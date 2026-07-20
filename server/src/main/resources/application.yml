@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: ftth-server
+  datasource:
+    url: ${FTTH_DB_URL:jdbc:postgresql://localhost:5432/ftth}
+    username: ${FTTH_DB_USER:ftth}
+    password: ${FTTH_DB_PASSWORD:ftth}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+  flyway:
+    locations: classpath:db/migration
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui
+
+ftth:
+  security:
+    # DEV ONLY — wajib dioverride via env di production (min. 32 byte)
+    jwt-secret: ${FTTH_JWT_SECRET:dev-only-secret-ftth-oss-change-me-in-production!}
+    # DEV ONLY — wajib dioverride via env di production (min. 32 byte).
+    # Mengganti nilai ini membuat kredensial SNMP yang tersimpan tidak terbaca.
+    encryption-secret: ${FTTH_ENCRYPTION_SECRET:dev-only-encryption-key-ftth-change-me-too!}
+    access-token-ttl: 15m
+    refresh-token-ttl: 30d
+  cors:
+    allowed-origins: ${FTTH_CORS_ORIGINS:http://localhost:5173}
+  bootstrap:
+    platform-admin-email: ${FTTH_PLATFORM_ADMIN_EMAIL:root@ftth.local}
+    platform-admin-password: ${FTTH_PLATFORM_ADMIN_PASSWORD:rootadmin123}
+    seed-demo-tenant: ${FTTH_SEED_DEMO:true}

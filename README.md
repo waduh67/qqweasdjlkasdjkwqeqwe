@@ -1,0 +1,275 @@
+# FTTH OSS
+
+Platform SaaS multi-tenant untuk manajemen infrastruktur FTTH: inventory jaringan
+(OLT → ODC → ODP → pelanggan), peta GIS jalur kabel, monitoring OLT/ONU,
+incident management dengan alarm correlation, work order teknisi, dan RBAC
+super-dinamis.
+
+**Status: Phase 0 & 1 selesai** — multi-tenancy, IAM/RBAC dinamis, audit, inventory
+jaringan (OLT→ODC→ODP), pelanggan + ONU, dan peta vector-tile sudah berjalan
+end-to-end. Monitoring menyusul (lihat [Roadmap](#roadmap)).
+
+---
+
+## Stack
+
+| Bagian | Teknologi |
+|---|---|
+| Backend | Spring Boot 4.1 + Kotlin, JDK 21, Spring Modulith (modular monolith) |
+| Database | PostgreSQL + PostGIS (TimescaleDB mulai Phase 2) |
+| Frontend | React 19 + TypeScript + Vite + MapLibre GL (vector tiles) |
+| Auth | JWT HS256 (access) + refresh token opaque ber-rotasi |
+| Collector | Kotlin agent (Phase 2) — SNMP/Telnet ke OLT, push outbound |
+
+Monorepo: `server/` (API), `web/` (SPA), `collector/` (placeholder Phase 2).
+
+---
+
+## Arsitektur
+
+Setiap module Spring Modulith disusun **Clean Architecture / Hexagonal
+(ports & adapters)**:
+
+```
+com.duluin.ftth.<module>/
+├── <Module>Api.kt, *Ref, events     ← API publik lintas-module (base package)
+├── domain/                          ← MURNI Kotlin: entity, value object, invariant
+│   ├── model/
+│   └── catalog/ · service/
+├── application/
+│   ├── port/inbound/                ← use case interface (dipakai lapisan web)
+│   ├── port/outbound/               ← port repository/gateway (istilah domain)
+│   └── service/                     ← implementasi use case (@Service @Transactional)
+└── adapter/
+    ├── inbound/web/                 ← controller + request/response DTO
+    └── outbound/persistence/        ← JPA entity + Spring Data repo + adapter + mapper
+```
+
+Aturan dependency: **adapter → application → domain**. Lapisan domain tidak tahu
+apa pun soal Spring/JPA/HTTP. JPA entity **bukan** model domain — keduanya
+dipetakan di adapter. Batas antar-module ditegakkan otomatis oleh test
+`ModularityTests`.
+
+Module: `common` (shared kernel, OPEN), `tenancy`, `iam`, `audit`, `network`,
+`customer`, `gis`.
+
+### Ketergantungan antar-module
+
+```
+gis ──▶ network ◀── customer
+         ▲              │
+         └──────────────┘   customer memakai NetworkApi saat memasang ONU
+```
+
+Aturannya satu arah: `customer → network`, `gis → {network, customer}`. Dua kasus
+yang menggoda untuk melanggarnya diselesaikan tanpa siklus:
+
+- **Aturan port ODP.** Kapasitas & status ODP dimiliki `network`, tapi yang tahu
+  port mana terpakai adalah `customer`. Jadi `customer` menyuplai daftar port
+  terisi dan `network` yang menegakkan aturannya
+  (`NetworkApi.assertOdpPortAssignable`).
+- **Larangan menghapus ODP yang masih dipakai.** `network` tidak boleh bertanya
+  ke `customer`, jadi arahnya dibalik: `network` mendeklarasikan port
+  `OdpUsageProbe` dan `customer` yang mengimplementasikannya. Tanpa ini,
+  menghapus ODP berhasil diam-diam dan menyisakan ONU menggantung — pelanggan
+  tetap tersambung di lapangan tapi lenyap dari peta.
+
+### Multi-tenancy (dua lapis)
+
+1. **Hibernate `@TenantId`** — mengisi & memfilter `tenant_id` otomatis dari
+   `TenantContext`.
+2. **Postgres Row-Level Security (FORCE)** — connection provider men-set GUC
+   `app.tenant_id` tiap connection dipinjam dari pool. Kalau kode lupa men-set
+   tenant, DB tetap tidak membocorkan data tenant lain.
+
+> ⚠️ `spring.jpa.open-in-view` **wajib false**. Bila aktif, sesi Hibernate dibuka
+> sebelum filter autentikasi memasang tenant context sehingga seluruh query
+> ter-scope ke tenant yang salah — dan gagalnya senyap. `MultiTenancySafetyCheck`
+> menggagalkan startup bila setelan ini aktif.
+
+### RBAC dinamis — 3 dimensi
+
+```
+Permission = module.resource.action   → iam.role.create, network.odp.update
+Role       = kumpulan permission, dibuat/diedit dari UI, per tenant
+Scope      = pembatasan data per area/wilayah (mis. teknisi Bekasi)
+```
+
+Katalog izin dideklarasikan **di kode** (`PermissionCatalog`, type-safe) lalu
+di-seed ke DB saat startup. Karena kodenya terstruktur, UI role-builder merender
+matriks *resource × action* secara otomatis — menambah izin baru cukup menambah
+satu baris di katalog.
+
+Penegakan: `@PreAuthorize("@authz.can('iam.role.create')")` di controller;
+platform admin melewati semua pengecekan.
+
+Scope area diterjemahkan ke satu nilai lewat `AuthenticatedUser.areaScope()`:
+`null` = tanpa batas, set berisi = hanya area itu, **set kosong = nol data**
+(pengguna yang dibatasi area tapi belum diberi area tidak boleh melihat seluruh
+tenant). Query dinamisnya memakai Criteria API, bukan JPQL dengan parameter
+nullable — parameter null tanpa tipe membuat Postgres menolak dengan galat
+menyesatkan seperti `function lower(bytea) does not exist`.
+
+### Inventory jaringan & GIS
+
+```
+SITE ──▶ OLT ──▶ PON PORT ──▶ ODC ──▶ ODP ──▶ ONU ──▶ CUSTOMER
+             └ kabel FEEDER ─┘ └ DISTRIBUSI ┘ └ DROP ┘
+```
+
+- **Port ODP tidak disimpan sebagai baris.** Kapasitas ada di `odp.capacity`,
+  okupansi diturunkan dari ONU yang menempatinya — menghemat ratusan ribu baris
+  kosong dan menghilangkan sinkronisasi ganda. "Satu port satu ONU" dijaga
+  agregat domain plus indeks unik parsial di database.
+- **Panjang kabel diturunkan dari geometri** (termasuk 5% slack), tidak pernah
+  diinput manual, agar laporan material selalu cocok dengan jalur yang tergambar.
+- **Pasangan ujung kabel divalidasi enum** `CableType` — kabel DROP tidak bisa
+  menghubungkan dua OLT.
+- **Rugi splitter melekat di `SplitterRatio`** (1:8 = 10,5 dB, dst) sehingga
+  telusur jalur bisa menghitung anggaran redaman OLT→pelanggan.
+- **Kredensial SNMP dienkripsi AES-256-GCM** (`SecretCipher`) memakai kunci
+  terpisah dari kunci JWT; API hanya mengembalikan `snmpConfigured: true/false`,
+  tidak pernah nilainya.
+
+**Vector tiles.** Peta dirender penuh di Postgres lewat `ST_AsMVT` — menarik
+puluhan ribu geometri ke JVM hanya untuk diserialkan ulang adalah cara paling
+pasti membuat peta melambat. Tiap module merender layernya sendiri (`network`:
+site/odc/odp/cable, `customer`: customer) dan `gis` menyambung byte-nya; `layers`
+adalah repeated field protobuf sehingga hasil sambungan tetap tile yang sah.
+
+> ⚠️ Query native untuk tile **wajib** lewat `EntityManager`, bukan
+> `JdbcTemplate`. GUC `app.tenant_id` yang mengaktifkan RLS hanya dipasang pada
+> connection yang dipinjam Hibernate (`TenantConnectionProvider`); connection
+> yang diambil langsung dari pool tidak punya GUC itu, sehingga RLS menolak semua
+> baris dan peta kosong tanpa penjelasan.
+
+---
+
+## Menjalankan
+
+### 1. Database
+
+Pakai docker-compose (Postgres + Redis + RabbitMQ):
+
+```bash
+docker compose up -d
+```
+
+Atau Postgres lokal — buat role & database:
+
+```sql
+CREATE ROLE ftth LOGIN PASSWORD 'ftth' NOSUPERUSER NOCREATEROLE NOBYPASSRLS;
+CREATE DATABASE ftth      OWNER ftth;
+CREATE DATABASE ftth_test OWNER ftth;
+```
+
+> Role aplikasi **tidak boleh** superuser/`BYPASSRLS`, kalau tidak RLS-nya
+> dilewati begitu saja.
+
+PostGIS harus dipasang oleh superuser — justru karena role aplikasi sengaja
+bukan superuser, ia tidak bisa membuat extension-nya sendiri:
+
+```bash
+sudo pacman -S postgis          # atau: apt install postgresql-17-postgis-3
+sudo -u postgres psql -d ftth      -c 'CREATE EXTENSION IF NOT EXISTS postgis;'
+sudo -u postgres psql -d ftth_test -c 'CREATE EXTENSION IF NOT EXISTS postgis;'
+```
+
+Migrasi `V2` gagal dengan pesan jelas bila extension-nya belum ada — jauh lebih
+baik daripada gagal saat query peta pertama.
+
+### 2. Backend
+
+```bash
+./gradlew :server:bootRun
+```
+
+Flyway memigrasi skema, lalu bootstrap men-seed katalog izin, tenant `platform`
++ platform admin, dan tenant demo. Swagger: <http://localhost:8080/swagger-ui>
+
+### 3. Frontend
+
+```bash
+cd web && npm install && npm run dev
+```
+
+Buka <http://localhost:5173> (request `/api` di-proxy ke `:8080`).
+
+### Akun bawaan (dev)
+
+| Peran | Tenant | Email | Password |
+|---|---|---|---|
+| Platform admin | `platform` | `root@ftth.local` | `rootadmin123` |
+| Admin tenant | `demo` | `admin@demo.ftth` | `admin12345` |
+
+Override lewat env: `FTTH_PLATFORM_ADMIN_EMAIL`, `FTTH_PLATFORM_ADMIN_PASSWORD`,
+`FTTH_SEED_DEMO=false`. **Di produksi wajib set `FTTH_JWT_SECRET` dan
+`FTTH_ENCRYPTION_SECRET`** (masing-masing ≥32 byte, dan harus berbeda).
+Mengganti `FTTH_ENCRYPTION_SECRET` membuat kredensial SNMP yang tersimpan tidak
+terbaca — OLT-nya tetap tampil, hanya ditandai "belum termonitor" dan perlu diisi
+ulang.
+
+> Basemap peta memakai raster tile OpenStreetMap publik — cukup untuk
+> pengembangan, tapi kebijakan pemakaian OSM tidak mengizinkan trafik aplikasi
+> produksi. Ganti ke penyedia tile berlangganan atau server tile sendiri di
+> `MapPage.tsx` sebelum dipakai sungguhan.
+
+---
+
+## Test
+
+```bash
+./gradlew :server:test
+```
+
+- `ModularityTests` — menegakkan batas module & bebas siklus (statis, tanpa DB).
+- `IamEndToEndIT` — lewat HTTP sungguhan (MockMvc) di atas Postgres `ftth_test`:
+  isolasi tenant, penegakan RBAC (200 vs 403 vs 401), dan isolasi izin platform.
+- `NetworkEndToEndIT` — rantai inventory penuh, aturan port ODP (duplikat → 409,
+  di luar kapasitas → 400), penolakan hapus ODP yang masih dipakai, panel ODP &
+  telusur jalur lintas-module, kerahasiaan community string SNMP, validasi
+  pasangan ujung kabel, isolasi tenant untuk aset jaringan, dan isi vector tile.
+
+Test integrasi memakai Postgres lokal (`application-test.yml`), bukan
+Testcontainers, karena mesin pengembangan ini tidak punya Docker.
+
+---
+
+## API utama
+
+| Endpoint | Izin |
+|---|---|
+| `POST /api/auth/login` · `/refresh` · `/logout` | publik |
+| `GET /api/me` | terautentikasi |
+| `GET/POST/PUT/DELETE /api/users` | `iam.user.*` |
+| `PUT /api/users/{id}/access` | `iam.user.assign` |
+| `GET/POST/PUT/DELETE /api/roles` | `iam.role.*` |
+| `GET /api/permissions` · `/catalog` | `iam.permission.view` |
+| `GET/POST/PUT/DELETE /api/areas` | `iam.area.*` |
+| `GET /api/audit-logs` | `audit.log.view` |
+| `GET /api/platform/tenants` · `POST` · `/{id}/suspend` | `platform.tenant.*` |
+| `GET/POST/PUT/DELETE /api/sites` | `network.site.*` |
+| `GET/POST/PUT/DELETE /api/olts` · `/{id}/pon-ports` | `network.olt.*` |
+| `GET/POST/PUT/DELETE /api/odcs` · `PUT /{id}/uplink` | `network.odc.*` |
+| `GET/POST/PUT/DELETE /api/odps` · `PUT /{id}/uplink` | `network.odp.*` |
+| `GET/POST/PUT/DELETE /api/cables` | `network.cable.*` |
+| `GET/POST/PUT/DELETE /api/customers` | `customer.customer.*` |
+| `POST /api/customers/{id}/subscriptions` · `/activate` · `/isolate` | `customer.subscription.update` |
+| `POST /api/customers/{id}/onus` · `/onus/{id}/attach` · `/detach` | `customer.onu.assign` |
+| `GET /api/gis/tiles/{z}/{x}/{y}.mvt` | `gis.map.view` |
+| `GET /api/gis/odps/{id}` | `gis.map.view` + `network.odp.view` |
+| `GET /api/gis/trace/customers/{id}` | `gis.map.view` + `customer.customer.view` |
+
+---
+
+## Roadmap
+
+- **Phase 0 — Fondasi** ✅ tenancy + IAM/RBAC + audit
+- **Phase 1 — Inventory + pelanggan + GIS** ✅ OLT→ODC→ODP, kabel bergeometri,
+  ONU pada port ODP, peta vector-tile, panel ODP, telusur jalur + anggaran redaman
+- **Phase 2** — Monitoring: collector agent, adapter vendor (ZTE/Huawei/Fiberhome),
+  metrik TimescaleDB, alarm
+- **Phase 3** — Incident + alarm correlation + notifikasi proaktif ke pelanggan
+- **Phase 4** — Work order + PWA teknisi (offline, GPS, foto bukti)
+- **Phase 5** — What-if simulation, predictive maintenance, OTDR plotting,
+  heatmap utilisasi port

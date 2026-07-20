@@ -1,0 +1,24 @@
+# Profil `test`: SENGAJA hanya berisi override, bukan konfigurasi lengkap.
+#
+# File ini bernama application-test.yml (bukan application.yml) agar
+# application.yml utama tetap dimuat — kalau tidak, setelan penting seperti
+# `spring.jpa.open-in-view: false` ikut hilang dan multi-tenancy rusak
+# (sesi Hibernate dibuka sebelum tenant context ter-set → query ter-scope ke
+# tenant sentinel dan tidak menemukan apa pun).
+#
+# Mesin ini tidak punya Docker, jadi memakai Postgres lokal (db ftth_test).
+# Role `ftth` NOSUPERUSER/NOBYPASSRLS sehingga RLS benar-benar teruji.
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ftth_test
+    username: ftth
+    password: ftth
+
+ftth:
+  security:
+    jwt-secret: test-only-secret-ftth-oss-1234567890-abcdef
+    encryption-secret: test-only-encryption-ftth-oss-0987654321-fedcba
+  bootstrap:
+    platform-admin-email: root@ftth.local
+    platform-admin-password: rootadmin123
+    seed-demo-tenant: true

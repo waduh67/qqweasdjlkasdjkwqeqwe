@@ -1,0 +1,116 @@
+import type { TokenResponse } from './types'
+
+/**
+ * Klien HTTP tipis untuk ftth-server.
+ *
+ * Access token disimpan di memori saja; refresh token di localStorage supaya
+ * sesi bertahan saat reload. Saat server membalas 401, klien mencoba sekali
+ * merotasi refresh token lalu mengulang request — transparan bagi pemanggil.
+ */
+
+const REFRESH_KEY = 'ftth.refreshToken'
+
+let accessToken: string | null = null
+let onSessionLost: (() => void) | null = null
+
+export const tokenStore = {
+  setAccessToken(token: string | null) {
+    accessToken = token
+  },
+  /**
+   * Dipakai MapLibre lewat `transformRequest`: request tile berangkat dari dalam
+   * pustaka peta, bukan lewat `api` di bawah, sehingga headernya harus dipasang
+   * sendiri. Endpoint tile tetap butuh autentikasi seperti endpoint lain.
+   */
+  getAccessToken(): string | null {
+    return accessToken
+  },
+  getRefreshToken(): string | null {
+    return localStorage.getItem(REFRESH_KEY)
+  },
+  setRefreshToken(token: string | null) {
+    if (token) localStorage.setItem(REFRESH_KEY, token)
+    else localStorage.removeItem(REFRESH_KEY)
+  },
+  clear() {
+    accessToken = null
+    localStorage.removeItem(REFRESH_KEY)
+  },
+  onSessionLost(handler: () => void) {
+    onSessionLost = handler
+  },
+}
+
+export class ApiError extends Error {
+  status: number
+  errors?: Record<string, string>
+
+  constructor(status: number, message: string, errors?: Record<string, string>) {
+    super(message)
+    this.status = status
+    this.errors = errors
+  }
+}
+
+async function parseError(response: Response): Promise<ApiError> {
+  let detail = response.statusText
+  let errors: Record<string, string> | undefined
+  try {
+    const body = await response.json()
+    detail = body.detail ?? body.message ?? detail
+    errors = body.errors
+  } catch {
+    /* respons tanpa body JSON */
+  }
+  return new ApiError(response.status, detail, errors)
+}
+
+async function rotateRefreshToken(): Promise<boolean> {
+  const refreshToken = tokenStore.getRefreshToken()
+  if (!refreshToken) return false
+
+  const response = await fetch('/api/auth/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+  })
+  if (!response.ok) return false
+
+  const tokens: TokenResponse = await response.json()
+  accessToken = tokens.accessToken
+  tokenStore.setRefreshToken(tokens.refreshToken)
+  return true
+}
+
+async function send(path: string, init: RequestInit): Promise<Response> {
+  const headers = new Headers(init.headers)
+  if (init.body) headers.set('Content-Type', 'application/json')
+  if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
+  return fetch(path, { ...init, headers })
+}
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  let response = await send(path, init)
+
+  if (response.status === 401 && tokenStore.getRefreshToken()) {
+    if (await rotateRefreshToken()) {
+      response = await send(path, init)
+    } else {
+      tokenStore.clear()
+      onSessionLost?.()
+    }
+  }
+
+  if (!response.ok) throw await parseError(response)
+  if (response.status === 204) return undefined as T
+  return response.json() as Promise<T>
+}
+
+export const api = {
+  get: <T>(path: string) => request<T>(path),
+  post: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) }),
+  put: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: 'PUT', body: body === undefined ? undefined : JSON.stringify(body) }),
+  del: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+}

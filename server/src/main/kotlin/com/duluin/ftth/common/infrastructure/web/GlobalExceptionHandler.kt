@@ -1,0 +1,54 @@
+package com.duluin.ftth.common.infrastructure.web
+
+import com.duluin.ftth.common.domain.error.AccessDeniedException
+import com.duluin.ftth.common.domain.error.AuthenticationException
+import com.duluin.ftth.common.domain.error.ConflictException
+import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.domain.error.ValidationException
+import org.springframework.http.HttpStatus
+import org.springframework.http.ProblemDetail
+import org.springframework.security.access.AccessDeniedException as SpringAccessDeniedException
+import org.springframework.security.authorization.AuthorizationDeniedException
+import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.bind.annotation.RestControllerAdvice
+
+/**
+ * Menerjemahkan exception domain (bebas HTTP) menjadi RFC-7807 ProblemDetail.
+ * Inilah satu-satunya tempat pemetaan status code, sehingga lapisan domain &
+ * application tidak perlu tahu soal HTTP.
+ */
+@RestControllerAdvice
+class GlobalExceptionHandler {
+
+    @ExceptionHandler(NotFoundException::class)
+    fun handleNotFound(ex: NotFoundException) = problem(HttpStatus.NOT_FOUND, ex.message)
+
+    @ExceptionHandler(ValidationException::class)
+    fun handleValidation(ex: ValidationException) = problem(HttpStatus.BAD_REQUEST, ex.message)
+
+    @ExceptionHandler(ConflictException::class)
+    fun handleConflict(ex: ConflictException) = problem(HttpStatus.CONFLICT, ex.message)
+
+    @ExceptionHandler(AuthenticationException::class)
+    fun handleAuthentication(ex: AuthenticationException) = problem(HttpStatus.UNAUTHORIZED, ex.message)
+
+    @ExceptionHandler(AccessDeniedException::class)
+    fun handleAccessDenied(ex: AccessDeniedException) = problem(HttpStatus.FORBIDDEN, ex.message)
+
+    @ExceptionHandler(AuthorizationDeniedException::class, SpringAccessDeniedException::class)
+    fun handleSpringDenied(ex: RuntimeException) =
+        problem(HttpStatus.FORBIDDEN, "Tidak punya izin untuk operasi ini")
+
+    @ExceptionHandler(MethodArgumentNotValidException::class)
+    fun handleBeanValidation(ex: MethodArgumentNotValidException): ProblemDetail =
+        problem(HttpStatus.BAD_REQUEST, "Validasi gagal").apply {
+            setProperty(
+                "errors",
+                ex.bindingResult.fieldErrors.associate { it.field to (it.defaultMessage ?: "tidak valid") },
+            )
+        }
+
+    private fun problem(status: HttpStatus, detail: String?): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(status, detail ?: status.reasonPhrase)
+}

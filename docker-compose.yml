@@ -1,0 +1,36 @@
+# Infra dev untuk ftth OSS.
+# timescaledb-ha sudah include PostGIS + TimescaleDB (dipakai mulai Phase 1/2,
+# tapi dari awal image-nya disamakan biar gak ada kejutan).
+services:
+  postgres:
+    image: timescale/timescaledb-ha:pg17
+    environment:
+      POSTGRES_DB: ftth
+      POSTGRES_USER: ftth
+      POSTGRES_PASSWORD: ftth
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/home/postgres/pgdata/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ftth"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ftth
+      RABBITMQ_DEFAULT_PASS: ftth
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+volumes:
+  pgdata:

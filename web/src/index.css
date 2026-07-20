@@ -1,0 +1,171 @@
+:root {
+  --bg: #0f1216;
+  --surface: #171b21;
+  --surface-2: #1f242c;
+  --border: #2a313b;
+  --text: #e6e9ee;
+  --muted: #96a0ae;
+  --accent: #3b82f6;
+  --accent-soft: #1e3a8a;
+  --danger: #ef4444;
+
+  color-scheme: dark;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+a { color: var(--accent); text-decoration: none; }
+
+button {
+  font: inherit;
+  padding: 0.5rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.danger { color: var(--danger); }
+
+input, select {
+  font: inherit;
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+input:focus, select:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+
+label { display: block; margin-bottom: 0.75rem; color: var(--muted); font-size: 0.85rem; }
+label span { display: block; margin-bottom: 0.3rem; }
+
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 0.6rem 0.7rem; border-bottom: 1px solid var(--border); }
+th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.2rem;
+}
+
+.row { display: flex; gap: 0.6rem; align-items: center; }
+.spread { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.stack { display: flex; flex-direction: column; gap: 1rem; }
+.muted { color: var(--muted); }
+.error { color: var(--danger); }
+.badge {
+  display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--border); font-size: 0.75rem; color: var(--muted);
+}
+
+/* Layout aplikasi */
+.app { display: grid; grid-template-columns: 230px 1fr; min-height: 100vh; }
+.sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 1rem; }
+.sidebar h1 { font-size: 1rem; margin: 0 0 1.2rem; letter-spacing: 0.02em; }
+.sidebar nav { display: flex; flex-direction: column; gap: 0.2rem; }
+.sidebar nav a { padding: 0.5rem 0.7rem; border-radius: 6px; color: var(--muted); }
+.sidebar nav a:hover { background: var(--surface-2); color: var(--text); }
+.sidebar nav a.active { background: var(--accent-soft); color: #fff; }
+.content { padding: 1.5rem 2rem; overflow-x: auto; }
+
+/* Login */
+.login-shell { display: grid; place-items: center; min-height: 100vh; padding: 1rem; }
+.login-card { width: 100%; max-width: 380px; }
+
+/* Matriks izin (role-builder) */
+.matrix-module { margin-bottom: 1.2rem; }
+.matrix-module h4 { margin: 0 0 0.5rem; text-transform: capitalize; }
+.matrix { font-size: 0.85rem; }
+.matrix td, .matrix th { padding: 0.35rem 0.5rem; }
+.matrix input[type='checkbox'] { width: auto; }
+.matrix .resource { color: var(--muted); }
+
+/* ---- Peta jaringan (MapLibre) ---- */
+
+.map-shell {
+  position: relative;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.map-canvas {
+  flex: 1;
+  height: 70vh;
+  min-height: 420px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #1e293b;
+}
+
+/* Panel detail ODP: menempel di sisi kanan peta, bisa digulung sendiri karena
+   daftar pelanggan bisa sepanjang kapasitas ODP. */
+.map-panel {
+  width: 27rem;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+@media (max-width: 1100px) {
+  .map-shell {
+    flex-direction: column;
+  }
+  .map-panel {
+    width: 100%;
+    max-height: none;
+  }
+}
+
+/* Bilah utilisasi port ODP. */
+.meter {
+  height: 8px;
+  background: #1e293b;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #f59e0b);
+  transition: width 0.2s ease;
+}
+
+select {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  background: #0b1220;
+  color: inherit;
+}
+
+/* MapLibre memakai tema terang secara bawaan; disesuaikan agar tidak menyilaukan. */
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-scale {
+  background: rgba(15, 23, 42, 0.8) !important;
+  color: #94a3b8 !important;
+  font-size: 0.7rem;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: #94a3b8;
+}
