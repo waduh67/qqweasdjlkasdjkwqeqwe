@@ -22,5 +22,8 @@ interface OdcRepository {
     /** Jumlah ODC per PON port dalam satu query — menghindari N+1 di daftar PON port. */
     fun countByPonPortIds(ponPortIds: Set<UUID>): Map<UUID, Long>
 
+    /** Id ODC yang menggantung pada salah satu PON port tersebut. */
+    fun findIdsByPonPortIds(ponPortIds: Set<UUID>): Set<UUID>
+
     fun deleteById(id: UUID)
 }

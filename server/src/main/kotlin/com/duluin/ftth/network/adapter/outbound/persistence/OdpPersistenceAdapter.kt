@@ -64,6 +64,9 @@ class OdpPersistenceAdapter(
         if (odcIds.isEmpty()) emptyMap()
         else jpa.countGroupedByOdc(odcIds).associate { it.parentId to it.total }
 
+    override fun findIdsByOdcIds(odcIds: Set<UUID>): Set<UUID> =
+        if (odcIds.isEmpty()) emptySet() else jpa.findIdsByOdcIds(odcIds)
+
     override fun deleteById(id: UUID) = jpa.deleteById(id)
 }
 

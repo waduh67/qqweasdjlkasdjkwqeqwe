@@ -70,6 +70,9 @@ interface OdcJpaRepository : JpaRepository<OdcJpaEntity, UUID>, JpaSpecification
         """,
     )
     fun countGroupedByPonPort(@Param("ponPortIds") ponPortIds: Collection<UUID>): List<ChildCount>
+
+    @Query("select o.id from OdcJpaEntity o where o.ponPortId in :ponPortIds")
+    fun findIdsByPonPortIds(@Param("ponPortIds") ponPortIds: Collection<UUID>): Set<UUID>
 }
 
 interface OdpJpaRepository : JpaRepository<OdpJpaEntity, UUID>, JpaSpecificationExecutor<OdpJpaEntity> {
@@ -84,6 +87,9 @@ interface OdpJpaRepository : JpaRepository<OdpJpaEntity, UUID>, JpaSpecification
         """,
     )
     fun countGroupedByOdc(@Param("odcIds") odcIds: Collection<UUID>): List<ChildCount>
+
+    @Query("select o.id from OdpJpaEntity o where o.odcId in :odcIds")
+    fun findIdsByOdcIds(@Param("odcIds") odcIds: Collection<UUID>): Set<UUID>
 }
 
 interface CableJpaRepository : JpaRepository<CableJpaEntity, UUID>, JpaSpecificationExecutor<CableJpaEntity> {

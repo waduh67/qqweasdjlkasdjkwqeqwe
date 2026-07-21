@@ -2,6 +2,7 @@ package com.duluin.ftth.network.application.service
 
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.network.CablePath
+import com.duluin.ftth.network.DownstreamIds
 import com.duluin.ftth.network.NetworkApi
 import com.duluin.ftth.network.OdpRef
 import com.duluin.ftth.network.OltPollingTarget
@@ -48,6 +49,14 @@ class NetworkApiService(
         if (ids.isEmpty()) emptyList() else oltRepository.findAllByIds(ids).map { it.toRef() }
 
     override fun listAllOltIds(): Set<UUID> = oltRepository.findAllIds()
+
+    override fun downstreamDeviceIds(oltIds: Set<UUID>, odcIds: Set<UUID>): DownstreamIds {
+        // OLT → PON port → ODC. ODC yang menempel di ODC alarm langsung ikut juga.
+        val ponPortIds = oltIds.flatMap { ponPortRepository.findByOltId(it) }.mapTo(HashSet()) { it.id }
+        val allOdcIds = odcIds + odcRepository.findIdsByPonPortIds(ponPortIds)
+        val odpIds = odpRepository.findIdsByOdcIds(allOdcIds)
+        return DownstreamIds(odcIds = allOdcIds, odpIds = odpIds)
+    }
 
     override fun cablesTouchingNodes(nodeIds: Set<UUID>): List<CablePath> =
         cableRepository.findByEndpointNodeIds(nodeIds).map { cable ->

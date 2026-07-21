@@ -28,5 +28,8 @@ interface OdpRepository {
     /** Jumlah ODP per ODC dalam satu query — menghindari N+1 di daftar ODC. */
     fun countByOdcIds(odcIds: Set<UUID>): Map<UUID, Long>
 
+    /** Id ODP yang menggantung pada salah satu ODC tersebut. */
+    fun findIdsByOdcIds(odcIds: Set<UUID>): Set<UUID>
+
     fun deleteById(id: UUID)
 }

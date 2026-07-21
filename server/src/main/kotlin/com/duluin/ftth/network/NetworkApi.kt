@@ -64,7 +64,17 @@ interface NetworkApi {
      * bermasalah tanpa module lain menyentuh tabel kabel langsung.
      */
     fun cablesTouchingNodes(nodeIds: Set<UUID>): List<CablePath>
+
+    /**
+     * Memperluas alarm perangkat hulu ke perangkat di bawahnya (blast radius):
+     * OLT → ODC di bawahnya → ODP di bawahnya. Dipakai gis agar OLT/ODC yang mati
+     * ikut menyorot merah seluruh feeder, distribusi, dan drop di hilirnya.
+     */
+    fun downstreamDeviceIds(oltIds: Set<UUID>, odcIds: Set<UUID>): DownstreamIds
 }
+
+/** Perangkat hilir dari sekumpulan OLT/ODC yang bermasalah. */
+data class DownstreamIds(val odcIds: Set<UUID>, val odpIds: Set<UUID>)
 
 /** Kabel beserta jalur geometrinya untuk kebutuhan overlay peta. */
 data class CablePath(

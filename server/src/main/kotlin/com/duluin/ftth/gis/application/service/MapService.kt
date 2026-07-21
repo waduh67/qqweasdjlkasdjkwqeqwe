@@ -123,6 +123,21 @@ class MapService(
         impacts.filter { it.entityType != "ONU" && it.entityType != "COLLECTOR" }
             .forEach { bump(it.entityId, it.severity) }
 
+        // Blast radius: OLT/ODC yang mati menjalar ke seluruh perangkat di bawahnya,
+        // sehingga feeder, distribusi, dan drop di hilirnya ikut merah. Keparahannya
+        // diwarisi dari alarm hulu terparah — perangkat mati bersifat kritis bagi
+        // semua yang bergantung padanya.
+        val oltImpactIds = impacts.filter { it.entityType == "OLT" }.mapTo(HashSet()) { it.entityId }
+        val odcImpactIds = impacts.filter { it.entityType == "ODC" }.mapTo(HashSet()) { it.entityId }
+        if (oltImpactIds.isNotEmpty() || odcImpactIds.isNotEmpty()) {
+            val propagated = severityName(
+                impacts.filter { it.entityType == "OLT" || it.entityType == "ODC" }
+                    .maxOf { severityRank(it.severity) },
+            )
+            val downstream = networkApi.downstreamDeviceIds(oltImpactIds, odcImpactIds)
+            (downstream.odcIds + downstream.odpIds).forEach { bump(it, propagated) }
+        }
+
         if (nodeSeverity.isEmpty()) return ImpactedOverlay(emptyList())
 
         val cables = networkApi.cablesTouchingNodes(nodeSeverity.keys).mapNotNull { cable ->
