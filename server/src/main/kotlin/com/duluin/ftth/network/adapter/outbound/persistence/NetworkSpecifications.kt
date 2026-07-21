@@ -58,4 +58,9 @@ internal object NetworkSpecifications {
             cb.and(cb.equal(root.get<Any>("toKind"), kind), cb.equal(root.get<UUID>("toId"), id)),
         )
     }
+
+    /** Kabel yang salah satu ujung id-nya ada di kumpulan simpul. */
+    fun endpointInNodes(nodeIds: Set<UUID>): Specification<CableJpaEntity> = Specification { root, _, cb ->
+        cb.or(root.get<UUID>("fromId").`in`(nodeIds), root.get<UUID>("toId").`in`(nodeIds))
+    }
 }

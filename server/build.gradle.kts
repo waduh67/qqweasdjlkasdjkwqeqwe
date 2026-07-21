@@ -22,6 +22,9 @@ dependencies {
     implementation(platform(libs.spring.boot.bom))
     implementation(platform(libs.spring.modulith.bom))
 
+    // Kontrak wire collector↔server; dipakai bersama modul :collector.
+    implementation(project(":contract"))
+
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-security")

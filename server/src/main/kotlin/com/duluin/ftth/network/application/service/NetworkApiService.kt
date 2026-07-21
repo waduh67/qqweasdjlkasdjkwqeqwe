@@ -1,10 +1,15 @@
 package com.duluin.ftth.network.application.service
 
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.network.CablePath
 import com.duluin.ftth.network.NetworkApi
 import com.duluin.ftth.network.OdpRef
+import com.duluin.ftth.network.OltPollingTarget
+import com.duluin.ftth.network.OltRef
+import com.duluin.ftth.network.domain.model.Olt
 import com.duluin.ftth.network.UpstreamHop
 import com.duluin.ftth.network.UpstreamPath
+import com.duluin.ftth.network.application.port.outbound.CableRepository
 import com.duluin.ftth.network.application.port.outbound.OdcRepository
 import com.duluin.ftth.network.application.port.outbound.OdpRepository
 import com.duluin.ftth.network.application.port.outbound.NetworkTileRenderer
@@ -29,11 +34,49 @@ class NetworkApiService(
     private val ponPortRepository: PonPortRepository,
     private val oltRepository: OltRepository,
     private val siteRepository: SiteRepository,
+    private val cableRepository: CableRepository,
     private val tileRenderer: NetworkTileRenderer,
 ) : NetworkApi {
 
     override fun renderMapTile(z: Int, x: Int, y: Int, areaIds: Set<UUID>?): ByteArray =
         tileRenderer.render(z, x, y, areaIds)
+
+    override fun findOltByCode(code: String): OltRef? =
+        oltRepository.findByCode(code.trim().uppercase())?.toRef()
+
+    override fun findOltsByIds(ids: Set<UUID>): List<OltRef> =
+        if (ids.isEmpty()) emptyList() else oltRepository.findAllByIds(ids).map { it.toRef() }
+
+    override fun listAllOltIds(): Set<UUID> = oltRepository.findAllIds()
+
+    override fun cablesTouchingNodes(nodeIds: Set<UUID>): List<CablePath> =
+        cableRepository.findByEndpointNodeIds(nodeIds).map { cable ->
+            CablePath(
+                id = cable.id,
+                code = cable.code,
+                cableType = cable.cableType.name,
+                points = cable.route.points,
+                fromId = cable.from.id,
+                toId = cable.to.id,
+            )
+        }
+
+    override fun findPollingTargets(oltIds: Set<UUID>): List<OltPollingTarget> {
+        if (oltIds.isEmpty()) return emptyList()
+        return oltRepository.findAllByIds(oltIds)
+            // OLT yang sedang dinonaktifkan tidak perlu di-polling; alarmnya justru
+            // akan menutupi gangguan sungguhan di perangkat lain.
+            .filter { it.status.acceptsService() }
+            .map { olt ->
+                OltPollingTarget(
+                    id = olt.id,
+                    code = olt.code,
+                    vendor = olt.vendor.name,
+                    host = olt.managementIp?.value,
+                    snmpCommunity = olt.snmpCommunity,
+                )
+            }
+    }
 
     override fun findOdp(id: UUID): OdpRef? = odpRepository.findById(id)?.toRef()
 
@@ -72,6 +115,15 @@ class NetworkApiService(
         )
     }
 }
+
+private fun Olt.toRef() = OltRef(
+    id = id,
+    code = code,
+    name = name,
+    vendor = vendor.name,
+    siteId = siteId,
+    active = status.acceptsService(),
+)
 
 private fun Odp.toRef() = OdpRef(
     id = id,

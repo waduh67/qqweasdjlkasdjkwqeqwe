@@ -3,6 +3,8 @@ import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type { OdcView, OdpView, OltView, SiteView } from '../api/network'
 import { useCan } from '../auth/useCan'
+import { StatusBadge, useToast } from '../components/ui'
+import { IconPlus } from '../components/icons'
 
 /**
  * Inventory jaringan dalam satu halaman bertab.
@@ -39,11 +41,14 @@ export function InventoryPage() {
   }
 
   return (
-    <div className="stack">
-      <h2 style={{ margin: 0 }}>Inventory Jaringan</h2>
-      <div className="row" style={{ flexWrap: 'wrap' }}>
+    <div className="stack" style={{ gap: '1.25rem' }}>
+      <div>
+        <h1 className="page-title">Inventory Jaringan</h1>
+        <p className="page-sub">Kelola site, OLT, ODC, dan ODP — dari POP sampai kotak terminasi.</p>
+      </div>
+      <div className="segment" style={{ alignSelf: 'flex-start' }}>
         {visible.map((item) => (
-          <button key={item.key} className={tab === item.key ? 'primary' : ''} onClick={() => setTab(item.key)}>
+          <button key={item.key} className={tab === item.key ? 'active' : ''} onClick={() => setTab(item.key)}>
             {item.label}
           </button>
         ))}
@@ -56,38 +61,40 @@ export function InventoryPage() {
   )
 }
 
-/** Hook pemuat daftar bersama: menyeragamkan penanganan galat dan muat-ulang. */
+/** Hook pemuat daftar bersama: menyeragamkan penanganan galat, toast, dan muat-ulang. */
 function useList<T>(path: string) {
+  const toast = useToast()
   const [items, setItems] = useState<T[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   const reload = useCallback(async () => {
     try {
       const page = await api.get<PageResponse<T>>(`${path}?size=100`)
       setItems(page.content)
-      setError(null)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Gagal memuat data')
+      toast.error(err instanceof ApiError ? err.message : 'Gagal memuat data')
+    } finally {
+      setLoading(false)
     }
-  }, [path])
+  }, [path, toast])
 
   useEffect(() => {
     void reload()
   }, [reload])
 
-  const run = async (action: () => Promise<unknown>) => {
-    setError(null)
+  const run = async (action: () => Promise<unknown>, okMessage?: string) => {
     try {
       await action()
       await reload()
+      if (okMessage) toast.success(okMessage)
       return true
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Operasi gagal')
+      toast.error(err instanceof ApiError ? err.message : 'Operasi gagal')
       return false
     }
   }
 
-  return { items, error, reload, run }
+  return { items, loading, reload, run }
 }
 
 function LocationFields({
@@ -115,7 +122,7 @@ function LocationFields({
 
 function SitesTab() {
   const { can } = useCan()
-  const { items, error, run } = useList<SiteView>('/api/sites')
+  const { items, run } = useList<SiteView>('/api/sites')
   const empty = { code: '', name: '', address: '', longitude: '', latitude: '' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
 
@@ -125,11 +132,10 @@ function SitesTab() {
         <span className="muted">{items.length} site</span>
         {can('network.site.create') && (
           <button className="primary" onClick={() => setDraft({ ...empty })}>
-            Tambah site
+            <IconPlus size={15} /> Tambah site
           </button>
         )}
       </div>
-      {error && <p className="error">{error}</p>}
 
       {draft && (
         <div className="card stack">
@@ -218,7 +224,7 @@ function SitesTab() {
 
 function OltsTab() {
   const { can } = useCan()
-  const { items, error, run } = useList<OltView>('/api/olts')
+  const { items, run } = useList<OltView>('/api/olts')
   const { items: sites } = useList<SiteView>('/api/sites')
   const empty = { siteId: '', code: '', name: '', vendor: 'ZTE', model: '', managementIp: '', snmpCommunity: '' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
@@ -230,11 +236,10 @@ function OltsTab() {
         <span className="muted">{items.length} OLT</span>
         {can('network.olt.create') && (
           <button className="primary" onClick={() => setDraft({ ...empty, siteId: sites[0]?.id ?? '' })}>
-            Tambah OLT
+            <IconPlus size={15} /> Tambah OLT
           </button>
         )}
       </div>
-      {error && <p className="error">{error}</p>}
 
       {draft && (
         <div className="card stack">
@@ -385,7 +390,7 @@ function OltsTab() {
 
 function OdcsTab() {
   const { can } = useCan()
-  const { items, error, run } = useList<OdcView>('/api/odcs')
+  const { items, run } = useList<OdcView>('/api/odcs')
   const empty = { code: '', name: '', longitude: '', latitude: '', splitterRatio: '1:8', capacity: '64' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
 
@@ -395,11 +400,10 @@ function OdcsTab() {
         <span className="muted">{items.length} ODC</span>
         {can('network.odc.create') && (
           <button className="primary" onClick={() => setDraft({ ...empty })}>
-            Tambah ODC
+            <IconPlus size={15} /> Tambah ODC
           </button>
         )}
       </div>
-      {error && <p className="error">{error}</p>}
 
       {draft && (
         <div className="card stack">
@@ -483,7 +487,7 @@ function OdcsTab() {
                 <td>{odc.splitterRatio}</td>
                 <td>{odc.odpCount}</td>
                 <td>
-                  <span className="badge">{odc.energized ? 'teraliri' : odc.status}</span>
+                  {odc.energized ? <StatusBadge status="ACTIVE" label="teraliri" /> : <StatusBadge status={odc.status} />}
                 </td>
                 <td>
                   {can('network.odc.delete') && (
@@ -501,7 +505,7 @@ function OdcsTab() {
 
 function OdpsTab() {
   const { can } = useCan()
-  const { items, error, run } = useList<OdpView>('/api/odps')
+  const { items, run } = useList<OdpView>('/api/odps')
   const { items: odcs } = useList<OdcView>('/api/odcs')
   const empty = { code: '', name: '', longitude: '', latitude: '', odcId: '', splitterRatio: '1:8', capacity: '8' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
@@ -512,11 +516,10 @@ function OdpsTab() {
         <span className="muted">{items.length} ODP</span>
         {can('network.odp.create') && (
           <button className="primary" onClick={() => setDraft({ ...empty, odcId: odcs[0]?.id ?? '' })}>
-            Tambah ODP
+            <IconPlus size={15} /> Tambah ODP
           </button>
         )}
       </div>
-      {error && <p className="error">{error}</p>}
 
       {draft && (
         <div className="card stack">
@@ -610,7 +613,7 @@ function OdpsTab() {
                 <td>{odp.splitterRatio}</td>
                 <td>{odp.capacity}</td>
                 <td>
-                  <span className="badge">{odp.status}</span>
+                  <StatusBadge status={odp.status} />
                 </td>
                 <td>
                   {can('network.odp.delete') && (

@@ -63,7 +63,7 @@ export function UsersPage() {
   return (
     <div className="stack">
       <div className="spread">
-        <h2 style={{ margin: 0 }}>Pengguna</h2>
+        <h1 className="page-title">Pengguna</h1>
         {can('iam.user.create') && (
           <button className="primary" onClick={() => setDraft({ ...EMPTY, roleIds: new Set(), areaIds: new Set() })}>
             Pengguna baru

@@ -29,7 +29,42 @@ interface CustomerApi {
 
     /** Vector tile berisi layer `customer`; digabung module `gis` dengan layer jaringan. */
     fun renderMapTile(z: Int, x: Int, y: Int, areaIds: Set<UUID>?): ByteArray
+
+    /**
+     * Memetakan serial yang dilaporkan OLT ke ONU yang terdaftar. Serial yang
+     * tidak ada di hasil berarti perangkat liar — terpasang di lapangan tapi
+     * belum pernah didaftarkan.
+     */
+    fun findOnusBySerialNumbers(serialNumbers: Set<String>): List<OnuRef>
+
+    /**
+     * Penempatan sekumpulan ONU (ke pelanggan & ODP mana), untuk memetakan alarm
+     * ONU ke kabel yang terdampak. ONU yang tidak ditemukan diabaikan.
+     */
+    fun placementsForOnus(onuIds: Set<UUID>): List<OnuPlacementRef>
+
+    /**
+     * Menerapkan status ONU yang teramati dari jaringan.
+     *
+     * Module monitoring TIDAK menulis ke agregat ONU secara langsung; ia melapor
+     * lewat kontrak ini dan module customer yang memutuskan. Hanya baris yang
+     * statusnya benar-benar berubah yang ditulis — satu siklus polling membawa
+     * ribuan bacaan dan hampir semuanya tidak berubah.
+     *
+     * @return jumlah ONU yang statusnya berubah.
+     */
+    fun recordObservedOnuStatuses(statuses: Map<UUID, String>): Int
 }
+
+/** Pandangan ringkas sebuah ONU untuk konsumen lintas-module. */
+data class OnuRef(
+    val id: UUID,
+    val serialNumber: String,
+    val customerId: UUID,
+    val customerName: String,
+    val odpId: UUID?,
+    val status: String,
+)
 
 data class CustomerRef(
     val id: UUID,
@@ -38,6 +73,13 @@ data class CustomerRef(
     val phone: String?,
     val location: Coordinate,
     val status: String,
+)
+
+/** Penempatan sebuah ONU: milik pelanggan mana dan di ODP mana (bila terpasang). */
+data class OnuPlacementRef(
+    val onuId: UUID,
+    val customerId: UUID,
+    val odpId: UUID?,
 )
 
 /** Di mana ONU seorang pelanggan terpasang, beserta kondisi optiknya. */

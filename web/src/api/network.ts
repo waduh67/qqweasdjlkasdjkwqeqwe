@@ -178,3 +178,26 @@ export interface CustomerTrace {
   estimatedLossDb: number | null
   hops: TraceHop[]
 }
+
+export type CableType = 'FEEDER' | 'DISTRIBUTION' | 'DROP'
+export type NodeKind = 'SITE' | 'OLT' | 'ODC' | 'ODP' | 'CUSTOMER'
+
+/** Bentuk `route` dari server: LineString sebagai daftar titik. */
+export interface RoutePath {
+  points: Coordinate[]
+}
+
+export interface CableView {
+  id: string
+  code: string
+  name: string
+  cableType: CableType
+  coreCount: number
+  route: RoutePath
+  lengthMeters: number
+  fromKind: NodeKind
+  fromId: string
+  toKind: NodeKind
+  toId: string
+  status: AssetStatus
+}

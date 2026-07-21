@@ -22,7 +22,25 @@ interface MapQuery {
 
     /** Telusur jalur dari pelanggan sampai OLT, lengkap dengan anggaran redaman. */
     fun traceCustomer(customerId: UUID): CustomerTrace
+
+    /**
+     * Kabel yang hilirnya sedang bermasalah menurut alarm hidup, untuk disorot
+     * merah di peta ("perangkat modar → kabel merah"). Menyusun dari monitoring
+     * (alarm) + customer (ONU→pelanggan/ODP) + network (geometri kabel).
+     */
+    fun impactedCables(): ImpactedOverlay
 }
+
+data class ImpactedOverlay(val cables: List<ImpactedCable>)
+
+data class ImpactedCable(
+    val id: UUID,
+    val code: String,
+    val cableType: String,
+    /** WARNING atau CRITICAL — keparahan tertinggi di antara ujung yang terdampak. */
+    val severity: String,
+    val points: List<Coordinate>,
+)
 
 data class OdpInspection(
     val odpId: UUID,

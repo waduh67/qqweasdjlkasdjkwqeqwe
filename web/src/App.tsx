@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Suspense, lazy, type ReactNode } from 'react'
 import { AuthProvider } from './auth/AuthContext'
+import { ToastProvider } from './components/ui'
 import { useAuth } from './auth/useAuth'
 import { useCan } from './auth/useCan'
 import { Layout } from './components/Layout'
@@ -8,6 +9,7 @@ import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { InventoryPage } from './pages/InventoryPage'
 import { CustomersPage } from './pages/CustomersPage'
+import { MonitoringPage } from './pages/MonitoringPage'
 
 /**
  * Halaman peta dimuat terpisah: MapLibre menyumbang sebagian besar ukuran
@@ -54,8 +56,9 @@ function LoginRoute() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Routes>
+      <ToastProvider>
+        <AuthProvider>
+          <Routes>
           <Route path="/login" element={<LoginRoute />} />
           <Route
             element={
@@ -88,6 +91,14 @@ export default function App() {
               element={
                 <RequirePermission permission="customer.customer.view">
                   <CustomersPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="monitoring"
+              element={
+                <RequirePermission permission="monitoring.dashboard.view">
+                  <MonitoringPage />
                 </RequirePermission>
               }
             />
@@ -133,8 +144,9 @@ export default function App() {
             />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AuthProvider>
+          </Routes>
+        </AuthProvider>
+      </ToastProvider>
     </BrowserRouter>
   )
 }

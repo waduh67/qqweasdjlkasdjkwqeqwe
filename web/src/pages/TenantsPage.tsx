@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import { useCan } from '../auth/useCan'
+import { StatusBadge } from '../components/ui'
+import { IconPlus } from '../components/icons'
 
 interface Tenant {
   id: string
@@ -40,12 +42,15 @@ export function TenantsPage() {
   }
 
   return (
-    <div className="stack">
+    <div className="stack" style={{ gap: '1.25rem' }}>
       <div className="spread">
-        <h2 style={{ margin: 0 }}>Tenant (Platform)</h2>
+        <div>
+          <h1 className="page-title">Tenant</h1>
+          <p className="page-sub">Onboarding ISP baru dan kelola status tenant di platform.</p>
+        </div>
         {can('platform.tenant.create') && (
           <button className="primary" onClick={() => setDraft({ ...EMPTY })}>
-            Onboarding tenant
+            <IconPlus size={15} /> Onboarding tenant
           </button>
         )}
       </div>
@@ -69,7 +74,7 @@ export function TenantsPage() {
                 <td>{tenant.slug}</td>
                 <td className="muted">{tenant.name}</td>
                 <td>
-                  <span className="badge">{tenant.status}</span>
+                  <StatusBadge status={tenant.status} />
                 </td>
                 <td>
                   {can('platform.tenant.manage') && tenant.slug !== 'platform' && (

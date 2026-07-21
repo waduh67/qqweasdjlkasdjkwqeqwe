@@ -13,6 +13,11 @@ interface OltRepository {
 
     fun findAllByIds(ids: Set<UUID>): List<Olt>
 
+    fun findByCode(code: String): Olt?
+
+    /** Seluruh id OLT tenant ini — dipakai saat collector ditugasi "semua OLT". */
+    fun findAllIds(): Set<UUID>
+
     fun search(query: String, siteId: UUID?, pageRequest: PageRequest): Page<Olt>
 
     fun existsByCode(code: String): Boolean

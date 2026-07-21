@@ -3,12 +3,15 @@ import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type { CustomerTrace, CustomerView, OdpView } from '../api/network'
 import { useCan } from '../auth/useCan'
+import { EmptyState, StatusBadge, useToast } from '../components/ui'
+import { IconCustomers, IconPlus, IconRoute, IconSearch } from '../components/icons'
 
+/** Warna kesehatan optik selaras token status. */
 const HEALTH_COLOR: Record<string, string> = {
-  GOOD: '#22c55e',
-  WARNING: '#f59e0b',
-  CRITICAL: '#ef4444',
-  UNKNOWN: '#64748b',
+  GOOD: 'var(--good-ink)',
+  WARNING: 'var(--warning-ink)',
+  CRITICAL: 'var(--critical-ink)',
+  UNKNOWN: 'var(--muted)',
 }
 
 const EMPTY_CUSTOMER = { code: '', name: '', phone: '', address: '', longitude: '', latitude: '' }
@@ -22,10 +25,11 @@ const EMPTY_CUSTOMER = { code: '', name: '', phone: '', address: '', longitude: 
  */
 export function CustomersPage() {
   const { can } = useCan()
+  const toast = useToast()
   const [customers, setCustomers] = useState<CustomerView[]>([])
   const [odps, setOdps] = useState<OdpView[]>([])
   const [query, setQuery] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState<typeof EMPTY_CUSTOMER | null>(null)
   const [trace, setTrace] = useState<CustomerTrace | null>(null)
 
@@ -35,11 +39,12 @@ export function CustomersPage() {
         `/api/customers?size=100&query=${encodeURIComponent(query)}`,
       )
       setCustomers(page.content)
-      setError(null)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Gagal memuat pelanggan')
+      toast.error(err instanceof ApiError ? err.message : 'Gagal memuat pelanggan')
+    } finally {
+      setLoading(false)
     }
-  }, [query])
+  }, [query, toast])
 
   useEffect(() => {
     void reload()
@@ -52,34 +57,42 @@ export function CustomersPage() {
       .catch(() => setOdps([]))
   }, [])
 
-  const run = async (action: () => Promise<unknown>) => {
-    setError(null)
+  const run = async (action: () => Promise<unknown>, okMessage?: string) => {
     try {
       await action()
       await reload()
+      if (okMessage) toast.success(okMessage)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Operasi gagal')
+      toast.error(err instanceof ApiError ? err.message : 'Operasi gagal')
     }
   }
 
   return (
-    <div className="stack">
+    <div className="stack" style={{ gap: '1.25rem' }}>
       <div className="spread">
-        <h2 style={{ margin: 0 }}>Pelanggan</h2>
+        <div>
+          <h1 className="page-title">Pelanggan</h1>
+          <p className="page-sub">Data pelanggan, perangkat ONU, dan penempatannya di ODP.</p>
+        </div>
         {can('customer.customer.create') && (
           <button className="primary" onClick={() => setDraft({ ...EMPTY_CUSTOMER })}>
-            Tambah pelanggan
+            <IconPlus size={15} /> Tambah pelanggan
           </button>
         )}
       </div>
 
-      <input
-        placeholder="Cari nama, kode, alamat, atau nomor telepon…"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
-
-      {error && <p className="error">{error}</p>}
+      <div style={{ position: 'relative' }}>
+        <IconSearch
+          size={16}
+          style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }}
+        />
+        <input
+          placeholder="Cari nama, kode, alamat, atau nomor telepon…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          style={{ paddingLeft: '2.2rem' }}
+        />
+      </div>
 
       {draft && (
         <div className="card stack">
@@ -144,12 +157,20 @@ export function CustomersPage() {
             void api
               .get<CustomerTrace>(`/api/gis/trace/customers/${customer.id}`)
               .then(setTrace)
-              .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal menelusuri jalur'))
+              .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Gagal menelusuri jalur'))
           }
         />
       ))}
 
-      {customers.length === 0 && <p className="muted">Belum ada pelanggan yang cocok.</p>}
+      {!loading && customers.length === 0 && (
+        <div className="card">
+          <EmptyState
+            title={query ? 'Tidak ada pelanggan yang cocok' : 'Belum ada pelanggan'}
+            hint={query ? 'Coba kata kunci lain.' : 'Tambahkan pelanggan pertama untuk mulai memasang ONU.'}
+            icon={<IconCustomers size={32} />}
+          />
+        </div>
+      )}
 
       {trace && <TracePanel trace={trace} onClose={() => setTrace(null)} />}
     </div>
@@ -164,7 +185,7 @@ function CustomerCard({
 }: {
   customer: CustomerView
   odps: OdpView[]
-  onRun: (action: () => Promise<unknown>) => Promise<void>
+  onRun: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
   onTrace: () => void
 }) {
   const { can } = useCan()
@@ -175,17 +196,27 @@ function CustomerCard({
     <div className="card stack">
       <div className="spread">
         <div>
-          <strong>{customer.name}</strong> <span className="badge">{customer.code}</span>{' '}
-          <span className="badge">{customer.status}</span>
-          {customer.awaitingInstallation && <span className="badge">menunggu instalasi</span>}
-          <div className="muted" style={{ fontSize: '0.85rem' }}>
+          <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+            <strong style={{ fontSize: '0.98rem' }}>{customer.name}</strong>
+            <span className="badge">{customer.code}</span>
+            <StatusBadge status={customer.status} />
+            {customer.awaitingInstallation && <StatusBadge status="PENDING" label="menunggu instalasi" />}
+          </div>
+          <div className="muted" style={{ fontSize: '0.85rem', marginTop: '0.2rem' }}>
             {customer.address} · {customer.phone ?? 'tanpa nomor'}
           </div>
         </div>
         <div className="row">
-          <button onClick={onTrace}>Telusur jalur</button>
+          <button onClick={onTrace}>
+            <IconRoute size={15} /> Telusur jalur
+          </button>
           {can('customer.customer.delete') && (
-            <button onClick={() => void onRun(() => api.del(`/api/customers/${customer.id}`))}>Hapus</button>
+            <button
+              className="ghost danger"
+              onClick={() => void onRun(() => api.del(`/api/customers/${customer.id}`), 'Pelanggan dihapus')}
+            >
+              Hapus
+            </button>
           )}
         </div>
       </div>
@@ -202,13 +233,13 @@ function CustomerCard({
             <span style={{ fontSize: '0.85rem' }}>
               {onu.serialNumber}{' '}
               {onu.odpCode ? (
-                <span className="badge">
+                <span className="badge accent">
                   {onu.odpCode} port {onu.odpPortNumber}
                 </span>
               ) : (
                 <span className="badge">belum terpasang</span>
               )}{' '}
-              <span style={{ color: HEALTH_COLOR[onu.opticalHealth] }}>
+              <span style={{ color: HEALTH_COLOR[onu.opticalHealth], fontWeight: 600 }}>
                 {onu.installRxPowerDbm != null ? `${onu.installRxPowerDbm} dBm` : onu.opticalHealth}
               </span>
             </span>

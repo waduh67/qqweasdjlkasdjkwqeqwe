@@ -5,9 +5,11 @@ Platform SaaS multi-tenant untuk manajemen infrastruktur FTTH: inventory jaringa
 incident management dengan alarm correlation, work order teknisi, dan RBAC
 super-dinamis.
 
-**Status: Phase 0 & 1 selesai** — multi-tenancy, IAM/RBAC dinamis, audit, inventory
-jaringan (OLT→ODC→ODP), pelanggan + ONU, dan peta vector-tile sudah berjalan
-end-to-end. Monitoring menyusul (lihat [Roadmap](#roadmap)).
+**Status: Phase 0, 1 & 2a selesai** — multi-tenancy, IAM/RBAC dinamis, audit,
+inventory jaringan (OLT→ODC→ODP), pelanggan + ONU, peta vector-tile, serta
+collector agent + metrik TimescaleDB + mesin alarm sudah berjalan end-to-end.
+Adapter vendor sungguhan (Phase 2b) menunggu verifikasi terhadap perangkat
+fisik (lihat [Roadmap](#roadmap)).
 
 ---
 
@@ -16,12 +18,13 @@ end-to-end. Monitoring menyusul (lihat [Roadmap](#roadmap)).
 | Bagian | Teknologi |
 |---|---|
 | Backend | Spring Boot 4.1 + Kotlin, JDK 21, Spring Modulith (modular monolith) |
-| Database | PostgreSQL + PostGIS (TimescaleDB mulai Phase 2) |
+| Database | PostgreSQL + PostGIS + TimescaleDB (metrik deret waktu) |
 | Frontend | React 19 + TypeScript + Vite + MapLibre GL (vector tiles) |
 | Auth | JWT HS256 (access) + refresh token opaque ber-rotasi |
-| Collector | Kotlin agent (Phase 2) — SNMP/Telnet ke OLT, push outbound |
+| Collector | Kotlin agent tanpa Spring — SNMP ke OLT, push outbound |
 
-Monorepo: `server/` (API), `web/` (SPA), `collector/` (placeholder Phase 2).
+Monorepo: `server/` (API), `web/` (SPA), `collector/` (agent), `contract/`
+(tipe wire collector↔server, Kotlin murni tanpa framework).
 
 ---
 
@@ -51,18 +54,20 @@ dipetakan di adapter. Batas antar-module ditegakkan otomatis oleh test
 `ModularityTests`.
 
 Module: `common` (shared kernel, OPEN), `tenancy`, `iam`, `audit`, `network`,
-`customer`, `gis`.
+`customer`, `gis`, `monitoring`.
 
 ### Ketergantungan antar-module
 
 ```
-gis ──▶ network ◀── customer
-         ▲              │
-         └──────────────┘   customer memakai NetworkApi saat memasang ONU
+        monitoring ──▶ network ◀── customer
+              │           ▲            │
+              └───────────┴────────────┘
+                     gis ──▶ (network, customer)
 ```
 
-Aturannya satu arah: `customer → network`, `gis → {network, customer}`. Dua kasus
-yang menggoda untuk melanggarnya diselesaikan tanpa siklus:
+Aturannya satu arah: `customer → network`, `gis → {network, customer}`,
+`monitoring → {network, customer}`. Tiga kasus yang menggoda untuk melanggarnya
+diselesaikan tanpa siklus:
 
 - **Aturan port ODP.** Kapasitas & status ODP dimiliki `network`, tapi yang tahu
   port mana terpakai adalah `customer`. Jadi `customer` menyuplai daftar port
@@ -73,6 +78,10 @@ yang menggoda untuk melanggarnya diselesaikan tanpa siklus:
   `OdpUsageProbe` dan `customer` yang mengimplementasikannya. Tanpa ini,
   menghapus ODP berhasil diam-diam dan menyisakan ONU menggantung — pelanggan
   tetap tersambung di lapangan tapi lenyap dari peta.
+- **Status ONU dari jaringan.** `monitoring` tahu status sebenarnya dari OLT,
+  tapi agregat ONU dimiliki `customer`. Jadi monitoring melapor lewat
+  `CustomerApi.recordObservedOnuStatuses` dan customer yang memutuskan — hanya
+  baris yang benar-benar berubah yang ditulis.
 
 ### Multi-tenancy (dua lapis)
 
@@ -143,6 +152,86 @@ adalah repeated field protobuf sehingga hasil sambungan tetap tile yang sah.
 > yang diambil langsung dari pool tidak punya GUC itu, sehingga RLS menolak semua
 > baris dan peta kosong tanpa penjelasan.
 
+**Menggambar kabel di peta.** Jalur kabel digambar langsung di peta, bukan
+diketik koordinatnya: klik perangkat sumber → klik titik belok mengikuti lapangan
+→ klik perangkat tujuan. Ujung **di-snap** ke perangkat nyata (`queryRenderedFeatures`)
+sehingga grafik selalu tersambung — telusur jalur & "siapa terdampak kalau putus"
+bergantung padanya. Tipe kabel ditebak dari pasangan ujung (server tetap penjaga),
+panjang dihitung dari geometri. Jalur bisa diedit dengan menggeser titik belok.
+Logikanya ada di `web/src/map/cableTool.ts` (imperatif, terpisah dari React).
+
+**Peta gaya NOC & status hidup.** Basemap gelap, kabel ramping dengan halo glow
+dan dash beranimasi (kesan "mengalir"), aset sebagai lingkaran bercahaya. Warna
+ONU pelanggan ikut status hidup dari tile (online hijau / LOS merah / offline
+kuning). Kabel yang **hilirnya bermasalah disorot merah berdenyut**: endpoint
+`GET /api/gis/impacted` menyusun dari alarm hidup (monitoring) → pelanggan/ODP
+terdampak (customer) → geometri kabel yang menyentuhnya (network), lalu klien
+menggambarnya sebagai overlay dan menyegarkannya tiap 30 detik. Komposisi lintas
+module lewat kontrak publik — `gis` tidak menyentuh tabel milik module lain.
+
+### Monitoring & collector
+
+```
+┌── jaringan ISP ──┐                    ┌──── cloud ────┐
+│ OLT ◀─SNMP─ agent├──HTTPS outbound───▶│ /api/collector│
+└──────────────────┘  (tanpa buka port) └───────┬───────┘
+                                                ▼
+                              onu_metric (hypertable) → mesin alarm → alarm
+```
+
+Collector selalu menyambung **keluar**. ISP tidak perlu membuka port atau
+port-forwarding, dan server tak pernah perlu tahu alamat jaringan pelanggan.
+
+- **Konfigurasi datang dari server**, dikirim balik pada tiap denyut. Operator
+  menambah OLT atau mengubah interval dari UI dan collector menyesuaikan pada
+  siklus berikutnya — tanpa siapa pun masuk ke mesin collector.
+- **Autentikasi API key** di rantai keamanan terpisah (`CollectorSecurityConfig`).
+  Kuncinya hanya disimpan sebagai SHA-256 dan ditampilkan sekali saat dibuat.
+  Tabel `collector` sengaja **tanpa RLS** — barisnya dicari sebelum tenant
+  diketahui, persis pola `refresh_token`; pemeriksaan tenant dilakukan eksplisit
+  di `CollectorService`.
+- **Permukaan collector hanya dua endpoint dan keduanya menulis**, jadi API key
+  yang bocor pun tidak bisa membaca data pelanggan.
+- **Batch punya id.** Koneksi ISP yang putus-nyambung membuat collector mengirim
+  ulang; `ingest_batch` + `ON CONFLICT DO NOTHING` membuat pemeriksaan dan
+  penulisan jadi satu operasi atomik, sehingga metrik tidak terhitung ganda.
+- **Vendor = data, bukan kelas.** `MibProfile` berisi OID dan skala satuan per
+  vendor (ZTE 0,001 dBm; Huawei/Fiberhome 0,01 dBm); alurnya sama untuk semua.
+  Menambah vendor = menambah satu profil.
+- **Simulator OLT** (`FTTH_COLLECTOR_SIMULATOR=true`) menggantikan seluruh adapter
+  SNMP dan menghasilkan populasi ONU yang stabil antar siklus, termasuk satu LOS,
+  satu offline, dan beberapa yang redamannya memburuk — supaya mesin alarm benar-
+  benar teruji tanpa perangkat fisik.
+
+**Alarm** dirancang agar tidak diabaikan orang: satu entitas hanya punya satu
+alarm terbuka per jenis (indeks unik parsial `WHERE status <> 'CLEARED'`), kondisi
+berulang menaikkan `occurrenceCount` alih-alih menambah baris, dan kondisi yang
+pulih menutup alarmnya sendiri. `SilentCollectorWatchdog` menutup lubang paling
+mudah luput: kalau collector-nya sendiri mati, tidak ada data masuk, tidak ada
+alarm terpicu, dan dashboard tampak tenang justru saat pemantauan sedang buta.
+
+> ⚠️ **TimescaleDB: RLS mengecualikan kompresi dan continuous aggregate.** Sudah
+> diuji, dan larangannya dua arah:
+>
+> ```
+> RLS dulu lalu columnstore : "columnstore cannot be used on table with row security"
+> columnstore dulu lalu RLS : "operation not supported on hypertables that have
+>                              columnstore enabled"
+> CREATE MATERIALIZED VIEW  : "cannot create continuous aggregate on hypertable
+>                              with row security"
+> ```
+>
+> Dipilih **isolasi tenant**, karena itu properti keamanan inti sistem ini
+> sementara kompresi hanya soal biaya disk yang sudah dibatasi retensi 90 hari.
+> Yang tetap didapat dari TimescaleDB: partisi chunk otomatis, chunk exclusion,
+> dan kebijakan retensi. Rollup jangka panjang, bila perlu, dikerjakan aplikasi
+> per tenant.
+
+Metrik ditulis lewat **JDBC batch di koneksi Hibernate** (`Session.doWork`), bukan
+JPA: metrik bukan agregat, dan melacak ribuan objek yang tak satu pun akan diubah
+hanya menghabiskan memori. Memakai `DataSource` langsung akan melewatkan GUC
+tenant dan RLS menolak seluruh INSERT.
+
 ---
 
 ## Menjalankan
@@ -175,8 +264,18 @@ sudo -u postgres psql -d ftth      -c 'CREATE EXTENSION IF NOT EXISTS postgis;'
 sudo -u postgres psql -d ftth_test -c 'CREATE EXTENSION IF NOT EXISTS postgis;'
 ```
 
-Migrasi `V2` gagal dengan pesan jelas bila extension-nya belum ada — jauh lebih
-baik daripada gagal saat query peta pertama.
+TimescaleDB juga, dan ia perlu di-preload sebelum Postgres start:
+
+```bash
+sudo pacman -S timescaledb       # atau: apt install timescaledb-2-postgresql-17
+sudo -u postgres psql -c "ALTER SYSTEM SET shared_preload_libraries = 'timescaledb';"
+sudo systemctl restart postgresql
+sudo -u postgres psql -d ftth      -c 'CREATE EXTENSION IF NOT EXISTS timescaledb;'
+sudo -u postgres psql -d ftth_test -c 'CREATE EXTENSION IF NOT EXISTS timescaledb;'
+```
+
+Migrasi `V2`/`V3` gagal dengan pesan jelas bila extension-nya belum ada — jauh
+lebih baik daripada gagal saat query peta atau ingestion pertama.
 
 ### 2. Backend
 
@@ -194,6 +293,23 @@ cd web && npm install && npm run dev
 ```
 
 Buka <http://localhost:5173> (request `/api` di-proxy ke `:8080`).
+
+### 4. Collector (opsional)
+
+Buat collector di UI **Monitoring → Buat**, salin API key-nya (hanya muncul
+sekali), lalu:
+
+```bash
+./gradlew :collector:installDist
+export FTTH_SERVER_URL=http://localhost:8080
+export FTTH_COLLECTOR_KEY=ftthc_xxx        # dari UI
+export FTTH_COLLECTOR_SIMULATOR=true       # OLT tiruan, tanpa perangkat fisik
+./collector/build/install/collector/bin/collector
+```
+
+Tambahkan `FTTH_COLLECTOR_ONCE=true` untuk sekali jalan (berguna untuk pengujian
+atau pemasangan bergaya systemd timer). Tanpa `FTTH_COLLECTOR_SIMULATOR`, agent
+memakai SNMP sungguhan ke `managementIp` tiap OLT.
 
 ### Akun bawaan (dev)
 
@@ -229,6 +345,11 @@ ulang.
   di luar kapasitas → 400), penolakan hapus ODP yang masih dipakai, panel ODP &
   telusur jalur lintas-module, kerahasiaan community string SNMP, validasi
   pasangan ujung kabel, isolasi tenant untuk aset jaringan, dan isi vector tile.
+- `MonitoringEndToEndIT` — gerbang collector (tanpa key / key salah / JWT
+  pengguna semuanya 401, versi protokol beda 426), API key tak pernah
+  dikembalikan lagi, deteksi ONU liar, deduplikasi batch, LOS → alarm kritis,
+  ambang redaman, peredaman banjir alarm, penutupan otomatis saat pulih, riwayat
+  redaman, dan isolasi tenant untuk metrik & alarm.
 
 Test integrasi memakai Postgres lokal (`application-test.yml`), bukan
 Testcontainers, karena mesin pengembangan ini tidak punya Docker.
@@ -259,6 +380,11 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
 | `GET /api/gis/tiles/{z}/{x}/{y}.mvt` | `gis.map.view` |
 | `GET /api/gis/odps/{id}` | `gis.map.view` + `network.odp.view` |
 | `GET /api/gis/trace/customers/{id}` | `gis.map.view` + `customer.customer.view` |
+| `GET /api/monitoring/dashboard` | `monitoring.dashboard.view` |
+| `GET/POST/PUT/DELETE /api/monitoring/collectors` | `monitoring.collector.*` |
+| `GET /api/monitoring/alarms` · `/{id}/acknowledge` · `/clear` | `monitoring.alarm.view` / `.ack` |
+| `GET /api/monitoring/onus/{id}/history` | `monitoring.metric.view` |
+| `POST /api/collector/heartbeat` · `/metrics` | API key collector (bukan RBAC) |
 
 ---
 
@@ -267,8 +393,12 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
 - **Phase 0 — Fondasi** ✅ tenancy + IAM/RBAC + audit
 - **Phase 1 — Inventory + pelanggan + GIS** ✅ OLT→ODC→ODP, kabel bergeometri,
   ONU pada port ODP, peta vector-tile, panel ODP, telusur jalur + anggaran redaman
-- **Phase 2** — Monitoring: collector agent, adapter vendor (ZTE/Huawei/Fiberhome),
-  metrik TimescaleDB, alarm
+- **Phase 2a — Monitoring** ✅ collector agent (outbound, API key), protokol
+  ber-versi, metrik TimescaleDB, mesin alarm anti-banjir, watchdog collector
+  membisu, simulator OLT
+- **Phase 2b** — Verifikasi adapter SNMP terhadap OLT sungguhan: OID di
+  `MibProfiles` disusun dari dokumentasi MIB publik dan **belum diuji terhadap
+  perangkat fisik**; firmware berbeda kerap menggeser sub-tree
 - **Phase 3** — Incident + alarm correlation + notifikasi proaktif ke pelanggan
 - **Phase 4** — Work order + PWA teknisi (offline, GPS, foto bukti)
 - **Phase 5** — What-if simulation, predictive maintenance, OTDR plotting,

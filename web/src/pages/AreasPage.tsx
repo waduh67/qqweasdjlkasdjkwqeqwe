@@ -30,7 +30,7 @@ export function AreasPage() {
 
   return (
     <div className="stack">
-      <h2 style={{ margin: 0 }}>Area / Wilayah</h2>
+      <h1 className="page-title">Area / Wilayah</h1>
       <p className="muted">
         Area adalah dimensi <em>scope</em> pada RBAC: pengguna yang dibatasi ke area tertentu hanya melihat aset dan
         tiket di area itu.

@@ -59,6 +59,10 @@ class CablePersistenceAdapter(
     override fun findByEndpoint(node: NetworkNodeRef): List<Cable> =
         jpa.findAll(NetworkSpecifications.endpointIs(node.kind, node.id)).map { it.toDomain() }
 
+    override fun findByEndpointNodeIds(nodeIds: Set<UUID>): List<Cable> =
+        if (nodeIds.isEmpty()) emptyList()
+        else jpa.findAll(NetworkSpecifications.endpointInNodes(nodeIds)).map { it.toDomain() }
+
     override fun existsByCode(code: String): Boolean = jpa.existsByCode(code)
 
     override fun deleteById(id: UUID) = jpa.deleteById(id)

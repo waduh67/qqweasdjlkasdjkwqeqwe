@@ -13,6 +13,11 @@ interface OnuRepository {
 
     fun findByCustomerIds(customerIds: Set<UUID>): List<Onu>
 
+    fun findAllByIds(ids: Set<UUID>): List<Onu>
+
+    /** Pencocokan massal serial yang dilaporkan OLT ke ONU terdaftar. */
+    fun findBySerialNumbers(serialNumbers: Set<String>): List<Onu>
+
     /** ONU yang terpasang pada sebuah ODP, terurut menurut nomor port. */
     fun findByOdpId(odpId: UUID): List<Onu>
 

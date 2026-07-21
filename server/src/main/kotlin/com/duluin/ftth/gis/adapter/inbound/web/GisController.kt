@@ -2,6 +2,7 @@ package com.duluin.ftth.gis.adapter.inbound.web
 
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.gis.application.port.inbound.CustomerTrace
+import com.duluin.ftth.gis.application.port.inbound.ImpactedOverlay
 import com.duluin.ftth.gis.application.port.inbound.MapQuery
 import com.duluin.ftth.gis.application.port.inbound.OdpInspection
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
@@ -52,6 +53,11 @@ class GisController(
     @GetMapping("/trace/customers/{id}")
     @PreAuthorize("@authz.can('gis.map.view') and @authz.can('customer.customer.view')")
     fun traceCustomer(@PathVariable id: UUID): CustomerTrace = mapQuery.traceCustomer(id)
+
+    /** Kabel yang hilirnya bermasalah (alarm hidup) — untuk disorot merah di peta. */
+    @GetMapping("/impacted")
+    @PreAuthorize("@authz.can('gis.map.view')")
+    fun impacted(): ImpactedOverlay = mapQuery.impactedCables()
 
     /**
      * Koordinat tile di luar rentang membuat `ST_TileEnvelope` melempar galat

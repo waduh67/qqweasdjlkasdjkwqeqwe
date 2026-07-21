@@ -39,6 +39,63 @@ interface NetworkApi {
      * sehingga tidak ada module yang perlu membaca tabel milik module lain.
      */
     fun renderMapTile(z: Int, x: Int, y: Int, areaIds: Set<UUID>?): ByteArray
+
+    /** Memetakan kode OLT yang dilaporkan collector kembali ke OLT di inventory. */
+    fun findOltByCode(code: String): OltRef?
+
+    fun findOltsByIds(ids: Set<UUID>): List<OltRef>
+
+    fun listAllOltIds(): Set<UUID>
+
+    /**
+     * Data yang dibutuhkan collector untuk mem-polling sekumpulan OLT, TERMASUK
+     * community string SNMP dalam bentuk terbaca.
+     *
+     * Dipisahkan dari [findOltsByIds] dan dinamai eksplisit supaya jelas bahwa
+     * ini satu-satunya jalan kredensial perangkat keluar dari module network.
+     * Pemanggilnya hanya endpoint collector yang sudah terautentikasi; API
+     * pengguna biasa tidak pernah menyentuhnya.
+     */
+    fun findPollingTargets(oltIds: Set<UUID>): List<OltPollingTarget>
+
+    /**
+     * Kabel yang salah satu ujungnya menyentuh sebuah simpul dalam [nodeIds],
+     * beserta geometrinya. Dipakai gis untuk mewarnai kabel yang hilirnya
+     * bermasalah tanpa module lain menyentuh tabel kabel langsung.
+     */
+    fun cablesTouchingNodes(nodeIds: Set<UUID>): List<CablePath>
+}
+
+/** Kabel beserta jalur geometrinya untuk kebutuhan overlay peta. */
+data class CablePath(
+    val id: UUID,
+    val code: String,
+    val cableType: String,
+    val points: List<Coordinate>,
+    val fromId: UUID,
+    val toId: UUID,
+)
+
+/** Pandangan ringkas sebuah OLT untuk konsumen lintas-module. */
+data class OltRef(
+    val id: UUID,
+    val code: String,
+    val name: String,
+    val vendor: String,
+    val siteId: UUID,
+    val active: Boolean,
+)
+
+/** OLT beserta kredensialnya, khusus untuk collector. */
+data class OltPollingTarget(
+    val id: UUID,
+    val code: String,
+    val vendor: String,
+    val host: String?,
+    val snmpCommunity: String?,
+) {
+    /** Tanpa alamat, collector tidak punya apa pun untuk dihubungi. */
+    val pollable: Boolean get() = !host.isNullOrBlank()
 }
 
 /** Pandangan ringkas sebuah ODP untuk konsumen lintas-module. */

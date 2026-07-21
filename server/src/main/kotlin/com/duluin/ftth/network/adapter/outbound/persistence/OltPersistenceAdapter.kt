@@ -59,6 +59,10 @@ class OltPersistenceAdapter(
         return jpa.findAll(spec, pageRequest.toPageable()).toDomainPage().map { it.toDomain() }
     }
 
+    override fun findByCode(code: String): Olt? = jpa.findByCode(code)?.toDomain()
+
+    override fun findAllIds(): Set<UUID> = jpa.findAllIds()
+
     override fun existsByCode(code: String): Boolean = jpa.existsByCode(code)
 
     override fun countBySiteId(siteId: UUID): Long = jpa.countBySiteId(siteId)

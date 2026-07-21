@@ -4,11 +4,20 @@ kotlin = "2.3.21"
 spring-boot = "4.1.0"
 spring-modulith = "2.1.0"
 springdoc = "3.0.3"
+snmp4j = "3.8.2"
+jackson = "3.0.4"
+logback = "1.5.20"
 
 [libraries]
 spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
 spring-modulith-bom = { module = "org.springframework.modulith:spring-modulith-bom", version.ref = "spring-modulith" }
 springdoc-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+
+# Dipakai collector saja — agent sengaja tidak menarik Spring sama sekali.
+snmp4j = { module = "org.snmp4j:snmp4j", version.ref = "snmp4j" }
+jackson-databind = { module = "tools.jackson.core:jackson-databind", version.ref = "jackson" }
+jackson-kotlin = { module = "tools.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

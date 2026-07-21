@@ -41,6 +41,13 @@ class OnuPersistenceAdapter(
     override fun findByCustomerIds(customerIds: Set<UUID>): List<Onu> =
         if (customerIds.isEmpty()) emptyList() else jpa.findByCustomerIdIn(customerIds).map { it.toDomain() }
 
+    override fun findAllByIds(ids: Set<UUID>): List<Onu> =
+        if (ids.isEmpty()) emptyList() else jpa.findAllById(ids).map { it.toDomain() }
+
+    override fun findBySerialNumbers(serialNumbers: Set<String>): List<Onu> =
+        if (serialNumbers.isEmpty()) emptyList()
+        else jpa.findBySerialNumberIn(serialNumbers).map { it.toDomain() }
+
     override fun findByOdpId(odpId: UUID): List<Onu> =
         jpa.findByOdpIdOrderByOdpPortNumber(odpId).map { it.toDomain() }
 

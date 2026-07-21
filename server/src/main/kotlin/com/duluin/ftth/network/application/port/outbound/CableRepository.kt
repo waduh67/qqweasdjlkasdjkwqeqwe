@@ -18,6 +18,9 @@ interface CableRepository {
     /** Kabel yang menyentuh simpul tertentu di salah satu ujungnya. */
     fun findByEndpoint(node: NetworkNodeRef): List<Cable>
 
+    /** Kabel yang salah satu ujung id-nya ada di [nodeIds] (abai jenis simpul). */
+    fun findByEndpointNodeIds(nodeIds: Set<UUID>): List<Cable>
+
     fun existsByCode(code: String): Boolean
 
     fun deleteById(id: UUID)

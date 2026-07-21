@@ -28,6 +28,7 @@ interface OnuJpaRepository : JpaRepository<OnuJpaEntity, UUID> {
     fun findByCustomerIdIn(customerIds: Collection<UUID>): List<OnuJpaEntity>
     fun findByOdpIdOrderByOdpPortNumber(odpId: UUID): List<OnuJpaEntity>
     fun existsBySerialNumber(serialNumber: String): Boolean
+    fun findBySerialNumberIn(serialNumbers: Collection<String>): List<OnuJpaEntity>
 
     @Query(
         """

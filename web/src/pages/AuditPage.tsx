@@ -19,7 +19,7 @@ export function AuditPage() {
 
   return (
     <div className="stack">
-      <h2 style={{ margin: 0 }}>Jejak Audit</h2>
+      <h1 className="page-title">Jejak Audit</h1>
       {error && <p className="error">{error}</p>}
       <div className="card">
         <table>

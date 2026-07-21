@@ -6,10 +6,13 @@ import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.common.security.areaScope
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.gis.application.port.inbound.CustomerTrace
+import com.duluin.ftth.gis.application.port.inbound.ImpactedCable
+import com.duluin.ftth.gis.application.port.inbound.ImpactedOverlay
 import com.duluin.ftth.gis.application.port.inbound.MapQuery
 import com.duluin.ftth.gis.application.port.inbound.OdpInspection
 import com.duluin.ftth.gis.application.port.inbound.TraceHop
 import com.duluin.ftth.gis.application.port.inbound.UpstreamView
+import com.duluin.ftth.monitoring.MonitoringApi
 import com.duluin.ftth.network.NetworkApi
 import com.duluin.ftth.network.UpstreamPath
 import org.springframework.stereotype.Service
@@ -22,6 +25,7 @@ import kotlin.math.roundToInt
 class MapService(
     private val networkApi: NetworkApi,
     private val customerApi: CustomerApi,
+    private val monitoringApi: MonitoringApi,
     private val currentUser: CurrentUserProvider,
 ) : MapQuery {
 
@@ -83,6 +87,68 @@ class MapService(
             estimatedLossDb = upstream?.let { estimateLoss(it, customer.location) },
             hops = buildHops(customer.location, upstream),
         )
+    }
+
+    /**
+     * Menyusun kabel-kabel yang hilirnya bermasalah dari alarm hidup.
+     *
+     * Alur komposisinya: alarm (monitoring) → entitas terdampak. Untuk alarm ONU,
+     * dipetakan ke pelanggan & ODP-nya (customer) — sebab kabel drop berujung di
+     * pelanggan dan kabel distribusi di ODP. Simpul terdampak lalu dicocokkan ke
+     * kabel yang menyentuhnya (network). Keparahan tiap kabel diambil dari ujung
+     * terdampak yang paling parah. Tidak ada module yang menyentuh tabel milik
+     * module lain — semuanya lewat kontrak publik.
+     */
+    override fun impactedCables(): ImpactedOverlay {
+        val impacts = monitoringApi.activeImpacts()
+        if (impacts.isEmpty()) return ImpactedOverlay(emptyList())
+
+        // Keparahan per simpul (id perangkat/pelanggan), diambil yang tertinggi.
+        val nodeSeverity = HashMap<UUID, Int>()
+        fun bump(id: UUID, severity: String) {
+            val rank = severityRank(severity)
+            if (rank > (nodeSeverity[id] ?: -1)) nodeSeverity[id] = rank
+        }
+
+        // Alarm ONU → pelanggan + ODP-nya membawa keparahan alarm itu.
+        val onuSeverity = impacts.filter { it.entityType == "ONU" }.associate { it.entityId to it.severity }
+        if (onuSeverity.isNotEmpty()) {
+            customerApi.placementsForOnus(onuSeverity.keys).forEach { placement ->
+                val severity = onuSeverity[placement.onuId] ?: return@forEach
+                bump(placement.customerId, severity)
+                placement.odpId?.let { bump(it, severity) }
+            }
+        }
+        // Alarm perangkat (ODP/ODC/OLT) langsung membawa id perangkatnya.
+        impacts.filter { it.entityType != "ONU" && it.entityType != "COLLECTOR" }
+            .forEach { bump(it.entityId, it.severity) }
+
+        if (nodeSeverity.isEmpty()) return ImpactedOverlay(emptyList())
+
+        val cables = networkApi.cablesTouchingNodes(nodeSeverity.keys).mapNotNull { cable ->
+            val rank = maxOf(nodeSeverity[cable.fromId] ?: -1, nodeSeverity[cable.toId] ?: -1)
+            if (rank < 0) return@mapNotNull null
+            ImpactedCable(
+                id = cable.id,
+                code = cable.code,
+                cableType = cable.cableType,
+                severity = severityName(rank),
+                points = cable.points,
+            )
+        }
+        return ImpactedOverlay(cables)
+    }
+
+    private fun severityRank(severity: String): Int = when (severity) {
+        "CRITICAL" -> 2
+        "WARNING" -> 1
+        else -> 0
+    }
+
+    private fun severityName(rank: Int): String = when (rank) {
+        2 -> "CRITICAL"
+        1 -> "WARNING"
+        else -> "INFO"
     }
 
     private fun UpstreamPath.toView() = UpstreamView(

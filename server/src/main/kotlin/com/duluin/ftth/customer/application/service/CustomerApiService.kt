@@ -4,6 +4,9 @@ import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.CustomerPlacement
 import com.duluin.ftth.customer.CustomerRef
 import com.duluin.ftth.customer.OdpOccupant
+import com.duluin.ftth.customer.OnuPlacementRef
+import com.duluin.ftth.customer.OnuRef
+import com.duluin.ftth.customer.domain.model.OnuStatus
 import com.duluin.ftth.customer.application.port.outbound.CustomerRepository
 import com.duluin.ftth.customer.application.port.outbound.CustomerTileRenderer
 import com.duluin.ftth.customer.application.port.outbound.OnuRepository
@@ -92,6 +95,45 @@ class CustomerApiService(
             )
         }.sortedBy { it.portNumber }
     }
+
+    override fun findOnusBySerialNumbers(serialNumbers: Set<String>): List<OnuRef> {
+        if (serialNumbers.isEmpty()) return emptyList()
+        val onus = onuRepository.findBySerialNumbers(serialNumbers.mapTo(HashSet()) { it.trim().uppercase() })
+        val customerNames = customerRepository.findAllByIds(onus.mapTo(HashSet()) { it.customerId })
+            .associate { it.id to it.name }
+        return onus.map { onu ->
+            OnuRef(
+                id = onu.id,
+                serialNumber = onu.serialNumber,
+                customerId = onu.customerId,
+                customerName = customerNames[onu.customerId].orEmpty(),
+                odpId = onu.odpId,
+                status = onu.status.name,
+            )
+        }
+    }
+
+    @Transactional
+    override fun recordObservedOnuStatuses(statuses: Map<UUID, String>): Int {
+        if (statuses.isEmpty()) return 0
+        var changed = 0
+        onuRepository.findAllByIds(statuses.keys).forEach { onu ->
+            val observed = statuses[onu.id]?.let { runCatching { OnuStatus.valueOf(it) }.getOrNull() }
+                ?: return@forEach
+            // ONU yang sudah dibongkar sengaja tidak diikutkan: perangkat lama yang
+            // masih menyala di tangan pelanggan tidak boleh menghidupkannya kembali
+            // di data seolah layanannya aktif.
+            if (onu.status == OnuStatus.DISMANTLED || onu.status == observed) return@forEach
+            onu.changeStatus(observed)
+            onuRepository.save(onu)
+            changed++
+        }
+        return changed
+    }
+
+    override fun placementsForOnus(onuIds: Set<UUID>): List<OnuPlacementRef> =
+        if (onuIds.isEmpty()) emptyList()
+        else onuRepository.findAllByIds(onuIds).map { OnuPlacementRef(it.id, it.customerId, it.odpId) }
 
     override fun occupiedPortsOn(odpId: UUID): Set<Int> =
         onuRepository.findByOdpId(odpId).mapNotNullTo(HashSet()) { it.odpPortNumber }

@@ -72,7 +72,7 @@ export function RolesPage() {
   return (
     <div className="stack">
       <div className="spread">
-        <h2 style={{ margin: 0 }}>Role &amp; Izin</h2>
+        <h1 className="page-title">Role &amp; Izin</h1>
         {can('iam.role.create') && (
           <button className="primary" onClick={() => setDraft({ ...EMPTY_DRAFT, permissionIds: new Set() })}>
             Role baru
