@@ -396,10 +396,16 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
 - **Phase 2a — Monitoring** ✅ collector agent (outbound, API key), protokol
   ber-versi, metrik TimescaleDB, mesin alarm anti-banjir, watchdog collector
   membisu, simulator OLT
-- **Phase 2b** — Verifikasi adapter SNMP terhadap OLT sungguhan: OID di
+- **Blast radius di peta** ✅ (potongan fitur unggulan yang dikerjakan lebih awal
+  bersama GIS): perangkat mati menyorot merah seluruh kabel hilirnya, klik kabel
+  merah menampilkan alarm penyebabnya, dan panel ODC mendaftar pelanggan terdampak
+- **Phase 2b** ⏸️ **ditunda** — verifikasi adapter SNMP terhadap OLT fisik. OID di
   `MibProfiles` disusun dari dokumentasi MIB publik dan **belum diuji terhadap
-  perangkat fisik**; firmware berbeda kerap menggeser sub-tree
-- **Phase 3** — Incident + alarm correlation + notifikasi proaktif ke pelanggan
+  perangkat sungguhan**; firmware berbeda kerap menggeser sub-tree. Menunggu
+  perangkat fisik; sementara itu simulator OLT menutupi pengujian.
+- **Phase 3** ▶️ **sedang dikerjakan** — incident + korelasi alarm + notifikasi
+  proaktif: menggabungkan banjir alarm sejenis (mis. 30 ONU di bawah satu ODC)
+  menjadi satu insiden ber-akar-masalah, lalu broadcast ke pelanggan terdampak
 - **Phase 4** — Work order + PWA teknisi (offline, GPS, foto bukti)
 - **Phase 5** — What-if simulation, predictive maintenance, OTDR plotting,
   heatmap utilisasi port
