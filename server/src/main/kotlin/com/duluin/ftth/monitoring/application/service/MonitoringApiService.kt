@@ -14,6 +14,12 @@ class MonitoringApiService(
 
     override fun activeImpacts(): List<AlarmImpact> =
         alarmRepository.findAllOpen().map {
-            AlarmImpact(entityType = it.entityType.name, entityId = it.entityId, severity = it.severity.name)
+            AlarmImpact(
+                entityType = it.entityType.name,
+                entityId = it.entityId,
+                severity = it.severity.name,
+                kind = it.kind.name,
+                label = it.entityLabel,
+            )
         }
 }

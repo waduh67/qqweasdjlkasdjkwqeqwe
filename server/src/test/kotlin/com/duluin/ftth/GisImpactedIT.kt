@@ -136,12 +136,14 @@ class GisImpactedIT {
         // Blast radius: feeder DAN distribusi ikut merah, keduanya CRITICAL.
         val impacted = impactedCodes(token)
         assertThat(impacted).contains("FEEDER", "DISTRIBUTION")
-        val severities: List<String> = JsonPath.read(
-            mockMvc.perform(get("/api/gis/impacted").header("Authorization", "Bearer $token"))
-                .andReturn().response.contentAsString,
-            "$.cables[*].severity",
-        )
+        val overlay = mockMvc.perform(get("/api/gis/impacted").header("Authorization", "Bearer $token"))
+            .andReturn().response.contentAsString
+        val severities: List<String> = JsonPath.read(overlay, "$.cables[*].severity")
         assertThat(severities).contains("CRITICAL")
+        // Tiap kabel merah membawa penyebabnya: alarm OLT tak-terjangkau di hulu,
+        // sehingga klik kabel di peta bisa menjawab "kenapa merah".
+        val causeKinds: List<String> = JsonPath.read(overlay, "$.cables[*].causes[*].kind")
+        assertThat(causeKinds).contains("OLT_UNREACHABLE")
 
         // Denyut pulih: alarm menutup sendiri → tidak ada lagi kabel merah.
         heartbeat(

@@ -201,3 +201,23 @@ export interface CableView {
   toId: string
   status: AssetStatus
 }
+
+/** Satu alarm hidup yang membuat sebuah kabel merah — jawaban "kenapa" saat diklik. */
+export interface ImpactCause {
+  label: string
+  kind: string
+  severity: string
+}
+
+export interface ImpactedCable {
+  id: string
+  code: string
+  cableType: CableType
+  severity: string
+  points: Coordinate[]
+  causes: ImpactCause[]
+}
+
+export interface ImpactedOverlay {
+  cables: ImpactedCable[]
+}

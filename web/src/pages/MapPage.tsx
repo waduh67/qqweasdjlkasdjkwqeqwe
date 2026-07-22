@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { api, ApiError, tokenStore } from '../api/client'
-import type { CableType, CableView, OdpInspection } from '../api/network'
+import type { CableType, CableView, ImpactCause, ImpactedOverlay, OdpInspection } from '../api/network'
 import { useCan } from '../auth/useCan'
 import { StatusBadge, useToast } from '../components/ui'
 import { IconClose, IconRoute } from '../components/icons'
@@ -210,8 +210,12 @@ export function MapPage() {
   const modeRef = useRef<'idle' | 'draw' | 'edit'>('idle')
   const animRef = useRef<number | null>(null)
   const impactedRef = useRef<number | null>(null)
+  // Penyebab per kabel (id → alarm hidup di hilir), diisi tiap overlay disegarkan
+  // dan dibaca saat kabel diklik untuk menjelaskan "kenapa merah".
+  const impactedCauses = useRef<Map<string, ImpactCause[]>>(new Map())
   const [selected, setSelected] = useState<OdpInspection | null>(null)
   const [cable, setCable] = useState<CableView | null>(null)
+  const [cableCauses, setCableCauses] = useState<ImpactCause[]>([])
   const [editing, setEditing] = useState<CableView | null>(null)
   const [toolState, setToolState] = useState<ToolState | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -230,9 +234,8 @@ export function MapPage() {
    */
   const refreshImpacted = async () => {
     try {
-      const overlay = await api.get<{
-        cables: Array<{ id: string; severity: string; points: Array<{ longitude: number; latitude: number }> }>
-      }>('/api/gis/impacted')
+      const overlay = await api.get<ImpactedOverlay>('/api/gis/impacted')
+      impactedCauses.current = new Map(overlay.cables.map((c) => [c.id, c.causes]))
       const src = map.current?.getSource('impacted') as GeoJSONSource | undefined
       src?.setData({
         type: 'FeatureCollection',
@@ -294,6 +297,8 @@ export function MapPage() {
         .get<CableView>(`/api/cables/${id}`)
         .then((c) => {
           setCable(c)
+          // Kalau kabel ini sedang merah, sertakan alarm penyebabnya.
+          setCableCauses(impactedCauses.current.get(id) ?? [])
           setSelected(null)
         })
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail kabel'))
@@ -549,6 +554,7 @@ export function MapPage() {
         {cable && (
           <CablePanel
             cable={cable}
+            causes={cableCauses}
             canEdit={can('network.cable.update')}
             canDelete={can('network.cable.delete')}
             onEdit={() => startEdit(cable)}
@@ -652,6 +658,7 @@ function SaveCablePanel({
 
 function CablePanel({
   cable,
+  causes,
   canEdit,
   canDelete,
   onEdit,
@@ -659,6 +666,7 @@ function CablePanel({
   onClose,
 }: {
   cable: CableView
+  causes: ImpactCause[]
   canEdit: boolean
   canDelete: boolean
   onEdit: () => void
@@ -685,6 +693,7 @@ function CablePanel({
       <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
         {cable.fromKind} → {cable.toKind} · {cable.route.points.length} titik jalur
       </p>
+      {causes.length > 0 && <CableCauses causes={causes} />}
       {(canEdit || canDelete) && (
         <div className="row">
           {canEdit && (
@@ -700,6 +709,48 @@ function CablePanel({
         </div>
       )}
     </aside>
+  )
+}
+
+const ALARM_LABEL: Record<string, string> = {
+  ONU_LOS: 'Sinyal hilang (LOS)',
+  ONU_OFFLINE: 'ONU offline',
+  ONU_LOW_RX: 'Redaman lemah',
+  OLT_UNREACHABLE: 'OLT tak terjangkau',
+  ODC_UNREACHABLE: 'ODC tak terjangkau',
+  COLLECTOR_SILENT: 'Collector membisu',
+}
+
+const CAUSE_DOT: Record<string, string> = { CRITICAL: '#ff3b5c', WARNING: '#fbbf24' }
+
+/** Bagian "kenapa merah": alarm hidup di hilir yang menyorot kabel ini. */
+function CableCauses({ causes }: { causes: ImpactCause[] }) {
+  return (
+    <div className="stack" style={{ gap: '0.4rem', borderTop: '1px solid var(--line, #2a3550)', paddingTop: '0.6rem' }}>
+      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#ff5470' }}>
+        Kenapa merah — {causes.length} alarm hidup di hilir
+      </span>
+      {causes.map((c, i) => (
+        <div key={`${c.kind}-${c.label}-${i}`} className="row" style={{ gap: '0.45rem', alignItems: 'center' }}>
+          <span
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              flexShrink: 0,
+              background: CAUSE_DOT[c.severity] ?? 'var(--muted)',
+            }}
+          />
+          <span className="badge">{ALARM_LABEL[c.kind] ?? c.kind}</span>
+          <span
+            className="muted"
+            style={{ fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          >
+            {c.label}
+          </span>
+        </div>
+      ))}
+    </div>
   )
 }
 

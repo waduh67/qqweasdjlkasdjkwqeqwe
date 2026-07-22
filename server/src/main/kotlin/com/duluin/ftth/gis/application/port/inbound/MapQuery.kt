@@ -40,6 +40,17 @@ data class ImpactedCable(
     /** WARNING atau CRITICAL — keparahan tertinggi di antara ujung yang terdampak. */
     val severity: String,
     val points: List<Coordinate>,
+    /** Alarm hidup yang membuat kabel ini merah — jawaban "kenapa" saat diklik. */
+    val causes: List<ImpactCause>,
+)
+
+/** Satu alasan sebuah kabel tersorot: alarm hidup di hilirnya. */
+data class ImpactCause(
+    val label: String,
+    /** Jenis alarm, mis. ONU_LOS, OLT_UNREACHABLE. */
+    val kind: String,
+    /** WARNING atau CRITICAL. */
+    val severity: String,
 )
 
 data class OdpInspection(

@@ -6,9 +6,11 @@ import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.common.security.areaScope
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.gis.application.port.inbound.CustomerTrace
+import com.duluin.ftth.gis.application.port.inbound.ImpactCause
 import com.duluin.ftth.gis.application.port.inbound.ImpactedCable
 import com.duluin.ftth.gis.application.port.inbound.ImpactedOverlay
 import com.duluin.ftth.gis.application.port.inbound.MapQuery
+import com.duluin.ftth.monitoring.AlarmImpact
 import com.duluin.ftth.gis.application.port.inbound.OdpInspection
 import com.duluin.ftth.gis.application.port.inbound.TraceHop
 import com.duluin.ftth.gis.application.port.inbound.UpstreamView
@@ -103,39 +105,44 @@ class MapService(
         val impacts = monitoringApi.activeImpacts()
         if (impacts.isEmpty()) return ImpactedOverlay(emptyList())
 
-        // Keparahan per simpul (id perangkat/pelanggan), diambil yang tertinggi.
+        // Keparahan per simpul (id perangkat/pelanggan), diambil yang tertinggi,
+        // beserta daftar alarm penyebabnya untuk menjawab "kenapa merah" saat diklik.
         val nodeSeverity = HashMap<UUID, Int>()
-        fun bump(id: UUID, severity: String) {
+        val nodeCauses = HashMap<UUID, MutableList<ImpactCause>>()
+        fun bump(id: UUID, severity: String, cause: ImpactCause) {
             val rank = severityRank(severity)
             if (rank > (nodeSeverity[id] ?: -1)) nodeSeverity[id] = rank
+            nodeCauses.getOrPut(id) { mutableListOf() }.add(cause)
         }
 
-        // Alarm ONU → pelanggan + ODP-nya membawa keparahan alarm itu.
-        val onuSeverity = impacts.filter { it.entityType == "ONU" }.associate { it.entityId to it.severity }
-        if (onuSeverity.isNotEmpty()) {
-            customerApi.placementsForOnus(onuSeverity.keys).forEach { placement ->
-                val severity = onuSeverity[placement.onuId] ?: return@forEach
-                bump(placement.customerId, severity)
-                placement.odpId?.let { bump(it, severity) }
+        // Alarm ONU → pelanggan + ODP-nya membawa keparahan & penyebabnya.
+        val onuImpacts = impacts.filter { it.entityType == "ONU" }.associateBy { it.entityId }
+        if (onuImpacts.isNotEmpty()) {
+            customerApi.placementsForOnus(onuImpacts.keys).forEach { placement ->
+                val impact = onuImpacts[placement.onuId] ?: return@forEach
+                val cause = impact.toCause()
+                bump(placement.customerId, impact.severity, cause)
+                placement.odpId?.let { bump(it, impact.severity, cause) }
             }
         }
         // Alarm perangkat (ODP/ODC/OLT) langsung membawa id perangkatnya.
         impacts.filter { it.entityType != "ONU" && it.entityType != "COLLECTOR" }
-            .forEach { bump(it.entityId, it.severity) }
+            .forEach { bump(it.entityId, it.severity, it.toCause()) }
 
         // Blast radius: OLT/ODC yang mati menjalar ke seluruh perangkat di bawahnya,
-        // sehingga feeder, distribusi, dan drop di hilirnya ikut merah. Keparahannya
-        // diwarisi dari alarm hulu terparah — perangkat mati bersifat kritis bagi
-        // semua yang bergantung padanya.
-        val oltImpactIds = impacts.filter { it.entityType == "OLT" }.mapTo(HashSet()) { it.entityId }
-        val odcImpactIds = impacts.filter { it.entityType == "ODC" }.mapTo(HashSet()) { it.entityId }
-        if (oltImpactIds.isNotEmpty() || odcImpactIds.isNotEmpty()) {
-            val propagated = severityName(
-                impacts.filter { it.entityType == "OLT" || it.entityType == "ODC" }
-                    .maxOf { severityRank(it.severity) },
-            )
+        // sehingga feeder, distribusi, dan drop di hilirnya ikut merah. Penyebabnya
+        // diwarisi dari alarm hulu itu sendiri, jadi kabel di hilir menjawab "kenapa
+        // merah" dengan menunjuk perangkat hulu yang modar.
+        val upstreamOutages = impacts.filter { it.entityType == "OLT" || it.entityType == "ODC" }
+        if (upstreamOutages.isNotEmpty()) {
+            val oltImpactIds = upstreamOutages.filter { it.entityType == "OLT" }.mapTo(HashSet()) { it.entityId }
+            val odcImpactIds = upstreamOutages.filter { it.entityType == "ODC" }.mapTo(HashSet()) { it.entityId }
             val downstream = networkApi.downstreamDeviceIds(oltImpactIds, odcImpactIds)
-            (downstream.odcIds + downstream.odpIds).forEach { bump(it, propagated) }
+            val downstreamNodes = downstream.odcIds + downstream.odpIds
+            upstreamOutages.forEach { outage ->
+                val cause = outage.toCause()
+                downstreamNodes.forEach { bump(it, outage.severity, cause) }
+            }
         }
 
         if (nodeSeverity.isEmpty()) return ImpactedOverlay(emptyList())
@@ -143,12 +150,14 @@ class MapService(
         val cables = networkApi.cablesTouchingNodes(nodeSeverity.keys).mapNotNull { cable ->
             val rank = maxOf(nodeSeverity[cable.fromId] ?: -1, nodeSeverity[cable.toId] ?: -1)
             if (rank < 0) return@mapNotNull null
+            val causes = (nodeCauses[cable.fromId].orEmpty() + nodeCauses[cable.toId].orEmpty()).distinct()
             ImpactedCable(
                 id = cable.id,
                 code = cable.code,
                 cableType = cable.cableType,
                 severity = severityName(rank),
                 points = cable.points,
+                causes = causes,
             )
         }
         return ImpactedOverlay(cables)
@@ -165,6 +174,8 @@ class MapService(
         1 -> "WARNING"
         else -> "INFO"
     }
+
+    private fun AlarmImpact.toCause() = ImpactCause(label = label, kind = kind, severity = severity)
 
     private fun UpstreamPath.toView() = UpstreamView(
         odcCode = odc?.code,

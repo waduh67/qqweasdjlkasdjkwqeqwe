@@ -15,11 +15,15 @@ interface MonitoringApi {
     fun activeImpacts(): List<AlarmImpact>
 }
 
-/** Satu entitas terdampak beserta tingkat keparahan alarm terbukanya. */
+/** Satu entitas terdampak beserta alarm terbuka yang menyebabkannya. */
 data class AlarmImpact(
     /** ONU, OLT, ODP, ODC, atau COLLECTOR. */
     val entityType: String,
     val entityId: UUID,
     /** INFO, WARNING, atau CRITICAL. */
     val severity: String,
+    /** Jenis alarm, mis. ONU_LOS, OLT_UNREACHABLE — untuk menjelaskan "kenapa". */
+    val kind: String,
+    /** Label entitas terdampak, mis. "OLT-BKS-01" atau serial ONU + nama pelanggan. */
+    val label: String,
 )
