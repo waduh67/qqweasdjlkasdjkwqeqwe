@@ -1,8 +1,11 @@
 package com.duluin.ftth
 
+import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.contract.CollectorProtocol
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
+import com.duluin.ftth.monitoring.application.port.outbound.CollectorRepository
+import com.duluin.ftth.monitoring.application.service.SilentCollectorEvaluator
 import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -12,6 +15,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -33,6 +37,12 @@ class MonitoringEndToEndIT {
 
     @Autowired
     private lateinit var onboarding: OnboardTenantUseCase
+
+    @Autowired
+    private lateinit var silentCollectorEvaluator: SilentCollectorEvaluator
+
+    @Autowired
+    private lateinit var collectorRepository: CollectorRepository
 
     private val pass = "secret12345"
 
@@ -272,6 +282,30 @@ class MonitoringEndToEndIT {
 
         assertThat(JsonPath.read<List<Any>>(history, "$.points")).hasSize(3)
         assertThat(JsonPath.read<Double>(history, "$.averageRxPowerDbm")).isEqualTo(-22.0)
+    }
+
+    @Test
+    fun `menghapus collector menutup alarm collector-membisu-nya agar tidak menggantung yatim`() {
+        val token = newTenantAdmin("wdog")
+        val created = post(
+            "/api/monitoring/collectors", token, """{"name":"Collector ${uniq()}","pollIntervalSeconds":60}""",
+        )
+        val collectorId = UUID.fromString(JsonPath.read<String>(created, "$.collector.id"))
+        val tenantId = collectorRepository.findById(collectorId)!!.tenantId
+
+        // Watchdog menandai collector berhenti melapor → alarm kritis terangkat.
+        TenantContext.runAs(tenantId) {
+            silentCollectorEvaluator.evaluate(tenantId, collectorId, "Collector membisu", true, Instant.now())
+        }
+        assertThat(activeAlarmCount(token)).isEqualTo(1)
+
+        // Menghapus collector harus menutup alarmnya: collector yang lenyap tidak
+        // akan pernah melapor lagi untuk menutupnya sendiri, sehingga tanpa ini
+        // alarm kritisnya menggantung yatim di dashboard selamanya.
+        mockMvc.perform(
+            delete("/api/monitoring/collectors/$collectorId").header("Authorization", "Bearer $token"),
+        ).andExpect(status().isNoContent)
+        assertThat(activeAlarmCount(token)).isZero()
     }
 
     private fun activeAlarmCount(token: String): Int {

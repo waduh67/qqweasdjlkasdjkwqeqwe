@@ -9,6 +9,7 @@ import com.duluin.ftth.monitoring.application.port.inbound.CollectorView
 import com.duluin.ftth.monitoring.application.port.inbound.ManageCollectorUseCase
 import com.duluin.ftth.monitoring.application.port.inbound.SaveCollectorCommand
 import com.duluin.ftth.monitoring.application.port.outbound.CollectorRepository
+import com.duluin.ftth.monitoring.domain.model.AlarmKind
 import com.duluin.ftth.monitoring.domain.model.Collector
 import com.duluin.ftth.network.NetworkApi
 import org.springframework.stereotype.Service
@@ -20,6 +21,7 @@ import java.util.UUID
 class CollectorService(
     private val collectorRepository: CollectorRepository,
     private val networkApi: NetworkApi,
+    private val alarmEngine: AlarmEngine,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
 ) : ManageCollectorUseCase {
@@ -76,6 +78,11 @@ class CollectorService(
 
     override fun delete(id: UUID) {
         val collector = require(id)
+        // Tutup alarm "collector membisu"-nya lebih dulu: collector yang sudah
+        // dihapus tidak akan pernah melapor lagi untuk menutupnya sendiri, jadi
+        // tanpa ini alarmnya menggantung selamanya sebagai kritis yatim di
+        // dashboard — persis pola clearFor untuk entitas yang tak lagi terpantau.
+        alarmEngine.clearFor(AlarmKind.COLLECTOR_SILENT, id)
         collectorRepository.deleteById(id)
         auditor.record("collector.deleted", "Collector", id, collector.tenantId, mapOf("name" to collector.name))
     }

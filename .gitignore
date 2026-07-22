@@ -20,3 +20,6 @@ web/.env.local
 
 # OS
 .DS_Store
+
+# Claude Code — override izin per-mesin
+.claude/settings.local.json
