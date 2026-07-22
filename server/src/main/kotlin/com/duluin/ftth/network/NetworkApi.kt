@@ -19,6 +19,11 @@ interface NetworkApi {
 
     fun findOdpsByIds(ids: Set<UUID>): List<OdpRef>
 
+    /** Ringkasan sebuah ODC, untuk header panel blast radius ("siapa di bawah ODC ini"). */
+    fun findOdc(id: UUID): OdcRef?
+
+    fun requireOdc(id: UUID): OdcRef
+
     /**
      * Menegakkan aturan penempatan ONU pada port ODP. Okupansi disuplai pemanggil
      * karena data ONU dimiliki module customer — dengan begitu aturannya tetap
@@ -118,6 +123,18 @@ data class OdpRef(
     val areaId: UUID?,
     val odcId: UUID?,
     val active: Boolean,
+)
+
+/** Pandangan ringkas sebuah ODC untuk konsumen lintas-module. */
+data class OdcRef(
+    val id: UUID,
+    val code: String,
+    val name: String,
+    val location: Coordinate,
+    val capacity: Int,
+    val ponPortId: UUID?,
+    /** Aktif DAN punya uplink — ODC tanpa uplink tak mengalirkan layanan meski "aktif". */
+    val energized: Boolean,
 )
 
 /**

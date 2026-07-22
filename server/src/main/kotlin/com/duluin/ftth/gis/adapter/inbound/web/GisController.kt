@@ -1,6 +1,7 @@
 package com.duluin.ftth.gis.adapter.inbound.web
 
 import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.gis.application.port.inbound.BlastRadiusView
 import com.duluin.ftth.gis.application.port.inbound.CustomerTrace
 import com.duluin.ftth.gis.application.port.inbound.ImpactedOverlay
 import com.duluin.ftth.gis.application.port.inbound.MapQuery
@@ -58,6 +59,11 @@ class GisController(
     @GetMapping("/impacted")
     @PreAuthorize("@authz.can('gis.map.view')")
     fun impacted(): ImpactedOverlay = mapQuery.impactedCables()
+
+    /** Blast radius sebuah ODC: pelanggan di hilirnya — "kalau ini putus, siapa yang kena". */
+    @GetMapping("/odcs/{id}/blast-radius")
+    @PreAuthorize("@authz.can('gis.map.view') and @authz.can('customer.customer.view')")
+    fun blastRadius(@PathVariable id: UUID): BlastRadiusView = mapQuery.blastRadius(id)
 
     /**
      * Koordinat tile di luar rentang membuat `ST_TileEnvelope` melempar galat

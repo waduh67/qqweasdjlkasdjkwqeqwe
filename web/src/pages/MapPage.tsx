@@ -2,7 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { api, ApiError, tokenStore } from '../api/client'
-import type { CableType, CableView, ImpactCause, ImpactedOverlay, OdpInspection } from '../api/network'
+import type {
+  AffectedCustomer,
+  BlastRadiusView,
+  CableType,
+  CableView,
+  ImpactCause,
+  ImpactedOverlay,
+  OdpInspection,
+} from '../api/network'
 import { useCan } from '../auth/useCan'
 import { StatusBadge, useToast } from '../components/ui'
 import { IconClose, IconRoute } from '../components/icons'
@@ -216,6 +224,7 @@ export function MapPage() {
   const [selected, setSelected] = useState<OdpInspection | null>(null)
   const [cable, setCable] = useState<CableView | null>(null)
   const [cableCauses, setCableCauses] = useState<ImpactCause[]>([])
+  const [blast, setBlast] = useState<BlastRadiusView | null>(null)
   const [editing, setEditing] = useState<CableView | null>(null)
   const [toolState, setToolState] = useState<ToolState | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -284,8 +293,24 @@ export function MapPage() {
         .then((odp) => {
           setSelected(odp)
           setCable(null)
+          setBlast(null)
         })
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail ODP'))
+    })
+
+    // Klik ODC (mode idle) → blast radius: siapa saja di hilirnya.
+    instance.on('click', 'odc', (event) => {
+      if (modeRef.current !== 'idle') return
+      const id = event.features?.[0]?.properties?.id as string | undefined
+      if (!id) return
+      api
+        .get<BlastRadiusView>(`/api/gis/odcs/${id}/blast-radius`)
+        .then((b) => {
+          setBlast(b)
+          setSelected(null)
+          setCable(null)
+        })
+        .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat blast radius ODC'))
     })
 
     // Klik kabel (mode idle) → tampilkan detail + aksi edit/hapus.
@@ -300,11 +325,12 @@ export function MapPage() {
           // Kalau kabel ini sedang merah, sertakan alarm penyebabnya.
           setCableCauses(impactedCauses.current.get(id) ?? [])
           setSelected(null)
+          setBlast(null)
         })
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail kabel'))
     })
 
-    for (const layer of ['odp', 'cable']) {
+    for (const layer of ['odp', 'odc', 'cable']) {
       instance.on('mouseenter', layer, () => {
         if (modeRef.current === 'idle') instance.getCanvas().style.cursor = 'pointer'
       })
@@ -550,6 +576,7 @@ export function MapPage() {
           />
         )}
 
+        {blast && <BlastRadiusPanel blast={blast} onClose={() => setBlast(null)} />}
         {selected && <OdpPanel inspection={selected} onClose={() => setSelected(null)} />}
         {cable && (
           <CablePanel
@@ -750,6 +777,82 @@ function CableCauses({ causes }: { causes: ImpactCause[] }) {
           </span>
         </div>
       ))}
+    </div>
+  )
+}
+
+const ONU_DOT: Record<string, string> = {
+  ONLINE: '#34d399',
+  LOS: '#ff3b5c',
+  OFFLINE: '#fbbf24',
+  PENDING: '#8b95a7',
+  DISMANTLED: '#8b95a7',
+}
+
+/** Panel "kalau ODC ini putus, siapa yang kena" — daftar pelanggan hilir + kesiapan broadcast. */
+function BlastRadiusPanel({ blast, onClose }: { blast: BlastRadiusView; onClose: () => void }) {
+  const withPhone = blast.customers.filter((c) => c.phone).length
+  return (
+    <aside className="map-panel stack">
+      <div className="spread">
+        <h3 style={{ margin: 0 }}>{blast.code}</h3>
+        <button className="ghost icon-btn" onClick={onClose} aria-label="Tutup">
+          <IconClose size={18} />
+        </button>
+      </div>
+      <p className="muted" style={{ margin: 0 }}>
+        {blast.name} · blast radius
+      </p>
+      <div className="row wrap" style={{ gap: '0.4rem' }}>
+        <StatusBadge
+          status={blast.energized ? 'ACTIVE' : 'INACTIVE'}
+          label={blast.energized ? 'Berenergi' : 'Tanpa uplink'}
+        />
+        <span className="badge">{blast.odpCount} ODP</span>
+        <span className="badge">{blast.customerCount} pelanggan</span>
+        {blast.downCount > 0 && (
+          <span className="badge" style={{ color: '#ff5470', borderColor: '#ff5470' }}>
+            {blast.downCount} mati
+          </span>
+        )}
+      </div>
+      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        Kalau ODC ini putus, {blast.customerCount} pelanggan kehilangan layanan.
+      </p>
+      {blast.customers.length > 0 && (
+        <div className="stack" style={{ gap: '0.3rem', maxHeight: 280, overflowY: 'auto' }}>
+          {blast.customers.map((c) => (
+            <AffectedRow key={c.customerId} c={c} />
+          ))}
+        </div>
+      )}
+      {withPhone > 0 && (
+        <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
+          {withPhone} nomor siap untuk broadcast pemberitahuan.
+        </p>
+      )}
+    </aside>
+  )
+}
+
+function AffectedRow({ c }: { c: AffectedCustomer }) {
+  return (
+    <div className="spread" style={{ gap: '0.45rem', alignItems: 'center' }}>
+      <span className="row" style={{ gap: '0.45rem', alignItems: 'center', minWidth: 0 }}>
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            flexShrink: 0,
+            background: ONU_DOT[c.onuStatus] ?? 'var(--muted)',
+          }}
+        />
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+      </span>
+      <span className="muted tnum" style={{ fontSize: '0.78rem', flexShrink: 0 }}>
+        {c.odpCode}
+      </span>
     </div>
   )
 }

@@ -4,9 +4,11 @@ import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.network.CablePath
 import com.duluin.ftth.network.DownstreamIds
 import com.duluin.ftth.network.NetworkApi
+import com.duluin.ftth.network.OdcRef
 import com.duluin.ftth.network.OdpRef
 import com.duluin.ftth.network.OltPollingTarget
 import com.duluin.ftth.network.OltRef
+import com.duluin.ftth.network.domain.model.Odc
 import com.duluin.ftth.network.domain.model.Olt
 import com.duluin.ftth.network.UpstreamHop
 import com.duluin.ftth.network.UpstreamPath
@@ -92,6 +94,11 @@ class NetworkApiService(
     override fun requireOdp(id: UUID): OdpRef =
         findOdp(id) ?: throw NotFoundException("ODP $id tidak ditemukan")
 
+    override fun findOdc(id: UUID): OdcRef? = odcRepository.findById(id)?.toRef()
+
+    override fun requireOdc(id: UUID): OdcRef =
+        findOdc(id) ?: throw NotFoundException("ODC $id tidak ditemukan")
+
     override fun findOdpsByIds(ids: Set<UUID>): List<OdpRef> =
         if (ids.isEmpty()) emptyList() else odpRepository.findAllByIds(ids).map { it.toRef() }
 
@@ -143,4 +150,14 @@ private fun Odp.toRef() = OdpRef(
     areaId = areaId,
     odcId = odcId,
     active = status.acceptsService(),
+)
+
+private fun Odc.toRef() = OdcRef(
+    id = id,
+    code = code,
+    name = name,
+    location = location,
+    capacity = capacity,
+    ponPortId = ponPortId,
+    energized = isEnergized(),
 )

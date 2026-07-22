@@ -5,6 +5,9 @@ import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.common.security.areaScope
 import com.duluin.ftth.customer.CustomerApi
+import com.duluin.ftth.customer.OdpOccupant
+import com.duluin.ftth.gis.application.port.inbound.AffectedCustomer
+import com.duluin.ftth.gis.application.port.inbound.BlastRadiusView
 import com.duluin.ftth.gis.application.port.inbound.CustomerTrace
 import com.duluin.ftth.gis.application.port.inbound.ImpactCause
 import com.duluin.ftth.gis.application.port.inbound.ImpactedCable
@@ -162,6 +165,45 @@ class MapService(
         }
         return ImpactedOverlay(cables)
     }
+
+    /**
+     * Menyusun blast radius sebuah ODC. Satu ODC bercabang ke sekumpulan kecil
+     * ODP, jadi penghuni diambil per ODP (masing-masing dalam query tetap) lalu
+     * diratakan — ini panel on-demand, bukan jalur render yang panas. Kode ODP
+     * dibawa dari ref-nya supaya tiap pelanggan tahu menggantung di mana.
+     */
+    override fun blastRadius(odcId: UUID): BlastRadiusView {
+        val odc = networkApi.requireOdc(odcId)
+        val odpIds = networkApi.downstreamDeviceIds(emptySet(), setOf(odcId)).odpIds
+        val odpCodeById = networkApi.findOdpsByIds(odpIds).associate { it.id to it.code }
+
+        val customers = odpIds.flatMap { odp ->
+            val odpCode = odpCodeById[odp] ?: "?"
+            customerApi.findOccupantsOfOdp(odp).map { it.toAffected(odpCode) }
+        }.sortedWith(compareBy({ it.odpCode }, { it.name }))
+
+        return BlastRadiusView(
+            odcId = odc.id,
+            code = odc.code,
+            name = odc.name,
+            energized = odc.energized,
+            odpCount = odpIds.size,
+            customerCount = customers.size,
+            // LOS/OFFLINE = sudah kehilangan layanan sungguhan, bukan sekadar potensi.
+            downCount = customers.count { it.onuStatus == "LOS" || it.onuStatus == "OFFLINE" },
+            customers = customers,
+        )
+    }
+
+    private fun OdpOccupant.toAffected(odpCode: String) = AffectedCustomer(
+        customerId = customerId,
+        code = customerCode,
+        name = customerName,
+        phone = phone,
+        odpCode = odpCode,
+        onuStatus = onuStatus,
+        opticalHealth = opticalHealth,
+    )
 
     private fun severityRank(severity: String): Int = when (severity) {
         "CRITICAL" -> 2

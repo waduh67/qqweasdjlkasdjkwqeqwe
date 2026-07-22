@@ -221,3 +221,26 @@ export interface ImpactedCable {
 export interface ImpactedOverlay {
   cables: ImpactedCable[]
 }
+
+/** Satu pelanggan di hilir sebuah ODC — sasaran blast radius & broadcast. */
+export interface AffectedCustomer {
+  customerId: string
+  code: string
+  name: string
+  phone: string | null
+  odpCode: string
+  onuStatus: OnuStatus
+  opticalHealth: OpticalHealth
+}
+
+/** Blast radius sebuah ODC: "kalau perangkat ini putus, siapa yang kena". */
+export interface BlastRadiusView {
+  odcId: string
+  code: string
+  name: string
+  energized: boolean
+  odpCount: number
+  customerCount: number
+  downCount: number
+  customers: AffectedCustomer[]
+}

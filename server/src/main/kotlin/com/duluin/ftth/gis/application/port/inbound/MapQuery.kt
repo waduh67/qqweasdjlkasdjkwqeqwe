@@ -29,7 +29,38 @@ interface MapQuery {
      * (alarm) + customer (ONU→pelanggan/ODP) + network (geometri kabel).
      */
     fun impactedCables(): ImpactedOverlay
+
+    /**
+     * Blast radius sebuah ODC: seluruh pelanggan di hilirnya lewat ODP-ODP-nya —
+     * menjawab "kalau perangkat ini putus, siapa yang kena" dan menyiapkan daftar
+     * sasaran broadcast pemberitahuan proaktif.
+     */
+    fun blastRadius(odcId: UUID): BlastRadiusView
 }
+
+data class BlastRadiusView(
+    val odcId: UUID,
+    val code: String,
+    val name: String,
+    /** Aktif dan punya uplink. ODC tak-berenergi berarti hilirnya sudah pasti mati. */
+    val energized: Boolean,
+    val odpCount: Int,
+    val customerCount: Int,
+    /** Pelanggan yang ONU-nya sedang LOS/OFFLINE — sudah terdampak nyata, bukan hipotetis. */
+    val downCount: Int,
+    val customers: List<AffectedCustomer>,
+)
+
+data class AffectedCustomer(
+    val customerId: UUID,
+    val code: String,
+    val name: String,
+    /** Untuk broadcast pemberitahuan (Phase 3). */
+    val phone: String?,
+    val odpCode: String,
+    val onuStatus: String,
+    val opticalHealth: String,
+)
 
 data class ImpactedOverlay(val cables: List<ImpactedCable>)
 

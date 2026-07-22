@@ -158,6 +158,33 @@ class NetworkEndToEndIT {
     }
 
     @Test
+    fun `blast radius ODC mendaftar seluruh pelanggan di hilirnya`() {
+        val token = newTenantAdmin("blast")
+        val odp = buildChain(token, capacity = 8)
+        attachNewCustomer(token, odp, port = 1)
+        attachNewCustomer(token, odp, port = 2)
+
+        val odc = JsonPath.read<String>(
+            mockMvc.perform(get("/api/odcs").header("Authorization", "Bearer $token"))
+                .andExpect(status().isOk).andReturn().response.contentAsString,
+            "$.content[0].id",
+        )
+
+        val json = mockMvc.perform(get("/api/gis/odcs/$odc/blast-radius").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andReturn().response.contentAsString
+
+        assertThat(JsonPath.read<Int>(json, "$.odpCount")).isEqualTo(1)
+        assertThat(JsonPath.read<Int>(json, "$.customerCount")).isEqualTo(2)
+        assertThat(JsonPath.read<Boolean>(json, "$.energized")).isTrue()
+        assertThat(JsonPath.read<List<String>>(json, "$.customers[*].odpCode")).hasSize(2)
+        // downCount harus konsisten dengan status yang benar-benar dilaporkan —
+        // berapa pun status bawaan ONU yang belum dipantau.
+        val statuses: List<String> = JsonPath.read(json, "$.customers[*].onuStatus")
+        val expectedDown = statuses.count { it == "LOS" || it == "OFFLINE" }
+        assertThat(JsonPath.read<Int>(json, "$.downCount")).isEqualTo(expectedDown)
+    }
+
+    @Test
     fun `telusur jalur pelanggan sampai OLT beserta anggaran redaman`() {
         val token = newTenantAdmin("trace")
         val odp = buildChain(token)
