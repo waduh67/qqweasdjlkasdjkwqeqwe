@@ -3,6 +3,7 @@ import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { ThemeToggle } from './ThemeToggle'
 import {
+  IconAlert,
   IconArea,
   IconAudit,
   IconBuilding,
@@ -44,6 +45,7 @@ const GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
       { to: '/inventory', label: 'Inventory', permission: 'network.odp.view', icon: IconInventory },
       { to: '/customers', label: 'Pelanggan', permission: 'customer.customer.view', icon: IconCustomers },
       { to: '/monitoring', label: 'Monitoring', permission: 'monitoring.dashboard.view', icon: IconMonitor },
+      { to: '/incidents', label: 'Insiden', permission: 'incident.ticket.view', icon: IconAlert },
     ],
   },
   {

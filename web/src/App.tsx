@@ -10,6 +10,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { InventoryPage } from './pages/InventoryPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { MonitoringPage } from './pages/MonitoringPage'
+import { IncidentsPage } from './pages/IncidentsPage'
 
 /**
  * Halaman peta dimuat terpisah: MapLibre menyumbang sebagian besar ukuran
@@ -99,6 +100,14 @@ export default function App() {
               element={
                 <RequirePermission permission="monitoring.dashboard.view">
                   <MonitoringPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="incidents"
+              element={
+                <RequirePermission permission="incident.ticket.view">
+                  <IncidentsPage />
                 </RequirePermission>
               }
             />
