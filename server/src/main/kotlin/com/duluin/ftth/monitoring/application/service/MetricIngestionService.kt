@@ -8,10 +8,12 @@ import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.OnuRef
 import com.duluin.ftth.monitoring.application.port.outbound.IngestBatchRepository
 import com.duluin.ftth.monitoring.application.port.outbound.OnuMetricRepository
+import com.duluin.ftth.monitoring.AlarmsChangedEvent
 import com.duluin.ftth.monitoring.domain.model.AlarmKind
 import com.duluin.ftth.monitoring.domain.model.OnuMetricPoint
 import com.duluin.ftth.network.NetworkApi
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -34,6 +36,7 @@ class MetricIngestionService(
     private val customerApi: CustomerApi,
     private val networkApi: NetworkApi,
     private val alarmEngine: AlarmEngine,
+    private val events: ApplicationEventPublisher,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -82,6 +85,9 @@ class MetricIngestionService(
             )
 
             matched.forEach { (reading, onu) -> evaluateAlarms(tenantId, reading, onu) }
+            // Alarm mungkin berubah → picu korelasi ulang insiden untuk tenant ini,
+            // sekali setelah seluruh batch dinilai (bukan per ONU).
+            events.publishEvent(AlarmsChangedEvent(tenantId))
         }
 
         if (unknown.isNotEmpty()) {

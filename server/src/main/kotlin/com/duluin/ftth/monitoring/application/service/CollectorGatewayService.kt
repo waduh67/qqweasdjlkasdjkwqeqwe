@@ -6,9 +6,11 @@ import com.duluin.ftth.contract.CollectorHeartbeat
 import com.duluin.ftth.contract.OltTarget
 import com.duluin.ftth.monitoring.application.port.outbound.CollectorRepository
 import com.duluin.ftth.monitoring.domain.model.AlarmKind
+import com.duluin.ftth.monitoring.AlarmsChangedEvent
 import com.duluin.ftth.monitoring.domain.model.Collector
 import com.duluin.ftth.monitoring.domain.model.CollectorStatus
 import com.duluin.ftth.network.NetworkApi
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -28,6 +30,7 @@ class CollectorGatewayService(
     private val collectorRepository: CollectorRepository,
     private val networkApi: NetworkApi,
     private val alarmEngine: AlarmEngine,
+    private val events: ApplicationEventPublisher,
 ) {
     fun handleHeartbeat(collectorId: UUID, heartbeat: CollectorHeartbeat): CollectorConfig {
         val collector = collectorRepository.findById(collectorId)
@@ -38,6 +41,8 @@ class CollectorGatewayService(
 
         val config = buildConfig(collector)
         evaluateOltReachability(collector.tenantId, config, heartbeat)
+        // Reachability OLT mungkin berubah → picu korelasi ulang insiden.
+        events.publishEvent(AlarmsChangedEvent(collector.tenantId))
         return config
     }
 

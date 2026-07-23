@@ -103,8 +103,12 @@ class IncidentIT {
         mockMvc.perform(get("/api/incidents").header("Authorization", "Bearer $token"))
             .andExpect(status().isOk).andReturn().response.contentAsString
 
+    private fun postAction(url: String, token: String): String =
+        mockMvc.perform(post(url).header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andReturn().response.contentAsString
+
     @Test
-    fun `banjir alarm ONU di bawah satu ODC menjadi satu insiden, bukan banyak tiket`() {
+    fun `banjir alarm ONU di bawah satu ODC menjadi satu insiden yang tersimpan dan bisa diakui`() {
         val token = newTenantAdmin("inc")
         val chain = buildChain(token)
         val a = attachOnu(token, chain.odp, port = 1)
@@ -115,13 +119,42 @@ class IncidentIT {
         // Dua ONU kehilangan sinyal, satu tetap sehat.
         sendMetrics(apiKey, reading(a, "LOS", null), reading(b, "LOS", null), reading(c, "ONLINE", -21.0))
 
+        // Korelasi (dipicu setelah commit ingestion) menyimpan SATU insiden berakar
+        // ODC, bukan dua tiket terpisah.
         val json = incidents(token)
-        // Dua alarm LOS → SATU insiden berakar di ODC, bukan dua tiket terpisah.
         assertThat(JsonPath.read<List<Any>>(json, "$[*]")).hasSize(1)
         assertThat(JsonPath.read<String>(json, "$[0].rootType")).isEqualTo("ODC")
         assertThat(JsonPath.read<Int>(json, "$[0].alarmCount")).isEqualTo(2)
         assertThat(JsonPath.read<Int>(json, "$[0].affectedCustomerCount")).isEqualTo(2)
         assertThat(JsonPath.read<String>(json, "$[0].severity")).isEqualTo("CRITICAL")
+        assertThat(JsonPath.read<String>(json, "$[0].status")).isEqualTo("OPEN")
+        val incidentId = JsonPath.read<String>(json, "$[0].id")
+
+        // Detail: timeline berisi pembukaan, dan anggota alarm hidupnya dua.
+        val detail = mockMvc.perform(get("/api/incidents/$incidentId").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andReturn().response.contentAsString
+        assertThat(JsonPath.read<List<String>>(detail, "$.timeline[*].type")).contains("OPENED")
+        assertThat(JsonPath.read<List<Any>>(detail, "$.members[*]")).hasSize(2)
+
+        // Operator mengakui: tetap terbuka, tapi statusnya berubah.
+        postAction("/api/incidents/$incidentId/acknowledge", token)
+        assertThat(JsonPath.read<String>(incidents(token), "$[0].status")).isEqualTo("ACKNOWLEDGED")
+    }
+
+    @Test
+    fun `insiden menutup sendiri saat alarm akarnya pulih`() {
+        val token = newTenantAdmin("incr")
+        val chain = buildChain(token)
+        val a = attachOnu(token, chain.odp, port = 1)
+        val b = attachOnu(token, chain.odp, port = 2)
+        val apiKey = newCollector(token)
+
+        sendMetrics(apiKey, reading(a, "LOS", null), reading(b, "LOS", null))
+        assertThat(JsonPath.read<List<Any>>(incidents(token), "$[*]")).hasSize(1)
+
+        // Fiber tersambung lagi → alarm menutup → korelasi menutup insidennya sendiri.
+        sendMetrics(apiKey, reading(a, "ONLINE", -21.0), reading(b, "ONLINE", -20.0))
+        assertThat(JsonPath.read<List<Any>>(incidents(token), "$[*]")).isEmpty()
     }
 
     @Test

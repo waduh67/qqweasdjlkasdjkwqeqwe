@@ -1,38 +1,61 @@
 package com.duluin.ftth.incident.application.port.inbound
 
+import java.time.Instant
 import java.util.UUID
 
 /**
- * Pandangan insiden hasil korelasi alarm hidup.
+ * Membaca insiden hasil korelasi alarm.
  *
- * Module `incident` tidak menyimpan tabel sendiri (belum): ia menyusun jawaban
- * dari `monitoring` (alarm hidup), `network` (topologi hulu), dan `customer`
- * (ONU → pelanggan). Nilainya: mengubah banjir alarm sejenis menjadi sedikit
- * insiden ber-akar-masalah — 12 ONU LOS di bawah satu ODC adalah SATU insiden,
- * bukan 12 baris yang membuat operator menyerah membacanya.
+ * Insiden dipersistensi dan punya lifecycle (dibuka → diakui → selesai): satu
+ * OLT modar yang berlangsung dua jam adalah satu insiden yang sama sepanjang itu,
+ * dengan timeline yang bisa ditelusuri — bukan pemandangan sesaat yang hilang saat
+ * di-refresh. Isinya dipelihara mesin korelasi yang menaiki pohon topologi mencari
+ * akar bersama; lihat module `incident`.
  */
 interface IncidentQuery {
 
-    /** Insiden aktif, dikelompokkan menurut akar masalah, terparah lebih dulu. */
+    /** Insiden yang belum selesai (OPEN + ACKNOWLEDGED), terparah lebih dulu. */
     fun activeIncidents(): List<IncidentView>
+
+    /** Detail satu insiden: ringkasannya, timeline, dan alarm anggotanya saat ini. */
+    fun incident(id: UUID): IncidentDetail
+}
+
+/** Perubahan lifecycle insiden oleh operator. */
+interface ManageIncidentUseCase {
+    fun acknowledge(id: UUID): IncidentView
+    fun resolve(id: UUID): IncidentView
 }
 
 data class IncidentView(
-    /**
-     * Kunci stabil dari akar masalahnya, "<TIPE>:<uuid>". Satu akar = satu insiden;
-     * dipakai UI untuk dedup dan (nanti) sebagai jangkar persistensi lifecycle.
-     */
+    val id: UUID,
+    /** Kunci stabil akar masalah, "<TIPE>:<uuid>". */
     val key: String,
-    /** Tipe akar masalah: OLT, ODC, ODP, ONU, atau COLLECTOR. */
     val rootType: String,
     val rootId: UUID,
     val rootLabel: String,
-    /** Keparahan tertinggi di antara anggotanya. */
     val severity: String,
+    val status: String,
     val title: String,
     val alarmCount: Int,
     val affectedCustomerCount: Int,
+    val openedAt: Instant,
+    val lastSeenAt: Instant,
+    val acknowledgedAt: Instant?,
+    val resolvedAt: Instant?,
+)
+
+data class IncidentDetail(
+    val incident: IncidentView,
+    val timeline: List<IncidentEventView>,
+    /** Alarm hidup yang saat ini menjadi anggota insiden ini (kosong bila sudah selesai). */
     val members: List<IncidentAlarm>,
+)
+
+data class IncidentEventView(
+    val type: String,
+    val message: String,
+    val at: Instant,
 )
 
 /** Satu alarm hidup yang menjadi anggota sebuah insiden. */

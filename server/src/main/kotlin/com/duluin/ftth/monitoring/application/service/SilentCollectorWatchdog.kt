@@ -77,6 +77,7 @@ class SilentCollectorWatchdog(
 @Component
 class SilentCollectorEvaluator(
     private val alarmEngine: AlarmEngine,
+    private val events: org.springframework.context.ApplicationEventPublisher,
 ) {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun evaluate(tenantId: UUID, collectorId: UUID, name: String, silent: Boolean, now: Instant) {
@@ -89,5 +90,7 @@ class SilentCollectorEvaluator(
             messageBuilder = { "Collector '$name' berhenti melapor — pemantauan jaringan sedang buta" },
             at = now,
         )
+        // Alarm collector-membisu mungkin berubah → picu korelasi ulang insiden.
+        events.publishEvent(com.duluin.ftth.monitoring.AlarmsChangedEvent(tenantId))
     }
 }
