@@ -6,6 +6,7 @@ import com.duluin.ftth.gis.application.port.inbound.CustomerTrace
 import com.duluin.ftth.gis.application.port.inbound.ImpactedOverlay
 import com.duluin.ftth.gis.application.port.inbound.MapQuery
 import com.duluin.ftth.gis.application.port.inbound.OdpInspection
+import com.duluin.ftth.gis.application.port.inbound.SiteInspection
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.CacheControl
@@ -64,6 +65,11 @@ class GisController(
     @GetMapping("/odcs/{id}/blast-radius")
     @PreAuthorize("@authz.can('gis.map.view') and @authz.can('customer.customer.view')")
     fun blastRadius(@PathVariable id: UUID): BlastRadiusView = mapQuery.blastRadius(id)
+
+    /** Isi sebuah site/POP: OLT di dalamnya + rekap perangkat & pelanggan hilir. */
+    @GetMapping("/sites/{id}")
+    @PreAuthorize("@authz.can('gis.map.view') and @authz.can('network.site.view')")
+    fun inspectSite(@PathVariable id: UUID): SiteInspection = mapQuery.inspectSite(id)
 
     /**
      * Koordinat tile di luar rentang membuat `ST_TileEnvelope` melempar galat

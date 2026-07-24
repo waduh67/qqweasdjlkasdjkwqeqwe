@@ -53,6 +53,8 @@ class OltPersistenceAdapter(
 
     override fun findAllByIds(ids: Set<UUID>): List<Olt> = jpa.findAllById(ids).map { it.toDomain() }
 
+    override fun findBySiteId(siteId: UUID): List<Olt> = jpa.findBySiteIdOrderByCode(siteId).map { it.toDomain() }
+
     override fun search(query: String, siteId: UUID?, pageRequest: PageRequest): Page<Olt> {
         val spec = NetworkSpecifications.textMatches<OltJpaEntity>(query)
             .and(NetworkSpecifications.equals("siteId", siteId))

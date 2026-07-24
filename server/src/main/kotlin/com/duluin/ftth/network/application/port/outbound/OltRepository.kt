@@ -13,6 +13,9 @@ interface OltRepository {
 
     fun findAllByIds(ids: Set<UUID>): List<Olt>
 
+    /** OLT di sebuah site, terurut kode — untuk panel inspeksi site di peta. */
+    fun findBySiteId(siteId: UUID): List<Olt>
+
     fun findByCode(code: String): Olt?
 
     /** Seluruh id OLT tenant ini — dipakai saat collector ditugasi "semua OLT". */

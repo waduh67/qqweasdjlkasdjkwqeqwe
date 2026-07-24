@@ -15,6 +15,8 @@ import com.duluin.ftth.gis.application.port.inbound.ImpactedOverlay
 import com.duluin.ftth.gis.application.port.inbound.MapQuery
 import com.duluin.ftth.monitoring.AlarmImpact
 import com.duluin.ftth.gis.application.port.inbound.OdpInspection
+import com.duluin.ftth.gis.application.port.inbound.SiteInspection
+import com.duluin.ftth.gis.application.port.inbound.SiteOlt
 import com.duluin.ftth.gis.application.port.inbound.TraceHop
 import com.duluin.ftth.gis.application.port.inbound.UpstreamView
 import com.duluin.ftth.monitoring.MonitoringApi
@@ -192,6 +194,32 @@ class MapService(
             // LOS/OFFLINE = sudah kehilangan layanan sungguhan, bukan sekadar potensi.
             downCount = customers.count { it.onuStatus == "LOS" || it.onuStatus == "OFFLINE" },
             customers = customers,
+        )
+    }
+
+    /**
+     * Merekap sebuah site. OLT-nya diambil langsung; ODC/ODP di hilir dihitung
+     * lewat primitif [NetworkApi.downstreamDeviceIds] (site → OLT → PON → ODC →
+     * ODP), dan jumlah pelanggan lewat satu query hitung agregat customer — bukan
+     * memuat tiap penghuni, karena satu site bisa menaungi ribuan sambungan.
+     */
+    override fun inspectSite(siteId: UUID): SiteInspection {
+        val site = networkApi.findSite(siteId) ?: throw NotFoundException("Site $siteId tidak ditemukan")
+        val olts = networkApi.oltsAtSite(siteId)
+        val downstream = networkApi.downstreamDeviceIds(olts.mapTo(HashSet()) { it.id }, emptySet())
+        val customerCount = customerApi.countOccupantsByOdp(downstream.odpIds).values.sum()
+
+        return SiteInspection(
+            siteId = site.id,
+            code = site.code,
+            name = site.name,
+            address = site.address,
+            location = site.location,
+            oltCount = olts.size,
+            odcCount = downstream.odcIds.size,
+            odpCount = downstream.odpIds.size,
+            customerCount = customerCount.toInt(),
+            olts = olts.map { SiteOlt(id = it.id, code = it.code, name = it.name, vendor = it.vendor, active = it.active) },
         )
     }
 

@@ -36,7 +36,35 @@ interface MapQuery {
      * sasaran broadcast pemberitahuan proaktif.
      */
     fun blastRadius(odcId: UUID): BlastRadiusView
+
+    /**
+     * Isi sebuah site/POP untuk panel peta: OLT yang berdiri di sini plus rekap
+     * seluruh perangkat & pelanggan di hilirnya — "seberapa besar site ini".
+     */
+    fun inspectSite(siteId: UUID): SiteInspection
 }
+
+data class SiteInspection(
+    val siteId: UUID,
+    val code: String,
+    val name: String,
+    val address: String?,
+    val location: Coordinate,
+    val oltCount: Int,
+    val odcCount: Int,
+    val odpCount: Int,
+    val customerCount: Int,
+    val olts: List<SiteOlt>,
+)
+
+data class SiteOlt(
+    val id: UUID,
+    val code: String,
+    val name: String,
+    val vendor: String,
+    /** Aktif dan siap dilayani — dasar penanda sehat/nonaktif di panel. */
+    val active: Boolean,
+)
 
 data class BlastRadiusView(
     val odcId: UUID,

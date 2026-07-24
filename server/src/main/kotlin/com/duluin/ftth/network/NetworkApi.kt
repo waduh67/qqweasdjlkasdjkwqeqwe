@@ -52,6 +52,12 @@ interface NetworkApi {
 
     fun listAllOltIds(): Set<UUID>
 
+    /** Ringkasan sebuah site/POP, untuk header panel inspeksi site di peta. */
+    fun findSite(id: UUID): SiteRef?
+
+    /** OLT yang berada di sebuah site — untuk menghitung hilir & mengisi panel site. */
+    fun oltsAtSite(siteId: UUID): List<OltRef>
+
     /**
      * Data yang dibutuhkan collector untuk mem-polling sekumpulan OLT, TERMASUK
      * community string SNMP dalam bentuk terbaca.
@@ -89,6 +95,16 @@ data class CablePath(
     val points: List<Coordinate>,
     val fromId: UUID,
     val toId: UUID,
+)
+
+/** Pandangan ringkas sebuah site/POP untuk konsumen lintas-module. */
+data class SiteRef(
+    val id: UUID,
+    val code: String,
+    val name: String,
+    val address: String?,
+    val location: Coordinate,
+    val areaId: UUID?,
 )
 
 /** Pandangan ringkas sebuah OLT untuk konsumen lintas-module. */

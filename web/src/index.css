@@ -810,31 +810,52 @@ tbody tr:last-child td {
   gap: 1rem;
   align-items: flex-start;
 }
-.map-canvas {
+.map-canvas-wrap {
+  position: relative;
   flex: 1;
+  min-width: 0;
+}
+.map-canvas {
+  width: 100%;
   height: 72vh;
   min-height: 440px;
   border-radius: var(--radius);
   overflow: hidden;
   border: 1px solid var(--border-strong);
 }
+/* Watermark akuntabilitas — label pengguna berulang, sangat samar, tak menghalangi
+   interaksi. Muncul di screenshot sehingga tangkapan layar bisa dilacak pemiliknya. */
+.map-watermark {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  border-radius: var(--radius);
+  background-repeat: repeat;
+}
+/* Panel info mengambang DI DALAM peta (pojok kanan-atas), bukan kolom di samping.
+   Peta tetap penuh & interaktif; kartu kaca buram menumpuk di atasnya. */
 .map-panel {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 7;
   width: 28rem;
-  max-height: 72vh;
+  max-width: calc(100% - 1.5rem);
+  max-height: calc(72vh - 1.5rem);
   overflow-y: auto;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg, var(--shadow-md));
   padding: 1.1rem;
 }
-@media (max-width: 1100px) {
-  .map-shell {
-    flex-direction: column;
-  }
+/* Di layar sempit, kartu melar ke kedua sisi agar tetap terbaca. */
+@media (max-width: 640px) {
   .map-panel {
-    width: 100%;
-    max-height: none;
+    left: 0.75rem;
+    width: auto;
   }
 }
 .maplibregl-ctrl-attrib,

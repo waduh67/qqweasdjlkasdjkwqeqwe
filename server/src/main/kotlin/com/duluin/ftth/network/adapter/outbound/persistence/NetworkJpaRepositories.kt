@@ -32,6 +32,7 @@ interface SiteJpaRepository : JpaRepository<SiteJpaEntity, UUID>, JpaSpecificati
 interface OltJpaRepository : JpaRepository<OltJpaEntity, UUID>, JpaSpecificationExecutor<OltJpaEntity> {
     fun existsByCode(code: String): Boolean
     fun findByCode(code: String): OltJpaEntity?
+    fun findBySiteIdOrderByCode(siteId: UUID): List<OltJpaEntity>
     fun countBySiteId(siteId: UUID): Long
 
     @Query("select o.id from OltJpaEntity o")

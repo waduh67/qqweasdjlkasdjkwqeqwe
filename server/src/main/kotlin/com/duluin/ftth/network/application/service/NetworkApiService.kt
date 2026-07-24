@@ -8,8 +8,10 @@ import com.duluin.ftth.network.OdcRef
 import com.duluin.ftth.network.OdpRef
 import com.duluin.ftth.network.OltPollingTarget
 import com.duluin.ftth.network.OltRef
+import com.duluin.ftth.network.SiteRef
 import com.duluin.ftth.network.domain.model.Odc
 import com.duluin.ftth.network.domain.model.Olt
+import com.duluin.ftth.network.domain.model.Site
 import com.duluin.ftth.network.UpstreamHop
 import com.duluin.ftth.network.UpstreamPath
 import com.duluin.ftth.network.application.port.outbound.CableRepository
@@ -51,6 +53,10 @@ class NetworkApiService(
         if (ids.isEmpty()) emptyList() else oltRepository.findAllByIds(ids).map { it.toRef() }
 
     override fun listAllOltIds(): Set<UUID> = oltRepository.findAllIds()
+
+    override fun findSite(id: UUID): SiteRef? = siteRepository.findById(id)?.toRef()
+
+    override fun oltsAtSite(siteId: UUID): List<OltRef> = oltRepository.findBySiteId(siteId).map { it.toRef() }
 
     override fun downstreamDeviceIds(oltIds: Set<UUID>, odcIds: Set<UUID>): DownstreamIds {
         // OLT → PON port → ODC. ODC yang menempel di ODC alarm langsung ikut juga.
@@ -131,6 +137,15 @@ class NetworkApiService(
         )
     }
 }
+
+private fun Site.toRef() = SiteRef(
+    id = id,
+    code = code,
+    name = name,
+    address = address,
+    location = location,
+    areaId = areaId,
+)
 
 private fun Olt.toRef() = OltRef(
     id = id,

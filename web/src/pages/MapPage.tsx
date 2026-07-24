@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { api, ApiError, tokenStore } from '../api/client'
@@ -7,13 +7,20 @@ import type {
   BlastRadiusView,
   CableType,
   CableView,
+  CustomerTrace,
   ImpactCause,
   ImpactedOverlay,
+  OdcView,
   OdpInspection,
+  SiteInspection,
+  SiteOlt,
+  TraceHop,
 } from '../api/network'
+import type { PageResponse } from '../api/types'
+import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { StatusBadge, useToast } from '../components/ui'
-import { IconClose, IconRoute } from '../components/icons'
+import { IconClose, IconPlus, IconRoute } from '../components/icons'
 import { createCableTool, type CableTool, type ToolState } from '../map/cableTool'
 
 /**
@@ -129,8 +136,6 @@ function glowCircle(id: string, sourceLayer: string, color: any, radius: number)
       paint: {
         'circle-radius': radius,
         'circle-color': color,
-        'circle-stroke-width': 1.5,
-        'circle-stroke-color': 'rgba(255,255,255,0.85)',
       },
     },
   ]
@@ -171,7 +176,7 @@ const FUTURISTIC_STYLE: any = {
       source: 'ftth',
       'source-layer': 'cable',
       layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': CABLE_COLOR, 'line-width': zoomWidth(9, 4), 'line-blur': 4, 'line-opacity': 0.4 },
+      paint: { 'line-color': CABLE_COLOR, 'line-width': zoomWidth(5, 2.2), 'line-blur': 4, 'line-opacity': 0.35 },
     },
     {
       id: 'cable',
@@ -179,7 +184,7 @@ const FUTURISTIC_STYLE: any = {
       source: 'ftth',
       'source-layer': 'cable',
       layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': CABLE_COLOR, 'line-width': zoomWidth(2, 0.8), 'line-opacity': 0.95 },
+      paint: { 'line-color': CABLE_COLOR, 'line-width': zoomWidth(1.2, 0.5), 'line-opacity': 0.95 },
     },
     {
       id: 'cable-flow',
@@ -189,7 +194,7 @@ const FUTURISTIC_STYLE: any = {
       layout: { 'line-cap': 'round' },
       paint: {
         'line-color': '#eaffff',
-        'line-width': zoomWidth(2, 0.8),
+        'line-width': zoomWidth(1.2, 0.5),
         'line-opacity': 0.9,
         'line-dasharray': [0, 4, 3],
       },
@@ -211,11 +216,43 @@ const FUTURISTIC_STYLE: any = {
   ],
 }
 
+/** Meng-escape teks agar aman disisipkan ke markup SVG watermark. */
+function escapeXml(raw: string): string {
+  return raw.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
+}
+
+/**
+ * Membuat ubin SVG berisi label pengguna yang dimiringkan, untuk dijadikan
+ * `background` berulang di atas kanvas. Tujuannya jejak akuntabilitas: bila peta
+ * di-screenshot, nama & email peng-capture ikut terekam. Sengaja sangat samar
+ * (opasitas rendah) agar tidak mengganggu pembacaan peta.
+ */
+function watermarkTile(label: string): string {
+  const text = escapeXml(label)
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="340" height="180">` +
+    `<text x="20" y="150" transform="rotate(-28 20 150)" ` +
+    `font-family="system-ui,-apple-system,sans-serif" font-size="13" font-weight="600" ` +
+    `fill="rgba(255,255,255,0.07)" letter-spacing="0.5">${text}</text></svg>`
+  return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`
+}
+
+/** Perangkat titik yang bisa ditaruh langsung di peta (punya koordinat sendiri). */
+type AssetKind = 'SITE' | 'ODC' | 'ODP'
+
+const ASSET_META: Record<AssetKind, { label: string; createPerm: string; deletePerm: string; endpoint: string }> = {
+  SITE: { label: 'Site/POP', createPerm: 'network.site.create', deletePerm: 'network.site.delete', endpoint: '/api/sites' },
+  ODC: { label: 'ODC', createPerm: 'network.odc.create', deletePerm: 'network.odc.delete', endpoint: '/api/odcs' },
+  ODP: { label: 'ODP', createPerm: 'network.odp.create', deletePerm: 'network.odp.delete', endpoint: '/api/odps' },
+}
+
 export function MapPage() {
   const container = useRef<HTMLDivElement>(null)
   const map = useRef<MapLibreMap | null>(null)
   const tool = useRef<CableTool | null>(null)
-  const modeRef = useRef<'idle' | 'draw' | 'edit'>('idle')
+  const modeRef = useRef<'idle' | 'draw' | 'edit' | 'place'>('idle')
+  // Jenis perangkat yang sedang ditaruh (mode 'place'), dibaca handler klik peta.
+  const placeKindRef = useRef<AssetKind | null>(null)
   const animRef = useRef<number | null>(null)
   const impactedRef = useRef<number | null>(null)
   // Penyebab per kabel (id → alarm hidup di hilir), diisi tiap overlay disegarkan
@@ -225,11 +262,23 @@ export function MapPage() {
   const [cable, setCable] = useState<CableView | null>(null)
   const [cableCauses, setCableCauses] = useState<ImpactCause[]>([])
   const [blast, setBlast] = useState<BlastRadiusView | null>(null)
+  const [trace, setTrace] = useState<CustomerTrace | null>(null)
+  const [siteInsp, setSiteInsp] = useState<SiteInspection | null>(null)
   const [editing, setEditing] = useState<CableView | null>(null)
   const [toolState, setToolState] = useState<ToolState | null>(null)
+  // Mode taruh perangkat baru: jenis yang dipilih, dan lokasi klik yang menunggu form.
+  const [placing, setPlacing] = useState<AssetKind | null>(null)
+  const [placeAt, setPlaceAt] = useState<{ kind: AssetKind; lng: number; lat: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const { can } = useCan()
+  const { user } = useAuth()
   const toast = useToast()
+
+  // Label watermark: siapa yang sedang melihat peta ini. Dihitung sekali per user.
+  const watermark = useMemo(() => {
+    const label = [user?.name, user?.email].filter(Boolean).join(' · ') || 'FTTH OSS'
+    return watermarkTile(label)
+  }, [user?.name, user?.email])
 
   /** Memaksa tile termuat ulang setelah kabel berubah (cache tile 60 detik). */
   const refreshTiles = () => {
@@ -279,11 +328,34 @@ export function MapPage() {
       },
     })
 
-    instance.addControl(new maplibregl.NavigationControl(), 'top-right')
+    // Kontrol zoom di kanan-bawah agar tidak tertimpa panel info yang mengambang
+    // di pojok kanan-atas peta.
+    instance.addControl(new maplibregl.NavigationControl(), 'bottom-right')
     instance.addControl(new maplibregl.ScaleControl(), 'bottom-left')
 
+    // Menutup semua panel info sebelum membuka yang baru — hanya satu tampil.
+    const clearPanels = () => {
+      setSelected(null)
+      setCable(null)
+      setBlast(null)
+      setTrace(null)
+      setSiteInsp(null)
+    }
+
+    // Menaruh perangkat baru: klik peta mana pun jadi lokasinya, lalu form muncul.
+    instance.on('click', (event) => {
+      if (modeRef.current !== 'place') return
+      const kind = placeKindRef.current
+      if (!kind) return
+      modeRef.current = 'idle'
+      placeKindRef.current = null
+      setPlacing(null)
+      instance.getCanvas().style.cursor = ''
+      setPlaceAt({ kind, lng: event.lngLat.lng, lat: event.lngLat.lat })
+    })
+
     instance.on('click', 'odp', (event) => {
-      // Selagi menggambar/mengedit kabel, klik dikuasai alat kabel.
+      // Selagi menggambar/mengedit kabel atau menaruh perangkat, klik dikuasai alat itu.
       if (modeRef.current !== 'idle') return
       const feature = event.features?.[0]
       const id = feature?.properties?.id as string | undefined
@@ -291,11 +363,38 @@ export function MapPage() {
       api
         .get<OdpInspection>(`/api/gis/odps/${id}`)
         .then((odp) => {
+          clearPanels()
           setSelected(odp)
-          setCable(null)
-          setBlast(null)
         })
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail ODP'))
+    })
+
+    // Klik pelanggan (mode idle) → telusur jalur ONU → ODP → ODC → OLT.
+    instance.on('click', 'customer', (event) => {
+      if (modeRef.current !== 'idle') return
+      const id = event.features?.[0]?.properties?.id as string | undefined
+      if (!id) return
+      api
+        .get<CustomerTrace>(`/api/gis/trace/customers/${id}`)
+        .then((t) => {
+          clearPanels()
+          setTrace(t)
+        })
+        .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat telusur pelanggan'))
+    })
+
+    // Klik site/POP (mode idle) → isi site: OLT + rekap perangkat & pelanggan hilir.
+    instance.on('click', 'site', (event) => {
+      if (modeRef.current !== 'idle') return
+      const id = event.features?.[0]?.properties?.id as string | undefined
+      if (!id) return
+      api
+        .get<SiteInspection>(`/api/gis/sites/${id}`)
+        .then((s) => {
+          clearPanels()
+          setSiteInsp(s)
+        })
+        .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail site'))
     })
 
     // Klik ODC (mode idle) → blast radius: siapa saja di hilirnya.
@@ -306,9 +405,8 @@ export function MapPage() {
       api
         .get<BlastRadiusView>(`/api/gis/odcs/${id}/blast-radius`)
         .then((b) => {
+          clearPanels()
           setBlast(b)
-          setSelected(null)
-          setCable(null)
         })
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat blast radius ODC'))
     })
@@ -321,16 +419,15 @@ export function MapPage() {
       api
         .get<CableView>(`/api/cables/${id}`)
         .then((c) => {
+          clearPanels()
           setCable(c)
           // Kalau kabel ini sedang merah, sertakan alarm penyebabnya.
           setCableCauses(impactedCauses.current.get(id) ?? [])
-          setSelected(null)
-          setBlast(null)
         })
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail kabel'))
     })
 
-    for (const layer of ['odp', 'odc', 'cable']) {
+    for (const layer of ['odp', 'odc', 'cable', 'customer', 'site']) {
       instance.on('mouseenter', layer, () => {
         if (modeRef.current === 'idle') instance.getCanvas().style.cursor = 'pointer'
       })
@@ -355,7 +452,7 @@ export function MapPage() {
           type: 'line',
           source: 'impacted',
           layout: { 'line-cap': 'round', 'line-join': 'round' },
-          paint: { 'line-color': SEVERITY_COLOR, 'line-width': zoomWidth(12, 5), 'line-blur': 5, 'line-opacity': 0.5 },
+          paint: { 'line-color': SEVERITY_COLOR, 'line-width': zoomWidth(7, 3), 'line-blur': 5, 'line-opacity': 0.5 },
         },
         'customer-glow',
       )
@@ -365,7 +462,7 @@ export function MapPage() {
           type: 'line',
           source: 'impacted',
           layout: { 'line-cap': 'round' },
-          paint: { 'line-color': SEVERITY_COLOR, 'line-width': zoomWidth(2.5, 1), 'line-opacity': 0.95 },
+          paint: { 'line-color': SEVERITY_COLOR, 'line-width': zoomWidth(1.6, 0.7), 'line-opacity': 0.95 },
         },
         'customer-glow',
       )
@@ -402,6 +499,8 @@ export function MapPage() {
   }, [])
 
   const startDraw = () => {
+    // Kalau sedang menaruh perangkat, batalkan dulu — satu alat aktif pada satu waktu.
+    if (placing) cancelPlace()
     setSelected(null)
     setCable(null)
     setEditing(null)
@@ -411,6 +510,62 @@ export function MapPage() {
   const cancelTool = () => {
     tool.current?.cancel()
     setEditing(null)
+  }
+
+  /** Masuk mode taruh: klik peta berikutnya menentukan lokasi perangkat baru. */
+  const startPlace = (kind: AssetKind) => {
+    tool.current?.cancel()
+    setSelected(null)
+    setCable(null)
+    setBlast(null)
+    setTrace(null)
+    setSiteInsp(null)
+    setEditing(null)
+    setPlaceAt(null)
+    placeKindRef.current = kind
+    modeRef.current = 'place'
+    setPlacing(kind)
+    if (map.current) map.current.getCanvas().style.cursor = 'crosshair'
+  }
+
+  const cancelPlace = () => {
+    placeKindRef.current = null
+    modeRef.current = 'idle'
+    setPlacing(null)
+    setPlaceAt(null)
+    if (map.current) map.current.getCanvas().style.cursor = ''
+  }
+
+  /** Menyimpan perangkat titik baru di lokasi yang diklik, lalu menyegarkan tile. */
+  const savePlacedAsset = async (payload: Record<string, unknown>) => {
+    if (!placeAt) return
+    const meta = ASSET_META[placeAt.kind]
+    try {
+      await api.post(meta.endpoint, {
+        ...payload,
+        location: { longitude: placeAt.lng, latitude: placeAt.lat },
+      })
+      toast.success(`${meta.label} ${String(payload.code ?? '')} tersimpan`)
+      setPlaceAt(null)
+      refreshTiles()
+      void refreshImpacted()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : `Gagal menyimpan ${meta.label}`)
+    }
+  }
+
+  /** Menghapus perangkat titik dari panelnya; server menolak bila masih dipakai hilir. */
+  const deleteAsset = async (kind: AssetKind, id: string, code: string, onDone: () => void) => {
+    const meta = ASSET_META[kind]
+    try {
+      await api.del(`${meta.endpoint}/${id}`)
+      toast.success(`${meta.label} ${code} dihapus`)
+      onDone()
+      refreshTiles()
+      void refreshImpacted()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : `Gagal menghapus ${meta.label}`)
+    }
   }
 
   const saveNewCable = async (form: { code: string; name: string; coreCount: number }) => {
@@ -516,14 +671,26 @@ export function MapPage() {
       </div>
       {error && <p className="error">{error}</p>}
       <div className="map-shell">
-        <div ref={container} className="map-canvas" />
+        {/* Kanvas dibungkus agar watermark akuntabilitas hanya menutup peta,
+            bukan panel di sampingnya. */}
+        <div className="map-canvas-wrap">
+          <div ref={container} className="map-canvas" />
+          <div className="map-watermark" aria-hidden="true" style={{ backgroundImage: watermark }} />
+        </div>
 
-        {/* Toolbar kiri-atas: mulai tarik kabel. Tampil saat idle — termasuk state
-            awal sebelum alat pernah dipakai (toolState masih null). */}
-        {can('network.cable.create') && (!toolState || toolState.mode === 'idle') && (
-          <div className="map-toolbar">
-            <button className="primary" onClick={startDraw}>
-              <IconRoute size={16} /> Tarik kabel
+        {/* Toolbar kiri-atas: tarik kabel + taruh perangkat. Tampil saat idle —
+            termasuk state awal sebelum alat pernah dipakai (toolState masih null). */}
+        {(!toolState || toolState.mode === 'idle') && !placing && !placeAt && (
+          <MapToolbar can={can} onDraw={startDraw} onPlace={startPlace} />
+        )}
+
+        {/* Bilah petunjuk saat menaruh perangkat baru */}
+        {placing && (
+          <div className="map-hint">
+            <IconPlus size={16} />
+            <span>Klik lokasi di peta untuk menaruh {ASSET_META[placing].label} baru</span>
+            <button className="ghost small" style={{ marginLeft: 'auto' }} onClick={cancelPlace}>
+              Batal
             </button>
           </div>
         )}
@@ -576,8 +743,40 @@ export function MapPage() {
           />
         )}
 
-        {blast && <BlastRadiusPanel blast={blast} onClose={() => setBlast(null)} />}
-        {selected && <OdpPanel inspection={selected} onClose={() => setSelected(null)} />}
+        {blast && (
+          <BlastRadiusPanel
+            blast={blast}
+            canDelete={can('network.odc.delete')}
+            onDelete={() => void deleteAsset('ODC', blast.odcId, blast.code, () => setBlast(null))}
+            onClose={() => setBlast(null)}
+          />
+        )}
+        {trace && <CustomerTracePanel trace={trace} onClose={() => setTrace(null)} />}
+        {siteInsp && (
+          <SitePanel
+            site={siteInsp}
+            canDelete={can('network.site.delete')}
+            onDelete={() => void deleteAsset('SITE', siteInsp.siteId, siteInsp.code, () => setSiteInsp(null))}
+            onClose={() => setSiteInsp(null)}
+          />
+        )}
+        {selected && (
+          <OdpPanel
+            inspection={selected}
+            canDelete={can('network.odp.delete')}
+            onDelete={() => void deleteAsset('ODP', selected.odpId, selected.code, () => setSelected(null))}
+            onClose={() => setSelected(null)}
+          />
+        )}
+        {placeAt && (
+          <PlaceAssetForm
+            kind={placeAt.kind}
+            lng={placeAt.lng}
+            lat={placeAt.lat}
+            onCancel={() => setPlaceAt(null)}
+            onSave={savePlacedAsset}
+          />
+        )}
         {cable && (
           <CablePanel
             cable={cable}
@@ -590,6 +789,38 @@ export function MapPage() {
           />
         )}
       </div>
+    </div>
+  )
+}
+
+/**
+ * Toolbar kiri-atas peta: tarik kabel + tombol taruh perangkat. Tiap tombol
+ * hanya muncul bila pengguna punya izin membuat aset terkait, sehingga toolbar
+ * menyesuaikan diri dengan peran — teknisi read-only tidak melihat apa pun.
+ */
+function MapToolbar({
+  can,
+  onDraw,
+  onPlace,
+}: {
+  can: (perm: string) => boolean
+  onDraw: () => void
+  onPlace: (kind: AssetKind) => void
+}) {
+  const placeable = (Object.keys(ASSET_META) as AssetKind[]).filter((k) => can(ASSET_META[k].createPerm))
+  if (!can('network.cable.create') && placeable.length === 0) return null
+  return (
+    <div className="map-toolbar">
+      {can('network.cable.create') && (
+        <button className="primary" onClick={onDraw}>
+          <IconRoute size={16} /> Tarik kabel
+        </button>
+      )}
+      {placeable.map((k) => (
+        <button key={k} className="ghost" onClick={() => onPlace(k)}>
+          <IconPlus size={15} /> {ASSET_META[k].label}
+        </button>
+      ))}
     </div>
   )
 }
@@ -790,7 +1021,17 @@ const ONU_DOT: Record<string, string> = {
 }
 
 /** Panel "kalau ODC ini putus, siapa yang kena" — daftar pelanggan hilir + kesiapan broadcast. */
-function BlastRadiusPanel({ blast, onClose }: { blast: BlastRadiusView; onClose: () => void }) {
+function BlastRadiusPanel({
+  blast,
+  canDelete,
+  onDelete,
+  onClose,
+}: {
+  blast: BlastRadiusView
+  canDelete: boolean
+  onDelete: () => void
+  onClose: () => void
+}) {
   const withPhone = blast.customers.filter((c) => c.phone).length
   return (
     <aside className="map-panel stack">
@@ -831,6 +1072,13 @@ function BlastRadiusPanel({ blast, onClose }: { blast: BlastRadiusView; onClose:
           {withPhone} nomor siap untuk broadcast pemberitahuan.
         </p>
       )}
+      {canDelete && (
+        <div className="row">
+          <button className="ghost danger" onClick={onDelete}>
+            Hapus ODC
+          </button>
+        </div>
+      )}
     </aside>
   )
 }
@@ -857,6 +1105,312 @@ function AffectedRow({ c }: { c: AffectedCustomer }) {
   )
 }
 
+const HOP_LABEL: Record<string, string> = {
+  CUSTOMER: 'Pelanggan',
+  ONU: 'ONU',
+  ODP: 'ODP',
+  ODC: 'ODC',
+  OLT: 'OLT',
+  PON: 'PON',
+  SITE: 'Site/POP',
+}
+
+/**
+ * Panel telusur pelanggan: jalur fisik dari rumah pelanggan menaiki topologi
+ * sampai OLT, dengan status optik dan perkiraan anggaran redaman — menjawab
+ * "kenapa pelanggan ini bermasalah dan lewat mana kabelnya".
+ */
+function CustomerTracePanel({ trace, onClose }: { trace: CustomerTrace; onClose: () => void }) {
+  const up = trace.upstream
+  return (
+    <aside className="map-panel stack">
+      <div className="spread">
+        <h3 style={{ margin: 0 }}>{trace.customerName}</h3>
+        <button className="ghost icon-btn" onClick={onClose} aria-label="Tutup">
+          <IconClose size={18} />
+        </button>
+      </div>
+      <p className="muted" style={{ margin: 0 }}>
+        {trace.customerCode}
+      </p>
+      <div className="row wrap" style={{ gap: '0.4rem' }}>
+        {trace.onuStatus && <StatusBadge status={trace.onuStatus} />}
+        {trace.onuSerialNumber && <span className="badge">{trace.onuSerialNumber}</span>}
+        {trace.odpPortNumber != null && <span className="badge">port {trace.odpPortNumber}</span>}
+      </div>
+
+      {(trace.installRxPowerDbm != null || trace.opticalHealth || trace.estimatedLossDb != null) && (
+        <div className="row wrap" style={{ gap: '0.4rem', alignItems: 'center' }}>
+          {trace.installRxPowerDbm != null && (
+            <span style={{ color: HEALTH_COLOR[trace.opticalHealth ?? 'UNKNOWN'], fontWeight: 600 }}>
+              {trace.installRxPowerDbm} dBm
+            </span>
+          )}
+          {trace.opticalHealth && trace.installRxPowerDbm == null && (
+            <span style={{ color: HEALTH_COLOR[trace.opticalHealth], fontWeight: 600 }}>{trace.opticalHealth}</span>
+          )}
+          {trace.estimatedLossDb != null && (
+            <span className="muted" style={{ fontSize: '0.82rem' }}>
+              perkiraan rugi total {trace.estimatedLossDb.toFixed(1)} dB
+            </span>
+          )}
+        </div>
+      )}
+
+      {up && (
+        <div>
+          <strong>Jalur hulu</strong>
+          <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', lineHeight: 1.6 }}>
+            ODC {up.odcCode ?? '—'} → PON {up.ponPortLabel ?? '—'} → OLT {up.oltCode ?? '—'} → site{' '}
+            {up.siteCode ?? '—'} {!up.complete && <span className="badge">jalur belum lengkap</span>}
+          </p>
+        </div>
+      )}
+
+      {trace.hops.length > 0 && (
+        <div>
+          <strong>Telusur jalur ({trace.hops.length})</strong>
+          <ol className="timeline" style={{ marginTop: '0.5rem' }}>
+            {trace.hops.map((hop: TraceHop, i: number) => (
+              <li key={`${hop.kind}-${hop.code}-${i}`}>
+                <span className="tl-dot" aria-hidden="true" />
+                <div className="stack" style={{ gap: '0.1rem' }}>
+                  <strong style={{ fontSize: '0.85rem' }}>
+                    {HOP_LABEL[hop.kind] ?? hop.kind} {hop.code}
+                  </strong>
+                  <span className="muted" style={{ fontSize: '0.8rem' }}>
+                    {hop.name}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+    </aside>
+  )
+}
+
+/**
+ * Panel isi sebuah site/POP: OLT yang berdiri di sini plus rekap seluruh
+ * perangkat & pelanggan di hilirnya — "seberapa besar site ini". Menghapus site
+ * ditolak server selama masih ada OLT terpasang, jadi tombolnya dikunci lebih dulu.
+ */
+function SitePanel({
+  site,
+  canDelete,
+  onDelete,
+  onClose,
+}: {
+  site: SiteInspection
+  canDelete: boolean
+  onDelete: () => void
+  onClose: () => void
+}) {
+  return (
+    <aside className="map-panel stack">
+      <div className="spread">
+        <h3 style={{ margin: 0 }}>{site.code}</h3>
+        <button className="ghost icon-btn" onClick={onClose} aria-label="Tutup">
+          <IconClose size={18} />
+        </button>
+      </div>
+      <p className="muted" style={{ margin: 0 }}>
+        {site.name}
+      </p>
+      {site.address && (
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          {site.address}
+        </p>
+      )}
+      <div className="row wrap" style={{ gap: '0.4rem' }}>
+        <span className="badge">{site.oltCount} OLT</span>
+        <span className="badge">{site.odcCount} ODC</span>
+        <span className="badge">{site.odpCount} ODP</span>
+        <span className="badge accent">{site.customerCount} pelanggan</span>
+      </div>
+      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        Seluruh perangkat & pelanggan yang bergantung pada site ini.
+      </p>
+      {site.olts.length > 0 && (
+        <div className="stack" style={{ gap: '0.3rem' }}>
+          <strong style={{ fontSize: '0.85rem' }}>OLT di site ini</strong>
+          {site.olts.map((olt) => (
+            <SiteOltRow key={olt.id} olt={olt} />
+          ))}
+        </div>
+      )}
+      {canDelete && (
+        <div className="row">
+          <button className="ghost danger" onClick={onDelete} disabled={site.oltCount > 0}>
+            Hapus site
+          </button>
+          {site.oltCount > 0 && (
+            <span className="muted" style={{ fontSize: '0.78rem', alignSelf: 'center' }}>
+              Masih ada OLT terpasang.
+            </span>
+          )}
+        </div>
+      )}
+    </aside>
+  )
+}
+
+function SiteOltRow({ olt }: { olt: SiteOlt }) {
+  return (
+    <div className="spread" style={{ gap: '0.45rem', alignItems: 'center' }}>
+      <span className="row" style={{ gap: '0.45rem', alignItems: 'center', minWidth: 0 }}>
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            flexShrink: 0,
+            background: olt.active ? '#34d399' : 'var(--muted)',
+          }}
+        />
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{olt.name}</span>
+      </span>
+      <span className="muted tnum" style={{ fontSize: '0.78rem', flexShrink: 0 }}>
+        {olt.code} · {olt.vendor}
+      </span>
+    </div>
+  )
+}
+
+/** Rasio splitter yang lazim dipakai — cukup untuk sebagian besar pemasangan. */
+const SPLITTER_RATIOS = ['1:2', '1:4', '1:8', '1:16', '1:32', '1:64']
+
+/**
+ * Form isian perangkat titik baru, muncul setelah lokasi diklik di peta. Field
+ * menyesuaikan jenis: Site cukup alamat, ODC/ODP butuh rasio splitter & kapasitas,
+ * dan ODP boleh langsung ditautkan ke ODC induknya. Koordinat diambil dari titik
+ * klik (ditampilkan, tak bisa diubah manual di sini).
+ */
+function PlaceAssetForm({
+  kind,
+  lng,
+  lat,
+  onCancel,
+  onSave,
+}: {
+  kind: AssetKind
+  lng: number
+  lat: number
+  onCancel: () => void
+  onSave: (payload: Record<string, unknown>) => void
+}) {
+  const meta = ASSET_META[kind]
+  const [code, setCode] = useState('')
+  const [name, setName] = useState('')
+  const [address, setAddress] = useState('')
+  const [splitterRatio, setSplitterRatio] = useState('1:8')
+  const [capacity, setCapacity] = useState(kind === 'ODP' ? 8 : 64)
+  const [odcId, setOdcId] = useState('')
+  const [odcs, setOdcs] = useState<OdcView[]>([])
+
+  // Daftar ODC untuk memilih induk sebuah ODP. Hanya relevan saat menaruh ODP.
+  useEffect(() => {
+    if (kind !== 'ODP') return
+    let alive = true
+    api
+      .get<PageResponse<OdcView>>('/api/odcs?size=100')
+      .then((page) => {
+        if (alive) setOdcs(page.content)
+      })
+      .catch(() => {
+        /* pemilih induk opsional — biarkan kosong bila gagal */
+      })
+    return () => {
+      alive = false
+    }
+  }, [kind])
+
+  const submit = () => {
+    const base: Record<string, unknown> = { code: sanitizeCode(code), name: name.trim() }
+    if (address.trim()) base.address = address.trim()
+    if (kind === 'SITE') {
+      onSave(base)
+      return
+    }
+    base.splitterRatio = splitterRatio
+    base.capacity = capacity
+    if (kind === 'ODP' && odcId) base.odcId = odcId
+    onSave(base)
+  }
+
+  return (
+    <aside className="map-panel stack">
+      <div className="spread">
+        <h3 style={{ margin: 0 }}>{meta.label} baru</h3>
+        <button className="ghost icon-btn" onClick={onCancel} aria-label="Batal">
+          <IconClose size={18} />
+        </button>
+      </div>
+      <p className="muted tnum" style={{ margin: 0, fontSize: '0.82rem' }}>
+        {lat.toFixed(6)}, {lng.toFixed(6)}
+      </p>
+      <label>
+        <span>Kode</span>
+        <input value={code} onChange={(e) => setCode(e.target.value)} placeholder={`${kind}-001`} />
+      </label>
+      <label>
+        <span>Nama</span>
+        <input value={name} onChange={(e) => setName(e.target.value)} />
+      </label>
+      <label>
+        <span>Alamat {kind !== 'SITE' && <span className="muted">(opsional)</span>}</span>
+        <input value={address} onChange={(e) => setAddress(e.target.value)} />
+      </label>
+      {kind === 'ODP' && (
+        <label>
+          <span>ODC induk</span>
+          <select value={odcId} onChange={(e) => setOdcId(e.target.value)}>
+            <option value="">— belum ditautkan —</option>
+            {odcs.map((odc) => (
+              <option key={odc.id} value={odc.id}>
+                {odc.code} — {odc.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {kind !== 'SITE' && (
+        <div className="row" style={{ gap: '0.5rem' }}>
+          <label style={{ flex: 1 }}>
+            <span>Rasio splitter</span>
+            <select value={splitterRatio} onChange={(e) => setSplitterRatio(e.target.value)}>
+              {SPLITTER_RATIOS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={{ flex: 1 }}>
+            <span>Kapasitas</span>
+            <input
+              type="number"
+              min={1}
+              max={kind === 'ODP' ? 256 : 1024}
+              value={capacity}
+              onChange={(e) => setCapacity(Number(e.target.value))}
+            />
+          </label>
+        </div>
+      )}
+      <div className="row">
+        <button className="primary" disabled={!code.trim() || !name.trim()} onClick={submit}>
+          Simpan {meta.label}
+        </button>
+        <button className="ghost" onClick={onCancel}>
+          Batal
+        </button>
+      </div>
+    </aside>
+  )
+}
+
 function Legend() {
   const items: Array<[string, string]> = [
     ['#b47cff', 'Site/POP'],
@@ -880,7 +1434,17 @@ function Legend() {
 }
 
 /** Panel jawaban atas pertanyaan lapangan: "di ODP ini ada siapa saja, port mana yang kosong?" */
-function OdpPanel({ inspection, onClose }: { inspection: OdpInspection; onClose: () => void }) {
+function OdpPanel({
+  inspection,
+  canDelete,
+  onDelete,
+  onClose,
+}: {
+  inspection: OdpInspection
+  canDelete: boolean
+  onDelete: () => void
+  onClose: () => void
+}) {
   const { upstream } = inspection
   return (
     <aside className="map-panel stack">
@@ -968,6 +1532,19 @@ function OdpPanel({ inspection, onClose }: { inspection: OdpInspection; onClose:
           </table>
         )}
       </div>
+
+      {canDelete && (
+        <div className="row">
+          <button className="ghost danger" onClick={onDelete} disabled={inspection.occupants.length > 0}>
+            Hapus ODP
+          </button>
+          {inspection.occupants.length > 0 && (
+            <span className="muted" style={{ fontSize: '0.78rem', alignSelf: 'center' }}>
+              Masih ada pelanggan tersambung.
+            </span>
+          )}
+        </div>
+      )}
     </aside>
   )
 }

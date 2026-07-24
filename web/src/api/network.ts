@@ -157,6 +157,27 @@ export interface OdpInspection {
   occupants: OdpOccupant[]
 }
 
+export interface SiteOlt {
+  id: string
+  code: string
+  name: string
+  vendor: string
+  active: boolean
+}
+
+export interface SiteInspection {
+  siteId: string
+  code: string
+  name: string
+  address: string | null
+  location: Coordinate
+  oltCount: number
+  odcCount: number
+  odpCount: number
+  customerCount: number
+  olts: SiteOlt[]
+}
+
 export interface TraceHop {
   kind: string
   code: string
