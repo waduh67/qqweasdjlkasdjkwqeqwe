@@ -265,3 +265,26 @@ export interface BlastRadiusView {
   downCount: number
   customers: AffectedCustomer[]
 }
+
+/** Ruas kabel yang ikut lenyap dalam simulasi putus — untuk disorot di peta. */
+export interface SeveredCable {
+  id: string
+  code: string
+  cableType: CableType
+  points: Coordinate[]
+}
+
+/** Simulasi "kalau kabel ini putus, siapa yang kena" — hasil dari klik sebuah kabel. */
+export interface CableCutView {
+  cableId: string
+  cableCode: string
+  cableType: CableType
+  /** Jenis simpul di ujung hilir yang terputus: ODC/ODP/CUSTOMER. */
+  severedRootKind: NodeKind
+  odcCount: number
+  odpCount: number
+  customerCount: number
+  downCount: number
+  customers: AffectedCustomer[]
+  severedCables: SeveredCable[]
+}

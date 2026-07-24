@@ -5,6 +5,7 @@ import { api, ApiError, tokenStore } from '../api/client'
 import type {
   AffectedCustomer,
   BlastRadiusView,
+  CableCutView,
   CableType,
   CableView,
   CustomerTrace,
@@ -63,6 +64,12 @@ const CABLE_COLOR: any = [
 /** Warna sorotan kabel terdampak menurut keparahan alarm hilirnya. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SEVERITY_COLOR: any = ['match', ['get', 'severity'], 'CRITICAL', '#ff3b5c', 'WARNING', '#fbbf24', '#ff3b5c']
+
+/**
+ * Warna sorotan simulasi "kalau putus" — amber, sengaja beda dari merah alarm
+ * hidup: yang ini hipotetis (belum terjadi), bukan gangguan nyata yang berjalan.
+ */
+const WHATIF_COLOR = '#f59e0b'
 
 /** Warna ONU pelanggan menurut status hidup — dasar "perangkat modar → merah". */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -262,6 +269,8 @@ export function MapPage() {
   const [cable, setCable] = useState<CableView | null>(null)
   const [cableCauses, setCableCauses] = useState<ImpactCause[]>([])
   const [blast, setBlast] = useState<BlastRadiusView | null>(null)
+  // Simulasi "kalau kabel ini putus" — panel + sorotan subpohon terputus.
+  const [whatIf, setWhatIf] = useState<CableCutView | null>(null)
   const [trace, setTrace] = useState<CustomerTrace | null>(null)
   const [siteInsp, setSiteInsp] = useState<SiteInspection | null>(null)
   const [editing, setEditing] = useState<CableView | null>(null)
@@ -338,6 +347,7 @@ export function MapPage() {
       setSelected(null)
       setCable(null)
       setBlast(null)
+      setWhatIf(null)
       setTrace(null)
       setSiteInsp(null)
     }
@@ -471,6 +481,36 @@ export function MapPage() {
         if (!document.hidden) void refreshImpacted()
       }, 30_000)
 
+      // Overlay simulasi "kalau putus": subpohon kabel yang lenyap disorot amber
+      // dan putus-putus — hipotetis, dibedakan dari merah alarm hidup. Diisi
+      // imperatif dari state `whatIf` (lihat efek sinkron di bawah).
+      instance.addSource('whatif', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+      instance.addLayer(
+        {
+          id: 'whatif-glow',
+          type: 'line',
+          source: 'whatif',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': WHATIF_COLOR, 'line-width': zoomWidth(8, 3.5), 'line-blur': 6, 'line-opacity': 0.45 },
+        },
+        'customer-glow',
+      )
+      instance.addLayer(
+        {
+          id: 'whatif-core',
+          type: 'line',
+          source: 'whatif',
+          layout: { 'line-cap': 'round' },
+          paint: {
+            'line-color': WHATIF_COLOR,
+            'line-width': zoomWidth(2, 0.9),
+            'line-opacity': 0.95,
+            'line-dasharray': [2, 2],
+          },
+        },
+        'customer-glow',
+      )
+
       // Animasi: dash `cable-flow` mengalir + denyut opasitas sorotan merah.
       let step = 0
       animRef.current = window.setInterval(() => {
@@ -497,6 +537,20 @@ export function MapPage() {
       map.current = null
     }
   }, [])
+
+  // Menyorot subpohon terputus saat panel simulasi terbuka; kosongkan saat tutup.
+  useEffect(() => {
+    const src = map.current?.getSource('whatif') as GeoJSONSource | undefined
+    if (!src) return
+    src.setData({
+      type: 'FeatureCollection',
+      features: (whatIf?.severedCables ?? []).map((c) => ({
+        type: 'Feature',
+        properties: {},
+        geometry: { type: 'LineString', coordinates: c.points.map((p) => [p.longitude, p.latitude]) },
+      })),
+    })
+  }, [whatIf])
 
   const startDraw = () => {
     // Kalau sedang menaruh perangkat, batalkan dulu — satu alat aktif pada satu waktu.
@@ -646,6 +700,17 @@ export function MapPage() {
     }
   }
 
+  /** Simulasi "kalau kabel ini putus": tukar panel kabel ke panel dampak + sorotan. */
+  const simulateCut = async (c: CableView) => {
+    try {
+      const view = await api.get<CableCutView>(`/api/gis/cables/${c.id}/blast-radius`)
+      setCable(null)
+      setWhatIf(view)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Gagal memuat simulasi putus kabel')
+    }
+  }
+
   if (!can('gis.map.view')) {
     return (
       <div className="card">
@@ -751,6 +816,7 @@ export function MapPage() {
             onClose={() => setBlast(null)}
           />
         )}
+        {whatIf && <CableCutPanel cut={whatIf} onClose={() => setWhatIf(null)} />}
         {trace && <CustomerTracePanel trace={trace} onClose={() => setTrace(null)} />}
         {siteInsp && (
           <SitePanel
@@ -783,8 +849,10 @@ export function MapPage() {
             causes={cableCauses}
             canEdit={can('network.cable.update')}
             canDelete={can('network.cable.delete')}
+            canSimulate={can('customer.customer.view')}
             onEdit={() => startEdit(cable)}
             onDelete={() => void deleteCable(cable)}
+            onSimulate={() => void simulateCut(cable)}
             onClose={() => setCable(null)}
           />
         )}
@@ -919,16 +987,20 @@ function CablePanel({
   causes,
   canEdit,
   canDelete,
+  canSimulate,
   onEdit,
   onDelete,
+  onSimulate,
   onClose,
 }: {
   cable: CableView
   causes: ImpactCause[]
   canEdit: boolean
   canDelete: boolean
+  canSimulate: boolean
   onEdit: () => void
   onDelete: () => void
+  onSimulate: () => void
   onClose: () => void
 }) {
   return (
@@ -952,6 +1024,11 @@ function CablePanel({
         {cable.fromKind} → {cable.toKind} · {cable.route.points.length} titik jalur
       </p>
       {causes.length > 0 && <CableCauses causes={causes} />}
+      {canSimulate && (
+        <button className="ghost" style={{ justifyContent: 'flex-start', color: WHATIF_COLOR }} onClick={onSimulate}>
+          Simulasi putus — siapa yang kena?
+        </button>
+      )}
       {(canEdit || canDelete) && (
         <div className="row">
           {canEdit && (
@@ -965,6 +1042,59 @@ function CablePanel({
             </button>
           )}
         </div>
+      )}
+    </aside>
+  )
+}
+
+const CUT_ROOT_LABEL: Record<string, string> = {
+  ODC: 'ODC + seluruh hilirnya',
+  ODP: 'ODP sasaran',
+  CUSTOMER: 'satu pelanggan',
+}
+
+/**
+ * Panel simulasi "kalau kabel ini putus, siapa yang kena". Kabel drop menjatuhkan
+ * satu pelanggan, distribusi satu ODP, feeder satu ODC beserta segenap subpohonnya
+ * — dampaknya ditentukan simpul di ujung hilir kabel, yang ditandai di sini.
+ */
+function CableCutPanel({ cut, onClose }: { cut: CableCutView; onClose: () => void }) {
+  const withPhone = cut.customers.filter((c) => c.phone).length
+  return (
+    <aside className="map-panel stack">
+      <div className="spread">
+        <h3 style={{ margin: 0 }}>{cut.cableCode}</h3>
+        <button className="ghost icon-btn" onClick={onClose} aria-label="Tutup">
+          <IconClose size={18} />
+        </button>
+      </div>
+      <p className="muted" style={{ margin: 0 }}>
+        Simulasi putus · {CUT_ROOT_LABEL[cut.severedRootKind] ?? cut.severedRootKind}
+      </p>
+      <div className="row wrap" style={{ gap: '0.4rem' }}>
+        {cut.odcCount > 0 && <span className="badge">{cut.odcCount} ODC</span>}
+        {cut.odpCount > 0 && <span className="badge">{cut.odpCount} ODP</span>}
+        <span className="badge">{cut.customerCount} pelanggan</span>
+        {cut.downCount > 0 && (
+          <span className="badge" style={{ color: '#ff5470', borderColor: '#ff5470' }}>
+            {cut.downCount} sudah mati
+          </span>
+        )}
+      </div>
+      <p style={{ margin: 0, fontSize: '0.82rem', color: WHATIF_COLOR }}>
+        Kalau ruas ini putus, {cut.customerCount} pelanggan kehilangan layanan.
+      </p>
+      {cut.customers.length > 0 && (
+        <div className="stack" style={{ gap: '0.3rem', maxHeight: 280, overflowY: 'auto' }}>
+          {cut.customers.map((c) => (
+            <AffectedRow key={c.customerId} c={c} />
+          ))}
+        </div>
+      )}
+      {withPhone > 0 && (
+        <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
+          {withPhone} nomor siap untuk broadcast pemberitahuan.
+        </p>
       )}
     </aside>
   )
