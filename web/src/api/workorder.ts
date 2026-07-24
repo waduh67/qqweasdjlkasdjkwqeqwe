@@ -37,3 +37,33 @@ export interface WorkOrderDetail {
   workOrder: WorkOrderView
   timeline: WorkOrderEventView[]
 }
+
+/** Bukti pengerjaan (Phase 4.2): foto & tanda tangan. Byte diambil via `api.blob`. */
+export type EvidenceKind = 'BEFORE' | 'AFTER' | 'LOCATION' | 'SERIAL' | 'OTHER'
+
+export interface EvidenceView {
+  id: string
+  workOrderId: string
+  kind: EvidenceKind
+  caption: string | null
+  contentType: string
+  sizeBytes: number
+  latitude: number | null
+  longitude: number | null
+  capturedAt: string | null
+  uploadedBy: string
+  uploadedByName: string | null
+  createdAt: string
+}
+
+export interface SignatureView {
+  id: string
+  workOrderId: string
+  signerName: string
+  contentType: string
+  sizeBytes: number
+  signedBy: string
+  signedByName: string | null
+  signedAt: string
+  createdAt: string
+}

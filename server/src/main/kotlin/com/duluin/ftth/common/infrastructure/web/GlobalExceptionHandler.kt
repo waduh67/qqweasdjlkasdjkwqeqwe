@@ -12,6 +12,7 @@ import org.springframework.security.authorization.AuthorizationDeniedException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.multipart.MaxUploadSizeExceededException
 
 /**
  * Menerjemahkan exception domain (bebas HTTP) menjadi RFC-7807 ProblemDetail.
@@ -39,6 +40,10 @@ class GlobalExceptionHandler {
     @ExceptionHandler(AuthorizationDeniedException::class, SpringAccessDeniedException::class)
     fun handleSpringDenied(ex: RuntimeException) =
         problem(HttpStatus.FORBIDDEN, "Tidak punya izin untuk operasi ini")
+
+    @ExceptionHandler(MaxUploadSizeExceededException::class)
+    fun handleUploadTooLarge(ex: MaxUploadSizeExceededException) =
+        problem(HttpStatus.BAD_REQUEST, "Berkas yang diunggah terlalu besar")
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleBeanValidation(ex: MethodArgumentNotValidException): ProblemDetail =

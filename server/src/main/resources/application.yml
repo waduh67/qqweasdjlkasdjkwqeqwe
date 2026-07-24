@@ -11,6 +11,11 @@ spring:
       ddl-auto: none
   flyway:
     locations: classpath:db/migration
+  servlet:
+    multipart:
+      # Bukti foto lapangan; batas keras di sini, validasi lebih ketat di service.
+      max-file-size: 20MB
+      max-request-size: 25MB
 
 server:
   port: 8080
@@ -40,3 +45,11 @@ ftth:
     platform-admin-email: ${FTTH_PLATFORM_ADMIN_EMAIL:root@ftth.local}
     platform-admin-password: ${FTTH_PLATFORM_ADMIN_PASSWORD:rootadmin123}
     seed-demo-tenant: ${FTTH_SEED_DEMO:true}
+  storage:
+    # Object storage bukti pengerjaan (MinIO dev; ganti ke S3 asli via env di prod).
+    endpoint: ${FTTH_S3_ENDPOINT:http://localhost:9000}
+    region: ${FTTH_S3_REGION:us-east-1}
+    bucket: ${FTTH_S3_BUCKET:ftth-evidence}
+    access-key: ${FTTH_S3_ACCESS_KEY:ftth}
+    secret-key: ${FTTH_S3_SECRET_KEY:ftthminio}
+    path-style-access: ${FTTH_S3_PATH_STYLE:true}

@@ -4,6 +4,7 @@ kotlin = "2.3.21"
 spring-boot = "4.1.0"
 spring-modulith = "2.1.0"
 springdoc = "3.0.3"
+awssdk = "2.29.52"
 snmp4j = "3.8.2"
 jackson = "3.0.4"
 logback = "1.5.20"
@@ -12,6 +13,10 @@ logback = "1.5.20"
 spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
 spring-modulith-bom = { module = "org.springframework.modulith:spring-modulith-bom", version.ref = "spring-modulith" }
 springdoc-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+
+# Object storage bukti pengerjaan (MinIO/S3-compatible). Versi s3 dikelola BOM.
+awssdk-bom = { module = "software.amazon.awssdk:bom", version.ref = "awssdk" }
+awssdk-s3 = { module = "software.amazon.awssdk:s3" }
 
 # Dipakai collector saja — agent sengaja tidak menarik Spring sama sekali.
 snmp4j = { module = "org.snmp4j:snmp4j", version.ref = "snmp4j" }

@@ -84,12 +84,15 @@ async function rotateRefreshToken(): Promise<boolean> {
 
 async function send(path: string, init: RequestInit): Promise<Response> {
   const headers = new Headers(init.headers)
-  if (init.body) headers.set('Content-Type', 'application/json')
+  // Hanya body JSON (string) yang diberi Content-Type di sini; untuk FormData
+  // biarkan browser memasang `multipart/form-data` beserta boundary-nya sendiri.
+  if (typeof init.body === 'string') headers.set('Content-Type', 'application/json')
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
   return fetch(path, { ...init, headers })
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+/** Kirim request + rotasi refresh token sekali bila 401; kembalikan Response mentah. */
+async function sendWithRefresh(path: string, init: RequestInit): Promise<Response> {
   let response = await send(path, init)
 
   if (response.status === 401 && tokenStore.getRefreshToken()) {
@@ -100,10 +103,25 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       onSessionLost?.()
     }
   }
+  return response
+}
 
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await sendWithRefresh(path, init)
   if (!response.ok) throw await parseError(response)
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
+}
+
+/**
+ * Ambil konten biner terautentikasi (mis. foto bukti) sebagai Blob. Tag `<img>`
+ * biasa tak bisa mengirim header Bearer, jadi konten diambil di sini lalu dijadikan
+ * object URL oleh pemanggil.
+ */
+async function requestBlob(path: string, init: RequestInit = {}): Promise<Blob> {
+  const response = await sendWithRefresh(path, init)
+  if (!response.ok) throw await parseError(response)
+  return response.blob()
 }
 
 export const api = {
@@ -113,4 +131,7 @@ export const api = {
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'PUT', body: body === undefined ? undefined : JSON.stringify(body) }),
   del: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+  blob: (path: string) => requestBlob(path),
+  postForm: <T>(path: string, form: FormData) => request<T>(path, { method: 'POST', body: form }),
+  putForm: <T>(path: string, form: FormData) => request<T>(path, { method: 'PUT', body: form }),
 }

@@ -32,5 +32,21 @@ services:
       - "5672:5672"
       - "15672:15672"
 
+  # Object storage S3-compatible untuk bukti pengerjaan work order (Phase 4.2).
+  # Konsol web di :9001, API S3 di :9000. Bucket dibuat otomatis oleh server saat start.
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ftth
+      # Password root MinIO wajib ≥ 8 karakter.
+      MINIO_ROOT_PASSWORD: ftthminio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+
 volumes:
   pgdata:
+  miniodata:

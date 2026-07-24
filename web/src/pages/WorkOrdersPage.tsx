@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse, User } from '../api/types'
 import type { CustomerView } from '../api/network'
 import type {
+  EvidenceKind,
+  EvidenceView,
+  SignatureView,
   WorkOrderDetail,
   WorkOrderPriority,
   WorkOrderStatus,
@@ -53,6 +56,16 @@ const EVENT_LABEL: Record<string, string> = {
   CANCELLED: 'Dibatalkan',
 }
 
+const KIND_LABEL: Record<EvidenceKind, string> = {
+  BEFORE: 'Sebelum',
+  AFTER: 'Sesudah',
+  LOCATION: 'Lokasi',
+  SERIAL: 'Serial ONU',
+  OTHER: 'Lainnya',
+}
+
+const KINDS = Object.keys(KIND_LABEL) as EvidenceKind[]
+
 const TYPES = Object.keys(TYPE_LABEL) as WorkOrderType[]
 const PRIORITIES = Object.keys(PRIORITY_LABEL) as WorkOrderPriority[]
 const STATUSES = Object.keys(STATUS_LABEL) as WorkOrderStatus[]
@@ -87,8 +100,9 @@ function WoStatusBadge({ status }: { status: WorkOrderStatus }) {
 /**
  * Work order sisi operator/dispatcher: buat tugas lapangan, tugaskan ke teknisi,
  * lalu kelola lifecycle-nya (draft → ditugaskan → dikerjakan → selesai / batal).
- * Pengerjaan di lapangan (mulai/selesai + bukti foto) dilayani klien teknisi
- * terpisah nanti; di sini penekanannya pada penjadwalan dan penugasan.
+ * Pengerjaan di lapangan (mulai/selesai) dilayani klien teknisi terpisah nanti;
+ * di sini penekanannya pada penjadwalan, penugasan, dan meninjau/mengkurasi bukti
+ * pengerjaan (foto & tanda tangan) yang diunggah teknisi.
  */
 export function WorkOrdersPage() {
   const { can } = useCan()
@@ -514,6 +528,8 @@ function WorkOrderDetailBody({
         </section>
       )}
 
+      {can('workorder.evidence.view') && <EvidenceSection workOrderId={id} status={wo.status} />}
+
       <section className="stack" style={{ gap: '0.5rem' }}>
         <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Timeline</h3>
         <ol className="timeline">
@@ -530,5 +546,207 @@ function WorkOrderDetailBody({
         </ol>
       </section>
     </div>
+  )
+}
+
+/**
+ * Gambar berkonten terautentikasi. `<img src>` biasa tak bisa mengirim header
+ * Bearer, jadi byte-nya diambil sebagai blob lalu dijadikan object URL; URL-nya
+ * dicabut saat unmount / ganti sumber agar tak bocor memori.
+ */
+function AuthedImage({ path, alt, size }: { path: string; alt: string; size: number }) {
+  const [url, setUrl] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    let objectUrl: string | null = null
+    setUrl(null)
+    setFailed(false)
+    api
+      .blob(path)
+      .then((b) => {
+        if (!active) return
+        objectUrl = URL.createObjectURL(b)
+        setUrl(objectUrl)
+      })
+      .catch(() => active && setFailed(true))
+    return () => {
+      active = false
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [path])
+
+  const box: CSSProperties = {
+    width: size,
+    height: size,
+    borderRadius: 8,
+    objectFit: 'cover',
+    background: 'var(--surface-2, #1e2530)',
+    border: '1px solid var(--border, #2a3340)',
+  }
+  if (failed) return <div style={{ ...box, display: 'grid', placeItems: 'center', fontSize: '0.7rem' }} className="muted">gagal</div>
+  if (!url) return <div style={box} aria-busy="true" />
+  return (
+    <a href={url} target="_blank" rel="noreferrer" title={alt}>
+      <img src={url} alt={alt} style={box} />
+    </a>
+  )
+}
+
+/**
+ * Bukti pengerjaan sebuah work order: galeri foto + tanda tangan. Operator meninjau
+ * (dan bila perlu mengkurasi) bukti yang diunggah teknisi. Unggah/hapus hanya untuk
+ * yang berizin `workorder.evidence.manage` dan selama work order sudah dikerjakan
+ * (bukan draft/batal — server juga menegakkan ini).
+ */
+function EvidenceSection({ workOrderId, status }: { workOrderId: string; status: WorkOrderStatus }) {
+  const { can } = useCan()
+  const toast = useToast()
+  const canManage = can('workorder.evidence.manage')
+  const documentable = status !== 'DRAFT' && status !== 'CANCELLED'
+
+  const [photos, setPhotos] = useState<EvidenceView[]>([])
+  const [signature, setSignature] = useState<SignatureView | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [kind, setKind] = useState<EvidenceKind>('AFTER')
+  const [caption, setCaption] = useState('')
+  const [busy, setBusy] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const reload = useCallback(async () => {
+    try {
+      const [ph, sg] = await Promise.all([
+        api.get<EvidenceView[]>(`/api/work-orders/${workOrderId}/evidence`),
+        // 204 (belum ada tanda tangan) → api.get mengembalikan undefined.
+        api.get<SignatureView | undefined>(`/api/work-orders/${workOrderId}/signature`),
+      ])
+      setPhotos(ph)
+      setSignature(sg ?? null)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal memuat bukti pengerjaan')
+    } finally {
+      setLoading(false)
+    }
+  }, [workOrderId, toast])
+
+  useEffect(() => {
+    void reload()
+  }, [reload])
+
+  const upload = async () => {
+    const file = fileRef.current?.files?.[0]
+    if (!file) {
+      toast.error('Pilih berkas foto dulu')
+      return
+    }
+    const form = new FormData()
+    form.set('file', file)
+    form.set('kind', kind)
+    if (caption.trim()) form.set('caption', caption.trim())
+    setBusy(true)
+    try {
+      await api.postForm(`/api/work-orders/${workOrderId}/evidence`, form)
+      setCaption('')
+      if (fileRef.current) fileRef.current.value = ''
+      await reload()
+      toast.success('Foto bukti diunggah')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal mengunggah foto')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const removePhoto = async (evidenceId: string) => {
+    try {
+      await api.del(`/api/work-orders/${workOrderId}/evidence/${evidenceId}`)
+      await reload()
+      toast.success('Foto dihapus')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus foto')
+    }
+  }
+
+  const removeSignature = async () => {
+    try {
+      await api.del(`/api/work-orders/${workOrderId}/signature`)
+      setSignature(null)
+      toast.success('Tanda tangan dihapus')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus tanda tangan')
+    }
+  }
+
+  return (
+    <section className="stack" style={{ gap: '0.6rem' }}>
+      <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Bukti pengerjaan</h3>
+
+      {loading ? (
+        <SkeletonRows rows={1} />
+      ) : (
+        <>
+          {photos.length === 0 && !signature ? (
+            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada bukti diunggah.</p>
+          ) : (
+            <div className="stack" style={{ gap: '0.6rem' }}>
+              {photos.length > 0 && (
+                <div className="row wrap" style={{ gap: '0.6rem' }}>
+                  {photos.map((ph) => (
+                    <div key={ph.id} className="stack" style={{ gap: '0.25rem', width: 96 }}>
+                      <AuthedImage path={`/api/work-orders/${workOrderId}/evidence/${ph.id}/content`} alt={ph.caption ?? KIND_LABEL[ph.kind]} size={96} />
+                      <span className="badge" style={{ fontSize: '0.7rem' }}>{KIND_LABEL[ph.kind]}</span>
+                      {ph.caption && <span className="muted" style={{ fontSize: '0.72rem' }}>{ph.caption}</span>}
+                      {ph.uploadedByName && <span className="muted" style={{ fontSize: '0.68rem' }}>oleh {ph.uploadedByName}</span>}
+                      {canManage && (
+                        <button className="ghost danger" style={{ fontSize: '0.72rem', padding: '0.15rem 0.4rem' }} onClick={() => void removePhoto(ph.id)}>
+                          Hapus
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {signature && (
+                <div className="stack" style={{ gap: '0.25rem', alignItems: 'flex-start' }}>
+                  <span className="muted" style={{ fontSize: '0.82rem' }}>Tanda tangan · {signature.signerName}</span>
+                  <AuthedImage path={`/api/work-orders/${workOrderId}/signature/content`} alt={`Tanda tangan ${signature.signerName}`} size={140} />
+                  <span className="muted" style={{ fontSize: '0.72rem' }}>{fmt(signature.signedAt)}</span>
+                  {canManage && (
+                    <button className="ghost danger" style={{ fontSize: '0.72rem', padding: '0.15rem 0.4rem' }} onClick={() => void removeSignature()}>
+                      Hapus tanda tangan
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {canManage && documentable && (
+            <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
+              <label style={{ minWidth: 130 }}>
+                <span>Jenis</span>
+                <select value={kind} onChange={(e) => setKind(e.target.value as EvidenceKind)}>
+                  {KINDS.map((k) => (
+                    <option key={k} value={k}>
+                      {KIND_LABEL[k]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ flex: 1, minWidth: 160 }}>
+                <span>Keterangan (opsional)</span>
+                <input value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="mis. sambungan core setelah splice" />
+              </label>
+              <input ref={fileRef} type="file" accept="image/*" style={{ maxWidth: 200 }} />
+              <button className="primary" disabled={busy} onClick={() => void upload()}>
+                {busy ? 'Mengunggah…' : 'Unggah foto'}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </section>
   )
 }

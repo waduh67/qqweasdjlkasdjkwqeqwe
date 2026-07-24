@@ -21,6 +21,7 @@ allOpen {
 dependencies {
     implementation(platform(libs.spring.boot.bom))
     implementation(platform(libs.spring.modulith.bom))
+    implementation(platform(libs.awssdk.bom))
 
     // Kontrak wire collector↔server; dipakai bersama modul :collector.
     implementation(project(":contract"))
@@ -48,6 +49,9 @@ dependencies {
     implementation("com.github.ben-manes.caffeine:caffeine")
 
     implementation(libs.springdoc.webmvc.ui)
+
+    // Object storage bukti pengerjaan work order (MinIO/S3-compatible).
+    implementation(libs.awssdk.s3)
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     // Boot 4 memecah autoconfigure test per teknologi; @AutoConfigureMockMvc ada di sini.

@@ -95,6 +95,7 @@ object PermissionCatalog {
         perm("workorder.order.assign", "Assign work order")
         perm("workorder.order.close", "Selesaikan work order")
         perm("workorder.evidence.view", "Lihat bukti pengerjaan")
+        perm("workorder.evidence.manage", "Unggah/hapus bukti pengerjaan")
 
         // Notification
         perm("notification.template.view", "Lihat template notifikasi")
