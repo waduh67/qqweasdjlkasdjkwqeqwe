@@ -15,6 +15,7 @@ import {
   IconMonitor,
   IconShield,
   IconUsers,
+  IconWorkOrder,
 } from './icons'
 import type { ComponentType } from 'react'
 import type { IconProps } from './icons'
@@ -46,6 +47,7 @@ const GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
       { to: '/customers', label: 'Pelanggan', permission: 'customer.customer.view', icon: IconCustomers },
       { to: '/monitoring', label: 'Monitoring', permission: 'monitoring.dashboard.view', icon: IconMonitor },
       { to: '/incidents', label: 'Insiden', permission: 'incident.ticket.view', icon: IconAlert },
+      { to: '/work-orders', label: 'Work Order', permission: 'workorder.order.view', icon: IconWorkOrder },
     ],
   },
   {

@@ -158,3 +158,11 @@ export const IconRoute = (p: IconProps) => (
     <path d="M8.5 19H14a3.5 3.5 0 0 0 0-7h-4a3.5 3.5 0 0 1 0-7h5.5" />
   </Icon>
 )
+
+export const IconWorkOrder = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M9 4h6a1 1 0 0 1 1 1v1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h1V5a1 1 0 0 1 1-1Z" />
+    <path d="M9 4h6v2H9Z" />
+    <path d="m9 13 2 2 4-4" />
+  </Icon>
+)
