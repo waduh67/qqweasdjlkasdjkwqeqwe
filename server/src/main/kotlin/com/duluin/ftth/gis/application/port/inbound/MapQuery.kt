@@ -38,6 +38,14 @@ interface MapQuery {
     fun blastRadius(odcId: UUID): BlastRadiusView
 
     /**
+     * Simulasi "kalau kabel ini putus": pelanggan yang kehilangan layanan di hilir
+     * ujung bawah kabel, plus geometri kabel yang lenyap untuk disorot di peta.
+     * Menyusun dari topologi network (subpohon terputus) dan data pelanggan
+     * (okupansi ODP di hilir) — tanpa module mana pun menyentuh tabel module lain.
+     */
+    fun cutBlastRadius(cableId: UUID): CableCutView
+
+    /**
      * Isi sebuah site/POP untuk panel peta: OLT yang berdiri di sini plus rekap
      * seluruh perangkat & pelanggan di hilirnya — "seberapa besar site ini".
      */
@@ -88,6 +96,33 @@ data class AffectedCustomer(
     val odpCode: String,
     val onuStatus: String,
     val opticalHealth: String,
+)
+
+/**
+ * Hasil simulasi memutus sebuah kabel: siapa yang kehilangan layanan bila ruas ini
+ * putus, plus geometri kabel yang ikut lenyap agar peta bisa menyorot subpohonnya.
+ */
+data class CableCutView(
+    val cableId: UUID,
+    val cableCode: String,
+    val cableType: String,
+    /** Jenis simpul di ujung hilir yang terputus: ODC/ODP/CUSTOMER. */
+    val severedRootKind: String,
+    val odcCount: Int,
+    val odpCount: Int,
+    val customerCount: Int,
+    /** Pelanggan yang ONU-nya sudah LOS/OFFLINE — sudah terdampak nyata, bukan hipotetis. */
+    val downCount: Int,
+    val customers: List<AffectedCustomer>,
+    /** Kabel yang lenyap bila ruas ini putus (termasuk ruas itu sendiri), untuk disorot. */
+    val severedCables: List<SeveredCable>,
+)
+
+data class SeveredCable(
+    val id: UUID,
+    val code: String,
+    val cableType: String,
+    val points: List<Coordinate>,
 )
 
 data class ImpactedOverlay(val cables: List<ImpactedCable>)

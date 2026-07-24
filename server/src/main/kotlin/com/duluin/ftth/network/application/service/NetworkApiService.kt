@@ -1,6 +1,7 @@
 package com.duluin.ftth.network.application.service
 
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.network.CableCutImpact
 import com.duluin.ftth.network.CablePath
 import com.duluin.ftth.network.DownstreamIds
 import com.duluin.ftth.network.NetworkApi
@@ -9,6 +10,9 @@ import com.duluin.ftth.network.OdpRef
 import com.duluin.ftth.network.OltPollingTarget
 import com.duluin.ftth.network.OltRef
 import com.duluin.ftth.network.SiteRef
+import com.duluin.ftth.network.domain.model.Cable
+import com.duluin.ftth.network.domain.model.NetworkNodeKind
+import com.duluin.ftth.network.domain.model.NetworkNodeRef
 import com.duluin.ftth.network.domain.model.Odc
 import com.duluin.ftth.network.domain.model.Olt
 import com.duluin.ftth.network.domain.model.Site
@@ -67,16 +71,63 @@ class NetworkApiService(
     }
 
     override fun cablesTouchingNodes(nodeIds: Set<UUID>): List<CablePath> =
-        cableRepository.findByEndpointNodeIds(nodeIds).map { cable ->
-            CablePath(
-                id = cable.id,
-                code = cable.code,
-                cableType = cable.cableType.name,
-                points = cable.route.points,
-                fromId = cable.from.id,
-                toId = cable.to.id,
-            )
+        cableRepository.findByEndpointNodeIds(nodeIds).map { it.toCablePath() }
+
+    override fun cutImpact(cableId: UUID): CableCutImpact {
+        val cable = cableRepository.findById(cableId)
+            ?: throw NotFoundException("Kabel $cableId tidak ditemukan")
+
+        // Telusuri subpohon fisik di hilir ujung bawah kabel lewat graf kabel:
+        // dari sebuah simpul, ikuti HANYA kabel yang berawal darinya (arah hilir),
+        // kumpulkan ujung berikutnya, ulangi. Ini menangkap ODP berantai maupun
+        // drop yang tergambar — apa pun jenis kabelnya. `visited` menjaga dari
+        // rangkaian melingkar. Ini panel on-demand saat kabel diklik, bukan jalur
+        // render yang panas, jadi query per-simpul dapat diterima.
+        val severedCables = LinkedHashMap<UUID, Cable>()
+        severedCables[cable.id] = cable
+        val odcIds = LinkedHashSet<UUID>()
+        val odpIds = LinkedHashSet<UUID>()
+        val customerIds = LinkedHashSet<UUID>()
+
+        val visited = HashSet<UUID>()
+        val queue = ArrayDeque<NetworkNodeRef>()
+        queue += cable.to
+        while (queue.isNotEmpty()) {
+            val node = queue.removeFirst()
+            if (!visited.add(node.id)) continue
+            when (node.kind) {
+                NetworkNodeKind.ODC -> odcIds += node.id
+                NetworkNodeKind.ODP -> odpIds += node.id
+                NetworkNodeKind.CUSTOMER -> customerIds += node.id
+                else -> Unit
+            }
+            cableRepository.findByEndpoint(node)
+                .filter { it.from == node }
+                .forEach { downstream ->
+                    severedCables.putIfAbsent(downstream.id, downstream)
+                    queue += downstream.to
+                }
         }
+
+        // Keanggotaan ODP di bawah sebuah ODC dicatat lewat `odp.odcId`, tidak
+        // selalu digambar sebagai kabel distribusi — jadi putus feeder melengkapi
+        // daftar ODP lewat pohon perangkat agar tak ada pelanggan yang terlewat.
+        if (odcIds.isNotEmpty()) {
+            odpIds += downstreamDeviceIds(emptySet(), odcIds).odpIds
+        }
+
+        return CableCutImpact(
+            cableId = cable.id,
+            cableCode = cable.code,
+            cableType = cable.cableType.name,
+            severedRootKind = cable.to.kind.name,
+            severedRootId = cable.to.id,
+            odcIds = odcIds,
+            odpIds = odpIds,
+            customerIds = customerIds,
+            severedCables = severedCables.values.map { it.toCablePath() },
+        )
+    }
 
     override fun findPollingTargets(oltIds: Set<UUID>): List<OltPollingTarget> {
         if (oltIds.isEmpty()) return emptyList()
@@ -175,4 +226,13 @@ private fun Odc.toRef() = OdcRef(
     capacity = capacity,
     ponPortId = ponPortId,
     energized = isEnergized(),
+)
+
+private fun Cable.toCablePath() = CablePath(
+    id = id,
+    code = code,
+    cableType = cableType.name,
+    points = route.points,
+    fromId = from.id,
+    toId = to.id,
 )

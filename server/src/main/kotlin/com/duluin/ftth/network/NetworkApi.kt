@@ -82,7 +82,42 @@ interface NetworkApi {
      * ikut menyorot merah seluruh feeder, distribusi, dan drop di hilirnya.
      */
     fun downstreamDeviceIds(oltIds: Set<UUID>, odcIds: Set<UUID>): DownstreamIds
+
+    /**
+     * Dampak topologis bila sebuah kabel diputus: seluruh subpohon fisik di hilir
+     * ujung bawahnya. Dipakai gis untuk simulasi "kalau kabel ini putus, siapa
+     * yang kena".
+     *
+     * Sebuah putus memutus segala yang dialiri lewatnya. Ujung hilir (`to`) kabel
+     * menjadi akar subpohon yang lenyap; dari sana network menelusuri graf kabel
+     * ke bawah — menangkap ODP berantai maupun drop yang tergambar, apa pun jenis
+     * kabelnya. Untuk akar berupa ODC, daftar ODP dilengkapi lewat pohon perangkat
+     * (`odp.odcId`) karena keanggotaan ODP di bawah ODC dicatat secara logis, tak
+     * selalu digambar sebagai kabel distribusi.
+     */
+    fun cutImpact(cableId: UUID): CableCutImpact
 }
+
+/**
+ * Subpohon yang lenyap bila sebuah kabel diputus, dalam istilah topologi murni.
+ * Module gis menerjemahkannya menjadi daftar pelanggan terdampak.
+ */
+data class CableCutImpact(
+    val cableId: UUID,
+    val cableCode: String,
+    val cableType: String,
+    /** Jenis simpul di ujung hilir kabel — akar subpohon yang terputus. */
+    val severedRootKind: String,
+    val severedRootId: UUID,
+    /** ODC di hilir yang ikut kehilangan uplink (relevan untuk putus feeder). */
+    val odcIds: Set<UUID>,
+    /** ODP di hilir yang kehilangan uplink. */
+    val odpIds: Set<UUID>,
+    /** Pelanggan yang tersambung langsung lewat kabel drop yang terputus. */
+    val customerIds: Set<UUID>,
+    /** Ruas kabel dalam subpohon terputus (termasuk kabel yang diputus) untuk disorot di peta. */
+    val severedCables: List<CablePath>,
+)
 
 /** Perangkat hilir dari sekumpulan OLT/ODC yang bermasalah. */
 data class DownstreamIds(val odcIds: Set<UUID>, val odpIds: Set<UUID>)

@@ -5,9 +5,11 @@ import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.common.security.areaScope
 import com.duluin.ftth.customer.CustomerApi
+import com.duluin.ftth.customer.CustomerRef
 import com.duluin.ftth.customer.OdpOccupant
 import com.duluin.ftth.gis.application.port.inbound.AffectedCustomer
 import com.duluin.ftth.gis.application.port.inbound.BlastRadiusView
+import com.duluin.ftth.gis.application.port.inbound.CableCutView
 import com.duluin.ftth.gis.application.port.inbound.CustomerTrace
 import com.duluin.ftth.gis.application.port.inbound.ImpactCause
 import com.duluin.ftth.gis.application.port.inbound.ImpactedCable
@@ -15,6 +17,7 @@ import com.duluin.ftth.gis.application.port.inbound.ImpactedOverlay
 import com.duluin.ftth.gis.application.port.inbound.MapQuery
 import com.duluin.ftth.monitoring.AlarmImpact
 import com.duluin.ftth.gis.application.port.inbound.OdpInspection
+import com.duluin.ftth.gis.application.port.inbound.SeveredCable
 import com.duluin.ftth.gis.application.port.inbound.SiteInspection
 import com.duluin.ftth.gis.application.port.inbound.SiteOlt
 import com.duluin.ftth.gis.application.port.inbound.TraceHop
@@ -198,6 +201,50 @@ class MapService(
     }
 
     /**
+     * Menyusun simulasi putus sebuah kabel. Network memberi subpohon topologis
+     * yang lenyap (ODC/ODP/pelanggan di hilir + geometri kabel); di sini subpohon
+     * itu diterjemahkan ke pelanggan nyata: penghuni tiap ODP hilir plus — untuk
+     * putus kabel drop yang tak menyisakan ODP — pelanggan di ujung kabel langsung.
+     */
+    override fun cutBlastRadius(cableId: UUID): CableCutView {
+        val impact = networkApi.cutImpact(cableId)
+
+        val odpCodeById = networkApi.findOdpsByIds(impact.odpIds).associate { it.id to it.code }
+        val occupantCustomers = impact.odpIds.flatMap { odp ->
+            val odpCode = odpCodeById[odp] ?: "?"
+            customerApi.findOccupantsOfOdp(odp).map { it.toAffected(odpCode) }
+        }
+
+        // Putus kabel drop menyambar satu pelanggan langsung — tanpa ODP di hilir,
+        // jadi diambil dari ujung CUSTOMER kabel lalu disatukan tanpa duplikat.
+        val seenCustomerIds = occupantCustomers.mapTo(HashSet()) { it.customerId }
+        val directCustomers = impact.customerIds
+            .takeIf { it.isNotEmpty() }
+            ?.let { customerApi.findCustomersByIds(it) }
+            .orEmpty()
+            .filter { it.id !in seenCustomerIds }
+            .map { it.toAffected() }
+
+        val customers = (occupantCustomers + directCustomers)
+            .sortedWith(compareBy({ it.odpCode }, { it.name }))
+
+        return CableCutView(
+            cableId = impact.cableId,
+            cableCode = impact.cableCode,
+            cableType = impact.cableType,
+            severedRootKind = impact.severedRootKind,
+            odcCount = impact.odcIds.size,
+            odpCount = impact.odpIds.size,
+            customerCount = customers.size,
+            downCount = customers.count { it.onuStatus == "LOS" || it.onuStatus == "OFFLINE" },
+            customers = customers,
+            severedCables = impact.severedCables.map {
+                SeveredCable(id = it.id, code = it.code, cableType = it.cableType, points = it.points)
+            },
+        )
+    }
+
+    /**
      * Merekap sebuah site. OLT-nya diambil langsung; ODC/ODP di hilir dihitung
      * lewat primitif [NetworkApi.downstreamDeviceIds] (site → OLT → PON → ODC →
      * ODP), dan jumlah pelanggan lewat satu query hitung agregat customer — bukan
@@ -231,6 +278,21 @@ class MapService(
         odpCode = odpCode,
         onuStatus = onuStatus,
         opticalHealth = opticalHealth,
+    )
+
+    /**
+     * Pelanggan di ujung kabel drop yang diputus. Statusnya tak diketahui dari
+     * sini (tak lewat ODP), tapi kepastiannya jelas: kabelnya putus, layanannya
+     * hilang. Diberi tanda "—" untuk membedakannya dari penghuni ODP yang berstatus.
+     */
+    private fun CustomerRef.toAffected() = AffectedCustomer(
+        customerId = id,
+        code = code,
+        name = name,
+        phone = phone,
+        odpCode = "—",
+        onuStatus = "UNKNOWN",
+        opticalHealth = "UNKNOWN",
     )
 
     private fun severityRank(severity: String): Int = when (severity) {

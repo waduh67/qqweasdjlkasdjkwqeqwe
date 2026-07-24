@@ -2,6 +2,7 @@ package com.duluin.ftth.gis.adapter.inbound.web
 
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.gis.application.port.inbound.BlastRadiusView
+import com.duluin.ftth.gis.application.port.inbound.CableCutView
 import com.duluin.ftth.gis.application.port.inbound.CustomerTrace
 import com.duluin.ftth.gis.application.port.inbound.ImpactedOverlay
 import com.duluin.ftth.gis.application.port.inbound.MapQuery
@@ -65,6 +66,11 @@ class GisController(
     @GetMapping("/odcs/{id}/blast-radius")
     @PreAuthorize("@authz.can('gis.map.view') and @authz.can('customer.customer.view')")
     fun blastRadius(@PathVariable id: UUID): BlastRadiusView = mapQuery.blastRadius(id)
+
+    /** Simulasi putus sebuah kabel: pelanggan yang kehilangan layanan di hilirnya. */
+    @GetMapping("/cables/{id}/blast-radius")
+    @PreAuthorize("@authz.can('gis.map.view') and @authz.can('customer.customer.view')")
+    fun cutBlastRadius(@PathVariable id: UUID): CableCutView = mapQuery.cutBlastRadius(id)
 
     /** Isi sebuah site/POP: OLT di dalamnya + rekap perangkat & pelanggan hilir. */
     @GetMapping("/sites/{id}")
