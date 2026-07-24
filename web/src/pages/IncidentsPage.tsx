@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { IncidentAlarm, IncidentDetail, IncidentEventView, IncidentView } from '../api/incident'
+import type { BroadcastView, NotificationChannel } from '../api/notification'
 import { useCan } from '../auth/useCan'
 import { Drawer, EmptyState, SkeletonRows, StatusBadge, useToast } from '../components/ui'
 import { IconAlert } from '../components/icons'
@@ -129,6 +130,7 @@ export function IncidentsPage() {
             detail={detail}
             canAck={can('incident.ticket.update')}
             canResolve={can('incident.ticket.close')}
+            canBroadcast={can('notification.broadcast.send')}
             onAcknowledge={() => void act(detail.incident.id, 'acknowledge', 'Insiden diakui')}
             onResolve={() => void act(detail.incident.id, 'resolve', 'Insiden ditutup', true)}
           />
@@ -142,12 +144,14 @@ function IncidentDetailBody({
   detail,
   canAck,
   canResolve,
+  canBroadcast,
   onAcknowledge,
   onResolve,
 }: {
   detail: IncidentDetail
   canAck: boolean
   canResolve: boolean
+  canBroadcast: boolean
   onAcknowledge: () => void
   onResolve: () => void
 }) {
@@ -177,6 +181,14 @@ function IncidentDetailBody({
             </button>
           )}
         </div>
+      )}
+
+      {canBroadcast && (
+        <BroadcastComposer
+          incidentId={inc.id}
+          rootLabel={`${ROOT_LABEL[inc.rootType] ?? inc.rootType} ${inc.rootLabel}`}
+          affectedCount={inc.affectedCustomerCount}
+        />
       )}
 
       <section className="stack" style={{ gap: '0.5rem' }}>
@@ -212,5 +224,92 @@ function IncidentDetailBody({
         </ol>
       </section>
     </div>
+  )
+}
+
+/**
+ * Penyiaran pemberitahuan gangguan ke pelanggan terdampak insiden — fitur
+ * "outage broadcast proaktif": kabari pelanggan sebelum mereka komplain. Daftar
+ * penerima dihitung server dari akar masalah; di sini operator hanya memilih
+ * kanal dan menyusun pesan (sudah diprefill dengan template yang bisa disunting).
+ */
+function BroadcastComposer({
+  incidentId,
+  rootLabel,
+  affectedCount,
+}: {
+  incidentId: string
+  rootLabel: string
+  affectedCount: number
+}) {
+  const toast = useToast()
+  const [open, setOpen] = useState(false)
+  const [channel, setChannel] = useState<NotificationChannel>('WHATSAPP')
+  const [message, setMessage] = useState(
+    `Pelanggan Yth, layanan internet Anda sedang mengalami gangguan (${rootLabel}). ` +
+      'Tim teknis kami sedang menanganinya. Mohon maaf atas ketidaknyamanannya.',
+  )
+  const [sending, setSending] = useState(false)
+
+  const submit = async () => {
+    if (!message.trim()) {
+      toast.error('Pesan tidak boleh kosong')
+      return
+    }
+    setSending(true)
+    try {
+      const res = await api.post<BroadcastView>('/api/notifications/broadcasts', {
+        incidentId,
+        channel,
+        message: message.trim(),
+      })
+      toast.success(
+        `Broadcast terkirim: ${res.sentCount} terkirim, ${res.skippedCount} dilewati dari ${res.recipientCount} pelanggan`,
+      )
+      setOpen(false)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Broadcast gagal')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  if (!open) {
+    return (
+      <div className="row" style={{ gap: '0.5rem' }}>
+        <button className="ghost" onClick={() => setOpen(true)}>
+          Broadcast ke pelanggan
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <section className="stack" style={{ gap: '0.55rem' }}>
+      <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Broadcast pemberitahuan</h3>
+      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        Menyasar {affectedCount} pelanggan terdampak. Yang tak punya nomor akan dilewati otomatis.
+      </p>
+      <label className="stack" style={{ gap: '0.25rem' }}>
+        <span>Kanal</span>
+        <select value={channel} onChange={(e) => setChannel(e.target.value as NotificationChannel)}>
+          <option value="WHATSAPP">WhatsApp</option>
+          <option value="SMS">SMS</option>
+          <option value="TELEGRAM">Telegram</option>
+        </select>
+      </label>
+      <label className="stack" style={{ gap: '0.25rem' }}>
+        <span>Pesan</span>
+        <textarea rows={4} maxLength={2000} value={message} onChange={(e) => setMessage(e.target.value)} />
+      </label>
+      <div className="row" style={{ gap: '0.5rem' }}>
+        <button className="primary" onClick={() => void submit()} disabled={sending}>
+          {sending ? 'Mengirim…' : 'Kirim broadcast'}
+        </button>
+        <button className="ghost" onClick={() => setOpen(false)} disabled={sending}>
+          Batal
+        </button>
+      </div>
+    </section>
   )
 }

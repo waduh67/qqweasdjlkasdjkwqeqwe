@@ -100,6 +100,7 @@ object PermissionCatalog {
         perm("notification.template.view", "Lihat template notifikasi")
         perm("notification.template.manage", "Kelola template notifikasi")
         perm("notification.broadcast.send", "Kirim broadcast ke pelanggan")
+        perm("notification.broadcast.view", "Lihat riwayat broadcast")
 
         // Audit
         perm("audit.log.view", "Lihat jejak audit")
