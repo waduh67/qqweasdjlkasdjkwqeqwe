@@ -13,6 +13,9 @@ interface UserRepository {
 
     fun findById(id: UUID): User?
 
+    /** Muat sekumpulan user sekaligus (mis. saat menampilkan nama teknisi di daftar work order). */
+    fun findAllByIds(ids: Set<UUID>): List<User>
+
     fun findByEmail(email: Email): User?
 
     fun existsByEmail(email: Email): Boolean

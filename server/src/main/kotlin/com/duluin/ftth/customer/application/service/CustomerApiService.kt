@@ -6,6 +6,7 @@ import com.duluin.ftth.customer.CustomerRef
 import com.duluin.ftth.customer.OdpOccupant
 import com.duluin.ftth.customer.OnuPlacementRef
 import com.duluin.ftth.customer.OnuRef
+import com.duluin.ftth.customer.domain.model.Customer
 import com.duluin.ftth.customer.domain.model.OnuStatus
 import com.duluin.ftth.customer.application.port.outbound.CustomerRepository
 import com.duluin.ftth.customer.application.port.outbound.CustomerTileRenderer
@@ -28,16 +29,10 @@ class CustomerApiService(
     override fun renderMapTile(z: Int, x: Int, y: Int, areaIds: Set<UUID>?): ByteArray =
         tileRenderer.render(z, x, y, areaIds)
 
-    override fun findCustomer(id: UUID): CustomerRef? = customerRepository.findById(id)?.let {
-        CustomerRef(
-            id = it.id,
-            code = it.code,
-            name = it.name,
-            phone = it.phone,
-            location = it.location,
-            status = it.status.name,
-        )
-    }
+    override fun findCustomer(id: UUID): CustomerRef? = customerRepository.findById(id)?.toRef()
+
+    override fun findCustomersByIds(ids: Set<UUID>): List<CustomerRef> =
+        if (ids.isEmpty()) emptyList() else customerRepository.findAllByIds(ids).map { it.toRef() }
 
     /**
      * Pelanggan bisa punya beberapa ONU (mis. unit cadangan yang belum dibongkar);
@@ -140,4 +135,13 @@ class CustomerApiService(
 
     override fun countOccupantsByOdp(odpIds: Set<UUID>): Map<UUID, Long> =
         onuRepository.countByOdpIds(odpIds)
+
+    private fun Customer.toRef() = CustomerRef(
+        id = id,
+        code = code,
+        name = name,
+        phone = phone,
+        location = location,
+        status = status.name,
+    )
 }

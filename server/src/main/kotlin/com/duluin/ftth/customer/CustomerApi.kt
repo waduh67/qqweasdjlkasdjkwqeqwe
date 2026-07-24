@@ -11,6 +11,9 @@ interface CustomerApi {
 
     fun findCustomer(id: UUID): CustomerRef?
 
+    /** Resolusi sekumpulan id pelanggan sekaligus; id yang tak ditemukan diabaikan. */
+    fun findCustomersByIds(ids: Set<UUID>): List<CustomerRef>
+
     /** Semua pelanggan yang tersambung pada sebuah ODP, terurut menurut nomor port. */
     fun findOccupantsOfOdp(odpId: UUID): List<OdpOccupant>
 

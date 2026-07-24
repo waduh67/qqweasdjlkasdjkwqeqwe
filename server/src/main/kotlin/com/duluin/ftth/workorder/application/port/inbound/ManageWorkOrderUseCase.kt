@@ -1,0 +1,50 @@
+package com.duluin.ftth.workorder.application.port.inbound
+
+import com.duluin.ftth.workorder.domain.model.WorkOrderPriority
+import com.duluin.ftth.workorder.domain.model.WorkOrderType
+import java.time.Instant
+import java.util.UUID
+
+/** Perubahan work order oleh operator/dispatcher: buat, ubah, tugaskan, jalankan lifecycle. */
+interface ManageWorkOrderUseCase {
+
+    fun create(command: SaveWorkOrderCommand): WorkOrderView
+
+    fun update(id: UUID, command: UpdateWorkOrderCommand): WorkOrderView
+
+    /** Menugaskan/menugaskan ulang ke seorang teknisi (harus pengguna aktif tenant ini). */
+    fun assign(id: UUID, technicianId: UUID): WorkOrderView
+
+    fun start(id: UUID): WorkOrderView
+
+    fun complete(id: UUID, resolutionNote: String?): WorkOrderView
+
+    fun cancel(id: UUID, reason: String?): WorkOrderView
+
+    /** Menghapus work order yang masih DRAFT (belum pernah ditugaskan). */
+    fun delete(id: UUID)
+}
+
+/** Membuat work order; `assignedTo` opsional (mengangkatnya langsung ke ASSIGNED). */
+data class SaveWorkOrderCommand(
+    val type: WorkOrderType,
+    val title: String,
+    val description: String?,
+    val priority: WorkOrderPriority,
+    val customerId: UUID?,
+    val incidentId: UUID?,
+    val areaId: UUID?,
+    val scheduledAt: Instant?,
+    val assignedTo: UUID?,
+)
+
+/** Mengubah rincian deskriptif; tipe tak bisa diubah, penugasan lewat [ManageWorkOrderUseCase.assign]. */
+data class UpdateWorkOrderCommand(
+    val title: String,
+    val description: String?,
+    val priority: WorkOrderPriority,
+    val customerId: UUID?,
+    val incidentId: UUID?,
+    val areaId: UUID?,
+    val scheduledAt: Instant?,
+)

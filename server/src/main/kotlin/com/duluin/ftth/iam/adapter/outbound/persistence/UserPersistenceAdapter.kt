@@ -39,6 +39,9 @@ class UserPersistenceAdapter(
 
     override fun findById(id: UUID): User? = jpa.findById(id).orElse(null)?.toDomain()
 
+    override fun findAllByIds(ids: Set<UUID>): List<User> =
+        if (ids.isEmpty()) emptyList() else jpa.findAllById(ids).map { it.toDomain() }
+
     override fun findByEmail(email: Email): User? = jpa.findByEmail(email.value)?.toDomain()
 
     override fun existsByEmail(email: Email): Boolean = jpa.existsByEmail(email.value)
