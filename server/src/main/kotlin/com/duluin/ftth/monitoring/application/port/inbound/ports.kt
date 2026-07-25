@@ -114,6 +114,13 @@ data class OnuMetricView(
      * `null` bila OLT tidak melaporkannya.
      */
     val downCause: String?,
+    /**
+     * Kapan ONU terakhir putus dan terakhir kembali online menurut register OLT.
+     * Menjawab "sejak kapan mati" dan "sudah berapa lama pulih" tanpa menunggu
+     * siklus polling berikutnya. `null` bila OLT tidak melaporkannya.
+     */
+    val lastOffAt: Instant?,
+    val lastOnAt: Instant?,
 )
 
 data class OnuHistoryView(

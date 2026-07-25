@@ -39,6 +39,13 @@ data class MibProfile(
     val downCauseOid: String? = null,
     /** Pemetaan nilai mentah register di atas ke [OnuDownCause]. */
     val downCauseMapping: Map<String, OnuDownCause> = emptyMap(),
+    /**
+     * OID register "last down/last up time" ONU. `null` bila belum diketahui untuk
+     * vendor ini — seperti [downCauseOid], plumbing-nya sudah lengkap dan tinggal
+     * diisi OID-nya setelah di-`snmpwalk` di perangkat sungguhan (Phase 2b).
+     */
+    val lastOffAtOid: String? = null,
+    val lastOnAtOid: String? = null,
     /** Serial GPON umumnya 4 huruf vendor + 8 digit heksa. */
     val serialIsHex: Boolean = true,
 )
@@ -92,6 +99,8 @@ class GponSnmpAdapter(
             profile.distanceOid,
             profile.uptimeOid,
             profile.downCauseOid,
+            profile.lastOffAtOid,
+            profile.lastOnAtOid,
         )
 
         val observedAt = clock()
@@ -123,7 +132,22 @@ class GponSnmpAdapter(
             distanceMeters = profile.distanceOid?.let { row[it]?.toIntOrNull() },
             observedAt = observedAt,
             lastDownCause = lastDownCause(row),
+            lastOffAt = timestampAt(profile.lastOffAtOid, row),
+            lastOnAt = timestampAt(profile.lastOnAtOid, row),
         )
+    }
+
+    /**
+     * Menafsirkan register waktu OLT (last off / last on). Formatnya bergantung
+     * firmware — sebagian melaporkan epoch detik, sebagian string ISO-8601 — jadi
+     * keduanya dicoba dan nilai yang tak terbaca diabaikan daripada salah tafsir.
+     * Selama OID vendor belum diisi, hasilnya `null`; format sebenarnya diverifikasi
+     * saat `snmpwalk` di perangkat sungguhan (Phase 2b).
+     */
+    private fun timestampAt(oid: String?, row: Map<String, String>): Instant? {
+        val raw = oid?.let { row[it] }?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        raw.toLongOrNull()?.let { return Instant.ofEpochSecond(it) }
+        return runCatching { Instant.parse(raw) }.getOrNull()
     }
 
     /**

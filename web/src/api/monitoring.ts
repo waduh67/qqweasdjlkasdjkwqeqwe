@@ -86,6 +86,10 @@ export interface OnuMetricView {
   distanceMeters: number | null
   /** `DYING_GASP` vs `LOS` — mati listrik pelanggan vs fiber putus. */
   downCause: OnuDownCause | null
+  /** Kapan ONU terakhir putus menurut register OLT; null bila tak dilaporkan. */
+  lastOffAt: string | null
+  /** Kapan ONU terakhir kembali online menurut register OLT. */
+  lastOnAt: string | null
 }
 
 export interface HistoryPoint {

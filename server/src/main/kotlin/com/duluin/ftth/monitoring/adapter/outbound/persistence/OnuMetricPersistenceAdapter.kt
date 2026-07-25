@@ -47,6 +47,10 @@ class OnuMetricPersistenceAdapter : OnuMetricRepository {
                     point.uptimeSeconds?.let { statement.setLong(8, it) } ?: statement.setNull(8, Types.BIGINT)
                     point.distanceMeters?.let { statement.setInt(9, it) } ?: statement.setNull(9, Types.INTEGER)
                     point.downCause?.let { statement.setString(10, it) } ?: statement.setNull(10, Types.VARCHAR)
+                    point.lastOffAt?.let { statement.setTimestamp(11, Timestamp.from(it)) }
+                        ?: statement.setNull(11, Types.TIMESTAMP)
+                    point.lastOnAt?.let { statement.setTimestamp(12, Timestamp.from(it)) }
+                        ?: statement.setNull(12, Types.TIMESTAMP)
                     statement.addBatch()
                 }
                 statement.executeBatch()
@@ -64,7 +68,8 @@ class OnuMetricPersistenceAdapter : OnuMetricRepository {
         val sql = """
             SELECT DISTINCT ON (onu_id)
                    time, tenant_id, onu_id, olt_id, status,
-                   rx_power_dbm, tx_power_dbm, uptime_seconds, distance_meters, down_cause
+                   rx_power_dbm, tx_power_dbm, uptime_seconds, distance_meters, down_cause,
+                   last_off_at, last_on_at
             FROM onu_metric
             WHERE onu_id::text = ANY(string_to_array(:onuIds, ','))
             ORDER BY onu_id, time DESC
@@ -81,7 +86,8 @@ class OnuMetricPersistenceAdapter : OnuMetricRepository {
     override fun findHistory(onuId: UUID, since: Instant, until: Instant): List<OnuMetricPoint> {
         val sql = """
             SELECT time, tenant_id, onu_id, olt_id, status,
-                   rx_power_dbm, tx_power_dbm, uptime_seconds, distance_meters, down_cause
+                   rx_power_dbm, tx_power_dbm, uptime_seconds, distance_meters, down_cause,
+                   last_off_at, last_on_at
             FROM onu_metric
             WHERE onu_id = CAST(:onuId AS uuid) AND time >= :since AND time <= :until
             ORDER BY time
@@ -212,7 +218,11 @@ class OnuMetricPersistenceAdapter : OnuMetricRepository {
         uptimeSeconds = (this[7] as? Number)?.toLong(),
         distanceMeters = (this[8] as? Number)?.toInt(),
         downCause = this[9] as String?,
+        lastOffAt = this[10].toInstantValueOrNull(),
+        lastOnAt = this[11].toInstantValueOrNull(),
     )
+
+    private fun Any?.toInstantValueOrNull(): Instant? = this?.toInstantValue()
 
     private fun java.sql.PreparedStatement.setNullableDouble(index: Int, value: Double?) {
         if (value == null) setNull(index, Types.DOUBLE) else setDouble(index, value)
@@ -225,8 +235,9 @@ class OnuMetricPersistenceAdapter : OnuMetricRepository {
 
         val INSERT_SQL = """
             INSERT INTO onu_metric
-                (time, tenant_id, onu_id, olt_id, status, rx_power_dbm, tx_power_dbm, uptime_seconds, distance_meters, down_cause)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (time, tenant_id, onu_id, olt_id, status, rx_power_dbm, tx_power_dbm, uptime_seconds,
+                 distance_meters, down_cause, last_off_at, last_on_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
     }
 }

@@ -48,6 +48,8 @@ class MetricQueryService(
                     txPowerDbm = point.txPowerDbm,
                     distanceMeters = point.distanceMeters,
                     downCause = point.downCause,
+                    lastOffAt = point.lastOffAt,
+                    lastOnAt = point.lastOnAt,
                 )
             }
         }

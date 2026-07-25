@@ -56,8 +56,28 @@ class GponSnmpAdapterTest {
         assertEquals(OnuOperationalStatus.ONLINE, onu.status)
         assertEquals(-22.5, onu.rxPowerDbm)
         assertEquals("OLT-BKS-01", onu.oltCode)
-        // Profil baku belum punya OID sebab-putus → jangan mengarang: null apa adanya.
+        // Profil baku belum punya OID sebab-putus / waktu → jangan mengarang: null apa adanya.
         assertNull(onu.lastDownCause)
+        assertNull(onu.lastOffAt)
+        assertNull(onu.lastOnAt)
+    }
+
+    @Test
+    fun `waktu putus dan pulih dibaca dari register, menerima epoch maupun ISO-8601`() {
+        val offOid = "1.3.6.1.4.1.3902.1012.3.28.2.1.100"
+        val onOid = "1.3.6.1.4.1.3902.1012.3.28.2.1.101"
+        val profile = MibProfiles.ZTE.copy(lastOffAtOid = offOid, lastOnAtOid = onOid)
+        val row = mapOf(
+            MibProfiles.ZTE.serialNumberOid to "5A544547C0FFEE01",
+            MibProfiles.ZTE.statusOid to "3",
+            offOid to "1721433600", // epoch detik
+            onOid to "2026-07-20T01:00:00Z", // string ISO-8601
+        )
+        val onu = adapter(profile, readerOf(row)).pollOnus(target).single()
+
+        // Format register berbeda antar firmware; keduanya harus terbaca, bukan salah satu.
+        assertEquals(Instant.ofEpochSecond(1_721_433_600), onu.lastOffAt)
+        assertEquals(Instant.parse("2026-07-20T01:00:00Z"), onu.lastOnAt)
     }
 
     @Test

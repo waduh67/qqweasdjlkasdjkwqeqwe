@@ -105,6 +105,19 @@ data class OnuReading(
      * "mati" tapi menuntut tindakan yang sama sekali berbeda.
      */
     val lastDownCause: OnuDownCause? = null,
+    /**
+     * Kapan ONU terakhir kali tercatat putus di register OLT. Seperti
+     * [lastDownCause], nilainya bertahan melewati pemulihan, jadi bisa hadir meski
+     * status kini ONLINE. `null` bila OLT tidak melaporkannya atau ONU belum pernah
+     * putus. Berpasangan dengan [lastOnAt] menjadi durasi gangguan terakhir.
+     */
+    val lastOffAt: Instant? = null,
+    /**
+     * Kapan ONU terakhir kali tercatat kembali online di register OLT. Bila lebih
+     * baru dari [lastOffAt], ONU sudah pulih; bila lebih lama (atau `null` saat
+     * [lastOffAt] terisi), ONU masih putus sejak saat itu.
+     */
+    val lastOnAt: Instant? = null,
 )
 
 /** Status ONU sebagaimana dilaporkan OLT. */

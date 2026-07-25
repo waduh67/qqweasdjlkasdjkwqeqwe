@@ -29,6 +29,14 @@ data class OnuMetricPoint(
      * gangguan terakhir. `null` bila OLT tidak melaporkannya.
      */
     val downCause: String?,
+    /**
+     * Kapan ONU terakhir putus dan terakhir kembali online menurut register OLT.
+     * Telemetri seperti [downCause] — bertahan melewati pemulihan. Berpasangan
+     * menjadi durasi gangguan terakhir; urutannya menandakan apakah ONU sudah
+     * pulih ([lastOnAt] > [lastOffAt]) atau masih putus. `null` bila tak dilaporkan.
+     */
+    val lastOffAt: Instant?,
+    val lastOnAt: Instant?,
 )
 
 /** Ringkasan riwayat redaman satu ONU pada rentang waktu tertentu. */

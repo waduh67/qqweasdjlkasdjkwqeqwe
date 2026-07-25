@@ -60,6 +60,8 @@ class SimulatorOltAdapter(
                 distanceMeters = if (profile.status == OnuOperationalStatus.LOS) null else 800 + index * 37,
                 observedAt = now,
                 lastDownCause = profile.downCause,
+                lastOffAt = profile.lastOffAt(now, index),
+                lastOnAt = profile.lastOnAt(now, index),
             )
         }
     }
@@ -96,7 +98,37 @@ class SimulatorOltAdapter(
             return Math.round((base + daily) * 100) / 100.0
         }
 
+        /**
+         * Perkiraan kapan ONU terakhir putus, meniru register OLT. Untuk ONU yang
+         * kini ONLINE, gangguannya sebentar sebelum boot terakhir; untuk yang masih
+         * mati, beberapa saat lalu dan belum pulih. Dibuat konsisten dengan [lastOnAt]
+         * agar urutannya mencerminkan status: pulih (`off` < `on`) atau masih mati.
+         */
+        fun lastOffAt(now: Instant, index: Int): Instant = when (status) {
+            OnuOperationalStatus.ONLINE ->
+                now.minusSeconds(uptimeSecondsOf(index) + OUTAGE_BLIP_SECONDS + index * 13L)
+            else ->
+                now.minusSeconds(ONGOING_OUTAGE_SECONDS + index * 60L)
+        }
+
+        /** Perkiraan kapan ONU terakhir kembali online, meniru register OLT. */
+        fun lastOnAt(now: Instant, index: Int): Instant = when (status) {
+            OnuOperationalStatus.ONLINE ->
+                // Kembali online saat boot terakhir; uptime = 86.400 × index detik.
+                now.minusSeconds(uptimeSecondsOf(index))
+            else ->
+                // Sempat menyala lama sebelum putus yang sekarang.
+                lastOffAt(now, index).minusSeconds(uptimeSecondsOf(index))
+        }
+
+        private fun uptimeSecondsOf(index: Int): Long = 86_400L * index
+
         companion object {
+            /** Kedip singkat sebelum ONU yang kini sehat berhasil boot ulang. */
+            const val OUTAGE_BLIP_SECONDS = 180L
+
+            /** Berapa lama ONU yang masih mati sudah putus saat ini. */
+            const val ONGOING_OUTAGE_SECONDS = 1_800L
             /**
              * Sebagian besar ONU sehat; sisanya bermasalah dengan proporsi yang
              * mirip jaringan nyata — kalau setengahnya rusak, alarm jadi bising

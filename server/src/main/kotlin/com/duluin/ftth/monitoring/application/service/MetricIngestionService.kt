@@ -78,6 +78,8 @@ class MetricIngestionService(
                         uptimeSeconds = reading.uptimeSeconds,
                         distanceMeters = reading.distanceMeters,
                         downCause = reading.lastDownCause?.name,
+                        lastOffAt = reading.lastOffAt,
+                        lastOnAt = reading.lastOnAt,
                     )
                 },
             )

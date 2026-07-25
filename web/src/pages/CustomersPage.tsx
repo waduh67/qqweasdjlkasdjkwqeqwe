@@ -329,6 +329,41 @@ function CustomerCard({
  * pelanggan bisa ratusan baris, jadi panel inline akan muncul di luar layar dan
  * terkesan "tak ada aksi" saat tombol diklik dari baris atas.
  */
+/** Waktu ringkas untuk baris gangguan, mis. "20 Jul 14:05". */
+function fmtMoment(d: Date): string {
+  return d.toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+/** Durasi manusiawi dari milidetik, mis. "3 jam 12 menit" atau "8 menit". */
+function humanizeDuration(ms: number): string {
+  const mins = Math.max(0, Math.floor(ms / 60_000))
+  if (mins < 60) return `${mins} menit`
+  const hours = Math.floor(mins / 60)
+  const days = Math.floor(hours / 24)
+  if (days >= 1) return `${days} hari ${hours % 24} jam`
+  return `${hours} jam ${mins % 60} menit`
+}
+
+/**
+ * Merangkai register "last off / last on" OLT menjadi satu kalimat: masih putus
+ * sejak kapan, atau terakhir putus lalu pulih berapa lama. Menjawab "sejak kapan
+ * mati" dan "sudah berapa lama normal" tanpa menunggu siklus polling berikutnya.
+ */
+function describeOutage(m: OnuMetricView): string {
+  const off = m.lastOffAt ? new Date(m.lastOffAt) : null
+  const on = m.lastOnAt ? new Date(m.lastOnAt) : null
+  // Pulih bila kembali online tidak lebih lama dari saat putus terakhir.
+  const recovered = off != null && on != null && on.getTime() >= off.getTime()
+  if (off && !recovered) {
+    return `Putus sejak ${fmtMoment(off)} · sudah ${humanizeDuration(Date.now() - off.getTime())}`
+  }
+  if (off && on) {
+    return `Terakhir putus ${fmtMoment(off)}, pulih ${fmtMoment(on)} · lama ${humanizeDuration(on.getTime() - off.getTime())}`
+  }
+  if (on) return `Terakhir online ${fmtMoment(on)}`
+  return ''
+}
+
 function TracePanel({ trace, onClose }: { trace: CustomerTrace; onClose: () => void }) {
   const { can } = useCan()
   const [live, setLive] = useState<OnuMetricView | null>(null)
@@ -392,6 +427,11 @@ function TracePanel({ trace, onClose }: { trace: CustomerTrace; onClose: () => v
                 </span>
               )}
             </div>
+          )}
+          {live && (live.lastOffAt || live.lastOnAt) && (
+            // Register "last off / last on" OLT: sejak kapan mati, dan kalau sudah
+            // pulih, tadi berapa lama putusnya — tanpa menunggu siklus polling berikutnya.
+            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>{describeOutage(live)}</p>
           )}
         </div>
       )}

@@ -159,11 +159,18 @@ class MonitoringEndToEndIT {
          "distanceMeters":null,"observedAt":"${Instant.now()}"}
         """.trimIndent()
 
-    private fun readingWithCause(serial: String, status: String, cause: String): String =
+    private fun readingWithCause(
+        serial: String,
+        status: String,
+        cause: String,
+        lastOffAt: String? = null,
+        lastOnAt: String? = null,
+    ): String =
         """
         {"serialNumber":"$serial","oltCode":"OLT-X","ponPortLabel":"1/1/1","status":"$status",
          "rxPowerDbm":null,"txPowerDbm":null,"uptimeSeconds":null,"distanceMeters":null,
-         "observedAt":"${Instant.now()}","lastDownCause":"$cause"}
+         "observedAt":"${Instant.now()}","lastDownCause":"$cause",
+         "lastOffAt":${lastOffAt?.let { "\"$it\"" } ?: "null"},"lastOnAt":${lastOnAt?.let { "\"$it\"" } ?: "null"}}
         """.trimIndent()
 
     private fun batch(vararg readings: String, batchId: String = uniq()): String =
@@ -350,9 +357,12 @@ class MonitoringEndToEndIT {
         // ONU mati karena pelanggan kehilangan daya: OLT melaporkan dying-gasp.
         // Inilah pembeda yang harus selamat sampai ke UI — "mati listrik", bukan
         // "fiber putus" — meski status di layar sama-sama menunjukkan tidak online.
+        // Register OLT juga membawa kapan putus & terakhir online, ikut round-trip.
+        val offAt = Instant.parse("2026-07-20T10:00:00Z")
+        val onAt = Instant.parse("2026-07-19T08:00:00Z")
         postAsCollector(
             "/api/collector/metrics", apiKey,
-            batch(readingWithCause(serial, "OFFLINE", "DYING_GASP")),
+            batch(readingWithCause(serial, "OFFLINE", "DYING_GASP", lastOffAt = "$offAt", lastOnAt = "$onAt")),
         )
 
         val metrics = mockMvc.perform(
@@ -361,6 +371,9 @@ class MonitoringEndToEndIT {
 
         assertThat(JsonPath.read<String>(metrics, "$[0].status")).isEqualTo("OFFLINE")
         assertThat(JsonPath.read<String>(metrics, "$[0].downCause")).isEqualTo("DYING_GASP")
+        // Dibandingkan sebagai Instant, bukan string, agar tak rapuh pada format ISO.
+        assertThat(Instant.parse(JsonPath.read<String>(metrics, "$[0].lastOffAt"))).isEqualTo(offAt)
+        assertThat(Instant.parse(JsonPath.read<String>(metrics, "$[0].lastOnAt"))).isEqualTo(onAt)
     }
 
     @Test
