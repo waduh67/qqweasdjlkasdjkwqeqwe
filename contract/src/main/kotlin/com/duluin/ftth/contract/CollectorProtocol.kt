@@ -94,6 +94,17 @@ data class OnuReading(
     /** Jarak hasil ranging OLT dalam meter; berguna untuk memperkirakan titik putus. */
     val distanceMeters: Int?,
     val observedAt: Instant,
+    /**
+     * Penyebab terakhir ONU putus, dari register "last down cause" OLT. OLT
+     * menyimpannya melewati ONU yang sudah kembali online, jadi nilainya bisa hadir
+     * meski status kini ONLINE — mencerminkan alasan gangguan terakhir. `null` bila
+     * OLT tidak melaporkannya atau ONU belum pernah putus.
+     *
+     * Pembeda paling berharganya: [OnuDownCause.DYING_GASP] (pelanggan mati listrik)
+     * versus [OnuDownCause.LOS] (fiber putus) — dua gangguan yang tampak sama-sama
+     * "mati" tapi menuntut tindakan yang sama sekali berbeda.
+     */
+    val lastDownCause: OnuDownCause? = null,
 )
 
 /** Status ONU sebagaimana dilaporkan OLT. */
@@ -103,6 +114,27 @@ enum class OnuOperationalStatus {
     /** Loss of Signal — fiber putus atau konektor lepas. */
     LOS,
     /** Dikenali OLT tapi belum terotorisasi. */
+    UNKNOWN,
+}
+
+/**
+ * Alasan sebuah ONU terakhir kali putus, sebagaimana dilaporkan OLT.
+ *
+ * Membedakan gangguan yang di layar tampak identik ("mati") tapi akar & tindakannya
+ * beda: [DYING_GASP] cukup tunggu listrik pelanggan pulih, [LOS] harus kirim teknisi.
+ */
+enum class OnuDownCause {
+    /** ONT mengirim "dying gasp" saat kehilangan daya — pelanggan mati listrik. */
+    DYING_GASP,
+    /** Loss of Signal — fiber putus atau konektor lepas. */
+    LOS,
+    /** Loss of Burst — jendela transmisi ONU hilang. */
+    LOB,
+    /** Sinyal terlalu lemah/rusak untuk dikunci. */
+    SIGNAL_FAIL,
+    /** Dinonaktifkan operator dari sisi OLT. */
+    ADMIN_DOWN,
+    /** OLT melaporkan putus tanpa sebab yang bisa dipetakan. */
     UNKNOWN,
 }
 

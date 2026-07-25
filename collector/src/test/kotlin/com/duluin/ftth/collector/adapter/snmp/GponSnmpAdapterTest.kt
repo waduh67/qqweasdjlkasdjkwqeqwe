@@ -1,6 +1,7 @@
 package com.duluin.ftth.collector.adapter.snmp
 
 import com.duluin.ftth.contract.OltTarget
+import com.duluin.ftth.contract.OnuDownCause
 import com.duluin.ftth.contract.OnuOperationalStatus
 import java.time.Instant
 import kotlin.test.Test
@@ -55,6 +56,45 @@ class GponSnmpAdapterTest {
         assertEquals(OnuOperationalStatus.ONLINE, onu.status)
         assertEquals(-22.5, onu.rxPowerDbm)
         assertEquals("OLT-BKS-01", onu.oltCode)
+        // Profil baku belum punya OID sebab-putus → jangan mengarang: null apa adanya.
+        assertNull(onu.lastDownCause)
+    }
+
+    @Test
+    fun `sebab putus terakhir dipetakan dari register saat profil menyediakan OID-nya`() {
+        val downCauseOid = "1.3.6.1.4.1.3902.1012.3.28.2.1.99"
+        val profile = MibProfiles.ZTE.copy(
+            downCauseOid = downCauseOid,
+            downCauseMapping = mapOf("9" to OnuDownCause.DYING_GASP),
+        )
+        val row = mapOf(
+            MibProfiles.ZTE.serialNumberOid to "5A544547C0FFEE01",
+            MibProfiles.ZTE.statusOid to "1", // OFFLINE pada ZTE
+            downCauseOid to "9",
+        )
+        val onu = adapter(profile, readerOf(row)).pollOnus(target).single()
+
+        // Dying-gasp: ONU lapor kehilangan daya, bukan fiber putus.
+        assertEquals(OnuDownCause.DYING_GASP, onu.lastDownCause)
+        assertEquals(OnuOperationalStatus.OFFLINE, onu.status)
+    }
+
+    @Test
+    fun `nilai register di luar peta jatuh ke UNKNOWN, bukan hilang`() {
+        val downCauseOid = "1.3.6.1.4.1.3902.1012.3.28.2.1.99"
+        val profile = MibProfiles.ZTE.copy(
+            downCauseOid = downCauseOid,
+            downCauseMapping = mapOf("9" to OnuDownCause.DYING_GASP),
+        )
+        val row = mapOf(
+            MibProfiles.ZTE.serialNumberOid to "5A544547C0FFEE01",
+            MibProfiles.ZTE.statusOid to "1",
+            downCauseOid to "254", // kode vendor yang belum dipetakan
+        )
+        val onu = adapter(profile, readerOf(row)).pollOnus(target).single()
+
+        // Bahwa ONU pernah putus tetap informasi berharga meski sebabnya tak dikenal.
+        assertEquals(OnuDownCause.UNKNOWN, onu.lastDownCause)
     }
 
     @Test

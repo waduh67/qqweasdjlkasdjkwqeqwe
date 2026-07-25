@@ -22,6 +22,13 @@ data class OnuMetricPoint(
     val txPowerDbm: Double?,
     val uptimeSeconds: Long?,
     val distanceMeters: Int?,
+    /**
+     * Penyebab putus terakhir dari register OLT (mis. DYING_GASP, LOS). Melekat
+     * pada titik pengukuran, bukan pada agregat ONU, karena ia telemetri: OLT
+     * menyimpannya melewati pemulihan sehingga bacaan terbaru selalu memuat sebab
+     * gangguan terakhir. `null` bila OLT tidak melaporkannya.
+     */
+    val downCause: String?,
 )
 
 /** Ringkasan riwayat redaman satu ONU pada rentang waktu tertentu. */

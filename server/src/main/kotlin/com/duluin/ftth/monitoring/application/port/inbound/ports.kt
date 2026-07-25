@@ -108,6 +108,12 @@ data class OnuMetricView(
     val rxPowerDbm: Double?,
     val txPowerDbm: Double?,
     val distanceMeters: Int?,
+    /**
+     * Sebab gangguan terakhir ONU (mis. DYING_GASP, LOS) — memisahkan "pelanggan
+     * mati listrik" dari "fiber putus" saat status sama-sama menunjukkan mati.
+     * `null` bila OLT tidak melaporkannya.
+     */
+    val downCause: String?,
 )
 
 data class OnuHistoryView(

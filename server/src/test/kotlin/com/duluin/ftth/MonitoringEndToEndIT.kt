@@ -87,6 +87,8 @@ class MonitoringEndToEndIT {
         return JsonPath.read(json, "$.apiKey")
     }
 
+    private fun id(json: String): String = JsonPath.read(json, "$.id")
+
     /** Mendaftarkan pelanggan + ONU, lalu mengembalikan serial ONU-nya. */
     private fun registerOnu(token: String): String {
         val suffix = uniq().uppercase()
@@ -102,11 +104,66 @@ class MonitoringEndToEndIT {
         return "SN-$suffix"
     }
 
+    /**
+     * Membangun rantai POP→OLT→PON→ODC→ODP, mendaftarkan pelanggan+ONU, lalu
+     * MEMASANG ONU-nya ke ODP. Metrik terbaru per pelanggan hanya muncul untuk ONU
+     * yang benar-benar terpasang (lihat `findPlacementOf`), jadi rantai penuh ini
+     * memang syarat, bukan kerumitan berlebih. Mengembalikan (customerId, serial).
+     */
+    private fun provisionAttachedOnu(token: String): Pair<String, String> {
+        val s = uniq().uppercase()
+        val site = id(
+            post("/api/sites", token, """{"code":"POP-$s","name":"POP $s","location":{"longitude":106.98,"latitude":-6.23}}"""),
+        )
+        val olt = id(
+            post(
+                "/api/olts", token,
+                """{"siteId":"$site","code":"OLT-$s","name":"OLT $s","vendor":"ZTE",
+                    "managementIp":"10.0.0.1","snmpCommunity":"rahasia"}""",
+            ),
+        )
+        val pon = id(post("/api/olts/$olt/pon-ports", token, """{"label":"1/1/1"}"""))
+        val odc = id(
+            post(
+                "/api/odcs", token,
+                """{"code":"ODC-$s","name":"ODC $s","location":{"longitude":106.99,"latitude":-6.24},
+                    "ponPortId":"$pon","splitterRatio":"1:8","capacity":64}""",
+            ),
+        )
+        val odp = id(
+            post(
+                "/api/odps", token,
+                """{"code":"ODP-$s","name":"ODP $s","location":{"longitude":106.995,"latitude":-6.245},
+                    "odcId":"$odc","splitterRatio":"1:8","capacity":8}""",
+            ),
+        )
+        val customerId = id(
+            post(
+                "/api/customers", token,
+                """{"code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji",
+                    "location":{"longitude":106.99,"latitude":-6.24}}""",
+            ),
+        )
+        val onuId = id(post("/api/customers/$customerId/onus", token, """{"serialNumber":"SN-$s"}"""))
+        post(
+            "/api/customers/onus/$onuId/attach", token,
+            """{"odpId":"$odp","portNumber":1,"installRxPowerDbm":-22.0}""", expected = 200,
+        )
+        return customerId to "SN-$s"
+    }
+
     private fun reading(serial: String, status: String, rxPower: Double?): String =
         """
         {"serialNumber":"$serial","oltCode":"OLT-X","ponPortLabel":"1/1/1","status":"$status",
          "rxPowerDbm":${rxPower ?: "null"},"txPowerDbm":null,"uptimeSeconds":null,
          "distanceMeters":null,"observedAt":"${Instant.now()}"}
+        """.trimIndent()
+
+    private fun readingWithCause(serial: String, status: String, cause: String): String =
+        """
+        {"serialNumber":"$serial","oltCode":"OLT-X","ponPortLabel":"1/1/1","status":"$status",
+         "rxPowerDbm":null,"txPowerDbm":null,"uptimeSeconds":null,"distanceMeters":null,
+         "observedAt":"${Instant.now()}","lastDownCause":"$cause"}
         """.trimIndent()
 
     private fun batch(vararg readings: String, batchId: String = uniq()): String =
@@ -282,6 +339,28 @@ class MonitoringEndToEndIT {
 
         assertThat(JsonPath.read<List<Any>>(history, "$.points")).hasSize(3)
         assertThat(JsonPath.read<Double>(history, "$.averageRxPowerDbm")).isEqualTo(-22.0)
+    }
+
+    @Test
+    fun `sebab putus terakhir ONU tersimpan dan terbaca di metrik terbaru pelanggan`() {
+        val token = newTenantAdmin("ldc")
+        val apiKey = newCollector(token)
+        val (customerId, serial) = provisionAttachedOnu(token)
+
+        // ONU mati karena pelanggan kehilangan daya: OLT melaporkan dying-gasp.
+        // Inilah pembeda yang harus selamat sampai ke UI — "mati listrik", bukan
+        // "fiber putus" — meski status di layar sama-sama menunjukkan tidak online.
+        postAsCollector(
+            "/api/collector/metrics", apiKey,
+            batch(readingWithCause(serial, "OFFLINE", "DYING_GASP")),
+        )
+
+        val metrics = mockMvc.perform(
+            get("/api/monitoring/customers/$customerId/metrics").header("Authorization", "Bearer $token"),
+        ).andExpect(status().isOk).andReturn().response.contentAsString
+
+        assertThat(JsonPath.read<String>(metrics, "$[0].status")).isEqualTo("OFFLINE")
+        assertThat(JsonPath.read<String>(metrics, "$[0].downCause")).isEqualTo("DYING_GASP")
     }
 
     @Test

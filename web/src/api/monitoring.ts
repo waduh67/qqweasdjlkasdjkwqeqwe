@@ -58,6 +58,36 @@ export interface MonitoringDashboard {
   recentAlarms: AlarmView[]
 }
 
+/**
+ * Sebab putus terakhir ONU dari register OLT. Membedakan gangguan yang di layar
+ * tampak sama tapi tindakannya beda — cukup selaras dengan enum `OnuDownCause`
+ * di sisi server.
+ */
+export type OnuDownCause = 'DYING_GASP' | 'LOS' | 'LOB' | 'SIGNAL_FAIL' | 'ADMIN_DOWN' | 'UNKNOWN'
+
+/** Label ringkas manusiawi untuk sebab putus, dipakai di badge "Ldc". */
+export const DOWN_CAUSE_LABEL: Record<OnuDownCause, string> = {
+  DYING_GASP: 'mati listrik',
+  LOS: 'fiber putus',
+  LOB: 'burst hilang',
+  SIGNAL_FAIL: 'sinyal gagal',
+  ADMIN_DOWN: 'dinonaktifkan',
+  UNKNOWN: 'tak diketahui',
+}
+
+/** Bacaan live terbaru satu ONU — status dan sebab putus terakhir dari OLT. */
+export interface OnuMetricView {
+  onuId: string
+  serialNumber: string
+  time: string
+  status: string
+  rxPowerDbm: number | null
+  txPowerDbm: number | null
+  distanceMeters: number | null
+  /** `DYING_GASP` vs `LOS` — mati listrik pelanggan vs fiber putus. */
+  downCause: OnuDownCause | null
+}
+
 export interface HistoryPoint {
   time: string
   rxPowerDbm: number | null

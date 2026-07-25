@@ -77,6 +77,7 @@ class MetricIngestionService(
                         txPowerDbm = reading.txPowerDbm,
                         uptimeSeconds = reading.uptimeSeconds,
                         distanceMeters = reading.distanceMeters,
+                        downCause = reading.lastDownCause?.name,
                     )
                 },
             )

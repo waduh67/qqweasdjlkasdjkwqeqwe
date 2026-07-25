@@ -4,6 +4,7 @@ import com.duluin.ftth.collector.adapter.OltAdapter
 import com.duluin.ftth.collector.adapter.OltProtocolException
 import com.duluin.ftth.collector.adapter.ProbeResult
 import com.duluin.ftth.contract.OltTarget
+import com.duluin.ftth.contract.OnuDownCause
 import com.duluin.ftth.contract.OnuOperationalStatus
 import com.duluin.ftth.contract.OnuReading
 import org.slf4j.LoggerFactory
@@ -30,6 +31,14 @@ data class MibProfile(
     /** Nilai mentah yang berarti "tidak ada pembacaan", mis. -32768 atau 2147483647. */
     val opticalPowerSentinels: Set<Long>,
     val statusMapping: Map<String, OnuOperationalStatus>,
+    /**
+     * OID register "last down cause" ONU. `null` bila belum diketahui untuk vendor
+     * ini — plumbing-nya sudah lengkap, tinggal isi OID + [downCauseMapping] setelah
+     * di-`snmpwalk` di perangkat sungguhan (Phase 2b).
+     */
+    val downCauseOid: String? = null,
+    /** Pemetaan nilai mentah register di atas ke [OnuDownCause]. */
+    val downCauseMapping: Map<String, OnuDownCause> = emptyMap(),
     /** Serial GPON umumnya 4 huruf vendor + 8 digit heksa. */
     val serialIsHex: Boolean = true,
 )
@@ -82,6 +91,7 @@ class GponSnmpAdapter(
             profile.txPowerOid,
             profile.distanceOid,
             profile.uptimeOid,
+            profile.downCauseOid,
         )
 
         val observedAt = clock()
@@ -112,7 +122,19 @@ class GponSnmpAdapter(
             uptimeSeconds = profile.uptimeOid?.let { row[it]?.toLongOrNull() },
             distanceMeters = profile.distanceOid?.let { row[it]?.toIntOrNull() },
             observedAt = observedAt,
+            lastDownCause = lastDownCause(row),
         )
+    }
+
+    /**
+     * Menerjemahkan register "last down cause" OLT ke [OnuDownCause]. Nilai mentah
+     * yang tak ada di [MibProfile.downCauseMapping] dianggap [OnuDownCause.UNKNOWN]
+     * daripada dibuang — bahwa ONU pernah putus tetap informasi berharga meski
+     * sebabnya belum bisa dipetakan. Selama OID vendor belum diisi, hasilnya `null`.
+     */
+    private fun lastDownCause(row: Map<String, String>): OnuDownCause? {
+        val raw = profile.downCauseOid?.let { row[it] }?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        return profile.downCauseMapping[raw] ?: OnuDownCause.UNKNOWN
     }
 
     /**

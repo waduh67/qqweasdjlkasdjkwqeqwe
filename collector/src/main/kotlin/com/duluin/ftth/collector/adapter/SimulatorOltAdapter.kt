@@ -1,6 +1,7 @@
 package com.duluin.ftth.collector.adapter
 
 import com.duluin.ftth.contract.OltTarget
+import com.duluin.ftth.contract.OnuDownCause
 import com.duluin.ftth.contract.OnuOperationalStatus
 import com.duluin.ftth.contract.OnuReading
 import java.time.Instant
@@ -58,19 +59,28 @@ class SimulatorOltAdapter(
                 uptimeSeconds = if (profile.status == OnuOperationalStatus.ONLINE) 86_400L * index else null,
                 distanceMeters = if (profile.status == OnuOperationalStatus.LOS) null else 800 + index * 37,
                 observedAt = now,
+                lastDownCause = profile.downCause,
             )
         }
     }
 
     /** Karakter satu ONU dalam simulasi, ditentukan posisinya agar stabil antar siklus. */
-    private enum class OnuProfile(val status: OnuOperationalStatus) {
+    private enum class OnuProfile(
+        val status: OnuOperationalStatus,
+        /**
+         * Penyebab putus terakhir, meniru register OLT: ONU OFFLINE dianggap
+         * pelanggan mati listrik ([OnuDownCause.DYING_GASP]) dan ONU LOS dianggap
+         * fiber putus — persis pembeda yang harus bisa dikenali sistem.
+         */
+        val downCause: OnuDownCause? = null,
+    ) {
         HEALTHY(OnuOperationalStatus.ONLINE),
         /** Redaman memburuk perlahan — sasaran deteksi degradasi. */
         DEGRADING(OnuOperationalStatus.ONLINE),
         /** Sudah melewati ambang kritis dan harus memicu alarm. */
         CRITICAL(OnuOperationalStatus.ONLINE),
-        OFFLINE(OnuOperationalStatus.OFFLINE),
-        LOS(OnuOperationalStatus.LOS),
+        OFFLINE(OnuOperationalStatus.OFFLINE, OnuDownCause.DYING_GASP),
+        LOS(OnuOperationalStatus.LOS, OnuDownCause.LOS),
         ;
 
         fun rxPower(now: Instant, index: Int): Double? {

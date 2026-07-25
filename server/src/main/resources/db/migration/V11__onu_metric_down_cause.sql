@@ -1,0 +1,16 @@
+-- ------------------------------------------------------------
+-- Sebab putus terakhir ONU pada deret waktu metrik.
+--
+-- Register "last down cause" OLT membedakan gangguan yang di layar tampak sama
+-- ("mati") tapi akar & tindakannya beda: DYING_GASP (ONT lapor kehilangan daya =
+-- pelanggan mati listrik, cukup tunggu pulih) versus LOS (fiber putus, kirim
+-- teknisi). Disimpan di deret waktu, bukan di agregat onu, karena ini telemetri:
+-- OLT menyimpannya melewati pemulihan sehingga bacaan terbaru memuat sebab
+-- gangguan terakhir tanpa perlu tabel status terpisah.
+--
+-- Nullable: OLT/vendor yang tidak melaporkannya (atau ONU yang belum pernah
+-- putus) cukup mengisi NULL. Tidak ada backfill — baris lama memang tak punya
+-- informasi ini. Kolom ditambahkan tanpa default agar ALTER pada hypertable
+-- tetap operasi metadata yang murah.
+-- ------------------------------------------------------------
+ALTER TABLE onu_metric ADD COLUMN down_cause varchar(20);

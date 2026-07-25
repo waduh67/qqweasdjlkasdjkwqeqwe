@@ -47,6 +47,7 @@ class MetricQueryService(
                     rxPowerDbm = point.rxPowerDbm,
                     txPowerDbm = point.txPowerDbm,
                     distanceMeters = point.distanceMeters,
+                    downCause = point.downCause,
                 )
             }
         }

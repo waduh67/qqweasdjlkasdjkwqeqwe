@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type { CustomerTrace, CustomerView, OdpView } from '../api/network'
+import { DOWN_CAUSE_LABEL, type OnuMetricView } from '../api/monitoring'
 import { useCan } from '../auth/useCan'
 import { Drawer, EmptyState, StatusBadge, useToast } from '../components/ui'
 import { IconCustomers, IconPlus, IconRoute, IconSearch } from '../components/icons'
@@ -329,6 +330,28 @@ function CustomerCard({
  * terkesan "tak ada aksi" saat tombol diklik dari baris atas.
  */
 function TracePanel({ trace, onClose }: { trace: CustomerTrace; onClose: () => void }) {
+  const { can } = useCan()
+  const [live, setLive] = useState<OnuMetricView | null>(null)
+
+  // Bacaan live ONU ditarik on-demand di sini, bukan di tiap kartu daftar: daftar
+  // pelanggan bisa ratusan baris, dan memuatnya per kartu jadi ratusan request
+  // sekaligus. Drawer ini hanya terbuka untuk satu pelanggan, jadi satu request.
+  useEffect(() => {
+    if (!can('monitoring.metric.view') || !trace.onuSerialNumber) return
+    let alive = true
+    void api
+      .get<OnuMetricView[]>(`/api/monitoring/customers/${trace.customerId}/metrics`)
+      .then((metrics) => {
+        if (!alive) return
+        const serial = trace.onuSerialNumber?.toUpperCase()
+        setLive(metrics.find((m) => m.serialNumber.toUpperCase() === serial) ?? null)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [can, trace.customerId, trace.onuSerialNumber])
+
   return (
     <Drawer title={`Jalur — ${trace.customerName}`} onClose={onClose}>
       {trace.hops.length <= 1 ? (
@@ -353,6 +376,23 @@ function TracePanel({ trace, onClose }: { trace: CustomerTrace; onClose: () => v
             </span>
             {trace.estimatedLossDb != null && ` · perkiraan rugi jalur ${trace.estimatedLossDb.toFixed(1)} dB`}
           </p>
+          {live && (
+            <div className="row" style={{ gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span className="muted" style={{ fontSize: '0.85rem' }}>Status live:</span>
+              <StatusBadge status={live.status} />
+              {live.downCause && (
+                // "Ldc" = Last Down Cause. DYING_GASP → pelanggan mati listrik,
+                // LOS → fiber putus: pembeda tindakan yang tak terlihat dari status saja.
+                <span
+                  className="badge"
+                  title={`Sebab putus terakhir: ${live.downCause}`}
+                  style={{ color: 'var(--warning-ink)', fontWeight: 600 }}
+                >
+                  Ldc: {DOWN_CAUSE_LABEL[live.downCause]}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       )}
     </Drawer>
