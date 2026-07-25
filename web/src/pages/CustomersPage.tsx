@@ -455,6 +455,19 @@ function TracePanel({ trace, onClose }: { trace: CustomerTrace; onClose: () => v
                 <div className="row" style={{ gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
                   <span className="muted" style={{ fontSize: '0.85rem' }}>Status live:</span>
                   <StatusBadge status={live.status} />
+                  {live.rxPowerDbm != null && (
+                    // Rx hidup terakhir — beda dari redaman terpasang di atasnya:
+                    // yang ini kondisi sekarang, penanda degradasi sejak instalasi.
+                    <span className="badge neutral tnum" title="Rx power hidup terakhir dari OLT">
+                      Rx {live.rxPowerDbm.toFixed(1)} dBm
+                    </span>
+                  )}
+                  {live.distanceMeters != null && (
+                    // Jarak ONU dari OLT hasil ukur OLT — untuk OTDR/telusur fisik.
+                    <span className="badge neutral tnum" title="Jarak ONU dari OLT (ukur OLT)">
+                      {live.distanceMeters} m
+                    </span>
+                  )}
                   {live.downCause && (
                     // "Ldc" = Last Down Cause. DYING_GASP → pelanggan mati listrik,
                     // LOS → fiber putus: pembeda tindakan yang tak terlihat dari status saja.
