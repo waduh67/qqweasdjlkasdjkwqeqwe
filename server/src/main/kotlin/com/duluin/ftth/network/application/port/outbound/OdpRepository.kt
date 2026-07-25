@@ -14,6 +14,16 @@ interface OdpRepository {
     fun findAllByIds(ids: Set<UUID>): List<Odp>
 
     /**
+     * Seluruh ODP dalam batasan area — untuk heatmap utilisasi port di peta.
+     * Tidak dipaginasi: heatmap justru butuh melihat semua ODP sekaligus saat
+     * zoom-out.
+     *
+     * @param areaIds `null` berarti tanpa pembatasan area; set kosong berarti
+     *        pengguna tidak punya area sama sekali sehingga hasilnya kosong.
+     */
+    fun findAllInAreas(areaIds: Set<UUID>?): List<Odp>
+
+    /**
      * @param areaIds `null` berarti tanpa pembatasan area; set kosong berarti
      *        pengguna tidak punya area sama sekali sehingga hasilnya kosong.
      */

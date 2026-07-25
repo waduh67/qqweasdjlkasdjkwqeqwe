@@ -16,6 +16,7 @@ import type {
   SiteInspection,
   SiteOlt,
   TraceHop,
+  UtilizationHeatmap,
 } from '../api/network'
 import type { PageResponse } from '../api/types'
 import { useAuth } from '../auth/useAuth'
@@ -70,6 +71,26 @@ const SEVERITY_COLOR: any = ['match', ['get', 'severity'], 'CRITICAL', '#ff3b5c'
  * hidup: yang ini hipotetis (belum terjadi), bukan gangguan nyata yang berjalan.
  */
 const WHATIF_COLOR = '#f59e0b'
+
+/**
+ * Gradasi warna heatmap utilisasi port: hijau (lengang) → kuning → jingga →
+ * merah (penuh). Diinterpolasi dari properti `util` (0–100) tiap titik ODP,
+ * sehingga sekali pandang terlihat ODP mana yang butuh perluasan kapasitas.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const HEATMAP_COLOR: any = [
+  'interpolate',
+  ['linear'],
+  ['get', 'util'],
+  0,
+  '#22c55e',
+  50,
+  '#eab308',
+  75,
+  '#f97316',
+  100,
+  '#ef4444',
+]
 
 /** Warna ONU pelanggan menurut status hidup — dasar "perangkat modar → merah". */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -273,6 +294,8 @@ export function MapPage() {
   const [whatIf, setWhatIf] = useState<CableCutView | null>(null)
   const [trace, setTrace] = useState<CustomerTrace | null>(null)
   const [siteInsp, setSiteInsp] = useState<SiteInspection | null>(null)
+  // Heatmap utilisasi port: menyala/mati lewat toggle, mewarnai ODP menurut pemakaian.
+  const [heatmap, setHeatmap] = useState(false)
   const [editing, setEditing] = useState<CableView | null>(null)
   const [toolState, setToolState] = useState<ToolState | null>(null)
   // Mode taruh perangkat baru: jenis yang dipilih, dan lokasi klik yang menunggu form.
@@ -511,6 +534,25 @@ export function MapPage() {
         'customer-glow',
       )
 
+      // Overlay heatmap utilisasi: halo lingkaran besar berwarna gradasi di bawah
+      // marker aset, jadi titik ODP tetap terlihat di atasnya. Diisi imperatif dari
+      // state `heatmap` (lihat efek sinkron di bawah) — kosong selama toggle mati.
+      instance.addSource('heat', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+      instance.addLayer(
+        {
+          id: 'heat-glow',
+          type: 'circle',
+          source: 'heat',
+          paint: {
+            'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 8, 16, 24],
+            'circle-color': HEATMAP_COLOR,
+            'circle-blur': 1,
+            'circle-opacity': 0.55,
+          },
+        },
+        'customer-glow',
+      )
+
       // Animasi: dash `cable-flow` mengalir + denyut opasitas sorotan merah.
       let step = 0
       animRef.current = window.setInterval(() => {
@@ -551,6 +593,39 @@ export function MapPage() {
       })),
     })
   }, [whatIf])
+
+  // Heatmap utilisasi: saat toggle menyala, ambil pemakaian port tiap ODP dan
+  // warnai titiknya; saat mati, kosongkan sumbernya. Fetch dibatalkan bila toggle
+  // berubah sebelum respons tiba agar tidak menimpa data dengan hasil basi.
+  useEffect(() => {
+    const src = map.current?.getSource('heat') as GeoJSONSource | undefined
+    if (!src) return
+    if (!heatmap) {
+      src.setData({ type: 'FeatureCollection', features: [] })
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      try {
+        const view = await api.get<UtilizationHeatmap>('/api/gis/odp-utilization')
+        if (cancelled) return
+        const live = map.current?.getSource('heat') as GeoJSONSource | undefined
+        live?.setData({
+          type: 'FeatureCollection',
+          features: view.odps.map((o) => ({
+            type: 'Feature',
+            properties: { util: o.utilizationPercent },
+            geometry: { type: 'Point', coordinates: [o.location.longitude, o.location.latitude] },
+          })),
+        })
+      } catch (err) {
+        if (!cancelled) setError(err instanceof ApiError ? err.message : 'Gagal memuat heatmap utilisasi')
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [heatmap])
 
   const startDraw = () => {
     // Kalau sedang menaruh perangkat, batalkan dulu — satu alat aktif pada satu waktu.
@@ -732,7 +807,18 @@ export function MapPage() {
           <h1 className="page-title">Peta Jaringan</h1>
           <p className="page-sub">Aset, pelanggan, dan jalur kabel — dari POP sampai rumah.</p>
         </div>
-        <Legend />
+        <div className="row" style={{ gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          {can('network.odp.view') && (
+            <button
+              className={`small ${heatmap ? 'primary' : 'ghost'}`}
+              onClick={() => setHeatmap((v) => !v)}
+              title="Warnai ODP menurut pemakaian port untuk perencanaan kapasitas"
+            >
+              Heatmap utilisasi
+            </button>
+          )}
+          {heatmap ? <HeatmapLegend /> : <Legend />}
+        </div>
       </div>
       {error && <p className="error">{error}</p>}
       <div className="map-shell">
@@ -1560,6 +1646,32 @@ function Legend() {
         </span>
       ))}
     </div>
+  )
+}
+
+/** Skala warna heatmap utilisasi port: gradasi hijau (lengang) → merah (penuh). */
+function HeatmapLegend() {
+  return (
+    <span className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
+      <span className="muted" style={{ fontSize: '0.85rem' }}>
+        Utilisasi port
+      </span>
+      <span className="muted" style={{ fontSize: '0.75rem' }}>
+        0%
+      </span>
+      <span
+        style={{
+          width: 96,
+          height: 10,
+          borderRadius: 6,
+          display: 'inline-block',
+          background: 'linear-gradient(90deg,#22c55e,#eab308,#f97316,#ef4444)',
+        }}
+      />
+      <span className="muted" style={{ fontSize: '0.75rem' }}>
+        100%
+      </span>
+    </span>
   )
 }
 

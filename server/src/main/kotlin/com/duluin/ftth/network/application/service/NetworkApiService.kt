@@ -159,6 +159,9 @@ class NetworkApiService(
     override fun findOdpsByIds(ids: Set<UUID>): List<OdpRef> =
         if (ids.isEmpty()) emptyList() else odpRepository.findAllByIds(ids).map { it.toRef() }
 
+    override fun odpsInArea(areaIds: Set<UUID>?): List<OdpRef> =
+        odpRepository.findAllInAreas(areaIds).map { it.toRef() }
+
     override fun assertOdpPortAssignable(odpId: UUID, portNumber: Int, occupiedPorts: Set<Int>) {
         val odp = odpRepository.findById(odpId) ?: throw NotFoundException("ODP $odpId tidak ditemukan")
         odp.assertPortAssignable(portNumber, occupiedPorts)

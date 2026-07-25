@@ -274,6 +274,23 @@ export interface SeveredCable {
   points: Coordinate[]
 }
 
+/** Utilisasi port satu ODP — dasar warna titik heatmap (hijau→kuning→merah). */
+export interface OdpUtilization {
+  odpId: string
+  code: string
+  name: string
+  location: Coordinate
+  capacity: number
+  used: number
+  /** Port terpakai / kapasitas, dibulatkan ke persen. */
+  utilizationPercent: number
+}
+
+/** Heatmap utilisasi port seluruh ODP dalam jangkauan — untuk perencanaan kapasitas. */
+export interface UtilizationHeatmap {
+  odps: OdpUtilization[]
+}
+
 /** Simulasi "kalau kabel ini putus, siapa yang kena" — hasil dari klik sebuah kabel. */
 export interface CableCutView {
   cableId: string

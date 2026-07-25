@@ -8,6 +8,7 @@ import com.duluin.ftth.gis.application.port.inbound.ImpactedOverlay
 import com.duluin.ftth.gis.application.port.inbound.MapQuery
 import com.duluin.ftth.gis.application.port.inbound.OdpInspection
 import com.duluin.ftth.gis.application.port.inbound.SiteInspection
+import com.duluin.ftth.gis.application.port.inbound.UtilizationHeatmap
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.CacheControl
@@ -71,6 +72,11 @@ class GisController(
     @GetMapping("/cables/{id}/blast-radius")
     @PreAuthorize("@authz.can('gis.map.view') and @authz.can('customer.customer.view')")
     fun cutBlastRadius(@PathVariable id: UUID): CableCutView = mapQuery.cutBlastRadius(id)
+
+    /** Heatmap utilisasi port ODP untuk perencanaan kapasitas (hijau→kuning→merah). */
+    @GetMapping("/odp-utilization")
+    @PreAuthorize("@authz.can('gis.map.view') and @authz.can('network.odp.view')")
+    fun odpUtilization(): UtilizationHeatmap = mapQuery.utilizationHeatmap()
 
     /** Isi sebuah site/POP: OLT di dalamnya + rekap perangkat & pelanggan hilir. */
     @GetMapping("/sites/{id}")

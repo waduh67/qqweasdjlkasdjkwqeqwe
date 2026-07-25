@@ -19,6 +19,16 @@ interface NetworkApi {
 
     fun findOdpsByIds(ids: Set<UUID>): List<OdpRef>
 
+    /**
+     * Seluruh ODP dalam batasan area pengguna — untuk heatmap utilisasi port.
+     * Membawa lokasi & kapasitas tiap ODP; module gis memadukannya dengan jumlah
+     * okupansi dari customer untuk menghitung persentase pemakaian port.
+     *
+     * @param areaIds `null` = tanpa batas area; set kosong = pengguna tanpa area
+     *        sehingga hasilnya kosong.
+     */
+    fun odpsInArea(areaIds: Set<UUID>?): List<OdpRef>
+
     /** Ringkasan sebuah ODC, untuk header panel blast radius ("siapa di bawah ODC ini"). */
     fun findOdc(id: UUID): OdcRef?
 

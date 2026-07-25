@@ -50,7 +50,30 @@ interface MapQuery {
      * seluruh perangkat & pelanggan di hilirnya — "seberapa besar site ini".
      */
     fun inspectSite(siteId: UUID): SiteInspection
+
+    /**
+     * Heatmap utilisasi port untuk perencanaan kapasitas: tiap ODP dalam batasan
+     * area pengguna beserta kapasitas, port terpakai, dan persentasenya. Menyusun
+     * dari network (lokasi & kapasitas ODP) dan customer (jumlah okupansi per ODP,
+     * satu query hitung agregat) — tanpa module mana pun menyentuh tabel module lain.
+     */
+    fun utilizationHeatmap(): UtilizationHeatmap
 }
+
+/** Utilisasi port seluruh ODP dalam jangkauan pengguna — bahan heatmap peta. */
+data class UtilizationHeatmap(val odps: List<OdpUtilization>)
+
+/** Pemakaian port satu ODP: dasar warna titik heatmap (hijau→kuning→merah). */
+data class OdpUtilization(
+    val odpId: UUID,
+    val code: String,
+    val name: String,
+    val location: Coordinate,
+    val capacity: Int,
+    val used: Int,
+    /** Port terpakai / kapasitas, dibulatkan ke persen. 0 bila kapasitas 0. */
+    val utilizationPercent: Int,
+)
 
 data class SiteInspection(
     val siteId: UUID,

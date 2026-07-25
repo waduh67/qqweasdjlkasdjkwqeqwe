@@ -17,9 +17,11 @@ import com.duluin.ftth.gis.application.port.inbound.ImpactedOverlay
 import com.duluin.ftth.gis.application.port.inbound.MapQuery
 import com.duluin.ftth.monitoring.AlarmImpact
 import com.duluin.ftth.gis.application.port.inbound.OdpInspection
+import com.duluin.ftth.gis.application.port.inbound.OdpUtilization
 import com.duluin.ftth.gis.application.port.inbound.SeveredCable
 import com.duluin.ftth.gis.application.port.inbound.SiteInspection
 import com.duluin.ftth.gis.application.port.inbound.SiteOlt
+import com.duluin.ftth.gis.application.port.inbound.UtilizationHeatmap
 import com.duluin.ftth.gis.application.port.inbound.TraceHop
 import com.duluin.ftth.gis.application.port.inbound.UpstreamView
 import com.duluin.ftth.monitoring.MonitoringApi
@@ -268,6 +270,34 @@ class MapService(
             customerCount = customerCount.toInt(),
             olts = olts.map { SiteOlt(id = it.id, code = it.code, name = it.name, vendor = it.vendor, active = it.active) },
         )
+    }
+
+    /**
+     * Menyusun heatmap utilisasi port. Network memberi tiap ODP dalam jangkauan
+     * area pengguna (lokasi + kapasitas); customer memberi jumlah port terpakai
+     * per ODP dalam SATU query hitung agregat — bukan memuat penghuni tiap ODP,
+     * karena satu tenant bisa punya puluhan ribu ODP. Persentase dihitung di sini
+     * agar klien tinggal mewarnai titik.
+     */
+    override fun utilizationHeatmap(): UtilizationHeatmap {
+        val areaIds = currentUser.current().areaScope()
+        val odps = networkApi.odpsInArea(areaIds)
+        if (odps.isEmpty()) return UtilizationHeatmap(emptyList())
+
+        val usedByOdp = customerApi.countOccupantsByOdp(odps.mapTo(HashSet()) { it.id })
+        val items = odps.map { odp ->
+            val used = (usedByOdp[odp.id] ?: 0L).toInt()
+            OdpUtilization(
+                odpId = odp.id,
+                code = odp.code,
+                name = odp.name,
+                location = odp.location,
+                capacity = odp.capacity,
+                used = used,
+                utilizationPercent = percentage(used, odp.capacity),
+            )
+        }
+        return UtilizationHeatmap(items)
     }
 
     private fun OdpOccupant.toAffected(odpCode: String) = AffectedCustomer(

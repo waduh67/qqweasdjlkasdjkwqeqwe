@@ -47,6 +47,9 @@ class OdpPersistenceAdapter(
 
     override fun findAllByIds(ids: Set<UUID>): List<Odp> = jpa.findAllById(ids).map { it.toDomain() }
 
+    override fun findAllInAreas(areaIds: Set<UUID>?): List<Odp> =
+        jpa.findAll(NetworkSpecifications.withinAreas<OdpJpaEntity>(areaIds)).map { it.toDomain() }
+
     override fun search(query: String, areaIds: Set<UUID>?, odcId: UUID?, pageRequest: PageRequest): Page<Odp> {
         val spec = NetworkSpecifications.textMatches<OdpJpaEntity>(query)
             .and(NetworkSpecifications.withinAreas(areaIds))
