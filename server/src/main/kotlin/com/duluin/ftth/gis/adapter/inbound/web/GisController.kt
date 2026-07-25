@@ -8,6 +8,7 @@ import com.duluin.ftth.gis.application.port.inbound.ImpactedOverlay
 import com.duluin.ftth.gis.application.port.inbound.MapQuery
 import com.duluin.ftth.gis.application.port.inbound.OdpInspection
 import com.duluin.ftth.gis.application.port.inbound.SiteInspection
+import com.duluin.ftth.gis.application.port.inbound.SubscriberNeighbors
 import com.duluin.ftth.gis.application.port.inbound.UtilizationHeatmap
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -57,6 +58,11 @@ class GisController(
     @GetMapping("/trace/customers/{id}")
     @PreAuthorize("@authz.can('gis.map.view') and @authz.can('customer.customer.view')")
     fun traceCustomer(@PathVariable id: UUID): CustomerTrace = mapQuery.traceCustomer(id)
+
+    /** Tetangga sejalur: pelanggan lain di ODP dan PON port yang sama, dengan kondisi hidupnya. */
+    @GetMapping("/trace/customers/{id}/neighbors")
+    @PreAuthorize("@authz.can('gis.map.view') and @authz.can('customer.customer.view')")
+    fun neighbors(@PathVariable id: UUID): SubscriberNeighbors = mapQuery.subscriberNeighbors(id)
 
     /** Kabel yang hilirnya bermasalah (alarm hidup) — untuk disorot merah di peta. */
     @GetMapping("/impacted")

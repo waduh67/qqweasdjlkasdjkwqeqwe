@@ -2,11 +2,13 @@ package com.duluin.ftth.monitoring.application.service
 
 import com.duluin.ftth.monitoring.AlarmImpact
 import com.duluin.ftth.monitoring.MonitoringApi
+import com.duluin.ftth.monitoring.OnuLiveMetric
 import com.duluin.ftth.monitoring.application.port.outbound.AlarmRepository
 import com.duluin.ftth.monitoring.application.port.outbound.OnuMetricRepository
 import com.duluin.ftth.monitoring.domain.model.AlarmEntityType
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)
@@ -34,6 +36,21 @@ class MonitoringApiService(
                 kind = it.kind.name,
                 label = it.entityLabel,
                 downCause = if (it.entityType == AlarmEntityType.ONU) downCauseByOnu[it.entityId] else null,
+            )
+        }
+    }
+
+    override fun latestMetricsByOnuIds(onuIds: Set<UUID>): Map<UUID, OnuLiveMetric> {
+        if (onuIds.isEmpty()) return emptyMap()
+        return metricRepository.findLatestByOnuIds(onuIds).mapValues { (onuId, point) ->
+            OnuLiveMetric(
+                onuId = onuId,
+                status = point.status,
+                rxPowerDbm = point.rxPowerDbm,
+                distanceMeters = point.distanceMeters,
+                downCause = point.downCause,
+                lastOffAt = point.lastOffAt,
+                lastOnAt = point.lastOnAt,
             )
         }
     }

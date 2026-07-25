@@ -70,6 +70,11 @@ class NetworkApiService(
         return DownstreamIds(odcIds = allOdcIds, odpIds = odpIds)
     }
 
+    override fun odpIdsUnderPonPort(ponPortId: UUID): Set<UUID> {
+        val odcIds = odcRepository.findIdsByPonPortIds(setOf(ponPortId))
+        return if (odcIds.isEmpty()) emptySet() else odpRepository.findIdsByOdcIds(odcIds)
+    }
+
     override fun cablesTouchingNodes(nodeIds: Set<UUID>): List<CablePath> =
         cableRepository.findByEndpointNodeIds(nodeIds).map { it.toCablePath() }
 

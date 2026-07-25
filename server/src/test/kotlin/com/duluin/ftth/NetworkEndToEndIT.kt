@@ -1,5 +1,6 @@
 package com.duluin.ftth
 
+import com.duluin.ftth.contract.CollectorProtocol
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
 import com.jayway.jsonpath.JsonPath
@@ -15,6 +16,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delet
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -108,6 +110,56 @@ class NetworkEndToEndIT {
         return customer
     }
 
+    private data class Sub(val customerId: String, val serial: String)
+
+    /** Seperti [attachNewCustomer], tapi mengembalikan juga serial ONU agar bisa dikirimi metrik. */
+    private fun attachSub(token: String, odpId: String, port: Int): Sub {
+        val suffix = uniq().uppercase()
+        val customer = idOf(
+            post(
+                "/api/customers", token,
+                """{"code":"CUST-$suffix","name":"Pelanggan $suffix","address":"Jl. Uji No. 1",
+                    "location":{"longitude":106.996,"latitude":-6.246}}""",
+            ),
+        )
+        val serial = "SN-$suffix"
+        val onu = idOf(post("/api/customers/$customer/onus", token, """{"serialNumber":"$serial"}"""))
+        post("/api/customers/onus/$onu/attach", token, """{"odpId":"$odpId","portNumber":$port}""", 200)
+        return Sub(customer, serial)
+    }
+
+    /** ODP tambahan di bawah ODC yang sudah ada — untuk membangun dua ODP satu PON port. */
+    private fun addOdp(token: String, odcId: String, capacity: Int = 8): String {
+        val suffix = uniq().uppercase()
+        return idOf(
+            post(
+                "/api/odps", token,
+                """{"code":"ODP-$suffix","name":"ODP $suffix","location":{"longitude":106.997,"latitude":-6.247},
+                    "odcId":"$odcId","splitterRatio":"1:8","capacity":$capacity}""",
+            ),
+        )
+    }
+
+    private fun firstOdcId(token: String): String = JsonPath.read(
+        mockMvc.perform(get("/api/odcs").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andReturn().response.contentAsString,
+        "$.content[0].id",
+    )
+
+    private fun newCollector(token: String): String =
+        JsonPath.read(post("/api/monitoring/collectors", token, """{"name":"C-${uniq()}","pollIntervalSeconds":60}"""), "$.apiKey")
+
+    private fun reading(serial: String, status: String, rx: Double?) =
+        """{"serialNumber":"$serial","oltCode":"OLT-X","ponPortLabel":"1/1/1","status":"$status","rxPowerDbm":${rx ?: "null"},"txPowerDbm":null,"uptimeSeconds":null,"distanceMeters":null,"observedAt":"${Instant.now()}"}"""
+
+    private fun sendMetrics(apiKey: String, vararg readings: String) {
+        mockMvc.perform(
+            post("/api/collector/metrics").header(CollectorProtocol.API_KEY_HEADER, apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"batchId":"b-${uniq()}","collectedAt":"${Instant.now()}","readings":[${readings.joinToString(",")}]}"""),
+        ).andExpect(status().isOk)
+    }
+
     @Test
     fun `satu port ODP hanya boleh ditempati satu ONU`() {
         val token = newTenantAdmin("port")
@@ -199,6 +251,46 @@ class NetworkEndToEndIT {
         // Dua tingkat splitter 1:8 => 2 x 10,5 dB, ditambah redaman serat.
         assertThat(JsonPath.read<Double>(json, "$.upstream.splitterLossDb")).isEqualTo(21.0)
         assertThat(JsonPath.read<Double>(json, "$.estimatedLossDb")).isGreaterThan(21.0)
+    }
+
+    @Test
+    fun `tetangga sejalur mendaftar se-ODP dan se-PON dengan bacaan hidup`() {
+        val token = newTenantAdmin("neighbor")
+        // Dua ODP di bawah satu ODC (karena itu satu PON port): A dan B se-ODP,
+        // C tetangga se-PON tapi beda ODP.
+        val odp1 = buildChain(token, capacity = 8)
+        val odp2 = addOdp(token, firstOdcId(token))
+        val a = attachSub(token, odp1, port = 1)
+        val b = attachSub(token, odp1, port = 2)
+        val c = attachSub(token, odp2, port = 1)
+
+        // Bacaan hidup: yang ditelusur (A) online, tetangga se-ODP (B) sedang LOS,
+        // tetangga se-PON di ODP lain (C) online.
+        val apiKey = newCollector(token)
+        sendMetrics(apiKey, reading(a.serial, "ONLINE", -21.0), reading(b.serial, "LOS", null), reading(c.serial, "ONLINE", -20.0))
+
+        val json = mockMvc.perform(
+            get("/api/gis/trace/customers/${a.customerId}/neighbors").header("Authorization", "Bearer $token"),
+        ).andExpect(status().isOk).andReturn().response.contentAsString
+
+        // Se-ODP hanya penghuni ODP-1; se-PON supersetnya, termasuk C di ODP-2.
+        assertThat(JsonPath.read<List<String>>(json, "$.sameOdp[*].customerId"))
+            .containsExactlyInAnyOrder(a.customerId, b.customerId)
+        assertThat(JsonPath.read<List<String>>(json, "$.samePonPort[*].customerId"))
+            .containsExactlyInAnyOrder(a.customerId, b.customerId, c.customerId)
+
+        // Pelanggan yang ditelusur ditandai `self`, dan hanya dia.
+        assertThat(JsonPath.read<List<String>>(json, "$.samePonPort[?(@.self==true)].customerId"))
+            .containsExactly(a.customerId)
+
+        // Bacaan hidup nyampai: A online dengan Rx -21, tetangga B tampak LOS —
+        // inti fiturnya, "siapa lagi di jalur yang sama dan kondisinya apa".
+        assertThat(JsonPath.read<List<String>>(json, "$.sameOdp[?(@.self==true)].liveStatus"))
+            .containsExactly("ONLINE")
+        assertThat(JsonPath.read<List<Double>>(json, "$.sameOdp[?(@.self==true)].liveRxPowerDbm"))
+            .containsExactly(-21.0)
+        assertThat(JsonPath.read<List<String>>(json, "$.sameOdp[?(@.customerId=='${b.customerId}')].liveStatus"))
+            .containsExactly("LOS")
     }
 
     @Test

@@ -88,6 +88,7 @@ class CustomerApiService(
                 customerName = customer.name,
                 phone = customer.phone,
                 location = customer.location,
+                onuId = onu.id,
                 onuSerialNumber = onu.serialNumber,
                 onuStatus = onu.status.name,
                 opticalHealth = onu.opticalHealth().name,

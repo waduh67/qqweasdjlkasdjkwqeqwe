@@ -16,11 +16,13 @@ import com.duluin.ftth.gis.application.port.inbound.ImpactedCable
 import com.duluin.ftth.gis.application.port.inbound.ImpactedOverlay
 import com.duluin.ftth.gis.application.port.inbound.MapQuery
 import com.duluin.ftth.monitoring.AlarmImpact
+import com.duluin.ftth.gis.application.port.inbound.NeighborView
 import com.duluin.ftth.gis.application.port.inbound.OdpInspection
 import com.duluin.ftth.gis.application.port.inbound.OdpUtilization
 import com.duluin.ftth.gis.application.port.inbound.SeveredCable
 import com.duluin.ftth.gis.application.port.inbound.SiteInspection
 import com.duluin.ftth.gis.application.port.inbound.SiteOlt
+import com.duluin.ftth.gis.application.port.inbound.SubscriberNeighbors
 import com.duluin.ftth.gis.application.port.inbound.UtilizationHeatmap
 import com.duluin.ftth.gis.application.port.inbound.TraceHop
 import com.duluin.ftth.gis.application.port.inbound.UpstreamView
@@ -98,6 +100,71 @@ class MapService(
             upstream = upstream?.toView(),
             estimatedLossDb = upstream?.let { estimateLoss(it, customer.location) },
             hops = buildHops(customer.location, upstream),
+        )
+    }
+
+    /**
+     * Menyusun tetangga sejalur seorang pelanggan.
+     *
+     * Se-ODP diambil langsung dari penghuni ODP-nya. Se-PON diambil dari seluruh
+     * ODP di bawah PON port yang sama (network memberi daftar ODP-nya, customer
+     * memberi penghuni tiap ODP) — superset yang memang mencakup se-ODP. Kondisi
+     * hidup tiap ONU ditarik sekali dalam satu query monitoring, bukan per baris.
+     * Pelanggan yang belum tersambung mengembalikan daftar kosong tanpa galat.
+     */
+    override fun subscriberNeighbors(customerId: UUID): SubscriberNeighbors {
+        val customer = customerApi.findCustomer(customerId)
+            ?: throw NotFoundException("Pelanggan $customerId tidak ditemukan")
+        val placement = customerApi.findPlacementOf(customerId)
+            ?: return SubscriberNeighbors(customer.id, null, null, emptyList(), emptyList())
+
+        val upstream = networkApi.upstreamOf(placement.odpId)
+        val odpCode = upstream.odp.code
+
+        val sameOdpOccupants = customerApi.findOccupantsOfOdp(placement.odpId)
+        // Se-PON: penghuni tiap ODP di bawah port PON yang sama. Bila port PON belum
+        // teridentifikasi (jaringan setengah jadi), lingkup jatuh ke ODP saja.
+        val ponOdpIds = upstream.ponPort?.let { networkApi.odpIdsUnderPonPort(it.id) }
+            ?: setOf(placement.odpId)
+        val odpCodeById = networkApi.findOdpsByIds(ponOdpIds).associate { it.id to it.code }
+        val samePonPairs = ponOdpIds.flatMap { odpId ->
+            val code = odpCodeById[odpId] ?: "?"
+            customerApi.findOccupantsOfOdp(odpId).map { code to it }
+        }
+
+        // Satu tarikan metrik hidup untuk semua ONU yang muncul (se-ODP ⊆ se-PON).
+        val onuIds = HashSet<UUID>()
+        sameOdpOccupants.mapTo(onuIds) { it.onuId }
+        samePonPairs.mapTo(onuIds) { it.second.onuId }
+        val live = monitoringApi.latestMetricsByOnuIds(onuIds)
+
+        fun toNeighbor(code: String, o: OdpOccupant): NeighborView {
+            val m = live[o.onuId]
+            return NeighborView(
+                customerId = o.customerId,
+                customerCode = o.customerCode,
+                customerName = o.customerName,
+                odpCode = code,
+                portNumber = o.portNumber,
+                onuSerialNumber = o.onuSerialNumber,
+                onuStatus = o.onuStatus,
+                opticalHealth = o.opticalHealth,
+                installRxPowerDbm = o.installRxPowerDbm,
+                liveStatus = m?.status,
+                liveRxPowerDbm = m?.rxPowerDbm,
+                distanceMeters = m?.distanceMeters,
+                downCause = m?.downCause,
+                self = o.customerId == customerId,
+            )
+        }
+
+        return SubscriberNeighbors(
+            customerId = customer.id,
+            odpCode = odpCode,
+            ponPortLabel = upstream.ponPort?.name,
+            sameOdp = sameOdpOccupants.map { toNeighbor(odpCode, it) }.sortedBy { it.portNumber },
+            samePonPort = samePonPairs.map { toNeighbor(it.first, it.second) }
+                .sortedWith(compareBy({ it.odpCode }, { it.portNumber })),
         )
     }
 

@@ -1,5 +1,6 @@
 package com.duluin.ftth.monitoring
 
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -13,7 +14,28 @@ interface MonitoringApi {
      * yang hilir-nya bermasalah — "perangkat modar → kabel merah".
      */
     fun activeImpacts(): List<AlarmImpact>
+
+    /**
+     * Bacaan hidup terakhir tiap ONU dalam himpunan (status, Rx, jarak, sebab
+     * putus). Dipakai gis untuk memperkaya daftar "tetangga pelanggan" dengan
+     * kondisi nyata tiap sambungan. Telemetri optik tetap milik monitoring; module
+     * lain hanya membacanya lewat kontrak ini. ONU tanpa bacaan tidak muncul di peta.
+     */
+    fun latestMetricsByOnuIds(onuIds: Set<UUID>): Map<UUID, OnuLiveMetric>
 }
+
+/** Bacaan hidup terakhir satu ONU, cukup untuk menandai kondisi di daftar tetangga. */
+data class OnuLiveMetric(
+    val onuId: UUID,
+    /** ONLINE, OFFLINE, atau LOS. */
+    val status: String,
+    val rxPowerDbm: Double?,
+    val distanceMeters: Int?,
+    /** Sebab putus terakhir dari register OLT (mis. DYING_GASP, LOS); `null` bila tak dilaporkan. */
+    val downCause: String?,
+    val lastOffAt: Instant?,
+    val lastOnAt: Instant?,
+)
 
 /** Satu entitas terdampak beserta alarm terbuka yang menyebabkannya. */
 data class AlarmImpact(

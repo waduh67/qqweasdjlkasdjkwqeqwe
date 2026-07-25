@@ -124,6 +124,7 @@ export interface OdpOccupant {
   customerName: string
   phone: string | null
   location: Coordinate
+  onuId: string
   onuSerialNumber: string
   onuStatus: OnuStatus
   opticalHealth: OpticalHealth
@@ -198,6 +199,37 @@ export interface CustomerTrace {
   upstream: UpstreamView | null
   estimatedLossDb: number | null
   hops: TraceHop[]
+}
+
+/** Satu tetangga sejalur: identitas + kondisi terpasang + bacaan hidup ONU-nya. */
+export interface NeighborView {
+  customerId: string
+  customerCode: string
+  customerName: string
+  odpCode: string
+  portNumber: number
+  onuSerialNumber: string
+  onuStatus: OnuStatus
+  opticalHealth: OpticalHealth
+  installRxPowerDbm: number | null
+  liveStatus: OnuStatus | null
+  liveRxPowerDbm: number | null
+  distanceMeters: number | null
+  downCause: string | null
+  /** Baris pelanggan yang sedang ditelusur — untuk disorot di daftar. */
+  self: boolean
+}
+
+/**
+ * Tetangga sejalur seorang pelanggan dalam dua lingkup: se-ODP (paling dekat) dan
+ * se-PON port (lebih luas, superset dari se-ODP). Kosong bila belum tersambung.
+ */
+export interface SubscriberNeighbors {
+  customerId: string
+  odpCode: string | null
+  ponPortLabel: string | null
+  sameOdp: NeighborView[]
+  samePonPort: NeighborView[]
 }
 
 export type CableType = 'FEEDER' | 'DISTRIBUTION' | 'DROP'

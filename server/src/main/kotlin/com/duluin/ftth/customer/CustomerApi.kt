@@ -129,6 +129,8 @@ data class OdpOccupant(
     val customerName: String,
     val phone: String?,
     val location: Coordinate,
+    /** Id ONU penghuni — untuk memadukan dengan bacaan hidup monitoring per ONU. */
+    val onuId: UUID,
     val onuSerialNumber: String,
     val onuStatus: String,
     val opticalHealth: String,

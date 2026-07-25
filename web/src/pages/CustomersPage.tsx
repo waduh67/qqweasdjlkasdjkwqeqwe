@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
-import type { CustomerTrace, CustomerView, OdpView } from '../api/network'
+import type { CustomerTrace, CustomerView, NeighborView, OdpView, SubscriberNeighbors } from '../api/network'
 import { DOWN_CAUSE_LABEL, type OnuMetricView } from '../api/monitoring'
 import { useCan } from '../auth/useCan'
 import { Drawer, EmptyState, StatusBadge, useToast } from '../components/ui'
@@ -364,9 +364,17 @@ function describeOutage(m: OnuMetricView): string {
   return ''
 }
 
+/** Redaman ringkas: "-21.0 dBm" atau "—" bila belum ada bacaan. */
+function fmtDbm(v: number | null): string {
+  return v != null ? `${v.toFixed(1)} dBm` : '—'
+}
+
 function TracePanel({ trace, onClose }: { trace: CustomerTrace; onClose: () => void }) {
   const { can } = useCan()
   const [live, setLive] = useState<OnuMetricView | null>(null)
+  const [neighbors, setNeighbors] = useState<SubscriberNeighbors | null>(null)
+  const [tab, setTab] = useState<'path' | 'odp' | 'pon'>('path')
+  const connected = trace.hops.length > 1
 
   // Bacaan live ONU ditarik on-demand di sini, bukan di tiap kartu daftar: daftar
   // pelanggan bisa ratusan baris, dan memuatnya per kartu jadi ratusan request
@@ -387,54 +395,141 @@ function TracePanel({ trace, onClose }: { trace: CustomerTrace; onClose: () => v
     }
   }, [can, trace.customerId, trace.onuSerialNumber])
 
+  // Tetangga sejalur (se-ODP & se-PON) beserta bacaan hidupnya, sekali tarik saat
+  // drawer terbuka — endpoint yang sama izinnya dengan telusur jalur yang barusan
+  // berhasil, jadi tak perlu penjagaan izin tambahan.
+  useEffect(() => {
+    if (!connected) return
+    let alive = true
+    void api
+      .get<SubscriberNeighbors>(`/api/gis/trace/customers/${trace.customerId}/neighbors`)
+      .then((n) => alive && setNeighbors(n))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [connected, trace.customerId])
+
+  const odpCount = neighbors?.sameOdp.length ?? 0
+  const ponCount = neighbors?.samePonPort.length ?? 0
+
   return (
     <Drawer title={`Jalur — ${trace.customerName}`} onClose={onClose}>
-      {trace.hops.length <= 1 ? (
+      {!connected ? (
         <p className="muted">Pelanggan ini belum tersambung ke jaringan.</p>
       ) : (
         <div className="stack">
-          <div className="row" style={{ flexWrap: 'wrap', gap: '0.4rem' }}>
-            {trace.hops.map((hop, index) => (
-              <span key={`${hop.kind}-${index}`} className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-                <span className="badge">
-                  {hop.kind}
-                  {hop.code && ` ${hop.code}`}
-                </span>
-                {index < trace.hops.length - 1 && <span className="muted">→</span>}
-              </span>
-            ))}
+          <div className="segment" style={{ alignSelf: 'flex-start' }}>
+            <button className={tab === 'path' ? 'active' : ''} onClick={() => setTab('path')}>
+              Jalur
+            </button>
+            <button className={tab === 'odp' ? 'active' : ''} onClick={() => setTab('odp')}>
+              Se-ODP{odpCount ? ` (${odpCount})` : ''}
+            </button>
+            <button className={tab === 'pon' ? 'active' : ''} onClick={() => setTab('pon')}>
+              Se-PON{ponCount ? ` (${ponCount})` : ''}
+            </button>
           </div>
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-            ONU {trace.onuSerialNumber} · port {trace.odpPortNumber} · redaman terpasang{' '}
-            <span style={{ color: HEALTH_COLOR[trace.opticalHealth ?? 'UNKNOWN'] }}>
-              {trace.installRxPowerDbm != null ? `${trace.installRxPowerDbm} dBm` : '—'}
-            </span>
-            {trace.estimatedLossDb != null && ` · perkiraan rugi jalur ${trace.estimatedLossDb.toFixed(1)} dB`}
-          </p>
-          {live && (
-            <div className="row" style={{ gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span className="muted" style={{ fontSize: '0.85rem' }}>Status live:</span>
-              <StatusBadge status={live.status} />
-              {live.downCause && (
-                // "Ldc" = Last Down Cause. DYING_GASP → pelanggan mati listrik,
-                // LOS → fiber putus: pembeda tindakan yang tak terlihat dari status saja.
-                <span
-                  className="badge"
-                  title={`Sebab putus terakhir: ${live.downCause}`}
-                  style={{ color: 'var(--warning-ink)', fontWeight: 600 }}
-                >
-                  Ldc: {DOWN_CAUSE_LABEL[live.downCause]}
+
+          {tab === 'path' && (
+            <div className="stack">
+              <div className="row" style={{ flexWrap: 'wrap', gap: '0.4rem' }}>
+                {trace.hops.map((hop, index) => (
+                  <span key={`${hop.kind}-${index}`} className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
+                    <span className="badge">
+                      {hop.kind}
+                      {hop.code && ` ${hop.code}`}
+                    </span>
+                    {index < trace.hops.length - 1 && <span className="muted">→</span>}
+                  </span>
+                ))}
+              </div>
+              <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+                ONU {trace.onuSerialNumber} · port {trace.odpPortNumber} · redaman terpasang{' '}
+                <span style={{ color: HEALTH_COLOR[trace.opticalHealth ?? 'UNKNOWN'] }}>
+                  {trace.installRxPowerDbm != null ? `${trace.installRxPowerDbm} dBm` : '—'}
                 </span>
+                {trace.estimatedLossDb != null && ` · perkiraan rugi jalur ${trace.estimatedLossDb.toFixed(1)} dB`}
+              </p>
+              {live && (
+                <div className="row" style={{ gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span className="muted" style={{ fontSize: '0.85rem' }}>Status live:</span>
+                  <StatusBadge status={live.status} />
+                  {live.downCause && (
+                    // "Ldc" = Last Down Cause. DYING_GASP → pelanggan mati listrik,
+                    // LOS → fiber putus: pembeda tindakan yang tak terlihat dari status saja.
+                    <span
+                      className="badge"
+                      title={`Sebab putus terakhir: ${live.downCause}`}
+                      style={{ color: 'var(--warning-ink)', fontWeight: 600 }}
+                    >
+                      Ldc: {DOWN_CAUSE_LABEL[live.downCause]}
+                    </span>
+                  )}
+                </div>
+              )}
+              {live && (live.lastOffAt || live.lastOnAt) && (
+                // Register "last off / last on" OLT: sejak kapan mati, dan kalau sudah
+                // pulih, tadi berapa lama putusnya — tanpa menunggu siklus polling berikutnya.
+                <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>{describeOutage(live)}</p>
               )}
             </div>
           )}
-          {live && (live.lastOffAt || live.lastOnAt) && (
-            // Register "last off / last on" OLT: sejak kapan mati, dan kalau sudah
-            // pulih, tadi berapa lama putusnya — tanpa menunggu siklus polling berikutnya.
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>{describeOutage(live)}</p>
-          )}
+
+          {tab === 'odp' && <NeighborList items={neighbors?.sameOdp ?? null} showOdp={false} />}
+          {tab === 'pon' && <NeighborList items={neighbors?.samePonPort ?? null} showOdp />}
         </div>
       )}
     </Drawer>
+  )
+}
+
+/**
+ * Daftar tetangga sejalur: siapa lagi di ODP/PON yang sama dan kondisi hidupnya.
+ * Menjawab pertanyaan lapangan "cuma dia yang mati atau se-jalur ikut mati" —
+ * penentu apakah masalahnya di rumah pelanggan atau di hulu. [showOdp] memunculkan
+ * kode ODP tiap baris, berguna di lingkup se-PON yang mencakup beberapa ODP.
+ */
+function NeighborList({ items, showOdp }: { items: NeighborView[] | null; showOdp: boolean }) {
+  if (items == null) return <p className="muted">Memuat tetangga…</p>
+  if (items.length === 0) return <p className="muted">Tidak ada tetangga di lingkup ini.</p>
+  return (
+    <div className="stack" style={{ gap: '0.4rem' }}>
+      {items.map((n) => (
+        <div
+          key={n.customerId}
+          className="row"
+          style={{
+            gap: '0.6rem',
+            alignItems: 'center',
+            padding: '0.45rem 0.55rem',
+            borderRadius: 8,
+            background: n.self ? 'var(--accent-soft)' : 'transparent',
+            border: `1px solid ${n.self ? 'var(--border-strong)' : 'var(--border)'}`,
+          }}
+        >
+          <span className="badge neutral" title="Nomor port ODP" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            #{n.portNumber}
+          </span>
+          <div className="stack" style={{ gap: 2, flex: 1, minWidth: 0 }}>
+            <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {n.customerName}
+              {n.self && <span className="muted" style={{ fontWeight: 400 }}> · pelanggan ini</span>}
+            </span>
+            <span className="muted" style={{ fontSize: '0.78rem' }}>
+              {showOdp && `${n.odpCode} · `}
+              {n.onuSerialNumber}
+            </span>
+          </div>
+          <div className="stack" style={{ gap: 3, alignItems: 'flex-end' }}>
+            <StatusBadge status={n.liveStatus ?? n.onuStatus} />
+            <span className="tnum muted" style={{ fontSize: '0.78rem' }}>
+              {fmtDbm(n.liveRxPowerDbm ?? n.installRxPowerDbm)}
+              {n.distanceMeters != null && ` · ${n.distanceMeters} m`}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
   )
 }

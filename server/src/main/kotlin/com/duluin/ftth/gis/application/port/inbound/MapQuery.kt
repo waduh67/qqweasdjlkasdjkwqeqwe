@@ -24,6 +24,14 @@ interface MapQuery {
     fun traceCustomer(customerId: UUID): CustomerTrace
 
     /**
+     * Tetangga seorang pelanggan: penghuni ODP yang sama, dan penghuni seluruh ODP
+     * di bawah PON port yang sama — masing-masing dengan bacaan hidup ONU-nya.
+     * Menjawab pertanyaan lapangan "siapa lagi di jalur yang sama" saat menangani
+     * gangguan: kalau semua tetangga se-PON ikut mati, masalahnya di hulu.
+     */
+    fun subscriberNeighbors(customerId: UUID): SubscriberNeighbors
+
+    /**
      * Kabel yang hilirnya sedang bermasalah menurut alarm hidup, untuk disorot
      * merah di peta ("perangkat modar → kabel merah"). Menyusun dari monitoring
      * (alarm) + customer (ONU→pelanggan/ODP) + network (geometri kabel).
@@ -222,4 +230,39 @@ data class TraceHop(
     val code: String,
     val name: String,
     val location: Coordinate?,
+)
+
+/**
+ * Tetangga sejalur seorang pelanggan dalam dua lingkup: satu ODP (paling dekat,
+ * berbagi kabel drop & splitter ODP) dan satu PON port (lebih luas, berbagi port
+ * OLT). [samePonPort] adalah superset — memang termasuk penghuni [sameOdp], persis
+ * seperti di lapangan. Kosong bila pelanggan belum tersambung.
+ */
+data class SubscriberNeighbors(
+    val customerId: UUID,
+    val odpCode: String?,
+    val ponPortLabel: String?,
+    val sameOdp: List<NeighborView>,
+    val samePonPort: List<NeighborView>,
+)
+
+/** Satu tetangga sejalur: identitas + kondisi terpasang + bacaan hidup ONU-nya. */
+data class NeighborView(
+    val customerId: UUID,
+    val customerCode: String,
+    val customerName: String,
+    val odpCode: String,
+    val portNumber: Int,
+    val onuSerialNumber: String,
+    /** Status ONU menurut catatan (ONLINE/OFFLINE/LOS/…), sebelum diperkaya monitoring. */
+    val onuStatus: String,
+    val opticalHealth: String,
+    val installRxPowerDbm: Double?,
+    /** Bacaan hidup terakhir dari monitoring; `null` bila ONU belum pernah terbaca. */
+    val liveStatus: String?,
+    val liveRxPowerDbm: Double?,
+    val distanceMeters: Int?,
+    val downCause: String?,
+    /** Baris pelanggan yang sedang ditelusur — untuk disorot di daftar. */
+    val self: Boolean,
 )

@@ -94,6 +94,13 @@ interface NetworkApi {
     fun downstreamDeviceIds(oltIds: Set<UUID>, odcIds: Set<UUID>): DownstreamIds
 
     /**
+     * ODP di bawah sebuah PON port (PON port → ODC → ODP). Dipakai gis untuk
+     * menyusun "tetangga se-PON port": seluruh pelanggan yang berbagi satu port PON
+     * OLT. Kosong bila port itu belum punya ODC/ODP di hilir.
+     */
+    fun odpIdsUnderPonPort(ponPortId: UUID): Set<UUID>
+
+    /**
      * Dampak topologis bila sebuah kabel diputus: seluruh subpohon fisik di hilir
      * ujung bawahnya. Dipakai gis untuk simulasi "kalau kabel ini putus, siapa
      * yang kena".
