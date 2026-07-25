@@ -915,6 +915,19 @@ tbody tr:last-child td {
 .map-toolbar button {
   box-shadow: var(--shadow-md);
 }
+/* Peta operasi selalu gelap, jadi tombol alat tak boleh ikut tema aplikasi:
+   di tema terang mode ghost mewarisi tinta gelap (`--text` ≈ hitam) sehingga
+   gelap-di-atas-gelap dan hilang. Kunci ke kaca gelap + tinta terang. */
+.map-toolbar button.ghost {
+  background: color-mix(in srgb, #0b1220 78%, transparent);
+  border-color: color-mix(in srgb, #ffffff 22%, transparent);
+  color: #f5f7fb;
+  backdrop-filter: blur(8px);
+}
+.map-toolbar button.ghost:hover:not(:disabled) {
+  background: color-mix(in srgb, #0b1220 92%, transparent);
+  border-color: color-mix(in srgb, #ffffff 34%, transparent);
+}
 
 /* Bilah petunjuk saat menggambar/mengedit kabel */
 .map-hint {
