@@ -85,7 +85,8 @@ class WorkOrder private constructor(
     completedAt: Instant?,
     resolutionNote: String?,
     cancelReason: String?,
-    val createdBy: UUID,
+    /** Pembuat WO; `null` berarti dibuat sistem (mis. preventif dari degradasi optik), tanpa pengguna. */
+    val createdBy: UUID?,
     val createdAt: Instant,
 ) {
     var title: String = title
@@ -213,7 +214,7 @@ class WorkOrder private constructor(
             areaId: UUID?,
             scheduledAt: Instant?,
             assignedTo: UUID?,
-            createdBy: UUID,
+            createdBy: UUID?,
             at: Instant = Instant.now(),
         ): WorkOrder {
             val id = UuidV7.generate()
@@ -265,7 +266,7 @@ class WorkOrder private constructor(
             completedAt: Instant?,
             resolutionNote: String?,
             cancelReason: String?,
-            createdBy: UUID,
+            createdBy: UUID?,
             createdAt: Instant,
         ): WorkOrder = WorkOrder(
             id, tenantId, code, type, title, description, priority, customerId, incidentId, areaId,

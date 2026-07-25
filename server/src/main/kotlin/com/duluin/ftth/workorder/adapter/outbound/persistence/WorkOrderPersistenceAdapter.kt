@@ -94,6 +94,18 @@ class WorkOrderPersistenceAdapter(
     override fun timelineOf(workOrderId: UUID): List<WorkOrderEvent> =
         eventJpa.findByWorkOrderIdOrderByAt(workOrderId).map { it.toDomain() }
 
+    override fun existsOpenPreventiveForCustomer(customerId: UUID): Boolean {
+        val openStatuses = WorkOrderStatus.entries.filter { it.open }
+        val spec = Specification<WorkOrderJpaEntity> { root, _, cb ->
+            cb.and(
+                cb.equal(root.get<UUID>("customerId"), customerId),
+                cb.equal(root.get<WorkOrderType>("type"), WorkOrderType.PREVENTIVE),
+                root.get<WorkOrderStatus>("status").`in`(openStatuses),
+            )
+        }
+        return jpa.count(spec) > 0
+    }
+
     override fun deleteById(id: UUID) = jpa.deleteById(id)
 
     /** Cari lewat kode atau judul; kosong = cocokkan semua. */

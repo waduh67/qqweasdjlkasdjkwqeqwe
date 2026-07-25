@@ -136,6 +136,51 @@ class OnuMetricPersistenceAdapter : OnuMetricRepository {
         )
     }
 
+    /**
+     * Pemindaian massal ONU yang redamannya memburuk, satu query untuk semua ONU
+     * tenant. Regresi & filternya dilakukan di database: menariknya ke JVM berarti
+     * memuat seluruh riwayat ribuan ONU hanya untuk membuang hampir semuanya.
+     *
+     * `regr_slope` diulang di HAVING karena SQL tidak mengizinkan alias SELECT di
+     * klausa itu. Kemiringan per detik dikali sehari lalu dibandingkan dengan
+     * ambang negatif: memburuk = turun lebih curam dari -[thresholdDbPerDay].
+     */
+    override fun findDegrading(since: Instant, minSamples: Int, thresholdDbPerDay: Double): List<OpticalTrend> {
+        val sql = """
+            SELECT onu_id,
+                   count(rx_power_dbm)                                          AS samples,
+                   avg(rx_power_dbm)                                            AS avg_rx,
+                   min(rx_power_dbm)                                            AS min_rx,
+                   max(rx_power_dbm)                                            AS max_rx,
+                   regr_slope(rx_power_dbm, extract(epoch from time))           AS slope_per_second
+            FROM onu_metric
+            WHERE time >= :since AND rx_power_dbm IS NOT NULL
+            GROUP BY onu_id
+            HAVING count(rx_power_dbm) >= :minSamples
+               AND regr_slope(rx_power_dbm, extract(epoch from time)) * :secondsPerDay <= :maxSlopePerDay
+        """.trimIndent()
+
+        @Suppress("UNCHECKED_CAST")
+        val rows = entityManager.createNativeQuery(sql)
+            .setParameter("since", Timestamp.from(since))
+            .setParameter("minSamples", minSamples)
+            .setParameter("secondsPerDay", SECONDS_PER_DAY)
+            // Ambang praktis dalam bentuk negatif: kemiringan harus lebih curam turun dari ini.
+            .setParameter("maxSlopePerDay", -thresholdDbPerDay)
+            .resultList as List<Array<Any?>>
+
+        return rows.map { row ->
+            OpticalTrend(
+                onuId = row[0] as UUID,
+                samples = (row[1] as? Number)?.toInt() ?: 0,
+                averageRxPowerDbm = (row[2] as? Number)?.toDouble()?.round2(),
+                minRxPowerDbm = (row[3] as? Number)?.toDouble()?.round2(),
+                maxRxPowerDbm = (row[4] as? Number)?.toDouble()?.round2(),
+                trendDbPerDay = (row[5] as? Number)?.toDouble()?.times(SECONDS_PER_DAY)?.round2(),
+            )
+        }
+    }
+
     override fun countSince(since: Instant): Long {
         val result = entityManager
             .createNativeQuery("SELECT count(*) FROM onu_metric WHERE time >= :since")

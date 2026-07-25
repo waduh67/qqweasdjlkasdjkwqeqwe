@@ -27,5 +27,12 @@ interface WorkOrderRepository {
     /** Timeline sebuah work order, terlama lebih dulu. */
     fun timelineOf(workOrderId: UUID): List<WorkOrderEvent>
 
+    /**
+     * Apakah pelanggan ini sudah punya WO preventif yang masih terbuka. Dasar
+     * idempotensi pemeliharaan prediktif: satu pelanggan cukup satu kunjungan
+     * preventif terjadwal, meski pemindaian berulang terus menandainya memburuk.
+     */
+    fun existsOpenPreventiveForCustomer(customerId: UUID): Boolean
+
     fun deleteById(id: UUID)
 }

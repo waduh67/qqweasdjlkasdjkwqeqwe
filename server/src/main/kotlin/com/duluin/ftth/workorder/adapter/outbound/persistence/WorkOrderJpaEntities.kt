@@ -69,8 +69,9 @@ class WorkOrderJpaEntity(
     @Column(name = "cancel_reason", length = 500)
     var cancelReason: String?,
 
-    @Column(name = "created_by", nullable = false, updatable = false)
-    var createdBy: UUID,
+    // Null = dibuat sistem (mis. WO preventif dari degradasi optik), tanpa pengguna.
+    @Column(name = "created_by", updatable = false)
+    var createdBy: UUID?,
 ) : TenantAwareJpaEntity(id)
 
 @Entity

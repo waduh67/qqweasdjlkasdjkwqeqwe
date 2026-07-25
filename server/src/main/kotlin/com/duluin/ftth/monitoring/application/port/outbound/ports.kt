@@ -71,6 +71,17 @@ interface OnuMetricRepository {
 
     fun computeTrend(onuId: UUID, since: Instant): OpticalTrend?
 
+    /**
+     * ONU yang redamannya memburuk melampaui [thresholdDbPerDay] dalam jendela
+     * sejak [since], dipindai lintas-ONU dalam satu query (bukan N+1 per ONU).
+     *
+     * Hanya ONU dengan minimal [minSamples] bacaan yang dipertimbangkan supaya
+     * kemiringannya bermakna, bukan derau dari satu-dua titik. Ter-scope tenant
+     * otomatis lewat RLS — GUC `app.tenant_id` dibawa koneksi Hibernate, sama
+     * seperti [computeTrend]. Tiap hasil dijamin `degrading`.
+     */
+    fun findDegrading(since: Instant, minSamples: Int, thresholdDbPerDay: Double): List<OpticalTrend>
+
     fun countSince(since: Instant): Long
 }
 
