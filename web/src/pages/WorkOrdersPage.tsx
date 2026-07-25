@@ -92,6 +92,17 @@ const EMPTY_DRAFT: Draft = {
 
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString('id-ID') : '—')
 const toInstant = (local: string): string | null => (local ? new Date(local).toISOString() : null)
+const fmtDbm = (v: number | null) => (v == null ? '—' : `${v.toFixed(2)} dBm`)
+
+type RxTone = 'good' | 'warning' | 'critical'
+
+/** Klasifikasi kasar redaman Rx ONU GPON (dBm): makin mendekati 0 makin kuat, di bawah −28 makin lemah. */
+function rxHealth(dbm: number): { tone: RxTone; label: string } {
+  if (dbm > -8) return { tone: 'critical', label: 'terlalu kuat' }
+  if (dbm >= -25) return { tone: 'good', label: 'sehat' }
+  if (dbm >= -28) return { tone: 'warning', label: 'waspada' }
+  return { tone: 'critical', label: 'lemah' }
+}
 
 function WoStatusBadge({ status }: { status: WorkOrderStatus }) {
   return <Badge tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</Badge>
@@ -528,6 +539,11 @@ function WorkOrderDetailBody({
         </section>
       )}
 
+      {/* Redaman optik — bukti kualitas; disembunyikan hanya bila belum ada & tak boleh mengubah. */}
+      {(canUpdate || wo.rxBeforeDbm != null || wo.rxAfterDbm != null) && (
+        <OpticalSection wo={wo} canUpdate={canUpdate} onAct={onAct} />
+      )}
+
       {can('workorder.evidence.view') && <EvidenceSection workOrderId={id} status={wo.status} />}
 
       <section className="stack" style={{ gap: '0.5rem' }}>
@@ -546,6 +562,105 @@ function WorkOrderDetailBody({
         </ol>
       </section>
     </div>
+  )
+}
+
+/** Satu angka redaman + indikator sehat/waspada/lemah. */
+function RxStat({ label, value }: { label: string; value: number | null }) {
+  const health = value != null ? rxHealth(value) : null
+  return (
+    <div className="stack" style={{ gap: '0.15rem' }}>
+      <span className="muted" style={{ fontSize: '0.78rem' }}>{label}</span>
+      <span className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
+        <strong>{fmtDbm(value)}</strong>
+        {health && <Badge tone={health.tone}>{health.label}</Badge>}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * Redaman optik (Rx, dBm) sebelum & sesudah pengerjaan sebagai bukti kualitas.
+ * Selisihnya menunjukkan perbaikan/penurunan sinyal; posisi terhadap ambang sehat
+ * memberi indikasi cepat. Nilai GPON selalu negatif (rentang wajar −40..0 dBm).
+ * Bisa direkam bertahap (before saat datang, after setelah selesai) selama WO belum batal.
+ */
+function OpticalSection({ wo, canUpdate, onAct }: { wo: WorkOrderView; canUpdate: boolean; onAct: ActFn }) {
+  const [editing, setEditing] = useState(false)
+  const [before, setBefore] = useState(wo.rxBeforeDbm?.toString() ?? '')
+  const [after, setAfter] = useState(wo.rxAfterDbm?.toString() ?? '')
+
+  const hasReading = wo.rxBeforeDbm != null || wo.rxAfterDbm != null
+  const delta = wo.rxBeforeDbm != null && wo.rxAfterDbm != null ? wo.rxAfterDbm - wo.rxBeforeDbm : null
+
+  const parse = (s: string): number | null => {
+    const t = s.trim()
+    if (!t) return null
+    const n = Number(t)
+    return Number.isFinite(n) ? n : null
+  }
+
+  const save = () => {
+    onAct(
+      () => api.put(`/api/work-orders/${wo.id}/optical`, { rxBeforeDbm: parse(before), rxAfterDbm: parse(after) }),
+      'Pengukuran redaman optik disimpan',
+      true,
+    )
+    setEditing(false)
+  }
+
+  const cancelEdit = () => {
+    setBefore(wo.rxBeforeDbm?.toString() ?? '')
+    setAfter(wo.rxAfterDbm?.toString() ?? '')
+    setEditing(false)
+  }
+
+  return (
+    <section className="stack" style={{ gap: '0.5rem' }}>
+      <div className="spread" style={{ alignItems: 'center' }}>
+        <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Redaman optik</h3>
+        {canUpdate && !editing && (
+          <button className="ghost" style={{ fontSize: '0.78rem', padding: '0.2rem 0.5rem' }} onClick={() => setEditing(true)}>
+            {hasReading ? 'Ubah' : 'Catat'}
+          </button>
+        )}
+      </div>
+
+      {editing ? (
+        <div className="stack" style={{ gap: '0.5rem' }}>
+          <div className="row wrap" style={{ gap: '0.6rem' }}>
+            <label style={{ flex: 1, minWidth: 130 }}>
+              <span>Rx sebelum (dBm)</span>
+              <input type="number" step="0.01" min={-40} max={0} value={before} onChange={(e) => setBefore(e.target.value)} placeholder="mis. -24.5" />
+            </label>
+            <label style={{ flex: 1, minWidth: 130 }}>
+              <span>Rx sesudah (dBm)</span>
+              <input type="number" step="0.01" min={-40} max={0} value={after} onChange={(e) => setAfter(e.target.value)} placeholder="mis. -20.1" />
+            </label>
+          </div>
+          <div className="row" style={{ gap: '0.5rem' }}>
+            <button className="primary" onClick={save}>Simpan</button>
+            <button onClick={cancelEdit}>Batal</button>
+          </div>
+          <p className="muted" style={{ margin: 0, fontSize: '0.75rem' }}>GPON selalu negatif; rentang wajar −40..0 dBm. Kosongkan bila belum diukur.</p>
+        </div>
+      ) : hasReading ? (
+        <div className="row wrap" style={{ gap: '1.2rem', alignItems: 'flex-start' }}>
+          <RxStat label="Sebelum" value={wo.rxBeforeDbm} />
+          <RxStat label="Sesudah" value={wo.rxAfterDbm} />
+          {delta != null && (
+            <div className="stack" style={{ gap: '0.15rem' }}>
+              <span className="muted" style={{ fontSize: '0.78rem' }}>Selisih</span>
+              <Badge tone={delta >= 0 ? 'good' : 'warning'}>
+                {delta >= 0 ? '▲ membaik' : '▼ menurun'} {Math.abs(delta).toFixed(2)} dB
+              </Badge>
+            </div>
+          )}
+        </div>
+      ) : (
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada pengukuran.</p>
+      )}
+    </section>
   )
 }
 

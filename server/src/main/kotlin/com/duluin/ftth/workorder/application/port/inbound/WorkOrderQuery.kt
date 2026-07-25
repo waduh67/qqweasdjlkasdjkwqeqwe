@@ -46,6 +46,9 @@ data class WorkOrderView(
     val completedAt: Instant?,
     val resolutionNote: String?,
     val cancelReason: String?,
+    /** Redaman optik (dBm) yang diukur teknisi sebelum & sesudah pengerjaan; `null` bila belum direkam. */
+    val rxBeforeDbm: Double?,
+    val rxAfterDbm: Double?,
     val createdAt: Instant,
 )
 

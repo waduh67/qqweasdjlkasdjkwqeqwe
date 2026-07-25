@@ -21,6 +21,9 @@ interface ManageWorkOrderUseCase {
 
     fun cancel(id: UUID, reason: String?): WorkOrderView
 
+    /** Merekam redaman optik (dBm) sebelum/sesudah pengerjaan sebagai bukti kualitas. */
+    fun recordOptical(id: UUID, command: RecordOpticalCommand): WorkOrderView
+
     /** Menghapus work order yang masih DRAFT (belum pernah ditugaskan). */
     fun delete(id: UUID)
 }
@@ -47,4 +50,10 @@ data class UpdateWorkOrderCommand(
     val incidentId: UUID?,
     val areaId: UUID?,
     val scheduledAt: Instant?,
+)
+
+/** Redaman optik (dBm) yang diukur teknisi; keduanya opsional agar bisa direkam bertahap. */
+data class RecordOpticalCommand(
+    val rxBeforeDbm: Double?,
+    val rxAfterDbm: Double?,
 )

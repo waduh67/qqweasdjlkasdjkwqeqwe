@@ -24,6 +24,9 @@ export interface WorkOrderView {
   completedAt: string | null
   resolutionNote: string | null
   cancelReason: string | null
+  /** Redaman optik (dBm) sebelum & sesudah pengerjaan; `null` bila belum diukur. */
+  rxBeforeDbm: number | null
+  rxAfterDbm: number | null
   createdAt: string
 }
 

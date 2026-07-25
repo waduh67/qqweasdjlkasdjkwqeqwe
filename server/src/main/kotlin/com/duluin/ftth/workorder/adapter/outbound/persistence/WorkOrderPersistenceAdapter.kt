@@ -36,6 +36,8 @@ class WorkOrderPersistenceAdapter(
             completedAt = workOrder.completedAt
             resolutionNote = workOrder.resolutionNote
             cancelReason = workOrder.cancelReason
+            rxBeforeDbm = workOrder.rxBeforeDbm
+            rxAfterDbm = workOrder.rxAfterDbm
         } ?: WorkOrderJpaEntity(
             id = workOrder.id,
             code = workOrder.code,
@@ -54,6 +56,8 @@ class WorkOrderPersistenceAdapter(
             completedAt = workOrder.completedAt,
             resolutionNote = workOrder.resolutionNote,
             cancelReason = workOrder.cancelReason,
+            rxBeforeDbm = workOrder.rxBeforeDbm,
+            rxAfterDbm = workOrder.rxAfterDbm,
             createdBy = workOrder.createdBy,
         )
         val saved = jpa.save(entity)
@@ -154,6 +158,8 @@ private fun WorkOrderJpaEntity.toDomain(): WorkOrder = WorkOrder.rehydrate(
     completedAt = completedAt,
     resolutionNote = resolutionNote,
     cancelReason = cancelReason,
+    rxBeforeDbm = rxBeforeDbm,
+    rxAfterDbm = rxAfterDbm,
     createdBy = createdBy,
     createdAt = createdAt,
 )

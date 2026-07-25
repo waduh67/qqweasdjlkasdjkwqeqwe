@@ -85,6 +85,8 @@ class WorkOrder private constructor(
     completedAt: Instant?,
     resolutionNote: String?,
     cancelReason: String?,
+    rxBeforeDbm: Double?,
+    rxAfterDbm: Double?,
     /** Pembuat WO; `null` berarti dibuat sistem (mis. preventif dari degradasi optik), tanpa pengguna. */
     val createdBy: UUID?,
     val createdAt: Instant,
@@ -116,6 +118,12 @@ class WorkOrder private constructor(
     var resolutionNote: String? = resolutionNote
         private set
     var cancelReason: String? = cancelReason
+        private set
+
+    /** Redaman optik (dBm) yang diukur teknisi sebelum & sesudah pengerjaan — bukti kualitas pasang. */
+    var rxBeforeDbm: Double? = rxBeforeDbm
+        private set
+    var rxAfterDbm: Double? = rxAfterDbm
         private set
 
     private val pending = mutableListOf<WorkOrderEvent>()
@@ -192,7 +200,32 @@ class WorkOrder private constructor(
         record(WorkOrderEventType.CANCELLED, reason?.let { "Dibatalkan: $it" } ?: "Dibatalkan", at, actorId)
     }
 
+    /**
+     * Merekam redaman optik (dBm) sebelum & sesudah pengerjaan sebagai bukti kualitas
+     * pasang. Kedua nilai opsional (boleh diisi bertahap); di luar rentang wajar ditolak.
+     * Boleh direkam sepanjang WO belum dibatalkan — termasuk saat sudah selesai.
+     */
+    fun recordOptical(newRxBeforeDbm: Double?, newRxAfterDbm: Double?, at: Instant, actorId: UUID?) {
+        if (status == WorkOrderStatus.CANCELLED) {
+            throw ConflictException("Work order sudah dibatalkan, tak bisa mencatat pengukuran")
+        }
+        rxBeforeDbm = validateRxPower(newRxBeforeDbm)
+        rxAfterDbm = validateRxPower(newRxAfterDbm)
+        record(WorkOrderEventType.UPDATED, "Pengukuran redaman optik direkam", at, actorId)
+    }
+
     companion object {
+        private const val MIN_RX_DBM = -40.0
+        private const val MAX_RX_DBM = 0.0
+
+        /** Redaman ONU GPON selalu negatif; di luar [MIN_RX_DBM]..[MAX_RX_DBM] dBm pasti salah ukur. */
+        private fun validateRxPower(value: Double?): Double? {
+            if (value != null && value !in MIN_RX_DBM..MAX_RX_DBM) {
+                throw ConflictException("Redaman optik $value dBm di luar rentang wajar ($MIN_RX_DBM..$MAX_RX_DBM dBm)")
+            }
+            return value
+        }
+
         private fun validateTitle(raw: String): String {
             val trimmed = raw.trim()
             if (trimmed.isEmpty()) throw ConflictException("Judul work order kosong")
@@ -237,6 +270,8 @@ class WorkOrder private constructor(
                 completedAt = null,
                 resolutionNote = null,
                 cancelReason = null,
+                rxBeforeDbm = null,
+                rxAfterDbm = null,
                 createdBy = createdBy,
                 createdAt = at,
             )
@@ -266,12 +301,14 @@ class WorkOrder private constructor(
             completedAt: Instant?,
             resolutionNote: String?,
             cancelReason: String?,
+            rxBeforeDbm: Double?,
+            rxAfterDbm: Double?,
             createdBy: UUID?,
             createdAt: Instant,
         ): WorkOrder = WorkOrder(
             id, tenantId, code, type, title, description, priority, customerId, incidentId, areaId,
             status, assignedTo, assignedAt, scheduledAt, startedAt, completedAt, resolutionNote,
-            cancelReason, createdBy, createdAt,
+            cancelReason, rxBeforeDbm, rxAfterDbm, createdBy, createdAt,
         )
     }
 }

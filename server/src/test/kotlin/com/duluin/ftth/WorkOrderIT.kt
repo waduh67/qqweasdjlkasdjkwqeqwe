@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.util.UUID
 
@@ -58,6 +59,13 @@ class WorkOrderIT {
     private fun get(url: String, token: String, expected: Int = 200): String =
         mockMvc.perform(get(url).header("Authorization", "Bearer $token"))
             .andExpect { assertThat(it.response.status).isEqualTo(expected) }
+            .andReturn().response.contentAsString
+
+    private fun put(url: String, token: String, body: String, expected: Int = 200): String =
+        mockMvc.perform(
+            put(url).header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON).content(body),
+        ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
             .andReturn().response.contentAsString
 
     private fun id(json: String): String = JsonPath.read(json, "$.id")
@@ -154,6 +162,32 @@ class WorkOrderIT {
             """{"type":"MIGRATION","title":"Pindah ODP","customerId":"${UUID.randomUUID()}"}""",
             expected = 404,
         )
+    }
+
+    @Test
+    fun `redaman optik direkam bertahap, di luar rentang ditolak, dan tak bisa setelah batal`() {
+        val token = newTenantAdmin("wo")
+        val woId = id(createWorkOrder(token, """{"type":"PSB","title":"Pasang baru"}"""))
+
+        // Bertahap: catat 'sebelum' saat teknisi tiba, lalu lengkapi 'sesudah'.
+        val before = put("/api/work-orders/$woId/optical", token, """{"rxBeforeDbm":-24.5}""")
+        assertThat(JsonPath.read<Double>(before, "$.rxBeforeDbm")).isEqualTo(-24.5)
+        assertThat(JsonPath.read<Any?>(before, "$.rxAfterDbm")).isNull()
+
+        val after = put("/api/work-orders/$woId/optical", token, """{"rxBeforeDbm":-24.5,"rxAfterDbm":-20.1}""")
+        assertThat(JsonPath.read<Double>(after, "$.rxAfterDbm")).isEqualTo(-20.1)
+
+        // Timeline mencatat pengukuran sebagai UPDATED (dua kali).
+        val detail = get("/api/work-orders/$woId", token)
+        assertThat(JsonPath.read<List<String>>(detail, "$.timeline[*].type")).containsExactly("CREATED", "UPDATED", "UPDATED")
+
+        // Di luar rentang wajar (−40..0 dBm) ditolak oleh validasi request.
+        put("/api/work-orders/$woId/optical", token, """{"rxBeforeDbm":-55}""", expected = 400)
+        put("/api/work-orders/$woId/optical", token, """{"rxAfterDbm":3.0}""", expected = 400)
+
+        // Setelah dibatalkan, pengukuran tak bisa lagi direkam.
+        post("/api/work-orders/$woId/cancel", token, """{"reason":"Salah alamat"}""", 200)
+        put("/api/work-orders/$woId/optical", token, """{"rxAfterDbm":-21.0}""", expected = 409)
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.duluin.ftth.workorder.adapter.inbound.web
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.infrastructure.web.PageResponse
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderUseCase
+import com.duluin.ftth.workorder.application.port.inbound.RecordOpticalCommand
 import com.duluin.ftth.workorder.application.port.inbound.SaveWorkOrderCommand
 import com.duluin.ftth.workorder.application.port.inbound.UpdateWorkOrderCommand
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderDetail
@@ -15,6 +16,8 @@ import com.duluin.ftth.workorder.domain.model.WorkOrderType
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import jakarta.validation.constraints.DecimalMax
+import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
@@ -96,6 +99,11 @@ class WorkOrderController(
     fun cancel(@PathVariable id: UUID, @Valid @RequestBody(required = false) request: CancelRequest?): WorkOrderView =
         manage.cancel(id, request?.reason)
 
+    @PutMapping("/{id}/optical")
+    @PreAuthorize("@authz.can('workorder.order.update')")
+    fun recordOptical(@PathVariable id: UUID, @Valid @RequestBody request: RecordOpticalRequest): WorkOrderView =
+        manage.recordOptical(id, request.toCommand())
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("@authz.can('workorder.order.update')")
@@ -157,3 +165,11 @@ data class CompleteRequest(
 data class CancelRequest(
     @field:Size(max = 500) val reason: String?,
 )
+
+/** Redaman optik (dBm); GPON selalu negatif, rentang wajar −40..0. Keduanya opsional. */
+data class RecordOpticalRequest(
+    @field:DecimalMin("-40.0") @field:DecimalMax("0.0") val rxBeforeDbm: Double?,
+    @field:DecimalMin("-40.0") @field:DecimalMax("0.0") val rxAfterDbm: Double?,
+) {
+    fun toCommand() = RecordOpticalCommand(rxBeforeDbm = rxBeforeDbm, rxAfterDbm = rxAfterDbm)
+}

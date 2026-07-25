@@ -8,6 +8,7 @@ import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderUseCase
+import com.duluin.ftth.workorder.application.port.inbound.RecordOpticalCommand
 import com.duluin.ftth.workorder.application.port.inbound.SaveWorkOrderCommand
 import com.duluin.ftth.workorder.application.port.inbound.UpdateWorkOrderCommand
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderDetail
@@ -107,6 +108,13 @@ class WorkOrderService(
     }
 
     @Transactional
+    override fun recordOptical(id: UUID, command: RecordOpticalCommand): WorkOrderView {
+        val workOrder = require(id)
+        workOrder.recordOptical(command.rxBeforeDbm, command.rxAfterDbm, Instant.now(), currentUser.current().userId)
+        return repository.save(workOrder).toView()
+    }
+
+    @Transactional
     override fun delete(id: UUID) {
         val workOrder = require(id)
         // Sekali ditugaskan, work order punya jejak (assignment/timeline) yang tak boleh
@@ -179,6 +187,8 @@ class WorkOrderService(
         completedAt = completedAt,
         resolutionNote = resolutionNote,
         cancelReason = cancelReason,
+        rxBeforeDbm = rxBeforeDbm,
+        rxAfterDbm = rxAfterDbm,
         createdAt = createdAt,
     )
 

@@ -69,6 +69,12 @@ class WorkOrderJpaEntity(
     @Column(name = "cancel_reason", length = 500)
     var cancelReason: String?,
 
+    @Column(name = "rx_before_dbm")
+    var rxBeforeDbm: Double?,
+
+    @Column(name = "rx_after_dbm")
+    var rxAfterDbm: Double?,
+
     // Null = dibuat sistem (mis. WO preventif dari degradasi optik), tanpa pengguna.
     @Column(name = "created_by", updatable = false)
     var createdBy: UUID?,
