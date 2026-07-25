@@ -6,6 +6,7 @@ import type {
   EvidenceKind,
   EvidenceView,
   SignatureView,
+  WorkOrderDashboardView,
   WorkOrderDetail,
   WorkOrderPriority,
   WorkOrderStatus,
@@ -125,6 +126,8 @@ export function WorkOrdersPage() {
   const [type, setType] = useState<WorkOrderType | ''>('')
   const [draft, setDraft] = useState<Draft | null>(null)
   const [detail, setDetail] = useState<WorkOrderDetail | null>(null)
+  // Ditambah tiap ada perubahan (buat/tugaskan/lifecycle) agar dashboard menghitung ulang.
+  const [dashVersion, setDashVersion] = useState(0)
 
   // Pelanggan & teknisi untuk pemilih di form — best-effort; bila operator tak
   // punya izin melihatnya, pemilihnya cukup dikosongkan (tidak menggagalkan halaman).
@@ -176,6 +179,7 @@ export function WorkOrdersPage() {
     try {
       await action()
       await reload()
+      setDashVersion((v) => v + 1)
       if (refreshId) await openDetail(refreshId)
       if (ok) toast.success(ok)
     } catch (err) {
@@ -215,6 +219,10 @@ export function WorkOrdersPage() {
           </button>
         )}
       </div>
+
+      {can('workorder.dashboard.view') && (
+        <DispatchDashboard version={dashVersion} activeStatus={status} onPickStatus={setStatus} />
+      )}
 
       <div className="row wrap" style={{ gap: '0.6rem' }}>
         <input
@@ -308,6 +316,88 @@ export function WorkOrdersPage() {
             }
           />
         </Drawer>
+      )}
+    </div>
+  )
+}
+
+function Stat({ label, value, accent }: { label: string; value: number; accent?: 'crit' | 'warn' }) {
+  return (
+    <div className={`stat ${accent === 'crit' ? 'crit-bar' : accent === 'warn' ? 'warn-bar' : 'accent-bar'}`}>
+      <div className="stat-label">{label}</div>
+      <div className="stat-value">{value.toLocaleString('id-ID')}</div>
+    </div>
+  )
+}
+
+/**
+ * Papan dispatch: sekilas kondisi antrean kerja. Kartu ringkas (total, terbuka,
+ * belum ditugaskan), pipeline per-status yang bisa diklik untuk memfilter daftar,
+ * dan beban tiap teknisi (WO terbuka) agar penugasan bisa diseimbangkan.
+ */
+function DispatchDashboard({
+  version,
+  activeStatus,
+  onPickStatus,
+}: {
+  version: number
+  activeStatus: WorkOrderStatus | ''
+  onPickStatus: (s: WorkOrderStatus | '') => void
+}) {
+  const [data, setData] = useState<WorkOrderDashboardView | null>(null)
+
+  useEffect(() => {
+    let active = true
+    void api
+      .get<WorkOrderDashboardView>('/api/work-orders/dashboard')
+      .then((d) => active && setData(d))
+      .catch(() => active && setData(null))
+    return () => {
+      active = false
+    }
+  }, [version])
+
+  if (!data) return null
+
+  return (
+    <div className="card stack" style={{ gap: '0.9rem' }}>
+      <div className="stat-grid">
+        <Stat label="Total" value={data.total} />
+        <Stat label="Terbuka" value={data.open} />
+        <Stat label="Belum ditugaskan" value={data.unassignedOpen} accent={data.unassignedOpen > 0 ? 'warn' : undefined} />
+      </div>
+
+      {/* Pipeline status — klik untuk memfilter daftar; klik lagi untuk melepas filter. */}
+      <div className="row wrap" style={{ gap: '0.4rem' }}>
+        {STATUSES.map((s) => {
+          const selected = activeStatus === s
+          return (
+            <button
+              key={s}
+              onClick={() => onPickStatus(selected ? '' : s)}
+              className={selected ? 'primary' : 'ghost'}
+              style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', fontSize: '0.82rem', padding: '0.3rem 0.6rem' }}
+              title={`Filter: ${STATUS_LABEL[s]}`}
+            >
+              {STATUS_LABEL[s]}
+              <span className={`badge ${STATUS_TONE[s]}`}>{data.byStatus[s] ?? 0}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {data.workloads.length > 0 && (
+        <div className="stack" style={{ gap: '0.35rem' }}>
+          <span className="muted" style={{ fontSize: '0.8rem' }}>Beban teknisi (WO terbuka)</span>
+          {data.workloads.slice(0, 6).map((w) => (
+            <div key={w.technicianId} className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+              <span style={{ flex: 1, fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                👷 {w.technicianName ?? '—'}
+              </span>
+              <Badge tone="accent">{w.openCount}</Badge>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )

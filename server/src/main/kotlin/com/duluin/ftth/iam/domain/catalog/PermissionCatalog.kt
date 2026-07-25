@@ -94,6 +94,7 @@ object PermissionCatalog {
 
         // Work order
         perm("workorder.order.view", "Lihat work order")
+        perm("workorder.dashboard.view", "Buka dashboard dispatch")
         perm("workorder.order.create", "Buat work order")
         perm("workorder.order.update", "Ubah work order")
         perm("workorder.order.assign", "Assign work order")

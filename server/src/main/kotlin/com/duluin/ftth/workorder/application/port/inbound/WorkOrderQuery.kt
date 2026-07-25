@@ -14,6 +14,9 @@ interface WorkOrderQuery {
 
     /** Detail satu work order beserta timeline lengkapnya. */
     fun get(id: UUID): WorkOrderDetail
+
+    /** Ringkasan dispatch: sebaran status/tipe, antrean belum ditugaskan, dan beban tiap teknisi. */
+    fun dashboard(): WorkOrderDashboardView
 }
 
 /** Penyaring daftar work order; semua bidang opsional. */
@@ -61,4 +64,25 @@ data class WorkOrderEventView(
     val type: String,
     val message: String,
     val at: Instant,
+)
+
+/**
+ * Ringkasan untuk papan dispatch. `byStatus`/`byType` selalu memuat semua nilai enum
+ * (yang tanpa data = 0) agar tampilan stabil; `workloads` hanya teknisi yang sedang
+ * memegang WO terbuka, terbanyak lebih dulu.
+ */
+data class WorkOrderDashboardView(
+    val total: Long,
+    val open: Long,
+    val unassignedOpen: Long,
+    val byStatus: Map<String, Long>,
+    val byType: Map<String, Long>,
+    val workloads: List<TechnicianWorkloadView>,
+)
+
+data class TechnicianWorkloadView(
+    val technicianId: UUID,
+    /** Nama teknisi, diresolusi lewat iam; `null` bila pengguna sudah tak ada. */
+    val technicianName: String?,
+    val openCount: Long,
 )

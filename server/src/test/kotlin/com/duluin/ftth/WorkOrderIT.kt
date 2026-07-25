@@ -191,6 +191,48 @@ class WorkOrderIT {
     }
 
     @Test
+    fun `dashboard dispatch merangkum status, antrean belum ditugaskan, dan beban teknisi`() {
+        val token = newTenantAdmin("wo")
+        val techA = newTechnician(token, "Teknisi A")
+        val techB = newTechnician(token, "Teknisi B")
+
+        // #1 tetap DRAFT (belum ditugaskan → masuk antrean dispatch).
+        createWorkOrder(token, """{"type":"PSB","title":"Pasang baru"}""")
+
+        // #2 ditugaskan ke A (ASSIGNED).
+        val wo2 = id(createWorkOrder(token, """{"type":"REPAIR","title":"Perbaikan"}"""))
+        post("/api/work-orders/$wo2/assign", token, """{"technicianId":"$techA"}""", 200)
+
+        // #3 ditugaskan ke A lalu dikerjakan (IN_PROGRESS).
+        val wo3 = id(createWorkOrder(token, """{"type":"REPAIR","title":"Perbaikan lain"}"""))
+        post("/api/work-orders/$wo3/assign", token, """{"technicianId":"$techA"}""", 200)
+        post("/api/work-orders/$wo3/start", token, "", 200)
+
+        // #4 ditugaskan ke B lalu diselesaikan (DONE → tak terhitung sebagai beban terbuka).
+        val wo4 = id(createWorkOrder(token, """{"type":"MIGRATION","title":"Migrasi"}"""))
+        post("/api/work-orders/$wo4/assign", token, """{"technicianId":"$techB"}""", 200)
+        post("/api/work-orders/$wo4/start", token, "", 200)
+        post("/api/work-orders/$wo4/complete", token, "", 200)
+
+        val dash = get("/api/work-orders/dashboard", token)
+        assertThat(JsonPath.read<Int>(dash, "$.total")).isEqualTo(4)
+        assertThat(JsonPath.read<Int>(dash, "$.open")).isEqualTo(3)
+        assertThat(JsonPath.read<Int>(dash, "$.unassignedOpen")).isEqualTo(1)
+        assertThat(JsonPath.read<Int>(dash, "$.byStatus.DRAFT")).isEqualTo(1)
+        assertThat(JsonPath.read<Int>(dash, "$.byStatus.ASSIGNED")).isEqualTo(1)
+        assertThat(JsonPath.read<Int>(dash, "$.byStatus.IN_PROGRESS")).isEqualTo(1)
+        assertThat(JsonPath.read<Int>(dash, "$.byStatus.DONE")).isEqualTo(1)
+        assertThat(JsonPath.read<Int>(dash, "$.byStatus.CANCELLED")).isEqualTo(0)
+        assertThat(JsonPath.read<Int>(dash, "$.byType.REPAIR")).isEqualTo(2)
+
+        // Hanya A yang punya WO terbuka (2); B tidak muncul karena WO-nya sudah DONE.
+        assertThat(JsonPath.read<List<Any>>(dash, "$.workloads[*]")).hasSize(1)
+        assertThat(JsonPath.read<String>(dash, "$.workloads[0].technicianId")).isEqualTo(techA)
+        assertThat(JsonPath.read<String>(dash, "$.workloads[0].technicianName")).isEqualTo("Teknisi A")
+        assertThat(JsonPath.read<Int>(dash, "$.workloads[0].openCount")).isEqualTo(2)
+    }
+
+    @Test
     fun `hapus hanya untuk draft, sisanya dibatalkan`() {
         val token = newTenantAdmin("wo")
 

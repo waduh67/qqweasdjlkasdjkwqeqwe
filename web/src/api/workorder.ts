@@ -36,6 +36,22 @@ export interface WorkOrderEventView {
   at: string
 }
 
+export interface TechnicianWorkloadView {
+  technicianId: string
+  technicianName: string | null
+  openCount: number
+}
+
+/** Ringkasan papan dispatch (`GET /api/work-orders/dashboard`). */
+export interface WorkOrderDashboardView {
+  total: number
+  open: number
+  unassignedOpen: number
+  byStatus: Record<WorkOrderStatus, number>
+  byType: Record<WorkOrderType, number>
+  workloads: TechnicianWorkloadView[]
+}
+
 export interface WorkOrderDetail {
   workOrder: WorkOrderView
   timeline: WorkOrderEventView[]

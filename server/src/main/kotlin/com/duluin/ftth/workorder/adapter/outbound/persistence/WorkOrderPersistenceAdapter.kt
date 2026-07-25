@@ -98,6 +98,17 @@ class WorkOrderPersistenceAdapter(
     override fun timelineOf(workOrderId: UUID): List<WorkOrderEvent> =
         eventJpa.findByWorkOrderIdOrderByAt(workOrderId).map { it.toDomain() }
 
+    override fun countByStatus(): Map<WorkOrderStatus, Long> =
+        jpa.countGroupedByStatus().associate { it.status to it.total }
+
+    override fun countByType(): Map<WorkOrderType, Long> =
+        jpa.countGroupedByType().associate { it.type to it.total }
+
+    override fun countOpenByTechnician(): Map<UUID?, Long> {
+        val openStatuses = WorkOrderStatus.entries.filter { it.open }
+        return jpa.countOpenGroupedByTechnician(openStatuses).associate { it.assignedTo to it.total }
+    }
+
     override fun existsOpenPreventiveForCustomer(customerId: UUID): Boolean {
         val openStatuses = WorkOrderStatus.entries.filter { it.open }
         val spec = Specification<WorkOrderJpaEntity> { root, _, cb ->

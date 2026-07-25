@@ -10,7 +10,9 @@ import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderUseCase
 import com.duluin.ftth.workorder.application.port.inbound.RecordOpticalCommand
 import com.duluin.ftth.workorder.application.port.inbound.SaveWorkOrderCommand
+import com.duluin.ftth.workorder.application.port.inbound.TechnicianWorkloadView
 import com.duluin.ftth.workorder.application.port.inbound.UpdateWorkOrderCommand
+import com.duluin.ftth.workorder.application.port.inbound.WorkOrderDashboardView
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderDetail
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderEventView
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderFilter
@@ -20,6 +22,7 @@ import com.duluin.ftth.workorder.application.port.outbound.WorkOrderRepository
 import com.duluin.ftth.workorder.domain.model.WorkOrder
 import com.duluin.ftth.workorder.domain.model.WorkOrderEvent
 import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
+import com.duluin.ftth.workorder.domain.model.WorkOrderType
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -144,6 +147,30 @@ class WorkOrderService(
         val workOrder = require(id)
         val timeline = repository.timelineOf(id).map { it.toView() }
         return WorkOrderDetail(workOrder.toView(), timeline)
+    }
+
+    override fun dashboard(): WorkOrderDashboardView {
+        val byStatus = repository.countByStatus()
+        val byType = repository.countByType()
+        val openByTechnician = repository.countOpenByTechnician()
+
+        // Nama teknisi diresolusi sekali-batch lewat iam (hindari N+1); WO tanpa
+        // teknisi masuk kunci null dan dihitung terpisah sebagai antrean dispatch.
+        val technicianNames = iamApi.usersByIds(openByTechnician.keys.filterNotNullTo(HashSet()))
+            .associate { it.id to it.name }
+        val workloads = openByTechnician
+            .filterKeys { it != null }
+            .map { (technicianId, count) -> TechnicianWorkloadView(technicianId!!, technicianNames[technicianId], count) }
+            .sortedByDescending { it.openCount }
+
+        return WorkOrderDashboardView(
+            total = byStatus.values.sum(),
+            open = WorkOrderStatus.entries.filter { it.open }.sumOf { byStatus[it] ?: 0L },
+            unassignedOpen = openByTechnician[null] ?: 0L,
+            byStatus = WorkOrderStatus.entries.associate { it.name to (byStatus[it] ?: 0L) },
+            byType = WorkOrderType.entries.associate { it.name to (byType[it] ?: 0L) },
+            workloads = workloads,
+        )
     }
 
     private fun require(id: UUID): WorkOrder =

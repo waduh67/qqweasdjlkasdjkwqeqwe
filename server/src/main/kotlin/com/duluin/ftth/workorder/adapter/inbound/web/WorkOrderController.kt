@@ -6,6 +6,7 @@ import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderUseCase
 import com.duluin.ftth.workorder.application.port.inbound.RecordOpticalCommand
 import com.duluin.ftth.workorder.application.port.inbound.SaveWorkOrderCommand
 import com.duluin.ftth.workorder.application.port.inbound.UpdateWorkOrderCommand
+import com.duluin.ftth.workorder.application.port.inbound.WorkOrderDashboardView
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderDetail
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderFilter
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderQuery
@@ -64,6 +65,10 @@ class WorkOrderController(
             PageRequest(page, size, sort = "createdAt", descending = true),
         ),
     )
+
+    @GetMapping("/dashboard")
+    @PreAuthorize("@authz.can('workorder.dashboard.view')")
+    fun dashboard(): WorkOrderDashboardView = query.dashboard()
 
     @GetMapping("/{id}")
     @PreAuthorize("@authz.can('workorder.order.view')")

@@ -27,6 +27,15 @@ interface WorkOrderRepository {
     /** Timeline sebuah work order, terlama lebih dulu. */
     fun timelineOf(workOrderId: UUID): List<WorkOrderEvent>
 
+    /** Jumlah WO per status (status tanpa data absen dari peta). */
+    fun countByStatus(): Map<WorkOrderStatus, Long>
+
+    /** Jumlah WO per tipe (tipe tanpa data absen dari peta). */
+    fun countByType(): Map<WorkOrderType, Long>
+
+    /** Beban WO terbuka per teknisi; kunci `null` = kelompok yang belum ditugaskan. */
+    fun countOpenByTechnician(): Map<UUID?, Long>
+
     /**
      * Apakah pelanggan ini sudah punya WO preventif yang masih terbuka. Dasar
      * idempotensi pemeliharaan prediktif: satu pelanggan cukup satu kunjungan
