@@ -6,6 +6,7 @@ import type {
   EvidenceKind,
   EvidenceView,
   SignatureView,
+  WorkOrderApprovalStatus,
   WorkOrderDashboardView,
   WorkOrderDetail,
   WorkOrderPriority,
@@ -55,6 +56,20 @@ const EVENT_LABEL: Record<string, string> = {
   STARTED: 'Mulai dikerjakan',
   COMPLETED: 'Selesai',
   CANCELLED: 'Dibatalkan',
+  APPROVED: 'Disetujui',
+  REJECTED: 'Ditolak',
+}
+
+const APPROVAL_LABEL: Record<WorkOrderApprovalStatus, string> = {
+  PENDING: 'Menunggu persetujuan',
+  APPROVED: 'Disetujui',
+  REJECTED: 'Ditolak',
+}
+
+const APPROVAL_TONE: Record<WorkOrderApprovalStatus, 'warning' | 'good' | 'critical'> = {
+  PENDING: 'warning',
+  APPROVED: 'good',
+  REJECTED: 'critical',
 }
 
 const KIND_LABEL: Record<EvidenceKind, string> = {
@@ -124,6 +139,7 @@ export function WorkOrdersPage() {
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState<WorkOrderStatus | ''>('')
   const [type, setType] = useState<WorkOrderType | ''>('')
+  const [approval, setApproval] = useState<WorkOrderApprovalStatus | ''>('')
   const [draft, setDraft] = useState<Draft | null>(null)
   const [detail, setDetail] = useState<WorkOrderDetail | null>(null)
   // Ditambah tiap ada perubahan (buat/tugaskan/lifecycle) agar dashboard menghitung ulang.
@@ -139,6 +155,7 @@ export function WorkOrdersPage() {
     if (query.trim()) params.set('query', query.trim())
     if (status) params.set('status', status)
     if (type) params.set('type', type)
+    if (approval) params.set('approval', approval)
     try {
       const page = await api.get<PageResponse<WorkOrderView>>(`/api/work-orders?${params}`)
       setOrders(page.content)
@@ -147,7 +164,7 @@ export function WorkOrdersPage() {
     } finally {
       setLoading(false)
     }
-  }, [query, status, type, toast])
+  }, [query, status, type, approval, toast])
 
   useEffect(() => {
     void reload()
@@ -221,7 +238,13 @@ export function WorkOrdersPage() {
       </div>
 
       {can('workorder.dashboard.view') && (
-        <DispatchDashboard version={dashVersion} activeStatus={status} onPickStatus={setStatus} />
+        <DispatchDashboard
+          version={dashVersion}
+          activeStatus={status}
+          onPickStatus={setStatus}
+          activeApproval={approval}
+          onToggleApproval={() => setApproval((a) => (a === 'PENDING' ? '' : 'PENDING'))}
+        />
       )}
 
       <div className="row wrap" style={{ gap: '0.6rem' }}>
@@ -247,6 +270,18 @@ export function WorkOrdersPage() {
             </option>
           ))}
         </select>
+        <select
+          value={approval}
+          onChange={(e) => setApproval(e.target.value as WorkOrderApprovalStatus | '')}
+          style={{ flex: 1, minWidth: 140 }}
+        >
+          <option value="">Semua persetujuan</option>
+          {(Object.keys(APPROVAL_LABEL) as WorkOrderApprovalStatus[]).map((a) => (
+            <option key={a} value={a}>
+              {APPROVAL_LABEL[a]}
+            </option>
+          ))}
+        </select>
       </div>
 
       {draft && (
@@ -267,9 +302,9 @@ export function WorkOrdersPage() {
       ) : orders.length === 0 ? (
         <div className="card">
           <EmptyState
-            title={query || status || type ? 'Tidak ada work order yang cocok' : 'Belum ada work order'}
+            title={query || status || type || approval ? 'Tidak ada work order yang cocok' : 'Belum ada work order'}
             hint={
-              query || status || type
+              query || status || type || approval
                 ? 'Coba ubah filter atau kata kunci.'
                 : 'Buat work order pertama untuk menjadwalkan pekerjaan lapangan.'
             }
@@ -321,12 +356,37 @@ export function WorkOrdersPage() {
   )
 }
 
-function Stat({ label, value, accent }: { label: string; value: number; accent?: 'crit' | 'warn' }) {
-  return (
-    <div className={`stat ${accent === 'crit' ? 'crit-bar' : accent === 'warn' ? 'warn-bar' : 'accent-bar'}`}>
+function Stat({
+  label,
+  value,
+  accent,
+  onClick,
+  active,
+}: {
+  label: string
+  value: number
+  accent?: 'crit' | 'warn'
+  onClick?: () => void
+  active?: boolean
+}) {
+  const cls = `stat ${accent === 'crit' ? 'crit-bar' : accent === 'warn' ? 'warn-bar' : 'accent-bar'}`
+  const body = (
+    <>
       <div className="stat-label">{label}</div>
       <div className="stat-value">{value.toLocaleString('id-ID')}</div>
-    </div>
+    </>
+  )
+  if (!onClick) return <div className={cls}>{body}</div>
+  // Bisa diklik → jadikan tombol; saat aktif ditandai garis luar agar filter terlihat.
+  return (
+    <button
+      type="button"
+      className={cls}
+      onClick={onClick}
+      style={{ textAlign: 'left', cursor: 'pointer', outline: active ? '2px solid var(--accent, #4c8bf5)' : undefined }}
+    >
+      {body}
+    </button>
   )
 }
 
@@ -339,10 +399,14 @@ function DispatchDashboard({
   version,
   activeStatus,
   onPickStatus,
+  activeApproval,
+  onToggleApproval,
 }: {
   version: number
   activeStatus: WorkOrderStatus | ''
   onPickStatus: (s: WorkOrderStatus | '') => void
+  activeApproval: WorkOrderApprovalStatus | ''
+  onToggleApproval: () => void
 }) {
   const [data, setData] = useState<WorkOrderDashboardView | null>(null)
 
@@ -365,6 +429,13 @@ function DispatchDashboard({
         <Stat label="Total" value={data.total} />
         <Stat label="Terbuka" value={data.open} />
         <Stat label="Belum ditugaskan" value={data.unassignedOpen} accent={data.unassignedOpen > 0 ? 'warn' : undefined} />
+        <Stat
+          label="Menunggu persetujuan"
+          value={data.pendingApproval}
+          accent={data.pendingApproval > 0 ? 'warn' : undefined}
+          onClick={onToggleApproval}
+          active={activeApproval === 'PENDING'}
+        />
       </div>
 
       {/* Pipeline status — klik untuk memfilter daftar; klik lagi untuk melepas filter. */}
@@ -509,11 +580,16 @@ function WorkOrderDetailBody({
   const [note, setNote] = useState('')
   const [reason, setReason] = useState('')
 
+  // Satu kolom catatan dipakai bersama: opsional saat menyetujui, wajib saat menolak.
+  const [decisionNote, setDecisionNote] = useState('')
+
   const id = wo.id
   const canAssign = can('workorder.order.assign')
   const canUpdate = can('workorder.order.update')
   const canClose = can('workorder.order.close')
+  const canApprove = can('workorder.order.approve')
   const terminal = wo.status === 'DONE' || wo.status === 'CANCELLED'
+  const awaitingApproval = wo.status === 'DONE' && wo.approvalStatus === 'PENDING'
 
   return (
     <div className="stack" style={{ gap: '1.1rem' }}>
@@ -523,6 +599,7 @@ function WorkOrderDetailBody({
         <Badge tone={wo.priority === 'URGENT' || wo.priority === 'HIGH' ? 'warning' : 'neutral'}>
           {PRIORITY_LABEL[wo.priority]}
         </Badge>
+        {wo.approvalStatus && <Badge tone={APPROVAL_TONE[wo.approvalStatus]}>{APPROVAL_LABEL[wo.approvalStatus]}</Badge>}
         {wo.customerName && <span className="badge">{wo.customerName}</span>}
       </div>
 
@@ -545,6 +622,18 @@ function WorkOrderDetailBody({
           <>
             <dt className="muted">Catatan</dt>
             <dd style={{ margin: 0 }}>{wo.resolutionNote}</dd>
+          </>
+        )}
+        {wo.approvedByName && (
+          <>
+            <dt className="muted">{wo.approvalStatus === 'REJECTED' ? 'Ditolak oleh' : 'Disetujui oleh'}</dt>
+            <dd style={{ margin: 0 }}>{wo.approvedByName}{wo.approvedAt ? ` · ${fmt(wo.approvedAt)}` : ''}</dd>
+          </>
+        )}
+        {wo.approvalNote && (
+          <>
+            <dt className="muted">{wo.approvalStatus === 'REJECTED' ? 'Alasan penolakan' : 'Catatan persetujuan'}</dt>
+            <dd style={{ margin: 0 }}>{wo.approvalNote}</dd>
           </>
         )}
         {wo.cancelReason && (
@@ -610,6 +699,39 @@ function WorkOrderDetailBody({
           >
             Selesaikan
           </button>
+        </section>
+      )}
+
+      {/* Persetujuan hasil kerja — hanya untuk WO selesai yang menunggu dikurasi. */}
+      {canApprove && awaitingApproval && (
+        <section className="stack" style={{ gap: '0.5rem' }}>
+          <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Persetujuan hasil kerja</h3>
+          <label className="stack" style={{ gap: '0.25rem' }}>
+            <span>Catatan (opsional untuk setuju, wajib bila menolak)</span>
+            <textarea
+              rows={2}
+              maxLength={500}
+              value={decisionNote}
+              onChange={(e) => setDecisionNote(e.target.value)}
+              placeholder="mis. redaman OK, pemasangan rapi"
+            />
+          </label>
+          <div className="row" style={{ gap: '0.5rem' }}>
+            <button
+              className="primary"
+              onClick={() => onAct(() => api.post(`/api/work-orders/${id}/approve`, { note: decisionNote.trim() || null }), 'Hasil kerja disetujui', true)}
+            >
+              Setujui
+            </button>
+            <button
+              className="ghost danger"
+              disabled={!decisionNote.trim()}
+              onClick={() => onAct(() => api.post(`/api/work-orders/${id}/reject`, { reason: decisionNote.trim() }), 'Hasil kerja ditolak, WO dibuka kembali', true)}
+              title={decisionNote.trim() ? undefined : 'Isi alasan penolakan dulu'}
+            >
+              Tolak &amp; buka kembali
+            </button>
+          </div>
         </section>
       )}
 

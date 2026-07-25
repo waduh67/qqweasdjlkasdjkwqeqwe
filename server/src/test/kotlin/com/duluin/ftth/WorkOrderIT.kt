@@ -232,6 +232,74 @@ class WorkOrderIT {
         assertThat(JsonPath.read<Int>(dash, "$.workloads[0].openCount")).isEqualTo(2)
     }
 
+    /** Bawa sebuah WO baru sampai DONE (assign → start → complete), kembalikan id-nya. */
+    private fun completeWorkOrder(token: String, title: String): String {
+        val woId = id(createWorkOrder(token, """{"type":"PSB","title":"$title"}"""))
+        val techId = newTechnician(token, "Teknisi $title")
+        post("/api/work-orders/$woId/assign", token, """{"technicianId":"$techId"}""", 200)
+        post("/api/work-orders/$woId/start", token, "", 200)
+        post("/api/work-orders/$woId/complete", token, "", 200)
+        return woId
+    }
+
+    @Test
+    fun `hasil kerja masuk antrean persetujuan, penolakan membuka kembali, persetujuan mengunci`() {
+        val token = newTenantAdmin("wo")
+        val woId = completeWorkOrder(token, "Pasang baru")
+
+        // Selesai → menunggu persetujuan; muncul di antrean & dashboard.
+        val done = get("/api/work-orders/$woId", token)
+        assertThat(JsonPath.read<String>(done, "$.workOrder.approvalStatus")).isEqualTo("PENDING")
+
+        val dash = get("/api/work-orders/dashboard", token)
+        assertThat(JsonPath.read<Int>(dash, "$.pendingApproval")).isEqualTo(1)
+
+        val queue = get("/api/work-orders?approval=PENDING", token)
+        assertThat(JsonPath.read<List<Any>>(queue, "$.content[*]")).hasSize(1)
+        assertThat(JsonPath.read<String>(queue, "$.content[0].id")).isEqualTo(woId)
+
+        // Alasan penolakan wajib (bean validation).
+        post("/api/work-orders/$woId/reject", token, """{"reason":""}""", expected = 400)
+
+        // Tolak → WO dibuka kembali ke IN_PROGRESS untuk dikerjakan ulang.
+        val rejected = post("/api/work-orders/$woId/reject", token, """{"reason":"Redaman masih jelek"}""", 200)
+        assertThat(JsonPath.read<String>(rejected, "$.status")).isEqualTo("IN_PROGRESS")
+        assertThat(JsonPath.read<String>(rejected, "$.approvalStatus")).isEqualTo("REJECTED")
+        assertThat(JsonPath.read<String>(rejected, "$.approvalNote")).isEqualTo("Redaman masih jelek")
+        assertThat(JsonPath.read<String>(rejected, "$.approvedByName")).isEqualTo("Admin")
+        assertThat(JsonPath.read<Any?>(rejected, "$.completedAt")).isNull()
+
+        // Antrean kini kosong (sudah tak PENDING).
+        assertThat(JsonPath.read<Int>(get("/api/work-orders/dashboard", token), "$.pendingApproval")).isEqualTo(0)
+
+        // Selesaikan ulang → kembali PENDING, catatan penolakan lama tereset.
+        val redone = post("/api/work-orders/$woId/complete", token, """{"resolutionNote":"Splice ulang"}""", 200)
+        assertThat(JsonPath.read<String>(redone, "$.approvalStatus")).isEqualTo("PENDING")
+        assertThat(JsonPath.read<Any?>(redone, "$.approvalNote")).isNull()
+
+        // Setujui → terkunci APPROVED dengan pengambil keputusan tercatat.
+        val approved = post("/api/work-orders/$woId/approve", token, """{"note":"Sekarang OK"}""", 200)
+        assertThat(JsonPath.read<String>(approved, "$.status")).isEqualTo("DONE")
+        assertThat(JsonPath.read<String>(approved, "$.approvalStatus")).isEqualTo("APPROVED")
+        assertThat(JsonPath.read<String>(approved, "$.approvalNote")).isEqualTo("Sekarang OK")
+        assertThat(JsonPath.read<String>(approved, "$.approvedByName")).isEqualTo("Admin")
+
+        // Sudah disetujui → tak bisa disetujui/ditolak lagi.
+        post("/api/work-orders/$woId/approve", token, "", expected = 409)
+        post("/api/work-orders/$woId/reject", token, """{"reason":"berubah pikiran"}""", expected = 409)
+
+        // Timeline memuat penolakan lalu persetujuan.
+        val timeline = JsonPath.read<List<String>>(get("/api/work-orders/$woId", token), "$.timeline[*].type")
+        assertThat(timeline).containsSubsequence("COMPLETED", "REJECTED", "COMPLETED", "APPROVED")
+    }
+
+    @Test
+    fun `setujui work order yang belum selesai ditolak`() {
+        val token = newTenantAdmin("wo")
+        val woId = id(createWorkOrder(token, """{"type":"PSB","title":"Pasang baru"}"""))
+        post("/api/work-orders/$woId/approve", token, "", expected = 409)
+    }
+
     @Test
     fun `hapus hanya untuk draft, sisanya dibatalkan`() {
         val token = newTenantAdmin("wo")

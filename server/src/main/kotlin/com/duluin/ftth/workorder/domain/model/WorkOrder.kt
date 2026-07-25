@@ -26,7 +26,14 @@ enum class WorkOrderStatus {
     val terminal: Boolean get() = !open
 }
 
-enum class WorkOrderEventType { CREATED, UPDATED, ASSIGNED, STARTED, COMPLETED, CANCELLED }
+enum class WorkOrderEventType { CREATED, UPDATED, ASSIGNED, STARTED, COMPLETED, CANCELLED, APPROVED, REJECTED }
+
+/**
+ * Status kurasi hasil kerja setelah WO diselesaikan. Muncul hanya setelah `complete()`
+ * ([PENDING]); penyelia menyetujui ([APPROVED]) atau menolak ([REJECTED], WO dibuka
+ * kembali untuk dikerjakan ulang). `null` = belum pernah selesai, jadi tak relevan.
+ */
+enum class WorkOrderApprovalStatus { PENDING, APPROVED, REJECTED }
 
 /** Satu entri timeline sebuah work order. */
 class WorkOrderEvent private constructor(
@@ -87,6 +94,10 @@ class WorkOrder private constructor(
     cancelReason: String?,
     rxBeforeDbm: Double?,
     rxAfterDbm: Double?,
+    approvalStatus: WorkOrderApprovalStatus?,
+    approvedBy: UUID?,
+    approvedAt: Instant?,
+    approvalNote: String?,
     /** Pembuat WO; `null` berarti dibuat sistem (mis. preventif dari degradasi optik), tanpa pengguna. */
     val createdBy: UUID?,
     val createdAt: Instant,
@@ -124,6 +135,16 @@ class WorkOrder private constructor(
     var rxBeforeDbm: Double? = rxBeforeDbm
         private set
     var rxAfterDbm: Double? = rxAfterDbm
+        private set
+
+    /** Kurasi hasil kerja pasca-selesai. `approvedBy`/`approvedAt`/`approvalNote` mencatat pengambil keputusan (setuju atau tolak). */
+    var approvalStatus: WorkOrderApprovalStatus? = approvalStatus
+        private set
+    var approvedBy: UUID? = approvedBy
+        private set
+    var approvedAt: Instant? = approvedAt
+        private set
+    var approvalNote: String? = approvalNote
         private set
 
     private val pending = mutableListOf<WorkOrderEvent>()
@@ -182,13 +203,54 @@ class WorkOrder private constructor(
         record(WorkOrderEventType.STARTED, "Pengerjaan dimulai", at, actorId)
     }
 
-    /** Menyelesaikan pekerjaan. Hanya dari IN_PROGRESS. */
+    /**
+     * Menyelesaikan pekerjaan. Hanya dari IN_PROGRESS. Hasilnya masuk antrean
+     * persetujuan ([WorkOrderApprovalStatus.PENDING]); keputusan penyelia
+     * sebelumnya (mis. bila WO ini pernah ditolak lalu dikerjakan ulang) direset.
+     */
     fun complete(note: String?, at: Instant, actorId: UUID?) {
         if (status != WorkOrderStatus.IN_PROGRESS) throw ConflictException("Work order harus sedang dikerjakan untuk diselesaikan")
         status = WorkOrderStatus.DONE
         completedAt = at
         resolutionNote = note?.ifBlank { null }
+        approvalStatus = WorkOrderApprovalStatus.PENDING
+        approvedBy = null
+        approvedAt = null
+        approvalNote = null
         record(WorkOrderEventType.COMPLETED, "Pekerjaan selesai", at, actorId)
+    }
+
+    /** Penyelia menyetujui hasil kerja. Hanya untuk WO selesai yang masih menunggu persetujuan. */
+    fun approve(note: String?, at: Instant, actorId: UUID?) {
+        requirePendingApproval()
+        approvalStatus = WorkOrderApprovalStatus.APPROVED
+        approvedBy = actorId
+        approvedAt = at
+        approvalNote = note?.ifBlank { null }
+        record(WorkOrderEventType.APPROVED, "Hasil kerja disetujui", at, actorId)
+    }
+
+    /**
+     * Penyelia menolak hasil kerja: WO dibuka kembali ke IN_PROGRESS untuk dikerjakan
+     * ulang, dengan alasan wajib. Menyelesaikannya lagi mengembalikannya ke antrean.
+     */
+    fun reject(reason: String, at: Instant, actorId: UUID?) {
+        requirePendingApproval()
+        val trimmed = reason.trim()
+        if (trimmed.isEmpty()) throw ConflictException("Alasan penolakan wajib diisi")
+        approvalStatus = WorkOrderApprovalStatus.REJECTED
+        approvedBy = actorId
+        approvedAt = at
+        approvalNote = trimmed
+        status = WorkOrderStatus.IN_PROGRESS
+        completedAt = null
+        record(WorkOrderEventType.REJECTED, "Hasil kerja ditolak: $trimmed", at, actorId)
+    }
+
+    private fun requirePendingApproval() {
+        if (status != WorkOrderStatus.DONE || approvalStatus != WorkOrderApprovalStatus.PENDING) {
+            throw ConflictException("Hanya work order selesai yang menunggu persetujuan yang bisa disetujui/ditolak")
+        }
     }
 
     /** Membatalkan dari state mana pun sebelum selesai. Idempotent bila sudah batal. */
@@ -272,6 +334,10 @@ class WorkOrder private constructor(
                 cancelReason = null,
                 rxBeforeDbm = null,
                 rxAfterDbm = null,
+                approvalStatus = null,
+                approvedBy = null,
+                approvedAt = null,
+                approvalNote = null,
                 createdBy = createdBy,
                 createdAt = at,
             )
@@ -303,12 +369,17 @@ class WorkOrder private constructor(
             cancelReason: String?,
             rxBeforeDbm: Double?,
             rxAfterDbm: Double?,
+            approvalStatus: WorkOrderApprovalStatus?,
+            approvedBy: UUID?,
+            approvedAt: Instant?,
+            approvalNote: String?,
             createdBy: UUID?,
             createdAt: Instant,
         ): WorkOrder = WorkOrder(
             id, tenantId, code, type, title, description, priority, customerId, incidentId, areaId,
             status, assignedTo, assignedAt, scheduledAt, startedAt, completedAt, resolutionNote,
-            cancelReason, rxBeforeDbm, rxAfterDbm, createdBy, createdAt,
+            cancelReason, rxBeforeDbm, rxAfterDbm, approvalStatus, approvedBy, approvedAt, approvalNote,
+            createdBy, createdAt,
         )
     }
 }

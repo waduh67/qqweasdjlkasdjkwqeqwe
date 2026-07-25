@@ -11,6 +11,7 @@ import com.duluin.ftth.workorder.application.port.inbound.WorkOrderDetail
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderFilter
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderQuery
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderView
+import com.duluin.ftth.workorder.domain.model.WorkOrderApprovalStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderPriority
 import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderType
@@ -57,11 +58,12 @@ class WorkOrderController(
         @RequestParam(required = false) type: WorkOrderType?,
         @RequestParam(required = false) status: WorkOrderStatus?,
         @RequestParam(required = false) assignedTo: UUID?,
+        @RequestParam(required = false) approval: WorkOrderApprovalStatus?,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
     ): PageResponse<WorkOrderView> = PageResponse.from(
         this.query.search(
-            WorkOrderFilter(query = query, type = type, status = status, assignedTo = assignedTo),
+            WorkOrderFilter(query = query, type = type, status = status, assignedTo = assignedTo, approvalStatus = approval),
             PageRequest(page, size, sort = "createdAt", descending = true),
         ),
     )
@@ -108,6 +110,16 @@ class WorkOrderController(
     @PreAuthorize("@authz.can('workorder.order.update')")
     fun recordOptical(@PathVariable id: UUID, @Valid @RequestBody request: RecordOpticalRequest): WorkOrderView =
         manage.recordOptical(id, request.toCommand())
+
+    @PostMapping("/{id}/approve")
+    @PreAuthorize("@authz.can('workorder.order.approve')")
+    fun approve(@PathVariable id: UUID, @Valid @RequestBody(required = false) request: ApproveRequest?): WorkOrderView =
+        manage.approve(id, request?.note)
+
+    @PostMapping("/{id}/reject")
+    @PreAuthorize("@authz.can('workorder.order.approve')")
+    fun reject(@PathVariable id: UUID, @Valid @RequestBody request: RejectRequest): WorkOrderView =
+        manage.reject(id, request.reason!!)
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -169,6 +181,16 @@ data class CompleteRequest(
 
 data class CancelRequest(
     @field:Size(max = 500) val reason: String?,
+)
+
+/** Catatan persetujuan opsional (mis. kualitas pasang OK). */
+data class ApproveRequest(
+    @field:Size(max = 500) val note: String?,
+)
+
+/** Penolakan hasil kerja; alasan wajib agar teknisi tahu apa yang harus diperbaiki. */
+data class RejectRequest(
+    @field:NotBlank @field:Size(max = 500) val reason: String?,
 )
 
 /** Redaman optik (dBm); GPON selalu negatif, rentang wajar −40..0. Keduanya opsional. */

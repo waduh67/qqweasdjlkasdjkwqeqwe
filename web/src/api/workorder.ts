@@ -3,6 +3,7 @@
 export type WorkOrderType = 'PSB' | 'REPAIR' | 'MIGRATION' | 'DISMANTLE' | 'PREVENTIVE'
 export type WorkOrderStatus = 'DRAFT' | 'ASSIGNED' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED'
 export type WorkOrderPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT'
+export type WorkOrderApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
 export interface WorkOrderView {
   id: string
@@ -27,6 +28,12 @@ export interface WorkOrderView {
   /** Redaman optik (dBm) sebelum & sesudah pengerjaan; `null` bila belum diukur. */
   rxBeforeDbm: number | null
   rxAfterDbm: number | null
+  /** Kurasi hasil kerja: PENDING/APPROVED/REJECTED; `null` bila WO belum pernah selesai. */
+  approvalStatus: WorkOrderApprovalStatus | null
+  approvedBy: string | null
+  approvedByName: string | null
+  approvedAt: string | null
+  approvalNote: string | null
   createdAt: string
 }
 
@@ -47,6 +54,8 @@ export interface WorkOrderDashboardView {
   total: number
   open: number
   unassignedOpen: number
+  /** Hasil kerja selesai yang menunggu dikurasi penyelia. */
+  pendingApproval: number
   byStatus: Record<WorkOrderStatus, number>
   byType: Record<WorkOrderType, number>
   workloads: TechnicianWorkloadView[]

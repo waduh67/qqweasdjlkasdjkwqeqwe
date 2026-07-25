@@ -2,6 +2,7 @@ package com.duluin.ftth.workorder.application.port.inbound
 
 import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
+import com.duluin.ftth.workorder.domain.model.WorkOrderApprovalStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderType
 import java.time.Instant
@@ -25,6 +26,8 @@ data class WorkOrderFilter(
     val type: WorkOrderType?,
     val status: WorkOrderStatus?,
     val assignedTo: UUID?,
+    /** Antrean persetujuan: mis. PENDING = hasil kerja yang menunggu dikurasi. */
+    val approvalStatus: WorkOrderApprovalStatus?,
 )
 
 data class WorkOrderView(
@@ -52,6 +55,13 @@ data class WorkOrderView(
     /** Redaman optik (dBm) yang diukur teknisi sebelum & sesudah pengerjaan; `null` bila belum direkam. */
     val rxBeforeDbm: Double?,
     val rxAfterDbm: Double?,
+    /** Kurasi hasil kerja: PENDING/APPROVED/REJECTED; `null` bila WO belum pernah selesai. */
+    val approvalStatus: String?,
+    val approvedBy: UUID?,
+    /** Nama pengambil keputusan persetujuan, diresolusi lewat iam; `null` bila belum ada/tak ada. */
+    val approvedByName: String?,
+    val approvedAt: Instant?,
+    val approvalNote: String?,
     val createdAt: Instant,
 )
 
@@ -75,6 +85,7 @@ data class WorkOrderDashboardView(
     val total: Long,
     val open: Long,
     val unassignedOpen: Long,
+    val pendingApproval: Long,
     val byStatus: Map<String, Long>,
     val byType: Map<String, Long>,
     val workloads: List<TechnicianWorkloadView>,

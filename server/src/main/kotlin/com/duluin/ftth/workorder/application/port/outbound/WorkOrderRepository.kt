@@ -3,6 +3,7 @@ package com.duluin.ftth.workorder.application.port.outbound
 import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.workorder.domain.model.WorkOrder
+import com.duluin.ftth.workorder.domain.model.WorkOrderApprovalStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderEvent
 import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderType
@@ -21,6 +22,7 @@ interface WorkOrderRepository {
         type: WorkOrderType?,
         status: WorkOrderStatus?,
         assignedTo: UUID?,
+        approvalStatus: WorkOrderApprovalStatus?,
         pageRequest: PageRequest,
     ): Page<WorkOrder>
 
@@ -35,6 +37,9 @@ interface WorkOrderRepository {
 
     /** Beban WO terbuka per teknisi; kunci `null` = kelompok yang belum ditugaskan. */
     fun countOpenByTechnician(): Map<UUID?, Long>
+
+    /** Jumlah WO yang menunggu persetujuan (selesai tapi belum dikurasi). */
+    fun countPendingApproval(): Long
 
     /**
      * Apakah pelanggan ini sudah punya WO preventif yang masih terbuka. Dasar

@@ -118,6 +118,20 @@ class WorkOrderService(
     }
 
     @Transactional
+    override fun approve(id: UUID, note: String?): WorkOrderView {
+        val workOrder = require(id)
+        workOrder.approve(note, Instant.now(), currentUser.current().userId)
+        return repository.save(workOrder).toView()
+    }
+
+    @Transactional
+    override fun reject(id: UUID, reason: String): WorkOrderView {
+        val workOrder = require(id)
+        workOrder.reject(reason, Instant.now(), currentUser.current().userId)
+        return repository.save(workOrder).toView()
+    }
+
+    @Transactional
     override fun delete(id: UUID) {
         val workOrder = require(id)
         // Sekali ditugaskan, work order punya jejak (assignment/timeline) yang tak boleh
@@ -134,13 +148,19 @@ class WorkOrderService(
             type = filter.type,
             status = filter.status,
             assignedTo = filter.assignedTo,
+            approvalStatus = filter.approvalStatus,
             pageRequest = page,
         )
-        val technicianNames = iamApi.usersByIds(result.content.mapNotNullTo(HashSet()) { it.assignedTo })
-            .associate { it.id to it.name }
+        // Teknisi & penyetuju sama-sama pengguna iam → kumpulkan idnya lalu resolusi sekali-batch.
+        val userIds = HashSet<UUID>()
+        result.content.forEach { wo ->
+            wo.assignedTo?.let { userIds += it }
+            wo.approvedBy?.let { userIds += it }
+        }
+        val userNames = iamApi.usersByIds(userIds).associate { it.id to it.name }
         val customerNames = customerApi.findCustomersByIds(result.content.mapNotNullTo(HashSet()) { it.customerId })
             .associate { it.id to it.name }
-        return result.map { it.toView(customerNames[it.customerId], technicianNames[it.assignedTo]) }
+        return result.map { it.toView(customerNames[it.customerId], userNames[it.assignedTo], userNames[it.approvedBy]) }
     }
 
     override fun get(id: UUID): WorkOrderDetail {
@@ -167,6 +187,7 @@ class WorkOrderService(
             total = byStatus.values.sum(),
             open = WorkOrderStatus.entries.filter { it.open }.sumOf { byStatus[it] ?: 0L },
             unassignedOpen = openByTechnician[null] ?: 0L,
+            pendingApproval = repository.countPendingApproval(),
             byStatus = WorkOrderStatus.entries.associate { it.name to (byStatus[it] ?: 0L) },
             byType = WorkOrderType.entries.associate { it.name to (byType[it] ?: 0L) },
             workloads = workloads,
@@ -192,9 +213,10 @@ class WorkOrderService(
     private fun WorkOrder.toView(): WorkOrderView = toView(
         customerName = customerId?.let { customerApi.findCustomer(it)?.name },
         technicianName = assignedTo?.let { iamApi.findUser(it)?.name },
+        approverName = approvedBy?.let { iamApi.findUser(it)?.name },
     )
 
-    private fun WorkOrder.toView(customerName: String?, technicianName: String?) = WorkOrderView(
+    private fun WorkOrder.toView(customerName: String?, technicianName: String?, approverName: String?) = WorkOrderView(
         id = id,
         code = code,
         type = type.name,
@@ -216,6 +238,11 @@ class WorkOrderService(
         cancelReason = cancelReason,
         rxBeforeDbm = rxBeforeDbm,
         rxAfterDbm = rxAfterDbm,
+        approvalStatus = approvalStatus?.name,
+        approvedBy = approvedBy,
+        approvedByName = approverName,
+        approvedAt = approvedAt,
+        approvalNote = approvalNote,
         createdAt = createdAt,
     )
 

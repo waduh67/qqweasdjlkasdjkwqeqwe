@@ -99,6 +99,7 @@ object PermissionCatalog {
         perm("workorder.order.update", "Ubah work order")
         perm("workorder.order.assign", "Assign work order")
         perm("workorder.order.close", "Selesaikan work order")
+        perm("workorder.order.approve", "Setujui/tolak hasil kerja")
         perm("workorder.evidence.view", "Lihat bukti pengerjaan")
         perm("workorder.evidence.manage", "Unggah/hapus bukti pengerjaan")
 

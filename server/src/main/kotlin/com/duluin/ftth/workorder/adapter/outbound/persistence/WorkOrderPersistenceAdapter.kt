@@ -7,6 +7,7 @@ import com.duluin.ftth.common.infrastructure.persistence.toPageable
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderRepository
 import com.duluin.ftth.workorder.domain.model.WorkOrder
+import com.duluin.ftth.workorder.domain.model.WorkOrderApprovalStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderEvent
 import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderType
@@ -38,6 +39,10 @@ class WorkOrderPersistenceAdapter(
             cancelReason = workOrder.cancelReason
             rxBeforeDbm = workOrder.rxBeforeDbm
             rxAfterDbm = workOrder.rxAfterDbm
+            approvalStatus = workOrder.approvalStatus
+            approvedBy = workOrder.approvedBy
+            approvedAt = workOrder.approvedAt
+            approvalNote = workOrder.approvalNote
         } ?: WorkOrderJpaEntity(
             id = workOrder.id,
             code = workOrder.code,
@@ -58,6 +63,10 @@ class WorkOrderPersistenceAdapter(
             cancelReason = workOrder.cancelReason,
             rxBeforeDbm = workOrder.rxBeforeDbm,
             rxAfterDbm = workOrder.rxAfterDbm,
+            approvalStatus = workOrder.approvalStatus,
+            approvedBy = workOrder.approvedBy,
+            approvedAt = workOrder.approvedAt,
+            approvalNote = workOrder.approvalNote,
             createdBy = workOrder.createdBy,
         )
         val saved = jpa.save(entity)
@@ -86,12 +95,14 @@ class WorkOrderPersistenceAdapter(
         type: WorkOrderType?,
         status: WorkOrderStatus?,
         assignedTo: UUID?,
+        approvalStatus: WorkOrderApprovalStatus?,
         pageRequest: PageRequest,
     ): Page<WorkOrder> {
         val spec = matchesText(query)
             .and(hasType(type))
             .and(hasStatus(status))
             .and(assignedToIs(assignedTo))
+            .and(hasApprovalStatus(approvalStatus))
         return jpa.findAll(spec, pageRequest.toPageable()).toDomainPage().map { it.toDomain() }
     }
 
@@ -108,6 +119,8 @@ class WorkOrderPersistenceAdapter(
         val openStatuses = WorkOrderStatus.entries.filter { it.open }
         return jpa.countOpenGroupedByTechnician(openStatuses).associate { it.assignedTo to it.total }
     }
+
+    override fun countPendingApproval(): Long = jpa.countByApprovalStatus(WorkOrderApprovalStatus.PENDING)
 
     override fun existsOpenPreventiveForCustomer(customerId: UUID): Boolean {
         val openStatuses = WorkOrderStatus.entries.filter { it.open }
@@ -148,6 +161,10 @@ class WorkOrderPersistenceAdapter(
     private fun assignedToIs(assignedTo: UUID?) = Specification<WorkOrderJpaEntity> { root, _, cb ->
         if (assignedTo == null) cb.conjunction() else cb.equal(root.get<UUID>("assignedTo"), assignedTo)
     }
+
+    private fun hasApprovalStatus(approvalStatus: WorkOrderApprovalStatus?) = Specification<WorkOrderJpaEntity> { root, _, cb ->
+        if (approvalStatus == null) cb.conjunction() else cb.equal(root.get<WorkOrderApprovalStatus>("approvalStatus"), approvalStatus)
+    }
 }
 
 private fun WorkOrderJpaEntity.toDomain(): WorkOrder = WorkOrder.rehydrate(
@@ -171,6 +188,10 @@ private fun WorkOrderJpaEntity.toDomain(): WorkOrder = WorkOrder.rehydrate(
     cancelReason = cancelReason,
     rxBeforeDbm = rxBeforeDbm,
     rxAfterDbm = rxAfterDbm,
+    approvalStatus = approvalStatus,
+    approvedBy = approvedBy,
+    approvedAt = approvedAt,
+    approvalNote = approvalNote,
     createdBy = createdBy,
     createdAt = createdAt,
 )

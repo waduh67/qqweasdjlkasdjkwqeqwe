@@ -24,6 +24,12 @@ interface ManageWorkOrderUseCase {
     /** Merekam redaman optik (dBm) sebelum/sesudah pengerjaan sebagai bukti kualitas. */
     fun recordOptical(id: UUID, command: RecordOpticalCommand): WorkOrderView
 
+    /** Penyelia menyetujui hasil kerja WO yang menunggu persetujuan. */
+    fun approve(id: UUID, note: String?): WorkOrderView
+
+    /** Penyelia menolak hasil kerja (alasan wajib); WO dibuka kembali untuk dikerjakan ulang. */
+    fun reject(id: UUID, reason: String): WorkOrderView
+
     /** Menghapus work order yang masih DRAFT (belum pernah ditugaskan). */
     fun delete(id: UUID)
 }

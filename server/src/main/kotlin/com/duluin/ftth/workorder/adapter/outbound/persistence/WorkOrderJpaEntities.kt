@@ -1,6 +1,7 @@
 package com.duluin.ftth.workorder.adapter.outbound.persistence
 
 import com.duluin.ftth.common.infrastructure.persistence.TenantAwareJpaEntity
+import com.duluin.ftth.workorder.domain.model.WorkOrderApprovalStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderEventType
 import com.duluin.ftth.workorder.domain.model.WorkOrderPriority
 import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
@@ -74,6 +75,19 @@ class WorkOrderJpaEntity(
 
     @Column(name = "rx_after_dbm")
     var rxAfterDbm: Double?,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "approval_status", length = 20)
+    var approvalStatus: WorkOrderApprovalStatus?,
+
+    @Column(name = "approved_by")
+    var approvedBy: UUID?,
+
+    @Column(name = "approved_at")
+    var approvedAt: Instant?,
+
+    @Column(name = "approval_note", length = 500)
+    var approvalNote: String?,
 
     // Null = dibuat sistem (mis. WO preventif dari degradasi optik), tanpa pengguna.
     @Column(name = "created_by", updatable = false)

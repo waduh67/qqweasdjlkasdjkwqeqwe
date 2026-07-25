@@ -1,5 +1,6 @@
 package com.duluin.ftth.workorder.adapter.outbound.persistence
 
+import com.duluin.ftth.workorder.domain.model.WorkOrderApprovalStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderType
 import org.springframework.data.jpa.repository.JpaRepository
@@ -39,6 +40,8 @@ interface WorkOrderJpaRepository :
             "where w.status in :statuses group by w.assignedTo",
     )
     fun countOpenGroupedByTechnician(statuses: Collection<WorkOrderStatus>): List<WorkOrderTechnicianCount>
+
+    fun countByApprovalStatus(approvalStatus: WorkOrderApprovalStatus): Long
 }
 
 interface WorkOrderEventJpaRepository : JpaRepository<WorkOrderEventJpaEntity, UUID> {
