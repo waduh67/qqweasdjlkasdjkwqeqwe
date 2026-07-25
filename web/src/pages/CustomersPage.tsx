@@ -3,7 +3,7 @@ import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type { CustomerTrace, CustomerView, OdpView } from '../api/network'
 import { useCan } from '../auth/useCan'
-import { EmptyState, StatusBadge, useToast } from '../components/ui'
+import { Drawer, EmptyState, StatusBadge, useToast } from '../components/ui'
 import { IconCustomers, IconPlus, IconRoute, IconSearch } from '../components/icons'
 
 /** Warna kesehatan optik selaras token status. */
@@ -322,18 +322,19 @@ function CustomerCard({
   )
 }
 
-/** Telusur jalur fisik pelanggan sampai OLT, lengkap dengan perkiraan redaman. */
+/**
+ * Telusur jalur fisik pelanggan sampai OLT, lengkap dengan perkiraan redaman.
+ * Ditampilkan sebagai drawer mengambang, bukan kartu di ujung halaman — daftar
+ * pelanggan bisa ratusan baris, jadi panel inline akan muncul di luar layar dan
+ * terkesan "tak ada aksi" saat tombol diklik dari baris atas.
+ */
 function TracePanel({ trace, onClose }: { trace: CustomerTrace; onClose: () => void }) {
   return (
-    <div className="card stack">
-      <div className="spread">
-        <h3 style={{ margin: 0 }}>Jalur — {trace.customerName}</h3>
-        <button onClick={onClose}>Tutup</button>
-      </div>
+    <Drawer title={`Jalur — ${trace.customerName}`} onClose={onClose}>
       {trace.hops.length <= 1 ? (
         <p className="muted">Pelanggan ini belum tersambung ke jaringan.</p>
       ) : (
-        <>
+        <div className="stack">
           <div className="row" style={{ flexWrap: 'wrap', gap: '0.4rem' }}>
             {trace.hops.map((hop, index) => (
               <span key={`${hop.kind}-${index}`} className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
@@ -352,8 +353,8 @@ function TracePanel({ trace, onClose }: { trace: CustomerTrace; onClose: () => v
             </span>
             {trace.estimatedLossDb != null && ` · perkiraan rugi jalur ${trace.estimatedLossDb.toFixed(1)} dB`}
           </p>
-        </>
+        </div>
       )}
-    </div>
+    </Drawer>
   )
 }
