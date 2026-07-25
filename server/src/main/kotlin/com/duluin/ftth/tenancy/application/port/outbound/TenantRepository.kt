@@ -15,4 +15,7 @@ interface TenantRepository {
     fun findBySlug(slug: String): Tenant?
 
     fun findAll(pageRequest: PageRequest): Page<Tenant>
+
+    /** Id seluruh tenant berstatus ACTIVE — untuk pemindaian terjadwal lintas-tenant. */
+    fun findActiveIds(): List<UUID>
 }

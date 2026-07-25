@@ -53,3 +53,14 @@ ftth:
     access-key: ${FTTH_S3_ACCESS_KEY:ftth}
     secret-key: ${FTTH_S3_SECRET_KEY:ftthminio}
     path-style-access: ${FTTH_S3_PATH_STYLE:true}
+  cpe:
+    # Router/ONT pelanggan dikelola lewat GenieACS (TR-069). Satu instance ACS
+    # melayani semua tenant; kredensial NBI global — WAJIB diisi via env di prod.
+    genieacs:
+      base-url: ${FTTH_CPE_GENIEACS_BASE_URL:http://localhost:7557}
+      username: ${FTTH_CPE_GENIEACS_USERNAME:}
+      password: ${FTTH_CPE_GENIEACS_PASSWORD:}
+    # Seberapa sering proyeksi CPE disinkronkan dari ACS.
+    sync-interval: ${FTTH_CPE_SYNC_INTERVAL:PT5M}
+    # ONU dianggap online bila inform terakhirnya dalam ambang ini.
+    online-stale-after: ${FTTH_CPE_ONLINE_STALE_AFTER:PT15M}

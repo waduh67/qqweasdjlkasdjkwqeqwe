@@ -11,6 +11,20 @@ import type {
   SubscriberNeighbors,
 } from '../api/network'
 import { DOWN_CAUSE_LABEL, type OnuHistoryView, type OnuMetricView } from '../api/monitoring'
+import {
+  CPE_ACTION_LABEL,
+  getCpeDevice,
+  getCpeLive,
+  listCpeDevices,
+  rebootCpe,
+  setCpeWifi,
+  type CpeActionView,
+  type CpeDeviceDetail,
+  type CpeDeviceView,
+  type CpeLiveView,
+  type SetWifiRequest,
+  type WifiView,
+} from '../api/cpe'
 import { useCan } from '../auth/useCan'
 import { EmptyState, Spinner, StatusBadge, useToast } from '../components/ui'
 import { OpticalChart } from '../components/OpticalChart'
@@ -24,7 +38,7 @@ const HEALTH_COLOR: Record<string, string> = {
   UNKNOWN: 'var(--muted)',
 }
 
-type Tab = 'ringkasan' | 'jalur' | 'tetangga' | 'metrik'
+type Tab = 'ringkasan' | 'jalur' | 'tetangga' | 'metrik' | 'cpe'
 
 /**
  * Halaman detail satu pelanggan sebagai rute tersendiri (`/customers/:id`), bukan
@@ -67,6 +81,7 @@ export function CustomerDetailPage() {
   // tiap render, jadi tak boleh masuk daftar dependensi effect (memicu loop).
   const canAssign = can('customer.onu.assign')
   const canMetric = can('monitoring.metric.view')
+  const canCpe = can('cpe.device.view')
 
   // ODP untuk form pasang ONU — hanya bila boleh memasang.
   useEffect(() => {
@@ -188,12 +203,18 @@ export function CustomerDetailPage() {
         <button className={tab === 'metrik' ? 'active' : ''} onClick={() => setTab('metrik')}>
           Metrik
         </button>
+        {canCpe && (
+          <button className={tab === 'cpe' ? 'active' : ''} onClick={() => setTab('cpe')}>
+            CPE
+          </button>
+        )}
       </div>
 
       {tab === 'ringkasan' && <RingkasanTab customer={customer} odps={odps} run={run} />}
       {tab === 'jalur' && <JalurTab trace={trace} connected={connected} />}
       {tab === 'tetangga' && <TetanggaTab neighbors={neighbors} connected={connected} odpCount={odpCount} ponCount={ponCount} />}
       {tab === 'metrik' && <MetrikTab customer={customer} metrics={metrics} />}
+      {tab === 'cpe' && <CpeTab customerId={id} />}
     </div>
   )
 }
@@ -654,6 +675,334 @@ function MiniStat({ label, value, unit, warn }: { label: string; value: string; 
       <div className="stat-value" style={{ fontSize: '1.3rem', color: warn ? 'var(--warning-ink)' : undefined }}>
         {value}
         <span className="muted" style={{ fontSize: '0.7rem', fontWeight: 500 }}> {unit}</span>
+      </div>
+    </div>
+  )
+}
+
+/* ---------- Tab: CPE (router/ONT pelanggan via GenieACS) ---------- */
+
+/**
+ * Kelola & pantau CPE pelanggan. Daftar perangkat dibaca dari proyeksi tersimpan
+ * (cepat); saat sebuah perangkat dipilih, keadaan langsung (WiFi & host) ditarik
+ * dari ACS. Setiap aksi (reboot, ubah WiFi) digerbangi izin dan tercatat di jejak.
+ */
+function CpeTab({ customerId }: { customerId: string }) {
+  const [devices, setDevices] = useState<CpeDeviceView[] | null>(null)
+  const [selected, setSelected] = useState<string | null>(null)
+
+  const load = useCallback(() => {
+    void listCpeDevices(customerId)
+      .then((list) => {
+        setDevices(list)
+        setSelected((cur) => cur ?? list[0]?.id ?? null)
+      })
+      .catch(() => setDevices([]))
+  }, [customerId])
+
+  useEffect(() => load(), [load])
+
+  if (devices == null) {
+    return (
+      <div className="card" style={{ display: 'grid', placeItems: 'center', minHeight: 120 }}>
+        <Spinner />
+      </div>
+    )
+  }
+  if (devices.length === 0) {
+    return (
+      <div className="card">
+        <p className="muted" style={{ margin: 0 }}>
+          Belum ada perangkat CPE tertaut. Penautan otomatis saat serial ONU pelanggan cocok dengan
+          perangkat di GenieACS.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="stack" style={{ gap: '1rem' }}>
+      {devices.length > 1 && (
+        <div className="segment" style={{ alignSelf: 'flex-start', flexWrap: 'wrap' }}>
+          {devices.map((d) => (
+            <button key={d.id} className={selected === d.id ? 'active' : ''} onClick={() => setSelected(d.id)}>
+              {d.model ?? d.serialNumber}
+            </button>
+          ))}
+        </div>
+      )}
+      {selected && <CpeDevicePanel key={selected} deviceId={selected} />}
+    </div>
+  )
+}
+
+/** Waktu ringkas dari string ISO, mis. "20 Jul 14:05"; "—" bila kosong. */
+function fmtInstant(iso: string | null): string {
+  return iso ? fmtMoment(new Date(iso)) : '—'
+}
+
+/** Satu perangkat CPE: ringkasan, kontrol (reboot/WiFi), host, dan jejak aksi. */
+function CpeDevicePanel({ deviceId }: { deviceId: string }) {
+  const { can } = useCan()
+  const toast = useToast()
+  const [detail, setDetail] = useState<CpeDeviceDetail | null>(null)
+  const [live, setLive] = useState<CpeLiveView | null>(null)
+  const [rebooting, setRebooting] = useState(false)
+
+  const canReboot = can('cpe.device.reboot')
+  const canWifiView = can('cpe.wifi.view')
+  const canWifiManage = can('cpe.wifi.manage')
+
+  const loadDetail = useCallback(() => {
+    void getCpeDevice(deviceId)
+      .then(setDetail)
+      .catch(() => setDetail(null))
+  }, [deviceId])
+
+  const loadLive = useCallback(() => {
+    if (!canWifiView) return
+    void getCpeLive(deviceId)
+      .then(setLive)
+      .catch(() => setLive({ wifi: [], hosts: [] }))
+  }, [deviceId, canWifiView])
+
+  useEffect(() => loadDetail(), [loadDetail])
+  useEffect(() => loadLive(), [loadLive])
+
+  const reboot = async () => {
+    setRebooting(true)
+    try {
+      const action = await rebootCpe(deviceId)
+      if (action.status === 'SUCCESS') toast.success('Perintah reboot terkirim')
+      else toast.error(action.detail ?? 'Reboot gagal di ACS')
+      loadDetail()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Reboot gagal')
+    } finally {
+      setRebooting(false)
+    }
+  }
+
+  const saveWifi = async (body: SetWifiRequest) => {
+    try {
+      const action = await setCpeWifi(deviceId, body)
+      if (action.status === 'SUCCESS') toast.success('Perubahan WiFi terkirim')
+      else toast.error(action.detail ?? 'Ubah WiFi gagal di ACS')
+      loadLive()
+      loadDetail()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Ubah WiFi gagal')
+    }
+  }
+
+  if (!detail) {
+    return (
+      <div className="card" style={{ display: 'grid', placeItems: 'center', minHeight: 120 }}>
+        <Spinner />
+      </div>
+    )
+  }
+
+  const d = detail.device
+  return (
+    <div className="stack" style={{ gap: '1rem' }}>
+      <div className="card stack" style={{ gap: '0.75rem' }}>
+        <div className="spread" style={{ alignItems: 'flex-start', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div className="stack" style={{ gap: '0.35rem' }}>
+            <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <strong style={{ fontSize: '0.95rem' }}>{d.model ?? d.productClass ?? 'CPE'}</strong>
+              <span
+                className="badge"
+                title={d.online ? 'Inform terakhir masih baru' : 'Tak ada inform terbaru dari ACS'}
+                style={{ color: d.online ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
+              >
+                {d.online ? 'online' : 'offline'}
+              </span>
+              {d.manufacturer && <span className="badge neutral">{d.manufacturer}</span>}
+            </div>
+            <span className="muted" style={{ fontSize: '0.82rem' }}>
+              {d.serialNumber}
+              {d.softwareVersion && ` · fw ${d.softwareVersion}`}
+              {d.ipAddress && ` · ${d.ipAddress}`}
+            </span>
+          </div>
+          {canReboot && (
+            <button className="ghost danger" onClick={() => void reboot()} disabled={rebooting}>
+              {rebooting ? 'Mengirim…' : 'Reboot'}
+            </button>
+          )}
+        </div>
+        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
+          <Field label="Inform terakhir" value={fmtInstant(d.lastInformAt)} />
+          <Field label="OUI" value={d.oui ?? '—'} />
+          <Field label="Kelas produk" value={d.productClass ?? '—'} />
+          <Field label="GenieACS ID" value={d.genieacsId} />
+        </div>
+      </div>
+
+      {canWifiView && (
+        <div className="card stack" style={{ gap: '0.75rem' }}>
+          <strong style={{ fontSize: '0.95rem' }}>WiFi</strong>
+          {live == null ? (
+            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Memuat dari ACS…</p>
+          ) : live.wifi.length === 0 ? (
+            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Tak ada jaringan WiFi terbaca.</p>
+          ) : (
+            live.wifi.map((w) => (
+              <WifiCard
+                key={`${w.ref}:${w.ssid}:${w.passphrase ?? ''}`}
+                wifi={w}
+                canManage={canWifiManage}
+                onSave={saveWifi}
+              />
+            ))
+          )}
+        </div>
+      )}
+
+      {canWifiView && (
+        <div className="card stack" style={{ gap: '0.6rem' }}>
+          <strong style={{ fontSize: '0.95rem' }}>Perangkat tersambung</strong>
+          {live == null ? (
+            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Memuat…</p>
+          ) : live.hosts.length === 0 ? (
+            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Tak ada host aktif.</p>
+          ) : (
+            <div className="stack" style={{ gap: '0.35rem' }}>
+              {live.hosts.map((h, i) => (
+                <div key={`${h.macAddress ?? i}`} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
+                  <div className="stack" style={{ gap: 2, minWidth: 0 }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{h.hostName ?? '(tanpa nama)'}</span>
+                    <span className="muted tnum" style={{ fontSize: '0.78rem' }}>
+                      {h.ipAddress ?? '—'}
+                      {h.macAddress && ` · ${h.macAddress}`}
+                    </span>
+                  </div>
+                  <span
+                    className="badge"
+                    style={{ color: h.active ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
+                  >
+                    {h.active ? 'aktif' : 'idle'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <CpeActionLog actions={detail.recentActions} />
+    </div>
+  )
+}
+
+/**
+ * Kartu satu jaringan WiFi dengan editor SSID/password. State edit dimiliki lokal
+ * dan hanya field yang benar-benar berubah yang dikirim (server menolak "tanpa
+ * perubahan"), jadi tombol Simpan mati sampai ada yang diubah.
+ */
+function WifiCard({
+  wifi,
+  canManage,
+  onSave,
+}: {
+  wifi: WifiView
+  canManage: boolean
+  onSave: (body: SetWifiRequest) => Promise<void>
+}) {
+  const [ssid, setSsid] = useState(wifi.ssid)
+  const [passphrase, setPassphrase] = useState(wifi.passphrase ?? '')
+  const [showPass, setShowPass] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  const ssidChanged = ssid.trim() !== '' && ssid !== wifi.ssid
+  const passChanged = passphrase !== '' && passphrase !== (wifi.passphrase ?? '')
+  const dirty = ssidChanged || passChanged
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      await onSave({
+        ref: wifi.ref,
+        ssid: ssidChanged ? ssid : null,
+        passphrase: passChanged ? passphrase : null,
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div
+      className="stack"
+      style={{ gap: '0.5rem', padding: '0.6rem 0.7rem', border: '1px solid var(--border)', borderRadius: 8 }}
+    >
+      <div className="row" style={{ gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        {wifi.band && <span className="badge neutral">{wifi.band}</span>}
+        <span className="badge" style={{ color: wifi.enabled ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}>
+          {wifi.enabled ? 'aktif' : 'nonaktif'}
+        </span>
+      </div>
+      {canManage ? (
+        <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <label style={{ flex: 2, minWidth: 160 }}>
+            <span>SSID</span>
+            <input value={ssid} onChange={(e) => setSsid(e.target.value)} />
+          </label>
+          <label style={{ flex: 2, minWidth: 160 }}>
+            <span>Password</span>
+            <input
+              type={showPass ? 'text' : 'password'}
+              value={passphrase}
+              placeholder={wifi.passphrase == null ? 'tersembunyi — isi untuk mengganti' : ''}
+              onChange={(e) => setPassphrase(e.target.value)}
+            />
+          </label>
+          <button onClick={() => setShowPass((v) => !v)}>{showPass ? 'Sembunyikan' : 'Lihat'}</button>
+          <button className="primary" onClick={() => void save()} disabled={!dirty || saving}>
+            {saving ? 'Menyimpan…' : 'Simpan'}
+          </button>
+        </div>
+      ) : (
+        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
+          <Field label="SSID" value={wifi.ssid} />
+          <Field label="Password" value={wifi.passphrase ?? 'tersembunyi'} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Jejak aksi terakhir ke perangkat — reboot / ubah WiFi, berhasil atau gagal. */
+function CpeActionLog({ actions }: { actions: CpeActionView[] }) {
+  if (actions.length === 0) return null
+  return (
+    <div className="card stack" style={{ gap: '0.5rem' }}>
+      <strong style={{ fontSize: '0.95rem' }}>Jejak aksi</strong>
+      <div className="stack" style={{ gap: '0.35rem' }}>
+        {actions.map((a) => (
+          <div key={a.id} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
+            <div className="stack" style={{ gap: 2, minWidth: 0 }}>
+              <span style={{ fontSize: '0.85rem' }}>
+                <span style={{ fontWeight: 600 }}>{CPE_ACTION_LABEL[a.action]}</span>
+                {a.detail && <span className="muted"> · {a.detail}</span>}
+              </span>
+              <span className="muted" style={{ fontSize: '0.78rem' }}>
+                {fmtInstant(a.requestedAt)}
+                {a.requestedByEmail && ` · ${a.requestedByEmail}`}
+              </span>
+            </div>
+            <span
+              className="badge"
+              style={{
+                color: a.status === 'SUCCESS' ? 'var(--good-ink)' : 'var(--critical-ink)',
+                fontWeight: 600,
+              }}
+            >
+              {a.status === 'SUCCESS' ? 'berhasil' : 'gagal'}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   )

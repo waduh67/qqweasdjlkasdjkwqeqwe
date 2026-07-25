@@ -101,6 +101,12 @@ object PermissionCatalog {
         perm("workorder.evidence.view", "Lihat bukti pengerjaan")
         perm("workorder.evidence.manage", "Unggah/hapus bukti pengerjaan")
 
+        // CPE (router/ONT pelanggan via GenieACS)
+        perm("cpe.device.view", "Lihat perangkat CPE pelanggan")
+        perm("cpe.device.reboot", "Reboot perangkat CPE")
+        perm("cpe.wifi.view", "Lihat WiFi & host tersambung")
+        perm("cpe.wifi.manage", "Ubah SSID/password WiFi")
+
         // Notification
         perm("notification.template.view", "Lihat template notifikasi")
         perm("notification.template.manage", "Kelola template notifikasi")

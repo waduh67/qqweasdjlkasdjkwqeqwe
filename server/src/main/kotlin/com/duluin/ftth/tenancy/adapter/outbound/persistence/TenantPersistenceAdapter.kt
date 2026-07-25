@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.infrastructure.persistence.toDomainPage
 import com.duluin.ftth.common.infrastructure.persistence.toPageable
+import com.duluin.ftth.tenancy.TenantStatus
 import com.duluin.ftth.tenancy.application.port.outbound.TenantRepository
 import com.duluin.ftth.tenancy.domain.model.Tenant
 import org.springframework.stereotype.Component
@@ -35,6 +36,8 @@ class TenantPersistenceAdapter(
 
     override fun findAll(pageRequest: PageRequest): Page<Tenant> =
         jpa.findAll(pageRequest.toPageable()).map(TenantJpaEntity::toDomain).toDomainPage()
+
+    override fun findActiveIds(): List<UUID> = jpa.findIdsByStatus(TenantStatus.ACTIVE)
 }
 
 private fun TenantJpaEntity.toDomain(): Tenant =

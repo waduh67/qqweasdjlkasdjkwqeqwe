@@ -47,6 +47,9 @@ class TenantService(
         tenantRepository.findBySlug(PLATFORM_SLUG)?.id
             ?: throw NotFoundException("Tenant platform belum diinisialisasi")
 
+    @Transactional(readOnly = true)
+    override fun findActiveTenantIds(): List<UUID> = tenantRepository.findActiveIds()
+
     override fun ensureTenant(slug: String, name: String): TenantRef {
         val normalized = slug.trim().lowercase()
         tenantRepository.findBySlug(normalized)?.let { return it.toRef() }
