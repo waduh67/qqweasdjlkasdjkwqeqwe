@@ -33,6 +33,9 @@ class PonPortPersistenceAdapter(
     override fun findByOltId(oltId: UUID): List<PonPort> =
         jpa.findByOltIdOrderByLabel(oltId).map { it.toDomain() }
 
+    override fun findByOltIdAndLabel(oltId: UUID, label: String): PonPort? =
+        jpa.findByOltIdAndLabel(oltId, label)?.toDomain()
+
     override fun existsByOltIdAndLabel(oltId: UUID, label: String): Boolean =
         jpa.existsByOltIdAndLabel(oltId, label)
 

@@ -14,6 +14,12 @@ interface CustomerRepository {
 
     fun findAllByIds(ids: Set<UUID>): List<Customer>
 
+    /**
+     * Pelanggan aktif (belum diputus) yang tak punya ONU terpasang di ODP mana pun.
+     * `null` = seluruh area; set kosong = tanpa hasil.
+     */
+    fun findAwaitingInstallation(areaIds: Set<UUID>?): List<Customer>
+
     fun search(
         query: String,
         areaIds: Set<UUID>?,

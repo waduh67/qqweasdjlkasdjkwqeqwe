@@ -7,6 +7,7 @@ import com.duluin.ftth.customer.ProvisionOnuCommand
 import com.duluin.ftth.monitoring.application.port.inbound.DiscoveredOnuView
 import com.duluin.ftth.monitoring.application.port.inbound.ManageDiscoveredOnuUseCase
 import com.duluin.ftth.monitoring.application.port.inbound.ProvisionDiscoveredOnuCommand
+import com.duluin.ftth.monitoring.application.port.inbound.ProvisioningSuggestion
 import com.duluin.ftth.monitoring.application.port.outbound.DiscoveredOnuRepository
 import com.duluin.ftth.monitoring.domain.model.DiscoveredOnu
 import com.duluin.ftth.monitoring.domain.model.DiscoveredOnuState
@@ -24,10 +25,16 @@ import java.util.UUID
 class DiscoveredOnuService(
     private val repository: DiscoveredOnuRepository,
     private val customerApi: CustomerApi,
+    private val resolver: OnuProvisioningResolver,
 ) : ManageDiscoveredOnuUseCase {
 
-    override fun list(state: DiscoveredOnuState?): List<DiscoveredOnuView> =
-        repository.findByState(state ?: DiscoveredOnuState.DISCOVERED).map { it.toView() }
+    override fun list(state: DiscoveredOnuState?): List<DiscoveredOnuView> {
+        val effective = state ?: DiscoveredOnuState.DISCOVERED
+        val rows = repository.findByState(effective)
+        // Saran auto-link hanya relevan untuk baris yang masih menuntut tindakan.
+        val suggestions = if (effective.actionable) resolver.resolveAll(rows) else emptyMap()
+        return rows.map { it.toView(suggestions[it.id]) }
+    }
 
     @Transactional
     override fun provision(id: UUID, command: ProvisionDiscoveredOnuCommand): DiscoveredOnuView {
@@ -60,7 +67,7 @@ class DiscoveredOnuService(
     private fun require(id: UUID): DiscoveredOnu =
         repository.findById(id) ?: throw NotFoundException("ONU terdeteksi $id tidak ditemukan")
 
-    private fun DiscoveredOnu.toView() = DiscoveredOnuView(
+    private fun DiscoveredOnu.toView(suggestion: ProvisioningSuggestion? = null) = DiscoveredOnuView(
         id = id,
         serialNumber = serialNumber,
         oltId = oltId,
@@ -72,5 +79,6 @@ class DiscoveredOnuService(
         lastSeenAt = lastSeenAt,
         seenCount = seenCount,
         state = state,
+        suggestion = suggestion,
     )
 }

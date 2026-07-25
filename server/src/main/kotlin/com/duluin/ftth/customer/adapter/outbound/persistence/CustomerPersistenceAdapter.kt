@@ -47,6 +47,12 @@ class CustomerPersistenceAdapter(
     override fun findAllByIds(ids: Set<UUID>): List<Customer> =
         if (ids.isEmpty()) emptyList() else jpa.findAllById(ids).map { it.toDomain() }
 
+    override fun findAwaitingInstallation(areaIds: Set<UUID>?): List<Customer> = when {
+        areaIds == null -> jpa.findAwaitingInstallation(CustomerStatus.TERMINATED)
+        areaIds.isEmpty() -> emptyList()
+        else -> jpa.findAwaitingInstallationInAreas(CustomerStatus.TERMINATED, areaIds)
+    }.map { it.toDomain() }
+
     override fun search(
         query: String,
         areaIds: Set<UUID>?,

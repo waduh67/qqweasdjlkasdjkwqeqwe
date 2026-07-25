@@ -1,19 +1,25 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
-import type { DiscoveredOnuState, DiscoveredOnuView } from '../api/monitoring'
+import type {
+  DiscoveredOnuState,
+  DiscoveredOnuView,
+  ProvisioningSuggestion,
+  SuggestionConfidence,
+} from '../api/monitoring'
 import type { CustomerView, OdpView } from '../api/network'
 import { useCan } from '../auth/useCan'
-import { Drawer, EmptyState, SkeletonRows, StatusBadge, useToast } from '../components/ui'
+import { Badge, Drawer, EmptyState, SkeletonRows, StatusBadge, useToast } from '../components/ui'
 import { IconInbox } from '../components/icons'
 
 /**
  * Kotak masuk auto-provisioning: ONU yang dilaporkan OLT tapi belum terdaftar.
  *
- * Alih-alih membuang serial tak dikenal ke log, monitoring menangkapnya ke sini;
- * operator memilih pelanggan + port ODP untuk menuntaskannya tanpa mengetik ulang
- * serial. `seenCount` sengaja ditonjolkan: membedakan perangkat yang benar-benar
- * terpasang dari serial yang cuma sekali lewat.
+ * Alih-alih membuang serial tak dikenal ke log, monitoring menangkapnya ke sini
+ * lalu menebak {pelanggan, ODP, port} dari topologi PON port + backlog instalasi.
+ * Bila cocok tunggal, operator cukup 1-klik "Terima"; selebihnya saran mengisi
+ * form di muka agar tinggal diperiksa. `seenCount` tetap ditonjolkan: membedakan
+ * perangkat yang benar-benar terpasang dari serial yang cuma sekali lewat.
  */
 
 const STATES: { key: DiscoveredOnuState; label: string }[] = [
@@ -21,6 +27,18 @@ const STATES: { key: DiscoveredOnuState; label: string }[] = [
   { key: 'PROVISIONED', label: 'Terprovisi' },
   { key: 'IGNORED', label: 'Diabaikan' },
 ]
+
+type ConfTone = 'good' | 'warning' | 'accent' | 'neutral'
+const CONFIDENCE: Record<SuggestionConfidence, { label: string; tone: ConfTone }> = {
+  HIGH: { label: 'Cocok', tone: 'good' },
+  MEDIUM: { label: 'Perlu cek', tone: 'warning' },
+  LOW: { label: 'Sebagian', tone: 'accent' },
+  NONE: { label: 'Manual', tone: 'neutral' },
+}
+
+/** Lengkap untuk 1-klik: pelanggan, ODP, dan port semuanya tertebak. */
+const isComplete = (s: ProvisioningSuggestion | null): boolean =>
+  s != null && s.customerId != null && s.odpId != null && s.portNumber != null
 
 export function ProvisioningPage() {
   const { can } = useCan()
@@ -69,15 +87,31 @@ export function ProvisioningPage() {
     }
   }
 
+  // Terima saran apa adanya: menuntaskan tanpa membuka form, memakai nilai tebakan.
+  const accept = (onu: DiscoveredOnuView) => {
+    const s = onu.suggestion!
+    return run(
+      () =>
+        api.post(`/api/monitoring/discovered-onus/${onu.id}/provision`, {
+          customerId: s.customerId,
+          odpId: s.odpId,
+          portNumber: s.portNumber,
+          installRxPowerDbm: onu.lastRxPowerDbm,
+        }),
+      `ONU ${onu.serialNumber} terprovisi`,
+    )
+  }
+
   const showActions = manage && state === 'DISCOVERED'
+  const showSuggestion = state === 'DISCOVERED'
 
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
       <div>
         <h1 className="page-title">Provisioning ONU</h1>
         <p className="page-sub">
-          Perangkat yang dilaporkan OLT tapi belum terdaftar. Tuntaskan menjadi pelanggan terpasang
-          tanpa mengetik ulang serial.
+          Perangkat yang dilaporkan OLT tapi belum terdaftar. Sistem menebak pelanggan, ODP, dan port
+          dari topologi — tinggal periksa lalu tuntaskan.
         </p>
       </div>
 
@@ -115,6 +149,7 @@ export function ProvisioningPage() {
                   <th>Status</th>
                   <th>Redaman</th>
                   <th>Terlihat</th>
+                  {showSuggestion && <th>Saran auto-link</th>}
                   {showActions && <th />}
                 </tr>
               </thead>
@@ -137,12 +172,28 @@ export function ProvisioningPage() {
                       ×{onu.seenCount}
                       <div>{new Date(onu.lastSeenAt).toLocaleString('id-ID')}</div>
                     </td>
+                    {showSuggestion && (
+                      <td style={{ maxWidth: '20rem' }}>
+                        <SuggestionCell suggestion={onu.suggestion} />
+                      </td>
+                    )}
                     {showActions && (
                       <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <div className="row" style={{ justifyContent: 'flex-end', gap: '0.35rem' }}>
-                          <button className="primary small" onClick={() => setProvision(onu)}>
-                            Provisi
-                          </button>
+                          {isComplete(onu.suggestion) ? (
+                            <>
+                              <button className="primary small" onClick={() => void accept(onu)}>
+                                Terima
+                              </button>
+                              <button className="ghost small" onClick={() => setProvision(onu)}>
+                                Ubah
+                              </button>
+                            </>
+                          ) : (
+                            <button className="primary small" onClick={() => setProvision(onu)}>
+                              Provisi
+                            </button>
+                          )}
                           <button
                             className="ghost small"
                             onClick={() =>
@@ -177,6 +228,30 @@ export function ProvisioningPage() {
   )
 }
 
+/** Ringkas saran di satu sel: nada keyakinan + target tertebak + alasannya. */
+function SuggestionCell({ suggestion }: { suggestion: ProvisioningSuggestion | null }) {
+  if (!suggestion) return <span className="muted">—</span>
+  const conf = CONFIDENCE[suggestion.confidence]
+  return (
+    <div className="stack" style={{ gap: '0.25rem' }}>
+      <div className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
+        <Badge tone={conf.tone}>{conf.label}</Badge>
+        {suggestion.odpId && (
+          <span style={{ fontSize: '0.84rem' }}>
+            {suggestion.customerName ? `${suggestion.customerName} · ` : ''}
+            {suggestion.odpCode}
+            {suggestion.portNumber != null ? ` · port ${suggestion.portNumber}` : ''}
+          </span>
+        )}
+      </div>
+      <span className="muted" style={{ fontSize: '0.76rem' }}>{suggestion.reason}</span>
+    </div>
+  )
+}
+
+/** Pelanggan terpilih di drawer — cukup id + nama; kode opsional (tak selalu ada dari saran). */
+type PickedCustomer = { id: string; name: string; code: string | null }
+
 /** Form penuntasan: pilih pelanggan (cari), ODP + port; serial sudah pasti dari perangkat. */
 function ProvisionDrawer({
   discovered,
@@ -190,11 +265,15 @@ function ProvisionDrawer({
   onDone: () => void
 }) {
   const toast = useToast()
+  const suggestion = discovered.suggestion
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<CustomerView[]>([])
-  const [customer, setCustomer] = useState<CustomerView | null>(null)
-  const [odpId, setOdpId] = useState('')
-  const [port, setPort] = useState('')
+  // Pra-isi dari saran: pelanggan, ODP, dan port yang berhasil ditebak.
+  const [customer, setCustomer] = useState<PickedCustomer | null>(
+    suggestion?.customerId ? { id: suggestion.customerId, name: suggestion.customerName ?? '', code: null } : null,
+  )
+  const [odpId, setOdpId] = useState(suggestion?.odpId ?? '')
+  const [port, setPort] = useState(suggestion?.portNumber != null ? String(suggestion.portNumber) : '')
   const [rx, setRx] = useState(discovered.lastRxPowerDbm != null ? String(discovered.lastRxPowerDbm) : '')
   const [saving, setSaving] = useState(false)
 
@@ -248,12 +327,20 @@ function ProvisionDrawer({
           {discovered.ponPortLabel ? ` · ${discovered.ponPortLabel}` : ''} · ×{discovered.seenCount}
         </div>
 
+        {suggestion && suggestion.confidence !== 'NONE' && (
+          <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-start' }}>
+            <Badge tone={CONFIDENCE[suggestion.confidence].tone}>{CONFIDENCE[suggestion.confidence].label}</Badge>
+            <span className="muted" style={{ fontSize: '0.82rem' }}>{suggestion.reason}</span>
+          </div>
+        )}
+
         <label>
           <span>Pelanggan</span>
           {customer ? (
             <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
               <span>
-                {customer.name} <span className="muted">· {customer.code}</span>
+                {customer.name}
+                {customer.code ? <span className="muted"> · {customer.code}</span> : null}
               </span>
               <button className="ghost small" onClick={() => setCustomer(null)}>
                 Ganti
@@ -275,7 +362,7 @@ function ProvisionDrawer({
                 className="ghost small"
                 style={{ justifyContent: 'flex-start', textAlign: 'left' }}
                 onClick={() => {
-                  setCustomer(c)
+                  setCustomer({ id: c.id, name: c.name, code: c.code })
                   setQuery('')
                   setResults([])
                 }}

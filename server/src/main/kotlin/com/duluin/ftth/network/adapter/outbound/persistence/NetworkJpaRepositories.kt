@@ -49,6 +49,7 @@ interface OltJpaRepository : JpaRepository<OltJpaEntity, UUID>, JpaSpecification
 
 interface PonPortJpaRepository : JpaRepository<PonPortJpaEntity, UUID> {
     fun findByOltIdOrderByLabel(oltId: UUID): List<PonPortJpaEntity>
+    fun findByOltIdAndLabel(oltId: UUID, label: String): PonPortJpaEntity?
     fun existsByOltIdAndLabel(oltId: UUID, label: String): Boolean
 
     @Query(

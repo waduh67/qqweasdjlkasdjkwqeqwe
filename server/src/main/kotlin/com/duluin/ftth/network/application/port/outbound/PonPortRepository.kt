@@ -13,6 +13,9 @@ interface PonPortRepository {
 
     fun findByOltId(oltId: UUID): List<PonPort>
 
+    /** PON port sebuah OLT menurut labelnya — memetakan label yang dilaporkan collector ke id. */
+    fun findByOltIdAndLabel(oltId: UUID, label: String): PonPort?
+
     fun existsByOltIdAndLabel(oltId: UUID, label: String): Boolean
 
     /** Jumlah PON port per OLT dalam satu query — menghindari N+1 di daftar OLT. */

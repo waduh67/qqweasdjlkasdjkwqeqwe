@@ -101,6 +101,14 @@ interface NetworkApi {
     fun odpIdsUnderPonPort(ponPortId: UUID): Set<UUID>
 
     /**
+     * ODP kandidat di bawah PON port yang dilaporkan collector, diresolusi dari
+     * label: (OLT + label PON port) → PON port → ODC → ODP. Dipakai monitoring
+     * untuk menebak ODP sebuah ONU liar dari topologi, sebelum operator memilih.
+     * Kosong bila label tak dikenal atau PON port belum punya ODP di hilir.
+     */
+    fun candidateOdpsUnderPonPort(oltId: UUID, ponPortLabel: String?): List<OdpRef>
+
+    /**
      * Dampak topologis bila sebuah kabel diputus: seluruh subpohon fisik di hilir
      * ujung bawahnya. Dipakai gis untuk simulasi "kalau kabel ini putus, siapa
      * yang kena".

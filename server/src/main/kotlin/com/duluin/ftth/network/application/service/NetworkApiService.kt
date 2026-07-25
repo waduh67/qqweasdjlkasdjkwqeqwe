@@ -75,6 +75,13 @@ class NetworkApiService(
         return if (odcIds.isEmpty()) emptySet() else odpRepository.findIdsByOdcIds(odcIds)
     }
 
+    override fun candidateOdpsUnderPonPort(oltId: UUID, ponPortLabel: String?): List<OdpRef> {
+        val label = ponPortLabel?.trim().orEmpty()
+        if (label.isEmpty()) return emptyList()
+        val ponPort = ponPortRepository.findByOltIdAndLabel(oltId, label) ?: return emptyList()
+        return findOdpsByIds(odpIdsUnderPonPort(ponPort.id))
+    }
+
     override fun cablesTouchingNodes(nodeIds: Set<UUID>): List<CablePath> =
         cableRepository.findByEndpointNodeIds(nodeIds).map { it.toCablePath() }
 

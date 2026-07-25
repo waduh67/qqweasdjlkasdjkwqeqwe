@@ -47,4 +47,42 @@ data class DiscoveredOnuView(
     val lastSeenAt: Instant,
     val seenCount: Int,
     val state: DiscoveredOnuState,
+    /**
+     * Tebakan auto-link {pelanggan, ODP, port} dari topologi + backlog instalasi,
+     * agar operator cukup mengonfirmasi. `null` untuk baris yang tak lagi menunggu
+     * tindakan (sudah diprovisikan/diabaikan).
+     */
+    val suggestion: ProvisioningSuggestion? = null,
 )
+
+/** Seberapa yakin saran auto-link, menentukan cara UI menyajikannya. */
+enum class SuggestionConfidence {
+    /** Cocok tunggal: pelanggan menunggu instalasi + ODP + port jelas — layak 1-klik. */
+    HIGH,
+
+    /** Pelanggan & ODP tertebak tapi ada alternatif — pra-isi, tapi minta operator memeriksa. */
+    MEDIUM,
+
+    /** Hanya ODP + port yang bisa ditebak dari topologi; pelanggan dipilih manual. */
+    LOW,
+
+    /** Tak ada yang bisa ditebak (PON port belum terpetakan / OLT belum dikenal). */
+    NONE,
+}
+
+/**
+ * Saran penautan sebuah ONU liar. Field bernilai `null` berarti bagian itu tak
+ * bisa ditebak dan harus diisi operator; [reason] selalu menjelaskan alasannya.
+ */
+data class ProvisioningSuggestion(
+    val confidence: SuggestionConfidence,
+    val customerId: UUID?,
+    val customerName: String?,
+    val odpId: UUID?,
+    val odpCode: String?,
+    val portNumber: Int?,
+    val reason: String,
+) {
+    /** Lengkap untuk 1-klik: pelanggan, ODP, dan port sudah tertebak. */
+    val complete: Boolean get() = customerId != null && odpId != null && portNumber != null
+}

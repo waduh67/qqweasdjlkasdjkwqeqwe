@@ -41,6 +41,9 @@ class CustomerApiService(
     override fun findCustomersByIds(ids: Set<UUID>): List<CustomerRef> =
         if (ids.isEmpty()) emptyList() else customerRepository.findAllByIds(ids).map { it.toRef() }
 
+    override fun findAwaitingInstallation(areaIds: Set<UUID>?): List<CustomerRef> =
+        customerRepository.findAwaitingInstallation(areaIds).map { it.toRef() }
+
     /**
      * Pelanggan bisa punya beberapa ONU (mis. unit cadangan yang belum dibongkar);
      * yang dilaporkan adalah yang benar-benar terpasang di ODP.

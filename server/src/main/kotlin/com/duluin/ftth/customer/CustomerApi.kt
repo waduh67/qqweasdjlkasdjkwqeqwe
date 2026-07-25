@@ -18,6 +18,16 @@ interface CustomerApi {
     fun findOccupantsOfOdp(odpId: UUID): List<OdpOccupant>
 
     /**
+     * Pelanggan aktif yang belum punya ONU terpasang di ODP mana pun — kandidat
+     * pemilik sebuah ONU liar yang baru terlihat OLT. Dipakai monitoring untuk
+     * menautkan ONU terdeteksi ke pelanggan yang menunggu instalasi.
+     *
+     * @param areaIds `null` = tanpa batas area; set kosong = pengguna tanpa area
+     *        sehingga hasilnya kosong.
+     */
+    fun findAwaitingInstallation(areaIds: Set<UUID>?): List<CustomerRef>
+
+    /**
      * Penempatan fisik seorang pelanggan (ODP mana, port berapa, ONU apa).
      * `null` bila pelanggan belum punya ONU yang terpasang — kondisi normal untuk
      * pelanggan yang baru didaftarkan dan menunggu instalasi.

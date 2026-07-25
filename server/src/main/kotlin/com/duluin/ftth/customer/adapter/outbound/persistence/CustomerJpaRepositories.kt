@@ -1,5 +1,6 @@
 package com.duluin.ftth.customer.adapter.outbound.persistence
 
+import com.duluin.ftth.customer.domain.model.CustomerStatus
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Query
@@ -16,6 +17,36 @@ interface CustomerJpaRepository :
     JpaRepository<CustomerJpaEntity, UUID>,
     JpaSpecificationExecutor<CustomerJpaEntity> {
     fun existsByCode(code: String): Boolean
+
+    /**
+     * Pelanggan menunggu instalasi: belum diputus dan tak punya satu pun ONU yang
+     * terpasang ke ODP. Sub-kueri NOT EXISTS ke ONU ikut disaring `@TenantId`.
+     */
+    @Query(
+        """
+        select c from CustomerJpaEntity c
+        where c.status <> :excluded
+          and not exists (
+            select 1 from OnuJpaEntity o where o.customerId = c.id and o.odpId is not null
+          )
+        """,
+    )
+    fun findAwaitingInstallation(@Param("excluded") excluded: CustomerStatus): List<CustomerJpaEntity>
+
+    @Query(
+        """
+        select c from CustomerJpaEntity c
+        where c.status <> :excluded
+          and c.areaId in :areaIds
+          and not exists (
+            select 1 from OnuJpaEntity o where o.customerId = c.id and o.odpId is not null
+          )
+        """,
+    )
+    fun findAwaitingInstallationInAreas(
+        @Param("excluded") excluded: CustomerStatus,
+        @Param("areaIds") areaIds: Collection<UUID>,
+    ): List<CustomerJpaEntity>
 }
 
 interface SubscriptionJpaRepository : JpaRepository<SubscriptionJpaEntity, UUID> {

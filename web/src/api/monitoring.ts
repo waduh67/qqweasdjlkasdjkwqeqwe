@@ -112,6 +112,23 @@ export interface OnuHistoryView {
 /** Tahap sebuah ONU di kotak masuk auto-provisioning. */
 export type DiscoveredOnuState = 'DISCOVERED' | 'PROVISIONED' | 'IGNORED'
 
+/** Seberapa yakin saran auto-link — menentukan cara UI menyajikannya. */
+export type SuggestionConfidence = 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'
+
+/**
+ * Tebakan {pelanggan, ODP, port} untuk sebuah ONU liar. Field `null` berarti
+ * bagian itu tak bisa ditebak dan harus diisi operator; `reason` menjelaskannya.
+ */
+export interface ProvisioningSuggestion {
+  confidence: SuggestionConfidence
+  customerId: string | null
+  customerName: string | null
+  odpId: string | null
+  odpCode: string | null
+  portNumber: number | null
+  reason: string
+}
+
 /**
  * ONU yang dilaporkan OLT tapi belum terdaftar — perangkat liar yang menunggu
  * dituntaskan operator menjadi pelanggan terpasang.
@@ -130,4 +147,6 @@ export interface DiscoveredOnuView {
   /** Berapa siklus polling melihat serial ini — sekali lewat vs benar-benar terpasang. */
   seenCount: number
   state: DiscoveredOnuState
+  /** Tebakan auto-link; `null` untuk baris yang tak lagi menunggu tindakan. */
+  suggestion: ProvisioningSuggestion | null
 }

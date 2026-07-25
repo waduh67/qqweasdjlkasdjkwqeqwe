@@ -80,9 +80,9 @@ class AutoProvisioningIT {
             "$.apiKey",
         )
 
-    private fun reading(serial: String, oltCode: String, rx: Double?): String =
+    private fun reading(serial: String, oltCode: String, rx: Double?, ponPortLabel: String = "1/1/1"): String =
         """
-        {"serialNumber":"$serial","oltCode":"$oltCode","ponPortLabel":"1/1/1","status":"UNKNOWN",
+        {"serialNumber":"$serial","oltCode":"$oltCode","ponPortLabel":"$ponPortLabel","status":"UNKNOWN",
          "rxPowerDbm":${rx ?: "null"},"txPowerDbm":null,"uptimeSeconds":null,
          "distanceMeters":null,"observedAt":"${Instant.now()}"}
         """.trimIndent()
@@ -179,6 +179,74 @@ class AutoProvisioningIT {
         val known = postAsCollector(apiKey, batch(reading(serial, oltCode, -22.0)))
         assertThat(JsonPath.read<Int>(known, "$.accepted")).isEqualTo(1)
         assertThat(JsonPath.read<List<String>>(known, "$.unknownSerialNumbers")).isEmpty()
+    }
+
+    @Test
+    fun `saran auto-link menebak pelanggan menunggu instalasi, ODP, dan port`() {
+        val token = newTenantAdmin("suggest")
+        val (oltCode, odp, customer) = scaffold(token)
+        val apiKey = newCollector(token)
+        val serial = "SN-${uniq().uppercase()}"
+
+        postAsCollector(apiKey, batch(reading(serial, oltCode, -22.0)))
+        val listed = inbox(token)
+
+        // Satu-satunya pelanggan menunggu instalasi + satu ODP kandidat → cocok tunggal.
+        assertThat(JsonPath.read<String>(listed, "$[0].suggestion.confidence")).isEqualTo("HIGH")
+        assertThat(JsonPath.read<String>(listed, "$[0].suggestion.customerId")).isEqualTo(customer)
+        assertThat(JsonPath.read<String>(listed, "$[0].suggestion.odpId")).isEqualTo(odp)
+        assertThat(JsonPath.read<Int>(listed, "$[0].suggestion.portNumber")).isEqualTo(1)
+
+        // Operator 1-klik: menuntaskan memakai persis nilai yang disarankan.
+        val discoveredId = JsonPath.read<String>(listed, "$[0].id")
+        val suggestedCustomer = JsonPath.read<String>(listed, "$[0].suggestion.customerId")
+        val suggestedOdp = JsonPath.read<String>(listed, "$[0].suggestion.odpId")
+        val suggestedPort = JsonPath.read<Int>(listed, "$[0].suggestion.portNumber")
+        val provisioned = post(
+            "/api/monitoring/discovered-onus/$discoveredId/provision", token,
+            """{"customerId":"$suggestedCustomer","odpId":"$suggestedOdp","portNumber":$suggestedPort}""",
+            expected = 200,
+        )
+        assertThat(JsonPath.read<String>(provisioned, "$.state")).isEqualTo("PROVISIONED")
+
+        val onus = getJson("/api/customers/$customer/onus", token)
+        assertThat(JsonPath.read<List<String>>(onus, "$[*].odpId")).containsExactly(odp)
+        assertThat(JsonPath.read<List<Int>>(onus, "$[*].odpPortNumber")).containsExactly(1)
+    }
+
+    @Test
+    fun `tanpa pelanggan menunggu instalasi, saran hanya ODP dan port kosong berikutnya`() {
+        val token = newTenantAdmin("lowsug")
+        val (oltCode, odp, customer) = scaffold(token)
+        val apiKey = newCollector(token)
+
+        // Pelanggan satu-satunya dipasangi ONU di port 1 → tak ada lagi yang menunggu instalasi.
+        val existing = id(post("/api/customers/$customer/onus", token, """{"serialNumber":"SN-OLD-${uniq().uppercase()}"}"""))
+        post("/api/customers/onus/$existing/attach", token, """{"odpId":"$odp","portNumber":1}""", expected = 200)
+
+        postAsCollector(apiKey, batch(reading("SN-${uniq().uppercase()}", oltCode, -22.0)))
+        val listed = inbox(token)
+
+        assertThat(JsonPath.read<String>(listed, "$[0].suggestion.confidence")).isEqualTo("LOW")
+        assertThat(JsonPath.read<String?>(listed, "$[0].suggestion.customerId")).isNull()
+        assertThat(JsonPath.read<String>(listed, "$[0].suggestion.odpId")).isEqualTo(odp)
+        // Port 1 terpakai → saran melompat ke port kosong berikutnya.
+        assertThat(JsonPath.read<Int>(listed, "$[0].suggestion.portNumber")).isEqualTo(2)
+    }
+
+    @Test
+    fun `PON port yang belum terpetakan tidak menghasilkan saran`() {
+        val token = newTenantAdmin("nosug")
+        val (oltCode, _, _) = scaffold(token)
+        val apiKey = newCollector(token)
+
+        // Label PON port yang tak dikenal OLT → tak ada ODP kandidat.
+        postAsCollector(apiKey, batch(reading("SN-${uniq().uppercase()}", oltCode, -22.0, ponPortLabel = "9/9/9")))
+        val listed = inbox(token)
+
+        assertThat(JsonPath.read<String>(listed, "$[0].suggestion.confidence")).isEqualTo("NONE")
+        assertThat(JsonPath.read<String?>(listed, "$[0].suggestion.odpId")).isNull()
+        assertThat(JsonPath.read<String?>(listed, "$[0].suggestion.customerId")).isNull()
     }
 
     @Test
