@@ -166,3 +166,10 @@ export const IconWorkOrder = (p: IconProps) => (
     <path d="m9 13 2 2 4-4" />
   </Icon>
 )
+
+export const IconSidebar = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M9 4v16" />
+  </Icon>
+)

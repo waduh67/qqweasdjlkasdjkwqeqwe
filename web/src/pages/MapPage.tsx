@@ -388,7 +388,8 @@ export function MapPage() {
     // Kontrol zoom di kanan-bawah agar tidak tertimpa panel info yang mengambang
     // di pojok kanan-atas peta.
     instance.addControl(new maplibregl.NavigationControl(), 'bottom-right')
-    instance.addControl(new maplibregl.ScaleControl(), 'bottom-left')
+    // Skala ikut di kanan-bawah; pojok kiri-bawah kini ditempati kartu info peta.
+    instance.addControl(new maplibregl.ScaleControl(), 'bottom-right')
 
     // Menutup semua panel info sebelum membuka yang baru — hanya satu tampil.
     const clearPanels = () => {
@@ -624,9 +625,16 @@ export function MapPage() {
     })
 
     map.current = instance
+
+    // Sidebar bisa diciutkan/dilebarkan, jadi lebar kanvas berubah tanpa resize
+    // jendela — MapLibre perlu diberi tahu agar peta mengisi ulang penuh.
+    const ro = new ResizeObserver(() => instance.resize())
+    if (container.current) ro.observe(container.current)
+
     return () => {
       if (animRef.current) window.clearInterval(animRef.current)
       if (impactedRef.current) window.clearInterval(impactedRef.current)
+      ro.disconnect()
       tool.current?.destroy()
       tool.current = null
       instance.remove()
@@ -938,32 +946,33 @@ export function MapPage() {
   const editingMode = toolState?.mode === 'edit'
 
   return (
-    <div className="stack">
-      <div className="spread">
-        <div>
-          <h1 className="page-title">Peta Jaringan</h1>
-          <p className="page-sub">Aset, pelanggan, dan jalur kabel — dari POP sampai rumah.</p>
-        </div>
-        <div className="row" style={{ gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          {can('network.odp.view') && (
-            <button
-              className={`small ${heatmap ? 'primary' : 'ghost'}`}
-              onClick={() => setHeatmap((v) => !v)}
-              title="Warnai ODP menurut pemakaian port untuk perencanaan kapasitas"
-            >
-              Heatmap utilisasi
-            </button>
-          )}
-          {heatmap ? <HeatmapLegend /> : <Legend />}
-        </div>
-      </div>
-      {error && <p className="error">{error}</p>}
+    <div className="map-page">
+      {error && <p className="error map-error">{error}</p>}
       <div className="map-shell">
         {/* Kanvas dibungkus agar watermark akuntabilitas hanya menutup peta,
             bukan panel di sampingnya. */}
         <div className="map-canvas-wrap">
           <div ref={container} className="map-canvas" />
           <div className="map-watermark" aria-hidden="true" style={{ backgroundImage: watermark }} />
+        </div>
+
+        {/* Judul + toggle heatmap + legenda dikumpulkan di kartu mengambang pojok
+            kiri-bawah, agar peta bisa mengisi penuh tanpa blok info mencuri tinggi. */}
+        <div className="map-info">
+          <div className="map-info-head">
+            <h2>Peta Jaringan</h2>
+            {can('network.odp.view') && (
+              <button
+                className={`small ${heatmap ? 'primary' : 'ghost'}`}
+                style={{ marginLeft: 'auto' }}
+                onClick={() => setHeatmap((v) => !v)}
+                title="Warnai ODP menurut pemakaian port untuk perencanaan kapasitas"
+              >
+                Heatmap utilisasi
+              </button>
+            )}
+          </div>
+          {heatmap ? <HeatmapLegend /> : <Legend />}
         </div>
 
         {/* Toolbar kiri-atas: tarik kabel + taruh perangkat. Tampil saat idle —

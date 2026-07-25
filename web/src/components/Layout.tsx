@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { useState } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { ThemeToggle } from './ThemeToggle'
@@ -15,6 +16,7 @@ import {
   IconMap,
   IconMonitor,
   IconShield,
+  IconSidebar,
   IconUsers,
   IconWorkOrder,
 } from './icons'
@@ -64,9 +66,28 @@ const GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
   },
 ]
 
+/**
+ * Rute yang petanya (atau kanvas lain) mengisi penuh area konten — tanpa padding
+ * & lebar maksimum, menempel di bawah header dan di samping sidebar.
+ */
+const FLUSH_ROUTES = new Set(['/map'])
+
+const COLLAPSE_KEY = 'ftth.sidebarCollapsed'
+
 export function Layout() {
   const { user, logout } = useAuth()
   const { can } = useCan()
+  const location = useLocation()
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1')
+
+  const toggleSidebar = () =>
+    setCollapsed((v) => {
+      const next = !v
+      localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0')
+      return next
+    })
+
+  const flush = FLUSH_ROUTES.has(location.pathname)
 
   const initials = (user?.name ?? '?')
     .split(' ')
@@ -75,13 +96,13 @@ export function Layout() {
     .join('')
 
   return (
-    <div className="app">
+    <div className={`app${collapsed ? ' sidebar-collapsed' : ''}`}>
       <aside className="sidebar">
         <div className="brand">
           <span className="logo" aria-hidden>
             <IconMap size={17} />
           </span>
-          FTTH OSS
+          <span className="brand-text">FTTH OSS</span>
         </div>
 
         {GROUPS.map((group, i) => {
@@ -92,9 +113,9 @@ export function Layout() {
               {group.label && <div className="nav-label">{group.label}</div>}
               <nav>
                 {visible.map((item) => (
-                  <NavLink key={item.to} to={item.to} end={item.end ?? false}>
+                  <NavLink key={item.to} to={item.to} end={item.end ?? false} title={item.label}>
                     <item.icon size={18} />
-                    {item.label}
+                    <span className="nav-text">{item.label}</span>
                   </NavLink>
                 ))}
               </nav>
@@ -106,6 +127,14 @@ export function Layout() {
       <div className="main">
         <header className="topbar">
           <div className="row" style={{ gap: '0.5rem' }}>
+            <button
+              className="ghost icon-btn"
+              onClick={toggleSidebar}
+              aria-label={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
+              title={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
+            >
+              <IconSidebar size={18} />
+            </button>
             <span className="badge accent">{user?.tenantSlug}</span>
             {user?.platformAdmin && <span className="badge">platform admin</span>}
           </div>
@@ -128,7 +157,7 @@ export function Layout() {
           </div>
         </header>
 
-        <main className="content">
+        <main className={flush ? 'content content-flush' : 'content'}>
           <Outlet />
         </main>
       </div>
