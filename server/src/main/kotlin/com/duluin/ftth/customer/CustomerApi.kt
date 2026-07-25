@@ -57,7 +57,29 @@ interface CustomerApi {
      * @return jumlah ONU yang statusnya berubah.
      */
     fun recordObservedOnuStatuses(statuses: Map<UUID, String>): Int
+
+    /**
+     * Memprovisikan sebuah ONU dari perangkat yang terdeteksi jaringan: daftarkan
+     * serialnya untuk pelanggan (atau pakai ulang bila sudah terdaftar untuk
+     * pelanggan yang sama) lalu pasang ke port ODP. Aturan port tetap ditegakkan
+     * network. Dipakai module monitoring saat operator menuntaskan ONU dari kotak
+     * masuk provisioning.
+     *
+     * @throws com.duluin.ftth.common.domain.error.ConflictException bila serial sudah terdaftar untuk pelanggan lain
+     */
+    fun provisionOnu(command: ProvisionOnuCommand): OnuRef
 }
+
+/** Perintah memprovisikan ONU liar menjadi pelanggan terpasang. */
+data class ProvisionOnuCommand(
+    val serialNumber: String,
+    val model: String?,
+    val customerId: UUID,
+    val odpId: UUID,
+    val portNumber: Int,
+    /** Redaman baseline saat instalasi untuk deteksi degradasi; boleh null. */
+    val installRxPowerDbm: Double?,
+)
 
 /** Pandangan ringkas sebuah ONU untuk konsumen lintas-module. */
 data class OnuRef(

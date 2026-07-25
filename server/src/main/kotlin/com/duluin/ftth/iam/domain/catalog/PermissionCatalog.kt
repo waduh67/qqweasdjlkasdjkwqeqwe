@@ -81,6 +81,8 @@ object PermissionCatalog {
         perm("monitoring.alarm.ack", "Acknowledge alarm")
         perm("monitoring.collector.view", "Lihat collector agent")
         perm("monitoring.collector.manage", "Kelola collector & polling")
+        perm("monitoring.provisioning.view", "Lihat kotak masuk ONU terdeteksi")
+        perm("monitoring.provisioning.manage", "Provisi/abaikan ONU terdeteksi")
 
         // Incident
         perm("incident.ticket.view", "Lihat tiket insiden")

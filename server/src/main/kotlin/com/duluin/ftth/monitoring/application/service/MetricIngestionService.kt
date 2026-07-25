@@ -36,6 +36,7 @@ class MetricIngestionService(
     private val customerApi: CustomerApi,
     private val networkApi: NetworkApi,
     private val alarmEngine: AlarmEngine,
+    private val discoveredOnuRecorder: DiscoveredOnuRecorder,
     private val events: ApplicationEventPublisher,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -88,10 +89,18 @@ class MetricIngestionService(
             // Alarm mungkin berubah → picu korelasi ulang insiden untuk tenant ini,
             // sekali setelah seluruh batch dinilai (bukan per ONU).
             events.publishEvent(AlarmsChangedEvent(tenantId))
+
+            // Serial yang kini dikenal tapi masih menggantung di kotak masuk
+            // (didaftarkan lewat jalur lain) dituntaskan sendiri.
+            discoveredOnuRecorder.resolveKnown(knownOnus.keys)
         }
 
         if (unknown.isNotEmpty()) {
-            log.info("{} serial ONU tidak dikenal pada batch {}", unknown.size, batch.batchId)
+            // ONU liar ditangkap ke kotak masuk provisioning, bukan sekadar dicatat log:
+            // operator bisa menuntaskannya jadi pelanggan tanpa mengetik ulang serial.
+            val unknownReadings = batch.readings.filterNot { it.serialNumber.trim().uppercase() in knownOnus }
+            discoveredOnuRecorder.capture(tenantId, unknownReadings, oltIdsByCode)
+            log.info("{} serial ONU tidak dikenal ditangkap ke kotak masuk pada batch {}", unknown.size, batch.batchId)
         }
         return IngestResult(
             accepted = matched.size,

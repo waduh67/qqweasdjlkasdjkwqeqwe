@@ -1,13 +1,19 @@
 package com.duluin.ftth.customer.application.service
 
+import com.duluin.ftth.common.domain.error.ConflictException
+import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.CustomerPlacement
 import com.duluin.ftth.customer.CustomerRef
 import com.duluin.ftth.customer.OdpOccupant
 import com.duluin.ftth.customer.OnuPlacementRef
 import com.duluin.ftth.customer.OnuRef
+import com.duluin.ftth.customer.ProvisionOnuCommand
 import com.duluin.ftth.customer.domain.model.Customer
 import com.duluin.ftth.customer.domain.model.OnuStatus
+import com.duluin.ftth.customer.application.port.inbound.AttachOnuCommand
+import com.duluin.ftth.customer.application.port.inbound.ManageOnuUseCase
+import com.duluin.ftth.customer.application.port.inbound.RegisterOnuCommand
 import com.duluin.ftth.customer.application.port.outbound.CustomerRepository
 import com.duluin.ftth.customer.application.port.outbound.CustomerTileRenderer
 import com.duluin.ftth.customer.application.port.outbound.OnuRepository
@@ -24,6 +30,7 @@ class CustomerApiService(
     private val onuRepository: OnuRepository,
     private val subscriptionRepository: SubscriptionRepository,
     private val tileRenderer: CustomerTileRenderer,
+    private val manageOnu: ManageOnuUseCase,
 ) : CustomerApi {
 
     override fun renderMapTile(z: Int, x: Int, y: Int, areaIds: Set<UUID>?): ByteArray =
@@ -124,6 +131,40 @@ class CustomerApiService(
             changed++
         }
         return changed
+    }
+
+    /**
+     * Daftarkan-atau-pakai-ulang lalu pasang, memakai kembali use case yang sama
+     * dengan pemasangan manual sehingga audit dan aturan port ikut berlaku. Serial
+     * yang sudah terdaftar untuk pelanggan yang sama dipakai ulang — memungkinkan
+     * memasang ONU yang tadinya terdaftar tanpa terpasang.
+     */
+    @Transactional
+    override fun provisionOnu(command: ProvisionOnuCommand): OnuRef {
+        val customer = customerRepository.findById(command.customerId)
+            ?: throw NotFoundException("Pelanggan ${command.customerId} tidak ditemukan")
+        val serial = command.serialNumber.trim().uppercase()
+        val existing = onuRepository.findBySerialNumbers(setOf(serial)).firstOrNull()
+        val onuId = if (existing != null) {
+            if (existing.customerId != command.customerId) {
+                throw ConflictException("ONU $serial sudah terdaftar pada pelanggan lain")
+            }
+            existing.id
+        } else {
+            manageOnu.register(command.customerId, RegisterOnuCommand(command.serialNumber, command.model)).id
+        }
+        val onu = manageOnu.attach(
+            onuId,
+            AttachOnuCommand(command.odpId, command.portNumber, command.installRxPowerDbm),
+        )
+        return OnuRef(
+            id = onu.id,
+            serialNumber = onu.serialNumber,
+            customerId = onu.customerId,
+            customerName = customer.name,
+            odpId = onu.odpId,
+            status = onu.status.name,
+        )
     }
 
     override fun placementsForOnus(onuIds: Set<UUID>): List<OnuPlacementRef> =
