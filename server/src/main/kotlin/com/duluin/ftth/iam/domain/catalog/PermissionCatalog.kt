@@ -57,6 +57,8 @@ object PermissionCatalog {
         perm("network.cable.delete", "Hapus kabel")
         perm("network.splitter.view", "Lihat splitter")
         perm("network.splitter.update", "Ubah splitter")
+        perm("network.otdr.view", "Lihat hasil uji OTDR")
+        perm("network.otdr.record", "Catat/hapus hasil uji OTDR")
 
         // GIS
         perm("gis.map.view", "Buka peta jaringan")

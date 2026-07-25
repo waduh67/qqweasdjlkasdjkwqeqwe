@@ -15,6 +15,19 @@ data class Coordinate(val longitude: Double, val latitude: Double) {
         if (latitude !in -90.0..90.0) throw ValidationException("Latitude harus antara -90 dan 90")
     }
 
+    /**
+     * Titik pada garis lurus menuju [other], pada pecahan [fraction] (0 = titik ini,
+     * 1 = [other]). Interpolasi linear lon/lat sudah cukup akurat di rentang satu ruas
+     * kabel (puluhan sampai ratusan meter) — sama pendekatannya dengan haversine di sini.
+     */
+    fun interpolate(other: Coordinate, fraction: Double): Coordinate {
+        val t = fraction.coerceIn(0.0, 1.0)
+        return Coordinate(
+            longitude = longitude + (other.longitude - longitude) * t,
+            latitude = latitude + (other.latitude - latitude) * t,
+        )
+    }
+
     /** Jarak haversine dalam meter — cukup untuk estimasi panjang kabel & radius. */
     fun distanceTo(other: Coordinate): Double {
         val phi1 = Math.toRadians(latitude)

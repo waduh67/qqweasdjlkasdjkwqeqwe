@@ -2,15 +2,19 @@ package com.duluin.ftth.network.adapter.inbound.web
 
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.network.domain.model.AssetStatus
+import com.duluin.ftth.network.domain.model.CableEnd
 import com.duluin.ftth.network.domain.model.CableType
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import com.duluin.ftth.network.domain.model.OltVendor
+import com.duluin.ftth.network.domain.model.OtdrEventType
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
+import jakarta.validation.constraints.PositiveOrZero
 import jakarta.validation.constraints.Size
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -89,6 +93,17 @@ data class CableRequest(
     val toKind: NetworkNodeKind,
     val toId: UUID,
     val status: AssetStatus = AssetStatus.ACTIVE,
+)
+
+data class OtdrTestRequest(
+    /** Jarak dari ujung ukur ke peristiwa, dalam meter serat. */
+    @field:PositiveOrZero val distanceMeters: Double,
+    val measuredFrom: CableEnd = CableEnd.FROM,
+    val eventType: OtdrEventType = OtdrEventType.BREAK,
+    @field:PositiveOrZero val lossDb: Double? = null,
+    @field:Size(max = 500) val note: String? = null,
+    /** Waktu pengukuran di lapangan; kosong berarti saat dicatat. */
+    val recordedAt: Instant? = null,
 )
 
 /** Badan request untuk operasi sambung/lepas; `null` berarti melepas sambungan. */

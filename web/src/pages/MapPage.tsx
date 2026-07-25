@@ -6,6 +6,7 @@ import type {
   AffectedCustomer,
   BlastRadiusView,
   CableCutView,
+  CableEnd,
   CableType,
   CableView,
   CustomerTrace,
@@ -13,6 +14,9 @@ import type {
   ImpactedOverlay,
   OdcView,
   OdpInspection,
+  OtdrEventType,
+  OtdrTest,
+  RecordOtdrTest,
   SiteInspection,
   SiteOlt,
   TraceHop,
@@ -71,6 +75,24 @@ const SEVERITY_COLOR: any = ['match', ['get', 'severity'], 'CRITICAL', '#ff3b5c'
  * hidup: yang ini hipotetis (belum terjadi), bukan gangguan nyata yang berjalan.
  */
 const WHATIF_COLOR = '#f59e0b'
+
+/**
+ * Warna titik perkiraan uji OTDR — magenta, sengaja lepas dari palet lain (merah
+ * alarm, amber simulasi, gradasi heatmap, warna aset): penanda diagnostik yang
+ * jelas "hasil ukur", bukan gangguan hidup maupun hipotesis.
+ */
+const OTDR_COLOR = '#f472b6'
+
+/** Label peristiwa OTDR dalam bahasa Indonesia — dipakai daftar & dropdown form. */
+const OTDR_EVENT_LABEL: Record<OtdrEventType, string> = {
+  BREAK: 'Putus',
+  HIGH_LOSS: 'Redaman tinggi',
+  REFLECTION: 'Pantulan',
+  SPLICE: 'Sambungan',
+  END: 'Ujung serat',
+}
+
+const OTDR_EVENT_OPTIONS = Object.entries(OTDR_EVENT_LABEL) as [OtdrEventType, string][]
 
 /**
  * Gradasi warna heatmap utilisasi port: hijau (lengang) → kuning → jingga →
@@ -289,6 +311,9 @@ export function MapPage() {
   const [selected, setSelected] = useState<OdpInspection | null>(null)
   const [cable, setCable] = useState<CableView | null>(null)
   const [cableCauses, setCableCauses] = useState<ImpactCause[]>([])
+  // Hasil uji OTDR kabel yang panelnya terbuka; titik perkiraannya diplot di peta.
+  // `null` = panel kabel tertutup / belum dimuat; `[]` = sudah dimuat, kosong.
+  const [otdrTests, setOtdrTests] = useState<OtdrTest[] | null>(null)
   const [blast, setBlast] = useState<BlastRadiusView | null>(null)
   // Simulasi "kalau kabel ini putus" — panel + sorotan subpohon terputus.
   const [whatIf, setWhatIf] = useState<CableCutView | null>(null)
@@ -369,6 +394,7 @@ export function MapPage() {
     const clearPanels = () => {
       setSelected(null)
       setCable(null)
+      setOtdrTests(null)
       setBlast(null)
       setWhatIf(null)
       setTrace(null)
@@ -553,6 +579,34 @@ export function MapPage() {
         'customer-glow',
       )
 
+      // Titik perkiraan uji OTDR: halo magenta + inti bercincin putih, sengaja di
+      // ATAS marker aset (tanpa beforeId) agar penanda diagnostik tak tertutup.
+      // Diisi imperatif dari state `otdrTests` (lihat efek sinkron di bawah).
+      instance.addSource('otdr', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+      instance.addLayer({
+        id: 'otdr-glow',
+        type: 'circle',
+        source: 'otdr',
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 10, 17, 26],
+          'circle-color': OTDR_COLOR,
+          'circle-blur': 1,
+          'circle-opacity': 0.4,
+        },
+      })
+      instance.addLayer({
+        id: 'otdr-dot',
+        type: 'circle',
+        source: 'otdr',
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 5, 17, 9],
+          'circle-color': OTDR_COLOR,
+          'circle-stroke-color': '#ffffff',
+          'circle-stroke-width': 2,
+          'circle-opacity': 0.95,
+        },
+      })
+
       // Animasi: dash `cable-flow` mengalir + denyut opasitas sorotan merah.
       let step = 0
       animRef.current = window.setInterval(() => {
@@ -626,6 +680,89 @@ export function MapPage() {
       cancelled = true
     }
   }, [heatmap])
+
+  // Saat panel kabel terbuka, muat riwayat uji OTDR-nya (bila punya izin lihat).
+  // Fetch dibatalkan bila kabel berganti sebelum respons tiba agar tak basi.
+  useEffect(() => {
+    if (!cable || !can('network.otdr.view')) {
+      setOtdrTests(null)
+      return
+    }
+    let cancelled = false
+    const cableId = cable.id
+    void (async () => {
+      try {
+        const list = await api.get<OtdrTest[]>(`/api/cables/${cableId}/otdr`)
+        if (!cancelled) setOtdrTests(list)
+      } catch {
+        // Riwayat OTDR opsional — panel kabel tetap tampil tanpa daftar uji.
+        if (!cancelled) setOtdrTests([])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cable?.id])
+
+  // Plot titik perkiraan tiap uji OTDR ke peta; kosongkan saat panel kabel tutup.
+  useEffect(() => {
+    const src = map.current?.getSource('otdr') as GeoJSONSource | undefined
+    if (!src) return
+    src.setData({
+      type: 'FeatureCollection',
+      features: (otdrTests ?? [])
+        .filter((t) => t.estimatedPoint)
+        .map((t) => ({
+          type: 'Feature',
+          properties: { id: t.id, eventType: t.eventType },
+          geometry: {
+            type: 'Point',
+            coordinates: [t.estimatedPoint!.longitude, t.estimatedPoint!.latitude],
+          },
+        })),
+    })
+  }, [otdrTests])
+
+  /** Mencatat satu uji OTDR, menyisipkannya ke daftar (terbaru dulu), lalu terbang ke titiknya. */
+  const recordOtdr = async (cableId: string, form: RecordOtdrTest) => {
+    try {
+      const test = await api.post<OtdrTest>(`/api/cables/${cableId}/otdr`, form)
+      setOtdrTests((prev) => [test, ...(prev ?? [])])
+      if (test.estimatedPoint) {
+        map.current?.flyTo({
+          center: [test.estimatedPoint.longitude, test.estimatedPoint.latitude],
+          zoom: Math.max(map.current.getZoom(), 16),
+        })
+      }
+      toast.success(
+        test.beyondCable
+          ? 'Uji OTDR dicatat — jarak melampaui panjang kabel, titik dijepit ke ujung'
+          : 'Uji OTDR dicatat',
+      )
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal mencatat uji OTDR')
+    }
+  }
+
+  const deleteOtdr = async (cableId: string, testId: string) => {
+    try {
+      await api.del(`/api/cables/${cableId}/otdr/${testId}`)
+      setOtdrTests((prev) => (prev ?? []).filter((t) => t.id !== testId))
+      toast.success('Uji OTDR dihapus')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus uji OTDR')
+    }
+  }
+
+  /** Terbang ke titik perkiraan sebuah uji (dipakai saat menekan barisnya di panel). */
+  const focusOtdr = (test: OtdrTest) => {
+    if (!test.estimatedPoint) return
+    map.current?.flyTo({
+      center: [test.estimatedPoint.longitude, test.estimatedPoint.latitude],
+      zoom: Math.max(map.current.getZoom(), 16),
+    })
+  }
 
   const startDraw = () => {
     // Kalau sedang menaruh perangkat, batalkan dulu — satu alat aktif pada satu waktu.
@@ -936,6 +1073,12 @@ export function MapPage() {
             canEdit={can('network.cable.update')}
             canDelete={can('network.cable.delete')}
             canSimulate={can('customer.customer.view')}
+            canViewOtdr={can('network.otdr.view')}
+            canRecordOtdr={can('network.otdr.record')}
+            otdrTests={otdrTests}
+            onRecordOtdr={(form) => void recordOtdr(cable.id, form)}
+            onDeleteOtdr={(testId) => void deleteOtdr(cable.id, testId)}
+            onFocusOtdr={focusOtdr}
             onEdit={() => startEdit(cable)}
             onDelete={() => void deleteCable(cable)}
             onSimulate={() => void simulateCut(cable)}
@@ -1074,6 +1217,12 @@ function CablePanel({
   canEdit,
   canDelete,
   canSimulate,
+  canViewOtdr,
+  canRecordOtdr,
+  otdrTests,
+  onRecordOtdr,
+  onDeleteOtdr,
+  onFocusOtdr,
   onEdit,
   onDelete,
   onSimulate,
@@ -1084,6 +1233,12 @@ function CablePanel({
   canEdit: boolean
   canDelete: boolean
   canSimulate: boolean
+  canViewOtdr: boolean
+  canRecordOtdr: boolean
+  otdrTests: OtdrTest[] | null
+  onRecordOtdr: (form: RecordOtdrTest) => void
+  onDeleteOtdr: (testId: string) => void
+  onFocusOtdr: (test: OtdrTest) => void
   onEdit: () => void
   onDelete: () => void
   onSimulate: () => void
@@ -1115,6 +1270,16 @@ function CablePanel({
           Simulasi putus — siapa yang kena?
         </button>
       )}
+      {canViewOtdr && (
+        <OtdrSection
+          cable={cable}
+          tests={otdrTests}
+          canRecord={canRecordOtdr}
+          onRecord={onRecordOtdr}
+          onDelete={onDeleteOtdr}
+          onFocus={onFocusOtdr}
+        />
+      )}
       {(canEdit || canDelete) && (
         <div className="row">
           {canEdit && (
@@ -1130,6 +1295,153 @@ function CablePanel({
         </div>
       )}
     </aside>
+  )
+}
+
+/**
+ * Bagian uji OTDR di dalam panel kabel: daftar hasil ukur (tiap baris terbang ke
+ * titik perkiraannya di peta bila diklik) plus form catat jarak gangguan. Jarak
+ * yang dimasukkan adalah panjang serat dari ujung ukur (hulu/hilir); server
+ * memetakannya ke titik di jalur kabel — di sini cukup ditampilkan & diplot.
+ */
+function OtdrSection({
+  cable,
+  tests,
+  canRecord,
+  onRecord,
+  onDelete,
+  onFocus,
+}: {
+  cable: CableView
+  tests: OtdrTest[] | null
+  canRecord: boolean
+  onRecord: (form: RecordOtdrTest) => void
+  onDelete: (testId: string) => void
+  onFocus: (test: OtdrTest) => void
+}) {
+  const [distance, setDistance] = useState('')
+  const [measuredFrom, setMeasuredFrom] = useState<CableEnd>('FROM')
+  const [eventType, setEventType] = useState<OtdrEventType>('BREAK')
+  const [lossDb, setLossDb] = useState('')
+  const [note, setNote] = useState('')
+
+  const distanceNum = Number(distance)
+  const canSubmit = distance.trim() !== '' && Number.isFinite(distanceNum) && distanceNum >= 0
+
+  const submit = () => {
+    if (!canSubmit) return
+    const loss = Number(lossDb)
+    onRecord({
+      distanceMeters: distanceNum,
+      measuredFrom,
+      eventType,
+      lossDb: lossDb.trim() !== '' && Number.isFinite(loss) ? loss : null,
+      note: note.trim() || null,
+    })
+    setDistance('')
+    setLossDb('')
+    setNote('')
+  }
+
+  const list = tests ?? []
+
+  return (
+    <div className="stack" style={{ gap: '0.5rem', borderTop: '1px solid var(--line)', paddingTop: '0.6rem' }}>
+      <div className="spread">
+        <strong style={{ fontSize: '0.85rem' }}>Uji OTDR</strong>
+        <span className="muted" style={{ fontSize: '0.75rem' }}>{list.length} hasil</span>
+      </div>
+
+      {list.length > 0 && (
+        <div className="stack" style={{ gap: '0.25rem', maxHeight: 190, overflowY: 'auto' }}>
+          {list.map((t) => (
+            <div key={t.id} className="spread" style={{ gap: '0.4rem', alignItems: 'center' }}>
+              <button
+                className="ghost"
+                style={{ justifyContent: 'flex-start', flex: 1, padding: '0.25rem 0.4rem', fontSize: '0.8rem' }}
+                onClick={() => onFocus(t)}
+                disabled={!t.estimatedPoint}
+                title={t.estimatedPoint ? 'Fokuskan peta ke titik perkiraan' : 'Titik tak bisa dipetakan'}
+              >
+                <span className="tnum" style={{ fontWeight: 600 }}>{formatLength(t.distanceMeters)}</span>
+                <span className="badge" style={{ marginLeft: '0.4rem' }}>{OTDR_EVENT_LABEL[t.eventType]}</span>
+                <span className="muted" style={{ marginLeft: '0.4rem' }}>
+                  dari {t.measuredFrom === 'FROM' ? cable.fromKind : cable.toKind}
+                </span>
+                {t.beyondCable && (
+                  <span className="badge" style={{ marginLeft: '0.4rem', color: WHATIF_COLOR, borderColor: WHATIF_COLOR }}>
+                    di luar
+                  </span>
+                )}
+              </button>
+              {canRecord && (
+                <button className="ghost icon-btn" onClick={() => onDelete(t.id)} aria-label="Hapus uji">
+                  <IconClose size={14} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tests === null && <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>Memuat…</p>}
+      {tests !== null && list.length === 0 && !canRecord && (
+        <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>Belum ada uji OTDR.</p>
+      )}
+
+      {canRecord && (
+        <div className="stack" style={{ gap: '0.4rem' }}>
+          <div className="row" style={{ gap: '0.4rem' }}>
+            <label style={{ flex: 1 }}>
+              <span>Jarak serat (m)</span>
+              <input
+                type="number"
+                min={0}
+                step="0.1"
+                value={distance}
+                onChange={(e) => setDistance(e.target.value)}
+                placeholder="mis. 320"
+              />
+            </label>
+            <label style={{ width: '8.5rem' }}>
+              <span>Diukur dari</span>
+              <select value={measuredFrom} onChange={(e) => setMeasuredFrom(e.target.value as CableEnd)}>
+                <option value="FROM">Hulu ({cable.fromKind})</option>
+                <option value="TO">Hilir ({cable.toKind})</option>
+              </select>
+            </label>
+          </div>
+          <div className="row" style={{ gap: '0.4rem' }}>
+            <label style={{ flex: 1 }}>
+              <span>Peristiwa</span>
+              <select value={eventType} onChange={(e) => setEventType(e.target.value as OtdrEventType)}>
+                {OTDR_EVENT_OPTIONS.map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </label>
+            <label style={{ width: '8.5rem' }}>
+              <span>Redaman (dB)</span>
+              <input
+                type="number"
+                min={0}
+                step="0.1"
+                value={lossDb}
+                onChange={(e) => setLossDb(e.target.value)}
+                placeholder="opsional"
+              />
+            </label>
+          </div>
+          <label>
+            <span>Catatan (opsional)</span>
+            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="mis. dekat tiang 12" />
+          </label>
+          <button className="primary" disabled={!canSubmit} onClick={submit}>
+            Plot &amp; simpan
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 

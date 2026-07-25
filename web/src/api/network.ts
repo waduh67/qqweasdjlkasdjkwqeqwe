@@ -291,6 +291,40 @@ export interface UtilizationHeatmap {
   odps: OdpUtilization[]
 }
 
+/** Ujung kabel tempat pengukuran OTDR dimulai — hulu (awal jalur) atau hilir (akhir jalur). */
+export type CableEnd = 'FROM' | 'TO'
+
+/** Jenis peristiwa yang terbaca reflektometer OTDR. */
+export type OtdrEventType = 'BREAK' | 'HIGH_LOSS' | 'REFLECTION' | 'SPLICE' | 'END'
+
+/** Satu hasil uji OTDR pada kabel, dengan titik perkiraan gangguan di jalurnya. */
+export interface OtdrTest {
+  id: string
+  cableId: string
+  distanceMeters: number
+  measuredFrom: CableEnd
+  eventType: OtdrEventType
+  lossDb: number | null
+  note: string | null
+  recordedBy: string
+  recordedByName: string | null
+  recordedAt: string
+  /** Titik perkiraan peristiwa di jalur kabel; `null` bila geometri tak bisa diresolusi. */
+  estimatedPoint: Coordinate | null
+  /** Jarak uji melampaui panjang kabel — titik dijepit ke ujung. */
+  beyondCable: boolean
+  cableLengthMeters: number
+}
+
+/** Badan request untuk mencatat satu uji OTDR. */
+export interface RecordOtdrTest {
+  distanceMeters: number
+  measuredFrom: CableEnd
+  eventType: OtdrEventType
+  lossDb?: number | null
+  note?: string | null
+}
+
 /** Simulasi "kalau kabel ini putus, siapa yang kena" — hasil dari klik sebuah kabel. */
 export interface CableCutView {
   cableId: string
