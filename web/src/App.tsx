@@ -9,6 +9,7 @@ import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { InventoryPage } from './pages/InventoryPage'
 import { CustomersPage } from './pages/CustomersPage'
+import { CustomerDetailPage } from './pages/CustomerDetailPage'
 import { MonitoringPage } from './pages/MonitoringPage'
 import { ProvisioningPage } from './pages/ProvisioningPage'
 import { IncidentsPage } from './pages/IncidentsPage'
@@ -94,6 +95,14 @@ export default function App() {
               element={
                 <RequirePermission permission="customer.customer.view">
                   <CustomersPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="customers/:id"
+              element={
+                <RequirePermission permission="customer.customer.view">
+                  <CustomerDetailPage />
                 </RequirePermission>
               }
             />
