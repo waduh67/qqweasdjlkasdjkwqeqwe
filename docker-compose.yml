@@ -47,6 +47,64 @@ services:
     volumes:
       - miniodata:/data
 
+  # --- GenieACS (TR-069) untuk modul CPE — DEV, OPSIONAL ---
+  # Semua service di bawah memakai profile "genieacs" agar TIDAK ikut naik pada
+  # `docker compose up` biasa. Nyalakan seluruh stack (+ 1 device palsu) dengan:
+  #     docker compose --profile genieacs up -d --build
+  # Aplikasi terhubung ke NBI di http://localhost:7557 (default ftth.cpe.genieacs.base-url).
+  genieacs-mongo:
+    image: mongo:4.4
+    profiles: ["genieacs"]
+    volumes:
+      - genieacs_mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  genieacs-cwmp:
+    build: ./docker/genieacs
+    image: ftth/genieacs:1.2.16
+    profiles: ["genieacs"]
+    command: genieacs-cwmp
+    environment:
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://genieacs-mongo:27017/genieacs
+    depends_on:
+      genieacs-mongo:
+        condition: service_healthy
+    ports:
+      - "7547:7547"
+    restart: unless-stopped
+
+  genieacs-nbi:
+    build: ./docker/genieacs
+    image: ftth/genieacs:1.2.16
+    profiles: ["genieacs"]
+    command: genieacs-nbi
+    environment:
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://genieacs-mongo:27017/genieacs
+    depends_on:
+      genieacs-mongo:
+        condition: service_healthy
+    ports:
+      - "7557:7557"
+    restart: unless-stopped
+
+  # Device ONT palsu. Muncul di GenieACS dengan serial "000000"; daftarkan ONU
+  # pelanggan dengan serial itu agar tertaut. Matikan bila tak perlu:
+  #     docker compose stop genieacs-sim
+  genieacs-sim:
+    build: ./docker/genieacs-sim
+    image: ftth/genieacs-sim:local
+    profiles: ["genieacs"]
+    command: ["-u", "http://genieacs-cwmp:7547/"]
+    depends_on:
+      genieacs-cwmp:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   pgdata:
   miniodata:
+  genieacs_mongo:
