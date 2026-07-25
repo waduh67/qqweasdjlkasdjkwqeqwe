@@ -74,3 +74,26 @@ export interface OnuHistoryView {
   trendDbPerDay: number | null
   degrading: boolean
 }
+
+/** Tahap sebuah ONU di kotak masuk auto-provisioning. */
+export type DiscoveredOnuState = 'DISCOVERED' | 'PROVISIONED' | 'IGNORED'
+
+/**
+ * ONU yang dilaporkan OLT tapi belum terdaftar — perangkat liar yang menunggu
+ * dituntaskan operator menjadi pelanggan terpasang.
+ */
+export interface DiscoveredOnuView {
+  id: string
+  serialNumber: string
+  /** Kode OLT teresolusi ke id inventory; null bila kodenya belum dikenal. */
+  oltId: string | null
+  oltCode: string
+  ponPortLabel: string | null
+  lastStatus: string
+  lastRxPowerDbm: number | null
+  firstSeenAt: string
+  lastSeenAt: string
+  /** Berapa siklus polling melihat serial ini — sekali lewat vs benar-benar terpasang. */
+  seenCount: number
+  state: DiscoveredOnuState
+}
