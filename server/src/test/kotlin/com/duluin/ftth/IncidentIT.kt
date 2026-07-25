@@ -91,6 +91,10 @@ class IncidentIT {
     private fun reading(serial: String, status: String, rx: Double?) =
         """{"serialNumber":"$serial","oltCode":"OLT-X","ponPortLabel":"1/1/1","status":"$status","rxPowerDbm":${rx ?: "null"},"txPowerDbm":null,"uptimeSeconds":null,"distanceMeters":null,"observedAt":"${Instant.now()}"}"""
 
+    /** Bacaan dengan sebab putus dari register OLT — bahan korelasi mati-listrik vs fiber-putus. */
+    private fun readingCause(serial: String, status: String, cause: String) =
+        """{"serialNumber":"$serial","oltCode":"OLT-X","ponPortLabel":"1/1/1","status":"$status","rxPowerDbm":null,"txPowerDbm":null,"uptimeSeconds":null,"distanceMeters":null,"observedAt":"${Instant.now()}","lastDownCause":"$cause"}"""
+
     private fun sendMetrics(apiKey: String, vararg readings: String) {
         mockMvc.perform(
             post("/api/collector/metrics").header(CollectorProtocol.API_KEY_HEADER, apiKey)
@@ -155,6 +159,54 @@ class IncidentIT {
         // Fiber tersambung lagi → alarm menutup → korelasi menutup insidennya sendiri.
         sendMetrics(apiKey, reading(a, "ONLINE", -21.0), reading(b, "ONLINE", -20.0))
         assertThat(JsonPath.read<List<Any>>(incidents(token), "$[*]")).isEmpty()
+    }
+
+    @Test
+    fun `blast-radius dying-gasp ditandai dugaan mati listrik area, bukan fiber putus`() {
+        val token = newTenantAdmin("pln")
+        val chain = buildChain(token)
+        val a = attachOnu(token, chain.odp, port = 1)
+        val b = attachOnu(token, chain.odp, port = 2)
+        val c = attachOnu(token, chain.odp, port = 3)
+        val apiKey = newCollector(token)
+
+        // Tiga ONU padam serentak dan OLT melaporkan dying-gasp: ciri PLN mati di
+        // area, bukan fiber putus — tindakan operatornya berbeda (tunggu listrik
+        // pulih, bukan kirim teknisi cari kabel).
+        sendMetrics(
+            apiKey,
+            readingCause(a, "OFFLINE", "DYING_GASP"),
+            readingCause(b, "OFFLINE", "DYING_GASP"),
+            readingCause(c, "OFFLINE", "DYING_GASP"),
+        )
+
+        val json = incidents(token)
+        assertThat(JsonPath.read<List<Any>>(json, "$[*]")).hasSize(1)
+        assertThat(JsonPath.read<String>(json, "$[0].rootType")).isEqualTo("ODC")
+        assertThat(JsonPath.read<String>(json, "$[0].suspectedCause")).isEqualTo("POWER_OUTAGE")
+
+        // Detail membawa sebab per-ONU juga, biar operator lihat dasarnya.
+        val incidentId = JsonPath.read<String>(json, "$[0].id")
+        val detail = mockMvc.perform(get("/api/incidents/$incidentId").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andReturn().response.contentAsString
+        assertThat(JsonPath.read<List<String>>(detail, "$.members[*].downCause")).contains("DYING_GASP")
+    }
+
+    @Test
+    fun `blast-radius LOS ditandai dugaan fiber putus`() {
+        val token = newTenantAdmin("cut")
+        val chain = buildChain(token)
+        val a = attachOnu(token, chain.odp, port = 1)
+        val b = attachOnu(token, chain.odp, port = 2)
+        val apiKey = newCollector(token)
+
+        // Dua ONU LOS serentak — sinyal hilang total, register bukan dying-gasp:
+        // pola fiber putus, kirim teknisi.
+        sendMetrics(apiKey, readingCause(a, "LOS", "LOS"), readingCause(b, "LOS", "LOS"))
+
+        val json = incidents(token)
+        assertThat(JsonPath.read<List<Any>>(json, "$[*]")).hasSize(1)
+        assertThat(JsonPath.read<String>(json, "$[0].suspectedCause")).isEqualTo("FIBER_CUT")
     }
 
     @Test

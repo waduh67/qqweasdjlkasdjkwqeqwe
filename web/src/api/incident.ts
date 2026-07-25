@@ -10,6 +10,8 @@ export interface IncidentView {
   title: string
   alarmCount: number
   affectedCustomerCount: number
+  /** Dugaan sebab blast-radius: POWER_OUTAGE / FIBER_CUT / MIXED, atau null bila belum cukup data. */
+  suspectedCause: string | null
   openedAt: string
   lastSeenAt: string
   acknowledgedAt: string | null
@@ -22,6 +24,8 @@ export interface IncidentAlarm {
   kind: string
   severity: string
   label: string
+  /** Sebab putus terakhir dari register OLT untuk anggota ONU; null untuk lainnya. */
+  downCause: string | null
 }
 
 export interface IncidentEventView {

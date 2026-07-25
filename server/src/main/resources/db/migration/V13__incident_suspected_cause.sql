@@ -1,0 +1,14 @@
+-- ------------------------------------------------------------
+-- Dugaan sebab blast-radius pada insiden hasil korelasi.
+--
+-- Saat sekelompok ONU di bawah satu ODC/OLT padam serentak, register "last down
+-- cause" mereka membedakan gangguan yang di layar tampak sama tapi tindakannya
+-- berlainan: mayoritas dying-gasp = kemungkinan PLN mati di area itu (tunggu
+-- listrik pulih), mayoritas LOS = fiber putus (kirim teknisi). Disimpulkan mesin
+-- korelasi dan disimpan di sini agar tampil di daftar insiden tanpa menghitung
+-- ulang.
+--
+-- Nullable: insiden perangkat/collector, gangguan satu pelanggan, atau ONU tanpa
+-- sebab terbaca cukup mengisi NULL. Nilai enum: POWER_OUTAGE / FIBER_CUT / MIXED.
+-- ------------------------------------------------------------
+ALTER TABLE incident ADD COLUMN suspected_cause varchar(20);

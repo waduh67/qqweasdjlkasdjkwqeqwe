@@ -65,6 +65,7 @@ class IncidentService(
         title = title,
         alarmCount = alarmCount,
         affectedCustomerCount = affectedCustomerCount,
+        suspectedCause = suspectedCause?.name,
         openedAt = openedAt,
         lastSeenAt = lastSeenAt,
         acknowledgedAt = acknowledgedAt,

@@ -26,4 +26,11 @@ data class AlarmImpact(
     val kind: String,
     /** Label entitas terdampak, mis. "OLT-BKS-01" atau serial ONU + nama pelanggan. */
     val label: String,
+    /**
+     * Sebab putus terakhir dari register OLT untuk impact ONU (mis. DYING_GASP,
+     * LOS) — bahan korelasi insiden membedakan "area mati listrik" dari "fiber
+     * putus" saat sekelompok ONU serentak padam. `null` untuk entitas non-ONU atau
+     * bila OLT tidak melaporkannya.
+     */
+    val downCause: String? = null,
 )

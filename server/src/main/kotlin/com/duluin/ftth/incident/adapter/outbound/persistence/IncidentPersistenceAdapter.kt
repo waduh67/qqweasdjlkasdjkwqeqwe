@@ -22,6 +22,7 @@ class IncidentPersistenceAdapter(
             title = incident.title
             alarmCount = incident.alarmCount
             affectedCustomerCount = incident.affectedCustomerCount
+            suspectedCause = incident.suspectedCause
             lastSeenAt = incident.lastSeenAt
             acknowledgedAt = incident.acknowledgedAt
             acknowledgedBy = incident.acknowledgedBy
@@ -36,6 +37,7 @@ class IncidentPersistenceAdapter(
             title = incident.title,
             alarmCount = incident.alarmCount,
             affectedCustomerCount = incident.affectedCustomerCount,
+            suspectedCause = incident.suspectedCause,
             openedAt = incident.openedAt,
             lastSeenAt = incident.lastSeenAt,
             acknowledgedAt = incident.acknowledgedAt,
@@ -85,6 +87,7 @@ private fun IncidentJpaEntity.toDomain(): Incident = Incident.rehydrate(
     title = title,
     alarmCount = alarmCount,
     affectedCustomerCount = affectedCustomerCount,
+    suspectedCause = suspectedCause,
     openedAt = openedAt,
     lastSeenAt = lastSeenAt,
     acknowledgedAt = acknowledgedAt,

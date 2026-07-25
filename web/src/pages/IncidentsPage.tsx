@@ -21,6 +21,24 @@ const EVENT_LABEL: Record<string, string> = {
   RESOLVED: 'Selesai',
 }
 
+/**
+ * Dugaan sebab blast-radius dari register ONU — dua gangguan yang di layar tampak
+ * sama tapi tindakannya berbeda: mati listrik area (tunggu PLN) vs fiber putus
+ * (kirim teknisi).
+ */
+const CAUSE_LABEL: Record<string, string> = {
+  POWER_OUTAGE: 'Dugaan mati listrik area',
+  FIBER_CUT: 'Dugaan fiber putus',
+  MIXED: 'Sebab campuran',
+}
+
+/** Sebab putus per-ONU dari register OLT untuk ditampilkan di anggota alarm. */
+const DOWN_CAUSE_LABEL: Record<string, string> = {
+  DYING_GASP: 'mati listrik',
+  LOS: 'sinyal hilang',
+  UNKNOWN: 'sebab tak diketahui',
+}
+
 function timeAgo(iso: string): string {
   const secs = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000))
   if (secs < 60) return 'baru saja'
@@ -110,6 +128,11 @@ export function IncidentsPage() {
                 <span className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                   <StatusBadge status={inc.severity} />
                   <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{inc.title}</strong>
+                  {inc.suspectedCause && CAUSE_LABEL[inc.suspectedCause] && (
+                    <span className={`badge cause-${inc.suspectedCause.toLowerCase()}`}>
+                      {CAUSE_LABEL[inc.suspectedCause]}
+                    </span>
+                  )}
                 </span>
                 <span className="muted" style={{ fontSize: '0.82rem' }}>
                   {ROOT_LABEL[inc.rootType] ?? inc.rootType} {inc.rootLabel} · {inc.alarmCount} alarm ·{' '}
@@ -166,6 +189,9 @@ function IncidentDetailBody({
         <span className="badge">{ROOT_LABEL[inc.rootType] ?? inc.rootType} {inc.rootLabel}</span>
         <span className="badge">{inc.alarmCount} alarm</span>
         <span className="badge">{inc.affectedCustomerCount} pelanggan</span>
+        {inc.suspectedCause && CAUSE_LABEL[inc.suspectedCause] && (
+          <span className={`badge cause-${inc.suspectedCause.toLowerCase()}`}>{CAUSE_LABEL[inc.suspectedCause]}</span>
+        )}
       </div>
 
       {(canAck || canResolve) && (
@@ -202,7 +228,12 @@ function IncidentDetailBody({
                 <span className={`dot-sev sev-${m.severity.toLowerCase()}`} aria-hidden="true" />
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.label}</span>
               </span>
-              <span className="badge">{m.kind}</span>
+              <span className="row" style={{ gap: '0.35rem', alignItems: 'center' }}>
+                {m.downCause && DOWN_CAUSE_LABEL[m.downCause] && (
+                  <span className="muted" style={{ fontSize: '0.78rem' }}>{DOWN_CAUSE_LABEL[m.downCause]}</span>
+                )}
+                <span className="badge">{m.kind}</span>
+              </span>
             </div>
           ))
         )}

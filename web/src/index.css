@@ -423,6 +423,18 @@ tbody tr:last-child td {
   border-color: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
+/* Dugaan sebab blast-radius: mati listrik (amber) vs fiber putus (merah) */
+.badge.cause-power_outage {
+  color: var(--warning-ink);
+  background: color-mix(in srgb, var(--warning) 18%, var(--surface));
+  border-color: color-mix(in srgb, var(--warning) 34%, transparent);
+}
+.badge.cause-fiber_cut {
+  color: var(--critical-ink);
+  background: color-mix(in srgb, var(--critical) 15%, var(--surface));
+  border-color: color-mix(in srgb, var(--critical) 32%, transparent);
+}
+
 /* ---------- Meter (utilisasi) ---------- */
 
 .meter {

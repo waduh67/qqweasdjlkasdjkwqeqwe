@@ -39,6 +39,11 @@ data class IncidentView(
     val title: String,
     val alarmCount: Int,
     val affectedCustomerCount: Int,
+    /**
+     * Dugaan sebab blast-radius dari register ONU: POWER_OUTAGE (area mati listrik),
+     * FIBER_CUT (fiber putus), MIXED (beragam), atau `null` bila datanya belum cukup.
+     */
+    val suspectedCause: String?,
     val openedAt: Instant,
     val lastSeenAt: Instant,
     val acknowledgedAt: Instant?,
@@ -65,4 +70,6 @@ data class IncidentAlarm(
     val kind: String,
     val severity: String,
     val label: String,
+    /** Sebab putus terakhir dari register OLT untuk anggota ONU; `null` untuk lainnya. */
+    val downCause: String? = null,
 )

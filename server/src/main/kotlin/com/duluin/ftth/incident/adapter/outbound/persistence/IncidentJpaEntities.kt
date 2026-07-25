@@ -5,6 +5,7 @@ import com.duluin.ftth.incident.domain.model.IncidentEventType
 import com.duluin.ftth.incident.domain.model.IncidentRootType
 import com.duluin.ftth.incident.domain.model.IncidentSeverity
 import com.duluin.ftth.incident.domain.model.IncidentStatus
+import com.duluin.ftth.incident.domain.model.IncidentSuspectedCause
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -44,6 +45,10 @@ class IncidentJpaEntity(
 
     @Column(name = "affected_customer_count", nullable = false)
     var affectedCustomerCount: Int,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "suspected_cause", length = 20)
+    var suspectedCause: IncidentSuspectedCause?,
 
     @Column(name = "opened_at", nullable = false, updatable = false)
     var openedAt: Instant,

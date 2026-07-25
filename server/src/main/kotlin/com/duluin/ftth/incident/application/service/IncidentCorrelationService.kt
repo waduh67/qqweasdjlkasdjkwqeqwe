@@ -2,6 +2,7 @@ package com.duluin.ftth.incident.application.service
 
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.incident.application.port.inbound.IncidentAlarm
+import com.duluin.ftth.incident.domain.model.IncidentSuspectedCause
 import com.duluin.ftth.monitoring.AlarmImpact
 import com.duluin.ftth.monitoring.MonitoringApi
 import com.duluin.ftth.network.NetworkApi
@@ -20,6 +21,8 @@ data class CorrelatedIncident(
     val title: String,
     val alarmCount: Int,
     val affectedCustomerCount: Int,
+    /** Dugaan sebab blast-radius dari register ONU (mati listrik area vs fiber putus); `null` bila tak cukup data. */
+    val suspectedCause: IncidentSuspectedCause?,
     val members: List<IncidentAlarm>,
 )
 
@@ -107,10 +110,32 @@ class IncidentCorrelationService(
                 title = titleFor(b),
                 alarmCount = b.members.size,
                 affectedCustomerCount = b.customers.size,
+                suspectedCause = suspectedCauseOf(b.members),
                 members = b.members.map {
-                    IncidentAlarm(it.entityType, it.entityId, it.kind, it.severity, it.label)
+                    IncidentAlarm(it.entityType, it.entityId, it.kind, it.severity, it.label, it.downCause)
                 },
             )
+        }
+    }
+
+    /**
+     * Menyimpulkan sebab blast-radius dari register "last down cause" ONU-ONU yang
+     * padam. Hanya untuk kelompok ≥2 ONU: gangguan satu pelanggan bukan soal "area",
+     * dan sebab per-ONU sudah tampak dari badge Ldc-nya sendiri. Bila mayoritas
+     * (≥[DOMINANCE]) melapor dying-gasp, kemungkinan PLN mati di area itu; bila
+     * mayoritas LOS, fiber putus; selain itu polanya beragam ([MIXED]). `null` bila
+     * tak ada ONU dengan sebab terbaca — jujur bahwa datanya belum cukup.
+     */
+    private fun suspectedCauseOf(members: List<AlarmImpact>): IncidentSuspectedCause? {
+        val causes = members.filter { it.entityType == "ONU" }.mapNotNull { it.downCause }
+        if (causes.size < MIN_ONUS_FOR_CAUSE) return null
+        val dying = causes.count { it == "DYING_GASP" }
+        val los = causes.count { it == "LOS" }
+        val threshold = causes.size * DOMINANCE
+        return when {
+            dying >= threshold -> IncidentSuspectedCause.POWER_OUTAGE
+            los >= threshold -> IncidentSuspectedCause.FIBER_CUT
+            else -> IncidentSuspectedCause.MIXED
         }
     }
 
@@ -143,5 +168,13 @@ class IncidentCorrelationService(
         2 -> "CRITICAL"
         1 -> "WARNING"
         else -> "INFO"
+    }
+
+    private companion object {
+        /** Di bawah ini bukan "area": gangguan satu pelanggan tak disimpulkan sebabnya. */
+        const val MIN_ONUS_FOR_CAUSE = 2
+
+        /** Ambang dominasi: ≥60% ONU sesebab untuk menyebut satu pola, sisanya MIXED. */
+        const val DOMINANCE = 0.6
     }
 }

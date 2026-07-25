@@ -46,6 +46,7 @@ class IncidentReconciler(
                     g.rootLabel,
                     g.alarmCount,
                     g.affectedCustomerCount,
+                    g.suspectedCause,
                     now,
                 )
                 repository.save(existing)
@@ -60,6 +61,7 @@ class IncidentReconciler(
                         title = g.title,
                         alarmCount = g.alarmCount,
                         affectedCustomerCount = g.affectedCustomerCount,
+                        suspectedCause = g.suspectedCause,
                         at = now,
                     ),
                 )

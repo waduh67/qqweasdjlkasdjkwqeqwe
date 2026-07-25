@@ -21,6 +21,22 @@ enum class IncidentStatus {
 
 enum class IncidentEventType { OPENED, SEVERITY_CHANGED, ACKNOWLEDGED, RESOLVED }
 
+/**
+ * Dugaan sebab sebuah insiden blast-radius, disimpulkan dari register "last down
+ * cause" ONU-ONU yang serentak padam. Membedakan gangguan yang di layar tampak
+ * sama tapi tindakannya berlainan:
+ *
+ * - [POWER_OUTAGE]: mayoritas ONU melapor dying-gasp → kemungkinan PLN mati di
+ *   area itu. Tunggu listrik pulih, jangan buru-buru kirim teknisi.
+ * - [FIBER_CUT]: mayoritas ONU LOS → jalur fiber putus. Kirim teknisi.
+ * - [MIXED]: pola tak dominan; sebabnya beragam dan perlu ditelaah manual.
+ *
+ * `null` (bukan salah satu nilai di atas) berarti tak cukup informasi: insiden
+ * perangkat/collector, atau ONU-nya tak melaporkan sebab. Hanya dihitung untuk
+ * insiden dengan ≥2 ONU terdampak — gangguan satu pelanggan bukan soal "area".
+ */
+enum class IncidentSuspectedCause { POWER_OUTAGE, FIBER_CUT, MIXED }
+
 /** Satu entri timeline sebuah insiden. */
 class IncidentEvent private constructor(
     val id: UUID,
@@ -69,6 +85,7 @@ class Incident private constructor(
     title: String,
     alarmCount: Int,
     affectedCustomerCount: Int,
+    suspectedCause: IncidentSuspectedCause?,
     val openedAt: Instant,
     lastSeenAt: Instant,
     acknowledgedAt: Instant?,
@@ -86,6 +103,8 @@ class Incident private constructor(
     var alarmCount: Int = alarmCount
         private set
     var affectedCustomerCount: Int = affectedCustomerCount
+        private set
+    var suspectedCause: IncidentSuspectedCause? = suspectedCause
         private set
     var lastSeenAt: Instant = lastSeenAt
         private set
@@ -118,6 +137,7 @@ class Incident private constructor(
         newRootLabel: String,
         newAlarmCount: Int,
         newAffectedCustomerCount: Int,
+        newSuspectedCause: IncidentSuspectedCause?,
         at: Instant,
     ) {
         if (status == IncidentStatus.RESOLVED) return
@@ -129,6 +149,9 @@ class Incident private constructor(
         title = newTitle
         alarmCount = newAlarmCount
         affectedCustomerCount = newAffectedCustomerCount
+        // Diperbarui diam-diam seperti alarmCount: register OLT bisa melengkapi sebab
+        // pada siklus berikutnya (mis. dying-gasp menyusul terbaca) tanpa jadi entri timeline.
+        suspectedCause = newSuspectedCause
         lastSeenAt = at
     }
 
@@ -166,6 +189,7 @@ class Incident private constructor(
             title: String,
             alarmCount: Int,
             affectedCustomerCount: Int,
+            suspectedCause: IncidentSuspectedCause? = null,
             at: Instant = Instant.now(),
         ): Incident {
             val incident = Incident(
@@ -179,6 +203,7 @@ class Incident private constructor(
                 title = title,
                 alarmCount = alarmCount,
                 affectedCustomerCount = affectedCustomerCount,
+                suspectedCause = suspectedCause,
                 openedAt = at,
                 lastSeenAt = at,
                 acknowledgedAt = null,
@@ -201,6 +226,7 @@ class Incident private constructor(
             title: String,
             alarmCount: Int,
             affectedCustomerCount: Int,
+            suspectedCause: IncidentSuspectedCause?,
             openedAt: Instant,
             lastSeenAt: Instant,
             acknowledgedAt: Instant?,
@@ -208,7 +234,7 @@ class Incident private constructor(
             resolvedAt: Instant?,
         ): Incident = Incident(
             id, tenantId, rootType, rootId, rootLabel, severity, status, title, alarmCount,
-            affectedCustomerCount, openedAt, lastSeenAt, acknowledgedAt, acknowledgedBy, resolvedAt,
+            affectedCustomerCount, suspectedCause, openedAt, lastSeenAt, acknowledgedAt, acknowledgedBy, resolvedAt,
         )
     }
 }
