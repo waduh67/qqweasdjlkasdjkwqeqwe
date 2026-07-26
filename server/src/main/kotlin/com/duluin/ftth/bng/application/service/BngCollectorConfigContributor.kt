@@ -64,6 +64,13 @@ class BngCollectorConfigContributor(
             host = address,
             adapterType = vendor.name,
             expectedUsernames = activeUsernames,
+            // Kredensial kontrol untuk adapter nyata (7d) — sudah terdekripsi di domain.
+            apiUsername = apiUsername,
+            apiSecret = apiSecret,
+            apiPort = apiPort,
+            apiUseTls = apiUseTls,
+            apiDatabase = apiDatabase,
+            coaSecret = coaSecret,
         )
     }
 }

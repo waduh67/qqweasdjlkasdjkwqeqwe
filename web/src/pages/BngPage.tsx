@@ -288,6 +288,13 @@ type NasDraft = {
   enabled: boolean
   /** Apakah entri yang diedit sudah punya secret CoA (untuk teks bantu). */
   hasCoaSecret: boolean
+  /** Kredensial kontrol adapter nyata (REST RouterOS / SQL FreeRADIUS). */
+  apiUsername: string
+  apiSecret: string
+  apiPort: string
+  apiUseTls: boolean
+  apiDatabase: string
+  hasApiSecret: boolean
 }
 
 const EMPTY_NAS: NasDraft = {
@@ -299,6 +306,12 @@ const EMPTY_NAS: NasDraft = {
   coaSecret: '',
   enabled: true,
   hasCoaSecret: false,
+  apiUsername: '',
+  apiSecret: '',
+  apiPort: '',
+  apiUseTls: true,
+  apiDatabase: '',
+  hasApiSecret: false,
 }
 
 function NasTab() {
@@ -317,6 +330,12 @@ function NasTab() {
       coaSecret: '',
       enabled: nas.enabled,
       hasCoaSecret: nas.hasCoaSecret,
+      apiUsername: nas.apiUsername ?? '',
+      apiSecret: '',
+      apiPort: nas.apiPort != null ? String(nas.apiPort) : '',
+      apiUseTls: nas.apiUseTls,
+      apiDatabase: nas.apiDatabase ?? '',
+      hasApiSecret: nas.hasApiSecret,
     })
 
   const save = () => {
@@ -328,6 +347,11 @@ function NasTab() {
       nasIdentifier: draft.nasIdentifier || null,
       coaSecret: draft.coaSecret || null,
       enabled: draft.enabled,
+      apiUsername: draft.apiUsername || null,
+      apiSecret: draft.apiSecret || null,
+      apiPort: draft.apiPort ? Number(draft.apiPort) : null,
+      apiUseTls: draft.apiUseTls,
+      apiDatabase: draft.apiDatabase || null,
     }
     void run(
       async () => {
@@ -401,6 +425,92 @@ function NasTab() {
               />
             </label>
           </div>
+
+          {draft.vendor === 'MIKROTIK' && (
+            <>
+              <p className="muted" style={{ margin: '0.25rem 0 0', fontWeight: 600 }}>
+                Kredensial REST API (RouterOS v7)
+              </p>
+              <div className="row">
+                <label style={{ flex: 1 }}>
+                  <span>User API</span>
+                  <input
+                    value={draft.apiUsername}
+                    onChange={(e) => setDraft({ ...draft, apiUsername: e.target.value })}
+                    placeholder="mis. ftth-api"
+                  />
+                </label>
+                <label style={{ flex: 1 }}>
+                  <span>Password API</span>
+                  <input
+                    type="password"
+                    value={draft.apiSecret}
+                    onChange={(e) => setDraft({ ...draft, apiSecret: e.target.value })}
+                    placeholder={draft.hasApiSecret ? 'terisi — isi untuk mengganti' : 'password user API'}
+                  />
+                </label>
+                <label style={{ flex: 1 }}>
+                  <span>Port</span>
+                  <input
+                    value={draft.apiPort}
+                    onChange={(e) => setDraft({ ...draft, apiPort: e.target.value })}
+                    placeholder={draft.apiUseTls ? '443' : '80'}
+                  />
+                </label>
+              </div>
+              <label className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={draft.apiUseTls}
+                  onChange={(e) => setDraft({ ...draft, apiUseTls: e.target.checked })}
+                  style={{ width: 'auto' }}
+                />
+                <span>Pakai HTTPS (www-ssl)</span>
+              </label>
+            </>
+          )}
+
+          {draft.vendor === 'FREERADIUS' && (
+            <>
+              <p className="muted" style={{ margin: '0.25rem 0 0', fontWeight: 600 }}>
+                Kredensial basis data RADIUS (FreeRADIUS)
+              </p>
+              <div className="row">
+                <label style={{ flex: 2 }}>
+                  <span>URL JDBC</span>
+                  <input
+                    value={draft.apiDatabase}
+                    onChange={(e) => setDraft({ ...draft, apiDatabase: e.target.value })}
+                    placeholder="jdbc:postgresql://10.0.0.9:5432/radius"
+                  />
+                </label>
+              </div>
+              <div className="row">
+                <label style={{ flex: 1 }}>
+                  <span>User DB</span>
+                  <input
+                    value={draft.apiUsername}
+                    onChange={(e) => setDraft({ ...draft, apiUsername: e.target.value })}
+                    placeholder="mis. radius"
+                  />
+                </label>
+                <label style={{ flex: 1 }}>
+                  <span>Password DB</span>
+                  <input
+                    type="password"
+                    value={draft.apiSecret}
+                    onChange={(e) => setDraft({ ...draft, apiSecret: e.target.value })}
+                    placeholder={draft.hasApiSecret ? 'terisi — isi untuk mengganti' : 'password basis data'}
+                  />
+                </label>
+              </div>
+              <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+                Sesi dibaca dari tabel <code>radacct</code>; Disconnect/CoA tetap lewat Secret CoA di atas
+                (paket RFC 5176 ke alamat manajemen, port 3799).
+              </p>
+            </>
+          )}
+
           <label className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
             <input
               type="checkbox"

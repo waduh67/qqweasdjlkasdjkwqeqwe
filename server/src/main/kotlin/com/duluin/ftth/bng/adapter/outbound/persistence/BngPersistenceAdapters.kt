@@ -62,6 +62,7 @@ class NasPersistenceAdapter(
 
     override fun save(nas: Nas): Nas {
         val encryptedCoaSecret = nas.coaSecret?.let(cipher::encrypt)
+        val encryptedApiSecret = nas.apiSecret?.let(cipher::encrypt)
         val entity = jpa.findById(nas.id).orElse(null)?.apply {
             name = nas.name
             vendor = nas.vendor
@@ -70,6 +71,11 @@ class NasPersistenceAdapter(
             coaSecret = encryptedCoaSecret
             collectorId = nas.collectorId
             enabled = nas.enabled
+            apiUsername = nas.apiUsername
+            apiSecret = encryptedApiSecret
+            apiPort = nas.apiPort
+            apiUseTls = nas.apiUseTls
+            apiDatabase = nas.apiDatabase
         } ?: NasJpaEntity(
             id = nas.id,
             name = nas.name,
@@ -79,6 +85,11 @@ class NasPersistenceAdapter(
             coaSecret = encryptedCoaSecret,
             collectorId = nas.collectorId,
             enabled = nas.enabled,
+            apiUsername = nas.apiUsername,
+            apiSecret = encryptedApiSecret,
+            apiPort = nas.apiPort,
+            apiUseTls = nas.apiUseTls,
+            apiDatabase = nas.apiDatabase,
         )
         return jpa.save(entity).toDomain()
     }
@@ -101,6 +112,11 @@ class NasPersistenceAdapter(
         coaSecret = cipher.decryptQuietly(coaSecret, name, log),
         collectorId = collectorId,
         enabled = enabled,
+        apiUsername = apiUsername,
+        apiSecret = cipher.decryptQuietly(apiSecret, name, log),
+        apiPort = apiPort,
+        apiUseTls = apiUseTls,
+        apiDatabase = apiDatabase,
     )
 }
 

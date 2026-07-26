@@ -38,6 +38,11 @@ interface CollectorConfigContributor {
  * [expectedUsernames] = akun PPPoE aktif di BRAS ini; hanya adapter simulator yang
  * memakainya (memerankan sesi yang cocok pelanggan nyata), adapter sungguhan
  * mengabaikannya.
+ *
+ * Kredensial kontrol ([apiUsername]..[coaSecret]) sudah TERDEKRIPSI di sini — module
+ * penyumbang membacanya dari domainnya, monitoring meneruskannya apa adanya ke DTO wire
+ * (aman: kanal collector TLS, cermin community SNMP OLT). Kosong untuk BRAS tanpa adapter
+ * nyata yang dikonfigurasi.
  */
 data class NasPollTarget(
     val nasId: UUID,
@@ -46,6 +51,12 @@ data class NasPollTarget(
     val host: String?,
     val adapterType: String,
     val expectedUsernames: List<String>,
+    val apiUsername: String? = null,
+    val apiSecret: String? = null,
+    val apiPort: Int? = null,
+    val apiUseTls: Boolean = true,
+    val apiDatabase: String? = null,
+    val coaSecret: String? = null,
 )
 
 /**

@@ -47,7 +47,12 @@ export interface SaveRateProfileRequest {
   radiusProfileName?: string | null
 }
 
-/** Proyeksi satu BRAS. [hasCoaSecret] menandai secret CoA terisi tanpa membocorkannya. */
+/**
+ * Proyeksi satu BRAS. [hasCoaSecret]/[hasApiSecret] menandai rahasianya terisi tanpa
+ * membocorkannya. Kredensial kontrol non-rahasia
+ * ([apiUsername]/[apiPort]/[apiUseTls]/[apiDatabase]) dibalikkan apa adanya untuk memuat
+ * ulang form saat diedit — dipakai adapter nyata (REST RouterOS / SQL FreeRADIUS).
+ */
 export interface NasView {
   id: string
   name: string
@@ -57,9 +62,17 @@ export interface NasView {
   hasCoaSecret: boolean
   collectorId: string | null
   enabled: boolean
+  apiUsername: string | null
+  hasApiSecret: boolean
+  apiPort: number | null
+  apiUseTls: boolean
+  apiDatabase: string | null
 }
 
-/** Perubahan BRAS; [coaSecret] kosong saat update = biarkan secret apa adanya. */
+/**
+ * Perubahan BRAS; [coaSecret]/[apiSecret] kosong saat update = biarkan rahasia apa adanya.
+ * [apiUsername]/[apiPort]/[apiUseTls]/[apiDatabase] = kredensial kontrol adapter nyata.
+ */
 export interface SaveNasRequest {
   name: string
   vendor: NasVendor
@@ -68,6 +81,11 @@ export interface SaveNasRequest {
   coaSecret?: string | null
   collectorId?: string | null
   enabled: boolean
+  apiUsername?: string | null
+  apiSecret?: string | null
+  apiPort?: number | null
+  apiUseTls?: boolean
+  apiDatabase?: string | null
 }
 
 /**

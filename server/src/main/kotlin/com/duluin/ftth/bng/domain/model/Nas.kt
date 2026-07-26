@@ -11,11 +11,15 @@ enum class NasVendor { MIKROTIK, CISCO, JUNIPER, FREERADIUS, OTHER }
  * Satu BRAS/BNG (Network Access Server) milik tenant — router master yang menutup
  * sesi PPPoE dan menjadi klien RADIUS.
  *
- * [coaSecret] adalah rahasia bersama untuk mengirim CoA/Disconnect (fitur "Reset
- * Login"/isolir di slice berikutnya); disimpan terenkripsi (batas enkripsi ada di
- * adapter persistence, sama seperti community SNMP OLT). [nasIdentifier] dipakai
- * mencocokkan laporan RADIUS Accounting ke NAS ini. [collectorId] menandai agent
- * on-prem mana yang menjangkau NAS ini — belum dipakai di slice fondasi.
+ * [coaSecret] adalah rahasia bersama untuk mengirim CoA/Disconnect (Reset Login/isolir);
+ * disimpan terenkripsi (batas enkripsi ada di adapter persistence, sama seperti community
+ * SNMP OLT). [nasIdentifier] dipakai mencocokkan laporan RADIUS Accounting ke NAS ini.
+ * [collectorId] menandai agent on-prem mana yang menjangkau NAS ini.
+ *
+ * Kredensial kontrol untuk adapter nyata (slice 7d) — dipakai berbeda per vendor:
+ * [apiUsername]/[apiSecret]/[apiPort]/[apiUseTls] untuk REST API RouterOS; [apiDatabase]
+ * (URL JDBC) + [apiUsername]/[apiSecret] untuk membaca `radacct` FreeRADIUS. Seperti
+ * [coaSecret], [apiSecret] plaintext di domain dan hanya terenkripsi di batas persistence.
  */
 class Nas private constructor(
     val id: UUID,
@@ -27,6 +31,11 @@ class Nas private constructor(
     coaSecret: String?,
     collectorId: UUID?,
     enabled: Boolean,
+    apiUsername: String?,
+    apiSecret: String?,
+    apiPort: Int?,
+    apiUseTls: Boolean,
+    apiDatabase: String?,
 ) {
     var name: String = name
         private set
@@ -51,6 +60,26 @@ class Nas private constructor(
     var enabled: Boolean = enabled
         private set
 
+    /** User login REST (RouterOS) / basis data (FreeRADIUS). Null = belum diisi. */
+    var apiUsername: String? = apiUsername
+        private set
+
+    /** Plaintext di domain; terenkripsi di batas persistence (cermin [coaSecret]). */
+    var apiSecret: String? = apiSecret
+        private set
+
+    /** Port REST RouterOS; null = adapter memakai bawaan (443/80 mengikut [apiUseTls]). */
+    var apiPort: Int? = apiPort
+        private set
+
+    /** REST RouterOS lewat HTTPS. Diabaikan FreeRADIUS (URL JDBC yang menentukan). */
+    var apiUseTls: Boolean = apiUseTls
+        private set
+
+    /** URL JDBC basis data RADIUS (FreeRADIUS). Kosong untuk vendor lain. */
+    var apiDatabase: String? = apiDatabase
+        private set
+
     @Suppress("LongParameterList")
     fun update(
         name: String,
@@ -60,6 +89,11 @@ class Nas private constructor(
         coaSecret: String?,
         collectorId: UUID?,
         enabled: Boolean,
+        apiUsername: String?,
+        apiSecret: String?,
+        apiPort: Int?,
+        apiUseTls: Boolean,
+        apiDatabase: String?,
     ) {
         this.name = validateName(name)
         this.vendor = vendor
@@ -67,9 +101,15 @@ class Nas private constructor(
         this.nasIdentifier = validateIdentifier(nasIdentifier)
         // Null berarti "biarkan apa adanya" agar rahasia tak terhapus tanpa sengaja
         // saat operator menyunting field lain; string kosong pun diperlakukan sama.
-        coaSecret?.trim()?.takeIf { it.isNotEmpty() }?.let { this.coaSecret = validateSecret(it) }
+        coaSecret?.trim()?.takeIf { it.isNotEmpty() }?.let { this.coaSecret = validateSecret(it, "Secret CoA") }
         this.collectorId = collectorId
         this.enabled = enabled
+        this.apiUsername = validateApiUsername(apiUsername)
+        // Sama seperti coaSecret: null/kosong = biarkan apa adanya, tak menimpa yang ada.
+        apiSecret?.trim()?.takeIf { it.isNotEmpty() }?.let { this.apiSecret = validateSecret(it, "Password kontrol BRAS") }
+        this.apiPort = validateApiPort(apiPort)
+        this.apiUseTls = apiUseTls
+        this.apiDatabase = validateApiDatabase(apiDatabase)
     }
 
     companion object {
@@ -82,6 +122,11 @@ class Nas private constructor(
             nasIdentifier: String?,
             coaSecret: String?,
             collectorId: UUID?,
+            apiUsername: String? = null,
+            apiSecret: String? = null,
+            apiPort: Int? = null,
+            apiUseTls: Boolean = true,
+            apiDatabase: String? = null,
         ): Nas = Nas(
             id = UuidV7.generate(),
             tenantId = tenantId,
@@ -89,9 +134,15 @@ class Nas private constructor(
             vendor = vendor,
             address = validateAddress(address),
             nasIdentifier = validateIdentifier(nasIdentifier),
-            coaSecret = coaSecret?.trim()?.takeIf { it.isNotEmpty() }?.let { validateSecret(it) },
+            coaSecret = coaSecret?.trim()?.takeIf { it.isNotEmpty() }?.let { validateSecret(it, "Secret CoA") },
             collectorId = collectorId,
             enabled = true,
+            apiUsername = validateApiUsername(apiUsername),
+            apiSecret = apiSecret?.trim()?.takeIf { it.isNotEmpty() }
+                ?.let { validateSecret(it, "Password kontrol BRAS") },
+            apiPort = validateApiPort(apiPort),
+            apiUseTls = apiUseTls,
+            apiDatabase = validateApiDatabase(apiDatabase),
         )
 
         @Suppress("LongParameterList")
@@ -105,7 +156,15 @@ class Nas private constructor(
             coaSecret: String?,
             collectorId: UUID?,
             enabled: Boolean,
-        ): Nas = Nas(id, tenantId, name, vendor, address, nasIdentifier, coaSecret, collectorId, enabled)
+            apiUsername: String? = null,
+            apiSecret: String? = null,
+            apiPort: Int? = null,
+            apiUseTls: Boolean = true,
+            apiDatabase: String? = null,
+        ): Nas = Nas(
+            id, tenantId, name, vendor, address, nasIdentifier, coaSecret, collectorId, enabled,
+            apiUsername, apiSecret, apiPort, apiUseTls, apiDatabase,
+        )
 
         private fun validateName(name: String): String {
             val trimmed = name.trim()
@@ -125,9 +184,26 @@ class Nas private constructor(
             return trimmed
         }
 
-        private fun validateSecret(secret: String): String {
-            if (secret.length > 255) throw ValidationException("Secret CoA maksimal 255 karakter")
+        private fun validateSecret(secret: String, label: String): String {
+            if (secret.length > 255) throw ValidationException("$label maksimal 255 karakter")
             return secret
+        }
+
+        private fun validateApiUsername(username: String?): String? {
+            val trimmed = username?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+            if (trimmed.length > 128) throw ValidationException("User kontrol BRAS maksimal 128 karakter")
+            return trimmed
+        }
+
+        private fun validateApiPort(port: Int?): Int? {
+            if (port != null && port !in 1..65_535) throw ValidationException("Port kontrol BRAS harus 1-65535")
+            return port
+        }
+
+        private fun validateApiDatabase(database: String?): String? {
+            val trimmed = database?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+            if (trimmed.length > 500) throw ValidationException("URL basis data BRAS maksimal 500 karakter")
+            return trimmed
         }
     }
 }

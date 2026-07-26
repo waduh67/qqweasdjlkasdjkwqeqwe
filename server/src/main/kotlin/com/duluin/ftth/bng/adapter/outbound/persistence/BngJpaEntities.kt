@@ -66,6 +66,21 @@ class NasJpaEntity(
 
     @Column(nullable = false)
     var enabled: Boolean,
+
+    @Column(name = "api_username", length = 128)
+    var apiUsername: String?,
+
+    @Column(name = "api_secret", length = 512)
+    var apiSecret: String?,
+
+    @Column(name = "api_port")
+    var apiPort: Int?,
+
+    @Column(name = "api_use_tls", nullable = false)
+    var apiUseTls: Boolean,
+
+    @Column(name = "api_database", length = 500)
+    var apiDatabase: String?,
 ) : TenantAwareJpaEntity(id)
 
 /**

@@ -19,10 +19,15 @@ interface ManageNasUseCase {
 }
 
 /**
- * [coaSecret] null/kosong saat update berarti "biarkan apa adanya" — rahasia tak
- * terhapus tanpa sengaja saat operator menyunting field lain. [enabled] hanya
+ * [coaSecret]/[apiSecret] null/kosong saat update berarti "biarkan apa adanya" — rahasia
+ * tak terhapus tanpa sengaja saat operator menyunting field lain. [enabled] hanya
  * berpengaruh saat update; NAS baru selalu aktif.
+ *
+ * [apiUsername]/[apiSecret]/[apiPort]/[apiUseTls]/[apiDatabase] adalah kredensial kontrol
+ * yang dipakai adapter nyata (slice 7d): REST RouterOS atau SQL FreeRADIUS. Berbeda dengan
+ * secret, field non-rahasia selalu ditimpa nilai baru saat update (cermin [enabled]).
  */
+@Suppress("LongParameterList")
 data class SaveNasCommand(
     val name: String,
     val vendor: NasVendor,
@@ -31,4 +36,9 @@ data class SaveNasCommand(
     val coaSecret: String?,
     val collectorId: UUID?,
     val enabled: Boolean = true,
+    val apiUsername: String? = null,
+    val apiSecret: String? = null,
+    val apiPort: Int? = null,
+    val apiUseTls: Boolean = true,
+    val apiDatabase: String? = null,
 )

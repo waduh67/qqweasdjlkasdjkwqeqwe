@@ -167,6 +167,13 @@ class CollectorGatewayService(
         host = host,
         adapterType = adapterType,
         expectedUsernames = expectedUsernames,
+        // Kredensial kontrol diteruskan apa adanya (sudah terdekripsi), seperti snmpCommunity OLT.
+        apiUsername = apiUsername,
+        apiSecret = apiSecret,
+        apiPort = apiPort,
+        apiUseTls = apiUseTls,
+        apiDatabase = apiDatabase,
+        coaSecret = coaSecret,
     )
 
     /**

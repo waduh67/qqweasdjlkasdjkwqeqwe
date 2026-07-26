@@ -14,8 +14,10 @@ data class RateProfileView(
 )
 
 /**
- * Proyeksi satu BRAS/NAS. [hasCoaSecret] menandai secret CoA sudah diisi tanpa
- * pernah membocorkan nilainya lewat API.
+ * Proyeksi satu BRAS/NAS. [hasCoaSecret]/[hasApiSecret] menandai rahasianya sudah diisi
+ * tanpa pernah membocorkan nilainya lewat API. Kredensial non-rahasia
+ * ([apiUsername]/[apiPort]/[apiUseTls]/[apiDatabase]) dibalikkan apa adanya agar form
+ * bisa memuat nilainya kembali saat diedit.
  */
 data class NasView(
     val id: UUID,
@@ -26,6 +28,11 @@ data class NasView(
     val hasCoaSecret: Boolean,
     val collectorId: UUID?,
     val enabled: Boolean,
+    val apiUsername: String?,
+    val hasApiSecret: Boolean,
+    val apiPort: Int?,
+    val apiUseTls: Boolean,
+    val apiDatabase: String?,
 )
 
 /**

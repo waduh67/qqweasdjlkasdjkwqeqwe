@@ -41,6 +41,11 @@ class NasService(
                 nasIdentifier = command.nasIdentifier,
                 coaSecret = command.coaSecret,
                 collectorId = command.collectorId,
+                apiUsername = command.apiUsername,
+                apiSecret = command.apiSecret,
+                apiPort = command.apiPort,
+                apiUseTls = command.apiUseTls,
+                apiDatabase = command.apiDatabase,
             ),
         )
         auditor.record("bng.nas.created", "Nas", nas.id, nas.tenantId, mapOf("name" to nas.name, "vendor" to nas.vendor.name))
@@ -61,6 +66,11 @@ class NasService(
             coaSecret = command.coaSecret,
             collectorId = command.collectorId,
             enabled = command.enabled,
+            apiUsername = command.apiUsername,
+            apiSecret = command.apiSecret,
+            apiPort = command.apiPort,
+            apiUseTls = command.apiUseTls,
+            apiDatabase = command.apiDatabase,
         )
         val saved = nasRepository.save(nas)
         auditor.record("bng.nas.updated", "Nas", saved.id, saved.tenantId, mapOf("name" to saved.name, "vendor" to saved.vendor.name))
@@ -91,4 +101,9 @@ private fun Nas.toView() = NasView(
     hasCoaSecret = coaSecret != null,
     collectorId = collectorId,
     enabled = enabled,
+    apiUsername = apiUsername,
+    hasApiSecret = apiSecret != null,
+    apiPort = apiPort,
+    apiUseTls = apiUseTls,
+    apiDatabase = apiDatabase,
 )
