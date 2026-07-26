@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type {
+  AutoProvisionPolicyView,
   DiscoveredOnuState,
   DiscoveredOnuView,
   ProvisioningSuggestion,
@@ -50,6 +51,8 @@ export function ProvisioningPage() {
   const [loading, setLoading] = useState(true)
   const [odps, setOdps] = useState<OdpView[]>([])
   const [provision, setProvision] = useState<DiscoveredOnuView | null>(null)
+  // Setelan zero-touch tenant; null = belum termuat (atau tak boleh dilihat).
+  const [autoProvision, setAutoProvision] = useState<boolean | null>(null)
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -75,7 +78,26 @@ export function ProvisioningPage() {
       .catch(() => {
         /* daftar ODP opsional; drawer tetap bisa dibuka manual */
       })
+    api
+      .get<AutoProvisionPolicyView>('/api/monitoring/auto-provision-policy')
+      .then((p) => setAutoProvision(p.enabled))
+      .catch(() => {
+        /* setelan opsional; toggle disembunyikan bila gagal dimuat */
+      })
   }, [manage])
+
+  // Zero-touch: saat menyala, ONU cocok-pasti (HIGH) ditautkan otomatis oleh
+  // pemindai terjadwal — operator tak perlu menekan "Terima" satu per satu.
+  const toggleAutoProvision = async () => {
+    const next = !(autoProvision ?? false)
+    try {
+      const p = await api.put<AutoProvisionPolicyView>('/api/monitoring/auto-provision-policy', { enabled: next })
+      setAutoProvision(p.enabled)
+      toast.success(p.enabled ? 'Auto-provisi zero-touch dinyalakan' : 'Auto-provisi zero-touch dimatikan')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal mengubah setelan')
+    }
+  }
 
   const run = async (action: () => Promise<unknown>, okMessage?: string) => {
     try {
@@ -118,12 +140,23 @@ export function ProvisioningPage() {
       <div className="card pad-0">
         <div className="card-head">
           <h3>Kotak masuk</h3>
-          <div className="segment">
-            {STATES.map((s) => (
-              <button key={s.key} className={state === s.key ? 'active' : ''} onClick={() => setState(s.key)}>
-                {s.label}
+          <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
+            {manage && autoProvision !== null && (
+              <button
+                className={`small ${autoProvision ? 'primary' : 'ghost'}`}
+                onClick={() => void toggleAutoProvision()}
+                title="Saat menyala, ONU cocok-pasti (keyakinan tinggi) ditautkan otomatis tanpa menunggu Anda menekan Terima"
+              >
+                Auto-provisi: {autoProvision ? 'nyala' : 'mati'}
               </button>
-            ))}
+            )}
+            <div className="segment">
+              {STATES.map((s) => (
+                <button key={s.key} className={state === s.key ? 'active' : ''} onClick={() => setState(s.key)}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

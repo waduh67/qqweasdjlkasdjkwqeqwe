@@ -130,3 +130,12 @@ class AlarmRuleJpaEntity(
     @Column(name = "sustain_seconds", nullable = false)
     var sustainSeconds: Int,
 ) : TenantAwareJpaEntity(id)
+
+@Entity
+@Table(name = "auto_provision_policy")
+class AutoProvisionPolicyJpaEntity(
+    id: UUID,
+
+    @Column(nullable = false)
+    var enabled: Boolean,
+) : TenantAwareJpaEntity(id)

@@ -109,6 +109,15 @@ export interface OnuHistoryView {
   degrading: boolean
 }
 
+/**
+ * Setelan auto-provisioning zero-touch tenant. Bila `enabled`, ONU liar
+ * berkeyakinan HIGH ditautkan otomatis oleh pemindai terjadwal tanpa menunggu
+ * operator menekan "Terima".
+ */
+export interface AutoProvisionPolicyView {
+  enabled: boolean
+}
+
 /** Tahap sebuah ONU di kotak masuk auto-provisioning. */
 export type DiscoveredOnuState = 'DISCOVERED' | 'PROVISIONED' | 'IGNORED'
 

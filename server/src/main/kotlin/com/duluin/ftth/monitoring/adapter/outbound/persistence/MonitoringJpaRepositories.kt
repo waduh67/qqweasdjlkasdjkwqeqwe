@@ -40,3 +40,9 @@ interface AlarmJpaRepository : JpaRepository<AlarmJpaEntity, UUID>, JpaSpecifica
 interface AlarmRuleJpaRepository : JpaRepository<AlarmRuleJpaEntity, UUID> {
     fun findByKind(kind: AlarmKind): AlarmRuleJpaEntity?
 }
+
+/**
+ * Satu baris per tenant (UNIQUE tenant_id). RLS + `@TenantId` menyaring [findAll]
+ * ke tenant aktif, jadi barisnya — bila ada — adalah elemen pertamanya.
+ */
+interface AutoProvisionPolicyJpaRepository : JpaRepository<AutoProvisionPolicyJpaEntity, UUID>

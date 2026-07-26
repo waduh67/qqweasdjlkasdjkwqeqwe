@@ -6,6 +6,7 @@ import com.duluin.ftth.monitoring.domain.model.Alarm
 import com.duluin.ftth.monitoring.domain.model.AlarmKind
 import com.duluin.ftth.monitoring.domain.model.AlarmRule
 import com.duluin.ftth.monitoring.domain.model.AlarmStatus
+import com.duluin.ftth.monitoring.domain.model.AutoProvisionPolicy
 import com.duluin.ftth.monitoring.domain.model.Collector
 import com.duluin.ftth.monitoring.domain.model.OnuMetricPoint
 import com.duluin.ftth.monitoring.domain.model.OpticalTrend
@@ -111,4 +112,12 @@ interface AlarmRuleRepository {
     fun findByKind(kind: AlarmKind): AlarmRule?
 
     fun findAll(): List<AlarmRule>
+}
+
+interface AutoProvisionPolicyRepository {
+
+    fun save(policy: AutoProvisionPolicy): AutoProvisionPolicy
+
+    /** Kebijakan tenant aktif bila sudah pernah disetel; `null` berarti pakai bawaan (mati). */
+    fun find(): AutoProvisionPolicy?
 }

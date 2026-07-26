@@ -1,8 +1,10 @@
 package com.duluin.ftth
 
+import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.contract.CollectorProtocol
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
+import com.duluin.ftth.monitoring.application.service.AutoProvisionSweeper
 import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -14,6 +16,7 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.Instant
 import java.util.UUID
@@ -36,6 +39,8 @@ class AutoProvisioningIT {
 
     @Autowired private lateinit var onboarding: OnboardTenantUseCase
 
+    @Autowired private lateinit var autoProvisionSweeper: AutoProvisionSweeper
+
     private val pass = "secret12345"
 
     private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
@@ -48,12 +53,28 @@ class AutoProvisioningIT {
         return JsonPath.read(json, "$.accessToken")
     }
 
-    private fun newTenantAdmin(prefix: String): String {
+    /** Tenant baru beserta id-nya — id dibutuhkan untuk menjalankan sapuan lintas-tenant. */
+    private data class Tenant(val token: String, val id: UUID)
+
+    private fun onboardTenant(prefix: String): Tenant {
         val slug = "$prefix${uniq()}"
         val admin = "admin@$slug.test"
-        onboarding.onboard(OnboardTenantCommand(slug, "Tenant $slug", admin, "Admin", pass))
-        return login(slug, admin)
+        val result = onboarding.onboard(OnboardTenantCommand(slug, "Tenant $slug", admin, "Admin", pass))
+        return Tenant(login(slug, admin), result.tenant.id)
     }
+
+    private fun newTenantAdmin(prefix: String): String = onboardTenant(prefix).token
+
+    private fun put(url: String, token: String, body: String, expected: Int = 200): String =
+        mockMvc.perform(
+            put(url).header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON).content(body),
+        ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
+            .andReturn().response.contentAsString
+
+    /** Menjalankan sapuan auto-provisioning untuk satu tenant, seperti pemindai terjadwal. */
+    private fun runAutoProvisionSweep(tenantId: UUID) =
+        TenantContext.runAs(tenantId) { autoProvisionSweeper.sweep(tenantId) }
 
     private fun post(url: String, token: String, body: String, expected: Int = 201): String =
         mockMvc.perform(
@@ -318,6 +339,84 @@ class AutoProvisioningIT {
         postAsCollector(apiKey, batch(reading(serial, oltCode, -21.0)))
         assertThat(JsonPath.read<List<String>>(inbox(token), "$[*].id")).isEmpty()
         assertThat(JsonPath.read<List<String>>(inbox(token, "PROVISIONED"), "$[*].id")).contains(discoveredId)
+    }
+
+    @Test
+    fun `zero-touch mati (default) membiarkan saran HIGH menunggu operator`() {
+        val tenant = onboardTenant("ztoff")
+        val (oltCode, _, customer) = scaffold(tenant.token)
+        val apiKey = newCollector(tenant.token)
+        val serial = "SN-${uniq().uppercase()}"
+
+        postAsCollector(apiKey, batch(reading(serial, oltCode, -22.0)))
+        // Cocok tunggal → HIGH, tapi kebijakan default mati.
+        assertThat(JsonPath.read<String>(inbox(tenant.token), "$[0].suggestion.confidence")).isEqualTo("HIGH")
+
+        runAutoProvisionSweep(tenant.id)
+
+        // Tanpa menyalakan kebijakan, sapuan tidak menautkan apa pun.
+        val listed = inbox(tenant.token)
+        assertThat(JsonPath.read<List<String>>(listed, "$[*].serialNumber")).containsExactly(serial)
+        assertThat(JsonPath.read<String>(listed, "$[0].state")).isEqualTo("DISCOVERED")
+        assertThat(
+            JsonPath.read<List<String>>(getJson("/api/customers/$customer/onus", tenant.token), "$[*].serialNumber"),
+        ).isEmpty()
+    }
+
+    @Test
+    fun `zero-touch menyala menautkan ONU HIGH otomatis tanpa operator`() {
+        val tenant = onboardTenant("zton")
+        val (oltCode, odp, customer) = scaffold(tenant.token)
+        val apiKey = newCollector(tenant.token)
+        val serial = "SN-${uniq().uppercase()}"
+
+        val policy = put("/api/monitoring/auto-provision-policy", tenant.token, """{"enabled":true}""")
+        assertThat(JsonPath.read<Boolean>(policy, "$.enabled")).isTrue()
+
+        postAsCollector(apiKey, batch(reading(serial, oltCode, -22.0)))
+        assertThat(JsonPath.read<String>(inbox(tenant.token), "$[0].suggestion.confidence")).isEqualTo("HIGH")
+
+        runAutoProvisionSweep(tenant.id)
+
+        // Baris kotak masuk dituntaskan sendiri, tanpa operator menekan apa pun.
+        assertThat(JsonPath.read<List<String>>(inbox(tenant.token), "$[*].id")).isEmpty()
+        assertThat(JsonPath.read<List<String>>(inbox(tenant.token, "PROVISIONED"), "$[*].serialNumber")).contains(serial)
+
+        // ONU kini terdaftar & terpasang persis di ODP+port tebakan.
+        val onus = getJson("/api/customers/$customer/onus", tenant.token)
+        assertThat(JsonPath.read<List<String>>(onus, "$[*].serialNumber")).containsExactly(serial)
+        assertThat(JsonPath.read<List<String>>(onus, "$[*].odpId")).containsExactly(odp)
+        assertThat(JsonPath.read<List<Int>>(onus, "$[*].odpPortNumber")).containsExactly(1)
+
+        // Serial kini dikenal → bacaan berikut diterima sebagai metrik biasa.
+        val known = postAsCollector(apiKey, batch(reading(serial, oltCode, -21.0)))
+        assertThat(JsonPath.read<Int>(known, "$.accepted")).isEqualTo(1)
+    }
+
+    @Test
+    fun `zero-touch menyala tidak menyentuh saran non-HIGH`() {
+        val tenant = onboardTenant("ztmed")
+        val (oltCode, _, _) = scaffold(tenant.token)
+        val apiKey = newCollector(tenant.token)
+        val s = uniq().uppercase()
+
+        put("/api/monitoring/auto-provision-policy", tenant.token, """{"enabled":true}""")
+
+        // Pelanggan kedua menunggu instalasi, tanpa WO PSB → dua kandidat, keyakinan MEDIUM.
+        post(
+            "/api/customers", tenant.token,
+            """{"code":"C2-$s","name":"Pelanggan Dua $s","address":"Jl. Uji 2",
+                "location":{"longitude":106.9955,"latitude":-6.2455}}""",
+        )
+
+        val serial = "SN-${uniq().uppercase()}"
+        postAsCollector(apiKey, batch(reading(serial, oltCode, -22.0)))
+        assertThat(JsonPath.read<String>(inbox(tenant.token), "$[0].suggestion.confidence")).isEqualTo("MEDIUM")
+
+        runAutoProvisionSweep(tenant.id)
+
+        // MEDIUM butuh mata manusia — tetap menunggu meski zero-touch menyala.
+        assertThat(JsonPath.read<String>(inbox(tenant.token), "$[0].state")).isEqualTo("DISCOVERED")
     }
 
     @Test
