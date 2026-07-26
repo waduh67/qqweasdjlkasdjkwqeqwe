@@ -1,5 +1,7 @@
 package com.duluin.ftth.monitoring.adapter.inbound.web
 
+import com.duluin.ftth.contract.BngIngestResult
+import com.duluin.ftth.contract.BngSessionBatch
 import com.duluin.ftth.contract.CollectorConfig
 import com.duluin.ftth.contract.CollectorHeartbeat
 import com.duluin.ftth.contract.IngestResult
@@ -22,9 +24,8 @@ import org.springframework.web.bind.annotation.RestController
  * terpisah — tidak ada `@PreAuthorize` di sini karena collector memang tidak
  * punya izin RBAC. Tenant sudah terpasang filter sebelum method ini berjalan.
  *
- * Permukaannya sengaja hanya dua endpoint dan keduanya menulis: collector tidak
- * pernah bisa membaca data pelanggan, sehingga API key yang bocor pun tidak
- * membuka isi tenant.
+ * Permukaannya sengaja hanya menulis: collector tidak pernah bisa membaca data
+ * pelanggan, sehingga API key yang bocor pun tidak membuka isi tenant.
  */
 @RestController
 @RequestMapping("/api/collector")
@@ -46,4 +47,11 @@ class CollectorGatewayController(
         @AuthenticationPrincipal principal: CollectorPrincipal,
         @RequestBody batch: MetricBatch,
     ): IngestResult = ingestion.ingest(principal.collectorId, principal.tenantId, batch)
+
+    @PostMapping("/bng-sessions")
+    @Operation(summary = "Mengirim batch sesi PPPoE dari sebuah BRAS")
+    fun ingestBngSessions(
+        @AuthenticationPrincipal principal: CollectorPrincipal,
+        @RequestBody batch: BngSessionBatch,
+    ): BngIngestResult = gateway.handleBngSessions(principal.collectorId, principal.tenantId, batch)
 }

@@ -1,9 +1,11 @@
 package com.duluin.ftth
 
+import com.duluin.ftth.contract.CollectorProtocol
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
 import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -16,6 +18,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -83,6 +86,41 @@ class BngIT {
                 """{"name":"$name","description":null,"downMbps":$down,"upMbps":$up,"radiusProfileName":"prof-$down"}""",
             ),
         )
+
+    private fun nas(token: String, name: String): String =
+        id(
+            post(
+                "/api/bng/nas", token,
+                """{"name":"$name","vendor":"MIKROTIK","address":"10.0.0.1",
+                    "nasIdentifier":"$name","coaSecret":null,"collectorId":null}""",
+            ),
+        )
+
+    /** Membuat collector dan mengembalikan API key mentahnya (untuk gerbang collector). */
+    private fun newCollector(token: String): String =
+        JsonPath.read(
+            post("/api/monitoring/collectors", token, """{"name":"Collector ${uniq()}","pollIntervalSeconds":60}"""),
+            "$.apiKey",
+        )
+
+    /** Mengirim ke gerbang collector memakai API key, bukan JWT pengguna. */
+    private fun postAsCollector(url: String, apiKey: String, body: String, expected: Int = 200): String =
+        mockMvc.perform(
+            post(url).header(CollectorProtocol.API_KEY_HEADER, apiKey)
+                .contentType(MediaType.APPLICATION_JSON).content(body),
+        ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
+            .andReturn().response.contentAsString
+
+    /** Satu sesi PPPoE wire (contract.RadiusSessionReading) yang dilaporkan BRAS. */
+    private fun sessionReading(username: String, out: Long, inn: Long): String =
+        """
+        {"username":"$username","online":true,"framedIp":"10.20.30.40","nasIp":"10.0.0.1",
+         "sessionId":"sess-1","callingStationId":"AA:BB:CC:DD:EE:FF","uptimeSeconds":3600,
+         "inOctets":$inn,"outOctets":$out}
+        """.trimIndent()
+
+    private fun bngBatch(nasId: String, collectedAt: Instant, reading: String, batchId: String = uniq()): String =
+        """{"batchId":"$batchId","nasId":"$nasId","collectedAt":"$collectedAt","sessions":[$reading]}"""
 
     /** Pelanggan + langganan aktif; kembalikan (customerId, subscriptionId). */
     private fun activeSubscription(token: String): Pair<String, String> {
@@ -277,5 +315,71 @@ class BngIT {
             """{"name":"Nekat","description":null,"downMbps":10,"upMbps":5,"radiusProfileName":null}""",
             expected = 403,
         )
+    }
+
+    @Test
+    fun `sesi PPPoE terkini dan tren trafik terbaca dari laporan collector`() {
+        val token = newTenantAdmin("bng-sess")
+        val apiKey = newCollector(token)
+        val nasId = nas(token, "BRAS-Read")
+        val planId = plan(token, "Paket Sesi")
+        val (_, sub) = activeSubscription(token)
+        val username = "pppoe${uniq()}"
+        val accessId = id(
+            post(
+                "/api/bng/access", token,
+                """{"subscriptionId":"$sub","username":"$username","secret":"rahasia123","rateProfileId":"$planId","nasId":"$nasId"}""",
+            ),
+        )
+
+        // Sebelum ada laporan: akun dikenal namun offline — bukan 404. Membedakan
+        // "belum terpantau" dari "akun tak dikenal".
+        val before = getJson("/api/bng/access/$accessId/session", token)
+        assertThat(JsonPath.read<Boolean>(before, "$.online")).isFalse()
+        assertThat(JsonPath.read<String>(before, "$.username")).isEqualTo(username)
+
+        // Dua poll berjarak 10 detik, penghitung octet tumbuh: 25 Mbps unduh, 8 Mbps unggah.
+        // out_octets = arah unduh (keluar BRAS), in_octets = unggah.
+        val t1 = Instant.now()
+        val t0 = t1.minusSeconds(10)
+        val out0 = 1_000_000_000L
+        val out1 = out0 + 3_125_000L * 10 // Δ = 25 Mbps selama 10 detik
+        val in0 = 500_000_000L
+        val in1 = in0 + 1_000_000L * 10 // Δ = 8 Mbps selama 10 detik
+        postAsCollector("/api/collector/bng-sessions", apiKey, bngBatch(nasId, t0, sessionReading(username, out0, in0)))
+        postAsCollector("/api/collector/bng-sessions", apiKey, bngBatch(nasId, t1, sessionReading(username, out1, in1)))
+
+        // Sesi terkini: online, IP framed, NAS teresolusi ke namanya.
+        val session = getJson("/api/bng/access/$accessId/session", token)
+        assertThat(JsonPath.read<Boolean>(session, "$.online")).isTrue()
+        assertThat(JsonPath.read<String>(session, "$.framedIp")).isEqualTo("10.20.30.40")
+        assertThat(JsonPath.read<String>(session, "$.nasName")).isEqualTo("BRAS-Read")
+
+        // Tren trafik: titik pertama tak berlaju (belum ada pembanding), titik kedua ≈25/8 Mbps.
+        val traffic = getJson("/api/bng/access/$accessId/traffic?hours=24", token)
+        assertThat(JsonPath.read<List<*>>(traffic, "$.points")).hasSize(2)
+        assertThat(JsonPath.read<Any?>(traffic, "$.points[0].downMbps")).isNull()
+        assertThat(JsonPath.read<Double>(traffic, "$.points[1].downMbps")).isCloseTo(25.0, within(0.1))
+        assertThat(JsonPath.read<Double>(traffic, "$.points[1].upMbps")).isCloseTo(8.0, within(0.1))
+    }
+
+    @Test
+    fun `heartbeat menyertakan BRAS sebagai target polling dengan daftar akun aktif`() {
+        val token = newTenantAdmin("bng-cfg")
+        val apiKey = newCollector(token)
+        val nasId = nas(token, "BRAS-Cfg")
+        val planId = plan(token, "Paket Cfg")
+        val (_, sub) = activeSubscription(token)
+        val username = "pppoe${uniq()}"
+        post(
+            "/api/bng/access", token,
+            """{"subscriptionId":"$sub","username":"$username","secret":"rahasia123","rateProfileId":"$planId","nasId":"$nasId"}""",
+        )
+
+        // Konfigurasi yang dikembalikan denyut collector kini memuat BRAS ini sebagai
+        // target polling, dengan username akun aktif untuk dipakai simulator.
+        val config = postAsCollector("/api/collector/heartbeat", apiKey, """{"agentVersion":"test-1.0"}""")
+        assertThat(JsonPath.read<List<String>>(config, "$.nasTargets[*].name")).contains("BRAS-Cfg")
+        assertThat(JsonPath.read<List<String>>(config, "$.nasTargets[*].expectedUsernames[*]")).contains(username)
     }
 }

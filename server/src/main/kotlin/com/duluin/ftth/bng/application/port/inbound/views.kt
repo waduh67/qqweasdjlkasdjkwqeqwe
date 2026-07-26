@@ -1,5 +1,6 @@
 package com.duluin.ftth.bng.application.port.inbound
 
+import java.time.Instant
 import java.util.UUID
 
 /** Proyeksi satu paket (rate profile) untuk UI. */
@@ -43,4 +44,37 @@ data class SubscriberAccessView(
     val nasId: UUID?,
     val nasName: String?,
     val status: String,
+)
+
+/**
+ * Keadaan sesi PPPoE terkini sebuah akun — hasil "B-ras Check". [online] false berarti
+ * BRAS melaporkan akun tidak sedang tersambung (atau belum pernah terpantau bila
+ * [lastSeenAt] null). Waktu semuanya UTC; UI yang menyesuaikan zona.
+ */
+data class BrasSessionView(
+    val subscriberAccessId: UUID,
+    val username: String,
+    val online: Boolean,
+    val framedIp: String?,
+    val nasId: UUID?,
+    val nasName: String?,
+    val nasIp: String?,
+    val callingStationId: String?,
+    val uptimeSeconds: Long?,
+    val startedAt: Instant?,
+    val lastSeenAt: Instant?,
+)
+
+/** Satu titik tren trafik siap-gambar (Mbps). Null = tak terhitung, grafik memutus garis. */
+data class TrafficPoint(
+    val time: Instant,
+    val downMbps: Double?,
+    val upMbps: Double?,
+)
+
+/** Tren trafik satu akun dalam rentang [hours] jam ke belakang. */
+data class TrafficHistoryView(
+    val subscriberAccessId: UUID,
+    val hours: Int,
+    val points: List<TrafficPoint>,
 )

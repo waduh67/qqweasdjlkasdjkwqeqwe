@@ -148,6 +148,9 @@ class SubscriberAccessPersistenceAdapter(
     override fun findByUsername(username: String): SubscriberAccess? =
         jpa.findByUsername(username)?.toDomain()
 
+    override fun findByNasId(nasId: UUID): List<SubscriberAccess> =
+        jpa.findByNasIdOrderByUsernameAsc(nasId).map { it.toDomain() }
+
     override fun existsBySubscriptionId(subscriptionId: UUID): Boolean =
         jpa.existsBySubscriptionId(subscriptionId)
 

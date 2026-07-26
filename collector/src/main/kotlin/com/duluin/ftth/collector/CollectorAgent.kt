@@ -1,13 +1,17 @@
 package com.duluin.ftth.collector
 
 import com.duluin.ftth.collector.adapter.AdapterRegistry
+import com.duluin.ftth.collector.adapter.BngAdapterRegistry
 import com.duluin.ftth.collector.adapter.ProbeResult
+import com.duluin.ftth.contract.BngSessionBatch
 import com.duluin.ftth.contract.CollectorConfig
 import com.duluin.ftth.contract.CollectorHeartbeat
 import com.duluin.ftth.contract.CycleReport
 import com.duluin.ftth.contract.MetricBatch
+import com.duluin.ftth.contract.NasTarget
 import com.duluin.ftth.contract.OltTarget
 import com.duluin.ftth.contract.OnuReading
+import com.duluin.ftth.contract.RadiusSessionReading
 import com.duluin.ftth.contract.TargetFailure
 import org.slf4j.LoggerFactory
 import java.time.Instant
@@ -34,6 +38,11 @@ class CollectorAgent(
     private val agentVersion: String,
     private val sleeper: (Long) -> Unit = { Thread.sleep(it) },
     private val clock: () -> Instant = Instant::now,
+    /**
+     * Adapter BRAS untuk jalur BNG (sesi PPPoE), Phase 7. Opsional: `null` berarti
+     * collector ini tidak melayani polling BRAS — konfigurasi `nasTargets` diabaikan.
+     */
+    private val bngRegistry: BngAdapterRegistry? = null,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val running = AtomicBoolean(true)
@@ -104,6 +113,12 @@ class CollectorAgent(
 
         readings.chunked(MetricBatch.MAX_READINGS).forEach(::deliver)
 
+        // Jalur BNG (sesi PPPoE) berjalan setelah OLT dan tak memengaruhi CycleReport,
+        // yang tetap fokus pada telemetri optik. Kegagalannya di-log per BRAS.
+        bngRegistry?.let { registry ->
+            if (config.nasTargets.isNotEmpty()) pollAndDeliverBng(config.nasTargets, registry)
+        }
+
         val report = CycleReport(
             startedAt = startedAt,
             finishedAt = clock(),
@@ -171,6 +186,59 @@ class CollectorAgent(
         // Metrik yang gagal terkirim sengaja tidak diantre ke disk: data optik
         // berumur pendek nilainya, dan siklus berikutnya sudah membawa yang baru.
         log.error("Batch {} dibuang setelah {} percobaan", batch.batchId, MAX_DELIVERY_ATTEMPTS)
+    }
+
+    /** Membaca sesi PPPoE tiap BRAS lalu mengirimnya; satu BRAS gagal tak menghentikan lainnya. */
+    private fun pollAndDeliverBng(targets: List<NasTarget>, bngRegistry: BngAdapterRegistry) {
+        for (target in targets) {
+            val adapter = bngRegistry.forVendor(target.vendor)
+            if (adapter == null) {
+                log.warn("BRAS {} vendor {} belum didukung, dilewati", target.name, target.vendor)
+                continue
+            }
+            val sessions = try {
+                adapter.pollSessions(target)
+            } catch (ex: Exception) {
+                log.warn("Polling sesi BRAS {} gagal: {}", target.name, ex.message)
+                continue
+            }
+            sessions.chunked(BngSessionBatch.MAX_SESSIONS).forEach { chunk -> deliverBng(target.nasId, chunk) }
+        }
+    }
+
+    /** Mengirim satu batch sesi dengan percobaan ulang, id batch dipertahankan (cermin [deliver]). */
+    private fun deliverBng(nasId: String, sessions: List<RadiusSessionReading>) {
+        val batch = BngSessionBatch(
+            batchId = UUID.randomUUID().toString(),
+            nasId = nasId,
+            collectedAt = clock(),
+            sessions = sessions,
+        )
+
+        repeat(MAX_DELIVERY_ATTEMPTS) { attempt ->
+            try {
+                val result = client.pushBngSessions(batch)
+                if (result.unknownUsernames.isNotEmpty()) {
+                    log.info(
+                        "{} sesi tanpa akun terdaftar di server: {}",
+                        result.unknownUsernames.size,
+                        result.unknownUsernames.take(5).joinToString(),
+                    )
+                }
+                return
+            } catch (ex: ServerRejectedException) {
+                if (ex.permanent) {
+                    log.error("Batch sesi ditolak permanen, dibuang: {}", ex.message)
+                    return
+                }
+                log.warn("Pengiriman sesi gagal (percobaan {}): {}", attempt + 1, ex.message)
+                sleeper(RETRY_DELAY_MILLIS)
+            } catch (ex: Exception) {
+                log.warn("Pengiriman sesi gagal (percobaan {}): {}", attempt + 1, ex.message)
+                sleeper(RETRY_DELAY_MILLIS)
+            }
+        }
+        log.error("Batch sesi {} dibuang setelah {} percobaan", batch.batchId, MAX_DELIVERY_ATTEMPTS)
     }
 
     private companion object {

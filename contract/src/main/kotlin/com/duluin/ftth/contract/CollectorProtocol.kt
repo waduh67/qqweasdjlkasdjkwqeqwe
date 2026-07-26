@@ -165,6 +165,12 @@ data class CollectorConfig(
     val targets: List<OltTarget>,
     /** Server bisa menyuruh collector diam, mis. saat pemeliharaan. */
     val paused: Boolean = false,
+    /**
+     * BRAS/NAS yang harus di-polling untuk sesi PPPoE & akunting (Phase 7).
+     * Aditif dan kosong bila tenant belum memakai modul BNG — collector lama yang
+     * belum mengenal field ini mengabaikannya, sesuai kebijakan forward-compatible.
+     */
+    val nasTargets: List<NasTarget> = emptyList(),
 )
 
 /**
@@ -183,11 +189,76 @@ data class OltTarget(
     val snmpCommunity: String?,
 )
 
+/**
+ * Satu BRAS/NAS yang harus di-polling collector untuk sesi PPPoE.
+ *
+ * [expectedUsernames] adalah akun yang menurut server seharusnya online — dipakai
+ * HANYA oleh adapter simulator untuk memproduksi sesi yang cocok dengan pelanggan
+ * nyata. Adapter sungguhan (RouterOS/FreeRADIUS) mengabaikannya dan membaca sesi
+ * apa adanya dari perangkat. [adapterType] memilih adapter di sisi collector.
+ */
+data class NasTarget(
+    val nasId: String,
+    val name: String,
+    val vendor: String,
+    val host: String?,
+    val adapterType: String,
+    val expectedUsernames: List<String> = emptyList(),
+)
+
 /** Jawaban server atas sebuah [MetricBatch]. */
 data class IngestResult(
     val accepted: Int,
     /** Bacaan yang serialnya tidak dikenal — kandidat ONU liar. */
     val unknownSerialNumbers: List<String>,
     /** True bila [MetricBatch.batchId] sudah pernah diterima. */
+    val duplicate: Boolean = false,
+)
+
+// ---------------------------------------------------------------------------
+// BNG (BRAS/RADIUS) — sesi PPPoE, Phase 7
+// ---------------------------------------------------------------------------
+
+/**
+ * Kiriman batch sesi PPPoE dari satu BRAS. Seperti [MetricBatch], [batchId] diulang
+ * saat pengiriman gagal sehingga server bisa membuang kiriman ganda.
+ */
+data class BngSessionBatch(
+    val batchId: String,
+    val nasId: String,
+    val collectedAt: Instant,
+    val sessions: List<RadiusSessionReading>,
+) {
+    companion object {
+        const val MAX_SESSIONS = 5_000
+    }
+}
+
+/**
+ * Satu sesi PPPoE sebagaimana dilaporkan BRAS.
+ *
+ * Octet KUMULATIF sejak sesi dimulai (bukan delta): server menghitung laju Mbps
+ * dari selisih antar-poll, meniru cara akunting RADIUS bekerja. [inOctets] = arah
+ * unggah pelanggan (masuk ke BRAS), [outOctets] = unduh (keluar dari BRAS ke
+ * pelanggan). ONU dikenali lewat [username] — server memetakannya ke akun; username
+ * yang tak dikenal berarti sesi milik langganan yang belum diprovisi di sistem.
+ */
+data class RadiusSessionReading(
+    val username: String,
+    val online: Boolean,
+    val framedIp: String? = null,
+    val nasIp: String? = null,
+    val sessionId: String? = null,
+    val callingStationId: String? = null,
+    val uptimeSeconds: Long? = null,
+    val inOctets: Long? = null,
+    val outOctets: Long? = null,
+)
+
+/** Jawaban server atas sebuah [BngSessionBatch]. */
+data class BngIngestResult(
+    val accepted: Int,
+    /** Username sesi yang tak cocok akun mana pun — langganan belum diprovisi. */
+    val unknownUsernames: List<String> = emptyList(),
     val duplicate: Boolean = false,
 )

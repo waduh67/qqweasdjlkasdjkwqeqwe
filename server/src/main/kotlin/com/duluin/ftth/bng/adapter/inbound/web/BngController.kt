@@ -1,5 +1,6 @@
 package com.duluin.ftth.bng.adapter.inbound.web
 
+import com.duluin.ftth.bng.application.port.inbound.BrasSessionView
 import com.duluin.ftth.bng.application.port.inbound.ManageNasUseCase
 import com.duluin.ftth.bng.application.port.inbound.ManageRateProfileUseCase
 import com.duluin.ftth.bng.application.port.inbound.ManageSubscriberAccessUseCase
@@ -10,7 +11,9 @@ import com.duluin.ftth.bng.application.port.inbound.ResetSecretCommand
 import com.duluin.ftth.bng.application.port.inbound.SaveNasCommand
 import com.duluin.ftth.bng.application.port.inbound.SaveRateProfileCommand
 import com.duluin.ftth.bng.application.port.inbound.SubscriberAccessView
+import com.duluin.ftth.bng.application.port.inbound.TrafficHistoryView
 import com.duluin.ftth.bng.application.port.inbound.UpdateAccessCommand
+import com.duluin.ftth.bng.application.port.inbound.ViewBngSessionUseCase
 import com.duluin.ftth.bng.domain.model.NasVendor
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
@@ -47,6 +50,7 @@ class BngController(
     private val plans: ManageRateProfileUseCase,
     private val nas: ManageNasUseCase,
     private val access: ManageSubscriberAccessUseCase,
+    private val sessions: ViewBngSessionUseCase,
 ) {
     // ---- Paket (rate profile) ----
 
@@ -152,6 +156,19 @@ class BngController(
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Hapus akun PPPoE")
     fun deleteAccess(@PathVariable id: UUID) = access.delete(id)
+
+    // ---- Sesi PPPoE & tren trafik (jalur baca BRAS) ----
+
+    @GetMapping("/access/{id}/session")
+    @PreAuthorize("@authz.can('bng.session.view')")
+    @Operation(summary = "Keadaan sesi PPPoE terkini akun (B-ras Check)")
+    fun session(@PathVariable id: UUID): BrasSessionView = sessions.session(id)
+
+    @GetMapping("/access/{id}/traffic")
+    @PreAuthorize("@authz.can('bng.session.view')")
+    @Operation(summary = "Tren trafik akun (Down/Up Mbps) beberapa jam ke belakang")
+    fun traffic(@PathVariable id: UUID, @RequestParam(defaultValue = "24") hours: Int): TrafficHistoryView =
+        sessions.traffic(id, hours)
 }
 
 data class SaveRateProfileRequest(

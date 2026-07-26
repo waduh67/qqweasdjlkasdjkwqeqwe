@@ -1,5 +1,7 @@
 package com.duluin.ftth.collector
 
+import com.duluin.ftth.contract.BngIngestResult
+import com.duluin.ftth.contract.BngSessionBatch
 import com.duluin.ftth.contract.CollectorConfig
 import com.duluin.ftth.contract.CollectorHeartbeat
 import com.duluin.ftth.contract.CollectorProtocol
@@ -46,6 +48,9 @@ class ServerClient(
 
     fun pushMetrics(batch: MetricBatch): IngestResult =
         send("/api/collector/metrics", batch, IngestResult::class.java)
+
+    fun pushBngSessions(batch: BngSessionBatch): BngIngestResult =
+        send("/api/collector/bng-sessions", batch, BngIngestResult::class.java)
 
     private fun <T> send(path: String, body: Any, responseType: Class<T>): T {
         val request = HttpRequest.newBuilder(URI.create("$baseUrl$path"))

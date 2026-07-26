@@ -1,15 +1,24 @@
 package com.duluin.ftth.monitoring.application.service
 
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.integration.BngSessionsReported
+import com.duluin.ftth.common.integration.CollectorConfigContributor
+import com.duluin.ftth.common.integration.NasPollTarget
+import com.duluin.ftth.common.integration.ReportedRadiusSession
+import com.duluin.ftth.contract.BngIngestResult
+import com.duluin.ftth.contract.BngSessionBatch
 import com.duluin.ftth.contract.CollectorConfig
 import com.duluin.ftth.contract.CollectorHeartbeat
+import com.duluin.ftth.contract.NasTarget
 import com.duluin.ftth.contract.OltTarget
+import com.duluin.ftth.contract.RadiusSessionReading
 import com.duluin.ftth.monitoring.application.port.outbound.CollectorRepository
 import com.duluin.ftth.monitoring.domain.model.AlarmKind
 import com.duluin.ftth.monitoring.AlarmsChangedEvent
 import com.duluin.ftth.monitoring.domain.model.Collector
 import com.duluin.ftth.monitoring.domain.model.CollectorStatus
 import com.duluin.ftth.network.NetworkApi
+import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -31,7 +40,15 @@ class CollectorGatewayService(
     private val networkApi: NetworkApi,
     private val alarmEngine: AlarmEngine,
     private val events: ApplicationEventPublisher,
+    /**
+     * Module lain (mis. bng) yang menitipkan target polling non-OLT lewat seam shared
+     * kernel — monitoring memanggilnya tanpa mengimpor module itu, menghindari siklus.
+     * Kosong bila tak ada module penyumbang.
+     */
+    private val collectorConfigContributors: List<CollectorConfigContributor> = emptyList(),
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     fun handleHeartbeat(collectorId: UUID, heartbeat: CollectorHeartbeat): CollectorConfig {
         val collector = collectorRepository.findById(collectorId)
             ?: throw NotFoundException("Collector $collectorId tidak ditemukan")
@@ -98,8 +115,72 @@ class CollectorGatewayService(
             pollIntervalSeconds = collector.pollIntervalSeconds,
             targets = targets,
             paused = collector.status == CollectorStatus.PAUSED,
+            nasTargets = collectContributedNasTargets(collector),
         )
     }
+
+    /**
+     * Mengumpulkan target BRAS dari seluruh contributor. Kegagalan satu contributor
+     * di-log dan dilewati — konfigurasi OLT (jalur utama collector) tak boleh jatuh
+     * hanya karena module penyumbang bermasalah.
+     */
+    private fun collectContributedNasTargets(collector: Collector): List<NasTarget> =
+        collectorConfigContributors.flatMap { contributor ->
+            try {
+                contributor.nasTargetsFor(collector.id, collector.tenantId).map { it.toWire() }
+            } catch (ex: Exception) {
+                log.warn("Contributor {} gagal menyumbang target BRAS", contributor.javaClass.simpleName, ex)
+                emptyList()
+            }
+        }
+
+    private fun NasPollTarget.toWire() = NasTarget(
+        nasId = nasId.toString(),
+        name = name,
+        vendor = vendor,
+        host = host,
+        adapterType = adapterType,
+        expectedUsernames = expectedUsernames,
+    )
+
+    /**
+     * Menerima batch sesi PPPoE dari collector dan menerbitkannya sebagai event shared
+     * kernel; module bng yang menyerapnya (AFTER_COMMIT, lihat BngSessionListener).
+     *
+     * Monitoring sengaja TIDAK memvalidasi username terhadap akun bng — ia tak
+     * mengenal data itu, dan menembusnya akan menjadikan monitoring→bng sebuah siklus.
+     * Karena itu [BngIngestResult.unknownUsernames] selalu kosong dari sini;
+     * rekonsiliasi akun tak dikenal terjadi di sisi bng (di-log). [nasId] wire yang
+     * bukan UUID valid ditolak sebagai galat argumen.
+     */
+    fun handleBngSessions(collectorId: UUID, tenantId: UUID, batch: BngSessionBatch): BngIngestResult {
+        val nasId = runCatching { UUID.fromString(batch.nasId) }.getOrNull()
+            ?: throw IllegalArgumentException("nasId '${batch.nasId}' bukan UUID yang sah")
+
+        events.publishEvent(
+            BngSessionsReported(
+                tenantId = tenantId,
+                collectorId = collectorId,
+                nasId = nasId,
+                batchId = batch.batchId,
+                collectedAt = batch.collectedAt,
+                sessions = batch.sessions.map { it.toReported() },
+            ),
+        )
+        return BngIngestResult(accepted = batch.sessions.size)
+    }
+
+    private fun RadiusSessionReading.toReported() = ReportedRadiusSession(
+        username = username,
+        online = online,
+        framedIp = framedIp,
+        nasIp = nasIp,
+        sessionId = sessionId,
+        callingStationId = callingStationId,
+        uptimeSeconds = uptimeSeconds,
+        inOctets = inOctets,
+        outOctets = outOctets,
+    )
 
     /** Ringkasan singkat siklus terakhir untuk ditampilkan di UI. */
     private fun summarize(cycle: com.duluin.ftth.contract.CycleReport): String = buildString {

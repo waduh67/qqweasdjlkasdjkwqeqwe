@@ -17,7 +17,12 @@ interface SubscriberAccessJpaRepository : JpaRepository<SubscriberAccessJpaEntit
     fun findByCustomerIdOrderByUsernameAsc(customerId: UUID): List<SubscriberAccessJpaEntity>
     fun findBySubscriptionId(subscriptionId: UUID): List<SubscriberAccessJpaEntity>
     fun findByUsername(username: String): SubscriberAccessJpaEntity?
+    fun findByNasIdOrderByUsernameAsc(nasId: UUID): List<SubscriberAccessJpaEntity>
     fun existsBySubscriptionId(subscriptionId: UUID): Boolean
     fun countByRateProfileId(rateProfileId: UUID): Long
     fun countByNasId(nasId: UUID): Long
+}
+
+interface RadiusSessionJpaRepository : JpaRepository<RadiusSessionJpaEntity, UUID> {
+    fun findBySubscriberAccessId(subscriberAccessId: UUID): RadiusSessionJpaEntity?
 }

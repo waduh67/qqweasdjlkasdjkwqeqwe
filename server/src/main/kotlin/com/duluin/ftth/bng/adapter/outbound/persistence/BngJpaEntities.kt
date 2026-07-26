@@ -9,6 +9,7 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Table
+import java.time.Instant
 import java.util.UUID
 
 /** Profil layanan (paket): kecepatan + pemetaan ke profil RADIUS. Semua atribut mutable. */
@@ -100,4 +101,55 @@ class SubscriberAccessJpaEntity(
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var status: AccessStatus,
+) : TenantAwareJpaEntity(id)
+
+/**
+ * Sesi PPPoE terkini per akun — di-upsert tiap poll BRAS, satu baris per akun
+ * ([subscriberAccessId] unik, dijaga index migrasi). Bukan deret waktu: hanya keadaan
+ * terakhir. Identitas turunan ([subscriptionId], [customerId], [username]) ikut disimpan
+ * agar panel bisa langsung ditampilkan tanpa join lintas modul.
+ */
+@Entity
+@Table(name = "radius_session")
+class RadiusSessionJpaEntity(
+    id: UUID,
+
+    @Column(name = "subscriber_access_id", nullable = false, updatable = false)
+    var subscriberAccessId: UUID,
+
+    @Column(name = "subscription_id", nullable = false, updatable = false)
+    var subscriptionId: UUID,
+
+    @Column(name = "customer_id", nullable = false, updatable = false)
+    var customerId: UUID,
+
+    @Column(nullable = false, length = 64, updatable = false)
+    var username: String,
+
+    @Column(name = "nas_id")
+    var nasId: UUID?,
+
+    @Column(name = "nas_ip", length = 45)
+    var nasIp: String?,
+
+    @Column(name = "framed_ip", length = 45)
+    var framedIp: String?,
+
+    @Column(name = "session_id", length = 128)
+    var sessionId: String?,
+
+    @Column(name = "calling_station_id", length = 64)
+    var callingStationId: String?,
+
+    @Column(nullable = false)
+    var online: Boolean,
+
+    @Column(name = "uptime_seconds")
+    var uptimeSeconds: Long?,
+
+    @Column(name = "started_at")
+    var startedAt: Instant?,
+
+    @Column(name = "last_seen_at", nullable = false)
+    var lastSeenAt: Instant,
 ) : TenantAwareJpaEntity(id)
