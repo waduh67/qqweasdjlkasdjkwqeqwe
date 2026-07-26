@@ -1,0 +1,21 @@
+# Satu-satunya pintu masuk dari internet (port 80/443).
+#
+# FTTH_SITE_ADDRESS menentukan mode:
+#   - domain (mis. "app.contoh.com")  -> Caddy urus sertifikat HTTPS otomatis
+#     (Let's Encrypt). Butuh DNS A record mengarah ke IP VPS + port 80/443 kebuka.
+#   - ":80"                            -> HTTP saja, akses lewat http://<IP-VPS>
+#     (sementara, sebelum punya domain).
+{$FTTH_SITE_ADDRESS} {
+	encode zstd gzip
+
+	# Jalur API + dokumentasi OpenAPI diteruskan ke ftth-server.
+	@backend path /api/* /swagger-ui* /v3/api-docs*
+	handle @backend {
+		reverse_proxy server:8080
+	}
+
+	# Sisanya (aplikasi web) dilayani Nginx yang memuat SPA React.
+	handle {
+		reverse_proxy web:80
+	}
+}

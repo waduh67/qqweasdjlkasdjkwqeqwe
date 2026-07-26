@@ -1,0 +1,4 @@
+node_modules
+dist
+.oxlintrc.json
+README.md

@@ -1,0 +1,28 @@
+# syntax=docker/dockerfile:1
+
+# ============================================================================
+# ftth-server — image produksi (Spring Boot bootJar).
+# Konteks build = ROOT repo (butuh gradle wrapper + modul :contract + :server).
+#   docker build -f server/Dockerfile -t ftth-server .
+# ============================================================================
+
+# ---- Tahap build: kompilasi bootJar dengan Gradle wrapper ----
+FROM eclipse-temurin:21-jdk AS build
+WORKDIR /workspace
+COPY . .
+# Cache direktori Gradle antar-build (butuh BuildKit; aktif di GitHub Actions &
+# Docker modern). Test dilewati di sini — dijalankan terpisah oleh pipeline CI.
+RUN --mount=type=cache,target=/root/.gradle \
+    chmod +x ./gradlew && ./gradlew :server:bootJar -x test --no-daemon
+# Boot jar = satu-satunya jar yang BUKAN "-plain.jar".
+RUN cp "$(ls server/build/libs/*.jar | grep -v -- '-plain.jar')" /workspace/app.jar
+
+# ---- Tahap runtime: JRE ramping, berjalan sebagai non-root ----
+FROM eclipse-temurin:21-jre AS runtime
+WORKDIR /app
+RUN groupadd --system ftth && useradd --system --gid ftth --home /app ftth
+COPY --from=build /workspace/app.jar /app/app.jar
+USER ftth
+EXPOSE 8080
+# MaxRAMPercentage: hormati batas memori container, bukan seluruh RAM host.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "/app/app.jar"]

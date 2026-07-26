@@ -1,0 +1,21 @@
+# Konteks build image server = root repo (butuh gradle wrapper + contract + server).
+# Yang di bawah TIDAK perlu ikut terkirim ke Docker daemon → build lebih cepat & bersih.
+.git
+.gradle
+**/.gradle/
+**/build/
+.kotlin
+**/.kotlin/
+.idea
+**/*.iml
+.vscode
+
+# Frontend tidak dipakai image server.
+web
+
+# Infra & dokumen tidak dipakai saat kompilasi.
+deploy
+docker
+.github
+*.md
+.claude

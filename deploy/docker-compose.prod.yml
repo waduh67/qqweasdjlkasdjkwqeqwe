@@ -1,0 +1,94 @@
+# ============================================================================
+# Stack PRODUKSI ftth (dijalankan di VPS). Semua nilai sensitif diambil dari
+# file `.env` di folder yang sama — TIDAK ada secret di file ini.
+#
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Hanya Caddy yang membuka port ke internet (80/443). Postgres, MinIO, server,
+# dan web hanya bisa diakses dari dalam jaringan compose.
+# ============================================================================
+name: ftth
+
+services:
+  # --- Database: satu image sudah include PostGIS + TimescaleDB ---
+  postgres:
+    image: timescale/timescaledb-ha:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPER_PASSWORD}
+      # Dipakai skrip init untuk membuat role & database aplikasi non-superuser.
+      FTTH_DB_USER: ${FTTH_DB_USER}
+      FTTH_DB_PASSWORD: ${FTTH_DB_PASSWORD}
+      FTTH_DB_NAME: ${FTTH_DB_NAME}
+    volumes:
+      - pgdata:/home/postgres/pgdata/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # --- Object storage bukti pengerjaan work order (internal saja) ---
+  minio:
+    image: minio/minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${FTTH_S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${FTTH_S3_SECRET_KEY}
+    volumes:
+      - miniodata:/data
+
+  # --- Backend Spring Boot ---
+  server:
+    image: ${IMAGE_PREFIX}/ftth-server:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      FTTH_DB_URL: jdbc:postgresql://postgres:5432/${FTTH_DB_NAME}
+      FTTH_DB_USER: ${FTTH_DB_USER}
+      FTTH_DB_PASSWORD: ${FTTH_DB_PASSWORD}
+      FTTH_JWT_SECRET: ${FTTH_JWT_SECRET}
+      FTTH_ENCRYPTION_SECRET: ${FTTH_ENCRYPTION_SECRET}
+      FTTH_CORS_ORIGINS: ${FTTH_CORS_ORIGINS}
+      FTTH_PLATFORM_ADMIN_EMAIL: ${FTTH_PLATFORM_ADMIN_EMAIL}
+      FTTH_PLATFORM_ADMIN_PASSWORD: ${FTTH_PLATFORM_ADMIN_PASSWORD}
+      FTTH_SEED_DEMO: ${FTTH_SEED_DEMO:-false}
+      FTTH_S3_ENDPOINT: http://minio:9000
+      FTTH_S3_ACCESS_KEY: ${FTTH_S3_ACCESS_KEY}
+      FTTH_S3_SECRET_KEY: ${FTTH_S3_SECRET_KEY}
+      FTTH_S3_BUCKET: ${FTTH_S3_BUCKET:-ftth-evidence}
+      FTTH_S3_PATH_STYLE: "true"
+
+  # --- Frontend statis (Nginx) ---
+  web:
+    image: ${IMAGE_PREFIX}/ftth-web:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+
+  # --- Reverse proxy + TLS otomatis (satu-satunya yang terekspos ke internet) ---
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - server
+      - web
+    environment:
+      FTTH_SITE_ADDRESS: ${FTTH_SITE_ADDRESS}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  miniodata:
+  caddy_data:
+  caddy_config:
