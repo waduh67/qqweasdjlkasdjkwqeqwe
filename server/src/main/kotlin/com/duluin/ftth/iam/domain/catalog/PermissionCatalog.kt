@@ -112,6 +112,14 @@ object PermissionCatalog {
         perm("cpe.diagnostic.run", "Jalankan diagnostik CPE (ping & uji kecepatan)")
         perm("cpe.firmware.manage", "Lihat & pasang firmware CPE")
 
+        // BNG (BRAS/RADIUS: paket, registri BRAS, akun PPPoE pelanggan)
+        perm("bng.plan.view", "Lihat paket layanan")
+        perm("bng.plan.manage", "Kelola paket layanan")
+        perm("bng.nas.view", "Lihat registri BRAS")
+        perm("bng.nas.manage", "Kelola registri BRAS")
+        perm("bng.access.view", "Lihat akun PPPoE pelanggan")
+        perm("bng.access.manage", "Kelola akun PPPoE pelanggan")
+
         // Notification
         perm("notification.template.view", "Lihat template notifikasi")
         perm("notification.template.manage", "Kelola template notifikasi")

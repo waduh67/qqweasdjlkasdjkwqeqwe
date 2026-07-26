@@ -14,6 +14,13 @@ interface CustomerApi {
     /** Resolusi sekumpulan id pelanggan sekaligus; id yang tak ditemukan diabaikan. */
     fun findCustomersByIds(ids: Set<UUID>): List<CustomerRef>
 
+    /**
+     * Resolusi satu langganan untuk module bng saat memprovisikan identitas jaringan
+     * (akun PPPoE): memberi customerId, paket, dan status tanpa membocorkan agregat
+     * internal customer. `null` bila langganan tak ditemukan.
+     */
+    fun findSubscription(id: UUID): SubscriptionRef?
+
     /** Semua pelanggan yang tersambung pada sebuah ODP, terurut menurut nomor port. */
     fun findOccupantsOfOdp(odpId: UUID): List<OdpOccupant>
 
@@ -107,6 +114,16 @@ data class CustomerRef(
     val name: String,
     val phone: String?,
     val location: Coordinate,
+    val status: String,
+)
+
+/** Pandangan ringkas sebuah langganan untuk konsumen lintas-module (mis. bng). */
+data class SubscriptionRef(
+    val id: UUID,
+    val customerId: UUID,
+    val packageName: String,
+    val bandwidthMbps: Int,
+    /** Nama [com.duluin.ftth.customer.domain.model.SubscriptionStatus], mis. "ACTIVE". */
     val status: String,
 )
 

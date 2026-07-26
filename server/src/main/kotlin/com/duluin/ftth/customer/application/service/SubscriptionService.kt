@@ -2,12 +2,16 @@ package com.duluin.ftth.customer.application.service
 
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
+import com.duluin.ftth.customer.SubscriptionActivated
+import com.duluin.ftth.customer.SubscriptionIsolated
+import com.duluin.ftth.customer.SubscriptionTerminated
 import com.duluin.ftth.customer.application.port.inbound.ManageSubscriptionUseCase
 import com.duluin.ftth.customer.application.port.inbound.SaveSubscriptionCommand
 import com.duluin.ftth.customer.application.port.inbound.SubscriptionView
 import com.duluin.ftth.customer.application.port.outbound.CustomerRepository
 import com.duluin.ftth.customer.application.port.outbound.SubscriptionRepository
 import com.duluin.ftth.customer.domain.model.Subscription
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -18,6 +22,7 @@ class SubscriptionService(
     private val subscriptionRepository: SubscriptionRepository,
     private val customerRepository: CustomerRepository,
     private val auditor: AuditRecorder,
+    private val events: ApplicationEventPublisher,
 ) : ManageSubscriptionUseCase {
 
     @Transactional(readOnly = true)
@@ -52,19 +57,25 @@ class SubscriptionService(
     override fun activate(id: UUID): SubscriptionView {
         val subscription = require(id)
         subscription.activate()
-        return saveAndAudit(subscription, "subscription.activated")
+        val view = saveAndAudit(subscription, "subscription.activated")
+        events.publishEvent(SubscriptionActivated(subscription.tenantId, subscription.id, subscription.customerId))
+        return view
     }
 
     override fun isolate(id: UUID): SubscriptionView {
         val subscription = require(id)
         subscription.isolate()
-        return saveAndAudit(subscription, "subscription.isolated")
+        val view = saveAndAudit(subscription, "subscription.isolated")
+        events.publishEvent(SubscriptionIsolated(subscription.tenantId, subscription.id, subscription.customerId))
+        return view
     }
 
     override fun terminate(id: UUID): SubscriptionView {
         val subscription = require(id)
         subscription.terminate()
-        return saveAndAudit(subscription, "subscription.terminated")
+        val view = saveAndAudit(subscription, "subscription.terminated")
+        events.publishEvent(SubscriptionTerminated(subscription.tenantId, subscription.id, subscription.customerId))
+        return view
     }
 
     private fun saveAndAudit(subscription: Subscription, action: String): SubscriptionView {

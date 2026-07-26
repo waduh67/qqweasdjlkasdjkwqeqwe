@@ -1,0 +1,281 @@
+package com.duluin.ftth
+
+import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
+import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
+import com.jayway.jsonpath.JsonPath
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.http.MediaType
+import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.util.UUID
+
+/**
+ * Uji module BNG (BRAS/RADIUS) slice fondasi: kelola paket & registri BRAS, lalu
+ * provisi identitas jaringan (akun PPPoE) untuk langganan. Menegakkan hal-hal yang
+ * paling gampang salah: rahasia tak pernah bocor lewat API, keunikan username &
+ * satu-akun-per-langganan, penolakan hapus objek terpakai, sinkronisasi status
+ * mengikuti daur hidup langganan (event), isolasi tenant (RLS), dan izin.
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+class BngIT {
+
+    @Autowired private lateinit var mockMvc: MockMvc
+    @Autowired private lateinit var onboarding: OnboardTenantUseCase
+
+    private val pass = "secret12345"
+
+    private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
+
+    private fun login(slug: String, email: String): String {
+        val json = mockMvc.perform(
+            post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("""{"tenantSlug":"$slug","email":"$email","password":"$pass"}"""),
+        ).andExpect(status().isOk).andReturn().response.contentAsString
+        return JsonPath.read(json, "$.accessToken")
+    }
+
+    private fun newTenantAdmin(prefix: String): String {
+        val slug = "$prefix${uniq()}"
+        val admin = "admin@$slug.test"
+        onboarding.onboard(OnboardTenantCommand(slug, "Tenant $slug", admin, "Admin", pass))
+        return login(slug, admin)
+    }
+
+    private fun post(url: String, token: String, body: String, expected: Int = 201): String =
+        mockMvc.perform(
+            post(url).header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON).content(body),
+        ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
+            .andReturn().response.contentAsString
+
+    private fun put(url: String, token: String, body: String, expected: Int = 200): String =
+        mockMvc.perform(
+            put(url).header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON).content(body),
+        ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
+            .andReturn().response.contentAsString
+
+    private fun del(url: String, token: String, expected: Int = 204) =
+        mockMvc.perform(delete(url).header("Authorization", "Bearer $token"))
+            .andExpect { assertThat(it.response.status).isEqualTo(expected) }
+
+    private fun getJson(url: String, token: String): String =
+        mockMvc.perform(get(url).header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andReturn().response.contentAsString
+
+    private fun id(json: String): String = JsonPath.read(json, "$.id")
+
+    private fun plan(token: String, name: String, down: Int = 20, up: Int = 10): String =
+        id(
+            post(
+                "/api/bng/plans", token,
+                """{"name":"$name","description":null,"downMbps":$down,"upMbps":$up,"radiusProfileName":"prof-$down"}""",
+            ),
+        )
+
+    /** Pelanggan + langganan aktif; kembalikan (customerId, subscriptionId). */
+    private fun activeSubscription(token: String): Pair<String, String> {
+        val s = uniq().uppercase()
+        val customer = id(
+            post(
+                "/api/customers", token,
+                """{"code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji",
+                    "location":{"longitude":106.996,"latitude":-6.246}}""",
+            ),
+        )
+        val sub = id(
+            post(
+                "/api/customers/$customer/subscriptions", token,
+                """{"packageName":"Home 20","bandwidthMbps":20,"monthlyFee":150000}""",
+            ),
+        )
+        post("/api/customers/subscriptions/$sub/activate", token, "", expected = 200)
+        return customer to sub
+    }
+
+    @Test
+    fun `provisi akun PPPoE untuk langganan, tanpa pernah membocorkan password`() {
+        val token = newTenantAdmin("bng")
+        val planId = plan(token, "Home 20/10")
+        val nasId = id(
+            post(
+                "/api/bng/nas", token,
+                """{"name":"BRAS-Pusat","vendor":"MIKROTIK","address":"10.0.0.1",
+                    "nasIdentifier":"bras-pusat","coaSecret":"coaRahasia987","collectorId":null}""",
+            ),
+        )
+        val (customer, sub) = activeSubscription(token)
+
+        val secret = "pppoeRahasia123"
+        val created = post(
+            "/api/bng/access", token,
+            """{"subscriptionId":"$sub","username":"pppoe${uniq()}","secret":"$secret","rateProfileId":"$planId","nasId":"$nasId"}""",
+        )
+        assertThat(JsonPath.read<String>(created, "$.status")).isEqualTo("ACTIVE")
+        assertThat(JsonPath.read<String>(created, "$.authType")).isEqualTo("PPPOE")
+        assertThat(JsonPath.read<String>(created, "$.rateProfileName")).isEqualTo("Home 20/10")
+        assertThat(JsonPath.read<String>(created, "$.nasName")).isEqualTo("BRAS-Pusat")
+        assertThat(JsonPath.read<String>(created, "$.subscriptionId")).isEqualTo(sub)
+        assertThat(JsonPath.read<String>(created, "$.customerId")).isEqualTo(customer)
+        // Password tak pernah muncul di respons mana pun.
+        assertThat(created).doesNotContain(secret)
+
+        val accessId = id(created)
+
+        // Terbaca lewat langganan maupun pelanggan.
+        assertThat(JsonPath.read<List<String>>(getJson("/api/bng/subscriptions/$sub/access", token), "$[*].id"))
+            .containsExactly(accessId)
+        assertThat(JsonPath.read<List<String>>(getJson("/api/bng/access?customerId=$customer", token), "$[*].id"))
+            .containsExactly(accessId)
+
+        // Ganti password: tetap tak bocor.
+        val afterReset = post("/api/bng/access/$accessId/reset-secret", token, """{"secret":"gantiPass456"}""", expected = 200)
+        assertThat(afterReset).doesNotContain("gantiPass456")
+
+        // Pindah paket.
+        val plan2 = plan(token, "Home 50/20", down = 50, up = 20)
+        val moved = put("/api/bng/access/$accessId", token, """{"rateProfileId":"$plan2","nasId":"$nasId"}""")
+        assertThat(JsonPath.read<String>(moved, "$.rateProfileName")).isEqualTo("Home 50/20")
+    }
+
+    @Test
+    fun `secret CoA BRAS tak pernah dibalikan, hanya penanda hasCoaSecret`() {
+        val token = newTenantAdmin("bng-nas")
+        val body = post(
+            "/api/bng/nas", token,
+            """{"name":"BRAS-Cab","vendor":"FREERADIUS","address":"10.9.9.9",
+                "nasIdentifier":"cab","coaSecret":"secretCoADiam111","collectorId":null}""",
+        )
+        assertThat(JsonPath.read<Boolean>(body, "$.hasCoaSecret")).isTrue()
+        assertThat(body).doesNotContain("secretCoADiam111")
+        assertThat(body).doesNotContain("coaSecret")
+
+        // Update tanpa mengirim secret: penanda tetap true (secret tak terhapus).
+        val nasId = id(body)
+        val updated = put(
+            "/api/bng/nas/$nasId", token,
+            """{"name":"BRAS-Cab","vendor":"FREERADIUS","address":"10.9.9.9",
+                "nasIdentifier":"cab","coaSecret":null,"collectorId":null,"enabled":true}""",
+        )
+        assertThat(JsonPath.read<Boolean>(updated, "$.hasCoaSecret")).isTrue()
+    }
+
+    @Test
+    fun `username PPPoE unik per tenant`() {
+        val token = newTenantAdmin("bng-uname")
+        val planId = plan(token, "Paket A")
+        val (_, sub1) = activeSubscription(token)
+        val (_, sub2) = activeSubscription(token)
+        val uname = "duplikat${uniq()}"
+
+        post("/api/bng/access", token, """{"subscriptionId":"$sub1","username":"$uname","secret":"rahasia123","rateProfileId":"$planId","nasId":null}""")
+        post(
+            "/api/bng/access", token,
+            """{"subscriptionId":"$sub2","username":"$uname","secret":"rahasia123","rateProfileId":"$planId","nasId":null}""",
+            expected = 409,
+        )
+    }
+
+    @Test
+    fun `satu langganan maksimal satu akun`() {
+        val token = newTenantAdmin("bng-one")
+        val planId = plan(token, "Paket B")
+        val (_, sub) = activeSubscription(token)
+
+        post("/api/bng/access", token, """{"subscriptionId":"$sub","username":"a${uniq()}","secret":"rahasia123","rateProfileId":"$planId","nasId":null}""")
+        post(
+            "/api/bng/access", token,
+            """{"subscriptionId":"$sub","username":"b${uniq()}","secret":"rahasia123","rateProfileId":"$planId","nasId":null}""",
+            expected = 409,
+        )
+    }
+
+    @Test
+    fun `provisi langganan tak dikenal ditolak 404`() {
+        val token = newTenantAdmin("bng-nosub")
+        val planId = plan(token, "Paket C")
+        post(
+            "/api/bng/access", token,
+            """{"subscriptionId":"${UUID.randomUUID()}","username":"x${uniq()}","secret":"rahasia123","rateProfileId":"$planId","nasId":null}""",
+            expected = 404,
+        )
+    }
+
+    @Test
+    fun `paket yang masih dipakai tak boleh dihapus`() {
+        val token = newTenantAdmin("bng-plandel")
+        val planId = plan(token, "Paket Pakai")
+        val (_, sub) = activeSubscription(token)
+        post("/api/bng/access", token, """{"subscriptionId":"$sub","username":"p${uniq()}","secret":"rahasia123","rateProfileId":"$planId","nasId":null}""")
+
+        del("/api/bng/plans/$planId", token, expected = 409)
+    }
+
+    @Test
+    fun `isolir lalu terminasi langganan menyelaraskan status akun`() {
+        val token = newTenantAdmin("bng-life")
+        val planId = plan(token, "Paket Hidup")
+        val (_, sub) = activeSubscription(token)
+        val accessId = id(
+            post("/api/bng/access", token, """{"subscriptionId":"$sub","username":"h${uniq()}","secret":"rahasia123","rateProfileId":"$planId","nasId":null}"""),
+        )
+        assertThat(JsonPath.read<String>(getJson("/api/bng/access/$accessId", token), "$.status")).isEqualTo("ACTIVE")
+
+        // Isolir langganan → listener AFTER_COMMIT mengisolir akun.
+        post("/api/customers/subscriptions/$sub/isolate", token, "", expected = 200)
+        assertThat(JsonPath.read<String>(getJson("/api/bng/access/$accessId", token), "$.status")).isEqualTo("ISOLATED")
+
+        // Terminasi langganan → akun ikut dihentikan.
+        post("/api/customers/subscriptions/$sub/terminate", token, "", expected = 200)
+        assertThat(JsonPath.read<String>(getJson("/api/bng/access/$accessId", token), "$.status")).isEqualTo("TERMINATED")
+    }
+
+    @Test
+    fun `tenant lain tak melihat paket maupun akun`() {
+        val tokenA = newTenantAdmin("bng-iso-a")
+        val tokenB = newTenantAdmin("bng-iso-b")
+        val planId = plan(tokenA, "Rahasia A")
+        val (customerA, sub) = activeSubscription(tokenA)
+        post("/api/bng/access", tokenA, """{"subscriptionId":"$sub","username":"iso${uniq()}","secret":"rahasia123","rateProfileId":"$planId","nasId":null}""")
+
+        // B tak melihat paket A, dan akun A lewat customerId A tetap kosong (RLS).
+        assertThat(JsonPath.read<List<String>>(getJson("/api/bng/plans", tokenB), "$[*].id")).doesNotContain(planId)
+        assertThat(JsonPath.read<List<String>>(getJson("/api/bng/access?customerId=$customerA", tokenB), "$[*].id")).isEmpty()
+    }
+
+    @Test
+    fun `izin lihat paket saja tak boleh mengelola`() {
+        val slug = "bng-perm${uniq()}"
+        val admin = "admin@$slug.test"
+        onboarding.onboard(OnboardTenantCommand(slug, "BNG Perm Co", admin, "Admin", pass))
+        val adminToken = login(slug, admin)
+
+        val permsJson = getJson("/api/permissions", adminToken)
+        val viewPermId = JsonPath.read<List<String>>(permsJson, "$[?(@.code=='bng.plan.view')].id").first()
+        val roleId = id(
+            post("/api/roles", adminToken, """{"name":"Lihat Paket","permissionIds":["$viewPermId"]}""", expected = 201),
+        )
+        val limitedEmail = "viewer@$slug.test"
+        post("/api/users", adminToken, """{"email":"$limitedEmail","name":"Viewer","password":"$pass","roleIds":["$roleId"]}""")
+        val limitedToken = login(slug, limitedEmail)
+
+        // Boleh lihat, tak boleh buat.
+        getJson("/api/bng/plans", limitedToken)
+        post(
+            "/api/bng/plans", limitedToken,
+            """{"name":"Nekat","description":null,"downMbps":10,"upMbps":5,"radiusProfileName":null}""",
+            expected = 403,
+        )
+    }
+}

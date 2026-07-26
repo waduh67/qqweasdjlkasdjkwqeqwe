@@ -9,6 +9,7 @@ import com.duluin.ftth.customer.OdpOccupant
 import com.duluin.ftth.customer.OnuPlacementRef
 import com.duluin.ftth.customer.OnuRef
 import com.duluin.ftth.customer.ProvisionOnuCommand
+import com.duluin.ftth.customer.SubscriptionRef
 import com.duluin.ftth.customer.domain.model.Customer
 import com.duluin.ftth.customer.domain.model.OnuStatus
 import com.duluin.ftth.customer.application.port.inbound.AttachOnuCommand
@@ -40,6 +41,17 @@ class CustomerApiService(
 
     override fun findCustomersByIds(ids: Set<UUID>): List<CustomerRef> =
         if (ids.isEmpty()) emptyList() else customerRepository.findAllByIds(ids).map { it.toRef() }
+
+    override fun findSubscription(id: UUID): SubscriptionRef? =
+        subscriptionRepository.findById(id)?.let {
+            SubscriptionRef(
+                id = it.id,
+                customerId = it.customerId,
+                packageName = it.packageName,
+                bandwidthMbps = it.bandwidthMbps,
+                status = it.status.name,
+            )
+        }
 
     override fun findAwaitingInstallation(areaIds: Set<UUID>?): List<CustomerRef> =
         customerRepository.findAwaitingInstallation(areaIds).map { it.toRef() }
