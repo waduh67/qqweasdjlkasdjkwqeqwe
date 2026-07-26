@@ -17,12 +17,17 @@ import {
   getCpeLive,
   listCpeDevices,
   rebootCpe,
+  runCpePing,
+  runCpeSpeedTest,
   setCpeWifi,
   type CpeActionView,
   type CpeDeviceDetail,
   type CpeDeviceView,
   type CpeLiveView,
+  type PingDiagnosticView,
   type SetWifiRequest,
+  type SpeedDirection,
+  type SpeedTestDiagnosticView,
   type WifiView,
 } from '../api/cpe'
 import { useCan } from '../auth/useCan'
@@ -752,6 +757,7 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
   const canReboot = can('cpe.device.reboot')
   const canWifiView = can('cpe.wifi.view')
   const canWifiManage = can('cpe.wifi.manage')
+  const canDiag = can('cpe.diagnostic.run')
 
   const loadDetail = useCallback(() => {
     void getCpeDevice(deviceId)
@@ -891,7 +897,146 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
         </div>
       )}
 
+      {canDiag && <DiagnosticsCard deviceId={deviceId} online={d.online} onRan={loadDetail} />}
+
       <CpeActionLog actions={detail.recentActions} />
+    </div>
+  )
+}
+
+/**
+ * Diagnostik on-demand: ping ke sasaran (kosong = bawaan server) dan uji kecepatan
+ * unduh/unggah TR-143. Hasilnya tak tersimpan — ditampilkan inline dan tiap jalan
+ * menulis jejak audit, jadi [onRan] menyegarkan panel jejak di atasnya. Tombol
+ * dikunci selagi satu uji berjalan (perangkat hanya melayani satu diagnostik).
+ */
+function DiagnosticsCard({
+  deviceId,
+  online,
+  onRan,
+}: {
+  deviceId: string
+  online: boolean
+  onRan: () => void
+}) {
+  const toast = useToast()
+  const [host, setHost] = useState('')
+  const [running, setRunning] = useState<'ping' | 'DOWNLOAD' | 'UPLOAD' | null>(null)
+  const [ping, setPing] = useState<PingDiagnosticView | null>(null)
+  const [speed, setSpeed] = useState<SpeedTestDiagnosticView | null>(null)
+
+  const doPing = async () => {
+    setRunning('ping')
+    try {
+      const result = await runCpePing(deviceId, host.trim() || undefined)
+      setPing(result)
+      if (!result.ok) toast.error(result.message)
+      onRan()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Ping gagal')
+    } finally {
+      setRunning(null)
+    }
+  }
+
+  const doSpeed = async (direction: SpeedDirection) => {
+    setRunning(direction)
+    try {
+      const result = await runCpeSpeedTest(deviceId, direction)
+      setSpeed(result)
+      if (!result.ok) toast.error(result.message)
+      onRan()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Uji kecepatan gagal')
+    } finally {
+      setRunning(null)
+    }
+  }
+
+  const busy = running !== null
+  return (
+    <div className="card stack" style={{ gap: '0.75rem' }}>
+      <strong style={{ fontSize: '0.95rem' }}>Diagnostik</strong>
+      {!online && (
+        <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+          Perangkat sedang offline — diagnostik bisa gagal atau menunggu lama.
+        </p>
+      )}
+      <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <label style={{ flex: 2, minWidth: 160 }}>
+          <span>Sasaran ping</span>
+          <input
+            value={host}
+            placeholder="kosong = bawaan (mis. 8.8.8.8)"
+            onChange={(e) => setHost(e.target.value)}
+          />
+        </label>
+        <button onClick={() => void doPing()} disabled={busy}>
+          {running === 'ping' ? 'Menguji…' : 'Ping'}
+        </button>
+        <button onClick={() => void doSpeed('DOWNLOAD')} disabled={busy}>
+          {running === 'DOWNLOAD' ? 'Menguji…' : 'Uji unduh'}
+        </button>
+        <button onClick={() => void doSpeed('UPLOAD')} disabled={busy}>
+          {running === 'UPLOAD' ? 'Menguji…' : 'Uji unggah'}
+        </button>
+      </div>
+      {ping && <DiagPingResult ping={ping} />}
+      {speed && <DiagSpeedResult speed={speed} />}
+    </div>
+  )
+}
+
+/** Baris hasil ping: host, ringkasan (avg/paket), dan status tuntas/gagal. */
+function DiagPingResult({ ping }: { ping: PingDiagnosticView }) {
+  const total = (ping.successCount ?? 0) + (ping.failureCount ?? 0)
+  return (
+    <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
+      <div className="stack" style={{ gap: 2, minWidth: 0 }}>
+        <span style={{ fontSize: '0.85rem' }}>
+          <span style={{ fontWeight: 600 }}>Ping {ping.host}</span>
+          {ping.ok && total > 0 && (
+            <span className="muted">
+              {' '}· {ping.successCount ?? 0}/{total} sukses
+              {ping.averageResponseMs != null && ` · avg ${ping.averageResponseMs} ms`}
+            </span>
+          )}
+        </span>
+        {!ping.ok && (
+          <span className="muted" style={{ fontSize: '0.78rem' }}>{ping.message}</span>
+        )}
+      </div>
+      <span
+        className="badge"
+        style={{ color: ping.ok ? 'var(--good-ink)' : 'var(--critical-ink)', fontWeight: 600 }}
+      >
+        {ping.ok ? 'tuntas' : 'gagal'}
+      </span>
+    </div>
+  )
+}
+
+/** Baris hasil uji kecepatan: arah, throughput Mbps, status. */
+function DiagSpeedResult({ speed }: { speed: SpeedTestDiagnosticView }) {
+  const label = speed.direction === 'DOWNLOAD' ? 'Unduh' : 'Unggah'
+  return (
+    <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
+      <div className="stack" style={{ gap: 2, minWidth: 0 }}>
+        <span style={{ fontSize: '0.85rem' }}>
+          <span style={{ fontWeight: 600 }}>{label}</span>
+          {speed.ok && speed.throughputMbps != null ? (
+            <span className="muted"> · {speed.throughputMbps.toFixed(1)} Mbps</span>
+          ) : (
+            <span className="muted"> · {speed.message}</span>
+          )}
+        </span>
+      </div>
+      <span
+        className="badge"
+        style={{ color: speed.ok ? 'var(--good-ink)' : 'var(--critical-ink)', fontWeight: 600 }}
+      >
+        {speed.ok ? 'tuntas' : 'gagal'}
+      </span>
     </div>
   )
 }

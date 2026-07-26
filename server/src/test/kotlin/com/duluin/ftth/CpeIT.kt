@@ -108,6 +108,16 @@ class CpeIT {
         )
     }
 
+    /** Pelanggan + ONU + device ACS tersinkron untuk [token]; kembalikan (genieacsId, deviceId). */
+    private fun syncedDevice(token: String): Pair<String, String> {
+        val (customer, serial) = customerWithOnu(token)
+        val genieacsId = "genie-${uniq()}"
+        seedAcsDevice(serial, genieacsId)
+        scheduler.syncAll()
+        val deviceId = JsonPath.read<String>(getJson("/api/cpe/devices?customerId=$customer", token), "$[0].id")
+        return genieacsId to deviceId
+    }
+
     @Test
     fun `sinkronisasi menautkan device ACS ke pelanggan lewat serial ONU`() {
         val token = newTenantAdmin("cpe")
@@ -232,6 +242,87 @@ class CpeIT {
         // A melihat device-nya; B menanyakan customerId milik A tetap kosong (RLS).
         assertThat(JsonPath.read<List<String>>(getJson("/api/cpe/devices?customerId=$customerA", tokenA), "$[*].id")).hasSize(1)
         assertThat(JsonPath.read<List<String>>(getJson("/api/cpe/devices?customerId=$customerA", tokenB), "$[*].id")).isEmpty()
+    }
+
+    @Test
+    fun `ping diagnostik berhasil, metriknya kembali dan tercatat di jejak`() {
+        val token = newTenantAdmin("cpe-ping")
+        val (genieacsId, deviceId) = syncedDevice(token)
+
+        val result = post("/api/cpe/devices/$deviceId/diagnostics/ping", token, """{"host":"1.1.1.1"}""", expected = 200)
+        assertThat(JsonPath.read<Boolean>(result, "$.ok")).isTrue()
+        assertThat(JsonPath.read<String>(result, "$.state")).isEqualTo("Complete")
+        assertThat(JsonPath.read<String>(result, "$.host")).isEqualTo("1.1.1.1")
+        assertThat(JsonPath.read<Int>(result, "$.averageResponseMs")).isEqualTo(12)
+        assertThat(acs.pingCalls.map { it.first }).containsExactly(genieacsId)
+        assertThat(acs.pingCalls.first().second).isEqualTo("1.1.1.1")
+
+        val detail = getJson("/api/cpe/devices/$deviceId", token)
+        assertThat(JsonPath.read<List<String>>(detail, "$.recentActions[*].action")).contains("PING_TEST")
+        assertThat(JsonPath.read<List<String>>(detail, "$.recentActions[*].status")).contains("SUCCESS")
+    }
+
+    @Test
+    fun `ping tanpa host memakai sasaran bawaan`() {
+        val token = newTenantAdmin("cpe-ping-def")
+        val (_, deviceId) = syncedDevice(token)
+
+        val result = post("/api/cpe/devices/$deviceId/diagnostics/ping", token, "{}", expected = 200)
+        assertThat(JsonPath.read<Boolean>(result, "$.ok")).isTrue()
+        // Host bawaan konfigurasi (8.8.8.8) dipakai saat pemanggil tak mengisi apa pun.
+        assertThat(acs.pingCalls.first().second).isEqualTo("8.8.8.8")
+    }
+
+    @Test
+    fun `uji kecepatan unduh mengembalikan throughput`() {
+        val token = newTenantAdmin("cpe-speed")
+        val (genieacsId, deviceId) = syncedDevice(token)
+
+        val result = post("/api/cpe/devices/$deviceId/diagnostics/speedtest?direction=DOWNLOAD", token, "", expected = 200)
+        assertThat(JsonPath.read<Boolean>(result, "$.ok")).isTrue()
+        assertThat(JsonPath.read<String>(result, "$.direction")).isEqualTo("DOWNLOAD")
+        assertThat(JsonPath.read<Double>(result, "$.throughputMbps")).isGreaterThan(0.0)
+        assertThat(acs.speedTestCalls.map { it.first }).containsExactly(genieacsId)
+
+        val detail = getJson("/api/cpe/devices/$deviceId", token)
+        assertThat(JsonPath.read<List<String>>(detail, "$.recentActions[*].action")).contains("SPEED_TEST")
+    }
+
+    @Test
+    fun `diagnostik gagal saat ACS menolak, tercatat FAILED tanpa menggagalkan permintaan`() {
+        val token = newTenantAdmin("cpe-diag-fail")
+        val (_, deviceId) = syncedDevice(token)
+
+        acs.failing = true
+        val result = post("/api/cpe/devices/$deviceId/diagnostics/ping", token, "{}", expected = 200)
+        assertThat(JsonPath.read<Boolean>(result, "$.ok")).isFalse()
+
+        val detail = getJson("/api/cpe/devices/$deviceId", token)
+        assertThat(JsonPath.read<List<String>>(detail, "$.recentActions[?(@.action=='PING_TEST')].status")).contains("FAILED")
+    }
+
+    @Test
+    fun `izin lihat CPE saja tak boleh menjalankan diagnostik`() {
+        val slug = "cpe-diag-perm${uniq()}"
+        val admin = "admin@$slug.test"
+        onboarding.onboard(OnboardTenantCommand(slug, "CPE Diag Co", admin, "Admin", pass))
+        val adminToken = login(slug, admin)
+        val (_, deviceId) = syncedDevice(adminToken)
+
+        // Role dengan HANYA cpe.device.view: boleh lihat, tak boleh diagnostik.
+        val permsJson = getJson("/api/permissions", adminToken)
+        val viewPermId = JsonPath.read<List<String>>(permsJson, "$[?(@.code=='cpe.device.view')].id").first()
+        val roleId = id(
+            post("/api/roles", adminToken, """{"name":"Lihat CPE","permissionIds":["$viewPermId"]}""", expected = 201),
+        )
+        val limitedEmail = "viewer@$slug.test"
+        post("/api/users", adminToken, """{"email":"$limitedEmail","name":"Viewer","password":"$pass","roleIds":["$roleId"]}""")
+        val limitedToken = login(slug, limitedEmail)
+
+        mockMvc.perform(
+            post("/api/cpe/devices/$deviceId/diagnostics/ping").header("Authorization", "Bearer $limitedToken")
+                .contentType(MediaType.APPLICATION_JSON).content("{}"),
+        ).andExpect(status().isForbidden)
     }
 
     @Test

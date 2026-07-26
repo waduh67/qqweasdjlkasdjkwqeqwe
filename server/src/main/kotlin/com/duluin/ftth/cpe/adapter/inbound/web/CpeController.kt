@@ -6,7 +6,11 @@ import com.duluin.ftth.cpe.application.port.inbound.CpeDeviceView
 import com.duluin.ftth.cpe.application.port.inbound.CpeLiveView
 import com.duluin.ftth.cpe.application.port.inbound.CpeQuery
 import com.duluin.ftth.cpe.application.port.inbound.ManageCpeUseCase
+import com.duluin.ftth.cpe.application.port.inbound.PingCommand
+import com.duluin.ftth.cpe.application.port.inbound.PingDiagnosticView
 import com.duluin.ftth.cpe.application.port.inbound.SetWifiCommand
+import com.duluin.ftth.cpe.application.port.inbound.SpeedTestDiagnosticView
+import com.duluin.ftth.cpe.domain.model.SpeedDirection
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -65,7 +69,28 @@ class CpeController(
         @PathVariable id: UUID,
         @Valid @RequestBody request: SetWifiRequest,
     ): CpeActionView = manage.setWifi(id, request.toCommand())
+
+    @PostMapping("/devices/{id}/diagnostics/ping")
+    @PreAuthorize("@authz.can('cpe.diagnostic.run')")
+    @Operation(summary = "Jalankan ping diagnostik (IPPingDiagnostics); hasil & jejak audit dikembalikan")
+    fun ping(
+        @PathVariable id: UUID,
+        @RequestBody(required = false) request: PingRequest?,
+    ): PingDiagnosticView = manage.runPing(id, PingCommand(request?.host))
+
+    @PostMapping("/devices/{id}/diagnostics/speedtest")
+    @PreAuthorize("@authz.can('cpe.diagnostic.run')")
+    @Operation(summary = "Jalankan uji kecepatan TR-143; arah unduh (default) atau unggah")
+    fun speedTest(
+        @PathVariable id: UUID,
+        @RequestParam(defaultValue = "DOWNLOAD") direction: SpeedDirection,
+    ): SpeedTestDiagnosticView = manage.runSpeedTest(id, direction)
 }
+
+/** Sasaran ping opsional; kosong berarti pakai host bawaan konfigurasi. */
+data class PingRequest(
+    val host: String?,
+)
 
 /**
  * [ref] menunjuk jaringan WiFi yang mana (dari `CpeLiveView.wifi[].ref`); [ssid]

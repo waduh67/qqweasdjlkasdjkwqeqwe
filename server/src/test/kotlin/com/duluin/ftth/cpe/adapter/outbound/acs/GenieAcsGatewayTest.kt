@@ -1,7 +1,9 @@
 package com.duluin.ftth.cpe.adapter.outbound.acs
 
 import com.duluin.ftth.cpe.application.port.outbound.WifiChange
+import com.duluin.ftth.cpe.domain.model.SpeedDirection
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.within
 import org.hamcrest.Matchers.containsString
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpMethod
@@ -12,6 +14,7 @@ import org.springframework.test.web.client.match.MockRestRequestMatchers.method
 import org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo
 import org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess
 import org.springframework.web.client.RestClient
+import java.time.Duration
 import java.time.Instant
 
 /**
@@ -25,7 +28,16 @@ class GenieAcsGatewayTest {
     private fun fixture(): Pair<GenieAcsGateway, MockRestServiceServer> {
         val builder = RestClient.builder().baseUrl("http://acs.test:7557")
         val server = MockRestServiceServer.bindTo(builder).build()
-        return GenieAcsGateway(builder.build()) to server
+        val gateway = GenieAcsGateway(
+            restClient = builder.build(),
+            downloadUrl = "http://speed.test/10MB.zip",
+            uploadUrl = "http://speed.test/upload",
+            uploadBytes = 10_485_760,
+            // Tenggat & interval kecil agar polling di test selesai seketika.
+            diagnosticsTimeout = Duration.ofMillis(500),
+            pollInterval = Duration.ofMillis(5),
+        )
+        return gateway to server
     }
 
     @Test
@@ -127,6 +139,66 @@ class GenieAcsGatewayTest {
         server.verify()
     }
 
+    @Test
+    fun `runPing menyetel input lalu memetakan hasil IPPingDiagnostics`() {
+        val (gateway, server) = fixture()
+        // 1) Deteksi akar model data (currentRoot).
+        server.expect(requestTo(containsString("/devices/")))
+            .andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess("[$TR098_ROOT]", MediaType.APPLICATION_JSON))
+        // 2) Task setParameterValues memicu diagnostik.
+        server.expect(requestTo(containsString("/devices/ACS-001/tasks")))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(jsonPath("$.name").value("setParameterValues"))
+            .andExpect(jsonPath("$.parameterValues[0][0]").value("InternetGatewayDevice.IPPingDiagnostics.DiagnosticsState"))
+            .andExpect(jsonPath("$.parameterValues[0][1]").value("Requested"))
+            .andExpect(jsonPath("$.parameterValues[1][0]").value("InternetGatewayDevice.IPPingDiagnostics.Host"))
+            .andExpect(jsonPath("$.parameterValues[1][1]").value("1.1.1.1"))
+            .andExpect(jsonPath("$.parameterValues[2][1]").value("4"))
+            .andRespond(withSuccess())
+        // 3) Poll: perangkat sudah menuntaskan.
+        server.expect(requestTo(containsString("/devices/")))
+            .andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess("[$TR098_PING_DONE]", MediaType.APPLICATION_JSON))
+
+        val ping = gateway.runPing("ACS-001", host = "1.1.1.1", count = 4)
+
+        assertThat(ping.complete).isTrue()
+        assertThat(ping.host).isEqualTo("1.1.1.1")
+        assertThat(ping.successCount).isEqualTo(4)
+        assertThat(ping.failureCount).isEqualTo(0)
+        assertThat(ping.averageResponseMs).isEqualTo(12)
+        server.verify()
+    }
+
+    @Test
+    fun `runSpeedTest unduh menghitung throughput dari byte dan durasi`() {
+        val (gateway, server) = fixture()
+        server.expect(requestTo(containsString("/devices/")))
+            .andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess("[$TR098_ROOT]", MediaType.APPLICATION_JSON))
+        server.expect(requestTo(containsString("/devices/ACS-001/tasks")))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(jsonPath("$.name").value("setParameterValues"))
+            .andExpect(jsonPath("$.parameterValues[0][0]").value("InternetGatewayDevice.DownloadDiagnostics.DiagnosticsState"))
+            .andExpect(jsonPath("$.parameterValues[1][0]").value("InternetGatewayDevice.DownloadDiagnostics.DownloadURL"))
+            .andExpect(jsonPath("$.parameterValues[1][1]").value("http://speed.test/10MB.zip"))
+            .andRespond(withSuccess())
+        server.expect(requestTo(containsString("/devices/")))
+            .andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess("[$TR098_DOWNLOAD_DONE]", MediaType.APPLICATION_JSON))
+
+        val speed = gateway.runSpeedTest("ACS-001", SpeedDirection.DOWNLOAD)
+
+        assertThat(speed.complete).isTrue()
+        assertThat(speed.direction).isEqualTo(SpeedDirection.DOWNLOAD)
+        assertThat(speed.testBytes).isEqualTo(10_485_760)
+        assertThat(speed.durationMs).isEqualTo(900)
+        // 10.485.760 byte × 8 / 1e6 / 0,9 s ≈ 93,2 Mbps.
+        assertThat(speed.throughputMbps).isCloseTo(93.2, within(0.5))
+        server.verify()
+    }
+
     companion object {
         private val TR098_DEVICE = """
             {
@@ -169,6 +241,37 @@ class GenieAcsGatewayTest {
                 "MACAddress": {"_value": "AA:BB:CC:DD:EE:FF"},
                 "Active": {"_value": true}
               }}}}}}
+            }
+        """.trimIndent()
+
+        /** Cukup untuk deteksi akar (currentRoot) tanpa detail lain. */
+        private val TR098_ROOT = """
+            {"_id": "ACS-001", "InternetGatewayDevice": {"DeviceInfo": {}}}
+        """.trimIndent()
+
+        private val TR098_PING_DONE = """
+            {
+              "_id": "ACS-001",
+              "InternetGatewayDevice": {"IPPingDiagnostics": {
+                "DiagnosticsState": {"_value": "Complete"},
+                "SuccessCount": {"_value": 4},
+                "FailureCount": {"_value": 0},
+                "AverageResponseTime": {"_value": 12},
+                "MinimumResponseTime": {"_value": 9},
+                "MaximumResponseTime": {"_value": 18}
+              }}
+            }
+        """.trimIndent()
+
+        private val TR098_DOWNLOAD_DONE = """
+            {
+              "_id": "ACS-001",
+              "InternetGatewayDevice": {"DownloadDiagnostics": {
+                "DiagnosticsState": {"_value": "Complete"},
+                "BOMTime": {"_value": "2026-07-25T10:00:00.000Z"},
+                "EOMTime": {"_value": "2026-07-25T10:00:00.900Z"},
+                "TestBytesReceived": {"_value": 10485760}
+              }}
             }
         """.trimIndent()
     }

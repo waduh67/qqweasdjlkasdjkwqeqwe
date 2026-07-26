@@ -1,6 +1,9 @@
 package com.duluin.ftth.cpe.application.port.outbound
 
 import com.duluin.ftth.cpe.domain.model.ConnectedHost
+import com.duluin.ftth.cpe.domain.model.PingDiagnostic
+import com.duluin.ftth.cpe.domain.model.SpeedDirection
+import com.duluin.ftth.cpe.domain.model.SpeedTestDiagnostic
 import com.duluin.ftth.cpe.domain.model.WifiNetwork
 import java.time.Instant
 
@@ -40,6 +43,21 @@ interface AcsGateway {
 
     /** Mengubah SSID/passphrase satu jaringan WiFi. Melempar bila ACS menolak. */
     fun applyWifi(genieacsId: String, change: WifiChange)
+
+    /**
+     * Menjalankan IPPingDiagnostics: menyetel `DiagnosticsState=Requested` lalu
+     * menunggu perangkat menuntaskannya (jajak pendapat berkala sampai tenggat).
+     * Diagnostik TR-069 asinkron — perangkat baru melapor pada inform berikutnya.
+     * Melempar bila ACS menolak/tak terjangkau; hasil tak-tuntas dikembalikan sebagai
+     * [PingDiagnostic] ber-state (bukan exception) agar pemanggil bisa mencatatnya.
+     */
+    fun runPing(genieacsId: String, host: String, count: Int): PingDiagnostic
+
+    /**
+     * Menjalankan TR-143 Download/UploadDiagnostics pada [direction]. URL berkas uji
+     * berasal dari konfigurasi adapter, bukan parameter — itu detail integrasi ACS.
+     */
+    fun runSpeedTest(genieacsId: String, direction: SpeedDirection): SpeedTestDiagnostic
 }
 
 /**

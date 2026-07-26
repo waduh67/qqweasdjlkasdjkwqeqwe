@@ -58,7 +58,7 @@ data class HostView(
 /** Satu baris jejak audit aksi ke perangkat. */
 data class CpeActionView(
     val id: UUID,
-    /** REBOOT atau SET_WIFI. */
+    /** REBOOT, SET_WIFI, PING_TEST, atau SPEED_TEST. */
     val action: String,
     /** SUCCESS atau FAILED. */
     val status: String,
@@ -66,4 +66,34 @@ data class CpeActionView(
     val requestedBy: UUID,
     val requestedByEmail: String?,
     val requestedAt: Instant,
+)
+
+/**
+ * Hasil ping diagnostik untuk UI — tidak tersimpan, dikembalikan langsung dari
+ * pemanggilan. [ok] menandai diagnostik tuntas dan metriknya terbaca; bila false,
+ * [message] menjelaskan sebabnya (ACS tak terjangkau, atau perangkat tak menuntaskan).
+ */
+data class PingDiagnosticView(
+    val ok: Boolean,
+    val host: String,
+    /** `DiagnosticsState` perangkat, mis. "Complete" atau "Error_CannotResolveHostName". */
+    val state: String,
+    val successCount: Int?,
+    val failureCount: Int?,
+    val averageResponseMs: Int?,
+    val minimumResponseMs: Int?,
+    val maximumResponseMs: Int?,
+    val message: String,
+)
+
+/** Hasil uji kecepatan TR-143 untuk UI; [throughputMbps] dihitung dari byte/waktu. */
+data class SpeedTestDiagnosticView(
+    val ok: Boolean,
+    /** DOWNLOAD atau UPLOAD. */
+    val direction: String,
+    val state: String,
+    val throughputMbps: Double?,
+    val testBytes: Long?,
+    val durationMs: Long?,
+    val message: String,
 )

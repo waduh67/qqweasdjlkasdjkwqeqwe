@@ -4,12 +4,17 @@ import com.duluin.ftth.cpe.application.port.outbound.AcsDevice
 import com.duluin.ftth.cpe.application.port.outbound.AcsGateway
 import com.duluin.ftth.cpe.application.port.outbound.WifiChange
 import com.duluin.ftth.cpe.domain.model.ConnectedHost
+import com.duluin.ftth.cpe.domain.model.PingDiagnostic
+import com.duluin.ftth.cpe.domain.model.SpeedDirection
+import com.duluin.ftth.cpe.domain.model.SpeedTestDiagnostic
 import com.duluin.ftth.cpe.domain.model.WifiNetwork
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Profile
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import tools.jackson.databind.JsonNode
+import java.time.Duration
 import java.time.Instant
 
 /**
@@ -29,6 +34,16 @@ import java.time.Instant
 @Profile("!test")
 class GenieAcsGateway(
     private val restClient: RestClient,
+    @Value("\${ftth.cpe.diagnostics.download-url:http://speedtest.tele2.net/10MB.zip}")
+    private val downloadUrl: String,
+    @Value("\${ftth.cpe.diagnostics.upload-url:http://speedtest.tele2.net/upload.php}")
+    private val uploadUrl: String,
+    @Value("\${ftth.cpe.diagnostics.upload-bytes:10485760}")
+    private val uploadBytes: Long,
+    @Value("\${ftth.cpe.diagnostics.timeout:PT25S}")
+    private val diagnosticsTimeout: Duration,
+    @Value("\${ftth.cpe.diagnostics.poll-interval:PT2S}")
+    private val pollInterval: Duration,
 ) : AcsGateway {
 
     override fun listDevices(): List<AcsDevice> {
@@ -87,6 +102,70 @@ class GenieAcsGateway(
         }
         if (values.isEmpty()) return
         postTask(genieacsId, mapOf("name" to "setParameterValues", "parameterValues" to values))
+    }
+
+    override fun runPing(genieacsId: String, host: String, count: Int): PingDiagnostic {
+        val root = currentRoot(genieacsId) ?: return PingDiagnostic.incomplete(host, "Error_NoRoot")
+        val base = pingBase(root)
+        // Setel input + picu (DiagnosticsState=Requested) dalam satu setParameterValues:
+        // perangkat menjalankan ping lalu melaporkan hasil pada inform "diagnostics complete".
+        postTask(
+            genieacsId,
+            mapOf(
+                "name" to "setParameterValues",
+                "parameterValues" to listOf(
+                    listOf("$base.DiagnosticsState", "Requested", XSD_STRING),
+                    listOf("$base.Host", host, XSD_STRING),
+                    listOf("$base.NumberOfRepetitions", count.toString(), XSD_UNSIGNED_INT),
+                ),
+            ),
+        )
+        val device = pollDiagnostic(genieacsId, "$base.DiagnosticsState", pingProjection(base))
+            ?: return PingDiagnostic.incomplete(host, "Error_Timeout")
+        val state = device.param("$base.DiagnosticsState") ?: "Error"
+        if (state != PingDiagnostic.COMPLETE) return PingDiagnostic.incomplete(host, state)
+        return PingDiagnostic(
+            host = host,
+            state = state,
+            successCount = device.paramInt("$base.SuccessCount"),
+            failureCount = device.paramInt("$base.FailureCount"),
+            averageResponseMs = device.paramInt("$base.AverageResponseTime"),
+            minimumResponseMs = device.paramInt("$base.MinimumResponseTime"),
+            maximumResponseMs = device.paramInt("$base.MaximumResponseTime"),
+        )
+    }
+
+    override fun runSpeedTest(genieacsId: String, direction: SpeedDirection): SpeedTestDiagnostic {
+        val root = currentRoot(genieacsId) ?: return SpeedTestDiagnostic.incomplete(direction, "Error_NoRoot")
+        val base = speedBase(root, direction)
+        val inputs = buildList {
+            add(listOf("$base.DiagnosticsState", "Requested", XSD_STRING))
+            if (direction == SpeedDirection.DOWNLOAD) {
+                add(listOf("$base.DownloadURL", downloadUrl, XSD_STRING))
+            } else {
+                add(listOf("$base.UploadURL", uploadUrl, XSD_STRING))
+                add(listOf("$base.TestFileLength", uploadBytes.toString(), XSD_UNSIGNED_INT))
+            }
+        }
+        postTask(genieacsId, mapOf("name" to "setParameterValues", "parameterValues" to inputs))
+        val device = pollDiagnostic(genieacsId, "$base.DiagnosticsState", speedProjection(base, direction))
+            ?: return SpeedTestDiagnostic.incomplete(direction, "Error_Timeout")
+        val state = device.param("$base.DiagnosticsState") ?: "Error"
+        if (state != PingDiagnostic.COMPLETE) return SpeedTestDiagnostic.incomplete(direction, state)
+        // Byte terukur: nama parameternya beda antar arah & antar firmware — ambil yang ada.
+        val bytes = when (direction) {
+            SpeedDirection.DOWNLOAD ->
+                device.paramLong("$base.TestBytesReceived") ?: device.paramLong("$base.TotalBytesReceived")
+            SpeedDirection.UPLOAD ->
+                device.paramLong("$base.TotalBytesSent") ?: device.paramLong("$base.TestBytesSent")
+        }
+        val durationMs = diagnosticDurationMs(device, base)
+        val throughput = if (bytes != null && durationMs != null && durationMs > 0) {
+            bytes * 8.0 / 1_000_000.0 / (durationMs / 1000.0)
+        } else {
+            null
+        }
+        return SpeedTestDiagnostic(direction, state, throughput, bytes, durationMs)
     }
 
     /** Ambil satu device penuh (untuk proyeksi tertentu) via query `_id`. */
@@ -149,10 +228,69 @@ class GenieAcsGateway(
         else -> null
     }
 
+    /** Akar model data device SEKARANG (perlu fetch — dipakai untuk menyusun path diagnostik). */
+    private fun currentRoot(genieacsId: String): String? =
+        fetchDevice(genieacsId, LIST_PROJECTION)?.detectRoot()
+
+    /**
+     * Path objek IPPing diagnostics: TR-181 menaruhnya di bawah `IP.Diagnostics.IPPing`,
+     * TR-098 memakai objek datar `IPPingDiagnostics` di akar.
+     */
+    private fun pingBase(root: String): String =
+        if (root == ROOT_TR181) "$root.IP.Diagnostics.IPPing" else "$root.IPPingDiagnostics"
+
+    /** Path objek Download/Upload diagnostics (TR-143) sesuai arah & model data. */
+    private fun speedBase(root: String, direction: SpeedDirection): String {
+        val leaf = if (direction == SpeedDirection.DOWNLOAD) "DownloadDiagnostics" else "UploadDiagnostics"
+        return if (root == ROOT_TR181) "$root.IP.Diagnostics.$leaf" else "$root.$leaf"
+    }
+
+    /**
+     * Menunggu terbatas sampai `DiagnosticsState` bukan lagi "Requested"/"None".
+     *
+     * Diagnostik TR-069 ASINKRON: perangkat menjalankan uji lalu melaporkan hasil pada
+     * inform "diagnostics complete" berikutnya. Untuk aksi admin on-demand, polling
+     * bertahap sampai [diagnosticsTimeout] dapat diterima; bila mentok, kembalikan
+     * snapshot terakhir (state-nya jadi penanda "belum tuntas").
+     */
+    private fun pollDiagnostic(genieacsId: String, statePath: String, projection: String): JsonNode? {
+        val deadline = Instant.now().plus(diagnosticsTimeout)
+        var last: JsonNode? = null
+        while (true) {
+            last = fetchDevice(genieacsId, projection) ?: last
+            val state = last?.param(statePath)
+            if (state != null && state != "Requested" && state != "None") return last
+            if (Instant.now().isAfter(deadline)) return last
+            Thread.sleep(pollInterval.toMillis())
+        }
+    }
+
+    private fun pingProjection(base: String): String = listOf(
+        "$base.DiagnosticsState", "$base.SuccessCount", "$base.FailureCount",
+        "$base.AverageResponseTime", "$base.MinimumResponseTime", "$base.MaximumResponseTime",
+    ).joinToString(",")
+
+    private fun speedProjection(base: String, direction: SpeedDirection): String {
+        val bytes = if (direction == SpeedDirection.DOWNLOAD) {
+            listOf("$base.TestBytesReceived", "$base.TotalBytesReceived")
+        } else {
+            listOf("$base.TotalBytesSent", "$base.TestBytesSent")
+        }
+        return (listOf("$base.DiagnosticsState", "$base.BOMTime", "$base.EOMTime") + bytes).joinToString(",")
+    }
+
+    /** Durasi transfer TR-143 dari `BOMTime`→`EOMTime` (ISO dateTime), dalam milidetik. */
+    private fun diagnosticDurationMs(device: JsonNode, base: String): Long? {
+        val bom = device.param("$base.BOMTime")?.let { runCatching { Instant.parse(it) }.getOrNull() } ?: return null
+        val eom = device.param("$base.EOMTime")?.let { runCatching { Instant.parse(it) }.getOrNull() } ?: return null
+        return Duration.between(bom, eom).toMillis().takeIf { it > 0 }
+    }
+
     companion object {
         private const val ROOT_TR098 = "InternetGatewayDevice"
         private const val ROOT_TR181 = "Device"
         private const val XSD_STRING = "xsd:string"
+        private const val XSD_UNSIGNED_INT = "xsd:unsignedInt"
 
         // Proyeksi membatasi field yang ditarik NBI agar sinkronisasi ringan di skala besar.
         private val LIST_PROJECTION = listOf(
@@ -198,6 +336,10 @@ private fun JsonNode.paramBool(dotted: String): Boolean? {
     val leaf = descend("$dotted._value")
     return if (leaf.isMissingNode || leaf.isNull) null else leaf.asBoolean(true)
 }
+
+private fun JsonNode.paramInt(dotted: String): Int? = param(dotted)?.toIntOrNull()
+
+private fun JsonNode.paramLong(dotted: String): Long? = param(dotted)?.toLongOrNull()
 
 /** Kunci instance angka ("1","2",…) sebuah node objek; abaikan meta seperti `_object`. */
 private fun JsonNode.instanceKeys(): List<String> =

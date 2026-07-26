@@ -4,6 +4,9 @@ import com.duluin.ftth.cpe.application.port.outbound.AcsDevice
 import com.duluin.ftth.cpe.application.port.outbound.AcsGateway
 import com.duluin.ftth.cpe.application.port.outbound.WifiChange
 import com.duluin.ftth.cpe.domain.model.ConnectedHost
+import com.duluin.ftth.cpe.domain.model.PingDiagnostic
+import com.duluin.ftth.cpe.domain.model.SpeedDirection
+import com.duluin.ftth.cpe.domain.model.SpeedTestDiagnostic
 import com.duluin.ftth.cpe.domain.model.WifiNetwork
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
@@ -26,9 +29,13 @@ class InMemoryAcsGateway : AcsGateway {
     private val devices = ConcurrentHashMap<String, AcsDevice>()
     private val wifi = ConcurrentHashMap<String, MutableList<WifiNetwork>>()
     private val hosts = ConcurrentHashMap<String, List<ConnectedHost>>()
+    private val pings = ConcurrentHashMap<String, PingDiagnostic>()
+    private val speedTests = ConcurrentHashMap<String, MutableMap<SpeedDirection, SpeedTestDiagnostic>>()
 
     val rebootCalls = CopyOnWriteArrayList<String>()
     val wifiChanges = CopyOnWriteArrayList<Pair<String, WifiChange>>()
+    val pingCalls = CopyOnWriteArrayList<Triple<String, String, Int>>()
+    val speedTestCalls = CopyOnWriteArrayList<Pair<String, SpeedDirection>>()
 
     @Volatile
     var failing: Boolean = false
@@ -37,8 +44,12 @@ class InMemoryAcsGateway : AcsGateway {
         devices.clear()
         wifi.clear()
         hosts.clear()
+        pings.clear()
+        speedTests.clear()
         rebootCalls.clear()
         wifiChanges.clear()
+        pingCalls.clear()
+        speedTestCalls.clear()
         failing = false
     }
 
@@ -52,6 +63,14 @@ class InMemoryAcsGateway : AcsGateway {
 
     fun seedHosts(genieacsId: String, list: List<ConnectedHost>) {
         hosts[genieacsId] = list
+    }
+
+    fun seedPing(genieacsId: String, result: PingDiagnostic) {
+        pings[genieacsId] = result
+    }
+
+    fun seedSpeedTest(genieacsId: String, result: SpeedTestDiagnostic) {
+        speedTests.getOrPut(genieacsId) { ConcurrentHashMap() }[result.direction] = result
     }
 
     override fun listDevices(): List<AcsDevice> = devices.values.toList()
@@ -80,5 +99,25 @@ class InMemoryAcsGateway : AcsGateway {
                 passphrase = change.passphrase ?: current.passphrase,
             )
         }
+    }
+
+    override fun runPing(genieacsId: String, host: String, count: Int): PingDiagnostic {
+        if (failing) throw IllegalStateException("ACS menolak ping (uji)")
+        pingCalls += Triple(genieacsId, host, count)
+        return pings[genieacsId]?.copy(host = host)
+            ?: PingDiagnostic(host, PingDiagnostic.COMPLETE, count, 0, 12, 9, 18)
+    }
+
+    override fun runSpeedTest(genieacsId: String, direction: SpeedDirection): SpeedTestDiagnostic {
+        if (failing) throw IllegalStateException("ACS menolak uji kecepatan (uji)")
+        speedTestCalls += genieacsId to direction
+        return speedTests[genieacsId]?.get(direction)
+            ?: SpeedTestDiagnostic(
+                direction = direction,
+                state = PingDiagnostic.COMPLETE,
+                throughputMbps = if (direction == SpeedDirection.DOWNLOAD) 94.2 else 41.7,
+                testBytes = 10_485_760,
+                durationMs = 900,
+            )
     }
 }

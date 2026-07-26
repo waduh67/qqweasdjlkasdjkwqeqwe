@@ -108,6 +108,7 @@ object PermissionCatalog {
         perm("cpe.device.reboot", "Reboot perangkat CPE")
         perm("cpe.wifi.view", "Lihat WiFi & host tersambung")
         perm("cpe.wifi.manage", "Ubah SSID/password WiFi")
+        perm("cpe.diagnostic.run", "Jalankan diagnostik CPE (ping & uji kecepatan)")
 
         // Notification
         perm("notification.template.view", "Lihat template notifikasi")

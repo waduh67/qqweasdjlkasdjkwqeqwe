@@ -10,7 +10,10 @@ import com.duluin.ftth.cpe.application.port.inbound.CpeLiveView
 import com.duluin.ftth.cpe.application.port.inbound.CpeQuery
 import com.duluin.ftth.cpe.application.port.inbound.HostView
 import com.duluin.ftth.cpe.application.port.inbound.ManageCpeUseCase
+import com.duluin.ftth.cpe.application.port.inbound.PingCommand
+import com.duluin.ftth.cpe.application.port.inbound.PingDiagnosticView
 import com.duluin.ftth.cpe.application.port.inbound.SetWifiCommand
+import com.duluin.ftth.cpe.application.port.inbound.SpeedTestDiagnosticView
 import com.duluin.ftth.cpe.application.port.inbound.WifiView
 import com.duluin.ftth.cpe.application.port.outbound.AcsGateway
 import com.duluin.ftth.cpe.application.port.outbound.CpeActionLogRepository
@@ -19,12 +22,14 @@ import com.duluin.ftth.cpe.application.port.outbound.WifiChange
 import com.duluin.ftth.cpe.domain.model.CpeActionLog
 import com.duluin.ftth.cpe.domain.model.CpeActionType
 import com.duluin.ftth.cpe.domain.model.CpeDevice
+import com.duluin.ftth.cpe.domain.model.SpeedDirection
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
 import java.time.Instant
+import java.util.Locale
 import java.util.UUID
 
 /**
@@ -45,6 +50,8 @@ class CpeService(
     private val acsGateway: AcsGateway,
     private val currentUser: CurrentUserProvider,
     @Value("\${ftth.cpe.online-stale-after:PT15M}") private val onlineStaleAfter: Duration,
+    @Value("\${ftth.cpe.diagnostics.ping-host:8.8.8.8}") private val defaultPingHost: String,
+    @Value("\${ftth.cpe.diagnostics.ping-count:4}") private val pingCount: Int,
 ) : CpeQuery, ManageCpeUseCase {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -109,6 +116,78 @@ class CpeService(
             )
         }
         return actionLogRepository.save(entry).toView()
+    }
+
+    override fun runPing(deviceId: UUID, command: PingCommand): PingDiagnosticView {
+        val device = requireDevice(deviceId)
+        val host = command.host?.trim()?.takeIf { it.isNotEmpty() } ?: defaultPingHost
+        if (host.length > 256) throw ValidationException("Alamat host maksimal 256 karakter")
+
+        val actor = currentUser.current()
+        val outcome = runCatching { acsGateway.runPing(device.genieacsId, host, pingCount) }
+        val result = outcome.getOrNull()
+        val ok = result?.complete == true
+        val message = when {
+            result == null -> "gagal menghubungi ACS: ${outcome.exceptionOrNull()?.message?.take(200)}"
+            result.complete -> {
+                val total = (result.successCount ?: 0) + (result.failureCount ?: 0)
+                buildString {
+                    append("${result.successCount ?: 0}/$total sukses")
+                    result.averageResponseMs?.let { append(", avg $it ms") }
+                }
+            }
+            else -> "tidak tuntas (${result.state})"
+        }
+        if (!ok) log.warn("Ping device {} tidak tuntas: {}", deviceId, message)
+        persistAction(deviceId, CpeActionType.PING_TEST, ok, "Ping $host → $message", actor.userId, actor.email)
+        return PingDiagnosticView(
+            ok = ok,
+            host = host,
+            state = result?.state ?: "Error",
+            successCount = result?.successCount,
+            failureCount = result?.failureCount,
+            averageResponseMs = result?.averageResponseMs,
+            minimumResponseMs = result?.minimumResponseMs,
+            maximumResponseMs = result?.maximumResponseMs,
+            message = message,
+        )
+    }
+
+    override fun runSpeedTest(deviceId: UUID, direction: SpeedDirection): SpeedTestDiagnosticView {
+        val device = requireDevice(deviceId)
+        val actor = currentUser.current()
+        val outcome = runCatching { acsGateway.runSpeedTest(device.genieacsId, direction) }
+        val result = outcome.getOrNull()
+        val throughput = result?.throughputMbps
+        val ok = result != null && result.complete && throughput != null
+        val message = when {
+            result == null -> "gagal menghubungi ACS: ${outcome.exceptionOrNull()?.message?.take(200)}"
+            result.complete && throughput != null -> String.format(Locale.US, "%.1f Mbps", throughput)
+            result.complete -> "tuntas tanpa throughput terbaca"
+            else -> "tidak tuntas (${result.state})"
+        }
+        if (!ok) log.warn("Uji kecepatan {} device {} tidak tuntas: {}", direction, deviceId, message)
+        val label = if (direction == SpeedDirection.DOWNLOAD) "unduh" else "unggah"
+        persistAction(deviceId, CpeActionType.SPEED_TEST, ok, "Speed $label → $message", actor.userId, actor.email)
+        return SpeedTestDiagnosticView(
+            ok = ok,
+            direction = direction.name,
+            state = result?.state ?: "Error",
+            throughputMbps = result?.throughputMbps,
+            testBytes = result?.testBytes,
+            durationMs = result?.durationMs,
+            message = message,
+        )
+    }
+
+    /** Tulis satu baris jejak audit untuk sebuah aksi diagnostik, sukses atau gagal. */
+    private fun persistAction(deviceId: UUID, type: CpeActionType, ok: Boolean, detail: String, actor: UUID, email: String?) {
+        val entry = if (ok) {
+            CpeActionLog.succeeded(deviceId, type, detail.take(480), actor, email)
+        } else {
+            CpeActionLog.failed(deviceId, type, detail.take(480), actor, email)
+        }
+        actionLogRepository.save(entry)
     }
 
     private fun requireDevice(id: UUID): CpeDevice =
