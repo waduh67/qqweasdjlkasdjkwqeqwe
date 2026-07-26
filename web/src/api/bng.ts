@@ -103,6 +103,39 @@ export interface UpdateAccessRequest {
   nasId?: string | null
 }
 
+/**
+ * Keadaan sesi PPPoE terkini sebuah akun ("B-ras Check"). [online] false berarti
+ * BRAS melaporkan akun tak sedang tersambung; bila [lastSeenAt] juga null, akun
+ * memang belum pernah terpantau. Waktu berformat ISO UTC — UI menyesuaikan zona.
+ */
+export interface BrasSessionView {
+  subscriberAccessId: string
+  username: string
+  online: boolean
+  framedIp: string | null
+  nasId: string | null
+  nasName: string | null
+  nasIp: string | null
+  callingStationId: string | null
+  uptimeSeconds: number | null
+  startedAt: string | null
+  lastSeenAt: string | null
+}
+
+/** Satu titik tren trafik siap-gambar (Mbps). null = tak terhitung → garis diputus. */
+export interface TrafficPoint {
+  time: string
+  downMbps: number | null
+  upMbps: number | null
+}
+
+/** Tren trafik satu akun dalam rentang [hours] jam ke belakang. */
+export interface TrafficHistoryView {
+  subscriberAccessId: string
+  hours: number
+  points: TrafficPoint[]
+}
+
 // ---- Paket (rate profile) ----
 
 /** Daftar paket layanan tenant. */
@@ -152,3 +185,13 @@ export const resetAccessSecret = (id: string, secret: string) =>
 
 /** Hapus akun PPPoE. */
 export const deleteAccess = (id: string) => api.del<void>(`/api/bng/access/${id}`)
+
+// ---- Sesi & trafik (jalur baca; izin bng.session.view) ----
+
+/** Keadaan sesi PPPoE terkini sebuah akun. */
+export const getBrasSession = (accessId: string) =>
+  api.get<BrasSessionView>(`/api/bng/access/${accessId}/session`)
+
+/** Tren trafik Down/Up sebuah akun untuk [hours] jam terakhir (bawaan 24). */
+export const getBrasTraffic = (accessId: string, hours = 24) =>
+  api.get<TrafficHistoryView>(`/api/bng/access/${accessId}/traffic?hours=${hours}`)

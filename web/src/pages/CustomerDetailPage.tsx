@@ -38,19 +38,24 @@ import {
 } from '../api/cpe'
 import {
   deleteAccess,
+  getBrasSession,
+  getBrasTraffic,
   listAccessForCustomer,
   listNas,
   listPlans,
   provisionAccess,
   resetAccessSecret,
   updateAccess,
+  type BrasSessionView,
   type NasView,
   type RateProfileView,
   type SubscriberAccessView,
+  type TrafficHistoryView,
 } from '../api/bng'
 import { useCan } from '../auth/useCan'
 import { EmptyState, Spinner, StatusBadge, useToast } from '../components/ui'
 import { OpticalChart } from '../components/OpticalChart'
+import { TrafficChart } from '../components/TrafficChart'
 import { IconAlert, IconCustomers, IconRoute } from '../components/icons'
 import type { SubscriptionView } from '../api/network'
 
@@ -735,6 +740,7 @@ function NetworkAccessTab({
   const canManage = can('bng.access.manage')
   const canPlanView = can('bng.plan.view')
   const canNasView = can('bng.nas.view')
+  const canSession = can('bng.session.view')
 
   const load = useCallback(() => {
     void listAccessForCustomer(customerId)
@@ -798,6 +804,7 @@ function NetworkAccessTab({
           plans={plans}
           nasList={nasList}
           canManage={canManage}
+          canSession={canSession}
           run={run}
         />
       ))}
@@ -865,6 +872,7 @@ function SubscriptionAccessCard({
   plans,
   nasList,
   canManage,
+  canSession,
   run,
 }: {
   sub: SubscriptionView
@@ -872,6 +880,7 @@ function SubscriptionAccessCard({
   plans: RateProfileView[]
   nasList: NasView[]
   canManage: boolean
+  canSession: boolean
   run: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
 }) {
   const [form, setForm] = useState<'provision' | 'edit' | 'reset' | null>(null)
@@ -990,6 +999,8 @@ function SubscriptionAccessCard({
               <button onClick={close}>Batal</button>
             </div>
           )}
+
+          {canSession && <BrasSessionPanel accessId={account.id} />}
         </div>
       ) : sub.status === 'TERMINATED' ? (
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
@@ -1038,6 +1049,83 @@ function SubscriptionAccessCard({
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * Panel "B-ras Check": keadaan sesi PPPoE terkini akun (online, IP framed, BRAS,
+ * uptime, MAC) plus tren trafik Down/Up 24 jam. Murni baca — datanya dari laporan
+ * collector, panel tak pernah menyentuh BRAS. Sesi & tren ditarik terpisah dan
+ * toleran gagal agar satu yang kosong tak menutup yang lain.
+ */
+function BrasSessionPanel({ accessId }: { accessId: string }) {
+  const [session, setSession] = useState<BrasSessionView | null>(null)
+  const [traffic, setTraffic] = useState<TrafficHistoryView | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    void getBrasSession(accessId)
+      .then((s) => alive && setSession(s))
+      .catch(() => {})
+    void getBrasTraffic(accessId, 24)
+      .then((t) => alive && setTraffic(t))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [accessId])
+
+  if (!session) {
+    return <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>Memuat sesi…</p>
+  }
+
+  const neverSeen = session.lastSeenAt == null
+  return (
+    <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.6rem' }}>
+      <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <span
+          className="badge"
+          title={session.online ? 'BRAS melaporkan sesi aktif' : 'BRAS tak melaporkan sesi aktif'}
+          style={{ color: session.online ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
+        >
+          {session.online ? '● online' : '○ offline'}
+        </span>
+        {session.framedIp && (
+          <span className="badge neutral tnum" title="IP yang diberikan ke pelanggan">
+            {session.framedIp}
+          </span>
+        )}
+        {session.nasName && (
+          <span className="badge neutral" title="BRAS yang menaungi sesi">{session.nasName}</span>
+        )}
+        {session.online && session.uptimeSeconds != null && (
+          <span className="badge neutral" title="Lama sesi berjalan">
+            uptime {humanizeDuration(session.uptimeSeconds * 1000)}
+          </span>
+        )}
+      </div>
+
+      {neverSeen ? (
+        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+          Akun ini belum pernah terpantau BRAS — pastikan BRAS-nya terhubung ke collector.
+        </p>
+      ) : (
+        <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+          {session.callingStationId && `MAC ${session.callingStationId} · `}
+          {session.nasIp && `NAS ${session.nasIp} · `}
+          terpantau terakhir {fmtInstant(session.lastSeenAt)}
+        </p>
+      )}
+
+      <div className="stack" style={{ gap: '0.4rem' }}>
+        <span className="muted" style={{ fontSize: '0.82rem', fontWeight: 600 }}>Tren trafik 24 jam</span>
+        {traffic ? (
+          <TrafficChart points={traffic.points} />
+        ) : (
+          <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>Memuat tren…</p>
+        )}
+      </div>
     </div>
   )
 }
