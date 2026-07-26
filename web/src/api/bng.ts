@@ -186,6 +186,26 @@ export const resetAccessSecret = (id: string, secret: string) =>
 /** Hapus akun PPPoE. */
 export const deleteAccess = (id: string) => api.del<void>(`/api/bng/access/${id}`)
 
+// ---- Kendali jaringan (jalur tulis ke BRAS) ----
+
+/**
+ * Isolir akun: potong akses (status jadi ISOLATED) sekaligus antre DISCONNECT agar
+ * sesi yang masih hidup benar-benar terputus. Izin `bng.access.isolate`.
+ */
+export const isolateAccess = (id: string) =>
+  api.post<SubscriberAccessView>(`/api/bng/access/${id}/isolate`, {})
+
+/** Pulihkan akun dari isolir (kembali ACTIVE). Izin `bng.access.isolate`. */
+export const restoreAccess = (id: string) =>
+  api.post<SubscriberAccessView>(`/api/bng/access/${id}/restore`, {})
+
+/**
+ * Reset Login: putus sesi PPPoE tanpa mengubah status akun, agar CPE dial ulang.
+ * Ditolak server (409) bila akun belum ditugaskan ke BRAS. Izin `bng.session.reset`.
+ */
+export const resetAccessLogin = (id: string) =>
+  api.post<SubscriberAccessView>(`/api/bng/access/${id}/reset-login`, {})
+
 // ---- Sesi & trafik (jalur baca; izin bng.session.view) ----
 
 /** Keadaan sesi PPPoE terkini sebuah akun. */

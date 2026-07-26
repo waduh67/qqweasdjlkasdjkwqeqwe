@@ -40,11 +40,14 @@ import {
   deleteAccess,
   getBrasSession,
   getBrasTraffic,
+  isolateAccess,
   listAccessForCustomer,
   listNas,
   listPlans,
   provisionAccess,
+  resetAccessLogin,
   resetAccessSecret,
+  restoreAccess,
   updateAccess,
   type BrasSessionView,
   type NasView,
@@ -741,6 +744,8 @@ function NetworkAccessTab({
   const canPlanView = can('bng.plan.view')
   const canNasView = can('bng.nas.view')
   const canSession = can('bng.session.view')
+  const canIsolate = can('bng.access.isolate')
+  const canReset = can('bng.session.reset')
 
   const load = useCallback(() => {
     void listAccessForCustomer(customerId)
@@ -805,6 +810,8 @@ function NetworkAccessTab({
           nasList={nasList}
           canManage={canManage}
           canSession={canSession}
+          canIsolate={canIsolate}
+          canReset={canReset}
           run={run}
         />
       ))}
@@ -873,6 +880,8 @@ function SubscriptionAccessCard({
   nasList,
   canManage,
   canSession,
+  canIsolate,
+  canReset,
   run,
 }: {
   sub: SubscriptionView
@@ -881,6 +890,8 @@ function SubscriptionAccessCard({
   nasList: NasView[]
   canManage: boolean
   canSession: boolean
+  canIsolate: boolean
+  canReset: boolean
   run: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
 }) {
   const [form, setForm] = useState<'provision' | 'edit' | 'reset' | null>(null)
@@ -943,6 +954,29 @@ function SubscriptionAccessCard({
     }
   }
 
+  // Kendali jaringan (jalur tulis ke BRAS): efeknya nyata pada sesi pelanggan —
+  // memutus koneksi — jadi tiap aksi minta konfirmasi eksplisit lebih dulu.
+  const isolate = () => {
+    if (!account) return
+    if (window.confirm(`Isolir akun ${account.username}? Sesi PPPoE-nya akan diputus sekarang.`)) {
+      void run(() => isolateAccess(account.id), 'Akun diisolir')
+    }
+  }
+
+  const restore = () => {
+    if (!account) return
+    if (window.confirm(`Pulihkan akun ${account.username} dari isolir?`)) {
+      void run(() => restoreAccess(account.id), 'Akun dipulihkan')
+    }
+  }
+
+  const resetLogin = () => {
+    if (!account) return
+    if (window.confirm(`Reset Login ${account.username}? Sesi diputus agar perangkat login ulang.`)) {
+      void run(() => resetAccessLogin(account.id), 'Perintah Reset Login dikirim')
+    }
+  }
+
   return (
     <div className="card stack" style={{ gap: '0.6rem' }}>
       <div className="spread" style={{ alignItems: 'center' }}>
@@ -961,13 +995,30 @@ function SubscriptionAccessCard({
             <StatusBadge status={account.status} />
           </div>
 
-          {canManage && form === null && (
+          {form === null && (canManage || canReset || canIsolate) && (
             <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap' }}>
-              <button onClick={openEdit}>Ganti paket / BRAS</button>
-              <button onClick={openReset}>Reset password</button>
-              <button className="ghost danger" onClick={remove}>
-                Hapus
-              </button>
+              {canManage && <button onClick={openEdit}>Ganti paket / BRAS</button>}
+              {canManage && <button onClick={openReset}>Reset password</button>}
+              {/* Reset Login: putus sesi agar CPE dial ulang — tak berlaku pada akun terhenti. */}
+              {canReset && account.status !== 'TERMINATED' && (
+                <button onClick={resetLogin}>Reset Login</button>
+              )}
+              {/* Isolir/Pulihkan: saling meniadakan sesuai status akun. */}
+              {canIsolate && account.status === 'ACTIVE' && (
+                <button className="ghost danger" onClick={isolate}>
+                  Isolir
+                </button>
+              )}
+              {canIsolate && account.status === 'ISOLATED' && (
+                <button className="primary" onClick={restore}>
+                  Pulihkan
+                </button>
+              )}
+              {canManage && (
+                <button className="ghost danger" onClick={remove}>
+                  Hapus
+                </button>
+              )}
             </div>
           )}
 
