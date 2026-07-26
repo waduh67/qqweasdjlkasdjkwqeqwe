@@ -1,5 +1,7 @@
 package com.duluin.ftth.collector.adapter
 
+import com.duluin.ftth.contract.BngActionCommand
+import com.duluin.ftth.contract.BngActionKind
 import com.duluin.ftth.contract.NasTarget
 import java.time.Instant
 import kotlin.test.Test
@@ -85,6 +87,30 @@ class SimulatorBngAdapterTest {
             assertNull(it.framedIp)
             assertNull(it.sessionId)
         }
+    }
+
+    @Test
+    fun `execute DISCONNECT dan COA selalu berhasil dan idempoten tanpa melempar`() {
+        val adapter = adapterAt(Instant.parse("2026-07-26T00:00:00Z"))
+        val target = targetOf("budi@isp")
+
+        // Simulator tak punya perangkat nyata untuk dipotong: sukses = tak melempar.
+        // Pemanggil menerjemahkan "tak melempar" menjadi ACK sukses; efek nyatanya
+        // (akun ISOLATED lenyap dari expectedUsernames) baru tampak di poll berikutnya.
+        adapter.execute(
+            target,
+            BngActionCommand(actionId = "a1", nasId = "nas-1", kind = BngActionKind.DISCONNECT, username = "budi@isp"),
+        )
+        // CoA membawa kecepatan baru; simulator cukup mencatatnya tanpa gagal.
+        adapter.execute(
+            target,
+            BngActionCommand("a2", "nas-1", BngActionKind.COA, "budi@isp", downMbps = 50, upMbps = 20),
+        )
+        // Idempoten: perintah yang sama datang lagi (at-least-once) tetap aman.
+        adapter.execute(
+            target,
+            BngActionCommand(actionId = "a1", nasId = "nas-1", kind = BngActionKind.DISCONNECT, username = "budi@isp"),
+        )
     }
 
     @Test

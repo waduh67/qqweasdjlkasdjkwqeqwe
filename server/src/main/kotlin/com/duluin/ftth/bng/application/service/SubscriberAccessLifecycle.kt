@@ -19,15 +19,23 @@ import java.util.UUID
  *
  * REQUIRES_NEW: listener berjalan pada fase AFTER_COMMIT saat transaksi langganan
  * sudah selesai — tanpa transaksi baru, tulisan di sini takkan pernah ter-commit.
+ *
+ * Isolir dari sini "beneran motong" juga: selain mengubah status, ia mengantre
+ * DISCONNECT lewat [BngActionService] (pelaku null = dipicu sistem, bukan operator),
+ * sama seperti tombol Isolir di UI.
  */
 @Service
 @Transactional(propagation = Propagation.REQUIRES_NEW)
 class SubscriberAccessLifecycle(
     private val subscriberAccessRepository: SubscriberAccessRepository,
+    private val bngActions: BngActionService,
 ) {
     fun onActivated(subscriptionId: UUID) = forEachLive(subscriptionId) { it.activate() }
 
-    fun onIsolated(subscriptionId: UUID) = forEachLive(subscriptionId) { it.isolate() }
+    fun onIsolated(subscriptionId: UUID) = forEachLive(subscriptionId) {
+        it.isolate()
+        bngActions.enqueueDisconnect(it, requestedBy = null, requestedByEmail = null)
+    }
 
     fun onTerminated(subscriptionId: UUID) =
         subscriberAccessRepository.findBySubscriptionId(subscriptionId).forEach {

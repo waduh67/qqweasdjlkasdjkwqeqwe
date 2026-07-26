@@ -1,6 +1,7 @@
 package com.duluin.ftth.bng.adapter.inbound.web
 
 import com.duluin.ftth.bng.application.port.inbound.BrasSessionView
+import com.duluin.ftth.bng.application.port.inbound.ControlSubscriberAccessUseCase
 import com.duluin.ftth.bng.application.port.inbound.ManageNasUseCase
 import com.duluin.ftth.bng.application.port.inbound.ManageRateProfileUseCase
 import com.duluin.ftth.bng.application.port.inbound.ManageSubscriberAccessUseCase
@@ -50,6 +51,7 @@ class BngController(
     private val plans: ManageRateProfileUseCase,
     private val nas: ManageNasUseCase,
     private val access: ManageSubscriberAccessUseCase,
+    private val control: ControlSubscriberAccessUseCase,
     private val sessions: ViewBngSessionUseCase,
 ) {
     // ---- Paket (rate profile) ----
@@ -156,6 +158,23 @@ class BngController(
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Hapus akun PPPoE")
     fun deleteAccess(@PathVariable id: UUID) = access.delete(id)
+
+    // ---- Kendali jaringan (jalur tulis ke BRAS) ----
+
+    @PostMapping("/access/{id}/isolate")
+    @PreAuthorize("@authz.can('bng.access.isolate')")
+    @Operation(summary = "Isolir akun: potong akses + antre DISCONNECT")
+    fun isolateAccess(@PathVariable id: UUID): SubscriberAccessView = control.isolate(id)
+
+    @PostMapping("/access/{id}/restore")
+    @PreAuthorize("@authz.can('bng.access.isolate')")
+    @Operation(summary = "Pulihkan akun dari isolir")
+    fun restoreAccess(@PathVariable id: UUID): SubscriberAccessView = control.restore(id)
+
+    @PostMapping("/access/{id}/reset-login")
+    @PreAuthorize("@authz.can('bng.session.reset')")
+    @Operation(summary = "Reset Login: putus sesi PPPoE agar CPE dial ulang")
+    fun resetLogin(@PathVariable id: UUID): SubscriberAccessView = control.resetLogin(id)
 
     // ---- Sesi PPPoE & tren trafik (jalur baca BRAS) ----
 

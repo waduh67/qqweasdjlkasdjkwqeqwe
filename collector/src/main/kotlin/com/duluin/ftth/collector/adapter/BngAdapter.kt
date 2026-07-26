@@ -1,10 +1,11 @@
 package com.duluin.ftth.collector.adapter
 
+import com.duluin.ftth.contract.BngActionCommand
 import com.duluin.ftth.contract.NasTarget
 import com.duluin.ftth.contract.RadiusSessionReading
 
 /**
- * Kontrak untuk membaca sesi PPPoE dari satu BRAS.
+ * Kontrak untuk membaca sesi PPPoE dari satu BRAS dan menjalankan perintah terhadapnya.
  *
  * Seperti [OltAdapter] untuk OLT, di sinilah perbedaan vendor BRAS diisolasi:
  * RouterOS lewat REST `/ppp/active`, FreeRADIUS lewat tabel `radacct`. Bagian lain
@@ -17,6 +18,14 @@ interface BngAdapter {
 
     /** Membaca seluruh sesi PPPoE aktif di bawah BRAS ini. */
     fun pollSessions(target: NasTarget): List<RadiusSessionReading>
+
+    /**
+     * Menjalankan satu perintah (jalur turun, Phase 7c): memutus sesi (DISCONNECT)
+     * atau mengubah kecepatan sesi hidup (COA). MELEMPAR bila gagal — pemanggil
+     * menangkapnya menjadi ACK gagal. Harus idempoten: perintah yang sama bisa datang
+     * berkali-kali sampai server menerima ACK.
+     */
+    fun execute(target: NasTarget, action: BngActionCommand)
 }
 
 /**

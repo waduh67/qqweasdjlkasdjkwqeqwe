@@ -1,5 +1,6 @@
 package com.duluin.ftth.bng.adapter.outbound.persistence
 
+import com.duluin.ftth.bng.domain.model.BngActionStatus
 import org.springframework.data.jpa.repository.JpaRepository
 import java.util.UUID
 
@@ -25,4 +26,11 @@ interface SubscriberAccessJpaRepository : JpaRepository<SubscriberAccessJpaEntit
 
 interface RadiusSessionJpaRepository : JpaRepository<RadiusSessionJpaEntity, UUID> {
     fun findBySubscriberAccessId(subscriberAccessId: UUID): RadiusSessionJpaEntity?
+}
+
+interface BngActionJpaRepository : JpaRepository<BngActionJpaEntity, UUID> {
+    fun findByNasIdInAndStatusInOrderByRequestedAtAsc(
+        nasIds: Collection<UUID>,
+        statuses: Collection<BngActionStatus>,
+    ): List<BngActionJpaEntity>
 }

@@ -39,6 +39,13 @@ data class CollectorHeartbeat(
     val protocolVersion: Int = CollectorProtocol.PROTOCOL_VERSION,
     /** Ringkasan hasil siklus polling terakhir, untuk ditampilkan di UI. */
     val lastCycle: CycleReport? = null,
+    /**
+     * Hasil eksekusi perintah BRAS (Reset Login/isolir/CoA) yang dikirim server pada
+     * denyut-denyut sebelumnya — jalur ACK (Phase 7c). Aditif dan kosong bila collector
+     * tidak menjalankan perintah apa pun; agent lama tak mengisinya. Server memakainya
+     * untuk menuntaskan status perintah di antrean.
+     */
+    val actionResults: List<BngActionResult> = emptyList(),
 )
 
 data class CycleReport(
@@ -171,6 +178,14 @@ data class CollectorConfig(
      * belum mengenal field ini mengabaikannya, sesuai kebijakan forward-compatible.
      */
     val nasTargets: List<NasTarget> = emptyList(),
+    /**
+     * Perintah BRAS yang harus dieksekusi collector pada siklus ini (Phase 7c):
+     * memutus sesi (Reset Login/isolir) atau mengubah kecepatan sesi hidup (CoA).
+     * Inilah jalur TURUN — arah perintah dari server ke collector — yang menumpang
+     * respons denyut agar tetap outbound-only. Aditif; agent lama mengabaikannya.
+     * Collector menjalankannya lalu meng-ACK lewat [CollectorHeartbeat.actionResults].
+     */
+    val bngActions: List<BngActionCommand> = emptyList(),
 )
 
 /**
@@ -261,4 +276,41 @@ data class BngIngestResult(
     /** Username sesi yang tak cocok akun mana pun — langganan belum diprovisi. */
     val unknownUsernames: List<String> = emptyList(),
     val duplicate: Boolean = false,
+)
+
+/** Jenis perintah BRAS yang bisa dititipkan server ke collector. */
+enum class BngActionKind {
+    /** Putuskan sesi PPPoE (Disconnect-Request/PoD) — dasar Reset Login & pemotongan isolir. */
+    DISCONNECT,
+
+    /** Change-of-Authorization: ubah kecepatan sesi yang sedang hidup tanpa memutusnya. */
+    COA,
+}
+
+/**
+ * Satu perintah BRAS yang harus dieksekusi collector, Phase 7c.
+ *
+ * [actionId] dibuat server dan dipantulkan collector di ACK sehingga server bisa
+ * menuntaskan tepat perintah itu (dan mengenali kiriman ganda — perintah dikirim ulang
+ * tiap denyut sampai di-ACK, jadi eksekusinya harus idempoten). [username] menyasar sesi
+ * yang tepat di BRAS; [downMbps]/[upMbps] hanya terisi untuk [BngActionKind.COA].
+ */
+data class BngActionCommand(
+    val actionId: String,
+    val nasId: String,
+    val kind: BngActionKind,
+    val username: String,
+    val downMbps: Int? = null,
+    val upMbps: Int? = null,
+)
+
+/**
+ * Hasil eksekusi satu [BngActionCommand], dikirim balik pada denyut berikutnya.
+ * [success] false menyertakan [detail] sebab gagal (mis. BRAS menolak CoA), yang
+ * server simpan di jejak perintah agar operator tahu kenapa Reset Login tak berhasil.
+ */
+data class BngActionResult(
+    val actionId: String,
+    val success: Boolean,
+    val detail: String? = null,
 )

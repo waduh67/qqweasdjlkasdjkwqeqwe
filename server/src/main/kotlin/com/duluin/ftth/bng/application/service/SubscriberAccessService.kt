@@ -1,5 +1,6 @@
 package com.duluin.ftth.bng.application.service
 
+import com.duluin.ftth.bng.application.port.inbound.ControlSubscriberAccessUseCase
 import com.duluin.ftth.bng.application.port.inbound.ManageSubscriberAccessUseCase
 import com.duluin.ftth.bng.application.port.inbound.ProvisionAccessCommand
 import com.duluin.ftth.bng.application.port.inbound.ResetSecretCommand
@@ -22,13 +23,14 @@ import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 /**
- * Kelola identitas jaringan (akun PPPoE) pelanggan.
+ * Kelola identitas jaringan (akun PPPoE) pelanggan — data (provisi/ganti/reset/hapus)
+ * sekaligus kendali jaringan (isolir/pulih/Reset Login).
  *
  * Langganan divalidasi lewat [CustomerApi] — kontrak publik module customer — bukan
  * dengan menembus internalnya, jadi batas antar-module terjaga. Status awal akun
  * mengikuti status langganan; sinkronisasi selanjutnya digerakkan event daur hidup
- * langganan (lihat [SubscriberAccessLifecycle]). Untuk slice fondasi ini belum ada
- * efek jaringan nyata — semua operasi murni data.
+ * langganan (lihat [SubscriberAccessLifecycle]). Perintah nyata ke BRAS (memutus/
+ * mengubah sesi) diantre lewat [BngActionService] dan dieksekusi collector jalur turun.
  */
 @Service
 @Transactional
@@ -39,7 +41,8 @@ class SubscriberAccessService(
     private val customerApi: CustomerApi,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
-) : ManageSubscriberAccessUseCase {
+    private val bngActions: BngActionService,
+) : ManageSubscriberAccessUseCase, ControlSubscriberAccessUseCase {
 
     @Transactional(readOnly = true)
     override fun listForCustomer(customerId: UUID): List<SubscriberAccessView> =
@@ -86,11 +89,18 @@ class SubscriberAccessService(
 
     override fun updateAssignment(id: UUID, command: UpdateAccessCommand): SubscriberAccessView {
         val access = require(id)
+        val previousProfileId = access.rateProfileId
         val profile = requireProfile(command.rateProfileId)
         val nas = command.nasId?.let { requireNas(it) }
         access.assignProfile(profile.id)
         access.moveToNas(nas?.id)
         val saved = subscriberAccessRepository.save(access)
+        // Paket berubah pada akun aktif → dorong CoA agar kecepatan sesi hidup ikut
+        // berubah tanpa memutusnya. No-op bila akun belum di BRAS (ditangani service).
+        if (previousProfileId != profile.id && saved.status == AccessStatus.ACTIVE) {
+            val user = currentUser.current()
+            bngActions.enqueueCoa(saved, profile.downMbps, profile.upMbps, user.userId, user.email)
+        }
         auditor.record(
             "bng.access.updated", "SubscriberAccess", saved.id, saved.tenantId,
             mapOf("username" to saved.username, "plan" to profile.name),
@@ -117,6 +127,54 @@ class SubscriberAccessService(
             "bng.access.deleted", "SubscriberAccess", id, access.tenantId,
             mapOf("username" to access.username),
         )
+    }
+
+    // ---- Kendali jaringan (jalur tulis ke BRAS) ----
+
+    override fun isolate(id: UUID): SubscriberAccessView {
+        val access = require(id)
+        access.isolate()
+        val saved = subscriberAccessRepository.save(access)
+        val user = currentUser.current()
+        // Isolir "beneran motong": status ISOLATED mengeluarkannya dari sesi yang
+        // diharapkan online, DISCONNECT memutus sesi yang masih hidup sekarang.
+        bngActions.enqueueDisconnect(saved, user.userId, user.email)
+        auditor.record(
+            "bng.access.isolated", "SubscriberAccess", saved.id, saved.tenantId,
+            mapOf("username" to saved.username),
+        )
+        return listOf(saved).toViews().first()
+    }
+
+    override fun restore(id: UUID): SubscriberAccessView {
+        val access = require(id)
+        access.activate()
+        val saved = subscriberAccessRepository.save(access)
+        // Tak perlu perintah: begitu ACTIVE, akun kembali masuk daftar sesi yang
+        // diharapkan online dan sesi berikutnya re-auth mengambil profil aktif.
+        auditor.record(
+            "bng.access.restored", "SubscriberAccess", saved.id, saved.tenantId,
+            mapOf("username" to saved.username),
+        )
+        return listOf(saved).toViews().first()
+    }
+
+    override fun resetLogin(id: UUID): SubscriberAccessView {
+        val access = require(id)
+        if (access.status == AccessStatus.TERMINATED) {
+            throw ConflictException("Akun jaringan sudah dihentikan — tidak bisa di-Reset Login")
+        }
+        val user = currentUser.current()
+        // Reset Login tanpa mengubah status: cukup putus sesi agar CPE dial ulang.
+        val enqueued = bngActions.enqueueDisconnect(access, user.userId, user.email)
+        if (!enqueued) {
+            throw ConflictException("Akun belum ditugaskan ke BRAS — tak ada sesi untuk di-reset")
+        }
+        auditor.record(
+            "bng.session.reset", "SubscriberAccess", access.id, access.tenantId,
+            mapOf("username" to access.username),
+        )
+        return listOf(access).toViews().first()
     }
 
     /**

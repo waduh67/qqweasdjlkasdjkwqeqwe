@@ -18,19 +18,36 @@ import java.net.http.HttpResponse
 import java.time.Duration
 
 /**
+ * Kanal keluar collector → server, dilihat dari sisi [CollectorAgent].
+ *
+ * Sengaja sebuah antarmuka: agent (inti) hanya bergantung pada tiga percakapan —
+ * denyut, kirim metrik, kirim sesi — bukan pada cara pengangkutannya. Produksi
+ * memakai [HttpServerClient]; pengujian menyuntikkan tiruan untuk mengamati apa
+ * yang benar-benar dikirim (mis. ACK perintah BRAS yang menumpang denyut).
+ */
+interface ServerClient {
+    /** Melapor hidup dan mengambil konfigurasi polling terbaru. */
+    fun heartbeat(heartbeat: CollectorHeartbeat): CollectorConfig
+
+    fun pushMetrics(batch: MetricBatch): IngestResult
+
+    fun pushBngSessions(batch: BngSessionBatch): BngIngestResult
+}
+
+/**
  * Klien HTTP ke ftth-server. Selalu outbound, sehingga tidak ada port yang perlu
  * dibuka di sisi ISP.
  *
  * Memakai HttpClient bawaan JDK: agent ini di-deploy di mesin milik operator dan
  * setiap dependensi tambahan adalah beban pemeliharaan bagi mereka, bukan bagi kita.
  */
-class ServerClient(
+class HttpServerClient(
     private val baseUrl: String,
     private val apiKey: String,
     private val http: HttpClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(10))
         .build(),
-) {
+) : ServerClient {
     private val log = LoggerFactory.getLogger(javaClass)
 
     // Jackson 3 sudah membawa dukungan java.time di databind, jadi Instant pada
@@ -42,14 +59,13 @@ class ServerClient(
         .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
         .build()
 
-    /** Melapor hidup dan mengambil konfigurasi polling terbaru. */
-    fun heartbeat(heartbeat: CollectorHeartbeat): CollectorConfig =
+    override fun heartbeat(heartbeat: CollectorHeartbeat): CollectorConfig =
         send("/api/collector/heartbeat", heartbeat, CollectorConfig::class.java)
 
-    fun pushMetrics(batch: MetricBatch): IngestResult =
+    override fun pushMetrics(batch: MetricBatch): IngestResult =
         send("/api/collector/metrics", batch, IngestResult::class.java)
 
-    fun pushBngSessions(batch: BngSessionBatch): BngIngestResult =
+    override fun pushBngSessions(batch: BngSessionBatch): BngIngestResult =
         send("/api/collector/bng-sessions", batch, BngIngestResult::class.java)
 
     private fun <T> send(path: String, body: Any, responseType: Class<T>): T {

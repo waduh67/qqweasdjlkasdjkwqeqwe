@@ -1,8 +1,11 @@
 package com.duluin.ftth.bng.adapter.outbound.persistence
 
+import com.duluin.ftth.bng.application.port.outbound.BngActionRepository
 import com.duluin.ftth.bng.application.port.outbound.NasRepository
 import com.duluin.ftth.bng.application.port.outbound.RateProfileRepository
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
+import com.duluin.ftth.bng.domain.model.BngAction
+import com.duluin.ftth.bng.domain.model.BngActionStatus
 import com.duluin.ftth.bng.domain.model.Nas
 import com.duluin.ftth.bng.domain.model.RateProfile
 import com.duluin.ftth.bng.domain.model.SubscriberAccess
@@ -173,6 +176,70 @@ class SubscriberAccessPersistenceAdapter(
         rateProfileId = rateProfileId,
         nasId = nasId,
         status = status,
+    )
+}
+
+/**
+ * Adapter antrean/audit perintah BRAS. Tanpa rahasia untuk dienkripsi — perintah
+ * hanya menaut akun & BRAS lewat UUID. Saat memperbarui, hanya kolom daur-hidup
+ * (status/detail/waktu) yang ditulis ulang; identitasnya `updatable = false` di entity.
+ */
+@Component
+class BngActionPersistenceAdapter(
+    private val jpa: BngActionJpaRepository,
+) : BngActionRepository {
+
+    override fun save(action: BngAction): BngAction {
+        val entity = jpa.findById(action.id).orElse(null)?.apply {
+            status = action.status
+            detail = action.detail
+            dispatchedAt = action.dispatchedAt
+            completedAt = action.completedAt
+        } ?: BngActionJpaEntity(
+            id = action.id,
+            subscriberAccessId = action.subscriberAccessId,
+            nasId = action.nasId,
+            username = action.username,
+            action = action.action,
+            downMbps = action.downMbps,
+            upMbps = action.upMbps,
+            status = action.status,
+            detail = action.detail,
+            requestedBy = action.requestedBy,
+            requestedByEmail = action.requestedByEmail,
+            requestedAt = action.requestedAt,
+            dispatchedAt = action.dispatchedAt,
+            completedAt = action.completedAt,
+        )
+        return jpa.save(entity).toDomain()
+    }
+
+    override fun findById(id: UUID): BngAction? = jpa.findById(id).orElse(null)?.toDomain()
+
+    override fun findDispatchableByNasIds(nasIds: Collection<UUID>): List<BngAction> {
+        if (nasIds.isEmpty()) return emptyList()
+        return jpa.findByNasIdInAndStatusInOrderByRequestedAtAsc(
+            nasIds,
+            listOf(BngActionStatus.PENDING, BngActionStatus.DISPATCHED),
+        ).map { it.toDomain() }
+    }
+
+    private fun BngActionJpaEntity.toDomain(): BngAction = BngAction.rehydrate(
+        id = id,
+        tenantId = tenantId ?: TenantContext.tenantId(),
+        subscriberAccessId = subscriberAccessId,
+        nasId = nasId,
+        username = username,
+        action = action,
+        downMbps = downMbps,
+        upMbps = upMbps,
+        status = status,
+        detail = detail,
+        requestedBy = requestedBy,
+        requestedByEmail = requestedByEmail,
+        requestedAt = requestedAt,
+        dispatchedAt = dispatchedAt,
+        completedAt = completedAt,
     )
 }
 

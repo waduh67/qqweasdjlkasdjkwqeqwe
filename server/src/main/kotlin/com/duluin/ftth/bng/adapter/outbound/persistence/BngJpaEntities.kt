@@ -2,6 +2,8 @@ package com.duluin.ftth.bng.adapter.outbound.persistence
 
 import com.duluin.ftth.bng.domain.model.AccessStatus
 import com.duluin.ftth.bng.domain.model.AuthType
+import com.duluin.ftth.bng.domain.model.BngActionStatus
+import com.duluin.ftth.bng.domain.model.BngActionType
 import com.duluin.ftth.bng.domain.model.NasVendor
 import com.duluin.ftth.common.infrastructure.persistence.TenantAwareJpaEntity
 import jakarta.persistence.Column
@@ -152,4 +154,56 @@ class RadiusSessionJpaEntity(
 
     @Column(name = "last_seen_at", nullable = false)
     var lastSeenAt: Instant,
+) : TenantAwareJpaEntity(id)
+
+/**
+ * Antrean + jejak audit perintah BRAS (Phase 7c). Identitas ([subscriberAccessId],
+ * [nasId], [username], [action], target laju, [requestedBy]/[requestedAt]) tak berubah
+ * setelah dibuat → `updatable = false`; hanya status & waktu penuntasannya berpindah.
+ */
+@Entity
+@Table(name = "bng_action")
+class BngActionJpaEntity(
+    id: UUID,
+
+    @Column(name = "subscriber_access_id", nullable = false, updatable = false)
+    var subscriberAccessId: UUID,
+
+    @Column(name = "nas_id", nullable = false, updatable = false)
+    var nasId: UUID,
+
+    @Column(nullable = false, length = 64, updatable = false)
+    var username: String,
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20, updatable = false)
+    var action: BngActionType,
+
+    @Column(name = "down_mbps", updatable = false)
+    var downMbps: Int?,
+
+    @Column(name = "up_mbps", updatable = false)
+    var upMbps: Int?,
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    var status: BngActionStatus,
+
+    @Column(length = 500)
+    var detail: String?,
+
+    @Column(name = "requested_by", updatable = false)
+    var requestedBy: UUID?,
+
+    @Column(name = "requested_by_email", length = 320, updatable = false)
+    var requestedByEmail: String?,
+
+    @Column(name = "requested_at", nullable = false, updatable = false)
+    var requestedAt: Instant,
+
+    @Column(name = "dispatched_at")
+    var dispatchedAt: Instant?,
+
+    @Column(name = "completed_at")
+    var completedAt: Instant?,
 ) : TenantAwareJpaEntity(id)

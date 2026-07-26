@@ -1,6 +1,7 @@
 package com.duluin.ftth.bng.application.port.outbound
 
 import com.duluin.ftth.bng.domain.model.AccountingRecordPoint
+import com.duluin.ftth.bng.domain.model.BngAction
 import com.duluin.ftth.bng.domain.model.Nas
 import com.duluin.ftth.bng.domain.model.RadiusSession
 import com.duluin.ftth.bng.domain.model.RateProfile
@@ -94,4 +95,22 @@ interface AccountingRecordRepository {
      * Titik pertama tiap rentang tak punya laju (belum ada pembanding) → null.
      */
     fun trafficSince(subscriberAccessId: UUID, since: Instant): List<TrafficSample>
+}
+
+/**
+ * Antrean sekaligus jejak audit perintah BRAS (jalur turun, Phase 7c). Tenant-aware
+ * (RLS), jadi pencarian ter-scope tenant aktif otomatis.
+ */
+interface BngActionRepository {
+
+    fun save(action: BngAction): BngAction
+
+    fun findById(id: UUID): BngAction?
+
+    /**
+     * Perintah yang belum tuntas (PENDING atau DISPATCHED) untuk sekumpulan BRAS —
+     * dasar dispatch ke collector. DISPATCHED ikut agar perintah yang belum di-ACK
+     * dikirim ulang (at-least-once). Terurut waktu minta agar urutannya stabil.
+     */
+    fun findDispatchableByNasIds(nasIds: Collection<UUID>): List<BngAction>
 }

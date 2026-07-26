@@ -20,6 +20,14 @@ import java.util.UUID
  */
 interface CollectorConfigContributor {
     fun nasTargetsFor(collectorId: UUID, tenantId: UUID): List<NasPollTarget>
+
+    /**
+     * Perintah BRAS yang menunggu dikirim ke collector ini (jalur turun, Phase 7c):
+     * memutus sesi (Reset Login/isolir) atau CoA. Dipanggil dalam transaksi & konteks
+     * tenant denyut yang sama; implementasi boleh menandai perintahnya "terkirim" saat
+     * menyerahkannya di sini. Default kosong agar contributor non-bng tak perlu tahu-menahu.
+     */
+    fun pendingBngActionsFor(collectorId: UUID, tenantId: UUID): List<BngActionDispatch> = emptyList()
 }
 
 /**
@@ -38,4 +46,19 @@ data class NasPollTarget(
     val host: String?,
     val adapterType: String,
     val expectedUsernames: List<String>,
+)
+
+/**
+ * Perintah BRAS yang disumbangkan module `bng` ke kanal collector — tipe netral shared
+ * kernel, monitoring memetakannya ke DTO wire (`contract.BngActionCommand`) tanpa perlu
+ * tahu detail protokol. [kind] memakai string netral (`DISCONNECT`/`COA`) agar `common`
+ * tak bergantung pada enum `contract`. [downMbps]/[upMbps] hanya untuk CoA.
+ */
+data class BngActionDispatch(
+    val actionId: UUID,
+    val nasId: UUID,
+    val kind: String,
+    val username: String,
+    val downMbps: Int?,
+    val upMbps: Int?,
 )

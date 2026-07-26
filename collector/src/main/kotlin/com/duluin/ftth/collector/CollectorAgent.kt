@@ -1,8 +1,11 @@
 package com.duluin.ftth.collector
 
 import com.duluin.ftth.collector.adapter.AdapterRegistry
+import com.duluin.ftth.collector.adapter.BngAdapter
 import com.duluin.ftth.collector.adapter.BngAdapterRegistry
 import com.duluin.ftth.collector.adapter.ProbeResult
+import com.duluin.ftth.contract.BngActionCommand
+import com.duluin.ftth.contract.BngActionResult
 import com.duluin.ftth.contract.BngSessionBatch
 import com.duluin.ftth.contract.CollectorConfig
 import com.duluin.ftth.contract.CollectorHeartbeat
@@ -47,6 +50,14 @@ class CollectorAgent(
     private val log = LoggerFactory.getLogger(javaClass)
     private val running = AtomicBoolean(true)
 
+    /**
+     * Hasil eksekusi perintah BRAS yang menunggu di-ACK ke server (jalur turun, Phase
+     * 7c). Diisi [runCycle] setelah menjalankan perintah, lalu dititipkan pada denyut
+     * berikutnya dan baru dikosongkan setelah denyut itu SUKSES terkirim — sehingga
+     * ACK yang gagal terkirim tidak hilang (server mengirim ulang perintahnya toh).
+     */
+    private var pendingActionResults: List<BngActionResult> = emptyList()
+
     fun stop() = running.set(false)
 
     /**
@@ -56,7 +67,7 @@ class CollectorAgent(
      * ditangani systemd timer alih-alih loop internal.
      */
     fun runOnce(): CycleReport? {
-        val config = client.heartbeat(CollectorHeartbeat(agentVersion = agentVersion))
+        val config = sendHeartbeat(lastCycle = null)
         if (config.paused) {
             log.info("Collector '{}' sedang dijeda server", config.collectorName)
             return null
@@ -64,11 +75,24 @@ class CollectorAgent(
         return runCycle(config)
     }
 
+    /**
+     * Mengirim denyut membawa hasil eksekusi perintah yang tertunda, lalu mengosongkan
+     * antrean ACK — hanya setelah denyut sukses (bila melempar, [pendingActionResults]
+     * tetap utuh untuk denyut berikutnya).
+     */
+    private fun sendHeartbeat(lastCycle: CycleReport?): CollectorConfig {
+        val config = client.heartbeat(
+            CollectorHeartbeat(agentVersion = agentVersion, lastCycle = lastCycle, actionResults = pendingActionResults),
+        )
+        pendingActionResults = emptyList()
+        return config
+    }
+
     fun run() {
         var lastCycle: CycleReport? = null
         while (running.get()) {
             val config = try {
-                client.heartbeat(CollectorHeartbeat(agentVersion = agentVersion, lastCycle = lastCycle))
+                sendHeartbeat(lastCycle)
             } catch (ex: ServerRejectedException) {
                 if (ex.permanent) {
                     // API key salah atau collector dinonaktifkan: mencoba lagi
@@ -117,6 +141,12 @@ class CollectorAgent(
         // yang tetap fokus pada telemetri optik. Kegagalannya di-log per BRAS.
         bngRegistry?.let { registry ->
             if (config.nasTargets.isNotEmpty()) pollAndDeliverBng(config.nasTargets, registry)
+        }
+
+        // Perintah BRAS jalur turun (Reset Login/isolir/CoA): dijalankan di sini,
+        // hasilnya dititipkan untuk di-ACK pada denyut berikutnya.
+        if (config.bngActions.isNotEmpty()) {
+            pendingActionResults = executeBngActions(config)
         }
 
         val report = CycleReport(
@@ -239,6 +269,46 @@ class CollectorAgent(
             }
         }
         log.error("Batch sesi {} dibuang setelah {} percobaan", batch.batchId, MAX_DELIVERY_ATTEMPTS)
+    }
+
+    /**
+     * Menjalankan tiap perintah BRAS dan mengumpulkan hasilnya sebagai ACK. Satu
+     * perintah yang gagal tak menghentikan yang lain — masing-masing menghasilkan
+     * satu [BngActionResult]. BRAS dipetakan dari [CollectorConfig.nasTargets] untuk
+     * mendapatkan vendor/host adapternya; perintah untuk BRAS yang tak ada di
+     * konfigurasi atau vendornya belum didukung dilaporkan gagal (bukan menggantung).
+     */
+    private fun executeBngActions(config: CollectorConfig): List<BngActionResult> {
+        val registry = bngRegistry
+        val targetsByNasId = config.nasTargets.associateBy { it.nasId }
+        return config.bngActions.map { action ->
+            val target = targetsByNasId[action.nasId]
+            val adapter = target?.let { registry?.forVendor(it.vendor) }
+            when {
+                registry == null -> failedAction(action, "Collector ini tidak melayani BRAS")
+                target == null -> failedAction(action, "BRAS ${action.nasId} tak ada dalam konfigurasi collector")
+                adapter == null -> failedAction(action, "Vendor ${target.vendor} belum didukung")
+                else -> executeOne(adapter, target, action)
+            }
+        }
+    }
+
+    private fun executeOne(adapter: BngAdapter, target: NasTarget, action: BngActionCommand): BngActionResult =
+        try {
+            adapter.execute(target, action)
+            log.info("Perintah {} untuk {} di BRAS {} berhasil", action.kind, action.username, target.name)
+            BngActionResult(actionId = action.actionId, success = true)
+        } catch (ex: Exception) {
+            log.warn(
+                "Perintah {} untuk {} di BRAS {} gagal: {}",
+                action.kind, action.username, target.name, ex.message,
+            )
+            BngActionResult(actionId = action.actionId, success = false, detail = ex.message?.take(400))
+        }
+
+    private fun failedAction(action: BngActionCommand, reason: String): BngActionResult {
+        log.warn("Perintah {} untuk {} tak bisa dieksekusi: {}", action.kind, action.username, reason)
+        return BngActionResult(actionId = action.actionId, success = false, detail = reason)
     }
 
     private companion object {

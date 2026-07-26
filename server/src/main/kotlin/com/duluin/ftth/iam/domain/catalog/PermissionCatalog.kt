@@ -119,7 +119,9 @@ object PermissionCatalog {
         perm("bng.nas.manage", "Kelola registri BRAS")
         perm("bng.access.view", "Lihat akun PPPoE pelanggan")
         perm("bng.access.manage", "Kelola akun PPPoE pelanggan")
+        perm("bng.access.isolate", "Isolir/pulihkan akses jaringan pelanggan")
         perm("bng.session.view", "Lihat sesi PPPoE & tren trafik pelanggan")
+        perm("bng.session.reset", "Reset Login (putus sesi PPPoE) pelanggan")
 
         // Notification
         perm("notification.template.view", "Lihat template notifikasi")

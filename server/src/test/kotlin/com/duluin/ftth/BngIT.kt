@@ -382,4 +382,90 @@ class BngIT {
         assertThat(JsonPath.read<List<String>>(config, "$.nasTargets[*].name")).contains("BRAS-Cfg")
         assertThat(JsonPath.read<List<String>>(config, "$.nasTargets[*].expectedUsernames[*]")).contains(username)
     }
+
+    @Test
+    fun `isolir mengantre DISCONNECT yang muncul di denyut lalu tuntas setelah collector ACK`() {
+        val token = newTenantAdmin("bng-kendali")
+        val apiKey = newCollector(token)
+        val nasId = nas(token, "BRAS-Kendali")
+        val planId = plan(token, "Paket Kendali")
+        val (_, sub) = activeSubscription(token)
+        val username = "pppoe${uniq()}"
+        val accessId = id(
+            post(
+                "/api/bng/access", token,
+                """{"subscriptionId":"$sub","username":"$username","secret":"rahasia123","rateProfileId":"$planId","nasId":"$nasId"}""",
+            ),
+        )
+
+        // Isolir dari UI: status jadi ISOLATED sekaligus mengantre satu DISCONNECT.
+        val isolated = post("/api/bng/access/$accessId/isolate", token, "", expected = 200)
+        assertThat(JsonPath.read<String>(isolated, "$.status")).isEqualTo("ISOLATED")
+
+        // Denyut collector membawa perintah DISCONNECT untuk akun itu (jalur turun).
+        val config = postAsCollector("/api/collector/heartbeat", apiKey, """{"agentVersion":"test-1.0"}""")
+        val filter = "$.bngActions[?(@.username=='$username')]"
+        assertThat(JsonPath.read<List<String>>(config, "$filter.kind")).containsExactly("DISCONNECT")
+        val actionId = JsonPath.read<List<String>>(config, "$filter.actionId").single()
+
+        // Collector meng-ACK sukses lewat denyut berikutnya → perintah dituntaskan
+        // (listener AFTER_COMMIT), sehingga tak dikirim ulang di denyut sesudahnya.
+        postAsCollector(
+            "/api/collector/heartbeat", apiKey,
+            """{"agentVersion":"test-1.0","actionResults":[{"actionId":"$actionId","success":true}]}""",
+        )
+        val after = postAsCollector("/api/collector/heartbeat", apiKey, """{"agentVersion":"test-1.0"}""")
+        assertThat(JsonPath.read<List<String>>(after, "$.bngActions[?(@.username=='$username')].actionId")).isEmpty()
+    }
+
+    @Test
+    fun `Reset Login memutus sesi pada akun ber-BRAS, ditolak pada akun tanpa BRAS`() {
+        val token = newTenantAdmin("bng-reset")
+        val apiKey = newCollector(token)
+        val nasId = nas(token, "BRAS-Reset")
+        val planId = plan(token, "Paket Reset")
+
+        // Akun tanpa BRAS: tak ada sesi untuk diputus → 409 (bukan diam-diam sukses).
+        val (_, subNoNas) = activeSubscription(token)
+        val accessNoNas = id(
+            post("/api/bng/access", token, """{"subscriptionId":"$subNoNas","username":"n${uniq()}","secret":"rahasia123","rateProfileId":"$planId","nasId":null}"""),
+        )
+        post("/api/bng/access/$accessNoNas/reset-login", token, "", expected = 409)
+
+        // Akun ber-BRAS: Reset Login mengantre DISCONNECT tanpa mengubah status akun.
+        val (_, sub) = activeSubscription(token)
+        val username = "r${uniq()}"
+        val accessId = id(
+            post("/api/bng/access", token, """{"subscriptionId":"$sub","username":"$username","secret":"rahasia123","rateProfileId":"$planId","nasId":"$nasId"}"""),
+        )
+        val reset = post("/api/bng/access/$accessId/reset-login", token, "", expected = 200)
+        assertThat(JsonPath.read<String>(reset, "$.status")).isEqualTo("ACTIVE")
+
+        val config = postAsCollector("/api/collector/heartbeat", apiKey, """{"agentVersion":"test-1.0"}""")
+        assertThat(JsonPath.read<List<String>>(config, "$.bngActions[?(@.username=='$username')].kind"))
+            .containsExactly("DISCONNECT")
+    }
+
+    @Test
+    fun `ganti paket pada akun aktif mendorong CoA dengan kecepatan paket baru`() {
+        val token = newTenantAdmin("bng-coa")
+        val apiKey = newCollector(token)
+        val nasId = nas(token, "BRAS-CoA")
+        val plan1 = plan(token, "Lambat", down = 20, up = 10)
+        val (_, sub) = activeSubscription(token)
+        val username = "c${uniq()}"
+        val accessId = id(
+            post("/api/bng/access", token, """{"subscriptionId":"$sub","username":"$username","secret":"rahasia123","rateProfileId":"$plan1","nasId":"$nasId"}"""),
+        )
+
+        // Pindah ke paket lebih cepat pada akun aktif → satu CoA membawa kecepatan baru.
+        val plan2 = plan(token, "Cepat", down = 100, up = 30)
+        put("/api/bng/access/$accessId", token, """{"rateProfileId":"$plan2","nasId":"$nasId"}""")
+
+        val config = postAsCollector("/api/collector/heartbeat", apiKey, """{"agentVersion":"test-1.0"}""")
+        val filter = "$.bngActions[?(@.username=='$username')]"
+        assertThat(JsonPath.read<List<String>>(config, "$filter.kind")).containsExactly("COA")
+        assertThat(JsonPath.read<List<Int>>(config, "$filter.downMbps")).containsExactly(100)
+        assertThat(JsonPath.read<List<Int>>(config, "$filter.upMbps")).containsExactly(30)
+    }
 }

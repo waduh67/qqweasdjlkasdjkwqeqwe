@@ -1,10 +1,15 @@
 package com.duluin.ftth.monitoring.application.service
 
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.integration.AcknowledgedBngAction
+import com.duluin.ftth.common.integration.BngActionDispatch
+import com.duluin.ftth.common.integration.BngActionsAcknowledged
 import com.duluin.ftth.common.integration.BngSessionsReported
 import com.duluin.ftth.common.integration.CollectorConfigContributor
 import com.duluin.ftth.common.integration.NasPollTarget
 import com.duluin.ftth.common.integration.ReportedRadiusSession
+import com.duluin.ftth.contract.BngActionCommand
+import com.duluin.ftth.contract.BngActionKind
 import com.duluin.ftth.contract.BngIngestResult
 import com.duluin.ftth.contract.BngSessionBatch
 import com.duluin.ftth.contract.CollectorConfig
@@ -56,11 +61,31 @@ class CollectorGatewayService(
         collector.recordHeartbeat(heartbeat.agentVersion, heartbeat.lastCycle?.let(::summarize))
         collectorRepository.save(collector)
 
+        // ACK perintah BRAS yang dibawa denyut ini → module bng menuntaskannya (AFTER_COMMIT).
+        publishBngActionAcks(collector.id, collector.tenantId, heartbeat)
+
         val config = buildConfig(collector)
         evaluateOltReachability(collector.tenantId, config, heartbeat)
         // Reachability OLT mungkin berubah → picu korelasi ulang insiden.
         events.publishEvent(AlarmsChangedEvent(collector.tenantId))
         return config
+    }
+
+    /**
+     * Meneruskan hasil eksekusi perintah BRAS dari collector sebagai event shared
+     * kernel; module bng menyerapnya (AFTER_COMMIT) untuk menuntaskan antreannya.
+     * Monitoring hanya menyalurkan — tak mengenal makna perintahnya. [actionId] wire
+     * yang bukan UUID valid dibuang diam-diam (agent nakal/rusak tak boleh menjatuhkan denyut).
+     */
+    private fun publishBngActionAcks(collectorId: UUID, tenantId: UUID, heartbeat: CollectorHeartbeat) {
+        if (heartbeat.actionResults.isEmpty()) return
+        val acked = heartbeat.actionResults.mapNotNull { result ->
+            val actionId = runCatching { UUID.fromString(result.actionId) }.getOrNull() ?: return@mapNotNull null
+            AcknowledgedBngAction(actionId, result.success, result.detail)
+        }
+        if (acked.isNotEmpty()) {
+            events.publishEvent(BngActionsAcknowledged(tenantId, collectorId, acked))
+        }
     }
 
     /**
@@ -116,6 +141,7 @@ class CollectorGatewayService(
             targets = targets,
             paused = collector.status == CollectorStatus.PAUSED,
             nasTargets = collectContributedNasTargets(collector),
+            bngActions = collectContributedBngActions(collector),
         )
     }
 
@@ -141,6 +167,30 @@ class CollectorGatewayService(
         host = host,
         adapterType = adapterType,
         expectedUsernames = expectedUsernames,
+    )
+
+    /**
+     * Mengumpulkan perintah BRAS yang menunggu dari seluruh contributor (jalur turun,
+     * Phase 7c). Sama seperti target BRAS: kegagalan satu contributor di-log & dilewati
+     * agar konfigurasi OLT (jalur utama) tak jatuh karena module penyumbang bermasalah.
+     */
+    private fun collectContributedBngActions(collector: Collector): List<BngActionCommand> =
+        collectorConfigContributors.flatMap { contributor ->
+            try {
+                contributor.pendingBngActionsFor(collector.id, collector.tenantId).map { it.toWire() }
+            } catch (ex: Exception) {
+                log.warn("Contributor {} gagal menyumbang perintah BRAS", contributor.javaClass.simpleName, ex)
+                emptyList()
+            }
+        }
+
+    private fun BngActionDispatch.toWire() = BngActionCommand(
+        actionId = actionId.toString(),
+        nasId = nasId.toString(),
+        kind = BngActionKind.valueOf(kind),
+        username = username,
+        downMbps = downMbps,
+        upMbps = upMbps,
     )
 
     /**

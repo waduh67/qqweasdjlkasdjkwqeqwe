@@ -57,7 +57,7 @@ fun main() {
     log.info("Vendor OLT didukung: {}", registry.supportedVendors.joinToString())
 
     val agent = CollectorAgent(
-        client = ServerClient(serverUrl, apiKey),
+        client = HttpServerClient(serverUrl, apiKey),
         registry = registry,
         agentVersion = AGENT_VERSION,
         bngRegistry = bngRegistry,

@@ -1,7 +1,9 @@
 package com.duluin.ftth.collector.adapter
 
+import com.duluin.ftth.contract.BngActionCommand
 import com.duluin.ftth.contract.NasTarget
 import com.duluin.ftth.contract.RadiusSessionReading
+import org.slf4j.LoggerFactory
 import java.time.Instant
 import kotlin.math.abs
 
@@ -28,9 +30,27 @@ class SimulatorBngAdapter(
     private val clock: () -> Instant = Instant::now,
 ) : BngAdapter {
 
+    private val log = LoggerFactory.getLogger(javaClass)
+
     override fun pollSessions(target: NasTarget): List<RadiusSessionReading> {
         val now = clock()
         return target.expectedUsernames.map { username -> reading(username, target, now) }
+    }
+
+    /**
+     * BRAS tiruan selalu "berhasil" mengeksekusi: tak ada perangkat nyata untuk
+     * memutus/mengubah. Cukup catat agar jalur perintah ujung-ke-ujung teramati saat
+     * dev — efek nyatanya tampak di poll berikutnya (akun ISOLATED hilang dari
+     * expectedUsernames sehingga tak lagi dilaporkan online).
+     */
+    override fun execute(target: NasTarget, action: BngActionCommand) {
+        log.info(
+            "SIMULATOR BRAS {}: {} untuk {}{}",
+            target.name,
+            action.kind,
+            action.username,
+            if (action.kind.name == "COA") " → ${action.downMbps}/${action.upMbps} Mbps" else "",
+        )
     }
 
     private fun reading(username: String, target: NasTarget, now: Instant): RadiusSessionReading {
