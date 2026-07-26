@@ -5,7 +5,7 @@ import java.time.Instant
 import java.util.UUID
 
 /** Jenis perintah yang bisa dikirim ke CPE lewat ACS. */
-enum class CpeActionType { REBOOT, SET_WIFI, PING_TEST, SPEED_TEST, FIRMWARE_UPGRADE }
+enum class CpeActionType { REBOOT, SET_WIFI, PING_TEST, SPEED_TEST, FIRMWARE_UPGRADE, FACTORY_RESET, REFRESH_ACS }
 
 /** Hasil eksekusi perintah — ACS bisa menolak atau timeout, jadi outcome dicatat. */
 enum class CpeActionStatus { SUCCESS, FAILED }

@@ -55,8 +55,15 @@ export interface HostView {
   active: boolean
 }
 
-/** REBOOT, SET_WIFI, PING_TEST, SPEED_TEST, atau FIRMWARE_UPGRADE. */
-export type CpeAction = 'REBOOT' | 'SET_WIFI' | 'PING_TEST' | 'SPEED_TEST' | 'FIRMWARE_UPGRADE'
+/** REBOOT, SET_WIFI, PING_TEST, SPEED_TEST, FIRMWARE_UPGRADE, FACTORY_RESET, atau REFRESH_ACS. */
+export type CpeAction =
+  | 'REBOOT'
+  | 'SET_WIFI'
+  | 'PING_TEST'
+  | 'SPEED_TEST'
+  | 'FIRMWARE_UPGRADE'
+  | 'FACTORY_RESET'
+  | 'REFRESH_ACS'
 /** SUCCESS atau FAILED. */
 export type CpeActionStatus = 'SUCCESS' | 'FAILED'
 /** Arah uji kecepatan TR-143. */
@@ -80,6 +87,8 @@ export const CPE_ACTION_LABEL: Record<CpeAction, string> = {
   PING_TEST: 'Ping test',
   SPEED_TEST: 'Uji kecepatan',
   FIRMWARE_UPGRADE: 'Upgrade firmware',
+  FACTORY_RESET: 'Reset pabrik',
+  REFRESH_ACS: 'Refresh ACS',
 }
 
 /** Perubahan WiFi; field null/kosong berarti "biarkan apa adanya". */
@@ -158,3 +167,20 @@ export const listCpeFirmware = (id: string) =>
 /** Picu upgrade firmware ke berkas pilihan; hasilnya tercatat di jejak audit. */
 export const upgradeCpeFirmware = (id: string, fileName: string) =>
   api.post<CpeActionView>(`/api/cpe/devices/${id}/firmware`, { fileName })
+
+/**
+ * Hasil "Refresh ACS": [connected] menandai apakah ACS berhasil menjangkau perangkat
+ * sekarang (status "ACS Connect"); bila false, perintah diantre untuk inform berikutnya.
+ */
+export interface AcsRefreshView {
+  connected: boolean
+  message: string
+}
+
+/** Reset pabrik ONT/router; hasilnya tercatat di jejak audit. */
+export const factoryResetCpe = (id: string) =>
+  api.post<CpeActionView>(`/api/cpe/devices/${id}/factory-reset`)
+
+/** Paksa perangkat membuka sesi ke ACS sekarang; kembalikan status ACS Connect. */
+export const refreshCpeAcs = (id: string) =>
+  api.post<AcsRefreshView>(`/api/cpe/devices/${id}/refresh`)

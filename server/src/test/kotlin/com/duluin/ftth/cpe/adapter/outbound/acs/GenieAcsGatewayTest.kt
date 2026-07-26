@@ -8,11 +8,13 @@ import org.assertj.core.api.Assertions.within
 import org.hamcrest.Matchers.containsString
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpMethod
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.test.web.client.MockRestServiceServer
 import org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath
 import org.springframework.test.web.client.match.MockRestRequestMatchers.method
 import org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo
+import org.springframework.test.web.client.response.MockRestResponseCreators.withStatus
 import org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess
 import org.springframework.web.client.RestClient
 import java.time.Duration
@@ -234,6 +236,43 @@ class GenieAcsGatewayTest {
             "ACS-001",
             FirmwareFile("F670L-V2.bin", "V2.0.0", "F670L", "00AABB", FirmwareFile.FIRMWARE_FILE_TYPE, 12_000_000),
         )
+        server.verify()
+    }
+
+    @Test
+    fun `factoryReset mengirim task factoryReset lewat connection request`() {
+        val (gateway, server) = fixture()
+        server.expect(requestTo(containsString("/devices/ACS-001/tasks")))
+            .andExpect(requestTo(containsString("connection_request")))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(jsonPath("$.name").value("factoryReset"))
+            .andRespond(withSuccess())
+
+        gateway.factoryReset("ACS-001")
+        server.verify()
+    }
+
+    @Test
+    fun `requestConnection true saat NBI balas 200 (perangkat terjangkau)`() {
+        val (gateway, server) = fixture()
+        server.expect(requestTo(containsString("/devices/ACS-001/tasks")))
+            .andExpect(requestTo(containsString("connection_request")))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(jsonPath("$.name").value("refreshObject"))
+            .andRespond(withSuccess())
+
+        assertThat(gateway.requestConnection("ACS-001")).isTrue()
+        server.verify()
+    }
+
+    @Test
+    fun `requestConnection false saat NBI balas 202 (task diantre, perangkat tak menjawab)`() {
+        val (gateway, server) = fixture()
+        server.expect(requestTo(containsString("/devices/ACS-001/tasks")))
+            .andExpect(method(HttpMethod.POST))
+            .andRespond(withStatus(HttpStatus.ACCEPTED))
+
+        assertThat(gateway.requestConnection("ACS-001")).isFalse()
         server.verify()
     }
 

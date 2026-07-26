@@ -39,9 +39,15 @@ class InMemoryAcsGateway : AcsGateway {
     val pingCalls = CopyOnWriteArrayList<Triple<String, String, Int>>()
     val speedTestCalls = CopyOnWriteArrayList<Pair<String, SpeedDirection>>()
     val firmwarePushes = CopyOnWriteArrayList<Pair<String, String>>()
+    val factoryResetCalls = CopyOnWriteArrayList<String>()
+    val connectionRequests = CopyOnWriteArrayList<String>()
 
     @Volatile
     var failing: Boolean = false
+
+    /** Hasil connection request (status "ACS Connect"); set false untuk menguji "Not Connect". */
+    @Volatile
+    var connectionReachable: Boolean = true
 
     fun reset() {
         devices.clear()
@@ -55,7 +61,10 @@ class InMemoryAcsGateway : AcsGateway {
         pingCalls.clear()
         speedTestCalls.clear()
         firmwarePushes.clear()
+        factoryResetCalls.clear()
+        connectionRequests.clear()
         failing = false
+        connectionReachable = true
     }
 
     fun seedDevice(device: AcsDevice) {
@@ -137,5 +146,16 @@ class InMemoryAcsGateway : AcsGateway {
     override fun pushFirmware(genieacsId: String, file: FirmwareFile) {
         if (failing) throw IllegalStateException("ACS menolak unduh firmware (uji)")
         firmwarePushes += genieacsId to file.name
+    }
+
+    override fun factoryReset(genieacsId: String) {
+        if (failing) throw IllegalStateException("ACS menolak factory reset (uji)")
+        factoryResetCalls += genieacsId
+    }
+
+    override fun requestConnection(genieacsId: String): Boolean {
+        if (failing) throw IllegalStateException("ACS menolak connection request (uji)")
+        connectionRequests += genieacsId
+        return connectionReachable
     }
 }

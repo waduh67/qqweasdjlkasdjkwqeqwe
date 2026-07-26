@@ -194,6 +194,24 @@ class GenieAcsGateway(
         )
     }
 
+    override fun factoryReset(genieacsId: String) {
+        postTask(genieacsId, mapOf("name" to "factoryReset"))
+    }
+
+    override fun requestConnection(genieacsId: String): Boolean {
+        // Task `refreshObject` pada akar (objectName "") + connection_request: GenieACS
+        // mencoba menghubungi perangkat SEKARANG dan menyegarkan seluruh pohonnya.
+        // Balasannya menandai keterjangkauan: 200 = sesi terbentuk & task jalan
+        // ("ACS Connect"); 202 = perangkat tak terjangkau, task diantre ("Not Connect").
+        val response = restClient.post()
+            .uri { it.pathSegment("devices", genieacsId, "tasks").queryParam("connection_request").build() }
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(mapOf("name" to "refreshObject", "objectName" to ""))
+            .retrieve()
+            .toBodilessEntity()
+        return response.statusCode.value() == 200
+    }
+
     /** Ambil satu device penuh (untuk proyeksi tertentu) via query `_id`. */
     private fun fetchDevice(genieacsId: String, projection: String): JsonNode? =
         restClient.get()

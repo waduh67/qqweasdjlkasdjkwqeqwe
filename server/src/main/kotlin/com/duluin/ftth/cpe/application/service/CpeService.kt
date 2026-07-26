@@ -3,6 +3,7 @@ package com.duluin.ftth.cpe.application.service
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.security.CurrentUserProvider
+import com.duluin.ftth.cpe.application.port.inbound.AcsRefreshView
 import com.duluin.ftth.cpe.application.port.inbound.CpeActionView
 import com.duluin.ftth.cpe.application.port.inbound.CpeDeviceDetail
 import com.duluin.ftth.cpe.application.port.inbound.CpeDeviceView
@@ -213,6 +214,36 @@ class CpeService(
             )
         }
         return actionLogRepository.save(entry).toView()
+    }
+
+    override fun factoryReset(deviceId: UUID): CpeActionView {
+        val device = requireDevice(deviceId)
+        val actor = currentUser.current()
+        val outcome = runCatching { acsGateway.factoryReset(device.genieacsId) }
+        val entry = if (outcome.isSuccess) {
+            CpeActionLog.succeeded(deviceId, CpeActionType.FACTORY_RESET, "Reset pabrik dijadwalkan", actor.userId, actor.email)
+        } else {
+            log.warn("Factory reset device {} gagal: {}", deviceId, outcome.exceptionOrNull()?.message)
+            CpeActionLog.failed(deviceId, CpeActionType.FACTORY_RESET, outcome.exceptionOrNull()?.message?.take(480), actor.userId, actor.email)
+        }
+        return actionLogRepository.save(entry).toView()
+    }
+
+    override fun refreshAcs(deviceId: UUID): AcsRefreshView {
+        val device = requireDevice(deviceId)
+        val actor = currentUser.current()
+        val outcome = runCatching { acsGateway.requestConnection(device.genieacsId) }
+        val connected = outcome.getOrNull() == true
+        val message = when {
+            outcome.isFailure -> "gagal menghubungi ACS: ${outcome.exceptionOrNull()?.message?.take(200)}"
+            connected -> "ACS terhubung ke perangkat"
+            else -> "perangkat tak menjawab; perintah diantre untuk inform berikutnya"
+        }
+        if (outcome.isFailure) log.warn("Refresh ACS device {} gagal: {}", deviceId, outcome.exceptionOrNull()?.message)
+        // "Not Connect" BUKAN kegagalan aksi (perangkat cuma sedang offline) — selama NBI
+        // menerima permintaan, aksinya SUCCESS; hanya penolakan NBI yang FAILED.
+        persistAction(deviceId, CpeActionType.REFRESH_ACS, outcome.isSuccess, "Refresh ACS → $message", actor.userId, actor.email)
+        return AcsRefreshView(connected, message)
     }
 
     /** Tulis satu baris jejak audit untuk sebuah aksi diagnostik, sukses atau gagal. */

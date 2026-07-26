@@ -23,6 +23,15 @@ interface ManageCpeUseCase {
 
     /** Memicu upgrade firmware ke berkas [UpgradeFirmwareCommand.fileName] pilihan. */
     fun upgradeFirmware(deviceId: UUID, command: UpgradeFirmwareCommand): CpeActionView
+
+    /** Reset pabrik ONT/router — mengembalikan seluruh konfigurasi ke setelan awal. */
+    fun factoryReset(deviceId: UUID): CpeActionView
+
+    /**
+     * Memaksa perangkat membuka sesi ke ACS sekarang (connection request) dan
+     * menyegarkan datanya; hasilnya menandai status "ACS Connect / Not Connect".
+     */
+    fun refreshAcs(deviceId: UUID): AcsRefreshView
 }
 
 /**

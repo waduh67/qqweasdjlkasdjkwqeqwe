@@ -72,6 +72,22 @@ interface AcsGateway {
      * bila ACS menolak/tak terjangkau — pemanggil mencatatnya ke jejak audit.
      */
     fun pushFirmware(genieacsId: String, file: FirmwareFile)
+
+    /**
+     * Reset pabrik (TR-069 FactoryReset) lewat connection request — mengembalikan
+     * seluruh konfigurasi perangkat ke setelan awal. Melempar bila ACS menolak/tak
+     * terjangkau; pemanggil mencatat kegagalan itu ke jejak audit.
+     */
+    fun factoryReset(genieacsId: String)
+
+    /**
+     * Memaksa perangkat membuka sesi ke ACS SEKARANG (connection request) dan
+     * menyegarkan pohon parameternya. Mengembalikan true bila ACS berhasil menjangkau
+     * perangkat (status "ACS Connect"), false bila perintah hanya diantre untuk inform
+     * berikutnya (perangkat sedang tak terjangkau — "Not Connect"). Melempar hanya bila
+     * NBI-nya sendiri menolak, bukan sekadar perangkat tak menjawab.
+     */
+    fun requestConnection(genieacsId: String): Boolean
 }
 
 /**

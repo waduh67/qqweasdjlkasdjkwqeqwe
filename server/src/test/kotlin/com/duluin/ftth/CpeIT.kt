@@ -390,6 +390,75 @@ class CpeIT {
     }
 
     @Test
+    fun `factory reset terkirim ke ACS dan tercatat di jejak audit`() {
+        val token = newTenantAdmin("cpe-fr")
+        val (genieacsId, deviceId) = syncedDevice(token)
+
+        val result = post("/api/cpe/devices/$deviceId/factory-reset", token, "", expected = 200)
+        assertThat(JsonPath.read<String>(result, "$.status")).isEqualTo("SUCCESS")
+        assertThat(JsonPath.read<String>(result, "$.action")).isEqualTo("FACTORY_RESET")
+        assertThat(acs.factoryResetCalls).containsExactly(genieacsId)
+
+        val detail = getJson("/api/cpe/devices/$deviceId", token)
+        assertThat(JsonPath.read<List<String>>(detail, "$.recentActions[*].action")).contains("FACTORY_RESET")
+        assertThat(JsonPath.read<List<String>>(detail, "$.recentActions[*].status")).contains("SUCCESS")
+    }
+
+    @Test
+    fun `refresh ACS lapor terhubung saat perangkat terjangkau`() {
+        val token = newTenantAdmin("cpe-refresh")
+        val (genieacsId, deviceId) = syncedDevice(token)
+
+        val result = post("/api/cpe/devices/$deviceId/refresh", token, "", expected = 200)
+        assertThat(JsonPath.read<Boolean>(result, "$.connected")).isTrue()
+        assertThat(acs.connectionRequests).containsExactly(genieacsId)
+
+        val detail = getJson("/api/cpe/devices/$deviceId", token)
+        assertThat(JsonPath.read<List<String>>(detail, "$.recentActions[*].action")).contains("REFRESH_ACS")
+        assertThat(JsonPath.read<List<String>>(detail, "$.recentActions[*].status")).contains("SUCCESS")
+    }
+
+    @Test
+    fun `refresh ACS lapor tak terhubung saat perangkat tak terjangkau`() {
+        val token = newTenantAdmin("cpe-refresh-off")
+        val (_, deviceId) = syncedDevice(token)
+
+        // Perangkat offline: NBI menerima permintaan tapi tak berhasil menjangkau perangkat.
+        acs.connectionReachable = false
+        val result = post("/api/cpe/devices/$deviceId/refresh", token, "", expected = 200)
+        assertThat(JsonPath.read<Boolean>(result, "$.connected")).isFalse()
+
+        // Not-Connect BUKAN kegagalan aksi — jejaknya tetap SUCCESS (perintah terkirim).
+        val detail = getJson("/api/cpe/devices/$deviceId", token)
+        assertThat(JsonPath.read<List<String>>(detail, "$.recentActions[?(@.action=='REFRESH_ACS')].status")).contains("SUCCESS")
+    }
+
+    @Test
+    fun `izin lihat CPE saja tak boleh kelola perangkat`() {
+        val slug = "cpe-mng-perm${uniq()}"
+        val admin = "admin@$slug.test"
+        onboarding.onboard(OnboardTenantCommand(slug, "CPE Mng Co", admin, "Admin", pass))
+        val adminToken = login(slug, admin)
+        val (_, deviceId) = syncedDevice(adminToken)
+
+        val permsJson = getJson("/api/permissions", adminToken)
+        val viewPermId = JsonPath.read<List<String>>(permsJson, "$[?(@.code=='cpe.device.view')].id").first()
+        val roleId = id(
+            post("/api/roles", adminToken, """{"name":"Lihat CPE Mng","permissionIds":["$viewPermId"]}""", expected = 201),
+        )
+        val limitedEmail = "mngviewer@$slug.test"
+        post("/api/users", adminToken, """{"email":"$limitedEmail","name":"Viewer","password":"$pass","roleIds":["$roleId"]}""")
+        val limitedToken = login(slug, limitedEmail)
+
+        mockMvc.perform(
+            post("/api/cpe/devices/$deviceId/factory-reset").header("Authorization", "Bearer $limitedToken"),
+        ).andExpect(status().isForbidden)
+        mockMvc.perform(
+            post("/api/cpe/devices/$deviceId/refresh").header("Authorization", "Bearer $limitedToken"),
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
     fun `tanpa izin cpe ditolak 403`() {
         val slug = "cpe-perm${uniq()}"
         val admin = "admin@$slug.test"

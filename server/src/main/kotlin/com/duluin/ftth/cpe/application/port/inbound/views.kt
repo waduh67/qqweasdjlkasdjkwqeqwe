@@ -106,3 +106,14 @@ data class FirmwareFileView(
     val productClass: String?,
     val sizeBytes: Long?,
 )
+
+/**
+ * Hasil "Refresh ACS" (connection request) untuk UI — tidak tersimpan. [connected]
+ * = ACS berhasil menjangkau perangkat sekarang (status "ACS Connect"); bila false,
+ * perintah tetap diantre untuk inform berikutnya ("Not Connect"). [message] merangkum
+ * keadaannya untuk ditampilkan.
+ */
+data class AcsRefreshView(
+    val connected: Boolean,
+    val message: String,
+)

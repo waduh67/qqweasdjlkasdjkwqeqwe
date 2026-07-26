@@ -1,5 +1,6 @@
 package com.duluin.ftth.cpe.adapter.inbound.web
 
+import com.duluin.ftth.cpe.application.port.inbound.AcsRefreshView
 import com.duluin.ftth.cpe.application.port.inbound.CpeActionView
 import com.duluin.ftth.cpe.application.port.inbound.CpeDeviceDetail
 import com.duluin.ftth.cpe.application.port.inbound.CpeDeviceView
@@ -100,6 +101,16 @@ class CpeController(
         @PathVariable id: UUID,
         @Valid @RequestBody request: UpgradeFirmwareRequest,
     ): CpeActionView = manage.upgradeFirmware(id, UpgradeFirmwareCommand(request.fileName))
+
+    @PostMapping("/devices/{id}/factory-reset")
+    @PreAuthorize("@authz.can('cpe.device.manage')")
+    @Operation(summary = "Reset pabrik ONT/router; hasilnya (berhasil/gagal) tercatat di jejak audit")
+    fun factoryReset(@PathVariable id: UUID): CpeActionView = manage.factoryReset(id)
+
+    @PostMapping("/devices/{id}/refresh")
+    @PreAuthorize("@authz.can('cpe.device.manage')")
+    @Operation(summary = "Paksa perangkat membuka sesi ke ACS sekarang; kembalikan status ACS Connect")
+    fun refreshAcs(@PathVariable id: UUID): AcsRefreshView = manage.refreshAcs(id)
 }
 
 /** Berkas firmware sasaran, dari `FirmwareFileView.name`. */

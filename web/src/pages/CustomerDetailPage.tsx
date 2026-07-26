@@ -13,15 +13,18 @@ import type {
 import { DOWN_CAUSE_LABEL, type OnuHistoryView, type OnuMetricView } from '../api/monitoring'
 import {
   CPE_ACTION_LABEL,
+  factoryResetCpe,
   getCpeDevice,
   getCpeLive,
   listCpeDevices,
   listCpeFirmware,
   rebootCpe,
+  refreshCpeAcs,
   runCpePing,
   runCpeSpeedTest,
   setCpeWifi,
   upgradeCpeFirmware,
+  type AcsRefreshView,
   type CpeActionView,
   type CpeDeviceDetail,
   type CpeDeviceView,
@@ -762,6 +765,7 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
   const canWifiManage = can('cpe.wifi.manage')
   const canDiag = can('cpe.diagnostic.run')
   const canFirmware = can('cpe.firmware.manage')
+  const canManage = can('cpe.device.manage')
 
   const loadDetail = useCallback(() => {
     void getCpeDevice(deviceId)
@@ -906,6 +910,8 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
       {canFirmware && (
         <FirmwareCard deviceId={deviceId} currentVersion={d.softwareVersion} onRan={loadDetail} />
       )}
+
+      {canManage && <AcsCard deviceId={deviceId} onRan={loadDetail} />}
 
       <CpeActionLog actions={detail.recentActions} />
     </div>
@@ -1135,6 +1141,86 @@ function FirmwareCard({
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * ACS & pemeliharaan: "Refresh ACS" memaksa perangkat membuka sesi ke ACS sekarang
+ * (connection request) dan melaporkan status "ACS Connect / Not Connect"; "Reset
+ * pabrik" mengembalikan seluruh konfigurasi ke setelan awal (destruktif, jadi pakai
+ * konfirmasi tegas). Keduanya menulis jejak audit, jadi [onRan] menyegarkan panel
+ * jejak. Butuh izin `cpe.device.manage`.
+ */
+function AcsCard({ deviceId, onRan }: { deviceId: string; onRan: () => void }) {
+  const toast = useToast()
+  const [acs, setAcs] = useState<AcsRefreshView | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [resetting, setResetting] = useState(false)
+
+  const refresh = async () => {
+    setRefreshing(true)
+    try {
+      const result = await refreshCpeAcs(deviceId)
+      setAcs(result)
+      if (result.connected) toast.success('ACS terhubung ke perangkat')
+      else toast.error(result.message)
+      onRan()
+    } catch (err) {
+      setAcs(null)
+      toast.error(err instanceof ApiError ? err.message : 'Refresh ACS gagal')
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  const factoryReset = async () => {
+    if (
+      !window.confirm(
+        'Reset pabrik mengembalikan SEMUA setelan perangkat (WiFi, dll) ke bawaan dan memutus koneksi pelanggan. Lanjutkan?',
+      )
+    ) {
+      return
+    }
+    setResetting(true)
+    try {
+      const action = await factoryResetCpe(deviceId)
+      if (action.status === 'SUCCESS') toast.success('Perintah reset pabrik terkirim')
+      else toast.error(action.detail ?? 'Reset pabrik gagal di ACS')
+      onRan()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Reset pabrik gagal')
+    } finally {
+      setResetting(false)
+    }
+  }
+
+  const busy = refreshing || resetting
+  return (
+    <div className="card stack" style={{ gap: '0.75rem' }}>
+      <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
+        <strong style={{ fontSize: '0.95rem' }}>ACS &amp; pemeliharaan</strong>
+        {acs != null && (
+          <span
+            className="badge"
+            title={acs.message}
+            style={{ color: acs.connected ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
+          >
+            {acs.connected ? 'ACS Connect' : 'Not Connect'}
+          </span>
+        )}
+      </div>
+      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        Refresh memaksa perangkat menghubungi ACS sekarang; reset pabrik mengembalikan setelan ke bawaan.
+      </p>
+      <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+        <button onClick={() => void refresh()} disabled={busy}>
+          {refreshing ? 'Menghubungi…' : 'Refresh ACS'}
+        </button>
+        <button className="ghost danger" onClick={() => void factoryReset()} disabled={busy}>
+          {resetting ? 'Mengirim…' : 'Reset pabrik'}
+        </button>
+      </div>
     </div>
   )
 }

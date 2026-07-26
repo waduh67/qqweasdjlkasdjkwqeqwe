@@ -106,6 +106,7 @@ object PermissionCatalog {
         // CPE (router/ONT pelanggan via GenieACS)
         perm("cpe.device.view", "Lihat perangkat CPE pelanggan")
         perm("cpe.device.reboot", "Reboot perangkat CPE")
+        perm("cpe.device.manage", "Reset pabrik & refresh koneksi ACS CPE")
         perm("cpe.wifi.view", "Lihat WiFi & host tersambung")
         perm("cpe.wifi.manage", "Ubah SSID/password WiFi")
         perm("cpe.diagnostic.run", "Jalankan diagnostik CPE (ping & uji kecepatan)")
