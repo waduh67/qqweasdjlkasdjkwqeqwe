@@ -1,4 +1,4 @@
-package com.duluin.ftth.monitoring
+package com.duluin.ftth.common.integration
 
 import java.util.UUID
 
@@ -9,11 +9,15 @@ import java.util.UUID
  * sebelum pelanggan merasakan gangguan.
  *
  * Module `workorder` mendengarkannya (setelah commit) untuk mengangkat work order
- * preventif ke pelanggan yang bersangkutan. Diletakkan di base package monitoring
- * — permukaan publiknya — karena hanya monitoring yang menerbitkannya (ia yang
- * memiliki deret metrik) dan consumer (`workorder`) memang boleh bergantung
- * padanya. Payload sengaja hanya fakta monitoring (ONU + tren); pemetaan ke
- * pelanggan adalah urusan workorder.
+ * preventif ke pelanggan yang bersangkutan.
+ *
+ * Diletakkan di shared kernel `common` (bukan di base package monitoring) supaya
+ * consumer `workorder` tidak perlu bergantung pada module `monitoring` — sama
+ * seperti [com.duluin.ftth.common.audit.AuditTrailEvent]. Ini penting karena
+ * monitoring kini justru bergantung pada `workorder` (menebak pemilik ONU liar
+ * dari WO PSB terbuka); menaruh event di sini memutus ketergantungan dua-arah
+ * yang akan menjadi siklus module. Payload sengaja hanya fakta monitoring (ONU +
+ * tren); pemetaan ke pelanggan adalah urusan workorder.
  */
 data class OpticalDegradationDetected(
     val tenantId: UUID,

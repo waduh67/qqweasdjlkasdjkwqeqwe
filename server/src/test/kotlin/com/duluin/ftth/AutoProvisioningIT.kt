@@ -215,6 +215,38 @@ class AutoProvisioningIT {
     }
 
     @Test
+    fun `WO PSB terbuka mengunci tebakan ke pelanggan order itu, mengalahkan yang terdekat`() {
+        val token = newTenantAdmin("psbsug")
+        val (oltCode, odp, awaitingFar) = scaffold(token)
+        val apiKey = newCollector(token)
+        val s = uniq().uppercase()
+
+        // Pelanggan kedua tepat di lokasi ODP → paling dekat secara geografis.
+        val awaitingNear = id(
+            post(
+                "/api/customers", token,
+                """{"code":"C2-$s","name":"Pelanggan Dekat $s","address":"Jl. Uji 2",
+                    "location":{"longitude":106.995,"latitude":-6.245}}""",
+            ),
+        )
+
+        // Order pasang terbuka justru untuk pelanggan yang lebih jauh.
+        post("/api/work-orders", token, """{"type":"PSB","title":"Pasang baru $s","customerId":"$awaitingFar"}""")
+
+        postAsCollector(apiKey, batch(reading("SN-${uniq().uppercase()}", oltCode, -22.0)))
+        val listed = inbox(token)
+
+        // Dua pelanggan menunggu + satu ODP: tanpa WO ini MEDIUM & menebak yang terdekat
+        // ($awaitingNear). WO PSB terbuka mengunci ke pelanggan order itu dan menaikkan keyakinan.
+        assertThat(JsonPath.read<String>(listed, "$[0].suggestion.confidence")).isEqualTo("HIGH")
+        assertThat(JsonPath.read<String>(listed, "$[0].suggestion.customerId")).isEqualTo(awaitingFar)
+        assertThat(JsonPath.read<String>(listed, "$[0].suggestion.customerId")).isNotEqualTo(awaitingNear)
+        assertThat(JsonPath.read<String>(listed, "$[0].suggestion.odpId")).isEqualTo(odp)
+        assertThat(JsonPath.read<Int>(listed, "$[0].suggestion.portNumber")).isEqualTo(1)
+        assertThat(JsonPath.read<String>(listed, "$[0].suggestion.reason")).contains("WO PSB")
+    }
+
+    @Test
     fun `tanpa pelanggan menunggu instalasi, saran hanya ODP dan port kosong berikutnya`() {
         val token = newTenantAdmin("lowsug")
         val (oltCode, odp, customer) = scaffold(token)

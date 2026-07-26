@@ -1,7 +1,7 @@
 package com.duluin.ftth.monitoring.application.service
 
+import com.duluin.ftth.common.integration.OpticalDegradationDetected
 import com.duluin.ftth.common.tenant.TenantContext
-import com.duluin.ftth.monitoring.OpticalDegradationDetected
 import com.duluin.ftth.monitoring.application.port.outbound.CollectorRepository
 import com.duluin.ftth.monitoring.application.port.outbound.OnuMetricRepository
 import com.duluin.ftth.monitoring.domain.model.OpticalTrend

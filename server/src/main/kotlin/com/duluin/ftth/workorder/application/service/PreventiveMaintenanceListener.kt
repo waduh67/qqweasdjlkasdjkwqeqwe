@@ -1,7 +1,7 @@
 package com.duluin.ftth.workorder.application.service
 
+import com.duluin.ftth.common.integration.OpticalDegradationDetected
 import com.duluin.ftth.common.tenant.TenantContext
-import com.duluin.ftth.monitoring.OpticalDegradationDetected
 import com.duluin.ftth.workorder.application.port.inbound.DegradingOnuSignal
 import com.duluin.ftth.workorder.application.port.inbound.RaisePreventiveMaintenanceUseCase
 import org.slf4j.LoggerFactory

@@ -48,5 +48,8 @@ interface WorkOrderRepository {
      */
     fun existsOpenPreventiveForCustomer(customerId: UUID): Boolean
 
+    /** Semua WO ber-[type] yang masih terbuka (belum selesai/batal) — bahan pencocokan lintas-module. */
+    fun findOpenByType(type: WorkOrderType): List<WorkOrder>
+
     fun deleteById(id: UUID)
 }

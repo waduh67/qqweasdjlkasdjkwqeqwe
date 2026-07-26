@@ -134,6 +134,17 @@ class WorkOrderPersistenceAdapter(
         return jpa.count(spec) > 0
     }
 
+    override fun findOpenByType(type: WorkOrderType): List<WorkOrder> {
+        val openStatuses = WorkOrderStatus.entries.filter { it.open }
+        val spec = Specification<WorkOrderJpaEntity> { root, _, cb ->
+            cb.and(
+                cb.equal(root.get<WorkOrderType>("type"), type),
+                root.get<WorkOrderStatus>("status").`in`(openStatuses),
+            )
+        }
+        return jpa.findAll(spec).map { it.toDomain() }
+    }
+
     override fun deleteById(id: UUID) = jpa.deleteById(id)
 
     /** Cari lewat kode atau judul; kosong = cocokkan semua. */
