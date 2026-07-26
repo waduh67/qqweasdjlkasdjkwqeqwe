@@ -173,3 +173,10 @@ export const IconSidebar = (p: IconProps) => (
     <path d="M9 4v16" />
   </Icon>
 )
+
+export const IconGauge = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m12 14 4-4" />
+    <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+  </Icon>
+)

@@ -36,10 +36,23 @@ import {
   type SpeedTestDiagnosticView,
   type WifiView,
 } from '../api/cpe'
+import {
+  deleteAccess,
+  listAccessForCustomer,
+  listNas,
+  listPlans,
+  provisionAccess,
+  resetAccessSecret,
+  updateAccess,
+  type NasView,
+  type RateProfileView,
+  type SubscriberAccessView,
+} from '../api/bng'
 import { useCan } from '../auth/useCan'
 import { EmptyState, Spinner, StatusBadge, useToast } from '../components/ui'
 import { OpticalChart } from '../components/OpticalChart'
 import { IconAlert, IconCustomers, IconRoute } from '../components/icons'
+import type { SubscriptionView } from '../api/network'
 
 /** Warna kesehatan optik selaras token status. */
 const HEALTH_COLOR: Record<string, string> = {
@@ -49,7 +62,7 @@ const HEALTH_COLOR: Record<string, string> = {
   UNKNOWN: 'var(--muted)',
 }
 
-type Tab = 'ringkasan' | 'jalur' | 'tetangga' | 'metrik' | 'cpe'
+type Tab = 'ringkasan' | 'jalur' | 'tetangga' | 'metrik' | 'akses' | 'cpe'
 
 /**
  * Halaman detail satu pelanggan sebagai rute tersendiri (`/customers/:id`), bukan
@@ -92,6 +105,7 @@ export function CustomerDetailPage() {
   // tiap render, jadi tak boleh masuk daftar dependensi effect (memicu loop).
   const canAssign = can('customer.onu.assign')
   const canMetric = can('monitoring.metric.view')
+  const canAccess = can('bng.access.view')
   const canCpe = can('cpe.device.view')
 
   // ODP untuk form pasang ONU — hanya bila boleh memasang.
@@ -214,6 +228,11 @@ export function CustomerDetailPage() {
         <button className={tab === 'metrik' ? 'active' : ''} onClick={() => setTab('metrik')}>
           Metrik
         </button>
+        {canAccess && (
+          <button className={tab === 'akses' ? 'active' : ''} onClick={() => setTab('akses')}>
+            Akses
+          </button>
+        )}
         {canCpe && (
           <button className={tab === 'cpe' ? 'active' : ''} onClick={() => setTab('cpe')}>
             CPE
@@ -225,6 +244,7 @@ export function CustomerDetailPage() {
       {tab === 'jalur' && <JalurTab trace={trace} connected={connected} />}
       {tab === 'tetangga' && <TetanggaTab neighbors={neighbors} connected={connected} odpCount={odpCount} ponCount={ponCount} />}
       {tab === 'metrik' && <MetrikTab customer={customer} metrics={metrics} />}
+      {tab === 'akses' && <NetworkAccessTab customerId={id} subscriptions={customer.subscriptions} />}
       {tab === 'cpe' && <CpeTab customerId={id} />}
     </div>
   )
@@ -687,6 +707,337 @@ function MiniStat({ label, value, unit, warn }: { label: string; value: string; 
         {value}
         <span className="muted" style={{ fontSize: '0.7rem', fontWeight: 500 }}> {unit}</span>
       </div>
+    </div>
+  )
+}
+
+/* ---------- Tab: Akses (identitas jaringan / akun PPPoE) ---------- */
+
+/**
+ * Kelola akun PPPoE (identitas jaringan) tiap langganan pelanggan — satu langganan
+ * paling banyak satu akun. Paket & BRAS ditarik hanya untuk mengisi dropdown, dan
+ * hanya bila operator boleh mengelola akun sekaligus melihat keduanya. Password
+ * (secret) tak pernah dibaca balik: cuma bisa diisi saat provisi atau di-reset.
+ */
+function NetworkAccessTab({
+  customerId,
+  subscriptions,
+}: {
+  customerId: string
+  subscriptions: SubscriptionView[]
+}) {
+  const { can } = useCan()
+  const toast = useToast()
+  const [accounts, setAccounts] = useState<SubscriberAccessView[] | null>(null)
+  const [plans, setPlans] = useState<RateProfileView[]>([])
+  const [nasList, setNasList] = useState<NasView[]>([])
+
+  const canManage = can('bng.access.manage')
+  const canPlanView = can('bng.plan.view')
+  const canNasView = can('bng.nas.view')
+
+  const load = useCallback(() => {
+    void listAccessForCustomer(customerId)
+      .then(setAccounts)
+      .catch(() => setAccounts([]))
+  }, [customerId])
+
+  useEffect(() => load(), [load])
+
+  // Paket & BRAS hanya untuk mengisi dropdown provisi/ganti — ditarik bila boleh
+  // mengelola akun sekaligus melihatnya; gagal senyap agar tab tetap tampil.
+  useEffect(() => {
+    if (!canManage || !canPlanView) return
+    void listPlans()
+      .then(setPlans)
+      .catch(() => setPlans([]))
+  }, [canManage, canPlanView])
+
+  useEffect(() => {
+    if (!canManage || !canNasView) return
+    void listNas()
+      .then(setNasList)
+      .catch(() => setNasList([]))
+  }, [canManage, canNasView])
+
+  const run = async (action: () => Promise<unknown>, okMessage?: string) => {
+    try {
+      await action()
+      load()
+      if (okMessage) toast.success(okMessage)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Operasi gagal')
+    }
+  }
+
+  if (accounts == null) {
+    return (
+      <div className="card" style={{ display: 'grid', placeItems: 'center', minHeight: 120 }}>
+        <Spinner />
+      </div>
+    )
+  }
+
+  if (subscriptions.length === 0) {
+    return (
+      <div className="card">
+        <p className="muted" style={{ margin: 0 }}>
+          Pelanggan belum punya langganan — buat langganan dulu sebelum memberi akun PPPoE.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="stack" style={{ gap: '0.75rem' }}>
+      {subscriptions.map((sub) => (
+        <SubscriptionAccessCard
+          key={sub.id}
+          sub={sub}
+          account={accounts.find((a) => a.subscriptionId === sub.id) ?? null}
+          plans={plans}
+          nasList={nasList}
+          canManage={canManage}
+          run={run}
+        />
+      ))}
+    </div>
+  )
+}
+
+/** Dropdown paket — nama + kecepatan agar mudah dibedakan. */
+function PlanField({
+  plans,
+  value,
+  onChange,
+}: {
+  plans: RateProfileView[]
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <label style={{ flex: 1, minWidth: 160 }}>
+      <span>Paket</span>
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        {plans.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name} ({p.downMbps}/{p.upMbps} Mbps)
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+/** Dropdown BRAS — opsional; "tanpa BRAS" berarti belum ditautkan. */
+function NasField({
+  nasList,
+  value,
+  onChange,
+}: {
+  nasList: NasView[]
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <label style={{ flex: 1, minWidth: 160 }}>
+      <span>BRAS</span>
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">— tanpa BRAS —</option>
+        {nasList.map((n) => (
+          <option key={n.id} value={n.id}>
+            {n.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+/**
+ * Satu langganan dan akun PPPoE-nya (0..1). Bila belum ada akun, tampilkan tombol
+ * provisi (kecuali langganan sudah dihentikan atau belum ada paket). Bila sudah,
+ * tampilkan identitasnya beserta aksi ganti paket/BRAS, reset password, dan hapus.
+ */
+function SubscriptionAccessCard({
+  sub,
+  account,
+  plans,
+  nasList,
+  canManage,
+  run,
+}: {
+  sub: SubscriptionView
+  account: SubscriberAccessView | null
+  plans: RateProfileView[]
+  nasList: NasView[]
+  canManage: boolean
+  run: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
+}) {
+  const [form, setForm] = useState<'provision' | 'edit' | 'reset' | null>(null)
+  const [username, setUsername] = useState('')
+  const [secret, setSecret] = useState('')
+  const [showSecret, setShowSecret] = useState(false)
+  const [rateProfileId, setRateProfileId] = useState('')
+  const [nasId, setNasId] = useState('')
+
+  const close = () => setForm(null)
+
+  const openProvision = () => {
+    setUsername('')
+    setSecret('')
+    setShowSecret(false)
+    setRateProfileId(plans[0]?.id ?? '')
+    setNasId('')
+    setForm('provision')
+  }
+
+  const openEdit = () => {
+    if (!account) return
+    setRateProfileId(account.rateProfileId)
+    setNasId(account.nasId ?? '')
+    setForm('edit')
+  }
+
+  const openReset = () => {
+    setSecret('')
+    setShowSecret(false)
+    setForm('reset')
+  }
+
+  const submitProvision = () =>
+    void run(async () => {
+      await provisionAccess({ subscriptionId: sub.id, username, secret, rateProfileId, nasId: nasId || null })
+      close()
+    }, 'Akun PPPoE dibuat')
+
+  const submitEdit = () => {
+    if (!account) return
+    void run(async () => {
+      await updateAccess(account.id, { rateProfileId, nasId: nasId || null })
+      close()
+    }, 'Akun diperbarui')
+  }
+
+  const submitReset = () => {
+    if (!account) return
+    void run(async () => {
+      await resetAccessSecret(account.id, secret)
+      close()
+    }, 'Password diganti')
+  }
+
+  const remove = () => {
+    if (!account) return
+    if (window.confirm(`Hapus akun PPPoE ${account.username}?`)) {
+      void run(() => deleteAccess(account.id), 'Akun dihapus')
+    }
+  }
+
+  return (
+    <div className="card stack" style={{ gap: '0.6rem' }}>
+      <div className="spread" style={{ alignItems: 'center' }}>
+        <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+          {sub.packageName} · {sub.bandwidthMbps} Mbps · Rp {sub.monthlyFee}
+        </span>
+        <StatusBadge status={sub.status} />
+      </div>
+
+      {account ? (
+        <div className="stack" style={{ gap: '0.5rem' }}>
+          <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span className="badge neutral tnum">{account.username}</span>
+            <span className="badge accent">{account.rateProfileName ?? 'paket tak dikenal'}</span>
+            <span className="badge neutral">{account.nasName ?? 'tanpa BRAS'}</span>
+            <StatusBadge status={account.status} />
+          </div>
+
+          {canManage && form === null && (
+            <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap' }}>
+              <button onClick={openEdit}>Ganti paket / BRAS</button>
+              <button onClick={openReset}>Reset password</button>
+              <button className="ghost danger" onClick={remove}>
+                Hapus
+              </button>
+            </div>
+          )}
+
+          {form === 'edit' && (
+            <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <PlanField plans={plans} value={rateProfileId} onChange={setRateProfileId} />
+              <NasField nasList={nasList} value={nasId} onChange={setNasId} />
+              <button className="primary" onClick={submitEdit} disabled={!rateProfileId}>
+                Simpan
+              </button>
+              <button onClick={close}>Batal</button>
+            </div>
+          )}
+
+          {form === 'reset' && (
+            <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <label style={{ flex: 2, minWidth: 180 }}>
+                <span>Password baru</span>
+                <input
+                  type={showSecret ? 'text' : 'password'}
+                  value={secret}
+                  onChange={(e) => setSecret(e.target.value)}
+                />
+              </label>
+              <button onClick={() => setShowSecret((v) => !v)}>{showSecret ? 'Sembunyikan' : 'Lihat'}</button>
+              <button className="primary" onClick={submitReset} disabled={!secret}>
+                Simpan
+              </button>
+              <button onClick={close}>Batal</button>
+            </div>
+          )}
+        </div>
+      ) : sub.status === 'TERMINATED' ? (
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          Langganan sudah dihentikan — tak bisa diberi akun PPPoE.
+        </p>
+      ) : !canManage ? (
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada akun PPPoE untuk langganan ini.</p>
+      ) : plans.length === 0 ? (
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          Belum ada akun PPPoE. Buat paket dulu di menu <strong>Paket &amp; BRAS</strong> sebelum memprovisi akun.
+        </p>
+      ) : form === 'provision' ? (
+        <div className="stack" style={{ gap: '0.5rem' }}>
+          <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <label style={{ flex: 2, minWidth: 160 }}>
+              <span>Username PPPoE</span>
+              <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="pelanggan@isp" />
+            </label>
+            <label style={{ flex: 2, minWidth: 160 }}>
+              <span>Password</span>
+              <input
+                type={showSecret ? 'text' : 'password'}
+                value={secret}
+                onChange={(e) => setSecret(e.target.value)}
+              />
+            </label>
+            <button onClick={() => setShowSecret((v) => !v)}>{showSecret ? 'Sembunyikan' : 'Lihat'}</button>
+          </div>
+          <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <PlanField plans={plans} value={rateProfileId} onChange={setRateProfileId} />
+            <NasField nasList={nasList} value={nasId} onChange={setNasId} />
+            <button className="primary" onClick={submitProvision} disabled={!username || !secret || !rateProfileId}>
+              Provisi
+            </button>
+            <button onClick={close}>Batal</button>
+          </div>
+          <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+            Password disimpan terenkripsi dan tidak pernah ditampilkan kembali — hanya bisa di-reset.
+          </p>
+        </div>
+      ) : (
+        <div className="spread" style={{ alignItems: 'center' }}>
+          <span className="muted" style={{ fontSize: '0.85rem' }}>Belum ada akun PPPoE untuk langganan ini.</span>
+          <button className="primary" onClick={openProvision}>
+            Provisi akun
+          </button>
+        </div>
+      )}
     </div>
   )
 }

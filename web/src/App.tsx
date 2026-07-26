@@ -14,6 +14,7 @@ import { MonitoringPage } from './pages/MonitoringPage'
 import { ProvisioningPage } from './pages/ProvisioningPage'
 import { IncidentsPage } from './pages/IncidentsPage'
 import { WorkOrdersPage } from './pages/WorkOrdersPage'
+import { BngPage } from './pages/BngPage'
 
 /**
  * Halaman peta dimuat terpisah: MapLibre menyumbang sebagian besar ukuran
@@ -103,6 +104,14 @@ export default function App() {
               element={
                 <RequirePermission permission="customer.customer.view">
                   <CustomerDetailPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="bng"
+              element={
+                <RequirePermission permission="bng.plan.view">
+                  <BngPage />
                 </RequirePermission>
               }
             />
