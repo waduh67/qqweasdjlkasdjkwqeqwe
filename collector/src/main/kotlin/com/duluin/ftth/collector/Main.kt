@@ -2,6 +2,7 @@ package com.duluin.ftth.collector
 
 import com.duluin.ftth.collector.adapter.AdapterRegistry
 import com.duluin.ftth.collector.adapter.BngAdapterRegistry
+import com.duluin.ftth.collector.adapter.MikrotikRouterOsAdapter
 import com.duluin.ftth.collector.adapter.SimulatorBngAdapter
 import com.duluin.ftth.collector.adapter.SimulatorOltAdapter
 import com.duluin.ftth.collector.adapter.snmp.GponSnmpAdapter
@@ -43,18 +44,18 @@ fun main() {
     val registry = AdapterRegistry(adapters)
 
     // Jalur BNG (sesi PPPoE): di mode simulator, satu SimulatorBngAdapter memerankan
-    // BRAS vendor apa pun lewat fallback. Di mode nyata registri kosong untuk saat ini
-    // — adapter BRAS sungguhan (RouterOS/FreeRADIUS) menyusul di slice berikutnya —
-    // sehingga nasTargets yang datang hanya dicatat "belum didukung", bukan ditebak.
+    // BRAS vendor apa pun lewat fallback. Di mode nyata dipasang adapter sungguhan per
+    // vendor; NAS bervendor lain hanya dicatat "belum didukung", bukan ditebak.
     val bngRegistry = if (simulatorEnabled) {
         BngAdapterRegistry(emptyList(), fallback = SimulatorBngAdapter())
     } else {
-        BngAdapterRegistry(emptyList())
+        BngAdapterRegistry(listOf(MikrotikRouterOsAdapter()))
     }
 
     log.info("ftth-collector {} → {}", AGENT_VERSION, serverUrl)
     if (simulatorEnabled) log.warn("MODE SIMULATOR aktif — data yang dikirim adalah tiruan, bukan dari perangkat")
     log.info("Vendor OLT didukung: {}", registry.supportedVendors.joinToString())
+    log.info("Vendor BRAS didukung: {}", bngRegistry.supportedVendors.joinToString().ifBlank { "(fallback simulator)" })
 
     val agent = CollectorAgent(
         client = HttpServerClient(serverUrl, apiKey),
