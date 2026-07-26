@@ -8,6 +8,8 @@ awssdk = "2.29.52"
 snmp4j = "3.8.2"
 jackson = "3.0.4"
 logback = "1.5.20"
+# Driver JDBC untuk adapter FreeRADIUS collector — disamakan dengan versi yang di-resolve server.
+postgresql = "42.7.11"
 
 [libraries]
 spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
@@ -23,6 +25,7 @@ snmp4j = { module = "org.snmp4j:snmp4j", version.ref = "snmp4j" }
 jackson-databind = { module = "tools.jackson.core:jackson-databind", version.ref = "jackson" }
 jackson-kotlin = { module = "tools.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

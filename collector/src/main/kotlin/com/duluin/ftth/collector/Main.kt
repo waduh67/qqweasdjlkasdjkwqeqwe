@@ -2,6 +2,7 @@ package com.duluin.ftth.collector
 
 import com.duluin.ftth.collector.adapter.AdapterRegistry
 import com.duluin.ftth.collector.adapter.BngAdapterRegistry
+import com.duluin.ftth.collector.adapter.FreeRadiusSqlAdapter
 import com.duluin.ftth.collector.adapter.MikrotikRouterOsAdapter
 import com.duluin.ftth.collector.adapter.SimulatorBngAdapter
 import com.duluin.ftth.collector.adapter.SimulatorOltAdapter
@@ -49,7 +50,7 @@ fun main() {
     val bngRegistry = if (simulatorEnabled) {
         BngAdapterRegistry(emptyList(), fallback = SimulatorBngAdapter())
     } else {
-        BngAdapterRegistry(listOf(MikrotikRouterOsAdapter()))
+        BngAdapterRegistry(listOf(MikrotikRouterOsAdapter(), FreeRadiusSqlAdapter()))
     }
 
     log.info("ftth-collector {} → {}", AGENT_VERSION, serverUrl)

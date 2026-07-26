@@ -26,6 +26,9 @@ dependencies {
     implementation(libs.jackson.databind)
     implementation(libs.jackson.kotlin)
     implementation(libs.logback.classic)
+    // Adapter FreeRADIUS membaca tabel radacct lewat JDBC. Satu-satunya driver DB di
+    // collector; kendali sesi (Disconnect/CoA) memakai UDP RADIUS murni, tanpa lib.
+    implementation(libs.postgresql)
 
     testImplementation(kotlin("test"))
 }
