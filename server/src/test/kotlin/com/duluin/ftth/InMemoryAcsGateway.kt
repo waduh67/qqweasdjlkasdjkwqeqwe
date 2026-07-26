@@ -4,6 +4,7 @@ import com.duluin.ftth.cpe.application.port.outbound.AcsDevice
 import com.duluin.ftth.cpe.application.port.outbound.AcsGateway
 import com.duluin.ftth.cpe.application.port.outbound.WifiChange
 import com.duluin.ftth.cpe.domain.model.ConnectedHost
+import com.duluin.ftth.cpe.domain.model.FirmwareFile
 import com.duluin.ftth.cpe.domain.model.PingDiagnostic
 import com.duluin.ftth.cpe.domain.model.SpeedDirection
 import com.duluin.ftth.cpe.domain.model.SpeedTestDiagnostic
@@ -31,11 +32,13 @@ class InMemoryAcsGateway : AcsGateway {
     private val hosts = ConcurrentHashMap<String, List<ConnectedHost>>()
     private val pings = ConcurrentHashMap<String, PingDiagnostic>()
     private val speedTests = ConcurrentHashMap<String, MutableMap<SpeedDirection, SpeedTestDiagnostic>>()
+    private val firmware = CopyOnWriteArrayList<FirmwareFile>()
 
     val rebootCalls = CopyOnWriteArrayList<String>()
     val wifiChanges = CopyOnWriteArrayList<Pair<String, WifiChange>>()
     val pingCalls = CopyOnWriteArrayList<Triple<String, String, Int>>()
     val speedTestCalls = CopyOnWriteArrayList<Pair<String, SpeedDirection>>()
+    val firmwarePushes = CopyOnWriteArrayList<Pair<String, String>>()
 
     @Volatile
     var failing: Boolean = false
@@ -46,10 +49,12 @@ class InMemoryAcsGateway : AcsGateway {
         hosts.clear()
         pings.clear()
         speedTests.clear()
+        firmware.clear()
         rebootCalls.clear()
         wifiChanges.clear()
         pingCalls.clear()
         speedTestCalls.clear()
+        firmwarePushes.clear()
         failing = false
     }
 
@@ -71,6 +76,11 @@ class InMemoryAcsGateway : AcsGateway {
 
     fun seedSpeedTest(genieacsId: String, result: SpeedTestDiagnostic) {
         speedTests.getOrPut(genieacsId) { ConcurrentHashMap() }[result.direction] = result
+    }
+
+    fun seedFirmware(files: List<FirmwareFile>) {
+        firmware.clear()
+        firmware.addAll(files)
     }
 
     override fun listDevices(): List<AcsDevice> = devices.values.toList()
@@ -119,5 +129,13 @@ class InMemoryAcsGateway : AcsGateway {
                 testBytes = 10_485_760,
                 durationMs = 900,
             )
+    }
+
+    override fun availableFirmware(productClass: String?, oui: String?): List<FirmwareFile> =
+        firmware.filter { it.fileType == FirmwareFile.FIRMWARE_FILE_TYPE && it.appliesTo(productClass, oui) }
+
+    override fun pushFirmware(genieacsId: String, file: FirmwareFile) {
+        if (failing) throw IllegalStateException("ACS menolak unduh firmware (uji)")
+        firmwarePushes += genieacsId to file.name
     }
 }

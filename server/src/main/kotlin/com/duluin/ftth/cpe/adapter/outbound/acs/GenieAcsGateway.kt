@@ -4,6 +4,7 @@ import com.duluin.ftth.cpe.application.port.outbound.AcsDevice
 import com.duluin.ftth.cpe.application.port.outbound.AcsGateway
 import com.duluin.ftth.cpe.application.port.outbound.WifiChange
 import com.duluin.ftth.cpe.domain.model.ConnectedHost
+import com.duluin.ftth.cpe.domain.model.FirmwareFile
 import com.duluin.ftth.cpe.domain.model.PingDiagnostic
 import com.duluin.ftth.cpe.domain.model.SpeedDirection
 import com.duluin.ftth.cpe.domain.model.SpeedTestDiagnostic
@@ -168,6 +169,31 @@ class GenieAcsGateway(
         return SpeedTestDiagnostic(direction, state, throughput, bytes, durationMs)
     }
 
+    override fun availableFirmware(productClass: String?, oui: String?): List<FirmwareFile> {
+        // GenieACS menyimpan berkas terunggah di koleksi Files; NBI /files/ mengembalikan
+        // dokumen fs.files: `_id` = nama berkas, metadata {fileType, version, oui, productClass}.
+        val array = restClient.get()
+            .uri { it.path("/files/").build() }
+            .retrieve()
+            .body(JsonNode::class.java)
+            ?: return emptyList()
+        return array.mapNotNull { it.toFirmwareFile() }
+            .filter { it.fileType == FirmwareFile.FIRMWARE_FILE_TYPE && it.appliesTo(productClass, oui) }
+    }
+
+    override fun pushFirmware(genieacsId: String, file: FirmwareFile) {
+        // Task `download`: GenieACS mencari berkas by `fileName` untuk mengisi URL/ukuran,
+        // lalu mengirim TR-069 Download RPC ke perangkat lewat connection request.
+        postTask(
+            genieacsId,
+            mapOf(
+                "name" to "download",
+                "fileName" to file.name,
+                "fileType" to file.fileType.ifBlank { FirmwareFile.FIRMWARE_FILE_TYPE },
+            ),
+        )
+    }
+
     /** Ambil satu device penuh (untuk proyeksi tertentu) via query `_id`. */
     private fun fetchDevice(genieacsId: String, projection: String): JsonNode? =
         restClient.get()
@@ -213,6 +239,20 @@ class GenieAcsGateway(
             softwareVersion = root?.let { param("$it.DeviceInfo.SoftwareVersion") },
             ipAddress = root?.let { externalIp(it) },
             lastInformAt = plain("_lastInform")?.let { runCatching { Instant.parse(it) }.getOrNull() },
+        )
+    }
+
+    /** Petakan satu dokumen fs.files GenieACS ke [FirmwareFile]; null bila tanpa nama. */
+    private fun JsonNode.toFirmwareFile(): FirmwareFile? {
+        val name = plain("_id") ?: return null
+        val length = descend("length")
+        return FirmwareFile(
+            name = name,
+            version = plain("metadata.version"),
+            productClass = plain("metadata.productClass"),
+            oui = plain("metadata.oui"),
+            fileType = plain("metadata.fileType") ?: "",
+            sizeBytes = if (length.isMissingNode || length.isNull) null else length.asLong(),
         )
     }
 

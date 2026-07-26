@@ -97,3 +97,12 @@ data class SpeedTestDiagnosticView(
     val durationMs: Long?,
     val message: String,
 )
+
+/** Satu berkas firmware yang bisa dipilih sebagai sasaran upgrade perangkat. */
+data class FirmwareFileView(
+    /** Identitas berkas di ACS; dikirim balik saat memicu upgrade. */
+    val name: String,
+    val version: String?,
+    val productClass: String?,
+    val sizeBytes: Long?,
+)

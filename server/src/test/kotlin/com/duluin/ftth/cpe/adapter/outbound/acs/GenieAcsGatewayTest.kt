@@ -1,6 +1,7 @@
 package com.duluin.ftth.cpe.adapter.outbound.acs
 
 import com.duluin.ftth.cpe.application.port.outbound.WifiChange
+import com.duluin.ftth.cpe.domain.model.FirmwareFile
 import com.duluin.ftth.cpe.domain.model.SpeedDirection
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
@@ -199,6 +200,43 @@ class GenieAcsGatewayTest {
         server.verify()
     }
 
+    @Test
+    fun `availableFirmware menyaring ke image firmware yang cocok model`() {
+        val (gateway, server) = fixture()
+        server.expect(requestTo(containsString("/files/")))
+            .andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess("[$FIRMWARE_FILE, $CONFIG_FILE, $OTHER_FIRMWARE]", MediaType.APPLICATION_JSON))
+
+        val files = gateway.availableFirmware(productClass = "F670L", oui = "00AABB")
+
+        // Berkas config (bukan firmware) & firmware model lain tersaring.
+        assertThat(files).hasSize(1)
+        val f = files.single()
+        assertThat(f.name).isEqualTo("F670L-V2.bin")
+        assertThat(f.version).isEqualTo("V2.0.0")
+        assertThat(f.productClass).isEqualTo("F670L")
+        assertThat(f.sizeBytes).isEqualTo(12_000_000)
+        server.verify()
+    }
+
+    @Test
+    fun `pushFirmware mengirim task download dengan fileName dan fileType`() {
+        val (gateway, server) = fixture()
+        server.expect(requestTo(containsString("/devices/ACS-001/tasks")))
+            .andExpect(requestTo(containsString("connection_request")))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(jsonPath("$.name").value("download"))
+            .andExpect(jsonPath("$.fileName").value("F670L-V2.bin"))
+            .andExpect(jsonPath("$.fileType").value("1 Firmware Upgrade Image"))
+            .andRespond(withSuccess())
+
+        gateway.pushFirmware(
+            "ACS-001",
+            FirmwareFile("F670L-V2.bin", "V2.0.0", "F670L", "00AABB", FirmwareFile.FIRMWARE_FILE_TYPE, 12_000_000),
+        )
+        server.verify()
+    }
+
     companion object {
         private val TR098_DEVICE = """
             {
@@ -273,6 +311,23 @@ class GenieAcsGatewayTest {
                 "TestBytesReceived": {"_value": 10485760}
               }}
             }
+        """.trimIndent()
+
+        // Dokumen fs.files GenieACS: _id = nama berkas, metadata polos (bukan pohon TR-069).
+        private val FIRMWARE_FILE = """
+            {"_id": "F670L-V2.bin", "length": 12000000,
+             "metadata": {"fileType": "1 Firmware Upgrade Image", "version": "V2.0.0",
+                          "productClass": "F670L", "oui": "00AABB"}}
+        """.trimIndent()
+
+        private val CONFIG_FILE = """
+            {"_id": "config.xml", "length": 4096,
+             "metadata": {"fileType": "3 Vendor Configuration File", "productClass": "F670L"}}
+        """.trimIndent()
+
+        private val OTHER_FIRMWARE = """
+            {"_id": "OtherModel.bin", "length": 8000000,
+             "metadata": {"fileType": "1 Firmware Upgrade Image", "version": "V1.0", "productClass": "XYZ999"}}
         """.trimIndent()
     }
 }

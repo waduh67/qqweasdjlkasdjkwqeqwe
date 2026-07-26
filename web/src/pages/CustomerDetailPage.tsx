@@ -16,14 +16,17 @@ import {
   getCpeDevice,
   getCpeLive,
   listCpeDevices,
+  listCpeFirmware,
   rebootCpe,
   runCpePing,
   runCpeSpeedTest,
   setCpeWifi,
+  upgradeCpeFirmware,
   type CpeActionView,
   type CpeDeviceDetail,
   type CpeDeviceView,
   type CpeLiveView,
+  type FirmwareFileView,
   type PingDiagnosticView,
   type SetWifiRequest,
   type SpeedDirection,
@@ -758,6 +761,7 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
   const canWifiView = can('cpe.wifi.view')
   const canWifiManage = can('cpe.wifi.manage')
   const canDiag = can('cpe.diagnostic.run')
+  const canFirmware = can('cpe.firmware.manage')
 
   const loadDetail = useCallback(() => {
     void getCpeDevice(deviceId)
@@ -899,6 +903,10 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
 
       {canDiag && <DiagnosticsCard deviceId={deviceId} online={d.online} onRan={loadDetail} />}
 
+      {canFirmware && (
+        <FirmwareCard deviceId={deviceId} currentVersion={d.softwareVersion} onRan={loadDetail} />
+      )}
+
       <CpeActionLog actions={detail.recentActions} />
     </div>
   )
@@ -1037,6 +1045,96 @@ function DiagSpeedResult({ speed }: { speed: SpeedTestDiagnosticView }) {
       >
         {speed.ok ? 'tuntas' : 'gagal'}
       </span>
+    </div>
+  )
+}
+
+/** Ukuran berkas ringkas (mis. "12,0 MB"); null → "—". */
+function fmtBytes(bytes: number | null): string {
+  if (bytes == null) return '—'
+  if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(1)} MB`
+  if (bytes >= 1_000) return `${(bytes / 1_000).toFixed(0)} KB`
+  return `${bytes} B`
+}
+
+/**
+ * Upgrade firmware: menampilkan versi terpasang sekarang dan daftar berkas firmware
+ * di ACS yang cocok untuk model perangkat. Menekan "Pasang" memicu unduh TR-069 (via
+ * konfirmasi, karena upgrade me-reboot perangkat) dan menulis jejak audit, jadi [onRan]
+ * menyegarkan panel jejak. Tombol dikunci selagi satu upgrade dikirim.
+ */
+function FirmwareCard({
+  deviceId,
+  currentVersion,
+  onRan,
+}: {
+  deviceId: string
+  currentVersion: string | null
+  onRan: () => void
+}) {
+  const toast = useToast()
+  const [files, setFiles] = useState<FirmwareFileView[] | null>(null)
+  const [pushing, setPushing] = useState<string | null>(null)
+
+  const load = useCallback(() => {
+    void listCpeFirmware(deviceId)
+      .then(setFiles)
+      .catch(() => setFiles([]))
+  }, [deviceId])
+
+  useEffect(() => load(), [load])
+
+  const upgrade = async (file: FirmwareFileView) => {
+    const versi = file.version ? ` (${file.version})` : ''
+    if (!window.confirm(`Pasang firmware ${file.name}${versi}? Perangkat akan reboot saat memasang.`)) {
+      return
+    }
+    setPushing(file.name)
+    try {
+      const action = await upgradeCpeFirmware(deviceId, file.name)
+      if (action.status === 'SUCCESS') toast.success('Perintah upgrade firmware terkirim')
+      else toast.error(action.detail ?? 'Upgrade firmware gagal di ACS')
+      onRan()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Upgrade firmware gagal')
+    } finally {
+      setPushing(null)
+    }
+  }
+
+  const busy = pushing !== null
+  return (
+    <div className="card stack" style={{ gap: '0.75rem' }}>
+      <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
+        <strong style={{ fontSize: '0.95rem' }}>Firmware</strong>
+        <span className="muted" style={{ fontSize: '0.82rem' }}>
+          terpasang: {currentVersion ?? '—'}
+        </span>
+      </div>
+      {files == null ? (
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Memuat dari ACS…</p>
+      ) : files.length === 0 ? (
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          Tak ada firmware tersedia untuk model ini.
+        </p>
+      ) : (
+        <div className="stack" style={{ gap: '0.35rem' }}>
+          {files.map((f) => (
+            <div key={f.name} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
+              <div className="stack" style={{ gap: 2, minWidth: 0 }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{f.version ?? f.name}</span>
+                <span className="muted" style={{ fontSize: '0.78rem' }}>
+                  {f.name}
+                  {f.sizeBytes != null && ` · ${fmtBytes(f.sizeBytes)}`}
+                </span>
+              </div>
+              <button onClick={() => void upgrade(f)} disabled={busy}>
+                {pushing === f.name ? 'Mengirim…' : 'Pasang'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

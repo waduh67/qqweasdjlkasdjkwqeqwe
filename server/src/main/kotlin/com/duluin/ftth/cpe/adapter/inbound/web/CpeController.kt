@@ -5,11 +5,13 @@ import com.duluin.ftth.cpe.application.port.inbound.CpeDeviceDetail
 import com.duluin.ftth.cpe.application.port.inbound.CpeDeviceView
 import com.duluin.ftth.cpe.application.port.inbound.CpeLiveView
 import com.duluin.ftth.cpe.application.port.inbound.CpeQuery
+import com.duluin.ftth.cpe.application.port.inbound.FirmwareFileView
 import com.duluin.ftth.cpe.application.port.inbound.ManageCpeUseCase
 import com.duluin.ftth.cpe.application.port.inbound.PingCommand
 import com.duluin.ftth.cpe.application.port.inbound.PingDiagnosticView
 import com.duluin.ftth.cpe.application.port.inbound.SetWifiCommand
 import com.duluin.ftth.cpe.application.port.inbound.SpeedTestDiagnosticView
+import com.duluin.ftth.cpe.application.port.inbound.UpgradeFirmwareCommand
 import com.duluin.ftth.cpe.domain.model.SpeedDirection
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
@@ -85,7 +87,25 @@ class CpeController(
         @PathVariable id: UUID,
         @RequestParam(defaultValue = "DOWNLOAD") direction: SpeedDirection,
     ): SpeedTestDiagnosticView = manage.runSpeedTest(id, direction)
+
+    @GetMapping("/devices/{id}/firmware")
+    @PreAuthorize("@authz.can('cpe.firmware.manage')")
+    @Operation(summary = "Berkas firmware di ACS yang cocok untuk model perangkat ini")
+    fun firmware(@PathVariable id: UUID): List<FirmwareFileView> = query.availableFirmware(id)
+
+    @PostMapping("/devices/{id}/firmware")
+    @PreAuthorize("@authz.can('cpe.firmware.manage')")
+    @Operation(summary = "Picu upgrade firmware ke berkas pilihan; hasil & jejak audit dikembalikan")
+    fun upgradeFirmware(
+        @PathVariable id: UUID,
+        @Valid @RequestBody request: UpgradeFirmwareRequest,
+    ): CpeActionView = manage.upgradeFirmware(id, UpgradeFirmwareCommand(request.fileName))
 }
+
+/** Berkas firmware sasaran, dari `FirmwareFileView.name`. */
+data class UpgradeFirmwareRequest(
+    @field:NotBlank val fileName: String,
+)
 
 /** Sasaran ping opsional; kosong berarti pakai host bawaan konfigurasi. */
 data class PingRequest(

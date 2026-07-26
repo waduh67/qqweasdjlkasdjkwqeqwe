@@ -3,6 +3,7 @@ package com.duluin.ftth
 import com.duluin.ftth.cpe.application.port.outbound.AcsDevice
 import com.duluin.ftth.cpe.application.service.CpeSyncScheduler
 import com.duluin.ftth.cpe.domain.model.ConnectedHost
+import com.duluin.ftth.cpe.domain.model.FirmwareFile
 import com.duluin.ftth.cpe.domain.model.WifiNetwork
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
@@ -299,6 +300,69 @@ class CpeIT {
 
         val detail = getJson("/api/cpe/devices/$deviceId", token)
         assertThat(JsonPath.read<List<String>>(detail, "$.recentActions[?(@.action=='PING_TEST')].status")).contains("FAILED")
+    }
+
+    @Test
+    fun `daftar firmware hanya yang cocok model, lalu upgrade terkirim dan tercatat`() {
+        val token = newTenantAdmin("cpe-fw")
+        val (genieacsId, deviceId) = syncedDevice(token)
+        acs.seedFirmware(
+            listOf(
+                FirmwareFile("F670L-V2.bin", "V2.0.0", "F670L", "00AABB", FirmwareFile.FIRMWARE_FILE_TYPE, 12_000_000),
+                FirmwareFile("Lain.bin", "V9", "XYZ999", null, FirmwareFile.FIRMWARE_FILE_TYPE, 5_000_000),
+            ),
+        )
+
+        // Perangkat ber-productClass F670L → hanya firmware yang cocok yang muncul.
+        val list = getJson("/api/cpe/devices/$deviceId/firmware", token)
+        assertThat(JsonPath.read<List<String>>(list, "$[*].name")).containsExactly("F670L-V2.bin")
+        assertThat(JsonPath.read<String>(list, "$[0].version")).isEqualTo("V2.0.0")
+
+        val result = post(
+            "/api/cpe/devices/$deviceId/firmware", token,
+            """{"fileName":"F670L-V2.bin"}""", expected = 200,
+        )
+        assertThat(JsonPath.read<String>(result, "$.status")).isEqualTo("SUCCESS")
+        assertThat(JsonPath.read<String>(result, "$.action")).isEqualTo("FIRMWARE_UPGRADE")
+        assertThat(acs.firmwarePushes).containsExactly(genieacsId to "F670L-V2.bin")
+
+        val detail = getJson("/api/cpe/devices/$deviceId", token)
+        assertThat(JsonPath.read<List<String>>(detail, "$.recentActions[*].action")).contains("FIRMWARE_UPGRADE")
+        assertThat(JsonPath.read<List<String>>(detail, "$.recentActions[*].status")).contains("SUCCESS")
+    }
+
+    @Test
+    fun `upgrade ke firmware tak tersedia ditolak sebelum menyentuh ACS`() {
+        val token = newTenantAdmin("cpe-fw-x")
+        val (_, deviceId) = syncedDevice(token)
+        acs.seedFirmware(
+            listOf(FirmwareFile("F670L-V2.bin", "V2.0.0", "F670L", "00AABB", FirmwareFile.FIRMWARE_FILE_TYPE, 12_000_000)),
+        )
+
+        post("/api/cpe/devices/$deviceId/firmware", token, """{"fileName":"ngawur.bin"}""", expected = 400)
+        assertThat(acs.firmwarePushes).isEmpty()
+    }
+
+    @Test
+    fun `izin lihat CPE saja tak boleh kelola firmware`() {
+        val slug = "cpe-fw-perm${uniq()}"
+        val admin = "admin@$slug.test"
+        onboarding.onboard(OnboardTenantCommand(slug, "CPE FW Co", admin, "Admin", pass))
+        val adminToken = login(slug, admin)
+        val (_, deviceId) = syncedDevice(adminToken)
+
+        val permsJson = getJson("/api/permissions", adminToken)
+        val viewPermId = JsonPath.read<List<String>>(permsJson, "$[?(@.code=='cpe.device.view')].id").first()
+        val roleId = id(
+            post("/api/roles", adminToken, """{"name":"Lihat CPE FW","permissionIds":["$viewPermId"]}""", expected = 201),
+        )
+        val limitedEmail = "fwviewer@$slug.test"
+        post("/api/users", adminToken, """{"email":"$limitedEmail","name":"Viewer","password":"$pass","roleIds":["$roleId"]}""")
+        val limitedToken = login(slug, limitedEmail)
+
+        mockMvc.perform(
+            get("/api/cpe/devices/$deviceId/firmware").header("Authorization", "Bearer $limitedToken"),
+        ).andExpect(status().isForbidden)
     }
 
     @Test

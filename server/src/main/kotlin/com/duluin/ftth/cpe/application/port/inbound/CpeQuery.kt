@@ -17,4 +17,10 @@ interface CpeQuery {
      * panel keadaan dibuka.
      */
     fun liveState(deviceId: UUID): CpeLiveView
+
+    /**
+     * Berkas firmware di ACS yang cocok untuk model perangkat ini — pilihan sasaran
+     * upgrade. Dibaca on-demand dari NBI, tidak tersimpan.
+     */
+    fun availableFirmware(deviceId: UUID): List<FirmwareFileView>
 }

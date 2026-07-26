@@ -55,8 +55,8 @@ export interface HostView {
   active: boolean
 }
 
-/** REBOOT, SET_WIFI, PING_TEST, atau SPEED_TEST. */
-export type CpeAction = 'REBOOT' | 'SET_WIFI' | 'PING_TEST' | 'SPEED_TEST'
+/** REBOOT, SET_WIFI, PING_TEST, SPEED_TEST, atau FIRMWARE_UPGRADE. */
+export type CpeAction = 'REBOOT' | 'SET_WIFI' | 'PING_TEST' | 'SPEED_TEST' | 'FIRMWARE_UPGRADE'
 /** SUCCESS atau FAILED. */
 export type CpeActionStatus = 'SUCCESS' | 'FAILED'
 /** Arah uji kecepatan TR-143. */
@@ -79,6 +79,7 @@ export const CPE_ACTION_LABEL: Record<CpeAction, string> = {
   SET_WIFI: 'Ubah WiFi',
   PING_TEST: 'Ping test',
   SPEED_TEST: 'Uji kecepatan',
+  FIRMWARE_UPGRADE: 'Upgrade firmware',
 }
 
 /** Perubahan WiFi; field null/kosong berarti "biarkan apa adanya". */
@@ -140,3 +141,20 @@ export const runCpePing = (id: string, host?: string) =>
 /** Jalankan uji kecepatan TR-143 pada arah unduh/unggah. */
 export const runCpeSpeedTest = (id: string, direction: SpeedDirection) =>
   api.post<SpeedTestDiagnosticView>(`/api/cpe/devices/${id}/diagnostics/speedtest?direction=${direction}`)
+
+/** Satu berkas firmware yang bisa dipilih sebagai sasaran upgrade. */
+export interface FirmwareFileView {
+  /** Identitas berkas di ACS; dikirim balik saat memicu upgrade. */
+  name: string
+  version: string | null
+  productClass: string | null
+  sizeBytes: number | null
+}
+
+/** Berkas firmware di ACS yang cocok untuk model perangkat ini. */
+export const listCpeFirmware = (id: string) =>
+  api.get<FirmwareFileView[]>(`/api/cpe/devices/${id}/firmware`)
+
+/** Picu upgrade firmware ke berkas pilihan; hasilnya tercatat di jejak audit. */
+export const upgradeCpeFirmware = (id: string, fileName: string) =>
+  api.post<CpeActionView>(`/api/cpe/devices/${id}/firmware`, { fileName })

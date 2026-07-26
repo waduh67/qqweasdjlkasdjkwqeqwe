@@ -20,7 +20,19 @@ interface ManageCpeUseCase {
 
     /** Menjalankan uji kecepatan TR-143 pada arah unduh/unggah. */
     fun runSpeedTest(deviceId: UUID, direction: SpeedDirection): SpeedTestDiagnosticView
+
+    /** Memicu upgrade firmware ke berkas [UpgradeFirmwareCommand.fileName] pilihan. */
+    fun upgradeFirmware(deviceId: UUID, command: UpgradeFirmwareCommand): CpeActionView
 }
+
+/**
+ * Sasaran upgrade firmware dari UI. [fileName] adalah identitas berkas di ACS (dari
+ * [FirmwareFileView.name]); harus salah satu yang cocok untuk model perangkat, kalau
+ * tidak permintaan ditolak sebelum ACS disentuh.
+ */
+data class UpgradeFirmwareCommand(
+    val fileName: String,
+)
 
 /**
  * Sasaran ping dari UI. [host] null/kosong berarti pakai host bawaan konfigurasi

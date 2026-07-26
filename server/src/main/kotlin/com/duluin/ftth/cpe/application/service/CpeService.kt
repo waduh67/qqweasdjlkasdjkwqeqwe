@@ -8,12 +8,14 @@ import com.duluin.ftth.cpe.application.port.inbound.CpeDeviceDetail
 import com.duluin.ftth.cpe.application.port.inbound.CpeDeviceView
 import com.duluin.ftth.cpe.application.port.inbound.CpeLiveView
 import com.duluin.ftth.cpe.application.port.inbound.CpeQuery
+import com.duluin.ftth.cpe.application.port.inbound.FirmwareFileView
 import com.duluin.ftth.cpe.application.port.inbound.HostView
 import com.duluin.ftth.cpe.application.port.inbound.ManageCpeUseCase
 import com.duluin.ftth.cpe.application.port.inbound.PingCommand
 import com.duluin.ftth.cpe.application.port.inbound.PingDiagnosticView
 import com.duluin.ftth.cpe.application.port.inbound.SetWifiCommand
 import com.duluin.ftth.cpe.application.port.inbound.SpeedTestDiagnosticView
+import com.duluin.ftth.cpe.application.port.inbound.UpgradeFirmwareCommand
 import com.duluin.ftth.cpe.application.port.inbound.WifiView
 import com.duluin.ftth.cpe.application.port.outbound.AcsGateway
 import com.duluin.ftth.cpe.application.port.outbound.CpeActionLogRepository
@@ -75,6 +77,13 @@ class CpeService(
         val hosts = acsGateway.connectedHosts(device.genieacsId)
             .map { HostView(it.hostName, it.ipAddress, it.macAddress, it.active) }
         return CpeLiveView(wifi, hosts)
+    }
+
+    @Transactional(readOnly = true)
+    override fun availableFirmware(deviceId: UUID): List<FirmwareFileView> {
+        val device = requireDevice(deviceId)
+        return acsGateway.availableFirmware(device.productClass, device.oui)
+            .map { FirmwareFileView(it.name, it.version, it.productClass, it.sizeBytes) }
     }
 
     override fun reboot(deviceId: UUID): CpeActionView {
@@ -178,6 +187,32 @@ class CpeService(
             durationMs = result?.durationMs,
             message = message,
         )
+    }
+
+    override fun upgradeFirmware(deviceId: UUID, command: UpgradeFirmwareCommand): CpeActionView {
+        val device = requireDevice(deviceId)
+        val fileName = command.fileName.trim()
+        if (fileName.isEmpty()) throw ValidationException("Pilih berkas firmware")
+        // Validasi ke daftar yang cocok untuk model ini — mencegah push berkas asal
+        // (dan memberi kita fileType yang benar) sebelum ACS disentuh.
+        val target = acsGateway.availableFirmware(device.productClass, device.oui)
+            .firstOrNull { it.name == fileName }
+            ?: throw ValidationException("Firmware '$fileName' tidak tersedia untuk perangkat ini")
+
+        val actor = currentUser.current()
+        val label = "Firmware→${target.name}" + (target.version?.let { " ($it)" } ?: "")
+        val outcome = runCatching { acsGateway.pushFirmware(device.genieacsId, target) }
+        val entry = if (outcome.isSuccess) {
+            CpeActionLog.succeeded(deviceId, CpeActionType.FIRMWARE_UPGRADE, label, actor.userId, actor.email)
+        } else {
+            log.warn("Upgrade firmware device {} gagal: {}", deviceId, outcome.exceptionOrNull()?.message)
+            CpeActionLog.failed(
+                deviceId, CpeActionType.FIRMWARE_UPGRADE,
+                "$label — gagal: ${outcome.exceptionOrNull()?.message}".take(480),
+                actor.userId, actor.email,
+            )
+        }
+        return actionLogRepository.save(entry).toView()
     }
 
     /** Tulis satu baris jejak audit untuk sebuah aksi diagnostik, sukses atau gagal. */

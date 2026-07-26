@@ -1,6 +1,7 @@
 package com.duluin.ftth.cpe.application.port.outbound
 
 import com.duluin.ftth.cpe.domain.model.ConnectedHost
+import com.duluin.ftth.cpe.domain.model.FirmwareFile
 import com.duluin.ftth.cpe.domain.model.PingDiagnostic
 import com.duluin.ftth.cpe.domain.model.SpeedDirection
 import com.duluin.ftth.cpe.domain.model.SpeedTestDiagnostic
@@ -58,6 +59,19 @@ interface AcsGateway {
      * berasal dari konfigurasi adapter, bukan parameter — itu detail integrasi ACS.
      */
     fun runSpeedTest(genieacsId: String, direction: SpeedDirection): SpeedTestDiagnostic
+
+    /**
+     * Berkas firmware yang tersedia di ACS, disaring ke yang cocok untuk model
+     * ([productClass]/[oui]) perangkat. Argumen null berarti tanpa penyaringan sumbu
+     * itu — kembalikan seluruh firmware image yang dikenal ACS.
+     */
+    fun availableFirmware(productClass: String?, oui: String?): List<FirmwareFile>
+
+    /**
+     * Memicu unduh firmware (TR-069 Download) berkas [file] ke perangkat. Melempar
+     * bila ACS menolak/tak terjangkau — pemanggil mencatatnya ke jejak audit.
+     */
+    fun pushFirmware(genieacsId: String, file: FirmwareFile)
 }
 
 /**
