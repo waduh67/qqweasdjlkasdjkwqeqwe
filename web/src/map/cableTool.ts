@@ -104,6 +104,7 @@ function lineLength(coords: Array<[number, number]>): number {
 const SRC_LINE = 'cable-tool-line'
 const SRC_VERTS = 'cable-tool-verts'
 const SRC_SNAP = 'cable-tool-snap'
+const SRC_MID = 'cable-tool-mid'
 
 export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) => void): CableTool {
   let mode: ToolState['mode'] = 'idle'
@@ -128,6 +129,7 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
     if (!map.getSource(SRC_LINE)) map.addSource(SRC_LINE, { type: 'geojson', data: empty })
     if (!map.getSource(SRC_VERTS)) map.addSource(SRC_VERTS, { type: 'geojson', data: empty })
     if (!map.getSource(SRC_SNAP)) map.addSource(SRC_SNAP, { type: 'geojson', data: empty })
+    if (!map.getSource(SRC_MID)) map.addSource(SRC_MID, { type: 'geojson', data: empty })
 
     if (!map.getLayer('cable-tool-line-l')) {
       map.addLayer({
@@ -166,6 +168,25 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
         },
       })
     }
+    // Pegangan titik-tengah: titik samar di tengah tiap segmen. Menyeretnya
+    // langsung membuat titik belok baru dan menariknya sekaligus — cara "melengkungkan"
+    // jalur yang tidak menuntut pengguna paham dulu "klik garis buat menyisip".
+    // Diletakkan sebelum lapisan titik nyata agar titik nyata tetap di atasnya.
+    if (!map.getLayer('cable-tool-mid-l')) {
+      map.addLayer({
+        id: 'cable-tool-mid-l',
+        type: 'circle',
+        source: SRC_MID,
+        paint: {
+          'circle-radius': 5,
+          'circle-color': '#ffffff',
+          'circle-opacity': 0.55,
+          'circle-stroke-color': '#2a78d6',
+          'circle-stroke-width': 1.5,
+          'circle-stroke-opacity': 0.7,
+        },
+      })
+    }
     // Titik belok: kotak putih; ujung terkunci lebih besar.
     if (!map.getLayer('cable-tool-verts-l')) {
       map.addLayer({
@@ -183,10 +204,10 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
   }
 
   function removeLayersAndSources() {
-    for (const id of ['cable-tool-hit-l', 'cable-tool-line-l', 'cable-tool-snap-l', 'cable-tool-verts-l']) {
+    for (const id of ['cable-tool-hit-l', 'cable-tool-line-l', 'cable-tool-snap-l', 'cable-tool-mid-l', 'cable-tool-verts-l']) {
       if (map.getLayer(id)) map.removeLayer(id)
     }
-    for (const id of [SRC_LINE, SRC_VERTS, SRC_SNAP]) {
+    for (const id of [SRC_LINE, SRC_VERTS, SRC_SNAP, SRC_MID]) {
       if (map.getSource(id)) map.removeSource(id)
     }
   }
@@ -224,6 +245,30 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
         ? { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [device.lng, device.lat] } }
         : { type: 'FeatureCollection', features: [] },
     )
+  }
+
+  /** Titik tengah tiap segmen; `insertAt` = indeks tempat titik baru disisipkan. */
+  function segmentMidpoints(coords: Array<[number, number]>): Array<{ coord: [number, number]; insertAt: number }> {
+    const mids: Array<{ coord: [number, number]; insertAt: number }> = []
+    for (let i = 0; i < coords.length - 1; i++) {
+      mids.push({
+        coord: [(coords[i][0] + coords[i + 1][0]) / 2, (coords[i][1] + coords[i + 1][1]) / 2],
+        insertAt: i + 1,
+      })
+    }
+    return mids
+  }
+
+  function setMid(points: Array<{ coord: [number, number]; insertAt: number }>) {
+    const src = map.getSource(SRC_MID) as GeoJSONSource | undefined
+    src?.setData({
+      type: 'FeatureCollection',
+      features: points.map((p) => ({
+        type: 'Feature',
+        properties: { insertAt: p.insertAt },
+        geometry: { type: 'Point', coordinates: p.coord },
+      })),
+    })
   }
 
   // ---------- snapping ----------
@@ -306,6 +351,8 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
     setVerts(
       editCoords.map((coord, i) => ({ coord, locked: i === 0 || i === editCoords.length - 1 })),
     )
+    // Sembunyikan pegangan tengah selagi menyeret agar tidak berkedip mengikuti titik.
+    setMid(dragIndex == null ? segmentMidpoints(editCoords) : [])
     setSnapRing(null)
   }
 
@@ -369,6 +416,28 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
     e.preventDefault()
   }
 
+  /**
+   * Tekan pegangan titik-tengah = jadikan titik belok nyata di situ lalu langsung
+   * seret — satu gerakan untuk "melengkungkan" segmen. Handler geser/lepas yang
+   * sudah ada mengurus sisanya.
+   */
+  const onMidMouseDown = (e: MapLayerMouseEvent) => {
+    if (mode !== 'edit') return
+    const f = e.features?.[0]
+    if (!f) return
+    const insertAt = Number(f.properties?.insertAt)
+    if (!Number.isInteger(insertAt) || insertAt <= 0 || insertAt > editCoords.length - 1) return
+    editCoords.splice(insertAt, 0, [e.lngLat.lng, e.lngLat.lat])
+    dragIndex = insertAt
+    // Set true supaya klik-garis yang mungkin menyusul (sisip via segmen) tidak
+    // menyisipkan titik kedua akibat balapan dengan render.
+    dragMoved = true
+    map.dragPan.disable()
+    e.preventDefault()
+    renderEdit()
+    emit()
+  }
+
   const onEditMove = (e: MapMouseEvent) => {
     if (mode !== 'edit' || dragIndex == null) return
     dragMoved = true
@@ -381,6 +450,9 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
     if (mode !== 'edit' || dragIndex == null) return
     dragIndex = null
     map.dragPan.enable()
+    // Munculkan lagi pegangan tengah (disembunyikan selama menyeret), kini di
+    // posisi segmen yang baru.
+    renderEdit()
   }
 
   /**
@@ -409,6 +481,14 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
     editCoords.splice(bestSeg, 0, p)
     renderEdit()
     emit()
+  }
+
+  // Petunjuk kursor: titik & pegangan tengah bisa diseret.
+  const onGrabEnter = () => {
+    if (mode === 'edit') map.getCanvas().style.cursor = 'move'
+  }
+  const onGrabLeave = () => {
+    if (mode === 'edit' && dragIndex == null) map.getCanvas().style.cursor = ''
   }
 
   // Klik ganda titik belok = hapus (ujung tak bisa dihapus).
@@ -443,19 +523,30 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
   function attachEdit() {
     map.doubleClickZoom.disable()
     map.on('mousedown', 'cable-tool-verts-l', onVertMouseDown)
+    map.on('mousedown', 'cable-tool-mid-l', onMidMouseDown)
     map.on('dblclick', 'cable-tool-verts-l', onVertDblClick)
     map.on('click', 'cable-tool-hit-l', onLineClick)
     map.on('mousemove', onEditMove)
     map.on('mouseup', onEditUp)
+    map.on('mouseenter', 'cable-tool-verts-l', onGrabEnter)
+    map.on('mouseleave', 'cable-tool-verts-l', onGrabLeave)
+    map.on('mouseenter', 'cable-tool-mid-l', onGrabEnter)
+    map.on('mouseleave', 'cable-tool-mid-l', onGrabLeave)
   }
   function detachEdit() {
     map.off('mousedown', 'cable-tool-verts-l', onVertMouseDown)
+    map.off('mousedown', 'cable-tool-mid-l', onMidMouseDown)
     map.off('dblclick', 'cable-tool-verts-l', onVertDblClick)
     map.off('click', 'cable-tool-hit-l', onLineClick)
     map.off('mousemove', onEditMove)
     map.off('mouseup', onEditUp)
+    map.off('mouseenter', 'cable-tool-verts-l', onGrabEnter)
+    map.off('mouseleave', 'cable-tool-verts-l', onGrabLeave)
+    map.off('mouseenter', 'cable-tool-mid-l', onGrabEnter)
+    map.off('mouseleave', 'cable-tool-mid-l', onGrabLeave)
     map.doubleClickZoom.enable()
     map.dragPan.enable()
+    map.getCanvas().style.cursor = ''
   }
 
   function reset() {
@@ -467,9 +558,11 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
     editEndpoints = null
     editCoords = []
     dragIndex = null
+    dragMoved = false
     setLine([])
     setVerts([])
     setSnapRing(null)
+    setMid([])
   }
 
   // ---------- API publik ----------
