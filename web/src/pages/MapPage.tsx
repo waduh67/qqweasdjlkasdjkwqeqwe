@@ -1067,7 +1067,7 @@ export function MapPage() {
         {editingMode && (
           <div className="map-hint">
             <IconRoute size={16} />
-            <span>Geser titik belok · klik garis untuk sisip · klik-ganda titik untuk hapus</span>
+            <span>Seret titik tengah (yang samar) untuk membelokkan · seret titik untuk menggeser · klik-ganda untuk hapus</span>
             <span className="tnum" style={{ marginLeft: 'auto', fontWeight: 600 }}>
               {formatLength(toolState?.lengthMeters ?? 0)}
             </span>
