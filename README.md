@@ -1,15 +1,19 @@
 # FTTH OSS
 
 Platform SaaS multi-tenant untuk manajemen infrastruktur FTTH: inventory jaringan
-(OLT → ODC → ODP → pelanggan), peta GIS jalur kabel, monitoring OLT/ONU,
-incident management dengan alarm correlation, work order teknisi, dan RBAC
-super-dinamis.
+(OLT → ODC → ODP → pelanggan), peta GIS jalur kabel, monitoring OLT/ONU, incident
+management dengan alarm correlation, work order teknisi, manajemen router
+pelanggan (GenieACS/TR-069), BRAS/RADIUS (sesi PPPoE), tagihan + pembayaran,
+akses remote perangkat via VPN, dan RBAC super-dinamis.
 
-**Status: Phase 0, 1 & 2a selesai** — multi-tenancy, IAM/RBAC dinamis, audit,
-inventory jaringan (OLT→ODC→ODP), pelanggan + ONU, peta vector-tile, serta
-collector agent + metrik TimescaleDB + mesin alarm sudah berjalan end-to-end.
-Adapter vendor sungguhan (Phase 2b) menunggu verifikasi terhadap perangkat
-fisik (lihat [Roadmap](#roadmap)).
+**Status: Phase 0–7 + billing + VPN berjalan end-to-end** — multi-tenancy,
+IAM/RBAC dinamis, audit, inventory jaringan, pelanggan + ONU, peta vector-tile,
+collector + metrik TimescaleDB + mesin alarm, incident + korelasi + notifikasi
+proaktif, work order + bukti lapangan, fitur advanced (what-if, heatmap,
+predictive, OTDR, auto-provisioning ONU), CPE via GenieACS, BNG (BRAS/RADIUS),
+billing (tagihan + auto-isolir), dan back-haul OpenVPN. Hanya adapter SNMP vendor
+sungguhan (Phase 2b) yang menunggu verifikasi terhadap perangkat fisik (lihat
+[Roadmap](#roadmap)).
 
 ---
 
@@ -53,8 +57,11 @@ apa pun soal Spring/JPA/HTTP. JPA entity **bukan** model domain — keduanya
 dipetakan di adapter. Batas antar-module ditegakkan otomatis oleh test
 `ModularityTests`.
 
-Module: `common` (shared kernel, OPEN), `tenancy`, `iam`, `audit`, `network`,
-`customer`, `gis`, `monitoring`.
+Module inti: `common` (shared kernel, OPEN), `tenancy`, `iam`, `audit`,
+`network`, `customer`, `gis`, `monitoring`. Di atasnya bertumpuk module layanan:
+`incident`, `workorder`, `notification`, `cpe` (router pelanggan via
+GenieACS/TR-069), `bng` (BRAS/RADIUS, sesi PPPoE), `billing` (tagihan +
+pembayaran), `vpn` (back-haul OpenVPN).
 
 ### Ketergantungan antar-module
 
@@ -82,6 +89,27 @@ diselesaikan tanpa siklus:
   tapi agregat ONU dimiliki `customer`. Jadi monitoring melapor lewat
   `CustomerApi.recordObservedOnuStatuses` dan customer yang memutuskan — hanya
   baris yang benar-benar berubah yang ditulis.
+
+### Module layanan di atas inti
+
+Module layanan berkomunikasi **hanya lewat tipe `*Api` publik & event domain**,
+tak pernah menyentuh tabel module lain — batas ini ditegakkan `ModularityTests`:
+
+- **incident** — mengorelasikan banjir alarm `monitoring` menjadi satu insiden
+  ber-akar-masalah alih-alih puluhan tiket.
+- **workorder** — tiket lapangan (PSB/perbaikan/migrasi/dismantle), bukti foto +
+  tanda tangan disimpan di MinIO/S3.
+- **notification** — broadcast proaktif ke pelanggan terdampak.
+- **cpe** — kelola router/ONT pelanggan lewat GenieACS (TR-069): WiFi, reboot,
+  diagnostik ping/speedtest, firmware, factory-reset.
+- **bng** — BRAS/RADIUS: paket, registri BRAS, akun PPPoE. Bereaksi atas event
+  langganan `customer` untuk memutus/memulihkan sesi PPPoE (adapter Mikrotik REST
+  v7 + FreeRADIUS).
+- **billing** — menerbitkan tagihan atas langganan lalu menggerakkan
+  isolir/aktivasi `customer` (yang mengalir ke `bng`) saat jatuh tempo/lunas;
+  gateway pembayaran agnostik lewat webhook.
+- **vpn** — **swasembada** (tanpa taut lintas-module): hub OpenVPN untuk
+  menjangkau perangkat tanpa IP publik.
 
 ### Multi-tenancy (dua lapis)
 
@@ -236,6 +264,11 @@ tenant dan RLS menolak seluruh INSERT.
 
 ## Menjalankan
 
+> 💡 Ingin seluruh stack (Postgres + MinIO + server + web + RADIUS) dalam satu
+> perintah? Lihat [`docs/lab-fullstack.md`](docs/lab-fullstack.md) —
+> `docker compose -f docker-compose.lab.yml up -d --build`. Bagian di bawah ini
+> untuk pengembangan lokal langkah-demi-langkah.
+
 ### 1. Database
 
 Pakai docker-compose (Postgres + Redis + RabbitMQ):
@@ -384,7 +417,20 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
 | `GET/POST/PUT/DELETE /api/monitoring/collectors` | `monitoring.collector.*` |
 | `GET /api/monitoring/alarms` · `/{id}/acknowledge` · `/clear` | `monitoring.alarm.view` / `.ack` |
 | `GET /api/monitoring/onus/{id}/history` | `monitoring.metric.view` |
+| `GET/POST /api/monitoring/discovered-onus` · `/auto-provision-policy` | `monitoring.provisioning.*` |
 | `POST /api/collector/heartbeat` · `/metrics` | API key collector (bukan RBAC) |
+| `GET /api/cables/{id}/otdr` · `POST` · `DELETE` | `network.otdr.*` |
+| `GET /api/incidents` · `/{id}` · `POST /{id}/acknowledge` · `/resolve` | `incident.ticket.*` |
+| `GET/POST/PUT/DELETE /api/work-orders` · `/dashboard` · `/{id}/assign` · `/start` · `/complete` · `/approve` | `workorder.order.*` / `.dashboard.view` |
+| `GET/POST/DELETE /api/work-orders/{id}/evidence` · `/signature` | `workorder.evidence.*` |
+| `GET/POST /api/notifications/broadcasts` | `notification.broadcast.view` / `.send` |
+| `GET /api/cpe/devices` · `/{id}/live` · `POST /{id}/{reboot,wifi,firmware,factory-reset,refresh}` · `/diagnostics/{ping,speedtest}` | `cpe.*` |
+| `GET/POST/PUT/DELETE /api/bng/plans` · `/nas` · `/access` | `bng.plan.*` / `bng.nas.*` / `bng.access.*` |
+| `POST /api/bng/access/{id}/isolate` · `/restore` · `/reset-login` · `GET /session` · `/traffic` | `bng.access.isolate` / `bng.session.*` |
+| `GET/POST /api/billing/invoices` · `/generate` · `/{id}/void` · `/pay` · `GET /payments` | `billing.invoice.*` / `billing.payment.manage` |
+| `POST /api/billing/webhooks/{tenantSlug}/{provider}` | publik (tanda tangan gateway) |
+| `GET/POST/PUT/DELETE /api/vpn/servers` · `/{id}/credentials` · `/config` | `vpn.server.*` / `vpn.config.view` |
+| `GET/POST/DELETE /api/vpn/servers/{id}/peers` · `/api/vpn/peers/{id}` · `/{enable,disable,rotate-password}` · `/ovpn` · `/routeros` | `vpn.peer.*` / `vpn.config.view` |
 
 ---
 
@@ -399,13 +445,29 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
 - **Blast radius di peta** ✅ (potongan fitur unggulan yang dikerjakan lebih awal
   bersama GIS): perangkat mati menyorot merah seluruh kabel hilirnya, klik kabel
   merah menampilkan alarm penyebabnya, dan panel ODC mendaftar pelanggan terdampak
-- **Phase 2b** ⏸️ **ditunda** — verifikasi adapter SNMP terhadap OLT fisik. OID di
-  `MibProfiles` disusun dari dokumentasi MIB publik dan **belum diuji terhadap
-  perangkat sungguhan**; firmware berbeda kerap menggeser sub-tree. Menunggu
-  perangkat fisik; sementara itu simulator OLT menutupi pengujian.
-- **Phase 3** ▶️ **sedang dikerjakan** — incident + korelasi alarm + notifikasi
-  proaktif: menggabungkan banjir alarm sejenis (mis. 30 ONU di bawah satu ODC)
-  menjadi satu insiden ber-akar-masalah, lalu broadcast ke pelanggan terdampak
-- **Phase 4** — Work order + PWA teknisi (offline, GPS, foto bukti)
-- **Phase 5** — What-if simulation, predictive maintenance, OTDR plotting,
-  heatmap utilisasi port
+- **Phase 2b** ⏸️ **ditunda (menunggu perangkat fisik)** — verifikasi adapter SNMP
+  terhadap OLT sungguhan. OID di `MibProfiles` disusun dari dokumentasi MIB publik
+  dan **belum diuji terhadap perangkat nyata**; firmware berbeda kerap menggeser
+  sub-tree. Sementara itu simulator OLT menutupi pengujian.
+- **Phase 3 — Incident + korelasi + notifikasi** ✅ banjir alarm sejenis (mis. 30
+  ONU di bawah satu ODC) menjadi satu insiden ber-akar-masalah, lalu broadcast
+  proaktif ke pelanggan terdampak
+- **Phase 4 — Work order** ✅ tiket lapangan (PSB/perbaikan/migrasi/dismantle),
+  alur assign→mulai→selesai→approve, bukti foto + tanda tangan di MinIO/S3.
+  Aplikasi teknisi (Compose Multiplatform) menyusul paling akhir.
+- **Phase 5 — Fitur advanced** ✅ what-if/blast-radius, heatmap utilisasi port,
+  predictive maintenance, OTDR plotting, auto-provisioning ONU (kotak masuk ONU
+  terdeteksi + kebijakan)
+- **Phase 6 — CPE** ✅ kelola router/ONT pelanggan via GenieACS (TR-069): WiFi,
+  reboot, diagnostik ping/speedtest, firmware, factory-reset & refresh ACS
+- **Phase 7 — BNG (BRAS/RADIUS)** ✅ paket, registri BRAS, akun PPPoE,
+  isolir/pulih & reset-login sesi; adapter Mikrotik REST v7 + FreeRADIUS, lab
+  docker RADIUS (lihat [`docs/lab-bras-radius.md`](docs/lab-bras-radius.md))
+- **Billing** ✅ mesin tagihan (invoice ber-periode, jatuh tempo + grace),
+  pembayaran manual + gateway agnostik lewat webhook, auto-isolir/auto-pulih yang
+  menggerakkan `customer` → `bng` (lihat [`docs/billing.md`](docs/billing.md))
+- **VPN** ✅ back-haul OpenVPN untuk remote perangkat tanpa IP publik: hub + peer,
+  IP overlay tetap, unduh `.ovpn`/RouterOS, rahasia terenkripsi (lihat
+  [`docs/vpn.md`](docs/vpn.md))
+- **Berikutnya** — subscriber-360 (satu layar: langganan + tagihan + tiket + CPE +
+  sesi PPPoE), lalu aplikasi teknisi Compose Multiplatform
