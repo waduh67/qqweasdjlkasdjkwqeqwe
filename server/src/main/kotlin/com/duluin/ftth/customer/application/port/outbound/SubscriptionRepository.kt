@@ -13,5 +13,8 @@ interface SubscriptionRepository {
 
     fun findByCustomerIds(customerIds: Set<UUID>): List<Subscription>
 
+    /** Langganan ACTIVE/ISOLATED tenant aktif — kandidat penagihan periode berjalan. */
+    fun findBillableForCurrentTenant(): List<Subscription>
+
     fun deleteById(id: UUID)
 }

@@ -123,6 +123,11 @@ object PermissionCatalog {
         perm("bng.session.view", "Lihat sesi PPPoE & tren trafik pelanggan")
         perm("bng.session.reset", "Reset Login (putus sesi PPPoE) pelanggan")
 
+        // Billing (tagihan, pembayaran, auto-isolir/auto-pulih)
+        perm("billing.invoice.view", "Lihat tagihan & pembayaran")
+        perm("billing.invoice.manage", "Terbitkan/batalkan tagihan")
+        perm("billing.payment.manage", "Catat pembayaran manual")
+
         // Notification
         perm("notification.template.view", "Lihat template notifikasi")
         perm("notification.template.manage", "Kelola template notifikasi")

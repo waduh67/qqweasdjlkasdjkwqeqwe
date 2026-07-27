@@ -3,6 +3,7 @@ package com.duluin.ftth.customer.adapter.outbound.persistence
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.customer.application.port.outbound.SubscriptionRepository
 import com.duluin.ftth.customer.domain.model.Subscription
+import com.duluin.ftth.customer.domain.model.SubscriptionStatus
 import org.springframework.stereotype.Component
 import java.util.UUID
 
@@ -39,6 +40,9 @@ class SubscriptionPersistenceAdapter(
 
     override fun findByCustomerIds(customerIds: Set<UUID>): List<Subscription> =
         if (customerIds.isEmpty()) emptyList() else jpa.findByCustomerIdIn(customerIds).map { it.toDomain() }
+
+    override fun findBillableForCurrentTenant(): List<Subscription> =
+        jpa.findByStatusIn(listOf(SubscriptionStatus.ACTIVE, SubscriptionStatus.ISOLATED)).map { it.toDomain() }
 
     override fun deleteById(id: UUID) = jpa.deleteById(id)
 }

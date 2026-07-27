@@ -2,6 +2,7 @@ package com.duluin.ftth.customer.application.service
 
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.customer.BillableSubscription
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.CustomerPlacement
 import com.duluin.ftth.customer.CustomerRef
@@ -14,11 +15,13 @@ import com.duluin.ftth.customer.domain.model.Customer
 import com.duluin.ftth.customer.domain.model.OnuStatus
 import com.duluin.ftth.customer.application.port.inbound.AttachOnuCommand
 import com.duluin.ftth.customer.application.port.inbound.ManageOnuUseCase
+import com.duluin.ftth.customer.application.port.inbound.ManageSubscriptionUseCase
 import com.duluin.ftth.customer.application.port.inbound.RegisterOnuCommand
 import com.duluin.ftth.customer.application.port.outbound.CustomerRepository
 import com.duluin.ftth.customer.application.port.outbound.CustomerTileRenderer
 import com.duluin.ftth.customer.application.port.outbound.OnuRepository
 import com.duluin.ftth.customer.application.port.outbound.SubscriptionRepository
+import com.duluin.ftth.customer.domain.model.Subscription
 import com.duluin.ftth.customer.domain.model.SubscriptionStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -32,6 +35,7 @@ class CustomerApiService(
     private val subscriptionRepository: SubscriptionRepository,
     private val tileRenderer: CustomerTileRenderer,
     private val manageOnu: ManageOnuUseCase,
+    private val manageSubscription: ManageSubscriptionUseCase,
 ) : CustomerApi {
 
     override fun renderMapTile(z: Int, x: Int, y: Int, areaIds: Set<UUID>?): ByteArray =
@@ -193,6 +197,38 @@ class CustomerApiService(
 
     override fun countOccupantsByOdp(odpIds: Set<UUID>): Map<UUID, Long> =
         onuRepository.countByOdpIds(odpIds)
+
+    override fun findBillableSubscriptions(): List<BillableSubscription> =
+        subscriptionRepository.findBillableForCurrentTenant().map { it.toBillable() }
+
+    override fun findBillableSubscription(subscriptionId: UUID): BillableSubscription? =
+        subscriptionRepository.findById(subscriptionId)?.toBillable()
+
+    /**
+     * Isolir/pulih dari billing memakai kembali use case langganan yang sama dengan
+     * kendali manual, sehingga audit & event ikut berjalan. No-op bila status tak sesuai
+     * (idempoten terhadap penegakan/pemulihan berulang).
+     */
+    @Transactional
+    override fun isolateForBilling(subscriptionId: UUID) {
+        val subscription = subscriptionRepository.findById(subscriptionId) ?: return
+        if (subscription.status == SubscriptionStatus.ACTIVE) manageSubscription.isolate(subscriptionId)
+    }
+
+    @Transactional
+    override fun reactivateForBilling(subscriptionId: UUID) {
+        val subscription = subscriptionRepository.findById(subscriptionId) ?: return
+        if (subscription.status == SubscriptionStatus.ISOLATED) manageSubscription.activate(subscriptionId)
+    }
+
+    private fun Subscription.toBillable() = BillableSubscription(
+        subscriptionId = id,
+        customerId = customerId,
+        packageName = packageName,
+        monthlyFee = monthlyFee,
+        status = status.name,
+        activatedAt = activatedAt,
+    )
 
     private fun Customer.toRef() = CustomerRef(
         id = id,

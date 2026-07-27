@@ -71,6 +71,9 @@ class SecurityConfig {
                 it.requestMatchers(
                     "/api/auth/login",
                     "/api/auth/refresh",
+                    // Webhook pembayaran: penyedia gateway memanggil dengan tanda tangannya
+                    // sendiri (diverifikasi di adapter), bukan token bearer kita.
+                    "/api/billing/webhooks/**",
                     "/actuator/health/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",

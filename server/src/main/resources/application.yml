@@ -64,3 +64,13 @@ ftth:
     sync-interval: ${FTTH_CPE_SYNC_INTERVAL:PT5M}
     # ONU dianggap online bila inform terakhirnya dalam ambang ini.
     online-stale-after: ${FTTH_CPE_ONLINE_STALE_AFTER:PT15M}
+  billing:
+    billing-day-of-month: 1
+    due-days: 7
+    grace-days: 3
+    auto-isolir: true
+    number-prefix: INV
+    default-provider: MANUAL
+    scheduler-interval: PT12H
+    # DEV ONLY — override via env di production
+    webhook-secret: ${FTTH_BILLING_WEBHOOK_SECRET:dev-only-billing-webhook-secret-change-me}

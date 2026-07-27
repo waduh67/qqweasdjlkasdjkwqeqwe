@@ -1,6 +1,7 @@
 package com.duluin.ftth.customer.adapter.outbound.persistence
 
 import com.duluin.ftth.customer.domain.model.CustomerStatus
+import com.duluin.ftth.customer.domain.model.SubscriptionStatus
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Query
@@ -52,6 +53,7 @@ interface CustomerJpaRepository :
 interface SubscriptionJpaRepository : JpaRepository<SubscriptionJpaEntity, UUID> {
     fun findByCustomerIdOrderByCreatedAtDesc(customerId: UUID): List<SubscriptionJpaEntity>
     fun findByCustomerIdIn(customerIds: Collection<UUID>): List<SubscriptionJpaEntity>
+    fun findByStatusIn(statuses: Collection<SubscriptionStatus>): List<SubscriptionJpaEntity>
 }
 
 interface OnuJpaRepository : JpaRepository<OnuJpaEntity, UUID> {

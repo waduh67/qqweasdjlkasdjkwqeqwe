@@ -1,0 +1,84 @@
+package com.duluin.ftth.billing.application.service
+
+import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
+import com.duluin.ftth.billing.config.BillingProperties
+import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
+import com.duluin.ftth.common.tenant.TenantContext
+import com.duluin.ftth.customer.CustomerApi
+import com.duluin.ftth.tenancy.TenantApi
+import org.slf4j.LoggerFactory
+import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Propagation
+import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
+import java.util.UUID
+
+/**
+ * Menjalankan siklus penagihan lintas tenant secara berkala: menerbitkan tagihan
+ * periode berjalan dan menegakkan tunggakan (auto-isolir). Berjalan di luar konteks
+ * request, jadi tenant dipasang satu per satu lewat [TenantContext.runAs] — sama
+ * seperti scheduler CPE. Kegagalan satu tenant tidak menghentikan tenant lain.
+ */
+@Component
+class BillingScheduler(
+    private val tenantApi: TenantApi,
+    private val worker: BillingCycleRunner,
+) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    @Scheduled(fixedDelayString = "\${ftth.billing.scheduler-interval:PT12H}")
+    fun issueInvoices() {
+        tenantApi.findActiveTenantIds().forEach { tenantId ->
+            runCatching { TenantContext.runAs(tenantId) { worker.issue(tenantId) } }
+                .onFailure { log.warn("Penerbitan tagihan tenant {} gagal: {}", tenantId, it.message) }
+        }
+    }
+
+    @Scheduled(fixedDelayString = "\${ftth.billing.scheduler-interval:PT12H}")
+    fun enforceOverdue() {
+        tenantApi.findActiveTenantIds().forEach { tenantId ->
+            runCatching { TenantContext.runAs(tenantId) { worker.enforce(tenantId) } }
+                .onFailure { log.warn("Penegakan tunggakan tenant {} gagal: {}", tenantId, it.message) }
+        }
+    }
+}
+
+/**
+ * Pekerja satu tenant dalam transaksinya sendiri.
+ *
+ * Komponen terpisah dari [BillingScheduler], bukan method privat: `@Transactional`
+ * Spring berlaku lewat proxy, jadi pemanggilan dari dalam kelas yang sama tak akan
+ * pernah dibungkus transaksi. REQUIRES_NEW mengurung kegagalan ke satu tenant.
+ */
+@Component
+class BillingCycleRunner(
+    private val invoiceGenerator: InvoiceGenerator,
+    private val invoiceRepository: InvoiceRepository,
+    private val customerApi: CustomerApi,
+    private val auditor: AuditRecorder,
+    private val properties: BillingProperties,
+) {
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    fun issue(tenantId: UUID) {
+        // Baru terbit setelah tanggal penagihan tercapai; sebelum itu scheduler no-op.
+        if (LocalDate.now().dayOfMonth >= properties.billingDayOfMonth) {
+            invoiceGenerator.generateFor(tenantId, LocalDate.now())
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    fun enforce(tenantId: UUID) {
+        val cutoff = LocalDate.now().minusDays(properties.graceDays)
+        invoiceRepository.findBillableOverdue(cutoff).forEach { invoice ->
+            invoice.markOverdue()
+            val saved = invoiceRepository.save(invoice)
+            auditor.record(
+                "billing.invoice.overdue", "Invoice", saved.id, saved.tenantId,
+                mapOf("number" to saved.number),
+            )
+            if (properties.autoIsolir) customerApi.isolateForBilling(saved.subscriptionId)
+        }
+    }
+}

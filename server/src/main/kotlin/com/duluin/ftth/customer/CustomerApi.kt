@@ -85,7 +85,40 @@ interface CustomerApi {
      * @throws com.duluin.ftth.common.domain.error.ConflictException bila serial sudah terdaftar untuk pelanggan lain
      */
     fun provisionOnu(command: ProvisionOnuCommand): OnuRef
+
+    /**
+     * Langganan yang layak ditagih milik tenant aktif: yang ACTIVE atau ISOLATED —
+     * langganan terisolir tetap berjalan kontraknya dan tetap ditagih. Dipakai module
+     * billing untuk menerbitkan tagihan periode berjalan.
+     */
+    fun findBillableSubscriptions(): List<BillableSubscription>
+
+    /** Resolusi satu langganan untuk penagihan; `null` bila tak ditemukan. */
+    fun findBillableSubscription(subscriptionId: UUID): BillableSubscription?
+
+    /**
+     * Isolir langganan karena menunggak. No-op bila langganan tidak sedang ACTIVE
+     * (sudah terisolir, pending, atau berakhir) — penegakan tunggakan aman diulang.
+     */
+    fun isolateForBilling(subscriptionId: UUID)
+
+    /**
+     * Pulihkan langganan setelah tagihannya lunas. No-op bila langganan tidak sedang
+     * ISOLATED — auto-pulih tidak menghidupkan langganan yang memang belum aktif.
+     */
+    fun reactivateForBilling(subscriptionId: UUID)
 }
+
+/** Pandangan ringkas sebuah langganan untuk penagihan (module billing). */
+data class BillableSubscription(
+    val subscriptionId: UUID,
+    val customerId: UUID,
+    val packageName: String,
+    val monthlyFee: java.math.BigDecimal,
+    /** Nama [com.duluin.ftth.customer.domain.model.SubscriptionStatus], mis. "ACTIVE". */
+    val status: String,
+    val activatedAt: java.time.Instant?,
+)
 
 /** Perintah memprovisikan ONU liar menjadi pelanggan terpasang. */
 data class ProvisionOnuCommand(
