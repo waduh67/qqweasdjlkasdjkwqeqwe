@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react'
 import { useAuth } from './useAuth'
 
 /**
@@ -6,16 +7,27 @@ import { useAuth } from './useAuth'
  *
  * Ini murni untuk pengalaman pengguna (menyembunyikan menu/tombol) — penegakan
  * yang sesungguhnya tetap di server.
+ *
+ * `can`/`canAny` di-memo pada objek `user` agar referensinya stabil antar-render.
+ * Tanpa ini, komponen yang menaruh `can` di dependency `useEffect` (mis. Dashboard)
+ * akan memicu loop refetch tak berujung: fungsi baru tiap render → efek jalan lagi
+ * → set state → render lagi.
  */
 export function useCan() {
   const { user } = useAuth()
 
-  const can = (permission: string): boolean => {
-    if (!user) return false
-    return user.platformAdmin || user.permissions.includes(permission)
-  }
+  const can = useCallback(
+    (permission: string): boolean => {
+      if (!user) return false
+      return user.platformAdmin || user.permissions.includes(permission)
+    },
+    [user],
+  )
 
-  const canAny = (...permissions: string[]): boolean => permissions.some(can)
+  const canAny = useCallback((...permissions: string[]): boolean => permissions.some(can), [can])
 
-  return { can, canAny, isPlatformAdmin: user?.platformAdmin ?? false }
+  return useMemo(
+    () => ({ can, canAny, isPlatformAdmin: user?.platformAdmin ?? false }),
+    [can, canAny, user],
+  )
 }
