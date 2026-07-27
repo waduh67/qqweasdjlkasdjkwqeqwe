@@ -46,6 +46,15 @@ class VpnServerJpaEntity(
 
     @Column(name = "tls_auth_key", columnDefinition = "text")
     var tlsAuthKey: String?,
+
+    @Column(name = "ca_key", columnDefinition = "text")
+    var caKey: String?,
+
+    @Column(name = "server_cert", columnDefinition = "text")
+    var serverCert: String?,
+
+    @Column(name = "server_key", columnDefinition = "text")
+    var serverKey: String?,
 ) : TenantAwareJpaEntity(id)
 
 /**

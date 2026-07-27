@@ -20,6 +20,8 @@ data class VpnServerView(
     val status: String,
     val hasCaCert: Boolean,
     val hasTlsAuth: Boolean,
+    /** True bila aplikasi sudah menerbitkan CA + sertifikat server → hub siap dipasang. */
+    val pkiReady: Boolean,
     val peerCount: Long,
 )
 

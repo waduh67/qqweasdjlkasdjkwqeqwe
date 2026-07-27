@@ -52,6 +52,8 @@ dependencies {
 
     // Object storage bukti pengerjaan work order (MinIO/S3-compatible).
     implementation(libs.awssdk.s3)
+    // PKI OpenVPN: module vpn menerbitkan CA + sertifikat server sendiri.
+    implementation(libs.bouncycastle.pkix)
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     // Boot 4 memecah autoconfigure test per teknologi; @AutoConfigureMockMvc ada di sini.

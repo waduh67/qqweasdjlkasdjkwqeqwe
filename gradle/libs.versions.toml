@@ -10,6 +10,8 @@ jackson = "3.0.4"
 logback = "1.5.20"
 # Driver JDBC untuk adapter FreeRADIUS collector — disamakan dengan versi yang di-resolve server.
 postgresql = "42.7.11"
+# PKI OpenVPN: app menerbitkan CA + sertifikat server sendiri (module vpn).
+bouncycastle = "1.80"
 
 [libraries]
 spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
@@ -26,6 +28,9 @@ jackson-databind = { module = "tools.jackson.core:jackson-databind", version.ref
 jackson-kotlin = { module = "tools.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+
+# PKI OpenVPN untuk module vpn (server menerbitkan CA + sertifikat server).
+bouncycastle-pkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncycastle" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

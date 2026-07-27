@@ -30,6 +30,9 @@ class VpnServer private constructor(
     status: VpnServerStatus,
     caCertPem: String?,
     tlsAuthKey: String?,
+    caKeyPem: String?,
+    serverCertPem: String?,
+    serverKeyPem: String?,
 ) {
     var name: String = name
         private set
@@ -59,6 +62,22 @@ class VpnServer private constructor(
     var tlsAuthKey: String? = tlsAuthKey
         private set
 
+    /** Kunci privat CA (menandatangani sertifikat server) — RAHASIA, terenkripsi di persistence. */
+    var caKeyPem: String? = caKeyPem
+        private set
+
+    /** Sertifikat server (publik, EKU serverAuth); disimpan apa adanya. */
+    var serverCertPem: String? = serverCertPem
+        private set
+
+    /** Kunci privat server — RAHASIA, terenkripsi di persistence. */
+    var serverKeyPem: String? = serverKeyPem
+        private set
+
+    /** True bila CA + sertifikat server lengkap → siap membuat installer & config klien. */
+    val pkiReady: Boolean
+        get() = caCertPem != null && caKeyPem != null && serverCertPem != null && serverKeyPem != null
+
     fun enable() {
         status = VpnServerStatus.ACTIVE
     }
@@ -84,6 +103,17 @@ class VpnServer private constructor(
         this.tlsAuthKey = tlsAuthKey?.trim()?.takeIf { it.isNotEmpty() }
     }
 
+    /**
+     * Pasang materi PKI yang diterbitkan aplikasi (CA menandatangani sertifikat server).
+     * Dipanggil saat hub dibuat sehingga operator tak perlu menjalankan easy-rsa sendiri.
+     */
+    fun attachPki(caCertPem: String, caKeyPem: String, serverCertPem: String, serverKeyPem: String) {
+        this.caCertPem = caCertPem.trim()
+        this.caKeyPem = caKeyPem.trim()
+        this.serverCertPem = serverCertPem.trim()
+        this.serverKeyPem = serverKeyPem.trim()
+    }
+
     companion object {
         fun create(
             tenantId: UUID,
@@ -103,6 +133,9 @@ class VpnServer private constructor(
             status = VpnServerStatus.ACTIVE,
             caCertPem = null,
             tlsAuthKey = null,
+            caKeyPem = null,
+            serverCertPem = null,
+            serverKeyPem = null,
         )
 
         @Suppress("LongParameterList")
@@ -117,8 +150,12 @@ class VpnServer private constructor(
             status: VpnServerStatus,
             caCertPem: String?,
             tlsAuthKey: String?,
+            caKeyPem: String?,
+            serverCertPem: String?,
+            serverKeyPem: String?,
         ): VpnServer = VpnServer(
-            id, tenantId, name, host, port, protocol, tunnelCidr, status, caCertPem, tlsAuthKey,
+            id, tenantId, name, host, port, protocol, tunnelCidr, status,
+            caCertPem, tlsAuthKey, caKeyPem, serverCertPem, serverKeyPem,
         )
 
         private fun validateName(name: String): String {

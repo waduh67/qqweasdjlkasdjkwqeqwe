@@ -9,6 +9,7 @@ import com.duluin.ftth.vpn.application.port.inbound.ManageVpnServerUseCase
 import com.duluin.ftth.vpn.application.port.inbound.ServerConfigView
 import com.duluin.ftth.vpn.application.port.inbound.UpdateVpnServerCommand
 import com.duluin.ftth.vpn.application.port.inbound.VpnServerView
+import com.duluin.ftth.vpn.application.port.outbound.ServerPkiIssuer
 import com.duluin.ftth.vpn.application.port.outbound.VpnPeerRepository
 import com.duluin.ftth.vpn.application.port.outbound.VpnServerRepository
 import com.duluin.ftth.vpn.config.VpnProperties
@@ -26,6 +27,7 @@ class VpnServerService(
     private val peerRepository: VpnPeerRepository,
     private val renderer: VpnConfigRenderer,
     private val properties: VpnProperties,
+    private val pkiIssuer: ServerPkiIssuer,
     private val auditor: AuditRecorder,
 ) : ManageVpnServerUseCase {
 
@@ -44,8 +46,15 @@ class VpnServerService(
             protocol = command.protocol ?: VpnProtocol.valueOf(properties.defaultProtocol),
             tunnelCidr = command.tunnelCidr ?: properties.defaultTunnelCidr,
         )
+        // Aplikasi menjadi CA-nya sendiri: terbitkan CA + sertifikat server saat hub dibuat,
+        // sehingga operator tak perlu easy-rsa manual.
+        val pki = pkiIssuer.issueForServer(server.name)
+        server.attachPki(pki.caCertPem, pki.caKeyPem, pki.serverCertPem, pki.serverKeyPem)
         val saved = serverRepository.save(server)
-        auditor.record("vpn.server.created", "VpnServer", saved.id, saved.tenantId, mapOf("name" to saved.name))
+        auditor.record(
+            "vpn.server.created", "VpnServer", saved.id, saved.tenantId,
+            mapOf("name" to saved.name, "pkiReady" to saved.pkiReady),
+        )
         return saved.toView()
     }
 
@@ -99,6 +108,7 @@ class VpnServerService(
         status = status.name,
         hasCaCert = caCertPem != null,
         hasTlsAuth = tlsAuthKey != null,
+        pkiReady = pkiReady,
         peerCount = peerRepository.countByServerId(id),
     )
 }

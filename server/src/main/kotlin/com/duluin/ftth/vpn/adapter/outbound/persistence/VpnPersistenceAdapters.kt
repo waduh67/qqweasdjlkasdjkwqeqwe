@@ -26,6 +26,9 @@ class VpnServerPersistenceAdapter(
     override fun save(server: VpnServer): VpnServer {
         val encryptedCa = server.caCertPem?.let(cipher::encrypt)
         val encryptedTlsAuth = server.tlsAuthKey?.let(cipher::encrypt)
+        // Kunci privat CA & server juga rahasia → terenkripsi; sertifikat server publik.
+        val encryptedCaKey = server.caKeyPem?.let(cipher::encrypt)
+        val encryptedServerKey = server.serverKeyPem?.let(cipher::encrypt)
         val entity = jpa.findById(server.id).orElse(null)?.apply {
             name = server.name
             host = server.host
@@ -35,6 +38,9 @@ class VpnServerPersistenceAdapter(
             status = server.status
             caCert = encryptedCa
             tlsAuthKey = encryptedTlsAuth
+            caKey = encryptedCaKey
+            serverCert = server.serverCertPem
+            serverKey = encryptedServerKey
         } ?: VpnServerJpaEntity(
             id = server.id,
             name = server.name,
@@ -45,6 +51,9 @@ class VpnServerPersistenceAdapter(
             status = server.status,
             caCert = encryptedCa,
             tlsAuthKey = encryptedTlsAuth,
+            caKey = encryptedCaKey,
+            serverCert = server.serverCertPem,
+            serverKey = encryptedServerKey,
         )
         return jpa.save(entity).toDomain()
     }
@@ -66,6 +75,9 @@ class VpnServerPersistenceAdapter(
         status = status,
         caCertPem = cipher.decryptQuietly(caCert, name, log),
         tlsAuthKey = cipher.decryptQuietly(tlsAuthKey, name, log),
+        caKeyPem = cipher.decryptQuietly(caKey, name, log),
+        serverCertPem = serverCert,
+        serverKeyPem = cipher.decryptQuietly(serverKey, name, log),
     )
 }
 
