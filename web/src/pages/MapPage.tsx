@@ -14,6 +14,7 @@ import type {
   ImpactedOverlay,
   OdcView,
   OdpInspection,
+  OnuView,
   OtdrEventType,
   OtdrTest,
   RecordOtdrTest,
@@ -305,6 +306,8 @@ export function MapPage() {
   const placeKindRef = useRef<AssetKind | null>(null)
   const animRef = useRef<number | null>(null)
   const impactedRef = useRef<number | null>(null)
+  // Pin yang bisa diseret untuk menyetel lokasi perangkat baru sebelum disimpan.
+  const placeMarker = useRef<maplibregl.Marker | null>(null)
   // Penyebab per kabel (id → alarm hidup di hilir), diisi tiap overlay disegarkan
   // dan dibaca saat kabel diklik untuk menjelaskan "kenapa merah".
   const impactedCauses = useRef<Map<string, ImpactCause[]>>(new Map())
@@ -656,6 +659,31 @@ export function MapPage() {
     })
   }, [whatIf])
 
+  // Pin lokasi perangkat baru: muncul begitu titik dipilih (klik peta), bisa
+  // diseret untuk menyetel posisi, dan koordinatnya balik ke `placeAt` sehingga
+  // form ikut memperbarui. Dibuang saat mode taruh selesai/batal.
+  useEffect(() => {
+    const instance = map.current
+    if (!instance) return
+    if (!placeAt) {
+      placeMarker.current?.remove()
+      placeMarker.current = null
+      return
+    }
+    if (!placeMarker.current) {
+      const marker = new maplibregl.Marker({ draggable: true, color: '#5b8cff' })
+        .setLngLat([placeAt.lng, placeAt.lat])
+        .addTo(instance)
+      marker.on('dragend', () => {
+        const p = marker.getLngLat()
+        setPlaceAt((cur) => (cur ? { ...cur, lng: p.lng, lat: p.lat } : cur))
+      })
+      placeMarker.current = marker
+    } else {
+      placeMarker.current.setLngLat([placeAt.lng, placeAt.lat])
+    }
+  }, [placeAt])
+
   // Heatmap utilisasi: saat toggle menyala, ambil pemakaian port tiap ODP dan
   // warnai titiknya; saat mati, kosongkan sumbernya. Fetch dibatalkan bila toggle
   // berubah sebelum respons tiba agar tidak menimpa data dengan hasil basi.
@@ -842,10 +870,18 @@ export function MapPage() {
     }
   }
 
-  const saveNewCable = async (form: { code: string; name: string; coreCount: number }) => {
+  const saveNewCable = async (form: {
+    code: string
+    name: string
+    coreCount: number
+    // Drop → pelanggan: port ODP yang dipilih + ONU yang ditautkan ke port itu.
+    portNumber?: number
+    onuId?: string
+  }) => {
     const route = tool.current?.route() ?? []
     const state = toolState
     if (!state?.from || !state?.to || !state.cableType) return
+    const odpId = state.from.id
     try {
       await api.post('/api/cables', {
         code: form.code,
@@ -859,7 +895,23 @@ export function MapPage() {
         toId: state.to.id,
         status: 'ACTIVE',
       })
-      toast.success(`Kabel ${form.code} tersimpan (${Math.round(state.lengthMeters)} m)`)
+      // Drop ke pelanggan: tautkan ONU-nya ke port ODP yang dipilih, sehingga
+      // "port mana" tercatat di penempatan ONU — sumber kebenaran port ODP.
+      let portNote = ''
+      if (form.onuId && form.portNumber != null) {
+        try {
+          await api.post(`/api/customers/onus/${form.onuId}/attach`, {
+            odpId,
+            portNumber: form.portNumber,
+          })
+          portNote = ` · ONU di port ${form.portNumber}`
+        } catch (attachErr) {
+          toast.error(
+            attachErr instanceof ApiError ? attachErr.message : 'Kabel tersimpan, tapi gagal menautkan ONU ke port',
+          )
+        }
+      }
+      toast.success(`Kabel ${form.code} tersimpan (${Math.round(state.lengthMeters)} m)${portNote}`)
       cancelTool()
       refreshTiles()
       void refreshImpacted()
@@ -1033,8 +1085,11 @@ export function MapPage() {
           <SaveCablePanel
             from={toolState.from.code}
             to={toolState.to.code}
+            fromId={toolState.from.id}
+            toId={toolState.to.id}
             cableType={toolState.cableType}
             lengthMeters={toolState.lengthMeters}
+            canAssignPort={can('customer.onu.assign')}
             onCancel={cancelTool}
             onSave={saveNewCable}
           />
@@ -1161,21 +1216,75 @@ function sanitizeCode(raw: string): string {
 function SaveCablePanel({
   from,
   to,
+  fromId,
+  toId,
   cableType,
   lengthMeters,
+  canAssignPort,
   onCancel,
   onSave,
 }: {
   from: string
   to: string
+  /** Id perangkat ujung awal (untuk drop = ODP tempat port dipilih). */
+  fromId: string
+  /** Id perangkat ujung akhir (untuk drop = pelanggan yang ONU-nya ditautkan). */
+  toId: string
   cableType: CableType
   lengthMeters: number
+  canAssignPort: boolean
   onCancel: () => void
-  onSave: (form: { code: string; name: string; coreCount: number }) => void
+  onSave: (form: { code: string; name: string; coreCount: number; portNumber?: number; onuId?: string }) => void
 }) {
   const [code, setCode] = useState(sanitizeCode(`CBL-${from}-${to}`))
   const [name, setName] = useState(`${TYPE_LABEL[cableType]} ${from} → ${to}`)
   const [coreCount, setCoreCount] = useState(DEFAULT_CORES[cableType])
+
+  // Untuk kabel drop, tampilkan peta port ODP tujuan supaya port tidak ditebak.
+  const isDrop = cableType === 'DROP'
+  const [odp, setOdp] = useState<OdpInspection | null>(null)
+  const [onu, setOnu] = useState<OnuView | null>(null)
+  const [loadingPorts, setLoadingPorts] = useState(isDrop)
+  const [selectedPort, setSelectedPort] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!isDrop) return
+    let alive = true
+    setLoadingPorts(true)
+    void (async () => {
+      try {
+        const [odpInsp, onus] = await Promise.all([
+          api.get<OdpInspection>(`/api/gis/odps/${fromId}`),
+          api
+            .get<OnuView[]>(`/api/customers/${toId}/onus`)
+            .catch(() => [] as OnuView[]),
+        ])
+        if (!alive) return
+        setOdp(odpInsp)
+        // ONU aktif pelanggan (yang belum dibongkar) — sasaran penautan port.
+        const active = onus.find((o) => o.status !== 'DISMANTLED') ?? onus[0] ?? null
+        setOnu(active)
+        // Prasetel ke port ONU saat ini bila memang sudah di ODP ini.
+        if (active?.odpId === odpInsp.odpId && active.odpPortNumber != null) {
+          setSelectedPort(active.odpPortNumber)
+        }
+      } finally {
+        if (alive) setLoadingPorts(false)
+      }
+    })()
+    return () => {
+      alive = false
+    }
+  }, [isDrop, fromId, toId])
+
+  const submit = () =>
+    onSave({
+      code: sanitizeCode(code),
+      name,
+      coreCount,
+      portNumber: isDrop && selectedPort != null ? selectedPort : undefined,
+      onuId: isDrop && onu && selectedPort != null ? onu.id : undefined,
+    })
 
   return (
     <aside className="map-panel stack">
@@ -1204,12 +1313,57 @@ function SaveCablePanel({
         <span>Jumlah core</span>
         <input type="number" min={1} max={288} value={coreCount} onChange={(e) => setCoreCount(Number(e.target.value))} />
       </label>
+
+      {isDrop && (
+        <div className="stack" style={{ gap: '0.4rem' }}>
+          <div className="spread">
+            <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Port ODP {odp?.code ?? from}</span>
+            {odp && (
+              <span className="muted" style={{ fontSize: '0.8rem' }}>
+                {odp.usedPorts}/{odp.capacity} terpakai
+              </span>
+            )}
+          </div>
+          {loadingPorts ? (
+            <span className="muted" style={{ fontSize: '0.82rem' }}>
+              Memuat port…
+            </span>
+          ) : odp ? (
+            <>
+              <PortGrid
+                inspection={odp}
+                selected={selectedPort}
+                ownPort={onu?.odpId === odp.odpId ? onu?.odpPortNumber ?? null : null}
+                onPick={canAssignPort && onu ? setSelectedPort : undefined}
+              />
+              {!onu ? (
+                <span className="muted" style={{ fontSize: '0.78rem' }}>
+                  Pelanggan belum punya ONU terdaftar — port tak bisa ditetapkan dari sini.
+                </span>
+              ) : !canAssignPort ? (
+                <span className="muted" style={{ fontSize: '0.78rem' }}>
+                  Butuh izin <span className="tnum">customer.onu.assign</span> untuk menautkan port.
+                </span>
+              ) : selectedPort == null ? (
+                <span className="muted" style={{ fontSize: '0.78rem' }}>
+                  Pilih port kosong untuk menautkan ONU pelanggan.
+                </span>
+              ) : (
+                <span className="muted" style={{ fontSize: '0.78rem' }}>
+                  ONU {onu.serialNumber} → port {selectedPort}
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="muted" style={{ fontSize: '0.82rem' }}>
+              Gagal memuat port ODP.
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="row">
-        <button
-          className="primary"
-          disabled={!code.trim() || !name.trim()}
-          onClick={() => onSave({ code: sanitizeCode(code), name, coreCount })}
-        >
+        <button className="primary" disabled={!code.trim() || !name.trim()} onClick={submit}>
           Simpan kabel
         </button>
         <button className="ghost" onClick={onCancel}>
@@ -1217,6 +1371,73 @@ function SaveCablePanel({
         </button>
       </div>
     </aside>
+  )
+}
+
+/**
+ * Peta port sebuah ODP: satu kotak per port, hijau untuk kosong dan abu untuk
+ * terpakai (dengan kode pelanggan penghuninya). Menjawab "port mana yang kosong"
+ * secara visual, tanpa menebak. Kotak yang bisa dipilih menyala saat ditunjuk.
+ */
+function PortGrid({
+  inspection,
+  selected,
+  ownPort,
+  onPick,
+}: {
+  inspection: OdpInspection
+  selected: number | null
+  /** Port yang sudah dihuni ONU pelanggan ini — boleh dipilih ulang. */
+  ownPort: number | null
+  onPick?: (port: number) => void
+}) {
+  const free = new Set(inspection.availablePortNumbers)
+  const occupantByPort = new Map(inspection.occupants.map((o) => [o.portNumber, o]))
+  const ports = Array.from({ length: inspection.capacity }, (_, i) => i + 1)
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(38px, 1fr))', gap: '0.3rem' }}>
+      {ports.map((n) => {
+        const occ = occupantByPort.get(n)
+        const isOwn = n === ownPort
+        const selectable = onPick != null && (free.has(n) || isOwn)
+        const isSelected = n === selected
+        const bg = isSelected
+          ? 'var(--accent-soft)'
+          : isOwn
+            ? 'var(--good-ink)'
+            : occ
+              ? 'var(--surface-2, rgba(148,163,184,0.15))'
+              : 'transparent'
+        const border = isSelected ? 'var(--accent)' : free.has(n) ? 'var(--good-ink)' : 'var(--border)'
+        return (
+          <button
+            key={n}
+            type="button"
+            disabled={!selectable}
+            onClick={selectable ? () => onPick?.(n) : undefined}
+            title={occ ? `Port ${n} · ${occ.customerCode} ${occ.customerName}` : `Port ${n} · kosong`}
+            style={{
+              padding: '0.3rem 0',
+              borderRadius: 6,
+              border: `1px solid ${border}`,
+              background: bg,
+              color: occ && !isOwn ? 'var(--muted)' : 'var(--text)',
+              cursor: selectable ? 'pointer' : 'default',
+              fontSize: '0.72rem',
+              lineHeight: 1.2,
+              textAlign: 'center',
+            }}
+          >
+            <div className="tnum" style={{ fontWeight: 600 }}>
+              {n}
+            </div>
+            <div style={{ fontSize: '0.6rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {occ ? occ.customerCode : '·'}
+            </div>
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
@@ -1919,8 +2140,11 @@ function PlaceAssetForm({
           <IconClose size={18} />
         </button>
       </div>
-      <p className="muted tnum" style={{ margin: 0, fontSize: '0.82rem' }}>
-        {lat.toFixed(6)}, {lng.toFixed(6)}
+      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        <span className="tnum">
+          {lat.toFixed(6)}, {lng.toFixed(6)}
+        </span>{' '}
+        · seret pin di peta untuk menyetel lokasi
       </p>
       <label>
         <span>Kode</span>
