@@ -104,7 +104,56 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  # --- FreeRADIUS + Postgres lab untuk modul BNG (BRAS/RADIUS) — DEV, OPSIONAL ---
+  # Semua service di bawah memakai profile "radius" agar TIDAK ikut naik pada
+  # `docker compose up` biasa. Nyalakan stack lab dengan:
+  #     docker compose --profile radius up -d
+  # Lihat docs/lab-bras-radius.md untuk cara mendaftarkan BRAS di app + uji end-to-end.
+  #
+  # radius-db menyimpan skema FreeRADIUS (radacct dkk). Adapter FreeRADIUS collector
+  # membaca sesi hidup lewat JDBC ke basis data ini. Port host 5433 dipakai agar tak
+  # bentrok dengan Postgres app di 5432.
+  radius-db:
+    image: postgres:16-alpine
+    profiles: ["radius"]
+    environment:
+      POSTGRES_DB: radius
+      POSTGRES_USER: radius
+      POSTGRES_PASSWORD: radius
+    ports:
+      - "5433:5432"
+    volumes:
+      - radius_db:/var/lib/postgresql/data
+      # Skema + data contoh dijalankan otomatis saat volume pertama kali dibuat.
+      - ./docker/radius/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U radius"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Server FreeRADIUS sungguhan — hanya diperlukan bila ingin BRAS (mis. Mikrotik CHR)
+  # AUTENTIKASI ke RADIUS ini. Untuk sekadar menguji jalur BACA adapter, cukup radius-db.
+  # Mendengarkan auth 1812/udp, accounting 1813/udp; DAE (CoA/Disconnect) 3799/udp
+  # dikirim collector ke perangkat BRAS, bukan ke server ini.
+  freeradius:
+    image: freeradius/freeradius-server:3.2.5
+    profiles: ["radius"]
+    depends_on:
+      radius-db:
+        condition: service_healthy
+    volumes:
+      - ./docker/radius/freeradius/mods-enabled/sql:/etc/freeradius/mods-enabled/sql:ro
+      - ./docker/radius/freeradius/clients.conf:/etc/freeradius/clients.conf:ro
+    ports:
+      - "1812:1812/udp"
+      - "1813:1813/udp"
+    # -X = mode debug verbose; enak untuk lab agar tiap paket auth terlihat di log.
+    command: ["radiusd", "-X"]
+    restart: unless-stopped
+
 volumes:
   pgdata:
   miniodata:
   genieacs_mongo:
+  radius_db:

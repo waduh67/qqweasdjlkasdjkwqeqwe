@@ -1,0 +1,46 @@
+# Modul SQL FreeRADIUS diarahkan ke PostgreSQL lab (service radius-db).
+#
+# File di mods-enabled/ tak harus symlink — file biasa pun dibaca. Query bawaan
+# (authorize, accounting, post-auth) diikutkan dari mods-config/sql yang sudah ada di
+# image resmi, jadi kita hanya perlu mengatur koneksi + membaca daftar klien dari tabel nas.
+sql {
+    dialect = "postgresql"
+    driver = "rlm_sql_${dialect}"
+
+    # Kredensial harus sama dengan environment container radius-db.
+    server = "radius-db"
+    port = 5432
+    login = "radius"
+    password = "radius"
+    radius_db = "radius"
+
+    # Baca daftar BRAS klien dari tabel nas (bukan hanya clients.conf).
+    read_clients = yes
+    client_table = "nas"
+
+    # Dipakai queries.conf bawaan (mods-config) untuk memetakan grup — wajib ada
+    # walau fitur grup tak kita pakai, kalau tidak radiusd gagal parse. "SQL-Group"
+    # adalah atribut kamus bawaan (sama seperti stock mods-available/sql).
+    group_attribute = "SQL-Group"
+
+    # Kolom-kolom baku FreeRADIUS.
+    acct_table1 = "radacct"
+    acct_table2 = "radacct"
+    postauth_table = "radpostauth"
+    authcheck_table = "radcheck"
+    authreply_table = "radreply"
+    groupcheck_table = "radgroupcheck"
+    groupreply_table = "radgroupreply"
+    usergroup_table = "radusergroup"
+
+    pool {
+        start = 1
+        min = 1
+        max = 5
+        spare = 1
+        idle_timeout = 60
+    }
+
+    # Query SQL siap-pakai per dialek dari image resmi.
+    $INCLUDE ${modconfdir}/${.:name}/main/${dialect}/queries.conf
+}
