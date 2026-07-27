@@ -157,7 +157,11 @@ diketik koordinatnya: klik perangkat sumber → klik titik belok mengikuti lapan
 → klik perangkat tujuan. Ujung **di-snap** ke perangkat nyata (`queryRenderedFeatures`)
 sehingga grafik selalu tersambung — telusur jalur & "siapa terdampak kalau putus"
 bergantung padanya. Tipe kabel ditebak dari pasangan ujung (server tetap penjaga),
-panjang dihitung dari geometri. Jalur bisa diedit dengan menggeser titik belok.
+panjang dihitung dari geometri. Jalur yang sudah ada bisa diedit: **seret pegangan
+titik-tengah** (titik samar di tengah tiap segmen) untuk membelokkan kabel dalam
+satu gerakan — pola editor peta yang lazim, tanpa perlu paham dulu "klik garis
+untuk menyisip titik". Titik belok yang ada bisa digeser, dan diklik-ganda untuk
+dihapus; kedua ujung terkunci karena harus tetap menempel ke perangkat.
 Logikanya ada di `web/src/map/cableTool.ts` (imperatif, terpisah dari React).
 
 **Peta gaya NOC & status hidup.** Basemap gelap, kabel ramping dengan halo glow
