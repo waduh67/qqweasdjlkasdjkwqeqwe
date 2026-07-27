@@ -12,10 +12,13 @@ class Permission private constructor(
     val id: UUID,
     val code: PermissionCode,
     description: String?,
-    val platformOnly: Boolean,
+    platformOnly: Boolean,
     active: Boolean,
 ) {
     var description: String? = description
+        private set
+
+    var platformOnly: Boolean = platformOnly
         private set
 
     var active: Boolean = active
@@ -23,9 +26,14 @@ class Permission private constructor(
 
     val module: String get() = code.module
 
-    /** Selaraskan metadata dengan definisi katalog terbaru saat seeding. */
-    fun syncWith(description: String?) {
+    /**
+     * Selaraskan metadata dengan definisi katalog terbaru saat seeding — termasuk
+     * `platformOnly`, agar kode yang berpindah klasifikasi (mis. tenant → platform)
+     * ikut terkoreksi, bukan cuma saat baru dibuat.
+     */
+    fun syncWith(description: String?, platformOnly: Boolean) {
         this.description = description
+        this.platformOnly = platformOnly
         this.active = true
     }
 

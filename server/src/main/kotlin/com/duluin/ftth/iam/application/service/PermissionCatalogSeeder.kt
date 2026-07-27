@@ -25,8 +25,10 @@ class PermissionCatalogSeeder(
                 current == null ->
                     permissionRepository.save(Permission.create(def.code, def.description, def.platformOnly))
 
-                current.description != def.description || !current.active -> {
-                    current.syncWith(def.description)
+                current.description != def.description ||
+                    current.platformOnly != def.platformOnly ||
+                    !current.active -> {
+                    current.syncWith(def.description, def.platformOnly)
                     permissionRepository.save(current)
                 }
             }

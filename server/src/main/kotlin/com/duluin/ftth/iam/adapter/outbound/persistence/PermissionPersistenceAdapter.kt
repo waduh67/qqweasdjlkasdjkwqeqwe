@@ -14,6 +14,7 @@ class PermissionPersistenceAdapter(
     override fun save(permission: Permission): Permission {
         val entity = jpa.findById(permission.id).orElse(null)?.apply {
             description = permission.description
+            platformOnly = permission.platformOnly
             active = permission.active
         } ?: PermissionJpaEntity(
             id = permission.id,
