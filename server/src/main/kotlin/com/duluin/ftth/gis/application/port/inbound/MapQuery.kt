@@ -204,11 +204,17 @@ data class UpstreamView(
 )
 
 /**
- * Jalur fisik satu pelanggan ke hulu.
+ * Jalur fisik satu pelanggan ke hulu, dari ONT (rumah) sampai BRAS.
  *
  * [estimatedLossDb] adalah perkiraan kasar: rugi splitter (yang dominan) ditambah
  * redaman serat menurut jarak garis lurus. Bukan pengganti pengukuran OTDR, tapi
  * cukup untuk menandai sambungan yang anggarannya sudah mepet sejak di atas kertas.
+ *
+ * [bras] adalah puncak jalur logis (tempat sesi PPPoE ditutup, di atas OLT) —
+ * `null` bila pelanggan belum diprovisi akun PPPoE. [liveRxPowerDbm]/[liveOnuStatus]/
+ * [distanceMeters] adalah bacaan optik HIDUP terakhir dari monitoring pada ONU
+ * pelanggan (beda dari [installRxPowerDbm] yang baseline saat instalasi); `null`
+ * bila ONU belum pernah terbaca.
  */
 data class CustomerTrace(
     val customerId: UUID,
@@ -222,7 +228,28 @@ data class CustomerTrace(
     val odpPortNumber: Int?,
     val upstream: UpstreamView?,
     val estimatedLossDb: Double?,
+    val bras: BrasHopView?,
+    val liveOnuStatus: String?,
+    val liveRxPowerDbm: Double?,
+    val distanceMeters: Int?,
     val hops: List<TraceHop>,
+)
+
+/**
+ * Hop BRAS pada telusur jalur: identitas jaringan pelanggan (akun PPPoE) beserta
+ * keadaan sesi terkininya. Tanpa rahasia apa pun. [online] false berarti BRAS
+ * melaporkan akun tak sedang tersambung (atau belum pernah terpantau).
+ */
+data class BrasHopView(
+    val username: String,
+    /** Status akun jaringan: ACTIVE/ISOLATED/TERMINATED. */
+    val accessStatus: String,
+    val rateProfileName: String?,
+    val online: Boolean,
+    val framedIp: String?,
+    val nasName: String?,
+    val nasIp: String?,
+    val uptimeSeconds: Long?,
 )
 
 data class TraceHop(
@@ -230,6 +257,10 @@ data class TraceHop(
     val code: String,
     val name: String,
     val location: Coordinate?,
+    /** Khusus hop BRAS: apakah sesi sedang online. `null` untuk hop non-BRAS. */
+    val online: Boolean? = null,
+    /** Keterangan inline siap-tampil (mis. "IP 100.64.0.5 · uptime 2j", "Rx −21.4 dBm"). */
+    val detail: String? = null,
 )
 
 /**

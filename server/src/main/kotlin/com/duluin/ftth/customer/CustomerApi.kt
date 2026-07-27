@@ -136,6 +136,8 @@ data class OnuPlacementRef(
 
 /** Di mana ONU seorang pelanggan terpasang, beserta kondisi optiknya. */
 data class CustomerPlacement(
+    /** Id ONU terpasang — untuk memadukan dengan bacaan hidup monitoring per ONU. */
+    val onuId: UUID,
     val odpId: UUID,
     val portNumber: Int,
     val onuSerialNumber: String,

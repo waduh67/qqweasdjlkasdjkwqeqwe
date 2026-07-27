@@ -160,6 +160,58 @@ class NetworkEndToEndIT {
         ).andExpect(status().isOk)
     }
 
+    private fun getJson(url: String, token: String): String =
+        mockMvc.perform(get(url).header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andReturn().response.contentAsString
+
+    /** Langganan aktif untuk pelanggan yang sudah ada; kembalikan id langganan. */
+    private fun activateSubscription(token: String, customerId: String): String {
+        val sub = idOf(
+            post(
+                "/api/customers/$customerId/subscriptions", token,
+                """{"packageName":"Home 20","bandwidthMbps":20,"monthlyFee":150000}""",
+            ),
+        )
+        post("/api/customers/subscriptions/$sub/activate", token, "", expected = 200)
+        return sub
+    }
+
+    /** Akun PPPoE pada sebuah BRAS untuk sebuah langganan; kembalikan username-nya. */
+    private fun provisionPppoe(token: String, subscriptionId: String, nasId: String): String {
+        val planId = idOf(
+            post(
+                "/api/bng/plans", token,
+                """{"name":"Home 20/10 ${uniq()}","description":null,"downMbps":20,"upMbps":10,"radiusProfileName":"prof-20"}""",
+            ),
+        )
+        val username = "pppoe${uniq()}"
+        post(
+            "/api/bng/access", token,
+            """{"subscriptionId":"$subscriptionId","username":"$username","secret":"rahasia123","rateProfileId":"$planId","nasId":"$nasId"}""",
+        )
+        return username
+    }
+
+    private fun registerNas(token: String, name: String): String =
+        idOf(
+            post(
+                "/api/bng/nas", token,
+                """{"name":"$name","vendor":"MIKROTIK","address":"10.0.0.1","nasIdentifier":"$name","coaSecret":null,"collectorId":null}""",
+            ),
+        )
+
+    /** BRAS melaporkan satu sesi PPPoE hidup lewat gerbang collector. */
+    private fun reportBngSession(apiKey: String, nasId: String, username: String) {
+        val reading = """{"username":"$username","online":true,"framedIp":"10.20.30.40","nasIp":"10.0.0.1",
+            "sessionId":"sess-1","callingStationId":"AA:BB:CC:DD:EE:FF","uptimeSeconds":3600,
+            "inOctets":500000000,"outOctets":1000000000}"""
+        mockMvc.perform(
+            post("/api/collector/bng-sessions").header(CollectorProtocol.API_KEY_HEADER, apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"batchId":"b-${uniq()}","nasId":"$nasId","collectedAt":"${Instant.now()}","sessions":[$reading]}"""),
+        ).andExpect(status().isOk)
+    }
+
     @Test
     fun `satu port ODP hanya boleh ditempati satu ONU`() {
         val token = newTenantAdmin("port")
@@ -251,6 +303,45 @@ class NetworkEndToEndIT {
         // Dua tingkat splitter 1:8 => 2 x 10,5 dB, ditambah redaman serat.
         assertThat(JsonPath.read<Double>(json, "$.upstream.splitterLossDb")).isEqualTo(21.0)
         assertThat(JsonPath.read<Double>(json, "$.estimatedLossDb")).isGreaterThan(21.0)
+        // Tanpa akun PPPoE: hop BRAS tak muncul dan blok bras kosong.
+        assertThat(JsonPath.read<List<String>>(json, "$.hops[*].kind")).doesNotContain("BRAS")
+        assertThat(JsonPath.read<Any?>(json, "$.bras")).isNull()
+    }
+
+    @Test
+    fun `telusur jalur diperkaya hop BRAS di puncak dan Rx optik hidup pada ONT`() {
+        val token = newTenantAdmin("trace-bras")
+        val apiKey = newCollector(token)
+        val odp = buildChain(token, capacity = 8)
+        val sub = attachSub(token, odp, port = 1)
+
+        // Identitas jaringan: langganan aktif + akun PPPoE pada sebuah BRAS.
+        val subscription = activateSubscription(token, sub.customerId)
+        val nasId = registerNas(token, "BRAS-Trace")
+        val username = provisionPppoe(token, subscription, nasId)
+
+        // BRAS melapor sesi hidup, OLT melapor Rx optik — dua sumber berbeda dipertemukan.
+        reportBngSession(apiKey, nasId, username)
+        sendMetrics(apiKey, reading(sub.serial, "ONLINE", -21.5))
+
+        val json = getJson("/api/gis/trace/customers/${sub.customerId}", token)
+
+        // Hop BRAS berada di puncak jalur, tepat di atas SITE.
+        assertThat(JsonPath.read<List<String>>(json, "$.hops[*].kind"))
+            .containsExactly("CUSTOMER", "ODP", "ODC", "PON_PORT", "OLT", "SITE", "BRAS")
+        assertThat(JsonPath.read<List<Boolean>>(json, "$.hops[?(@.kind=='BRAS')].online")).containsExactly(true)
+
+        // Blok BRAS terstruktur: sesi online, IP framed, NAS teresolusi ke namanya.
+        assertThat(JsonPath.read<Boolean>(json, "$.bras.online")).isTrue()
+        assertThat(JsonPath.read<String>(json, "$.bras.username")).isEqualTo(username)
+        assertThat(JsonPath.read<String>(json, "$.bras.framedIp")).isEqualTo("10.20.30.40")
+        assertThat(JsonPath.read<String>(json, "$.bras.nasName")).isEqualTo("BRAS-Trace")
+
+        // Bacaan optik HIDUP menempel pada simpul ONT (beda dari redaman baseline instalasi).
+        assertThat(JsonPath.read<String>(json, "$.liveOnuStatus")).isEqualTo("ONLINE")
+        assertThat(JsonPath.read<Double>(json, "$.liveRxPowerDbm")).isEqualTo(-21.5)
+        assertThat(JsonPath.read<List<String>>(json, "$.hops[?(@.kind=='CUSTOMER')].detail").first())
+            .contains("Rx").contains("-21.5")
     }
 
     @Test

@@ -1,5 +1,7 @@
 package com.duluin.ftth.gis.application.service
 
+import com.duluin.ftth.bng.BngApi
+import com.duluin.ftth.bng.SubscriberSessionRef
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.security.CurrentUserProvider
@@ -9,6 +11,7 @@ import com.duluin.ftth.customer.CustomerRef
 import com.duluin.ftth.customer.OdpOccupant
 import com.duluin.ftth.gis.application.port.inbound.AffectedCustomer
 import com.duluin.ftth.gis.application.port.inbound.BlastRadiusView
+import com.duluin.ftth.gis.application.port.inbound.BrasHopView
 import com.duluin.ftth.gis.application.port.inbound.CableCutView
 import com.duluin.ftth.gis.application.port.inbound.CustomerTrace
 import com.duluin.ftth.gis.application.port.inbound.ImpactCause
@@ -27,10 +30,12 @@ import com.duluin.ftth.gis.application.port.inbound.UtilizationHeatmap
 import com.duluin.ftth.gis.application.port.inbound.TraceHop
 import com.duluin.ftth.gis.application.port.inbound.UpstreamView
 import com.duluin.ftth.monitoring.MonitoringApi
+import com.duluin.ftth.monitoring.OnuLiveMetric
 import com.duluin.ftth.network.NetworkApi
 import com.duluin.ftth.network.UpstreamPath
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.Locale
 import java.util.UUID
 import kotlin.math.roundToInt
 
@@ -40,6 +45,7 @@ class MapService(
     private val networkApi: NetworkApi,
     private val customerApi: CustomerApi,
     private val monitoringApi: MonitoringApi,
+    private val bngApi: BngApi,
     private val currentUser: CurrentUserProvider,
 ) : MapQuery {
 
@@ -86,6 +92,11 @@ class MapService(
 
         val placement = customerApi.findPlacementOf(customerId)
         val upstream = placement?.let { networkApi.upstreamOf(it.odpId) }
+        // Bacaan optik HIDUP ONU pelanggan (beda dari redaman baseline saat instalasi);
+        // null bila ONU belum terpasang atau belum pernah terbaca monitoring.
+        val live = placement?.let { monitoringApi.latestMetricsByOnuIds(setOf(it.onuId))[it.onuId] }
+        // Identitas jaringan + sesi PPPoE terkini — puncak jalur, di atas OLT.
+        val bras = bngApi.findSubscriberSession(customerId)
 
         return CustomerTrace(
             customerId = customer.id,
@@ -99,7 +110,11 @@ class MapService(
             odpPortNumber = placement?.portNumber,
             upstream = upstream?.toView(),
             estimatedLossDb = upstream?.let { estimateLoss(it, customer.location) },
-            hops = buildHops(customer.location, upstream),
+            bras = bras?.toHopView(),
+            liveOnuStatus = live?.status,
+            liveRxPowerDbm = live?.rxPowerDbm,
+            distanceMeters = live?.distanceMeters,
+            hops = buildHops(customer.location, upstream, bras, live),
         )
     }
 
@@ -428,14 +443,78 @@ class MapService(
         return upstream.splitterLossDb + distanceKm * FIBER_LOSS_DB_PER_KM
     }
 
-    private fun buildHops(customerLocation: Coordinate, upstream: UpstreamPath?): List<TraceHop> = buildList {
-        add(TraceHop("CUSTOMER", "", "Rumah pelanggan", customerLocation))
-        upstream ?: return@buildList
-        add(TraceHop("ODP", upstream.odp.code, upstream.odp.name, upstream.odp.location))
-        upstream.odc?.let { add(TraceHop("ODC", it.code, it.name, null)) }
-        upstream.ponPort?.let { add(TraceHop("PON_PORT", it.code, it.name, null)) }
-        upstream.olt?.let { add(TraceHop("OLT", it.code, it.name, null)) }
-        upstream.site?.let { add(TraceHop("SITE", it.code, it.name, null)) }
+    /**
+     * Merangkai simpul jalur dari ONT (rumah) ke hulu sampai BRAS. Simpul BRAS
+     * ditambahkan di puncak walau hulu fisik kosong — pelanggan bisa saja sudah
+     * punya akun PPPoE sebelum ONU-nya terpasang, dan sesi itu tetap layak dilihat.
+     */
+    private fun buildHops(
+        customerLocation: Coordinate,
+        upstream: UpstreamPath?,
+        bras: SubscriberSessionRef?,
+        live: OnuLiveMetric?,
+    ): List<TraceHop> = buildList {
+        add(TraceHop("CUSTOMER", "", "Rumah pelanggan", customerLocation, detail = customerDetail(live)))
+        upstream?.let { up ->
+            add(TraceHop("ODP", up.odp.code, up.odp.name, up.odp.location))
+            up.odc?.let { add(TraceHop("ODC", it.code, it.name, null)) }
+            up.ponPort?.let { add(TraceHop("PON_PORT", it.code, it.name, null)) }
+            up.olt?.let { add(TraceHop("OLT", it.code, it.name, null)) }
+            up.site?.let { add(TraceHop("SITE", it.code, it.name, null)) }
+        }
+        bras?.let {
+            add(
+                TraceHop(
+                    kind = "BRAS",
+                    code = it.nasName ?: "BRAS",
+                    name = it.username,
+                    location = null,
+                    online = it.online,
+                    detail = brasDetail(it),
+                ),
+            )
+        }
+    }
+
+    /** Ringkasan bacaan optik hidup untuk badge simpul ONT; null bila belum terbaca. */
+    private fun customerDetail(live: OnuLiveMetric?): String? {
+        live ?: return null
+        return buildString {
+            append(live.status)
+            live.rxPowerDbm?.let { append(" · Rx ${formatDbm(it)}") }
+            live.distanceMeters?.let { append(" · $it m") }
+        }
+    }
+
+    /** Ringkasan sesi PPPoE untuk badge simpul BRAS. */
+    private fun brasDetail(bras: SubscriberSessionRef): String = buildString {
+        append(if (bras.online) "Online" else "Offline")
+        bras.framedIp?.let { append(" · $it") }
+        bras.uptimeSeconds?.takeIf { bras.online }?.let { append(" · uptime ${formatUptime(it)}") }
+        bras.rateProfileName?.let { append(" · $it") }
+    }
+
+    private fun SubscriberSessionRef.toHopView() = BrasHopView(
+        username = username,
+        accessStatus = accessStatus,
+        rateProfileName = rateProfileName,
+        online = online,
+        framedIp = framedIp,
+        nasName = nasName,
+        nasIp = nasIp,
+        uptimeSeconds = uptimeSeconds,
+    )
+
+    private fun formatDbm(dbm: Double): String = String.format(Locale.US, "%.1f dBm", dbm)
+
+    private fun formatUptime(seconds: Long): String {
+        val hours = seconds / 3600
+        val minutes = (seconds % 3600) / 60
+        return when {
+            hours > 0 -> "${hours}j ${minutes}m"
+            minutes > 0 -> "${minutes}m"
+            else -> "${seconds}d"
+        }
     }
 
     private fun percentage(used: Int, total: Int): Int =

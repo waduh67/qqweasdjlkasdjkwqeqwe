@@ -65,6 +65,7 @@ class CustomerApiService(
             .firstOrNull { it.attached }
             ?.let { onu ->
                 CustomerPlacement(
+                    onuId = onu.id,
                     odpId = onu.odpId!!,
                     portNumber = onu.odpPortNumber!!,
                     onuSerialNumber = onu.serialNumber,
