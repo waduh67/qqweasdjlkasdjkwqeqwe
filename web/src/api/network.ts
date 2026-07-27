@@ -184,6 +184,22 @@ export interface TraceHop {
   code: string
   name: string
   location: Coordinate | null
+  /** Khusus hop BRAS: apakah sesi sedang online. `null` untuk hop non-BRAS. */
+  online: boolean | null
+  /** Keterangan inline siap-tampil (mis. "IP 100.64.0.5 · uptime 2j", "Rx −21.4 dBm"). */
+  detail: string | null
+}
+
+/** Hop BRAS: identitas jaringan pelanggan (akun PPPoE) + keadaan sesi terkininya. */
+export interface BrasHopView {
+  username: string
+  accessStatus: string
+  rateProfileName: string | null
+  online: boolean
+  framedIp: string | null
+  nasName: string | null
+  nasIp: string | null
+  uptimeSeconds: number | null
 }
 
 export interface CustomerTrace {
@@ -198,6 +214,12 @@ export interface CustomerTrace {
   odpPortNumber: number | null
   upstream: UpstreamView | null
   estimatedLossDb: number | null
+  /** Puncak jalur (tempat sesi PPPoE ditutup, di atas OLT); `null` bila belum diprovisi PPPoE. */
+  bras: BrasHopView | null
+  /** Bacaan optik HIDUP ONU pelanggan dari monitoring; `null` bila belum pernah terbaca. */
+  liveOnuStatus: OnuStatus | null
+  liveRxPowerDbm: number | null
+  distanceMeters: number | null
   hops: TraceHop[]
 }
 

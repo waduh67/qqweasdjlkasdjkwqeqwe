@@ -1643,13 +1643,15 @@ function AffectedRow({ c }: { c: AffectedCustomer }) {
 }
 
 const HOP_LABEL: Record<string, string> = {
-  CUSTOMER: 'Pelanggan',
+  CUSTOMER: 'ONT / Pelanggan',
   ONU: 'ONU',
-  ODP: 'ODP',
-  ODC: 'ODC',
+  ODP: 'ODP (FAT)',
+  ODC: 'ODC (FDT)',
   OLT: 'OLT',
   PON: 'PON',
+  PON_PORT: 'PON',
   SITE: 'Site/POP',
+  BRAS: 'BRAS',
 }
 
 /**
@@ -1676,7 +1678,10 @@ function CustomerTracePanel({ trace, onClose }: { trace: CustomerTrace; onClose:
         {trace.odpPortNumber != null && <span className="badge">port {trace.odpPortNumber}</span>}
       </div>
 
-      {(trace.installRxPowerDbm != null || trace.opticalHealth || trace.estimatedLossDb != null) && (
+      {(trace.installRxPowerDbm != null ||
+        trace.opticalHealth ||
+        trace.liveRxPowerDbm != null ||
+        trace.estimatedLossDb != null) && (
         <div className="row wrap" style={{ gap: '0.4rem', alignItems: 'center' }}>
           {trace.installRxPowerDbm != null && (
             <span style={{ color: HEALTH_COLOR[trace.opticalHealth ?? 'UNKNOWN'], fontWeight: 600 }}>
@@ -1686,11 +1691,32 @@ function CustomerTracePanel({ trace, onClose }: { trace: CustomerTrace; onClose:
           {trace.opticalHealth && trace.installRxPowerDbm == null && (
             <span style={{ color: HEALTH_COLOR[trace.opticalHealth], fontWeight: 600 }}>{trace.opticalHealth}</span>
           )}
+          {trace.liveRxPowerDbm != null && (
+            <span className="muted" style={{ fontSize: '0.82rem' }}>
+              Rx hidup <span className="tnum">{trace.liveRxPowerDbm.toFixed(1)} dBm</span>
+              {trace.distanceMeters != null && ` · ${trace.distanceMeters} m`}
+            </span>
+          )}
           {trace.estimatedLossDb != null && (
             <span className="muted" style={{ fontSize: '0.82rem' }}>
               perkiraan rugi total {trace.estimatedLossDb.toFixed(1)} dB
             </span>
           )}
+        </div>
+      )}
+
+      {trace.bras && (
+        <div>
+          <strong>BRAS / sesi PPPoE</strong>
+          <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', lineHeight: 1.6 }}>
+            <span style={{ color: trace.bras.online ? 'var(--good-ink)' : 'var(--critical-ink)', fontWeight: 600 }}>
+              {trace.bras.online ? 'Online' : 'Offline'}
+            </span>{' '}
+            · {trace.bras.username}
+            {trace.bras.framedIp && <> · IP <span className="tnum">{trace.bras.framedIp}</span></>}
+            {trace.bras.nasName && ` · ${trace.bras.nasName}`}
+            {trace.bras.rateProfileName && ` · ${trace.bras.rateProfileName}`}
+          </p>
         </div>
       )}
 
@@ -1708,19 +1734,28 @@ function CustomerTracePanel({ trace, onClose }: { trace: CustomerTrace; onClose:
         <div>
           <strong>Telusur jalur ({trace.hops.length})</strong>
           <ol className="timeline" style={{ marginTop: '0.5rem' }}>
-            {trace.hops.map((hop: TraceHop, i: number) => (
-              <li key={`${hop.kind}-${hop.code}-${i}`}>
-                <span className="tl-dot" aria-hidden="true" />
-                <div className="stack" style={{ gap: '0.1rem' }}>
-                  <strong style={{ fontSize: '0.85rem' }}>
-                    {HOP_LABEL[hop.kind] ?? hop.kind} {hop.code}
-                  </strong>
-                  <span className="muted" style={{ fontSize: '0.8rem' }}>
-                    {hop.name}
-                  </span>
-                </div>
-              </li>
-            ))}
+            {trace.hops.map((hop: TraceHop, i: number) => {
+              const hopColor =
+                hop.online == null ? undefined : hop.online ? 'var(--good-ink)' : 'var(--critical-ink)'
+              return (
+                <li key={`${hop.kind}-${hop.code}-${i}`}>
+                  <span className="tl-dot" aria-hidden="true" style={hopColor ? { background: hopColor } : undefined} />
+                  <div className="stack" style={{ gap: '0.1rem' }}>
+                    <strong style={{ fontSize: '0.85rem', color: hopColor }}>
+                      {HOP_LABEL[hop.kind] ?? hop.kind} {hop.code}
+                    </strong>
+                    <span className="muted" style={{ fontSize: '0.8rem' }}>
+                      {hop.name}
+                    </span>
+                    {hop.detail && (
+                      <span className="muted tnum" style={{ fontSize: '0.78rem' }}>
+                        {hop.detail}
+                      </span>
+                    )}
+                  </div>
+                </li>
+              )
+            })}
           </ol>
         </div>
       )}

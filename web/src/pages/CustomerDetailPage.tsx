@@ -434,14 +434,38 @@ function OnuManager({
 
 /* ---------- Tab: Jalur (topologi hulu + anggaran redaman) ---------- */
 
+/** Label lapangan tiap simpul jalur: RADIUS→BRAS→OLT→FDT→FAT→ONT. */
+const HOP_LABEL: Record<string, string> = {
+  CUSTOMER: 'ONT',
+  ODP: 'FAT',
+  ODC: 'FDT',
+  PON_PORT: 'PON',
+  OLT: 'OLT',
+  SITE: 'POP',
+  BRAS: 'BRAS',
+}
+
+/** Durasi ringkas dari detik uptime sesi, mis. "2j 5m" / "5m" / "40d". */
+function fmtUptime(seconds: number | null): string {
+  if (seconds == null) return ''
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  if (h > 0) return `${h}j ${m}m`
+  if (m > 0) return `${m}m`
+  return `${seconds}d`
+}
+
 function JalurTab({ trace, connected }: { trace: CustomerTrace | null; connected: boolean }) {
-  if (!trace || !connected) {
+  // Pelanggan tanpa ONU terpasang tetap bisa punya identitas jaringan (akun PPPoE);
+  // trace-nya sah selama ada, jadi cukup butuh trace — bukan status tersambung fisik.
+  if (!trace) {
     return (
       <div className="card">
         <p className="muted" style={{ margin: 0 }}>Pelanggan ini belum tersambung ke jaringan.</p>
       </div>
     )
   }
+  const bras = trace.bras
   return (
     <div className="card stack" style={{ gap: '0.75rem' }}>
       <div className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
@@ -449,23 +473,57 @@ function JalurTab({ trace, connected }: { trace: CustomerTrace | null; connected
         <strong style={{ fontSize: '0.95rem' }}>Jalur ke hulu</strong>
       </div>
       <div className="row" style={{ flexWrap: 'wrap', gap: '0.4rem' }}>
-        {trace.hops.map((hop, index) => (
-          <span key={`${hop.kind}-${index}`} className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-            <span className="badge">
-              {hop.kind}
-              {hop.code && ` ${hop.code}`}
+        {trace.hops.map((hop, index) => {
+          // Hop BRAS diwarnai menurut keadaan sesi: hijau online, merah offline.
+          const brasClass = hop.kind === 'BRAS' ? (hop.online ? 'badge good' : 'badge critical') : 'badge'
+          return (
+            <span key={`${hop.kind}-${index}`} className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
+              <span
+                className={brasClass}
+                title={hop.detail ?? undefined}
+                style={{ display: 'inline-flex', flexDirection: 'column', gap: 1, alignItems: 'flex-start' }}
+              >
+                <span>
+                  {HOP_LABEL[hop.kind] ?? hop.kind}
+                  {hop.code && ` ${hop.code}`}
+                </span>
+                {hop.detail && (
+                  <span style={{ fontSize: '0.68rem', opacity: 0.8, fontWeight: 400 }}>{hop.detail}</span>
+                )}
+              </span>
+              {index < trace.hops.length - 1 && <span className="muted">→</span>}
             </span>
-            {index < trace.hops.length - 1 && <span className="muted">→</span>}
-          </span>
-        ))}
+          )
+        })}
       </div>
-      <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-        ONU {trace.onuSerialNumber} · port {trace.odpPortNumber} · redaman terpasang{' '}
-        <span style={{ color: HEALTH_COLOR[trace.opticalHealth ?? 'UNKNOWN'] }}>
-          {trace.installRxPowerDbm != null ? `${trace.installRxPowerDbm} dBm` : '—'}
-        </span>
-        {trace.estimatedLossDb != null && ` · perkiraan rugi jalur ${trace.estimatedLossDb.toFixed(1)} dB`}
-      </p>
+      {connected && (
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          ONU {trace.onuSerialNumber} · port {trace.odpPortNumber} · redaman terpasang{' '}
+          <span style={{ color: HEALTH_COLOR[trace.opticalHealth ?? 'UNKNOWN'] }}>
+            {trace.installRxPowerDbm != null ? `${trace.installRxPowerDbm} dBm` : '—'}
+          </span>
+          {trace.liveRxPowerDbm != null && (
+            <>
+              {' · '}Rx hidup <span className="tnum">{fmtDbm(trace.liveRxPowerDbm)}</span>
+              {trace.distanceMeters != null && ` · ${trace.distanceMeters} m`}
+            </>
+          )}
+          {trace.estimatedLossDb != null && ` · perkiraan rugi jalur ${trace.estimatedLossDb.toFixed(1)} dB`}
+        </p>
+      )}
+      {bras && (
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          BRAS: <strong style={{ fontWeight: 600 }}>{bras.username}</strong>
+          {' · '}
+          <span style={{ color: bras.online ? 'var(--good-ink)' : 'var(--critical-ink)', fontWeight: 600 }}>
+            {bras.online ? 'Online' : 'Offline'}
+          </span>
+          {bras.framedIp && <> · IP <span className="tnum">{bras.framedIp}</span></>}
+          {bras.nasName && ` · ${bras.nasName}`}
+          {bras.online && bras.uptimeSeconds != null && ` · uptime ${fmtUptime(bras.uptimeSeconds)}`}
+          {bras.rateProfileName && ` · ${bras.rateProfileName}`}
+        </p>
+      )}
     </div>
   )
 }
