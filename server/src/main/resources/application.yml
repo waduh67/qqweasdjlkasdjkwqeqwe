@@ -74,3 +74,8 @@ ftth:
     scheduler-interval: PT12H
     # DEV ONLY — override via env di production
     webhook-secret: ${FTTH_BILLING_WEBHOOK_SECRET:dev-only-billing-webhook-secret-change-me}
+  vpn:
+    # Bawaan hub OpenVPN manajemen (dipakai saat pembuatan tanpa nilai eksplisit).
+    default-port: 1194
+    default-protocol: UDP
+    default-tunnel-cidr: 10.8.0.0/24

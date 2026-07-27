@@ -128,6 +128,13 @@ object PermissionCatalog {
         perm("billing.invoice.manage", "Terbitkan/batalkan tagihan")
         perm("billing.payment.manage", "Catat pembayaran manual")
 
+        // VPN (akses remote perangkat via OpenVPN)
+        perm("vpn.server.view", "Lihat server VPN")
+        perm("vpn.server.manage", "Kelola server VPN")
+        perm("vpn.peer.view", "Lihat peer/perangkat VPN")
+        perm("vpn.peer.manage", "Kelola peer/perangkat VPN")
+        perm("vpn.config.view", "Unduh config VPN (.ovpn & RouterOS) berisi kredensial")
+
         // Notification
         perm("notification.template.view", "Lihat template notifikasi")
         perm("notification.template.manage", "Kelola template notifikasi")

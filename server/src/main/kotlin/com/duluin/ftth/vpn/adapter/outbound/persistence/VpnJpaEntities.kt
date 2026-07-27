@@ -1,0 +1,88 @@
+package com.duluin.ftth.vpn.adapter.outbound.persistence
+
+import com.duluin.ftth.common.infrastructure.persistence.TenantAwareJpaEntity
+import com.duluin.ftth.vpn.domain.model.VpnPeerStatus
+import com.duluin.ftth.vpn.domain.model.VpnProtocol
+import com.duluin.ftth.vpn.domain.model.VpnServerStatus
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
+import jakarta.persistence.Table
+import java.time.Instant
+import java.util.UUID
+
+/**
+ * Hub OpenVPN. [caCert]/[tlsAuthKey] disimpan terenkripsi (batas enkripsi di adapter);
+ * kolomnya `text` agar muat PEM sertifikat + ciphertext yang lebih panjang dari plaintext.
+ */
+@Entity
+@Table(name = "vpn_server")
+class VpnServerJpaEntity(
+    id: UUID,
+
+    @Column(nullable = false, length = 100)
+    var name: String,
+
+    @Column(nullable = false, length = 255)
+    var host: String,
+
+    @Column(nullable = false)
+    var port: Int,
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    var protocol: VpnProtocol,
+
+    @Column(name = "tunnel_cidr", nullable = false, length = 64)
+    var tunnelCidr: String,
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    var status: VpnServerStatus,
+
+    @Column(name = "ca_cert", columnDefinition = "text")
+    var caCert: String?,
+
+    @Column(name = "tls_auth_key", columnDefinition = "text")
+    var tlsAuthKey: String?,
+) : TenantAwareJpaEntity(id)
+
+/**
+ * Peer/perangkat yang men-dial hub. Identitas ([serverId], [username], [overlayIp]) tak
+ * berubah setelah dibuat → `updatable = false`. [password] disimpan terenkripsi (batas
+ * enkripsi di adapter). [lastHandshakeAt] dicadangkan untuk liveness kelak.
+ */
+@Entity
+@Table(name = "vpn_peer")
+class VpnPeerJpaEntity(
+    id: UUID,
+
+    @Column(name = "server_id", nullable = false, updatable = false)
+    var serverId: UUID,
+
+    @Column(nullable = false, length = 100)
+    var name: String,
+
+    @Column(nullable = false, length = 64, updatable = false)
+    var username: String,
+
+    @Column(name = "overlay_ip", nullable = false, length = 45, updatable = false)
+    var overlayIp: String,
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    var status: VpnPeerStatus,
+
+    @Column(name = "device_type", length = 60)
+    var deviceType: String?,
+
+    @Column(name = "device_id")
+    var deviceId: UUID?,
+
+    @Column(name = "last_handshake_at")
+    var lastHandshakeAt: Instant?,
+
+    @Column(nullable = false, length = 512)
+    var password: String,
+) : TenantAwareJpaEntity(id)
