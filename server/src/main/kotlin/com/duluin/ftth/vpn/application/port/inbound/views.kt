@@ -5,9 +5,9 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * Proyeksi satu hub VPN untuk UI. [hasCaCert]/[hasTlsAuth] menandai rahasianya sudah
- * diisi TANPA pernah membocorkan nilainya — sertifikat/kunci hanya keluar lewat endpoint
- * unduh config yang berizin terpisah. [serverAddress] diturunkan dari [tunnelCidr].
+ * Proyeksi satu hub VPN (infrastruktur PLATFORM) untuk dashboard admin platform.
+ * [hasCaCert]/[hasTlsAuth] menandai rahasianya sudah diisi TANPA membocorkan nilainya.
+ * [serverAddress] diturunkan dari [tunnelCidr]. [peerCount] = akun terpasang (lintas-tenant).
  */
 data class VpnServerView(
     val id: UUID,
@@ -33,24 +33,36 @@ data class VpnServerView(
 )
 
 /**
- * Proyeksi satu peer/perangkat VPN. Password SENGAJA tidak disertakan — hanya bisa
- * dirotasi, tak pernah dibaca balik lewat pandangan biasa (hanya lewat unduh config).
+ * Proyeksi satu AKUN VPN milik tenant — semua yang perlu ditempel ke Mikrotik. Endpoint
+ * ([host]:[port]/[protocol]) + [securityType] berasal dari hub yang di-auto-assign. [password]
+ * SENGAJA hanya terisi sekali saat generate/rotasi (sekali tampil); pada list/get selalu null
+ * dan hanya bisa diperoleh ulang lewat unduh config.
  */
-data class VpnPeerView(
+data class VpnAccountView(
     val id: UUID,
-    val serverId: UUID,
-    val name: String,
+    val label: String,
+    /** Nama hub yang menampung akun ini (untuk tampilan). */
+    val serverName: String,
+    /** Alamat publik yang di-dial Mikrotik. */
+    val host: String,
+    val port: Int,
+    val protocol: String,
+    /** Cipher tunnel (mis. AES-256-GCM). */
+    val cipher: String,
+    /** Ringkasan tipe keamanan siap-tampil (mis. "OpenVPN (UDP) · AES-256-GCM"). */
+    val securityType: String,
     val username: String,
+    /** IP overlay tetap yang di-push server — alamat perangkat di dalam tunnel. */
     val overlayIp: String,
     val status: String,
-    val deviceType: String?,
-    val deviceId: UUID?,
     val lastHandshakeAt: Instant?,
+    /** Sekali tampil saat generate/rotasi; null pada list/get. */
+    val password: String? = null,
 )
 
 /**
  * Konfigurasi server OpenVPN siap-pakai: [serverConf] adalah isi `server.conf`, dan [ccd]
- * memetakan username peter → baris client-config-dir (`ifconfig-push ...`) yang mengunci IP
+ * memetakan username peer → baris client-config-dir (`ifconfig-push ...`) yang mengunci IP
  * overlay tiap peer aktif.
  */
 data class ServerConfigView(
@@ -75,9 +87,12 @@ data class UpdateVpnServerCommand(
     val protocol: VpnProtocol,
 )
 
-/** [username] null/blank = diturunkan otomatis dari [name] dan dijamin unik per server. */
-data class CreateVpnPeerCommand(
-    val name: String,
+/**
+ * Generate akun VPN untuk tenant: hub dipilih otomatis (auto-assign). [label] kosong =
+ * diberi nama default. [username] null/blank = diturunkan dari label & dijamin unik per hub.
+ */
+data class GenerateVpnAccountCommand(
+    val label: String?,
     val deviceType: String?,
     val deviceId: UUID?,
     val username: String?,

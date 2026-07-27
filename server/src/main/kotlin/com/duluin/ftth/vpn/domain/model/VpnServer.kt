@@ -11,17 +11,19 @@ enum class VpnProtocol { UDP, TCP }
 enum class VpnServerStatus { ACTIVE, DISABLED }
 
 /**
- * Hub OpenVPN manajemen yang dijalankan operator — perangkat tanpa IP publik men-dial
- * ke sini dan memperoleh IP overlay tetap yang bisa di-Winbox/SSH operator.
+ * Hub OpenVPN yang dijalankan PLATFORM (operator SaaS) di VPS ber-IP publik — bukan milik
+ * tenant. Beberapa hub bisa berdampingan; tenant tinggal men-generate akun dan sistem
+ * menautkannya ke salah satu hub yang tersedia. Perangkat tenant men-dial ke sini dan
+ * memperoleh IP overlay tetap yang bisa di-Winbox/SSH.
  *
  * [caCertPem] (PEM sertifikat CA, wajib untuk membangun config klien) dan [tlsAuthKey]
  * (opsional ta.key) adalah rahasia: plaintext di domain, terenkripsi di batas persistence
  * (cermin secret CoA/SNMP di module lain). [tunnelCidr] menentukan blok overlay tempat
- * peer dialokasikan; alamat network+1 dicadangkan untuk hub sendiri.
+ * peer dialokasikan; alamat network+1 dicadangkan untuk hub sendiri. TANPA tenantId: hub
+ * adalah infrastruktur platform, dikelola hanya di dashboard admin platform.
  */
 class VpnServer private constructor(
     val id: UUID,
-    val tenantId: UUID,
     name: String,
     host: String,
     port: Int,
@@ -116,7 +118,6 @@ class VpnServer private constructor(
 
     companion object {
         fun create(
-            tenantId: UUID,
             name: String,
             host: String,
             port: Int,
@@ -124,7 +125,6 @@ class VpnServer private constructor(
             tunnelCidr: String,
         ): VpnServer = VpnServer(
             id = UuidV7.generate(),
-            tenantId = tenantId,
             name = validateName(name),
             host = validateHost(host),
             port = validatePort(port),
@@ -141,7 +141,6 @@ class VpnServer private constructor(
         @Suppress("LongParameterList")
         fun rehydrate(
             id: UUID,
-            tenantId: UUID,
             name: String,
             host: String,
             port: Int,
@@ -154,7 +153,7 @@ class VpnServer private constructor(
             serverCertPem: String?,
             serverKeyPem: String?,
         ): VpnServer = VpnServer(
-            id, tenantId, name, host, port, protocol, tunnelCidr, status,
+            id, name, host, port, protocol, tunnelCidr, status,
             caCertPem, tlsAuthKey, caKeyPem, serverCertPem, serverKeyPem,
         )
 

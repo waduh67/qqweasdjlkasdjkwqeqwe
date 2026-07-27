@@ -1,6 +1,5 @@
 package com.duluin.ftth.vpn
 
-import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.vpn.application.service.VpnConfigRenderer
 import com.duluin.ftth.vpn.domain.model.VpnProtocol
@@ -15,7 +14,6 @@ class VpnInstallScriptTest {
     private val renderer = VpnConfigRenderer()
 
     private fun readyServer(): VpnServer = VpnServer.create(
-        tenantId = UuidV7.generate(),
         name = "Hub Utama",
         host = "vpn.example.com",
         port = 1194,
@@ -57,7 +55,6 @@ class VpnInstallScriptTest {
     @Test
     fun `installer menolak hub yang PKI-nya belum siap`() {
         val notReady = VpnServer.create(
-            tenantId = UuidV7.generate(),
             name = "Hub Baru",
             host = "vpn2.example.com",
             port = 1194,

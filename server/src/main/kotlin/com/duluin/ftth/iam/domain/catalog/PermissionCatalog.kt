@@ -128,11 +128,11 @@ object PermissionCatalog {
         perm("billing.invoice.manage", "Terbitkan/batalkan tagihan")
         perm("billing.payment.manage", "Catat pembayaran manual")
 
-        // VPN (akses remote perangkat via OpenVPN)
-        perm("vpn.server.view", "Lihat server VPN")
-        perm("vpn.server.manage", "Kelola server VPN")
-        perm("vpn.peer.view", "Lihat peer/perangkat VPN")
-        perm("vpn.peer.manage", "Kelola peer/perangkat VPN")
+        // VPN — hub/server adalah infrastruktur PLATFORM (dikelola admin platform), akun milik tenant
+        platform("vpn.server.view", "Lihat server VPN platform")
+        platform("vpn.server.manage", "Kelola server VPN platform")
+        perm("vpn.peer.view", "Lihat akun VPN")
+        perm("vpn.peer.manage", "Generate & kelola akun VPN")
         perm("vpn.config.view", "Unduh config VPN (.ovpn & RouterOS) berisi kredensial")
 
         // Notification

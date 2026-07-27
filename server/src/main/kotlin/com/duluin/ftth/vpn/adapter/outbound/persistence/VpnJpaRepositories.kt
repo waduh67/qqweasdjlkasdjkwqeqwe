@@ -1,5 +1,6 @@
 package com.duluin.ftth.vpn.adapter.outbound.persistence
 
+import com.duluin.ftth.vpn.domain.model.VpnServerStatus
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
@@ -8,9 +9,11 @@ import java.util.UUID
 
 interface VpnServerJpaRepository : JpaRepository<VpnServerJpaEntity, UUID> {
     fun findAllByOrderByNameAsc(): List<VpnServerJpaEntity>
+    fun findByStatusOrderByNameAsc(status: VpnServerStatus): List<VpnServerJpaEntity>
 }
 
 interface VpnPeerJpaRepository : JpaRepository<VpnPeerJpaEntity, UUID> {
+    fun findByTenantIdOrderByNameAsc(tenantId: UUID): List<VpnPeerJpaEntity>
     fun findByServerIdOrderByOverlayIpAsc(serverId: UUID): List<VpnPeerJpaEntity>
     fun findByServerIdAndUsername(serverId: UUID, username: String): VpnPeerJpaEntity?
     fun existsByServerIdAndUsername(serverId: UUID, username: String): Boolean

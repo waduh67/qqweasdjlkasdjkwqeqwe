@@ -3,8 +3,8 @@ package com.duluin.ftth.vpn.application.port.outbound
 import com.duluin.ftth.vpn.domain.model.VpnNodeToken
 import java.util.UUID
 
-/** Rujukan ringkas hasil resolusi token node: cukup untuk memasang tenant lalu memuat hub. */
-data class VpnNodeRef(val serverId: UUID, val tenantId: UUID)
+/** Rujukan ringkas hasil resolusi token node: hub yang dituju (peer di-resolve dari username). */
+data class VpnNodeRef(val serverId: UUID)
 
 /**
  * Port persistence token node. Tabelnya SENGAJA tanpa RLS/@TenantId (cermin collector):

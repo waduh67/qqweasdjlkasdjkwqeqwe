@@ -1,37 +1,26 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError } from '../api/client'
 import {
-  createPeer,
-  createServer,
-  deletePeer,
-  deleteServer,
-  disablePeer,
-  downloadPeerOvpn,
-  downloadPeerRouterOs,
-  enablePeer,
-  listPeers,
-  listServers,
-  regenerateToken,
-  rotatePeerPassword,
-  updateServer,
-  type CreateVpnServerRequest,
-  type UpdateVpnServerRequest,
-  type VpnPeerView,
-  type VpnProtocol,
-  type VpnServerView,
+  deleteAccount,
+  disableAccount,
+  downloadAccountOvpn,
+  downloadAccountRouterOs,
+  enableAccount,
+  generateAccount,
+  listAccounts,
+  rotateAccountPassword,
+  type VpnAccountView,
 } from '../api/vpn'
 import { useCan } from '../auth/useCan'
 import { EmptyState, useToast } from '../components/ui'
 import { IconAlert, IconPlus } from '../components/icons'
 
 /**
- * VPN back-haul: remote Mikrotik & perangkat tanpa IP publik lewat hub OpenVPN.
- *
- * Alur "matang": buat hub (aplikasi jadi CA-nya sendiri) → jalankan perintah pasang
- * SEKALI di VPS → tambah perangkat. Verifikasi user/pass & IP overlay berjalan otomatis
- * lewat callback aplikasi, jadi tak ada langkah teknis manual di VPS setelah pasang.
- * Rahasia tak pernah dibaca balik: token node & perintah pasang hanya tampil sekali
- * (saat buat/rotasi), password perangkat hanya keluar lewat unduh .ovpn/RouterOS.
+ * Akun VPN (tenant). Alur unggulan satu klik: tekan Generate → sistem meng-AUTO-ASSIGN akun
+ * ke server VPN platform yang tersedia dan menampilkan kredensial siap tempel ke Mikrotik
+ * (host:port, protokol, tipe keamanan, username, password). Tenant tak pernah memilih/melihat
+ * server — itu urusan admin platform. Password hanya tampil sekali (saat generate/rotasi) atau
+ * lewat unduh .ovpn/RouterOS.
  */
 
 /** Hook pemuat daftar bersama untuk endpoint yang mengembalikan array polos. */
@@ -92,107 +81,79 @@ function fmtWhen(iso: string | null): string {
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })
 }
 
-type ServerDraft = {
-  id: string | null
-  name: string
-  host: string
-  port: string
-  protocol: VpnProtocol
-  tunnelCidr: string
-}
-
-const EMPTY_SERVER: ServerDraft = { id: null, name: '', host: '', port: '1194', protocol: 'UDP', tunnelCidr: '10.8.0.0/24' }
-
 export function VpnPage() {
   const { can } = useCan()
-  const canManage = can('vpn.server.manage')
-  const { items: servers, loading, run, reload } = useResource(listServers)
+  const canManage = can('vpn.peer.manage')
+  const canConfig = can('vpn.config.view')
+  const toast = useToast()
+  const { items: accounts, loading, run } = useResource(listAccounts)
 
-  const [draft, setDraft] = useState<ServerDraft | null>(null)
-  // Token node + perintah pasang hanya tampil sekali (setelah buat/rotasi).
-  const [secret, setSecret] = useState<VpnServerView | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [label, setLabel] = useState('')
+  const [busy, setBusy] = useState(false)
+  // Kredensial (dengan password) hanya tampil sekali — setelah generate/rotasi.
+  const [fresh, setFresh] = useState<VpnAccountView | null>(null)
 
-  const selected = servers.find((s) => s.id === selectedId) ?? null
-
-  const edit = (server: VpnServerView) =>
-    setDraft({
-      id: server.id,
-      name: server.name,
-      host: server.host,
-      port: String(server.port),
-      protocol: server.protocol,
-      tunnelCidr: server.tunnelCidr,
-    })
-
-  const save = () => {
-    if (!draft) return
+  const generate = () => {
+    setBusy(true)
     void run(async () => {
-      if (draft.id) {
-        const body: UpdateVpnServerRequest = {
-          name: draft.name,
-          host: draft.host,
-          port: Number(draft.port) || 1194,
-          protocol: draft.protocol,
-        }
-        await updateServer(draft.id, body)
-      } else {
-        const body: CreateVpnServerRequest = {
-          name: draft.name,
-          host: draft.host,
-          port: draft.port ? Number(draft.port) : null,
-          protocol: draft.protocol,
-          tunnelCidr: draft.tunnelCidr || null,
-        }
-        setSecret(await createServer(body))
-      }
-      setDraft(null)
-    }, draft.id ? 'Hub diperbarui' : 'Hub dibuat — jalankan perintah pasang di VPS')
+      const account = await generateAccount({ label: label.trim() || null })
+      setFresh(account)
+      setLabel('')
+    }, 'Akun VPN dibuat — salin kredensial di bawah').finally(() => setBusy(false))
   }
 
-  const regenerate = (server: VpnServerView) => {
-    if (
-      !window.confirm(
-        `Rotasi token pasang untuk “${server.name}”? Perintah/token lama langsung tak berlaku dan VPS perlu dipasang ulang dengan yang baru.`,
-      )
+  const toggle = (a: VpnAccountView) =>
+    void run(
+      () => (a.status === 'ENABLED' ? disableAccount(a.id) : enableAccount(a.id)),
+      a.status === 'ENABLED' ? 'Akun dinonaktifkan' : 'Akun diaktifkan',
     )
+
+  const rotate = (a: VpnAccountView) => {
+    if (!window.confirm(`Rotasi password “${a.label}”? Password lama langsung tak berlaku — perbarui di Mikrotik.`))
       return
     void run(async () => {
-      setSecret(await regenerateToken(server.id))
-    }, 'Token pasang dirotasi')
+      setFresh(await rotateAccountPassword(a.id))
+    }, 'Password dirotasi — salin yang baru di bawah')
   }
 
-  const remove = (server: VpnServerView) => {
-    if (!window.confirm(`Hapus hub “${server.name}”? Ditolak bila masih punya perangkat.`)) return
-    void run(async () => {
-      await deleteServer(server.id)
-      if (selectedId === server.id) setSelectedId(null)
-    }, 'Hub dihapus')
+  const remove = (a: VpnAccountView) => {
+    if (!window.confirm(`Hapus akun “${a.label}”? Koneksi Mikrotik dengan akun ini akan putus.`)) return
+    void run(() => deleteAccount(a.id), 'Akun dihapus')
   }
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
       <div>
-        <h1 className="page-title">VPN Back-haul</h1>
+        <h1 className="page-title">Akun VPN</h1>
         <p className="page-sub">
-          Remote Mikrotik &amp; perangkat tanpa IP publik lewat hub OpenVPN. Buat hub, jalankan perintah
-          pasang sekali di VPS, lalu tambah perangkat — verifikasi user &amp; IP overlay berjalan otomatis
-          lewat callback aplikasi.
+          Butuh remote Mikrotik tanpa IP publik? Cukup <strong>Generate akun</strong> — sistem memilih server VPN
+          otomatis dan memberi Anda host, port, tipe keamanan, username &amp; password siap tempel di Mikrotik.
         </p>
       </div>
 
-      <div className="spread">
-        <span className="muted">{servers.length} hub</span>
-        {canManage && (
-          <button className="primary" onClick={() => setDraft({ ...EMPTY_SERVER })}>
-            <IconPlus size={15} /> Tambah hub
-          </button>
-        )}
-      </div>
+      {canManage && (
+        <div className="card stack" style={{ gap: '0.75rem' }}>
+          <div className="row" style={{ alignItems: 'flex-end' }}>
+            <label style={{ flex: 1 }}>
+              <span>Label (opsional)</span>
+              <input
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !busy && generate()}
+                placeholder="mis. Mikrotik Bekasi"
+              />
+            </label>
+            <button className="primary" onClick={generate} disabled={busy}>
+              <IconPlus size={15} /> {busy ? 'Membuat…' : 'Generate akun'}
+            </button>
+          </div>
+          <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+            Server dipilih otomatis. Password hanya tampil sekali setelah dibuat — salin atau unduh config-nya.
+          </p>
+        </div>
+      )}
 
-      {secret && <InstallSecretCard server={secret} onDismiss={() => setSecret(null)} />}
-
-      {draft && <ServerForm draft={draft} setDraft={setDraft} onSave={save} onCancel={() => setDraft(null)} />}
+      {fresh && <CredentialCard account={fresh} onDismiss={() => setFresh(null)} />}
 
       {loading ? (
         <div className="card">
@@ -200,68 +161,72 @@ export function VpnPage() {
             Memuat…
           </p>
         </div>
-      ) : servers.length === 0 ? (
+      ) : accounts.length === 0 ? (
         <div className="card">
-          <EmptyState title="Belum ada hub" hint="Buat hub, lalu jalankan perintah pasang sekali di VPS." />
+          <EmptyState
+            title="Belum ada akun VPN"
+            hint={canManage ? 'Tekan “Generate akun” untuk membuat yang pertama.' : 'Belum ada akun untuk ditampilkan.'}
+          />
         </div>
       ) : (
         <div className="card">
           <table>
             <thead>
               <tr>
-                <th>Hub</th>
+                <th>Label</th>
+                <th>Server</th>
                 <th>Titik dial</th>
-                <th>Subnet overlay</th>
-                <th>Perangkat</th>
-                <th>PKI</th>
+                <th>Username</th>
+                <th>IP overlay</th>
+                <th>Status</th>
+                <th>Handshake terakhir</th>
                 <th />
               </tr>
             </thead>
             <tbody>
-              {servers.map((server) => (
-                <tr
-                  key={server.id}
-                  style={server.id === selectedId ? { background: 'color-mix(in srgb, var(--accent) 8%, transparent)' } : undefined}
-                >
-                  <td>
-                    {server.name}
-                    <br />
-                    <span
-                      className="badge"
-                      style={{ color: server.status === 'ACTIVE' ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
-                    >
-                      {server.status === 'ACTIVE' ? 'aktif' : 'nonaktif'}
-                    </span>
-                  </td>
+              {accounts.map((a) => (
+                <tr key={a.id}>
+                  <td>{a.label}</td>
+                  <td className="muted">{a.serverName}</td>
                   <td className="muted">
-                    {server.host}:{server.port}
+                    {a.host}:{a.port}
                     <br />
-                    <span style={{ fontSize: '0.8rem' }}>{server.protocol}</span>
+                    <span style={{ fontSize: '0.8rem' }}>{a.protocol}</span>
                   </td>
-                  <td className="muted">
-                    {server.tunnelCidr}
-                    <br />
-                    <span style={{ fontSize: '0.8rem' }}>server {server.serverAddress}</span>
-                  </td>
-                  <td className="tnum">{server.peerCount}</td>
+                  <td className="muted">{a.username}</td>
+                  <td className="tnum">{a.overlayIp}</td>
                   <td>
                     <span
                       className="badge"
-                      style={{ color: server.pkiReady ? 'var(--good-ink)' : 'var(--warning-ink)', fontWeight: 600 }}
+                      style={{ color: a.status === 'ENABLED' ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
                     >
-                      {server.pkiReady ? 'siap' : 'belum'}
+                      {a.status === 'ENABLED' ? 'aktif' : 'nonaktif'}
                     </span>
                   </td>
+                  <td className="muted">{fmtWhen(a.lastHandshakeAt)}</td>
                   <td>
                     <div className="row">
-                      <button onClick={() => setSelectedId(server.id === selectedId ? null : server.id)}>
-                        {server.id === selectedId ? 'Tutup' : 'Kelola perangkat'}
-                      </button>
+                      {canConfig && (
+                        <>
+                          <button
+                            onClick={() =>
+                              void saveBlob(() => downloadAccountRouterOs(a.id), `${a.username}.rsc`, toast.error)
+                            }
+                          >
+                            RouterOS
+                          </button>
+                          <button
+                            onClick={() => void saveBlob(() => downloadAccountOvpn(a.id), `${a.username}.ovpn`, toast.error)}
+                          >
+                            .ovpn
+                          </button>
+                        </>
+                      )}
                       {canManage && (
                         <>
-                          <button onClick={() => regenerate(server)}>Perintah pasang</button>
-                          <button onClick={() => edit(server)}>Ubah</button>
-                          <button onClick={() => remove(server)}>Hapus</button>
+                          <button onClick={() => toggle(a)}>{a.status === 'ENABLED' ? 'Nonaktifkan' : 'Aktifkan'}</button>
+                          <button onClick={() => rotate(a)}>Rotasi password</button>
+                          <button onClick={() => remove(a)}>Hapus</button>
                         </>
                       )}
                     </div>
@@ -272,98 +237,26 @@ export function VpnPage() {
           </table>
         </div>
       )}
-
-      {selected && can('vpn.peer.view') && (
-        <PeersPanel key={selected.id} server={selected} onPeersChanged={reload} />
-      )}
     </div>
   )
 }
 
-/* ---------- Form hub ---------- */
+/* ---------- Kartu kredensial sekali-tampil ---------- */
 
-function ServerForm({
-  draft,
-  setDraft,
-  onSave,
-  onCancel,
-}: {
-  draft: ServerDraft
-  setDraft: (d: ServerDraft) => void
-  onSave: () => void
-  onCancel: () => void
-}) {
-  return (
-    <div className="card stack">
-      <div className="row">
-        <label style={{ flex: 2 }}>
-          <span>Nama hub</span>
-          <input
-            value={draft.name}
-            onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-            placeholder="Hub Utama"
-          />
-        </label>
-        <label style={{ flex: 2 }}>
-          <span>Host / IP publik VPS</span>
-          <input
-            value={draft.host}
-            onChange={(e) => setDraft({ ...draft, host: e.target.value })}
-            placeholder="vpn.isp-anda.com"
-          />
-        </label>
-        <label style={{ flex: 1 }}>
-          <span>Port</span>
-          <input value={draft.port} onChange={(e) => setDraft({ ...draft, port: e.target.value })} placeholder="1194" />
-        </label>
-        <label style={{ flex: 1 }}>
-          <span>Protokol</span>
-          <select
-            value={draft.protocol}
-            onChange={(e) => setDraft({ ...draft, protocol: e.target.value as VpnProtocol })}
-          >
-            <option value="UDP">UDP</option>
-            <option value="TCP">TCP</option>
-          </select>
-        </label>
-      </div>
-
-      {draft.id === null ? (
-        <label>
-          <span>Subnet overlay (CIDR)</span>
-          <input
-            value={draft.tunnelCidr}
-            onChange={(e) => setDraft({ ...draft, tunnelCidr: e.target.value })}
-            placeholder="10.8.0.0/24"
-          />
-        </label>
-      ) : (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-          Subnet overlay <code>{draft.tunnelCidr}</code> tetap setelah hub dibuat (IP perangkat sudah teralokasi darinya).
-        </p>
-      )}
-
-      <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-        Aplikasi menerbitkan CA + sertifikat server otomatis saat hub dibuat — tak perlu easy-rsa manual.
-        Perintah pasang satu-baris muncul sekali setelah simpan.
-      </p>
-      <div className="row">
-        <button className="primary" onClick={onSave}>
-          Simpan
-        </button>
-        <button onClick={onCancel}>Batal</button>
-      </div>
-    </div>
-  )
-}
-
-/* ---------- Kartu rahasia sekali-tampil ---------- */
-
-function InstallSecretCard({ server, onDismiss }: { server: VpnServerView; onDismiss: () => void }) {
+function CredentialCard({ account, onDismiss }: { account: VpnAccountView; onDismiss: () => void }) {
   const toast = useToast()
-  const command = server.installCommand ?? ''
-  const token = server.nodeToken ?? ''
-  const needsBaseUrl = command.includes('<URL-APLIKASI-ANDA>')
+  const copy = (value: string, what: string) =>
+    void navigator.clipboard?.writeText(value).then(() => toast.success(`${what} disalin`))
+
+  const rows: Array<{ label: string; value: string; copy?: boolean }> = [
+    { label: 'Server', value: account.serverName },
+    { label: 'Host / IP', value: account.host, copy: true },
+    { label: 'Port', value: String(account.port), copy: true },
+    { label: 'Tipe keamanan', value: account.securityType },
+    { label: 'Username', value: account.username, copy: true },
+    { label: 'Password', value: account.password ?? '—', copy: !!account.password },
+    { label: 'IP overlay', value: account.overlayIp },
+  ]
 
   return (
     <div
@@ -372,181 +265,50 @@ function InstallSecretCard({ server, onDismiss }: { server: VpnServerView; onDis
     >
       <div className="row" style={{ gap: '0.5rem', marginBottom: '0.5rem' }}>
         <IconAlert size={17} style={{ color: 'var(--warning-ink)' }} />
-        <strong>Perintah pasang untuk hub “{server.name}”</strong>
+        <strong>Kredensial akun “{account.label}”</strong>
       </div>
-      <p className="muted" style={{ margin: '0 0 0.5rem', fontSize: '0.83rem' }}>
-        Jalankan sekali di VPS sebagai root. Installer memasang OpenVPN + PKI aplikasi dan menyambungkan callback
-        verifikasi — tak ada langkah teknis manual setelahnya. Perintah &amp; token ini hanya ditampilkan sekali.
+      <p className="muted" style={{ margin: '0 0 0.6rem', fontSize: '0.83rem' }}>
+        Tempel data ini ke OVPN client Mikrotik Anda. <strong>Password hanya ditampilkan sekali</strong> — bila
+        terlewat, rotasi ulang atau unduh config.
       </p>
-      <code style={{ display: 'block', wordBreak: 'break-all', padding: '0.5rem', marginBottom: '0.5rem' }}>
-        {command}
-      </code>
-      {needsBaseUrl && (
-        <p className="muted" style={{ margin: '0 0 0.5rem', fontSize: '0.8rem' }}>
-          Ganti <code>&lt;URL-APLIKASI-ANDA&gt;</code> dengan URL publik aplikasi ini, atau set{' '}
-          <code>FTTH_VPN_PUBLIC_BASE_URL</code> di server agar terisi otomatis.
-        </p>
-      )}
-      <p className="muted" style={{ margin: '0 0 0.6rem', fontSize: '0.8rem' }}>
-        Token node: <code>{token}</code>
-      </p>
+      <table style={{ marginBottom: '0.6rem' }}>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.label}>
+              <td className="muted" style={{ width: '9rem' }}>
+                {r.label}
+              </td>
+              <td>
+                <code style={{ wordBreak: 'break-all' }}>{r.value}</code>
+              </td>
+              <td style={{ width: '4rem' }}>
+                {r.copy && (
+                  <button className="small ghost" onClick={() => copy(r.value, r.label)}>
+                    Salin
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
       <div className="row">
         <button
           className="small"
-          onClick={() => void navigator.clipboard?.writeText(command).then(() => toast.success('Perintah pasang disalin'))}
+          onClick={() => void saveBlob(() => downloadAccountRouterOs(account.id), `${account.username}.rsc`, toast.error)}
         >
-          Salin perintah
+          Unduh RouterOS
         </button>
         <button
           className="small ghost"
-          onClick={() => void navigator.clipboard?.writeText(token).then(() => toast.success('Token node disalin'))}
+          onClick={() => void saveBlob(() => downloadAccountOvpn(account.id), `${account.username}.ovpn`, toast.error)}
         >
-          Salin token
+          Unduh .ovpn
         </button>
         <button className="ghost small" onClick={onDismiss}>
           Selesai
         </button>
       </div>
-    </div>
-  )
-}
-
-/* ---------- Panel perangkat sebuah hub ---------- */
-
-function PeersPanel({ server, onPeersChanged }: { server: VpnServerView; onPeersChanged: () => void }) {
-  const { can } = useCan()
-  const toast = useToast()
-  const canManage = can('vpn.peer.manage')
-  const canConfig = can('vpn.config.view')
-  const fetcher = useCallback(() => listPeers(server.id), [server.id])
-  const { items: peers, loading, run } = useResource(fetcher)
-  const [name, setName] = useState('')
-
-  const addPeer = () => {
-    const trimmed = name.trim()
-    if (!trimmed) return
-    void run(async () => {
-      await createPeer(server.id, { name: trimmed })
-      setName('')
-      onPeersChanged()
-    }, 'Perangkat ditambahkan — unduh config untuk memasangnya')
-  }
-
-  const toggle = (peer: VpnPeerView) =>
-    void run(
-      () => (peer.status === 'ENABLED' ? disablePeer(peer.id) : enablePeer(peer.id)),
-      peer.status === 'ENABLED' ? 'Perangkat dinonaktifkan' : 'Perangkat diaktifkan',
-    )
-
-  const rotate = (peer: VpnPeerView) => {
-    if (!window.confirm(`Rotasi password “${peer.name}”? Unduh ulang config setelah ini agar perangkat tetap tersambung.`))
-      return
-    void run(() => rotatePeerPassword(peer.id), 'Password dirotasi — unduh ulang config')
-  }
-
-  const removePeer = (peer: VpnPeerView) => {
-    if (!window.confirm(`Hapus perangkat “${peer.name}”?`)) return
-    void run(async () => {
-      await deletePeer(peer.id)
-      onPeersChanged()
-    }, 'Perangkat dihapus')
-  }
-
-  return (
-    <div className="card stack">
-      <div className="spread">
-        <div>
-          <strong>Perangkat — {server.name}</strong>
-          <div className="muted" style={{ fontSize: '0.82rem' }}>
-            {server.host}:{server.port} · {server.protocol} · subnet {server.tunnelCidr}
-          </div>
-        </div>
-      </div>
-
-      {canManage && (
-        <div className="row">
-          <input
-            style={{ flex: 1 }}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addPeer()}
-            placeholder="Nama perangkat (mis. Mikrotik Bekasi)"
-          />
-          <button className="primary" onClick={addPeer}>
-            <IconPlus size={15} /> Tambah perangkat
-          </button>
-        </div>
-      )}
-
-      {loading ? (
-        <p className="muted" style={{ margin: 0 }}>
-          Memuat…
-        </p>
-      ) : peers.length === 0 ? (
-        <EmptyState title="Belum ada perangkat" hint="Tambah perangkat, lalu unduh .ovpn / skrip RouterOS-nya." />
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Nama</th>
-              <th>Username</th>
-              <th>IP overlay</th>
-              <th>Status</th>
-              <th>Handshake terakhir</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {peers.map((peer) => (
-              <tr key={peer.id}>
-                <td>{peer.name}</td>
-                <td className="muted">{peer.username}</td>
-                <td className="tnum">{peer.overlayIp}</td>
-                <td>
-                  <span
-                    className="badge"
-                    style={{ color: peer.status === 'ENABLED' ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
-                  >
-                    {peer.status === 'ENABLED' ? 'aktif' : 'nonaktif'}
-                  </span>
-                </td>
-                <td className="muted">{fmtWhen(peer.lastHandshakeAt)}</td>
-                <td>
-                  <div className="row">
-                    {canConfig && (
-                      <>
-                        <button
-                          onClick={() =>
-                            void saveBlob(() => downloadPeerRouterOs(peer.id), `${peer.username}.rsc`, toast.error)
-                          }
-                        >
-                          RouterOS
-                        </button>
-                        <button
-                          onClick={() =>
-                            void saveBlob(() => downloadPeerOvpn(peer.id), `${peer.username}.ovpn`, toast.error)
-                          }
-                        >
-                          .ovpn
-                        </button>
-                      </>
-                    )}
-                    {canManage && (
-                      <>
-                        <button onClick={() => toggle(peer)}>
-                          {peer.status === 'ENABLED' ? 'Nonaktifkan' : 'Aktifkan'}
-                        </button>
-                        <button onClick={() => rotate(peer)}>Rotasi password</button>
-                        <button onClick={() => removePeer(peer)}>Hapus</button>
-                      </>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
     </div>
   )
 }

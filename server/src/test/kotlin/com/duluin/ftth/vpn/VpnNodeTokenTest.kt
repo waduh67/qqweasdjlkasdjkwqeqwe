@@ -11,13 +11,11 @@ class VpnNodeTokenTest {
     @Test
     fun `issue menghasilkan token berawalan dan menyimpan hanya hash + hint`() {
         val serverId = UuidV7.generate()
-        val tenantId = UuidV7.generate()
 
-        val (token, raw) = VpnNodeToken.issue(serverId, tenantId)
+        val (token, raw) = VpnNodeToken.issue(serverId)
 
         assertThat(raw).startsWith(VpnNodeToken.PREFIX)
         assertThat(token.serverId).isEqualTo(serverId)
-        assertThat(token.tenantId).isEqualTo(tenantId)
         // Yang tersimpan hash, bukan token mentah.
         assertThat(token.tokenHash).isEqualTo(VpnNodeToken.hash(raw))
         assertThat(token.tokenHash).isNotEqualTo(raw)
@@ -35,10 +33,9 @@ class VpnNodeTokenTest {
     @Test
     fun `setiap penerbitan unik`() {
         val serverId = UuidV7.generate()
-        val tenantId = UuidV7.generate()
 
-        val (_, first) = VpnNodeToken.issue(serverId, tenantId)
-        val (_, second) = VpnNodeToken.issue(serverId, tenantId)
+        val (_, first) = VpnNodeToken.issue(serverId)
+        val (_, second) = VpnNodeToken.issue(serverId)
 
         assertThat(first).isNotEqualTo(second)
     }

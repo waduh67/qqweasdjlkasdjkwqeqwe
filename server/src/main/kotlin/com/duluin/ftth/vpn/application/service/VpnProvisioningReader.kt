@@ -13,9 +13,9 @@ import java.security.MessageDigest
 import java.util.UUID
 
 /**
- * Pembacaan hub/peer ber-RLS untuk provisioning, DALAM scope tenant (dipanggil di dalam
- * `TenantContext.runAs` oleh [VpnProvisioningService]). `@Transactional` di sini membuka sesi
- * Hibernate SETELAH tenant terpasang, jadi filter tenant + RLS ter-scope dengan benar.
+ * Pembacaan hub/peer untuk provisioning. Hub & akun kini tabel tanpa RLS, jadi peer di-resolve
+ * lintas-tenant lewat (serverId, username) — persis yang dibutuhkan callback OpenVPN yang tak
+ * tahu tenant. `@Transactional(readOnly)` sekadar membungkus tiap pembacaan dalam satu sesi.
  */
 @Component
 class VpnProvisioningReader(

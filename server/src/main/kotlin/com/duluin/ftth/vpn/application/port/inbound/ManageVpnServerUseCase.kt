@@ -2,7 +2,7 @@ package com.duluin.ftth.vpn.application.port.inbound
 
 import java.util.UUID
 
-/** Kelola hub OpenVPN manajemen milik tenant: telusur, buat, ubah, kredensial, config, hapus. */
+/** Kelola hub OpenVPN — infrastruktur PLATFORM (admin platform): telusur, buat, ubah, kredensial, config, hapus. */
 interface ManageVpnServerUseCase {
 
     fun list(): List<VpnServerView>

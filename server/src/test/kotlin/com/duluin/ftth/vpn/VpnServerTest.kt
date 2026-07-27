@@ -1,6 +1,5 @@
 package com.duluin.ftth.vpn
 
-import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.vpn.domain.model.VpnProtocol
 import com.duluin.ftth.vpn.domain.model.VpnServer
@@ -13,7 +12,6 @@ import org.junit.jupiter.api.Test
 class VpnServerTest {
 
     private fun newServer(port: Int = 1194, tunnelCidr: String = "10.8.0.0/24"): VpnServer = VpnServer.create(
-        tenantId = UuidV7.generate(),
         name = "Hub Utama",
         host = "vpn.example.com",
         port = port,

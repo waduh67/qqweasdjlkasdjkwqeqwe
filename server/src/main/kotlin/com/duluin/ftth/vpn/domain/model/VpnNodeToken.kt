@@ -12,13 +12,13 @@ import java.util.UUID
  * agar bisa di-resolve SEBELUM tenant diketahui — sama seperti API key collector.
  *
  * Hanya [tokenHash] (SHA-256) yang disimpan; token mentah hanya ditampilkan SEKALI saat
- * diterbitkan/dirotasi. [tokenHint] (akhiran) hanya untuk tampilan UI. [tenantId] disimpan
- * agar [TenantContext] bisa dipasang sebelum membaca `vpn_server` yang ber-RLS.
+ * diterbitkan/dirotasi. [tokenHint] (akhiran) hanya untuk tampilan UI. Token menaut ke hub
+ * saja — hub adalah infrastruktur platform (tanpa tenant); peer di-resolve lintas-tenant
+ * lewat (serverId, username) saat callback.
  */
 class VpnNodeToken private constructor(
     val id: UUID,
     val serverId: UUID,
-    val tenantId: UUID,
     val tokenHash: String,
     val tokenHint: String,
 ) {
@@ -29,20 +29,19 @@ class VpnNodeToken private constructor(
         private const val HINT_LENGTH = 6
 
         /** Terbitkan token baru untuk sebuah hub; mengembalikan entitas + token MENTAH (sekali tampil). */
-        fun issue(serverId: UUID, tenantId: UUID): Pair<VpnNodeToken, String> {
+        fun issue(serverId: UUID): Pair<VpnNodeToken, String> {
             val raw = generate()
             val token = VpnNodeToken(
                 id = UuidV7.generate(),
                 serverId = serverId,
-                tenantId = tenantId,
                 tokenHash = hash(raw),
                 tokenHint = raw.takeLast(HINT_LENGTH),
             )
             return token to raw
         }
 
-        fun rehydrate(id: UUID, serverId: UUID, tenantId: UUID, tokenHash: String, tokenHint: String): VpnNodeToken =
-            VpnNodeToken(id, serverId, tenantId, tokenHash, tokenHint)
+        fun rehydrate(id: UUID, serverId: UUID, tokenHash: String, tokenHint: String): VpnNodeToken =
+            VpnNodeToken(id, serverId, tokenHash, tokenHint)
 
         fun generate(): String {
             val bytes = ByteArray(TOKEN_BYTES).also(SecureRandom()::nextBytes)

@@ -17,7 +17,6 @@ class VpnConfigRendererTest {
     private val dummyCa = "-----BEGIN CERTIFICATE-----\nDUMMYCA\n-----END CERTIFICATE-----"
 
     private fun newServer(): VpnServer = VpnServer.create(
-        tenantId = UuidV7.generate(),
         name = "Hub Utama",
         host = "vpn.example.com",
         port = 1194,

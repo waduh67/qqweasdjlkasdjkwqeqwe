@@ -42,7 +42,6 @@ class VpnServerService(
 
     override fun create(command: CreateVpnServerCommand): VpnServerView {
         val server = VpnServer.create(
-            tenantId = TenantContext.tenantId(),
             name = command.name,
             host = command.host,
             port = command.port ?: properties.defaultPort,
@@ -55,9 +54,9 @@ class VpnServerService(
         server.attachPki(pki.caCertPem, pki.caKeyPem, pki.serverCertPem, pki.serverKeyPem)
         val saved = serverRepository.save(server)
         // Token node menyertai hub sejak lahir: dari sinilah perintah pasang satu-baris berasal.
-        val rawToken = issueNodeToken(saved.id, saved.tenantId)
+        val rawToken = issueNodeToken(saved.id)
         auditor.record(
-            "vpn.server.created", "VpnServer", saved.id, saved.tenantId,
+            "vpn.server.created", "VpnServer", saved.id, TenantContext.tenantId(),
             mapOf("name" to saved.name, "pkiReady" to saved.pkiReady),
         )
         return saved.toView(rawNodeToken = rawToken)
@@ -65,15 +64,15 @@ class VpnServerService(
 
     override fun regenerateNodeToken(id: UUID): VpnServerView {
         val server = require(id)
-        val rawToken = issueNodeToken(server.id, server.tenantId)
-        auditor.record("vpn.server.token-regenerated", "VpnServer", server.id, server.tenantId, emptyMap())
+        val rawToken = issueNodeToken(server.id)
+        auditor.record("vpn.server.token-regenerated", "VpnServer", server.id, TenantContext.tenantId(), emptyMap())
         return server.toView(rawNodeToken = rawToken)
     }
 
     /** Satu token aktif per hub: buang yang lama lalu terbitkan baru, kembalikan yang mentah (sekali tampil). */
-    private fun issueNodeToken(serverId: UUID, tenantId: UUID): String {
+    private fun issueNodeToken(serverId: UUID): String {
         nodeTokenRepository.deleteByServerId(serverId)
-        val (token, raw) = VpnNodeToken.issue(serverId, tenantId)
+        val (token, raw) = VpnNodeToken.issue(serverId)
         nodeTokenRepository.save(token)
         return raw
     }
@@ -83,7 +82,7 @@ class VpnServerService(
         server.rename(command.name)
         server.updateEndpoint(command.host, command.port, command.protocol)
         val saved = serverRepository.save(server)
-        auditor.record("vpn.server.updated", "VpnServer", saved.id, saved.tenantId, mapOf("name" to saved.name))
+        auditor.record("vpn.server.updated", "VpnServer", saved.id, TenantContext.tenantId(), mapOf("name" to saved.name))
         return saved.toView()
     }
 
@@ -92,7 +91,7 @@ class VpnServerService(
         server.setCredentials(caCertPem, tlsAuthKey)
         val saved = serverRepository.save(server)
         auditor.record(
-            "vpn.server.credentials-set", "VpnServer", saved.id, saved.tenantId,
+            "vpn.server.credentials-set", "VpnServer", saved.id, TenantContext.tenantId(),
             mapOf("hasCaCert" to (saved.caCertPem != null), "hasTlsAuth" to (saved.tlsAuthKey != null)),
         )
         return saved.toView()
@@ -102,10 +101,10 @@ class VpnServerService(
         val server = require(id)
         val peers = peerRepository.countByServerId(id)
         if (peers > 0) {
-            throw ConflictException("Server VPN '${server.name}' masih punya $peers peer, hapus dulu")
+            throw ConflictException("Server VPN '${server.name}' masih punya $peers akun, hapus dulu")
         }
         serverRepository.delete(id)
-        auditor.record("vpn.server.deleted", "VpnServer", id, server.tenantId, mapOf("name" to server.name))
+        auditor.record("vpn.server.deleted", "VpnServer", id, TenantContext.tenantId(), mapOf("name" to server.name))
     }
 
     @Transactional(readOnly = true)

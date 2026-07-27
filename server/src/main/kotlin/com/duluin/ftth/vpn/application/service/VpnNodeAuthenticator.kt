@@ -8,11 +8,10 @@ import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 
 /**
- * Resolusi token node → (tenant, hub), dalam transaksinya sendiri. Cermin persis
- * `CollectorAuthenticator`: dibuat komponen terpisah agar proxy `@Transactional` benar-benar
- * terlibat, dan REQUIRES_NEW memastikan sesi Hibernate pencarian ini (pada tabel TANPA RLS,
- * sebelum tenant diketahui) DITUTUP sebelum [com.duluin.ftth.common.tenant.TenantContext]
- * dipasang untuk membaca hub yang ber-RLS.
+ * Resolusi token node → hub, dalam transaksinya sendiri. Cermin persis `CollectorAuthenticator`:
+ * dibuat komponen terpisah agar proxy `@Transactional` benar-benar terlibat, dan REQUIRES_NEW
+ * memastikan sesi Hibernate pencarian ini (pada tabel TANPA RLS) DITUTUP rapi sebelum pembacaan
+ * hub/peer berikutnya.
  */
 @Component
 class VpnNodeAuthenticator(

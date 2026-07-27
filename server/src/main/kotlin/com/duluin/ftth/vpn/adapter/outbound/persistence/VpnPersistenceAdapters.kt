@@ -1,7 +1,6 @@
 package com.duluin.ftth.vpn.adapter.outbound.persistence
 
 import com.duluin.ftth.common.security.SecretCipher
-import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.vpn.application.port.outbound.VpnNodeRef
 import com.duluin.ftth.vpn.application.port.outbound.VpnNodeTokenRepository
 import com.duluin.ftth.vpn.application.port.outbound.VpnPeerRepository
@@ -9,6 +8,7 @@ import com.duluin.ftth.vpn.application.port.outbound.VpnServerRepository
 import com.duluin.ftth.vpn.domain.model.VpnNodeToken
 import com.duluin.ftth.vpn.domain.model.VpnPeer
 import com.duluin.ftth.vpn.domain.model.VpnServer
+import com.duluin.ftth.vpn.domain.model.VpnServerStatus
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -66,11 +66,14 @@ class VpnServerPersistenceAdapter(
 
     override fun findAll(): List<VpnServer> = jpa.findAllByOrderByNameAsc().map { it.toDomain() }
 
+    /** Hub siap-pakai untuk auto-assign: ACTIVE + PKI lengkap, terurut nama (deterministik). */
+    override fun findAssignable(): List<VpnServer> =
+        jpa.findByStatusOrderByNameAsc(VpnServerStatus.ACTIVE).map { it.toDomain() }.filter { it.pkiReady }
+
     override fun delete(id: UUID) = jpa.deleteById(id)
 
     private fun VpnServerJpaEntity.toDomain(): VpnServer = VpnServer.rehydrate(
         id = id,
-        tenantId = tenantId ?: TenantContext.tenantId(),
         name = name,
         host = host,
         port = port,
@@ -110,6 +113,7 @@ class VpnPeerPersistenceAdapter(
             if (encryptedPassword != null) password = encryptedPassword
         } ?: VpnPeerJpaEntity(
             id = peer.id,
+            tenantId = peer.tenantId,
             serverId = peer.serverId,
             name = peer.name,
             username = peer.username,
@@ -124,6 +128,9 @@ class VpnPeerPersistenceAdapter(
     }
 
     override fun findById(id: UUID): VpnPeer? = jpa.findById(id).orElse(null)?.toDomain()
+
+    override fun findByTenant(tenantId: UUID): List<VpnPeer> =
+        jpa.findByTenantIdOrderByNameAsc(tenantId).map { it.toDomain() }
 
     override fun findByServerId(serverId: UUID): List<VpnPeer> =
         jpa.findByServerIdOrderByOverlayIpAsc(serverId).map { it.toDomain() }
@@ -143,7 +150,7 @@ class VpnPeerPersistenceAdapter(
 
     private fun VpnPeerJpaEntity.toDomain(): VpnPeer = VpnPeer.rehydrate(
         id = id,
-        tenantId = tenantId ?: TenantContext.tenantId(),
+        tenantId = tenantId,
         serverId = serverId,
         name = name,
         username = username,
@@ -172,14 +179,13 @@ class VpnNodeTokenPersistenceAdapter(
         VpnNodeTokenJpaEntity(
             id = token.id,
             serverId = token.serverId,
-            tenantId = token.tenantId,
             tokenHash = token.tokenHash,
             tokenHint = token.tokenHint,
         ),
     ).let { token }
 
     override fun findRefByTokenHash(tokenHash: String): VpnNodeRef? =
-        jpa.findByTokenHash(tokenHash)?.let { VpnNodeRef(serverId = it.serverId, tenantId = it.tenantId) }
+        jpa.findByTokenHash(tokenHash)?.let { VpnNodeRef(serverId = it.serverId) }
 
     @Transactional
     override fun deleteByServerId(serverId: UUID) = jpa.deleteByServerId(serverId)

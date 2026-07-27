@@ -108,8 +108,10 @@ tak pernah menyentuh tabel module lain — batas ini ditegakkan `ModularityTests
 - **billing** — menerbitkan tagihan atas langganan lalu menggerakkan
   isolir/aktivasi `customer` (yang mengalir ke `bng`) saat jatuh tempo/lunas;
   gateway pembayaran agnostik lewat webhook.
-- **vpn** — **swasembada** (tanpa taut lintas-module): hub OpenVPN untuk
-  menjangkau perangkat tanpa IP publik.
+- **vpn** — **swasembada** (tanpa taut lintas-module): VPN-as-a-service. Hub
+  OpenVPN adalah infrastruktur **platform** (jalan di VPS kita, IP publik kita,
+  app jadi CA-nya sendiri + installer satu-perintah). **Tenant tinggal generate
+  akun** yang di-auto-assign ke hub tersedia → kredensial siap tempel di Mikrotik.
 
 ### Multi-tenancy (dua lapis)
 
@@ -429,8 +431,9 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
 | `POST /api/bng/access/{id}/isolate` · `/restore` · `/reset-login` · `GET /session` · `/traffic` | `bng.access.isolate` / `bng.session.*` |
 | `GET/POST /api/billing/invoices` · `/generate` · `/{id}/void` · `/pay` · `GET /payments` | `billing.invoice.*` / `billing.payment.manage` |
 | `POST /api/billing/webhooks/{tenantSlug}/{provider}` | publik (tanda tangan gateway) |
-| `GET/POST/PUT/DELETE /api/vpn/servers` · `/{id}/credentials` · `/config` | `vpn.server.*` / `vpn.config.view` |
-| `GET/POST/DELETE /api/vpn/servers/{id}/peers` · `/api/vpn/peers/{id}` · `/{enable,disable,rotate-password}` · `/ovpn` · `/routeros` | `vpn.peer.*` / `vpn.config.view` |
+| `GET/POST/PUT/DELETE /api/vpn/servers` · `/{id}/credentials` · `/regenerate-token` · `/config` (hub platform) | `vpn.server.*` (platform-only) / `vpn.config.view` |
+| `GET /api/vpn/accounts` · `POST /generate` · `/{id}/{enable,disable,rotate-password}` · `DELETE` · `/ovpn` · `/routeros` (akun tenant) | `vpn.peer.*` / `vpn.config.view` |
+| `GET/POST /api/vpn/provision/{install.sh,authenticate,client-connect}` | token node (tanpa bearer) |
 
 ---
 
@@ -466,8 +469,9 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
 - **Billing** ✅ mesin tagihan (invoice ber-periode, jatuh tempo + grace),
   pembayaran manual + gateway agnostik lewat webhook, auto-isolir/auto-pulih yang
   menggerakkan `customer` → `bng` (lihat [`docs/billing.md`](docs/billing.md))
-- **VPN** ✅ back-haul OpenVPN untuk remote perangkat tanpa IP publik: hub + peer,
-  IP overlay tetap, unduh `.ovpn`/RouterOS, rahasia terenkripsi (lihat
-  [`docs/vpn.md`](docs/vpn.md))
+- **VPN** ✅ VPN-as-a-service untuk remote perangkat tanpa IP publik: hub OpenVPN
+  platform (app jadi CA + installer satu-perintah + verifikasi via callback), tenant
+  tinggal generate akun (auto-assign) → kredensial siap tempel di Mikrotik, IP overlay
+  tetap, unduh `.ovpn`/RouterOS, rahasia terenkripsi (lihat [`docs/vpn.md`](docs/vpn.md))
 - **Berikutnya** — subscriber-360 (satu layar: langganan + tagihan + tiket + CPE +
   sesi PPPoE), lalu aplikasi teknisi Compose Multiplatform

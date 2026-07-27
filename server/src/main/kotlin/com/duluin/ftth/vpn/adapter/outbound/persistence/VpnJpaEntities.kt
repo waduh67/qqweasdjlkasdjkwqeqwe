@@ -1,7 +1,6 @@
 package com.duluin.ftth.vpn.adapter.outbound.persistence
 
 import com.duluin.ftth.common.infrastructure.persistence.BaseJpaEntity
-import com.duluin.ftth.common.infrastructure.persistence.TenantAwareJpaEntity
 import com.duluin.ftth.vpn.domain.model.VpnPeerStatus
 import com.duluin.ftth.vpn.domain.model.VpnProtocol
 import com.duluin.ftth.vpn.domain.model.VpnServerStatus
@@ -14,8 +13,9 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * Hub OpenVPN. [caCert]/[tlsAuthKey] disimpan terenkripsi (batas enkripsi di adapter);
- * kolomnya `text` agar muat PEM sertifikat + ciphertext yang lebih panjang dari plaintext.
+ * Hub OpenVPN — infrastruktur PLATFORM (tanpa tenant/RLS). [caCert]/[tlsAuthKey] disimpan
+ * terenkripsi (batas enkripsi di adapter); kolomnya `text` agar muat PEM sertifikat +
+ * ciphertext yang lebih panjang dari plaintext.
  */
 @Entity
 @Table(name = "vpn_server")
@@ -56,17 +56,23 @@ class VpnServerJpaEntity(
 
     @Column(name = "server_key", columnDefinition = "text")
     var serverKey: String?,
-) : TenantAwareJpaEntity(id)
+) : BaseJpaEntity(id)
 
 /**
- * Peer/perangkat yang men-dial hub. Identitas ([serverId], [username], [overlayIp]) tak
- * berubah setelah dibuat → `updatable = false`. [password] disimpan terenkripsi (batas
- * enkripsi di adapter). [lastHandshakeAt] dicadangkan untuk liveness kelak.
+ * Akun VPN milik tenant (satu perangkat yang men-dial hub). Tabel TANPA RLS (cermin
+ * [CollectorJpaEntity]): [tenantId] kolom biasa (bukan `@TenantId`) — difilter tenant di
+ * aplikasi untuk daftar/kelola, sekaligus bisa dibaca lintas-tenant per hub untuk auth
+ * callback. Identitas ([serverId], [username], [overlayIp]) tak berubah setelah dibuat →
+ * `updatable = false`. [password] terenkripsi (batas enkripsi di adapter). [lastHandshakeAt]
+ * dicadangkan untuk liveness kelak.
  */
 @Entity
 @Table(name = "vpn_peer")
 class VpnPeerJpaEntity(
     id: UUID,
+
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    var tenantId: UUID,
 
     @Column(name = "server_id", nullable = false, updatable = false)
     var serverId: UUID,
@@ -95,12 +101,12 @@ class VpnPeerJpaEntity(
 
     @Column(nullable = false, length = 512)
     var password: String,
-) : TenantAwareJpaEntity(id)
+) : BaseJpaEntity(id)
 
 /**
- * Token node per hub. Sengaja [BaseJpaEntity] dengan kolom [tenantId] BIASA (bukan
- * `@TenantId`) dan tabelnya TANPA RLS — persis pola [CollectorJpaEntity]: barisnya dicari
- * lewat hash token SEBELUM tenant diketahui, jadi filter tenant justru akan memblokirnya.
+ * Token node per hub. [BaseJpaEntity] dan tabelnya TANPA RLS — persis pola [CollectorJpaEntity]:
+ * barisnya dicari lewat hash token untuk mengenali hub yang memanggil balik. Menaut ke hub
+ * saja (hub adalah infrastruktur platform tanpa tenant); peer di-resolve dari username.
  */
 @Entity
 @Table(name = "vpn_node_token")
@@ -109,9 +115,6 @@ class VpnNodeTokenJpaEntity(
 
     @Column(name = "server_id", nullable = false, updatable = false)
     var serverId: UUID,
-
-    @Column(name = "tenant_id", nullable = false, updatable = false)
-    var tenantId: UUID,
 
     @Column(name = "token_hash", nullable = false, length = 64, updatable = false)
     var tokenHash: String,

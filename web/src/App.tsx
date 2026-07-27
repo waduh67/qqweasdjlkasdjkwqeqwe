@@ -16,6 +16,7 @@ import { IncidentsPage } from './pages/IncidentsPage'
 import { WorkOrdersPage } from './pages/WorkOrdersPage'
 import { BngPage } from './pages/BngPage'
 import { VpnPage } from './pages/VpnPage'
+import { VpnServersPage } from './pages/VpnServersPage'
 
 /**
  * Halaman peta dimuat terpisah: MapLibre menyumbang sebagian besar ukuran
@@ -119,8 +120,16 @@ export default function App() {
             <Route
               path="vpn"
               element={
-                <RequirePermission permission="vpn.server.view">
+                <RequirePermission permission="vpn.peer.view">
                   <VpnPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="vpn-servers"
+              element={
+                <RequirePermission permission="vpn.server.view">
+                  <VpnServersPage />
                 </RequirePermission>
               }
             />

@@ -5,8 +5,8 @@ import com.duluin.ftth.vpn.domain.model.VpnServer
 import java.util.UUID
 
 /**
- * Port persistence module vpn. Kedua tabel tenant-aware (@TenantId + RLS), jadi semua
- * pencarian ter-scope tenant aktif secara otomatis — tak ada parameter tenantId.
+ * Port persistence hub VPN. Hub adalah infrastruktur PLATFORM (tanpa tenant/RLS): pencarian
+ * lintas seluruh hub, dikelola hanya oleh admin platform.
  */
 interface VpnServerRepository {
 
@@ -14,29 +14,45 @@ interface VpnServerRepository {
 
     fun findById(id: UUID): VpnServer?
 
-    /** Semua hub tenant aktif, terurut nama. */
+    /** Semua hub platform, terurut nama. */
     fun findAll(): List<VpnServer>
+
+    /**
+     * Hub yang siap menerima akun baru (ACTIVE + PKI lengkap), terurut agar auto-assign
+     * deterministik. Pemanggil memilih yang paling lengang (peer paling sedikit).
+     */
+    fun findAssignable(): List<VpnServer>
 
     fun delete(id: UUID)
 }
 
+/**
+ * Port persistence akun VPN (peer). Tabelnya TANPA RLS (cermin collector): sebagian query
+ * di-scope tenant di aplikasi (daftar/kelola milik tenant), sebagian lintas-tenant per hub
+ * (alokasi IP, keunikan username, resolusi callback) — sebab satu hub dibagi banyak tenant.
+ */
 interface VpnPeerRepository {
 
     fun save(peer: VpnPeer): VpnPeer
 
     fun findById(id: UUID): VpnPeer?
 
-    /** Peer sebuah hub, terurut IP overlay. */
+    /** Akun milik satu tenant, terurut nama — daftar untuk dashboard tenant. */
+    fun findByTenant(tenantId: UUID): List<VpnPeer>
+
+    /** Peer sebuah hub (lintas-tenant), terurut IP overlay — dipakai render config server. */
     fun findByServerId(serverId: UUID): List<VpnPeer>
 
-    /** Satu peer via (hub, username) — dipakai callback provisioning saat verifikasi koneksi. */
+    /** Satu peer via (hub, username) LINTAS-TENANT — dipakai callback provisioning. */
     fun findByServerIdAndUsername(serverId: UUID, username: String): VpnPeer?
 
-    /** IP overlay yang sudah terpakai pada sebuah hub — dasar alokasi berikutnya. */
+    /** IP overlay terpakai pada sebuah hub (lintas-tenant) — dasar alokasi berikutnya. */
     fun usedOverlayIps(serverId: UUID): Set<String>
 
+    /** Keunikan username per hub, LINTAS-TENANT. */
     fun existsByServerIdAndUsername(serverId: UUID, username: String): Boolean
 
+    /** Jumlah peer sebuah hub (lintas-tenant) — kapasitas untuk auto-assign & tampilan. */
     fun countByServerId(serverId: UUID): Long
 
     fun deleteById(id: UUID)
