@@ -118,6 +118,7 @@ class VpnPeerPersistenceAdapter(
             name = peer.name,
             username = peer.username,
             overlayIp = peer.overlayIp,
+            remotePort = peer.remotePort,
             status = peer.status,
             deviceType = peer.deviceType,
             deviceId = peer.deviceId,
@@ -141,6 +142,8 @@ class VpnPeerPersistenceAdapter(
     override fun usedOverlayIps(serverId: UUID): Set<String> =
         jpa.findByServerIdOrderByOverlayIpAsc(serverId).mapTo(HashSet()) { it.overlayIp }
 
+    override fun usedRemotePorts(serverId: UUID): Set<Int> = jpa.findRemotePortsByServerId(serverId).toHashSet()
+
     override fun existsByServerIdAndUsername(serverId: UUID, username: String): Boolean =
         jpa.existsByServerIdAndUsername(serverId, username)
 
@@ -155,6 +158,7 @@ class VpnPeerPersistenceAdapter(
         name = name,
         username = username,
         overlayIp = overlayIp,
+        remotePort = remotePort,
         status = status,
         deviceType = deviceType,
         deviceId = deviceId,

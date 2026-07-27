@@ -13,10 +13,11 @@ enum class VpnPeerStatus { ENABLED, DISABLED }
  *
  * [serverId] menaut ke [VpnServer] (referensi intra-module, FK diperbolehkan). [username]
  * unik per server (dipakai sebagai identitas login OpenVPN dan common-name). [overlayIp]
- * dialokasikan dari subnet server. [password] adalah rahasia: plaintext di domain,
- * terenkripsi di batas persistence. [deviceType]/[deviceId] hanya label bebas atas
- * perangkat yang dijangkau (TANPA FK, boleh null). [lastHandshakeAt] dicadangkan untuk
- * liveness kelak — selalu null untuk saat ini.
+ * dialokasikan dari subnet server. [remotePort] adalah port publik TCP unik per hub yang
+ * di-DNAT ke port manajemen perangkat (Winbox) → operator meremote lewat `IP_HUB:remotePort`.
+ * [password] adalah rahasia: plaintext di domain, terenkripsi di batas persistence.
+ * [deviceType]/[deviceId] hanya label bebas atas perangkat yang dijangkau (TANPA FK, boleh
+ * null). [lastHandshakeAt] dicadangkan untuk liveness kelak — selalu null untuk saat ini.
  */
 class VpnPeer private constructor(
     val id: UUID,
@@ -25,6 +26,7 @@ class VpnPeer private constructor(
     val name: String,
     val username: String,
     val overlayIp: String,
+    val remotePort: Int,
     status: VpnPeerStatus,
     val deviceType: String?,
     val deviceId: UUID?,
@@ -58,6 +60,7 @@ class VpnPeer private constructor(
             name: String,
             username: String,
             overlayIp: String,
+            remotePort: Int,
             password: String,
             deviceType: String?,
             deviceId: UUID?,
@@ -68,6 +71,7 @@ class VpnPeer private constructor(
             name = validateName(name),
             username = validateUsername(username),
             overlayIp = validateOverlayIp(overlayIp),
+            remotePort = validateRemotePort(remotePort),
             status = VpnPeerStatus.ENABLED,
             deviceType = deviceType?.trim()?.takeIf { it.isNotEmpty() },
             deviceId = deviceId,
@@ -83,13 +87,14 @@ class VpnPeer private constructor(
             name: String,
             username: String,
             overlayIp: String,
+            remotePort: Int,
             status: VpnPeerStatus,
             deviceType: String?,
             deviceId: UUID?,
             lastHandshakeAt: Instant?,
             password: String,
         ): VpnPeer = VpnPeer(
-            id, tenantId, serverId, name, username, overlayIp, status,
+            id, tenantId, serverId, name, username, overlayIp, remotePort, status,
             deviceType, deviceId, lastHandshakeAt, password,
         )
 
@@ -116,6 +121,11 @@ class VpnPeer private constructor(
             val trimmed = overlayIp.trim()
             if (trimmed.isBlank()) throw ValidationException("IP overlay peer VPN wajib diisi")
             return trimmed
+        }
+
+        private fun validateRemotePort(remotePort: Int): Int {
+            if (remotePort !in 1..65535) throw ValidationException("Port remote peer VPN harus 1-65535")
+            return remotePort
         }
 
         private fun validatePassword(password: String): String {

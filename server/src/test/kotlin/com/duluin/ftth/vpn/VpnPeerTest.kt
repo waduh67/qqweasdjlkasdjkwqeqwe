@@ -17,10 +17,28 @@ class VpnPeerTest {
         name = "BRAS Jakarta 1",
         username = username,
         overlayIp = "10.8.0.2",
+        remotePort = 20000,
         password = "initialpassword123",
         deviceType = null,
         deviceId = null,
     )
+
+    @Test
+    fun `create menolak port remote di luar 1-65535`() {
+        assertThatThrownBy {
+            VpnPeer.create(
+                tenantId = UuidV7.generate(),
+                serverId = UuidV7.generate(),
+                name = "BRAS Jakarta 1",
+                username = "bras-jakarta-1",
+                overlayIp = "10.8.0.2",
+                remotePort = 70000,
+                password = "initialpassword123",
+                deviceType = null,
+                deviceId = null,
+            )
+        }.isInstanceOf(ValidationException::class.java)
+    }
 
     @Test
     fun `create menghasilkan peer ENABLED dengan lastHandshake null`() {

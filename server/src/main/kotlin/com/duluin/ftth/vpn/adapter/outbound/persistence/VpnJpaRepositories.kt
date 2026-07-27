@@ -18,6 +18,10 @@ interface VpnPeerJpaRepository : JpaRepository<VpnPeerJpaEntity, UUID> {
     fun findByServerIdAndUsername(serverId: UUID, username: String): VpnPeerJpaEntity?
     fun existsByServerIdAndUsername(serverId: UUID, username: String): Boolean
     fun countByServerId(serverId: UUID): Long
+
+    /** Port remote terpakai pada sebuah hub (lintas-tenant) — dasar alokasi berikutnya, tanpa dekripsi. */
+    @Query("select p.remotePort from VpnPeerJpaEntity p where p.serverId = :serverId")
+    fun findRemotePortsByServerId(@Param("serverId") serverId: UUID): List<Int>
 }
 
 interface VpnNodeTokenJpaRepository : JpaRepository<VpnNodeTokenJpaEntity, UUID> {

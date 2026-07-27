@@ -178,6 +178,7 @@ export function VpnPage() {
                 <th>Titik dial</th>
                 <th>Username</th>
                 <th>IP overlay</th>
+                <th>Winbox (remote)</th>
                 <th>Status</th>
                 <th>Handshake terakhir</th>
                 <th />
@@ -195,6 +196,7 @@ export function VpnPage() {
                   </td>
                   <td className="muted">{a.username}</td>
                   <td className="tnum">{a.overlayIp}</td>
+                  <td className="tnum">{a.winboxAddress}</td>
                   <td>
                     <span
                       className="badge"
@@ -256,6 +258,7 @@ function CredentialCard({ account, onDismiss }: { account: VpnAccountView; onDis
     { label: 'Username', value: account.username, copy: true },
     { label: 'Password', value: account.password ?? '—', copy: !!account.password },
     { label: 'IP overlay', value: account.overlayIp },
+    { label: 'Winbox (remote)', value: account.winboxAddress, copy: true },
   ]
 
   return (

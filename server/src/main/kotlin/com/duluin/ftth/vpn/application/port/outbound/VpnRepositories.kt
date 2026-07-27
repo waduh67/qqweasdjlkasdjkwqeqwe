@@ -49,6 +49,9 @@ interface VpnPeerRepository {
     /** IP overlay terpakai pada sebuah hub (lintas-tenant) — dasar alokasi berikutnya. */
     fun usedOverlayIps(serverId: UUID): Set<String>
 
+    /** Port remote (publik TCP) terpakai pada sebuah hub (lintas-tenant) — dasar alokasi berikutnya. */
+    fun usedRemotePorts(serverId: UUID): Set<Int>
+
     /** Keunikan username per hub, LINTAS-TENANT. */
     fun existsByServerIdAndUsername(serverId: UUID, username: String): Boolean
 

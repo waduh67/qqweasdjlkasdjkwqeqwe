@@ -86,6 +86,10 @@ class VpnPeerJpaEntity(
     @Column(name = "overlay_ip", nullable = false, length = 45, updatable = false)
     var overlayIp: String,
 
+    // Port publik TCP di hub yang di-DNAT ke Winbox perangkat; identitas, tak berubah.
+    @Column(name = "remote_port", nullable = false, updatable = false)
+    var remotePort: Int,
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var status: VpnPeerStatus,

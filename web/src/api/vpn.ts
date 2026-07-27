@@ -96,6 +96,10 @@ export interface VpnAccountView {
   securityType: string
   username: string
   overlayIp: string
+  /** Port publik TCP di hub yang di-DNAT ke Winbox (8291) perangkat. */
+  remotePort: number
+  /** Alamat siap-Winbox `host:remotePort` — remote perangkat tanpa ikut men-dial tunnel. */
+  winboxAddress: string
   status: string
   lastHandshakeAt: string | null
   password: string | null

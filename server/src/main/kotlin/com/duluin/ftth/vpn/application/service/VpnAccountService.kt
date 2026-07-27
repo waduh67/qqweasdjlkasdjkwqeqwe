@@ -9,6 +9,8 @@ import com.duluin.ftth.vpn.application.port.inbound.ManageVpnAccountUseCase
 import com.duluin.ftth.vpn.application.port.inbound.VpnAccountView
 import com.duluin.ftth.vpn.application.port.outbound.VpnPeerRepository
 import com.duluin.ftth.vpn.application.port.outbound.VpnServerRepository
+import com.duluin.ftth.vpn.config.VpnProperties
+import com.duluin.ftth.vpn.domain.model.RemotePortRange
 import com.duluin.ftth.vpn.domain.model.TunnelSubnet
 import com.duluin.ftth.vpn.domain.model.VpnPeer
 import com.duluin.ftth.vpn.domain.model.VpnServer
@@ -31,6 +33,7 @@ class VpnAccountService(
     private val peerRepository: VpnPeerRepository,
     private val renderer: VpnConfigRenderer,
     private val passwordGenerator: PasswordGenerator,
+    private val properties: VpnProperties,
     private val auditor: AuditRecorder,
 ) : ManageVpnAccountUseCase {
 
@@ -51,6 +54,8 @@ class VpnAccountService(
         val server = pickServer()
         val label = command.label?.trim()?.takeIf { it.isNotBlank() } ?: DEFAULT_LABEL
         val overlayIp = TunnelSubnet.parse(server.tunnelCidr).allocate(peerRepository.usedOverlayIps(server.id))
+        val remotePort = RemotePortRange(properties.remotePortMin, properties.remotePortMax)
+            .allocate(peerRepository.usedRemotePorts(server.id))
         val username = resolveUsername(server.id, label, command.username)
         val peer = VpnPeer.create(
             tenantId = TenantContext.tenantId(),
@@ -58,6 +63,7 @@ class VpnAccountService(
             name = label,
             username = username,
             overlayIp = overlayIp,
+            remotePort = remotePort,
             password = passwordGenerator.generate(),
             deviceType = command.deviceType,
             deviceId = command.deviceId,
@@ -65,7 +71,10 @@ class VpnAccountService(
         val saved = peerRepository.save(peer)
         auditor.record(
             "vpn.account.generated", "VpnPeer", saved.id, saved.tenantId,
-            mapOf("username" to saved.username, "overlayIp" to saved.overlayIp, "serverId" to server.id),
+            mapOf(
+                "username" to saved.username, "overlayIp" to saved.overlayIp,
+                "remotePort" to saved.remotePort, "serverId" to server.id,
+            ),
         )
         // Password disertakan SEKALI di sini (sekali tampil).
         return saved.toView(server, revealPassword = true)
@@ -163,6 +172,8 @@ class VpnAccountService(
             securityType = "OpenVPN ($protocol) · $CIPHER",
             username = username,
             overlayIp = overlayIp,
+            remotePort = remotePort,
+            winboxAddress = "${server.host}:$remotePort",
             status = status.name,
             lastHandshakeAt = lastHandshakeAt,
             password = if (revealPassword) password else null,

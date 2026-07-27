@@ -82,3 +82,7 @@ ftth:
     # URL publik aplikasi yang di-embed ke installer (dipakai VPS untuk callback verify/connect).
     # Kosong = diturunkan dari request unduh installer. WAJIB diisi di prod bila di belakang proxy.
     public-base-url: ${FTTH_VPN_PUBLIC_BASE_URL:}
+    # Rentang port publik TCP di hub yang di-DNAT ke Winbox (8291) tiap perangkat — satu port
+    # unik per akun. Buka rentang ini di firewall VPS (mis. 20000-40000/tcp).
+    remote-port-min: ${FTTH_VPN_REMOTE_PORT_MIN:20000}
+    remote-port-max: ${FTTH_VPN_REMOTE_PORT_MAX:40000}

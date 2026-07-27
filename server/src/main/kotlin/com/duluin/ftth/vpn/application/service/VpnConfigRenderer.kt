@@ -134,6 +134,8 @@ class VpnConfigRenderer {
             .replace("{{PROTO}}", proto)
             .replace("{{APP_URL}}", baseUrl)
             .replace("{{NODE_TOKEN}}", rawNodeToken)
+            .replace("{{TUNNEL_CIDR}}", TunnelSubnet.parse(server.tunnelCidr).cidr)
+            .replace("{{DEVICE_PORT}}", DEVICE_PORT.toString())
             .replace("{{SERVER_CONF}}", renderNodeServerConf(server, proto))
             .replace("{{CA_CERT}}", caCert.trim())
             .replace("{{SERVER_CERT}}", serverCert.trim())
@@ -143,7 +145,8 @@ class VpnConfigRenderer {
     /**
      * `server.conf` untuk model callback-langsung: sertifikat/kunci dari berkas, autentikasi
      * user/pass dan `ifconfig-push` IP tetap didelegasikan ke skrip yang memanggil balik aplikasi
-     * (`auth-user-pass-verify` + `client-connect`). `dh none` memakai ECDHE (kunci server RSA).
+     * (`auth-user-pass-verify` + `client-connect`). `client-disconnect` melepas DNAT port publik
+     * saat perangkat putus. `dh none` memakai ECDHE (kunci server RSA).
      */
     private fun renderNodeServerConf(server: VpnServer, proto: String): String {
         val subnet = TunnelSubnet.parse(server.tunnelCidr)
@@ -162,6 +165,7 @@ class VpnConfigRenderer {
             appendLine("script-security 2")
             appendLine("auth-user-pass-verify /etc/openvpn/server/ftth-verify.sh via-file")
             appendLine("client-connect /etc/openvpn/server/ftth-connect.sh")
+            appendLine("client-disconnect /etc/openvpn/server/ftth-disconnect.sh")
             appendLine("keepalive 10 120")
             appendLine("persist-key")
             appendLine("persist-tun")
@@ -179,5 +183,8 @@ class VpnConfigRenderer {
 
     private companion object {
         const val INSTALL_TEMPLATE_PATH = "/vpn/install.sh.template"
+
+        /** Port Winbox default perangkat Mikrotik — tujuan DNAT dari port publik hub. */
+        const val DEVICE_PORT = 8291
     }
 }

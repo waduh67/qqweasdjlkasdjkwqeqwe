@@ -16,4 +16,11 @@ data class VpnProperties(
      * dan untuk merangkai perintah pasang. Kosong = diturunkan dari request unduh installer.
      */
     val publicBaseUrl: String = "",
+    /**
+     * Rentang port publik TCP di hub yang di-DNAT ke Winbox tiap perangkat (satu port unik per
+     * akun/hub). Operator meremote perangkat lewat `IP_HUB:port` tanpa ikut men-dial tunnel.
+     * Buka rentang ini di firewall VPS (mis. `20000-40000/tcp`).
+     */
+    val remotePortMin: Int = 20000,
+    val remotePortMax: Int = 40000,
 )

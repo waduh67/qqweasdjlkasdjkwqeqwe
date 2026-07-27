@@ -45,7 +45,7 @@ Istilah singkat:
    - `22` (SSH), `80` (HTTP), `443` (HTTPS). Sisanya biarin ketutup.
    - **Mau pakai fitur VPN** (remote Mikrotik tanpa IP publik)? buka juga port hub
      OpenVPN — default `1194/UDP` (samakan dengan Port/Protokol saat bikin hub di
-     dashboard). Lihat Bagian I.
+     dashboard) **dan** rentang port remote Winbox `20000-40000/TCP`. Lihat Bagian I.
 4. Create. Setelah jadi, catat **Public IP** VM-nya (mis. `20.11.22.33`).
 5. Coba SSH dari laptop:
    ```bash
@@ -224,8 +224,10 @@ Fitur ini menjadikan **VPS ini sekaligus hub OpenVPN**. Tenant tinggal klik "Gen
 akun VPN" di dashboard → dapat `ip:port` + user/pass → tempel di Mikrotik. Hub-nya
 dikelola HANYA oleh admin platform.
 
-1. **Buka port hub di NSG Azure** — tambah inbound rule `1194/UDP` (atau port/protokol
-   yang kamu pilih saat bikin hub).
+1. **Buka port di NSG Azure** — tambah inbound rule `1194/UDP` (atau port/protokol
+   yang kamu pilih saat bikin hub) **plus** rentang `20000-40000/TCP` untuk remote Winbox
+   (tiap akun VPN dapat satu port unik di rentang ini; sesuaikan bila kamu ubah
+   `FTTH_VPN_REMOTE_PORT_MIN/MAX`).
 
 2. **Kasih tahu aplikasi URL publiknya** — di `/opt/ftth/.env`, tambah baris:
    ```bash
@@ -255,10 +257,18 @@ dikelola HANYA oleh admin platform.
 
 5. **Tenant generate akun & pasang di Mikrotik** — dari akun tenant, menu **Akun VPN** →
    Generate → salin kredensial → tempel di Mikrotik (unduh skrip RouterOS bila perlu).
+   Kartu kredensial memuat **Winbox (remote)** = `IP_VPS:port` — begitu Mikrotik terhubung
+   ke hub, buka alamat itu di Winbox/browser untuk meremote perangkatnya langsung, tanpa
+   ikut men-dial tunnel. Hub men-DNAT `IP_VPS:port` → `overlay:8291` otomatis.
+
+> **Sudah pernah pasang hub sebelum fitur remote-port ini?** Jalankan ulang perintah pasang
+> hub dari dashboard (menu Server VPN → salin ulang perintah / rotasi token) agar skrip
+> `ftth-connect.sh`/`ftth-disconnect.sh` + aturan iptables baru ikut terpasang. Akun lama
+> otomatis dapat port remote lewat migrasi DB; Mikrotik-nya cukup reconnect ke hub.
 
 > Domain di balik Cloudflare (orange-cloud) hanya mem-proxy HTTP/HTTPS, **bukan** UDP
-> 1194 — makanya Host hub wajib IP publik VPS mentah. Callback aplikasi (lewat HTTPS
-> domain) tetap jalan normal.
+> 1194 maupun rentang TCP Winbox — makanya Host hub wajib IP publik VPS mentah. Callback
+> aplikasi (lewat HTTPS domain) tetap jalan normal.
 
 ---
 

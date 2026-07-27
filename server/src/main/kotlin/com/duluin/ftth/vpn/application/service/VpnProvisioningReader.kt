@@ -37,14 +37,18 @@ class VpnProvisioningReader(
         return constantTimeEquals(peer.password, password)
     }
 
-    /** Baris `ifconfig-push {overlayIp} {netmask}` untuk peer aktif; null bila tak ada/nonaktif. */
+    /**
+     * Data koneksi peer aktif: `{overlayIp} {netmask} {remotePort}` (dipisah spasi). Skrip
+     * `client-connect` di VPS memakainya untuk menulis `ifconfig-push {overlayIp} {netmask}` ke
+     * berkas CCD SEKALIGUS memasang DNAT port publik → Winbox perangkat. Null bila tak ada/nonaktif.
+     */
     @Transactional(readOnly = true)
     fun clientConnectLine(serverId: UUID, username: String): String? {
         val peer = enabledPeer(serverId, username) ?: return null
         val server = serverRepository.findById(serverId)
             ?: throw ConflictException("Hub VPN $serverId hilang saat client-connect")
         val netmask = TunnelSubnet.parse(server.tunnelCidr).netmask()
-        return "ifconfig-push ${peer.overlayIp} $netmask"
+        return "${peer.overlayIp} $netmask ${peer.remotePort}"
     }
 
     private fun enabledPeer(serverId: UUID, username: String): VpnPeer? =

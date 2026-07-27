@@ -49,7 +49,13 @@ class VpnInstallScriptTest {
         assertThat(script).contains("username-as-common-name")
         assertThat(script).contains("auth-user-pass-verify /etc/openvpn/server/ftth-verify.sh via-file")
         assertThat(script).contains("client-connect /etc/openvpn/server/ftth-connect.sh")
+        assertThat(script).contains("client-disconnect /etc/openvpn/server/ftth-disconnect.sh")
         assertThat(script).contains("dh none")
+        // DNAT port publik -> Winbox: rute-balik MASQUERADE + FORWARD subnet tunnel, port device 8291.
+        assertThat(script).contains("TUN_CIDR=\"10.8.0.0/24\"")
+        assertThat(script).contains("-j MASQUERADE")
+        assertThat(script).contains("--to-destination \"\$ip:8291\"")
+        assertThat(script).contains("ftth-disconnect.sh")
     }
 
     @Test

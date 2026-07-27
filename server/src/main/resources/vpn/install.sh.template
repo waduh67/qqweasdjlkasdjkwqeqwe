@@ -73,23 +73,72 @@ code=$(curl -sS -o /dev/null -w '%{http_code}' -m 10 \
 FTTH_VERIFY
 chmod 755 "$DIR/ftth-verify.sh"
 
-# Kunci IP overlay tetap per perangkat: minta aplikasi baris ifconfig-push-nya.
+# Kunci IP overlay tetap + pasang DNAT port publik -> Winbox perangkat. Aplikasi mengembalikan
+# "ip mask port": baris ifconfig-push ditulis ke berkas config, port di-DNAT ke <ip>:{{DEVICE_PORT}}.
 cat > "$DIR/ftth-connect.sh" <<'FTTH_CONNECT'
 #!/usr/bin/env bash
 set -euo pipefail
 source /etc/openvpn/server/ftth-node.env
+config="$1"
 line=$(curl -sS -m 10 \
   --data-urlencode "token=$NODE_TOKEN" \
   --data-urlencode "username=$common_name" \
   "$APP_URL/api/vpn/provision/client-connect" || true)
 [ -n "$line" ] || exit 1
-printf '%s\n' "$line" > "$1"
+read -r ip mask port <<< "$line"
+[ -n "$ip" ] && [ -n "$mask" ] || exit 1
+printf 'ifconfig-push %s %s\n' "$ip" "$mask" > "$config"
+
+# DNAT port publik hub -> Winbox perangkat. Best-effort: dibungkus { } || true + exit 0 supaya
+# kegagalan iptables TAK PERNAH membuat skrip exit != 0 (OpenVPN akan menolak klien bila begitu).
+if [ -n "$port" ] && command -v iptables >/dev/null 2>&1; then
+  {
+    dest="$ip:{{DEVICE_PORT}}"
+    # Bersihkan DNAT usang di port sama menuju tujuan lain (IP overlay bisa dipakai ulang lintas-tenant).
+    iptables -t nat -S PREROUTING 2>/dev/null \
+      | awk -v p="$port" -v d="$dest" '$0 ~ ("--dport "p" ") && /-j DNAT/ && $0 !~ d {sub(/^-A/,"-D"); print}' \
+      | while read -r rule; do iptables -t nat $rule 2>/dev/null || true; done
+    iptables -t nat -C PREROUTING -p tcp --dport "$port" -j DNAT --to-destination "$dest" 2>/dev/null \
+      || iptables -t nat -A PREROUTING -p tcp --dport "$port" -j DNAT --to-destination "$dest" 2>/dev/null || true
+  } || true
+fi
+exit 0
 FTTH_CONNECT
 chmod 755 "$DIR/ftth-connect.sh"
+
+# Lepas DNAT port publik saat perangkat putus (best-effort; selalu exit 0).
+cat > "$DIR/ftth-disconnect.sh" <<'FTTH_DISCONNECT'
+#!/usr/bin/env bash
+set -uo pipefail
+source /etc/openvpn/server/ftth-node.env
+line=$(curl -sS -m 10 \
+  --data-urlencode "token=$NODE_TOKEN" \
+  --data-urlencode "username=$common_name" \
+  "$APP_URL/api/vpn/provision/client-connect" || true)
+[ -n "$line" ] || exit 0
+read -r ip mask port <<< "$line"
+if [ -n "${port:-}" ] && [ -n "${ip:-}" ] && command -v iptables >/dev/null 2>&1; then
+  iptables -t nat -D PREROUTING -p tcp --dport "$port" -j DNAT --to-destination "$ip:{{DEVICE_PORT}}" 2>/dev/null || true
+fi
+exit 0
+FTTH_DISCONNECT
+chmod 755 "$DIR/ftth-disconnect.sh"
 
 # Aktifkan IP forwarding (perangkat overlay bisa dijangkau lewat hub).
 echo 'net.ipv4.ip_forward=1' > /etc/sysctl.d/99-ftth-vpn.conf
 sysctl -q -w net.ipv4.ip_forward=1
+
+# Rute-balik trafik remote (DNAT -> Winbox) lewat tunnel: MASQUERADE ke subnet tunnel supaya
+# perangkat membalas ke hub (10.8.0.1), plus izinkan FORWARD subnet tunnel (host Docker set DROP).
+TUN_CIDR="{{TUNNEL_CIDR}}"
+if command -v iptables >/dev/null 2>&1; then
+  iptables -t nat -C POSTROUTING -d "$TUN_CIDR" -j MASQUERADE 2>/dev/null \
+    || iptables -t nat -A POSTROUTING -d "$TUN_CIDR" -j MASQUERADE 2>/dev/null || true
+  iptables -C FORWARD -d "$TUN_CIDR" -j ACCEPT 2>/dev/null \
+    || iptables -I FORWARD 1 -d "$TUN_CIDR" -j ACCEPT 2>/dev/null || true
+  iptables -C FORWARD -s "$TUN_CIDR" -j ACCEPT 2>/dev/null \
+    || iptables -I FORWARD 1 -s "$TUN_CIDR" -j ACCEPT 2>/dev/null || true
+fi
 
 systemctl enable --now openvpn-server@server
 sleep 1

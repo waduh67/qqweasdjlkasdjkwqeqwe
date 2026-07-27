@@ -54,6 +54,10 @@ data class VpnAccountView(
     val username: String,
     /** IP overlay tetap yang di-push server — alamat perangkat di dalam tunnel. */
     val overlayIp: String,
+    /** Port publik TCP di hub yang di-DNAT ke Winbox perangkat. */
+    val remotePort: Int,
+    /** Alamat siap-Winbox: `host:remotePort` — remote perangkat tanpa ikut nge-dial tunnel. */
+    val winboxAddress: String,
     val status: String,
     val lastHandshakeAt: Instant?,
     /** Sekali tampil saat generate/rotasi; null pada list/get. */

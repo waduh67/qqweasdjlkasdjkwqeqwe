@@ -145,11 +145,15 @@ class VpnIT {
         val accId = id(acc)
         val username = JsonPath.read<String>(acc, "$.username")
         val overlayIp = JsonPath.read<String>(acc, "$.overlayIp")
+        val remotePort = JsonPath.read<Int>(acc, "$.remotePort")
         val password = JsonPath.read<String>(acc, "$.password")
         assertThat(username).isEqualTo("bras-jkt")
         assertThat(JsonPath.read<String>(acc, "$.serverName")).isEqualTo(hubName)
         assertThat(JsonPath.read<String>(acc, "$.host")).isEqualTo("vpn.example.com")
         assertThat(JsonPath.read<String>(acc, "$.securityType")).contains("AES-256-GCM")
+        // Port remote di rentang default + winboxAddress = host:remotePort siap tempel.
+        assertThat(remotePort).isBetween(20000, 40000)
+        assertThat(JsonPath.read<String>(acc, "$.winboxAddress")).isEqualTo("vpn.example.com:$remotePort")
 
         // Password sekali-tampil: GET biasa tak lagi membocorkannya.
         val fetched = getText("/api/vpn/accounts/$accId", tenant)
@@ -159,10 +163,10 @@ class VpnIT {
         assertThat(authenticate(nodeToken, username, password)).isEqualTo(204)
         assertThat(authenticate(nodeToken, username, "passwordSalah")).isEqualTo(403)
 
-        // client-connect: kunci IP overlay tetap akun.
+        // client-connect: kunci IP overlay tetap + port remote (VPS memakainya untuk ifconfig-push + DNAT).
         val (ccStatus, ccBody) = clientConnect(nodeToken, username)
         assertThat(ccStatus).isEqualTo(200)
-        assertThat(ccBody.trim()).isEqualTo("ifconfig-push $overlayIp 255.255.255.0")
+        assertThat(ccBody.trim()).isEqualTo("$overlayIp 255.255.255.0 $remotePort")
 
         // Akun nonaktif ditolak di kedua callback.
         post("/api/vpn/accounts/$accId/disable", tenant, "", expected = 200)
