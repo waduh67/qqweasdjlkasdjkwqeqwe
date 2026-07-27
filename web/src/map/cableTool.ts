@@ -141,6 +141,17 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
         },
       })
     }
+    // Jalur klik tak kasat mata yang jauh lebih lebar dari garis 3px, supaya
+    // menyisipkan titik belok saat mengedit tidak menuntut ketepatan piksel.
+    if (!map.getLayer('cable-tool-hit-l')) {
+      map.addLayer({
+        id: 'cable-tool-hit-l',
+        type: 'line',
+        source: SRC_LINE,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#2a78d6', 'line-opacity': 0, 'line-width': 20 },
+      })
+    }
     // Cincin sorotan pada perangkat yang akan di-snap.
     if (!map.getLayer('cable-tool-snap-l')) {
       map.addLayer({
@@ -172,7 +183,7 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
   }
 
   function removeLayersAndSources() {
-    for (const id of ['cable-tool-line-l', 'cable-tool-snap-l', 'cable-tool-verts-l']) {
+    for (const id of ['cable-tool-hit-l', 'cable-tool-line-l', 'cable-tool-snap-l', 'cable-tool-verts-l']) {
       if (map.getLayer(id)) map.removeLayer(id)
     }
     for (const id of [SRC_LINE, SRC_VERTS, SRC_SNAP]) {
@@ -193,9 +204,14 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
     const src = map.getSource(SRC_VERTS) as GeoJSONSource | undefined
     src?.setData({
       type: 'FeatureCollection',
-      features: points.map((p) => ({
+      // `index` disematkan sebagai properti (bukan cocokkan koordinat) karena
+      // MapLibre mengkuantisasi koordinat sumber GeoJSON saat memetakannya ke tile
+      // internal — `queryRenderedFeatures` mengembalikan angka yang SEDIKIT berbeda
+      // dari yang kita masukkan, jadi pencocokan `===` selalu meleset dan seret titik
+      // tak pernah aktif. Indeks eksplisit kebal terhadap kuantisasi itu.
+      features: points.map((p, i) => ({
         type: 'Feature',
-        properties: { locked: p.locked },
+        properties: { locked: p.locked, index: i },
         geometry: { type: 'Point', coordinates: p.coord },
       })),
     })
@@ -344,10 +360,9 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
   const onVertMouseDown = (e: MapLayerMouseEvent) => {
     if (mode !== 'edit') return
     const f = e.features?.[0]
-    if (!f || f.geometry.type !== 'Point') return
-    const [lng, lat] = f.geometry.coordinates as [number, number]
-    const idx = editCoords.findIndex((c) => c[0] === lng && c[1] === lat)
-    if (idx <= 0 || idx >= editCoords.length - 1) return // ujung terkunci
+    if (!f) return
+    const idx = Number(f.properties?.index)
+    if (!Number.isInteger(idx) || idx <= 0 || idx >= editCoords.length - 1) return // ujung terkunci
     dragIndex = idx
     dragMoved = false
     map.dragPan.disable()
@@ -401,10 +416,9 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
     if (mode !== 'edit') return
     e.preventDefault()
     const f = e.features?.[0]
-    if (!f || f.geometry.type !== 'Point') return
-    const [lng, lat] = f.geometry.coordinates as [number, number]
-    const idx = editCoords.findIndex((c) => c[0] === lng && c[1] === lat)
-    if (idx > 0 && idx < editCoords.length - 1) {
+    if (!f) return
+    const idx = Number(f.properties?.index)
+    if (Number.isInteger(idx) && idx > 0 && idx < editCoords.length - 1) {
       editCoords.splice(idx, 1)
       renderEdit()
       emit()
@@ -430,14 +444,14 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
     map.doubleClickZoom.disable()
     map.on('mousedown', 'cable-tool-verts-l', onVertMouseDown)
     map.on('dblclick', 'cable-tool-verts-l', onVertDblClick)
-    map.on('click', 'cable-tool-line-l', onLineClick)
+    map.on('click', 'cable-tool-hit-l', onLineClick)
     map.on('mousemove', onEditMove)
     map.on('mouseup', onEditUp)
   }
   function detachEdit() {
     map.off('mousedown', 'cable-tool-verts-l', onVertMouseDown)
     map.off('dblclick', 'cable-tool-verts-l', onVertDblClick)
-    map.off('click', 'cable-tool-line-l', onLineClick)
+    map.off('click', 'cable-tool-hit-l', onLineClick)
     map.off('mousemove', onEditMove)
     map.off('mouseup', onEditUp)
     map.doubleClickZoom.enable()
