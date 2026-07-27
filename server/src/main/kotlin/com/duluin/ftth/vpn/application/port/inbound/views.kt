@@ -23,6 +23,13 @@ data class VpnServerView(
     /** True bila aplikasi sudah menerbitkan CA + sertifikat server → hub siap dipasang. */
     val pkiReady: Boolean,
     val peerCount: Long,
+    /**
+     * Token node MENTAH — hanya terisi tepat setelah hub dibuat / token dirotasi (sekali tampil,
+     * tak pernah bisa dibaca ulang), null pada list/get. Kredensial installer + callback VPS.
+     */
+    val nodeToken: String? = null,
+    /** Perintah pasang satu-baris siap tempel di VPS; terisi bersama [nodeToken]. */
+    val installCommand: String? = null,
 )
 
 /**

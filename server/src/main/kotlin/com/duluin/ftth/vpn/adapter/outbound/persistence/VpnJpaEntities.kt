@@ -1,5 +1,6 @@
 package com.duluin.ftth.vpn.adapter.outbound.persistence
 
+import com.duluin.ftth.common.infrastructure.persistence.BaseJpaEntity
 import com.duluin.ftth.common.infrastructure.persistence.TenantAwareJpaEntity
 import com.duluin.ftth.vpn.domain.model.VpnPeerStatus
 import com.duluin.ftth.vpn.domain.model.VpnProtocol
@@ -95,3 +96,26 @@ class VpnPeerJpaEntity(
     @Column(nullable = false, length = 512)
     var password: String,
 ) : TenantAwareJpaEntity(id)
+
+/**
+ * Token node per hub. Sengaja [BaseJpaEntity] dengan kolom [tenantId] BIASA (bukan
+ * `@TenantId`) dan tabelnya TANPA RLS — persis pola [CollectorJpaEntity]: barisnya dicari
+ * lewat hash token SEBELUM tenant diketahui, jadi filter tenant justru akan memblokirnya.
+ */
+@Entity
+@Table(name = "vpn_node_token")
+class VpnNodeTokenJpaEntity(
+    id: UUID,
+
+    @Column(name = "server_id", nullable = false, updatable = false)
+    var serverId: UUID,
+
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    var tenantId: UUID,
+
+    @Column(name = "token_hash", nullable = false, length = 64, updatable = false)
+    var tokenHash: String,
+
+    @Column(name = "token_hint", nullable = false, length = 16, updatable = false)
+    var tokenHint: String,
+) : BaseJpaEntity(id)

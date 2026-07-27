@@ -11,4 +11,9 @@ data class VpnProperties(
     val defaultPort: Int = 1194,
     val defaultProtocol: String = "UDP",
     val defaultTunnelCidr: String = "10.8.0.0/24",
+    /**
+     * URL publik aplikasi yang di-embed ke installer (dipakai VPS untuk callback verify/connect)
+     * dan untuk merangkai perintah pasang. Kosong = diturunkan dari request unduh installer.
+     */
+    val publicBaseUrl: String = "",
 )

@@ -2,13 +2,17 @@ package com.duluin.ftth.vpn.adapter.outbound.persistence
 
 import com.duluin.ftth.common.security.SecretCipher
 import com.duluin.ftth.common.tenant.TenantContext
+import com.duluin.ftth.vpn.application.port.outbound.VpnNodeRef
+import com.duluin.ftth.vpn.application.port.outbound.VpnNodeTokenRepository
 import com.duluin.ftth.vpn.application.port.outbound.VpnPeerRepository
 import com.duluin.ftth.vpn.application.port.outbound.VpnServerRepository
+import com.duluin.ftth.vpn.domain.model.VpnNodeToken
 import com.duluin.ftth.vpn.domain.model.VpnPeer
 import com.duluin.ftth.vpn.domain.model.VpnServer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 /**
@@ -124,6 +128,9 @@ class VpnPeerPersistenceAdapter(
     override fun findByServerId(serverId: UUID): List<VpnPeer> =
         jpa.findByServerIdOrderByOverlayIpAsc(serverId).map { it.toDomain() }
 
+    override fun findByServerIdAndUsername(serverId: UUID, username: String): VpnPeer? =
+        jpa.findByServerIdAndUsername(serverId, username)?.toDomain()
+
     override fun usedOverlayIps(serverId: UUID): Set<String> =
         jpa.findByServerIdOrderByOverlayIpAsc(serverId).mapTo(HashSet()) { it.overlayIp }
 
@@ -149,6 +156,33 @@ class VpnPeerPersistenceAdapter(
         // terdekripsi tidak masalah untuk baca, dan save menjaganya agar tak menimpa.
         password = cipher.decryptQuietly(password, username, log) ?: "",
     )
+}
+
+/**
+ * Adapter token node. Tabelnya tanpa RLS/@TenantId (lihat [VpnNodeTokenJpaEntity]), jadi
+ * [findRefByTokenHash] mengembalikan hub lintas-tenant — dipakai saat autentikasi node
+ * sebelum [TenantContext] dipasang. Hanya hash yang disimpan; tak ada batas enkripsi di sini.
+ */
+@Component
+class VpnNodeTokenPersistenceAdapter(
+    private val jpa: VpnNodeTokenJpaRepository,
+) : VpnNodeTokenRepository {
+
+    override fun save(token: VpnNodeToken): VpnNodeToken = jpa.save(
+        VpnNodeTokenJpaEntity(
+            id = token.id,
+            serverId = token.serverId,
+            tenantId = token.tenantId,
+            tokenHash = token.tokenHash,
+            tokenHint = token.tokenHint,
+        ),
+    ).let { token }
+
+    override fun findRefByTokenHash(tokenHash: String): VpnNodeRef? =
+        jpa.findByTokenHash(tokenHash)?.let { VpnNodeRef(serverId = it.serverId, tenantId = it.tenantId) }
+
+    @Transactional
+    override fun deleteByServerId(serverId: UUID) = jpa.deleteByServerId(serverId)
 }
 
 /**

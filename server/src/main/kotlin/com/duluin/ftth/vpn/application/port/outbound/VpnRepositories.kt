@@ -29,6 +29,9 @@ interface VpnPeerRepository {
     /** Peer sebuah hub, terurut IP overlay. */
     fun findByServerId(serverId: UUID): List<VpnPeer>
 
+    /** Satu peer via (hub, username) — dipakai callback provisioning saat verifikasi koneksi. */
+    fun findByServerIdAndUsername(serverId: UUID, username: String): VpnPeer?
+
     /** IP overlay yang sudah terpakai pada sebuah hub — dasar alokasi berikutnya. */
     fun usedOverlayIps(serverId: UUID): Set<String>
 

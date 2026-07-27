@@ -16,6 +16,9 @@ interface ManageVpnServerUseCase {
     /** Set/hapus sertifikat CA & kunci tls-auth. Keduanya null = kosongkan. */
     fun setCredentials(id: UUID, caCertPem: String?, tlsAuthKey: String?): VpnServerView
 
+    /** Rotasi token node hub (mencabut yang lama). View balikan memuat token + perintah pasang baru. */
+    fun regenerateNodeToken(id: UUID): VpnServerView
+
     /** Menolak menghapus hub yang masih punya peer. */
     fun delete(id: UUID)
 

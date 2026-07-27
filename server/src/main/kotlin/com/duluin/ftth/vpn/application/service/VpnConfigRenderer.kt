@@ -7,6 +7,7 @@ import com.duluin.ftth.vpn.domain.model.VpnPeer
 import com.duluin.ftth.vpn.domain.model.VpnPeerStatus
 import com.duluin.ftth.vpn.domain.model.VpnServer
 import org.springframework.stereotype.Component
+import java.nio.charset.StandardCharsets
 
 /**
  * Perakit teks konfigurasi OpenVPN (murni, tanpa I/O). Baseline RouterOS v7 — sejalan
@@ -108,5 +109,75 @@ class VpnConfigRenderer {
             .filter { it.status == VpnPeerStatus.ENABLED }
             .associate { it.username to "ifconfig-push ${it.overlayIp} $netmask" }
         return ServerConfigView(serverConf = serverConf, ccd = ccd)
+    }
+
+    /**
+     * Installer satu-perintah untuk VPS. Menyisipkan CA + sertifikat/kunci server (dari PKI
+     * aplikasi) dan `server.conf` model callback-langsung ke template bash: OpenVPN memverifikasi
+     * user/pass dan mengunci IP overlay dengan memanggil balik aplikasi memakai [rawNodeToken],
+     * jadi perangkat baru bekerja seketika tanpa menyentuh VPS lagi. Melempar [ConflictException]
+     * bila PKI hub belum lengkap.
+     */
+    fun renderInstallScript(server: VpnServer, appBaseUrl: String, rawNodeToken: String): String {
+        val caCert = server.caCertPem
+        val serverCert = server.serverCertPem
+        val serverKey = server.serverKeyPem
+        if (caCert == null || serverCert == null || serverKey == null) {
+            throw ConflictException("Hub '${server.name}' belum siap: PKI (CA/sertifikat server) belum terbit")
+        }
+        val baseUrl = appBaseUrl.trimEnd('/')
+        val proto = server.protocol.name.lowercase()
+        return installTemplate
+            .replace("{{SERVER_NAME}}", server.name)
+            .replace("{{HOST}}", server.host)
+            .replace("{{PORT}}", server.port.toString())
+            .replace("{{PROTO}}", proto)
+            .replace("{{APP_URL}}", baseUrl)
+            .replace("{{NODE_TOKEN}}", rawNodeToken)
+            .replace("{{SERVER_CONF}}", renderNodeServerConf(server, proto))
+            .replace("{{CA_CERT}}", caCert.trim())
+            .replace("{{SERVER_CERT}}", serverCert.trim())
+            .replace("{{SERVER_KEY}}", serverKey.trim())
+    }
+
+    /**
+     * `server.conf` untuk model callback-langsung: sertifikat/kunci dari berkas, autentikasi
+     * user/pass dan `ifconfig-push` IP tetap didelegasikan ke skrip yang memanggil balik aplikasi
+     * (`auth-user-pass-verify` + `client-connect`). `dh none` memakai ECDHE (kunci server RSA).
+     */
+    private fun renderNodeServerConf(server: VpnServer, proto: String): String {
+        val subnet = TunnelSubnet.parse(server.tunnelCidr)
+        return buildString {
+            appendLine("port ${server.port}")
+            appendLine("proto $proto")
+            appendLine("dev tun")
+            appendLine("topology subnet")
+            appendLine("server ${subnet.networkAddress()} ${subnet.netmask()}")
+            appendLine("ca ca.crt")
+            appendLine("cert server.crt")
+            appendLine("key server.key")
+            appendLine("dh none")
+            appendLine("verify-client-cert none")
+            appendLine("username-as-common-name")
+            appendLine("script-security 2")
+            appendLine("auth-user-pass-verify /etc/openvpn/server/ftth-verify.sh via-file")
+            appendLine("client-connect /etc/openvpn/server/ftth-connect.sh")
+            appendLine("keepalive 10 120")
+            appendLine("persist-key")
+            appendLine("persist-tun")
+            appendLine("cipher AES-256-GCM")
+            append("verb 3")
+        }
+    }
+
+    /** Template installer dibaca sekali dari classpath (resource statis, aman di-cache). */
+    private val installTemplate: String by lazy {
+        val stream = javaClass.getResourceAsStream(INSTALL_TEMPLATE_PATH)
+            ?: error("Template installer VPN tidak ditemukan di classpath: $INSTALL_TEMPLATE_PATH")
+        stream.use { it.readBytes().toString(StandardCharsets.UTF_8) }
+    }
+
+    private companion object {
+        const val INSTALL_TEMPLATE_PATH = "/vpn/install.sh.template"
     }
 }

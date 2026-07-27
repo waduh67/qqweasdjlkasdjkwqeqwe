@@ -72,6 +72,11 @@ class VpnController(
     fun setCredentials(@PathVariable id: UUID, @RequestBody request: SetCredentialsRequest): VpnServerView =
         servers.setCredentials(id, request.caCertPem, request.tlsAuthKey)
 
+    @PostMapping("/servers/{id}/regenerate-token")
+    @PreAuthorize("@authz.can('vpn.server.manage')")
+    @Operation(summary = "Rotasi token node hub (kembalikan token + perintah pasang baru, sekali tampil)")
+    fun regenerateToken(@PathVariable id: UUID): VpnServerView = servers.regenerateNodeToken(id)
+
     @DeleteMapping("/servers/{id}")
     @PreAuthorize("@authz.can('vpn.server.manage')")
     @ResponseStatus(HttpStatus.NO_CONTENT)

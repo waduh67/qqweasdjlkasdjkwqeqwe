@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+#
+# Installer hub OpenVPN FTTH untuk "{{SERVER_NAME}}".
+# Jalankan SEKALI di VPS ber-IP publik:
+#   curl -fsSL "<APP_URL>/api/vpn/provision/install.sh?token=<NODE_TOKEN>" | sudo bash
+# Idempoten: aman dijalankan ulang. Perangkat baru cukup ditambah dari dashboard —
+# VPS tidak perlu disentuh lagi (verifikasi user & IP tetap lewat callback ke aplikasi).
+#
+set -euo pipefail
+
+if [ "$(id -u)" -ne 0 ]; then
+  echo "[ftth] Jalankan sebagai root (mis. lewat sudo)." >&2
+  exit 1
+fi
+
+APP_URL="{{APP_URL}}"
+NODE_TOKEN="{{NODE_TOKEN}}"
+DIR=/etc/openvpn/server
+
+echo "[ftth] Memasang OpenVPN untuk hub {{SERVER_NAME}} ..."
+export DEBIAN_FRONTEND=noninteractive
+if command -v apt-get >/dev/null 2>&1; then
+  apt-get update -qq
+  apt-get install -y -qq openvpn curl
+elif command -v dnf >/dev/null 2>&1; then
+  dnf install -y -q openvpn curl
+else
+  echo "[ftth] Manajer paket tak dikenal; pasang 'openvpn' + 'curl' manual lalu ulangi." >&2
+  exit 1
+fi
+
+install -d -m 700 "$DIR"
+
+cat > "$DIR/ca.crt" <<'FTTH_CA_CERT'
+{{CA_CERT}}
+FTTH_CA_CERT
+
+cat > "$DIR/server.crt" <<'FTTH_SERVER_CERT'
+{{SERVER_CERT}}
+FTTH_SERVER_CERT
+
+( umask 077; cat > "$DIR/server.key" <<'FTTH_SERVER_KEY'
+{{SERVER_KEY}}
+FTTH_SERVER_KEY
+)
+chmod 600 "$DIR/server.key"
+
+cat > "$DIR/server.conf" <<'FTTH_SERVER_CONF'
+{{SERVER_CONF}}
+FTTH_SERVER_CONF
+
+# Kredensial node (rahasia): dipakai skrip verify/connect untuk memanggil balik aplikasi.
+( umask 077; cat > "$DIR/ftth-node.env" <<FTTH_NODE_ENV
+APP_URL=$APP_URL
+NODE_TOKEN=$NODE_TOKEN
+FTTH_NODE_ENV
+)
+chmod 600 "$DIR/ftth-node.env"
+
+# Verifikasi username/password tiap koneksi ke aplikasi (via-file: baris1=user, baris2=pass).
+cat > "$DIR/ftth-verify.sh" <<'FTTH_VERIFY'
+#!/usr/bin/env bash
+set -euo pipefail
+source /etc/openvpn/server/ftth-node.env
+user=$(sed -n '1p' "$1")
+pass=$(sed -n '2p' "$1")
+code=$(curl -sS -o /dev/null -w '%{http_code}' -m 10 \
+  --data-urlencode "token=$NODE_TOKEN" \
+  --data-urlencode "username=$user" \
+  --data-urlencode "password=$pass" \
+  "$APP_URL/api/vpn/provision/authenticate" || echo 000)
+[ "$code" = "204" ]
+FTTH_VERIFY
+chmod 755 "$DIR/ftth-verify.sh"
+
+# Kunci IP overlay tetap per perangkat: minta aplikasi baris ifconfig-push-nya.
+cat > "$DIR/ftth-connect.sh" <<'FTTH_CONNECT'
+#!/usr/bin/env bash
+set -euo pipefail
+source /etc/openvpn/server/ftth-node.env
+line=$(curl -sS -m 10 \
+  --data-urlencode "token=$NODE_TOKEN" \
+  --data-urlencode "username=$common_name" \
+  "$APP_URL/api/vpn/provision/client-connect" || true)
+[ -n "$line" ] || exit 1
+printf '%s\n' "$line" > "$1"
+FTTH_CONNECT
+chmod 755 "$DIR/ftth-connect.sh"
+
+# Aktifkan IP forwarding (perangkat overlay bisa dijangkau lewat hub).
+echo 'net.ipv4.ip_forward=1' > /etc/sysctl.d/99-ftth-vpn.conf
+sysctl -q -w net.ipv4.ip_forward=1
+
+systemctl enable --now openvpn-server@server
+sleep 1
+systemctl --no-pager --full status openvpn-server@server 2>/dev/null | head -n 5 || true
+
+echo "[ftth] Selesai. Hub '{{SERVER_NAME}}' mendengarkan di {{HOST}}:{{PORT}}/{{PROTO}}."
+echo "[ftth] Tambah perangkat dari dashboard, lalu tempel skrip RouterOS di Mikrotik-nya."

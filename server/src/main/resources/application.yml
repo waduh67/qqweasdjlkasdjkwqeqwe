@@ -79,3 +79,6 @@ ftth:
     default-port: 1194
     default-protocol: UDP
     default-tunnel-cidr: 10.8.0.0/24
+    # URL publik aplikasi yang di-embed ke installer (dipakai VPS untuk callback verify/connect).
+    # Kosong = diturunkan dari request unduh installer. WAJIB diisi di prod bila di belakang proxy.
+    public-base-url: ${FTTH_VPN_PUBLIC_BASE_URL:}
