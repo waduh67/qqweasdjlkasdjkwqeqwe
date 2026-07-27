@@ -43,6 +43,9 @@ Istilah singkat:
    - **Username**: `azureuser` (default; catat ini).
 3. **Networking / NSG (firewall Azure)** — buka **inbound port**:
    - `22` (SSH), `80` (HTTP), `443` (HTTPS). Sisanya biarin ketutup.
+   - **Mau pakai fitur VPN** (remote Mikrotik tanpa IP publik)? buka juga port hub
+     OpenVPN — default `1194/UDP` (samakan dengan Port/Protokol saat bikin hub di
+     dashboard). Lihat Bagian I.
 4. Create. Setelah jadi, catat **Public IP** VM-nya (mis. `20.11.22.33`).
 5. Coba SSH dari laptop:
    ```bash
@@ -212,6 +215,50 @@ docker compose -f docker-compose.prod.yml ps          # status semua container
 docker compose -f docker-compose.prod.yml logs server  # log backend
 docker compose -f docker-compose.prod.yml logs caddy   # log proxy/HTTPS
 ```
+
+---
+
+## Bagian I — (Opsional) Aktifkan fitur VPN (remote Mikrotik tanpa IP publik)
+
+Fitur ini menjadikan **VPS ini sekaligus hub OpenVPN**. Tenant tinggal klik "Generate
+akun VPN" di dashboard → dapat `ip:port` + user/pass → tempel di Mikrotik. Hub-nya
+dikelola HANYA oleh admin platform.
+
+1. **Buka port hub di NSG Azure** — tambah inbound rule `1194/UDP` (atau port/protokol
+   yang kamu pilih saat bikin hub).
+
+2. **Kasih tahu aplikasi URL publiknya** — di `/opt/ftth/.env`, tambah baris:
+   ```bash
+   FTTH_VPN_PUBLIC_BASE_URL=https://app.contoh.com   # samakan dgn domain aplikasi
+   ```
+   Lalu **salin ulang compose terbaru** dari repo (karena file compose di-copy manual):
+   ```bash
+   # dari laptop, di root repo
+   scp deploy/docker-compose.prod.yml azureuser@20.11.22.33:/opt/ftth/
+   ```
+   Di VPS terapkan:
+   ```bash
+   cd /opt/ftth && docker compose -f docker-compose.prod.yml up -d
+   ```
+
+3. **Bikin hub di dashboard** — login sebagai admin platform → menu **Server VPN** →
+   isi Host = **IP publik VPS (mentah, bukan domain di balik Cloudflare)**, Port `1194`,
+   Protokol UDP, Subnet overlay mis. `10.8.0.0/24` → simpan. Aplikasi menerbitkan CA +
+   sertifikat server otomatis dan menampilkan **perintah pasang satu-baris (sekali tampil)**.
+
+4. **Jalankan perintah pasang itu di VPS** (bukan di laptop). Installer memasang OpenVPN
+   + skrip callback, lalu `systemctl enable --now openvpn-server@server`. Verifikasi:
+   ```bash
+   sudo systemctl status openvpn-server@server   # harus active (running)
+   sudo ls -la /etc/openvpn/server/              # harus terisi ca/server.crt/conf/skrip
+   ```
+
+5. **Tenant generate akun & pasang di Mikrotik** — dari akun tenant, menu **Akun VPN** →
+   Generate → salin kredensial → tempel di Mikrotik (unduh skrip RouterOS bila perlu).
+
+> Domain di balik Cloudflare (orange-cloud) hanya mem-proxy HTTP/HTTPS, **bukan** UDP
+> 1194 — makanya Host hub wajib IP publik VPS mentah. Callback aplikasi (lewat HTTPS
+> domain) tetap jalan normal.
 
 ---
 
