@@ -32,7 +32,10 @@ data class SubscriberSessionRef(
     val username: String,
     /** Status akun jaringan: ACTIVE/ISOLATED/TERMINATED. */
     val accessStatus: String,
-    /** Nama paket (rate profile) yang menempel pada akun; `null` bila paket telah terhapus. */
+    /**
+     * Nama paket (katalog) yang menempel pada akun; `null` bila paket telah dinonaktifkan/
+     * terhapus. Nama field dipertahankan (bukan `planName`) demi kestabilan konsumen gis/web.
+     */
     val rateProfileName: String?,
     val online: Boolean,
     val framedIp: String?,

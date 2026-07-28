@@ -293,22 +293,52 @@ data class BngIngestResult(
     val duplicate: Boolean = false,
 )
 
-/** Jenis perintah BRAS yang bisa dititipkan server ke collector. */
+/**
+ * Jenis perintah BRAS/RADIUS yang bisa dititipkan server ke collector.
+ *
+ * Dua jalur berbeda kanal (lihat FreeRadiusSqlAdapter):
+ *  - **DAE** ([DISCONNECT]/[COA]) — paket RFC 5176 langsung ke BRAS penutup sesi;
+ *  - **provisioning SQL** ([PROVISION]/[DEPROVISION]/[SYNC_GROUP]) — tulis tabel
+ *    otorisasi FreeRADIUS (`radcheck`/`radusergroup`/`radgroupreply`) via JDBC.
+ *    Inilah jalur "RADIUS jadi pusat": bikin/ubah paket = satu baris grup, bukan
+ *    sentuh tiap router.
+ *
+ * Aditif terhadap protokol lama: collector yang belum mengenal kind baru melaporkannya
+ * gagal (jujur), server menyimpan sebabnya — bukan diam-diam tak berefek.
+ */
 enum class BngActionKind {
     /** Putuskan sesi PPPoE (Disconnect-Request/PoD) — dasar Reset Login & pemotongan isolir. */
     DISCONNECT,
 
     /** Change-of-Authorization: ubah kecepatan sesi yang sedang hidup tanpa memutusnya. */
     COA,
+
+    /** Tulis kredensial + keanggotaan grup akun (radcheck Cleartext-Password + radusergroup). */
+    PROVISION,
+
+    /** Hapus kredensial + keanggotaan + balasan akun (radcheck/radreply/radusergroup by username). */
+    DEPROVISION,
+
+    /** Sinkronkan atribut grup paket (radgroupreply Mikrotik-Rate-Limit + Simultaneous-Use + grup FUP). */
+    SYNC_GROUP,
 }
 
 /**
- * Satu perintah BRAS yang harus dieksekusi collector, Phase 7c.
+ * Satu perintah BRAS/RADIUS yang harus dieksekusi collector, Phase 7c (diperluas untuk
+ * provisioning RADIUS-pusat).
  *
  * [actionId] dibuat server dan dipantulkan collector di ACK sehingga server bisa
  * menuntaskan tepat perintah itu (dan mengenali kiriman ganda — perintah dikirim ulang
  * tiap denyut sampai di-ACK, jadi eksekusinya harus idempoten). [username] menyasar sesi
- * yang tepat di BRAS; [downMbps]/[upMbps] hanya terisi untuk [BngActionKind.COA].
+ * (DAE) atau baris otorisasi (SQL) yang tepat.
+ *
+ * Field payload terisi sesuai [kind]; sisanya null:
+ *  - [downMbps]/[upMbps] — [BngActionKind.COA] (juga dipakai adapter untuk atribut rate live).
+ *  - [groupname] — [BngActionKind.PROVISION] (grup yang diikuti akun) & [BngActionKind.SYNC_GROUP]
+ *    (grup yang disetel).
+ *  - [password] — [BngActionKind.PROVISION] saja; TIDAK disimpan server, diresolusi+dekripsi
+ *    saat klaim dan hanya melintas kanal TLS — tak ada cleartext at-rest baru.
+ *  - [rateLimit]/[simultaneousUse]/[fupGroupname]/[fupRateLimit] — [BngActionKind.SYNC_GROUP].
  */
 data class BngActionCommand(
     val actionId: String,
@@ -317,6 +347,12 @@ data class BngActionCommand(
     val username: String,
     val downMbps: Int? = null,
     val upMbps: Int? = null,
+    val groupname: String? = null,
+    val password: String? = null,
+    val rateLimit: String? = null,
+    val simultaneousUse: Int? = null,
+    val fupGroupname: String? = null,
+    val fupRateLimit: String? = null,
 )
 
 /**

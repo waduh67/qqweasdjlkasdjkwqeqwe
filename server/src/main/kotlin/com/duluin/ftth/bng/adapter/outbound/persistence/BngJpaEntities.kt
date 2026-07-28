@@ -14,28 +14,6 @@ import jakarta.persistence.Table
 import java.time.Instant
 import java.util.UUID
 
-/** Profil layanan (paket): kecepatan + pemetaan ke profil RADIUS. Semua atribut mutable. */
-@Entity
-@Table(name = "rate_profile")
-class RateProfileJpaEntity(
-    id: UUID,
-
-    @Column(nullable = false, length = 60)
-    var name: String,
-
-    @Column(length = 200)
-    var description: String?,
-
-    @Column(name = "down_mbps", nullable = false)
-    var downMbps: Int,
-
-    @Column(name = "up_mbps", nullable = false)
-    var upMbps: Int,
-
-    @Column(name = "radius_profile_name", length = 100)
-    var radiusProfileName: String?,
-) : TenantAwareJpaEntity(id)
-
 /**
  * Registri BRAS/NAS. [coaSecret] disimpan terenkripsi (batas enkripsi di adapter),
  * kolomnya dilonggarkan agar muat ciphertext yang lebih panjang dari plaintext.
@@ -109,8 +87,8 @@ class SubscriberAccessJpaEntity(
     @Column(nullable = false, length = 512)
     var secret: String,
 
-    @Column(name = "rate_profile_id", nullable = false)
-    var rateProfileId: UUID,
+    @Column(name = "plan_id", nullable = false)
+    var planId: UUID,
 
     @Column(name = "nas_id")
     var nasId: UUID?,
@@ -173,16 +151,21 @@ class RadiusSessionJpaEntity(
 
 /**
  * Antrean + jejak audit perintah BRAS (Phase 7c). Identitas ([subscriberAccessId],
- * [nasId], [username], [action], target laju, [requestedBy]/[requestedAt]) tak berubah
+ * [nasId], [username], [action], payload, [requestedBy]/[requestedAt]) tak berubah
  * setelah dibuat → `updatable = false`; hanya status & waktu penuntasannya berpindah.
+ *
+ * [subscriberAccessId] nullable: perintah tingkat-grup (SYNC_GROUP) & penghapusan
+ * (DEPROVISION) sengaja LEPAS dari akun agar tak ikut ter-CASCADE saat akun dihapus,
+ * sehingga penghapusan RADIUS tetap terkirim. Kolom payload ([groupname]..[fupRateLimit])
+ * terisi sesuai jenis perintah.
  */
 @Entity
 @Table(name = "bng_action")
 class BngActionJpaEntity(
     id: UUID,
 
-    @Column(name = "subscriber_access_id", nullable = false, updatable = false)
-    var subscriberAccessId: UUID,
+    @Column(name = "subscriber_access_id", updatable = false)
+    var subscriberAccessId: UUID?,
 
     @Column(name = "nas_id", nullable = false, updatable = false)
     var nasId: UUID,
@@ -199,6 +182,21 @@ class BngActionJpaEntity(
 
     @Column(name = "up_mbps", updatable = false)
     var upMbps: Int?,
+
+    @Column(name = "groupname", length = 128, updatable = false)
+    var groupname: String?,
+
+    @Column(name = "rate_limit", length = 200, updatable = false)
+    var rateLimit: String?,
+
+    @Column(name = "simultaneous_use", updatable = false)
+    var simultaneousUse: Int?,
+
+    @Column(name = "fup_group", length = 128, updatable = false)
+    var fupGroupname: String?,
+
+    @Column(name = "fup_rate_limit", length = 200, updatable = false)
+    var fupRateLimit: String?,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

@@ -60,10 +60,15 @@ data class NasPollTarget(
 )
 
 /**
- * Perintah BRAS yang disumbangkan module `bng` ke kanal collector — tipe netral shared
- * kernel, monitoring memetakannya ke DTO wire (`contract.BngActionCommand`) tanpa perlu
- * tahu detail protokol. [kind] memakai string netral (`DISCONNECT`/`COA`) agar `common`
- * tak bergantung pada enum `contract`. [downMbps]/[upMbps] hanya untuk CoA.
+ * Perintah BRAS/RADIUS yang disumbangkan module `bng` ke kanal collector — tipe netral
+ * shared kernel, monitoring memetakannya ke DTO wire (`contract.BngActionCommand`) tanpa
+ * perlu tahu detail protokol. [kind] memakai string netral (`DISCONNECT`/`COA`/`PROVISION`/
+ * `DEPROVISION`/`SYNC_GROUP`) agar `common` tak bergantung pada enum `contract`.
+ *
+ * Field payload terisi sesuai [kind] (sisanya null): [downMbps]/[upMbps] untuk CoA;
+ * [groupname] untuk PROVISION & SYNC_GROUP; [password] hanya PROVISION (diresolusi+dekripsi
+ * saat klaim, hanya melintas kanal TLS); [rateLimit]/[simultaneousUse]/[fupGroupname]/
+ * [fupRateLimit] untuk SYNC_GROUP.
  */
 data class BngActionDispatch(
     val actionId: UUID,
@@ -72,4 +77,10 @@ data class BngActionDispatch(
     val username: String,
     val downMbps: Int?,
     val upMbps: Int?,
+    val groupname: String? = null,
+    val password: String? = null,
+    val rateLimit: String? = null,
+    val simultaneousUse: Int? = null,
+    val fupGroupname: String? = null,
+    val fupRateLimit: String? = null,
 )

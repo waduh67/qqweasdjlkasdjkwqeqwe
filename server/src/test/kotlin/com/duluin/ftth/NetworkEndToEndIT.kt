@@ -186,14 +186,14 @@ class NetworkEndToEndIT {
     private fun provisionPppoe(token: String, subscriptionId: String, nasId: String): String {
         val planId = idOf(
             post(
-                "/api/bng/plans", token,
-                """{"name":"Home 20/10 ${uniq()}","description":null,"downMbps":20,"upMbps":10,"radiusProfileName":"prof-20"}""",
+                "/api/catalog/plans", token,
+                """{"name":"Home 20/10 ${uniq()}","description":null,"price":150000,"downMbps":20,"upMbps":10,"serviceTypes":["PPPOE"]}""",
             ),
         )
         val username = "pppoe${uniq()}"
         post(
             "/api/bng/access", token,
-            """{"subscriptionId":"$subscriptionId","username":"$username","secret":"rahasia123","rateProfileId":"$planId","nasId":"$nasId"}""",
+            """{"subscriptionId":"$subscriptionId","username":"$username","secret":"rahasia123","planId":"$planId","nasId":"$nasId"}""",
         )
         return username
     }

@@ -116,9 +116,7 @@ object PermissionCatalog {
         perm("catalog.plan.view", "Lihat paket internet")
         perm("catalog.plan.manage", "Kelola paket internet")
 
-        // BNG (BRAS/RADIUS: paket, registri BRAS, akun PPPoE pelanggan)
-        perm("bng.plan.view", "Lihat paket layanan")
-        perm("bng.plan.manage", "Kelola paket layanan")
+        // BNG (BRAS/RADIUS: registri BRAS, akun PPPoE pelanggan; katalog paket pindah ke catalog.plan.*)
         perm("bng.nas.view", "Lihat registri BRAS")
         perm("bng.nas.manage", "Kelola registri BRAS")
         perm("bng.access.view", "Lihat akun PPPoE pelanggan")

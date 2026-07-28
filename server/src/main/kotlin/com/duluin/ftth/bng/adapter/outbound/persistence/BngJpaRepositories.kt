@@ -4,11 +4,6 @@ import com.duluin.ftth.bng.domain.model.BngActionStatus
 import org.springframework.data.jpa.repository.JpaRepository
 import java.util.UUID
 
-interface RateProfileJpaRepository : JpaRepository<RateProfileJpaEntity, UUID> {
-    fun findAllByOrderByNameAsc(): List<RateProfileJpaEntity>
-    fun existsByName(name: String): Boolean
-}
-
 interface NasJpaRepository : JpaRepository<NasJpaEntity, UUID> {
     fun findAllByOrderByNameAsc(): List<NasJpaEntity>
     fun existsByName(name: String): Boolean
@@ -19,8 +14,8 @@ interface SubscriberAccessJpaRepository : JpaRepository<SubscriberAccessJpaEntit
     fun findBySubscriptionId(subscriptionId: UUID): List<SubscriberAccessJpaEntity>
     fun findByUsername(username: String): SubscriberAccessJpaEntity?
     fun findByNasIdOrderByUsernameAsc(nasId: UUID): List<SubscriberAccessJpaEntity>
+    fun findByPlanId(planId: UUID): List<SubscriberAccessJpaEntity>
     fun existsBySubscriptionId(subscriptionId: UUID): Boolean
-    fun countByRateProfileId(rateProfileId: UUID): Long
     fun countByNasId(nasId: UUID): Long
 }
 

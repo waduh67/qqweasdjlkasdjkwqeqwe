@@ -13,7 +13,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
@@ -69,23 +68,15 @@ class BngIT {
         ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
             .andReturn().response.contentAsString
 
-    private fun del(url: String, token: String, expected: Int = 204) =
-        mockMvc.perform(delete(url).header("Authorization", "Bearer $token"))
-            .andExpect { assertThat(it.response.status).isEqualTo(expected) }
-
     private fun getJson(url: String, token: String): String =
         mockMvc.perform(get(url).header("Authorization", "Bearer $token"))
             .andExpect(status().isOk).andReturn().response.contentAsString
 
     private fun id(json: String): String = JsonPath.read(json, "$.id")
 
+    /** Paket katalog yang dirujuk akun PPPoE (bng tak lagi punya katalog sendiri). */
     private fun plan(token: String, name: String, down: Int = 20, up: Int = 10): String =
-        id(
-            post(
-                "/api/bng/plans", token,
-                """{"name":"$name","description":null,"downMbps":$down,"upMbps":$up,"radiusProfileName":"prof-$down"}""",
-            ),
-        )
+        catalogPlan(token, name, down, up)
 
     private fun nas(token: String, name: String): String =
         id(
@@ -168,11 +159,11 @@ class BngIT {
         val secret = "pppoeRahasia123"
         val created = post(
             "/api/bng/access", token,
-            """{"subscriptionId":"$sub","username":"pppoe${uniq()}","secret":"$secret","rateProfileId":"$planId","nasId":"$nasId"}""",
+            """{"subscriptionId":"$sub","username":"pppoe${uniq()}","secret":"$secret","planId":"$planId","nasId":"$nasId"}""",
         )
         assertThat(JsonPath.read<String>(created, "$.status")).isEqualTo("ACTIVE")
         assertThat(JsonPath.read<String>(created, "$.authType")).isEqualTo("PPPOE")
-        assertThat(JsonPath.read<String>(created, "$.rateProfileName")).isEqualTo("Home 20/10")
+        assertThat(JsonPath.read<String>(created, "$.planName")).isEqualTo("Home 20/10")
         assertThat(JsonPath.read<String>(created, "$.nasName")).isEqualTo("BRAS-Pusat")
         assertThat(JsonPath.read<String>(created, "$.subscriptionId")).isEqualTo(sub)
         assertThat(JsonPath.read<String>(created, "$.customerId")).isEqualTo(customer)
@@ -193,8 +184,8 @@ class BngIT {
 
         // Pindah paket.
         val plan2 = plan(token, "Home 50/20", down = 50, up = 20)
-        val moved = put("/api/bng/access/$accessId", token, """{"rateProfileId":"$plan2","nasId":"$nasId"}""")
-        assertThat(JsonPath.read<String>(moved, "$.rateProfileName")).isEqualTo("Home 50/20")
+        val moved = put("/api/bng/access/$accessId", token, """{"planId":"$plan2","nasId":"$nasId"}""")
+        assertThat(JsonPath.read<String>(moved, "$.planName")).isEqualTo("Home 50/20")
     }
 
     @Test
@@ -264,10 +255,10 @@ class BngIT {
         val (_, sub2) = activeSubscription(token)
         val uname = "duplikat${uniq()}"
 
-        post("/api/bng/access", token, """{"subscriptionId":"$sub1","username":"$uname","secret":"rahasia123","rateProfileId":"$planId","nasId":null}""")
+        post("/api/bng/access", token, """{"subscriptionId":"$sub1","username":"$uname","secret":"rahasia123","planId":"$planId","nasId":null}""")
         post(
             "/api/bng/access", token,
-            """{"subscriptionId":"$sub2","username":"$uname","secret":"rahasia123","rateProfileId":"$planId","nasId":null}""",
+            """{"subscriptionId":"$sub2","username":"$uname","secret":"rahasia123","planId":"$planId","nasId":null}""",
             expected = 409,
         )
     }
@@ -278,10 +269,10 @@ class BngIT {
         val planId = plan(token, "Paket B")
         val (_, sub) = activeSubscription(token)
 
-        post("/api/bng/access", token, """{"subscriptionId":"$sub","username":"a${uniq()}","secret":"rahasia123","rateProfileId":"$planId","nasId":null}""")
+        post("/api/bng/access", token, """{"subscriptionId":"$sub","username":"a${uniq()}","secret":"rahasia123","planId":"$planId","nasId":null}""")
         post(
             "/api/bng/access", token,
-            """{"subscriptionId":"$sub","username":"b${uniq()}","secret":"rahasia123","rateProfileId":"$planId","nasId":null}""",
+            """{"subscriptionId":"$sub","username":"b${uniq()}","secret":"rahasia123","planId":"$planId","nasId":null}""",
             expected = 409,
         )
     }
@@ -292,19 +283,9 @@ class BngIT {
         val planId = plan(token, "Paket C")
         post(
             "/api/bng/access", token,
-            """{"subscriptionId":"${UUID.randomUUID()}","username":"x${uniq()}","secret":"rahasia123","rateProfileId":"$planId","nasId":null}""",
+            """{"subscriptionId":"${UUID.randomUUID()}","username":"x${uniq()}","secret":"rahasia123","planId":"$planId","nasId":null}""",
             expected = 404,
         )
-    }
-
-    @Test
-    fun `paket yang masih dipakai tak boleh dihapus`() {
-        val token = newTenantAdmin("bng-plandel")
-        val planId = plan(token, "Paket Pakai")
-        val (_, sub) = activeSubscription(token)
-        post("/api/bng/access", token, """{"subscriptionId":"$sub","username":"p${uniq()}","secret":"rahasia123","rateProfileId":"$planId","nasId":null}""")
-
-        del("/api/bng/plans/$planId", token, expected = 409)
     }
 
     @Test
@@ -313,7 +294,7 @@ class BngIT {
         val planId = plan(token, "Paket Hidup")
         val (_, sub) = activeSubscription(token)
         val accessId = id(
-            post("/api/bng/access", token, """{"subscriptionId":"$sub","username":"h${uniq()}","secret":"rahasia123","rateProfileId":"$planId","nasId":null}"""),
+            post("/api/bng/access", token, """{"subscriptionId":"$sub","username":"h${uniq()}","secret":"rahasia123","planId":"$planId","nasId":null}"""),
         )
         assertThat(JsonPath.read<String>(getJson("/api/bng/access/$accessId", token), "$.status")).isEqualTo("ACTIVE")
 
@@ -327,41 +308,16 @@ class BngIT {
     }
 
     @Test
-    fun `tenant lain tak melihat paket maupun akun`() {
+    fun `tenant lain tak melihat akun pelanggan`() {
         val tokenA = newTenantAdmin("bng-iso-a")
         val tokenB = newTenantAdmin("bng-iso-b")
         val planId = plan(tokenA, "Rahasia A")
         val (customerA, sub) = activeSubscription(tokenA)
-        post("/api/bng/access", tokenA, """{"subscriptionId":"$sub","username":"iso${uniq()}","secret":"rahasia123","rateProfileId":"$planId","nasId":null}""")
+        post("/api/bng/access", tokenA, """{"subscriptionId":"$sub","username":"iso${uniq()}","secret":"rahasia123","planId":"$planId","nasId":null}""")
 
-        // B tak melihat paket A, dan akun A lewat customerId A tetap kosong (RLS).
-        assertThat(JsonPath.read<List<String>>(getJson("/api/bng/plans", tokenB), "$[*].id")).doesNotContain(planId)
+        // Akun A lewat customerId A tetap kosong dari sisi B (RLS). Isolasi katalog paket
+        // diuji tersendiri di CatalogIT.
         assertThat(JsonPath.read<List<String>>(getJson("/api/bng/access?customerId=$customerA", tokenB), "$[*].id")).isEmpty()
-    }
-
-    @Test
-    fun `izin lihat paket saja tak boleh mengelola`() {
-        val slug = "bng-perm${uniq()}"
-        val admin = "admin@$slug.test"
-        onboarding.onboard(OnboardTenantCommand(slug, "BNG Perm Co", admin, "Admin", pass))
-        val adminToken = login(slug, admin)
-
-        val permsJson = getJson("/api/permissions", adminToken)
-        val viewPermId = JsonPath.read<List<String>>(permsJson, "$[?(@.code=='bng.plan.view')].id").first()
-        val roleId = id(
-            post("/api/roles", adminToken, """{"name":"Lihat Paket","permissionIds":["$viewPermId"]}""", expected = 201),
-        )
-        val limitedEmail = "viewer@$slug.test"
-        post("/api/users", adminToken, """{"email":"$limitedEmail","name":"Viewer","password":"$pass","roleIds":["$roleId"]}""")
-        val limitedToken = login(slug, limitedEmail)
-
-        // Boleh lihat, tak boleh buat.
-        getJson("/api/bng/plans", limitedToken)
-        post(
-            "/api/bng/plans", limitedToken,
-            """{"name":"Nekat","description":null,"downMbps":10,"upMbps":5,"radiusProfileName":null}""",
-            expected = 403,
-        )
     }
 
     @Test
@@ -375,7 +331,7 @@ class BngIT {
         val accessId = id(
             post(
                 "/api/bng/access", token,
-                """{"subscriptionId":"$sub","username":"$username","secret":"rahasia123","rateProfileId":"$planId","nasId":"$nasId"}""",
+                """{"subscriptionId":"$sub","username":"$username","secret":"rahasia123","planId":"$planId","nasId":"$nasId"}""",
             ),
         )
 
@@ -420,7 +376,7 @@ class BngIT {
         val username = "pppoe${uniq()}"
         post(
             "/api/bng/access", token,
-            """{"subscriptionId":"$sub","username":"$username","secret":"rahasia123","rateProfileId":"$planId","nasId":"$nasId"}""",
+            """{"subscriptionId":"$sub","username":"$username","secret":"rahasia123","planId":"$planId","nasId":"$nasId"}""",
         )
 
         // Konfigurasi yang dikembalikan denyut collector kini memuat BRAS ini sebagai
@@ -441,7 +397,7 @@ class BngIT {
         val accessId = id(
             post(
                 "/api/bng/access", token,
-                """{"subscriptionId":"$sub","username":"$username","secret":"rahasia123","rateProfileId":"$planId","nasId":"$nasId"}""",
+                """{"subscriptionId":"$sub","username":"$username","secret":"rahasia123","planId":"$planId","nasId":"$nasId"}""",
             ),
         )
 
@@ -449,20 +405,21 @@ class BngIT {
         val isolated = post("/api/bng/access/$accessId/isolate", token, "", expected = 200)
         assertThat(JsonPath.read<String>(isolated, "$.status")).isEqualTo("ISOLATED")
 
-        // Denyut collector membawa perintah DISCONNECT untuk akun itu (jalur turun).
+        // Denyut collector membawa perintah DISCONNECT untuk akun itu (jalur turun) — di
+        // samping PROVISION awal (kredensial + keanggotaan grup) yang juga masih menunggu.
         val config = postAsCollector("/api/collector/heartbeat", apiKey, """{"agentVersion":"test-1.0"}""")
-        val filter = "$.bngActions[?(@.username=='$username')]"
-        assertThat(JsonPath.read<List<String>>(config, "$filter.kind")).containsExactly("DISCONNECT")
-        val actionId = JsonPath.read<List<String>>(config, "$filter.actionId").single()
+        val disconnect = "$.bngActions[?(@.username=='$username' && @.kind=='DISCONNECT')]"
+        assertThat(JsonPath.read<List<String>>(config, "$disconnect.kind")).containsExactly("DISCONNECT")
+        val actionId = JsonPath.read<List<String>>(config, "$disconnect.actionId").single()
 
-        // Collector meng-ACK sukses lewat denyut berikutnya → perintah dituntaskan
+        // Collector meng-ACK sukses lewat denyut berikutnya → DISCONNECT dituntaskan
         // (listener AFTER_COMMIT), sehingga tak dikirim ulang di denyut sesudahnya.
         postAsCollector(
             "/api/collector/heartbeat", apiKey,
             """{"agentVersion":"test-1.0","actionResults":[{"actionId":"$actionId","success":true}]}""",
         )
         val after = postAsCollector("/api/collector/heartbeat", apiKey, """{"agentVersion":"test-1.0"}""")
-        assertThat(JsonPath.read<List<String>>(after, "$.bngActions[?(@.username=='$username')].actionId")).isEmpty()
+        assertThat(JsonPath.read<List<String>>(after, "$disconnect.actionId")).isEmpty()
     }
 
     @Test
@@ -475,7 +432,7 @@ class BngIT {
         // Akun tanpa BRAS: tak ada sesi untuk diputus → 409 (bukan diam-diam sukses).
         val (_, subNoNas) = activeSubscription(token)
         val accessNoNas = id(
-            post("/api/bng/access", token, """{"subscriptionId":"$subNoNas","username":"n${uniq()}","secret":"rahasia123","rateProfileId":"$planId","nasId":null}"""),
+            post("/api/bng/access", token, """{"subscriptionId":"$subNoNas","username":"n${uniq()}","secret":"rahasia123","planId":"$planId","nasId":null}"""),
         )
         post("/api/bng/access/$accessNoNas/reset-login", token, "", expected = 409)
 
@@ -483,13 +440,13 @@ class BngIT {
         val (_, sub) = activeSubscription(token)
         val username = "r${uniq()}"
         val accessId = id(
-            post("/api/bng/access", token, """{"subscriptionId":"$sub","username":"$username","secret":"rahasia123","rateProfileId":"$planId","nasId":"$nasId"}"""),
+            post("/api/bng/access", token, """{"subscriptionId":"$sub","username":"$username","secret":"rahasia123","planId":"$planId","nasId":"$nasId"}"""),
         )
         val reset = post("/api/bng/access/$accessId/reset-login", token, "", expected = 200)
         assertThat(JsonPath.read<String>(reset, "$.status")).isEqualTo("ACTIVE")
 
         val config = postAsCollector("/api/collector/heartbeat", apiKey, """{"agentVersion":"test-1.0"}""")
-        assertThat(JsonPath.read<List<String>>(config, "$.bngActions[?(@.username=='$username')].kind"))
+        assertThat(JsonPath.read<List<String>>(config, "$.bngActions[?(@.username=='$username' && @.kind=='DISCONNECT')].kind"))
             .containsExactly("DISCONNECT")
     }
 
@@ -502,17 +459,18 @@ class BngIT {
         val (_, sub) = activeSubscription(token)
         val username = "c${uniq()}"
         val accessId = id(
-            post("/api/bng/access", token, """{"subscriptionId":"$sub","username":"$username","secret":"rahasia123","rateProfileId":"$plan1","nasId":"$nasId"}"""),
+            post("/api/bng/access", token, """{"subscriptionId":"$sub","username":"$username","secret":"rahasia123","planId":"$plan1","nasId":"$nasId"}"""),
         )
 
-        // Pindah ke paket lebih cepat pada akun aktif → satu CoA membawa kecepatan baru.
+        // Pindah ke paket lebih cepat pada akun aktif → CoA membawa kecepatan baru (di
+        // samping PROVISION untuk memindah keanggotaan grup ke paket baru).
         val plan2 = plan(token, "Cepat", down = 100, up = 30)
-        put("/api/bng/access/$accessId", token, """{"rateProfileId":"$plan2","nasId":"$nasId"}""")
+        put("/api/bng/access/$accessId", token, """{"planId":"$plan2","nasId":"$nasId"}""")
 
         val config = postAsCollector("/api/collector/heartbeat", apiKey, """{"agentVersion":"test-1.0"}""")
-        val filter = "$.bngActions[?(@.username=='$username')]"
-        assertThat(JsonPath.read<List<String>>(config, "$filter.kind")).containsExactly("COA")
-        assertThat(JsonPath.read<List<Int>>(config, "$filter.downMbps")).containsExactly(100)
-        assertThat(JsonPath.read<List<Int>>(config, "$filter.upMbps")).containsExactly(30)
+        val coa = "$.bngActions[?(@.username=='$username' && @.kind=='COA')]"
+        assertThat(JsonPath.read<List<String>>(config, "$coa.kind")).containsExactly("COA")
+        assertThat(JsonPath.read<List<Int>>(config, "$coa.downMbps")).containsExactly(100)
+        assertThat(JsonPath.read<List<Int>>(config, "$coa.upMbps")).containsExactly(30)
     }
 }

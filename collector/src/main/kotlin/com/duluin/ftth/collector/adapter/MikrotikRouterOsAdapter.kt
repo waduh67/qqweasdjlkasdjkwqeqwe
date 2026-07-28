@@ -83,6 +83,13 @@ class MikrotikRouterOsAdapter(
         when (action.kind) {
             BngActionKind.DISCONNECT -> disconnect(target, action.username)
             BngActionKind.COA -> changeRate(target, action.username, action.downMbps, action.upMbps)
+            // Provisioning (kredensial + grup paket) berpusat di FreeRADIUS, bukan di
+            // router: RouterOS cukup jadi RADIUS client. Melempar jujur agar operator
+            // mengarahkan akun ke NAS ber-adapter FreeRADIUS, bukan diam-diam tak berefek.
+            BngActionKind.PROVISION, BngActionKind.DEPROVISION, BngActionKind.SYNC_GROUP ->
+                throw IllegalStateException(
+                    "RouterOS ${target.name}: ${action.kind} lewat RADIUS-pusat — arahkan akun ke NAS ber-adapter FreeRADIUS",
+                )
         }
     }
 

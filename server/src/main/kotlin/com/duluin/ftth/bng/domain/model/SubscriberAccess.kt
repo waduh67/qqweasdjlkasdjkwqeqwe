@@ -23,6 +23,11 @@ enum class AccessStatus { ACTIVE, ISOLATED, TERMINATED }
  *
  * [secret] (password PPPoE) dipegang apa adanya di domain; adapter persistence yang
  * mengenkripsi ke DB. Ia tidak pernah dikembalikan lewat API — hanya bisa diisi/reset.
+ *
+ * [planId] menaut ke paket di modul `catalog` (UUID polos tanpa FK, menjaga batas
+ * antar-module). Akun tak menyimpan atribut jaringan sendiri: kecepatan/QoS dibaca live
+ * dari paket saat provisioning ke RADIUS, sehingga perubahan paket menyebar tanpa
+ * menyentuh akun.
  */
 class SubscriberAccess private constructor(
     val id: UUID,
@@ -33,14 +38,14 @@ class SubscriberAccess private constructor(
     val username: String,
     val authType: AuthType,
     secret: String,
-    rateProfileId: UUID,
+    planId: UUID,
     nasId: UUID?,
     status: AccessStatus,
 ) {
     var secret: String = secret
         private set
 
-    var rateProfileId: UUID = rateProfileId
+    var planId: UUID = planId
         private set
 
     var nasId: UUID? = nasId
@@ -54,9 +59,9 @@ class SubscriberAccess private constructor(
         this.secret = validateSecret(newSecret)
     }
 
-    fun assignProfile(rateProfileId: UUID) {
+    fun assignPlan(planId: UUID) {
         assertNotTerminated()
-        this.rateProfileId = rateProfileId
+        this.planId = planId
     }
 
     fun moveToNas(nasId: UUID?) {
@@ -93,7 +98,7 @@ class SubscriberAccess private constructor(
             customerId: UUID,
             username: String,
             secret: String,
-            rateProfileId: UUID,
+            planId: UUID,
             nasId: UUID?,
             status: AccessStatus,
         ): SubscriberAccess = SubscriberAccess(
@@ -104,7 +109,7 @@ class SubscriberAccess private constructor(
             username = validateUsername(username),
             authType = AuthType.PPPOE,
             secret = validateSecret(secret),
-            rateProfileId = rateProfileId,
+            planId = planId,
             nasId = nasId,
             status = status,
         )
@@ -118,11 +123,11 @@ class SubscriberAccess private constructor(
             username: String,
             authType: AuthType,
             secret: String,
-            rateProfileId: UUID,
+            planId: UUID,
             nasId: UUID?,
             status: AccessStatus,
         ): SubscriberAccess = SubscriberAccess(
-            id, tenantId, subscriptionId, customerId, username, authType, secret, rateProfileId, nasId, status,
+            id, tenantId, subscriptionId, customerId, username, authType, secret, planId, nasId, status,
         )
 
         private val USERNAME_PATTERN = Regex("^[A-Za-z0-9._@-]{2,64}$")

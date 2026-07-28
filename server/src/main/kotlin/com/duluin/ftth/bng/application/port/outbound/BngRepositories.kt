@@ -4,31 +4,16 @@ import com.duluin.ftth.bng.domain.model.AccountingRecordPoint
 import com.duluin.ftth.bng.domain.model.BngAction
 import com.duluin.ftth.bng.domain.model.Nas
 import com.duluin.ftth.bng.domain.model.RadiusSession
-import com.duluin.ftth.bng.domain.model.RateProfile
 import com.duluin.ftth.bng.domain.model.SubscriberAccess
 import com.duluin.ftth.bng.domain.model.TrafficSample
 import java.time.Instant
 import java.util.UUID
 
 /**
- * Port persistence module bng. Ketiga tabel tenant-aware (@TenantId + RLS), jadi
+ * Port persistence module bng. Semua tabel tenant-aware (@TenantId + RLS), jadi
  * semua pencarian ter-scope tenant aktif secara otomatis — tak ada parameter
  * tenantId yang dibawa-bawa.
  */
-interface RateProfileRepository {
-
-    fun save(profile: RateProfile): RateProfile
-
-    fun findById(id: UUID): RateProfile?
-
-    /** Semua paket tenant aktif, terurut nama. */
-    fun findAll(): List<RateProfile>
-
-    fun existsByName(name: String): Boolean
-
-    fun deleteById(id: UUID)
-}
-
 interface NasRepository {
 
     fun save(nas: Nas): Nas
@@ -57,10 +42,10 @@ interface SubscriberAccessRepository {
     /** Semua akun yang dinaungi sebuah BRAS — dipakai jalur baca untuk tahu siapa yang diharapkan online. */
     fun findByNasId(nasId: UUID): List<SubscriberAccess>
 
-    fun existsBySubscriptionId(subscriptionId: UUID): Boolean
+    /** Semua akun yang memakai sebuah paket — dipakai re-sync grup RADIUS saat paket berubah. */
+    fun findByPlanId(planId: UUID): List<SubscriberAccess>
 
-    /** Berapa akun yang masih memakai sebuah paket — untuk mencegah hapus paket terpakai. */
-    fun countByRateProfileId(rateProfileId: UUID): Long
+    fun existsBySubscriptionId(subscriptionId: UUID): Boolean
 
     /** Berapa akun yang masih dinaungi sebuah BRAS — untuk mencegah hapus BRAS terpakai. */
     fun countByNasId(nasId: UUID): Long

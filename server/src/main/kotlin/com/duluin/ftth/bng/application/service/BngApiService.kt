@@ -4,8 +4,8 @@ import com.duluin.ftth.bng.BngApi
 import com.duluin.ftth.bng.SubscriberSessionRef
 import com.duluin.ftth.bng.application.port.outbound.NasRepository
 import com.duluin.ftth.bng.application.port.outbound.RadiusSessionRepository
-import com.duluin.ftth.bng.application.port.outbound.RateProfileRepository
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
+import com.duluin.ftth.catalog.CatalogApi
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -21,7 +21,7 @@ class BngApiService(
     private val subscriberAccessRepository: SubscriberAccessRepository,
     private val radiusSessionRepository: RadiusSessionRepository,
     private val nasRepository: NasRepository,
-    private val rateProfileRepository: RateProfileRepository,
+    private val catalogApi: CatalogApi,
 ) : BngApi {
 
     override fun findSubscriberSession(customerId: UUID): SubscriberSessionRef? {
@@ -41,7 +41,7 @@ class BngApiService(
             subscriberAccessId = chosen.id,
             username = chosen.username,
             accessStatus = chosen.status.name,
-            rateProfileName = rateProfileRepository.findById(chosen.rateProfileId)?.name,
+            rateProfileName = catalogApi.findPlanNetwork(chosen.planId)?.name,
             online = session?.online ?: false,
             framedIp = session?.framedIp,
             nasId = nasId,

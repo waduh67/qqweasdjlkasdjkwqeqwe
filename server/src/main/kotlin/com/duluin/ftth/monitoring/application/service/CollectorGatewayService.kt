@@ -198,6 +198,12 @@ class CollectorGatewayService(
         username = username,
         downMbps = downMbps,
         upMbps = upMbps,
+        groupname = groupname,
+        password = password,
+        rateLimit = rateLimit,
+        simultaneousUse = simultaneousUse,
+        fupGroupname = fupGroupname,
+        fupRateLimit = fupRateLimit,
     )
 
     /**

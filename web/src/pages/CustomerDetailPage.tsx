@@ -43,7 +43,6 @@ import {
   isolateAccess,
   listAccessForCustomer,
   listNas,
-  listPlans,
   provisionAccess,
   resetAccessLogin,
   resetAccessSecret,
@@ -51,7 +50,6 @@ import {
   updateAccess,
   type BrasSessionView,
   type NasView,
-  type RateProfileView,
   type SubscriberAccessView,
   type TrafficHistoryView,
 } from '../api/bng'
@@ -957,11 +955,11 @@ function NetworkAccessTab({
   const { can } = useCan()
   const toast = useToast()
   const [accounts, setAccounts] = useState<SubscriberAccessView[] | null>(null)
-  const [plans, setPlans] = useState<RateProfileView[]>([])
+  const [plans, setPlans] = useState<PlanView[]>([])
   const [nasList, setNasList] = useState<NasView[]>([])
 
   const canManage = can('bng.access.manage')
-  const canPlanView = can('bng.plan.view')
+  const canPlanView = can('catalog.plan.view')
   const canNasView = can('bng.nas.view')
   const canSession = can('bng.session.view')
   const canIsolate = can('bng.access.isolate')
@@ -975,12 +973,12 @@ function NetworkAccessTab({
 
   useEffect(() => load(), [load])
 
-  // Paket & BRAS hanya untuk mengisi dropdown provisi/ganti — ditarik bila boleh
-  // mengelola akun sekaligus melihatnya; gagal senyap agar tab tetap tampil.
+  // Paket (catalog) & BRAS hanya untuk mengisi dropdown provisi/ganti — ditarik bila
+  // boleh mengelola akun sekaligus melihat paket; gagal senyap agar tab tetap tampil.
   useEffect(() => {
     if (!canManage || !canPlanView) return
-    void listPlans()
-      .then(setPlans)
+    void listCatalogPlans()
+      .then((all) => setPlans(all.filter((p) => p.active)))
       .catch(() => setPlans([]))
   }, [canManage, canPlanView])
 
@@ -1045,7 +1043,7 @@ function PlanField({
   value,
   onChange,
 }: {
-  plans: RateProfileView[]
+  plans: PlanView[]
   value: string
   onChange: (v: string) => void
 }) {
@@ -1106,7 +1104,7 @@ function SubscriptionAccessCard({
 }: {
   sub: SubscriptionView
   account: SubscriberAccessView | null
-  plans: RateProfileView[]
+  plans: PlanView[]
   nasList: NasView[]
   canManage: boolean
   canSession: boolean
@@ -1118,7 +1116,7 @@ function SubscriptionAccessCard({
   const [username, setUsername] = useState('')
   const [secret, setSecret] = useState('')
   const [showSecret, setShowSecret] = useState(false)
-  const [rateProfileId, setRateProfileId] = useState('')
+  const [planId, setPlanId] = useState('')
   const [nasId, setNasId] = useState('')
 
   const close = () => setForm(null)
@@ -1127,14 +1125,14 @@ function SubscriptionAccessCard({
     setUsername('')
     setSecret('')
     setShowSecret(false)
-    setRateProfileId(plans[0]?.id ?? '')
+    setPlanId(plans[0]?.id ?? '')
     setNasId('')
     setForm('provision')
   }
 
   const openEdit = () => {
     if (!account) return
-    setRateProfileId(account.rateProfileId)
+    setPlanId(account.planId)
     setNasId(account.nasId ?? '')
     setForm('edit')
   }
@@ -1147,14 +1145,14 @@ function SubscriptionAccessCard({
 
   const submitProvision = () =>
     void run(async () => {
-      await provisionAccess({ subscriptionId: sub.id, username, secret, rateProfileId, nasId: nasId || null })
+      await provisionAccess({ subscriptionId: sub.id, username, secret, planId, nasId: nasId || null })
       close()
     }, 'Akun PPPoE dibuat')
 
   const submitEdit = () => {
     if (!account) return
     void run(async () => {
-      await updateAccess(account.id, { rateProfileId, nasId: nasId || null })
+      await updateAccess(account.id, { planId, nasId: nasId || null })
       close()
     }, 'Akun diperbarui')
   }
@@ -1210,7 +1208,7 @@ function SubscriptionAccessCard({
         <div className="stack" style={{ gap: '0.5rem' }}>
           <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <span className="badge neutral tnum">{account.username}</span>
-            <span className="badge accent">{account.rateProfileName ?? 'paket tak dikenal'}</span>
+            <span className="badge accent">{account.planName ?? 'paket tak dikenal'}</span>
             <span className="badge neutral">{account.nasName ?? 'tanpa BRAS'}</span>
             <StatusBadge status={account.status} />
           </div>
@@ -1244,9 +1242,9 @@ function SubscriptionAccessCard({
 
           {form === 'edit' && (
             <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <PlanField plans={plans} value={rateProfileId} onChange={setRateProfileId} />
+              <PlanField plans={plans} value={planId} onChange={setPlanId} />
               <NasField nasList={nasList} value={nasId} onChange={setNasId} />
-              <button className="primary" onClick={submitEdit} disabled={!rateProfileId}>
+              <button className="primary" onClick={submitEdit} disabled={!planId}>
                 Simpan
               </button>
               <button onClick={close}>Batal</button>
@@ -1281,7 +1279,7 @@ function SubscriptionAccessCard({
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada akun PPPoE untuk langganan ini.</p>
       ) : plans.length === 0 ? (
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-          Belum ada akun PPPoE. Buat paket dulu di menu <strong>Paket &amp; BRAS</strong> sebelum memprovisi akun.
+          Belum ada akun PPPoE. Buat paket dulu di menu <strong>Paket Internet</strong> sebelum memprovisi akun.
         </p>
       ) : form === 'provision' ? (
         <div className="stack" style={{ gap: '0.5rem' }}>
@@ -1301,9 +1299,9 @@ function SubscriptionAccessCard({
             <button onClick={() => setShowSecret((v) => !v)}>{showSecret ? 'Sembunyikan' : 'Lihat'}</button>
           </div>
           <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <PlanField plans={plans} value={rateProfileId} onChange={setRateProfileId} />
+            <PlanField plans={plans} value={planId} onChange={setPlanId} />
             <NasField nasList={nasList} value={nasId} onChange={setNasId} />
-            <button className="primary" onClick={submitProvision} disabled={!username || !secret || !rateProfileId}>
+            <button className="primary" onClick={submitProvision} disabled={!username || !secret || !planId}>
               Provisi
             </button>
             <button onClick={close}>Batal</button>

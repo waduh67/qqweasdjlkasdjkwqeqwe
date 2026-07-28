@@ -2,50 +2,34 @@ import { useCallback, useEffect, useState } from 'react'
 import { ApiError } from '../api/client'
 import {
   createNas,
-  createPlan,
   deleteNas,
-  deletePlan,
   listNas,
-  listPlans,
   NAS_VENDOR_LABEL,
   NAS_VENDORS,
   updateNas,
-  updatePlan,
   type NasView,
-  type RateProfileView,
   type SaveNasRequest,
-  type SaveRateProfileRequest,
 } from '../api/bng'
 import { useCan } from '../auth/useCan'
 import { useToast } from '../components/ui'
 import { IconPlus } from '../components/icons'
 
 /**
- * Paket & BRAS dalam satu halaman bertab.
+ * Registri BRAS/RADIUS tenant.
  *
- * Keduanya adalah konfigurasi tingkat-tenant yang mendasari akun PPPoE pelanggan:
- * paket (rate profile) menentukan kecepatan, BRAS (NAS) adalah router master yang
- * menutup sesi PPPoE. Akun PPPoE sendiri dikelola per-pelanggan di halaman detail
- * pelanggan (tab Akses). Slice fondasi: murni data, belum ada perintah ke BRAS.
+ * BRAS (NAS) adalah router master yang menutup sesi PPPoE dan menjadi klien RADIUS.
+ * Katalog paket (kecepatan/harga/QoS) kini di halaman Paket Internet (modul catalog);
+ * akun PPPoE sendiri dikelola per-pelanggan di halaman detail pelanggan (tab Akses).
  */
-
-type Tab = 'plans' | 'nas'
-
-const TABS: Array<{ key: Tab; label: string; permission: string }> = [
-  { key: 'plans', label: 'Paket', permission: 'bng.plan.view' },
-  { key: 'nas', label: 'BRAS', permission: 'bng.nas.view' },
-]
 
 export function BngPage() {
   const { can } = useCan()
-  const visible = TABS.filter((tab) => can(tab.permission))
-  const [tab, setTab] = useState<Tab>(visible[0]?.key ?? 'plans')
 
-  if (visible.length === 0) {
+  if (!can('bng.nas.view')) {
     return (
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Akses ditolak</h3>
-        <p className="muted">Kamu tidak punya izin melihat paket maupun BRAS.</p>
+        <p className="muted">Kamu tidak punya izin melihat registri BRAS.</p>
       </div>
     )
   }
@@ -53,20 +37,12 @@ export function BngPage() {
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
       <div>
-        <h1 className="page-title">Paket &amp; BRAS</h1>
+        <h1 className="page-title">BRAS &amp; RADIUS</h1>
         <p className="page-sub">
-          Kelola paket layanan (kecepatan) dan registri BRAS/RADIUS — fondasi akun PPPoE pelanggan.
+          Registri BRAS/RADIUS — router master penutup sesi PPPoE, fondasi akun pelanggan.
         </p>
       </div>
-      <div className="segment" style={{ alignSelf: 'flex-start' }}>
-        {visible.map((item) => (
-          <button key={item.key} className={tab === item.key ? 'active' : ''} onClick={() => setTab(item.key)}>
-            {item.label}
-          </button>
-        ))}
-      </div>
-      {tab === 'plans' && <PlansTab />}
-      {tab === 'nas' && <NasTab />}
+      <NasTab />
     </div>
   )
 }
@@ -106,177 +82,7 @@ function useResource<T>(fetcher: () => Promise<T[]>) {
   return { items, loading, reload, run }
 }
 
-/* ---------- Tab: Paket (rate profile) ---------- */
-
-type PlanDraft = {
-  id: string | null
-  name: string
-  description: string
-  downMbps: string
-  upMbps: string
-  radiusProfileName: string
-}
-
-const EMPTY_PLAN: PlanDraft = { id: null, name: '', description: '', downMbps: '', upMbps: '', radiusProfileName: '' }
-
-function PlansTab() {
-  const { can } = useCan()
-  const { items, run } = useResource(listPlans)
-  const canManage = can('bng.plan.manage')
-  const [draft, setDraft] = useState<PlanDraft | null>(null)
-
-  const edit = (plan: RateProfileView) =>
-    setDraft({
-      id: plan.id,
-      name: plan.name,
-      description: plan.description ?? '',
-      downMbps: String(plan.downMbps),
-      upMbps: String(plan.upMbps),
-      radiusProfileName: plan.radiusProfileName ?? '',
-    })
-
-  const save = () => {
-    if (!draft) return
-    const body: SaveRateProfileRequest = {
-      name: draft.name,
-      description: draft.description || null,
-      downMbps: Number(draft.downMbps),
-      upMbps: Number(draft.upMbps),
-      radiusProfileName: draft.radiusProfileName || null,
-    }
-    void run(
-      async () => {
-        await (draft.id ? updatePlan(draft.id, body) : createPlan(body))
-        setDraft(null)
-      },
-      draft.id ? 'Paket diperbarui' : 'Paket dibuat',
-    )
-  }
-
-  return (
-    <div className="stack">
-      <div className="spread">
-        <span className="muted">{items.length} paket</span>
-        {canManage && (
-          <button className="primary" onClick={() => setDraft({ ...EMPTY_PLAN })}>
-            <IconPlus size={15} /> Tambah paket
-          </button>
-        )}
-      </div>
-
-      {draft && (
-        <div className="card stack">
-          <div className="row">
-            <label style={{ flex: 2 }}>
-              <span>Nama paket</span>
-              <input
-                value={draft.name}
-                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                placeholder="Home 50 Mbps"
-              />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Unduh (Mbps)</span>
-              <input
-                value={draft.downMbps}
-                onChange={(e) => setDraft({ ...draft, downMbps: e.target.value })}
-                placeholder="50"
-              />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Unggah (Mbps)</span>
-              <input
-                value={draft.upMbps}
-                onChange={(e) => setDraft({ ...draft, upMbps: e.target.value })}
-                placeholder="25"
-              />
-            </label>
-          </div>
-          <div className="row">
-            <label style={{ flex: 2 }}>
-              <span>Deskripsi</span>
-              <input
-                value={draft.description}
-                onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-                placeholder="opsional"
-              />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Profil RADIUS</span>
-              <input
-                value={draft.radiusProfileName}
-                onChange={(e) => setDraft({ ...draft, radiusProfileName: e.target.value })}
-                placeholder="pppoe-50m"
-              />
-            </label>
-          </div>
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-            Profil RADIUS = nama profil yang dikenal BRAS (profil PPP Mikrotik atau grup FreeRADIUS) —
-            dipakai saat menerapkan kecepatan ke sesi nanti.
-          </p>
-          <div className="row">
-            <button className="primary" onClick={save}>
-              Simpan
-            </button>
-            <button onClick={() => setDraft(null)}>Batal</button>
-          </div>
-        </div>
-      )}
-
-      <div className="card">
-        <table>
-          <thead>
-            <tr>
-              <th>Nama</th>
-              <th>Kecepatan</th>
-              <th>Profil RADIUS</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((plan) => (
-              <tr key={plan.id}>
-                <td>
-                  {plan.name}
-                  {plan.description && (
-                    <>
-                      <br />
-                      <span className="muted" style={{ fontSize: '0.8rem' }}>
-                        {plan.description}
-                      </span>
-                    </>
-                  )}
-                </td>
-                <td className="tnum">
-                  {plan.downMbps} / {plan.upMbps} Mbps
-                </td>
-                <td className="muted">{plan.radiusProfileName ?? '—'}</td>
-                <td>
-                  {canManage && (
-                    <div className="row">
-                      <button onClick={() => edit(plan)}>Ubah</button>
-                      <button
-                        onClick={() => {
-                          if (window.confirm(`Hapus paket ${plan.name}?`)) {
-                            void run(() => deletePlan(plan.id), 'Paket dihapus')
-                          }
-                        }}
-                      >
-                        Hapus
-                      </button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
-
-/* ---------- Tab: BRAS (NAS) ---------- */
+/* ---------- BRAS (NAS) ---------- */
 
 type NasDraft = {
   id: string | null

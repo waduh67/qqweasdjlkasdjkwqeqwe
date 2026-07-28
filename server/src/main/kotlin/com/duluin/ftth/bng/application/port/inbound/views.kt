@@ -3,16 +3,6 @@ package com.duluin.ftth.bng.application.port.inbound
 import java.time.Instant
 import java.util.UUID
 
-/** Proyeksi satu paket (rate profile) untuk UI. */
-data class RateProfileView(
-    val id: UUID,
-    val name: String,
-    val description: String?,
-    val downMbps: Int,
-    val upMbps: Int,
-    val radiusProfileName: String?,
-)
-
 /**
  * Proyeksi satu BRAS/NAS. [hasCoaSecret]/[hasApiSecret] menandai rahasianya sudah diisi
  * tanpa pernah membocorkan nilainya lewat API. Kredensial non-rahasia
@@ -37,8 +27,9 @@ data class NasView(
 
 /**
  * Proyeksi satu akun PPPoE. Password (secret) SENGAJA tidak disertakan — hanya bisa
- * diisi/reset, tak pernah dibaca balik. [rateProfileName]/[nasName] diresolusi untuk
- * tampilan agar UI tak perlu memanggil balik.
+ * diisi/reset, tak pernah dibaca balik. [planName]/[nasName] diresolusi untuk
+ * tampilan agar UI tak perlu memanggil balik. [planName] `null` bila paket telah
+ * dinonaktifkan/terhapus dari katalog.
  */
 data class SubscriberAccessView(
     val id: UUID,
@@ -46,8 +37,8 @@ data class SubscriberAccessView(
     val customerId: UUID,
     val username: String,
     val authType: String,
-    val rateProfileId: UUID,
-    val rateProfileName: String?,
+    val planId: UUID,
+    val planName: String?,
     val nasId: UUID?,
     val nasName: String?,
     val status: String,

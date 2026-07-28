@@ -7,12 +7,12 @@ import com.duluin.ftth.bng.application.port.inbound.ResetSecretCommand
 import com.duluin.ftth.bng.application.port.inbound.SubscriberAccessView
 import com.duluin.ftth.bng.application.port.inbound.UpdateAccessCommand
 import com.duluin.ftth.bng.application.port.outbound.NasRepository
-import com.duluin.ftth.bng.application.port.outbound.RateProfileRepository
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.domain.model.AccessStatus
 import com.duluin.ftth.bng.domain.model.Nas
-import com.duluin.ftth.bng.domain.model.RateProfile
 import com.duluin.ftth.bng.domain.model.SubscriberAccess
+import com.duluin.ftth.catalog.CatalogApi
+import com.duluin.ftth.catalog.PlanNetworkRef
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
@@ -36,7 +36,7 @@ import java.util.UUID
 @Transactional
 class SubscriberAccessService(
     private val subscriberAccessRepository: SubscriberAccessRepository,
-    private val rateProfileRepository: RateProfileRepository,
+    private val catalogApi: CatalogApi,
     private val nasRepository: NasRepository,
     private val customerApi: CustomerApi,
     private val currentUser: CurrentUserProvider,
@@ -65,7 +65,7 @@ class SubscriberAccessService(
         subscriberAccessRepository.findByUsername(username)?.let {
             throw ConflictException("Username PPPoE '$username' sudah dipakai")
         }
-        val profile = requireProfile(command.rateProfileId)
+        val plan = requirePlan(command.planId)
         val nas = command.nasId?.let { requireNas(it) }
 
         val access = subscriberAccessRepository.save(
@@ -75,37 +75,53 @@ class SubscriberAccessService(
                 customerId = subscription.customerId,
                 username = command.username,
                 secret = command.secret,
-                rateProfileId = profile.id,
+                planId = plan.planId,
                 nasId = nas?.id,
                 status = initialStatus(subscription.status),
             ),
         )
+        // RADIUS jadi pusat: pastikan grup paket ada di BRAS lalu tulis kredensial +
+        // keanggotaan akun. No-op bila akun belum ditugaskan ke BRAS.
+        val user = currentUser.current()
+        access.nasId?.let { nasId ->
+            bngActions.enqueueSyncGroup(nasId, access.tenantId, plan, user.userId, user.email)
+            bngActions.enqueueProvision(access, user.userId, user.email)
+        }
         auditor.record(
             "bng.access.provisioned", "SubscriberAccess", access.id, access.tenantId,
             mapOf("username" to access.username, "subscription" to access.subscriptionId.toString()),
         )
-        return access.toView(profile.name, nas?.name)
+        return access.toView(plan.name, nas?.name)
     }
 
     override fun updateAssignment(id: UUID, command: UpdateAccessCommand): SubscriberAccessView {
         val access = require(id)
-        val previousProfileId = access.rateProfileId
-        val profile = requireProfile(command.rateProfileId)
+        val previousPlanId = access.planId
+        val previousNasId = access.nasId
+        val plan = requirePlan(command.planId)
         val nas = command.nasId?.let { requireNas(it) }
-        access.assignProfile(profile.id)
+        access.assignPlan(plan.planId)
         access.moveToNas(nas?.id)
         val saved = subscriberAccessRepository.save(access)
-        // Paket berubah pada akun aktif → dorong CoA agar kecepatan sesi hidup ikut
-        // berubah tanpa memutusnya. No-op bila akun belum di BRAS (ditangani service).
-        if (previousProfileId != profile.id && saved.status == AccessStatus.ACTIVE) {
-            val user = currentUser.current()
-            bngActions.enqueueCoa(saved, profile.downMbps, profile.upMbps, user.userId, user.email)
+        val user = currentUser.current()
+        // Selalu pastikan grup + kredensial akun tertulis di BRAS tujuan (bila ada).
+        saved.nasId?.let { nasId ->
+            bngActions.enqueueSyncGroup(nasId, saved.tenantId, plan, user.userId, user.email)
+            bngActions.enqueueProvision(saved, user.userId, user.email)
+        }
+        // Pindah BRAS → cabut otorisasi di BRAS lama agar tak menggantung di sana.
+        if (previousNasId != null && previousNasId != saved.nasId) {
+            bngActions.enqueueDeprovisionAt(previousNasId, saved.tenantId, saved.username, user.userId, user.email)
+        } else if (previousPlanId != plan.planId && saved.status == AccessStatus.ACTIVE) {
+            // Paket berubah pada BRAS yang sama & akun aktif → CoA agar sesi hidup langsung
+            // memakai kecepatan baru tanpa memutusnya.
+            bngActions.enqueueCoa(saved, plan.downMbps, plan.upMbps, user.userId, user.email)
         }
         auditor.record(
             "bng.access.updated", "SubscriberAccess", saved.id, saved.tenantId,
-            mapOf("username" to saved.username, "plan" to profile.name),
+            mapOf("username" to saved.username, "plan" to plan.name),
         )
-        return saved.toView(profile.name, nas?.name)
+        return saved.toView(plan.name, nas?.name)
     }
 
     override fun resetSecret(id: UUID, command: ResetSecretCommand): SubscriberAccessView {
@@ -122,6 +138,11 @@ class SubscriberAccessService(
 
     override fun delete(id: UUID) {
         val access = require(id)
+        val user = currentUser.current()
+        // Cabut otorisasi RADIUS SEBELUM baris akun hilang. DEPROVISION tak menaut akun
+        // (subscriberAccessId null) sehingga selamat dari CASCADE saat baris akun dihapus —
+        // penghapusan di BRAS tetap terkirim.
+        bngActions.enqueueDeprovision(access, user.userId, user.email)
         subscriberAccessRepository.deleteById(id)
         auditor.record(
             "bng.access.deleted", "SubscriberAccess", id, access.tenantId,
@@ -191,33 +212,33 @@ class SubscriberAccessService(
     private fun require(id: UUID): SubscriberAccess =
         subscriberAccessRepository.findById(id) ?: throw NotFoundException("Akun jaringan $id tidak ditemukan")
 
-    private fun requireProfile(id: UUID): RateProfile =
-        rateProfileRepository.findById(id) ?: throw NotFoundException("Paket $id tidak ditemukan")
+    private fun requirePlan(id: UUID): PlanNetworkRef =
+        catalogApi.findPlanNetwork(id) ?: throw NotFoundException("Paket $id tidak ditemukan")
 
     private fun requireNas(id: UUID): Nas =
         nasRepository.findById(id) ?: throw NotFoundException("BRAS $id tidak ditemukan")
 
     /**
-     * Meresolusi nama paket & BRAS untuk sekumpulan akun dalam dua query tetap
-     * (semua paket + semua BRAS tenant, keduanya himpunan kecil), menghindari
-     * lookup per-baris.
+     * Meresolusi nama paket & BRAS untuk sekumpulan akun tanpa lookup per-baris: nama
+     * BRAS dari satu query (himpunan kecil per tenant), nama paket dimemo per planId unik
+     * lewat katalog (akun umumnya berbagi sedikit paket).
      */
     private fun List<SubscriberAccess>.toViews(): List<SubscriberAccessView> {
         if (isEmpty()) return emptyList()
-        val profileNames = rateProfileRepository.findAll().associate { it.id to it.name }
+        val planNames = map { it.planId }.distinct().associateWith { catalogApi.findPlanNetwork(it)?.name }
         val nasNames = nasRepository.findAll().associate { it.id to it.name }
-        return map { it.toView(profileNames[it.rateProfileId], it.nasId?.let(nasNames::get)) }
+        return map { it.toView(planNames[it.planId], it.nasId?.let(nasNames::get)) }
     }
 }
 
-private fun SubscriberAccess.toView(rateProfileName: String?, nasName: String?) = SubscriberAccessView(
+private fun SubscriberAccess.toView(planName: String?, nasName: String?) = SubscriberAccessView(
     id = id,
     subscriptionId = subscriptionId,
     customerId = customerId,
     username = username,
     authType = authType.name,
-    rateProfileId = rateProfileId,
-    rateProfileName = rateProfileName,
+    planId = planId,
+    planName = planName,
     nasId = nasId,
     nasName = nasName,
     status = status.name,

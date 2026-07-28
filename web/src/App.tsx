@@ -121,7 +121,7 @@ export default function App() {
             <Route
               path="bng"
               element={
-                <RequirePermission permission="bng.plan.view">
+                <RequirePermission permission="bng.nas.view">
                   <BngPage />
                 </RequirePermission>
               }

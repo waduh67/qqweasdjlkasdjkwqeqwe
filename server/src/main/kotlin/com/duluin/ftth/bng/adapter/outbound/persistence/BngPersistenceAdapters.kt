@@ -2,12 +2,10 @@ package com.duluin.ftth.bng.adapter.outbound.persistence
 
 import com.duluin.ftth.bng.application.port.outbound.BngActionRepository
 import com.duluin.ftth.bng.application.port.outbound.NasRepository
-import com.duluin.ftth.bng.application.port.outbound.RateProfileRepository
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.domain.model.BngAction
 import com.duluin.ftth.bng.domain.model.BngActionStatus
 import com.duluin.ftth.bng.domain.model.Nas
-import com.duluin.ftth.bng.domain.model.RateProfile
 import com.duluin.ftth.bng.domain.model.SubscriberAccess
 import com.duluin.ftth.common.security.SecretCipher
 import com.duluin.ftth.common.tenant.TenantContext
@@ -15,38 +13,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.util.UUID
-
-@Component
-class RateProfilePersistenceAdapter(
-    private val jpa: RateProfileJpaRepository,
-) : RateProfileRepository {
-
-    override fun save(profile: RateProfile): RateProfile {
-        val entity = jpa.findById(profile.id).orElse(null)?.apply {
-            name = profile.name
-            description = profile.description
-            downMbps = profile.downMbps
-            upMbps = profile.upMbps
-            radiusProfileName = profile.radiusProfileName
-        } ?: RateProfileJpaEntity(
-            id = profile.id,
-            name = profile.name,
-            description = profile.description,
-            downMbps = profile.downMbps,
-            upMbps = profile.upMbps,
-            radiusProfileName = profile.radiusProfileName,
-        )
-        return jpa.save(entity).toDomain()
-    }
-
-    override fun findById(id: UUID): RateProfile? = jpa.findById(id).orElse(null)?.toDomain()
-
-    override fun findAll(): List<RateProfile> = jpa.findAllByOrderByNameAsc().map { it.toDomain() }
-
-    override fun existsByName(name: String): Boolean = jpa.existsByName(name)
-
-    override fun deleteById(id: UUID) = jpa.deleteById(id)
-}
 
 /**
  * Adapter NAS sekaligus batas enkripsi: domain memegang secret CoA apa adanya,
@@ -138,7 +104,7 @@ class SubscriberAccessPersistenceAdapter(
         val encryptedSecret = access.secret.takeIf { it.isNotBlank() }?.let(cipher::encrypt)
         val entity = jpa.findById(access.id).orElse(null)?.apply {
             // Identitas (subscriptionId, customerId, username, authType) tak disentuh.
-            rateProfileId = access.rateProfileId
+            planId = access.planId
             nasId = access.nasId
             status = access.status
             if (encryptedSecret != null) secret = encryptedSecret
@@ -149,7 +115,7 @@ class SubscriberAccessPersistenceAdapter(
             username = access.username,
             authType = access.authType,
             secret = encryptedSecret ?: error("Password akun jaringan wajib diisi"),
-            rateProfileId = access.rateProfileId,
+            planId = access.planId,
             nasId = access.nasId,
             status = access.status,
         )
@@ -170,10 +136,11 @@ class SubscriberAccessPersistenceAdapter(
     override fun findByNasId(nasId: UUID): List<SubscriberAccess> =
         jpa.findByNasIdOrderByUsernameAsc(nasId).map { it.toDomain() }
 
+    override fun findByPlanId(planId: UUID): List<SubscriberAccess> =
+        jpa.findByPlanId(planId).map { it.toDomain() }
+
     override fun existsBySubscriptionId(subscriptionId: UUID): Boolean =
         jpa.existsBySubscriptionId(subscriptionId)
-
-    override fun countByRateProfileId(rateProfileId: UUID): Long = jpa.countByRateProfileId(rateProfileId)
 
     override fun countByNasId(nasId: UUID): Long = jpa.countByNasId(nasId)
 
@@ -189,7 +156,7 @@ class SubscriberAccessPersistenceAdapter(
         // Password tak pernah dibaca balik lewat API; sentinel kosong bila tak
         // terdekripsi tidak masalah untuk baca, dan save menjaganya agar tak menimpa.
         secret = cipher.decryptQuietly(secret, username, log) ?: "",
-        rateProfileId = rateProfileId,
+        planId = planId,
         nasId = nasId,
         status = status,
     )
@@ -219,6 +186,11 @@ class BngActionPersistenceAdapter(
             action = action.action,
             downMbps = action.downMbps,
             upMbps = action.upMbps,
+            groupname = action.groupname,
+            rateLimit = action.rateLimit,
+            simultaneousUse = action.simultaneousUse,
+            fupGroupname = action.fupGroupname,
+            fupRateLimit = action.fupRateLimit,
             status = action.status,
             detail = action.detail,
             requestedBy = action.requestedBy,
@@ -249,6 +221,11 @@ class BngActionPersistenceAdapter(
         action = action,
         downMbps = downMbps,
         upMbps = upMbps,
+        groupname = groupname,
+        rateLimit = rateLimit,
+        simultaneousUse = simultaneousUse,
+        fupGroupname = fupGroupname,
+        fupRateLimit = fupRateLimit,
         status = status,
         detail = detail,
         requestedBy = requestedBy,
@@ -258,16 +235,6 @@ class BngActionPersistenceAdapter(
         completedAt = completedAt,
     )
 }
-
-private fun RateProfileJpaEntity.toDomain(): RateProfile = RateProfile.rehydrate(
-    id = id,
-    tenantId = tenantId ?: TenantContext.tenantId(),
-    name = name,
-    description = description,
-    downMbps = downMbps,
-    upMbps = upMbps,
-    radiusProfileName = radiusProfileName,
-)
 
 /**
  * Rahasia yang tidak bisa didekripsi (mis. kunci dirotasi tanpa migrasi) tidak

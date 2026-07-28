@@ -1,8 +1,12 @@
 package com.duluin.ftth.bng.application.service
 
 import com.duluin.ftth.bng.application.port.outbound.BngActionRepository
+import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.domain.model.BngAction
+import com.duluin.ftth.bng.domain.model.BngActionType
+import com.duluin.ftth.bng.domain.model.RadiusGroups
 import com.duluin.ftth.bng.domain.model.SubscriberAccess
+import com.duluin.ftth.catalog.PlanNetworkRef
 import com.duluin.ftth.common.integration.AcknowledgedBngAction
 import com.duluin.ftth.common.integration.BngActionDispatch
 import org.slf4j.LoggerFactory
@@ -25,6 +29,7 @@ import java.util.UUID
 @Transactional
 class BngActionService(
     private val bngActionRepository: BngActionRepository,
+    private val subscriberAccessRepository: SubscriberAccessRepository,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -77,6 +82,92 @@ class BngActionService(
     }
 
     /**
+     * Antre PROVISION: tulis kredensial + keanggotaan grup paket akun ke RADIUS
+     * ("RADIUS jadi pusat"). Grup diturunkan dari [SubscriberAccess.planId]; password
+     * TIDAK dititip di sini — diresolusi saat [claimDispatch]. No-op bila akun belum di
+     * BRAS. Mengembalikan true bila benar-benar mengantre.
+     */
+    fun enqueueProvision(access: SubscriberAccess, requestedBy: UUID?, requestedByEmail: String?): Boolean {
+        val nasId = access.nasId ?: return skipNoNas(access, "PROVISION")
+        bngActionRepository.save(
+            BngAction.provision(
+                tenantId = access.tenantId,
+                subscriberAccessId = access.id,
+                nasId = nasId,
+                username = access.username,
+                groupname = RadiusGroups.normal(access.planId),
+                requestedBy = requestedBy,
+                requestedByEmail = requestedByEmail,
+            ),
+        )
+        return true
+    }
+
+    /**
+     * Antre DEPROVISION: cabut seluruh otorisasi akun (per username) dari BRAS yang kini
+     * menaunginya. Dipakai saat hapus akun/terminasi. No-op bila akun belum di BRAS.
+     */
+    fun enqueueDeprovision(access: SubscriberAccess, requestedBy: UUID?, requestedByEmail: String?): Boolean {
+        val nasId = access.nasId ?: return skipNoNas(access, "DEPROVISION")
+        enqueueDeprovisionAt(nasId, access.tenantId, access.username, requestedBy, requestedByEmail)
+        return true
+    }
+
+    /**
+     * Antre DEPROVISION pada BRAS TERTENTU (bukan yang kini di akun) — dipakai saat akun
+     * dipindah BRAS: otorisasi di BRAS lama dicabut agar tak menggantung. Per-username,
+     * tanpa menaut akun, jadi selamat dari CASCADE bila akunnya kelak dihapus.
+     */
+    @Suppress("LongParameterList")
+    fun enqueueDeprovisionAt(
+        nasId: UUID,
+        tenantId: UUID,
+        username: String,
+        requestedBy: UUID?,
+        requestedByEmail: String?,
+    ) {
+        bngActionRepository.save(
+            BngAction.deprovision(
+                tenantId = tenantId,
+                nasId = nasId,
+                username = username,
+                requestedBy = requestedBy,
+                requestedByEmail = requestedByEmail,
+            ),
+        )
+    }
+
+    /**
+     * Antre SYNC_GROUP: setel atribut grup paket ([plan]) di sebuah BRAS — rate-limit
+     * normal, batas sesi ([PlanNetworkRef.connectionLimit]), dan grup throttle FUP bila
+     * paket ber-FUP. Tingkat-grup (bukan per-akun): satu baris mengubah kecepatan semua
+     * akun di paket itu. Nilai jaringan dibaca live dari katalog oleh pemanggil.
+     */
+    @Suppress("LongParameterList")
+    fun enqueueSyncGroup(
+        nasId: UUID,
+        tenantId: UUID,
+        plan: PlanNetworkRef,
+        requestedBy: UUID?,
+        requestedByEmail: String?,
+    ) {
+        val fupGroupname = if (plan.fupEnabled && plan.fupRateLimit != null) RadiusGroups.fup(plan.planId) else null
+        bngActionRepository.save(
+            BngAction.syncGroup(
+                tenantId = tenantId,
+                nasId = nasId,
+                groupname = RadiusGroups.normal(plan.planId),
+                rateLimit = plan.rateLimit,
+                simultaneousUse = plan.connectionLimit,
+                fupGroupname = fupGroupname,
+                fupRateLimit = plan.fupRateLimit,
+                requestedBy = requestedBy,
+                requestedByEmail = requestedByEmail,
+            ),
+        )
+    }
+
+    /**
      * Klaim perintah belum-tuntas untuk sekumpulan BRAS, tandai DISPATCHED, kembalikan
      * sebagai dispatch netral (tipe shared-kernel) untuk collector. Dipanggil contributor
      * DI DALAM transaksi denyut (REQUIRED), jadi penandaan ikut ter-commit bersama denyut.
@@ -109,12 +200,28 @@ class BngActionService(
         return false
     }
 
-    private fun BngAction.toDispatch() = BngActionDispatch(
-        actionId = id,
-        nasId = nasId,
-        kind = action.name,
-        username = username,
-        downMbps = downMbps,
-        upMbps = upMbps,
-    )
+    private fun BngAction.toDispatch(): BngActionDispatch {
+        // Password hanya untuk PROVISION: diresolusi+dekripsi dari akun saat klaim (repo
+        // mengembalikan secret terdekripsi), TAK PERNAH disimpan di bng_action. Diangkut
+        // ke collector lewat kanal TLS — tak ada cleartext at-rest baru.
+        val password = if (action == BngActionType.PROVISION) {
+            subscriberAccessId?.let { subscriberAccessRepository.findById(it)?.secret }
+        } else {
+            null
+        }
+        return BngActionDispatch(
+            actionId = id,
+            nasId = nasId,
+            kind = action.name,
+            username = username,
+            downMbps = downMbps,
+            upMbps = upMbps,
+            groupname = groupname,
+            password = password,
+            rateLimit = rateLimit,
+            simultaneousUse = simultaneousUse,
+            fupGroupname = fupGroupname,
+            fupRateLimit = fupRateLimit,
+        )
+    }
 }

@@ -4,13 +4,22 @@ import com.duluin.ftth.common.domain.UuidV7
 import java.time.Instant
 import java.util.UUID
 
-/** Jenis perintah BRAS yang bisa diantrekan ke collector. */
+/** Jenis perintah BRAS/RADIUS yang bisa diantrekan ke collector. */
 enum class BngActionType {
     /** Putuskan sesi PPPoE — dasar pemotongan isolir & Reset Login. */
     DISCONNECT,
 
     /** Change-of-Authorization: ubah kecepatan sesi hidup tanpa memutusnya. */
     COA,
+
+    /** Tulis otorisasi akun ke RADIUS (kredensial + keanggotaan grup paket). */
+    PROVISION,
+
+    /** Hapus otorisasi akun dari RADIUS (per username). */
+    DEPROVISION,
+
+    /** Sinkronkan atribut grup paket di RADIUS (rate-limit + batas sesi + grup FUP). */
+    SYNC_GROUP,
 }
 
 /**
@@ -33,21 +42,39 @@ enum class BngActionStatus { PENDING, DISPATCHED, COMPLETED, FAILED }
  * lalu di-ACK pada denyut berikutnya. Karena perintah dikirim ulang tiap denyut
  * sampai di-ACK, eksekusinya harus idempoten (at-least-once).
  *
- * [subscriberAccessId] menaut ke akun (intra-module, FK CASCADE). [nasId] BRAS
- * penyasar — wajib ada: tanpa BRAS tak ada tempat mengirim perintah. [requestedBy]
+ * [subscriberAccessId] menaut ke akun (intra-module, FK CASCADE) untuk perintah per-akun
+ * (DISCONNECT/COA/PROVISION); NULL untuk perintah tingkat-grup ([BngActionType.SYNC_GROUP])
+ * dan penghapusan ([BngActionType.DEPROVISION]) — yang sengaja LEPAS dari akun agar tak
+ * ikut ter-CASCADE saat akun dihapus, sehingga penghapusan RADIUS tetap terkirim. [nasId]
+ * BRAS penyasar — wajib ada: tanpa BRAS tak ada tempat mengirim perintah. [requestedBy]
  * boleh null saat perintah dipicu sistem (mis. isolir otomatis dari event langganan),
  * bukan operator.
+ *
+ * Payload menyesuaikan jenis: [downMbps]/[upMbps] untuk COA; [groupname] untuk PROVISION
+ * (grup yang diikuti) & SYNC_GROUP (grup yang disetel); [rateLimit]/[simultaneousUse]/
+ * [fupGroupname]/[fupRateLimit] untuk SYNC_GROUP. Password akun SENGAJA tak disimpan di
+ * sini — diresolusi+dekripsi dari akun saat klaim dispatch.
  */
 class BngAction private constructor(
     val id: UUID,
     val tenantId: UUID,
-    val subscriberAccessId: UUID,
+    val subscriberAccessId: UUID?,
     val nasId: UUID,
     val username: String,
     val action: BngActionType,
     /** Hanya terisi untuk [BngActionType.COA]. */
     val downMbps: Int?,
     val upMbps: Int?,
+    /** Nama grup paket — [BngActionType.PROVISION] & [BngActionType.SYNC_GROUP]. */
+    val groupname: String?,
+    /** Atribut Mikrotik-Rate-Limit grup — [BngActionType.SYNC_GROUP]. */
+    val rateLimit: String?,
+    /** Batas sesi simultan grup — [BngActionType.SYNC_GROUP]; null = tanpa batas. */
+    val simultaneousUse: Int?,
+    /** Nama grup throttle FUP — [BngActionType.SYNC_GROUP] bila FUP aktif. */
+    val fupGroupname: String?,
+    /** Atribut rate-limit grup FUP — [BngActionType.SYNC_GROUP] bila FUP aktif. */
+    val fupRateLimit: String?,
     status: BngActionStatus,
     detail: String?,
     val requestedBy: UUID?,
@@ -108,22 +135,9 @@ class BngAction private constructor(
             requestedBy: UUID?,
             requestedByEmail: String?,
             at: Instant = Instant.now(),
-        ): BngAction = BngAction(
-            id = UuidV7.generate(),
-            tenantId = tenantId,
-            subscriberAccessId = subscriberAccessId,
-            nasId = nasId,
-            username = username,
-            action = BngActionType.DISCONNECT,
-            downMbps = null,
-            upMbps = null,
-            status = BngActionStatus.PENDING,
-            detail = null,
-            requestedBy = requestedBy,
-            requestedByEmail = requestedByEmail,
-            requestedAt = at,
-            dispatchedAt = null,
-            completedAt = null,
+        ): BngAction = create(
+            tenantId, subscriberAccessId, nasId, username, BngActionType.DISCONNECT,
+            requestedBy = requestedBy, requestedByEmail = requestedByEmail, at = at,
         )
 
         @Suppress("LongParameterList")
@@ -137,15 +151,99 @@ class BngAction private constructor(
             requestedBy: UUID?,
             requestedByEmail: String?,
             at: Instant = Instant.now(),
+        ): BngAction = create(
+            tenantId, subscriberAccessId, nasId, username, BngActionType.COA,
+            downMbps = downMbps, upMbps = upMbps,
+            requestedBy = requestedBy, requestedByEmail = requestedByEmail, at = at,
+        )
+
+        /** Tulis kredensial + keanggotaan grup akun ke RADIUS. Password diresolusi saat klaim, bukan disimpan. */
+        @Suppress("LongParameterList")
+        fun provision(
+            tenantId: UUID,
+            subscriberAccessId: UUID,
+            nasId: UUID,
+            username: String,
+            groupname: String,
+            requestedBy: UUID?,
+            requestedByEmail: String?,
+            at: Instant = Instant.now(),
+        ): BngAction = create(
+            tenantId, subscriberAccessId, nasId, username, BngActionType.PROVISION,
+            groupname = groupname,
+            requestedBy = requestedBy, requestedByEmail = requestedByEmail, at = at,
+        )
+
+        /**
+         * Hapus otorisasi akun dari RADIUS (per username). Tanpa [subscriberAccessId]
+         * agar tak ikut ter-CASCADE saat akunnya dihapus — penghapusan RADIUS tetap terkirim.
+         */
+        fun deprovision(
+            tenantId: UUID,
+            nasId: UUID,
+            username: String,
+            requestedBy: UUID?,
+            requestedByEmail: String?,
+            at: Instant = Instant.now(),
+        ): BngAction = create(
+            tenantId, subscriberAccessId = null, nasId, username, BngActionType.DEPROVISION,
+            requestedBy = requestedBy, requestedByEmail = requestedByEmail, at = at,
+        )
+
+        /**
+         * Sinkronkan atribut grup paket di RADIUS. Tingkat-grup, bukan per-akun → tanpa
+         * [subscriberAccessId], username kosong (adapter mengabaikannya untuk SYNC_GROUP).
+         */
+        @Suppress("LongParameterList")
+        fun syncGroup(
+            tenantId: UUID,
+            nasId: UUID,
+            groupname: String,
+            rateLimit: String,
+            simultaneousUse: Int?,
+            fupGroupname: String?,
+            fupRateLimit: String?,
+            requestedBy: UUID?,
+            requestedByEmail: String?,
+            at: Instant = Instant.now(),
+        ): BngAction = create(
+            tenantId, subscriberAccessId = null, nasId, username = "", BngActionType.SYNC_GROUP,
+            groupname = groupname, rateLimit = rateLimit, simultaneousUse = simultaneousUse,
+            fupGroupname = fupGroupname, fupRateLimit = fupRateLimit,
+            requestedBy = requestedBy, requestedByEmail = requestedByEmail, at = at,
+        )
+
+        @Suppress("LongParameterList")
+        private fun create(
+            tenantId: UUID,
+            subscriberAccessId: UUID?,
+            nasId: UUID,
+            username: String,
+            action: BngActionType,
+            downMbps: Int? = null,
+            upMbps: Int? = null,
+            groupname: String? = null,
+            rateLimit: String? = null,
+            simultaneousUse: Int? = null,
+            fupGroupname: String? = null,
+            fupRateLimit: String? = null,
+            requestedBy: UUID?,
+            requestedByEmail: String?,
+            at: Instant,
         ): BngAction = BngAction(
             id = UuidV7.generate(),
             tenantId = tenantId,
             subscriberAccessId = subscriberAccessId,
             nasId = nasId,
             username = username,
-            action = BngActionType.COA,
+            action = action,
             downMbps = downMbps,
             upMbps = upMbps,
+            groupname = groupname,
+            rateLimit = rateLimit,
+            simultaneousUse = simultaneousUse,
+            fupGroupname = fupGroupname,
+            fupRateLimit = fupRateLimit,
             status = BngActionStatus.PENDING,
             detail = null,
             requestedBy = requestedBy,
@@ -159,12 +257,17 @@ class BngAction private constructor(
         fun rehydrate(
             id: UUID,
             tenantId: UUID,
-            subscriberAccessId: UUID,
+            subscriberAccessId: UUID?,
             nasId: UUID,
             username: String,
             action: BngActionType,
             downMbps: Int?,
             upMbps: Int?,
+            groupname: String?,
+            rateLimit: String?,
+            simultaneousUse: Int?,
+            fupGroupname: String?,
+            fupRateLimit: String?,
             status: BngActionStatus,
             detail: String?,
             requestedBy: UUID?,
@@ -174,6 +277,7 @@ class BngAction private constructor(
             completedAt: Instant?,
         ): BngAction = BngAction(
             id, tenantId, subscriberAccessId, nasId, username, action, downMbps, upMbps,
+            groupname, rateLimit, simultaneousUse, fupGroupname, fupRateLimit,
             status, detail, requestedBy, requestedByEmail, requestedAt, dispatchedAt, completedAt,
         )
     }

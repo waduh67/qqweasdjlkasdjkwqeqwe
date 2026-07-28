@@ -11,20 +11,26 @@ import java.sql.ResultSet
 
 /**
  * Adapter BRAS nyata untuk tumpukan FreeRADIUS: baca sesi dari tabel akunting SQL,
- * kendalikan sesi lewat RADIUS DAE (RFC 5176) langsung ke BRAS/NAS.
+ * kendalikan sesi lewat RADIUS DAE (RFC 5176), dan provision otorisasi lewat SQL.
  *
- * Dua jalur sengaja lewat kanal berbeda karena begitulah FreeRADIUS bekerja:
+ * TIGA jalur lewat kanal berbeda karena begitulah FreeRADIUS bekerja:
  *  - **baca**: `radacct` (`acctstoptime IS NULL` = masih hidup) via JDBC — octet & durasi
  *    sesegar Interim-Update terakhir yang dikirim NAS; server menghitung laju dari deltanya;
- *  - **kendali**: Disconnect/CoA bukan ke server RADIUS melainkan ke BRAS yang memegang
- *    sesi ([NasTarget.host], port [RadiusDae.DEFAULT_PORT]) memakai [NasTarget.coaSecret].
+ *  - **kendali sesi hidup** (DAE): Disconnect/CoA bukan ke server RADIUS melainkan ke BRAS
+ *    yang memegang sesi ([NasTarget.host], port [RadiusDae.DEFAULT_PORT]) memakai
+ *    [NasTarget.coaSecret];
+ *  - **provisioning otorisasi** (SQL): PROVISION/DEPROVISION/SYNC_GROUP menulis tabel
+ *    `radcheck`/`radusergroup`/`radgroupreply`/`radgroupcheck` lewat JDBC ([NasTarget.apiDatabase]) —
+ *    inilah "RADIUS jadi pusat": paket = satu grup, akun cukup diikutkan ke grupnya.
+ *    Tak butuh Secret CoA (bukan DAE), jadi jalur ini jalan meski coaSecret kosong.
  *
- * CoA memakai VSA Mikrotik-Rate-Limit — BRAS ber-FreeRADIUS paling lazim di pasar ID
+ * CoA & grup memakai VSA Mikrotik-Rate-Limit — BRAS ber-FreeRADIUS paling lazim di pasar ID
  * adalah MikroTik. NAS vendor lain butuh atribut kecepatan berbeda (perluasan adapter).
  * Disconnect memakai atribut standar sehingga berlaku umum.
  */
 class FreeRadiusSqlAdapter(
     private val reader: RadacctReader = JdbcRadacctReader(),
+    private val writer: RadiusWriter = JdbcRadiusWriter(),
     private val dae: RadiusDaeClient = RadiusDaeClient(),
     private val daePort: Int = RadiusDae.DEFAULT_PORT,
 ) : BngAdapter {
@@ -36,16 +42,54 @@ class FreeRadiusSqlAdapter(
     override fun pollSessions(target: NasTarget): List<RadiusSessionReading> = reader.activeSessions(target)
 
     override fun execute(target: NasTarget, action: BngActionCommand) {
+        when (action.kind) {
+            // Jalur DAE (butuh host + Secret CoA + sesi hidup).
+            BngActionKind.DISCONNECT -> withDae(target, action) { host, secret, session ->
+                disconnect(target, host, secret, action, session)
+            }
+            BngActionKind.COA -> withDae(target, action) { host, secret, session ->
+                changeRate(target, host, secret, action, session)
+            }
+            // Jalur SQL (butuh URL JDBC apiDatabase; tak butuh Secret CoA).
+            BngActionKind.PROVISION -> writer.provision(
+                target, action.username, requirePassword(target, action), requireGroup(target, action),
+            )
+            BngActionKind.DEPROVISION -> writer.deprovision(target, action.username)
+            BngActionKind.SYNC_GROUP -> writer.syncGroup(
+                target,
+                requireGroup(target, action),
+                requireRateLimit(target, action),
+                action.simultaneousUse,
+                action.fupGroupname,
+                action.fupRateLimit,
+            )
+        }
+    }
+
+    /** Menyiapkan kanal DAE (host + Secret CoA) lalu meresolusi sesi hidup sekali untuk perintah. */
+    private inline fun withDae(
+        target: NasTarget,
+        action: BngActionCommand,
+        body: (host: String, secret: String, session: ActiveSession?) -> Unit,
+    ) {
         val host = target.host?.takeIf { it.isNotBlank() }
             ?: throw IllegalStateException("BRAS ${target.name}: alamat NAS (tujuan DAE) belum diisi")
         val secret = target.coaSecret?.takeIf { it.isNotBlank() }
             ?: throw IllegalStateException("BRAS ${target.name}: Secret CoA (DAE) belum diisi")
-        val session = reader.findActive(target, action.username)
-        when (action.kind) {
-            BngActionKind.DISCONNECT -> disconnect(target, host, secret, action, session)
-            BngActionKind.COA -> changeRate(target, host, secret, action, session)
-        }
+        body(host, secret, reader.findActive(target, action.username))
     }
+
+    private fun requirePassword(target: NasTarget, action: BngActionCommand): String =
+        action.password?.takeIf { it.isNotBlank() }
+            ?: throw IllegalStateException("PROVISION ${action.username} di ${target.name}: password akun tak terbawa")
+
+    private fun requireGroup(target: NasTarget, action: BngActionCommand): String =
+        action.groupname?.takeIf { it.isNotBlank() }
+            ?: throw IllegalStateException("${action.kind} di ${target.name}: nama grup paket tak terbawa")
+
+    private fun requireRateLimit(target: NasTarget, action: BngActionCommand): String =
+        action.rateLimit?.takeIf { it.isNotBlank() }
+            ?: throw IllegalStateException("SYNC_GROUP di ${target.name}: rate-limit grup tak terbawa")
 
     private fun disconnect(
         target: NasTarget,
@@ -138,7 +182,7 @@ interface RadacctReader {
  * inOctets, Acct-Output = unduh → outOctets, konsisten dengan adapter lain.
  */
 class JdbcRadacctReader(
-    private val connect: (NasTarget) -> Connection = ::openConnection,
+    private val connect: (NasTarget) -> Connection = ::openRadiusConnection,
 ) : RadacctReader {
 
     override fun activeSessions(target: NasTarget): List<RadiusSessionReading> =
@@ -195,11 +239,137 @@ class JdbcRadacctReader(
 
         /** inet Postgres bisa terbaca "10.0.0.1/32"; BRAS hanya butuh alamatnya. */
         private fun stripMask(value: String?): String? = value?.substringBefore('/')?.takeIf { it.isNotBlank() }
+    }
+}
 
-        private fun openConnection(target: NasTarget): Connection {
-            val url = target.apiDatabase?.takeIf { it.isNotBlank() }
-                ?: throw IllegalStateException("BRAS ${target.name}: URL JDBC radacct belum diisi")
-            return DriverManager.getConnection(url, target.apiUsername, target.apiSecret)
+/**
+ * Membuka koneksi JDBC ke basis data FreeRADIUS sebuah BRAS dari [NasTarget.apiDatabase]
+ * (URL JDBC) + kredensialnya. Dipakai bersama pembaca `radacct` dan penulis otorisasi —
+ * keduanya menembak DB SQL FreeRADIUS yang sama.
+ */
+internal fun openRadiusConnection(target: NasTarget): Connection {
+    val url = target.apiDatabase?.takeIf { it.isNotBlank() }
+        ?: throw IllegalStateException("BRAS ${target.name}: URL JDBC FreeRADIUS belum diisi")
+    return DriverManager.getConnection(url, target.apiUsername, target.apiSecret)
+}
+
+/**
+ * Penulis otorisasi FreeRADIUS. Diabstraksikan agar bentuk SQL yang ditulis adapter
+ * (radcheck/radusergroup/radgroupreply/radgroupcheck) teruji tanpa basis data.
+ *
+ * Semua operasi IDEMPOTEN (DELETE-lalu-INSERT dalam satu transaksi): perintah dikirim
+ * ulang tiap denyut sampai di-ACK, jadi menjalankannya dua kali harus menghasilkan
+ * keadaan yang sama.
+ */
+interface RadiusWriter {
+    /** Tulis kredensial akun (radcheck Cleartext-Password) + keanggotaan grup (radusergroup). */
+    fun provision(target: NasTarget, username: String, password: String, groupname: String)
+
+    /** Hapus seluruh baris otorisasi akun (radcheck/radreply/radusergroup by username). */
+    fun deprovision(target: NasTarget, username: String)
+
+    /**
+     * Setel atribut grup paket: rate-limit normal (radgroupreply Mikrotik-Rate-Limit),
+     * batas sesi ([simultaneousUse] → radgroupcheck Simultaneous-Use, dihapus bila null),
+     * dan — bila FUP aktif — grup throttle kedua ([fupGroupname]/[fupRateLimit]).
+     */
+    fun syncGroup(
+        target: NasTarget,
+        groupname: String,
+        rateLimit: String,
+        simultaneousUse: Int?,
+        fupGroupname: String?,
+        fupRateLimit: String?,
+    )
+}
+
+/**
+ * Menulis tabel otorisasi FreeRADIUS lewat JDBC. Koneksi dibuka sekali per operasi
+ * (collector jarang provision), tiap operasi satu transaksi eksplisit agar sekumpulan
+ * baris (kredensial + grup) tampil atomik ke FreeRADIUS — auth tak pernah melihat akun
+ * separuh-terpasang.
+ */
+class JdbcRadiusWriter(
+    private val connect: (NasTarget) -> Connection = ::openRadiusConnection,
+) : RadiusWriter {
+
+    override fun provision(target: NasTarget, username: String, password: String, groupname: String) =
+        inTransaction(target) { conn ->
+            conn.replace(
+                "DELETE FROM radcheck WHERE username = ? AND attribute = 'Cleartext-Password'" to listOf(username),
+                "INSERT INTO radcheck (username, attribute, op, value) VALUES (?, 'Cleartext-Password', ':=', ?)"
+                    to listOf(username, password),
+                "DELETE FROM radusergroup WHERE username = ?" to listOf(username),
+                "INSERT INTO radusergroup (username, groupname, priority) VALUES (?, ?, 1)"
+                    to listOf(username, groupname),
+            )
+        }
+
+    override fun deprovision(target: NasTarget, username: String) =
+        inTransaction(target) { conn ->
+            conn.replace(
+                "DELETE FROM radcheck WHERE username = ?" to listOf(username),
+                "DELETE FROM radreply WHERE username = ?" to listOf(username),
+                "DELETE FROM radusergroup WHERE username = ?" to listOf(username),
+            )
+        }
+
+    override fun syncGroup(
+        target: NasTarget,
+        groupname: String,
+        rateLimit: String,
+        simultaneousUse: Int?,
+        fupGroupname: String?,
+        fupRateLimit: String?,
+    ) = inTransaction(target) { conn ->
+        // Rate-limit grup normal.
+        conn.replace(
+            "DELETE FROM radgroupreply WHERE groupname = ? AND attribute = 'Mikrotik-Rate-Limit'" to listOf(groupname),
+            "INSERT INTO radgroupreply (groupname, attribute, op, value) VALUES (?, 'Mikrotik-Rate-Limit', ':=', ?)"
+                to listOf(groupname, rateLimit),
+        )
+        // Batas sesi simultan: hapus dulu, tulis ulang hanya bila diminta (null = tanpa batas).
+        conn.replace("DELETE FROM radgroupcheck WHERE groupname = ? AND attribute = 'Simultaneous-Use'" to listOf(groupname))
+        if (simultaneousUse != null) {
+            conn.replace(
+                "INSERT INTO radgroupcheck (groupname, attribute, op, value) VALUES (?, 'Simultaneous-Use', ':=', ?)"
+                    to listOf(groupname, simultaneousUse.toString()),
+            )
+        }
+        // Grup throttle FUP (opsional): rate-limit kedua yang di-swap saat kuota terlampaui.
+        if (fupGroupname != null && fupRateLimit != null) {
+            conn.replace(
+                "DELETE FROM radgroupreply WHERE groupname = ? AND attribute = 'Mikrotik-Rate-Limit'"
+                    to listOf(fupGroupname),
+                "INSERT INTO radgroupreply (groupname, attribute, op, value) VALUES (?, 'Mikrotik-Rate-Limit', ':=', ?)"
+                    to listOf(fupGroupname, fupRateLimit),
+            )
+        }
+    }
+
+    private inline fun inTransaction(target: NasTarget, body: (Connection) -> Unit) {
+        connect(target).use { conn ->
+            val previousAutoCommit = conn.autoCommit
+            conn.autoCommit = false
+            try {
+                body(conn)
+                conn.commit()
+            } catch (ex: Exception) {
+                runCatching { conn.rollback() }
+                throw ex
+            } finally {
+                runCatching { conn.autoCommit = previousAutoCommit }
+            }
+        }
+    }
+
+    /** Menjalankan sederet (SQL, params) berurutan dalam transaksi berjalan. */
+    private fun Connection.replace(vararg statements: Pair<String, List<String>>) {
+        for ((sql, params) in statements) {
+            prepareStatement(sql).use { st ->
+                params.forEachIndexed { i, value -> st.setString(i + 1, value) }
+                st.executeUpdate()
+            }
         }
     }
 }

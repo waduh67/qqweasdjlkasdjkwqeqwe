@@ -41,6 +41,9 @@ class SubscriberAccessLifecycle(
         subscriberAccessRepository.findBySubscriptionId(subscriptionId).forEach {
             it.terminate()
             subscriberAccessRepository.save(it)
+            // Langganan berakhir → cabut otorisasi akun dari RADIUS (system-triggered,
+            // pelaku null). No-op bila akun tak pernah ditugaskan ke BRAS.
+            bngActions.enqueueDeprovision(it, requestedBy = null, requestedByEmail = null)
         }
 
     private inline fun forEachLive(subscriptionId: UUID, change: (SubscriberAccess) -> Unit) {

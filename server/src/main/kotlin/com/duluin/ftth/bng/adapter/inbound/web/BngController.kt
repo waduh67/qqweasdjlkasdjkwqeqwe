@@ -3,14 +3,11 @@ package com.duluin.ftth.bng.adapter.inbound.web
 import com.duluin.ftth.bng.application.port.inbound.BrasSessionView
 import com.duluin.ftth.bng.application.port.inbound.ControlSubscriberAccessUseCase
 import com.duluin.ftth.bng.application.port.inbound.ManageNasUseCase
-import com.duluin.ftth.bng.application.port.inbound.ManageRateProfileUseCase
 import com.duluin.ftth.bng.application.port.inbound.ManageSubscriberAccessUseCase
 import com.duluin.ftth.bng.application.port.inbound.NasView
 import com.duluin.ftth.bng.application.port.inbound.ProvisionAccessCommand
-import com.duluin.ftth.bng.application.port.inbound.RateProfileView
 import com.duluin.ftth.bng.application.port.inbound.ResetSecretCommand
 import com.duluin.ftth.bng.application.port.inbound.SaveNasCommand
-import com.duluin.ftth.bng.application.port.inbound.SaveRateProfileCommand
 import com.duluin.ftth.bng.application.port.inbound.SubscriberAccessView
 import com.duluin.ftth.bng.application.port.inbound.TrafficHistoryView
 import com.duluin.ftth.bng.application.port.inbound.UpdateAccessCommand
@@ -36,11 +33,10 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 /**
- * BRAS/RADIUS (BNG): kelola paket layanan, registri BRAS, dan identitas jaringan
- * (akun PPPoE) pelanggan.
+ * BRAS/RADIUS (BNG): kelola registri BRAS dan identitas jaringan (akun PPPoE) pelanggan.
  *
- * Slice fondasi ini murni data — belum ada perintah nyata ke BRAS. Aturan nilai
- * (panjang, rentang kecepatan, format username) ditegakkan di domain agar konsisten
+ * Katalog paket kini di modul `catalog` (`/api/catalog/plans`) — akun cukup merujuk
+ * `planId`. Aturan nilai (panjang, format username) ditegakkan di domain agar konsisten
  * dari mana pun perubahannya datang; controller hanya mewajibkan field terisi.
  */
 @RestController
@@ -48,43 +44,11 @@ import java.util.UUID
 @Tag(name = "BNG — BRAS/RADIUS & akun PPPoE")
 @SecurityRequirement(name = "bearer-jwt")
 class BngController(
-    private val plans: ManageRateProfileUseCase,
     private val nas: ManageNasUseCase,
     private val access: ManageSubscriberAccessUseCase,
     private val control: ControlSubscriberAccessUseCase,
     private val sessions: ViewBngSessionUseCase,
 ) {
-    // ---- Paket (rate profile) ----
-
-    @GetMapping("/plans")
-    @PreAuthorize("@authz.can('bng.plan.view')")
-    @Operation(summary = "Daftar paket layanan tenant")
-    fun listPlans(): List<RateProfileView> = plans.list()
-
-    @GetMapping("/plans/{id}")
-    @PreAuthorize("@authz.can('bng.plan.view')")
-    @Operation(summary = "Detail satu paket")
-    fun getPlan(@PathVariable id: UUID): RateProfileView = plans.get(id)
-
-    @PostMapping("/plans")
-    @PreAuthorize("@authz.can('bng.plan.manage')")
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Buat paket baru")
-    fun createPlan(@Valid @RequestBody request: SaveRateProfileRequest): RateProfileView =
-        plans.create(request.toCommand())
-
-    @PutMapping("/plans/{id}")
-    @PreAuthorize("@authz.can('bng.plan.manage')")
-    @Operation(summary = "Ubah paket")
-    fun updatePlan(@PathVariable id: UUID, @Valid @RequestBody request: SaveRateProfileRequest): RateProfileView =
-        plans.update(id, request.toCommand())
-
-    @DeleteMapping("/plans/{id}")
-    @PreAuthorize("@authz.can('bng.plan.manage')")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Hapus paket (ditolak bila masih dipakai akun)")
-    fun deletePlan(@PathVariable id: UUID) = plans.delete(id)
-
     // ---- BRAS/NAS ----
 
     @GetMapping("/nas")
@@ -190,16 +154,6 @@ class BngController(
         sessions.traffic(id, hours)
 }
 
-data class SaveRateProfileRequest(
-    @field:NotBlank val name: String,
-    val description: String?,
-    val downMbps: Int,
-    val upMbps: Int,
-    val radiusProfileName: String?,
-) {
-    fun toCommand() = SaveRateProfileCommand(name, description, downMbps, upMbps, radiusProfileName)
-}
-
 data class SaveNasRequest(
     @field:NotBlank val name: String,
     val vendor: NasVendor,
@@ -227,17 +181,17 @@ data class ProvisionAccessRequest(
     val subscriptionId: UUID,
     @field:NotBlank val username: String,
     @field:NotBlank val secret: String,
-    val rateProfileId: UUID,
+    val planId: UUID,
     val nasId: UUID?,
 ) {
-    fun toCommand() = ProvisionAccessCommand(subscriptionId, username, secret, rateProfileId, nasId)
+    fun toCommand() = ProvisionAccessCommand(subscriptionId, username, secret, planId, nasId)
 }
 
 data class UpdateAccessRequest(
-    val rateProfileId: UUID,
+    val planId: UUID,
     val nasId: UUID?,
 ) {
-    fun toCommand() = UpdateAccessCommand(rateProfileId, nasId)
+    fun toCommand() = UpdateAccessCommand(planId, nasId)
 }
 
 data class ResetSecretRequest(

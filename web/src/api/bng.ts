@@ -1,12 +1,12 @@
 import { api } from './client'
 
 /**
- * Tipe & panggilan module bng (BRAS/RADIUS: paket layanan, registri BRAS, dan
- * identitas jaringan/akun PPPoE pelanggan). Cermin `BngController` di server.
+ * Tipe & panggilan module bng (BRAS/RADIUS: registri BRAS dan identitas jaringan/akun
+ * PPPoE pelanggan). Cermin `BngController` di server. Katalog paket pindah ke modul
+ * `catalog` (`web/src/api/catalog.ts`) — akun cukup merujuk `planId`.
  *
- * Slice fondasi: murni data — belum ada perintah nyata ke BRAS. Secret (password
- * PPPoE / CoA BRAS) tak pernah dibaca balik: hanya bisa diisi saat provisi atau
- * di-reset, dan kehadirannya di BRAS ditandai boolean `hasCoaSecret`.
+ * Secret (password PPPoE / CoA BRAS) tak pernah dibaca balik: hanya bisa diisi saat
+ * provisi atau di-reset, dan kehadirannya di BRAS ditandai boolean `hasCoaSecret`.
  */
 
 /** Vendor BRAS yang dikenal — menentukan adapter kontrol sesi nantinya. */
@@ -26,26 +26,6 @@ export const NAS_VENDOR_LABEL: Record<NasVendor, string> = {
 
 /** Urutan vendor untuk pilihan pada form. */
 export const NAS_VENDORS: NasVendor[] = ['MIKROTIK', 'CISCO', 'JUNIPER', 'FREERADIUS', 'OTHER']
-
-/** Proyeksi satu paket layanan (rate profile). */
-export interface RateProfileView {
-  id: string
-  name: string
-  description: string | null
-  downMbps: number
-  upMbps: number
-  /** Nama profil yang dikenal BRAS/RADIUS (profil PPP Mikrotik / grup FreeRADIUS). */
-  radiusProfileName: string | null
-}
-
-/** Perubahan paket; dipakai untuk create maupun update. */
-export interface SaveRateProfileRequest {
-  name: string
-  description?: string | null
-  downMbps: number
-  upMbps: number
-  radiusProfileName?: string | null
-}
 
 /**
  * Proyeksi satu BRAS. [hasCoaSecret]/[hasApiSecret] menandai rahasianya terisi tanpa
@@ -90,8 +70,8 @@ export interface SaveNasRequest {
 
 /**
  * Proyeksi satu akun PPPoE. Password (secret) sengaja tak disertakan — hanya bisa
- * diisi saat provisi atau di-reset. [rateProfileName]/[nasName] sudah diresolusi
- * di server agar UI tak perlu memanggil balik.
+ * diisi saat provisi atau di-reset. [planName]/[nasName] sudah diresolusi di server
+ * agar UI tak perlu memanggil balik. [planId] merujuk paket di modul catalog.
  */
 export interface SubscriberAccessView {
   id: string
@@ -99,8 +79,8 @@ export interface SubscriberAccessView {
   customerId: string
   username: string
   authType: string
-  rateProfileId: string
-  rateProfileName: string | null
+  planId: string
+  planName: string | null
   nasId: string | null
   nasName: string | null
   status: AccessStatus
@@ -111,13 +91,13 @@ export interface ProvisionAccessRequest {
   subscriptionId: string
   username: string
   secret: string
-  rateProfileId: string
+  planId: string
   nasId?: string | null
 }
 
 /** Ganti paket dan/atau BRAS sebuah akun. */
 export interface UpdateAccessRequest {
-  rateProfileId: string
+  planId: string
   nasId?: string | null
 }
 
@@ -153,21 +133,6 @@ export interface TrafficHistoryView {
   hours: number
   points: TrafficPoint[]
 }
-
-// ---- Paket (rate profile) ----
-
-/** Daftar paket layanan tenant. */
-export const listPlans = () => api.get<RateProfileView[]>('/api/bng/plans')
-
-/** Buat paket baru. */
-export const createPlan = (body: SaveRateProfileRequest) => api.post<RateProfileView>('/api/bng/plans', body)
-
-/** Ubah paket. */
-export const updatePlan = (id: string, body: SaveRateProfileRequest) =>
-  api.put<RateProfileView>(`/api/bng/plans/${id}`, body)
-
-/** Hapus paket (ditolak server bila masih dipakai akun). */
-export const deletePlan = (id: string) => api.del<void>(`/api/bng/plans/${id}`)
 
 // ---- BRAS/NAS ----
 

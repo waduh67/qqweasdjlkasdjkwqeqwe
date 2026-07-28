@@ -33,12 +33,12 @@ data class ProvisionAccessCommand(
     val subscriptionId: UUID,
     val username: String,
     val secret: String,
-    val rateProfileId: UUID,
+    val planId: UUID,
     val nasId: UUID?,
 )
 
 data class UpdateAccessCommand(
-    val rateProfileId: UUID,
+    val planId: UUID,
     val nasId: UUID?,
 )
 
