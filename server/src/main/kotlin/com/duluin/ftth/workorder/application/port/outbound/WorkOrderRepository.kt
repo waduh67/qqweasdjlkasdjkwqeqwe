@@ -23,6 +23,7 @@ interface WorkOrderRepository {
         status: WorkOrderStatus?,
         assignedTo: UUID?,
         approvalStatus: WorkOrderApprovalStatus?,
+        customerId: UUID?,
         pageRequest: PageRequest,
     ): Page<WorkOrder>
 

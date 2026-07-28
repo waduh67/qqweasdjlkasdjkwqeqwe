@@ -76,13 +76,23 @@ class IncidentIT {
     }
 
     /** Mendaftar pelanggan + ONU, memasangnya ke port ODP, dan mengembalikan serial ONU-nya. */
-    private fun attachOnu(token: String, odpId: String, port: Int): String {
+    private fun attachOnu(token: String, odpId: String, port: Int): String =
+        attachOnuReturningCustomer(token, odpId, port).second
+
+    /** Seperti [attachOnu] tetapi juga mengembalikan id pelanggan pemilik ONU. */
+    private fun attachOnuReturningCustomer(token: String, odpId: String, port: Int): Pair<String, String> {
         val s = uniq().uppercase()
         val customer = id(post("/api/customers", token, """{"code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","location":{"longitude":106.99,"latitude":-6.24}}"""))
         val serial = "SN-$s"
         val onu = id(post("/api/customers/$customer/onus", token, """{"serialNumber":"$serial"}"""))
         post("/api/customers/onus/$onu/attach", token, """{"odpId":"$odpId","portNumber":$port}""", 200)
-        return serial
+        return customer to serial
+    }
+
+    /** Pelanggan polos tanpa ONU/pasangan jaringan — tak akan pernah terdampak insiden topologi. */
+    private fun bareCustomer(token: String): String {
+        val s = uniq().uppercase()
+        return id(post("/api/customers", token, """{"code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","location":{"longitude":106.99,"latitude":-6.24}}"""))
     }
 
     private fun newCollector(token: String): String =
@@ -105,6 +115,10 @@ class IncidentIT {
 
     private fun incidents(token: String): String =
         mockMvc.perform(get("/api/incidents").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andReturn().response.contentAsString
+
+    private fun incidentsForCustomer(token: String, customerId: String): String =
+        mockMvc.perform(get("/api/incidents?customerId=$customerId").header("Authorization", "Bearer $token"))
             .andExpect(status().isOk).andReturn().response.contentAsString
 
     private fun postAction(url: String, token: String): String =
@@ -213,5 +227,28 @@ class IncidentIT {
     fun `tanpa alarm, tidak ada insiden`() {
         val token = newTenantAdmin("incq")
         assertThat(JsonPath.read<List<Any>>(incidents(token), "$[*]")).isEmpty()
+    }
+
+    @Test
+    fun `insiden aktif tersaring hanya ke pelanggan yang terdampak`() {
+        val token = newTenantAdmin("inccust")
+        val chain = buildChain(token)
+        val (custA, serialA) = attachOnuReturningCustomer(token, chain.odp, port = 1)
+        val (custB, serialB) = attachOnuReturningCustomer(token, chain.odp, port = 2)
+        val custC = bareCustomer(token) // tak terpasang di ODP terdampak → tak pernah terdampak
+        val apiKey = newCollector(token)
+
+        // Dua ONU se-ODP LOS → satu insiden berakar ODC yang berdampak ke A & B.
+        sendMetrics(apiKey, reading(serialA, "LOS", null), reading(serialB, "LOS", null))
+        assertThat(JsonPath.read<List<Any>>(incidents(token), "$[*]")).hasSize(1)
+
+        // Pelanggan terdampak melihat persis insiden itu.
+        val forA = incidentsForCustomer(token, custA)
+        assertThat(JsonPath.read<List<Any>>(forA, "$[*]")).hasSize(1)
+        assertThat(JsonPath.read<String>(forA, "$[0].rootType")).isEqualTo("ODC")
+        assertThat(JsonPath.read<List<Any>>(incidentsForCustomer(token, custB), "$[*]")).hasSize(1)
+
+        // Pelanggan tak terdampak tak melihat apa-apa.
+        assertThat(JsonPath.read<List<Any>>(incidentsForCustomer(token, custC), "$[*]")).isEmpty()
     }
 }

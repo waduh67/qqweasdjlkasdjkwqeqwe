@@ -59,11 +59,19 @@ class WorkOrderController(
         @RequestParam(required = false) status: WorkOrderStatus?,
         @RequestParam(required = false) assignedTo: UUID?,
         @RequestParam(required = false) approval: WorkOrderApprovalStatus?,
+        @RequestParam(required = false) customerId: UUID?,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
     ): PageResponse<WorkOrderView> = PageResponse.from(
         this.query.search(
-            WorkOrderFilter(query = query, type = type, status = status, assignedTo = assignedTo, approvalStatus = approval),
+            WorkOrderFilter(
+                query = query,
+                type = type,
+                status = status,
+                assignedTo = assignedTo,
+                approvalStatus = approval,
+                customerId = customerId,
+            ),
             PageRequest(page, size, sort = "createdAt", descending = true),
         ),
     )

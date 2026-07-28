@@ -96,6 +96,7 @@ class WorkOrderPersistenceAdapter(
         status: WorkOrderStatus?,
         assignedTo: UUID?,
         approvalStatus: WorkOrderApprovalStatus?,
+        customerId: UUID?,
         pageRequest: PageRequest,
     ): Page<WorkOrder> {
         val spec = matchesText(query)
@@ -103,6 +104,7 @@ class WorkOrderPersistenceAdapter(
             .and(hasStatus(status))
             .and(assignedToIs(assignedTo))
             .and(hasApprovalStatus(approvalStatus))
+            .and(hasCustomer(customerId))
         return jpa.findAll(spec, pageRequest.toPageable()).toDomainPage().map { it.toDomain() }
     }
 
@@ -171,6 +173,10 @@ class WorkOrderPersistenceAdapter(
 
     private fun assignedToIs(assignedTo: UUID?) = Specification<WorkOrderJpaEntity> { root, _, cb ->
         if (assignedTo == null) cb.conjunction() else cb.equal(root.get<UUID>("assignedTo"), assignedTo)
+    }
+
+    private fun hasCustomer(customerId: UUID?) = Specification<WorkOrderJpaEntity> { root, _, cb ->
+        if (customerId == null) cb.conjunction() else cb.equal(root.get<UUID>("customerId"), customerId)
     }
 
     private fun hasApprovalStatus(approvalStatus: WorkOrderApprovalStatus?) = Specification<WorkOrderJpaEntity> { root, _, cb ->

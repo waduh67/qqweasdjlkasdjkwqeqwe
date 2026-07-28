@@ -56,11 +56,14 @@ import {
   type TrafficHistoryView,
 } from '../api/bng'
 import { useCan } from '../auth/useCan'
-import { EmptyState, Spinner, StatusBadge, useToast } from '../components/ui'
+import { Badge, EmptyState, Spinner, StatusBadge, useToast } from '../components/ui'
 import { OpticalChart } from '../components/OpticalChart'
 import { TrafficChart } from '../components/TrafficChart'
 import { IconAlert, IconCustomers, IconRoute } from '../components/icons'
 import type { SubscriptionView } from '../api/network'
+import { listInvoicesForCustomer, type InvoiceView } from '../api/billing'
+import { listIncidentsForCustomer, type IncidentView } from '../api/incident'
+import { listWorkOrdersForCustomer, type WorkOrderStatus, type WorkOrderView } from '../api/workorder'
 
 /** Warna kesehatan optik selaras token status. */
 const HEALTH_COLOR: Record<string, string> = {
@@ -70,7 +73,7 @@ const HEALTH_COLOR: Record<string, string> = {
   UNKNOWN: 'var(--muted)',
 }
 
-type Tab = 'ringkasan' | 'jalur' | 'tetangga' | 'metrik' | 'akses' | 'cpe'
+type Tab = 'ringkasan' | 'jalur' | 'tetangga' | 'metrik' | 'akses' | 'cpe' | 'tagihan' | 'tiket' | 'timeline'
 
 /**
  * Halaman detail satu pelanggan sebagai rute tersendiri (`/customers/:id`), bukan
@@ -115,6 +118,10 @@ export function CustomerDetailPage() {
   const canMetric = can('monitoring.metric.view')
   const canAccess = can('bng.access.view')
   const canCpe = can('cpe.device.view')
+  // Facet sisi-bisnis Subscriber-360: tiap tab digerbang izin modul pemiliknya.
+  const canBilling = can('billing.invoice.view')
+  const canIncident = can('incident.ticket.view')
+  const canWorkorder = can('workorder.order.view')
 
   // ODP untuk form pasang ONU — hanya bila boleh memasang.
   useEffect(() => {
@@ -246,6 +253,21 @@ export function CustomerDetailPage() {
             CPE
           </button>
         )}
+        {canBilling && (
+          <button className={tab === 'tagihan' ? 'active' : ''} onClick={() => setTab('tagihan')}>
+            Tagihan
+          </button>
+        )}
+        {(canIncident || canWorkorder) && (
+          <button className={tab === 'tiket' ? 'active' : ''} onClick={() => setTab('tiket')}>
+            Tiket &amp; WO
+          </button>
+        )}
+        {(canBilling || canIncident || canWorkorder) && (
+          <button className={tab === 'timeline' ? 'active' : ''} onClick={() => setTab('timeline')}>
+            Timeline
+          </button>
+        )}
       </div>
 
       {tab === 'ringkasan' && <RingkasanTab customer={customer} odps={odps} run={run} />}
@@ -254,6 +276,17 @@ export function CustomerDetailPage() {
       {tab === 'metrik' && <MetrikTab customer={customer} metrics={metrics} />}
       {tab === 'akses' && <NetworkAccessTab customerId={id} subscriptions={customer.subscriptions} />}
       {tab === 'cpe' && <CpeTab customerId={id} />}
+      {tab === 'tagihan' && <TagihanTab customerId={id} />}
+      {tab === 'tiket' && <TiketWoTab customerId={id} canIncident={canIncident} canWorkorder={canWorkorder} />}
+      {tab === 'timeline' && (
+        <TimelineTab
+          customerId={id}
+          customer={customer}
+          canBilling={canBilling}
+          canIncident={canIncident}
+          canWorkorder={canWorkorder}
+        />
+      )}
     </div>
   )
 }
@@ -1878,6 +1911,389 @@ function CpeActionLog({ actions }: { actions: CpeActionView[] }) {
             >
               {a.status === 'SUCCESS' ? 'berhasil' : 'gagal'}
             </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ---------- Tab: Tagihan & tunggakan (module billing) ---------- */
+
+/** Rupiah ringkas dari nilai numerik, mis. "Rp 150.000". */
+function fmtRupiah(n: number): string {
+  return `Rp ${n.toLocaleString('id-ID')}`
+}
+
+/** LocalDate "YYYY-MM-DD" → "15 Jul 2026"; "—" bila kosong. */
+function fmtDate(localDate: string | null): string {
+  if (!localDate) return '—'
+  const d = new Date(`${localDate}T00:00:00`)
+  return Number.isNaN(d.getTime())
+    ? localDate
+    : d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+/** Tanggal lokal hari ini "YYYY-MM-DD" untuk membandingkan jatuh tempo (bandingkan leksikografis). */
+function todayLocalDate(): string {
+  const n = new Date()
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
+}
+
+const INVOICE_TONE: Record<InvoiceView['status'], 'good' | 'warning' | 'critical' | 'neutral'> = {
+  PAID: 'good',
+  ISSUED: 'warning',
+  OVERDUE: 'critical',
+  VOID: 'neutral',
+}
+
+const INVOICE_LABEL: Record<InvoiceView['status'], string> = {
+  PAID: 'Lunas',
+  ISSUED: 'Terbit',
+  OVERDUE: 'Jatuh tempo',
+  VOID: 'Batal',
+}
+
+/** Tagihan menunggak: berstatus OVERDUE, atau ISSUED yang sudah lewat jatuh tempo. */
+function isOutstanding(inv: InvoiceView, today: string): boolean {
+  return inv.status === 'OVERDUE' || (inv.status === 'ISSUED' && inv.dueDate < today)
+}
+
+/**
+ * Tagihan & tunggakan pelanggan. Daftar tagihan (semua status) dari module billing,
+ * plus ringkas tunggakan yang dihitung sisi klien: Σ nilai tagihan jatuh tempo yang
+ * belum dibayar. Digerbang `billing.invoice.view` di pemanggil.
+ */
+function TagihanTab({ customerId }: { customerId: string }) {
+  const [invoices, setInvoices] = useState<InvoiceView[] | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    void listInvoicesForCustomer(customerId)
+      .then((list) => alive && setInvoices(list))
+      .catch(() => alive && setInvoices([]))
+    return () => {
+      alive = false
+    }
+  }, [customerId])
+
+  if (invoices == null) {
+    return (
+      <div className="card" style={{ display: 'grid', placeItems: 'center', minHeight: 120 }}>
+        <Spinner />
+      </div>
+    )
+  }
+
+  if (invoices.length === 0) {
+    return (
+      <div className="card">
+        <p className="muted" style={{ margin: 0 }}>Belum ada tagihan untuk pelanggan ini.</p>
+      </div>
+    )
+  }
+
+  const today = todayLocalDate()
+  const tunggakan = invoices.filter((inv) => isOutstanding(inv, today)).reduce((s, inv) => s + Number(inv.amount), 0)
+
+  return (
+    <div className="stack" style={{ gap: '1rem' }}>
+      <div className="card stack" style={{ gap: '0.4rem' }}>
+        <div className="spread" style={{ alignItems: 'center' }}>
+          <strong style={{ fontSize: '0.95rem' }}>Tunggakan</strong>
+          <span
+            className="tnum"
+            style={{ fontWeight: 700, color: tunggakan > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
+          >
+            {fmtRupiah(tunggakan)}
+          </span>
+        </div>
+        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+          Jumlah tagihan jatuh tempo yang belum dibayar.
+        </p>
+      </div>
+
+      <div className="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Nomor</th>
+              <th>Periode</th>
+              <th>Jatuh tempo</th>
+              <th style={{ textAlign: 'right' }}>Jumlah</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {invoices.map((inv) => (
+              <tr key={inv.id}>
+                <td className="tnum">{inv.number}</td>
+                <td className="muted">
+                  {fmtDate(inv.periodStart)} – {fmtDate(inv.periodEnd)}
+                </td>
+                <td className="muted">{fmtDate(inv.dueDate)}</td>
+                <td className="tnum" style={{ textAlign: 'right' }}>
+                  {fmtRupiah(Number(inv.amount))}
+                </td>
+                <td>
+                  <Badge tone={INVOICE_TONE[inv.status]}>{INVOICE_LABEL[inv.status]}</Badge>
+                  {inv.payUrl && inv.status !== 'PAID' && inv.status !== 'VOID' && (
+                    <a
+                      href={inv.payUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ marginLeft: '0.5rem', fontSize: '0.8rem' }}
+                    >
+                      bayar
+                    </a>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+/* ---------- Tab: Tiket insiden & Work Order (module incident + workorder) ---------- */
+
+const WO_STATUS_TONE: Record<WorkOrderStatus, 'neutral' | 'accent' | 'warning' | 'good'> = {
+  DRAFT: 'neutral',
+  ASSIGNED: 'accent',
+  IN_PROGRESS: 'warning',
+  DONE: 'good',
+  CANCELLED: 'neutral',
+}
+
+const WO_STATUS_LABEL: Record<WorkOrderStatus, string> = {
+  DRAFT: 'Draft',
+  ASSIGNED: 'Ditugaskan',
+  IN_PROGRESS: 'Dikerjakan',
+  DONE: 'Selesai',
+  CANCELLED: 'Dibatalkan',
+}
+
+/**
+ * Insiden aktif yang berdampak (module incident) + riwayat work order penuh
+ * (module workorder). Tiap bagian ditarik & digerbang izin modulnya sendiri;
+ * WO yang lahir dari insiden ditandai agar tautan silangnya terlihat. Riwayat
+ * insiden *resolved* sengaja tak ditampilkan — diwakili riwayat work order.
+ */
+function TiketWoTab({
+  customerId,
+  canIncident,
+  canWorkorder,
+}: {
+  customerId: string
+  canIncident: boolean
+  canWorkorder: boolean
+}) {
+  const [incidents, setIncidents] = useState<IncidentView[] | null>(null)
+  const [orders, setOrders] = useState<WorkOrderView[] | null>(null)
+
+  useEffect(() => {
+    if (!canIncident) return
+    let alive = true
+    void listIncidentsForCustomer(customerId)
+      .then((list) => alive && setIncidents(list))
+      .catch(() => alive && setIncidents([]))
+    return () => {
+      alive = false
+    }
+  }, [customerId, canIncident])
+
+  useEffect(() => {
+    if (!canWorkorder) return
+    let alive = true
+    void listWorkOrdersForCustomer(customerId)
+      .then((list) => alive && setOrders(list))
+      .catch(() => alive && setOrders([]))
+    return () => {
+      alive = false
+    }
+  }, [customerId, canWorkorder])
+
+  return (
+    <div className="stack" style={{ gap: '1rem' }}>
+      {canIncident && (
+        <div className="card stack" style={{ gap: '0.6rem' }}>
+          <div className="spread" style={{ alignItems: 'center' }}>
+            <strong style={{ fontSize: '0.95rem' }}>Insiden aktif</strong>
+            <span className="muted" style={{ fontSize: '0.8rem' }}>gangguan yang sedang berdampak</span>
+          </div>
+          {incidents == null ? (
+            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Memuat insiden…</p>
+          ) : incidents.length === 0 ? (
+            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Tak ada insiden aktif yang berdampak.</p>
+          ) : (
+            incidents.map((inc) => (
+              <div key={inc.id} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
+                <div className="stack" style={{ gap: 2, minWidth: 0 }}>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{inc.title}</span>
+                  <span className="muted" style={{ fontSize: '0.78rem' }}>
+                    {inc.rootLabel} · dibuka {fmtInstant(inc.openedAt)}
+                  </span>
+                </div>
+                <div className="row" style={{ gap: '0.35rem' }}>
+                  <StatusBadge status={inc.severity} />
+                  <StatusBadge status={inc.status} />
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {canWorkorder && (
+        <div className="card stack" style={{ gap: '0.6rem' }}>
+          <div className="spread" style={{ alignItems: 'center' }}>
+            <strong style={{ fontSize: '0.95rem' }}>Riwayat work order</strong>
+            <span className="muted" style={{ fontSize: '0.8rem' }}>semua status</span>
+          </div>
+          {orders == null ? (
+            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Memuat work order…</p>
+          ) : orders.length === 0 ? (
+            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada work order untuk pelanggan ini.</p>
+          ) : (
+            orders.map((wo) => (
+              <div key={wo.id} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
+                <div className="stack" style={{ gap: 2, minWidth: 0 }}>
+                  <span style={{ fontSize: '0.88rem' }}>
+                    <span className="tnum" style={{ fontWeight: 600 }}>{wo.code}</span> · {wo.title}
+                    {wo.incidentId && (
+                      <span className="badge accent" style={{ marginLeft: '0.4rem' }}>dari insiden</span>
+                    )}
+                  </span>
+                  <span className="muted" style={{ fontSize: '0.78rem' }}>
+                    {wo.type} · dibuat {fmtInstant(wo.createdAt)}
+                    {wo.assignedToName && ` · ${wo.assignedToName}`}
+                  </span>
+                </div>
+                <Badge tone={WO_STATUS_TONE[wo.status]}>{WO_STATUS_LABEL[wo.status]}</Badge>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ---------- Tab: Timeline aktivitas gabungan (gabung sisi klien) ---------- */
+
+type TimelineTone = 'good' | 'warning' | 'critical' | 'neutral' | 'accent'
+
+const TONE_INK: Record<TimelineTone, string> = {
+  good: 'var(--good-ink)',
+  warning: 'var(--warning-ink)',
+  critical: 'var(--critical-ink)',
+  accent: 'var(--accent)',
+  neutral: 'var(--muted)',
+}
+
+/**
+ * Riwayat aktivitas satu pelanggan sebagai satu garis waktu — gabungan murni sisi
+ * klien dari tagihan, insiden, work order, langganan, dan ONU yang sudah ditarik
+ * masing-masing endpoint (tanpa endpoint timeline khusus). Tiap sumber ikut hanya
+ * bila izin modulnya dimiliki; langganan & ONU selalu ada (dari data pelanggan).
+ */
+function TimelineTab({
+  customerId,
+  customer,
+  canBilling,
+  canIncident,
+  canWorkorder,
+}: {
+  customerId: string
+  customer: CustomerView
+  canBilling: boolean
+  canIncident: boolean
+  canWorkorder: boolean
+}) {
+  const [invoices, setInvoices] = useState<InvoiceView[]>([])
+  const [incidents, setIncidents] = useState<IncidentView[]>([])
+  const [orders, setOrders] = useState<WorkOrderView[]>([])
+
+  useEffect(() => {
+    if (!canBilling) return
+    let alive = true
+    void listInvoicesForCustomer(customerId)
+      .then((l) => alive && setInvoices(l))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [customerId, canBilling])
+
+  useEffect(() => {
+    if (!canIncident) return
+    let alive = true
+    void listIncidentsForCustomer(customerId)
+      .then((l) => alive && setIncidents(l))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [customerId, canIncident])
+
+  useEffect(() => {
+    if (!canWorkorder) return
+    let alive = true
+    void listWorkOrdersForCustomer(customerId)
+      .then((l) => alive && setOrders(l))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [customerId, canWorkorder])
+
+  const entries: Array<{ at: string; label: string; tone: TimelineTone }> = []
+  const push = (at: string | null, label: string, tone: TimelineTone) => {
+    if (at) entries.push({ at, label, tone })
+  }
+
+  customer.subscriptions.forEach((sub) => {
+    push(sub.activatedAt, `Langganan ${sub.packageName} diaktifkan`, 'good')
+    push(sub.terminatedAt, `Langganan ${sub.packageName} dihentikan`, 'critical')
+  })
+  customer.onus.forEach((onu) => push(onu.installedAt, `ONU ${onu.serialNumber} dipasang`, 'accent'))
+  invoices.forEach((inv) => {
+    push(inv.issuedAt, `Tagihan ${inv.number} terbit`, 'warning')
+    push(inv.paidAt, `Tagihan ${inv.number} dibayar`, 'good')
+  })
+  incidents.forEach((inc) => push(inc.openedAt, `Insiden ${inc.title} dibuka`, 'critical'))
+  orders.forEach((wo) => {
+    push(wo.createdAt, `WO ${wo.code} dibuat`, 'accent')
+    push(wo.completedAt, `WO ${wo.code} selesai`, 'good')
+  })
+
+  // Terbaru lebih dulu; timestamp ISO 8601 aman dibandingkan leksikografis.
+  entries.sort((a, b) => b.at.localeCompare(a.at))
+
+  if (entries.length === 0) {
+    return (
+      <div className="card">
+        <p className="muted" style={{ margin: 0 }}>Belum ada aktivitas yang tercatat.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="card stack" style={{ gap: '0.5rem' }}>
+      <strong style={{ fontSize: '0.95rem' }}>Aktivitas terbaru</strong>
+      <div className="stack" style={{ gap: '0.4rem' }}>
+        {entries.map((e, i) => (
+          <div key={`${e.at}-${i}`} className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
+            <span className="muted tnum" style={{ fontSize: '0.78rem', minWidth: 92 }}>
+              {fmtInstant(e.at)}
+            </span>
+            <span
+              aria-hidden
+              style={{ width: 8, height: 8, borderRadius: '50%', background: TONE_INK[e.tone], flexShrink: 0 }}
+            />
+            <span style={{ fontSize: '0.85rem' }}>{e.label}</span>
           </div>
         ))}
       </div>

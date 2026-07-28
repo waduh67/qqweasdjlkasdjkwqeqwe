@@ -1,3 +1,5 @@
+import { api } from './client'
+
 /** Insiden hasil korelasi alarm (module `incident`). */
 export interface IncidentView {
   id: string
@@ -39,3 +41,11 @@ export interface IncidentDetail {
   timeline: IncidentEventView[]
   members: IncidentAlarm[]
 }
+
+/**
+ * Insiden **aktif** yang saat ini berdampak ke satu pelanggan (panel Subscriber-360).
+ * Server menurunkannya dari akar tiap insiden terbuka → pelanggan terdampak; riwayat
+ * insiden *resolved* tak direkonstruksi (diwakili riwayat work order).
+ */
+export const listIncidentsForCustomer = (customerId: string) =>
+  api.get<IncidentView[]>(`/api/incidents?customerId=${customerId}`)

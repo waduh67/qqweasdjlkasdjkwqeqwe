@@ -2,6 +2,7 @@ package com.duluin.ftth.incident.application.service
 
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.security.CurrentUserProvider
+import com.duluin.ftth.incident.IncidentApi
 import com.duluin.ftth.incident.application.port.inbound.IncidentDetail
 import com.duluin.ftth.incident.application.port.inbound.IncidentEventView
 import com.duluin.ftth.incident.application.port.inbound.IncidentQuery
@@ -20,9 +21,18 @@ class IncidentService(
     private val repository: IncidentRepository,
     private val correlation: IncidentCorrelationService,
     private val currentUser: CurrentUserProvider,
+    private val incidentApi: IncidentApi,
 ) : IncidentQuery, ManageIncidentUseCase {
 
     override fun activeIncidents(): List<IncidentView> = repository.findOpen().map { it.toView() }
+
+    // Reuse penurunan pelanggan-terdampak yang dipakai broadcast (akar → hilir), lalu
+    // saring ke satu pelanggan. Menjamin konsistensi: pelanggan melihat persis insiden
+    // yang siarannya akan menjangkau dia. Insiden terbuka jumlahnya sedikit → murah.
+    override fun incidentsForCustomer(customerId: UUID): List<IncidentView> =
+        repository.findOpen()
+            .filter { inc -> incidentApi.affectedContacts(inc.id).any { it.customerId == customerId } }
+            .map { it.toView() }
 
     override fun incident(id: UUID): IncidentDetail {
         val incident = repository.findById(id) ?: throw NotFoundException("Insiden $id tidak ditemukan")

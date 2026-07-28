@@ -149,6 +149,7 @@ class WorkOrderService(
             status = filter.status,
             assignedTo = filter.assignedTo,
             approvalStatus = filter.approvalStatus,
+            customerId = filter.customerId,
             pageRequest = page,
         )
         // Teknisi & penyetuju sama-sama pengguna iam → kumpulkan idnya lalu resolusi sekali-batch.

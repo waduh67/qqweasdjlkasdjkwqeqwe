@@ -165,6 +165,26 @@ class WorkOrderIT {
     }
 
     @Test
+    fun `filter by customer hanya mengembalikan work order pelanggan itu`() {
+        val token = newTenantAdmin("wo")
+        val (custA, _) = newCustomer(token)
+        val (custB, _) = newCustomer(token)
+
+        val woA = id(createWorkOrder(token, """{"type":"REPAIR","title":"Perbaikan A","customerId":"$custA"}"""))
+        createWorkOrder(token, """{"type":"MIGRATION","title":"Pindah B","customerId":"$custB"}""")
+        // WO tanpa pelanggan tak boleh ikut ketika difilter per pelanggan.
+        createWorkOrder(token, """{"type":"PSB","title":"Pasang lepasan"}""")
+
+        val listA = get("/api/work-orders?customerId=$custA", token)
+        assertThat(JsonPath.read<List<Any>>(listA, "$.content[*]")).hasSize(1)
+        assertThat(JsonPath.read<String>(listA, "$.content[0].id")).isEqualTo(woA)
+        assertThat(JsonPath.read<String>(listA, "$.content[0].customerId")).isEqualTo(custA)
+
+        // Tanpa param, ketiga WO tetap tampil (perilaku lama tak berubah).
+        assertThat(JsonPath.read<List<Any>>(get("/api/work-orders", token), "$.content[*]")).hasSize(3)
+    }
+
+    @Test
     fun `redaman optik direkam bertahap, di luar rentang ditolak, dan tak bisa setelah batal`() {
         val token = newTenantAdmin("wo")
         val woId = id(createWorkOrder(token, """{"type":"PSB","title":"Pasang baru"}"""))

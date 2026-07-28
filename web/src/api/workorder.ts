@@ -1,5 +1,8 @@
 /** Work order sisi operator/dispatcher (module `workorder`). */
 
+import { api } from './client'
+import type { PageResponse } from './types'
+
 export type WorkOrderType = 'PSB' | 'REPAIR' | 'MIGRATION' | 'DISMANTLE' | 'PREVENTIVE'
 export type WorkOrderStatus = 'DRAFT' | 'ASSIGNED' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED'
 export type WorkOrderPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT'
@@ -95,3 +98,13 @@ export interface SignatureView {
   signedAt: string
   createdAt: string
 }
+
+/**
+ * Riwayat work order satu pelanggan (semua status), terbaru dulu. Endpoint search
+ * mengembalikan halaman — ambil `.content`. Ukuran besar agar riwayat pendek utuh
+ * dalam satu tarik untuk panel Subscriber-360.
+ */
+export const listWorkOrdersForCustomer = (customerId: string) =>
+  api
+    .get<PageResponse<WorkOrderView>>(`/api/work-orders?customerId=${customerId}&size=100`)
+    .then((page) => page.content)

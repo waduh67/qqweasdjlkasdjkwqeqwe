@@ -28,6 +28,8 @@ data class WorkOrderFilter(
     val assignedTo: UUID?,
     /** Antrean persetujuan: mis. PENDING = hasil kerja yang menunggu dikurasi. */
     val approvalStatus: WorkOrderApprovalStatus?,
+    /** Batasi ke WO milik satu pelanggan (riwayat pekerjaan di panel Subscriber-360). */
+    val customerId: UUID? = null,
 )
 
 data class WorkOrderView(

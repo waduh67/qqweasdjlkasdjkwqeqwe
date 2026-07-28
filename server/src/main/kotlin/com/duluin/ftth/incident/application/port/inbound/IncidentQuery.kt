@@ -17,6 +17,15 @@ interface IncidentQuery {
     /** Insiden yang belum selesai (OPEN + ACKNOWLEDGED), terparah lebih dulu. */
     fun activeIncidents(): List<IncidentView>
 
+    /**
+     * Insiden **aktif** yang saat ini berdampak ke satu pelanggan — bahan panel
+     * Subscriber-360. Dihitung dari akar tiap insiden terbuka (ONU→pemilik;
+     * OLT/ODC/ODP→penghuni ODP hilir), jadi persis insiden yang broadcast-nya
+     * akan menjangkau pelanggan ini. Riwayat insiden *resolved* tak direkonstruksi
+     * (okupansi ODP berubah seiring waktu) — diwakili oleh riwayat work order.
+     */
+    fun incidentsForCustomer(customerId: UUID): List<IncidentView>
+
     /** Detail satu insiden: ringkasannya, timeline, dan alarm anggotanya saat ini. */
     fun incident(id: UUID): IncidentDetail
 }

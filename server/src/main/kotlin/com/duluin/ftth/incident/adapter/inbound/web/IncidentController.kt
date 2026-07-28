@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
@@ -26,9 +27,14 @@ class IncidentController(
     private val query: IncidentQuery,
     private val manage: ManageIncidentUseCase,
 ) {
+    /**
+     * Daftar insiden aktif. Dengan `customerId` → hanya insiden yang saat ini
+     * berdampak ke pelanggan itu (panel Subscriber-360); tanpanya → semua insiden aktif.
+     */
     @GetMapping
     @PreAuthorize("@authz.can('incident.ticket.view')")
-    fun active(): List<IncidentView> = query.activeIncidents()
+    fun active(@RequestParam(required = false) customerId: UUID?): List<IncidentView> =
+        if (customerId != null) query.incidentsForCustomer(customerId) else query.activeIncidents()
 
     @GetMapping("/{id}")
     @PreAuthorize("@authz.can('incident.ticket.view')")
