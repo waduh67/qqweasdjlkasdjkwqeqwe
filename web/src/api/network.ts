@@ -94,6 +94,8 @@ export interface OnuView {
 export interface SubscriptionView {
   id: string
   customerId: string
+  /** Paket katalog sumber snapshot; null untuk langganan warisan. */
+  planId: string | null
   packageName: string
   bandwidthMbps: number
   monthlyFee: string

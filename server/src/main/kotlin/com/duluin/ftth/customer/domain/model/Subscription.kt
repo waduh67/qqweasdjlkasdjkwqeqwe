@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.ValidationException
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.Instant
 import java.util.UUID
 
@@ -17,23 +18,54 @@ enum class SubscriptionStatus {
 }
 
 /**
+ * Snapshot komersial sebuah paket ([com.duluin.ftth.catalog.Plan]) yang DIBEKUKAN ke
+ * langganan saat create/update.
+ *
+ * Harga & atribut siklus disalin (bukan dibaca live) supaya invoice historis tetap
+ * stabil walau harga paket berubah kelak. [planId] menyimpan asal paket untuk
+ * penelusuran & agar bng bisa menyelaraskan sisi jaringan (grup RADIUS). Override
+ * siklus bernilai null = ikut kebijakan billing global. Sisi jaringan (kecepatan,
+ * burst, FUP) sengaja TIDAK di-snapshot — bng membacanya live dari catalog.
+ */
+data class PlanSnapshot(
+    val planId: UUID?,
+    val packageName: String,
+    val bandwidthMbps: Int,
+    val monthlyFee: BigDecimal,
+    val prorateOnActivation: Boolean?,
+    val billingDayOfMonth: Int?,
+    val graceDays: Int?,
+    val autoIsolir: Boolean?,
+)
+
+/**
  * Langganan layanan milik seorang pelanggan.
  *
  * Perpindahan status dijaga sebagai mesin keadaan eksplisit: langganan yang sudah
  * diakhiri tidak boleh "hidup lagi" diam-diam lewat update biasa, karena tanggal
- * aktivasi dan terminasi dipakai untuk penagihan.
+ * aktivasi dan terminasi dipakai untuk penagihan. Detail paket disimpan sebagai
+ * [PlanSnapshot] beku, bukan referensi hidup.
  */
 class Subscription private constructor(
     val id: UUID,
     val tenantId: UUID,
     val customerId: UUID,
+    planId: UUID?,
     packageName: String,
     bandwidthMbps: Int,
     monthlyFee: BigDecimal,
+    prorateOnActivation: Boolean?,
+    billingDayOfMonth: Int?,
+    graceDays: Int?,
+    autoIsolir: Boolean?,
     status: SubscriptionStatus,
     activatedAt: Instant?,
     terminatedAt: Instant?,
 ) {
+    /** Asal paket katalog; null untuk langganan warisan sebelum sistem paket terpadu. */
+    var planId: UUID? = planId
+        private set
+
     var packageName: String = packageName
         private set
 
@@ -41,6 +73,18 @@ class Subscription private constructor(
         private set
 
     var monthlyFee: BigDecimal = monthlyFee
+        private set
+
+    var prorateOnActivation: Boolean? = prorateOnActivation
+        private set
+
+    var billingDayOfMonth: Int? = billingDayOfMonth
+        private set
+
+    var graceDays: Int? = graceDays
+        private set
+
+    var autoIsolir: Boolean? = autoIsolir
         private set
 
     var status: SubscriptionStatus = status
@@ -52,11 +96,18 @@ class Subscription private constructor(
     var terminatedAt: Instant? = terminatedAt
         private set
 
-    fun updatePackage(packageName: String, bandwidthMbps: Int, monthlyFee: BigDecimal) {
+    /** Salin ulang snapshot paket (mis. ganti paket atau harga negosiasi). */
+    fun updatePackage(snapshot: PlanSnapshot) {
         assertNotTerminated()
-        this.packageName = validatePackageName(packageName)
-        this.bandwidthMbps = validateBandwidth(bandwidthMbps)
-        this.monthlyFee = validateFee(monthlyFee)
+        val s = validate(snapshot)
+        planId = s.planId
+        packageName = s.packageName
+        bandwidthMbps = s.bandwidthMbps
+        monthlyFee = s.monthlyFee
+        prorateOnActivation = s.prorateOnActivation
+        billingDayOfMonth = s.billingDayOfMonth
+        graceDays = s.graceDays
+        autoIsolir = s.autoIsolir
     }
 
     fun activate(at: Instant = Instant.now()) {
@@ -91,34 +142,55 @@ class Subscription private constructor(
         fun create(
             tenantId: UUID,
             customerId: UUID,
-            packageName: String,
-            bandwidthMbps: Int,
-            monthlyFee: BigDecimal,
-        ): Subscription = Subscription(
-            id = UuidV7.generate(),
-            tenantId = tenantId,
-            customerId = customerId,
-            packageName = validatePackageName(packageName),
-            bandwidthMbps = validateBandwidth(bandwidthMbps),
-            monthlyFee = validateFee(monthlyFee),
-            status = SubscriptionStatus.PENDING,
-            activatedAt = null,
-            terminatedAt = null,
-        )
+            snapshot: PlanSnapshot,
+        ): Subscription {
+            val s = validate(snapshot)
+            return Subscription(
+                id = UuidV7.generate(),
+                tenantId = tenantId,
+                customerId = customerId,
+                planId = s.planId,
+                packageName = s.packageName,
+                bandwidthMbps = s.bandwidthMbps,
+                monthlyFee = s.monthlyFee,
+                prorateOnActivation = s.prorateOnActivation,
+                billingDayOfMonth = s.billingDayOfMonth,
+                graceDays = s.graceDays,
+                autoIsolir = s.autoIsolir,
+                status = SubscriptionStatus.PENDING,
+                activatedAt = null,
+                terminatedAt = null,
+            )
+        }
 
         @Suppress("LongParameterList")
         fun rehydrate(
             id: UUID,
             tenantId: UUID,
             customerId: UUID,
+            planId: UUID?,
             packageName: String,
             bandwidthMbps: Int,
             monthlyFee: BigDecimal,
+            prorateOnActivation: Boolean?,
+            billingDayOfMonth: Int?,
+            graceDays: Int?,
+            autoIsolir: Boolean?,
             status: SubscriptionStatus,
             activatedAt: Instant?,
             terminatedAt: Instant?,
         ): Subscription = Subscription(
-            id, tenantId, customerId, packageName, bandwidthMbps, monthlyFee, status, activatedAt, terminatedAt,
+            id, tenantId, customerId, planId, packageName, bandwidthMbps, monthlyFee,
+            prorateOnActivation, billingDayOfMonth, graceDays, autoIsolir,
+            status, activatedAt, terminatedAt,
+        )
+
+        private fun validate(snapshot: PlanSnapshot): PlanSnapshot = snapshot.copy(
+            packageName = validatePackageName(snapshot.packageName),
+            bandwidthMbps = validateBandwidth(snapshot.bandwidthMbps),
+            monthlyFee = validateFee(snapshot.monthlyFee),
+            billingDayOfMonth = validateBillingDay(snapshot.billingDayOfMonth),
+            graceDays = validateGraceDays(snapshot.graceDays),
         )
 
         private fun validatePackageName(name: String): String {
@@ -134,7 +206,17 @@ class Subscription private constructor(
 
         private fun validateFee(fee: BigDecimal): BigDecimal {
             if (fee.signum() < 0) throw ValidationException("Biaya bulanan tidak boleh negatif")
-            return fee.setScale(2, java.math.RoundingMode.HALF_UP)
+            return fee.setScale(2, RoundingMode.HALF_UP)
+        }
+
+        private fun validateBillingDay(day: Int?): Int? {
+            if (day != null && day !in 1..31) throw ValidationException("Tanggal tagih harus 1-31")
+            return day
+        }
+
+        private fun validateGraceDays(days: Int?): Int? {
+            if (days != null && days !in 0..90) throw ValidationException("Grace period harus 0-90 hari")
+            return days
         }
     }
 }

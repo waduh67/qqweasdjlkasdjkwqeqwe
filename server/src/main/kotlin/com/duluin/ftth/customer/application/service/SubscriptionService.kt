@@ -1,6 +1,8 @@
 package com.duluin.ftth.customer.application.service
 
+import com.duluin.ftth.catalog.CatalogApi
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.customer.SubscriptionActivated
 import com.duluin.ftth.customer.SubscriptionIsolated
@@ -10,6 +12,7 @@ import com.duluin.ftth.customer.application.port.inbound.SaveSubscriptionCommand
 import com.duluin.ftth.customer.application.port.inbound.SubscriptionView
 import com.duluin.ftth.customer.application.port.outbound.CustomerRepository
 import com.duluin.ftth.customer.application.port.outbound.SubscriptionRepository
+import com.duluin.ftth.customer.domain.model.PlanSnapshot
 import com.duluin.ftth.customer.domain.model.Subscription
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
@@ -21,6 +24,7 @@ import java.util.UUID
 class SubscriptionService(
     private val subscriptionRepository: SubscriptionRepository,
     private val customerRepository: CustomerRepository,
+    private val catalog: CatalogApi,
     private val auditor: AuditRecorder,
     private val events: ApplicationEventPublisher,
 ) : ManageSubscriptionUseCase {
@@ -33,13 +37,7 @@ class SubscriptionService(
         val customer = customerRepository.findById(customerId)
             ?: throw NotFoundException("Pelanggan $customerId tidak ditemukan")
         val subscription = subscriptionRepository.save(
-            Subscription.create(
-                tenantId = customer.tenantId,
-                customerId = customerId,
-                packageName = command.packageName,
-                bandwidthMbps = command.bandwidthMbps,
-                monthlyFee = command.monthlyFee,
-            ),
+            Subscription.create(customer.tenantId, customerId, resolveSnapshot(command)),
         )
         auditor.record(
             "subscription.created", "Subscription", subscription.id, subscription.tenantId,
@@ -50,8 +48,28 @@ class SubscriptionService(
 
     override fun update(id: UUID, command: SaveSubscriptionCommand): SubscriptionView {
         val subscription = require(id)
-        subscription.updatePackage(command.packageName, command.bandwidthMbps, command.monthlyFee)
+        subscription.updatePackage(resolveSnapshot(command))
         return saveAndAudit(subscription, "subscription.updated")
+    }
+
+    /**
+     * Menyalin sisi komersial paket katalog menjadi snapshot langganan (customer →
+     * catalog, acyclic). Paket nonaktif ditolak agar tak dipasang ke pelanggan baru.
+     */
+    private fun resolveSnapshot(command: SaveSubscriptionCommand): PlanSnapshot {
+        val plan = catalog.findPlanCommercial(command.planId)
+            ?: throw NotFoundException("Paket ${command.planId} tidak ditemukan")
+        if (!plan.active) throw ValidationException("Paket ${plan.packageName} nonaktif, tak bisa dipilih")
+        return PlanSnapshot(
+            planId = plan.planId,
+            packageName = plan.packageName,
+            bandwidthMbps = plan.bandwidthMbps,
+            monthlyFee = command.monthlyFeeOverride ?: plan.monthlyFee,
+            prorateOnActivation = plan.prorateOnActivation,
+            billingDayOfMonth = plan.billingDayOfMonth,
+            graceDays = plan.graceDays,
+            autoIsolir = plan.autoIsolir,
+        )
     }
 
     override fun activate(id: UUID): SubscriptionView {

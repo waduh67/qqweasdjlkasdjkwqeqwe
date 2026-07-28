@@ -30,6 +30,8 @@ data class CustomerView(
 data class SubscriptionView(
     val id: UUID,
     val customerId: UUID,
+    /** Paket katalog sumber snapshot; null untuk langganan warisan. */
+    val planId: UUID?,
     val packageName: String,
     val bandwidthMbps: Int,
     val monthlyFee: BigDecimal,

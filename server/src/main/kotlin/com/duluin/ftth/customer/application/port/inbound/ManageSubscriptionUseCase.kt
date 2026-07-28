@@ -19,8 +19,12 @@ interface ManageSubscriptionUseCase {
     fun terminate(id: UUID): SubscriptionView
 }
 
+/**
+ * Buat/ubah langganan dengan MERUJUK paket katalog (bukan lagi teks bebas). Sisi
+ * komersial paket di-snapshot ke langganan; [monthlyFeeOverride] mengizinkan harga
+ * negosiasi per-pelanggan (null = pakai harga paket).
+ */
 data class SaveSubscriptionCommand(
-    val packageName: String,
-    val bandwidthMbps: Int,
-    val monthlyFee: BigDecimal,
+    val planId: UUID,
+    val monthlyFeeOverride: BigDecimal? = null,
 )

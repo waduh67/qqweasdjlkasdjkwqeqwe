@@ -51,6 +51,7 @@ class CustomerApiService(
             SubscriptionRef(
                 id = it.id,
                 customerId = it.customerId,
+                planId = it.planId,
                 packageName = it.packageName,
                 bandwidthMbps = it.bandwidthMbps,
                 status = it.status.name,
@@ -228,6 +229,10 @@ class CustomerApiService(
         monthlyFee = monthlyFee,
         status = status.name,
         activatedAt = activatedAt,
+        prorateOnActivation = prorateOnActivation,
+        billingDayOfMonth = billingDayOfMonth,
+        graceDays = graceDays,
+        autoIsolir = autoIsolir,
     )
 
     private fun Customer.toRef() = CustomerRef(

@@ -174,9 +174,9 @@ data class CustomerRequest(
 data class CustomerStatusRequest(val status: CustomerStatus)
 
 data class SubscriptionRequest(
-    @field:NotBlank @field:Size(max = 100) val packageName: String,
-    @field:Min(1) @field:Max(100_000) val bandwidthMbps: Int,
-    @field:DecimalMin("0.0") val monthlyFee: BigDecimal,
+    val planId: UUID,
+    /** Harga negosiasi opsional; kosong = pakai harga paket. */
+    @field:DecimalMin("0.0") val monthlyFeeOverride: BigDecimal? = null,
 )
 
 data class OnuRequest(
@@ -203,7 +203,6 @@ private fun CustomerRequest.toCommand() = SaveCustomerCommand(
 )
 
 private fun SubscriptionRequest.toCommand() = SaveSubscriptionCommand(
-    packageName = packageName,
-    bandwidthMbps = bandwidthMbps,
-    monthlyFee = monthlyFee,
+    planId = planId,
+    monthlyFeeOverride = monthlyFeeOverride,
 )

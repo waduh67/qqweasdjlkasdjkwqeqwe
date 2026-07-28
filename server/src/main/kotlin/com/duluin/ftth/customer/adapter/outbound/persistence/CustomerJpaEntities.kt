@@ -53,6 +53,9 @@ class SubscriptionJpaEntity(
     @Column(name = "customer_id", nullable = false, updatable = false)
     var customerId: UUID,
 
+    @Column(name = "plan_id")
+    var planId: UUID?,
+
     @Column(name = "package_name", nullable = false, length = 100)
     var packageName: String,
 
@@ -61,6 +64,18 @@ class SubscriptionJpaEntity(
 
     @Column(name = "monthly_fee", nullable = false, precision = 14, scale = 2)
     var monthlyFee: BigDecimal,
+
+    @Column(name = "prorate_on_activation")
+    var prorateOnActivation: Boolean?,
+
+    @Column(name = "billing_day_of_month")
+    var billingDayOfMonth: Int?,
+
+    @Column(name = "grace_days")
+    var graceDays: Int?,
+
+    @Column(name = "auto_isolir")
+    var autoIsolir: Boolean?,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

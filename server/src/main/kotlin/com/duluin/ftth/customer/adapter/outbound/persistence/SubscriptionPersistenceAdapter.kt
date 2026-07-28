@@ -14,18 +14,28 @@ class SubscriptionPersistenceAdapter(
 
     override fun save(subscription: Subscription): Subscription {
         val entity = jpa.findById(subscription.id).orElse(null)?.apply {
+            planId = subscription.planId
             packageName = subscription.packageName
             bandwidthMbps = subscription.bandwidthMbps
             monthlyFee = subscription.monthlyFee
+            prorateOnActivation = subscription.prorateOnActivation
+            billingDayOfMonth = subscription.billingDayOfMonth
+            graceDays = subscription.graceDays
+            autoIsolir = subscription.autoIsolir
             status = subscription.status
             activatedAt = subscription.activatedAt
             terminatedAt = subscription.terminatedAt
         } ?: SubscriptionJpaEntity(
             id = subscription.id,
             customerId = subscription.customerId,
+            planId = subscription.planId,
             packageName = subscription.packageName,
             bandwidthMbps = subscription.bandwidthMbps,
             monthlyFee = subscription.monthlyFee,
+            prorateOnActivation = subscription.prorateOnActivation,
+            billingDayOfMonth = subscription.billingDayOfMonth,
+            graceDays = subscription.graceDays,
+            autoIsolir = subscription.autoIsolir,
             status = subscription.status,
             activatedAt = subscription.activatedAt,
             terminatedAt = subscription.terminatedAt,
@@ -51,9 +61,14 @@ internal fun SubscriptionJpaEntity.toDomain(): Subscription = Subscription.rehyd
     id = id,
     tenantId = tenantId ?: TenantContext.tenantId(),
     customerId = customerId,
+    planId = planId,
     packageName = packageName,
     bandwidthMbps = bandwidthMbps,
     monthlyFee = monthlyFee,
+    prorateOnActivation = prorateOnActivation,
+    billingDayOfMonth = billingDayOfMonth,
+    graceDays = graceDays,
+    autoIsolir = autoIsolir,
     status = status,
     activatedAt = activatedAt,
     terminatedAt = terminatedAt,

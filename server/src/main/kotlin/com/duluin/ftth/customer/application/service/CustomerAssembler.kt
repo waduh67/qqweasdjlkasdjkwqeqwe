@@ -64,6 +64,7 @@ internal fun Customer.toView(subscriptions: List<SubscriptionView>, onus: List<O
 internal fun Subscription.toView() = SubscriptionView(
     id = id,
     customerId = customerId,
+    planId = planId,
     packageName = packageName,
     bandwidthMbps = bandwidthMbps,
     monthlyFee = monthlyFee,

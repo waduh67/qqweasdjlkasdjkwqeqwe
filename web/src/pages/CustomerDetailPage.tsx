@@ -61,6 +61,7 @@ import { OpticalChart } from '../components/OpticalChart'
 import { TrafficChart } from '../components/TrafficChart'
 import { IconAlert, IconCustomers, IconRoute } from '../components/icons'
 import type { SubscriptionView } from '../api/network'
+import { listPlans as listCatalogPlans, type PlanView } from '../api/catalog'
 import { listInvoicesForCustomer, type InvoiceView } from '../api/billing'
 import { listIncidentsForCustomer, type IncidentView } from '../api/incident'
 import { listWorkOrdersForCustomer, type WorkOrderStatus, type WorkOrderView } from '../api/workorder'
@@ -322,21 +323,7 @@ function RingkasanTab({
         </div>
       </div>
 
-      <div className="card stack" style={{ gap: '0.6rem' }}>
-        <strong style={{ fontSize: '0.95rem' }}>Langganan</strong>
-        {customer.subscriptions.length === 0 ? (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada langganan.</p>
-        ) : (
-          customer.subscriptions.map((sub) => (
-            <div key={sub.id} className="spread" style={{ alignItems: 'center' }}>
-              <span style={{ fontSize: '0.88rem' }}>
-                {sub.packageName} · {sub.bandwidthMbps} Mbps · Rp {sub.monthlyFee}
-              </span>
-              <StatusBadge status={sub.status} />
-            </div>
-          ))
-        )}
-      </div>
+      <SubscriptionManager customer={customer} run={run} />
 
       <OnuManager customer={customer} odps={odps} run={run} />
     </div>
@@ -348,6 +335,148 @@ function Field({ label, value }: { label: string; value: string }) {
     <div className="stat">
       <div className="stat-label">{label}</div>
       <div style={{ fontSize: '0.9rem', color: 'var(--text-2)', wordBreak: 'break-word' }}>{value}</div>
+    </div>
+  )
+}
+
+/**
+ * Kelola langganan pelanggan: pilih paket dari katalog (bukan lagi ketik bebas), harga
+ * & kecepatan ikut paket dengan opsi harga negosiasi per-pelanggan, plus kendali daur
+ * hidup. Sisi komersial di-snapshot server saat simpan; sisi jaringan dibaca live.
+ */
+function SubscriptionManager({
+  customer,
+  run,
+}: {
+  customer: CustomerView
+  run: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
+}) {
+  const { can } = useCan()
+  const canManage = can('customer.subscription.update')
+  const [plans, setPlans] = useState<PlanView[]>([])
+  const [planId, setPlanId] = useState('')
+  const [priceOverride, setPriceOverride] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!canManage) return
+    void listCatalogPlans()
+      .then((all) => setPlans(all.filter((p) => p.active)))
+      .catch(() => setPlans([]))
+  }, [canManage])
+
+  const selected = plans.find((p) => p.id === planId) ?? null
+
+  const submit = async () => {
+    if (!planId) return
+    setSaving(true)
+    const override = priceOverride.trim()
+    await run(
+      () =>
+        api.post(`/api/customers/${customer.id}/subscriptions`, {
+          planId,
+          monthlyFeeOverride: override === '' ? null : Number(override),
+        }),
+      'Langganan ditambahkan',
+    )
+    setSaving(false)
+    setPlanId('')
+    setPriceOverride('')
+  }
+
+  return (
+    <div className="card stack" style={{ gap: '0.75rem' }}>
+      <strong style={{ fontSize: '0.95rem' }}>Langganan</strong>
+
+      {customer.subscriptions.length === 0 ? (
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada langganan.</p>
+      ) : (
+        customer.subscriptions.map((sub) => (
+          <div key={sub.id} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.88rem' }}>
+              {sub.packageName} · {sub.bandwidthMbps} Mbps · Rp {sub.monthlyFee}
+            </span>
+            <div className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
+              <StatusBadge status={sub.status} />
+              {canManage && sub.status !== 'TERMINATED' && <SubscriptionActions sub={sub} run={run} />}
+            </div>
+          </div>
+        ))
+      )}
+
+      {canManage && (
+        <div className="stack" style={{ gap: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
+          {plans.length === 0 ? (
+            <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+              Belum ada paket aktif — buat dulu di menu Paket Internet.
+            </p>
+          ) : (
+            <>
+              <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <label style={{ flex: '2 1 200px' }}>
+                  <span>Paket</span>
+                  <select value={planId} onChange={(e) => setPlanId(e.target.value)}>
+                    <option value="">— pilih paket —</option>
+                    {plans.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} · {p.downMbps}/{p.upMbps} Mbps · {fmtRupiah(p.price)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label style={{ flex: '1 1 140px' }}>
+                  <span>Harga negosiasi</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={priceOverride}
+                    onChange={(e) => setPriceOverride(e.target.value)}
+                    placeholder={selected ? String(selected.price) : 'ikut paket'}
+                  />
+                </label>
+                <button className="primary" disabled={!planId || saving} onClick={() => void submit()}>
+                  Tambah
+                </button>
+              </div>
+              {selected && (
+                <p className="muted tnum" style={{ margin: 0, fontSize: '0.82rem' }}>
+                  {selected.downMbps}/{selected.upMbps} Mbps · {fmtRupiah(selected.price)}/bln
+                  {selected.fupEnabled ? ' · FUP' : ''} — kecepatan &amp; QoS mengikuti paket secara live.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Kendali daur hidup satu langganan sesuai statusnya kini. */
+function SubscriptionActions({
+  sub,
+  run,
+}: {
+  sub: SubscriptionView
+  run: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
+}) {
+  const act = (verb: string, okMessage: string) =>
+    run(() => api.post(`/api/customers/subscriptions/${sub.id}/${verb}`, {}), okMessage)
+  return (
+    <div className="row" style={{ gap: '0.35rem' }}>
+      {(sub.status === 'PENDING' || sub.status === 'ISOLATED') && (
+        <button className="ghost" onClick={() => void act('activate', 'Langganan diaktifkan')}>
+          Aktifkan
+        </button>
+      )}
+      {sub.status === 'ACTIVE' && (
+        <button className="ghost" onClick={() => void act('isolate', 'Langganan diisolir')}>
+          Isolir
+        </button>
+      )}
+      <button className="ghost danger" onClick={() => void act('terminate', 'Langganan diakhiri')}>
+        Akhiri
+      </button>
     </div>
   )
 }

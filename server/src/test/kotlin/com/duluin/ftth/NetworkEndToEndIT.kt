@@ -166,10 +166,16 @@ class NetworkEndToEndIT {
 
     /** Langganan aktif untuk pelanggan yang sudah ada; kembalikan id langganan. */
     private fun activateSubscription(token: String, customerId: String): String {
+        val planId = idOf(
+            post(
+                "/api/catalog/plans", token,
+                """{"name":"Home 20 ${uniq()}","description":null,"price":150000,"downMbps":20,"upMbps":10,"serviceTypes":["PPPOE"]}""",
+            ),
+        )
         val sub = idOf(
             post(
                 "/api/customers/$customerId/subscriptions", token,
-                """{"packageName":"Home 20","bandwidthMbps":20,"monthlyFee":150000}""",
+                """{"planId":"$planId"}""",
             ),
         )
         post("/api/customers/subscriptions/$sub/activate", token, "", expected = 200)

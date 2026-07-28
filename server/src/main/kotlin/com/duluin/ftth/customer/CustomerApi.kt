@@ -109,7 +109,11 @@ interface CustomerApi {
     fun reactivateForBilling(subscriptionId: UUID)
 }
 
-/** Pandangan ringkas sebuah langganan untuk penagihan (module billing). */
+/**
+ * Pandangan ringkas sebuah langganan untuk penagihan (module billing). Membawa snapshot
+ * override siklus billing per-paket (null = ikut kebijakan global billing) supaya
+ * penerbitan/penegakan bisa mengikuti setelan paket tanpa billing menyentuh catalog.
+ */
 data class BillableSubscription(
     val subscriptionId: UUID,
     val customerId: UUID,
@@ -118,6 +122,11 @@ data class BillableSubscription(
     /** Nama [com.duluin.ftth.customer.domain.model.SubscriptionStatus], mis. "ACTIVE". */
     val status: String,
     val activatedAt: java.time.Instant?,
+    /** Override siklus dari paket; null = ikut BillingProperties global. */
+    val prorateOnActivation: Boolean?,
+    val billingDayOfMonth: Int?,
+    val graceDays: Int?,
+    val autoIsolir: Boolean?,
 )
 
 /** Perintah memprovisikan ONU liar menjadi pelanggan terpasang. */
@@ -154,6 +163,8 @@ data class CustomerRef(
 data class SubscriptionRef(
     val id: UUID,
     val customerId: UUID,
+    /** Paket katalog langganan; bng membaca sisi jaringannya live untuk RADIUS. */
+    val planId: UUID?,
     val packageName: String,
     val bandwidthMbps: Int,
     /** Nama [com.duluin.ftth.customer.domain.model.SubscriptionStatus], mis. "ACTIVE". */

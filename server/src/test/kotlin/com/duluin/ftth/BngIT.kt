@@ -122,7 +122,16 @@ class BngIT {
     private fun bngBatch(nasId: String, collectedAt: Instant, reading: String, batchId: String = uniq()): String =
         """{"batchId":"$batchId","nasId":"$nasId","collectedAt":"$collectedAt","sessions":[$reading]}"""
 
-    /** Pelanggan + langganan aktif; kembalikan (customerId, subscriptionId). */
+    /** Membuat paket katalog dan mengembalikan id-nya (langganan merujuk ini, bukan teks bebas). */
+    private fun catalogPlan(token: String, name: String, down: Int = 20, up: Int = 10, price: Int = 150000): String =
+        id(
+            post(
+                "/api/catalog/plans", token,
+                """{"name":"$name","description":null,"price":$price,"downMbps":$down,"upMbps":$up,"serviceTypes":["PPPOE"]}""",
+            ),
+        )
+
+    /** Pelanggan + langganan aktif merujuk paket katalog; kembalikan (customerId, subscriptionId). */
     private fun activeSubscription(token: String): Pair<String, String> {
         val s = uniq().uppercase()
         val customer = id(
@@ -132,10 +141,11 @@ class BngIT {
                     "location":{"longitude":106.996,"latitude":-6.246}}""",
             ),
         )
+        val planId = catalogPlan(token, "Paket $s")
         val sub = id(
             post(
                 "/api/customers/$customer/subscriptions", token,
-                """{"packageName":"Home 20","bandwidthMbps":20,"monthlyFee":150000}""",
+                """{"planId":"$planId"}""",
             ),
         )
         post("/api/customers/subscriptions/$sub/activate", token, "", expected = 200)
