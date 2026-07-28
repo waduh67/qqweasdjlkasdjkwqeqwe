@@ -7,6 +7,7 @@ import com.duluin.ftth.vpn.domain.model.VpnPeerStatus
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import java.time.Instant
 
 /** Menguji validasi & transisi peer VPN — murni domain. */
 class VpnPeerTest {
@@ -41,11 +42,36 @@ class VpnPeerTest {
     }
 
     @Test
-    fun `create menghasilkan peer ENABLED dengan lastHandshake null`() {
+    fun `create menghasilkan peer ENABLED dengan lastHandshake null dan offline`() {
         val peer = newPeer()
         assertThat(peer.status).isEqualTo(VpnPeerStatus.ENABLED)
         assertThat(peer.lastHandshakeAt).isNull()
+        assertThat(peer.online).isFalse()
         assertThat(peer.username).isEqualTo("bras-jakarta-1")
+    }
+
+    @Test
+    fun `markConnected menandai online dan mencatat waktu handshake`() {
+        val peer = newPeer()
+        val at = Instant.parse("2026-07-28T10:15:30Z")
+
+        peer.markConnected(at)
+
+        assertThat(peer.online).isTrue()
+        assertThat(peer.lastHandshakeAt).isEqualTo(at)
+    }
+
+    @Test
+    fun `markDisconnected menandai offline tapi mempertahankan jejak handshake terakhir`() {
+        val peer = newPeer()
+        val at = Instant.parse("2026-07-28T10:15:30Z")
+        peer.markConnected(at)
+
+        peer.markDisconnected()
+
+        assertThat(peer.online).isFalse()
+        // Jejak waktu terakhir online tetap disimpan sebagai "terakhir terhubung".
+        assertThat(peer.lastHandshakeAt).isEqualTo(at)
     }
 
     @Test

@@ -17,7 +17,8 @@ enum class VpnPeerStatus { ENABLED, DISABLED }
  * di-DNAT ke port manajemen perangkat (Winbox) → operator meremote lewat `IP_HUB:remotePort`.
  * [password] adalah rahasia: plaintext di domain, terenkripsi di batas persistence.
  * [deviceType]/[deviceId] hanya label bebas atas perangkat yang dijangkau (TANPA FK, boleh
- * null). [lastHandshakeAt] dicadangkan untuk liveness kelak — selalu null untuk saat ini.
+ * null). Liveness ([online] + [lastHandshakeAt]) dilaporkan hub lewat callback OpenVPN
+ * connect/disconnect — bukan status administratif, melainkan cerminan koneksi nyata.
  */
 class VpnPeer private constructor(
     val id: UUID,
@@ -30,10 +31,19 @@ class VpnPeer private constructor(
     status: VpnPeerStatus,
     val deviceType: String?,
     val deviceId: UUID?,
-    val lastHandshakeAt: Instant?,
+    lastHandshakeAt: Instant?,
+    online: Boolean,
     password: String,
 ) {
     var status: VpnPeerStatus = status
+        private set
+
+    /** Waktu peer terakhir dilaporkan hub terhubung; null bila hub belum pernah melaporkannya. */
+    var lastHandshakeAt: Instant? = lastHandshakeAt
+        private set
+
+    /** True selagi hub melaporkan peer terhubung; jadi false saat hub melaporkan putus. */
+    var online: Boolean = online
         private set
 
     /** Plaintext di domain; adapter persistence yang mengenkripsi ke DB. */
@@ -50,6 +60,17 @@ class VpnPeer private constructor(
 
     fun rotatePassword(newPassword: String) {
         this.password = validatePassword(newPassword)
+    }
+
+    /** Hub melapor peer BARU TERHUBUNG (callback `client-connect` OpenVPN): tandai online + catat waktu. */
+    fun markConnected(at: Instant) {
+        lastHandshakeAt = at
+        online = true
+    }
+
+    /** Hub melapor peer PUTUS (callback `client-disconnect`): offline; [lastHandshakeAt] tetap sebagai jejak. */
+    fun markDisconnected() {
+        online = false
     }
 
     companion object {
@@ -76,6 +97,7 @@ class VpnPeer private constructor(
             deviceType = deviceType?.trim()?.takeIf { it.isNotEmpty() },
             deviceId = deviceId,
             lastHandshakeAt = null,
+            online = false,
             password = validatePassword(password),
         )
 
@@ -92,10 +114,11 @@ class VpnPeer private constructor(
             deviceType: String?,
             deviceId: UUID?,
             lastHandshakeAt: Instant?,
+            online: Boolean,
             password: String,
         ): VpnPeer = VpnPeer(
             id, tenantId, serverId, name, username, overlayIp, remotePort, status,
-            deviceType, deviceId, lastHandshakeAt, password,
+            deviceType, deviceId, lastHandshakeAt, online, password,
         )
 
         private val USERNAME_PATTERN = Regex("^[a-zA-Z0-9._-]+$")

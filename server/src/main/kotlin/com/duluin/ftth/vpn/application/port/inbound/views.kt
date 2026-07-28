@@ -58,7 +58,11 @@ data class VpnAccountView(
     val remotePort: Int,
     /** Alamat siap-Winbox: `host:remotePort` — remote perangkat tanpa ikut nge-dial tunnel. */
     val winboxAddress: String,
+    /** Status ADMINISTRATIF akun (ENABLED/DISABLED) — apakah boleh terhubung. */
     val status: String,
+    /** Liveness NYATA: true selagi hub melapor perangkat terhubung (callback OpenVPN). */
+    val online: Boolean = false,
+    /** Waktu perangkat terakhir dilaporkan terhubung; null bila hub belum pernah melapor. */
     val lastHandshakeAt: Instant?,
     /**
      * True bila hub-nya TCP → juga melayani perangkat **RouterOS v6** (TCP + AES-256-CBC), bukan

@@ -110,6 +110,7 @@ class VpnPeerPersistenceAdapter(
             deviceType = peer.deviceType
             deviceId = peer.deviceId
             lastHandshakeAt = peer.lastHandshakeAt
+            online = peer.online
             if (encryptedPassword != null) password = encryptedPassword
         } ?: VpnPeerJpaEntity(
             id = peer.id,
@@ -123,6 +124,7 @@ class VpnPeerPersistenceAdapter(
             deviceType = peer.deviceType,
             deviceId = peer.deviceId,
             lastHandshakeAt = peer.lastHandshakeAt,
+            online = peer.online,
             password = encryptedPassword ?: error("Password peer VPN wajib diisi"),
         )
         return jpa.save(entity).toDomain()
@@ -163,6 +165,7 @@ class VpnPeerPersistenceAdapter(
         deviceType = deviceType,
         deviceId = deviceId,
         lastHandshakeAt = lastHandshakeAt,
+        online = online,
         // Password tak pernah dibaca balik lewat pandangan biasa; sentinel kosong bila tak
         // terdekripsi tidak masalah untuk baca, dan save menjaganya agar tak menimpa.
         password = cipher.decryptQuietly(password, username, log) ?: "",

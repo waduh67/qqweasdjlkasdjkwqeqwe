@@ -31,4 +31,14 @@ class VpnProvisioningService(
         val ref = authenticator.resolve(rawToken) ?: return null
         return reader.clientConnectLine(ref.serverId, username)
     }
+
+    override fun reportConnected(rawToken: String, username: String): Boolean {
+        val ref = authenticator.resolve(rawToken) ?: return false
+        return reader.recordConnect(ref.serverId, username)
+    }
+
+    override fun reportDisconnected(rawToken: String, username: String): Boolean {
+        val ref = authenticator.resolve(rawToken) ?: return false
+        return reader.recordDisconnect(ref.serverId, username)
+    }
 }

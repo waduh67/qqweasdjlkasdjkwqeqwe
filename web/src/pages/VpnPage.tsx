@@ -180,7 +180,7 @@ export function VpnPage() {
                 <th>IP overlay</th>
                 <th>Winbox (remote)</th>
                 <th>Status</th>
-                <th>Handshake terakhir</th>
+                <th>Koneksi</th>
                 <th />
               </tr>
             </thead>
@@ -205,7 +205,9 @@ export function VpnPage() {
                       {a.status === 'ENABLED' ? 'aktif' : 'nonaktif'}
                     </span>
                   </td>
-                  <td className="muted">{fmtWhen(a.lastHandshakeAt)}</td>
+                  <td>
+                    <LiveIndicator online={a.online} lastHandshakeAt={a.lastHandshakeAt} />
+                  </td>
                   <td>
                     <div className="row">
                       {canConfig && (
@@ -411,6 +413,29 @@ function CommandBlock({
       </pre>
       <span className="muted" style={{ fontSize: '0.76rem' }}>
         {hint}
+      </span>
+    </div>
+  )
+}
+
+/* ---------- Indikator liveness peer (online nyata dari hub, bukan status administratif) ---------- */
+
+function LiveIndicator({ online, lastHandshakeAt }: { online: boolean; lastHandshakeAt: string | null }) {
+  const sub = online
+    ? `sejak ${fmtWhen(lastHandshakeAt)}`
+    : lastHandshakeAt
+      ? `terakhir ${fmtWhen(lastHandshakeAt)}`
+      : 'belum pernah terhubung'
+  return (
+    <div className="stack" style={{ gap: '0.15rem' }}>
+      <span
+        className="badge"
+        style={{ color: online ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
+      >
+        {online ? '● online' : '○ offline'}
+      </span>
+      <span className="muted" style={{ fontSize: '0.76rem' }}>
+        {sub}
       </span>
     </div>
   )

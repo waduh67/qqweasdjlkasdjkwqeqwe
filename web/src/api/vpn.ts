@@ -100,7 +100,11 @@ export interface VpnAccountView {
   remotePort: number
   /** Alamat siap-Winbox `host:remotePort` — remote perangkat tanpa ikut men-dial tunnel. */
   winboxAddress: string
+  /** Status ADMINISTRATIF (ENABLED/DISABLED) — apakah akun boleh terhubung. */
   status: string
+  /** Liveness NYATA: true selagi hub melapor perangkat terhubung. */
+  online: boolean
+  /** Waktu perangkat terakhir dilaporkan terhubung; null bila hub belum pernah melapor. */
   lastHandshakeAt: string | null
   /** True bila hub-nya TCP → juga melayani RouterOS v6 (TCP + AES-256-CBC), bukan cuma v7. */
   supportsV6: boolean

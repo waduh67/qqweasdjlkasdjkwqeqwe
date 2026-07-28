@@ -71,6 +71,8 @@ di-allowlist di `SecurityConfig` (`/api/vpn/provision/**`):
   username/password akun (banding waktu-tetap), hanya akun **ENABLED** → 204/403.
 - `POST /api/vpn/provision/client-connect` — kunci IP overlay tetap akun
   (`ifconfig-push {overlayIp} {netmask}`).
+- `POST /api/vpn/provision/client-connected` / `…/client-disconnected` — **telemetri
+  liveness**: hub melapor akun terhubung/putus → aplikasi menandai `online` + `lastHandshakeAt`.
 
 Model OpenVPN-nya: `verify-client-cert none` + `username-as-common-name` +
 `auth-user-pass-verify … via-file` + `client-connect …` + `script-security 2` +
@@ -86,6 +88,15 @@ untuk hub TCP; (b) config v6 dirender terpisah lewat `VpnClientVariant.V6` (menu
 `/interface ovpn-client add`, `cipher=aes256-cbc`, `certificate=none`). Perangkat v7
 tak terpengaruh (tetap nego GCM). Render v6 **best-effort** — properti CLI v6 bervariasi
 antar-rilis; minta akun varian v6 pada hub non-TCP ditolak `ConflictException`.
+
+**Liveness peer (online nyata).** Selain status administratif (ENABLED/DISABLED), tiap akun
+punya `online` + `lastHandshakeAt` yang **mencerminkan koneksi nyata**. Skrip `client-connect`
+di hub memanggil `client-connected` saat perangkat men-dial, dan `client-disconnect` memanggil
+`client-disconnected` saat putus — keduanya best-effort (tak menggerbang tunnel). Telemetri
+**sengaja terpisah** dari endpoint `client-connect` yang load-bearing: hub lama (pra-liveness)
+memakai ulang `client-connect` untuk connect DAN disconnect, jadi endpoint terpisah menjamin hub
+lama sekadar tak melapor (`online=false`, `lastHandshakeAt=null` → "belum diketahui") alih-alih
+salah melapor online saat putus. Jalankan ulang installer di hub untuk mengaktifkan liveness.
 
 ---
 
@@ -185,6 +196,7 @@ Artefak siap-unduh, dirender dari entitas yang rahasianya **sudah terdekripsi**:
 | `GET /api/vpn/provision/install.sh?token=…` | token node |
 | `POST /api/vpn/provision/authenticate` | token node |
 | `POST /api/vpn/provision/client-connect` | token node |
+| `POST /api/vpn/provision/client-connected` · `/client-disconnected` | token node |
 
 Hapus hub ditolak selama masih menampung akun.
 

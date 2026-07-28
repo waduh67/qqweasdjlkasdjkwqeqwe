@@ -183,6 +183,7 @@ class VpnAccountService(
             remotePort = remotePort,
             winboxAddress = "${server.host}:$remotePort",
             status = status.name,
+            online = online,
             lastHandshakeAt = lastHandshakeAt,
             supportsV6 = supportsV6,
             password = if (revealPassword) password else null,

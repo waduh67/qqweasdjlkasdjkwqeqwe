@@ -63,8 +63,8 @@ class VpnServerJpaEntity(
  * [CollectorJpaEntity]): [tenantId] kolom biasa (bukan `@TenantId`) — difilter tenant di
  * aplikasi untuk daftar/kelola, sekaligus bisa dibaca lintas-tenant per hub untuk auth
  * callback. Identitas ([serverId], [username], [overlayIp]) tak berubah setelah dibuat →
- * `updatable = false`. [password] terenkripsi (batas enkripsi di adapter). [lastHandshakeAt]
- * dicadangkan untuk liveness kelak.
+ * `updatable = false`. [password] terenkripsi (batas enkripsi di adapter). Liveness
+ * ([online] + [lastHandshakeAt]) diperbarui callback connect/disconnect dari hub.
  */
 @Entity
 @Table(name = "vpn_peer")
@@ -102,6 +102,9 @@ class VpnPeerJpaEntity(
 
     @Column(name = "last_handshake_at")
     var lastHandshakeAt: Instant?,
+
+    @Column(nullable = false)
+    var online: Boolean,
 
     @Column(nullable = false, length = 512)
     var password: String,

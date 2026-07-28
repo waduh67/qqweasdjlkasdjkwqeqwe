@@ -102,6 +102,12 @@ if [ -n "$port" ] && command -v iptables >/dev/null 2>&1; then
       || iptables -t nat -A PREROUTING -p tcp --dport "$port" -j DNAT --to-destination "$dest" 2>/dev/null || true
   } || true
 fi
+
+# Telemetri liveness (best-effort, tak menggerbang tunnel): laporkan peer terhubung ke aplikasi.
+curl -sS -m 10 -o /dev/null \
+  --data-urlencode "token=$NODE_TOKEN" \
+  --data-urlencode "username=$common_name" \
+  "$APP_URL/api/vpn/provision/client-connected" >/dev/null 2>&1 || true
 exit 0
 FTTH_CONNECT
 chmod 755 "$DIR/ftth-connect.sh"
@@ -120,6 +126,12 @@ read -r ip mask port <<< "$line"
 if [ -n "${port:-}" ] && [ -n "${ip:-}" ] && command -v iptables >/dev/null 2>&1; then
   iptables -t nat -D PREROUTING -p tcp --dport "$port" -j DNAT --to-destination "$ip:{{DEVICE_PORT}}" 2>/dev/null || true
 fi
+
+# Telemetri liveness (best-effort): laporkan peer putus ke aplikasi supaya statusnya offline.
+curl -sS -m 10 -o /dev/null \
+  --data-urlencode "token=$NODE_TOKEN" \
+  --data-urlencode "username=$common_name" \
+  "$APP_URL/api/vpn/provision/client-disconnected" >/dev/null 2>&1 || true
 exit 0
 FTTH_DISCONNECT
 chmod 755 "$DIR/ftth-disconnect.sh"

@@ -10,12 +10,14 @@ import com.duluin.ftth.vpn.domain.model.VpnPeerStatus
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.security.MessageDigest
+import java.time.Instant
 import java.util.UUID
 
 /**
  * Pembacaan hub/peer untuk provisioning. Hub & akun kini tabel tanpa RLS, jadi peer di-resolve
  * lintas-tenant lewat (serverId, username) — persis yang dibutuhkan callback OpenVPN yang tak
- * tahu tenant. `@Transactional(readOnly)` sekadar membungkus tiap pembacaan dalam satu sesi.
+ * tahu tenant. `@Transactional(readOnly)` sekadar membungkus tiap pembacaan dalam satu sesi;
+ * pencatatan liveness ([recordConnect]/[recordDisconnect]) memakai transaksi tulis biasa.
  */
 @Component
 class VpnProvisioningReader(
@@ -49,6 +51,28 @@ class VpnProvisioningReader(
             ?: throw ConflictException("Hub VPN $serverId hilang saat client-connect")
         val netmask = TunnelSubnet.parse(server.tunnelCidr).netmask()
         return "${peer.overlayIp} $netmask ${peer.remotePort}"
+    }
+
+    /**
+     * Hub melaporkan peer BARU TERHUBUNG (`client-connect`): tandai online + catat waktu. Telemetri
+     * murni — tak menggerbang tunnel; balikannya sekadar penanda apakah peernya dikenal. Peer dicari
+     * tanpa filter status: bila mulai putus setelah dinonaktifkan, laporan tetap tercermin jujur.
+     */
+    @Transactional
+    fun recordConnect(serverId: UUID, username: String): Boolean {
+        val peer = peerRepository.findByServerIdAndUsername(serverId, username) ?: return false
+        peer.markConnected(Instant.now())
+        peerRepository.save(peer)
+        return true
+    }
+
+    /** Hub melaporkan peer PUTUS (`client-disconnect`): tandai offline. Lihat [recordConnect]. */
+    @Transactional
+    fun recordDisconnect(serverId: UUID, username: String): Boolean {
+        val peer = peerRepository.findByServerIdAndUsername(serverId, username) ?: return false
+        peer.markDisconnected()
+        peerRepository.save(peer)
+        return true
     }
 
     private fun enabledPeer(serverId: UUID, username: String): VpnPeer? =

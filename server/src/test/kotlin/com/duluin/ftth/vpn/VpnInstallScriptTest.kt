@@ -50,6 +50,9 @@ class VpnInstallScriptTest {
         assertThat(script).contains("auth-user-pass-verify /etc/openvpn/server/ftth-verify.sh via-file")
         assertThat(script).contains("client-connect /etc/openvpn/server/ftth-connect.sh")
         assertThat(script).contains("client-disconnect /etc/openvpn/server/ftth-disconnect.sh")
+        // Telemetri liveness: connect/disconnect script melapor balik status peer ke aplikasi.
+        assertThat(script).contains("/api/vpn/provision/client-connected")
+        assertThat(script).contains("/api/vpn/provision/client-disconnected")
         assertThat(script).contains("dh none")
         // NCP: satu hub melayani v7 (GCM) & v6 (CBC fallback).
         assertThat(script).contains("data-ciphers AES-256-GCM:AES-256-CBC")
