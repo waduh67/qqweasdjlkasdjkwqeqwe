@@ -1,5 +1,6 @@
 package com.duluin.ftth.bng.adapter.outbound.persistence
 
+import com.duluin.ftth.bng.domain.model.AccessStatus
 import com.duluin.ftth.bng.domain.model.BngActionStatus
 import org.springframework.data.jpa.repository.JpaRepository
 import java.util.UUID
@@ -15,6 +16,7 @@ interface SubscriberAccessJpaRepository : JpaRepository<SubscriberAccessJpaEntit
     fun findByUsername(username: String): SubscriberAccessJpaEntity?
     fun findByNasIdOrderByUsernameAsc(nasId: UUID): List<SubscriberAccessJpaEntity>
     fun findByPlanId(planId: UUID): List<SubscriberAccessJpaEntity>
+    fun findByStatusAndNasIdIsNotNull(status: AccessStatus): List<SubscriberAccessJpaEntity>
     fun existsBySubscriptionId(subscriptionId: UUID): Boolean
     fun countByNasId(nasId: UUID): Long
 }

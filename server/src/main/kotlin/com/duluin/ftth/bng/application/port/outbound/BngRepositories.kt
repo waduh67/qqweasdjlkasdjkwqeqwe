@@ -45,6 +45,13 @@ interface SubscriberAccessRepository {
     /** Semua akun yang memakai sebuah paket — dipakai re-sync grup RADIUS saat paket berubah. */
     fun findByPlanId(planId: UUID): List<SubscriberAccess>
 
+    /**
+     * Akun ACTIVE yang sudah ditugaskan ke BRAS — kandidat penegakan FUP. Hanya akun
+     * aktif & ber-BRAS yang relevan: terisolir/terhenti sudah terputus, tak-ber-BRAS tak
+     * punya sesi untuk di-throttle.
+     */
+    fun findActiveOnNas(): List<SubscriberAccess>
+
     fun existsBySubscriptionId(subscriptionId: UUID): Boolean
 
     /** Berapa akun yang masih dinaungi sebuah BRAS — untuk mencegah hapus BRAS terpakai. */
@@ -80,6 +87,15 @@ interface AccountingRecordRepository {
      * Titik pertama tiap rentang tak punya laju (belum ada pembanding) → null.
      */
     fun trafficSince(subscriberAccessId: UUID, since: Instant): List<TrafficSample>
+
+    /**
+     * Total octet (unggah+unduh) terpakai tiap akun sejak [since] — dasar penegakan FUP.
+     * Sadar-reset: penghitung kumulatif yang MUNDUR (sesi baru menyetel ulang counter)
+     * dihitung dari nol, bukan jadi selisih negatif; titik pertama tiap akun jadi baseline
+     * (kontribusi 0) agar byte sebelum [since] tak ikut terhitung. Akun tanpa cuplikan pada
+     * rentang tak muncul di peta (dianggap 0 oleh pemanggil).
+     */
+    fun usageSince(subscriberAccessIds: Collection<UUID>, since: Instant): Map<UUID, Long>
 }
 
 /**

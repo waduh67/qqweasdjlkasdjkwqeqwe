@@ -89,17 +89,7 @@ class BngActionService(
      */
     fun enqueueProvision(access: SubscriberAccess, requestedBy: UUID?, requestedByEmail: String?): Boolean {
         val nasId = access.nasId ?: return skipNoNas(access, "PROVISION")
-        bngActionRepository.save(
-            BngAction.provision(
-                tenantId = access.tenantId,
-                subscriberAccessId = access.id,
-                nasId = nasId,
-                username = access.username,
-                groupname = RadiusGroups.normal(access.planId),
-                requestedBy = requestedBy,
-                requestedByEmail = requestedByEmail,
-            ),
-        )
+        saveProvision(access, nasId, RadiusGroups.normal(access.planId), requestedBy, requestedByEmail)
         return true
     }
 
@@ -161,6 +151,56 @@ class BngActionService(
                 simultaneousUse = plan.connectionLimit,
                 fupGroupname = fupGroupname,
                 fupRateLimit = plan.fupRateLimit,
+                requestedBy = requestedBy,
+                requestedByEmail = requestedByEmail,
+            ),
+        )
+    }
+
+    /**
+     * Antre penerapan throttle FUP: pindah keanggotaan grup akun ke grup FUP paket (lewat
+     * PROVISION ulang — penulis RADIUS menghapus keanggotaan lama lalu menulis grup FUP,
+     * jadi swap-nya atomik) lalu CoA ke kecepatan FUP agar sesi hidup langsung melambat.
+     * Dipicu sistem (pelaku null). No-op bila akun belum di BRAS atau paket tak menyediakan
+     * kecepatan FUP. Mengembalikan true bila benar-benar mengantre.
+     */
+    fun enqueueApplyFup(access: SubscriberAccess, plan: PlanNetworkRef): Boolean {
+        val nasId = access.nasId ?: return skipNoNas(access, "APPLY_FUP")
+        val fupDown = plan.fupDownMbps
+        val fupUp = plan.fupUpMbps
+        if (!plan.fupEnabled || fupDown == null || fupUp == null) return false
+        saveProvision(access, nasId, RadiusGroups.fup(plan.planId), requestedBy = null, requestedByEmail = null)
+        enqueueCoa(access, fupDown, fupUp, requestedBy = null, requestedByEmail = null)
+        return true
+    }
+
+    /**
+     * Antre pencabutan throttle FUP: kembalikan keanggotaan akun ke grup normal paket
+     * (PROVISION ulang) lalu CoA ke kecepatan penuh. Dipicu sistem saat pemakaian turun
+     * atau siklus berganti. No-op bila akun belum di BRAS.
+     */
+    fun enqueueClearFup(access: SubscriberAccess, plan: PlanNetworkRef): Boolean {
+        val nasId = access.nasId ?: return skipNoNas(access, "CLEAR_FUP")
+        saveProvision(access, nasId, RadiusGroups.normal(access.planId), requestedBy = null, requestedByEmail = null)
+        enqueueCoa(access, plan.downMbps, plan.upMbps, requestedBy = null, requestedByEmail = null)
+        return true
+    }
+
+    /** Simpan satu PROVISION akun ke [groupname] tertentu (grup normal atau throttle FUP). */
+    private fun saveProvision(
+        access: SubscriberAccess,
+        nasId: UUID,
+        groupname: String,
+        requestedBy: UUID?,
+        requestedByEmail: String?,
+    ) {
+        bngActionRepository.save(
+            BngAction.provision(
+                tenantId = access.tenantId,
+                subscriberAccessId = access.id,
+                nasId = nasId,
+                username = access.username,
+                groupname = groupname,
                 requestedBy = requestedBy,
                 requestedByEmail = requestedByEmail,
             ),

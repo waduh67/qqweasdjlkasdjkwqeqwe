@@ -84,6 +84,14 @@ export interface SubscriberAccessView {
   nasId: string | null
   nasName: string | null
   status: AccessStatus
+  /** Paket ini ber-FUP (punya kuota + kecepatan throttle). */
+  fupEnabled: boolean
+  /** Kuota FUP periode (MB); null bila paket tak ber-FUP. */
+  fupQuotaMb: number | null
+  /** Akun sedang di-throttle FUP (dipindah ke grup kecepatan turun). */
+  fupThrottled: boolean
+  /** Pemakaian akun sejak awal siklus (MB); null bila tak dihitung. */
+  periodUsageMb: number | null
 }
 
 /** Provisi akun PPPoE baru untuk sebuah langganan. */

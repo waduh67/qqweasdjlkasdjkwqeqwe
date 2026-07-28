@@ -96,6 +96,9 @@ class SubscriberAccessJpaEntity(
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var status: AccessStatus,
+
+    @Column(name = "fup_throttled", nullable = false)
+    var fupThrottled: Boolean,
 ) : TenantAwareJpaEntity(id)
 
 /**

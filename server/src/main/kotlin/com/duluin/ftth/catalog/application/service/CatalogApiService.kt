@@ -49,5 +49,7 @@ class CatalogApiService(
         fupEnabled = attributes.fupEnabled,
         fupQuotaMb = attributes.fupQuotaMb,
         fupRateLimit = fupRateLimitString(),
+        fupDownMbps = attributes.fupDownMbps,
+        fupUpMbps = attributes.fupUpMbps,
     )
 }

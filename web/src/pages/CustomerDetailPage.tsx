@@ -1211,6 +1211,16 @@ function SubscriptionAccessCard({
             <span className="badge accent">{account.planName ?? 'paket tak dikenal'}</span>
             <span className="badge neutral">{account.nasName ?? 'tanpa BRAS'}</span>
             <StatusBadge status={account.status} />
+            {account.fupEnabled && (
+              <span
+                className={`badge ${account.fupThrottled ? 'critical' : 'neutral'} tnum`}
+                title={account.fupThrottled ? 'Kuota FUP terlampaui — kecepatan diturunkan' : 'Pemakaian FUP siklus berjalan'}
+              >
+                FUP {account.periodUsageMb ?? 0}
+                {account.fupQuotaMb != null ? ` / ${account.fupQuotaMb}` : ''} MB
+                {account.fupThrottled ? ' · throttle' : ''}
+              </span>
+            )}
           </div>
 
           {form === null && (canManage || canReset || canIsolate) && (

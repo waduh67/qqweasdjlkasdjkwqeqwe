@@ -3,6 +3,7 @@ package com.duluin.ftth.bng.adapter.outbound.persistence
 import com.duluin.ftth.bng.application.port.outbound.BngActionRepository
 import com.duluin.ftth.bng.application.port.outbound.NasRepository
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
+import com.duluin.ftth.bng.domain.model.AccessStatus
 import com.duluin.ftth.bng.domain.model.BngAction
 import com.duluin.ftth.bng.domain.model.BngActionStatus
 import com.duluin.ftth.bng.domain.model.Nas
@@ -107,6 +108,7 @@ class SubscriberAccessPersistenceAdapter(
             planId = access.planId
             nasId = access.nasId
             status = access.status
+            fupThrottled = access.fupThrottled
             if (encryptedSecret != null) secret = encryptedSecret
         } ?: SubscriberAccessJpaEntity(
             id = access.id,
@@ -118,6 +120,7 @@ class SubscriberAccessPersistenceAdapter(
             planId = access.planId,
             nasId = access.nasId,
             status = access.status,
+            fupThrottled = access.fupThrottled,
         )
         return jpa.save(entity).toDomain()
     }
@@ -139,6 +142,9 @@ class SubscriberAccessPersistenceAdapter(
     override fun findByPlanId(planId: UUID): List<SubscriberAccess> =
         jpa.findByPlanId(planId).map { it.toDomain() }
 
+    override fun findActiveOnNas(): List<SubscriberAccess> =
+        jpa.findByStatusAndNasIdIsNotNull(AccessStatus.ACTIVE).map { it.toDomain() }
+
     override fun existsBySubscriptionId(subscriptionId: UUID): Boolean =
         jpa.existsBySubscriptionId(subscriptionId)
 
@@ -159,6 +165,7 @@ class SubscriberAccessPersistenceAdapter(
         planId = planId,
         nasId = nasId,
         status = status,
+        fupThrottled = fupThrottled,
     )
 }
 

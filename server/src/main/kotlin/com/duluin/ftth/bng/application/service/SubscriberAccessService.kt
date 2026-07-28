@@ -6,6 +6,7 @@ import com.duluin.ftth.bng.application.port.inbound.ProvisionAccessCommand
 import com.duluin.ftth.bng.application.port.inbound.ResetSecretCommand
 import com.duluin.ftth.bng.application.port.inbound.SubscriberAccessView
 import com.duluin.ftth.bng.application.port.inbound.UpdateAccessCommand
+import com.duluin.ftth.bng.application.port.outbound.AccountingRecordRepository
 import com.duluin.ftth.bng.application.port.outbound.NasRepository
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.domain.model.AccessStatus
@@ -20,6 +21,9 @@ import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.customer.CustomerApi
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 
 /**
@@ -36,6 +40,7 @@ import java.util.UUID
 @Transactional
 class SubscriberAccessService(
     private val subscriberAccessRepository: SubscriberAccessRepository,
+    private val accountingRecordRepository: AccountingRecordRepository,
     private val catalogApi: CatalogApi,
     private val nasRepository: NasRepository,
     private val customerApi: CustomerApi,
@@ -91,7 +96,7 @@ class SubscriberAccessService(
             "bng.access.provisioned", "SubscriberAccess", access.id, access.tenantId,
             mapOf("username" to access.username, "subscription" to access.subscriptionId.toString()),
         )
-        return access.toView(plan.name, nas?.name)
+        return access.toView(plan, nas?.name, periodUsageMb = null)
     }
 
     override fun updateAssignment(id: UUID, command: UpdateAccessCommand): SubscriberAccessView {
@@ -121,7 +126,7 @@ class SubscriberAccessService(
             "bng.access.updated", "SubscriberAccess", saved.id, saved.tenantId,
             mapOf("username" to saved.username, "plan" to plan.name),
         )
-        return saved.toView(plan.name, nas?.name)
+        return saved.toView(plan, nas?.name, periodUsageMb = null)
     }
 
     override fun resetSecret(id: UUID, command: ResetSecretCommand): SubscriberAccessView {
@@ -219,27 +224,43 @@ class SubscriberAccessService(
         nasRepository.findById(id) ?: throw NotFoundException("BRAS $id tidak ditemukan")
 
     /**
-     * Meresolusi nama paket & BRAS untuk sekumpulan akun tanpa lookup per-baris: nama
-     * BRAS dari satu query (himpunan kecil per tenant), nama paket dimemo per planId unik
-     * lewat katalog (akun umumnya berbagi sedikit paket).
+     * Meresolusi paket & BRAS untuk sekumpulan akun tanpa lookup per-baris: nama BRAS dari
+     * satu query (himpunan kecil per tenant), paket dimemo per planId unik lewat katalog
+     * (akun umumnya berbagi sedikit paket), dan pemakaian FUP periode berjalan seluruh akun
+     * ditarik sekali (satu query batch reset-aware) untuk indikator kuota.
      */
     private fun List<SubscriberAccess>.toViews(): List<SubscriberAccessView> {
         if (isEmpty()) return emptyList()
-        val planNames = map { it.planId }.distinct().associateWith { catalogApi.findPlanNetwork(it)?.name }
+        val plans = map { it.planId }.distinct().associateWith { catalogApi.findPlanNetwork(it) }
         val nasNames = nasRepository.findAll().associate { it.id to it.name }
-        return map { it.toView(planNames[it.planId], it.nasId?.let(nasNames::get)) }
+        val usage = accountingRecordRepository.usageSince(map { it.id }, currentPeriodStart())
+        return map { access ->
+            access.toView(plans[access.planId], access.nasId?.let(nasNames::get), usage[access.id]?.toMb())
+        }
     }
+
+    /** Awal siklus FUP = hari-1 bulan berjalan di zona sistem (selaras penegak FUP). */
+    private fun currentPeriodStart(): Instant =
+        LocalDate.now().withDayOfMonth(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
 }
 
-private fun SubscriberAccess.toView(planName: String?, nasName: String?) = SubscriberAccessView(
-    id = id,
-    subscriptionId = subscriptionId,
-    customerId = customerId,
-    username = username,
-    authType = authType.name,
-    planId = planId,
-    planName = planName,
-    nasId = nasId,
-    nasName = nasName,
-    status = status.name,
-)
+/** Byte → MB desimal (1 MB = 1e6 byte), selaras kuota FUP & Mbps di seluruh sistem. */
+private fun Long.toMb(): Long = this / 1_000_000L
+
+private fun SubscriberAccess.toView(plan: PlanNetworkRef?, nasName: String?, periodUsageMb: Long?) =
+    SubscriberAccessView(
+        id = id,
+        subscriptionId = subscriptionId,
+        customerId = customerId,
+        username = username,
+        authType = authType.name,
+        planId = planId,
+        planName = plan?.name,
+        nasId = nasId,
+        nasName = nasName,
+        status = status.name,
+        fupEnabled = plan?.fupEnabled ?: false,
+        fupQuotaMb = plan?.fupQuotaMb,
+        fupThrottled = fupThrottled,
+        periodUsageMb = periodUsageMb,
+    )

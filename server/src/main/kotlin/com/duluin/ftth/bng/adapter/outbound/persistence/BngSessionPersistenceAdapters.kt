@@ -168,10 +168,60 @@ class AccountingRecordPersistenceAdapter : AccountingRecordRepository {
         }
     }
 
+    /**
+     * Total octet terpakai per akun sejak [since], sadar-reset. `LAG` mengambil penghitung
+     * cuplikan sebelumnya per akun; kontribusi tiap langkah:
+     *  - titik pertama akun (prev NULL) → 0 (baseline; byte sebelum [since] tak dihitung),
+     *  - counter tumbuh (curr ≥ prev)   → selisih (curr − prev),
+     *  - counter mundur (sesi baru)     → curr penuh (bukan selisih negatif).
+     * `unggah (in) + unduh (out)` dijumlah jadi total pemakaian. `coalesce` menjaga cuplikan
+     * ber-octet null tak menggagalkan agregasi.
+     */
+    override fun usageSince(subscriberAccessIds: Collection<UUID>, since: Instant): Map<UUID, Long> {
+        if (subscriberAccessIds.isEmpty()) return emptyMap()
+        val sql = """
+            WITH ordered AS (
+                SELECT subscriber_access_id AS access_id,
+                       coalesce(in_octets, 0)  AS in_octets,
+                       coalesce(out_octets, 0) AS out_octets,
+                       lag(in_octets)  OVER w AS prev_in,
+                       lag(out_octets) OVER w AS prev_out
+                FROM accounting_record
+                WHERE subscriber_access_id IN (:accessIds) AND time >= :since
+                WINDOW w AS (PARTITION BY subscriber_access_id ORDER BY time)
+            )
+            SELECT access_id,
+                   SUM(
+                       CASE WHEN prev_in IS NULL THEN 0
+                            WHEN in_octets >= prev_in THEN in_octets - prev_in
+                            ELSE in_octets END
+                     + CASE WHEN prev_out IS NULL THEN 0
+                            WHEN out_octets >= prev_out THEN out_octets - prev_out
+                            ELSE out_octets END
+                   ) AS total_octets
+            FROM ordered
+            GROUP BY access_id
+        """.trimIndent()
+
+        @Suppress("UNCHECKED_CAST")
+        val rows = entityManager.createNativeQuery(sql)
+            .setParameter("accessIds", subscriberAccessIds)
+            .setParameter("since", Timestamp.from(since))
+            .resultList as List<Array<Any?>>
+
+        return rows.associate { row -> row[0].toUuidValue() to ((row[1] as? Number)?.toLong() ?: 0L) }
+    }
+
     private fun Any?.toInstantValue(): Instant = when (this) {
         is Instant -> this
         is Timestamp -> toInstant()
         else -> error("Tipe kolom waktu tidak dikenal: ${this?.javaClass?.name}")
+    }
+
+    private fun Any?.toUuidValue(): UUID = when (this) {
+        is UUID -> this
+        is String -> UUID.fromString(this)
+        else -> error("Tipe kolom UUID tidak dikenal: ${this?.javaClass?.name}")
     }
 
     private fun Double.round2(): Double = Math.round(this * 100) / 100.0

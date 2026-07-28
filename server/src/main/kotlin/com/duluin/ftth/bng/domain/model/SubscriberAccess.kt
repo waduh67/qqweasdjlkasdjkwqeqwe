@@ -41,6 +41,7 @@ class SubscriberAccess private constructor(
     planId: UUID,
     nasId: UUID?,
     status: AccessStatus,
+    fupThrottled: Boolean,
 ) {
     var secret: String = secret
         private set
@@ -52,6 +53,14 @@ class SubscriberAccess private constructor(
         private set
 
     var status: AccessStatus = status
+        private set
+
+    /**
+     * Kuota FUP terlampaui → akun kini dipindah ke grup throttle RADIUS. Bendera ini
+     * mencegah antre-ganda: penegak FUP hanya me-remap sekali saat pertama melampaui,
+     * dan hanya memulihkan sekali saat pemakaian turun/siklus berganti.
+     */
+    var fupThrottled: Boolean = fupThrottled
         private set
 
     fun resetSecret(newSecret: String) {
@@ -84,6 +93,20 @@ class SubscriberAccess private constructor(
         status = AccessStatus.TERMINATED
     }
 
+    /** Tandai akun ter-throttle FUP (dipindah ke grup FUP). Hanya akun aktif yang di-throttle. */
+    fun applyFupThrottle() {
+        assertNotTerminated()
+        fupThrottled = true
+    }
+
+    /**
+     * Cabut throttle FUP (dikembalikan ke grup normal). Idempoten — aman dipanggil saat
+     * rollover siklus, pemulihan pemakaian, maupun penggantian paket.
+     */
+    fun clearFupThrottle() {
+        fupThrottled = false
+    }
+
     private fun assertNotTerminated() {
         if (status == AccessStatus.TERMINATED) {
             throw ConflictException("Akun jaringan sudah dihentikan dan tidak bisa diubah lagi")
@@ -112,6 +135,7 @@ class SubscriberAccess private constructor(
             planId = planId,
             nasId = nasId,
             status = status,
+            fupThrottled = false,
         )
 
         @Suppress("LongParameterList")
@@ -126,8 +150,9 @@ class SubscriberAccess private constructor(
             planId: UUID,
             nasId: UUID?,
             status: AccessStatus,
+            fupThrottled: Boolean,
         ): SubscriberAccess = SubscriberAccess(
-            id, tenantId, subscriptionId, customerId, username, authType, secret, planId, nasId, status,
+            id, tenantId, subscriptionId, customerId, username, authType, secret, planId, nasId, status, fupThrottled,
         )
 
         private val USERNAME_PATTERN = Regex("^[A-Za-z0-9._@-]{2,64}$")

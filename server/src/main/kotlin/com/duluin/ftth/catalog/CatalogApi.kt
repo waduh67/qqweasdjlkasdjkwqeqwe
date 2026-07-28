@@ -43,7 +43,8 @@ data class PlanCommercialRef(
 /**
  * Sisi jaringan paket. [rateLimit] sudah dirakit jadi atribut Mikrotik-Rate-Limit siap
  * tulis ke `radgroupreply`; [downMbps]/[upMbps] disertakan untuk CoA numerik. FUP: bila
- * [fupEnabled], [fupRateLimit] adalah kecepatan throttle grup kedua.
+ * [fupEnabled], [fupRateLimit] adalah kecepatan throttle grup kedua dan [fupDownMbps]/
+ * [fupUpMbps] versi numeriknya untuk CoA saat kuota terlampaui.
  */
 data class PlanNetworkRef(
     val planId: UUID,
@@ -55,4 +56,6 @@ data class PlanNetworkRef(
     val fupEnabled: Boolean,
     val fupQuotaMb: Long?,
     val fupRateLimit: String?,
+    val fupDownMbps: Int?,
+    val fupUpMbps: Int?,
 )

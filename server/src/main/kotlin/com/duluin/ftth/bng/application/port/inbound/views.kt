@@ -30,6 +30,11 @@ data class NasView(
  * diisi/reset, tak pernah dibaca balik. [planName]/[nasName] diresolusi untuk
  * tampilan agar UI tak perlu memanggil balik. [planName] `null` bila paket telah
  * dinonaktifkan/terhapus dari katalog.
+ *
+ * Bidang FUP untuk indikator pemakaian: [fupEnabled] menandai paket ber-FUP,
+ * [fupQuotaMb] kuota periodenya, [fupThrottled] apakah akun kini sedang di-throttle,
+ * dan [periodUsageMb] pemakaian akun sejak awal siklus (null bila tak dihitung, mis.
+ * pada balikan aksi tunggal).
  */
 data class SubscriberAccessView(
     val id: UUID,
@@ -42,6 +47,10 @@ data class SubscriberAccessView(
     val nasId: UUID?,
     val nasName: String?,
     val status: String,
+    val fupEnabled: Boolean,
+    val fupQuotaMb: Long?,
+    val fupThrottled: Boolean,
+    val periodUsageMb: Long?,
 )
 
 /**
