@@ -149,4 +149,100 @@ class InvoiceTest {
             )
         }.isInstanceOf(ValidationException::class.java)
     }
+
+    // --- Prorata: hitung hari terpakai saat aktivasi tengah periode ---
+
+    private val jul1 = LocalDate.of(2026, 7, 1)
+    private val jul31 = LocalDate.of(2026, 7, 31)
+
+    @Test
+    fun `prorate aktivasi tengah bulan menagih hari terpakai`() {
+        // Aktif 16 Juli (bulan 31 hari) → 16 hari terpakai (16..31 inklusif).
+        val result = Invoice.prorate(BigDecimal("310000"), LocalDate.of(2026, 7, 16), jul1, jul31)
+
+        assertThat(result).isNotNull
+        assertThat(result!!.days).isEqualTo(16)
+        assertThat(result.amount).isEqualByComparingTo("160000") // 310000 * 16 / 31
+        assertThat(result.amount.scale()).isEqualTo(2)
+    }
+
+    @Test
+    fun `prorate hari terakhir periode menagih satu hari`() {
+        val result = Invoice.prorate(BigDecimal("300000"), jul31, jul1, jul31)
+
+        assertThat(result!!.days).isEqualTo(1)
+        assertThat(result.amount).isEqualByComparingTo("9677.42") // 300000 * 1 / 31, HALF_UP
+    }
+
+    @Test
+    fun `prorate membulatkan setengah ke atas pada skala 2`() {
+        // Juni 30 hari, aktif tgl 11 → 20 hari; 100000 * 20 / 30 = 66666.666… → 66666.67
+        val result = Invoice.prorate(
+            BigDecimal("100000"), LocalDate.of(2026, 6, 11),
+            LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30),
+        )
+
+        assertThat(result!!.days).isEqualTo(20)
+        assertThat(result.amount).isEqualByComparingTo("66666.67")
+    }
+
+    @Test
+    fun `prorate aktivasi hari pertama tidak diprorata`() {
+        assertThat(Invoice.prorate(BigDecimal("310000"), jul1, jul1, jul31)).isNull()
+    }
+
+    @Test
+    fun `prorate aktivasi sebelum periode tidak diprorata`() {
+        assertThat(Invoice.prorate(BigDecimal("310000"), LocalDate.of(2026, 6, 20), jul1, jul31)).isNull()
+    }
+
+    @Test
+    fun `prorate aktivasi setelah periode tidak diprorata`() {
+        assertThat(Invoice.prorate(BigDecimal("310000"), LocalDate.of(2026, 8, 2), jul1, jul31)).isNull()
+    }
+
+    @Test
+    fun `create dengan prorata menyimpan penanda dan hari`() {
+        val invoice = Invoice.create(
+            tenantId = UuidV7.generate(),
+            customerId = UuidV7.generate(),
+            subscriptionId = UuidV7.generate(),
+            number = "INV-202607-0001",
+            periodStart = jul1,
+            periodEnd = jul31,
+            amount = BigDecimal("160000"),
+            dueDate = LocalDate.of(2026, 7, 8),
+            prorated = true,
+            proratedDays = 16,
+        )
+
+        assertThat(invoice.prorated).isTrue()
+        assertThat(invoice.proratedDays).isEqualTo(16)
+    }
+
+    @Test
+    fun `create penuh secara default tidak diprorata`() {
+        val invoice = newInvoice()
+
+        assertThat(invoice.prorated).isFalse()
+        assertThat(invoice.proratedDays).isNull()
+    }
+
+    @Test
+    fun `create prorata tanpa hari valid ditolak`() {
+        assertThatThrownBy {
+            Invoice.create(
+                tenantId = UuidV7.generate(),
+                customerId = UuidV7.generate(),
+                subscriptionId = UuidV7.generate(),
+                number = "INV-202607-0001",
+                periodStart = jul1,
+                periodEnd = jul31,
+                amount = BigDecimal("160000"),
+                dueDate = LocalDate.of(2026, 7, 8),
+                prorated = true,
+                proratedDays = 0,
+            )
+        }.isInstanceOf(ValidationException::class.java)
+    }
 }

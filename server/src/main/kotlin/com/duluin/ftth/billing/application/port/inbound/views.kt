@@ -18,6 +18,9 @@ data class InvoiceView(
     val periodStart: LocalDate,
     val periodEnd: LocalDate,
     val amount: BigDecimal,
+    /** Tagihan diprorata (aktivasi tengah periode); [proratedDays] = hari yang ditagih. */
+    val prorated: Boolean,
+    val proratedDays: Int?,
     val status: String,
     val issuedAt: Instant,
     val dueDate: LocalDate,

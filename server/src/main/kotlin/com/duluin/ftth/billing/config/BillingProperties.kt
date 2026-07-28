@@ -18,6 +18,8 @@ data class BillingProperties(
     val graceDays: Long = 3,
     /** Otomatis isolir langganan saat tagihannya menunggak. */
     val autoIsolir: Boolean = true,
+    /** Prorata tagihan pertama saat langganan aktif di tengah bulan (default global). */
+    val prorateOnActivation: Boolean = false,
     val numberPrefix: String = "INV",
     val defaultProvider: String = "MANUAL",
     /** Selang jalannya scheduler penagihan (ISO-8601 duration). */

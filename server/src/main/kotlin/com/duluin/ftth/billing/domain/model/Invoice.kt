@@ -7,6 +7,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Instant
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /**
@@ -17,6 +18,12 @@ import java.util.UUID
  * memicu efek nyata (auto-isolir saat menunggak, auto-pulih saat lunas).
  */
 enum class InvoiceStatus { ISSUED, PAID, OVERDUE, VOID }
+
+/**
+ * Hasil perhitungan prorata: [amount] yang harus ditagih (skala 2) untuk [days] hari
+ * terpakai — hari aktivasi sampai akhir periode, inklusif.
+ */
+data class Proration(val amount: BigDecimal, val days: Int)
 
 /**
  * Tagihan satu periode langganan seorang pelanggan.
@@ -36,6 +43,10 @@ class Invoice private constructor(
     val periodStart: LocalDate,
     val periodEnd: LocalDate,
     val amount: BigDecimal,
+    /** Tagihan ini diprorata (aktivasi tengah periode) — [amount] < tarif penuh sebulan. */
+    val prorated: Boolean,
+    /** Jumlah hari terpakai yang ditagihkan bila [prorated]; null saat tagihan penuh. */
+    val proratedDays: Int?,
     status: InvoiceStatus,
     val issuedAt: Instant,
     val dueDate: LocalDate,
@@ -109,6 +120,8 @@ class Invoice private constructor(
             periodEnd: LocalDate,
             amount: BigDecimal,
             dueDate: LocalDate,
+            prorated: Boolean = false,
+            proratedDays: Int? = null,
         ): Invoice = Invoice(
             id = UuidV7.generate(),
             tenantId = tenantId,
@@ -118,6 +131,8 @@ class Invoice private constructor(
             periodStart = periodStart,
             periodEnd = periodEnd,
             amount = validateAmount(amount),
+            prorated = prorated,
+            proratedDays = validateProratedDays(prorated, proratedDays),
             status = InvoiceStatus.ISSUED,
             issuedAt = Instant.now(),
             dueDate = dueDate,
@@ -137,6 +152,8 @@ class Invoice private constructor(
             periodStart: LocalDate,
             periodEnd: LocalDate,
             amount: BigDecimal,
+            prorated: Boolean,
+            proratedDays: Int?,
             status: InvoiceStatus,
             issuedAt: Instant,
             dueDate: LocalDate,
@@ -146,8 +163,31 @@ class Invoice private constructor(
             payUrl: String?,
         ): Invoice = Invoice(
             id, tenantId, customerId, subscriptionId, number, periodStart, periodEnd, amount,
-            status, issuedAt, dueDate, paidAt, gatewayProvider, gatewayRef, payUrl,
+            prorated, proratedDays, status, issuedAt, dueDate, paidAt, gatewayProvider, gatewayRef, payUrl,
         )
+
+        /**
+         * Hitung prorata bila [activationDate] jatuh di dalam [periodStart]..[periodEnd]
+         * dan bukan hari pertama periode. Pelanggan hanya membayar hari terpakai
+         * (hari aktivasi s/d akhir periode, inklusif). Mengembalikan null → tagih penuh:
+         * aktivasi di luar periode (bulan berikutnya sudah ditagih penuh) atau tepat di
+         * awal periode (sudah sebulan penuh, bukan prorata).
+         */
+        fun prorate(
+            fullAmount: BigDecimal,
+            activationDate: LocalDate,
+            periodStart: LocalDate,
+            periodEnd: LocalDate,
+        ): Proration? {
+            if (activationDate.isBefore(periodStart) || activationDate.isAfter(periodEnd)) return null
+            val daysInPeriod = ChronoUnit.DAYS.between(periodStart, periodEnd).toInt() + 1
+            val usedDays = ChronoUnit.DAYS.between(activationDate, periodEnd).toInt() + 1
+            if (usedDays >= daysInPeriod) return null
+            val amount = fullAmount
+                .multiply(BigDecimal(usedDays))
+                .divide(BigDecimal(daysInPeriod), 2, RoundingMode.HALF_UP)
+            return Proration(amount, usedDays)
+        }
 
         private fun validateNumber(number: String): String {
             val trimmed = number.trim()
@@ -158,6 +198,13 @@ class Invoice private constructor(
         private fun validateAmount(amount: BigDecimal): BigDecimal {
             if (amount.signum() < 0) throw ValidationException("Nilai tagihan tidak boleh negatif")
             return amount.setScale(2, RoundingMode.HALF_UP)
+        }
+
+        /** Hari prorata wajib >= 1 saat diprorata; diabaikan (null) saat tagihan penuh. */
+        private fun validateProratedDays(prorated: Boolean, days: Int?): Int? {
+            if (!prorated) return null
+            if (days == null || days < 1) throw ValidationException("Hari prorata harus >= 1 saat tagihan diprorata")
+            return days
         }
     }
 }

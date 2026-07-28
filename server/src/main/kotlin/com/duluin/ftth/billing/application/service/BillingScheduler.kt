@@ -62,23 +62,31 @@ class BillingCycleRunner(
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun issue(tenantId: UUID) {
-        // Baru terbit setelah tanggal penagihan tercapai; sebelum itu scheduler no-op.
-        if (LocalDate.now().dayOfMonth >= properties.billingDayOfMonth) {
-            invoiceGenerator.generateFor(tenantId, LocalDate.now())
-        }
+        // Gating tanggal penagihan kini per-langganan di dalam generator (paket bisa
+        // menimpa billingDayOfMonth), jadi runner cukup memanggil untuk hari ini.
+        invoiceGenerator.generateFor(tenantId, LocalDate.now())
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun enforce(tenantId: UUID) {
-        val cutoff = LocalDate.now().minusDays(properties.graceDays)
-        invoiceRepository.findBillableOverdue(cutoff).forEach { invoice ->
+        val today = LocalDate.now()
+        // Ambil superset kandidat (jatuh tempo < hari ini = grace 0), lalu saring per
+        // langganan menurut grace efektifnya — paket bisa menimpa graceDays/autoIsolir
+        // global (null = ikut global). Langganan tak ditemukan (mis. sudah berakhir)
+        // memakai kebijakan global; isolir atas langganan non-aktif tetap no-op.
+        invoiceRepository.findBillableOverdue(today).forEach { invoice ->
+            val sub = customerApi.findBillableSubscription(invoice.subscriptionId)
+            val graceDays = sub?.graceDays?.toLong() ?: properties.graceDays
+            if (!invoice.dueDate.isBefore(today.minusDays(graceDays))) return@forEach
+
             invoice.markOverdue()
             val saved = invoiceRepository.save(invoice)
             auditor.record(
                 "billing.invoice.overdue", "Invoice", saved.id, saved.tenantId,
                 mapOf("number" to saved.number),
             )
-            if (properties.autoIsolir) customerApi.isolateForBilling(saved.subscriptionId)
+            val autoIsolir = sub?.autoIsolir ?: properties.autoIsolir
+            if (autoIsolir) customerApi.isolateForBilling(saved.subscriptionId)
         }
     }
 }

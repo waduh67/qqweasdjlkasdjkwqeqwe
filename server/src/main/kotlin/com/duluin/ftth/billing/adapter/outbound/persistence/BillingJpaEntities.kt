@@ -40,6 +40,12 @@ class InvoiceJpaEntity(
     @Column(nullable = false, precision = 14, scale = 2, updatable = false)
     var amount: BigDecimal,
 
+    @Column(nullable = false, updatable = false)
+    var prorated: Boolean,
+
+    @Column(name = "prorated_days", updatable = false)
+    var proratedDays: Int?,
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var status: InvoiceStatus,

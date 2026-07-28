@@ -1,0 +1,314 @@
+package com.duluin.ftth.billing
+
+import com.duluin.ftth.billing.application.port.outbound.ChargeRequest
+import com.duluin.ftth.billing.application.port.outbound.ChargeResult
+import com.duluin.ftth.billing.application.port.outbound.GatewayCallback
+import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
+import com.duluin.ftth.billing.application.port.outbound.PaymentGateway
+import com.duluin.ftth.billing.application.service.BillingCycleRunner
+import com.duluin.ftth.billing.application.service.InvoiceGenerator
+import com.duluin.ftth.billing.application.service.PaymentGatewayRegistry
+import com.duluin.ftth.billing.config.BillingProperties
+import com.duluin.ftth.billing.domain.model.Invoice
+import com.duluin.ftth.billing.domain.model.InvoiceStatus
+import com.duluin.ftth.common.domain.UuidV7
+import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
+import com.duluin.ftth.common.security.CurrentUserProvider
+import com.duluin.ftth.customer.BillableSubscription
+import com.duluin.ftth.customer.CustomerApi
+import com.duluin.ftth.customer.CustomerRef
+import com.duluin.ftth.customer.ProvisionOnuCommand
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
+import java.math.BigDecimal
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.util.UUID
+
+/**
+ * Menguji siklus penagihan (penerbitan prorata + penegakan tunggakan) memakai fake
+ * port murni — tanpa Spring/DB. Fokus perilaku yang tak tercakup uji domain [InvoiceTest]:
+ * prorata mengalir konsisten ke tagihan DAN charge gateway, gating tanggal tagih per
+ * langganan, serta grace/autoIsolir per-paket dengan fallback global.
+ */
+class BillingCycleTest {
+
+    // --- Penerbitan: prorata & konsistensi tagihan↔charge ---
+
+    @Test
+    fun `penerbitan memprorata tagihan dan charge saat aktivasi tengah periode`() {
+        val sub = billable(monthlyFee = BigDecimal("310000"), prorateOnActivation = true, activatedAt = dateAt(2026, 7, 16))
+        val f = fixture(props(), billables = listOf(sub))
+
+        val count = f.generator.generateFor(UuidV7.generate(), LocalDate.of(2026, 7, 20))
+
+        assertThat(count).isEqualTo(1)
+        val invoice = f.repo.saved.single()
+        assertThat(invoice.prorated).isTrue()
+        assertThat(invoice.proratedDays).isEqualTo(16) // 16..31 inklusif
+        assertThat(invoice.amount).isEqualByComparingTo("160000") // 310000 * 16 / 31
+        // Charge WAJIB memakai nilai yang sama dengan tagihan.
+        assertThat(f.gateway.charges.single().amount).isEqualByComparingTo("160000")
+        assertThat(f.gateway.charges.single().description).contains("prorata 16 hari")
+    }
+
+    @Test
+    fun `penerbitan menagih penuh saat aktivasi hari pertama periode`() {
+        val sub = billable(monthlyFee = BigDecimal("310000"), prorateOnActivation = true, activatedAt = dateAt(2026, 7, 1))
+        val f = fixture(props(), billables = listOf(sub))
+
+        f.generator.generateFor(UuidV7.generate(), LocalDate.of(2026, 7, 20))
+
+        val invoice = f.repo.saved.single()
+        assertThat(invoice.prorated).isFalse()
+        assertThat(invoice.proratedDays).isNull()
+        assertThat(invoice.amount).isEqualByComparingTo("310000")
+        assertThat(f.gateway.charges.single().amount).isEqualByComparingTo("310000")
+    }
+
+    @Test
+    fun `prorata global berlaku saat paket tak menyetel flag`() {
+        val sub = billable(prorateOnActivation = null, activatedAt = dateAt(2026, 7, 16))
+        val f = fixture(props(prorate = true), billables = listOf(sub))
+
+        f.generator.generateFor(UuidV7.generate(), LocalDate.of(2026, 7, 20))
+
+        assertThat(f.repo.saved.single().prorated).isTrue()
+    }
+
+    @Test
+    fun `tanpa prorata aktif aktivasi tengah bulan tetap penuh`() {
+        val sub = billable(monthlyFee = BigDecimal("310000"), prorateOnActivation = null, activatedAt = dateAt(2026, 7, 16))
+        val f = fixture(props(prorate = false), billables = listOf(sub))
+
+        f.generator.generateFor(UuidV7.generate(), LocalDate.of(2026, 7, 20))
+
+        val invoice = f.repo.saved.single()
+        assertThat(invoice.prorated).isFalse()
+        assertThat(invoice.amount).isEqualByComparingTo("310000")
+    }
+
+    // --- Penerbitan: gating tanggal tagih per langganan ---
+
+    @Test
+    fun `langganan dgn tanggal tagih belum tiba dilewati`() {
+        val sub = billable(billingDayOfMonth = 20)
+        val f = fixture(props(billingDay = 1), billables = listOf(sub))
+
+        val count = f.generator.generateFor(UuidV7.generate(), LocalDate.of(2026, 7, 10))
+
+        assertThat(count).isEqualTo(0)
+        assertThat(f.repo.saved).isEmpty()
+    }
+
+    @Test
+    fun `langganan terbit setelah tanggal tagihnya tercapai`() {
+        val sub = billable(billingDayOfMonth = 20)
+        val f = fixture(props(billingDay = 1), billables = listOf(sub))
+
+        val count = f.generator.generateFor(UuidV7.generate(), LocalDate.of(2026, 7, 25))
+
+        assertThat(count).isEqualTo(1)
+    }
+
+    // --- Penegakan: grace & autoIsolir per-paket dengan fallback global ---
+
+    @Test
+    fun `penegakan menghormati grace paket - masih dalam grace tak ditandai`() {
+        val subId = UuidV7.generate()
+        val sub = billable(subscriptionId = subId, graceDays = 5)
+        val invoice = issuedInvoice(subId, dueDate = LocalDate.now().minusDays(2))
+        val f = fixture(props(grace = 1), overdue = listOf(invoice), byId = mapOf(subId to sub))
+
+        f.runner.enforce(UuidV7.generate())
+
+        assertThat(f.repo.saved).isEmpty()
+        assertThat(f.customerApi.isolated).isEmpty()
+    }
+
+    @Test
+    fun `penegakan menandai menunggak dan isolir setelah lewat grace paket`() {
+        val subId = UuidV7.generate()
+        val sub = billable(subscriptionId = subId, graceDays = 5, autoIsolir = true)
+        val invoice = issuedInvoice(subId, dueDate = LocalDate.now().minusDays(10))
+        val f = fixture(props(grace = 1), overdue = listOf(invoice), byId = mapOf(subId to sub))
+
+        f.runner.enforce(UuidV7.generate())
+
+        assertThat(f.repo.saved.single().status).isEqualTo(InvoiceStatus.OVERDUE)
+        assertThat(f.customerApi.isolated).containsExactly(subId)
+    }
+
+    @Test
+    fun `autoIsolir paket false menandai menunggak tanpa mengisolir`() {
+        val subId = UuidV7.generate()
+        val sub = billable(subscriptionId = subId, graceDays = 0, autoIsolir = false)
+        val invoice = issuedInvoice(subId, dueDate = LocalDate.now().minusDays(5))
+        val f = fixture(props(grace = 3, autoIsolir = true), overdue = listOf(invoice), byId = mapOf(subId to sub))
+
+        f.runner.enforce(UuidV7.generate())
+
+        assertThat(f.repo.saved.single().status).isEqualTo(InvoiceStatus.OVERDUE)
+        assertThat(f.customerApi.isolated).isEmpty()
+    }
+
+    @Test
+    fun `langganan tak ditemukan jatuh ke kebijakan global`() {
+        val subId = UuidV7.generate() // tak ada di byId → pakai grace/autoIsolir global
+        val invoice = issuedInvoice(subId, dueDate = LocalDate.now().minusDays(10))
+        val f = fixture(props(grace = 3, autoIsolir = true), overdue = listOf(invoice), byId = emptyMap())
+
+        f.runner.enforce(UuidV7.generate())
+
+        assertThat(f.repo.saved.single().status).isEqualTo(InvoiceStatus.OVERDUE)
+        assertThat(f.customerApi.isolated).containsExactly(subId)
+    }
+
+    // --- Perkakas uji ---
+
+    private class Fixture(
+        val generator: InvoiceGenerator,
+        val runner: BillingCycleRunner,
+        val repo: FakeInvoiceRepository,
+        val gateway: CapturingGateway,
+        val customerApi: FakeCustomerApi,
+    )
+
+    private fun fixture(
+        props: BillingProperties,
+        billables: List<BillableSubscription> = emptyList(),
+        overdue: List<Invoice> = emptyList(),
+        byId: Map<UUID, BillableSubscription> = emptyMap(),
+    ): Fixture {
+        val repo = FakeInvoiceRepository(overdue)
+        val customerApi = FakeCustomerApi(billables, byId)
+        val gateway = CapturingGateway()
+        val registry = PaymentGatewayRegistry(listOf(gateway), props)
+        val auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser)
+        val generator = InvoiceGenerator(repo, customerApi, registry, auditor, props)
+        val runner = BillingCycleRunner(generator, repo, customerApi, auditor, props)
+        return Fixture(generator, runner, repo, gateway, customerApi)
+    }
+
+    private fun props(
+        prorate: Boolean = false,
+        billingDay: Int = 1,
+        grace: Long = 3,
+        autoIsolir: Boolean = true,
+    ) = BillingProperties(
+        billingDayOfMonth = billingDay,
+        graceDays = grace,
+        autoIsolir = autoIsolir,
+        prorateOnActivation = prorate,
+        defaultProvider = "FAKE",
+    )
+
+    private fun billable(
+        subscriptionId: UUID = UuidV7.generate(),
+        monthlyFee: BigDecimal = BigDecimal("310000"),
+        status: String = "ACTIVE",
+        activatedAt: Instant? = null,
+        prorateOnActivation: Boolean? = null,
+        billingDayOfMonth: Int? = null,
+        graceDays: Int? = null,
+        autoIsolir: Boolean? = null,
+    ) = BillableSubscription(
+        subscriptionId = subscriptionId,
+        customerId = UuidV7.generate(),
+        packageName = "Home 100",
+        monthlyFee = monthlyFee,
+        status = status,
+        activatedAt = activatedAt,
+        prorateOnActivation = prorateOnActivation,
+        billingDayOfMonth = billingDayOfMonth,
+        graceDays = graceDays,
+        autoIsolir = autoIsolir,
+    )
+
+    private fun issuedInvoice(subscriptionId: UUID, dueDate: LocalDate): Invoice = Invoice.create(
+        tenantId = UuidV7.generate(),
+        customerId = UuidV7.generate(),
+        subscriptionId = subscriptionId,
+        number = "INV-202607-0001",
+        periodStart = LocalDate.of(2026, 7, 1),
+        periodEnd = LocalDate.of(2026, 7, 31),
+        amount = BigDecimal("100000"),
+        dueDate = dueDate,
+    )
+
+    private fun dateAt(year: Int, month: Int, day: Int): Instant =
+        LocalDate.of(year, month, day).atStartOfDay(ZoneId.systemDefault()).toInstant()
+
+    private object NoUser : CurrentUserProvider {
+        override fun currentOrNull() = null
+    }
+
+    private class CapturingGateway : PaymentGateway {
+        override val provider = "FAKE"
+        val charges = mutableListOf<ChargeRequest>()
+
+        override fun createCharge(request: ChargeRequest): ChargeResult {
+            charges.add(request)
+            return ChargeResult(provider, "ref-${request.invoiceNumber}", null)
+        }
+
+        override fun parseCallback(callback: GatewayCallback) = throw UnsupportedOperationException()
+    }
+
+    private class FakeInvoiceRepository(private val overdue: List<Invoice>) : InvoiceRepository {
+        val saved = mutableListOf<Invoice>()
+
+        override fun save(invoice: Invoice): Invoice {
+            saved.add(invoice)
+            return invoice
+        }
+
+        override fun findById(id: UUID): Invoice? = saved.find { it.id == id }
+
+        override fun existsForPeriod(subscriptionId: UUID, periodStart: LocalDate) = false
+
+        override fun countForPeriod(periodStart: LocalDate) = 0L
+
+        override fun findBillableOverdue(asOf: LocalDate): List<Invoice> =
+            overdue.filter { it.status == InvoiceStatus.ISSUED && it.dueDate.isBefore(asOf) }
+
+        override fun findAll() = throw UnsupportedOperationException()
+        override fun findByNumber(number: String) = throw UnsupportedOperationException()
+        override fun findByCustomerId(customerId: UUID) = throw UnsupportedOperationException()
+        override fun findByStatus(status: InvoiceStatus) = throw UnsupportedOperationException()
+        override fun hasOverdueForSubscription(subscriptionId: UUID) = throw UnsupportedOperationException()
+    }
+
+    private class FakeCustomerApi(
+        private val billables: List<BillableSubscription>,
+        private val byId: Map<UUID, BillableSubscription>,
+    ) : CustomerApi {
+        val isolated = mutableListOf<UUID>()
+
+        override fun findBillableSubscriptions() = billables
+
+        override fun findBillableSubscription(subscriptionId: UUID) = byId[subscriptionId]
+
+        override fun findCustomersByIds(ids: Set<UUID>): List<CustomerRef> = emptyList()
+
+        override fun isolateForBilling(subscriptionId: UUID) {
+            isolated.add(subscriptionId)
+        }
+
+        override fun findCustomer(id: UUID) = throw UnsupportedOperationException()
+        override fun findSubscription(id: UUID) = throw UnsupportedOperationException()
+        override fun findOccupantsOfOdp(odpId: UUID) = throw UnsupportedOperationException()
+        override fun findAwaitingInstallation(areaIds: Set<UUID>?) = throw UnsupportedOperationException()
+        override fun findPlacementOf(customerId: UUID) = throw UnsupportedOperationException()
+        override fun occupiedPortsOn(odpId: UUID) = throw UnsupportedOperationException()
+        override fun countOccupantsByOdp(odpIds: Set<UUID>) = throw UnsupportedOperationException()
+        override fun renderMapTile(z: Int, x: Int, y: Int, areaIds: Set<UUID>?) = throw UnsupportedOperationException()
+        override fun findOnusBySerialNumbers(serialNumbers: Set<String>) = throw UnsupportedOperationException()
+        override fun placementsForOnus(onuIds: Set<UUID>) = throw UnsupportedOperationException()
+        override fun recordObservedOnuStatuses(statuses: Map<UUID, String>) = throw UnsupportedOperationException()
+        override fun provisionOnu(command: ProvisionOnuCommand) = throw UnsupportedOperationException()
+        override fun reactivateForBilling(subscriptionId: UUID) = throw UnsupportedOperationException()
+    }
+}
