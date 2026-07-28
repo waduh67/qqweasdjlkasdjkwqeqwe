@@ -14,6 +14,7 @@ import { MonitoringPage } from './pages/MonitoringPage'
 import { ProvisioningPage } from './pages/ProvisioningPage'
 import { IncidentsPage } from './pages/IncidentsPage'
 import { WorkOrdersPage } from './pages/WorkOrdersPage'
+import { CatalogPage } from './pages/CatalogPage'
 import { BngPage } from './pages/BngPage'
 import { VpnPage } from './pages/VpnPage'
 import { VpnServersPage } from './pages/VpnServersPage'
@@ -106,6 +107,14 @@ export default function App() {
               element={
                 <RequirePermission permission="customer.customer.view">
                   <CustomerDetailPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="catalog"
+              element={
+                <RequirePermission permission="catalog.plan.view">
+                  <CatalogPage />
                 </RequirePermission>
               }
             />

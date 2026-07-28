@@ -49,6 +49,15 @@ export const IconInventory = (p: IconProps) => (
   </Icon>
 )
 
+export const IconPackage = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+    <path d="m3.3 7 8.7 5 8.7-5" />
+    <path d="M12 22V12" />
+    <path d="m7.5 4.3 9 5.1" />
+  </Icon>
+)
+
 export const IconUsers = (p: IconProps) => (
   <Icon {...p}>
     <circle cx="9" cy="8" r="3.2" />
