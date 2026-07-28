@@ -295,6 +295,35 @@ function CredentialCard({ account, onDismiss }: { account: VpnAccountView; onDis
           ))}
         </tbody>
       </table>
+      {account.routerOsCommand && (
+        <div className="stack" style={{ gap: '0.35rem', marginBottom: '0.7rem' }}>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="muted" style={{ fontSize: '0.82rem' }}>
+              Atau tinggal tempel di terminal RouterOS <strong>v7</strong> (langsung jadi):
+            </span>
+            <button className="small ghost" onClick={() => copy(account.routerOsCommand!, 'Perintah RouterOS')}>
+              Salin perintah
+            </button>
+          </div>
+          <pre
+            style={{
+              margin: 0,
+              padding: '0.6rem 0.7rem',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '6px',
+              overflowX: 'auto',
+              fontSize: '0.76rem',
+              lineHeight: 1.5,
+            }}
+          >
+            <code>{account.routerOsCommand}</code>
+          </pre>
+          <span className="muted" style={{ fontSize: '0.76rem' }}>
+            Perlu RouterOS v7 — v6 tak didukung (hub pakai UDP + AES-256-GCM).
+          </span>
+        </div>
+      )}
       <div className="row">
         <button
           className="small"

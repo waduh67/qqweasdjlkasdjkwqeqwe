@@ -62,6 +62,12 @@ data class VpnAccountView(
     val lastHandshakeAt: Instant?,
     /** Sekali tampil saat generate/rotasi; null pada list/get. */
     val password: String? = null,
+    /**
+     * Perintah RouterOS v7 satu-baris siap salin-tempel di terminal Mikrotik (sudah berisi
+     * [password]). Sekali tampil bersama [password]; null pada list/get. v6 tak didukung hub
+     * (butuh UDP + AES-256-GCM).
+     */
+    val routerOsCommand: String? = null,
 )
 
 /**

@@ -54,24 +54,49 @@ class VpnConfigRenderer {
         }
     }
 
-    /** Skrip RouterOS v7 untuk membuat interface ovpn-client ke hub. */
+    /**
+     * Parameter `ovpn-client` RouterOS **v7** sebagai pasangan key=value URUT — sumber tunggal
+     * untuk skrip `.rsc` [renderRouterOs] maupun perintah satu-baris [renderRouterOsCommand].
+     * Sengaja v7: hub memakai UDP + AES-256-GCM yang tak didukung OVPN client RouterOS v6.
+     * Nilai username/password dikutip; keduanya dijamin alfanumerik oleh PasswordGenerator/slug.
+     */
+    private fun routerOsParams(server: VpnServer, peer: VpnPeer): List<Pair<String, String>> = listOf(
+        "name" to "\"ovpn-${peer.username}\"",
+        "connect-to" to server.host,
+        "port" to server.port.toString(),
+        "protocol" to server.protocol.name.lowercase(),
+        "user" to "\"${peer.username}\"",
+        "password" to "\"${peer.password}\"",
+        "mode" to "ip",
+        "add-default-route" to "no",
+        "use-peer-dns" to "no",
+        "verify-server-certificate" to "no",
+        "auth" to "sha1",
+        "cipher" to "aes256-gcm",
+        "disabled" to "no",
+    )
+
+    /** Skrip RouterOS v7 (multi-baris, untuk diunduh `.rsc`) yang membuat interface ovpn-client ke hub. */
     fun renderRouterOs(server: VpnServer, peer: VpnPeer): String = buildString {
         appendLine("# OpenVPN management client -> ${server.name} (${server.host}:${server.port})")
-        appendLine("# Overlay IP (di-push server): ${peer.overlayIp}")
+        appendLine("# Overlay IP (di-push server): ${peer.overlayIp} — butuh RouterOS v7")
         appendLine("/interface/ovpn-client/add \\")
-        appendLine("    name=\"ovpn-${peer.username}\" \\")
-        appendLine("    connect-to=${server.host} \\")
-        appendLine("    port=${server.port} \\")
-        appendLine("    protocol=${server.protocol.name.lowercase()} \\")
-        appendLine("    user=\"${peer.username}\" \\")
-        appendLine("    password=\"${peer.password}\" \\")
-        appendLine("    mode=ip \\")
-        appendLine("    add-default-route=no \\")
-        appendLine("    use-peer-dns=no \\")
-        appendLine("    verify-server-certificate=no \\")
-        appendLine("    cipher=aes256-gcm \\")
-        appendLine("    disabled=no")
+        val params = routerOsParams(server, peer)
+        params.forEachIndexed { i, (key, value) ->
+            appendLine("    $key=$value${if (i == params.lastIndex) "" else " \\"}")
+        }
     }
+
+    /**
+     * Perintah RouterOS v7 **satu-baris** siap salin-tempel di terminal Mikrotik (sudah berisi
+     * password). Isinya sama dengan [renderRouterOs] tapi tanpa continuation `\`, jadi tempel
+     * sekali langsung jalan tanpa risiko baris kepotong.
+     */
+    fun renderRouterOsCommand(server: VpnServer, peer: VpnPeer): String =
+        routerOsParams(server, peer).joinToString(
+            separator = " ",
+            prefix = "/interface/ovpn-client/add ",
+        ) { (key, value) -> "$key=$value" }
 
     /**
      * `server.conf` + berkas client-config-dir (CCD) per peer AKTIF (ENABLED). Tiap CCD

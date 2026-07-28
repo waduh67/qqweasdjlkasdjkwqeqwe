@@ -154,10 +154,19 @@ class VpnIT {
         // Port remote di rentang default + winboxAddress = host:remotePort siap tempel.
         assertThat(remotePort).isBetween(20000, 40000)
         assertThat(JsonPath.read<String>(acc, "$.winboxAddress")).isEqualTo("vpn.example.com:$remotePort")
+        // Perintah RouterOS v7 siap-tempel ikut sekali-tampil (berisi username + password).
+        val routerOsCommand = JsonPath.read<String>(acc, "$.routerOsCommand")
+        assertThat(routerOsCommand)
+            .startsWith("/interface/ovpn-client/add ")
+            .contains("connect-to=vpn.example.com")
+            .contains("user=\"$username\"")
+            .contains("password=\"$password\"")
+            .contains("cipher=aes256-gcm")
 
-        // Password sekali-tampil: GET biasa tak lagi membocorkannya.
+        // Password sekali-tampil: GET biasa tak lagi membocorkannya (juga perintah RouterOS-nya).
         val fetched = getText("/api/vpn/accounts/$accId", tenant)
         assertThat(JsonPath.read<Any?>(fetched, "$.password")).isNull()
+        assertThat(JsonPath.read<Any?>(fetched, "$.routerOsCommand")).isNull()
 
         // auth-user-pass-verify: kredensial benar → 204, salah → 403.
         assertThat(authenticate(nodeToken, username, password)).isEqualTo(204)

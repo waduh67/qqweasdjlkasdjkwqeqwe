@@ -103,6 +103,8 @@ export interface VpnAccountView {
   status: string
   lastHandshakeAt: string | null
   password: string | null
+  /** Perintah RouterOS v7 satu-baris siap tempel di terminal Mikrotik; sekali tampil bersama [password]. */
+  routerOsCommand: string | null
 }
 
 /** Semua opsional — alur unggulan cukup POST kosong. */

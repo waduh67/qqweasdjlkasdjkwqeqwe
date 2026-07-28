@@ -177,6 +177,7 @@ class VpnAccountService(
             status = status.name,
             lastHandshakeAt = lastHandshakeAt,
             password = if (revealPassword) password else null,
+            routerOsCommand = if (revealPassword) renderer.renderRouterOsCommand(server, this) else null,
         )
     }
 

@@ -89,6 +89,25 @@ class VpnConfigRendererTest {
     }
 
     @Test
+    fun `routeros command satu-baris siap tempel di terminal v7`() {
+        val server = newServer()
+        val peer = newPeer(server.id)
+
+        val cmd = renderer.renderRouterOsCommand(server, peer)
+
+        assertThat(cmd).startsWith("/interface/ovpn-client/add ")
+        assertThat(cmd).doesNotContain("\n")
+        assertThat(cmd).doesNotContain("\\")
+        assertThat(cmd).contains("connect-to=vpn.example.com")
+        assertThat(cmd).contains("port=1194")
+        assertThat(cmd).contains("protocol=udp")
+        assertThat(cmd).contains("user=\"bras-jakarta-1\"")
+        assertThat(cmd).contains("password=\"secretpassword12345\"")
+        assertThat(cmd).contains("cipher=aes256-gcm")
+        assertThat(cmd).contains("verify-server-certificate=no")
+    }
+
+    @Test
     fun `server conf memuat server network netmask dan ccd per peer aktif`() {
         val server = newServer().apply { setCredentials(dummyCa, null) }
         val peer = newPeer(server.id)
