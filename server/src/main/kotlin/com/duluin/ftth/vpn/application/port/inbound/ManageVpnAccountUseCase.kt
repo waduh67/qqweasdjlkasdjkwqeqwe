@@ -1,5 +1,6 @@
 package com.duluin.ftth.vpn.application.port.inbound
 
+import com.duluin.ftth.vpn.domain.model.VpnClientVariant
 import java.util.UUID
 
 /**
@@ -29,9 +30,12 @@ interface ManageVpnAccountUseCase {
 
     fun delete(id: UUID)
 
-    /** Berkas `.ovpn` klien generik (berisi kredensial) untuk akun ini. */
-    fun renderOvpn(id: UUID): String
+    /** Berkas `.ovpn` klien generik (berisi kredensial); [variant] memilih cipher v7 (GCM)/v6 (CBC). */
+    fun renderOvpn(id: UUID, variant: VpnClientVariant = VpnClientVariant.V7): String
 
-    /** Skrip RouterOS v7 (ovpn-client) untuk akun ini. */
-    fun renderRouterOs(id: UUID): String
+    /**
+     * Skrip RouterOS (ovpn-client) untuk akun ini. [variant] V7 (default; UDP/TCP + GCM) atau
+     * V6 (TCP + CBC, sintaks menu lama). V6 pada hub non-TCP ditolak (v6 mustahil dial UDP).
+     */
+    fun renderRouterOs(id: UUID, variant: VpnClientVariant = VpnClientVariant.V7): String
 }

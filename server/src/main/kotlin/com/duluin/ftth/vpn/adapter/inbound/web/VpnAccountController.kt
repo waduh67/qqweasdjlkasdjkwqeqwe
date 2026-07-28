@@ -3,6 +3,7 @@ package com.duluin.ftth.vpn.adapter.inbound.web
 import com.duluin.ftth.vpn.application.port.inbound.GenerateVpnAccountCommand
 import com.duluin.ftth.vpn.application.port.inbound.ManageVpnAccountUseCase
 import com.duluin.ftth.vpn.application.port.inbound.VpnAccountView
+import com.duluin.ftth.vpn.domain.model.VpnClientVariant
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
@@ -70,13 +72,19 @@ class VpnAccountController(
 
     @GetMapping("/{id}/ovpn", produces = ["text/plain"])
     @PreAuthorize("@authz.can('vpn.config.view')")
-    @Operation(summary = "Unduh berkas .ovpn akun (berisi kredensial)")
-    fun ovpn(@PathVariable id: UUID): String = accounts.renderOvpn(id)
+    @Operation(summary = "Unduh berkas .ovpn akun (berisi kredensial); variant V7 (GCM) / V6 (CBC)")
+    fun ovpn(
+        @PathVariable id: UUID,
+        @RequestParam(required = false, defaultValue = "V7") variant: VpnClientVariant,
+    ): String = accounts.renderOvpn(id, variant)
 
     @GetMapping("/{id}/routeros", produces = ["text/plain"])
     @PreAuthorize("@authz.can('vpn.config.view')")
-    @Operation(summary = "Unduh skrip RouterOS akun (berisi kredensial)")
-    fun routerOs(@PathVariable id: UUID): String = accounts.renderRouterOs(id)
+    @Operation(summary = "Unduh skrip RouterOS akun (berisi kredensial); variant V7 / V6")
+    fun routerOs(
+        @PathVariable id: UUID,
+        @RequestParam(required = false, defaultValue = "V7") variant: VpnClientVariant,
+    ): String = accounts.renderRouterOs(id, variant)
 }
 
 /**

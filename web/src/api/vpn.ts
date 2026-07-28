@@ -102,10 +102,17 @@ export interface VpnAccountView {
   winboxAddress: string
   status: string
   lastHandshakeAt: string | null
+  /** True bila hub-nya TCP → juga melayani RouterOS v6 (TCP + AES-256-CBC), bukan cuma v7. */
+  supportsV6: boolean
   password: string | null
   /** Perintah RouterOS v7 satu-baris siap tempel di terminal Mikrotik; sekali tampil bersama [password]. */
   routerOsCommand: string | null
+  /** Perintah RouterOS v6 (TCP + AES-256-CBC, best-effort); sekali tampil, hanya bila [supportsV6]. */
+  routerOsCommandV6: string | null
 }
+
+/** Varian klien saat unduh config: v7 (UDP/TCP + GCM) atau v6 (TCP + CBC). */
+export type VpnClientVariant = 'V7' | 'V6'
 
 /** Semua opsional — alur unggulan cukup POST kosong. */
 export interface GenerateVpnAccountRequest {
@@ -140,8 +147,10 @@ export const deleteAccount = (id: string) => api.del<void>(`/api/vpn/accounts/${
 
 // ---- Unduh config akun (berisi kredensial; izin vpn.config.view) ----
 
-/** Unduh berkas .ovpn akun sebagai Blob (dijadikan unduhan file oleh pemanggil). */
-export const downloadAccountOvpn = (id: string) => api.blob(`/api/vpn/accounts/${id}/ovpn`)
+/** Unduh berkas .ovpn akun sebagai Blob (dijadikan unduhan file oleh pemanggil). [variant] V7 (GCM)/V6 (CBC). */
+export const downloadAccountOvpn = (id: string, variant: VpnClientVariant = 'V7') =>
+  api.blob(`/api/vpn/accounts/${id}/ovpn?variant=${variant}`)
 
-/** Unduh skrip RouterOS akun sebagai Blob. */
-export const downloadAccountRouterOs = (id: string) => api.blob(`/api/vpn/accounts/${id}/routeros`)
+/** Unduh skrip RouterOS akun sebagai Blob. [variant] V7 (default)/V6 (perangkat lama). */
+export const downloadAccountRouterOs = (id: string, variant: VpnClientVariant = 'V7') =>
+  api.blob(`/api/vpn/accounts/${id}/routeros?variant=${variant}`)

@@ -51,6 +51,9 @@ class VpnInstallScriptTest {
         assertThat(script).contains("client-connect /etc/openvpn/server/ftth-connect.sh")
         assertThat(script).contains("client-disconnect /etc/openvpn/server/ftth-disconnect.sh")
         assertThat(script).contains("dh none")
+        // NCP: satu hub melayani v7 (GCM) & v6 (CBC fallback).
+        assertThat(script).contains("data-ciphers AES-256-GCM:AES-256-CBC")
+        assertThat(script).contains("data-ciphers-fallback AES-256-CBC")
         // DNAT port publik -> Winbox: rute-balik MASQUERADE + FORWARD subnet tunnel, port device 8291.
         assertThat(script).contains("TUN_CIDR=\"10.8.0.0/24\"")
         assertThat(script).contains("-j MASQUERADE")

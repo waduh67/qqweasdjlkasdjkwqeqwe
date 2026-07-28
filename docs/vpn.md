@@ -74,8 +74,18 @@ di-allowlist di `SecurityConfig` (`/api/vpn/provision/**`):
 
 Model OpenVPN-nya: `verify-client-cert none` + `username-as-common-name` +
 `auth-user-pass-verify … via-file` + `client-connect …` + `script-security 2` +
-`dh none`, cipher `AES-256-GCM`. Jadi VPS tak menyimpan daftar user — semua
-verifikasi memanggil balik aplikasi.
+`dh none`. Cipher dinego lewat **NCP** (`data-ciphers AES-256-GCM:AES-256-CBC` +
+`data-ciphers-fallback AES-256-CBC`) → **satu hub melayani RouterOS v7 (GCM) &
+v6 (CBC)** sekaligus. Jadi VPS tak menyimpan daftar user — semua verifikasi
+memanggil balik aplikasi.
+
+**Dukungan RouterOS v6.** Klien OVPN v6 itu **TCP-only** + **CBC-only** (tanpa NCP)
+dan tanpa properti `verify-server-certificate`. Maka: (a) hub yang melayani v6 harus
+berprotokol **TCP** (v6 mustahil dial UDP) — `VpnAccountView.supportsV6` = true hanya
+untuk hub TCP; (b) config v6 dirender terpisah lewat `VpnClientVariant.V6` (menu lama
+`/interface ovpn-client add`, `cipher=aes256-cbc`, `certificate=none`). Perangkat v7
+tak terpengaruh (tetap nego GCM). Render v6 **best-effort** — properti CLI v6 bervariasi
+antar-rilis; minta akun varian v6 pada hub non-TCP ditolak `ConflictException`.
 
 ---
 
@@ -101,12 +111,15 @@ adalah tabel **tanpa RLS**; `vpn_peer` menyimpan `tenant_id` sebagai **kolom pol
 
 Artefak siap-unduh, dirender dari entitas yang rahasianya **sudah terdekripsi**:
 
-1. **`.ovpn` klien** (`GET /accounts/{id}/ovpn`) — mandiri, CA + kredensial inline
-   (`<auth-user-pass>`, `<ca>`, dan `<tls-auth>` + `key-direction 1` bila hub punya
-   tls-auth). Melempar `ConflictException` bila hub belum punya CA.
-2. **Skrip RouterOS v7** (`GET /accounts/{id}/routeros`) — `/interface/ovpn-client/add`
-   `cipher=aes256-gcm verify-server-certificate=no`, sejalan dengan adapter Mikrotik
-   REST v7 di module `bng`.
+1. **`.ovpn` klien** (`GET /accounts/{id}/ovpn?variant=V7|V6`) — mandiri, CA + kredensial
+   inline (`<auth-user-pass>`, `<ca>`, dan `<tls-auth>` + `key-direction 1` bila hub punya
+   tls-auth). `variant=V6` memakai `cipher AES-256-CBC` + `proto tcp`. Melempar
+   `ConflictException` bila hub belum punya CA (atau V6 pada hub non-TCP).
+2. **Skrip RouterOS** (`GET /accounts/{id}/routeros?variant=V7|V6`) — default **v7**
+   (`/interface/ovpn-client/add cipher=aes256-gcm verify-server-certificate=no`, sejalan
+   dengan adapter Mikrotik REST v7 di module `bng`). `variant=V6` merender sintaks menu lama
+   (`/interface ovpn-client add cipher=aes256-cbc certificate=none`) untuk perangkat lama —
+   hanya pada hub TCP.
 3. **`server.conf` + client-config-dir** (`GET /servers/{id}/config`, admin platform)
    — isi `server.conf` plus map `username → ifconfig-push {overlayIp} {netmask}` untuk
    tiap akun **ENABLED**. (Umumnya tak perlu disentuh manual: installer sudah
@@ -163,7 +176,7 @@ Artefak siap-unduh, dirender dari entitas yang rahasianya **sudah terdekripsi**:
 | `GET /api/vpn/accounts` · `/{id}` | `vpn.peer.view` |
 | `POST /api/vpn/accounts/generate` | `vpn.peer.manage` |
 | `POST /api/vpn/accounts/{id}/{enable,disable,rotate-password}` · `DELETE` | `vpn.peer.manage` |
-| `GET /api/vpn/accounts/{id}/ovpn` · `/routeros` | `vpn.config.view` |
+| `GET /api/vpn/accounts/{id}/ovpn` · `/routeros` (`?variant=V7\|V6`) | `vpn.config.view` |
 
 **Provisioning (dari VPS, auth via token node — tanpa bearer, di-allowlist):**
 

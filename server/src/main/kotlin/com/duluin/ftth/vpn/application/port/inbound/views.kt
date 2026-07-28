@@ -60,14 +60,23 @@ data class VpnAccountView(
     val winboxAddress: String,
     val status: String,
     val lastHandshakeAt: Instant?,
+    /**
+     * True bila hub-nya TCP → juga melayani perangkat **RouterOS v6** (TCP + AES-256-CBC), bukan
+     * cuma v7. Menentukan apakah UI menawarkan varian/unduhan v6.
+     */
+    val supportsV6: Boolean = false,
     /** Sekali tampil saat generate/rotasi; null pada list/get. */
     val password: String? = null,
     /**
      * Perintah RouterOS v7 satu-baris siap salin-tempel di terminal Mikrotik (sudah berisi
-     * [password]). Sekali tampil bersama [password]; null pada list/get. v6 tak didukung hub
-     * (butuh UDP + AES-256-GCM).
+     * [password]). Sekali tampil bersama [password]; null pada list/get.
      */
     val routerOsCommand: String? = null,
+    /**
+     * Perintah RouterOS **v6** satu-baris (TCP + AES-256-CBC, sintaks menu lama) — best-effort untuk
+     * perangkat lama. Sekali tampil bersama [password] DAN hanya bila [supportsV6]; null selain itu.
+     */
+    val routerOsCommandV6: String? = null,
 )
 
 /**

@@ -12,7 +12,9 @@ import com.duluin.ftth.vpn.application.port.outbound.VpnServerRepository
 import com.duluin.ftth.vpn.config.VpnProperties
 import com.duluin.ftth.vpn.domain.model.RemotePortRange
 import com.duluin.ftth.vpn.domain.model.TunnelSubnet
+import com.duluin.ftth.vpn.domain.model.VpnClientVariant
 import com.duluin.ftth.vpn.domain.model.VpnPeer
+import com.duluin.ftth.vpn.domain.model.VpnProtocol
 import com.duluin.ftth.vpn.domain.model.VpnServer
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -114,15 +116,19 @@ class VpnAccountService(
     }
 
     @Transactional(readOnly = true)
-    override fun renderOvpn(id: UUID): String {
+    override fun renderOvpn(id: UUID, variant: VpnClientVariant): String {
         val peer = ownedPeer(id)
-        return renderer.renderOvpn(requireServer(peer.serverId), peer)
+        return renderer.renderOvpn(requireServer(peer.serverId), peer, variant)
     }
 
     @Transactional(readOnly = true)
-    override fun renderRouterOs(id: UUID): String {
+    override fun renderRouterOs(id: UUID, variant: VpnClientVariant): String {
         val peer = ownedPeer(id)
-        return renderer.renderRouterOs(requireServer(peer.serverId), peer)
+        val server = requireServer(peer.serverId)
+        return when (variant) {
+            VpnClientVariant.V7 -> renderer.renderRouterOs(server, peer)
+            VpnClientVariant.V6 -> renderer.renderRouterOsV6(server, peer)
+        }
     }
 
     /** Hub paling lengang di antara yang siap-pakai (ACTIVE + PKI); menolak bila belum ada. */
@@ -161,6 +167,8 @@ class VpnAccountService(
 
     private fun VpnPeer.toView(server: VpnServer, revealPassword: Boolean = false): VpnAccountView {
         val protocol = server.protocol.name
+        // Hub TCP menyajikan GCM+CBC (NCP) → juga melayani RouterOS v6.
+        val supportsV6 = server.protocol == VpnProtocol.TCP
         return VpnAccountView(
             id = id,
             label = name,
@@ -176,8 +184,10 @@ class VpnAccountService(
             winboxAddress = "${server.host}:$remotePort",
             status = status.name,
             lastHandshakeAt = lastHandshakeAt,
+            supportsV6 = supportsV6,
             password = if (revealPassword) password else null,
             routerOsCommand = if (revealPassword) renderer.renderRouterOsCommand(server, this) else null,
+            routerOsCommandV6 = if (revealPassword && supportsV6) renderer.renderRouterOsCommandV6(server, this) else null,
         )
     }
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ApiError } from '../api/client'
 import {
   deleteAccount,
@@ -296,35 +296,36 @@ function CredentialCard({ account, onDismiss }: { account: VpnAccountView; onDis
         </tbody>
       </table>
       {account.routerOsCommand && (
-        <div className="stack" style={{ gap: '0.35rem', marginBottom: '0.7rem' }}>
-          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="muted" style={{ fontSize: '0.82rem' }}>
+        <CommandBlock
+          title={
+            <>
               Atau tinggal tempel di terminal RouterOS <strong>v7</strong> (langsung jadi):
-            </span>
-            <button className="small ghost" onClick={() => copy(account.routerOsCommand!, 'Perintah RouterOS')}>
-              Salin perintah
-            </button>
-          </div>
-          <pre
-            style={{
-              margin: 0,
-              padding: '0.6rem 0.7rem',
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: '6px',
-              overflowX: 'auto',
-              fontSize: '0.76rem',
-              lineHeight: 1.5,
-            }}
-          >
-            <code>{account.routerOsCommand}</code>
-          </pre>
-          <span className="muted" style={{ fontSize: '0.76rem' }}>
-            Perlu RouterOS v7 — v6 tak didukung (hub pakai UDP + AES-256-GCM).
-          </span>
-        </div>
+            </>
+          }
+          command={account.routerOsCommand}
+          copyLabel="Salin perintah"
+          onCopy={() => copy(account.routerOsCommand!, 'Perintah RouterOS v7')}
+          hint={
+            account.supportsV6
+              ? 'RouterOS v7 (UDP/TCP + AES-256-GCM). Perangkat v6? Pakai perintah di bawah.'
+              : 'RouterOS v7 (AES-256-GCM). Perangkat v6 butuh hub TCP — hub akun ini bukan TCP.'
+          }
+        />
       )}
-      <div className="row">
+      {account.supportsV6 && account.routerOsCommandV6 && (
+        <CommandBlock
+          title={
+            <>
+              Perangkat lama? Tempel di terminal RouterOS <strong>v6</strong> (TCP + AES-256-CBC):
+            </>
+          }
+          command={account.routerOsCommandV6}
+          copyLabel="Salin perintah v6"
+          onCopy={() => copy(account.routerOsCommandV6!, 'Perintah RouterOS v6')}
+          hint="Best-effort untuk v6 — bila ada properti yang ditolak, sesuaikan dengan rilis RouterOS Anda."
+        />
+      )}
+      <div className="row" style={{ flexWrap: 'wrap' }}>
         <button
           className="small"
           onClick={() => void saveBlob(() => downloadAccountRouterOs(account.id), `${account.username}.rsc`, toast.error)}
@@ -337,10 +338,80 @@ function CredentialCard({ account, onDismiss }: { account: VpnAccountView; onDis
         >
           Unduh .ovpn
         </button>
+        {account.supportsV6 && (
+          <>
+            <button
+              className="small"
+              onClick={() =>
+                void saveBlob(
+                  () => downloadAccountRouterOs(account.id, 'V6'),
+                  `${account.username}-v6.rsc`,
+                  toast.error,
+                )
+              }
+            >
+              Unduh RouterOS v6
+            </button>
+            <button
+              className="small ghost"
+              onClick={() =>
+                void saveBlob(() => downloadAccountOvpn(account.id, 'V6'), `${account.username}-v6.ovpn`, toast.error)
+              }
+            >
+              Unduh .ovpn v6
+            </button>
+          </>
+        )}
         <button className="ghost small" onClick={onDismiss}>
           Selesai
         </button>
       </div>
+    </div>
+  )
+}
+
+/* ---------- Blok perintah RouterOS satu-baris (v7/v6), dengan salin + catatan ---------- */
+
+function CommandBlock({
+  title,
+  command,
+  copyLabel,
+  onCopy,
+  hint,
+}: {
+  title: ReactNode
+  command: string
+  copyLabel: string
+  onCopy: () => void
+  hint: string
+}) {
+  return (
+    <div className="stack" style={{ gap: '0.35rem', marginBottom: '0.7rem' }}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <span className="muted" style={{ fontSize: '0.82rem' }}>
+          {title}
+        </span>
+        <button className="small ghost" onClick={onCopy}>
+          {copyLabel}
+        </button>
+      </div>
+      <pre
+        style={{
+          margin: 0,
+          padding: '0.6rem 0.7rem',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: '6px',
+          overflowX: 'auto',
+          fontSize: '0.76rem',
+          lineHeight: 1.5,
+        }}
+      >
+        <code>{command}</code>
+      </pre>
+      <span className="muted" style={{ fontSize: '0.76rem' }}>
+        {hint}
+      </span>
     </div>
   )
 }

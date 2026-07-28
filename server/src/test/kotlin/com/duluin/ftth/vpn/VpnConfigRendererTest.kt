@@ -3,6 +3,7 @@ package com.duluin.ftth.vpn
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.vpn.application.service.VpnConfigRenderer
+import com.duluin.ftth.vpn.domain.model.VpnClientVariant
 import com.duluin.ftth.vpn.domain.model.VpnPeer
 import com.duluin.ftth.vpn.domain.model.VpnProtocol
 import com.duluin.ftth.vpn.domain.model.VpnServer
@@ -21,6 +22,15 @@ class VpnConfigRendererTest {
         host = "vpn.example.com",
         port = 1194,
         protocol = VpnProtocol.UDP,
+        tunnelCidr = "10.8.0.0/24",
+    )
+
+    /** Hub TCP — satu-satunya yang bisa melayani RouterOS v6 (v6 TCP-only). */
+    private fun newTcpServer(): VpnServer = VpnServer.create(
+        name = "Hub TCP",
+        host = "vpn.example.com",
+        port = 443,
+        protocol = VpnProtocol.TCP,
         tunnelCidr = "10.8.0.0/24",
     )
 
@@ -105,6 +115,65 @@ class VpnConfigRendererTest {
         assertThat(cmd).contains("password=\"secretpassword12345\"")
         assertThat(cmd).contains("cipher=aes256-gcm")
         assertThat(cmd).contains("verify-server-certificate=no")
+    }
+
+    @Test
+    fun `routeros v6 command satu-baris pakai menu lama TCP dan cipher CBC`() {
+        val server = newTcpServer()
+        val peer = newPeer(server.id)
+
+        val cmd = renderer.renderRouterOsCommandV6(server, peer)
+
+        // Sintaks menu lama (spasi, bukan slash) + satu baris.
+        assertThat(cmd).startsWith("/interface ovpn-client add ")
+        assertThat(cmd).doesNotContain("\n")
+        assertThat(cmd).contains("connect-to=vpn.example.com")
+        assertThat(cmd).contains("port=443")
+        assertThat(cmd).contains("user=\"bras-jakarta-1\"")
+        assertThat(cmd).contains("password=\"secretpassword12345\"")
+        assertThat(cmd).contains("cipher=aes256-cbc")
+        assertThat(cmd).contains("certificate=none")
+        assertThat(cmd).contains("auth=sha1")
+        // v6 tak punya properti-properti v7 ini — jangan sampai bocor & bikin perintah gagal.
+        assertThat(cmd).doesNotContain("aes256-gcm")
+        assertThat(cmd).doesNotContain("verify-server-certificate")
+        assertThat(cmd).doesNotContain("protocol=")
+    }
+
+    @Test
+    fun `routeros v6 dan ovpn v6 ditolak pada hub non-TCP`() {
+        val udp = newServer().apply { setCredentials(dummyCa, null) }
+        val peer = newPeer(udp.id)
+
+        assertThatThrownBy { renderer.renderRouterOsCommandV6(udp, peer) }
+            .isInstanceOf(ConflictException::class.java)
+        assertThatThrownBy { renderer.renderRouterOsV6(udp, peer) }
+            .isInstanceOf(ConflictException::class.java)
+        assertThatThrownBy { renderer.renderOvpn(udp, peer, VpnClientVariant.V6) }
+            .isInstanceOf(ConflictException::class.java)
+    }
+
+    @Test
+    fun `ovpn v6 memakai cipher CBC dan proto tcp`() {
+        val server = newTcpServer().apply { setCredentials(dummyCa, null) }
+        val peer = newPeer(server.id)
+
+        val ovpn = renderer.renderOvpn(server, peer, VpnClientVariant.V6)
+
+        assertThat(ovpn).contains("proto tcp")
+        assertThat(ovpn).contains("cipher AES-256-CBC")
+        assertThat(ovpn).doesNotContain("AES-256-GCM")
+    }
+
+    @Test
+    fun `server conf menyajikan GCM dan CBC via NCP untuk melayani v7 dan v6`() {
+        val server = newTcpServer().apply { setCredentials(dummyCa, null) }
+        val peer = newPeer(server.id)
+
+        val config = renderer.renderServerConfig(server, listOf(peer))
+
+        assertThat(config.serverConf).contains("data-ciphers AES-256-GCM:AES-256-CBC")
+        assertThat(config.serverConf).contains("data-ciphers-fallback AES-256-CBC")
     }
 
     @Test
