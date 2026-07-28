@@ -18,6 +18,9 @@ export interface InvoiceView {
   periodStart: string
   periodEnd: string
   amount: string
+  /** Tagihan diprorata (aktivasi tengah periode); `proratedDays` = jumlah hari yang ditagih. */
+  prorated: boolean
+  proratedDays: number | null
   status: InvoiceStatus
   issuedAt: string
   dueDate: string

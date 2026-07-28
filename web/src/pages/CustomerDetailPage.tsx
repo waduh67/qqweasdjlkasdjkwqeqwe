@@ -2171,6 +2171,19 @@ function TagihanTab({ customerId }: { customerId: string }) {
                 <td className="muted">{fmtDate(inv.dueDate)}</td>
                 <td className="tnum" style={{ textAlign: 'right' }}>
                   {fmtRupiah(Number(inv.amount))}
+                  {inv.prorated && (
+                    <span
+                      className="badge neutral"
+                      style={{ marginLeft: '0.4rem' }}
+                      title={
+                        inv.proratedDays != null
+                          ? `Diprorata ${inv.proratedDays} hari (aktivasi tengah periode)`
+                          : 'Diprorata (aktivasi tengah periode)'
+                      }
+                    >
+                      prorata{inv.proratedDays != null ? ` ${inv.proratedDays}h` : ''}
+                    </span>
+                  )}
                 </td>
                 <td>
                   <Badge tone={INVOICE_TONE[inv.status]}>{INVOICE_LABEL[inv.status]}</Badge>
