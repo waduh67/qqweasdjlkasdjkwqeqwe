@@ -31,6 +31,52 @@ services:
       timeout: 5s
       retries: 12
 
+  # --- DB RADIUS: skema FreeRADIUS 3.x (radacct/radcheck/radusergroup/...) ---
+  # Postgres terpisah dari DB aplikasi supaya skema RADIUS tak nyampur RLS/timescale.
+  radius-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${RADIUS_DB_NAME:-radius}
+      POSTGRES_USER: ${RADIUS_DB_USER:-radius}
+      POSTGRES_PASSWORD: ${RADIUS_DB_PASSWORD:?wajib diisi di .env}
+    volumes:
+      - radiusdata:/var/lib/postgresql/data
+      - ./radius/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${RADIUS_DB_USER:-radius}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # --- Server FreeRADIUS: auth PPPoE + accounting ke radius-db ---
+  # Mikrotik menembak ke sini (auth 1812/udp, acct 1813/udp). CoA/Disconnect
+  # (RFC 5176 :3799) tetap ditembak COLLECTOR balik ke Mikrotik, bukan dari sini.
+  freeradius:
+    image: freeradius/freeradius-server:3.2.5
+    restart: unless-stopped
+    depends_on:
+      radius-db:
+        condition: service_healthy
+    environment:
+      RADIUS_DB_HOST: radius-db
+      RADIUS_DB_PORT: "5432"
+      RADIUS_DB_NAME: ${RADIUS_DB_NAME:-radius}
+      RADIUS_DB_USER: ${RADIUS_DB_USER:-radius}
+      RADIUS_DB_PASSWORD: ${RADIUS_DB_PASSWORD:?wajib diisi di .env}
+      RADIUS_CLIENT_NAME: ${RADIUS_CLIENT_NAME:-mikrotik}
+      RADIUS_CLIENT_IP: ${RADIUS_CLIENT_IP:?isi IP/subnet Mikrotik di .env}
+      RADIUS_CLIENT_SECRET: ${RADIUS_CLIENT_SECRET:?isi shared secret di .env}
+    volumes:
+      - ./radius/freeradius/mods-enabled/sql:/etc/freeradius/mods-enabled/sql:ro
+      - ./radius/freeradius/clients.conf:/etc/freeradius/clients.conf:ro
+    # `-X` = debug verbose (tiap Access-Request kelihatan) — enak buat nyambungin
+    # Mikrotik pertama kali. Ganti ke `-f` kalau sudah stabil.
+    command: ["radiusd", "-X"]
+    ports:
+      - "1812:1812/udp"
+      - "1813:1813/udp"
+
   # --- Object storage bukti pengerjaan work order (internal saja) ---
   minio:
     image: minio/minio
@@ -95,6 +141,7 @@ services:
 
 volumes:
   pgdata:
+  radiusdata:
   miniodata:
   caddy_data:
   caddy_config:

@@ -1,0 +1,44 @@
+# Modul SQL FreeRADIUS → PostgreSQL (service radius-db). Kredensial diambil dari
+# environment lewat $ENV{...} (FreeRADIUS 3.x meng-expand ini saat parse config),
+# jadi tidak ada secret tertulis di file — semua di `.env`.
+#
+# Query bawaan (authorize/accounting/post-auth) diikutkan dari mods-config/sql yang
+# sudah ada di image resmi; di sini kita hanya atur koneksi + tabel.
+sql {
+    dialect = "postgresql"
+    driver = "rlm_sql_${dialect}"
+
+    server    = "$ENV{RADIUS_DB_HOST}"
+    port      = $ENV{RADIUS_DB_PORT}
+    login     = "$ENV{RADIUS_DB_USER}"
+    password  = "$ENV{RADIUS_DB_PASSWORD}"
+    radius_db = "$ENV{RADIUS_DB_NAME}"
+
+    # Klien BRAS didefinisikan di clients.conf (dari .env), bukan dari tabel nas.
+    read_clients = no
+
+    # Dipakai queries.conf bawaan untuk memetakan grup — wajib ada walau fitur grup
+    # tak dipakai, kalau tidak radiusd gagal parse. "SQL-Group" atribut kamus bawaan.
+    group_attribute = "SQL-Group"
+
+    # Kolom-kolom baku FreeRADIUS.
+    acct_table1 = "radacct"
+    acct_table2 = "radacct"
+    postauth_table = "radpostauth"
+    authcheck_table = "radcheck"
+    authreply_table = "radreply"
+    groupcheck_table = "radgroupcheck"
+    groupreply_table = "radgroupreply"
+    usergroup_table = "radusergroup"
+
+    pool {
+        start = 1
+        min = 1
+        max = 5
+        spare = 1
+        idle_timeout = 60
+    }
+
+    # Query SQL siap-pakai per dialek dari image resmi.
+    $INCLUDE ${modconfdir}/${.:name}/main/${dialect}/queries.conf
+}

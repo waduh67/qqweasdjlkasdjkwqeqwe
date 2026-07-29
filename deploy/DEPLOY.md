@@ -92,8 +92,11 @@ Salin 3 hal dari repo ke folder ini: `docker-compose.prod.yml`, `Caddyfile`, fol
 
 ```bash
 scp deploy/docker-compose.prod.yml deploy/Caddyfile azureuser@20.11.22.33:/opt/ftth/
-scp -r deploy/postgres-init azureuser@20.11.22.33:/opt/ftth/
+scp -r deploy/postgres-init deploy/radius azureuser@20.11.22.33:/opt/ftth/
 ```
+
+> Folder `radius/` berisi skema DB FreeRADIUS + config server RADIUS yang
+> di-mount stack (lihat **Bagian K**). Kalau nanti file ini berubah, ulang `scp`-nya.
 
 > Kalau nanti file infra ini berubah, ulang `scp`-nya. Image aplikasi mah otomatis
 > ke-update lewat CI, tapi file compose/Caddy disalin manual.
@@ -363,6 +366,75 @@ tapi nol-registry.
 - **Self-hosted runner** — daftarkan VPS/laptop sebagai runner GitHub → menit Actions
   jadi tak terbatas & gratis. Paling worth kalau sering deploy.
 - Atau tetap manual seperti di atas — tak butuh Actions sama sekali.
+
+---
+
+## Bagian K — Server RADIUS (FreeRADIUS) di stack
+
+Stack prod sudah menyertakan **FreeRADIUS + Postgres RADIUS** (service `freeradius`
+& `radius-db`) — jalan otomatis bareng yang lain begitu `docker compose up -d`. Ini
+server RADIUS **beneran**: Mikrotik auth PPPoE ke sini, accounting masuk `radacct`,
+lalu app/collector baca sesinya + provisioning kecepatan.
+
+### K.1 Isi `.env` + buka firewall
+
+Di `/opt/ftth/.env` isi blok RADIUS (lihat `.env.example`): `RADIUS_DB_PASSWORD`,
+`RADIUS_CLIENT_IP` (IP/subnet Mikrotik), `RADIUS_CLIENT_SECRET` (shared secret).
+
+Buka di NSG/firewall VPS, **batasi ke IP Mikrotik**:
+- `1812/udp` (auth) · `1813/udp` (accounting)
+
+Terapkan:
+```bash
+cd /opt/ftth
+docker compose -f docker-compose.prod.yml up -d radius-db freeradius
+docker compose -f docker-compose.prod.yml logs -f freeradius   # -X: tiap auth kelihatan
+```
+
+### K.2 Arahkan Mikrotik ke RADIUS ini (RouterOS v7)
+
+```rsc
+# <IP-VPS> = IP publik VPS; secret = RADIUS_CLIENT_SECRET di .env
+/radius add service=ppp address=<IP-VPS> secret=<RADIUS_CLIENT_SECRET> \
+    authentication-port=1812 accounting-port=1813
+/radius incoming set accept=yes port=3799
+/ppp aaa set use-radius=yes accounting=yes interim-update=5m
+```
+
+### K.3 (Uji cepat) bikin satu user PPPoE tanpa app
+
+Sebelum provisioning app dipakai, bisa tes login dengan menaruh user langsung:
+```bash
+docker compose -f docker-compose.prod.yml exec radius-db \
+  psql -U radius -d radius -c \
+  "INSERT INTO radcheck (username,attribute,op,value) VALUES ('test@isp.net','Cleartext-Password',':=','test123');"
+```
+Dial `test@isp.net`/`test123` dari klien PPPoE → di log `freeradius` harus muncul
+`Access-Accept`, dan `radacct` dapat baris sesi baru.
+
+### K.4 Daftarkan BRAS di UI app (form Add RADIUS server)
+
+| Field | Isi |
+|---|---|
+| Nama | `BRAS Produksi` (bebas) |
+| Vendor | `MIKROTIK` |
+| Alamat manajemen | **IP Mikrotik** (sasaran CoA/Disconnect :3799) |
+| NAS-Identifier | identitas NAS = `radacct.nasidentifier` (cek `SELECT DISTINCT nasidentifier FROM radacct;`) |
+| Secret CoA | secret DAE di `/radius incoming` Mikrotik (biasanya = `RADIUS_CLIENT_SECRET`) |
+| URL JDBC | `jdbc:postgresql://radius-db:5432/radius` (bila collector di stack yang sama) |
+| User DB | `RADIUS_DB_USER` (mis. `radius`) |
+| Password DB | `RADIUS_DB_PASSWORD` |
+| Aktif | ✅ |
+
+### K.5 Catatan arah koneksi (penting)
+
+- **Auth/acct**: Mikrotik → VPS (1812/1813). Selama Mikrotik bisa keluar ke internet, jalan.
+- **CoA/Disconnect**: collector → **Mikrotik** :3799. Jadi collector harus bisa
+  **menjangkau balik** Mikrotik. Kalau Mikrotik di belakang NAT (tanpa IP publik),
+  pakai **fitur VPN hub** (Bagian I) supaya collector menembak Mikrotik lewat overlay.
+- **URL JDBC** dijangkau oleh **collector**. Kalau collector jalan di stack VPS yang
+  sama → `radius-db:5432`. Kalau collector di jaringan ISP → arahkan ke host DB RADIUS
+  yang reachable (dan buka port DB ke IP collector saja).
 
 ---
 
