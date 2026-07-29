@@ -18,6 +18,15 @@ sql {
     read_clients = yes
     client_table = "nas"
 
+    # Kunci SQL per-tenant (RADIUS-as-a-service). FreeRADIUS sudah mencocokkan
+    # request ke satu klien/BRAS lewat source-IP+secret (anti-spoof); shortname
+    # klien = KODE TENANT (kolom nas.shortname). Kita prefix-kan ke User-Name
+    # sehingga radcheck/radusergroup/radacct di-key "{kodeTenant}:{username}".
+    # Efek: username telanjang boleh KEMBAR antar-tenant (tenantA:budi ≠ tenantB:budi)
+    # sedangkan CPE pelanggan tetap mengetik "budi" saja. Grup plan pakai UUID →
+    # sudah aman lintas-tenant tanpa prefix.
+    sql_user_name = "%{client:shortname}:%{User-Name}"
+
     # Dipakai queries.conf bawaan (mods-config) untuk memetakan grup — wajib ada
     # walau fitur grup tak kita pakai, kalau tidak radiusd gagal parse. "SQL-Group"
     # adalah atribut kamus bawaan (sama seperti stock mods-available/sql).
