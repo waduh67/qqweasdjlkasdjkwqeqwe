@@ -76,6 +76,16 @@ class WorkOrderController(
         ),
     )
 
+    @GetMapping("/mine")
+    @PreAuthorize("@authz.canAny('workorder.order.view','workorder.order.field')")
+    fun mine(
+        @RequestParam(required = false) status: WorkOrderStatus?,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+    ): PageResponse<WorkOrderView> = PageResponse.from(
+        query.searchMine(status, PageRequest(page, size, sort = "createdAt", descending = true)),
+    )
+
     @GetMapping("/dashboard")
     @PreAuthorize("@authz.can('workorder.dashboard.view')")
     fun dashboard(): WorkOrderDashboardView = query.dashboard()
@@ -101,11 +111,11 @@ class WorkOrderController(
         manage.assign(id, request.technicianId!!)
 
     @PostMapping("/{id}/start")
-    @PreAuthorize("@authz.can('workorder.order.update')")
+    @PreAuthorize("@authz.canAny('workorder.order.update','workorder.order.field')")
     fun start(@PathVariable id: UUID): WorkOrderView = manage.start(id)
 
     @PostMapping("/{id}/complete")
-    @PreAuthorize("@authz.can('workorder.order.close')")
+    @PreAuthorize("@authz.canAny('workorder.order.close','workorder.order.field')")
     fun complete(@PathVariable id: UUID, @Valid @RequestBody(required = false) request: CompleteRequest?): WorkOrderView =
         manage.complete(id, request?.resolutionNote)
 
@@ -115,7 +125,7 @@ class WorkOrderController(
         manage.cancel(id, request?.reason)
 
     @PutMapping("/{id}/optical")
-    @PreAuthorize("@authz.can('workorder.order.update')")
+    @PreAuthorize("@authz.canAny('workorder.order.update','workorder.order.field')")
     fun recordOptical(@PathVariable id: UUID, @Valid @RequestBody request: RecordOpticalRequest): WorkOrderView =
         manage.recordOptical(id, request.toCommand())
 

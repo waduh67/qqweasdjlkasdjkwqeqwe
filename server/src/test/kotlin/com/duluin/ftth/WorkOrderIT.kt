@@ -341,4 +341,70 @@ class WorkOrderIT {
         assertThat(JsonPath.read<String>(cancelled, "$.status")).isEqualTo("CANCELLED")
         assertThat(JsonPath.read<String>(cancelled, "$.cancelReason")).isEqualTo("Duplikat")
     }
+
+    @Test
+    fun `work order tertaut pelanggan membawa koordinat tujuan untuk navigasi teknisi`() {
+        val token = newTenantAdmin("wo")
+        val (customerId, _) = newCustomer(token) // lokasi lon 106.99 lat -6.24
+
+        val created = createWorkOrder(token, """{"type":"PSB","title":"Pasang baru","customerId":"$customerId"}""")
+        assertThat(JsonPath.read<Double>(created, "$.destinationLat")).isEqualTo(-6.24)
+        assertThat(JsonPath.read<Double>(created, "$.destinationLng")).isEqualTo(106.99)
+
+        // Ikut muncul di daftar (jalur resolusi batch).
+        val list = get("/api/work-orders", token)
+        assertThat(JsonPath.read<Double>(list, "$.content[0].destinationLat")).isEqualTo(-6.24)
+        assertThat(JsonPath.read<Double>(list, "$.content[0].destinationLng")).isEqualTo(106.99)
+
+        // WO tanpa pelanggan → koordinat null.
+        val lepasan = createWorkOrder(token, """{"type":"PSB","title":"Pasang lepasan"}""")
+        assertThat(JsonPath.read<Any?>(lepasan, "$.destinationLat")).isNull()
+    }
+
+    @Test
+    fun `teknisi lapangan hanya lihat dan kerjakan WO miliknya, WO lain ditolak 403`() {
+        val slug = "wo${uniq()}"
+        val adminEmail = "admin@$slug.test"
+        onboarding.onboard(OnboardTenantCommand(slug, "Tenant $slug", adminEmail, "Admin", pass))
+        val adminToken = login(slug, adminEmail)
+
+        // Role sistem "Teknisi" tersedia sejak onboarding.
+        val roles = get("/api/roles", adminToken)
+        val roleNames = JsonPath.read<List<String>>(roles, "$[*].name")
+        val roleIds = JsonPath.read<List<String>>(roles, "$[*].id")
+        assertThat(roleNames).contains("Teknisi")
+        val teknisiRoleId = roleIds[roleNames.indexOf("Teknisi")]
+
+        // Dua teknisi ber-role Teknisi.
+        val tech1Email = "tech1-${uniq()}@x.test"
+        val tech1Id = id(
+            post("/api/users", adminToken, """{"email":"$tech1Email","name":"Teknisi Satu","password":"$pass","roleIds":["$teknisiRoleId"]}"""),
+        )
+        val tech2Id = id(
+            post("/api/users", adminToken, """{"email":"tech2-${uniq()}@x.test","name":"Teknisi Dua","password":"$pass","roleIds":["$teknisiRoleId"]}"""),
+        )
+        val tech1Token = login(slug, tech1Email)
+
+        // WO milik tech1 dan WO milik tech2.
+        val woMine = id(createWorkOrder(adminToken, """{"type":"PSB","title":"Pasang ke A"}"""))
+        post("/api/work-orders/$woMine/assign", adminToken, """{"technicianId":"$tech1Id"}""", 200)
+        val woOther = id(createWorkOrder(adminToken, """{"type":"PSB","title":"Pasang ke B"}"""))
+        post("/api/work-orders/$woOther/assign", adminToken, """{"technicianId":"$tech2Id"}""", 200)
+
+        // Papan tugas /mine hanya berisi WO tech1.
+        val mine = get("/api/work-orders/mine", tech1Token)
+        assertThat(JsonPath.read<List<Any>>(mine, "$.content[*]")).hasSize(1)
+        assertThat(JsonPath.read<String>(mine, "$.content[0].id")).isEqualTo(woMine)
+
+        // Kerjakan WO sendiri → boleh.
+        post("/api/work-orders/$woMine/start", tech1Token, "", 200)
+        post("/api/work-orders/$woMine/complete", tech1Token, """{"resolutionNote":"Selesai"}""", 200)
+
+        // Sentuh WO teknisi lain → 403 (bukan pemiliknya).
+        post("/api/work-orders/$woOther/start", tech1Token, "", expected = 403)
+        post("/api/work-orders/$woOther/complete", tech1Token, "", expected = 403)
+
+        // Dispatcher (admin) tetap bebas mengerjakan WO mana pun.
+        post("/api/work-orders/$woOther/start", adminToken, "", 200)
+    }
 }

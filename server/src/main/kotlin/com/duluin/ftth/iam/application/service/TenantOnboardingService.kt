@@ -20,12 +20,15 @@ class TenantOnboardingService(
     override fun onboard(command: OnboardTenantCommand): OnboardTenantResult {
         val tenant = tenantApi.ensureTenant(command.slug, command.name)
         val adminCreated = TenantContext.runAs(tenant.id) {
-            provisioner.provisionTenantAdmin(
+            val created = provisioner.provisionTenantAdmin(
                 tenantId = tenant.id,
                 email = command.adminEmail,
                 name = command.adminName,
                 password = command.adminPassword,
             )
+            // Role sistem "Teknisi" untuk aplikasi teknisi mobile — tersedia sejak onboarding.
+            provisioner.ensureTechnicianRole(tenant.id)
+            created
         }
         return OnboardTenantResult(tenant = tenant, adminUserCreated = adminCreated)
     }
