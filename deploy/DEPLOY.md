@@ -272,11 +272,105 @@ dikelola HANYA oleh admin platform.
 
 ---
 
+## Bagian J — Deploy manual (kalau GitHub Actions kena limit)
+
+Kuota **GitHub Actions** (menit compute buat test + build image) bisa habis. Kalau
+itu terjadi, `git push main` **tidak lagi otomatis nge-deploy**. Tenang — yang habis
+cuma robotnya; **GHCR (gudang image) & VPS tetap jalan normal**. Jadi kita tinggal
+kerjain manual apa yang tadinya dikerjain robot: **build image di laptop → dorong ke
+GHCR → VPS narik**. Alur di VPS (compose, `.env`, nama image) tidak berubah sama sekali.
+
+### Prasyarat (sekali)
+
+- **PAT `write:packages`.** Yang di VPS (`GHCR_PAT`) cuma `read:packages` — itu buat
+  narik. Buat push dari laptop butuh scope **`write:packages`**. Bikin di GitHub →
+  Settings → Developer settings → Tokens (classic) → centang `write:packages`
+  (+ `read:packages`). Akun kamu juga harus punya akses tulis ke package org (kalau
+  `IMAGE_PREFIX` mengarah ke org, mis. `ghcr.io/karuhun-developer`).
+- **Samakan `IMAGE_PREFIX`.** Tag yang kamu build WAJIB sama dengan yang di VPS:
+  ```bash
+  grep IMAGE_PREFIX /opt/ftth/.env      # jalankan di VPS, catat nilainya
+  ```
+
+### Langkah 1 — di LAPTOP (build + push)
+
+```bash
+cd <root-repo-ftth>
+
+# login GHCR pakai PAT ber-scope write:packages
+echo '<PAT-write-packages>' | docker login ghcr.io -u <username-github> --password-stdin
+
+# SAMAKAN dengan IMAGE_PREFIX di /opt/ftth/.env
+PREFIX=ghcr.io/karuhun-developer
+
+# gerbang test (gantiin job "test" di CI)
+./gradlew :server:test
+
+# build 2 image — context & Dockerfile persis seperti CI
+docker build -f server/Dockerfile -t $PREFIX/ftth-server:latest .
+docker build -f web/Dockerfile    -t $PREFIX/ftth-web:latest    ./web
+
+# dorong ke GHCR
+docker push $PREFIX/ftth-server:latest
+docker push $PREFIX/ftth-web:latest
+```
+
+> Laptop x86_64 → VPS Azure amd64: arch cocok, aman. Kalau build dari mesin ARM,
+> tambahkan `--platform linux/amd64` di tiap `docker build`.
+
+### Langkah 2 — di VPS (deploy = ini yang bikin live)
+
+```bash
+cd /opt/ftth
+echo '<PAT-read-packages>' | docker login ghcr.io -u <username-github> --password-stdin
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+docker image prune -f
+docker compose -f docker-compose.prod.yml logs -f server   # pantau migrasi + startup
+```
+
+Migrasi DB (Flyway) jalan **otomatis** saat server start — tidak ada langkah DB manual.
+
+### Alternatif tanpa registry — `docker save` → `scp` → `load`
+
+Kalau ogah urus GHCR: bungkus image jadi file, kirim langsung ke VPS.
+
+```bash
+# LAPTOP (image di-tag dengan prefix yang sama supaya compose langsung nemu)
+PREFIX=ghcr.io/karuhun-developer
+docker build -f server/Dockerfile -t $PREFIX/ftth-server:latest .
+docker build -f web/Dockerfile    -t $PREFIX/ftth-web:latest    ./web
+docker save $PREFIX/ftth-server:latest $PREFIX/ftth-web:latest | gzip | \
+  ssh <user>@<ip-vps> 'gunzip | docker load'
+
+# VPS (image sudah ke-load, tak perlu pull)
+cd /opt/ftth && docker compose -f docker-compose.prod.yml up -d
+```
+
+Trade-off: transfer tiap deploy gede (server ~300–500 MB). Lebih lambat dari GHCR,
+tapi nol-registry.
+
+### Troubleshooting login/pull GHCR
+
+| Gejala | Sebab & solusi |
+|---|---|
+| `docker login` → `denied: denied` | Kamu menempel placeholder `<PAT-...>` mentah, bukan token asli. Ganti dengan token beneran (biasanya diawali `ghp_`). |
+| `pull` → `403 Forbidden ... manifests/latest` | Image belum pernah dipush ke namespace itu (mis. repo baru pindah org, CI tak sempat jalan) **atau** akun tak punya akses baca package org. Build+push dari laptop dulu (Langkah 1). Kalau tetap 403 setelah kepush → atur akses di `github.com/orgs/<org>/packages` → package → *Package settings* → beri akses / set visibility. |
+| `pull` → `not found` | `IMAGE_PREFIX` di `.env` beda dengan tag yang kamu push. Samakan. |
+
+### Balik ke CI otomatis (jangka panjang)
+
+- **Self-hosted runner** — daftarkan VPS/laptop sebagai runner GitHub → menit Actions
+  jadi tak terbatas & gratis. Paling worth kalau sering deploy.
+- Atau tetap manual seperti di atas — tak butuh Actions sama sekali.
+
+---
+
 ## Operasional harian
 
 | Mau apa | Perintah (di `/opt/ftth` pada VPS) |
 |---|---|
-| Update ke versi terbaru | cukup `git push main` dari laptop — otomatis |
+| Update ke versi terbaru | cukup `git push main` dari laptop — otomatis (kalau Actions limit → **Bagian J**) |
 | Restart semua | `docker compose -f docker-compose.prod.yml restart` |
 | Lihat log realtime | `docker compose -f docker-compose.prod.yml logs -f server` |
 | Backup database | `docker compose -f docker-compose.prod.yml exec postgres pg_dump -U postgres ftth > backup_$(date +%F).sql` |
