@@ -20,6 +20,9 @@ export interface WorkOrderView {
   customerName: string | null
   incidentId: string | null
   areaId: string | null
+  /** Koordinat lokasi pelanggan tertaut untuk navigasi teknisi; `null` bila tak tertaut. */
+  destinationLat: number | null
+  destinationLng: number | null
   assignedTo: string | null
   assignedToName: string | null
   scheduledAt: string | null
@@ -108,3 +111,13 @@ export const listWorkOrdersForCustomer = (customerId: string) =>
   api
     .get<PageResponse<WorkOrderView>>(`/api/work-orders?customerId=${customerId}&size=100`)
     .then((page) => page.content)
+
+/**
+ * Papan tugas milik teknisi yang sedang login (`GET /api/work-orders/mine`), opsional
+ * disaring status. Kontrak yang sama dikonsumsi aplikasi teknisi mobile untuk
+ * menampilkan "tugas saya".
+ */
+export const listMyWorkOrders = (status?: WorkOrderStatus) =>
+  api.get<PageResponse<WorkOrderView>>(
+    `/api/work-orders/mine${status ? `?status=${status}` : ''}`,
+  )
