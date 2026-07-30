@@ -193,7 +193,7 @@ class BngIT {
         val token = newTenantAdmin("bng-nas")
         val body = post(
             "/api/bng/nas", token,
-            """{"name":"BRAS-Cab","vendor":"FREERADIUS","address":"10.9.9.9",
+            """{"name":"BRAS-Cab","vendor":"OTHER","address":"10.9.9.9",
                 "nasIdentifier":"cab","coaSecret":"secretCoADiam111","collectorId":null}""",
         )
         assertThat(JsonPath.read<Boolean>(body, "$.hasCoaSecret")).isTrue()
@@ -204,7 +204,7 @@ class BngIT {
         val nasId = id(body)
         val updated = put(
             "/api/bng/nas/$nasId", token,
-            """{"name":"BRAS-Cab","vendor":"FREERADIUS","address":"10.9.9.9",
+            """{"name":"BRAS-Cab","vendor":"OTHER","address":"10.9.9.9",
                 "nasIdentifier":"cab","coaSecret":null,"collectorId":null,"enabled":true}""",
         )
         assertThat(JsonPath.read<Boolean>(updated, "$.hasCoaSecret")).isTrue()

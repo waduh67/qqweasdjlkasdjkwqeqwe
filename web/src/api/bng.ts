@@ -11,7 +11,7 @@ import { api } from './client'
  */
 
 /** Vendor BRAS yang dikenal — menentukan adapter kontrol sesi nantinya. */
-export type NasVendor = 'MIKROTIK' | 'CISCO' | 'JUNIPER' | 'FREERADIUS' | 'OTHER'
+export type NasVendor = 'MIKROTIK' | 'CISCO' | 'JUNIPER' | 'OTHER'
 
 /** ACTIVE, ISOLATED, atau TERMINATED — mengekor status langganan. */
 export type AccessStatus = 'ACTIVE' | 'ISOLATED' | 'TERMINATED'
@@ -21,12 +21,11 @@ export const NAS_VENDOR_LABEL: Record<NasVendor, string> = {
   MIKROTIK: 'MikroTik (RouterOS)',
   CISCO: 'Cisco',
   JUNIPER: 'Juniper',
-  FREERADIUS: 'FreeRADIUS',
   OTHER: 'Lainnya',
 }
 
 /** Urutan vendor untuk pilihan pada form. */
-export const NAS_VENDORS: NasVendor[] = ['MIKROTIK', 'CISCO', 'JUNIPER', 'FREERADIUS', 'OTHER']
+export const NAS_VENDORS: NasVendor[] = ['MIKROTIK', 'CISCO', 'JUNIPER', 'OTHER']
 
 /**
  * Proyeksi satu BRAS. [hasCoaSecret]/[hasApiSecret] menandai rahasianya terisi tanpa

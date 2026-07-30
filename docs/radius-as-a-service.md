@@ -62,8 +62,10 @@ ke **server**:
 | Auth + accounting | — | Mikrotik → FreeRADIUS **langsung** (keluar) |
 
 Collector **tetap** dipakai untuk OLT SNMP dan vendor **MIKROTIK-native** (kontrol
-sesi via REST RouterOS). Vendor `FREERADIUS` di collector kini ~tak terpakai (adapter
-JDBC-nya dihapus); enum-nya dipertahankan agar tak perlu migrasi data.
+sesi via REST RouterOS). Nilai vendor `FREERADIUS` **dihapus** dari registri BRAS
+(migrasi V39): `nas` adalah RADIUS *client*, sedang FreeRADIUS adalah *server*-nya, jadi
+memilihnya sebagai vendor BRAS tak bermakna. Baris lama (bila ada) dinormalkan ke `OTHER`.
+Enum kini `{ MIKROTIK, CISCO, JUNIPER, OTHER }`.
 
 ---
 

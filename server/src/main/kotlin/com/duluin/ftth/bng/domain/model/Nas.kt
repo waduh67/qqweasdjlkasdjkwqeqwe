@@ -5,7 +5,7 @@ import com.duluin.ftth.common.domain.error.ValidationException
 import java.util.UUID
 
 /** Vendor BRAS/BNG yang didukung; menentukan adapter yang dipakai agent kelak. */
-enum class NasVendor { MIKROTIK, CISCO, JUNIPER, FREERADIUS, OTHER }
+enum class NasVendor { MIKROTIK, CISCO, JUNIPER, OTHER }
 
 /**
  * Bagaimana server pusat menjangkau NAS ini untuk kontrol sesi (DAE CoA/Disconnect).
