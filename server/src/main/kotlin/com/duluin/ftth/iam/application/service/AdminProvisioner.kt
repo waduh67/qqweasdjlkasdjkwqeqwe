@@ -36,6 +36,20 @@ class AdminProvisioner(
         return ensureAdminUser(tenantId, email, name, password, platformAdmin = true, roleIds = setOf(roleId))
     }
 
+    /**
+     * Role sistem "Teknisi": izin minimal untuk pengerjaan lapangan (papan tugas +
+     * bukti WO yang ditugaskan ke diri sendiri, plus konteks pelanggan/langganan).
+     * Dipakai aplikasi teknisi mobile. Idempotent; tenant admin bebas menyesuaikan
+     * izinnya belakangan lewat role-builder.
+     */
+    fun ensureTechnicianRole(tenantId: UUID): UUID =
+        ensureRole(
+            tenantId,
+            TECHNICIAN_ROLE_NAME,
+            "Teknisi lapangan: kerjakan work order yang ditugaskan",
+            permissionIdsForCodes(TECHNICIAN_PERMISSION_CODES),
+        )
+
     private fun ensureRole(tenantId: UUID, name: String, description: String, permissionIds: Set<UUID>): UUID {
         val existing = roleRepository.findByName(name)
         return when {
@@ -79,4 +93,20 @@ class AdminProvisioner(
 
     private fun allPermissionIds(): Set<UUID> =
         permissionRepository.findAll().mapTo(HashSet()) { it.id }
+
+    private fun permissionIdsForCodes(codes: Set<String>): Set<UUID> =
+        permissionRepository.findAll().filter { it.code.value in codes }.mapTo(HashSet()) { it.id }
+
+    companion object {
+        const val TECHNICIAN_ROLE_NAME = "Teknisi"
+
+        /** Izin minimal role Teknisi; kepemilikan WO ditegakkan terpisah di modul workorder. */
+        val TECHNICIAN_PERMISSION_CODES = setOf(
+            "workorder.order.view",
+            "workorder.order.field",
+            "workorder.evidence.view",
+            "customer.customer.view",
+            "customer.subscription.view",
+        )
+    }
 }

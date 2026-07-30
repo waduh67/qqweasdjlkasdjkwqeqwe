@@ -50,7 +50,7 @@ class WorkOrderEvidenceController(
 
     @PostMapping("/evidence", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("@authz.can('workorder.evidence.manage')")
+    @PreAuthorize("@authz.canAny('workorder.evidence.manage','workorder.order.field')")
     fun upload(
         @PathVariable workOrderId: UUID,
         @RequestParam("file") file: MultipartFile,
@@ -81,7 +81,7 @@ class WorkOrderEvidenceController(
 
     @DeleteMapping("/evidence/{evidenceId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("@authz.can('workorder.evidence.manage')")
+    @PreAuthorize("@authz.canAny('workorder.evidence.manage','workorder.order.field')")
     fun delete(@PathVariable workOrderId: UUID, @PathVariable evidenceId: UUID) =
         manage.removePhoto(workOrderId, evidenceId)
 
@@ -91,7 +91,7 @@ class WorkOrderEvidenceController(
         query.getSignature(workOrderId)?.let { ResponseEntity.ok(it) } ?: ResponseEntity.noContent().build()
 
     @PutMapping("/signature", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
-    @PreAuthorize("@authz.can('workorder.evidence.manage')")
+    @PreAuthorize("@authz.canAny('workorder.evidence.manage','workorder.order.field')")
     fun sign(
         @PathVariable workOrderId: UUID,
         @RequestParam("file") file: MultipartFile,
@@ -116,7 +116,7 @@ class WorkOrderEvidenceController(
 
     @DeleteMapping("/signature")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("@authz.can('workorder.evidence.manage')")
+    @PreAuthorize("@authz.canAny('workorder.evidence.manage','workorder.order.field')")
     fun unsign(@PathVariable workOrderId: UUID) = manage.removeSignature(workOrderId)
 
     private fun MultipartFile.requireContentType(): String =

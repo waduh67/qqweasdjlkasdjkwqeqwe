@@ -13,6 +13,12 @@ interface WorkOrderQuery {
 
     fun search(filter: WorkOrderFilter, page: PageRequest): Page<WorkOrderView>
 
+    /**
+     * Papan tugas milik teknisi yang sedang login: hanya WO yang di-assign ke dirinya,
+     * opsional disaring status. Sumber data untuk aplikasi teknisi mobile.
+     */
+    fun searchMine(status: WorkOrderStatus?, page: PageRequest): Page<WorkOrderView>
+
     /** Detail satu work order beserta timeline lengkapnya. */
     fun get(id: UUID): WorkOrderDetail
 
@@ -45,6 +51,9 @@ data class WorkOrderView(
     val customerName: String?,
     val incidentId: UUID?,
     val areaId: UUID?,
+    /** Koordinat lokasi pelanggan tertaut (untuk navigasi teknisi lapangan); `null` bila WO tak tertaut pelanggan. */
+    val destinationLat: Double?,
+    val destinationLng: Double?,
     val assignedTo: UUID?,
     /** Nama teknisi ter-assign, diresolusi lewat iam; `null` bila belum ditugaskan. */
     val assignedToName: String?,

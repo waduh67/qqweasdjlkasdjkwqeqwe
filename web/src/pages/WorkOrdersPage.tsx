@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { api, ApiError } from '../api/client'
-import type { PageResponse, User } from '../api/types'
+import type { PageResponse, Role, User } from '../api/types'
 import type { CustomerView } from '../api/network'
 import type {
   EvidenceKind,
@@ -140,6 +140,7 @@ export function WorkOrdersPage() {
   const [status, setStatus] = useState<WorkOrderStatus | ''>('')
   const [type, setType] = useState<WorkOrderType | ''>('')
   const [approval, setApproval] = useState<WorkOrderApprovalStatus | ''>('')
+  const [assignedTo, setAssignedTo] = useState('')
   const [draft, setDraft] = useState<Draft | null>(null)
   const [detail, setDetail] = useState<WorkOrderDetail | null>(null)
   // Ditambah tiap ada perubahan (buat/tugaskan/lifecycle) agar dashboard menghitung ulang.
@@ -156,6 +157,7 @@ export function WorkOrdersPage() {
     if (status) params.set('status', status)
     if (type) params.set('type', type)
     if (approval) params.set('approval', approval)
+    if (assignedTo) params.set('assignedTo', assignedTo)
     try {
       const page = await api.get<PageResponse<WorkOrderView>>(`/api/work-orders?${params}`)
       setOrders(page.content)
@@ -164,7 +166,7 @@ export function WorkOrdersPage() {
     } finally {
       setLoading(false)
     }
-  }, [query, status, type, approval, toast])
+  }, [query, status, type, approval, assignedTo, toast])
 
   useEffect(() => {
     void reload()
@@ -175,9 +177,22 @@ export function WorkOrdersPage() {
       .get<PageResponse<CustomerView>>('/api/customers?size=200')
       .then((p) => setCustomers(p.content))
       .catch(() => setCustomers([]))
-    void api
-      .get<PageResponse<User>>('/api/users?size=200')
-      .then((p) => setTechnicians(p.content.filter((u) => u.status === 'ACTIVE')))
+    // Pemilih teknisi disaring ke pemegang role "Teknisi" (bukan semua user aktif) agar
+    // penugasan hanya jatuh ke petugas lapangan. Bila role belum ada / tak berizin lihat
+    // roles, jatuh balik ke semua user aktif supaya form tetap bisa dipakai.
+    void Promise.all([
+      api.get<PageResponse<User>>('/api/users?size=200'),
+      api.get<Role[]>('/api/roles').catch(() => [] as Role[]),
+    ])
+      .then(([users, roles]) => {
+        const active = users.content.filter((u) => u.status === 'ACTIVE')
+        const technicianRole = roles.find((r) => r.name === 'Teknisi')
+        setTechnicians(
+          technicianRole
+            ? active.filter((u) => u.roleIds.includes(technicianRole.id))
+            : active,
+        )
+      })
       .catch(() => setTechnicians([]))
   }, [])
 
@@ -282,6 +297,18 @@ export function WorkOrdersPage() {
             </option>
           ))}
         </select>
+        <select
+          value={assignedTo}
+          onChange={(e) => setAssignedTo(e.target.value)}
+          style={{ flex: 1, minWidth: 140 }}
+        >
+          <option value="">Semua teknisi</option>
+          {technicians.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {draft && (
@@ -302,9 +329,9 @@ export function WorkOrdersPage() {
       ) : orders.length === 0 ? (
         <div className="card">
           <EmptyState
-            title={query || status || type || approval ? 'Tidak ada work order yang cocok' : 'Belum ada work order'}
+            title={query || status || type || approval || assignedTo ? 'Tidak ada work order yang cocok' : 'Belum ada work order'}
             hint={
-              query || status || type || approval
+              query || status || type || approval || assignedTo
                 ? 'Coba ubah filter atau kata kunci.'
                 : 'Buat work order pertama untuk menjadwalkan pekerjaan lapangan.'
             }
@@ -610,6 +637,20 @@ function WorkOrderDetailBody({
         <dd style={{ margin: 0 }}>{wo.assignedToName ?? 'belum ditugaskan'}</dd>
         <dt className="muted">Jadwal</dt>
         <dd style={{ margin: 0 }}>{fmt(wo.scheduledAt)}</dd>
+        {wo.destinationLat != null && wo.destinationLng != null && (
+          <>
+            <dt className="muted">Lokasi</dt>
+            <dd style={{ margin: 0 }}>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${wo.destinationLat},${wo.destinationLng}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Navigasi ke pelanggan ↗
+              </a>
+            </dd>
+          </>
+        )}
         <dt className="muted">Dibuat</dt>
         <dd style={{ margin: 0 }}>{fmt(wo.createdAt)}</dd>
         {wo.completedAt && (

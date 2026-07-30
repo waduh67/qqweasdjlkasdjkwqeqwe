@@ -1,5 +1,6 @@
 package com.duluin.ftth.workorder.application.service
 
+import com.duluin.ftth.common.domain.error.AccessDeniedException
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
@@ -49,6 +50,7 @@ class WorkOrderEvidenceService(
     @Transactional
     override fun attachPhoto(workOrderId: UUID, command: AttachEvidenceCommand): EvidenceView {
         val workOrder = requireDocumentable(workOrderId)
+        requireFieldAccess(workOrder)
         validateImage(command.contentType, command.bytes)
         val photo = WorkOrderEvidence.attach(
             tenantId = workOrder.tenantId,
@@ -70,6 +72,7 @@ class WorkOrderEvidenceService(
     override fun removePhoto(workOrderId: UUID, evidenceId: UUID) {
         val photo = evidence.findById(evidenceId)?.takeIf { it.workOrderId == workOrderId }
             ?: throw NotFoundException("Bukti $evidenceId tidak ditemukan pada work order $workOrderId")
+        requireFieldAccess(require(workOrderId))
         evidence.deleteById(photo.id)
         storage.delete(photo.storageKey)
     }
@@ -77,6 +80,7 @@ class WorkOrderEvidenceService(
     @Transactional
     override fun captureSignature(workOrderId: UUID, command: CaptureSignatureCommand): SignatureView {
         val workOrder = require(workOrderId)
+        requireFieldAccess(workOrder)
         if (workOrder.status != WorkOrderStatus.IN_PROGRESS && workOrder.status != WorkOrderStatus.DONE) {
             throw ConflictException("Tanda tangan hanya bisa direkam saat pekerjaan berlangsung atau setelah selesai")
         }
@@ -105,6 +109,7 @@ class WorkOrderEvidenceService(
     override fun removeSignature(workOrderId: UUID) {
         val signature = signatures.findByWorkOrder(workOrderId)
             ?: throw NotFoundException("Work order $workOrderId belum punya tanda tangan")
+        requireFieldAccess(require(workOrderId))
         signatures.deleteById(signature.id)
         storage.delete(signature.storageKey)
     }
@@ -148,6 +153,18 @@ class WorkOrderEvidenceService(
             throw ConflictException("Work order sudah dibatalkan, tak bisa dilampiri bukti")
         }
         return workOrder
+    }
+
+    /**
+     * Bukti lapangan dibatasi kepemilikan: pemegang izin dispatcher (`workorder.evidence.manage`)
+     * boleh mengelola bukti WO mana pun; teknisi lapangan (hanya izin `field`) hanya WO
+     * yang ditugaskan ke dirinya. Platform admin lolos otomatis via [hasPermission].
+     */
+    private fun requireFieldAccess(workOrder: WorkOrder) {
+        val actor = currentUser.current()
+        if (!actor.hasPermission("workorder.evidence.manage") && workOrder.assignedTo != actor.userId) {
+            throw AccessDeniedException("Work order ${workOrder.code} tidak ditugaskan ke Anda")
+        }
     }
 
     private fun uploaderName(userId: UUID): String? = iamApi.findUser(userId)?.name
