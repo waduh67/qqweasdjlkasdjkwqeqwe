@@ -21,6 +21,12 @@ interface CustomerApi {
      */
     fun findSubscription(id: UUID): SubscriptionRef?
 
+    /**
+     * Semua langganan seorang pelanggan — untuk agregator Subscriber-360 yang menyusun
+     * pandangan 360° dari satu pelanggan. Kosong bila pelanggan belum punya langganan.
+     */
+    fun findSubscriptionsByCustomer(customerId: UUID): List<SubscriptionRef>
+
     /** Semua pelanggan yang tersambung pada sebuah ODP, terurut menurut nomor port. */
     fun findOccupantsOfOdp(odpId: UUID): List<OdpOccupant>
 

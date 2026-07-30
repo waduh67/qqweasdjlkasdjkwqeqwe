@@ -47,16 +47,10 @@ class CustomerApiService(
         if (ids.isEmpty()) emptyList() else customerRepository.findAllByIds(ids).map { it.toRef() }
 
     override fun findSubscription(id: UUID): SubscriptionRef? =
-        subscriptionRepository.findById(id)?.let {
-            SubscriptionRef(
-                id = it.id,
-                customerId = it.customerId,
-                planId = it.planId,
-                packageName = it.packageName,
-                bandwidthMbps = it.bandwidthMbps,
-                status = it.status.name,
-            )
-        }
+        subscriptionRepository.findById(id)?.toRef()
+
+    override fun findSubscriptionsByCustomer(customerId: UUID): List<SubscriptionRef> =
+        subscriptionRepository.findByCustomerIds(setOf(customerId)).map { it.toRef() }
 
     override fun findAwaitingInstallation(areaIds: Set<UUID>?): List<CustomerRef> =
         customerRepository.findAwaitingInstallation(areaIds).map { it.toRef() }
@@ -233,6 +227,15 @@ class CustomerApiService(
         billingDayOfMonth = billingDayOfMonth,
         graceDays = graceDays,
         autoIsolir = autoIsolir,
+    )
+
+    private fun Subscription.toRef() = SubscriptionRef(
+        id = id,
+        customerId = customerId,
+        planId = planId,
+        packageName = packageName,
+        bandwidthMbps = bandwidthMbps,
+        status = status.name,
     )
 
     private fun Customer.toRef() = CustomerRef(

@@ -299,6 +299,7 @@ class BillingCycleTest {
 
         override fun findCustomer(id: UUID) = throw UnsupportedOperationException()
         override fun findSubscription(id: UUID) = throw UnsupportedOperationException()
+        override fun findSubscriptionsByCustomer(customerId: UUID) = throw UnsupportedOperationException()
         override fun findOccupantsOfOdp(odpId: UUID) = throw UnsupportedOperationException()
         override fun findAwaitingInstallation(areaIds: Set<UUID>?) = throw UnsupportedOperationException()
         override fun findPlacementOf(customerId: UUID) = throw UnsupportedOperationException()
