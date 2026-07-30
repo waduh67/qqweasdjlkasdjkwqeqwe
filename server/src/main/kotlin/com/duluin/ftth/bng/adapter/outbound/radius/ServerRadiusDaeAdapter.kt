@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component
 /**
  * Mengirim DAE (RFC 5176) LANGSUNG dari server ke BRAS/NAS untuk mengontrol sesi hidup —
  * jalur server-side dari kontrol yang dulu hanya lewat collector on-prem. Dipakai untuk NAS
- * yang server jangkau sendiri (reachability DIRECT: IP publik → tembak `:3799`; VPN: IP
- * overlay, menyusul S2c). Paket dirakit dengan codec bersama [RadiusDae] di modul `contract`
+ * yang server jangkau sendiri — reachability DIRECT (IP publik → tembak `:3799`) atau VPN
+ * (IP overlay lewat tunnel; server ko-lokasi hub VPN). Paket dirakit dengan codec bersama [RadiusDae] di modul `contract`
  * — satu implementasi, dipakai collector maupun server, tak ada dua salinan yang bisa menyimpang.
  *
  * Keputusan idempotensi sama seperti adapter FreeRADIUS collector: Disconnect yang dibalas

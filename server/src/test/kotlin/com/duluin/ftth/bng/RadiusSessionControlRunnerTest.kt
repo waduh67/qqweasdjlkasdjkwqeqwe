@@ -24,9 +24,10 @@ import java.util.UUID
 /**
  * Menguji worker jalur-KONTROL sesi RADIUS server-side ([RadiusSessionControlRunner]) dengan
  * fake murni (tanpa Spring/DB/UDP). Inti yang diuji adalah reachability 3-jalur RADIUS-as-a-
- * service: DIRECT menembak DAE (dan menangani sesi mati per jenis aksi), VPN/NONE degradasi
- * anggun (COMPLETED bercatatan, tanpa menembak), pembelahan-klaim menyisihkan BRAS COLLECTOR,
- * sesi `radacct` dibaca malas, dan kegagalan transien tetap PENDING sampai lewat batas usia.
+ * service: DIRECT/VPN menembak DAE ke nas.address (dan menangani sesi mati per jenis aksi),
+ * NONE degradasi anggun (COMPLETED bercatatan, tanpa menembak), pembelahan-klaim menyisihkan
+ * BRAS COLLECTOR, sesi `radacct` dibaca malas, dan kegagalan transien tetap PENDING sampai
+ * lewat batas usia.
  */
 class RadiusSessionControlRunnerTest {
 
@@ -94,14 +95,31 @@ class RadiusSessionControlRunnerTest {
     }
 
     @Test
-    fun `VPN DISCONNECT degradasi anggun (rute overlay belum aktif)`() {
+    fun `VPN DISCONNECT dengan sesi hidup menembak DAE ke alamat overlay (S2c)`() {
         val nas = nas(NasReachability.VPN)
         val action = disconnect(nas.id, "budi")
+        val fx = fixture(nas = listOf(nas), pending = listOf(action), sessions = listOf(session("budi")))
+
+        fx.runner.execute(tenantId, now)
+
+        // Identik jalur DIRECT: DAE ditembak ke nas.address (yang untuk VPN diisi IP overlay).
+        val call = fx.control.disconnects.single()
+        assertThat(call.host).isEqualTo("203.0.113.9")
+        assertThat(call.username).isEqualTo("budi")
+        assertThat(call.acctSessionId).isEqualTo("s-budi")
+        assertThat(action.status).isEqualTo(BngActionStatus.COMPLETED)
+        assertThat(fx.radacct.calls).isNotEmpty() // VPN kini ikut memicu baca sesi
+    }
+
+    @Test
+    fun `VPN COA tanpa sesi degradasi anggun (berlaku saat login ulang)`() {
+        val nas = nas(NasReachability.VPN)
+        val action = coa(nas.id, "hantu", down = 100, up = 30)
         val fx = fixture(nas = listOf(nas), pending = listOf(action), sessions = emptyList())
 
         fx.runner.execute(tenantId, now)
 
-        assertThat(fx.control.disconnects).isEmpty()
+        assertThat(fx.control.coas).isEmpty()
         assertThat(action.status).isEqualTo(BngActionStatus.COMPLETED)
         assertThat(action.detail).contains("login ulang")
     }
@@ -140,14 +158,14 @@ class RadiusSessionControlRunnerTest {
     }
 
     @Test
-    fun `sesi radacct tak dibaca bila tak ada aksi DIRECT (degradasi murni)`() {
+    fun `sesi radacct tak dibaca bila tak ada aksi DIRECT atau VPN (degradasi murni)`() {
         val nas = nas(NasReachability.NONE)
         val action = disconnect(nas.id, "budi")
         val fx = fixture(nas = listOf(nas), pending = listOf(action), sessions = emptyList())
 
         fx.runner.execute(tenantId, now)
 
-        assertThat(fx.radacct.calls).isEmpty() // jalur degradasi tak butuh sesi
+        assertThat(fx.radacct.calls).isEmpty() // jalur degradasi NONE tak butuh sesi
         assertThat(action.status).isEqualTo(BngActionStatus.COMPLETED)
     }
 

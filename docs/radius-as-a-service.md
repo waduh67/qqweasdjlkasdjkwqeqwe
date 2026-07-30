@@ -142,10 +142,15 @@ Kolom `nas.reachability` menandai jalurnya (migrasi V37, default `COLLECTOR`):
   `contract.radius.RadiusDae` (murni-Kotlin, dipindah dari collector ke modul `contract`
   agar bisa dipakai dua sisi). Disconnect-NAK 503 (sesi tak ada) = idempoten/sukses;
   CoA-NAK dilempar.
-- Sesi `radacct` dibaca **malas** hanya untuk jalur `DIRECT`. `VPN`/`NONE` & CoA-tanpa-sesi
-  → `COMPLETED`-bercatatan, tak gagal keras.
+- `DIRECT` **dan** `VPN` menembak DAE lewat jalur yang **sama** — ke `nas.address:3799`
+  (IP publik untuk DIRECT, IP overlay untuk VPN). Sesi `radacct` dibaca **malas** untuk
+  keduanya (butuh Acct-Session-Id/NAS-IP). `NONE` & CoA-tanpa-sesi-hidup →
+  `COMPLETED`-bercatatan, tak gagal keras.
 - **Alamat di `nas`** = alamat yang sama dipakai target CoA (overlay IP kalau VPN, IP
   publik kalau tidak) — satu identitas, dua arah.
+- **Syarat jalur `VPN`:** container `server` harus **ter-rute ke subnet overlay** (server
+  ko-lokasi hub). Auto-resolve overlay IP dari peer VPN tertaut (`VpnApi` + linkage
+  peer↔nas) = enhancement lanjutan; kini operator mengisi overlay IP sebagai `nas.address`.
 - DNAT port-publik VPN (`RemotePortRange` 20000-40000 → `overlay:8291`) hanya untuk remote
   Winbox, **bukan** jalur CoA.
 

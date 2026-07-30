@@ -63,10 +63,12 @@ class RadiusSessionControlDispatcher(
  *  - **DIRECT**: tembak DAE ke IP publik NAS. DISCONNECT tanpa sesi = sudah tercapai
  *    (COMPLETED polos); COA tanpa sesi = degradasi (tak bisa ubah sesi mati, tapi rate baru
  *    sudah tertulis di grup → berlaku saat login ulang).
- *  - **VPN**: rute overlay belum aktif (S2c) → degradasi anggun.
+ *  - **VPN**: tembak DAE ke IP OVERLAY NAS (`nas.address` = overlay IP) — jalur & penanganan
+ *    sesi IDENTIK DIRECT. Syaratnya server ter-rute ke jaringan overlay (server ko-lokasi hub
+ *    VPN). Auto-resolve overlay IP dari peer VPN tertaut = enhancement lanjutan (butuh VpnApi).
  *  - **NONE**: tak terjangkau → degradasi anggun.
  *
- * Sesi `radacct` dibaca MALAS: hanya bila ada aksi DIRECT (jalur degradasi tak butuh sesi).
+ * Sesi `radacct` dibaca MALAS: hanya bila ada aksi DIRECT/VPN (jalur degradasi NONE tak butuh sesi).
  */
 @Component
 class RadiusSessionControlRunner(
@@ -96,9 +98,9 @@ class RadiusSessionControlRunner(
         val pending = bngActionRepository.findServerSessionControlPending(serverNas.keys, props.batchSize)
         if (pending.isEmpty()) return
 
-        // Sesi hanya dibutuhkan jalur DIRECT (untuk Acct-Session-Id/NAS-IP & cek sesi hidup).
+        // Sesi dibutuhkan jalur DAE langsung DIRECT/VPN (untuk Acct-Session-Id/NAS-IP & cek sesi hidup).
         val sessions: Map<String, SessionObservation> =
-            if (pending.any { serverNas[it.nasId]?.reachability == NasReachability.DIRECT }) {
+            if (pending.any { serverNas[it.nasId]?.reachability.firesDae() }) {
                 val slug = tenantApi.findById(tenantId)?.slug ?: run {
                     log.warn("Tenant {} tak punya slug — kontrol sesi RADIUS dilewati", tenantId)
                     return
@@ -117,8 +119,8 @@ class RadiusSessionControlRunner(
     private fun executeOne(action: BngAction, nas: Nas, sessions: Map<String, SessionObservation>, now: Instant) {
         try {
             when (nas.reachability) {
-                NasReachability.DIRECT -> fireDirect(action, nas, sessions)
-                NasReachability.VPN -> action.completeWithNote(degradeNote(action, nas, "rute overlay VPN belum aktif"))
+                // DIRECT (IP publik) & VPN (IP overlay) sama-sama menembak DAE ke nas.address.
+                NasReachability.DIRECT, NasReachability.VPN -> fireDae(action, nas, sessions)
                 NasReachability.NONE -> action.completeWithNote(degradeNote(action, nas, "BRAS tak terjangkau server"))
                 // Klaim hanya BRAS non-COLLECTOR — cabang ini defensif, tak akan tercapai.
                 NasReachability.COLLECTOR -> return
@@ -129,8 +131,11 @@ class RadiusSessionControlRunner(
         }
     }
 
-    /** Jalur DIRECT: tembak DAE ke IP publik NAS. Sesi mati ditangani sesuai jenis aksi. */
-    private fun fireDirect(action: BngAction, nas: Nas, sessions: Map<String, SessionObservation>) {
+    /**
+     * Jalur DAE langsung (DIRECT/VPN): tembak DAE ke [Nas.address] — IP publik untuk DIRECT,
+     * IP overlay untuk VPN. Sesi mati ditangani sesuai jenis aksi (idempoten/degradasi).
+     */
+    private fun fireDae(action: BngAction, nas: Nas, sessions: Map<String, SessionObservation>) {
         val host = nas.address?.takeIf { it.isNotBlank() }
             ?: throw IllegalStateException("BRAS ${nas.name}: alamat NAS (tujuan DAE) belum diisi")
         val secret = nas.coaSecret?.takeIf { it.isNotBlank() }
@@ -185,3 +190,10 @@ class RadiusSessionControlRunner(
     // identifier sama — sejalan idempotensi antrean.
     private fun identifierFor(action: BngAction): Int = action.id.hashCode() and 0xFF
 }
+
+/**
+ * Reachability yang server layani dengan DAE langsung ke `nas.address`: DIRECT (IP publik) &
+ * VPN (IP overlay). NONE degradasi, COLLECTOR dilayani agent — keduanya tak menembak dari sini.
+ */
+private fun NasReachability?.firesDae(): Boolean =
+    this == NasReachability.DIRECT || this == NasReachability.VPN
