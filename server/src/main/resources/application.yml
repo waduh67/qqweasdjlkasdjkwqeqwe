@@ -98,3 +98,5 @@ ftth:
     enabled: ${FTTH_RADIUS_ENABLED:true}
     # Selang worker mengklaim aksi provisioning tertunda.
     dispatch-interval: ${FTTH_RADIUS_DISPATCH_INTERVAL:PT10S}
+    # Selang poller membaca sesi hidup radacct platform per tenant (jalur-baca server-side).
+    session-poll-interval: ${FTTH_RADIUS_SESSION_POLL_INTERVAL:PT30S}

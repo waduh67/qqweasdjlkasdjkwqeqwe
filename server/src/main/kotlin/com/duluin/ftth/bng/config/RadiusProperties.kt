@@ -25,6 +25,8 @@ data class RadiusProperties(
     val maxPoolSize: Int = 5,
     /** Selang worker mengklaim aksi provisioning tertunda dari antrean. */
     val dispatchInterval: Duration = Duration.ofSeconds(10),
+    /** Selang poller membaca sesi hidup `radacct` platform per tenant (jalur-baca server-side). */
+    val sessionPollInterval: Duration = Duration.ofSeconds(30),
     /** Berapa aksi diklaim per putaran per-tenant — batas agar satu tenant tak memonopoli. */
     val batchSize: Int = 100,
     /**
