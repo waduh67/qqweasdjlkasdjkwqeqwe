@@ -25,6 +25,22 @@ data class NasView(
 )
 
 /**
+ * Koordinat FreeRADIUS pusat yang tenant arahkan router-nya (nilai `address=`+port di
+ * `/radius` Mikrotik). Sama untuk semua tenant — satu server RADIUS-as-a-service, bukan
+ * per-tenant. [configured] false berarti platform belum mengisi [host] (env
+ * `FTTH_RADIUS_PUBLIC_HOST`); UI menampilkan catatan alih-alih host tebakan. [coaPort]
+ * adalah arah balik (SERVER → BRAS) untuk DAE/CoA, disertakan agar operator membuka port
+ * itu di Mikrotik.
+ */
+data class RadiusEndpointView(
+    val host: String?,
+    val authPort: Int,
+    val acctPort: Int,
+    val coaPort: Int,
+    val configured: Boolean,
+)
+
+/**
  * Proyeksi satu akun PPPoE. Password (secret) SENGAJA tidak disertakan — hanya bisa
  * diisi/reset, tak pernah dibaca balik. [planName]/[nasName] diresolusi untuk
  * tampilan agar UI tak perlu memanggil balik. [planName] `null` bila paket telah

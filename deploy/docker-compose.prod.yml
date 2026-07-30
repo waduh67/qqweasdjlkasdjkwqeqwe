@@ -110,6 +110,11 @@ services:
       FTTH_RADIUS_DB_URL: jdbc:postgresql://radius-db:5432/${RADIUS_DB_NAME:-radius}
       FTTH_RADIUS_DB_USER: ${RADIUS_DB_USER:-radius}
       FTTH_RADIUS_DB_PASSWORD: ${RADIUS_DB_PASSWORD:?wajib diisi di .env}
+      # Alamat publik FreeRADIUS pusat yang DITAMPILKAN ke tenant untuk mengarahkan
+      # router-nya (kartu "Arahkan router ke RADIUS ini" di UI). Biasanya = IP publik VPS
+      # ini. Kosong → UI menandai "belum dikonfigurasi" (auth tetap jalan, hanya panduan
+      # yang menampilkan placeholder).
+      FTTH_RADIUS_PUBLIC_HOST: ${FTTH_RADIUS_PUBLIC_HOST:-}
       FTTH_JWT_SECRET: ${FTTH_JWT_SECRET}
       FTTH_ENCRYPTION_SECRET: ${FTTH_ENCRYPTION_SECRET}
       FTTH_CORS_ORIGINS: ${FTTH_CORS_ORIGINS}

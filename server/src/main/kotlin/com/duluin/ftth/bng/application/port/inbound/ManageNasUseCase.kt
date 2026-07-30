@@ -16,6 +16,12 @@ interface ManageNasUseCase {
 
     /** Menolak menghapus BRAS yang masih menaungi akun PPPoE mana pun. */
     fun delete(id: UUID)
+
+    /**
+     * Koordinat FreeRADIUS pusat (host+port) yang tenant arahkan router-nya. Info platform
+     * global — dari [com.duluin.ftth.bng.config.RadiusProperties], bukan tabel `nas`.
+     */
+    fun radiusEndpoint(): RadiusEndpointView
 }
 
 /**

@@ -6,6 +6,7 @@ import com.duluin.ftth.bng.application.port.inbound.ManageNasUseCase
 import com.duluin.ftth.bng.application.port.inbound.ManageSubscriberAccessUseCase
 import com.duluin.ftth.bng.application.port.inbound.NasView
 import com.duluin.ftth.bng.application.port.inbound.ProvisionAccessCommand
+import com.duluin.ftth.bng.application.port.inbound.RadiusEndpointView
 import com.duluin.ftth.bng.application.port.inbound.ResetSecretCommand
 import com.duluin.ftth.bng.application.port.inbound.SaveNasCommand
 import com.duluin.ftth.bng.application.port.inbound.SubscriberAccessView
@@ -55,6 +56,11 @@ class BngController(
     @PreAuthorize("@authz.can('bng.nas.view')")
     @Operation(summary = "Daftar BRAS tenant")
     fun listNas(): List<NasView> = nas.list()
+
+    @GetMapping("/radius-endpoint")
+    @PreAuthorize("@authz.can('bng.nas.view')")
+    @Operation(summary = "Koordinat FreeRADIUS pusat untuk arahkan router (host+port)")
+    fun radiusEndpoint(): RadiusEndpointView = nas.radiusEndpoint()
 
     @GetMapping("/nas/{id}")
     @PreAuthorize("@authz.can('bng.nas.view')")

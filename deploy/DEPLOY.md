@@ -428,15 +428,21 @@ kalau tidak, FreeRADIUS menolak request dari IP yang tak dikenalnya.
 
 ### K.3 Arahkan Mikrotik ke RADIUS ini (RouterOS v7)
 
-Secret di bawah = **Secret CoA** yang kamu isi di UI untuk BRAS ini (identik dua sisi).
+Secret di bawah = **shared secret** yang kamu isi di UI untuk BRAS ini (identik dua sisi).
 
 ```rsc
-# <IP-VPS> = IP publik VPS; <SECRET-BRAS> = Secret CoA dari form UI
+# <IP-VPS> = IP publik VPS; <SECRET-BRAS> = shared secret dari form UI
 /radius add service=ppp address=<IP-VPS> secret=<SECRET-BRAS> \
     authentication-port=1812 accounting-port=1813
 /radius incoming set accept=yes port=3799
 /ppp aaa set use-radius=yes accounting=yes interim-update=5m
 ```
+
+> **Muncul otomatis di UI tenant.** Set `FTTH_RADIUS_PUBLIC_HOST` di `.env` (= IP publik
+> VPS ini) → halaman **BRAS & RADIUS** menampilkan kartu "Arahkan router ke RADIUS ini"
+> berisi host + port + skrip di atas **siap-salin**, dengan secret terisi otomatis saat
+> operator menekan **Generate**. Tanpa env itu, kartu menandai "belum dikonfigurasi" dan
+> skrip memakai placeholder `<IP-RADIUS>` (auth tetap jalan; hanya panduan yang kosong).
 
 ### K.4 Provisi akun PPPoE lewat app (bukan SQL manual)
 

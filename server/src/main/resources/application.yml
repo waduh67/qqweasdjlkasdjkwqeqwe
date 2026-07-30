@@ -96,6 +96,13 @@ ftth:
     password: ${FTTH_RADIUS_DB_PASSWORD:}
     # Sakelar eksplisit — matikan provisioning walau url terisi (mis. saat migrasi).
     enabled: ${FTTH_RADIUS_ENABLED:true}
+    # Alamat publik FreeRADIUS pusat yang tenant arahkan router-nya (nilai address= di
+    # /radius Mikrotik). KOSONG = UI menandai "belum dikonfigurasi". Isi IP/host publik VPS
+    # di prod. Port default = standar RADIUS (auth 1812, acct 1813) + DAE/CoA (3799).
+    public-host: ${FTTH_RADIUS_PUBLIC_HOST:}
+    auth-port: ${FTTH_RADIUS_AUTH_PORT:1812}
+    acct-port: ${FTTH_RADIUS_ACCT_PORT:1813}
+    coa-port: ${FTTH_RADIUS_COA_PORT:3799}
     # Selang worker mengklaim aksi provisioning tertunda.
     dispatch-interval: ${FTTH_RADIUS_DISPATCH_INTERVAL:PT10S}
     # Selang poller membaca sesi hidup radacct platform per tenant (jalur-baca server-side).

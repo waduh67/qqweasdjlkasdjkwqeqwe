@@ -2,10 +2,12 @@ package com.duluin.ftth.bng.application.service
 
 import com.duluin.ftth.bng.application.port.inbound.ManageNasUseCase
 import com.duluin.ftth.bng.application.port.inbound.NasView
+import com.duluin.ftth.bng.application.port.inbound.RadiusEndpointView
 import com.duluin.ftth.bng.application.port.inbound.SaveNasCommand
 import com.duluin.ftth.bng.application.port.outbound.NasRepository
 import com.duluin.ftth.bng.application.port.outbound.RadiusClientRegistryPort
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
+import com.duluin.ftth.bng.config.RadiusProperties
 import com.duluin.ftth.bng.domain.model.Nas
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
@@ -25,10 +27,23 @@ class NasService(
     private val auditor: AuditRecorder,
     private val clientRegistry: RadiusClientRegistryPort,
     private val tenantApi: TenantApi,
+    private val radiusProperties: RadiusProperties,
 ) : ManageNasUseCase {
 
     @Transactional(readOnly = true)
     override fun list(): List<NasView> = nasRepository.findAll().map { it.toView() }
+
+    @Transactional(readOnly = true)
+    override fun radiusEndpoint(): RadiusEndpointView {
+        val host = radiusProperties.publicHost.trim().ifBlank { null }
+        return RadiusEndpointView(
+            host = host,
+            authPort = radiusProperties.authPort,
+            acctPort = radiusProperties.acctPort,
+            coaPort = radiusProperties.coaPort,
+            configured = host != null,
+        )
+    }
 
     @Transactional(readOnly = true)
     override fun get(id: UUID): NasView = require(id).toView()

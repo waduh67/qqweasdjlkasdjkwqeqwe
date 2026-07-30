@@ -68,6 +68,20 @@ export interface SaveNasRequest {
 }
 
 /**
+ * Koordinat FreeRADIUS pusat yang router tenant arahkan (auth/acct). Sama untuk semua
+ * tenant — satu server RADIUS-as-a-service. [configured] false berarti platform belum
+ * mengisi [host] → UI menampilkan catatan alih-alih host tebakan. [coaPort] = arah balik
+ * (server → BRAS) untuk DAE/CoA, agar operator membuka port itu di Mikrotik.
+ */
+export interface RadiusEndpointView {
+  host: string | null
+  authPort: number
+  acctPort: number
+  coaPort: number
+  configured: boolean
+}
+
+/**
  * Proyeksi satu akun PPPoE. Password (secret) sengaja tak disertakan — hanya bisa
  * diisi saat provisi atau di-reset. [planName]/[nasName] sudah diresolusi di server
  * agar UI tak perlu memanggil balik. [planId] merujuk paket di modul catalog.
@@ -145,6 +159,9 @@ export interface TrafficHistoryView {
 
 /** Daftar BRAS tenant. */
 export const listNas = () => api.get<NasView[]>('/api/bng/nas')
+
+/** Koordinat FreeRADIUS pusat untuk arahkan router tenant (host+port). */
+export const getRadiusEndpoint = () => api.get<RadiusEndpointView>('/api/bng/radius-endpoint')
 
 /** Daftarkan BRAS baru. */
 export const createNas = (body: SaveNasRequest) => api.post<NasView>('/api/bng/nas', body)

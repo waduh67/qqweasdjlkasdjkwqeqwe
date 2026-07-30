@@ -3,11 +3,13 @@ import { ApiError } from '../api/client'
 import {
   createNas,
   deleteNas,
+  getRadiusEndpoint,
   listNas,
   NAS_VENDOR_LABEL,
   NAS_VENDORS,
   updateNas,
   type NasView,
+  type RadiusEndpointView,
   type SaveNasRequest,
 } from '../api/bng'
 import { useCan } from '../auth/useCan'
@@ -24,8 +26,17 @@ import { IconPlus } from '../components/icons'
 
 export function BngPage() {
   const { can } = useCan()
+  const allowed = can('bng.nas.view')
+  const [endpoint, setEndpoint] = useState<RadiusEndpointView | null>(null)
 
-  if (!can('bng.nas.view')) {
+  useEffect(() => {
+    if (!allowed) return
+    void getRadiusEndpoint()
+      .then(setEndpoint)
+      .catch(() => setEndpoint(null))
+  }, [allowed])
+
+  if (!allowed) {
     return (
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Akses ditolak</h3>
@@ -40,10 +51,124 @@ export function BngPage() {
         <h1 className="page-title">BRAS &amp; RADIUS</h1>
         <p className="page-sub">
           Daftarkan router master (BRAS) sebagai klien RADIUS — alamat + shared secret. FreeRADIUS
-          pusat memuatnya otomatis; tak perlu setup server RADIUS sendiri.
+          pusat memuatnya otomatis; tak perlu setup server RADIUS sendiri. Arahkan router ke alamat
+          server di bawah.
         </p>
       </div>
-      <NasTab />
+      {endpoint && <RadiusServerCard endpoint={endpoint} />}
+      <NasTab endpoint={endpoint} />
+    </div>
+  )
+}
+
+/**
+ * Rakit skrip RouterOS v7 untuk mengarahkan Mikrotik ke FreeRADIUS pusat. [secret] kosong →
+ * placeholder `<SECRET-BRAS>`; host kosong (platform belum set) → `<IP-RADIUS>`. Urutan sama
+ * dengan panduan deploy: /radius add (auth+acct) · incoming (CoA) · ppp aaa use-radius.
+ */
+function mikrotikScript(endpoint: RadiusEndpointView, secret: string): string {
+  const host = endpoint.host ?? '<IP-RADIUS>'
+  const sec = secret || '<SECRET-BRAS>'
+  return [
+    `/radius add service=ppp address=${host} secret=${sec} \\`,
+    `    authentication-port=${endpoint.authPort} accounting-port=${endpoint.acctPort}`,
+    `/radius incoming set accept=yes port=${endpoint.coaPort}`,
+    `/ppp aaa set use-radius=yes accounting=yes interim-update=5m`,
+  ].join('\n')
+}
+
+/** Blok skrip RouterOS siap-salin (monospace multi-baris + tombol Salin). */
+function MikrotikSnippet({ script }: { script: string }) {
+  const toast = useToast()
+  return (
+    <div className="stack" style={{ gap: '0.4rem' }}>
+      <code
+        style={{
+          display: 'block',
+          whiteSpace: 'pre',
+          overflowX: 'auto',
+          padding: '0.6rem 0.75rem',
+          fontSize: '0.8rem',
+          lineHeight: 1.5,
+        }}
+      >
+        {script}
+      </code>
+      <div>
+        <button
+          type="button"
+          className="small"
+          onClick={() =>
+            void navigator.clipboard?.writeText(script).then(() => toast.success('Config Mikrotik disalin'))
+          }
+        >
+          Salin config Mikrotik
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Kartu info koneksi server RADIUS pusat — ke mana tenant mengarahkan router-nya. Host/port
+ * dari platform (sama untuk semua tenant). Bila platform belum mengisi host, tampilkan catatan
+ * alih-alih menebak. Secret di skrip = placeholder (diisi nyata di form saat Generate).
+ */
+function RadiusServerCard({ endpoint }: { endpoint: RadiusEndpointView }) {
+  return (
+    <div className="card stack" style={{ gap: '0.75rem' }}>
+      <div>
+        <h3 style={{ margin: 0 }}>Arahkan router ke RADIUS ini</h3>
+        <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.85rem' }}>
+          Setiap BRAS mengarah ke server RADIUS pusat kami. Auth &amp; accounting jalan tanpa VPN
+          (router menembak keluar) — cukup router bisa keluar ke internet.
+        </p>
+      </div>
+      {endpoint.configured ? (
+        <>
+          <div className="row" style={{ gap: '1.5rem', flexWrap: 'wrap' }}>
+            <span>
+              <span className="muted" style={{ fontSize: '0.8rem' }}>
+                Host
+              </span>
+              <br />
+              <code>{endpoint.host}</code>
+            </span>
+            <span>
+              <span className="muted" style={{ fontSize: '0.8rem' }}>
+                Auth
+              </span>
+              <br />
+              <code>{endpoint.authPort}/udp</code>
+            </span>
+            <span>
+              <span className="muted" style={{ fontSize: '0.8rem' }}>
+                Accounting
+              </span>
+              <br />
+              <code>{endpoint.acctPort}/udp</code>
+            </span>
+            <span>
+              <span className="muted" style={{ fontSize: '0.8rem' }}>
+                CoA (server → BRAS)
+              </span>
+              <br />
+              <code>{endpoint.coaPort}/udp</code>
+            </span>
+          </div>
+          <MikrotikSnippet script={mikrotikScript(endpoint, '')} />
+          <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+            Ganti <code>&lt;SECRET-BRAS&gt;</code> dengan shared secret BRAS ini (hasil Generate di
+            form). Buka <code>{endpoint.coaPort}/udp</code> masuk di router agar CoA/Disconnect dari
+            server bisa memutus/mengubah sesi.
+          </p>
+        </>
+      ) : (
+        <p className="muted" style={{ margin: 0 }}>
+          Host server RADIUS belum dikonfigurasi platform. Hubungi admin untuk mengaktifkan{' '}
+          <code>FTTH_RADIUS_PUBLIC_HOST</code> sebelum mengarahkan router.
+        </p>
+      )}
     </div>
   )
 }
@@ -133,7 +258,7 @@ const EMPTY_NAS: NasDraft = {
   hasApiSecret: false,
 }
 
-function NasTab() {
+function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
   const { can } = useCan()
   const { items, run } = useResource(listNas)
   const canManage = can('bng.nas.manage')
@@ -322,6 +447,21 @@ function NasTab() {
             <strong> sama persis</strong> di konfigurasi RADIUS Mikrotik. Disimpan terenkripsi dan tak
             pernah ditampilkan kembali — salin dulu hasil Generate sebelum menyimpan.
           </p>
+
+          {endpoint?.configured && (
+            <div className="stack" style={{ gap: '0.35rem' }}>
+              <span className="muted" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                Config Mikrotik untuk BRAS ini
+              </span>
+              <MikrotikSnippet script={mikrotikScript(endpoint, draft.coaSecret)} />
+              {!draft.coaSecret && (
+                <span className="muted" style={{ fontSize: '0.78rem' }}>
+                  Isi / Generate shared secret di atas agar tersalin utuh ke skrip.
+                </span>
+              )}
+            </div>
+          )}
+
           <div className="row">
             <button className="primary" onClick={save}>
               Simpan

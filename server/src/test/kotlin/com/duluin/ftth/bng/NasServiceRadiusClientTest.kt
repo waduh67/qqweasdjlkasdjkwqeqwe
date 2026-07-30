@@ -5,6 +5,7 @@ import com.duluin.ftth.bng.application.port.outbound.NasRepository
 import com.duluin.ftth.bng.application.port.outbound.RadiusClientRegistryPort
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.application.service.NasService
+import com.duluin.ftth.bng.config.RadiusProperties
 import com.duluin.ftth.bng.domain.model.Nas
 import com.duluin.ftth.bng.domain.model.NasVendor
 import com.duluin.ftth.bng.domain.model.SubscriberAccess
@@ -114,7 +115,10 @@ class NasServiceRadiusClientTest {
             )
         }
         val auditor = AuditRecorder(ApplicationEventPublisher { }, currentUser)
-        return NasService(FakeNasRepo(), FakeNoSubscriberRepo(), currentUser, auditor, registry, FakeTenantApi())
+        return NasService(
+            FakeNasRepo(), FakeNoSubscriberRepo(), currentUser, auditor, registry, FakeTenantApi(),
+            RadiusProperties(),
+        )
     }
 
     private fun command(address: String?, coaSecret: String?, enabled: Boolean = true) = SaveNasCommand(

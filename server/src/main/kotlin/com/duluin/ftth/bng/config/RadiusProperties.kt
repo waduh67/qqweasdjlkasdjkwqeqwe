@@ -21,6 +21,18 @@ data class RadiusProperties(
     val password: String = "",
     /** Sakelar eksplisit — matikan provisioning walau url terisi (mis. saat migrasi). */
     val enabled: Boolean = true,
+    /**
+     * Alamat publik FreeRADIUS pusat yang TENANT arahkan router-nya (nilai `address=` di
+     * `/radius` Mikrotik) — BUKAN [url] JDBC. KOSONG = UI menandai "belum dikonfigurasi
+     * platform" alih-alih menebak host. Isi IP/host publik VPS via env di prod.
+     */
+    val publicHost: String = "",
+    /** Port auth RADIUS yang router tembak (RFC 2865). */
+    val authPort: Int = 1812,
+    /** Port accounting RADIUS yang router tembak (RFC 2866). */
+    val acctPort: Int = 1813,
+    /** Port DAE/CoA (RFC 5176) yang SERVER tembak balik ke BRAS. */
+    val coaPort: Int = 3799,
     /** Ukuran pool koneksi radius-db (provisioning jarang, kecil sudah cukup). */
     val maxPoolSize: Int = 5,
     /** Selang worker mengklaim aksi provisioning tertunda dari antrean. */
