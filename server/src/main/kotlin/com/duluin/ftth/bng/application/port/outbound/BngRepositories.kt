@@ -126,4 +126,14 @@ interface BngActionRepository {
      * Dibatasi [limit] agar satu tenant tak memonopoli satu putaran; terurut waktu minta.
      */
     fun findServerProvisioningPending(limit: Int): List<BngAction>
+
+    /**
+     * Perintah KONTROL SESI ([BngActionType.SESSION_CONTROL]: DISCONNECT/COA) yang masih
+     * PENDING untuk sekumpulan BRAS yang server jangkau sendiri (reachability ≠ COLLECTOR)
+     * — diklaim worker DAE server-side (RADIUS-as-a-service). Cermin
+     * [findServerProvisioningPending] tapi disaring per-BRAS: BRAS COLLECTOR tetap dilayani
+     * agent on-prem lewat [findDispatchableByNasIds]. Tanpa status DISPATCHED (server
+     * mengeksekusi sinkron lalu menuntaskan sendiri). Dibatasi [limit], terurut waktu minta.
+     */
+    fun findServerSessionControlPending(nasIds: Collection<UUID>, limit: Int): List<BngAction>
 }

@@ -131,6 +131,19 @@ class BngAction private constructor(
         completedAt = at
     }
 
+    /**
+     * Selesai TAPI dengan catatan — untuk degradasi anggun: NAS tak terjangkau (reachability
+     * VPN/NONE, atau sesi sudah mati) sehingga CoA/Disconnect tak bisa ditembak sekarang, namun
+     * keadaan RADIUS sudah benar dan perubahan berlaku saat sesi login ulang. Bukan kegagalan
+     * (tak perlu retry), jadi ditandai COMPLETED; [note] merekam alasannya untuk audit.
+     */
+    fun completeWithNote(note: String, at: Instant = Instant.now()) {
+        if (isTerminal) return
+        status = BngActionStatus.COMPLETED
+        detail = note
+        completedAt = at
+    }
+
     /** ACK gagal dari collector; [detail] mengangkut sebab. No-op bila sudah terminal. */
     fun fail(detail: String?, at: Instant = Instant.now()) {
         if (isTerminal) return

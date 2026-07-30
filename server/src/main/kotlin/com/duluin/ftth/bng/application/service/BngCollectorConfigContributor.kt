@@ -4,6 +4,7 @@ import com.duluin.ftth.bng.application.port.outbound.NasRepository
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.domain.model.AccessStatus
 import com.duluin.ftth.bng.domain.model.Nas
+import com.duluin.ftth.bng.domain.model.NasReachability
 import com.duluin.ftth.common.integration.BngActionDispatch
 import com.duluin.ftth.common.integration.CollectorConfigContributor
 import com.duluin.ftth.common.integration.NasPollTarget
@@ -45,13 +46,22 @@ class BngCollectorConfigContributor(
     }
 
     /**
-     * BRAS yang di-polling collector ini: ditugaskan padanya secara eksplisit
-     * ([Nas.collectorId] == collector) ATAU belum ditugaskan ke mana pun (null) —
-     * bawaan benar untuk ISP satu collector. BRAS nonaktif dilewati.
+     * BRAS yang di-polling & dikontrol collector ini: ditugaskan padanya secara eksplisit
+     * ([Nas.collectorId] == collector) ATAU belum ditugaskan ke mana pun (null) — bawaan benar
+     * untuk ISP satu collector. BRAS nonaktif dilewati.
+     *
+     * Hanya BRAS ber-reachability [NasReachability.COLLECTOR] yang diikutkan: sejak
+     * RADIUS-as-a-service, BRAS yang server jangkau sendiri (DIRECT/VPN) dibaca & dikontrol
+     * server langsung (baca `radacct` + DAE), sedangkan NONE tak terjangkau siapa pun —
+     * ketiganya sengaja LEPAS dari collector agar tak dobel-dilayani. Bawaan COLLECTOR menjaga
+     * perilaku warisan: BRAS lama tetap milik agent on-prem.
      */
     private fun nasForCollector(collectorId: UUID): List<Nas> =
-        nasRepository.findAll()
-            .filter { it.enabled && (it.collectorId == collectorId || it.collectorId == null) }
+        nasRepository.findAll().filter {
+            it.enabled &&
+                it.reachability == NasReachability.COLLECTOR &&
+                (it.collectorId == collectorId || it.collectorId == null)
+        }
 
     private fun Nas.toPollTarget(): NasPollTarget {
         val activeUsernames = subscriberAccessRepository.findByNasId(id)

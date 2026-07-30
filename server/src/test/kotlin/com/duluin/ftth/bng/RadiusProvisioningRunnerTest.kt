@@ -214,6 +214,7 @@ private class FakeActionRepo(private val pending: List<BngAction>) : BngActionRe
     override fun findById(id: UUID): BngAction? = pending.firstOrNull { it.id == id }
     override fun findDispatchableByNasIds(nasIds: Collection<UUID>): List<BngAction> = emptyList()
     override fun findServerProvisioningPending(limit: Int): List<BngAction> = pending.take(limit)
+    override fun findServerSessionControlPending(nasIds: Collection<UUID>, limit: Int): List<BngAction> = emptyList()
 }
 
 private class FakeAccessRepo(private val accesses: List<SubscriberAccess>) : SubscriberAccessRepository {

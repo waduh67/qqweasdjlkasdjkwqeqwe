@@ -34,6 +34,13 @@ interface BngActionJpaRepository : JpaRepository<BngActionJpaEntity, UUID> {
         statuses: Collection<BngActionStatus>,
     ): List<BngActionJpaEntity>
 
+    fun findByNasIdInAndActionInAndStatusInOrderByRequestedAtAsc(
+        nasIds: Collection<UUID>,
+        actions: Collection<BngActionType>,
+        statuses: Collection<BngActionStatus>,
+        pageable: Pageable,
+    ): List<BngActionJpaEntity>
+
     fun findByActionInAndStatusInOrderByRequestedAtAsc(
         actions: Collection<BngActionType>,
         statuses: Collection<BngActionStatus>,

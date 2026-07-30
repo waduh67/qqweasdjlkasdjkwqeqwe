@@ -8,6 +8,17 @@ import java.util.UUID
 enum class NasVendor { MIKROTIK, CISCO, JUNIPER, FREERADIUS, OTHER }
 
 /**
+ * Bagaimana server pusat menjangkau NAS ini untuk kontrol sesi (DAE CoA/Disconnect).
+ * Auth & accounting TAK pernah butuh ini — Mikrotik menembak keluar ke server RADIUS.
+ * Hanya jalur-turun (memutus/menurunkan sesi hidup) yang perlu tahu rute balik:
+ *  - [DIRECT]    NAS ber-IP-publik: server tembak `:3799` langsung.
+ *  - [VPN]       NAS di-NAT tapi ikut overlay VPN: server tembak lewat IP overlay (S2c).
+ *  - [COLLECTOR] NAS di-NAT tanpa VPN: titipkan ke agent on-prem yang sekamar dengan NAS.
+ *  - [NONE]      tak terjangkau apa pun: degradasi anggun — perubahan berlaku saat login ulang.
+ */
+enum class NasReachability { DIRECT, VPN, COLLECTOR, NONE }
+
+/**
  * Satu BRAS/BNG (Network Access Server) milik tenant — router master yang menutup
  * sesi PPPoE dan menjadi klien RADIUS.
  *
@@ -36,6 +47,7 @@ class Nas private constructor(
     apiPort: Int?,
     apiUseTls: Boolean,
     apiDatabase: String?,
+    reachability: NasReachability,
 ) {
     var name: String = name
         private set
@@ -78,6 +90,14 @@ class Nas private constructor(
 
     /** URL JDBC basis data RADIUS (FreeRADIUS). Kosong untuk vendor lain. */
     var apiDatabase: String? = apiDatabase
+        private set
+
+    /**
+     * Rute kontrol sesi (DAE) ke NAS ini. Ditetapkan saat pembuatan dan dijaga lintas
+     * [update] (bukan field form biasa; S3 yang menyambungkannya ke form self-service),
+     * agar sunting field lain tak diam-diam mereset rute jadi COLLECTOR.
+     */
+    var reachability: NasReachability = reachability
         private set
 
     @Suppress("LongParameterList")
@@ -127,6 +147,7 @@ class Nas private constructor(
             apiPort: Int? = null,
             apiUseTls: Boolean = true,
             apiDatabase: String? = null,
+            reachability: NasReachability = NasReachability.COLLECTOR,
         ): Nas = Nas(
             id = UuidV7.generate(),
             tenantId = tenantId,
@@ -143,6 +164,7 @@ class Nas private constructor(
             apiPort = validateApiPort(apiPort),
             apiUseTls = apiUseTls,
             apiDatabase = validateApiDatabase(apiDatabase),
+            reachability = reachability,
         )
 
         @Suppress("LongParameterList")
@@ -161,9 +183,10 @@ class Nas private constructor(
             apiPort: Int? = null,
             apiUseTls: Boolean = true,
             apiDatabase: String? = null,
+            reachability: NasReachability = NasReachability.COLLECTOR,
         ): Nas = Nas(
             id, tenantId, name, vendor, address, nasIdentifier, coaSecret, collectorId, enabled,
-            apiUsername, apiSecret, apiPort, apiUseTls, apiDatabase,
+            apiUsername, apiSecret, apiPort, apiUseTls, apiDatabase, reachability,
         )
 
         private fun validateName(name: String): String {

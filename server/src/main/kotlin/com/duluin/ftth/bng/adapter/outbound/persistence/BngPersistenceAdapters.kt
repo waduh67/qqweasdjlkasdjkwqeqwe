@@ -45,6 +45,7 @@ class NasPersistenceAdapter(
             apiPort = nas.apiPort
             apiUseTls = nas.apiUseTls
             apiDatabase = nas.apiDatabase
+            reachability = nas.reachability
         } ?: NasJpaEntity(
             id = nas.id,
             name = nas.name,
@@ -59,6 +60,7 @@ class NasPersistenceAdapter(
             apiPort = nas.apiPort,
             apiUseTls = nas.apiUseTls,
             apiDatabase = nas.apiDatabase,
+            reachability = nas.reachability,
         )
         return jpa.save(entity).toDomain()
     }
@@ -86,6 +88,7 @@ class NasPersistenceAdapter(
         apiPort = apiPort,
         apiUseTls = apiUseTls,
         apiDatabase = apiDatabase,
+        reachability = reachability,
     )
 }
 
@@ -228,6 +231,16 @@ class BngActionPersistenceAdapter(
             listOf(BngActionStatus.PENDING),
             PageRequest.of(0, limit),
         ).map { it.toDomain() }
+
+    override fun findServerSessionControlPending(nasIds: Collection<UUID>, limit: Int): List<BngAction> {
+        if (nasIds.isEmpty()) return emptyList()
+        return jpa.findByNasIdInAndActionInAndStatusInOrderByRequestedAtAsc(
+            nasIds,
+            BngActionType.SESSION_CONTROL,
+            listOf(BngActionStatus.PENDING),
+            PageRequest.of(0, limit),
+        ).map { it.toDomain() }
+    }
 
     private fun BngActionJpaEntity.toDomain(): BngAction = BngAction.rehydrate(
         id = id,

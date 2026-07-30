@@ -4,6 +4,7 @@ import com.duluin.ftth.bng.domain.model.AccessStatus
 import com.duluin.ftth.bng.domain.model.AuthType
 import com.duluin.ftth.bng.domain.model.BngActionStatus
 import com.duluin.ftth.bng.domain.model.BngActionType
+import com.duluin.ftth.bng.domain.model.NasReachability
 import com.duluin.ftth.bng.domain.model.NasVendor
 import com.duluin.ftth.common.infrastructure.persistence.TenantAwareJpaEntity
 import jakarta.persistence.Column
@@ -59,6 +60,10 @@ class NasJpaEntity(
 
     @Column(name = "api_database", length = 500)
     var apiDatabase: String?,
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    var reachability: NasReachability,
 ) : TenantAwareJpaEntity(id)
 
 /**
