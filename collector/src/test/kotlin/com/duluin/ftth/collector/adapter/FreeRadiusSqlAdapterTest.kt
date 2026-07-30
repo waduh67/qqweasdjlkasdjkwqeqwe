@@ -4,6 +4,8 @@ import com.duluin.ftth.contract.BngActionCommand
 import com.duluin.ftth.contract.BngActionKind
 import com.duluin.ftth.contract.NasTarget
 import com.duluin.ftth.contract.RadiusSessionReading
+import com.duluin.ftth.contract.radius.RadiusDae
+import com.duluin.ftth.contract.radius.RadiusDaeClient
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Proxy
 import java.nio.charset.StandardCharsets

@@ -1,5 +1,7 @@
 package com.duluin.ftth.collector.adapter
 
+import com.duluin.ftth.contract.radius.RadiusDae
+import com.duluin.ftth.contract.radius.RadiusDaeClient
 import java.nio.charset.StandardCharsets
 import java.time.Duration
 import kotlin.test.Test

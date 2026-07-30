@@ -1,6 +1,5 @@
-package com.duluin.ftth.collector.adapter
+package com.duluin.ftth.contract.radius
 
-import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -20,6 +19,11 @@ import java.time.Duration
  * kecepatannya. Authenticator permintaan dihitung gaya Accounting-Request
  * (MD5 atas paket ber-authenticator-nol + shared secret), dan authenticator balasan
  * diverifikasi agar ACK/NAK palsu tak diterima.
+ *
+ * Tinggal di modul `contract` (kontrak wire bersama, Kotlin murni tanpa dependency)
+ * agar DUA sisi memakainya: collector menembak DAE dari on-prem (NAS di-NAT), server
+ * menembak DAE langsung ke NAS ber-IP-publik (RADIUS-as-a-service). Satu implementasi,
+ * bukan dua salinan yang bisa menyimpang.
  */
 object RadiusDae {
 
@@ -176,8 +180,6 @@ class RadiusDaeClient(
     private val retries: Int = 2,
     private val socketFactory: () -> DatagramSocket = { DatagramSocket() },
 ) {
-    private val log = LoggerFactory.getLogger(javaClass)
-
     fun send(
         host: String,
         port: Int,
@@ -199,10 +201,8 @@ class RadiusDaeClient(
                 try {
                     socket.receive(reply)
                 } catch (_: SocketTimeoutException) {
-                    if (attempt++ < retries) {
-                        log.debug("DAE {}:{} tak menjawab, kirim ulang ({}/{})", host, port, attempt, retries)
-                        continue
-                    }
+                    // UDP bisa hilang: kirim ulang sampai batas retry, lalu menyerah jujur.
+                    if (attempt++ < retries) continue
                     throw IllegalStateException("BRAS $host:$port tak menjawab DAE dalam ${timeout.toMillis()}ms")
                 }
                 val response = buffer.copyOf(reply.length)
