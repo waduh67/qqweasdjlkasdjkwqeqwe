@@ -39,7 +39,8 @@ export function BngPage() {
       <div>
         <h1 className="page-title">BRAS &amp; RADIUS</h1>
         <p className="page-sub">
-          Registri BRAS/RADIUS — router master penutup sesi PPPoE, fondasi akun pelanggan.
+          Daftarkan router master (BRAS) sebagai klien RADIUS — alamat + shared secret. FreeRADIUS
+          pusat memuatnya otomatis; tak perlu setup server RADIUS sendiri.
         </p>
       </div>
       <NasTab />
@@ -84,6 +85,20 @@ function useResource<T>(fetcher: () => Promise<T[]>) {
 
 /* ---------- BRAS (NAS) ---------- */
 
+/**
+ * Shared secret RADIUS acak (base64url ~24 char). Dipakai tombol "Generate" agar
+ * operator tak perlu mengarang secret sendiri — nilai sama dipakai Mikrotik (auth ke
+ * FreeRADIUS pusat) dan server (CoA/Disconnect RFC 5176).
+ */
+function randomSecret(): string {
+  const bytes = new Uint8Array(18)
+  crypto.getRandomValues(bytes)
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+}
+
 type NasDraft = {
   id: string | null
   name: string
@@ -92,7 +107,7 @@ type NasDraft = {
   nasIdentifier: string
   coaSecret: string
   enabled: boolean
-  /** Apakah entri yang diedit sudah punya secret CoA (untuk teks bantu). */
+  /** Apakah entri yang diedit sudah punya shared secret (untuk teks bantu). */
   hasCoaSecret: boolean
   /** Kredensial kontrol REST RouterOS (vendor MIKROTIK). */
   apiUsername: string
@@ -123,9 +138,15 @@ function NasTab() {
   const { items, run } = useResource(listNas)
   const canManage = can('bng.nas.manage')
   const [draft, setDraft] = useState<NasDraft | null>(null)
+  /** Buka draft baru/edit dengan secret tersembunyi (baru terungkap saat "Generate"). */
+  const [revealSecret, setRevealSecret] = useState(false)
+  const open = (next: NasDraft | null) => {
+    setRevealSecret(false)
+    setDraft(next)
+  }
 
   const edit = (nas: NasView) =>
-    setDraft({
+    open({
       id: nas.id,
       name: nas.name,
       vendor: nas.vendor,
@@ -158,7 +179,7 @@ function NasTab() {
     void run(
       async () => {
         await (draft.id ? updateNas(draft.id, body) : createNas(body))
-        setDraft(null)
+        open(null)
       },
       draft.id ? 'BRAS diperbarui' : 'BRAS didaftarkan',
     )
@@ -169,7 +190,7 @@ function NasTab() {
       <div className="spread">
         <span className="muted">{items.length} BRAS</span>
         {canManage && (
-          <button className="primary" onClick={() => setDraft({ ...EMPTY_NAS })}>
+          <button className="primary" onClick={() => open({ ...EMPTY_NAS })}>
             <IconPlus size={15} /> Tambah BRAS
           </button>
         )}
@@ -206,7 +227,7 @@ function NasTab() {
               <input
                 value={draft.address}
                 onChange={(e) => setDraft({ ...draft, address: e.target.value })}
-                placeholder="10.20.0.1"
+                placeholder="IP publik / overlay VPN, mis. 10.20.0.1"
               />
             </label>
             <label style={{ flex: 1 }}>
@@ -217,15 +238,29 @@ function NasTab() {
                 placeholder="opsional"
               />
             </label>
-            <label style={{ flex: 1 }}>
-              <span>Secret CoA</span>
+          </div>
+          <div className="row" style={{ alignItems: 'flex-end' }}>
+            <label style={{ flex: 2 }}>
+              <span>Shared Secret RADIUS</span>
               <input
-                type="password"
+                type={revealSecret ? 'text' : 'password'}
                 value={draft.coaSecret}
                 onChange={(e) => setDraft({ ...draft, coaSecret: e.target.value })}
-                placeholder={draft.hasCoaSecret ? 'terisi — isi untuk mengganti' : 'opsional'}
+                placeholder={draft.hasCoaSecret ? 'terisi — isi untuk mengganti' : 'ketik atau Generate'}
               />
             </label>
+            <button
+              type="button"
+              onClick={() => {
+                setDraft({ ...draft, coaSecret: randomSecret() })
+                setRevealSecret(true)
+              }}
+            >
+              Generate
+            </button>
+            <button type="button" onClick={() => setRevealSecret((v) => !v)}>
+              {revealSecret ? 'Sembunyikan' : 'Lihat'}
+            </button>
           </div>
 
           {draft.vendor === 'MIKROTIK' && (
@@ -282,14 +317,16 @@ function NasTab() {
             <span>Aktif</span>
           </label>
           <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-            Secret CoA (Change-of-Authorization) disimpan terenkripsi dan tidak pernah ditampilkan kembali.
-            Dipakai untuk mengubah/memutus sesi PPPoE dari jarak jauh nanti.
+            Shared secret ini dipakai dua arah: Mikrotik memakainya untuk autentikasi ke FreeRADIUS
+            pusat, dan server memakainya untuk CoA/Disconnect (RFC 5176) ke BRAS. Isi nilai yang
+            <strong> sama persis</strong> di konfigurasi RADIUS Mikrotik. Disimpan terenkripsi dan tak
+            pernah ditampilkan kembali — salin dulu hasil Generate sebelum menyimpan.
           </p>
           <div className="row">
             <button className="primary" onClick={save}>
               Simpan
             </button>
-            <button onClick={() => setDraft(null)}>Batal</button>
+            <button onClick={() => open(null)}>Batal</button>
           </div>
         </div>
       )}
@@ -301,7 +338,7 @@ function NasTab() {
               <th>Nama</th>
               <th>Vendor</th>
               <th>Alamat</th>
-              <th>CoA</th>
+              <th>Secret</th>
               <th>Status</th>
               <th />
             </tr>

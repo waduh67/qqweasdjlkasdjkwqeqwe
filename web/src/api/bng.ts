@@ -5,8 +5,9 @@ import { api } from './client'
  * PPPoE pelanggan). Cermin `BngController` di server. Katalog paket pindah ke modul
  * `catalog` (`web/src/api/catalog.ts`) — akun cukup merujuk `planId`.
  *
- * Secret (password PPPoE / CoA BRAS) tak pernah dibaca balik: hanya bisa diisi saat
- * provisi atau di-reset, dan kehadirannya di BRAS ditandai boolean `hasCoaSecret`.
+ * Secret (password PPPoE / shared secret BRAS) tak pernah dibaca balik: hanya bisa diisi
+ * saat provisi atau di-reset, dan kehadirannya di BRAS ditandai boolean `hasCoaSecret`.
+ * `coaSecret` adalah shared secret RADIUS dua-arah: auth Mikrotik→FreeRADIUS + CoA server→BRAS.
  */
 
 /** Vendor BRAS yang dikenal — menentukan adapter kontrol sesi nantinya. */

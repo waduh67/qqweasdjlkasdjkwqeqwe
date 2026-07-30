@@ -1,5 +1,14 @@
 # Lab BRAS/RADIUS — Uji Adapter BNG Sungguhan
 
+> **⚠️ Sebagian usang setelah pivot RADIUS-as-a-service.** Kini **server** (bukan collector)
+> yang memegang `radacct`/provisioning ke satu FreeRADIUS pusat, dan form BRAS **tak lagi**
+> punya field `URL JDBC / User DB / Password DB`. Akibatnya: **Jalur A (Mikrotik REST) tetap
+> valid** untuk menguji adapter MIKROTIK di collector, tapi **Jalur B (baca `radacct` via
+> collector JDBC) sudah tak berlaku** — adapter `FreeRadiusSqlAdapter` dihapus dan jalur-baca
+> pindah server-side. Untuk arsitektur & alur uji model baru, lihat
+> [`radius-as-a-service.md`](radius-as-a-service.md). Bagian di bawah dipertahankan sebagai
+> rujukan historis Phase 7.
+
 Panduan ini menuntun bang menguji modul **BNG** (BRAS/RADIUS) collector dengan
 perangkat/servis **nyata**, bukan simulator. Dua adapter yang diuji:
 
