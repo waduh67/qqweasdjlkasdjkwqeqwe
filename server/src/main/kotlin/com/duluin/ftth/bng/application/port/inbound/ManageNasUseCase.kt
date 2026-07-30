@@ -23,9 +23,9 @@ interface ManageNasUseCase {
  * tak terhapus tanpa sengaja saat operator menyunting field lain. [enabled] hanya
  * berpengaruh saat update; NAS baru selalu aktif.
  *
- * [apiUsername]/[apiSecret]/[apiPort]/[apiUseTls]/[apiDatabase] adalah kredensial kontrol
- * yang dipakai adapter nyata (slice 7d): REST RouterOS atau SQL FreeRADIUS. Berbeda dengan
- * secret, field non-rahasia selalu ditimpa nilai baru saat update (cermin [enabled]).
+ * [apiUsername]/[apiSecret]/[apiPort]/[apiUseTls] adalah kredensial kontrol REST RouterOS
+ * (vendor MIKROTIK). Berbeda dengan secret, field non-rahasia selalu ditimpa nilai baru
+ * saat update (cermin [enabled]).
  */
 @Suppress("LongParameterList")
 data class SaveNasCommand(
@@ -40,5 +40,4 @@ data class SaveNasCommand(
     val apiSecret: String? = null,
     val apiPort: Int? = null,
     val apiUseTls: Boolean = true,
-    val apiDatabase: String? = null,
 )

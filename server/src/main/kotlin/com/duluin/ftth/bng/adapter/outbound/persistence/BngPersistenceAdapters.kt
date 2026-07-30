@@ -44,7 +44,6 @@ class NasPersistenceAdapter(
             apiSecret = encryptedApiSecret
             apiPort = nas.apiPort
             apiUseTls = nas.apiUseTls
-            apiDatabase = nas.apiDatabase
             reachability = nas.reachability
         } ?: NasJpaEntity(
             id = nas.id,
@@ -59,7 +58,6 @@ class NasPersistenceAdapter(
             apiSecret = encryptedApiSecret,
             apiPort = nas.apiPort,
             apiUseTls = nas.apiUseTls,
-            apiDatabase = nas.apiDatabase,
             reachability = nas.reachability,
         )
         return jpa.save(entity).toDomain()
@@ -87,7 +85,6 @@ class NasPersistenceAdapter(
         apiSecret = cipher.decryptQuietly(apiSecret, name, log),
         apiPort = apiPort,
         apiUseTls = apiUseTls,
-        apiDatabase = apiDatabase,
         reachability = reachability,
     )
 }

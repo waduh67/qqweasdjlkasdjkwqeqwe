@@ -55,7 +55,6 @@ data class NasPollTarget(
     val apiSecret: String? = null,
     val apiPort: Int? = null,
     val apiUseTls: Boolean = true,
-    val apiDatabase: String? = null,
     val coaSecret: String? = null,
 )
 

@@ -6,9 +6,10 @@ import java.sql.Connection
 import java.util.UUID
 
 /**
- * Menulis tabel otorisasi FreeRADIUS lewat JDBC ke radius-db platform. Port SQL dari
- * `FreeRadiusSqlAdapter.JdbcRadiusWriter` (collector) — sama persis, hanya sumber koneksi
- * yang beda: dulu URL per-NAS milik tenant, kini pool platform lewat [RadiusConnectionResolver].
+ * Menulis tabel otorisasi FreeRADIUS (`radcheck`/`radreply`/`radusergroup`) lewat JDBC ke
+ * radius-db platform. Di model RADIUS-as-a-service jalur-tulis ini server-side sepenuhnya:
+ * koneksi datang dari pool platform lewat [RadiusConnectionResolver], bukan lagi URL JDBC
+ * per-NAS milik tenant.
  *
  * Tiap operasi satu transaksi eksplisit agar sekumpulan baris (kredensial + grup) tampil
  * atomik ke FreeRADIUS — auth tak pernah melihat akun separuh-terpasang.

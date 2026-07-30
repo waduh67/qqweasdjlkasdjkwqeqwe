@@ -163,17 +163,16 @@ data class SaveNasRequest(
     val coaSecret: String?,
     val collectorId: UUID?,
     val enabled: Boolean = true,
-    /** Kredensial kontrol adapter nyata (7d): REST RouterOS / SQL FreeRADIUS. */
+    /** Kredensial kontrol REST RouterOS (vendor MIKROTIK). */
     val apiUsername: String? = null,
     /** Kosong saat update = biarkan password kontrol apa adanya. */
     val apiSecret: String? = null,
     val apiPort: Int? = null,
     val apiUseTls: Boolean = true,
-    val apiDatabase: String? = null,
 ) {
     fun toCommand() = SaveNasCommand(
         name, vendor, address, nasIdentifier, coaSecret, collectorId, enabled,
-        apiUsername, apiSecret, apiPort, apiUseTls, apiDatabase,
+        apiUsername, apiSecret, apiPort, apiUseTls,
     )
 }
 

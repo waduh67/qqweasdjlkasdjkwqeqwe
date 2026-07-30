@@ -27,10 +27,9 @@ enum class NasReachability { DIRECT, VPN, COLLECTOR, NONE }
  * SNMP OLT). [nasIdentifier] dipakai mencocokkan laporan RADIUS Accounting ke NAS ini.
  * [collectorId] menandai agent on-prem mana yang menjangkau NAS ini.
  *
- * Kredensial kontrol untuk adapter nyata (slice 7d) — dipakai berbeda per vendor:
- * [apiUsername]/[apiSecret]/[apiPort]/[apiUseTls] untuk REST API RouterOS; [apiDatabase]
- * (URL JDBC) + [apiUsername]/[apiSecret] untuk membaca `radacct` FreeRADIUS. Seperti
- * [coaSecret], [apiSecret] plaintext di domain dan hanya terenkripsi di batas persistence.
+ * Kredensial kontrol untuk adapter nyata — [apiUsername]/[apiSecret]/[apiPort]/[apiUseTls]
+ * dipakai REST API RouterOS (vendor MIKROTIK). Seperti [coaSecret], [apiSecret] plaintext
+ * di domain dan hanya terenkripsi di batas persistence.
  */
 class Nas private constructor(
     val id: UUID,
@@ -46,7 +45,6 @@ class Nas private constructor(
     apiSecret: String?,
     apiPort: Int?,
     apiUseTls: Boolean,
-    apiDatabase: String?,
     reachability: NasReachability,
 ) {
     var name: String = name
@@ -72,7 +70,7 @@ class Nas private constructor(
     var enabled: Boolean = enabled
         private set
 
-    /** User login REST (RouterOS) / basis data (FreeRADIUS). Null = belum diisi. */
+    /** User login REST RouterOS. Null = belum diisi. */
     var apiUsername: String? = apiUsername
         private set
 
@@ -84,12 +82,8 @@ class Nas private constructor(
     var apiPort: Int? = apiPort
         private set
 
-    /** REST RouterOS lewat HTTPS. Diabaikan FreeRADIUS (URL JDBC yang menentukan). */
+    /** REST RouterOS lewat HTTPS. */
     var apiUseTls: Boolean = apiUseTls
-        private set
-
-    /** URL JDBC basis data RADIUS (FreeRADIUS). Kosong untuk vendor lain. */
-    var apiDatabase: String? = apiDatabase
         private set
 
     /**
@@ -113,7 +107,6 @@ class Nas private constructor(
         apiSecret: String?,
         apiPort: Int?,
         apiUseTls: Boolean,
-        apiDatabase: String?,
     ) {
         this.name = validateName(name)
         this.vendor = vendor
@@ -129,7 +122,6 @@ class Nas private constructor(
         apiSecret?.trim()?.takeIf { it.isNotEmpty() }?.let { this.apiSecret = validateSecret(it, "Password kontrol BRAS") }
         this.apiPort = validateApiPort(apiPort)
         this.apiUseTls = apiUseTls
-        this.apiDatabase = validateApiDatabase(apiDatabase)
     }
 
     companion object {
@@ -146,7 +138,6 @@ class Nas private constructor(
             apiSecret: String? = null,
             apiPort: Int? = null,
             apiUseTls: Boolean = true,
-            apiDatabase: String? = null,
             reachability: NasReachability = NasReachability.COLLECTOR,
         ): Nas = Nas(
             id = UuidV7.generate(),
@@ -163,7 +154,6 @@ class Nas private constructor(
                 ?.let { validateSecret(it, "Password kontrol BRAS") },
             apiPort = validateApiPort(apiPort),
             apiUseTls = apiUseTls,
-            apiDatabase = validateApiDatabase(apiDatabase),
             reachability = reachability,
         )
 
@@ -182,11 +172,10 @@ class Nas private constructor(
             apiSecret: String? = null,
             apiPort: Int? = null,
             apiUseTls: Boolean = true,
-            apiDatabase: String? = null,
             reachability: NasReachability = NasReachability.COLLECTOR,
         ): Nas = Nas(
             id, tenantId, name, vendor, address, nasIdentifier, coaSecret, collectorId, enabled,
-            apiUsername, apiSecret, apiPort, apiUseTls, apiDatabase, reachability,
+            apiUsername, apiSecret, apiPort, apiUseTls, reachability,
         )
 
         private fun validateName(name: String): String {
@@ -221,12 +210,6 @@ class Nas private constructor(
         private fun validateApiPort(port: Int?): Int? {
             if (port != null && port !in 1..65_535) throw ValidationException("Port kontrol BRAS harus 1-65535")
             return port
-        }
-
-        private fun validateApiDatabase(database: String?): String? {
-            val trimmed = database?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-            if (trimmed.length > 500) throw ValidationException("URL basis data BRAS maksimal 500 karakter")
-            return trimmed
         }
     }
 }

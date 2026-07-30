@@ -209,16 +209,14 @@ data class OltTarget(
  *
  * [expectedUsernames] adalah akun yang menurut server seharusnya online — dipakai
  * HANYA oleh adapter simulator untuk memproduksi sesi yang cocok dengan pelanggan
- * nyata. Adapter sungguhan (RouterOS/FreeRADIUS) mengabaikannya dan membaca sesi
- * apa adanya dari perangkat. [adapterType] memilih adapter di sisi collector.
+ * nyata. Adapter sungguhan (RouterOS) mengabaikannya dan membaca sesi apa adanya dari
+ * perangkat. [adapterType] memilih adapter di sisi collector.
  *
  * Kredensial kontrol ([apiUsername]..[coaSecret]) dikirim polos di dalam badan
  * respons — aman karena kanalnya TLS dan hanya collector terautentikasi yang bisa
  * memintanya, persis seperti [OltTarget.snmpCommunity]. Di database server nilainya
- * tetap terenkripsi. Yang dipakai bergantung adapter:
- *  - RouterOS memakai [apiUsername]/[apiSecret]/[apiPort]/[apiUseTls] untuk REST API v7;
- *  - FreeRADIUS memakai [apiDatabase] (URL JDBC) + [apiUsername]/[apiSecret] untuk membaca
- *    tabel `radacct`, dan [coaSecret] untuk paket Disconnect/CoA (RFC 5176) ke [host].
+ * tetap terenkripsi. RouterOS memakai [apiUsername]/[apiSecret]/[apiPort]/[apiUseTls]
+ * untuk REST API v7 dan [coaSecret] untuk paket Disconnect/CoA (RFC 5176) ke [host].
  * Semuanya opsional/berdefault agar forward-compatible: collector lama mengabaikannya.
  */
 data class NasTarget(
@@ -232,7 +230,6 @@ data class NasTarget(
     val apiSecret: String? = null,
     val apiPort: Int? = null,
     val apiUseTls: Boolean = true,
-    val apiDatabase: String? = null,
     val coaSecret: String? = null,
 )
 
@@ -296,7 +293,7 @@ data class BngIngestResult(
 /**
  * Jenis perintah BRAS/RADIUS yang bisa dititipkan server ke collector.
  *
- * Dua jalur berbeda kanal (lihat FreeRadiusSqlAdapter):
+ * Dua jalur lewat kanal berbeda:
  *  - **DAE** ([DISCONNECT]/[COA]) — paket RFC 5176 langsung ke BRAS penutup sesi;
  *  - **provisioning SQL** ([PROVISION]/[DEPROVISION]/[SYNC_GROUP]) — tulis tabel
  *    otorisasi FreeRADIUS (`radcheck`/`radusergroup`/`radgroupreply`) via JDBC.

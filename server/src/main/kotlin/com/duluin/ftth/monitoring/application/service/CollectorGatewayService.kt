@@ -172,7 +172,6 @@ class CollectorGatewayService(
         apiSecret = apiSecret,
         apiPort = apiPort,
         apiUseTls = apiUseTls,
-        apiDatabase = apiDatabase,
         coaSecret = coaSecret,
     )
 

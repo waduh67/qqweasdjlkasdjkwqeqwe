@@ -6,8 +6,8 @@ import java.util.UUID
 /**
  * Proyeksi satu BRAS/NAS. [hasCoaSecret]/[hasApiSecret] menandai rahasianya sudah diisi
  * tanpa pernah membocorkan nilainya lewat API. Kredensial non-rahasia
- * ([apiUsername]/[apiPort]/[apiUseTls]/[apiDatabase]) dibalikkan apa adanya agar form
- * bisa memuat nilainya kembali saat diedit.
+ * ([apiUsername]/[apiPort]/[apiUseTls]) dibalikkan apa adanya agar form bisa memuat
+ * nilainya kembali saat diedit.
  */
 data class NasView(
     val id: UUID,
@@ -22,7 +22,6 @@ data class NasView(
     val hasApiSecret: Boolean,
     val apiPort: Int?,
     val apiUseTls: Boolean,
-    val apiDatabase: String?,
 )
 
 /**

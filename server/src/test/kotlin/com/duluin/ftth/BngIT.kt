@@ -215,20 +215,18 @@ class BngIT {
         val token = newTenantAdmin("bng-cred")
         val body = post(
             "/api/bng/nas", token,
-            """{"name":"BRAS-Kred","vendor":"FREERADIUS","address":"10.9.9.9","nasIdentifier":"kred",
+            """{"name":"BRAS-Kred","vendor":"MIKROTIK","address":"10.9.9.9","nasIdentifier":"kred",
                 "coaSecret":"coaDiam111","collectorId":null,
-                "apiUsername":"radius","apiSecret":"dbPassDiam222","apiPort":5432,"apiUseTls":false,
-                "apiDatabase":"jdbc:postgresql://10.9.9.9:5432/radius"}""",
+                "apiUsername":"ftth-api","apiSecret":"apiPassDiam222","apiPort":8729,"apiUseTls":false}""",
         )
         // Kredensial non-rahasia dibalikkan apa adanya; password hanya sebagai penanda.
-        assertThat(JsonPath.read<String>(body, "$.apiUsername")).isEqualTo("radius")
-        assertThat(JsonPath.read<Int>(body, "$.apiPort")).isEqualTo(5432)
+        assertThat(JsonPath.read<String>(body, "$.apiUsername")).isEqualTo("ftth-api")
+        assertThat(JsonPath.read<Int>(body, "$.apiPort")).isEqualTo(8729)
         assertThat(JsonPath.read<Boolean>(body, "$.apiUseTls")).isFalse()
-        assertThat(JsonPath.read<String>(body, "$.apiDatabase")).isEqualTo("jdbc:postgresql://10.9.9.9:5432/radius")
         assertThat(JsonPath.read<Boolean>(body, "$.hasApiSecret")).isTrue()
         assertThat(JsonPath.read<Boolean>(body, "$.hasCoaSecret")).isTrue()
         // Rahasia tak pernah muncul di respons.
-        assertThat(body).doesNotContain("dbPassDiam222")
+        assertThat(body).doesNotContain("apiPassDiam222")
         assertThat(body).doesNotContain("coaDiam111")
         assertThat(body).doesNotContain("apiSecret")
 
@@ -237,14 +235,13 @@ class BngIT {
         val nasId = id(body)
         val updated = put(
             "/api/bng/nas/$nasId", token,
-            """{"name":"BRAS-Kred","vendor":"FREERADIUS","address":"10.9.9.9","nasIdentifier":"kred",
+            """{"name":"BRAS-Kred","vendor":"MIKROTIK","address":"10.9.9.9","nasIdentifier":"kred",
                 "coaSecret":null,"collectorId":null,
-                "apiUsername":"radius2","apiSecret":null,"apiPort":6432,"apiUseTls":false,
-                "apiDatabase":"jdbc:postgresql://10.9.9.9:6432/radius","enabled":true}""",
+                "apiUsername":"ftth-api2","apiSecret":null,"apiPort":8443,"apiUseTls":false,"enabled":true}""",
         )
         assertThat(JsonPath.read<Boolean>(updated, "$.hasApiSecret")).isTrue()
-        assertThat(JsonPath.read<String>(updated, "$.apiUsername")).isEqualTo("radius2")
-        assertThat(JsonPath.read<Int>(updated, "$.apiPort")).isEqualTo(6432)
+        assertThat(JsonPath.read<String>(updated, "$.apiUsername")).isEqualTo("ftth-api2")
+        assertThat(JsonPath.read<Int>(updated, "$.apiPort")).isEqualTo(8443)
     }
 
     @Test

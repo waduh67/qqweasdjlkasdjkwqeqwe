@@ -58,9 +58,6 @@ class NasJpaEntity(
     @Column(name = "api_use_tls", nullable = false)
     var apiUseTls: Boolean,
 
-    @Column(name = "api_database", length = 500)
-    var apiDatabase: String?,
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var reachability: NasReachability,

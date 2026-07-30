@@ -49,7 +49,6 @@ class NasService(
                 apiSecret = command.apiSecret,
                 apiPort = command.apiPort,
                 apiUseTls = command.apiUseTls,
-                apiDatabase = command.apiDatabase,
             ),
         )
         syncRadiusClient(nas)
@@ -77,7 +76,6 @@ class NasService(
             apiSecret = command.apiSecret,
             apiPort = command.apiPort,
             apiUseTls = command.apiUseTls,
-            apiDatabase = command.apiDatabase,
         )
         val saved = nasRepository.save(nas)
         syncRadiusClient(saved, previousAddress)
@@ -141,5 +139,4 @@ private fun Nas.toView() = NasView(
     hasApiSecret = apiSecret != null,
     apiPort = apiPort,
     apiUseTls = apiUseTls,
-    apiDatabase = apiDatabase,
 )

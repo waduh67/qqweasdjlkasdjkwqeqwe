@@ -79,7 +79,6 @@ class BngCollectorConfigContributor(
             apiSecret = apiSecret,
             apiPort = apiPort,
             apiUseTls = apiUseTls,
-            apiDatabase = apiDatabase,
             coaSecret = coaSecret,
         )
     }

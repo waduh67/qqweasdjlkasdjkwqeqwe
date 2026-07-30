@@ -2,7 +2,6 @@ package com.duluin.ftth.collector
 
 import com.duluin.ftth.collector.adapter.AdapterRegistry
 import com.duluin.ftth.collector.adapter.BngAdapterRegistry
-import com.duluin.ftth.collector.adapter.FreeRadiusSqlAdapter
 import com.duluin.ftth.collector.adapter.MikrotikRouterOsAdapter
 import com.duluin.ftth.collector.adapter.SimulatorBngAdapter
 import com.duluin.ftth.collector.adapter.SimulatorOltAdapter
@@ -46,11 +45,13 @@ fun main() {
 
     // Jalur BNG (sesi PPPoE): di mode simulator, satu SimulatorBngAdapter memerankan
     // BRAS vendor apa pun lewat fallback. Di mode nyata dipasang adapter sungguhan per
-    // vendor; NAS bervendor lain hanya dicatat "belum didukung", bukan ditebak.
+    // vendor; NAS bervendor lain hanya dicatat "belum didukung", bukan ditebak. Data-plane
+    // RADIUS (provision/baca radacct/DAE) kini dipegang server pusat, jadi collector hanya
+    // perlu adapter MIKROTIK-native (REST) untuk kontrol sesi on-prem.
     val bngRegistry = if (simulatorEnabled) {
         BngAdapterRegistry(emptyList(), fallback = SimulatorBngAdapter())
     } else {
-        BngAdapterRegistry(listOf(MikrotikRouterOsAdapter(), FreeRadiusSqlAdapter()))
+        BngAdapterRegistry(listOf(MikrotikRouterOsAdapter()))
     }
 
     log.info("ftth-collector {} → {}", AGENT_VERSION, serverUrl)

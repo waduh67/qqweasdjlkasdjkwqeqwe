@@ -14,8 +14,8 @@ import java.util.UUID
 
 /**
  * Menguji bentuk SQL yang ditulis [FreeRadiusJdbcAdapter] ke radius-db platform lewat
- * koneksi PEREKAM berbasis proxy (tanpa DB nyata) — cermin uji `JdbcRadiusWriter` di
- * collector. Yang ditegaskan: rangkaian statement radcheck/radusergroup/radgroupreply/
+ * koneksi PEREKAM berbasis proxy (tanpa DB nyata). Yang ditegaskan: rangkaian statement
+ * radcheck/radusergroup/radgroupreply/
  * radgroupcheck yang tepat, atomisitas (auto-commit dimatikan lalu commit), dan bahwa
  * username yang DITERIMA adapter dipakai apa adanya (prefix slug urusan pemanggil, bukan
  * adapter — adapter murni SQL, tenancy-agnostik).

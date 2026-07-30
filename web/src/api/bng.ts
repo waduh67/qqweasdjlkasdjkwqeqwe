@@ -30,8 +30,8 @@ export const NAS_VENDORS: NasVendor[] = ['MIKROTIK', 'CISCO', 'JUNIPER', 'FREERA
 /**
  * Proyeksi satu BRAS. [hasCoaSecret]/[hasApiSecret] menandai rahasianya terisi tanpa
  * membocorkannya. Kredensial kontrol non-rahasia
- * ([apiUsername]/[apiPort]/[apiUseTls]/[apiDatabase]) dibalikkan apa adanya untuk memuat
- * ulang form saat diedit — dipakai adapter nyata (REST RouterOS / SQL FreeRADIUS).
+ * ([apiUsername]/[apiPort]/[apiUseTls]) dibalikkan apa adanya untuk memuat ulang form
+ * saat diedit — dipakai adapter REST RouterOS (vendor MIKROTIK).
  */
 export interface NasView {
   id: string
@@ -46,12 +46,11 @@ export interface NasView {
   hasApiSecret: boolean
   apiPort: number | null
   apiUseTls: boolean
-  apiDatabase: string | null
 }
 
 /**
  * Perubahan BRAS; [coaSecret]/[apiSecret] kosong saat update = biarkan rahasia apa adanya.
- * [apiUsername]/[apiPort]/[apiUseTls]/[apiDatabase] = kredensial kontrol adapter nyata.
+ * [apiUsername]/[apiPort]/[apiUseTls] = kredensial kontrol REST RouterOS (vendor MIKROTIK).
  */
 export interface SaveNasRequest {
   name: string
@@ -65,7 +64,6 @@ export interface SaveNasRequest {
   apiSecret?: string | null
   apiPort?: number | null
   apiUseTls?: boolean
-  apiDatabase?: string | null
 }
 
 /**

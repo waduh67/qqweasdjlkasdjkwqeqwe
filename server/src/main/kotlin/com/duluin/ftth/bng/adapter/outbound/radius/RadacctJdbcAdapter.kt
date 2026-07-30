@@ -7,12 +7,11 @@ import java.sql.ResultSet
 import java.util.UUID
 
 /**
- * Membaca `radacct` FreeRADIUS lewat JDBC ke radius-db platform. Port SQL dari
- * `JdbcRadacctReader` (collector) — sama semantiknya, dua beda pokok karena model
- * RADIUS-as-a-service: (1) koneksi dari pool platform [RadiusConnectionResolver] alih-alih
- * URL per-NAS milik tenant; (2) query DISARING per kode tenant sebab satu radius-db memuat
- * semua tenant — `radacct.username` ber-prefix `{kodeTenant}:` (S0), yang dikupas kembali
- * ke username bare di sini agar cocok akun.
+ * Membaca `radacct` FreeRADIUS lewat JDBC ke radius-db platform. Di model RADIUS-as-a-service
+ * jalur-baca ini server-side sepenuhnya, dengan dua ciri khas: (1) koneksi dari pool platform
+ * [RadiusConnectionResolver] alih-alih URL JDBC per-NAS milik tenant; (2) query DISARING per
+ * kode tenant sebab satu radius-db memuat semua tenant — `radacct.username` ber-prefix
+ * `{kodeTenant}:` (S0), yang dikupas kembali ke username bare di sini agar cocok akun.
  */
 @Component
 class RadacctJdbcAdapter(
