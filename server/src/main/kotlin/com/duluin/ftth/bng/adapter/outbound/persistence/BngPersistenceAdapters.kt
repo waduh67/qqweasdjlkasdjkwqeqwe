@@ -6,12 +6,14 @@ import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.domain.model.AccessStatus
 import com.duluin.ftth.bng.domain.model.BngAction
 import com.duluin.ftth.bng.domain.model.BngActionStatus
+import com.duluin.ftth.bng.domain.model.BngActionType
 import com.duluin.ftth.bng.domain.model.Nas
 import com.duluin.ftth.bng.domain.model.SubscriberAccess
 import com.duluin.ftth.common.security.SecretCipher
 import com.duluin.ftth.common.tenant.TenantContext
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import java.util.UUID
 
@@ -213,11 +215,19 @@ class BngActionPersistenceAdapter(
 
     override fun findDispatchableByNasIds(nasIds: Collection<UUID>): List<BngAction> {
         if (nasIds.isEmpty()) return emptyList()
-        return jpa.findByNasIdInAndStatusInOrderByRequestedAtAsc(
+        return jpa.findByNasIdInAndActionInAndStatusInOrderByRequestedAtAsc(
             nasIds,
+            BngActionType.SESSION_CONTROL,
             listOf(BngActionStatus.PENDING, BngActionStatus.DISPATCHED),
         ).map { it.toDomain() }
     }
+
+    override fun findServerProvisioningPending(limit: Int): List<BngAction> =
+        jpa.findByActionInAndStatusInOrderByRequestedAtAsc(
+            BngActionType.PROVISIONING,
+            listOf(BngActionStatus.PENDING),
+            PageRequest.of(0, limit),
+        ).map { it.toDomain() }
 
     private fun BngActionJpaEntity.toDomain(): BngAction = BngAction.rehydrate(
         id = id,

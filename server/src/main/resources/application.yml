@@ -86,3 +86,15 @@ ftth:
     # unik per akun. Buka rentang ini di firewall VPS (mis. 20000-40000/tcp).
     remote-port-min: ${FTTH_VPN_REMOTE_PORT_MIN:20000}
     remote-port-max: ${FTTH_VPN_REMOTE_PORT_MAX:40000}
+  radius:
+    # radius-db platform (RADIUS-as-a-service) yang dipegang SERVER untuk menulis otorisasi
+    # (radcheck/radusergroup/radgroupreply). KOSONG = provisioning server-side NONAKTIF —
+    # aplikasi tetap boot (dev/test), aksi menumpuk PENDING sampai dikonfigurasi. WAJIB diisi
+    # via env di prod; kredensial ini RAHASIA PLATFORM (bukan input tenant).
+    url: ${FTTH_RADIUS_DB_URL:}
+    username: ${FTTH_RADIUS_DB_USER:}
+    password: ${FTTH_RADIUS_DB_PASSWORD:}
+    # Sakelar eksplisit — matikan provisioning walau url terisi (mis. saat migrasi).
+    enabled: ${FTTH_RADIUS_ENABLED:true}
+    # Selang worker mengklaim aksi provisioning tertunda.
+    dispatch-interval: ${FTTH_RADIUS_DISPATCH_INTERVAL:PT10S}

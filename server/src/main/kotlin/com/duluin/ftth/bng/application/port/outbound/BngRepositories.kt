@@ -109,9 +109,21 @@ interface BngActionRepository {
     fun findById(id: UUID): BngAction?
 
     /**
-     * Perintah yang belum tuntas (PENDING atau DISPATCHED) untuk sekumpulan BRAS —
-     * dasar dispatch ke collector. DISPATCHED ikut agar perintah yang belum di-ACK
-     * dikirim ulang (at-least-once). Terurut waktu minta agar urutannya stabil.
+     * Perintah KONTROL SESI ([BngActionType.SESSION_CONTROL]: DISCONNECT/COA) yang belum
+     * tuntas (PENDING atau DISPATCHED) untuk sekumpulan BRAS — dasar dispatch ke collector.
+     * Aksi jalur-data (PROVISION/DEPROVISION/SYNC_GROUP) SENGAJA tak ikut: sejak
+     * RADIUS-as-a-service, server yang mengeksekusinya langsung ke radius-db (lihat
+     * [findServerProvisioningPending]) — collector on-prem tak punya rute ke radius-db
+     * internal. DISPATCHED ikut agar perintah yang belum di-ACK dikirim ulang
+     * (at-least-once). Terurut waktu minta agar urutannya stabil.
      */
     fun findDispatchableByNasIds(nasIds: Collection<UUID>): List<BngAction>
+
+    /**
+     * Aksi jalur-DATA RADIUS ([BngActionType.PROVISIONING]) yang masih PENDING untuk tenant
+     * aktif (RLS) — diklaim worker server-side untuk ditulis ke radius-db platform. Tak
+     * pakai status DISPATCHED (worker mengeksekusi sinkron lalu menuntaskan sendiri).
+     * Dibatasi [limit] agar satu tenant tak memonopoli satu putaran; terurut waktu minta.
+     */
+    fun findServerProvisioningPending(limit: Int): List<BngAction>
 }

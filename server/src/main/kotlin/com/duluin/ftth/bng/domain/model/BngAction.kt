@@ -20,6 +20,19 @@ enum class BngActionType {
 
     /** Sinkronkan atribut grup paket di RADIUS (rate-limit + batas sesi + grup FUP). */
     SYNC_GROUP,
+    ;
+
+    companion object {
+        /**
+         * Aksi jalur-DATA RADIUS — dieksekusi SERVER langsung ke radius-db platform
+         * (RADIUS-as-a-service), TIDAK dititip ke collector on-prem yang tak punya rute
+         * ke radius-db internal.
+         */
+        val PROVISIONING: Set<BngActionType> = setOf(PROVISION, DEPROVISION, SYNC_GROUP)
+
+        /** Aksi kontrol sesi (DAE RFC 5176) — masih lewat collector on-prem (jalur turun). */
+        val SESSION_CONTROL: Set<BngActionType> = setOf(DISCONNECT, COA)
+    }
 }
 
 /**
@@ -124,6 +137,17 @@ class BngAction private constructor(
         status = BngActionStatus.FAILED
         this.detail = detail
         completedAt = at
+    }
+
+    /**
+     * Gagal TRANSIEN pada eksekusi server-side (mis. radius-db sesaat mati): rekam sebab
+     * tapi TETAP PENDING agar diklaim ulang putaran berikutnya (degradasi anggun,
+     * at-least-once). Beda dari [fail] yang terminal — dipakai worker provisioning selama
+     * aksi belum melewati batas usia retry.
+     */
+    fun retryLater(detail: String?) {
+        if (isTerminal) return
+        this.detail = detail
     }
 
     companion object {
