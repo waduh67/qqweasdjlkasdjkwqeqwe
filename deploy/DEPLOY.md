@@ -369,19 +369,28 @@ tapi nol-registry.
 
 ---
 
-## Bagian K — Server RADIUS (FreeRADIUS) di stack
+## Bagian K — Server RADIUS (FreeRADIUS) di stack — RADIUS-as-a-service
 
 Stack prod sudah menyertakan **FreeRADIUS + Postgres RADIUS** (service `freeradius`
 & `radius-db`) — jalan otomatis bareng yang lain begitu `docker compose up -d`. Ini
-server RADIUS **beneran**: Mikrotik auth PPPoE ke sini, accounting masuk `radacct`,
-lalu app/collector baca sesinya + provisioning kecepatan.
+server RADIUS **beneran** yang platform sediakan sebagai layanan: Mikrotik tiap tenant
+auth PPPoE ke sini, accounting masuk `radacct`, dan **server aplikasi** yang menulis
+otorisasi (password + kecepatan), membaca sesi, dan mendaftarkan klien BRAS.
+
+**Yang berubah dari model lama:** tak ada lagi client BRAS di `.env` maupun URL JDBC di
+form. Tenant **daftarkan BRAS sendiri di UI** (nama, IP, shared secret) → server menulis
+baris tabel `nas` → FreeRADIUS memuat klien dari situ (`read_clients=yes`). Username PPPoE
+di-key `{kodeTenant}:{username}` otomatis (`sql_user_name`), jadi username boleh kembar
+antar-tenant. Server terhubung ke `radius-db` internal lewat env (`FTTH_RADIUS_DB_*`,
+sudah di-wire otomatis di compose dari blok `RADIUS_DB_*`).
 
 ### K.1 Isi `.env` + buka firewall
 
-Di `/opt/ftth/.env` isi blok RADIUS (lihat `.env.example`): `RADIUS_DB_PASSWORD`,
-`RADIUS_CLIENT_IP` (IP/subnet Mikrotik), `RADIUS_CLIENT_SECRET` (shared secret).
+Di `/opt/ftth/.env` cukup isi **satu** rahasia RADIUS: `RADIUS_DB_PASSWORD` (lihat
+`.env.example`; `RADIUS_DB_NAME`/`RADIUS_DB_USER` biarkan default `radius`). Tak ada
+lagi `RADIUS_CLIENT_*` — klien BRAS datang dari UI.
 
-Buka di NSG/firewall VPS, **batasi ke IP Mikrotik**:
+Buka di NSG/firewall VPS, **batasi ke IP Mikrotik tenant**:
 - `1812/udp` (auth) · `1813/udp` (accounting)
 
 Terapkan:
@@ -391,50 +400,65 @@ docker compose -f docker-compose.prod.yml up -d radius-db freeradius
 docker compose -f docker-compose.prod.yml logs -f freeradius   # -X: tiap auth kelihatan
 ```
 
-### K.2 Arahkan Mikrotik ke RADIUS ini (RouterOS v7)
+### K.2 Daftarkan BRAS di UI app **dulu** (form Tambah BRAS)
 
-```rsc
-# <IP-VPS> = IP publik VPS; secret = RADIUS_CLIENT_SECRET di .env
-/radius add service=ppp address=<IP-VPS> secret=<RADIUS_CLIENT_SECRET> \
-    authentication-port=1812 accounting-port=1813
-/radius incoming set accept=yes port=3799
-/ppp aaa set use-radius=yes accounting=yes interim-update=5m
-```
-
-### K.3 (Uji cepat) bikin satu user PPPoE tanpa app
-
-Sebelum provisioning app dipakai, bisa tes login dengan menaruh user langsung:
-```bash
-docker compose -f docker-compose.prod.yml exec radius-db \
-  psql -U radius -d radius -c \
-  "INSERT INTO radcheck (username,attribute,op,value) VALUES ('test@isp.net','Cleartext-Password',':=','test123');"
-```
-Dial `test@isp.net`/`test123` dari klien PPPoE → di log `freeradius` harus muncul
-`Access-Accept`, dan `radacct` dapat baris sesi baru.
-
-### K.4 Daftarkan BRAS di UI app (form Add RADIUS server)
+Klien BRAS dibaca dari tabel `nas`, jadi **daftarkan di UI sebelum** Mikrotik menembak —
+kalau tidak, FreeRADIUS menolak request dari IP yang tak dikenalnya.
 
 | Field | Isi |
 |---|---|
 | Nama | `BRAS Produksi` (bebas) |
 | Vendor | `MIKROTIK` |
-| Alamat manajemen | **IP Mikrotik** (sasaran CoA/Disconnect :3799) |
-| NAS-Identifier | identitas NAS = `radacct.nasidentifier` (cek `SELECT DISTINCT nasidentifier FROM radacct;`) |
-| Secret CoA | secret DAE di `/radius incoming` Mikrotik (biasanya = `RADIUS_CLIENT_SECRET`) |
-| URL JDBC | `jdbc:postgresql://radius-db:5432/radius` (bila collector di stack yang sama) |
-| User DB | `RADIUS_DB_USER` (mis. `radius`) |
-| Password DB | `RADIUS_DB_PASSWORD` |
+| Alamat manajemen | **IP Mikrotik** (jadi `nasname` klien **dan** sasaran CoA/Disconnect :3799) |
+| NAS-Identifier | opsional; identitas NAS = `radacct.nasidentifier` |
+| Secret CoA | **shared secret BRAS ini** — dipakai ganda: secret klien RADIUS (auth/acct) **dan** secret DAE (:3799). Simpan; nanti diketik sama di Mikrotik. |
+| Kredensial REST API | (opsional) untuk kontrol sesi via collector on-prem RouterOS v7 |
 | Aktif | ✅ |
+
+> Begitu disimpan, server menulis baris `nas` (`nasname`=IP, `secret`=Secret CoA,
+> `shortname`=kode tenant). Cek: `docker compose -f docker-compose.prod.yml exec
+> radius-db psql -U radius -d radius -c "SELECT nasname,shortname FROM nas;"`.
+
+> **Reload setelah tambah/ubah BRAS.** `read_clients=yes` memuat daftar klien saat
+> FreeRADIUS **start**, jadi BRAS yang baru didaftarkan belum dikenali sampai di-reload:
+> `docker compose -f docker-compose.prod.yml restart freeradius`. Dampaknya kecil — sesi
+> PPPoE yang sedang hidup ada di Mikrotik (bukan di FreeRADIUS), reload cuma menjeda
+> auth/acct **request baru** beberapa detik. (Klien dinamis tanpa-reload = penyempurnaan
+> lanjutan; belum di stack ini.)
+
+### K.3 Arahkan Mikrotik ke RADIUS ini (RouterOS v7)
+
+Secret di bawah = **Secret CoA** yang kamu isi di UI untuk BRAS ini (identik dua sisi).
+
+```rsc
+# <IP-VPS> = IP publik VPS; <SECRET-BRAS> = Secret CoA dari form UI
+/radius add service=ppp address=<IP-VPS> secret=<SECRET-BRAS> \
+    authentication-port=1812 accounting-port=1813
+/radius incoming set accept=yes port=3799
+/ppp aaa set use-radius=yes accounting=yes interim-update=5m
+```
+
+### K.4 Provisi akun PPPoE lewat app (bukan SQL manual)
+
+Cara benar: buat pelanggan + langganan (pilih Paket) → provisi akun PPPoE di tab **Akses**.
+Server menulis `radcheck`/`radusergroup` dengan kunci `{kodeTenant}:{username}` yang cocok
+dengan `sql_user_name`. Dial akun itu dari klien PPPoE → log `freeradius` menampilkan
+`Access-Accept` dan `radacct` dapat baris sesi baru.
+
+> Mau tes mentah tanpa app? Ingat prefiks tenant: username di `radcheck` **wajib**
+> `{kodeTenant}:{username}` (mis. `acme:test@isp.net`), sedangkan CPE tetap mengetik
+> `test@isp.net` saja. Tanpa prefiks yang benar, auth NAK.
 
 ### K.5 Catatan arah koneksi (penting)
 
-- **Auth/acct**: Mikrotik → VPS (1812/1813). Selama Mikrotik bisa keluar ke internet, jalan.
-- **CoA/Disconnect**: collector → **Mikrotik** :3799. Jadi collector harus bisa
-  **menjangkau balik** Mikrotik. Kalau Mikrotik di belakang NAT (tanpa IP publik),
-  pakai **fitur VPN hub** (Bagian I) supaya collector menembak Mikrotik lewat overlay.
-- **URL JDBC** dijangkau oleh **collector**. Kalau collector jalan di stack VPS yang
-  sama → `radius-db:5432`. Kalau collector di jaringan ISP → arahkan ke host DB RADIUS
-  yang reachable (dan buka port DB ke IP collector saja).
+- **Auth/acct**: Mikrotik → VPS (1812/1813). Selama Mikrotik bisa keluar ke internet, jalan
+  tanpa VPN — walau Mikrotik di belakang NAT penuh.
+- **CoA/Disconnect**: **SERVER → Mikrotik** :3799 (jalur-tulis DAE server-side). Server harus
+  bisa **menjangkau balik** alamat manajemen BRAS. Tiga jalur (per-NAS): IP publik → tembak
+  langsung (buka 3799/udp di Mikrotik ke IP VPS); di balik NAT + join **VPN hub** (Bagian I)
+  → lewat overlay; tak terjangkau → degradasi anggun (perubahan berlaku saat login ulang).
+- **Server → radius-db**: internal compose (`radius-db:5432`), otomatis lewat `FTTH_RADIUS_DB_*`.
+  Tak ada port DB yang perlu dibuka ke luar.
 
 ---
 

@@ -50,8 +50,10 @@ services:
       retries: 12
 
   # --- Server FreeRADIUS: auth PPPoE + accounting ke radius-db ---
-  # Mikrotik menembak ke sini (auth 1812/udp, acct 1813/udp). CoA/Disconnect
-  # (RFC 5176 :3799) tetap ditembak COLLECTOR balik ke Mikrotik, bukan dari sini.
+  # Mikrotik menembak ke sini (auth 1812/udp, acct 1813/udp). Klien BRAS dibaca dari
+  # tabel `nas` (read_clients=yes) — tenant daftarkan sendiri lewat UI, bukan .env.
+  # CoA/Disconnect (RFC 5176 :3799) ditembak SERVER langsung ke alamat manajemen BRAS
+  # (jalur DIRECT/overlay), bukan lagi dari collector maupun dari container ini.
   freeradius:
     image: freeradius/freeradius-server:3.2.5
     restart: unless-stopped
@@ -64,9 +66,6 @@ services:
       RADIUS_DB_NAME: ${RADIUS_DB_NAME:-radius}
       RADIUS_DB_USER: ${RADIUS_DB_USER:-radius}
       RADIUS_DB_PASSWORD: ${RADIUS_DB_PASSWORD:?wajib diisi di .env}
-      RADIUS_CLIENT_NAME: ${RADIUS_CLIENT_NAME:-mikrotik}
-      RADIUS_CLIENT_IP: ${RADIUS_CLIENT_IP:?isi IP/subnet Mikrotik di .env}
-      RADIUS_CLIENT_SECRET: ${RADIUS_CLIENT_SECRET:?isi shared secret di .env}
     volumes:
       - ./radius/freeradius/mods-enabled/sql:/etc/freeradius/mods-enabled/sql:ro
       - ./radius/freeradius/clients.conf:/etc/freeradius/clients.conf:ro
@@ -95,10 +94,22 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      # Ordering saja (bukan service_healthy): pool radius-db toleran boot
+      # (initializationFailTimeout=-1) — server tetap nyala walau radius-db sesaat mati,
+      # aksi provisioning menumpuk PENDING lalu jalan saat radius-db pulih.
+      radius-db:
+        condition: service_started
     environment:
       FTTH_DB_URL: jdbc:postgresql://postgres:5432/${FTTH_DB_NAME}
       FTTH_DB_USER: ${FTTH_DB_USER}
       FTTH_DB_PASSWORD: ${FTTH_DB_PASSWORD}
+      # radius-db platform (RADIUS-as-a-service): server menulis otorisasi
+      # (radcheck/radusergroup/radgroupreply), membaca radacct, dan mendaftarkan klien
+      # `nas` langsung ke sini via JDBC. Kredensial = rahasia platform (bukan input
+      # tenant), diturunkan dari blok RADIUS_DB_* yang sama dengan freeradius/radius-db.
+      FTTH_RADIUS_DB_URL: jdbc:postgresql://radius-db:5432/${RADIUS_DB_NAME:-radius}
+      FTTH_RADIUS_DB_USER: ${RADIUS_DB_USER:-radius}
+      FTTH_RADIUS_DB_PASSWORD: ${RADIUS_DB_PASSWORD:?wajib diisi di .env}
       FTTH_JWT_SECRET: ${FTTH_JWT_SECRET}
       FTTH_ENCRYPTION_SECRET: ${FTTH_ENCRYPTION_SECRET}
       FTTH_CORS_ORIGINS: ${FTTH_CORS_ORIGINS}

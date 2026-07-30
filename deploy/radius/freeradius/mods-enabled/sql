@@ -14,8 +14,20 @@ sql {
     password  = "$ENV{RADIUS_DB_PASSWORD}"
     radius_db = "$ENV{RADIUS_DB_NAME}"
 
-    # Klien BRAS didefinisikan di clients.conf (dari .env), bukan dari tabel nas.
-    read_clients = no
+    # Daftar BRAS klien dibaca dari tabel `nas` (RADIUS-as-a-service, bukan lagi dari
+    # clients.conf/.env): tenant daftarkan BRAS di UI → server menulis satu baris `nas`
+    # (nasname=IP, secret, shortname=kode tenant). Zero restart, zero secret di file.
+    read_clients = yes
+    client_table = "nas"
+
+    # Kunci SQL per-tenant (inti RADIUS-as-a-service). FreeRADIUS sudah mencocokkan
+    # request ke satu klien/BRAS lewat source-IP+secret (anti-spoof); shortname klien =
+    # KODE TENANT (kolom nas.shortname). Kita prefix-kan ke User-Name sehingga
+    # radcheck/radusergroup/radacct di-key "{kodeTenant}:{username}". Efek: username
+    # telanjang boleh KEMBAR antar-tenant (tenantA:budi ≠ tenantB:budi) sementara CPE
+    # pelanggan tetap mengetik "budi" saja. Grup plan pakai UUID → aman tanpa prefix.
+    # Server WAJIB menulis radcheck dengan format kunci yang identik (lihat S1).
+    sql_user_name = "%{client:shortname}:%{User-Name}"
 
     # Dipakai queries.conf bawaan untuk memetakan grup — wajib ada walau fitur grup
     # tak dipakai, kalau tidak radiusd gagal parse. "SQL-Group" atribut kamus bawaan.
