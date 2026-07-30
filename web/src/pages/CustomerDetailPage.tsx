@@ -63,6 +63,7 @@ import { listPlans as listCatalogPlans, type PlanView } from '../api/catalog'
 import { listInvoicesForCustomer, type InvoiceView } from '../api/billing'
 import { listIncidentsForCustomer, type IncidentView } from '../api/incident'
 import { listWorkOrdersForCustomer, type WorkOrderStatus, type WorkOrderView } from '../api/workorder'
+import { getSubscriber360, type Sub360BillingSummary, type Subscriber360View } from '../api/subscriber360'
 
 /** Warna kesehatan optik selaras token status. */
 const HEALTH_COLOR: Record<string, string> = {
@@ -95,6 +96,7 @@ export function CustomerDetailPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [tab, setTab] = useState<Tab>('ringkasan')
+  const [sub360, setSub360] = useState<Subscriber360View | null>(null)
 
   const reload = useCallback(async () => {
     try {
@@ -110,6 +112,20 @@ export function CustomerDetailPage() {
   useEffect(() => {
     void reload()
   }, [reload])
+
+  // Ringkasan 360° server-side: satu panggilan agregat yang menyusun tunggakan
+  // (dihitung SERVER), status sesi PPPoE, CPE, dan work order terbuka — tiap facet
+  // sudah digerbang izin per-modul di server. Aditif & toleran gagal: tab detail tetap
+  // memakai tarikannya sendiri, jadi kegagalan di sini tak melumpuhkan halaman.
+  useEffect(() => {
+    let alive = true
+    void getSubscriber360(id)
+      .then((v) => alive && setSub360(v))
+      .catch(() => alive && setSub360(null))
+    return () => {
+      alive = false
+    }
+  }, [id])
 
   // Gerbang izin sebagai boolean primitif: `can` dari useCan berganti identitas
   // tiap render, jadi tak boleh masuk daftar dependensi effect (memicu loop).
@@ -269,13 +285,13 @@ export function CustomerDetailPage() {
         )}
       </div>
 
-      {tab === 'ringkasan' && <RingkasanTab customer={customer} odps={odps} run={run} />}
+      {tab === 'ringkasan' && <RingkasanTab customer={customer} odps={odps} run={run} sub360={sub360} />}
       {tab === 'jalur' && <JalurTab trace={trace} connected={connected} />}
       {tab === 'tetangga' && <TetanggaTab neighbors={neighbors} connected={connected} odpCount={odpCount} ponCount={ponCount} />}
       {tab === 'metrik' && <MetrikTab customer={customer} metrics={metrics} />}
       {tab === 'akses' && <NetworkAccessTab customerId={id} subscriptions={customer.subscriptions} />}
       {tab === 'cpe' && <CpeTab customerId={id} />}
-      {tab === 'tagihan' && <TagihanTab customerId={id} />}
+      {tab === 'tagihan' && <TagihanTab customerId={id} billing={sub360?.billing ?? null} />}
       {tab === 'tiket' && <TiketWoTab customerId={id} canIncident={canIncident} canWorkorder={canWorkorder} />}
       {tab === 'timeline' && (
         <TimelineTab
@@ -304,13 +320,17 @@ function RingkasanTab({
   customer,
   odps,
   run,
+  sub360,
 }: {
   customer: CustomerView
   odps: OdpView[]
   run: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
+  sub360: Subscriber360View | null
 }) {
   return (
     <div className="stack" style={{ gap: '1rem' }}>
+      <Overview360Card sub360={sub360} />
+
       <div className="card stack" style={{ gap: '0.75rem' }}>
         <strong style={{ fontSize: '0.95rem' }}>Profil</strong>
         <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
@@ -333,6 +353,100 @@ function Field({ label, value }: { label: string; value: string }) {
     <div className="stat">
       <div className="stat-label">{label}</div>
       <div style={{ fontSize: '0.9rem', color: 'var(--text-2)', wordBreak: 'break-word' }}>{value}</div>
+    </div>
+  )
+}
+
+/** Baris kecil di dalam sel facet 360°; membedakan "terkunci" (abu-abu) dari isi. */
+function FacetLine({ text, muted = true }: { text: string; muted?: boolean }) {
+  return (
+    <div className={muted ? 'muted' : undefined} style={{ fontSize: '0.85rem' }}>
+      {text}
+    </div>
+  )
+}
+
+/**
+ * Strip ringkasan 360° dari satu panggilan agregat server (`/api/subscriber-360/:id`) —
+ * menyatukan tunggakan (dihitung SERVER), sesi PPPoE, CPE, dan work order terbuka dalam
+ * satu tarikan, menggantikan fan-out lintas-modul sisi klien untuk pandangan sekilas.
+ *
+ * Tiap facet digerbang izin modulnya di server: facet yang tak diizinkan tampil sebagai
+ * sel "terkunci" (dibedakan dari "memang kosong" lewat [Subscriber360View.access]).
+ * Detail penuh tetap ada di tab masing-masing (Akses/CPE/Tagihan/Tiket & WO).
+ */
+function Overview360Card({ sub360 }: { sub360: Subscriber360View | null }) {
+  if (!sub360) return null
+  const { billing, session, cpeDevices, openWorkOrder, access } = sub360
+  const arrears = billing ? Number(billing.outstandingAmount) : 0
+  const cpeOnline = cpeDevices?.filter((d) => d.online).length ?? 0
+  return (
+    <div className="card stack" style={{ gap: '0.75rem' }}>
+      <strong style={{ fontSize: '0.95rem' }}>Ringkasan 360°</strong>
+      <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
+        <div className="stat">
+          <div className="stat-label">Tunggakan</div>
+          {!access.billing ? (
+            <FacetLine text="terkunci" />
+          ) : (
+            <>
+              <div
+                className="tnum"
+                style={{ fontWeight: 700, color: arrears > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
+              >
+                {fmtRupiah(arrears)}
+              </div>
+              <FacetLine text={billing && billing.outstandingCount > 0 ? `${billing.outstandingCount} tagihan jatuh tempo` : 'lunas'} />
+            </>
+          )}
+        </div>
+
+        <div className="stat">
+          <div className="stat-label">Sesi PPPoE</div>
+          {!access.session ? (
+            <FacetLine text="terkunci" />
+          ) : !session ? (
+            <FacetLine text="belum ada" />
+          ) : (
+            <>
+              <div>
+                <Badge tone={session.online ? 'good' : 'neutral'}>{session.online ? 'Online' : 'Offline'}</Badge>
+              </div>
+              <FacetLine text={session.framedIp ?? session.username} />
+            </>
+          )}
+        </div>
+
+        <div className="stat">
+          <div className="stat-label">CPE</div>
+          {!access.cpe ? (
+            <FacetLine text="terkunci" />
+          ) : !cpeDevices || cpeDevices.length === 0 ? (
+            <FacetLine text="tak ada" />
+          ) : (
+            <>
+              <div className="tnum" style={{ fontWeight: 700 }}>
+                {cpeOnline}/{cpeDevices.length}
+              </div>
+              <FacetLine text="online" />
+            </>
+          )}
+        </div>
+
+        <div className="stat">
+          <div className="stat-label">WO terbuka</div>
+          {!access.workOrder ? (
+            <FacetLine text="terkunci" />
+          ) : !openWorkOrder ? (
+            <FacetLine text="tak ada" />
+          ) : (
+            <>
+              <div className="tnum" style={{ fontWeight: 700 }}>{openWorkOrder.code}</div>
+              <FacetLine text={openWorkOrder.scheduledAt ? fmtDate(openWorkOrder.scheduledAt.slice(0, 10)) : 'terjadwal —'} />
+            </>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -2098,10 +2212,11 @@ function isOutstanding(inv: InvoiceView, today: string): boolean {
 
 /**
  * Tagihan & tunggakan pelanggan. Daftar tagihan (semua status) dari module billing,
- * plus ringkas tunggakan yang dihitung sisi klien: Σ nilai tagihan jatuh tempo yang
- * belum dibayar. Digerbang `billing.invoice.view` di pemanggil.
+ * plus ringkas tunggakan. Nilai tunggakan diambil dari agregat 360° yang **dihitung
+ * server** (satu sumber kebenaran, sama dengan strip Ringkasan); bila agregat tak
+ * tersedia (gagal muat) jatuh balik ke hitung sisi klien. Digerbang `billing.invoice.view`.
  */
-function TagihanTab({ customerId }: { customerId: string }) {
+function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub360BillingSummary | null }) {
   const [invoices, setInvoices] = useState<InvoiceView[] | null>(null)
 
   useEffect(() => {
@@ -2131,7 +2246,10 @@ function TagihanTab({ customerId }: { customerId: string }) {
   }
 
   const today = todayLocalDate()
-  const tunggakan = invoices.filter((inv) => isOutstanding(inv, today)).reduce((s, inv) => s + Number(inv.amount), 0)
+  const tunggakan =
+    billing != null
+      ? Number(billing.outstandingAmount)
+      : invoices.filter((inv) => isOutstanding(inv, today)).reduce((s, inv) => s + Number(inv.amount), 0)
 
   return (
     <div className="stack" style={{ gap: '1rem' }}>
