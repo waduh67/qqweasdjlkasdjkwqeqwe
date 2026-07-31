@@ -27,9 +27,14 @@ enum class AuthType {
 
 /**
  * Status identitas jaringan, mencerminkan status langganan tapi hidup terpisah
- * karena kelak ia yang menggerakkan efek jaringan nyata (ganti profil, tendang sesi).
+ * karena ia yang menggerakkan efek jaringan nyata (ganti profil, tendang sesi).
+ *
+ * [PENDING]: akun sudah dibuat tapi BELUM ditulis ke RADIUS — dibuat saat langganan masih
+ * menunggu instalasi (WO PSB belum selesai), sehingga pelanggan tak bisa online duluan.
+ * Otorisasi RADIUS baru ditulis saat langganan diaktifkan (lihat
+ * [com.duluin.ftth.bng.application.service.SubscriberAccessLifecycle.onActivated]).
  */
-enum class AccessStatus { ACTIVE, ISOLATED, TERMINATED }
+enum class AccessStatus { PENDING, ACTIVE, ISOLATED, TERMINATED }
 
 /**
  * Identitas jaringan seorang pelanggan — akun PPPoE yang dipakai login internet.

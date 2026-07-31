@@ -16,6 +16,7 @@ import com.duluin.ftth.catalog.CatalogApi
 import com.duluin.ftth.catalog.PlanNetworkRef
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.customer.CustomerApi
@@ -49,6 +50,8 @@ class SubscriberAccessService(
     private val bngActions: BngActionService,
 ) : ManageSubscriberAccessUseCase, ControlSubscriberAccessUseCase {
 
+    private val secureRandom = java.security.SecureRandom()
+
     @Transactional(readOnly = true)
     override fun listForCustomer(customerId: UUID): List<SubscriberAccessView> =
         subscriberAccessRepository.findByCustomerId(customerId).toViews()
@@ -73,6 +76,9 @@ class SubscriberAccessService(
             throw ConflictException("Paket '${plan.name}' tidak melayani tipe layanan ${command.authType.name}")
         }
         val nas = command.nasId?.let { requireNas(it) }
+        // Kredensial login yang dikosongkan operator di-generate server-side (kebijakan onboarding
+        // "auto-generate, boleh override"); tipe berbasis MAC memakai MAC-nya sendiri sebagai identitas.
+        val (username, secret) = resolveCredentials(command, subscription.customerId)
 
         // Bangun akun DULU: companion menormalkan identitas (MAC → `AA:BB:...`) & memvalidasi
         // per-tipe, jadi uji keunikan dilakukan atas identitas ternormalkan, bukan input mentah.
@@ -80,8 +86,8 @@ class SubscriberAccessService(
             tenantId = currentUser.current().tenantId,
             subscriptionId = subscription.id,
             customerId = subscription.customerId,
-            username = command.username,
-            secret = command.secret,
+            username = username,
+            secret = secret,
             planId = plan.planId,
             nasId = nas?.id,
             status = initialStatus(subscription.status),
@@ -92,12 +98,16 @@ class SubscriberAccessService(
             throw ConflictException("Identitas jaringan '${account.username}' sudah dipakai")
         }
         val access = subscriberAccessRepository.save(account)
-        // RADIUS jadi pusat: pastikan grup paket ada di BRAS lalu tulis kredensial +
-        // keanggotaan akun. No-op bila akun belum ditugaskan ke BRAS.
+        // RADIUS jadi pusat: pastikan grup paket ada di BRAS lalu tulis kredensial + keanggotaan
+        // akun. No-op bila akun belum ditugaskan ke BRAS. Akun PENDING (langganan masih menunggu
+        // instalasi) sengaja BELUM ditulis ke RADIUS — pelanggan baru online saat WO PSB selesai
+        // (SubscriberAccessLifecycle.onActivated yang memprovisikannya).
         val user = currentUser.current()
-        access.nasId?.let { nasId ->
-            bngActions.enqueueSyncGroup(nasId, access.tenantId, plan, user.userId, user.email)
-            bngActions.enqueueProvision(access, user.userId, user.email)
+        if (access.status != AccessStatus.PENDING) {
+            access.nasId?.let { nasId ->
+                bngActions.enqueueSyncGroup(nasId, access.tenantId, plan, user.userId, user.email)
+                bngActions.enqueueProvision(access, user.userId, user.email)
+            }
         }
         auditor.record(
             "bng.access.provisioned", "SubscriberAccess", access.id, access.tenantId,
@@ -213,15 +223,54 @@ class SubscriberAccessService(
     }
 
     /**
-     * Status akun mengikuti status langganan saat dibuat: langganan aktif/menunggu
-     * instalasi menghasilkan akun aktif, langganan terisolir menghasilkan akun
-     * terisolir. Langganan yang sudah diakhiri tak boleh dibuatkan akun baru.
+     * Status akun mengikuti status langganan saat dibuat: langganan aktif → akun aktif (langsung
+     * ditulis ke RADIUS), langganan menunggu instalasi → akun PENDING (belum ditulis ke RADIUS;
+     * diaktifkan+diprovisikan saat WO PSB selesai lewat [SubscriberAccessLifecycle.onActivated]),
+     * langganan terisolir → akun terisolir. Langganan yang sudah diakhiri tak boleh dibuatkan akun.
      */
     private fun initialStatus(subscriptionStatus: String): AccessStatus = when (subscriptionStatus) {
-        "ACTIVE", "PENDING" -> AccessStatus.ACTIVE
+        "ACTIVE" -> AccessStatus.ACTIVE
+        "PENDING" -> AccessStatus.PENDING
         "ISOLATED" -> AccessStatus.ISOLATED
         else -> throw ConflictException("Langganan berstatus $subscriptionStatus tidak bisa dibuatkan akun jaringan")
     }
+
+    /**
+     * Kredensial login akhir: dipakai apa adanya bila operator mengisinya, di-generate server-side
+     * bila dikosongkan (kebijakan onboarding "auto-generate, boleh override"). Tipe berbasis MAC
+     * (DHCP/Static) tak memakai kredensial login — identitasnya MAC (WAJIB diisi operator) dan
+     * secret diabaikan domain; keduanya diteruskan apa adanya untuk dinormalkan/divalidasi domain.
+     */
+    private fun resolveCredentials(command: ProvisionAccessCommand, customerId: UUID): Pair<String, String> {
+        if (command.authType.macBased) {
+            val mac = command.username?.takeIf { it.isNotBlank() }
+                ?: throw ValidationException("Akun ${command.authType.name} butuh MAC address")
+            return mac to command.secret.orEmpty()
+        }
+        val username = command.username?.takeIf { it.isNotBlank() } ?: generateUsername(customerId)
+        val secret = command.secret?.takeIf { it.isNotBlank() } ?: generateSecret()
+        return username to secret
+    }
+
+    /**
+     * Username login turunan kode pelanggan (dinormalkan ke pola username domain), dijaga unik
+     * dalam tenant (RLS) dengan suffix angka bila kode sudah dipakai akun lain (mis. pelanggan
+     * ber-langganan lebih dari satu). Fallback "user" bila kode tak menyisakan karakter valid.
+     */
+    private fun generateUsername(customerId: UUID): String {
+        val base = customerApi.findCustomer(customerId)?.code
+            ?.lowercase()?.replace(Regex("[^a-z0-9._@-]"), "")
+            ?.takeIf { it.length >= 2 }
+            ?: "user"
+        if (subscriberAccessRepository.findByUsername(base) == null) return base
+        var n = 2
+        while (subscriberAccessRepository.findByUsername("$base-$n") != null) n++
+        return "$base-$n"
+    }
+
+    /** Secret acak 12 karakter (alfabet tanpa karakter mirip) — memenuhi aturan panjang domain. */
+    private fun generateSecret(): String =
+        (1..12).map { SECRET_ALPHABET[secureRandom.nextInt(SECRET_ALPHABET.length)] }.joinToString("")
 
     private fun require(id: UUID): SubscriberAccess =
         subscriberAccessRepository.findById(id) ?: throw NotFoundException("Akun jaringan $id tidak ditemukan")
@@ -252,6 +301,9 @@ class SubscriberAccessService(
     private fun currentPeriodStart(): Instant =
         LocalDate.now().withDayOfMonth(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
 }
+
+/** Alfabet secret auto-generate — tanpa 0/O/1/l/I yang mudah tertukar saat dibaca operator. */
+private const val SECRET_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"
 
 /** Byte → MB desimal (1 MB = 1e6 byte), selaras kuota FUP & Mbps di seluruh sistem. */
 private fun Long.toMb(): Long = this / 1_000_000L

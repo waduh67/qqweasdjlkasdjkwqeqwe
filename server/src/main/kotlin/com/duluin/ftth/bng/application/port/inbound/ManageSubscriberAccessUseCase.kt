@@ -31,14 +31,15 @@ interface ManageSubscriberAccessUseCase {
 }
 
 /**
- * [username] adalah identitas login untuk PPPoE/Hotspot, atau MAC untuk DHCP/Static
- * (dinormalkan di domain). [secret] diabaikan untuk tipe berbasis MAC (MAC jadi password).
- * [framedIp] hanya dipakai DHCP/Static (reservasi Framed-IP-Address; wajib untuk STATIC).
+ * [username] identitas login untuk PPPoE/Hotspot (null/kosong → di-generate server-side dari
+ * kode pelanggan), atau MAC untuk DHCP/Static (WAJIB diisi, dinormalkan di domain). [secret]
+ * password PPPoE/Hotspot (null/kosong → di-generate acak); diabaikan untuk tipe berbasis MAC
+ * (MAC jadi password). [framedIp] hanya dipakai DHCP/Static (reservasi Framed-IP-Address; wajib STATIC).
  */
 data class ProvisionAccessCommand(
     val subscriptionId: UUID,
-    val username: String,
-    val secret: String,
+    val username: String?,
+    val secret: String?,
     val planId: UUID,
     val nasId: UUID?,
     val authType: AuthType = AuthType.PPPOE,

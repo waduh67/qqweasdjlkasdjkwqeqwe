@@ -48,6 +48,15 @@ class SubscriberAccessTest {
     }
 
     @Test
+    fun `akun PENDING bisa diaktifkan menjadi ACTIVE`() {
+        val a = access(status = AccessStatus.PENDING)
+        assertThat(a.status).isEqualTo(AccessStatus.PENDING)
+
+        a.activate()
+        assertThat(a.status).isEqualTo(AccessStatus.ACTIVE)
+    }
+
+    @Test
     fun `applyFupThrottle menandai, clearFupThrottle mencabut`() {
         val a = access()
 
