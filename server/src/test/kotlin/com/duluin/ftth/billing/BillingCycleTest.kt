@@ -18,6 +18,7 @@ import com.duluin.ftth.customer.BillableSubscription
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.CustomerRef
 import com.duluin.ftth.customer.ProvisionOnuCommand
+import com.duluin.ftth.customer.RegisterCustomerCommand
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
@@ -313,5 +314,8 @@ class BillingCycleTest {
         override fun reactivateForBilling(subscriptionId: UUID) = throw UnsupportedOperationException()
         override fun activateForInstallation(subscriptionId: UUID) = throw UnsupportedOperationException()
         override fun terminateForDismantle(subscriptionId: UUID) = throw UnsupportedOperationException()
+        override fun registerCustomer(command: RegisterCustomerCommand) = throw UnsupportedOperationException()
+        override fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: BigDecimal?) =
+            throw UnsupportedOperationException()
     }
 }

@@ -128,7 +128,32 @@ interface CustomerApi {
      * teknisi menuntaskan WO bongkar.
      */
     fun terminateForDismantle(subscriptionId: UUID)
+
+    /**
+     * Onboarding: daftarkan pelanggan baru lewat kontrak publik (kode unik & aturan module
+     * customer tetap ditegakkan), kembalikan id-nya. Dipakai orkestrasi PSB ekspres yang
+     * merangkai pendaftaran + langganan + akun + WO dalam satu transaksi.
+     */
+    fun registerCustomer(command: RegisterCustomerCommand): UUID
+
+    /**
+     * Onboarding: buka langganan merujuk paket katalog; lahir berstatus PENDING (menunggu
+     * instalasi), sehingga akun jaringannya pun PENDING sampai WO PSB selesai. Kembalikan id
+     * langganan. [monthlyFeeOverride] null = pakai harga paket.
+     */
+    fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: java.math.BigDecimal?): UUID
 }
+
+/** Perintah mendaftarkan pelanggan baru lewat kontrak publik (orkestrasi onboarding PSB ekspres). */
+data class RegisterCustomerCommand(
+    val code: String,
+    val name: String,
+    val phone: String?,
+    val email: String?,
+    val address: String,
+    val location: Coordinate,
+    val areaId: UUID?,
+)
 
 /**
  * Pandangan ringkas sebuah langganan untuk penagihan (module billing). Membawa snapshot

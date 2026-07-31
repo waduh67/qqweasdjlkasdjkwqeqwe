@@ -17,6 +17,7 @@ import {
   IconMap,
   IconMonitor,
   IconPackage,
+  IconPlus,
   IconRoute,
   IconShield,
   IconSidebar,
@@ -59,6 +60,7 @@ const GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
   {
     label: 'Layanan Pelanggan',
     items: [
+      { to: '/express-psb', label: 'PSB Ekspres', permission: 'customer.customer.create', icon: IconPlus },
       { to: '/customers', label: 'Pelanggan', permission: 'customer.customer.view', icon: IconCustomers },
       { to: '/catalog', label: 'Paket Internet', permission: 'catalog.plan.view', icon: IconPackage },
     ],

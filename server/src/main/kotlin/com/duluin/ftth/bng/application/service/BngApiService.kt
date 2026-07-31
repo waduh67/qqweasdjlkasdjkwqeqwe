@@ -1,11 +1,17 @@
 package com.duluin.ftth.bng.application.service
 
 import com.duluin.ftth.bng.BngApi
+import com.duluin.ftth.bng.ProvisionAccessSpec
+import com.duluin.ftth.bng.ProvisionedAccessRef
 import com.duluin.ftth.bng.SubscriberSessionRef
+import com.duluin.ftth.bng.application.port.inbound.ManageSubscriberAccessUseCase
+import com.duluin.ftth.bng.application.port.inbound.ProvisionAccessCommand
 import com.duluin.ftth.bng.application.port.outbound.NasRepository
 import com.duluin.ftth.bng.application.port.outbound.RadiusSessionRepository
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
+import com.duluin.ftth.bng.domain.model.AuthType
 import com.duluin.ftth.catalog.CatalogApi
+import com.duluin.ftth.common.domain.error.ValidationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -22,7 +28,32 @@ class BngApiService(
     private val radiusSessionRepository: RadiusSessionRepository,
     private val nasRepository: NasRepository,
     private val catalogApi: CatalogApi,
+    private val manageAccess: ManageSubscriberAccessUseCase,
 ) : BngApi {
+
+    @Transactional
+    override fun provisionAccess(command: ProvisionAccessSpec): ProvisionedAccessRef {
+        val view = manageAccess.provision(
+            ProvisionAccessCommand(
+                subscriptionId = command.subscriptionId,
+                username = command.username,
+                secret = command.secret,
+                planId = command.planId,
+                nasId = command.nasId,
+                authType = parseAuthType(command.authType),
+                framedIp = command.framedIp,
+            ),
+        )
+        return ProvisionedAccessRef(accessId = view.id, username = view.username, status = view.status)
+    }
+
+    /** Petakan string tipe layanan lintas-module ke [AuthType]; null/kosong → PPPOE. */
+    private fun parseAuthType(raw: String?): AuthType =
+        raw?.trim()?.takeIf { it.isNotEmpty() }?.let { value ->
+            runCatching { AuthType.valueOf(value.uppercase()) }.getOrElse {
+                throw ValidationException("Tipe layanan '$raw' tidak dikenal (PPPOE/HOTSPOT/DHCP/STATIC)")
+            }
+        } ?: AuthType.PPPOE
 
     override fun findSubscriberSession(customerId: UUID): SubscriberSessionRef? {
         val accounts = subscriberAccessRepository.findByCustomerId(customerId)

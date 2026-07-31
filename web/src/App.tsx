@@ -10,6 +10,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { InventoryPage } from './pages/InventoryPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { CustomerDetailPage } from './pages/CustomerDetailPage'
+import { ExpressPsbPage } from './pages/ExpressPsbPage'
 import { MonitoringPage } from './pages/MonitoringPage'
 import { ProvisioningPage } from './pages/ProvisioningPage'
 import { IncidentsPage } from './pages/IncidentsPage'
@@ -107,6 +108,14 @@ export default function App() {
               element={
                 <RequirePermission permission="customer.customer.view">
                   <CustomerDetailPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="express-psb"
+              element={
+                <RequirePermission permission="customer.customer.create">
+                  <ExpressPsbPage />
                 </RequirePermission>
               }
             />

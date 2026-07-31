@@ -3,6 +3,8 @@ package com.duluin.ftth.subscriber360
 import com.duluin.ftth.billing.BillingAccountSummary
 import com.duluin.ftth.billing.BillingApi
 import com.duluin.ftth.bng.BngApi
+import com.duluin.ftth.bng.ProvisionAccessSpec
+import com.duluin.ftth.bng.ProvisionedAccessRef
 import com.duluin.ftth.bng.SubscriberSessionRef
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.NotFoundException
@@ -19,8 +21,10 @@ import com.duluin.ftth.customer.OdpOccupant
 import com.duluin.ftth.customer.OnuPlacementRef
 import com.duluin.ftth.customer.OnuRef
 import com.duluin.ftth.customer.ProvisionOnuCommand
+import com.duluin.ftth.customer.RegisterCustomerCommand
 import com.duluin.ftth.customer.SubscriptionRef
 import com.duluin.ftth.subscriber360.application.service.Subscriber360Service
+import com.duluin.ftth.workorder.RaisePsbCommand
 import com.duluin.ftth.workorder.WorkOrderRef
 import com.duluin.ftth.workorder.WorkorderApi
 import org.assertj.core.api.Assertions.assertThat
@@ -146,6 +150,9 @@ class Subscriber360ServiceTest {
         override fun reactivateForBilling(subscriptionId: UUID) = throw UnsupportedOperationException()
         override fun activateForInstallation(subscriptionId: UUID) = throw UnsupportedOperationException()
         override fun terminateForDismantle(subscriptionId: UUID) = throw UnsupportedOperationException()
+        override fun registerCustomer(command: RegisterCustomerCommand) = throw UnsupportedOperationException()
+        override fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: BigDecimal?) =
+            throw UnsupportedOperationException()
     }
 
     private inner class FakeBngApi : BngApi {
@@ -154,6 +161,9 @@ class Subscriber360ServiceTest {
             rateProfileName = "Home 100", online = true, framedIp = "100.64.0.5",
             nasId = null, nasName = null, nasIp = null, uptimeSeconds = 120, startedAt = null, lastSeenAt = null,
         )
+
+        override fun provisionAccess(command: ProvisionAccessSpec): ProvisionedAccessRef =
+            throw UnsupportedOperationException()
     }
 
     private inner class FakeBillingApi : BillingApi {
@@ -173,6 +183,8 @@ class Subscriber360ServiceTest {
         override fun openPsbByCustomer(): Map<UUID, WorkOrderRef> = mapOf(
             forCustomer to WorkOrderRef(UuidV7.generate(), "WO-1", forCustomer, null, null),
         )
+
+        override fun raisePsb(command: RaisePsbCommand): WorkOrderRef = throw UnsupportedOperationException()
     }
 
     private companion object {

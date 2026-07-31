@@ -10,13 +10,17 @@ import com.duluin.ftth.customer.OdpOccupant
 import com.duluin.ftth.customer.OnuPlacementRef
 import com.duluin.ftth.customer.OnuRef
 import com.duluin.ftth.customer.ProvisionOnuCommand
+import com.duluin.ftth.customer.RegisterCustomerCommand
 import com.duluin.ftth.customer.SubscriptionRef
 import com.duluin.ftth.customer.domain.model.Customer
 import com.duluin.ftth.customer.domain.model.OnuStatus
 import com.duluin.ftth.customer.application.port.inbound.AttachOnuCommand
+import com.duluin.ftth.customer.application.port.inbound.ManageCustomerUseCase
 import com.duluin.ftth.customer.application.port.inbound.ManageOnuUseCase
 import com.duluin.ftth.customer.application.port.inbound.ManageSubscriptionUseCase
 import com.duluin.ftth.customer.application.port.inbound.RegisterOnuCommand
+import com.duluin.ftth.customer.application.port.inbound.SaveCustomerCommand
+import com.duluin.ftth.customer.application.port.inbound.SaveSubscriptionCommand
 import com.duluin.ftth.customer.application.port.outbound.CustomerRepository
 import com.duluin.ftth.customer.application.port.outbound.CustomerTileRenderer
 import com.duluin.ftth.customer.application.port.outbound.OnuRepository
@@ -35,6 +39,7 @@ class CustomerApiService(
     private val subscriptionRepository: SubscriptionRepository,
     private val tileRenderer: CustomerTileRenderer,
     private val manageOnu: ManageOnuUseCase,
+    private val manageCustomer: ManageCustomerUseCase,
     private val manageSubscription: ManageSubscriptionUseCase,
 ) : CustomerApi {
 
@@ -233,6 +238,28 @@ class CustomerApiService(
         val subscription = subscriptionRepository.findById(subscriptionId) ?: return
         if (subscription.status != SubscriptionStatus.TERMINATED) manageSubscription.terminate(subscriptionId)
     }
+
+    /**
+     * Onboarding memakai kembali use case pembuatan yang sama dengan jalur manual (controller),
+     * jadi validasi kode unik, audit, dan event ikut berjalan — orkestrasi tak menembus internal.
+     */
+    @Transactional
+    override fun registerCustomer(command: RegisterCustomerCommand): UUID =
+        manageCustomer.create(
+            SaveCustomerCommand(
+                code = command.code,
+                name = command.name,
+                phone = command.phone,
+                email = command.email,
+                address = command.address,
+                location = command.location,
+                areaId = command.areaId,
+            ),
+        ).id
+
+    @Transactional
+    override fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: java.math.BigDecimal?): UUID =
+        manageSubscription.create(customerId, SaveSubscriptionCommand(planId, monthlyFeeOverride)).id
 
     private fun Subscription.toBillable() = BillableSubscription(
         subscriptionId = id,
