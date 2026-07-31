@@ -49,6 +49,8 @@ data class WorkOrderView(
     val customerId: UUID?,
     /** Nama pelanggan tertaut, diresolusi lewat customer; `null` bila tak tertaut/tak ada. */
     val customerName: String?,
+    /** Langganan yang WO ini kerjakan (PSB/DISMANTLE); `null` bila WO tak tertaut langganan. */
+    val subscriptionId: UUID?,
     val incidentId: UUID?,
     val areaId: UUID?,
     /** Koordinat lokasi pelanggan tertaut (untuk navigasi teknisi lapangan); `null` bila WO tak tertaut pelanggan. */

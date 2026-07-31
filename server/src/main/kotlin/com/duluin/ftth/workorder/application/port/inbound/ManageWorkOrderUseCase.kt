@@ -41,6 +41,8 @@ data class SaveWorkOrderCommand(
     val description: String?,
     val priority: WorkOrderPriority,
     val customerId: UUID?,
+    /** Langganan yang WO ini kerjakan; PSB/DISMANTLE selesai menggerakkan status langganan. */
+    val subscriptionId: UUID?,
     val incidentId: UUID?,
     val areaId: UUID?,
     val scheduledAt: Instant?,

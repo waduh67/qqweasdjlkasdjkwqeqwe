@@ -78,6 +78,12 @@ class WorkOrder private constructor(
     val tenantId: UUID,
     val code: String,
     val type: WorkOrderType,
+    /**
+     * Langganan yang WO ini kerjakan (PSB memasang, DISMANTLE membongkar). Disetel sekali
+     * saat dibuka dan tak berubah — penyelesaian WO-lah yang menggerakkan status langganan
+     * (aktivasi/terminasi). `null` untuk WO tanpa langganan (perbaikan jaringan, preventif).
+     */
+    val subscriptionId: UUID?,
     title: String,
     description: String?,
     priority: WorkOrderPriority,
@@ -310,6 +316,8 @@ class WorkOrder private constructor(
             scheduledAt: Instant?,
             assignedTo: UUID?,
             createdBy: UUID?,
+            // Default null: WO yang lahir tanpa langganan (mis. preventif) tak perlu menyebutnya.
+            subscriptionId: UUID? = null,
             at: Instant = Instant.now(),
         ): WorkOrder {
             val id = UuidV7.generate()
@@ -318,6 +326,7 @@ class WorkOrder private constructor(
                 tenantId = tenantId,
                 code = deriveCode(id),
                 type = type,
+                subscriptionId = subscriptionId,
                 title = validateTitle(title),
                 description = description?.ifBlank { null },
                 priority = priority,
@@ -353,6 +362,7 @@ class WorkOrder private constructor(
             tenantId: UUID,
             code: String,
             type: WorkOrderType,
+            subscriptionId: UUID?,
             title: String,
             description: String?,
             priority: WorkOrderPriority,
@@ -376,7 +386,7 @@ class WorkOrder private constructor(
             createdBy: UUID?,
             createdAt: Instant,
         ): WorkOrder = WorkOrder(
-            id, tenantId, code, type, title, description, priority, customerId, incidentId, areaId,
+            id, tenantId, code, type, subscriptionId, title, description, priority, customerId, incidentId, areaId,
             status, assignedTo, assignedAt, scheduledAt, startedAt, completedAt, resolutionNote,
             cancelReason, rxBeforeDbm, rxAfterDbm, approvalStatus, approvedBy, approvedAt, approvalNote,
             createdBy, createdAt,

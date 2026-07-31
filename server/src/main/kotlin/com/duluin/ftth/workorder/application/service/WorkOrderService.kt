@@ -64,6 +64,7 @@ class WorkOrderService(
             scheduledAt = command.scheduledAt,
             assignedTo = command.assignedTo,
             createdBy = actor.userId,
+            subscriptionId = command.subscriptionId,
         )
         val saved = repository.save(workOrder)
         saved.assignedTo?.let { publishAssigned(saved, it) }
@@ -111,7 +112,19 @@ class WorkOrderService(
         val workOrder = require(id)
         requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.close")
         workOrder.complete(resolutionNote, Instant.now(), currentUser.current().userId)
-        return repository.save(workOrder).toView()
+        val saved = repository.save(workOrder)
+        // Penyelesaian WO menggerakkan status langganan: PSB selesai = layanan resmi hidup
+        // (aktif + mulai ditagih prorata), DISMANTLE selesai = layanan berakhir. Panggilan
+        // ke customer idempoten (no-op bila status langganan tak sesuai), jadi menyelesaikan
+        // ulang WO yang sempat ditolak penyelia tak menggeser tanggal aktivasi/terminasi.
+        saved.subscriptionId?.let { subscriptionId ->
+            when (saved.type) {
+                WorkOrderType.PSB -> customerApi.activateForInstallation(subscriptionId)
+                WorkOrderType.DISMANTLE -> customerApi.terminateForDismantle(subscriptionId)
+                else -> Unit
+            }
+        }
+        return saved.toView()
     }
 
     @Transactional
@@ -278,6 +291,7 @@ class WorkOrderService(
         description = description,
         customerId = customerId,
         customerName = customer?.name,
+        subscriptionId = subscriptionId,
         incidentId = incidentId,
         areaId = areaId,
         destinationLat = customer?.location?.latitude,

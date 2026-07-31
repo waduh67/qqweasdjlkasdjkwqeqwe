@@ -144,6 +144,8 @@ class Subscriber360ServiceTest {
         override fun findBillableSubscription(subscriptionId: UUID) = throw UnsupportedOperationException()
         override fun isolateForBilling(subscriptionId: UUID) = throw UnsupportedOperationException()
         override fun reactivateForBilling(subscriptionId: UUID) = throw UnsupportedOperationException()
+        override fun activateForInstallation(subscriptionId: UUID) = throw UnsupportedOperationException()
+        override fun terminateForDismantle(subscriptionId: UUID) = throw UnsupportedOperationException()
     }
 
     private inner class FakeBngApi : BngApi {

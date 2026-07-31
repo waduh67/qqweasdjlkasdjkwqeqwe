@@ -87,6 +87,31 @@ class WorkOrderIT {
 
     private fun createWorkOrder(token: String, body: String) = post("/api/work-orders", token, body)
 
+    /** Buat paket katalog, kembalikan id-nya (langganan merujuk ini). */
+    private fun catalogPlan(token: String, name: String): String =
+        id(
+            post(
+                "/api/catalog/plans", token,
+                """{"name":"$name","description":null,"price":150000,"downMbps":20,"upMbps":10,"serviceTypes":["PPPOE"]}""",
+            ),
+        )
+
+    /** Pelanggan + langganan PENDING merujuk paket; kembalikan (customerId, subscriptionId). */
+    private fun pendingSubscription(token: String): Pair<String, String> {
+        val (customerId, _) = newCustomer(token)
+        val planId = catalogPlan(token, "Paket ${uniq()}")
+        val sub = id(post("/api/customers/$customerId/subscriptions", token, """{"planId":"$planId"}"""))
+        return customerId to sub
+    }
+
+    /** Status satu langganan lewat daftar langganan pelanggan (enum sebagai string). */
+    private fun subscriptionStatus(token: String, customerId: String, subscriptionId: String): String {
+        val list = get("/api/customers/$customerId/subscriptions", token)
+        val ids = JsonPath.read<List<String>>(list, "$[*].id")
+        val statuses = JsonPath.read<List<String>>(list, "$[*].status")
+        return statuses[ids.indexOf(subscriptionId)]
+    }
+
     @Test
     fun `siklus hidup work order ditegakkan dan nama teknisi diresolusi`() {
         val token = newTenantAdmin("wo")
@@ -359,6 +384,80 @@ class WorkOrderIT {
         // WO tanpa pelanggan → koordinat null.
         val lepasan = createWorkOrder(token, """{"type":"PSB","title":"Pasang lepasan"}""")
         assertThat(JsonPath.read<Any?>(lepasan, "$.destinationLat")).isNull()
+    }
+
+    @Test
+    fun `PSB selesai mengaktifkan langganan, ditolak lalu selesai ulang tetap aktif`() {
+        val token = newTenantAdmin("wo")
+        val (customerId, sub) = pendingSubscription(token)
+        assertThat(subscriptionStatus(token, customerId, sub)).isEqualTo("PENDING")
+
+        val woId = id(
+            createWorkOrder(
+                token,
+                """{"type":"PSB","title":"Pasang baru","customerId":"$customerId","subscriptionId":"$sub"}""",
+            ),
+        )
+        assertThat(JsonPath.read<String>(get("/api/work-orders/$woId", token), "$.workOrder.subscriptionId")).isEqualTo(sub)
+
+        val techId = newTechnician(token, "Teknisi PSB")
+        post("/api/work-orders/$woId/assign", token, """{"technicianId":"$techId"}""", 200)
+        post("/api/work-orders/$woId/start", token, "", 200)
+        // Langganan masih PENDING sampai WO benar-benar selesai.
+        assertThat(subscriptionStatus(token, customerId, sub)).isEqualTo("PENDING")
+
+        // Selesai → layanan resmi hidup.
+        post("/api/work-orders/$woId/complete", token, """{"resolutionNote":"Terpasang"}""", 200)
+        assertThat(subscriptionStatus(token, customerId, sub)).isEqualTo("ACTIVE")
+
+        // Penyelia menolak → WO dibuka lagi; aktivasi TIDAK dibatalkan (layanan sudah jalan).
+        post("/api/work-orders/$woId/reject", token, """{"reason":"Rapikan kabel"}""", 200)
+        assertThat(subscriptionStatus(token, customerId, sub)).isEqualTo("ACTIVE")
+
+        // Selesai ulang: idempoten (activate no-op karena bukan PENDING), tetap ACTIVE tanpa error.
+        post("/api/work-orders/$woId/complete", token, """{"resolutionNote":"Sudah rapi"}""", 200)
+        assertThat(subscriptionStatus(token, customerId, sub)).isEqualTo("ACTIVE")
+    }
+
+    @Test
+    fun `DISMANTLE selesai menerminasi langganan`() {
+        val token = newTenantAdmin("wo")
+        val (customerId, sub) = pendingSubscription(token)
+        post("/api/customers/subscriptions/$sub/activate", token, "", 200)
+        assertThat(subscriptionStatus(token, customerId, sub)).isEqualTo("ACTIVE")
+
+        val woId = id(
+            createWorkOrder(
+                token,
+                """{"type":"DISMANTLE","title":"Bongkar","customerId":"$customerId","subscriptionId":"$sub"}""",
+            ),
+        )
+        val techId = newTechnician(token, "Teknisi Bongkar")
+        post("/api/work-orders/$woId/assign", token, """{"technicianId":"$techId"}""", 200)
+        post("/api/work-orders/$woId/start", token, "", 200)
+        post("/api/work-orders/$woId/complete", token, "", 200)
+
+        assertThat(subscriptionStatus(token, customerId, sub)).isEqualTo("TERMINATED")
+    }
+
+    @Test
+    fun `WO non-PSB dengan langganan tak menggeser status langganan saat selesai`() {
+        val token = newTenantAdmin("wo")
+        val (customerId, sub) = pendingSubscription(token)
+
+        val woId = id(
+            createWorkOrder(
+                token,
+                """{"type":"REPAIR","title":"Cek redaman","customerId":"$customerId","subscriptionId":"$sub"}""",
+            ),
+        )
+        val techId = newTechnician(token, "Teknisi Repair")
+        post("/api/work-orders/$woId/assign", token, """{"technicianId":"$techId"}""", 200)
+        post("/api/work-orders/$woId/start", token, "", 200)
+        post("/api/work-orders/$woId/complete", token, "", 200)
+
+        // REPAIR bukan pemasangan/pembongkaran → langganan tetap PENDING.
+        assertThat(subscriptionStatus(token, customerId, sub)).isEqualTo("PENDING")
     }
 
     @Test

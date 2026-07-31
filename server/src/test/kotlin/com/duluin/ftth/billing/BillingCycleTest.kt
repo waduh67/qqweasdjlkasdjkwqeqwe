@@ -311,5 +311,7 @@ class BillingCycleTest {
         override fun recordObservedOnuStatuses(statuses: Map<UUID, String>) = throw UnsupportedOperationException()
         override fun provisionOnu(command: ProvisionOnuCommand) = throw UnsupportedOperationException()
         override fun reactivateForBilling(subscriptionId: UUID) = throw UnsupportedOperationException()
+        override fun activateForInstallation(subscriptionId: UUID) = throw UnsupportedOperationException()
+        override fun terminateForDismantle(subscriptionId: UUID) = throw UnsupportedOperationException()
     }
 }

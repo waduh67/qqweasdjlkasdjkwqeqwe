@@ -113,6 +113,21 @@ interface CustomerApi {
      * ISOLATED — auto-pulih tidak menghidupkan langganan yang memang belum aktif.
      */
     fun reactivateForBilling(subscriptionId: UUID)
+
+    /**
+     * Aktivasi langganan begitu instalasi (WO PSB) selesai — layanan resmi hidup dan mulai
+     * ditagih (prorata dari saat aktivasi). No-op bila langganan tidak sedang PENDING, jadi
+     * menyelesaikan ulang WO PSB yang sempat ditolak penyelia tak menggeser tanggal aktivasi.
+     * Dipakai module workorder saat teknisi menuntaskan WO pemasangan.
+     */
+    fun activateForInstallation(subscriptionId: UUID)
+
+    /**
+     * Terminasi langganan begitu pembongkaran (WO DISMANTLE) selesai — layanan berakhir.
+     * No-op bila langganan sudah TERMINATED, jadi aman diulang. Dipakai module workorder saat
+     * teknisi menuntaskan WO bongkar.
+     */
+    fun terminateForDismantle(subscriptionId: UUID)
 }
 
 /**

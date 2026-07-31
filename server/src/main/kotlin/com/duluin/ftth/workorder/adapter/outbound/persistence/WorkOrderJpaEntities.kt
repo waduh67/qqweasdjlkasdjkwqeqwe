@@ -43,6 +43,11 @@ class WorkOrderJpaEntity(
     @Column(name = "customer_id")
     var customerId: UUID?,
 
+    // Ditautkan sekali saat WO dibuka & tak berubah (updatable=false) — penyelesaian WO
+    // yang menggerakkan lifecycle langganan, bukan sebaliknya.
+    @Column(name = "subscription_id", updatable = false)
+    var subscriptionId: UUID?,
+
     @Column(name = "incident_id")
     var incidentId: UUID?,
 

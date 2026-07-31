@@ -216,6 +216,24 @@ class CustomerApiService(
         if (subscription.status == SubscriptionStatus.ISOLATED) manageSubscription.activate(subscriptionId)
     }
 
+    /**
+     * Aktivasi/terminasi dari penyelesaian work order memakai kembali use case langganan yang
+     * sama dengan kendali manual, sehingga audit & event (SubscriptionActivated/Terminated,
+     * yang memicu sinkron akses & billing) ikut berjalan. No-op bila status tak sesuai —
+     * idempoten terhadap penyelesaian ulang WO.
+     */
+    @Transactional
+    override fun activateForInstallation(subscriptionId: UUID) {
+        val subscription = subscriptionRepository.findById(subscriptionId) ?: return
+        if (subscription.status == SubscriptionStatus.PENDING) manageSubscription.activate(subscriptionId)
+    }
+
+    @Transactional
+    override fun terminateForDismantle(subscriptionId: UUID) {
+        val subscription = subscriptionRepository.findById(subscriptionId) ?: return
+        if (subscription.status != SubscriptionStatus.TERMINATED) manageSubscription.terminate(subscriptionId)
+    }
+
     private fun Subscription.toBillable() = BillableSubscription(
         subscriptionId = id,
         customerId = customerId,
