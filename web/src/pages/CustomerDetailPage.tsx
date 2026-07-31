@@ -59,7 +59,7 @@ import { OpticalChart } from '../components/OpticalChart'
 import { TrafficChart } from '../components/TrafficChart'
 import { IconAlert, IconCustomers, IconRoute } from '../components/icons'
 import type { SubscriptionView } from '../api/network'
-import { listPlans as listCatalogPlans, type PlanView } from '../api/catalog'
+import { listPlans as listCatalogPlans, SERVICE_TYPE_LABEL, type PlanView, type ServiceType } from '../api/catalog'
 import { listInvoicesForCustomer, type InvoiceView } from '../api/billing'
 import { listIncidentsForCustomer, type IncidentView } from '../api/incident'
 import { listWorkOrdersForCustomer, type WorkOrderStatus, type WorkOrderView } from '../api/workorder'
@@ -1232,16 +1232,35 @@ function SubscriptionAccessCard({
   const [showSecret, setShowSecret] = useState(false)
   const [planId, setPlanId] = useState('')
   const [nasId, setNasId] = useState('')
+  const [authType, setAuthType] = useState<ServiceType>('PPPOE')
+  const [framedIp, setFramedIp] = useState('')
+
+  // Tipe layanan yang boleh dipilih ditentukan paket yang dipilih (`serviceTypes`-nya);
+  // tipe berbasis MAC (DHCP/Static) memakai MAC sebagai identitas + password, bukan login.
+  const provisionPlan = plans.find((p) => p.id === planId) ?? null
+  const availableTypes: ServiceType[] = provisionPlan?.serviceTypes ?? []
+  const macBased = authType === 'DHCP' || authType === 'STATIC'
 
   const close = () => setForm(null)
 
   const openProvision = () => {
     setUsername('')
     setSecret('')
+    setFramedIp('')
     setShowSecret(false)
-    setPlanId(plans[0]?.id ?? '')
+    const first = plans[0]
+    setPlanId(first?.id ?? '')
+    setAuthType(first?.serviceTypes[0] ?? 'PPPOE')
     setNasId('')
     setForm('provision')
+  }
+
+  // Ganti paket saat provisi: bila paket baru tak melayani tipe terpilih, jatuhkan ke
+  // tipe pertama yang dilayaninya agar dropdown & guard server tetap konsisten.
+  const changeProvisionPlan = (id: string) => {
+    setPlanId(id)
+    const p = plans.find((x) => x.id === id)
+    if (p && !p.serviceTypes.includes(authType)) setAuthType(p.serviceTypes[0] ?? 'PPPOE')
   }
 
   const openEdit = () => {
@@ -1259,9 +1278,26 @@ function SubscriptionAccessCard({
 
   const submitProvision = () =>
     void run(async () => {
-      await provisionAccess({ subscriptionId: sub.id, username, secret, planId, nasId: nasId || null })
+      await provisionAccess({
+        subscriptionId: sub.id,
+        username,
+        // Tipe berbasis MAC tak pakai password (MAC jadi password di server).
+        secret: macBased ? undefined : secret,
+        planId,
+        nasId: nasId || null,
+        authType,
+        framedIp: macBased ? framedIp || null : null,
+      })
       close()
-    }, 'Akun PPPoE dibuat')
+    }, 'Akun jaringan dibuat')
+
+  // Validasi form provisi per-tipe: login butuh username+password; MAC butuh MAC (+ IP
+  // wajib untuk Static). Paket wajib dipilih di semua kasus.
+  const provisionInvalid =
+    !username ||
+    !planId ||
+    (!macBased && !secret) ||
+    (authType === 'STATIC' && !framedIp)
 
   const submitEdit = () => {
     if (!account) return
@@ -1281,7 +1317,7 @@ function SubscriptionAccessCard({
 
   const remove = () => {
     if (!account) return
-    if (window.confirm(`Hapus akun PPPoE ${account.username}?`)) {
+    if (window.confirm(`Hapus akun jaringan ${account.username}?`)) {
       void run(() => deleteAccess(account.id), 'Akun dihapus')
     }
   }
@@ -1322,8 +1358,10 @@ function SubscriptionAccessCard({
         <div className="stack" style={{ gap: '0.5rem' }}>
           <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <span className="badge neutral tnum">{account.username}</span>
+            <span className="badge">{SERVICE_TYPE_LABEL[account.authType]}</span>
             <span className="badge accent">{account.planName ?? 'paket tak dikenal'}</span>
             <span className="badge neutral">{account.nasName ?? 'tanpa BRAS'}</span>
+            {account.framedIp && <span className="badge neutral tnum">IP {account.framedIp}</span>}
             <StatusBadge status={account.status} />
             {account.fupEnabled && (
               <span
@@ -1397,46 +1435,87 @@ function SubscriptionAccessCard({
         </div>
       ) : sub.status === 'TERMINATED' ? (
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-          Langganan sudah dihentikan — tak bisa diberi akun PPPoE.
+          Langganan sudah dihentikan — tak bisa diberi akun jaringan.
         </p>
       ) : !canManage ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada akun PPPoE untuk langganan ini.</p>
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada akun jaringan untuk langganan ini.</p>
       ) : plans.length === 0 ? (
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-          Belum ada akun PPPoE. Buat paket dulu di menu <strong>Paket Internet</strong> sebelum memprovisi akun.
+          Belum ada akun jaringan. Buat paket dulu di menu <strong>Paket Internet</strong> sebelum memprovisi akun.
         </p>
       ) : form === 'provision' ? (
         <div className="stack" style={{ gap: '0.5rem' }}>
           <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <label style={{ flex: 2, minWidth: 160 }}>
-              <span>Username PPPoE</span>
-              <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="pelanggan@isp" />
+            <PlanField plans={plans} value={planId} onChange={changeProvisionPlan} />
+            <label style={{ flex: 1, minWidth: 140 }}>
+              <span>Tipe layanan</span>
+              <select
+                value={authType}
+                onChange={(e) => setAuthType(e.target.value as ServiceType)}
+                disabled={availableTypes.length <= 1}
+              >
+                {availableTypes.map((t) => (
+                  <option key={t} value={t}>
+                    {SERVICE_TYPE_LABEL[t]}
+                  </option>
+                ))}
+              </select>
             </label>
-            <label style={{ flex: 2, minWidth: 160 }}>
-              <span>Password</span>
-              <input
-                type={showSecret ? 'text' : 'password'}
-                value={secret}
-                onChange={(e) => setSecret(e.target.value)}
-              />
-            </label>
-            <button onClick={() => setShowSecret((v) => !v)}>{showSecret ? 'Sembunyikan' : 'Lihat'}</button>
           </div>
+
+          {macBased ? (
+            <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <label style={{ flex: 2, minWidth: 180 }}>
+                <span>MAC Address</span>
+                <input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="AA:BB:CC:DD:EE:FF"
+                />
+              </label>
+              <label style={{ flex: 2, minWidth: 160 }}>
+                <span>Reserved IP{authType === 'STATIC' ? '' : ' (opsional)'}</span>
+                <input
+                  value={framedIp}
+                  onChange={(e) => setFramedIp(e.target.value)}
+                  placeholder="100.64.0.10"
+                />
+              </label>
+            </div>
+          ) : (
+            <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <label style={{ flex: 2, minWidth: 160 }}>
+                <span>Username</span>
+                <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="pelanggan@isp" />
+              </label>
+              <label style={{ flex: 2, minWidth: 160 }}>
+                <span>Password</span>
+                <input
+                  type={showSecret ? 'text' : 'password'}
+                  value={secret}
+                  onChange={(e) => setSecret(e.target.value)}
+                />
+              </label>
+              <button onClick={() => setShowSecret((v) => !v)}>{showSecret ? 'Sembunyikan' : 'Lihat'}</button>
+            </div>
+          )}
+
           <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <PlanField plans={plans} value={planId} onChange={setPlanId} />
             <NasField nasList={nasList} value={nasId} onChange={setNasId} />
-            <button className="primary" onClick={submitProvision} disabled={!username || !secret || !planId}>
+            <button className="primary" onClick={submitProvision} disabled={provisionInvalid}>
               Provisi
             </button>
             <button onClick={close}>Batal</button>
           </div>
           <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-            Password disimpan terenkripsi dan tidak pernah ditampilkan kembali — hanya bisa di-reset.
+            {macBased
+              ? 'DHCP/Static memakai MAC sebagai identitas sekaligus password (konvensi use-radius). Static butuh IP yang direservasi.'
+              : 'Password disimpan terenkripsi dan tidak pernah ditampilkan kembali — hanya bisa di-reset.'}
           </p>
         </div>
       ) : (
         <div className="spread" style={{ alignItems: 'center' }}>
-          <span className="muted" style={{ fontSize: '0.85rem' }}>Belum ada akun PPPoE untuk langganan ini.</span>
+          <span className="muted" style={{ fontSize: '0.85rem' }}>Belum ada akun jaringan untuk langganan ini.</span>
           <button className="primary" onClick={openProvision}>
             Provisi akun
           </button>

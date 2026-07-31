@@ -75,6 +75,13 @@ class BngAction private constructor(
     val nasId: UUID,
     val username: String,
     val action: BngActionType,
+    /**
+     * Skema identitas akun yang dituju — menentukan penulisan ke radius-db saat jalur-tulis
+     * server: PPPoE/Hotspot di-prefix slug tenant (`"{slug}:{username}"`), DHCP/Static memakai
+     * MAC apa adanya (global-unik). Dibawa di aksi karena DEPROVISION lepas dari akun
+     * (subscriberAccessId null) namun tetap harus tahu cara memetakan identitasnya.
+     */
+    val authType: AuthType,
     /** Hanya terisi untuk [BngActionType.COA]. */
     val downMbps: Int?,
     val upMbps: Int?,
@@ -204,26 +211,31 @@ class BngAction private constructor(
             groupname: String,
             requestedBy: UUID?,
             requestedByEmail: String?,
+            authType: AuthType = AuthType.PPPOE,
             at: Instant = Instant.now(),
         ): BngAction = create(
             tenantId, subscriberAccessId, nasId, username, BngActionType.PROVISION,
-            groupname = groupname,
+            groupname = groupname, authType = authType,
             requestedBy = requestedBy, requestedByEmail = requestedByEmail, at = at,
         )
 
         /**
          * Hapus otorisasi akun dari RADIUS (per username). Tanpa [subscriberAccessId]
          * agar tak ikut ter-CASCADE saat akunnya dihapus — penghapusan RADIUS tetap terkirim.
+         * [authType] dibawa agar jalur-tulis tahu memetakan identitas (slug-prefix vs MAC).
          */
+        @Suppress("LongParameterList")
         fun deprovision(
             tenantId: UUID,
             nasId: UUID,
             username: String,
             requestedBy: UUID?,
             requestedByEmail: String?,
+            authType: AuthType = AuthType.PPPOE,
             at: Instant = Instant.now(),
         ): BngAction = create(
             tenantId, subscriberAccessId = null, nasId, username, BngActionType.DEPROVISION,
+            authType = authType,
             requestedBy = requestedBy, requestedByEmail = requestedByEmail, at = at,
         )
 
@@ -264,6 +276,7 @@ class BngAction private constructor(
             simultaneousUse: Int? = null,
             fupGroupname: String? = null,
             fupRateLimit: String? = null,
+            authType: AuthType = AuthType.PPPOE,
             requestedBy: UUID?,
             requestedByEmail: String?,
             at: Instant,
@@ -274,6 +287,7 @@ class BngAction private constructor(
             nasId = nasId,
             username = username,
             action = action,
+            authType = authType,
             downMbps = downMbps,
             upMbps = upMbps,
             groupname = groupname,
@@ -298,6 +312,7 @@ class BngAction private constructor(
             nasId: UUID,
             username: String,
             action: BngActionType,
+            authType: AuthType,
             downMbps: Int?,
             upMbps: Int?,
             groupname: String?,
@@ -313,7 +328,7 @@ class BngAction private constructor(
             dispatchedAt: Instant?,
             completedAt: Instant?,
         ): BngAction = BngAction(
-            id, tenantId, subscriberAccessId, nasId, username, action, downMbps, upMbps,
+            id, tenantId, subscriberAccessId, nasId, username, action, authType, downMbps, upMbps,
             groupname, rateLimit, simultaneousUse, fupGroupname, fupRateLimit,
             status, detail, requestedBy, requestedByEmail, requestedAt, dispatchedAt, completedAt,
         )

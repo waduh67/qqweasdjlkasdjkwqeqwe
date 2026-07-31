@@ -64,9 +64,9 @@ class NasJpaEntity(
 ) : TenantAwareJpaEntity(id)
 
 /**
- * Identitas jaringan (akun PPPoE). Identitas ([subscriptionId], [customerId],
- * [username], [authType]) tak berubah setelah dibuat → `updatable = false`. [secret]
- * disimpan terenkripsi (batas enkripsi di adapter).
+ * Identitas jaringan (akun PPPoE/Hotspot atau berbasis MAC untuk DHCP/Static). Identitas
+ * ([subscriptionId], [customerId], [username], [authType], [framedIp]) tak berubah setelah
+ * dibuat → `updatable = false`. [secret] disimpan terenkripsi (batas enkripsi di adapter).
  */
 @Entity
 @Table(name = "subscriber_access")
@@ -101,6 +101,10 @@ class SubscriberAccessJpaEntity(
 
     @Column(name = "fup_throttled", nullable = false)
     var fupThrottled: Boolean,
+
+    /** Reservasi Framed-IP-Address untuk DHCP/Static; null untuk PPPoE/Hotspot. Terikat identitas. */
+    @Column(name = "framed_ip", length = 45, updatable = false)
+    var framedIp: String?,
 ) : TenantAwareJpaEntity(id)
 
 /**
@@ -181,6 +185,11 @@ class BngActionJpaEntity(
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20, updatable = false)
     var action: BngActionType,
+
+    /** Skema identitas akun yang dituju — memetakan penulisan radius-db (slug-prefix vs MAC). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_type", nullable = false, length = 20, updatable = false)
+    var authType: AuthType,
 
     @Column(name = "down_mbps", updatable = false)
     var downMbps: Int?,

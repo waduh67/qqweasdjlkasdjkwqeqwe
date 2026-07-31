@@ -6,6 +6,7 @@ import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.application.service.RadiusProvisioningRunner
 import com.duluin.ftth.bng.config.RadiusProperties
 import com.duluin.ftth.bng.domain.model.AccessStatus
+import com.duluin.ftth.bng.domain.model.AuthType
 import com.duluin.ftth.bng.domain.model.BngAction
 import com.duluin.ftth.bng.domain.model.BngActionStatus
 import com.duluin.ftth.bng.domain.model.SubscriberAccess
@@ -51,6 +52,36 @@ class RadiusProvisioningRunnerTest {
         assertThat(call.groupname).isEqualTo("plan:${access.planId}")
         assertThat(action.status).isEqualTo(BngActionStatus.COMPLETED)
         assertThat(fixture.actions.saved).contains(action)
+    }
+
+    @Test
+    fun `PROVISION DHCP memakai MAC tanpa prefix slug dan meneruskan Framed-IP-Address`() {
+        val access = SubscriberAccess.create(
+            tenantId = tenantId,
+            subscriptionId = UuidV7.generate(),
+            customerId = UuidV7.generate(),
+            username = "AA:BB:CC:DD:EE:FF",
+            secret = "",
+            planId = UuidV7.generate(),
+            nasId = nasId,
+            status = AccessStatus.ACTIVE,
+            authType = AuthType.DHCP,
+            framedIp = "100.64.0.10",
+        )
+        val action = BngAction.provision(
+            tenantId, access.id, nasId, username = access.username, groupname = "plan:${access.planId}",
+            requestedBy = null, requestedByEmail = null, authType = AuthType.DHCP, at = now,
+        )
+        val fixture = fixture(pending = listOf(action), accesses = listOf(access))
+
+        fixture.runner.execute(tenantId, now)
+
+        val call = fixture.radius.provisions.single()
+        // MAC global-unik → TAK di-prefix slug (beda dari PPPoE/Hotspot).
+        assertThat(call.scopedUsername).isEqualTo("AA:BB:CC:DD:EE:FF")
+        assertThat(call.password).isEqualTo("AA:BB:CC:DD:EE:FF")
+        assertThat(call.framedIp).isEqualTo("100.64.0.10")
+        assertThat(action.status).isEqualTo(BngActionStatus.COMPLETED)
     }
 
     @Test
@@ -233,7 +264,13 @@ private class FakeAccessRepo(private val accesses: List<SubscriberAccess>) : Sub
 }
 
 private class FakeRadiusPort(private val failWith: Exception?) : RadiusProvisioningPort {
-    data class ProvisionCall(val tenantId: UUID, val scopedUsername: String, val password: String, val groupname: String)
+    data class ProvisionCall(
+        val tenantId: UUID,
+        val scopedUsername: String,
+        val password: String,
+        val groupname: String,
+        val framedIp: String?,
+    )
     data class SyncCall(
         val tenantId: UUID,
         val groupname: String,
@@ -249,9 +286,9 @@ private class FakeRadiusPort(private val failWith: Exception?) : RadiusProvision
 
     override fun isConfigured(): Boolean = true
 
-    override fun provision(tenantId: UUID, scopedUsername: String, password: String, groupname: String) {
+    override fun provision(tenantId: UUID, scopedUsername: String, password: String, groupname: String, framedIp: String?) {
         failWith?.let { throw it }
-        provisions += ProvisionCall(tenantId, scopedUsername, password, groupname)
+        provisions += ProvisionCall(tenantId, scopedUsername, password, groupname, framedIp)
     }
 
     override fun deprovision(tenantId: UUID, scopedUsername: String) {

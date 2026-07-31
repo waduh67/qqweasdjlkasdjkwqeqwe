@@ -193,6 +193,7 @@ class FupCycleRunnerTest {
         fupRateLimit = "2M/5M",
         fupDownMbps = 5,
         fupUpMbps = 2,
+        serviceTypes = setOf("PPPOE"),
     )
 }
 

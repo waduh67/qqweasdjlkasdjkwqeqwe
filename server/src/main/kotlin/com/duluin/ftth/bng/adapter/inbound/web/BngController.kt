@@ -13,7 +13,9 @@ import com.duluin.ftth.bng.application.port.inbound.SubscriberAccessView
 import com.duluin.ftth.bng.application.port.inbound.TrafficHistoryView
 import com.duluin.ftth.bng.application.port.inbound.UpdateAccessCommand
 import com.duluin.ftth.bng.application.port.inbound.ViewBngSessionUseCase
+import com.duluin.ftth.bng.domain.model.AuthType
 import com.duluin.ftth.bng.domain.model.NasVendor
+import com.duluin.ftth.common.domain.error.ValidationException
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -182,15 +184,39 @@ data class SaveNasRequest(
     )
 }
 
+/**
+ * [username] = login untuk PPPoE/Hotspot atau MAC untuk DHCP/Static (dinormalkan di domain).
+ * [secret] wajib untuk PPPoE/Hotspot, boleh kosong untuk tipe berbasis MAC (MAC jadi password);
+ * validasinya di domain per-tipe, bukan bean-validation. [authType] default PPPOE agar klien
+ * lama tetap jalan; [framedIp] hanya untuk DHCP/Static (wajib STATIC).
+ */
 data class ProvisionAccessRequest(
     val subscriptionId: UUID,
     @field:NotBlank val username: String,
-    @field:NotBlank val secret: String,
+    val secret: String? = null,
     val planId: UUID,
     val nasId: UUID?,
+    val authType: String? = "PPPOE",
+    val framedIp: String? = null,
 ) {
-    fun toCommand() = ProvisionAccessCommand(subscriptionId, username, secret, planId, nasId)
+    fun toCommand() = ProvisionAccessCommand(
+        subscriptionId = subscriptionId,
+        username = username,
+        secret = secret ?: "",
+        planId = planId,
+        nasId = nasId,
+        authType = parseAuthType(authType),
+        framedIp = framedIp,
+    )
 }
+
+/** Petakan string tipe layanan dari klien ke [AuthType]; null/kosong → PPPOE (kompat klien lama). */
+private fun parseAuthType(raw: String?): AuthType =
+    raw?.trim()?.takeIf { it.isNotEmpty() }?.let { value ->
+        runCatching { AuthType.valueOf(value.uppercase()) }.getOrElse {
+            throw ValidationException("Tipe layanan '$raw' tidak dikenal (PPPOE/HOTSPOT/DHCP/STATIC)")
+        }
+    } ?: AuthType.PPPOE
 
 data class UpdateAccessRequest(
     val planId: UUID,

@@ -87,19 +87,37 @@ mengisi form — tak ada lagi ketik nama profil.
 
 ---
 
-## Jalur-tulis RADIUS (`bng` → collector)
+## Jalur-tulis RADIUS (dua jalur terpisah)
 
-`bng` mengubah maksud (provision, ganti paket, hapus, FUP) menjadi baris `bng_action`
-yang diklaim collector lewat denyut, lalu ditulis ke RADIUS via JDBC. Password
-**tidak** disimpan di `bng_action` — diresolusi+dekripsi dari `SubscriberAccess.secret`
-saat klaim, diangkut lewat kanal TLS (tak ada cleartext at-rest baru).
+`bng` mengubah maksud (provision, ganti paket, hapus, FUP, isolir) menjadi baris
+`bng_action`. Ada **dua jalur eksekusi** yang beda tujuan — jangan campur:
+
+**1. Provisioning otorisasi — server-side langsung (RADIUS-as-a-service).**
+`RadiusProvisioningDispatcher` (`@Scheduled`) meng-klaim aksi pending per tenant
+(`findServerProvisioningPending`); `FreeRadiusJdbcAdapter` menuliskannya **langsung ke
+radius-db platform via JDBC** (`RadiusConnectionResolver`) — idempoten DELETE-lalu-INSERT
+dalam satu transaksi. **Tak ada router disentuh, tak ada collector di jalur ini.**
+Password **tidak** disimpan di `bng_action` — diresolusi+dekripsi dari
+`SubscriberAccess.secret` saat klaim (tak ada cleartext at-rest baru).
 
 | `BngActionType` | Tulisan RADIUS (idempoten, DELETE-lalu-INSERT) |
 |---|---|
-| `PROVISION` | `radcheck` (Cleartext-Password) + `radusergroup` (keanggotaan grup) |
-| `DEPROVISION` | hapus `radcheck`/`radreply`/`radusergroup` by username |
+| `PROVISION` | `radcheck` (Cleartext-Password) + `radusergroup` (keanggotaan grup) + `radreply` (Framed-IP-Address bila direservasi) |
+| `DEPROVISION` | hapus `radcheck`/`radreply`/`radusergroup` by identitas |
 | `SYNC_GROUP` | `radgroupreply` (Mikrotik-Rate-Limit) + `radgroupcheck` (Simultaneous-Use) + baris grup FUP |
-| `COA` | RFC 5176 Change-of-Authorization (kecepatan sesi hidup, tanpa putus) |
+
+Identitas RADIUS ikut `authType` akun: **PPPoE/Hotspot** pakai username login;
+**DHCP/Static** pakai **MAC** sebagai username *sekaligus* password (konvensi Mikrotik
+`use-radius`), dan **Static** menambah `radreply Framed-IP-Address` (IP dipin). Grup
+rate-limit (`plan:{id}`) dipakai ulang lintas semua tipe.
+
+**2. Kontrol sesi hidup — jalur collector/VPN (RFC 5176 DAE).**
+Perubahan yang harus mengetuk router yang sudah punya sesi hidup — server menembak
+_masuk_ ke BRAS, jadi lewat collector/overlay VPN, bukan JDBC:
+
+| `BngActionType` | Aksi |
+|---|---|
+| `COA` | RFC 5176 Change-of-Authorization (ubah kecepatan sesi hidup, tanpa putus) |
 | `DISCONNECT` | RFC 5176 Disconnect (isolir / Reset Login) |
 
 **Kunci swap FUP:** karena `PROVISION` melakukan `DELETE FROM radusergroup ... THEN

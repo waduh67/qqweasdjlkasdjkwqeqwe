@@ -57,6 +57,8 @@ data class SubscriberAccessView(
     val customerId: UUID,
     val username: String,
     val authType: String,
+    /** Reservasi Framed-IP-Address untuk DHCP/Static; null untuk PPPoE/Hotspot. */
+    val framedIp: String?,
     val planId: UUID,
     val planName: String?,
     val nasId: UUID?,

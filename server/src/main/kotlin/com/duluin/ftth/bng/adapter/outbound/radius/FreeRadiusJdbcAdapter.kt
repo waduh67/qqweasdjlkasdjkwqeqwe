@@ -21,7 +21,7 @@ class FreeRadiusJdbcAdapter(
 
     override fun isConfigured(): Boolean = connections.configured
 
-    override fun provision(tenantId: UUID, scopedUsername: String, password: String, groupname: String) =
+    override fun provision(tenantId: UUID, scopedUsername: String, password: String, groupname: String, framedIp: String?) =
         inTransaction(tenantId) { conn ->
             conn.replace(
                 "DELETE FROM radcheck WHERE username = ? AND attribute = 'Cleartext-Password'" to listOf(scopedUsername),
@@ -30,7 +30,15 @@ class FreeRadiusJdbcAdapter(
                 "DELETE FROM radusergroup WHERE username = ?" to listOf(scopedUsername),
                 "INSERT INTO radusergroup (username, groupname, priority) VALUES (?, ?, 1)"
                     to listOf(scopedUsername, groupname),
+                // Reservasi IP (DHCP/Static): selalu hapus dulu — idempoten; tulis ulang hanya bila diminta.
+                "DELETE FROM radreply WHERE username = ? AND attribute = 'Framed-IP-Address'" to listOf(scopedUsername),
             )
+            if (framedIp != null) {
+                conn.replace(
+                    "INSERT INTO radreply (username, attribute, op, value) VALUES (?, 'Framed-IP-Address', ':=', ?)"
+                        to listOf(scopedUsername, framedIp),
+                )
+            }
         }
 
     override fun deprovision(tenantId: UUID, scopedUsername: String) =

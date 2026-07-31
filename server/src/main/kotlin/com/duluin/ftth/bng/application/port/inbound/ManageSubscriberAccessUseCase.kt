@@ -1,5 +1,6 @@
 package com.duluin.ftth.bng.application.port.inbound
 
+import com.duluin.ftth.bng.domain.model.AuthType
 import java.util.UUID
 
 /**
@@ -17,7 +18,7 @@ interface ManageSubscriberAccessUseCase {
 
     fun get(id: UUID): SubscriberAccessView
 
-    /** Membuat akun PPPoE untuk sebuah langganan; satu langganan maksimal satu akun. */
+    /** Membuat akun jaringan untuk sebuah langganan; satu langganan maksimal satu akun. */
     fun provision(command: ProvisionAccessCommand): SubscriberAccessView
 
     /** Mengganti paket dan/atau BRAS yang menaungi akun. */
@@ -29,12 +30,19 @@ interface ManageSubscriberAccessUseCase {
     fun delete(id: UUID)
 }
 
+/**
+ * [username] adalah identitas login untuk PPPoE/Hotspot, atau MAC untuk DHCP/Static
+ * (dinormalkan di domain). [secret] diabaikan untuk tipe berbasis MAC (MAC jadi password).
+ * [framedIp] hanya dipakai DHCP/Static (reservasi Framed-IP-Address; wajib untuk STATIC).
+ */
 data class ProvisionAccessCommand(
     val subscriptionId: UUID,
     val username: String,
     val secret: String,
     val planId: UUID,
     val nasId: UUID?,
+    val authType: AuthType = AuthType.PPPOE,
+    val framedIp: String? = null,
 )
 
 data class UpdateAccessCommand(

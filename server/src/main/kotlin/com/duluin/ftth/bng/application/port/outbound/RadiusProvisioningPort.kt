@@ -24,8 +24,12 @@ interface RadiusProvisioningPort {
      */
     fun isConfigured(): Boolean
 
-    /** Tulis kredensial (radcheck Cleartext-Password) + keanggotaan grup (radusergroup). */
-    fun provision(tenantId: UUID, scopedUsername: String, password: String, groupname: String)
+    /**
+     * Tulis kredensial (radcheck Cleartext-Password) + keanggotaan grup (radusergroup).
+     * [framedIp] non-null (DHCP/Static) menambah reservasi `radreply Framed-IP-Address`;
+     * null (PPPoE/Hotspot) hanya membersihkan reservasi lama — jalur idempoten sama.
+     */
+    fun provision(tenantId: UUID, scopedUsername: String, password: String, groupname: String, framedIp: String?)
 
     /** Hapus seluruh baris otorisasi akun (radcheck/radreply/radusergroup by username). */
     fun deprovision(tenantId: UUID, scopedUsername: String)

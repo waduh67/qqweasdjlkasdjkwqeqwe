@@ -1,4 +1,5 @@
 import { api } from './client'
+import type { ServiceType } from './catalog'
 
 /**
  * Tipe & panggilan module bng (BRAS/RADIUS: registri BRAS dan identitas jaringan/akun
@@ -81,16 +82,21 @@ export interface RadiusEndpointView {
 }
 
 /**
- * Proyeksi satu akun PPPoE. Password (secret) sengaja tak disertakan — hanya bisa
+ * Proyeksi satu akun jaringan. Password (secret) sengaja tak disertakan — hanya bisa
  * diisi saat provisi atau di-reset. [planName]/[nasName] sudah diresolusi di server
  * agar UI tak perlu memanggil balik. [planId] merujuk paket di modul catalog.
+ *
+ * [authType] menentukan skema identitas: PPPoE/Hotspot login+password; DHCP/Static
+ * berbasis MAC ([username] = MAC). [framedIp] hanya terisi untuk DHCP/Static yang
+ * mereservasi IP (Framed-IP-Address); null untuk PPPoE/Hotspot.
  */
 export interface SubscriberAccessView {
   id: string
   subscriptionId: string
   customerId: string
   username: string
-  authType: string
+  authType: ServiceType
+  framedIp: string | null
   planId: string
   planName: string | null
   nasId: string | null
@@ -106,13 +112,20 @@ export interface SubscriberAccessView {
   periodUsageMb: number | null
 }
 
-/** Provisi akun PPPoE baru untuk sebuah langganan. */
+/**
+ * Provisi akun jaringan baru untuk sebuah langganan. [username] = login (PPPoE/Hotspot)
+ * atau MAC (DHCP/Static, dinormalkan server). [secret] wajib PPPoE/Hotspot, diabaikan
+ * untuk tipe berbasis MAC. [authType] harus termasuk `serviceTypes` paket. [framedIp]
+ * hanya DHCP/Static (wajib STATIC).
+ */
 export interface ProvisionAccessRequest {
   subscriptionId: string
   username: string
-  secret: string
+  secret?: string
   planId: string
   nasId?: string | null
+  authType?: ServiceType
+  framedIp?: string | null
 }
 
 /** Ganti paket dan/atau BRAS sebuah akun. */
