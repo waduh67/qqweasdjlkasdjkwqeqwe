@@ -18,6 +18,14 @@ interface ManageNasUseCase {
     fun delete(id: UUID)
 
     /**
+     * Pratinjau `/ppp/secret` dari RouterOS sebuah BRAS (vendor MIKROTIK) untuk wizard
+     * bulk-import — TANPA password (server yang menariknya saat commit). Menyentuh router
+     * langsung; gagal 409 bila BRAS tak ber-alamat/kredensial/terjangkau atau vendornya
+     * bukan MikroTik.
+     */
+    fun listPppSecrets(nasId: UUID): List<PppSecretView>
+
+    /**
      * Koordinat FreeRADIUS pusat (host+port) yang tenant arahkan router-nya. Info platform
      * global — dari [com.duluin.ftth.bng.config.RadiusProperties], bukan tabel `nas`.
      */
@@ -32,6 +40,10 @@ interface ManageNasUseCase {
  * [apiUsername]/[apiSecret]/[apiPort]/[apiUseTls] adalah kredensial kontrol REST RouterOS
  * (vendor MIKROTIK). Berbeda dengan secret, field non-rahasia selalu ditimpa nilai baru
  * saat update (cermin [enabled]).
+ *
+ * [areaIds] = area yang dinaungi BRAS ini (dasar auto-pilih BRAS dari area pelanggan saat
+ * PSB). Selalu diganti TOTAL saat update (cermin [enabled]); tiap area boleh dinaungi paling
+ * banyak satu BRAS — konflik ditolak.
  */
 @Suppress("LongParameterList")
 data class SaveNasCommand(
@@ -46,4 +58,5 @@ data class SaveNasCommand(
     val apiSecret: String? = null,
     val apiPort: Int? = null,
     val apiUseTls: Boolean = true,
+    val areaIds: List<UUID> = emptyList(),
 )

@@ -1,6 +1,7 @@
 package com.duluin.ftth.bng.adapter.outbound.persistence
 
 import com.duluin.ftth.bng.application.port.outbound.BngActionRepository
+import com.duluin.ftth.bng.application.port.outbound.NasAreaCoverageRepository
 import com.duluin.ftth.bng.application.port.outbound.NasRepository
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.domain.model.AccessStatus
@@ -9,6 +10,7 @@ import com.duluin.ftth.bng.domain.model.BngActionStatus
 import com.duluin.ftth.bng.domain.model.BngActionType
 import com.duluin.ftth.bng.domain.model.Nas
 import com.duluin.ftth.bng.domain.model.SubscriberAccess
+import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.security.SecretCipher
 import com.duluin.ftth.common.tenant.TenantContext
 import org.slf4j.Logger
@@ -87,6 +89,38 @@ class NasPersistenceAdapter(
         apiUseTls = apiUseTls,
         reachability = reachability,
     )
+}
+
+/**
+ * Adapter cakupan area per-BRAS. Tanpa rahasia — hanya menaut BRAS ↔ area lewat UUID.
+ * [replaceCoverage] hapus-lalu-pasang dalam satu transaksi; flush di antaranya agar
+ * penghapusan baris lama terlihat sebelum penyisipan (mencegah bentrok UNIQUE saat area
+ * dipertahankan pada BRAS yang sama). tenant_id diisi Hibernate (@TenantId) otomatis.
+ */
+@Component
+class NasAreaCoveragePersistenceAdapter(
+    private val jpa: NasAreaJpaRepository,
+) : NasAreaCoverageRepository {
+
+    override fun findAreaIdsByNasId(nasId: UUID): List<UUID> =
+        jpa.findByNasId(nasId).map { it.areaId }
+
+    override fun findAreaIdsByNasIds(nasIds: Collection<UUID>): Map<UUID, List<UUID>> {
+        if (nasIds.isEmpty()) return emptyMap()
+        return jpa.findByNasIdIn(nasIds).groupBy({ it.nasId }, { it.areaId })
+    }
+
+    override fun findNasIdByAreaId(areaId: UUID): UUID? = jpa.findByAreaId(areaId)?.nasId
+
+    override fun replaceCoverage(nasId: UUID, areaIds: Collection<UUID>) {
+        jpa.deleteByNasId(nasId)
+        jpa.flush()
+        areaIds.toSet().forEach { areaId ->
+            jpa.save(NasAreaJpaEntity(id = UuidV7.generate(), nasId = nasId, areaId = areaId))
+        }
+    }
+
+    override fun deleteByNasId(nasId: UUID) = jpa.deleteByNasId(nasId)
 }
 
 /**

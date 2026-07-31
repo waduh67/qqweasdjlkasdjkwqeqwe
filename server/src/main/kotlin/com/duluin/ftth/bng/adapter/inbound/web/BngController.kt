@@ -5,6 +5,7 @@ import com.duluin.ftth.bng.application.port.inbound.ControlSubscriberAccessUseCa
 import com.duluin.ftth.bng.application.port.inbound.ManageNasUseCase
 import com.duluin.ftth.bng.application.port.inbound.ManageSubscriberAccessUseCase
 import com.duluin.ftth.bng.application.port.inbound.NasView
+import com.duluin.ftth.bng.application.port.inbound.PppSecretView
 import com.duluin.ftth.bng.application.port.inbound.ProvisionAccessCommand
 import com.duluin.ftth.bng.application.port.inbound.RadiusEndpointView
 import com.duluin.ftth.bng.application.port.inbound.ResetSecretCommand
@@ -86,6 +87,11 @@ class BngController(
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Hapus BRAS (ditolak bila masih menaungi akun)")
     fun deleteNas(@PathVariable id: UUID) = nas.delete(id)
+
+    @GetMapping("/nas/{id}/ppp-secrets")
+    @PreAuthorize("@authz.can('bng.nas.manage')")
+    @Operation(summary = "Pratinjau akun PPPoE (/ppp/secret) di RouterOS BRAS ini untuk bulk-import (tanpa password)")
+    fun pppSecrets(@PathVariable id: UUID): List<PppSecretView> = nas.listPppSecrets(id)
 
     // ---- Akun PPPoE (identitas jaringan) ----
 
@@ -177,10 +183,12 @@ data class SaveNasRequest(
     val apiSecret: String? = null,
     val apiPort: Int? = null,
     val apiUseTls: Boolean = true,
+    /** Area yang dinaungi BRAS ini — diganti TOTAL; dasar auto-pilih BRAS dari area saat PSB. */
+    val areaIds: List<UUID> = emptyList(),
 ) {
     fun toCommand() = SaveNasCommand(
         name, vendor, address, nasIdentifier, coaSecret, collectorId, enabled,
-        apiUsername, apiSecret, apiPort, apiUseTls,
+        apiUsername, apiSecret, apiPort, apiUseTls, areaIds,
     )
 }
 

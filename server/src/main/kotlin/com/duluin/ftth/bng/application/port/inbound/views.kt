@@ -22,6 +22,23 @@ data class NasView(
     val hasApiSecret: Boolean,
     val apiPort: Int?,
     val apiUseTls: Boolean,
+    /** Area yang dinaungi BRAS ini — dipakai PSB untuk auto-pilih BRAS dari area pelanggan. */
+    val areaIds: List<UUID>,
+)
+
+/**
+ * Pratinjau satu baris `/ppp/secret` RouterOS untuk wizard bulk-import PPPoE. Password
+ * SENGAJA tak disertakan — pratinjau hanya untuk operator memilih baris & memetakan
+ * [profile]→paket; server-lah yang menarik ulang password saat commit impor (tak pernah
+ * bocor ke browser). [comment] sering memuat nama/ID pelanggan, [disabled] menandai akun
+ * yang dimatikan di router.
+ */
+data class PppSecretView(
+    val name: String,
+    val profile: String?,
+    val service: String?,
+    val comment: String?,
+    val disabled: Boolean,
 )
 
 /**

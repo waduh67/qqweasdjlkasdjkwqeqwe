@@ -29,7 +29,39 @@ interface BngApi {
      * username final (server bisa meng-generate username); TAK pernah mengembalikan secret.
      */
     fun provisionAccess(command: ProvisionAccessSpec): ProvisionedAccessRef
+
+    /**
+     * BRAS yang menaungi sebuah area (cakupan area→BRAS), atau `null` bila area itu belum
+     * dipetakan ke BRAS mana pun. Dipakai onboarding PSB untuk memilih BRAS otomatis dari
+     * area pelanggan bila operator tak memilih BRAS manual. Deterministik: tiap area dinaungi
+     * paling banyak satu BRAS. Ter-scope tenant aktif (RLS).
+     */
+    fun resolveNasForArea(areaId: UUID): UUID?
+
+    /**
+     * Tarik seluruh `/ppp/secret` dari RouterOS sebuah BRAS (vendor MIKROTIK) — bahan mentah
+     * bulk-import PPPoE. BERBEDA dari pratinjau UI ([ManageNasUseCase.listPppSecrets]), ini
+     * MEMBAWA password: dipakai orkestrasi impor onboarding untuk membuat akun dengan
+     * password asli router agar pelanggan tetap bisa login setelah pindah ke RADIUS pusat.
+     * Karena itu jalur ini INTERNAL antar-module dan TAK pernah di-serialisasi utuh ke
+     * browser oleh bng. Menyentuh router langsung; gagal 409 bila tak terjangkau. RLS-scoped.
+     */
+    fun fetchPppSecretsFromNas(nasId: UUID): List<PppSecretRef>
 }
+
+/**
+ * Satu baris `/ppp/secret` RouterOS untuk orkestrasi impor lintas-module. [password] adalah
+ * plaintext dari router — sengaja dibawa agar akun impor pakai password asli; jangan
+ * bocorkan ke luar batas onboarding. [profile] dipetakan operator ke paket katalog.
+ */
+data class PppSecretRef(
+    val name: String,
+    val password: String?,
+    val profile: String?,
+    val service: String?,
+    val comment: String?,
+    val disabled: Boolean,
+)
 
 /**
  * Perintah provisi akun jaringan lintas-module (orkestrasi onboarding). [username]/[secret]

@@ -1,8 +1,11 @@
 package com.duluin.ftth.bng
 
 import com.duluin.ftth.bng.application.port.inbound.SaveNasCommand
+import com.duluin.ftth.bng.application.port.outbound.NasAreaCoverageRepository
 import com.duluin.ftth.bng.application.port.outbound.NasRepository
+import com.duluin.ftth.bng.application.port.outbound.PppSecret
 import com.duluin.ftth.bng.application.port.outbound.RadiusClientRegistryPort
+import com.duluin.ftth.bng.application.port.outbound.RouterOsPort
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.application.service.NasService
 import com.duluin.ftth.bng.config.RadiusProperties
@@ -10,6 +13,7 @@ import com.duluin.ftth.bng.domain.model.Nas
 import com.duluin.ftth.bng.domain.model.NasVendor
 import com.duluin.ftth.bng.domain.model.SubscriberAccess
 import com.duluin.ftth.common.domain.UuidV7
+import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.AuthenticatedUser
 import com.duluin.ftth.common.security.CurrentUserProvider
@@ -17,6 +21,7 @@ import com.duluin.ftth.tenancy.TenantApi
 import com.duluin.ftth.tenancy.TenantRef
 import com.duluin.ftth.tenancy.TenantStatus
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
 import java.util.UUID
@@ -105,9 +110,68 @@ class NasServiceRadiusClientTest {
         assertThat(registry.deregistered).containsExactly("203.0.113.9")
     }
 
+    // ---- Cakupan area (auto-pilih BRAS dari area) ----
+
+    @Test
+    fun `create dengan areaIds memasang cakupan area dan mengembalikannya di view`() {
+        val coverage = FakeCoverageRepo()
+        val a1 = UuidV7.generate()
+        val a2 = UuidV7.generate()
+        val view = service(FakeClientRegistry(configured = false), coverage)
+            .create(command(address = null, coaSecret = null, areaIds = listOf(a1, a2)))
+
+        assertThat(view.areaIds).containsExactlyInAnyOrder(a1, a2)
+        assertThat(coverage.findNasIdByAreaId(a1)).isEqualTo(view.id)
+        assertThat(coverage.findNasIdByAreaId(a2)).isEqualTo(view.id)
+    }
+
+    @Test
+    fun `update mengganti TOTAL cakupan area`() {
+        val coverage = FakeCoverageRepo()
+        val svc = service(FakeClientRegistry(configured = false), coverage)
+        val a1 = UuidV7.generate()
+        val a2 = UuidV7.generate()
+        val created = svc.create(command(address = null, coaSecret = null, areaIds = listOf(a1)))
+
+        val updated = svc.update(created.id, command(address = null, coaSecret = null, areaIds = listOf(a2)))
+
+        assertThat(updated.areaIds).containsExactly(a2)
+        assertThat(coverage.findNasIdByAreaId(a1)).isNull()
+        assertThat(coverage.findNasIdByAreaId(a2)).isEqualTo(created.id)
+    }
+
+    @Test
+    fun `area yang sudah dinaungi BRAS lain ditolak`() {
+        val coverage = FakeCoverageRepo()
+        val a1 = UuidV7.generate()
+        // Area a1 sudah dimiliki BRAS lain.
+        coverage.replaceCoverage(UuidV7.generate(), listOf(a1))
+
+        assertThatThrownBy {
+            service(FakeClientRegistry(configured = false), coverage)
+                .create(command(address = null, coaSecret = null, areaIds = listOf(a1)))
+        }.isInstanceOf(ConflictException::class.java)
+    }
+
+    @Test
+    fun `delete melepas seluruh cakupan area`() {
+        val coverage = FakeCoverageRepo()
+        val svc = service(FakeClientRegistry(configured = false), coverage)
+        val a1 = UuidV7.generate()
+        val created = svc.create(command(address = null, coaSecret = null, areaIds = listOf(a1)))
+
+        svc.delete(created.id)
+
+        assertThat(coverage.findNasIdByAreaId(a1)).isNull()
+        assertThat(coverage.findAreaIdsByNasId(created.id)).isEmpty()
+    }
+
     // ---- Fixture & fake ----
 
-    private fun service(registry: FakeClientRegistry): NasService {
+    private fun service(
+        registry: FakeClientRegistry,
+        coverage: FakeCoverageRepo = FakeCoverageRepo(),
+    ): NasService {
         val currentUser = object : CurrentUserProvider {
             override fun currentOrNull() = AuthenticatedUser(
                 userId = UuidV7.generate(), tenantId = tenantId, email = "op@acme.id",
@@ -117,11 +181,16 @@ class NasServiceRadiusClientTest {
         val auditor = AuditRecorder(ApplicationEventPublisher { }, currentUser)
         return NasService(
             FakeNasRepo(), FakeNoSubscriberRepo(), currentUser, auditor, registry, FakeTenantApi(),
-            RadiusProperties(),
+            RadiusProperties(), coverage, FakeRouterOs(),
         )
     }
 
-    private fun command(address: String?, coaSecret: String?, enabled: Boolean = true) = SaveNasCommand(
+    private fun command(
+        address: String?,
+        coaSecret: String?,
+        enabled: Boolean = true,
+        areaIds: List<UUID> = emptyList(),
+    ) = SaveNasCommand(
         name = "BRAS Utama",
         vendor = NasVendor.MIKROTIK,
         address = address,
@@ -129,7 +198,12 @@ class NasServiceRadiusClientTest {
         coaSecret = coaSecret,
         collectorId = null,
         enabled = enabled,
+        areaIds = areaIds,
     )
+
+    private class FakeRouterOs : RouterOsPort {
+        override fun fetchPppSecrets(nas: Nas): List<PppSecret> = emptyList()
+    }
 
     private data class Registered(val nasname: String, val shortname: String, val secret: String)
 
@@ -168,6 +242,21 @@ class NasServiceRadiusClientTest {
         override fun existsByName(name: String): Boolean = false
         override fun deleteById(id: UUID) {
             store.remove(id)
+        }
+    }
+
+    private class FakeCoverageRepo : NasAreaCoverageRepository {
+        private val byNas = mutableMapOf<UUID, MutableList<UUID>>()
+        override fun findAreaIdsByNasId(nasId: UUID): List<UUID> = byNas[nasId].orEmpty()
+        override fun findAreaIdsByNasIds(nasIds: Collection<UUID>): Map<UUID, List<UUID>> =
+            nasIds.associateWith { byNas[it].orEmpty() }.filterValues { it.isNotEmpty() }
+        override fun findNasIdByAreaId(areaId: UUID): UUID? =
+            byNas.entries.firstOrNull { areaId in it.value }?.key
+        override fun replaceCoverage(nasId: UUID, areaIds: Collection<UUID>) {
+            byNas[nasId] = areaIds.toMutableList()
+        }
+        override fun deleteByNasId(nasId: UUID) {
+            byNas.remove(nasId)
         }
     }
 

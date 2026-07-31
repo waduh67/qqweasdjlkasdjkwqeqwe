@@ -164,6 +164,10 @@ class Subscriber360ServiceTest {
 
         override fun provisionAccess(command: ProvisionAccessSpec): ProvisionedAccessRef =
             throw UnsupportedOperationException()
+
+        override fun resolveNasForArea(areaId: UUID): UUID? = null
+
+        override fun fetchPppSecretsFromNas(nasId: UUID) = emptyList<com.duluin.ftth.bng.PppSecretRef>()
     }
 
     private inner class FakeBillingApi : BillingApi {

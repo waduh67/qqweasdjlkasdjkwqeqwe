@@ -64,6 +64,24 @@ class NasJpaEntity(
 ) : TenantAwareJpaEntity(id)
 
 /**
+ * Cakupan area sebuah BRAS: baris (nas, area). [areaId] UUID polos (area milik iam) —
+ * tanpa relasi JPA lintas-module. UNIQUE (tenant_id, area_id) di migrasi menjaga tiap
+ * area dinaungi paling banyak satu BRAS. Semua kolom `updatable = false`: baris diganti
+ * total (hapus+pasang), bukan disunting.
+ */
+@Entity
+@Table(name = "nas_area")
+class NasAreaJpaEntity(
+    id: UUID,
+
+    @Column(name = "nas_id", nullable = false, updatable = false)
+    var nasId: UUID,
+
+    @Column(name = "area_id", nullable = false, updatable = false)
+    var areaId: UUID,
+) : TenantAwareJpaEntity(id)
+
+/**
  * Identitas jaringan (akun PPPoE/Hotspot atau berbasis MAC untuk DHCP/Static). Identitas
  * ([subscriptionId], [customerId], [username], [authType], [framedIp]) tak berubah setelah
  * dibuat → `updatable = false`. [secret] disimpan terenkripsi (batas enkripsi di adapter).

@@ -11,6 +11,7 @@ import { InventoryPage } from './pages/InventoryPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { CustomerDetailPage } from './pages/CustomerDetailPage'
 import { ExpressPsbPage } from './pages/ExpressPsbPage'
+import { ImportPppoePage } from './pages/ImportPppoePage'
 import { MonitoringPage } from './pages/MonitoringPage'
 import { ProvisioningPage } from './pages/ProvisioningPage'
 import { IncidentsPage } from './pages/IncidentsPage'
@@ -116,6 +117,14 @@ export default function App() {
               element={
                 <RequirePermission permission="customer.customer.create">
                   <ExpressPsbPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="import-pppoe"
+              element={
+                <RequirePermission permission="customer.customer.create">
+                  <ImportPppoePage />
                 </RequirePermission>
               }
             />

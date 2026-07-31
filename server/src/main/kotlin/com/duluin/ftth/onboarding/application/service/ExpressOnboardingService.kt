@@ -43,13 +43,18 @@ class ExpressOnboardingService(
 
         val subscriptionId = customerApi.openSubscription(customerId, command.planId, command.monthlyFeeOverride)
 
+        // BRAS: pakai pilihan manual bila ada; kalau kosong, auto-pilih dari cakupan area pelanggan
+        // (deterministik — tiap area dinaungi paling banyak satu BRAS). Tetap boleh null (akun lahir
+        // tanpa BRAS, ditugaskan belakangan) bila area tak dipetakan ke BRAS mana pun.
+        val nasId = command.nasId ?: command.areaId?.let { bngApi.resolveNasForArea(it) }
+
         val access = bngApi.provisionAccess(
             ProvisionAccessSpec(
                 subscriptionId = subscriptionId,
                 username = command.username,
                 secret = command.secret,
                 planId = command.planId,
-                nasId = command.nasId,
+                nasId = nasId,
                 authType = command.serviceType,
                 framedIp = command.framedIp,
             ),

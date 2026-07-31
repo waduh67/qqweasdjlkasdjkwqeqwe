@@ -57,3 +57,64 @@ export interface ExpressPsbResult {
 /** Onboarding PSB ekspres (satu POST, satu transaksi). */
 export const onboardPsb = (body: ExpressPsbRequest) =>
   api.post<ExpressPsbResult>('/api/onboarding/psb', body)
+
+// ---- Bulk-import PPPoE (migrasi akun RouterOS → sistem) ----
+
+/**
+ * Bulk-import PPPoE: migrasi akun `/ppp/secret` sebuah RouterOS jadi pelanggan+langganan+akun
+ * yang langsung AKTIF dan terprovisi ke RADIUS pusat (cermin `OnboardingController.importPppoe`).
+ * Beda dari PSB: tanpa Work Order (pelanggan sudah terpasang). Per-baris atomik — satu baris
+ * gagal tak menggagalkan batch; hasilnya per-baris.
+ */
+
+/** Sumber baris: `NAS` = server menarik dari router; `INLINE` = baris dari paste/upload operator. */
+export type ImportSource = 'NAS' | 'INLINE'
+
+/** Satu baris impor INLINE (dari paste/upload). [name] = username PPPoE; sisanya opsional. */
+export interface ImportRowPayload {
+  name: string
+  password?: string | null
+  profile?: string | null
+  comment?: string | null
+  disabled?: boolean
+}
+
+export interface ImportPppoeRequest {
+  nasId: string
+  source: ImportSource
+  /** Wajib untuk INLINE; diabaikan untuk NAS (server menarik sendiri). */
+  rows?: ImportRowPayload[]
+  /** Peta profil RouterOS → id paket katalog. */
+  profilePlanId?: Record<string, string>
+  /** Paket fallback bila profil tak terpetakan; null → baris ber-profil tak dikenal dilewati. */
+  defaultPlanId?: string | null
+  /** Lewati akun yang dimatikan di router (default true di server). */
+  skipDisabled?: boolean
+  /** Batasi ke username terpilih; kosong/absen = semua baris. */
+  onlyNames?: string[] | null
+  /** Data pelanggan yang tak ada di `/ppp/secret` (placeholder, diperkaya belakangan). */
+  areaId?: string | null
+  defaultAddress?: string | null
+  defaultLocation?: LocationPayload | null
+}
+
+export type ImportRowStatus = 'CREATED' | 'SKIPPED' | 'FAILED'
+
+/** Nasib satu baris: dibuat, dilewati (sudah ada / profil tak dipetakan), atau gagal. */
+export interface ImportRowOutcome {
+  username: string
+  status: ImportRowStatus
+  message: string | null
+}
+
+/** Rekap hasil impor + rincian per-baris. */
+export interface ImportPppoeResult {
+  created: number
+  skipped: number
+  failed: number
+  rows: ImportRowOutcome[]
+}
+
+/** Jalankan bulk-import PPPoE (satu POST → rekap per-baris). */
+export const importPppoe = (body: ImportPppoeRequest) =>
+  api.post<ImportPppoeResult>('/api/onboarding/import/pppoe', body)

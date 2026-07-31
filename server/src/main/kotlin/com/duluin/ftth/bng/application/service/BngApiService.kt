@@ -1,13 +1,16 @@
 package com.duluin.ftth.bng.application.service
 
 import com.duluin.ftth.bng.BngApi
+import com.duluin.ftth.bng.PppSecretRef
 import com.duluin.ftth.bng.ProvisionAccessSpec
 import com.duluin.ftth.bng.ProvisionedAccessRef
 import com.duluin.ftth.bng.SubscriberSessionRef
 import com.duluin.ftth.bng.application.port.inbound.ManageSubscriberAccessUseCase
 import com.duluin.ftth.bng.application.port.inbound.ProvisionAccessCommand
+import com.duluin.ftth.bng.application.port.outbound.NasAreaCoverageRepository
 import com.duluin.ftth.bng.application.port.outbound.NasRepository
 import com.duluin.ftth.bng.application.port.outbound.RadiusSessionRepository
+import com.duluin.ftth.bng.application.port.outbound.RouterOsPort
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.domain.model.AuthType
 import com.duluin.ftth.catalog.CatalogApi
@@ -27,9 +30,28 @@ class BngApiService(
     private val subscriberAccessRepository: SubscriberAccessRepository,
     private val radiusSessionRepository: RadiusSessionRepository,
     private val nasRepository: NasRepository,
+    private val coverageRepository: NasAreaCoverageRepository,
     private val catalogApi: CatalogApi,
     private val manageAccess: ManageSubscriberAccessUseCase,
+    private val routerOs: RouterOsPort,
 ) : BngApi {
+
+    override fun resolveNasForArea(areaId: UUID): UUID? = coverageRepository.findNasIdByAreaId(areaId)
+
+    override fun fetchPppSecretsFromNas(nasId: UUID): List<PppSecretRef> {
+        val nas = nasRepository.findById(nasId)
+            ?: throw ValidationException("BRAS $nasId tidak ditemukan")
+        return routerOs.fetchPppSecrets(nas).map {
+            PppSecretRef(
+                name = it.name,
+                password = it.password,
+                profile = it.profile,
+                service = it.service,
+                comment = it.comment,
+                disabled = it.disabled,
+            )
+        }
+    }
 
     @Transactional
     override fun provisionAccess(command: ProvisionAccessSpec): ProvisionedAccessRef {

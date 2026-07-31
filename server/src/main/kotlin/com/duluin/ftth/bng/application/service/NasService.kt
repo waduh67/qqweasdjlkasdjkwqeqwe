@@ -2,10 +2,13 @@ package com.duluin.ftth.bng.application.service
 
 import com.duluin.ftth.bng.application.port.inbound.ManageNasUseCase
 import com.duluin.ftth.bng.application.port.inbound.NasView
+import com.duluin.ftth.bng.application.port.inbound.PppSecretView
 import com.duluin.ftth.bng.application.port.inbound.RadiusEndpointView
 import com.duluin.ftth.bng.application.port.inbound.SaveNasCommand
+import com.duluin.ftth.bng.application.port.outbound.NasAreaCoverageRepository
 import com.duluin.ftth.bng.application.port.outbound.NasRepository
 import com.duluin.ftth.bng.application.port.outbound.RadiusClientRegistryPort
+import com.duluin.ftth.bng.application.port.outbound.RouterOsPort
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.config.RadiusProperties
 import com.duluin.ftth.bng.domain.model.Nas
@@ -28,10 +31,16 @@ class NasService(
     private val clientRegistry: RadiusClientRegistryPort,
     private val tenantApi: TenantApi,
     private val radiusProperties: RadiusProperties,
+    private val coverageRepository: NasAreaCoverageRepository,
+    private val routerOs: RouterOsPort,
 ) : ManageNasUseCase {
 
     @Transactional(readOnly = true)
-    override fun list(): List<NasView> = nasRepository.findAll().map { it.toView() }
+    override fun list(): List<NasView> {
+        val all = nasRepository.findAll()
+        val coverage = coverageRepository.findAreaIdsByNasIds(all.map { it.id })
+        return all.map { it.toView(coverage[it.id] ?: emptyList()) }
+    }
 
     @Transactional(readOnly = true)
     override fun radiusEndpoint(): RadiusEndpointView {
@@ -46,7 +55,7 @@ class NasService(
     }
 
     @Transactional(readOnly = true)
-    override fun get(id: UUID): NasView = require(id).toView()
+    override fun get(id: UUID): NasView = require(id).toView(coverageRepository.findAreaIdsByNasId(id))
 
     override fun create(command: SaveNasCommand): NasView {
         val name = command.name.trim()
@@ -67,8 +76,9 @@ class NasService(
             ),
         )
         syncRadiusClient(nas)
+        applyCoverage(nas.id, command.areaIds)
         auditor.record("bng.nas.created", "Nas", nas.id, nas.tenantId, mapOf("name" to nas.name, "vendor" to nas.vendor.name))
-        return nas.toView()
+        return nas.toView(coverageRepository.findAreaIdsByNasId(nas.id))
     }
 
     override fun update(id: UUID, command: SaveNasCommand): NasView {
@@ -94,8 +104,9 @@ class NasService(
         )
         val saved = nasRepository.save(nas)
         syncRadiusClient(saved, previousAddress)
+        applyCoverage(saved.id, command.areaIds)
         auditor.record("bng.nas.updated", "Nas", saved.id, saved.tenantId, mapOf("name" to saved.name, "vendor" to saved.vendor.name))
-        return saved.toView()
+        return saved.toView(coverageRepository.findAreaIdsByNasId(saved.id))
     }
 
     override fun delete(id: UUID) {
@@ -104,13 +115,44 @@ class NasService(
         if (inUse > 0) {
             throw ConflictException("BRAS '${nas.name}' masih menaungi $inUse akun PPPoE, pindahkan dulu")
         }
+        coverageRepository.deleteByNasId(id)
         nasRepository.deleteById(id)
         if (clientRegistry.isConfigured()) nas.address?.let { clientRegistry.deregister(nas.tenantId, it) }
         auditor.record("bng.nas.deleted", "Nas", id, nas.tenantId, mapOf("name" to nas.name))
     }
 
+    @Transactional(readOnly = true)
+    override fun listPppSecrets(nasId: UUID): List<PppSecretView> =
+        routerOs.fetchPppSecrets(require(nasId)).map {
+            // Password sengaja dibuang di sini — pratinjau tak pernah membawa rahasia ke UI.
+            PppSecretView(
+                name = it.name,
+                profile = it.profile,
+                service = it.service,
+                comment = it.comment,
+                disabled = it.disabled,
+            )
+        }
+
     private fun require(id: UUID): Nas =
         nasRepository.findById(id) ?: throw NotFoundException("BRAS $id tidak ditemukan")
+
+    /**
+     * Ganti total cakupan area sebuah BRAS. Menolak area yang sudah dinaungi BRAS LAIN agar
+     * resolusi area→BRAS tetap deterministik (tiap area satu BRAS); area yang tetap di BRAS
+     * ini dibiarkan (hapus-lalu-pasang idempoten). UNIQUE (tenant_id, area_id) di DB adalah
+     * jaring pengaman terakhir bila ada perlombaan.
+     */
+    private fun applyCoverage(nasId: UUID, areaIds: List<UUID>) {
+        val wanted = areaIds.toSet()
+        wanted.forEach { areaId ->
+            val owner = coverageRepository.findNasIdByAreaId(areaId)
+            if (owner != null && owner != nasId) {
+                throw ConflictException("Area sudah dinaungi BRAS lain — lepaskan dulu dari BRAS itu")
+            }
+        }
+        coverageRepository.replaceCoverage(nasId, wanted)
+    }
 
     /**
      * Sinkronkan baris klien RADIUS (tabel `nas` platform) dengan keadaan BRAS ini —
@@ -140,7 +182,7 @@ class NasService(
     }
 }
 
-private fun Nas.toView() = NasView(
+private fun Nas.toView(areaIds: List<UUID>) = NasView(
     id = id,
     name = name,
     vendor = vendor.name,
@@ -154,4 +196,5 @@ private fun Nas.toView() = NasView(
     hasApiSecret = apiSecret != null,
     apiPort = apiPort,
     apiUseTls = apiUseTls,
+    areaIds = areaIds,
 )

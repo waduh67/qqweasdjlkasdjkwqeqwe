@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ApiError } from '../api/client'
 import { api } from '../api/client'
-import type { PageResponse, Role, User } from '../api/types'
+import type { Area, PageResponse, Role, User } from '../api/types'
 import { listNas, type NasView } from '../api/bng'
 import { listPlans, SERVICE_TYPE_LABEL, type PlanView, type ServiceType } from '../api/catalog'
 import { onboardPsb, type ExpressPsbResult } from '../api/onboarding'
@@ -27,6 +27,7 @@ const EMPTY = {
   phone: '',
   email: '',
   address: '',
+  areaId: '',
   longitude: '',
   latitude: '',
   monthlyFeeOverride: '',
@@ -59,6 +60,7 @@ export function ExpressPsbPage() {
 
   const [plans, setPlans] = useState<PlanView[]>([])
   const [nasList, setNasList] = useState<NasView[]>([])
+  const [areas, setAreas] = useState<Area[]>([])
   const [technicians, setTechnicians] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -99,7 +101,20 @@ export function ExpressPsbPage() {
       const techRole = roles.find((r) => r.name === 'Teknisi')
       setTechnicians(techRole ? active.filter((u) => u.roleIds.includes(techRole.id)) : active)
     })
+
+    // Area best-effort — dipakai memilih area pelanggan sekaligus auto-pilih BRAS dari cakupannya.
+    void api
+      .get<Area[]>('/api/areas')
+      .then(setAreas)
+      .catch(() => setAreas([]))
   }, [])
+
+  // Peta area → BRAS (dari cakupan tiap BRAS). Dasar auto-pilih BRAS saat area dipilih.
+  const nasByArea = useMemo(() => {
+    const map = new Map<string, string>()
+    nasList.forEach((n) => n.areaIds.forEach((areaId) => map.set(areaId, n.id)))
+    return map
+  }, [nasList])
 
   const selectedPlan = useMemo(() => plans.find((p) => p.id === planId), [plans, planId])
   const availableTypes: ServiceType[] = selectedPlan?.serviceTypes ?? []
@@ -111,6 +126,13 @@ export function ExpressPsbPage() {
     setPlanId(id)
     const p = plans.find((x) => x.id === id)
     if (p && !p.serviceTypes.includes(authType)) setAuthType(p.serviceTypes[0] ?? 'PPPOE')
+  }
+
+  // Pilih area → auto-isi BRAS dari cakupan area itu (operator tetap boleh menimpanya di bawah).
+  const changeArea = (areaId: string) => {
+    set({ areaId })
+    const auto = nasByArea.get(areaId)
+    if (auto) setNasId(auto)
   }
 
   const invalid =
@@ -139,6 +161,7 @@ export function ExpressPsbPage() {
         phone: draft.phone.trim() || null,
         email: draft.email.trim() || null,
         address: draft.address.trim(),
+        areaId: draft.areaId || null,
         location: { longitude: Number(draft.longitude), latitude: Number(draft.latitude) },
         planId,
         monthlyFeeOverride: draft.monthlyFeeOverride.trim() ? Number(draft.monthlyFeeOverride) : null,
@@ -233,6 +256,21 @@ export function ExpressPsbPage() {
                 <input value={draft.latitude} onChange={(e) => set({ latitude: e.target.value })} placeholder="-6.2" />
               </label>
             </div>
+            {areas.length > 0 && (
+              <div className="row wrap" style={{ gap: '0.6rem' }}>
+                <label style={{ flex: 1, minWidth: 200 }}>
+                  <span>Area {nasByArea.has(draft.areaId) && <span className="muted">· BRAS otomatis terpilih</span>}</span>
+                  <select value={draft.areaId} onChange={(e) => changeArea(e.target.value)}>
+                    <option value="">— pilih area —</option>
+                    {areas.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
           </section>
 
           {/* Paket & akun jaringan */}
@@ -309,6 +347,11 @@ export function ExpressPsbPage() {
                   ))}
                 </select>
               </label>
+              {draft.areaId !== '' && !nasByArea.has(draft.areaId) && (
+                <span className="muted" style={{ fontSize: '0.8rem', alignSelf: 'center' }}>
+                  Area ini belum dipetakan ke BRAS — pilih manual bila perlu.
+                </span>
+              )}
             </div>
             <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
               {macBased

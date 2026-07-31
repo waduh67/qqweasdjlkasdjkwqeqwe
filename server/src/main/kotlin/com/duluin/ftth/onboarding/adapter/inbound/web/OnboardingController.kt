@@ -4,6 +4,11 @@ import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.onboarding.application.port.inbound.ExpressOnboardingUseCase
 import com.duluin.ftth.onboarding.application.port.inbound.ExpressPsbCommand
 import com.duluin.ftth.onboarding.application.port.inbound.ExpressPsbResult
+import com.duluin.ftth.onboarding.application.port.inbound.ImportPppoeCommand
+import com.duluin.ftth.onboarding.application.port.inbound.ImportPppoeResult
+import com.duluin.ftth.onboarding.application.port.inbound.ImportPppoeUseCase
+import com.duluin.ftth.onboarding.application.port.inbound.ImportRow
+import com.duluin.ftth.onboarding.application.port.inbound.ImportSource
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -35,6 +40,7 @@ import java.util.UUID
 @SecurityRequirement(name = "bearer-jwt")
 class OnboardingController(
     private val onboarding: ExpressOnboardingUseCase,
+    private val importPppoe: ImportPppoeUseCase,
 ) {
 
     @PostMapping("/psb")
@@ -44,7 +50,61 @@ class OnboardingController(
     )
     fun onboardPsb(@Valid @RequestBody request: ExpressPsbRequest): ExpressPsbResult =
         onboarding.onboardPsb(request.toCommand())
+
+    /**
+     * Bulk-import PPPoE dari RouterOS ke sistem (pelanggan+langganan+akun AKTIF+terprovisi RADIUS).
+     * Digating union izin langkah yang dirangkainya + `bng.nas.manage` (baca `/ppp/secret` router
+     * pada sumber NAS). Membalas rekap per-baris (bukan resource tunggal) → 200, bukan 201.
+     */
+    @PostMapping("/import/pppoe")
+    @ResponseStatus(HttpStatus.OK)
+    @PreAuthorize(
+        "@authz.canAll('customer.customer.create','customer.subscription.update','bng.access.manage','bng.nas.manage')",
+    )
+    fun importPppoe(@Valid @RequestBody request: ImportPppoeRequest): ImportPppoeResult =
+        importPppoe.importPppoe(request.toCommand())
 }
+
+/**
+ * Muatan bulk-import PPPoE. [source] NAS → server menarik `/ppp/secret` dari [nasId] (abaikan
+ * [rows]); INLINE → baris dari [rows] (hasil paste/upload operator). [profilePlanId] memetakan
+ * profil RouterOS → paket; [defaultPlanId] fallback. [onlyNames] membatasi ke username terpilih.
+ * [defaultAddress]/[defaultLocation] mengisi data pelanggan yang tak ada di router (placeholder).
+ */
+data class ImportPppoeRequest(
+    @field:NotNull val nasId: UUID?,
+    @field:NotNull val source: ImportSource?,
+    @field:Valid val rows: List<ImportRowPayload> = emptyList(),
+    val profilePlanId: Map<String, UUID> = emptyMap(),
+    val defaultPlanId: UUID? = null,
+    val skipDisabled: Boolean = true,
+    val onlyNames: List<String>? = null,
+    val areaId: UUID? = null,
+    @field:Size(max = 500) val defaultAddress: String? = null,
+    @field:Valid val defaultLocation: LocationPayload? = null,
+) {
+    fun toCommand() = ImportPppoeCommand(
+        nasId = nasId!!,
+        source = source!!,
+        rows = rows.map { ImportRow(it.name!!, it.password, it.profile, it.comment, it.disabled) },
+        profilePlanId = profilePlanId,
+        defaultPlanId = defaultPlanId,
+        skipDisabled = skipDisabled,
+        onlyNames = onlyNames?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet(),
+        areaId = areaId,
+        defaultAddress = defaultAddress,
+        defaultLocation = defaultLocation?.let { Coordinate(it.longitude, it.latitude) },
+    )
+}
+
+/** Satu baris impor INLINE (paste/upload). [name] = username PPPoE; sisanya opsional. */
+data class ImportRowPayload(
+    @field:NotBlank @field:Size(max = 100) val name: String?,
+    @field:Size(max = 100) val password: String? = null,
+    @field:Size(max = 100) val profile: String? = null,
+    @field:Size(max = 255) val comment: String? = null,
+    val disabled: Boolean = false,
+)
 
 /** Titik lokasi pelanggan; longitude dulu (urutan GeoJSON/PostGIS), sama seperti form pelanggan. */
 data class LocationPayload(

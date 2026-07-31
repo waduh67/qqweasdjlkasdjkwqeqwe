@@ -80,6 +80,32 @@ class OnboardingExpressPsbIT {
     }
 
     @Test
+    fun `PSB ekspres tanpa BRAS manual memilih BRAS otomatis dari area pelanggan`() {
+        val slug = "onba${uniq()}"
+        val token = onboard(slug)
+        val planId = createPlan(token)
+
+        // Area pelanggan → dipetakan ke sebuah BRAS lewat cakupan area BRAS.
+        val areaId = id(post("/api/areas", token, """{"code":"AR${uniq()}","name":"Zona ${uniq()}"}"""))
+        val nasId = id(
+            post(
+                "/api/bng/nas", token,
+                """{"name":"BRAS ${uniq()}","vendor":"MIKROTIK","areaIds":["$areaId"]}""",
+            ),
+        )
+
+        // Onboard TANPA nasId; hanya areaId — server auto-pilih BRAS dari cakupan area.
+        val result = post(
+            "/api/onboarding/psb", token,
+            """{"code":"C-AUTO${uniq()}","name":"Sari","address":"Jl. Auto","location":{"longitude":106.8,"latitude":-6.2},"areaId":"$areaId","planId":"$planId","username":"pppoe${uniq()}","secret":"rahasia123"}""",
+        )
+
+        val accessId = JsonPath.read<String>(result, "$.accessId")
+        val access = get("/api/bng/access/$accessId", token)
+        assertThat(JsonPath.read<String>(access, "$.nasId")).isEqualTo(nasId)
+    }
+
+    @Test
     fun `planId ngawur me-rollback seluruh onboarding sehingga pelanggan pun tak tercipta`() {
         val slug = "onbr${uniq()}"
         val token = onboard(slug)

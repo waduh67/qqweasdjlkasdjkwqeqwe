@@ -47,6 +47,8 @@ export interface NasView {
   hasApiSecret: boolean
   apiPort: number | null
   apiUseTls: boolean
+  /** Area yang dinaungi BRAS ini — dasar auto-pilih BRAS dari area pelanggan saat PSB. */
+  areaIds: string[]
 }
 
 /**
@@ -65,6 +67,8 @@ export interface SaveNasRequest {
   apiSecret?: string | null
   apiPort?: number | null
   apiUseTls?: boolean
+  /** Area yang dinaungi BRAS ini — diganti TOTAL tiap simpan (cermin `enabled`). */
+  areaIds?: string[]
 }
 
 /**
@@ -183,6 +187,23 @@ export const updateNas = (id: string, body: SaveNasRequest) => api.put<NasView>(
 
 /** Hapus BRAS (ditolak server bila masih menaungi akun). */
 export const deleteNas = (id: string) => api.del<void>(`/api/bng/nas/${id}`)
+
+/**
+ * Pratinjau akun PPPoE (`/ppp/secret`) di RouterOS BRAS ini untuk bulk-import — TANPA password
+ * (server menariknya saat commit). Menyentuh router langsung; gagal 409 bila BRAS tak
+ * ber-alamat/kredensial/terjangkau atau vendornya bukan MikroTik. Izin `bng.nas.manage`.
+ */
+export interface PppSecretPreview {
+  name: string
+  profile: string | null
+  service: string | null
+  comment: string | null
+  disabled: boolean
+}
+
+/** Tarik pratinjau `/ppp/secret` dari sebuah BRAS. */
+export const previewPppSecrets = (nasId: string) =>
+  api.get<PppSecretPreview[]>(`/api/bng/nas/${nasId}/ppp-secrets`)
 
 // ---- Akun PPPoE (identitas jaringan) ----
 

@@ -27,6 +27,31 @@ interface NasRepository {
     fun deleteById(id: UUID)
 }
 
+/**
+ * Cakupan area per-BRAS — dasar auto-pilih BRAS dari area pelanggan saat PSB. Tenant-aware
+ * (RLS), jadi semua pencarian ter-scope tenant aktif otomatis. Tiap area dinaungi PALING
+ * BANYAK satu BRAS (unik per tenant di migrasi), jadi [findNasIdByAreaId] mengembalikan 0..1
+ * dan resolusinya deterministik. [areaId] merujuk area milik iam sebagai UUID polos (tanpa
+ * FK lintas-module) — batas module dijaga di kode.
+ */
+interface NasAreaCoverageRepository {
+
+    /** Area yang dinaungi sebuah BRAS. */
+    fun findAreaIdsByNasId(nasId: UUID): List<UUID>
+
+    /** Peta nasId → area-nya untuk sekumpulan BRAS (hindari N+1 saat menyusun daftar). */
+    fun findAreaIdsByNasIds(nasIds: Collection<UUID>): Map<UUID, List<UUID>>
+
+    /** BRAS yang menaungi sebuah area; `null` bila area belum dipetakan ke BRAS mana pun. */
+    fun findNasIdByAreaId(areaId: UUID): UUID?
+
+    /** Ganti TOTAL cakupan sebuah BRAS: lepas yang lama, pasang tepat [areaIds] baru. */
+    fun replaceCoverage(nasId: UUID, areaIds: Collection<UUID>)
+
+    /** Lepas seluruh cakupan sebuah BRAS (dipanggil saat BRAS dihapus). */
+    fun deleteByNasId(nasId: UUID)
+}
+
 interface SubscriberAccessRepository {
 
     fun save(access: SubscriberAccess): SubscriberAccess

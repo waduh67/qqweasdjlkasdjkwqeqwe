@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ApiError } from '../api/client'
+import { api, ApiError } from '../api/client'
 import {
   createNas,
   deleteNas,
@@ -12,6 +12,7 @@ import {
   type RadiusEndpointView,
   type SaveNasRequest,
 } from '../api/bng'
+import type { Area } from '../api/types'
 import { useCan } from '../auth/useCan'
 import { useToast } from '../components/ui'
 import { IconPlus } from '../components/icons'
@@ -175,6 +176,8 @@ type NasDraft = {
   apiPort: string
   apiUseTls: boolean
   hasApiSecret: boolean
+  /** Area yang dinaungi BRAS ini — dasar auto-pilih BRAS dari area pelanggan saat PSB. */
+  areaIds: string[]
 }
 
 const EMPTY_NAS: NasDraft = {
@@ -191,13 +194,24 @@ const EMPTY_NAS: NasDraft = {
   apiPort: '',
   apiUseTls: true,
   hasApiSecret: false,
+  areaIds: [],
 }
 
 function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
   const { can } = useCan()
   const { items, run } = useResource(listNas)
   const canManage = can('bng.nas.manage')
+  const canViewAreas = can('iam.area.view')
+  const [areas, setAreas] = useState<Area[]>([])
   const [draft, setDraft] = useState<NasDraft | null>(null)
+
+  useEffect(() => {
+    if (!canViewAreas) return
+    void api
+      .get<Area[]>('/api/areas')
+      .then(setAreas)
+      .catch(() => setAreas([]))
+  }, [canViewAreas])
   /** Buka draft baru/edit dengan secret tersembunyi (baru terungkap saat "Generate"). */
   const [revealSecret, setRevealSecret] = useState(false)
   const open = (next: NasDraft | null) => {
@@ -220,6 +234,7 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
       apiPort: nas.apiPort != null ? String(nas.apiPort) : '',
       apiUseTls: nas.apiUseTls,
       hasApiSecret: nas.hasApiSecret,
+      areaIds: nas.areaIds,
     })
 
   const save = () => {
@@ -235,6 +250,7 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
       apiSecret: draft.apiSecret || null,
       apiPort: draft.apiPort ? Number(draft.apiPort) : null,
       apiUseTls: draft.apiUseTls,
+      areaIds: draft.areaIds,
     }
     void run(
       async () => {
@@ -376,6 +392,58 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
             />
             <span>Aktif</span>
           </label>
+
+          <div className="stack" style={{ gap: '0.35rem' }}>
+            <span className="muted" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+              Area yang dinaungi BRAS ini
+            </span>
+            {!canViewAreas ? (
+              <span className="muted" style={{ fontSize: '0.82rem' }}>
+                Butuh izin lihat area (iam.area.view) untuk menyetel cakupan.
+              </span>
+            ) : areas.length === 0 ? (
+              <span className="muted" style={{ fontSize: '0.82rem' }}>
+                Belum ada area. Buat dulu di menu Area.
+              </span>
+            ) : (
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '0.4rem 1rem',
+                  maxHeight: 160,
+                  overflowY: 'auto',
+                  border: '1px solid var(--line)',
+                  borderRadius: 6,
+                  padding: '0.5rem 0.65rem',
+                }}
+              >
+                {areas.map((area) => (
+                  <label key={area.id} className="row" style={{ gap: '0.4rem', alignItems: 'center', width: 'auto' }}>
+                    <input
+                      type="checkbox"
+                      checked={draft.areaIds.includes(area.id)}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          areaIds: e.target.checked
+                            ? [...draft.areaIds, area.id]
+                            : draft.areaIds.filter((id) => id !== area.id),
+                        })
+                      }
+                      style={{ width: 'auto' }}
+                    />
+                    <span style={{ fontSize: '0.85rem' }}>{area.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <span className="muted" style={{ fontSize: '0.78rem' }}>
+              PSB Ekspres memakai peta ini untuk otomatis memilih BRAS dari area pelanggan. Tiap area
+              cuma boleh dinaungi satu BRAS.
+            </span>
+          </div>
+
           <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
             Shared secret ini dipakai dua arah: Mikrotik memakainya untuk autentikasi ke FreeRADIUS
             pusat, dan server memakainya untuk CoA/Disconnect (RFC 5176) ke BRAS. Isi nilai yang

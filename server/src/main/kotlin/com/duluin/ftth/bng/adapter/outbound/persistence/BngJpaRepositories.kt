@@ -12,6 +12,13 @@ interface NasJpaRepository : JpaRepository<NasJpaEntity, UUID> {
     fun existsByName(name: String): Boolean
 }
 
+interface NasAreaJpaRepository : JpaRepository<NasAreaJpaEntity, UUID> {
+    fun findByNasId(nasId: UUID): List<NasAreaJpaEntity>
+    fun findByNasIdIn(nasIds: Collection<UUID>): List<NasAreaJpaEntity>
+    fun findByAreaId(areaId: UUID): NasAreaJpaEntity?
+    fun deleteByNasId(nasId: UUID)
+}
+
 interface SubscriberAccessJpaRepository : JpaRepository<SubscriberAccessJpaEntity, UUID> {
     fun findByCustomerIdOrderByUsernameAsc(customerId: UUID): List<SubscriberAccessJpaEntity>
     fun findBySubscriptionId(subscriptionId: UUID): List<SubscriberAccessJpaEntity>
