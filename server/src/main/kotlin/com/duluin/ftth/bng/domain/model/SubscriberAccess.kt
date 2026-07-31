@@ -5,8 +5,25 @@ import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.ValidationException
 import java.util.UUID
 
-/** Cara pelanggan diautentikasi ke jaringan; PPPoE dulu, IPoE/STATIC menyusul. */
-enum class AuthType { PPPOE }
+/**
+ * Cara pelanggan diautentikasi ke jaringan:
+ *  - [PPPOE]/[HOTSPOT]: identitas login (username + password), dial/portal.
+ *  - [DHCP]/[STATIC]: identitas berbasis MAC (`use-radius` Mikrotik) — MAC jadi username
+ *    DAN password; [STATIC] menambah reservasi `Framed-IP-Address`.
+ *
+ * Semua tipe memakai grup rate-limit paket yang sama (`plan:{id}`) — atribut
+ * Mikrotik-Rate-Limit berlaku lintas-tipe. [macBased] memutuskan skema identitas:
+ * MAC global-unik → TAK di-prefix slug tenant (username login yang di-prefix).
+ */
+enum class AuthType {
+    PPPOE,
+    HOTSPOT,
+    DHCP,
+    STATIC,
+    ;
+
+    val macBased: Boolean get() = this == DHCP || this == STATIC
+}
 
 /**
  * Status identitas jaringan, mencerminkan status langganan tapi hidup terpisah
@@ -28,13 +45,17 @@ enum class AccessStatus { ACTIVE, ISOLATED, TERMINATED }
  * antar-module). Akun tak menyimpan atribut jaringan sendiri: kecepatan/QoS dibaca live
  * dari paket saat provisioning ke RADIUS, sehingga perubahan paket menyebar tanpa
  * menyentuh akun.
+ *
+ * [framedIp] hanya untuk tipe berbasis MAC yang meminta reservasi IP (wajib [AuthType.STATIC],
+ * opsional [AuthType.DHCP]) → ditulis sebagai `radreply Framed-IP-Address`; null untuk
+ * PPPoE/Hotspot. Terikat identitas → tak berubah setelah dibuat.
  */
 class SubscriberAccess private constructor(
     val id: UUID,
     val tenantId: UUID,
     val subscriptionId: UUID,
     val customerId: UUID,
-    /** Identitas login; tak berubah setelah dibuat. */
+    /** Identitas login (atau MAC untuk tipe berbasis MAC); tak berubah setelah dibuat. */
     val username: String,
     val authType: AuthType,
     secret: String,
@@ -42,6 +63,8 @@ class SubscriberAccess private constructor(
     nasId: UUID?,
     status: AccessStatus,
     fupThrottled: Boolean,
+    /** Reservasi IP (Framed-IP-Address) untuk DHCP/STATIC; null bila tak dipakai. */
+    val framedIp: String?,
 ) {
     var secret: String = secret
         private set
@@ -65,6 +88,9 @@ class SubscriberAccess private constructor(
 
     fun resetSecret(newSecret: String) {
         assertNotTerminated()
+        if (authType.macBased) {
+            throw ConflictException("Akun berbasis MAC (DHCP/Static) tak punya password untuk direset")
+        }
         this.secret = validateSecret(newSecret)
     }
 
@@ -114,6 +140,13 @@ class SubscriberAccess private constructor(
     }
 
     companion object {
+        /**
+         * Membuat akun; skema identitas ditentukan [authType]:
+         *  - PPPoE/Hotspot: [username] login + [secret] password (keduanya divalidasi).
+         *  - DHCP/Static: [username] adalah MAC (dinormalkan ke `AA:BB:CC:DD:EE:FF`) yang
+         *    dipakai SEKALIGUS sebagai password (konvensi `use-radius`); [secret] diabaikan.
+         *    [framedIp] jadi reservasi `Framed-IP-Address` — wajib untuk STATIC, opsional DHCP.
+         */
         @Suppress("LongParameterList")
         fun create(
             tenantId: UUID,
@@ -124,19 +157,39 @@ class SubscriberAccess private constructor(
             planId: UUID,
             nasId: UUID?,
             status: AccessStatus,
-        ): SubscriberAccess = SubscriberAccess(
-            id = UuidV7.generate(),
-            tenantId = tenantId,
-            subscriptionId = subscriptionId,
-            customerId = customerId,
-            username = validateUsername(username),
-            authType = AuthType.PPPOE,
-            secret = validateSecret(secret),
-            planId = planId,
-            nasId = nasId,
-            status = status,
-            fupThrottled = false,
-        )
+            authType: AuthType = AuthType.PPPOE,
+            framedIp: String? = null,
+        ): SubscriberAccess {
+            val identity: String
+            val effectiveSecret: String
+            val reservedIp: String?
+            when (authType) {
+                AuthType.PPPOE, AuthType.HOTSPOT -> {
+                    identity = validateUsername(username)
+                    effectiveSecret = validateSecret(secret)
+                    reservedIp = null
+                }
+                AuthType.DHCP, AuthType.STATIC -> {
+                    identity = normalizeMac(username)
+                    effectiveSecret = identity
+                    reservedIp = validateFramedIp(framedIp, required = authType == AuthType.STATIC)
+                }
+            }
+            return SubscriberAccess(
+                id = UuidV7.generate(),
+                tenantId = tenantId,
+                subscriptionId = subscriptionId,
+                customerId = customerId,
+                username = identity,
+                authType = authType,
+                secret = effectiveSecret,
+                planId = planId,
+                nasId = nasId,
+                status = status,
+                fupThrottled = false,
+                framedIp = reservedIp,
+            )
+        }
 
         @Suppress("LongParameterList")
         fun rehydrate(
@@ -151,23 +204,51 @@ class SubscriberAccess private constructor(
             nasId: UUID?,
             status: AccessStatus,
             fupThrottled: Boolean,
+            framedIp: String?,
         ): SubscriberAccess = SubscriberAccess(
-            id, tenantId, subscriptionId, customerId, username, authType, secret, planId, nasId, status, fupThrottled,
+            id, tenantId, subscriptionId, customerId, username, authType, secret, planId, nasId, status,
+            fupThrottled, framedIp,
         )
 
         private val USERNAME_PATTERN = Regex("^[A-Za-z0-9._@-]{2,64}$")
+        private val MAC_HEX_PATTERN = Regex("^[0-9A-F]{12}$")
+        private val IPV4_PATTERN =
+            Regex("^((25[0-5]|2[0-4]\\d|1?\\d?\\d)\\.){3}(25[0-5]|2[0-4]\\d|1?\\d?\\d)$")
 
         private fun validateUsername(username: String): String {
             val trimmed = username.trim()
             if (!USERNAME_PATTERN.matches(trimmed)) {
-                throw ValidationException("Username PPPoE 2-64 karakter, hanya huruf/angka dan . _ - @")
+                throw ValidationException("Username 2-64 karakter, hanya huruf/angka dan . _ - @")
             }
             return trimmed
         }
 
         private fun validateSecret(secret: String): String {
-            if (secret.length !in 4..128) throw ValidationException("Password PPPoE harus 4-128 karakter")
+            if (secret.length !in 4..128) throw ValidationException("Password harus 4-128 karakter")
             return secret
+        }
+
+        /** Normalkan MAC ke bentuk kanonik `AA:BB:CC:DD:EE:FF` (terima pemisah `:` `-` `.` atau tanpa pemisah). */
+        private fun normalizeMac(raw: String): String {
+            val hex = raw.trim().uppercase().replace(Regex("[.:-]"), "")
+            if (!MAC_HEX_PATTERN.matches(hex)) {
+                throw ValidationException("MAC address harus 12 digit heksadesimal (mis. AA:BB:CC:DD:EE:FF)")
+            }
+            return hex.chunked(2).joinToString(":")
+        }
+
+        /** Validasi reservasi IPv4; [required] untuk STATIC (wajib), DHCP boleh kosong (dinamis). */
+        private fun validateFramedIp(framedIp: String?, required: Boolean): String? {
+            val trimmed = framedIp?.trim()?.takeIf { it.isNotEmpty() }
+                ?: return if (required) {
+                    throw ValidationException("IP Statis butuh alamat IP yang direservasi (Framed-IP-Address)")
+                } else {
+                    null
+                }
+            if (!IPV4_PATTERN.matches(trimmed)) {
+                throw ValidationException("Reserved IP harus IPv4 valid, mis. 100.64.0.10")
+            }
+            return trimmed
         }
     }
 }

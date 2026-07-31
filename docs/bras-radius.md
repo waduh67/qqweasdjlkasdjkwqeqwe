@@ -102,6 +102,40 @@ RouterOS siap-tempel. Bentuknya (ganti `<IP-RADIUS>` & `<SECRET-BRAS>` sesuai pu
 
 ---
 
+## Tipe layanan lain: Hotspot, DHCP, IP Statis
+
+Snippet di atas mengarahkan **PPPoE**. Model RADIUS-pusat yang sama menegakkan tipe
+lain juga — grup rate-limit (`plan:{id}`) & CoA **dipakai ulang apa adanya**, cuma cara
+router memicu event auth yang beda. Syaratnya: paket mengizinkan tipe itu (field
+`serviceTypes` di **Paket Internet**), lalu buat akun bertipe sesuai di **detail
+pelanggan → tab Akses**.
+
+**Hotspot** — auth by username/password (halaman login / MAC-login):
+
+```rsc
+/ip hotspot profile set <profil> use-radius=yes radius-interim-update=5m
+```
+
+**DHCP & IP Statis** — auth by **MAC** saat perangkat minta lease:
+
+```rsc
+/ip dhcp-server set <server> use-radius=yes
+/ip dhcp-server network add address=<subnet> gateway=<gw> dns-server=<dns>
+```
+
+Di form akun, isi **MAC** (dinormalkan server → jadi identitas + password RADIUS):
+- **DHCP** — IP dari pool DHCP router; reservasi `Framed-IP-Address` opsional.
+- **IP Statis** — **wajib** isi IP reservasi; server memin IP itu via `radreply
+  Framed-IP-Address`, jadi perangkat selalu dapat IP tetap **plus** tetap kena
+  rate-limit & CoA.
+
+> **Static murni** (IP diketik manual di router, tanpa DHCP & tanpa auth) **tak punya
+> event auth** → **di luar jangkauan RADIUS-pusat**; enforce-nya `simple-queue` di
+> router (jalur VPN/collector). Kalau mau IP tetap yang **tetap ke-enforce** lewat
+> RADIUS, pakai tipe **IP Statis** (pola DHCP-reservasi) di atas — bukan IP manual.
+
+---
+
 ## Jebakan NAT & jaringan (sering bikin gagal)
 
 - **Isi IP RADIUS = IP publik VPS mentah, BUKAN domain di belakang Cloudflare.** RADIUS
@@ -122,12 +156,14 @@ RouterOS siap-tempel. Bentuknya (ganti `<IP-RADIUS>` & `<SECRET-BRAS>` sesuai pu
 
 ---
 
-## Setelah daftar: bikin akun PPPoE pelanggan
+## Setelah daftar: bikin akun jaringan pelanggan
 
-Mendaftarkan BRAS hanya sekali per router. Akun PPPoE per-pelanggan dibuat di **detail
-pelanggan → tab Akses** (username + password + paket). Paket (kecepatan/harga) dikelola
-di modul **Paket Internet** (`catalog`) — lihat [`catalog.md`](catalog.md). Server yang
-menulis otorisasi ke RADIUS; kamu tak menyentuh SQL apa pun.
+Mendaftarkan BRAS hanya sekali per router. Akun per-pelanggan dibuat di **detail
+pelanggan → tab Akses**: pilih **tipe** (PPPoE/Hotspot pakai username+password;
+DHCP/IP Statis pakai MAC — lihat [tipe layanan lain](#tipe-layanan-lain-hotspot-dhcp-ip-statis))
++ paket. Paket (kecepatan/harga) dikelola di modul **Paket Internet** (`catalog`) —
+lihat [`catalog.md`](catalog.md). Server yang menulis otorisasi ke RADIUS; kamu tak
+menyentuh SQL apa pun.
 
 ---
 

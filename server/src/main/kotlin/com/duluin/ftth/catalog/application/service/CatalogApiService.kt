@@ -51,5 +51,6 @@ class CatalogApiService(
         fupRateLimit = fupRateLimitString(),
         fupDownMbps = attributes.fupDownMbps,
         fupUpMbps = attributes.fupUpMbps,
+        serviceTypes = attributes.serviceTypes.mapTo(LinkedHashSet()) { it.name },
     )
 }

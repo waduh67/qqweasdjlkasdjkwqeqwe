@@ -45,6 +45,11 @@ data class PlanCommercialRef(
  * tulis ke `radgroupreply`; [downMbps]/[upMbps] disertakan untuk CoA numerik. FUP: bila
  * [fupEnabled], [fupRateLimit] adalah kecepatan throttle grup kedua dan [fupDownMbps]/
  * [fupUpMbps] versi numeriknya untuk CoA saat kuota terlampaui.
+ *
+ * [serviceTypes] = tipe layanan yang paket ini layani (nama enum `ServiceType`:
+ * PPPOE/STATIC/HOTSPOT/DHCP) — `bng` memakainya untuk menjaga akun hanya dibuat dengan
+ * tipe autentikasi yang paketnya dukung. Enum internal catalog tak bocor: dibalikkan
+ * sebagai `Set<String>`.
  */
 data class PlanNetworkRef(
     val planId: UUID,
@@ -58,4 +63,5 @@ data class PlanNetworkRef(
     val fupRateLimit: String?,
     val fupDownMbps: Int?,
     val fupUpMbps: Int?,
+    val serviceTypes: Set<String>,
 )

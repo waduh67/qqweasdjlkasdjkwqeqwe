@@ -123,6 +123,7 @@ class SubscriberAccessPersistenceAdapter(
             nasId = access.nasId,
             status = access.status,
             fupThrottled = access.fupThrottled,
+            framedIp = access.framedIp,
         )
         return jpa.save(entity).toDomain()
     }
@@ -168,6 +169,7 @@ class SubscriberAccessPersistenceAdapter(
         nasId = nasId,
         status = status,
         fupThrottled = fupThrottled,
+        framedIp = framedIp,
     )
 }
 
@@ -193,6 +195,7 @@ class BngActionPersistenceAdapter(
             nasId = action.nasId,
             username = action.username,
             action = action.action,
+            authType = action.authType,
             downMbps = action.downMbps,
             upMbps = action.upMbps,
             groupname = action.groupname,
@@ -246,6 +249,7 @@ class BngActionPersistenceAdapter(
         nasId = nasId,
         username = username,
         action = action,
+        authType = authType,
         downMbps = downMbps,
         upMbps = upMbps,
         groupname = groupname,

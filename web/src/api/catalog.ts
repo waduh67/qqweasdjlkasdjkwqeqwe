@@ -9,7 +9,7 @@ import { api } from './client'
  * live SEBELUM disimpan; nilai final tetap datang dari server.
  */
 
-/** Nama enum ServiceType server (ketersediaan paket; enforce PPPoE dulu, sisanya metadata). */
+/** Nama enum ServiceType server (ketersediaan paket; semua tipe kini di-enforce ke RADIUS). */
 export type ServiceType = 'PPPOE' | 'STATIC' | 'HOTSPOT' | 'DHCP'
 
 export const SERVICE_TYPES: ServiceType[] = ['PPPOE', 'STATIC', 'HOTSPOT', 'DHCP']

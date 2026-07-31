@@ -95,9 +95,10 @@ class RadiusProvisioningRunner(
         try {
             when (action.action) {
                 BngActionType.PROVISION -> radius.provision(
-                    tenantId, scoped(slug, action.username), resolvePassword(action), requireGroup(action),
+                    tenantId, identity(slug, action), resolvePassword(action), requireGroup(action),
+                    resolveFramedIp(action),
                 )
-                BngActionType.DEPROVISION -> radius.deprovision(tenantId, scoped(slug, action.username))
+                BngActionType.DEPROVISION -> radius.deprovision(tenantId, identity(slug, action))
                 BngActionType.SYNC_GROUP -> radius.syncGroup(
                     tenantId,
                     requireGroup(action),
@@ -137,6 +138,10 @@ class RadiusProvisioningRunner(
         action.subscriberAccessId?.let { subscriberAccessRepository.findById(it)?.secret }?.takeIf { it.isNotBlank() }
             ?: throw IllegalStateException("PROVISION ${action.username}: password akun tak terbaca")
 
+    /** Reservasi Framed-IP-Address (DHCP/Static) dibaca live dari akun; null utk PPPoE/Hotspot. */
+    private fun resolveFramedIp(action: BngAction): String? =
+        action.subscriberAccessId?.let { subscriberAccessRepository.findById(it)?.framedIp }
+
     private fun requireGroup(action: BngAction): String =
         action.groupname?.takeIf { it.isNotBlank() }
             ?: throw IllegalStateException("${action.action} ${action.username}: nama grup paket tak terbawa")
@@ -144,6 +149,15 @@ class RadiusProvisioningRunner(
     private fun requireRateLimit(action: BngAction): String =
         action.rateLimit?.takeIf { it.isNotBlank() }
             ?: throw IllegalStateException("SYNC_GROUP ${action.groupname}: rate-limit grup tak terbawa")
+
+    /**
+     * Identitas radius-db per skema autentikasi: PPPoE/Hotspot di-prefix kode tenant
+     * (`"{slug}:{username}"`) — username login bisa kembar antar-tenant; DHCP/Static memakai
+     * MAC apa adanya (global-unik) tanpa prefix. Dibaca dari `authType` yang dibawa aksi
+     * agar DEPROVISION (lepas dari akun) tetap tahu skemanya.
+     */
+    private fun identity(slug: String, action: BngAction): String =
+        if (action.authType.macBased) action.username else scoped(slug, action.username)
 
     /** Prefix kode tenant ke username — kunci SQL radius-db `"{slug}:{username}"` (S0). */
     private fun scoped(slug: String, username: String): String = "$slug:$username"

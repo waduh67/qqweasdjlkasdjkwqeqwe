@@ -66,25 +66,32 @@ class SubscriberAccessService(
         if (subscriberAccessRepository.existsBySubscriptionId(subscription.id)) {
             throw ConflictException("Langganan ini sudah punya akun jaringan")
         }
-        val username = command.username.trim()
-        subscriberAccessRepository.findByUsername(username)?.let {
-            throw ConflictException("Username PPPoE '$username' sudah dipakai")
-        }
         val plan = requirePlan(command.planId)
+        // Paket harus melayani tipe autentikasi yang diminta (Ketersediaan `serviceTypes`
+        // paket) — mencegah membuat akun DHCP/Hotspot pada paket yang cuma untuk PPPoE.
+        if (command.authType.name !in plan.serviceTypes) {
+            throw ConflictException("Paket '${plan.name}' tidak melayani tipe layanan ${command.authType.name}")
+        }
         val nas = command.nasId?.let { requireNas(it) }
 
-        val access = subscriberAccessRepository.save(
-            SubscriberAccess.create(
-                tenantId = currentUser.current().tenantId,
-                subscriptionId = subscription.id,
-                customerId = subscription.customerId,
-                username = command.username,
-                secret = command.secret,
-                planId = plan.planId,
-                nasId = nas?.id,
-                status = initialStatus(subscription.status),
-            ),
+        // Bangun akun DULU: companion menormalkan identitas (MAC → `AA:BB:...`) & memvalidasi
+        // per-tipe, jadi uji keunikan dilakukan atas identitas ternormalkan, bukan input mentah.
+        val account = SubscriberAccess.create(
+            tenantId = currentUser.current().tenantId,
+            subscriptionId = subscription.id,
+            customerId = subscription.customerId,
+            username = command.username,
+            secret = command.secret,
+            planId = plan.planId,
+            nasId = nas?.id,
+            status = initialStatus(subscription.status),
+            authType = command.authType,
+            framedIp = command.framedIp,
         )
+        subscriberAccessRepository.findByUsername(account.username)?.let {
+            throw ConflictException("Identitas jaringan '${account.username}' sudah dipakai")
+        }
+        val access = subscriberAccessRepository.save(account)
         // RADIUS jadi pusat: pastikan grup paket ada di BRAS lalu tulis kredensial +
         // keanggotaan akun. No-op bila akun belum ditugaskan ke BRAS.
         val user = currentUser.current()
@@ -116,7 +123,9 @@ class SubscriberAccessService(
         }
         // Pindah BRAS → cabut otorisasi di BRAS lama agar tak menggantung di sana.
         if (previousNasId != null && previousNasId != saved.nasId) {
-            bngActions.enqueueDeprovisionAt(previousNasId, saved.tenantId, saved.username, user.userId, user.email)
+            bngActions.enqueueDeprovisionAt(
+                previousNasId, saved.tenantId, saved.username, saved.authType, user.userId, user.email,
+            )
         } else if (previousPlanId != plan.planId && saved.status == AccessStatus.ACTIVE) {
             // Paket berubah pada BRAS yang sama & akun aktif → CoA agar sesi hidup langsung
             // memakai kecepatan baru tanpa memutusnya.
@@ -254,6 +263,7 @@ private fun SubscriberAccess.toView(plan: PlanNetworkRef?, nasName: String?, per
         customerId = customerId,
         username = username,
         authType = authType.name,
+        framedIp = framedIp,
         planId = planId,
         planName = plan?.name,
         nasId = nasId,

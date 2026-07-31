@@ -2,6 +2,7 @@ package com.duluin.ftth.bng.application.service
 
 import com.duluin.ftth.bng.application.port.outbound.BngActionRepository
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
+import com.duluin.ftth.bng.domain.model.AuthType
 import com.duluin.ftth.bng.domain.model.BngAction
 import com.duluin.ftth.bng.domain.model.BngActionType
 import com.duluin.ftth.bng.domain.model.RadiusGroups
@@ -99,20 +100,22 @@ class BngActionService(
      */
     fun enqueueDeprovision(access: SubscriberAccess, requestedBy: UUID?, requestedByEmail: String?): Boolean {
         val nasId = access.nasId ?: return skipNoNas(access, "DEPROVISION")
-        enqueueDeprovisionAt(nasId, access.tenantId, access.username, requestedBy, requestedByEmail)
+        enqueueDeprovisionAt(nasId, access.tenantId, access.username, access.authType, requestedBy, requestedByEmail)
         return true
     }
 
     /**
      * Antre DEPROVISION pada BRAS TERTENTU (bukan yang kini di akun) — dipakai saat akun
      * dipindah BRAS: otorisasi di BRAS lama dicabut agar tak menggantung. Per-username,
-     * tanpa menaut akun, jadi selamat dari CASCADE bila akunnya kelak dihapus.
+     * tanpa menaut akun, jadi selamat dari CASCADE bila akunnya kelak dihapus. [authType]
+     * dibawa agar jalur-tulis tahu memetakan identitas (slug-prefix vs MAC) tanpa akun.
      */
     @Suppress("LongParameterList")
     fun enqueueDeprovisionAt(
         nasId: UUID,
         tenantId: UUID,
         username: String,
+        authType: AuthType,
         requestedBy: UUID?,
         requestedByEmail: String?,
     ) {
@@ -121,6 +124,7 @@ class BngActionService(
                 tenantId = tenantId,
                 nasId = nasId,
                 username = username,
+                authType = authType,
                 requestedBy = requestedBy,
                 requestedByEmail = requestedByEmail,
             ),
@@ -201,6 +205,7 @@ class BngActionService(
                 nasId = nasId,
                 username = access.username,
                 groupname = groupname,
+                authType = access.authType,
                 requestedBy = requestedBy,
                 requestedByEmail = requestedByEmail,
             ),

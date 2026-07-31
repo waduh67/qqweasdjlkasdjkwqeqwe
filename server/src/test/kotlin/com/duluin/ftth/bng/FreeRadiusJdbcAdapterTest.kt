@@ -27,9 +27,9 @@ class FreeRadiusJdbcAdapterTest {
     private fun adapter(conn: Connection) = FreeRadiusJdbcAdapter(RecordingConnections(conn))
 
     @Test
-    fun `provision menulis radcheck dan radusergroup dalam satu transaksi`() {
+    fun `provision PPPoE menulis radcheck, radusergroup, dan membersihkan reservasi IP dalam satu transaksi`() {
         val db = RecordingDb()
-        adapter(db.connection()).provision(tenantId, "acme:budi", "s3cr3t", "plan:p1")
+        adapter(db.connection()).provision(tenantId, "acme:budi", "s3cr3t", "plan:p1", framedIp = null)
 
         assertThat(db.autoCommitDuringBody).isEqualTo(false)
         assertThat(db.committed).isTrue()
@@ -42,7 +42,29 @@ class FreeRadiusJdbcAdapterTest {
             "DELETE FROM radusergroup WHERE username = ?" to listOf("acme:budi"),
             "INSERT INTO radusergroup (username, groupname, priority) VALUES (?, ?, 1)"
                 to listOf("acme:budi", "plan:p1"),
+            // Reservasi IP dibersihkan tanpa syarat (idempoten); tanpa framedIp tak ada INSERT.
+            "DELETE FROM radreply WHERE username = ? AND attribute = 'Framed-IP-Address'" to listOf("acme:budi"),
         )
+    }
+
+    @Test
+    fun `provision DHCP-Static dengan framedIp menulis reservasi Framed-IP-Address`() {
+        val db = RecordingDb()
+        // Identitas MAC apa adanya (bukan slug-prefix) — pemanggil yang memutuskan; adapter murni SQL.
+        adapter(db.connection()).provision(tenantId, "AA:BB:CC:DD:EE:FF", "AA:BB:CC:DD:EE:FF", "plan:p1", framedIp = "100.64.0.10")
+
+        assertThat(db.executed).containsExactly(
+            "DELETE FROM radcheck WHERE username = ? AND attribute = 'Cleartext-Password'" to listOf("AA:BB:CC:DD:EE:FF"),
+            "INSERT INTO radcheck (username, attribute, op, value) VALUES (?, 'Cleartext-Password', ':=', ?)"
+                to listOf("AA:BB:CC:DD:EE:FF", "AA:BB:CC:DD:EE:FF"),
+            "DELETE FROM radusergroup WHERE username = ?" to listOf("AA:BB:CC:DD:EE:FF"),
+            "INSERT INTO radusergroup (username, groupname, priority) VALUES (?, ?, 1)"
+                to listOf("AA:BB:CC:DD:EE:FF", "plan:p1"),
+            "DELETE FROM radreply WHERE username = ? AND attribute = 'Framed-IP-Address'" to listOf("AA:BB:CC:DD:EE:FF"),
+            "INSERT INTO radreply (username, attribute, op, value) VALUES (?, 'Framed-IP-Address', ':=', ?)"
+                to listOf("AA:BB:CC:DD:EE:FF", "100.64.0.10"),
+        )
+        assertThat(db.committed).isTrue()
     }
 
     @Test
