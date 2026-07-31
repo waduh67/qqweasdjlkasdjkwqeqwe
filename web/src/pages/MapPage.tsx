@@ -336,7 +336,7 @@ export function MapPage() {
 
   // Label watermark: siapa yang sedang melihat peta ini. Dihitung sekali per user.
   const watermark = useMemo(() => {
-    const label = [user?.name, user?.email].filter(Boolean).join(' · ') || 'FTTH OSS'
+    const label = [user?.name, user?.email].filter(Boolean).join(' · ') || 'NetOps Console'
     return watermarkTile(label)
   }, [user?.name, user?.email])
 

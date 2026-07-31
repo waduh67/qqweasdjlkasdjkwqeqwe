@@ -33,7 +33,7 @@ export function LoginPage() {
             <IconMap size={20} />
           </span>
           <div>
-            <h2 style={{ margin: 0, fontSize: '1.15rem' }}>FTTH OSS</h2>
+            <h2 style={{ margin: 0, fontSize: '1.15rem' }}>NetOps Console</h2>
             <p className="muted" style={{ margin: 0, fontSize: '0.83rem' }}>
               Masuk ke konsol operasi jaringan
             </p>

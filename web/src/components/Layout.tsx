@@ -109,7 +109,7 @@ export function Layout() {
           <span className="logo" aria-hidden>
             <IconMap size={17} />
           </span>
-          <span className="brand-text">FTTH OSS</span>
+          <span className="brand-text">NetOps</span>
         </div>
 
         {GROUPS.map((group, i) => {
