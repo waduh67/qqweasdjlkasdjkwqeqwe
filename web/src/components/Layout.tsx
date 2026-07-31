@@ -46,16 +46,26 @@ const GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     items: [{ to: '/', label: 'Dashboard', permission: null, icon: IconDashboard, end: true }],
   },
   {
-    label: 'Operasi Jaringan',
+    label: 'Jaringan',
     items: [
       { to: '/map', label: 'Peta Jaringan', permission: 'gis.map.view', icon: IconMap },
       { to: '/inventory', label: 'Inventory', permission: 'network.odp.view', icon: IconInventory },
-      { to: '/customers', label: 'Pelanggan', permission: 'customer.customer.view', icon: IconCustomers },
-      { to: '/catalog', label: 'Paket Internet', permission: 'catalog.plan.view', icon: IconPackage },
-      { to: '/bng', label: 'BRAS & RADIUS', permission: 'bng.nas.view', icon: IconGauge },
+      { to: '/bras', label: 'BRAS & RADIUS', permission: 'bng.nas.view', icon: IconGauge },
       { to: '/vpn', label: 'Akun VPN', permission: 'vpn.peer.view', icon: IconRoute },
       { to: '/monitoring', label: 'Monitoring', permission: 'monitoring.dashboard.view', icon: IconMonitor },
       { to: '/provisioning', label: 'Provisioning', permission: 'monitoring.provisioning.view', icon: IconInbox },
+    ],
+  },
+  {
+    label: 'Layanan Pelanggan',
+    items: [
+      { to: '/customers', label: 'Pelanggan', permission: 'customer.customer.view', icon: IconCustomers },
+      { to: '/catalog', label: 'Paket Internet', permission: 'catalog.plan.view', icon: IconPackage },
+    ],
+  },
+  {
+    label: 'Lapangan',
+    items: [
       { to: '/incidents', label: 'Insiden', permission: 'incident.ticket.view', icon: IconAlert },
       { to: '/work-orders', label: 'Work Order', permission: 'workorder.order.view', icon: IconWorkOrder },
     ],

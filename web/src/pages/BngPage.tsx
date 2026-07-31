@@ -51,11 +51,10 @@ export function BngPage() {
         <h1 className="page-title">BRAS &amp; RADIUS</h1>
         <p className="page-sub">
           Daftarkan router master (BRAS) sebagai klien RADIUS — alamat + shared secret. FreeRADIUS
-          pusat memuatnya otomatis; tak perlu setup server RADIUS sendiri. Arahkan router ke alamat
-          server di bawah.
+          pusat memuatnya otomatis; tak perlu setup server RADIUS sendiri. Config Mikrotik siap-salin
+          muncul di form tiap BRAS.
         </p>
       </div>
-      {endpoint && <RadiusServerCard endpoint={endpoint} />}
       <NasTab endpoint={endpoint} />
     </div>
   )
@@ -105,70 +104,6 @@ function MikrotikSnippet({ script }: { script: string }) {
           Salin config Mikrotik
         </button>
       </div>
-    </div>
-  )
-}
-
-/**
- * Kartu info koneksi server RADIUS pusat — ke mana tenant mengarahkan router-nya. Host/port
- * dari platform (sama untuk semua tenant). Bila platform belum mengisi host, tampilkan catatan
- * alih-alih menebak. Secret di skrip = placeholder (diisi nyata di form saat Generate).
- */
-function RadiusServerCard({ endpoint }: { endpoint: RadiusEndpointView }) {
-  return (
-    <div className="card stack" style={{ gap: '0.75rem' }}>
-      <div>
-        <h3 style={{ margin: 0 }}>Arahkan router ke RADIUS ini</h3>
-        <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.85rem' }}>
-          Setiap BRAS mengarah ke server RADIUS pusat kami. Auth &amp; accounting jalan tanpa VPN
-          (router menembak keluar) — cukup router bisa keluar ke internet.
-        </p>
-      </div>
-      {endpoint.configured ? (
-        <>
-          <div className="row" style={{ gap: '1.5rem', flexWrap: 'wrap' }}>
-            <span>
-              <span className="muted" style={{ fontSize: '0.8rem' }}>
-                Host
-              </span>
-              <br />
-              <code>{endpoint.host}</code>
-            </span>
-            <span>
-              <span className="muted" style={{ fontSize: '0.8rem' }}>
-                Auth
-              </span>
-              <br />
-              <code>{endpoint.authPort}/udp</code>
-            </span>
-            <span>
-              <span className="muted" style={{ fontSize: '0.8rem' }}>
-                Accounting
-              </span>
-              <br />
-              <code>{endpoint.acctPort}/udp</code>
-            </span>
-            <span>
-              <span className="muted" style={{ fontSize: '0.8rem' }}>
-                CoA (server → BRAS)
-              </span>
-              <br />
-              <code>{endpoint.coaPort}/udp</code>
-            </span>
-          </div>
-          <MikrotikSnippet script={mikrotikScript(endpoint, '')} />
-          <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
-            Ganti <code>&lt;SECRET-BRAS&gt;</code> dengan shared secret BRAS ini (hasil Generate di
-            form). Buka <code>{endpoint.coaPort}/udp</code> masuk di router agar CoA/Disconnect dari
-            server bisa memutus/mengubah sesi.
-          </p>
-        </>
-      ) : (
-        <p className="muted" style={{ margin: 0 }}>
-          Host server RADIUS belum dikonfigurasi platform. Hubungi admin untuk mengaktifkan{' '}
-          <code>FTTH_RADIUS_PUBLIC_HOST</code> sebelum mengarahkan router.
-        </p>
-      )}
     </div>
   )
 }

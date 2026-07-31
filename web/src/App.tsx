@@ -119,13 +119,15 @@ export default function App() {
               }
             />
             <Route
-              path="bng"
+              path="bras"
               element={
                 <RequirePermission permission="bng.nas.view">
                   <BngPage />
                 </RequirePermission>
               }
             />
+            {/* Kompat: URL lama /bng dialihkan ke /bras (label & slug kini selaras). */}
+            <Route path="bng" element={<Navigate to="/bras" replace />} />
             <Route
               path="vpn"
               element={
