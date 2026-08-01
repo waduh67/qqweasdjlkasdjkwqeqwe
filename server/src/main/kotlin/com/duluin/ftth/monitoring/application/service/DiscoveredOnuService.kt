@@ -12,6 +12,7 @@ import com.duluin.ftth.monitoring.application.port.outbound.DiscoveredOnuReposit
 import com.duluin.ftth.monitoring.domain.model.DiscoveredOnu
 import com.duluin.ftth.monitoring.domain.model.DiscoveredOnuState
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
@@ -63,6 +64,26 @@ class DiscoveredOnuService(
         discovered.ignore()
         return repository.save(discovered).toView()
     }
+
+    @Transactional
+    override fun delete(id: UUID) {
+        val discovered = require(id)
+        repository.deleteById(discovered.id)
+    }
+
+    /**
+     * Membersihkan sisa kotak masuk milik OLT yang baru dihapus. Dipicu event
+     * [com.duluin.ftth.network.OltDeletedEvent] lewat [OltDeletedListener] — reaksi
+     * sistem, bukan aksi operator, jadi sengaja di luar [ManageDiscoveredOnuUseCase].
+     * Pemanggil menjalankannya dalam tenant context agar RLS menyaring ke tenant OLT.
+     *
+     * REQUIRES_NEW karena dipanggil dari listener AFTER_COMMIT: transaksi penghapus
+     * OLT sudah selesai, jadi penghapusan yatim harus berjalan di transaksinya sendiri
+     * yang benar-benar di-commit — persis pola [IncidentReconciler.reconcile]. Tanpa
+     * ini, query DELETE gagal dengan "No active transaction".
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    fun purgeForDeletedOlt(oltId: UUID): Int = repository.deleteByOltId(oltId)
 
     private fun require(id: UUID): DiscoveredOnu =
         repository.findById(id) ?: throw NotFoundException("ONU terdeteksi $id tidak ditemukan")

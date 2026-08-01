@@ -27,4 +27,15 @@ interface DiscoveredOnuRepository {
      * didaftarkan lewat jalur mana pun.
      */
     fun findDiscoveredBySerials(serialNumbers: Set<String>): List<DiscoveredOnu>
+
+    /** Menghapus permanen satu baris kotak masuk (bukan sekadar menandainya IGNORED). */
+    fun deleteById(id: UUID)
+
+    /**
+     * Menghapus semua baris kotak masuk milik sebuah OLT. Dipakai saat OLT-nya
+     * dihapus dari inventory: karena `discovered_onu` merujuk OLT tanpa foreign key
+     * lintas-module, ONU-nya tak ikut terhapus sendiri dan akan menggantung sebagai
+     * yatim. Mengembalikan jumlah baris yang terhapus.
+     */
+    fun deleteByOltId(oltId: UUID): Int
 }

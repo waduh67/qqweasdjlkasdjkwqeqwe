@@ -25,6 +25,15 @@ interface ManageDiscoveredOnuUseCase {
 
     /** Mengabaikan sebuah ONU terdeteksi (perangkat uji, ONU tetangga, dst). */
     fun ignore(id: UUID): DiscoveredOnuView
+
+    /**
+     * Menghapus permanen sebuah baris ONU terdeteksi dari kotak masuk. Berbeda dari
+     * [ignore] yang menyimpannya sebagai IGNORED: ini mengeluarkannya dari basis data.
+     * Hanya menyentuh baris kotak masuk — ONU/pelanggan yang sudah terdaftar tak
+     * terpengaruh. Bila OLT masih melihat serialnya, ia muncul lagi sebagai baru pada
+     * polling berikutnya; yatim dari OLT yang sudah dihapus tidak.
+     */
+    fun delete(id: UUID)
 }
 
 data class ProvisionDiscoveredOnuCommand(

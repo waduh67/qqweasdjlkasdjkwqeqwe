@@ -6,6 +6,7 @@ import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
+import com.duluin.ftth.network.OltDeletedEvent
 import com.duluin.ftth.network.application.port.inbound.ManageOltUseCase
 import com.duluin.ftth.network.application.port.inbound.OltView
 import com.duluin.ftth.network.application.port.inbound.PonPortView
@@ -19,6 +20,7 @@ import com.duluin.ftth.network.domain.model.AssetStatus
 import com.duluin.ftth.network.domain.model.Olt
 import com.duluin.ftth.network.domain.model.PonPort
 import com.duluin.ftth.network.domain.model.vo.ManagementIp
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -32,6 +34,7 @@ class OltService(
     private val odcRepository: OdcRepository,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
+    private val events: ApplicationEventPublisher,
 ) : ManageOltUseCase {
 
     @Transactional(readOnly = true)
@@ -107,6 +110,9 @@ class OltService(
         }
         oltRepository.deleteById(id)
         auditor.record("olt.deleted", "Olt", id, olt.tenantId, mapOf("code" to olt.code))
+        // Module lain yang merujuk OLT tanpa foreign key (mis. kotak masuk ONU
+        // terdeteksi di monitoring) membersihkan sisa yatimnya setelah commit.
+        events.publishEvent(OltDeletedEvent(olt.tenantId, olt.id, olt.code))
     }
 
     @Transactional(readOnly = true)

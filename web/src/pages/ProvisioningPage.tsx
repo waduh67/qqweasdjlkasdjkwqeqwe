@@ -126,7 +126,18 @@ export function ProvisioningPage() {
     )
   }
 
-  const showActions = manage && state === 'DISCOVERED'
+  // Hapus permanen baris kotak masuk — beda dari "Abaikan" yang cuma menandainya
+  // IGNORED (masih tersimpan). Berguna terutama untuk yatim dari OLT yang sudah
+  // dihapus: baris itu takkan hilang sendiri karena OLT-nya tak lagi mem-poll.
+  const remove = (onu: DiscoveredOnuView) => {
+    if (!window.confirm(`Hapus permanen ONU ${onu.serialNumber} dari kotak masuk? Kalau OLT masih melihatnya, ia muncul lagi pada polling berikutnya.`)) {
+      return
+    }
+    return run(() => api.del(`/api/monitoring/discovered-onus/${onu.id}`), 'ONU dihapus')
+  }
+
+  // Baris di state mana pun boleh dihapus; provisi/abaikan hanya untuk yang menunggu.
+  const showActions = manage
   const showSuggestion = state === 'DISCOVERED'
 
   const rows = useMemo(() => {
@@ -197,25 +208,32 @@ export function ProvisioningPage() {
       width: '1%',
       cell: (onu) => (
         <div className="row" style={{ justifyContent: 'flex-end', gap: '0.35rem', flexWrap: 'nowrap' }}>
-          {isComplete(onu.suggestion) ? (
+          {state === 'DISCOVERED' && (
             <>
-              <button className="primary small" onClick={() => void accept(onu)}>
-                Terima
-              </button>
-              <button className="ghost small" onClick={() => setProvision(onu)}>
-                Ubah
+              {isComplete(onu.suggestion) ? (
+                <>
+                  <button className="primary small" onClick={() => void accept(onu)}>
+                    Terima
+                  </button>
+                  <button className="ghost small" onClick={() => setProvision(onu)}>
+                    Ubah
+                  </button>
+                </>
+              ) : (
+                <button className="primary small" onClick={() => setProvision(onu)}>
+                  Provisi
+                </button>
+              )}
+              <button
+                className="ghost small"
+                onClick={() => void run(() => api.post(`/api/monitoring/discovered-onus/${onu.id}/ignore`), 'ONU diabaikan')}
+              >
+                Abaikan
               </button>
             </>
-          ) : (
-            <button className="primary small" onClick={() => setProvision(onu)}>
-              Provisi
-            </button>
           )}
-          <button
-            className="ghost small"
-            onClick={() => void run(() => api.post(`/api/monitoring/discovered-onus/${onu.id}/ignore`), 'ONU diabaikan')}
-          >
-            Abaikan
+          <button className="ghost small danger" onClick={() => void remove(onu)}>
+            Hapus
           </button>
         </div>
       ),

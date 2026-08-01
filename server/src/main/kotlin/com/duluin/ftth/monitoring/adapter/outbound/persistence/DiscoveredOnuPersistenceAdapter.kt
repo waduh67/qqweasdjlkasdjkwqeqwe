@@ -53,6 +53,10 @@ class DiscoveredOnuPersistenceAdapter(
         } else {
             jpa.findBySerialNumberInAndState(serialNumbers, DiscoveredOnuState.DISCOVERED).map { it.toDomain() }
         }
+
+    override fun deleteById(id: UUID) = jpa.deleteById(id)
+
+    override fun deleteByOltId(oltId: UUID): Int = jpa.deleteByOltId(oltId)
 }
 
 private fun DiscoveredOnuJpaEntity.toDomain(): DiscoveredOnu = DiscoveredOnu.rehydrate(

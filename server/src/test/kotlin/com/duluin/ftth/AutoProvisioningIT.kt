@@ -14,6 +14,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
@@ -87,6 +88,11 @@ class AutoProvisioningIT {
         mockMvc.perform(get(url).header("Authorization", "Bearer $token"))
             .andExpect(status().isOk).andReturn().response.contentAsString
 
+    private fun delete(url: String, token: String, expected: Int = 204) {
+        mockMvc.perform(delete(url).header("Authorization", "Bearer $token"))
+            .andExpect { assertThat(it.response.status).isEqualTo(expected) }
+    }
+
     private fun id(json: String): String = JsonPath.read(json, "$.id")
 
     private fun postAsCollector(apiKey: String, body: String): String =
@@ -146,6 +152,22 @@ class AutoProvisioningIT {
             ),
         )
         return Triple("OLT-$s", odp, customer)
+    }
+
+    /** OLT minimal tanpa PON/ODC — boleh langsung dihapus. Mengembalikan (oltId, oltCode). */
+    private fun bareOlt(token: String): Pair<String, String> {
+        val s = uniq().uppercase()
+        val site = id(
+            post("/api/sites", token, """{"code":"POP-$s","name":"POP $s","location":{"longitude":106.98,"latitude":-6.23}}"""),
+        )
+        val olt = id(
+            post(
+                "/api/olts", token,
+                """{"siteId":"$site","code":"OLT-$s","name":"OLT $s","vendor":"ZTE",
+                    "managementIp":"10.0.0.1","snmpCommunity":"rahasia"}""",
+            ),
+        )
+        return olt to "OLT-$s"
     }
 
     private fun inbox(token: String, state: String? = null): String =
@@ -318,6 +340,44 @@ class AutoProvisioningIT {
         // Keluar dari daftar yang menunggu, tapi masih bisa dilihat lewat filter state.
         assertThat(JsonPath.read<List<String>>(inbox(token), "$[*].id")).isEmpty()
         assertThat(JsonPath.read<List<String>>(inbox(token, "IGNORED"), "$[*].id")).containsExactly(discoveredId)
+    }
+
+    @Test
+    fun `menghapus ONU terdeteksi mengeluarkannya dari basis data`() {
+        val token = newTenantAdmin("del")
+        val (oltCode, _, _) = scaffold(token)
+        val apiKey = newCollector(token)
+        val serial = "SN-${uniq().uppercase()}"
+
+        postAsCollector(apiKey, batch(reading(serial, oltCode, -20.0)))
+        val discoveredId = JsonPath.read<String>(inbox(token), "$[0].id")
+
+        delete("/api/monitoring/discovered-onus/$discoveredId", token)
+
+        // Beda dari "abaikan": barisnya benar-benar lenyap, tak lagi terlihat di state mana pun.
+        assertThat(JsonPath.read<List<String>>(inbox(token), "$[*].id")).isEmpty()
+        assertThat(JsonPath.read<List<String>>(inbox(token, "IGNORED"), "$[*].id")).isEmpty()
+        assertThat(JsonPath.read<List<String>>(inbox(token, "PROVISIONED"), "$[*].id")).isEmpty()
+    }
+
+    @Test
+    fun `menghapus OLT membersihkan ONU terdeteksi yatimnya`() {
+        val token = newTenantAdmin("oltdel")
+        val (oltId, oltCode) = bareOlt(token)
+        val apiKey = newCollector(token)
+        val serial = "SN-${uniq().uppercase()}"
+
+        // Serial liar tertangkap ke kotak masuk, terikat ke OLT yang barusan dibuat.
+        postAsCollector(apiKey, batch(reading(serial, oltCode, -20.0)))
+        val listed = inbox(token)
+        assertThat(JsonPath.read<List<String>>(listed, "$[*].serialNumber")).containsExactly(serial)
+        assertThat(JsonPath.read<String>(listed, "$[0].oltId")).isEqualTo(oltId)
+
+        // Menghapus OLT-nya memicu bersih-bersih: ONU yatimnya tak boleh menggantung.
+        delete("/api/olts/$oltId", token)
+
+        assertThat(JsonPath.read<List<String>>(inbox(token), "$[*].id")).isEmpty()
+        assertThat(JsonPath.read<List<String>>(inbox(token, "IGNORED"), "$[*].id")).isEmpty()
     }
 
     @Test
