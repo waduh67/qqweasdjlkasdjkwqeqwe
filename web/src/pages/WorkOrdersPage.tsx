@@ -18,6 +18,7 @@ import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
 import { Badge, Drawer, EmptyState, Modal, SearchInput, SkeletonRows, Tabs, Toolbar, useToast } from '../components/ui'
 import { Combobox } from '../components/Combobox'
+import { MultiCombobox } from '../components/MultiCombobox'
 import { IconPlus, IconWorkOrder } from '../components/icons'
 
 const TYPE_LABEL: Record<WorkOrderType, string> = {
@@ -95,7 +96,7 @@ type Draft = {
   priority: WorkOrderPriority
   customerId: string
   scheduledAt: string
-  assignedTo: string
+  assignees: string[]
 }
 
 const EMPTY_DRAFT: Draft = {
@@ -105,7 +106,7 @@ const EMPTY_DRAFT: Draft = {
   priority: 'NORMAL',
   customerId: '',
   scheduledAt: '',
-  assignedTo: '',
+  assignees: [],
 }
 
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString('id-ID') : '—')
@@ -139,6 +140,28 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 /** Nada prioritas: tinggi/mendesak menonjol (warning), sisanya netral. */
 const priorityTone = (p: WorkOrderPriority): 'warning' | 'neutral' =>
   p === 'URGENT' || p === 'HIGH' ? 'warning' : 'neutral'
+
+/** Nama roster teknisi digabung untuk teks/sortir; kosong bila belum ditugaskan. */
+const assigneeLabel = (wo: WorkOrderView): string =>
+  wo.assignees.map((a) => a.name ?? '—').join(', ')
+
+/** Apakah pilihan roster identik dengan roster tersimpan (abaikan urutan) → tombol nonaktif. */
+const sameRoster = (ids: string[], current: WorkOrderView['assignees']): boolean =>
+  ids.length === current.length && ids.every((id) => current.some((a) => a.id === id))
+
+/** Chip nama tiap teknisi di roster (tim datar); "belum ditugaskan" bila kosong. */
+function AssigneeChips({ wo }: { wo: WorkOrderView }) {
+  if (wo.assignees.length === 0) return <span className="muted">belum ditugaskan</span>
+  return (
+    <div className="row wrap" style={{ gap: '0.3rem' }}>
+      {wo.assignees.map((a) => (
+        <span key={a.id} className="badge">
+          {a.name ?? '—'}
+        </span>
+      ))}
+    </div>
+  )
+}
 
 /**
  * Work order sisi operator/dispatcher: buat tugas lapangan, tugaskan ke teknisi,
@@ -268,7 +291,7 @@ export function WorkOrdersPage() {
         priority: draft.priority,
         customerId: draft.customerId || null,
         scheduledAt: toInstant(draft.scheduledAt),
-        assignedTo: draft.assignedTo || null,
+        assignees: draft.assignees,
       })
       setDraft(null)
     }, 'Work order dibuat')
@@ -306,8 +329,8 @@ export function WorkOrdersPage() {
     {
       key: 'assignee',
       header: 'Teknisi',
-      sortValue: (wo) => wo.assignedToName,
-      cell: (wo) => wo.assignedToName ?? <span className="muted">belum ditugaskan</span>,
+      sortValue: (wo) => assigneeLabel(wo),
+      cell: (wo) => <AssigneeChips wo={wo} />,
     },
     {
       key: 'scheduledAt',
@@ -629,10 +652,10 @@ function WorkOrderForm({
         </label>
         <div className="row wrap">
           <label className="stack" style={{ flex: 1, minWidth: 200, gap: '0.25rem' }}>
-            <span>Teknisi (opsional)</span>
-            <Combobox
-              value={draft.assignedTo}
-              onChange={(id) => onChange({ ...draft, assignedTo: id })}
+            <span>Teknisi (opsional, bisa lebih dari satu)</span>
+            <MultiCombobox
+              values={draft.assignees}
+              onChange={(ids) => onChange({ ...draft, assignees: ids })}
               fetchOptions={fetchTechnicians}
               toId={(t) => t.id}
               toLabel={(t) => t.name}
@@ -668,7 +691,7 @@ function WorkOrderDetailBody({
   // State awal cukup dari prop: komponen ini di-`key` pada id work order, jadi
   // berganti work order me-remount dan mereset pilihan ini dengan sendirinya.
   const [tab, setTab] = useState<'ringkasan' | 'bukti' | 'riwayat'>('ringkasan')
-  const [assignee, setAssignee] = useState(wo.assignedTo ?? '')
+  const [assignees, setAssignees] = useState<string[]>(wo.assignees.map((a) => a.id))
   const [note, setNote] = useState('')
   const [reason, setReason] = useState('')
 
@@ -716,7 +739,7 @@ function WorkOrderDetailBody({
             <Field label="Tipe">{TYPE_LABEL[wo.type]}</Field>
             <Field label="Pelanggan">{wo.customerName ?? <span className="muted">—</span>}</Field>
             <Field label="Prioritas">{PRIORITY_LABEL[wo.priority]}</Field>
-            <Field label="Teknisi">{wo.assignedToName ?? <span className="muted">belum ditugaskan</span>}</Field>
+            <Field label="Teknisi"><AssigneeChips wo={wo} /></Field>
             <Field label="Jadwal">{wo.scheduledAt ? fmt(wo.scheduledAt) : <span className="muted">—</span>}</Field>
             {wo.destinationLat != null && wo.destinationLng != null && (
               <Field label="Lokasi">
@@ -752,14 +775,16 @@ function WorkOrderDetailBody({
               <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Penugasan</h3>
               <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
                 <label className="stack" style={{ flex: 1, gap: '0.25rem' }}>
-                  <span>Teknisi</span>
-                  <Combobox
-                    value={assignee}
-                    onChange={(id) => setAssignee(id)}
+                  <span>Teknisi (bisa lebih dari satu)</span>
+                  <MultiCombobox
+                    values={assignees}
+                    onChange={setAssignees}
                     fetchOptions={fetchTechnicians}
                     toId={(t) => t.id}
                     toLabel={(t) => t.name}
-                    initialLabel={wo.assignedToName ?? ''}
+                    initialLabels={Object.fromEntries(
+                      wo.assignees.filter((a) => a.name).map((a) => [a.id, a.name as string]),
+                    )}
                     debounceMs={0}
                     placeholder="Cari teknisi…"
                     emptyText="Tak ada teknisi"
@@ -767,10 +792,10 @@ function WorkOrderDetailBody({
                 </label>
                 <button
                   className="primary"
-                  disabled={!assignee || assignee === wo.assignedTo}
-                  onClick={() => onAct(() => api.post(`/api/work-orders/${id}/assign`, { technicianId: assignee }), 'Teknisi ditugaskan', true)}
+                  disabled={assignees.length === 0 || sameRoster(assignees, wo.assignees)}
+                  onClick={() => onAct(() => api.post(`/api/work-orders/${id}/assign`, { technicianIds: assignees }), 'Teknisi ditugaskan', true)}
                 >
-                  {wo.assignedTo ? 'Tugaskan ulang' : 'Tugaskan'}
+                  {wo.assignees.length > 0 ? 'Tugaskan ulang' : 'Tugaskan'}
                 </button>
               </div>
             </section>

@@ -8,6 +8,7 @@ import { onboardPsb, type ExpressPsbResult } from '../api/onboarding'
 import { useCan } from '../auth/useCan'
 import { Badge, EmptyState, useToast } from '../components/ui'
 import { LocationPicker } from '../components/LocationPicker'
+import { MultiCombobox } from '../components/MultiCombobox'
 import { IconPackage, IconPlus } from '../components/icons'
 
 /** Alfabet secret (tanpa 0/O/1/l/I) — cermin konvensi generator server agar mudah dibaca operator. */
@@ -36,7 +37,7 @@ const EMPTY = {
   title: '',
   description: '',
   scheduledAt: '',
-  assignedTo: '',
+  assignees: [] as string[],
   framedIp: '',
 }
 
@@ -174,7 +175,7 @@ export function ExpressPsbPage() {
         title: draft.title.trim() || null,
         description: draft.description.trim() || null,
         scheduledAt: toInstant(draft.scheduledAt),
-        assignedTo: draft.assignedTo || null,
+        assignees: draft.assignees,
       })
       setResult({ ...res, secretUsed: macBased ? res.username : secret })
       toast.success(`PSB ${res.workOrderCode} dibuat untuk ${draft.name.trim()}`)
@@ -369,15 +370,21 @@ export function ExpressPsbPage() {
                 <input value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder={`PSB ${draft.name.trim() || 'pelanggan'}`} />
               </label>
               <label style={{ flex: 1, minWidth: 180 }}>
-                <span>Teknisi (opsional)</span>
-                <select value={draft.assignedTo} onChange={(e) => set({ assignedTo: e.target.value })}>
-                  <option value="">— belum ditugaskan —</option>
-                  {technicians.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
+                <span>Teknisi (opsional, bisa lebih dari satu)</span>
+                <MultiCombobox
+                  values={draft.assignees}
+                  onChange={(ids) => set({ assignees: ids })}
+                  fetchOptions={(term) =>
+                    Promise.resolve(
+                      technicians.filter((t) => t.name.toLowerCase().includes(term.toLowerCase())),
+                    )
+                  }
+                  toId={(t) => t.id}
+                  toLabel={(t) => t.name}
+                  debounceMs={0}
+                  placeholder="Cari teknisi…"
+                  emptyText="Tak ada teknisi"
+                />
               </label>
               <label style={{ flex: 1, minWidth: 180 }}>
                 <span>Jadwal (opsional)</span>

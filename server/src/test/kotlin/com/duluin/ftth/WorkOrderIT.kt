@@ -119,15 +119,15 @@ class WorkOrderIT {
         val created = createWorkOrder(token, """{"type":"REPAIR","title":"Ganti drop core putus","priority":"HIGH"}""")
         assertThat(JsonPath.read<String>(created, "$.status")).isEqualTo("DRAFT")
         assertThat(JsonPath.read<String>(created, "$.code")).startsWith("WO-")
-        assertThat(JsonPath.read<Any?>(created, "$.assignedTo")).isNull()
+        assertThat(JsonPath.read<List<Any>>(created, "$.assignees")).isEmpty()
         val woId = id(created)
 
         // Tugaskan ke teknisi → naik ke ASSIGNED, nama teknisi ikut diresolusi.
         val techId = newTechnician(token, "Budi Teknisi")
-        val assigned = post("/api/work-orders/$woId/assign", token, """{"technicianId":"$techId"}""", 200)
+        val assigned = post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
         assertThat(JsonPath.read<String>(assigned, "$.status")).isEqualTo("ASSIGNED")
-        assertThat(JsonPath.read<String>(assigned, "$.assignedTo")).isEqualTo(techId)
-        assertThat(JsonPath.read<String>(assigned, "$.assignedToName")).isEqualTo("Budi Teknisi")
+        assertThat(JsonPath.read<List<String>>(assigned, "$.assignees[*].id")).containsExactly(techId)
+        assertThat(JsonPath.read<List<String>>(assigned, "$.assignees[*].name")).containsExactly("Budi Teknisi")
 
         // Kerjakan lalu selesaikan.
         val started = post("/api/work-orders/$woId/start", token, "", 200)
@@ -158,7 +158,7 @@ class WorkOrderIT {
     fun `assign teknisi tidak ada ditolak 404`() {
         val token = newTenantAdmin("wo")
         val woId = id(createWorkOrder(token, """{"type":"PSB","title":"Pasang baru"}"""))
-        post("/api/work-orders/$woId/assign", token, """{"technicianId":"${UUID.randomUUID()}"}""", expected = 404)
+        post("/api/work-orders/$woId/assign", token, """{"technicianIds":["${UUID.randomUUID()}"]}""", expected = 404)
     }
 
     @Test
@@ -167,7 +167,7 @@ class WorkOrderIT {
         val woId = id(createWorkOrder(token, """{"type":"REPAIR","title":"Perbaikan"}"""))
         val techId = newTechnician(token, "Teknisi Cuti")
         post("/api/users/$techId/disable", token, "", 200)
-        post("/api/work-orders/$woId/assign", token, """{"technicianId":"$techId"}""", expected = 409)
+        post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", expected = 409)
     }
 
     @Test
@@ -246,16 +246,16 @@ class WorkOrderIT {
 
         // #2 ditugaskan ke A (ASSIGNED).
         val wo2 = id(createWorkOrder(token, """{"type":"REPAIR","title":"Perbaikan"}"""))
-        post("/api/work-orders/$wo2/assign", token, """{"technicianId":"$techA"}""", 200)
+        post("/api/work-orders/$wo2/assign", token, """{"technicianIds":["$techA"]}""", 200)
 
         // #3 ditugaskan ke A lalu dikerjakan (IN_PROGRESS).
         val wo3 = id(createWorkOrder(token, """{"type":"REPAIR","title":"Perbaikan lain"}"""))
-        post("/api/work-orders/$wo3/assign", token, """{"technicianId":"$techA"}""", 200)
+        post("/api/work-orders/$wo3/assign", token, """{"technicianIds":["$techA"]}""", 200)
         post("/api/work-orders/$wo3/start", token, "", 200)
 
         // #4 ditugaskan ke B lalu diselesaikan (DONE → tak terhitung sebagai beban terbuka).
         val wo4 = id(createWorkOrder(token, """{"type":"MIGRATION","title":"Migrasi"}"""))
-        post("/api/work-orders/$wo4/assign", token, """{"technicianId":"$techB"}""", 200)
+        post("/api/work-orders/$wo4/assign", token, """{"technicianIds":["$techB"]}""", 200)
         post("/api/work-orders/$wo4/start", token, "", 200)
         post("/api/work-orders/$wo4/complete", token, "", 200)
 
@@ -281,7 +281,7 @@ class WorkOrderIT {
     private fun completeWorkOrder(token: String, title: String): String {
         val woId = id(createWorkOrder(token, """{"type":"PSB","title":"$title"}"""))
         val techId = newTechnician(token, "Teknisi $title")
-        post("/api/work-orders/$woId/assign", token, """{"technicianId":"$techId"}""", 200)
+        post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
         post("/api/work-orders/$woId/start", token, "", 200)
         post("/api/work-orders/$woId/complete", token, "", 200)
         return woId
@@ -358,7 +358,7 @@ class WorkOrderIT {
         // Yang sudah ditugaskan tak bisa dihapus — harus dibatalkan.
         val woId = id(createWorkOrder(token, """{"type":"REPAIR","title":"Perbaikan"}"""))
         val techId = newTechnician(token, "Teknisi")
-        post("/api/work-orders/$woId/assign", token, """{"technicianId":"$techId"}""", 200)
+        post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
         mockMvc.perform(delete("/api/work-orders/$woId").header("Authorization", "Bearer $token"))
             .andExpect(status().isConflict)
 
@@ -401,7 +401,7 @@ class WorkOrderIT {
         assertThat(JsonPath.read<String>(get("/api/work-orders/$woId", token), "$.workOrder.subscriptionId")).isEqualTo(sub)
 
         val techId = newTechnician(token, "Teknisi PSB")
-        post("/api/work-orders/$woId/assign", token, """{"technicianId":"$techId"}""", 200)
+        post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
         post("/api/work-orders/$woId/start", token, "", 200)
         // Langganan masih PENDING sampai WO benar-benar selesai.
         assertThat(subscriptionStatus(token, customerId, sub)).isEqualTo("PENDING")
@@ -433,7 +433,7 @@ class WorkOrderIT {
             ),
         )
         val techId = newTechnician(token, "Teknisi Bongkar")
-        post("/api/work-orders/$woId/assign", token, """{"technicianId":"$techId"}""", 200)
+        post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
         post("/api/work-orders/$woId/start", token, "", 200)
         post("/api/work-orders/$woId/complete", token, "", 200)
 
@@ -452,7 +452,7 @@ class WorkOrderIT {
             ),
         )
         val techId = newTechnician(token, "Teknisi Repair")
-        post("/api/work-orders/$woId/assign", token, """{"technicianId":"$techId"}""", 200)
+        post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
         post("/api/work-orders/$woId/start", token, "", 200)
         post("/api/work-orders/$woId/complete", token, "", 200)
 
@@ -486,9 +486,9 @@ class WorkOrderIT {
 
         // WO milik tech1 dan WO milik tech2.
         val woMine = id(createWorkOrder(adminToken, """{"type":"PSB","title":"Pasang ke A"}"""))
-        post("/api/work-orders/$woMine/assign", adminToken, """{"technicianId":"$tech1Id"}""", 200)
+        post("/api/work-orders/$woMine/assign", adminToken, """{"technicianIds":["$tech1Id"]}""", 200)
         val woOther = id(createWorkOrder(adminToken, """{"type":"PSB","title":"Pasang ke B"}"""))
-        post("/api/work-orders/$woOther/assign", adminToken, """{"technicianId":"$tech2Id"}""", 200)
+        post("/api/work-orders/$woOther/assign", adminToken, """{"technicianIds":["$tech2Id"]}""", 200)
 
         // Papan tugas /mine hanya berisi WO tech1.
         val mine = get("/api/work-orders/mine", tech1Token)
@@ -505,5 +505,68 @@ class WorkOrderIT {
 
         // Dispatcher (admin) tetap bebas mengerjakan WO mana pun.
         post("/api/work-orders/$woOther/start", adminToken, "", 200)
+    }
+
+    @Test
+    fun `tim datar — satu WO banyak teknisi tampil di papan semua anggota dan terhitung beban tiap anggota`() {
+        val slug = "wo${uniq()}"
+        val adminEmail = "admin@$slug.test"
+        onboarding.onboard(OnboardTenantCommand(slug, "Tenant $slug", adminEmail, "Admin", pass))
+        val adminToken = login(slug, adminEmail)
+
+        val roles = get("/api/roles", adminToken)
+        val roleNames = JsonPath.read<List<String>>(roles, "$[*].name")
+        val roleIds = JsonPath.read<List<String>>(roles, "$[*].id")
+        val teknisiRoleId = roleIds[roleNames.indexOf("Teknisi")]
+
+        fun teknisi(name: String): Pair<String, String> {
+            val email = "tech-${uniq()}@x.test"
+            val uid = id(
+                post("/api/users", adminToken, """{"email":"$email","name":"$name","password":"$pass","roleIds":["$teknisiRoleId"]}"""),
+            )
+            return uid to email
+        }
+
+        val (techAId, techAEmail) = teknisi("Teknisi A")
+        val (techBId, techBEmail) = teknisi("Teknisi B")
+        val (techCId, _) = teknisi("Teknisi C")
+        val techAToken = login(slug, techAEmail)
+        val techBToken = login(slug, techBEmail)
+
+        // Tugaskan satu WO ke DUA teknisi sekaligus (tim datar).
+        val woId = id(createWorkOrder(adminToken, """{"type":"PSB","title":"Pasang berdua"}"""))
+        val assigned = post("/api/work-orders/$woId/assign", adminToken, """{"technicianIds":["$techAId","$techBId"]}""", 200)
+        assertThat(JsonPath.read<List<String>>(assigned, "$.assignees[*].id")).containsExactlyInAnyOrder(techAId, techBId)
+        assertThat(JsonPath.read<List<String>>(assigned, "$.assignees[*].name"))
+            .containsExactlyInAnyOrder("Teknisi A", "Teknisi B")
+
+        // Round-trip: ambil ulang detail dari persistence → roster utuh dua teknisi.
+        val detail = get("/api/work-orders/$woId", adminToken)
+        assertThat(JsonPath.read<List<String>>(detail, "$.workOrder.assignees[*].id"))
+            .containsExactlyInAnyOrder(techAId, techBId)
+
+        // Keduanya melihat WO di papan tugasnya masing-masing (membership tim datar).
+        assertThat(JsonPath.read<List<String>>(get("/api/work-orders/mine", techAToken), "$.content[*].id")).containsExactly(woId)
+        assertThat(JsonPath.read<List<String>>(get("/api/work-orders/mine", techBToken), "$.content[*].id")).containsExactly(woId)
+
+        // Dashboard menghitung WO terbuka ini pada beban KEDUA teknisi.
+        val dash = get("/api/work-orders/dashboard", adminToken)
+        val wlIds = JsonPath.read<List<String>>(dash, "$.workloads[*].technicianId")
+        val wlCounts = JsonPath.read<List<Int>>(dash, "$.workloads[*].openCount")
+        assertThat(wlIds).contains(techAId, techBId)
+        assertThat(wlCounts[wlIds.indexOf(techAId)]).isEqualTo(1)
+        assertThat(wlCounts[wlIds.indexOf(techBId)]).isEqualTo(1)
+
+        // Anggota mana pun boleh memulai (tim datar, semua setara).
+        post("/api/work-orders/$woId/start", techBToken, "", 200)
+
+        // Tugaskan ulang → roster diganti utuh ke satu teknisi C; A & B lepas.
+        val reassigned = post("/api/work-orders/$woId/assign", adminToken, """{"technicianIds":["$techCId"]}""", 200)
+        assertThat(JsonPath.read<List<String>>(reassigned, "$.assignees[*].id")).containsExactly(techCId)
+        assertThat(JsonPath.read<List<Any>>(get("/api/work-orders/mine", techAToken), "$.content[*]")).isEmpty()
+        assertThat(JsonPath.read<List<Any>>(get("/api/work-orders/mine", techBToken), "$.content[*]")).isEmpty()
+
+        // Roster kosong ditolak oleh bean validation (@NotEmpty).
+        post("/api/work-orders/$woId/assign", adminToken, """{"technicianIds":[]}""", expected = 400)
     }
 }

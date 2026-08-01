@@ -38,7 +38,8 @@ data class RaisePsbCommand(
     val description: String?,
     val areaId: UUID?,
     val scheduledAt: Instant?,
-    val assignedTo: UUID?,
+    /** Roster teknisi awal (tim datar); kosong = WO lahir belum ditugaskan. */
+    val assignees: Set<UUID> = emptySet(),
 )
 
 /** Pandangan ringkas sebuah work order untuk konsumen lintas-module. */

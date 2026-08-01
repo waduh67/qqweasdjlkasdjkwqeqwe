@@ -12,8 +12,12 @@ interface ManageWorkOrderUseCase {
 
     fun update(id: UUID, command: UpdateWorkOrderCommand): WorkOrderView
 
-    /** Menugaskan/menugaskan ulang ke seorang teknisi (harus pengguna aktif tenant ini). */
-    fun assign(id: UUID, technicianId: UUID): WorkOrderView
+    /**
+     * Menyetel roster teknisi WO (tim datar) — mengganti roster lama sepenuhnya.
+     * Semua id harus pengguna aktif tenant ini; roster kosong ditolak (pakai lifecycle
+     * lain bila ingin melepas semua). Semua anggota setara: siapa pun boleh mulai/selesai.
+     */
+    fun assign(id: UUID, technicianIds: Set<UUID>): WorkOrderView
 
     fun start(id: UUID): WorkOrderView
 
@@ -34,7 +38,7 @@ interface ManageWorkOrderUseCase {
     fun delete(id: UUID)
 }
 
-/** Membuat work order; `assignedTo` opsional (mengangkatnya langsung ke ASSIGNED). */
+/** Membuat work order; `assignees` opsional (roster non-kosong mengangkatnya langsung ke ASSIGNED). */
 data class SaveWorkOrderCommand(
     val type: WorkOrderType,
     val title: String,
@@ -46,7 +50,8 @@ data class SaveWorkOrderCommand(
     val incidentId: UUID?,
     val areaId: UUID?,
     val scheduledAt: Instant?,
-    val assignedTo: UUID?,
+    /** Roster teknisi awal (tim datar); kosong = WO lahir belum ditugaskan. */
+    val assignees: Set<UUID> = emptySet(),
 )
 
 /** Mengubah rincian deskriptif; tipe tak bisa diubah, penugasan lewat [ManageWorkOrderUseCase.assign]. */

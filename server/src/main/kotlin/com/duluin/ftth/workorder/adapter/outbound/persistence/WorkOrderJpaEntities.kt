@@ -54,9 +54,8 @@ class WorkOrderJpaEntity(
     @Column(name = "area_id")
     var areaId: UUID?,
 
-    @Column(name = "assigned_to")
-    var assignedTo: UUID?,
-
+    // Roster teknisi ada di tabel penghubung work_order_assignee (tim datar); di sini
+    // hanya scalar "kapan roster terakhir disetel".
     @Column(name = "assigned_at")
     var assignedAt: Instant?,
 
@@ -97,6 +96,25 @@ class WorkOrderJpaEntity(
     // Null = dibuat sistem (mis. WO preventif dari degradasi optik), tanpa pengguna.
     @Column(name = "created_by", updatable = false)
     var createdBy: UUID?,
+) : TenantAwareJpaEntity(id)
+
+/**
+ * Satu teknisi yang ditugaskan ke sebuah work order. Tim datar: banyak baris per WO,
+ * semua setara. Dihapus otomatis bila WO-nya dihapus (FK ON DELETE CASCADE di skema).
+ */
+@Entity
+@Table(name = "work_order_assignee")
+class WorkOrderAssigneeJpaEntity(
+    id: UUID,
+
+    @Column(name = "work_order_id", nullable = false, updatable = false)
+    var workOrderId: UUID,
+
+    @Column(name = "technician_id", nullable = false, updatable = false)
+    var technicianId: UUID,
+
+    @Column(name = "assigned_at", nullable = false)
+    var assignedAt: Instant,
 ) : TenantAwareJpaEntity(id)
 
 @Entity

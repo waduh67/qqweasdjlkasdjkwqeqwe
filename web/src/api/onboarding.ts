@@ -39,7 +39,8 @@ export interface ExpressPsbRequest {
   title?: string | null
   description?: string | null
   scheduledAt?: string | null
-  assignedTo?: string | null
+  /** Roster teknisi awal WO PSB (tim datar); kosong = belum ditugaskan. */
+  assignees?: string[]
 }
 
 /**

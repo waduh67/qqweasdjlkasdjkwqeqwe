@@ -2,6 +2,7 @@ package com.duluin.ftth.workorder.adapter.outbound.persistence
 
 import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
+import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.infrastructure.persistence.toDomainPage
 import com.duluin.ftth.common.infrastructure.persistence.toPageable
 import com.duluin.ftth.common.tenant.TenantContext
@@ -13,12 +14,14 @@ import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderType
 import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Component
+import java.time.Instant
 import java.util.UUID
 
 @Component
 class WorkOrderPersistenceAdapter(
     private val jpa: WorkOrderJpaRepository,
     private val eventJpa: WorkOrderEventJpaRepository,
+    private val assigneeJpa: WorkOrderAssigneeJpaRepository,
 ) : WorkOrderRepository {
 
     override fun save(workOrder: WorkOrder): WorkOrder {
@@ -30,7 +33,6 @@ class WorkOrderPersistenceAdapter(
             customerId = workOrder.customerId
             incidentId = workOrder.incidentId
             areaId = workOrder.areaId
-            assignedTo = workOrder.assignedTo
             assignedAt = workOrder.assignedAt
             scheduledAt = workOrder.scheduledAt
             startedAt = workOrder.startedAt
@@ -55,7 +57,6 @@ class WorkOrderPersistenceAdapter(
             subscriptionId = workOrder.subscriptionId,
             incidentId = workOrder.incidentId,
             areaId = workOrder.areaId,
-            assignedTo = workOrder.assignedTo,
             assignedAt = workOrder.assignedAt,
             scheduledAt = workOrder.scheduledAt,
             startedAt = workOrder.startedAt,
@@ -71,6 +72,7 @@ class WorkOrderPersistenceAdapter(
             createdBy = workOrder.createdBy,
         )
         val saved = jpa.save(entity)
+        reconcileAssignees(workOrder)
 
         // Simpan event timeline yang tertunda, lalu kosongkan agar tidak tersimpan ganda.
         workOrder.pendingEvents().forEach { ev ->
@@ -86,10 +88,28 @@ class WorkOrderPersistenceAdapter(
             )
         }
         workOrder.clearPending()
-        return saved.toDomain()
+        return saved.toDomain(workOrder.assignees)
     }
 
-    override fun findById(id: UUID): WorkOrder? = jpa.findById(id).orElse(null)?.toDomain()
+    /** Selaraskan baris roster ke [WorkOrder.assignees]: buang yang lepas, tambah yang baru. */
+    private fun reconcileAssignees(workOrder: WorkOrder) {
+        val existing = assigneeJpa.findByWorkOrderId(workOrder.id).associateBy { it.technicianId }
+        val desired = workOrder.assignees
+        existing.filterKeys { it !in desired }.values.forEach { assigneeJpa.delete(it) }
+        (desired - existing.keys).forEach { technicianId ->
+            assigneeJpa.save(
+                WorkOrderAssigneeJpaEntity(
+                    id = UuidV7.generate(),
+                    workOrderId = workOrder.id,
+                    technicianId = technicianId,
+                    assignedAt = workOrder.assignedAt ?: Instant.now(),
+                ),
+            )
+        }
+    }
+
+    override fun findById(id: UUID): WorkOrder? =
+        jpa.findById(id).orElse(null)?.let { it.toDomain(rosterOf(it.id)) }
 
     override fun search(
         query: String?,
@@ -106,7 +126,9 @@ class WorkOrderPersistenceAdapter(
             .and(assignedToIs(assignedTo))
             .and(hasApprovalStatus(approvalStatus))
             .and(hasCustomer(customerId))
-        return jpa.findAll(spec, pageRequest.toPageable()).toDomainPage().map { it.toDomain() }
+        val page = jpa.findAll(spec, pageRequest.toPageable())
+        val rosters = rostersOf(page.content.map { it.id })
+        return page.toDomainPage().map { it.toDomain(rosters[it.id].orEmpty()) }
     }
 
     override fun timelineOf(workOrderId: UUID): List<WorkOrderEvent> =
@@ -120,7 +142,11 @@ class WorkOrderPersistenceAdapter(
 
     override fun countOpenByTechnician(): Map<UUID?, Long> {
         val openStatuses = WorkOrderStatus.entries.filter { it.open }
-        return jpa.countOpenGroupedByTechnician(openStatuses).associate { it.assignedTo to it.total }
+        val byTechnician: Map<UUID?, Long> =
+            jpa.countOpenGroupedByTechnician(openStatuses).associate { it.assignedTo to it.total }
+        val unassigned = jpa.countOpenUnassigned(openStatuses)
+        // Kunci null = antrean WO terbuka tanpa satu pun teknisi (dipakai dashboard "belum ditugaskan").
+        return if (unassigned > 0) byTechnician + (null to unassigned) else byTechnician
     }
 
     override fun countPendingApproval(): Long = jpa.countByApprovalStatus(WorkOrderApprovalStatus.PENDING)
@@ -145,10 +171,24 @@ class WorkOrderPersistenceAdapter(
                 root.get<WorkOrderStatus>("status").`in`(openStatuses),
             )
         }
-        return jpa.findAll(spec).map { it.toDomain() }
+        val entities = jpa.findAll(spec)
+        val rosters = rostersOf(entities.map { it.id })
+        return entities.map { it.toDomain(rosters[it.id].orEmpty()) }
     }
 
     override fun deleteById(id: UUID) = jpa.deleteById(id)
+
+    /** Roster teknisi satu WO. */
+    private fun rosterOf(workOrderId: UUID): Set<UUID> =
+        assigneeJpa.findByWorkOrderId(workOrderId).mapTo(mutableSetOf()) { it.technicianId }
+
+    /** Roster teknisi banyak WO sekaligus (hindari N+1 di daftar/halaman). */
+    private fun rostersOf(workOrderIds: List<UUID>): Map<UUID, Set<UUID>> {
+        if (workOrderIds.isEmpty()) return emptyMap()
+        return assigneeJpa.findByWorkOrderIdIn(workOrderIds)
+            .groupBy({ it.workOrderId }, { it.technicianId })
+            .mapValues { (_, ids) -> ids.toSet() }
+    }
 
     /** Cari lewat kode atau judul; kosong = cocokkan semua. */
     private fun matchesText(query: String?) = Specification<WorkOrderJpaEntity> { root, _, cb ->
@@ -172,8 +212,20 @@ class WorkOrderPersistenceAdapter(
         if (status == null) cb.conjunction() else cb.equal(root.get<WorkOrderStatus>("status"), status)
     }
 
-    private fun assignedToIs(assignedTo: UUID?) = Specification<WorkOrderJpaEntity> { root, _, cb ->
-        if (assignedTo == null) cb.conjunction() else cb.equal(root.get<UUID>("assignedTo"), assignedTo)
+    // Filter "WO teknisi ini" = ada baris roster untuk teknisi tsb (tim datar, keanggotaan).
+    private fun assignedToIs(assignedTo: UUID?) = Specification<WorkOrderJpaEntity> { root, query, cb ->
+        if (assignedTo == null || query == null) {
+            cb.conjunction()
+        } else {
+            val sub = query.subquery(UUID::class.java)
+            val a = sub.from(WorkOrderAssigneeJpaEntity::class.java)
+            sub.select(a.get("workOrderId"))
+            sub.where(
+                cb.equal(a.get<UUID>("workOrderId"), root.get<UUID>("id")),
+                cb.equal(a.get<UUID>("technicianId"), assignedTo),
+            )
+            cb.exists(sub)
+        }
     }
 
     private fun hasCustomer(customerId: UUID?) = Specification<WorkOrderJpaEntity> { root, _, cb ->
@@ -185,7 +237,7 @@ class WorkOrderPersistenceAdapter(
     }
 }
 
-private fun WorkOrderJpaEntity.toDomain(): WorkOrder = WorkOrder.rehydrate(
+private fun WorkOrderJpaEntity.toDomain(assignees: Set<UUID>): WorkOrder = WorkOrder.rehydrate(
     id = id,
     tenantId = tenantId ?: TenantContext.tenantId(),
     code = code,
@@ -198,7 +250,7 @@ private fun WorkOrderJpaEntity.toDomain(): WorkOrder = WorkOrder.rehydrate(
     incidentId = incidentId,
     areaId = areaId,
     status = status,
-    assignedTo = assignedTo,
+    assignees = assignees,
     assignedAt = assignedAt,
     scheduledAt = scheduledAt,
     startedAt = startedAt,

@@ -140,7 +140,8 @@ data class ExpressPsbRequest(
     @field:Size(max = 200) val title: String? = null,
     @field:Size(max = 2000) val description: String? = null,
     val scheduledAt: Instant? = null,
-    val assignedTo: UUID? = null,
+    /** Roster teknisi awal WO PSB (tim datar); null/kosong = belum ditugaskan. */
+    val assignees: Set<UUID>? = null,
 ) {
     fun toCommand() = ExpressPsbCommand(
         code = code,
@@ -160,6 +161,6 @@ data class ExpressPsbRequest(
         title = title,
         description = description,
         scheduledAt = scheduledAt,
-        assignedTo = assignedTo,
+        assignees = assignees ?: emptySet(),
     )
 }

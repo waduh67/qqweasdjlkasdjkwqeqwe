@@ -56,9 +56,8 @@ data class WorkOrderView(
     /** Koordinat lokasi pelanggan tertaut (untuk navigasi teknisi lapangan); `null` bila WO tak tertaut pelanggan. */
     val destinationLat: Double?,
     val destinationLng: Double?,
-    val assignedTo: UUID?,
-    /** Nama teknisi ter-assign, diresolusi lewat iam; `null` bila belum ditugaskan. */
-    val assignedToName: String?,
+    /** Roster teknisi ter-assign (tim datar, semua setara); kosong bila belum ditugaskan. */
+    val assignees: List<WorkOrderAssigneeView>,
     val scheduledAt: Instant?,
     val assignedAt: Instant?,
     val startedAt: Instant?,
@@ -76,6 +75,12 @@ data class WorkOrderView(
     val approvedAt: Instant?,
     val approvalNote: String?,
     val createdAt: Instant,
+)
+
+/** Seorang teknisi di roster WO; nama diresolusi lewat iam (`null` bila pengguna sudah tak ada). */
+data class WorkOrderAssigneeView(
+    val id: UUID,
+    val name: String?,
 )
 
 data class WorkOrderDetail(

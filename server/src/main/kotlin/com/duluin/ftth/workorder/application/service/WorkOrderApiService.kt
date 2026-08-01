@@ -45,7 +45,7 @@ class WorkOrderApiService(
                 incidentId = null,
                 areaId = command.areaId,
                 scheduledAt = command.scheduledAt,
-                assignedTo = command.assignedTo,
+                assignees = command.assignees,
             ),
         )
         return WorkOrderRef(

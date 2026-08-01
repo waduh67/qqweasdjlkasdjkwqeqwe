@@ -23,8 +23,8 @@ export interface WorkOrderView {
   /** Koordinat lokasi pelanggan tertaut untuk navigasi teknisi; `null` bila tak tertaut. */
   destinationLat: number | null
   destinationLng: number | null
-  assignedTo: string | null
-  assignedToName: string | null
+  /** Roster teknisi ter-assign (tim datar, semua setara); kosong bila belum ditugaskan. */
+  assignees: WorkOrderAssigneeView[]
   scheduledAt: string | null
   assignedAt: string | null
   startedAt: string | null
@@ -41,6 +41,12 @@ export interface WorkOrderView {
   approvedAt: string | null
   approvalNote: string | null
   createdAt: string
+}
+
+/** Seorang teknisi di roster WO; nama diresolusi lewat iam (`null` bila pengguna sudah tak ada). */
+export interface WorkOrderAssigneeView {
+  id: string
+  name: string | null
 }
 
 export interface WorkOrderEventView {

@@ -68,7 +68,7 @@ class ExpressOnboardingService(
                 description = command.description,
                 areaId = command.areaId,
                 scheduledAt = command.scheduledAt,
-                assignedTo = command.assignedTo,
+                assignees = command.assignees,
             ),
         )
 

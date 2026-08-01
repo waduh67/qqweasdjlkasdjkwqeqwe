@@ -2528,7 +2528,8 @@ function TiketWoTab({
                   </span>
                   <span className="muted" style={{ fontSize: '0.78rem' }}>
                     {wo.type} · dibuat {fmtInstant(wo.createdAt)}
-                    {wo.assignedToName && ` · ${wo.assignedToName}`}
+                    {wo.assignees.length > 0 &&
+                      ` · ${wo.assignees.map((a) => a.name ?? '—').join(', ')}`}
                   </span>
                 </div>
                 <Badge tone={WO_STATUS_TONE[wo.status]}>{WO_STATUS_LABEL[wo.status]}</Badge>

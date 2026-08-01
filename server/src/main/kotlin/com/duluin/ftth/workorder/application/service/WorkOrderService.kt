@@ -15,6 +15,7 @@ import com.duluin.ftth.workorder.application.port.inbound.RecordOpticalCommand
 import com.duluin.ftth.workorder.application.port.inbound.SaveWorkOrderCommand
 import com.duluin.ftth.workorder.application.port.inbound.TechnicianWorkloadView
 import com.duluin.ftth.workorder.application.port.inbound.UpdateWorkOrderCommand
+import com.duluin.ftth.workorder.application.port.inbound.WorkOrderAssigneeView
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderDashboardView
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderDetail
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderEventView
@@ -50,7 +51,7 @@ class WorkOrderService(
     @Transactional
     override fun create(command: SaveWorkOrderCommand): WorkOrderView {
         requireCustomerExists(command.customerId)
-        command.assignedTo?.let { requireActiveTechnician(it) }
+        command.assignees.forEach { requireActiveTechnician(it) }
         val actor = currentUser.current()
         val workOrder = WorkOrder.open(
             tenantId = actor.tenantId,
@@ -62,12 +63,12 @@ class WorkOrderService(
             incidentId = command.incidentId,
             areaId = command.areaId,
             scheduledAt = command.scheduledAt,
-            assignedTo = command.assignedTo,
+            assignees = command.assignees,
             createdBy = actor.userId,
             subscriptionId = command.subscriptionId,
         )
         val saved = repository.save(workOrder)
-        saved.assignedTo?.let { publishAssigned(saved, it) }
+        if (saved.assignees.isNotEmpty()) publishAssigned(saved)
         return saved.toView()
     }
 
@@ -90,12 +91,13 @@ class WorkOrderService(
     }
 
     @Transactional
-    override fun assign(id: UUID, technicianId: UUID): WorkOrderView {
-        requireActiveTechnician(technicianId)
+    override fun assign(id: UUID, technicianIds: Set<UUID>): WorkOrderView {
+        if (technicianIds.isEmpty()) throw ConflictException("Minimal satu teknisi harus ditugaskan")
+        technicianIds.forEach { requireActiveTechnician(it) }
         val workOrder = require(id)
-        workOrder.assign(technicianId, Instant.now(), currentUser.current().userId)
+        workOrder.assign(technicianIds, Instant.now(), currentUser.current().userId)
         val saved = repository.save(workOrder)
-        publishAssigned(saved, technicianId)
+        publishAssigned(saved)
         return saved.toView()
     }
 
@@ -177,16 +179,16 @@ class WorkOrderService(
             customerId = filter.customerId,
             pageRequest = page,
         )
-        // Teknisi & penyetuju sama-sama pengguna iam → kumpulkan idnya lalu resolusi sekali-batch.
+        // Teknisi (roster) & penyetuju sama-sama pengguna iam → kumpulkan idnya lalu resolusi sekali-batch.
         val userIds = HashSet<UUID>()
         result.content.forEach { wo ->
-            wo.assignedTo?.let { userIds += it }
+            userIds += wo.assignees
             wo.approvedBy?.let { userIds += it }
         }
         val userNames = iamApi.usersByIds(userIds).associate { it.id to it.name }
         val customers = customerApi.findCustomersByIds(result.content.mapNotNullTo(HashSet()) { it.customerId })
             .associateBy { it.id }
-        return result.map { it.toView(customers[it.customerId], userNames[it.assignedTo], userNames[it.approvedBy]) }
+        return result.map { it.toView(customers[it.customerId], userNames, userNames[it.approvedBy]) }
     }
 
     override fun searchMine(status: WorkOrderStatus?, page: PageRequest): Page<WorkOrderView> {
@@ -256,32 +258,36 @@ class WorkOrderService(
      */
     private fun requireFieldAccess(workOrder: WorkOrder, dispatcherPermission: String) {
         val actor = currentUser.current()
-        if (!actor.hasPermission(dispatcherPermission) && workOrder.assignedTo != actor.userId) {
+        if (!actor.hasPermission(dispatcherPermission) && !workOrder.isAssignedTo(actor.userId)) {
             throw AccessDeniedException("Work order ${workOrder.code} tidak ditugaskan ke Anda")
         }
     }
 
-    private fun publishAssigned(workOrder: WorkOrder, technicianId: UUID) {
+    private fun publishAssigned(workOrder: WorkOrder) {
         events.publishEvent(
             WorkOrderAssigned(
                 tenantId = workOrder.tenantId,
                 workOrderId = workOrder.id,
                 code = workOrder.code,
                 title = workOrder.title,
-                technicianId = technicianId,
+                technicianIds = workOrder.assignees.toList(),
                 scheduledAt = workOrder.scheduledAt,
             ),
         )
     }
 
-    /** View untuk satu WO: resolusi nama per-baris (murah untuk detail/aksi tunggal). */
+    /** View untuk satu WO: resolusi nama roster sekali-batch (murah untuk detail/aksi tunggal). */
     private fun WorkOrder.toView(): WorkOrderView = toView(
         customer = customerId?.let { customerApi.findCustomer(it) },
-        technicianName = assignedTo?.let { iamApi.findUser(it)?.name },
+        assigneeNames = iamApi.usersByIds(assignees).associate { it.id to it.name },
         approverName = approvedBy?.let { iamApi.findUser(it)?.name },
     )
 
-    private fun WorkOrder.toView(customer: CustomerRef?, technicianName: String?, approverName: String?) = WorkOrderView(
+    private fun WorkOrder.toView(
+        customer: CustomerRef?,
+        assigneeNames: Map<UUID, String?>,
+        approverName: String?,
+    ) = WorkOrderView(
         id = id,
         code = code,
         type = type.name,
@@ -296,8 +302,7 @@ class WorkOrderService(
         areaId = areaId,
         destinationLat = customer?.location?.latitude,
         destinationLng = customer?.location?.longitude,
-        assignedTo = assignedTo,
-        assignedToName = technicianName,
+        assignees = assignees.map { WorkOrderAssigneeView(it, assigneeNames[it]) },
         scheduledAt = scheduledAt,
         assignedAt = assignedAt,
         startedAt = startedAt,

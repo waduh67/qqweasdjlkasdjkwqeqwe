@@ -23,10 +23,11 @@ class WorkOrderAssignmentListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     fun on(event: WorkOrderAssigned) {
         log.info(
-            "Work order {} ({}) ditugaskan ke teknisi {} — siap dikirim ke aplikasi teknisi",
+            "Work order {} ({}) ditugaskan ke {} teknisi {} — siap dikirim ke aplikasi teknisi",
             event.code,
             event.workOrderId,
-            event.technicianId,
+            event.technicianIds.size,
+            event.technicianIds,
         )
     }
 }

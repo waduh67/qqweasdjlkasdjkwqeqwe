@@ -21,6 +21,7 @@ import jakarta.validation.Valid
 import jakarta.validation.constraints.DecimalMax
 import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
 import org.springframework.http.HttpStatus
@@ -108,7 +109,7 @@ class WorkOrderController(
     @PostMapping("/{id}/assign")
     @PreAuthorize("@authz.can('workorder.order.assign')")
     fun assign(@PathVariable id: UUID, @Valid @RequestBody request: AssignRequest): WorkOrderView =
-        manage.assign(id, request.technicianId!!)
+        manage.assign(id, request.technicianIds!!)
 
     @PostMapping("/{id}/start")
     @PreAuthorize("@authz.canAny('workorder.order.update','workorder.order.field')")
@@ -155,7 +156,8 @@ data class CreateWorkOrderRequest(
     val incidentId: UUID?,
     val areaId: UUID?,
     val scheduledAt: Instant?,
-    val assignedTo: UUID?,
+    /** Roster teknisi awal (tim datar); null/kosong = WO lahir belum ditugaskan. */
+    val assignees: Set<UUID>?,
 ) {
     fun toCommand() = SaveWorkOrderCommand(
         type = type!!,
@@ -167,7 +169,7 @@ data class CreateWorkOrderRequest(
         incidentId = incidentId,
         areaId = areaId,
         scheduledAt = scheduledAt,
-        assignedTo = assignedTo,
+        assignees = assignees ?: emptySet(),
     )
 }
 
@@ -192,7 +194,8 @@ data class UpdateWorkOrderRequest(
 }
 
 data class AssignRequest(
-    @field:NotNull val technicianId: UUID?,
+    /** Roster teknisi baru (tim datar) — mengganti roster lama; minimal satu. */
+    @field:NotEmpty val technicianIds: Set<UUID>?,
 )
 
 data class CompleteRequest(

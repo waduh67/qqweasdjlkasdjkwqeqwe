@@ -162,7 +162,7 @@ class WorkOrderEvidenceService(
      */
     private fun requireFieldAccess(workOrder: WorkOrder) {
         val actor = currentUser.current()
-        if (!actor.hasPermission("workorder.evidence.manage") && workOrder.assignedTo != actor.userId) {
+        if (!actor.hasPermission("workorder.evidence.manage") && !workOrder.isAssignedTo(actor.userId)) {
             throw AccessDeniedException("Work order ${workOrder.code} tidak ditugaskan ke Anda")
         }
     }

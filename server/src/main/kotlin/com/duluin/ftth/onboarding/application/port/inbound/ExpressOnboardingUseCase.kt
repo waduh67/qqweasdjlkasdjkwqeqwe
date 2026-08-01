@@ -46,7 +46,8 @@ data class ExpressPsbCommand(
     val title: String?,
     val description: String?,
     val scheduledAt: Instant?,
-    val assignedTo: UUID?,
+    /** Roster teknisi awal WO PSB (tim datar); kosong = belum ditugaskan. */
+    val assignees: Set<UUID> = emptySet(),
 )
 
 /**

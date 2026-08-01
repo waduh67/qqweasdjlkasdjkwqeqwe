@@ -91,7 +91,7 @@ class WorkOrder private constructor(
     incidentId: UUID?,
     areaId: UUID?,
     status: WorkOrderStatus,
-    assignedTo: UUID?,
+    assignees: Set<UUID>,
     assignedAt: Instant?,
     scheduledAt: Instant?,
     startedAt: Instant?,
@@ -122,8 +122,15 @@ class WorkOrder private constructor(
         private set
     var status: WorkOrderStatus = status
         private set
-    var assignedTo: UUID? = assignedTo
-        private set
+
+    private val _assignees: MutableSet<UUID> = assignees.toMutableSet()
+
+    /** Teknisi yang ditugaskan — tim datar, semua setara. Kosong = belum ditugaskan. */
+    val assignees: Set<UUID> get() = _assignees.toSet()
+
+    /** Apakah [userId] anggota tim WO ini (dipakai penegakan akses lapangan). */
+    fun isAssignedTo(userId: UUID): Boolean = userId in _assignees
+
     var assignedAt: Instant? = assignedAt
         private set
     var scheduledAt: Instant? = scheduledAt
@@ -189,15 +196,19 @@ class WorkOrder private constructor(
     }
 
     /**
-     * Menugaskan (atau menugaskan ulang) ke seorang teknisi. Dari DRAFT langsung
-     * naik ke ASSIGNED; penugasan ulang selagi dikerjakan tidak mengubah status.
+     * Menugaskan (atau menugaskan ulang) ke satu tim teknisi setara. Roster diganti
+     * utuh — memanggil ulang menimpa penugasan sebelumnya; minimal satu teknisi. Dari
+     * DRAFT langsung naik ke ASSIGNED; penugasan ulang selagi dikerjakan tak mengubah status.
      */
-    fun assign(technicianId: UUID, at: Instant, actorId: UUID?) {
+    fun assign(technicianIds: Set<UUID>, at: Instant, actorId: UUID?) {
         if (status.terminal) throw ConflictException("Work order sudah $status, tak bisa ditugaskan")
-        assignedTo = technicianId
+        if (technicianIds.isEmpty()) throw ConflictException("Minimal satu teknisi harus ditugaskan")
+        _assignees.clear()
+        _assignees += technicianIds
         assignedAt = at
         if (status == WorkOrderStatus.DRAFT) status = WorkOrderStatus.ASSIGNED
-        record(WorkOrderEventType.ASSIGNED, "Ditugaskan ke teknisi", at, actorId)
+        val label = if (technicianIds.size == 1) "Ditugaskan ke teknisi" else "Ditugaskan ke ${technicianIds.size} teknisi"
+        record(WorkOrderEventType.ASSIGNED, label, at, actorId)
     }
 
     /** Teknisi mulai mengerjakan. Harus sudah ditugaskan lebih dulu. */
@@ -314,7 +325,7 @@ class WorkOrder private constructor(
             incidentId: UUID?,
             areaId: UUID?,
             scheduledAt: Instant?,
-            assignedTo: UUID?,
+            assignees: Set<UUID> = emptySet(),
             createdBy: UUID?,
             // Default null: WO yang lahir tanpa langganan (mis. preventif) tak perlu menyebutnya.
             subscriptionId: UUID? = null,
@@ -334,7 +345,7 @@ class WorkOrder private constructor(
                 incidentId = incidentId,
                 areaId = areaId,
                 status = WorkOrderStatus.DRAFT,
-                assignedTo = null,
+                assignees = emptySet(),
                 assignedAt = null,
                 scheduledAt = scheduledAt,
                 startedAt = null,
@@ -352,7 +363,7 @@ class WorkOrder private constructor(
             )
             workOrder.record(WorkOrderEventType.CREATED, "Work order dibuat", at, createdBy)
             // Penugasan saat pembuatan bersifat opsional — bila ada, sekalian naik ke ASSIGNED.
-            if (assignedTo != null) workOrder.assign(assignedTo, at, createdBy)
+            if (assignees.isNotEmpty()) workOrder.assign(assignees, at, createdBy)
             return workOrder
         }
 
@@ -370,7 +381,7 @@ class WorkOrder private constructor(
             incidentId: UUID?,
             areaId: UUID?,
             status: WorkOrderStatus,
-            assignedTo: UUID?,
+            assignees: Set<UUID>,
             assignedAt: Instant?,
             scheduledAt: Instant?,
             startedAt: Instant?,
@@ -387,7 +398,7 @@ class WorkOrder private constructor(
             createdAt: Instant,
         ): WorkOrder = WorkOrder(
             id, tenantId, code, type, subscriptionId, title, description, priority, customerId, incidentId, areaId,
-            status, assignedTo, assignedAt, scheduledAt, startedAt, completedAt, resolutionNote,
+            status, assignees, assignedAt, scheduledAt, startedAt, completedAt, resolutionNote,
             cancelReason, rxBeforeDbm, rxAfterDbm, approvalStatus, approvedBy, approvedAt, approvalNote,
             createdBy, createdAt,
         )

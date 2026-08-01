@@ -77,7 +77,7 @@ class WorkOrderEvidenceIT {
     private fun startedWorkOrder(token: String): String {
         val woId = newWorkOrder(token)
         val techId = newTechnician(token)
-        post("/api/work-orders/$woId/assign", token, """{"technicianId":"$techId"}""", 200)
+        post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
         post("/api/work-orders/$woId/start", token, "", 200)
         return woId
     }
@@ -193,7 +193,7 @@ class WorkOrderEvidenceIT {
         // ASSIGNED (belum mulai) juga ditolak.
         val assigned = newWorkOrder(token)
         val techId = newTechnician(token)
-        post("/api/work-orders/$assigned/assign", token, """{"technicianId":"$techId"}""", 200)
+        post("/api/work-orders/$assigned/assign", token, """{"technicianIds":["$techId"]}""", 200)
         mockMvc.perform(
             multipart(HttpMethod.PUT, "/api/work-orders/$assigned/signature").file(png("ttd.png"))
                 .param("signerName", "X").header("Authorization", "Bearer $token"),

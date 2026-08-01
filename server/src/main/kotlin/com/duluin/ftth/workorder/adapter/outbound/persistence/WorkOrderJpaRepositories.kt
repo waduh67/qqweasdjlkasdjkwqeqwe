@@ -19,7 +19,7 @@ interface WorkOrderTypeCount {
     val total: Long
 }
 
-/** Beban WO terbuka per teknisi; `assignedTo` null = kelompok yang belum ditugaskan. */
+/** Beban WO terbuka per teknisi (dari roster tim datar). */
 interface WorkOrderTechnicianCount {
     val assignedTo: UUID?
     val total: Long
@@ -36,12 +36,26 @@ interface WorkOrderJpaRepository :
     fun countGroupedByType(): List<WorkOrderTypeCount>
 
     @Query(
-        "select w.assignedTo as assignedTo, count(w) as total from WorkOrderJpaEntity w " +
-            "where w.status in :statuses group by w.assignedTo",
+        "select a.technicianId as assignedTo, count(a) as total from WorkOrderAssigneeJpaEntity a " +
+            "where a.workOrderId in (select w.id from WorkOrderJpaEntity w where w.status in :statuses) " +
+            "group by a.technicianId",
     )
     fun countOpenGroupedByTechnician(statuses: Collection<WorkOrderStatus>): List<WorkOrderTechnicianCount>
 
+    /** WO terbuka yang belum punya satu pun teknisi di roster (antrean dispatch). */
+    @Query(
+        "select count(w) from WorkOrderJpaEntity w where w.status in :statuses " +
+            "and not exists (select 1 from WorkOrderAssigneeJpaEntity a where a.workOrderId = w.id)",
+    )
+    fun countOpenUnassigned(statuses: Collection<WorkOrderStatus>): Long
+
     fun countByApprovalStatus(approvalStatus: WorkOrderApprovalStatus): Long
+}
+
+interface WorkOrderAssigneeJpaRepository : JpaRepository<WorkOrderAssigneeJpaEntity, UUID> {
+    fun findByWorkOrderId(workOrderId: UUID): List<WorkOrderAssigneeJpaEntity>
+
+    fun findByWorkOrderIdIn(workOrderIds: Collection<UUID>): List<WorkOrderAssigneeJpaEntity>
 }
 
 interface WorkOrderEventJpaRepository : JpaRepository<WorkOrderEventJpaEntity, UUID> {

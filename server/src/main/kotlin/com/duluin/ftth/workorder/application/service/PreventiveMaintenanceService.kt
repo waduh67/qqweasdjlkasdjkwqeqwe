@@ -56,7 +56,7 @@ class PreventiveMaintenanceService(
             incidentId = null,
             areaId = null,
             scheduledAt = null,
-            assignedTo = null,
+            assignees = emptySet(),
             createdBy = null,
         )
         return repository.save(workOrder).id
