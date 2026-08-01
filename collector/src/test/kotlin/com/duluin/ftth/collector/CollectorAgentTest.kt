@@ -1,8 +1,8 @@
 package com.duluin.ftth.collector
 
-import com.duluin.ftth.collector.adapter.AdapterRegistry
 import com.duluin.ftth.collector.adapter.BngAdapterRegistry
 import com.duluin.ftth.collector.adapter.SimulatorBngAdapter
+import com.duluin.ftth.snmp.AdapterRegistry
 import com.duluin.ftth.contract.BngActionCommand
 import com.duluin.ftth.contract.BngActionKind
 import com.duluin.ftth.contract.BngIngestResult

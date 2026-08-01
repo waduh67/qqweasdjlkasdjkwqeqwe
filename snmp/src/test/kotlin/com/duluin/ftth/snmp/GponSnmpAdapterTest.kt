@@ -1,4 +1,4 @@
-package com.duluin.ftth.collector.adapter.snmp
+package com.duluin.ftth.snmp
 
 import com.duluin.ftth.contract.OltTarget
 import com.duluin.ftth.contract.OnuDownCause
@@ -194,6 +194,6 @@ class GponSnmpAdapterTest {
         val result = adapter(MibProfiles.ZTE, readerOf())
             .probe(target.copy(snmpCommunity = null))
 
-        assertTrue(result is com.duluin.ftth.collector.adapter.ProbeResult.Unreachable)
+        assertTrue(result is ProbeResult.Unreachable)
     }
 }

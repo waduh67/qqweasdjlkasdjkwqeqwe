@@ -1,6 +1,5 @@
-package com.duluin.ftth.collector.adapter.snmp
+package com.duluin.ftth.snmp
 
-import com.duluin.ftth.collector.adapter.OltProtocolException
 import org.snmp4j.CommunityTarget
 import org.snmp4j.PDU
 import org.snmp4j.Snmp

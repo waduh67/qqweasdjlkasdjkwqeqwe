@@ -1,8 +1,5 @@
-package com.duluin.ftth.collector.adapter.snmp
+package com.duluin.ftth.snmp
 
-import com.duluin.ftth.collector.adapter.OltAdapter
-import com.duluin.ftth.collector.adapter.OltProtocolException
-import com.duluin.ftth.collector.adapter.ProbeResult
 import com.duluin.ftth.contract.OltTarget
 import com.duluin.ftth.contract.OnuDownCause
 import com.duluin.ftth.contract.OnuOperationalStatus

@@ -4,6 +4,8 @@ import com.duluin.ftth.contract.OltTarget
 import com.duluin.ftth.contract.OnuDownCause
 import com.duluin.ftth.contract.OnuOperationalStatus
 import com.duluin.ftth.contract.OnuReading
+import com.duluin.ftth.snmp.OltAdapter
+import com.duluin.ftth.snmp.ProbeResult
 import java.time.Instant
 import kotlin.math.sin
 import kotlin.random.Random

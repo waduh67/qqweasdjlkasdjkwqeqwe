@@ -1,13 +1,13 @@
 package com.duluin.ftth.collector
 
-import com.duluin.ftth.collector.adapter.AdapterRegistry
 import com.duluin.ftth.collector.adapter.BngAdapterRegistry
 import com.duluin.ftth.collector.adapter.MikrotikRouterOsAdapter
 import com.duluin.ftth.collector.adapter.SimulatorBngAdapter
 import com.duluin.ftth.collector.adapter.SimulatorOltAdapter
-import com.duluin.ftth.collector.adapter.snmp.GponSnmpAdapter
-import com.duluin.ftth.collector.adapter.snmp.HsgqEponSnmpAdapter
-import com.duluin.ftth.collector.adapter.snmp.MibProfiles
+import com.duluin.ftth.snmp.AdapterRegistry
+import com.duluin.ftth.snmp.GponSnmpAdapter
+import com.duluin.ftth.snmp.HsgqEponSnmpAdapter
+import com.duluin.ftth.snmp.MibProfiles
 import org.slf4j.LoggerFactory
 
 /**

@@ -25,6 +25,9 @@ dependencies {
 
     // Kontrak wire collector↔server; dipakai bersama modul :collector.
     implementation(project(":contract"))
+    // Adapter SNMP OLT: server memoll OLT langsung (server-side SNMP), memakai
+    // adapter yang sama dengan agent :collector on-prem.
+    implementation(project(":snmp"))
 
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")

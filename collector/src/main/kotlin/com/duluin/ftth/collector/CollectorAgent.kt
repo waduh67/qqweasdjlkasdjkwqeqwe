@@ -1,9 +1,9 @@
 package com.duluin.ftth.collector
 
-import com.duluin.ftth.collector.adapter.AdapterRegistry
 import com.duluin.ftth.collector.adapter.BngAdapter
 import com.duluin.ftth.collector.adapter.BngAdapterRegistry
-import com.duluin.ftth.collector.adapter.ProbeResult
+import com.duluin.ftth.snmp.AdapterRegistry
+import com.duluin.ftth.snmp.ProbeResult
 import com.duluin.ftth.contract.BngActionCommand
 import com.duluin.ftth.contract.BngActionResult
 import com.duluin.ftth.contract.BngSessionBatch

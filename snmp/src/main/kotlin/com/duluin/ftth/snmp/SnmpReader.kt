@@ -1,4 +1,4 @@
-package com.duluin.ftth.collector.adapter.snmp
+package com.duluin.ftth.snmp
 
 /**
  * Abstraksi minimal atas hal yang dibutuhkan adapter GPON dari SNMP: membaca satu

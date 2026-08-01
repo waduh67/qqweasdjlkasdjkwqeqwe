@@ -1,10 +1,10 @@
-package com.duluin.ftth.collector.adapter.snmp
+package com.duluin.ftth.snmp
 
-import com.duluin.ftth.collector.adapter.snmp.HsgqEponSnmpAdapter.Companion.MAC_OID
-import com.duluin.ftth.collector.adapter.snmp.HsgqEponSnmpAdapter.Companion.NAME_OID
-import com.duluin.ftth.collector.adapter.snmp.HsgqEponSnmpAdapter.Companion.RX_POWER_OID
-import com.duluin.ftth.collector.adapter.snmp.HsgqEponSnmpAdapter.Companion.STATUS_OID
-import com.duluin.ftth.collector.adapter.snmp.HsgqEponSnmpAdapter.Companion.TX_POWER_OID
+import com.duluin.ftth.snmp.HsgqEponSnmpAdapter.Companion.MAC_OID
+import com.duluin.ftth.snmp.HsgqEponSnmpAdapter.Companion.NAME_OID
+import com.duluin.ftth.snmp.HsgqEponSnmpAdapter.Companion.RX_POWER_OID
+import com.duluin.ftth.snmp.HsgqEponSnmpAdapter.Companion.STATUS_OID
+import com.duluin.ftth.snmp.HsgqEponSnmpAdapter.Companion.TX_POWER_OID
 import com.duluin.ftth.contract.OltTarget
 import com.duluin.ftth.contract.OnuOperationalStatus
 import java.time.Instant
@@ -149,7 +149,7 @@ class HsgqEponSnmpAdapterTest {
 
         assertEquals(
             true,
-            result is com.duluin.ftth.collector.adapter.ProbeResult.Unreachable,
+            result is ProbeResult.Unreachable,
         )
     }
 }

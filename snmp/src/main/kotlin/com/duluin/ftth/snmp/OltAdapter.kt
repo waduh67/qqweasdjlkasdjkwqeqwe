@@ -1,4 +1,4 @@
-package com.duluin.ftth.collector.adapter
+package com.duluin.ftth.snmp
 
 import com.duluin.ftth.contract.OltTarget
 import com.duluin.ftth.contract.OnuReading

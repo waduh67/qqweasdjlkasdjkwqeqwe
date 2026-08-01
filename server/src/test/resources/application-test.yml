@@ -15,6 +15,11 @@ spring:
     password: ftth
 
 ftth:
+  monitoring:
+    # Tes berjalan dengan @EnableScheduling aktif, jadi poller OLT server-side ikut
+    # menyala. Dimatikan di sini agar tes tak menembak SNMP nyata ke host OLT seed
+    # (lambat) maupun menaikkan alarm OLT_UNREACHABLE yang mengganggu tes monitoring.
+    server-poll-enabled: false
   security:
     jwt-secret: test-only-secret-ftth-oss-1234567890-abcdef
     encryption-secret: test-only-encryption-ftth-oss-0987654321-fedcba

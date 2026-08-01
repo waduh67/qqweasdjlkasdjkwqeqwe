@@ -55,12 +55,31 @@ class MetricIngestionService(
             return IngestResult(accepted = 0, unknownSerialNumbers = emptyList(), duplicate = true)
         }
 
-        val serials = batch.readings.mapTo(HashSet()) { it.serialNumber.trim().uppercase() }
+        return ingestReadings(tenantId, batch.readings)
+    }
+
+    /**
+     * Inti ingestion tanpa pembukuan batch: memetakan bacaan ke ONU terdaftar,
+     * menyimpan deret waktunya, memperbarui status, menilai alarm, dan menangkap
+     * ONU liar ke kotak masuk provisioning.
+     *
+     * Dipisah dari [ingest] karena dua jalur memasukinya:
+     * - collector on-prem lewat [ingest], yang lebih dulu mendedup batch;
+     * - polling SNMP server-side, yang memoll OLT sendiri dan TIDAK punya batch
+     *   untuk didedup.
+     *
+     * Karena itu ia sengaja tidak menyentuh [batchRepository] maupun `collectorId`
+     * (FK `ingest_batch.collector_id` yang tak ada padanannya di jalur server-side).
+     * Tetap transaksional bersama pemanggil: penyimpanan metrik dan penilaian alarm
+     * jatuh atau berhasil bersama-sama.
+     */
+    fun ingestReadings(tenantId: UUID, readings: List<OnuReading>): IngestResult {
+        val serials = readings.mapTo(HashSet()) { it.serialNumber.trim().uppercase() }
         val knownOnus = customerApi.findOnusBySerialNumbers(serials).associateBy { it.serialNumber }
-        val oltIdsByCode = resolveOltIds(batch.readings)
+        val oltIdsByCode = resolveOltIds(readings)
 
         val unknown = serials.filterNot { it in knownOnus }
-        val matched = batch.readings.mapNotNull { reading ->
+        val matched = readings.mapNotNull { reading ->
             knownOnus[reading.serialNumber.trim().uppercase()]?.let { onu -> reading to onu }
         }
 
@@ -101,9 +120,9 @@ class MetricIngestionService(
         if (unknown.isNotEmpty()) {
             // ONU liar ditangkap ke kotak masuk provisioning, bukan sekadar dicatat log:
             // operator bisa menuntaskannya jadi pelanggan tanpa mengetik ulang serial.
-            val unknownReadings = batch.readings.filterNot { it.serialNumber.trim().uppercase() in knownOnus }
+            val unknownReadings = readings.filterNot { it.serialNumber.trim().uppercase() in knownOnus }
             discoveredOnuRecorder.capture(tenantId, unknownReadings, oltIdsByCode)
-            log.info("{} serial ONU tidak dikenal ditangkap ke kotak masuk pada batch {}", unknown.size, batch.batchId)
+            log.info("{} serial ONU tidak dikenal ditangkap ke kotak masuk", unknown.size)
         }
         return IngestResult(
             accepted = matched.size,

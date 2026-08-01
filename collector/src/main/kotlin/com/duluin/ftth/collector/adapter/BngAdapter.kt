@@ -7,7 +7,7 @@ import com.duluin.ftth.contract.RadiusSessionReading
 /**
  * Kontrak untuk membaca sesi PPPoE dari satu BRAS dan menjalankan perintah terhadapnya.
  *
- * Seperti [OltAdapter] untuk OLT, di sinilah perbedaan vendor BRAS diisolasi:
+ * Seperti OltAdapter (modul :snmp) untuk OLT, di sinilah perbedaan vendor BRAS diisolasi:
  * RouterOS lewat REST `/ppp/active`, FreeRADIUS lewat tabel `radacct`. Bagian lain
  * collector maupun server hanya pernah melihat [RadiusSessionReading] yang seragam.
  */

@@ -8,6 +8,9 @@ awssdk = "2.29.52"
 snmp4j = "3.8.2"
 jackson = "3.0.4"
 logback = "1.5.20"
+# API logging modul :snmp (snmp4j hanya menaruh slf4j-api di runtime, bukan compile);
+# disamakan dengan yang ditarik logback 1.5.20.
+slf4j = "2.0.17"
 # Driver JDBC untuk adapter FreeRADIUS collector — disamakan dengan versi yang di-resolve server.
 postgresql = "42.7.11"
 # PKI OpenVPN: app menerbitkan CA + sertifikat server sendiri (module vpn).
@@ -22,8 +25,9 @@ springdoc-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc
 awssdk-bom = { module = "software.amazon.awssdk:bom", version.ref = "awssdk" }
 awssdk-s3 = { module = "software.amazon.awssdk:s3" }
 
-# Dipakai collector saja — agent sengaja tidak menarik Spring sama sekali.
+# Dipakai modul :snmp (adapter OLT), yang ditarik bersama oleh :collector & :server.
 snmp4j = { module = "org.snmp4j:snmp4j", version.ref = "snmp4j" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 jackson-databind = { module = "tools.jackson.core:jackson-databind", version.ref = "jackson" }
 jackson-kotlin = { module = "tools.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }

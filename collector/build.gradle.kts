@@ -22,7 +22,9 @@ application {
 
 dependencies {
     implementation(project(":contract"))
-    implementation(libs.snmp4j)
+    // Adapter SNMP OLT (GPON data-driven + EPON HSGQ) hidup di modul :snmp, dipakai
+    // bersama server. snmp4j ikut transitif dari sana — collector tak menyentuhnya langsung.
+    implementation(project(":snmp"))
     implementation(libs.jackson.databind)
     implementation(libs.jackson.kotlin)
     implementation(libs.logback.classic)
