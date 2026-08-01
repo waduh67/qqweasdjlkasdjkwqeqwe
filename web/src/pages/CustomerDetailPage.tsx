@@ -631,13 +631,26 @@ function OnuManager({
           {can('customer.onu.assign') && (
             <div className="row">
               {onu.odpId ? (
+                // Masih terpasang: lepas dulu — hapus sengaja tak ditawarkan agar port
+                // ODP tak menggantung (aturan sama yang ditegakkan OnuService.delete).
                 <button onClick={() => void run(() => api.post(`/api/customers/onus/${onu.id}/detach`), 'ONU dilepas')}>
                   Lepas
                 </button>
               ) : (
-                <button onClick={() => setAttach({ onuId: onu.id, odpId: odps[0]?.id ?? '', port: '1', rx: '' })}>
-                  Pasang ke ODP
-                </button>
+                <>
+                  <button onClick={() => setAttach({ onuId: onu.id, odpId: odps[0]?.id ?? '', port: '1', rx: '' })}>
+                    Pasang ke ODP
+                  </button>
+                  <button
+                    className="danger"
+                    onClick={() => {
+                      if (!window.confirm(`Hapus permanen ONU ${onu.serialNumber} dari pelanggan ini?`)) return
+                      void run(() => api.del(`/api/customers/onus/${onu.id}`), 'ONU dihapus')
+                    }}
+                  >
+                    Hapus
+                  </button>
+                </>
               )}
             </div>
           )}
