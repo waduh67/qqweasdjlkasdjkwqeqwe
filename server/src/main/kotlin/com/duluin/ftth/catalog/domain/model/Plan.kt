@@ -203,7 +203,11 @@ class Plan private constructor(
     }
 }
 
-/** Tipe layanan tempat paket ini bisa ditawarkan (metadata; enforcement penuh baru PPPoE). */
+/**
+ * Tipe layanan tempat paket ini bisa ditawarkan. Semua tipe ditegakkan penuh ke RADIUS-pusat:
+ * PPPoE/Hotspot lewat username+password, DHCP/Static lewat MAC (`use-radius`, Static memin
+ * `Framed-IP-Address`). Grup rate-limit `plan:{id}` dipakai ulang lintas-tipe.
+ */
 enum class ServiceType { PPPOE, STATIC, HOTSPOT, DHCP }
 
 /**

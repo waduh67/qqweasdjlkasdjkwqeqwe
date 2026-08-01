@@ -28,7 +28,7 @@ Plan (agregat)
 │               burstTimeSec? · downMinMbps? · upMinMbps? · priority(1-8, default 8)
 │               connectionLimit?               (Simultaneous-Use per akun)
 ├── FUP         fupEnabled · fupQuotaMb? · fupDownMbps? · fupUpMbps?
-├── ketersediaan serviceTypes: Set<PPPOE|STATIC|HOTSPOT|DHCP>   (metadata; enforce PPPoE dulu)
+├── ketersediaan serviceTypes: Set<PPPOE|STATIC|HOTSPOT|DHCP>   (ditegakkan penuh lintas-tipe)
 ├── override    prorateOnActivation? · billingDayOfMonth? · dueDays? · graceDays? · autoIsolir?
 │  billing      (null = ikut kebijakan global billing)
 └── active
