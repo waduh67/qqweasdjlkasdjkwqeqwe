@@ -452,10 +452,13 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
 - **Blast radius di peta** ✅ (potongan fitur unggulan yang dikerjakan lebih awal
   bersama GIS): perangkat mati menyorot merah seluruh kabel hilirnya, klik kabel
   merah menampilkan alarm penyebabnya, dan panel ODC mendaftar pelanggan terdampak
-- **Phase 2b** ⏸️ **ditunda (menunggu perangkat fisik)** — verifikasi adapter SNMP
-  terhadap OLT sungguhan. OID di `MibProfiles` disusun dari dokumentasi MIB publik
-  dan **belum diuji terhadap perangkat nyata**; firmware berbeda kerap menggeser
-  sub-tree. Sementara itu simulator OLT menutupi pengujian.
+- **Phase 2b — server-side SNMP polling** ✅ server polling OLT langsung (tanpa
+  agen on-prem), adapter di modul `:snmp` dipakai bareng collector. Jalur **HSGQ
+  EPON** (identitas MAC, tabel enterprise `.50224.3`) **sudah divalidasi terhadap
+  HSGQ-E04I sungguhan** end-to-end (poll → kotak masuk). Adapter **GPON**
+  (`MibProfiles`: ZTE/HUAWEI/FIBERHOME) OID-nya dari dokumentasi MIB publik dan
+  **belum diuji terhadap perangkat GPON nyata** — firmware berbeda kerap menggeser
+  sub-tree; simulator OLT menutupi pengujian. Lihat [`docs/monitoring.md`](docs/monitoring.md).
 - **Phase 3 — Incident + korelasi + notifikasi** ✅ banjir alarm sejenis (mis. 30
   ONU di bawah satu ODC) menjadi satu insiden ber-akar-masalah, lalu broadcast
   proaktif ke pelanggan terdampak
@@ -463,8 +466,9 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
   alur assign→mulai→selesai→approve, bukti foto + tanda tangan di MinIO/S3.
   Aplikasi teknisi (Compose Multiplatform) menyusul paling akhir.
 - **Phase 5 — Fitur advanced** ✅ what-if/blast-radius, heatmap utilisasi port,
-  predictive maintenance, OTDR plotting, auto-provisioning ONU (kotak masuk ONU
-  terdeteksi + kebijakan)
+  predictive maintenance, OTDR plotting, auto-provisioning ONU (server polling OLT
+  via SNMP → kotak masuk ONU terdeteksi + kebijakan zero-touch, lihat
+  [`docs/monitoring.md`](docs/monitoring.md))
 - **Phase 6 — CPE** ✅ kelola router/ONT pelanggan via GenieACS (TR-069): WiFi,
   reboot, diagnostik ping/speedtest, firmware, factory-reset & refresh ACS
 - **Phase 7 — BNG (BRAS/RADIUS)** ✅ paket, registri BRAS, akun PPPoE,
