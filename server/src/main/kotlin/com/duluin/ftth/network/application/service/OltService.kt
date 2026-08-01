@@ -63,6 +63,7 @@ class OltService(
                 model = command.model,
                 managementIp = ManagementIp.ofNullable(command.managementIp),
                 snmpCommunity = command.snmpCommunity,
+                snmpPort = command.snmpPort,
             ),
         )
         auditor.record("olt.created", "Olt", olt.id, olt.tenantId, mapOf("code" to olt.code, "vendor" to olt.vendor.name))
@@ -78,6 +79,7 @@ class OltService(
             vendor = command.vendor,
             model = command.model,
             managementIp = ManagementIp.ofNullable(command.managementIp),
+            snmpPort = command.snmpPort,
         )
         olt.changeSnmpCommunity(command.snmpCommunity)
         val saved = oltRepository.save(olt)
@@ -180,6 +182,7 @@ private fun Olt.toView(siteName: String?, ponPortCount: Int) = OltView(
     managementIp = managementIp?.value,
     status = status,
     snmpConfigured = !snmpCommunity.isNullOrBlank(),
+    snmpPort = snmpPort,
     pollable = isPollable(),
     ponPortCount = ponPortCount,
 )

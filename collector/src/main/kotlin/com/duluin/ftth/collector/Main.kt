@@ -6,6 +6,7 @@ import com.duluin.ftth.collector.adapter.MikrotikRouterOsAdapter
 import com.duluin.ftth.collector.adapter.SimulatorBngAdapter
 import com.duluin.ftth.collector.adapter.SimulatorOltAdapter
 import com.duluin.ftth.collector.adapter.snmp.GponSnmpAdapter
+import com.duluin.ftth.collector.adapter.snmp.HsgqEponSnmpAdapter
 import com.duluin.ftth.collector.adapter.snmp.MibProfiles
 import org.slf4j.LoggerFactory
 
@@ -36,10 +37,13 @@ fun main() {
     // asalnya.
     val simulatorEnabled = env("FTTH_COLLECTOR_SIMULATOR", "false").toBoolean()
 
+    // GPON (data-driven MibProfile) + EPON HSGQ (adapter tersendiri karena identitas MAC
+    // & join dua-tabel — lihat HsgqEponSnmpAdapter). Simulator memerankan tiap vendor.
     val adapters = if (simulatorEnabled) {
-        MibProfiles.all().map { SimulatorOltAdapter(vendor = it.vendor) }
+        MibProfiles.all().map { SimulatorOltAdapter(vendor = it.vendor) } +
+            SimulatorOltAdapter(vendor = HsgqEponSnmpAdapter.VENDOR)
     } else {
-        MibProfiles.all().map { GponSnmpAdapter(it) }
+        MibProfiles.all().map { GponSnmpAdapter(it) } + HsgqEponSnmpAdapter()
     }
     val registry = AdapterRegistry(adapters)
 

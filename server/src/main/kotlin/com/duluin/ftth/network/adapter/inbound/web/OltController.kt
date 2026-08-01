@@ -98,6 +98,7 @@ private fun OltRequest.toCommand() = SaveOltCommand(
     model = model,
     managementIp = managementIp,
     snmpCommunity = snmpCommunity,
+    snmpPort = snmpPort,
 )
 
 private fun PonPortRequest.toCommand() = SavePonPortCommand(

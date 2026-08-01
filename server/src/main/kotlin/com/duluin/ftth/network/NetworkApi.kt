@@ -184,6 +184,7 @@ data class OltPollingTarget(
     val vendor: String,
     val host: String?,
     val snmpCommunity: String?,
+    val snmpPort: Int = 161,
 ) {
     /** Tanpa alamat, collector tidak punya apa pun untuk dihubungi. */
     val pollable: Boolean get() = !host.isNullOrBlank()

@@ -42,6 +42,7 @@ data class SaveOltCommand(
      * ulang form tanpa mengisi ulang password tidak boleh menghapusnya.
      */
     val snmpCommunity: String?,
+    val snmpPort: Int = 161,
 )
 
 data class SavePonPortCommand(

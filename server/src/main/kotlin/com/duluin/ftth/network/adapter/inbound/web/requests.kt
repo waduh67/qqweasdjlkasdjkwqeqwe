@@ -50,6 +50,8 @@ data class OltRequest(
     @field:Size(max = 45) val managementIp: String? = null,
     /** Kosongkan untuk mempertahankan community string yang sudah tersimpan. */
     val snmpCommunity: String? = null,
+    /** Port SNMP perangkat; baku 161, setel lain bila OLT diekspos lewat NAT/DMZ. */
+    @field:Min(1) @field:Max(65535) val snmpPort: Int = 161,
 )
 
 data class PonPortRequest(

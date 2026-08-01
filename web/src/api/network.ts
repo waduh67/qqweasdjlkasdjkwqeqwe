@@ -29,6 +29,7 @@ export interface OltView {
   status: AssetStatus
   /** Server tidak pernah mengirim community string-nya, hanya ada/tidaknya. */
   snmpConfigured: boolean
+  snmpPort: number
   pollable: boolean
   ponPortCount: number
 }

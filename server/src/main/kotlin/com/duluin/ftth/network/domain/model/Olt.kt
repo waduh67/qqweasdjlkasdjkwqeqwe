@@ -22,6 +22,7 @@ class Olt private constructor(
     model: String?,
     managementIp: ManagementIp?,
     snmpCommunity: String?,
+    snmpPort: Int,
     status: AssetStatus,
 ) {
     var siteId: UUID = siteId
@@ -42,15 +43,31 @@ class Olt private constructor(
     var snmpCommunity: String? = snmpCommunity
         private set
 
+    /**
+     * Port SNMP perangkat. Baku 161, tapi sebagian OLT (mis. yang diekspos lewat
+     * NAT/DMZ) mendengarkan di port non-standar — collector memakai nilai ini alih-alih
+     * berasumsi 161, kalau tidak perangkat semacam itu tak akan pernah terjawab.
+     */
+    var snmpPort: Int = snmpPort
+        private set
+
     var status: AssetStatus = status
         private set
 
-    fun update(siteId: UUID, name: String, vendor: OltVendor, model: String?, managementIp: ManagementIp?) {
+    fun update(
+        siteId: UUID,
+        name: String,
+        vendor: OltVendor,
+        model: String?,
+        managementIp: ManagementIp?,
+        snmpPort: Int,
+    ) {
         this.siteId = siteId
         this.name = AssetNaming.name(name, "OLT")
         this.vendor = vendor
         this.model = model?.trim()?.takeIf { it.isNotEmpty() }
         this.managementIp = managementIp
+        this.snmpPort = validPort(snmpPort)
     }
 
     /** `null` berarti "jangan ubah"; string kosong berarti "hapus kredensial". */
@@ -72,6 +89,9 @@ class Olt private constructor(
         vendor.monitoringSupported() && managementIp != null && !snmpCommunity.isNullOrBlank()
 
     companion object {
+        /** Port SNMP baku bila operator tidak menyetel sendiri. */
+        const val DEFAULT_SNMP_PORT = 161
+
         fun create(
             tenantId: UUID,
             siteId: UUID,
@@ -81,6 +101,7 @@ class Olt private constructor(
             model: String?,
             managementIp: ManagementIp?,
             snmpCommunity: String?,
+            snmpPort: Int = DEFAULT_SNMP_PORT,
             status: AssetStatus = AssetStatus.ACTIVE,
         ): Olt = Olt(
             id = UuidV7.generate(),
@@ -92,6 +113,7 @@ class Olt private constructor(
             model = model?.trim()?.takeIf { it.isNotEmpty() },
             managementIp = managementIp,
             snmpCommunity = snmpCommunity?.trim()?.takeIf { it.isNotEmpty() },
+            snmpPort = validPort(snmpPort),
             status = status,
         )
 
@@ -105,8 +127,16 @@ class Olt private constructor(
             model: String?,
             managementIp: ManagementIp?,
             snmpCommunity: String?,
+            snmpPort: Int,
             status: AssetStatus,
-        ): Olt = Olt(id, tenantId, code, siteId, name, vendor, model, managementIp, snmpCommunity, status)
+        ): Olt = Olt(id, tenantId, code, siteId, name, vendor, model, managementIp, snmpCommunity, snmpPort, status)
+
+        private fun validPort(port: Int): Int {
+            if (port !in 1..65535) {
+                throw ValidationException("Port SNMP $port di luar rentang 1..65535")
+            }
+            return port
+        }
     }
 }
 

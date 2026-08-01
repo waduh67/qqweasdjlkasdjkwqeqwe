@@ -154,6 +154,7 @@ class NetworkApiService(
                     vendor = olt.vendor.name,
                     host = olt.managementIp?.value,
                     snmpCommunity = olt.snmpCommunity,
+                    snmpPort = olt.snmpPort,
                 )
             }
     }

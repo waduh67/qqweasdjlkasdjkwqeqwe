@@ -38,6 +38,9 @@ class OltJpaEntity(
     @Column(name = "snmp_community")
     var snmpCommunity: String?,
 
+    @Column(name = "snmp_port", nullable = false)
+    var snmpPort: Int,
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var status: AssetStatus,

@@ -34,6 +34,7 @@ class OltPersistenceAdapter(
             model = olt.model
             managementIp = olt.managementIp?.value
             snmpCommunity = encryptedCommunity
+            snmpPort = olt.snmpPort
             status = olt.status
         } ?: OltJpaEntity(
             id = olt.id,
@@ -44,6 +45,7 @@ class OltPersistenceAdapter(
             model = olt.model,
             managementIp = olt.managementIp?.value,
             snmpCommunity = encryptedCommunity,
+            snmpPort = olt.snmpPort,
             status = olt.status,
         )
         return jpa.save(entity).toDomain()
@@ -85,6 +87,7 @@ class OltPersistenceAdapter(
         model = model,
         managementIp = ManagementIp.ofNullable(managementIp),
         snmpCommunity = decryptQuietly(snmpCommunity, code),
+        snmpPort = snmpPort,
         status = status,
     )
 

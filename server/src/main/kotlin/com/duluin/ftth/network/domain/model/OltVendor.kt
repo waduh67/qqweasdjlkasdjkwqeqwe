@@ -10,6 +10,9 @@ enum class OltVendor {
     HUAWEI,
     FIBERHOME,
     NOKIA,
+
+    /** OLT EPON berbasis chipset HSGQ (mis. HSGQ-E04I) — jamak di ISP kecil, identitas ONU = MAC. */
+    HSGQ,
     OTHER,
     ;
 

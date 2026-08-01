@@ -37,6 +37,7 @@ data class OltView(
     val status: AssetStatus,
     /** Community string TIDAK pernah dikembalikan — hanya penanda ada/tidaknya. */
     val snmpConfigured: Boolean,
+    val snmpPort: Int,
     val pollable: Boolean,
     val ponPortCount: Int,
 )

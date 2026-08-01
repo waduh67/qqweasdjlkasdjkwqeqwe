@@ -27,7 +27,7 @@ const TABS: Array<{ key: Tab; label: string; permission: string }> = [
 ]
 
 const SPLITTER_RATIOS = ['1:2', '1:4', '1:8', '1:16', '1:32', '1:64']
-const VENDORS = ['ZTE', 'HUAWEI', 'FIBERHOME', 'NOKIA', 'OTHER']
+const VENDORS = ['ZTE', 'HUAWEI', 'FIBERHOME', 'NOKIA', 'HSGQ', 'OTHER']
 
 const ASSET_STATUS_OPTIONS: { value: AssetStatus | ''; label: string }[] = [
   { value: '', label: 'Semua status' },
@@ -258,7 +258,7 @@ function OltsTab() {
   const { can } = useCan()
   const { items, loading, run } = useList<OltView>('/api/olts')
   const { items: sites } = useList<SiteView>('/api/sites')
-  const empty = { siteId: '', code: '', name: '', vendor: 'ZTE', model: '', managementIp: '', snmpCommunity: '' }
+  const empty = { siteId: '', code: '', name: '', vendor: 'ZTE', model: '', managementIp: '', snmpCommunity: '', snmpPort: '161' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
   const [ports, setPorts] = useState<Record<string, string>>({})
   const [query, setQuery] = useState('')
@@ -408,6 +408,17 @@ function OltsTab() {
                 onChange={(e) => setDraft({ ...draft, snmpCommunity: e.target.value })}
               />
             </label>
+            <label style={{ width: 110 }}>
+              <span>Port SNMP</span>
+              <input
+                type="number"
+                min={1}
+                max={65535}
+                value={draft.snmpPort}
+                onChange={(e) => setDraft({ ...draft, snmpPort: e.target.value })}
+                placeholder="161"
+              />
+            </label>
           </div>
           <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
             Community string disimpan terenkripsi dan tidak pernah ditampilkan kembali.
@@ -422,6 +433,7 @@ function OltsTab() {
                     model: draft.model || null,
                     managementIp: draft.managementIp || null,
                     snmpCommunity: draft.snmpCommunity || null,
+                    snmpPort: Number(draft.snmpPort) || 161,
                   })
                   setDraft(null)
                 })

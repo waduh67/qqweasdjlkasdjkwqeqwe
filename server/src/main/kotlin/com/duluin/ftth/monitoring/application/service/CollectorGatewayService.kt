@@ -131,6 +131,7 @@ class CollectorGatewayService(
                     oltCode = it.code,
                     vendor = it.vendor,
                     host = it.host!!,
+                    snmpPort = it.snmpPort,
                     snmpCommunity = it.snmpCommunity,
                 )
             }
