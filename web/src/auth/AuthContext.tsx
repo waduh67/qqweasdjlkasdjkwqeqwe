@@ -5,7 +5,7 @@ import type { Profile, TokenResponse } from '../api/types'
 interface AuthState {
   user: Profile | null
   loading: boolean
-  login: (tenantSlug: string, email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   /** Ambil ulang profil (izin efektif terbaru) tanpa menunggu token kedaluwarsa. */
   refreshProfile: () => Promise<void>
@@ -56,8 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const login = useCallback(async (tenantSlug: string, email: string, password: string) => {
-    const tokens = await api.post<TokenResponse>('/api/auth/login', { tenantSlug, email, password })
+  const login = useCallback(async (email: string, password: string) => {
+    const tokens = await api.post<TokenResponse>('/api/auth/login', { email, password })
     tokenStore.setAccessToken(tokens.accessToken)
     tokenStore.setRefreshToken(tokens.refreshToken)
     setUser(tokens.user)

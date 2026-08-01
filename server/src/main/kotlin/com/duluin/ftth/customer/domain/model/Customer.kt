@@ -75,6 +75,17 @@ class Customer private constructor(
     companion object {
         private val CODE_PATTERN = Regex("^[A-Z0-9][A-Z0-9._/-]{1,39}$")
 
+        /**
+         * Format kode pelanggan yang dibuat otomatis ketika operator tak mengetiknya sendiri —
+         * berurut per-tenant (`CUST-000001`, `CUST-000002`, …). Prefiks & lebar padding disatukan di
+         * sini agar generator (service) dan kueri urutan (repository) tak berbeda diam-diam.
+         */
+        const val AUTO_CODE_PREFIX = "CUST-"
+        private const val AUTO_CODE_WIDTH = 6
+
+        fun formatAutoCode(sequence: Int): String =
+            AUTO_CODE_PREFIX + sequence.toString().padStart(AUTO_CODE_WIDTH, '0')
+
         fun create(
             tenantId: UUID,
             code: String,

@@ -29,5 +29,12 @@ interface CustomerRepository {
 
     fun existsByCode(code: String): Boolean
 
+    /**
+     * Nomor urut kode-otomatis tertinggi yang sudah dipakai tenant ini (dari kode berbentuk
+     * `{prefix}{angka}`), atau 0 bila belum ada. Dipakai untuk membuat kode berikutnya secara
+     * berurut. Tercakup RLS per-tenant, jadi hitungannya per-tenant tanpa filter eksplisit.
+     */
+    fun maxCodeSequence(prefix: String): Int
+
     fun deleteById(id: UUID)
 }

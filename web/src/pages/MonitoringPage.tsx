@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type {
@@ -9,9 +9,13 @@ import type {
   OnuHistoryView,
 } from '../api/monitoring'
 import { useCan } from '../auth/useCan'
-import { Drawer, EmptyState, SkeletonRows, StatusBadge, useToast } from '../components/ui'
+import { DataTable, type Column } from '../components/DataTable'
+import { Drawer, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
 import { OpticalChart } from '../components/OpticalChart'
 import { IconAlert, IconPlus } from '../components/icons'
+
+/** Peringkat keparahan untuk pengurutan — makin tinggi makin genting (kritis di atas saat desc). */
+const SEVERITY_RANK: Record<string, number> = { CRITICAL: 3, WARNING: 2, INFO: 1 }
 
 /**
  * Dashboard monitoring: kesehatan collector, alarm aktif, pengelolaan agent, dan
@@ -28,6 +32,8 @@ export function MonitoringPage() {
   const [collectors, setCollectors] = useState<CollectorView[]>([])
   const [alarms, setAlarms] = useState<AlarmView[]>([])
   const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'ALL'>('ACTIVE')
+  const [collectorQuery, setCollectorQuery] = useState('')
+  const [alarmQuery, setAlarmQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [newKey, setNewKey] = useState<CollectorCreated | null>(null)
   const [draftName, setDraftName] = useState('')
@@ -77,6 +83,158 @@ export function MonitoringPage() {
     }
   }
 
+  const canManageCollector = can('monitoring.collector.manage')
+
+  const filteredCollectors = useMemo(() => {
+    const q = collectorQuery.trim().toLowerCase()
+    if (!q) return collectors
+    return collectors.filter((c) =>
+      [c.name, c.status, c.agentVersion ?? '', c.lastCycleSummary ?? ''].join(' ').toLowerCase().includes(q),
+    )
+  }, [collectors, collectorQuery])
+
+  const collectorColumns: Column<CollectorView>[] = [
+    {
+      key: 'name',
+      header: 'Nama',
+      sortValue: (c) => c.name,
+      cell: (c) => (
+        <div>
+          <div style={{ fontWeight: 550 }}>{c.name}</div>
+          <div className="muted" style={{ fontSize: '0.78rem' }}>
+            {c.apiKeyHint}… · tiap {c.pollIntervalSeconds}s
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortValue: (c) => c.status,
+      cell: (c) => (
+        <div className="row" style={{ gap: '0.35rem' }}>
+          <StatusBadge status={c.status} />
+          {c.silent && <StatusBadge status="CRITICAL" label="membisu" />}
+        </div>
+      ),
+    },
+    { key: 'agent', header: 'Agent', sortValue: (c) => c.agentVersion, cell: (c) => <span className="muted">{c.agentVersion ?? '—'}</span> },
+    {
+      key: 'lastSeen',
+      header: 'Terakhir melapor',
+      sortValue: (c) => c.lastSeenAt,
+      cell: (c) => (
+        <span className="muted" style={{ fontSize: '0.83rem' }}>
+          {c.lastSeenAt ? new Date(c.lastSeenAt).toLocaleString('id-ID') : 'belum pernah'}
+        </span>
+      ),
+    },
+    {
+      key: 'cycle',
+      header: 'Siklus terakhir',
+      cell: (c) => (
+        <span className="muted" style={{ fontSize: '0.8rem', display: 'inline-block', maxWidth: 220 }}>
+          {c.lastCycleSummary ?? '—'}
+        </span>
+      ),
+    },
+  ]
+  if (canManageCollector) {
+    collectorColumns.push({
+      key: 'actions',
+      header: '',
+      align: 'right',
+      width: '1%',
+      cell: (c) => (
+        <button
+          className="ghost small danger"
+          onClick={() => void run(() => api.del(`/api/monitoring/collectors/${c.id}`), 'Collector dihapus')}
+        >
+          Hapus
+        </button>
+      ),
+    })
+  }
+
+  const filteredAlarms = useMemo(() => {
+    const q = alarmQuery.trim().toLowerCase()
+    if (!q) return alarms
+    return alarms.filter((a) =>
+      [a.entityLabel, a.kind, a.message, a.severity, a.status].join(' ').toLowerCase().includes(q),
+    )
+  }, [alarms, alarmQuery])
+
+  const alarmColumns: Column<AlarmView>[] = [
+    {
+      key: 'severity',
+      header: 'Keparahan',
+      sortValue: (a) => SEVERITY_RANK[a.severity] ?? 0,
+      cell: (a) => <StatusBadge status={a.severity} />,
+    },
+    {
+      key: 'entity',
+      header: 'Entitas',
+      sortValue: (a) => a.entityLabel,
+      cell: (a) => (
+        <div>
+          <div style={{ fontSize: '0.88rem' }}>{a.entityLabel}</div>
+          <div className="row" style={{ gap: '0.35rem', marginTop: '0.15rem' }}>
+            <span className="badge">{a.kind}</span>
+            {a.occurrenceCount > 1 && <span className="muted" style={{ fontSize: '0.75rem' }}>×{a.occurrenceCount}</span>}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'message',
+      header: 'Pesan',
+      sortValue: (a) => a.message,
+      cell: (a) => (
+        <span className="muted" style={{ fontSize: '0.85rem', display: 'inline-block', maxWidth: 320 }}>
+          {a.message}
+        </span>
+      ),
+    },
+    {
+      key: 'open',
+      header: 'Terbuka',
+      sortValue: (a) => a.openMinutes,
+      cell: (a) => (
+        <span className="muted" style={{ fontSize: '0.83rem', whiteSpace: 'nowrap' }}>
+          {formatDuration(a.openMinutes)}
+          <div>
+            <StatusBadge status={a.status} />
+          </div>
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      width: '1%',
+      cell: (a) => (
+        <div className="row" style={{ justifyContent: 'flex-end', gap: '0.35rem', flexWrap: 'nowrap' }}>
+          {a.entityType === 'ONU' && can('monitoring.metric.view') && (
+            <button className="ghost small" onClick={() => void openHistory(a.entityId, a.entityLabel)}>
+              Redaman
+            </button>
+          )}
+          {can('monitoring.alarm.ack') && a.status === 'ACTIVE' && (
+            <button className="small" onClick={() => void run(() => api.post(`/api/monitoring/alarms/${a.id}/acknowledge`), 'Alarm diakui')}>
+              Akui
+            </button>
+          )}
+          {can('monitoring.alarm.ack') && a.status !== 'CLEARED' && (
+            <button className="ghost small" onClick={() => void run(() => api.post(`/api/monitoring/alarms/${a.id}/clear`), 'Alarm ditutup')}>
+              Tutup
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ]
+
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
       <div>
@@ -95,10 +253,10 @@ export function MonitoringPage() {
       )}
 
       {can('monitoring.collector.view') && (
-        <div className="card pad-0">
-          <div className="card-head">
-            <h3>Collector</h3>
-            {can('monitoring.collector.manage') && (
+        <section className="stack" style={{ gap: '0.85rem' }}>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-end', gap: '0.75rem' }}>
+            <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Collector</h2>
+            {canManageCollector && (
               <div className="row">
                 <input
                   placeholder="Nama collector baru"
@@ -127,92 +285,54 @@ export function MonitoringPage() {
           </div>
 
           {newKey && (
-            <div className="card-body">
-              <div className="card" style={{ borderColor: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 8%, var(--surface))' }}>
-                <div className="row" style={{ gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <IconAlert size={17} style={{ color: 'var(--warning-ink)' }} />
-                  <strong>API key untuk “{newKey.collector.name}”</strong>
-                </div>
-                <code style={{ display: 'block', wordBreak: 'break-all', padding: '0.5rem', marginBottom: '0.5rem' }}>
-                  {newKey.apiKey}
-                </code>
-                <p className="muted" style={{ margin: '0 0 0.6rem', fontSize: '0.83rem' }}>
-                  Salin sekarang — kunci ini hanya ditampilkan sekali. Pasang di collector sebagai{' '}
-                  <code>FTTH_COLLECTOR_KEY</code>.
-                </p>
-                <div className="row">
-                  <button className="small" onClick={() => void navigator.clipboard?.writeText(newKey.apiKey).then(() => toast.success('API key disalin'))}>
-                    Salin
-                  </button>
-                  <button className="ghost small" onClick={() => setNewKey(null)}>
-                    Selesai
-                  </button>
-                </div>
+            <div className="card" style={{ borderColor: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 8%, var(--surface))' }}>
+              <div className="row" style={{ gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <IconAlert size={17} style={{ color: 'var(--warning-ink)' }} />
+                <strong>API key untuk “{newKey.collector.name}”</strong>
+              </div>
+              <code style={{ display: 'block', wordBreak: 'break-all', padding: '0.5rem', marginBottom: '0.5rem' }}>
+                {newKey.apiKey}
+              </code>
+              <p className="muted" style={{ margin: '0 0 0.6rem', fontSize: '0.83rem' }}>
+                Salin sekarang — kunci ini hanya ditampilkan sekali. Pasang di collector sebagai{' '}
+                <code>FTTH_COLLECTOR_KEY</code>.
+              </p>
+              <div className="row">
+                <button className="small" onClick={() => void navigator.clipboard?.writeText(newKey.apiKey).then(() => toast.success('API key disalin'))}>
+                  Salin
+                </button>
+                <button className="ghost small" onClick={() => setNewKey(null)}>
+                  Selesai
+                </button>
               </div>
             </div>
           )}
 
-          {collectors.length === 0 ? (
-            <div className="card-body">
-              <EmptyState title="Belum ada collector" hint="Buat satu, lalu jalankan agent dengan API key-nya di jaringan ISP." />
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Nama</th>
-                    <th>Status</th>
-                    <th>Agent</th>
-                    <th>Terakhir melapor</th>
-                    <th>Siklus terakhir</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {collectors.map((collector) => (
-                    <tr key={collector.id}>
-                      <td>
-                        <div style={{ fontWeight: 550 }}>{collector.name}</div>
-                        <div className="muted" style={{ fontSize: '0.78rem' }}>
-                          {collector.apiKeyHint}… · tiap {collector.pollIntervalSeconds}s
-                        </div>
-                      </td>
-                      <td>
-                        <div className="row" style={{ gap: '0.35rem' }}>
-                          <StatusBadge status={collector.status} />
-                          {collector.silent && <StatusBadge status="CRITICAL" label="membisu" />}
-                        </div>
-                      </td>
-                      <td className="muted">{collector.agentVersion ?? '—'}</td>
-                      <td className="muted" style={{ fontSize: '0.83rem' }}>
-                        {collector.lastSeenAt ? new Date(collector.lastSeenAt).toLocaleString('id-ID') : 'belum pernah'}
-                      </td>
-                      <td className="muted" style={{ fontSize: '0.8rem', maxWidth: 220 }}>
-                        {collector.lastCycleSummary ?? '—'}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        {can('monitoring.collector.manage') && (
-                          <button
-                            className="ghost small danger"
-                            onClick={() => void run(() => api.del(`/api/monitoring/collectors/${collector.id}`), 'Collector dihapus')}
-                          >
-                            Hapus
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {collectors.length > 0 && (
+            <Toolbar>
+              <SearchInput value={collectorQuery} onChange={setCollectorQuery} placeholder="Cari collector…" />
+            </Toolbar>
           )}
-        </div>
+          <DataTable
+            columns={collectorColumns}
+            rows={filteredCollectors}
+            rowKey={(c) => c.id}
+            loading={loading}
+            initialSort={{ key: 'name', dir: 'asc' }}
+            empty={
+              <EmptyState
+                title={collectorQuery ? 'Tidak ada collector yang cocok' : 'Belum ada collector'}
+                hint={collectorQuery ? 'Coba ubah kata kunci.' : 'Buat satu, lalu jalankan agent dengan API key-nya di jaringan ISP.'}
+              />
+            }
+          />
+        </section>
       )}
 
-      <div className="card pad-0">
-        <div className="card-head">
-          <h3>Alarm</h3>
+      <section className="stack" style={{ gap: '0.85rem' }}>
+        <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Alarm</h2>
+        <Toolbar>
+          <SearchInput value={alarmQuery} onChange={setAlarmQuery} placeholder="Cari entitas, jenis, atau pesan…" />
           <div className="segment">
             <button className={statusFilter === 'ACTIVE' ? 'active' : ''} onClick={() => setStatusFilter('ACTIVE')}>
               Aktif
@@ -221,82 +341,22 @@ export function MonitoringPage() {
               Semua
             </button>
           </div>
-        </div>
-
-        {loading ? (
-          <div className="card-body">
-            <SkeletonRows rows={4} cols={5} />
-          </div>
-        ) : alarms.length === 0 ? (
-          <div className="card-body">
+        </Toolbar>
+        <DataTable
+          columns={alarmColumns}
+          rows={filteredAlarms}
+          rowKey={(a) => a.id}
+          loading={loading}
+          initialSort={{ key: 'severity', dir: 'desc' }}
+          empty={
             <EmptyState
-              title={statusFilter === 'ACTIVE' ? 'Tidak ada alarm aktif' : 'Belum ada alarm'}
-              hint="Jaringan tenang. Alarm baru muncul otomatis saat collector melaporkan gangguan."
+              title={alarmQuery ? 'Tidak ada alarm yang cocok' : statusFilter === 'ACTIVE' ? 'Tidak ada alarm aktif' : 'Belum ada alarm'}
+              hint={alarmQuery ? 'Coba ubah kata kunci.' : 'Jaringan tenang. Alarm baru muncul otomatis saat collector melaporkan gangguan.'}
               icon={<IconAlert size={32} />}
             />
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Keparahan</th>
-                  <th>Entitas</th>
-                  <th>Pesan</th>
-                  <th>Terbuka</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {alarms.map((alarm) => (
-                  <tr key={alarm.id}>
-                    <td>
-                      <StatusBadge status={alarm.severity} />
-                    </td>
-                    <td>
-                      <div style={{ fontSize: '0.88rem' }}>{alarm.entityLabel}</div>
-                      <div className="row" style={{ gap: '0.35rem', marginTop: '0.15rem' }}>
-                        <span className="badge">{alarm.kind}</span>
-                        {alarm.occurrenceCount > 1 && (
-                          <span className="muted" style={{ fontSize: '0.75rem' }}>×{alarm.occurrenceCount}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="muted" style={{ fontSize: '0.85rem', maxWidth: 320 }}>
-                      {alarm.message}
-                    </td>
-                    <td className="muted" style={{ fontSize: '0.83rem', whiteSpace: 'nowrap' }}>
-                      {formatDuration(alarm.openMinutes)}
-                      <div>
-                        <StatusBadge status={alarm.status} />
-                      </div>
-                    </td>
-                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <div className="row" style={{ justifyContent: 'flex-end', gap: '0.35rem' }}>
-                        {alarm.entityType === 'ONU' && can('monitoring.metric.view') && (
-                          <button className="ghost small" onClick={() => void openHistory(alarm.entityId, alarm.entityLabel)}>
-                            Redaman
-                          </button>
-                        )}
-                        {can('monitoring.alarm.ack') && alarm.status === 'ACTIVE' && (
-                          <button className="small" onClick={() => void run(() => api.post(`/api/monitoring/alarms/${alarm.id}/acknowledge`), 'Alarm diakui')}>
-                            Akui
-                          </button>
-                        )}
-                        {can('monitoring.alarm.ack') && alarm.status !== 'CLEARED' && (
-                          <button className="ghost small" onClick={() => void run(() => api.post(`/api/monitoring/alarms/${alarm.id}/clear`), 'Alarm ditutup')}>
-                            Tutup
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+          }
+        />
+      </section>
 
       {trace && (
         <Drawer title={`Tren redaman — ${trace.label}`} onClose={() => setTrace(null)}>

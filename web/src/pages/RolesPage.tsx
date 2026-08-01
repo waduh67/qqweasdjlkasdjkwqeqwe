@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PermissionCatalog, Role } from '../api/types'
 import { PermissionMatrix } from '../components/PermissionMatrix'
 import { useCan } from '../auth/useCan'
+import { DataTable, type Column } from '../components/DataTable'
+import { Badge, EmptyState, SearchInput, Toolbar } from '../components/ui'
+import { IconPlus, IconShield } from '../components/icons'
 
 type Draft = { id: string | null; name: string; description: string; permissionIds: Set<string> }
 
@@ -15,6 +18,8 @@ export function RolesPage() {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [query, setQuery] = useState('')
 
   const readOnly = !can('iam.role.update') && !can('iam.role.create')
 
@@ -33,9 +38,73 @@ export function RolesPage() {
         setCatalog(catalogData)
       } catch (err) {
         setError(err instanceof ApiError ? err.message : 'Gagal memuat data')
+      } finally {
+        setLoading(false)
       }
     })()
   }, [])
+
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return roles
+    return roles.filter(
+      (r) => r.name.toLowerCase().includes(q) || (r.description ?? '').toLowerCase().includes(q),
+    )
+  }, [roles, query])
+
+  const columns: Column<Role>[] = [
+    {
+      key: 'name',
+      header: 'Nama',
+      sortValue: (r) => r.name,
+      cell: (r) => (
+        <div className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
+          <strong>{r.name}</strong>
+          {r.systemRole && <Badge>sistem</Badge>}
+        </div>
+      ),
+    },
+    {
+      key: 'description',
+      header: 'Deskripsi',
+      sortValue: (r) => r.description,
+      cell: (r) => <span className="muted">{r.description ?? '–'}</span>,
+    },
+    {
+      key: 'permissions',
+      header: 'Jumlah izin',
+      align: 'right',
+      sortValue: (r) => r.permissionIds.length,
+      cell: (r) => r.permissionIds.length,
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      width: '1%',
+      cell: (role) => (
+        <div className="row" style={{ justifyContent: 'flex-end' }}>
+          <button
+            onClick={() =>
+              setDraft({
+                id: role.id,
+                name: role.name,
+                description: role.description ?? '',
+                permissionIds: new Set(role.permissionIds),
+              })
+            }
+          >
+            {readOnly ? 'Lihat' : 'Ubah'}
+          </button>
+          {can('iam.role.delete') && !role.systemRole && (
+            <button className="danger" onClick={() => void remove(role)}>
+              Hapus
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ]
 
   async function save() {
     if (!draft) return
@@ -75,64 +144,31 @@ export function RolesPage() {
         <h1 className="page-title">Role &amp; Izin</h1>
         {can('iam.role.create') && (
           <button className="primary" onClick={() => setDraft({ ...EMPTY_DRAFT, permissionIds: new Set() })}>
-            Role baru
+            <IconPlus size={15} /> Role baru
           </button>
         )}
       </div>
 
       {error && <p className="error">{error}</p>}
 
-      <div className="card">
-        <table>
-          <thead>
-            <tr>
-              <th>Nama</th>
-              <th>Deskripsi</th>
-              <th>Jumlah izin</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {roles.map((role) => (
-              <tr key={role.id}>
-                <td>
-                  {role.name} {role.systemRole && <span className="badge">sistem</span>}
-                </td>
-                <td className="muted">{role.description ?? '–'}</td>
-                <td>{role.permissionIds.length}</td>
-                <td>
-                  <div className="row">
-                    <button
-                      onClick={() =>
-                        setDraft({
-                          id: role.id,
-                          name: role.name,
-                          description: role.description ?? '',
-                          permissionIds: new Set(role.permissionIds),
-                        })
-                      }
-                    >
-                      {readOnly ? 'Lihat' : 'Ubah'}
-                    </button>
-                    {can('iam.role.delete') && !role.systemRole && (
-                      <button className="danger" onClick={() => void remove(role)}>
-                        Hapus
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {roles.length === 0 && (
-              <tr>
-                <td colSpan={4} className="muted">
-                  Belum ada role.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Toolbar>
+        <SearchInput value={query} onChange={setQuery} placeholder="Cari nama atau deskripsi role…" />
+      </Toolbar>
+
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(r) => r.id}
+        loading={loading}
+        initialSort={{ key: 'name', dir: 'asc' }}
+        empty={
+          <EmptyState
+            title={query ? 'Tidak ada role yang cocok' : 'Belum ada role'}
+            hint={query ? 'Coba ubah kata kunci.' : 'Buat role pertama untuk mengatur izin.'}
+            icon={<IconShield size={32} />}
+          />
+        }
+      />
 
       {draft && catalog && (
         <div className="card stack">

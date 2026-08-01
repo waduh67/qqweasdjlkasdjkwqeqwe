@@ -65,6 +65,8 @@ class CustomerPersistenceAdapter(
 
     override fun existsByCode(code: String): Boolean = jpa.existsByCode(code)
 
+    override fun maxCodeSequence(prefix: String): Int = jpa.maxCodeSequence(prefix)
+
     override fun deleteById(id: UUID) = jpa.deleteById(id)
 
     /**

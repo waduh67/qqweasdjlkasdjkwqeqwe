@@ -6,8 +6,7 @@ import { Spinner } from '../components/ui'
 
 export function LoginPage() {
   const { login } = useAuth()
-  const [tenantSlug, setTenantSlug] = useState('demo')
-  const [email, setEmail] = useState('admin@demo.ftth')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -17,7 +16,7 @@ export function LoginPage() {
     setError(null)
     setBusy(true)
     try {
-      await login(tenantSlug, email, password)
+      await login(email, password)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Gagal masuk')
     } finally {
@@ -41,16 +40,13 @@ export function LoginPage() {
         </div>
 
         <label>
-          <span>Tenant</span>
-          <input value={tenantSlug} onChange={(e) => setTenantSlug(e.target.value)} required autoComplete="organization" />
-        </label>
-        <label>
           <span>Email</span>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            autoFocus
             autoComplete="username"
           />
         </label>

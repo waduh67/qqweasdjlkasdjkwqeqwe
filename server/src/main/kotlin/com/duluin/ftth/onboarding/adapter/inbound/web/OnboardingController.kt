@@ -119,7 +119,8 @@ data class LocationPayload(
  */
 data class ExpressPsbRequest(
     // Pelanggan
-    @field:NotBlank @field:Size(max = 40) val code: String?,
+    /** Kosong = server membuat kode berurut otomatis (`CUST-000001`). */
+    @field:Size(max = 40) val code: String? = null,
     @field:NotBlank @field:Size(max = 150) val name: String?,
     @field:Size(max = 30) val phone: String? = null,
     @field:Size(max = 255) val email: String? = null,
@@ -142,7 +143,7 @@ data class ExpressPsbRequest(
     val assignedTo: UUID? = null,
 ) {
     fun toCommand() = ExpressPsbCommand(
-        code = code!!,
+        code = code,
         name = name!!,
         phone = phone,
         email = email,

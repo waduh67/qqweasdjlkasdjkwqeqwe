@@ -13,7 +13,6 @@ interface AuthenticationUseCase {
 }
 
 data class LoginCommand(
-    val tenantSlug: String,
     val email: String,
     val password: String,
 )

@@ -22,7 +22,8 @@ interface ManageCustomerUseCase {
 }
 
 data class SaveCustomerCommand(
-    val code: String,
+    /** Kosong/null = server membuat kode berurut otomatis (`CUST-000001`). */
+    val code: String?,
     val name: String,
     val phone: String?,
     val email: String?,

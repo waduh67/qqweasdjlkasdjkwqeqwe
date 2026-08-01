@@ -1,42 +1,91 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { Area } from '../api/types'
 import { useCan } from '../auth/useCan'
+import { DataTable, type Column } from '../components/DataTable'
+import { EmptyState, SearchInput, Toolbar, useToast } from '../components/ui'
+import { IconArea } from '../components/icons'
 
 export function AreasPage() {
   const { can } = useCan()
+  const toast = useToast()
   const [areas, setAreas] = useState<Area[]>([])
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [loading, setLoading] = useState(true)
 
-  async function reload() {
-    setAreas(await api.get<Area[]>('/api/areas'))
-  }
+  const reload = useCallback(async () => {
+    try {
+      setAreas(await api.get<Area[]>('/api/areas'))
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal memuat area')
+    } finally {
+      setLoading(false)
+    }
+  }, [toast])
 
   useEffect(() => {
-    void reload().catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat area'))
-  }, [])
+    void reload()
+  }, [reload])
 
-  async function run(action: () => Promise<unknown>) {
-    setError(null)
+  async function run(action: () => Promise<unknown>, ok: string) {
     try {
       await action()
       await reload()
+      toast.success(ok)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Operasi gagal')
+      toast.error(err instanceof ApiError ? err.message : 'Operasi gagal')
     }
   }
 
-  return (
-    <div className="stack">
-      <h1 className="page-title">Area / Wilayah</h1>
-      <p className="muted">
-        Area adalah dimensi <em>scope</em> pada RBAC: pengguna yang dibatasi ke area tertentu hanya melihat aset dan
-        tiket di area itu.
-      </p>
+  // Resolusi induk: parentId → nama area induk (fallback ke id bila tak ketemu).
+  const parentName = useMemo(() => {
+    const byId = new Map(areas.map((a) => [a.id, a.name] as const))
+    return (a: Area) => (a.parentId ? byId.get(a.parentId) ?? a.parentId : null)
+  }, [areas])
 
-      {error && <p className="error">{error}</p>}
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return areas
+    return areas.filter((a) => a.code.toLowerCase().includes(q) || a.name.toLowerCase().includes(q))
+  }, [areas, query])
+
+  const columns: Column<Area>[] = [
+    { key: 'code', header: 'Kode', sortValue: (a) => a.code, cell: (a) => <span className="badge">{a.code}</span> },
+    { key: 'name', header: 'Nama', sortValue: (a) => a.name, cell: (a) => <strong>{a.name}</strong> },
+    {
+      key: 'parent',
+      header: 'Induk',
+      sortValue: (a) => parentName(a),
+      cell: (a) => {
+        const p = parentName(a)
+        return p ? <span className="muted">{p}</span> : <span className="muted">—</span>
+      },
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      width: '1%',
+      cell: (a) =>
+        can('iam.area.delete') ? (
+          <button className="danger" onClick={() => void run(() => api.del(`/api/areas/${a.id}`), 'Area dihapus')}>
+            Hapus
+          </button>
+        ) : null,
+    },
+  ]
+
+  return (
+    <div className="stack" style={{ gap: '1.25rem' }}>
+      <div>
+        <h1 className="page-title">Area / Wilayah</h1>
+        <p className="muted">
+          Area adalah dimensi <em>scope</em> pada RBAC: pengguna yang dibatasi ke area tertentu hanya melihat aset dan
+          tiket di area itu.
+        </p>
+      </div>
 
       {can('iam.area.create') && (
         <div className="card row" style={{ alignItems: 'flex-end' }}>
@@ -56,7 +105,7 @@ export function AreasPage() {
                 await api.post('/api/areas', { code, name, parentId: null })
                 setCode('')
                 setName('')
-              })
+              }, 'Area ditambahkan')
             }
           >
             Tambah
@@ -64,39 +113,24 @@ export function AreasPage() {
         </div>
       )}
 
-      <div className="card">
-        <table>
-          <thead>
-            <tr>
-              <th>Kode</th>
-              <th>Nama</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {areas.map((area) => (
-              <tr key={area.id}>
-                <td>{area.code}</td>
-                <td className="muted">{area.name}</td>
-                <td>
-                  {can('iam.area.delete') && (
-                    <button className="danger" onClick={() => void run(() => api.del(`/api/areas/${area.id}`))}>
-                      Hapus
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {areas.length === 0 && (
-              <tr>
-                <td colSpan={3} className="muted">
-                  Belum ada area.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Toolbar>
+        <SearchInput value={query} onChange={setQuery} placeholder="Cari kode atau nama…" />
+      </Toolbar>
+
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(a) => a.id}
+        loading={loading}
+        initialSort={{ key: 'code', dir: 'asc' }}
+        empty={
+          <EmptyState
+            title={query ? 'Tidak ada area yang cocok' : 'Belum ada area'}
+            hint={query ? 'Coba ubah kata kunci.' : 'Tambahkan area pertama untuk mulai membatasi scope RBAC.'}
+            icon={<IconArea size={32} />}
+          />
+        }
+      />
     </div>
   )
 }

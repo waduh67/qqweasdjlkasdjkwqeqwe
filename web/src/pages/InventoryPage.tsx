@@ -1,17 +1,20 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
-import type { OdcView, OdpView, OltView, SiteView } from '../api/network'
+import type { AssetStatus, OdcView, OdpView, OltView, SiteView } from '../api/network'
 import { useCan } from '../auth/useCan'
-import { StatusBadge, useToast } from '../components/ui'
-import { IconPlus } from '../components/icons'
+import { DataTable, type Column } from '../components/DataTable'
+import { LocationPicker } from '../components/LocationPicker'
+import { EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
+import { IconInventory, IconPlus } from '../components/icons'
 
 /**
  * Inventory jaringan dalam satu halaman bertab.
  *
  * Dijadikan satu halaman karena keempat aset ini dikelola berurutan — site dulu,
  * lalu OLT di atasnya, lalu ODC, lalu ODP — sehingga berpindah antar tab lebih
- * masuk akal daripada berpindah antar halaman.
+ * masuk akal daripada berpindah antar halaman. Tiap tab memakai tabel bisa-urut
+ * yang seragam dengan bilah pencarian & filter di atasnya.
  */
 
 type Tab = 'sites' | 'olts' | 'odcs' | 'odps'
@@ -25,6 +28,20 @@ const TABS: Array<{ key: Tab; label: string; permission: string }> = [
 
 const SPLITTER_RATIOS = ['1:2', '1:4', '1:8', '1:16', '1:32', '1:64']
 const VENDORS = ['ZTE', 'HUAWEI', 'FIBERHOME', 'NOKIA', 'OTHER']
+
+const ASSET_STATUS_OPTIONS: { value: AssetStatus | ''; label: string }[] = [
+  { value: '', label: 'Semua status' },
+  { value: 'PLANNED', label: 'Rencana' },
+  { value: 'ACTIVE', label: 'Aktif' },
+  { value: 'MAINTENANCE', label: 'Perawatan' },
+  { value: 'INACTIVE', label: 'Nonaktif' },
+]
+
+/** Apakah salah satu kolom teks memuat kata kunci (kata kunci sudah huruf kecil). */
+function matchesQuery(fields: Array<string | null | undefined>, q: string): boolean {
+  if (!q) return true
+  return fields.some((f) => (f ?? '').toLowerCase().includes(q))
+}
 
 export function InventoryPage() {
   const { can } = useCan()
@@ -104,27 +121,62 @@ function LocationFields({
 }: {
   longitude: string
   latitude: string
-  onChange: (field: 'longitude' | 'latitude', value: string) => void
+  onChange: (longitude: string, latitude: string) => void
 }) {
   return (
-    <>
-      <label style={{ flex: 1 }}>
-        <span>Longitude</span>
-        <input value={longitude} onChange={(e) => onChange('longitude', e.target.value)} placeholder="106.9975" />
-      </label>
-      <label style={{ flex: 1 }}>
-        <span>Latitude</span>
-        <input value={latitude} onChange={(e) => onChange('latitude', e.target.value)} placeholder="-6.2428" />
-      </label>
-    </>
+    <label>
+      <span>Lokasi</span>
+      <LocationPicker longitude={longitude} latitude={latitude} onChange={onChange} height={240} />
+    </label>
   )
 }
 
 function SitesTab() {
   const { can } = useCan()
-  const { items, run } = useList<SiteView>('/api/sites')
+  const { items, loading, run } = useList<SiteView>('/api/sites')
   const empty = { code: '', name: '', address: '', longitude: '', latitude: '' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
+  const [query, setQuery] = useState('')
+
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return items.filter((s) => matchesQuery([s.code, s.name, s.address], q))
+  }, [items, query])
+
+  const columns: Column<SiteView>[] = [
+    { key: 'code', header: 'Kode', sortValue: (s) => s.code, cell: (s) => s.code },
+    {
+      key: 'name',
+      header: 'Nama',
+      sortValue: (s) => s.name,
+      cell: (s) => (
+        <div className="stack" style={{ gap: '0.15rem' }}>
+          <strong>{s.name}</strong>
+          <span className="muted" style={{ fontSize: '0.8rem' }}>{s.address ?? '—'}</span>
+        </div>
+      ),
+    },
+    { key: 'olt', header: 'OLT', align: 'right', sortValue: (s) => s.oltCount, cell: (s) => s.oltCount },
+    {
+      key: 'coord',
+      header: 'Koordinat',
+      cell: (s) => (
+        <span className="muted" style={{ fontSize: '0.8rem' }}>
+          {s.location.latitude.toFixed(5)}, {s.location.longitude.toFixed(5)}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      width: '1%',
+      cell: (s) =>
+        can('network.site.delete') ? (
+          <button onClick={() => void run(() => api.del(`/api/sites/${s.id}`))}>Hapus</button>
+        ) : null,
+    },
+  ]
 
   return (
     <div className="stack">
@@ -149,17 +201,15 @@ function SitesTab() {
               <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
             </label>
           </div>
-          <div className="row">
-            <label style={{ flex: 2 }}>
-              <span>Alamat</span>
-              <input value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} />
-            </label>
-            <LocationFields
-              longitude={draft.longitude}
-              latitude={draft.latitude}
-              onChange={(field, value) => setDraft({ ...draft, [field]: value })}
-            />
-          </div>
+          <label>
+            <span>Alamat</span>
+            <input value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} />
+          </label>
+          <LocationFields
+            longitude={draft.longitude}
+            latitude={draft.latitude}
+            onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
+          />
           <div className="row">
             <button
               className="primary"
@@ -182,53 +232,119 @@ function SitesTab() {
         </div>
       )}
 
-      <div className="card">
-        <table>
-          <thead>
-            <tr>
-              <th>Kode</th>
-              <th>Nama</th>
-              <th>OLT</th>
-              <th>Koordinat</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((site) => (
-              <tr key={site.id}>
-                <td>{site.code}</td>
-                <td>
-                  {site.name}
-                  <br />
-                  <span className="muted" style={{ fontSize: '0.8rem' }}>
-                    {site.address}
-                  </span>
-                </td>
-                <td>{site.oltCount}</td>
-                <td className="muted" style={{ fontSize: '0.8rem' }}>
-                  {site.location.latitude.toFixed(5)}, {site.location.longitude.toFixed(5)}
-                </td>
-                <td>
-                  {can('network.site.delete') && (
-                    <button onClick={() => void run(() => api.del(`/api/sites/${site.id}`))}>Hapus</button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Toolbar>
+        <SearchInput value={query} onChange={setQuery} placeholder="Cari kode, nama, atau alamat…" />
+      </Toolbar>
+
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(s) => s.id}
+        loading={loading}
+        initialSort={{ key: 'code', dir: 'asc' }}
+        empty={
+          <EmptyState
+            title={query ? 'Tidak ada site yang cocok' : 'Belum ada site'}
+            hint={query ? 'Coba ubah kata kunci.' : 'Tambahkan site/POP pertama untuk mulai memasang OLT.'}
+            icon={<IconInventory size={32} />}
+          />
+        }
+      />
     </div>
   )
 }
 
 function OltsTab() {
   const { can } = useCan()
-  const { items, run } = useList<OltView>('/api/olts')
+  const { items, loading, run } = useList<OltView>('/api/olts')
   const { items: sites } = useList<SiteView>('/api/sites')
   const empty = { siteId: '', code: '', name: '', vendor: 'ZTE', model: '', managementIp: '', snmpCommunity: '' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
   const [ports, setPorts] = useState<Record<string, string>>({})
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('')
+
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return items.filter(
+      (o) =>
+        matchesQuery([o.code, o.name, o.siteName, o.vendor, o.managementIp], q) &&
+        (!statusFilter || o.status === statusFilter),
+    )
+  }, [items, query, statusFilter])
+
+  const columns: Column<OltView>[] = [
+    {
+      key: 'code',
+      header: 'Kode',
+      sortValue: (o) => o.code,
+      cell: (o) => (
+        <div className="stack" style={{ gap: '0.15rem' }}>
+          <strong>{o.code}</strong>
+          <span className="muted" style={{ fontSize: '0.8rem' }}>{o.name}</span>
+        </div>
+      ),
+    },
+    { key: 'site', header: 'Site', sortValue: (o) => o.siteName, cell: (o) => <span className="muted">{o.siteName ?? '—'}</span> },
+    {
+      key: 'vendor',
+      header: 'Vendor',
+      sortValue: (o) => o.vendor,
+      cell: (o) => (
+        <div className="stack" style={{ gap: '0.15rem' }}>
+          <span>{o.vendor}</span>
+          <span className="muted" style={{ fontSize: '0.8rem' }}>{o.managementIp ?? '—'}</span>
+        </div>
+      ),
+    },
+    { key: 'status', header: 'Status', sortValue: (o) => o.status, cell: (o) => <StatusBadge status={o.status} /> },
+    {
+      key: 'monitoring',
+      header: 'Monitoring',
+      sortValue: (o) => (o.pollable ? 1 : 0),
+      cell: (o) => <span className="badge">{o.pollable ? 'siap dipolling' : 'belum lengkap'}</span>,
+    },
+    {
+      key: 'ponPorts',
+      header: 'PON port',
+      sortValue: (o) => o.ponPortCount,
+      cell: (o) => (
+        <div className="stack" style={{ gap: '0.35rem' }}>
+          <span>{o.ponPortCount}</span>
+          {can('network.olt.update') && (
+            <div className="row" style={{ gap: '0.3rem' }}>
+              <input
+                style={{ width: '5.5rem' }}
+                placeholder="1/2/3"
+                value={ports[o.id] ?? ''}
+                onChange={(e) => setPorts({ ...ports, [o.id]: e.target.value })}
+              />
+              <button
+                onClick={() =>
+                  void run(async () => {
+                    await api.post(`/api/olts/${o.id}/pon-ports`, { label: ports[o.id] })
+                    setPorts({ ...ports, [o.id]: '' })
+                  })
+                }
+              >
+                + port
+              </button>
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      width: '1%',
+      cell: (o) =>
+        can('network.olt.delete') ? (
+          <button onClick={() => void run(() => api.del(`/api/olts/${o.id}`))}>Hapus</button>
+        ) : null,
+    },
+  ]
 
   return (
     <div className="stack">
@@ -318,81 +434,89 @@ function OltsTab() {
         </div>
       )}
 
-      <div className="card">
-        <table>
-          <thead>
-            <tr>
-              <th>Kode</th>
-              <th>Site</th>
-              <th>Vendor</th>
-              <th>Monitoring</th>
-              <th>PON port</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((olt) => (
-              <tr key={olt.id}>
-                <td>
-                  {olt.code}
-                  <br />
-                  <span className="muted" style={{ fontSize: '0.8rem' }}>
-                    {olt.name}
-                  </span>
-                </td>
-                <td className="muted">{olt.siteName}</td>
-                <td>
-                  {olt.vendor}
-                  <br />
-                  <span className="muted" style={{ fontSize: '0.8rem' }}>
-                    {olt.managementIp ?? '—'}
-                  </span>
-                </td>
-                <td>
-                  <span className="badge">{olt.pollable ? 'siap dipolling' : 'belum lengkap'}</span>
-                </td>
-                <td>
-                  {olt.ponPortCount}
-                  {can('network.olt.update') && (
-                    <div className="row" style={{ marginTop: '0.35rem' }}>
-                      <input
-                        style={{ width: '5.5rem' }}
-                        placeholder="1/2/3"
-                        value={ports[olt.id] ?? ''}
-                        onChange={(e) => setPorts({ ...ports, [olt.id]: e.target.value })}
-                      />
-                      <button
-                        onClick={() =>
-                          void run(async () => {
-                            await api.post(`/api/olts/${olt.id}/pon-ports`, { label: ports[olt.id] })
-                            setPorts({ ...ports, [olt.id]: '' })
-                          })
-                        }
-                      >
-                        + port
-                      </button>
-                    </div>
-                  )}
-                </td>
-                <td>
-                  {can('network.olt.delete') && (
-                    <button onClick={() => void run(() => api.del(`/api/olts/${olt.id}`))}>Hapus</button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Toolbar>
+        <SearchInput value={query} onChange={setQuery} placeholder="Cari kode, nama, site, vendor, atau IP…" />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as AssetStatus | '')}>
+          {ASSET_STATUS_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </Toolbar>
+
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(o) => o.id}
+        loading={loading}
+        initialSort={{ key: 'code', dir: 'asc' }}
+        empty={
+          <EmptyState
+            title={query || statusFilter ? 'Tidak ada OLT yang cocok' : 'Belum ada OLT'}
+            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Tambahkan OLT di atas sebuah site untuk mulai membangun.'}
+            icon={<IconInventory size={32} />}
+          />
+        }
+      />
     </div>
   )
 }
 
 function OdcsTab() {
   const { can } = useCan()
-  const { items, run } = useList<OdcView>('/api/odcs')
+  const { items, loading, run } = useList<OdcView>('/api/odcs')
   const empty = { code: '', name: '', longitude: '', latitude: '', splitterRatio: '1:8', capacity: '64' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('')
+
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return items.filter(
+      (o) => matchesQuery([o.code, o.name, o.oltName], q) && (!statusFilter || o.status === statusFilter),
+    )
+  }, [items, query, statusFilter])
+
+  const columns: Column<OdcView>[] = [
+    {
+      key: 'code',
+      header: 'Kode',
+      sortValue: (o) => o.code,
+      cell: (o) => (
+        <div className="stack" style={{ gap: '0.15rem' }}>
+          <strong>{o.code}</strong>
+          <span className="muted" style={{ fontSize: '0.8rem' }}>{o.name}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'upstream',
+      header: 'Hulu',
+      sortValue: (o) => o.oltName,
+      cell: (o) => (
+        <span className="muted" style={{ fontSize: '0.85rem' }}>
+          {o.oltName ? `${o.oltName} · ${o.ponPortLabel}` : 'belum di-uplink'}
+        </span>
+      ),
+    },
+    { key: 'splitter', header: 'Splitter', sortValue: (o) => o.splitterRatio, cell: (o) => o.splitterRatio },
+    { key: 'odp', header: 'ODP', align: 'right', sortValue: (o) => o.odpCount, cell: (o) => o.odpCount },
+    {
+      key: 'status',
+      header: 'Status',
+      sortValue: (o) => (o.energized ? 'ACTIVE' : o.status),
+      cell: (o) => (o.energized ? <StatusBadge status="ACTIVE" label="teraliri" /> : <StatusBadge status={o.status} />),
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      width: '1%',
+      cell: (o) =>
+        can('network.odc.delete') ? (
+          <button onClick={() => void run(() => api.del(`/api/odcs/${o.id}`))}>Hapus</button>
+        ) : null,
+    },
+  ]
 
   return (
     <div className="stack">
@@ -418,11 +542,6 @@ function OdcsTab() {
             </label>
           </div>
           <div className="row">
-            <LocationFields
-              longitude={draft.longitude}
-              latitude={draft.latitude}
-              onChange={(field, value) => setDraft({ ...draft, [field]: value })}
-            />
             <label style={{ flex: 1 }}>
               <span>Rasio splitter</span>
               <select value={draft.splitterRatio} onChange={(e) => setDraft({ ...draft, splitterRatio: e.target.value })}>
@@ -436,6 +555,11 @@ function OdcsTab() {
               <input value={draft.capacity} onChange={(e) => setDraft({ ...draft, capacity: e.target.value })} />
             </label>
           </div>
+          <LocationFields
+            longitude={draft.longitude}
+            latitude={draft.latitude}
+            onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
+          />
           <div className="row">
             <button
               className="primary"
@@ -459,56 +583,76 @@ function OdcsTab() {
         </div>
       )}
 
-      <div className="card">
-        <table>
-          <thead>
-            <tr>
-              <th>Kode</th>
-              <th>Hulu</th>
-              <th>Splitter</th>
-              <th>ODP</th>
-              <th>Status</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((odc) => (
-              <tr key={odc.id}>
-                <td>
-                  {odc.code}
-                  <br />
-                  <span className="muted" style={{ fontSize: '0.8rem' }}>
-                    {odc.name}
-                  </span>
-                </td>
-                <td className="muted" style={{ fontSize: '0.85rem' }}>
-                  {odc.oltName ? `${odc.oltName} · ${odc.ponPortLabel}` : 'belum di-uplink'}
-                </td>
-                <td>{odc.splitterRatio}</td>
-                <td>{odc.odpCount}</td>
-                <td>
-                  {odc.energized ? <StatusBadge status="ACTIVE" label="teraliri" /> : <StatusBadge status={odc.status} />}
-                </td>
-                <td>
-                  {can('network.odc.delete') && (
-                    <button onClick={() => void run(() => api.del(`/api/odcs/${odc.id}`))}>Hapus</button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Toolbar>
+        <SearchInput value={query} onChange={setQuery} placeholder="Cari kode, nama, atau OLT hulu…" />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as AssetStatus | '')}>
+          {ASSET_STATUS_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </Toolbar>
+
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(o) => o.id}
+        loading={loading}
+        initialSort={{ key: 'code', dir: 'asc' }}
+        empty={
+          <EmptyState
+            title={query || statusFilter ? 'Tidak ada ODC yang cocok' : 'Belum ada ODC'}
+            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Tambahkan ODC untuk memecah distribusi ke ODP.'}
+            icon={<IconInventory size={32} />}
+          />
+        }
+      />
     </div>
   )
 }
 
 function OdpsTab() {
   const { can } = useCan()
-  const { items, run } = useList<OdpView>('/api/odps')
+  const { items, loading, run } = useList<OdpView>('/api/odps')
   const { items: odcs } = useList<OdcView>('/api/odcs')
   const empty = { code: '', name: '', longitude: '', latitude: '', odcId: '', splitterRatio: '1:8', capacity: '8' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('')
+
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return items.filter(
+      (o) => matchesQuery([o.code, o.name, o.odcName], q) && (!statusFilter || o.status === statusFilter),
+    )
+  }, [items, query, statusFilter])
+
+  const columns: Column<OdpView>[] = [
+    {
+      key: 'code',
+      header: 'Kode',
+      sortValue: (o) => o.code,
+      cell: (o) => (
+        <div className="stack" style={{ gap: '0.15rem' }}>
+          <strong>{o.code}</strong>
+          <span className="muted" style={{ fontSize: '0.8rem' }}>{o.name}</span>
+        </div>
+      ),
+    },
+    { key: 'odc', header: 'ODC induk', sortValue: (o) => o.odcName, cell: (o) => <span className="muted">{o.odcName ?? '—'}</span> },
+    { key: 'splitter', header: 'Splitter', sortValue: (o) => o.splitterRatio, cell: (o) => o.splitterRatio },
+    { key: 'port', header: 'Port', align: 'right', sortValue: (o) => o.capacity, cell: (o) => o.capacity },
+    { key: 'status', header: 'Status', sortValue: (o) => o.status, cell: (o) => <StatusBadge status={o.status} /> },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      width: '1%',
+      cell: (o) =>
+        can('network.odp.delete') ? (
+          <button onClick={() => void run(() => api.del(`/api/odps/${o.id}`))}>Hapus</button>
+        ) : null,
+    },
+  ]
 
   return (
     <div className="stack">
@@ -545,11 +689,6 @@ function OdpsTab() {
             </label>
           </div>
           <div className="row">
-            <LocationFields
-              longitude={draft.longitude}
-              latitude={draft.latitude}
-              onChange={(field, value) => setDraft({ ...draft, [field]: value })}
-            />
             <label style={{ flex: 1 }}>
               <span>Rasio splitter</span>
               <select value={draft.splitterRatio} onChange={(e) => setDraft({ ...draft, splitterRatio: e.target.value })}>
@@ -563,6 +702,11 @@ function OdpsTab() {
               <input value={draft.capacity} onChange={(e) => setDraft({ ...draft, capacity: e.target.value })} />
             </label>
           </div>
+          <LocationFields
+            longitude={draft.longitude}
+            latitude={draft.latitude}
+            onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
+          />
           <div className="row">
             <button
               className="primary"
@@ -587,44 +731,29 @@ function OdpsTab() {
         </div>
       )}
 
-      <div className="card">
-        <table>
-          <thead>
-            <tr>
-              <th>Kode</th>
-              <th>ODC induk</th>
-              <th>Splitter</th>
-              <th>Port</th>
-              <th>Status</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((odp) => (
-              <tr key={odp.id}>
-                <td>
-                  {odp.code}
-                  <br />
-                  <span className="muted" style={{ fontSize: '0.8rem' }}>
-                    {odp.name}
-                  </span>
-                </td>
-                <td className="muted">{odp.odcName ?? '—'}</td>
-                <td>{odp.splitterRatio}</td>
-                <td>{odp.capacity}</td>
-                <td>
-                  <StatusBadge status={odp.status} />
-                </td>
-                <td>
-                  {can('network.odp.delete') && (
-                    <button onClick={() => void run(() => api.del(`/api/odps/${odp.id}`))}>Hapus</button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Toolbar>
+        <SearchInput value={query} onChange={setQuery} placeholder="Cari kode, nama, atau ODC induk…" />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as AssetStatus | '')}>
+          {ASSET_STATUS_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </Toolbar>
+
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(o) => o.id}
+        loading={loading}
+        initialSort={{ key: 'code', dir: 'asc' }}
+        empty={
+          <EmptyState
+            title={query || statusFilter ? 'Tidak ada ODP yang cocok' : 'Belum ada ODP'}
+            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Tambahkan ODP sebagai kotak terminasi ke pelanggan.'}
+            icon={<IconInventory size={32} />}
+          />
+        }
+      />
     </div>
   )
 }

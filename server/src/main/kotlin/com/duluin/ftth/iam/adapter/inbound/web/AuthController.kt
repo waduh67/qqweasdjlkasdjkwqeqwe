@@ -25,7 +25,7 @@ class AuthController(
     @PostMapping("/login")
     fun login(@Valid @RequestBody request: LoginRequest): TokenResponse =
         TokenResponse.from(
-            authentication.login(LoginCommand(request.tenantSlug, request.email, request.password)),
+            authentication.login(LoginCommand(request.email, request.password)),
         )
 
     @PostMapping("/refresh")
@@ -39,7 +39,6 @@ class AuthController(
 }
 
 data class LoginRequest(
-    @field:NotBlank val tenantSlug: String,
     @field:NotBlank val email: String,
     @field:NotBlank val password: String,
 )

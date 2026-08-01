@@ -46,12 +46,15 @@ class CustomerService(
     override fun get(id: UUID): CustomerView = assemble(requireCustomer(id))
 
     override fun create(command: SaveCustomerCommand): CustomerView {
-        val code = command.code.trim().uppercase()
-        if (customerRepository.existsByCode(code)) throw ConflictException("Kode pelanggan '$code' sudah dipakai")
+        val manualCode = command.code?.trim()?.takeIf { it.isNotEmpty() }?.uppercase()
+        if (manualCode != null && customerRepository.existsByCode(manualCode)) {
+            throw ConflictException("Kode pelanggan '$manualCode' sudah dipakai")
+        }
+        val code = manualCode ?: generateNextCode()
         val customer = customerRepository.save(
             Customer.create(
                 tenantId = currentUser.current().tenantId,
-                code = command.code,
+                code = code,
                 name = command.name,
                 phone = command.phone,
                 email = command.email,
@@ -119,4 +122,23 @@ class CustomerService(
 
     private fun requireCustomer(id: UUID): Customer =
         customerRepository.findById(id) ?: throw NotFoundException("Pelanggan $id tidak ditemukan")
+
+    /**
+     * Kode berurut per-tenant (`CUST-000001`). Mulai dari urutan tertinggi + 1, lalu naik selama
+     * kandidatnya sudah terpakai — melompati lubang yang ditinggalkan kode manual (mis. operator
+     * pernah mengetik `CUST-000005` sendiri). Uniknya tetap dijaga akhir oleh UNIQUE(tenant, code).
+     */
+    private fun generateNextCode(): String {
+        var sequence = customerRepository.maxCodeSequence(Customer.AUTO_CODE_PREFIX) + 1
+        repeat(MAX_CODE_ATTEMPTS) {
+            val candidate = Customer.formatAutoCode(sequence)
+            if (!customerRepository.existsByCode(candidate)) return candidate
+            sequence++
+        }
+        throw ConflictException("Gagal membuat kode pelanggan otomatis, coba isi manual")
+    }
+
+    private companion object {
+        const val MAX_CODE_ATTEMPTS = 100
+    }
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ApiError } from '../api/client'
 import {
   createServer,
@@ -12,8 +12,9 @@ import {
   type VpnServerView,
 } from '../api/vpn'
 import { useCan } from '../auth/useCan'
-import { EmptyState, useToast } from '../components/ui'
-import { IconAlert, IconPlus } from '../components/icons'
+import { DataTable, type Column } from '../components/DataTable'
+import { Badge, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
+import { IconAlert, IconPlus, IconRoute } from '../components/icons'
 
 /**
  * Server VPN (PLATFORM). Halaman admin platform untuk mengelola hub OpenVPN yang jalan di VPS
@@ -69,6 +70,10 @@ type ServerDraft = {
 
 const EMPTY_SERVER: ServerDraft = { id: null, name: '', host: '', port: '1194', protocol: 'UDP', tunnelCidr: '10.8.0.0/24' }
 
+/** Label status hub dalam bahasa Indonesia; nilai tak dikenal ditampilkan apa adanya. */
+const STATUS_LABELS: Record<string, string> = { ACTIVE: 'Aktif', INACTIVE: 'Nonaktif' }
+const statusLabel = (status: string) => STATUS_LABELS[status] ?? status
+
 export function VpnServersPage() {
   const { can } = useCan()
   const canManage = can('vpn.server.manage')
@@ -77,6 +82,31 @@ export function VpnServersPage() {
   const [draft, setDraft] = useState<ServerDraft | null>(null)
   // Token node + perintah pasang hanya tampil sekali (setelah buat/rotasi).
   const [secret, setSecret] = useState<VpnServerView | null>(null)
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+
+  // Status hub yang tersedia untuk dropdown filter (diturunkan dari data).
+  const statuses = useMemo(
+    () => Array.from(new Set(servers.map((s) => s.status))).sort(),
+    [servers],
+  )
+
+  // Saring di sisi klien: cari nama/titik dial/subnet, plus filter status.
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return servers.filter((s) => {
+      if (statusFilter && s.status !== statusFilter) return false
+      if (!q) return true
+      return (
+        s.name.toLowerCase().includes(q) ||
+        s.host.toLowerCase().includes(q) ||
+        `${s.host}:${s.port}`.includes(q) ||
+        s.protocol.toLowerCase().includes(q) ||
+        s.tunnelCidr.toLowerCase().includes(q) ||
+        s.serverAddress.toLowerCase().includes(q)
+      )
+    })
+  }, [servers, query, statusFilter])
 
   const edit = (server: VpnServerView) =>
     setDraft({
@@ -130,6 +160,62 @@ export function VpnServersPage() {
     void run(() => deleteServer(server.id), 'Hub dihapus')
   }
 
+  const columns: Column<VpnServerView>[] = [
+    { key: 'name', header: 'Hub', sortValue: (s) => s.name, cell: (s) => <strong>{s.name}</strong> },
+    {
+      key: 'status',
+      header: 'Status',
+      sortValue: (s) => s.status,
+      cell: (s) => <StatusBadge status={s.status} label={statusLabel(s.status)} />,
+    },
+    {
+      key: 'endpoint',
+      header: 'Titik dial',
+      sortValue: (s) => s.host,
+      cell: (s) => (
+        <div className="stack" style={{ gap: '0.15rem' }}>
+          <span>
+            {s.host}:{s.port}
+          </span>
+          <span className="muted" style={{ fontSize: '0.8rem' }}>{s.protocol}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'overlay',
+      header: 'Subnet overlay',
+      sortValue: (s) => s.tunnelCidr,
+      cell: (s) => (
+        <div className="stack" style={{ gap: '0.15rem' }}>
+          <span>{s.tunnelCidr}</span>
+          <span className="muted" style={{ fontSize: '0.8rem' }}>server {s.serverAddress}</span>
+        </div>
+      ),
+    },
+    { key: 'peers', header: 'Akun', align: 'right', sortValue: (s) => s.peerCount, cell: (s) => s.peerCount },
+    {
+      key: 'pki',
+      header: 'PKI',
+      sortValue: (s) => (s.pkiReady ? 1 : 0),
+      cell: (s) => <Badge tone={s.pkiReady ? 'good' : 'warning'}>{s.pkiReady ? 'siap' : 'belum'}</Badge>,
+    },
+  ]
+  if (canManage) {
+    columns.push({
+      key: 'actions',
+      header: '',
+      align: 'right',
+      width: '1%',
+      cell: (s) => (
+        <div className="row" style={{ justifyContent: 'flex-end' }}>
+          <button onClick={() => regenerate(s)}>Perintah pasang</button>
+          <button onClick={() => edit(s)}>Ubah</button>
+          <button onClick={() => remove(s)}>Hapus</button>
+        </div>
+      ),
+    })
+  }
+
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
       <div>
@@ -153,76 +239,34 @@ export function VpnServersPage() {
 
       {draft && <ServerForm draft={draft} setDraft={setDraft} onSave={save} onCancel={() => setDraft(null)} />}
 
-      {loading ? (
-        <div className="card">
-          <p className="muted" style={{ margin: 0 }}>
-            Memuat…
-          </p>
-        </div>
-      ) : servers.length === 0 ? (
-        <div className="card">
-          <EmptyState title="Belum ada hub" hint="Buat hub, lalu jalankan perintah pasang sekali di VPS." />
-        </div>
-      ) : (
-        <div className="card">
-          <table>
-            <thead>
-              <tr>
-                <th>Hub</th>
-                <th>Titik dial</th>
-                <th>Subnet overlay</th>
-                <th>Akun</th>
-                <th>PKI</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {servers.map((server) => (
-                <tr key={server.id}>
-                  <td>
-                    {server.name}
-                    <br />
-                    <span
-                      className="badge"
-                      style={{ color: server.status === 'ACTIVE' ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
-                    >
-                      {server.status === 'ACTIVE' ? 'aktif' : 'nonaktif'}
-                    </span>
-                  </td>
-                  <td className="muted">
-                    {server.host}:{server.port}
-                    <br />
-                    <span style={{ fontSize: '0.8rem' }}>{server.protocol}</span>
-                  </td>
-                  <td className="muted">
-                    {server.tunnelCidr}
-                    <br />
-                    <span style={{ fontSize: '0.8rem' }}>server {server.serverAddress}</span>
-                  </td>
-                  <td className="tnum">{server.peerCount}</td>
-                  <td>
-                    <span
-                      className="badge"
-                      style={{ color: server.pkiReady ? 'var(--good-ink)' : 'var(--warning-ink)', fontWeight: 600 }}
-                    >
-                      {server.pkiReady ? 'siap' : 'belum'}
-                    </span>
-                  </td>
-                  <td>
-                    {canManage && (
-                      <div className="row">
-                        <button onClick={() => regenerate(server)}>Perintah pasang</button>
-                        <button onClick={() => edit(server)}>Ubah</button>
-                        <button onClick={() => remove(server)}>Hapus</button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <Toolbar>
+        <SearchInput value={query} onChange={setQuery} placeholder="Cari nama, titik dial, atau subnet…" />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="">Semua status</option>
+          {statuses.map((s) => (
+            <option key={s} value={s}>{statusLabel(s)}</option>
+          ))}
+        </select>
+      </Toolbar>
+
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(s) => s.id}
+        loading={loading}
+        initialSort={{ key: 'name', dir: 'asc' }}
+        empty={
+          <EmptyState
+            title={query || statusFilter ? 'Tidak ada hub yang cocok' : 'Belum ada hub'}
+            hint={
+              query || statusFilter
+                ? 'Coba ubah kata kunci atau filter.'
+                : 'Buat hub, lalu jalankan perintah pasang sekali di VPS.'
+            }
+            icon={<IconRoute size={32} />}
+          />
+        }
+      />
     </div>
   )
 }

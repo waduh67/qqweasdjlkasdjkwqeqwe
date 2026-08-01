@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type {
@@ -10,7 +10,8 @@ import type {
 } from '../api/monitoring'
 import type { CustomerView, OdpView } from '../api/network'
 import { useCan } from '../auth/useCan'
-import { Badge, Drawer, EmptyState, SkeletonRows, StatusBadge, useToast } from '../components/ui'
+import { DataTable, type Column } from '../components/DataTable'
+import { Badge, Drawer, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
 import { IconInbox } from '../components/icons'
 
 /**
@@ -48,6 +49,7 @@ export function ProvisioningPage() {
 
   const [state, setState] = useState<DiscoveredOnuState>('DISCOVERED')
   const [items, setItems] = useState<DiscoveredOnuView[]>([])
+  const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [odps, setOdps] = useState<OdpView[]>([])
   const [provision, setProvision] = useState<DiscoveredOnuView | null>(null)
@@ -127,6 +129,99 @@ export function ProvisioningPage() {
   const showActions = manage && state === 'DISCOVERED'
   const showSuggestion = state === 'DISCOVERED'
 
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return items
+    return items.filter((onu) =>
+      [onu.serialNumber, onu.oltCode, onu.ponPortLabel ?? '', onu.suggestion?.customerName ?? '', onu.suggestion?.odpCode ?? '']
+        .join(' ')
+        .toLowerCase()
+        .includes(q),
+    )
+  }, [items, query])
+
+  const columns: Column<DiscoveredOnuView>[] = [
+    {
+      key: 'serial',
+      header: 'Serial',
+      sortValue: (o) => o.serialNumber,
+      cell: (o) => <span style={{ fontWeight: 550, whiteSpace: 'nowrap' }}>{o.serialNumber}</span>,
+    },
+    {
+      key: 'olt',
+      header: 'OLT / PON',
+      sortValue: (o) => o.oltCode,
+      cell: (o) => (
+        <div>
+          <div style={{ fontSize: '0.88rem' }}>
+            {o.oltCode}
+            {o.oltId ? '' : ' · tak dikenal'}
+          </div>
+          <div className="muted" style={{ fontSize: '0.78rem' }}>{o.ponPortLabel ?? '—'}</div>
+        </div>
+      ),
+    },
+    { key: 'status', header: 'Status', sortValue: (o) => o.lastStatus, cell: (o) => <StatusBadge status={o.lastStatus} /> },
+    {
+      key: 'rx',
+      header: 'Redaman',
+      align: 'right',
+      sortValue: (o) => o.lastRxPowerDbm,
+      cell: (o) => <span className="muted">{o.lastRxPowerDbm != null ? `${o.lastRxPowerDbm} dBm` : '—'}</span>,
+    },
+    {
+      key: 'seen',
+      header: 'Terlihat',
+      sortValue: (o) => o.lastSeenAt,
+      cell: (o) => (
+        <span className="muted" style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+          ×{o.seenCount}
+          <div>{new Date(o.lastSeenAt).toLocaleString('id-ID')}</div>
+        </span>
+      ),
+    },
+  ]
+  if (showSuggestion) {
+    columns.push({
+      key: 'suggestion',
+      header: 'Saran auto-link',
+      sortValue: (o) => o.suggestion?.confidence,
+      cell: (o) => <SuggestionCell suggestion={o.suggestion} />,
+    })
+  }
+  if (showActions) {
+    columns.push({
+      key: 'actions',
+      header: '',
+      align: 'right',
+      width: '1%',
+      cell: (onu) => (
+        <div className="row" style={{ justifyContent: 'flex-end', gap: '0.35rem', flexWrap: 'nowrap' }}>
+          {isComplete(onu.suggestion) ? (
+            <>
+              <button className="primary small" onClick={() => void accept(onu)}>
+                Terima
+              </button>
+              <button className="ghost small" onClick={() => setProvision(onu)}>
+                Ubah
+              </button>
+            </>
+          ) : (
+            <button className="primary small" onClick={() => setProvision(onu)}>
+              Provisi
+            </button>
+          )}
+          <button
+            className="ghost small"
+            onClick={() => void run(() => api.post(`/api/monitoring/discovered-onus/${onu.id}/ignore`), 'ONU diabaikan')}
+          >
+            Abaikan
+          </button>
+        </div>
+      ),
+    })
+  }
+
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
       <div>
@@ -137,114 +232,43 @@ export function ProvisioningPage() {
         </p>
       </div>
 
-      <div className="card pad-0">
-        <div className="card-head">
-          <h3>Kotak masuk</h3>
-          <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
-            {manage && autoProvision !== null && (
-              <button
-                className={`small ${autoProvision ? 'primary' : 'ghost'}`}
-                onClick={() => void toggleAutoProvision()}
-                title="Saat menyala, ONU cocok-pasti (keyakinan tinggi) ditautkan otomatis tanpa menunggu Anda menekan Terima"
-              >
-                Auto-provisi: {autoProvision ? 'nyala' : 'mati'}
-              </button>
-            )}
-            <div className="segment">
-              {STATES.map((s) => (
-                <button key={s.key} className={state === s.key ? 'active' : ''} onClick={() => setState(s.key)}>
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </div>
+      <Toolbar>
+        <SearchInput value={query} onChange={setQuery} placeholder="Cari serial, OLT, atau pelanggan tertebak…" />
+        <div className="segment">
+          {STATES.map((s) => (
+            <button key={s.key} className={state === s.key ? 'active' : ''} onClick={() => setState(s.key)}>
+              {s.label}
+            </button>
+          ))}
         </div>
-
-        {loading ? (
-          <div className="card-body">
-            <SkeletonRows rows={4} cols={5} />
-          </div>
-        ) : items.length === 0 ? (
-          <div className="card-body">
-            <EmptyState
-              title={state === 'DISCOVERED' ? 'Tidak ada ONU menunggu' : 'Kosong'}
-              hint="Serial tak dikenal yang dilaporkan collector muncul di sini otomatis."
-              icon={<IconInbox size={32} />}
-            />
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Serial</th>
-                  <th>OLT / PON</th>
-                  <th>Status</th>
-                  <th>Redaman</th>
-                  <th>Terlihat</th>
-                  {showSuggestion && <th>Saran auto-link</th>}
-                  {showActions && <th />}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((onu) => (
-                  <tr key={onu.id}>
-                    <td style={{ fontWeight: 550, whiteSpace: 'nowrap' }}>{onu.serialNumber}</td>
-                    <td>
-                      <div style={{ fontSize: '0.88rem' }}>
-                        {onu.oltCode}
-                        {onu.oltId ? '' : ' · tak dikenal'}
-                      </div>
-                      <div className="muted" style={{ fontSize: '0.78rem' }}>{onu.ponPortLabel ?? '—'}</div>
-                    </td>
-                    <td>
-                      <StatusBadge status={onu.lastStatus} />
-                    </td>
-                    <td className="muted">{onu.lastRxPowerDbm != null ? `${onu.lastRxPowerDbm} dBm` : '—'}</td>
-                    <td className="muted" style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-                      ×{onu.seenCount}
-                      <div>{new Date(onu.lastSeenAt).toLocaleString('id-ID')}</div>
-                    </td>
-                    {showSuggestion && (
-                      <td style={{ maxWidth: '20rem' }}>
-                        <SuggestionCell suggestion={onu.suggestion} />
-                      </td>
-                    )}
-                    {showActions && (
-                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        <div className="row" style={{ justifyContent: 'flex-end', gap: '0.35rem' }}>
-                          {isComplete(onu.suggestion) ? (
-                            <>
-                              <button className="primary small" onClick={() => void accept(onu)}>
-                                Terima
-                              </button>
-                              <button className="ghost small" onClick={() => setProvision(onu)}>
-                                Ubah
-                              </button>
-                            </>
-                          ) : (
-                            <button className="primary small" onClick={() => setProvision(onu)}>
-                              Provisi
-                            </button>
-                          )}
-                          <button
-                            className="ghost small"
-                            onClick={() =>
-                              void run(() => api.post(`/api/monitoring/discovered-onus/${onu.id}/ignore`), 'ONU diabaikan')
-                            }
-                          >
-                            Abaikan
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        {manage && autoProvision !== null && (
+          <>
+            <span className="spacer" />
+            <button
+              className={`small ${autoProvision ? 'primary' : 'ghost'}`}
+              onClick={() => void toggleAutoProvision()}
+              title="Saat menyala, ONU cocok-pasti (keyakinan tinggi) ditautkan otomatis tanpa menunggu Anda menekan Terima"
+            >
+              Auto-provisi: {autoProvision ? 'nyala' : 'mati'}
+            </button>
+          </>
         )}
-      </div>
+      </Toolbar>
+
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(o) => o.id}
+        loading={loading}
+        initialSort={{ key: 'seen', dir: 'desc' }}
+        empty={
+          <EmptyState
+            title={query ? 'Tidak ada yang cocok' : state === 'DISCOVERED' ? 'Tidak ada ONU menunggu' : 'Kosong'}
+            hint={query ? 'Coba ubah kata kunci.' : 'Serial tak dikenal yang dilaporkan collector muncul di sini otomatis.'}
+            icon={<IconInbox size={32} />}
+          />
+        }
+      />
 
       {provision && (
         <ProvisionDrawer

@@ -14,6 +14,7 @@ import java.util.UUID
 @Component
 class UserPersistenceAdapter(
     private val jpa: UserJpaRepository,
+    private val directory: UserDirectoryJpaRepository,
 ) : UserRepository {
 
     override fun save(user: User): User {
@@ -34,7 +35,23 @@ class UserPersistenceAdapter(
             roleIds = user.roleIds.toMutableSet(),
             areaIds = user.areaIds.toMutableSet(),
         )
-        return jpa.save(entity).toDomain()
+        val saved = jpa.save(entity)
+        upsertDirectory(saved.id, user.tenantId, user.email.value.lowercase())
+        return saved.toDomain()
+    }
+
+    /**
+     * Pelihara indeks pre-auth email→tenant (login tanpa slug) tiap user disimpan.
+     * `user_directory` tak ter-RLS, jadi keunikan email ditegakkan GLOBAL: membuat
+     * user dengan email milik tenant lain gagal di UNIQUE(email_lower) — invarian
+     * "1 email = 1 tenant".
+     */
+    private fun upsertDirectory(userId: UUID, tenantId: UUID, emailLower: String) {
+        val row = directory.findById(userId).orElse(null)?.apply {
+            this.tenantId = tenantId
+            this.emailLower = emailLower
+        } ?: UserDirectoryJpaEntity(id = userId, tenantId = tenantId, emailLower = emailLower)
+        directory.save(row)
     }
 
     override fun findById(id: UUID): User? = jpa.findById(id).orElse(null)?.toDomain()

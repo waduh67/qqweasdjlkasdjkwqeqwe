@@ -7,6 +7,7 @@ import { listPlans, SERVICE_TYPE_LABEL, type PlanView, type ServiceType } from '
 import { onboardPsb, type ExpressPsbResult } from '../api/onboarding'
 import { useCan } from '../auth/useCan'
 import { Badge, EmptyState, useToast } from '../components/ui'
+import { LocationPicker } from '../components/LocationPicker'
 import { IconPackage, IconPlus } from '../components/icons'
 
 /** Alfabet secret (tanpa 0/O/1/l/I) — cermin konvensi generator server agar mudah dibaca operator. */
@@ -136,7 +137,6 @@ export function ExpressPsbPage() {
   }
 
   const invalid =
-    !draft.code.trim() ||
     !draft.name.trim() ||
     !draft.address.trim() ||
     !draft.longitude.trim() ||
@@ -150,13 +150,13 @@ export function ExpressPsbPage() {
 
   const submit = async () => {
     if (invalid) {
-      toast.error('Lengkapi dulu kolom wajib (kode, nama, alamat, koordinat, paket, kredensial).')
+      toast.error('Lengkapi dulu kolom wajib (nama, alamat, koordinat, paket, kredensial).')
       return
     }
     setSaving(true)
     try {
       const res = await onboardPsb({
-        code: draft.code.trim(),
+        code: draft.code.trim() || undefined,
         name: draft.name.trim(),
         phone: draft.phone.trim() || null,
         email: draft.email.trim() || null,
@@ -226,8 +226,8 @@ export function ExpressPsbPage() {
             <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Pelanggan</h3>
             <div className="row wrap" style={{ gap: '0.6rem' }}>
               <label style={{ flex: 1, minWidth: 140 }}>
-                <span>Kode *</span>
-                <input value={draft.code} onChange={(e) => set({ code: e.target.value })} placeholder="CUST-0001" />
+                <span>Kode</span>
+                <input value={draft.code} onChange={(e) => set({ code: e.target.value })} placeholder="Otomatis: CUST-000001" />
               </label>
               <label style={{ flex: 2, minWidth: 180 }}>
                 <span>Nama *</span>
@@ -242,20 +242,19 @@ export function ExpressPsbPage() {
                 <input value={draft.email} onChange={(e) => set({ email: e.target.value })} placeholder="budi@email.com" />
               </label>
             </div>
-            <div className="row wrap" style={{ gap: '0.6rem' }}>
-              <label style={{ flex: 3, minWidth: 220 }}>
-                <span>Alamat *</span>
-                <input value={draft.address} onChange={(e) => set({ address: e.target.value })} placeholder="Jl. Merdeka No. 10" />
-              </label>
-              <label style={{ flex: 1, minWidth: 130 }}>
-                <span>Longitude *</span>
-                <input value={draft.longitude} onChange={(e) => set({ longitude: e.target.value })} placeholder="106.8" />
-              </label>
-              <label style={{ flex: 1, minWidth: 130 }}>
-                <span>Latitude *</span>
-                <input value={draft.latitude} onChange={(e) => set({ latitude: e.target.value })} placeholder="-6.2" />
-              </label>
-            </div>
+            <label>
+              <span>Alamat *</span>
+              <input value={draft.address} onChange={(e) => set({ address: e.target.value })} placeholder="Jl. Merdeka No. 10" />
+            </label>
+            <label>
+              <span>Lokasi *</span>
+              <LocationPicker
+                longitude={draft.longitude}
+                latitude={draft.latitude}
+                onChange={(longitude, latitude) => set({ longitude, latitude })}
+                onAddress={(address) => set(draft.address.trim() ? {} : { address })}
+              />
+            </label>
             {areas.length > 0 && (
               <div className="row wrap" style={{ gap: '0.6rem' }}>
                 <label style={{ flex: 1, minWidth: 200 }}>

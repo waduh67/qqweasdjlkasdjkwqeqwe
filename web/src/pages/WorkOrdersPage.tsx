@@ -15,7 +15,8 @@ import type {
   WorkOrderView,
 } from '../api/workorder'
 import { useCan } from '../auth/useCan'
-import { Badge, Drawer, EmptyState, SkeletonRows, useToast } from '../components/ui'
+import { DataTable, type Column } from '../components/DataTable'
+import { Badge, Drawer, EmptyState, Modal, SearchInput, SkeletonRows, Tabs, Toolbar, useToast } from '../components/ui'
 import { IconPlus, IconWorkOrder } from '../components/icons'
 
 const TYPE_LABEL: Record<WorkOrderType, string> = {
@@ -123,6 +124,10 @@ function rxHealth(dbm: number): { tone: RxTone; label: string } {
 function WoStatusBadge({ status }: { status: WorkOrderStatus }) {
   return <Badge tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</Badge>
 }
+
+/** Nada prioritas: tinggi/mendesak menonjol (warning), sisanya netral. */
+const priorityTone = (p: WorkOrderPriority): 'warning' | 'neutral' =>
+  p === 'URGENT' || p === 'HIGH' ? 'warning' : 'neutral'
 
 /**
  * Work order sisi operator/dispatcher: buat tugas lapangan, tugaskan ke teknisi,
@@ -238,6 +243,56 @@ export function WorkOrdersPage() {
       setDraft(null)
     }, 'Work order dibuat')
 
+  const columns: Column<WorkOrderView>[] = [
+    {
+      key: 'code',
+      header: 'Kode',
+      sortValue: (wo) => wo.code,
+      cell: (wo) => <span className="badge accent">{wo.code}</span>,
+    },
+    {
+      key: 'type',
+      header: 'Tipe',
+      sortValue: (wo) => TYPE_LABEL[wo.type],
+      cell: (wo) => <span className="badge">{TYPE_LABEL[wo.type]}</span>,
+    },
+    {
+      key: 'title',
+      header: 'Judul',
+      sortValue: (wo) => wo.title,
+      cell: (wo) => (
+        <div className="row" style={{ gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <strong>{wo.title}</strong>
+          {wo.priority !== 'NORMAL' && <Badge tone={priorityTone(wo.priority)}>{PRIORITY_LABEL[wo.priority]}</Badge>}
+        </div>
+      ),
+    },
+    {
+      key: 'customer',
+      header: 'Pelanggan',
+      sortValue: (wo) => wo.customerName,
+      cell: (wo) => wo.customerName ?? <span className="muted">—</span>,
+    },
+    {
+      key: 'assignee',
+      header: 'Teknisi',
+      sortValue: (wo) => wo.assignedToName,
+      cell: (wo) => wo.assignedToName ?? <span className="muted">belum ditugaskan</span>,
+    },
+    {
+      key: 'scheduledAt',
+      header: 'Jadwal',
+      sortValue: (wo) => wo.scheduledAt,
+      cell: (wo) => (wo.scheduledAt ? fmt(wo.scheduledAt) : <span className="muted">—</span>),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortValue: (wo) => wo.status,
+      cell: (wo) => <WoStatusBadge status={wo.status} />,
+    },
+  ]
+
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
       <div className="spread">
@@ -262,14 +317,9 @@ export function WorkOrdersPage() {
         />
       )}
 
-      <div className="row wrap" style={{ gap: '0.6rem' }}>
-        <input
-          placeholder="Cari kode atau judul…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          style={{ flex: 2, minWidth: 200 }}
-        />
-        <select value={status} onChange={(e) => setStatus(e.target.value as WorkOrderStatus | '')} style={{ flex: 1, minWidth: 140 }}>
+      <Toolbar>
+        <SearchInput value={query} onChange={setQuery} placeholder="Cari kode atau judul…" />
+        <select value={status} onChange={(e) => setStatus(e.target.value as WorkOrderStatus | '')}>
           <option value="">Semua status</option>
           {STATUSES.map((s) => (
             <option key={s} value={s}>
@@ -277,7 +327,7 @@ export function WorkOrdersPage() {
             </option>
           ))}
         </select>
-        <select value={type} onChange={(e) => setType(e.target.value as WorkOrderType | '')} style={{ flex: 1, minWidth: 140 }}>
+        <select value={type} onChange={(e) => setType(e.target.value as WorkOrderType | '')}>
           <option value="">Semua tipe</option>
           {TYPES.map((t) => (
             <option key={t} value={t}>
@@ -285,11 +335,7 @@ export function WorkOrdersPage() {
             </option>
           ))}
         </select>
-        <select
-          value={approval}
-          onChange={(e) => setApproval(e.target.value as WorkOrderApprovalStatus | '')}
-          style={{ flex: 1, minWidth: 140 }}
-        >
+        <select value={approval} onChange={(e) => setApproval(e.target.value as WorkOrderApprovalStatus | '')}>
           <option value="">Semua persetujuan</option>
           {(Object.keys(APPROVAL_LABEL) as WorkOrderApprovalStatus[]).map((a) => (
             <option key={a} value={a}>
@@ -297,11 +343,7 @@ export function WorkOrdersPage() {
             </option>
           ))}
         </select>
-        <select
-          value={assignedTo}
-          onChange={(e) => setAssignedTo(e.target.value)}
-          style={{ flex: 1, minWidth: 140 }}
-        >
+        <select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)}>
           <option value="">Semua teknisi</option>
           {technicians.map((t) => (
             <option key={t.id} value={t.id}>
@@ -309,7 +351,7 @@ export function WorkOrdersPage() {
             </option>
           ))}
         </select>
-      </div>
+      </Toolbar>
 
       {draft && (
         <WorkOrderForm
@@ -322,12 +364,14 @@ export function WorkOrdersPage() {
         />
       )}
 
-      {loading ? (
-        <div className="card">
-          <SkeletonRows rows={4} />
-        </div>
-      ) : orders.length === 0 ? (
-        <div className="card">
+      <DataTable
+        columns={columns}
+        rows={orders}
+        rowKey={(wo) => wo.id}
+        onRowClick={(wo) => void openDetail(wo.id)}
+        loading={loading}
+        initialSort={{ key: 'scheduledAt', dir: 'desc' }}
+        empty={
           <EmptyState
             title={query || status || type || approval || assignedTo ? 'Tidak ada work order yang cocok' : 'Belum ada work order'}
             hint={
@@ -337,33 +381,8 @@ export function WorkOrdersPage() {
             }
             icon={<IconWorkOrder size={32} />}
           />
-        </div>
-      ) : (
-        <div className="stack" style={{ gap: '0.6rem' }}>
-          {orders.map((wo) => (
-            <button key={wo.id} className="incident-row" onClick={() => void openDetail(wo.id)}>
-              <span className="stack" style={{ gap: '0.3rem', minWidth: 0, alignItems: 'flex-start', flex: 1 }}>
-                <span className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span className="badge accent">{wo.code}</span>
-                  <span className="badge">{TYPE_LABEL[wo.type]}</span>
-                  {wo.priority !== 'NORMAL' && (
-                    <Badge tone={wo.priority === 'URGENT' || wo.priority === 'HIGH' ? 'warning' : 'neutral'}>
-                      {PRIORITY_LABEL[wo.priority]}
-                    </Badge>
-                  )}
-                  <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{wo.title}</strong>
-                </span>
-                <span className="muted" style={{ fontSize: '0.82rem' }}>
-                  {wo.customerName ? `${wo.customerName} · ` : ''}
-                  {wo.assignedToName ? `👷 ${wo.assignedToName}` : 'belum ditugaskan'}
-                  {wo.scheduledAt ? ` · jadwal ${fmt(wo.scheduledAt)}` : ''}
-                </span>
-              </span>
-              <WoStatusBadge status={wo.status} />
-            </button>
-          ))}
-        </div>
-      )}
+        }
+      />
 
       {detail && (
         <Drawer title={`${detail.workOrder.code} · ${detail.workOrder.title}`} onClose={() => setDetail(null)}>
@@ -518,72 +537,83 @@ function WorkOrderForm({
   onCancel: () => void
 }) {
   return (
-    <div className="card stack">
-      <div className="row wrap">
-        <label style={{ flex: 1, minWidth: 140 }}>
-          <span>Tipe</span>
-          <select value={draft.type} onChange={(e) => onChange({ ...draft, type: e.target.value as WorkOrderType })}>
-            {TYPES.map((t) => (
-              <option key={t} value={t}>
-                {TYPE_LABEL[t]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label style={{ flex: 3, minWidth: 200 }}>
+    <Modal
+      title="Buat work order"
+      onClose={onCancel}
+      wide
+      footer={
+        <>
+          <button onClick={onCancel}>Batal</button>
+          <button className="primary" onClick={onSubmit}>Simpan</button>
+        </>
+      }
+    >
+      <div className="stack">
+        <label className="stack" style={{ gap: '0.25rem' }}>
           <span>Judul</span>
-          <input value={draft.title} onChange={(e) => onChange({ ...draft, title: e.target.value })} placeholder="mis. Ganti drop core putus" />
+          <input
+            autoFocus
+            value={draft.title}
+            onChange={(e) => onChange({ ...draft, title: e.target.value })}
+            placeholder="mis. Ganti drop core putus"
+          />
         </label>
-        <label style={{ flex: 1, minWidth: 120 }}>
-          <span>Prioritas</span>
-          <select value={draft.priority} onChange={(e) => onChange({ ...draft, priority: e.target.value as WorkOrderPriority })}>
-            {PRIORITIES.map((p) => (
-              <option key={p} value={p}>
-                {PRIORITY_LABEL[p]}
-              </option>
-            ))}
-          </select>
+        <div className="row wrap">
+          <label style={{ flex: 1, minWidth: 140 }}>
+            <span>Tipe</span>
+            <select value={draft.type} onChange={(e) => onChange({ ...draft, type: e.target.value as WorkOrderType })}>
+              {TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {TYPE_LABEL[t]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={{ flex: 1, minWidth: 140 }}>
+            <span>Prioritas</span>
+            <select value={draft.priority} onChange={(e) => onChange({ ...draft, priority: e.target.value as WorkOrderPriority })}>
+              {PRIORITIES.map((p) => (
+                <option key={p} value={p}>
+                  {PRIORITY_LABEL[p]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <label className="stack" style={{ gap: '0.25rem' }}>
+          <span>Deskripsi (opsional)</span>
+          <textarea rows={3} maxLength={2000} value={draft.description} onChange={(e) => onChange({ ...draft, description: e.target.value })} />
         </label>
+        <div className="row wrap">
+          <label style={{ flex: 2, minWidth: 180 }}>
+            <span>Pelanggan (opsional)</span>
+            <select value={draft.customerId} onChange={(e) => onChange({ ...draft, customerId: e.target.value })}>
+              <option value="">— tanpa pelanggan —</option>
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.code})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={{ flex: 2, minWidth: 180 }}>
+            <span>Teknisi (opsional)</span>
+            <select value={draft.assignedTo} onChange={(e) => onChange({ ...draft, assignedTo: e.target.value })}>
+              <option value="">— belum ditugaskan —</option>
+              {technicians.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={{ flex: 1, minWidth: 180 }}>
+            <span>Jadwal (opsional)</span>
+            <input type="datetime-local" value={draft.scheduledAt} onChange={(e) => onChange({ ...draft, scheduledAt: e.target.value })} />
+          </label>
+        </div>
       </div>
-      <label className="stack" style={{ gap: '0.25rem' }}>
-        <span>Deskripsi</span>
-        <textarea rows={2} maxLength={2000} value={draft.description} onChange={(e) => onChange({ ...draft, description: e.target.value })} />
-      </label>
-      <div className="row wrap">
-        <label style={{ flex: 2, minWidth: 180 }}>
-          <span>Pelanggan (opsional)</span>
-          <select value={draft.customerId} onChange={(e) => onChange({ ...draft, customerId: e.target.value })}>
-            <option value="">— tanpa pelanggan —</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} ({c.code})
-              </option>
-            ))}
-          </select>
-        </label>
-        <label style={{ flex: 2, minWidth: 180 }}>
-          <span>Teknisi (opsional)</span>
-          <select value={draft.assignedTo} onChange={(e) => onChange({ ...draft, assignedTo: e.target.value })}>
-            <option value="">— belum ditugaskan —</option>
-            {technicians.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label style={{ flex: 1, minWidth: 180 }}>
-          <span>Jadwal (opsional)</span>
-          <input type="datetime-local" value={draft.scheduledAt} onChange={(e) => onChange({ ...draft, scheduledAt: e.target.value })} />
-        </label>
-      </div>
-      <div className="row">
-        <button className="primary" onClick={onSubmit}>
-          Simpan
-        </button>
-        <button onClick={onCancel}>Batal</button>
-      </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -603,6 +633,7 @@ function WorkOrderDetailBody({
   const wo = detail.workOrder
   // State awal cukup dari prop: komponen ini di-`key` pada id work order, jadi
   // berganti work order me-remount dan mereset pilihan ini dengan sendirinya.
+  const [tab, setTab] = useState<'ringkasan' | 'bukti' | 'riwayat'>('ringkasan')
   const [assignee, setAssignee] = useState(wo.assignedTo ?? '')
   const [note, setNote] = useState('')
   const [reason, setReason] = useState('')
@@ -618,202 +649,225 @@ function WorkOrderDetailBody({
   const terminal = wo.status === 'DONE' || wo.status === 'CANCELLED'
   const awaitingApproval = wo.status === 'DONE' && wo.approvalStatus === 'PENDING'
 
+  const showOptical = canUpdate || wo.rxBeforeDbm != null || wo.rxAfterDbm != null
+  const showEvidence = can('workorder.evidence.view')
+
   return (
-    <div className="stack" style={{ gap: '1.1rem' }}>
+    <div className="stack" style={{ gap: '1rem' }}>
+      {/* Ringkasan status selalu di atas tab supaya keadaan WO langsung terbaca. */}
       <div className="row wrap" style={{ gap: '0.4rem' }}>
         <WoStatusBadge status={wo.status} />
         <span className="badge">{TYPE_LABEL[wo.type]}</span>
-        <Badge tone={wo.priority === 'URGENT' || wo.priority === 'HIGH' ? 'warning' : 'neutral'}>
-          {PRIORITY_LABEL[wo.priority]}
-        </Badge>
+        <Badge tone={priorityTone(wo.priority)}>{PRIORITY_LABEL[wo.priority]}</Badge>
         {wo.approvalStatus && <Badge tone={APPROVAL_TONE[wo.approvalStatus]}>{APPROVAL_LABEL[wo.approvalStatus]}</Badge>}
         {wo.customerName && <span className="badge">{wo.customerName}</span>}
       </div>
 
-      {wo.description && <p style={{ margin: 0, fontSize: '0.9rem' }}>{wo.description}</p>}
+      <Tabs
+        active={tab}
+        onChange={setTab}
+        tabs={[
+          { key: 'ringkasan', label: 'Ringkasan' },
+          { key: 'bukti', label: 'Bukti & optik' },
+          { key: 'riwayat', label: 'Riwayat', badge: detail.timeline.length },
+        ]}
+      />
 
-      <dl className="kv" style={{ margin: 0, display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.3rem 0.8rem', fontSize: '0.85rem' }}>
-        <dt className="muted">Teknisi</dt>
-        <dd style={{ margin: 0 }}>{wo.assignedToName ?? 'belum ditugaskan'}</dd>
-        <dt className="muted">Jadwal</dt>
-        <dd style={{ margin: 0 }}>{fmt(wo.scheduledAt)}</dd>
-        {wo.destinationLat != null && wo.destinationLng != null && (
-          <>
-            <dt className="muted">Lokasi</dt>
-            <dd style={{ margin: 0 }}>
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${wo.destinationLat},${wo.destinationLng}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Navigasi ke pelanggan ↗
-              </a>
-            </dd>
-          </>
-        )}
-        <dt className="muted">Dibuat</dt>
-        <dd style={{ margin: 0 }}>{fmt(wo.createdAt)}</dd>
-        {wo.completedAt && (
-          <>
-            <dt className="muted">Selesai</dt>
-            <dd style={{ margin: 0 }}>{fmt(wo.completedAt)}</dd>
-          </>
-        )}
-        {wo.resolutionNote && (
-          <>
-            <dt className="muted">Catatan</dt>
-            <dd style={{ margin: 0 }}>{wo.resolutionNote}</dd>
-          </>
-        )}
-        {wo.approvedByName && (
-          <>
-            <dt className="muted">{wo.approvalStatus === 'REJECTED' ? 'Ditolak oleh' : 'Disetujui oleh'}</dt>
-            <dd style={{ margin: 0 }}>{wo.approvedByName}{wo.approvedAt ? ` · ${fmt(wo.approvedAt)}` : ''}</dd>
-          </>
-        )}
-        {wo.approvalNote && (
-          <>
-            <dt className="muted">{wo.approvalStatus === 'REJECTED' ? 'Alasan penolakan' : 'Catatan persetujuan'}</dt>
-            <dd style={{ margin: 0 }}>{wo.approvalNote}</dd>
-          </>
-        )}
-        {wo.cancelReason && (
-          <>
-            <dt className="muted">Alasan batal</dt>
-            <dd style={{ margin: 0 }}>{wo.cancelReason}</dd>
-          </>
-        )}
-      </dl>
+      {tab === 'ringkasan' && (
+        <div className="stack" style={{ gap: '1.1rem' }}>
+          {wo.description && <p style={{ margin: 0, fontSize: '0.9rem' }}>{wo.description}</p>}
 
-      {/* Penugasan — selagi work order belum selesai/batal. */}
-      {canAssign && !terminal && (
-        <section className="stack" style={{ gap: '0.4rem' }}>
-          <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Penugasan</h3>
-          <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
-            <label style={{ flex: 1 }}>
-              <span>Teknisi</span>
-              <select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
-                <option value="">— pilih teknisi —</option>
-                {technicians.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              className="primary"
-              disabled={!assignee || assignee === wo.assignedTo}
-              onClick={() => onAct(() => api.post(`/api/work-orders/${id}/assign`, { technicianId: assignee }), 'Teknisi ditugaskan', true)}
-            >
-              {wo.assignedTo ? 'Tugaskan ulang' : 'Tugaskan'}
-            </button>
-          </div>
-        </section>
-      )}
+          <dl className="kv" style={{ margin: 0, display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.3rem 0.8rem', fontSize: '0.85rem' }}>
+            <dt className="muted">Teknisi</dt>
+            <dd style={{ margin: 0 }}>{wo.assignedToName ?? 'belum ditugaskan'}</dd>
+            <dt className="muted">Jadwal</dt>
+            <dd style={{ margin: 0 }}>{fmt(wo.scheduledAt)}</dd>
+            {wo.destinationLat != null && wo.destinationLng != null && (
+              <>
+                <dt className="muted">Lokasi</dt>
+                <dd style={{ margin: 0 }}>
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${wo.destinationLat},${wo.destinationLng}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Navigasi ke pelanggan ↗
+                  </a>
+                </dd>
+              </>
+            )}
+            <dt className="muted">Dibuat</dt>
+            <dd style={{ margin: 0 }}>{fmt(wo.createdAt)}</dd>
+            {wo.completedAt && (
+              <>
+                <dt className="muted">Selesai</dt>
+                <dd style={{ margin: 0 }}>{fmt(wo.completedAt)}</dd>
+              </>
+            )}
+            {wo.resolutionNote && (
+              <>
+                <dt className="muted">Catatan</dt>
+                <dd style={{ margin: 0 }}>{wo.resolutionNote}</dd>
+              </>
+            )}
+            {wo.approvedByName && (
+              <>
+                <dt className="muted">{wo.approvalStatus === 'REJECTED' ? 'Ditolak oleh' : 'Disetujui oleh'}</dt>
+                <dd style={{ margin: 0 }}>{wo.approvedByName}{wo.approvedAt ? ` · ${fmt(wo.approvedAt)}` : ''}</dd>
+              </>
+            )}
+            {wo.approvalNote && (
+              <>
+                <dt className="muted">{wo.approvalStatus === 'REJECTED' ? 'Alasan penolakan' : 'Catatan persetujuan'}</dt>
+                <dd style={{ margin: 0 }}>{wo.approvalNote}</dd>
+              </>
+            )}
+            {wo.cancelReason && (
+              <>
+                <dt className="muted">Alasan batal</dt>
+                <dd style={{ margin: 0 }}>{wo.cancelReason}</dd>
+              </>
+            )}
+          </dl>
 
-      {/* Aksi lifecycle. */}
-      <div className="row wrap" style={{ gap: '0.5rem' }}>
-        {canUpdate && wo.status === 'ASSIGNED' && (
-          <button onClick={() => onAct(() => api.post(`/api/work-orders/${id}/start`), 'Pengerjaan dimulai', true)}>Mulai</button>
-        )}
-        {canUpdate && wo.status === 'DRAFT' && (
-          <button
-            className="ghost danger"
-            onClick={() => onAct(() => api.del(`/api/work-orders/${id}`), 'Work order dihapus', false)}
-          >
-            Hapus
-          </button>
-        )}
-      </div>
-
-      {/* Selesaikan — hanya saat sedang dikerjakan. */}
-      {canClose && wo.status === 'IN_PROGRESS' && (
-        <section className="stack" style={{ gap: '0.4rem' }}>
-          <label className="stack" style={{ gap: '0.25rem' }}>
-            <span>Catatan penyelesaian (opsional)</span>
-            <textarea rows={2} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} />
-          </label>
-          <button
-            className="primary"
-            onClick={() => onAct(() => api.post(`/api/work-orders/${id}/complete`, { resolutionNote: note.trim() || null }), 'Work order selesai', true)}
-          >
-            Selesaikan
-          </button>
-        </section>
-      )}
-
-      {/* Persetujuan hasil kerja — hanya untuk WO selesai yang menunggu dikurasi. */}
-      {canApprove && awaitingApproval && (
-        <section className="stack" style={{ gap: '0.5rem' }}>
-          <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Persetujuan hasil kerja</h3>
-          <label className="stack" style={{ gap: '0.25rem' }}>
-            <span>Catatan (opsional untuk setuju, wajib bila menolak)</span>
-            <textarea
-              rows={2}
-              maxLength={500}
-              value={decisionNote}
-              onChange={(e) => setDecisionNote(e.target.value)}
-              placeholder="mis. redaman OK, pemasangan rapi"
-            />
-          </label>
-          <div className="row" style={{ gap: '0.5rem' }}>
-            <button
-              className="primary"
-              onClick={() => onAct(() => api.post(`/api/work-orders/${id}/approve`, { note: decisionNote.trim() || null }), 'Hasil kerja disetujui', true)}
-            >
-              Setujui
-            </button>
-            <button
-              className="ghost danger"
-              disabled={!decisionNote.trim()}
-              onClick={() => onAct(() => api.post(`/api/work-orders/${id}/reject`, { reason: decisionNote.trim() }), 'Hasil kerja ditolak, WO dibuka kembali', true)}
-              title={decisionNote.trim() ? undefined : 'Isi alasan penolakan dulu'}
-            >
-              Tolak &amp; buka kembali
-            </button>
-          </div>
-        </section>
-      )}
-
-      {/* Pembatalan — selagi belum selesai/batal. */}
-      {canClose && !terminal && (
-        <section className="stack" style={{ gap: '0.4rem' }}>
-          <label className="stack" style={{ gap: '0.25rem' }}>
-            <span>Batalkan work order</span>
-            <input placeholder="Alasan (opsional)" value={reason} onChange={(e) => setReason(e.target.value)} />
-          </label>
-          <button
-            className="ghost danger"
-            onClick={() => onAct(() => api.post(`/api/work-orders/${id}/cancel`, { reason: reason.trim() || null }), 'Work order dibatalkan', true)}
-          >
-            Batalkan
-          </button>
-        </section>
-      )}
-
-      {/* Redaman optik — bukti kualitas; disembunyikan hanya bila belum ada & tak boleh mengubah. */}
-      {(canUpdate || wo.rxBeforeDbm != null || wo.rxAfterDbm != null) && (
-        <OpticalSection wo={wo} canUpdate={canUpdate} onAct={onAct} />
-      )}
-
-      {can('workorder.evidence.view') && <EvidenceSection workOrderId={id} status={wo.status} />}
-
-      <section className="stack" style={{ gap: '0.5rem' }}>
-        <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Timeline</h3>
-        <ol className="timeline">
-          {detail.timeline.map((ev, i) => (
-            <li key={i}>
-              <span className="tl-dot" aria-hidden="true" />
-              <div className="stack" style={{ gap: '0.15rem' }}>
-                <strong style={{ fontSize: '0.85rem' }}>{EVENT_LABEL[ev.type] ?? ev.type}</strong>
-                <span className="muted" style={{ fontSize: '0.82rem' }}>{ev.message}</span>
-                <span className="muted" style={{ fontSize: '0.75rem' }}>{fmt(ev.at)}</span>
+          {/* Penugasan — selagi work order belum selesai/batal. */}
+          {canAssign && !terminal && (
+            <section className="stack" style={{ gap: '0.4rem' }}>
+              <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Penugasan</h3>
+              <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
+                <label style={{ flex: 1 }}>
+                  <span>Teknisi</span>
+                  <select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
+                    <option value="">— pilih teknisi —</option>
+                    {technicians.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  className="primary"
+                  disabled={!assignee || assignee === wo.assignedTo}
+                  onClick={() => onAct(() => api.post(`/api/work-orders/${id}/assign`, { technicianId: assignee }), 'Teknisi ditugaskan', true)}
+                >
+                  {wo.assignedTo ? 'Tugaskan ulang' : 'Tugaskan'}
+                </button>
               </div>
-            </li>
-          ))}
-        </ol>
-      </section>
+            </section>
+          )}
+
+          {/* Aksi lifecycle. */}
+          {canUpdate && (wo.status === 'ASSIGNED' || wo.status === 'DRAFT') && (
+            <div className="row wrap" style={{ gap: '0.5rem' }}>
+              {wo.status === 'ASSIGNED' && (
+                <button onClick={() => onAct(() => api.post(`/api/work-orders/${id}/start`), 'Pengerjaan dimulai', true)}>Mulai</button>
+              )}
+              {wo.status === 'DRAFT' && (
+                <button
+                  className="ghost danger"
+                  onClick={() => onAct(() => api.del(`/api/work-orders/${id}`), 'Work order dihapus', false)}
+                >
+                  Hapus
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Selesaikan — hanya saat sedang dikerjakan. */}
+          {canClose && wo.status === 'IN_PROGRESS' && (
+            <section className="stack" style={{ gap: '0.4rem' }}>
+              <label className="stack" style={{ gap: '0.25rem' }}>
+                <span>Catatan penyelesaian (opsional)</span>
+                <textarea rows={2} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} />
+              </label>
+              <button
+                className="primary"
+                onClick={() => onAct(() => api.post(`/api/work-orders/${id}/complete`, { resolutionNote: note.trim() || null }), 'Work order selesai', true)}
+              >
+                Selesaikan
+              </button>
+            </section>
+          )}
+
+          {/* Persetujuan hasil kerja — hanya untuk WO selesai yang menunggu dikurasi. */}
+          {canApprove && awaitingApproval && (
+            <section className="stack" style={{ gap: '0.5rem' }}>
+              <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Persetujuan hasil kerja</h3>
+              <label className="stack" style={{ gap: '0.25rem' }}>
+                <span>Catatan (opsional untuk setuju, wajib bila menolak)</span>
+                <textarea
+                  rows={2}
+                  maxLength={500}
+                  value={decisionNote}
+                  onChange={(e) => setDecisionNote(e.target.value)}
+                  placeholder="mis. redaman OK, pemasangan rapi"
+                />
+              </label>
+              <div className="row" style={{ gap: '0.5rem' }}>
+                <button
+                  className="primary"
+                  onClick={() => onAct(() => api.post(`/api/work-orders/${id}/approve`, { note: decisionNote.trim() || null }), 'Hasil kerja disetujui', true)}
+                >
+                  Setujui
+                </button>
+                <button
+                  className="ghost danger"
+                  disabled={!decisionNote.trim()}
+                  onClick={() => onAct(() => api.post(`/api/work-orders/${id}/reject`, { reason: decisionNote.trim() }), 'Hasil kerja ditolak, WO dibuka kembali', true)}
+                  title={decisionNote.trim() ? undefined : 'Isi alasan penolakan dulu'}
+                >
+                  Tolak &amp; buka kembali
+                </button>
+              </div>
+            </section>
+          )}
+
+          {/* Pembatalan — selagi belum selesai/batal. */}
+          {canClose && !terminal && (
+            <section className="stack" style={{ gap: '0.4rem' }}>
+              <label className="stack" style={{ gap: '0.25rem' }}>
+                <span>Batalkan work order</span>
+                <input placeholder="Alasan (opsional)" value={reason} onChange={(e) => setReason(e.target.value)} />
+              </label>
+              <button
+                className="ghost danger"
+                onClick={() => onAct(() => api.post(`/api/work-orders/${id}/cancel`, { reason: reason.trim() || null }), 'Work order dibatalkan', true)}
+              >
+                Batalkan
+              </button>
+            </section>
+          )}
+        </div>
+      )}
+
+      {tab === 'bukti' && (
+        <div className="stack" style={{ gap: '1.1rem' }}>
+          {/* Redaman optik — bukti kualitas; disembunyikan hanya bila belum ada & tak boleh mengubah. */}
+          {showOptical && <OpticalSection wo={wo} canUpdate={canUpdate} onAct={onAct} />}
+          {showEvidence && <EvidenceSection workOrderId={id} status={wo.status} />}
+          {!showOptical && !showEvidence && (
+            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Tak ada bukti yang bisa ditampilkan.</p>
+          )}
+        </div>
+      )}
+
+      {tab === 'riwayat' && (
+        <section className="stack" style={{ gap: '0.5rem' }}>
+          <ol className="timeline">
+            {detail.timeline.map((ev, i) => (
+              <li key={i}>
+                <span className="tl-dot" aria-hidden="true" />
+                <div className="stack" style={{ gap: '0.15rem' }}>
+                  <strong style={{ fontSize: '0.85rem' }}>{EVENT_LABEL[ev.type] ?? ev.type}</strong>
+                  <span className="muted" style={{ fontSize: '0.82rem' }}>{ev.message}</span>
+                  <span className="muted" style={{ fontSize: '0.75rem' }}>{fmt(ev.at)}</span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
     </div>
   )
 }

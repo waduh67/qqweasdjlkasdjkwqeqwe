@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ApiError } from '../api/client'
 import {
   buildFupRateLimit,
@@ -14,8 +14,9 @@ import {
   type ServiceType,
 } from '../api/catalog'
 import { useCan } from '../auth/useCan'
-import { useToast } from '../components/ui'
-import { IconPlus } from '../components/icons'
+import { DataTable, type Column } from '../components/DataTable'
+import { Badge, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
+import { IconPackage, IconPlus } from '../components/icons'
 
 /**
  * Paket internet — SUMBER TUNGGAL harga + kecepatan + QoS + FUP + siklus billing.
@@ -115,6 +116,8 @@ export function CatalogPage() {
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState<Draft | null>(null)
   const [saving, setSaving] = useState(false)
+  const [query, setQuery] = useState('')
+  const [serviceFilter, setServiceFilter] = useState<ServiceType | ''>('')
 
   const reload = useCallback(async () => {
     try {
@@ -232,6 +235,98 @@ export function CatalogPage() {
         fupUpMbps: num(draft.fupUpMbps),
       })
     : ''
+
+  // Saring paket di sisi klien: cocokkan nama + (opsional) tipe layanan.
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return items.filter((p) => {
+      if (q && !p.name.toLowerCase().includes(q)) return false
+      if (serviceFilter && !p.serviceTypes.includes(serviceFilter)) return false
+      return true
+    })
+  }, [items, query, serviceFilter])
+
+  const columns: Column<PlanView>[] = [
+    {
+      key: 'name',
+      header: 'Nama paket',
+      sortValue: (p) => p.name,
+      cell: (p) => (
+        <div className="stack" style={{ gap: '0.15rem' }}>
+          <strong>{p.name}</strong>
+          {p.description && (
+            <span className="muted" style={{ fontSize: '0.8rem' }}>{p.description}</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'price',
+      header: 'Harga / bln',
+      align: 'right',
+      sortValue: (p) => p.price,
+      cell: (p) => fmtRupiah(p.price),
+    },
+    {
+      key: 'speed',
+      header: 'Kecepatan',
+      align: 'right',
+      sortValue: (p) => p.downMbps,
+      cell: (p) => `${p.downMbps} / ${p.upMbps} Mbps`,
+    },
+    {
+      key: 'fup',
+      header: 'FUP',
+      sortValue: (p) => (p.fupEnabled ? 1 : 0),
+      cell: (p) =>
+        p.fupEnabled ? <Badge tone="accent">FUP</Badge> : <span className="muted">—</span>,
+    },
+    {
+      key: 'services',
+      header: 'Layanan',
+      sortValue: (p) => p.serviceTypes.map((s) => SERVICE_TYPE_LABEL[s]).join(', '),
+      cell: (p) => (
+        <div className="row" style={{ gap: '0.3rem', flexWrap: 'wrap' }}>
+          {p.serviceTypes.length === 0 ? (
+            <span className="muted">—</span>
+          ) : (
+            p.serviceTypes.map((s) => <Badge key={s}>{SERVICE_TYPE_LABEL[s]}</Badge>)
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortValue: (p) => (p.active ? 1 : 0),
+      cell: (p) =>
+        p.active ? (
+          <StatusBadge status="ACTIVE" label="Aktif" />
+        ) : (
+          <StatusBadge status="INACTIVE" label="Nonaktif" />
+        ),
+    },
+    ...(canManage
+      ? [
+          {
+            key: 'actions',
+            header: '',
+            align: 'right' as const,
+            width: '1%',
+            cell: (p: PlanView) => (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  edit(p)
+                }}
+              >
+                Ubah
+              </button>
+            ),
+          },
+        ]
+      : []),
+  ]
 
   return (
     <div className="stack">
@@ -535,67 +630,42 @@ export function CatalogPage() {
         </div>
       )}
 
-      <div className="card">
-        <table>
-          <thead>
-            <tr>
-              <th>Paket</th>
-              <th>Harga</th>
-              <th>Kecepatan</th>
-              <th>Rate-limit RADIUS</th>
-              <th>Status</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((plan) => (
-              <tr key={plan.id} style={{ opacity: plan.active ? 1 : 0.55 }}>
-                <td>
-                  {plan.name}
-                  {plan.description && (
-                    <>
-                      <br />
-                      <span className="muted" style={{ fontSize: '0.8rem' }}>
-                        {plan.description}
-                      </span>
-                    </>
-                  )}
-                </td>
-                <td className="tnum">{fmtRupiah(plan.price)}</td>
-                <td className="tnum">
-                  {plan.downMbps} / {plan.upMbps} Mbps
-                  {plan.fupEnabled && (
-                    <>
-                      {' '}
-                      <span className="badge">FUP</span>
-                    </>
-                  )}
-                </td>
-                <td>
-                  <code style={{ fontSize: '0.8rem' }}>{plan.rateLimit}</code>
-                </td>
-                <td>
-                  {plan.active ? (
-                    <span className="badge accent">Aktif</span>
-                  ) : (
-                    <span className="badge">Nonaktif</span>
-                  )}
-                </td>
-                <td>
-                  {canManage && <button onClick={() => edit(plan)}>Ubah</button>}
-                </td>
-              </tr>
-            ))}
-            {!loading && items.length === 0 && (
-              <tr>
-                <td colSpan={6} className="muted">
-                  Belum ada paket. {canManage ? 'Klik “Tambah paket” untuk membuat.' : ''}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Toolbar>
+        <SearchInput value={query} onChange={setQuery} placeholder="Cari nama paket…" />
+        <select
+          value={serviceFilter}
+          onChange={(e) => setServiceFilter(e.target.value as ServiceType | '')}
+        >
+          <option value="">Semua layanan</option>
+          {SERVICE_TYPES.map((s) => (
+            <option key={s} value={s}>
+              {SERVICE_TYPE_LABEL[s]}
+            </option>
+          ))}
+        </select>
+      </Toolbar>
+
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(p) => p.id}
+        onRowClick={canManage ? edit : undefined}
+        loading={loading}
+        initialSort={{ key: 'name', dir: 'asc' }}
+        empty={
+          <EmptyState
+            title={query || serviceFilter ? 'Tidak ada paket yang cocok' : 'Belum ada paket'}
+            hint={
+              query || serviceFilter
+                ? 'Coba ubah kata kunci atau filter.'
+                : canManage
+                  ? 'Klik “Tambah paket” untuk membuat paket pertama.'
+                  : undefined
+            }
+            icon={<IconPackage size={32} />}
+          />
+        }
+      />
     </div>
   )
 }

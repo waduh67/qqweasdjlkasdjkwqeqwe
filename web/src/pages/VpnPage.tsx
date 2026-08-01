@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ApiError } from '../api/client'
 import {
   deleteAccount,
@@ -12,7 +12,8 @@ import {
   type VpnAccountView,
 } from '../api/vpn'
 import { useCan } from '../auth/useCan'
-import { EmptyState, useToast } from '../components/ui'
+import { DataTable, type Column } from '../components/DataTable'
+import { EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
 import { IconAlert, IconPlus } from '../components/icons'
 
 /**
@@ -81,6 +82,12 @@ function fmtWhen(iso: string | null): string {
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })
 }
 
+const STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: '', label: 'Semua status' },
+  { value: 'ENABLED', label: 'Aktif' },
+  { value: 'DISABLED', label: 'Nonaktif' },
+]
+
 export function VpnPage() {
   const { can } = useCan()
   const canManage = can('vpn.peer.manage')
@@ -92,6 +99,8 @@ export function VpnPage() {
   const [busy, setBusy] = useState(false)
   // Kredensial (dengan password) hanya tampil sekali — setelah generate/rotasi.
   const [fresh, setFresh] = useState<VpnAccountView | null>(null)
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
   const generate = () => {
     setBusy(true)
@@ -120,6 +129,108 @@ export function VpnPage() {
     if (!window.confirm(`Hapus akun “${a.label}”? Koneksi Mikrotik dengan akun ini akan putus.`)) return
     void run(() => deleteAccount(a.id), 'Akun dihapus')
   }
+
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return accounts.filter((a) => {
+      if (statusFilter && a.status !== statusFilter) return false
+      if (!q) return true
+      return [a.label, a.serverName, a.host, a.username, a.overlayIp, a.winboxAddress].some((v) =>
+        v?.toLowerCase().includes(q),
+      )
+    })
+  }, [accounts, query, statusFilter])
+
+  const columns: Column<VpnAccountView>[] = [
+    { key: 'label', header: 'Label', sortValue: (a) => a.label, cell: (a) => <strong>{a.label}</strong> },
+    {
+      key: 'server',
+      header: 'Server',
+      sortValue: (a) => a.serverName,
+      cell: (a) => <span className="muted">{a.serverName}</span>,
+    },
+    {
+      key: 'dial',
+      header: 'Titik dial',
+      sortValue: (a) => a.host,
+      cell: (a) => (
+        <div className="stack" style={{ gap: '0.15rem' }}>
+          <span className="tnum">
+            {a.host}:{a.port}
+          </span>
+          <span className="muted" style={{ fontSize: '0.8rem' }}>
+            {a.protocol}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: 'username',
+      header: 'Username',
+      sortValue: (a) => a.username,
+      cell: (a) => <span className="muted">{a.username}</span>,
+    },
+    {
+      key: 'overlayIp',
+      header: 'IP overlay',
+      sortValue: (a) => a.overlayIp,
+      cell: (a) => <span className="tnum">{a.overlayIp}</span>,
+    },
+    {
+      key: 'winbox',
+      header: 'Winbox (remote)',
+      sortValue: (a) => a.winboxAddress,
+      cell: (a) => <span className="tnum">{a.winboxAddress}</span>,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortValue: (a) => a.status,
+      cell: (a) => (
+        <StatusBadge
+          status={a.status === 'ENABLED' ? 'ACTIVE' : 'DISABLED'}
+          label={a.status === 'ENABLED' ? 'aktif' : 'nonaktif'}
+        />
+      ),
+    },
+    {
+      key: 'connection',
+      header: 'Koneksi',
+      sortValue: (a) => (a.online ? 1 : 0),
+      cell: (a) => <LiveIndicator online={a.online} lastHandshakeAt={a.lastHandshakeAt} />,
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      width: '1%',
+      cell: (a) => (
+        <div className="row" style={{ justifyContent: 'flex-end' }}>
+          {canConfig && (
+            <>
+              <button
+                onClick={() => void saveBlob(() => downloadAccountRouterOs(a.id), `${a.username}.rsc`, toast.error)}
+              >
+                RouterOS
+              </button>
+              <button
+                onClick={() => void saveBlob(() => downloadAccountOvpn(a.id), `${a.username}.ovpn`, toast.error)}
+              >
+                .ovpn
+              </button>
+            </>
+          )}
+          {canManage && (
+            <>
+              <button onClick={() => toggle(a)}>{a.status === 'ENABLED' ? 'Nonaktifkan' : 'Aktifkan'}</button>
+              <button onClick={() => rotate(a)}>Rotasi password</button>
+              <button onClick={() => remove(a)}>Hapus</button>
+            </>
+          )}
+        </div>
+      ),
+    },
+  ]
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
@@ -155,92 +266,36 @@ export function VpnPage() {
 
       {fresh && <CredentialCard account={fresh} onDismiss={() => setFresh(null)} />}
 
-      {loading ? (
-        <div className="card">
-          <p className="muted" style={{ margin: 0 }}>
-            Memuat…
-          </p>
-        </div>
-      ) : accounts.length === 0 ? (
-        <div className="card">
+      <Toolbar>
+        <SearchInput value={query} onChange={setQuery} placeholder="Cari label, server, username, atau IP…" />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          {STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </Toolbar>
+
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(a) => a.id}
+        loading={loading}
+        initialSort={{ key: 'label', dir: 'asc' }}
+        empty={
           <EmptyState
-            title="Belum ada akun VPN"
-            hint={canManage ? 'Tekan “Generate akun” untuk membuat yang pertama.' : 'Belum ada akun untuk ditampilkan.'}
+            title={query || statusFilter ? 'Tidak ada akun yang cocok' : 'Belum ada akun VPN'}
+            hint={
+              query || statusFilter
+                ? 'Coba ubah kata kunci atau filter.'
+                : canManage
+                  ? 'Tekan “Generate akun” untuk membuat yang pertama.'
+                  : 'Belum ada akun untuk ditampilkan.'
+            }
           />
-        </div>
-      ) : (
-        <div className="card">
-          <table>
-            <thead>
-              <tr>
-                <th>Label</th>
-                <th>Server</th>
-                <th>Titik dial</th>
-                <th>Username</th>
-                <th>IP overlay</th>
-                <th>Winbox (remote)</th>
-                <th>Status</th>
-                <th>Koneksi</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {accounts.map((a) => (
-                <tr key={a.id}>
-                  <td>{a.label}</td>
-                  <td className="muted">{a.serverName}</td>
-                  <td className="muted">
-                    {a.host}:{a.port}
-                    <br />
-                    <span style={{ fontSize: '0.8rem' }}>{a.protocol}</span>
-                  </td>
-                  <td className="muted">{a.username}</td>
-                  <td className="tnum">{a.overlayIp}</td>
-                  <td className="tnum">{a.winboxAddress}</td>
-                  <td>
-                    <span
-                      className="badge"
-                      style={{ color: a.status === 'ENABLED' ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
-                    >
-                      {a.status === 'ENABLED' ? 'aktif' : 'nonaktif'}
-                    </span>
-                  </td>
-                  <td>
-                    <LiveIndicator online={a.online} lastHandshakeAt={a.lastHandshakeAt} />
-                  </td>
-                  <td>
-                    <div className="row">
-                      {canConfig && (
-                        <>
-                          <button
-                            onClick={() =>
-                              void saveBlob(() => downloadAccountRouterOs(a.id), `${a.username}.rsc`, toast.error)
-                            }
-                          >
-                            RouterOS
-                          </button>
-                          <button
-                            onClick={() => void saveBlob(() => downloadAccountOvpn(a.id), `${a.username}.ovpn`, toast.error)}
-                          >
-                            .ovpn
-                          </button>
-                        </>
-                      )}
-                      {canManage && (
-                        <>
-                          <button onClick={() => toggle(a)}>{a.status === 'ENABLED' ? 'Nonaktifkan' : 'Aktifkan'}</button>
-                          <button onClick={() => rotate(a)}>Rotasi password</button>
-                          <button onClick={() => remove(a)}>Hapus</button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+        }
+      />
     </div>
   )
 }

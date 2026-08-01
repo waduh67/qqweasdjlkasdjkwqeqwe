@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { IncidentAlarm, IncidentDetail, IncidentEventView, IncidentView } from '../api/incident'
 import type { BroadcastView, NotificationChannel } from '../api/notification'
 import { useCan } from '../auth/useCan'
-import { Drawer, EmptyState, SkeletonRows, StatusBadge, useToast } from '../components/ui'
+import { DataTable, type Column } from '../components/DataTable'
+import { Drawer, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
 import { IconAlert } from '../components/icons'
+
+/** Urutan keparahan untuk pengurutan tabel (turun = paling parah di atas). */
+const SEV_RANK: Record<string, number> = { CRITICAL: 5, MAJOR: 4, MINOR: 3, WARNING: 2, INFO: 1 }
 
 const ROOT_LABEL: Record<string, string> = {
   OLT: 'OLT',
@@ -60,6 +64,8 @@ export function IncidentsPage() {
   const [incidents, setIncidents] = useState<IncidentView[]>([])
   const [loading, setLoading] = useState(true)
   const [detail, setDetail] = useState<IncidentDetail | null>(null)
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
   const reload = useCallback(async () => {
     try {
@@ -98,6 +104,66 @@ export function IncidentsPage() {
     }
   }
 
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return incidents.filter(
+      (inc) =>
+        (!statusFilter || inc.status === statusFilter) &&
+        (!q ||
+          inc.title.toLowerCase().includes(q) ||
+          inc.rootLabel.toLowerCase().includes(q)),
+    )
+  }, [incidents, query, statusFilter])
+
+  const columns: Column<IncidentView>[] = [
+    {
+      key: 'severity',
+      header: 'Keparahan',
+      sortValue: (i) => SEV_RANK[i.severity] ?? 0,
+      cell: (i) => <StatusBadge status={i.severity} />,
+    },
+    {
+      key: 'title',
+      header: 'Insiden',
+      sortValue: (i) => i.title,
+      cell: (i) => (
+        <div className="stack" style={{ gap: '0.2rem' }}>
+          <strong>{i.title}</strong>
+          {i.suspectedCause && CAUSE_LABEL[i.suspectedCause] && (
+            <span className={`badge cause-${i.suspectedCause.toLowerCase()}`}>
+              {CAUSE_LABEL[i.suspectedCause]}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'root',
+      header: 'Akar masalah',
+      sortValue: (i) => i.rootLabel,
+      cell: (i) => `${ROOT_LABEL[i.rootType] ?? i.rootType} ${i.rootLabel}`,
+    },
+    { key: 'alarms', header: 'Alarm', align: 'right', sortValue: (i) => i.alarmCount, cell: (i) => i.alarmCount },
+    {
+      key: 'customers',
+      header: 'Pelanggan',
+      align: 'right',
+      sortValue: (i) => i.affectedCustomerCount,
+      cell: (i) => i.affectedCustomerCount,
+    },
+    { key: 'opened', header: 'Dibuka', sortValue: (i) => i.openedAt, cell: (i) => timeAgo(i.openedAt) },
+    {
+      key: 'status',
+      header: 'Status',
+      sortValue: (i) => i.status,
+      cell: (i) => (
+        <span className={`badge ${i.status === 'ACKNOWLEDGED' ? 'warning' : ''}`}>
+          {i.status === 'ACKNOWLEDGED' ? 'Diakui' : 'Terbuka'}
+        </span>
+      ),
+    },
+  ]
+
   return (
     <div className="stack" style={{ gap: '1.2rem' }}>
       <div>
@@ -107,45 +173,34 @@ export function IncidentsPage() {
         </p>
       </div>
 
-      {loading ? (
-        <div className="card">
-          <SkeletonRows rows={4} />
-        </div>
-      ) : incidents.length === 0 ? (
-        <div className="card">
+      <Toolbar>
+        <SearchInput value={query} onChange={setQuery} placeholder="Cari judul atau akar masalah…" />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="">Semua status</option>
+          <option value="OPEN">Terbuka</option>
+          <option value="ACKNOWLEDGED">Diakui</option>
+        </select>
+      </Toolbar>
+
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(i) => i.id}
+        onRowClick={(i) => void openDetail(i.id)}
+        loading={loading}
+        initialSort={{ key: 'severity', dir: 'desc' }}
+        empty={
           <EmptyState
-            title="Tidak ada insiden aktif"
-            hint="Jaringan tenang. Insiden muncul di sini saat alarm terkorelasi jadi gangguan."
+            title={query || statusFilter ? 'Tidak ada insiden yang cocok' : 'Tidak ada insiden aktif'}
+            hint={
+              query || statusFilter
+                ? 'Coba ubah kata kunci atau filter.'
+                : 'Jaringan tenang. Insiden muncul di sini saat alarm terkorelasi jadi gangguan.'
+            }
             icon={<IconAlert size={34} />}
           />
-        </div>
-      ) : (
-        <div className="stack" style={{ gap: '0.6rem' }}>
-          {incidents.map((inc) => (
-            <button key={inc.id} className="incident-row" onClick={() => void openDetail(inc.id)}>
-              <span className={`sev-stripe sev-${inc.severity.toLowerCase()}`} aria-hidden="true" />
-              <span className="stack" style={{ gap: '0.3rem', minWidth: 0, alignItems: 'flex-start', flex: 1 }}>
-                <span className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <StatusBadge status={inc.severity} />
-                  <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{inc.title}</strong>
-                  {inc.suspectedCause && CAUSE_LABEL[inc.suspectedCause] && (
-                    <span className={`badge cause-${inc.suspectedCause.toLowerCase()}`}>
-                      {CAUSE_LABEL[inc.suspectedCause]}
-                    </span>
-                  )}
-                </span>
-                <span className="muted" style={{ fontSize: '0.82rem' }}>
-                  {ROOT_LABEL[inc.rootType] ?? inc.rootType} {inc.rootLabel} · {inc.alarmCount} alarm ·{' '}
-                  {inc.affectedCustomerCount} pelanggan · dibuka {timeAgo(inc.openedAt)}
-                </span>
-              </span>
-              <span className={`badge ${inc.status === 'ACKNOWLEDGED' ? 'warning' : ''}`}>
-                {inc.status === 'ACKNOWLEDGED' ? 'Diakui' : 'Terbuka'}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
+        }
+      />
 
       {detail && (
         <Drawer title={detail.incident.title} onClose={() => setDetail(null)}>

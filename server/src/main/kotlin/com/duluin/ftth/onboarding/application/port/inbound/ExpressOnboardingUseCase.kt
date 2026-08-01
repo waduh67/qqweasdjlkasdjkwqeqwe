@@ -25,7 +25,8 @@ interface ExpressOnboardingUseCase {
  */
 data class ExpressPsbCommand(
     // Pelanggan
-    val code: String,
+    /** Kosong/null = server membuat kode berurut otomatis (`CUST-000001`). */
+    val code: String?,
     val name: String,
     val phone: String?,
     val email: String?,

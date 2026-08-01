@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import {
   createNas,
@@ -8,14 +8,16 @@ import {
   NAS_VENDOR_LABEL,
   NAS_VENDORS,
   updateNas,
+  type NasVendor,
   type NasView,
   type RadiusEndpointView,
   type SaveNasRequest,
 } from '../api/bng'
 import type { Area } from '../api/types'
 import { useCan } from '../auth/useCan'
-import { useToast } from '../components/ui'
-import { IconPlus } from '../components/icons'
+import { DataTable, type Column } from '../components/DataTable'
+import { Badge, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
+import { IconGauge, IconPlus } from '../components/icons'
 
 /**
  * Registri BRAS/RADIUS tenant.
@@ -199,11 +201,14 @@ const EMPTY_NAS: NasDraft = {
 
 function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
   const { can } = useCan()
-  const { items, run } = useResource(listNas)
+  const { items, loading, run } = useResource(listNas)
   const canManage = can('bng.nas.manage')
   const canViewAreas = can('iam.area.view')
   const [areas, setAreas] = useState<Area[]>([])
   const [draft, setDraft] = useState<NasDraft | null>(null)
+  const [query, setQuery] = useState('')
+  const [vendorFilter, setVendorFilter] = useState<NasVendor | ''>('')
+  const [statusFilter, setStatusFilter] = useState<'' | 'enabled' | 'disabled'>('')
 
   useEffect(() => {
     if (!canViewAreas) return
@@ -260,6 +265,111 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
       draft.id ? 'BRAS diperbarui' : 'BRAS didaftarkan',
     )
   }
+
+  /** Peta id→nama area untuk menampilkan cakupan tiap BRAS tanpa memanggil balik. */
+  const areaNames = useMemo(() => new Map(areas.map((a) => [a.id, a.name])), [areas])
+
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return items.filter((nas) => {
+      if (vendorFilter && nas.vendor !== vendorFilter) return false
+      if (statusFilter === 'enabled' && !nas.enabled) return false
+      if (statusFilter === 'disabled' && nas.enabled) return false
+      if (!q) return true
+      return [nas.name, nas.address ?? '', nas.nasIdentifier ?? '', NAS_VENDOR_LABEL[nas.vendor]].some((v) =>
+        v.toLowerCase().includes(q),
+      )
+    })
+  }, [items, query, vendorFilter, statusFilter])
+
+  const columns: Column<NasView>[] = [
+    {
+      key: 'name',
+      header: 'Nama',
+      sortValue: (nas) => nas.name,
+      cell: (nas) => (
+        <div className="stack" style={{ gap: '0.15rem' }}>
+          <strong>{nas.name}</strong>
+          {nas.nasIdentifier && (
+            <span className="muted" style={{ fontSize: '0.8rem' }}>
+              {nas.nasIdentifier}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'vendor',
+      header: 'Vendor',
+      sortValue: (nas) => NAS_VENDOR_LABEL[nas.vendor],
+      cell: (nas) => NAS_VENDOR_LABEL[nas.vendor],
+    },
+    {
+      key: 'address',
+      header: 'Alamat',
+      sortValue: (nas) => nas.address ?? '',
+      cell: (nas) => nas.address ?? <span className="muted">—</span>,
+    },
+    {
+      key: 'areas',
+      header: 'Cakupan area',
+      sortValue: (nas) => nas.areaIds.length,
+      cell: (nas) => {
+        if (nas.areaIds.length === 0) return <span className="muted">—</span>
+        const names = nas.areaIds.map((id) => areaNames.get(id)).filter((n): n is string => !!n)
+        if (names.length === 0) return <Badge>{nas.areaIds.length} area</Badge>
+        return (
+          <div className="row" style={{ gap: '0.3rem', flexWrap: 'wrap' }}>
+            {names.map((n) => (
+              <Badge key={n}>{n}</Badge>
+            ))}
+          </div>
+        )
+      },
+    },
+    {
+      key: 'secret',
+      header: 'Secret',
+      sortValue: (nas) => (nas.hasCoaSecret ? 1 : 0),
+      cell: (nas) => (
+        <Badge tone={nas.hasCoaSecret ? 'good' : 'neutral'}>
+          {nas.hasCoaSecret ? 'secret terpasang' : 'belum diisi'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortValue: (nas) => (nas.enabled ? 1 : 0),
+      cell: (nas) => (
+        <StatusBadge status={nas.enabled ? 'ACTIVE' : 'INACTIVE'} label={nas.enabled ? 'aktif' : 'nonaktif'} />
+      ),
+    },
+    ...(canManage
+      ? [
+          {
+            key: 'actions',
+            header: '',
+            align: 'right',
+            width: '1%',
+            cell: (nas: NasView) => (
+              <div className="row" style={{ justifyContent: 'flex-end' }}>
+                <button onClick={() => edit(nas)}>Ubah</button>
+                <button
+                  onClick={() => {
+                    if (window.confirm(`Hapus BRAS ${nas.name}?`)) {
+                      void run(() => deleteNas(nas.id), 'BRAS dihapus')
+                    }
+                  }}
+                >
+                  Hapus
+                </button>
+              </div>
+            ),
+          } satisfies Column<NasView>,
+        ]
+      : []),
+  ]
 
   return (
     <div className="stack">
@@ -474,71 +584,48 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
         </div>
       )}
 
-      <div className="card">
-        <table>
-          <thead>
-            <tr>
-              <th>Nama</th>
-              <th>Vendor</th>
-              <th>Alamat</th>
-              <th>Secret</th>
-              <th>Status</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((nas) => (
-              <tr key={nas.id}>
-                <td>
-                  {nas.name}
-                  {nas.nasIdentifier && (
-                    <>
-                      <br />
-                      <span className="muted" style={{ fontSize: '0.8rem' }}>
-                        {nas.nasIdentifier}
-                      </span>
-                    </>
-                  )}
-                </td>
-                <td>{NAS_VENDOR_LABEL[nas.vendor]}</td>
-                <td className="muted">{nas.address ?? '—'}</td>
-                <td>
-                  <span
-                    className="badge"
-                    style={{ color: nas.hasCoaSecret ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
-                  >
-                    {nas.hasCoaSecret ? 'secret terpasang' : 'belum diisi'}
-                  </span>
-                </td>
-                <td>
-                  <span
-                    className="badge"
-                    style={{ color: nas.enabled ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
-                  >
-                    {nas.enabled ? 'aktif' : 'nonaktif'}
-                  </span>
-                </td>
-                <td>
-                  {canManage && (
-                    <div className="row">
-                      <button onClick={() => edit(nas)}>Ubah</button>
-                      <button
-                        onClick={() => {
-                          if (window.confirm(`Hapus BRAS ${nas.name}?`)) {
-                            void run(() => deleteNas(nas.id), 'BRAS dihapus')
-                          }
-                        }}
-                      >
-                        Hapus
-                      </button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Toolbar>
+        <SearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="Cari nama, alamat, NAS-Identifier, atau vendor…"
+        />
+        <select value={vendorFilter} onChange={(e) => setVendorFilter(e.target.value as NasVendor | '')}>
+          <option value="">Semua vendor</option>
+          {NAS_VENDORS.map((vendor) => (
+            <option key={vendor} value={vendor}>
+              {NAS_VENDOR_LABEL[vendor]}
+            </option>
+          ))}
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as '' | 'enabled' | 'disabled')}
+        >
+          <option value="">Semua status</option>
+          <option value="enabled">Aktif</option>
+          <option value="disabled">Nonaktif</option>
+        </select>
+      </Toolbar>
+
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(nas) => nas.id}
+        loading={loading}
+        initialSort={{ key: 'name', dir: 'asc' }}
+        empty={
+          <EmptyState
+            title={query || vendorFilter || statusFilter ? 'Tidak ada BRAS yang cocok' : 'Belum ada BRAS'}
+            hint={
+              query || vendorFilter || statusFilter
+                ? 'Coba ubah kata kunci atau filter.'
+                : 'Daftarkan router master pertama sebagai klien RADIUS.'
+            }
+            icon={<IconGauge size={32} />}
+          />
+        }
+      />
     </div>
   )
 }

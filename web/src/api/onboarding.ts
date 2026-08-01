@@ -18,7 +18,8 @@ export interface LocationPayload {
 
 export interface ExpressPsbRequest {
   // Pelanggan
-  code: string
+  /** Kosong/undefined = server membuat kode berurut otomatis (CUST-000001). */
+  code?: string
   name: string
   phone?: string | null
   email?: string | null

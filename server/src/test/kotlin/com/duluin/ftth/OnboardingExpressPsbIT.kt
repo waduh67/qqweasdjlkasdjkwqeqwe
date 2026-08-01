@@ -125,6 +125,46 @@ class OnboardingExpressPsbIT {
         assertThat(JsonPath.read<Int>(list, "$.totalElements")).isZero()
     }
 
+    @Test
+    fun `kode pelanggan dibuat otomatis berurut per-tenant saat operator tak mengetiknya`() {
+        val slug = "onbc${uniq()}"
+        val token = onboard(slug)
+
+        // Dua pelanggan tanpa 'code' → berurut, mulai dari CUST-000001.
+        val c1 = post(
+            "/api/customers", token,
+            """{"name":"Tanpa Kode 1","address":"Jl. A","location":{"longitude":106.8,"latitude":-6.2}}""",
+        )
+        val c2 = post(
+            "/api/customers", token,
+            """{"name":"Tanpa Kode 2","address":"Jl. B","location":{"longitude":106.8,"latitude":-6.2}}""",
+        )
+        assertThat(JsonPath.read<String>(c1, "$.code")).isEqualTo("CUST-000001")
+        assertThat(JsonPath.read<String>(c2, "$.code")).isEqualTo("CUST-000002")
+
+        // PSB ekspres tanpa 'code' ikut generator yang sama → CUST-000003.
+        val planId = createPlan(token)
+        val psb = post(
+            "/api/onboarding/psb", token,
+            """{"name":"PSB Tanpa Kode","address":"Jl. C","location":{"longitude":106.8,"latitude":-6.2},"planId":"$planId","username":"pppoe${uniq()}","secret":"rahasia123"}""",
+        )
+        val customerId = JsonPath.read<String>(psb, "$.customerId")
+        val fromPsb = get("/api/customers/$customerId", token)
+        assertThat(JsonPath.read<String>(fromPsb, "$.code")).isEqualTo("CUST-000003")
+
+        // Kode manual tetap dihormati (dinormalkan huruf besar) dan tak menggeser urutan otomatis.
+        val manual = post(
+            "/api/customers", token,
+            """{"code":"vip-01","name":"Manual","address":"Jl. D","location":{"longitude":106.8,"latitude":-6.2}}""",
+        )
+        assertThat(JsonPath.read<String>(manual, "$.code")).isEqualTo("VIP-01")
+        val c4 = post(
+            "/api/customers", token,
+            """{"name":"Tanpa Kode 4","address":"Jl. E","location":{"longitude":106.8,"latitude":-6.2}}""",
+        )
+        assertThat(JsonPath.read<String>(c4, "$.code")).isEqualTo("CUST-000004")
+    }
+
     // --- Perkakas HTTP ---
 
     private fun onboard(slug: String): String {

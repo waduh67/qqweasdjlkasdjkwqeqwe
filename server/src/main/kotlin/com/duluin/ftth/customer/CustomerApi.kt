@@ -146,7 +146,8 @@ interface CustomerApi {
 
 /** Perintah mendaftarkan pelanggan baru lewat kontrak publik (orkestrasi onboarding PSB ekspres). */
 data class RegisterCustomerCommand(
-    val code: String,
+    /** Kosong/null = server membuat kode berurut otomatis (`CUST-000001`). */
+    val code: String?,
     val name: String,
     val phone: String?,
     val email: String?,

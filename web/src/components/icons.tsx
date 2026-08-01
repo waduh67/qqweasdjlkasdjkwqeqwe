@@ -189,3 +189,16 @@ export const IconGauge = (p: IconProps) => (
     <path d="M3.34 19a10 10 0 1 1 17.32 0" />
   </Icon>
 )
+
+export const IconChevronDown = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m6 9 6 6 6-6" />
+  </Icon>
+)
+
+/** Panah dua-arah — penanda kolom bisa diurut yang belum aktif. */
+export const IconChevronsUpDown = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m7 15 5 5 5-5M7 9l5-5 5 5" />
+  </Icon>
+)

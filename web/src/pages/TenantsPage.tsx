@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import { useCan } from '../auth/useCan'
-import { StatusBadge } from '../components/ui'
-import { IconPlus } from '../components/icons'
+import { DataTable, type Column } from '../components/DataTable'
+import { EmptyState, SearchInput, StatusBadge, Toolbar } from '../components/ui'
+import { IconBuilding, IconPlus } from '../components/icons'
 
 interface Tenant {
   id: string
@@ -14,17 +15,30 @@ interface Tenant {
 
 const EMPTY = { slug: '', name: '', adminEmail: '', adminName: '', adminPassword: '' }
 
+const STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: '', label: 'Semua status' },
+  { value: 'ACTIVE', label: 'Aktif' },
+  { value: 'SUSPENDED', label: 'Ditangguhkan' },
+]
+
 /** Halaman platform admin: daftar tenant + onboarding tenant baru beserta admin awalnya. */
 export function TenantsPage() {
   const { can } = useCan()
   const [tenants, setTenants] = useState<Tenant[]>([])
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState<typeof EMPTY | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
   async function reload() {
-    const page = await api.get<PageResponse<Tenant>>('/api/platform/tenants?size=50')
-    setTenants(page.content)
+    try {
+      const page = await api.get<PageResponse<Tenant>>('/api/platform/tenants?size=50')
+      setTenants(page.content)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -40,6 +54,44 @@ export function TenantsPage() {
       setError(err instanceof ApiError ? err.message : 'Operasi gagal')
     }
   }
+
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return tenants.filter((t) => {
+      if (statusFilter && t.status !== statusFilter) return false
+      if (!q) return true
+      return t.name.toLowerCase().includes(q) || t.slug.toLowerCase().includes(q)
+    })
+  }, [tenants, query, statusFilter])
+
+  const columns: Column<Tenant>[] = [
+    { key: 'name', header: 'Nama', sortValue: (t) => t.name, cell: (t) => <strong>{t.name}</strong> },
+    { key: 'slug', header: 'Slug', sortValue: (t) => t.slug, cell: (t) => <span className="badge">{t.slug}</span> },
+    {
+      key: 'status',
+      header: 'Status',
+      sortValue: (t) => t.status,
+      cell: (t) => <StatusBadge status={t.status} />,
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      width: '1%',
+      cell: (t) =>
+        can('platform.tenant.manage') && t.slug !== 'platform' ? (
+          <button
+            onClick={() =>
+              void run(() =>
+                api.post(`/api/platform/tenants/${t.id}/${t.status === 'ACTIVE' ? 'suspend' : 'activate'}`),
+              )
+            }
+          >
+            {t.status === 'ACTIVE' ? 'Suspend' : 'Aktifkan'}
+          </button>
+        ) : null,
+    },
+  ]
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
@@ -58,44 +110,29 @@ export function TenantsPage() {
       {error && <p className="error">{error}</p>}
       {notice && <p className="muted">{notice}</p>}
 
-      <div className="card">
-        <table>
-          <thead>
-            <tr>
-              <th>Slug</th>
-              <th>Nama</th>
-              <th>Status</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {tenants.map((tenant) => (
-              <tr key={tenant.id}>
-                <td>{tenant.slug}</td>
-                <td className="muted">{tenant.name}</td>
-                <td>
-                  <StatusBadge status={tenant.status} />
-                </td>
-                <td>
-                  {can('platform.tenant.manage') && tenant.slug !== 'platform' && (
-                    <button
-                      onClick={() =>
-                        void run(() =>
-                          api.post(
-                            `/api/platform/tenants/${tenant.id}/${tenant.status === 'ACTIVE' ? 'suspend' : 'activate'}`,
-                          ),
-                        )
-                      }
-                    >
-                      {tenant.status === 'ACTIVE' ? 'Suspend' : 'Aktifkan'}
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Toolbar>
+        <SearchInput value={query} onChange={setQuery} placeholder="Cari nama atau slug…" />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          {STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </Toolbar>
+
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(t) => t.id}
+        loading={loading}
+        initialSort={{ key: 'name', dir: 'asc' }}
+        empty={
+          <EmptyState
+            title={query || statusFilter ? 'Tidak ada tenant yang cocok' : 'Belum ada tenant'}
+            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Onboarding tenant pertama untuk mulai.'}
+            icon={<IconBuilding size={32} />}
+          />
+        }
+      />
 
       {draft && (
         <div className="card stack">

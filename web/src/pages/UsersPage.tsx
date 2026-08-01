@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { Area, PageResponse, Role, User } from '../api/types'
 import { useCan } from '../auth/useCan'
+import { DataTable, type Column } from '../components/DataTable'
+import { EmptyState, SearchInput, StatusBadge, Toolbar } from '../components/ui'
+import { IconUsers } from '../components/icons'
 
 interface NewUser {
   email: string
@@ -19,25 +22,35 @@ export function UsersPage() {
   const [roles, setRoles] = useState<Role[]>([])
   const [areas, setAreas] = useState<Area[]>([])
   const [query, setQuery] = useState('')
+  const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState<NewUser | null>(null)
   const [editing, setEditing] = useState<User | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(async (search: string) => {
-    const page = await api.get<PageResponse<User>>(
-      `/api/users?size=50${search ? `&query=${encodeURIComponent(search)}` : ''}`,
-    )
-    setUsers(page.content)
-  }, [])
+  const reload = useCallback(async () => {
+    try {
+      const page = await api.get<PageResponse<User>>(
+        `/api/users?size=50${query ? `&query=${encodeURIComponent(query)}` : ''}`,
+      )
+      setUsers(page.content)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Gagal memuat pengguna')
+    } finally {
+      setLoading(false)
+    }
+  }, [query])
+
+  useEffect(() => {
+    void reload()
+  }, [reload])
 
   useEffect(() => {
     void (async () => {
       try {
-        await load('')
         if (can('iam.role.view')) setRoles(await api.get<Role[]>('/api/roles'))
         if (can('iam.area.view')) setAreas(await api.get<Area[]>('/api/areas'))
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : 'Gagal memuat pengguna')
+        setError(err instanceof ApiError ? err.message : 'Gagal memuat data')
       }
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -47,7 +60,7 @@ export function UsersPage() {
     setError(null)
     try {
       await action()
-      await load(query)
+      await reload()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Operasi gagal')
     }
@@ -59,6 +72,62 @@ export function UsersPage() {
     else next.add(id)
     return next
   }
+
+  const roleNames = (user: User) =>
+    user.roleIds.map((id) => roles.find((r) => r.id === id)?.name ?? '?').join(', ')
+  const areaCodes = (user: User) =>
+    user.areaIds.length === 0
+      ? 'semua'
+      : user.areaIds.map((id) => areas.find((a) => a.id === id)?.code ?? '?').join(', ')
+
+  const columns: Column<User>[] = [
+    { key: 'name', header: 'Nama', sortValue: (u) => u.name, cell: (u) => u.name },
+    { key: 'email', header: 'Email', sortValue: (u) => u.email, className: 'muted', cell: (u) => u.email },
+    {
+      key: 'status',
+      header: 'Status',
+      sortValue: (u) => u.status,
+      cell: (u) => <StatusBadge status={u.status} />,
+    },
+    {
+      key: 'role',
+      header: 'Role',
+      className: 'muted',
+      sortValue: (u) => roleNames(u),
+      cell: (u) => roleNames(u) || '–',
+    },
+    { key: 'area', header: 'Area', className: 'muted', sortValue: (u) => areaCodes(u), cell: (u) => areaCodes(u) },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      width: '1%',
+      cell: (user) => (
+        <div className="row">
+          {can('iam.user.assign') && <button onClick={() => setEditing(user)}>Akses</button>}
+          {can('iam.user.update') && (
+            <button
+              onClick={() =>
+                void run(() =>
+                  api.post(`/api/users/${user.id}/${user.status === 'ACTIVE' ? 'disable' : 'enable'}`),
+                )
+              }
+            >
+              {user.status === 'ACTIVE' ? 'Nonaktifkan' : 'Aktifkan'}
+            </button>
+          )}
+          {can('iam.user.delete') && (
+            <button
+              className="danger"
+              onClick={() => confirm(`Hapus ${user.email}?`) && void run(() => api.del(`/api/users/${user.id}`))}
+            >
+              Hapus
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ]
 
   return (
     <div className="stack">
@@ -73,73 +142,24 @@ export function UsersPage() {
 
       {error && <p className="error">{error}</p>}
 
-      <div className="row">
-        <input
-          placeholder="Cari nama atau email…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && void run(async () => {})}
-        />
-        <button onClick={() => void run(async () => {})}>Cari</button>
-      </div>
+      <Toolbar>
+        <SearchInput value={query} onChange={setQuery} placeholder="Cari nama atau email…" />
+      </Toolbar>
 
-      <div className="card">
-        <table>
-          <thead>
-            <tr>
-              <th>Nama</th>
-              <th>Email</th>
-              <th>Status</th>
-              <th>Role</th>
-              <th>Area</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id}>
-                <td>{user.name}</td>
-                <td className="muted">{user.email}</td>
-                <td>
-                  <span className="badge">{user.status}</span>
-                </td>
-                <td className="muted">
-                  {user.roleIds.map((id) => roles.find((r) => r.id === id)?.name ?? '?').join(', ') || '–'}
-                </td>
-                <td className="muted">
-                  {user.areaIds.length === 0
-                    ? 'semua'
-                    : user.areaIds.map((id) => areas.find((a) => a.id === id)?.code ?? '?').join(', ')}
-                </td>
-                <td>
-                  <div className="row">
-                    {can('iam.user.assign') && <button onClick={() => setEditing(user)}>Akses</button>}
-                    {can('iam.user.update') && (
-                      <button
-                        onClick={() =>
-                          void run(() =>
-                            api.post(`/api/users/${user.id}/${user.status === 'ACTIVE' ? 'disable' : 'enable'}`),
-                          )
-                        }
-                      >
-                        {user.status === 'ACTIVE' ? 'Nonaktifkan' : 'Aktifkan'}
-                      </button>
-                    )}
-                    {can('iam.user.delete') && (
-                      <button
-                        className="danger"
-                        onClick={() => confirm(`Hapus ${user.email}?`) && void run(() => api.del(`/api/users/${user.id}`))}
-                      >
-                        Hapus
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        rows={users}
+        rowKey={(u) => u.id}
+        loading={loading}
+        initialSort={{ key: 'name', dir: 'asc' }}
+        empty={
+          <EmptyState
+            title={query ? 'Tidak ada pengguna yang cocok' : 'Belum ada pengguna'}
+            hint={query ? 'Coba ubah kata kunci pencarian.' : 'Tambahkan pengguna pertama untuk memberi akses ke sistem.'}
+            icon={<IconUsers size={32} />}
+          />
+        }
+      />
 
       {draft && (
         <div className="card stack">
