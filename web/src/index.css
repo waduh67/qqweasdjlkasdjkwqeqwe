@@ -507,6 +507,117 @@ tbody tr.row-click:focus-visible {
   font-size: 0.68rem;
 }
 
+/* ── Combobox (pemilih tunggal yang bisa dicari) ───────────────────────────── */
+.combobox {
+  position: relative;
+}
+.cb-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.cb-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.cb-field > svg {
+  color: var(--muted);
+  flex: none;
+}
+.cb-field input {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 0.5rem 0;
+}
+.cb-field input:focus {
+  outline: none;
+  box-shadow: none;
+}
+.cb-field button {
+  padding: 0.2rem;
+  border: none;
+  background: none;
+}
+.combobox.is-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.cb-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  max-height: 16rem;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+}
+.cb-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.cb-option.active {
+  background: var(--surface-hover);
+}
+.cb-option.selected .cb-label {
+  color: var(--accent);
+  font-weight: 600;
+}
+.cb-label {
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.cb-meta {
+  font-size: 0.75rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cb-note {
+  padding: 0.5rem 0.55rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* ── Ringkasan work order — grid definisi rapi (ganti dl inline) ────────────── */
+.wo-desc {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-2);
+}
+.wo-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1rem;
+  margin: 0;
+  font-size: 0.85rem;
+  align-items: baseline;
+}
+.wo-grid dt {
+  color: var(--muted);
+}
+.wo-grid dd {
+  margin: 0;
+  color: var(--text);
+}
+
 /* ---------- Modal (dialog terpusat) ---------- */
 
 .modal {

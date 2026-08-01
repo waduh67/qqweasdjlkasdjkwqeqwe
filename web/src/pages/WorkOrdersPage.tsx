@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse, Role, User } from '../api/types'
 import type { CustomerView } from '../api/network'
@@ -17,6 +17,7 @@ import type {
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
 import { Badge, Drawer, EmptyState, Modal, SearchInput, SkeletonRows, Tabs, Toolbar, useToast } from '../components/ui'
+import { Combobox } from '../components/Combobox'
 import { IconPlus, IconWorkOrder } from '../components/icons'
 
 const TYPE_LABEL: Record<WorkOrderType, string> = {
@@ -125,6 +126,16 @@ function WoStatusBadge({ status }: { status: WorkOrderStatus }) {
   return <Badge tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</Badge>
 }
 
+/** Satu pasang label/nilai dalam grid ringkasan (`.wo-grid`). */
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <>
+      <dt>{label}</dt>
+      <dd>{children}</dd>
+    </>
+  )
+}
+
 /** Nada prioritas: tinggi/mendesak menonjol (warning), sisanya netral. */
 const priorityTone = (p: WorkOrderPriority): 'warning' | 'neutral' =>
   p === 'URGENT' || p === 'HIGH' ? 'warning' : 'neutral'
@@ -151,10 +162,33 @@ export function WorkOrdersPage() {
   // Ditambah tiap ada perubahan (buat/tugaskan/lifecycle) agar dashboard menghitung ulang.
   const [dashVersion, setDashVersion] = useState(0)
 
-  // Pelanggan & teknisi untuk pemilih di form — best-effort; bila operator tak
-  // punya izin melihatnya, pemilihnya cukup dikosongkan (tidak menggagalkan halaman).
-  const [customers, setCustomers] = useState<CustomerView[]>([])
+  // Teknisi untuk pemilih & filter — best-effort; bila operator tak punya izin
+  // melihatnya, pemilihnya cukup dikosongkan (tidak menggagalkan halaman). Pelanggan
+  // TIDAK dimuat borongan: dicari sisi-server lewat combobox agar tahan ribuan baris.
   const [technicians, setTechnicians] = useState<User[]>([])
+
+  // Pencarian pelanggan sisi-server untuk combobox — ambil sedikit per ketikan, bukan
+  // menarik ratusan/ribuan ke klien. Gagal (mis. tak berizin) → daftar kosong, form tetap jalan.
+  const fetchCustomers = useCallback(async (term: string): Promise<CustomerView[]> => {
+    const params = new URLSearchParams({ size: '8' })
+    if (term) params.set('query', term)
+    try {
+      const p = await api.get<PageResponse<CustomerView>>(`/api/customers?${params}`)
+      return p.content
+    } catch {
+      return []
+    }
+  }, [])
+
+  // Teknisi difilter lokal (jumlahnya dibatasi role) — bungkus jadi Promise agar
+  // antarmuka combobox seragam dengan pencarian pelanggan sisi-server.
+  const fetchTechnicians = useCallback(
+    async (term: string): Promise<User[]> => {
+      const t = term.toLowerCase()
+      return t ? technicians.filter((u) => u.name.toLowerCase().includes(t)) : technicians
+    },
+    [technicians],
+  )
 
   const reload = useCallback(async () => {
     const params = new URLSearchParams({ size: '100' })
@@ -178,10 +212,6 @@ export function WorkOrdersPage() {
   }, [reload])
 
   useEffect(() => {
-    void api
-      .get<PageResponse<CustomerView>>('/api/customers?size=200')
-      .then((p) => setCustomers(p.content))
-      .catch(() => setCustomers([]))
     // Pemilih teknisi disaring ke pemegang role "Teknisi" (bukan semua user aktif) agar
     // penugasan hanya jatuh ke petugas lapangan. Bila role belum ada / tak berizin lihat
     // roles, jatuh balik ke semua user aktif supaya form tetap bisa dipakai.
@@ -356,8 +386,8 @@ export function WorkOrdersPage() {
       {draft && (
         <WorkOrderForm
           draft={draft}
-          customers={customers}
-          technicians={technicians}
+          fetchCustomers={fetchCustomers}
+          fetchTechnicians={fetchTechnicians}
           onChange={setDraft}
           onSubmit={submitCreate}
           onCancel={() => setDraft(null)}
@@ -389,7 +419,7 @@ export function WorkOrdersPage() {
           <WorkOrderDetailBody
             key={detail.workOrder.id}
             detail={detail}
-            technicians={technicians}
+            fetchTechnicians={fetchTechnicians}
             onAct={(action, ok, keepOpen) =>
               void run(action, ok, keepOpen ? detail.workOrder.id : undefined).then(() => {
                 if (!keepOpen) setDetail(null)
@@ -523,15 +553,15 @@ function DispatchDashboard({
 /** Form buat work order — tipe & teknisi hanya relevan saat pembuatan. */
 function WorkOrderForm({
   draft,
-  customers,
-  technicians,
+  fetchCustomers,
+  fetchTechnicians,
   onChange,
   onSubmit,
   onCancel,
 }: {
   draft: Draft
-  customers: CustomerView[]
-  technicians: User[]
+  fetchCustomers: (term: string) => Promise<CustomerView[]>
+  fetchTechnicians: (term: string) => Promise<User[]>
   onChange: (d: Draft) => void
   onSubmit: () => void
   onCancel: () => void
@@ -584,28 +614,32 @@ function WorkOrderForm({
           <span>Deskripsi (opsional)</span>
           <textarea rows={3} maxLength={2000} value={draft.description} onChange={(e) => onChange({ ...draft, description: e.target.value })} />
         </label>
+        <label className="stack" style={{ gap: '0.25rem' }}>
+          <span>Pelanggan (opsional)</span>
+          <Combobox
+            value={draft.customerId}
+            onChange={(id) => onChange({ ...draft, customerId: id })}
+            fetchOptions={fetchCustomers}
+            toId={(c) => c.id}
+            toLabel={(c) => c.name}
+            toMeta={(c) => [c.code, c.phone, c.address].filter(Boolean).join(' · ')}
+            placeholder="Cari nama, kode, telepon, atau alamat pelanggan…"
+            emptyText="Pelanggan tak ditemukan"
+          />
+        </label>
         <div className="row wrap">
-          <label style={{ flex: 2, minWidth: 180 }}>
-            <span>Pelanggan (opsional)</span>
-            <select value={draft.customerId} onChange={(e) => onChange({ ...draft, customerId: e.target.value })}>
-              <option value="">— tanpa pelanggan —</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.code})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label style={{ flex: 2, minWidth: 180 }}>
+          <label className="stack" style={{ flex: 1, minWidth: 200, gap: '0.25rem' }}>
             <span>Teknisi (opsional)</span>
-            <select value={draft.assignedTo} onChange={(e) => onChange({ ...draft, assignedTo: e.target.value })}>
-              <option value="">— belum ditugaskan —</option>
-              {technicians.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+            <Combobox
+              value={draft.assignedTo}
+              onChange={(id) => onChange({ ...draft, assignedTo: id })}
+              fetchOptions={fetchTechnicians}
+              toId={(t) => t.id}
+              toLabel={(t) => t.name}
+              debounceMs={0}
+              placeholder="Cari teknisi…"
+              emptyText="Tak ada teknisi"
+            />
           </label>
           <label style={{ flex: 1, minWidth: 180 }}>
             <span>Jadwal (opsional)</span>
@@ -622,11 +656,11 @@ type ActFn = (action: () => Promise<unknown>, ok: string, keepOpen: boolean) => 
 /** Detail + aksi lifecycle. Tombol yang muncul mengikuti status & izin. */
 function WorkOrderDetailBody({
   detail,
-  technicians,
+  fetchTechnicians,
   onAct,
 }: {
   detail: WorkOrderDetail
-  technicians: User[]
+  fetchTechnicians: (term: string) => Promise<User[]>
   onAct: ActFn
 }) {
   const { can } = useCan()
@@ -654,13 +688,14 @@ function WorkOrderDetailBody({
 
   return (
     <div className="stack" style={{ gap: '1rem' }}>
-      {/* Ringkasan status selalu di atas tab supaya keadaan WO langsung terbaca. */}
+      {/* Baris status (keadaan saja) di atas tab — data rinci pindah ke grid Ringkasan
+          agar tak dobel tampil. Prioritas hanya muncul di sini saat perlu perhatian. */}
       <div className="row wrap" style={{ gap: '0.4rem' }}>
         <WoStatusBadge status={wo.status} />
-        <span className="badge">{TYPE_LABEL[wo.type]}</span>
-        <Badge tone={priorityTone(wo.priority)}>{PRIORITY_LABEL[wo.priority]}</Badge>
         {wo.approvalStatus && <Badge tone={APPROVAL_TONE[wo.approvalStatus]}>{APPROVAL_LABEL[wo.approvalStatus]}</Badge>}
-        {wo.customerName && <span className="badge">{wo.customerName}</span>}
+        {(wo.priority === 'URGENT' || wo.priority === 'HIGH') && (
+          <Badge tone="warning">Prioritas {PRIORITY_LABEL[wo.priority]}</Badge>
+        )}
       </div>
 
       <Tabs
@@ -675,59 +710,40 @@ function WorkOrderDetailBody({
 
       {tab === 'ringkasan' && (
         <div className="stack" style={{ gap: '1.1rem' }}>
-          {wo.description && <p style={{ margin: 0, fontSize: '0.9rem' }}>{wo.description}</p>}
+          {wo.description && <p className="wo-desc">{wo.description}</p>}
 
-          <dl className="kv" style={{ margin: 0, display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.3rem 0.8rem', fontSize: '0.85rem' }}>
-            <dt className="muted">Teknisi</dt>
-            <dd style={{ margin: 0 }}>{wo.assignedToName ?? 'belum ditugaskan'}</dd>
-            <dt className="muted">Jadwal</dt>
-            <dd style={{ margin: 0 }}>{fmt(wo.scheduledAt)}</dd>
+          <dl className="wo-grid">
+            <Field label="Tipe">{TYPE_LABEL[wo.type]}</Field>
+            <Field label="Pelanggan">{wo.customerName ?? <span className="muted">—</span>}</Field>
+            <Field label="Prioritas">{PRIORITY_LABEL[wo.priority]}</Field>
+            <Field label="Teknisi">{wo.assignedToName ?? <span className="muted">belum ditugaskan</span>}</Field>
+            <Field label="Jadwal">{wo.scheduledAt ? fmt(wo.scheduledAt) : <span className="muted">—</span>}</Field>
             {wo.destinationLat != null && wo.destinationLng != null && (
-              <>
-                <dt className="muted">Lokasi</dt>
-                <dd style={{ margin: 0 }}>
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${wo.destinationLat},${wo.destinationLng}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Navigasi ke pelanggan ↗
-                  </a>
-                </dd>
-              </>
+              <Field label="Lokasi">
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${wo.destinationLat},${wo.destinationLng}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Navigasi ke pelanggan ↗
+                </a>
+              </Field>
             )}
-            <dt className="muted">Dibuat</dt>
-            <dd style={{ margin: 0 }}>{fmt(wo.createdAt)}</dd>
-            {wo.completedAt && (
-              <>
-                <dt className="muted">Selesai</dt>
-                <dd style={{ margin: 0 }}>{fmt(wo.completedAt)}</dd>
-              </>
-            )}
-            {wo.resolutionNote && (
-              <>
-                <dt className="muted">Catatan</dt>
-                <dd style={{ margin: 0 }}>{wo.resolutionNote}</dd>
-              </>
-            )}
+            <Field label="Dibuat">{fmt(wo.createdAt)}</Field>
+            {wo.completedAt && <Field label="Selesai">{fmt(wo.completedAt)}</Field>}
+            {wo.resolutionNote && <Field label="Catatan">{wo.resolutionNote}</Field>}
             {wo.approvedByName && (
-              <>
-                <dt className="muted">{wo.approvalStatus === 'REJECTED' ? 'Ditolak oleh' : 'Disetujui oleh'}</dt>
-                <dd style={{ margin: 0 }}>{wo.approvedByName}{wo.approvedAt ? ` · ${fmt(wo.approvedAt)}` : ''}</dd>
-              </>
+              <Field label={wo.approvalStatus === 'REJECTED' ? 'Ditolak oleh' : 'Disetujui oleh'}>
+                {wo.approvedByName}
+                {wo.approvedAt ? ` · ${fmt(wo.approvedAt)}` : ''}
+              </Field>
             )}
             {wo.approvalNote && (
-              <>
-                <dt className="muted">{wo.approvalStatus === 'REJECTED' ? 'Alasan penolakan' : 'Catatan persetujuan'}</dt>
-                <dd style={{ margin: 0 }}>{wo.approvalNote}</dd>
-              </>
+              <Field label={wo.approvalStatus === 'REJECTED' ? 'Alasan penolakan' : 'Catatan persetujuan'}>
+                {wo.approvalNote}
+              </Field>
             )}
-            {wo.cancelReason && (
-              <>
-                <dt className="muted">Alasan batal</dt>
-                <dd style={{ margin: 0 }}>{wo.cancelReason}</dd>
-              </>
-            )}
+            {wo.cancelReason && <Field label="Alasan batal">{wo.cancelReason}</Field>}
           </dl>
 
           {/* Penugasan — selagi work order belum selesai/batal. */}
@@ -735,16 +751,19 @@ function WorkOrderDetailBody({
             <section className="stack" style={{ gap: '0.4rem' }}>
               <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Penugasan</h3>
               <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
-                <label style={{ flex: 1 }}>
+                <label className="stack" style={{ flex: 1, gap: '0.25rem' }}>
                   <span>Teknisi</span>
-                  <select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
-                    <option value="">— pilih teknisi —</option>
-                    {technicians.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Combobox
+                    value={assignee}
+                    onChange={(id) => setAssignee(id)}
+                    fetchOptions={fetchTechnicians}
+                    toId={(t) => t.id}
+                    toLabel={(t) => t.name}
+                    initialLabel={wo.assignedToName ?? ''}
+                    debounceMs={0}
+                    placeholder="Cari teknisi…"
+                    emptyText="Tak ada teknisi"
+                  />
                 </label>
                 <button
                   className="primary"
