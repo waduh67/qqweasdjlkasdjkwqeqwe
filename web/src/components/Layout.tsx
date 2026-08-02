@@ -70,7 +70,10 @@ const GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     label: 'Lapangan',
     items: [
       { to: '/incidents', label: 'Insiden', permission: 'incident.ticket.view', icon: IconAlert },
-      { to: '/work-orders', label: 'Work Order', permission: 'workorder.order.view', icon: IconWorkOrder },
+      // Papan dispatch (semua WO) di-gate izin dashboard = khusus operator; teknisi (yang
+      // cuma punya `order.view`+`order.field`) tak melihatnya, hanya "Tugas Saya" di bawah.
+      { to: '/work-orders', label: 'Work Order', permission: 'workorder.dashboard.view', icon: IconWorkOrder },
+      { to: '/my-work-orders', label: 'Tugas Saya', permission: 'workorder.order.field', icon: IconInbox },
     ],
   },
   {

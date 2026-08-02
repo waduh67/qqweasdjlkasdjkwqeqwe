@@ -16,6 +16,7 @@ import { MonitoringPage } from './pages/MonitoringPage'
 import { ProvisioningPage } from './pages/ProvisioningPage'
 import { IncidentsPage } from './pages/IncidentsPage'
 import { WorkOrdersPage } from './pages/WorkOrdersPage'
+import { MyWorkOrdersPage } from './pages/MyWorkOrdersPage'
 import { CatalogPage } from './pages/CatalogPage'
 import { BngPage } from './pages/BngPage'
 import { VpnPage } from './pages/VpnPage'
@@ -189,8 +190,16 @@ export default function App() {
             <Route
               path="work-orders"
               element={
-                <RequirePermission permission="workorder.order.view">
+                <RequirePermission permission="workorder.dashboard.view">
                   <WorkOrdersPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="my-work-orders"
+              element={
+                <RequirePermission permission="workorder.order.field">
+                  <MyWorkOrdersPage />
                 </RequirePermission>
               }
             />

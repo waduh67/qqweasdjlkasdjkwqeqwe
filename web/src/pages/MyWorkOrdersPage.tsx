@@ -1,0 +1,181 @@
+import { useCallback, useEffect, useState } from 'react'
+import { api, ApiError } from '../api/client'
+import type { User } from '../api/types'
+import {
+  listMyWorkOrders,
+  type WorkOrderDetail,
+  type WorkOrderStatus,
+  type WorkOrderView,
+} from '../api/workorder'
+import { DataTable, type Column } from '../components/DataTable'
+import { Badge, Drawer, EmptyState, Toolbar, useToast } from '../components/ui'
+import { IconWorkOrder } from '../components/icons'
+import {
+  PRIORITY_LABEL,
+  STATUSES,
+  STATUS_LABEL,
+  TYPE_LABEL,
+  assigneeLabel,
+  fmt,
+  priorityTone,
+} from '../components/workorder/labels'
+import { AssigneeChips, WoStatusBadge } from '../components/workorder/views'
+import { WorkOrderDetailBody } from '../components/workorder/WorkOrderDetailBody'
+
+/**
+ * "Tugas Saya" — papan tugas milik teknisi yang sedang login. Beda dari papan dispatch
+ * operator (`WorkOrdersPage`) yang menampilkan SEMUA work order: di sini hanya WO tempat
+ * teknisi ini jadi anggota roster (`GET /api/work-orders/mine`). Teknisi mengerjakannya
+ * lewat web (mulai, catat redaman, unggah bukti, selesaikan) sampai aplikasi teknisi
+ * mobile tersedia. Penugasan/pembatalan/persetujuan tetap milik operator — section-nya
+ * ter-gate izin yang tak dimiliki teknisi, jadi tak muncul di sini.
+ */
+export function MyWorkOrdersPage() {
+  const toast = useToast()
+  const [orders, setOrders] = useState<WorkOrderView[]>([])
+  const [loading, setLoading] = useState(true)
+  const [status, setStatus] = useState<WorkOrderStatus | ''>('')
+  const [detail, setDetail] = useState<WorkOrderDetail | null>(null)
+
+  const reload = useCallback(async () => {
+    try {
+      const page = await listMyWorkOrders(status || undefined)
+      setOrders(page.content)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal memuat tugas')
+    } finally {
+      setLoading(false)
+    }
+  }, [status, toast])
+
+  useEffect(() => {
+    void reload()
+  }, [reload])
+
+  const openDetail = useCallback(
+    async (id: string) => {
+      try {
+        setDetail(await api.get<WorkOrderDetail>(`/api/work-orders/${id}`))
+      } catch (err) {
+        toast.error(err instanceof ApiError ? err.message : 'Gagal memuat detail tugas')
+      }
+    },
+    [toast],
+  )
+
+  const run = async (action: () => Promise<unknown>, ok?: string, refreshId?: string) => {
+    try {
+      await action()
+      await reload()
+      if (refreshId) await openDetail(refreshId)
+      if (ok) toast.success(ok)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Operasi gagal')
+    }
+  }
+
+  // Section penugasan ter-gate `workorder.order.assign` yang tak dimiliki teknisi →
+  // pemilih teknisi tak pernah dipakai di halaman ini; resolver kosong sudah cukup.
+  const noTechnicians = useCallback(async (): Promise<User[]> => [], [])
+
+  const columns: Column<WorkOrderView>[] = [
+    {
+      key: 'code',
+      header: 'Kode',
+      sortValue: (wo) => wo.code,
+      cell: (wo) => <span className="badge accent">{wo.code}</span>,
+    },
+    {
+      key: 'type',
+      header: 'Tipe',
+      sortValue: (wo) => TYPE_LABEL[wo.type],
+      cell: (wo) => <span className="badge">{TYPE_LABEL[wo.type]}</span>,
+    },
+    {
+      key: 'title',
+      header: 'Judul',
+      sortValue: (wo) => wo.title,
+      cell: (wo) => (
+        <div className="row" style={{ gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <strong>{wo.title}</strong>
+          {wo.priority !== 'NORMAL' && <Badge tone={priorityTone(wo.priority)}>{PRIORITY_LABEL[wo.priority]}</Badge>}
+        </div>
+      ),
+    },
+    {
+      key: 'customer',
+      header: 'Pelanggan',
+      sortValue: (wo) => wo.customerName,
+      cell: (wo) => wo.customerName ?? <span className="muted">—</span>,
+    },
+    {
+      key: 'team',
+      header: 'Tim',
+      sortValue: (wo) => assigneeLabel(wo),
+      cell: (wo) => <AssigneeChips wo={wo} />,
+    },
+    {
+      key: 'scheduledAt',
+      header: 'Jadwal',
+      sortValue: (wo) => wo.scheduledAt,
+      cell: (wo) => (wo.scheduledAt ? fmt(wo.scheduledAt) : <span className="muted">—</span>),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortValue: (wo) => wo.status,
+      cell: (wo) => <WoStatusBadge status={wo.status} />,
+    },
+  ]
+
+  return (
+    <div className="stack" style={{ gap: '1.25rem' }}>
+      <div>
+        <h1 className="page-title">Tugas Saya</h1>
+        <p className="page-sub">Work order yang ditugaskan ke kamu — kerjakan, catat redaman, unggah bukti, lalu selesaikan.</p>
+      </div>
+
+      <Toolbar>
+        <select value={status} onChange={(e) => setStatus(e.target.value as WorkOrderStatus | '')}>
+          <option value="">Semua status</option>
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {STATUS_LABEL[s]}
+            </option>
+          ))}
+        </select>
+      </Toolbar>
+
+      <DataTable
+        columns={columns}
+        rows={orders}
+        rowKey={(wo) => wo.id}
+        onRowClick={(wo) => void openDetail(wo.id)}
+        loading={loading}
+        initialSort={{ key: 'scheduledAt', dir: 'desc' }}
+        empty={
+          <EmptyState
+            title={status ? 'Tidak ada tugas dengan status itu' : 'Belum ada tugas untukmu'}
+            hint={status ? 'Coba ubah filter status.' : 'Tugas yang ditugaskan operator akan muncul di sini.'}
+            icon={<IconWorkOrder size={32} />}
+          />
+        }
+      />
+
+      {detail && (
+        <Drawer title={`${detail.workOrder.code} · ${detail.workOrder.title}`} onClose={() => setDetail(null)}>
+          <WorkOrderDetailBody
+            key={detail.workOrder.id}
+            detail={detail}
+            fetchTechnicians={noTechnicians}
+            onAct={(action, ok, keepOpen) =>
+              void run(action, ok, keepOpen ? detail.workOrder.id : undefined).then(() => {
+                if (!keepOpen) setDetail(null)
+              })
+            }
+          />
+        </Drawer>
+      )}
+    </div>
+  )
+}
