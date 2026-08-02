@@ -8,6 +8,7 @@ import com.duluin.ftth.billing.domain.model.Proration
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.customer.BillableSubscription
 import com.duluin.ftth.customer.CustomerApi
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.time.LocalDate
 import java.time.ZoneId
@@ -29,9 +30,12 @@ class InvoiceGenerator(
     private val invoiceRepository: InvoiceRepository,
     private val customerApi: CustomerApi,
     private val gatewayRegistry: PaymentGatewayRegistry,
+    private val gatewayResolver: TenantPaymentGatewayResolver,
     private val auditor: AuditRecorder,
     private val properties: BillingProperties,
 ) {
+
+    private val log = LoggerFactory.getLogger(javaClass)
 
     /**
      * Terbitkan tagihan periode bulan [today] untuk [tenantId]. Nomor urut bersifat
@@ -55,9 +59,14 @@ class InvoiceGenerator(
 
         val customerNames = customerApi.findCustomersByIds(billable.mapTo(HashSet()) { it.customerId })
             .associate { it.id to it.name }
-        val gateway = gatewayRegistry.default()
+        // Gateway di-resolve SEKALI per ronde (kredensial + mode tenant aktif); adapter dipilih
+        // dari provider resolver — sumber kebenaran, bukan config global lama.
+        val ctx = gatewayResolver.resolve()
+        val gateway = gatewayRegistry.forProvider(ctx.provider)
+            ?: error("Adapter gateway '${ctx.provider}' tidak tersedia")
         val base = invoiceRepository.countForPeriod(periodStart)
 
+        var issued = 0
         billable.forEachIndexed { index, sub ->
             val seq = base + index + 1
             val number = "${properties.numberPrefix}-$yyyyMM-${seq.toString().padStart(SEQ_WIDTH, '0')}"
@@ -83,23 +92,31 @@ class InvoiceGenerator(
             } else {
                 "Tagihan ${sub.packageName} periode $yyyyMM"
             }
-            val charge = gateway.createCharge(
-                ChargeRequest(
-                    invoiceNumber = number,
-                    amount = amount,
-                    customerName = customerNames[sub.customerId] ?: sub.packageName,
-                    customerEmail = null,
-                    description = chargeDescription,
-                ),
-            )
-            invoice.attachCharge(charge.provider, charge.gatewayRef, charge.payUrl)
-            val saved = invoiceRepository.save(invoice)
-            auditor.record(
-                "billing.invoice.issued", "Invoice", saved.id, saved.tenantId,
-                mapOf("number" to saved.number, "amount" to saved.amount),
-            )
+            // Satu charge gagal (gateway tenant salah setel / penyedia kerangka) tak boleh
+            // membatalkan seluruh ronde — log lalu lanjut ke langganan berikutnya.
+            runCatching {
+                val charge = gateway.createCharge(
+                    ChargeRequest(
+                        invoiceNumber = number,
+                        amount = amount,
+                        customerName = customerNames[sub.customerId] ?: sub.packageName,
+                        customerEmail = null,
+                        description = chargeDescription,
+                    ),
+                    ctx,
+                )
+                invoice.attachCharge(charge.provider, charge.gatewayRef, charge.payUrl)
+                val saved = invoiceRepository.save(invoice)
+                auditor.record(
+                    "billing.invoice.issued", "Invoice", saved.id, saved.tenantId,
+                    mapOf("number" to saved.number, "amount" to saved.amount),
+                )
+                issued++
+            }.onFailure { e ->
+                log.warn("Gagal membuat charge {} lewat gateway {}: {}", number, ctx.provider, e.message)
+            }
         }
-        return billable.size
+        return issued
     }
 
     /**

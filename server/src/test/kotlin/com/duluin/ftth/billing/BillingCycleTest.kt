@@ -5,12 +5,16 @@ import com.duluin.ftth.billing.application.port.outbound.ChargeResult
 import com.duluin.ftth.billing.application.port.outbound.GatewayCallback
 import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
 import com.duluin.ftth.billing.application.port.outbound.PaymentGateway
+import com.duluin.ftth.billing.application.port.outbound.TenantPaymentGatewayRepository
 import com.duluin.ftth.billing.application.service.BillingCycleRunner
 import com.duluin.ftth.billing.application.service.InvoiceGenerator
 import com.duluin.ftth.billing.application.service.PaymentGatewayRegistry
+import com.duluin.ftth.billing.application.service.TenantPaymentGatewayResolver
 import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
+import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
+import com.duluin.ftth.billing.domain.model.TenantPaymentGateway
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
@@ -236,8 +240,11 @@ class BillingCycleTest {
         val customerApi = FakeCustomerApi(billables, byId)
         val gateway = CapturingGateway()
         val registry = PaymentGatewayRegistry(listOf(gateway), props)
+        // Tanpa baris config tenant → resolver jatuh ke fallback MANUAL; adapter penangkap
+        // memakai provider "MANUAL" agar registry memilihnya untuk konteks itu.
+        val resolver = TenantPaymentGatewayResolver(NoGatewayConfig, props)
         val auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser)
-        val generator = InvoiceGenerator(repo, customerApi, registry, auditor, props)
+        val generator = InvoiceGenerator(repo, customerApi, registry, resolver, auditor, props)
         // Publisher penangkap khusus buntut siklus (InvoiceDueSoon/InvoiceOverdue) —
         // auditor tetap no-op agar event audit tak mengotori assertion.
         val events = CapturingEvents()
@@ -255,7 +262,6 @@ class BillingCycleTest {
         graceDays = grace,
         autoIsolir = autoIsolir,
         prorateOnActivation = prorate,
-        defaultProvider = "FAKE",
     )
 
     private fun billable(
@@ -307,15 +313,22 @@ class BillingCycleTest {
     }
 
     private class CapturingGateway : PaymentGateway {
-        override val provider = "FAKE"
+        override val provider = "MANUAL"
         val charges = mutableListOf<ChargeRequest>()
 
-        override fun createCharge(request: ChargeRequest): ChargeResult {
+        override fun createCharge(request: ChargeRequest, ctx: ResolvedGatewayContext): ChargeResult {
             charges.add(request)
             return ChargeResult(provider, "ref-${request.invoiceNumber}", null)
         }
 
-        override fun parseCallback(callback: GatewayCallback) = throw UnsupportedOperationException()
+        override fun parseCallback(callback: GatewayCallback, ctx: ResolvedGatewayContext) =
+            throw UnsupportedOperationException()
+    }
+
+    /** Repo config gateway kosong → resolver memakai fallback MANUAL (perilaku default tenant). */
+    private object NoGatewayConfig : TenantPaymentGatewayRepository {
+        override fun find(): TenantPaymentGateway? = null
+        override fun save(settings: TenantPaymentGateway): TenantPaymentGateway = settings
     }
 
     private class FakeInvoiceRepository(private val overdue: List<Invoice>) : InvoiceRepository {

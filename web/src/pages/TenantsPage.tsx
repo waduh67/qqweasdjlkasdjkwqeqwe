@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
+import { provisionXenditSubAccount } from '../api/payment'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
 import { EmptyState, SearchInput, StatusBadge, Toolbar } from '../components/ui'
@@ -14,6 +15,14 @@ interface Tenant {
 }
 
 const EMPTY = { slug: '', name: '', adminEmail: '', adminName: '', adminPassword: '' }
+
+/** Draft form provisioning Xendit PLATFORM untuk satu tenant. */
+interface ProvisionDraft {
+  tenantId: string
+  tenantName: string
+  email: string
+  businessName: string
+}
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: 'Semua status' },
@@ -29,6 +38,7 @@ export function TenantsPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState<typeof EMPTY | null>(null)
+  const [provision, setProvision] = useState<ProvisionDraft | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -79,16 +89,29 @@ export function TenantsPage() {
       align: 'right',
       width: '1%',
       cell: (t) =>
-        can('platform.tenant.manage') && t.slug !== 'platform' ? (
-          <button
-            onClick={() =>
-              void run(() =>
-                api.post(`/api/platform/tenants/${t.id}/${t.status === 'ACTIVE' ? 'suspend' : 'activate'}`),
-              )
-            }
-          >
-            {t.status === 'ACTIVE' ? 'Suspend' : 'Aktifkan'}
-          </button>
+        t.slug !== 'platform' ? (
+          <div className="row" style={{ justifyContent: 'flex-end', gap: '0.4rem' }}>
+            {can('billing.gateway.provision') && (
+              <button
+                onClick={() =>
+                  setProvision({ tenantId: t.id, tenantName: t.name, email: '', businessName: t.name })
+                }
+              >
+                Provisi Xendit
+              </button>
+            )}
+            {can('platform.tenant.manage') && (
+              <button
+                onClick={() =>
+                  void run(() =>
+                    api.post(`/api/platform/tenants/${t.id}/${t.status === 'ACTIVE' ? 'suspend' : 'activate'}`),
+                  )
+                }
+              >
+                {t.status === 'ACTIVE' ? 'Suspend' : 'Aktifkan'}
+              </button>
+            )}
+          </div>
         ) : null,
     },
   ]
@@ -186,6 +209,56 @@ export function TenantsPage() {
               Buat
             </button>
             <button onClick={() => setDraft(null)}>Batal</button>
+          </div>
+        </div>
+      )}
+
+      {provision && (
+        <div className="card stack">
+          <h3 style={{ margin: 0 }}>Provisikan Xendit (mode PLATFORM)</h3>
+          <p className="muted">
+            Membuat sub-account Xendit (xenPlatform) untuk <strong>{provision.tenantName}</strong> memakai akun master
+            platform, lalu mengunci gateway tenant ke XENDIT/PLATFORM/aktif. Email harus unik di Xendit.
+          </p>
+          <div className="row" style={{ alignItems: 'flex-start' }}>
+            <label style={{ flex: 1 }}>
+              <span>Email sub-account</span>
+              <input
+                type="email"
+                value={provision.email}
+                onChange={(e) => setProvision({ ...provision, email: e.target.value })}
+                placeholder="billing@pt-fiber.co.id"
+              />
+            </label>
+            <label style={{ flex: 1 }}>
+              <span>Nama bisnis</span>
+              <input
+                value={provision.businessName}
+                onChange={(e) => setProvision({ ...provision, businessName: e.target.value })}
+              />
+            </label>
+          </div>
+          <div className="row">
+            <button
+              className="primary"
+              disabled={!provision.email.trim()}
+              onClick={() =>
+                void run(async () => {
+                  const result = await provisionXenditSubAccount(provision.tenantId, {
+                    email: provision.email.trim(),
+                    businessName: provision.businessName.trim() || null,
+                  })
+                  setNotice(
+                    `Sub-account Xendit ${result.subAccountId} tersimpan untuk "${provision.tenantName}".` +
+                      (result.callbackTokenSet ? '' : ' Token callback pakai fallback platform global.'),
+                  )
+                  setProvision(null)
+                })
+              }
+            >
+              Provisikan
+            </button>
+            <button onClick={() => setProvision(null)}>Batal</button>
           </div>
         </div>
       )}

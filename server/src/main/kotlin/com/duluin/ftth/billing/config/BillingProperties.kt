@@ -27,4 +27,28 @@ data class BillingProperties(
     /** Selang jalannya scheduler penagihan (ISO-8601 duration). */
     val schedulerInterval: String = "PT12H",
     val webhookSecret: String = "dev-only-billing-webhook-secret-change-me",
+    /** Kredensial MASTER agregator platform (mode PLATFORM). Nonaktif secara default. */
+    val platform: PlatformGatewayProperties = PlatformGatewayProperties(),
+)
+
+/**
+ * Kredensial MASTER akun agregator platform (mode PLATFORM). Sengaja di config/env — BUKAN
+ * per baris tenant — agar charge/callback tak perlu membaca lintas-RLS. [enabled] mati =
+ * semua tenant mode PLATFORM dorman (jatuh ke fallback MANUAL) sampai platform mengonfigurasi.
+ */
+data class PlatformGatewayProperties(
+    val enabled: Boolean = false,
+    val xendit: PlatformXenditProperties = PlatformXenditProperties(),
+)
+
+/**
+ * Akun master Xendit xenPlatform. [secretKey] dipakai basic-auth semua charge PLATFORM &
+ * pembuatan sub-account; [feeRuleId] dipasang di header `with-fee-rule` (komisi platform);
+ * [callbackBaseUrl] basis URL publik untuk mendaftarkan callback sub-account.
+ */
+data class PlatformXenditProperties(
+    val secretKey: String = "",
+    val webhookToken: String = "",
+    val feeRuleId: String = "",
+    val callbackBaseUrl: String = "",
 )

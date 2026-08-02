@@ -130,6 +130,10 @@ object PermissionCatalog {
         perm("billing.invoice.view", "Lihat tagihan & pembayaran")
         perm("billing.invoice.manage", "Terbitkan/batalkan tagihan")
         perm("billing.payment.manage", "Catat pembayaran manual")
+        perm("billing.gateway.view", "Lihat setelan payment gateway")
+        perm("billing.gateway.manage", "Kelola penyedia & kredensial payment gateway")
+        // Provisioning sub-account Xendit PLATFORM: aksi lintas-tenant milik platform-admin.
+        platform("billing.gateway.provision", "Provisikan sub-account Xendit (mode PLATFORM) untuk tenant")
 
         // VPN — hub/server adalah infrastruktur PLATFORM (dikelola admin platform), akun milik tenant
         platform("vpn.server.view", "Lihat server VPN platform")

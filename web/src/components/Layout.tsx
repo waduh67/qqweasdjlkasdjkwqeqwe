@@ -85,6 +85,7 @@ const GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
       { to: '/audit', label: 'Jejak Audit', permission: 'audit.log.view', icon: IconAudit },
       { to: '/vpn-servers', label: 'Server VPN', permission: 'vpn.server.view', icon: IconRoute },
       { to: '/notifications', label: 'Notifikasi', permission: 'notification.settings.view', icon: IconAlert },
+      { to: '/payment-gateway', label: 'Payment Gateway', permission: 'billing.gateway.view', icon: IconPackage },
       { to: '/tenants', label: 'Tenant', permission: 'platform.tenant.view', icon: IconBuilding },
     ],
   },

@@ -1,5 +1,6 @@
 package com.duluin.ftth.billing.application.port.outbound
 
+import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
 import java.math.BigDecimal
 import java.time.Instant
 
@@ -10,20 +11,24 @@ import java.time.Instant
  *
  * [provider] adalah nama kanonik penyedia (mis. `MANUAL`), dipakai registry untuk
  * memilih adapter dan disimpan di tagihan/pembayaran.
+ *
+ * Adapter tetap singleton stateless: kredensial per-tenant TIDAK dipegang adapter, melainkan
+ * disuntikkan lewat [ResolvedGatewayContext] tiap panggilan (hasil resolusi baris config tenant).
+ * Inilah alasan kedua method menerima `ctx` — satu adapter melayani banyak tenant.
  */
 interface PaymentGateway {
 
     val provider: String
 
-    /** Buat charge untuk sebuah tagihan; hasilnya dilekatkan ke tagihan. */
-    fun createCharge(request: ChargeRequest): ChargeResult
+    /** Buat charge untuk sebuah tagihan memakai kredensial tenant di [ctx]; hasilnya dilekatkan ke tagihan. */
+    fun createCharge(request: ChargeRequest, ctx: ResolvedGatewayContext): ChargeResult
 
     /**
-     * Terjemahkan callback (webhook) menjadi settlement bila sah & bisa diurai.
-     * `null` berarti callback ditolak (tanda tangan salah) atau tak bisa dipahami —
-     * pemanggil membalas 4xx tanpa menyentuh tagihan.
+     * Terjemahkan callback (webhook) menjadi settlement bila sah & bisa diurai, memakai token
+     * verifikasi tenant di [ctx]. `null` berarti callback ditolak (tanda tangan salah) atau tak
+     * bisa dipahami — pemanggil membalas 4xx tanpa menyentuh tagihan.
      */
-    fun parseCallback(callback: GatewayCallback): PaymentSettlement?
+    fun parseCallback(callback: GatewayCallback, ctx: ResolvedGatewayContext): PaymentSettlement?
 }
 
 /** Permintaan membuat charge untuk sebuah tagihan. */
