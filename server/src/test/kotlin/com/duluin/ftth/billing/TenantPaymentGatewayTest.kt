@@ -62,6 +62,20 @@ class TenantPaymentGatewayTest {
     }
 
     @Test
+    fun `PIVOT BYO membawa merchant id dan secret terpisah plus callback key`() {
+        val gw = defaultGateway().apply {
+            update(PaymentProvider.PIVOT, GatewayMode.BYO, enabled = true, apiKey = "merchant_1", secretKey = "secret_1", webhookToken = "cb_key")
+        }
+
+        val ctx = gw.resolve(platform)
+        assertThat(ctx).isNotNull
+        assertThat(ctx!!.provider).isEqualTo("PIVOT")
+        assertThat(ctx.apiKey).isEqualTo("merchant_1")     // → X-MERCHANT-ID
+        assertThat(ctx.secretKey).isEqualTo("secret_1")    // → X-MERCHANT-SECRET
+        assertThat(ctx.webhookToken).isEqualTo("cb_key")   // → X-API-Key callback
+    }
+
+    @Test
     fun `skeleton PAYWUZ tetap meresolusi agar adapternya dipilih dan melempar jelas`() {
         val gw = defaultGateway().apply {
             update(PaymentProvider.PAYWUZ, GatewayMode.BYO, enabled = true, apiKey = "pk_x", secretKey = null, webhookToken = "tok")

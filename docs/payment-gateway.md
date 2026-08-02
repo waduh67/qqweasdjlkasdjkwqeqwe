@@ -11,9 +11,9 @@ Dua mode:
 | **BYO** | tenant | akun gateway tenant sendiri (secret di baris tenant, terenkripsi) | rekening tenant langsung | — |
 | **PLATFORM** | platform | akun **MASTER** platform (config/env) + **sub-account** xenPlatform per tenant | balance sub-account tenant di platform | via `fee_rule` (header `with-fee-rule`) |
 
-Xendit digarap penuh (BYO **dan** PLATFORM). **Paywuz/Pivot** baru kerangka —
-bisa dipilih & dikonfigurasi, tapi `createCharge` melempar sampai dokumentasi API-nya
-tersedia (drop-in nanti tanpa ubah skema).
+Xendit digarap penuh (BYO **dan** PLATFORM); **Pivot** (pivot-payment.com) digarap penuh
+**BYO**. **Paywuz** masih kerangka — bisa dipilih & dikonfigurasi, tapi `createCharge`
+melempar sampai dokumentasi API-nya tersedia (drop-in nanti tanpa ubah skema).
 
 ---
 
@@ -66,7 +66,8 @@ webhookToken, subAccountId?, feeRuleId?)`:
 |---|---|---|---|
 | `enabled = false` | — (selalu null → MANUAL) | — | — |
 | BYO · XENDIT | `secret_key` terisi | key tenant | token tenant |
-| BYO · PAYWUZ/PIVOT | selalu (adapter melempar) | `api_key` | token tenant |
+| BYO · PIVOT | selalu (adapter validasi) | `secret_key` (merchant secret) + `api_key` (merchant id) | token tenant (Callback API Key) |
+| BYO · PAYWUZ | selalu (adapter melempar) | `api_key` | token tenant |
 | BYO · MANUAL | selalu | — | token tenant |
 | PLATFORM · XENDIT | `platform.enabled` **&** master secret **&** `sub_account_id` | key **MASTER** | token sub-account **?:** token platform |
 
@@ -113,6 +114,45 @@ POST /api/billing/webhooks/{tenantSlug}/xendit   (publik, tanpa bearer)
 
 ---
 
+## Pivot (pivot-payment.com) — BYO
+
+Adapter `PivotPaymentGateway` (BYO). Beda dari Xendit, Pivot butuh **sepasang kredensial** dan
+**auth dua-langkah**, jadi `ResolvedGatewayContext` dilebarkan satu field `apiKey` (merchant id):
+
+| Kolom DB | Peran Pivot | Header |
+|---|---|---|
+| `api_key` | merchant id | `X-MERCHANT-ID` (tukar token) |
+| `secret_key` | merchant secret | `X-MERCHANT-SECRET` (tukar token) |
+| `webhook_token` | Callback API Key | `X-API-Key` (verifikasi callback) |
+
+**Charge** (`POST /v2/payments`, payment session mode REDIRECT):
+
+```
+1. POST /v1/access-token  (X-MERCHANT-ID + X-MERCHANT-SECRET)  → { accessToken, expiresIn:900 }
+     └─ token di-cache per merchant-id (~14 mnt) → satu ronde banyak-tagihan tak tukar berulang
+2. POST /v2/payments  Authorization: Bearer <token>
+     body { clientReferenceId, amount:{value,currency:IDR}, mode:REDIRECT,
+            redirectUrl:{success/failure/expiration}, customer:{givenName,email?},
+            orderInformation:{productDetails:[…]}, metadata }
+     → ChargeResult(provider="PIVOT", gatewayRef=data.id, payUrl=data.paymentUrl)
+```
+
+- **IDR zero-decimal:** `amount.value` dikirim `setScale(0, HALF_UP)` (sama seperti Xendit).
+- **`redirectUrl` WAJIB** (mode REDIRECT) → tiga URL diturunkan dari `ftth.billing.pivot.redirect-base-url`
+  (`<base>/paid`, `/failed`, `/expired`). Kosong → charge Pivot gagal jelas (`ConflictException`).
+- **`orderInformation` minimal-jujur:** satu baris layanan `DIGITAL`; field ber-enum
+  (`category`/`subCategory`/`shippingInfo`) diomit — nilainya belum terverifikasi, dan `billingInfo`
+  hanya wajib untuk Foreign Card AVS. Bila Pivot menolak, `runCatching` di `InvoiceGenerator`
+  mencatat body error tanpa membatalkan ronde → jadi item verifikasi sandbox.
+- **Lingkungan** dipilih `ftth.billing.pivot.sandbox` (base `api-stg.pivot-payment.com` vs `api.pivot-payment.com`).
+
+**Callback** (`POST /api/billing/webhooks/{tenantSlug}/pivot`): header **static `X-API-Key`**
+(Callback API Key per-tenant, BUKAN HMAC) dibanding **constant-time** dengan `webhook_token`; hanya
+`data.status = PAID` jadi settlement. `PaymentSettlement(data.clientReferenceId, data.id, data.amount.value,
+data.chargeDetails[0].paidAt ?: now)`.
+
+---
+
 ## Mode PLATFORM — auto-provision sub-account
 
 Aksi **platform-admin** membuat sub-account xenPlatform (`MANAGED`) atas nama tenant,
@@ -148,12 +188,12 @@ XenditSubAccountProvisioningService.provisionXendit(...)          ← koordinato
 
 ---
 
-## Paywuz / Pivot (kerangka)
+## Paywuz (kerangka)
 
-`PaywuzPaymentGateway` / `PivotPaymentGateway`: `provider="PAYWUZ"/"PIVOT"`. `createCharge`
-melempar `UnsupportedOperationException("Gateway <X> belum didukung — dokumentasi API
-belum tersedia")`, `parseCallback` log-warn + `null`. Enum & CHECK `ck_tpg_provider`
-sudah memuat keduanya sejak V50 → impl asli tinggal drop-in tanpa migrasi.
+`PaywuzPaymentGateway` (`provider="PAYWUZ"`): `createCharge` melempar
+`UnsupportedOperationException("Gateway Paywuz belum didukung — dokumentasi API belum tersedia")`,
+`parseCallback` log-warn + `null`. Enum & CHECK `ck_tpg_provider` sudah memuatnya sejak V50 →
+impl asli tinggal drop-in tanpa migrasi (persis pola Pivot yang sudah digarap).
 
 ---
 
@@ -167,6 +207,8 @@ sudah memuat keduanya sejak V50 → impl asli tinggal drop-in tanpa migrasi.
 | `platform.xendit.webhook-token` · `FTTH_BILLING_PLATFORM_XENDIT_WEBHOOK_TOKEN` | `""` | token callback platform (fallback bila sub-account tak punya token sendiri) |
 | `platform.xendit.fee-rule-id` · `FTTH_BILLING_PLATFORM_XENDIT_FEE_RULE_ID` | `""` | fee rule komisi (`with-fee-rule`) — dibuat sekali di dashboard, **tak** diotomasi |
 | `platform.xendit.callback-base-url` · `FTTH_BILLING_PLATFORM_XENDIT_CALLBACK_BASE_URL` | `""` | basis URL publik untuk mendaftarkan callback sub-account |
+| `pivot.sandbox` · `FTTH_BILLING_PIVOT_SANDBOX` | `false` | Pivot BYO: `true` → base `api-stg`, else `api` produksi |
+| `pivot.redirect-base-url` · `FTTH_BILLING_PIVOT_REDIRECT_BASE_URL` | `""` | Pivot BYO: basis URL balik (mode REDIRECT WAJIB); kosong = charge Pivot gagal jelas |
 
 > **Config lawas `default-provider`** kini **usang** — resolver memilih adapter dari
 > baris config tenant (sumber kebenaran), dan fallback MANUAL sudah hardcoded. Dibiarkan

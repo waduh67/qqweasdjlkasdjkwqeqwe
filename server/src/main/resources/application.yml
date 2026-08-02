@@ -83,6 +83,11 @@ ftth:
         webhook-token: ${FTTH_BILLING_PLATFORM_XENDIT_WEBHOOK_TOKEN:}
         fee-rule-id: ${FTTH_BILLING_PLATFORM_XENDIT_FEE_RULE_ID:}
         callback-base-url: ${FTTH_BILLING_PLATFORM_XENDIT_CALLBACK_BASE_URL:}
+    # Adapter Pivot (BYO). sandbox=true → base api-stg. redirect-base-url WAJIB bila ada
+    # tenant memakai Pivot (mode REDIRECT butuh URL balik); kosong = charge Pivot gagal jelas.
+    pivot:
+      sandbox: ${FTTH_BILLING_PIVOT_SANDBOX:false}
+      redirect-base-url: ${FTTH_BILLING_PIVOT_REDIRECT_BASE_URL:}
   vpn:
     # Bawaan hub OpenVPN manajemen (dipakai saat pembuatan tanpa nilai eksplisit).
     default-port: 1194

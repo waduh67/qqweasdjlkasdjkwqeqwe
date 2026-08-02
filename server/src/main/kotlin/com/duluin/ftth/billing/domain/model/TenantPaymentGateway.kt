@@ -48,7 +48,7 @@ data class PlatformGatewayCreds(
 data class ResolvedGatewayContext(
     val provider: String,
     val mode: GatewayMode,
-    /** BYO: kunci milik tenant; PLATFORM: kunci MASTER platform. Null untuk MANUAL. */
+    /** BYO: kunci milik tenant; PLATFORM: kunci MASTER platform. Null untuk MANUAL. Pivot: merchant secret. */
     val secretKey: String?,
     /** Token verifikasi callback (MANUAL fallback ke shared secret global). */
     val webhookToken: String?,
@@ -56,6 +56,8 @@ data class ResolvedGatewayContext(
     val subAccountId: String? = null,
     /** PLATFORM saja → header `with-fee-rule`. */
     val feeRuleId: String? = null,
+    /** BYO PIVOT: merchant id (`X-MERCHANT-ID`), disandingkan dengan [secretKey] (`X-MERCHANT-SECRET`). */
+    val apiKey: String? = null,
 )
 
 /**
@@ -165,10 +167,14 @@ class TenantPaymentGateway private constructor(
             val key = secretKey?.trim()?.takeIf { it.isNotEmpty() } ?: return null
             ResolvedGatewayContext("XENDIT", GatewayMode.BYO, secretKey = key, webhookToken = webhookToken)
         }
-        // Kerangka: resolusi berhasil agar adapter penyedia dipilih & melempar pesan jelas
-        // (bukan diam-diam jatuh ke MANUAL). Kunci opsional — adapter belum memakainya.
-        PaymentProvider.PAYWUZ, PaymentProvider.PIVOT ->
-            ResolvedGatewayContext(provider.name, GatewayMode.BYO, secretKey = apiKey, webhookToken = webhookToken)
+        // Pivot butuh SEPASANG kredensial: merchant id (apiKey → X-MERCHANT-ID) + merchant
+        // secret (secretKey → X-MERCHANT-SECRET). Resolusi tetap jalan walau belum lengkap agar
+        // adapter Pivot yang dipilih & melempar pesan jelas (bukan diam-diam jatuh ke MANUAL).
+        PaymentProvider.PIVOT ->
+            ResolvedGatewayContext("PIVOT", GatewayMode.BYO, secretKey = secretKey, webhookToken = webhookToken, apiKey = apiKey)
+        // Paywuz: masih kerangka — resolusi berhasil agar adapternya dipilih & melempar pesan jelas.
+        PaymentProvider.PAYWUZ ->
+            ResolvedGatewayContext("PAYWUZ", GatewayMode.BYO, secretKey = apiKey, webhookToken = webhookToken)
         PaymentProvider.MANUAL ->
             ResolvedGatewayContext("MANUAL", GatewayMode.BYO, secretKey = null, webhookToken = webhookToken)
     }

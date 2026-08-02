@@ -29,6 +29,19 @@ data class BillingProperties(
     val webhookSecret: String = "dev-only-billing-webhook-secret-change-me",
     /** Kredensial MASTER agregator platform (mode PLATFORM). Nonaktif secara default. */
     val platform: PlatformGatewayProperties = PlatformGatewayProperties(),
+    /** Setelan adapter Pivot (BYO): pemilihan lingkungan + URL balik wajib mode REDIRECT. */
+    val pivot: PivotProperties = PivotProperties(),
+)
+
+/**
+ * Setelan adapter Pivot (BYO). [sandbox] memilih base URL (`api-stg` vs `api` produksi).
+ * [redirectBaseUrl] WAJIB diisi bila ada tenant memakai Pivot — mode REDIRECT mengharuskan URL
+ * balik success/failure/expiration; ketiganya diturunkan dari basis ini (mis. `<base>/paid`).
+ * Kosong = charge Pivot gagal dengan pesan jelas (bukan mengirim URL cacat).
+ */
+data class PivotProperties(
+    val sandbox: Boolean = false,
+    val redirectBaseUrl: String = "",
 )
 
 /**

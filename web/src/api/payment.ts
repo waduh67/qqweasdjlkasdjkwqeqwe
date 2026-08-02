@@ -8,7 +8,7 @@ export type GatewayMode = 'BYO' | 'PLATFORM'
 export const PAYMENT_PROVIDER_LABEL: Record<PaymentProvider, string> = {
   XENDIT: 'Xendit',
   PAYWUZ: 'Paywuz (belum didukung)',
-  PIVOT: 'Pivot (belum didukung)',
+  PIVOT: 'Pivot',
   MANUAL: 'Manual (tunai/transfer)',
 }
 
@@ -18,7 +18,7 @@ export const GATEWAY_MODE_LABEL: Record<GatewayMode, string> = {
 }
 
 /** Penyedia yang charge otomatisnya sudah jalan (sisanya kerangka/manual). */
-export const SUPPORTED_PROVIDERS: PaymentProvider[] = ['XENDIT', 'MANUAL']
+export const SUPPORTED_PROVIDERS: PaymentProvider[] = ['XENDIT', 'PIVOT', 'MANUAL']
 
 /**
  * Setelan seperti dibaca dari server. Kredensial TAK pernah dikembalikan — hanya penanda

@@ -91,8 +91,10 @@ export function PaymentGatewaySettingsPage() {
     )
   }
 
-  const isKeyPair = form.provider === 'PAYWUZ' || form.provider === 'PIVOT'
-  const unsupported = isKeyPair
+  const isXendit = form.provider === 'XENDIT'
+  const isPivot = form.provider === 'PIVOT'
+  const isPaywuz = form.provider === 'PAYWUZ'
+  const unsupported = isPaywuz // Pivot kini didukung penuh; hanya Paywuz masih kerangka.
 
   return (
     <div className="stack">
@@ -205,50 +207,88 @@ export function PaymentGatewaySettingsPage() {
             </p>
           )}
 
-          {form.provider === 'XENDIT' && (
+          {/* Merchant ID (apiKey) — Pivot: X-MERCHANT-ID; Paywuz: API key penyedia. */}
+          {(isPivot || isPaywuz) && (
             <label>
-              <span>Secret key {form.secretKeySet && <span className="muted">(tersimpan)</span>}</span>
-              <input
-                type="password"
-                value={secretKey}
-                onChange={(e) => setSecretKey(e.target.value)}
-                placeholder={form.secretKeySet ? 'Biarkan kosong untuk mempertahankan' : 'xnd_production_... / xnd_development_...'}
-                disabled={!manage}
-              />
-            </label>
-          )}
-
-          {isKeyPair && (
-            <label>
-              <span>API key {form.apiKeySet && <span className="muted">(tersimpan)</span>}</span>
+              <span>
+                {isPivot ? 'Merchant ID' : 'API key'} {form.apiKeySet && <span className="muted">(tersimpan)</span>}
+              </span>
               <input
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder={form.apiKeySet ? 'Biarkan kosong untuk mempertahankan' : 'API key penyedia'}
+                placeholder={
+                  form.apiKeySet
+                    ? 'Biarkan kosong untuk mempertahankan'
+                    : isPivot
+                      ? 'X-MERCHANT-ID dari dashboard Pivot'
+                      : 'API key penyedia'
+                }
                 disabled={!manage || unsupported}
               />
             </label>
           )}
 
-          {form.provider !== 'MANUAL' && (
+          {/* Secret key (secretKey) — Xendit: secret key; Pivot: X-MERCHANT-SECRET. */}
+          {(isXendit || isPivot) && (
             <label>
-              <span>Webhook token {form.webhookTokenSet && <span className="muted">(tersimpan)</span>}</span>
+              <span>
+                {isPivot ? 'Merchant Secret' : 'Secret key'}{' '}
+                {form.secretKeySet && <span className="muted">(tersimpan)</span>}
+              </span>
               <input
                 type="password"
-                value={webhookToken}
-                onChange={(e) => setWebhookToken(e.target.value)}
-                placeholder={form.webhookTokenSet ? 'Biarkan kosong untuk mempertahankan' : 'Token verifikasi callback (x-callback-token)'}
+                value={secretKey}
+                onChange={(e) => setSecretKey(e.target.value)}
+                placeholder={
+                  form.secretKeySet
+                    ? 'Biarkan kosong untuk mempertahankan'
+                    : isPivot
+                      ? 'X-MERCHANT-SECRET dari dashboard Pivot'
+                      : 'xnd_production_... / xnd_development_...'
+                }
                 disabled={!manage}
               />
             </label>
           )}
 
-          {form.provider === 'XENDIT' && (
+          {/* Token verifikasi callback (webhookToken) — Xendit: x-callback-token; Pivot: X-API-Key. */}
+          {form.provider !== 'MANUAL' && (
+            <label>
+              <span>
+                {isPivot ? 'Callback API Key' : 'Webhook token'}{' '}
+                {form.webhookTokenSet && <span className="muted">(tersimpan)</span>}
+              </span>
+              <input
+                type="password"
+                value={webhookToken}
+                onChange={(e) => setWebhookToken(e.target.value)}
+                placeholder={
+                  form.webhookTokenSet
+                    ? 'Biarkan kosong untuk mempertahankan'
+                    : isPivot
+                      ? 'X-API-Key untuk verifikasi callback'
+                      : 'Token verifikasi callback (x-callback-token)'
+                }
+                disabled={!manage}
+              />
+            </label>
+          )}
+
+          {isXendit && (
             <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
               Secret key dari dashboard Xendit (Settings → API Keys). Webhook token = <code>x-callback-token</code> yang
               Xendit kirim di header callback; arahkan URL callback Xendit ke{' '}
               <code>/api/billing/webhooks/&lt;tenant&gt;/xendit</code>.
+            </p>
+          )}
+
+          {isPivot && (
+            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+              Merchant ID &amp; Secret dari dashboard Pivot (Settings → API Keys) — dipakai menukar access token.
+              Callback API Key dari halaman Callbacks; arahkan URL callback Pivot ke{' '}
+              <code>/api/billing/webhooks/&lt;tenant&gt;/pivot</code>. Pastikan server sudah mengisi{' '}
+              <code>FTTH_BILLING_PIVOT_REDIRECT_BASE_URL</code> (mode REDIRECT butuh URL balik).
             </p>
           )}
         </div>
