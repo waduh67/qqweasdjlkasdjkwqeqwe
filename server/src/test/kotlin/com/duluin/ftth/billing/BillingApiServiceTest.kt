@@ -111,6 +111,7 @@ class BillingApiServiceTest {
         override fun existsForPeriod(subscriptionId: UUID, periodStart: LocalDate) = throw UnsupportedOperationException()
         override fun countForPeriod(periodStart: LocalDate) = throw UnsupportedOperationException()
         override fun findBillableOverdue(asOf: LocalDate) = throw UnsupportedOperationException()
+        override fun findRemindableDueSoon(from: LocalDate, to: LocalDate) = throw UnsupportedOperationException()
         override fun hasOverdueForSubscription(subscriptionId: UUID) = throw UnsupportedOperationException()
     }
 }

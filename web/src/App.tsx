@@ -34,6 +34,7 @@ import { RolesPage } from './pages/RolesPage'
 import { AreasPage } from './pages/AreasPage'
 import { AuditPage } from './pages/AuditPage'
 import { TenantsPage } from './pages/TenantsPage'
+import { NotificationSettingsPage } from './pages/NotificationSettingsPage'
 
 /** Menahan rute sampai sesi dipulihkan, lalu mengarahkan ke login bila belum masuk. */
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -257,6 +258,14 @@ export default function App() {
               element={
                 <RequirePermission permission="platform.tenant.view">
                   <TenantsPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="notifications"
+              element={
+                <RequirePermission permission="notification.settings.view">
+                  <NotificationSettingsPage />
                 </RequirePermission>
               }
             />

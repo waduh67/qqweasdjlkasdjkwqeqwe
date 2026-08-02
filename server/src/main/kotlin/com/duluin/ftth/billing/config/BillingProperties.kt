@@ -16,6 +16,8 @@ data class BillingProperties(
     val dueDays: Long = 7,
     /** Masa tenggang setelah jatuh tempo sebelum ditandai menunggak. */
     val graceDays: Long = 3,
+    /** Berapa hari sebelum jatuh tempo pelanggan diingatkan (pemicu notifikasi INVOICE_DUE_SOON). */
+    val reminderDaysBefore: Long = 3,
     /** Otomatis isolir langganan saat tagihannya menunggak. */
     val autoIsolir: Boolean = true,
     /** Prorata tagihan pertama saat langganan aktif di tengah bulan (default global). */

@@ -84,6 +84,7 @@ const GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
       { to: '/areas', label: 'Area', permission: 'iam.area.view', icon: IconArea },
       { to: '/audit', label: 'Jejak Audit', permission: 'audit.log.view', icon: IconAudit },
       { to: '/vpn-servers', label: 'Server VPN', permission: 'vpn.server.view', icon: IconRoute },
+      { to: '/notifications', label: 'Notifikasi', permission: 'notification.settings.view', icon: IconAlert },
       { to: '/tenants', label: 'Tenant', permission: 'platform.tenant.view', icon: IconBuilding },
     ],
   },

@@ -20,4 +20,6 @@ data class WorkOrderAssigned(
     /** Roster teknisi yang ditugaskan (tim datar); konsumen notifikasi mem-fan-out ke tiap id. */
     val technicianIds: List<UUID>,
     val scheduledAt: Instant?,
+    /** Pelanggan WO (null utk kerja infrastruktur murni); konsumen notifikasi memberi tahu ybs. */
+    val customerId: UUID?,
 )

@@ -67,6 +67,9 @@ class InvoiceJpaEntity(
 
     @Column(name = "pay_url", length = 1000)
     var payUrl: String?,
+
+    @Column(name = "due_soon_reminded", nullable = false)
+    var dueSoonReminded: Boolean,
 ) : TenantAwareJpaEntity(id)
 
 /**

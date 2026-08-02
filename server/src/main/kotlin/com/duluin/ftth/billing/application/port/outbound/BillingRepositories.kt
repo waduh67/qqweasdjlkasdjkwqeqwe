@@ -35,6 +35,12 @@ interface InvoiceRepository {
     /** Tagihan terbit (ISSUED) yang sudah lewat [asOf] — kandidat penegakan tunggakan. */
     fun findBillableOverdue(asOf: LocalDate): List<Invoice>
 
+    /**
+     * Tagihan terbit (ISSUED) yang JATUH TEMPO antara [from]..[to] (inklusif) dan belum
+     * pernah dikirimi pengingat — kandidat pengingat "mendekati jatuh tempo".
+     */
+    fun findRemindableDueSoon(from: LocalDate, to: LocalDate): List<Invoice>
+
     /** Masih ada tagihan menunggak (OVERDUE) untuk langganan ini — penentu auto-pulih. */
     fun hasOverdueForSubscription(subscriptionId: UUID): Boolean
 }

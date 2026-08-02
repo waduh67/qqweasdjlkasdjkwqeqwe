@@ -14,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.Instant
 import java.util.UUID
@@ -108,9 +109,25 @@ class NotificationIT {
         mockMvc.perform(get(url).header("Authorization", "Bearer $token"))
             .andExpect(status().isOk).andReturn().response.contentAsString
 
+    /**
+     * Menyalakan gateway WA mode LOG untuk tenant. Gateway bawaan MATI (aman-secara-default),
+     * jadi tanpa ini tiap broadcast — termasuk MANUAL — hanya dicatat SKIPPED "Gateway WA nonaktif".
+     * Mode LOG "mengirim" ke log dan dihitung SENT, jadi cukup untuk menguji jalur kirim.
+     */
+    private fun enableWhatsAppGateway(token: String) {
+        mockMvc.perform(
+            put("/api/notifications/settings").header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """{"provider":"LOG","gatewayEnabled":true,"notifyOnSubscriptionLifecycle":false,"notifyOnInvoiceReminder":false,"notifyOnWorkOrderSchedule":false,"notifyOnIncidentOpen":false}""",
+                ),
+        ).andExpect(status().isOk)
+    }
+
     @Test
     fun `broadcast menyasar seluruh pelanggan terdampak insiden dan mencatat hasil per penerima`() {
         val token = newTenantAdmin("notif")
+        enableWhatsAppGateway(token) // tanpa gateway aktif, semua penerima jadi SKIPPED
         val chain = buildChain(token)
         // Dua pelanggan bertelepon + satu tanpa telepon, semuanya di bawah ODC yang sama.
         val a = attachOnu(token, chain.odp, port = 1, phone = "628110000001")

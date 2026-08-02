@@ -24,6 +24,7 @@ class InvoicePersistenceAdapter(
             gatewayProvider = invoice.gatewayProvider
             gatewayRef = invoice.gatewayRef
             payUrl = invoice.payUrl
+            dueSoonReminded = invoice.dueSoonReminded
         } ?: InvoiceJpaEntity(
             id = invoice.id,
             customerId = invoice.customerId,
@@ -41,6 +42,7 @@ class InvoicePersistenceAdapter(
             gatewayProvider = invoice.gatewayProvider,
             gatewayRef = invoice.gatewayRef,
             payUrl = invoice.payUrl,
+            dueSoonReminded = invoice.dueSoonReminded,
         )
         return jpa.save(entity).toDomain()
     }
@@ -64,6 +66,10 @@ class InvoicePersistenceAdapter(
 
     override fun findBillableOverdue(asOf: LocalDate): List<Invoice> =
         jpa.findByStatusAndDueDateBeforeOrderByIssuedAtAsc(InvoiceStatus.ISSUED, asOf).map { it.toDomain() }
+
+    override fun findRemindableDueSoon(from: LocalDate, to: LocalDate): List<Invoice> =
+        jpa.findByStatusAndDueSoonRemindedFalseAndDueDateBetweenOrderByDueDateAsc(InvoiceStatus.ISSUED, from, to)
+            .map { it.toDomain() }
 
     override fun hasOverdueForSubscription(subscriptionId: UUID): Boolean =
         jpa.existsBySubscriptionIdAndStatus(subscriptionId, InvoiceStatus.OVERDUE)
@@ -111,6 +117,7 @@ internal fun InvoiceJpaEntity.toDomain(): Invoice = Invoice.rehydrate(
     gatewayProvider = gatewayProvider,
     gatewayRef = gatewayRef,
     payUrl = payUrl,
+    dueSoonReminded = dueSoonReminded,
 )
 
 internal fun PaymentJpaEntity.toDomain(): Payment = Payment.rehydrate(

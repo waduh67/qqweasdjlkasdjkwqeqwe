@@ -13,9 +13,9 @@ import com.duluin.ftth.notification.application.port.inbound.SendBroadcastUseCas
 import com.duluin.ftth.notification.application.port.inbound.SendIncidentBroadcastCommand
 import com.duluin.ftth.notification.application.port.outbound.BroadcastDigest
 import com.duluin.ftth.notification.application.port.outbound.BroadcastRepository
-import com.duluin.ftth.notification.application.port.outbound.MessageDispatcher
 import com.duluin.ftth.notification.domain.model.Broadcast
 import com.duluin.ftth.notification.domain.model.BroadcastRecipient
+import com.duluin.ftth.notification.domain.model.NotificationTrigger
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -24,16 +24,16 @@ import java.util.UUID
  * Menyusun dan menyiarkan broadcast, lalu menyimpannya sebagai riwayat.
  *
  * "Siapa yang terdampak" bukan urusan module ini — itu dijawab incident lewat
- * [IncidentApi.affectedContacts]. Di sini pesannya dikirim satu per satu lewat
- * [MessageDispatcher] dan tiap hasilnya dicatat, sehingga riwayat mencerminkan
- * kenyataan pengiriman, bukan sekadar niat.
+ * [IncidentApi.affectedContacts]. Pengiriman & pencatatan riwayat didelegasikan ke
+ * [NotificationSender] (dipakai bersama pemicu otomatis), jadi service ini hanya
+ * merakit penerima dari kontak insiden lalu menyerahkannya sebagai pemicu MANUAL.
  */
 @Service
 @Transactional(readOnly = true)
 class BroadcastService(
     private val incidentApi: IncidentApi,
     private val repository: BroadcastRepository,
-    private val dispatcher: MessageDispatcher,
+    private val sender: NotificationSender,
     private val currentUser: CurrentUserProvider,
 ) : SendBroadcastUseCase, BroadcastQuery {
 
@@ -42,25 +42,19 @@ class BroadcastService(
         val actor = currentUser.current()
         // Melempar NotFound bila insidennya tak ada — validasi keberadaan sekaligus.
         val contacts = incidentApi.affectedContacts(command.incidentId)
-
-        val broadcast = Broadcast.compose(
-            tenantId = actor.tenantId,
-            incidentId = command.incidentId,
-            channel = command.channel,
-            message = command.message,
-            createdBy = actor.userId,
-        )
-        contacts.forEach { contact ->
-            val outcome = dispatcher.send(command.channel, contact.phone, command.message)
-            broadcast.record(
-                customerId = contact.customerId,
-                customerName = contact.name,
-                phone = contact.phone,
-                status = outcome.status,
-                detail = outcome.detail,
-            )
+        val recipients = contacts.map {
+            NotificationSender.Recipient(customerId = it.customerId, name = it.name, phone = it.phone)
         }
-        return repository.save(broadcast).toView()
+        // MANUAL selalu aktif, jadi dispatch tak pernah null di sini.
+        val broadcast = sender.dispatch(
+            trigger = NotificationTrigger.MANUAL,
+            message = command.message,
+            recipients = recipients,
+            incidentId = command.incidentId,
+            createdBy = actor.userId,
+            channel = command.channel,
+        ) ?: error("Broadcast MANUAL seharusnya selalu tersiar")
+        return broadcast.toView()
     }
 
     override fun history(request: PageRequest): Page<BroadcastView> =
@@ -75,6 +69,7 @@ class BroadcastService(
         id = id,
         incidentId = incidentId,
         channel = channel.name,
+        trigger = trigger.name,
         message = message,
         recipientCount = recipientCount,
         sentCount = sentCount,
@@ -87,6 +82,7 @@ class BroadcastService(
         id = id,
         incidentId = incidentId,
         channel = channel.name,
+        trigger = trigger.name,
         message = message,
         recipientCount = recipientCount,
         sentCount = sentCount,

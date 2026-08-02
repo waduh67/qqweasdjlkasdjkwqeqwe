@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.notification.domain.model.Broadcast
 import com.duluin.ftth.notification.domain.model.NotificationChannel
+import com.duluin.ftth.notification.domain.model.NotificationTrigger
 import java.time.Instant
 import java.util.UUID
 
@@ -29,6 +30,7 @@ data class BroadcastDigest(
     val channel: NotificationChannel,
     val message: String,
     val createdBy: UUID,
+    val trigger: NotificationTrigger,
     val createdAt: Instant,
     val recipientCount: Int,
     val sentCount: Int,

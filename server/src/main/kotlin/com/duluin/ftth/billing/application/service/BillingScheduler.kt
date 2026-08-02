@@ -1,5 +1,7 @@
 package com.duluin.ftth.billing.application.service
 
+import com.duluin.ftth.billing.InvoiceDueSoon
+import com.duluin.ftth.billing.InvoiceOverdue
 import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
 import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
@@ -7,6 +9,7 @@ import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.tenancy.TenantApi
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Propagation
@@ -42,6 +45,14 @@ class BillingScheduler(
                 .onFailure { log.warn("Penegakan tunggakan tenant {} gagal: {}", tenantId, it.message) }
         }
     }
+
+    @Scheduled(fixedDelayString = "\${ftth.billing.scheduler-interval:PT12H}")
+    fun remindDueSoon() {
+        tenantApi.findActiveTenantIds().forEach { tenantId ->
+            runCatching { TenantContext.runAs(tenantId) { worker.remindDueSoon(tenantId) } }
+                .onFailure { log.warn("Pengingat jatuh tempo tenant {} gagal: {}", tenantId, it.message) }
+        }
+    }
 }
 
 /**
@@ -58,6 +69,7 @@ class BillingCycleRunner(
     private val customerApi: CustomerApi,
     private val auditor: AuditRecorder,
     private val properties: BillingProperties,
+    private val events: ApplicationEventPublisher,
 ) {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -85,8 +97,32 @@ class BillingCycleRunner(
                 "billing.invoice.overdue", "Invoice", saved.id, saved.tenantId,
                 mapOf("number" to saved.number),
             )
+            // Beri tahu pelanggan tagihannya menunggak (notification memutuskan kirim/tidak
+            // lewat saklar pemicu). Sekali per tagihan: begitu OVERDUE ia tak terpilih lagi.
+            events.publishEvent(
+                InvoiceOverdue(saved.tenantId, saved.id, saved.customerId, saved.number, saved.amount, saved.dueDate),
+            )
             val autoIsolir = sub?.autoIsolir ?: properties.autoIsolir
             if (autoIsolir) customerApi.isolateForBilling(saved.subscriptionId)
+        }
+    }
+
+    /**
+     * Ingatkan pelanggan atas tagihan yang jatuh tempo dalam [BillingProperties.reminderDaysBefore]
+     * hari ke depan dan belum pernah diingatkan. Penanda `dueSoonReminded` dinyalakan di transaksi
+     * yang sama dengan penerbitan event, jadi sweep berkala tak mengirimi ulang — bahkan bila tenant
+     * sedang mematikan saklar pemicunya (menyalakannya kelak tak membanjiri pengingat lama).
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    fun remindDueSoon(tenantId: UUID) {
+        val today = LocalDate.now()
+        val until = today.plusDays(properties.reminderDaysBefore)
+        invoiceRepository.findRemindableDueSoon(today, until).forEach { invoice ->
+            invoice.markDueSoonReminded()
+            val saved = invoiceRepository.save(invoice)
+            events.publishEvent(
+                InvoiceDueSoon(saved.tenantId, saved.id, saved.customerId, saved.number, saved.amount, saved.dueDate),
+            )
         }
     }
 }

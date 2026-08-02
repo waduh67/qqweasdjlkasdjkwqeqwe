@@ -67,11 +67,13 @@ class BroadcastRecipient private constructor(
 class Broadcast private constructor(
     val id: UUID,
     val tenantId: UUID,
-    /** Insiden pemicu, bila broadcast lahir dari gangguan; `null` untuk siaran ad-hoc kelak. */
+    /** Insiden pemicu, bila broadcast lahir dari gangguan; `null` untuk siaran non-insiden. */
     val incidentId: UUID?,
     val channel: NotificationChannel,
     val message: String,
     val createdBy: UUID,
+    /** Asal-usul siaran: manual operator atau pemicu otomatis (langganan/tagihan/WO/insiden). */
+    val trigger: NotificationTrigger,
     val createdAt: Instant,
 ) {
     private val _recipients = mutableListOf<BroadcastRecipient>()
@@ -97,14 +99,16 @@ class Broadcast private constructor(
     }
 
     companion object {
+        @Suppress("LongParameterList")
         fun compose(
             tenantId: UUID,
             incidentId: UUID?,
             channel: NotificationChannel,
             message: String,
             createdBy: UUID,
+            trigger: NotificationTrigger,
             at: Instant = Instant.now(),
-        ): Broadcast = Broadcast(UuidV7.generate(), tenantId, incidentId, channel, message, createdBy, at)
+        ): Broadcast = Broadcast(UuidV7.generate(), tenantId, incidentId, channel, message, createdBy, trigger, at)
 
         @Suppress("LongParameterList")
         fun rehydrate(
@@ -114,9 +118,10 @@ class Broadcast private constructor(
             channel: NotificationChannel,
             message: String,
             createdBy: UUID,
+            trigger: NotificationTrigger,
             createdAt: Instant,
             recipients: List<BroadcastRecipient>,
-        ): Broadcast = Broadcast(id, tenantId, incidentId, channel, message, createdBy, createdAt)
+        ): Broadcast = Broadcast(id, tenantId, incidentId, channel, message, createdBy, trigger, createdAt)
             .apply { _recipients += recipients }
     }
 }

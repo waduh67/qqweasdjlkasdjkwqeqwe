@@ -28,6 +28,7 @@ class BroadcastPersistenceAdapter(
                 channel = broadcast.channel,
                 message = broadcast.message,
                 createdBy = broadcast.createdBy,
+                trigger = broadcast.trigger,
                 recipientCount = broadcast.recipientCount,
                 sentCount = broadcast.sentCount,
                 skippedCount = broadcast.skippedCount,
@@ -71,6 +72,7 @@ private fun BroadcastJpaEntity.toDigest() = BroadcastDigest(
     channel = channel,
     message = message,
     createdBy = createdBy,
+    trigger = trigger,
     createdAt = sentAt,
     recipientCount = recipientCount,
     sentCount = sentCount,
@@ -85,6 +87,7 @@ private fun BroadcastJpaEntity.toDomain(recipients: List<BroadcastRecipient>) = 
     channel = channel,
     message = message,
     createdBy = createdBy,
+    trigger = trigger,
     createdAt = sentAt,
     recipients = recipients,
 )

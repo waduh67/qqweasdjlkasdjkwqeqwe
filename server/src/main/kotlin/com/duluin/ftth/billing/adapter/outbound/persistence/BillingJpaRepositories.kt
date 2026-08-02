@@ -13,6 +13,11 @@ interface InvoiceJpaRepository : JpaRepository<InvoiceJpaEntity, UUID> {
     fun existsBySubscriptionIdAndPeriodStart(subscriptionId: UUID, periodStart: LocalDate): Boolean
     fun countByPeriodStart(periodStart: LocalDate): Long
     fun findByStatusAndDueDateBeforeOrderByIssuedAtAsc(status: InvoiceStatus, dueDate: LocalDate): List<InvoiceJpaEntity>
+    fun findByStatusAndDueSoonRemindedFalseAndDueDateBetweenOrderByDueDateAsc(
+        status: InvoiceStatus,
+        from: LocalDate,
+        to: LocalDate,
+    ): List<InvoiceJpaEntity>
     fun existsBySubscriptionIdAndStatus(subscriptionId: UUID, status: InvoiceStatus): Boolean
 }
 

@@ -167,6 +167,54 @@ class BillingCycleTest {
         assertThat(f.customerApi.isolated).containsExactly(subId)
     }
 
+    @Test
+    fun `penegakan menerbitkan event InvoiceOverdue sekali per tagihan`() {
+        val subId = UuidV7.generate()
+        val sub = billable(subscriptionId = subId, graceDays = 5, autoIsolir = true)
+        val invoice = issuedInvoice(subId, dueDate = LocalDate.now().minusDays(10))
+        val f = fixture(props(grace = 1), overdue = listOf(invoice), byId = mapOf(subId to sub))
+
+        f.runner.enforce(UuidV7.generate())
+
+        val overdueEvents = f.events.published.filterIsInstance<InvoiceOverdue>()
+        assertThat(overdueEvents).hasSize(1)
+        assertThat(overdueEvents.single().invoiceId).isEqualTo(invoice.id)
+        assertThat(overdueEvents.single().customerId).isEqualTo(invoice.customerId)
+    }
+
+    // --- Penegakan: sweep pengingat jatuh tempo (due-soon) ---
+
+    @Test
+    fun `sweep due-soon menerbitkan InvoiceDueSoon menandai teringatkan dan idempoten`() {
+        val subId = UuidV7.generate()
+        // reminderDaysBefore bawaan = 3, jadi jatuh tempo H+2 masuk jendela.
+        val invoice = issuedInvoice(subId, dueDate = LocalDate.now().plusDays(2))
+        val f = fixture(props(), overdue = listOf(invoice))
+
+        f.runner.remindDueSoon(UuidV7.generate())
+
+        assertThat(invoice.dueSoonReminded).isTrue()
+        val dueSoon = f.events.published.filterIsInstance<InvoiceDueSoon>()
+        assertThat(dueSoon).hasSize(1)
+        assertThat(dueSoon.single().invoiceId).isEqualTo(invoice.id)
+
+        // Sweep kedua tak boleh mengirim ulang — flag sudah menyaringnya keluar.
+        f.runner.remindDueSoon(UuidV7.generate())
+        assertThat(f.events.published.filterIsInstance<InvoiceDueSoon>()).hasSize(1)
+    }
+
+    @Test
+    fun `sweep due-soon melewati tagihan di luar jendela pengingat`() {
+        val subId = UuidV7.generate()
+        val invoice = issuedInvoice(subId, dueDate = LocalDate.now().plusDays(10)) // > 3 hari
+        val f = fixture(props(), overdue = listOf(invoice))
+
+        f.runner.remindDueSoon(UuidV7.generate())
+
+        assertThat(invoice.dueSoonReminded).isFalse()
+        assertThat(f.events.published.filterIsInstance<InvoiceDueSoon>()).isEmpty()
+    }
+
     // --- Perkakas uji ---
 
     private class Fixture(
@@ -175,6 +223,7 @@ class BillingCycleTest {
         val repo: FakeInvoiceRepository,
         val gateway: CapturingGateway,
         val customerApi: FakeCustomerApi,
+        val events: CapturingEvents,
     )
 
     private fun fixture(
@@ -189,8 +238,11 @@ class BillingCycleTest {
         val registry = PaymentGatewayRegistry(listOf(gateway), props)
         val auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser)
         val generator = InvoiceGenerator(repo, customerApi, registry, auditor, props)
-        val runner = BillingCycleRunner(generator, repo, customerApi, auditor, props)
-        return Fixture(generator, runner, repo, gateway, customerApi)
+        // Publisher penangkap khusus buntut siklus (InvoiceDueSoon/InvoiceOverdue) —
+        // auditor tetap no-op agar event audit tak mengotori assertion.
+        val events = CapturingEvents()
+        val runner = BillingCycleRunner(generator, repo, customerApi, auditor, props, events)
+        return Fixture(generator, runner, repo, gateway, customerApi, events)
     }
 
     private fun props(
@@ -246,6 +298,14 @@ class BillingCycleTest {
         override fun currentOrNull() = null
     }
 
+    /** Menangkap event domain yang diterbitkan runner agar bisa di-assert (InvoiceDueSoon/InvoiceOverdue). */
+    private class CapturingEvents : ApplicationEventPublisher {
+        val published = mutableListOf<Any>()
+        override fun publishEvent(event: Any) {
+            published.add(event)
+        }
+    }
+
     private class CapturingGateway : PaymentGateway {
         override val provider = "FAKE"
         val charges = mutableListOf<ChargeRequest>()
@@ -274,6 +334,12 @@ class BillingCycleTest {
 
         override fun findBillableOverdue(asOf: LocalDate): List<Invoice> =
             overdue.filter { it.status == InvoiceStatus.ISSUED && it.dueDate.isBefore(asOf) }
+
+        override fun findRemindableDueSoon(from: LocalDate, to: LocalDate): List<Invoice> =
+            overdue.filter {
+                it.status == InvoiceStatus.ISSUED && !it.dueSoonReminded &&
+                    !it.dueDate.isBefore(from) && !it.dueDate.isAfter(to)
+            }
 
         override fun findAll() = throw UnsupportedOperationException()
         override fun findByNumber(number: String) = throw UnsupportedOperationException()

@@ -54,8 +54,17 @@ class Invoice private constructor(
     gatewayProvider: String?,
     gatewayRef: String?,
     payUrl: String?,
+    dueSoonReminded: Boolean,
 ) {
     var status: InvoiceStatus = status
+        private set
+
+    /**
+     * Sudah pernah dikirimi pengingat "mendekati jatuh tempo" — penjaga idempoten
+     * agar sweep pengingat berkala (tiap 12 jam) tak mengirimi pelanggan berkali-kali
+     * untuk tagihan yang sama. Sekali dinyalakan tak pernah mati (tagihan tak terbit ulang).
+     */
+    var dueSoonReminded: Boolean = dueSoonReminded
         private set
 
     var paidAt: Instant? = paidAt
@@ -84,6 +93,11 @@ class Invoice private constructor(
                 paidAt = at
             }
         }
+    }
+
+    /** Tandai bahwa pengingat mendekati jatuh tempo sudah dikirim (idempoten). */
+    fun markDueSoonReminded() {
+        dueSoonReminded = true
     }
 
     /** Hanya tagihan yang masih terbit (ISSUED) yang bisa jatuh tempo. */
@@ -140,6 +154,7 @@ class Invoice private constructor(
             gatewayProvider = null,
             gatewayRef = null,
             payUrl = null,
+            dueSoonReminded = false,
         )
 
         @Suppress("LongParameterList")
@@ -161,9 +176,11 @@ class Invoice private constructor(
             gatewayProvider: String?,
             gatewayRef: String?,
             payUrl: String?,
+            dueSoonReminded: Boolean,
         ): Invoice = Invoice(
             id, tenantId, customerId, subscriptionId, number, periodStart, periodEnd, amount,
             prorated, proratedDays, status, issuedAt, dueDate, paidAt, gatewayProvider, gatewayRef, payUrl,
+            dueSoonReminded,
         )
 
         /**

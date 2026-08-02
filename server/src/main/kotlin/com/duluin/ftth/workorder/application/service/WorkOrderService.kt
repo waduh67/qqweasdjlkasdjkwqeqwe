@@ -272,6 +272,7 @@ class WorkOrderService(
                 title = workOrder.title,
                 technicianIds = workOrder.assignees.toList(),
                 scheduledAt = workOrder.scheduledAt,
+                customerId = workOrder.customerId,
             ),
         )
     }

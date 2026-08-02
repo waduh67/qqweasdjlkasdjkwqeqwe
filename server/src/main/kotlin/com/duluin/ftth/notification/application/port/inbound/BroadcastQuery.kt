@@ -18,6 +18,8 @@ data class BroadcastView(
     val id: UUID,
     val incidentId: UUID?,
     val channel: String,
+    /** Asal siaran (MANUAL / SUBSCRIPTION_* / INVOICE_* / WORK_ORDER_SCHEDULED / INCIDENT_OPENED). */
+    val trigger: String,
     val message: String,
     val recipientCount: Int,
     val sentCount: Int,

@@ -1,9 +1,11 @@
 package com.duluin.ftth.incident.application.service
 
+import com.duluin.ftth.incident.IncidentOpened
 import com.duluin.ftth.incident.application.port.outbound.IncidentRepository
 import com.duluin.ftth.incident.domain.model.Incident
 import com.duluin.ftth.incident.domain.model.IncidentRootType
 import com.duluin.ftth.incident.domain.model.IncidentSeverity
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
@@ -22,6 +24,7 @@ import java.util.UUID
 class IncidentReconciler(
     private val correlation: IncidentCorrelationService,
     private val repository: IncidentRepository,
+    private val events: ApplicationEventPublisher,
 ) {
     /**
      * REQUIRES_NEW karena dipanggil dari listener AFTER_COMMIT: transaksi penerbit
@@ -51,7 +54,7 @@ class IncidentReconciler(
                 )
                 repository.save(existing)
             } else {
-                repository.save(
+                val opened = repository.save(
                     Incident.open(
                         tenantId = tenantId,
                         rootType = IncidentRootType.valueOf(g.rootType),
@@ -63,6 +66,17 @@ class IncidentReconciler(
                         affectedCustomerCount = g.affectedCustomerCount,
                         suspectedCause = g.suspectedCause,
                         at = now,
+                    ),
+                )
+                // Insiden BARU saja yang menyiarkan pemberitahuan; refresh insiden lama tidak.
+                events.publishEvent(
+                    IncidentOpened(
+                        tenantId = tenantId,
+                        incidentId = opened.id,
+                        title = opened.title,
+                        rootLabel = opened.rootLabel,
+                        severity = opened.severity.name,
+                        affectedCustomerCount = opened.affectedCustomerCount,
                     ),
                 )
             }

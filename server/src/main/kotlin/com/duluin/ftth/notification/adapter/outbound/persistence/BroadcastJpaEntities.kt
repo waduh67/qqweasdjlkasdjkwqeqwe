@@ -3,6 +3,7 @@ package com.duluin.ftth.notification.adapter.outbound.persistence
 import com.duluin.ftth.common.infrastructure.persistence.TenantAwareJpaEntity
 import com.duluin.ftth.notification.domain.model.DeliveryStatus
 import com.duluin.ftth.notification.domain.model.NotificationChannel
+import com.duluin.ftth.notification.domain.model.NotificationTrigger
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -28,6 +29,10 @@ class BroadcastJpaEntity(
 
     @Column(name = "created_by", nullable = false, updatable = false)
     var createdBy: UUID,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "trigger", nullable = false, length = 30, updatable = false)
+    var trigger: NotificationTrigger,
 
     // Jumlah ter-denormalisasi: broadcast bersifat titik-waktu, hitungannya tak
     // pernah berubah setelah tersiar, jadi aman disimpan agar daftar riwayat ringan.
