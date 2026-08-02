@@ -52,39 +52,49 @@ BillingScheduler  @Scheduled(fixedDelayString = "${ftth.billing.scheduler-interv
 
 - **`issue`** memanggil `InvoiceGenerator.generateFor(tenantId, today)` yang menarik
   `customerApi.findBillableSubscriptions()`, menyaring `monthlyFee > 0` &
-  `!existsForPeriod`, membuat nomor `INV-YYYYMM-####`, lalu—bila ada gateway
-  default—memanggil `createCharge` untuk menempelkan `payUrl`.
+  `!existsForPeriod`, membuat nomor `INV-YYYYMM-####`, lalu memanggil `createCharge`
+  lewat gateway hasil resolusi tenant (`TenantPaymentGatewayResolver`, di-resolve sekali
+  per ronde) untuk menempelkan `payUrl`. Tiap charge dibungkus `runCatching` — satu gagal
+  tak membatalkan ronde.
 - **`enforce`** menandai invoice yang lewat `dueAt + graceDays` menjadi OVERDUE
   dan (opsional) mengisolir langganannya.
 
 ---
 
-## Pembayaran & gateway agnostik
+## Pembayaran & gateway per-tenant
 
 `PaymentGateway` adalah port keluar yang **provider-agnostik** — tidak ada vendor
-yang di-hardcode:
+yang di-hardcode. Adapter tetap singleton stateless; kredensial per-tenant disuntikkan
+lewat `ResolvedGatewayContext` tiap panggilan (satu adapter melayani banyak tenant):
 
 ```kotlin
 interface PaymentGateway {
-    val provider: String                                   // "MANUAL", "MIDTRANS", …
-    fun createCharge(request: ChargeRequest): ChargeResult // saat invoice terbit
-    fun parseCallback(callback: GatewayCallback): PaymentSettlement?  // saat webhook masuk
+    val provider: String                                                       // "MANUAL", "XENDIT", …
+    fun createCharge(request: ChargeRequest, ctx: ResolvedGatewayContext): ChargeResult
+    fun parseCallback(callback: GatewayCallback, ctx: ResolvedGatewayContext): PaymentSettlement?
 }
 ```
 
-- `PaymentGatewayRegistry` mengumpulkan semua bean `PaymentGateway`, mengindeksnya
-  per `provider.uppercase()`, dan menyediakan `default()` dari
-  `ftth.billing.default-provider`. Menambah provider = menambah satu bean; tak ada
-  perubahan di core.
+- `TenantPaymentGatewayResolver` membaca baris config gateway tenant (via RLS),
+  mendekripsi di batas persistence, dan menghasilkan `ResolvedGatewayContext`
+  (provider + mode + kredensial). Jatuh ke fallback **MANUAL** (+ shared secret global)
+  bila tenant belum/nonaktif mengonfigurasi.
+- `PaymentGatewayRegistry` mengindeks semua bean `PaymentGateway` per `provider.uppercase()`;
+  pemanggil memilih adapter via `forProvider(ctx.provider)`. Menambah provider = menambah satu bean.
 - Bawaan `ManualPaymentGateway` (`provider = "MANUAL"`) memverifikasi header
-  `X-Billing-Signature` sama dengan `ftth.billing.webhook-secret`.
+  `X-Billing-Signature` sama dengan `ctx.webhookToken ?: ftth.billing.webhook-secret`.
+
+> Tiap tenant memilih penyedia + mode (BYO/PLATFORM) + kredensialnya sendiri. Xendit
+> digarap penuh (BYO **dan** PLATFORM/xenPlatform dengan auto-provision sub-account);
+> Paywuz/Pivot kerangka. Detail lengkap: [**docs/payment-gateway.md**](payment-gateway.md).
 
 ### Alur settle (lunas → auto-pulih)
 
 ```
 POST /api/billing/webhooks/{tenantSlug}/{provider}   (TANPA bearer — publik)
   └─ tenantApi.findBySlug(tenantSlug) → TenantContext.runAs
-       └─ gateway.parseCallback(rawBody, headers) → PaymentSettlement?
+       ├─ ctx = resolver.resolve() → gateway = registry.forProvider(ctx.provider)
+       └─ gateway.parseCallback(GatewayCallback(headers, body), ctx) → PaymentSettlement?
             └─ PaymentService.settle():
                  ├─ invoice.markPaid(at)
                  ├─ PaymentRepository.save(Payment)   (append-only)
@@ -117,9 +127,14 @@ Pembayaran manual juga bisa lewat `POST /api/billing/invoices/{id}/pay`
 | `grace-days` | 3 | masa tenggang sebelum isolir |
 | `auto-isolir` | true | isolir otomatis saat overdue |
 | `number-prefix` | `INV` | awalan nomor invoice |
-| `default-provider` | `MANUAL` | gateway saat pembuatan charge |
+| `default-provider` | `MANUAL` | **usang** — digantikan resolusi gateway per-tenant (lihat di bawah) |
 | `scheduler-interval` | `PT12H` | selang siklus penagihan |
-| `webhook-secret` | *(dev)* | override via `FTTH_BILLING_WEBHOOK_SECRET` |
+| `webhook-secret` | *(dev)* | secret callback **MANUAL** (fallback); override via `FTTH_BILLING_WEBHOOK_SECRET` |
+| `platform.*` | *(mati)* | kredensial MASTER agregator (mode PLATFORM) — lihat [docs/payment-gateway.md](payment-gateway.md) |
+
+> Pemilihan gateway per pembuatan charge kini lewat `TenantPaymentGatewayResolver`
+> (baris config tenant), bukan `default-provider` global. Setelan + env payment gateway
+> selengkapnya di [**docs/payment-gateway.md**](payment-gateway.md).
 
 ---
 
@@ -132,6 +147,8 @@ Pembayaran manual juga bisa lewat `POST /api/billing/invoices/{id}/pay`
 | `POST /api/billing/invoices/{id}/void` | `billing.invoice.manage` |
 | `POST /api/billing/invoices/{id}/pay` | `billing.payment.manage` |
 | `GET /api/billing/payments` | `billing.invoice.view` |
+| `GET · PUT /api/billing/gateway-settings` | `billing.gateway.view` / `billing.gateway.manage` |
+| `POST /api/billing/platform/gateway/{tenantId}/xendit-subaccount` | `billing.gateway.provision` (platform) |
 | `POST /api/billing/webhooks/{tenantSlug}/{provider}` | publik (tanda tangan gateway) |
 
 ---

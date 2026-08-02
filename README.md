@@ -107,7 +107,9 @@ tak pernah menyentuh tabel module lain — batas ini ditegakkan `ModularityTests
   v7 + FreeRADIUS).
 - **billing** — menerbitkan tagihan atas langganan lalu menggerakkan
   isolir/aktivasi `customer` (yang mengalir ke `bng`) saat jatuh tempo/lunas;
-  gateway pembayaran agnostik lewat webhook.
+  **payment gateway per-tenant** (Xendit BYO & PLATFORM/xenPlatform; Paywuz/Pivot
+  kerangka) lewat webhook, kredensial terenkripsi (lihat
+  [`docs/payment-gateway.md`](docs/payment-gateway.md)).
 - **vpn** — **swasembada** (tanpa taut lintas-module): VPN-as-a-service. Hub
   OpenVPN adalah infrastruktur **platform** (jalan di VPS kita, IP publik kita,
   app jadi CA-nya sendiri + installer satu-perintah). **Tenant tinggal generate
@@ -434,6 +436,7 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
 | `GET/POST/PUT/DELETE /api/bng/plans` · `/nas` · `/access` | `bng.plan.*` / `bng.nas.*` / `bng.access.*` |
 | `POST /api/bng/access/{id}/isolate` · `/restore` · `/reset-login` · `GET /session` · `/traffic` | `bng.access.isolate` / `bng.session.*` |
 | `GET/POST /api/billing/invoices` · `/generate` · `/{id}/void` · `/pay` · `GET /payments` | `billing.invoice.*` / `billing.payment.manage` |
+| `GET/PUT /api/billing/gateway-settings` · `POST /platform/gateway/{tenantId}/xendit-subaccount` | `billing.gateway.view`/`.manage` / `.provision` (platform) |
 | `POST /api/billing/webhooks/{tenantSlug}/{provider}` | publik (tanda tangan gateway) |
 | `GET/POST/PUT/DELETE /api/vpn/servers` · `/{id}/credentials` · `/regenerate-token` · `/config` (hub platform) | `vpn.server.*` (platform-only) / `vpn.config.view` |
 | `GET /api/vpn/accounts` · `POST /generate` · `/{id}/{enable,disable,rotate-password}` · `DELETE` · `/ovpn` · `/routeros` (akun tenant) | `vpn.peer.*` / `vpn.config.view` |
@@ -475,8 +478,10 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
   isolir/pulih & reset-login sesi; adapter Mikrotik REST v7 + FreeRADIUS, lab
   docker RADIUS (lihat [`docs/lab-bras-radius.md`](docs/lab-bras-radius.md))
 - **Billing** ✅ mesin tagihan (invoice ber-periode, jatuh tempo + grace),
-  pembayaran manual + gateway agnostik lewat webhook, auto-isolir/auto-pulih yang
-  menggerakkan `customer` → `bng` (lihat [`docs/billing.md`](docs/billing.md))
+  payment gateway **per-tenant** (Xendit BYO & PLATFORM/xenPlatform + auto-provision
+  sub-account; Paywuz/Pivot kerangka) lewat webhook, auto-isolir/auto-pulih yang
+  menggerakkan `customer` → `bng` (lihat [`docs/billing.md`](docs/billing.md) &
+  [`docs/payment-gateway.md`](docs/payment-gateway.md))
 - **VPN** ✅ VPN-as-a-service untuk remote perangkat tanpa IP publik: hub OpenVPN
   platform (app jadi CA + installer satu-perintah + verifikasi via callback), tenant
   tinggal generate akun (auto-assign) → kredensial siap tempel di Mikrotik, IP overlay
