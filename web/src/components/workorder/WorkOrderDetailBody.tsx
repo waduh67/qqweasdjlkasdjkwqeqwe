@@ -1,8 +1,10 @@
 /**
- * Isi drawer detail work order + aksi lifecycle-nya, dipakai bersama papan dispatch
- * operator dan papan "Tugas Saya" teknisi. Tombol yang muncul mengikuti status WO
- * dan izin: dispatcher lewat `workorder.order.update`/`close`, teknisi lapangan lewat
- * `workorder.order.field` — persis meniru `@authz.canAny(...)` di controller server.
+ * Isi halaman detail work order + aksi lifecycle-nya, dipakai bersama papan dispatch
+ * operator dan papan "Tugas Saya" teknisi (keduanya lewat `WorkOrderDetailPage`). Semua
+ * field dalam satu kolom yang bisa di-scroll—bukan tab—karena isiannya banyak. Tombol
+ * yang muncul mengikuti status WO dan izin: dispatcher lewat `workorder.order.update`/
+ * `close`, teknisi lapangan lewat `workorder.order.field` — persis meniru
+ * `@authz.canAny(...)` di controller server.
  */
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { api, ApiError } from '../../api/client'
@@ -17,10 +19,8 @@ import type {
 } from '../../api/workorder'
 import { useCan } from '../../auth/useCan'
 import { MultiCombobox } from '../MultiCombobox'
-import { Badge, SkeletonRows, Tabs, useToast } from '../ui'
+import { Badge, SkeletonRows, useToast } from '../ui'
 import {
-  APPROVAL_LABEL,
-  APPROVAL_TONE,
   EVENT_LABEL,
   KIND_LABEL,
   KINDS,
@@ -32,7 +32,7 @@ import {
   sameRoster,
   type ActFn,
 } from './labels'
-import { AssigneeChips, Field, WoStatusBadge } from './views'
+import { AssigneeChips, Field } from './views'
 
 /** Detail + aksi lifecycle. Tombol yang muncul mengikuti status & izin. */
 export function WorkOrderDetailBody({
@@ -48,7 +48,6 @@ export function WorkOrderDetailBody({
   const wo = detail.workOrder
   // State awal cukup dari prop: komponen ini di-`key` pada id work order, jadi
   // berganti work order me-remount dan mereset pilihan ini dengan sendirinya.
-  const [tab, setTab] = useState<'ringkasan' | 'bukti' | 'riwayat'>('ringkasan')
   const [assignees, setAssignees] = useState<string[]>(wo.assignees.map((a) => a.id))
   const [note, setNote] = useState('')
   const [reason, setReason] = useState('')
@@ -76,207 +75,184 @@ export function WorkOrderDetailBody({
 
   return (
     <div className="stack" style={{ gap: '1rem' }}>
-      {/* Baris status (keadaan saja) di atas tab — data rinci pindah ke grid Ringkasan
-          agar tak dobel tampil. Prioritas hanya muncul di sini saat perlu perhatian. */}
-      <div className="row wrap" style={{ gap: '0.4rem' }}>
-        <WoStatusBadge status={wo.status} />
-        {wo.approvalStatus && <Badge tone={APPROVAL_TONE[wo.approvalStatus]}>{APPROVAL_LABEL[wo.approvalStatus]}</Badge>}
-        {(wo.priority === 'URGENT' || wo.priority === 'HIGH') && (
-          <Badge tone="warning">Prioritas {PRIORITY_LABEL[wo.priority]}</Badge>
-        )}
-      </div>
+      {/* Satu kolom scroll (bukan tab): ringkasan, aksi lifecycle, redaman, bukti, lalu
+          riwayat — teknisi mengisi banyak field tanpa berpindah tab. Badge status &
+          persetujuan tampil di header halaman detail. */}
+      <div className="card stack" style={{ gap: '1.1rem' }}>
+        {wo.description && <p className="wo-desc">{wo.description}</p>}
 
-      <Tabs
-        active={tab}
-        onChange={setTab}
-        tabs={[
-          { key: 'ringkasan', label: 'Ringkasan' },
-          { key: 'bukti', label: 'Bukti & optik' },
-          { key: 'riwayat', label: 'Riwayat', badge: detail.timeline.length },
-        ]}
-      />
-
-      {tab === 'ringkasan' && (
-        <div className="stack" style={{ gap: '1.1rem' }}>
-          {wo.description && <p className="wo-desc">{wo.description}</p>}
-
-          <dl className="wo-grid">
-            <Field label="Tipe">{TYPE_LABEL[wo.type]}</Field>
-            <Field label="Pelanggan">{wo.customerName ?? <span className="muted">—</span>}</Field>
-            <Field label="Prioritas">{PRIORITY_LABEL[wo.priority]}</Field>
-            <Field label="Teknisi"><AssigneeChips wo={wo} /></Field>
-            <Field label="Jadwal">{wo.scheduledAt ? fmt(wo.scheduledAt) : <span className="muted">—</span>}</Field>
-            {wo.destinationLat != null && wo.destinationLng != null && (
-              <Field label="Lokasi">
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${wo.destinationLat},${wo.destinationLng}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Navigasi ke pelanggan ↗
-                </a>
-              </Field>
-            )}
-            <Field label="Dibuat">{fmt(wo.createdAt)}</Field>
-            {wo.completedAt && <Field label="Selesai">{fmt(wo.completedAt)}</Field>}
-            {wo.resolutionNote && <Field label="Catatan">{wo.resolutionNote}</Field>}
-            {wo.approvedByName && (
-              <Field label={wo.approvalStatus === 'REJECTED' ? 'Ditolak oleh' : 'Disetujui oleh'}>
-                {wo.approvedByName}
-                {wo.approvedAt ? ` · ${fmt(wo.approvedAt)}` : ''}
-              </Field>
-            )}
-            {wo.approvalNote && (
-              <Field label={wo.approvalStatus === 'REJECTED' ? 'Alasan penolakan' : 'Catatan persetujuan'}>
-                {wo.approvalNote}
-              </Field>
-            )}
-            {wo.cancelReason && <Field label="Alasan batal">{wo.cancelReason}</Field>}
-          </dl>
-
-          {/* Penugasan — selagi work order belum selesai/batal. */}
-          {canAssign && !terminal && (
-            <section className="stack" style={{ gap: '0.4rem' }}>
-              <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Penugasan</h3>
-              <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
-                <label className="stack" style={{ flex: 1, gap: '0.25rem' }}>
-                  <span>Teknisi (bisa lebih dari satu)</span>
-                  <MultiCombobox
-                    values={assignees}
-                    onChange={setAssignees}
-                    fetchOptions={fetchTechnicians}
-                    toId={(t) => t.id}
-                    toLabel={(t) => t.name}
-                    initialLabels={Object.fromEntries(
-                      wo.assignees.filter((a) => a.name).map((a) => [a.id, a.name as string]),
-                    )}
-                    debounceMs={0}
-                    placeholder="Cari teknisi…"
-                    emptyText="Tak ada teknisi"
-                  />
-                </label>
-                <button
-                  className="primary"
-                  disabled={assignees.length === 0 || sameRoster(assignees, wo.assignees)}
-                  onClick={() => onAct(() => api.post(`/api/work-orders/${id}/assign`, { technicianIds: assignees }), 'Teknisi ditugaskan', true)}
-                >
-                  {wo.assignees.length > 0 ? 'Tugaskan ulang' : 'Tugaskan'}
-                </button>
-              </div>
-            </section>
+        <dl className="wo-grid">
+          <Field label="Tipe">{TYPE_LABEL[wo.type]}</Field>
+          <Field label="Pelanggan">{wo.customerName ?? <span className="muted">—</span>}</Field>
+          <Field label="Prioritas">{PRIORITY_LABEL[wo.priority]}</Field>
+          <Field label="Teknisi"><AssigneeChips wo={wo} /></Field>
+          <Field label="Jadwal">{wo.scheduledAt ? fmt(wo.scheduledAt) : <span className="muted">—</span>}</Field>
+          {wo.destinationLat != null && wo.destinationLng != null && (
+            <Field label="Lokasi">
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${wo.destinationLat},${wo.destinationLng}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Navigasi ke pelanggan ↗
+              </a>
+            </Field>
           )}
-
-          {/* Aksi lifecycle: mulai (aksi lapangan) & hapus draft (khusus operator). */}
-          {((canStart && wo.status === 'ASSIGNED') || (canUpdate && wo.status === 'DRAFT')) && (
-            <div className="row wrap" style={{ gap: '0.5rem' }}>
-              {canStart && wo.status === 'ASSIGNED' && (
-                <button onClick={() => onAct(() => api.post(`/api/work-orders/${id}/start`), 'Pengerjaan dimulai', true)}>Mulai</button>
-              )}
-              {canUpdate && wo.status === 'DRAFT' && (
-                <button
-                  className="ghost danger"
-                  onClick={() => onAct(() => api.del(`/api/work-orders/${id}`), 'Work order dihapus', false)}
-                >
-                  Hapus
-                </button>
-              )}
-            </div>
+          <Field label="Dibuat">{fmt(wo.createdAt)}</Field>
+          {wo.completedAt && <Field label="Selesai">{fmt(wo.completedAt)}</Field>}
+          {wo.resolutionNote && <Field label="Catatan">{wo.resolutionNote}</Field>}
+          {wo.approvedByName && (
+            <Field label={wo.approvalStatus === 'REJECTED' ? 'Ditolak oleh' : 'Disetujui oleh'}>
+              {wo.approvedByName}
+              {wo.approvedAt ? ` · ${fmt(wo.approvedAt)}` : ''}
+            </Field>
           )}
+          {wo.approvalNote && (
+            <Field label={wo.approvalStatus === 'REJECTED' ? 'Alasan penolakan' : 'Catatan persetujuan'}>
+              {wo.approvalNote}
+            </Field>
+          )}
+          {wo.cancelReason && <Field label="Alasan batal">{wo.cancelReason}</Field>}
+        </dl>
 
-          {/* Selesaikan — hanya saat sedang dikerjakan (aksi lapangan). */}
-          {canComplete && wo.status === 'IN_PROGRESS' && (
-            <section className="stack" style={{ gap: '0.4rem' }}>
-              <label className="stack" style={{ gap: '0.25rem' }}>
-                <span>Catatan penyelesaian (opsional)</span>
-                <textarea rows={2} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} />
+        {/* Penugasan — selagi work order belum selesai/batal. */}
+        {canAssign && !terminal && (
+          <section className="stack" style={{ gap: '0.4rem' }}>
+            <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Penugasan</h3>
+            <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
+              <label className="stack" style={{ flex: 1, gap: '0.25rem' }}>
+                <span>Teknisi (bisa lebih dari satu)</span>
+                <MultiCombobox
+                  values={assignees}
+                  onChange={setAssignees}
+                  fetchOptions={fetchTechnicians}
+                  toId={(t) => t.id}
+                  toLabel={(t) => t.name}
+                  initialLabels={Object.fromEntries(
+                    wo.assignees.filter((a) => a.name).map((a) => [a.id, a.name as string]),
+                  )}
+                  debounceMs={0}
+                  placeholder="Cari teknisi…"
+                  emptyText="Tak ada teknisi"
+                />
               </label>
               <button
                 className="primary"
-                onClick={() => onAct(() => api.post(`/api/work-orders/${id}/complete`, { resolutionNote: note.trim() || null }), 'Work order selesai', true)}
+                disabled={assignees.length === 0 || sameRoster(assignees, wo.assignees)}
+                onClick={() => onAct(() => api.post(`/api/work-orders/${id}/assign`, { technicianIds: assignees }), 'Teknisi ditugaskan', true)}
               >
-                Selesaikan
+                {wo.assignees.length > 0 ? 'Tugaskan ulang' : 'Tugaskan'}
               </button>
-            </section>
-          )}
+            </div>
+          </section>
+        )}
 
-          {/* Persetujuan hasil kerja — hanya untuk WO selesai yang menunggu dikurasi. */}
-          {canApprove && awaitingApproval && (
-            <section className="stack" style={{ gap: '0.5rem' }}>
-              <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Persetujuan hasil kerja</h3>
-              <label className="stack" style={{ gap: '0.25rem' }}>
-                <span>Catatan (opsional untuk setuju, wajib bila menolak)</span>
-                <textarea
-                  rows={2}
-                  maxLength={500}
-                  value={decisionNote}
-                  onChange={(e) => setDecisionNote(e.target.value)}
-                  placeholder="mis. redaman OK, pemasangan rapi"
-                />
-              </label>
-              <div className="row" style={{ gap: '0.5rem' }}>
-                <button
-                  className="primary"
-                  onClick={() => onAct(() => api.post(`/api/work-orders/${id}/approve`, { note: decisionNote.trim() || null }), 'Hasil kerja disetujui', true)}
-                >
-                  Setujui
-                </button>
-                <button
-                  className="ghost danger"
-                  disabled={!decisionNote.trim()}
-                  onClick={() => onAct(() => api.post(`/api/work-orders/${id}/reject`, { reason: decisionNote.trim() }), 'Hasil kerja ditolak, WO dibuka kembali', true)}
-                  title={decisionNote.trim() ? undefined : 'Isi alasan penolakan dulu'}
-                >
-                  Tolak &amp; buka kembali
-                </button>
-              </div>
-            </section>
-          )}
-
-          {/* Pembatalan — selagi belum selesai/batal. */}
-          {canClose && !terminal && (
-            <section className="stack" style={{ gap: '0.4rem' }}>
-              <label className="stack" style={{ gap: '0.25rem' }}>
-                <span>Batalkan work order</span>
-                <input placeholder="Alasan (opsional)" value={reason} onChange={(e) => setReason(e.target.value)} />
-              </label>
+        {/* Aksi lifecycle: mulai (aksi lapangan) & hapus draft (khusus operator). */}
+        {((canStart && wo.status === 'ASSIGNED') || (canUpdate && wo.status === 'DRAFT')) && (
+          <div className="row wrap" style={{ gap: '0.5rem' }}>
+            {canStart && wo.status === 'ASSIGNED' && (
+              <button onClick={() => onAct(() => api.post(`/api/work-orders/${id}/start`), 'Pengerjaan dimulai', true)}>Mulai</button>
+            )}
+            {canUpdate && wo.status === 'DRAFT' && (
               <button
                 className="ghost danger"
-                onClick={() => onAct(() => api.post(`/api/work-orders/${id}/cancel`, { reason: reason.trim() || null }), 'Work order dibatalkan', true)}
+                onClick={() => onAct(() => api.del(`/api/work-orders/${id}`), 'Work order dihapus', false)}
               >
-                Batalkan
+                Hapus
               </button>
-            </section>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
 
-      {tab === 'bukti' && (
-        <div className="stack" style={{ gap: '1.1rem' }}>
-          {/* Redaman optik — bukti kualitas; disembunyikan hanya bila belum ada & tak boleh mengubah. */}
+        {/* Selesaikan — hanya saat sedang dikerjakan (aksi lapangan). */}
+        {canComplete && wo.status === 'IN_PROGRESS' && (
+          <section className="stack" style={{ gap: '0.4rem' }}>
+            <label className="stack" style={{ gap: '0.25rem' }}>
+              <span>Catatan penyelesaian (opsional)</span>
+              <textarea rows={2} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} />
+            </label>
+            <button
+              className="primary"
+              onClick={() => onAct(() => api.post(`/api/work-orders/${id}/complete`, { resolutionNote: note.trim() || null }), 'Work order selesai', true)}
+            >
+              Selesaikan
+            </button>
+          </section>
+        )}
+
+        {/* Persetujuan hasil kerja — hanya untuk WO selesai yang menunggu dikurasi. */}
+        {canApprove && awaitingApproval && (
+          <section className="stack" style={{ gap: '0.5rem' }}>
+            <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Persetujuan hasil kerja</h3>
+            <label className="stack" style={{ gap: '0.25rem' }}>
+              <span>Catatan (opsional untuk setuju, wajib bila menolak)</span>
+              <textarea
+                rows={2}
+                maxLength={500}
+                value={decisionNote}
+                onChange={(e) => setDecisionNote(e.target.value)}
+                placeholder="mis. redaman OK, pemasangan rapi"
+              />
+            </label>
+            <div className="row" style={{ gap: '0.5rem' }}>
+              <button
+                className="primary"
+                onClick={() => onAct(() => api.post(`/api/work-orders/${id}/approve`, { note: decisionNote.trim() || null }), 'Hasil kerja disetujui', true)}
+              >
+                Setujui
+              </button>
+              <button
+                className="ghost danger"
+                disabled={!decisionNote.trim()}
+                onClick={() => onAct(() => api.post(`/api/work-orders/${id}/reject`, { reason: decisionNote.trim() }), 'Hasil kerja ditolak, WO dibuka kembali', true)}
+                title={decisionNote.trim() ? undefined : 'Isi alasan penolakan dulu'}
+              >
+                Tolak &amp; buka kembali
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* Pembatalan — selagi belum selesai/batal. */}
+        {canClose && !terminal && (
+          <section className="stack" style={{ gap: '0.4rem' }}>
+            <label className="stack" style={{ gap: '0.25rem' }}>
+              <span>Batalkan work order</span>
+              <input placeholder="Alasan (opsional)" value={reason} onChange={(e) => setReason(e.target.value)} />
+            </label>
+            <button
+              className="ghost danger"
+              onClick={() => onAct(() => api.post(`/api/work-orders/${id}/cancel`, { reason: reason.trim() || null }), 'Work order dibatalkan', true)}
+            >
+              Batalkan
+            </button>
+          </section>
+        )}
+      </div>
+
+      {(showOptical || showEvidence) && (
+        <div className="card stack" style={{ gap: '1.1rem' }}>
+          {/* Redaman optik (bukti kualitas) + foto & tanda tangan pengerjaan. */}
           {showOptical && <OpticalSection wo={wo} canEdit={canRecordOptical} onAct={onAct} />}
           {showEvidence && <EvidenceSection workOrderId={id} status={wo.status} />}
-          {!showOptical && !showEvidence && (
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Tak ada bukti yang bisa ditampilkan.</p>
-          )}
         </div>
       )}
 
-      {tab === 'riwayat' && (
-        <section className="stack" style={{ gap: '0.5rem' }}>
-          <ol className="timeline">
-            {detail.timeline.map((ev, i) => (
-              <li key={i}>
-                <span className="tl-dot" aria-hidden="true" />
-                <div className="stack" style={{ gap: '0.15rem' }}>
-                  <strong style={{ fontSize: '0.85rem' }}>{EVENT_LABEL[ev.type] ?? ev.type}</strong>
-                  <span className="muted" style={{ fontSize: '0.82rem' }}>{ev.message}</span>
-                  <span className="muted" style={{ fontSize: '0.75rem' }}>{fmt(ev.at)}</span>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+      <div className="card stack" style={{ gap: '0.5rem' }}>
+        <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Riwayat</h3>
+        <ol className="timeline">
+          {detail.timeline.map((ev, i) => (
+            <li key={i}>
+              <span className="tl-dot" aria-hidden="true" />
+              <div className="stack" style={{ gap: '0.15rem' }}>
+                <strong style={{ fontSize: '0.85rem' }}>{EVENT_LABEL[ev.type] ?? ev.type}</strong>
+                <span className="muted" style={{ fontSize: '0.82rem' }}>{ev.message}</span>
+                <span className="muted" style={{ fontSize: '0.75rem' }}>{fmt(ev.at)}</span>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
     </div>
   )
 }

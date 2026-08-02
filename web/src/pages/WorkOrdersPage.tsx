@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
-import type { PageResponse, Role, User } from '../api/types'
+import type { PageResponse, User } from '../api/types'
 import type { CustomerView } from '../api/network'
 import type {
   WorkOrderApprovalStatus,
   WorkOrderDashboardView,
-  WorkOrderDetail,
   WorkOrderPriority,
   WorkOrderStatus,
   WorkOrderType,
@@ -13,7 +13,7 @@ import type {
 } from '../api/workorder'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
-import { Badge, Drawer, EmptyState, Modal, SearchInput, Toolbar, useToast } from '../components/ui'
+import { Badge, EmptyState, Modal, SearchInput, Toolbar, useToast } from '../components/ui'
 import { Combobox } from '../components/Combobox'
 import { MultiCombobox } from '../components/MultiCombobox'
 import { IconPlus, IconWorkOrder } from '../components/icons'
@@ -31,7 +31,7 @@ import {
   priorityTone,
 } from '../components/workorder/labels'
 import { AssigneeChips, WoStatusBadge } from '../components/workorder/views'
-import { WorkOrderDetailBody } from '../components/workorder/WorkOrderDetailBody'
+import { useTechnicians } from '../components/workorder/useTechnicians'
 
 type Draft = {
   type: WorkOrderType
@@ -64,6 +64,7 @@ const toInstant = (local: string): string | null => (local ? new Date(local).toI
  */
 export function WorkOrdersPage() {
   const { can } = useCan()
+  const navigate = useNavigate()
   const toast = useToast()
   const [orders, setOrders] = useState<WorkOrderView[]>([])
   const [loading, setLoading] = useState(true)
@@ -73,14 +74,12 @@ export function WorkOrdersPage() {
   const [approval, setApproval] = useState<WorkOrderApprovalStatus | ''>('')
   const [assignedTo, setAssignedTo] = useState('')
   const [draft, setDraft] = useState<Draft | null>(null)
-  const [detail, setDetail] = useState<WorkOrderDetail | null>(null)
   // Ditambah tiap ada perubahan (buat/tugaskan/lifecycle) agar dashboard menghitung ulang.
   const [dashVersion, setDashVersion] = useState(0)
 
-  // Teknisi untuk pemilih & filter — best-effort; bila operator tak punya izin
-  // melihatnya, pemilihnya cukup dikosongkan (tidak menggagalkan halaman). Pelanggan
-  // TIDAK dimuat borongan: dicari sisi-server lewat combobox agar tahan ribuan baris.
-  const [technicians, setTechnicians] = useState<User[]>([])
+  // Teknisi (pemegang role "Teknisi") untuk pemilih penugasan & filter — best-effort lewat
+  // hook; bila operator tak berizin melihatnya, daftarnya kosong dan halaman tetap jalan.
+  const { technicians, fetchTechnicians } = useTechnicians()
 
   // Pencarian pelanggan sisi-server untuk combobox — ambil sedikit per ketikan, bukan
   // menarik ratusan/ribuan ke klien. Gagal (mis. tak berizin) → daftar kosong, form tetap jalan.
@@ -94,16 +93,6 @@ export function WorkOrdersPage() {
       return []
     }
   }, [])
-
-  // Teknisi difilter lokal (jumlahnya dibatasi role) — bungkus jadi Promise agar
-  // antarmuka combobox seragam dengan pencarian pelanggan sisi-server.
-  const fetchTechnicians = useCallback(
-    async (term: string): Promise<User[]> => {
-      const t = term.toLowerCase()
-      return t ? technicians.filter((u) => u.name.toLowerCase().includes(t)) : technicians
-    },
-    [technicians],
-  )
 
   const reload = useCallback(async () => {
     const params = new URLSearchParams({ size: '100' })
@@ -126,43 +115,11 @@ export function WorkOrdersPage() {
     void reload()
   }, [reload])
 
-  useEffect(() => {
-    // Pemilih teknisi disaring ke pemegang role "Teknisi" (bukan semua user aktif) agar
-    // penugasan hanya jatuh ke petugas lapangan. Bila role belum ada / tak berizin lihat
-    // roles, jatuh balik ke semua user aktif supaya form tetap bisa dipakai.
-    void Promise.all([
-      api.get<PageResponse<User>>('/api/users?size=200'),
-      api.get<Role[]>('/api/roles').catch(() => [] as Role[]),
-    ])
-      .then(([users, roles]) => {
-        const active = users.content.filter((u) => u.status === 'ACTIVE')
-        const technicianRole = roles.find((r) => r.name === 'Teknisi')
-        setTechnicians(
-          technicianRole
-            ? active.filter((u) => u.roleIds.includes(technicianRole.id))
-            : active,
-        )
-      })
-      .catch(() => setTechnicians([]))
-  }, [])
-
-  const openDetail = useCallback(
-    async (id: string) => {
-      try {
-        setDetail(await api.get<WorkOrderDetail>(`/api/work-orders/${id}`))
-      } catch (err) {
-        toast.error(err instanceof ApiError ? err.message : 'Gagal memuat detail work order')
-      }
-    },
-    [toast],
-  )
-
-  const run = async (action: () => Promise<unknown>, ok?: string, refreshId?: string) => {
+  const run = async (action: () => Promise<unknown>, ok?: string) => {
     try {
       await action()
       await reload()
       setDashVersion((v) => v + 1)
-      if (refreshId) await openDetail(refreshId)
       if (ok) toast.success(ok)
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Operasi gagal')
@@ -313,7 +270,7 @@ export function WorkOrdersPage() {
         columns={columns}
         rows={orders}
         rowKey={(wo) => wo.id}
-        onRowClick={(wo) => void openDetail(wo.id)}
+        onRowClick={(wo) => navigate(`/work-orders/${wo.id}`)}
         loading={loading}
         initialSort={{ key: 'scheduledAt', dir: 'desc' }}
         empty={
@@ -328,21 +285,6 @@ export function WorkOrdersPage() {
           />
         }
       />
-
-      {detail && (
-        <Drawer title={`${detail.workOrder.code} · ${detail.workOrder.title}`} onClose={() => setDetail(null)}>
-          <WorkOrderDetailBody
-            key={detail.workOrder.id}
-            detail={detail}
-            fetchTechnicians={fetchTechnicians}
-            onAct={(action, ok, keepOpen) =>
-              void run(action, ok, keepOpen ? detail.workOrder.id : undefined).then(() => {
-                if (!keepOpen) setDetail(null)
-              })
-            }
-          />
-        </Drawer>
-      )}
     </div>
   )
 }

@@ -17,6 +17,7 @@ import { ProvisioningPage } from './pages/ProvisioningPage'
 import { IncidentsPage } from './pages/IncidentsPage'
 import { WorkOrdersPage } from './pages/WorkOrdersPage'
 import { MyWorkOrdersPage } from './pages/MyWorkOrdersPage'
+import { WorkOrderDetailPage } from './pages/WorkOrderDetailPage'
 import { CatalogPage } from './pages/CatalogPage'
 import { BngPage } from './pages/BngPage'
 import { VpnPage } from './pages/VpnPage'
@@ -196,10 +197,26 @@ export default function App() {
               }
             />
             <Route
+              path="work-orders/:id"
+              element={
+                <RequirePermission permission="workorder.order.view">
+                  <WorkOrderDetailPage backTo="/work-orders" backLabel="Work Order" />
+                </RequirePermission>
+              }
+            />
+            <Route
               path="my-work-orders"
               element={
                 <RequirePermission permission="workorder.order.field">
                   <MyWorkOrdersPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="my-work-orders/:id"
+              element={
+                <RequirePermission permission="workorder.order.view">
+                  <WorkOrderDetailPage backTo="/my-work-orders" backLabel="Tugas Saya" />
                 </RequirePermission>
               }
             />

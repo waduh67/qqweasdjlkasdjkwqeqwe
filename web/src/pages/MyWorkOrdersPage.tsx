@@ -1,14 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api, ApiError } from '../api/client'
-import type { User } from '../api/types'
-import {
-  listMyWorkOrders,
-  type WorkOrderDetail,
-  type WorkOrderStatus,
-  type WorkOrderView,
-} from '../api/workorder'
+import { useNavigate } from 'react-router-dom'
+import { ApiError } from '../api/client'
+import { listMyWorkOrders, type WorkOrderStatus, type WorkOrderView } from '../api/workorder'
 import { DataTable, type Column } from '../components/DataTable'
-import { Badge, Drawer, EmptyState, Toolbar, useToast } from '../components/ui'
+import { Badge, EmptyState, Toolbar, useToast } from '../components/ui'
 import { IconWorkOrder } from '../components/icons'
 import {
   PRIORITY_LABEL,
@@ -20,7 +15,6 @@ import {
   priorityTone,
 } from '../components/workorder/labels'
 import { AssigneeChips, WoStatusBadge } from '../components/workorder/views'
-import { WorkOrderDetailBody } from '../components/workorder/WorkOrderDetailBody'
 
 /**
  * "Tugas Saya" — papan tugas milik teknisi yang sedang login. Beda dari papan dispatch
@@ -31,11 +25,11 @@ import { WorkOrderDetailBody } from '../components/workorder/WorkOrderDetailBody
  * ter-gate izin yang tak dimiliki teknisi, jadi tak muncul di sini.
  */
 export function MyWorkOrdersPage() {
+  const navigate = useNavigate()
   const toast = useToast()
   const [orders, setOrders] = useState<WorkOrderView[]>([])
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState<WorkOrderStatus | ''>('')
-  const [detail, setDetail] = useState<WorkOrderDetail | null>(null)
 
   const reload = useCallback(async () => {
     try {
@@ -51,32 +45,6 @@ export function MyWorkOrdersPage() {
   useEffect(() => {
     void reload()
   }, [reload])
-
-  const openDetail = useCallback(
-    async (id: string) => {
-      try {
-        setDetail(await api.get<WorkOrderDetail>(`/api/work-orders/${id}`))
-      } catch (err) {
-        toast.error(err instanceof ApiError ? err.message : 'Gagal memuat detail tugas')
-      }
-    },
-    [toast],
-  )
-
-  const run = async (action: () => Promise<unknown>, ok?: string, refreshId?: string) => {
-    try {
-      await action()
-      await reload()
-      if (refreshId) await openDetail(refreshId)
-      if (ok) toast.success(ok)
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Operasi gagal')
-    }
-  }
-
-  // Section penugasan ter-gate `workorder.order.assign` yang tak dimiliki teknisi →
-  // pemilih teknisi tak pernah dipakai di halaman ini; resolver kosong sudah cukup.
-  const noTechnicians = useCallback(async (): Promise<User[]> => [], [])
 
   const columns: Column<WorkOrderView>[] = [
     {
@@ -150,7 +118,7 @@ export function MyWorkOrdersPage() {
         columns={columns}
         rows={orders}
         rowKey={(wo) => wo.id}
-        onRowClick={(wo) => void openDetail(wo.id)}
+        onRowClick={(wo) => navigate(`/my-work-orders/${wo.id}`)}
         loading={loading}
         initialSort={{ key: 'scheduledAt', dir: 'desc' }}
         empty={
@@ -161,21 +129,6 @@ export function MyWorkOrdersPage() {
           />
         }
       />
-
-      {detail && (
-        <Drawer title={`${detail.workOrder.code} · ${detail.workOrder.title}`} onClose={() => setDetail(null)}>
-          <WorkOrderDetailBody
-            key={detail.workOrder.id}
-            detail={detail}
-            fetchTechnicians={noTechnicians}
-            onAct={(action, ok, keepOpen) =>
-              void run(action, ok, keepOpen ? detail.workOrder.id : undefined).then(() => {
-                if (!keepOpen) setDetail(null)
-              })
-            }
-          />
-        </Drawer>
-      )}
     </div>
   )
 }
