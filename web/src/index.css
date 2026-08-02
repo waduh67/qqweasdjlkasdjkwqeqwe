@@ -725,6 +725,13 @@ tbody tr.row-click:focus-visible {
   padding: 0;
   overflow: hidden;
 }
+/* Garis pemisah tipis antar-seksi di dalam satu kartu. */
+.hr {
+  height: 1px;
+  border: 0;
+  margin: 0.35rem 0;
+  background: var(--border);
+}
 /* Kartu yang seluruhnya bisa diklik untuk membuka detail (mis. baris pelanggan). */
 .card.clickable {
   cursor: pointer;
