@@ -5,6 +5,7 @@ import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.security.CurrentUserProvider
+import com.duluin.ftth.common.storage.ObjectStorage
 import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.workorder.application.port.inbound.AttachEvidenceCommand
 import com.duluin.ftth.workorder.application.port.inbound.CaptureSignatureCommand
@@ -13,7 +14,6 @@ import com.duluin.ftth.workorder.application.port.inbound.EvidenceView
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderEvidenceUseCase
 import com.duluin.ftth.workorder.application.port.inbound.SignatureView
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderEvidenceQuery
-import com.duluin.ftth.workorder.application.port.outbound.ObjectStorage
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderEvidenceRepository
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderRepository
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderSignatureRepository

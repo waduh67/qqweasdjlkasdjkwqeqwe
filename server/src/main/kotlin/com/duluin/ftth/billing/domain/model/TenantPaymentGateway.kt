@@ -63,6 +63,34 @@ data class ResolvedGatewayContext(
 )
 
 /**
+ * Konfigurasi pembayaran MANUAL per-tenant (transfer / QRIS) — dipakai saat gateway otomatis
+ * nonaktif: inilah satu-satunya instruksi bayar yang bisa ditunjukkan ke pelanggan. Semua
+ * NON-RAHASIA (bukan kredensial), jadi plaintext & semantik "selalu diganti" (null/kosong =
+ * kosongkan), mengikuti pola [TenantPaymentGateway.paymentMethod].
+ *
+ * Gambar QRIS byte-nya TIDAK di sini (ada di object storage); [qrisEnabled] hanya penanda
+ * aktif, gambarnya dikelola lewat [TenantPaymentGateway.attachQrisImage]/[clearQrisImage].
+ */
+data class ManualPaymentConfig(
+    val transferEnabled: Boolean = false,
+    val bankName: String? = null,
+    val accountNumber: String? = null,
+    val accountHolder: String? = null,
+    val qrisEnabled: Boolean = false,
+) {
+    /** Rapikan input operator: kosong/whitespace → null (setara "tak diisi"). */
+    fun normalized(): ManualPaymentConfig = copy(
+        bankName = bankName?.trim()?.takeIf { it.isNotEmpty() },
+        accountNumber = accountNumber?.trim()?.takeIf { it.isNotEmpty() },
+        accountHolder = accountHolder?.trim()?.takeIf { it.isNotEmpty() },
+    )
+
+    companion object {
+        val EMPTY = ManualPaymentConfig()
+    }
+}
+
+/**
  * Setelan payment gateway satu tenant (satu baris per tenant): penyedia + mode + kredensial
  * bawa-sendiri (BYO) atau penanda sub-account (PLATFORM).
  *
@@ -85,6 +113,9 @@ class TenantPaymentGateway private constructor(
     webhookToken: String?,
     subAccountId: String?,
     paymentMethod: String?,
+    manual: ManualPaymentConfig,
+    qrisStorageKey: String?,
+    qrisContentType: String?,
 ) {
     var provider: PaymentProvider = provider
         private set
@@ -115,6 +146,21 @@ class TenantPaymentGateway private constructor(
     var paymentMethod: String? = paymentMethod
         private set
 
+    /** Metode pembayaran manual (tunai/transfer/QRIS). Non-rahasia; disunting operator lewat [update]. */
+    var manual: ManualPaymentConfig = manual
+        private set
+
+    /** Object-storage key gambar QRIS (satu per tenant). Dikelola [attachQrisImage]/[clearQrisImage], bukan [update]. */
+    var qrisStorageKey: String? = qrisStorageKey
+        private set
+
+    /** MIME gambar QRIS (mis. `image/png`), untuk menyajikan byte balik dengan tipe benar. */
+    var qrisContentType: String? = qrisContentType
+        private set
+
+    /** Apakah gambar QRIS sudah terunggah (byte ada di storage). */
+    val qrisImageSet: Boolean get() = !qrisStorageKey.isNullOrBlank()
+
     /**
      * Sunting setelan dari sisi operator (tenant admin). Kredensial null/kosong = biarkan apa
      * adanya. [paymentMethod] BUKAN rahasia → semantik ganti: null/kosong = kosongkan (jatuh ke
@@ -129,6 +175,7 @@ class TenantPaymentGateway private constructor(
         secretKey: String?,
         webhookToken: String?,
         paymentMethod: String? = null,
+        manual: ManualPaymentConfig = ManualPaymentConfig.EMPTY,
     ) {
         this.provider = provider
         this.mode = mode
@@ -139,9 +186,24 @@ class TenantPaymentGateway private constructor(
         webhookToken?.trim()?.takeIf { it.isNotEmpty() }?.let { this.webhookToken = validateSecret(it, "Webhook token") }
         // Bukan rahasia — selalu diganti (null/kosong = pakai default global).
         this.paymentMethod = paymentMethod?.trim()?.takeIf { it.isNotEmpty() }
+        // Konfigurasi manual non-rahasia — selalu diganti (gambar QRIS dikelola terpisah).
+        this.manual = manual.normalized()
         if (mode == GatewayMode.PLATFORM && subAccountId.isNullOrBlank()) {
             throw ValidationException("Mode PLATFORM butuh sub-account — provisikan lewat admin platform dulu")
         }
+    }
+
+    /** Pasang (atau ganti) gambar QRIS yang sudah tersimpan di object storage. */
+    fun attachQrisImage(storageKey: String, contentType: String) {
+        this.qrisStorageKey = storageKey.trim().takeIf { it.isNotEmpty() }
+            ?: throw ValidationException("Storage key QRIS kosong")
+        this.qrisContentType = contentType.trim().takeIf { it.isNotEmpty() } ?: "application/octet-stream"
+    }
+
+    /** Lepas gambar QRIS (byte-nya dihapus dari storage oleh pemanggil). */
+    fun clearQrisImage() {
+        this.qrisStorageKey = null
+        this.qrisContentType = null
     }
 
     /**
@@ -222,6 +284,9 @@ class TenantPaymentGateway private constructor(
             webhookToken = null,
             subAccountId = null,
             paymentMethod = null,
+            manual = ManualPaymentConfig.EMPTY,
+            qrisStorageKey = null,
+            qrisContentType = null,
         )
 
         @Suppress("LongParameterList")
@@ -236,8 +301,12 @@ class TenantPaymentGateway private constructor(
             webhookToken: String?,
             subAccountId: String?,
             paymentMethod: String?,
+            manual: ManualPaymentConfig,
+            qrisStorageKey: String?,
+            qrisContentType: String?,
         ): TenantPaymentGateway = TenantPaymentGateway(
             id, tenantId, provider, mode, enabled, apiKey, secretKey, webhookToken, subAccountId, paymentMethod,
+            manual, qrisStorageKey, qrisContentType,
         )
 
         private fun validateSecret(value: String, label: String): String {

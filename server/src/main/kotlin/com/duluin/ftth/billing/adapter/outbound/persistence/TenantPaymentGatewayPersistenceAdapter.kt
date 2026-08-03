@@ -1,6 +1,7 @@
 package com.duluin.ftth.billing.adapter.outbound.persistence
 
 import com.duluin.ftth.billing.application.port.outbound.TenantPaymentGatewayRepository
+import com.duluin.ftth.billing.domain.model.ManualPaymentConfig
 import com.duluin.ftth.billing.domain.model.TenantPaymentGateway
 import com.duluin.ftth.common.security.SecretCipher
 import com.duluin.ftth.common.tenant.TenantContext
@@ -37,6 +38,13 @@ class TenantPaymentGatewayPersistenceAdapter(
             webhookToken = encryptedWebhookToken
             subAccountId = settings.subAccountId
             paymentMethod = settings.paymentMethod
+            manualTransferEnabled = settings.manual.transferEnabled
+            transferBankName = settings.manual.bankName
+            transferAccountNumber = settings.manual.accountNumber
+            transferAccountHolder = settings.manual.accountHolder
+            manualQrisEnabled = settings.manual.qrisEnabled
+            qrisStorageKey = settings.qrisStorageKey
+            qrisContentType = settings.qrisContentType
         } ?: TenantPaymentGatewayJpaEntity(
             id = settings.id,
             provider = settings.provider,
@@ -47,6 +55,13 @@ class TenantPaymentGatewayPersistenceAdapter(
             webhookToken = encryptedWebhookToken,
             subAccountId = settings.subAccountId,
             paymentMethod = settings.paymentMethod,
+            manualTransferEnabled = settings.manual.transferEnabled,
+            transferBankName = settings.manual.bankName,
+            transferAccountNumber = settings.manual.accountNumber,
+            transferAccountHolder = settings.manual.accountHolder,
+            manualQrisEnabled = settings.manual.qrisEnabled,
+            qrisStorageKey = settings.qrisStorageKey,
+            qrisContentType = settings.qrisContentType,
         )
         return jpa.save(entity).toDomain()
     }
@@ -62,6 +77,15 @@ class TenantPaymentGatewayPersistenceAdapter(
         webhookToken = cipher.decryptQuietly(webhookToken, "webhook_token", log),
         subAccountId = subAccountId,
         paymentMethod = paymentMethod,
+        manual = ManualPaymentConfig(
+            transferEnabled = manualTransferEnabled,
+            bankName = transferBankName,
+            accountNumber = transferAccountNumber,
+            accountHolder = transferAccountHolder,
+            qrisEnabled = manualQrisEnabled,
+        ),
+        qrisStorageKey = qrisStorageKey,
+        qrisContentType = qrisContentType,
     )
 }
 

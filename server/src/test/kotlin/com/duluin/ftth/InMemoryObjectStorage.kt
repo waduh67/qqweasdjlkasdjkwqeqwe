@@ -1,8 +1,8 @@
 package com.duluin.ftth
 
 import com.duluin.ftth.common.domain.error.NotFoundException
-import com.duluin.ftth.workorder.application.port.outbound.ObjectStorage
-import com.duluin.ftth.workorder.application.port.outbound.StoredObject
+import com.duluin.ftth.common.storage.ObjectStorage
+import com.duluin.ftth.common.storage.StoredObject
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 import java.util.concurrent.ConcurrentHashMap
