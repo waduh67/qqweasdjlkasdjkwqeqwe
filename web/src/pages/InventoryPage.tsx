@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
-import type { AssetStatus, OdcView, OdpView, OltView, SiteView } from '../api/network'
+import type { AssetStatus, OdcView, OdpView, OltView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
 import { LocationPicker } from '../components/LocationPicker'
@@ -29,6 +29,22 @@ const TABS: Array<{ key: Tab; label: string; permission: string }> = [
 
 const SPLITTER_RATIOS = ['1:2', '1:4', '1:8', '1:16', '1:32', '1:64']
 const VENDORS = ['ZTE', 'HUAWEI', 'FIBERHOME', 'NOKIA', 'HSGQ', 'OTHER']
+
+const SNMP_VERSIONS: { value: SnmpVersion; label: string }[] = [
+  { value: 'V1', label: 'v1' },
+  { value: 'V2C', label: 'v2c' },
+  { value: 'V3', label: 'v3' },
+]
+
+/**
+ * HSGQ (EPON/GPON) tak berbicara SNMP — perangkatnya dikelola & dibaca murni
+ * lewat Web UI API (HTTP). Vendor lain (ZTE, Huawei, dst.) sebaliknya: SNMP jadi
+ * kanal utama, Web hanya pelengkap metrik suhu/optik. Preset ini yang membuat
+ * form create OLT menyesuaikan diri saat vendor diganti.
+ */
+function isWebManaged(vendor: string): boolean {
+  return vendor === 'HSGQ'
+}
 
 const ASSET_STATUS_OPTIONS: { value: AssetStatus | ''; label: string }[] = [
   { value: '', label: 'Semua status' },
@@ -266,13 +282,29 @@ function OltsTab() {
     name: '',
     vendor: 'ZTE',
     model: '',
+    description: '',
     managementIp: '',
+    snmpEnabled: true,
     snmpCommunity: '',
+    snmpVersion: 'V2C' as SnmpVersion,
     snmpPort: '161',
+    webEnabled: false,
+    webProtocol: 'HTTP' as WebProtocol,
+    webPort: '',
+    webUsername: '',
+    webPassword: '',
     longitude: '',
     latitude: '',
   }
-  const [draft, setDraft] = useState<typeof empty | null>(null)
+  type OltDraft = typeof empty
+  const [draft, setDraft] = useState<OltDraft | null>(null)
+
+  // Ganti vendor = ganti kanal manajemen yang masuk akal: HSGQ murni Web UI
+  // (SNMP mati), selainnya SNMP-first (Web pelengkap, mati kecuali dinyalakan).
+  const changeVendor = (d: OltDraft, vendor: string): OltDraft =>
+    isWebManaged(vendor)
+      ? { ...d, vendor, snmpEnabled: false, webEnabled: true }
+      : { ...d, vendor, snmpEnabled: true, webEnabled: d.webEnabled }
   const [ports, setPorts] = useState<Record<string, string>>({})
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('')
@@ -381,6 +413,7 @@ function OltsTab() {
 
       {draft && (
         <div className="card stack">
+          {/* Identitas perangkat */}
           <div className="row">
             <label style={{ flex: 1 }}>
               <span>Site</span>
@@ -403,48 +436,179 @@ function OltsTab() {
           </div>
           <div className="row">
             <label style={{ flex: 1 }}>
-              <span>Vendor</span>
-              <select value={draft.vendor} onChange={(e) => setDraft({ ...draft, vendor: e.target.value })}>
+              <span>
+                Vendor <span className="muted">(hardware type)</span>
+              </span>
+              <select value={draft.vendor} onChange={(e) => setDraft(changeVendor(draft, e.target.value))}>
                 {VENDORS.map((vendor) => (
                   <option key={vendor}>{vendor}</option>
                 ))}
               </select>
             </label>
             <label style={{ flex: 1 }}>
-              <span>Model</span>
+              <span>
+                Model <span className="muted">(opsional)</span>
+              </span>
               <input value={draft.model} onChange={(e) => setDraft({ ...draft, model: e.target.value })} placeholder="C320" />
             </label>
             <label style={{ flex: 1 }}>
-              <span>IP manajemen</span>
+              <span>
+                IP manajemen <span className="muted">(opsional)</span>
+              </span>
               <input
                 value={draft.managementIp}
                 onChange={(e) => setDraft({ ...draft, managementIp: e.target.value })}
                 placeholder="10.10.1.2"
               />
             </label>
-            <label style={{ flex: 1 }}>
-              <span>SNMP community</span>
-              <input
-                type="password"
-                value={draft.snmpCommunity}
-                onChange={(e) => setDraft({ ...draft, snmpCommunity: e.target.value })}
-              />
-            </label>
-            <label style={{ width: 110 }}>
-              <span>Port SNMP</span>
-              <input
-                type="number"
-                min={1}
-                max={65535}
-                value={draft.snmpPort}
-                onChange={(e) => setDraft({ ...draft, snmpPort: e.target.value })}
-                placeholder="161"
-              />
-            </label>
           </div>
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-            Community string disimpan terenkripsi dan tidak pernah ditampilkan kembali.
-          </p>
+          <label>
+            <span>
+              Deskripsi <span className="muted">(opsional)</span>
+            </span>
+            <input
+              value={draft.description}
+              onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+              placeholder="Lokasi rak, kontak vendor, atau ID kontrak…"
+            />
+          </label>
+
+          {/* Kanal SNMP — utama untuk ZTE/Huawei/dst.; HSGQ tak berbicara SNMP */}
+          {!isWebManaged(draft.vendor) && (
+            <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
+              <label className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={draft.snmpEnabled}
+                  onChange={(e) => setDraft({ ...draft, snmpEnabled: e.target.checked })}
+                  style={{ width: 'auto' }}
+                />
+                <span style={{ fontWeight: 600 }}>Aktifkan SNMP untuk OLT ini</span>
+              </label>
+              {draft.snmpEnabled && (
+                <div className="row">
+                  <label style={{ flex: 1 }}>
+                    <span>
+                      Community string <span className="muted">(RO/RW)</span>
+                    </span>
+                    <input
+                      type="password"
+                      value={draft.snmpCommunity}
+                      onChange={(e) => setDraft({ ...draft, snmpCommunity: e.target.value })}
+                      placeholder="public"
+                    />
+                  </label>
+                  <label style={{ width: 130 }}>
+                    <span>Versi</span>
+                    <select
+                      value={draft.snmpVersion}
+                      onChange={(e) => setDraft({ ...draft, snmpVersion: e.target.value as SnmpVersion })}
+                    >
+                      {SNMP_VERSIONS.map((v) => (
+                        <option key={v.value} value={v.value}>
+                          {v.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label style={{ width: 110 }}>
+                    <span>Port SNMP</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={65535}
+                      value={draft.snmpPort}
+                      onChange={(e) => setDraft({ ...draft, snmpPort: e.target.value })}
+                      placeholder="161"
+                    />
+                  </label>
+                </div>
+              )}
+              <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+                Community string disimpan terenkripsi dan tidak pernah ditampilkan kembali.
+              </p>
+            </div>
+          )}
+
+          {/* Kanal Web UI — HSGQ pakai ini sebagai manajemen langsung; lainnya untuk metrik suhu/optik */}
+          <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
+            {isWebManaged(draft.vendor) ? (
+              <div className="stack" style={{ gap: '0.25rem' }}>
+                <span style={{ fontWeight: 600 }}>Web UI API (HTTP Management)</span>
+                <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+                  OLT HSGQ terhubung langsung lewat HTTP Web UI API — mengandalkan Port Web, Web Username, & Web Password di
+                  bawah.
+                </p>
+              </div>
+            ) : (
+              <>
+                <label className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={draft.webEnabled}
+                    onChange={(e) => setDraft({ ...draft, webEnabled: e.target.checked })}
+                    style={{ width: 'auto' }}
+                  />
+                  <span style={{ fontWeight: 600 }}>Aktifkan Web Management (metrik)</span>
+                </label>
+                <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+                  Digunakan untuk mengambil data suhu (temperature) &amp; daya optik (optical power) lewat Web UI.
+                </p>
+              </>
+            )}
+            {(isWebManaged(draft.vendor) || draft.webEnabled) && (
+              <div className="row">
+                <label style={{ width: 130 }}>
+                  <span>Protokol</span>
+                  <select
+                    value={draft.webProtocol}
+                    onChange={(e) => setDraft({ ...draft, webProtocol: e.target.value as WebProtocol })}
+                  >
+                    <option value="HTTP">HTTP</option>
+                    <option value="HTTPS">HTTPS</option>
+                  </select>
+                </label>
+                <label style={{ width: 130 }}>
+                  <span>Port Web</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={65535}
+                    value={draft.webPort}
+                    onChange={(e) => setDraft({ ...draft, webPort: e.target.value })}
+                    placeholder="80"
+                  />
+                </label>
+                <label style={{ flex: 1 }}>
+                  <span>
+                    Web Username <span className="muted">(opsional)</span>
+                  </span>
+                  <input
+                    value={draft.webUsername}
+                    onChange={(e) => setDraft({ ...draft, webUsername: e.target.value })}
+                    placeholder="admin"
+                  />
+                </label>
+                <label style={{ flex: 1 }}>
+                  <span>
+                    Web Password <span className="muted">(opsional)</span>
+                  </span>
+                  <input
+                    type="password"
+                    value={draft.webPassword}
+                    onChange={(e) => setDraft({ ...draft, webPassword: e.target.value })}
+                    placeholder={isWebManaged(draft.vendor) ? 'password Web UI' : 'kalau beda dari Telnet'}
+                  />
+                </label>
+              </div>
+            )}
+            {(isWebManaged(draft.vendor) || draft.webEnabled) && (
+              <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+                Password Web disimpan terenkripsi dan tidak pernah ditampilkan kembali.
+              </p>
+            )}
+          </div>
+
           <LocationFields
             longitude={draft.longitude}
             latitude={draft.latitude}
@@ -458,13 +622,24 @@ function OltsTab() {
               className="primary"
               onClick={() =>
                 void run(async () => {
-                  const { longitude, latitude, ...rest } = draft
+                  const { longitude, latitude } = draft
                   await api.post('/api/olts', {
-                    ...rest,
+                    siteId: draft.siteId,
+                    code: draft.code,
+                    name: draft.name,
+                    vendor: draft.vendor,
                     model: draft.model || null,
+                    description: draft.description || null,
                     managementIp: draft.managementIp || null,
+                    snmpEnabled: draft.snmpEnabled,
                     snmpCommunity: draft.snmpCommunity || null,
+                    snmpVersion: draft.snmpVersion,
                     snmpPort: Number(draft.snmpPort) || 161,
+                    webEnabled: draft.webEnabled,
+                    webProtocol: draft.webProtocol,
+                    webPort: draft.webPort ? Number(draft.webPort) : null,
+                    webUsername: draft.webUsername || null,
+                    webPassword: draft.webPassword || null,
                     location:
                       longitude && latitude
                         ? { longitude: Number(longitude), latitude: Number(latitude) }

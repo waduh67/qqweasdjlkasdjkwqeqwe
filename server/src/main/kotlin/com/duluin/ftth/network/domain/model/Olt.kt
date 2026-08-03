@@ -27,6 +27,14 @@ class Olt private constructor(
     status: AssetStatus,
     location: Coordinate,
     areaId: UUID?,
+    description: String?,
+    snmpEnabled: Boolean,
+    snmpVersion: SnmpVersion,
+    webEnabled: Boolean,
+    webProtocol: WebProtocol,
+    webPort: Int?,
+    webUsername: String?,
+    webPassword: String?,
 ) {
     var siteId: UUID = siteId
         private set
@@ -69,6 +77,34 @@ class Olt private constructor(
     var status: AssetStatus = status
         private set
 
+    /** Catatan bebas operator (mis. lokasi rak, kontak vendor, ID kontrak). */
+    var description: String? = description
+        private set
+
+    /** Kanal SNMP aktif — dicabut untuk OLT yang dikelola murni lewat Web UI (mis. HSGQ HTTP). */
+    var snmpEnabled: Boolean = snmpEnabled
+        private set
+
+    var snmpVersion: SnmpVersion = snmpVersion
+        private set
+
+    /** Kanal Web UI/HTTP aktif — dipakai untuk metrik (suhu, daya optik) / manajemen langsung. */
+    var webEnabled: Boolean = webEnabled
+        private set
+
+    var webProtocol: WebProtocol = webProtocol
+        private set
+
+    var webPort: Int? = webPort
+        private set
+
+    var webUsername: String? = webUsername
+        private set
+
+    /** Dipegang plaintext di domain; adapter persistence yang mengenkripsinya, sama seperti [snmpCommunity]. */
+    var webPassword: String? = webPassword
+        private set
+
     fun update(
         siteId: UUID,
         name: String,
@@ -78,6 +114,13 @@ class Olt private constructor(
         snmpPort: Int,
         location: Coordinate,
         areaId: UUID?,
+        description: String?,
+        snmpEnabled: Boolean,
+        snmpVersion: SnmpVersion,
+        webEnabled: Boolean,
+        webProtocol: WebProtocol,
+        webPort: Int?,
+        webUsername: String?,
     ) {
         this.siteId = siteId
         this.name = AssetNaming.name(name, "OLT")
@@ -87,6 +130,13 @@ class Olt private constructor(
         this.snmpPort = validPort(snmpPort)
         this.location = location
         this.areaId = areaId
+        this.description = description?.trim()?.takeIf { it.isNotEmpty() }
+        this.snmpEnabled = snmpEnabled
+        this.snmpVersion = snmpVersion
+        this.webEnabled = webEnabled
+        this.webProtocol = webProtocol
+        this.webPort = webPort?.let(::validPort)
+        this.webUsername = webUsername?.trim()?.takeIf { it.isNotEmpty() }
     }
 
     /** `null` berarti "jangan ubah"; string kosong berarti "hapus kredensial". */
@@ -95,17 +145,23 @@ class Olt private constructor(
         snmpCommunity = community.trim().takeIf { it.isNotEmpty() }
     }
 
+    /** `null` berarti "jangan ubah"; string kosong berarti "hapus password Web". */
+    fun changeWebPassword(password: String?) {
+        if (password == null) return
+        webPassword = password.trim().takeIf { it.isNotEmpty() }
+    }
+
     fun changeStatus(status: AssetStatus) {
         this.status = status
     }
 
     /**
-     * Collector hanya bisa mem-polling OLT yang vendornya didukung sekaligus
-     * punya alamat dan kredensial. Dipakai UI untuk menandai OLT yang
-     * "terinventarisasi tapi belum termonitor".
+     * Collector hanya bisa mem-polling OLT yang kanal SNMP-nya aktif, vendornya
+     * didukung, sekaligus punya alamat dan kredensial. Dipakai UI untuk menandai
+     * OLT yang "terinventarisasi tapi belum termonitor".
      */
     fun isPollable(): Boolean =
-        vendor.monitoringSupported() && managementIp != null && !snmpCommunity.isNullOrBlank()
+        snmpEnabled && vendor.monitoringSupported() && managementIp != null && !snmpCommunity.isNullOrBlank()
 
     companion object {
         /** Port SNMP baku bila operator tidak menyetel sendiri. */
@@ -124,6 +180,14 @@ class Olt private constructor(
             areaId: UUID?,
             snmpPort: Int = DEFAULT_SNMP_PORT,
             status: AssetStatus = AssetStatus.ACTIVE,
+            description: String? = null,
+            snmpEnabled: Boolean = true,
+            snmpVersion: SnmpVersion = SnmpVersion.V2C,
+            webEnabled: Boolean = false,
+            webProtocol: WebProtocol = WebProtocol.HTTP,
+            webPort: Int? = null,
+            webUsername: String? = null,
+            webPassword: String? = null,
         ): Olt = Olt(
             id = UuidV7.generate(),
             tenantId = tenantId,
@@ -138,6 +202,14 @@ class Olt private constructor(
             status = status,
             location = location,
             areaId = areaId,
+            description = description?.trim()?.takeIf { it.isNotEmpty() },
+            snmpEnabled = snmpEnabled,
+            snmpVersion = snmpVersion,
+            webEnabled = webEnabled,
+            webProtocol = webProtocol,
+            webPort = webPort?.let(::validPort),
+            webUsername = webUsername?.trim()?.takeIf { it.isNotEmpty() },
+            webPassword = webPassword?.trim()?.takeIf { it.isNotEmpty() },
         )
 
         fun rehydrate(
@@ -154,14 +226,23 @@ class Olt private constructor(
             status: AssetStatus,
             location: Coordinate,
             areaId: UUID?,
+            description: String?,
+            snmpEnabled: Boolean,
+            snmpVersion: SnmpVersion,
+            webEnabled: Boolean,
+            webProtocol: WebProtocol,
+            webPort: Int?,
+            webUsername: String?,
+            webPassword: String?,
         ): Olt = Olt(
             id, tenantId, code, siteId, name, vendor, model, managementIp,
             snmpCommunity, snmpPort, status, location, areaId,
+            description, snmpEnabled, snmpVersion, webEnabled, webProtocol, webPort, webUsername, webPassword,
         )
 
         private fun validPort(port: Int): Int {
             if (port !in 1..65535) {
-                throw ValidationException("Port SNMP $port di luar rentang 1..65535")
+                throw ValidationException("Port $port di luar rentang 1..65535")
             }
             return port
         }

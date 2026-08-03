@@ -100,6 +100,14 @@ private fun OltRequest.toCommand() = SaveOltCommand(
     snmpCommunity = snmpCommunity,
     snmpPort = snmpPort,
     location = location?.toCoordinate(),
+    description = description,
+    snmpEnabled = snmpEnabled,
+    snmpVersion = snmpVersion,
+    webEnabled = webEnabled,
+    webProtocol = webProtocol,
+    webPort = webPort,
+    webUsername = webUsername,
+    webPassword = webPassword,
 )
 
 private fun PonPortRequest.toCommand() = SavePonPortCommand(

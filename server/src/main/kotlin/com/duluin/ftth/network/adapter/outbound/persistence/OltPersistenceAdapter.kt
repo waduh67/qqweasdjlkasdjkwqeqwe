@@ -29,6 +29,7 @@ class OltPersistenceAdapter(
 
     override fun save(olt: Olt): Olt {
         val encryptedCommunity = olt.snmpCommunity?.let(cipher::encrypt)
+        val encryptedWebPassword = olt.webPassword?.let(cipher::encrypt)
         val entity = jpa.findById(olt.id).orElse(null)?.apply {
             siteId = olt.siteId
             name = olt.name
@@ -40,6 +41,14 @@ class OltPersistenceAdapter(
             status = olt.status
             location = Geometries.point(olt.location)
             areaId = olt.areaId
+            description = olt.description
+            snmpEnabled = olt.snmpEnabled
+            snmpVersion = olt.snmpVersion
+            webEnabled = olt.webEnabled
+            webProtocol = olt.webProtocol
+            webPort = olt.webPort
+            webUsername = olt.webUsername
+            webPassword = encryptedWebPassword
         } ?: OltJpaEntity(
             id = olt.id,
             code = olt.code,
@@ -53,6 +62,14 @@ class OltPersistenceAdapter(
             status = olt.status,
             location = Geometries.point(olt.location),
             areaId = olt.areaId,
+            description = olt.description,
+            snmpEnabled = olt.snmpEnabled,
+            snmpVersion = olt.snmpVersion,
+            webEnabled = olt.webEnabled,
+            webProtocol = olt.webProtocol,
+            webPort = olt.webPort,
+            webUsername = olt.webUsername,
+            webPassword = encryptedWebPassword,
         )
         return jpa.save(entity).toDomain()
     }
@@ -97,6 +114,14 @@ class OltPersistenceAdapter(
         status = status,
         location = location.toCoordinate(),
         areaId = areaId,
+        description = description,
+        snmpEnabled = snmpEnabled,
+        snmpVersion = snmpVersion,
+        webEnabled = webEnabled,
+        webProtocol = webProtocol,
+        webPort = webPort,
+        webUsername = webUsername,
+        webPassword = decryptQuietly(webPassword, code),
     )
 
     /**
@@ -108,7 +133,7 @@ class OltPersistenceAdapter(
     private fun decryptQuietly(ciphertext: String?, oltCode: String): String? {
         if (ciphertext == null) return null
         return runCatching { cipher.decrypt(ciphertext) }
-            .onFailure { log.warn("Kredensial SNMP OLT {} tidak bisa didekripsi; perlu diisi ulang", oltCode) }
+            .onFailure { log.warn("Kredensial OLT {} tidak bisa didekripsi; perlu diisi ulang", oltCode) }
             .getOrNull()
     }
 }

@@ -72,6 +72,14 @@ class OltService(
                 location = command.location ?: site.location,
                 areaId = site.areaId,
                 snmpPort = command.snmpPort,
+                description = command.description,
+                snmpEnabled = command.snmpEnabled,
+                snmpVersion = command.snmpVersion,
+                webEnabled = command.webEnabled,
+                webProtocol = command.webProtocol,
+                webPort = command.webPort,
+                webUsername = command.webUsername,
+                webPassword = command.webPassword,
             ),
         )
         auditor.record("olt.created", "Olt", olt.id, olt.tenantId, mapOf("code" to olt.code, "vendor" to olt.vendor.name))
@@ -92,8 +100,16 @@ class OltService(
             // (menampung kasus OLT dipindah ke site di area lain).
             location = command.location ?: olt.location,
             areaId = site.areaId,
+            description = command.description,
+            snmpEnabled = command.snmpEnabled,
+            snmpVersion = command.snmpVersion,
+            webEnabled = command.webEnabled,
+            webProtocol = command.webProtocol,
+            webPort = command.webPort,
+            webUsername = command.webUsername,
         )
         olt.changeSnmpCommunity(command.snmpCommunity)
+        olt.changeWebPassword(command.webPassword)
         val saved = oltRepository.save(olt)
         auditor.record("olt.updated", "Olt", saved.id, saved.tenantId, mapOf("code" to saved.code))
         return saved.toView(site.name, ponPortRepository.findByOltId(id).size)
@@ -202,6 +218,14 @@ private fun Olt.toView(siteName: String?, ponPortCount: Int) = OltView(
     ponPortCount = ponPortCount,
     location = location,
     areaId = areaId,
+    description = description,
+    snmpEnabled = snmpEnabled,
+    snmpVersion = snmpVersion,
+    webEnabled = webEnabled,
+    webProtocol = webProtocol,
+    webPort = webPort,
+    webUsername = webUsername,
+    webPasswordConfigured = !webPassword.isNullOrBlank(),
 )
 
 private fun PonPort.toView(odcCount: Long) = PonPortView(

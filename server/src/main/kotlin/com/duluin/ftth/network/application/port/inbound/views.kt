@@ -6,6 +6,8 @@ import com.duluin.ftth.network.domain.model.AssetStatus
 import com.duluin.ftth.network.domain.model.CableType
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import com.duluin.ftth.network.domain.model.OltVendor
+import com.duluin.ftth.network.domain.model.SnmpVersion
+import com.duluin.ftth.network.domain.model.WebProtocol
 import java.util.UUID
 
 /**
@@ -42,6 +44,15 @@ data class OltView(
     val ponPortCount: Int,
     val location: Coordinate,
     val areaId: UUID?,
+    val description: String?,
+    val snmpEnabled: Boolean,
+    val snmpVersion: SnmpVersion,
+    val webEnabled: Boolean,
+    val webProtocol: WebProtocol,
+    val webPort: Int?,
+    val webUsername: String?,
+    /** Password Web TIDAK pernah dikembalikan — hanya penanda ada/tidaknya. */
+    val webPasswordConfigured: Boolean,
 )
 
 data class PonPortView(

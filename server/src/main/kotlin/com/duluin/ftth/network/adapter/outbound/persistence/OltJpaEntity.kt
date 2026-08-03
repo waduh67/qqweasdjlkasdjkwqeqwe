@@ -3,6 +3,8 @@ package com.duluin.ftth.network.adapter.outbound.persistence
 import com.duluin.ftth.common.infrastructure.persistence.TenantAwareJpaEntity
 import com.duluin.ftth.network.domain.model.AssetStatus
 import com.duluin.ftth.network.domain.model.OltVendor
+import com.duluin.ftth.network.domain.model.SnmpVersion
+import com.duluin.ftth.network.domain.model.WebProtocol
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -51,4 +53,31 @@ class OltJpaEntity(
 
     @Column(name = "area_id")
     var areaId: UUID?,
+
+    @Column(columnDefinition = "text")
+    var description: String?,
+
+    @Column(name = "snmp_enabled", nullable = false)
+    var snmpEnabled: Boolean,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "snmp_version", nullable = false, length = 10)
+    var snmpVersion: SnmpVersion,
+
+    @Column(name = "web_enabled", nullable = false)
+    var webEnabled: Boolean,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "web_protocol", nullable = false, length = 10)
+    var webProtocol: WebProtocol,
+
+    @Column(name = "web_port")
+    var webPort: Int?,
+
+    @Column(name = "web_username", length = 100)
+    var webUsername: String?,
+
+    /** Ciphertext AES-GCM, bukan plaintext — lihat AesGcmSecretCipher. */
+    @Column(name = "web_password")
+    var webPassword: String?,
 ) : TenantAwareJpaEntity(id)

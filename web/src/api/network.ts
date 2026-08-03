@@ -7,6 +7,9 @@ export interface Coordinate {
 
 export type AssetStatus = 'PLANNED' | 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE'
 
+export type SnmpVersion = 'V1' | 'V2C' | 'V3'
+export type WebProtocol = 'HTTP' | 'HTTPS'
+
 export interface SiteView {
   id: string
   code: string
@@ -34,6 +37,15 @@ export interface OltView {
   ponPortCount: number
   location: Coordinate
   areaId: string | null
+  description: string | null
+  snmpEnabled: boolean
+  snmpVersion: SnmpVersion
+  webEnabled: boolean
+  webProtocol: WebProtocol
+  webPort: number | null
+  webUsername: string | null
+  /** Server tidak pernah mengirim password Web-nya, hanya ada/tidaknya. */
+  webPasswordConfigured: boolean
 }
 
 export interface PonPortView {

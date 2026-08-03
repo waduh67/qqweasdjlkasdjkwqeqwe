@@ -5,6 +5,8 @@ import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.network.domain.model.AssetStatus
 import com.duluin.ftth.network.domain.model.OltVendor
+import com.duluin.ftth.network.domain.model.SnmpVersion
+import com.duluin.ftth.network.domain.model.WebProtocol
 import java.util.UUID
 
 interface ManageOltUseCase {
@@ -50,6 +52,15 @@ data class SaveOltCommand(
      * peta); jalur "taruh di peta" mengirim koordinat eksplisit.
      */
     val location: Coordinate? = null,
+    val description: String? = null,
+    val snmpEnabled: Boolean = true,
+    val snmpVersion: SnmpVersion = SnmpVersion.V2C,
+    val webEnabled: Boolean = false,
+    val webProtocol: WebProtocol = WebProtocol.HTTP,
+    val webPort: Int? = null,
+    val webUsername: String? = null,
+    /** `null` = pertahankan password Web tersimpan (API tak pernah mengembalikannya). */
+    val webPassword: String? = null,
 )
 
 data class SavePonPortCommand(

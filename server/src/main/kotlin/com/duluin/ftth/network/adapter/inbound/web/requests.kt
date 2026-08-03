@@ -7,6 +7,8 @@ import com.duluin.ftth.network.domain.model.CableType
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import com.duluin.ftth.network.domain.model.OltVendor
 import com.duluin.ftth.network.domain.model.OtdrEventType
+import com.duluin.ftth.network.domain.model.SnmpVersion
+import com.duluin.ftth.network.domain.model.WebProtocol
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
@@ -54,6 +56,16 @@ data class OltRequest(
     @field:Min(1) @field:Max(65535) val snmpPort: Int = 161,
     /** Titik OLT di peta; `null` = warisi lokasi site-nya. */
     @field:Valid val location: LocationRequest? = null,
+    @field:Size(max = 500) val description: String? = null,
+    val snmpEnabled: Boolean = true,
+    val snmpVersion: SnmpVersion = SnmpVersion.V2C,
+    /** Kanal Web UI/HTTP (metrik suhu/optik atau manajemen langsung, mis. HSGQ). */
+    val webEnabled: Boolean = false,
+    val webProtocol: WebProtocol = WebProtocol.HTTP,
+    @field:Min(1) @field:Max(65535) val webPort: Int? = null,
+    @field:Size(max = 100) val webUsername: String? = null,
+    /** Kosongkan untuk mempertahankan password Web yang tersimpan terenkripsi. */
+    val webPassword: String? = null,
 )
 
 data class PonPortRequest(

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
-import type { AssetStatus, OltView, PonPortView, SiteView } from '../api/network'
+import type { AssetStatus, OltView, PonPortView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
 import type { PageResponse } from '../api/types'
 import { useCan } from '../auth/useCan'
 import { LocationPicker } from '../components/LocationPicker'
@@ -19,6 +19,12 @@ import { IconInventory, IconPlus } from '../components/icons'
  */
 
 const VENDORS = ['ZTE', 'HUAWEI', 'FIBERHOME', 'NOKIA', 'HSGQ', 'OTHER']
+
+const SNMP_VERSIONS: { value: SnmpVersion; label: string }[] = [
+  { value: 'V1', label: 'v1' },
+  { value: 'V2C', label: 'v2c' },
+  { value: 'V3', label: 'v3' },
+]
 
 const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
   { value: 'PLANNED', label: 'Rencana' },
@@ -181,8 +187,11 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
     if (!moved) return
     setSaving(true)
     try {
-      // PUT butuh badan OltRequest utuh; kirim ulang field kini + koordinat baru.
-      // `snmpCommunity` sengaja diabaikan (kosong = pertahankan yang terenkripsi).
+      // PUT butuh badan OltRequest utuh; kirim ulang SEMUA field kini + koordinat
+      // baru. Field non-rahasia (deskripsi, SNMP/Web) di-set langsung oleh domain,
+      // jadi kalau dihilangkan di sini PUT akan meresetnya ke default — makanya
+      // ikut dikirim. `snmpCommunity`/`webPassword` sengaja diabaikan (kosong =
+      // pertahankan yang terenkripsi).
       await api.put(`/api/olts/${olt.id}`, {
         siteId: olt.siteId,
         code: olt.code,
@@ -191,6 +200,13 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
         model: olt.model,
         managementIp: olt.managementIp,
         snmpPort: olt.snmpPort,
+        description: olt.description,
+        snmpEnabled: olt.snmpEnabled,
+        snmpVersion: olt.snmpVersion,
+        webEnabled: olt.webEnabled,
+        webProtocol: olt.webProtocol,
+        webPort: olt.webPort,
+        webUsername: olt.webUsername,
         location: { longitude: Number(lon), latitude: Number(lat) },
       })
       toast.success('Lokasi OLT diperbarui')
@@ -208,25 +224,45 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
         <h3 style={{ margin: 0 }}>Informasi perangkat</h3>
         <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
           <Field label="Site" value={olt.siteName ?? '—'} />
-          <Field label="Vendor" value={olt.vendor} />
+          <Field label="Vendor (hardware type)" value={olt.vendor} />
           <Field label="Model" value={olt.model ?? '—'} />
           <Field label="IP manajemen" value={olt.managementIp ?? '—'} />
-          <Field label="Port SNMP" value={String(olt.snmpPort)} />
           <Field label="Jumlah PON port" value={String(olt.ponPortCount)} />
         </div>
+        {olt.description && <Field label="Deskripsi" value={olt.description} />}
       </div>
 
       <div className="card stack">
         <h3 style={{ margin: 0 }}>Monitoring SNMP</h3>
         <div className="row wrap" style={{ gap: '0.5rem' }}>
+          {olt.snmpEnabled ? <Badge tone="accent">SNMP aktif</Badge> : <Badge tone="neutral">SNMP nonaktif</Badge>}
           {olt.pollable ? <Badge tone="good">Siap dipolling</Badge> : <Badge tone="neutral">Belum lengkap</Badge>}
           {olt.snmpConfigured ? <Badge tone="accent">Community tersimpan</Badge> : <Badge tone="neutral">Community belum diset</Badge>}
+          <Badge>{olt.snmpVersion.toLowerCase()}</Badge>
           <Badge>Port {olt.snmpPort}</Badge>
         </div>
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-          {olt.pollable
-            ? 'Server memolling OLT ini via SNMP untuk menaik-turunkan alarm jangkauan & membaca telemetri ONU di hilirnya.'
-            : 'Lengkapi vendor yang didukung, IP manajemen, dan SNMP community lewat tombol Edit agar OLT bisa dipolling.'}
+          {!olt.snmpEnabled
+            ? 'Kanal SNMP dimatikan — OLT ini dikelola lewat Web UI (mis. HSGQ). Tak ada polling SNMP yang dilakukan.'
+            : olt.pollable
+              ? 'Server memolling OLT ini via SNMP untuk menaik-turunkan alarm jangkauan & membaca telemetri ONU di hilirnya.'
+              : 'Lengkapi vendor yang didukung, IP manajemen, dan SNMP community lewat tombol Edit agar OLT bisa dipolling.'}
+        </p>
+      </div>
+
+      <div className="card stack">
+        <h3 style={{ margin: 0 }}>Web UI / HTTP</h3>
+        <div className="row wrap" style={{ gap: '0.5rem' }}>
+          {olt.webEnabled ? <Badge tone="accent">Web aktif</Badge> : <Badge tone="neutral">Web nonaktif</Badge>}
+          <Badge>{olt.webProtocol}</Badge>
+          {olt.webPort != null && <Badge>Port {olt.webPort}</Badge>}
+          {olt.webUsername && <Badge>User {olt.webUsername}</Badge>}
+          {olt.webPasswordConfigured ? <Badge tone="accent">Password tersimpan</Badge> : <Badge tone="neutral">Password belum diset</Badge>}
+        </div>
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          {olt.webEnabled
+            ? 'Kanal Web UI dipakai untuk mengambil metrik suhu & daya optik, atau (mis. HSGQ) sebagai manajemen langsung lewat HTTP.'
+            : 'Kanal Web UI dimatikan. Aktifkan lewat tombol Edit bila ingin menarik metrik suhu/optik atau mengelola OLT via HTTP.'}
         </p>
       </div>
 
@@ -387,8 +423,16 @@ function EditOltModal({ olt, onClose, onSaved }: { olt: OltView; onClose: () => 
   const [vendor, setVendor] = useState(olt.vendor)
   const [model, setModel] = useState(olt.model ?? '')
   const [managementIp, setManagementIp] = useState(olt.managementIp ?? '')
+  const [description, setDescription] = useState(olt.description ?? '')
+  const [snmpEnabled, setSnmpEnabled] = useState(olt.snmpEnabled)
   const [snmpCommunity, setSnmpCommunity] = useState('')
+  const [snmpVersion, setSnmpVersion] = useState<SnmpVersion>(olt.snmpVersion)
   const [snmpPort, setSnmpPort] = useState(String(olt.snmpPort))
+  const [webEnabled, setWebEnabled] = useState(olt.webEnabled)
+  const [webProtocol, setWebProtocol] = useState<WebProtocol>(olt.webProtocol)
+  const [webPort, setWebPort] = useState(olt.webPort != null ? String(olt.webPort) : '')
+  const [webUsername, setWebUsername] = useState(olt.webUsername ?? '')
+  const [webPassword, setWebPassword] = useState('')
   const [status, setStatus] = useState<AssetStatus>(olt.status)
   const [saving, setSaving] = useState(false)
 
@@ -419,9 +463,17 @@ function EditOltModal({ olt, onClose, onSaved }: { olt: OltView; onClose: () => 
         model: model.trim() || null,
         managementIp: managementIp.trim() || null,
         snmpPort: Number(snmpPort) || 161,
+        description: description.trim() || null,
+        snmpEnabled,
+        snmpVersion,
+        webEnabled,
+        webProtocol,
+        webPort: webPort.trim() ? Number(webPort) : null,
+        webUsername: webUsername.trim() || null,
       }
-      // Kosong = pertahankan community terenkripsi; hanya kirim saat diisi.
+      // Kosong = pertahankan rahasia terenkripsi; hanya kirim saat diisi.
       if (snmpCommunity.trim()) body.snmpCommunity = snmpCommunity.trim()
+      if (webPassword.trim()) body.webPassword = webPassword.trim()
       await api.put(`/api/olts/${olt.id}`, body)
       // Status punya endpoint tersendiri; ubah hanya bila berbeda.
       if (status !== olt.status) await api.put(`/api/olts/${olt.id}/status`, { status })
@@ -502,23 +554,113 @@ function EditOltModal({ olt, onClose, onSaved }: { olt: OltView; onClose: () => 
             </span>
             <input value={managementIp} onChange={(e) => setManagementIp(e.target.value)} placeholder="10.10.1.2" />
           </label>
-          <label style={{ flex: 1 }}>
-            <span>SNMP community</span>
+          <label style={{ flex: 2 }}>
+            <span>
+              Deskripsi <span className="muted">(opsional)</span>
+            </span>
             <input
-              type="password"
-              value={snmpCommunity}
-              onChange={(e) => setSnmpCommunity(e.target.value)}
-              placeholder={olt.snmpConfigured ? '(tersimpan)' : 'public'}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Lokasi rak, kontak vendor, atau ID kontrak…"
             />
           </label>
-          <label style={{ width: 110 }}>
-            <span>Port SNMP</span>
-            <input type="number" min={1} max={65535} value={snmpPort} onChange={(e) => setSnmpPort(e.target.value)} />
-          </label>
         </div>
+
+        {/* Kanal SNMP */}
+        <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
+          <label className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+            <input
+              type="checkbox"
+              checked={snmpEnabled}
+              onChange={(e) => setSnmpEnabled(e.target.checked)}
+              style={{ width: 'auto' }}
+            />
+            <span style={{ fontWeight: 600 }}>Aktifkan SNMP untuk OLT ini</span>
+          </label>
+          {snmpEnabled && (
+            <div className="row" style={{ gap: '0.5rem' }}>
+              <label style={{ flex: 1 }}>
+                <span>
+                  Community string <span className="muted">(RO/RW)</span>
+                </span>
+                <input
+                  type="password"
+                  value={snmpCommunity}
+                  onChange={(e) => setSnmpCommunity(e.target.value)}
+                  placeholder={olt.snmpConfigured ? '(tersimpan)' : 'public'}
+                />
+              </label>
+              <label style={{ width: 120 }}>
+                <span>Versi</span>
+                <select value={snmpVersion} onChange={(e) => setSnmpVersion(e.target.value as SnmpVersion)}>
+                  {SNMP_VERSIONS.map((v) => (
+                    <option key={v.value} value={v.value}>
+                      {v.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ width: 110 }}>
+                <span>Port SNMP</span>
+                <input type="number" min={1} max={65535} value={snmpPort} onChange={(e) => setSnmpPort(e.target.value)} />
+              </label>
+            </div>
+          )}
+        </div>
+
+        {/* Kanal Web UI / HTTP */}
+        <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
+          <label className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+            <input
+              type="checkbox"
+              checked={webEnabled}
+              onChange={(e) => setWebEnabled(e.target.checked)}
+              style={{ width: 'auto' }}
+            />
+            <span style={{ fontWeight: 600 }}>Aktifkan Web UI / HTTP</span>
+          </label>
+          {webEnabled && (
+            <div className="row" style={{ gap: '0.5rem' }}>
+              <label style={{ width: 120 }}>
+                <span>Protokol</span>
+                <select value={webProtocol} onChange={(e) => setWebProtocol(e.target.value as WebProtocol)}>
+                  <option value="HTTP">HTTP</option>
+                  <option value="HTTPS">HTTPS</option>
+                </select>
+              </label>
+              <label style={{ width: 120 }}>
+                <span>Port Web</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={65535}
+                  value={webPort}
+                  onChange={(e) => setWebPort(e.target.value)}
+                  placeholder="80"
+                />
+              </label>
+              <label style={{ flex: 1 }}>
+                <span>
+                  Web Username <span className="muted">(opsional)</span>
+                </span>
+                <input value={webUsername} onChange={(e) => setWebUsername(e.target.value)} placeholder="admin" />
+              </label>
+              <label style={{ flex: 1 }}>
+                <span>Web Password</span>
+                <input
+                  type="password"
+                  value={webPassword}
+                  onChange={(e) => setWebPassword(e.target.value)}
+                  placeholder={olt.webPasswordConfigured ? '(tersimpan)' : 'password Web UI'}
+                />
+              </label>
+            </div>
+          )}
+        </div>
+
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-          Community string disimpan terenkripsi & tak pernah ditampilkan. Kosongkan untuk mempertahankan yang tersimpan.
-          Kode OLT tak bisa diubah.
+          Community string &amp; password Web disimpan terenkripsi dan tak pernah ditampilkan. Kosongkan untuk
+          mempertahankan yang tersimpan. Kode OLT tak bisa diubah.
         </p>
       </div>
     </Modal>
