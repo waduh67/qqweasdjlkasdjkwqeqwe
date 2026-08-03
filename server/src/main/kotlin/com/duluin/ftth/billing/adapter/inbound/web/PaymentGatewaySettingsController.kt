@@ -2,6 +2,7 @@ package com.duluin.ftth.billing.adapter.inbound.web
 
 import com.duluin.ftth.billing.application.port.inbound.ManagePaymentGatewaySettingsUseCase
 import com.duluin.ftth.billing.application.port.inbound.PaymentGatewaySettingsView
+import com.duluin.ftth.billing.application.port.inbound.PaywuzMethodView
 import com.duluin.ftth.billing.application.port.inbound.UpdatePaymentGatewaySettingsCommand
 import com.duluin.ftth.billing.domain.model.GatewayMode
 import com.duluin.ftth.billing.domain.model.PaymentProvider
@@ -40,6 +41,11 @@ class PaymentGatewaySettingsController(
     @Operation(summary = "Ubah penyedia, mode, & kredensial payment gateway")
     fun update(@Valid @RequestBody request: PaymentGatewaySettingsRequest): PaymentGatewaySettingsView =
         useCase.update(request.toCommand())
+
+    @GetMapping("/paywuz-methods")
+    @PreAuthorize("@authz.can('billing.gateway.view')")
+    @Operation(summary = "Daftar metode pembayaran proyek Paywuz tenant (untuk pilihan di UI)")
+    fun paywuzMethods(): List<PaywuzMethodView> = useCase.listPaywuzMethods()
 }
 
 /**
@@ -53,6 +59,7 @@ data class PaymentGatewaySettingsRequest(
     @field:Size(max = 512) val apiKey: String? = null,
     @field:Size(max = 512) val secretKey: String? = null,
     @field:Size(max = 512) val webhookToken: String? = null,
+    @field:Size(max = 64) val paymentMethod: String? = null,
 ) {
     fun toCommand() = UpdatePaymentGatewaySettingsCommand(
         provider = provider,
@@ -61,5 +68,6 @@ data class PaymentGatewaySettingsRequest(
         apiKey = apiKey,
         secretKey = secretKey,
         webhookToken = webhookToken,
+        paymentMethod = paymentMethod,
     )
 }

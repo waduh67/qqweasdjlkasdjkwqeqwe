@@ -30,7 +30,8 @@ tenant_payment_gateway
 ├── secret_key      ciphertext — Xendit BYO secret key
 ├── webhook_token   ciphertext — token verifikasi callback per-tenant
 │                               (PLATFORM = token sub-account)
-└── sub_account_id  PLATFORM: user_id sub-account Xendit (header for-user-id)
+├── sub_account_id  PLATFORM: user_id sub-account Xendit (header for-user-id)
+└── payment_method  plaintext — Paywuz BYO: kode metode per-tenant (V51; bukan rahasia)
 ```
 
 - **Kredensial write-only.** Batas enkripsi ada di adapter persistence (`SecretCipher`
@@ -206,8 +207,15 @@ Authorization: Bearer <api_key>
 ```
 
 - **`paymentMethod` WAJIB** — kode metode (mis. meta-method `QRIS`/`VA`), beda dari halaman hosted
-  Xendit/Pivot yang membiarkan pelanggan memilih. Diambil dari `ftth.billing.paywuz.payment-method`
-  (default `QRIS`) — v1 satu setelan global; operator wajib memastikan kodenya valid untuk proyeknya.
+  Xendit/Pivot yang membiarkan pelanggan memilih. **Presedensi:** kolom `payment_method` per-tenant
+  (bila diisi) → jatuh ke `ftth.billing.paywuz.payment-method` global (default `QRIS`). Nilai per-tenant
+  disimpan **plaintext** (bukan rahasia) di kolom `payment_method`, dibawa lewat
+  `ResolvedGatewayContext.paymentMethod`.
+- **Pilihan metode per-tenant (UI):** endpoint `GET /api/billing/gateway-settings/paywuz-methods`
+  (`billing.gateway.view`) memanggil `GET /v1/payment-methods` proyek tenant pakai API key tersimpan
+  dan mengembalikan daftar `{code, name, type}` untuk mengisi dropdown. Port outbound
+  `PaywuzMethodDirectory` (diimplementasi oleh adapter Paywuz). Melempar `ValidationException` bila
+  API key belum tersimpan; kosong bila tenant bukan Paywuz.
 - **IDR zero-decimal:** `amount` dikirim `setScale(0, HALF_UP)`. `expiryMinutes` dari config (default 1440).
 
 **Callback** (`POST /api/billing/webhooks/{tenantSlug}/paywuz`): header **`X-Paywuz-Signature:
@@ -228,7 +236,7 @@ sha256=<hex>`** = HMAC-SHA256(**api_key**, rawBody) dibanding **constant-time**;
 | `platform.xendit.callback-base-url` · `FTTH_BILLING_PLATFORM_XENDIT_CALLBACK_BASE_URL` | `""` | basis URL publik untuk mendaftarkan callback sub-account |
 | `pivot.sandbox` · `FTTH_BILLING_PIVOT_SANDBOX` | `false` | Pivot BYO: `true` → base `api-stg`, else `api` produksi |
 | `pivot.redirect-base-url` · `FTTH_BILLING_PIVOT_REDIRECT_BASE_URL` | `""` | Pivot BYO: basis URL balik (mode REDIRECT WAJIB); kosong = charge Pivot gagal jelas |
-| `paywuz.payment-method` · `FTTH_BILLING_PAYWUZ_PAYMENT_METHOD` | `QRIS` | Paywuz BYO: kode metode wajib saat bikin transaksi (mis. `QRIS`/`VA`) |
+| `paywuz.payment-method` · `FTTH_BILLING_PAYWUZ_PAYMENT_METHOD` | `QRIS` | Paywuz BYO: kode metode **default global** (fallback) — dipakai bila kolom `payment_method` per-tenant kosong |
 | `paywuz.expiry-minutes` · `FTTH_BILLING_PAYWUZ_EXPIRY_MINUTES` | `1440` | Paywuz BYO: masa hidup tautan bayar (menit) |
 
 > **Config lawas `default-provider`** kini **usang** — resolver memilih adapter dari

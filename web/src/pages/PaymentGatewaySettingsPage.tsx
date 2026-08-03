@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ApiError } from '../api/client'
 import {
   getPaymentGatewaySettings,
+  getPaywuzMethods,
   GATEWAY_MODE_LABEL,
   PAYMENT_PROVIDER_LABEL,
   SUPPORTED_PROVIDERS,
@@ -9,6 +10,7 @@ import {
   type GatewayMode,
   type PaymentGatewaySettingsView,
   type PaymentProvider,
+  type PaywuzMethod,
   type UpdatePaymentGatewaySettingsRequest,
 } from '../api/payment'
 import { useCan } from '../auth/useCan'
@@ -82,6 +84,9 @@ export function PaymentGatewaySettingsPage() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   // Input kredensial write-only, terpisah dari view: kosong = pertahankan yang tersimpan.
   const [creds, setCreds] = useState<Record<CredKey, string>>({ apiKey: '', secretKey: '', webhookToken: '' })
+  // Metode Paywuz proyek tenant (dimuat on-demand pakai API key tersimpan); null = belum dimuat.
+  const [paywuzMethods, setPaywuzMethods] = useState<PaywuzMethod[] | null>(null)
+  const [loadingMethods, setLoadingMethods] = useState(false)
 
   useEffect(() => {
     getPaymentGatewaySettings()
@@ -115,6 +120,13 @@ export function PaymentGatewaySettingsPage() {
         out.push({ label: f.label, from: isCredSet(saved, f.key) ? 'tersimpan' : 'kosong', to: 'diganti ke nilai baru' })
       }
     }
+    if (form.provider === 'PAYWUZ' && (form.paymentMethod ?? '') !== (saved.paymentMethod ?? '')) {
+      out.push({
+        label: 'Metode Paywuz',
+        from: saved.paymentMethod || 'default server',
+        to: form.paymentMethod || 'default server',
+      })
+    }
     return out
   }, [saved, form, creds])
 
@@ -124,8 +136,33 @@ export function PaymentGatewaySettingsPage() {
   const onProvider = (provider: PaymentProvider) => {
     // Ganti penyedia mengosongkan input kredensial (spesifik penyedia) & memaksa BYO bila
     // penyedia tak mendukung PLATFORM (hanya Xendit/xenPlatform yang punya mode agregator).
+    // Metode Paywuz hanya relevan untuk Paywuz — dibuang bila pindah penyedia.
     clearCreds()
-    setForm((f) => (f ? { ...f, provider, mode: provider === 'XENDIT' ? f.mode : 'BYO' } : f))
+    setPaywuzMethods(null)
+    setForm((f) =>
+      f
+        ? {
+            ...f,
+            provider,
+            mode: provider === 'XENDIT' ? f.mode : 'BYO',
+            paymentMethod: provider === 'PAYWUZ' ? f.paymentMethod : null,
+          }
+        : f,
+    )
+  }
+
+  // Muat metode aktif proyek Paywuz tenant (pakai API key tersimpan di server).
+  const loadMethods = async () => {
+    setLoadingMethods(true)
+    try {
+      const methods = await getPaywuzMethods()
+      setPaywuzMethods(methods)
+      if (methods.length === 0) toast.error('Proyek Paywuz ini belum punya metode pembayaran aktif')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal memuat metode Paywuz')
+    } finally {
+      setLoadingMethods(false)
+    }
   }
 
   const discard = () => {
@@ -143,6 +180,8 @@ export function PaymentGatewaySettingsPage() {
       apiKey: creds.apiKey.trim() || null,
       secretKey: creds.secretKey.trim() || null,
       webhookToken: creds.webhookToken.trim() || null,
+      // Metode hanya bermakna untuk Paywuz; penyedia lain selalu kirim null (kosongkan).
+      paymentMethod: form.provider === 'PAYWUZ' ? form.paymentMethod?.trim() || null : null,
     }
     try {
       const result = await updatePaymentGatewaySettings(body)
@@ -263,6 +302,18 @@ export function PaymentGatewaySettingsPage() {
               </label>
             ))}
 
+            {form.provider === 'PAYWUZ' && (
+              <PaywuzMethodField
+                value={form.paymentMethod}
+                onChange={(paymentMethod) => setForm({ ...form, paymentMethod })}
+                methods={paywuzMethods}
+                onLoad={() => void loadMethods()}
+                loading={loadingMethods}
+                canLoad={saved.provider === 'PAYWUZ' && saved.apiKeySet}
+                disabled={!manage}
+              />
+            )}
+
             {form.provider === 'XENDIT' && (
               <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
                 Secret key dari dashboard Xendit (Settings → API Keys). Webhook token = <code>x-callback-token</code>;
@@ -280,8 +331,8 @@ export function PaymentGatewaySettingsPage() {
               <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
                 API key proyek dari dashboard Paywuz (<code>pk_live_…</code> / <code>pk_sand_…</code>) — dipakai untuk
                 menagih sekaligus memverifikasi webhook, jadi tak ada token terpisah. Arahkan URL callback Paywuz ke{' '}
-                <code>/api/billing/webhooks/&lt;tenant&gt;/paywuz</code>. Kode metode bayar (mis. QRIS) diatur di server
-                (<code>FTTH_BILLING_PAYWUZ_PAYMENT_METHOD</code>).
+                <code>/api/billing/webhooks/&lt;tenant&gt;/paywuz</code>. Metode bayar dipilih di atas; kosong = pakai
+                default server (<code>FTTH_BILLING_PAYWUZ_PAYMENT_METHOD</code>).
               </p>
             )}
           </div>
@@ -388,17 +439,24 @@ function StatusPanel({ saved }: { saved: PaymentGatewaySettingsView }) {
       {saved.provider === 'MANUAL' ? (
         <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>Tanpa kredensial penyedia (pelunasan manual).</p>
       ) : saved.mode === 'BYO' ? (
-        <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.82rem' }}>
-          {fields.map((f) => (
-            <span key={f.key} className="row" style={{ gap: '0.3rem', alignItems: 'center' }}>
-              <span aria-hidden style={{ color: isCredSet(saved, f.key) ? 'var(--good-ink, green)' : 'var(--text-3)' }}>
-                {isCredSet(saved, f.key) ? '●' : '○'}
+        <div className="stack" style={{ gap: '0.4rem' }}>
+          <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.82rem' }}>
+            {fields.map((f) => (
+              <span key={f.key} className="row" style={{ gap: '0.3rem', alignItems: 'center' }}>
+                <span aria-hidden style={{ color: isCredSet(saved, f.key) ? 'var(--good-ink, green)' : 'var(--text-3)' }}>
+                  {isCredSet(saved, f.key) ? '●' : '○'}
+                </span>
+                <span className="muted">
+                  {f.label}: {isCredSet(saved, f.key) ? 'terisi' : 'belum'}
+                </span>
               </span>
-              <span className="muted">
-                {f.label}: {isCredSet(saved, f.key) ? 'terisi' : 'belum'}
-              </span>
+            ))}
+          </div>
+          {saved.provider === 'PAYWUZ' && (
+            <span className="muted" style={{ fontSize: '0.82rem' }}>
+              Metode bayar: <strong>{saved.paymentMethod || 'default server'}</strong>
             </span>
-          ))}
+          )}
         </div>
       ) : null}
     </div>
@@ -423,6 +481,73 @@ function PlatformSection({ subAccountId }: { subAccountId: string | null }) {
           tenant ini.
         </Callout>
       )}
+    </div>
+  )
+}
+
+/**
+ * Pemilih metode bayar Paywuz per-tenant. Metode dimuat on-demand dari proyek Paywuz tenant
+ * (butuh API key tersimpan) lalu ditawarkan sebagai dropdown; sebelum dimuat (atau bila key
+ * belum tersimpan) tetap bisa diketik manual. Kosong = jatuh ke default server.
+ */
+function PaywuzMethodField({
+  value,
+  onChange,
+  methods,
+  onLoad,
+  loading,
+  canLoad,
+  disabled,
+}: {
+  value: string | null
+  onChange: (value: string | null) => void
+  methods: PaywuzMethod[] | null
+  onLoad: () => void
+  loading: boolean
+  canLoad: boolean
+  disabled?: boolean
+}) {
+  // Nilai tersimpan yang tak ada di daftar termuat tetap perlu jadi opsi agar tak diam-diam hilang.
+  const missing = value && methods && !methods.some((m) => m.code === value)
+  return (
+    <div className="stack" style={{ gap: '0.4rem' }}>
+      <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
+        <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Metode pembayaran</span>
+        <button
+          type="button"
+          className="ghost"
+          style={{ fontSize: '0.8rem', padding: '0.2rem 0.6rem' }}
+          onClick={onLoad}
+          disabled={disabled || !canLoad || loading}
+        >
+          {loading ? 'Memuat…' : methods ? 'Muat ulang' : 'Muat metode dari Paywuz'}
+        </button>
+      </div>
+
+      {methods && methods.length > 0 ? (
+        <select value={value ?? ''} onChange={(e) => onChange(e.target.value || null)} disabled={disabled}>
+          <option value="">Default server</option>
+          {missing && <option value={value ?? ''}>{value} (tersimpan, tak lagi aktif)</option>}
+          {methods.map((m) => (
+            <option key={m.code} value={m.code}>
+              {m.name} · {m.code} ({m.type})
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value.trim() || null)}
+          placeholder="kosong = metode default server (mis. QRIS)"
+          disabled={disabled}
+        />
+      )}
+
+      <span className="muted" style={{ fontSize: '0.82rem' }}>
+        {canLoad
+          ? 'Pilih metode aktif proyek Paywuz tenant ini. Kosongkan untuk memakai default server.'
+          : 'Simpan API key Paywuz dulu untuk memuat daftar metode — sementara boleh ketik kode metode manual.'}
+      </span>
     </div>
   )
 }

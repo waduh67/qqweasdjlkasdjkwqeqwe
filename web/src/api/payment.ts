@@ -32,6 +32,15 @@ export interface PaymentGatewaySettingsView {
   secretKeySet: boolean
   webhookTokenSet: boolean
   subAccountId: string | null
+  /** Paywuz BYO: kode metode per-tenant; null = pakai default server. */
+  paymentMethod: string | null
+}
+
+/** Satu metode pembayaran proyek Paywuz (untuk pilihan di UI). */
+export interface PaywuzMethod {
+  code: string
+  name: string
+  type: string
 }
 
 /**
@@ -46,6 +55,8 @@ export interface UpdatePaymentGatewaySettingsRequest {
   apiKey: string | null
   secretKey: string | null
   webhookToken: string | null
+  /** Paywuz BYO: kode metode per-tenant; null/kosong = default server. */
+  paymentMethod: string | null
 }
 
 export function getPaymentGatewaySettings(): Promise<PaymentGatewaySettingsView> {
@@ -56,6 +67,11 @@ export function updatePaymentGatewaySettings(
   body: UpdatePaymentGatewaySettingsRequest,
 ): Promise<PaymentGatewaySettingsView> {
   return api.put('/api/billing/gateway-settings', body)
+}
+
+/** Metode aktif proyek Paywuz tenant (pakai API key tersimpan) — untuk pilihan metode per-tenant. */
+export function getPaywuzMethods(): Promise<PaywuzMethod[]> {
+  return api.get('/api/billing/gateway-settings/paywuz-methods')
 }
 
 /** Permintaan provisioning sub-account Xendit (aksi platform-admin, mode PLATFORM). */

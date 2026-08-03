@@ -5,6 +5,8 @@ import com.duluin.ftth.billing.application.port.outbound.ChargeResult
 import com.duluin.ftth.billing.application.port.outbound.GatewayCallback
 import com.duluin.ftth.billing.application.port.outbound.PaymentGateway
 import com.duluin.ftth.billing.application.port.outbound.PaymentSettlement
+import com.duluin.ftth.billing.application.port.outbound.PaywuzMethodDirectory
+import com.duluin.ftth.billing.application.port.outbound.PaywuzMethodInfo
 import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
 import com.duluin.ftth.common.domain.error.ConflictException
@@ -44,7 +46,7 @@ import javax.crypto.spec.SecretKeySpec
 class PaywuzPaymentGateway(
     private val objectMapper: ObjectMapper,
     private val billingProperties: BillingProperties,
-) : PaymentGateway {
+) : PaymentGateway, PaywuzMethodDirectory {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -53,10 +55,12 @@ class PaywuzPaymentGateway(
     override fun createCharge(request: ChargeRequest, ctx: ResolvedGatewayContext): ChargeResult {
         val apiKey = ctx.secretKey?.takeIf { it.isNotBlank() }
             ?: throw ConflictException("Kredensial Paywuz belum lengkap — isi API key di setelan gateway")
+        // Metode per-tenant menang; jatuh ke default global config bila tenant belum memilih.
+        val method = ctx.paymentMethod?.takeIf { it.isNotBlank() } ?: billingProperties.paywuz.paymentMethod
         val body = buildMap<String, Any> {
             put("orderId", request.invoiceNumber)
             put("amount", request.amount.setScale(0, RoundingMode.HALF_UP).toLong())
-            put("paymentMethod", billingProperties.paywuz.paymentMethod)
+            put("paymentMethod", method)
             put("expiryMinutes", billingProperties.paywuz.expiryMinutes)
             put("metadata", mapOf("invoiceNumber" to request.invoiceNumber))
         }
@@ -123,6 +127,25 @@ class PaywuzPaymentGateway(
         }.getOrElse {
             log.warn("Callback Paywuz tidak bisa diurai: {}", it.message)
             null
+        }
+    }
+
+    override fun listMethods(apiKey: String): List<PaywuzMethodInfo> {
+        return try {
+            val node = client(apiKey).get()
+                .uri("/v1/payment-methods")
+                .retrieve()
+                .body(String::class.java)
+                ?.let(objectMapper::readTree)
+                ?: return emptyList()
+            val data = node.get("data")?.takeIf { it.isArray } ?: return emptyList()
+            data.mapNotNull { m ->
+                val code = m.get("code")?.asString()?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                PaywuzMethodInfo(code = code, name = m.get("name")?.asString()?.takeIf { it.isNotBlank() } ?: code, type = m.get("type")?.asString() ?: "")
+            }
+        } catch (e: RestClientResponseException) {
+            log.warn("Paywuz gagal memuat daftar metode ({}): {}", e.statusCode.value(), e.responseBodyAsString.take(HTTP_ERR_SNIPPET))
+            throw ConflictException("Paywuz menolak permintaan daftar metode (${e.statusCode.value()})")
         }
     }
 

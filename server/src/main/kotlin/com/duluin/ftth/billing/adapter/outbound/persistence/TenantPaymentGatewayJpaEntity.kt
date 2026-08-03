@@ -42,4 +42,8 @@ class TenantPaymentGatewayJpaEntity(
 
     @Column(name = "sub_account_id", length = 128)
     var subAccountId: String?,
+
+    // BUKAN ciphertext — kode metode Paywuz per-tenant (bukan rahasia).
+    @Column(name = "payment_method", length = 64)
+    var paymentMethod: String?,
 ) : TenantAwareJpaEntity(id)

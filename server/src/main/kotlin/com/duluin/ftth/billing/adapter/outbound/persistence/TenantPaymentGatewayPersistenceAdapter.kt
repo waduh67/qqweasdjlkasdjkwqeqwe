@@ -36,6 +36,7 @@ class TenantPaymentGatewayPersistenceAdapter(
             secretKey = encryptedSecretKey
             webhookToken = encryptedWebhookToken
             subAccountId = settings.subAccountId
+            paymentMethod = settings.paymentMethod
         } ?: TenantPaymentGatewayJpaEntity(
             id = settings.id,
             provider = settings.provider,
@@ -45,6 +46,7 @@ class TenantPaymentGatewayPersistenceAdapter(
             secretKey = encryptedSecretKey,
             webhookToken = encryptedWebhookToken,
             subAccountId = settings.subAccountId,
+            paymentMethod = settings.paymentMethod,
         )
         return jpa.save(entity).toDomain()
     }
@@ -59,6 +61,7 @@ class TenantPaymentGatewayPersistenceAdapter(
         secretKey = cipher.decryptQuietly(secretKey, "secret_key", log),
         webhookToken = cipher.decryptQuietly(webhookToken, "webhook_token", log),
         subAccountId = subAccountId,
+        paymentMethod = paymentMethod,
     )
 }
 

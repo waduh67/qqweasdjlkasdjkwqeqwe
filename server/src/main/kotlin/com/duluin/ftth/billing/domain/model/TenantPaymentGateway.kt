@@ -58,6 +58,8 @@ data class ResolvedGatewayContext(
     val feeRuleId: String? = null,
     /** BYO PIVOT: merchant id (`X-MERCHANT-ID`), disandingkan dengan [secretKey] (`X-MERCHANT-SECRET`). */
     val apiKey: String? = null,
+    /** BYO PAYWUZ: kode metode pembayaran per-tenant (mis. `QRIS`/`VA`); null → default global config. */
+    val paymentMethod: String? = null,
 )
 
 /**
@@ -82,6 +84,7 @@ class TenantPaymentGateway private constructor(
     secretKey: String?,
     webhookToken: String?,
     subAccountId: String?,
+    paymentMethod: String?,
 ) {
     var provider: PaymentProvider = provider
         private set
@@ -108,9 +111,14 @@ class TenantPaymentGateway private constructor(
     var subAccountId: String? = subAccountId
         private set
 
+    /** BYO PAYWUZ: kode metode pembayaran per-tenant. Bukan rahasia (plaintext di DB). null = default global. */
+    var paymentMethod: String? = paymentMethod
+        private set
+
     /**
      * Sunting setelan dari sisi operator (tenant admin). Kredensial null/kosong = biarkan apa
-     * adanya. [subAccountId] TIDAK disetel di sini — ia hasil provisioning platform-admin
+     * adanya. [paymentMethod] BUKAN rahasia → semantik ganti: null/kosong = kosongkan (jatuh ke
+     * default global). [subAccountId] TIDAK disetel di sini — ia hasil provisioning platform-admin
      * ([provisionPlatform]); operator memilih PLATFORM hanya setelah sub-account tersedia.
      */
     fun update(
@@ -120,6 +128,7 @@ class TenantPaymentGateway private constructor(
         apiKey: String?,
         secretKey: String?,
         webhookToken: String?,
+        paymentMethod: String? = null,
     ) {
         this.provider = provider
         this.mode = mode
@@ -128,6 +137,8 @@ class TenantPaymentGateway private constructor(
         apiKey?.trim()?.takeIf { it.isNotEmpty() }?.let { this.apiKey = validateSecret(it, "API key") }
         secretKey?.trim()?.takeIf { it.isNotEmpty() }?.let { this.secretKey = validateSecret(it, "Secret key") }
         webhookToken?.trim()?.takeIf { it.isNotEmpty() }?.let { this.webhookToken = validateSecret(it, "Webhook token") }
+        // Bukan rahasia — selalu diganti (null/kosong = pakai default global).
+        this.paymentMethod = paymentMethod?.trim()?.takeIf { it.isNotEmpty() }
         if (mode == GatewayMode.PLATFORM && subAccountId.isNullOrBlank()) {
             throw ValidationException("Mode PLATFORM butuh sub-account — provisikan lewat admin platform dulu")
         }
@@ -173,9 +184,10 @@ class TenantPaymentGateway private constructor(
         PaymentProvider.PIVOT ->
             ResolvedGatewayContext("PIVOT", GatewayMode.BYO, secretKey = secretKey, webhookToken = webhookToken, apiKey = apiKey)
         // Paywuz butuh SATU kredensial (API key) yang jadi Bearer auth SEKALIGUS secret HMAC
-        // webhook — dibawa di secretKey; tak ada webhook_token terpisah.
+        // webhook — dibawa di secretKey; tak ada webhook_token terpisah. Kode metode per-tenant
+        // ikut dibawa (null → adapter pakai default global config).
         PaymentProvider.PAYWUZ ->
-            ResolvedGatewayContext("PAYWUZ", GatewayMode.BYO, secretKey = apiKey, webhookToken = webhookToken)
+            ResolvedGatewayContext("PAYWUZ", GatewayMode.BYO, secretKey = apiKey, webhookToken = webhookToken, paymentMethod = paymentMethod)
         PaymentProvider.MANUAL ->
             ResolvedGatewayContext("MANUAL", GatewayMode.BYO, secretKey = null, webhookToken = webhookToken)
     }
@@ -209,6 +221,7 @@ class TenantPaymentGateway private constructor(
             secretKey = null,
             webhookToken = null,
             subAccountId = null,
+            paymentMethod = null,
         )
 
         @Suppress("LongParameterList")
@@ -222,8 +235,9 @@ class TenantPaymentGateway private constructor(
             secretKey: String?,
             webhookToken: String?,
             subAccountId: String?,
+            paymentMethod: String?,
         ): TenantPaymentGateway = TenantPaymentGateway(
-            id, tenantId, provider, mode, enabled, apiKey, secretKey, webhookToken, subAccountId,
+            id, tenantId, provider, mode, enabled, apiKey, secretKey, webhookToken, subAccountId, paymentMethod,
         )
 
         private fun validateSecret(value: String, label: String): String {

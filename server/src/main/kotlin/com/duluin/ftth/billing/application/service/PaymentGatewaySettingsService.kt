@@ -2,9 +2,13 @@ package com.duluin.ftth.billing.application.service
 
 import com.duluin.ftth.billing.application.port.inbound.ManagePaymentGatewaySettingsUseCase
 import com.duluin.ftth.billing.application.port.inbound.PaymentGatewaySettingsView
+import com.duluin.ftth.billing.application.port.inbound.PaywuzMethodView
 import com.duluin.ftth.billing.application.port.inbound.UpdatePaymentGatewaySettingsCommand
+import com.duluin.ftth.billing.application.port.outbound.PaywuzMethodDirectory
 import com.duluin.ftth.billing.application.port.outbound.TenantPaymentGatewayRepository
+import com.duluin.ftth.billing.domain.model.PaymentProvider
 import com.duluin.ftth.billing.domain.model.TenantPaymentGateway
+import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.tenant.TenantContext
 import org.springframework.stereotype.Service
@@ -19,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class PaymentGatewaySettingsService(
     private val repository: TenantPaymentGatewayRepository,
+    private val paywuzMethods: PaywuzMethodDirectory,
     private val auditor: AuditRecorder,
 ) : ManagePaymentGatewaySettingsUseCase {
 
@@ -35,6 +40,7 @@ class PaymentGatewaySettingsService(
             apiKey = command.apiKey,
             secretKey = command.secretKey,
             webhookToken = command.webhookToken,
+            paymentMethod = command.paymentMethod,
         )
         val saved = repository.save(settings)
         auditor.record(
@@ -46,6 +52,14 @@ class PaymentGatewaySettingsService(
         return saved.toView()
     }
 
+    override fun listPaywuzMethods(): List<PaywuzMethodView> {
+        val gateway = repository.find() ?: return emptyList()
+        if (gateway.provider != PaymentProvider.PAYWUZ) return emptyList()
+        val apiKey = gateway.apiKey?.takeIf { it.isNotBlank() }
+            ?: throw ValidationException("Isi & simpan API key Paywuz dulu untuk memuat daftar metode")
+        return paywuzMethods.listMethods(apiKey).map { PaywuzMethodView(it.code, it.name, it.type) }
+    }
+
     private fun TenantPaymentGateway.toView() = PaymentGatewaySettingsView(
         provider = provider.name,
         mode = mode.name,
@@ -54,5 +68,6 @@ class PaymentGatewaySettingsService(
         secretKeySet = !secretKey.isNullOrBlank(),
         webhookTokenSet = !webhookToken.isNullOrBlank(),
         subAccountId = subAccountId,
+        paymentMethod = paymentMethod,
     )
 }
