@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type { AssetStatus, OdcView, OdpView, OltView, SiteView } from '../api/network'
@@ -256,6 +257,7 @@ function SitesTab() {
 
 function OltsTab() {
   const { can } = useCan()
+  const navigate = useNavigate()
   const { items, loading, run } = useList<OltView>('/api/olts')
   const { items: sites } = useList<SiteView>('/api/sites')
   const empty = {
@@ -323,7 +325,9 @@ function OltsTab() {
         <div className="stack" style={{ gap: '0.35rem' }}>
           <span>{o.ponPortCount}</span>
           {can('network.olt.update') && (
-            <div className="row" style={{ gap: '0.3rem' }}>
+            // Baris kini bisa diklik menuju detail OLT; hentikan bubbling agar
+            // mengetik/klik kontrol PON port di sel ini tak ikut bernavigasi.
+            <div className="row" style={{ gap: '0.3rem' }} onClick={(e) => e.stopPropagation()}>
               <input
                 style={{ width: '5.5rem' }}
                 placeholder="1/2/3"
@@ -352,7 +356,14 @@ function OltsTab() {
       width: '1%',
       cell: (o) =>
         can('network.olt.delete') ? (
-          <button onClick={() => void run(() => api.del(`/api/olts/${o.id}`))}>Hapus</button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              void run(() => api.del(`/api/olts/${o.id}`))
+            }}
+          >
+            Hapus
+          </button>
         ) : null,
     },
   ]
@@ -483,6 +494,7 @@ function OltsTab() {
         columns={columns}
         rows={rows}
         rowKey={(o) => o.id}
+        onRowClick={(o) => navigate(`/olts/${o.id}`)}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
         empty={

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { api, ApiError, tokenStore } from '../api/client'
@@ -14,7 +15,6 @@ import type {
   ImpactedOverlay,
   OdcView,
   OdpInspection,
-  OltView,
   OnuView,
   OtdrEventType,
   OtdrTest,
@@ -356,7 +356,6 @@ export function MapPage() {
   const [whatIf, setWhatIf] = useState<CableCutView | null>(null)
   const [trace, setTrace] = useState<CustomerTrace | null>(null)
   const [siteInsp, setSiteInsp] = useState<SiteInspection | null>(null)
-  const [oltInsp, setOltInsp] = useState<OltView | null>(null)
   // Heatmap utilisasi port: menyala/mati lewat toggle, mewarnai ODP menurut pemakaian.
   const [heatmap, setHeatmap] = useState(false)
   const [editing, setEditing] = useState<CableView | null>(null)
@@ -368,6 +367,11 @@ export function MapPage() {
   const { can } = useCan()
   const { user } = useAuth()
   const toast = useToast()
+  // Handler klik peta didaftarkan sekali di effect ber-deps kosong, jadi `navigate`
+  // dibaca lewat ref agar selalu versi terkini tanpa mendaftar ulang handler.
+  const navigate = useNavigate()
+  const navigateRef = useRef(navigate)
+  navigateRef.current = navigate
 
   // Label watermark: siapa yang sedang melihat peta ini. Dihitung sekali per user.
   const watermark = useMemo(() => {
@@ -465,7 +469,6 @@ export function MapPage() {
       setWhatIf(null)
       setTrace(null)
       setSiteInsp(null)
-      setOltInsp(null)
     }
 
     // Menaruh perangkat baru: klik peta mana pun jadi lokasinya, lalu form muncul.
@@ -523,18 +526,13 @@ export function MapPage() {
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail site'))
     })
 
-    // Klik OLT (mode idle) → detail perangkat: vendor/model/IP + status SNMP.
+    // Klik OLT (mode idle) → halaman detail perangkat (rute tersendiri), tempat
+    // lokasi/identitas/SNMP-nya bisa diedit. Bawa asal agar "kembali" balik ke peta.
     instance.on('click', 'olt', (event) => {
       if (modeRef.current !== 'idle') return
       const id = event.features?.[0]?.properties?.id as string | undefined
       if (!id) return
-      api
-        .get<OltView>(`/api/olts/${id}`)
-        .then((o) => {
-          clearPanels()
-          setOltInsp(o)
-        })
-        .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail OLT'))
+      navigateRef.current(`/olts/${id}`, { state: { backTo: '/map', backLabel: 'Peta' } })
     })
 
     // Klik ODC (mode idle) → blast radius: siapa saja di hilirnya.
@@ -899,7 +897,6 @@ export function MapPage() {
     setBlast(null)
     setTrace(null)
     setSiteInsp(null)
-    setOltInsp(null)
     setEditing(null)
     setPlaceAt(null)
     placeKindRef.current = kind
@@ -1189,14 +1186,6 @@ export function MapPage() {
             canDelete={can('network.site.delete')}
             onDelete={() => void deleteAsset('SITE', siteInsp.siteId, siteInsp.code, () => setSiteInsp(null))}
             onClose={() => setSiteInsp(null)}
-          />
-        )}
-        {oltInsp && (
-          <OltPanel
-            olt={oltInsp}
-            canDelete={can('network.olt.delete')}
-            onDelete={() => void deleteAsset('OLT', oltInsp.id, oltInsp.code, () => setOltInsp(null))}
-            onClose={() => setOltInsp(null)}
           />
         )}
         {selected && (
@@ -2154,76 +2143,6 @@ function SiteOltRow({ olt }: { olt: SiteOlt }) {
         {olt.code} · {olt.vendor}
       </span>
     </div>
-  )
-}
-
-/**
- * Panel sebuah OLT saat markernya diklik: identitas perangkat (vendor/model/IP),
- * status, kesiapan SNMP, dan jumlah port PON. Menghapus OLT ditolak server selama
- * masih ada PON port / ODC di hilirnya, jadi tombolnya tersedia tapi bisa gagal
- * dengan pesan jelas.
- */
-function OltPanel({
-  olt,
-  canDelete,
-  onDelete,
-  onClose,
-}: {
-  olt: OltView
-  canDelete: boolean
-  onDelete: () => void
-  onClose: () => void
-}) {
-  return (
-    <aside className="map-panel stack">
-      <div className="spread">
-        <h3 style={{ margin: 0 }}>{olt.code}</h3>
-        <button className="ghost icon-btn" onClick={onClose} aria-label="Tutup">
-          <IconClose size={18} />
-        </button>
-      </div>
-      <p className="muted" style={{ margin: 0 }}>
-        {olt.name}
-      </p>
-      <div className="row wrap" style={{ gap: '0.4rem' }}>
-        <StatusBadge status={olt.status} />
-        <span className="badge">{olt.vendor}</span>
-        {olt.model && <span className="badge">{olt.model}</span>}
-        <span className="badge">{olt.ponPortCount} port PON</span>
-      </div>
-      {olt.siteName && (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-          Site {olt.siteName}
-        </p>
-      )}
-      <div className="row wrap" style={{ gap: '0.4rem', alignItems: 'center' }}>
-        {olt.managementIp && (
-          <span className="muted tnum" style={{ fontSize: '0.82rem' }}>
-            IP {olt.managementIp}
-          </span>
-        )}
-        <span
-          className="badge"
-          style={
-            olt.pollable
-              ? { color: 'var(--good-ink)', borderColor: 'var(--good-ink)' }
-              : { color: 'var(--muted)' }
-          }
-        >
-          {olt.pollable ? `SNMP siap · port ${olt.snmpPort}` : 'SNMP belum diset'}
-        </span>
-      </div>
-      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-        Perangkat inti: kalau OLT ini modar, seluruh jalur di hilirnya ikut mati.
-      </p>
-      {canDelete && (
-        <div className="row">
-          <button className="ghost danger" onClick={onDelete}>
-            Hapus OLT
-          </button>
-        </div>
-      )}
-    </aside>
   )
 }
 

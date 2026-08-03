@@ -8,6 +8,7 @@ import { Layout } from './components/Layout'
 import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { InventoryPage } from './pages/InventoryPage'
+import { OltDetailPage } from './pages/OltDetailPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { CustomerDetailPage } from './pages/CustomerDetailPage'
 import { ExpressPsbPage } from './pages/ExpressPsbPage'
@@ -97,6 +98,14 @@ export default function App() {
               element={
                 <RequirePermission permission="network.odp.view">
                   <InventoryPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="olts/:id"
+              element={
+                <RequirePermission permission="network.olt.view">
+                  <OltDetailPage />
                 </RequirePermission>
               }
             />
