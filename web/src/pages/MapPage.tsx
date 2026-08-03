@@ -14,12 +14,14 @@ import type {
   ImpactedOverlay,
   OdcView,
   OdpInspection,
+  OltView,
   OnuView,
   OtdrEventType,
   OtdrTest,
   RecordOtdrTest,
   SiteInspection,
   SiteOlt,
+  SiteView,
   TraceHop,
   UtilizationHeatmap,
 } from '../api/network'
@@ -70,6 +72,13 @@ const CABLE_COLOR: any = [
 /** Warna sorotan kabel terdampak menurut keparahan alarm hilirnya. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SEVERITY_COLOR: any = ['match', ['get', 'severity'], 'CRITICAL', '#ff3b5c', 'WARNING', '#fbbf24', '#ff3b5c']
+
+/** Warna marker OLT — biru, sengaja lepas dari cyan ODC & ungu site agar perangkat aktif menonjol. */
+const OLT_COLOR = '#4f9dff'
+
+/** Warna simpul terdampak (OLT/ODC/ODP/pelanggan) saat alarm hidup — merah/amber, sama palet kabel. */
+const NODE_CRITICAL_COLOR = '#ff3b5c'
+const NODE_WARNING_COLOR = '#fbbf24'
 
 /**
  * Warna sorotan simulasi "kalau putus" — amber, sengaja beda dari merah alarm
@@ -254,6 +263,7 @@ const FUTURISTIC_STYLE: any = {
     ...glowCircle('customer', 'customer', CUSTOMER_COLOR, 4),
     ...glowCircle('odp', 'odp', '#fbbf24', 6),
     ...glowCircle('odc', 'odc', '#22d3ee', 8),
+    ...glowCircle('olt', 'olt', OLT_COLOR, 9),
     ...glowCircle('site', 'site', '#b47cff', 10),
     {
       id: 'odp-label',
@@ -264,8 +274,31 @@ const FUTURISTIC_STYLE: any = {
       layout: { 'text-field': ['get', 'code'], 'text-size': 11, 'text-offset': [0, 1.5] },
       paint: { 'text-color': '#dbeafe', 'text-halo-color': '#0a0e14', 'text-halo-width': 1.5 },
     },
+    {
+      id: 'olt-label',
+      type: 'symbol',
+      source: 'ftth',
+      'source-layer': 'olt',
+      minzoom: 13,
+      layout: { 'text-field': ['get', 'code'], 'text-size': 12, 'text-offset': [0, 1.6] },
+      paint: { 'text-color': '#dbeafe', 'text-halo-color': '#0a0e14', 'text-halo-width': 1.5 },
+    },
   ],
 }
+
+/**
+ * Layer titik yang markernya diwarnai ulang saat perangkat/pelanggannya terdampak
+ * alarm hidup ("perangkat modar → merah"). Cukup mencocokkan id fitur dengan daftar
+ * simpul terdampak — id UUID unik global, jadi satu ekspresi berlaku lintas layer.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const NODE_LAYERS: Array<{ id: string; base: any }> = [
+  { id: 'customer', base: CUSTOMER_COLOR },
+  { id: 'odp', base: '#fbbf24' },
+  { id: 'odc', base: '#22d3ee' },
+  { id: 'olt', base: OLT_COLOR },
+  { id: 'site', base: '#b47cff' },
+]
 
 /** Meng-escape teks agar aman disisipkan ke markup SVG watermark. */
 function escapeXml(raw: string): string {
@@ -289,10 +322,11 @@ function watermarkTile(label: string): string {
 }
 
 /** Perangkat titik yang bisa ditaruh langsung di peta (punya koordinat sendiri). */
-type AssetKind = 'SITE' | 'ODC' | 'ODP'
+type AssetKind = 'SITE' | 'OLT' | 'ODC' | 'ODP'
 
 const ASSET_META: Record<AssetKind, { label: string; createPerm: string; deletePerm: string; endpoint: string }> = {
   SITE: { label: 'Site/POP', createPerm: 'network.site.create', deletePerm: 'network.site.delete', endpoint: '/api/sites' },
+  OLT: { label: 'OLT', createPerm: 'network.olt.create', deletePerm: 'network.olt.delete', endpoint: '/api/olts' },
   ODC: { label: 'ODC', createPerm: 'network.odc.create', deletePerm: 'network.odc.delete', endpoint: '/api/odcs' },
   ODP: { label: 'ODP', createPerm: 'network.odp.create', deletePerm: 'network.odp.delete', endpoint: '/api/odps' },
 }
@@ -322,6 +356,7 @@ export function MapPage() {
   const [whatIf, setWhatIf] = useState<CableCutView | null>(null)
   const [trace, setTrace] = useState<CustomerTrace | null>(null)
   const [siteInsp, setSiteInsp] = useState<SiteInspection | null>(null)
+  const [oltInsp, setOltInsp] = useState<OltView | null>(null)
   // Heatmap utilisasi port: menyala/mati lewat toggle, mewarnai ODP menurut pemakaian.
   const [heatmap, setHeatmap] = useState(false)
   const [editing, setEditing] = useState<CableView | null>(null)
@@ -363,8 +398,35 @@ export function MapPage() {
           geometry: { type: 'LineString', coordinates: c.points.map((p) => [p.longitude, p.latitude]) },
         })),
       })
+      recolorImpactedNodes(overlay.nodes)
     } catch {
       /* overlay opsional — abaikan galat */
+    }
+  }
+
+  /**
+   * Mewarnai ulang marker perangkat yang terdampak alarm hidup: id UUID unik global,
+   * jadi satu ekspresi `case` yang mencocokkan id fitur berlaku untuk tiap layer
+   * titik (inti + halo). Simpul tak-terdampak jatuh ke warna dasar layernya — saat
+   * alarm menutup, `crit`/`warn` kosong sehingga semua kembali normal.
+   */
+  const recolorImpactedNodes = (nodes: ImpactedOverlay['nodes']) => {
+    const instance = map.current
+    if (!instance) return
+    const crit = nodes.filter((n) => n.severity === 'CRITICAL').map((n) => n.id)
+    const warn = nodes.filter((n) => n.severity !== 'CRITICAL').map((n) => n.id)
+    for (const { id, base } of NODE_LAYERS) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const expr: any = [
+        'case',
+        ['in', ['get', 'id'], ['literal', crit]],
+        NODE_CRITICAL_COLOR,
+        ['in', ['get', 'id'], ['literal', warn]],
+        NODE_WARNING_COLOR,
+        base,
+      ]
+      if (instance.getLayer(id)) instance.setPaintProperty(id, 'circle-color', expr)
+      if (instance.getLayer(`${id}-glow`)) instance.setPaintProperty(`${id}-glow`, 'circle-color', expr)
     }
   }
 
@@ -403,6 +465,7 @@ export function MapPage() {
       setWhatIf(null)
       setTrace(null)
       setSiteInsp(null)
+      setOltInsp(null)
     }
 
     // Menaruh perangkat baru: klik peta mana pun jadi lokasinya, lalu form muncul.
@@ -460,6 +523,20 @@ export function MapPage() {
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail site'))
     })
 
+    // Klik OLT (mode idle) → detail perangkat: vendor/model/IP + status SNMP.
+    instance.on('click', 'olt', (event) => {
+      if (modeRef.current !== 'idle') return
+      const id = event.features?.[0]?.properties?.id as string | undefined
+      if (!id) return
+      api
+        .get<OltView>(`/api/olts/${id}`)
+        .then((o) => {
+          clearPanels()
+          setOltInsp(o)
+        })
+        .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail OLT'))
+    })
+
     // Klik ODC (mode idle) → blast radius: siapa saja di hilirnya.
     instance.on('click', 'odc', (event) => {
       if (modeRef.current !== 'idle') return
@@ -490,7 +567,7 @@ export function MapPage() {
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail kabel'))
     })
 
-    for (const layer of ['odp', 'odc', 'cable', 'customer', 'site']) {
+    for (const layer of ['odp', 'odc', 'olt', 'cable', 'customer', 'site']) {
       instance.on('mouseenter', layer, () => {
         if (modeRef.current === 'idle') instance.getCanvas().style.cursor = 'pointer'
       })
@@ -822,6 +899,7 @@ export function MapPage() {
     setBlast(null)
     setTrace(null)
     setSiteInsp(null)
+    setOltInsp(null)
     setEditing(null)
     setPlaceAt(null)
     placeKindRef.current = kind
@@ -1111,6 +1189,14 @@ export function MapPage() {
             canDelete={can('network.site.delete')}
             onDelete={() => void deleteAsset('SITE', siteInsp.siteId, siteInsp.code, () => setSiteInsp(null))}
             onClose={() => setSiteInsp(null)}
+          />
+        )}
+        {oltInsp && (
+          <OltPanel
+            olt={oltInsp}
+            canDelete={can('network.olt.delete')}
+            onDelete={() => void deleteAsset('OLT', oltInsp.id, oltInsp.code, () => setOltInsp(null))}
+            onClose={() => setOltInsp(null)}
           />
         )}
         {selected && (
@@ -2071,8 +2157,81 @@ function SiteOltRow({ olt }: { olt: SiteOlt }) {
   )
 }
 
+/**
+ * Panel sebuah OLT saat markernya diklik: identitas perangkat (vendor/model/IP),
+ * status, kesiapan SNMP, dan jumlah port PON. Menghapus OLT ditolak server selama
+ * masih ada PON port / ODC di hilirnya, jadi tombolnya tersedia tapi bisa gagal
+ * dengan pesan jelas.
+ */
+function OltPanel({
+  olt,
+  canDelete,
+  onDelete,
+  onClose,
+}: {
+  olt: OltView
+  canDelete: boolean
+  onDelete: () => void
+  onClose: () => void
+}) {
+  return (
+    <aside className="map-panel stack">
+      <div className="spread">
+        <h3 style={{ margin: 0 }}>{olt.code}</h3>
+        <button className="ghost icon-btn" onClick={onClose} aria-label="Tutup">
+          <IconClose size={18} />
+        </button>
+      </div>
+      <p className="muted" style={{ margin: 0 }}>
+        {olt.name}
+      </p>
+      <div className="row wrap" style={{ gap: '0.4rem' }}>
+        <StatusBadge status={olt.status} />
+        <span className="badge">{olt.vendor}</span>
+        {olt.model && <span className="badge">{olt.model}</span>}
+        <span className="badge">{olt.ponPortCount} port PON</span>
+      </div>
+      {olt.siteName && (
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          Site {olt.siteName}
+        </p>
+      )}
+      <div className="row wrap" style={{ gap: '0.4rem', alignItems: 'center' }}>
+        {olt.managementIp && (
+          <span className="muted tnum" style={{ fontSize: '0.82rem' }}>
+            IP {olt.managementIp}
+          </span>
+        )}
+        <span
+          className="badge"
+          style={
+            olt.pollable
+              ? { color: 'var(--good-ink)', borderColor: 'var(--good-ink)' }
+              : { color: 'var(--muted)' }
+          }
+        >
+          {olt.pollable ? `SNMP siap · port ${olt.snmpPort}` : 'SNMP belum diset'}
+        </span>
+      </div>
+      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        Perangkat inti: kalau OLT ini modar, seluruh jalur di hilirnya ikut mati.
+      </p>
+      {canDelete && (
+        <div className="row">
+          <button className="ghost danger" onClick={onDelete}>
+            Hapus OLT
+          </button>
+        </div>
+      )}
+    </aside>
+  )
+}
+
 /** Rasio splitter yang lazim dipakai — cukup untuk sebagian besar pemasangan. */
 const SPLITTER_RATIOS = ['1:2', '1:4', '1:8', '1:16', '1:32', '1:64']
+
+/** Vendor OLT yang didukung — selaras dengan daftar di halaman Inventaris. */
+const VENDORS = ['ZTE', 'HUAWEI', 'FIBERHOME', 'NOKIA', 'HSGQ', 'OTHER']
 
 /**
  * Form isian perangkat titik baru, muncul setelah lokasi diklik di peta. Field
@@ -2101,6 +2260,14 @@ function PlaceAssetForm({
   const [capacity, setCapacity] = useState(kind === 'ODP' ? 8 : 64)
   const [odcId, setOdcId] = useState('')
   const [odcs, setOdcs] = useState<OdcView[]>([])
+  // OLT: site induk (wajib), identitas perangkat, dan kesiapan SNMP.
+  const [siteId, setSiteId] = useState('')
+  const [sites, setSites] = useState<SiteView[]>([])
+  const [vendor, setVendor] = useState('ZTE')
+  const [model, setModel] = useState('')
+  const [managementIp, setManagementIp] = useState('')
+  const [snmpCommunity, setSnmpCommunity] = useState('')
+  const [snmpPort, setSnmpPort] = useState('161')
 
   // Daftar ODC untuk memilih induk sebuah ODP. Hanya relevan saat menaruh ODP.
   useEffect(() => {
@@ -2119,8 +2286,35 @@ function PlaceAssetForm({
     }
   }, [kind])
 
+  // Daftar site untuk memilih tempat berdirinya OLT. Wajib dipilih sebelum simpan.
+  useEffect(() => {
+    if (kind !== 'OLT') return
+    let alive = true
+    api
+      .get<PageResponse<SiteView>>('/api/sites?size=100')
+      .then((page) => {
+        if (alive) setSites(page.content)
+      })
+      .catch(() => {
+        /* pemilih site opsional untuk pemuatan — tetap wajib saat simpan */
+      })
+    return () => {
+      alive = false
+    }
+  }, [kind])
+
   const submit = () => {
     const base: Record<string, unknown> = { code: sanitizeCode(code), name: name.trim() }
+    if (kind === 'OLT') {
+      base.siteId = siteId
+      base.vendor = vendor
+      if (model.trim()) base.model = model.trim()
+      if (managementIp.trim()) base.managementIp = managementIp.trim()
+      if (snmpCommunity.trim()) base.snmpCommunity = snmpCommunity.trim()
+      base.snmpPort = Number(snmpPort) || 161
+      onSave(base)
+      return
+    }
     if (address.trim()) base.address = address.trim()
     if (kind === 'SITE') {
       onSave(base)
@@ -2131,6 +2325,9 @@ function PlaceAssetForm({
     if (kind === 'ODP' && odcId) base.odcId = odcId
     onSave(base)
   }
+
+  // OLT wajib pilih site; aset lain hanya butuh kode + nama.
+  const canSubmit = code.trim() !== '' && name.trim() !== '' && (kind !== 'OLT' || siteId !== '')
 
   return (
     <aside className="map-panel stack">
@@ -2154,10 +2351,69 @@ function PlaceAssetForm({
         <span>Nama</span>
         <input value={name} onChange={(e) => setName(e.target.value)} />
       </label>
-      <label>
-        <span>Alamat {kind !== 'SITE' && <span className="muted">(opsional)</span>}</span>
-        <input value={address} onChange={(e) => setAddress(e.target.value)} />
-      </label>
+      {kind === 'OLT' && (
+        <>
+          <label>
+            <span>Site induk</span>
+            <select value={siteId} onChange={(e) => setSiteId(e.target.value)}>
+              <option value="">— pilih site —</option>
+              {sites.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.code} — {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="row" style={{ gap: '0.5rem' }}>
+            <label style={{ flex: 1 }}>
+              <span>Vendor</span>
+              <select value={vendor} onChange={(e) => setVendor(e.target.value)}>
+                {VENDORS.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label style={{ flex: 1 }}>
+              <span>Model {<span className="muted">(opsional)</span>}</span>
+              <input value={model} onChange={(e) => setModel(e.target.value)} />
+            </label>
+          </div>
+          <label>
+            <span>IP manajemen {<span className="muted">(opsional)</span>}</span>
+            <input value={managementIp} onChange={(e) => setManagementIp(e.target.value)} placeholder="10.0.0.1" />
+          </label>
+          <div className="row" style={{ gap: '0.5rem' }}>
+            <label style={{ flex: 1 }}>
+              <span>SNMP community {<span className="muted">(opsional)</span>}</span>
+              <input value={snmpCommunity} onChange={(e) => setSnmpCommunity(e.target.value)} placeholder="public" />
+            </label>
+            <label style={{ width: '6.5rem' }}>
+              <span>Port SNMP</span>
+              <input
+                type="number"
+                min={1}
+                max={65535}
+                value={snmpPort}
+                onChange={(e) => setSnmpPort(e.target.value)}
+              />
+            </label>
+          </div>
+        </>
+      )}
+      {kind !== 'SITE' && kind !== 'OLT' && (
+        <label>
+          <span>Alamat <span className="muted">(opsional)</span></span>
+          <input value={address} onChange={(e) => setAddress(e.target.value)} />
+        </label>
+      )}
+      {kind === 'SITE' && (
+        <label>
+          <span>Alamat</span>
+          <input value={address} onChange={(e) => setAddress(e.target.value)} />
+        </label>
+      )}
       {kind === 'ODP' && (
         <label>
           <span>ODC induk</span>
@@ -2171,7 +2427,7 @@ function PlaceAssetForm({
           </select>
         </label>
       )}
-      {kind !== 'SITE' && (
+      {(kind === 'ODC' || kind === 'ODP') && (
         <div className="row" style={{ gap: '0.5rem' }}>
           <label style={{ flex: 1 }}>
             <span>Rasio splitter</span>
@@ -2196,7 +2452,7 @@ function PlaceAssetForm({
         </div>
       )}
       <div className="row">
-        <button className="primary" disabled={!code.trim() || !name.trim()} onClick={submit}>
+        <button className="primary" disabled={!canSubmit} onClick={submit}>
           Simpan {meta.label}
         </button>
         <button className="ghost" onClick={onCancel}>
@@ -2210,6 +2466,7 @@ function PlaceAssetForm({
 function Legend() {
   const items: Array<[string, string]> = [
     ['#b47cff', 'Site/POP'],
+    [OLT_COLOR, 'OLT'],
     ['#22d3ee', 'ODC'],
     ['#fbbf24', 'ODP'],
     ['#34d399', 'Pelanggan online'],

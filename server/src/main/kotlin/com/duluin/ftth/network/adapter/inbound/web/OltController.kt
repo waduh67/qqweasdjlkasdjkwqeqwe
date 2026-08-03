@@ -99,6 +99,7 @@ private fun OltRequest.toCommand() = SaveOltCommand(
     managementIp = managementIp,
     snmpCommunity = snmpCommunity,
     snmpPort = snmpPort,
+    location = location?.toCoordinate(),
 )
 
 private fun PonPortRequest.toCommand() = SavePonPortCommand(

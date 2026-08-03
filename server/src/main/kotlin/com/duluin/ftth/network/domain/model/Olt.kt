@@ -2,6 +2,7 @@ package com.duluin.ftth.network.domain.model
 
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.network.domain.model.vo.ManagementIp
 import java.util.UUID
 
@@ -24,11 +25,25 @@ class Olt private constructor(
     snmpCommunity: String?,
     snmpPort: Int,
     status: AssetStatus,
+    location: Coordinate,
+    areaId: UUID?,
 ) {
     var siteId: UUID = siteId
         private set
 
     var name: String = name
+        private set
+
+    /**
+     * Titik OLT di peta. Berdiri sendiri (bukan sekadar menempel di site) supaya
+     * saat OLT mati, perangkatnya terlihat merah beserta seluruh jalur hilirnya.
+     * Baku diwarisi dari lokasi site-nya, tapi operator bisa menaruhnya sendiri.
+     */
+    var location: Coordinate = location
+        private set
+
+    /** Area scope untuk penyaringan tile — diwarisi dari site (OLT tinggal di site-nya). */
+    var areaId: UUID? = areaId
         private set
 
     var vendor: OltVendor = vendor
@@ -61,6 +76,8 @@ class Olt private constructor(
         model: String?,
         managementIp: ManagementIp?,
         snmpPort: Int,
+        location: Coordinate,
+        areaId: UUID?,
     ) {
         this.siteId = siteId
         this.name = AssetNaming.name(name, "OLT")
@@ -68,6 +85,8 @@ class Olt private constructor(
         this.model = model?.trim()?.takeIf { it.isNotEmpty() }
         this.managementIp = managementIp
         this.snmpPort = validPort(snmpPort)
+        this.location = location
+        this.areaId = areaId
     }
 
     /** `null` berarti "jangan ubah"; string kosong berarti "hapus kredensial". */
@@ -101,6 +120,8 @@ class Olt private constructor(
             model: String?,
             managementIp: ManagementIp?,
             snmpCommunity: String?,
+            location: Coordinate,
+            areaId: UUID?,
             snmpPort: Int = DEFAULT_SNMP_PORT,
             status: AssetStatus = AssetStatus.ACTIVE,
         ): Olt = Olt(
@@ -115,6 +136,8 @@ class Olt private constructor(
             snmpCommunity = snmpCommunity?.trim()?.takeIf { it.isNotEmpty() },
             snmpPort = validPort(snmpPort),
             status = status,
+            location = location,
+            areaId = areaId,
         )
 
         fun rehydrate(
@@ -129,7 +152,12 @@ class Olt private constructor(
             snmpCommunity: String?,
             snmpPort: Int,
             status: AssetStatus,
-        ): Olt = Olt(id, tenantId, code, siteId, name, vendor, model, managementIp, snmpCommunity, snmpPort, status)
+            location: Coordinate,
+            areaId: UUID?,
+        ): Olt = Olt(
+            id, tenantId, code, siteId, name, vendor, model, managementIp,
+            snmpCommunity, snmpPort, status, location, areaId,
+        )
 
         private fun validPort(port: Int): Int {
             if (port !in 1..65535) {

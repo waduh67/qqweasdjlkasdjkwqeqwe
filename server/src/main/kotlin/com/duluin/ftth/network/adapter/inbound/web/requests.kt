@@ -52,6 +52,8 @@ data class OltRequest(
     val snmpCommunity: String? = null,
     /** Port SNMP perangkat; baku 161, setel lain bila OLT diekspos lewat NAT/DMZ. */
     @field:Min(1) @field:Max(65535) val snmpPort: Int = 161,
+    /** Titik OLT di peta; `null` = warisi lokasi site-nya. */
+    @field:Valid val location: LocationRequest? = null,
 )
 
 data class PonPortRequest(

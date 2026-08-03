@@ -258,7 +258,18 @@ function OltsTab() {
   const { can } = useCan()
   const { items, loading, run } = useList<OltView>('/api/olts')
   const { items: sites } = useList<SiteView>('/api/sites')
-  const empty = { siteId: '', code: '', name: '', vendor: 'ZTE', model: '', managementIp: '', snmpCommunity: '', snmpPort: '161' }
+  const empty = {
+    siteId: '',
+    code: '',
+    name: '',
+    vendor: 'ZTE',
+    model: '',
+    managementIp: '',
+    snmpCommunity: '',
+    snmpPort: '161',
+    longitude: '',
+    latitude: '',
+  }
   const [draft, setDraft] = useState<typeof empty | null>(null)
   const [ports, setPorts] = useState<Record<string, string>>({})
   const [query, setQuery] = useState('')
@@ -423,17 +434,30 @@ function OltsTab() {
           <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
             Community string disimpan terenkripsi dan tidak pernah ditampilkan kembali.
           </p>
+          <LocationFields
+            longitude={draft.longitude}
+            latitude={draft.latitude}
+            onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
+          />
+          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+            Kosongkan lokasi untuk mengikuti koordinat site. Isi bila ingin OLT tampil di titiknya sendiri di peta.
+          </p>
           <div className="row">
             <button
               className="primary"
               onClick={() =>
                 void run(async () => {
+                  const { longitude, latitude, ...rest } = draft
                   await api.post('/api/olts', {
-                    ...draft,
+                    ...rest,
                     model: draft.model || null,
                     managementIp: draft.managementIp || null,
                     snmpCommunity: draft.snmpCommunity || null,
                     snmpPort: Number(draft.snmpPort) || 161,
+                    location:
+                      longitude && latitude
+                        ? { longitude: Number(longitude), latitude: Number(latitude) }
+                        : null,
                   })
                   setDraft(null)
                 })

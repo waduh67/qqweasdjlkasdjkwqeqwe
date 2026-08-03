@@ -32,6 +32,8 @@ export interface OltView {
   snmpPort: number
   pollable: boolean
   ponPortCount: number
+  location: Coordinate
+  areaId: string | null
 }
 
 export interface PonPortView {
@@ -296,8 +298,16 @@ export interface ImpactedCable {
   causes: ImpactCause[]
 }
 
+/** Satu simpul (OLT/ODC/ODP/pelanggan) yang ikut terdampak — untuk mewarnai markernya merah. */
+export interface ImpactedNode {
+  /** Sama dengan id fitur pada vector tile, sehingga cukup dicocokkan lintas layer. */
+  id: string
+  severity: string
+}
+
 export interface ImpactedOverlay {
   cables: ImpactedCable[]
+  nodes: ImpactedNode[]
 }
 
 /** Satu pelanggan di hilir sebuah ODC — sasaran blast radius & broadcast. */

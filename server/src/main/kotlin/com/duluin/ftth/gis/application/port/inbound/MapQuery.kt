@@ -156,7 +156,27 @@ data class SeveredCable(
     val points: List<Coordinate>,
 )
 
-data class ImpactedOverlay(val cables: List<ImpactedCable>)
+/**
+ * Sorotan dampak gangguan di peta: kabel yang hilirnya bermasalah [cables] plus
+ * perangkat/pelanggan terdampak [nodes] (OLT/ODC/ODP/pelanggan). Kabel diwarnai
+ * merah lewat garis overlay; simpul diwarnai dengan mencocokkan id fitur peta —
+ * jadi saat OLT mati, perangkatnya ikut merah, bukan cuma kabelnya.
+ */
+data class ImpactedOverlay(
+    val cables: List<ImpactedCable>,
+    val nodes: List<ImpactedNode>,
+)
+
+/**
+ * Satu simpul terdampak. [id] adalah id perangkat/pelanggan yang sama dengan id
+ * fitur pada vector tile, sehingga frontend cukup mencocokkan tanpa perlu tahu
+ * jenisnya — id UUID unik global lintas layer.
+ */
+data class ImpactedNode(
+    val id: UUID,
+    /** WARNING atau CRITICAL — keparahan tertinggi dari alarm yang menimpanya. */
+    val severity: String,
+)
 
 data class ImpactedCable(
     val id: UUID,

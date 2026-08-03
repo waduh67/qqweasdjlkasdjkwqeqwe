@@ -65,6 +65,16 @@ class NetworkTileAdapter : NetworkTileRenderer {
                 ), ''::bytea)
                 ||
                 COALESCE((
+                    SELECT ST_AsMVT(t, 'olt', 4096, 'geom') FROM (
+                        SELECT a.id::text AS id, a.code AS code, a.name AS name,
+                               a.status AS status,
+                               ST_AsMVTGeom(ST_Transform(a.location, 3857), env.mercator, 4096, 64, true) AS geom
+                        FROM olt a CROSS JOIN env
+                        WHERE a.location && env.wgs84 $areaFilter
+                    ) t WHERE t.geom IS NOT NULL
+                ), ''::bytea)
+                ||
+                COALESCE((
                     SELECT ST_AsMVT(t, 'odc', 4096, 'geom') FROM (
                         SELECT a.id::text AS id, a.code AS code, a.name AS name,
                                a.capacity AS capacity, a.status AS status,

@@ -197,13 +197,18 @@ dihapus; kedua ujung terkunci karena harus tetap menempel ke perangkat.
 Logikanya ada di `web/src/map/cableTool.ts` (imperatif, terpisah dari React).
 
 **Peta gaya NOC & status hidup.** Basemap gelap, kabel ramping dengan halo glow
-dan dash beranimasi (kesan "mengalir"), aset sebagai lingkaran bercahaya. Warna
-ONU pelanggan ikut status hidup dari tile (online hijau / LOS merah / offline
-kuning). Kabel yang **hilirnya bermasalah disorot merah berdenyut**: endpoint
-`GET /api/gis/impacted` menyusun dari alarm hidup (monitoring) → pelanggan/ODP
-terdampak (customer) → geometri kabel yang menyentuhnya (network), lalu klien
-menggambarnya sebagai overlay dan menyegarkannya tiap 30 detik. Komposisi lintas
-module lewat kontrak publik — `gis` tidak menyentuh tabel milik module lain.
+dan dash beranimasi (kesan "mengalir"), aset sebagai lingkaran bercahaya. **OLT
+adalah marker kelas satu** (koordinat sendiri, biru; kosong = mewarisi lokasi
+site-nya) — bukan lagi tersembunyi di dalam site — sehingga perangkat inti terlihat
+dan bisa diklik untuk detail vendor/model/IP/SNMP. Warna ONU pelanggan ikut status
+hidup dari tile (online hijau / LOS merah / offline kuning). Kabel yang **hilirnya
+bermasalah disorot merah berdenyut**, dan **marker perangkat yang terdampak ikut
+merah** (OLT modar → marker OLT + seluruh jalur di hilirnya menyala merah): endpoint
+`GET /api/gis/impacted` menyusun dari alarm hidup (monitoring) → pelanggan/ODP/OLT
+terdampak (customer/network) → geometri kabel yang menyentuhnya (network) plus daftar
+`nodes` (id simpul terdampak + keparahan), lalu klien menggambar kabel sebagai overlay
+dan mewarnai ulang marker yang id-nya cocok, menyegarkannya tiap 30 detik. Komposisi
+lintas module lewat kontrak publik — `gis` tidak menyentuh tabel milik module lain.
 
 ### Monitoring & collector
 
@@ -453,8 +458,9 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
   ber-versi, metrik TimescaleDB, mesin alarm anti-banjir, watchdog collector
   membisu, simulator OLT
 - **Blast radius di peta** ✅ (potongan fitur unggulan yang dikerjakan lebih awal
-  bersama GIS): perangkat mati menyorot merah seluruh kabel hilirnya, klik kabel
-  merah menampilkan alarm penyebabnya, dan panel ODC mendaftar pelanggan terdampak
+  bersama GIS): perangkat mati menyorot merah seluruh kabel hilirnya **beserta marker
+  perangkat terdampak** (OLT kini marker kelas satu di peta), klik kabel merah
+  menampilkan alarm penyebabnya, dan panel ODC mendaftar pelanggan terdampak
 - **Phase 2b — server-side SNMP polling** ✅ server polling OLT langsung (tanpa
   agen on-prem), adapter di modul `:snmp` dipakai bareng collector. Jalur **HSGQ
   EPON** (identitas MAC, tabel enterprise `.50224.3`) **sudah divalidasi terhadap

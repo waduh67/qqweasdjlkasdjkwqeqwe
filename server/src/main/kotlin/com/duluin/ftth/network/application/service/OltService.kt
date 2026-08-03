@@ -19,6 +19,7 @@ import com.duluin.ftth.network.application.port.outbound.SiteRepository
 import com.duluin.ftth.network.domain.model.AssetStatus
 import com.duluin.ftth.network.domain.model.Olt
 import com.duluin.ftth.network.domain.model.PonPort
+import com.duluin.ftth.network.domain.model.Site
 import com.duluin.ftth.network.domain.model.vo.ManagementIp
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
@@ -55,7 +56,7 @@ class OltService(
     override fun create(command: SaveOltCommand): OltView {
         val code = command.code.trim().uppercase()
         if (oltRepository.existsByCode(code)) throw ConflictException("Kode OLT '$code' sudah dipakai")
-        val site = requireSiteExists(command.siteId)
+        val site = requireSite(command.siteId)
         val olt = oltRepository.save(
             Olt.create(
                 tenantId = currentUser.current().tenantId,
@@ -66,16 +67,20 @@ class OltService(
                 model = command.model,
                 managementIp = ManagementIp.ofNullable(command.managementIp),
                 snmpCommunity = command.snmpCommunity,
+                // Tanpa koordinat eksplisit, OLT berdiri di lokasi site-nya; area
+                // scope selalu ikut site (OLT tinggal di dalamnya).
+                location = command.location ?: site.location,
+                areaId = site.areaId,
                 snmpPort = command.snmpPort,
             ),
         )
         auditor.record("olt.created", "Olt", olt.id, olt.tenantId, mapOf("code" to olt.code, "vendor" to olt.vendor.name))
-        return olt.toView(site, 0)
+        return olt.toView(site.name, 0)
     }
 
     override fun update(id: UUID, command: SaveOltCommand): OltView {
         val olt = requireOlt(id)
-        val site = requireSiteExists(command.siteId)
+        val site = requireSite(command.siteId)
         olt.update(
             siteId = command.siteId,
             name = command.name,
@@ -83,11 +88,15 @@ class OltService(
             model = command.model,
             managementIp = ManagementIp.ofNullable(command.managementIp),
             snmpPort = command.snmpPort,
+            // Koordinat kosong = pertahankan yang tersimpan; area re-inherit dari site
+            // (menampung kasus OLT dipindah ke site di area lain).
+            location = command.location ?: olt.location,
+            areaId = site.areaId,
         )
         olt.changeSnmpCommunity(command.snmpCommunity)
         val saved = oltRepository.save(olt)
         auditor.record("olt.updated", "Olt", saved.id, saved.tenantId, mapOf("code" to saved.code))
-        return saved.toView(site, ponPortRepository.findByOltId(id).size)
+        return saved.toView(site.name, ponPortRepository.findByOltId(id).size)
     }
 
     override fun changeStatus(id: UUID, status: AssetStatus): OltView {
@@ -173,8 +182,8 @@ class OltService(
     private fun requirePonPort(id: UUID): PonPort =
         ponPortRepository.findById(id) ?: throw NotFoundException("PON port $id tidak ditemukan")
 
-    private fun requireSiteExists(siteId: UUID): String =
-        siteRepository.findById(siteId)?.name ?: throw NotFoundException("Site $siteId tidak ditemukan")
+    private fun requireSite(siteId: UUID): Site =
+        siteRepository.findById(siteId) ?: throw NotFoundException("Site $siteId tidak ditemukan")
 }
 
 private fun Olt.toView(siteName: String?, ponPortCount: Int) = OltView(
@@ -191,6 +200,8 @@ private fun Olt.toView(siteName: String?, ponPortCount: Int) = OltView(
     snmpPort = snmpPort,
     pollable = isPollable(),
     ponPortCount = ponPortCount,
+    location = location,
+    areaId = areaId,
 )
 
 private fun PonPort.toView(odcCount: Long) = PonPortView(

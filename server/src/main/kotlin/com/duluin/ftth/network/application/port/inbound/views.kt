@@ -40,6 +40,8 @@ data class OltView(
     val snmpPort: Int,
     val pollable: Boolean,
     val ponPortCount: Int,
+    val location: Coordinate,
+    val areaId: UUID?,
 )
 
 data class PonPortView(

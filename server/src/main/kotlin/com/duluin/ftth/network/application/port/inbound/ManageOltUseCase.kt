@@ -2,6 +2,7 @@ package com.duluin.ftth.network.application.port.inbound
 
 import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
+import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.network.domain.model.AssetStatus
 import com.duluin.ftth.network.domain.model.OltVendor
 import java.util.UUID
@@ -43,6 +44,12 @@ data class SaveOltCommand(
      */
     val snmpCommunity: String?,
     val snmpPort: Int = 161,
+    /**
+     * Titik OLT di peta. `null` berarti "warisi dari lokasi site-nya" — dipakai
+     * jalur pembuatan yang belum menaruh OLT sendiri (mis. tab inventaris tanpa
+     * peta); jalur "taruh di peta" mengirim koordinat eksplisit.
+     */
+    val location: Coordinate? = null,
 )
 
 data class SavePonPortCommand(

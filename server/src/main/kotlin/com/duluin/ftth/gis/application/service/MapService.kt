@@ -16,6 +16,7 @@ import com.duluin.ftth.gis.application.port.inbound.CableCutView
 import com.duluin.ftth.gis.application.port.inbound.CustomerTrace
 import com.duluin.ftth.gis.application.port.inbound.ImpactCause
 import com.duluin.ftth.gis.application.port.inbound.ImpactedCable
+import com.duluin.ftth.gis.application.port.inbound.ImpactedNode
 import com.duluin.ftth.gis.application.port.inbound.ImpactedOverlay
 import com.duluin.ftth.gis.application.port.inbound.MapQuery
 import com.duluin.ftth.monitoring.AlarmImpact
@@ -195,7 +196,7 @@ class MapService(
      */
     override fun impactedCables(): ImpactedOverlay {
         val impacts = monitoringApi.activeImpacts()
-        if (impacts.isEmpty()) return ImpactedOverlay(emptyList())
+        if (impacts.isEmpty()) return ImpactedOverlay(emptyList(), emptyList())
 
         // Keparahan per simpul (id perangkat/pelanggan), diambil yang tertinggi,
         // beserta daftar alarm penyebabnya untuk menjawab "kenapa merah" saat diklik.
@@ -237,7 +238,7 @@ class MapService(
             }
         }
 
-        if (nodeSeverity.isEmpty()) return ImpactedOverlay(emptyList())
+        if (nodeSeverity.isEmpty()) return ImpactedOverlay(emptyList(), emptyList())
 
         val cables = networkApi.cablesTouchingNodes(nodeSeverity.keys).mapNotNull { cable ->
             val rank = maxOf(nodeSeverity[cable.fromId] ?: -1, nodeSeverity[cable.toId] ?: -1)
@@ -252,7 +253,10 @@ class MapService(
                 causes = causes,
             )
         }
-        return ImpactedOverlay(cables)
+        // Simpul terdampak (OLT/ODC/ODP/pelanggan) untuk diwarnai merah di peta —
+        // id-nya sama dengan id fitur tile, jadi frontend tinggal mencocokkan.
+        val nodes = nodeSeverity.map { (id, rank) -> ImpactedNode(id = id, severity = severityName(rank)) }
+        return ImpactedOverlay(cables, nodes)
     }
 
     /**

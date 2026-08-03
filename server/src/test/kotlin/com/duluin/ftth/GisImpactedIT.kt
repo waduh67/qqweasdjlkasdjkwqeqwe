@@ -144,8 +144,14 @@ class GisImpactedIT {
         // sehingga klik kabel di peta bisa menjawab "kenapa merah".
         val causeKinds: List<String> = JsonPath.read(overlay, "$.cables[*].causes[*].kind")
         assertThat(causeKinds).contains("OLT_UNREACHABLE")
+        // Perangkat OLT sendiri ikut tersorot merah (bukan cuma kabelnya) — inilah
+        // yang mewarnai marker OLT di peta saat perangkatnya modar.
+        val impactedNodeIds: List<String> = JsonPath.read(overlay, "$.nodes[*].id")
+        assertThat(impactedNodeIds).contains(olt)
+        val oltSeverity: List<String> = JsonPath.read(overlay, "$.nodes[?(@.id=='$olt')].severity")
+        assertThat(oltSeverity).containsExactly("CRITICAL")
 
-        // Denyut pulih: alarm menutup sendiri → tidak ada lagi kabel merah.
+        // Denyut pulih: alarm menutup sendiri → tidak ada lagi kabel merah maupun simpul terdampak.
         heartbeat(
             apiKey,
             """{"agentVersion":"0.2.0","lastCycle":{"startedAt":"2026-07-20T05:05:00Z",
@@ -153,5 +159,8 @@ class GisImpactedIT {
                 "failures":[]}}""",
         )
         assertThat(impactedCodes(token)).isEmpty()
+        val recovered = mockMvc.perform(get("/api/gis/impacted").header("Authorization", "Bearer $token"))
+            .andReturn().response.contentAsString
+        assertThat(JsonPath.read<List<String>>(recovered, "$.nodes[*].id")).isEmpty()
     }
 }

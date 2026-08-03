@@ -2,6 +2,8 @@ package com.duluin.ftth.network.adapter.outbound.persistence
 
 import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
+import com.duluin.ftth.common.infrastructure.persistence.geo.Geometries
+import com.duluin.ftth.common.infrastructure.persistence.geo.toCoordinate
 import com.duluin.ftth.common.infrastructure.persistence.toDomainPage
 import com.duluin.ftth.common.infrastructure.persistence.toPageable
 import com.duluin.ftth.common.security.SecretCipher
@@ -36,6 +38,8 @@ class OltPersistenceAdapter(
             snmpCommunity = encryptedCommunity
             snmpPort = olt.snmpPort
             status = olt.status
+            location = Geometries.point(olt.location)
+            areaId = olt.areaId
         } ?: OltJpaEntity(
             id = olt.id,
             code = olt.code,
@@ -47,6 +51,8 @@ class OltPersistenceAdapter(
             snmpCommunity = encryptedCommunity,
             snmpPort = olt.snmpPort,
             status = olt.status,
+            location = Geometries.point(olt.location),
+            areaId = olt.areaId,
         )
         return jpa.save(entity).toDomain()
     }
@@ -89,6 +95,8 @@ class OltPersistenceAdapter(
         snmpCommunity = decryptQuietly(snmpCommunity, code),
         snmpPort = snmpPort,
         status = status,
+        location = location.toCoordinate(),
+        areaId = areaId,
     )
 
     /**
