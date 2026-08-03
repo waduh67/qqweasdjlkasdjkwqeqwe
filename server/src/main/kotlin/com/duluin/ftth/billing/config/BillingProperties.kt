@@ -31,6 +31,20 @@ data class BillingProperties(
     val platform: PlatformGatewayProperties = PlatformGatewayProperties(),
     /** Setelan adapter Pivot (BYO): pemilihan lingkungan + URL balik wajib mode REDIRECT. */
     val pivot: PivotProperties = PivotProperties(),
+    /** Setelan adapter Paywuz (BYO): kode metode bayar + masa hidup tautan. */
+    val paywuz: PaywuzProperties = PaywuzProperties(),
+)
+
+/**
+ * Setelan adapter Paywuz (BYO). Paywuz mewajibkan **kode metode** saat membuat transaksi
+ * ([paymentMethod] — mis. meta-method `QRIS`/`VA` dari daftar metode proyek tenant), berbeda
+ * dari Xendit/Pivot yang halaman hosted-nya membiarkan pelanggan memilih. [expiryMinutes] = masa
+ * hidup tautan bayar (menit). Lingkungan (sandbox vs live) ditentukan prefiks API key
+ * (`pk_sand_…`/`pk_live_…`), bukan base URL — jadi tak ada saklar sandbox di sini.
+ */
+data class PaywuzProperties(
+    val paymentMethod: String = "QRIS",
+    val expiryMinutes: Long = 1440,
 )
 
 /**

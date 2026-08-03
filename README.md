@@ -107,8 +107,8 @@ tak pernah menyentuh tabel module lain — batas ini ditegakkan `ModularityTests
   v7 + FreeRADIUS).
 - **billing** — menerbitkan tagihan atas langganan lalu menggerakkan
   isolir/aktivasi `customer` (yang mengalir ke `bng`) saat jatuh tempo/lunas;
-  **payment gateway per-tenant** (Xendit BYO & PLATFORM/xenPlatform; Paywuz/Pivot
-  kerangka) lewat webhook, kredensial terenkripsi (lihat
+  **payment gateway per-tenant** (Xendit BYO & PLATFORM/xenPlatform; Pivot & Paywuz
+  BYO) lewat webhook, kredensial terenkripsi (lihat
   [`docs/payment-gateway.md`](docs/payment-gateway.md)).
 - **vpn** — **swasembada** (tanpa taut lintas-module): VPN-as-a-service. Hub
   OpenVPN adalah infrastruktur **platform** (jalan di VPS kita, IP publik kita,
@@ -479,7 +479,7 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
   docker RADIUS (lihat [`docs/lab-bras-radius.md`](docs/lab-bras-radius.md))
 - **Billing** ✅ mesin tagihan (invoice ber-periode, jatuh tempo + grace),
   payment gateway **per-tenant** (Xendit BYO & PLATFORM/xenPlatform + auto-provision
-  sub-account; Paywuz/Pivot kerangka) lewat webhook, auto-isolir/auto-pulih yang
+  sub-account; Pivot & Paywuz BYO) lewat webhook, auto-isolir/auto-pulih yang
   menggerakkan `customer` → `bng` (lihat [`docs/billing.md`](docs/billing.md) &
   [`docs/payment-gateway.md`](docs/payment-gateway.md))
 - **VPN** ✅ VPN-as-a-service untuk remote perangkat tanpa IP publik: hub OpenVPN

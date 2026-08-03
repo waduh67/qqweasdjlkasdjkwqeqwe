@@ -172,7 +172,8 @@ class TenantPaymentGateway private constructor(
         // adapter Pivot yang dipilih & melempar pesan jelas (bukan diam-diam jatuh ke MANUAL).
         PaymentProvider.PIVOT ->
             ResolvedGatewayContext("PIVOT", GatewayMode.BYO, secretKey = secretKey, webhookToken = webhookToken, apiKey = apiKey)
-        // Paywuz: masih kerangka — resolusi berhasil agar adapternya dipilih & melempar pesan jelas.
+        // Paywuz butuh SATU kredensial (API key) yang jadi Bearer auth SEKALIGUS secret HMAC
+        // webhook — dibawa di secretKey; tak ada webhook_token terpisah.
         PaymentProvider.PAYWUZ ->
             ResolvedGatewayContext("PAYWUZ", GatewayMode.BYO, secretKey = apiKey, webhookToken = webhookToken)
         PaymentProvider.MANUAL ->

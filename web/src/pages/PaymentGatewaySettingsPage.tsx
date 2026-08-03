@@ -53,10 +53,8 @@ function credFields(provider: PaymentProvider): CredField[] {
         { key: 'webhookToken', label: 'Callback API Key', placeholder: 'X-API-Key untuk verifikasi callback' },
       ]
     case 'PAYWUZ':
-      return [
-        { key: 'apiKey', label: 'API key', placeholder: 'API key penyedia' },
-        { key: 'webhookToken', label: 'Webhook token', placeholder: 'Token verifikasi callback' },
-      ]
+      // Satu kredensial: API key proyek — Bearer auth SEKALIGUS secret HMAC verifikasi webhook.
+      return [{ key: 'apiKey', label: 'API key', placeholder: 'pk_live_… / pk_sand_…' }]
     case 'MANUAL':
       return []
   }
@@ -276,6 +274,14 @@ export function PaymentGatewaySettingsPage() {
                 Merchant ID &amp; Secret dari dashboard Pivot (Settings → API Keys). Callback API Key dari halaman
                 Callbacks; arahkan URL callback Pivot ke <code>/api/billing/webhooks/&lt;tenant&gt;/pivot</code>.
                 Server juga wajib mengisi <code>FTTH_BILLING_PIVOT_REDIRECT_BASE_URL</code>.
+              </p>
+            )}
+            {form.provider === 'PAYWUZ' && (
+              <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+                API key proyek dari dashboard Paywuz (<code>pk_live_…</code> / <code>pk_sand_…</code>) — dipakai untuk
+                menagih sekaligus memverifikasi webhook, jadi tak ada token terpisah. Arahkan URL callback Paywuz ke{' '}
+                <code>/api/billing/webhooks/&lt;tenant&gt;/paywuz</code>. Kode metode bayar (mis. QRIS) diatur di server
+                (<code>FTTH_BILLING_PAYWUZ_PAYMENT_METHOD</code>).
               </p>
             )}
           </div>

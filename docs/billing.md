@@ -85,8 +85,8 @@ interface PaymentGateway {
   `X-Billing-Signature` sama dengan `ctx.webhookToken ?: ftth.billing.webhook-secret`.
 
 > Tiap tenant memilih penyedia + mode (BYO/PLATFORM) + kredensialnya sendiri. Xendit
-> digarap penuh (BYO **dan** PLATFORM/xenPlatform dengan auto-provision sub-account); Pivot
-> digarap penuh BYO; Paywuz kerangka. Detail lengkap: [**docs/payment-gateway.md**](payment-gateway.md).
+> digarap penuh (BYO **dan** PLATFORM/xenPlatform dengan auto-provision sub-account); Pivot &
+> Paywuz digarap penuh BYO. Detail lengkap: [**docs/payment-gateway.md**](payment-gateway.md).
 
 ### Alur settle (lunas → auto-pulih)
 

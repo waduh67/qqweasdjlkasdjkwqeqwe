@@ -88,6 +88,11 @@ ftth:
     pivot:
       sandbox: ${FTTH_BILLING_PIVOT_SANDBOX:false}
       redirect-base-url: ${FTTH_BILLING_PIVOT_REDIRECT_BASE_URL:}
+    # Adapter Paywuz (BYO). payment-method = kode metode wajib saat bikin transaksi
+    # (mis. meta-method QRIS/VA dari daftar metode proyek tenant). Sandbox via prefiks key.
+    paywuz:
+      payment-method: ${FTTH_BILLING_PAYWUZ_PAYMENT_METHOD:QRIS}
+      expiry-minutes: ${FTTH_BILLING_PAYWUZ_EXPIRY_MINUTES:1440}
   vpn:
     # Bawaan hub OpenVPN manajemen (dipakai saat pembuatan tanpa nilai eksplisit).
     default-port: 1194

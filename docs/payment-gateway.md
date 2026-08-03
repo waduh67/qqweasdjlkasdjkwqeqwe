@@ -11,9 +11,9 @@ Dua mode:
 | **BYO** | tenant | akun gateway tenant sendiri (secret di baris tenant, terenkripsi) | rekening tenant langsung | — |
 | **PLATFORM** | platform | akun **MASTER** platform (config/env) + **sub-account** xenPlatform per tenant | balance sub-account tenant di platform | via `fee_rule` (header `with-fee-rule`) |
 
-Xendit digarap penuh (BYO **dan** PLATFORM); **Pivot** (pivot-payment.com) digarap penuh
-**BYO**. **Paywuz** masih kerangka — bisa dipilih & dikonfigurasi, tapi `createCharge`
-melempar sampai dokumentasi API-nya tersedia (drop-in nanti tanpa ubah skema).
+Xendit digarap penuh (BYO **dan** PLATFORM); **Pivot** (pivot-payment.com) dan **Paywuz**
+(paywuz.id) digarap penuh **BYO**. Semua adapter berbagi skema `tenant_payment_gateway` yang
+sama — tambah provider tak butuh migrasi.
 
 ---
 
@@ -67,7 +67,7 @@ webhookToken, subAccountId?, feeRuleId?)`:
 | `enabled = false` | — (selalu null → MANUAL) | — | — |
 | BYO · XENDIT | `secret_key` terisi | key tenant | token tenant |
 | BYO · PIVOT | selalu (adapter validasi) | `secret_key` (merchant secret) + `api_key` (merchant id) | token tenant (Callback API Key) |
-| BYO · PAYWUZ | selalu (adapter melempar) | `api_key` | token tenant |
+| BYO · PAYWUZ | selalu (adapter validasi) | `api_key` (jadi `secretKey`: Bearer **&** secret HMAC webhook) | — (pakai `secretKey`) |
 | BYO · MANUAL | selalu | — | token tenant |
 | PLATFORM · XENDIT | `platform.enabled` **&** master secret **&** `sub_account_id` | key **MASTER** | token sub-account **?:** token platform |
 
@@ -188,12 +188,31 @@ XenditSubAccountProvisioningService.provisionXendit(...)          ← koordinato
 
 ---
 
-## Paywuz (kerangka)
+## Paywuz (paywuz.id) — BYO
 
-`PaywuzPaymentGateway` (`provider="PAYWUZ"`): `createCharge` melempar
-`UnsupportedOperationException("Gateway Paywuz belum didukung — dokumentasi API belum tersedia")`,
-`parseCallback` log-warn + `null`. Enum & CHECK `ck_tpg_provider` sudah memuatnya sejak V50 →
-impl asli tinggal drop-in tanpa migrasi (persis pola Pivot yang sudah digarap).
+Adapter `PaywuzPaymentGateway` (BYO). Paywuz hanya butuh **satu** kredensial: **API key** proyek
+(`pk_live_…`/`pk_sand_…`) yang jadi Bearer auth **sekaligus** secret HMAC verifikasi webhook —
+disimpan di kolom `api_key`, dibawa sebagai `ResolvedGatewayContext.secretKey`, tanpa
+`webhook_token` terpisah. Lingkungan (sandbox vs live) ditentukan prefiks key, base URL sama
+(`https://api.paywuz.id/v1`).
+
+**Charge** (`POST /v1/transactions`):
+
+```
+body { orderId=invoiceNumber, amount (int IDR), paymentMethod, expiryMinutes, metadata }
+Authorization: Bearer <api_key>
+→ { data: { id, paymentUrl, status } }
+  ChargeResult(provider="PAYWUZ", gatewayRef=data.id, payUrl=data.paymentUrl)
+```
+
+- **`paymentMethod` WAJIB** — kode metode (mis. meta-method `QRIS`/`VA`), beda dari halaman hosted
+  Xendit/Pivot yang membiarkan pelanggan memilih. Diambil dari `ftth.billing.paywuz.payment-method`
+  (default `QRIS`) — v1 satu setelan global; operator wajib memastikan kodenya valid untuk proyeknya.
+- **IDR zero-decimal:** `amount` dikirim `setScale(0, HALF_UP)`. `expiryMinutes` dari config (default 1440).
+
+**Callback** (`POST /api/billing/webhooks/{tenantSlug}/paywuz`): header **`X-Paywuz-Signature:
+sha256=<hex>`** = HMAC-SHA256(**api_key**, rawBody) dibanding **constant-time**; hanya status
+`settlement`/`success` jadi settlement. `PaymentSettlement(orderId, id, amount, timestamp ?: now)`.
 
 ---
 
@@ -209,6 +228,8 @@ impl asli tinggal drop-in tanpa migrasi (persis pola Pivot yang sudah digarap).
 | `platform.xendit.callback-base-url` · `FTTH_BILLING_PLATFORM_XENDIT_CALLBACK_BASE_URL` | `""` | basis URL publik untuk mendaftarkan callback sub-account |
 | `pivot.sandbox` · `FTTH_BILLING_PIVOT_SANDBOX` | `false` | Pivot BYO: `true` → base `api-stg`, else `api` produksi |
 | `pivot.redirect-base-url` · `FTTH_BILLING_PIVOT_REDIRECT_BASE_URL` | `""` | Pivot BYO: basis URL balik (mode REDIRECT WAJIB); kosong = charge Pivot gagal jelas |
+| `paywuz.payment-method` · `FTTH_BILLING_PAYWUZ_PAYMENT_METHOD` | `QRIS` | Paywuz BYO: kode metode wajib saat bikin transaksi (mis. `QRIS`/`VA`) |
+| `paywuz.expiry-minutes` · `FTTH_BILLING_PAYWUZ_EXPIRY_MINUTES` | `1440` | Paywuz BYO: masa hidup tautan bayar (menit) |
 
 > **Config lawas `default-provider`** kini **usang** — resolver memilih adapter dari
 > baris config tenant (sumber kebenaran), dan fallback MANUAL sudah hardcoded. Dibiarkan

@@ -76,14 +76,15 @@ class TenantPaymentGatewayTest {
     }
 
     @Test
-    fun `skeleton PAYWUZ tetap meresolusi agar adapternya dipilih dan melempar jelas`() {
+    fun `PAYWUZ BYO membawa API key sebagai secret (Bearer sekaligus HMAC webhook)`() {
         val gw = defaultGateway().apply {
-            update(PaymentProvider.PAYWUZ, GatewayMode.BYO, enabled = true, apiKey = "pk_x", secretKey = null, webhookToken = "tok")
+            update(PaymentProvider.PAYWUZ, GatewayMode.BYO, enabled = true, apiKey = "pk_live_x", secretKey = null, webhookToken = null)
         }
 
         val ctx = gw.resolve(platform)
         assertThat(ctx).isNotNull
         assertThat(ctx!!.provider).isEqualTo("PAYWUZ")
+        assertThat(ctx.secretKey).isEqualTo("pk_live_x") // API key → Bearer + secret HMAC webhook
     }
 
     @Test
