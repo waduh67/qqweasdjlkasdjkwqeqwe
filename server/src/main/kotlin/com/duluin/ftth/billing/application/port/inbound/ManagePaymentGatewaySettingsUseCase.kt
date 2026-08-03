@@ -2,6 +2,7 @@ package com.duluin.ftth.billing.application.port.inbound
 
 import com.duluin.ftth.billing.domain.model.GatewayMode
 import com.duluin.ftth.billing.domain.model.PaymentProvider
+import com.duluin.ftth.common.storage.StoredObject
 
 /**
  * Sisi operator dari setelan payment gateway tenant: baca setelan (atau bawaan MANUAL/mati
@@ -16,6 +17,18 @@ interface ManagePaymentGatewaySettingsUseCase {
      * Kosong bila tenant bukan Paywuz; melempar bila API key belum tersimpan atau Paywuz menolak.
      */
     fun listPaywuzMethods(): List<PaywuzMethodView>
+
+    /** Simpan/ganti gambar QRIS pembayaran manual (byte ke object storage). */
+    fun uploadQrisImage(contentType: String, bytes: ByteArray): PaymentGatewaySettingsView
+
+    /** Lepas gambar QRIS (hapus dari storage). */
+    fun deleteQrisImage(): PaymentGatewaySettingsView
+
+    /** Ambil byte gambar QRIS untuk disajikan; null bila belum ada. */
+    fun getQrisImage(): StoredObject?
+
+    /** Instruksi bayar manual ringkas untuk pelanggan (dipakai halaman detail pelanggan). */
+    fun manualPaymentInstructions(): ManualPaymentInstructionsView
 }
 
 /**
@@ -32,6 +45,27 @@ data class PaymentGatewaySettingsView(
     val webhookTokenSet: Boolean,
     val subAccountId: String?,
     val paymentMethod: String?,
+    // Pembayaran manual (transfer/QRIS) — non-rahasia, ditampilkan apa adanya.
+    val manualTransferEnabled: Boolean,
+    val bankName: String?,
+    val accountNumber: String?,
+    val accountHolder: String?,
+    val manualQrisEnabled: Boolean,
+    val qrisImageSet: Boolean,
+)
+
+/**
+ * Instruksi bayar manual yang ditunjukkan ke pelanggan (halaman detail pelanggan) untuk
+ * tagihan MANUAL. Ringkas & non-rahasia; gambar QRIS diambil lewat endpoint konten terpisah
+ * (hanya penanda [qrisImageAvailable] di sini).
+ */
+data class ManualPaymentInstructionsView(
+    val transferEnabled: Boolean,
+    val bankName: String?,
+    val accountNumber: String?,
+    val accountHolder: String?,
+    val qrisEnabled: Boolean,
+    val qrisImageAvailable: Boolean,
 )
 
 /** Satu metode pembayaran Paywuz untuk pilihan di UI. */
@@ -55,4 +89,10 @@ data class UpdatePaymentGatewaySettingsCommand(
     val secretKey: String?,
     val webhookToken: String?,
     val paymentMethod: String?,
+    // Pembayaran manual (non-rahasia) — selalu diganti (null/kosong = kosongkan).
+    val manualTransferEnabled: Boolean,
+    val bankName: String?,
+    val accountNumber: String?,
+    val accountHolder: String?,
+    val manualQrisEnabled: Boolean,
 )

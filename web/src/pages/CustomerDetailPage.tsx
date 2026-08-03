@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
@@ -61,6 +61,11 @@ import { IconAlert, IconCustomers, IconRoute } from '../components/icons'
 import type { SubscriptionView } from '../api/network'
 import { listPlans as listCatalogPlans, SERVICE_TYPE_LABEL, type PlanView, type ServiceType } from '../api/catalog'
 import { listInvoicesForCustomer, type InvoiceView } from '../api/billing'
+import {
+  getManualPaymentInstructions,
+  QRIS_IMAGE_PATH,
+  type ManualPaymentInstructionsView,
+} from '../api/payment'
 import { listIncidentsForCustomer, type IncidentView } from '../api/incident'
 import { listWorkOrdersForCustomer, type WorkOrderStatus, type WorkOrderView } from '../api/workorder'
 import { getSubscriber360, type Sub360BillingSummary, type Subscriber360View } from '../api/subscriber360'
@@ -2310,12 +2315,25 @@ function isOutstanding(inv: InvoiceView, today: string): boolean {
  */
 function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub360BillingSummary | null }) {
   const [invoices, setInvoices] = useState<InvoiceView[] | null>(null)
+  // Instruksi bayar manual tenant (bank/QRIS) — ditampilkan untuk tagihan tanpa tautan gateway.
+  const [manual, setManual] = useState<ManualPaymentInstructionsView | null>(null)
 
   useEffect(() => {
     let alive = true
     void listInvoicesForCustomer(customerId)
       .then((list) => alive && setInvoices(list))
       .catch(() => alive && setInvoices([]))
+    return () => {
+      alive = false
+    }
+  }, [customerId])
+
+  useEffect(() => {
+    let alive = true
+    // Non-kritis: bila gagal muat, panel "Cara bayar" cukup disembunyikan.
+    void getManualPaymentInstructions()
+      .then((m) => alive && setManual(m))
+      .catch(() => alive && setManual(null))
     return () => {
       alive = false
     }
@@ -2413,7 +2431,91 @@ function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub3
           </tbody>
         </table>
       </div>
+
+      {/* Cara bayar manual — hanya bila ada tagihan belum lunas tanpa tautan gateway. */}
+      {manual != null &&
+        (manual.transferEnabled || manual.qrisEnabled) &&
+        invoices.some((inv) => !inv.payUrl && (inv.status === 'ISSUED' || inv.status === 'OVERDUE')) && (
+          <ManualPayPanel manual={manual} />
+        )}
     </div>
+  )
+}
+
+/**
+ * Panel "Cara bayar" untuk tagihan tanpa tautan gateway (pelunasan manual): rekening transfer,
+ * gambar QRIS, dan/atau catatan tunai — hanya metode yang diaktifkan tenant di setelan gateway.
+ */
+function ManualPayPanel({ manual }: { manual: ManualPaymentInstructionsView }) {
+  return (
+    <div className="card stack" style={{ gap: '0.75rem' }}>
+      <strong style={{ fontSize: '0.95rem' }}>Cara bayar</strong>
+      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        Untuk tagihan belum lunas yang dibayar manual, gunakan salah satu cara berikut.
+      </p>
+
+      {manual.transferEnabled && (
+        <div className="stack" style={{ gap: '0.2rem' }}>
+          <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Transfer bank</span>
+          <span className="muted" style={{ fontSize: '0.85rem' }}>
+            {manual.bankName || 'Bank belum diisi'}
+            {manual.accountNumber ? ` · ${manual.accountNumber}` : ''}
+            {manual.accountHolder ? ` · a.n. ${manual.accountHolder}` : ''}
+          </span>
+        </div>
+      )}
+
+      {manual.qrisEnabled && manual.qrisImageAvailable && (
+        <div className="stack" style={{ gap: '0.3rem' }}>
+          <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>QRIS</span>
+          <AuthedImage path={QRIS_IMAGE_PATH} alt="QRIS pembayaran" size={160} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Gambar berkonten terautentikasi: `<img src>` tak bisa kirim header Bearer, jadi byte ditarik
+ * sebagai blob lalu dijadikan object URL (dicabut saat unmount/ganti sumber).
+ */
+function AuthedImage({ path, alt, size }: { path: string; alt: string; size: number }) {
+  const [url, setUrl] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    let objectUrl: string | null = null
+    setUrl(null)
+    setFailed(false)
+    api
+      .blob(path)
+      .then((b) => {
+        if (!active) return
+        objectUrl = URL.createObjectURL(b)
+        setUrl(objectUrl)
+      })
+      .catch(() => active && setFailed(true))
+    return () => {
+      active = false
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [path])
+
+  const box: CSSProperties = {
+    width: size,
+    height: size,
+    borderRadius: 8,
+    objectFit: 'contain',
+    background: 'var(--surface-2, #1e2530)',
+    border: '1px solid var(--border, #2a3340)',
+  }
+  if (failed) return <div style={{ ...box, display: 'grid', placeItems: 'center', fontSize: '0.7rem' }} className="muted">gagal</div>
+  if (!url) return <div style={box} aria-busy="true" />
+  return (
+    <a href={url} target="_blank" rel="noreferrer" title={alt}>
+      <img src={url} alt={alt} style={box} />
+    </a>
   )
 }
 

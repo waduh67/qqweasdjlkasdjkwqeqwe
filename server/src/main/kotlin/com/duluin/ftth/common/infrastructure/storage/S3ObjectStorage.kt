@@ -1,7 +1,8 @@
-package com.duluin.ftth.workorder.adapter.outbound.storage
+package com.duluin.ftth.common.infrastructure.storage
 
-import com.duluin.ftth.workorder.application.port.outbound.ObjectStorage
-import com.duluin.ftth.workorder.application.port.outbound.StoredObject
+import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.storage.ObjectStorage
+import com.duluin.ftth.common.storage.StoredObject
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Profile
@@ -14,13 +15,12 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
-import com.duluin.ftth.common.domain.error.NotFoundException
 
 /**
- * Adapter [ObjectStorage] di atas S3/MinIO. Semua bukti satu tenant hidup dalam
- * satu bucket, dipisah lewat prefix kunci (`<tenant>/wo/...`); pemisahan tenant
- * yang mengikat tetap ditegakkan di lapisan metadata (Hibernate + RLS), prefix
- * ini sekadar tata letak + pertahanan berlapis.
+ * Adapter [ObjectStorage] di atas S3/MinIO. Semua objek satu tenant hidup dalam
+ * satu bucket, dipisah lewat prefix kunci (`<tenant>/wo/...`, `<tenant>/billing/...`);
+ * pemisahan tenant yang mengikat tetap ditegakkan di lapisan metadata (Hibernate + RLS),
+ * prefix ini sekadar tata letak + pertahanan berlapis.
  */
 @Component
 @Profile("!test")

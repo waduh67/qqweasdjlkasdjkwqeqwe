@@ -1,13 +1,13 @@
-package com.duluin.ftth.workorder.application.port.outbound
+package com.duluin.ftth.common.storage
 
 /**
- * Port penyimpanan objek biner (bukti foto, tanda tangan). Diimplementasikan di
- * lapisan adapter memakai S3/MinIO — application hanya tahu put/get/delete
- * berkunci, tak tahu vendor storage-nya.
+ * Port penyimpanan objek biner (bukti foto/tanda tangan work-order, gambar QRIS billing).
+ * Diimplementasikan di lapisan adapter memakai S3/MinIO — application hanya tahu
+ * put/get/delete berkunci, tak tahu vendor storage-nya.
  *
- * Byte diedarkan sebagai [ByteArray]: berkas bukti berukuran wajar (foto ponsel),
- * dan boundary yang sederhana lebih aman daripada mengedarkan stream yang harus
- * dijaga siklus hidupnya lintas-lapisan.
+ * Byte diedarkan sebagai [ByteArray]: berkas berukuran wajar (foto ponsel, gambar QRIS),
+ * dan boundary yang sederhana lebih aman daripada mengedarkan stream yang harus dijaga
+ * siklus hidupnya lintas-lapisan.
  */
 interface ObjectStorage {
 
