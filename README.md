@@ -108,7 +108,8 @@ tak pernah menyentuh tabel module lain — batas ini ditegakkan `ModularityTests
 - **billing** — menerbitkan tagihan atas langganan lalu menggerakkan
   isolir/aktivasi `customer` (yang mengalir ke `bng`) saat jatuh tempo/lunas;
   **payment gateway per-tenant** (Xendit BYO & PLATFORM/xenPlatform; Pivot & Paywuz
-  BYO) lewat webhook, kredensial terenkripsi (lihat
+  BYO) lewat webhook, kredensial terenkripsi; plus **pembayaran manual** (instruksi
+  transfer bank + gambar QRIS di MinIO/S3) saat gateway nonaktif (lihat
   [`docs/payment-gateway.md`](docs/payment-gateway.md)).
 - **vpn** — **swasembada** (tanpa taut lintas-module): VPN-as-a-service. Hub
   OpenVPN adalah infrastruktur **platform** (jalan di VPS kita, IP publik kita,
@@ -441,7 +442,8 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
 | `GET/POST/PUT/DELETE /api/bng/plans` · `/nas` · `/access` | `bng.plan.*` / `bng.nas.*` / `bng.access.*` |
 | `POST /api/bng/access/{id}/isolate` · `/restore` · `/reset-login` · `GET /session` · `/traffic` | `bng.access.isolate` / `bng.session.*` |
 | `GET/POST /api/billing/invoices` · `/generate` · `/{id}/void` · `/pay` · `GET /payments` | `billing.invoice.*` / `billing.payment.manage` |
-| `GET/PUT /api/billing/gateway-settings` · `POST /platform/gateway/{tenantId}/xendit-subaccount` | `billing.gateway.view`/`.manage` / `.provision` (platform) |
+| `GET/PUT /api/billing/gateway-settings` · `POST/DELETE/GET /gateway-settings/qris` · `POST /platform/gateway/{tenantId}/xendit-subaccount` | `billing.gateway.view`/`.manage` / `.provision` (platform) |
+| `GET /api/billing/manual-payment-instructions` | `billing.invoice.view` |
 | `POST /api/billing/webhooks/{tenantSlug}/{provider}` | publik (tanda tangan gateway) |
 | `GET/POST/PUT/DELETE /api/vpn/servers` · `/{id}/credentials` · `/regenerate-token` · `/config` (hub platform) | `vpn.server.*` (platform-only) / `vpn.config.view` |
 | `GET /api/vpn/accounts` · `POST /generate` · `/{id}/{enable,disable,rotate-password}` · `DELETE` · `/ovpn` · `/routeros` (akun tenant) | `vpn.peer.*` / `vpn.config.view` |
@@ -485,7 +487,8 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
   docker RADIUS (lihat [`docs/lab-bras-radius.md`](docs/lab-bras-radius.md))
 - **Billing** ✅ mesin tagihan (invoice ber-periode, jatuh tempo + grace),
   payment gateway **per-tenant** (Xendit BYO & PLATFORM/xenPlatform + auto-provision
-  sub-account; Pivot & Paywuz BYO) lewat webhook, auto-isolir/auto-pulih yang
+  sub-account; Pivot & Paywuz BYO) lewat webhook, **pembayaran manual** (transfer bank
+  + gambar QRIS di MinIO/S3) saat gateway nonaktif, auto-isolir/auto-pulih yang
   menggerakkan `customer` → `bng` (lihat [`docs/billing.md`](docs/billing.md) &
   [`docs/payment-gateway.md`](docs/payment-gateway.md))
 - **VPN** ✅ VPN-as-a-service untuk remote perangkat tanpa IP publik: hub OpenVPN

@@ -31,7 +31,14 @@ tenant_payment_gateway
 ├── webhook_token   ciphertext — token verifikasi callback per-tenant
 │                               (PLATFORM = token sub-account)
 ├── sub_account_id  PLATFORM: user_id sub-account Xendit (header for-user-id)
-└── payment_method  plaintext — Paywuz BYO: kode metode per-tenant (V51; bukan rahasia)
+├── payment_method  plaintext — Paywuz BYO: kode metode per-tenant (V51; bukan rahasia)
+│
+│   Pembayaran manual (V54) — plaintext, bukan rahasia, semantik "selalu diganti":
+├── manual_transfer_enabled  saklar transfer bank
+├── transfer_bank_name / transfer_account_number / transfer_account_holder
+├── manual_qris_enabled       saklar QRIS
+├── qris_storage_key          key byte gambar QRIS di object storage (bukan byte-nya)
+└── qris_content_type         MIME gambar QRIS
 ```
 
 - **Kredensial write-only.** Batas enkripsi ada di adapter persistence (`SecretCipher`
@@ -211,16 +218,52 @@ Authorization: Bearer <api_key>
   (bila diisi) → jatuh ke `ftth.billing.paywuz.payment-method` global (default `QRIS`). Nilai per-tenant
   disimpan **plaintext** (bukan rahasia) di kolom `payment_method`, dibawa lewat
   `ResolvedGatewayContext.paymentMethod`.
-- **Pilihan metode per-tenant (UI):** endpoint `GET /api/billing/gateway-settings/paywuz-methods`
-  (`billing.gateway.view`) memanggil `GET /v1/payment-methods` proyek tenant pakai API key tersimpan
-  dan mengembalikan daftar `{code, name, type}` untuk mengisi dropdown. Port outbound
-  `PaywuzMethodDirectory` (diimplementasi oleh adapter Paywuz). Melempar `ValidationException` bila
-  API key belum tersimpan; kosong bila tenant bukan Paywuz.
+- **Pilihan metode per-tenant (UI):** halaman setelan menampilkan **dropdown statis meta-method**
+  `QRIS` / `VA` ("Virtual Account (Pilih Bank)") + opsi "Default server (QRIS)" — kode disimpan apa
+  adanya ke kolom `payment_method`, plus tampilan **URL webhook per-tenant** (read-only, tombol
+  salin) yang ditempel operator ke dashboard Paywuz. Endpoint dinamis `GET /api/billing/gateway-settings/paywuz-methods`
+  (`billing.gateway.view`, memanggil `GET /v1/payment-methods` proyek tenant lewat port outbound
+  `PaywuzMethodDirectory`) **masih tersedia** tapi tak lagi dipakai UI — dipertahankan untuk klien
+  yang ingin daftar metode live per proyek.
 - **IDR zero-decimal:** `amount` dikirim `setScale(0, HALF_UP)`. `expiryMinutes` dari config (default 1440).
 
 **Callback** (`POST /api/billing/webhooks/{tenantSlug}/paywuz`): header **`X-Paywuz-Signature:
 sha256=<hex>`** = HMAC-SHA256(**api_key**, rawBody) dibanding **constant-time**; hanya status
 `settlement`/`success` jadi settlement. `PaymentSettlement(orderId, id, amount, timestamp ?: now)`.
+
+---
+
+## Pembayaran manual (transfer / QRIS) — V54
+
+Saat gateway **nonaktif** (atau provider `MANUAL`), tenant "cuma bisa manual" — dan `ManualPaymentGateway`
+tak punya tautan bayar. Fitur ini mengisi celah itu: tenant mengatur **instruksi bayar manual** yang
+tampil ke pelanggan pada tagihan MANUAL. Dua metode independen, tiap saklar membuka fieldnya:
+
+- **Transfer bank** — `transfer_bank_name`, `transfer_account_number`, `transfer_account_holder`.
+- **QRIS** — unggah **gambar QRIS**; byte disimpan di **object storage** (bukan DB), DB hanya simpan
+  `qris_storage_key` + `qris_content_type`.
+
+Semua field manual **non-rahasia** → ikuti pola kolom `payment_method` (V51): **plaintext, tak
+dienkripsi, semantik "selalu diganti"** (bukan write-only seperti kredensial). Toggle & teks disimpan
+lewat `PUT /api/billing/gateway-settings` biasa; hanya byte gambar QRIS yang lewat endpoint multipart
+terpisah.
+
+**Object storage QRIS.** Port `ObjectStorage`/`StoredObject` (dulu di modul `workorder`) dipromosikan
+ke `com.duluin.ftth.common.storage` (adapter S3/MinIO di `common.infrastructure.storage`) supaya modul
+`billing` ikut pakai — bucket & prefix `ftth.storage` sama dengan bukti work-order. Key QRIS satu per
+tenant: **`"$tenantId/billing/gateway/qris"`** (unggah ulang menimpa). Validasi: `contentType` harus
+`image/*`, maksimal **5 MB**. Pola "taruh byte dulu, baru simpan metadata" meniru `WorkOrderEvidenceService`.
+
+**UI (halaman Payment Gateway).** Saat `!enabled || provider === 'MANUAL'`, provider terkunci ke
+MANUAL (tanpa dropdown penyedia) dan seksi **"Pembayaran manual"** muncul. Unggah/hapus gambar QRIS
+**ditunda** ke satu alur "Tinjau & simpan" bersama edit transfer (preview lokal ditahan sampai save)
+— PUT setelan dulu, baru unggah/hapus byte — supaya edit transfer tak hilang & tak terasa auto-submit.
+Preview gambar pakai pola `AuthedImage` (`api.blob` → `createObjectURL`, karena `<img src>` tak bisa
+kirim Bearer).
+
+**Tampilan ke pelanggan.** `CustomerDetailPage` memanggil `GET /api/billing/manual-payment-instructions`
+untuk merender panel "Cara bayar" pada tagihan MANUAL yang belum lunas: rekening (bila transfer aktif)
++ gambar QRIS (bila QRIS aktif & tersedia).
 
 ---
 
@@ -259,6 +302,11 @@ di DB/klien/git; rotate bila bocor.
 |---|---|
 | `GET /api/billing/gateway-settings` | `billing.gateway.view` |
 | `PUT /api/billing/gateway-settings` | `billing.gateway.manage` |
+| `POST /api/billing/gateway-settings/qris` (multipart `file`) | `billing.gateway.manage` |
+| `DELETE /api/billing/gateway-settings/qris` | `billing.gateway.manage` |
+| `GET /api/billing/gateway-settings/qris` (byte gambar) | `billing.gateway.view` / `billing.invoice.view` |
+| `GET /api/billing/gateway-settings/paywuz-methods` | `billing.gateway.view` (tak dipakai UI baru) |
+| `GET /api/billing/manual-payment-instructions` | `billing.invoice.view` |
 | `POST /api/billing/platform/gateway/{tenantId}/xendit-subaccount` | `billing.gateway.provision` (platform-only) |
 | `POST /api/billing/webhooks/{tenantSlug}/{provider}` | publik (tanda tangan gateway) |
 
