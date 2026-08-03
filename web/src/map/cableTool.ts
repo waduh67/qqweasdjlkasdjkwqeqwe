@@ -68,8 +68,8 @@ export interface CableTool {
 }
 
 /** Lapisan perangkat yang bisa jadi sasaran snap. Urutan = prioritas saat bertumpuk. */
-const DEVICE_LAYERS = ['customer', 'odp', 'odc', 'site']
-const LAYER_KIND: Record<string, NodeKind> = { site: 'SITE', odc: 'ODC', odp: 'ODP', customer: 'CUSTOMER' }
+const DEVICE_LAYERS = ['customer', 'odp', 'odc', 'olt', 'site']
+const LAYER_KIND: Record<string, NodeKind> = { site: 'SITE', olt: 'OLT', odc: 'ODC', odp: 'ODP', customer: 'CUSTOMER' }
 
 /** Pasangan ujung yang sah beserta tipe kabel yang tersirat (cermin aturan server). */
 function inferType(from: NodeKind, to: NodeKind): CableType | null {

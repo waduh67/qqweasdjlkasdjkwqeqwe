@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
-import type { AssetStatus, OdcView, OdpView, OltView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
+import type { AssetStatus, OdcView, OdpView, OltView, PonPortView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
 import { LocationPicker } from '../components/LocationPicker'
@@ -684,11 +684,81 @@ function OltsTab() {
   )
 }
 
+/**
+ * Pemilih uplink ODC dalam dua langkah: pilih OLT dulu, lalu PON port-nya. ODC
+ * "nyantol" ke sebuah PON port (`ponPortId`) — inilah sambungan LOGIS yang bikin
+ * ODC teraliri (energized), terpisah dari kabel feeder fisik di peta. Port di-fetch
+ * per-OLT (`/api/olts/{id}/pon-ports`) begitu OLT dipilih. Nilai keluaran = id PON
+ * port ('' berarti belum di-uplink). OLT-nya sendiri disimpan sebagai state internal
+ * karena server cukup butuh id port (port sudah tahu OLT-nya).
+ */
+function PonPortPicker({ value, onChange }: { value: string; onChange: (ponPortId: string) => void }) {
+  const { items: olts } = useList<OltView>('/api/olts')
+  const [oltId, setOltId] = useState('')
+  const [ports, setPorts] = useState<PonPortView[]>([])
+  const [loadingPorts, setLoadingPorts] = useState(false)
+
+  useEffect(() => {
+    if (!oltId) {
+      setPorts([])
+      return
+    }
+    let alive = true
+    setLoadingPorts(true)
+    api
+      .get<PonPortView[]>(`/api/olts/${oltId}/pon-ports`)
+      .then((list) => alive && setPorts(list))
+      .catch(() => alive && setPorts([]))
+      .finally(() => alive && setLoadingPorts(false))
+    return () => {
+      alive = false
+    }
+  }, [oltId])
+
+  return (
+    <div className="row">
+      <label style={{ flex: 1 }}>
+        <span>OLT hulu</span>
+        <select
+          value={oltId}
+          onChange={(e) => {
+            setOltId(e.target.value)
+            onChange('')
+          }}
+        >
+          <option value="">— belum di-uplink —</option>
+          {olts.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.code} · {o.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label style={{ flex: 1 }}>
+        <span>PON port</span>
+        <select value={value} onChange={(e) => onChange(e.target.value)} disabled={!oltId || loadingPorts}>
+          <option value="">
+            {!oltId ? '— pilih OLT dulu —' : loadingPorts ? 'memuat…' : '— pilih port —'}
+          </option>
+          {ports.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.label}
+              {p.odcCount > 0 ? ` · ${p.odcCount} ODC` : ''}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  )
+}
+
 function OdcsTab() {
   const { can } = useCan()
   const { items, loading, run } = useList<OdcView>('/api/odcs')
-  const empty = { code: '', name: '', longitude: '', latitude: '', splitterRatio: '1:8', capacity: '64' }
+  const empty = { code: '', name: '', longitude: '', latitude: '', ponPortId: '', splitterRatio: '1:8', capacity: '64' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
+  const [uplinkFor, setUplinkFor] = useState<OdcView | null>(null)
+  const [uplinkPort, setUplinkPort] = useState('')
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('')
 
@@ -734,10 +804,23 @@ function OdcsTab() {
       header: '',
       align: 'right',
       width: '1%',
-      cell: (o) =>
-        can('network.odc.delete') ? (
-          <button onClick={() => void run(() => api.del(`/api/odcs/${o.id}`))}>Hapus</button>
-        ) : null,
+      cell: (o) => (
+        <div className="row" style={{ gap: '0.35rem', justifyContent: 'flex-end' }}>
+          {can('network.odc.update') && (
+            <button
+              onClick={() => {
+                setUplinkFor(o)
+                setUplinkPort('')
+              }}
+            >
+              Uplink
+            </button>
+          )}
+          {can('network.odc.delete') && (
+            <button onClick={() => void run(() => api.del(`/api/odcs/${o.id}`))}>Hapus</button>
+          )}
+        </div>
+      ),
     },
   ]
 
@@ -783,6 +866,7 @@ function OdcsTab() {
             latitude={draft.latitude}
             onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
           />
+          <PonPortPicker value={draft.ponPortId} onChange={(ponPortId) => setDraft({ ...draft, ponPortId })} />
           <div className="row">
             <button
               className="primary"
@@ -792,6 +876,7 @@ function OdcsTab() {
                     code: draft.code,
                     name: draft.name,
                     location: { longitude: Number(draft.longitude), latitude: Number(draft.latitude) },
+                    ponPortId: draft.ponPortId || null,
                     splitterRatio: draft.splitterRatio,
                     capacity: Number(draft.capacity),
                   })
@@ -802,6 +887,42 @@ function OdcsTab() {
               Simpan
             </button>
             <button onClick={() => setDraft(null)}>Batal</button>
+          </div>
+        </div>
+      )}
+
+      {uplinkFor && (
+        <div className="card stack">
+          <div className="spread">
+            <strong>Uplink {uplinkFor.code}</strong>
+            <span className="muted" style={{ fontSize: '0.85rem' }}>
+              {uplinkFor.oltName
+                ? `sekarang: ${uplinkFor.oltName} · ${uplinkFor.ponPortLabel}`
+                : 'sekarang: belum di-uplink'}
+            </span>
+          </div>
+          <PonPortPicker value={uplinkPort} onChange={setUplinkPort} />
+          <div className="row">
+            <button
+              className="primary"
+              onClick={() =>
+                void run(async () => {
+                  await api.put(`/api/odcs/${uplinkFor.id}/uplink`, { targetId: uplinkPort || null })
+                  setUplinkFor(null)
+                  setUplinkPort('')
+                }, 'Uplink ODC diperbarui')
+              }
+            >
+              Simpan uplink
+            </button>
+            <button
+              onClick={() => {
+                setUplinkFor(null)
+                setUplinkPort('')
+              }}
+            >
+              Batal
+            </button>
           </div>
         </div>
       )}
