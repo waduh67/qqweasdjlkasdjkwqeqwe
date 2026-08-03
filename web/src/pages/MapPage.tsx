@@ -1200,9 +1200,7 @@ export function MapPage() {
           <OltPanel
             olt={oltInsp}
             canView={can('network.olt.view')}
-            canDelete={can('network.olt.delete')}
             onOpenDetail={() => navigate(`/olts/${oltInsp.id}`, { state: { backTo: '/map', backLabel: 'Peta' } })}
-            onDelete={() => void deleteAsset('OLT', oltInsp.id, oltInsp.code, () => setOltInsp(null))}
             onClose={() => setOltInsp(null)}
           />
         )}
@@ -2167,24 +2165,19 @@ function SiteOltRow({ olt }: { olt: SiteOlt }) {
 /**
  * Panel sebuah OLT saat markernya diklik: identitas perangkat (vendor/model/IP),
  * status, kesiapan SNMP, dan jumlah port PON — seragam dengan panel ODC/ODP/site.
- * Untuk mengedit lokasi/identitas/SNMP atau mengelola PON port, "Buka detail"
- * membawa ke halaman lengkap OLT. Menghapus OLT ditolak server selama masih ada
- * PON port / ODC di hilirnya, jadi tombolnya tersedia tapi bisa gagal dengan pesan
- * jelas.
+ * Sengaja tanpa tombol hapus: OLT adalah perangkat inti dengan banyak hilir, jadi
+ * penghapusan hanya dari halaman detail yang lebih sengaja lewat "Buka detail"
+ * (di sana pun server menolak selama masih ada ODC menggantung).
  */
 function OltPanel({
   olt,
   canView,
-  canDelete,
   onOpenDetail,
-  onDelete,
   onClose,
 }: {
   olt: OltView
   canView: boolean
-  canDelete: boolean
   onOpenDetail: () => void
-  onDelete: () => void
   onClose: () => void
 }) {
   return (
@@ -2229,18 +2222,13 @@ function OltPanel({
       <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
         Perangkat inti: kalau OLT ini modar, seluruh jalur di hilirnya ikut mati.
       </p>
-      <div className="row wrap" style={{ gap: '0.5rem' }}>
-        {canView && (
+      {canView && (
+        <div className="row">
           <button className="primary" onClick={onOpenDetail}>
             Buka detail
           </button>
-        )}
-        {canDelete && (
-          <button className="ghost danger" onClick={onDelete}>
-            Hapus OLT
-          </button>
-        )}
-      </div>
+        </div>
+      )}
     </aside>
   )
 }
