@@ -39,6 +39,14 @@ ensure_ext() {
   ok "Extension siap."
 }
 
+# Kalau container postgres jalan: tunggu healthy + pastikan extension.
+# Dipanggil habis 'up'/'up-all' biar Flyway V2 gak gagal soal postgis.
+ensure_db_ready() {
+  if $COMPOSE ps --status running postgres 2>/dev/null | grep -q postgres; then
+    wait_pg && ensure_ext
+  fi
+}
+
 usage() {
   cat <<EOF
 dev.sh — helper dev ftth
@@ -75,8 +83,8 @@ cmd="${1:-help}"
 [ "$#" -gt 0 ] && shift || true
 
 case "$cmd" in
-  up)       $COMPOSE up -d "$@" ;;
-  up-all)   $COMPOSE $PROFILE up -d --build "$@" ;;
+  up)       $COMPOSE up -d "$@"; ensure_db_ready ;;
+  up-all)   $COMPOSE $PROFILE up -d --build "$@"; ensure_db_ready ;;
   down)     $COMPOSE $PROFILE down ;;
   reset)
     warn "Ini bakal HAPUS semua data DB & MinIO."

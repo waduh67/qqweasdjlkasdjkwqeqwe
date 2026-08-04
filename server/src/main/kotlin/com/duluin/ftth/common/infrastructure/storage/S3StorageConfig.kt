@@ -1,4 +1,4 @@
-package com.duluin.ftth.workorder.adapter.outbound.storage
+package com.duluin.ftth.common.infrastructure.storage
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -12,8 +12,8 @@ import java.net.URI
 
 /**
  * Merakit klien S3 sinkron yang menunjuk ke MinIO/S3. Dinonaktifkan di profil
- * `test` (di sana [ObjectStorage] dipenuhi implementasi in-memory) supaya uji
- * tidak menuntut MinIO hidup.
+ * `test` (di sana [com.duluin.ftth.common.storage.ObjectStorage] dipenuhi implementasi
+ * in-memory) supaya uji tidak menuntut MinIO hidup.
  */
 @Configuration
 @Profile("!test")

@@ -1,6 +1,7 @@
 package com.duluin.ftth.billing
 
 import com.duluin.ftth.billing.domain.model.GatewayMode
+import com.duluin.ftth.billing.domain.model.ManualPaymentConfig
 import com.duluin.ftth.billing.domain.model.PaymentProvider
 import com.duluin.ftth.billing.domain.model.PlatformGatewayCreds
 import com.duluin.ftth.billing.domain.model.TenantPaymentGateway
@@ -183,6 +184,67 @@ class TenantPaymentGatewayTest {
         assertThatThrownBy {
             defaultGateway().provisionPlatform(subAccountId = "  ", webhookToken = null)
         }.isInstanceOf(ValidationException::class.java)
+    }
+
+    // --- pembayaran manual (tunai/transfer/QRIS) ---
+
+    @Test
+    fun `update menyimpan konfigurasi manual ternormalisasi (whitespace jadi null)`() {
+        val gw = defaultGateway().apply {
+            update(
+                PaymentProvider.MANUAL,
+                GatewayMode.BYO,
+                enabled = false,
+                apiKey = null,
+                secretKey = null,
+                webhookToken = null,
+                manual = ManualPaymentConfig(
+                    transferEnabled = true,
+                    bankName = "  BCA  ",
+                    accountNumber = "1234567890",
+                    accountHolder = "   ", // whitespace → null
+                    qrisEnabled = true,
+                ),
+            )
+        }
+
+        assertThat(gw.manual.transferEnabled).isTrue()
+        assertThat(gw.manual.bankName).isEqualTo("BCA")
+        assertThat(gw.manual.accountNumber).isEqualTo("1234567890")
+        assertThat(gw.manual.accountHolder).isNull()
+        assertThat(gw.manual.qrisEnabled).isTrue()
+    }
+
+    @Test
+    fun `update tanpa manual mengosongkan konfigurasi manual (semantik selalu diganti)`() {
+        val gw = defaultGateway().apply {
+            update(
+                PaymentProvider.MANUAL, GatewayMode.BYO, enabled = false,
+                apiKey = null, secretKey = null, webhookToken = null,
+                manual = ManualPaymentConfig(transferEnabled = true, bankName = "BNI"),
+            )
+        }
+
+        // Update berikutnya tanpa argumen manual → kembali ke EMPTY (bukan pertahankan).
+        gw.update(PaymentProvider.MANUAL, GatewayMode.BYO, enabled = false, apiKey = null, secretKey = null, webhookToken = null)
+
+        assertThat(gw.manual).isEqualTo(ManualPaymentConfig.EMPTY)
+    }
+
+    @Test
+    fun `attachQrisImage mengeset penanda lalu clearQrisImage melepasnya`() {
+        val gw = defaultGateway()
+        assertThat(gw.qrisImageSet).isFalse()
+
+        gw.attachQrisImage(storageKey = "t1/billing/gateway/qris", contentType = "image/png")
+        assertThat(gw.qrisImageSet).isTrue()
+        assertThat(gw.qrisStorageKey).isEqualTo("t1/billing/gateway/qris")
+        assertThat(gw.qrisContentType).isEqualTo("image/png")
+
+        gw.clearQrisImage()
+        assertThat(gw.qrisImageSet).isFalse()
+        assertThat(gw.qrisStorageKey).isNull()
+        assertThat(gw.qrisContentType).isNull()
     }
 
     // --- perkakas uji ---

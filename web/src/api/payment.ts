@@ -34,6 +34,14 @@ export interface PaymentGatewaySettingsView {
   subAccountId: string | null
   /** Paywuz BYO: kode metode per-tenant; null = pakai default server. */
   paymentMethod: string | null
+  // Pembayaran manual (transfer/QRIS) — non-rahasia, ditampilkan apa adanya.
+  manualTransferEnabled: boolean
+  bankName: string | null
+  accountNumber: string | null
+  accountHolder: string | null
+  manualQrisEnabled: boolean
+  /** Apakah gambar QRIS sudah terunggah (byte di object storage). */
+  qrisImageSet: boolean
 }
 
 /** Satu metode pembayaran proyek Paywuz (untuk pilihan di UI). */
@@ -57,6 +65,12 @@ export interface UpdatePaymentGatewaySettingsRequest {
   webhookToken: string | null
   /** Paywuz BYO: kode metode per-tenant; null/kosong = default server. */
   paymentMethod: string | null
+  // Pembayaran manual (non-rahasia) — selalu diganti; gambar QRIS diunggah terpisah.
+  manualTransferEnabled: boolean
+  bankName: string | null
+  accountNumber: string | null
+  accountHolder: string | null
+  manualQrisEnabled: boolean
 }
 
 export function getPaymentGatewaySettings(): Promise<PaymentGatewaySettingsView> {
@@ -72,6 +86,39 @@ export function updatePaymentGatewaySettings(
 /** Metode aktif proyek Paywuz tenant (pakai API key tersimpan) — untuk pilihan metode per-tenant. */
 export function getPaywuzMethods(): Promise<PaywuzMethod[]> {
   return api.get('/api/billing/gateway-settings/paywuz-methods')
+}
+
+/** Path konten byte gambar QRIS (ter-gate) — untuk pola `AuthedImage` (api.blob + createObjectURL). */
+export const QRIS_IMAGE_PATH = '/api/billing/gateway-settings/qris'
+
+/** Unggah/ganti gambar QRIS pembayaran manual. Multipart, jadi di luar tombol simpan utama. */
+export function uploadQrisImage(file: File): Promise<PaymentGatewaySettingsView> {
+  const form = new FormData()
+  form.append('file', file)
+  return api.postForm(QRIS_IMAGE_PATH, form)
+}
+
+/** Hapus gambar QRIS pembayaran manual. */
+export function deleteQrisImage(): Promise<PaymentGatewaySettingsView> {
+  return api.del(QRIS_IMAGE_PATH)
+}
+
+/**
+ * Instruksi bayar manual ringkas untuk ditunjukkan ke pelanggan (halaman detail pelanggan) pada
+ * tagihan MANUAL. Non-rahasia; gambar QRIS diambil lewat `QRIS_IMAGE_PATH`.
+ */
+export interface ManualPaymentInstructionsView {
+  transferEnabled: boolean
+  bankName: string | null
+  accountNumber: string | null
+  accountHolder: string | null
+  qrisEnabled: boolean
+  qrisImageAvailable: boolean
+}
+
+/** Instruksi bayar manual tenant aktif (di-gate `billing.invoice.view`). */
+export function getManualPaymentInstructions(): Promise<ManualPaymentInstructionsView> {
+  return api.get('/api/billing/manual-payment-instructions')
 }
 
 /** Permintaan provisioning sub-account Xendit (aksi platform-admin, mode PLATFORM). */

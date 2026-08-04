@@ -46,4 +46,27 @@ class TenantPaymentGatewayJpaEntity(
     // BUKAN ciphertext — kode metode Paywuz per-tenant (bukan rahasia).
     @Column(name = "payment_method", length = 64)
     var paymentMethod: String?,
+
+    // --- Pembayaran manual (transfer/QRIS) — semua NON-rahasia (plaintext). ---
+    @Column(name = "manual_transfer_enabled", nullable = false)
+    var manualTransferEnabled: Boolean,
+
+    @Column(name = "transfer_bank_name", length = 120)
+    var transferBankName: String?,
+
+    @Column(name = "transfer_account_number", length = 60)
+    var transferAccountNumber: String?,
+
+    @Column(name = "transfer_account_holder", length = 160)
+    var transferAccountHolder: String?,
+
+    @Column(name = "manual_qris_enabled", nullable = false)
+    var manualQrisEnabled: Boolean,
+
+    // Object-storage key gambar QRIS (byte-nya di MinIO/S3, bukan di DB).
+    @Column(name = "qris_storage_key", length = 255)
+    var qrisStorageKey: String?,
+
+    @Column(name = "qris_content_type", length = 100)
+    var qrisContentType: String?,
 ) : TenantAwareJpaEntity(id)
