@@ -5,8 +5,10 @@ import { ToastProvider } from './components/ui'
 import { useAuth } from './auth/useAuth'
 import { useCan } from './auth/useCan'
 import { Layout } from './components/Layout'
+import { PlatformLayout } from './components/PlatformLayout'
 import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { PlatformDashboardPage } from './pages/PlatformDashboardPage'
 import { InventoryPage } from './pages/InventoryPage'
 import { OltDetailPage } from './pages/OltDetailPage'
 import { CustomersPage } from './pages/CustomersPage'
@@ -64,10 +66,29 @@ function RequirePermission({ permission, children }: { permission: string; child
   return <>{children}</>
 }
 
+/**
+ * Setelah login, Platform admin mendarat di shell platform (`/platform`); operator
+ * tenant ke beranda tenant (`/`). Pengalihan hanya di sini — bukan di `/` — supaya
+ * beranda tenant tetap bisa dibuka platform admin (mis. lewat "Tampilan Tenant")
+ * tanpa terlempar balik ke `/platform`.
+ */
 function LoginRoute() {
   const { user, loading } = useAuth()
+  const { isPlatformAdmin } = useCan()
   if (loading) return <div className="login-shell muted">Memuat…</div>
-  return user ? <Navigate to="/" replace /> : <LoginPage />
+  if (!user) return <LoginPage />
+  return <Navigate to={isPlatformAdmin ? '/platform' : '/'} replace />
+}
+
+/**
+ * Penjaga area `/platform/*`: hanya Platform admin (SaaS super-admin). Bukan
+ * penegak keamanan — server tetap otoritatif — melainkan agar operator tenant biasa
+ * tak nyasar ke shell platform. Non-platform-admin dialihkan ke beranda tenant.
+ */
+function RequirePlatformAdmin({ children }: { children: ReactNode }) {
+  const { isPlatformAdmin } = useCan()
+  if (!isPlatformAdmin) return <Navigate to="/" replace />
+  return <>{children}</>
 }
 
 export default function App() {
@@ -169,14 +190,8 @@ export default function App() {
                 </RequirePermission>
               }
             />
-            <Route
-              path="vpn-servers"
-              element={
-                <RequirePermission permission="vpn.server.view">
-                  <VpnServersPage />
-                </RequirePermission>
-              }
-            />
+            {/* Pindah ke area platform; jaga bookmark lama. */}
+            <Route path="vpn-servers" element={<Navigate to="/platform/vpn-servers" replace />} />
             <Route
               path="monitoring"
               element={
@@ -265,22 +280,9 @@ export default function App() {
                 </RequirePermission>
               }
             />
-            <Route
-              path="tenants"
-              element={
-                <RequirePermission permission="platform.tenant.view">
-                  <TenantsPage />
-                </RequirePermission>
-              }
-            />
-            <Route
-              path="platform-billing"
-              element={
-                <RequirePermission permission="platform.billing.view">
-                  <PlatformBillingSettingsPage />
-                </RequirePermission>
-              }
-            />
+            {/* Pindah ke area platform; jaga bookmark lama. */}
+            <Route path="tenants" element={<Navigate to="/platform/tenants" replace />} />
+            <Route path="platform-billing" element={<Navigate to="/platform/billing" replace />} />
             <Route
               path="notifications"
               element={
@@ -306,6 +308,70 @@ export default function App() {
               }
             />
           </Route>
+
+          {/* Area khusus Platform admin (SaaS) — shell & dashboard terpisah dari tenant.
+              Halaman platform yang dipakai ulang tak berubah, hanya di-mount di sini. */}
+          <Route
+            path="platform"
+            element={
+              <RequireAuth>
+                <RequirePlatformAdmin>
+                  <PlatformLayout />
+                </RequirePlatformAdmin>
+              </RequireAuth>
+            }
+          >
+            <Route index element={<PlatformDashboardPage />} />
+            <Route
+              path="tenants"
+              element={
+                <RequirePermission permission="platform.tenant.view">
+                  <TenantsPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="billing"
+              element={
+                <RequirePermission permission="platform.billing.view">
+                  <PlatformBillingSettingsPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="vpn-servers"
+              element={
+                <RequirePermission permission="vpn.server.view">
+                  <VpnServersPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="users"
+              element={
+                <RequirePermission permission="iam.user.view">
+                  <UsersPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="roles"
+              element={
+                <RequirePermission permission="iam.role.view">
+                  <RolesPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="audit"
+              element={
+                <RequirePermission permission="audit.log.view">
+                  <AuditPage />
+                </RequirePermission>
+              }
+            />
+          </Route>
+
           <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>

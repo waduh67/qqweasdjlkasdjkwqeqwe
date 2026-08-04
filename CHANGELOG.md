@@ -6,6 +6,34 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-04 — Area UI khusus Platform admin (SaaS) terpisah dari UI tenant
+
+Platform admin (SaaS super-admin, `user.platformAdmin`) kini punya **shell & dashboard
+sendiri** di namespace `/platform/*`, tak lagi bercampur dengan menu operasional tenant.
+Murni pekerjaan frontend — tanpa endpoint atau permission baru.
+
+**Ditambahkan**
+- **Shell platform** `PlatformLayout` (`web/src/components/PlatformLayout.tsx`): sidebar khusus
+  platform (Dashboard, Tenant, Billing Langganan, Server VPN, plus Administrasi Platform:
+  Pengguna/Role/Audit) dengan brand "NetOps · Platform" dan pintasan "↗ Tampilan Tenant" untuk
+  inspeksi area tenant.
+- **Dashboard SaaS** `PlatformDashboardPage` (`web/src/pages/PlatformDashboardPage.tsx`): lean,
+  dirakit dari endpoint yang ada — ringkasan portofolio tenant (total/aktif/ditangguhkan), gateway
+  aktif & biaya bulanan default, daftar tenant, dan pintasan.
+- **Namespace rute `/platform/*`** dengan penjaga `RequirePlatformAdmin`; halaman platform yang ada
+  (`TenantsPage`, `PlatformBillingSettingsPage`, `VpnServersPage`, `UsersPage`, `RolesPage`,
+  `AuditPage`) dipakai ulang apa adanya, hanya di-mount di path baru.
+
+**Diubah**
+- **Landing platform admin** kini otomatis ke `/platform` sesudah login (operator tenant tetap ke
+  beranda operasional). Pengalihan hanya saat login — beranda tenant `/` tetap bisa dibuka platform
+  admin lewat "Tampilan Tenant" tanpa terlempar balik.
+- **Nav tenant** (`Layout`) tak lagi memuat item platform (Tenant, Billing Langganan, Server VPN) —
+  item-item itu memang hanya pernah terlihat oleh platform admin. Sebagai gantinya, saat platform
+  admin menengok area tenant, sidebar memunculkan pintasan **"Tampilan Platform"** (balik ke `/platform`).
+- **Rute platform lama jadi redirect** demi jaga bookmark: `/tenants` → `/platform/tenants`,
+  `/platform-billing` → `/platform/billing`, `/vpn-servers` → `/platform/vpn-servers`.
+
 ### 2026-08-04 — Langganan SaaS: harga default global + override khusus + self-service tenant
 
 Model harga langganan aplikasi (SaaS) dirapikan menjadi **flat + override** dengan halaman

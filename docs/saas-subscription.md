@@ -234,6 +234,14 @@ val tenantIds = tenantApi.findActiveTenantIds().filterNot { it == platformId }
   di-load dari setelan platform bila punya `platform.billing.view`).
 - **Setelan platform** (`PlatformBillingSettingsPage.tsx`): input *Harga bulanan default*.
 
+> **Area Platform admin terpisah.** Halaman sisi platform di atas (onboarding tenant, setelan
+> billing langganan, server VPN, plus pengguna/role/audit) tidak lagi bercampur dengan menu tenant.
+> Platform admin (`user.platformAdmin`) punya shell & dashboard sendiri — `PlatformLayout` +
+> `PlatformDashboardPage` — di namespace **`/platform/*`** (`web/src/App.tsx`, dijaga
+> `RequirePlatformAdmin`). Login sebagai platform admin mendarat di `/platform`; path lama
+> (`/tenants`, `/platform-billing`, `/vpn-servers`) dialihkan ke `/platform/*`. Platform admin tetap
+> boleh membuka halaman operasional tenant lewat deep-link untuk inspeksi (tanpa redirect paksa).
+
 **Pemakaian kosmetik** dihitung server-side lewat `SubscriptionUsageProbe` (count OLT/ODC/ODP/
 pelanggan) memakai `EntityManager` — koneksi Hibernate membawa GUC `app.tenant_id` (RLS-aware),
 beda dari `JdbcTemplate` polos. Angka nyata, **batasnya bohong** (selalu Unlimited): murni hiasan,

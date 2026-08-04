@@ -150,6 +150,12 @@ satu baris di katalog.
 Penegakan: `@PreAuthorize("@authz.can('iam.role.create')")` di controller;
 platform admin melewati semua pengecekan.
 
+Di frontend, Platform admin punya **area terpisah** dari operator tenant: shell &
+dashboard SaaS sendiri di namespace `/platform/*` (tenant, billing langganan, server
+VPN, plus pengguna/role/audit platform). Login sebagai platform admin mendarat di
+`/platform`; ia tetap boleh membuka halaman operasional tenant lewat deep-link untuk
+inspeksi. Detail: [`docs/saas-subscription.md`](docs/saas-subscription.md).
+
 Scope area diterjemahkan ke satu nilai lewat `AuthenticatedUser.areaScope()`:
 `null` = tanpa batas, set berisi = hanya area itu, **set kosong = nol data**
 (pengguna yang dibatasi area tapi belum diberi area tidak boleh melihat seluruh

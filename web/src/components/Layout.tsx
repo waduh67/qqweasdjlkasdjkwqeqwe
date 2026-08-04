@@ -86,11 +86,8 @@ const GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
       { to: '/roles', label: 'Role & Izin', permission: 'iam.role.view', icon: IconShield },
       { to: '/areas', label: 'Area', permission: 'iam.area.view', icon: IconArea },
       { to: '/audit', label: 'Jejak Audit', permission: 'audit.log.view', icon: IconAudit },
-      { to: '/vpn-servers', label: 'Server VPN', permission: 'vpn.server.view', icon: IconRoute },
       { to: '/notifications', label: 'Notifikasi', permission: 'notification.settings.view', icon: IconAlert },
       { to: '/payment-gateway', label: 'Payment Gateway', permission: 'billing.gateway.view', icon: IconPackage },
-      { to: '/tenants', label: 'Tenant', permission: 'platform.tenant.view', icon: IconBuilding },
-      { to: '/platform-billing', label: 'Billing Langganan', permission: 'platform.billing.view', icon: IconGauge },
     ],
   },
 ]
@@ -105,7 +102,7 @@ const COLLAPSE_KEY = 'ftth.sidebarCollapsed'
 
 export function Layout() {
   const { user, logout } = useAuth()
-  const { can } = useCan()
+  const { can, isPlatformAdmin } = useCan()
   const location = useLocation()
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1')
 
@@ -133,6 +130,16 @@ export function Layout() {
           </span>
           <span className="brand-text">NetOps</span>
         </div>
+
+        {/* Platform admin sedang menengok area tenant — beri jalan cepat balik ke shell platform. */}
+        {isPlatformAdmin && (
+          <nav>
+            <NavLink to="/platform" title="Kembali ke tampilan platform">
+              <IconBuilding size={18} />
+              <span className="nav-text">Tampilan Platform</span>
+            </NavLink>
+          </nav>
+        )}
 
         {GROUPS.map((group, i) => {
           const visible = group.items.filter((item) => item.permission === null || can(item.permission))
