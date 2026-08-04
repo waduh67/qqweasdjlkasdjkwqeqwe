@@ -7,9 +7,11 @@ import com.duluin.ftth.tenancy.TenantStatus
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
+import java.math.BigDecimal
 import org.springframework.http.HttpStatus
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.PostMapping
@@ -42,6 +44,7 @@ class TenantOnboardingController(
                     adminEmail = request.adminEmail,
                     adminName = request.adminName,
                     adminPassword = request.adminPassword,
+                    monthlyFee = request.monthlyFee,
                 ),
             ),
         )
@@ -53,6 +56,9 @@ data class OnboardTenantRequest(
     @field:Email @field:NotBlank val adminEmail: String,
     @field:NotBlank val adminName: String,
     @field:Size(min = 8) val adminPassword: String,
+    /** Harga langganan khusus (opsional); null/kosong = pakai harga default global. */
+    @field:DecimalMin(value = "0", message = "Harga bulanan tidak boleh negatif")
+    val monthlyFee: BigDecimal? = null,
 )
 
 data class OnboardTenantResponse(

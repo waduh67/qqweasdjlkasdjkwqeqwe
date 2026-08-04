@@ -123,6 +123,7 @@ function GlobalPanel({
   const [graceDays, setGraceDays] = useState(String(settings.defaultGraceDays))
   const [dueDays, setDueDays] = useState(String(settings.defaultDueDays))
   const [billingDay, setBillingDay] = useState(String(settings.defaultBillingDay))
+  const [monthlyFee, setMonthlyFee] = useState(String(settings.defaultMonthlyFee))
   const [currency, setCurrency] = useState(settings.currency)
   const [saving, setSaving] = useState(false)
 
@@ -131,6 +132,7 @@ function GlobalPanel({
     Number(graceDays) !== settings.defaultGraceDays ||
     Number(dueDays) !== settings.defaultDueDays ||
     Number(billingDay) !== settings.defaultBillingDay ||
+    Number(monthlyFee) !== settings.defaultMonthlyFee ||
     currency.trim().toUpperCase() !== settings.currency
 
   const activeGateway = settings.gateways.find((g) => g.provider === activeProvider)
@@ -144,6 +146,7 @@ function GlobalPanel({
         defaultGraceDays: Number(graceDays),
         defaultDueDays: Number(dueDays),
         defaultBillingDay: Number(billingDay),
+        defaultMonthlyFee: Number(monthlyFee),
         currency: currency.trim().toUpperCase(),
       })
       onSaved(result)
@@ -192,6 +195,20 @@ function GlobalPanel({
       )}
 
       <div className="hr" />
+
+      <FormRow
+        label="Harga bulanan default (Rp)"
+        hint="Biaya langganan bulanan yang sama untuk semua tenant. Saat onboarding tenant baru, super-admin bisa menimpanya jadi harga khusus."
+      >
+        <input
+          type="number"
+          min={0}
+          step={1000}
+          value={monthlyFee}
+          onChange={(e) => setMonthlyFee(e.target.value)}
+          disabled={!manage}
+        />
+      </FormRow>
 
       <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
         <label style={{ flex: 1, minWidth: 140 }}>

@@ -73,11 +73,39 @@ class TenantSubscription private constructor(
         this.nextInvoiceAt = date
     }
 
+    /**
+     * Beri masa aktif awal saat langganan baru dibuat: aktif sejak [start] selama sebulan, dan tagihan
+     * PERTAMA baru terbit menjelang periode itu habis. Menghindari tenant baru langsung tertagih/tersuspend
+     * di siklus scheduler berikutnya; perpanjangan setelahnya menambah masa aktif saat LUNAS.
+     */
+    fun seedInitialPeriod(start: LocalDate) {
+        this.currentPeriodStart = start
+        this.currentPeriodEnd = start.plusMonths(1)
+        this.nextInvoiceAt = start.plusMonths(1)
+    }
+
     /** Tandai periode berjalan + jadwal tagihan berikutnya (dipanggil generator saat menerbitkan). */
     fun openPeriod(start: LocalDate, end: LocalDate, nextInvoiceAt: LocalDate) {
         this.currentPeriodStart = start
         this.currentPeriodEnd = end
         this.nextInvoiceAt = nextInvoiceAt
+    }
+
+    /**
+     * Perpanjang masa aktif sebulan saat sebuah tagihan LUNAS — inilah yang menambah `currentPeriodEnd`
+     * (bukan penerbitan tagihan). Menumpuk di ujung bila masa aktif belum habis; bila sudah lewat atau
+     * belum pernah aktif, mulai periode baru dari [today]. Tak berlaku bila langganan CANCELLED.
+     */
+    fun extendOnPayment(today: LocalDate) {
+        if (status == SubscriptionStatus.CANCELLED) return
+        val end = currentPeriodEnd
+        if (end == null || end.isBefore(today)) {
+            currentPeriodStart = today
+            currentPeriodEnd = today.plusMonths(1)
+        } else {
+            currentPeriodEnd = end.plusMonths(1)
+        }
+        if (activatedAt == null) activatedAt = Instant.now()
     }
 
     /** Ada tagihan lewat jatuh tempo (masih dalam grace). Idempoten; tak berlaku bila CANCELLED. */

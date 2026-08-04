@@ -86,6 +86,7 @@ const GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
       { to: '/vpn-servers', label: 'Server VPN', permission: 'vpn.server.view', icon: IconRoute },
       { to: '/notifications', label: 'Notifikasi', permission: 'notification.settings.view', icon: IconAlert },
       { to: '/payment-gateway', label: 'Payment Gateway', permission: 'billing.gateway.view', icon: IconPackage },
+      { to: '/subscription', label: 'Langganan Aplikasi', permission: 'billing.subscription.view', icon: IconGauge },
       { to: '/tenants', label: 'Tenant', permission: 'platform.tenant.view', icon: IconBuilding },
       { to: '/platform-billing', label: 'Billing Langganan', permission: 'platform.billing.view', icon: IconGauge },
     ],

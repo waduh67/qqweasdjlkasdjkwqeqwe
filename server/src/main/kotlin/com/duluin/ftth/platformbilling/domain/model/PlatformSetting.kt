@@ -2,6 +2,8 @@ package com.duluin.ftth.platformbilling.domain.model
 
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.UUID
 
 /** Penyedia pembayaran untuk menagih langganan tenant ke platform. */
@@ -19,9 +21,14 @@ class PlatformSetting private constructor(
     defaultGraceDays: Int,
     defaultDueDays: Int,
     defaultBillingDay: Int,
+    defaultMonthlyFee: BigDecimal,
     currency: String,
 ) {
     var activeProvider: PlatformPaymentProvider = activeProvider
+        private set
+
+    /** Harga bulanan bawaan untuk tenant baru saat super-admin tak mengisi harga khusus. */
+    var defaultMonthlyFee: BigDecimal = defaultMonthlyFee
         private set
 
     var defaultGraceDays: Int = defaultGraceDays
@@ -41,12 +48,14 @@ class PlatformSetting private constructor(
         defaultGraceDays: Int,
         defaultDueDays: Int,
         defaultBillingDay: Int,
+        defaultMonthlyFee: BigDecimal,
         currency: String,
     ) {
         this.activeProvider = activeProvider
         this.defaultGraceDays = validateDays(defaultGraceDays, "Masa tenggang")
         this.defaultDueDays = validateDays(defaultDueDays, "Jatuh tempo")
         this.defaultBillingDay = validateBillingDay(defaultBillingDay)
+        this.defaultMonthlyFee = validateFee(defaultMonthlyFee)
         this.currency = validateCurrency(currency)
     }
 
@@ -58,6 +67,7 @@ class PlatformSetting private constructor(
             defaultGraceDays = 7,
             defaultDueDays = 7,
             defaultBillingDay = 1,
+            defaultMonthlyFee = BigDecimal.ZERO.setScale(2),
             currency = "IDR",
         )
 
@@ -67,10 +77,17 @@ class PlatformSetting private constructor(
             defaultGraceDays: Int,
             defaultDueDays: Int,
             defaultBillingDay: Int,
+            defaultMonthlyFee: BigDecimal,
             currency: String,
         ): PlatformSetting = PlatformSetting(
-            id, activeProvider, defaultGraceDays, defaultDueDays, defaultBillingDay, currency,
+            id, activeProvider, defaultGraceDays, defaultDueDays, defaultBillingDay,
+            defaultMonthlyFee, currency,
         )
+
+        private fun validateFee(fee: BigDecimal): BigDecimal {
+            if (fee.signum() < 0) throw ValidationException("Harga bulanan default tidak boleh negatif")
+            return fee.setScale(2, RoundingMode.HALF_UP)
+        }
 
         private fun validateDays(days: Int, label: String): Int {
             if (days < 0) throw ValidationException("$label tidak boleh negatif")

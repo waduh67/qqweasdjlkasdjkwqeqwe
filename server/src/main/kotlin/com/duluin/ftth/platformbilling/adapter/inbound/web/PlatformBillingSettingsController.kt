@@ -8,9 +8,11 @@ import com.duluin.ftth.platformbilling.domain.model.PlatformPaymentProvider
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotNull
+import java.math.BigDecimal
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -43,6 +45,7 @@ class PlatformBillingSettingsController(
                 defaultGraceDays = body.defaultGraceDays,
                 defaultDueDays = body.defaultDueDays,
                 defaultBillingDay = body.defaultBillingDay,
+                defaultMonthlyFee = body.defaultMonthlyFee,
                 currency = body.currency,
             ),
         )
@@ -74,6 +77,8 @@ data class UpdateSettingRequest(
     val defaultDueDays: Int = 7,
     @field:Min(1) @field:Max(28)
     val defaultBillingDay: Int = 1,
+    @field:DecimalMin(value = "0", message = "Harga bulanan default tidak boleh negatif")
+    val defaultMonthlyFee: BigDecimal = BigDecimal.ZERO,
     val currency: String = "IDR",
 )
 

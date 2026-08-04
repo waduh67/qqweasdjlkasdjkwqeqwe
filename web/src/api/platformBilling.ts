@@ -34,6 +34,8 @@ export interface PlatformBillingSettingsView {
   defaultGraceDays: number
   defaultDueDays: number
   defaultBillingDay: number
+  /** Harga langganan bulanan default (sama untuk semua tenant, bisa dioverride saat onboarding). */
+  defaultMonthlyFee: number
   currency: string
   gateways: PlatformGatewayView[]
 }
@@ -44,6 +46,7 @@ export interface UpdatePlatformSettingsRequest {
   defaultGraceDays: number
   defaultDueDays: number
   defaultBillingDay: number
+  defaultMonthlyFee: number
   currency: string
 }
 

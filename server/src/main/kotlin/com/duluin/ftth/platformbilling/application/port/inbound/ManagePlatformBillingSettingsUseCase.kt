@@ -1,6 +1,7 @@
 package com.duluin.ftth.platformbilling.application.port.inbound
 
 import com.duluin.ftth.platformbilling.domain.model.PlatformPaymentProvider
+import java.math.BigDecimal
 
 /**
  * Sisi super-admin: baca & ubah setelan billing global platform (gateway aktif, default
@@ -19,6 +20,7 @@ data class PlatformBillingSettingsView(
     val defaultGraceDays: Int,
     val defaultDueDays: Int,
     val defaultBillingDay: Int,
+    val defaultMonthlyFee: BigDecimal,
     val currency: String,
     val gateways: List<PlatformGatewayView>,
 )
@@ -40,6 +42,7 @@ data class UpdatePlatformSettingsCommand(
     val defaultGraceDays: Int,
     val defaultDueDays: Int,
     val defaultBillingDay: Int,
+    val defaultMonthlyFee: BigDecimal,
     val currency: String,
 )
 

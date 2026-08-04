@@ -137,6 +137,9 @@ object PermissionCatalog {
         perm("billing.payment.manage", "Catat pembayaran manual")
         perm("billing.gateway.view", "Lihat setelan payment gateway")
         perm("billing.gateway.manage", "Kelola penyedia & kredensial payment gateway")
+        // Langganan SaaS sisi tenant: lihat masa aktif/tagihan sendiri + perpanjang mandiri.
+        perm("billing.subscription.view", "Lihat langganan aplikasi (masa aktif, tagihan)")
+        perm("billing.subscription.renew", "Perpanjang langganan aplikasi (buat tagihan & bayar)")
         // Provisioning sub-account Xendit PLATFORM: aksi lintas-tenant milik platform-admin.
         platform("billing.gateway.provision", "Provisikan sub-account Xendit (mode PLATFORM) untuk tenant")
 

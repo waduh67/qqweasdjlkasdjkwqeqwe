@@ -38,6 +38,7 @@ class PlatformBillingSettingsService(
             defaultGraceDays = command.defaultGraceDays,
             defaultDueDays = command.defaultDueDays,
             defaultBillingDay = command.defaultBillingDay,
+            defaultMonthlyFee = command.defaultMonthlyFee,
             currency = command.currency,
         )
         val saved = settingRepository.save(setting)
@@ -85,6 +86,7 @@ class PlatformBillingSettingsService(
             defaultGraceDays = setting.defaultGraceDays,
             defaultDueDays = setting.defaultDueDays,
             defaultBillingDay = setting.defaultBillingDay,
+            defaultMonthlyFee = setting.defaultMonthlyFee,
             currency = setting.currency,
             gateways = gateways,
         )

@@ -7,6 +7,7 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Table
+import java.math.BigDecimal
 import java.util.UUID
 
 /**
@@ -30,6 +31,9 @@ class PlatformSettingJpaEntity(
 
     @Column(name = "default_billing_day", nullable = false)
     var defaultBillingDay: Int,
+
+    @Column(name = "default_monthly_fee", nullable = false)
+    var defaultMonthlyFee: BigDecimal,
 
     @Column(nullable = false, length = 3)
     var currency: String,

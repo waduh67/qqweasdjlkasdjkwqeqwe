@@ -21,6 +21,7 @@ class PlatformSettingPersistenceAdapter(
             defaultGraceDays = setting.defaultGraceDays
             defaultDueDays = setting.defaultDueDays
             defaultBillingDay = setting.defaultBillingDay
+            defaultMonthlyFee = setting.defaultMonthlyFee
             currency = setting.currency
         } ?: PlatformSettingJpaEntity(
             id = setting.id,
@@ -28,6 +29,7 @@ class PlatformSettingPersistenceAdapter(
             defaultGraceDays = setting.defaultGraceDays,
             defaultDueDays = setting.defaultDueDays,
             defaultBillingDay = setting.defaultBillingDay,
+            defaultMonthlyFee = setting.defaultMonthlyFee,
             currency = setting.currency,
         )
         return jpa.save(entity).toDomain()
@@ -39,6 +41,7 @@ class PlatformSettingPersistenceAdapter(
         defaultGraceDays = defaultGraceDays,
         defaultDueDays = defaultDueDays,
         defaultBillingDay = defaultBillingDay,
+        defaultMonthlyFee = defaultMonthlyFee,
         currency = currency,
     )
 }

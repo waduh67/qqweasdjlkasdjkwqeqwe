@@ -48,9 +48,10 @@ class PlatformInvoiceGenerator(
         val periodEnd = periodStart.plusMonths(1).minusDays(1)
         val number = "SUB-${periodStart.format(YEAR_MONTH)}-${tenantShort(subscription.tenantId)}"
 
-        // Selalu majukan jadwal berikut agar langganan tak tersangkut, walau tagihan periode ini
-        // sudah ada (penerbitan susulan/duplikat).
-        subscription.openPeriod(periodStart, periodEnd, periodStart.plusMonths(1))
+        // Majukan HANYA jadwal tagihan berikutnya agar langganan tak tersangkut; masa aktif
+        // (`currentPeriodEnd`) TIDAK diperpanjang di sini — itu terjadi saat tagihan LUNAS
+        // ([TenantSubscription.extendOnPayment]). Berlaku walau tagihan periode ini sudah ada.
+        subscription.scheduleNextInvoice(periodStart.plusMonths(1))
         subscriptionRepository.save(subscription)
 
         if (invoiceRepository.findByNumber(number) != null) {

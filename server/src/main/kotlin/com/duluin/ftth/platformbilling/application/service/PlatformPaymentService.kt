@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -99,6 +100,11 @@ class PlatformPaymentService(
             tenantId = tenantApi.platformTenantId(),
             detail = mapOf("number" to saved.number, "provider" to provider),
         )
+        // Pelunasan memperpanjang masa aktif sebulan (bukan penerbitan tagihan) — sesuai model LUNAS.
+        subscriptionRepository.findById(saved.subscriptionId)?.let { subscription ->
+            subscription.extendOnPayment(LocalDate.now())
+            subscriptionRepository.save(subscription)
+        }
         reactivateIfCleared(saved.subscriptionId, saved.tenantId)
         return saved
     }

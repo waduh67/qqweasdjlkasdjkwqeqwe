@@ -6,6 +6,30 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-04 — Langganan SaaS: harga default global + override khusus + self-service tenant
+
+Model harga langganan aplikasi (SaaS) dirapikan menjadi **flat + override** dengan halaman
+langganan mandiri sisi tenant.
+
+**Ditambahkan**
+- **Harga bulanan default global** di setelan Billing Langganan Platform (satu harga untuk semua
+  tenant). Migrasi **V58** — kolom `default_monthly_fee` pada `platform_setting`.
+- **Override harga khusus saat onboarding tenant**: form "Onboarding tenant" punya kolom
+  "Harga bulanan khusus" (kosong = pakai harga default global). Langganan tenant dibuat otomatis
+  saat onboarding (idempotent), plus **backfill** memastikan tiap tenant lama punya langganan
+  (tenant `platform` dikecualikan).
+- **Halaman "Langganan Aplikasi" sisi tenant** (`/subscription`, izin `billing.subscription.view`):
+  masa aktif + status, pemakaian kosmetik (mis. "OLT 10 / Unlimited" — tanpa batas nyata), riwayat
+  tagihan, dan tombol **Perpanjang** mandiri lewat gateway aktif (izin `billing.subscription.renew`).
+  Endpoint baru `GET /api/subscription` + `POST /api/subscription/renew`.
+
+**Diubah**
+- **Masa aktif bertambah saat tagihan LUNAS**, bukan saat tagihan terbit. Penerbitan tagihan hanya
+  memajukan jadwal tagih berikutnya; pelunasan (webhook gateway / manual) memperpanjang
+  `current_period_end` sebulan (menumpuk bila masa aktif belum habis).
+- Langganan baru diberi **masa aktif awal sebulan** dengan tagihan pertama terbit menjelang periode
+  habis — mencegah tenant baru langsung tertagih/tersuspend oleh scheduler.
+
 ### 2026-08-04 — Input SNMP untuk OLT vendor HSGQ
 
 **Diperbaiki**
