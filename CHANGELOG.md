@@ -6,6 +6,15 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-04 — Input SNMP untuk OLT vendor HSGQ
+
+**Diperbaiki**
+- Form **tambah OLT** kini menampilkan input SNMP (community string / versi / port) saat vendor
+  **HSGQ** dipilih. Sebelumnya seksi SNMP disembunyikan karena asumsi keliru "HSGQ tak berbicara
+  SNMP" — padahal HSGQ EPON nyatanya dipolling lewat SNMP (`HsgqEponSnmpAdapter` terdaftar di
+  poller). HSGQ kini bersifat **dual-channel**: memilih vendor HSGQ menyalakan SNMP **dan** Web UI,
+  keduanya sekaligus.
+
 ### 2026-08-04 — Pembayaran manual (transfer / QRIS) + rework UI Paywuz
 
 Bagian dari rework bertahap payment gateway ([`docs/payment-gateway.md`](docs/payment-gateway.md)),
