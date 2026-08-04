@@ -13,7 +13,7 @@ langganan mandiri sisi tenant. Strategi lengkap: [`docs/saas-subscription.md`](d
 
 **Ditambahkan**
 - **Harga bulanan default global** di setelan Billing Langganan Platform (satu harga untuk semua
-  tenant). Migrasi **V58** — kolom `default_monthly_fee` pada `platform_setting`.
+  tenant). Migrasi **V62** — kolom `default_monthly_fee` pada `platform_setting`.
 - **Override harga khusus saat onboarding tenant**: form "Onboarding tenant" punya kolom
   "Harga bulanan khusus" (kosong = pakai harga default global). Langganan tenant dibuat otomatis
   saat onboarding (idempotent), plus **backfill** memastikan tiap tenant lama punya langganan
