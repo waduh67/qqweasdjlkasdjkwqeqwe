@@ -26,9 +26,18 @@ class AdminProvisioner(
 ) {
     /** Role "Tenant Admin" (semua izin non-platform) + admin tenant. */
     fun provisionTenantAdmin(tenantId: UUID, email: String, name: String, password: String): Boolean {
-        val roleId = ensureRole(tenantId, "Tenant Admin", "Akses penuh dalam tenant", tenantPermissionIds())
+        val roleId = ensureTenantAdminRole(tenantId)
         return ensureAdminUser(tenantId, email, name, password, platformAdmin = false, roleIds = setOf(roleId))
     }
+
+    /**
+     * Role bawaan "Tenant Admin": semua izin non-platform yang berlaku SAAT INI.
+     * Dipisah dari [provisionTenantAdmin] agar bisa dipanggil sebagai backfill untuk
+     * tenant lama — saat izin baru ditambahkan ke katalog, [ensureRole] menyetel ulang
+     * set izin role ini (replacePermissions) sehingga menu baru ikut terbuka. Idempotent.
+     */
+    fun ensureTenantAdminRole(tenantId: UUID): UUID =
+        ensureRole(tenantId, TENANT_ADMIN_ROLE_NAME, "Akses penuh dalam tenant", tenantPermissionIds())
 
     /** Role "Super Admin" (semua izin termasuk platform) + platform admin. */
     fun provisionPlatformAdmin(tenantId: UUID, email: String, name: String, password: String): Boolean {
@@ -98,6 +107,7 @@ class AdminProvisioner(
         permissionRepository.findAll().filter { it.code.value in codes }.mapTo(HashSet()) { it.id }
 
     companion object {
+        const val TENANT_ADMIN_ROLE_NAME = "Tenant Admin"
         const val TECHNICIAN_ROLE_NAME = "Teknisi"
 
         /** Izin minimal role Teknisi; kepemilikan WO ditegakkan terpisah di modul workorder. */
