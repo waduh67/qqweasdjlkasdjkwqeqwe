@@ -11,7 +11,6 @@ import com.duluin.ftth.platformbilling.domain.model.TenantSubscriptionInvoice
 import com.duluin.ftth.platformbilling.domain.model.TenantSubscriptionPayment
 import com.duluin.ftth.tenancy.TenantApi
 import com.duluin.ftth.tenancy.TenantStatus
-import com.duluin.ftth.tenancy.application.port.inbound.ManageTenantUseCase
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -31,7 +30,6 @@ class PlatformPaymentService(
     private val invoiceRepository: TenantSubscriptionInvoiceRepository,
     private val paymentRepository: TenantSubscriptionPaymentRepository,
     private val subscriptionRepository: TenantSubscriptionRepository,
-    private val manageTenant: ManageTenantUseCase,
     private val tenantApi: TenantApi,
     private val auditor: AuditRecorder,
 ) {
@@ -119,7 +117,7 @@ class PlatformPaymentService(
         subscriptionRepository.save(subscription)
         // Pulihkan tenant yang sempat disuspend karena menunggak.
         if (tenantApi.findById(tenantId)?.status == TenantStatus.SUSPENDED) {
-            manageTenant.activate(tenantId)
+            tenantApi.activate(tenantId)
             auditor.record(
                 action = "platform.subscription.tenant.restored",
                 entityType = "Tenant",

@@ -1,6 +1,7 @@
 package com.duluin.ftth.billing.application.port.outbound
 
 import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
+import org.springframework.modulith.NamedInterface
 import java.math.BigDecimal
 import java.time.Instant
 
@@ -15,7 +16,12 @@ import java.time.Instant
  * Adapter tetap singleton stateless: kredensial per-tenant TIDAK dipegang adapter, melainkan
  * disuntikkan lewat [ResolvedGatewayContext] tiap panggilan (hasil resolusi baris config tenant).
  * Inilah alasan kedua method menerima `ctx` — satu adapter melayani banyak tenant.
+ *
+ * Bagian dari named interface `gateway` (Spring Modulith): mesin payment gateway ini di-expose
+ * agar module `platformbilling` (penagihan langganan SaaS) memakai ulang registry & adapter yang
+ * sama, tanpa menembus batas enkapsulasi billing lain. Lihat [ModularityTests].
  */
+@NamedInterface("gateway")
 interface PaymentGateway {
 
     val provider: String
@@ -32,6 +38,7 @@ interface PaymentGateway {
 }
 
 /** Permintaan membuat charge untuk sebuah tagihan. */
+@NamedInterface("gateway")
 data class ChargeRequest(
     val invoiceNumber: String,
     val amount: BigDecimal,
@@ -41,6 +48,7 @@ data class ChargeRequest(
 )
 
 /** Hasil charge: referensi & tautan bayar bila penyedia menyediakannya. */
+@NamedInterface("gateway")
 data class ChargeResult(
     val provider: String,
     val gatewayRef: String?,
@@ -48,12 +56,14 @@ data class ChargeResult(
 )
 
 /** Callback mentah dari penyedia — header (untuk verifikasi tanda tangan) + body apa adanya. */
+@NamedInterface("gateway")
 data class GatewayCallback(
     val headers: Map<String, String>,
     val rawBody: String,
 )
 
 /** Pelunasan yang sudah tervalidasi, siap diterapkan ke tagihan. */
+@NamedInterface("gateway")
 data class PaymentSettlement(
     val invoiceNumber: String,
     val gatewayRef: String?,

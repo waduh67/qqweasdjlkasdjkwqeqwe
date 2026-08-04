@@ -232,6 +232,8 @@ class NasServiceRadiusClientTest {
         override fun platformTenantId(): UUID = throw UnsupportedOperationException()
         override fun findActiveTenantIds(): List<UUID> = throw UnsupportedOperationException()
         override fun ensureTenant(slug: String, name: String): TenantRef = throw UnsupportedOperationException()
+        override fun suspend(id: UUID): TenantRef = throw UnsupportedOperationException()
+        override fun activate(id: UUID): TenantRef = throw UnsupportedOperationException()
     }
 
     private class FakeNasRepo : NasRepository {

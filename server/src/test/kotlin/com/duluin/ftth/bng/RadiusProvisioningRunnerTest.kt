@@ -232,6 +232,8 @@ private class FakeTenantApi(private val id: UUID, private val slug: String?) : T
     override fun platformTenantId(): UUID = notUsed()
     override fun findActiveTenantIds(): List<UUID> = listOf(id)
     override fun ensureTenant(slug: String, name: String): TenantRef = notUsed()
+    override fun suspend(id: UUID): TenantRef = notUsed()
+    override fun activate(id: UUID): TenantRef = notUsed()
     private fun notUsed(): Nothing = throw UnsupportedOperationException("tak dipakai di uji ini")
 }
 

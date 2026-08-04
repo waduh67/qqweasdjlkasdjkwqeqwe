@@ -2,6 +2,7 @@ package com.duluin.ftth.billing.domain.model
 
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
+import org.springframework.modulith.NamedInterface
 import java.util.UUID
 
 /**
@@ -20,7 +21,10 @@ enum class PaymentProvider { XENDIT, PAYWUZ, PIVOT, MANUAL }
  *  - [PLATFORM] tenant memakai akun MASTER platform lewat sub-account (Xendit xenPlatform):
  *               kredensial master dari config/env, [TenantPaymentGateway.subAccountId] menandai
  *               atas nama siapa charge dibuat (header `for-user-id`).
+ *
+ * Bagian dari named interface `gateway` — dipakai `platformbilling` (mode gateway langganan).
  */
+@NamedInterface("gateway")
 enum class GatewayMode { BYO, PLATFORM }
 
 /**
@@ -44,7 +48,11 @@ data class PlatformGatewayCreds(
  *
  * [provider] String (bukan enum) agar registry bisa memilih adapter apa pun — termasuk
  * `MANUAL` fallback yang bukan bagian dari konfigurasi tenant.
+ *
+ * Bagian dari named interface `gateway` — `platformbilling` menyusun konteks ini untuk
+ * menagih langganan lewat gateway platform, memakai adapter billing yang sama.
  */
+@NamedInterface("gateway")
 data class ResolvedGatewayContext(
     val provider: String,
     val mode: GatewayMode,

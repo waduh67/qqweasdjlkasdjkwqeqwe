@@ -9,7 +9,7 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 ### 2026-08-04 — Langganan SaaS: harga default global + override khusus + self-service tenant
 
 Model harga langganan aplikasi (SaaS) dirapikan menjadi **flat + override** dengan halaman
-langganan mandiri sisi tenant.
+langganan mandiri sisi tenant. Strategi lengkap: [`docs/saas-subscription.md`](docs/saas-subscription.md).
 
 **Ditambahkan**
 - **Harga bulanan default global** di setelan Billing Langganan Platform (satu harga untuk semua
@@ -29,6 +29,15 @@ langganan mandiri sisi tenant.
   `current_period_end` sebulan (menumpuk bila masa aktif belum habis).
 - Langganan baru diberi **masa aktif awal sebulan** dengan tagihan pertama terbit menjelang periode
   habis — mencegah tenant baru langsung tertagih/tersuspend oleh scheduler.
+
+**Internal (batas modul)**
+- Provisioning langganan saat onboarding dipisah dari `iam` lewat event `TenantOnboardedEvent`
+  (bukan panggilan port langsung) — memutus siklus modul `iam → platformbilling → billing → … → iam`
+  yang ditegakkan `ModularityTests`.
+- Mesin payment gateway `billing` (registry + port + value type) di-expose sebagai **named interface**
+  Spring Modulith `gateway` agar `platformbilling` memakainya ulang tanpa menembus enkapsulasi.
+- `suspend(id)`/`activate(id)` dipromosikan ke `TenantApi` (kontrak lintas-module) menggantikan akses
+  `ManageTenantUseCase` internal tenancy.
 
 ### 2026-08-04 — Input SNMP untuk OLT vendor HSGQ
 

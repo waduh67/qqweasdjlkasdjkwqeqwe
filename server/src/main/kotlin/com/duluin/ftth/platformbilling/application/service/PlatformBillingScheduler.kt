@@ -6,7 +6,6 @@ import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscript
 import com.duluin.ftth.platformbilling.domain.model.SubscriptionInvoiceStatus
 import com.duluin.ftth.tenancy.TenantApi
 import com.duluin.ftth.tenancy.TenantStatus
-import com.duluin.ftth.tenancy.application.port.inbound.ManageTenantUseCase
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -58,7 +57,6 @@ class PlatformBillingRunner(
     private val invoiceRepository: TenantSubscriptionInvoiceRepository,
     private val invoiceGenerator: PlatformInvoiceGenerator,
     private val resolver: PlatformGatewayResolver,
-    private val manageTenant: ManageTenantUseCase,
     private val tenantApi: TenantApi,
     private val auditor: AuditRecorder,
 ) {
@@ -102,7 +100,7 @@ class PlatformBillingRunner(
         if (pastGrace && subscription.status != com.duluin.ftth.platformbilling.domain.model.SubscriptionStatus.SUSPENDED) {
             subscription.suspend()
             if (tenantApi.findById(tenantId)?.status == TenantStatus.ACTIVE) {
-                manageTenant.suspend(tenantId)
+                tenantApi.suspend(tenantId)
                 auditor.record(
                     action = "platform.subscription.tenant.suspended",
                     entityType = "Tenant",
