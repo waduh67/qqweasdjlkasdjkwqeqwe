@@ -36,7 +36,10 @@ class TenantSelfSubscriptionService(
     }
 
     @Transactional
-    override fun renew(): SubscriptionInvoiceView {
+    override fun renew(months: Int): SubscriptionInvoiceView {
+        if (months !in 1..MAX_PREPAY_MONTHS) {
+            throw ValidationException("Jumlah bulan harus 1..$MAX_PREPAY_MONTHS")
+        }
         val subscription = subscriptionRepository.findByTenantId(TenantContext.tenantId())
             ?: throw NotFoundException("Tenant belum berlangganan")
         if (subscription.isCancelled) {
@@ -46,7 +49,7 @@ class TenantSelfSubscriptionService(
         invoiceRepository.findOutstandingBySubscriptionId(subscription.id).firstOrNull()?.let {
             return it.toView()
         }
-        val invoice = invoiceGenerator.issueFor(subscription, LocalDate.now(), force = true)
+        val invoice = invoiceGenerator.issueFor(subscription, LocalDate.now(), force = true, months = months)
             ?: throw ValidationException("Tagihan tak dapat diterbitkan saat ini")
         return invoice.toView()
     }
@@ -66,6 +69,11 @@ class TenantSelfSubscriptionService(
             usage = usage,
             invoices = invoices,
         )
+    }
+
+    private companion object {
+        /** Batas atas bayar di muka (bulan) — cukup lebar (setahun) tanpa membuka penyalahgunaan. */
+        const val MAX_PREPAY_MONTHS = 12
     }
 
     private fun TenantSubscriptionInvoice.toView() = SubscriptionInvoiceView(

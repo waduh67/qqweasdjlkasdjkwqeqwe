@@ -93,17 +93,39 @@ export function TenantSubscriptionModal({
   }
 
   const saveFee = () => {
+    // Kosong ≠ 0: tanpa guard ini `Number('')` jadi 0 → langganan gratis tak sengaja.
+    if (fee.trim() === '') {
+      toast.error('Biaya bulanan wajib diisi')
+      return
+    }
     const monthlyFee = Number(fee)
     if (!Number.isFinite(monthlyFee) || monthlyFee < 0) {
       toast.error('Biaya bulanan tidak valid')
+      return
+    }
+    // Tanggal tagih & masa tenggang opsional (kosong = default global), tapi bila diisi harus
+    // dalam rentang — validasi di klien agar errornya jelas, bukan menunggu tolakan server.
+    const parseInRange = (raw: string, min: number, max: number): number | null | undefined => {
+      if (raw.trim() === '') return null
+      const n = Number(raw)
+      return Number.isInteger(n) && n >= min && n <= max ? n : undefined
+    }
+    const billingDayVal = parseInRange(billingDay, 1, 28)
+    if (billingDayVal === undefined) {
+      toast.error('Tanggal tagih harus bilangan 1–28')
+      return
+    }
+    const graceDaysVal = parseInRange(graceDays, 0, 90)
+    if (graceDaysVal === undefined) {
+      toast.error('Masa tenggang harus bilangan 0–90 hari')
       return
     }
     void run(
       () =>
         configureTenantSubscription(tenantId, {
           monthlyFee,
-          billingDay: billingDay.trim() ? Number(billingDay) : null,
-          graceDays: graceDays.trim() ? Number(graceDays) : null,
+          billingDay: billingDayVal,
+          graceDays: graceDaysVal,
         }),
       sub ? 'Langganan diperbarui' : 'Langganan dibuat',
     )

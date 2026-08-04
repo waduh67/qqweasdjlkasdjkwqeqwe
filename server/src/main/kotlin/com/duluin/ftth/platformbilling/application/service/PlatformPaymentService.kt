@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /**
@@ -98,9 +99,11 @@ class PlatformPaymentService(
             tenantId = tenantApi.platformTenantId(),
             detail = mapOf("number" to saved.number, "provider" to provider),
         )
-        // Pelunasan memperpanjang masa aktif sebulan (bukan penerbitan tagihan) — sesuai model LUNAS.
+        // Pelunasan memperpanjang masa aktif (bukan penerbitan tagihan) — sesuai model LUNAS.
+        // Jumlah bulan diturunkan dari rentang periode tagihan (mendukung prabayar >1 bulan).
         subscriptionRepository.findById(saved.subscriptionId)?.let { subscription ->
-            subscription.extendOnPayment(LocalDate.now())
+            val months = ChronoUnit.MONTHS.between(saved.periodStart, saved.periodEnd.plusDays(1)).coerceAtLeast(1)
+            subscription.extendOnPayment(LocalDate.now(), months)
             subscriptionRepository.save(subscription)
         }
         reactivateIfCleared(saved.subscriptionId, saved.tenantId)

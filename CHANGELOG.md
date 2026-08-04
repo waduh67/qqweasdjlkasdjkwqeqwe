@@ -19,9 +19,15 @@ langganan mandiri sisi tenant. Strategi lengkap: [`docs/saas-subscription.md`](d
   saat onboarding (idempotent), plus **backfill** memastikan tiap tenant lama punya langganan
   (tenant `platform` dikecualikan).
 - **Halaman "Langganan Aplikasi" sisi tenant** (`/subscription`, izin `billing.subscription.view`):
-  masa aktif + status, pemakaian kosmetik (mis. "OLT 10 / Unlimited" — tanpa batas nyata), riwayat
-  tagihan, dan tombol **Perpanjang** mandiri lewat gateway aktif (izin `billing.subscription.renew`).
+  tata letak lebar penuh — hero biaya + masa aktif (bar progres periode), pemakaian kosmetik (mis.
+  "OLT 10 / Unlimited" — tanpa batas nyata), riwayat tagihan, dan tombol **Perpanjang** mandiri lewat
+  gateway aktif (izin `billing.subscription.renew`).
   Endpoint baru `GET /api/subscription` + `POST /api/subscription/renew`.
+- **Bayar di muka beberapa bulan sekaligus** (1 / 3 / 6 / 12 bulan): pemilih durasi di halaman
+  langganan; `POST /api/subscription/renew?months=N` (1..12) menerbitkan satu tagihan `biaya × N`
+  berperiode N bulan, dan saat LUNAS masa aktif memanjang N bulan. Jumlah bulan diturunkan dari
+  rentang periode tagihan (tanpa kolom/migrasi baru); `next_invoice_at` dilompatkan agar scheduler
+  tak menagih dobel di bulan yang sudah prabayar.
 
 **Diubah**
 - **Masa aktif bertambah saat tagihan LUNAS**, bukan saat tagihan terbit. Penerbitan tagihan hanya

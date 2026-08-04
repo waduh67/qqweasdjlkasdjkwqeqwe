@@ -35,7 +35,10 @@ export async function getMySubscription(): Promise<TenantSelfSubscriptionView | 
   return res ?? null
 }
 
-/** Terbitkan/ambil tagihan berjalan untuk dibayar; kembalikan tagihan berisi tautan bayar. */
-export function renewMySubscription(): Promise<SubscriptionInvoiceView> {
-  return api.post('/api/subscription/renew')
+/**
+ * Terbitkan/ambil tagihan untuk dibayar; kembalikan tagihan berisi tautan bayar.
+ * `months` = jumlah bulan dibayar di muka (1..12) — nilai tagihan `biaya × months`.
+ */
+export function renewMySubscription(months = 1): Promise<SubscriptionInvoiceView> {
+  return api.post(`/api/subscription/renew?months=${months}`)
 }

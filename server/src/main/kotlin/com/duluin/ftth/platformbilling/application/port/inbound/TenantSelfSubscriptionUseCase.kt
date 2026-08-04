@@ -15,10 +15,11 @@ interface TenantSelfSubscriptionUseCase {
     fun current(): TenantSelfSubscriptionView?
 
     /**
-     * Terbitkan (atau ambil kembali) tagihan berjalan untuk dibayar via gateway aktif, lalu
-     * kembalikan tagihan berisi tautan bayar. Masa aktif baru bertambah saat tagihan LUNAS.
+     * Terbitkan (atau ambil kembali) tagihan untuk dibayar via gateway aktif, lalu kembalikan
+     * tagihan berisi tautan bayar. [months] = jumlah bulan dibayar di muka (1..12); nilai tagihan
+     * `biaya × months`. Masa aktif baru bertambah sebanyak [months] saat tagihan LUNAS.
      */
-    fun renew(): SubscriptionInvoiceView
+    fun renew(months: Int = 1): SubscriptionInvoiceView
 }
 
 /** Pandangan langganan sisi tenant + pemakaian kosmetik. */

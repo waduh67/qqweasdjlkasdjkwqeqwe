@@ -92,18 +92,20 @@ class TenantSubscription private constructor(
     }
 
     /**
-     * Perpanjang masa aktif sebulan saat sebuah tagihan LUNAS — inilah yang menambah `currentPeriodEnd`
-     * (bukan penerbitan tagihan). Menumpuk di ujung bila masa aktif belum habis; bila sudah lewat atau
-     * belum pernah aktif, mulai periode baru dari [today]. Tak berlaku bila langganan CANCELLED.
+     * Perpanjang masa aktif [months] bulan saat sebuah tagihan LUNAS — inilah yang menambah
+     * `currentPeriodEnd` (bukan penerbitan tagihan). Menumpuk di ujung bila masa aktif belum habis;
+     * bila sudah lewat atau belum pernah aktif, mulai periode baru dari [today]. [months] > 1 dipakai
+     * saat tenant membayar di muka beberapa bulan sekaligus. Tak berlaku bila langganan CANCELLED.
      */
-    fun extendOnPayment(today: LocalDate) {
+    fun extendOnPayment(today: LocalDate, months: Long = 1) {
         if (status == SubscriptionStatus.CANCELLED) return
+        val span = months.coerceAtLeast(1)
         val end = currentPeriodEnd
         if (end == null || end.isBefore(today)) {
             currentPeriodStart = today
-            currentPeriodEnd = today.plusMonths(1)
+            currentPeriodEnd = today.plusMonths(span)
         } else {
-            currentPeriodEnd = end.plusMonths(1)
+            currentPeriodEnd = end.plusMonths(span)
         }
         if (activatedAt == null) activatedAt = Instant.now()
     }

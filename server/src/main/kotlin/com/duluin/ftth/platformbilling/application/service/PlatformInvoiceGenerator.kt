@@ -10,6 +10,7 @@ import com.duluin.ftth.platformbilling.domain.model.TenantSubscriptionInvoice
 import com.duluin.ftth.tenancy.TenantApi
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -34,24 +35,39 @@ class PlatformInvoiceGenerator(
     private val log = LoggerFactory.getLogger(javaClass)
 
     /**
-     * Terbitkan tagihan periode berjalan untuk [subscription] bila jatuh temponya sudah tiba
-     * ([TenantSubscription.nextInvoiceAt] <= [today]) atau [force] (trigger manual super-admin).
+     * Terbitkan tagihan langganan untuk [subscription] bila jatuh temponya sudah tiba
+     * ([TenantSubscription.nextInvoiceAt] <= [today]) atau [force] (trigger manual super-admin /
+     * perpanjangan mandiri tenant). [months] > 1 = bayar di muka beberapa bulan sekaligus: nilai
+     * tagihan `monthly_fee × months`, dan periode membentang sepanjang itu. Pada perpanjangan [force]
+     * yang masih aktif, periode dimulai dari ujung masa aktif berjalan (menyambung, bukan menimpa).
      * Mengembalikan tagihan yang dibuat, atau null bila dilewati.
      */
-    fun issueFor(subscription: TenantSubscription, today: LocalDate, force: Boolean = false): TenantSubscriptionInvoice? {
+    fun issueFor(
+        subscription: TenantSubscription,
+        today: LocalDate,
+        force: Boolean = false,
+        months: Int = 1,
+    ): TenantSubscriptionInvoice? {
         if (subscription.isCancelled) return null
         val due = subscription.nextInvoiceAt
         if (!force && (due == null || due.isAfter(today))) return null
 
+        val span = months.coerceAtLeast(1).toLong()
         val setting = resolver.setting()
-        val periodStart = due ?: today
-        val periodEnd = periodStart.plusMonths(1).minusDays(1)
+        // Perpanjangan (force) saat masih aktif menyambung dari ujung masa aktif → nomor periode
+        // beda dari tagihan bulan berjalan (hindari tabrakan) & terbaca "prabayar ke depan".
+        val activeUntil = subscription.currentPeriodEnd
+        val periodStart = when {
+            force && activeUntil != null && !activeUntil.isBefore(today) -> activeUntil
+            else -> due ?: today
+        }
+        val periodEnd = periodStart.plusMonths(span).minusDays(1)
         val number = "SUB-${periodStart.format(YEAR_MONTH)}-${tenantShort(subscription.tenantId)}"
 
-        // Majukan HANYA jadwal tagihan berikutnya agar langganan tak tersangkut; masa aktif
-        // (`currentPeriodEnd`) TIDAK diperpanjang di sini — itu terjadi saat tagihan LUNAS
-        // ([TenantSubscription.extendOnPayment]). Berlaku walau tagihan periode ini sudah ada.
-        subscription.scheduleNextInvoice(periodStart.plusMonths(1))
+        // Majukan HANYA jadwal tagihan berikutnya (melewati seluruh bulan prabayar) agar langganan
+        // tak tersangkut & scheduler tak menagih dobel; masa aktif (`currentPeriodEnd`) TIDAK
+        // diperpanjang di sini — itu terjadi saat tagihan LUNAS ([TenantSubscription.extendOnPayment]).
+        subscription.scheduleNextInvoice(periodStart.plusMonths(span))
         subscriptionRepository.save(subscription)
 
         if (invoiceRepository.findByNumber(number) != null) {
@@ -66,7 +82,7 @@ class PlatformInvoiceGenerator(
             number = number,
             periodStart = periodStart,
             periodEnd = periodEnd,
-            amount = subscription.monthlyFee,
+            amount = subscription.monthlyFee.multiply(BigDecimal.valueOf(span)),
             dueDate = dueDate,
         )
         invoice = invoiceRepository.save(invoice)

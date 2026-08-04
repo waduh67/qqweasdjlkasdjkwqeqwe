@@ -10,6 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 /**
@@ -30,8 +31,11 @@ class TenantSubscriptionSelfController(
     fun get(): ResponseEntity<TenantSelfSubscriptionView> =
         useCase.current()?.let { ResponseEntity.ok(it) } ?: ResponseEntity.noContent().build()
 
-    /** Terbitkan/ambil tagihan berjalan untuk dibayar; kembalikan tautan bayar gateway. */
+    /**
+     * Terbitkan/ambil tagihan untuk dibayar; kembalikan tautan bayar gateway. [months] = jumlah
+     * bulan dibayar di muka (default 1) — nilai tagihan `biaya × months`.
+     */
     @PostMapping("/renew")
     @PreAuthorize("@authz.can('billing.subscription.renew')")
-    fun renew(): SubscriptionInvoiceView = useCase.renew()
+    fun renew(@RequestParam(defaultValue = "1") months: Int): SubscriptionInvoiceView = useCase.renew(months)
 }

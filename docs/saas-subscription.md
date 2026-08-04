@@ -83,18 +83,25 @@ Inti requirement #2. Penerbitan tagihan dan perpanjangan masa aktif **dipisah**:
 
 ```kotlin
 // Perpanjangan menumpuk bila masa aktif belum habis; mulai baru bila sudah lewat.
-fun extendOnPayment(today: LocalDate) {
+// [months] > 1 saat tenant bayar di muka beberapa bulan sekaligus.
+fun extendOnPayment(today: LocalDate, months: Long = 1) {
     if (status == SubscriptionStatus.CANCELLED) return
+    val span = months.coerceAtLeast(1)
     val end = currentPeriodEnd
     if (end == null || end.isBefore(today)) {          // lewat / belum pernah aktif
         currentPeriodStart = today
-        currentPeriodEnd = today.plusMonths(1)
+        currentPeriodEnd = today.plusMonths(span)
     } else {                                            // masih aktif → tumpuk di ujung
-        currentPeriodEnd = end.plusMonths(1)
+        currentPeriodEnd = end.plusMonths(span)
     }
     if (activatedAt == null) activatedAt = Instant.now()
 }
 ```
+
+**Jumlah bulan diturunkan dari periode tagihan** (tanpa kolom baru): saat LUNAS,
+`months = ChronoUnit.MONTHS.between(periodStart, periodEnd + 1 hari)`. Perpanjangan multi-bulan
+menerbitkan satu tagihan `biaya × N` berperiode N bulan; scheduler pun tak menagih dobel karena
+`next_invoice_at` dilompatkan melewati seluruh bulan prabayar.
 
 **Kenapa `seedInitialPeriod`?** Tanpa masa aktif awal, tenant baru langsung punya tagihan jatuh
 tempo dan `PlatformBillingScheduler` akan menyuspendnya di siklus berikutnya sebelum sempat
@@ -104,13 +111,19 @@ membayar. Memberi 1 bulan aktif di depan (tagihan pertama terbit menjelang habis
 
 ## Perpanjangan mandiri (self-service)
 
-`POST /api/subscription/renew` (izin `billing.subscription.renew`):
+`POST /api/subscription/renew?months=N` (izin `billing.subscription.renew`, `N` 1..12, default 1):
 
-1. Bila sudah ada tagihan **tertunggak** (ISSUED/OVERDUE) → kembalikan yang itu (jangan bikin dobel).
-2. Bila tidak → terbitkan tagihan baru (`issueFor(..., force = true)`) lewat gateway aktif; kembalikan
-   `payUrl`.
+1. Bila sudah ada tagihan **tertunggak** (ISSUED/OVERDUE) → kembalikan yang itu (jangan bikin dobel;
+   `months` diabaikan — bayar dulu yang tertunggak).
+2. Bila tidak → terbitkan tagihan baru (`issueFor(..., force = true, months = N)`) lewat gateway
+   aktif; nilai `biaya × N`, periode membentang N bulan **menyambung** dari ujung masa aktif berjalan;
+   kembalikan `payUrl`.
 3. Tenant membayar di tab gateway. Saat webhook **settle**, `PlatformPaymentService.applySettlement`
-   → `extendOnPayment` → masa aktif memanjang.
+   → `extendOnPayment(today, N)` → masa aktif memanjang N bulan.
+
+**Bayar di muka (1 / 3 / 6 / 12 bulan)**: tenant memilih durasi di halaman langganan sebelum
+menekan *Perpanjang*. Ini murni opsional — scheduler tetap menerbitkan tagihan bulanan otomatis
+menjelang masa aktif habis; tombol hanya mempercepat / memborong beberapa bulan.
 
 Pesan UI eksplisit: *"Masa aktif bertambah setelah pembayaran LUNAS."* — tak ada perpanjangan
 optimistis di sisi terbit.
@@ -190,7 +203,7 @@ sub-package billing.
 
 | Endpoint | Izin |
 |---|---|
-| `GET /api/subscription` · `POST /api/subscription/renew` | `billing.subscription.*` (tenant) |
+| `GET /api/subscription` · `POST /api/subscription/renew?months=N` | `billing.subscription.*` (tenant) |
 | `GET/PUT /api/platform/billing/settings` | `platform.billing.*` |
 | `.../tenants/{id}/subscription` · `/invoices` · `/invoices/{id}/pay`·`/void` · `/cancel` | `platform.subscription.*` |
 | `POST /api/platform/billing/webhooks/{provider}` | publik (verifikasi tanda tangan gateway) |
@@ -213,8 +226,10 @@ val tenantIds = tenantApi.findActiveTenantIds().filterNot { it == platformId }
 ## Sisi web
 
 - **Halaman tenant** `/subscription` (`SubscriptionPage.tsx`, izin `billing.subscription.view`):
-  kartu status + masa aktif, tombol *Perpanjang*/*Bayar sekarang*, kartu pemakaian kosmetik
-  ("N / Unlimited" — `limit` selalu `null`), riwayat tagihan dengan tautan bayar.
+  tata letak lebar penuh — *hero* biaya + masa aktif (bar progres periode), pemilih durasi bayar
+  di muka **1 / 3 / 6 / 12 bulan** dengan total langsung, tombol *Perpanjang*/*Bayar sekarang*,
+  kartu pemakaian kosmetik ("N / Unlimited" — `limit` selalu `null`), riwayat tagihan dengan tautan
+  bayar, dan panel penjelas "cara perpanjangan".
 - **Onboarding** (`TenantsPage.tsx`): input *Harga bulanan khusus* (kosong = default global,
   di-load dari setelan platform bila punya `platform.billing.view`).
 - **Setelan platform** (`PlatformBillingSettingsPage.tsx`): input *Harga bulanan default*.
@@ -222,4 +237,28 @@ val tenantIds = tenantApi.findActiveTenantIds().filterNot { it == platformId }
 **Pemakaian kosmetik** dihitung server-side lewat `SubscriptionUsageProbe` (count OLT/ODC/ODP/
 pelanggan) memakai `EntityManager` — koneksi Hibernate membawa GUC `app.tenant_id` (RLS-aware),
 beda dari `JdbcTemplate` polos. Angka nyata, **batasnya bohong** (selalu Unlimited): murni hiasan,
-tak pernah menolak operasi.
+tak pernah menolak operasi. Di UI, tiap metrik tampil sebagai *meter* bar; karena `limit` selalu
+`null`, track digambar penuh redup (accent-soft) berlabel "N / Unlimited".
+
+---
+
+## Rencana lanjutan — plan bertingkat (DITUNDA)
+
+> **Status: ditunda.** Model saat ini **flat + override** (satu harga, tanpa tier). Halaman tenant
+> sengaja dibuat tanpa bagian *Available Plans* / tombol *Upgrade*.
+
+Referensi desain menampilkan **plan bertingkat** (Starter / Business / Pro, harga & kuota berbeda,
+alur *Upgrade*) dengan kuota **nyata** (bukan kosmetik). Ini **belum** dibangun. Bila kelak diambil,
+perubahan yang dibutuhkan (garis besar):
+
+- **Data**: tabel `subscription_plan` (kode, harga, kuota per metrik) + `tenant_subscription.plan_id`
+  (FK) menggantikan/menemani `monthly_fee` flat. Harga tak lagi satu angka global.
+- **Kuota nyata**: `UsageMetricView.limit` diisi dari plan (bukan `null`); `SubscriptionUsageProbe`
+  jadi sumber *enforcement*, bukan sekadar hiasan — perlu keputusan apakah menolak operasi saat
+  kuota habis atau tetap kosmetik dengan peringatan.
+- **Alur upgrade/downgrade**: proration, kapan berlaku (langsung vs periode berikutnya), efek ke
+  `current_period_end`.
+- **UI**: seksi *Available Plans* (kartu per tier + tombol Upgrade/Renew), mengganti kartu status
+  tunggal saat ini.
+
+Sampai diputuskan, halaman tenant tetap: **satu plan aktif + tombol Perpanjang**, pemakaian kosmetik.
