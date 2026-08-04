@@ -1,6 +1,7 @@
 package com.duluin.ftth.iam.application.port.inbound
 
 import com.duluin.ftth.tenancy.TenantRef
+import java.math.BigDecimal
 
 /**
  * Onboarding tenant: buat tenant (via module tenancy) + role "Tenant Admin"
@@ -18,6 +19,8 @@ data class OnboardTenantCommand(
     val adminEmail: String,
     val adminName: String,
     val adminPassword: String,
+    /** Harga langganan bulanan khusus tenant ini; null = pakai harga default global. */
+    val monthlyFee: BigDecimal? = null,
 )
 
 data class OnboardTenantResult(

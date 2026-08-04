@@ -27,4 +27,14 @@ interface TenantApi {
 
     /** Buat tenant bila slug belum ada; idempotent. Mengembalikan tenant (baru atau lama). */
     fun ensureTenant(slug: String, name: String): TenantRef
+
+    /**
+     * Suspend tenant (mis. saat langganan SaaS lewat masa tenggang di `platformbilling`).
+     * Di-expose lewat [TenantApi] — bukan lewat use case web internal — agar module lain
+     * bisa memicu suspend tanpa menembus batas enkapsulasi tenancy.
+     */
+    fun suspend(id: UUID): TenantRef
+
+    /** Aktifkan kembali tenant yang tersuspend (mis. saat tunggakan langganan lunas). */
+    fun activate(id: UUID): TenantRef
 }

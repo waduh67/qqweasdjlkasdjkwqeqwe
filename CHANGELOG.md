@@ -6,6 +6,45 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-04 — Langganan SaaS: harga default global + override khusus + self-service tenant
+
+Model harga langganan aplikasi (SaaS) dirapikan menjadi **flat + override** dengan halaman
+langganan mandiri sisi tenant. Strategi lengkap: [`docs/saas-subscription.md`](docs/saas-subscription.md).
+
+**Ditambahkan**
+- **Harga bulanan default global** di setelan Billing Langganan Platform (satu harga untuk semua
+  tenant). Migrasi **V58** — kolom `default_monthly_fee` pada `platform_setting`.
+- **Override harga khusus saat onboarding tenant**: form "Onboarding tenant" punya kolom
+  "Harga bulanan khusus" (kosong = pakai harga default global). Langganan tenant dibuat otomatis
+  saat onboarding (idempotent), plus **backfill** memastikan tiap tenant lama punya langganan
+  (tenant `platform` dikecualikan).
+- **Halaman "Langganan Aplikasi" sisi tenant** (`/subscription`, izin `billing.subscription.view`):
+  tata letak lebar penuh — hero biaya + masa aktif (bar progres periode), pemakaian kosmetik (mis.
+  "OLT 10 / Unlimited" — tanpa batas nyata), riwayat tagihan, dan tombol **Perpanjang** mandiri lewat
+  gateway aktif (izin `billing.subscription.renew`).
+  Endpoint baru `GET /api/subscription` + `POST /api/subscription/renew`.
+- **Bayar di muka beberapa bulan sekaligus** (1 / 3 / 6 / 12 bulan): pemilih durasi di halaman
+  langganan; `POST /api/subscription/renew?months=N` (1..12) menerbitkan satu tagihan `biaya × N`
+  berperiode N bulan, dan saat LUNAS masa aktif memanjang N bulan. Jumlah bulan diturunkan dari
+  rentang periode tagihan (tanpa kolom/migrasi baru); `next_invoice_at` dilompatkan agar scheduler
+  tak menagih dobel di bulan yang sudah prabayar.
+
+**Diubah**
+- **Masa aktif bertambah saat tagihan LUNAS**, bukan saat tagihan terbit. Penerbitan tagihan hanya
+  memajukan jadwal tagih berikutnya; pelunasan (webhook gateway / manual) memperpanjang
+  `current_period_end` sebulan (menumpuk bila masa aktif belum habis).
+- Langganan baru diberi **masa aktif awal sebulan** dengan tagihan pertama terbit menjelang periode
+  habis — mencegah tenant baru langsung tertagih/tersuspend oleh scheduler.
+
+**Internal (batas modul)**
+- Provisioning langganan saat onboarding dipisah dari `iam` lewat event `TenantOnboardedEvent`
+  (bukan panggilan port langsung) — memutus siklus modul `iam → platformbilling → billing → … → iam`
+  yang ditegakkan `ModularityTests`.
+- Mesin payment gateway `billing` (registry + port + value type) di-expose sebagai **named interface**
+  Spring Modulith `gateway` agar `platformbilling` memakainya ulang tanpa menembus enkapsulasi.
+- `suspend(id)`/`activate(id)` dipromosikan ke `TenantApi` (kontrak lintas-module) menggantikan akses
+  `ManageTenantUseCase` internal tenancy.
+
 ### 2026-08-04 — Input SNMP untuk OLT vendor HSGQ
 
 **Diperbaiki**

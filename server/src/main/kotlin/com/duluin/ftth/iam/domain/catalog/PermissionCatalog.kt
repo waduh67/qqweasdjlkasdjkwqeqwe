@@ -17,6 +17,11 @@ object PermissionCatalog {
         platform("platform.tenant.view", "Lihat daftar tenant")
         platform("platform.tenant.create", "Onboarding tenant baru beserta admin awal")
         platform("platform.tenant.manage", "Suspend/aktifkan tenant")
+        // SaaS billing platform: setelan gateway global + langganan tenant ke aplikasi.
+        platform("platform.billing.view", "Lihat setelan billing & payment gateway platform")
+        platform("platform.billing.manage", "Kelola gateway aktif & kredensial billing platform")
+        platform("platform.subscription.view", "Lihat langganan & tagihan tenant ke aplikasi")
+        platform("platform.subscription.manage", "Kelola biaya bulanan, tagihan & pembayaran langganan tenant")
 
         // IAM
         perm("iam.user.view", "Lihat pengguna")
@@ -132,6 +137,9 @@ object PermissionCatalog {
         perm("billing.payment.manage", "Catat pembayaran manual")
         perm("billing.gateway.view", "Lihat setelan payment gateway")
         perm("billing.gateway.manage", "Kelola penyedia & kredensial payment gateway")
+        // Langganan SaaS sisi tenant: lihat masa aktif/tagihan sendiri + perpanjang mandiri.
+        perm("billing.subscription.view", "Lihat langganan aplikasi (masa aktif, tagihan)")
+        perm("billing.subscription.renew", "Perpanjang langganan aplikasi (buat tagihan & bayar)")
         // Provisioning sub-account Xendit PLATFORM: aksi lintas-tenant milik platform-admin.
         platform("billing.gateway.provision", "Provisikan sub-account Xendit (mode PLATFORM) untuk tenant")
 

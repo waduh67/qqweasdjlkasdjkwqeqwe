@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import { provisionXenditSubAccount } from '../api/payment'
+import { getPlatformBillingSettings } from '../api/platformBilling'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
 import { EmptyState, SearchInput, StatusBadge, Toolbar } from '../components/ui'
 import { IconBuilding, IconPlus } from '../components/icons'
+import { TenantSubscriptionModal } from './TenantSubscriptionModal'
 
 interface Tenant {
   id: string
@@ -14,7 +16,7 @@ interface Tenant {
   status: string
 }
 
-const EMPTY = { slug: '', name: '', adminEmail: '', adminName: '', adminPassword: '' }
+const EMPTY = { slug: '', name: '', adminEmail: '', adminName: '', adminPassword: '', monthlyFee: '' }
 
 /** Draft form provisioning Xendit PLATFORM untuk satu tenant. */
 interface ProvisionDraft {
@@ -39,6 +41,8 @@ export function TenantsPage() {
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState<typeof EMPTY | null>(null)
   const [provision, setProvision] = useState<ProvisionDraft | null>(null)
+  const [subscription, setSubscription] = useState<{ id: string; name: string } | null>(null)
+  const [defaultFee, setDefaultFee] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -53,6 +57,12 @@ export function TenantsPage() {
 
   useEffect(() => {
     void reload().catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat tenant'))
+    // Harga default global untuk ditampilkan sebagai acuan saat onboarding (best-effort).
+    if (can('platform.billing.view')) {
+      void getPlatformBillingSettings()
+        .then((s) => setDefaultFee(s.defaultMonthlyFee))
+        .catch(() => undefined)
+    }
   }, [])
 
   async function run(action: () => Promise<unknown>) {
@@ -91,6 +101,9 @@ export function TenantsPage() {
       cell: (t) =>
         t.slug !== 'platform' ? (
           <div className="row" style={{ justifyContent: 'flex-end', gap: '0.4rem' }}>
+            {can('platform.subscription.view') && (
+              <button onClick={() => setSubscription({ id: t.id, name: t.name })}>Langganan</button>
+            )}
             {can('billing.gateway.provision') && (
               <button
                 onClick={() =>
@@ -195,12 +208,35 @@ export function TenantsPage() {
               />
             </label>
           </div>
+          <div className="row" style={{ alignItems: 'flex-start' }}>
+            <label style={{ flex: 1 }}>
+              <span>Harga bulanan khusus (Rp)</span>
+              <input
+                type="number"
+                min={0}
+                step={1000}
+                value={draft.monthlyFee}
+                onChange={(e) => setDraft({ ...draft, monthlyFee: e.target.value })}
+                placeholder={
+                  defaultFee != null ? `Default Rp ${defaultFee.toLocaleString('id-ID')}` : 'Kosongkan = harga default'
+                }
+              />
+              <span className="muted" style={{ fontSize: '0.8rem' }}>
+                Kosongkan untuk memakai harga default global. Isi untuk harga khusus tenant ini.
+              </span>
+            </label>
+            <div style={{ flex: 1 }} />
+          </div>
           <div className="row">
             <button
               className="primary"
               onClick={() =>
                 void run(async () => {
-                  await api.post('/api/platform/tenants', draft)
+                  const { monthlyFee, ...rest } = draft
+                  await api.post('/api/platform/tenants', {
+                    ...rest,
+                    monthlyFee: monthlyFee.trim() === '' ? undefined : Number(monthlyFee),
+                  })
                   setNotice(`Tenant "${draft.slug}" siap. Admin bisa langsung masuk dengan tenant tersebut.`)
                   setDraft(null)
                 })
@@ -261,6 +297,14 @@ export function TenantsPage() {
             <button onClick={() => setProvision(null)}>Batal</button>
           </div>
         </div>
+      )}
+
+      {subscription && (
+        <TenantSubscriptionModal
+          tenantId={subscription.id}
+          tenantName={subscription.name}
+          onClose={() => setSubscription(null)}
+        />
       )}
     </div>
   )

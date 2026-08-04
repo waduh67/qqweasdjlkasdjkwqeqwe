@@ -74,6 +74,9 @@ class SecurityConfig {
                     // Webhook pembayaran: penyedia gateway memanggil dengan tanda tangannya
                     // sendiri (diverifikasi di adapter), bukan token bearer kita.
                     "/api/billing/webhooks/**",
+                    // Webhook langganan SaaS (platform menagih tenant): sama alasannya —
+                    // penyedia gateway memanggil dengan tanda tangannya sendiri.
+                    "/api/platform/billing/webhooks/**",
                     // Provisioning VPN: VPS mengunduh installer & memanggil balik (verify
                     // user/pass, minta IP overlay) dengan token node-nya sendiri, bukan bearer.
                     "/api/vpn/provision/**",

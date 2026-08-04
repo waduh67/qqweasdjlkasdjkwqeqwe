@@ -111,6 +111,11 @@ tak pernah menyentuh tabel module lain — batas ini ditegakkan `ModularityTests
   BYO) lewat webhook, kredensial terenkripsi; plus **pembayaran manual** (instruksi
   transfer bank + gambar QRIS di MinIO/S3) saat gateway nonaktif (lihat
   [`docs/payment-gateway.md`](docs/payment-gateway.md)).
+- **platformbilling** — penagihan **platform → tenant** (langganan SaaS): harga bulanan
+  flat + override khusus saat onboarding, perpanjangan mandiri lewat gateway (masa aktif
+  bertambah saat **LUNAS**), auto-suspend/pulih tenant saat menunggak. Level platform
+  (tanpa RLS); memakai ulang mesin gateway `billing` lewat named interface `gateway`
+  (lihat [`docs/saas-subscription.md`](docs/saas-subscription.md)).
 - **vpn** — **swasembada** (tanpa taut lintas-module): VPN-as-a-service. Hub
   OpenVPN adalah infrastruktur **platform** (jalan di VPS kita, IP publik kita,
   app jadi CA-nya sendiri + installer satu-perintah). **Tenant tinggal generate
@@ -491,6 +496,11 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
   + gambar QRIS di MinIO/S3) saat gateway nonaktif, auto-isolir/auto-pulih yang
   menggerakkan `customer` → `bng` (lihat [`docs/billing.md`](docs/billing.md) &
   [`docs/payment-gateway.md`](docs/payment-gateway.md))
+- **Langganan SaaS** ✅ penagihan platform → tenant: harga bulanan flat + **override
+  khusus** saat onboarding, halaman *Langganan Aplikasi* sisi tenant (masa aktif, riwayat
+  tagihan, pemakaian kosmetik) + **perpanjangan mandiri** lewat gateway aktif (masa aktif
+  bertambah saat **LUNAS**, bukan saat terbit), scheduler auto-suspend/pulih (lihat
+  [`docs/saas-subscription.md`](docs/saas-subscription.md))
 - **VPN** ✅ VPN-as-a-service untuk remote perangkat tanpa IP publik: hub OpenVPN
   platform (app jadi CA + installer satu-perintah + verifikasi via callback), tenant
   tinggal generate akun (auto-assign) → kredensial siap tempel di Mikrotik, IP overlay
