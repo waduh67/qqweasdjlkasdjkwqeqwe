@@ -282,10 +282,10 @@ export function PaymentGatewaySettingsPage() {
   const showManual = !form.enabled || form.provider === 'MANUAL'
 
   return (
-    <div className="stack" style={{ maxWidth: 720 }}>
+    <div className="stack settings-page">
       <div>
-        <h2 style={{ margin: 0 }}>Payment Gateway</h2>
-        <p className="muted" style={{ margin: '0.25rem 0 0' }}>
+        <h1 className="page-title">Payment Gateway</h1>
+        <p className="page-sub" style={{ margin: '0.25rem 0 0' }}>
           Penyedia pembayaran &amp; kredensial untuk menagih pelanggan otomatis. Perubahan minta konfirmasi
           sebelum berlaku.
         </p>

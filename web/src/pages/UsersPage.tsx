@@ -4,7 +4,7 @@ import type { Area, PageResponse, Role, User } from '../api/types'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
 import { EmptyState, SearchInput, StatusBadge, Toolbar } from '../components/ui'
-import { IconUsers } from '../components/icons'
+import { IconCheck, IconClose, IconKey, IconPlus, IconPower, IconTrash, IconUsers } from '../components/icons'
 
 interface NewUser {
   email: string
@@ -103,25 +103,30 @@ export function UsersPage() {
       align: 'right',
       width: '1%',
       cell: (user) => (
-        <div className="row">
-          {can('iam.user.assign') && <button onClick={() => setEditing(user)}>Akses</button>}
+        <div className="row" style={{ justifyContent: 'flex-end' }}>
+          {can('iam.user.assign') && (
+            <button className="small" onClick={() => setEditing(user)}>
+              <IconKey size={15} /> Akses
+            </button>
+          )}
           {can('iam.user.update') && (
             <button
+              className="small"
               onClick={() =>
                 void run(() =>
                   api.post(`/api/users/${user.id}/${user.status === 'ACTIVE' ? 'disable' : 'enable'}`),
                 )
               }
             >
-              {user.status === 'ACTIVE' ? 'Nonaktifkan' : 'Aktifkan'}
+              <IconPower size={15} /> {user.status === 'ACTIVE' ? 'Nonaktifkan' : 'Aktifkan'}
             </button>
           )}
           {can('iam.user.delete') && (
             <button
-              className="danger"
+              className="small danger"
               onClick={() => confirm(`Hapus ${user.email}?`) && void run(() => api.del(`/api/users/${user.id}`))}
             >
-              Hapus
+              <IconTrash size={15} /> Hapus
             </button>
           )}
         </div>
@@ -135,7 +140,7 @@ export function UsersPage() {
         <h1 className="page-title">Pengguna</h1>
         {can('iam.user.create') && (
           <button className="primary" onClick={() => setDraft({ ...EMPTY, roleIds: new Set(), areaIds: new Set() })}>
-            Pengguna baru
+            <IconPlus size={16} /> Pengguna baru
           </button>
         )}
       </div>
@@ -204,9 +209,11 @@ export function UsersPage() {
                 })
               }
             >
-              Simpan
+              <IconCheck size={16} /> Simpan
             </button>
-            <button onClick={() => setDraft(null)}>Batal</button>
+            <button onClick={() => setDraft(null)}>
+              <IconClose size={16} /> Batal
+            </button>
           </div>
         </div>
       )}
@@ -318,9 +325,11 @@ function AccessEditor({
       </p>
       <div className="row">
         <button className="primary" onClick={() => onSave([...roleIds], [...areaIds])}>
-          Simpan
+          <IconCheck size={16} /> Simpan
         </button>
-        <button onClick={onCancel}>Batal</button>
+        <button onClick={onCancel}>
+          <IconClose size={16} /> Batal
+        </button>
       </div>
     </div>
   )

@@ -6,6 +6,35 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-04 — Redesign UI: sidebar gelap, aksen indigo, switcher lingkungan
+
+Penyegaran visual menyeluruh design system in-house "NetOps Console" (`web/src/index.css`)
+terinspirasi dashboard SaaS modern. Murni frontend — tanpa endpoint, permission, atau
+perubahan kontrak API. Semua ~30 halaman ikut berganti lewat satu titik ungkit (token CSS).
+
+**Diubah**
+- **Palet aksen jadi indigo–biru** (`#4f46e5` light, `#818cf8` dark) menggantikan aksen lama;
+  seluruh warna dipusatkan pada token `--accent` + turunannya (`--accent-hover/-soft/--focus-ring`,
+  gradient logo, box-shadow tombol via `color-mix`) — tak ada lagi nilai warna ter-hardcode.
+- **Sidebar permanen gelap** (charcoal-navy) lepas dari tema terang/gelap konten lewat token
+  khusus `--sidebar-*`, dengan link aktif ber-rib aksen indigo di tepi kiri.
+- **Kartu statistik** dirapikan (buang bilah aksen tebal, pakai titik status halus) dan tabel
+  bergaya lebih bersih (header uppercase abu, padding lega).
+- **Scrollbar kustom** untuk Chrome (`::-webkit-scrollbar`) & Firefox (`scrollbar-*`), termasuk
+  varian terang untuk sidebar gelap.
+- **Halaman berbasis formulir** (`/payment-gateway`, `/platform/billing`) kini satu kolom
+  terpusat (`.settings-page`, `max-width` + `margin-inline: auto`) — menghapus gutter kosong
+  lebar di sisi kanan pada layar besar.
+- **Font Plus Jakarta Sans** (Google Fonts, `display=swap`) dengan fallback `system-ui`.
+
+**Ditambahkan**
+- **Switcher lingkungan** (`web/src/components/EnvSwitcher.tsx`): pil dropdown di puncak sidebar
+  untuk platform admin berpindah antara "Tampilan Platform" ↔ "Tampilan Tenant", menggantikan
+  item nav lama. Hanya tampil untuk platform admin.
+- **Ikon aksi** pada manajemen pengguna (`/users`): tombol tambah (`+`), akses (kunci),
+  aktif/nonaktif (power), dan hapus (trash) kini semuanya bericon; ikon baru `IconTrash`,
+  `IconPower`, `IconKey`, `IconCheck` di `web/src/components/icons.tsx`.
+
 ### 2026-08-04 — Area UI khusus Platform admin (SaaS) terpisah dari UI tenant
 
 Platform admin (SaaS super-admin, `user.platformAdmin`) kini punya **shell & dashboard
