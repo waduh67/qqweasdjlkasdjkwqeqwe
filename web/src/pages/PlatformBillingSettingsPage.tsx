@@ -72,7 +72,7 @@ export function PlatformBillingSettingsPage() {
   }
 
   return (
-    <div className="stack" style={{ maxWidth: 760, gap: '1.25rem' }}>
+    <div className="stack settings-page" style={{ gap: '1.5rem' }}>
       <div>
         <h1 className="page-title">Billing Langganan Platform</h1>
         <p className="page-sub">

@@ -66,6 +66,36 @@ export const IconUsers = (p: IconProps) => (
   </Icon>
 )
 
+export const IconTrash = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3 6h18" />
+    <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+    <path d="M10 11v6M14 11v6" />
+  </Icon>
+)
+
+export const IconPower = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 3v9" />
+    <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+  </Icon>
+)
+
+export const IconKey = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="7.5" cy="15.5" r="4.5" />
+    <path d="m21 2-9.6 9.6" />
+    <path d="m15.5 7.5 3 3L22 7l-3-3" />
+  </Icon>
+)
+
+export const IconCheck = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M20 6 9 17l-5-5" />
+  </Icon>
+)
+
 export const IconCustomers = (p: IconProps) => (
   <Icon {...p}>
     <circle cx="12" cy="8" r="3.5" />

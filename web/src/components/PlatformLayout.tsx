@@ -3,13 +3,13 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { ThemeToggle } from './ThemeToggle'
+import { EnvSwitcher } from './EnvSwitcher'
 import {
   IconAudit,
   IconBuilding,
   IconDashboard,
   IconGauge,
   IconLogout,
-  IconMap,
   IconRoute,
   IconShield,
   IconSidebar,
@@ -35,11 +35,7 @@ type NavItem = {
 const GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
   {
     label: null,
-    items: [
-      { to: '/platform', label: 'Dashboard', permission: null, icon: IconDashboard, end: true },
-      // Jalan keluar ke area tenant (platform admin boleh inspeksi lewat deep-link).
-      { to: '/', label: 'Tampilan Tenant', permission: null, icon: IconMap },
-    ],
+    items: [{ to: '/platform', label: 'Dashboard', permission: null, icon: IconDashboard, end: true }],
   },
   {
     label: 'Tenant',
@@ -98,6 +94,8 @@ export function PlatformLayout() {
           </span>
           <span className="brand-text">NetOps · Platform</span>
         </div>
+
+        <EnvSwitcher current="platform" />
 
         {GROUPS.map((group, i) => {
           const visible = group.items.filter((item) => item.permission === null || can(item.permission))

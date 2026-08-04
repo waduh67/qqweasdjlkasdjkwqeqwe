@@ -3,11 +3,11 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { ThemeToggle } from './ThemeToggle'
+import { EnvSwitcher } from './EnvSwitcher'
 import {
   IconAlert,
   IconArea,
   IconAudit,
-  IconBuilding,
   IconCustomers,
   IconDashboard,
   IconGauge,
@@ -131,15 +131,8 @@ export function Layout() {
           <span className="brand-text">NetOps</span>
         </div>
 
-        {/* Platform admin sedang menengok area tenant — beri jalan cepat balik ke shell platform. */}
-        {isPlatformAdmin && (
-          <nav>
-            <NavLink to="/platform" title="Kembali ke tampilan platform">
-              <IconBuilding size={18} />
-              <span className="nav-text">Tampilan Platform</span>
-            </NavLink>
-          </nav>
-        )}
+        {/* Platform admin sedang menengok area tenant — switcher konteks di puncak sidebar. */}
+        {isPlatformAdmin && <EnvSwitcher current="tenant" />}
 
         {GROUPS.map((group, i) => {
           const visible = group.items.filter((item) => item.permission === null || can(item.permission))
