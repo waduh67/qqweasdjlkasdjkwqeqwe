@@ -108,6 +108,12 @@ data class CableRequest(
     val fromId: UUID,
     val toKind: NetworkNodeKind,
     val toId: UUID,
+    /** FEEDER: PON port OLT sumber. */
+    val fromPonPortId: UUID? = null,
+    /** Sumber: kaki splitter ODC / slot ODP. */
+    @field:Min(1) val fromPortNumber: Int? = null,
+    /** Input tujuan (opsional). */
+    @field:Min(1) val toPortNumber: Int? = null,
     val status: AssetStatus = AssetStatus.ACTIVE,
 )
 

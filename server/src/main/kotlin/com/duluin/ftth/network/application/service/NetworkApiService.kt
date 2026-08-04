@@ -103,7 +103,7 @@ class NetworkApiService(
 
         val visited = HashSet<UUID>()
         val queue = ArrayDeque<NetworkNodeRef>()
-        queue += cable.to
+        queue += cable.to.ref
         while (queue.isNotEmpty()) {
             val node = queue.removeFirst()
             if (!visited.add(node.id)) continue
@@ -114,10 +114,10 @@ class NetworkApiService(
                 else -> Unit
             }
             cableRepository.findByEndpoint(node)
-                .filter { it.from == node }
+                .filter { it.from.ref == node }
                 .forEach { downstream ->
                     severedCables.putIfAbsent(downstream.id, downstream)
-                    queue += downstream.to
+                    queue += downstream.to.ref
                 }
         }
 

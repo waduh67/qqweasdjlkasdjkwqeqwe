@@ -14,6 +14,13 @@ interface ManageCableUseCase {
 
     fun get(id: UUID): CableView
 
+    /**
+     * Port keluaran yang tersedia pada sebuah simpul sumber — bahan picker "colok
+     * dari port mana". OLT → PON port-nya; ODC/ODP → kaki/slot 1..kapasitas; port
+     * yang sudah dipakai kabel lain ditandai occupied. SITE/CUSTOMER → kosong.
+     */
+    fun sourcePorts(kind: NetworkNodeKind, id: UUID): List<CablePortOption>
+
     fun create(command: SaveCableCommand): CableView
 
     fun update(id: UUID, command: SaveCableCommand): CableView
@@ -31,5 +38,11 @@ data class SaveCableCommand(
     val fromId: UUID,
     val toKind: NetworkNodeKind,
     val toId: UUID,
+    /** FEEDER: PON port OLT sumber. Null = tanpa port (kabel legacy / ujung SITE). */
+    val fromPonPortId: UUID? = null,
+    /** Sumber: kaki splitter ODC / slot ODP. */
+    val fromPortNumber: Int? = null,
+    /** Input tujuan (opsional, umumnya tunggal). */
+    val toPortNumber: Int? = null,
     val status: AssetStatus,
 )

@@ -4,9 +4,11 @@ import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.domain.geo.RoutePath
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
+import com.duluin.ftth.network.application.port.inbound.CablePortOption
 import com.duluin.ftth.network.application.port.inbound.CableView
 import com.duluin.ftth.network.application.port.inbound.ManageCableUseCase
 import com.duluin.ftth.network.application.port.inbound.SaveCableCommand
@@ -14,9 +16,11 @@ import com.duluin.ftth.network.application.port.outbound.CableRepository
 import com.duluin.ftth.network.application.port.outbound.OdcRepository
 import com.duluin.ftth.network.application.port.outbound.OdpRepository
 import com.duluin.ftth.network.application.port.outbound.OltRepository
+import com.duluin.ftth.network.application.port.outbound.PonPortRepository
 import com.duluin.ftth.network.application.port.outbound.SiteRepository
 import com.duluin.ftth.network.domain.model.Cable
 import com.duluin.ftth.network.domain.model.CableType
+import com.duluin.ftth.network.domain.model.NetworkEndpoint
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import com.duluin.ftth.network.domain.model.NetworkNodeRef
 import org.springframework.stereotype.Service
@@ -31,6 +35,7 @@ class CableService(
     private val oltRepository: OltRepository,
     private val odcRepository: OdcRepository,
     private val odpRepository: OdpRepository,
+    private val ponPortRepository: PonPortRepository,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
 ) : ManageCableUseCase {
@@ -42,12 +47,46 @@ class CableService(
     @Transactional(readOnly = true)
     override fun get(id: UUID): CableView = requireCable(id).toView()
 
+    @Transactional(readOnly = true)
+    override fun sourcePorts(kind: NetworkNodeKind, id: UUID): List<CablePortOption> {
+        val ref = NetworkNodeRef(kind, id)
+        // Kabel yang BERAWAL dari simpul ini menempati port keluarannya.
+        val outgoing = cableRepository.findByEndpoint(ref).filter { it.from.ref == ref }
+        return when (kind) {
+            NetworkNodeKind.OLT -> {
+                val byPonPort = outgoing.mapNotNull { c -> c.from.ponPortId?.let { it to c } }.toMap()
+                ponPortRepository.findByOltId(id).map { port ->
+                    val cable = byPonPort[port.id]
+                    CablePortOption(port.id, null, port.label, cable != null, cable?.code)
+                }
+            }
+            NetworkNodeKind.ODC -> {
+                val odc = odcRepository.findById(id) ?: throw NotFoundException("ODC $id tidak ditemukan")
+                val byLeg = outgoing.mapNotNull { c -> c.from.portNumber?.let { it to c } }.toMap()
+                (1..odc.capacity).map { leg ->
+                    val cable = byLeg[leg]
+                    CablePortOption(null, leg, "Kaki $leg", cable != null, cable?.code)
+                }
+            }
+            NetworkNodeKind.ODP -> {
+                val odp = odpRepository.findById(id) ?: throw NotFoundException("ODP $id tidak ditemukan")
+                val bySlot = outgoing.mapNotNull { c -> c.from.portNumber?.let { it to c } }.toMap()
+                (1..odp.capacity).map { slot ->
+                    val cable = bySlot[slot]
+                    CablePortOption(null, slot, "Slot $slot", cable != null, cable?.code)
+                }
+            }
+            NetworkNodeKind.SITE, NetworkNodeKind.CUSTOMER -> emptyList()
+        }
+    }
+
     override fun create(command: SaveCableCommand): CableView {
         val code = command.code.trim().uppercase()
         if (cableRepository.existsByCode(code)) throw ConflictException("Kode kabel '$code' sudah dipakai")
-        val from = NetworkNodeRef(command.fromKind, command.fromId)
-        val to = NetworkNodeRef(command.toKind, command.toId)
-        assertNodesExist(from, to)
+        val from = command.fromEndpoint()
+        val to = command.toEndpoint()
+        assertNodesExist(from.ref, to.ref)
+        validateSourcePort(from, excludeCableId = null)
         val cable = cableRepository.save(
             Cable.create(
                 tenantId = currentUser.current().tenantId,
@@ -61,6 +100,7 @@ class CableService(
                 status = command.status,
             ),
         )
+        applyUplink(cable)
         auditor.record(
             "cable.created", "Cable", cable.id, cable.tenantId,
             mapOf("code" to cable.code, "type" to cable.cableType.name, "lengthMeters" to cable.lengthMeters),
@@ -70,9 +110,10 @@ class CableService(
 
     override fun update(id: UUID, command: SaveCableCommand): CableView {
         val cable = requireCable(id)
-        val from = NetworkNodeRef(command.fromKind, command.fromId)
-        val to = NetworkNodeRef(command.toKind, command.toId)
-        assertNodesExist(from, to)
+        val from = command.fromEndpoint()
+        val to = command.toEndpoint()
+        assertNodesExist(from.ref, to.ref)
+        validateSourcePort(from, excludeCableId = id)
         cable.update(
             name = command.name,
             cableType = command.cableType,
@@ -83,6 +124,7 @@ class CableService(
             status = command.status,
         )
         val saved = cableRepository.save(cable)
+        applyUplink(saved)
         auditor.record("cable.updated", "Cable", saved.id, saved.tenantId, mapOf("code" to saved.code))
         return saved.toView()
     }
@@ -90,7 +132,109 @@ class CableService(
     override fun delete(id: UUID) {
         val cable = requireCable(id)
         cableRepository.deleteById(id)
+        releaseUplink(cable)
         auditor.record("cable.deleted", "Cable", id, cable.tenantId, mapOf("code" to cable.code))
+    }
+
+    /**
+     * Menegakkan aturan port KELUARAN sumber sebuah kabel: portnya ada di simpul,
+     * masih di dalam kapasitas, dan belum dipakai kabel lain. Ini yang membuat "gak
+     * bisa nambah kabel sembarangan kalau portnya penuh" — okupansi hidup di sini,
+     * bukan di unique-index DB, karena rujukan ujung memang tak ber-foreign-key.
+     *
+     * Port sengaja OPSIONAL di server: kabel tanpa port dibiarkan lewat (kabel lama
+     * portnya NULL, dan feeder dari SITE tak mengenal PON port). Kewajiban "pilih
+     * port dulu" ditegakkan di UI penarikan kabel — begitu sebuah port dipilih,
+     * barulah aturan keberadaan/kapasitas/okupansi di sini berlaku penuh.
+     */
+    private fun validateSourcePort(from: NetworkEndpoint, excludeCableId: UUID?) {
+        when (from.kind) {
+            NetworkNodeKind.OLT -> {
+                val ponPortId = from.ponPortId ?: return
+                val ponPort = ponPortRepository.findById(ponPortId)
+                    ?: throw NotFoundException("PON port $ponPortId tidak ditemukan")
+                if (ponPort.oltId != from.id) {
+                    throw ValidationException("PON port ${ponPort.label} bukan milik OLT sumber")
+                }
+                conflictingSourceCable(from, excludeCableId) { it.ponPortId == ponPortId }
+                    ?.let { throw ConflictException("PON port ${ponPort.label} sudah dipakai kabel ${it.code}") }
+            }
+            NetworkNodeKind.ODC -> {
+                val port = from.portNumber ?: return
+                val odc = odcRepository.findById(from.id) ?: throw NotFoundException("ODC ${from.id} tidak ditemukan")
+                if (port !in 1..odc.capacity) {
+                    throw ValidationException("Kaki splitter $port di luar kapasitas ODC ${odc.code} (1-${odc.capacity})")
+                }
+                conflictingSourceCable(from, excludeCableId) { it.portNumber == port }
+                    ?.let { throw ConflictException("Kaki splitter $port ODC ${odc.code} sudah dipakai kabel ${it.code}") }
+            }
+            NetworkNodeKind.ODP -> {
+                val port = from.portNumber ?: return
+                val odp = odpRepository.findById(from.id) ?: throw NotFoundException("ODP ${from.id} tidak ditemukan")
+                if (port !in 1..odp.capacity) {
+                    throw ValidationException("Slot $port di luar kapasitas ODP ${odp.code} (1-${odp.capacity})")
+                }
+                conflictingSourceCable(from, excludeCableId) { it.portNumber == port }
+                    ?.let { throw ConflictException("Slot $port ODP ${odp.code} sudah dipakai kabel ${it.code}") }
+            }
+            // SITE feeder tak mengenal PON port; CUSTOMER tak pernah jadi sumber kabel.
+            NetworkNodeKind.SITE, NetworkNodeKind.CUSTOMER -> Unit
+        }
+    }
+
+    /** Kabel LAIN yang memakai port keluaran sumber yang sama (selain [excludeCableId]). */
+    private fun conflictingSourceCable(
+        from: NetworkEndpoint,
+        excludeCableId: UUID?,
+        samePort: (NetworkEndpoint) -> Boolean,
+    ): Cable? = cableRepository.findByEndpoint(from.ref)
+        .firstOrNull { it.id != excludeCableId && it.from.ref == from.ref && samePort(it.from) }
+
+    /**
+     * Fisik = logis: begitu kabel feeder/distribusi tergambar, uplink logis simpul
+     * hilir langsung ikut ter-set — operator tak perlu menyetel uplink dua kali.
+     * DROP sengaja tak disentuh: pemasangan ONU pelanggan (module customer) yang
+     * memegang keterisian slot ODP, dan network tak boleh bergantung padanya.
+     */
+    private fun applyUplink(cable: Cable) = adjustUplink(cable, connect = true)
+
+    /** Kebalikan [applyUplink]: melepas uplink bila simpul hilir masih menunjuk kabel ini. */
+    private fun releaseUplink(cable: Cable) = adjustUplink(cable, connect = false)
+
+    private fun adjustUplink(cable: Cable, connect: Boolean) {
+        when (cable.cableType) {
+            CableType.FEEDER -> {
+                val ponPortId = cable.from.ponPortId ?: return
+                if (cable.to.kind != NetworkNodeKind.ODC) return
+                val odc = odcRepository.findById(cable.to.id) ?: return
+                val target = if (connect) ponPortId else null
+                // Saat melepas, hanya kosongkan bila ODC memang masih menunjuk kabel ini.
+                if (!connect && odc.ponPortId != ponPortId) return
+                if (odc.ponPortId != target) {
+                    odc.connectTo(target)
+                    odcRepository.save(odc)
+                }
+            }
+            CableType.DISTRIBUTION -> {
+                if (cable.to.kind != NetworkNodeKind.ODP) return
+                val odcId = resolveUpstreamOdcId(cable.from) ?: return
+                val odp = odpRepository.findById(cable.to.id) ?: return
+                val target = if (connect) odcId else null
+                if (!connect && odp.odcId != odcId) return
+                if (odp.odcId != target) {
+                    odp.connectTo(target)
+                    odpRepository.save(odp)
+                }
+            }
+            CableType.DROP -> Unit
+        }
+    }
+
+    /** ODC hulu sebuah ujung distribusi: ODC itu sendiri, atau ODC dari ODP yang dirangkai. */
+    private fun resolveUpstreamOdcId(from: NetworkEndpoint): UUID? = when (from.kind) {
+        NetworkNodeKind.ODC -> from.id
+        NetworkNodeKind.ODP -> odpRepository.findById(from.id)?.odcId
+        else -> null
     }
 
     /**
@@ -120,6 +264,12 @@ class CableService(
         cableRepository.findById(id) ?: throw NotFoundException("Kabel $id tidak ditemukan")
 }
 
+private fun SaveCableCommand.fromEndpoint() =
+    NetworkEndpoint(fromKind, fromId, ponPortId = fromPonPortId, portNumber = fromPortNumber)
+
+private fun SaveCableCommand.toEndpoint() =
+    NetworkEndpoint(toKind, toId, portNumber = toPortNumber)
+
 private fun Cable.toView() = CableView(
     id = id,
     code = code,
@@ -132,5 +282,8 @@ private fun Cable.toView() = CableView(
     fromId = from.id,
     toKind = to.kind,
     toId = to.id,
+    fromPonPortId = from.ponPortId,
+    fromPortNumber = from.portNumber,
+    toPortNumber = to.portNumber,
     status = status,
 )

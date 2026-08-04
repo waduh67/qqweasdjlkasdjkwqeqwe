@@ -24,14 +24,34 @@ enum class CableType(
     DROP(setOf(NetworkNodeKind.ODP), setOf(NetworkNodeKind.CUSTOMER)),
     ;
 
-    fun assertEndpoints(from: NetworkNodeRef, to: NetworkNodeRef) {
+    fun assertEndpoints(from: NetworkEndpoint, to: NetworkEndpoint) {
         if (from.kind !in validFrom) {
             throw ValidationException("Kabel $name tidak boleh berawal dari ${from.kind}, harus salah satu dari $validFrom")
         }
         if (to.kind !in validTo) {
             throw ValidationException("Kabel $name tidak boleh berakhir di ${to.kind}, harus salah satu dari $validTo")
         }
-        if (from == to) throw ValidationException("Kabel tidak boleh berawal dan berakhir di simpul yang sama")
+        if (from.ref == to.ref) throw ValidationException("Kabel tidak boleh berawal dan berakhir di simpul yang sama")
+        assertPortShape(from)
+        assertPortShape(to)
+    }
+
+    /**
+     * Port hanya boleh menempel di jenis simpul yang memang punya port fisik. Yang
+     * WAJIB-ada-nya port pada kabel baru + batas kapasitas + okupansi ditegakkan di
+     * CableService (butuh kapasitas simpul & data kabel lain); di sini cukup
+     * memastikan port tidak salah tempel — mis. PON port di ujung ODP.
+     */
+    private fun assertPortShape(endpoint: NetworkEndpoint) {
+        if (endpoint.ponPortId != null && endpoint.kind != NetworkNodeKind.OLT) {
+            throw ValidationException("PON port hanya berlaku untuk ujung OLT, bukan ${endpoint.kind}")
+        }
+        endpoint.portNumber?.let { port ->
+            if (endpoint.kind != NetworkNodeKind.ODC && endpoint.kind != NetworkNodeKind.ODP) {
+                throw ValidationException("Nomor port hanya berlaku untuk ODC/ODP, bukan ${endpoint.kind}")
+            }
+            if (port < 1) throw ValidationException("Nomor port harus >= 1")
+        }
     }
 }
 
@@ -50,8 +70,8 @@ class Cable private constructor(
     cableType: CableType,
     coreCount: Int,
     route: RoutePath,
-    from: NetworkNodeRef,
-    to: NetworkNodeRef,
+    from: NetworkEndpoint,
+    to: NetworkEndpoint,
     status: AssetStatus,
 ) {
     var name: String = name
@@ -66,10 +86,10 @@ class Cable private constructor(
     var route: RoutePath = route
         private set
 
-    var from: NetworkNodeRef = from
+    var from: NetworkEndpoint = from
         private set
 
-    var to: NetworkNodeRef = to
+    var to: NetworkEndpoint = to
         private set
 
     var status: AssetStatus = status
@@ -83,8 +103,8 @@ class Cable private constructor(
         cableType: CableType,
         coreCount: Int,
         route: RoutePath,
-        from: NetworkNodeRef,
-        to: NetworkNodeRef,
+        from: NetworkEndpoint,
+        to: NetworkEndpoint,
         status: AssetStatus,
     ) {
         cableType.assertEndpoints(from, to)
@@ -107,8 +127,8 @@ class Cable private constructor(
             cableType: CableType,
             coreCount: Int,
             route: RoutePath,
-            from: NetworkNodeRef,
-            to: NetworkNodeRef,
+            from: NetworkEndpoint,
+            to: NetworkEndpoint,
             status: AssetStatus = AssetStatus.ACTIVE,
         ): Cable {
             cableType.assertEndpoints(from, to)
@@ -135,8 +155,8 @@ class Cable private constructor(
             cableType: CableType,
             coreCount: Int,
             route: RoutePath,
-            from: NetworkNodeRef,
-            to: NetworkNodeRef,
+            from: NetworkEndpoint,
+            to: NetworkEndpoint,
             status: AssetStatus,
         ): Cable = Cable(id, tenantId, code, name, cableType, coreCount, route, from, to, status)
 

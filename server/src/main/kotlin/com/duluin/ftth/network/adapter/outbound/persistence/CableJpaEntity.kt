@@ -51,6 +51,18 @@ class CableJpaEntity(
     @Column(name = "to_id", nullable = false)
     var toId: UUID,
 
+    /** FEEDER: PON port OLT sumber. Null untuk kabel lama / ujung non-OLT. */
+    @Column(name = "from_pon_port_id")
+    var fromPonPortId: UUID?,
+
+    /** Sumber: kaki splitter ODC / slot ODP. Null untuk kabel lama. */
+    @Column(name = "from_port_number")
+    var fromPortNumber: Int?,
+
+    /** Input tujuan (opsional, umumnya tunggal). Null untuk kabel lama. */
+    @Column(name = "to_port_number")
+    var toPortNumber: Int?,
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var status: AssetStatus,

@@ -2,10 +2,12 @@ package com.duluin.ftth.network.adapter.inbound.web
 
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.infrastructure.web.PageResponse
+import com.duluin.ftth.network.application.port.inbound.CablePortOption
 import com.duluin.ftth.network.application.port.inbound.CableView
 import com.duluin.ftth.network.application.port.inbound.ManageCableUseCase
 import com.duluin.ftth.network.application.port.inbound.SaveCableCommand
 import com.duluin.ftth.network.domain.model.CableType
+import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -44,6 +46,14 @@ class CableController(
     @PreAuthorize("@authz.can('network.cable.view')")
     fun get(@PathVariable id: UUID): CableView = manageCable.get(id)
 
+    /** Port keluaran yang tersedia di simpul sumber — untuk picker "colok dari port mana". */
+    @GetMapping("/source-ports")
+    @PreAuthorize("@authz.can('network.cable.view')")
+    fun sourcePorts(
+        @RequestParam kind: NetworkNodeKind,
+        @RequestParam id: UUID,
+    ): List<CablePortOption> = manageCable.sourcePorts(kind, id)
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("@authz.can('network.cable.create')")
@@ -70,5 +80,8 @@ private fun CableRequest.toCommand() = SaveCableCommand(
     fromId = fromId,
     toKind = toKind,
     toId = toId,
+    fromPonPortId = fromPonPortId,
+    fromPortNumber = fromPortNumber,
+    toPortNumber = toPortNumber,
     status = status,
 )

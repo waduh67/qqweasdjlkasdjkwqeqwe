@@ -95,6 +95,21 @@ data class OdpView(
     val status: AssetStatus,
 )
 
+/**
+ * Satu pilihan port KELUARAN pada simpul sumber, untuk picker "colok dari port
+ * mana" saat menarik kabel. [ponPortId] terisi untuk OLT (PON port berlabel),
+ * [portNumber] untuk kaki splitter ODC / slot ODP. [occupied] menandai port yang
+ * sudah dipakai kabel lain sehingga tak boleh dipilih lagi.
+ */
+data class CablePortOption(
+    val ponPortId: UUID?,
+    val portNumber: Int?,
+    val label: String,
+    val occupied: Boolean,
+    /** Kode kabel yang menempati port ini, bila [occupied]. */
+    val occupiedByCable: String?,
+)
+
 data class CableView(
     val id: UUID,
     val code: String,
@@ -107,5 +122,11 @@ data class CableView(
     val fromId: UUID,
     val toKind: NetworkNodeKind,
     val toId: UUID,
+    /** FEEDER: PON port OLT sumber; null bila kabel legacy / ujung SITE. */
+    val fromPonPortId: UUID?,
+    /** Sumber: kaki splitter ODC / slot ODP; null bila legacy. */
+    val fromPortNumber: Int?,
+    /** Input tujuan; null bila tak dipilih. */
+    val toPortNumber: Int?,
     val status: AssetStatus,
 )

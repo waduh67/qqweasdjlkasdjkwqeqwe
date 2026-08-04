@@ -10,6 +10,7 @@ import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.network.application.port.outbound.CableRepository
 import com.duluin.ftth.network.domain.model.Cable
 import com.duluin.ftth.network.domain.model.CableType
+import com.duluin.ftth.network.domain.model.NetworkEndpoint
 import com.duluin.ftth.network.domain.model.NetworkNodeRef
 import org.springframework.stereotype.Component
 import java.util.UUID
@@ -30,6 +31,9 @@ class CablePersistenceAdapter(
             fromId = cable.from.id
             toKind = cable.to.kind
             toId = cable.to.id
+            fromPonPortId = cable.from.ponPortId
+            fromPortNumber = cable.from.portNumber
+            toPortNumber = cable.to.portNumber
             status = cable.status
         } ?: CableJpaEntity(
             id = cable.id,
@@ -43,6 +47,9 @@ class CablePersistenceAdapter(
             fromId = cable.from.id,
             toKind = cable.to.kind,
             toId = cable.to.id,
+            fromPonPortId = cable.from.ponPortId,
+            fromPortNumber = cable.from.portNumber,
+            toPortNumber = cable.to.portNumber,
             status = cable.status,
         )
         return jpa.save(entity).toDomain()
@@ -76,7 +83,7 @@ internal fun CableJpaEntity.toDomain(): Cable = Cable.rehydrate(
     cableType = cableType,
     coreCount = coreCount,
     route = route.toRoutePath(),
-    from = NetworkNodeRef(fromKind, fromId),
-    to = NetworkNodeRef(toKind, toId),
+    from = NetworkEndpoint(fromKind, fromId, ponPortId = fromPonPortId, portNumber = fromPortNumber),
+    to = NetworkEndpoint(toKind, toId, portNumber = toPortNumber),
     status = status,
 )
