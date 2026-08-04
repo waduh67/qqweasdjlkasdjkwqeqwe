@@ -13,6 +13,16 @@ const REFRESH_KEY = 'ftth.refreshToken'
 let accessToken: string | null = null
 let onSessionLost: (() => void) | null = null
 
+/**
+ * Rotasi refresh token yang sedang berjalan. Refresh token bersifat SEKALI-PAKAI —
+ * server me-revoke token yang dipakai lalu menerbitkan yang baru. Jadi bila dua
+ * pemanggil merotasi berbarengan (StrictMode memanggil restore dua kali, atau
+ * boot-restore beradu dengan retry-401), keduanya HARUS berbagi satu panggilan;
+ * kalau tidak, panggilan kedua membawa token yang sudah di-revoke → 401 → sesi
+ * terhapus. Promise ini men-serialisasi mereka.
+ */
+let refreshInFlight: Promise<TokenResponse | null> | null = null
+
 export const tokenStore = {
   setAccessToken(token: string | null) {
     accessToken = token
@@ -65,21 +75,39 @@ async function parseError(response: Response): Promise<ApiError> {
   return new ApiError(response.status, detail, errors)
 }
 
-async function rotateRefreshToken(): Promise<boolean> {
+/**
+ * Rotasi refresh token → sesi baru, ter-dedupe (single-flight). Pemanggil yang
+ * datang saat rotasi sedang berjalan ikut menunggu promise yang sama alih-alih
+ * menembak fetch kedua dengan token yang sama. Mengembalikan token+profil baru,
+ * atau `null` bila tak ada refresh token / rotasi gagal.
+ */
+export function refreshSession(): Promise<TokenResponse | null> {
+  if (refreshInFlight) return refreshInFlight
+
   const refreshToken = tokenStore.getRefreshToken()
-  if (!refreshToken) return false
+  if (!refreshToken) return Promise.resolve(null)
 
-  const response = await fetch('/api/auth/refresh', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken }),
-  })
-  if (!response.ok) return false
+  refreshInFlight = (async () => {
+    try {
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      })
+      if (!response.ok) return null
 
-  const tokens: TokenResponse = await response.json()
-  accessToken = tokens.accessToken
-  tokenStore.setRefreshToken(tokens.refreshToken)
-  return true
+      const tokens: TokenResponse = await response.json()
+      accessToken = tokens.accessToken
+      tokenStore.setRefreshToken(tokens.refreshToken)
+      return tokens
+    } catch {
+      return null
+    } finally {
+      refreshInFlight = null
+    }
+  })()
+
+  return refreshInFlight
 }
 
 async function send(path: string, init: RequestInit): Promise<Response> {
@@ -96,7 +124,7 @@ async function sendWithRefresh(path: string, init: RequestInit): Promise<Respons
   let response = await send(path, init)
 
   if (response.status === 401 && tokenStore.getRefreshToken()) {
-    if (await rotateRefreshToken()) {
+    if (await refreshSession()) {
       response = await send(path, init)
     } else {
       tokenStore.clear()
