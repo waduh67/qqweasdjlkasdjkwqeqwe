@@ -8,11 +8,13 @@ import type {
   BlastRadiusView,
   CableCutView,
   CableEnd,
+  CablePortOption,
   CableType,
   CableView,
   CustomerTrace,
   ImpactCause,
   ImpactedOverlay,
+  NodeKind,
   OdcView,
   OdpInspection,
   OltView,
@@ -957,8 +959,10 @@ export function MapPage() {
     code: string
     name: string
     coreCount: number
-    // Drop → pelanggan: port ODP yang dipilih + ONU yang ditautkan ke port itu.
-    portNumber?: number
+    // Feeder: PON port OLT sumber. Distribusi/drop: kaki/slot sumber.
+    fromPonPortId?: string
+    fromPortNumber?: number
+    // Drop → pelanggan: ONU yang ditautkan ke slot ODP sumber (form.fromPortNumber).
     onuId?: string
   }) => {
     const route = tool.current?.route() ?? []
@@ -976,18 +980,20 @@ export function MapPage() {
         fromId: state.from.id,
         toKind: state.to.kind,
         toId: state.to.id,
+        fromPonPortId: form.fromPonPortId,
+        fromPortNumber: form.fromPortNumber,
         status: 'ACTIVE',
       })
-      // Drop ke pelanggan: tautkan ONU-nya ke port ODP yang dipilih, sehingga
+      // Drop ke pelanggan: tautkan ONU-nya ke slot ODP yang sama, sehingga
       // "port mana" tercatat di penempatan ONU — sumber kebenaran port ODP.
       let portNote = ''
-      if (form.onuId && form.portNumber != null) {
+      if (form.onuId && form.fromPortNumber != null) {
         try {
           await api.post(`/api/customers/onus/${form.onuId}/attach`, {
             odpId,
-            portNumber: form.portNumber,
+            portNumber: form.fromPortNumber,
           })
-          portNote = ` · ONU di port ${form.portNumber}`
+          portNote = ` · ONU di port ${form.fromPortNumber}`
         } catch (attachErr) {
           toast.error(
             attachErr instanceof ApiError ? attachErr.message : 'Kabel tersimpan, tapi gagal menautkan ONU ke port',
@@ -1032,6 +1038,11 @@ export function MapPage() {
         fromId: editing.fromId,
         toKind: editing.toKind,
         toId: editing.toId,
+        // Edit hanya mengubah geometri jalur — pertahankan port terekam agar tak
+        // ter-null-kan (yang berarti melepas uplink) hanya karena rute digeser.
+        fromPonPortId: editing.fromPonPortId ?? undefined,
+        fromPortNumber: editing.fromPortNumber ?? undefined,
+        toPortNumber: editing.toPortNumber ?? undefined,
         status: editing.status,
       })
       toast.success(`Jalur ${editing.code} diperbarui`)
@@ -1168,6 +1179,7 @@ export function MapPage() {
           <SaveCablePanel
             from={toolState.from.code}
             to={toolState.to.code}
+            fromKind={toolState.from.kind}
             fromId={toolState.from.id}
             toId={toolState.to.id}
             cableType={toolState.cableType}
@@ -1304,9 +1316,13 @@ function sanitizeCode(raw: string): string {
     .slice(0, 40)
 }
 
+/** Port keluaran sumber yang dipilih: PON port OLT (ponPortId) atau kaki/slot (portNumber). */
+type SourcePort = { ponPortId: string | null; portNumber: number | null }
+
 function SaveCablePanel({
   from,
   to,
+  fromKind,
   fromId,
   toId,
   cableType,
@@ -1317,6 +1333,8 @@ function SaveCablePanel({
 }: {
   from: string
   to: string
+  /** Jenis perangkat ujung awal — menentukan bentuk port sumber (PON/kaki/slot). */
+  fromKind: NodeKind
   /** Id perangkat ujung awal (untuk drop = ODP tempat port dipilih). */
   fromId: string
   /** Id perangkat ujung akhir (untuk drop = pelanggan yang ONU-nya ditautkan). */
@@ -1325,14 +1343,44 @@ function SaveCablePanel({
   lengthMeters: number
   canAssignPort: boolean
   onCancel: () => void
-  onSave: (form: { code: string; name: string; coreCount: number; portNumber?: number; onuId?: string }) => void
+  onSave: (form: {
+    code: string
+    name: string
+    coreCount: number
+    fromPonPortId?: string
+    fromPortNumber?: number
+    onuId?: string
+  }) => void
 }) {
   const [code, setCode] = useState(sanitizeCode(`CBL-${from}-${to}`))
   const [name, setName] = useState(`${TYPE_LABEL[cableType]} ${from} → ${to}`)
   const [coreCount, setCoreCount] = useState(DEFAULT_CORES[cableType])
 
-  // Untuk kabel drop, tampilkan peta port ODP tujuan supaya port tidak ditebak.
   const isDrop = cableType === 'DROP'
+
+  // Feeder/distribusi: pilih port KELUARAN sumber (PON port OLT / kaki ODC / slot
+  // ODP). Feeder dari SITE tak punya PON port → daftar kosong, port tak diperlukan.
+  const [srcOptions, setSrcOptions] = useState<CablePortOption[] | null>(isDrop ? [] : null)
+  const [srcPort, setSrcPort] = useState<SourcePort | null>(null)
+
+  useEffect(() => {
+    if (isDrop) return
+    let alive = true
+    setSrcOptions(null)
+    void api
+      .get<CablePortOption[]>(`/api/cables/source-ports?kind=${fromKind}&id=${fromId}`)
+      .then((opts) => {
+        if (alive) setSrcOptions(opts)
+      })
+      .catch(() => {
+        if (alive) setSrcOptions([])
+      })
+    return () => {
+      alive = false
+    }
+  }, [isDrop, fromKind, fromId])
+
+  // Untuk kabel drop, tampilkan peta port ODP tujuan supaya port tidak ditebak.
   const [odp, setOdp] = useState<OdpInspection | null>(null)
   const [onu, setOnu] = useState<OnuView | null>(null)
   const [loadingPorts, setLoadingPorts] = useState(isDrop)
@@ -1368,12 +1416,21 @@ function SaveCablePanel({
     }
   }, [isDrop, fromId, toId])
 
+  // Kesiapan simpan: feeder/distribusi butuh port sumber terpilih (kecuali simpul
+  // tanpa port, mis. feeder SITE → daftar kosong). Drop butuh pelanggan ber-ONU.
+  const sourceReady = isDrop
+    ? true
+    : srcOptions != null && (srcOptions.length === 0 || srcPort != null)
+  const dropReady = !isDrop || onu != null
+  const canSave = code.trim() !== '' && name.trim() !== '' && sourceReady && dropReady
+
   const submit = () =>
     onSave({
       code: sanitizeCode(code),
       name,
       coreCount,
-      portNumber: isDrop && selectedPort != null ? selectedPort : undefined,
+      fromPonPortId: srcPort?.ponPortId ?? undefined,
+      fromPortNumber: isDrop ? selectedPort ?? undefined : srcPort?.portNumber ?? undefined,
       onuId: isDrop && onu && selectedPort != null ? onu.id : undefined,
     })
 
@@ -1405,6 +1462,32 @@ function SaveCablePanel({
         <input type="number" min={1} max={288} value={coreCount} onChange={(e) => setCoreCount(Number(e.target.value))} />
       </label>
 
+      {!isDrop && (
+        <div className="stack" style={{ gap: '0.4rem' }}>
+          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Port sumber {from}</span>
+          {srcOptions == null ? (
+            <span className="muted" style={{ fontSize: '0.82rem' }}>
+              Memuat port…
+            </span>
+          ) : srcOptions.length === 0 ? (
+            <span className="muted" style={{ fontSize: '0.78rem' }}>
+              {fromKind === 'SITE'
+                ? 'Feeder dari POP tak melalui PON port — langsung tersambung.'
+                : 'Tak ada port keluaran di simpul ini.'}
+            </span>
+          ) : (
+            <>
+              <SourcePortGrid options={srcOptions} selected={srcPort} onPick={setSrcPort} />
+              <span className="muted" style={{ fontSize: '0.78rem' }}>
+                {srcPort == null
+                  ? 'Pilih port keluaran dulu — kabel tak bisa ditarik tanpa port.'
+                  : `Menarik kabel ini otomatis menyetel uplink ${to}.`}
+              </span>
+            </>
+          )}
+        </div>
+      )}
+
       {isDrop && (
         <div className="stack" style={{ gap: '0.4rem' }}>
           <div className="spread">
@@ -1429,7 +1512,7 @@ function SaveCablePanel({
               />
               {!onu ? (
                 <span className="muted" style={{ fontSize: '0.78rem' }}>
-                  Pelanggan belum punya ONU terdaftar — port tak bisa ditetapkan dari sini.
+                  Pelanggan belum punya ONU terpasang — kabel drop tak bisa ditarik ke sini.
                 </span>
               ) : !canAssignPort ? (
                 <span className="muted" style={{ fontSize: '0.78rem' }}>
@@ -1437,11 +1520,11 @@ function SaveCablePanel({
                 </span>
               ) : selectedPort == null ? (
                 <span className="muted" style={{ fontSize: '0.78rem' }}>
-                  Pilih port kosong untuk menautkan ONU pelanggan.
+                  Pilih slot kosong untuk menautkan ONU pelanggan.
                 </span>
               ) : (
                 <span className="muted" style={{ fontSize: '0.78rem' }}>
-                  ONU {onu.serialNumber} → port {selectedPort}
+                  ONU {onu.serialNumber} → slot {selectedPort}
                 </span>
               )}
             </>
@@ -1454,7 +1537,7 @@ function SaveCablePanel({
       )}
 
       <div className="row">
-        <button className="primary" disabled={!code.trim() || !name.trim()} onClick={submit}>
+        <button className="primary" disabled={!canSave} onClick={submit}>
           Simpan kabel
         </button>
         <button className="ghost" onClick={onCancel}>
@@ -1462,6 +1545,61 @@ function SaveCablePanel({
         </button>
       </div>
     </aside>
+  )
+}
+
+/**
+ * Peta port KELUARAN sumber (feeder/distribusi): PON port OLT, kaki splitter ODC,
+ * atau slot ODP. Port yang sudah dipakai kabel lain tampil nonaktif dengan kode
+ * kabel penghuninya — menjawab "colok dari port mana" tanpa menabrak yang terisi.
+ */
+function SourcePortGrid({
+  options,
+  selected,
+  onPick,
+}: {
+  options: CablePortOption[]
+  selected: SourcePort | null
+  onPick: (port: SourcePort) => void
+}) {
+  const isSame = (o: CablePortOption) =>
+    selected != null &&
+    (o.ponPortId != null ? selected.ponPortId === o.ponPortId : selected.portNumber === o.portNumber)
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(56px, 1fr))', gap: '0.3rem' }}>
+      {options.map((o) => {
+        const key = o.ponPortId ?? `p${o.portNumber}`
+        const isSelected = isSame(o)
+        const selectable = !o.occupied
+        const bg = isSelected ? 'var(--accent-soft)' : o.occupied ? 'var(--surface-2, rgba(148,163,184,0.15))' : 'transparent'
+        const border = isSelected ? 'var(--accent)' : o.occupied ? 'var(--border)' : 'var(--good-ink)'
+        return (
+          <button
+            key={key}
+            type="button"
+            disabled={!selectable}
+            onClick={selectable ? () => onPick({ ponPortId: o.ponPortId, portNumber: o.portNumber }) : undefined}
+            title={o.occupied ? `${o.label} · dipakai kabel ${o.occupiedByCable}` : `${o.label} · kosong`}
+            style={{
+              padding: '0.3rem 0.2rem',
+              borderRadius: 6,
+              border: `1px solid ${border}`,
+              background: bg,
+              color: o.occupied ? 'var(--muted)' : 'var(--text)',
+              cursor: selectable ? 'pointer' : 'default',
+              fontSize: '0.7rem',
+              lineHeight: 1.2,
+              textAlign: 'center',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {o.label}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
@@ -1583,7 +1721,9 @@ function CablePanel({
         <StatusBadge status={cable.status} />
       </div>
       <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-        {cable.fromKind} → {cable.toKind} · {cable.route.points.length} titik jalur
+        {cable.fromKind}
+        {cable.fromPortLabel ? ` · ${cable.fromPortLabel}` : ''} → {cable.toKind}
+        {cable.toPortNumber != null ? ` · Port ${cable.toPortNumber}` : ''} · {cable.route.points.length} titik jalur
       </p>
       {causes.length > 0 && <CableCauses causes={causes} />}
       {canSimulate && (

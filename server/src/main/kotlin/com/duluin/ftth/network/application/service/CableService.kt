@@ -262,6 +262,40 @@ class CableService(
 
     private fun requireCable(id: UUID): Cable =
         cableRepository.findById(id) ?: throw NotFoundException("Kabel $id tidak ditemukan")
+
+    private fun Cable.toView() = CableView(
+        id = id,
+        code = code,
+        name = name,
+        cableType = cableType,
+        coreCount = coreCount,
+        route = route,
+        lengthMeters = lengthMeters,
+        fromKind = from.kind,
+        fromId = from.id,
+        toKind = to.kind,
+        toId = to.id,
+        fromPonPortId = from.ponPortId,
+        fromPortNumber = from.portNumber,
+        toPortNumber = to.portNumber,
+        fromPortLabel = resolveFromPortLabel(),
+        status = status,
+    )
+
+    /**
+     * Label port keluaran sumber siap-tampil untuk panel: PON port OLT dilabeli
+     * dengan label port-nya (butuh lookup), kaki ODC / slot ODP cukup diturunkan
+     * dari nomornya. Null bila kabel tak menyimpan port (legacy / feeder SITE).
+     */
+    private fun Cable.resolveFromPortLabel(): String? {
+        from.ponPortId?.let { id -> return ponPortRepository.findById(id)?.let { "PON ${it.label}" } }
+        val port = from.portNumber ?: return null
+        return when (from.kind) {
+            NetworkNodeKind.ODC -> "Kaki $port"
+            NetworkNodeKind.ODP -> "Slot $port"
+            else -> "Port $port"
+        }
+    }
 }
 
 private fun SaveCableCommand.fromEndpoint() =
@@ -269,21 +303,3 @@ private fun SaveCableCommand.fromEndpoint() =
 
 private fun SaveCableCommand.toEndpoint() =
     NetworkEndpoint(toKind, toId, portNumber = toPortNumber)
-
-private fun Cable.toView() = CableView(
-    id = id,
-    code = code,
-    name = name,
-    cableType = cableType,
-    coreCount = coreCount,
-    route = route,
-    lengthMeters = lengthMeters,
-    fromKind = from.kind,
-    fromId = from.id,
-    toKind = to.kind,
-    toId = to.id,
-    fromPonPortId = from.ponPortId,
-    fromPortNumber = from.portNumber,
-    toPortNumber = to.portNumber,
-    status = status,
-)

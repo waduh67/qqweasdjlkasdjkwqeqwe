@@ -128,5 +128,7 @@ data class CableView(
     val fromPortNumber: Int?,
     /** Input tujuan; null bila tak dipilih. */
     val toPortNumber: Int?,
+    /** Label siap-tampil port keluaran sumber, mis. "PON 1/1/1" / "Kaki 3" / "Slot 5". */
+    val fromPortLabel: String?,
     val status: AssetStatus,
 )

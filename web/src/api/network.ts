@@ -291,7 +291,29 @@ export interface CableView {
   fromId: string
   toKind: NodeKind
   toId: string
+  /** FEEDER: PON port OLT sumber; null bila feeder dari SITE / kabel legacy. */
+  fromPonPortId: string | null
+  /** Sumber: kaki splitter ODC / slot ODP; null bila legacy. */
+  fromPortNumber: number | null
+  /** Input tujuan; null bila tak dipilih (input tunggal). */
+  toPortNumber: number | null
+  /** Label siap-tampil port keluaran sumber, mis. "PON 1/1/1" / "Kaki 3" / "Slot 5". */
+  fromPortLabel: string | null
   status: AssetStatus
+}
+
+/**
+ * Satu pilihan port KELUARAN pada simpul sumber, untuk picker "colok dari port
+ * mana" saat menarik kabel. `ponPortId` terisi untuk OLT (PON port), `portNumber`
+ * untuk kaki splitter ODC / slot ODP. `occupied` menandai port yang sudah dipakai
+ * kabel lain sehingga tak boleh dipilih lagi.
+ */
+export interface CablePortOption {
+  ponPortId: string | null
+  portNumber: number | null
+  label: string
+  occupied: boolean
+  occupiedByCable: string | null
 }
 
 /** Satu alarm hidup yang membuat sebuah kabel merah — jawaban "kenapa" saat diklik. */
