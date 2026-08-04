@@ -37,10 +37,12 @@ const SNMP_VERSIONS: { value: SnmpVersion; label: string }[] = [
 ]
 
 /**
- * HSGQ (EPON/GPON) tak berbicara SNMP — perangkatnya dikelola & dibaca murni
- * lewat Web UI API (HTTP). Vendor lain (ZTE, Huawei, dst.) sebaliknya: SNMP jadi
- * kanal utama, Web hanya pelengkap metrik suhu/optik. Preset ini yang membuat
- * form create OLT menyesuaikan diri saat vendor diganti.
+ * HSGQ (EPON) punya kanal Web UI API (HTTP) sebagai manajemen langsung, DI SAMPING
+ * SNMP — adapter EPON HSGQ tetap mem-polling perangkat lewat SNMP. Maka HSGQ
+ * bersifat dual-channel: input SNMP tetap tersedia dan default-nya kedua kanal
+ * menyala. Vendor lain (ZTE, Huawei, dst.) SNMP-first: Web hanya pelengkap metrik
+ * suhu/optik dan mati kecuali dinyalakan. `isWebManaged` menandai vendor yang
+ * memang mengekspos Web UI management (kini hanya HSGQ).
  */
 function isWebManaged(vendor: string): boolean {
   return vendor === 'HSGQ'
@@ -299,11 +301,12 @@ function OltsTab() {
   type OltDraft = typeof empty
   const [draft, setDraft] = useState<OltDraft | null>(null)
 
-  // Ganti vendor = ganti kanal manajemen yang masuk akal: HSGQ murni Web UI
-  // (SNMP mati), selainnya SNMP-first (Web pelengkap, mati kecuali dinyalakan).
+  // Ganti vendor = ganti kanal manajemen yang masuk akal: HSGQ dual-channel
+  // (SNMP EPON + Web UI, keduanya menyala), selainnya SNMP-first (Web pelengkap,
+  // mati kecuali dinyalakan).
   const changeVendor = (d: OltDraft, vendor: string): OltDraft =>
     isWebManaged(vendor)
-      ? { ...d, vendor, snmpEnabled: false, webEnabled: true }
+      ? { ...d, vendor, snmpEnabled: true, webEnabled: true }
       : { ...d, vendor, snmpEnabled: true, webEnabled: d.webEnabled }
   const [ports, setPorts] = useState<Record<string, string>>({})
   const [query, setQuery] = useState('')
@@ -473,62 +476,60 @@ function OltsTab() {
             />
           </label>
 
-          {/* Kanal SNMP — utama untuk ZTE/Huawei/dst.; HSGQ tak berbicara SNMP */}
-          {!isWebManaged(draft.vendor) && (
-            <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
-              <label className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
-                <input
-                  type="checkbox"
-                  checked={draft.snmpEnabled}
-                  onChange={(e) => setDraft({ ...draft, snmpEnabled: e.target.checked })}
-                  style={{ width: 'auto' }}
-                />
-                <span style={{ fontWeight: 600 }}>Aktifkan SNMP untuk OLT ini</span>
-              </label>
-              {draft.snmpEnabled && (
-                <div className="row">
-                  <label style={{ flex: 1 }}>
-                    <span>
-                      Community string <span className="muted">(RO/RW)</span>
-                    </span>
-                    <input
-                      type="password"
-                      value={draft.snmpCommunity}
-                      onChange={(e) => setDraft({ ...draft, snmpCommunity: e.target.value })}
-                      placeholder="public"
-                    />
-                  </label>
-                  <label style={{ width: 130 }}>
-                    <span>Versi</span>
-                    <select
-                      value={draft.snmpVersion}
-                      onChange={(e) => setDraft({ ...draft, snmpVersion: e.target.value as SnmpVersion })}
-                    >
-                      {SNMP_VERSIONS.map((v) => (
-                        <option key={v.value} value={v.value}>
-                          {v.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label style={{ width: 110 }}>
-                    <span>Port SNMP</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={65535}
-                      value={draft.snmpPort}
-                      onChange={(e) => setDraft({ ...draft, snmpPort: e.target.value })}
-                      placeholder="161"
-                    />
-                  </label>
-                </div>
-              )}
-              <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-                Community string disimpan terenkripsi dan tidak pernah ditampilkan kembali.
-              </p>
-            </div>
-          )}
+          {/* Kanal SNMP — utama untuk ZTE/Huawei/dst.; HSGQ EPON pun dipolling lewat SNMP, jadi tampil untuk semua vendor */}
+          <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
+            <label className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+              <input
+                type="checkbox"
+                checked={draft.snmpEnabled}
+                onChange={(e) => setDraft({ ...draft, snmpEnabled: e.target.checked })}
+                style={{ width: 'auto' }}
+              />
+              <span style={{ fontWeight: 600 }}>Aktifkan SNMP untuk OLT ini</span>
+            </label>
+            {draft.snmpEnabled && (
+              <div className="row">
+                <label style={{ flex: 1 }}>
+                  <span>
+                    Community string <span className="muted">(RO/RW)</span>
+                  </span>
+                  <input
+                    type="password"
+                    value={draft.snmpCommunity}
+                    onChange={(e) => setDraft({ ...draft, snmpCommunity: e.target.value })}
+                    placeholder="public"
+                  />
+                </label>
+                <label style={{ width: 130 }}>
+                  <span>Versi</span>
+                  <select
+                    value={draft.snmpVersion}
+                    onChange={(e) => setDraft({ ...draft, snmpVersion: e.target.value as SnmpVersion })}
+                  >
+                    {SNMP_VERSIONS.map((v) => (
+                      <option key={v.value} value={v.value}>
+                        {v.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label style={{ width: 110 }}>
+                  <span>Port SNMP</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={65535}
+                    value={draft.snmpPort}
+                    onChange={(e) => setDraft({ ...draft, snmpPort: e.target.value })}
+                    placeholder="161"
+                  />
+                </label>
+              </div>
+            )}
+            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+              Community string disimpan terenkripsi dan tidak pernah ditampilkan kembali.
+            </p>
+          </div>
 
           {/* Kanal Web UI — HSGQ pakai ini sebagai manajemen langsung; lainnya untuk metrik suhu/optik */}
           <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
