@@ -1,5 +1,5 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { api, tokenStore } from '../api/client'
+import { api, refreshSession, tokenStore } from '../api/client'
 import type { Profile, TokenResponse } from '../api/types'
 
 interface AuthState {
@@ -26,27 +26,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false
 
     async function restore() {
-      const refreshToken = tokenStore.getRefreshToken()
-      if (!refreshToken) {
-        setLoading(false)
-        return
-      }
-      try {
-        const response = await fetch('/api/auth/refresh', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken }),
-        })
-        if (!response.ok) throw new Error('sesi kedaluwarsa')
-        const tokens: TokenResponse = await response.json()
-        tokenStore.setAccessToken(tokens.accessToken)
-        tokenStore.setRefreshToken(tokens.refreshToken)
+      // Rotasi lewat single-flight bersama: StrictMode memanggil effect ini dua
+      // kali, tapi keduanya berbagi satu rotasi sehingga refresh token sekali-pakai
+      // tak "dibelanjakan dua kali" (yang tadinya bikin ke-logout tiap refresh).
+      const tokens = await refreshSession()
+      if (tokens) {
         if (!cancelled) setUser(tokens.user)
-      } catch {
+      } else {
         tokenStore.clear()
-      } finally {
-        if (!cancelled) setLoading(false)
       }
+      if (!cancelled) setLoading(false)
     }
 
     tokenStore.onSessionLost(() => setUser(null))
