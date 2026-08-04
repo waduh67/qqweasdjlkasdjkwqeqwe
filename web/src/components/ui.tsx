@@ -14,7 +14,7 @@ import { IconAlert, IconClose, IconInbox, IconSearch } from './icons'
  * konsisten membuat operator ragu, dan itu lebih berbahaya daripada polos.
  */
 
-type Tone = 'neutral' | 'good' | 'warning' | 'serious' | 'critical' | 'accent'
+export type Tone = 'neutral' | 'good' | 'warning' | 'serious' | 'critical' | 'accent'
 
 /** Memetakan status domain ke nada visual. Satu sumber kebenaran untuk semua tabel. */
 const STATUS_TONE: Record<string, Tone> = {

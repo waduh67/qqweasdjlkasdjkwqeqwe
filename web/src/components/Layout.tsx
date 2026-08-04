@@ -87,6 +87,7 @@ const GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
       { to: '/notifications', label: 'Notifikasi', permission: 'notification.settings.view', icon: IconAlert },
       { to: '/payment-gateway', label: 'Payment Gateway', permission: 'billing.gateway.view', icon: IconPackage },
       { to: '/tenants', label: 'Tenant', permission: 'platform.tenant.view', icon: IconBuilding },
+      { to: '/platform-billing', label: 'Billing Langganan', permission: 'platform.billing.view', icon: IconGauge },
     ],
   },
 ]

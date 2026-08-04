@@ -17,6 +17,11 @@ object PermissionCatalog {
         platform("platform.tenant.view", "Lihat daftar tenant")
         platform("platform.tenant.create", "Onboarding tenant baru beserta admin awal")
         platform("platform.tenant.manage", "Suspend/aktifkan tenant")
+        // SaaS billing platform: setelan gateway global + langganan tenant ke aplikasi.
+        platform("platform.billing.view", "Lihat setelan billing & payment gateway platform")
+        platform("platform.billing.manage", "Kelola gateway aktif & kredensial billing platform")
+        platform("platform.subscription.view", "Lihat langganan & tagihan tenant ke aplikasi")
+        platform("platform.subscription.manage", "Kelola biaya bulanan, tagihan & pembayaran langganan tenant")
 
         // IAM
         perm("iam.user.view", "Lihat pengguna")

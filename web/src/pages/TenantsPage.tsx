@@ -6,6 +6,7 @@ import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
 import { EmptyState, SearchInput, StatusBadge, Toolbar } from '../components/ui'
 import { IconBuilding, IconPlus } from '../components/icons'
+import { TenantSubscriptionModal } from './TenantSubscriptionModal'
 
 interface Tenant {
   id: string
@@ -39,6 +40,7 @@ export function TenantsPage() {
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState<typeof EMPTY | null>(null)
   const [provision, setProvision] = useState<ProvisionDraft | null>(null)
+  const [subscription, setSubscription] = useState<{ id: string; name: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -91,6 +93,9 @@ export function TenantsPage() {
       cell: (t) =>
         t.slug !== 'platform' ? (
           <div className="row" style={{ justifyContent: 'flex-end', gap: '0.4rem' }}>
+            {can('platform.subscription.view') && (
+              <button onClick={() => setSubscription({ id: t.id, name: t.name })}>Langganan</button>
+            )}
             {can('billing.gateway.provision') && (
               <button
                 onClick={() =>
@@ -261,6 +266,14 @@ export function TenantsPage() {
             <button onClick={() => setProvision(null)}>Batal</button>
           </div>
         </div>
+      )}
+
+      {subscription && (
+        <TenantSubscriptionModal
+          tenantId={subscription.id}
+          tenantName={subscription.name}
+          onClose={() => setSubscription(null)}
+        />
       )}
     </div>
   )

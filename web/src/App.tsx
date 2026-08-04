@@ -37,6 +37,7 @@ import { AuditPage } from './pages/AuditPage'
 import { TenantsPage } from './pages/TenantsPage'
 import { NotificationSettingsPage } from './pages/NotificationSettingsPage'
 import { PaymentGatewaySettingsPage } from './pages/PaymentGatewaySettingsPage'
+import { PlatformBillingSettingsPage } from './pages/PlatformBillingSettingsPage'
 
 /** Menahan rute sampai sesi dipulihkan, lalu mengarahkan ke login bila belum masuk. */
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -268,6 +269,14 @@ export default function App() {
               element={
                 <RequirePermission permission="platform.tenant.view">
                   <TenantsPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="platform-billing"
+              element={
+                <RequirePermission permission="platform.billing.view">
+                  <PlatformBillingSettingsPage />
                 </RequirePermission>
               }
             />
