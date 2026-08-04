@@ -27,11 +27,11 @@ hanya kolom penunjuk pemilik langganan).
 
 | Tabel | Migrasi | Isi |
 |---|---|---|
-| `platform_setting` | **V55** (+`default_monthly_fee` di **V58**) | satu baris setelan global: hari tagih, masa tenggang, **harga bulanan default** |
-| `platform_payment_gateway` | **V55** | gateway aktif tingkat platform (memakai ulang mesin [`billing`](payment-gateway.md)) |
-| `tenant_subscription` | **V56** | satu baris per tenant: `monthly_fee`, `status`, periode aktif, jadwal tagih |
-| `tenant_subscription_invoice` | **V57** | tagihan langganan ber-periode (ISSUED/PAID/OVERDUE/VOID) |
-| `tenant_subscription_payment` | **V57** | pelunasan (dari webhook gateway atau catatan manual super-admin) |
+| `platform_setting` | **V59** (+`default_monthly_fee` di **V62**) | satu baris setelan global: hari tagih, masa tenggang, **harga bulanan default** |
+| `platform_payment_gateway` | **V59** | gateway aktif tingkat platform (memakai ulang mesin [`billing`](payment-gateway.md)) |
+| `tenant_subscription` | **V60** | satu baris per tenant: `monthly_fee`, `status`, periode aktif, jadwal tagih |
+| `tenant_subscription_invoice` | **V61** | tagihan langganan ber-periode (ISSUED/PAID/OVERDUE/VOID) |
+| `tenant_subscription_payment` | **V61** | pelunasan (dari webhook gateway atau catatan manual super-admin) |
 
 ### `tenant_subscription` — mesin keadaan
 
