@@ -7,6 +7,7 @@ import com.duluin.ftth.gis.application.port.inbound.CustomerTrace
 import com.duluin.ftth.gis.application.port.inbound.ImpactedOverlay
 import com.duluin.ftth.gis.application.port.inbound.MapQuery
 import com.duluin.ftth.gis.application.port.inbound.OdpInspection
+import com.duluin.ftth.gis.application.port.inbound.PonPortInspection
 import com.duluin.ftth.gis.application.port.inbound.SiteInspection
 import com.duluin.ftth.gis.application.port.inbound.SubscriberNeighbors
 import com.duluin.ftth.gis.application.port.inbound.UtilizationHeatmap
@@ -83,6 +84,16 @@ class GisController(
     @GetMapping("/odp-utilization")
     @PreAuthorize("@authz.can('gis.map.view') and @authz.can('network.odp.view')")
     fun odpUtilization(): UtilizationHeatmap = mapQuery.utilizationHeatmap()
+
+    /**
+     * Drill-down sebuah PON port: ODC → ODP (FAT) di bawahnya dengan utilisasi port,
+     * untuk perencanaan kapasitas dari halaman detail OLT. Digerbang seperti heatmap
+     * utilisasi ODP (angka okupansi agregat, non-PII) ditambah `network.olt.view`
+     * karena titik masuknya adalah inspeksi sebuah OLT.
+     */
+    @GetMapping("/pon-ports/{id}")
+    @PreAuthorize("@authz.can('gis.map.view') and @authz.can('network.olt.view') and @authz.can('network.odp.view')")
+    fun inspectPonPort(@PathVariable id: UUID): PonPortInspection = mapQuery.inspectPonPort(id)
 
     /** Isi sebuah site/POP: OLT di dalamnya + rekap perangkat & pelanggan hilir. */
     @GetMapping("/sites/{id}")

@@ -5,9 +5,11 @@ import com.duluin.ftth.network.CableCutImpact
 import com.duluin.ftth.network.CablePath
 import com.duluin.ftth.network.DownstreamIds
 import com.duluin.ftth.network.NetworkApi
+import com.duluin.ftth.network.OdcBranch
 import com.duluin.ftth.network.OdcRef
 import com.duluin.ftth.network.OdpRef
 import com.duluin.ftth.network.OltPollingTarget
+import com.duluin.ftth.network.PonPortTopology
 import com.duluin.ftth.network.OltRef
 import com.duluin.ftth.network.SiteRef
 import com.duluin.ftth.network.domain.model.Cable
@@ -73,6 +75,23 @@ class NetworkApiService(
     override fun odpIdsUnderPonPort(ponPortId: UUID): Set<UUID> {
         val odcIds = odcRepository.findIdsByPonPortIds(setOf(ponPortId))
         return if (odcIds.isEmpty()) emptySet() else odpRepository.findIdsByOdcIds(odcIds)
+    }
+
+    override fun topologyUnderPonPort(ponPortId: UUID): PonPortTopology? {
+        val ponPort = ponPortRepository.findById(ponPortId) ?: return null
+        // Sedikit ODC per PON port (biasanya 1-8) dan ini panel on-demand, bukan
+        // jalur render panas — jadi memuat ODP per ODC dalam query terpisah masih pantas.
+        return PonPortTopology(
+            ponPortId = ponPort.id,
+            label = ponPort.label,
+            oltId = ponPort.oltId,
+            odcs = odcRepository.findByPonPortId(ponPortId).map { odc ->
+                OdcBranch(
+                    odc = odc.toRef(),
+                    odps = odpRepository.findByOdcId(odc.id).map { it.toRef() },
+                )
+            },
+        )
     }
 
     override fun candidateOdpsUnderPonPort(oltId: UUID, ponPortLabel: String?): List<OdpRef> {

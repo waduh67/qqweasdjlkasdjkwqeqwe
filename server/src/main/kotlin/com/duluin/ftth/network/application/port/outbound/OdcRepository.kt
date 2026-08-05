@@ -25,5 +25,8 @@ interface OdcRepository {
     /** Id ODC yang menggantung pada salah satu PON port tersebut. */
     fun findIdsByPonPortIds(ponPortIds: Set<UUID>): Set<UUID>
 
+    /** ODC yang menggantung pada sebuah PON port, urut kode — untuk drill-down PON → ODC → ODP. */
+    fun findByPonPortId(ponPortId: UUID): List<Odc>
+
     fun deleteById(id: UUID)
 }

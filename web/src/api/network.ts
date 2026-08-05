@@ -392,6 +392,39 @@ export interface UtilizationHeatmap {
   odps: OdpUtilization[]
 }
 
+/** Satu ODC di bawah PON port dengan rekap utilisasi + ODP (FAT) anaknya. */
+export interface PonOdcBranch {
+  odcId: string
+  code: string
+  name: string
+  /** Aktif dan punya uplink. */
+  energized: boolean
+  /** Kaki splitter ODC — kapasitas cabang distribusi. */
+  legCapacity: number
+  odpCount: number
+  /** Total & terpakai port pelanggan di seluruh ODP anak. */
+  capacity: number
+  used: number
+  utilizationPercent: number
+  odps: OdpUtilization[]
+}
+
+/**
+ * Drill-down utilisasi satu PON port: total port pelanggan di seluruh ODP di
+ * bawahnya, plus rincian per ODC → ODP. Untuk perencanaan kapasitas dari detail OLT.
+ */
+export interface PonPortInspection {
+  ponPortId: string
+  label: string
+  oltId: string
+  odcCount: number
+  odpCount: number
+  capacity: number
+  used: number
+  utilizationPercent: number
+  odcs: PonOdcBranch[]
+}
+
 /** Ujung kabel tempat pengukuran OTDR dimulai — hulu (awal jalur) atau hilir (akhir jalur). */
 export type CableEnd = 'FROM' | 'TO'
 

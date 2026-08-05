@@ -75,6 +75,8 @@ interface OdcJpaRepository : JpaRepository<OdcJpaEntity, UUID>, JpaSpecification
 
     @Query("select o.id from OdcJpaEntity o where o.ponPortId in :ponPortIds")
     fun findIdsByPonPortIds(@Param("ponPortIds") ponPortIds: Collection<UUID>): Set<UUID>
+
+    fun findByPonPortIdOrderByCode(ponPortId: UUID): List<OdcJpaEntity>
 }
 
 interface OdpJpaRepository : JpaRepository<OdpJpaEntity, UUID>, JpaSpecificationExecutor<OdpJpaEntity> {

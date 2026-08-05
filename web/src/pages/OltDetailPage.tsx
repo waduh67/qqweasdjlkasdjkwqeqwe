@@ -1,7 +1,19 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
-import type { AssetStatus, OltView, PonPortView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
+import type {
+  AssetStatus,
+  OdpInspection,
+  OdpUtilization,
+  OltView,
+  PonOdcBranch,
+  PonPortInspection,
+  PonPortView,
+  SiteView,
+  SnmpVersion,
+  WebProtocol,
+} from '../api/network'
+import type { Tone } from '../components/ui'
 import type { PageResponse } from '../api/types'
 import { useCan } from '../auth/useCan'
 import { LocationPicker } from '../components/LocationPicker'
@@ -46,6 +58,9 @@ export function OltDetailPage() {
   const { can } = useCan()
   const canUpdate = can('network.olt.update')
   const canDelete = can('network.olt.delete')
+  // Drill-down PON → ODC → ODP menembus module gis (topologi + okupansi agregat),
+  // jadi butuh izin peta & ODP; disembunyikan bila operator tak berhak memanggilnya.
+  const canDrill = can('gis.map.view') && can('network.odp.view')
 
   const [olt, setOlt] = useState<OltView | null>(null)
   const [loading, setLoading] = useState(true)
@@ -146,7 +161,7 @@ export function OltDetailPage() {
       </div>
 
       {tab === 'ringkasan' && <RingkasanTab olt={olt} canUpdate={canUpdate} onSaved={load} />}
-      {tab === 'pon' && <PonPortTab oltId={olt.id} canUpdate={canUpdate} onChanged={load} />}
+      {tab === 'pon' && <PonPortTab oltId={olt.id} canUpdate={canUpdate} canDrill={canDrill} onChanged={load} />}
 
       {editing && (
         <EditOltModal
@@ -314,11 +329,23 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
 }
 
 /** Tab PON port: daftar port slot/kartu OLT — dasar penautan ODC di hilir. */
-function PonPortTab({ oltId, canUpdate, onChanged }: { oltId: string; canUpdate: boolean; onChanged: () => void }) {
+function PonPortTab({
+  oltId,
+  canUpdate,
+  canDrill,
+  onChanged,
+}: {
+  oltId: string
+  canUpdate: boolean
+  canDrill: boolean
+  onChanged: () => void
+}) {
   const toast = useToast()
   const [ports, setPorts] = useState<PonPortView[] | null>(null)
   const [label, setLabel] = useState('')
   const [busy, setBusy] = useState(false)
+  // Satu PON port terbuka pada satu waktu — drill-down memuat topologinya on-demand.
+  const [expanded, setExpanded] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -383,35 +410,267 @@ function PonPortTab({ oltId, canUpdate, onChanged }: { oltId: string; canUpdate:
         />
       ) : (
         <div className="stack" style={{ gap: 0 }}>
-          {ports.map((p) => (
-            <div
-              key={p.id}
-              className="spread"
-              style={{ gap: '0.5rem', alignItems: 'center', padding: '0.55rem 0', borderTop: '1px solid var(--border)' }}
-            >
-              <div className="row" style={{ gap: '0.5rem', alignItems: 'center', minWidth: 0 }}>
-                <strong className="tnum">{p.label}</strong>
-                <StatusBadge status={p.status} />
-                {p.description && (
-                  <span className="muted" style={{ fontSize: '0.85rem' }}>
-                    {p.description}
-                  </span>
-                )}
-              </div>
-              <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
-                <span className="badge">{p.odcCount} ODC</span>
-                {canUpdate && (
-                  <button className="ghost danger" disabled={p.odcCount > 0} onClick={() => void remove(p)}>
-                    Hapus
+          {ports.map((p) => {
+            const drillable = canDrill && p.odcCount > 0
+            const isOpen = expanded === p.id
+            return (
+              <div key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
+                <div className="spread" style={{ gap: '0.5rem', alignItems: 'center', padding: '0.55rem 0' }}>
+                  <button
+                    type="button"
+                    onClick={() => drillable && setExpanded(isOpen ? null : p.id)}
+                    disabled={!drillable}
+                    title={drillable ? 'Lihat ODC & ODP di bawah port ini' : undefined}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      justifyContent: 'flex-start',
+                      gap: '0.5rem',
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: drillable ? 'pointer' : 'default',
+                    }}
+                  >
+                    <span aria-hidden style={{ width: '0.9rem', color: 'var(--text-3)' }}>
+                      {drillable ? (isOpen ? '▾' : '▸') : ''}
+                    </span>
+                    <strong className="tnum">{p.label}</strong>
+                    <StatusBadge status={p.status} />
+                    {p.description && (
+                      <span className="muted" style={{ fontSize: '0.85rem' }}>
+                        {p.description}
+                      </span>
+                    )}
                   </button>
-                )}
+                  <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
+                    <span className="badge">{p.odcCount} ODC</span>
+                    {canUpdate && (
+                      <button className="ghost danger" disabled={p.odcCount > 0} onClick={() => void remove(p)}>
+                        Hapus
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {isOpen && <PonDrilldown ponPortId={p.id} canDrillOdp={canDrill} />}
               </div>
-            </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Drill-down satu PON port: memuat topologi ODC → ODP (FAT) beserta utilisasi port,
+ * lewat `GET /api/gis/pon-ports/{id}`. Dimuat saat baris PON dibuka, bukan di awal.
+ */
+function PonDrilldown({ ponPortId, canDrillOdp }: { ponPortId: string; canDrillOdp: boolean }) {
+  const toast = useToast()
+  const [data, setData] = useState<PonPortInspection | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    api
+      .get<PonPortInspection>(`/api/gis/pon-ports/${ponPortId}`)
+      .then((d) => {
+        if (alive) setData(d)
+      })
+      .catch((err) => {
+        if (!alive) return
+        setFailed(true)
+        toast.error(err instanceof ApiError ? err.message : 'Gagal memuat drill-down PON')
+      })
+    return () => {
+      alive = false
+    }
+  }, [ponPortId, toast])
+
+  if (failed) return null
+  if (!data) {
+    return (
+      <div style={{ display: 'grid', placeItems: 'center', padding: '1rem' }}>
+        <Spinner />
+      </div>
+    )
+  }
+
+  if (data.odcs.length === 0) {
+    return (
+      <p className="muted" style={{ margin: 0, padding: '0 0 0.85rem 1.4rem', fontSize: '0.85rem' }}>
+        Belum ada ODC di bawah port ini.
+      </p>
+    )
+  }
+
+  return (
+    <div className="stack" style={{ gap: '0.6rem', padding: '0.15rem 0 0.85rem 1.4rem' }}>
+      <div className="muted tnum" style={{ fontSize: '0.82rem' }}>
+        {data.odcCount} ODC · {data.odpCount} ODP · {data.used}/{data.capacity} port terpakai ({data.utilizationPercent}%)
+      </div>
+      {data.odcs.map((odc) => (
+        <OdcBranchCard key={odc.odcId} odc={odc} canDrillOdp={canDrillOdp} />
+      ))}
+    </div>
+  )
+}
+
+/** Kartu satu ODC di bawah PON: rekap utilisasi port + daftar ODP (FAT) anaknya. */
+function OdcBranchCard({ odc, canDrillOdp }: { odc: PonOdcBranch; canDrillOdp: boolean }) {
+  return (
+    <div className="card stack" style={{ gap: '0.5rem', padding: '0.7rem', background: 'var(--surface-2)' }}>
+      <div className="spread" style={{ gap: '0.5rem', alignItems: 'center' }}>
+        <div className="row" style={{ gap: '0.5rem', alignItems: 'center', minWidth: 0 }}>
+          <strong>{odc.code}</strong>
+          {odc.energized ? <Badge tone="good">Berenergi</Badge> : <Badge tone="neutral">Tanpa uplink</Badge>}
+          <span className="muted tnum" style={{ fontSize: '0.8rem' }}>
+            {odc.odpCount}/{odc.legCapacity} kaki
+          </span>
+        </div>
+        <span className="tnum" style={{ fontSize: '0.85rem', flexShrink: 0 }}>
+          {odc.used}/{odc.capacity} port
+        </span>
+      </div>
+      <UtilBar percent={odc.utilizationPercent} />
+      {odc.odps.length === 0 ? (
+        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+          Belum ada ODP di ODC ini.
+        </p>
+      ) : (
+        <div className="stack" style={{ gap: 0 }}>
+          {odc.odps.map((odp) => (
+            <OdpRow key={odp.odpId} odp={odp} canDrillOdp={canDrillOdp} />
           ))}
         </div>
       )}
     </div>
   )
+}
+
+/** Satu baris ODP (FAT): utilisasi port; bisa dibuka untuk melihat daftar penghuninya. */
+function OdpRow({ odp, canDrillOdp }: { odp: OdpUtilization; canDrillOdp: boolean }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{ borderTop: '1px solid var(--border)' }}>
+      <button
+        type="button"
+        onClick={() => canDrillOdp && setOpen(!open)}
+        disabled={!canDrillOdp}
+        title={canDrillOdp ? 'Lihat pelanggan di ODP ini' : undefined}
+        style={{
+          width: '100%',
+          justifyContent: 'space-between',
+          gap: '0.5rem',
+          background: 'none',
+          border: 'none',
+          padding: '0.4rem 0',
+          cursor: canDrillOdp ? 'pointer' : 'default',
+        }}
+      >
+        <span className="row" style={{ gap: '0.4rem', alignItems: 'center', minWidth: 0 }}>
+          <span aria-hidden style={{ width: '0.9rem', color: 'var(--text-3)' }}>
+            {canDrillOdp ? (open ? '▾' : '▸') : ''}
+          </span>
+          <strong style={{ fontSize: '0.88rem' }}>{odp.code}</strong>
+          <span className="muted" style={{ fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {odp.name}
+          </span>
+        </span>
+        <span className="row" style={{ gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
+          <span className="tnum" style={{ fontSize: '0.82rem' }}>
+            {odp.used}/{odp.capacity}
+          </span>
+          <Badge tone={utilTone(odp.utilizationPercent)}>{odp.utilizationPercent}%</Badge>
+        </span>
+      </button>
+      {open && <OdpOccupants odpId={odp.odpId} />}
+    </div>
+  )
+}
+
+/** Daftar penghuni satu ODP (FAT), dimuat lewat inspeksi ODP gis saat baris dibuka. */
+function OdpOccupants({ odpId }: { odpId: string }) {
+  const toast = useToast()
+  const [data, setData] = useState<OdpInspection | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    api
+      .get<OdpInspection>(`/api/gis/odps/${odpId}`)
+      .then((d) => {
+        if (alive) setData(d)
+      })
+      .catch((err) => {
+        if (!alive) return
+        setFailed(true)
+        toast.error(err instanceof ApiError ? err.message : 'Gagal memuat penghuni ODP')
+      })
+    return () => {
+      alive = false
+    }
+  }, [odpId, toast])
+
+  if (failed) return null
+  if (!data) {
+    return (
+      <div style={{ display: 'grid', placeItems: 'center', padding: '0.6rem' }}>
+        <Spinner />
+      </div>
+    )
+  }
+
+  if (data.occupants.length === 0) {
+    return (
+      <p className="muted" style={{ margin: 0, padding: '0 0 0.6rem 1.3rem', fontSize: '0.82rem' }}>
+        Belum ada pelanggan terpasang.
+      </p>
+    )
+  }
+
+  return (
+    <div className="stack" style={{ gap: 0, padding: '0 0 0.5rem 1.3rem' }}>
+      {data.occupants.map((o) => (
+        <div
+          key={o.onuId}
+          className="spread"
+          style={{ gap: '0.5rem', alignItems: 'center', padding: '0.3rem 0', fontSize: '0.84rem' }}
+        >
+          <span className="row" style={{ gap: '0.45rem', alignItems: 'center', minWidth: 0 }}>
+            <span className="badge">Port {o.portNumber}</span>
+            <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.customerName}</strong>
+            <span className="muted tnum">{o.customerCode}</span>
+          </span>
+          <StatusBadge status={o.onuStatus} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Bar utilisasi port: hijau→kuning→merah menurut persentase pemakaian. */
+function UtilBar({ percent }: { percent: number }) {
+  const clamped = Math.max(0, Math.min(100, percent))
+  return (
+    <div
+      style={{ height: 6, borderRadius: 999, background: 'var(--border)', overflow: 'hidden' }}
+      role="progressbar"
+      aria-valuenow={clamped}
+      aria-valuemin={0}
+      aria-valuemax={100}
+    >
+      <div style={{ width: `${clamped}%`, height: '100%', background: `var(--${utilTone(percent)})` }} />
+    </div>
+  )
+}
+
+/** Ambang warna utilisasi: penuh (≥90%) merah, padat (≥70%) kuning, lega hijau. */
+function utilTone(percent: number): Tone {
+  if (percent >= 90) return 'critical'
+  if (percent >= 70) return 'warning'
+  return 'good'
 }
 
 /** Modal ubah identitas & SNMP OLT. Kode tak bisa diubah; lokasi diedit di tab Ringkasan. */

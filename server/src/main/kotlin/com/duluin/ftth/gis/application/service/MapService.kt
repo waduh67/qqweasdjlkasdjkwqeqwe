@@ -23,6 +23,8 @@ import com.duluin.ftth.monitoring.AlarmImpact
 import com.duluin.ftth.gis.application.port.inbound.NeighborView
 import com.duluin.ftth.gis.application.port.inbound.OdpInspection
 import com.duluin.ftth.gis.application.port.inbound.OdpUtilization
+import com.duluin.ftth.gis.application.port.inbound.PonOdcBranch
+import com.duluin.ftth.gis.application.port.inbound.PonPortInspection
 import com.duluin.ftth.gis.application.port.inbound.SeveredCable
 import com.duluin.ftth.gis.application.port.inbound.SiteInspection
 import com.duluin.ftth.gis.application.port.inbound.SiteOlt
@@ -387,6 +389,65 @@ class MapService(
             )
         }
         return UtilizationHeatmap(items)
+    }
+
+    /**
+     * Menyusun drill-down sebuah PON port. Network memberi topologi PON → ODC → ODP
+     * (kapasitas tiap tingkat); customer memberi jumlah port terpakai per ODP dalam
+     * SATU query hitung agregat — bukan memuat penghuni tiap ODP, karena satu PON
+     * bisa menaungi puluhan ODP. Utilisasi dirol-up dari ODP ke ODC ke PON di sini
+     * agar klien tinggal menggambar bar; daftar penghuni tiap ODP diambil terpisah
+     * lewat inspectOdp saat operator men-drill ke satu FAT.
+     */
+    override fun inspectPonPort(ponPortId: UUID): PonPortInspection {
+        val topology = networkApi.topologyUnderPonPort(ponPortId)
+            ?: throw NotFoundException("PON port $ponPortId tidak ditemukan")
+
+        val allOdpIds = topology.odcs.flatMapTo(HashSet()) { branch -> branch.odps.map { it.id } }
+        val usedByOdp = customerApi.countOccupantsByOdp(allOdpIds)
+
+        val branches = topology.odcs.map { branch ->
+            val odpItems = branch.odps.map { odp ->
+                val used = (usedByOdp[odp.id] ?: 0L).toInt()
+                OdpUtilization(
+                    odpId = odp.id,
+                    code = odp.code,
+                    name = odp.name,
+                    location = odp.location,
+                    capacity = odp.capacity,
+                    used = used,
+                    utilizationPercent = percentage(used, odp.capacity),
+                )
+            }
+            val capacity = odpItems.sumOf { it.capacity }
+            val used = odpItems.sumOf { it.used }
+            PonOdcBranch(
+                odcId = branch.odc.id,
+                code = branch.odc.code,
+                name = branch.odc.name,
+                energized = branch.odc.energized,
+                legCapacity = branch.odc.capacity,
+                odpCount = odpItems.size,
+                capacity = capacity,
+                used = used,
+                utilizationPercent = percentage(used, capacity),
+                odps = odpItems,
+            )
+        }
+
+        val capacity = branches.sumOf { it.capacity }
+        val used = branches.sumOf { it.used }
+        return PonPortInspection(
+            ponPortId = topology.ponPortId,
+            label = topology.label,
+            oltId = topology.oltId,
+            odcCount = branches.size,
+            odpCount = branches.sumOf { it.odpCount },
+            capacity = capacity,
+            used = used,
+            utilizationPercent = percentage(used, capacity),
+            odcs = branches,
+        )
     }
 
     private fun OdpOccupant.toAffected(odpCode: String) = AffectedCustomer(

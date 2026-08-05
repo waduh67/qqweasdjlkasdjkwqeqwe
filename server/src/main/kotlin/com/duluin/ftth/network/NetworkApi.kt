@@ -101,6 +101,13 @@ interface NetworkApi {
     fun odpIdsUnderPonPort(ponPortId: UUID): Set<UUID>
 
     /**
+     * Topologi di bawah satu PON port OLT: ODC yang menggantung padanya, tiap ODC
+     * dengan ODP anaknya (urut kode). Dipakai gis menyusun drill-down PON → ODC →
+     * ODP (FAT) untuk perencanaan kapasitas. `null` bila PON port tak ditemukan.
+     */
+    fun topologyUnderPonPort(ponPortId: UUID): PonPortTopology?
+
+    /**
      * ODP kandidat di bawah PON port yang dilaporkan collector, diresolusi dari
      * label: (OLT + label PON port) → PON port → ODC → ODP. Dipakai monitoring
      * untuk menebak ODP sebuah ONU liar dari topologi, sebelum operator memilih.
@@ -146,6 +153,25 @@ data class CableCutImpact(
 
 /** Perangkat hilir dari sekumpulan OLT/ODC yang bermasalah. */
 data class DownstreamIds(val odcIds: Set<UUID>, val odpIds: Set<UUID>)
+
+/**
+ * Topologi di bawah satu PON port OLT untuk drill-down: ODC yang menggantung
+ * padanya beserta ODP anak tiap ODC. Membawa kapasitas tiap tingkat (lewat [OdcRef]/
+ * [OdpRef]) sehingga gis bisa memadukannya dengan okupansi port dari customer tanpa
+ * menyentuh tabel jaringan.
+ */
+data class PonPortTopology(
+    val ponPortId: UUID,
+    val label: String,
+    val oltId: UUID,
+    val odcs: List<OdcBranch>,
+)
+
+/** Satu ODC di bawah PON port beserta ODP anaknya (urut kode). */
+data class OdcBranch(
+    val odc: OdcRef,
+    val odps: List<OdpRef>,
+)
 
 /** Kabel beserta jalur geometrinya untuk kebutuhan overlay peta. */
 data class CablePath(

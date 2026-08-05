@@ -66,7 +66,53 @@ interface MapQuery {
      * satu query hitung agregat) — tanpa module mana pun menyentuh tabel module lain.
      */
     fun utilizationHeatmap(): UtilizationHeatmap
+
+    /**
+     * Drill-down sebuah PON port OLT: ODC yang menggantung padanya, tiap ODC dengan
+     * ODP (FAT) anaknya, lengkap utilisasi port di tiap tingkat. Menyusun dari network
+     * (topologi PON → ODC → ODP) dan customer (okupansi per ODP dalam satu query hitung
+     * agregat) — tanpa module mana pun menyentuh tabel module lain. Angka okupansi
+     * bersifat agregat (non-PII); drill ke satu ODP daun memakai [inspectOdp] yang
+     * sudah ada untuk melihat daftar penghuninya.
+     */
+    fun inspectPonPort(ponPortId: UUID): PonPortInspection
 }
+
+/**
+ * Drill-down utilisasi satu PON port. [capacity]/[used] adalah TOTAL port pelanggan
+ * di seluruh ODP di bawahnya — angka perencanaan kapasitas "seberapa penuh PON ini".
+ */
+data class PonPortInspection(
+    val ponPortId: UUID,
+    val label: String,
+    val oltId: UUID,
+    val odcCount: Int,
+    val odpCount: Int,
+    val capacity: Int,
+    val used: Int,
+    val utilizationPercent: Int,
+    val odcs: List<PonOdcBranch>,
+)
+
+/**
+ * Satu ODC di bawah PON port dengan rekap utilisasi. [legCapacity] = kaki splitter
+ * ODC (kapasitas cabang distribusi); [capacity]/[used] = total port pelanggan di
+ * seluruh ODP anak. [odps] memakai [OdpUtilization] yang sama dengan heatmap.
+ */
+data class PonOdcBranch(
+    val odcId: UUID,
+    val code: String,
+    val name: String,
+    /** Aktif dan punya uplink. */
+    val energized: Boolean,
+    /** Kaki splitter ODC — kapasitas cabang distribusi. */
+    val legCapacity: Int,
+    val odpCount: Int,
+    val capacity: Int,
+    val used: Int,
+    val utilizationPercent: Int,
+    val odps: List<OdpUtilization>,
+)
 
 /** Utilisasi port seluruh ODP dalam jangkauan pengguna — bahan heatmap peta. */
 data class UtilizationHeatmap(val odps: List<OdpUtilization>)

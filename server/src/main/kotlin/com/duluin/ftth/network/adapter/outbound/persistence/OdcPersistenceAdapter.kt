@@ -64,6 +64,9 @@ class OdcPersistenceAdapter(
     override fun findIdsByPonPortIds(ponPortIds: Set<UUID>): Set<UUID> =
         if (ponPortIds.isEmpty()) emptySet() else jpa.findIdsByPonPortIds(ponPortIds)
 
+    override fun findByPonPortId(ponPortId: UUID): List<Odc> =
+        jpa.findByPonPortIdOrderByCode(ponPortId).map { it.toDomain() }
+
     override fun deleteById(id: UUID) = jpa.deleteById(id)
 }
 
