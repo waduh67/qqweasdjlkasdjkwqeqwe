@@ -168,6 +168,8 @@ class Subscriber360ServiceTest {
         override fun resolveNasForArea(areaId: UUID): UUID? = null
 
         override fun fetchPppSecretsFromNas(nasId: UUID) = emptyList<com.duluin.ftth.bng.PppSecretRef>()
+
+        override fun activeSubscriberLiveness() = emptyList<com.duluin.ftth.bng.SubscriberPppoeLiveness>()
     }
 
     private inner class FakeBillingApi : BillingApi {

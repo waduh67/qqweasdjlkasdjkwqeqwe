@@ -47,7 +47,33 @@ interface BngApi {
      * browser oleh bng. Menyentuh router langsung; gagal 409 bila tak terjangkau. RLS-scoped.
      */
     fun fetchPppSecretsFromNas(nasId: UUID): List<PppSecretRef>
+
+    /**
+     * Keadaan hidup PPPoE seluruh akun ACTIVE tenant — bahan monitoring menilai alarm
+     * `PPPOE_DOWN` (sesi putus → pelanggan offline walau ONU boleh jadi masih menyala).
+     *
+     * [SubscriberPppoeLiveness.online] SUDAH memperhitungkan ambang basi: poll BRAS hanya
+     * melaporkan sesi yang hidup, sesi yang berakhir MENGHILANG dari `radacct` tanpa pernah
+     * ditandai offline — jadi baris ber-`online=true` yang tak diperbarui melebihi ambang
+     * dianggap putus. Satu pelanggan bisa punya beberapa akun (unit kedua): masing-masing
+     * jadi satu baris; agregasi per-pelanggan diserahkan ke pemanggil. RLS-scoped.
+     */
+    fun activeSubscriberLiveness(): List<SubscriberPppoeLiveness>
 }
+
+/**
+ * Keadaan hidup satu akun PPPoE ACTIVE untuk penilaian alarm lintas-module. Tanpa rahasia
+ * apa pun. [online] adalah putusan akhir (sudah memperhitungkan ambang basi sesi), bukan
+ * sekadar flag mentah baris `radacct`. [customerId] didenormalisasi agar monitoring bisa
+ * mewarnai peta lewat customerId tanpa menembus module customer.
+ */
+data class SubscriberPppoeLiveness(
+    val customerId: UUID,
+    val username: String,
+    val online: Boolean,
+    /** Kapan BRAS terakhir melaporkan sesi ini; `null` bila belum pernah terpantau. */
+    val lastSeenAt: Instant?,
+)
 
 /**
  * Satu baris `/ppp/secret` RouterOS untuk orkestrasi impor lintas-module. [password] adalah

@@ -2,6 +2,7 @@ package com.duluin.ftth.bng.adapter.outbound.persistence
 
 import com.duluin.ftth.bng.application.port.outbound.AccountingRecordRepository
 import com.duluin.ftth.bng.application.port.outbound.RadiusSessionRepository
+import com.duluin.ftth.bng.domain.model.AccessStatus
 import com.duluin.ftth.bng.domain.model.AccountingRecordPoint
 import com.duluin.ftth.bng.domain.model.RadiusSession
 import com.duluin.ftth.bng.domain.model.TrafficSample
@@ -59,6 +60,9 @@ class RadiusSessionPersistenceAdapter(
 
     override fun findBySubscriberAccessId(subscriberAccessId: UUID): RadiusSession? =
         jpa.findBySubscriberAccessId(subscriberAccessId)?.toDomain()
+
+    override fun findAllForActiveAccounts(): List<RadiusSession> =
+        jpa.findAllByAccountStatus(AccessStatus.ACTIVE).map { it.toDomain() }
 
     private fun RadiusSessionJpaEntity.toDomain(): RadiusSession = RadiusSession.rehydrate(
         id = id,

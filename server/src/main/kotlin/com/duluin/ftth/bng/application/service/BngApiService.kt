@@ -4,6 +4,7 @@ import com.duluin.ftth.bng.BngApi
 import com.duluin.ftth.bng.PppSecretRef
 import com.duluin.ftth.bng.ProvisionAccessSpec
 import com.duluin.ftth.bng.ProvisionedAccessRef
+import com.duluin.ftth.bng.SubscriberPppoeLiveness
 import com.duluin.ftth.bng.SubscriberSessionRef
 import com.duluin.ftth.bng.application.port.inbound.ManageSubscriberAccessUseCase
 import com.duluin.ftth.bng.application.port.inbound.ProvisionAccessCommand
@@ -15,8 +16,11 @@ import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.domain.model.AuthType
 import com.duluin.ftth.catalog.CatalogApi
 import com.duluin.ftth.common.domain.error.ValidationException
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -34,6 +38,13 @@ class BngApiService(
     private val catalogApi: CatalogApi,
     private val manageAccess: ManageSubscriberAccessUseCase,
     private val routerOs: RouterOsPort,
+    /**
+     * Ambang basi sesi: baris `radacct` ber-`online=true` yang tak diperbarui melebihi
+     * durasi ini dianggap sudah putus. Dipilih 3 menit — beberapa kali interval poll BRAS
+     * (umumnya 30–60 dtk), jadi satu poll yang terlewat tak langsung memerahkan pelanggan,
+     * tapi sesi yang benar-benar berakhir tetap ketahuan cepat.
+     */
+    @Value("\${ftth.bng.session-stale-after:PT3M}") private val sessionStaleAfter: Duration,
 ) : BngApi {
 
     override fun resolveNasForArea(areaId: UUID): UUID? = coverageRepository.findNasIdByAreaId(areaId)
@@ -104,5 +115,24 @@ class BngApiService(
             startedAt = session?.startedAt,
             lastSeenAt = session?.lastSeenAt,
         )
+    }
+
+    override fun activeSubscriberLiveness(): List<SubscriberPppoeLiveness> {
+        // Ambang basi dihitung sekali per panggilan agar semua sesi dinilai pada garis
+        // waktu yang sama. Jam nyata dipakai di sini (bukan disuntik): pengujian membuat
+        // sesi "sangat basi" (lastSeenAt jauh di masa lalu) atau "segar" agar putusannya
+        // deterministik tanpa perlu mengendalikan waktu.
+        val cutoff = Instant.now().minus(sessionStaleAfter)
+        return radiusSessionRepository.findAllForActiveAccounts().map { session ->
+            SubscriberPppoeLiveness(
+                customerId = session.customerId,
+                username = session.username,
+                // Poll BRAS hanya melaporkan sesi hidup; sesi yang berakhir menghilang dari
+                // radacct tanpa ditandai offline. Maka baris ber-online=true yang tak segar
+                // lagi diperlakukan sebagai putus — inilah dasar deteksi "hilang, bukan mati".
+                online = session.online && !session.lastSeenAt.isBefore(cutoff),
+                lastSeenAt = session.lastSeenAt,
+            )
+        }
     }
 }

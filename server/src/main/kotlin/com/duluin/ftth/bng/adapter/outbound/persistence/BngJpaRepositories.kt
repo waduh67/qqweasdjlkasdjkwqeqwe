@@ -5,6 +5,8 @@ import com.duluin.ftth.bng.domain.model.BngActionStatus
 import com.duluin.ftth.bng.domain.model.BngActionType
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
 import java.util.UUID
 
 interface NasJpaRepository : JpaRepository<NasJpaEntity, UUID> {
@@ -32,6 +34,21 @@ interface SubscriberAccessJpaRepository : JpaRepository<SubscriberAccessJpaEntit
 
 interface RadiusSessionJpaRepository : JpaRepository<RadiusSessionJpaEntity, UUID> {
     fun findBySubscriberAccessId(subscriberAccessId: UUID): RadiusSessionJpaEntity?
+
+    /**
+     * Sesi milik akun berstatus [status], disaring lewat subquery ke subscriber_access
+     * (taut UUID polos, tanpa relasi JPA lintas-agregat). RLS memfilter kedua tabel ke
+     * tenant aktif, jadi hasilnya ter-scope otomatis.
+     */
+    @Query(
+        """
+        SELECT s FROM RadiusSessionJpaEntity s
+        WHERE s.subscriberAccessId IN (
+            SELECT a.id FROM SubscriberAccessJpaEntity a WHERE a.status = :status
+        )
+        """,
+    )
+    fun findAllByAccountStatus(@Param("status") status: AccessStatus): List<RadiusSessionJpaEntity>
 }
 
 interface BngActionJpaRepository : JpaRepository<BngActionJpaEntity, UUID> {

@@ -207,6 +207,8 @@ class ImportPppoeServiceTest {
             throw UnsupportedOperationException()
 
         override fun resolveNasForArea(areaId: UUID): UUID? = throw UnsupportedOperationException()
+
+        override fun activeSubscriberLiveness() = throw UnsupportedOperationException()
     }
 
     private class FakeCustomerApi(

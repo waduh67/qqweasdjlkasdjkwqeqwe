@@ -95,6 +95,14 @@ interface RadiusSessionRepository {
     fun save(session: RadiusSession): RadiusSession
 
     fun findBySubscriberAccessId(subscriberAccessId: UUID): RadiusSession?
+
+    /**
+     * Sesi terkini seluruh akun ACTIVE — dasar penilaian alarm PPPoE putus oleh monitoring.
+     * Hanya akun ACTIVE yang relevan: PENDING belum ditulis ke RADIUS, ISOLATED/TERMINATED
+     * memang tak diharapkan online. Akun ACTIVE yang belum pernah terpantau (tanpa baris
+     * sesi) tak muncul di sini — dianggap "belum diketahui", bukan "putus".
+     */
+    fun findAllForActiveAccounts(): List<RadiusSession>
 }
 
 /**

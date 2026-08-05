@@ -218,7 +218,10 @@ class MapService(
                 placement.odpId?.let { bump(it, impact.severity, cause) }
             }
         }
-        // Alarm perangkat (ODP/ODC/OLT) langsung membawa id perangkatnya.
+        // Alarm ber-id-langsung: perangkat (ODP/ODC/OLT) membawa id perangkatnya, dan alarm
+        // pelanggan (PPPOE_DOWN dari bng — sesi PPPoE putus) membawa customerId. Seperti impact
+        // ONU, id pelanggan itu mewarnai marker pelanggan + kabel drop yang berujung padanya —
+        // menutup celah "ONU hidup tapi pelanggan offline" yang tak terlihat dari telemetri optik.
         impacts.filter { it.entityType != "ONU" && it.entityType != "COLLECTOR" }
             .forEach { bump(it.entityId, it.severity, it.toCause()) }
 

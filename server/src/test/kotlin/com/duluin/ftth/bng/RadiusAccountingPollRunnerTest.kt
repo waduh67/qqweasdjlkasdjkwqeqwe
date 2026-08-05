@@ -157,6 +157,8 @@ class RadiusAccountingPollRunnerTest {
 
         // Selalu sesi baru (tak ada yang tersimpan sebelumnya) → jalur RadiusSession.start.
         override fun findBySubscriberAccessId(subscriberAccessId: UUID): RadiusSession? = null
+
+        override fun findAllForActiveAccounts(): List<RadiusSession> = saved
     }
 
     private class FakeAccountingRepo : AccountingRecordRepository {

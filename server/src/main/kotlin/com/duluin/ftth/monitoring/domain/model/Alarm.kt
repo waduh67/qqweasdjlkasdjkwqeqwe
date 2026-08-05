@@ -12,6 +12,14 @@ enum class AlarmEntityType {
     ODP,
     ODC,
     COLLECTOR,
+
+    /**
+     * Pelanggan sebagai subjek — dipakai alarm yang lahir di ATAS lapisan optik, mis.
+     * sesi PPPoE putus (BRAS/RADIUS). Berbeda dari [ONU] yang menyoal perangkat fisik
+     * di rumah; [CUSTOMER] menyoal identitas jaringan pelanggan yang gis warnai ke
+     * marker pelanggan + kabel drop-nya via customerId.
+     */
+    CUSTOMER,
 }
 
 enum class AlarmSeverity {
@@ -72,6 +80,17 @@ enum class AlarmKind(
      * saja" karena tidak ada alarm baru yang masuk.
      */
     COLLECTOR_SILENT(AlarmEntityType.COLLECTOR, AlarmSeverity.CRITICAL, null, null, 900, "Collector berhenti melapor"),
+
+    /**
+     * Sesi PPPoE pelanggan putus di BRAS — pelanggan offline walau ONU-nya boleh jadi
+     * masih menyala. Menutup celah "ONU hidup tapi pelanggan tak bisa internetan"
+     * (mis. salah kredensial, di-suspend sepihak router, sesi ngadat) yang tak terlihat
+     * di telemetri optik. WARNING, bukan CRITICAL: satu pelanggan offline bukan gangguan
+     * masif, dan penghakiman "putus" sudah diredam ambang basi sesi di bng (poll BRAS
+     * cuma melaporkan sesi hidup; sesi berakhir menghilang tanpa ditandai), jadi tak
+     * perlu jeda tahan tambahan di sini.
+     */
+    PPPOE_DOWN(AlarmEntityType.CUSTOMER, AlarmSeverity.WARNING, null, null, 0, "Sesi PPPoE pelanggan putus"),
 }
 
 /**

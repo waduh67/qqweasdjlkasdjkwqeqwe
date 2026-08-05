@@ -1966,6 +1966,7 @@ const ALARM_LABEL: Record<string, string> = {
   OLT_UNREACHABLE: 'OLT tak terjangkau',
   ODC_UNREACHABLE: 'ODC tak terjangkau',
   COLLECTOR_SILENT: 'Collector membisu',
+  PPPOE_DOWN: 'PPPoE putus',
 }
 
 const CAUSE_DOT: Record<string, string> = { CRITICAL: '#ff3b5c', WARNING: '#fbbf24' }
