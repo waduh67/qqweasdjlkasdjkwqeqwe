@@ -13,6 +13,7 @@ import { InventoryPage } from './pages/InventoryPage'
 import { OltDetailPage } from './pages/OltDetailPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { CustomerDetailPage } from './pages/CustomerDetailPage'
+import { InvoicesPage } from './pages/InvoicesPage'
 import { ExpressPsbPage } from './pages/ExpressPsbPage'
 import { ImportPppoePage } from './pages/ImportPppoePage'
 import { MonitoringPage } from './pages/MonitoringPage'
@@ -169,6 +170,14 @@ export default function App() {
               element={
                 <RequirePermission permission="catalog.plan.view">
                   <CatalogPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="invoices"
+              element={
+                <RequirePermission permission="billing.invoice.view">
+                  <InvoicesPage />
                 </RequirePermission>
               }
             />
