@@ -2,13 +2,18 @@ package com.duluin.ftth.billing.application.service
 
 import com.duluin.ftth.billing.BillingAccountSummary
 import com.duluin.ftth.billing.BillingApi
+import com.duluin.ftth.billing.BillingFinancialReport
+import com.duluin.ftth.billing.MonthlyRevenuePoint
 import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
+import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
+import java.time.ZoneId
 import java.util.UUID
 
 /**
@@ -38,10 +43,60 @@ class BillingApiService(
         )
     }
 
+    override fun financialReport(from: LocalDate, to: LocalDate): BillingFinancialReport {
+        val fromInstant = from.atStartOfDay(zone).toInstant()
+        val toExclusive = to.plusDays(1).atStartOfDay(zone).toInstant()
+
+        val paid = invoiceRepository.findPaidBetween(fromInstant, toExclusive)
+        val issued = invoiceRepository.findIssuedBetween(fromInstant, toExclusive)
+        val outstanding = invoiceRepository.findOutstanding(LocalDate.now())
+
+        return BillingFinancialReport(
+            revenueCollected = paid.sumOfAmount(),
+            paidInvoiceCount = paid.size,
+            issuedAmount = issued.sumOfAmount(),
+            issuedInvoiceCount = issued.size,
+            outstandingAmount = outstanding.sumOfAmount(),
+            outstandingInvoiceCount = outstanding.size,
+            statusCounts = invoiceRepository.countByStatus().entries.associate { (s, n) -> s.name to n.toInt() },
+        )
+    }
+
+    override fun monthlyRevenue(fromMonth: YearMonth, toMonth: YearMonth): List<MonthlyRevenuePoint> {
+        val fromInstant = fromMonth.atDay(1).atStartOfDay(zone).toInstant()
+        val toExclusive = toMonth.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant()
+
+        // Kelompokkan pembayaran menurut bulan kalender zona server (sama seperti penjadwal
+        // yang memakai LocalDate.now()), lalu tebar ke SELURUH bulan rentang agar bolong ikut nol.
+        val byMonth = invoiceRepository.findPaidBetween(fromInstant, toExclusive)
+            .groupBy { YearMonth.from(it.paidAt!!.atZone(zone)) }
+
+        val points = mutableListOf<MonthlyRevenuePoint>()
+        var m = fromMonth
+        while (!m.isAfter(toMonth)) {
+            val invoices = byMonth[m].orEmpty()
+            points += MonthlyRevenuePoint(
+                month = m.toString(),
+                revenue = invoices.sumOfAmount(),
+                paidInvoiceCount = invoices.size,
+            )
+            m = m.plusMonths(1)
+        }
+        return points
+    }
+
+    private fun List<Invoice>.sumOfAmount(): BigDecimal =
+        fold(BigDecimal.ZERO) { acc, inv -> acc + inv.amount }
+
     /**
      * Menunggak = OVERDUE, atau ISSUED yang sudah lewat jatuh tempo. Cermin persis
      * `isOutstanding` di UI lama; PAID/VOID dikecualikan.
      */
     private fun Invoice.isOutstanding(today: LocalDate): Boolean =
         status == InvoiceStatus.OVERDUE || (status == InvoiceStatus.ISSUED && dueDate.isBefore(today))
+
+    private companion object {
+        /** Batas hari→instant memakai zona server, selaras dengan penjadwal billing (LocalDate.now()). */
+        val zone: ZoneId = ZoneId.systemDefault()
+    }
 }

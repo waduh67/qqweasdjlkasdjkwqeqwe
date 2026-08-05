@@ -153,6 +153,8 @@ class Subscriber360ServiceTest {
         override fun registerCustomer(command: RegisterCustomerCommand) = throw UnsupportedOperationException()
         override fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: BigDecimal?) =
             throw UnsupportedOperationException()
+
+        override fun subscriberStats() = throw UnsupportedOperationException()
     }
 
     private inner class FakeBngApi : BngApi {
@@ -177,6 +179,12 @@ class Subscriber360ServiceTest {
             customerId = customerId, outstandingAmount = BigDecimal("100000"),
             outstandingCount = 1, unpaidCount = 1, oldestDueDate = null, lastPaidAt = null,
         )
+
+        override fun financialReport(from: java.time.LocalDate, to: java.time.LocalDate) =
+            throw UnsupportedOperationException()
+
+        override fun monthlyRevenue(fromMonth: java.time.YearMonth, toMonth: java.time.YearMonth) =
+            throw UnsupportedOperationException()
     }
 
     private inner class FakeCpeApi : CpeApi {

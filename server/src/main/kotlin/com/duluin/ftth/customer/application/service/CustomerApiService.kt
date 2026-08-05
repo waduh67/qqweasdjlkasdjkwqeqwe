@@ -11,6 +11,7 @@ import com.duluin.ftth.customer.OnuPlacementRef
 import com.duluin.ftth.customer.OnuRef
 import com.duluin.ftth.customer.ProvisionOnuCommand
 import com.duluin.ftth.customer.RegisterCustomerCommand
+import com.duluin.ftth.customer.SubscriberStats
 import com.duluin.ftth.customer.SubscriptionRef
 import com.duluin.ftth.customer.domain.model.Customer
 import com.duluin.ftth.customer.domain.model.OnuStatus
@@ -203,6 +204,16 @@ class CustomerApiService(
 
     override fun findBillableSubscription(subscriptionId: UUID): BillableSubscription? =
         subscriptionRepository.findById(subscriptionId)?.toBillable()
+
+    override fun subscriberStats(): SubscriberStats {
+        val byStatus = subscriptionRepository.countByStatus()
+        return SubscriberStats(
+            totalCustomers = customerRepository.count().toInt(),
+            subscriptionsByStatus = byStatus.entries.associate { (s, n) -> s.name to n.toInt() },
+            billableCount = ((byStatus[SubscriptionStatus.ACTIVE] ?: 0) + (byStatus[SubscriptionStatus.ISOLATED] ?: 0)).toInt(),
+            mrr = subscriptionRepository.sumMonthlyRecurringRevenue(),
+        )
+    }
 
     /**
      * Isolir/pulih dari billing memakai kembali use case langganan yang sama dengan

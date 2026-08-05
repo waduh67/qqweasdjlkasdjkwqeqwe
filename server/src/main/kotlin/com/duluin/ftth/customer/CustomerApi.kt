@@ -142,7 +142,29 @@ interface CustomerApi {
      * langganan. [monthlyFeeOverride] null = pakai harga paket.
      */
     fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: java.math.BigDecimal?): UUID
+
+    /**
+     * Statistik pelanggan & langganan TENANT untuk laporan (modul `reporting`): jumlah
+     * pelanggan, cacah langganan per status, dan MRR (jumlah tarif bulanan langganan yang
+     * masih ditagih). Customer tetap satu-satunya yang menyentuh tabelnya (RLS per tenant).
+     */
+    fun subscriberStats(): SubscriberStats
 }
+
+/**
+ * Potret pelanggan & langganan satu tenant untuk laporan.
+ *
+ * [totalCustomers] = seluruh pelanggan tenant. [subscriptionsByStatus] = cacah langganan per
+ * nama status ([com.duluin.ftth.customer.domain.model.SubscriptionStatus]: PENDING/ACTIVE/
+ * ISOLATED/TERMINATED). [billableCount] = langganan penghasil pendapatan berulang (ACTIVE+
+ * ISOLATED) — pembagi ARPU. [mrr] = jumlah tarif bulanan langganan billable (skala 2).
+ */
+data class SubscriberStats(
+    val totalCustomers: Int,
+    val subscriptionsByStatus: Map<String, Int>,
+    val billableCount: Int,
+    val mrr: java.math.BigDecimal,
+)
 
 /** Perintah mendaftarkan pelanggan baru lewat kontrak publik (orkestrasi onboarding PSB ekspres). */
 data class RegisterCustomerCommand(

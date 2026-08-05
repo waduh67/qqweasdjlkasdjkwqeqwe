@@ -29,6 +29,9 @@ interface CustomerRepository {
 
     fun existsByCode(code: String): Boolean
 
+    /** Jumlah seluruh pelanggan tenant aktif (tercakup RLS) — angka utama laporan. */
+    fun count(): Long
+
     /**
      * Nomor urut kode-otomatis tertinggi yang sudah dipakai tenant ini (dari kode berbentuk
      * `{prefix}{angka}`), atau 0 bila belum ada. Dipakai untuk membuat kode berikutnya secara

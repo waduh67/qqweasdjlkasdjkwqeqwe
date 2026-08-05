@@ -230,6 +230,8 @@ class ImportPppoeServiceTest {
             activatedCount++
         }
 
+        override fun subscriberStats() = throw UnsupportedOperationException()
+
         override fun findCustomer(id: UUID) = throw UnsupportedOperationException()
         override fun findCustomersByIds(ids: Set<UUID>) = throw UnsupportedOperationException()
         override fun findSubscription(id: UUID) = throw UnsupportedOperationException()

@@ -359,6 +359,10 @@ class BillingCycleTest {
         override fun findByCustomerId(customerId: UUID) = throw UnsupportedOperationException()
         override fun findByStatus(status: InvoiceStatus) = throw UnsupportedOperationException()
         override fun hasOverdueForSubscription(subscriptionId: UUID) = throw UnsupportedOperationException()
+        override fun findPaidBetween(from: Instant, toExclusive: Instant) = throw UnsupportedOperationException()
+        override fun findIssuedBetween(from: Instant, toExclusive: Instant) = throw UnsupportedOperationException()
+        override fun findOutstanding(asOf: LocalDate) = throw UnsupportedOperationException()
+        override fun countByStatus() = throw UnsupportedOperationException()
     }
 
     private class FakeCustomerApi(
@@ -396,5 +400,7 @@ class BillingCycleTest {
         override fun registerCustomer(command: RegisterCustomerCommand) = throw UnsupportedOperationException()
         override fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: BigDecimal?) =
             throw UnsupportedOperationException()
+
+        override fun subscriberStats() = throw UnsupportedOperationException()
     }
 }

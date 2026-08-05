@@ -75,7 +75,61 @@ class BillingApiServiceTest {
         assertThat(summary.lastPaidAt).isEqualTo(newer)
     }
 
+    @Test
+    fun `financialReport menjumlah tertagih, terbit, tunggakan, dan cacah status`() {
+        val service = BillingApiService(
+            FakeInvoiceRepository(
+                invoices = emptyList(),
+                paid = listOf(paidOn("120000", "2026-07-05T12:00:00Z"), paidOn("80000", "2026-07-20T12:00:00Z")),
+                issued = listOf(issued("200000", minusDays(1)), issued("50000", plusDays(3))),
+                outstanding = listOf(overdue("75000", minusDays(10)), issued("25000", minusDays(2))),
+                statusCounts = mapOf(
+                    InvoiceStatus.PAID to 2L,
+                    InvoiceStatus.ISSUED to 3L,
+                    InvoiceStatus.OVERDUE to 1L,
+                ),
+            ),
+        )
+
+        val report = service.financialReport(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31))
+
+        assertThat(report.revenueCollected).isEqualByComparingTo("200000") // 120000 + 80000
+        assertThat(report.paidInvoiceCount).isEqualTo(2)
+        assertThat(report.issuedAmount).isEqualByComparingTo("250000") // 200000 + 50000
+        assertThat(report.issuedInvoiceCount).isEqualTo(2)
+        assertThat(report.outstandingAmount).isEqualByComparingTo("100000") // 75000 + 25000
+        assertThat(report.outstandingInvoiceCount).isEqualTo(2)
+        assertThat(report.statusCounts).containsEntry("PAID", 2).containsEntry("ISSUED", 3).containsEntry("OVERDUE", 1)
+    }
+
+    @Test
+    fun `monthlyRevenue mengelompokkan per bulan dan menebar bolong jadi nol`() {
+        val service = BillingApiService(
+            FakeInvoiceRepository(
+                invoices = emptyList(),
+                paid = listOf(
+                    paidOn("100000", "2026-07-10T12:00:00Z"),
+                    paidOn("40000", "2026-07-25T12:00:00Z"),
+                    paidOn("60000", "2026-08-03T12:00:00Z"),
+                ),
+            ),
+        )
+
+        val series = service.monthlyRevenue(java.time.YearMonth.of(2026, 5), java.time.YearMonth.of(2026, 8))
+
+        assertThat(series.map { it.month }).containsExactly("2026-05", "2026-06", "2026-07", "2026-08")
+        assertThat(series[0].revenue).isEqualByComparingTo("0")
+        assertThat(series[1].revenue).isEqualByComparingTo("0")
+        assertThat(series[2].revenue).isEqualByComparingTo("140000") // Jul: 100000 + 40000
+        assertThat(series[2].paidInvoiceCount).isEqualTo(2)
+        assertThat(series[3].revenue).isEqualByComparingTo("60000") // Agu
+        assertThat(series[3].paidInvoiceCount).isEqualTo(1)
+    }
+
     // --- Perkakas uji ---
+
+    private fun paidOn(amount: String, paidAt: String): Invoice =
+        paid(amount = amount, dueDate = minusDays(1), paidAt = Instant.parse(paidAt))
 
     private fun issued(amount: String, dueDate: LocalDate): Invoice = Invoice.create(
         tenantId = UuidV7.generate(),
@@ -100,8 +154,18 @@ class BillingApiServiceTest {
     private fun plusDays(n: Long): LocalDate = LocalDate.now().plusDays(n)
     private fun minusDays(n: Long): LocalDate = LocalDate.now().minusDays(n)
 
-    private class FakeInvoiceRepository(private val invoices: List<Invoice>) : InvoiceRepository {
+    private class FakeInvoiceRepository(
+        private val invoices: List<Invoice>,
+        private val paid: List<Invoice> = emptyList(),
+        private val issued: List<Invoice> = emptyList(),
+        private val outstanding: List<Invoice> = emptyList(),
+        private val statusCounts: Map<InvoiceStatus, Long> = emptyMap(),
+    ) : InvoiceRepository {
         override fun findByCustomerId(customerId: UUID): List<Invoice> = invoices
+        override fun findPaidBetween(from: Instant, toExclusive: Instant): List<Invoice> = paid
+        override fun findIssuedBetween(from: Instant, toExclusive: Instant): List<Invoice> = issued
+        override fun findOutstanding(asOf: LocalDate): List<Invoice> = outstanding
+        override fun countByStatus(): Map<InvoiceStatus, Long> = statusCounts
 
         override fun save(invoice: Invoice) = throw UnsupportedOperationException()
         override fun findById(id: UUID) = throw UnsupportedOperationException()

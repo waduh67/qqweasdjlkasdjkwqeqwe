@@ -7,6 +7,7 @@ import com.duluin.ftth.billing.domain.model.InvoiceStatus
 import com.duluin.ftth.billing.domain.model.Payment
 import com.duluin.ftth.common.tenant.TenantContext
 import org.springframework.stereotype.Component
+import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
@@ -73,6 +74,18 @@ class InvoicePersistenceAdapter(
 
     override fun hasOverdueForSubscription(subscriptionId: UUID): Boolean =
         jpa.existsBySubscriptionIdAndStatus(subscriptionId, InvoiceStatus.OVERDUE)
+
+    override fun findPaidBetween(from: Instant, toExclusive: Instant): List<Invoice> =
+        jpa.findByPaidAtGreaterThanEqualAndPaidAtLessThanOrderByPaidAtAsc(from, toExclusive).map { it.toDomain() }
+
+    override fun findIssuedBetween(from: Instant, toExclusive: Instant): List<Invoice> =
+        jpa.findByIssuedAtGreaterThanEqualAndIssuedAtLessThan(from, toExclusive).map { it.toDomain() }
+
+    override fun findOutstanding(asOf: LocalDate): List<Invoice> =
+        jpa.findOutstanding(asOf).map { it.toDomain() }
+
+    override fun countByStatus(): Map<InvoiceStatus, Long> =
+        jpa.countGroupedByStatus().associate { it.status to it.total }
 }
 
 @Component

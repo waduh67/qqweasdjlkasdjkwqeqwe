@@ -5,6 +5,7 @@ import com.duluin.ftth.customer.application.port.outbound.SubscriptionRepository
 import com.duluin.ftth.customer.domain.model.Subscription
 import com.duluin.ftth.customer.domain.model.SubscriptionStatus
 import org.springframework.stereotype.Component
+import java.math.BigDecimal
 import java.util.UUID
 
 @Component
@@ -52,9 +53,20 @@ class SubscriptionPersistenceAdapter(
         if (customerIds.isEmpty()) emptyList() else jpa.findByCustomerIdIn(customerIds).map { it.toDomain() }
 
     override fun findBillableForCurrentTenant(): List<Subscription> =
-        jpa.findByStatusIn(listOf(SubscriptionStatus.ACTIVE, SubscriptionStatus.ISOLATED)).map { it.toDomain() }
+        jpa.findByStatusIn(BILLABLE_STATUSES).map { it.toDomain() }
+
+    override fun countByStatus(): Map<SubscriptionStatus, Long> =
+        jpa.countGroupedByStatus().associate { it.status to it.total }
+
+    override fun sumMonthlyRecurringRevenue(): BigDecimal =
+        jpa.sumMonthlyFeeByStatusIn(BILLABLE_STATUSES)
 
     override fun deleteById(id: UUID) = jpa.deleteById(id)
+
+    private companion object {
+        /** ACTIVE + ISOLATED = langganan yang masih ditagih (penghasil pendapatan berulang). */
+        val BILLABLE_STATUSES = listOf(SubscriptionStatus.ACTIVE, SubscriptionStatus.ISOLATED)
+    }
 }
 
 internal fun SubscriptionJpaEntity.toDomain(): Subscription = Subscription.rehydrate(

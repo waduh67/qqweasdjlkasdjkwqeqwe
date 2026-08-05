@@ -3,6 +3,7 @@ package com.duluin.ftth.billing.application.port.outbound
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
 import com.duluin.ftth.billing.domain.model.Payment
+import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
@@ -43,6 +44,22 @@ interface InvoiceRepository {
 
     /** Masih ada tagihan menunggak (OVERDUE) untuk langganan ini — penentu auto-pulih. */
     fun hasOverdueForSubscription(subscriptionId: UUID): Boolean
+
+    /**
+     * Tagihan LUNAS yang `paidAt` berada di [from]..[toExclusive) — dasar pendapatan
+     * tertagih & tren bulanan. Setengah-terbuka di ujung kanan supaya batas bulan tak
+     * dobel-hitung.
+     */
+    fun findPaidBetween(from: Instant, toExclusive: Instant): List<Invoice>
+
+    /** Tagihan yang TERBIT (`issuedAt`) di [from]..[toExclusive) — dasar nilai yang ditagihkan. */
+    fun findIssuedBetween(from: Instant, toExclusive: Instant): List<Invoice>
+
+    /** Tunggakan per [asOf]: berstatus OVERDUE, atau ISSUED yang jatuh temponya sebelum [asOf]. */
+    fun findOutstanding(asOf: LocalDate): List<Invoice>
+
+    /** Cacah seluruh tagihan tenant per status — potret distribusi untuk laporan. */
+    fun countByStatus(): Map<InvoiceStatus, Long>
 }
 
 interface PaymentRepository {
