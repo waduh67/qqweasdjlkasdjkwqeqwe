@@ -3,8 +3,11 @@ package com.duluin.ftth.billing.application.service
 import com.duluin.ftth.billing.BillingAccountSummary
 import com.duluin.ftth.billing.BillingApi
 import com.duluin.ftth.billing.BillingFinancialReport
+import com.duluin.ftth.billing.CustomerInvoiceRef
+import com.duluin.ftth.billing.CustomerPaymentRef
 import com.duluin.ftth.billing.MonthlyRevenuePoint
 import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
+import com.duluin.ftth.billing.application.port.outbound.PaymentRepository
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
 import org.springframework.stereotype.Service
@@ -27,7 +30,37 @@ import java.util.UUID
 @Transactional(readOnly = true)
 class BillingApiService(
     private val invoiceRepository: InvoiceRepository,
+    private val paymentRepository: PaymentRepository,
 ) : BillingApi {
+
+    override fun findCustomerInvoices(customerId: UUID): List<CustomerInvoiceRef> =
+        invoiceRepository.findByCustomerId(customerId).map { inv ->
+            CustomerInvoiceRef(
+                id = inv.id,
+                number = inv.number,
+                periodStart = inv.periodStart,
+                periodEnd = inv.periodEnd,
+                amount = inv.amount,
+                status = inv.status.name,
+                issuedAt = inv.issuedAt,
+                dueDate = inv.dueDate,
+                paidAt = inv.paidAt,
+                gatewayProvider = inv.gatewayProvider,
+                payUrl = inv.payUrl,
+            )
+        }
+
+    override fun findCustomerPayments(customerId: UUID): List<CustomerPaymentRef> =
+        paymentRepository.findByCustomerId(customerId).map { pay ->
+            CustomerPaymentRef(
+                id = pay.id,
+                invoiceId = pay.invoiceId,
+                amount = pay.amount,
+                provider = pay.provider,
+                paidAt = pay.paidAt,
+                note = pay.note,
+            )
+        }
 
     override fun findAccountSummary(customerId: UUID): BillingAccountSummary {
         val invoices = invoiceRepository.findByCustomerId(customerId)

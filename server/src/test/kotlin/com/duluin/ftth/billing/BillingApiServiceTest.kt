@@ -1,9 +1,11 @@
 package com.duluin.ftth.billing
 
 import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
+import com.duluin.ftth.billing.application.port.outbound.PaymentRepository
 import com.duluin.ftth.billing.application.service.BillingApiService
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
+import com.duluin.ftth.billing.domain.model.Payment
 import com.duluin.ftth.common.domain.UuidV7
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -32,7 +34,7 @@ class BillingApiServiceTest {
             paid(amount = "200000", dueDate = minusDays(20), paidAt = paidAt), // lunas → tak menunggak
             voided(amount = "30000", dueDate = minusDays(30)),               // dibatalkan → tak menunggak
         )
-        val service = BillingApiService(FakeInvoiceRepository(invoices))
+        val service = billing(FakeInvoiceRepository(invoices))
 
         val summary = service.findAccountSummary(customerId)
 
@@ -46,7 +48,7 @@ class BillingApiServiceTest {
 
     @Test
     fun `tanpa tagihan mengembalikan ringkasan nol`() {
-        val service = BillingApiService(FakeInvoiceRepository(emptyList()))
+        val service = billing(FakeInvoiceRepository(emptyList()))
 
         val summary = service.findAccountSummary(customerId)
 
@@ -61,7 +63,7 @@ class BillingApiServiceTest {
     fun `lastPaidAt memilih pembayaran terbaru lintas tagihan`() {
         val older = Instant.parse("2026-06-15T02:00:00Z")
         val newer = Instant.parse("2026-07-20T02:00:00Z")
-        val service = BillingApiService(
+        val service = billing(
             FakeInvoiceRepository(
                 listOf(
                     paid(amount = "100000", dueDate = minusDays(40), paidAt = older),
@@ -77,7 +79,7 @@ class BillingApiServiceTest {
 
     @Test
     fun `financialReport menjumlah tertagih, terbit, tunggakan, dan cacah status`() {
-        val service = BillingApiService(
+        val service = billing(
             FakeInvoiceRepository(
                 invoices = emptyList(),
                 paid = listOf(paidOn("120000", "2026-07-05T12:00:00Z"), paidOn("80000", "2026-07-20T12:00:00Z")),
@@ -104,7 +106,7 @@ class BillingApiServiceTest {
 
     @Test
     fun `monthlyRevenue mengelompokkan per bulan dan menebar bolong jadi nol`() {
-        val service = BillingApiService(
+        val service = billing(
             FakeInvoiceRepository(
                 invoices = emptyList(),
                 paid = listOf(
@@ -127,6 +129,9 @@ class BillingApiServiceTest {
     }
 
     // --- Perkakas uji ---
+
+    /** Ringkasan rekening tak menyentuh pembayaran; fake payment repo kosong sudah cukup. */
+    private fun billing(invoices: InvoiceRepository) = BillingApiService(invoices, FakePaymentRepository())
 
     private fun paidOn(amount: String, paidAt: String): Invoice =
         paid(amount = amount, dueDate = minusDays(1), paidAt = Instant.parse(paidAt))
@@ -177,5 +182,11 @@ class BillingApiServiceTest {
         override fun findBillableOverdue(asOf: LocalDate) = throw UnsupportedOperationException()
         override fun findRemindableDueSoon(from: LocalDate, to: LocalDate) = throw UnsupportedOperationException()
         override fun hasOverdueForSubscription(subscriptionId: UUID) = throw UnsupportedOperationException()
+    }
+
+    private class FakePaymentRepository(private val payments: List<Payment> = emptyList()) : PaymentRepository {
+        override fun findByCustomerId(customerId: UUID): List<Payment> = payments
+        override fun findByInvoiceId(invoiceId: UUID) = throw UnsupportedOperationException()
+        override fun save(payment: Payment) = throw UnsupportedOperationException()
     }
 }

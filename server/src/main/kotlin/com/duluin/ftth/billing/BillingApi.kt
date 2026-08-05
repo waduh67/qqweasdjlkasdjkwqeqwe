@@ -22,6 +22,16 @@ interface BillingApi {
     fun findAccountSummary(customerId: UUID): BillingAccountSummary
 
     /**
+     * Tagihan seorang pelanggan (semua status), terbit terbaru dulu — untuk portal
+     * self-service. Membawa [CustomerInvoiceRef.payUrl] agar portal bisa menautkan "Bayar
+     * online" tanpa menembus batas modul billing.
+     */
+    fun findCustomerInvoices(customerId: UUID): List<CustomerInvoiceRef>
+
+    /** Riwayat pembayaran seorang pelanggan, terbaru dulu — untuk portal self-service. */
+    fun findCustomerPayments(customerId: UUID): List<CustomerPaymentRef>
+
+    /**
      * Laporan keuangan TENANT untuk rentang [from]..[to] (inklusif) — dipakai modul
      * `reporting` menyusun laporan lintas-domain. Billing tetap satu-satunya yang
      * menyentuh tabel tagihan/pembayaran (RLS per tenant aktif), jadi angka uang punya
@@ -57,6 +67,36 @@ data class BillingFinancialReport(
     val outstandingAmount: BigDecimal,
     val outstandingInvoiceCount: Int,
     val statusCounts: Map<String, Int>,
+)
+
+/**
+ * Proyeksi satu tagihan untuk pelanggan (portal self-service). Sengaja tak membocorkan
+ * [gatewayRef] internal; [payUrl] disertakan agar portal bisa menautkan pembayaran online
+ * (null = gateway manual / belum ada tautan bayar). Semua nilai uang pada skala 2.
+ */
+data class CustomerInvoiceRef(
+    val id: UUID,
+    val number: String,
+    val periodStart: LocalDate,
+    val periodEnd: LocalDate,
+    val amount: BigDecimal,
+    /** Nama [com.duluin.ftth.billing.domain.model.InvoiceStatus], mis. "ISSUED". */
+    val status: String,
+    val issuedAt: Instant,
+    val dueDate: LocalDate,
+    val paidAt: Instant?,
+    val gatewayProvider: String?,
+    val payUrl: String?,
+)
+
+/** Proyeksi satu pembayaran untuk pelanggan (portal self-service). */
+data class CustomerPaymentRef(
+    val id: UUID,
+    val invoiceId: UUID,
+    val amount: BigDecimal,
+    val provider: String,
+    val paidAt: Instant,
+    val note: String?,
 )
 
 /** Satu titik tren: pendapatan tertagih pada satu bulan kalender ([month] = "YYYY-MM"). */

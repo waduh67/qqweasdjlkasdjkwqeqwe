@@ -69,6 +69,7 @@ import {
 import { listIncidentsForCustomer, type IncidentView } from '../api/incident'
 import { listWorkOrdersForCustomer, type WorkOrderStatus, type WorkOrderView } from '../api/workorder'
 import { getSubscriber360, type Sub360BillingSummary, type Subscriber360View } from '../api/subscriber360'
+import { PortalCredentialCard } from '../components/PortalCredentialCard'
 
 /** Warna kesehatan optik selaras token status. */
 const HEALTH_COLOR: Record<string, string> = {
@@ -349,6 +350,8 @@ function RingkasanTab({
       <SubscriptionManager customer={customer} run={run} />
 
       <OnuManager customer={customer} odps={odps} run={run} />
+
+      <PortalCredentialCard customerId={customer.id} />
     </div>
   )
 }

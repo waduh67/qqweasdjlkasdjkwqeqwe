@@ -43,6 +43,7 @@ import { PaymentGatewaySettingsPage } from './pages/PaymentGatewaySettingsPage'
 import { PlatformBillingSettingsPage } from './pages/PlatformBillingSettingsPage'
 import { SubscriptionPage } from './pages/SubscriptionPage'
 import { ReportsPage } from './pages/ReportsPage'
+import { PortalApp } from './portal/PortalApp'
 
 /** Menahan rute sampai sesi dipulihkan, lalu mengarahkan ke login bila belum masuk. */
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -97,8 +98,22 @@ export default function App() {
   return (
     <BrowserRouter>
       <ToastProvider>
-        <AuthProvider>
-          <Routes>
+        {/* Realm pelanggan (`/portal/*`) di-mount TERPISAH dari konsol operator: provider,
+            klien HTTP, dan token store sendiri (lihat PortalApp). Dua sesi tak bersinggungan. */}
+        <Routes>
+          <Route path="/portal/*" element={<PortalApp />} />
+          <Route path="/*" element={<OperatorApp />} />
+        </Routes>
+      </ToastProvider>
+    </BrowserRouter>
+  )
+}
+
+/** Konsol OPERATOR/PLATFORM — seluruh rute tenant di dalam satu `AuthProvider`. */
+function OperatorApp() {
+  return (
+    <AuthProvider>
+      <Routes>
           <Route path="/login" element={<LoginRoute />} />
           <Route
             element={
@@ -391,9 +406,7 @@ export default function App() {
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AuthProvider>
-      </ToastProvider>
-    </BrowserRouter>
+      </Routes>
+    </AuthProvider>
   )
 }

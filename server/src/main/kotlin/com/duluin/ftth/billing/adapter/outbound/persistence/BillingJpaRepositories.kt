@@ -57,4 +57,5 @@ interface InvoiceJpaRepository : JpaRepository<InvoiceJpaEntity, UUID> {
 
 interface PaymentJpaRepository : JpaRepository<PaymentJpaEntity, UUID> {
     fun findByInvoiceIdOrderByPaidAtDesc(invoiceId: UUID): List<PaymentJpaEntity>
+    fun findByCustomerIdOrderByPaidAtDesc(customerId: UUID): List<PaymentJpaEntity>
 }

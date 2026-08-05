@@ -185,6 +185,9 @@ class Subscriber360ServiceTest {
 
         override fun monthlyRevenue(fromMonth: java.time.YearMonth, toMonth: java.time.YearMonth) =
             throw UnsupportedOperationException()
+
+        override fun findCustomerInvoices(customerId: UUID) = throw UnsupportedOperationException()
+        override fun findCustomerPayments(customerId: UUID) = throw UnsupportedOperationException()
     }
 
     private inner class FakeCpeApi : CpeApi {

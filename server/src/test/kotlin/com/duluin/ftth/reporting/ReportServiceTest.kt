@@ -95,6 +95,8 @@ class ReportServiceTest {
         }
 
         override fun findAccountSummary(customerId: UUID) = throw UnsupportedOperationException()
+        override fun findCustomerInvoices(customerId: UUID) = throw UnsupportedOperationException()
+        override fun findCustomerPayments(customerId: UUID) = throw UnsupportedOperationException()
     }
 
     private class FakeCustomerApi(private val stats: SubscriberStats) : CustomerApi {

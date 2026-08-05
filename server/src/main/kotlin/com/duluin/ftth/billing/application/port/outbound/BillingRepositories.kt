@@ -67,4 +67,7 @@ interface PaymentRepository {
     fun save(payment: Payment): Payment
 
     fun findByInvoiceId(invoiceId: UUID): List<Payment>
+
+    /** Riwayat pembayaran seorang pelanggan, terbaru dulu — untuk portal self-service. */
+    fun findByCustomerId(customerId: UUID): List<Payment>
 }

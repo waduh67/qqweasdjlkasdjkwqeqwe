@@ -79,6 +79,10 @@ object PermissionCatalog {
         perm("customer.onu.view", "Lihat ONU pelanggan")
         perm("customer.onu.assign", "Pasang/lepas ONU ke port ODP")
 
+        // Portal self-service pelanggan (operator menyiapkan/mereset kredensial login pelanggan)
+        perm("portal.credential.view", "Lihat status kredensial portal pelanggan")
+        perm("portal.credential.manage", "Buat/reset/nonaktifkan kredensial portal pelanggan")
+
         // Monitoring
         perm("monitoring.dashboard.view", "Buka dashboard monitoring")
         perm("monitoring.metric.view", "Lihat metrik optik/ONU")

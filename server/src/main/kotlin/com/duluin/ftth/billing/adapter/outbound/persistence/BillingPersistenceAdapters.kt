@@ -110,6 +110,9 @@ class PaymentPersistenceAdapter(
 
     override fun findByInvoiceId(invoiceId: UUID): List<Payment> =
         jpa.findByInvoiceIdOrderByPaidAtDesc(invoiceId).map { it.toDomain() }
+
+    override fun findByCustomerId(customerId: UUID): List<Payment> =
+        jpa.findByCustomerIdOrderByPaidAtDesc(customerId).map { it.toDomain() }
 }
 
 internal fun InvoiceJpaEntity.toDomain(): Invoice = Invoice.rehydrate(
