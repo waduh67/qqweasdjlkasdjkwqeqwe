@@ -71,6 +71,9 @@ class SecurityConfig {
                 it.requestMatchers(
                     "/api/auth/login",
                     "/api/auth/refresh",
+                    // Pendaftaran mandiri ISP: publik (bikin tenant + admin awal). Keunikan
+                    // slug/email dijaga di service, bukan lewat auth.
+                    "/api/signup",
                     // Webhook pembayaran: penyedia gateway memanggil dengan tanda tangannya
                     // sendiri (diverifikasi di adapter), bukan token bearer kita.
                     "/api/billing/webhooks/**",

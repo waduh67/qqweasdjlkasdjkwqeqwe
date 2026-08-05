@@ -7,6 +7,7 @@ import { useCan } from './auth/useCan'
 import { Layout } from './components/Layout'
 import { PlatformLayout } from './components/PlatformLayout'
 import { LoginPage } from './pages/LoginPage'
+import { SignupPage } from './pages/SignupPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { PlatformDashboardPage } from './pages/PlatformDashboardPage'
 import { InventoryPage } from './pages/InventoryPage'
@@ -115,6 +116,8 @@ function OperatorApp() {
     <AuthProvider>
       <Routes>
           <Route path="/login" element={<LoginRoute />} />
+          {/* Pendaftaran mandiri ISP — publik, di luar guard auth. */}
+          <Route path="/signup" element={<SignupPage />} />
           <Route
             element={
               <RequireAuth>

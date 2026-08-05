@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { ApiError } from '../api/client'
 import { IconMap } from '../components/icons'
@@ -6,7 +7,10 @@ import { Spinner } from '../components/ui'
 
 export function LoginPage() {
   const { login } = useAuth()
-  const [email, setEmail] = useState('')
+  // Setelah daftar, SignupPage mengarahkan ke sini sambil membawa email untuk diisi otomatis.
+  const location = useLocation()
+  const prefillEmail = (location.state as { email?: string } | null)?.email ?? ''
+  const [email, setEmail] = useState(prefillEmail)
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -70,6 +74,9 @@ export function LoginPage() {
         <button className="primary" type="submit" disabled={busy} style={{ width: '100%', padding: '0.6rem' }}>
           {busy ? <Spinner /> : 'Masuk'}
         </button>
+        <p className="muted" style={{ margin: 0, fontSize: '0.83rem', textAlign: 'center' }}>
+          Punya jaringan FTTH sendiri? <Link to="/signup">Daftar ISP baru</Link>
+        </p>
       </form>
     </div>
   )
