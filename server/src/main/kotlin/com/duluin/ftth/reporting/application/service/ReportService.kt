@@ -14,7 +14,7 @@ import java.time.YearMonth
 /**
  * Merakit laporan dari kontrak publik `billing` + `customer` — murni baca, tak punya
  * persistence sendiri (pola sama `subscriber360`/`gis`). Endpoint di-anchor pada satu izin
- * `report.view` di controller: laporan adalah pandangan manajerial menyeluruh, jadi digating
+ * `reporting.report.view` di controller: laporan adalah pandangan manajerial menyeluruh, jadi digating
  * utuh, bukan per-facet.
  */
 @Service

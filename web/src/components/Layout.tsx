@@ -48,7 +48,7 @@ const GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
     label: null,
     items: [
       { to: '/', label: 'Dashboard', permission: null, icon: IconDashboard, end: true },
-      { to: '/reports', label: 'Laporan', permission: 'report.view', icon: IconChart },
+      { to: '/reports', label: 'Laporan', permission: 'reporting.report.view', icon: IconChart },
       { to: '/subscription', label: 'Langganan Aplikasi', permission: 'billing.subscription.view', icon: IconGauge },
     ],
   },

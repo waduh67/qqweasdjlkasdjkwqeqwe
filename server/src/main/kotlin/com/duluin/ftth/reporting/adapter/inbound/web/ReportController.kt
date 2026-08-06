@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.time.LocalDate
 
 /**
- * Endpoint laporan & analitik tenant. Di-anchor pada satu izin `report.view` (pandangan
+ * Endpoint laporan & analitik tenant. Di-anchor pada satu izin `reporting.report.view` (pandangan
  * manajerial menyeluruh). Rentang default = bulan berjalan sampai hari ini; tren default 6
  * bulan terakhir — dipilih server agar klien tak perlu tahu "hari ini" tenant.
  */
@@ -26,7 +26,7 @@ class ReportController(
 ) {
 
     @GetMapping("/overview")
-    @PreAuthorize("@authz.can('report.view')")
+    @PreAuthorize("@authz.can('reporting.report.view')")
     fun overview(
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) from: LocalDate?,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) to: LocalDate?,

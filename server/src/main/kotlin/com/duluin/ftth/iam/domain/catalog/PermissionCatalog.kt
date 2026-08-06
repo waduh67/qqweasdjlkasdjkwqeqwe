@@ -163,7 +163,7 @@ object PermissionCatalog {
         perm("notification.settings.manage", "Kelola gateway WA & saklar pemicu notifikasi")
 
         // Laporan & analitik (agregasi lintas-domain: keuangan + langganan)
-        perm("report.view", "Lihat laporan & analitik")
+        perm("reporting.report.view", "Lihat laporan & analitik")
 
         // Audit
         perm("audit.log.view", "Lihat jejak audit")

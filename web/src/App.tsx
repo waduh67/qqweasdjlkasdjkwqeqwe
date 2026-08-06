@@ -338,7 +338,7 @@ function OperatorApp() {
             <Route
               path="reports"
               element={
-                <RequirePermission permission="report.view">
+                <RequirePermission permission="reporting.report.view">
                   <ReportsPage />
                 </RequirePermission>
               }
