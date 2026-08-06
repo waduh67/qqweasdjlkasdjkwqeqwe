@@ -1,64 +1,57 @@
 package com.duluin.ftth.billing.adapter.outbound.gateway
 
+import com.duluin.ftth.billing.adapter.outbound.gateway.pivot.PivotApiClient
+import com.duluin.ftth.billing.adapter.outbound.gateway.pivot.PivotCredentials
 import com.duluin.ftth.billing.application.port.outbound.ChargeRequest
 import com.duluin.ftth.billing.application.port.outbound.ChargeResult
 import com.duluin.ftth.billing.application.port.outbound.GatewayCallback
 import com.duluin.ftth.billing.application.port.outbound.PaymentGateway
 import com.duluin.ftth.billing.application.port.outbound.PaymentSettlement
 import com.duluin.ftth.billing.config.BillingProperties
+import com.duluin.ftth.billing.domain.model.PivotFeeType
 import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
 import com.duluin.ftth.common.domain.error.ConflictException
 import org.slf4j.LoggerFactory
-import org.springframework.http.MediaType
-import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.stereotype.Component
-import org.springframework.web.client.RestClient
-import org.springframework.web.client.RestClientResponseException
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
-import java.time.Duration
 import java.time.Instant
-import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Adapter Pivot (pivot-payment.com) — BYO. Singleton stateless kecuali cache token: kredensial
- * datang per-panggilan lewat [ResolvedGatewayContext], jadi [RestClient] dibangun per-call.
+ * Adapter Pivot (pivot-payment.com) untuk model "business as platform": SEMUA charge dibuat di
+ * akun MASTER platform ([ResolvedGatewayContext.apiKey]/[ResolvedGatewayContext.secretKey]).
  *
- * Auth Pivot dua-langkah: `POST /v1/access-token` (header `X-MERCHANT-ID` + `X-MERCHANT-SECRET`)
- * menukar kredensial jadi Bearer token hidup ~900 dtk; token itu dipakai `POST /v2/payments`
- * (payment session mode REDIRECT). Token di-cache per merchant-id agar satu ronde penagihan
- * dengan banyak tagihan tak menukar token berulang. Callback diverifikasi header static
- * `X-API-Key` (Callback API Key per-tenant, BUKAN HMAC) dibanding constant-time; hanya status
- * PAID jadi settlement.
+ *  - **Tagihan pelanggan tenant**: charge dibuat ON-BEHALF-OF sub-account tenant
+ *    ([ResolvedGatewayContext.subAccountId] → header `x-submerchant-id`) + `splitRoutingConfigurations`
+ *    memotong fee platform ([ResolvedGatewayContext.platformFeeMinor]) ke akun master. Pelanggan
+ *    membayar nominal tagihan apa adanya; tenant menerima sisanya (fee terpotong dari hasil tenant).
+ *  - **Langganan SaaS tenant**: `subAccountId` null → charge langsung di master, tanpa split (100%
+ *    ke platform).
  *
- * IDR zero-decimal — `amount.value` dibulatkan ke bilangan bulat (nilai tagihan di DB tetap
- * scale-2, hanya angka yang dikirim ke Pivot yang dibulatkan), selaras adapter Xendit.
+ * Auth/token & HTTP ditangani [PivotApiClient]. Idempotency `X-REQUEST-ID` diturunkan dari nomor
+ * tagihan (deterministik → retry aman). Callback diverifikasi header static `X-API-Key` (Callback
+ * API Key master, BUKAN HMAC) dibanding constant-time; hanya status pelunasan jadi settlement.
  *
- * Kredensial → kolom: `api_key` = merchant id, `secret_key` = merchant secret, `webhook_token`
- * = Callback API Key. Butuh `ftth.billing.pivot.redirect-base-url` (mode REDIRECT wajib URL balik).
+ * IDR zero-decimal — `amount.value` dibulatkan ke bilangan bulat (nilai tagihan di DB tetap scale-2).
+ * Butuh `ftth.billing.pivot.redirect-base-url` (mode REDIRECT wajib URL balik).
  */
 @Component
 class PivotPaymentGateway(
+    private val apiClient: PivotApiClient,
     private val objectMapper: ObjectMapper,
     private val billingProperties: BillingProperties,
 ) : PaymentGateway {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    /** Cache access-token per merchant-id (token hidup ~900 dtk; disegarkan sebelum kedaluwarsa). */
-    private val tokenCache = ConcurrentHashMap<String, CachedToken>()
-
     override val provider: String = "PIVOT"
 
     override fun createCharge(request: ChargeRequest, ctx: ResolvedGatewayContext): ChargeResult {
-        val merchantId = ctx.apiKey?.takeIf { it.isNotBlank() }
-            ?: throw ConflictException("Kredensial Pivot belum lengkap — isi Merchant ID di setelan gateway")
-        val merchantSecret = ctx.secretKey?.takeIf { it.isNotBlank() }
-            ?: throw ConflictException("Kredensial Pivot belum lengkap — isi Merchant Secret di setelan gateway")
+        val creds = ctx.pivotCredentials()
         val redirectBase = billingProperties.pivot.redirectBaseUrl.trim().trimEnd('/').takeIf { it.isNotEmpty() }
             ?: throw ConflictException("Pivot butuh redirect base URL — set FTTH_BILLING_PIVOT_REDIRECT_BASE_URL")
 
@@ -83,9 +76,6 @@ class PivotPaymentGateway(
                     request.customerEmail?.takeIf { it.isNotBlank() }?.let { put("email", it) }
                 },
             )
-            // orderInformation WAJIB; satu baris layanan digital. Field ber-enum (category/subCategory/
-            // shippingInfo) sengaja diomit — nilainya tak terverifikasi, dan billingInfo hanya wajib
-            // untuk Foreign Card AVS (tak relevan pembayaran lokal IDR). Butuh cek sandbox.
             put(
                 "orderInformation",
                 mapOf(
@@ -99,39 +89,32 @@ class PivotPaymentGateway(
                     ),
                 ),
             )
+            // Fee platform via split-routing — HANYA untuk charge on-behalf sub-account (tagihan
+            // pelanggan); langganan SaaS (subAccountId null) tanpa split. Fee dihitung sebagai nominal
+            // tetap (FIXED) ke akun master; PERCENTAGE dikonversi dari nilai tagihan saat ini.
+            splitRouting(ctx, amountValue)?.let { put("splitRoutingConfigurations", it) }
             put("metadata", mapOf("invoiceNumber" to request.invoiceNumber))
         }
-        return try {
-            val node = client().post()
-                .uri("/v2/payments")
-                .contentType(MediaType.APPLICATION_JSON)
-                .headers { it.setBearerAuth(accessToken(merchantId, merchantSecret)) }
-                .body(body)
-                .retrieve()
-                .body(String::class.java)
-                ?.let(objectMapper::readTree)
-                ?: throw ConflictException("Pivot tak mengembalikan body payment session")
-            val data = node.get("data")
-            ChargeResult(
-                provider = "PIVOT",
-                gatewayRef = data?.get("id")?.asString()?.takeIf { it.isNotBlank() },
-                payUrl = data?.get("paymentUrl")?.asString()?.takeIf { it.isNotBlank() },
-            )
-        } catch (e: RestClientResponseException) {
-            log.warn(
-                "Pivot menolak pembuatan payment {} ({}): {}",
-                request.invoiceNumber,
-                e.statusCode.value(),
-                e.responseBodyAsString.take(HTTP_ERR_SNIPPET),
-            )
-            throw ConflictException("Pivot menolak pembuatan payment (${e.statusCode.value()})")
-        }
+
+        val node = apiClient.post(
+            path = "/v2/payments",
+            body = body,
+            creds = creds,
+            subMerchantId = ctx.subAccountId,
+            requestId = idempotencyKey(request.invoiceNumber),
+        )
+        val data = node.get("data")
+        return ChargeResult(
+            provider = "PIVOT",
+            gatewayRef = data?.get("id")?.asString()?.takeIf { it.isNotBlank() },
+            payUrl = data?.get("paymentUrl")?.asString()?.takeIf { it.isNotBlank() },
+        )
     }
 
     override fun parseCallback(callback: GatewayCallback, ctx: ResolvedGatewayContext): PaymentSettlement? {
         val expected = ctx.webhookToken?.takeIf { it.isNotBlank() }
         if (expected == null) {
-            log.warn("Callback Pivot ditolak — Callback API Key tenant belum diset")
+            log.warn("Callback Pivot ditolak — Callback API Key master belum diset")
             return null
         }
         val apiKey = callback.headers.entries
@@ -165,6 +148,35 @@ class PivotPaymentGateway(
         }
     }
 
+    /** Konfigurasi split-routing fee platform, atau null bila tak ada fee / bukan charge on-behalf. */
+    private fun splitRouting(ctx: ResolvedGatewayContext, amountValue: Long): List<Map<String, Any>>? {
+        if (ctx.subAccountId.isNullOrBlank()) return null
+        val masterId = ctx.apiKey?.takeIf { it.isNotBlank() } ?: return null
+        val feeValue = when (ctx.platformFeeType) {
+            PivotFeeType.FIXED -> ctx.platformFeeMinor
+            PivotFeeType.PERCENTAGE -> amountValue * ctx.platformFeeMinor / PERCENT_BASIS
+        }
+        if (feeValue <= 0 || feeValue >= amountValue) return null
+        return listOf(
+            mapOf(
+                "merchantId" to masterId,
+                "type" to "FIXED",
+                "currency" to "IDR",
+                "fixedAmount" to feeValue,
+                "remarks" to "Platform fee",
+            ),
+        )
+    }
+
+    /** Kredensial akun master dari ctx (dijamin lengkap oleh resolver; melempar jelas bila tidak). */
+    private fun ResolvedGatewayContext.pivotCredentials(): PivotCredentials {
+        val merchantId = apiKey?.takeIf { it.isNotBlank() }
+            ?: throw ConflictException("Kredensial Pivot master belum lengkap — isi Merchant ID di setelan platform")
+        val merchantSecret = secretKey?.takeIf { it.isNotBlank() }
+            ?: throw ConflictException("Kredensial Pivot master belum lengkap — isi Merchant Secret di setelan platform")
+        return PivotCredentials(merchantId, merchantSecret, sandbox)
+    }
+
     /** Waktu bayar dari `chargeDetails[0].paidAt` bila ada & bisa diurai, else null (pemanggil pakai now). */
     private fun firstChargePaidAt(data: JsonNode): Instant? {
         val charges = data.get("chargeDetails")?.takeIf { it.isArray && !it.isEmpty } ?: return null
@@ -172,52 +184,26 @@ class PivotPaymentGateway(
         return runCatching { Instant.parse(text) }.getOrNull()
     }
 
-    /** Bearer token Pivot: pakai cache per merchant-id, tukar ulang bila kosong/kedaluwarsa. */
-    private fun accessToken(merchantId: String, merchantSecret: String): String {
-        tokenCache[merchantId]?.takeIf { Instant.now().isBefore(it.expiresAt) }?.let { return it.token }
-        val node = client().post()
-            .uri("/v1/access-token")
-            .header("X-MERCHANT-ID", merchantId)
-            .header("X-MERCHANT-SECRET", merchantSecret)
-            .retrieve()
-            .body(String::class.java)
-            ?.let(objectMapper::readTree)
-            ?: throw ConflictException("Pivot tak mengembalikan access token")
-        val token = (node.get("accessToken") ?: node.at("/data/accessToken")).asString().takeIf { it.isNotBlank() }
-            ?: throw ConflictException("Respons access token Pivot tak berisi accessToken")
-        val ttl = (node.get("expiresIn") ?: node.at("/data/expiresIn")).asLong().takeIf { it > 0 } ?: DEFAULT_TOKEN_TTL
-        val expiresAt = Instant.now().plusSeconds((ttl - TOKEN_REFRESH_SKEW).coerceAtLeast(MIN_TOKEN_TTL))
-        tokenCache[merchantId] = CachedToken(token, expiresAt)
-        return token
+    /**
+     * `X-REQUEST-ID` idempotency: alfanumerik 16–36 char, deterministik dari nomor tagihan agar
+     * retry charge tak menggandakan payment session di Pivot.
+     */
+    private fun idempotencyKey(invoiceNumber: String): String {
+        val cleaned = invoiceNumber.filter { it.isLetterOrDigit() }.ifEmpty { "INV" }
+        val padded = (REQUEST_PREFIX + cleaned).take(REQUEST_ID_MAX)
+        return if (padded.length >= REQUEST_ID_MIN) padded else padded.padEnd(REQUEST_ID_MIN, '0')
     }
-
-    /** [RestClient] baru per-panggilan — kredensial (merchant/token) beda tiap tenant. */
-    private fun client(): RestClient = RestClient.builder()
-        .baseUrl(if (billingProperties.pivot.sandbox) SANDBOX_BASE_URL else PROD_BASE_URL)
-        .requestFactory(
-            SimpleClientHttpRequestFactory().apply {
-                setConnectTimeout(CONNECT_TIMEOUT)
-                setReadTimeout(READ_TIMEOUT)
-            },
-        )
-        .build()
 
     private fun constantTimeEquals(a: String, b: String): Boolean =
         MessageDigest.isEqual(a.toByteArray(StandardCharsets.UTF_8), b.toByteArray(StandardCharsets.UTF_8))
 
-    private data class CachedToken(val token: String, val expiresAt: Instant)
-
     private companion object {
-        const val PROD_BASE_URL = "https://api.pivot-payment.com"
-        const val SANDBOX_BASE_URL = "https://api-stg.pivot-payment.com"
         const val CALLBACK_KEY_HEADER = "X-API-Key"
         const val MAX_ITEM_NAME = 255
-        const val HTTP_ERR_SNIPPET = 300
-        const val DEFAULT_TOKEN_TTL = 900L
-        const val TOKEN_REFRESH_SKEW = 60L
-        const val MIN_TOKEN_TTL = 30L
+        const val PERCENT_BASIS = 100L
+        const val REQUEST_PREFIX = "req"
+        const val REQUEST_ID_MIN = 16
+        const val REQUEST_ID_MAX = 36
         val SETTLED_STATUSES = setOf("PAID", "SETTLED", "SUCCESS")
-        val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(5)
-        val READ_TIMEOUT: Duration = Duration.ofSeconds(20)
     }
 }

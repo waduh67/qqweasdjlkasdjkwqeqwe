@@ -1,55 +1,27 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { ApiError } from '../api/client'
 import {
+  getPivotMasterConfig,
   getPlatformBillingSettings,
-  PLATFORM_PROVIDER_LABEL,
-  PLATFORM_PROVIDERS,
-  updatePlatformGateway,
+  PLATFORM_FEE_TYPE_LABEL,
+  updatePivotMasterConfig,
   updatePlatformSettings,
+  type PivotMasterConfigView,
   type PlatformBillingSettingsView,
-  type PlatformGatewayView,
-  type PlatformProvider,
+  type PlatformFeeType,
 } from '../api/platformBilling'
 import { useCan } from '../auth/useCan'
 import { Badge, EmptyState, useToast } from '../components/ui'
 import { IconAlert, IconShield } from '../components/icons'
 
 /**
- * Setelan billing langganan SaaS (level platform) — super-admin memilih gateway mana yang menagih
- * tenant untuk memakai aplikasi, plus kredensial tiap penyedia. Beda dari `PaymentGatewaySettingsPage`
- * (yang per-tenant menagih pelanggan tenant): ini GLOBAL, satu baris per penyedia untuk seluruh platform.
+ * Setelan billing langganan SaaS (level platform) — super-admin mengatur default global (harga/
+ * grace/jatuh-tempo) plus akun master Pivot (satu agregator untuk seluruh platform: menagih tenant
+ * biaya langganan sekaligus menampung pembayaran pelanggan tiap tenant lewat sub-account).
  *
- * Kredensial write-only: dikirim saat menyimpan, tak pernah ditarik balik — server hanya menandai
- * sudah terisi (`*Set`). Rahasia null/kosong saat simpan = pertahankan yang tersimpan.
+ * Kredensial Pivot write-only: dikirim saat menyimpan, tak pernah ditarik balik — server hanya
+ * menandai sudah terisi (`*Set`). Rahasia null/kosong saat simpan = pertahankan yang tersimpan.
  */
-
-type CredKey = 'apiKey' | 'secretKey' | 'webhookToken'
-interface CredField {
-  key: CredKey
-  label: string
-  placeholder: string
-}
-
-/** Kredensial relevan per penyedia — cermin `PlatformPaymentGateway.resolve()` di server. */
-function credFields(provider: PlatformProvider): CredField[] {
-  switch (provider) {
-    case 'PAYWUZ':
-      // Satu API key: Bearer auth SEKALIGUS secret HMAC verifikasi webhook.
-      return [{ key: 'apiKey', label: 'API key', placeholder: 'pk_live_… / pk_sand_…' }]
-    case 'XENDIT':
-      return [
-        { key: 'secretKey', label: 'Secret key', placeholder: 'xnd_production_… / xnd_development_…' },
-        { key: 'webhookToken', label: 'Webhook token', placeholder: 'x-callback-token dari dashboard Xendit' },
-      ]
-    case 'MIDTRANS':
-      return [
-        { key: 'secretKey', label: 'Server Key', placeholder: 'Mid-server-… (produksi) / SB-Mid-server-… (sandbox)' },
-      ]
-  }
-}
-
-const isCredSet = (v: PlatformGatewayView, key: CredKey): boolean =>
-  key === 'apiKey' ? v.apiKeySet : key === 'secretKey' ? v.secretKeySet : v.webhookTokenSet
 
 export function PlatformBillingSettingsPage() {
   const { can } = useCan()
@@ -57,11 +29,16 @@ export function PlatformBillingSettingsPage() {
   const manage = can('platform.billing.manage')
 
   const [settings, setSettings] = useState<PlatformBillingSettingsView | null>(null)
+  const [pivot, setPivot] = useState<PivotMasterConfigView | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    getPlatformBillingSettings()
-      .then(setSettings)
+    Promise.all([
+      getPlatformBillingSettings().then(setSettings),
+      getPivotMasterConfig()
+        .then(setPivot)
+        .catch(() => undefined),
+    ])
       .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Gagal memuat setelan billing'))
       .finally(() => setLoading(false))
   }, [toast])
@@ -76,39 +53,19 @@ export function PlatformBillingSettingsPage() {
       <div>
         <h1 className="page-title">Billing Langganan Platform</h1>
         <p className="page-sub">
-          Gateway &amp; kredensial untuk menagih tenant biaya bulanan memakai aplikasi ini. Setelan berlaku
-          global — satu penyedia aktif menagih semua tenant.
+          Harga langganan default &amp; akun master Pivot untuk menagih tenant memakai aplikasi ini. Setelan
+          berlaku global untuk seluruh platform.
         </p>
       </div>
 
       <GlobalPanel settings={settings} manage={manage} onSaved={setSettings} />
 
-      <div className="stack" style={{ gap: '0.85rem' }}>
-        <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Kredensial penyedia</h2>
-        {!manage && (
-          <p className="muted" style={{ margin: 0 }}>
-            Anda hanya bisa melihat. Perlu izin “Kelola gateway billing platform” untuk mengubah.
-          </p>
-        )}
-        {PLATFORM_PROVIDERS.map((provider) => {
-          const gw = settings.gateways.find((g) => g.provider === provider)
-          if (!gw) return null
-          return (
-            <GatewayCard
-              key={provider}
-              gateway={gw}
-              active={settings.activeProvider === provider}
-              manage={manage}
-              onSaved={setSettings}
-            />
-          )
-        })}
-      </div>
+      {pivot && <PivotMasterPanel config={pivot} manage={manage} onSaved={setPivot} />}
     </div>
   )
 }
 
-/** Setelan global: gateway aktif + default grace/jatuh-tempo/tanggal-tagih/mata-uang. */
+/** Setelan global: default grace/jatuh-tempo/tanggal-tagih/harga/mata-uang. */
 function GlobalPanel({
   settings,
   manage,
@@ -119,7 +76,6 @@ function GlobalPanel({
   onSaved: (s: PlatformBillingSettingsView) => void
 }) {
   const toast = useToast()
-  const [activeProvider, setActiveProvider] = useState(settings.activeProvider)
   const [graceDays, setGraceDays] = useState(String(settings.defaultGraceDays))
   const [dueDays, setDueDays] = useState(String(settings.defaultDueDays))
   const [billingDay, setBillingDay] = useState(String(settings.defaultBillingDay))
@@ -128,21 +84,16 @@ function GlobalPanel({
   const [saving, setSaving] = useState(false)
 
   const dirty =
-    activeProvider !== settings.activeProvider ||
     Number(graceDays) !== settings.defaultGraceDays ||
     Number(dueDays) !== settings.defaultDueDays ||
     Number(billingDay) !== settings.defaultBillingDay ||
     Number(monthlyFee) !== settings.defaultMonthlyFee ||
     currency.trim().toUpperCase() !== settings.currency
 
-  const activeGateway = settings.gateways.find((g) => g.provider === activeProvider)
-  const activeReady = activeGateway?.enabled && activeGateway?.credentialsSet
-
   const save = async () => {
     setSaving(true)
     try {
       const result = await updatePlatformSettings({
-        activeProvider,
         defaultGraceDays: Number(graceDays),
         defaultDueDays: Number(dueDays),
         defaultBillingDay: Number(billingDay),
@@ -160,41 +111,10 @@ function GlobalPanel({
 
   return (
     <div className="card stack" style={{ gap: '0.85rem' }}>
-      <div className="spread" style={{ alignItems: 'center' }}>
-        <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
-          <IconShield size={16} />
-          <strong style={{ fontSize: '0.95rem' }}>Gateway aktif &amp; default global</strong>
-        </div>
-        <Badge tone={activeReady ? 'good' : 'warning'}>
-          {activeReady ? 'siap menagih' : 'belum siap'}
-        </Badge>
+      <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+        <IconShield size={16} />
+        <strong style={{ fontSize: '0.95rem' }}>Default global</strong>
       </div>
-
-      <FormRow
-        label="Gateway aktif"
-        hint="Penyedia yang dipakai menagih langganan tenant. Pastikan kredensialnya terisi & aktif di bawah."
-      >
-        <select
-          value={activeProvider}
-          onChange={(e) => setActiveProvider(e.target.value as PlatformProvider)}
-          disabled={!manage}
-        >
-          {PLATFORM_PROVIDERS.map((p) => (
-            <option key={p} value={p}>
-              {PLATFORM_PROVIDER_LABEL[p]}
-            </option>
-          ))}
-        </select>
-      </FormRow>
-
-      {!activeReady && (
-        <Callout>
-          <strong>{PLATFORM_PROVIDER_LABEL[activeProvider]}</strong> belum siap — aktifkan &amp; isi kredensialnya di
-          kartu penyedia di bawah, kalau tidak penerbitan tagihan langganan akan gagal membuat tautan bayar.
-        </Callout>
-      )}
-
-      <div className="hr" />
 
       <FormRow
         label="Harga bulanan default (Rp)"
@@ -273,44 +193,62 @@ function GlobalPanel({
   )
 }
 
-/** Kartu satu penyedia: saklar aktif + kredensial + URL webhook untuk disalin ke dashboard. */
-function GatewayCard({
-  gateway,
-  active,
+const FEE_TYPES: PlatformFeeType[] = ['FIXED', 'PERCENTAGE']
+
+/**
+ * Panel akun master Pivot: kredensial (Merchant ID/Secret/Callback API Key) write-only, toggle
+ * sandbox & aktif, fee platform, rekening payout platform, plus URL callback SaaS untuk disalin.
+ */
+function PivotMasterPanel({
+  config,
   manage,
   onSaved,
 }: {
-  gateway: PlatformGatewayView
-  active: boolean
+  config: PivotMasterConfigView
   manage: boolean
-  onSaved: (s: PlatformBillingSettingsView) => void
+  onSaved: (c: PivotMasterConfigView) => void
 }) {
   const toast = useToast()
-  const fields = useMemo(() => credFields(gateway.provider), [gateway.provider])
-  const [enabled, setEnabled] = useState(gateway.enabled)
-  const [paymentMethod, setPaymentMethod] = useState(gateway.paymentMethod ?? '')
-  const [creds, setCreds] = useState<Record<CredKey, string>>({ apiKey: '', secretKey: '', webhookToken: '' })
+  const [enabled, setEnabled] = useState(config.enabled)
+  const [sandbox, setSandbox] = useState(config.sandbox)
+  const [merchantId, setMerchantId] = useState('')
+  const [merchantSecret, setMerchantSecret] = useState('')
+  const [callbackApiKey, setCallbackApiKey] = useState('')
+  const [feeMinor, setFeeMinor] = useState(String(config.platformFeeMinor))
+  const [feeType, setFeeType] = useState<PlatformFeeType>(config.platformFeeType)
+  const [payoutChannel, setPayoutChannel] = useState(config.payoutChannelCode ?? '')
+  const [payoutAccount, setPayoutAccount] = useState(config.payoutAccountNumber ?? '')
   const [saving, setSaving] = useState(false)
 
-  // Sinkron ulang saat baris gateway diperbarui dari server (mis. penyedia lain disimpan).
+  // Sinkron ulang saat config diperbarui dari server.
   useEffect(() => {
-    setEnabled(gateway.enabled)
-    setPaymentMethod(gateway.paymentMethod ?? '')
-    setCreds({ apiKey: '', secretKey: '', webhookToken: '' })
-  }, [gateway])
+    setEnabled(config.enabled)
+    setSandbox(config.sandbox)
+    setMerchantId('')
+    setMerchantSecret('')
+    setCallbackApiKey('')
+    setFeeMinor(String(config.platformFeeMinor))
+    setFeeType(config.platformFeeType)
+    setPayoutChannel(config.payoutChannelCode ?? '')
+    setPayoutAccount(config.payoutAccountNumber ?? '')
+  }, [config])
 
-  const credDirty = fields.some((f) => creds[f.key].trim() !== '')
+  const credDirty = merchantId.trim() !== '' || merchantSecret.trim() !== '' || callbackApiKey.trim() !== ''
   const dirty =
-    enabled !== gateway.enabled ||
-    (gateway.provider === 'PAYWUZ' && paymentMethod.trim() !== (gateway.paymentMethod ?? '')) ||
+    enabled !== config.enabled ||
+    sandbox !== config.sandbox ||
+    Number(feeMinor) !== config.platformFeeMinor ||
+    feeType !== config.platformFeeType ||
+    payoutChannel.trim() !== (config.payoutChannelCode ?? '') ||
+    payoutAccount.trim() !== (config.payoutAccountNumber ?? '') ||
     credDirty
 
-  const webhookUrl = `${window.location.origin}/api/platform/billing/webhooks/${gateway.provider.toLowerCase()}`
+  const callbackUrl = `${window.location.origin}/api/platform/billing/webhooks/pivot`
 
-  const copyWebhook = async () => {
+  const copyCallback = async () => {
     try {
-      await navigator.clipboard.writeText(webhookUrl)
-      toast.success('URL webhook disalin')
+      await navigator.clipboard.writeText(callbackUrl)
+      toast.success('URL callback disalin')
     } catch {
       toast.error('Gagal menyalin — salin manual dari kolomnya')
     }
@@ -319,76 +257,175 @@ function GatewayCard({
   const save = async () => {
     setSaving(true)
     try {
-      const result = await updatePlatformGateway(gateway.provider, {
+      const result = await updatePivotMasterConfig({
         enabled,
-        apiKey: creds.apiKey.trim() || null,
-        secretKey: creds.secretKey.trim() || null,
-        webhookToken: creds.webhookToken.trim() || null,
-        paymentMethod: gateway.provider === 'PAYWUZ' ? paymentMethod.trim() || null : null,
+        sandbox,
+        merchantId: merchantId.trim() || null,
+        merchantSecret: merchantSecret.trim() || null,
+        callbackApiKey: callbackApiKey.trim() || null,
+        platformFeeMinor: Number(feeMinor),
+        platformFeeType: feeType,
+        payoutChannelCode: payoutChannel.trim() || null,
+        payoutAccountNumber: payoutAccount.trim() || null,
       })
       onSaved(result)
-      toast.success(`Kredensial ${PLATFORM_PROVIDER_LABEL[gateway.provider]} disimpan`)
+      toast.success('Konfigurasi Pivot master disimpan')
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Gagal menyimpan kredensial')
+      toast.error(err instanceof ApiError ? err.message : 'Gagal menyimpan konfigurasi')
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div className="card stack" style={{ gap: '0.85rem' }} aria-disabled={!manage}>
-      <div className="spread" style={{ alignItems: 'center' }}>
-        <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <strong style={{ fontSize: '0.95rem' }}>{PLATFORM_PROVIDER_LABEL[gateway.provider]}</strong>
-          {active && <Badge tone="accent">aktif</Badge>}
-          <Badge tone={gateway.credentialsSet ? 'good' : 'neutral'}>
-            {gateway.credentialsSet ? 'kredensial terisi' : 'kredensial kosong'}
-          </Badge>
-        </div>
-        <Segmented
-          value={enabled ? 'on' : 'off'}
-          onChange={(v) => setEnabled(v === 'on')}
-          disabled={!manage}
-          options={[
-            { value: 'off', label: 'Nonaktif' },
-            { value: 'on', label: 'Aktif' },
-          ]}
-        />
-      </div>
+    <div className="stack" style={{ gap: '0.85rem' }}>
+      <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Akun Master Pivot</h2>
+      {!manage && (
+        <p className="muted" style={{ margin: 0 }}>
+          Anda hanya bisa melihat. Perlu izin “Kelola gateway billing platform” untuk mengubah.
+        </p>
+      )}
 
-      {fields.map((f) => (
-        <label key={f.key}>
+      {/* Kredensial + status */}
+      <div className="card stack" style={{ gap: '0.85rem' }} aria-disabled={!manage}>
+        <div className="spread" style={{ alignItems: 'center' }}>
+          <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <strong style={{ fontSize: '0.95rem' }}>Kredensial &amp; status</strong>
+            <Badge tone={sandbox ? 'warning' : 'accent'}>{sandbox ? 'sandbox' : 'produksi'}</Badge>
+            <Badge tone={config.credentialsSet ? 'good' : 'neutral'}>
+              {config.credentialsSet ? 'kredensial terisi' : 'kredensial kosong'}
+            </Badge>
+          </div>
+          <Segmented
+            value={enabled ? 'on' : 'off'}
+            onChange={(v) => setEnabled(v === 'on')}
+            disabled={!manage}
+            options={[
+              { value: 'off', label: 'Nonaktif' },
+              { value: 'on', label: 'Aktif' },
+            ]}
+          />
+        </div>
+
+        <FormRow label="Mode" hint="Sandbox untuk uji coba; produksi untuk transaksi sungguhan.">
+          <Segmented
+            value={sandbox ? 'sandbox' : 'prod'}
+            onChange={(v) => setSandbox(v === 'sandbox')}
+            disabled={!manage}
+            options={[
+              { value: 'prod', label: 'Produksi' },
+              { value: 'sandbox', label: 'Sandbox' },
+            ]}
+          />
+        </FormRow>
+
+        <label>
           <span>
-            {f.label} {isCredSet(gateway, f.key) && <span className="muted">· tersimpan</span>}
+            Merchant ID {config.merchantIdSet && <span className="muted">· tersimpan</span>}
           </span>
           <input
             type="password"
             autoComplete="new-password"
-            value={creds[f.key]}
-            onChange={(e) => setCreds((c) => ({ ...c, [f.key]: e.target.value }))}
-            placeholder={isCredSet(gateway, f.key) ? 'Biarkan kosong untuk mempertahankan' : f.placeholder}
+            value={merchantId}
+            onChange={(e) => setMerchantId(e.target.value)}
+            placeholder={config.merchantIdSet ? 'Biarkan kosong untuk mempertahankan' : 'X-MERCHANT-ID dari dashboard Pivot'}
             disabled={!manage}
           />
         </label>
-      ))}
-
-      {gateway.provider === 'PAYWUZ' && (
         <label>
-          <span>Metode pembayaran</span>
-          <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} disabled={!manage}>
-            <option value="">Default server (QRIS)</option>
-            <option value="QRIS">QRIS</option>
-            <option value="VA">Virtual Account (Pilih Bank)</option>
-          </select>
+          <span>
+            Merchant Secret {config.merchantSecretSet && <span className="muted">· tersimpan</span>}
+          </span>
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={merchantSecret}
+            onChange={(e) => setMerchantSecret(e.target.value)}
+            placeholder={config.merchantSecretSet ? 'Biarkan kosong untuk mempertahankan' : 'X-MERCHANT-SECRET dari dashboard Pivot'}
+            disabled={!manage}
+          />
         </label>
-      )}
+        <label>
+          <span>
+            Callback API Key {config.callbackApiKeySet && <span className="muted">· tersimpan</span>}
+          </span>
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={callbackApiKey}
+            onChange={(e) => setCallbackApiKey(e.target.value)}
+            placeholder={config.callbackApiKeySet ? 'Biarkan kosong untuk mempertahankan' : 'X-API-Key untuk verifikasi callback'}
+            disabled={!manage}
+          />
+        </label>
 
-      <WebhookField url={webhookUrl} onCopy={() => void copyWebhook()} provider={gateway.provider} />
+        <WebhookField url={callbackUrl} onCopy={() => void copyCallback()} />
+      </div>
+
+      {/* Fee platform */}
+      <div className="card stack" style={{ gap: '0.85rem' }} aria-disabled={!manage}>
+        <strong style={{ fontSize: '0.95rem' }}>Fee Platform</strong>
+        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+          Potongan platform per transaksi pembayaran pelanggan tenant. Untuk <strong>Nominal tetap</strong> isi
+          rupiah (mis. 1000 = Rp1.000); untuk <strong>Persentase</strong> isi angka persen (mis. 2 = 2%).
+        </p>
+        <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+          <label style={{ flex: 1, minWidth: 180 }}>
+            <span>Jenis fee</span>
+            <select value={feeType} onChange={(e) => setFeeType(e.target.value as PlatformFeeType)} disabled={!manage}>
+              {FEE_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {PLATFORM_FEE_TYPE_LABEL[t]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={{ flex: 1, minWidth: 160 }}>
+            <span>{feeType === 'PERCENTAGE' ? 'Nilai (%)' : 'Nilai (Rp)'}</span>
+            <input
+              type="number"
+              min={0}
+              step={feeType === 'PERCENTAGE' ? 0.1 : 100}
+              value={feeMinor}
+              onChange={(e) => setFeeMinor(e.target.value)}
+              disabled={!manage}
+            />
+          </label>
+        </div>
+      </div>
+
+      {/* Rekening payout platform */}
+      <div className="card stack" style={{ gap: '0.85rem' }} aria-disabled={!manage}>
+        <strong style={{ fontSize: '0.95rem' }}>Rekening Payout Platform</strong>
+        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+          Rekening tujuan pencairan dana platform (fee terkumpul &amp; penagihan langganan tenant).
+        </p>
+        <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+          <label style={{ flex: 1, minWidth: 140 }}>
+            <span>Kode channel bank</span>
+            <input
+              value={payoutChannel}
+              onChange={(e) => setPayoutChannel(e.target.value)}
+              placeholder="mis. BCA, MANDIRI"
+              disabled={!manage}
+            />
+          </label>
+          <label style={{ flex: 1, minWidth: 160 }}>
+            <span>Nomor rekening</span>
+            <input
+              value={payoutAccount}
+              onChange={(e) => setPayoutAccount(e.target.value)}
+              placeholder="mis. 1234567890"
+              disabled={!manage}
+            />
+          </label>
+        </div>
+      </div>
 
       {manage && (
         <div className="row" style={{ justifyContent: 'flex-end' }}>
           <button className="primary" onClick={() => void save()} disabled={!dirty || saving}>
-            {saving ? 'Menyimpan…' : 'Simpan'}
+            {saving ? 'Menyimpan…' : 'Simpan konfigurasi Pivot'}
           </button>
         </div>
       )}
@@ -396,10 +433,10 @@ function GatewayCard({
   )
 }
 
-function WebhookField({ url, onCopy, provider }: { url: string; onCopy: () => void; provider: PlatformProvider }) {
+function WebhookField({ url, onCopy }: { url: string; onCopy: () => void }) {
   return (
     <div className="stack" style={{ gap: '0.4rem' }}>
-      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>URL webhook</span>
+      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>URL callback</span>
       <div className="row" style={{ gap: '0.5rem', alignItems: 'stretch' }}>
         <input value={url} readOnly onFocus={(e) => e.target.select()} style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.82rem' }} />
         <button type="button" className="ghost" onClick={onCopy} style={{ whiteSpace: 'nowrap' }}>
@@ -407,8 +444,7 @@ function WebhookField({ url, onCopy, provider }: { url: string; onCopy: () => vo
         </button>
       </div>
       <span className="muted" style={{ fontSize: '0.82rem' }}>
-        Tempel ke menu Callback/Webhook di dashboard {PLATFORM_PROVIDER_LABEL[provider]} agar pelunasan
-        langganan otomatis masuk ke sistem.
+        Tempel sebagai Callback URL di dashboard Pivot agar pelunasan langganan tenant otomatis masuk ke sistem.
       </span>
     </div>
   )
@@ -453,26 +489,6 @@ function FormRow({ label, hint, children }: { label: string; hint?: string; chil
           {hint}
         </span>
       )}
-    </div>
-  )
-}
-
-function Callout({ children }: { children: ReactNode }) {
-  return (
-    <div
-      className="row"
-      style={{
-        gap: '0.5rem',
-        alignItems: 'flex-start',
-        padding: '0.6rem 0.75rem',
-        borderRadius: 'var(--radius-sm)',
-        background: 'color-mix(in srgb, var(--warning) 12%, var(--surface))',
-        border: '1px solid color-mix(in srgb, var(--warning) 32%, transparent)',
-        fontSize: '0.85rem',
-      }}
-    >
-      <IconAlert size={16} />
-      <span>{children}</span>
     </div>
   )
 }

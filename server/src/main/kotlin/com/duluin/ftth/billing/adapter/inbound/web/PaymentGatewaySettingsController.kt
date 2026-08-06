@@ -2,9 +2,7 @@ package com.duluin.ftth.billing.adapter.inbound.web
 
 import com.duluin.ftth.billing.application.port.inbound.ManagePaymentGatewaySettingsUseCase
 import com.duluin.ftth.billing.application.port.inbound.PaymentGatewaySettingsView
-import com.duluin.ftth.billing.application.port.inbound.PaywuzMethodView
 import com.duluin.ftth.billing.application.port.inbound.UpdatePaymentGatewaySettingsCommand
-import com.duluin.ftth.billing.domain.model.GatewayMode
 import com.duluin.ftth.billing.domain.model.PaymentProvider
 import com.duluin.ftth.common.domain.error.ValidationException
 import io.swagger.v3.oas.annotations.Operation
@@ -29,9 +27,9 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
 
 /**
- * Setelan payment gateway tenant: penyedia (Xendit/Paywuz/Pivot/Manual) + mode (BYO/PLATFORM)
- * + kredensial bawa-sendiri. Kredensial hanya boleh DITULIS (write-only): dikirim saat update,
- * tak pernah dikembalikan — GET hanya menandakan sudah terisi/belum.
+ * Setelan penagihan tenant: metode aktif (PIVOT otomatis / MANUAL) + konfigurasi pembayaran manual
+ * (transfer/QRIS). Tak ada kredensial di sini — Pivot memakai akun master platform + sub-account
+ * tenant (kelola lewat `/api/billing/pivot-account`).
  */
 @RestController
 @RequestMapping("/api/billing/gateway-settings")
@@ -47,14 +45,9 @@ class PaymentGatewaySettingsController(
 
     @PutMapping
     @PreAuthorize("@authz.can('billing.gateway.manage')")
-    @Operation(summary = "Ubah penyedia, mode, & kredensial payment gateway")
+    @Operation(summary = "Ubah metode aktif & konfigurasi pembayaran manual")
     fun update(@Valid @RequestBody request: PaymentGatewaySettingsRequest): PaymentGatewaySettingsView =
         useCase.update(request.toCommand())
-
-    @GetMapping("/paywuz-methods")
-    @PreAuthorize("@authz.can('billing.gateway.view')")
-    @Operation(summary = "Daftar metode pembayaran proyek Paywuz tenant (untuk pilihan di UI)")
-    fun paywuzMethods(): List<PaywuzMethodView> = useCase.listPaywuzMethods()
 
     @PostMapping("/qris", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     @PreAuthorize("@authz.can('billing.gateway.manage')")
@@ -80,18 +73,12 @@ class PaymentGatewaySettingsController(
 }
 
 /**
- * Kredensial ([apiKey]/[secretKey]/[webhookToken]) opsional: kosong/absen = biarkan yang
- * tersimpan. Batas panjang mengikuti validasi domain agar pesan galat konsisten di klien.
+ * Metode aktif (`PIVOT`/`MANUAL`) + konfigurasi pembayaran manual (non-rahasia). Gambar QRIS
+ * diunggah terpisah lewat endpoint multipart.
  */
 data class PaymentGatewaySettingsRequest(
     @field:NotNull val provider: PaymentProvider,
-    @field:NotNull val mode: GatewayMode,
     @field:NotNull val enabled: Boolean,
-    @field:Size(max = 512) val apiKey: String? = null,
-    @field:Size(max = 512) val secretKey: String? = null,
-    @field:Size(max = 512) val webhookToken: String? = null,
-    @field:Size(max = 64) val paymentMethod: String? = null,
-    // Pembayaran manual (transfer/QRIS) — non-rahasia. Gambar QRIS diunggah terpisah.
     val manualTransferEnabled: Boolean = false,
     @field:Size(max = 120) val bankName: String? = null,
     @field:Size(max = 60) val accountNumber: String? = null,
@@ -100,12 +87,7 @@ data class PaymentGatewaySettingsRequest(
 ) {
     fun toCommand() = UpdatePaymentGatewaySettingsCommand(
         provider = provider,
-        mode = mode,
         enabled = enabled,
-        apiKey = apiKey,
-        secretKey = secretKey,
-        webhookToken = webhookToken,
-        paymentMethod = paymentMethod,
         manualTransferEnabled = manualTransferEnabled,
         bankName = bankName,
         accountNumber = accountNumber,

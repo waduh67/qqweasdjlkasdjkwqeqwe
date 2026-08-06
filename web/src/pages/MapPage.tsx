@@ -2470,6 +2470,9 @@ function PlaceAssetForm({
     }
   }, [kind])
 
+  // Normalisasi kode aset: rapikan spasi & seragamkan huruf besar (kode aset konvensinya uppercase).
+  const sanitizeCode = (raw: string) => raw.trim().replace(/\s+/g, ' ').toUpperCase()
+
   const submit = () => {
     const base: Record<string, unknown> = { code: sanitizeCode(code), name: name.trim() }
     if (kind === 'OLT') {

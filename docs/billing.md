@@ -77,24 +77,27 @@ lewat `ResolvedGatewayContext` tiap panggilan (satu adapter melayani banyak tena
 
 ```kotlin
 interface PaymentGateway {
-    val provider: String                                                       // "MANUAL", "XENDIT", …
+    val provider: String                                                       // "PIVOT", "MANUAL"
     fun createCharge(request: ChargeRequest, ctx: ResolvedGatewayContext): ChargeResult
     fun parseCallback(callback: GatewayCallback, ctx: ResolvedGatewayContext): PaymentSettlement?
 }
 ```
 
-- `TenantPaymentGatewayResolver` membaca baris config gateway tenant (via RLS),
-  mendekripsi di batas persistence, dan menghasilkan `ResolvedGatewayContext`
-  (provider + mode + kredensial). Jatuh ke fallback **MANUAL** (+ shared secret global)
-  bila tenant belum/nonaktif mengonfigurasi.
+- `TenantPaymentGatewayResolver` membaca metode aktif tenant (via RLS) + setelan MASTER
+  Pivot + sub-account tenant, lalu menghasilkan `ResolvedGatewayContext`. Jatuh ke fallback
+  **MANUAL** (+ shared secret global) bila tenant belum/nonaktif memakai Pivot atau
+  sub-account belum siap.
 - `PaymentGatewayRegistry` mengindeks semua bean `PaymentGateway` per `provider.uppercase()`;
-  pemanggil memilih adapter via `forProvider(ctx.provider)`. Menambah provider = menambah satu bean.
+  pemanggil memilih adapter via `forProvider(ctx.provider)`. Kini hanya ada `PivotPaymentGateway`
+  + `ManualPaymentGateway`.
 - Bawaan `ManualPaymentGateway` (`provider = "MANUAL"`) memverifikasi header
   `X-Billing-Signature` sama dengan `ctx.webhookToken ?: ftth.billing.webhook-secret`.
 
-> Tiap tenant memilih penyedia + mode (BYO/PLATFORM) + kredensialnya sendiri. Xendit
-> digarap penuh (BYO **dan** PLATFORM/xenPlatform dengan auto-provision sub-account); Pivot &
-> Paywuz digarap penuh BYO. Detail lengkap: [**docs/payment-gateway.md**](payment-gateway.md).
+> **Pivot-only.** Sejak migrasi penuh, penyedia lama (Xendit/Midtrans/Paywuz) & model BYOK
+> **dihapus**. Seluruh transaksi berjalan di **satu akun MASTER Pivot** milik platform, tiap
+> tenant jadi **sub-account** yang ditagih on-behalf (+ split fee platform); alternatifnya
+> pembayaran **MANUAL** (transfer/QRIS). Detail: [**docs/pivot-overview.md**](pivot-overview.md)
+> · [**docs/payment-gateway.md**](payment-gateway.md).
 
 ### Alur settle (lunas → auto-pulih)
 
@@ -138,11 +141,12 @@ Pembayaran manual juga bisa lewat `POST /api/billing/invoices/{id}/pay`
 | `default-provider` | `MANUAL` | **usang** — digantikan resolusi gateway per-tenant (lihat di bawah) |
 | `scheduler-interval` | `PT12H` | selang siklus penagihan |
 | `webhook-secret` | *(dev)* | secret callback **MANUAL** (fallback); override via `FTTH_BILLING_WEBHOOK_SECRET` |
-| `platform.*` | *(mati)* | kredensial MASTER agregator (mode PLATFORM) — lihat [docs/payment-gateway.md](payment-gateway.md) |
+| `pivot.redirect-base-url` | `""` | Pivot: basis URL balik mode REDIRECT — lihat [docs/pivot-overview.md](pivot-overview.md) |
 
 > Pemilihan gateway per pembuatan charge kini lewat `TenantPaymentGatewayResolver`
-> (baris config tenant), bukan `default-provider` global. Setelan + env payment gateway
-> selengkapnya di [**docs/payment-gateway.md**](payment-gateway.md).
+> (metode aktif tenant + master Pivot + sub-account), bukan `default-provider` global.
+> Kredensial MASTER Pivot ada di `pivot_master_config` (setelan super-admin), bukan env.
+> Setelan payment gateway selengkapnya di [**docs/payment-gateway.md**](payment-gateway.md).
 
 ---
 
@@ -157,8 +161,9 @@ Pembayaran manual juga bisa lewat `POST /api/billing/invoices/{id}/pay`
 | `POST /api/billing/invoices/{id}/pay` | `billing.payment.manage` |
 | `GET /api/billing/payments` | `billing.invoice.view` |
 | `GET · PUT /api/billing/gateway-settings` | `billing.gateway.view` / `billing.gateway.manage` |
-| `POST /api/billing/platform/gateway/{tenantId}/xendit-subaccount` | `billing.gateway.provision` (platform) |
-| `POST /api/billing/webhooks/{tenantSlug}/{provider}` | publik (tanda tangan gateway) |
+| `GET/POST /api/billing/pivot-account/**` (sub-account, saldo, payout) | `billing.gateway.view` / `manage` |
+| `GET/PUT /api/platform/pivot-config` (setelan master Pivot) | `platform.billing.view` / `manage` |
+| `POST /api/billing/webhooks/{tenantSlug}/pivot` · `/pivot-payout` | publik (`X-API-Key` master) |
 
 ---
 

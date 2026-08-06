@@ -7,8 +7,8 @@ import java.time.Instant
 
 /**
  * Kontrak payment gateway yang provider-agnostik: satu antarmuka untuk semua
- * penyedia (manual/transfer, dan kelak Midtrans/Xendit/dsb). Modul billing hanya
- * tahu antarmuka ini; adapter konkret hidup di `adapter/outbound/gateway`.
+ * penyedia (Pivot dan manual/transfer). Modul billing hanya tahu antarmuka ini;
+ * adapter konkret hidup di `adapter/outbound/gateway`.
  *
  * [provider] adalah nama kanonik penyedia (mis. `MANUAL`), dipakai registry untuk
  * memilih adapter dan disimpan di tagihan/pembayaran.

@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { listTenants, type Tenant } from '../api/platform'
 import {
   getPlatformBillingSettings,
-  PLATFORM_PROVIDER_LABEL,
   type PlatformBillingSettingsView,
 } from '../api/platformBilling'
 import { useAuth } from '../auth/useAuth'
@@ -70,7 +69,6 @@ export function PlatformDashboardPage() {
         {tenants != null && (
           <Stat label="Tenant ditangguhkan" value={suspended} accent={suspended > 0 ? 'warn' : undefined} />
         )}
-        {billing != null && <StatText label="Gateway aktif" value={PLATFORM_PROVIDER_LABEL[billing.activeProvider]} />}
         {billing != null && <StatText label="Biaya bulanan default" value={fee} />}
       </div>
 

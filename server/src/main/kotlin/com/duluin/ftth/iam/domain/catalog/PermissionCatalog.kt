@@ -146,8 +146,6 @@ object PermissionCatalog {
         // Langganan SaaS sisi tenant: lihat masa aktif/tagihan sendiri + perpanjang mandiri.
         perm("billing.subscription.view", "Lihat langganan aplikasi (masa aktif, tagihan)")
         perm("billing.subscription.renew", "Perpanjang langganan aplikasi (buat tagihan & bayar)")
-        // Provisioning sub-account Xendit PLATFORM: aksi lintas-tenant milik platform-admin.
-        platform("billing.gateway.provision", "Provisikan sub-account Xendit (mode PLATFORM) untuk tenant")
 
         // VPN — hub/server adalah infrastruktur PLATFORM (dikelola admin platform), akun milik tenant
         platform("vpn.server.view", "Lihat server VPN platform")

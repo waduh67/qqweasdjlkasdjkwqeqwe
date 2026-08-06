@@ -1,0 +1,90 @@
+package com.duluin.ftth.billing.adapter.outbound.gateway.pivot
+
+import com.duluin.ftth.billing.application.port.outbound.InquiryResult
+import com.duluin.ftth.billing.application.port.outbound.PivotSubMerchantPort
+import com.duluin.ftth.billing.application.port.outbound.SubMerchantResult
+import com.duluin.ftth.billing.domain.model.PivotMasterContext
+import com.duluin.ftth.billing.domain.model.SubAccountKycStatus
+import com.duluin.ftth.billing.domain.model.SubAccountStatus
+import com.duluin.ftth.billing.domain.model.SubAccountType
+import com.duluin.ftth.common.domain.error.ConflictException
+import org.springframework.stereotype.Component
+import tools.jackson.databind.JsonNode
+
+/**
+ * Adapter port sub-merchant Pivot (`/v1/sub-merchants`, `/v1/inquiry-account`) di atas [PivotApiClient].
+ * Menyembunyikan bentuk JSON Pivot: create/fetch mengembalikan [SubMerchantResult] yang sudah
+ * dipetakan ke enum domain, inquiry mengembalikan [InquiryResult].
+ *
+ * SEMUA panggilan memakai kredensial akun MASTER platform (dibangun dari [PivotMasterContext]).
+ */
+@Component
+class PivotSubMerchantGateway(
+    private val apiClient: PivotApiClient,
+) : PivotSubMerchantPort {
+
+    override fun create(
+        master: PivotMasterContext,
+        type: SubAccountType,
+        shortName: String,
+        businessName: String,
+    ): SubMerchantResult {
+        val body = mapOf(
+            "subAccountType" to type.name,
+            "shortName" to shortName,
+            "businessName" to businessName,
+        )
+        return apiClient.post("/v1/sub-merchants", body, master.credentials()).toSubMerchant()
+    }
+
+    override fun fetch(master: PivotMasterContext, subMerchantUuid: String): SubMerchantResult =
+        apiClient.get("/v1/sub-merchants/$subMerchantUuid", master.credentials()).toSubMerchant()
+
+    override fun inquiryAccount(master: PivotMasterContext, channelCode: String, accountNumber: String): InquiryResult {
+        val body = mapOf("channelCode" to channelCode, "accountNumber" to accountNumber)
+        val data = apiClient.post("/v1/inquiry-account", body, master.credentials()).dataOrRoot()
+        val inquiryId = data.textOrNull("inquiryId") ?: data.textOrNull("id")
+            ?: throw ConflictException("Respons inquiry Pivot tak berisi inquiryId")
+        val accountName = data.textOrNull("accountName")
+            ?: data.textOrNull("accountHolderName")
+            ?: data.textOrNull("beneficiaryName")
+        return InquiryResult(inquiryId = inquiryId, accountName = accountName)
+    }
+
+    private fun PivotMasterContext.credentials() = PivotCredentials(merchantId, merchantSecret, sandbox)
+
+    private fun JsonNode.toSubMerchant(): SubMerchantResult {
+        val data = dataOrRoot()
+        val uuid = data.textOrNull("id") ?: data.textOrNull("subMerchantId") ?: data.textOrNull("uuid")
+            ?: throw ConflictException("Respons sub-account Pivot tak berisi id")
+        return SubMerchantResult(
+            subMerchantUuid = uuid,
+            status = mapStatus(data.textOrNull("subAccountStatus")),
+            kycStatus = mapKycStatus(data.textOrNull("subAccountKycStatus")),
+        )
+    }
+
+    private fun JsonNode.dataOrRoot(): JsonNode = get("data")?.takeIf { !it.isNull } ?: this
+
+    private fun JsonNode.textOrNull(field: String): String? =
+        get(field)?.takeIf { !it.isNull }?.asString()?.takeIf { it.isNotBlank() }
+
+    private companion object {
+        /** Petakan `subAccountStatus` Pivot → enum domain; nilai tak dikenal dianggap CREATED (baru dibuat). */
+        fun mapStatus(raw: String?): SubAccountStatus = when (raw?.uppercase()) {
+            "ACTIVE" -> SubAccountStatus.ACTIVE
+            "DEACTIVATED", "INACTIVE", "SUSPENDED" -> SubAccountStatus.DEACTIVATED
+            "REJECTED" -> SubAccountStatus.REJECTED
+            else -> SubAccountStatus.CREATED
+        }
+
+        /** Petakan `subAccountKycStatus` Pivot → enum domain; nilai tak dikenal dianggap NOT_REQUIRED. */
+        fun mapKycStatus(raw: String?): SubAccountKycStatus = when (raw?.uppercase()) {
+            "WAITING_FOR_DOCUMENT", "WAITING_DOCUMENT" -> SubAccountKycStatus.WAITING_FOR_DOCUMENT
+            "IN_REVIEW", "REVIEW", "PENDING" -> SubAccountKycStatus.IN_REVIEW
+            "APPROVED", "VERIFIED" -> SubAccountKycStatus.APPROVED
+            "REJECTED" -> SubAccountKycStatus.REJECTED
+            else -> SubAccountKycStatus.NOT_REQUIRED
+        }
+    }
+}

@@ -27,8 +27,8 @@ hanya kolom penunjuk pemilik langganan).
 
 | Tabel | Migrasi | Isi |
 |---|---|---|
-| `platform_setting` | **V59** (+`default_monthly_fee` di **V62**) | satu baris setelan global: hari tagih, masa tenggang, **harga bulanan default** |
-| `platform_payment_gateway` | **V59** | gateway aktif tingkat platform (memakai ulang mesin [`billing`](payment-gateway.md)) |
+| `platform_setting` | **V59** (+`default_monthly_fee` di **V62**; `active_payment_provider` dibuang **V69**) | satu baris setelan global: hari tagih, masa tenggang, **harga bulanan default** |
+| ~~`platform_payment_gateway`~~ | **V59**, **dibuang V69** | *(usang)* kredensial gateway platform — diganti singleton `pivot_master_config` (V70), lihat [`pivot-overview.md`](pivot-overview.md) |
 | `tenant_subscription` | **V60** | satu baris per tenant: `monthly_fee`, `status`, periode aktif, jadwal tagih |
 | `tenant_subscription_invoice` | **V61** | tagihan langganan ber-periode (ISSUED/PAID/OVERDUE/VOID) |
 | `tenant_subscription_payment` | **V61** | pelunasan (dari webhook gateway atau catatan manual super-admin) |
@@ -168,20 +168,25 @@ listener tak menggagalkan onboarding — **backfill start-up** menambal langgana
 
 ### 2. `platformbilling → billing` memakai mesin gateway → named interface `gateway`
 
-`platformbilling` menagih lewat gateway yang **sama** seperti tagihan pelanggan
-([`docs/payment-gateway.md`](payment-gateway.md)), jadi butuh `PaymentGatewayRegistry`,
-`ChargeRequest`, `PaymentSettlement`, `ResolvedGatewayContext`, dll. — tipe **internal** billing.
-Alih-alih menembus enkapsulasi, tipe-tipe itu di-expose sebagai **named interface** Spring Modulith:
+`platformbilling` menagih lewat akun MASTER Pivot yang **sama** seperti tagihan pelanggan
+([`docs/pivot-overview.md`](pivot-overview.md)), jadi butuh `PaymentGatewayRegistry`,
+`ChargeRequest`, `PaymentSettlement`, `ResolvedGatewayContext`, dan `PivotMasterConfigProvider`
+— tipe **internal** billing. Alih-alih menembus enkapsulasi, tipe-tipe itu di-expose sebagai
+**named interface** Spring Modulith:
 
 ```kotlin
 @NamedInterface("gateway")
 interface PaymentGateway { ... }          // + ChargeRequest/Result, PaymentSettlement, GatewayCallback,
-@NamedInterface("gateway")                //   PaymentGatewayRegistry, ResolvedGatewayContext, GatewayMode
-data class ResolvedGatewayContext(...)
+@NamedInterface("gateway")                //   PaymentGatewayRegistry, ResolvedGatewayContext, GatewayMode,
+data class ResolvedGatewayContext(...)    //   PivotMasterContext/FeeType, PivotMasterConfigProvider
 ```
 
 `platformbilling → billing :: gateway` kini sah menurut ModularityTests, tanpa membuka seluruh
-sub-package billing.
+sub-package billing. `PlatformGatewayResolver` menyusun konteks charge dari
+`PivotMasterConfigProvider.current()`: langsung di akun master, **tanpa** `x-submerchant-id` &
+**tanpa** split fee → 100% dana masuk platform (pemasukan platform, bukan tenant). Bila master
+Pivot belum dikonfigurasi/aktif, charge langganan menolak dengan pesan jelas (bukan diam-diam
+gagal).
 
 ### 3. Suspend/aktifkan tenant → lewat `TenantApi`
 

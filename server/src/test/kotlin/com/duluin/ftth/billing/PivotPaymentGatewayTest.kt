@@ -1,6 +1,7 @@
 package com.duluin.ftth.billing
 
 import com.duluin.ftth.billing.adapter.outbound.gateway.PivotPaymentGateway
+import com.duluin.ftth.billing.adapter.outbound.gateway.pivot.PivotApiClient
 import com.duluin.ftth.billing.application.port.outbound.GatewayCallback
 import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.billing.domain.model.GatewayMode
@@ -17,7 +18,9 @@ import java.time.Instant
  */
 class PivotPaymentGatewayTest {
 
-    private val gateway = PivotPaymentGateway(JsonMapper.builder().build(), BillingProperties())
+    // parseCallback murni header+body → tak menyentuh HTTP; PivotApiClient hanya melengkapi konstruktor.
+    private val objectMapper = JsonMapper.builder().build()
+    private val gateway = PivotPaymentGateway(PivotApiClient(objectMapper), objectMapper, BillingProperties())
 
     private fun ctx(token: String?) = ResolvedGatewayContext(
         provider = "PIVOT",

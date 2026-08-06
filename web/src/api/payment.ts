@@ -1,40 +1,23 @@
-/** Setelan payment gateway tenant (module `billing`): penyedia + mode + kredensial BYO. */
+/** Setelan payment gateway tenant (module `billing`): Pivot (agregator platform) atau Manual. */
 
 import { api } from './client'
 
-export type PaymentProvider = 'XENDIT' | 'MIDTRANS' | 'PAYWUZ' | 'PIVOT' | 'MANUAL'
-export type GatewayMode = 'BYO' | 'PLATFORM'
+/** Penyedia pembayaran tenant: PIVOT (via akun platform) atau MANUAL (transfer/QRIS). */
+export type PaymentProvider = 'PIVOT' | 'MANUAL'
 
 export const PAYMENT_PROVIDER_LABEL: Record<PaymentProvider, string> = {
-  XENDIT: 'Xendit',
-  MIDTRANS: 'Midtrans',
-  PAYWUZ: 'Paywuz',
   PIVOT: 'Pivot',
   MANUAL: 'Manual (tunai/transfer)',
 }
 
-export const GATEWAY_MODE_LABEL: Record<GatewayMode, string> = {
-  BYO: 'Akun sendiri (BYO)',
-  PLATFORM: 'Akun platform (agregator)',
-}
-
-/** Penyedia yang charge otomatisnya sudah jalan. */
-export const SUPPORTED_PROVIDERS: PaymentProvider[] = ['XENDIT', 'MIDTRANS', 'PIVOT', 'PAYWUZ', 'MANUAL']
-
 /**
- * Setelan seperti dibaca dari server. Kredensial TAK pernah dikembalikan — hanya penanda
- * sudah terisi (`*Set`) agar rahasia tak bocor ke UI. `subAccountId` aman ditampilkan.
+ * Setelan seperti dibaca dari server. Tak ada kredensial per-tenant lagi — penagihan otomatis
+ * memakai akun master Pivot platform + sub-account tenant. Field manual (transfer/QRIS)
+ * non-rahasia, ditampilkan apa adanya; `qrisImageSet` hanya penanda gambar sudah terunggah.
  */
 export interface PaymentGatewaySettingsView {
   provider: PaymentProvider
-  mode: GatewayMode
   enabled: boolean
-  apiKeySet: boolean
-  secretKeySet: boolean
-  webhookTokenSet: boolean
-  subAccountId: string | null
-  /** Paywuz BYO: kode metode per-tenant; null = pakai default server. */
-  paymentMethod: string | null
   // Pembayaran manual (transfer/QRIS) — non-rahasia, ditampilkan apa adanya.
   manualTransferEnabled: boolean
   bankName: string | null
@@ -45,28 +28,13 @@ export interface PaymentGatewaySettingsView {
   qrisImageSet: boolean
 }
 
-/** Satu metode pembayaran proyek Paywuz (untuk pilihan di UI). */
-export interface PaywuzMethod {
-  code: string
-  name: string
-  type: string
-}
-
 /**
- * Perubahan setelan. Kredensial (`apiKey`/`secretKey`/`webhookToken`) null/kosong = biarkan
- * yang tersimpan apa adanya, jadi menyunting field lain tak menghapus rahasia. `subAccountId`
- * tak dikirim — ia hasil provisioning platform-admin.
+ * Perubahan setelan. Tak ada kredensial — hanya pilih penyedia (PIVOT/MANUAL), status aktif,
+ * dan konfigurasi pembayaran manual. Gambar QRIS diunggah terpisah (multipart).
  */
 export interface UpdatePaymentGatewaySettingsRequest {
   provider: PaymentProvider
-  mode: GatewayMode
   enabled: boolean
-  apiKey: string | null
-  secretKey: string | null
-  webhookToken: string | null
-  /** Paywuz BYO: kode metode per-tenant; null/kosong = default server. */
-  paymentMethod: string | null
-  // Pembayaran manual (non-rahasia) — selalu diganti; gambar QRIS diunggah terpisah.
   manualTransferEnabled: boolean
   bankName: string | null
   accountNumber: string | null
@@ -82,11 +50,6 @@ export function updatePaymentGatewaySettings(
   body: UpdatePaymentGatewaySettingsRequest,
 ): Promise<PaymentGatewaySettingsView> {
   return api.put('/api/billing/gateway-settings', body)
-}
-
-/** Metode aktif proyek Paywuz tenant (pakai API key tersimpan) — untuk pilihan metode per-tenant. */
-export function getPaywuzMethods(): Promise<PaywuzMethod[]> {
-  return api.get('/api/billing/gateway-settings/paywuz-methods')
 }
 
 /** Path konten byte gambar QRIS (ter-gate) — untuk pola `AuthedImage` (api.blob + createObjectURL). */
@@ -120,28 +83,4 @@ export interface ManualPaymentInstructionsView {
 /** Instruksi bayar manual tenant aktif (di-gate `billing.invoice.view`). */
 export function getManualPaymentInstructions(): Promise<ManualPaymentInstructionsView> {
   return api.get('/api/billing/manual-payment-instructions')
-}
-
-/** Permintaan provisioning sub-account Xendit (aksi platform-admin, mode PLATFORM). */
-export interface ProvisionXenditSubAccountRequest {
-  email: string
-  businessName: string | null
-}
-
-/** Hasil provisioning: id sub-account + apakah token callback-nya ikut tersimpan. */
-export interface SubAccountProvisionResult {
-  tenantId: string
-  subAccountId: string
-  callbackTokenSet: boolean
-}
-
-/**
- * Provisikan sub-account Xendit (mode PLATFORM/xenPlatform) untuk sebuah tenant dan kunci baris
- * gateway-nya ke XENDIT/PLATFORM/aktif. Butuh izin platform `billing.gateway.provision`.
- */
-export function provisionXenditSubAccount(
-  tenantId: string,
-  body: ProvisionXenditSubAccountRequest,
-): Promise<SubAccountProvisionResult> {
-  return api.post(`/api/billing/platform/gateway/${tenantId}/xendit-subaccount`, body)
 }

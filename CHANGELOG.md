@@ -6,6 +6,70 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-06 — Migrasi penuh payment gateway ke Pivot
+
+Payment layer dipangkas jadi **Pivot-only** dengan model **"business as platform"**: satu
+akun **MASTER** Pivot milik platform menampung semua transaksi, tiap tenant jadi **sub-account**
+yang ditagih on-behalf (+ potong fee platform via split routing). Seluruh penyedia lain
+(**Xendit/Midtrans/Paywuz**) dan model **BYOK** per-tenant **dihapus**. Ditambah fase payout/
+withdrawal untuk menyalurkan dana tenant. Dokumentasi baru: `docs/pivot-overview.md`,
+`docs/pivot-sub-account.md`, `docs/pivot-fee-split.md`, `docs/pivot-payout.md`.
+
+**Ditambahkan**
+- **Setelan MASTER Pivot** (`pivot_master_config`, migrasi `V70`; singleton PLATFORM-level
+  tanpa RLS): kredensial terenkripsi (merchant id/secret + Callback API Key), toggle sandbox,
+  fee platform per transaksi (`platform_fee_minor`/`platform_fee_type` FIXED|PERCENTAGE),
+  rekening payout platform. Domain `PivotMasterConfig`, service `PivotMasterConfigService`,
+  provider `PivotMasterConfigProvider` (`@NamedInterface("gateway")`). Endpoint super-admin
+  `GET/PUT /api/platform/pivot-config` (`PivotMasterConfigController`, izin `platform.billing.*`).
+- **Sub-account Pivot per-tenant** (`tenant_pivot_account`, migrasi `V71`; tenant-scoped + RLS):
+  domain `TenantPivotAccount` (`SubAccountType` NON_KYC/KYC, `SubAccountStatus`,
+  `SubAccountKycStatus`, rekening payout + `payout_inquiry_id`). Auto-provisi **NON_KYC** saat
+  onboarding lewat `TenantPivotAccountProvisioningListener` (`TenantOnboardedEvent`, AFTER_COMMIT,
+  dalam `TenantContext.runAs`). Service `TenantPivotAccountService`, adapter
+  `PivotSubMerchantGateway` (`POST /v1/sub-merchants`, `GET /v1/sub-merchants/{uuid}`,
+  `POST /v1/inquiry-account`). Endpoint `GET /api/billing/pivot-account`,
+  `POST .../provision|refresh|request-kyc|payout-account` (`TenantPivotAccountController`).
+- **Payout & withdrawal** (`tenant_payout`, migrasi `V72`; tenant-scoped + RLS): domain
+  `TenantPayout` (`PayoutKind` PAYOUT/WITHDRAWAL, `PayoutStatus` PENDING→PROCESSING→SUCCESS/FAILED),
+  service `TenantPayoutService`, adapter `PivotPayoutGateway` (`POST /v1/payouts`,
+  `POST /v1/withdrawals` on-behalf, `GET /v1/balances`). Nominal eksplisit (belum ada scheduler
+  otomatis — follow-up). Endpoint `GET /api/billing/pivot-account/balance|payouts`,
+  `POST .../payouts|withdrawals` (`TenantPayoutController`). Rekonsiliasi
+  `POST /api/billing/webhooks/{slug}/pivot-payout` (`PivotPayoutWebhookController`, verifikasi
+  `X-API-Key` master, idempotent).
+- **Split routing fee platform** (`PivotPaymentGateway.splitRouting`): fee (FIXED / PERCENTAGE
+  dikonversi ke nominal) dipotong dari hasil tenant ke merchant id master; di-skip untuk charge
+  langganan SaaS & saat fee 0 / ≥ nominal.
+- **Klien Pivot bersama** `PivotApiClient`: OAuth `POST /v1/access-token` (Bearer ~900 dtk,
+  cache per merchant-id), base URL sandbox/prod, header `x-submerchant-id` (on-behalf) &
+  `X-REQUEST-ID` (idempotency), galat HTTP → `ConflictException`.
+
+**Diubah**
+- **`tenant_payment_gateway` dirampingkan** (migrasi `V69`): kolom `mode`, `api_key`, `secret_key`,
+  `webhook_token`, `sub_account_id`, `payment_method` **dibuang**; `provider` dibatasi
+  `PIVOT | MANUAL` (CHECK baru). Domain `TenantPaymentGateway` tak lagi menyimpan kredensial —
+  hanya metode aktif + konfigurasi pembayaran manual (transfer/QRIS). Controller
+  `PaymentGatewaySettingsController` (`/api/billing/gateway-settings`) tanpa field kredensial.
+- **Resolusi gateway** `TenantPaymentGatewayResolver`: PIVOT (mode PLATFORM di akun master +
+  `x-submerchant-id` + split fee) bila master aktif & sub-account siap (bukan DEACTIVATED/REJECTED),
+  else fallback **MANUAL**. Charge Pivot pindah on-behalf sub-account (`PivotPaymentGateway`,
+  `POST /v2/payments` REDIRECT); callback verifikasi `X-API-Key` master (status PAID/SETTLED/SUCCESS).
+- **Penagihan langganan SaaS** `platformbilling.PlatformGatewayResolver`: charge langsung di akun
+  master (`subAccountId=null`, tanpa split → 100% ke platform) via `PivotMasterConfigProvider`;
+  menolak jelas bila master belum dikonfigurasi.
+- **Dokumentasi** `docs/payment-gateway.md`, `docs/billing.md`, `docs/saas-subscription.md`
+  disesuaikan ke model Pivot master+sub-account.
+
+**Dihapus**
+- **Penyedia Xendit/Midtrans/Paywuz & model BYOK** (migrasi `V69`): kredensial gateway per-tenant,
+  tabel `platform_payment_gateway`, kolom `platform_setting.active_payment_provider`, dan mode
+  BYO/PLATFORM per-penyedia. Auto-provision sub-account xenPlatform & endpoint
+  `POST /api/billing/platform/gateway/{tenantId}/xendit-subaccount` ikut hilang. Satu-satunya
+  gateway kini Pivot; alternatifnya pembayaran manual (transfer/QRIS).
+- **Izin `billing.gateway.provision`** (provisi sub-account Xendit PLATFORM) dihapus dari
+  `PermissionCatalog`; `PermissionCatalogSeeder` menonaktifkannya otomatis saat startup.
+
 ### 2026-08-06 — Peta pusatkan ke lokasi pengguna + kode kabel auto-generate
 
 Dua penyempurnaan alur lapangan. **Peta Jaringan** (`/map`) kini otomatis memusatkan diri

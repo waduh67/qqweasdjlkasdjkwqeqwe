@@ -1,7 +1,5 @@
 package com.duluin.ftth.billing
 
-import com.duluin.ftth.billing.application.port.outbound.PaywuzMethodDirectory
-import com.duluin.ftth.billing.application.port.outbound.PaywuzMethodInfo
 import com.duluin.ftth.billing.application.port.outbound.TenantPaymentGatewayRepository
 import com.duluin.ftth.billing.application.service.PaymentGatewaySettingsService
 import com.duluin.ftth.billing.domain.model.TenantPaymentGateway
@@ -41,7 +39,6 @@ class PaymentGatewaySettingsServiceTest {
         storage = FakeStorage()
         service = PaymentGatewaySettingsService(
             repository = repository,
-            paywuzMethods = NoopPaywuzMethods,
             auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
             storage = storage,
         )
@@ -98,6 +95,8 @@ class PaymentGatewaySettingsServiceTest {
         override fun save(settings: TenantPaymentGateway): TenantPaymentGateway = settings.also { row = it }
     }
 
+    // (tak ada lagi PaywuzMethodDirectory — kredensial gateway dibuang dari service)
+
     private class FakeStorage : ObjectStorage {
         val objects = ConcurrentHashMap<String, StoredObject>()
         override fun put(key: String, contentType: String, bytes: ByteArray) {
@@ -110,10 +109,6 @@ class PaymentGatewaySettingsServiceTest {
         override fun delete(key: String) {
             objects.remove(key)
         }
-    }
-
-    private object NoopPaywuzMethods : PaywuzMethodDirectory {
-        override fun listMethods(apiKey: String): List<PaywuzMethodInfo> = emptyList()
     }
 
     private object NoUser : CurrentUserProvider {

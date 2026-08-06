@@ -17,7 +17,6 @@ class PlatformSettingPersistenceAdapter(
 
     override fun save(setting: PlatformSetting): PlatformSetting {
         val entity = jpa.findById(setting.id).orElse(null)?.apply {
-            activeProvider = setting.activeProvider
             defaultGraceDays = setting.defaultGraceDays
             defaultDueDays = setting.defaultDueDays
             defaultBillingDay = setting.defaultBillingDay
@@ -25,7 +24,6 @@ class PlatformSettingPersistenceAdapter(
             currency = setting.currency
         } ?: PlatformSettingJpaEntity(
             id = setting.id,
-            activeProvider = setting.activeProvider,
             defaultGraceDays = setting.defaultGraceDays,
             defaultDueDays = setting.defaultDueDays,
             defaultBillingDay = setting.defaultBillingDay,
@@ -37,7 +35,6 @@ class PlatformSettingPersistenceAdapter(
 
     private fun PlatformSettingJpaEntity.toDomain(): PlatformSetting = PlatformSetting.rehydrate(
         id = id,
-        activeProvider = activeProvider,
         defaultGraceDays = defaultGraceDays,
         defaultDueDays = defaultDueDays,
         defaultBillingDay = defaultBillingDay,

@@ -3,78 +3,47 @@ import { api, ApiError } from '../api/client'
 import {
   deleteQrisImage,
   getPaymentGatewaySettings,
-  GATEWAY_MODE_LABEL,
   PAYMENT_PROVIDER_LABEL,
   QRIS_IMAGE_PATH,
-  SUPPORTED_PROVIDERS,
   updatePaymentGatewaySettings,
   uploadQrisImage,
-  type GatewayMode,
   type PaymentGatewaySettingsView,
   type PaymentProvider,
   type UpdatePaymentGatewaySettingsRequest,
 } from '../api/payment'
+import {
+  getPivotAccount,
+  PIVOT_ACCOUNT_STATUS_LABEL,
+  PIVOT_ACCOUNT_TYPE_LABEL,
+  PIVOT_KYC_STATUS_LABEL,
+  provisionPivotAccount,
+  refreshPivotAccount,
+  requestPivotKyc,
+  setPivotPayoutAccount,
+  type PivotAccountStatus,
+  type PivotKycStatus,
+  type TenantPivotAccountView,
+} from '../api/pivotAccount'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, Modal, useToast } from '../components/ui'
+import { Badge, EmptyState, Modal, useToast, type Tone } from '../components/ui'
 import { IconAlert, IconShield } from '../components/icons'
 
 /**
  * Pengaturan Payment Gateway tenant — halaman kritis: salah setel = tagihan tak dapat tautan
- * bayar atau charge lewat gateway yang keliru. Karena itu UX-nya dijaga:
+ * bayar atau pelanggan tak tahu cara membayar. Karena itu UX-nya dijaga:
  *
  *  1. **Status live dipisah dari form edit** — kartu atas menampilkan konfigurasi yang BENAR-BENAR
  *     berlaku sekarang (`saved`); form di bawah menampung suntingan yang belum disimpan (`form`).
  *  2. **Lacak perubahan (dirty)** — tombol simpan mati sampai ada yang berubah; "Batalkan" mengembalikan.
- *  3. **Wajib konfirmasi** — menyimpan memunculkan ringkasan diff (penyedia/mode/status/kredensial)
- *     yang harus dikonfirmasi, supaya tak ada perubahan tak sengaja.
+ *  3. **Wajib konfirmasi** — menyimpan memunculkan ringkasan diff yang harus dikonfirmasi.
  *
- * Kredensial write-only: dikirim saat menyimpan, tak pernah ditarik kembali — server hanya
- * menandai sudah terisi. Mode PLATFORM disiapkan admin platform (sub-account di-provisi).
+ * Penagihan otomatis memakai **Pivot** lewat akun master platform + sub-account tenant (dikelola di
+ * kartu "Sub-account Pivot" di bawah, endpoint terpisah). Tak ada lagi kredensial per-tenant.
  */
 
-/**
- * Penyedia gateway otomatis (tanpa MANUAL): hanya relevan saat gateway AKTIF. Saat nonaktif,
- * penyedia otomatis MANUAL (pelanggan bayar transfer/QRIS) tanpa dropdown — dropdown baru muncul
- * ketika operator mengaktifkan gateway.
- */
-const GATEWAY_PROVIDERS: PaymentProvider[] = ['XENDIT', 'MIDTRANS', 'PIVOT', 'PAYWUZ']
-
-type CredKey = 'apiKey' | 'secretKey' | 'webhookToken'
-interface CredField {
-  key: CredKey
-  label: string
-  placeholder: string
-}
-
-/** Kredensial yang relevan per penyedia — satu sumber untuk input, status, & ringkasan konfirmasi. */
-function credFields(provider: PaymentProvider): CredField[] {
-  switch (provider) {
-    case 'XENDIT':
-      return [
-        { key: 'secretKey', label: 'Secret key', placeholder: 'xnd_production_… / xnd_development_…' },
-        { key: 'webhookToken', label: 'Webhook token', placeholder: 'x-callback-token dari dashboard Xendit' },
-      ]
-    case 'MIDTRANS':
-      // Satu kredensial: Server Key — Basic-auth Snap SEKALIGUS secret verifikasi signature
-      // webhook (SHA512). Tak ada token webhook terpisah; prefiks `SB-` = sandbox.
-      return [{ key: 'secretKey', label: 'Server Key', placeholder: 'Mid-server-… / SB-Mid-server-…' }]
-    case 'PIVOT':
-      return [
-        { key: 'apiKey', label: 'Merchant ID', placeholder: 'X-MERCHANT-ID dari dashboard Pivot' },
-        { key: 'secretKey', label: 'Merchant Secret', placeholder: 'X-MERCHANT-SECRET dari dashboard Pivot' },
-        { key: 'webhookToken', label: 'Callback API Key', placeholder: 'X-API-Key untuk verifikasi callback' },
-      ]
-    case 'PAYWUZ':
-      // Satu kredensial: API key proyek — Bearer auth SEKALIGUS secret HMAC verifikasi webhook.
-      return [{ key: 'apiKey', label: 'API key', placeholder: 'pk_live_… / pk_sand_…' }]
-    case 'MANUAL':
-      return []
-  }
-}
-
-const isCredSet = (v: PaymentGatewaySettingsView, key: CredKey): boolean =>
-  key === 'apiKey' ? v.apiKeySet : key === 'secretKey' ? v.secretKeySet : v.webhookTokenSet
+/** Metode pembayaran tenant: PIVOT (otomatis via platform) atau MANUAL (transfer/QRIS). */
+const PROVIDER_OPTIONS: PaymentProvider[] = ['PIVOT', 'MANUAL']
 
 interface FieldChange {
   label: string
@@ -94,8 +63,6 @@ export function PaymentGatewaySettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
-  // Input kredensial write-only, terpisah dari view: kosong = pertahankan yang tersimpan.
-  const [creds, setCreds] = useState<Record<CredKey, string>>({ apiKey: '', secretKey: '', webhookToken: '' })
   // Gambar QRIS ikut tombol simpan utama (bukan unggah langsung) supaya transfer + toggle +
   // gambar tersimpan sekaligus dalam satu aksi — tak ada "auto-submit" saat memilih berkas.
   // `qrisFile` = berkas baru yang menunggu diunggah; `qrisRemoved` = minta hapus yang tersimpan.
@@ -114,34 +81,12 @@ export function PaymentGatewaySettingsPage() {
       .finally(() => setLoading(false))
   }, [toast])
 
-  const setCred = (key: CredKey, value: string) => setCreds((c) => ({ ...c, [key]: value }))
-  const clearCreds = () => setCreds({ apiKey: '', secretKey: '', webhookToken: '' })
-
-  // Ringkasan perubahan (dipakai untuk dirty-state + konfirmasi). Suntingan kredensial hanya
-  // dihitung untuk field yang relevan dengan penyedia terpilih.
+  // Ringkasan perubahan (dipakai untuk dirty-state + konfirmasi).
   const changes = useMemo<FieldChange[]>(() => {
     if (!saved || !form) return []
     const out: FieldChange[] = []
     if (form.provider !== saved.provider) {
-      out.push({ label: 'Penyedia', from: PAYMENT_PROVIDER_LABEL[saved.provider], to: PAYMENT_PROVIDER_LABEL[form.provider] })
-    }
-    if (form.mode !== saved.mode) {
-      out.push({ label: 'Mode', from: GATEWAY_MODE_LABEL[saved.mode], to: GATEWAY_MODE_LABEL[form.mode] })
-    }
-    if (form.enabled !== saved.enabled) {
-      out.push({ label: 'Status', from: saved.enabled ? 'Aktif' : 'Nonaktif', to: form.enabled ? 'Aktif' : 'Nonaktif' })
-    }
-    for (const f of credFields(form.provider)) {
-      if (creds[f.key].trim() !== '') {
-        out.push({ label: f.label, from: isCredSet(saved, f.key) ? 'tersimpan' : 'kosong', to: 'diganti ke nilai baru' })
-      }
-    }
-    if (form.provider === 'PAYWUZ' && (form.paymentMethod ?? '') !== (saved.paymentMethod ?? '')) {
-      out.push({
-        label: 'Metode Paywuz',
-        from: saved.paymentMethod || 'default server',
-        to: form.paymentMethod || 'default server',
-      })
+      out.push({ label: 'Metode', from: PAYMENT_PROVIDER_LABEL[saved.provider], to: PAYMENT_PROVIDER_LABEL[form.provider] })
     }
     // Pembayaran manual (non-rahasia) — gambar QRIS dikelola langsung, tak masuk diff ini.
     const onOff = (b: boolean) => (b ? 'nyala' : 'mati')
@@ -166,46 +111,19 @@ export function PaymentGatewaySettingsPage() {
       out.push({ label: 'Gambar QRIS', from: 'tersimpan', to: 'dihapus' })
     }
     return out
-  }, [saved, form, creds, qrisFile, qrisRemoved])
+  }, [saved, form, qrisFile, qrisRemoved])
 
   const dirty = changes.length > 0
-  const enabling = !!saved && !!form && form.enabled && !saved.enabled
+  const enabling = !!saved && !!form && form.provider === 'PIVOT' && saved.provider !== 'PIVOT'
 
+  // Toggle metode PIVOT/MANUAL. PIVOT = penagihan otomatis (enabled); MANUAL = pelanggan bayar
+  // transfer/QRIS (enabled false). Field manual dipertahankan agar tak hilang saat berpindah.
   const onProvider = (provider: PaymentProvider) => {
-    // Ganti penyedia mengosongkan input kredensial (spesifik penyedia) & memaksa BYO bila
-    // penyedia tak mendukung PLATFORM (hanya Xendit/xenPlatform yang punya mode agregator).
-    // Metode Paywuz hanya relevan untuk Paywuz — dibuang bila pindah penyedia.
-    clearCreds()
-    setForm((f) =>
-      f
-        ? {
-            ...f,
-            provider,
-            mode: provider === 'XENDIT' ? f.mode : 'BYO',
-            paymentMethod: provider === 'PAYWUZ' ? f.paymentMethod : null,
-          }
-        : f,
-    )
-  }
-
-  // Nyalakan/matikan gateway. Nonaktif = penyedia otomatis MANUAL (pelanggan bayar manual),
-  // dropdown penyedia disembunyikan; aktif = pilih penyedia gateway (default ke yang tersimpan
-  // atau Xendit bila sebelumnya manual).
-  const onToggleEnabled = (enabled: boolean) => {
-    if (enabled) {
-      const fallback: PaymentProvider = saved && saved.provider !== 'MANUAL' ? saved.provider : 'XENDIT'
-      setForm((f) =>
-        f ? { ...f, enabled: true, provider: f.provider !== 'MANUAL' ? f.provider : fallback } : f,
-      )
-    } else {
-      clearCreds()
-      setForm((f) => (f ? { ...f, enabled: false, provider: 'MANUAL', mode: 'BYO', paymentMethod: null } : f))
-    }
+    setForm((f) => (f ? { ...f, provider, enabled: provider === 'PIVOT' } : f))
   }
 
   const discard = () => {
     if (saved) setForm(saved)
-    clearCreds()
     setQrisFile(null)
     setQrisRemoved(false)
   }
@@ -235,13 +153,7 @@ export function PaymentGatewaySettingsPage() {
     setSaving(true)
     const body: UpdatePaymentGatewaySettingsRequest = {
       provider: form.provider,
-      mode: form.mode,
       enabled: form.enabled,
-      apiKey: creds.apiKey.trim() || null,
-      secretKey: creds.secretKey.trim() || null,
-      webhookToken: creds.webhookToken.trim() || null,
-      // Metode hanya bermakna untuk Paywuz; penyedia lain selalu kirim null (kosongkan).
-      paymentMethod: form.provider === 'PAYWUZ' ? form.paymentMethod?.trim() || null : null,
       manualTransferEnabled: form.manualTransferEnabled,
       bankName: form.bankName?.trim() || null,
       accountNumber: form.accountNumber?.trim() || null,
@@ -259,7 +171,6 @@ export function PaymentGatewaySettingsPage() {
       }
       setSaved(result)
       setForm(result)
-      clearCreds()
       setQrisFile(null)
       setQrisRemoved(false)
       setQrisVersion((v) => v + 1)
@@ -277,24 +188,19 @@ export function PaymentGatewaySettingsPage() {
     return <EmptyState title="Setelan gateway tak tersedia" hint="Coba muat ulang halaman." icon={<IconAlert size={28} />} />
   }
 
-  const supported = SUPPORTED_PROVIDERS.includes(form.provider)
-  const fields = credFields(form.provider)
-  // URL webhook per-tenant (readonly, untuk disalin ke dashboard penyedia). Origin = URL aplikasi
+  // URL callback Pivot per-tenant (readonly, untuk disalin ke dashboard Pivot). Origin = URL aplikasi
   // saat ini; di produksi inilah alamat publik yang dipanggil balik. Path memakai SLUG tenant —
-  // BillingWebhookController me-resolve tenant lewat slug, bukan UUID. Segmen penyedia (lowercase)
-  // hanya untuk routing/log; gateway sebenarnya ditentukan setelan aktif tenant.
-  const webhookUrl = (provider: PaymentProvider) =>
-    `${window.location.origin}/api/billing/webhooks/${user?.tenantSlug ?? '<tenant>'}/${provider.toLowerCase()}`
-  // Saat gateway mati (atau penyedia MANUAL), pembayaran manual adalah satu-satunya cara bayar.
-  const showManual = !form.enabled || form.provider === 'MANUAL'
+  // BillingWebhookController me-resolve tenant lewat slug, bukan UUID.
+  const webhookUrl = `${window.location.origin}/api/billing/webhooks/${user?.tenantSlug ?? '<tenant>'}/pivot`
+  const showManual = form.provider === 'MANUAL'
 
   return (
     <div className="stack settings-page">
       <div>
         <h1 className="page-title">Payment Gateway</h1>
         <p className="page-sub" style={{ margin: '0.25rem 0 0' }}>
-          Penyedia pembayaran &amp; kredensial untuk menagih pelanggan otomatis. Perubahan minta konfirmasi
-          sebelum berlaku.
+          Cara pelanggan Anda membayar: otomatis lewat <strong>Pivot</strong> atau manual (transfer/QRIS).
+          Perubahan minta konfirmasi sebelum berlaku.
         </p>
       </div>
 
@@ -311,126 +217,29 @@ export function PaymentGatewaySettingsPage() {
       <div className="card stack" aria-disabled={!manage}>
         <SectionTitle>Ubah setelan</SectionTitle>
 
-        <FormRow label="Status gateway" hint="Saat aktif, penerbitan tagihan otomatis membuat tautan bayar lewat penyedia. Saat mati, penyedia otomatis manual — tagihan terbit tanpa tautan & pelanggan bayar transfer/QRIS.">
+        <FormRow
+          label="Metode pembayaran"
+          hint="Pivot menerbitkan tautan bayar otomatis (QRIS/VA) lewat akun platform. Manual = tagihan terbit tanpa tautan; pelanggan bayar transfer/QRIS statis Anda."
+        >
           <Segmented
-            value={form.enabled ? 'on' : 'off'}
-            onChange={(v) => onToggleEnabled(v === 'on')}
+            value={form.provider}
+            onChange={(v) => onProvider(v as PaymentProvider)}
             disabled={!manage}
-            options={[
-              { value: 'off', label: 'Nonaktif' },
-              { value: 'on', label: 'Aktif' },
-            ]}
+            options={PROVIDER_OPTIONS.map((p) => ({ value: p, label: PAYMENT_PROVIDER_LABEL[p] }))}
           />
         </FormRow>
 
-        {!form.enabled && (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-            Gateway nonaktif — pembayaran <strong>manual</strong> (transfer/QRIS), tanpa penyedia otomatis. Aktifkan
-            untuk memilih penyedia (Xendit/Paywuz/Pivot).
-          </p>
-        )}
-
-        {form.enabled && (
+        {form.provider === 'PIVOT' && (
           <>
-            <FormRow label="Penyedia">
-              <select value={form.provider} onChange={(e) => onProvider(e.target.value as PaymentProvider)} disabled={!manage}>
-                {GATEWAY_PROVIDERS.map((p) => (
-                  <option key={p} value={p}>
-                    {PAYMENT_PROVIDER_LABEL[p]}
-                  </option>
-                ))}
-              </select>
-            </FormRow>
-
-            {!supported && (
-              <Callout>
-                Penyedia ini <strong>belum didukung</strong> — dokumentasi API-nya belum tersedia. Setelan bisa disimpan,
-                tapi penerbitan tagihan otomatis akan gagal untuk tenant ini sampai integrasinya rampung.
-              </Callout>
-            )}
-
-            {form.provider === 'XENDIT' && (
-              <FormRow label="Mode" hint="BYO memakai akun Xendit tenant sendiri; PLATFORM menagih lewat sub-account agregator platform.">
-                <Segmented
-                  value={form.mode}
-                  onChange={(v) => setForm({ ...form, mode: v as GatewayMode })}
-                  disabled={!manage}
-                  options={[
-                    { value: 'BYO', label: GATEWAY_MODE_LABEL.BYO },
-                    { value: 'PLATFORM', label: GATEWAY_MODE_LABEL.PLATFORM },
-                  ]}
-                />
-              </FormRow>
-            )}
-
-            <div className="hr" />
-
-            {form.mode === 'PLATFORM' ? (
-              <PlatformSection subAccountId={form.subAccountId} />
-            ) : (
-              <div className="stack" style={{ gap: '0.85rem' }}>
-                <SectionTitle>Kredensial (akun sendiri)</SectionTitle>
-
-                {fields.map((f) => (
-              <label key={f.key}>
-                <span>
-                  {f.label} {isCredSet(saved, f.key) && <span className="muted">· tersimpan</span>}
-                </span>
-                <input
-                  type="password"
-                  autoComplete="new-password"
-                  value={creds[f.key]}
-                  onChange={(e) => setCred(f.key, e.target.value)}
-                  placeholder={isCredSet(saved, f.key) ? 'Biarkan kosong untuk mempertahankan' : f.placeholder}
-                  disabled={!manage || !supported}
-                />
-              </label>
-            ))}
-
-            {form.provider === 'PAYWUZ' && (
-              <PaywuzMethodField
-                value={form.paymentMethod}
-                onChange={(paymentMethod) => setForm({ ...form, paymentMethod })}
-                disabled={!manage}
-              />
-            )}
-
-            {form.provider === 'XENDIT' && (
-              <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-                Secret key dari dashboard Xendit (Settings → API Keys). Webhook token = <code>x-callback-token</code>.
-              </p>
-            )}
-            {form.provider === 'MIDTRANS' && (
-              <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-                <strong>Server Key</strong> dari dashboard Midtrans (Settings → Access Keys). Key berprefiks{' '}
-                <code>SB-</code> otomatis dianggap <strong>sandbox</strong>, tanpa prefiks = <strong>produksi</strong>.
-                Satu key ini dipakai untuk menagih (Snap) <em>sekaligus</em> memverifikasi signature webhook.
-              </p>
-            )}
-            {form.provider === 'PIVOT' && (
-              <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-                Merchant ID &amp; Secret dari dashboard Pivot (Settings → API Keys). Callback API Key dari halaman
-                Callbacks. Server juga wajib mengisi <code>FTTH_BILLING_PIVOT_REDIRECT_BASE_URL</code>.
-              </p>
-            )}
-            {form.provider === 'PAYWUZ' && (
-              <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-                <strong>API key</strong> proyek dari dashboard Paywuz (<code>pk_live_…</code> produksi,{' '}
-                <code>pk_sand_…</code> uji coba) — satu key untuk menagih <em>sekaligus</em> memverifikasi webhook.{' '}
-                <strong>Metode pembayaran</strong>: <code>QRIS</code> satu kode QR untuk semua bank/e-wallet;{' '}
-                <strong>Virtual Account</strong> memberi nomor VA per bank.
-              </p>
-            )}
-
-            {supported && (
-              <WebhookField
-                url={webhookUrl(form.provider)}
-                hint={webhookHint(form.provider)}
-                onCopy={() => void copyToClipboard(webhookUrl(form.provider))}
-              />
-            )}
-              </div>
-            )}
+            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+              Penagihan otomatis via Pivot memakai sub-account tenant Anda. Pastikan sub-account sudah
+              diprovisi &amp; rekening payout tersetel di kartu <strong>Sub-account Pivot</strong> di bawah.
+            </p>
+            <WebhookField
+              url={webhookUrl}
+              hint="Tempel sebagai Callback URL di dashboard Pivot (menu Callbacks)."
+              onCopy={() => void copyToClipboard(webhookUrl)}
+            />
           </>
         )}
 
@@ -470,6 +279,9 @@ export function PaymentGatewaySettingsPage() {
         )}
       </div>
 
+      {/* ---- Sub-account Pivot (endpoint terpisah) ---- */}
+      {form.provider === 'PIVOT' && <PivotAccountCard manage={manage} />}
+
       {confirmOpen && (
         <Modal
           title="Konfirmasi perubahan gateway"
@@ -506,13 +318,13 @@ export function PaymentGatewaySettingsPage() {
 
             {enabling && (
               <Callout>
-                Gateway akan <strong>AKTIF</strong> — tagihan berikutnya otomatis dibuatkan tautan bayar lewat{' '}
-                <strong>{PAYMENT_PROVIDER_LABEL[form.provider]}</strong>. Pastikan kredensial di atas benar.
+                Metode akan beralih ke <strong>Pivot</strong> — tagihan berikutnya otomatis dibuatkan tautan bayar.
+                Pastikan sub-account Pivot sudah aktif &amp; rekening payout tersetel.
               </Callout>
             )}
-            {saved.enabled && !form.enabled && (
+            {saved.provider === 'PIVOT' && form.provider === 'MANUAL' && (
               <Callout>
-                Gateway akan <strong>DINONAKTIFKAN</strong> — tagihan tetap terbit tapi tanpa tautan bayar; pelunasan
+                Metode akan beralih ke <strong>Manual</strong> — tagihan tetap terbit tapi tanpa tautan bayar; pelunasan
                 harus dicatat manual.
               </Callout>
             )}
@@ -525,8 +337,7 @@ export function PaymentGatewaySettingsPage() {
 
 /** Kartu ringkas konfigurasi yang benar-benar berlaku sekarang (bukan suntingan). */
 function StatusPanel({ saved }: { saved: PaymentGatewaySettingsView }) {
-  const fields = credFields(saved.provider)
-  const supported = SUPPORTED_PROVIDERS.includes(saved.provider)
+  const auto = saved.provider === 'PIVOT'
   return (
     <div className="card stack" style={{ gap: '0.75rem' }}>
       <div className="spread" style={{ alignItems: 'center' }}>
@@ -534,43 +345,14 @@ function StatusPanel({ saved }: { saved: PaymentGatewaySettingsView }) {
           <IconShield size={16} />
           <strong style={{ fontSize: '0.95rem' }}>Berlaku sekarang</strong>
         </div>
-        <Badge tone={saved.enabled ? 'good' : 'neutral'}>{saved.enabled ? 'Aktif' : 'Nonaktif'}</Badge>
+        <Badge tone={auto ? 'good' : 'neutral'}>{auto ? 'Otomatis' : 'Manual'}</Badge>
       </div>
 
       <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap' }}>
         <Badge tone="accent">{PAYMENT_PROVIDER_LABEL[saved.provider]}</Badge>
-        <Badge>{GATEWAY_MODE_LABEL[saved.mode]}</Badge>
-        {!supported && <Badge tone="warning">belum didukung</Badge>}
-        {saved.mode === 'PLATFORM' && (
-          <Badge tone={saved.subAccountId ? 'good' : 'warning'}>
-            {saved.subAccountId ? `sub-account ${saved.subAccountId}` : 'sub-account belum diprovisi'}
-          </Badge>
-        )}
       </div>
 
-      {(saved.provider === 'MANUAL' || !saved.enabled) && <ManualSummary saved={saved} />}
-
-      {saved.provider === 'MANUAL' ? null : saved.mode === 'BYO' ? (
-        <div className="stack" style={{ gap: '0.4rem' }}>
-          <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.82rem' }}>
-            {fields.map((f) => (
-              <span key={f.key} className="row" style={{ gap: '0.3rem', alignItems: 'center' }}>
-                <span aria-hidden style={{ color: isCredSet(saved, f.key) ? 'var(--good-ink, green)' : 'var(--text-3)' }}>
-                  {isCredSet(saved, f.key) ? '●' : '○'}
-                </span>
-                <span className="muted">
-                  {f.label}: {isCredSet(saved, f.key) ? 'terisi' : 'belum'}
-                </span>
-              </span>
-            ))}
-          </div>
-          {saved.provider === 'PAYWUZ' && (
-            <span className="muted" style={{ fontSize: '0.82rem' }}>
-              Metode bayar: <strong>{saved.paymentMethod || 'default server'}</strong>
-            </span>
-          )}
-        </div>
-      ) : null}
+      {!auto && <ManualSummary saved={saved} />}
     </div>
   )
 }
@@ -592,11 +374,198 @@ function ManualSummary({ saved }: { saved: PaymentGatewaySettingsView }) {
   )
 }
 
+const PIVOT_STATUS_TONE: Record<PivotAccountStatus, Tone> = {
+  NOT_PROVISIONED: 'neutral',
+  CREATED: 'accent',
+  ACTIVE: 'good',
+  DEACTIVATED: 'warning',
+  REJECTED: 'critical',
+}
+
+const PIVOT_KYC_TONE: Record<PivotKycStatus, Tone> = {
+  NOT_REQUIRED: 'neutral',
+  WAITING_FOR_DOCUMENT: 'warning',
+  IN_REVIEW: 'accent',
+  APPROVED: 'good',
+  REJECTED: 'critical',
+}
+
 /**
- * Seksi setelan pembayaran manual (tunai / transfer / QRIS) — muncul saat gateway nonaktif atau
- * penyedia MANUAL, di mana inilah satu-satunya cara pelanggan membayar. Tiap metode punya saklar;
- * Transfer membuka field rekening, QRIS membuka pengunggah gambar. Toggle & field ikut tombol
- * simpan utama; gambar QRIS diunggah/dihapus langsung (multipart) lewat [onUploadQris]/[onDeleteQris].
+ * Kartu Sub-account Pivot tenant — dikelola lewat endpoint `/api/billing/pivot-account` (terpisah
+ * dari setelan gateway). Menampilkan status provisioning + badge status/KYC/jenis, menjaga guard
+ * `masterActive` (platform harus mengaktifkan Pivot dulu), lalu menyediakan aksi Provision/Refresh/
+ * Ajukan KYC + form rekening payout.
+ */
+function PivotAccountCard({ manage }: { manage: boolean }) {
+  const toast = useToast()
+  const [account, setAccount] = useState<TenantPivotAccountView | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [channelCode, setChannelCode] = useState('')
+  const [accountNumber, setAccountNumber] = useState('')
+
+  useEffect(() => {
+    getPivotAccount()
+      .then((a) => {
+        setAccount(a)
+        setChannelCode(a.payoutChannelCode ?? '')
+        setAccountNumber(a.payoutAccountNumber ?? '')
+      })
+      .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Gagal memuat sub-account Pivot'))
+      .finally(() => setLoading(false))
+  }, [toast])
+
+  const run = async (fn: () => Promise<TenantPivotAccountView>, okMsg: string) => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const a = await fn()
+      setAccount(a)
+      setChannelCode(a.payoutChannelCode ?? '')
+      setAccountNumber(a.payoutAccountNumber ?? '')
+      toast.success(okMsg)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Operasi gagal')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const payoutDirty =
+    !!account &&
+    (channelCode.trim() !== (account.payoutChannelCode ?? '') ||
+      accountNumber.trim() !== (account.payoutAccountNumber ?? ''))
+
+  return (
+    <div className="card stack" style={{ gap: '0.85rem' }} aria-disabled={!manage}>
+      <div className="spread" style={{ alignItems: 'center' }}>
+        <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+          <IconShield size={16} />
+          <strong style={{ fontSize: '0.95rem' }}>Sub-account Pivot</strong>
+        </div>
+        {account && (
+          <Badge tone={account.provisioned ? 'good' : 'neutral'}>
+            {account.provisioned ? 'diprovisi' : 'belum diprovisi'}
+          </Badge>
+        )}
+      </div>
+
+      {loading ? (
+        <p className="muted" style={{ margin: 0 }}>Memuat sub-account…</p>
+      ) : !account ? (
+        <p className="muted" style={{ margin: 0 }}>Data sub-account tak tersedia.</p>
+      ) : (
+        <>
+          {!account.masterActive && (
+            <Callout>
+              Platform belum mengaktifkan Pivot. Provisioning sub-account &amp; penagihan otomatis tak akan jalan
+              sampai admin platform mengaktifkan &amp; mengonfigurasi akun master Pivot.
+            </Callout>
+          )}
+
+          <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap' }}>
+            <Badge tone={PIVOT_STATUS_TONE[account.status]}>{PIVOT_ACCOUNT_STATUS_LABEL[account.status]}</Badge>
+            <Badge>{PIVOT_ACCOUNT_TYPE_LABEL[account.type]}</Badge>
+            {account.type === 'KYC' || account.kycStatus !== 'NOT_REQUIRED' ? (
+              <Badge tone={PIVOT_KYC_TONE[account.kycStatus]}>KYC: {PIVOT_KYC_STATUS_LABEL[account.kycStatus]}</Badge>
+            ) : null}
+            <Badge tone={account.payoutReady ? 'good' : 'warning'}>
+              {account.payoutReady ? 'payout siap' : 'payout belum siap'}
+            </Badge>
+          </div>
+
+          {account.shortName && (
+            <span className="muted" style={{ fontSize: '0.82rem' }}>
+              Nama singkat: <strong>{account.shortName}</strong>
+            </span>
+          )}
+
+          {manage && (
+            <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+              {!account.provisioned && (
+                <button
+                  className="primary"
+                  disabled={busy || !account.masterActive}
+                  onClick={() => void run(provisionPivotAccount, 'Sub-account Pivot diprovisi')}
+                >
+                  Provision
+                </button>
+              )}
+              <button
+                className="ghost"
+                disabled={busy || !account.provisioned}
+                onClick={() => void run(refreshPivotAccount, 'Status sub-account disegarkan')}
+              >
+                Refresh
+              </button>
+              {account.provisioned && account.type === 'NON_KYC' && (
+                <button
+                  className="ghost"
+                  disabled={busy}
+                  onClick={() => void run(requestPivotKyc, 'Pengajuan KYC dikirim')}
+                >
+                  Ajukan KYC
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Rekening payout: ke mana dana pelanggan diteruskan */}
+          <div className="hr" />
+          <SectionTitle>Rekening payout</SectionTitle>
+          <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+            Rekening tujuan pencairan dana dari pembayaran pelanggan Anda.
+            {account.payoutAccountName && (
+              <>
+                {' '}Terverifikasi atas nama <strong>{account.payoutAccountName}</strong>.
+              </>
+            )}
+          </p>
+          <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <label style={{ flex: 1, minWidth: 140 }}>
+              <span>Kode channel bank</span>
+              <input
+                value={channelCode}
+                onChange={(e) => setChannelCode(e.target.value)}
+                placeholder="mis. BCA, MANDIRI"
+                disabled={!manage || !account.provisioned}
+              />
+            </label>
+            <label style={{ flex: 1, minWidth: 160 }}>
+              <span>Nomor rekening</span>
+              <input
+                value={accountNumber}
+                onChange={(e) => setAccountNumber(e.target.value)}
+                placeholder="mis. 1234567890"
+                disabled={!manage || !account.provisioned}
+              />
+            </label>
+            {manage && (
+              <button
+                className="primary"
+                disabled={busy || !account.provisioned || !payoutDirty || !channelCode.trim() || !accountNumber.trim()}
+                onClick={() =>
+                  void run(
+                    () => setPivotPayoutAccount({ channelCode: channelCode.trim(), accountNumber: accountNumber.trim() }),
+                    'Rekening payout tersimpan',
+                  )
+                }
+              >
+                Simpan rekening
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Seksi setelan pembayaran manual (tunai / transfer / QRIS) — muncul saat metode MANUAL, di mana
+ * inilah satu-satunya cara pelanggan membayar. Tiap metode punya saklar; Transfer membuka field
+ * rekening, QRIS membuka pengunggah gambar. Toggle & field ikut tombol simpan utama; gambar QRIS
+ * diunggah/dihapus saat menyimpan (multipart).
  */
 function ManualPaymentSection({
   form,
@@ -622,7 +591,7 @@ function ManualPaymentSection({
       <div>
         <SectionTitle>Pembayaran manual</SectionTitle>
         <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.82rem' }}>
-          Cara pelanggan membayar saat gateway otomatis nonaktif. Nyalakan metode yang Anda terima —
+          Cara pelanggan membayar saat metode manual dipilih. Nyalakan metode yang Anda terima —
           hanya yang menyala ditampilkan di tagihan pelanggan.
         </p>
       </div>
@@ -819,78 +788,15 @@ function AuthedImage({ path, version, alt, size }: { path: string; version: numb
   )
 }
 
-function PlatformSection({ subAccountId }: { subAccountId: string | null }) {
-  return (
-    <div className="stack" style={{ gap: '0.75rem' }}>
-      <SectionTitle>Akun platform (agregator)</SectionTitle>
-      <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-        Tagihan dibuat atas nama sub-account platform; platform menampung &amp; meneruskan dana lalu memotong komisi.
-        Sub-account disiapkan oleh admin platform — tak diisi di sini.
-      </p>
-      <label>
-        <span>Sub-account ID</span>
-        <input value={subAccountId ?? ''} placeholder="belum diprovisi — hubungi admin platform" disabled readOnly />
-      </label>
-      {!subAccountId && (
-        <Callout>
-          Belum ada sub-account. Mode PLATFORM tak akan aktif sampai admin platform memprovisi sub-account Xendit untuk
-          tenant ini.
-        </Callout>
-      )}
-    </div>
-  )
-}
-
-/** Kode meta-metode Paywuz yang didukung (dikirim apa adanya ke `POST /v1/transactions`). */
-const PAYWUZ_METHODS: { code: string; label: string; hint: string }[] = [
-  { code: 'QRIS', label: 'QRIS', hint: 'Satu kode QR untuk semua bank & e-wallet.' },
-  { code: 'VA', label: 'Virtual Account (Pilih Bank)', hint: 'Pelanggan memilih bank lalu dapat nomor VA.' },
-]
-
 /**
- * Pemilih metode bayar Paywuz per-tenant — dropdown tetap berisi meta-metode yang didukung
- * (QRIS / Virtual Account). Nilai tersimpan yang di luar daftar tetap dimunculkan agar tak
- * diam-diam hilang. Kosong = pakai default server (`FTTH_BILLING_PAYWUZ_PAYMENT_METHOD`, mis. QRIS).
- */
-function PaywuzMethodField({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: string | null
-  onChange: (value: string | null) => void
-  disabled?: boolean
-}) {
-  const known = PAYWUZ_METHODS.some((m) => m.code === value)
-  const selected = PAYWUZ_METHODS.find((m) => m.code === value)
-  return (
-    <div className="stack" style={{ gap: '0.4rem' }}>
-      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Metode pembayaran</span>
-      <select value={value ?? ''} onChange={(e) => onChange(e.target.value || null)} disabled={disabled}>
-        <option value="">Default server (QRIS)</option>
-        {value && !known && <option value={value}>{value} (tersimpan)</option>}
-        {PAYWUZ_METHODS.map((m) => (
-          <option key={m.code} value={m.code}>
-            {m.label}
-          </option>
-        ))}
-      </select>
-      <span className="muted" style={{ fontSize: '0.82rem' }}>
-        {selected ? selected.hint : 'Kosongkan untuk memakai metode default server (QRIS).'}
-      </span>
-    </div>
-  )
-}
-
-/**
- * Menampilkan URL webhook per-tenant (readonly) + tombol salin. Operator menempelkannya ke
- * dashboard penyedia agar status pembayaran otomatis masuk. URL tak bisa disunting di sini —
+ * Menampilkan URL callback per-tenant (readonly) + tombol salin. Operator menempelkannya ke
+ * dashboard Pivot agar status pembayaran otomatis masuk. URL tak bisa disunting di sini —
  * ia turunan tenant + alamat aplikasi.
  */
 function WebhookField({ url, hint, onCopy }: { url: string; hint: string; onCopy: () => void }) {
   return (
     <div className="stack" style={{ gap: '0.4rem' }}>
-      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>URL webhook</span>
+      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>URL callback</span>
       <div className="row" style={{ gap: '0.5rem', alignItems: 'stretch' }}>
         <input value={url} readOnly onFocus={(e) => e.target.select()} style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.82rem' }} />
         <button type="button" className="ghost" onClick={onCopy} style={{ whiteSpace: 'nowrap' }}>
@@ -902,22 +808,6 @@ function WebhookField({ url, hint, onCopy }: { url: string; hint: string; onCopy
       </span>
     </div>
   )
-}
-
-/** Tempat menempel URL webhook di dashboard tiap penyedia — jadi teks bantuan `WebhookField`. */
-function webhookHint(provider: PaymentProvider): string {
-  switch (provider) {
-    case 'XENDIT':
-      return 'Tempel sebagai Callback URL di dashboard Xendit (Settings → Webhooks).'
-    case 'MIDTRANS':
-      return 'Tempel sebagai Payment Notification URL di dashboard Midtrans (Settings → Configuration).'
-    case 'PIVOT':
-      return 'Tempel sebagai Callback URL di dashboard Pivot (menu Callbacks).'
-    case 'PAYWUZ':
-      return 'Tempel ke menu Callback/Webhook di dashboard Paywuz.'
-    default:
-      return 'Tempel ke menu Callback/Webhook di dashboard penyedia.'
-  }
 }
 
 function Segmented<T extends string>({

@@ -6,27 +6,22 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.UUID
 
-/** Penyedia pembayaran untuk menagih langganan tenant ke platform. */
-enum class PlatformPaymentProvider { PAYWUZ, XENDIT, MIDTRANS }
-
 /**
- * Setelan GLOBAL billing platform (satu baris). Menyimpan gateway aktif yang dipakai
- * menagih langganan tenant (default [PlatformPaymentProvider.PAYWUZ], bisa diganti
- * super-admin kapan saja) plus default grace/jatuh-tempo/tanggal-tagih yang berlaku
- * saat langganan tenant tak menimpanya sendiri.
+ * Setelan GLOBAL billing platform (satu baris). Menyimpan default grace/jatuh-tempo/tanggal-tagih
+ * dan harga bulanan bawaan yang berlaku saat langganan tenant tak menimpanya sendiri.
+ *
+ * Penyedia pembayaran TIDAK lagi di sini — seluruh penagihan langganan berjalan di akun master
+ * Pivot ([com.duluin.ftth.billing.domain.model.PivotMasterConfig], dikelola di setelan platform),
+ * jadi tak ada lagi "gateway aktif" yang bisa dipilih.
  */
 class PlatformSetting private constructor(
     val id: UUID,
-    activeProvider: PlatformPaymentProvider,
     defaultGraceDays: Int,
     defaultDueDays: Int,
     defaultBillingDay: Int,
     defaultMonthlyFee: BigDecimal,
     currency: String,
 ) {
-    var activeProvider: PlatformPaymentProvider = activeProvider
-        private set
-
     /** Harga bulanan bawaan untuk tenant baru saat super-admin tak mengisi harga khusus. */
     var defaultMonthlyFee: BigDecimal = defaultMonthlyFee
         private set
@@ -44,14 +39,12 @@ class PlatformSetting private constructor(
         private set
 
     fun update(
-        activeProvider: PlatformPaymentProvider,
         defaultGraceDays: Int,
         defaultDueDays: Int,
         defaultBillingDay: Int,
         defaultMonthlyFee: BigDecimal,
         currency: String,
     ) {
-        this.activeProvider = activeProvider
         this.defaultGraceDays = validateDays(defaultGraceDays, "Masa tenggang")
         this.defaultDueDays = validateDays(defaultDueDays, "Jatuh tempo")
         this.defaultBillingDay = validateBillingDay(defaultBillingDay)
@@ -63,7 +56,6 @@ class PlatformSetting private constructor(
         /** Setelan bawaan saat platform belum pernah dikonfigurasi. */
         fun default(): PlatformSetting = PlatformSetting(
             id = UuidV7.generate(),
-            activeProvider = PlatformPaymentProvider.PAYWUZ,
             defaultGraceDays = 7,
             defaultDueDays = 7,
             defaultBillingDay = 1,
@@ -73,15 +65,13 @@ class PlatformSetting private constructor(
 
         fun rehydrate(
             id: UUID,
-            activeProvider: PlatformPaymentProvider,
             defaultGraceDays: Int,
             defaultDueDays: Int,
             defaultBillingDay: Int,
             defaultMonthlyFee: BigDecimal,
             currency: String,
         ): PlatformSetting = PlatformSetting(
-            id, activeProvider, defaultGraceDays, defaultDueDays, defaultBillingDay,
-            defaultMonthlyFee, currency,
+            id, defaultGraceDays, defaultDueDays, defaultBillingDay, defaultMonthlyFee, currency,
         )
 
         private fun validateFee(fee: BigDecimal): BigDecimal {

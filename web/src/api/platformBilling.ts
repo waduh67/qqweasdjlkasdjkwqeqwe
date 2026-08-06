@@ -1,62 +1,29 @@
 /**
- * Billing langganan SaaS level-platform: super-admin memilih gateway aktif + kredensialnya
- * (global, bukan per-tenant), lalu mengelola langganan tiap tenant (biaya bulanan flat, tagihan,
- * pembayaran). Semua endpoint di-gate izin `platform.billing.*` / `platform.subscription.*`.
+ * Billing langganan SaaS level-platform: super-admin mengatur default global (grace/jatuh-tempo/
+ * tanggal-tagih/harga) + konfigurasi master Pivot (satu akun agregator untuk seluruh platform),
+ * lalu mengelola langganan tiap tenant (biaya bulanan flat, tagihan, pembayaran). Semua endpoint
+ * di-gate izin `platform.billing.*` / `platform.subscription.*`.
  */
 
 import { api, ApiError } from './client'
 
-export type PlatformProvider = 'PAYWUZ' | 'XENDIT' | 'MIDTRANS'
-
-export const PLATFORM_PROVIDER_LABEL: Record<PlatformProvider, string> = {
-  PAYWUZ: 'Paywuz',
-  XENDIT: 'Xendit',
-  MIDTRANS: 'Midtrans',
-}
-
-/** Urutan tampil dropdown gateway aktif — Paywuz default. */
-export const PLATFORM_PROVIDERS: PlatformProvider[] = ['PAYWUZ', 'XENDIT', 'MIDTRANS']
-
-/** Ringkasan satu penyedia (tanpa rahasia — hanya penanda boolean sudah terisi). */
-export interface PlatformGatewayView {
-  provider: PlatformProvider
-  enabled: boolean
-  apiKeySet: boolean
-  secretKeySet: boolean
-  webhookTokenSet: boolean
-  paymentMethod: string | null
-  credentialsSet: boolean
-}
-
-/** Setelan billing global + baris tiap penyedia. */
+/** Setelan billing global (tanpa gateway per-penyedia — penagihan platform via Pivot master). */
 export interface PlatformBillingSettingsView {
-  activeProvider: PlatformProvider
   defaultGraceDays: number
   defaultDueDays: number
   defaultBillingDay: number
   /** Harga langganan bulanan default (sama untuk semua tenant, bisa dioverride saat onboarding). */
   defaultMonthlyFee: number
   currency: string
-  gateways: PlatformGatewayView[]
 }
 
-/** Ganti gateway aktif + default global. */
+/** Ganti default global billing platform. */
 export interface UpdatePlatformSettingsRequest {
-  activeProvider: PlatformProvider
   defaultGraceDays: number
   defaultDueDays: number
   defaultBillingDay: number
   defaultMonthlyFee: number
   currency: string
-}
-
-/** Ubah kredensial satu penyedia. Rahasia null/kosong = biarkan yang tersimpan apa adanya. */
-export interface UpdatePlatformGatewayRequest {
-  enabled: boolean
-  apiKey: string | null
-  secretKey: string | null
-  webhookToken: string | null
-  paymentMethod: string | null
 }
 
 export function getPlatformBillingSettings(): Promise<PlatformBillingSettingsView> {
@@ -69,11 +36,55 @@ export function updatePlatformSettings(
   return api.put('/api/platform/billing/settings', body)
 }
 
-export function updatePlatformGateway(
-  provider: PlatformProvider,
-  body: UpdatePlatformGatewayRequest,
-): Promise<PlatformBillingSettingsView> {
-  return api.put(`/api/platform/billing/settings/gateways/${provider}`, body)
+// ---- Konfigurasi master Pivot (agregator platform) ----
+
+/** Cara menghitung fee platform per transaksi: nominal tetap (Rp) atau persentase. */
+export type PlatformFeeType = 'FIXED' | 'PERCENTAGE'
+
+export const PLATFORM_FEE_TYPE_LABEL: Record<PlatformFeeType, string> = {
+  FIXED: 'Nominal tetap (Rp)',
+  PERCENTAGE: 'Persentase (%)',
+}
+
+/**
+ * Konfigurasi akun master Pivot platform. Kredensial write-only: server hanya menandai sudah terisi
+ * (`*Set`), tak pernah menariknya kembali. `platformFeeMinor` = nilai fee (Rp untuk FIXED, angka
+ * persen untuk PERCENTAGE).
+ */
+export interface PivotMasterConfigView {
+  enabled: boolean
+  sandbox: boolean
+  merchantIdSet: boolean
+  merchantSecretSet: boolean
+  callbackApiKeySet: boolean
+  credentialsSet: boolean
+  platformFeeMinor: number
+  platformFeeType: PlatformFeeType
+  payoutChannelCode: string | null
+  payoutAccountNumber: string | null
+}
+
+/** Ubah konfigurasi master Pivot. Kredensial null/kosong = pertahankan yang tersimpan apa adanya. */
+export interface PivotMasterConfigRequest {
+  enabled: boolean
+  sandbox: boolean
+  merchantId: string | null
+  merchantSecret: string | null
+  callbackApiKey: string | null
+  platformFeeMinor: number
+  platformFeeType: PlatformFeeType
+  payoutChannelCode: string | null
+  payoutAccountNumber: string | null
+}
+
+export function getPivotMasterConfig(): Promise<PivotMasterConfigView> {
+  return api.get('/api/platform/pivot-config')
+}
+
+export function updatePivotMasterConfig(
+  body: PivotMasterConfigRequest,
+): Promise<PivotMasterConfigView> {
+  return api.put('/api/platform/pivot-config', body)
 }
 
 // ---- Langganan per tenant ----

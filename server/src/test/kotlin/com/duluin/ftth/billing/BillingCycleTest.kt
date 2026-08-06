@@ -6,18 +6,23 @@ import com.duluin.ftth.billing.application.port.outbound.GatewayCallback
 import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
 import com.duluin.ftth.billing.application.port.outbound.PaymentGateway
 import com.duluin.ftth.billing.application.port.outbound.TenantPaymentGatewayRepository
+import com.duluin.ftth.billing.application.port.outbound.TenantPivotAccountRepository
+import com.duluin.ftth.billing.application.port.outbound.PivotMasterConfigRepository
 import com.duluin.ftth.billing.application.port.outbound.BillingTaxSettingsRepository
 import com.duluin.ftth.billing.application.service.BillingCycleRunner
 import com.duluin.ftth.billing.application.service.BillingTaxSettingsResolver
 import com.duluin.ftth.billing.application.service.InvoiceGenerator
 import com.duluin.ftth.billing.application.service.PaymentGatewayRegistry
+import com.duluin.ftth.billing.application.service.PivotMasterConfigProvider
 import com.duluin.ftth.billing.application.service.TenantPaymentGatewayResolver
 import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.billing.domain.model.BillingTaxSettings
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
+import com.duluin.ftth.billing.domain.model.PivotMasterConfig
 import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
 import com.duluin.ftth.billing.domain.model.TenantPaymentGateway
+import com.duluin.ftth.billing.domain.model.TenantPivotAccount
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
@@ -245,7 +250,9 @@ class BillingCycleTest {
         val registry = PaymentGatewayRegistry(listOf(gateway), props)
         // Tanpa baris config tenant → resolver jatuh ke fallback MANUAL; adapter penangkap
         // memakai provider "MANUAL" agar registry memilihnya untuk konteks itu.
-        val resolver = TenantPaymentGatewayResolver(NoGatewayConfig, props)
+        // Tanpa master Pivot & tanpa sub-account → resolver pasti jatuh ke MANUAL.
+        val masterConfig = PivotMasterConfigProvider(NoMasterConfig)
+        val resolver = TenantPaymentGatewayResolver(NoGatewayConfig, NoPivotAccount, masterConfig, props)
         // Tanpa baris setelan pajak → resolver jatuh ke bawaan (PPN mati) → tagihan tanpa PPN,
         // jadi assertion nilai tagihan↔charge di test ini tetap murni tarif dasar.
         val taxResolver = BillingTaxSettingsResolver(NoTaxConfig)
@@ -335,6 +342,19 @@ class BillingCycleTest {
     private object NoGatewayConfig : TenantPaymentGatewayRepository {
         override fun find(): TenantPaymentGateway? = null
         override fun save(settings: TenantPaymentGateway): TenantPaymentGateway = settings
+    }
+
+    /** Tenant belum punya sub-account Pivot → salah satu prasyarat PIVOT tak terpenuhi. */
+    private object NoPivotAccount : TenantPivotAccountRepository {
+        override fun find(): TenantPivotAccount? = null
+        override fun save(account: TenantPivotAccount): TenantPivotAccount = account
+        override fun findByTenant(tenantId: UUID): TenantPivotAccount? = null
+    }
+
+    /** Platform belum mengaktifkan master Pivot → resolver tak bisa membentuk konteks PIVOT. */
+    private object NoMasterConfig : PivotMasterConfigRepository {
+        override fun find(): PivotMasterConfig? = null
+        override fun save(config: PivotMasterConfig): PivotMasterConfig = config
     }
 
     private object NoTaxConfig : BillingTaxSettingsRepository {

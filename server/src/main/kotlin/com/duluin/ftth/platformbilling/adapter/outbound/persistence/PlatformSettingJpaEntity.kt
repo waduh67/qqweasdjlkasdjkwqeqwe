@@ -1,11 +1,8 @@
 package com.duluin.ftth.platformbilling.adapter.outbound.persistence
 
 import com.duluin.ftth.common.infrastructure.persistence.BaseJpaEntity
-import com.duluin.ftth.platformbilling.domain.model.PlatformPaymentProvider
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
 import jakarta.persistence.Table
 import java.math.BigDecimal
 import java.util.UUID
@@ -18,10 +15,6 @@ import java.util.UUID
 @Table(name = "platform_setting")
 class PlatformSettingJpaEntity(
     id: UUID,
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "active_payment_provider", nullable = false, length = 20)
-    var activeProvider: PlatformPaymentProvider,
 
     @Column(name = "default_grace_days", nullable = false)
     var defaultGraceDays: Int,

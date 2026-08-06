@@ -1,0 +1,59 @@
+package com.duluin.ftth.billing.application.port.inbound
+
+import com.duluin.ftth.billing.domain.model.PayoutKind
+import com.duluin.ftth.billing.domain.model.PayoutStatus
+import java.time.Instant
+
+/**
+ * Penyaluran dana tenant. Dua jalur (lihat [PayoutKind]):
+ *  - PAYOUT (NON_KYC) — operator platform menyalurkan dana dari balance master ke rekening tenant.
+ *  - WITHDRAWAL (KYC) — tenant menarik saldo sub-account-nya sendiri.
+ * Nominal eksplisit (minor-unit IDR) — TIDAK ada akrual otomatis; saldo dibaca dari Pivot ([balance]).
+ */
+interface ManageTenantPayoutUseCase {
+    /** Riwayat penyaluran tenant aktif, terbaru-dahulu. */
+    fun history(): List<TenantPayoutView>
+
+    /** Saldo tersedia relevan tenant (master untuk NON_KYC, sub-account untuk KYC). */
+    fun balance(): PivotBalanceView
+
+    /** Salurkan dana NON_KYC ke rekening payout tenant (aksi operator platform). */
+    fun dispatchPayout(command: DispatchPayoutCommand): TenantPayoutView
+
+    /** Tarik saldo sub-account KYC tenant (aksi tenant sendiri). */
+    fun withdraw(command: DispatchPayoutCommand): TenantPayoutView
+}
+
+/** Rekonsiliasi hasil penyaluran dari callback Pivot (payout webhook / `WITHDRAW.*`). */
+interface ReconcilePayoutUseCase {
+    /** Perbarui status baris via ref Pivot. Idempotent — callback ganda aman. */
+    fun reconcile(reference: String, success: Boolean, reason: String?)
+}
+
+/** Nominal penyaluran (minor-unit IDR) + catatan opsional. */
+data class DispatchPayoutCommand(
+    val amountMinor: Long,
+    val remarks: String?,
+)
+
+/** Satu baris riwayat penyaluran untuk ditampilkan. */
+data class TenantPayoutView(
+    val id: String,
+    val kind: PayoutKind,
+    val amountMinor: Long,
+    val channelCode: String?,
+    val accountNumber: String?,
+    val accountName: String?,
+    val status: PayoutStatus,
+    val pivotRef: String?,
+    val failureReason: String?,
+    val createdAt: Instant,
+)
+
+/** Cuplikan saldo untuk UI (minor-unit IDR). [subAccount] = benar bila saldo sub-account (KYC). */
+data class PivotBalanceView(
+    val availableMinor: Long,
+    val pendingMinor: Long,
+    val currency: String,
+    val subAccount: Boolean,
+)
