@@ -49,6 +49,7 @@ export const PIVOT_KYC_STATUS_LABEL: Record<PivotKycStatus, string> = {
 /**
  * Ringkasan sub-account Pivot tenant. `masterActive` = akun master platform sudah dikonfigurasi &
  * aktif (kalau false, provisioning tak bisa jalan). `payoutReady` = rekening payout sudah tersetel.
+ * `profileComplete` = profil bisnis (identitas/PIC/alamat) sudah cukup untuk mendaftar ke Pivot.
  */
 export interface TenantPivotAccountView {
   provisioned: boolean
@@ -56,11 +57,31 @@ export interface TenantPivotAccountView {
   status: PivotAccountStatus
   kycStatus: PivotKycStatus
   shortName: string | null
+  // Profil bisnis sub-account (non-rahasia) — wajib sebelum provisioning.
+  legalName: string | null
+  merchantEmail: string | null
+  merchantPhone: string | null
+  picName: string | null
+  picEmail: string | null
+  picPhone: string | null
+  address: string | null
+  profileComplete: boolean
   payoutChannelCode: string | null
   payoutAccountNumber: string | null
   payoutAccountName: string | null
   payoutReady: boolean
   masterActive: boolean
+}
+
+/** Profil bisnis sub-account yang diisi tenant. `legalName` opsional (fallback nama tenant). */
+export interface PivotProfileRequest {
+  legalName: string | null
+  merchantEmail: string | null
+  merchantPhone: string | null
+  picName: string | null
+  picEmail: string | null
+  picPhone: string | null
+  address: string | null
 }
 
 /** Setel rekening payout sub-account: kode channel bank + nomor rekening. */
@@ -72,6 +93,11 @@ export interface PivotPayoutAccountRequest {
 /** Baca ringkasan sub-account Pivot tenant aktif. */
 export function getPivotAccount(): Promise<TenantPivotAccountView> {
   return api.get('/api/billing/pivot-account')
+}
+
+/** Simpan profil bisnis sub-account (identitas + PIC + alamat) — wajib sebelum provisioning. */
+export function savePivotProfile(body: PivotProfileRequest): Promise<TenantPivotAccountView> {
+  return api.put('/api/billing/pivot-account/profile', body)
 }
 
 /** Provisikan sub-account Pivot untuk tenant aktif (butuh akun master platform aktif). */

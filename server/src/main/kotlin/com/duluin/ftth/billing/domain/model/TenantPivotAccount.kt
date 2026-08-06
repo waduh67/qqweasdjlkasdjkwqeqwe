@@ -39,6 +39,13 @@ class TenantPivotAccount private constructor(
     status: SubAccountStatus,
     kycStatus: SubAccountKycStatus,
     shortName: String?,
+    legalName: String?,
+    merchantEmail: String?,
+    merchantPhone: String?,
+    picName: String?,
+    picEmail: String?,
+    picPhone: String?,
+    address: String?,
     payoutChannelCode: String?,
     payoutAccountNumber: String?,
     payoutAccountName: String?,
@@ -61,6 +68,34 @@ class TenantPivotAccount private constructor(
     var shortName: String? = shortName
         private set
 
+    /** Nama legal bisnis sub-account (Pivot `name`). Kosong → fallback nama tenant saat provisioning. */
+    var legalName: String? = legalName
+        private set
+
+    /** Email bisnis sub-account (Pivot `merchantEmail`). */
+    var merchantEmail: String? = merchantEmail
+        private set
+
+    /** Telepon bisnis sub-account (Pivot `merchantPhone`). */
+    var merchantPhone: String? = merchantPhone
+        private set
+
+    /** Nama PIC (Pivot `picName`). */
+    var picName: String? = picName
+        private set
+
+    /** Email PIC (Pivot `picEmail`). */
+    var picEmail: String? = picEmail
+        private set
+
+    /** Telepon PIC (Pivot `picPhone`). */
+    var picPhone: String? = picPhone
+        private set
+
+    /** Alamat bisnis sub-account (Pivot `address`). */
+    var address: String? = address
+        private set
+
     /** Channel bank rekening payout tenant (mis. `BCA`). */
     var payoutChannelCode: String? = payoutChannelCode
         private set
@@ -78,6 +113,15 @@ class TenantPivotAccount private constructor(
 
     val provisioned: Boolean get() = !subMerchantUuid.isNullOrBlank()
     val payoutReady: Boolean get() = !payoutInquiryId.isNullOrBlank()
+
+    /**
+     * Profil sudah cukup untuk membuat sub-account: identitas & PIC & alamat terisi. `name` boleh
+     * kosong (fallback nama tenant), rekening bank opsional (bisa disetel belakangan via payout).
+     */
+    val profileComplete: Boolean
+        get() = !merchantEmail.isNullOrBlank() && !merchantPhone.isNullOrBlank() &&
+            !picName.isNullOrBlank() && !picEmail.isNullOrBlank() && !picPhone.isNullOrBlank() &&
+            !address.isNullOrBlank()
 
     /** Simpan hasil `POST /v1/sub-merchants` (uuid + status awal). */
     fun markProvisioned(subMerchantUuid: String, type: SubAccountType, status: SubAccountStatus, kycStatus: SubAccountKycStatus) {
@@ -105,6 +149,26 @@ class TenantPivotAccount private constructor(
         this.shortName = shortName?.trim()?.takeIf { it.isNotEmpty() }
     }
 
+    /** Simpan profil bisnis sub-account yang diisi tenant (identitas + PIC + alamat). Non-rahasia. */
+    @Suppress("LongParameterList")
+    fun setProfile(
+        legalName: String?,
+        merchantEmail: String?,
+        merchantPhone: String?,
+        picName: String?,
+        picEmail: String?,
+        picPhone: String?,
+        address: String?,
+    ) {
+        this.legalName = legalName?.trim()?.takeIf { it.isNotEmpty() }
+        this.merchantEmail = merchantEmail?.trim()?.takeIf { it.isNotEmpty() }
+        this.merchantPhone = merchantPhone?.trim()?.takeIf { it.isNotEmpty() }
+        this.picName = picName?.trim()?.takeIf { it.isNotEmpty() }
+        this.picEmail = picEmail?.trim()?.takeIf { it.isNotEmpty() }
+        this.picPhone = picPhone?.trim()?.takeIf { it.isNotEmpty() }
+        this.address = address?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
     /** Simpan rekening payout tenant beserta hasil validasi inquiry (nama + inquiryId). */
     fun setPayoutAccount(channelCode: String, accountNumber: String, accountName: String?, inquiryId: String?) {
         this.payoutChannelCode = channelCode.trim().uppercase().takeIf { it.isNotEmpty() }
@@ -125,6 +189,13 @@ class TenantPivotAccount private constructor(
             status = SubAccountStatus.NOT_PROVISIONED,
             kycStatus = SubAccountKycStatus.NOT_REQUIRED,
             shortName = null,
+            legalName = null,
+            merchantEmail = null,
+            merchantPhone = null,
+            picName = null,
+            picEmail = null,
+            picPhone = null,
+            address = null,
             payoutChannelCode = null,
             payoutAccountNumber = null,
             payoutAccountName = null,
@@ -140,12 +211,20 @@ class TenantPivotAccount private constructor(
             status: SubAccountStatus,
             kycStatus: SubAccountKycStatus,
             shortName: String?,
+            legalName: String?,
+            merchantEmail: String?,
+            merchantPhone: String?,
+            picName: String?,
+            picEmail: String?,
+            picPhone: String?,
+            address: String?,
             payoutChannelCode: String?,
             payoutAccountNumber: String?,
             payoutAccountName: String?,
             payoutInquiryId: String?,
         ): TenantPivotAccount = TenantPivotAccount(
             id, tenantId, subMerchantUuid, type, status, kycStatus, shortName,
+            legalName, merchantEmail, merchantPhone, picName, picEmail, picPhone, address,
             payoutChannelCode, payoutAccountNumber, payoutAccountName, payoutInquiryId,
         )
     }

@@ -19,12 +19,13 @@ import {
   provisionPivotAccount,
   refreshPivotAccount,
   requestPivotKyc,
+  savePivotProfile,
   setPivotPayoutAccount,
   type PivotAccountStatus,
   type PivotKycStatus,
+  type PivotProfileRequest,
   type TenantPivotAccountView,
 } from '../api/pivotAccount'
-import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { Badge, EmptyState, Modal, useToast, type Tone } from '../components/ui'
 import { IconAlert, IconShield } from '../components/icons'
@@ -45,6 +46,17 @@ import { IconAlert, IconShield } from '../components/icons'
 /** Metode pembayaran tenant: PIVOT (otomatis via platform) atau MANUAL (transfer/QRIS). */
 const PROVIDER_OPTIONS: PaymentProvider[] = ['PIVOT', 'MANUAL']
 
+/** Profil sub-account kosong (string kosong agar input terkontrol, bukan null). */
+const EMPTY_PROFILE: PivotProfileRequest = {
+  legalName: '',
+  merchantEmail: '',
+  merchantPhone: '',
+  picName: '',
+  picEmail: '',
+  picPhone: '',
+  address: '',
+}
+
 interface FieldChange {
   label: string
   from: string
@@ -53,7 +65,6 @@ interface FieldChange {
 
 export function PaymentGatewaySettingsPage() {
   const { can } = useCan()
-  const { user } = useAuth()
   const toast = useToast()
   const manage = can('billing.gateway.manage')
 
@@ -139,15 +150,6 @@ export function PaymentGatewaySettingsPage() {
     setQrisRemoved(true)
   }
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast.success('URL webhook disalin')
-    } catch {
-      toast.error('Gagal menyalin — salin manual dari kolomnya')
-    }
-  }
-
   const doSave = async () => {
     if (!form) return
     setSaving(true)
@@ -188,10 +190,6 @@ export function PaymentGatewaySettingsPage() {
     return <EmptyState title="Setelan gateway tak tersedia" hint="Coba muat ulang halaman." icon={<IconAlert size={28} />} />
   }
 
-  // URL callback Pivot per-tenant (readonly, untuk disalin ke dashboard Pivot). Origin = URL aplikasi
-  // saat ini; di produksi inilah alamat publik yang dipanggil balik. Path memakai SLUG tenant —
-  // BillingWebhookController me-resolve tenant lewat slug, bukan UUID.
-  const webhookUrl = `${window.location.origin}/api/billing/webhooks/${user?.tenantSlug ?? '<tenant>'}/pivot`
   const showManual = form.provider === 'MANUAL'
 
   return (
@@ -230,17 +228,10 @@ export function PaymentGatewaySettingsPage() {
         </FormRow>
 
         {form.provider === 'PIVOT' && (
-          <>
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-              Penagihan otomatis via Pivot memakai sub-account tenant Anda. Pastikan sub-account sudah
-              diprovisi &amp; rekening payout tersetel di kartu <strong>Sub-account Pivot</strong> di bawah.
-            </p>
-            <WebhookField
-              url={webhookUrl}
-              hint="Tempel sebagai Callback URL di dashboard Pivot (menu Callbacks)."
-              onCopy={() => void copyToClipboard(webhookUrl)}
-            />
-          </>
+          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+            Penagihan otomatis via Pivot memakai sub-account tenant Anda. Pastikan sub-account sudah
+            diprovisi &amp; rekening payout tersetel di kartu <strong>Sub-account Pivot</strong> di bawah.
+          </p>
         )}
 
         {showManual && (
@@ -403,14 +394,27 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
   const [busy, setBusy] = useState(false)
   const [channelCode, setChannelCode] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
+  // Profil bisnis sub-account (identitas + PIC + alamat) — wajib sebelum provisioning.
+  const [profile, setProfile] = useState<PivotProfileRequest>(EMPTY_PROFILE)
+
+  const syncFrom = (a: TenantPivotAccountView) => {
+    setAccount(a)
+    setChannelCode(a.payoutChannelCode ?? '')
+    setAccountNumber(a.payoutAccountNumber ?? '')
+    setProfile({
+      legalName: a.legalName ?? '',
+      merchantEmail: a.merchantEmail ?? '',
+      merchantPhone: a.merchantPhone ?? '',
+      picName: a.picName ?? '',
+      picEmail: a.picEmail ?? '',
+      picPhone: a.picPhone ?? '',
+      address: a.address ?? '',
+    })
+  }
 
   useEffect(() => {
     getPivotAccount()
-      .then((a) => {
-        setAccount(a)
-        setChannelCode(a.payoutChannelCode ?? '')
-        setAccountNumber(a.payoutAccountNumber ?? '')
-      })
+      .then(syncFrom)
       .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Gagal memuat sub-account Pivot'))
       .finally(() => setLoading(false))
   }, [toast])
@@ -419,10 +423,7 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
     if (busy) return
     setBusy(true)
     try {
-      const a = await fn()
-      setAccount(a)
-      setChannelCode(a.payoutChannelCode ?? '')
-      setAccountNumber(a.payoutAccountNumber ?? '')
+      syncFrom(await fn())
       toast.success(okMsg)
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Operasi gagal')
@@ -435,6 +436,35 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
     !!account &&
     (channelCode.trim() !== (account.payoutChannelCode ?? '') ||
       accountNumber.trim() !== (account.payoutAccountNumber ?? ''))
+
+  // Profil dianggap lengkap secara lokal (mirror `profileComplete` server) untuk meng-gate tombol.
+  const profileFilled =
+    profile.merchantEmail!.trim() !== '' &&
+    profile.merchantPhone!.trim() !== '' &&
+    profile.picName!.trim() !== '' &&
+    profile.picEmail!.trim() !== '' &&
+    profile.picPhone!.trim() !== '' &&
+    profile.address!.trim() !== ''
+
+  const profileDirty =
+    !!account &&
+    ((profile.legalName ?? '') !== (account.legalName ?? '') ||
+      (profile.merchantEmail ?? '') !== (account.merchantEmail ?? '') ||
+      (profile.merchantPhone ?? '') !== (account.merchantPhone ?? '') ||
+      (profile.picName ?? '') !== (account.picName ?? '') ||
+      (profile.picEmail ?? '') !== (account.picEmail ?? '') ||
+      (profile.picPhone ?? '') !== (account.picPhone ?? '') ||
+      (profile.address ?? '') !== (account.address ?? ''))
+
+  const trimmedProfile = (): PivotProfileRequest => ({
+    legalName: profile.legalName?.trim() || null,
+    merchantEmail: profile.merchantEmail?.trim() || null,
+    merchantPhone: profile.merchantPhone?.trim() || null,
+    picName: profile.picName?.trim() || null,
+    picEmail: profile.picEmail?.trim() || null,
+    picPhone: profile.picPhone?.trim() || null,
+    address: profile.address?.trim() || null,
+  })
 
   return (
     <div className="card stack" style={{ gap: '0.85rem' }} aria-disabled={!manage}>
@@ -480,15 +510,124 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
             </span>
           )}
 
+          {/* Profil bisnis sub-account — wajib diisi lengkap sebelum bisa diprovisi ke Pivot. */}
+          {!account.provisioned && (
+            <>
+              <div className="hr" />
+              <SectionTitle>Profil sub-account</SectionTitle>
+              <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+                Data bisnis yang didaftarkan ke Pivot. Semua kolom (kecuali nama legal) wajib diisi
+                sebelum sub-account bisa diprovisi.
+              </p>
+              <div className="stack" style={{ gap: '0.6rem' }}>
+                <label>
+                  <span>Nama legal bisnis (opsional)</span>
+                  <input
+                    value={profile.legalName ?? ''}
+                    onChange={(e) => setProfile((p) => ({ ...p, legalName: e.target.value }))}
+                    placeholder="kosong = pakai nama tenant"
+                    maxLength={200}
+                    disabled={!manage}
+                  />
+                </label>
+                <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <label style={{ flex: 1, minWidth: 200 }}>
+                    <span>Email bisnis</span>
+                    <input
+                      type="email"
+                      value={profile.merchantEmail ?? ''}
+                      onChange={(e) => setProfile((p) => ({ ...p, merchantEmail: e.target.value }))}
+                      placeholder="mis. billing@usaha.co.id"
+                      maxLength={160}
+                      disabled={!manage}
+                    />
+                  </label>
+                  <label style={{ flex: 1, minWidth: 160 }}>
+                    <span>Telepon bisnis</span>
+                    <input
+                      value={profile.merchantPhone ?? ''}
+                      onChange={(e) => setProfile((p) => ({ ...p, merchantPhone: e.target.value }))}
+                      placeholder="mis. 081234567890"
+                      maxLength={40}
+                      disabled={!manage}
+                    />
+                  </label>
+                </div>
+                <label>
+                  <span>Nama PIC</span>
+                  <input
+                    value={profile.picName ?? ''}
+                    onChange={(e) => setProfile((p) => ({ ...p, picName: e.target.value }))}
+                    placeholder="penanggung jawab"
+                    maxLength={160}
+                    disabled={!manage}
+                  />
+                </label>
+                <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <label style={{ flex: 1, minWidth: 200 }}>
+                    <span>Email PIC</span>
+                    <input
+                      type="email"
+                      value={profile.picEmail ?? ''}
+                      onChange={(e) => setProfile((p) => ({ ...p, picEmail: e.target.value }))}
+                      placeholder="mis. pic@usaha.co.id"
+                      maxLength={160}
+                      disabled={!manage}
+                    />
+                  </label>
+                  <label style={{ flex: 1, minWidth: 160 }}>
+                    <span>Telepon PIC</span>
+                    <input
+                      value={profile.picPhone ?? ''}
+                      onChange={(e) => setProfile((p) => ({ ...p, picPhone: e.target.value }))}
+                      placeholder="mis. 081234567890"
+                      maxLength={40}
+                      disabled={!manage}
+                    />
+                  </label>
+                </div>
+                <label>
+                  <span>Alamat bisnis</span>
+                  <textarea
+                    value={profile.address ?? ''}
+                    onChange={(e) => setProfile((p) => ({ ...p, address: e.target.value }))}
+                    placeholder="alamat lengkap usaha"
+                    maxLength={500}
+                    rows={2}
+                    disabled={!manage}
+                  />
+                </label>
+                {manage && (
+                  <div className="row" style={{ gap: '0.5rem', justifyContent: 'flex-end' }}>
+                    <button
+                      className="ghost"
+                      disabled={busy || !profileDirty}
+                      onClick={() => void run(() => savePivotProfile(trimmedProfile()), 'Profil sub-account tersimpan')}
+                    >
+                      Simpan profil
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
           {manage && (
             <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
               {!account.provisioned && (
                 <button
                   className="primary"
-                  disabled={busy || !account.masterActive}
+                  disabled={busy || !account.masterActive || !profileFilled || profileDirty}
+                  title={
+                    !profileFilled
+                      ? 'Lengkapi profil sub-account dulu'
+                      : profileDirty
+                        ? 'Simpan perubahan profil dulu'
+                        : undefined
+                  }
                   onClick={() => void run(provisionPivotAccount, 'Sub-account Pivot diprovisi')}
                 >
-                  Provision
+                  Daftarkan sub-account
                 </button>
               )}
               <button
@@ -785,28 +924,6 @@ function AuthedImage({ path, version, alt, size }: { path: string; version: numb
     <a href={url} target="_blank" rel="noreferrer" title={alt}>
       <img src={url} alt={alt} style={box} />
     </a>
-  )
-}
-
-/**
- * Menampilkan URL callback per-tenant (readonly) + tombol salin. Operator menempelkannya ke
- * dashboard Pivot agar status pembayaran otomatis masuk. URL tak bisa disunting di sini —
- * ia turunan tenant + alamat aplikasi.
- */
-function WebhookField({ url, hint, onCopy }: { url: string; hint: string; onCopy: () => void }) {
-  return (
-    <div className="stack" style={{ gap: '0.4rem' }}>
-      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>URL callback</span>
-      <div className="row" style={{ gap: '0.5rem', alignItems: 'stretch' }}>
-        <input value={url} readOnly onFocus={(e) => e.target.select()} style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.82rem' }} />
-        <button type="button" className="ghost" onClick={onCopy} style={{ whiteSpace: 'nowrap' }}>
-          Salin
-        </button>
-      </div>
-      <span className="muted" style={{ fontSize: '0.82rem' }}>
-        {hint} Alamatnya unik per-tenant.
-      </span>
-    </div>
   )
 }
 

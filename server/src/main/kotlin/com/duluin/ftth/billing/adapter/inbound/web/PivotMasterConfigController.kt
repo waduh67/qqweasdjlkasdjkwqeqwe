@@ -49,6 +49,7 @@ class PivotMasterConfigController(
  * Rahasia (merchantId/secret/callbackApiKey) null/kosong = biarkan apa adanya (tak menghapus saat
  * menyunting fee/payout). Fee & rekening payout non-rahasia → selalu diganti.
  */
+@Suppress("LongParameterList")
 data class PivotMasterConfigRequest(
     val enabled: Boolean = false,
     val sandbox: Boolean = false,
@@ -59,6 +60,19 @@ data class PivotMasterConfigRequest(
     @field:NotNull val platformFeeType: PivotFeeType = PivotFeeType.FIXED,
     @field:Size(max = 40) val payoutChannelCode: String? = null,
     @field:Size(max = 60) val payoutAccountNumber: String? = null,
+    // Default field wajib create sub-account (non-rahasia).
+    @field:Size(max = 40) val defaultBusinessType: String? = null,
+    @field:Size(max = 40) val defaultBusinessStructure: String? = null,
+    @field:Size(max = 120) val defaultParentIndustry: String? = null,
+    @field:Size(max = 120) val defaultChildIndustry: String? = null,
+    @field:Size(max = 20) val defaultMcc: String? = null,
+    @field:Size(max = 40) val defaultDigitalStatus: String? = null,
+    @field:Size(max = 8) val defaultBusinessCountry: String? = null,
+    @field:Size(max = 8) val defaultCountryOfEntity: String? = null,
+    @field:Size(max = 500) val defaultLogoUrl: String? = null,
+    @field:Size(max = 300) val defaultWebsite: String? = null,
+    @field:Min(0) val defaultDistrictId: Int? = null,
+    @field:Size(max = 20) val defaultPostCode: String? = null,
 ) {
     fun toCommand() = UpdatePivotMasterConfigCommand(
         enabled = enabled,
@@ -70,5 +84,17 @@ data class PivotMasterConfigRequest(
         platformFeeType = platformFeeType,
         payoutChannelCode = payoutChannelCode,
         payoutAccountNumber = payoutAccountNumber,
+        defaultBusinessType = defaultBusinessType,
+        defaultBusinessStructure = defaultBusinessStructure,
+        defaultParentIndustry = defaultParentIndustry,
+        defaultChildIndustry = defaultChildIndustry,
+        defaultMcc = defaultMcc,
+        defaultDigitalStatus = defaultDigitalStatus,
+        defaultBusinessCountry = defaultBusinessCountry,
+        defaultCountryOfEntity = defaultCountryOfEntity,
+        defaultLogoUrl = defaultLogoUrl,
+        defaultWebsite = defaultWebsite,
+        defaultDistrictId = defaultDistrictId,
+        defaultPostCode = defaultPostCode,
     )
 }

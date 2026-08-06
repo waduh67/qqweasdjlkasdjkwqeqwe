@@ -196,8 +196,9 @@ function GlobalPanel({
 const FEE_TYPES: PlatformFeeType[] = ['FIXED', 'PERCENTAGE']
 
 /**
- * Panel akun master Pivot: kredensial (Merchant ID/Secret/Callback API Key) write-only, toggle
- * sandbox & aktif, fee platform, rekening payout platform, plus URL callback SaaS untuk disalin.
+ * Panel akun master Pivot: kredensial (Client ID/Client Secret/Callback Secret — sesuai label
+ * dashboard Pivot) write-only, toggle sandbox & aktif, fee platform, rekening payout platform,
+ * default sub-account, plus URL callback SaaS untuk disalin.
  */
 function PivotMasterPanel({
   config,
@@ -218,6 +219,7 @@ function PivotMasterPanel({
   const [feeType, setFeeType] = useState<PlatformFeeType>(config.platformFeeType)
   const [payoutChannel, setPayoutChannel] = useState(config.payoutChannelCode ?? '')
   const [payoutAccount, setPayoutAccount] = useState(config.payoutAccountNumber ?? '')
+  const [defaults, setDefaults] = useState<SubAccountDefaultsForm>(() => defaultsFromConfig(config))
   const [saving, setSaving] = useState(false)
 
   // Sinkron ulang saat config diperbarui dari server.
@@ -231,9 +233,14 @@ function PivotMasterPanel({
     setFeeType(config.platformFeeType)
     setPayoutChannel(config.payoutChannelCode ?? '')
     setPayoutAccount(config.payoutAccountNumber ?? '')
+    setDefaults(defaultsFromConfig(config))
   }, [config])
 
   const credDirty = merchantId.trim() !== '' || merchantSecret.trim() !== '' || callbackApiKey.trim() !== ''
+  const savedDefaults = defaultsFromConfig(config)
+  const defaultsDirty = (Object.keys(defaults) as (keyof SubAccountDefaultsForm)[]).some(
+    (k) => defaults[k].trim() !== savedDefaults[k].trim(),
+  )
   const dirty =
     enabled !== config.enabled ||
     sandbox !== config.sandbox ||
@@ -241,6 +248,7 @@ function PivotMasterPanel({
     feeType !== config.platformFeeType ||
     payoutChannel.trim() !== (config.payoutChannelCode ?? '') ||
     payoutAccount.trim() !== (config.payoutAccountNumber ?? '') ||
+    defaultsDirty ||
     credDirty
 
   const copyUrl = async (url: string) => {
@@ -255,6 +263,7 @@ function PivotMasterPanel({
   const save = async () => {
     setSaving(true)
     try {
+      const districtId = defaults.defaultDistrictId.trim()
       const result = await updatePivotMasterConfig({
         enabled,
         sandbox,
@@ -265,6 +274,18 @@ function PivotMasterPanel({
         platformFeeType: feeType,
         payoutChannelCode: payoutChannel.trim() || null,
         payoutAccountNumber: payoutAccount.trim() || null,
+        defaultBusinessType: defaults.defaultBusinessType.trim() || null,
+        defaultBusinessStructure: defaults.defaultBusinessStructure.trim() || null,
+        defaultParentIndustry: defaults.defaultParentIndustry.trim() || null,
+        defaultChildIndustry: defaults.defaultChildIndustry.trim() || null,
+        defaultMcc: defaults.defaultMcc.trim() || null,
+        defaultDigitalStatus: defaults.defaultDigitalStatus.trim() || null,
+        defaultBusinessCountry: defaults.defaultBusinessCountry.trim() || null,
+        defaultCountryOfEntity: defaults.defaultCountryOfEntity.trim() || null,
+        defaultLogoUrl: defaults.defaultLogoUrl.trim() || null,
+        defaultWebsite: defaults.defaultWebsite.trim() || null,
+        defaultDistrictId: districtId ? Number(districtId) : null,
+        defaultPostCode: defaults.defaultPostCode.trim() || null,
       })
       onSaved(result)
       toast.success('Konfigurasi Pivot master disimpan')
@@ -319,40 +340,40 @@ function PivotMasterPanel({
 
         <label>
           <span>
-            Merchant ID {config.merchantIdSet && <span className="muted">· tersimpan</span>}
+            Client ID {config.merchantIdSet && <span className="muted">· tersimpan</span>}
           </span>
           <input
             type="password"
             autoComplete="new-password"
             value={merchantId}
             onChange={(e) => setMerchantId(e.target.value)}
-            placeholder={config.merchantIdSet ? 'Biarkan kosong untuk mempertahankan' : 'X-MERCHANT-ID dari dashboard Pivot'}
+            placeholder={config.merchantIdSet ? 'Biarkan kosong untuk mempertahankan' : 'Client ID dashboard Pivot (dikirim sebagai X-MERCHANT-ID)'}
             disabled={!manage}
           />
         </label>
         <label>
           <span>
-            Merchant Secret {config.merchantSecretSet && <span className="muted">· tersimpan</span>}
+            Client Secret {config.merchantSecretSet && <span className="muted">· tersimpan</span>}
           </span>
           <input
             type="password"
             autoComplete="new-password"
             value={merchantSecret}
             onChange={(e) => setMerchantSecret(e.target.value)}
-            placeholder={config.merchantSecretSet ? 'Biarkan kosong untuk mempertahankan' : 'X-MERCHANT-SECRET dari dashboard Pivot'}
+            placeholder={config.merchantSecretSet ? 'Biarkan kosong untuk mempertahankan' : 'Client Secret dashboard Pivot (dikirim sebagai X-MERCHANT-SECRET)'}
             disabled={!manage}
           />
         </label>
         <label>
           <span>
-            Callback API Key {config.callbackApiKeySet && <span className="muted">· tersimpan</span>}
+            Callback Secret {config.callbackApiKeySet && <span className="muted">· tersimpan</span>}
           </span>
           <input
             type="password"
             autoComplete="new-password"
             value={callbackApiKey}
             onChange={(e) => setCallbackApiKey(e.target.value)}
-            placeholder={config.callbackApiKeySet ? 'Biarkan kosong untuk mempertahankan' : 'X-API-Key untuk verifikasi callback'}
+            placeholder={config.callbackApiKeySet ? 'Biarkan kosong untuk mempertahankan' : 'Callback Secret untuk verifikasi header X-API-Key'}
             disabled={!manage}
           />
         </label>
@@ -420,6 +441,9 @@ function PivotMasterPanel({
         </div>
       </div>
 
+      {/* Default sub-account (field wajib create sub-merchant yang sama untuk semua tenant) */}
+      <SubAccountDefaultsPanel defaults={defaults} onChange={setDefaults} manage={manage} />
+
       {manage && (
         <div className="row" style={{ justifyContent: 'flex-end' }}>
           <button className="primary" onClick={() => void save()} disabled={!dirty || saving}>
@@ -432,9 +456,214 @@ function PivotMasterPanel({
 }
 
 /**
+ * Nilai default field wajib `POST /v1/sub-merchants` yang SAMA untuk semua tenant (referensi
+ * bisnis/industri). Diisi sekali oleh super-admin; digabung dengan profil spesifik-tenant saat
+ * provisioning. Semua string agar input terkontrol — `defaultDistrictId` dikonversi ke angka saat simpan.
+ */
+interface SubAccountDefaultsForm {
+  defaultBusinessType: string
+  defaultBusinessStructure: string
+  defaultParentIndustry: string
+  defaultChildIndustry: string
+  defaultMcc: string
+  defaultDigitalStatus: string
+  defaultBusinessCountry: string
+  defaultCountryOfEntity: string
+  defaultLogoUrl: string
+  defaultWebsite: string
+  defaultDistrictId: string
+  defaultPostCode: string
+}
+
+/** Ambil nilai default dari config server → bentuk form (null → string kosong). */
+function defaultsFromConfig(c: PivotMasterConfigView): SubAccountDefaultsForm {
+  return {
+    defaultBusinessType: c.defaultBusinessType ?? '',
+    defaultBusinessStructure: c.defaultBusinessStructure ?? '',
+    defaultParentIndustry: c.defaultParentIndustry ?? '',
+    defaultChildIndustry: c.defaultChildIndustry ?? '',
+    defaultMcc: c.defaultMcc ?? '',
+    defaultDigitalStatus: c.defaultDigitalStatus ?? '',
+    defaultBusinessCountry: c.defaultBusinessCountry ?? '',
+    defaultCountryOfEntity: c.defaultCountryOfEntity ?? '',
+    defaultLogoUrl: c.defaultLogoUrl ?? '',
+    defaultWebsite: c.defaultWebsite ?? '',
+    defaultDistrictId: c.defaultDistrictId != null ? String(c.defaultDistrictId) : '',
+    defaultPostCode: c.defaultPostCode ?? '',
+  }
+}
+
+const BUSINESS_TYPE_OPTIONS = ['INDIVIDUAL', 'COMPANY']
+const DIGITAL_STATUS_OPTIONS = ['Digital', 'Non-digital']
+
+/**
+ * Panel default sub-account: dropdown untuk field berdaftar-nilai (businessType/digitalStatus),
+ * input untuk nilai referensi (mcc/industri/districtId/postCode) yang harus valid menurut daftar
+ * referensi Pivot. Diisi sekali; provisioning tenant menggabungnya dengan profil spesifik-tenant.
+ */
+function SubAccountDefaultsPanel({
+  defaults,
+  onChange,
+  manage,
+}: {
+  defaults: SubAccountDefaultsForm
+  onChange: (updater: (d: SubAccountDefaultsForm) => SubAccountDefaultsForm) => void
+  manage: boolean
+}) {
+  const set = (patch: Partial<SubAccountDefaultsForm>) => onChange((d) => ({ ...d, ...patch }))
+  return (
+    <div className="card stack" style={{ gap: '0.85rem' }} aria-disabled={!manage}>
+      <strong style={{ fontSize: '0.95rem' }}>Default Sub-account</strong>
+      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        Data bisnis/industri yang sama untuk semua sub-account tenant (dipakai saat mendaftarkan
+        sub-account ke Pivot). Nilai referensi (MCC, industri, district ID, struktur bisnis) harus
+        valid menurut daftar referensi Pivot — verifikasi di sandbox sebelum produksi.
+      </p>
+
+      <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+        <label style={{ flex: 1, minWidth: 160 }}>
+          <span>Tipe bisnis</span>
+          <select
+            value={defaults.defaultBusinessType}
+            onChange={(e) => set({ defaultBusinessType: e.target.value })}
+            disabled={!manage}
+          >
+            <option value="">— pilih —</option>
+            {BUSINESS_TYPE_OPTIONS.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label style={{ flex: 1, minWidth: 160 }}>
+          <span>Status digital</span>
+          <select
+            value={defaults.defaultDigitalStatus}
+            onChange={(e) => set({ defaultDigitalStatus: e.target.value })}
+            disabled={!manage}
+          >
+            <option value="">— pilih —</option>
+            {DIGITAL_STATUS_OPTIONS.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label style={{ flex: 1, minWidth: 160 }}>
+          <span>Struktur bisnis</span>
+          <input
+            value={defaults.defaultBusinessStructure}
+            onChange={(e) => set({ defaultBusinessStructure: e.target.value })}
+            placeholder="mis. PT, CV"
+            disabled={!manage}
+          />
+        </label>
+      </div>
+
+      <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+        <label style={{ flex: 1, minWidth: 160 }}>
+          <span>Industri induk</span>
+          <input
+            value={defaults.defaultParentIndustry}
+            onChange={(e) => set({ defaultParentIndustry: e.target.value })}
+            placeholder="dari daftar referensi Pivot"
+            disabled={!manage}
+          />
+        </label>
+        <label style={{ flex: 1, minWidth: 160 }}>
+          <span>Industri anak</span>
+          <input
+            value={defaults.defaultChildIndustry}
+            onChange={(e) => set({ defaultChildIndustry: e.target.value })}
+            placeholder="dari daftar referensi Pivot"
+            disabled={!manage}
+          />
+        </label>
+        <label style={{ flex: 1, minWidth: 120 }}>
+          <span>MCC</span>
+          <input
+            value={defaults.defaultMcc}
+            onChange={(e) => set({ defaultMcc: e.target.value })}
+            placeholder="mis. 4899"
+            disabled={!manage}
+          />
+        </label>
+      </div>
+
+      <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+        <label style={{ flex: 1, minWidth: 120 }}>
+          <span>Negara bisnis</span>
+          <input
+            value={defaults.defaultBusinessCountry}
+            onChange={(e) => set({ defaultBusinessCountry: e.target.value })}
+            placeholder="mis. ID"
+            maxLength={8}
+            disabled={!manage}
+          />
+        </label>
+        <label style={{ flex: 1, minWidth: 120 }}>
+          <span>Negara entitas</span>
+          <input
+            value={defaults.defaultCountryOfEntity}
+            onChange={(e) => set({ defaultCountryOfEntity: e.target.value })}
+            placeholder="mis. ID"
+            maxLength={8}
+            disabled={!manage}
+          />
+        </label>
+        <label style={{ flex: 1, minWidth: 120 }}>
+          <span>District ID</span>
+          <input
+            type="number"
+            min={0}
+            value={defaults.defaultDistrictId}
+            onChange={(e) => set({ defaultDistrictId: e.target.value })}
+            placeholder="dari daftar referensi Pivot"
+            disabled={!manage}
+          />
+        </label>
+        <label style={{ flex: 1, minWidth: 120 }}>
+          <span>Kode pos</span>
+          <input
+            value={defaults.defaultPostCode}
+            onChange={(e) => set({ defaultPostCode: e.target.value })}
+            placeholder="mis. 40111"
+            maxLength={20}
+            disabled={!manage}
+          />
+        </label>
+      </div>
+
+      <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+        <label style={{ flex: 1, minWidth: 200 }}>
+          <span>Website</span>
+          <input
+            value={defaults.defaultWebsite}
+            onChange={(e) => set({ defaultWebsite: e.target.value })}
+            placeholder="https://…"
+            disabled={!manage}
+          />
+        </label>
+        <label style={{ flex: 1, minWidth: 200 }}>
+          <span>URL logo</span>
+          <input
+            value={defaults.defaultLogoUrl}
+            onChange={(e) => set({ defaultLogoUrl: e.target.value })}
+            placeholder="https://…/logo.png"
+            disabled={!manage}
+          />
+        </label>
+      </div>
+    </div>
+  )
+}
+
+/**
  * Callback Pivot didaftarkan **per produk** di akun master: satu URL "Create URL" per produk di
  * dashboard Pivot. Backend meng-expose satu endpoint platform per produk di bawah
- * `/api/platform/pivot/callbacks/*` — semuanya diverifikasi header `X-API-Key` (Callback API Key
+ * `/api/platform/pivot/callbacks/*` — semuanya diverifikasi header `X-API-Key` (Callback Secret
  * master yang sama).
  */
 const PIVOT_CALLBACK_PRODUCTS: { label: string; product: string; path: string }[] = [
@@ -457,8 +686,8 @@ function PivotCallbackUrls({ onCopy }: { onCopy: (url: string) => void }) {
       <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>URL Callback Pivot (per produk)</span>
       <span className="muted" style={{ fontSize: '0.82rem' }}>
         Akun master Pivot mendaftarkan satu Callback URL per produk. Tempel tiap URL di bawah ke
-        kolom “Create URL” produk yang cocok pada dashboard Pivot. Semua produk memakai Callback API
-        Key yang sama untuk verifikasi header <code>X-API-Key</code>.
+        kolom “Create URL” produk yang cocok pada dashboard Pivot. Semua produk memakai Callback
+        Secret yang sama untuk verifikasi header <code>X-API-Key</code>.
       </span>
       <div className="stack" style={{ gap: '0.4rem' }}>
         {PIVOT_CALLBACK_PRODUCTS.map(({ label, product, path }) => {

@@ -2,11 +2,11 @@ package com.duluin.ftth.billing.adapter.outbound.gateway.pivot
 
 import com.duluin.ftth.billing.application.port.outbound.InquiryResult
 import com.duluin.ftth.billing.application.port.outbound.PivotSubMerchantPort
+import com.duluin.ftth.billing.application.port.outbound.SubMerchantCreateRequest
 import com.duluin.ftth.billing.application.port.outbound.SubMerchantResult
 import com.duluin.ftth.billing.domain.model.PivotMasterContext
 import com.duluin.ftth.billing.domain.model.SubAccountKycStatus
 import com.duluin.ftth.billing.domain.model.SubAccountStatus
-import com.duluin.ftth.billing.domain.model.SubAccountType
 import com.duluin.ftth.common.domain.error.ConflictException
 import org.springframework.stereotype.Component
 import tools.jackson.databind.JsonNode
@@ -23,17 +23,33 @@ class PivotSubMerchantGateway(
     private val apiClient: PivotApiClient,
 ) : PivotSubMerchantPort {
 
-    override fun create(
-        master: PivotMasterContext,
-        type: SubAccountType,
-        shortName: String,
-        businessName: String,
-    ): SubMerchantResult {
-        val body = mapOf(
-            "subAccountType" to type.name,
-            "shortName" to shortName,
-            "businessName" to businessName,
-        )
+    override fun create(master: PivotMasterContext, request: SubMerchantCreateRequest): SubMerchantResult {
+        val body = buildMap<String, Any> {
+            put("subAccountType", request.type.name)
+            put("shortName", request.shortName)
+            put("name", request.name)
+            put("website", request.website)
+            put("logo", request.logo)
+            put("merchantEmail", request.merchantEmail)
+            put("merchantPhone", request.merchantPhone)
+            put("businessCountry", request.businessCountry)
+            put("businessType", request.businessType)
+            put("businessStructure", request.businessStructure)
+            put("parentIndustry", request.parentIndustry)
+            put("childIndustry", request.childIndustry)
+            put("mcc", request.mcc)
+            put("countryOfEntity", request.countryOfEntity)
+            put("digitalStatus", request.digitalStatus)
+            put("picName", request.picName)
+            put("picEmail", request.picEmail)
+            put("picPhone", request.picPhone)
+            put("address", request.address)
+            put("districtId", request.districtId)
+            put("postCode", request.postCode)
+            if (!request.bankChannelCode.isNullOrBlank() && !request.bankAccountNumber.isNullOrBlank()) {
+                put("bankAccount", mapOf("accountNumber" to request.bankAccountNumber, "channelCode" to request.bankChannelCode))
+            }
+        }
         return apiClient.post("/v1/sub-merchants", body, master.credentials()).toSubMerchant()
     }
 

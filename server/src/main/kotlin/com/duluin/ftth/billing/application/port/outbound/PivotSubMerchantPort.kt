@@ -11,8 +11,8 @@ import com.duluin.ftth.billing.domain.model.SubAccountType
  * HTTP + memetakan respons Pivot ke enum domain. Dipakai provisioning & manajemen sub-account tenant.
  */
 interface PivotSubMerchantPort {
-    /** Buat sub-account [type] untuk tenant; [shortName] jadi transaction descriptor. */
-    fun create(master: PivotMasterContext, type: SubAccountType, shortName: String, businessName: String): SubMerchantResult
+    /** Buat sub-account di akun master dari [request] (field wajib lengkap `POST /v1/sub-merchants`). */
+    fun create(master: PivotMasterContext, request: SubMerchantCreateRequest): SubMerchantResult
 
     /** Tarik status terbaru sub-account (`GET /v1/sub-merchants/{uuid}`). */
     fun fetch(master: PivotMasterContext, subMerchantUuid: String): SubMerchantResult
@@ -20,6 +20,39 @@ interface PivotSubMerchantPort {
     /** Validasi rekening bank sebelum payout; hasilkan `inquiryId` + nama pemilik terverifikasi. */
     fun inquiryAccount(master: PivotMasterContext, channelCode: String, accountNumber: String): InquiryResult
 }
+
+/**
+ * Payload create sub-account Pivot — sudah tergabung dari default level-platform (referensi bisnis)
+ * + profil spesifik-tenant (identitas/PIC/alamat) + rekening bank opsional. Semua field wajib Pivot
+ * sudah non-null di sini; validasi kelengkapan dilakukan di service SEBELUM merakit request ini.
+ */
+@Suppress("LongParameterList")
+data class SubMerchantCreateRequest(
+    val type: SubAccountType,
+    val shortName: String,
+    val name: String,
+    val website: String,
+    val logo: String,
+    val merchantEmail: String,
+    val merchantPhone: String,
+    val businessCountry: String,
+    val businessType: String,
+    val businessStructure: String,
+    val parentIndustry: String,
+    val childIndustry: String,
+    val mcc: String,
+    val countryOfEntity: String,
+    val digitalStatus: String,
+    val picName: String,
+    val picEmail: String,
+    val picPhone: String,
+    val address: String,
+    val districtId: Int,
+    val postCode: String,
+    /** Rekening bank tujuan withdrawal (opsional saat create). */
+    val bankChannelCode: String?,
+    val bankAccountNumber: String?,
+)
 
 /** Hasil create/fetch sub-account: uuid + status siklus-hidup & KYC (sudah dipetakan ke enum domain). */
 data class SubMerchantResult(

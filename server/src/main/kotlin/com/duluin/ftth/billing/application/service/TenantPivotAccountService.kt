@@ -2,9 +2,11 @@ package com.duluin.ftth.billing.application.service
 
 import com.duluin.ftth.billing.application.port.inbound.ManageTenantPivotAccountUseCase
 import com.duluin.ftth.billing.application.port.inbound.ProvisionTenantPivotAccountUseCase
+import com.duluin.ftth.billing.application.port.inbound.SaveTenantPivotProfileCommand
 import com.duluin.ftth.billing.application.port.inbound.SetPivotPayoutAccountCommand
 import com.duluin.ftth.billing.application.port.inbound.TenantPivotAccountView
 import com.duluin.ftth.billing.application.port.outbound.PivotSubMerchantPort
+import com.duluin.ftth.billing.application.port.outbound.SubMerchantCreateRequest
 import com.duluin.ftth.billing.application.port.outbound.TenantPivotAccountRepository
 import com.duluin.ftth.billing.domain.model.PivotMasterContext
 import com.duluin.ftth.billing.domain.model.SubAccountType
@@ -86,12 +88,32 @@ class TenantPivotAccountService(
         val shortName = account.shortName ?: descriptorFor(tenant.name)
         // KYC = sub-account atas nama tenant sendiri: buat baru bertipe KYC, dokumen dikirim
         // out-of-band ke verification@pivot-payment.com (di luar app) untuk approval Pivot.
-        val result = subMerchant.create(master, SubAccountType.KYC, shortName, tenant.name)
+        val request = buildCreateRequest(account, tenant.name, shortName, SubAccountType.KYC, master)
+        val result = subMerchant.create(master, request)
         account.setShortName(shortName)
         account.markProvisioned(result.subMerchantUuid, SubAccountType.KYC, result.status, result.kycStatus)
         account.requestKyc()
         val saved = repository.save(account)
         audit("billing.pivot.kyc.requested", saved.id, tenantId)
+        return saved.toView()
+    }
+
+    @Transactional
+    override fun saveProfile(command: SaveTenantPivotProfileCommand): TenantPivotAccountView {
+        requireMaster()
+        val tenantId = TenantContext.tenantId()
+        val account = repository.find() ?: TenantPivotAccount.defaultFor(tenantId)
+        account.setProfile(
+            legalName = command.legalName,
+            merchantEmail = command.merchantEmail,
+            merchantPhone = command.merchantPhone,
+            picName = command.picName,
+            picEmail = command.picEmail,
+            picPhone = command.picPhone,
+            address = command.address,
+        )
+        val saved = repository.save(account)
+        audit("billing.pivot.profile.updated", saved.id, tenantId)
         return saved.toView()
     }
 
@@ -118,13 +140,80 @@ class TenantPivotAccountService(
     ): TenantPivotAccount {
         val tenant = tenantApi.requireById(tenantId)
         val shortName = account.shortName ?: descriptorFor(tenant.name)
-        val result = subMerchant.create(master, SubAccountType.NON_KYC, shortName, tenant.name)
+        val request = buildCreateRequest(account, tenant.name, shortName, SubAccountType.NON_KYC, master)
+        val result = subMerchant.create(master, request)
         account.setShortName(shortName)
         account.markProvisioned(result.subMerchantUuid, SubAccountType.NON_KYC, result.status, result.kycStatus)
         val saved = repository.save(account)
         audit("billing.pivot.provisioned", saved.id, tenantId)
         log.info("Sub-account Pivot NON_KYC dibuat untuk tenant {} (uuid {})", tenantId, result.subMerchantUuid)
         return saved
+    }
+
+    /**
+     * Rakit payload create sub-account: gabung profil tenant (identitas/PIC/alamat + rekening) dengan
+     * default level-platform (referensi bisnis/industri). Melempar [ValidationException] yang jelas
+     * bila profil tenant belum lengkap ATAU default platform belum diisi — supaya request tak
+     * dikirim setengah jadi lalu ditolak 400 oleh Pivot.
+     */
+    private fun buildCreateRequest(
+        account: TenantPivotAccount,
+        tenantName: String,
+        shortName: String,
+        type: SubAccountType,
+        master: PivotMasterContext,
+    ): SubMerchantCreateRequest {
+        if (!account.profileComplete) {
+            throw ValidationException(
+                "Lengkapi profil sub-account dulu (email & telepon bisnis, nama/email/telepon PIC, alamat) sebelum mendaftar ke Pivot",
+            )
+        }
+        val d = master.subAccountDefaults
+        val missing = buildList {
+            if (d.businessType.isNullOrBlank()) add("tipe bisnis")
+            if (d.businessStructure.isNullOrBlank()) add("struktur bisnis")
+            if (d.parentIndustry.isNullOrBlank()) add("industri induk")
+            if (d.childIndustry.isNullOrBlank()) add("industri anak")
+            if (d.mcc.isNullOrBlank()) add("MCC")
+            if (d.digitalStatus.isNullOrBlank()) add("status digital")
+            if (d.businessCountry.isNullOrBlank()) add("negara bisnis")
+            if (d.countryOfEntity.isNullOrBlank()) add("negara entitas")
+            if (d.logoUrl.isNullOrBlank()) add("logo")
+            if (d.website.isNullOrBlank()) add("website")
+            if (d.districtId == null) add("district ID")
+            if (d.postCode.isNullOrBlank()) add("kode pos")
+        }
+        if (missing.isNotEmpty()) {
+            throw ValidationException(
+                "Default sub-account platform belum lengkap: ${missing.joinToString(", ")}. " +
+                    "Isi di setelan Billing Langganan Platform sebelum tenant bisa mendaftar.",
+            )
+        }
+        return SubMerchantCreateRequest(
+            type = type,
+            shortName = shortName,
+            name = account.legalName ?: tenantName,
+            website = d.website!!,
+            logo = d.logoUrl!!,
+            merchantEmail = account.merchantEmail!!,
+            merchantPhone = account.merchantPhone!!,
+            businessCountry = d.businessCountry!!,
+            businessType = d.businessType!!,
+            businessStructure = d.businessStructure!!,
+            parentIndustry = d.parentIndustry!!,
+            childIndustry = d.childIndustry!!,
+            mcc = d.mcc!!,
+            countryOfEntity = d.countryOfEntity!!,
+            digitalStatus = d.digitalStatus!!,
+            picName = account.picName!!,
+            picEmail = account.picEmail!!,
+            picPhone = account.picPhone!!,
+            address = account.address!!,
+            districtId = d.districtId!!,
+            postCode = d.postCode!!,
+            bankChannelCode = account.payoutChannelCode,
+            bankAccountNumber = account.payoutAccountNumber,
+        )
     }
 
     private fun requireMaster(): PivotMasterContext = masterConfig.current()
@@ -143,6 +232,14 @@ class TenantPivotAccountService(
         status = status,
         kycStatus = kycStatus,
         shortName = shortName,
+        legalName = legalName,
+        merchantEmail = merchantEmail,
+        merchantPhone = merchantPhone,
+        picName = picName,
+        picEmail = picEmail,
+        picPhone = picPhone,
+        address = address,
+        profileComplete = profileComplete,
         payoutChannelCode = payoutChannelCode,
         payoutAccountNumber = payoutAccountNumber,
         payoutAccountName = payoutAccountName,

@@ -22,6 +22,9 @@ interface ManageTenantPivotAccountUseCase {
     /** Ajukan upgrade NON_KYC → KYC (buat sub-account KYC; dokumen dikirim out-of-band ke Pivot). */
     fun requestKyc(): TenantPivotAccountView
 
+    /** Simpan profil bisnis sub-account (identitas + PIC + alamat) — wajib sebelum provisioning. */
+    fun saveProfile(command: SaveTenantPivotProfileCommand): TenantPivotAccountView
+
     /** Setel rekening payout tenant; nomor divalidasi lewat `POST /v1/inquiry-account`. */
     fun setPayoutAccount(command: SetPivotPayoutAccountCommand): TenantPivotAccountView
 }
@@ -37,11 +40,30 @@ data class TenantPivotAccountView(
     val status: SubAccountStatus,
     val kycStatus: SubAccountKycStatus,
     val shortName: String?,
+    val legalName: String?,
+    val merchantEmail: String?,
+    val merchantPhone: String?,
+    val picName: String?,
+    val picEmail: String?,
+    val picPhone: String?,
+    val address: String?,
+    val profileComplete: Boolean,
     val payoutChannelCode: String?,
     val payoutAccountNumber: String?,
     val payoutAccountName: String?,
     val payoutReady: Boolean,
     val masterActive: Boolean,
+)
+
+/** Profil bisnis sub-account yang diisi tenant. `legalName` opsional (fallback nama tenant). */
+data class SaveTenantPivotProfileCommand(
+    val legalName: String?,
+    val merchantEmail: String?,
+    val merchantPhone: String?,
+    val picName: String?,
+    val picEmail: String?,
+    val picPhone: String?,
+    val address: String?,
 )
 
 /** Setel rekening payout tenant (channel bank + nomor rekening); nama pemilik diisi hasil inquiry. */
