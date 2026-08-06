@@ -31,6 +31,8 @@ import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.CustomerRef
 import com.duluin.ftth.customer.ProvisionOnuCommand
 import com.duluin.ftth.customer.RegisterCustomerCommand
+import com.duluin.ftth.tenancy.TenantApi
+import com.duluin.ftth.tenancy.TenantRef
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
@@ -252,7 +254,7 @@ class BillingCycleTest {
         // memakai provider "MANUAL" agar registry memilihnya untuk konteks itu.
         // Tanpa master Pivot & tanpa sub-account → resolver pasti jatuh ke MANUAL.
         val masterConfig = PivotMasterConfigProvider(NoMasterConfig)
-        val resolver = TenantPaymentGatewayResolver(NoGatewayConfig, NoPivotAccount, masterConfig, props)
+        val resolver = TenantPaymentGatewayResolver(NoGatewayConfig, NoPivotAccount, masterConfig, NoTenantApi, props)
         // Tanpa baris setelan pajak → resolver jatuh ke bawaan (PPN mati) → tagihan tanpa PPN,
         // jadi assertion nilai tagihan↔charge di test ini tetap murni tarif dasar.
         val taxResolver = BillingTaxSettingsResolver(NoTaxConfig)
@@ -349,6 +351,18 @@ class BillingCycleTest {
         override fun find(): TenantPivotAccount? = null
         override fun save(account: TenantPivotAccount): TenantPivotAccount = account
         override fun findByTenant(tenantId: UUID): TenantPivotAccount? = null
+    }
+
+    /** Resolver hanya menyentuh TenantApi di cabang PIVOT; test ini murni MANUAL → tak pernah dipanggil. */
+    private object NoTenantApi : TenantApi {
+        override fun findById(id: UUID): TenantRef? = null
+        override fun findBySlug(slug: String): TenantRef? = null
+        override fun requireById(id: UUID): TenantRef = error("tak dipakai")
+        override fun platformTenantId(): UUID = error("tak dipakai")
+        override fun findActiveTenantIds(): List<UUID> = emptyList()
+        override fun ensureTenant(slug: String, name: String): TenantRef = error("tak dipakai")
+        override fun suspend(id: UUID): TenantRef = error("tak dipakai")
+        override fun activate(id: UUID): TenantRef = error("tak dipakai")
     }
 
     /** Platform belum mengaktifkan master Pivot → resolver tak bisa membentuk konteks PIVOT. */

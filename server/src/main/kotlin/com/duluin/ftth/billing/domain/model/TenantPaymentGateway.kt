@@ -45,6 +45,12 @@ data class ResolvedGatewayContext(
     val webhookToken: String?,
     /** PIVOT customer charge: uuid sub-account tenant (`x-submerchant-id`). Null = charge di master (SaaS). */
     val subAccountId: String? = null,
+    /**
+     * PIVOT customer charge: slug tenant pemilik charge, disematkan ke `metadata.tenantSlug` agar
+     * callback pembayaran (satu URL master) bisa memilah customer vs SaaS & me-resolve tenant O(1).
+     * Null untuk charge SaaS/MANUAL.
+     */
+    val tenantSlug: String? = null,
     /** PIVOT: `X-MERCHANT-ID` master (auth + tujuan split-routing fee platform). */
     val apiKey: String? = null,
     /** PIVOT: lingkungan Pivot (sandbox vs produksi). */

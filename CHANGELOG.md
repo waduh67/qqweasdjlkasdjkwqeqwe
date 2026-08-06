@@ -58,6 +58,14 @@ withdrawal untuk menyalurkan dana tenant. Dokumentasi baru: `docs/pivot-overview
 - **Penagihan langganan SaaS** `platformbilling.PlatformGatewayResolver`: charge langsung di akun
   master (`subAccountId=null`, tanpa split → 100% ke platform) via `PivotMasterConfigProvider`;
   menolak jelas bila master belum dikonfigurasi.
+- **Callback Pivot direstrukturisasi** dari URL per-tenant-slug (`/api/billing/webhooks/{slug}/pivot`,
+  `.../pivot-payout`, `/api/platform/billing/webhooks/pivot`) menjadi **10 endpoint platform per-produk**
+  di bawah `/api/platform/pivot/callbacks/*` (Pivot master mendaftarkan satu Callback URL per produk):
+  `payment` (dipilah customer vs langganan SaaS via metadata `scope`), `payout`/`withdrawal`/
+  `international-payout`/`refund`, `sub-account-registration`, dan `wallet`/`wallets`/
+  `wallet-account-linkage-activation`/`wallet-user-activation` (produk wallet tak dipakai → no-op ACK 200).
+  Semua verifikasi `X-API-Key` master (constant-time). Setelan Billing Langganan Platform kini
+  menampilkan ke-10 URL siap-salin per produk (`web/src/pages/PlatformBillingSettingsPage.tsx`).
 - **Dokumentasi** `docs/payment-gateway.md`, `docs/billing.md`, `docs/saas-subscription.md`
   disesuaikan ke model Pivot master+sub-account.
 

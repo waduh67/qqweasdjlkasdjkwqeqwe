@@ -105,8 +105,9 @@ POST /api/billing/pivot-account/withdrawals { amountMinor, remarks? }   (billing
 
 ## Rekonsiliasi webhook
 
-`POST /api/billing/webhooks/{tenantSlug}/pivot-payout` (`PivotPayoutWebhookController`,
-publik) menutup status baris:
+Callback status payout/withdrawal masuk lewat endpoint platform per-produk
+`POST /api/platform/pivot/callbacks/payout` dan `.../withdrawal` (juga
+`.../international-payout`) — bukan lagi URL per-tenant-slug. Handler menutup status baris:
 
 ```
 verifikasi X-API-Key == callback_api_key master (constant-time)
@@ -119,7 +120,7 @@ verifikasi X-API-Key == callback_api_key master (constant-time)
         └─ findByReference(ref) → markSuccess() / markFailed(reason)
 ```
 
-- Terpisah dari `BillingWebhookController` (pelunasan tagihan): payout/withdrawal **tidak**
+- Terpisah dari callback `payment` (pelunasan tagihan): payout/withdrawal **tidak**
   menyentuh invoice — hanya menutup `tenant_payout`.
 - **Idempotent** (callback ganda aman); ref yang tak cocok baris mana pun diabaikan.
 
@@ -148,5 +149,5 @@ sandbox/prod kadang beda pembungkusnya.
 | `GET /api/billing/pivot-account/payouts` | `billing.gateway.view` | riwayat penyaluran tenant |
 | `POST /api/billing/pivot-account/payouts` | `billing.gateway.manage` | salurkan dana NON_KYC ke rekening tenant |
 | `POST /api/billing/pivot-account/withdrawals` | `billing.gateway.manage` | tarik saldo sub-account KYC |
-| `POST /api/billing/webhooks/{slug}/pivot-payout` | publik (`X-API-Key` master) | rekonsiliasi status payout/withdrawal |
+| `POST /api/platform/pivot/callbacks/payout` · `.../withdrawal` · `.../international-payout` | publik (`X-API-Key` master) | rekonsiliasi status payout/withdrawal |
 </content>

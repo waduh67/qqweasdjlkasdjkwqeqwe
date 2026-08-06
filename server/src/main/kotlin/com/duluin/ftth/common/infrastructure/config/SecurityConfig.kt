@@ -74,12 +74,9 @@ class SecurityConfig {
                     // Pendaftaran mandiri ISP: publik (bikin tenant + admin awal). Keunikan
                     // slug/email dijaga di service, bukan lewat auth.
                     "/api/signup",
-                    // Webhook pembayaran: penyedia gateway memanggil dengan tanda tangannya
-                    // sendiri (diverifikasi di adapter), bukan token bearer kita.
-                    "/api/billing/webhooks/**",
-                    // Webhook langganan SaaS (platform menagih tenant): sama alasannya —
-                    // penyedia gateway memanggil dengan tanda tangannya sendiri.
-                    "/api/platform/billing/webhooks/**",
+                    // Callback Pivot: satu URL per produk di akun MASTER, Pivot memanggil dengan
+                    // `X-API-Key` master-nya sendiri (diverifikasi di lapis billing), bukan bearer.
+                    "/api/platform/pivot/callbacks/**",
                     // Provisioning VPN: VPS mengunduh installer & memanggil balik (verify
                     // user/pass, minta IP overlay) dengan token node-nya sendiri, bukan bearer.
                     "/api/vpn/provision/**",

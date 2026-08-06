@@ -85,23 +85,39 @@ adalah singleton stateless kecuali cache token.
 
 ---
 
-## Keamanan callback — header `X-API-Key`
+## Callback Pivot — satu URL per PRODUK (level platform)
 
-**SEMUA** callback Pivot (pembayaran tenant, langganan SaaS, payout/withdrawal)
-diverifikasi oleh satu mekanisme: header **`X-API-Key`** harus sama dengan **Callback API
-Key master** (`pivot_master_config.callback_api_key`), dibandingkan **constant-time**
-(`MessageDigest.isEqual`). Bukan HMAC per-tenant — satu key master untuk seluruh webhook.
+Pivot mendaftarkan callback **per produk** pada akun **master**, bukan per-tenant: satu
+"Create URL" per produk di dashboard Pivot (10 produk). Karena itu backend meng-expose
+**satu endpoint platform per produk** di bawah base path
+**`/api/platform/pivot/callbacks/*`** (`PivotCallbackController`), bukan lagi URL
+per-tenant-slug. Callback lama `/api/billing/webhooks/{slug}/pivot`,
+`/api/billing/webhooks/{slug}/pivot-payout`, dan `/api/platform/billing/webhooks/pivot`
+**dihapus** — digantikan endpoint per-produk di bawah.
 
-| Callback | Endpoint | Verifikasi |
+**SEMUA** endpoint diverifikasi satu mekanisme: header **`X-API-Key`** harus sama dengan
+**Callback API Key master** (`pivot_master_config.callback_api_key`), dibandingkan
+**constant-time** (`MessageDigest.isEqual`). Bukan HMAC per-tenant — satu key master untuk
+seluruh webhook. Endpoint `permitAll` (gateway eksternal tak membawa JWT); keasliannya
+dijamin `X-API-Key`. Key kosong/tak cocok → callback ditolak 4xx tanpa menyentuh data.
+
+| Produk | Endpoint | Aksi |
 |---|---|---|
-| Pelunasan tagihan pelanggan | `POST /api/billing/webhooks/{tenantSlug}/pivot` | `X-API-Key` = callback key master; status ∈ {PAID, SETTLED, SUCCESS} → settlement |
-| Pelunasan langganan SaaS | `POST /api/platform/billing/webhooks/pivot` | idem (tanpa tenant di path — level platform) |
-| Status payout/withdrawal | `POST /api/billing/webhooks/{tenantSlug}/pivot-payout` | idem; menutup baris `tenant_payout` (bukan invoice) |
+| PAYMENT | `POST /api/platform/pivot/callbacks/payment` | pelunasan; dipilah **customer** (metadata `scope=TENANT`, di-resolve via `tenantSlug` → settlement billing tenant) vs **langganan SaaS** (`scope=SAAS` → settlement platform) |
+| PAYOUT | `POST /api/platform/pivot/callbacks/payout` | rekonsiliasi baris `tenant_payout` via referensi Pivot (idempotent) |
+| WITHDRAWAL | `POST /api/platform/pivot/callbacks/withdrawal` | idem — rekonsiliasi `tenant_payout` (idempotent) |
+| INTERNATIONAL_PAYOUT | `POST /api/platform/pivot/callbacks/international-payout` | idem — rekonsiliasi `tenant_payout` (idempotent) |
+| REFUND | `POST /api/platform/pivot/callbacks/refund` | di-ACK + dicatat log; belum ada domain refund (follow-up) |
+| SUB_ACCOUNT_REGISTRATION | `POST /api/platform/pivot/callbacks/sub-account-registration` | update status/KYC `tenant_pivot_account` |
+| WALLET | `POST /api/platform/pivot/callbacks/wallet` | produk wallet tak dipakai — verifikasi `X-API-Key` lalu ACK 200 (no-op) |
+| WALLETS | `POST /api/platform/pivot/callbacks/wallets` | idem — no-op ACK 200 |
+| WALLET_ACCOUNT_LINKAGE_ACTIVATION | `POST /api/platform/pivot/callbacks/wallet-account-linkage-activation` | idem — no-op ACK 200 |
+| WALLET_USER_ACTIVATION | `POST /api/platform/pivot/callbacks/wallet-user-activation` | idem — no-op ACK 200 |
 
-Endpoint webhook `permitAll` (gateway eksternal tak membawa JWT); keasliannya dijamin
-`X-API-Key`. Tenant di-resolve dari **slug** di path lalu dipasang ke `TenantContext` agar
-tulisan patuh RLS. Key master hanya callback key kosong/tak cocok → callback ditolak 4xx
-tanpa menyentuh data.
+Endpoint **wallet\*** tetap ada meski produk wallet tak dipakai: verifikasi `X-API-Key` lalu
+balas ACK 200 (no-op) supaya Pivot berhenti retry. Untuk **payment**, tenant di-resolve dari
+`tenantSlug` di metadata charge lalu dipasang ke `TenantContext` agar settlement patuh RLS;
+charge langganan SaaS (`scope=SAAS`) diselesaikan di level platform tanpa tenant.
 
 ---
 
@@ -113,16 +129,16 @@ Pelanggan bayar tagihan
        ├─ splitRoutingConfigurations → fee platform (FIXED) ke merchantId master
        └─ paymentUrl → dilekatkan ke invoice (payUrl)
   ─── pelanggan membayar di halaman hosted Pivot ───
-  └─ callback POST /api/billing/webhooks/{slug}/pivot  (X-API-Key master)
+  └─ callback POST /api/platform/pivot/callbacks/payment  (X-API-Key master, scope=TENANT)
        └─ status PAID → invoice.markPaid + auto-pulih langganan pelanggan
 
 Dana tenant (NON_KYC) mengendap di balance MASTER
   └─ payout: POST /v1/payouts (master → rekening tenant tervalidasi)   [pivot-payout.md]
-       └─ callback POST /api/billing/webhooks/{slug}/pivot-payout → tutup tenant_payout
+       └─ callback POST /api/platform/pivot/callbacks/payout → tutup tenant_payout
 
 Langganan SaaS tenant (pemasukan platform)
   └─ POST /v2/payments (MASTER, tanpa sub-account, tanpa split) → 100% ke platform
-       └─ callback POST /api/platform/billing/webhooks/pivot
+       └─ callback POST /api/platform/pivot/callbacks/payment (scope=SAAS)
 ```
 
 ---
@@ -145,9 +161,12 @@ Kredensial & lingkungan (sandbox) Pivot **tidak** di env melainkan di `pivot_mas
    Merchant Secret, Callback API Key (dari dashboard Pivot), pilih sandbox/prod, set fee
    platform (FIXED/PERCENTAGE) + rekening payout platform, lalu **aktifkan**.
 2. Set `FTTH_BILLING_PIVOT_REDIRECT_BASE_URL` di server (URL balik REDIRECT).
-3. Daftarkan URL callback di dashboard Pivot: `{origin}/api/billing/webhooks/{slug}/pivot`
-   (tagihan), `{origin}/api/billing/webhooks/{slug}/pivot-payout` (payout), dan
-   `{origin}/api/platform/billing/webhooks/pivot` (langganan SaaS).
+3. Daftarkan URL callback **per produk** di dashboard Pivot (satu "Create URL" per produk):
+   tempel `{origin}/api/platform/pivot/callbacks/<produk>` untuk tiap dari 10 produk —
+   `payment`, `payout`, `withdrawal`, `international-payout`, `refund`,
+   `sub-account-registration`, `wallet`, `wallets`, `wallet-account-linkage-activation`,
+   `wallet-user-activation`. Semua memakai Callback API Key master yang sama. UI penyalinan
+   tersedia di setelan Billing Langganan Platform.
 4. Sub-account tenant **terprovisi otomatis** saat onboarding (NON_KYC); tenant lama
    pra-fitur diprovisi lewat `POST /api/billing/pivot-account/provision`. Lihat
    [`pivot-sub-account.md`](pivot-sub-account.md).

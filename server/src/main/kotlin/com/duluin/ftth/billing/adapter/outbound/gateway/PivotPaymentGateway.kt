@@ -22,6 +22,18 @@ import java.security.MessageDigest
 import java.time.Instant
 
 /**
+ * Kunci metadata routing charge Pivot — disematkan saat create charge & di-echo Pivot di callback
+ * pembayaran. Dipakai [com.duluin.ftth.billing.application.service.PivotCallbackService] memilah
+ * charge pelanggan tenant (scope [TENANT] + [TENANT_SLUG_KEY]) vs langganan SaaS (scope [SAAS]).
+ */
+internal object PivotChargeScope {
+    const val KEY = "scope"
+    const val TENANT_SLUG_KEY = "tenantSlug"
+    const val TENANT = "TENANT"
+    const val SAAS = "SAAS"
+}
+
+/**
  * Adapter Pivot (pivot-payment.com) untuk model "business as platform": SEMUA charge dibuat di
  * akun MASTER platform ([ResolvedGatewayContext.apiKey]/[ResolvedGatewayContext.secretKey]).
  *
@@ -93,7 +105,22 @@ class PivotPaymentGateway(
             // pelanggan); langganan SaaS (subAccountId null) tanpa split. Fee dihitung sebagai nominal
             // tetap (FIXED) ke akun master; PERCENTAGE dikonversi dari nilai tagihan saat ini.
             splitRouting(ctx, amountValue)?.let { put("splitRoutingConfigurations", it) }
-            put("metadata", mapOf("invoiceNumber" to request.invoiceNumber))
+            // Metadata di-echo Pivot di callback pembayaran → dipakai routing satu URL master:
+            // charge on-behalf sub-account (subAccountId != null) = tagihan pelanggan tenant
+            // (scope TENANT + tenantSlug untuk resolve O(1)); tanpa sub-account = langganan SaaS.
+            put(
+                "metadata",
+                buildMap<String, Any> {
+                    put("invoiceNumber", request.invoiceNumber)
+                    val tenantSlug = ctx.tenantSlug?.takeIf { it.isNotBlank() }
+                    if (ctx.subAccountId != null && tenantSlug != null) {
+                        put(PivotChargeScope.KEY, PivotChargeScope.TENANT)
+                        put(PivotChargeScope.TENANT_SLUG_KEY, tenantSlug)
+                    } else {
+                        put(PivotChargeScope.KEY, PivotChargeScope.SAAS)
+                    }
+                },
+            )
         }
 
         val node = apiClient.post(

@@ -6,6 +6,8 @@ import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.billing.domain.model.GatewayMode
 import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
 import com.duluin.ftth.billing.domain.model.SubAccountStatus
+import com.duluin.ftth.common.tenant.TenantContext
+import com.duluin.ftth.tenancy.TenantApi
 import org.springframework.stereotype.Component
 
 /**
@@ -23,6 +25,7 @@ class TenantPaymentGatewayResolver(
     private val repo: TenantPaymentGatewayRepository,
     private val subAccounts: TenantPivotAccountRepository,
     private val masterConfig: PivotMasterConfigProvider,
+    private val tenantApi: TenantApi,
     private val props: BillingProperties,
 ) {
     fun resolve(): ResolvedGatewayContext {
@@ -37,6 +40,7 @@ class TenantPaymentGatewayResolver(
                     secretKey = master.merchantSecret,
                     webhookToken = master.callbackApiKey,
                     subAccountId = sub.subMerchantUuid,
+                    tenantSlug = tenantApi.findById(TenantContext.tenantId())?.slug,
                     apiKey = master.merchantId,
                     sandbox = master.sandbox,
                     platformFeeMinor = master.platformFeeMinor,

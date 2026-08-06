@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional
  *
  * Menggantikan model BYOK lama (baris kredensial per-penyedia). Analog `TenantPaymentGatewayResolver`
  * di module billing, tapi tanpa sub-account/RLS. Dipakai `PlatformInvoiceGenerator` (charge) &
- * `PlatformBillingWebhookController` (verifikasi callback).
+ * `PivotCallbackController` (verifikasi callback pelunasan langganan SaaS).
  */
 @Service
 @Transactional(readOnly = true)

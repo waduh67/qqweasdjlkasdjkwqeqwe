@@ -243,11 +243,9 @@ function PivotMasterPanel({
     payoutAccount.trim() !== (config.payoutAccountNumber ?? '') ||
     credDirty
 
-  const callbackUrl = `${window.location.origin}/api/platform/billing/webhooks/pivot`
-
-  const copyCallback = async () => {
+  const copyUrl = async (url: string) => {
     try {
-      await navigator.clipboard.writeText(callbackUrl)
+      await navigator.clipboard.writeText(url)
       toast.success('URL callback disalin')
     } catch {
       toast.error('Gagal menyalin — salin manual dari kolomnya')
@@ -359,7 +357,7 @@ function PivotMasterPanel({
           />
         </label>
 
-        <WebhookField url={callbackUrl} onCopy={() => void copyCallback()} />
+        <PivotCallbackUrls onCopy={(url) => void copyUrl(url)} />
       </div>
 
       {/* Fee platform */}
@@ -433,19 +431,58 @@ function PivotMasterPanel({
   )
 }
 
-function WebhookField({ url, onCopy }: { url: string; onCopy: () => void }) {
+/**
+ * Callback Pivot didaftarkan **per produk** di akun master: satu URL "Create URL" per produk di
+ * dashboard Pivot. Backend meng-expose satu endpoint platform per produk di bawah
+ * `/api/platform/pivot/callbacks/*` — semuanya diverifikasi header `X-API-Key` (Callback API Key
+ * master yang sama).
+ */
+const PIVOT_CALLBACK_PRODUCTS: { label: string; product: string; path: string }[] = [
+  { label: 'Pembayaran', product: 'PAYMENT', path: '/api/platform/pivot/callbacks/payment' },
+  { label: 'Payout', product: 'PAYOUT', path: '/api/platform/pivot/callbacks/payout' },
+  { label: 'Withdrawal / Penarikan', product: 'WITHDRAWAL', path: '/api/platform/pivot/callbacks/withdrawal' },
+  { label: 'Payout Internasional', product: 'INTERNATIONAL_PAYOUT', path: '/api/platform/pivot/callbacks/international-payout' },
+  { label: 'Refund', product: 'REFUND', path: '/api/platform/pivot/callbacks/refund' },
+  { label: 'Registrasi Sub-account', product: 'SUB_ACCOUNT_REGISTRATION', path: '/api/platform/pivot/callbacks/sub-account-registration' },
+  { label: 'Wallet', product: 'WALLET', path: '/api/platform/pivot/callbacks/wallet' },
+  { label: 'Wallets', product: 'WALLETS', path: '/api/platform/pivot/callbacks/wallets' },
+  { label: 'Aktivasi Linkage Wallet', product: 'WALLET_ACCOUNT_LINKAGE_ACTIVATION', path: '/api/platform/pivot/callbacks/wallet-account-linkage-activation' },
+  { label: 'Aktivasi User Wallet', product: 'WALLET_USER_ACTIVATION', path: '/api/platform/pivot/callbacks/wallet-user-activation' },
+]
+
+function PivotCallbackUrls({ onCopy }: { onCopy: (url: string) => void }) {
+  const origin = window.location.origin
   return (
-    <div className="stack" style={{ gap: '0.4rem' }}>
-      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>URL callback</span>
-      <div className="row" style={{ gap: '0.5rem', alignItems: 'stretch' }}>
-        <input value={url} readOnly onFocus={(e) => e.target.select()} style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.82rem' }} />
-        <button type="button" className="ghost" onClick={onCopy} style={{ whiteSpace: 'nowrap' }}>
-          Salin
-        </button>
-      </div>
+    <div className="stack" style={{ gap: '0.5rem' }}>
+      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>URL Callback Pivot (per produk)</span>
       <span className="muted" style={{ fontSize: '0.82rem' }}>
-        Tempel sebagai Callback URL di dashboard Pivot agar pelunasan langganan tenant otomatis masuk ke sistem.
+        Akun master Pivot mendaftarkan satu Callback URL per produk. Tempel tiap URL di bawah ke
+        kolom “Create URL” produk yang cocok pada dashboard Pivot. Semua produk memakai Callback API
+        Key yang sama untuk verifikasi header <code>X-API-Key</code>.
       </span>
+      <div className="stack" style={{ gap: '0.4rem' }}>
+        {PIVOT_CALLBACK_PRODUCTS.map(({ label, product, path }) => {
+          const url = `${origin}${path}`
+          return (
+            <div key={product} className="stack" style={{ gap: '0.25rem' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                {label} <span className="muted" style={{ fontWeight: 400 }}>· {product}</span>
+              </span>
+              <div className="row" style={{ gap: '0.5rem', alignItems: 'stretch' }}>
+                <input
+                  value={url}
+                  readOnly
+                  onFocus={(e) => e.target.select()}
+                  style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.82rem' }}
+                />
+                <button type="button" className="ghost" onClick={() => onCopy(url)} style={{ whiteSpace: 'nowrap' }}>
+                  Salin
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

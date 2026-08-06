@@ -22,9 +22,9 @@ import org.springframework.web.bind.annotation.RestController
  * Setelan akun MASTER Pivot untuk super-admin platform: kredensial (merchant id/secret/callback key),
  * toggle sandbox, fee platform per transaksi, dan rekening payout platform. Dijaga izin
  * `platform.billing.*` (platform admin otomatis lolos). Rahasia write-only — respons hanya penanda
- * `*Set`, tak pernah membocorkan nilai. URL callback yang harus didaftarkan di dashboard Pivot:
- * `{origin}/api/billing/webhooks/{tenantSlug}/pivot` (tagihan pelanggan) &
- * `{origin}/api/platform/billing/webhooks/pivot` (langganan SaaS) — verifikasi header `X-API-Key`.
+ * `*Set`, tak pernah membocorkan nilai. URL callback didaftarkan per PRODUK di dashboard Pivot
+ * (akun master, satu URL per produk) di bawah `{origin}/api/platform/pivot/callbacks/{produk}` — verifikasi
+ * header `X-API-Key` master. Daftar lengkapnya tampil siap-salin di setelan Billing Langganan Platform.
  */
 @RestController
 @RequestMapping("/api/platform/pivot-config")
