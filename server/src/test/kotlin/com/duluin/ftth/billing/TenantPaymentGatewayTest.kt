@@ -63,6 +63,52 @@ class TenantPaymentGatewayTest {
     }
 
     @Test
+    fun `MIDTRANS BYO membawa Server Key sebagai secret tanpa webhook token terpisah`() {
+        val gw = defaultGateway().apply {
+            update(PaymentProvider.MIDTRANS, GatewayMode.BYO, enabled = true, apiKey = null, secretKey = "Mid-server-x", webhookToken = "diabaikan")
+        }
+
+        val ctx = gw.resolve(platform)
+        assertThat(ctx).isNotNull
+        assertThat(ctx!!.provider).isEqualTo("MIDTRANS")
+        assertThat(ctx.mode).isEqualTo(GatewayMode.BYO)
+        assertThat(ctx.secretKey).isEqualTo("Mid-server-x") // Server Key → Basic-auth Snap + secret SHA512 webhook
+        assertThat(ctx.webhookToken).isNull()               // Midtrans tak punya token webhook terpisah
+    }
+
+    @Test
+    fun `MIDTRANS BYO tanpa Server Key meresolusi null walau aktif`() {
+        val gw = defaultGateway().apply {
+            update(PaymentProvider.MIDTRANS, GatewayMode.BYO, enabled = true, apiKey = null, secretKey = null, webhookToken = null)
+        }
+
+        assertThat(gw.resolve(platform)).isNull()
+    }
+
+    @Test
+    fun `MIDTRANS tak mendukung mode PLATFORM di sisi tenant (meresolusi null)`() {
+        // MIDTRANS + PLATFORM tak mungkin lolos update() (butuh sub-account), tapi baris lama /
+        // rehydrate bisa saja membawanya; resolvePlatform hanya melayani XENDIT → null.
+        val gw = TenantPaymentGateway.rehydrate(
+            id = UuidV7.generate(),
+            tenantId = UuidV7.generate(),
+            provider = PaymentProvider.MIDTRANS,
+            mode = GatewayMode.PLATFORM,
+            enabled = true,
+            apiKey = null,
+            secretKey = "Mid-server-x",
+            webhookToken = null,
+            subAccountId = "acc_x",
+            paymentMethod = null,
+            manual = ManualPaymentConfig.EMPTY,
+            qrisStorageKey = null,
+            qrisContentType = null,
+        )
+
+        assertThat(gw.resolve(platform)).isNull()
+    }
+
+    @Test
     fun `PIVOT BYO membawa merchant id dan secret terpisah plus callback key`() {
         val gw = defaultGateway().apply {
             update(PaymentProvider.PIVOT, GatewayMode.BYO, enabled = true, apiKey = "merchant_1", secretKey = "secret_1", webhookToken = "cb_key")

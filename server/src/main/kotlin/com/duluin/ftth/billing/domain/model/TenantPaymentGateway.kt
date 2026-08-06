@@ -6,15 +6,18 @@ import org.springframework.modulith.NamedInterface
 import java.util.UUID
 
 /**
- * Penyedia payment gateway yang bisa dipilih tenant.
+ * Penyedia payment gateway yang bisa dipilih tenant untuk menagih pelanggannya.
  *
- *  - [XENDIT] digarap penuh (BYO & PLATFORM/xenPlatform).
- *  - [PAYWUZ]/[PIVOT] kerangka — bisa dipilih & dikonfigurasi, tapi charge belum jalan
- *    (dokumentasi API-nya belum tersedia); adapter melempar sampai diimplementasikan.
- *  - [MANUAL] pembayaran luar-band (tunai/transfer) + webhook bersecret bersama; ini
+ *  - [XENDIT]   digarap penuh (BYO & PLATFORM/xenPlatform).
+ *  - [MIDTRANS] BYO (Snap): satu Server Key jadi Basic-auth Snap SEKALIGUS secret verifikasi
+ *    signature webhook (SHA512), dibawa di [TenantPaymentGateway.secretKey]. Tak ada webhook
+ *    token terpisah. Mode PLATFORM belum didukung dari sisi tenant (v1 hanya XENDIT).
+ *  - [PAYWUZ]   BYO: satu API key (Bearer + HMAC webhook) + kode metode bayar per-tenant.
+ *  - [PIVOT]    BYO: sepasang kredensial (merchant id + merchant secret) + callback API key.
+ *  - [MANUAL]   pembayaran luar-band (tunai/transfer/QRIS) + webhook bersecret bersama; ini
  *    juga fallback saat tenant belum/nonaktif mengonfigurasi gateway.
  */
-enum class PaymentProvider { XENDIT, PAYWUZ, PIVOT, MANUAL }
+enum class PaymentProvider { XENDIT, MIDTRANS, PAYWUZ, PIVOT, MANUAL }
 
 /**
  *  - [BYO]      tenant memakai akun gateway-nya sendiri (kredensial di baris tenant).
@@ -247,6 +250,14 @@ class TenantPaymentGateway private constructor(
         PaymentProvider.XENDIT -> {
             val key = secretKey?.trim()?.takeIf { it.isNotEmpty() } ?: return null
             ResolvedGatewayContext("XENDIT", GatewayMode.BYO, secretKey = key, webhookToken = webhookToken)
+        }
+        // Midtrans (Snap) butuh SATU kredensial: Server Key — jadi Basic-auth Snap SEKALIGUS
+        // secret verifikasi signature webhook (SHA512), dibawa di secretKey; tak ada webhook
+        // token terpisah. Seperti XENDIT: tanpa Server Key konfigurasi tak lengkap → null
+        // (pemanggil jatuh ke fallback MANUAL, bukan diam-diam charge dengan kredensial kosong).
+        PaymentProvider.MIDTRANS -> {
+            val key = secretKey?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+            ResolvedGatewayContext("MIDTRANS", GatewayMode.BYO, secretKey = key, webhookToken = null)
         }
         // Pivot butuh SEPASANG kredensial: merchant id (apiKey → X-MERCHANT-ID) + merchant
         // secret (secretKey → X-MERCHANT-SECRET). Resolusi tetap jalan walau belum lengkap agar

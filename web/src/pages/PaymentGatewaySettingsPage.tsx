@@ -38,7 +38,7 @@ import { IconAlert, IconShield } from '../components/icons'
  * penyedia otomatis MANUAL (pelanggan bayar transfer/QRIS) tanpa dropdown — dropdown baru muncul
  * ketika operator mengaktifkan gateway.
  */
-const GATEWAY_PROVIDERS: PaymentProvider[] = ['XENDIT', 'PIVOT', 'PAYWUZ']
+const GATEWAY_PROVIDERS: PaymentProvider[] = ['XENDIT', 'MIDTRANS', 'PIVOT', 'PAYWUZ']
 
 type CredKey = 'apiKey' | 'secretKey' | 'webhookToken'
 interface CredField {
@@ -55,6 +55,10 @@ function credFields(provider: PaymentProvider): CredField[] {
         { key: 'secretKey', label: 'Secret key', placeholder: 'xnd_production_… / xnd_development_…' },
         { key: 'webhookToken', label: 'Webhook token', placeholder: 'x-callback-token dari dashboard Xendit' },
       ]
+    case 'MIDTRANS':
+      // Satu kredensial: Server Key — Basic-auth Snap SEKALIGUS secret verifikasi signature
+      // webhook (SHA512). Tak ada token webhook terpisah; prefiks `SB-` = sandbox.
+      return [{ key: 'secretKey', label: 'Server Key', placeholder: 'Mid-server-… / SB-Mid-server-…' }]
     case 'PIVOT':
       return [
         { key: 'apiKey', label: 'Merchant ID', placeholder: 'X-MERCHANT-ID dari dashboard Pivot' },
@@ -395,6 +399,15 @@ export function PaymentGatewaySettingsPage() {
               <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
                 Secret key dari dashboard Xendit (Settings → API Keys). Webhook token = <code>x-callback-token</code>;
                 arahkan URL callback Xendit ke <code>/api/billing/webhooks/&lt;tenant&gt;/xendit</code>.
+              </p>
+            )}
+            {form.provider === 'MIDTRANS' && (
+              <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+                <strong>Server Key</strong> dari dashboard Midtrans (Settings → Access Keys). Key berprefiks{' '}
+                <code>SB-</code> otomatis dianggap <strong>sandbox</strong>, tanpa prefiks = <strong>produksi</strong>.
+                Satu key ini dipakai untuk menagih (Snap) <em>sekaligus</em> memverifikasi signature webhook — jadi tak
+                ada token webhook terpisah. Di dashboard Midtrans (Settings → Configuration), setel{' '}
+                <strong>Payment Notification URL</strong> ke <code>/api/billing/webhooks/&lt;tenant&gt;/midtrans</code>.
               </p>
             )}
             {form.provider === 'PIVOT' && (

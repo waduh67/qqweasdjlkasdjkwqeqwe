@@ -2,11 +2,12 @@
 
 import { api } from './client'
 
-export type PaymentProvider = 'XENDIT' | 'PAYWUZ' | 'PIVOT' | 'MANUAL'
+export type PaymentProvider = 'XENDIT' | 'MIDTRANS' | 'PAYWUZ' | 'PIVOT' | 'MANUAL'
 export type GatewayMode = 'BYO' | 'PLATFORM'
 
 export const PAYMENT_PROVIDER_LABEL: Record<PaymentProvider, string> = {
   XENDIT: 'Xendit',
+  MIDTRANS: 'Midtrans',
   PAYWUZ: 'Paywuz',
   PIVOT: 'Pivot',
   MANUAL: 'Manual (tunai/transfer)',
@@ -18,7 +19,7 @@ export const GATEWAY_MODE_LABEL: Record<GatewayMode, string> = {
 }
 
 /** Penyedia yang charge otomatisnya sudah jalan. */
-export const SUPPORTED_PROVIDERS: PaymentProvider[] = ['XENDIT', 'PIVOT', 'PAYWUZ', 'MANUAL']
+export const SUPPORTED_PROVIDERS: PaymentProvider[] = ['XENDIT', 'MIDTRANS', 'PIVOT', 'PAYWUZ', 'MANUAL']
 
 /**
  * Setelan seperti dibaca dari server. Kredensial TAK pernah dikembalikan — hanya penanda
