@@ -265,6 +265,7 @@ class CustomerApiService(
                 address = command.address,
                 location = command.location,
                 areaId = command.areaId,
+                idCardNumber = command.idCardNumber,
             ),
         ).id
 

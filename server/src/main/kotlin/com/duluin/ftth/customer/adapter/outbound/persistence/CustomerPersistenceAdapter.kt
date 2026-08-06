@@ -27,6 +27,7 @@ class CustomerPersistenceAdapter(
             address = customer.address
             location = Geometries.point(customer.location)
             areaId = customer.areaId
+            idCardNumber = customer.idCardNumber
             status = customer.status
         } ?: CustomerJpaEntity(
             id = customer.id,
@@ -37,6 +38,7 @@ class CustomerPersistenceAdapter(
             address = customer.address,
             location = Geometries.point(customer.location),
             areaId = customer.areaId,
+            idCardNumber = customer.idCardNumber,
             status = customer.status,
         )
         return jpa.save(entity).toDomain()
@@ -115,5 +117,6 @@ internal fun CustomerJpaEntity.toDomain(): Customer = Customer.rehydrate(
     address = address,
     location = location.toCoordinate(),
     areaId = areaId,
+    idCardNumber = idCardNumber,
     status = status,
 )

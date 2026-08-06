@@ -128,6 +128,7 @@ export interface CustomerView {
   address: string
   location: Coordinate
   areaId: string | null
+  idCardNumber: string | null
   status: CustomerStatus
   subscriptions: SubscriptionView[]
   onus: OnuView[]

@@ -343,6 +343,7 @@ function RingkasanTab({
           <Field label="Alamat" value={customer.address} />
           <Field label="Telepon" value={customer.phone ?? '—'} />
           <Field label="Email" value={customer.email ?? '—'} />
+          <Field label="NIK / No. identitas" value={customer.idCardNumber ?? '—'} />
           <Field label="Koordinat" value={`${customer.location.latitude}, ${customer.location.longitude}`} />
         </div>
       </div>

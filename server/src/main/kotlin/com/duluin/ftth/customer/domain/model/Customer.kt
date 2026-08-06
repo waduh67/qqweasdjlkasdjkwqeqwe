@@ -29,6 +29,7 @@ class Customer private constructor(
     address: String,
     location: Coordinate,
     areaId: UUID?,
+    idCardNumber: String?,
     status: CustomerStatus,
 ) {
     var name: String = name
@@ -49,6 +50,10 @@ class Customer private constructor(
     var areaId: UUID? = areaId
         private set
 
+    /** Nomor identitas (NIK/KTP/paspor) — opsional; berguna untuk KYC & pelaporan regulasi ISP. */
+    var idCardNumber: String? = idCardNumber
+        private set
+
     var status: CustomerStatus = status
         private set
 
@@ -59,6 +64,7 @@ class Customer private constructor(
         address: String,
         location: Coordinate,
         areaId: UUID?,
+        idCardNumber: String?,
     ) {
         this.name = validateName(name)
         this.phone = normalizePhone(phone)
@@ -66,6 +72,7 @@ class Customer private constructor(
         this.address = validateAddress(address)
         this.location = location
         this.areaId = areaId
+        this.idCardNumber = normalizeIdCard(idCardNumber)
     }
 
     fun changeStatus(status: CustomerStatus) {
@@ -95,6 +102,7 @@ class Customer private constructor(
             address: String,
             location: Coordinate,
             areaId: UUID?,
+            idCardNumber: String? = null,
             status: CustomerStatus = CustomerStatus.PROSPECT,
         ): Customer = Customer(
             id = UuidV7.generate(),
@@ -106,6 +114,7 @@ class Customer private constructor(
             address = validateAddress(address),
             location = location,
             areaId = areaId,
+            idCardNumber = normalizeIdCard(idCardNumber),
             status = status,
         )
 
@@ -120,8 +129,9 @@ class Customer private constructor(
             address: String,
             location: Coordinate,
             areaId: UUID?,
+            idCardNumber: String?,
             status: CustomerStatus,
-        ): Customer = Customer(id, tenantId, code, name, phone, email, address, location, areaId, status)
+        ): Customer = Customer(id, tenantId, code, name, phone, email, address, location, areaId, idCardNumber, status)
 
         private fun validateCode(code: String): String {
             val normalized = code.trim().uppercase()
@@ -156,6 +166,16 @@ class Customer private constructor(
                 throw ValidationException("Nomor telepon '$phone' tidak valid")
             }
             return normalized
+        }
+
+        /**
+         * Menormalkan nomor identitas: kosong → null. Sengaja longgar (tak memaksa 16 digit NIK)
+         * agar paspor/KITAS pun bisa disimpan; hanya batasi panjang agar tak jadi teks bebas.
+         */
+        private fun normalizeIdCard(idCardNumber: String?): String? {
+            val trimmed = idCardNumber?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+            if (trimmed.length > 32) throw ValidationException("Nomor identitas maksimal 32 karakter")
+            return trimmed
         }
     }
 }

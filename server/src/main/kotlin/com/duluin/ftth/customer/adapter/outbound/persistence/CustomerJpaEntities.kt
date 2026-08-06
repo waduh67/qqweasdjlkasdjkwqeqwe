@@ -40,6 +40,9 @@ class CustomerJpaEntity(
     @Column(name = "area_id")
     var areaId: UUID?,
 
+    @Column(name = "id_card_number", length = 32)
+    var idCardNumber: String?,
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var status: CustomerStatus,

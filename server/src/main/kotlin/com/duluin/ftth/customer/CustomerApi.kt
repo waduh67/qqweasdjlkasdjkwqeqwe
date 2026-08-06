@@ -176,6 +176,8 @@ data class RegisterCustomerCommand(
     val address: String,
     val location: Coordinate,
     val areaId: UUID?,
+    /** Nomor identitas (NIK/KTP/paspor); opsional. */
+    val idCardNumber: String? = null,
 )
 
 /**

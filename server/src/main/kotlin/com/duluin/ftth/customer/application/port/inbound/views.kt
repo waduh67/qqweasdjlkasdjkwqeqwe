@@ -18,6 +18,7 @@ data class CustomerView(
     val address: String,
     val location: Coordinate,
     val areaId: UUID?,
+    val idCardNumber: String?,
     val status: CustomerStatus,
     val subscriptions: List<SubscriptionView>,
     val onus: List<OnuView>,

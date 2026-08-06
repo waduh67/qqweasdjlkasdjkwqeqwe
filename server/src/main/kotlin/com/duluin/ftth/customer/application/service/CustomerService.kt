@@ -61,6 +61,7 @@ class CustomerService(
                 address = command.address,
                 location = command.location,
                 areaId = command.areaId,
+                idCardNumber = command.idCardNumber,
             ),
         )
         auditor.record(
@@ -79,6 +80,7 @@ class CustomerService(
             address = command.address,
             location = command.location,
             areaId = command.areaId,
+            idCardNumber = command.idCardNumber,
         )
         val saved = customerRepository.save(customer)
         auditor.record("customer.updated", "Customer", saved.id, saved.tenantId, mapOf("code" to saved.code))

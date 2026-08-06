@@ -170,6 +170,7 @@ data class CustomerRequest(
     @field:NotBlank @field:Size(max = 500) val address: String,
     @field:Valid val location: CustomerLocationRequest,
     val areaId: UUID? = null,
+    @field:Size(max = 32) val idCardNumber: String? = null,
 )
 
 data class CustomerStatusRequest(val status: CustomerStatus)
@@ -201,6 +202,7 @@ private fun CustomerRequest.toCommand() = SaveCustomerCommand(
     address = address,
     location = Coordinate(location.longitude, location.latitude),
     areaId = areaId,
+    idCardNumber = idCardNumber,
 )
 
 private fun SubscriptionRequest.toCommand() = SaveSubscriptionCommand(

@@ -9,7 +9,7 @@ import { LocationPicker } from '../components/LocationPicker'
 import { EmptyState, Modal, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
 import { IconCustomers, IconInbox, IconPlus } from '../components/icons'
 
-const EMPTY_CUSTOMER = { code: '', name: '', phone: '', address: '', longitude: '', latitude: '' }
+const EMPTY_CUSTOMER = { code: '', name: '', phone: '', idCardNumber: '', address: '', longitude: '', latitude: '' }
 
 const STATUS_OPTIONS: { value: CustomerStatus | ''; label: string }[] = [
   { value: '', label: 'Semua status' },
@@ -72,6 +72,7 @@ export function CustomersPage() {
         code: draft.code.trim() || undefined,
         name: draft.name,
         phone: draft.phone || null,
+        idCardNumber: draft.idCardNumber.trim() || null,
         address: draft.address,
         location: { longitude: Number(draft.longitude), latitude: Number(draft.latitude) },
       })
@@ -181,10 +182,16 @@ export function CustomersPage() {
                 <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} autoFocus />
               </label>
             </div>
-            <label>
-              <span>Telepon</span>
-              <input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} placeholder="08123456789" />
-            </label>
+            <div className="row">
+              <label style={{ flex: 1 }}>
+                <span>Telepon</span>
+                <input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} placeholder="08123456789" />
+              </label>
+              <label style={{ flex: 1 }}>
+                <span>NIK / No. identitas</span>
+                <input value={draft.idCardNumber} onChange={(e) => setDraft({ ...draft, idCardNumber: e.target.value })} placeholder="opsional" />
+              </label>
+            </div>
             <label>
               <span>Alamat</span>
               <input value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} />
