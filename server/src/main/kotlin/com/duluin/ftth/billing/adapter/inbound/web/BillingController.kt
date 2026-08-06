@@ -55,6 +55,11 @@ class BillingController(
     @Operation(summary = "Batalkan tagihan (ditolak bila sudah lunas)")
     fun voidInvoice(@PathVariable id: UUID): InvoiceView = invoices.void(id)
 
+    @PostMapping("/invoices/{id}/recharge")
+    @PreAuthorize("@authz.can('billing.invoice.manage')")
+    @Operation(summary = "Buat ulang tautan bayar tagihan lewat penyedia gateway aktif")
+    fun recharge(@PathVariable id: UUID): InvoiceView = invoices.refreshPaymentLink(id)
+
     @PostMapping("/invoices/{id}/pay")
     @PreAuthorize("@authz.can('billing.payment.manage')")
     @Operation(summary = "Catat pembayaran manual sebuah tagihan")

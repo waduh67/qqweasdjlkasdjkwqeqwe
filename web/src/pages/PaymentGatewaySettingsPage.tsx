@@ -279,9 +279,12 @@ export function PaymentGatewaySettingsPage() {
 
   const supported = SUPPORTED_PROVIDERS.includes(form.provider)
   const fields = credFields(form.provider)
-  // URL webhook Paywuz per-tenant (readonly, untuk disalin ke dashboard Paywuz). Origin = URL aplikasi
-  // saat ini; di produksi inilah alamat publik yang dipanggil balik oleh Paywuz.
-  const paywuzWebhookUrl = `${window.location.origin}/api/billing/webhooks/${user?.tenantId ?? '<tenant>'}/paywuz`
+  // URL webhook per-tenant (readonly, untuk disalin ke dashboard penyedia). Origin = URL aplikasi
+  // saat ini; di produksi inilah alamat publik yang dipanggil balik. Path memakai SLUG tenant —
+  // BillingWebhookController me-resolve tenant lewat slug, bukan UUID. Segmen penyedia (lowercase)
+  // hanya untuk routing/log; gateway sebenarnya ditentukan setelan aktif tenant.
+  const webhookUrl = (provider: PaymentProvider) =>
+    `${window.location.origin}/api/billing/webhooks/${user?.tenantSlug ?? '<tenant>'}/${provider.toLowerCase()}`
   // Saat gateway mati (atau penyedia MANUAL), pembayaran manual adalah satu-satunya cara bayar.
   const showManual = !form.enabled || form.provider === 'MANUAL'
 
@@ -385,48 +388,46 @@ export function PaymentGatewaySettingsPage() {
             ))}
 
             {form.provider === 'PAYWUZ' && (
-              <>
-                <PaywuzMethodField
-                  value={form.paymentMethod}
-                  onChange={(paymentMethod) => setForm({ ...form, paymentMethod })}
-                  disabled={!manage}
-                />
-                <WebhookField url={paywuzWebhookUrl} onCopy={() => void copyToClipboard(paywuzWebhookUrl)} />
-              </>
+              <PaywuzMethodField
+                value={form.paymentMethod}
+                onChange={(paymentMethod) => setForm({ ...form, paymentMethod })}
+                disabled={!manage}
+              />
             )}
 
             {form.provider === 'XENDIT' && (
               <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-                Secret key dari dashboard Xendit (Settings → API Keys). Webhook token = <code>x-callback-token</code>;
-                arahkan URL callback Xendit ke <code>/api/billing/webhooks/&lt;tenant&gt;/xendit</code>.
+                Secret key dari dashboard Xendit (Settings → API Keys). Webhook token = <code>x-callback-token</code>.
               </p>
             )}
             {form.provider === 'MIDTRANS' && (
               <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
                 <strong>Server Key</strong> dari dashboard Midtrans (Settings → Access Keys). Key berprefiks{' '}
                 <code>SB-</code> otomatis dianggap <strong>sandbox</strong>, tanpa prefiks = <strong>produksi</strong>.
-                Satu key ini dipakai untuk menagih (Snap) <em>sekaligus</em> memverifikasi signature webhook — jadi tak
-                ada token webhook terpisah. Di dashboard Midtrans (Settings → Configuration), setel{' '}
-                <strong>Payment Notification URL</strong> ke <code>/api/billing/webhooks/&lt;tenant&gt;/midtrans</code>.
+                Satu key ini dipakai untuk menagih (Snap) <em>sekaligus</em> memverifikasi signature webhook.
               </p>
             )}
             {form.provider === 'PIVOT' && (
               <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
                 Merchant ID &amp; Secret dari dashboard Pivot (Settings → API Keys). Callback API Key dari halaman
-                Callbacks; arahkan URL callback Pivot ke <code>/api/billing/webhooks/&lt;tenant&gt;/pivot</code>.
-                Server juga wajib mengisi <code>FTTH_BILLING_PIVOT_REDIRECT_BASE_URL</code>.
+                Callbacks. Server juga wajib mengisi <code>FTTH_BILLING_PIVOT_REDIRECT_BASE_URL</code>.
               </p>
             )}
             {form.provider === 'PAYWUZ' && (
               <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-                <strong>API key</strong> proyek diambil dari dashboard Paywuz (<code>pk_live_…</code> untuk produksi,{' '}
-                <code>pk_sand_…</code> untuk uji coba). Satu key ini dipakai untuk menagih <em>sekaligus</em> memverifikasi
-                webhook — jadi tak ada token webhook terpisah. <strong>Metode pembayaran</strong> menentukan cara pelanggan
-                membayar: <code>QRIS</code> menampilkan satu kode QR untuk semua bank/e-wallet, sedangkan{' '}
-                <strong>Virtual Account</strong> membuat nomor VA dan pelanggan memilih banknya saat membayar. Salin{' '}
-                <strong>URL webhook</strong> di bawah dan tempel ke dashboard Paywuz (menu Callback/Webhook) agar status
-                pembayaran otomatis masuk ke sistem.
+                <strong>API key</strong> proyek dari dashboard Paywuz (<code>pk_live_…</code> produksi,{' '}
+                <code>pk_sand_…</code> uji coba) — satu key untuk menagih <em>sekaligus</em> memverifikasi webhook.{' '}
+                <strong>Metode pembayaran</strong>: <code>QRIS</code> satu kode QR untuk semua bank/e-wallet;{' '}
+                <strong>Virtual Account</strong> memberi nomor VA per bank.
               </p>
+            )}
+
+            {supported && (
+              <WebhookField
+                url={webhookUrl(form.provider)}
+                hint={webhookHint(form.provider)}
+                onCopy={() => void copyToClipboard(webhookUrl(form.provider))}
+              />
             )}
               </div>
             )}
@@ -886,7 +887,7 @@ function PaywuzMethodField({
  * dashboard penyedia agar status pembayaran otomatis masuk. URL tak bisa disunting di sini —
  * ia turunan tenant + alamat aplikasi.
  */
-function WebhookField({ url, onCopy }: { url: string; onCopy: () => void }) {
+function WebhookField({ url, hint, onCopy }: { url: string; hint: string; onCopy: () => void }) {
   return (
     <div className="stack" style={{ gap: '0.4rem' }}>
       <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>URL webhook</span>
@@ -897,10 +898,26 @@ function WebhookField({ url, onCopy }: { url: string; onCopy: () => void }) {
         </button>
       </div>
       <span className="muted" style={{ fontSize: '0.82rem' }}>
-        Tempel ke menu Callback/Webhook di dashboard Paywuz. Alamatnya unik per-tenant.
+        {hint} Alamatnya unik per-tenant.
       </span>
     </div>
   )
+}
+
+/** Tempat menempel URL webhook di dashboard tiap penyedia — jadi teks bantuan `WebhookField`. */
+function webhookHint(provider: PaymentProvider): string {
+  switch (provider) {
+    case 'XENDIT':
+      return 'Tempel sebagai Callback URL di dashboard Xendit (Settings → Webhooks).'
+    case 'MIDTRANS':
+      return 'Tempel sebagai Payment Notification URL di dashboard Midtrans (Settings → Configuration).'
+    case 'PIVOT':
+      return 'Tempel sebagai Callback URL di dashboard Pivot (menu Callbacks).'
+    case 'PAYWUZ':
+      return 'Tempel ke menu Callback/Webhook di dashboard Paywuz.'
+    default:
+      return 'Tempel ke menu Callback/Webhook di dashboard penyedia.'
+  }
 }
 
 function Segmented<T extends string>({

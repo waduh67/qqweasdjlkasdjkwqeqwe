@@ -59,6 +59,14 @@ BillingScheduler  @Scheduled(fixedDelayString = "${ftth.billing.scheduler-interv
 - **`enforce`** menandai invoice yang lewat `dueAt + graceDays` menjadi OVERDUE
   dan (opsional) mengisolir langganannya.
 
+> **Bayar ikut penyedia aktif.** `payUrl` sebuah invoice dibuat **sekali** saat terbit,
+> lewat penyedia yang aktif saat itu. Bila operator mengganti penyedia setelahnya, tagihan
+> lama masih menyimpan tautan penyedia lama. `POST /invoices/{id}/recharge`
+> (`InvoiceGenerator.refreshCharge` → `ManageInvoiceUseCase.refreshPaymentLink`) me-resolve
+> penyedia **aktif sekarang** dan membuat charge baru bila berbeda (idempoten bila sama;
+> tanpa tautan bila MANUAL; ditolak untuk PAID/VOID). Tombol **bayar** di UI memanggil
+> endpoint ini sebelum membuka tautan, jadi pembayaran selalu ikut setelan terbaru.
+
 ---
 
 ## Pembayaran & gateway per-tenant
@@ -145,6 +153,7 @@ Pembayaran manual juga bisa lewat `POST /api/billing/invoices/{id}/pay`
 | `GET /api/billing/invoices` · `/{id}` | `billing.invoice.view` |
 | `POST /api/billing/invoices/generate` | `billing.invoice.manage` |
 | `POST /api/billing/invoices/{id}/void` | `billing.invoice.manage` |
+| `POST /api/billing/invoices/{id}/recharge` | `billing.invoice.manage` |
 | `POST /api/billing/invoices/{id}/pay` | `billing.payment.manage` |
 | `GET /api/billing/payments` | `billing.invoice.view` |
 | `GET · PUT /api/billing/gateway-settings` | `billing.gateway.view` / `billing.gateway.manage` |
