@@ -17,9 +17,18 @@
 -- Normalisasi SEMUA baris ke 'PIVOT'|'MANUAL' sebelum CHECK baru — tahan case/spasi & idempotent
 -- (aman diulang). Apa pun selain PIVOT (case-insensitive) turun ke MANUAL sebagai fallback aman,
 -- termasuk penyedia lama (XENDIT/PAYWUZ/MIDTRANS) & nilai tak terduga dari percobaan migrasi gagal.
+--
+-- RLS DIMATIKAN sementara saat normalisasi: Flyway jalan sebagai role NOBYPASSRLS & GUC
+-- app.tenant_id tak di-set, jadi UPDATE ter-RLS (FORCE) MEMFILTER semua baris → 0 baris ternormalkan,
+-- padahal ADD CONSTRAINT di bawah memindai SEMUA baris fisik (lolos RLS) → CHECK gagal oleh baris
+-- lama. FORCE ROW LEVEL SECURITY bertahan melewati ENABLE (pola sama V29/V39/V44/V46).
+ALTER TABLE tenant_payment_gateway DISABLE ROW LEVEL SECURITY;
+
 UPDATE tenant_payment_gateway
 SET provider = CASE WHEN upper(btrim(provider)) = 'PIVOT' THEN 'PIVOT' ELSE 'MANUAL' END
 WHERE provider IS DISTINCT FROM 'PIVOT' AND provider IS DISTINCT FROM 'MANUAL';
+
+ALTER TABLE tenant_payment_gateway ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE tenant_payment_gateway DROP CONSTRAINT IF EXISTS ck_tpg_provider;
 ALTER TABLE tenant_payment_gateway DROP CONSTRAINT IF EXISTS ck_tpg_mode;
