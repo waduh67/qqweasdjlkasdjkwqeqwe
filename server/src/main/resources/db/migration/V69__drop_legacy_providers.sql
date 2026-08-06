@@ -14,8 +14,12 @@
 -- ------------------------------------------------------------
 -- tenant_payment_gateway — buang kredensial BYO & normalisasi penyedia ke PIVOT|MANUAL.
 -- ------------------------------------------------------------
--- Penyedia lama (XENDIT/PAYWUZ/MIDTRANS) turun ke MANUAL (fallback aman) sebelum CHECK baru.
-UPDATE tenant_payment_gateway SET provider = 'MANUAL' WHERE provider NOT IN ('PIVOT', 'MANUAL');
+-- Normalisasi SEMUA baris ke 'PIVOT'|'MANUAL' sebelum CHECK baru — tahan case/spasi & idempotent
+-- (aman diulang). Apa pun selain PIVOT (case-insensitive) turun ke MANUAL sebagai fallback aman,
+-- termasuk penyedia lama (XENDIT/PAYWUZ/MIDTRANS) & nilai tak terduga dari percobaan migrasi gagal.
+UPDATE tenant_payment_gateway
+SET provider = CASE WHEN upper(btrim(provider)) = 'PIVOT' THEN 'PIVOT' ELSE 'MANUAL' END
+WHERE provider IS DISTINCT FROM 'PIVOT' AND provider IS DISTINCT FROM 'MANUAL';
 
 ALTER TABLE tenant_payment_gateway DROP CONSTRAINT IF EXISTS ck_tpg_provider;
 ALTER TABLE tenant_payment_gateway DROP CONSTRAINT IF EXISTS ck_tpg_mode;
