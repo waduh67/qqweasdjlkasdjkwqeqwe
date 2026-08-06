@@ -303,6 +303,14 @@ export function ImportCustomersPage() {
           Kolom dicocokkan lewat nama header (urutan bebas): {CUSTOMER_CSV_COLUMNS.join(', ')}. Hasil{' '}
           <strong>Ekspor CSV</strong> dari halaman Pelanggan bisa langsung diunggah kembali.
         </p>
+        <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+          <code>connection_type</code>: isi <code>pppoe</code> (atau kosongkan) — v1 hanya memproses PPPoE;
+          tipe lain (<code>hotspot</code>, <code>static</code>, <code>dhcp</code>) akan dilewati.
+          <br />
+          <code>installation_date</code>: <code>YYYY-MM-DD</code> (juga menerima <code>DD/MM/YYYY</code>).{' '}
+          <code>next_billing</code>: tanggal tagih 1–28. <code>mikrotik_password</code> kosong = pertahankan
+          yang lama.
+        </p>
       </div>
 
       {/* 2. Pratinjau */}
