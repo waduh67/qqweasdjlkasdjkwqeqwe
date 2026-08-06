@@ -82,7 +82,28 @@ interface BngApi {
      * jadi satu baris; agregasi per-pelanggan diserahkan ke pemanggil. RLS-scoped.
      */
     fun activeSubscriberLiveness(): List<SubscriberPppoeLiveness>
+
+    /**
+     * Seluruh akun jaringan tenant untuk EKSPOR CSV pelanggan (simetris dengan impor). Anchor =
+     * `username` (kunci upsert). Membawa taut ke langganan & pemiliknya plus nama BRAS ter-resolusi,
+     * TANPA secret — password PPPoE tak pernah diekspor (impor ulang memperlakukan kolom kosong =
+     * "pertahankan"). Terurut menurut username agar keluaran CSV deterministik. RLS-scoped.
+     */
+    fun exportAccesses(): List<AccessExportRef>
 }
+
+/**
+ * Identitas ringkas satu akun jaringan untuk EKSPOR CSV pelanggan. [authType] nama tipe layanan
+ * (mis. "PPPOE") yang dipetakan ke kolom `connection_type`; [nasName] nama BRAS ter-resolusi untuk
+ * kolom `router_name` (null bila akun tak ber-BRAS). TANPA secret.
+ */
+data class AccessExportRef(
+    val username: String,
+    val authType: String,
+    val subscriptionId: UUID,
+    val customerId: UUID,
+    val nasName: String?,
+)
 
 /**
  * Keadaan hidup satu akun PPPoE ACTIVE untuk penilaian alarm lintas-module. Tanpa rahasia

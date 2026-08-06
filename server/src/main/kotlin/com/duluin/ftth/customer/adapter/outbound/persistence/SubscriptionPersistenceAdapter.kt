@@ -52,6 +52,9 @@ class SubscriptionPersistenceAdapter(
     override fun findByCustomerIds(customerIds: Set<UUID>): List<Subscription> =
         if (customerIds.isEmpty()) emptyList() else jpa.findByCustomerIdIn(customerIds).map { it.toDomain() }
 
+    override fun findByIds(ids: Set<UUID>): List<Subscription> =
+        if (ids.isEmpty()) emptyList() else jpa.findAllById(ids).map { it.toDomain() }
+
     override fun findBillableForCurrentTenant(): List<Subscription> =
         jpa.findByStatusIn(BILLABLE_STATUSES).map { it.toDomain() }
 

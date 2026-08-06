@@ -15,6 +15,9 @@ interface SubscriptionRepository {
 
     fun findByCustomerIds(customerIds: Set<UUID>): List<Subscription>
 
+    /** Resolusi sekumpulan langganan sekaligus (ekspor CSV); id yang tak ada diabaikan. */
+    fun findByIds(ids: Set<UUID>): List<Subscription>
+
     /** Langganan ACTIVE/ISOLATED tenant aktif — kandidat penagihan periode berjalan. */
     fun findBillableForCurrentTenant(): List<Subscription>
 

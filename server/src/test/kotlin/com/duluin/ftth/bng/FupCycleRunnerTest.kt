@@ -214,6 +214,7 @@ private class FakeSubscriberAccessRepo(private val active: List<SubscriberAccess
     override fun existsBySubscriptionId(subscriptionId: UUID): Boolean = notUsed()
     override fun countByNasId(nasId: UUID): Long = notUsed()
     override fun deleteById(id: UUID): Unit = notUsed()
+    override fun findAll(): List<com.duluin.ftth.bng.domain.model.SubscriberAccess> = notUsed()
     private fun notUsed(): Nothing = throw UnsupportedOperationException("tak dipakai di uji ini")
 }
 

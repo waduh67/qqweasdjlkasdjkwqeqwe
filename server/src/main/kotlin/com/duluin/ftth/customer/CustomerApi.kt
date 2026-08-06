@@ -174,7 +174,36 @@ interface CustomerApi {
      * masih ditagih). Customer tetap satu-satunya yang menyentuh tabelnya (RLS per tenant).
      */
     fun subscriberStats(): SubscriberStats
+
+    /**
+     * Baris EKSPOR CSV per langganan: snapshot langganan (paket, aktivasi, hari tanggal tagih)
+     * DIGABUNG biodata pemiliknya (email, alamat, NIK, koordinat). Dipetakan per subscriptionId;
+     * id yang tak ditemukan (atau pemiliknya hilang) diabaikan. Join langganan→pelanggan terjadi
+     * DI DALAM module customer (agregatnya sendiri), jadi onboarding cukup memadukan dengan akun
+     * jaringan menurut subscriptionId. RLS-scoped.
+     */
+    fun findExportRows(subscriptionIds: Set<UUID>): List<CustomerExportRow>
 }
+
+/**
+ * Baris ekspor gabungan langganan + biodata pemiliknya untuk CSV pelanggan. Berbeda dari
+ * [SubscriptionRef]/[CustomerRef] yang sengaja ringkas — ekspor butuh kolom lengkap agar hasilnya
+ * bisa diimpor ulang. [activatedAt] jadi kolom `installation_date`, [billingDayOfMonth] jadi
+ * `next_billing`. Tanpa rahasia apa pun (password akun tak pernah lewat sini).
+ */
+data class CustomerExportRow(
+    val subscriptionId: UUID,
+    val customerId: UUID,
+    val name: String,
+    val phone: String?,
+    val email: String?,
+    val address: String,
+    val idCardNumber: String?,
+    val location: Coordinate,
+    val packageName: String,
+    val activatedAt: Instant?,
+    val billingDayOfMonth: Int?,
+)
 
 /**
  * Potret pelanggan & langganan satu tenant untuk laporan.

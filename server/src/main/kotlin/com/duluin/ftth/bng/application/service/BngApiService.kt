@@ -1,5 +1,6 @@
 package com.duluin.ftth.bng.application.service
 
+import com.duluin.ftth.bng.AccessExportRef
 import com.duluin.ftth.bng.BngApi
 import com.duluin.ftth.bng.ImportedAccessRef
 import com.duluin.ftth.bng.PppSecretRef
@@ -147,6 +148,22 @@ class BngApiService(
             startedAt = session?.startedAt,
             lastSeenAt = session?.lastSeenAt,
         )
+    }
+
+    override fun exportAccesses(): List<AccessExportRef> {
+        val accounts = subscriberAccessRepository.findAll()
+        if (accounts.isEmpty()) return emptyList()
+        // Nama BRAS di-resolusi lewat satu peta (hindari N+1); akun tanpa BRAS → nama null.
+        val nasNames = nasRepository.findAll().associate { it.id to it.name }
+        return accounts.map { access ->
+            AccessExportRef(
+                username = access.username,
+                authType = access.authType.name,
+                subscriptionId = access.subscriptionId,
+                customerId = access.customerId,
+                nasName = access.nasId?.let { nasNames[it] },
+            )
+        }
     }
 
     override fun activeSubscriberLiveness(): List<SubscriberPppoeLiveness> {

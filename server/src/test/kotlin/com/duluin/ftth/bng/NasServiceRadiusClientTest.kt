@@ -277,5 +277,6 @@ class NasServiceRadiusClientTest {
         override fun findByPlanId(planId: UUID): List<SubscriberAccess> = throw UnsupportedOperationException()
         override fun existsBySubscriptionId(subscriptionId: UUID): Boolean = throw UnsupportedOperationException()
         override fun deleteById(id: UUID): Unit = throw UnsupportedOperationException()
+        override fun findAll(): List<com.duluin.ftth.bng.domain.model.SubscriberAccess> = throw UnsupportedOperationException()
     }
 }

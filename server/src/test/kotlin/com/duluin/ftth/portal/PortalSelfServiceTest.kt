@@ -231,6 +231,7 @@ class PortalSelfServiceTest {
         override fun resolveNasByName(name: String) = throw UnsupportedOperationException()
         override fun findAccessByUsername(username: String) = throw UnsupportedOperationException()
         override fun updateAccessFromImport(accessId: UUID, planId: UUID, nasId: UUID?, secret: String?) = throw UnsupportedOperationException()
+        override fun exportAccesses(): List<com.duluin.ftth.bng.AccessExportRef> = throw UnsupportedOperationException()
     }
 
     private class FakeCpeApi(private val devices: List<CpeDeviceStatusRef>) : CpeApi {

@@ -61,6 +61,9 @@ interface SubscriberAccessRepository {
 
     fun findById(id: UUID): SubscriberAccess?
 
+    /** Semua akun tenant aktif, terurut username — dipakai ekspor CSV pelanggan (anchor username). */
+    fun findAll(): List<SubscriberAccess>
+
     fun findByCustomerId(customerId: UUID): List<SubscriberAccess>
 
     fun findBySubscriptionId(subscriptionId: UUID): List<SubscriberAccess>

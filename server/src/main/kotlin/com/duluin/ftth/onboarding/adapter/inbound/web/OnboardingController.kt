@@ -1,7 +1,9 @@
 package com.duluin.ftth.onboarding.adapter.inbound.web
 
 import com.duluin.ftth.common.domain.geo.Coordinate
+import com.duluin.ftth.onboarding.application.port.inbound.CustomerExportLine
 import com.duluin.ftth.onboarding.application.port.inbound.CustomerImportRow
+import com.duluin.ftth.onboarding.application.port.inbound.ExportCustomersUseCase
 import com.duluin.ftth.onboarding.application.port.inbound.ExpressOnboardingUseCase
 import com.duluin.ftth.onboarding.application.port.inbound.ExpressPsbCommand
 import com.duluin.ftth.onboarding.application.port.inbound.ExpressPsbResult
@@ -21,8 +23,12 @@ import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -47,6 +53,7 @@ class OnboardingController(
     private val onboarding: ExpressOnboardingUseCase,
     private val importPppoe: ImportPppoeUseCase,
     private val importCustomers: ImportCustomersUseCase,
+    private val exportCustomers: ExportCustomersUseCase,
 ) {
 
     @PostMapping("/psb")
@@ -82,6 +89,75 @@ class OnboardingController(
     )
     fun importCustomers(@Valid @RequestBody request: ImportCustomersRequest): ImportCustomersResult =
         importCustomers.importCustomers(request.toCommand())
+
+    /**
+     * Ekspor CSV pelanggan (kebalikan simetris impor) — satu baris per akun jaringan, kolom cocok
+     * template impor sehingga hasilnya bisa diunggah kembali. `mikrotik_password` & `notes` selalu
+     * KOSONG (rahasia tak diekspor; kolom kosong = "pertahankan" saat diimpor ulang). Digating izin
+     * BACA union (lihat/telaah pelanggan, langganan, akun jaringan). Membalas `text/csv` sebagai
+     * unduhan berkas.
+     */
+    @GetMapping("/export/customers", produces = ["text/csv"])
+    @PreAuthorize(
+        "@authz.canAll('customer.customer.view','customer.subscription.view','bng.access.view')",
+    )
+    fun exportCustomers(): ResponseEntity<ByteArray> {
+        val csv = CustomerCsv.render(exportCustomers.exportCustomers())
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"pelanggan.csv\"")
+            .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+            .body(csv.toByteArray(Charsets.UTF_8))
+    }
+}
+
+/**
+ * Penulis CSV pelanggan (satu-satunya tempat urutan & escaping kolom hidup, di sisi adapter web).
+ * Header identik template impor agar keluaran ekspor bisa diunggah kembali tanpa penyesuaian.
+ * Kolom `mikrotik_password` & `notes` selalu kosong.
+ */
+internal object CustomerCsv {
+
+    /** Urutan kolom = template impor. Diubah = klien impor/ekspor harus ikut disesuaikan. */
+    private val HEADER = listOf(
+        "name", "phone", "address", "package_name", "connection_type", "installation_date",
+        "mikrotik_username", "mikrotik_password", "email", "router_name", "id_card_number",
+        "next_billing", "latitude", "longitude", "notes",
+    )
+
+    fun render(lines: List<CustomerExportLine>): String {
+        val sb = StringBuilder()
+        sb.append(HEADER.joinToString(",") { escape(it) }).append("\r\n")
+        for (line in lines) {
+            sb.append(
+                listOf(
+                    line.name.orEmpty(),
+                    line.phone.orEmpty(),
+                    line.address.orEmpty(),
+                    line.packageName.orEmpty(),
+                    line.connectionType,
+                    line.installationDate?.toString().orEmpty(),
+                    line.mikrotikUsername,
+                    "", // mikrotik_password — sengaja kosong (rahasia tak diekspor)
+                    line.email.orEmpty(),
+                    line.routerName.orEmpty(),
+                    line.idCardNumber.orEmpty(),
+                    line.nextBillingDay?.toString().orEmpty(),
+                    line.latitude?.toString().orEmpty(),
+                    line.longitude?.toString().orEmpty(),
+                    "", // notes — tak dipetakan ke model
+                ).joinToString(",") { escape(it) },
+            ).append("\r\n")
+        }
+        return sb.toString()
+    }
+
+    /** Escaping RFC-4180: bungkus tanda kutip bila mengandung koma/kutip/baris-baru; kutip digandakan. */
+    private fun escape(value: String): String =
+        if (value.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) {
+            "\"" + value.replace("\"", "\"\"") + "\""
+        } else {
+            value
+        }
 }
 
 /**

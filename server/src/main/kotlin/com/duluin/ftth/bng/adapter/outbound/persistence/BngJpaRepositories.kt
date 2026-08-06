@@ -23,6 +23,7 @@ interface NasAreaJpaRepository : JpaRepository<NasAreaJpaEntity, UUID> {
 }
 
 interface SubscriberAccessJpaRepository : JpaRepository<SubscriberAccessJpaEntity, UUID> {
+    fun findAllByOrderByUsernameAsc(): List<SubscriberAccessJpaEntity>
     fun findByCustomerIdOrderByUsernameAsc(customerId: UUID): List<SubscriberAccessJpaEntity>
     fun findBySubscriptionId(subscriptionId: UUID): List<SubscriberAccessJpaEntity>
     fun findByUsername(username: String): SubscriberAccessJpaEntity?

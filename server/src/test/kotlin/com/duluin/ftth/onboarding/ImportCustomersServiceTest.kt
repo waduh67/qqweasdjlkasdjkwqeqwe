@@ -328,6 +328,7 @@ class ImportCustomersServiceTest {
         override fun resolveNasForArea(areaId: UUID) = throw UnsupportedOperationException()
         override fun fetchPppSecretsFromNas(nasId: UUID) = throw UnsupportedOperationException()
         override fun activeSubscriberLiveness() = throw UnsupportedOperationException()
+        override fun exportAccesses() = throw UnsupportedOperationException()
     }
 
     data class AccessUpdate(val accessId: UUID, val planId: UUID, val nasId: UUID?, val secret: String?)
@@ -382,5 +383,6 @@ class ImportCustomersServiceTest {
         override fun isolateForBilling(subscriptionId: UUID) = throw UnsupportedOperationException()
         override fun reactivateForBilling(subscriptionId: UUID) = throw UnsupportedOperationException()
         override fun terminateForDismantle(subscriptionId: UUID) = throw UnsupportedOperationException()
+        override fun findExportRows(subscriptionIds: Set<UUID>) = throw UnsupportedOperationException()
     }
 }

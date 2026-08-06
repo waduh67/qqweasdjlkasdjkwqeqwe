@@ -5,6 +5,7 @@ import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.customer.BillableSubscription
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.CustomerPlacement
+import com.duluin.ftth.customer.CustomerExportRow
 import com.duluin.ftth.customer.CustomerRef
 import com.duluin.ftth.customer.OdpOccupant
 import com.duluin.ftth.customer.OnuPlacementRef
@@ -306,6 +307,35 @@ class CustomerApiService(
     @Transactional
     override fun overrideSubscriptionBillingDay(subscriptionId: UUID, billingDayOfMonth: Int?) {
         manageSubscription.overrideBilling(subscriptionId, billingDayOfMonth)
+    }
+
+    /**
+     * Merakit baris ekspor: ambil langganan yang diminta, resolusi pemiliknya dalam satu query,
+     * lalu gabungkan. Langganan yang pemiliknya hilang (data anomali) dilewati agar ekspor tetap
+     * jalan alih-alih gagal total.
+     */
+    override fun findExportRows(subscriptionIds: Set<UUID>): List<CustomerExportRow> {
+        if (subscriptionIds.isEmpty()) return emptyList()
+        val subscriptions = subscriptionRepository.findByIds(subscriptionIds)
+        if (subscriptions.isEmpty()) return emptyList()
+        val customers = customerRepository.findAllByIds(subscriptions.mapTo(HashSet()) { it.customerId })
+            .associateBy { it.id }
+        return subscriptions.mapNotNull { subscription ->
+            val customer = customers[subscription.customerId] ?: return@mapNotNull null
+            CustomerExportRow(
+                subscriptionId = subscription.id,
+                customerId = customer.id,
+                name = customer.name,
+                phone = customer.phone,
+                email = customer.email,
+                address = customer.address,
+                idCardNumber = customer.idCardNumber,
+                location = customer.location,
+                packageName = subscription.packageName,
+                activatedAt = subscription.activatedAt,
+                billingDayOfMonth = subscription.billingDayOfMonth,
+            )
+        }
     }
 
     private fun Subscription.toBillable() = BillableSubscription(
