@@ -81,6 +81,11 @@ jobs:
           tags: |
             ${{ env.IMAGE_PREFIX }}/ftth-server:latest
             ${{ env.IMAGE_PREFIX }}/ftth-server:${{ github.sha }}
+          # Matikan attestation provenance/SBOM: manifest attestation-nya memicu
+          # 403 saat push blob ke GHCR pada tag kedua (git-sha), dan tak diperlukan
+          # untuk pipeline deploy privat ini.
+          provenance: false
+          sbom: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -93,6 +98,8 @@ jobs:
           tags: |
             ${{ env.IMAGE_PREFIX }}/ftth-web:latest
             ${{ env.IMAGE_PREFIX }}/ftth-web:${{ github.sha }}
+          provenance: false
+          sbom: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
