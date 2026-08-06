@@ -2415,6 +2415,11 @@ function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub3
                       prorata{inv.proratedDays != null ? ` ${inv.proratedDays}h` : ''}
                     </span>
                   )}
+                  {Number(inv.taxAmount) > 0 && (
+                    <div className="muted" style={{ fontSize: '0.72rem' }}>
+                      termasuk PPN {fmtRupiah(Number(inv.taxAmount))}
+                    </div>
+                  )}
                 </td>
                 <td>
                   <Badge tone={INVOICE_TONE[inv.status]}>{INVOICE_LABEL[inv.status]}</Badge>

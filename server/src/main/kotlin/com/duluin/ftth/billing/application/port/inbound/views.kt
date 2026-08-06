@@ -17,7 +17,14 @@ data class InvoiceView(
     val subscriptionId: UUID,
     val periodStart: LocalDate,
     val periodEnd: LocalDate,
+    /** Total tagihan (sudah termasuk [taxAmount] PPN). */
     val amount: BigDecimal,
+    /** Dasar sebelum PPN (DPP) = [amount] − [taxAmount]. */
+    val baseAmount: BigDecimal,
+    /** Komponen PPN dalam [amount]; nol bila tagihan tanpa PPN. */
+    val taxAmount: BigDecimal,
+    /** Tarif PPN yang diterapkan (mis. 0.1100); null bila tanpa PPN. */
+    val taxRate: BigDecimal?,
     /** Tagihan diprorata (aktivasi tengah periode); [proratedDays] = hari yang ditagih. */
     val prorated: Boolean,
     val proratedDays: Int?,

@@ -41,6 +41,7 @@ import { AuditPage } from './pages/AuditPage'
 import { TenantsPage } from './pages/TenantsPage'
 import { NotificationSettingsPage } from './pages/NotificationSettingsPage'
 import { PaymentGatewaySettingsPage } from './pages/PaymentGatewaySettingsPage'
+import { TaxSettingsPage } from './pages/TaxSettingsPage'
 import { PlatformBillingSettingsPage } from './pages/PlatformBillingSettingsPage'
 import { SubscriptionPage } from './pages/SubscriptionPage'
 import { ReportsPage } from './pages/ReportsPage'
@@ -324,6 +325,14 @@ function OperatorApp() {
               element={
                 <RequirePermission permission="billing.gateway.view">
                   <PaymentGatewaySettingsPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="tax-settings"
+              element={
+                <RequirePermission permission="billing.tax.view">
+                  <TaxSettingsPage />
                 </RequirePermission>
               }
             />

@@ -29,9 +29,11 @@ data class Proration(val amount: BigDecimal, val days: Int)
  * Tagihan satu periode langganan seorang pelanggan.
  *
  * Ditaut ke `subscription`/`customer` (module customer) lewat UUID polos tanpa FK
- * lintas-module. [amount] disimpan pada skala 2 (rupiah bulat + sen). Referensi
- * gateway ([gatewayProvider]/[gatewayRef]/[payUrl]) dilekatkan setelah charge dibuat
- * dan tidak pernah mengubah nilai tagihan.
+ * lintas-module. [amount] adalah TOTAL yang ditagih ke pelanggan (skala 2, rupiah bulat +
+ * sen) — sudah termasuk [taxAmount] (PPN). Dasar sebelum pajak (DPP) = [baseAmount].
+ * PPN nol saat tenant tak mengaktifkannya, sehingga tagihan lama (tanpa kolom pajak) tetap
+ * setara total = dasar. Referensi gateway ([gatewayProvider]/[gatewayRef]/[payUrl])
+ * dilekatkan setelah charge dibuat dan tidak pernah mengubah nilai tagihan.
  */
 class Invoice private constructor(
     val id: UUID,
@@ -43,6 +45,10 @@ class Invoice private constructor(
     val periodStart: LocalDate,
     val periodEnd: LocalDate,
     val amount: BigDecimal,
+    /** Komponen PPN (skala 2) yang SUDAH termasuk dalam [amount]; nol bila tagihan tanpa PPN. */
+    val taxAmount: BigDecimal,
+    /** Tarif PPN yang diterapkan (mis. 0.1100); null bila tagihan tanpa PPN. */
+    val taxRate: BigDecimal?,
     /** Tagihan ini diprorata (aktivasi tengah periode) — [amount] < tarif penuh sebulan. */
     val prorated: Boolean,
     /** Jumlah hari terpakai yang ditagihkan bila [prorated]; null saat tagihan penuh. */
@@ -56,6 +62,9 @@ class Invoice private constructor(
     payUrl: String?,
     dueSoonReminded: Boolean,
 ) {
+    /** Dasar Pengenaan Pajak (DPP): nilai layanan sebelum PPN = [amount] − [taxAmount]. */
+    val baseAmount: BigDecimal get() = amount.subtract(taxAmount)
+
     var status: InvoiceStatus = status
         private set
 
@@ -124,6 +133,12 @@ class Invoice private constructor(
     }
 
     companion object {
+        /**
+         * Terbitkan tagihan dari [baseAmount] (DPP, sebelum pajak). Bila [taxRate] non-null &
+         * positif (mis. 0.11), PPN dihitung `baseAmount × taxRate` (skala 2, HALF_UP) dan
+         * ditambahkan ke total; bila null/nol, tagihan tanpa PPN (total = dasar) — menjaga
+         * perilaku lama tetap utuh.
+         */
         @Suppress("LongParameterList")
         fun create(
             tenantId: UUID,
@@ -132,30 +147,38 @@ class Invoice private constructor(
             number: String,
             periodStart: LocalDate,
             periodEnd: LocalDate,
-            amount: BigDecimal,
+            baseAmount: BigDecimal,
             dueDate: LocalDate,
+            taxRate: BigDecimal? = null,
             prorated: Boolean = false,
             proratedDays: Int? = null,
-        ): Invoice = Invoice(
-            id = UuidV7.generate(),
-            tenantId = tenantId,
-            customerId = customerId,
-            subscriptionId = subscriptionId,
-            number = validateNumber(number),
-            periodStart = periodStart,
-            periodEnd = periodEnd,
-            amount = validateAmount(amount),
-            prorated = prorated,
-            proratedDays = validateProratedDays(prorated, proratedDays),
-            status = InvoiceStatus.ISSUED,
-            issuedAt = Instant.now(),
-            dueDate = dueDate,
-            paidAt = null,
-            gatewayProvider = null,
-            gatewayRef = null,
-            payUrl = null,
-            dueSoonReminded = false,
-        )
+        ): Invoice {
+            val base = validateAmount(baseAmount)
+            val rate = validateTaxRate(taxRate)
+            val tax = rate?.let { base.multiply(it).setScale(2, RoundingMode.HALF_UP) } ?: ZERO_MONEY
+            return Invoice(
+                id = UuidV7.generate(),
+                tenantId = tenantId,
+                customerId = customerId,
+                subscriptionId = subscriptionId,
+                number = validateNumber(number),
+                periodStart = periodStart,
+                periodEnd = periodEnd,
+                amount = base.add(tax),
+                taxAmount = tax,
+                taxRate = rate,
+                prorated = prorated,
+                proratedDays = validateProratedDays(prorated, proratedDays),
+                status = InvoiceStatus.ISSUED,
+                issuedAt = Instant.now(),
+                dueDate = dueDate,
+                paidAt = null,
+                gatewayProvider = null,
+                gatewayRef = null,
+                payUrl = null,
+                dueSoonReminded = false,
+            )
+        }
 
         @Suppress("LongParameterList")
         fun rehydrate(
@@ -167,6 +190,8 @@ class Invoice private constructor(
             periodStart: LocalDate,
             periodEnd: LocalDate,
             amount: BigDecimal,
+            taxAmount: BigDecimal,
+            taxRate: BigDecimal?,
             prorated: Boolean,
             proratedDays: Int?,
             status: InvoiceStatus,
@@ -179,8 +204,8 @@ class Invoice private constructor(
             dueSoonReminded: Boolean,
         ): Invoice = Invoice(
             id, tenantId, customerId, subscriptionId, number, periodStart, periodEnd, amount,
-            prorated, proratedDays, status, issuedAt, dueDate, paidAt, gatewayProvider, gatewayRef, payUrl,
-            dueSoonReminded,
+            taxAmount, taxRate, prorated, proratedDays, status, issuedAt, dueDate, paidAt,
+            gatewayProvider, gatewayRef, payUrl, dueSoonReminded,
         )
 
         /**
@@ -215,6 +240,21 @@ class Invoice private constructor(
         private fun validateAmount(amount: BigDecimal): BigDecimal {
             if (amount.signum() < 0) throw ValidationException("Nilai tagihan tidak boleh negatif")
             return amount.setScale(2, RoundingMode.HALF_UP)
+        }
+
+        /** Nol uang berskala 2 — nilai PPN default saat tagihan tak dikenai pajak. */
+        private val ZERO_MONEY: BigDecimal = BigDecimal.ZERO.setScale(2)
+
+        /**
+         * Tarif PPN wajib di rentang [0, 1) — sebuah pecahan (mis. 0.11 untuk 11%), bukan
+         * persen. null atau nol → tagihan tanpa PPN (kembalikan null). Dinormalkan ke skala 4.
+         */
+        private fun validateTaxRate(rate: BigDecimal?): BigDecimal? {
+            if (rate == null) return null
+            if (rate.signum() < 0) throw ValidationException("Tarif PPN tidak boleh negatif")
+            if (rate >= BigDecimal.ONE) throw ValidationException("Tarif PPN harus di bawah 1 (mis. 0.11 untuk 11%)")
+            if (rate.signum() == 0) return null
+            return rate.setScale(4, RoundingMode.HALF_UP)
         }
 
         /** Hari prorata wajib >= 1 saat diprorata; diabaikan (null) saat tagihan penuh. */

@@ -5,11 +5,13 @@ import type { PageResponse } from '../api/types'
 import type { CustomerView } from '../api/network'
 import {
   generateInvoices,
+  getTaxObligation,
   listInvoices,
   recordManualPayment,
   voidInvoice,
   type InvoiceStatus,
   type InvoiceView,
+  type TaxObligationView,
 } from '../api/billing'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
@@ -106,6 +108,7 @@ export function InvoicesPage() {
   const toast = useToast()
   const navigate = useNavigate()
   const [invoices, setInvoices] = useState<InvoiceView[]>([])
+  const [obligation, setObligation] = useState<TaxObligationView | null>(null)
   const [names, setNames] = useState<Map<string, CustomerLite>>(new Map())
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | ''>('')
@@ -118,6 +121,7 @@ export function InvoicesPage() {
 
   const canManage = can('billing.invoice.manage')
   const canPay = can('billing.payment.manage')
+  const canViewTax = can('billing.tax.view')
 
   const reload = useCallback(async () => {
     try {
@@ -144,6 +148,19 @@ export function InvoicesPage() {
       alive = false
     }
   }, [])
+
+  useEffect(() => {
+    // KPI pajak (PPN terkumpul + kewajiban BHP/USO) tahun berjalan — hanya bila punya izinnya,
+    // dan non-kritis: gagal muat cukup menyembunyikan kartunya, tak mengganggu daftar tagihan.
+    if (!canViewTax) return
+    let alive = true
+    void getTaxObligation()
+      .then((o) => alive && setObligation(o))
+      .catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [canViewTax])
 
   const today = todayLocalDate()
 
@@ -258,7 +275,19 @@ export function InvoicesPage() {
       header: 'Jumlah',
       align: 'right',
       sortValue: (i) => Number(i.amount),
-      cell: (i) => fmtRupiah(Number(i.amount)),
+      cell: (i) => {
+        const tax = Number(i.taxAmount)
+        return (
+          <div className="stack" style={{ gap: '0.1rem', alignItems: 'flex-end' }}>
+            <span>{fmtRupiah(Number(i.amount))}</span>
+            {tax > 0 && (
+              <span className="muted" style={{ fontSize: '0.75rem' }}>
+                termasuk PPN {fmtRupiah(tax)}
+              </span>
+            )}
+          </div>
+        )
+      },
     },
     {
       key: 'status',
@@ -333,6 +362,18 @@ export function InvoicesPage() {
         />
         <SummaryCard label="Tagihan menunggak" value={String(summary.outstandingCount)} />
         <SummaryCard label="Sudah lunas" value={String(summary.paidCount)} tone="good" />
+        {obligation?.ppnEnabled && (
+          <SummaryCard
+            label={`PPN terkumpul ${obligation.from.slice(0, 4)}`}
+            value={fmtRupiah(Number(obligation.ppnCollected))}
+          />
+        )}
+        {obligation?.regulatoryEnabled && (
+          <SummaryCard
+            label={`Kewajiban BHP/USO ${obligation.from.slice(0, 4)}`}
+            value={fmtRupiah(Number(obligation.regulatoryObligation))}
+          />
+        )}
       </div>
 
       <Toolbar>
@@ -398,6 +439,11 @@ export function InvoicesPage() {
               Menandai <strong>{payTarget.number}</strong> sebesar <strong>{fmtRupiah(Number(payTarget.amount))}</strong> sebagai
               lunas via pembayaran manual (mis. transfer/QRIS di luar gateway).
             </p>
+            {Number(payTarget.taxAmount) > 0 && (
+              <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+                Dasar {fmtRupiah(Number(payTarget.baseAmount))} + PPN {fmtRupiah(Number(payTarget.taxAmount))}.
+              </p>
+            )}
             <label>
               <span>Catatan (opsional)</span>
               <input

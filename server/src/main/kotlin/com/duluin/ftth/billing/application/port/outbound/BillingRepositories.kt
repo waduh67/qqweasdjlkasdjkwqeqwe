@@ -1,5 +1,6 @@
 package com.duluin.ftth.billing.application.port.outbound
 
+import com.duluin.ftth.billing.domain.model.BillingTaxSettings
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
 import com.duluin.ftth.billing.domain.model.Payment
@@ -70,4 +71,13 @@ interface PaymentRepository {
 
     /** Riwayat pembayaran seorang pelanggan, terbaru dulu — untuk portal self-service. */
     fun findByCustomerId(customerId: UUID): List<Payment>
+}
+
+/**
+ * Persistence setelan pajak tenant. Satu baris per tenant (RLS + @TenantId menyaring ke
+ * tenant aktif), jadi [find] mengembalikan baris tunggal — null bila belum pernah disetel.
+ */
+interface BillingTaxSettingsRepository {
+    fun find(): BillingTaxSettings?
+    fun save(settings: BillingTaxSettings): BillingTaxSettings
 }

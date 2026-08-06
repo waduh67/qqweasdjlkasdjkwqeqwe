@@ -40,6 +40,14 @@ class InvoiceJpaEntity(
     @Column(nullable = false, precision = 14, scale = 2, updatable = false)
     var amount: BigDecimal,
 
+    /** Komponen PPN termasuk dalam [amount]; 0 untuk tagihan tanpa PPN (termasuk baris lama). */
+    @Column(name = "tax_amount", nullable = false, precision = 14, scale = 2, updatable = false)
+    var taxAmount: BigDecimal,
+
+    /** Tarif PPN yang diterapkan (mis. 0.1100); null bila tanpa PPN. */
+    @Column(name = "tax_rate", precision = 6, scale = 4, updatable = false)
+    var taxRate: BigDecimal?,
+
     @Column(nullable = false, updatable = false)
     var prorated: Boolean,
 

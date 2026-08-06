@@ -6,11 +6,14 @@ import com.duluin.ftth.billing.application.port.outbound.GatewayCallback
 import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
 import com.duluin.ftth.billing.application.port.outbound.PaymentGateway
 import com.duluin.ftth.billing.application.port.outbound.TenantPaymentGatewayRepository
+import com.duluin.ftth.billing.application.port.outbound.BillingTaxSettingsRepository
 import com.duluin.ftth.billing.application.service.BillingCycleRunner
+import com.duluin.ftth.billing.application.service.BillingTaxSettingsResolver
 import com.duluin.ftth.billing.application.service.InvoiceGenerator
 import com.duluin.ftth.billing.application.service.PaymentGatewayRegistry
 import com.duluin.ftth.billing.application.service.TenantPaymentGatewayResolver
 import com.duluin.ftth.billing.config.BillingProperties
+import com.duluin.ftth.billing.domain.model.BillingTaxSettings
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
 import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
@@ -243,8 +246,11 @@ class BillingCycleTest {
         // Tanpa baris config tenant → resolver jatuh ke fallback MANUAL; adapter penangkap
         // memakai provider "MANUAL" agar registry memilihnya untuk konteks itu.
         val resolver = TenantPaymentGatewayResolver(NoGatewayConfig, props)
+        // Tanpa baris setelan pajak → resolver jatuh ke bawaan (PPN mati) → tagihan tanpa PPN,
+        // jadi assertion nilai tagihan↔charge di test ini tetap murni tarif dasar.
+        val taxResolver = BillingTaxSettingsResolver(NoTaxConfig)
         val auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser)
-        val generator = InvoiceGenerator(repo, customerApi, registry, resolver, auditor, props)
+        val generator = InvoiceGenerator(repo, customerApi, registry, resolver, taxResolver, auditor, props)
         // Publisher penangkap khusus buntut siklus (InvoiceDueSoon/InvoiceOverdue) —
         // auditor tetap no-op agar event audit tak mengotori assertion.
         val events = CapturingEvents()
@@ -293,7 +299,7 @@ class BillingCycleTest {
         number = "INV-202607-0001",
         periodStart = LocalDate.of(2026, 7, 1),
         periodEnd = LocalDate.of(2026, 7, 31),
-        amount = BigDecimal("100000"),
+        baseAmount = BigDecimal("100000"),
         dueDate = dueDate,
     )
 
@@ -329,6 +335,13 @@ class BillingCycleTest {
     private object NoGatewayConfig : TenantPaymentGatewayRepository {
         override fun find(): TenantPaymentGateway? = null
         override fun save(settings: TenantPaymentGateway): TenantPaymentGateway = settings
+    }
+
+    private object NoTaxConfig : BillingTaxSettingsRepository {
+        // Kembalikan bawaan (PPN mati) langsung agar resolver tak menyentuh TenantContext —
+        // test siklus ini murni fake tanpa request, jadi tak ada tenant di context.
+        override fun find(): BillingTaxSettings = BillingTaxSettings.defaultFor(UuidV7.generate())
+        override fun save(settings: BillingTaxSettings): BillingTaxSettings = settings
     }
 
     private class FakeInvoiceRepository(private val overdue: List<Invoice>) : InvoiceRepository {

@@ -31,6 +31,7 @@ class InvoiceGenerator(
     private val customerApi: CustomerApi,
     private val gatewayRegistry: PaymentGatewayRegistry,
     private val gatewayResolver: TenantPaymentGatewayResolver,
+    private val taxResolver: BillingTaxSettingsResolver,
     private val auditor: AuditRecorder,
     private val properties: BillingProperties,
 ) {
@@ -64,17 +65,20 @@ class InvoiceGenerator(
         val ctx = gatewayResolver.resolve()
         val gateway = gatewayRegistry.forProvider(ctx.provider)
             ?: error("Adapter gateway '${ctx.provider}' tidak tersedia")
+        // Setelan pajak di-resolve SEKALI per ronde (sama seperti gateway): PPN menjadi tarif
+        // yang sama untuk semua tagihan periode ini. Nonaktif → null (tagihan tanpa PPN).
+        val taxRate = taxResolver.resolve().effectivePpnRate()
         val base = invoiceRepository.countForPeriod(periodStart)
 
         var issued = 0
         billable.forEachIndexed { index, sub ->
             val seq = base + index + 1
             val number = "${properties.numberPrefix}-$yyyyMM-${seq.toString().padStart(SEQ_WIDTH, '0')}"
-            // Prorata dihitung sekali; nilainya menjadi satu-satunya sumber untuk
-            // BAIK tagihan MAUPUN charge gateway (harus konsisten — kalau berbeda,
-            // pelanggan membayar jumlah yang tak sama dengan tagihannya).
+            // Dasar (DPP) dihitung sekali dari prorata/tarif penuh; tagihan menambahkan PPN di
+            // atasnya (bila aktif). Charge gateway memakai TOTAL tagihan (invoice.amount) agar
+            // pelanggan membayar persis nilai tagihannya — dasar + PPN konsisten satu sumber.
             val proration = prorationFor(sub, periodStart, periodEnd)
-            val amount = proration?.amount ?: sub.monthlyFee
+            val baseAmount = proration?.amount ?: sub.monthlyFee
             val invoice = Invoice.create(
                 tenantId = tenantId,
                 customerId = sub.customerId,
@@ -82,8 +86,9 @@ class InvoiceGenerator(
                 number = number,
                 periodStart = periodStart,
                 periodEnd = periodEnd,
-                amount = amount,
+                baseAmount = baseAmount,
                 dueDate = today.plusDays(properties.dueDays),
+                taxRate = taxRate,
                 prorated = proration != null,
                 proratedDays = proration?.days,
             )
@@ -98,7 +103,7 @@ class InvoiceGenerator(
                 val charge = gateway.createCharge(
                     ChargeRequest(
                         invoiceNumber = number,
-                        amount = amount,
+                        amount = invoice.amount,
                         customerName = customerNames[sub.customerId] ?: sub.packageName,
                         customerEmail = null,
                         description = chargeDescription,

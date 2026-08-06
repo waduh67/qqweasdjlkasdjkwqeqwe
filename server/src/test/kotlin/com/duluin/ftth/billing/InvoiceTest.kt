@@ -25,7 +25,7 @@ class InvoiceTest {
         number = "INV-202607-0001",
         periodStart = LocalDate.of(2026, 7, 1),
         periodEnd = LocalDate.of(2026, 7, 31),
-        amount = amount,
+        baseAmount = amount,
         dueDate = LocalDate.of(2026, 7, 8),
     )
 
@@ -144,7 +144,7 @@ class InvoiceTest {
                 number = "   ",
                 periodStart = LocalDate.of(2026, 7, 1),
                 periodEnd = LocalDate.of(2026, 7, 31),
-                amount = BigDecimal("1000"),
+                baseAmount = BigDecimal("1000"),
                 dueDate = LocalDate.of(2026, 7, 8),
             )
         }.isInstanceOf(ValidationException::class.java)
@@ -210,7 +210,7 @@ class InvoiceTest {
             number = "INV-202607-0001",
             periodStart = jul1,
             periodEnd = jul31,
-            amount = BigDecimal("160000"),
+            baseAmount = BigDecimal("160000"),
             dueDate = LocalDate.of(2026, 7, 8),
             prorated = true,
             proratedDays = 16,
@@ -238,11 +238,74 @@ class InvoiceTest {
                 number = "INV-202607-0001",
                 periodStart = jul1,
                 periodEnd = jul31,
-                amount = BigDecimal("160000"),
+                baseAmount = BigDecimal("160000"),
                 dueDate = LocalDate.of(2026, 7, 8),
                 prorated = true,
                 proratedDays = 0,
             )
         }.isInstanceOf(ValidationException::class.java)
+    }
+
+    // --- PPN: komponen pajak yang ditambahkan ke total tagihan ---
+
+    private fun withTax(base: BigDecimal, rate: BigDecimal?): Invoice = Invoice.create(
+        tenantId = UuidV7.generate(),
+        customerId = UuidV7.generate(),
+        subscriptionId = UuidV7.generate(),
+        number = "INV-202607-0001",
+        periodStart = jul1,
+        periodEnd = jul31,
+        baseAmount = base,
+        dueDate = LocalDate.of(2026, 7, 8),
+        taxRate = rate,
+    )
+
+    @Test
+    fun `create dengan taxRate menambahkan PPN ke atas dasar`() {
+        val invoice = withTax(BigDecimal("150000"), BigDecimal("0.11"))
+
+        assertThat(invoice.baseAmount).isEqualByComparingTo("150000")
+        assertThat(invoice.taxAmount).isEqualByComparingTo("16500") // 150000 * 0.11
+        assertThat(invoice.amount).isEqualByComparingTo("166500") // dasar + PPN
+        assertThat(invoice.taxRate).isEqualByComparingTo("0.11")
+        assertThat(invoice.taxAmount.scale()).isEqualTo(2)
+    }
+
+    @Test
+    fun `create tanpa taxRate tak berpajak — total sama dengan dasar`() {
+        val invoice = withTax(BigDecimal("150000"), null)
+
+        assertThat(invoice.taxAmount).isEqualByComparingTo("0")
+        assertThat(invoice.taxRate).isNull()
+        assertThat(invoice.amount).isEqualByComparingTo(invoice.baseAmount)
+    }
+
+    @Test
+    fun `taxRate nol dianggap tanpa PPN`() {
+        val invoice = withTax(BigDecimal("150000"), BigDecimal.ZERO)
+
+        assertThat(invoice.taxAmount).isEqualByComparingTo("0")
+        assertThat(invoice.taxRate).isNull()
+    }
+
+    @Test
+    fun `PPN membulatkan setengah ke atas pada skala 2`() {
+        // 9677.42 * 0.11 = 1064.5162 → 1064.52
+        val invoice = withTax(BigDecimal("9677.42"), BigDecimal("0.11"))
+
+        assertThat(invoice.taxAmount).isEqualByComparingTo("1064.52")
+        assertThat(invoice.amount).isEqualByComparingTo("10741.94") // 9677.42 + 1064.52
+    }
+
+    @Test
+    fun `taxRate negatif ditolak`() {
+        assertThatThrownBy { withTax(BigDecimal("150000"), BigDecimal("-0.1")) }
+            .isInstanceOf(ValidationException::class.java)
+    }
+
+    @Test
+    fun `taxRate satu atau lebih ditolak`() {
+        assertThatThrownBy { withTax(BigDecimal("150000"), BigDecimal.ONE) }
+            .isInstanceOf(ValidationException::class.java)
     }
 }

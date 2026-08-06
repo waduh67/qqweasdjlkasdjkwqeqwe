@@ -143,7 +143,7 @@ class BillingApiServiceTest {
         number = "INV-${UuidV7.generate()}",
         periodStart = LocalDate.of(2026, 7, 1),
         periodEnd = LocalDate.of(2026, 7, 31),
-        amount = BigDecimal(amount),
+        baseAmount = BigDecimal(amount),
         dueDate = dueDate,
     )
 

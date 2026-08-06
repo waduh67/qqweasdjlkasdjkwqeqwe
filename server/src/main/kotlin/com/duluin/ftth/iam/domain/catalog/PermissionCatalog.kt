@@ -141,6 +141,8 @@ object PermissionCatalog {
         perm("billing.payment.manage", "Catat pembayaran manual")
         perm("billing.gateway.view", "Lihat setelan payment gateway")
         perm("billing.gateway.manage", "Kelola penyedia & kredensial payment gateway")
+        perm("billing.tax.view", "Lihat setelan pajak & kewajiban BHP/USO")
+        perm("billing.tax.manage", "Kelola PPN & kontribusi BHP/USO")
         // Langganan SaaS sisi tenant: lihat masa aktif/tagihan sendiri + perpanjang mandiri.
         perm("billing.subscription.view", "Lihat langganan aplikasi (masa aktif, tagihan)")
         perm("billing.subscription.renew", "Perpanjang langganan aplikasi (buat tagihan & bayar)")

@@ -17,7 +17,14 @@ export interface InvoiceView {
   subscriptionId: string
   periodStart: string
   periodEnd: string
+  /** Total tagihan (sudah termasuk `taxAmount` PPN). */
   amount: string
+  /** Dasar sebelum PPN (DPP) = `amount` − `taxAmount`. */
+  baseAmount: string
+  /** Komponen PPN dalam `amount`; "0" bila tagihan tanpa PPN. */
+  taxAmount: string
+  /** Tarif PPN yang diterapkan (pecahan, mis. "0.1100"); null bila tanpa PPN. */
+  taxRate: string | null
   /** Tagihan diprorata (aktivasi tengah periode); `proratedDays` = jumlah hari yang ditagih. */
   prorated: boolean
   proratedDays: number | null
@@ -69,3 +76,64 @@ export const recordManualPayment = (id: string, note?: string) =>
 /** Pembayaran yang tercatat atas sebuah tagihan. */
 export const listPayments = (invoiceId: string) =>
   api.get<PaymentView[]>(`/api/billing/payments?invoiceId=${invoiceId}`)
+
+/**
+ * Setelan pajak tenant. PPN adalah komponen yang DITAGIHKAN ke pelanggan (menambah total
+ * tagihan). BHP/USO adalah kewajiban LAPORAN tenant (bukan ditagih ke pelanggan), dihitung
+ * server dari peredaran bruto. Semua tarif adalah PECAHAN sebagai string (mis. "0.1100" = 11%).
+ */
+export interface TaxSettingsView {
+  ppnEnabled: boolean
+  ppnRate: string
+  regulatoryEnabled: boolean
+  bhpRate: string
+  usoRate: string
+}
+
+/** Perubahan setelan pajak; tarif dikirim sebagai pecahan number di [0,1). */
+export interface UpdateTaxSettingsRequest {
+  ppnEnabled: boolean
+  ppnRate: number
+  regulatoryEnabled: boolean
+  bhpRate: number
+  usoRate: number
+}
+
+/**
+ * Ringkasan pajak satu rentang (dihitung dari tagihan LUNAS). `ppnCollected` = Σ PPN tertagih
+ * (pass-through ke negara); `regulatoryRevenueBase` = peredaran bruto sebelum PPN (dasar BHP/USO);
+ * `regulatoryObligation` = BHP + USO — "0" bila pelaporan BHP/USO nonaktif. Semua nilai uang string.
+ */
+export interface TaxObligationView {
+  from: string
+  to: string
+  ppnEnabled: boolean
+  ppnRate: string
+  ppnCollected: string
+  regulatoryEnabled: boolean
+  bhpRate: string
+  usoRate: string
+  regulatoryRevenueBase: string
+  bhpAmount: string
+  usoAmount: string
+  regulatoryObligation: string
+}
+
+/** Baca setelan pajak tenant aktif. */
+export const getTaxSettings = () => api.get<TaxSettingsView>('/api/billing/tax-settings')
+
+/** Ubah setelan pajak tenant. */
+export const updateTaxSettings = (body: UpdateTaxSettingsRequest) =>
+  api.put<TaxSettingsView>('/api/billing/tax-settings', body)
+
+/**
+ * PPN terkumpul + kewajiban BHP/USO. Tanpa argumen, server memakai tahun kalender berjalan
+ * (1 Jan s/d hari ini). `from`/`to` dalam format "YYYY-MM-DD".
+ */
+export const getTaxObligation = (from?: string, to?: string) => {
+  const params = new URLSearchParams()
+  if (from) params.set('from', from)
+  if (to) params.set('to', to)
+  const qs = params.toString()
+  return api.get<TaxObligationView>(`/api/billing/tax-obligation${qs ? `?${qs}` : ''}`)
+}

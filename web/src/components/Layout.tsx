@@ -92,6 +92,7 @@ const GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
       { to: '/audit', label: 'Jejak Audit', permission: 'audit.log.view', icon: IconAudit },
       { to: '/notifications', label: 'Notifikasi', permission: 'notification.settings.view', icon: IconAlert },
       { to: '/payment-gateway', label: 'Payment Gateway', permission: 'billing.gateway.view', icon: IconPackage },
+      { to: '/tax-settings', label: 'Pajak & BHP/USO', permission: 'billing.tax.view', icon: IconReceipt },
     ],
   },
 ]

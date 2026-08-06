@@ -25,7 +25,7 @@ class PaymentSettlementFlowTest {
         number = "INV-202607-0007",
         periodStart = LocalDate.of(2026, 7, 1),
         periodEnd = LocalDate.of(2026, 7, 31),
-        amount = amount,
+        baseAmount = amount,
         dueDate = LocalDate.of(2026, 7, 8),
     )
 
