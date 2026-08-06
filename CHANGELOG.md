@@ -6,6 +6,27 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-06 — Peta pusatkan ke lokasi pengguna + kode kabel auto-generate
+
+Dua penyempurnaan alur lapangan. **Peta Jaringan** (`/map`) kini otomatis memusatkan diri
+ke lokasi pengguna saat dibuka, dan **kode kabel** tak lagi diisi manual — dibuat otomatis
+di backend.
+
+**Ditambahkan**
+- **Peta pusatkan ke lokasi pengguna** (`web/src/pages/MapPage.tsx`): saat `/map` dibuka,
+  peta meminta izin lokasi lalu memusatkan diri (`flyTo`) ke area pengguna via Geolocation
+  API. Bila izin ditolak/gagal, peta tetap di pusat default (Bekasi) tanpa mengganggu.
+  Ditambah tombol **"Lokasi saya"** di toolbar untuk memusatkan ulang kapan saja (tampil
+  untuk semua peran — geolokasi bukan aksi tulis). Ikon baru `IconCrosshair`.
+
+**Diubah**
+- **Kode kabel auto-generate di backend**: saat menarik kabel, `code` kini dibuat otomatis
+  sebagai **UUIDv7** (terurut waktu) di `CableService.create` bila frontend tak mengirimnya —
+  field **Kode** dihapus dari form tarik kabel (`SaveCablePanel`). Request `code` menjadi
+  opsional (`CableRequest`, `SaveCableCommand`). Sekalian memperbaiki bug laten:
+  `create` sebelumnya menyimpan `command.code` mentah padahal cek duplikat memakai versi
+  ter-normalisasi (trim + uppercase) — kini keduanya memakai kode hasil resolusi yang sama.
+
 ### 2026-08-06 — Webhook copyable semua penyedia + bayar ikut penyedia gateway aktif
 
 Dua perbaikan alur pembayaran gateway. Setelan **Payment Gateway** kini memunculkan URL

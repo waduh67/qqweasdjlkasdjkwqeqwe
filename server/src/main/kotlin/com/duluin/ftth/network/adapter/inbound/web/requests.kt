@@ -99,7 +99,8 @@ data class OdpRequest(
 )
 
 data class CableRequest(
-    @field:NotBlank @field:Size(max = 40) val code: String,
+    /** Opsional — kosong = backend auto-generate UUIDv7 (tak diisi dari frontend). */
+    @field:Size(max = 40) val code: String? = null,
     @field:NotBlank @field:Size(max = 150) val name: String,
     val cableType: CableType,
     @field:Min(1) @field:Max(288) val coreCount: Int,

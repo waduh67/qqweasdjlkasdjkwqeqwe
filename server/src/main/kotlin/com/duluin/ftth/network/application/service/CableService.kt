@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.domain.geo.RoutePath
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
@@ -81,7 +82,10 @@ class CableService(
     }
 
     override fun create(command: SaveCableCommand): CableView {
-        val code = command.code.trim().uppercase()
+        // Kode kabel dibuat backend: UUIDv7 (terurut waktu) bila frontend tak mengirim
+        // kode. UUID praktis tak mungkin tabrakan; existsByCode tetap jadi pengaman.
+        val code = command.code?.trim()?.uppercase()?.takeIf { it.isNotBlank() }
+            ?: UuidV7.generate().toString().uppercase()
         if (cableRepository.existsByCode(code)) throw ConflictException("Kode kabel '$code' sudah dipakai")
         val from = command.fromEndpoint()
         val to = command.toEndpoint()
@@ -90,7 +94,7 @@ class CableService(
         val cable = cableRepository.save(
             Cable.create(
                 tenantId = currentUser.current().tenantId,
-                code = command.code,
+                code = code,
                 name = command.name,
                 cableType = command.cableType,
                 coreCount = command.coreCount,

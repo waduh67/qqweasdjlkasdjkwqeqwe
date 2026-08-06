@@ -267,3 +267,12 @@ export const IconUpload = (p: IconProps) => (
     <path d="M12 3v12" />
   </Icon>
 )
+
+/** Bidik/lokasi — dipakai tombol "Lokasi saya" di peta. */
+export const IconCrosshair = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="7" />
+    <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+    <circle cx="12" cy="12" r="1" />
+  </Icon>
+)

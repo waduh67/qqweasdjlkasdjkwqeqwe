@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -32,7 +32,7 @@ import type { PageResponse } from '../api/types'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { StatusBadge, useToast } from '../components/ui'
-import { IconClose, IconPlus, IconRoute } from '../components/icons'
+import { IconClose, IconCrosshair, IconPlus, IconRoute } from '../components/icons'
 import { createCableTool, type CableTool, type ToolState } from '../map/cableTool'
 
 /**
@@ -435,6 +435,33 @@ export function MapPage() {
     }
   }
 
+  /**
+   * Pusatkan peta ke lokasi pengguna lewat Geolocation API. Dipanggil sekali otomatis
+   * saat peta siap (`announce=false`, diam bila ditolak → peta tetap di default Bekasi)
+   * dan lewat tombol "Lokasi saya" (`announce=true`, toast sukses/gagal). Geolocation
+   * memberi lat/lng; MapLibre memakai [lng, lat] sehingga urutannya dibalik.
+   */
+  const locateMe = useCallback(
+    (announce: boolean) => {
+      if (!navigator.geolocation) {
+        if (announce) toast.error('Peramban tidak mendukung geolokasi')
+        return
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { longitude, latitude } = pos.coords
+          map.current?.flyTo({ center: [longitude, latitude], zoom: Math.max(map.current.getZoom(), 15) })
+          if (announce) toast.success('Peta dipusatkan ke lokasi Anda')
+        },
+        () => {
+          if (announce) toast.error('Tidak bisa mengakses lokasi — periksa izin peramban')
+        },
+        { enableHighAccuracy: true, timeout: 8000 },
+      )
+    },
+    [toast],
+  )
+
   useEffect(() => {
     if (!container.current || map.current) return
 
@@ -713,6 +740,10 @@ export function MapPage() {
 
     map.current = instance
 
+    // Saat peta pertama dibuka, coba pusatkan ke lokasi pengguna (diam bila ditolak —
+    // peta tetap di default). Operator bisa memusatkan ulang lewat tombol "Lokasi saya".
+    locateMe(false)
+
     // Sidebar bisa diciutkan/dilebarkan, jadi lebar kanvas berubah tanpa resize
     // jendela — MapLibre perlu diberi tahu agar peta mengisi ulang penuh.
     const ro = new ResizeObserver(() => instance.resize())
@@ -727,6 +758,9 @@ export function MapPage() {
       instance.remove()
       map.current = null
     }
+    // Init peta sekali saat mount; `locateMe` stabil (useCallback) & sengaja tak jadi dep
+    // agar peta tak dibangun ulang.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Menyorot subpohon terputus saat panel simulasi terbuka; kosongkan saat tutup.
@@ -956,7 +990,6 @@ export function MapPage() {
   }
 
   const saveNewCable = async (form: {
-    code: string
     name: string
     coreCount: number
     // Feeder: PON port OLT sumber. Distribusi/drop: kaki/slot sumber.
@@ -971,7 +1004,6 @@ export function MapPage() {
     const odpId = state.from.id
     try {
       await api.post('/api/cables', {
-        code: form.code,
         name: form.name,
         cableType: state.cableType,
         coreCount: form.coreCount,
@@ -1000,7 +1032,7 @@ export function MapPage() {
           )
         }
       }
-      toast.success(`Kabel ${form.code} tersimpan (${Math.round(state.lengthMeters)} m)${portNote}`)
+      toast.success(`Kabel tersimpan (${Math.round(state.lengthMeters)} m)${portNote}`)
       cancelTool()
       refreshTiles()
       void refreshImpacted()
@@ -1124,7 +1156,7 @@ export function MapPage() {
         {/* Toolbar kiri-atas: tarik kabel + taruh perangkat. Tampil saat idle —
             termasuk state awal sebelum alat pernah dipakai (toolState masih null). */}
         {(!toolState || toolState.mode === 'idle') && !placing && !placeAt && (
-          <MapToolbar can={can} onDraw={startDraw} onPlace={startPlace} />
+          <MapToolbar can={can} onDraw={startDraw} onPlace={startPlace} onLocate={() => locateMe(true)} />
         )}
 
         {/* Bilah petunjuk saat menaruh perangkat baru */}
@@ -1258,23 +1290,27 @@ export function MapPage() {
 }
 
 /**
- * Toolbar kiri-atas peta: tarik kabel + tombol taruh perangkat. Tiap tombol
- * hanya muncul bila pengguna punya izin membuat aset terkait, sehingga toolbar
- * menyesuaikan diri dengan peran — teknisi read-only tidak melihat apa pun.
+ * Toolbar kiri-atas peta: lokasi saya + tarik kabel + tombol taruh perangkat. Tombol
+ * tulis (tarik kabel/taruh aset) hanya muncul bila pengguna punya izin terkait; tombol
+ * "Lokasi saya" selalu tampil karena geolokasi bukan aksi tulis (semua peran boleh).
  */
 function MapToolbar({
   can,
   onDraw,
   onPlace,
+  onLocate,
 }: {
   can: (perm: string) => boolean
   onDraw: () => void
   onPlace: (kind: AssetKind) => void
+  onLocate: () => void
 }) {
   const placeable = (Object.keys(ASSET_META) as AssetKind[]).filter((k) => can(ASSET_META[k].createPerm))
-  if (!can('network.cable.create') && placeable.length === 0) return null
   return (
     <div className="map-toolbar">
+      <button className="ghost" onClick={onLocate}>
+        <IconCrosshair size={15} /> Lokasi saya
+      </button>
       {can('network.cable.create') && (
         <button className="primary" onClick={onDraw}>
           <IconRoute size={16} /> Tarik kabel
@@ -1307,15 +1343,6 @@ function drawHint(state: ToolState): string {
   return 'Selesai — isi detail kabel'
 }
 
-/** Membersihkan kode agar cocok pola server (huruf besar, alfanumerik + . _ / -). */
-function sanitizeCode(raw: string): string {
-  return raw
-    .toUpperCase()
-    .replace(/[^A-Z0-9._/-]/g, '-')
-    .replace(/-+/g, '-')
-    .slice(0, 40)
-}
-
 /** Port keluaran sumber yang dipilih: PON port OLT (ponPortId) atau kaki/slot (portNumber). */
 type SourcePort = { ponPortId: string | null; portNumber: number | null }
 
@@ -1344,7 +1371,6 @@ function SaveCablePanel({
   canAssignPort: boolean
   onCancel: () => void
   onSave: (form: {
-    code: string
     name: string
     coreCount: number
     fromPonPortId?: string
@@ -1352,7 +1378,6 @@ function SaveCablePanel({
     onuId?: string
   }) => void
 }) {
-  const [code, setCode] = useState(sanitizeCode(`CBL-${from}-${to}`))
   const [name, setName] = useState(`${TYPE_LABEL[cableType]} ${from} → ${to}`)
   const [coreCount, setCoreCount] = useState(DEFAULT_CORES[cableType])
 
@@ -1422,11 +1447,10 @@ function SaveCablePanel({
     ? true
     : srcOptions != null && (srcOptions.length === 0 || srcPort != null)
   const dropReady = !isDrop || onu != null
-  const canSave = code.trim() !== '' && name.trim() !== '' && sourceReady && dropReady
+  const canSave = name.trim() !== '' && sourceReady && dropReady
 
   const submit = () =>
     onSave({
-      code: sanitizeCode(code),
       name,
       coreCount,
       fromPonPortId: srcPort?.ponPortId ?? undefined,
@@ -1449,10 +1473,6 @@ function SaveCablePanel({
         </span>
         <span className="badge tnum">{formatLength(lengthMeters)}</span>
       </div>
-      <label>
-        <span>Kode</span>
-        <input value={code} onChange={(e) => setCode(e.target.value)} />
-      </label>
       <label>
         <span>Nama</span>
         <input value={name} onChange={(e) => setName(e.target.value)} />

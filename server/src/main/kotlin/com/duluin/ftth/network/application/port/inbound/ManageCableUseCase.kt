@@ -29,7 +29,8 @@ interface ManageCableUseCase {
 }
 
 data class SaveCableCommand(
-    val code: String,
+    /** Null/kosong = backend auto-generate UUIDv7 saat create. */
+    val code: String?,
     val name: String,
     val cableType: CableType,
     val coreCount: Int,
