@@ -2,6 +2,7 @@ package com.duluin.ftth.billing.adapter.outbound.persistence
 
 import com.duluin.ftth.billing.application.port.outbound.PivotMasterConfigRepository
 import com.duluin.ftth.billing.domain.model.PivotMasterConfig
+import com.duluin.ftth.billing.domain.model.SubAccountDefaults
 import com.duluin.ftth.common.security.SecretCipher
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -26,6 +27,7 @@ class PivotMasterConfigPersistenceAdapter(
         val encMerchantId = config.merchantId?.let(cipher::encrypt)
         val encMerchantSecret = config.merchantSecret?.let(cipher::encrypt)
         val encCallbackKey = config.callbackApiKey?.let(cipher::encrypt)
+        val d = config.subAccountDefaults
         val entity = jpa.findById(config.id).orElse(null)?.apply {
             enabled = config.enabled
             merchantId = encMerchantId
@@ -36,6 +38,18 @@ class PivotMasterConfigPersistenceAdapter(
             platformFeeType = config.platformFeeType
             payoutChannelCode = config.payoutChannelCode
             payoutAccountNumber = config.payoutAccountNumber
+            defaultBusinessType = d.businessType
+            defaultBusinessStructure = d.businessStructure
+            defaultParentIndustry = d.parentIndustry
+            defaultChildIndustry = d.childIndustry
+            defaultMcc = d.mcc
+            defaultDigitalStatus = d.digitalStatus
+            defaultBusinessCountry = d.businessCountry
+            defaultCountryOfEntity = d.countryOfEntity
+            defaultLogoUrl = d.logoUrl
+            defaultWebsite = d.website
+            defaultDistrictId = d.districtId
+            defaultPostCode = d.postCode
         } ?: PivotMasterConfigJpaEntity(
             id = config.id,
             enabled = config.enabled,
@@ -47,6 +61,18 @@ class PivotMasterConfigPersistenceAdapter(
             platformFeeType = config.platformFeeType,
             payoutChannelCode = config.payoutChannelCode,
             payoutAccountNumber = config.payoutAccountNumber,
+            defaultBusinessType = d.businessType,
+            defaultBusinessStructure = d.businessStructure,
+            defaultParentIndustry = d.parentIndustry,
+            defaultChildIndustry = d.childIndustry,
+            defaultMcc = d.mcc,
+            defaultDigitalStatus = d.digitalStatus,
+            defaultBusinessCountry = d.businessCountry,
+            defaultCountryOfEntity = d.countryOfEntity,
+            defaultLogoUrl = d.logoUrl,
+            defaultWebsite = d.website,
+            defaultDistrictId = d.districtId,
+            defaultPostCode = d.postCode,
         )
         return jpa.save(entity).toDomain()
     }
@@ -62,6 +88,20 @@ class PivotMasterConfigPersistenceAdapter(
         platformFeeType = platformFeeType,
         payoutChannelCode = payoutChannelCode,
         payoutAccountNumber = payoutAccountNumber,
+        subAccountDefaults = SubAccountDefaults(
+            businessType = defaultBusinessType,
+            businessStructure = defaultBusinessStructure,
+            parentIndustry = defaultParentIndustry,
+            childIndustry = defaultChildIndustry,
+            mcc = defaultMcc,
+            digitalStatus = defaultDigitalStatus,
+            businessCountry = defaultBusinessCountry,
+            countryOfEntity = defaultCountryOfEntity,
+            logoUrl = defaultLogoUrl,
+            website = defaultWebsite,
+            districtId = defaultDistrictId,
+            postCode = defaultPostCode,
+        ),
     )
 }
 

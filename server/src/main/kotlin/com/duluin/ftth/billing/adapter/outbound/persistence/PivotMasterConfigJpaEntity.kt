@@ -46,4 +46,41 @@ class PivotMasterConfigJpaEntity(
 
     @Column(name = "payout_account_number", length = 60)
     var payoutAccountNumber: String?,
+
+    // Default field wajib create sub-account (non-rahasia → plaintext).
+    @Column(name = "default_business_type", length = 40)
+    var defaultBusinessType: String?,
+
+    @Column(name = "default_business_structure", length = 40)
+    var defaultBusinessStructure: String?,
+
+    @Column(name = "default_parent_industry", length = 120)
+    var defaultParentIndustry: String?,
+
+    @Column(name = "default_child_industry", length = 120)
+    var defaultChildIndustry: String?,
+
+    @Column(name = "default_mcc", length = 20)
+    var defaultMcc: String?,
+
+    @Column(name = "default_digital_status", length = 40)
+    var defaultDigitalStatus: String?,
+
+    @Column(name = "default_business_country", length = 8)
+    var defaultBusinessCountry: String?,
+
+    @Column(name = "default_country_of_entity", length = 8)
+    var defaultCountryOfEntity: String?,
+
+    @Column(name = "default_logo_url", length = 500)
+    var defaultLogoUrl: String?,
+
+    @Column(name = "default_website", length = 300)
+    var defaultWebsite: String?,
+
+    @Column(name = "default_district_id")
+    var defaultDistrictId: Int?,
+
+    @Column(name = "default_post_code", length = 20)
+    var defaultPostCode: String?,
 ) : BaseJpaEntity(id)

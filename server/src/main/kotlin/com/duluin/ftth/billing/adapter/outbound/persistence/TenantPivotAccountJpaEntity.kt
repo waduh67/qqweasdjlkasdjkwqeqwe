@@ -38,6 +38,27 @@ class TenantPivotAccountJpaEntity(
     @Column(name = "short_name", length = 120)
     var shortName: String?,
 
+    @Column(name = "legal_name", length = 200)
+    var legalName: String?,
+
+    @Column(name = "merchant_email", length = 160)
+    var merchantEmail: String?,
+
+    @Column(name = "merchant_phone", length = 40)
+    var merchantPhone: String?,
+
+    @Column(name = "pic_name", length = 160)
+    var picName: String?,
+
+    @Column(name = "pic_email", length = 160)
+    var picEmail: String?,
+
+    @Column(name = "pic_phone", length = 40)
+    var picPhone: String?,
+
+    @Column(name = "address", length = 500)
+    var address: String?,
+
     @Column(name = "payout_channel_code", length = 40)
     var payoutChannelCode: String?,
 

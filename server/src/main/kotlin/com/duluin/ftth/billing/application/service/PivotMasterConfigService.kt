@@ -5,6 +5,7 @@ import com.duluin.ftth.billing.application.port.inbound.PivotMasterConfigView
 import com.duluin.ftth.billing.application.port.inbound.UpdatePivotMasterConfigCommand
 import com.duluin.ftth.billing.application.port.outbound.PivotMasterConfigRepository
 import com.duluin.ftth.billing.domain.model.PivotMasterConfig
+import com.duluin.ftth.billing.domain.model.SubAccountDefaults
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.tenancy.TenantApi
 import org.springframework.stereotype.Service
@@ -38,6 +39,20 @@ class PivotMasterConfigService(
             platformFeeType = command.platformFeeType,
             payoutChannelCode = command.payoutChannelCode,
             payoutAccountNumber = command.payoutAccountNumber,
+            subAccountDefaults = SubAccountDefaults(
+                businessType = command.defaultBusinessType,
+                businessStructure = command.defaultBusinessStructure,
+                parentIndustry = command.defaultParentIndustry,
+                childIndustry = command.defaultChildIndustry,
+                mcc = command.defaultMcc,
+                digitalStatus = command.defaultDigitalStatus,
+                businessCountry = command.defaultBusinessCountry,
+                countryOfEntity = command.defaultCountryOfEntity,
+                logoUrl = command.defaultLogoUrl,
+                website = command.defaultWebsite,
+                districtId = command.defaultDistrictId,
+                postCode = command.defaultPostCode,
+            ),
         )
         val saved = repository.save(config)
         auditor.record(
@@ -61,5 +76,17 @@ class PivotMasterConfigService(
         platformFeeType = platformFeeType,
         payoutChannelCode = payoutChannelCode,
         payoutAccountNumber = payoutAccountNumber,
+        defaultBusinessType = subAccountDefaults.businessType,
+        defaultBusinessStructure = subAccountDefaults.businessStructure,
+        defaultParentIndustry = subAccountDefaults.parentIndustry,
+        defaultChildIndustry = subAccountDefaults.childIndustry,
+        defaultMcc = subAccountDefaults.mcc,
+        defaultDigitalStatus = subAccountDefaults.digitalStatus,
+        defaultBusinessCountry = subAccountDefaults.businessCountry,
+        defaultCountryOfEntity = subAccountDefaults.countryOfEntity,
+        defaultLogoUrl = subAccountDefaults.logoUrl,
+        defaultWebsite = subAccountDefaults.website,
+        defaultDistrictId = subAccountDefaults.districtId,
+        defaultPostCode = subAccountDefaults.postCode,
     )
 }

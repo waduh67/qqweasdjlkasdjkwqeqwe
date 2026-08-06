@@ -24,9 +24,23 @@ data class PivotMasterConfigView(
     val platformFeeType: PivotFeeType,
     val payoutChannelCode: String?,
     val payoutAccountNumber: String?,
+    /** Default field wajib create sub-account (non-rahasia → nilai apa adanya). */
+    val defaultBusinessType: String?,
+    val defaultBusinessStructure: String?,
+    val defaultParentIndustry: String?,
+    val defaultChildIndustry: String?,
+    val defaultMcc: String?,
+    val defaultDigitalStatus: String?,
+    val defaultBusinessCountry: String?,
+    val defaultCountryOfEntity: String?,
+    val defaultLogoUrl: String?,
+    val defaultWebsite: String?,
+    val defaultDistrictId: Int?,
+    val defaultPostCode: String?,
 )
 
 /** Ubah setelan master. Rahasia (merchantId/secret/callbackKey) null/kosong = biarkan apa adanya. */
+@Suppress("LongParameterList")
 data class UpdatePivotMasterConfigCommand(
     val enabled: Boolean,
     val sandbox: Boolean,
@@ -37,4 +51,17 @@ data class UpdatePivotMasterConfigCommand(
     val platformFeeType: PivotFeeType,
     val payoutChannelCode: String?,
     val payoutAccountNumber: String?,
+    /** Default field wajib create sub-account (non-rahasia). */
+    val defaultBusinessType: String?,
+    val defaultBusinessStructure: String?,
+    val defaultParentIndustry: String?,
+    val defaultChildIndustry: String?,
+    val defaultMcc: String?,
+    val defaultDigitalStatus: String?,
+    val defaultBusinessCountry: String?,
+    val defaultCountryOfEntity: String?,
+    val defaultLogoUrl: String?,
+    val defaultWebsite: String?,
+    val defaultDistrictId: Int?,
+    val defaultPostCode: String?,
 )

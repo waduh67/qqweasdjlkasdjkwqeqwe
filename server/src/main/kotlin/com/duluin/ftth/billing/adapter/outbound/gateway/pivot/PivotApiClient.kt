@@ -131,10 +131,32 @@ class PivotApiClient(
         val raw = try {
             call()
         } catch (e: org.springframework.web.client.RestClientResponseException) {
-            log.warn("Pivot menolak {} ({}): {}", label, e.statusCode.value(), e.responseBodyAsString.take(ERR_SNIPPET))
-            throw ConflictException("Pivot menolak permintaan (${e.statusCode.value()})")
+            val bodyText = e.responseBodyAsString
+            log.warn("Pivot menolak {} ({}): {}", label, e.statusCode.value(), bodyText.take(ERR_SNIPPET))
+            val reason = pivotErrorMessage(bodyText)
+            val suffix = reason?.let { ": $it" } ?: ""
+            throw ConflictException("Pivot menolak permintaan (${e.statusCode.value()})$suffix")
         }
         return raw?.let(objectMapper::readTree) ?: throw ConflictException("Pivot tak mengembalikan body untuk $label")
+    }
+
+    /**
+     * Ambil pesan galat dari body Pivot agar kegagalan bisa didiagnosis (mis. nilai referensi
+     * `districtId`/`mcc` tak valid) tanpa membaca log. Body Pivot bervariasi (`message`, `error`,
+     * atau `errors[].message`) — coba beberapa bentuk; kembalikan null bila tak bisa diurai.
+     */
+    private fun pivotErrorMessage(body: String): String? {
+        if (body.isBlank()) return null
+        val node = runCatching { objectMapper.readTree(body) }.getOrNull() ?: return null
+        val direct = node.get("message") ?: node.get("error") ?: node.at("/data/message")
+        direct?.takeIf { !it.isNull }?.asString()?.takeIf { it.isNotBlank() }?.let { return it.take(ERR_SNIPPET) }
+        val fromErrors = node.get("errors")?.takeIf { it.isArray && !it.isEmpty }?.let { arr ->
+            (0 until arr.size()).mapNotNull { i ->
+                val el = arr.get(i)
+                (el.get("message") ?: el.get("field"))?.takeIf { !it.isNull }?.asString()?.takeIf { it.isNotBlank() }
+            }.joinToString("; ").takeIf { it.isNotBlank() }
+        }
+        return fromErrors?.take(ERR_SNIPPET)
     }
 
     /** [RestClient] baru per-panggilan — base URL bisa beda antar akun (sandbox/prod). */

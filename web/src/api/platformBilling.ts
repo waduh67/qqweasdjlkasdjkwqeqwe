@@ -48,8 +48,9 @@ export const PLATFORM_FEE_TYPE_LABEL: Record<PlatformFeeType, string> = {
 
 /**
  * Konfigurasi akun master Pivot platform. Kredensial write-only: server hanya menandai sudah terisi
- * (`*Set`), tak pernah menariknya kembali. `platformFeeMinor` = nilai fee (Rp untuk FIXED, angka
- * persen untuk PERCENTAGE).
+ * (`*Set`), tak pernah menariknya kembali (labelnya di dashboard Pivot: Client ID / Client Secret /
+ * Callback Secret). `platformFeeMinor` = nilai fee (Rp untuk FIXED, angka persen untuk PERCENTAGE).
+ * Field `default*` = default sub-account (non-rahasia, ditampilkan apa adanya).
  */
 export interface PivotMasterConfigView {
   enabled: boolean
@@ -62,6 +63,19 @@ export interface PivotMasterConfigView {
   platformFeeType: PlatformFeeType
   payoutChannelCode: string | null
   payoutAccountNumber: string | null
+  // Default field wajib create sub-account (non-rahasia).
+  defaultBusinessType: string | null
+  defaultBusinessStructure: string | null
+  defaultParentIndustry: string | null
+  defaultChildIndustry: string | null
+  defaultMcc: string | null
+  defaultDigitalStatus: string | null
+  defaultBusinessCountry: string | null
+  defaultCountryOfEntity: string | null
+  defaultLogoUrl: string | null
+  defaultWebsite: string | null
+  defaultDistrictId: number | null
+  defaultPostCode: string | null
 }
 
 /** Ubah konfigurasi master Pivot. Kredensial null/kosong = pertahankan yang tersimpan apa adanya. */
@@ -75,6 +89,19 @@ export interface PivotMasterConfigRequest {
   platformFeeType: PlatformFeeType
   payoutChannelCode: string | null
   payoutAccountNumber: string | null
+  // Default field wajib create sub-account (non-rahasia).
+  defaultBusinessType: string | null
+  defaultBusinessStructure: string | null
+  defaultParentIndustry: string | null
+  defaultChildIndustry: string | null
+  defaultMcc: string | null
+  defaultDigitalStatus: string | null
+  defaultBusinessCountry: string | null
+  defaultCountryOfEntity: string | null
+  defaultLogoUrl: string | null
+  defaultWebsite: string | null
+  defaultDistrictId: number | null
+  defaultPostCode: string | null
 }
 
 export function getPivotMasterConfig(): Promise<PivotMasterConfigView> {
