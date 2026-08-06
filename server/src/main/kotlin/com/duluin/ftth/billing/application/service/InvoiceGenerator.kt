@@ -125,6 +125,40 @@ class InvoiceGenerator(
     }
 
     /**
+     * Buat ulang charge sebuah [invoice] lewat penyedia gateway yang **aktif sekarang**
+     * (bukan penyedia saat tagihan terbit). Dipakai saat pelanggan hendak membayar sebuah
+     * tagihan lama yang tautannya dibuat penyedia lama, setelah operator mengganti penyedia.
+     *
+     * Mengembalikan `true` bila tautan bayar berganti (charge baru dilekatkan; pemanggil
+     * wajib menyimpan), `false` bila tak ada yang berubah:
+     * - penyedia aktif MANUAL → tak ada tautan gateway (pelanggan bayar transfer/QRIS), atau
+     * - penyedia aktif sama dengan penyedia tagihan dan tautan sudah ada (idempoten).
+     *
+     * Berbeda dari [generateFor], kegagalan charge di sini **dilempar** ke pemanggil (aksi
+     * satu-tagihan yang dipicu pengguna, bukan ronde massal) agar kesalahan setelan terlihat.
+     */
+    fun refreshCharge(invoice: Invoice): Boolean {
+        val ctx = gatewayResolver.resolve()
+        if (ctx.provider.equals("MANUAL", ignoreCase = true)) return false
+        if (invoice.payUrl != null && invoice.gatewayProvider.equals(ctx.provider, ignoreCase = true)) return false
+        val gateway = gatewayRegistry.forProvider(ctx.provider)
+            ?: error("Adapter gateway '${ctx.provider}' tidak tersedia")
+        val customerName = customerApi.findCustomer(invoice.customerId)?.name ?: invoice.number
+        val charge = gateway.createCharge(
+            ChargeRequest(
+                invoiceNumber = invoice.number,
+                amount = invoice.amount,
+                customerName = customerName,
+                customerEmail = null,
+                description = "Tagihan ${invoice.number}",
+            ),
+            ctx,
+        )
+        invoice.attachCharge(charge.provider, charge.gatewayRef, charge.payUrl)
+        return true
+    }
+
+    /**
      * Prorata untuk [sub] pada periode berjalan, atau null (tagih penuh). Aktif bila
      * flag paket [BillableSubscription.prorateOnActivation] menyala (null = ikut global
      * [BillingProperties.prorateOnActivation]) dan langganan punya `activatedAt` di dalam

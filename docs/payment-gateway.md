@@ -314,6 +314,14 @@ di DB/klien/git; rotate bila bocor.
 platform-only (tak tenant-assignable). Web: halaman **Payment Gateway** (setelan tenant,
 guard `billing.gateway.view`) + tombol **"Provisi Xendit"** per tenant di halaman platform-admin.
 
+**URL webhook di UI (mode BYO).** Untuk **semua** penyedia (Xendit/Midtrans/Pivot/Paywuz),
+halaman Payment Gateway menampilkan field **URL webhook** readonly siap-salin + hint tempat
+menempel di dashboard penyedia. Formatnya `<origin>/api/billing/webhooks/<slug>/<provider>` —
+memakai **slug** tenant (bukan UUID), selaras dengan `BillingWebhookController` yang me-resolve
+tenant lewat slug; segmen `<provider>` lowercase hanya untuk routing/log (gateway sebenarnya =
+setelan aktif tenant). Mode PLATFORM (Xendit) tak menampilkan field ini — callback didaftarkan
+otomatis ke sub-account platform saat provisioning.
+
 ---
 
 ## Keamanan

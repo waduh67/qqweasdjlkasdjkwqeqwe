@@ -73,6 +73,15 @@ export const voidInvoice = (id: string) =>
 export const recordManualPayment = (id: string, note?: string) =>
   api.post<InvoiceView>(`/api/billing/invoices/${id}/pay`, note ? { note } : undefined)
 
+/**
+ * Buat ulang tautan bayar tagihan lewat penyedia gateway yang AKTIF sekarang, lalu kembalikan
+ * view terbaru. Dipakai tombol "bayar": bila penyedia aktif berbeda dari penyedia tagihan,
+ * charge baru dibuat agar pembayaran mengikuti setelan penyedia terbaru. Idempoten bila sama.
+ * `payUrl` bisa null bila penyedia aktif MANUAL (pelanggan bayar transfer/QRIS).
+ */
+export const refreshPaymentLink = (id: string) =>
+  api.post<InvoiceView>(`/api/billing/invoices/${id}/recharge`)
+
 /** Pembayaran yang tercatat atas sebuah tagihan. */
 export const listPayments = (invoiceId: string) =>
   api.get<PaymentView[]>(`/api/billing/payments?invoiceId=${invoiceId}`)

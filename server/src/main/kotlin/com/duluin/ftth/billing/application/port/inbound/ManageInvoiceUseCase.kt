@@ -21,4 +21,13 @@ interface ManageInvoiceUseCase {
     fun generateCurrentPeriodForCurrentTenant(): Int
 
     fun void(id: UUID): InvoiceView
+
+    /**
+     * Buat ulang tautan bayar sebuah tagihan lewat penyedia gateway yang **aktif sekarang**,
+     * lalu kembalikan proyeksinya. Dipakai saat pelanggan hendak membayar: bila penyedia
+     * aktif berbeda dari penyedia tagihan, charge baru dibuat agar pembayaran mengikuti
+     * setelan penyedia terbaru. Idempoten bila penyedianya sudah sama. Ditolak bila tagihan
+     * sudah lunas / dibatalkan.
+     */
+    fun refreshPaymentLink(id: UUID): InvoiceView
 }

@@ -60,7 +60,7 @@ import { TrafficChart } from '../components/TrafficChart'
 import { IconAlert, IconCustomers, IconRoute } from '../components/icons'
 import type { SubscriptionView } from '../api/network'
 import { listPlans as listCatalogPlans, SERVICE_TYPE_LABEL, type PlanView, type ServiceType } from '../api/catalog'
-import { listInvoicesForCustomer, type InvoiceView } from '../api/billing'
+import { listInvoicesForCustomer, refreshPaymentLink, type InvoiceView } from '../api/billing'
 import {
   getManualPaymentInstructions,
   QRIS_IMAGE_PATH,
@@ -2317,9 +2317,41 @@ function isOutstanding(inv: InvoiceView, today: string): boolean {
  * tersedia (gagal muat) jatuh balik ke hitung sisi klien. Digerbang `billing.invoice.view`.
  */
 function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub360BillingSummary | null }) {
+  const { can } = useCan()
+  const toast = useToast()
   const [invoices, setInvoices] = useState<InvoiceView[] | null>(null)
   // Instruksi bayar manual tenant (bank/QRIS) — ditampilkan untuk tagihan tanpa tautan gateway.
   const [manual, setManual] = useState<ManualPaymentInstructionsView | null>(null)
+  // Tagihan yang sedang disiapkan tautan bayarnya (re-charge lewat penyedia aktif) — cegah dobel-klik.
+  const [paying, setPaying] = useState<string | null>(null)
+  const canManage = can('billing.invoice.manage')
+
+  /**
+   * Siapkan pembayaran: buat ulang tautan lewat penyedia gateway yang AKTIF sekarang, lalu buka.
+   * Bila operator mengganti penyedia setelah tagihan terbit, ini memastikan pelanggan membayar
+   * lewat penyedia terbaru (bukan tautan penyedia lama yang tersimpan). Tab dibuka SINKRON dulu
+   * agar tak diblokir popup blocker sesudah await.
+   */
+  const handlePay = async (inv: InvoiceView) => {
+    const w = window.open('', '_blank')
+    setPaying(inv.id)
+    try {
+      const updated = await refreshPaymentLink(inv.id)
+      setInvoices((prev) => prev?.map((x) => (x.id === updated.id ? updated : x)) ?? prev)
+      if (updated.payUrl) {
+        if (w) w.location.href = updated.payUrl
+        else window.open(updated.payUrl, '_blank', 'noopener')
+      } else {
+        w?.close()
+        toast.info('Penyedia aktif manual — arahkan pelanggan ke pembayaran transfer/QRIS di bawah.')
+      }
+    } catch (err) {
+      w?.close()
+      toast.error(err instanceof ApiError ? err.message : 'Gagal menyiapkan tautan bayar')
+    } finally {
+      setPaying(null)
+    }
+  }
 
   useEffect(() => {
     let alive = true
@@ -2423,15 +2455,18 @@ function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub3
                 </td>
                 <td>
                   <Badge tone={INVOICE_TONE[inv.status]}>{INVOICE_LABEL[inv.status]}</Badge>
-                  {inv.payUrl && inv.status !== 'PAID' && inv.status !== 'VOID' && (
-                    <a
-                      href={inv.payUrl}
-                      target="_blank"
-                      rel="noreferrer"
+                  {/* Tampil untuk tagihan layak bayar (ISSUED/OVERDUE) walau payUrl masih kosong —
+                      re-charge lewat penyedia AKTIF yang membuat/memperbarui tautannya saat diklik. */}
+                  {canManage && (inv.status === 'ISSUED' || inv.status === 'OVERDUE') && (
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={() => void handlePay(inv)}
+                      disabled={paying != null}
                       style={{ marginLeft: '0.5rem', fontSize: '0.8rem' }}
                     >
-                      bayar
-                    </a>
+                      {paying === inv.id ? 'menyiapkan…' : 'bayar'}
+                    </button>
                   )}
                 </td>
               </tr>

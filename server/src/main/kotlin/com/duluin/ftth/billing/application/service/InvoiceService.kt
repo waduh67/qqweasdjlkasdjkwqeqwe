@@ -8,6 +8,7 @@ import com.duluin.ftth.billing.application.port.outbound.PaymentRepository
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
 import com.duluin.ftth.billing.domain.model.Payment
+import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.tenant.TenantContext
@@ -51,6 +52,21 @@ class InvoiceService(
         invoice.void()
         val saved = invoiceRepository.save(invoice)
         auditor.record("billing.invoice.voided", "Invoice", saved.id, saved.tenantId, mapOf("number" to saved.number))
+        return saved.toView()
+    }
+
+    override fun refreshPaymentLink(id: UUID): InvoiceView {
+        val invoice = require(id)
+        if (invoice.status == InvoiceStatus.PAID || invoice.status == InvoiceStatus.VOID) {
+            throw ConflictException("Tagihan berstatus ${invoice.status} tidak bisa dibuatkan tautan bayar")
+        }
+        val changed = invoiceGenerator.refreshCharge(invoice)
+        if (!changed) return invoice.toView()
+        val saved = invoiceRepository.save(invoice)
+        auditor.record(
+            "billing.invoice.recharged", "Invoice", saved.id, saved.tenantId,
+            mapOf("number" to saved.number, "provider" to (saved.gatewayProvider ?: "-")),
+        )
         return saved.toView()
     }
 

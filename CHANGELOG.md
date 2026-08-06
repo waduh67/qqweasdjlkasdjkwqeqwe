@@ -6,6 +6,34 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-06 — Webhook copyable semua penyedia + bayar ikut penyedia gateway aktif
+
+Dua perbaikan alur pembayaran gateway. Setelan **Payment Gateway** kini memunculkan URL
+webhook siap-salin untuk **semua** penyedia (bukan hanya Paywuz), dan tombol **bayar** di
+detail pelanggan selalu mengikuti penyedia yang **aktif sekarang** — bukan penyedia saat
+tagihan diterbitkan.
+
+**Diubah**
+- **URL webhook copyable untuk semua penyedia** (`web/src/pages/PaymentGatewaySettingsPage.tsx`):
+  Xendit, Midtrans, Pivot, dan Paywuz kini sama-sama menampilkan field **URL webhook** readonly
+  + tombol **Salin** + hint tempat menempel per-penyedia (sebelumnya hanya Paywuz; penyedia lain
+  cuma menyebut path di catatan). Catatan panjang per-penyedia diringkas ke panduan kredensial
+  saja (path callback tak lagi diulang — sudah diwakili field).
+- **Perbaikan slug pada URL webhook**: path memakai **slug** tenant
+  (`/api/billing/webhooks/<slug>/<provider>`), bukan `tenantId` (UUID) — selaras dengan
+  `BillingWebhookController` yang me-resolve tenant lewat slug. Sebelumnya URL Paywuz memakai
+  UUID sehingga callback tak akan cocok.
+
+**Ditambahkan**
+- **Bayar mengikuti penyedia gateway aktif** ("regenerate saat bayar"): endpoint baru
+  `POST /api/billing/invoices/{id}/recharge` (izin `billing.invoice.manage`) membuat ulang
+  tautan bayar sebuah tagihan lewat penyedia yang aktif sekarang. Idempoten bila penyedianya
+  sudah sama; tanpa tautan bila penyedia aktif MANUAL; ditolak untuk tagihan lunas/batal.
+  Backend: `InvoiceGenerator.refreshCharge`, `ManageInvoiceUseCase.refreshPaymentLink`,
+  `InvoiceService`. Frontend: tombol **bayar** di tab Tagihan detail pelanggan
+  (`web/src/pages/CustomerDetailPage.tsx`) memanggil endpoint lalu membuka tautan terbaru;
+  kini juga muncul untuk tagihan ISSUED/OVERDUE yang belum punya tautan.
+
 ### 2026-08-04 — Redesign UI: sidebar gelap, aksen indigo, switcher lingkungan
 
 Penyegaran visual menyeluruh design system in-house "NetOps Console" (`web/src/index.css`)
