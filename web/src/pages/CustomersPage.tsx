@@ -7,7 +7,7 @@ import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
 import { LocationPicker } from '../components/LocationPicker'
 import { EmptyState, Modal, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
-import { IconCustomers, IconPlus } from '../components/icons'
+import { IconCustomers, IconInbox, IconPlus } from '../components/icons'
 
 const EMPTY_CUSTOMER = { code: '', name: '', phone: '', address: '', longitude: '', latitude: '' }
 
@@ -121,9 +121,16 @@ export function CustomersPage() {
           <p className="page-sub">Data pelanggan, perangkat ONU, dan penempatannya di ODP.</p>
         </div>
         {can('customer.customer.create') && (
-          <button className="primary" onClick={() => setDraft({ ...EMPTY_CUSTOMER })}>
-            <IconPlus size={15} /> Tambah pelanggan
-          </button>
+          <div className="row" style={{ gap: '0.5rem' }}>
+            {/* Pintu masuk impor massal — dulu menu sidebar tersendiri, kini menyatu di area
+                Pelanggan bersama (kelak) impor/ekspor CSV. Rute /import-pppoe tak berubah. */}
+            <button className="ghost" onClick={() => navigate('/import-pppoe')}>
+              <IconInbox size={15} /> Impor PPPoE
+            </button>
+            <button className="primary" onClick={() => setDraft({ ...EMPTY_CUSTOMER })}>
+              <IconPlus size={15} /> Tambah pelanggan
+            </button>
+          </div>
         )}
       </div>
 
