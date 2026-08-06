@@ -242,6 +242,7 @@ class NasServiceRadiusClientTest {
         override fun findById(id: UUID): Nas? = store[id]
         override fun findAll(): List<Nas> = store.values.toList()
         override fun existsByName(name: String): Boolean = false
+        override fun findByNameIgnoreCase(name: String) = throw UnsupportedOperationException()
         override fun deleteById(id: UUID) {
             store.remove(id)
         }

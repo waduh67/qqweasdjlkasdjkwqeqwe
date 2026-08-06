@@ -155,6 +155,9 @@ class Subscriber360ServiceTest {
             throw UnsupportedOperationException()
 
         override fun subscriberStats() = throw UnsupportedOperationException()
+        override fun updateCustomerBiodata(command: com.duluin.ftth.customer.UpdateCustomerBiodataCommand) = throw UnsupportedOperationException()
+        override fun activateImportedSubscription(subscriptionId: UUID, activatedAt: java.time.Instant?, billingDayOfMonth: Int?) = throw UnsupportedOperationException()
+        override fun overrideSubscriptionBillingDay(subscriptionId: UUID, billingDayOfMonth: Int?) = throw UnsupportedOperationException()
     }
 
     private inner class FakeBngApi : BngApi {
@@ -172,6 +175,10 @@ class Subscriber360ServiceTest {
         override fun fetchPppSecretsFromNas(nasId: UUID) = emptyList<com.duluin.ftth.bng.PppSecretRef>()
 
         override fun activeSubscriberLiveness() = emptyList<com.duluin.ftth.bng.SubscriberPppoeLiveness>()
+
+        override fun resolveNasByName(name: String) = throw UnsupportedOperationException()
+        override fun findAccessByUsername(username: String) = throw UnsupportedOperationException()
+        override fun updateAccessFromImport(accessId: UUID, planId: UUID, nasId: UUID?, secret: String?) = throw UnsupportedOperationException()
     }
 
     private inner class FakeBillingApi : BillingApi {

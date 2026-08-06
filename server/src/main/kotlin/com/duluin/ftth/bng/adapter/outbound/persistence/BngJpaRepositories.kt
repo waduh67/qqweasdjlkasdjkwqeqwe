@@ -12,6 +12,7 @@ import java.util.UUID
 interface NasJpaRepository : JpaRepository<NasJpaEntity, UUID> {
     fun findAllByOrderByNameAsc(): List<NasJpaEntity>
     fun existsByName(name: String): Boolean
+    fun findFirstByNameIgnoreCase(name: String): NasJpaEntity?
 }
 
 interface NasAreaJpaRepository : JpaRepository<NasAreaJpaEntity, UUID> {

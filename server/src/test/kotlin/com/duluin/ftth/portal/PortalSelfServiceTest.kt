@@ -206,6 +206,7 @@ class PortalSelfServiceTest {
     ) : CatalogApi {
         override fun findPlanCommercial(planId: UUID) = commercial[planId]
         override fun findPlanNetwork(planId: UUID) = network[planId]
+        override fun findPlanByName(name: String) = throw UnsupportedOperationException()
     }
 
     private class FakeBillingApi(
@@ -227,6 +228,9 @@ class PortalSelfServiceTest {
         override fun resolveNasForArea(areaId: UUID): UUID? = throw UnsupportedOperationException()
         override fun fetchPppSecretsFromNas(nasId: UUID) = throw UnsupportedOperationException()
         override fun activeSubscriberLiveness() = throw UnsupportedOperationException()
+        override fun resolveNasByName(name: String) = throw UnsupportedOperationException()
+        override fun findAccessByUsername(username: String) = throw UnsupportedOperationException()
+        override fun updateAccessFromImport(accessId: UUID, planId: UUID, nasId: UUID?, secret: String?) = throw UnsupportedOperationException()
     }
 
     private class FakeCpeApi(private val devices: List<CpeDeviceStatusRef>) : CpeApi {

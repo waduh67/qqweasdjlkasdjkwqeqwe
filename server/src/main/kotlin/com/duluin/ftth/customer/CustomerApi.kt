@@ -1,6 +1,7 @@
 package com.duluin.ftth.customer
 
 import com.duluin.ftth.common.domain.geo.Coordinate
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -144,6 +145,30 @@ interface CustomerApi {
     fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: java.math.BigDecimal?): UUID
 
     /**
+     * Impor CSV: perbarui biodata pelanggan secara PARSIAL — hanya field non-null yang ditimpa,
+     * sisanya dipertahankan (kolom CSV kosong = lewati). Dipakai jalur upsert saat username sudah
+     * ada, agar impor ulang tak menghapus data yang tak dibawa file. Aturan module customer
+     * (validasi & audit) tetap ditegakkan lewat use case internal.
+     */
+    fun updateCustomerBiodata(command: UpdateCustomerBiodataCommand)
+
+    /**
+     * Impor CSV (pelanggan/akun BARU): aktivasi langganan yang baru dibuka dengan tanggal aktivasi
+     * dari kolom `installation_date` ([activatedAt] null = sekarang) dan tanggal tagih dari
+     * `next_billing` ([billingDayOfMonth] null = ikut snapshot paket). Pelanggan impor umumnya
+     * sudah terpasang, jadi langsung ACTIVE — memancarkan SubscriptionActivated agar akun
+     * jaringan yang diprovisi setelahnya lahir ACTIVE.
+     */
+    fun activateImportedSubscription(subscriptionId: UUID, activatedAt: Instant?, billingDayOfMonth: Int?)
+
+    /**
+     * Impor CSV (jalur upsert langganan yang sudah ada): setel ulang HANYA tanggal tagih dari
+     * kolom `next_billing`. null = kembalikan ke kebijakan billing global. Tak mengganti paket
+     * maupun status.
+     */
+    fun overrideSubscriptionBillingDay(subscriptionId: UUID, billingDayOfMonth: Int?)
+
+    /**
      * Statistik pelanggan & langganan TENANT untuk laporan (modul `reporting`): jumlah
      * pelanggan, cacah langganan per status, dan MRR (jumlah tarif bulanan langganan yang
      * masih ditagih). Customer tetap satu-satunya yang menyentuh tabelnya (RLS per tenant).
@@ -177,6 +202,22 @@ data class RegisterCustomerCommand(
     val location: Coordinate,
     val areaId: UUID?,
     /** Nomor identitas (NIK/KTP/paspor); opsional. */
+    val idCardNumber: String? = null,
+)
+
+/**
+ * Perintah pembaruan biodata PARSIAL lewat impor CSV: setiap field null = "pertahankan yang ada",
+ * non-null = timpa. Berbeda dari [SaveCustomerCommand] jalur manual yang menimpa penuh — impor
+ * hanya membawa sebagian kolom dan tak boleh mengosongkan data yang tak disertakan. `code` tak
+ * bisa diubah dari impor (kunci di sini adalah username akun, bukan kode).
+ */
+data class UpdateCustomerBiodataCommand(
+    val customerId: UUID,
+    val name: String? = null,
+    val phone: String? = null,
+    val email: String? = null,
+    val address: String? = null,
+    val location: Coordinate? = null,
     val idCardNumber: String? = null,
 )
 

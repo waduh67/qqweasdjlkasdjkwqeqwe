@@ -110,6 +110,17 @@ class Subscription private constructor(
         autoIsolir = s.autoIsolir
     }
 
+    /**
+     * Setel langsung tanggal tagih (hari dalam bulan) — dipakai impor CSV yang membawa
+     * `next_billing` sebagai basis siklus (pemetaan Opsi A: hanya harinya, di-clamp ≤28 oleh
+     * pemanggil). null = kembalikan ke kebijakan billing global. Berbeda dari [updatePackage]
+     * yang menyalin ulang seluruh snapshot; ini hanya menyentuh hari tagih.
+     */
+    fun overrideBillingDay(day: Int?) {
+        assertNotTerminated()
+        billingDayOfMonth = validateBillingDay(day)
+    }
+
     fun activate(at: Instant = Instant.now()) {
         assertNotTerminated()
         status = SubscriptionStatus.ACTIVE

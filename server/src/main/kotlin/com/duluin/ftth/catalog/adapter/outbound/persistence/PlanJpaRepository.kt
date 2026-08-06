@@ -6,4 +6,5 @@ import java.util.UUID
 interface PlanJpaRepository : JpaRepository<PlanJpaEntity, UUID> {
     fun findAllByOrderByNameAsc(): List<PlanJpaEntity>
     fun existsByName(name: String): Boolean
+    fun findFirstByNameIgnoreCase(name: String): PlanJpaEntity?
 }

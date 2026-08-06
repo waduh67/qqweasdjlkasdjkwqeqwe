@@ -13,6 +13,7 @@ import com.duluin.ftth.customer.ProvisionOnuCommand
 import com.duluin.ftth.customer.RegisterCustomerCommand
 import com.duluin.ftth.customer.SubscriberStats
 import com.duluin.ftth.customer.SubscriptionRef
+import com.duluin.ftth.customer.UpdateCustomerBiodataCommand
 import com.duluin.ftth.customer.domain.model.Customer
 import com.duluin.ftth.customer.domain.model.OnuStatus
 import com.duluin.ftth.customer.application.port.inbound.AttachOnuCommand
@@ -30,6 +31,7 @@ import com.duluin.ftth.customer.domain.model.Subscription
 import com.duluin.ftth.customer.domain.model.SubscriptionStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 import java.util.UUID
 
 @Service
@@ -272,6 +274,39 @@ class CustomerApiService(
     @Transactional
     override fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: java.math.BigDecimal?): UUID =
         manageSubscription.create(customerId, SaveSubscriptionCommand(planId, monthlyFeeOverride)).id
+
+    /**
+     * Merge parsial: baca kondisi terkini lalu timpa hanya field yang dibawa CSV (non-null),
+     * pertahankan sisanya. Memakai kembali use case update manual sehingga validasi & audit ikut.
+     */
+    @Transactional
+    override fun updateCustomerBiodata(command: UpdateCustomerBiodataCommand) {
+        val customer = customerRepository.findById(command.customerId)
+            ?: throw NotFoundException("Pelanggan ${command.customerId} tidak ditemukan")
+        manageCustomer.update(
+            command.customerId,
+            SaveCustomerCommand(
+                code = customer.code,
+                name = command.name ?: customer.name,
+                phone = command.phone ?: customer.phone,
+                email = command.email ?: customer.email,
+                address = command.address ?: customer.address,
+                location = command.location ?: customer.location,
+                areaId = customer.areaId,
+                idCardNumber = command.idCardNumber ?: customer.idCardNumber,
+            ),
+        )
+    }
+
+    @Transactional
+    override fun activateImportedSubscription(subscriptionId: UUID, activatedAt: Instant?, billingDayOfMonth: Int?) {
+        manageSubscription.activateImported(subscriptionId, activatedAt, billingDayOfMonth)
+    }
+
+    @Transactional
+    override fun overrideSubscriptionBillingDay(subscriptionId: UUID, billingDayOfMonth: Int?) {
+        manageSubscription.overrideBilling(subscriptionId, billingDayOfMonth)
+    }
 
     private fun Subscription.toBillable() = BillableSubscription(
         subscriptionId = id,

@@ -24,6 +24,9 @@ interface NasRepository {
 
     fun existsByName(name: String): Boolean
 
+    /** Cari BRAS menurut nama (abai huruf besar/kecil) — resolusi impor CSV kolom `router_name`. `null` bila tak ada. */
+    fun findByNameIgnoreCase(name: String): Nas?
+
     fun deleteById(id: UUID)
 }
 

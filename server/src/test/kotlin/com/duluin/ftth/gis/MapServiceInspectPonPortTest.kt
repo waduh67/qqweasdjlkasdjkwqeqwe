@@ -216,6 +216,9 @@ class MapServiceInspectPonPortTest {
             throw UnsupportedOperationException()
 
         override fun subscriberStats() = throw UnsupportedOperationException()
+        override fun updateCustomerBiodata(command: com.duluin.ftth.customer.UpdateCustomerBiodataCommand) = throw UnsupportedOperationException()
+        override fun activateImportedSubscription(subscriptionId: UUID, activatedAt: java.time.Instant?, billingDayOfMonth: Int?) = throw UnsupportedOperationException()
+        override fun overrideSubscriptionBillingDay(subscriptionId: UUID, billingDayOfMonth: Int?) = throw UnsupportedOperationException()
     }
 
     private class ThrowingMonitoringApi : MonitoringApi {
@@ -231,6 +234,9 @@ class MapServiceInspectPonPortTest {
         override fun resolveNasForArea(areaId: UUID) = throw UnsupportedOperationException()
         override fun fetchPppSecretsFromNas(nasId: UUID) = throw UnsupportedOperationException()
         override fun activeSubscriberLiveness() = throw UnsupportedOperationException()
+        override fun resolveNasByName(name: String) = throw UnsupportedOperationException()
+        override fun findAccessByUsername(username: String) = throw UnsupportedOperationException()
+        override fun updateAccessFromImport(accessId: UUID, planId: UUID, nasId: UUID?, secret: String?) = throw UnsupportedOperationException()
     }
 
     private class ThrowingCurrentUser : CurrentUserProvider {

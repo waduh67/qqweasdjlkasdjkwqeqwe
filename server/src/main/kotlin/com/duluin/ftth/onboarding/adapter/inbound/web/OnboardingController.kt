@@ -1,9 +1,13 @@
 package com.duluin.ftth.onboarding.adapter.inbound.web
 
 import com.duluin.ftth.common.domain.geo.Coordinate
+import com.duluin.ftth.onboarding.application.port.inbound.CustomerImportRow
 import com.duluin.ftth.onboarding.application.port.inbound.ExpressOnboardingUseCase
 import com.duluin.ftth.onboarding.application.port.inbound.ExpressPsbCommand
 import com.duluin.ftth.onboarding.application.port.inbound.ExpressPsbResult
+import com.duluin.ftth.onboarding.application.port.inbound.ImportCustomersCommand
+import com.duluin.ftth.onboarding.application.port.inbound.ImportCustomersResult
+import com.duluin.ftth.onboarding.application.port.inbound.ImportCustomersUseCase
 import com.duluin.ftth.onboarding.application.port.inbound.ImportPppoeCommand
 import com.duluin.ftth.onboarding.application.port.inbound.ImportPppoeResult
 import com.duluin.ftth.onboarding.application.port.inbound.ImportPppoeUseCase
@@ -26,6 +30,7 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.math.BigDecimal
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -41,6 +46,7 @@ import java.util.UUID
 class OnboardingController(
     private val onboarding: ExpressOnboardingUseCase,
     private val importPppoe: ImportPppoeUseCase,
+    private val importCustomers: ImportCustomersUseCase,
 ) {
 
     @PostMapping("/psb")
@@ -63,7 +69,72 @@ class OnboardingController(
     )
     fun importPppoe(@Valid @RequestBody request: ImportPppoeRequest): ImportPppoeResult =
         importPppoe.importPppoe(request.toCommand())
+
+    /**
+     * Impor CSV pelanggan generik (upsert menurut `mikrotik_username`): buat/perbarui pelanggan +
+     * langganan + akun jaringan per baris. Digating union izin langkah yang dirangkainya (buat &
+     * ubah pelanggan, ubah langganan, kelola akun jaringan). Membalas rekap per-baris → 200.
+     */
+    @PostMapping("/import/customers")
+    @ResponseStatus(HttpStatus.OK)
+    @PreAuthorize(
+        "@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update','bng.access.manage')",
+    )
+    fun importCustomers(@Valid @RequestBody request: ImportCustomersRequest): ImportCustomersResult =
+        importCustomers.importCustomers(request.toCommand())
 }
+
+/**
+ * Muatan impor CSV pelanggan: baris sudah diurai klien menjadi bentuk terstruktur. `mikrotik_username`
+ * jadi kunci upsert (kosong = baris dilewati). Kolom lain opsional — pada jalur update yang kosong
+ * dipertahankan.
+ */
+data class ImportCustomersRequest(
+    @field:Valid val rows: List<CustomerImportRowPayload> = emptyList(),
+) {
+    fun toCommand() = ImportCustomersCommand(
+        rows = rows.map {
+            CustomerImportRow(
+                name = it.name,
+                phone = it.phone,
+                address = it.address,
+                packageName = it.packageName,
+                connectionType = it.connectionType,
+                installationDate = it.installationDate,
+                mikrotikUsername = it.mikrotikUsername,
+                mikrotikPassword = it.mikrotikPassword,
+                email = it.email,
+                routerName = it.routerName,
+                idCardNumber = it.idCardNumber,
+                nextBillingDay = it.nextBillingDay,
+                latitude = it.latitude,
+                longitude = it.longitude,
+            )
+        },
+    )
+}
+
+/**
+ * Satu baris impor CSV. [mikrotikUsername] = kunci upsert. [installationDate] format ISO (`YYYY-MM-DD`).
+ * [nextBillingDay] hari tanggal tagih (di-clamp ≤28 di service). Batas panjang menahan payload absurd,
+ * bukan menegakkan aturan bisnis (itu di domain/service, agar satu baris jelek tak menjatuhkan batch).
+ */
+data class CustomerImportRowPayload(
+    @field:Size(max = 150) val name: String? = null,
+    @field:Size(max = 30) val phone: String? = null,
+    @field:Size(max = 500) val address: String? = null,
+    @field:Size(max = 100) val packageName: String? = null,
+    @field:Size(max = 30) val connectionType: String? = null,
+    val installationDate: LocalDate? = null,
+    @field:Size(max = 100) val mikrotikUsername: String? = null,
+    @field:Size(max = 100) val mikrotikPassword: String? = null,
+    @field:Size(max = 255) val email: String? = null,
+    @field:Size(max = 100) val routerName: String? = null,
+    @field:Size(max = 32) val idCardNumber: String? = null,
+    val nextBillingDay: Int? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+)
 
 /**
  * Muatan bulk-import PPPoE. [source] NAS → server menarik `/ppp/secret` dari [nasId] (abaikan

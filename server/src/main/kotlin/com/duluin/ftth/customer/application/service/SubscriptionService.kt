@@ -17,6 +17,7 @@ import com.duluin.ftth.customer.domain.model.Subscription
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 import java.util.UUID
 
 @Service
@@ -78,6 +79,21 @@ class SubscriptionService(
         val view = saveAndAudit(subscription, "subscription.activated")
         events.publishEvent(SubscriptionActivated(subscription.tenantId, subscription.id, subscription.customerId))
         return view
+    }
+
+    override fun activateImported(id: UUID, activatedAt: Instant?, billingDayOfMonth: Int?): SubscriptionView {
+        val subscription = require(id)
+        subscription.activate(activatedAt ?: Instant.now())
+        if (billingDayOfMonth != null) subscription.overrideBillingDay(billingDayOfMonth)
+        val view = saveAndAudit(subscription, "subscription.activated")
+        events.publishEvent(SubscriptionActivated(subscription.tenantId, subscription.id, subscription.customerId))
+        return view
+    }
+
+    override fun overrideBilling(id: UUID, billingDayOfMonth: Int?): SubscriptionView {
+        val subscription = require(id)
+        subscription.overrideBillingDay(billingDayOfMonth)
+        return saveAndAudit(subscription, "subscription.updated")
     }
 
     override fun isolate(id: UUID): SubscriptionView {

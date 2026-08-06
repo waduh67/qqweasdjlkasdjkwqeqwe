@@ -1,6 +1,7 @@
 package com.duluin.ftth.bng.application.service
 
 import com.duluin.ftth.bng.BngApi
+import com.duluin.ftth.bng.ImportedAccessRef
 import com.duluin.ftth.bng.PppSecretRef
 import com.duluin.ftth.bng.ProvisionAccessSpec
 import com.duluin.ftth.bng.ProvisionedAccessRef
@@ -8,6 +9,8 @@ import com.duluin.ftth.bng.SubscriberPppoeLiveness
 import com.duluin.ftth.bng.SubscriberSessionRef
 import com.duluin.ftth.bng.application.port.inbound.ManageSubscriberAccessUseCase
 import com.duluin.ftth.bng.application.port.inbound.ProvisionAccessCommand
+import com.duluin.ftth.bng.application.port.inbound.ResetSecretCommand
+import com.duluin.ftth.bng.application.port.inbound.UpdateAccessCommand
 import com.duluin.ftth.bng.application.port.outbound.NasAreaCoverageRepository
 import com.duluin.ftth.bng.application.port.outbound.NasRepository
 import com.duluin.ftth.bng.application.port.outbound.RadiusSessionRepository
@@ -48,6 +51,35 @@ class BngApiService(
 ) : BngApi {
 
     override fun resolveNasForArea(areaId: UUID): UUID? = coverageRepository.findNasIdByAreaId(areaId)
+
+    override fun resolveNasByName(name: String): UUID? =
+        name.trim().takeIf { it.isNotEmpty() }?.let { nasRepository.findByNameIgnoreCase(it)?.id }
+
+    override fun findAccessByUsername(username: String): ImportedAccessRef? =
+        username.trim().takeIf { it.isNotEmpty() }
+            ?.let { subscriberAccessRepository.findByUsername(it) }
+            ?.let { access ->
+                ImportedAccessRef(
+                    accessId = access.id,
+                    subscriptionId = access.subscriptionId,
+                    customerId = access.customerId,
+                    planId = access.planId,
+                    nasId = access.nasId,
+                    macBased = access.authType.macBased,
+                )
+            }
+
+    @Transactional
+    override fun updateAccessFromImport(accessId: UUID, planId: UUID, nasId: UUID?, secret: String?) {
+        val access = subscriberAccessRepository.findById(accessId)
+            ?: throw ValidationException("Akun jaringan $accessId tidak ditemukan")
+        manageAccess.updateAssignment(accessId, UpdateAccessCommand(planId = planId, nasId = nasId))
+        // Password hanya diganti bila kolom CSV diisi; akun berbasis MAC tak punya password (MAC = password).
+        val newSecret = secret?.trim()?.takeIf { it.isNotEmpty() }
+        if (newSecret != null && !access.authType.macBased) {
+            manageAccess.resetSecret(accessId, ResetSecretCommand(newSecret))
+        }
+    }
 
     override fun fetchPppSecretsFromNas(nasId: UUID): List<PppSecretRef> {
         val nas = nasRepository.findById(nasId)

@@ -283,6 +283,7 @@ private class FakeNasRepo(private val all: List<Nas>) : NasRepository {
     override fun findById(id: UUID): Nas? = all.firstOrNull { it.id == id }
     override fun save(nas: Nas): Nas = notUsed()
     override fun existsByName(name: String): Boolean = notUsed()
+    override fun findByNameIgnoreCase(name: String): Nas? = notUsed()
     override fun deleteById(id: UUID): Unit = notUsed()
     private fun notUsed(): Nothing = throw UnsupportedOperationException("tak dipakai di uji ini")
 }

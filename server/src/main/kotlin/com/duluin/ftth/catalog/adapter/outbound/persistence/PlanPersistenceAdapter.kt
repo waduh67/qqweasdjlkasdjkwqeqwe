@@ -82,6 +82,9 @@ class PlanPersistenceAdapter(
 
     override fun existsByName(name: String): Boolean = jpa.existsByName(name)
 
+    override fun findByNameIgnoreCase(name: String): Plan? =
+        jpa.findFirstByNameIgnoreCase(name.trim())?.toDomain()
+
     private fun PlanJpaEntity.toDomain(): Plan = Plan.rehydrate(
         id = id,
         tenantId = tenantId ?: TenantContext.tenantId(),

@@ -19,6 +19,12 @@ interface CatalogApi {
     /** Sisi komersial paket untuk di-snapshot langganan. `null` bila paket tak ada. */
     fun findPlanCommercial(planId: UUID): PlanCommercialRef?
 
+    /**
+     * Resolusi paket menurut NAMA (abai huruf besar/kecil) — dipakai impor CSV pelanggan yang
+     * merujuk paket lewat kolom `package_name`, bukan UUID. `null` bila nama tak cocok paket mana pun.
+     */
+    fun findPlanByName(name: String): PlanCommercialRef?
+
     /** Sisi jaringan paket untuk penegakan RADIUS. `null` bila paket tak ada. */
     fun findPlanNetwork(planId: UUID): PlanNetworkRef?
 }

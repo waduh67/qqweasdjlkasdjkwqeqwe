@@ -124,5 +124,8 @@ class ReportServiceTest {
         override fun terminateForDismantle(subscriptionId: UUID) = throw UnsupportedOperationException()
         override fun registerCustomer(command: com.duluin.ftth.customer.RegisterCustomerCommand) = throw UnsupportedOperationException()
         override fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: BigDecimal?) = throw UnsupportedOperationException()
+        override fun updateCustomerBiodata(command: com.duluin.ftth.customer.UpdateCustomerBiodataCommand) = throw UnsupportedOperationException()
+        override fun activateImportedSubscription(subscriptionId: UUID, activatedAt: java.time.Instant?, billingDayOfMonth: Int?) = throw UnsupportedOperationException()
+        override fun overrideSubscriptionBillingDay(subscriptionId: UUID, billingDayOfMonth: Int?) = throw UnsupportedOperationException()
     }
 }

@@ -209,6 +209,10 @@ class ImportPppoeServiceTest {
         override fun resolveNasForArea(areaId: UUID): UUID? = throw UnsupportedOperationException()
 
         override fun activeSubscriberLiveness() = throw UnsupportedOperationException()
+
+        override fun resolveNasByName(name: String) = throw UnsupportedOperationException()
+        override fun findAccessByUsername(username: String) = throw UnsupportedOperationException()
+        override fun updateAccessFromImport(accessId: UUID, planId: UUID, nasId: UUID?, secret: String?) = throw UnsupportedOperationException()
     }
 
     private class FakeCustomerApi(
@@ -252,5 +256,8 @@ class ImportPppoeServiceTest {
         override fun isolateForBilling(subscriptionId: UUID) = throw UnsupportedOperationException()
         override fun reactivateForBilling(subscriptionId: UUID) = throw UnsupportedOperationException()
         override fun terminateForDismantle(subscriptionId: UUID) = throw UnsupportedOperationException()
+        override fun updateCustomerBiodata(command: com.duluin.ftth.customer.UpdateCustomerBiodataCommand) = throw UnsupportedOperationException()
+        override fun activateImportedSubscription(subscriptionId: UUID, activatedAt: java.time.Instant?, billingDayOfMonth: Int?) = throw UnsupportedOperationException()
+        override fun overrideSubscriptionBillingDay(subscriptionId: UUID, billingDayOfMonth: Int?) = throw UnsupportedOperationException()
     }
 }

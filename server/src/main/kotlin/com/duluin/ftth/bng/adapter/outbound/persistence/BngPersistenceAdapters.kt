@@ -71,6 +71,9 @@ class NasPersistenceAdapter(
 
     override fun existsByName(name: String): Boolean = jpa.existsByName(name)
 
+    override fun findByNameIgnoreCase(name: String): Nas? =
+        jpa.findFirstByNameIgnoreCase(name.trim())?.toDomain()
+
     override fun deleteById(id: UUID) = jpa.deleteById(id)
 
     private fun NasJpaEntity.toDomain(): Nas = Nas.rehydrate(

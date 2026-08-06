@@ -1,6 +1,7 @@
 package com.duluin.ftth.customer.application.port.inbound
 
 import java.math.BigDecimal
+import java.time.Instant
 import java.util.UUID
 
 interface ManageSubscriptionUseCase {
@@ -12,6 +13,21 @@ interface ManageSubscriptionUseCase {
     fun update(id: UUID, command: SaveSubscriptionCommand): SubscriptionView
 
     fun activate(id: UUID): SubscriptionView
+
+    /**
+     * Aktivasi langganan hasil impor/backfill: pelanggan sudah terpasang di lapangan, jadi
+     * [activatedAt] menjadi basis prorata (null = sekarang) dan [billingDayOfMonth] menyetel
+     * langsung tanggal tagih dari kolom CSV (null = ikut snapshot paket). Memancarkan
+     * SubscriptionActivated sama seperti [activate] sehingga sinkron akses & billing ikut jalan.
+     */
+    fun activateImported(id: UUID, activatedAt: Instant?, billingDayOfMonth: Int?): SubscriptionView
+
+    /**
+     * Setel ulang HANYA tanggal tagih sebuah langganan (jalur upsert impor CSV memperbarui
+     * `next_billing` tanpa mengganti paket). null = kembalikan ke kebijakan billing global.
+     * Tak memancarkan event — tanggal tagih tak menyentuh sisi jaringan/RADIUS.
+     */
+    fun overrideBilling(id: UUID, billingDayOfMonth: Int?): SubscriptionView
 
     /** Isolir sementara, mis. karena tunggakan — perangkat tetap terpasang. */
     fun isolate(id: UUID): SubscriptionView

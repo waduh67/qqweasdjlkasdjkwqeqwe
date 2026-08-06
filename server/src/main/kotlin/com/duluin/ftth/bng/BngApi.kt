@@ -39,6 +39,29 @@ interface BngApi {
     fun resolveNasForArea(areaId: UUID): UUID?
 
     /**
+     * Resolusi BRAS menurut NAMA (abai huruf besar/kecil) — impor CSV pelanggan merujuk BRAS
+     * lewat kolom `router_name`, bukan UUID. `null` bila nama tak cocok BRAS mana pun. Ter-scope
+     * tenant aktif (RLS).
+     */
+    fun resolveNasByName(name: String): UUID?
+
+    /**
+     * Cari akun jaringan menurut username (kunci upsert impor CSV pelanggan: `mikrotik_username`).
+     * `null` bila belum ada akun dengan username itu → pemanggil membuat pelanggan+langganan+akun baru.
+     * Membawa `subscriptionId`/`customerId` agar orkestrasi impor bisa memperbarui langganan &
+     * biodata pemiliknya tanpa menembus internal module. TAK membocorkan secret.
+     */
+    fun findAccessByUsername(username: String): ImportedAccessRef?
+
+    /**
+     * Perbarui akun jaringan yang sudah ada dari impor CSV (jalur upsert): pindahkan paket/BRAS
+     * dan—bila [secret] diisi—ganti password. [secret] null = pertahankan password lama (kolom
+     * kosong di CSV dilewati). Untuk akun berbasis MAC, [secret] diabaikan. Memakai kembali use
+     * case pengelolaan akun (audit & sinkron RADIUS ikut berjalan).
+     */
+    fun updateAccessFromImport(accessId: UUID, planId: UUID, nasId: UUID?, secret: String?)
+
+    /**
      * Tarik seluruh `/ppp/secret` dari RouterOS sebuah BRAS (vendor MIKROTIK) — bahan mentah
      * bulk-import PPPoE. BERBEDA dari pratinjau UI ([ManageNasUseCase.listPppSecrets]), ini
      * MEMBAWA password: dipakai orkestrasi impor onboarding untuk membuat akun dengan
@@ -102,6 +125,21 @@ data class ProvisionAccessSpec(
     val nasId: UUID?,
     val authType: String?,
     val framedIp: String?,
+)
+
+/**
+ * Identitas ringkas sebuah akun jaringan untuk jalur upsert impor CSV — hasil pencarian
+ * per-username. Membawa taut ke langganan & pemiliknya plus paket/BRAS terkini (untuk merge
+ * partial-update), TANPA secret. [macBased] menandai akun DHCP/Static yang passwordnya = MAC
+ * (tak bisa di-reset dari impor).
+ */
+data class ImportedAccessRef(
+    val accessId: UUID,
+    val subscriptionId: UUID,
+    val customerId: UUID,
+    val planId: UUID,
+    val nasId: UUID?,
+    val macBased: Boolean,
 )
 
 /** Hasil provisi: identitas akun tanpa membocorkan secret (password PPPoE tak pernah keluar). */

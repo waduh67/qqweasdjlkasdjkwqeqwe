@@ -17,4 +17,7 @@ interface PlanRepository {
     fun findAll(): List<Plan>
 
     fun existsByName(name: String): Boolean
+
+    /** Cari paket menurut nama (abai huruf besar/kecil) — resolusi impor CSV per-nama. `null` bila tak ada. */
+    fun findByNameIgnoreCase(name: String): Plan?
 }

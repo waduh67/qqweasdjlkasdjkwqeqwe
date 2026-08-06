@@ -23,6 +23,9 @@ class CatalogApiService(
     override fun findPlanCommercial(planId: UUID): PlanCommercialRef? =
         planRepository.findById(planId)?.toCommercialRef()
 
+    override fun findPlanByName(name: String): PlanCommercialRef? =
+        name.trim().takeIf { it.isNotEmpty() }?.let { planRepository.findByNameIgnoreCase(it)?.toCommercialRef() }
+
     override fun findPlanNetwork(planId: UUID): PlanNetworkRef? =
         planRepository.findById(planId)?.toNetworkRef()
 
