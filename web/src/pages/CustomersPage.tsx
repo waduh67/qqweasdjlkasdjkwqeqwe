@@ -6,8 +6,9 @@ import type { CustomerStatus, CustomerView } from '../api/network'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
 import { LocationPicker } from '../components/LocationPicker'
+import { exportCustomersCsv } from '../api/onboarding'
 import { EmptyState, Modal, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
-import { IconCustomers, IconInbox, IconPlus } from '../components/icons'
+import { IconCustomers, IconDownload, IconInbox, IconPlus, IconUpload } from '../components/icons'
 
 const EMPTY_CUSTOMER = { code: '', name: '', phone: '', idCardNumber: '', address: '', longitude: '', latitude: '' }
 
@@ -41,6 +42,31 @@ export function CustomersPage() {
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState<typeof EMPTY_CUSTOMER | null>(null)
   const [saving, setSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
+
+  // Ekspor butuh izin BACA union (pelanggan+langganan+akun) — cocok gating server; disable, bukan sembunyi.
+  const canExport =
+    can('customer.customer.view') && can('customer.subscription.view') && can('bng.access.view')
+
+  const exportCsv = async () => {
+    setExporting(true)
+    try {
+      // Byte ter-gate (butuh Bearer) → ambil Blob dulu, lalu jadikan unduhan lewat object URL.
+      const blob = await exportCustomersCsv()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'pelanggan.csv'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal mengekspor CSV')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const reload = useCallback(async () => {
     try {
@@ -121,18 +147,28 @@ export function CustomersPage() {
           <h1 className="page-title">Pelanggan</h1>
           <p className="page-sub">Data pelanggan, perangkat ONU, dan penempatannya di ODP.</p>
         </div>
-        {can('customer.customer.create') && (
-          <div className="row" style={{ gap: '0.5rem' }}>
-            {/* Pintu masuk impor massal — dulu menu sidebar tersendiri, kini menyatu di area
-                Pelanggan bersama (kelak) impor/ekspor CSV. Rute /import-pppoe tak berubah. */}
-            <button className="ghost" onClick={() => navigate('/import-pppoe')}>
-              <IconInbox size={15} /> Impor PPPoE
+        {/* Impor/ekspor massal menyatu di area Pelanggan (dulu menu sidebar tersendiri). Ekspor
+            digating izin BACA (bisa untuk operator view-only); impor digating izin buat pelanggan. */}
+        <div className="row" style={{ gap: '0.5rem' }}>
+          {canExport && (
+            <button className="ghost" onClick={() => void exportCsv()} disabled={exporting}>
+              <IconDownload size={15} /> {exporting ? 'Mengekspor…' : 'Ekspor CSV'}
             </button>
-            <button className="primary" onClick={() => setDraft({ ...EMPTY_CUSTOMER })}>
-              <IconPlus size={15} /> Tambah pelanggan
-            </button>
-          </div>
-        )}
+          )}
+          {can('customer.customer.create') && (
+            <>
+              <button className="ghost" onClick={() => navigate('/import-customers')}>
+                <IconUpload size={15} /> Impor CSV
+              </button>
+              <button className="ghost" onClick={() => navigate('/import-pppoe')}>
+                <IconInbox size={15} /> Impor PPPoE
+              </button>
+              <button className="primary" onClick={() => setDraft({ ...EMPTY_CUSTOMER })}>
+                <IconPlus size={15} /> Tambah pelanggan
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <Toolbar>

@@ -249,3 +249,21 @@ export const IconChevronsUpDown = (p: IconProps) => (
     <path d="m7 15 5 5 5-5M7 9l5-5 5 5" />
   </Icon>
 )
+
+/** Unduh — dipakai tombol ekspor CSV. */
+export const IconDownload = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <path d="M7 10l5 5 5-5" />
+    <path d="M12 15V3" />
+  </Icon>
+)
+
+/** Unggah — dipakai tombol impor CSV. */
+export const IconUpload = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <path d="M17 8l-5-5-5 5" />
+    <path d="M12 3v12" />
+  </Icon>
+)

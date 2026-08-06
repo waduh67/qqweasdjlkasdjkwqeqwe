@@ -120,3 +120,77 @@ export interface ImportPppoeResult {
 /** Jalankan bulk-import PPPoE (satu POST → rekap per-baris). */
 export const importPppoe = (body: ImportPppoeRequest) =>
   api.post<ImportPppoeResult>('/api/onboarding/import/pppoe', body)
+
+// ---- Impor/ekspor CSV pelanggan (generik, upsert menurut mikrotik_username) ----
+
+/**
+ * Impor CSV pelanggan generik: satu berkas berisi biodata + langganan + akun jaringan per baris,
+ * di-UPSERT menurut `mikrotik_username` (cermin `OnboardingController.importCustomers`). Berbeda
+ * dari impor PPPoE yang menyedot `/ppp/secret`: sumbernya berkas CSV yang dirakit operator dan
+ * bersifat upsert. Baris sudah diurai KLIEN jadi bentuk terstruktur sebelum dikirim.
+ */
+
+/**
+ * Urutan kolom kanonis CSV pelanggan — identik header ekspor server (`CustomerCsv.HEADER`).
+ * Dipakai membangkitkan template unduhan; parser impor memetakan lewat NAMA kolom, jadi urutan
+ * di berkas yang diunggah bebas selama nama header cocok.
+ */
+export const CUSTOMER_CSV_COLUMNS = [
+  'name', 'phone', 'address', 'package_name', 'connection_type', 'installation_date',
+  'mikrotik_username', 'mikrotik_password', 'email', 'router_name', 'id_card_number',
+  'next_billing', 'latitude', 'longitude', 'notes',
+] as const
+
+/**
+ * Satu baris impor CSV. [mikrotikUsername] = kunci upsert (kosong → server melewati baris).
+ * [installationDate] ISO `YYYY-MM-DD`. Kolom lain opsional: pada jalur update yang kosong
+ * dipertahankan; [mikrotikPassword] kosong = pertahankan password lama.
+ */
+export interface CustomerCsvRow {
+  name?: string | null
+  phone?: string | null
+  address?: string | null
+  packageName?: string | null
+  connectionType?: string | null
+  installationDate?: string | null
+  mikrotikUsername?: string | null
+  mikrotikPassword?: string | null
+  email?: string | null
+  routerName?: string | null
+  idCardNumber?: string | null
+  nextBillingDay?: number | null
+  latitude?: number | null
+  longitude?: number | null
+}
+
+export interface ImportCustomersRequest {
+  rows: CustomerCsvRow[]
+}
+
+export type CustomerImportStatus = 'CREATED' | 'UPDATED' | 'SKIPPED' | 'FAILED'
+
+/** Nasib satu baris: dibuat, diperbarui, dilewati (username kosong/tipe tak didukung), atau gagal. */
+export interface CustomerImportOutcome {
+  username: string
+  status: CustomerImportStatus
+  message: string | null
+}
+
+/** Rekap hasil impor CSV + rincian per-baris. */
+export interface ImportCustomersResult {
+  created: number
+  updated: number
+  skipped: number
+  failed: number
+  rows: CustomerImportOutcome[]
+}
+
+/** Jalankan impor CSV pelanggan (satu POST → rekap per-baris). */
+export const importCustomers = (body: ImportCustomersRequest) =>
+  api.post<ImportCustomersResult>('/api/onboarding/import/customers', body)
+
+/**
+ * Ekspor CSV pelanggan sebagai Blob (byte ter-gate → diambil dengan header Bearer, bukan `<a href>`).
+ * Pemanggil menjadikannya unduhan berkas (object URL). Header kolomnya cocok template impor.
+ */
+export const exportCustomersCsv = () => api.blob('/api/onboarding/export/customers')

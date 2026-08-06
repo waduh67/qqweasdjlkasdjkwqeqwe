@@ -17,6 +17,7 @@ import { CustomerDetailPage } from './pages/CustomerDetailPage'
 import { InvoicesPage } from './pages/InvoicesPage'
 import { ExpressPsbPage } from './pages/ExpressPsbPage'
 import { ImportPppoePage } from './pages/ImportPppoePage'
+import { ImportCustomersPage } from './pages/ImportCustomersPage'
 import { MonitoringPage } from './pages/MonitoringPage'
 import { ProvisioningPage } from './pages/ProvisioningPage'
 import { IncidentsPage } from './pages/IncidentsPage'
@@ -182,6 +183,14 @@ function OperatorApp() {
               element={
                 <RequirePermission permission="customer.customer.create">
                   <ImportPppoePage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="import-customers"
+              element={
+                <RequirePermission permission="customer.customer.create">
+                  <ImportCustomersPage />
                 </RequirePermission>
               }
             />
