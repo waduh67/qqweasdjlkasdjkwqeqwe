@@ -10,8 +10,9 @@ import java.time.LocalDate
  * sekadar create.
  *
  * Kunci upsert = username akun jaringan (`mikrotik_username`):
- *  - belum ada  → BUAT pelanggan + langganan (paket dari `package_name`) + akun PPPoE, langsung
- *                 AKTIF (pelanggan impor sudah terpasang), aktivasi memakai `installation_date`.
+ *  - belum ada  → BUAT pelanggan + langganan (paket dari `package_name`) + akun jaringan (tipe dari
+ *                 `connection_type`), langsung AKTIF (pelanggan impor sudah terpasang), aktivasi
+ *                 memakai `installation_date`.
  *  - sudah ada  → PERBARUI parsial: biodata (kolom kosong dilewati), tanggal tagih, BRAS, dan
  *                 password (kosong = pertahankan). Paket SENGAJA tak diubah pada jalur update —
  *                 ganti paket bukan lingkup impor massal ini.
@@ -19,10 +20,11 @@ import java.time.LocalDate
  * Per-baris ATOMIK (tiap baris commit sendiri): satu baris gagal tak menyeret batch. Hasil
  * per-baris ([CustomerImportOutcome]).
  *
- * Cakupan v1 (dilaporkan ke operator): hanya koneksi PPPoE; baris tipe lain dilewati. Aktivasi
- * MEMPRORATA dari `installation_date` (lampau → tagih penuh, tak ada masalah prorata). `next_billing`
- * dipetakan ke HARI tanggal tagih (Opsi A), di-clamp ≤28 agar aman di Februari; kolom `notes`
- * diabaikan.
+ * Tipe koneksi: `pppoe`/`hotspot` (username+password) & `dhcp`/`static` (identitas MAC, `use-radius`
+ * MikroTik — `static` menambah reservasi Framed-IP). Kolom `connection_type` kosong → PPPoE; nilai tak
+ * dikenal → baris GAGAL. Aktivasi MEMPRORATA dari `installation_date` (lampau → tagih penuh, tak ada
+ * masalah prorata). `next_billing` dipetakan ke HARI tanggal tagih (Opsi A), di-clamp ≤28 agar aman di
+ * Februari; kolom `notes` diabaikan.
  */
 interface ImportCustomersUseCase {
 
@@ -37,9 +39,12 @@ data class ImportCustomersCommand(
 /**
  * Satu baris CSV pelanggan (sudah diurai klien). [mikrotikUsername] = kunci upsert. Semua field
  * lain opsional: pada jalur UPDATE, kolom kosong berarti "pertahankan yang ada"; pada jalur CREATE,
- * field wajib domain (nama, alamat) yang kosong membuat baris GAGAL. [connectionType] "pppoe_direct"/
- * kosong → PPPoE; tipe lain dilewati (v1). [installationDate] jadi tanggal aktivasi langganan.
- * [nextBillingDay] = hari tanggal tagih (di-clamp ≤28). [latitude]/[longitude] → koordinat pelanggan.
+ * field wajib domain (nama, alamat) yang kosong membuat baris GAGAL. [connectionType] kosong/`pppoe`
+ * → PPPoE, `hotspot`/`dhcp`/`static` → tipe terkait; tak dikenal → baris GAGAL. Untuk `dhcp`/`static`
+ * [mikrotikUsername] adalah MAC & [mikrotikPassword] diabaikan; [framedIp] jadi reservasi Framed-IP
+ * (WAJIB `static`, opsional `dhcp`, diabaikan `pppoe`/`hotspot`). [installationDate] jadi tanggal
+ * aktivasi langganan. [nextBillingDay] = hari tanggal tagih (di-clamp ≤28). [latitude]/[longitude] →
+ * koordinat pelanggan.
  */
 data class CustomerImportRow(
     val name: String?,
@@ -56,6 +61,7 @@ data class CustomerImportRow(
     val nextBillingDay: Int?,
     val latitude: Double?,
     val longitude: Double?,
+    val framedIp: String? = null,
 )
 
 /** Rekap hasil impor + rincian per-baris. */
@@ -79,7 +85,8 @@ data class CustomerImportOutcome(
 
 /**
  * CREATED = pelanggan+langganan+akun baru dibuat; UPDATED = akun yang sudah ada diperbarui;
- * SKIPPED = sengaja dilewati (username kosong / tipe koneksi tak didukung / sudah pernah diimpor);
- * FAILED = gagal (data tak valid / paket/router tak ditemukan).
+ * SKIPPED = sengaja dilewati (username kosong / sudah pernah diimpor);
+ * FAILED = gagal (data tak valid / tipe koneksi tak dikenal / paket/router tak ditemukan / MAC atau
+ * Framed-IP tak valid).
  */
 enum class CustomerImportStatus { CREATED, UPDATED, SKIPPED, FAILED }

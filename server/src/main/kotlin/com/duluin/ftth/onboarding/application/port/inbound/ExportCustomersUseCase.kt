@@ -20,9 +20,11 @@ interface ExportCustomersUseCase {
 
 /**
  * Satu baris ekspor CSV pelanggan (sebelum diserialisasi adapter web). [mikrotikUsername] = anchor
- * (selalu ada). [connectionType] nama tipe koneksi huruf kecil (mis. "pppoe"). [installationDate]
- * diturunkan dari tanggal aktivasi langganan (tanggal UTC). Kolom rahasia (`mikrotik_password`) dan
- * `notes` sengaja tak ada di sini — adapter menulisnya kosong agar tetap cocok template impor.
+ * (selalu ada; MAC untuk tipe DHCP/Static). [connectionType] nama tipe koneksi huruf kecil (mis.
+ * "pppoe", "static"). [framedIp] reservasi Framed-IP untuk Static/DHCP (null bila tak ada).
+ * [installationDate] diturunkan dari tanggal aktivasi langganan (tanggal UTC). Kolom rahasia
+ * (`mikrotik_password`) dan `notes` sengaja tak ada di sini — adapter menulisnya kosong agar tetap
+ * cocok template impor.
  */
 data class CustomerExportLine(
     val name: String?,
@@ -38,4 +40,5 @@ data class CustomerExportLine(
     val nextBillingDay: Int?,
     val latitude: Double?,
     val longitude: Double?,
+    val framedIp: String? = null,
 )

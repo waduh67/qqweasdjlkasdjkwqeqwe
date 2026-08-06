@@ -58,14 +58,14 @@ class ImportCustomersService(
         if (username.isEmpty()) {
             return CustomerImportOutcome("", CustomerImportStatus.SKIPPED, "mikrotik_username kosong — baris dilewati")
         }
-        if (!isPppoe(row.connectionType)) {
-            return CustomerImportOutcome(
-                username, CustomerImportStatus.SKIPPED,
-                "Tipe koneksi '${row.connectionType}' belum didukung (v1 hanya PPPoE)",
+        // Petakan `connection_type` ke tipe kanonis di sini (murah, tanpa DB) sebelum membuka transaksi.
+        val authType = resolveAuthType(row.connectionType)
+            ?: return CustomerImportOutcome(
+                username, CustomerImportStatus.FAILED,
+                "Tipe koneksi '${row.connectionType}' tak dikenal (pppoe/hotspot/dhcp/static)",
             )
-        }
         return try {
-            CustomerImportOutcome(username, rowImporter.importRow(username, row), null)
+            CustomerImportOutcome(username, rowImporter.importRow(username, authType, row), null)
         } catch (e: ConflictException) {
             // Bentrok (mis. sudah pernah diimpor lewat jalur lain) → impor idempoten, lewati saja.
             CustomerImportOutcome(username, CustomerImportStatus.SKIPPED, e.message)
@@ -75,10 +75,19 @@ class ImportCustomersService(
         }
     }
 
-    /** `pppoe_direct`/`pppoe`/kosong → didukung; tipe lain (hotspot/static/dhcp) di luar cakupan v1. */
-    private fun isPppoe(connectionType: String?): Boolean {
-        val value = connectionType?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return true
-        return value.contains("pppoe")
+    /**
+     * Petakan `connection_type` (nilai bebas dari CSV/RouterOS) ke nama [AuthType] kanonis via substring
+     * — toleran terhadap varian macam `pppoe_direct`. Kosong → PPPOE; tak dikenal → null (baris gagal).
+     */
+    private fun resolveAuthType(connectionType: String?): String? {
+        val value = connectionType?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return "PPPOE"
+        return when {
+            value.contains("pppoe") -> "PPPOE"
+            value.contains("hotspot") -> "HOTSPOT"
+            value.contains("static") -> "STATIC"
+            value.contains("dhcp") -> "DHCP"
+            else -> null
+        }
     }
 }
 
@@ -96,13 +105,13 @@ class CustomerRowImporter(
 ) {
 
     @Transactional
-    fun importRow(username: String, row: CustomerImportRow): CustomerImportStatus {
+    fun importRow(username: String, authType: String, row: CustomerImportRow): CustomerImportStatus {
         val existing = bngApi.findAccessByUsername(username)
-        return if (existing == null) createNew(username, row) else updateExisting(existing, row)
+        return if (existing == null) createNew(username, authType, row) else updateExisting(existing, row)
     }
 
     /** Pelanggan+langganan+akun BARU, langsung aktif (pelanggan impor sudah terpasang di lapangan). */
-    private fun createNew(username: String, row: CustomerImportRow): CustomerImportStatus {
+    private fun createNew(username: String, authType: String, row: CustomerImportRow): CustomerImportStatus {
         val plan = catalogApi.findPlanByName(row.packageName.orEmpty())
             ?: throw ValidationException("Paket '${row.packageName ?: "-"}' tidak ditemukan")
         val nasId = resolveNas(row.routerName)
@@ -128,11 +137,13 @@ class CustomerRowImporter(
             ProvisionAccessSpec(
                 subscriptionId = subscriptionId,
                 username = username,
+                // Password hanya untuk tipe login (PPPoE/Hotspot); MAC-based (DHCP/Static) mengabaikannya.
                 secret = row.mikrotikPassword?.trim()?.takeIf { it.isNotEmpty() },
                 planId = plan.planId,
                 nasId = nasId,
-                authType = "PPPOE",
-                framedIp = null,
+                authType = authType,
+                // Framed-IP hanya bermakna untuk Static (wajib) / DHCP (opsional); bng memvalidasi.
+                framedIp = row.framedIp?.trim()?.takeIf { it.isNotEmpty() },
             ),
         )
         return CustomerImportStatus.CREATED

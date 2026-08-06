@@ -19,12 +19,17 @@ import { IconInbox, IconDownload, IconUpload } from '../components/icons'
  * di-round-trip). Alur: unggah → urai di klien → pratinjau → commit → rekap per-baris.
  *
  * Penguraian CSV terjadi di browser (RFC-4180, dipetakan lewat NAMA header sehingga urutan kolom
- * bebas). Baris tanpa `mikrotik_username` atau bertipe koneksi non-PPPoE ditandai "akan dilewati"
- * di pratinjau — server tetap penegak sebenarnya dan melaporkannya kembali di rekap.
+ * bebas). Semua tipe koneksi didukung: `pppoe`/`hotspot` (login username+password) &
+ * `dhcp`/`static` (identitas MAC — `mikrotik_username` diisi MAC). Baris bermasalah diprediksi di
+ * pratinjau — tanpa `mikrotik_username` (dilewati), tipe tak dikenal atau Static tanpa `framed_ip`
+ * (gagal) — namun server tetap penegak sebenarnya dan melaporkannya kembali di rekap.
  */
 
-/** Satu baris pratinjau: muatan siap-kirim + alasan lewat yang diprediksi klien (jika ada). */
-type PreviewRow = CustomerCsvRow & { skipReason: string | null }
+/** Prediksi klien atas satu baris: `skip` (server melewati) / `fail` (server menolak) + alasannya. */
+type RowIssue = { kind: 'skip' | 'fail'; reason: string }
+
+/** Satu baris pratinjau: muatan siap-kirim + masalah yang diprediksi klien (null bila siap). */
+type PreviewRow = CustomerCsvRow & { issue: RowIssue | null }
 
 /**
  * Urai teks CSV jadi larik-baris (RFC-4180): field boleh dibungkus kutip; kutip ganda `""` jadi satu
@@ -122,9 +127,18 @@ function orNull(raw: string): string | null {
   return s === '' ? null : s
 }
 
-/** PPPoE bila tipe kosong atau memuat substring "pppoe" (cermin prediksi server; sisanya dilewati v1). */
-function isPppoe(connectionType: string | null | undefined): boolean {
-  return !connectionType || connectionType.toLowerCase().includes('pppoe')
+/** Tipe koneksi kanonis dari nilai bebas CSV (cermin `resolveAuthType` server via substring). */
+type ConnType = 'pppoe' | 'hotspot' | 'dhcp' | 'static'
+
+/** Petakan `connection_type` ke tipe kanonis; kosong → pppoe; tak dikenal → null (baris gagal). */
+function resolveType(connectionType: string | null | undefined): ConnType | null {
+  if (!connectionType) return 'pppoe'
+  const v = connectionType.toLowerCase()
+  if (v.includes('pppoe')) return 'pppoe'
+  if (v.includes('hotspot')) return 'hotspot'
+  if (v.includes('static')) return 'static'
+  if (v.includes('dhcp')) return 'dhcp'
+  return null
 }
 
 /** Petakan larik-baris CSV ber-header jadi baris pratinjau. Kolom dicocokkan lewat NAMA header. */
@@ -142,11 +156,17 @@ function toPreviewRows(records: string[][]): PreviewRow[] {
   return body.map((cols) => {
     const mikrotikUsername = orNull(at(cols, 'mikrotik_username'))
     const connectionType = orNull(at(cols, 'connection_type'))
-    const skipReason = !mikrotikUsername
-      ? 'username kosong'
-      : !isPppoe(connectionType)
-        ? 'tipe koneksi non-PPPoE'
-        : null
+    const framedIp = orNull(at(cols, 'framed_ip'))
+    const type = resolveType(connectionType)
+    // Prediksi masalah baris (cermin aturan server): username kosong → dilewati; tipe tak dikenal
+    // atau Static tanpa Framed-IP → gagal. Sisanya siap. Server tetap penegak final.
+    const issue: RowIssue | null = !mikrotikUsername
+      ? { kind: 'skip', reason: 'username kosong' }
+      : type === null
+        ? { kind: 'fail', reason: `tipe '${connectionType}' tak dikenal` }
+        : type === 'static' && !framedIp
+          ? { kind: 'fail', reason: 'Static wajib framed_ip' }
+          : null
     return {
       name: orNull(at(cols, 'name')),
       phone: orNull(at(cols, 'phone')),
@@ -158,11 +178,12 @@ function toPreviewRows(records: string[][]): PreviewRow[] {
       mikrotikPassword: orNull(at(cols, 'mikrotik_password')),
       email: orNull(at(cols, 'email')),
       routerName: orNull(at(cols, 'router_name')),
+      framedIp,
       idCardNumber: orNull(at(cols, 'id_card_number')),
       nextBillingDay: toInt(at(cols, 'next_billing')),
       latitude: toNum(at(cols, 'latitude')),
       longitude: toNum(at(cols, 'longitude')),
-      skipReason,
+      issue,
     }
   })
 }
@@ -201,8 +222,8 @@ export function ImportCustomersPage() {
     can('customer.subscription.update') &&
     can('bng.access.manage')
 
-  const skipCount = useMemo(() => rows.filter((r) => r.skipReason).length, [rows])
-  const readyCount = rows.length - skipCount
+  const issueCount = useMemo(() => rows.filter((r) => r.issue).length, [rows])
+  const readyCount = rows.length - issueCount
 
   const onFile = (file: File) => {
     setResult(null)
@@ -224,8 +245,8 @@ export function ImportCustomersPage() {
     if (rows.length === 0) return
     setSaving(true)
     try {
-      // Kirim SEMUA baris (termasuk yang diprediksi dilewati) agar rekap server jujur & lengkap.
-      const payload: CustomerCsvRow[] = rows.map(({ skipReason: _skip, ...row }) => row)
+      // Kirim SEMUA baris (termasuk yang diprediksi bermasalah) agar rekap server jujur & lengkap.
+      const payload: CustomerCsvRow[] = rows.map(({ issue: _issue, ...row }) => row)
       const res = await importCustomers({ rows: payload })
       setResult(res)
       toast.success(
@@ -304,8 +325,11 @@ export function ImportCustomersPage() {
           <strong>Ekspor CSV</strong> dari halaman Pelanggan bisa langsung diunggah kembali.
         </p>
         <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
-          <code>connection_type</code>: isi <code>pppoe</code> (atau kosongkan) — v1 hanya memproses PPPoE;
-          tipe lain (<code>hotspot</code>, <code>static</code>, <code>dhcp</code>) akan dilewati.
+          <code>connection_type</code>: <code>pppoe</code> / <code>hotspot</code> / <code>dhcp</code> /{' '}
+          <code>static</code> (kosong = pppoe; tak dikenal = baris gagal). Untuk <code>dhcp</code>/
+          <code>static</code>, isi <code>mikrotik_username</code> dengan <strong>MAC</strong> (mis.{' '}
+          <code>AA:BB:CC:DD:EE:FF</code>) — <code>mikrotik_password</code> diabaikan. <code>framed_ip</code>{' '}
+          = reservasi IP: <strong>wajib</strong> untuk <code>static</code>, opsional untuk <code>dhcp</code>.
           <br />
           <code>installation_date</code>: <code>YYYY-MM-DD</code> (juga menerima <code>DD/MM/YYYY</code>).{' '}
           <code>next_billing</code>: tanggal tagih 1–28. <code>mikrotik_password</code> kosong = pertahankan
@@ -320,7 +344,7 @@ export function ImportCustomersPage() {
             <h3 style={{ margin: 0, fontSize: '0.95rem' }}>
               2. Pratinjau{' '}
               <span className="muted">
-                ({readyCount} siap{skipCount > 0 ? `, ${skipCount} akan dilewati` : ''})
+                ({readyCount} siap{issueCount > 0 ? `, ${issueCount} bermasalah` : ''})
               </span>
             </h3>
           </div>
@@ -328,10 +352,11 @@ export function ImportCustomersPage() {
             <table className="table" style={{ fontSize: '0.85rem' }}>
               <thead>
                 <tr>
-                  <th>Username</th>
+                  <th>Username / MAC</th>
                   <th>Nama</th>
                   <th>Paket</th>
                   <th>Koneksi</th>
+                  <th>Framed-IP</th>
                   <th>Tgl pasang</th>
                   <th>Tagih</th>
                   <th>Status</th>
@@ -344,11 +369,14 @@ export function ImportCustomersPage() {
                     <td>{r.name ?? <span className="muted">—</span>}</td>
                     <td>{r.packageName ?? <span className="muted">—</span>}</td>
                     <td>{r.connectionType ?? <span className="muted">pppoe</span>}</td>
+                    <td>{r.framedIp ? <code>{r.framedIp}</code> : <span className="muted">—</span>}</td>
                     <td>{r.installationDate ?? <span className="muted">—</span>}</td>
                     <td>{r.nextBillingDay ?? <span className="muted">—</span>}</td>
                     <td>
-                      {r.skipReason ? (
-                        <Badge tone="neutral">dilewati · {r.skipReason}</Badge>
+                      {r.issue ? (
+                        <Badge tone={r.issue.kind === 'fail' ? 'critical' : 'neutral'}>
+                          {r.issue.kind === 'fail' ? 'gagal' : 'dilewati'} · {r.issue.reason}
+                        </Badge>
                       ) : (
                         <Badge tone="good">siap</Badge>
                       )}
@@ -358,10 +386,10 @@ export function ImportCustomersPage() {
               </tbody>
             </table>
           </div>
-          {skipCount > 0 && (
+          {issueCount > 0 && (
             <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
-              {skipCount} baris akan dilewati server (username kosong atau tipe koneksi non-PPPoE). v1 hanya
-              memproses PPPoE.
+              {issueCount} baris diprediksi bermasalah (username kosong → dilewati; tipe tak dikenal atau
+              Static tanpa <code>framed_ip</code> → gagal). Baris lain tetap dikirim; server memberi rekap final.
             </p>
           )}
         </div>

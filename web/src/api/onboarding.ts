@@ -137,12 +137,14 @@ export const importPppoe = (body: ImportPppoeRequest) =>
  */
 export const CUSTOMER_CSV_COLUMNS = [
   'name', 'phone', 'address', 'package_name', 'connection_type', 'installation_date',
-  'mikrotik_username', 'mikrotik_password', 'email', 'router_name', 'id_card_number',
+  'mikrotik_username', 'mikrotik_password', 'email', 'router_name', 'framed_ip', 'id_card_number',
   'next_billing', 'latitude', 'longitude', 'notes',
 ] as const
 
 /**
- * Satu baris impor CSV. [mikrotikUsername] = kunci upsert (kosong → server melewati baris).
+ * Satu baris impor CSV. [mikrotikUsername] = kunci upsert (kosong → server melewati baris; untuk
+ * tipe DHCP/Static isinya MAC). [connectionType] `pppoe`/`hotspot`/`dhcp`/`static` (kosong → pppoe;
+ * tak dikenal → baris gagal). [framedIp] reservasi Framed-IP untuk Static (wajib)/DHCP (opsional).
  * [installationDate] ISO `YYYY-MM-DD`. Kolom lain opsional: pada jalur update yang kosong
  * dipertahankan; [mikrotikPassword] kosong = pertahankan password lama.
  */
@@ -157,6 +159,7 @@ export interface CustomerCsvRow {
   mikrotikPassword?: string | null
   email?: string | null
   routerName?: string | null
+  framedIp?: string | null
   idCardNumber?: string | null
   nextBillingDay?: number | null
   latitude?: number | null
@@ -169,7 +172,7 @@ export interface ImportCustomersRequest {
 
 export type CustomerImportStatus = 'CREATED' | 'UPDATED' | 'SKIPPED' | 'FAILED'
 
-/** Nasib satu baris: dibuat, diperbarui, dilewati (username kosong/tipe tak didukung), atau gagal. */
+/** Nasib satu baris: dibuat, diperbarui, dilewati (username kosong/sudah diimpor), atau gagal. */
 export interface CustomerImportOutcome {
   username: string
   status: CustomerImportStatus

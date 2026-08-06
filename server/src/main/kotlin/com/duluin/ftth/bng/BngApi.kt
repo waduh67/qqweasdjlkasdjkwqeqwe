@@ -95,7 +95,8 @@ interface BngApi {
 /**
  * Identitas ringkas satu akun jaringan untuk EKSPOR CSV pelanggan. [authType] nama tipe layanan
  * (mis. "PPPOE") yang dipetakan ke kolom `connection_type`; [nasName] nama BRAS ter-resolusi untuk
- * kolom `router_name` (null bila akun tak ber-BRAS). TANPA secret.
+ * kolom `router_name` (null bila akun tak ber-BRAS). [framedIp] reservasi Framed-IP untuk akun
+ * Static/DHCP (null bila tak ada) — dipetakan ke kolom `framed_ip`. TANPA secret.
  */
 data class AccessExportRef(
     val username: String,
@@ -103,6 +104,7 @@ data class AccessExportRef(
     val subscriptionId: UUID,
     val customerId: UUID,
     val nasName: String?,
+    val framedIp: String? = null,
 )
 
 /**

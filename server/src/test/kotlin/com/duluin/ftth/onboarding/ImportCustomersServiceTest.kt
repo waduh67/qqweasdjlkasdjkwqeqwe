@@ -24,11 +24,12 @@ import java.util.UUID
 
 /**
  * Menguji orkestrasi impor CSV pelanggan dengan fake murni (tanpa Spring/DB): upsert menurut
- * `mikrotik_username`. Menegakkan: baris baru → buat pelanggan+langganan+akun PPPoE aktif dengan
- * paket dari nama & BRAS dari nama; username sudah ada → update parsial (paket TAK berubah, kolom
- * kosong dipertahankan, password kosong diteruskan apa adanya untuk dipertahankan bng); tanggal
- * pasang jadi aktivasi; `next_billing` di-clamp ≤28; baris tak layak (username kosong / tipe non-
- * PPPoE / paket/router tak dikenal) dilewati/gagal tanpa menyeret batch.
+ * `mikrotik_username`. Menegakkan: baris baru → buat pelanggan+langganan+akun aktif dengan paket
+ * dari nama & BRAS dari nama; `connection_type` dipetakan ke authType (pppoe/hotspot/dhcp/static),
+ * Framed-IP diteruskan; username sudah ada → update parsial (paket TAK berubah, kolom kosong
+ * dipertahankan, password kosong diteruskan apa adanya untuk dipertahankan bng); tanggal pasang jadi
+ * aktivasi; `next_billing` di-clamp ≤28; baris tak layak (username kosong → dilewati; tipe tak
+ * dikenal / paket / router tak ditemukan → gagal) tanpa menyeret batch.
  */
 class ImportCustomersServiceTest {
 
@@ -225,13 +226,81 @@ class ImportCustomersServiceTest {
     }
 
     @Test
-    fun `tipe koneksi non-PPPoE dilewati`() {
-        val result = newService(FakeCatalogApi(), FakeBngApi(), FakeCustomerApi()).importCustomers(
-            ImportCustomersCommand(listOf(row(username = "hotspot-user", connectionType = "hotspot"))),
+    fun `tipe hotspot memprovisi akun login HOTSPOT dengan password`() {
+        val catalog = FakeCatalogApi(mapOf("home 20" to homePlan))
+        val bng = FakeBngApi(routers = mapOf("bras-01" to brasId))
+        val customer = FakeCustomerApi()
+        newService(catalog, bng, customer).importCustomers(
+            ImportCustomersCommand(
+                listOf(
+                    row(
+                        name = "Wifi Warkop", address = "Jl. Kopi", packageName = "Home 20",
+                        username = "warkop", password = "kopi123", routerName = "BRAS-01",
+                        connectionType = "hotspot",
+                    ),
+                ),
+            ),
         )
 
-        assertThat(result.skipped).isEqualTo(1)
-        assertThat(result.rows.single().message).contains("belum didukung")
+        val provisioned = bng.provisioned.single()
+        assertThat(provisioned.authType).isEqualTo("HOTSPOT")
+        assertThat(provisioned.secret).isEqualTo("kopi123")
+        assertThat(provisioned.framedIp).isNull()
+    }
+
+    @Test
+    fun `tipe dhcp memprovisi akun berbasis MAC`() {
+        val catalog = FakeCatalogApi(mapOf("home 20" to homePlan))
+        val bng = FakeBngApi(routers = mapOf("bras-01" to brasId))
+        val customer = FakeCustomerApi()
+        newService(catalog, bng, customer).importCustomers(
+            ImportCustomersCommand(
+                listOf(
+                    row(
+                        name = "Pelanggan DHCP", address = "Jl. Dinamis", packageName = "Home 20",
+                        username = "AA:BB:CC:DD:EE:FF", routerName = "BRAS-01",
+                        connectionType = "dhcp",
+                    ),
+                ),
+            ),
+        )
+
+        val provisioned = bng.provisioned.single()
+        assertThat(provisioned.authType).isEqualTo("DHCP")
+        assertThat(provisioned.username).isEqualTo("AA:BB:CC:DD:EE:FF")
+    }
+
+    @Test
+    fun `tipe static meneruskan reservasi framed_ip`() {
+        val catalog = FakeCatalogApi(mapOf("home 20" to homePlan))
+        val bng = FakeBngApi(routers = mapOf("bras-01" to brasId))
+        val customer = FakeCustomerApi()
+        newService(catalog, bng, customer).importCustomers(
+            ImportCustomersCommand(
+                listOf(
+                    row(
+                        name = "Pelanggan Static", address = "Jl. Tetap", packageName = "Home 20",
+                        username = "11:22:33:44:55:66", routerName = "BRAS-01",
+                        connectionType = "static", framedIp = "100.64.0.10",
+                    ),
+                ),
+            ),
+        )
+
+        val provisioned = bng.provisioned.single()
+        assertThat(provisioned.authType).isEqualTo("STATIC")
+        assertThat(provisioned.framedIp).isEqualTo("100.64.0.10")
+    }
+
+    @Test
+    fun `tipe koneksi tak dikenal menggagalkan baris`() {
+        val result = newService(FakeCatalogApi(), FakeBngApi(), FakeCustomerApi()).importCustomers(
+            ImportCustomersCommand(listOf(row(username = "user-x", connectionType = "wireless"))),
+        )
+
+        assertThat(result.failed).isEqualTo(1)
+        assertThat(result.rows.single().status).isEqualTo(CustomerImportStatus.FAILED)
+        assertThat(result.rows.single().message).contains("tak dikenal")
     }
 
     @Test
@@ -278,6 +347,7 @@ class ImportCustomersServiceTest {
         nextBillingDay: Int? = null,
         latitude: Double? = null,
         longitude: Double? = null,
+        framedIp: String? = null,
     ) = CustomerImportRow(
         name = name,
         phone = phone,
@@ -293,6 +363,7 @@ class ImportCustomersServiceTest {
         nextBillingDay = nextBillingDay,
         latitude = latitude,
         longitude = longitude,
+        framedIp = framedIp,
     )
 
     private class FakeCatalogApi(

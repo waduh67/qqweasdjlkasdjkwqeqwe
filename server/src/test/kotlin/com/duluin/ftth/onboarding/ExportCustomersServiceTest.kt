@@ -18,8 +18,9 @@ import java.util.UUID
  * Menguji orkestrasi ekspor CSV pelanggan dengan fake murni: memadukan akun jaringan (anchor
  * username) dengan snapshot langganan + biodata pemiliknya menurut subscriptionId. Menegakkan:
  * tipe koneksi jadi huruf kecil, tanggal aktivasi jadi tanggal pasang (UTC), nama BRAS jadi
- * router_name, koordinat terurai lat/long; akun yang langganannya tak ter-resolusi dilewati;
- * tanpa akun → keluaran kosong. Password TAK pernah muncul (tak ada di model baris ekspor).
+ * router_name, Framed-IP akun Static/DHCP diteruskan, koordinat terurai lat/long; akun yang
+ * langganannya tak ter-resolusi dilewati; tanpa akun → keluaran kosong. Password TAK pernah muncul
+ * (tak ada di model baris ekspor).
  */
 class ExportCustomersServiceTest {
 
@@ -63,6 +64,37 @@ class ExportCustomersServiceTest {
         assertThat(line.nextBillingDay).isEqualTo(10)
         assertThat(line.latitude).isEqualTo(-6.2)
         assertThat(line.longitude).isEqualTo(106.8)
+    }
+
+    @Test
+    fun `akun static mengekspor tipe dan framed_ip`() {
+        val subId = UuidV7.generate()
+        val custId = UuidV7.generate()
+        val bng = FakeBngApi(
+            listOf(AccessExportRef("AA:BB:CC:DD:EE:FF", "STATIC", subId, custId, nasName = "BRAS-01", framedIp = "100.64.0.10")),
+        )
+        val customer = FakeCustomerApi(
+            listOf(
+                CustomerExportRow(
+                    subscriptionId = subId,
+                    customerId = custId,
+                    name = "Pelanggan Static",
+                    phone = null,
+                    email = null,
+                    address = "Jl. Tetap",
+                    idCardNumber = null,
+                    location = Coordinate(0.0, 0.0),
+                    packageName = "Home 20",
+                    activatedAt = null,
+                    billingDayOfMonth = null,
+                ),
+            ),
+        )
+
+        val line = ExportCustomersService(customer, bng).exportCustomers().single()
+        assertThat(line.connectionType).isEqualTo("static")
+        assertThat(line.mikrotikUsername).isEqualTo("AA:BB:CC:DD:EE:FF")
+        assertThat(line.framedIp).isEqualTo("100.64.0.10")
     }
 
     @Test

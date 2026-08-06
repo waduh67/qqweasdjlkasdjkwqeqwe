@@ -162,6 +162,7 @@ class BngApiService(
                 subscriptionId = access.subscriptionId,
                 customerId = access.customerId,
                 nasName = access.nasId?.let { nasNames[it] },
+                framedIp = access.framedIp,
             )
         }
     }

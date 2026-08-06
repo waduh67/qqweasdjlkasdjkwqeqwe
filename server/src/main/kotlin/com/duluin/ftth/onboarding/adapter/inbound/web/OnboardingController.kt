@@ -120,7 +120,7 @@ internal object CustomerCsv {
     /** Urutan kolom = template impor. Diubah = klien impor/ekspor harus ikut disesuaikan. */
     private val HEADER = listOf(
         "name", "phone", "address", "package_name", "connection_type", "installation_date",
-        "mikrotik_username", "mikrotik_password", "email", "router_name", "id_card_number",
+        "mikrotik_username", "mikrotik_password", "email", "router_name", "framed_ip", "id_card_number",
         "next_billing", "latitude", "longitude", "notes",
     )
 
@@ -140,6 +140,7 @@ internal object CustomerCsv {
                     "", // mikrotik_password — sengaja kosong (rahasia tak diekspor)
                     line.email.orEmpty(),
                     line.routerName.orEmpty(),
+                    line.framedIp.orEmpty(),
                     line.idCardNumber.orEmpty(),
                     line.nextBillingDay?.toString().orEmpty(),
                     line.latitude?.toString().orEmpty(),
@@ -185,14 +186,16 @@ data class ImportCustomersRequest(
                 nextBillingDay = it.nextBillingDay,
                 latitude = it.latitude,
                 longitude = it.longitude,
+                framedIp = it.framedIp,
             )
         },
     )
 }
 
 /**
- * Satu baris impor CSV. [mikrotikUsername] = kunci upsert. [installationDate] format ISO (`YYYY-MM-DD`).
- * [nextBillingDay] hari tanggal tagih (di-clamp ≤28 di service). Batas panjang menahan payload absurd,
+ * Satu baris impor CSV. [mikrotikUsername] = kunci upsert (MAC untuk tipe DHCP/Static). [installationDate]
+ * format ISO (`YYYY-MM-DD`). [nextBillingDay] hari tanggal tagih (di-clamp ≤28 di service). [framedIp]
+ * reservasi Framed-IP untuk Static (wajib)/DHCP (opsional). Batas panjang menahan payload absurd,
  * bukan menegakkan aturan bisnis (itu di domain/service, agar satu baris jelek tak menjatuhkan batch).
  */
 data class CustomerImportRowPayload(
@@ -210,6 +213,7 @@ data class CustomerImportRowPayload(
     val nextBillingDay: Int? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
+    @field:Size(max = 45) val framedIp: String? = null,
 )
 
 /**
