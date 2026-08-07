@@ -11,9 +11,10 @@ import {
   type ImportSource,
 } from '../api/onboarding'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, useToast } from '../components/ui'
-import { PageHeader } from '../components/PageHeader'
-import { IconInbox, IconPackage } from '../components/icons'
+import { Badge, EmptyState } from '@/components/atoms'
+import { useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { IconInbox, IconPackage } from '@/components/atoms/icons'
 
 /** Baris PPPoE untuk pratinjau/impor. [password] hanya ada pada sumber INLINE (paste/upload). */
 type PreviewRow = {

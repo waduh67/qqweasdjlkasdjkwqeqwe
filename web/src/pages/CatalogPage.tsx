@@ -15,12 +15,14 @@ import {
 } from '../api/catalog'
 import { Pencil, Plus, RefreshCw } from 'lucide-react'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column, type RowAction } from '../components/DataTable'
-import { CommandBar, type CommandAction } from '../components/CommandBar'
-import { Blade } from '../components/Blade'
-import { PageHeader } from '../components/PageHeader'
-import { Badge, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
-import { IconPackage } from '../components/icons'
+import { DataTable, type Column, type RowAction } from '@/components/organisms'
+import { CommandBar, type CommandAction } from '@/components/molecules'
+import { Blade } from '@/components/organisms'
+import { PageHeader } from '@/components/molecules'
+import { Badge, EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { SearchInput } from '@/components/molecules'
+import { useToast } from '@/system'
+import { IconPackage } from '@/components/atoms/icons'
 
 /**
  * Paket internet — SUMBER TUNGGAL harga + kecepatan + QoS + FUP + siklus billing.

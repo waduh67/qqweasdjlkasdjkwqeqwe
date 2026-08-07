@@ -5,9 +5,9 @@ import type { PageResponse } from '../api/types'
 import type { AlarmView, MonitoringDashboard } from '../api/monitoring'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
-import { StatusBadge } from '../components/ui'
-import { PageHeader } from '../components/PageHeader'
-import { IconCustomers, IconInventory, IconMap, IconMonitor, type IconProps } from '../components/icons'
+import { StatusBadge } from '@/components/atoms'
+import { PageHeader } from '@/components/molecules'
+import { IconCustomers, IconInventory, IconMap, IconMonitor, type IconProps } from '@/components/atoms/icons'
 import type { ComponentType } from 'react'
 
 /**

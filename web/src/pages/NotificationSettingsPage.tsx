@@ -9,8 +9,9 @@ import {
   type WhatsAppProvider,
 } from '../api/notification'
 import { useCan } from '../auth/useCan'
-import { EmptyState, useToast } from '../components/ui'
-import { IconAlert } from '../components/icons'
+import { EmptyState } from '@/components/atoms'
+import { useToast } from '@/system'
+import { IconAlert } from '@/components/atoms/icons'
 
 /**
  * Pengaturan Notifikasi tenant.

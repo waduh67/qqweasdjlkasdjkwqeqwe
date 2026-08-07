@@ -16,10 +16,12 @@ import {
   type UsageMetricView,
 } from '../api/subscription'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, Modal, useToast } from '../components/ui'
-import type { Tone } from '../components/ui'
-import { PageHeader } from '../components/PageHeader'
-import { GatewayPayPanel } from '../components/GatewayPayPanel'
+import { Badge, EmptyState } from '@/components/atoms'
+import { Modal } from '@/components/molecules'
+import { useToast } from '@/system'
+import { type Tone } from '@/components/atoms'
+import { PageHeader } from '@/components/molecules'
+import { GatewayPayPanel } from '@/components/organisms'
 import {
   IconGauge,
   IconRoute,
@@ -27,7 +29,7 @@ import {
   IconPackage,
   IconCustomers,
   type IconProps,
-} from '../components/icons'
+} from '@/components/atoms/icons'
 
 /**
  * Halaman langganan sisi TENANT (self-service): tenant admin melihat masa aktif & status langganan

@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { Area } from '../api/types'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { EmptyState, SearchInput, Toolbar, useToast } from '../components/ui'
-import { PageHeader } from '../components/PageHeader'
-import { IconArea } from '../components/icons'
+import { DataTable, type Column } from '@/components/organisms'
+import { EmptyState, Toolbar } from '@/components/atoms'
+import { SearchInput } from '@/components/molecules'
+import { useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { IconArea } from '@/components/atoms/icons'
 
 export function AreasPage() {
   const { can } = useCan()

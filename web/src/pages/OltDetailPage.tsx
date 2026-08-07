@@ -13,15 +13,17 @@ import type {
   SnmpVersion,
   WebProtocol,
 } from '../api/network'
-import type { Tone } from '../components/ui'
+import { type Tone } from '@/components/atoms'
 import type { PageResponse } from '../api/types'
 import { useCan } from '../auth/useCan'
-import { LocationPicker } from '../components/LocationPicker'
-import { Badge, EmptyState, Spinner, StatusBadge, Tabs, useToast } from '../components/ui'
-import { Blade } from '../components/Blade'
-import { IconInventory, IconPlus } from '../components/icons'
-import { DiscoveredOnuInbox } from '../components/DiscoveredOnuInbox'
-import { OltRegisteredOnus } from '../components/OltRegisteredOnus'
+import { LocationPicker } from '@/components/organisms'
+import { Badge, EmptyState, Spinner, StatusBadge } from '@/components/atoms'
+import { Tabs } from '@/components/molecules'
+import { useToast } from '@/system'
+import { Blade } from '@/components/organisms'
+import { IconInventory, IconPlus } from '@/components/atoms/icons'
+import { DiscoveredOnuInbox } from '@/components/organisms'
+import { OltRegisteredOnus } from '@/components/organisms'
 
 /**
  * Detail satu OLT sebagai rute tersendiri (`/olts/:id`) — bukan panel peta.

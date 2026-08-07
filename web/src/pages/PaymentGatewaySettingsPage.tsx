@@ -35,10 +35,12 @@ import {
   type TenantPivotAccountView,
 } from '../api/pivotAccount'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, Modal, useToast, type Tone } from '../components/ui'
-import { Combobox } from '../components/Combobox'
-import { PageHeader } from '../components/PageHeader'
-import { IconAlert, IconShield } from '../components/icons'
+import { Badge, EmptyState, type Tone } from '@/components/atoms'
+import { Modal } from '@/components/molecules'
+import { useToast } from '@/system'
+import { Combobox } from '@/components/molecules'
+import { PageHeader } from '@/components/molecules'
+import { IconAlert, IconShield } from '@/components/atoms/icons'
 import {
   channelNameByCode,
   PIVOT_CHANNEL_TYPE_LABEL,

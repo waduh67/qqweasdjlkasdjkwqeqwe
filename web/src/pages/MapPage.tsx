@@ -31,8 +31,9 @@ import type {
 import type { PageResponse } from '../api/types'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
-import { StatusBadge, useToast } from '../components/ui'
-import { IconClose, IconCrosshair, IconPlus, IconRoute } from '../components/icons'
+import { StatusBadge } from '@/components/atoms'
+import { useToast } from '@/system'
+import { IconClose, IconCrosshair, IconPlus, IconRoute } from '@/components/atoms/icons'
 import { createCableTool, type CableTool, type ToolState } from '../map/cableTool'
 
 /**

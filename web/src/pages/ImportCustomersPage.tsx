@@ -9,9 +9,10 @@ import {
   type ImportCustomersResult,
 } from '../api/onboarding'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, useToast } from '../components/ui'
-import { PageHeader } from '../components/PageHeader'
-import { IconInbox, IconDownload, IconUpload } from '../components/icons'
+import { Badge, EmptyState } from '@/components/atoms'
+import { useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { IconInbox, IconDownload, IconUpload } from '@/components/atoms/icons'
 
 /**
  * Impor CSV pelanggan — unggah satu berkas berisi biodata + langganan + akun jaringan, di-UPSERT

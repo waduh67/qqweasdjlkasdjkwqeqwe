@@ -12,10 +12,12 @@ import {
   type VpnAccountView,
 } from '../api/vpn'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { EmptyState, SearchInput, StatusBadge, Toolbar, useConfirm, useToast } from '../components/ui'
-import { PageHeader } from '../components/PageHeader'
-import { IconAlert, IconPlus } from '../components/icons'
+import { DataTable, type Column } from '@/components/organisms'
+import { EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { SearchInput } from '@/components/molecules'
+import { useConfirm, useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { IconAlert, IconPlus } from '@/components/atoms/icons'
 
 /**
  * Akun VPN (tenant). Alur unggulan satu klik: tekan Generate → sistem meng-AUTO-ASSIGN akun

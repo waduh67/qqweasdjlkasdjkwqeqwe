@@ -1,5 +1,5 @@
-import { DiscoveredOnuInbox } from '../components/DiscoveredOnuInbox'
-import { PageHeader } from '../components/PageHeader'
+import { DiscoveredOnuInbox } from '@/components/organisms'
+import { PageHeader } from '@/components/molecules'
 
 /**
  * Halaman Provisioning ONU: kotak masuk auto-provisioning lintas semua OLT.

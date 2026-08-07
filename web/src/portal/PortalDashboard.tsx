@@ -14,7 +14,7 @@ import {
   type PortalInvoice,
   type PortalPaymentMethodOption,
 } from './portalApi'
-import { GatewayPayPanel } from '../components/GatewayPayPanel'
+import { GatewayPayPanel } from '@/components/organisms'
 
 type Tab = 'ringkasan' | 'tagihan' | 'koneksi' | 'profil'
 

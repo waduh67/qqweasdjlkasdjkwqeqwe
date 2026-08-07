@@ -11,10 +11,11 @@ import {
   type PlatformFeeType,
 } from '../api/platformBilling'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, useToast } from '../components/ui'
-import { Combobox } from '../components/Combobox'
-import { PageHeader } from '../components/PageHeader'
-import { IconAlert, IconShield } from '../components/icons'
+import { Badge, EmptyState } from '@/components/atoms'
+import { useToast } from '@/system'
+import { Combobox } from '@/components/molecules'
+import { PageHeader } from '@/components/molecules'
+import { IconAlert, IconShield } from '@/components/atoms/icons'
 import {
   childrenOfIndustry,
   districtNameById,

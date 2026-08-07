@@ -2,8 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { signupTenant, type SignupResult } from '../api/signup'
-import { IconMap } from '../components/icons'
-import { Spinner } from '../components/ui'
+import { IconMap } from '@/components/atoms/icons'
+import { Spinner } from '@/components/atoms'
 
 /** Ubah nama ISP jadi kandidat slug: huruf kecil, spasi/simbol → strip. */
 function slugify(value: string): string {

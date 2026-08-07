@@ -12,14 +12,16 @@ import type {
   WorkOrderView,
 } from '../api/workorder'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { CommandBar, type CommandAction } from '../components/CommandBar'
-import { PageHeader } from '../components/PageHeader'
-import { Badge, EmptyState, SearchInput, Toolbar, useToast } from '../components/ui'
-import { Blade } from '../components/Blade'
-import { Combobox } from '../components/Combobox'
-import { MultiCombobox } from '../components/MultiCombobox'
-import { IconPlus, IconWorkOrder } from '../components/icons'
+import { DataTable, type Column } from '@/components/organisms'
+import { CommandBar, type CommandAction } from '@/components/molecules'
+import { PageHeader } from '@/components/molecules'
+import { Badge, EmptyState, Toolbar } from '@/components/atoms'
+import { SearchInput } from '@/components/molecules'
+import { useToast } from '@/system'
+import { Blade } from '@/components/organisms'
+import { Combobox } from '@/components/molecules'
+import { MultiCombobox } from '@/components/molecules'
+import { IconPlus, IconWorkOrder } from '@/components/atoms/icons'
 import {
   APPROVAL_LABEL,
   PRIORITIES,
@@ -32,9 +34,9 @@ import {
   assigneeLabel,
   fmt,
   priorityTone,
-} from '../components/workorder/labels'
-import { AssigneeChips, WoStatusBadge } from '../components/workorder/views'
-import { useTechnicians } from '../components/workorder/useTechnicians'
+} from '@/utils/woLabels'
+import { AssigneeChips, WoStatusBadge } from '@/components/organisms/workorder/views'
+import { useTechnicians } from '@/hooks/useTechnicians'
 
 type Draft = {
   type: WorkOrderType

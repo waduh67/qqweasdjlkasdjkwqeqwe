@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PermissionCatalog, Role } from '../api/types'
-import { PermissionMatrix } from '../components/PermissionMatrix'
+import { PermissionMatrix } from '@/components/molecules'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { CommandBar, type CommandAction } from '../components/CommandBar'
-import { PageHeader } from '../components/PageHeader'
-import { Field } from '../components/Blade'
-import { Badge, EmptyState, SearchInput, Toolbar, useConfirm } from '../components/ui'
-import { IconPlus, IconShield } from '../components/icons'
+import { DataTable, type Column } from '@/components/organisms'
+import { CommandBar, type CommandAction } from '@/components/molecules'
+import { PageHeader } from '@/components/molecules'
+import { Field } from '@/components/molecules'
+import { Badge, EmptyState, Toolbar } from '@/components/atoms'
+import { SearchInput } from '@/components/molecules'
+import { useConfirm } from '@/system'
+import { IconPlus, IconShield } from '@/components/atoms/icons'
 
 type Draft = { id: string | null; name: string; description: string; permissionIds: Set<string> }
 

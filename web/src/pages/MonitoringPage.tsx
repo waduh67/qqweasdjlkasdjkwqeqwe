@@ -9,11 +9,13 @@ import type {
   OnuHistoryView,
 } from '../api/monitoring'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { Drawer, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
-import { PageHeader } from '../components/PageHeader'
-import { OpticalChart } from '../components/OpticalChart'
-import { IconAlert, IconPlus } from '../components/icons'
+import { DataTable, type Column } from '@/components/organisms'
+import { EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { Drawer, SearchInput } from '@/components/molecules'
+import { useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { OpticalChart } from '@/components/atoms'
+import { IconAlert, IconPlus } from '@/components/atoms/icons'
 
 /** Peringkat keparahan untuk pengurutan — makin tinggi makin genting (kritis di atas saat desc). */
 const SEVERITY_RANK: Record<string, number> = { CRITICAL: 3, WARNING: 2, INFO: 1 }

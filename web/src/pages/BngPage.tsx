@@ -15,11 +15,13 @@ import {
 } from '../api/bng'
 import type { Area } from '../api/types'
 import { useCan } from '../auth/useCan'
-import { Blade } from '../components/Blade'
-import { DataTable, type Column } from '../components/DataTable'
-import { Badge, EmptyState, SearchInput, StatusBadge, Toolbar, useConfirm, useToast } from '../components/ui'
-import { PageHeader } from '../components/PageHeader'
-import { IconGauge, IconPlus } from '../components/icons'
+import { Blade } from '@/components/organisms'
+import { DataTable, type Column } from '@/components/organisms'
+import { Badge, EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { SearchInput } from '@/components/molecules'
+import { useConfirm, useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { IconGauge, IconPlus } from '@/components/atoms/icons'
 
 /**
  * Registri BRAS/RADIUS tenant.

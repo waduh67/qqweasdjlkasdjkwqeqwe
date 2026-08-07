@@ -7,9 +7,11 @@ import {
   type UpdateTaxSettingsRequest,
 } from '../api/billing'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, Modal, useToast } from '../components/ui'
-import { PageHeader } from '../components/PageHeader'
-import { IconAlert, IconShield } from '../components/icons'
+import { Badge, EmptyState } from '@/components/atoms'
+import { Modal } from '@/components/molecules'
+import { useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { IconAlert, IconShield } from '@/components/atoms/icons'
 
 /**
  * Setelan pajak tenant — dua kebijakan berbeda sifat digabung karena keduanya "pajak tenant":

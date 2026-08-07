@@ -7,8 +7,8 @@ import {
 } from '../api/platformBilling'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
-import { StatusBadge } from '../components/ui'
-import { PageHeader } from '../components/PageHeader'
+import { StatusBadge } from '@/components/atoms'
+import { PageHeader } from '@/components/molecules'
 import {
   IconBuilding,
   IconGauge,
@@ -16,7 +16,7 @@ import {
   IconShield,
   IconUsers,
   type IconProps,
-} from '../components/icons'
+} from '@/components/atoms/icons'
 import type { ComponentType } from 'react'
 
 /**

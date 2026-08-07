@@ -51,11 +51,13 @@ import {
   type SubscriberAccessView,
 } from '../api/bng'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, Modal, Spinner, StatusBadge, Tabs, useConfirm, useToast } from '../components/ui'
-import { GatewayPayPanel } from '../components/GatewayPayPanel'
-import { OpticalChart } from '../components/OpticalChart'
-import { SubscriberTrafficPanel } from '../components/SubscriberTrafficPanel'
-import { IconAlert, IconCustomers, IconRoute } from '../components/icons'
+import { Badge, EmptyState, Spinner, StatusBadge } from '@/components/atoms'
+import { Modal, Tabs } from '@/components/molecules'
+import { useConfirm, useToast } from '@/system'
+import { GatewayPayPanel } from '@/components/organisms'
+import { OpticalChart } from '@/components/atoms'
+import { SubscriberTrafficPanel } from '@/components/organisms'
+import { IconAlert, IconCustomers, IconRoute } from '@/components/atoms/icons'
 import type { SubscriptionView } from '../api/network'
 import { listPlans as listCatalogPlans, SERVICE_TYPE_LABEL, type PlanView, type ServiceType } from '../api/catalog'
 import {
@@ -74,7 +76,7 @@ import {
 import { listIncidentsForCustomer, type IncidentView } from '../api/incident'
 import { listWorkOrdersForCustomer, type WorkOrderStatus, type WorkOrderView } from '../api/workorder'
 import { getSubscriber360, type Sub360BillingSummary, type Subscriber360View } from '../api/subscriber360'
-import { PortalCredentialCard } from '../components/PortalCredentialCard'
+import { PortalCredentialCard } from '@/components/organisms'
 
 /** Warna kesehatan optik selaras token status. */
 const HEALTH_COLOR: Record<string, string> = {

@@ -12,10 +12,12 @@ import {
   type VpnServerView,
 } from '../api/vpn'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { Badge, EmptyState, SearchInput, StatusBadge, Toolbar, useConfirm, useToast } from '../components/ui'
-import { PageHeader } from '../components/PageHeader'
-import { IconAlert, IconPlus, IconRoute } from '../components/icons'
+import { DataTable, type Column } from '@/components/organisms'
+import { Badge, EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { SearchInput } from '@/components/molecules'
+import { useConfirm, useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { IconAlert, IconPlus, IconRoute } from '@/components/atoms/icons'
 
 /**
  * Server VPN (PLATFORM). Halaman admin platform untuk mengelola hub OpenVPN yang jalan di VPS

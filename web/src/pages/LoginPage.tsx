@@ -2,8 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { ApiError } from '../api/client'
-import { IconMap } from '../components/icons'
-import { Spinner } from '../components/ui'
+import { IconMap } from '@/components/atoms/icons'
+import { Spinner } from '@/components/atoms'
 
 export function LoginPage() {
   const { login } = useAuth()

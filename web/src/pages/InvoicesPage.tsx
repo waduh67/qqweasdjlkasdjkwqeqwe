@@ -14,11 +14,13 @@ import {
   type TaxObligationView,
 } from '../api/billing'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { CommandBar, type CommandAction } from '../components/CommandBar'
-import { PageHeader } from '../components/PageHeader'
-import { Badge, EmptyState, Modal, SearchInput, Toolbar, useToast, type Tone } from '../components/ui'
-import { IconInbox, IconPlus } from '../components/icons'
+import { DataTable, type Column } from '@/components/organisms'
+import { CommandBar, type CommandAction } from '@/components/molecules'
+import { PageHeader } from '@/components/molecules'
+import { Badge, EmptyState, Toolbar, type Tone } from '@/components/atoms'
+import { Modal, SearchInput } from '@/components/molecules'
+import { useToast } from '@/system'
+import { IconInbox, IconPlus } from '@/components/atoms/icons'
 
 /** Rupiah ringkas dari nilai numerik, mis. "Rp 150.000". */
 function fmtRupiah(n: number): string {

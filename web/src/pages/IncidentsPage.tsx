@@ -3,10 +3,12 @@ import { api, ApiError } from '../api/client'
 import type { IncidentAlarm, IncidentDetail, IncidentEventView, IncidentView } from '../api/incident'
 import type { BroadcastView, NotificationChannel } from '../api/notification'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { Drawer, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
-import { PageHeader } from '../components/PageHeader'
-import { IconAlert } from '../components/icons'
+import { DataTable, type Column } from '@/components/organisms'
+import { EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { Drawer, SearchInput } from '@/components/molecules'
+import { useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { IconAlert } from '@/components/atoms/icons'
 
 /** Urutan keparahan untuk pengurutan tabel (turun = paling parah di atas). */
 const SEV_RANK: Record<string, number> = { CRITICAL: 5, MAJOR: 4, MINOR: 3, WARNING: 2, INFO: 1 }

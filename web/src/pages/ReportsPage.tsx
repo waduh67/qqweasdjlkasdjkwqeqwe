@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getReportOverview, type ReportOverview } from '../api/reports'
 import { ApiError } from '../api/client'
-import { EmptyState, Spinner, useToast } from '../components/ui'
-import { PageHeader } from '../components/PageHeader'
-import { IconChart } from '../components/icons'
+import { EmptyState, Spinner } from '@/components/atoms'
+import { useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { IconChart } from '@/components/atoms/icons'
 
 /**
  * Laporan & analitik — potret bisnis satu tenant. Merangkai angka keuangan
