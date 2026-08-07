@@ -94,13 +94,24 @@ class PivotPaymentGateway(
         val apiMode = method != null
         val body = buildChargeBody(request, ctx, method)
 
-        val node = apiClient.post(
-            path = "/v2/payments",
-            body = body,
-            creds = creds,
-            subMerchantId = ctx.subAccountId,
-            requestId = newRequestId(),
-        )
+        val node = try {
+            apiClient.post(
+                path = "/v2/payments",
+                body = body,
+                creds = creds,
+                subMerchantId = ctx.subAccountId,
+                requestId = newRequestId(),
+            )
+        } catch (e: ConflictException) {
+            // Pivot menolak QR bila produk QRIS belum di-enable di akun merchant ("merchant not
+            // registered qr") — ini setelan dashboard Pivot, bukan bug. Beri pesan actionable.
+            if (method == METHOD_QR && e.message?.contains("not registered", ignoreCase = true) == true) {
+                throw ConflictException(
+                    "QRIS belum aktif di akun Pivot. Aktifkan produk QRIS di dashboard Pivot lalu coba lagi.",
+                )
+            }
+            throw e
+        }
         val data = node.get("data")
         return if (apiMode) parseApiCharge(data, method!!) else parseRedirectCharge(data)
     }
@@ -123,7 +134,11 @@ class PivotPaymentGateway(
             ?: throw ConflictException("Pivot butuh redirect base URL — set FTTH_BILLING_PIVOT_REDIRECT_BASE_URL")
 
         return buildMap {
-            put("clientReferenceId", request.invoiceNumber)
+            // clientReferenceId UNIK per charge (Pivot menolak yang berulang: "client reference id
+            // already exist") — nomor invoice jadi prefiks agar terlacak, tapi keunikan menjaga
+            // ganti metode / retry untuk invoice yang sama tetap diterima. Pemetaan pelunasan kembali
+            // ke invoice memakai `metadata.invoiceNumber` (di bawah), bukan clientReferenceId.
+            put("clientReferenceId", newClientReferenceId(request.invoiceNumber))
             put("amount", mapOf("value" to amountValue, "currency" to "IDR"))
             put("paymentType", "SINGLE")
             // Batas waktu sesi bayar = jatuh tempo tagihan (di-clamp ke maksimum Pivot: expiryAt di
@@ -281,7 +296,11 @@ class PivotPaymentGateway(
                 log.info("Callback Pivot diabaikan — status '{}' bukan pelunasan", status)
                 return@runCatching null
             }
-            val invoiceNumber = data.get("clientReferenceId")?.asString()?.takeIf { it.isNotBlank() }
+            // Nomor invoice dibaca dari `metadata.invoiceNumber` (di-echo Pivot) lebih dulu karena
+            // `clientReferenceId` kini unik per charge (bukan lagi nomor invoice). Fallback ke
+            // clientReferenceId untuk kompatibilitas charge lama / mode REDIRECT.
+            val invoiceNumber = data.at("/metadata/invoiceNumber").asString().takeIf { it.isNotBlank() }
+                ?: data.get("clientReferenceId")?.asString()?.takeIf { it.isNotBlank() }
                 ?: return@runCatching null
             val amountText = data.get("amount")?.get("value")?.asString()?.takeIf { it.isNotBlank() }
                 ?: return@runCatching null
@@ -352,6 +371,16 @@ class PivotPaymentGateway(
      */
     internal fun newRequestId(): String =
         (REQUEST_PREFIX + UUID.randomUUID().toString().replace("-", "")).take(REQUEST_ID_MAX)
+
+    /**
+     * `clientReferenceId` UNIK per charge: `<invoiceNumber>-<epochMillis>-<rand4>`. Nomor invoice
+     * tetap jadi prefiks (mudah dilacak di dashboard Pivot); komponen waktu + acak menjamin keunikan
+     * agar Pivot tak menolak "client reference id already exist" saat tenant ganti metode (VA↔QRIS)
+     * atau retry untuk invoice yang sama. Pemetaan pelunasan kembali ke invoice memakai
+     * `metadata.invoiceNumber`, bukan nilai ini.
+     */
+    internal fun newClientReferenceId(invoiceNumber: String): String =
+        "$invoiceNumber-${System.currentTimeMillis()}-${UUID.randomUUID().toString().take(4)}"
 
     private fun constantTimeEquals(a: String, b: String): Boolean =
         MessageDigest.isEqual(a.toByteArray(StandardCharsets.UTF_8), b.toByteArray(StandardCharsets.UTF_8))

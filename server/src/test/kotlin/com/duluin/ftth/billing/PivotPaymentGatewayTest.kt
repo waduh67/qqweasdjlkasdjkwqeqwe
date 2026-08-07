@@ -52,6 +52,27 @@ class PivotPaymentGatewayTest {
     )
 
     @Test
+    fun `metadata invoiceNumber diprioritaskan atas clientReferenceId unik`() {
+        // clientReferenceId kini unik (nomor invoice + timestamp/acak); nomor invoice asli dibaca
+        // dari metadata yang di-echo Pivot.
+        val body = GatewayCallback(
+            headers = mapOf("X-API-Key" to "cb_key"),
+            rawBody = """
+                {"event":"PAYMENT.PAID","data":{"id":"pay_9",
+                "clientReferenceId":"INV-202608-0001-1712345678901-ab12",
+                "metadata":{"invoiceNumber":"INV-202608-0001"},
+                "status":"PAID","amount":{"value":150000,"currency":"IDR"},
+                "chargeDetails":[{"paidAt":"2026-08-01T10:15:30Z"}]}}
+            """.trimIndent(),
+        )
+
+        val settlement = gateway.parseCallback(body, ctx("cb_key"))
+
+        assertThat(settlement).isNotNull
+        assertThat(settlement!!.invoiceNumber).isEqualTo("INV-202608-0001")
+    }
+
+    @Test
     fun `X-API-Key benar dan status PAID melahirkan settlement`() {
         val settlement = gateway.parseCallback(callback("cb_key", "PAID"), ctx("cb_key"))
 
@@ -195,5 +216,15 @@ class PivotPaymentGatewayTest {
         assertThat(a).isNotEqualTo(b)
         assertThat(a.length).isBetween(16, 36)
         assertThat(a).matches("[A-Za-z0-9]+")
+    }
+
+    @Test
+    fun `clientReferenceId unik antar charge dan berawalan nomor invoice`() {
+        val a = chargingGateway.newClientReferenceId("SUB-202608-abcd1234")
+        val b = chargingGateway.newClientReferenceId("SUB-202608-abcd1234")
+
+        assertThat(a).isNotEqualTo(b)
+        assertThat(a).startsWith("SUB-202608-abcd1234-")
+        assertThat(b).startsWith("SUB-202608-abcd1234-")
     }
 }

@@ -337,6 +337,20 @@ export function SubscriptionPage() {
             methods={methods}
             createCharge={(method, channel) => payMyInvoice(paying.id, method, channel)}
             pollStatus={() => pollInvoiceStatus(paying.id)}
+            initialInstruction={
+              paying.payMethod
+                ? {
+                    payMethod: paying.payMethod,
+                    vaChannel: paying.vaChannel,
+                    vaNumber: paying.vaNumber,
+                    vaName: paying.vaName,
+                    vaExpiresAt: paying.vaExpiresAt,
+                    qrContent: paying.qrContent,
+                    qrUrl: paying.qrUrl,
+                    qrExpiresAt: paying.qrExpiresAt,
+                  }
+                : null
+            }
             onPaid={() => {
               void load()
               toast.success(`Tagihan ${paying.number} lunas — masa aktif diperpanjang.`)
