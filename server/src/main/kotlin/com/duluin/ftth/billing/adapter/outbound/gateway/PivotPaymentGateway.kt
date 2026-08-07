@@ -20,6 +20,26 @@ import java.math.RoundingMode
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
+
+/** maximumExpiry terbesar yang dijamin Pivot (kartu & virtual account = 30 HARI, per get-payment-method-config). */
+private const val PIVOT_MAX_EXPIRY_DAYS = 30L
+
+/**
+ * `expiryAt` (ISO-8601 UTC) untuk sesi bayar Pivot STRICT: berlaku sampai HABIS hari jatuh tempo
+ * ([dueDate] akhir hari di [zone]). Di-clamp ke `[now+1 jam, now+30 hari]` — 30 hari = maximumExpiry
+ * terbesar Pivot; expiryAt di atas itu ditolak → charge gagal. Batas bawah jaga-jaga bila jatuh
+ * tempo sudah lewat (terbit-ulang/overdue) agar sesi tak langsung mati. `null` (tanpa [dueDate]) →
+ * tak dikirim, Pivot memakai default (~28 hari).
+ */
+internal fun pivotExpiryAt(dueDate: LocalDate?, now: Instant, zone: ZoneId): String? {
+    val target = dueDate?.plusDays(1)?.atStartOfDay(zone)?.toInstant() ?: return null
+    val floor = now.plus(1, ChronoUnit.HOURS)
+    val ceil = now.plus(PIVOT_MAX_EXPIRY_DAYS, ChronoUnit.DAYS)
+    return target.coerceIn(floor, ceil).toString()
+}
 
 /**
  * Kunci metadata routing charge Pivot — disematkan saat create charge & di-echo Pivot di callback
@@ -73,6 +93,12 @@ class PivotPaymentGateway(
             put("amount", mapOf("value" to amountValue, "currency" to "IDR"))
             put("paymentType", "SINGLE")
             put("mode", "REDIRECT")
+            // Batas waktu sesi bayar = jatuh tempo tagihan (STRICT: tak diperpanjang otomatis). Di-clamp
+            // ke rentang aman: expiryAt di luar batas maksimum Pivot ditolak → charge gagal.
+            pivotExpiryAt(request.dueDate, Instant.now(), ZoneId.systemDefault())?.let {
+                put("expiryAt", it)
+                put("expirationMode", "STRICT")
+            }
             put(
                 "redirectUrl",
                 mapOf(

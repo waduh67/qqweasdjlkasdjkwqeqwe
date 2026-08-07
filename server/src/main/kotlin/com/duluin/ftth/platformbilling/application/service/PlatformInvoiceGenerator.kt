@@ -129,6 +129,7 @@ class PlatformInvoiceGenerator(
                 customerName = tenant.name,
                 customerEmail = null,
                 description = "Langganan aplikasi ${tenant.name} — ${invoice.periodStart.format(YEAR_MONTH)}",
+                dueDate = invoice.dueDate,
             ),
             ctx,
         )
