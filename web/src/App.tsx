@@ -8,6 +8,7 @@ import { Layout } from './components/Layout'
 import { PlatformLayout } from './components/PlatformLayout'
 import { LoginPage } from './pages/LoginPage'
 import { SignupPage } from './pages/SignupPage'
+import { PaymentPaidPage, PaymentFailedPage, PaymentExpiredPage } from './pages/PaymentReturnPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { PlatformDashboardPage } from './pages/PlatformDashboardPage'
 import { InventoryPage } from './pages/InventoryPage'
@@ -120,6 +121,11 @@ function OperatorApp() {
           <Route path="/login" element={<LoginRoute />} />
           {/* Pendaftaran mandiri ISP — publik, di luar guard auth. */}
           <Route path="/signup" element={<SignupPage />} />
+          {/* Halaman balik gateway Pivot (mode REDIRECT) — publik: pembayar yang kembali dari
+              halaman bayar eksternal belum tentu masih login. Pelunasan otoritatif via callback. */}
+          <Route path="/paid" element={<PaymentPaidPage />} />
+          <Route path="/failed" element={<PaymentFailedPage />} />
+          <Route path="/expired" element={<PaymentExpiredPage />} />
           <Route
             element={
               <RequireAuth>
