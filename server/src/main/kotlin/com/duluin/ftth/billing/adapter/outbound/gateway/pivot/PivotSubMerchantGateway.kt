@@ -67,6 +67,24 @@ class PivotSubMerchantGateway(
         return InquiryResult(inquiryId = inquiryId, accountName = accountName)
     }
 
+    override fun assignUser(master: PivotMasterContext, subMerchantId: String, email: String, name: String) {
+        apiClient.post(
+            "/v1/sub-merchants/admin",
+            mapOf("email" to email, "name" to name),
+            master.credentials(),
+            subMerchantId = subMerchantId,
+        )
+    }
+
+    override fun resendInvitation(master: PivotMasterContext, subMerchantId: String, email: String) {
+        apiClient.post(
+            "/v1/sub-merchants/users/resend-invitation",
+            mapOf("email" to email),
+            master.credentials(),
+            subMerchantId = subMerchantId,
+        )
+    }
+
     private fun PivotMasterContext.credentials() = PivotCredentials(merchantId, merchantSecret, sandbox)
 
     private fun JsonNode.toSubMerchant(): SubMerchantResult {

@@ -17,11 +17,11 @@ interface ManageTenantPayoutUseCase {
     /** Saldo tersedia relevan tenant (master untuk NON_KYC, sub-account untuk KYC). */
     fun balance(): PivotBalanceView
 
-    /** Salurkan dana NON_KYC ke rekening payout tenant (aksi operator platform). */
+    /** Salurkan dana ke rekening beneficiary bebas (validasi inquiry + wajib cek saldo dulu). */
     fun dispatchPayout(command: DispatchPayoutCommand): TenantPayoutView
 
-    /** Tarik saldo sub-account KYC tenant (aksi tenant sendiri). */
-    fun withdraw(command: DispatchPayoutCommand): TenantPayoutView
+    /** Tarik saldo sub-account KYC tenant ke rekening payout tersimpan (aksi tenant sendiri). */
+    fun withdraw(command: WithdrawCommand): TenantPayoutView
 }
 
 /** Rekonsiliasi hasil penyaluran dari callback Pivot (payout webhook / `WITHDRAW.*`). */
@@ -30,10 +30,21 @@ interface ReconcilePayoutUseCase {
     fun reconcile(reference: String, success: Boolean, reason: String?)
 }
 
-/** Nominal penyaluran (minor-unit IDR) + catatan opsional. */
+/**
+ * Perintah payout ke rekening beneficiary bebas: bank ([channelCode]) + [accountNumber] + nominal
+ * (rupiah utuh). Nama pemilik divalidasi server via inquiry; saldo dicek wajib sebelum create.
+ */
 data class DispatchPayoutCommand(
+    val channelCode: String,
+    val accountNumber: String,
     val amountMinor: Long,
-    val remarks: String?,
+    val description: String?,
+)
+
+/** Perintah penarikan saldo sub-account KYC tenant ke rekening payout tersimpan. */
+data class WithdrawCommand(
+    val amountMinor: Long,
+    val description: String?,
 )
 
 /** Satu baris riwayat penyaluran untuk ditampilkan. */

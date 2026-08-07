@@ -4,10 +4,12 @@ import com.duluin.ftth.billing.application.port.inbound.DispatchPayoutCommand
 import com.duluin.ftth.billing.application.port.inbound.ManageTenantPayoutUseCase
 import com.duluin.ftth.billing.application.port.inbound.PivotBalanceView
 import com.duluin.ftth.billing.application.port.inbound.TenantPayoutView
+import com.duluin.ftth.billing.application.port.inbound.WithdrawCommand
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
 import org.springframework.security.access.prepost.PreAuthorize
@@ -41,21 +43,35 @@ class TenantPayoutController(
 
     @PostMapping("/payouts")
     @PreAuthorize("@authz.can('billing.gateway.manage')")
-    @Operation(summary = "Salurkan dana NON_KYC ke rekening payout tenant")
+    @Operation(summary = "Salurkan dana ke rekening beneficiary (inquiry + wajib cek saldo)")
     fun payout(@Valid @RequestBody request: DispatchPayoutRequest): TenantPayoutView =
-        useCase.dispatchPayout(DispatchPayoutCommand(request.amountMinor, request.remarks))
+        useCase.dispatchPayout(
+            DispatchPayoutCommand(request.channelCode, request.accountNumber, request.amountMinor, request.description),
+        )
 
     @PostMapping("/withdrawals")
     @PreAuthorize("@authz.can('billing.gateway.manage')")
-    @Operation(summary = "Tarik saldo sub-account KYC tenant")
-    fun withdraw(@Valid @RequestBody request: DispatchPayoutRequest): TenantPayoutView =
-        useCase.withdraw(DispatchPayoutCommand(request.amountMinor, request.remarks))
+    @Operation(summary = "Tarik saldo sub-account KYC tenant ke rekening payout tersimpan")
+    fun withdraw(@Valid @RequestBody request: WithdrawRequest): TenantPayoutView =
+        useCase.withdraw(WithdrawCommand(request.amountMinor, request.description))
 }
 
-/** Perintah penyaluran: nominal minor-unit IDR (> 0) + catatan opsional. */
+/** Perintah payout beneficiary: bank + nomor rekening tujuan + nominal (rupiah utuh > 0). */
 data class DispatchPayoutRequest(
+    @field:NotBlank(message = "Channel bank wajib diisi") @field:Size(max = 40)
+    val channelCode: String,
+    @field:NotBlank(message = "Nomor rekening wajib diisi") @field:Size(max = 60)
+    val accountNumber: String,
     @field:Positive(message = "Nominal harus lebih dari 0")
     val amountMinor: Long,
     @field:Size(max = 200)
-    val remarks: String? = null,
+    val description: String? = null,
+)
+
+/** Perintah penarikan saldo KYC: nominal (rupiah utuh > 0) + catatan opsional. */
+data class WithdrawRequest(
+    @field:Positive(message = "Nominal harus lebih dari 0")
+    val amountMinor: Long,
+    @field:Size(max = 200)
+    val description: String? = null,
 )

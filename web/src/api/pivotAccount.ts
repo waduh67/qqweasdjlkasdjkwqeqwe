@@ -127,3 +127,72 @@ export function setPivotPayoutAccount(
 ): Promise<TenantPivotAccountView> {
   return api.post('/api/billing/pivot-account/payout-account', body)
 }
+
+/** Undang/assign user admin ke sub-account tenant (Pivot mengirim email undangan). */
+export function assignSubAccountUser(body: {
+  email: string
+  name: string
+}): Promise<TenantPivotAccountView> {
+  return api.post('/api/billing/pivot-account/users', body)
+}
+
+/** Kirim ulang undangan ke user sub-account tenant berdasarkan email. */
+export function resendSubAccountInvitation(body: {
+  email: string
+}): Promise<TenantPivotAccountView> {
+  return api.post('/api/billing/pivot-account/users/resend-invitation', body)
+}
+
+/** Jenis penyaluran dana: PAYOUT (ke beneficiary bebas) atau WITHDRAWAL (tarik saldo KYC sendiri). */
+export type PivotPayoutKind = 'PAYOUT' | 'WITHDRAWAL'
+
+/** Status penyaluran dana di sisi lokal (difinalkan callback Pivot). */
+export type PivotPayoutStatus = 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED'
+
+/**
+ * Cuplikan saldo payout tenant (rupiah utuh). `subAccount` = saldo dibaca on-behalf sub-account
+ * tenant (bukan saldo master platform).
+ */
+export interface PivotBalanceView {
+  availableMinor: number
+  pendingMinor: number
+  currency: string
+  subAccount: boolean
+}
+
+/** Satu baris riwayat penyaluran dana untuk ditampilkan. */
+export interface TenantPayoutView {
+  id: string
+  kind: PivotPayoutKind
+  amountMinor: number
+  channelCode: string | null
+  accountNumber: string | null
+  accountName: string | null
+  status: PivotPayoutStatus
+  pivotRef: string | null
+  failureReason: string | null
+  createdAt: string
+}
+
+/** Baca saldo payout relevan tenant (on-behalf sub-account bila sudah terprovisi). */
+export function getPivotBalance(): Promise<PivotBalanceView> {
+  return api.get('/api/billing/pivot-account/balance')
+}
+
+/** Riwayat penyaluran dana tenant (terbaru-dahulu). */
+export function listPivotPayouts(): Promise<TenantPayoutView[]> {
+  return api.get('/api/billing/pivot-account/payouts')
+}
+
+/**
+ * Salurkan dana ke rekening beneficiary bebas. Server memvalidasi nama pemilik (inquiry) & wajib
+ * mengecek saldo sebelum membuat payout.
+ */
+export function createPivotPayout(body: {
+  channelCode: string
+  accountNumber: string
+  amountMinor: number
+  description?: string | null
+}): Promise<TenantPayoutView> {
+  return api.post('/api/billing/pivot-account/payouts', body)
+}

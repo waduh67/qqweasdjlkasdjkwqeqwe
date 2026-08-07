@@ -27,6 +27,12 @@ interface ManageTenantPivotAccountUseCase {
 
     /** Setel rekening payout tenant; nomor divalidasi lewat `POST /v1/inquiry-account`. */
     fun setPayoutAccount(command: SetPivotPayoutAccountCommand): TenantPivotAccountView
+
+    /** Undang user admin ke sub-account tenant (`POST /v1/sub-merchants/admin`). */
+    fun assignUser(command: AssignPivotUserCommand): TenantPivotAccountView
+
+    /** Kirim ulang undangan user sub-account (`POST /v1/sub-merchants/users/resend-invitation`). */
+    fun resendInvitation(command: ResendPivotInvitationCommand): TenantPivotAccountView
 }
 
 /**
@@ -76,4 +82,15 @@ data class SaveTenantPivotProfileCommand(
 data class SetPivotPayoutAccountCommand(
     val channelCode: String,
     val accountNumber: String,
+)
+
+/** Assign user admin ke sub-account tenant: alamat email + nama lengkap (undangan dikirim Pivot). */
+data class AssignPivotUserCommand(
+    val email: String,
+    val name: String,
+)
+
+/** Kirim ulang undangan ke user sub-account tenant berdasarkan alamat email. */
+data class ResendPivotInvitationCommand(
+    val email: String,
 )

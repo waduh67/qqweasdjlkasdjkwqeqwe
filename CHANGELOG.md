@@ -6,6 +6,32 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-07 — Manajemen pengguna sub-account Pivot + sistem local payout (beneficiary bebas, wajib cek saldo)
+
+**Ditambahkan**
+- **Undang & kirim ulang undangan pengguna sub-account.** Tenant bisa mengundang admin ke
+  sub-account Pivot-nya (email + nama, `POST /v1/sub-merchants/admin`) dan mengirim ulang undangan
+  (`POST /v1/sub-merchants/users/resend-invitation`) — keduanya on-behalf lewat `x-submerchant-id`.
+  Seksi baru "Pengguna sub-account" di kartu Sub-account Pivot (`PaymentGatewaySettingsPage`),
+  di-gate izin `billing.gateway.manage`, muncul setelah sub-account terprovisi.
+- **Sistem local payout ke rekening beneficiary bebas.** Seksi "Saldo & Payout": tampilkan saldo
+  payout sub-account lalu kirim dana ke bank + nomor rekening tujuan apa pun (pilih bank via
+  dropdown channel, nominal rupiah, deskripsi). Server memvalidasi nama pemilik lewat inquiry &
+  **WAJIB mengecek saldo sebelum membuat payout** — payout ditolak (`ConflictException`) bila saldo
+  tak cukup, tanpa menembak Pivot. Riwayat payout ditampilkan dengan status (Menunggu/Diproses/
+  Berhasil/Gagal) + alasan gagal.
+
+**Diubah**
+- **Body `POST /v1/payouts` diselaraskan dengan dokumentasi Pivot** — kini array `payouts[]`
+  dengan `referenceId`, `amount.value` (rupiah utuh), `description`, dan `inquiryId` (bila ada) atau
+  `channelInformation{accountNumber,accountName}`. Withdrawal KYC (`/v1/withdrawals`) tetap memakai
+  bentuk flat lama (builder terpisah). Referensi payout dibaca dari `data.uuid` (rekonsiliasi
+  callback juga mengenali `uuid`).
+- **Saldo payout dibaca dari `GET /v1/payouts/balance?currency=IDR`** (menggantikan
+  `/v1/balances?usecase=PAYMENT`); `availableBalance.value` yang berupa string desimal 2-angka
+  dibulatkan ke bawah jadi rupiah utuh agar konsisten dengan `amount.value` saat create payout.
+  Saldo dibaca on-behalf sub-account tenant begitu terprovisi.
+
 ### 2026-08-07 — Simpan profil sub-account Pivot tak lagi inquiry + daftar satu klik + dropdown channel
 
 **Diperbaiki**

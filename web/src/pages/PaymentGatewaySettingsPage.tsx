@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { api, ApiError } from '../api/client'
 import {
   deleteQrisImage,
@@ -12,18 +12,26 @@ import {
   type UpdatePaymentGatewaySettingsRequest,
 } from '../api/payment'
 import {
+  assignSubAccountUser,
+  createPivotPayout,
   getPivotAccount,
+  getPivotBalance,
+  listPivotPayouts,
   PIVOT_ACCOUNT_STATUS_LABEL,
   PIVOT_ACCOUNT_TYPE_LABEL,
   PIVOT_KYC_STATUS_LABEL,
   provisionPivotAccount,
   refreshPivotAccount,
   requestPivotKyc,
+  resendSubAccountInvitation,
   savePivotProfile,
   setPivotPayoutAccount,
   type PivotAccountStatus,
+  type PivotBalanceView,
   type PivotKycStatus,
+  type PivotPayoutStatus,
   type PivotProfileRequest,
+  type TenantPayoutView,
   type TenantPivotAccountView,
 } from '../api/pivotAccount'
 import { useCan } from '../auth/useCan'
@@ -783,9 +791,298 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
               </div>
             </>
           )}
+
+          {account.provisioned && <PivotUsersSection manage={manage} />}
+          {account.provisioned && <PivotPayoutSection manage={manage} />}
         </>
       )}
     </div>
+  )
+}
+
+const PAYOUT_STATUS_TONE: Record<PivotPayoutStatus, Tone> = {
+  PENDING: 'neutral',
+  PROCESSING: 'warning',
+  SUCCESS: 'good',
+  FAILED: 'critical',
+}
+
+const PAYOUT_STATUS_LABEL: Record<PivotPayoutStatus, string> = {
+  PENDING: 'Menunggu',
+  PROCESSING: 'Diproses',
+  SUCCESS: 'Berhasil',
+  FAILED: 'Gagal',
+}
+
+/** Format rupiah utuh (tanpa desimal) sesuai lokal id-ID. */
+const formatRupiah = (n: number) => `Rp ${n.toLocaleString('id-ID')}`
+
+/**
+ * Manajemen pengguna sub-account: undang admin (email + nama) & kirim ulang undangan. Aksi Pivot
+ * on-behalf sub-account tenant; keduanya tak mengubah state akun, jadi seksi ini mandiri (busy
+ * lokal). Muncul hanya saat sub-account sudah terprovisi.
+ */
+function PivotUsersSection({ manage }: { manage: boolean }) {
+  const toast = useToast()
+  const [email, setEmail] = useState('')
+  const [name, setName] = useState('')
+  const [resendEmail, setResendEmail] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const run = async (fn: () => Promise<unknown>, okMsg: string) => {
+    if (busy) return
+    setBusy(true)
+    try {
+      await fn()
+      toast.success(okMsg)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Operasi gagal')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <>
+      <div className="hr" />
+      <SectionTitle>Pengguna sub-account</SectionTitle>
+      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        Undang admin ke sub-account Pivot Anda. Pivot mengirim email undangan ke alamat yang diisi.
+      </p>
+      <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <label style={{ flex: 1, minWidth: 200 }}>
+          <span>Email pengguna</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="mis. admin@usaha.co.id"
+            maxLength={255}
+            disabled={!manage}
+          />
+        </label>
+        <label style={{ flex: 1, minWidth: 160 }}>
+          <span>Nama pengguna</span>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="nama lengkap"
+            maxLength={255}
+            disabled={!manage}
+          />
+        </label>
+        {manage && (
+          <button
+            className="primary"
+            disabled={busy || !email.trim() || !name.trim()}
+            onClick={() =>
+              void run(async () => {
+                await assignSubAccountUser({ email: email.trim(), name: name.trim() })
+                setEmail('')
+                setName('')
+              }, 'Undangan pengguna terkirim')
+            }
+          >
+            Undang pengguna
+          </button>
+        )}
+      </div>
+      <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <label style={{ flex: 1, minWidth: 200 }}>
+          <span>Kirim ulang undangan (email)</span>
+          <input
+            type="email"
+            value={resendEmail}
+            onChange={(e) => setResendEmail(e.target.value)}
+            placeholder="email pengguna yang sudah diundang"
+            maxLength={255}
+            disabled={!manage}
+          />
+        </label>
+        {manage && (
+          <button
+            className="ghost"
+            disabled={busy || !resendEmail.trim()}
+            onClick={() =>
+              void run(
+                () => resendSubAccountInvitation({ email: resendEmail.trim() }),
+                'Undangan dikirim ulang',
+              )
+            }
+          >
+            Kirim ulang undangan
+          </button>
+        )}
+      </div>
+    </>
+  )
+}
+
+/**
+ * Saldo & payout sub-account: tampilkan saldo payout (on-behalf sub-account) lalu form kirim dana ke
+ * rekening beneficiary bebas. Server memvalidasi nama pemilik (inquiry) & WAJIB mengecek saldo
+ * sebelum membuat payout, jadi UI hanya menyodorkan form + menampilkan galat server apa adanya.
+ */
+function PivotPayoutSection({ manage }: { manage: boolean }) {
+  const toast = useToast()
+  const [balance, setBalance] = useState<PivotBalanceView | null>(null)
+  const [payouts, setPayouts] = useState<TenantPayoutView[]>([])
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [channelCode, setChannelCode] = useState('')
+  const [accountNumber, setAccountNumber] = useState('')
+  const [amount, setAmount] = useState('')
+  const [description, setDescription] = useState('')
+
+  const loadData = useCallback(async () => {
+    const [b, p] = await Promise.all([getPivotBalance(), listPivotPayouts()])
+    setBalance(b)
+    setPayouts(p)
+  }, [])
+
+  useEffect(() => {
+    loadData()
+      .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Gagal memuat saldo/payout'))
+      .finally(() => setLoading(false))
+  }, [loadData, toast])
+
+  const refresh = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      await loadData()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal menyegarkan saldo')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const amountMinor = Math.trunc(Number(amount))
+  const amountValid = amount.trim() !== '' && Number.isFinite(amountMinor) && amountMinor > 0
+  const canSubmit =
+    manage && !busy && channelCode.trim() !== '' && accountNumber.trim() !== '' && amountValid
+
+  const submit = async () => {
+    if (!canSubmit) return
+    setBusy(true)
+    try {
+      await createPivotPayout({
+        channelCode: channelCode.trim(),
+        accountNumber: accountNumber.trim(),
+        amountMinor,
+        description: description.trim() || null,
+      })
+      toast.success('Payout terkirim')
+      setAmount('')
+      setDescription('')
+      await loadData()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Payout gagal')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <>
+      <div className="hr" />
+      <SectionTitle>Saldo &amp; Payout</SectionTitle>
+      {loading ? (
+        <p className="muted" style={{ margin: 0 }}>Memuat saldo…</p>
+      ) : (
+        <>
+          <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span className="muted" style={{ fontSize: '0.82rem' }}>Saldo tersedia:</span>
+            <strong>{balance ? formatRupiah(balance.availableMinor) : '—'}</strong>
+            {balance && balance.pendingMinor > 0 && (
+              <span className="muted" style={{ fontSize: '0.8rem' }}>
+                (tertahan {formatRupiah(balance.pendingMinor)})
+              </span>
+            )}
+            <button className="ghost" disabled={busy} onClick={() => void refresh()}>
+              Segarkan saldo
+            </button>
+          </div>
+
+          <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <label style={{ flex: 1, minWidth: 140 }}>
+              <span>Bank tujuan</span>
+              <ChannelCodeField value={channelCode} onChange={setChannelCode} disabled={!manage} />
+            </label>
+            <label style={{ flex: 1, minWidth: 160 }}>
+              <span>Nomor rekening</span>
+              <input
+                value={accountNumber}
+                onChange={(e) => setAccountNumber(e.target.value)}
+                placeholder="mis. 1234567890"
+                maxLength={60}
+                disabled={!manage}
+              />
+            </label>
+            <label style={{ flex: 1, minWidth: 120 }}>
+              <span>Nominal (Rp)</span>
+              <input
+                inputMode="numeric"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
+                placeholder="mis. 100000"
+                disabled={!manage}
+              />
+            </label>
+          </div>
+          <label>
+            <span>Deskripsi (opsional)</span>
+            <input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="catatan payout"
+              maxLength={200}
+              disabled={!manage}
+            />
+          </label>
+          {manage && (
+            <div className="row" style={{ gap: '0.5rem', justifyContent: 'flex-end' }}>
+              <button className="primary" disabled={!canSubmit} onClick={() => void submit()}>
+                Kirim payout
+              </button>
+            </div>
+          )}
+          <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+            Nama pemilik rekening divalidasi otomatis (inquiry) &amp; saldo dicek sebelum payout dibuat.
+          </p>
+
+          <div className="hr" />
+          <SectionTitle>Riwayat payout</SectionTitle>
+          {payouts.length === 0 ? (
+            <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>Belum ada penyaluran dana.</p>
+          ) : (
+            <div className="stack" style={{ gap: '0.4rem' }}>
+              {payouts.map((p) => {
+                const dest = [p.channelCode, p.accountNumber].filter(Boolean).join(' ')
+                const desc = [p.accountName, dest].filter(Boolean).join(' · ')
+                return (
+                  <div
+                    key={p.id}
+                    className="spread"
+                    style={{ gap: '0.75rem', fontSize: '0.85rem', alignItems: 'center' }}
+                  >
+                    <div className="stack" style={{ gap: '0.15rem' }}>
+                      <strong>{formatRupiah(p.amountMinor)}</strong>
+                      <span className="muted" style={{ fontSize: '0.78rem' }}>{desc || '—'}</span>
+                      {p.failureReason && (
+                        <span style={{ fontSize: '0.78rem', color: 'var(--critical)' }}>{p.failureReason}</span>
+                      )}
+                    </div>
+                    <Badge tone={PAYOUT_STATUS_TONE[p.status]}>{PAYOUT_STATUS_LABEL[p.status]}</Badge>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </>
+      )}
+    </>
   )
 }
 

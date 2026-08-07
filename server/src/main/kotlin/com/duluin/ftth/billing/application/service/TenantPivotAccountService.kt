@@ -1,7 +1,9 @@
 package com.duluin.ftth.billing.application.service
 
+import com.duluin.ftth.billing.application.port.inbound.AssignPivotUserCommand
 import com.duluin.ftth.billing.application.port.inbound.ManageTenantPivotAccountUseCase
 import com.duluin.ftth.billing.application.port.inbound.ProvisionTenantPivotAccountUseCase
+import com.duluin.ftth.billing.application.port.inbound.ResendPivotInvitationCommand
 import com.duluin.ftth.billing.application.port.inbound.SaveTenantPivotProfileCommand
 import com.duluin.ftth.billing.application.port.inbound.SetPivotPayoutAccountCommand
 import com.duluin.ftth.billing.application.port.inbound.TenantPivotAccountView
@@ -136,6 +138,40 @@ class TenantPivotAccountService(
         audit("billing.pivot.payout.updated", saved.id, tenantId)
         return saved.toView()
     }
+
+    @Transactional
+    override fun assignUser(command: AssignPivotUserCommand): TenantPivotAccountView {
+        val master = requireMaster()
+        val tenantId = TenantContext.tenantId()
+        val account = repository.find() ?: TenantPivotAccount.defaultFor(tenantId)
+        val subId = requireProvisioned(account)
+        val email = command.email.trim().takeIf { it.isNotEmpty() }
+            ?: throw ValidationException("Email pengguna wajib diisi")
+        val name = command.name.trim().takeIf { it.isNotEmpty() }
+            ?: throw ValidationException("Nama pengguna wajib diisi")
+        subMerchant.assignUser(master, subId, email, name)
+        audit("billing.pivot.user.assigned", account.id, tenantId)
+        log.info("User '{}' diundang ke sub-account tenant {}", email, tenantId)
+        return account.toView()
+    }
+
+    @Transactional
+    override fun resendInvitation(command: ResendPivotInvitationCommand): TenantPivotAccountView {
+        val master = requireMaster()
+        val tenantId = TenantContext.tenantId()
+        val account = repository.find() ?: TenantPivotAccount.defaultFor(tenantId)
+        val subId = requireProvisioned(account)
+        val email = command.email.trim().takeIf { it.isNotEmpty() }
+            ?: throw ValidationException("Email pengguna wajib diisi")
+        subMerchant.resendInvitation(master, subId, email)
+        audit("billing.pivot.invitation.resent", account.id, tenantId)
+        log.info("Undangan dikirim ulang ke '{}' untuk sub-account tenant {}", email, tenantId)
+        return account.toView()
+    }
+
+    /** UUID sub-account tenant — aksi on-behalf butuh sub-account sudah terdaftar di Pivot. */
+    private fun requireProvisioned(account: TenantPivotAccount): String = account.subMerchantUuid
+        ?: throw ConflictException("Sub-account belum terdaftar di Pivot — daftarkan dulu")
 
     private fun provisionNonKyc(
         account: TenantPivotAccount,

@@ -1,6 +1,8 @@
 package com.duluin.ftth.billing.adapter.inbound.web
 
+import com.duluin.ftth.billing.application.port.inbound.AssignPivotUserCommand
 import com.duluin.ftth.billing.application.port.inbound.ManageTenantPivotAccountUseCase
+import com.duluin.ftth.billing.application.port.inbound.ResendPivotInvitationCommand
 import com.duluin.ftth.billing.application.port.inbound.SaveTenantPivotProfileCommand
 import com.duluin.ftth.billing.application.port.inbound.SetPivotPayoutAccountCommand
 import com.duluin.ftth.billing.application.port.inbound.TenantPivotAccountView
@@ -8,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 import org.springframework.security.access.prepost.PreAuthorize
@@ -61,6 +64,18 @@ class TenantPivotAccountController(
     @Operation(summary = "Setel rekening payout tenant (divalidasi via inquiry Pivot)")
     fun setPayoutAccount(@Valid @RequestBody request: PivotPayoutAccountRequest): TenantPivotAccountView =
         useCase.setPayoutAccount(SetPivotPayoutAccountCommand(request.channelCode, request.accountNumber))
+
+    @PostMapping("/users")
+    @PreAuthorize("@authz.can('billing.gateway.manage')")
+    @Operation(summary = "Undang user admin ke sub-account tenant")
+    fun assignUser(@Valid @RequestBody request: AssignPivotUserRequest): TenantPivotAccountView =
+        useCase.assignUser(AssignPivotUserCommand(request.email, request.name))
+
+    @PostMapping("/users/resend-invitation")
+    @PreAuthorize("@authz.can('billing.gateway.manage')")
+    @Operation(summary = "Kirim ulang undangan user sub-account tenant")
+    fun resendInvitation(@Valid @RequestBody request: ResendPivotInvitationRequest): TenantPivotAccountView =
+        useCase.resendInvitation(ResendPivotInvitationCommand(request.email))
 }
 
 /**
@@ -97,4 +112,18 @@ data class PivotPayoutAccountRequest(
     val channelCode: String,
     @field:NotBlank(message = "Nomor rekening wajib diisi") @field:Size(max = 60)
     val accountNumber: String,
+)
+
+/** Assign user admin ke sub-account tenant: email + nama lengkap. */
+data class AssignPivotUserRequest(
+    @field:NotBlank(message = "Email wajib diisi") @field:Email @field:Size(max = 255)
+    val email: String,
+    @field:NotBlank(message = "Nama wajib diisi") @field:Size(max = 255)
+    val name: String,
+)
+
+/** Kirim ulang undangan ke user sub-account tenant. */
+data class ResendPivotInvitationRequest(
+    @field:NotBlank(message = "Email wajib diisi") @field:Email @field:Size(max = 255)
+    val email: String,
 )

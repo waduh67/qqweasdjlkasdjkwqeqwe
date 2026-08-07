@@ -5,8 +5,10 @@ import com.duluin.ftth.billing.application.port.inbound.ManageTenantPayoutUseCas
 import com.duluin.ftth.billing.application.port.inbound.PivotBalanceView
 import com.duluin.ftth.billing.application.port.inbound.ReconcilePayoutUseCase
 import com.duluin.ftth.billing.application.port.inbound.TenantPayoutView
+import com.duluin.ftth.billing.application.port.inbound.WithdrawCommand
 import com.duluin.ftth.billing.application.port.outbound.PayoutCommand
 import com.duluin.ftth.billing.application.port.outbound.PivotPayoutPort
+import com.duluin.ftth.billing.application.port.outbound.PivotSubMerchantPort
 import com.duluin.ftth.billing.application.port.outbound.TenantPayoutRepository
 import com.duluin.ftth.billing.application.port.outbound.TenantPivotAccountRepository
 import com.duluin.ftth.billing.domain.model.PayoutKind
@@ -43,6 +45,7 @@ class TenantPayoutService(
     private val accounts: TenantPivotAccountRepository,
     private val masterConfig: PivotMasterConfigProvider,
     private val payoutPort: PivotPayoutPort,
+    private val subMerchant: PivotSubMerchantPort,
     private val auditor: AuditRecorder,
 ) : ManageTenantPayoutUseCase, ReconcilePayoutUseCase {
 
@@ -53,8 +56,8 @@ class TenantPayoutService(
     override fun balance(): PivotBalanceView {
         val master = requireMaster()
         val account = accounts.find()
-        // Dana KYC ada di balance sub-account tenant; NON_KYC di balance master platform.
-        val subId = account?.takeIf { it.type == SubAccountType.KYC && it.provisioned }?.subMerchantUuid
+        // Saldo payout dibaca on-behalf sub-account tenant bila sudah terprovisi; else saldo master.
+        val subId = account?.takeIf { it.provisioned }?.subMerchantUuid
         val snapshot = payoutPort.balance(master, subId)
         return PivotBalanceView(
             availableMinor = snapshot.availableMinor,
@@ -70,20 +73,42 @@ class TenantPayoutService(
         val amount = requireAmount(command.amountMinor)
         val tenantId = TenantContext.tenantId()
         val account = accounts.find() ?: throw ConflictException("Sub-account Pivot tenant belum ada")
-        if (account.type != SubAccountType.NON_KYC) {
-            throw ConflictException("Payout hanya untuk akun NON_KYC; akun KYC memakai penarikan sendiri")
-        }
-        if (!account.payoutReady) throw ConflictException("Rekening payout tenant belum divalidasi")
+        val subId = account.subMerchantUuid
+            ?: throw ConflictException("Sub-account tenant belum terdaftar di Pivot")
+        val channelCode = command.channelCode.trim().uppercase().takeIf { it.isNotEmpty() }
+            ?: throw ValidationException("Channel bank wajib diisi")
+        val accountNumber = command.accountNumber.trim().takeIf { it.isNotEmpty() }
+            ?: throw ValidationException("Nomor rekening wajib diisi")
 
-        val payout = newPayout(tenantId, PayoutKind.PAYOUT, amount, account)
+        // Validasi rekening tujuan → nama pemilik + inquiryId; wajib cek saldo sebelum create payout.
+        val inquiry = subMerchant.inquiryAccount(master, channelCode, accountNumber)
+        val snapshot = payoutPort.balance(master, subId)
+        if (snapshot.availableMinor < amount) {
+            throw ConflictException(
+                "Saldo payout tak cukup — tersedia Rp ${snapshot.availableMinor}, butuh Rp $amount",
+            )
+        }
+
+        val payout = TenantPayout.create(
+            tenantId = tenantId,
+            kind = PayoutKind.PAYOUT,
+            amountMinor = amount,
+            channelCode = channelCode,
+            accountNumber = accountNumber,
+            accountName = inquiry.accountName,
+            createdAt = Instant.now(),
+        )
         val dispatch = payoutPort.payout(
             master,
+            subId,
             PayoutCommand(
                 amountMinor = amount,
-                channelCode = account.payoutChannelCode,
-                accountNumber = account.payoutAccountNumber,
-                inquiryId = account.payoutInquiryId,
-                remarks = command.remarks,
+                channelCode = channelCode,
+                accountNumber = accountNumber,
+                accountName = inquiry.accountName,
+                inquiryId = inquiry.inquiryId,
+                referenceId = payout.id.toString(),
+                description = command.description,
             ),
             requestId(payout.id),
         )
@@ -91,12 +116,12 @@ class TenantPayoutService(
         if (dispatch.settledImmediately) payout.markSuccess()
         val saved = repository.save(payout)
         audit("billing.pivot.payout.dispatched", saved.id, tenantId)
-        log.info("Payout NON_KYC tenant {} sebesar {} → ref {}", tenantId, amount, dispatch.reference)
+        log.info("Payout tenant {} sebesar {} ke {}/{} → ref {}", tenantId, amount, channelCode, accountNumber, dispatch.reference)
         return saved.toView()
     }
 
     @Transactional
-    override fun withdraw(command: DispatchPayoutCommand): TenantPayoutView {
+    override fun withdraw(command: WithdrawCommand): TenantPayoutView {
         val master = requireMaster()
         val amount = requireAmount(command.amountMinor)
         val tenantId = TenantContext.tenantId()
@@ -106,6 +131,7 @@ class TenantPayoutService(
         }
         val subId = account.subMerchantUuid
             ?: throw ConflictException("Sub-account tenant belum punya UUID di Pivot")
+        if (!account.payoutReady) throw ConflictException("Rekening payout tenant belum divalidasi")
 
         val payout = newPayout(tenantId, PayoutKind.WITHDRAWAL, amount, account)
         val dispatch = payoutPort.withdraw(
@@ -115,8 +141,10 @@ class TenantPayoutService(
                 amountMinor = amount,
                 channelCode = account.payoutChannelCode,
                 accountNumber = account.payoutAccountNumber,
+                accountName = account.payoutAccountName,
                 inquiryId = account.payoutInquiryId,
-                remarks = command.remarks,
+                referenceId = payout.id.toString(),
+                description = command.description,
             ),
             requestId(payout.id),
         )

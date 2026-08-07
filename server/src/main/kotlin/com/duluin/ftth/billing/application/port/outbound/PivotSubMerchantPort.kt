@@ -19,6 +19,18 @@ interface PivotSubMerchantPort {
 
     /** Validasi rekening bank sebelum payout; hasilkan `inquiryId` + nama pemilik terverifikasi. */
     fun inquiryAccount(master: PivotMasterContext, channelCode: String, accountNumber: String): InquiryResult
+
+    /**
+     * Undang/assign user admin ke sub-account tenant (`POST /v1/sub-merchants/admin`), on-behalf lewat
+     * [subMerchantId] (`x-submerchant-id`). Pivot mengirim email undangan ke [email].
+     */
+    fun assignUser(master: PivotMasterContext, subMerchantId: String, email: String, name: String)
+
+    /**
+     * Kirim ulang undangan ke user yang sudah pernah di-assign (`POST /v1/sub-merchants/users/
+     * resend-invitation`), on-behalf lewat [subMerchantId] (`x-submerchant-id`).
+     */
+    fun resendInvitation(master: PivotMasterContext, subMerchantId: String, email: String)
 }
 
 /**

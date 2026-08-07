@@ -12,10 +12,16 @@ import com.duluin.ftth.billing.domain.model.PivotMasterContext
  */
 interface PivotPayoutPort {
     /**
-     * Salurkan dana dari balance master ke rekening tenant yang sudah divalidasi (`inquiryId`).
-     * [requestId] = idempotency `X-REQUEST-ID`.
+     * Salurkan dana dari saldo payout sub-account tenant ke rekening beneficiary (`POST /v1/payouts`),
+     * on-behalf lewat [subMerchantId] (`x-submerchant-id`). Body memakai `inquiryId` bila ada, atau
+     * `channelInformation`. [requestId] = idempotency `X-REQUEST-ID`.
      */
-    fun payout(master: PivotMasterContext, command: PayoutCommand, requestId: String): PayoutDispatch
+    fun payout(
+        master: PivotMasterContext,
+        subMerchantId: String,
+        command: PayoutCommand,
+        requestId: String,
+    ): PayoutDispatch
 
     /**
      * Tarik saldo sub-account tenant ke rekening tenant (KYC). Dijalankan on-behalf lewat
@@ -29,22 +35,25 @@ interface PivotPayoutPort {
     ): PayoutDispatch
 
     /**
-     * Saldo tersedia. [subMerchantId] null = balance master platform; berisi = balance sub-account
-     * tenant (on-behalf).
+     * Saldo payout tersedia (`GET /v1/payouts/balance?currency=IDR`). [subMerchantId] null = saldo
+     * master platform; berisi = saldo sub-account tenant (on-behalf).
      */
     fun balance(master: PivotMasterContext, subMerchantId: String?): BalanceSnapshot
 }
 
 /**
- * Perintah penyaluran. [inquiryId] hasil validasi rekening (`POST /v1/inquiry-account`); untuk
- * withdrawal KYC ke rekening sub-account bisa null bila Pivot memakai rekening terdaftar.
+ * Perintah penyaluran. [inquiryId] hasil validasi rekening (`POST /v1/inquiry-account`); bila ada,
+ * dipakai langsung. Jika null, dipakai jalur `channelCode` + `channelInformation`
+ * ([accountNumber]+[accountName]). [referenceId] wajib unik per payout (idempotency bisnis Pivot).
  */
 data class PayoutCommand(
     val amountMinor: Long,
     val channelCode: String?,
     val accountNumber: String?,
+    val accountName: String?,
     val inquiryId: String?,
-    val remarks: String?,
+    val referenceId: String,
+    val description: String?,
 )
 
 /** Hasil perintah penyaluran: referensi Pivot untuk rekonsiliasi + apakah sudah final (jarang). */

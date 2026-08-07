@@ -78,7 +78,8 @@ class PivotCallbackService(
         verifySignature(headers)
         val root = objectMapper.readTree(body)
         val data = root.get("data")?.takeIf { !it.isNull } ?: root
-        val reference = data.textOrNull("id") ?: data.textOrNull("referenceId") ?: data.textOrNull("reference")
+        val reference = data.textOrNull("uuid") ?: data.textOrNull("id")
+            ?: data.textOrNull("referenceId") ?: data.textOrNull("reference")
         if (reference == null) {
             log.warn("Callback penyaluran tanpa referensi — diabaikan")
             return false
