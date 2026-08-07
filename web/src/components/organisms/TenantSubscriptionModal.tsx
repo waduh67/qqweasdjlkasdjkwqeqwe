@@ -249,7 +249,8 @@ export function TenantSubscriptionModal({
             </div>
             <span className="muted" style={{ fontSize: '0.82rem' }}>
               Tanggal tagih &amp; masa tenggang kosong = pakai default global. Menyimpan tenant baru langsung
-              menjadwalkan tagihan pertama.
+              menjadwalkan tagihan pertama. Mengubah biaya juga memperbarui tagihan yang belum lunas &amp; belum
+              dibayar.
             </span>
             {/* Simpan/Aktifkan kini di footer Blade; sisakan aksi hentikan langganan di sini. */}
             {manage && sub && sub.status !== 'CANCELLED' && (

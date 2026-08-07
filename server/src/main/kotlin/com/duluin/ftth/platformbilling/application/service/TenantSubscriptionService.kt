@@ -14,7 +14,9 @@ import com.duluin.ftth.platformbilling.domain.model.TenantSubscriptionInvoice
 import com.duluin.ftth.tenancy.TenantApi
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.math.BigDecimal
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /**
@@ -40,7 +42,8 @@ class TenantSubscriptionService(
     override fun configure(tenantId: UUID, command: ConfigureSubscriptionCommand): TenantSubscriptionDetailView {
         // Pastikan tenant ada (melempar NotFound bila tidak).
         tenantApi.requireById(tenantId)
-        val subscription = subscriptionRepository.findByTenantId(tenantId)?.apply {
+        val existing = subscriptionRepository.findByTenantId(tenantId)
+        val subscription = existing?.apply {
             configure(command.monthlyFee, command.billingDay, command.graceDays)
         } ?: TenantSubscription.create(
             tenantId = tenantId,
@@ -52,6 +55,17 @@ class TenantSubscriptionService(
             scheduleNextInvoice(LocalDate.now())
         }
         val saved = subscriptionRepository.save(subscription)
+        // Langganan yang sudah ada: biaya baru ikut menyesuaikan tagihan yang belum lunas & belum
+        // di-charge (nilai = biaya bulanan × jumlah bulan periode). `reprice` no-op bila tak berubah.
+        if (existing != null) {
+            invoiceRepository.findOutstandingBySubscriptionId(saved.id).forEach { invoice ->
+                val span = ChronoUnit.MONTHS.between(invoice.periodStart, invoice.periodEnd.plusDays(1))
+                    .coerceAtLeast(1)
+                if (invoice.reprice(saved.monthlyFee.multiply(BigDecimal.valueOf(span)))) {
+                    invoiceRepository.save(invoice)
+                }
+            }
+        }
         auditor.record(
             action = "platform.subscription.configured",
             entityType = "TenantSubscription",
@@ -66,6 +80,12 @@ class TenantSubscriptionService(
     override fun generateInvoice(tenantId: UUID): SubscriptionInvoiceView {
         val subscription = subscriptionRepository.findByTenantId(tenantId)
             ?: throw NotFoundException("Tenant belum berlangganan — set biaya bulanan dulu")
+        // Idempoten: bila masih ada tagihan belum lunas, kembalikan itu alih-alih menerbitkan
+        // yang baru (hindari tagihan dobel saat "Terbitkan tagihan" diklik berulang) — seragam
+        // dengan jalur perpanjangan mandiri tenant (TenantSelfSubscriptionService.renew).
+        invoiceRepository.findOutstandingBySubscriptionId(subscription.id).firstOrNull()?.let {
+            return it.toView()
+        }
         val invoice = invoiceGenerator.issueFor(subscription, LocalDate.now(), force = true)
             ?: throw NotFoundException("Tagihan tak dapat diterbitkan (langganan dibatalkan atau tagihan periode ini sudah ada)")
         return invoice.toView()

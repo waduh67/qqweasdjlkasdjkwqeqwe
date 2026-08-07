@@ -29,6 +29,7 @@ class TenantSubscriptionInvoicePersistenceAdapter(
 
     override fun save(invoice: TenantSubscriptionInvoice): TenantSubscriptionInvoice {
         val entity = jpa.findById(invoice.id).orElse(null)?.apply {
+            amount = invoice.amount
             status = invoice.status
             paidAt = invoice.paidAt
             gatewayProvider = invoice.gatewayProvider
