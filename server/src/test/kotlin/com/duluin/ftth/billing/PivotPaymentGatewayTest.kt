@@ -2,6 +2,7 @@ package com.duluin.ftth.billing
 
 import com.duluin.ftth.billing.adapter.outbound.gateway.PivotPaymentGateway
 import com.duluin.ftth.billing.adapter.outbound.gateway.pivot.PivotApiClient
+import com.duluin.ftth.billing.adapter.outbound.gateway.pivotExpiryAt
 import com.duluin.ftth.billing.application.port.outbound.GatewayCallback
 import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.billing.domain.model.GatewayMode
@@ -10,6 +11,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import tools.jackson.databind.json.JsonMapper
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 /**
  * Uji verifikasi callback Pivot tanpa Spring/HTTP: hanya [PivotPaymentGateway.parseCallback],
@@ -75,6 +78,40 @@ class PivotPaymentGatewayTest {
     @Test
     fun `Callback API Key tenant belum diset menolak semua callback`() {
         assertThat(gateway.parseCallback(callback("cb_key", "PAID"), ctx(null))).isNull()
+    }
+
+    // --- expiryAt sesi bayar STRICT (jatuh tempo tagihan, di-clamp ke maksimum Pivot) ---
+
+    // Jam tetap agar deterministik (tanpa Instant.now nyata); UTC agar akhir-hari tak tergeser zona.
+    private val now = Instant.parse("2026-08-07T03:00:00Z")
+
+    @Test
+    fun `tanpa dueDate tidak mengirim expiryAt`() {
+        assertThat(pivotExpiryAt(null, now, ZoneOffset.UTC)).isNull()
+    }
+
+    @Test
+    fun `dueDate normal jadi akhir hari jatuh tempo`() {
+        // Jatuh tempo 2026-08-14 → berlaku sampai habis hari itu (awal 08-15 UTC).
+        val expiry = pivotExpiryAt(LocalDate.of(2026, 8, 14), now, ZoneOffset.UTC)
+
+        assertThat(expiry).isEqualTo("2026-08-15T00:00:00Z")
+    }
+
+    @Test
+    fun `dueDate melebihi 30 hari di-clamp ke maksimum Pivot`() {
+        // Jatuh tempo 60 hari ke depan → di-clamp ke now+30 hari (batas kartu & virtual account).
+        val expiry = pivotExpiryAt(LocalDate.of(2026, 10, 31), now, ZoneOffset.UTC)
+
+        assertThat(expiry).isEqualTo(now.plusSeconds(30 * 24 * 3600).toString())
+    }
+
+    @Test
+    fun `dueDate sudah lewat di-clamp ke batas bawah agar sesi tak langsung mati`() {
+        // Terbit-ulang / overdue: jatuh tempo kemarin → minimal now+1 jam, bukan waktu lampau.
+        val expiry = pivotExpiryAt(LocalDate.of(2026, 8, 1), now, ZoneOffset.UTC)
+
+        assertThat(expiry).isEqualTo(now.plusSeconds(3600).toString())
     }
 
     @Test

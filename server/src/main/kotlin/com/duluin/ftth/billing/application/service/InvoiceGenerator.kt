@@ -107,6 +107,7 @@ class InvoiceGenerator(
                         customerName = customerNames[sub.customerId] ?: sub.packageName,
                         customerEmail = null,
                         description = chargeDescription,
+                        dueDate = invoice.dueDate,
                     ),
                     ctx,
                 )
@@ -151,6 +152,7 @@ class InvoiceGenerator(
                 customerName = customerName,
                 customerEmail = null,
                 description = "Tagihan ${invoice.number}",
+                dueDate = invoice.dueDate,
             ),
             ctx,
         )

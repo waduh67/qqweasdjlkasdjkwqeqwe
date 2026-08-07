@@ -4,6 +4,7 @@ import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
 import org.springframework.modulith.NamedInterface
 import java.math.BigDecimal
 import java.time.Instant
+import java.time.LocalDate
 
 /**
  * Kontrak payment gateway yang provider-agnostik: satu antarmuka untuk semua
@@ -37,7 +38,13 @@ interface PaymentGateway {
     fun parseCallback(callback: GatewayCallback, ctx: ResolvedGatewayContext): PaymentSettlement?
 }
 
-/** Permintaan membuat charge untuk sebuah tagihan. */
+/**
+ * Permintaan membuat charge untuk sebuah tagihan.
+ *
+ * [dueDate] = jatuh tempo tagihan. Penyedia yang mendukung batas waktu sesi bayar (mis. Pivot mode
+ * STRICT) memakainya sebagai kedaluwarsa tautan bayar; `null` = biarkan penyedia pakai default.
+ * Penyedia yang tak punya konsep ini (manual/transfer) mengabaikannya.
+ */
 @NamedInterface("gateway")
 data class ChargeRequest(
     val invoiceNumber: String,
@@ -45,6 +52,7 @@ data class ChargeRequest(
     val customerName: String,
     val customerEmail: String?,
     val description: String,
+    val dueDate: LocalDate? = null,
 )
 
 /** Hasil charge: referensi & tautan bayar bila penyedia menyediakannya. */
