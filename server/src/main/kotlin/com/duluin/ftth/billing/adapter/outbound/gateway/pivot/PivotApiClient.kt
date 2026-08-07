@@ -113,8 +113,12 @@ class PivotApiClient(
         val node = exchange("POST /v1/access-token") {
             client(creds).post()
                 .uri("/v1/access-token")
+                .contentType(MediaType.APPLICATION_JSON)
                 .header("X-MERCHANT-ID", creds.merchantId)
                 .header("X-MERCHANT-SECRET", creds.merchantSecret)
+                // Body `{}` wajib: handler token Pivot men-decode body JSON, body kosong →
+                // 400 {"message":"EOF"}. Kredensial tetap lewat header, `{}` hanya memuaskan decoder.
+                .body(emptyMap<String, Any>())
                 .retrieve()
                 .body(String::class.java)
         }
@@ -135,7 +139,7 @@ class PivotApiClient(
             log.warn("Pivot menolak {} ({}): {}", label, e.statusCode.value(), bodyText.take(ERR_SNIPPET))
             val reason = pivotErrorMessage(bodyText)
             val suffix = reason?.let { ": $it" } ?: ""
-            throw ConflictException("Pivot menolak permintaan (${e.statusCode.value()})$suffix")
+            throw ConflictException("Pivot menolak $label (${e.statusCode.value()})$suffix")
         }
         return raw?.let(objectMapper::readTree) ?: throw ConflictException("Pivot tak mengembalikan body untuk $label")
     }

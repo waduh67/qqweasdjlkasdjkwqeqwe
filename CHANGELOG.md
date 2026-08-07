@@ -6,6 +6,21 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-07 — Perbaiki provisioning Pivot (400 EOF) & metode pembayaran ke-reset
+
+**Diperbaiki**
+- **Provisioning sub-account Pivot gagal `400 EOF`.** Penukaran token `POST /v1/access-token`
+  dikirim tanpa body → handler Pivot men-decode body kosong dan menolak dengan
+  `{"message":"EOF"}`. Kini call itu mengirim `Content-Type: application/json` + body `{}`
+  (kredensial tetap lewat header `X-MERCHANT-ID`/`X-MERCHANT-SECRET`). Pesan galat Pivot juga
+  kini menyebut endpoint yang gagal (`Pivot menolak POST /v1/… (400): …`) agar mudah didiagnosis
+  (`PivotApiClient`).
+- **Metode pembayaran di `/payment-gateway` ke-reset ke "Manual" tiap ada toast.** Objek API
+  toast tak di-memo, sehingga tiap notifikasi (mis. simpan profil / galat provision) mengubah
+  identitas context dan memicu `useEffect` ber-dep `[toast]` memuat ulang setelan — menimpa
+  pilihan "Pivot" yang belum disimpan. API toast kini di-memo (`ui.tsx`), memperbaiki reset ini
+  dan fetch-ulang tak sengaja di seluruh halaman lain.
+
 ### 2026-08-06 — Migrasi penuh payment gateway ke Pivot
 
 Payment layer dipangkas jadi **Pivot-only** dengan model **"business as platform"**: satu

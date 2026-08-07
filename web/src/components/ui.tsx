@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from 'react'
@@ -272,11 +273,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     window.setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), kind === 'error' ? 6000 : 3500)
   }, [])
 
-  const api: ToastApi = {
-    success: (m) => push('success', m),
-    error: (m) => push('error', m),
-    info: (m) => push('info', m),
-  }
+  // Di-memo agar identitas `api` stabil (push sudah stabil): tanpa ini, tiap toast membuat
+  // nilai context baru → `useEffect` ber-dep `[toast]` fetch-ulang tak sengaja (mis. metode
+  // pembayaran di /payment-gateway ke-reset ke Manual saat ada toast).
+  const api = useMemo<ToastApi>(
+    () => ({
+      success: (m) => push('success', m),
+      error: (m) => push('error', m),
+      info: (m) => push('info', m),
+    }),
+    [push],
+  )
 
   return (
     <ToastContext.Provider value={api}>
