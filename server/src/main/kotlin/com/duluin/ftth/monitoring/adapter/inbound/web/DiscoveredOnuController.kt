@@ -36,9 +36,11 @@ class DiscoveredOnuController(
 ) {
     @GetMapping
     @PreAuthorize("@authz.can('monitoring.provisioning.view')")
-    @Operation(summary = "Daftar ONU terdeteksi; default yang masih menunggu (DISCOVERED)")
-    fun list(@RequestParam(required = false) state: DiscoveredOnuState?): List<DiscoveredOnuView> =
-        useCase.list(state)
+    @Operation(summary = "Daftar ONU terdeteksi; default yang masih menunggu (DISCOVERED). Bisa disaring per-OLT lewat oltId")
+    fun list(
+        @RequestParam(required = false) state: DiscoveredOnuState?,
+        @RequestParam(required = false) oltId: UUID?,
+    ): List<DiscoveredOnuView> = useCase.list(state, oltId)
 
     @PostMapping("/{id}/provision")
     @PreAuthorize("@authz.can('monitoring.provisioning.manage')")

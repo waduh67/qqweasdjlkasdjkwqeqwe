@@ -22,6 +22,13 @@ interface DiscoveredOnuRepository {
     fun findByState(state: DiscoveredOnuState): List<DiscoveredOnu>
 
     /**
+     * Isi kotak masuk sebuah state yang disaring ke satu OLT, terbaru dulu — untuk
+     * pandangan per-OLT di halaman detail OLT. Baris ber-`oltId` null (OLT belum
+     * terpetakan di inventory) tak pernah ikut, memang di luar cakupan OLT itu.
+     */
+    fun findByStateAndOltId(state: DiscoveredOnuState, oltId: UUID): List<DiscoveredOnu>
+
+    /**
      * Baris yang MASIH menunggu (DISCOVERED) untuk serial yang kini sudah dikenal —
      * dipakai ingestion untuk menuntaskan sendiri kotak masuk begitu serial
      * didaftarkan lewat jalur mana pun.

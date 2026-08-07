@@ -491,4 +491,30 @@ class AutoProvisioningIT {
         assertThat(JsonPath.read<List<String>>(inbox(tokenA), "$[*].id")).hasSize(1)
         assertThat(JsonPath.read<List<String>>(inbox(tokenB), "$[*].id")).isEmpty()
     }
+
+    @Test
+    fun `kotak masuk bisa disaring per-OLT`() {
+        val token = newTenantAdmin("perolt")
+        val (oltIdA, oltCodeA) = bareOlt(token)
+        val (oltIdB, oltCodeB) = bareOlt(token)
+        val apiKey = newCollector(token)
+        val serialA = "SN-A-${uniq().uppercase()}"
+        val serialB = "SN-B-${uniq().uppercase()}"
+
+        postAsCollector(apiKey, batch(reading(serialA, oltCodeA, -20.0)))
+        postAsCollector(apiKey, batch(reading(serialB, oltCodeB, -21.0)))
+
+        // Tanpa filter: seluruh kotak masuk tenant terlihat.
+        assertThat(JsonPath.read<List<String>>(inbox(token), "$[*].serialNumber"))
+            .containsExactlyInAnyOrder(serialA, serialB)
+
+        // Disaring ke OLT A → hanya serial di OLT A, dan oltId-nya memang A.
+        val onlyA = getJson("/api/monitoring/discovered-onus?state=DISCOVERED&oltId=$oltIdA", token)
+        assertThat(JsonPath.read<List<String>>(onlyA, "$[*].serialNumber")).containsExactly(serialA)
+        assertThat(JsonPath.read<List<String>>(onlyA, "$[*].oltId")).containsExactly(oltIdA)
+
+        // Disaring ke OLT B → hanya serial di OLT B.
+        val onlyB = getJson("/api/monitoring/discovered-onus?state=DISCOVERED&oltId=$oltIdB", token)
+        assertThat(JsonPath.read<List<String>>(onlyB, "$[*].serialNumber")).containsExactly(serialB)
+    }
 }

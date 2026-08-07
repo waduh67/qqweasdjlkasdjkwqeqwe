@@ -14,8 +14,11 @@ import java.util.UUID
  */
 interface ManageDiscoveredOnuUseCase {
 
-    /** Daftar ONU terdeteksi pada sebuah tahap; default yang masih menunggu tindakan. */
-    fun list(state: DiscoveredOnuState?): List<DiscoveredOnuView>
+    /**
+     * Daftar ONU terdeteksi pada sebuah tahap; default yang masih menunggu tindakan.
+     * Bila [oltId] diisi, hasil disaring ke satu OLT saja — untuk pandangan per-OLT.
+     */
+    fun list(state: DiscoveredOnuState?, oltId: UUID? = null): List<DiscoveredOnuView>
 
     /**
      * Menuntaskan sebuah ONU terdeteksi: daftarkan serialnya untuk pelanggan lalu

@@ -13,6 +13,11 @@ interface DiscoveredOnuJpaRepository : JpaRepository<DiscoveredOnuJpaEntity, UUI
 
     fun findByStateOrderByLastSeenAtDesc(state: DiscoveredOnuState): List<DiscoveredOnuJpaEntity>
 
+    fun findByStateAndOltIdOrderByLastSeenAtDesc(
+        state: DiscoveredOnuState,
+        oltId: UUID,
+    ): List<DiscoveredOnuJpaEntity>
+
     fun findBySerialNumberInAndState(
         serialNumbers: Set<String>,
         state: DiscoveredOnuState,

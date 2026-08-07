@@ -29,9 +29,9 @@ class DiscoveredOnuService(
     private val resolver: OnuProvisioningResolver,
 ) : ManageDiscoveredOnuUseCase {
 
-    override fun list(state: DiscoveredOnuState?): List<DiscoveredOnuView> {
+    override fun list(state: DiscoveredOnuState?, oltId: UUID?): List<DiscoveredOnuView> {
         val effective = state ?: DiscoveredOnuState.DISCOVERED
-        val rows = repository.findByState(effective)
+        val rows = if (oltId != null) repository.findByStateAndOltId(effective, oltId) else repository.findByState(effective)
         // Saran auto-link hanya relevan untuk baris yang masih menuntut tindakan.
         val suggestions = if (effective.actionable) resolver.resolveAll(rows) else emptyMap()
         return rows.map { it.toView(suggestions[it.id]) }

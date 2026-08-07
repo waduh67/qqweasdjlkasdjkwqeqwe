@@ -47,6 +47,9 @@ class DiscoveredOnuPersistenceAdapter(
     override fun findByState(state: DiscoveredOnuState): List<DiscoveredOnu> =
         jpa.findByStateOrderByLastSeenAtDesc(state).map { it.toDomain() }
 
+    override fun findByStateAndOltId(state: DiscoveredOnuState, oltId: UUID): List<DiscoveredOnu> =
+        jpa.findByStateAndOltIdOrderByLastSeenAtDesc(state, oltId).map { it.toDomain() }
+
     override fun findDiscoveredBySerials(serialNumbers: Set<String>): List<DiscoveredOnu> =
         if (serialNumbers.isEmpty()) {
             emptyList()
