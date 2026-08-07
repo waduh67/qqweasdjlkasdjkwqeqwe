@@ -15,6 +15,8 @@ import {
 } from '../api/billing'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
+import { CommandBar, type CommandAction } from '../components/CommandBar'
+import { PageHeader } from '../components/PageHeader'
 import { Badge, EmptyState, Modal, SearchInput, Toolbar, useToast, type Tone } from '../components/ui'
 import { IconInbox, IconPlus } from '../components/icons'
 
@@ -340,19 +342,21 @@ export function InvoicesPage() {
     },
   ]
 
+  // CommandBar ala Azure: primary `+ Terbitkan tagihan` dipatok kiri, seragam dengan Pelanggan.
+  const primary: CommandAction | undefined = canManage
+    ? {
+        key: 'generate',
+        label: 'Terbitkan tagihan',
+        icon: <IconPlus size={16} />,
+        onClick: () => setConfirmGenerate(true),
+        disabled: busy,
+      }
+    : undefined
+
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div className="spread">
-        <div>
-          <h1 className="page-title">Tagihan</h1>
-          <p className="page-sub">Daftar tagihan seluruh pelanggan — terbitkan, catat pembayaran, atau batalkan.</p>
-        </div>
-        {canManage && (
-          <button className="primary" onClick={() => setConfirmGenerate(true)} disabled={busy}>
-            <IconPlus size={15} /> Terbitkan tagihan
-          </button>
-        )}
-      </div>
+      <PageHeader title="Tagihan" subtitle="Daftar tagihan seluruh pelanggan — terbitkan, catat pembayaran, atau batalkan." />
+      <CommandBar primary={primary} />
 
       <div className="row" style={{ gap: '1rem', flexWrap: 'wrap' }}>
         <SummaryCard

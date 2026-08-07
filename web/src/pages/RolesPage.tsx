@@ -4,6 +4,8 @@ import type { PermissionCatalog, Role } from '../api/types'
 import { PermissionMatrix } from '../components/PermissionMatrix'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
+import { CommandBar, type CommandAction } from '../components/CommandBar'
+import { PageHeader } from '../components/PageHeader'
 import { Badge, EmptyState, SearchInput, Toolbar, useConfirm } from '../components/ui'
 import { IconPlus, IconShield } from '../components/icons'
 
@@ -139,16 +141,20 @@ export function RolesPage() {
     }
   }
 
+  // CommandBar ala Azure: primary `+ Role baru` dipatok kiri, seragam dengan Pelanggan.
+  const primary: CommandAction | undefined = can('iam.role.create')
+    ? {
+        key: 'create',
+        label: 'Role baru',
+        icon: <IconPlus size={16} />,
+        onClick: () => setDraft({ ...EMPTY_DRAFT, permissionIds: new Set() }),
+      }
+    : undefined
+
   return (
     <div className="stack">
-      <div className="spread">
-        <h1 className="page-title">Role &amp; Izin</h1>
-        {can('iam.role.create') && (
-          <button className="primary" onClick={() => setDraft({ ...EMPTY_DRAFT, permissionIds: new Set() })}>
-            <IconPlus size={15} /> Role baru
-          </button>
-        )}
-      </div>
+      <PageHeader title="Role & Izin" subtitle="Kelompokkan izin ke dalam peran untuk mengatur akses pengguna." />
+      <CommandBar primary={primary} />
 
       {error && <p className="error">{error}</p>}
 

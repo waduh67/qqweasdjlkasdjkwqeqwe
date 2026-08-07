@@ -13,6 +13,8 @@ import type {
 } from '../api/workorder'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
+import { CommandBar, type CommandAction } from '../components/CommandBar'
+import { PageHeader } from '../components/PageHeader'
 import { Badge, EmptyState, SearchInput, Toolbar, useToast } from '../components/ui'
 import { Blade } from '../components/Blade'
 import { Combobox } from '../components/Combobox'
@@ -208,19 +210,20 @@ export function WorkOrdersPage() {
     },
   ]
 
+  // CommandBar ala Azure: primary `+ Buat work order` dipatok kiri, seragam dengan Pelanggan.
+  const primary: CommandAction | undefined = can('workorder.order.create')
+    ? {
+        key: 'create',
+        label: 'Buat work order',
+        icon: <IconPlus size={16} />,
+        onClick: () => openDraft({ ...EMPTY_DRAFT }),
+      }
+    : undefined
+
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div className="spread">
-        <div>
-          <h1 className="page-title">Work Order</h1>
-          <p className="page-sub">Tugas lapangan — penjadwalan, penugasan teknisi, dan lifecycle-nya.</p>
-        </div>
-        {can('workorder.order.create') && (
-          <button className="primary" onClick={() => openDraft({ ...EMPTY_DRAFT })}>
-            <IconPlus size={15} /> Buat work order
-          </button>
-        )}
-      </div>
+      <PageHeader title="Work Order" subtitle="Tugas lapangan — penjadwalan, penugasan teknisi, dan lifecycle-nya." />
+      <CommandBar primary={primary} />
 
       {can('workorder.dashboard.view') && (
         <DispatchDashboard
