@@ -158,6 +158,9 @@ class PivotPaymentGatewayTest {
 
         assertThat(body["mode"]).isEqualTo("API")
         assertThat(body["autoConfirm"]).isEqualTo(true)
+        // expiryAt valid; expirationMode BUKAN field Pivot (ditolak untuk VA/QR).
+        assertThat(body["expiryAt"]).isNotNull()
+        assertThat(body).doesNotContainKey("expirationMode")
         // redirectUrl WAJIB walau mode-API (Pivot memvalidasinya `required`).
         @Suppress("UNCHECKED_CAST")
         val redirect = body["redirectUrl"] as Map<String, Any>
@@ -177,6 +180,8 @@ class PivotPaymentGatewayTest {
 
         assertThat(body["mode"]).isEqualTo("API")
         assertThat(body).containsKey("redirectUrl")
+        assertThat(body["expiryAt"]).isNotNull()
+        assertThat(body).doesNotContainKey("expirationMode")
         @Suppress("UNCHECKED_CAST")
         val va = (body["paymentMethodOptions"] as Map<String, Any>)["virtualAccount"] as Map<String, Any>
         assertThat(va["channel"]).isEqualTo("BNI")
