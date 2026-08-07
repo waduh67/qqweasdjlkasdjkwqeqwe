@@ -116,9 +116,10 @@ class PivotApiClient(
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("X-MERCHANT-ID", creds.merchantId)
                 .header("X-MERCHANT-SECRET", creds.merchantSecret)
-                // Body `{}` wajib: handler token Pivot men-decode body JSON, body kosong →
-                // 400 {"message":"EOF"}. Kredensial tetap lewat header, `{}` hanya memuaskan decoder.
-                .body(emptyMap<String, Any>())
+                // Body wajib: handler token Pivot men-decode body JSON & memvalidasi field
+                // `grantType` (camelCase, required) — body kosong → 400 EOF, tanpa grantType →
+                // 400 "GrantType required". Kredensial tetap lewat header X-MERCHANT-*.
+                .body(mapOf("grantType" to GRANT_TYPE))
                 .retrieve()
                 .body(String::class.java)
         }
@@ -179,6 +180,7 @@ class PivotApiClient(
     private companion object {
         const val PROD_BASE_URL = "https://api.pivot-payment.com"
         const val SANDBOX_BASE_URL = "https://api-stg.pivot-payment.com"
+        const val GRANT_TYPE = "client_credentials"
         const val SUBMERCHANT_HEADER = "x-submerchant-id"
         const val REQUEST_ID_HEADER = "X-REQUEST-ID"
         const val ERR_SNIPPET = 300
