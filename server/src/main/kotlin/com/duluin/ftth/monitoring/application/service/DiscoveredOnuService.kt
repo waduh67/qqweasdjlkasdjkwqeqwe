@@ -27,6 +27,7 @@ class DiscoveredOnuService(
     private val repository: DiscoveredOnuRepository,
     private val customerApi: CustomerApi,
     private val resolver: OnuProvisioningResolver,
+    private val recorder: DiscoveredOnuRecorder,
 ) : ManageDiscoveredOnuUseCase {
 
     override fun list(state: DiscoveredOnuState?, oltId: UUID?): List<DiscoveredOnuView> {
@@ -84,6 +85,24 @@ class DiscoveredOnuService(
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun purgeForDeletedOlt(oltId: UUID): Int = repository.deleteByOltId(oltId)
+
+    /**
+     * Menuntaskan sendiri baris kotak masuk berserial [serialNumber] yang kini dikenal —
+     * dipicu event [com.duluin.ftth.customer.OnuRegistered] lewat [OnuRegisteredListener]
+     * saat ONU didaftarkan di LUAR kotak masuk (mis. dicolok manual dari halaman pelanggan).
+     * Reaksi sistem, bukan aksi operator, jadi sengaja di luar [ManageDiscoveredOnuUseCase].
+     * Pemanggil menjalankannya dalam tenant context agar RLS menyaring ke tenant yang benar.
+     *
+     * REQUIRES_NEW karena dipanggil dari listener AFTER_COMMIT (transaksi registrasi sudah
+     * selesai) — sama alasannya dengan [purgeForDeletedOlt]. Serial dinormalkan agar cocok
+     * penyimpanan DiscoveredOnu (uppercase). Mengembalikan jumlah baris yang dituntaskan.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    fun resolveRegistered(serialNumber: String): Int {
+        val serial = serialNumber.trim().uppercase()
+        if (serial.isBlank()) return 0
+        return recorder.resolveKnown(setOf(serial))
+    }
 
     private fun require(id: UUID): DiscoveredOnu =
         repository.findById(id) ?: throw NotFoundException("ONU terdeteksi $id tidak ditemukan")

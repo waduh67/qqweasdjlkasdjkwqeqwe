@@ -381,7 +381,7 @@ class AutoProvisioningIT {
     }
 
     @Test
-    fun `serial yang didaftarkan di luar kotak masuk menuntaskan sendiri barisnya`() {
+    fun `serial didaftarkan di luar kotak masuk langsung menuntaskan barisnya (sinkron)`() {
         val token = newTenantAdmin("selfheal")
         val (oltCode, odp, customer) = scaffold(token)
         val apiKey = newCollector(token)
@@ -391,14 +391,17 @@ class AutoProvisioningIT {
         postAsCollector(apiKey, batch(reading(serial, oltCode, -21.0)))
         val discoveredId = JsonPath.read<String>(inbox(token), "$[0].id")
 
-        // Operator justru mendaftarkan & memasangnya lewat halaman pelanggan (di luar kotak masuk).
+        // Operator justru mendaftarkannya lewat halaman pelanggan (di luar kotak masuk).
+        // Registrasi memancarkan OnuRegistered → monitoring menuntaskan barisnya SINKRON,
+        // tanpa menunggu poll collector berikutnya menyadari serialnya kini dikenal.
         val onu = id(post("/api/customers/$customer/onus", token, """{"serialNumber":"$serial"}"""))
-        post("/api/customers/onus/$onu/attach", token, """{"odpId":"$odp","portNumber":2}""", expected = 200)
 
-        // Bacaan berikut untuk serial yang kini dikenal → baris kotak masuk dituntaskan sendiri.
-        postAsCollector(apiKey, batch(reading(serial, oltCode, -21.0)))
         assertThat(JsonPath.read<List<String>>(inbox(token), "$[*].id")).isEmpty()
         assertThat(JsonPath.read<List<String>>(inbox(token, "PROVISIONED"), "$[*].id")).contains(discoveredId)
+
+        // Memasang ODP-nya kemudian tetap sah — baris kotak masuk sudah tuntas, tak muncul lagi.
+        post("/api/customers/onus/$onu/attach", token, """{"odpId":"$odp","portNumber":2}""", expected = 200)
+        assertThat(JsonPath.read<List<String>>(inbox(token), "$[*].id")).isEmpty()
     }
 
     @Test

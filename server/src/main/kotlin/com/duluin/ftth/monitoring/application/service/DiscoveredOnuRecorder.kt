@@ -65,11 +65,14 @@ class DiscoveredOnuRecorder(
      * Menuntaskan sendiri kotak masuk: serial yang kini dikenal namun masih punya
      * baris DISCOVERED (mis. didaftarkan langsung dari halaman pelanggan, di luar
      * kotak masuk) ditandai PROVISIONED agar tidak menggantung sebagai "menunggu".
+     * Mengembalikan jumlah baris yang dituntaskan (untuk log/telemetri pemanggil).
      */
-    fun resolveKnown(knownSerials: Set<String>) {
-        repository.findDiscoveredBySerials(knownSerials).forEach {
+    fun resolveKnown(knownSerials: Set<String>): Int {
+        val rows = repository.findDiscoveredBySerials(knownSerials)
+        rows.forEach {
             it.markProvisioned()
             repository.save(it)
         }
+        return rows.size
     }
 }
