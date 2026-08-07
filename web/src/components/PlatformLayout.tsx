@@ -4,6 +4,7 @@ import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { ThemeToggle } from './ThemeToggle'
 import { EnvSwitcher } from './EnvSwitcher'
+import { Breadcrumbs } from './Breadcrumbs'
 import {
   IconAudit,
   IconBuilding,
@@ -149,6 +150,9 @@ export function PlatformLayout() {
         </header>
 
         <main className="content">
+          <div className="breadcrumb-bar">
+            <Breadcrumbs />
+          </div>
           <Outlet />
         </main>
       </div>

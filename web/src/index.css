@@ -29,14 +29,15 @@
   --focus-ring: rgba(0, 120, 212, 0.4);
 
   /* Sidebar — selalu gelap (charcoal-navy), lepas dari tema konten seperti referensi. */
-  --sidebar-bg: #14151f;
-  --sidebar-bg-2: #1c1d2b;
-  --sidebar-text: #cbd2e0;
-  --sidebar-muted: #7b8296;
-  --sidebar-border: rgba(255, 255, 255, 0.07);
-  --sidebar-active-bg: rgba(79, 70, 229, 0.24);
-  --sidebar-active-text: #ffffff;
-  --sidebar-active-accent: #818cf8;
+  /* Left-nav TERANG ala Azure Portal (light). */
+  --sidebar-bg: #ffffff;
+  --sidebar-bg-2: #f3f2f1;
+  --sidebar-text: #323130;
+  --sidebar-muted: #605e5c;
+  --sidebar-border: #edebe9;
+  --sidebar-active-bg: #eff6fc;
+  --sidebar-active-text: #0078d4;
+  --sidebar-active-accent: #0078d4;
 
   /* Status — tetap, tidak di-tema; dipasangkan ikon/label, tak pernah warna saja */
   --good: #10b981;
@@ -84,6 +85,16 @@
     --accent-soft: rgba(40, 153, 245, 0.16);
     --focus-ring: rgba(40, 153, 245, 0.45);
 
+    /* Left-nav gelap ala Azure Portal (dark). */
+    --sidebar-bg: #201f1e;
+    --sidebar-bg-2: #292827;
+    --sidebar-text: #d2d0ce;
+    --sidebar-muted: #a19f9d;
+    --sidebar-border: #3b3a39;
+    --sidebar-active-bg: rgba(40, 153, 245, 0.16);
+    --sidebar-active-text: #2899f5;
+    --sidebar-active-accent: #2899f5;
+
     --good: #34d399;
     --good-ink: #6ee7b7;
     --warning: #fbbf24;
@@ -118,6 +129,16 @@
   --accent-ink: #ffffff;
   --accent-soft: rgba(40, 153, 245, 0.16);
   --focus-ring: rgba(40, 153, 245, 0.45);
+
+  /* Left-nav gelap ala Azure Portal (dark). */
+  --sidebar-bg: #201f1e;
+  --sidebar-bg-2: #292827;
+  --sidebar-text: #d2d0ce;
+  --sidebar-muted: #a19f9d;
+  --sidebar-border: #3b3a39;
+  --sidebar-active-bg: rgba(40, 153, 245, 0.16);
+  --sidebar-active-text: #2899f5;
+  --sidebar-active-accent: #2899f5;
 
   --good: #34d399;
   --good-ink: #6ee7b7;
@@ -872,13 +893,34 @@ tbody tr.row-click:focus-visible {
 .page-title {
   margin: 0;
   font-size: 1.6rem;
-  font-weight: 750;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 .page-sub {
   margin: 0.25rem 0 0;
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+/* ---------- Breadcrumb global (Azure) ---------- */
+.breadcrumb-bar {
+  margin-bottom: 1rem;
+}
+
+/* ---------- Kepala halaman (judul + slot CommandBar) ---------- */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: none;
 }
 
 /* ---------- Badge & pil status ---------- */
@@ -1164,17 +1206,17 @@ tbody tr.row-click:focus-visible {
   align-items: center;
   gap: 0.6rem;
   padding: 0.4rem 0.5rem 0.9rem;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 1.05rem;
   letter-spacing: -0.02em;
-  color: #fff;
+  color: var(--sidebar-text);
 }
 .logo {
   width: 30px;
   height: 30px;
-  border-radius: 9px;
-  background: linear-gradient(135deg, #6366f1, #4338ca);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #2899f5, #0078d4);
+  box-shadow: 0 2px 6px rgba(0, 120, 212, 0.35);
   display: grid;
   place-items: center;
   color: #fff;
@@ -1211,7 +1253,7 @@ tbody tr.row-click:focus-visible {
 }
 .sidebar nav a:hover {
   background: var(--sidebar-bg-2);
-  color: #fff;
+  color: var(--sidebar-text);
   text-decoration: none;
 }
 .sidebar nav a:hover svg {

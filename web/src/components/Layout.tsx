@@ -4,6 +4,7 @@ import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { ThemeToggle } from './ThemeToggle'
 import { EnvSwitcher } from './EnvSwitcher'
+import { Breadcrumbs } from './Breadcrumbs'
 import {
   IconAlert,
   IconArea,
@@ -193,6 +194,11 @@ export function Layout() {
         </header>
 
         <main className={flush ? 'content content-flush' : 'content'}>
+          {!flush && (
+            <div className="breadcrumb-bar">
+              <Breadcrumbs />
+            </div>
+          )}
           <Outlet />
         </main>
       </div>
