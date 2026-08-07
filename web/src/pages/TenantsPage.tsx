@@ -4,7 +4,7 @@ import type { PageResponse } from '../api/types'
 import { getPlatformBillingSettings } from '../api/platformBilling'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
-import { EmptyState, SearchInput, StatusBadge, Toolbar } from '../components/ui'
+import { ConfirmDialog, EmptyState, SearchInput, StatusBadge, Toolbar } from '../components/ui'
 import { IconBuilding, IconPlus } from '../components/icons'
 import { TenantSubscriptionModal } from './TenantSubscriptionModal'
 
@@ -32,6 +32,8 @@ export function TenantsPage() {
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState<typeof EMPTY | null>(null)
   const [subscription, setSubscription] = useState<{ id: string; name: string } | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<Tenant | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [defaultFee, setDefaultFee] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -106,18 +108,7 @@ export function TenantsPage() {
               </button>
             )}
             {can('platform.tenant.delete') && (
-              <button
-                className="danger"
-                onClick={() => {
-                  if (
-                    !window.confirm(
-                      `Hapus tenant "${t.name}" (${t.slug}) beserta SELURUH datanya secara permanen? Tindakan ini tidak bisa dibatalkan.`,
-                    )
-                  )
-                    return
-                  void run(() => api.del(`/api/platform/tenants/${t.id}`))
-                }}
-              >
+              <button className="danger" onClick={() => setConfirmDelete(t)}>
                 Hapus
               </button>
             )}
@@ -251,6 +242,29 @@ export function TenantsPage() {
           tenantId={subscription.id}
           tenantName={subscription.name}
           onClose={() => setSubscription(null)}
+        />
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Hapus tenant"
+          danger
+          busy={deleting}
+          confirmLabel="Hapus permanen"
+          onClose={() => setConfirmDelete(null)}
+          onConfirm={async () => {
+            setDeleting(true)
+            await run(() => api.del(`/api/platform/tenants/${confirmDelete.id}`))
+            setDeleting(false)
+            setConfirmDelete(null)
+          }}
+          message={
+            <p style={{ margin: 0 }}>
+              Hapus tenant <strong>{confirmDelete.name}</strong> (<code>{confirmDelete.slug}</code>) beserta
+              <strong> SELURUH datanya</strong> secara permanen? Tindakan ini{' '}
+              <strong>tidak bisa dibatalkan</strong>.
+            </p>
+          }
         />
       )}
     </div>

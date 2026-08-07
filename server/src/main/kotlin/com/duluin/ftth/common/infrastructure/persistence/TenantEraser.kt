@@ -80,9 +80,13 @@ class TenantEraser(txManager: PlatformTransactionManager) {
 
     /**
      * Hapus tiap tabel dengan beberapa lintasan (multi-pass) supaya tak perlu tahu urutan
-     * FK: tabel yang deletenya diblok FK (SQLState 23503 — termasuk NO ACTION yang dicek di
-     * akhir statement) di-rollback ke savepoint dan dicoba lagi di lintasan berikutnya,
-     * setelah anak-anaknya bersih. Cascade intra-module (mis. `customer`→`subscription`,
+     * FK: tabel yang deletenya melanggar integritas (SQLState kelas 23) di-rollback ke
+     * savepoint dan dicoba lagi di lintasan berikutnya, setelah anak-anaknya bersih. Ini
+     * mencakup FK violation langsung (23503 — termasuk NO ACTION yang dicek di akhir
+     * statement) MAUPUN efek samping cascade: mis. `DELETE FROM odp` men-`SET NULL` kolom
+     * `onu.odp_id` (FK ON DELETE SET NULL) padahal `onu.odp_port_number` masih terisi →
+     * melanggar CHECK `ck_onu_attachment` (23514). Menunda `odp` sampai `onu` terhapus
+     * lebih dulu menyelesaikannya. Cascade intra-module (mis. `customer`→`subscription`,
      * `app_user`→`user_role`/`refresh_token`) menghabiskan banyak tabel di lintasan pertama.
      */
     private fun deleteAll(conn: Connection, tables: List<String>, tenantId: UUID) {
@@ -104,14 +108,16 @@ class TenantEraser(txManager: PlatformTransactionManager) {
                     iterator.remove()
                     progressed = true
                 } catch (e: SQLException) {
-                    if (e.sqlState == FK_VIOLATION) {
-                        conn.rollback(savepoint) // masih ada anak yang mereferensi — coba lagi nanti.
+                    if (e.sqlState?.startsWith(INTEGRITY_VIOLATION_CLASS) == true) {
+                        // Anak masih mereferensi (FK 23503) atau efek samping cascade melanggar
+                        // CHECK (mis. SET NULL → ck_onu_attachment, 23514) — coba lagi nanti.
+                        conn.rollback(savepoint)
                     } else {
                         throw e
                     }
                 }
             }
-            check(progressed) { "Tak bisa menyelesaikan urutan FK saat menghapus tenant; tersisa: $remaining" }
+            check(progressed) { "Tak bisa menyelesaikan urutan hapus tenant (kendala integritas buntu); tersisa: $remaining" }
         }
     }
 
@@ -123,7 +129,11 @@ class TenantEraser(txManager: PlatformTransactionManager) {
     }
 
     private companion object {
-        /** `foreign_key_violation` — anak masih mereferensi baris yang hendak dihapus. */
-        const val FK_VIOLATION = "23503"
+        /**
+         * Kelas SQLState `23` = integrity_constraint_violation (FK 23503, CHECK 23514, dst).
+         * Semua bisa muncul saat urutan hapus belum benar — ditunda & dicoba ulang. Penjaga
+         * "tak ada progres" di [deleteAll] menangkap pelanggaran yang benar-benar buntu.
+         */
+        const val INTEGRITY_VIOLATION_CLASS = "23"
     }
 }
