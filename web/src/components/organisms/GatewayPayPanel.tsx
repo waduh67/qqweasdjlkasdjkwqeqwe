@@ -55,6 +55,7 @@ export function GatewayPayPanel({
   pollStatus,
   onPaid,
   onClose,
+  initialInstruction,
 }: {
   title?: string
   /** Baris keterangan opsional (mis. nomor tagihan + jumlah). */
@@ -67,11 +68,19 @@ export function GatewayPayPanel({
   /** Dipanggil sekali saat tagihan terdeteksi lunas. */
   onPaid?: () => void
   onClose: () => void
+  /**
+   * Instruksi bayar yang sudah dibuat sebelumnya (mis. VA/QRIS tersimpan di tagihan). Bila diisi,
+   * panel langsung menampilkannya saat dibuka — tak perlu buat ulang; metode & bank ikut ter-set
+   * dari sini. Null/kosong → perilaku default (mulai dari metode pertama, tanpa instruksi).
+   */
+  initialInstruction?: GatewayPayInstruction | null
 }) {
-  const [method, setMethod] = useState(methods[0]?.type ?? '')
+  const [method, setMethod] = useState(initialInstruction?.payMethod ?? methods[0]?.type ?? '')
   const selectedMethod = methods.find((m) => m.type === method) ?? methods[0]
-  const [channel, setChannel] = useState(selectedMethod?.channels[0]?.code ?? '')
-  const [instruction, setInstruction] = useState<GatewayPayInstruction | null>(null)
+  const [channel, setChannel] = useState(
+    initialInstruction?.vaChannel ?? selectedMethod?.channels[0]?.code ?? '',
+  )
+  const [instruction, setInstruction] = useState<GatewayPayInstruction | null>(initialInstruction ?? null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
