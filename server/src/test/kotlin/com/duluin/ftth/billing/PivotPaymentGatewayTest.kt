@@ -3,13 +3,16 @@ package com.duluin.ftth.billing
 import com.duluin.ftth.billing.adapter.outbound.gateway.PivotPaymentGateway
 import com.duluin.ftth.billing.adapter.outbound.gateway.pivot.PivotApiClient
 import com.duluin.ftth.billing.adapter.outbound.gateway.pivotExpiryAt
+import com.duluin.ftth.billing.application.port.outbound.ChargeRequest
 import com.duluin.ftth.billing.application.port.outbound.GatewayCallback
 import com.duluin.ftth.billing.config.BillingProperties
+import com.duluin.ftth.billing.config.PivotProperties
 import com.duluin.ftth.billing.domain.model.GatewayMode
 import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import tools.jackson.databind.json.JsonMapper
+import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -127,5 +130,65 @@ class PivotPaymentGatewayTest {
         assertThat(settlement).isNotNull
         assertThat(settlement!!.amount).isEqualByComparingTo("1000")
         assertThat(settlement.paidAt).isAfterOrEqualTo(before)
+    }
+
+    // --- body /v2/payments: redirectUrl WAJIB di kedua mode; X-REQUEST-ID unik per charge ---
+
+    // Gateway dengan redirect-base-url terisi (wajib untuk semua charge, termasuk mode-API).
+    private val chargingGateway = PivotPaymentGateway(
+        PivotApiClient(objectMapper),
+        objectMapper,
+        BillingProperties(pivot = PivotProperties(redirectBaseUrl = "https://app.contoh.com/")),
+    )
+
+    private fun request(method: String? = null, vaChannel: String? = null) = ChargeRequest(
+        invoiceNumber = "INV-202608-0001",
+        amount = BigDecimal("150000.00"),
+        customerName = "Budi",
+        customerEmail = "budi@contoh.com",
+        description = "Langganan",
+        dueDate = LocalDate.of(2026, 8, 14),
+        method = method,
+        vaChannel = vaChannel,
+    )
+
+    @Test
+    fun `body QRIS mode-API tetap menyertakan redirectUrl dan opsi qr`() {
+        val body = chargingGateway.buildChargeBody(request(method = "QR"), ctx("cb_key"), "QR")
+
+        assertThat(body["mode"]).isEqualTo("API")
+        assertThat(body["autoConfirm"]).isEqualTo(true)
+        // redirectUrl WAJIB walau mode-API (Pivot memvalidasinya `required`).
+        @Suppress("UNCHECKED_CAST")
+        val redirect = body["redirectUrl"] as Map<String, Any>
+        assertThat(redirect["successReturnUrl"]).isEqualTo("https://app.contoh.com/paid")
+        @Suppress("UNCHECKED_CAST")
+        val options = body["paymentMethodOptions"] as Map<String, Any>
+        assertThat(options).containsKey("qr")
+    }
+
+    @Test
+    fun `body Virtual Account mode-API menyertakan redirectUrl dan channel`() {
+        val body = chargingGateway.buildChargeBody(
+            request(method = "VIRTUAL_ACCOUNT", vaChannel = "BNI"),
+            ctx("cb_key"),
+            "VIRTUAL_ACCOUNT",
+        )
+
+        assertThat(body["mode"]).isEqualTo("API")
+        assertThat(body).containsKey("redirectUrl")
+        @Suppress("UNCHECKED_CAST")
+        val va = (body["paymentMethodOptions"] as Map<String, Any>)["virtualAccount"] as Map<String, Any>
+        assertThat(va["channel"]).isEqualTo("BNI")
+    }
+
+    @Test
+    fun `X-REQUEST-ID unik antar panggilan dan panjangnya masuk rentang alnum`() {
+        val a = chargingGateway.newRequestId()
+        val b = chargingGateway.newRequestId()
+
+        assertThat(a).isNotEqualTo(b)
+        assertThat(a.length).isBetween(16, 36)
+        assertThat(a).matches("[A-Za-z0-9]+")
     }
 }

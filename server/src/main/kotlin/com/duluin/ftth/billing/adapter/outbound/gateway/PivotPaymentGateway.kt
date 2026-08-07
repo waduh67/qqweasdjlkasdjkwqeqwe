@@ -25,6 +25,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+import java.util.UUID
 
 /** maximumExpiry terbesar yang dijamin Pivot (kartu & virtual account = 30 HARI, per get-payment-method-config). */
 private const val PIVOT_MAX_EXPIRY_DAYS = 30L
@@ -66,9 +67,10 @@ internal object PivotChargeScope {
  *  - **Langganan SaaS tenant**: `subAccountId` null → charge langsung di master, tanpa split (100%
  *    ke platform).
  *
- * Auth/token & HTTP ditangani [PivotApiClient]. Idempotency `X-REQUEST-ID` diturunkan dari nomor
- * tagihan (deterministik → retry aman). Callback diverifikasi header static `X-API-Key` (Callback
- * API Key master, BUKAN HMAC) dibanding constant-time; hanya status pelunasan jadi settlement.
+ * Auth/token & HTTP ditangani [PivotApiClient]. `X-REQUEST-ID` create charge UNIK per panggilan
+ * (Pivot menuntut keunikan — id yang diulang ditolak). Callback diverifikasi header static
+ * `X-API-Key` (Callback API Key master, BUKAN HMAC) dibanding constant-time; hanya status
+ * pelunasan jadi settlement.
  *
  * IDR zero-decimal — `amount.value` dibulatkan ke bilangan bulat (nilai tagihan di DB tetap scale-2).
  * Butuh `ftth.billing.pivot.redirect-base-url` (mode REDIRECT wajib URL balik).
@@ -86,14 +88,41 @@ class PivotPaymentGateway(
 
     override fun createCharge(request: ChargeRequest, ctx: ResolvedGatewayContext): ChargeResult {
         val creds = ctx.pivotCredentials()
-        val amountValue = request.amount.setScale(0, RoundingMode.HALF_UP).toLong()
         // Metode diisi (VIRTUAL_ACCOUNT/QR) → charge mode-API in-app (instruksi bayar langsung di
         // respons, TANPA redirect). Kosong → mode REDIRECT lama (halaman ter-host Pivot).
         val method = request.method?.trim()?.uppercase()?.takeIf { it.isNotEmpty() }
         val apiMode = method != null
-        val expiryAt = pivotExpiryAt(request.dueDate, Instant.now(), ZoneId.systemDefault())
+        val body = buildChargeBody(request, ctx, method)
 
-        val body = buildMap<String, Any> {
+        val node = apiClient.post(
+            path = "/v2/payments",
+            body = body,
+            creds = creds,
+            subMerchantId = ctx.subAccountId,
+            requestId = newRequestId(),
+        )
+        val data = node.get("data")
+        return if (apiMode) parseApiCharge(data, method!!) else parseRedirectCharge(data)
+    }
+
+    /**
+     * Rakit body `POST /v2/payments`. Murni (tanpa HTTP) agar bisa diuji. [method] non-null →
+     * mode-API (menambah `autoConfirm`+`paymentMethod`+`paymentMethodOptions` untuk instruksi bayar
+     * inline); null → mode REDIRECT. Blok `redirectUrl` SELALU disertakan: Pivot memvalidasinya
+     * `required` di KEDUA mode (di mode-API tak ada redirect nyata, tapi field tetap dituntut).
+     */
+    internal fun buildChargeBody(
+        request: ChargeRequest,
+        ctx: ResolvedGatewayContext,
+        method: String?,
+    ): Map<String, Any> {
+        val amountValue = request.amount.setScale(0, RoundingMode.HALF_UP).toLong()
+        val apiMode = method != null
+        val expiryAt = pivotExpiryAt(request.dueDate, Instant.now(), ZoneId.systemDefault())
+        val redirectBase = billingProperties.pivot.redirectBaseUrl.trim().trimEnd('/').takeIf { it.isNotEmpty() }
+            ?: throw ConflictException("Pivot butuh redirect base URL — set FTTH_BILLING_PIVOT_REDIRECT_BASE_URL")
+
+        return buildMap {
             put("clientReferenceId", request.invoiceNumber)
             put("amount", mapOf("value" to amountValue, "currency" to "IDR"))
             put("paymentType", "SINGLE")
@@ -103,25 +132,23 @@ class PivotPaymentGateway(
                 put("expiryAt", it)
                 put("expirationMode", "STRICT")
             }
+            // redirectUrl WAJIB di kedua mode (Pivot memvalidasinya `required`). Mode-API tak
+            // benar-benar me-redirect — instruksi bayar kembali inline di `chargeDetails[0]`.
+            put("mode", if (apiMode) "API" else "REDIRECT")
+            put(
+                "redirectUrl",
+                mapOf(
+                    "successReturnUrl" to "$redirectBase/paid",
+                    "failureReturnUrl" to "$redirectBase/failed",
+                    "expirationReturnUrl" to "$redirectBase/expired",
+                ),
+            )
             if (apiMode) {
                 // Mode API + autoConfirm → Pivot langsung terbitkan instrumen (nomor VA / string QRIS)
                 // di `chargeDetails[0]`; pelanggan membayar dari dalam aplikasi ini, tanpa redirect.
-                put("mode", "API")
                 put("autoConfirm", true)
-                put("paymentMethod", mapOf("type" to method))
+                put("paymentMethod", mapOf("type" to method!!))
                 put("paymentMethodOptions", buildPaymentMethodOptions(method, request, expiryAt))
-            } else {
-                val redirectBase = billingProperties.pivot.redirectBaseUrl.trim().trimEnd('/').takeIf { it.isNotEmpty() }
-                    ?: throw ConflictException("Pivot butuh redirect base URL — set FTTH_BILLING_PIVOT_REDIRECT_BASE_URL")
-                put("mode", "REDIRECT")
-                put(
-                    "redirectUrl",
-                    mapOf(
-                        "successReturnUrl" to "$redirectBase/paid",
-                        "failureReturnUrl" to "$redirectBase/failed",
-                        "expirationReturnUrl" to "$redirectBase/expired",
-                    ),
-                )
             }
             put(
                 "customer",
@@ -164,16 +191,6 @@ class PivotPaymentGateway(
                 },
             )
         }
-
-        val node = apiClient.post(
-            path = "/v2/payments",
-            body = body,
-            creds = creds,
-            subMerchantId = ctx.subAccountId,
-            requestId = idempotencyKey(request.invoiceNumber, method),
-        )
-        val data = node.get("data")
-        return if (apiMode) parseApiCharge(data, method) else parseRedirectCharge(data)
     }
 
     /** Opsi metode bayar mode-API sesuai instrumen yang dipilih. */
@@ -328,20 +345,14 @@ class PivotPaymentGateway(
     }
 
     /**
-     * `X-REQUEST-ID` idempotency: alfanumerik 16–36 char, deterministik dari nomor tagihan agar
-     * retry charge tak menggandakan payment session di Pivot. [method] disisipkan agar ganti
-     * instrumen (VA↔QRIS) menghasilkan sesi bayar baru, bukan echo charge pertama.
+     * `X-REQUEST-ID` create charge: alfanumerik 16–36 char, UNIK per panggilan. Pivot MENOLAK id
+     * yang diulang (`Use unique X-Request-Id`) — bukan meng-echo charge pertama — jadi tiap create
+     * charge memakai UUID acak (hex 32 char + prefiks `req` = 35, masuk rentang). Konsekuensi: retry
+     * jaringan bisa melahirkan sesi bayar ganda; diterima untuk charge on-demand (sesi lama
+     * kedaluwarsa lewat `expiryAt`).
      */
-    private fun idempotencyKey(invoiceNumber: String, method: String?): String {
-        val cleaned = invoiceNumber.filter { it.isLetterOrDigit() }.ifEmpty { "INV" }
-        val suffix = when (method) {
-            METHOD_VA -> "VA"
-            METHOD_QR -> "QR"
-            else -> ""
-        }
-        val padded = (REQUEST_PREFIX + cleaned + suffix).take(REQUEST_ID_MAX)
-        return if (padded.length >= REQUEST_ID_MIN) padded else padded.padEnd(REQUEST_ID_MIN, '0')
-    }
+    internal fun newRequestId(): String =
+        (REQUEST_PREFIX + UUID.randomUUID().toString().replace("-", "")).take(REQUEST_ID_MAX)
 
     private fun constantTimeEquals(a: String, b: String): Boolean =
         MessageDigest.isEqual(a.toByteArray(StandardCharsets.UTF_8), b.toByteArray(StandardCharsets.UTF_8))
@@ -351,7 +362,6 @@ class PivotPaymentGateway(
         const val MAX_ITEM_NAME = 255
         const val PERCENT_BASIS = 100L
         const val REQUEST_PREFIX = "req"
-        const val REQUEST_ID_MIN = 16
         const val REQUEST_ID_MAX = 36
         const val METHOD_VA = "VIRTUAL_ACCOUNT"
         const val METHOD_QR = "QR"
