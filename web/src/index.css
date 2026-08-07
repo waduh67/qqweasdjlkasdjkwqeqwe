@@ -170,9 +170,10 @@ body {
   min-height: 100%;
 }
 
-/* Root pada default 16px (1rem = 16px). */
+/* Skala tipografi lebih rapat ala Azure Portal: root 13px supaya seluruh ukuran
+   berbasis rem — judul, nav, badge — ikut mengecil proporsional. */
 html {
-  font-size: 16px;
+  font-size: 13px;
 }
 
 body {
