@@ -8,10 +8,12 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 /**
  * Halaman langganan sisi TENANT: tenant admin melihat masa aktif/tagihan langganan aplikasinya
@@ -38,4 +40,12 @@ class TenantSubscriptionSelfController(
     @PostMapping("/renew")
     @PreAuthorize("@authz.can('billing.subscription.renew')")
     fun renew(@RequestParam(defaultValue = "1") months: Int): SubscriptionInvoiceView = useCase.renew(months)
+
+    /**
+     * Siapkan tautan bayar untuk satu tagihan tertunggak (charge ulang bila belum ada tautan) lalu
+     * kembalikan tagihannya. Dipakai tombol "Bayar" per-tagihan di Riwayat tagihan.
+     */
+    @PostMapping("/invoices/{invoiceId}/pay")
+    @PreAuthorize("@authz.can('billing.subscription.renew')")
+    fun pay(@PathVariable invoiceId: UUID): SubscriptionInvoiceView = useCase.payInvoice(invoiceId)
 }

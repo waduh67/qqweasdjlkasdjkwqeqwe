@@ -14,6 +14,7 @@ import com.duluin.ftth.billing.domain.model.PivotMasterConfig
 import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
 import com.duluin.ftth.billing.domain.model.SubAccountDefaults
 import com.duluin.ftth.common.domain.UuidV7
+import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.AuthenticatedUser
@@ -160,6 +161,81 @@ class PlatformInvoiceGeneratorRenewTest {
         assertThat(view.payUrl).isEqualTo("https://pay.test/xyz")
         // Tagihan tertunggak yang sama dipakai ulang (tak terbit tagihan baru).
         assertThat(invoices.all()).hasSize(1)
+    }
+
+    // --- payInvoice (tombol "Bayar" per-tagihan di Riwayat tagihan) ---
+
+    @Test
+    fun `bayar tagihan tertunggak tanpa payUrl men-charge ulang lalu mengembalikan tautan bayar`() {
+        TenantContext.set(tenantId)
+        activeSubscription().also { subscriptions.save(it) }
+        val invoice = invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED).also { invoices.save(it) }
+        val service = TenantSelfSubscriptionService(subscriptions, invoices, chargingGenerator("https://pay.test/abc"), FakeUsageProbe())
+
+        val view = service.payInvoice(invoice.id)
+
+        assertThat(view.number).isEqualTo(baseNumber)
+        assertThat(view.payUrl).isEqualTo("https://pay.test/abc")
+    }
+
+    @Test
+    fun `bayar tagihan yang sudah punya tautan tidak men-charge ulang (idempoten)`() {
+        TenantContext.set(tenantId)
+        activeSubscription().also { subscriptions.save(it) }
+        val invoice = invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED)
+            .also { it.attachCharge("PIVOT", "ref-lama", "https://pay.test/lama"); invoices.save(it) }
+        // Gateway mengembalikan URL BEDA — tak boleh dipakai bila tautan lama masih ada.
+        val service = TenantSelfSubscriptionService(subscriptions, invoices, chargingGenerator("https://pay.test/baru"), FakeUsageProbe())
+
+        val view = service.payInvoice(invoice.id)
+
+        assertThat(view.payUrl).isEqualTo("https://pay.test/lama")
+    }
+
+    @Test
+    fun `bayar tagihan milik langganan lain ditolak (NotFound)`() {
+        TenantContext.set(tenantId)
+        activeSubscription().also { subscriptions.save(it) }
+        // Tagihan milik subscriptionId lain → guard kepemilikan menolaknya.
+        val alien = TenantSubscriptionInvoice.create(
+            tenantId = tenantId,
+            subscriptionId = UuidV7.generate(),
+            number = "SUB-202611-019fbbbb",
+            periodStart = activeUntil,
+            periodEnd = LocalDate.of(2026, 11, 3),
+            amount = BigDecimal("100000.00"),
+            dueDate = activeUntil.plusDays(7),
+        ).also { invoices.save(it) }
+        val service = TenantSelfSubscriptionService(subscriptions, invoices, generator, FakeUsageProbe())
+
+        assertThatThrownBy { service.payInvoice(alien.id) }
+            .isInstanceOf(NotFoundException::class.java)
+    }
+
+    @Test
+    fun `bayar tagihan yang sudah lunas ditolak (Validation)`() {
+        TenantContext.set(tenantId)
+        activeSubscription().also { subscriptions.save(it) }
+        val paid = invoiceFor(baseNumber, SubscriptionInvoiceStatus.PAID).also { invoices.save(it) }
+        val service = TenantSelfSubscriptionService(subscriptions, invoices, generator, FakeUsageProbe())
+
+        assertThatThrownBy { service.payInvoice(paid.id) }
+            .isInstanceOf(ValidationException::class.java)
+            .hasMessageContaining("tidak dapat dibayar")
+    }
+
+    @Test
+    fun `bayar saat gateway belum dikonfigurasi tetap mengembalikan tagihan tanpa tautan (bukan 500)`() {
+        TenantContext.set(tenantId)
+        activeSubscription().also { subscriptions.save(it) }
+        val invoice = invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED).also { invoices.save(it) }
+        // `generator` default → resolver Pivot NONAKTIF → resolveActive() melempar → ditelan ensurePayable.
+        val service = TenantSelfSubscriptionService(subscriptions, invoices, generator, FakeUsageProbe())
+
+        val view = service.payInvoice(invoice.id)
+
+        assertThat(view.number).isEqualTo(baseNumber)
+        assertThat(view.payUrl).isNull()
     }
 
     // --- helper ---

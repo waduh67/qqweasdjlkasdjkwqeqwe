@@ -8,6 +8,7 @@ import {
 } from '../api/platformBilling'
 import {
   getMySubscription,
+  payMyInvoice,
   renewMySubscription,
   type TenantSelfSubscriptionView,
   type UsageMetricView,
@@ -99,20 +100,37 @@ export function SubscriptionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Perpanjang HANYA menerbitkan tagihan; pembayaran dilakukan lewat tombol "Bayar" per-tagihan di
+  // Riwayat tagihan (tak lagi membuka tab bayar otomatis dari sini).
   const renew = async () => {
     if (busy) return
     setBusy(true)
     try {
       const invoice = await renewMySubscription(months)
       await load()
-      if (invoice.payUrl) {
-        window.open(invoice.payUrl, '_blank', 'noopener')
-        toast.success(`Tagihan ${invoice.number} terbit — lanjutkan pembayaran di tab baru`)
-      } else {
-        toast.success(`Tagihan ${invoice.number} terbit. Tautan bayar belum siap — hubungi admin platform.`)
-      }
+      toast.success(`Tagihan ${invoice.number} terbit — bayar lewat tombol Bayar di Riwayat tagihan.`)
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal memperpanjang langganan')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Bayar satu tagihan tertunggak: server charge ulang bila belum ada tautan, lalu buka di tab baru.
+  const pay = async (inv: SubscriptionInvoiceView) => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const updated = await payMyInvoice(inv.id)
+      await load()
+      if (updated.payUrl) {
+        window.open(updated.payUrl, '_blank', 'noopener')
+        toast.success(`Membuka pembayaran ${updated.number} di tab baru`)
+      } else {
+        toast.error('Tautan bayar belum siap — hubungi admin platform.')
+      }
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal menyiapkan pembayaran')
     } finally {
       setBusy(false)
     }
@@ -138,11 +156,7 @@ export function SubscriptionPage() {
   const expiringSoon = remaining != null && remaining <= 7
   const elapsed = periodElapsed(sub.currentPeriodStart, sub.activeUntil)
   const canPrepay = canRenew && sub.status !== 'CANCELLED' && !outstanding
-  const renewLabel = busy
-    ? 'Memproses…'
-    : outstanding
-      ? 'Bayar sekarang'
-      : `Perpanjang ${months} bulan`
+  const renewLabel = busy ? 'Memproses…' : `Perpanjang ${months} bulan`
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
@@ -264,7 +278,7 @@ export function SubscriptionPage() {
           ) : (
             <div className="stack" style={{ gap: '0.4rem' }}>
               {sub.invoices.map((inv) => (
-                <InvoiceRow key={inv.id} inv={inv} />
+                <InvoiceRow key={inv.id} inv={inv} onPay={pay} busy={busy} />
               ))}
             </div>
           )}
@@ -284,8 +298,8 @@ export function SubscriptionPage() {
             >
               <strong style={{ fontSize: '0.9rem' }}>Ada tagihan menunggu pembayaran</strong>
               <span className="muted" style={{ fontSize: '0.83rem' }}>
-                {outstanding.number} · {fmtIdr(outstanding.amount)}. Masa aktif bertambah setelah pembayaran{' '}
-                <strong>LUNAS</strong>.
+                {outstanding.number} · {fmtIdr(outstanding.amount)}. Klik tombol <strong>Bayar</strong> di Riwayat
+                tagihan. Masa aktif bertambah setelah pembayaran <strong>LUNAS</strong>.
               </span>
             </div>
           )}
@@ -295,7 +309,9 @@ export function SubscriptionPage() {
             <Step n={1} title="Pilih durasi">
               Pilih <strong>1 / 3 / 6 / 12 bulan</strong> lalu klik <strong>Perpanjang</strong> — tagihan sejumlah itu terbit.
             </Step>
-            <Step n={2} title="Bayar">Lunasi lewat gateway pembayaran aktif (tab baru terbuka otomatis).</Step>
+            <Step n={2} title="Bayar">
+              Klik <strong>Bayar</strong> pada tagihan di <strong>Riwayat tagihan</strong> — tab pembayaran gateway terbuka.
+            </Step>
             <Step n={3} title="Masa aktif bertambah">
               Setelah pembayaran <strong>LUNAS</strong>, masa aktif memanjang sesuai jumlah bulan — menumpuk bila belum habis.
             </Step>
@@ -397,7 +413,15 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
   )
 }
 
-function InvoiceRow({ inv }: { inv: SubscriptionInvoiceView }) {
+function InvoiceRow({
+  inv,
+  onPay,
+  busy,
+}: {
+  inv: SubscriptionInvoiceView
+  onPay: (inv: SubscriptionInvoiceView) => void
+  busy: boolean
+}) {
   const outstanding = inv.status === 'ISSUED' || inv.status === 'OVERDUE'
   return (
     <div
@@ -423,24 +447,15 @@ function InvoiceRow({ inv }: { inv: SubscriptionInvoiceView }) {
         </span>
       </div>
       <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{fmtIdr(inv.amount)}</span>
-      {inv.payUrl && outstanding && (
-        <a
-          href={inv.payUrl}
-          target="_blank"
-          rel="noreferrer"
-          style={{
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            padding: '0.35rem 0.7rem',
-            whiteSpace: 'nowrap',
-            textDecoration: 'none',
-            borderRadius: 'var(--radius-sm)',
-            background: 'var(--accent)',
-            color: 'var(--accent-ink)',
-          }}
+      {outstanding && (
+        <button
+          className="primary"
+          onClick={() => onPay(inv)}
+          disabled={busy}
+          style={{ fontSize: '0.8rem', fontWeight: 600, padding: '0.35rem 0.7rem', whiteSpace: 'nowrap' }}
         >
           Bayar ↗
-        </a>
+        </button>
       )}
     </div>
   )

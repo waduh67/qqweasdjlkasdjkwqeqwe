@@ -15,6 +15,7 @@ import com.duluin.ftth.platformbilling.domain.model.TenantSubscriptionInvoice
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
+import java.util.UUID
 
 /**
  * Layanan langganan sisi tenant (self-service). Selalu bekerja pada tenant konteks berjalan
@@ -56,6 +57,21 @@ class TenantSelfSubscriptionService(
                 "Periode langganan ini sudah dibayar — belum ada tagihan baru untuk diperpanjang.",
             )
         return invoice.toView()
+    }
+
+    @Transactional
+    override fun payInvoice(invoiceId: UUID): SubscriptionInvoiceView {
+        val subscription = subscriptionRepository.findByTenantId(TenantContext.tenantId())
+            ?: throw NotFoundException("Tenant belum berlangganan")
+        // Batasi ke tagihan milik langganan tenant ini — tenant tak boleh membayar tagihan tenant lain.
+        val invoice = invoiceRepository.findById(invoiceId)
+            ?.takeIf { it.subscriptionId == subscription.id }
+            ?: throw NotFoundException("Tagihan tidak ditemukan")
+        if (!invoice.isOutstanding) {
+            throw ValidationException("Tagihan ini tidak dapat dibayar (status ${invoice.status}).")
+        }
+        // Charge ulang bila belum ada tautan (mis. gateway sempat gagal saat terbit); idempoten.
+        return invoiceGenerator.ensurePayable(invoice, subscription).toView()
     }
 
     private fun TenantSubscription.toSelfView(): TenantSelfSubscriptionView {

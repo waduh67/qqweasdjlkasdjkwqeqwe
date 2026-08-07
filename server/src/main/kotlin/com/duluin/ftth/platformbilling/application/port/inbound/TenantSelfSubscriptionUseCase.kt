@@ -3,6 +3,7 @@ package com.duluin.ftth.platformbilling.application.port.inbound
 import com.duluin.ftth.platformbilling.domain.model.SubscriptionStatus
 import java.math.BigDecimal
 import java.time.LocalDate
+import java.util.UUID
 
 /**
  * Sisi TENANT (bukan super-admin): tenant admin melihat langganan aplikasinya sendiri —
@@ -20,6 +21,13 @@ interface TenantSelfSubscriptionUseCase {
      * `biaya × months`. Masa aktif baru bertambah sebanyak [months] saat tagihan LUNAS.
      */
     fun renew(months: Int = 1): SubscriptionInvoiceView
+
+    /**
+     * Siapkan tautan bayar untuk satu tagihan tertunggak milik tenant berjalan (charge ulang bila
+     * tautannya belum sempat terbit), lalu kembalikan tagihannya. NotFound bila tagihan bukan milik
+     * tenant ini; Validation bila tagihan sudah lunas/void (tak dapat dibayar).
+     */
+    fun payInvoice(invoiceId: UUID): SubscriptionInvoiceView
 }
 
 /** Pandangan langganan sisi tenant + pemakaian kosmetik. */
