@@ -1,6 +1,7 @@
 package com.duluin.ftth.bng.adapter.outbound.persistence
 
 import com.duluin.ftth.bng.domain.model.AccessStatus
+import com.duluin.ftth.bng.domain.model.AuthType
 import com.duluin.ftth.bng.domain.model.BngActionStatus
 import com.duluin.ftth.bng.domain.model.BngActionType
 import org.springframework.data.domain.Pageable
@@ -30,6 +31,17 @@ interface SubscriberAccessJpaRepository : JpaRepository<SubscriberAccessJpaEntit
     fun findByNasIdOrderByUsernameAsc(nasId: UUID): List<SubscriberAccessJpaEntity>
     fun findByPlanId(planId: UUID): List<SubscriberAccessJpaEntity>
     fun findByStatusAndNasIdIsNotNull(status: AccessStatus): List<SubscriberAccessJpaEntity>
+
+    /** Username akun berstatus [status] & bertipe salah satu [authTypes] — proyeksi ringan (hanya username). */
+    @Query(
+        "SELECT a.username FROM SubscriberAccessJpaEntity a " +
+            "WHERE a.status = :status AND a.authType IN :authTypes",
+    )
+    fun findUsernamesByStatusAndAuthTypeIn(
+        @Param("status") status: AccessStatus,
+        @Param("authTypes") authTypes: Collection<AuthType>,
+    ): List<String>
+
     fun existsBySubscriptionId(subscriptionId: UUID): Boolean
     fun countByNasId(nasId: UUID): Long
 }

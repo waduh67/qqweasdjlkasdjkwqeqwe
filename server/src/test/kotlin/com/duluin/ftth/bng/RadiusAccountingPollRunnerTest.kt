@@ -83,6 +83,21 @@ class RadiusAccountingPollRunnerTest {
     }
 
     @Test
+    fun `meneruskan username MAC akun aktif ke pembaca radacct`() {
+        val fixture = fixture(
+            accesses = listOf(access("budi")),
+            observations = emptyList(),
+            macUsernames = listOf("aa:bb:cc:dd:ee:ff"),
+        )
+
+        fixture.runner.execute(tenantId, now)
+
+        // Daftar MAC akun aktif diteruskan sebagai penyaring tambahan (cabang `username = ANY(?)`)
+        // agar sesi DHCP/Static yang ditulis polos tanpa prefiks ikut terbaca.
+        assertThat(fixture.read.lastMacUsernames).containsExactly("aa:bb:cc:dd:ee:ff")
+    }
+
+    @Test
     fun `tanpa sesi hidup tak menyerap apa pun`() {
         val fixture = fixture(accesses = listOf(access("budi")), observations = emptyList())
 
@@ -107,12 +122,16 @@ class RadiusAccountingPollRunnerTest {
         accesses: List<SubscriberAccess>,
         observations: List<SessionObservation>,
         slug: String? = this.slug,
+        macUsernames: List<String> = emptyList(),
     ): Fixture {
         val read = FakeReadPort(observations)
         val sessions = FakeSessionRepo()
         val accounting = FakeAccountingRepo()
-        val ingest = BngSessionIngestService(FakeAccessRepo(accesses), sessions, accounting)
-        val runner = RadiusAccountingPollRunner(FakeTenantApi(tenantId, slug), read, ingest)
+        // Satu repo dipakai bersama: ingest me-resolusi akun per username, runner menariknya
+        // untuk daftar MAC akun aktif yang diteruskan ke pembaca.
+        val accessRepo = FakeAccessRepo(accesses, macUsernames)
+        val ingest = BngSessionIngestService(accessRepo, sessions, accounting)
+        val runner = RadiusAccountingPollRunner(FakeTenantApi(tenantId, slug), read, accessRepo, ingest)
         return Fixture(runner, read, sessions, accounting)
     }
 
@@ -141,9 +160,15 @@ class RadiusAccountingPollRunnerTest {
 
     private class FakeReadPort(private val observations: List<SessionObservation>) : RadiusAccountingReadPort {
         val calls = mutableListOf<Pair<UUID, String>>()
+        var lastMacUsernames: List<String>? = null
         override fun isConfigured(): Boolean = true
-        override fun activeSessions(tenantId: UUID, tenantCode: String): List<SessionObservation> {
+        override fun activeSessions(
+            tenantId: UUID,
+            tenantCode: String,
+            macUsernames: List<String>,
+        ): List<SessionObservation> {
             calls += tenantId to tenantCode
+            lastMacUsernames = macUsernames
             return observations
         }
     }
@@ -167,15 +192,19 @@ class RadiusAccountingPollRunnerTest {
             saved += points
         }
 
-        override fun trafficSince(subscriberAccessId: UUID, since: Instant): List<TrafficSample> =
+        override fun trafficSince(subscriberAccessId: UUID, since: Instant, bucketSeconds: Long): List<TrafficSample> =
             throw UnsupportedOperationException("tak dipakai di uji ini")
 
         override fun usageSince(subscriberAccessIds: Collection<UUID>, since: Instant): Map<UUID, Long> =
             throw UnsupportedOperationException("tak dipakai di uji ini")
     }
 
-    private class FakeAccessRepo(private val accesses: List<SubscriberAccess>) : SubscriberAccessRepository {
+    private class FakeAccessRepo(
+        private val accesses: List<SubscriberAccess>,
+        private val activeMacUsernames: List<String> = emptyList(),
+    ) : SubscriberAccessRepository {
         override fun findByUsername(username: String): SubscriberAccess? = accesses.firstOrNull { it.username == username }
+        override fun findActiveMacUsernames(): List<String> = activeMacUsernames
         override fun save(access: SubscriberAccess): SubscriberAccess = notUsed()
         override fun findById(id: UUID): SubscriberAccess? = notUsed()
         override fun findByCustomerId(customerId: UUID): List<SubscriberAccess> = notUsed()

@@ -309,7 +309,11 @@ private class FakeScActionRepo(private val pending: List<BngAction>) : BngAction
 private class FakeReadPort(private val sessions: List<SessionObservation>) : RadiusAccountingReadPort {
     val calls = mutableListOf<Pair<UUID, String>>()
     override fun isConfigured(): Boolean = true
-    override fun activeSessions(tenantId: UUID, tenantCode: String): List<SessionObservation> {
+    override fun activeSessions(
+        tenantId: UUID,
+        tenantCode: String,
+        macUsernames: List<String>,
+    ): List<SessionObservation> {
         calls += tenantId to tenantCode
         return sessions
     }

@@ -83,6 +83,13 @@ interface SubscriberAccessRepository {
      */
     fun findActiveOnNas(): List<SubscriberAccess>
 
+    /**
+     * Username (MAC) akun ACTIVE berbasis MAC (DHCP/Static) — dipakai jalur-baca `radacct`
+     * untuk menyaring balik baris mereka yang ditulis POLOS tanpa prefiks tenant. Hanya
+     * username yang dikembalikan (bukan agregat penuh) sebab pemanggil hanya butuh itu.
+     */
+    fun findActiveMacUsernames(): List<String>
+
     fun existsBySubscriptionId(subscriptionId: UUID): Boolean
 
     /** Berapa akun yang masih dinaungi sebuah BRAS — untuk mencegah hapus BRAS terpakai. */
@@ -122,10 +129,14 @@ interface AccountingRecordRepository {
     fun saveAll(points: List<AccountingRecordPoint>)
 
     /**
-     * Tren trafik satu akun sejak [since], sudah dihitung jadi Mbps per titik.
-     * Titik pertama tiap rentang tak punya laju (belum ada pembanding) → null.
+     * Tren trafik satu akun sejak [since], sudah dihitung jadi Mbps per titik. Titik pertama
+     * tiap rentang tak punya laju (belum ada pembanding) → null.
+     *
+     * Cuplikan mentah lebih dulu diringkas ke ember [bucketSeconds] detik (satu wakil per ember)
+     * agar jumlah titik tetap terkendali pada rentang panjang — mentahnya bisa puluhan ribu.
+     * Laju dihitung antar-ember; makin lebar ember makin halus (rata-rata makin lebar).
      */
-    fun trafficSince(subscriberAccessId: UUID, since: Instant): List<TrafficSample>
+    fun trafficSince(subscriberAccessId: UUID, since: Instant, bucketSeconds: Long): List<TrafficSample>
 
     /**
      * Total octet (unggah+unduh) terpakai tiap akun sejak [since] — dasar penegakan FUP.

@@ -46,9 +46,31 @@ class BngMonitoringQueryService(
         }
         requireAccess(subscriberAccessId)
         val since = Instant.now().minus(Duration.ofHours(hours.toLong()))
-        val points = accountingRecordRepository.trafficSince(subscriberAccessId, since)
-            .map { TrafficPoint(it.time, it.downMbps, it.upMbps) }
-        return TrafficHistoryView(subscriberAccessId, hours, points)
+        val samples = accountingRecordRepository.trafficSince(subscriberAccessId, since, bucketSecondsFor(hours))
+        val points = samples.map { TrafficPoint(it.time, it.downMbps, it.upMbps) }
+        // Throughput "sekarang" = titik terakhir yang masih terhitung; ekor null (akun offline)
+        // dilewati agar badge memantulkan laju nyata terakhir, bukan kekosongan.
+        val current = samples.lastOrNull { it.downMbps != null || it.upMbps != null }
+        val totalBytes = accountingRecordRepository
+            .usageSince(listOf(subscriberAccessId), since)[subscriberAccessId] ?: 0L
+        return TrafficHistoryView(
+            subscriberAccessId = subscriberAccessId,
+            hours = hours,
+            points = points,
+            currentDownMbps = current?.downMbps,
+            currentUpMbps = current?.upMbps,
+            totalBytes = totalBytes,
+        )
+    }
+
+    /**
+     * Lebar ember agar jumlah titik ≈ [TARGET_POINTS] apa pun rentangnya: rentang panjang
+     * dibuat lebih kasar ketimbang membanjiri klien. Minimal [POLL_INTERVAL_SECONDS] — tak ada
+     * gunanya lebih halus dari selang cuplikan yang tersedia.
+     */
+    private fun bucketSecondsFor(hours: Int): Long {
+        val windowSeconds = hours.toLong() * SECONDS_PER_HOUR
+        return maxOf(POLL_INTERVAL_SECONDS, windowSeconds / TARGET_POINTS)
     }
 
     private fun requireAccess(id: UUID): SubscriberAccess =
@@ -88,5 +110,12 @@ class BngMonitoringQueryService(
     private companion object {
         /** Batas atas rentang; data akunting mentah memang hanya disimpan 90 hari. */
         const val MAX_HISTORY_HOURS = 24 * 90
+        const val SECONDS_PER_HOUR = 3600L
+
+        /** Sasaran jumlah titik grafik apa pun rentangnya — kompromi kehalusan vs bobot payload. */
+        const val TARGET_POINTS = 720L
+
+        /** Ember tak lebih halus dari selang poll `radacct` (`ftth.radius.session-poll-interval`). */
+        const val POLL_INTERVAL_SECONDS = 30L
     }
 }

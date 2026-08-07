@@ -5,6 +5,7 @@ import com.duluin.ftth.bng.application.port.outbound.NasAreaCoverageRepository
 import com.duluin.ftth.bng.application.port.outbound.NasRepository
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.domain.model.AccessStatus
+import com.duluin.ftth.bng.domain.model.AuthType
 import com.duluin.ftth.bng.domain.model.BngAction
 import com.duluin.ftth.bng.domain.model.BngActionStatus
 import com.duluin.ftth.bng.domain.model.BngActionType
@@ -187,6 +188,9 @@ class SubscriberAccessPersistenceAdapter(
 
     override fun findActiveOnNas(): List<SubscriberAccess> =
         jpa.findByStatusAndNasIdIsNotNull(AccessStatus.ACTIVE).map { it.toDomain() }
+
+    override fun findActiveMacUsernames(): List<String> =
+        jpa.findUsernamesByStatusAndAuthTypeIn(AccessStatus.ACTIVE, listOf(AuthType.DHCP, AuthType.STATIC))
 
     override fun existsBySubscriptionId(subscriptionId: UUID): Boolean =
         jpa.existsBySubscriptionId(subscriptionId)

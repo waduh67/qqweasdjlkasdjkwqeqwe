@@ -164,11 +164,18 @@ export interface TrafficPoint {
   upMbps: number | null
 }
 
-/** Tren trafik satu akun dalam rentang [hours] jam ke belakang. */
+/**
+ * Tren trafik satu akun dalam rentang [hours] jam ke belakang. `currentDownMbps`/`currentUpMbps`
+ * = laju titik terakhir yang terhitung (throughput "sekarang"; null bila akun offline).
+ * `totalBytes` = total pemakaian data (unggah+unduh) pada rentang.
+ */
 export interface TrafficHistoryView {
   subscriberAccessId: string
   hours: number
   points: TrafficPoint[]
+  currentDownMbps: number | null
+  currentUpMbps: number | null
+  totalBytes: number
 }
 
 // ---- BRAS/NAS ----

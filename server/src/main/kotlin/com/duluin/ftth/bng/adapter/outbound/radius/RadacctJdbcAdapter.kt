@@ -20,13 +20,20 @@ class RadacctJdbcAdapter(
 
     override fun isConfigured(): Boolean = connections.configured
 
-    override fun activeSessions(tenantId: UUID, tenantCode: String): List<SessionObservation> {
+    override fun activeSessions(
+        tenantId: UUID,
+        tenantCode: String,
+        macUsernames: List<String>,
+    ): List<SessionObservation> {
         val prefix = "$tenantCode:"
         return connections.connectionFor(tenantId).use { conn ->
             conn.prepareStatement(ACTIVE_SESSIONS_SQL).use { st ->
                 // Slug/kode tenant hanya [a-z0-9-] → tak ada metakarakter LIKE; ':' menambat
                 // pemisah sehingga "acme:%" tak keliru menyapu tenant lain (mis. "acme-x").
                 st.setString(1, "$prefix%")
+                // Akun berbasis MAC (DHCP/Static) ditulis POLOS tanpa prefiks → tak tertangkap
+                // LIKE; saring balik lewat daftar eksplisit. Kosong → ANY('{}') selalu false.
+                st.setArray(2, conn.createArrayOf("text", macUsernames.toTypedArray()))
                 st.executeQuery().use { rs ->
                     val seen = HashSet<String>()
                     val out = ArrayList<SessionObservation>()
@@ -44,6 +51,7 @@ class RadacctJdbcAdapter(
 
     private fun mapRow(rs: ResultSet, prefix: String): SessionObservation = SessionObservation(
         // Kupas prefiks tenant → username bare (radcheck memakai scoped; akun kita bare).
+        // Akun berbasis MAC ditulis polos → removePrefix no-op, tetap MAC apa adanya.
         username = rs.getString("username").removePrefix(prefix),
         online = true,
         nasIp = stripMask(rs.getString("nasipaddress")),
@@ -51,18 +59,33 @@ class RadacctJdbcAdapter(
         sessionId = rs.getString("acctsessionid"),
         callingStationId = rs.getString("callingstationid"),
         uptimeSeconds = rs.getLong("acctsessiontime").takeUnless { rs.wasNull() },
-        inOctets = rs.getLong("acctinputoctets").takeUnless { rs.wasNull() },
-        outOctets = rs.getLong("acctoutputoctets").takeUnless { rs.wasNull() },
+        inOctets = octets(rs, "acctinputoctets", "acctinputgigawords"),
+        outOctets = octets(rs, "acctoutputoctets", "acctoutputgigawords"),
     )
 
     companion object {
         private const val COLUMNS =
             "username, framedipaddress, nasipaddress, acctsessionid, callingstationid, " +
-                "acctsessiontime, acctinputoctets, acctoutputoctets"
+                "acctsessiontime, acctinputoctets, acctoutputoctets, acctinputgigawords, acctoutputgigawords"
 
         private const val ACTIVE_SESSIONS_SQL =
-            "SELECT $COLUMNS FROM radacct WHERE acctstoptime IS NULL AND username LIKE ? " +
-                "ORDER BY acctstarttime DESC"
+            "SELECT $COLUMNS FROM radacct WHERE acctstoptime IS NULL " +
+                "AND (username LIKE ? OR username = ANY(?)) ORDER BY acctstarttime DESC"
+
+        /** Batas wrap penghitung octet 32-bit RADIUS; tiap kelipatan dicatat di kolom gigawords. */
+        private const val OCTETS_PER_GIGAWORD = 1L shl 32
+
+        /**
+         * Octet kumulatif sebenarnya = octet 32-bit bawah + `gigawords × 2³²`. FreeRADIUS mencatat
+         * jumlah wrap penghitung di kolom `*gigawords`; tanpa menjumlahnya, sesi high-volume yang
+         * sudah wrap akan under-report. Kolom octet null → null (tak terlaporkan); gigawords
+         * null → 0 (sesi kecil tak pernah wrap, hasil = octet bawah, sama seperti sebelumnya).
+         */
+        private fun octets(rs: ResultSet, octetCol: String, gigawordCol: String): Long? {
+            val low = rs.getLong(octetCol).takeUnless { rs.wasNull() } ?: return null
+            val gigawords = rs.getLong(gigawordCol).takeUnless { rs.wasNull() } ?: 0L
+            return low + gigawords * OCTETS_PER_GIGAWORD
+        }
 
         /** inet Postgres bisa terbaca "10.0.0.1/32"; UI hanya butuh alamatnya. */
         private fun stripMask(value: String?): String? = value?.substringBefore('/')?.takeIf { it.isNotBlank() }

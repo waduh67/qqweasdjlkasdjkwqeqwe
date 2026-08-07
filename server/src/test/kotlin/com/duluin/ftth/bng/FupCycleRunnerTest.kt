@@ -205,6 +205,7 @@ private class FakeSubscriberAccessRepo(private val active: List<SubscriberAccess
     }
 
     override fun findActiveOnNas(): List<SubscriberAccess> = active
+    override fun findActiveMacUsernames(): List<String> = notUsed()
     override fun findById(id: UUID): SubscriberAccess? = active.firstOrNull { it.id == id }
     override fun findByCustomerId(customerId: UUID): List<SubscriberAccess> = notUsed()
     override fun findBySubscriptionId(subscriptionId: UUID): List<SubscriberAccess> = notUsed()
@@ -223,7 +224,7 @@ private class FakeAccountingRepo(private val usage: Map<UUID, Long>) : Accountin
         usage.filterKeys { it in subscriberAccessIds }
 
     override fun saveAll(points: List<AccountingRecordPoint>): Unit = throw UnsupportedOperationException()
-    override fun trafficSince(subscriberAccessId: UUID, since: Instant): List<TrafficSample> =
+    override fun trafficSince(subscriberAccessId: UUID, since: Instant, bucketSeconds: Long): List<TrafficSample> =
         throw UnsupportedOperationException()
 }
 

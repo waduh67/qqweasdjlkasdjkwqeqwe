@@ -39,7 +39,6 @@ import {
 import {
   deleteAccess,
   getBrasSession,
-  getBrasTraffic,
   isolateAccess,
   listAccessForCustomer,
   listNas,
@@ -51,12 +50,11 @@ import {
   type BrasSessionView,
   type NasView,
   type SubscriberAccessView,
-  type TrafficHistoryView,
 } from '../api/bng'
 import { useCan } from '../auth/useCan'
 import { Badge, EmptyState, Spinner, StatusBadge, useToast } from '../components/ui'
 import { OpticalChart } from '../components/OpticalChart'
-import { TrafficChart } from '../components/TrafficChart'
+import { SubscriberTrafficPanel } from '../components/SubscriberTrafficPanel'
 import { IconAlert, IconCustomers, IconRoute } from '../components/icons'
 import type { SubscriptionView } from '../api/network'
 import { listPlans as listCatalogPlans, SERVICE_TYPE_LABEL, type PlanView, type ServiceType } from '../api/catalog'
@@ -79,7 +77,7 @@ const HEALTH_COLOR: Record<string, string> = {
   UNKNOWN: 'var(--muted)',
 }
 
-type Tab = 'ringkasan' | 'jalur' | 'tetangga' | 'metrik' | 'akses' | 'cpe' | 'tagihan' | 'tiket' | 'timeline'
+type Tab = 'ringkasan' | 'jalur' | 'tetangga' | 'metrik' | 'akses' | 'trafik' | 'cpe' | 'tagihan' | 'tiket' | 'timeline'
 
 /**
  * Halaman detail satu pelanggan sebagai rute tersendiri (`/customers/:id`), bukan
@@ -138,6 +136,8 @@ export function CustomerDetailPage() {
   const canAssign = can('customer.onu.assign')
   const canMetric = can('monitoring.metric.view')
   const canAccess = can('bng.access.view')
+  // Tab Trafik digerbang izin baca sesi/trafik (sama dengan panel B-ras Check).
+  const canTraffic = can('bng.session.view')
   const canCpe = can('cpe.device.view')
   // Facet sisi-bisnis Subscriber-360: tiap tab digerbang izin modul pemiliknya.
   const canBilling = can('billing.invoice.view')
@@ -269,6 +269,11 @@ export function CustomerDetailPage() {
             Akses
           </button>
         )}
+        {canTraffic && (
+          <button className={tab === 'trafik' ? 'active' : ''} onClick={() => setTab('trafik')}>
+            Trafik
+          </button>
+        )}
         {canCpe && (
           <button className={tab === 'cpe' ? 'active' : ''} onClick={() => setTab('cpe')}>
             CPE
@@ -296,6 +301,7 @@ export function CustomerDetailPage() {
       {tab === 'tetangga' && <TetanggaTab neighbors={neighbors} connected={connected} odpCount={odpCount} ponCount={ponCount} />}
       {tab === 'metrik' && <MetrikTab customer={customer} metrics={metrics} />}
       {tab === 'akses' && <NetworkAccessTab customerId={id} subscriptions={customer.subscriptions} />}
+      {tab === 'trafik' && <TrafikTab customerId={id} />}
       {tab === 'cpe' && <CpeTab customerId={id} />}
       {tab === 'tagihan' && <TagihanTab customerId={id} billing={sub360?.billing ?? null} />}
       {tab === 'tiket' && <TiketWoTab customerId={id} canIncident={canIncident} canWorkorder={canWorkorder} />}
@@ -1549,21 +1555,18 @@ function SubscriptionAccessCard({
 
 /**
  * Panel "B-ras Check": keadaan sesi PPPoE terkini akun (online, IP framed, BRAS,
- * uptime, MAC) plus tren trafik Down/Up 24 jam. Murni baca — datanya dari laporan
- * collector, panel tak pernah menyentuh BRAS. Sesi & tren ditarik terpisah dan
+ * uptime, MAC) plus tren trafik Down/Up. Murni baca — datanya dari laporan collector,
+ * panel tak pernah menyentuh BRAS. Sesi ditarik di sini; tren didelegasikan ke
+ * [SubscriberTrafficPanel] (satu implementasi dipakai bersama tab Trafik) dan keduanya
  * toleran gagal agar satu yang kosong tak menutup yang lain.
  */
 function BrasSessionPanel({ accessId }: { accessId: string }) {
   const [session, setSession] = useState<BrasSessionView | null>(null)
-  const [traffic, setTraffic] = useState<TrafficHistoryView | null>(null)
 
   useEffect(() => {
     let alive = true
     void getBrasSession(accessId)
       .then((s) => alive && setSession(s))
-      .catch(() => {})
-    void getBrasTraffic(accessId, 24)
-      .then((t) => alive && setTraffic(t))
       .catch(() => {})
     return () => {
       alive = false
@@ -1612,14 +1615,64 @@ function BrasSessionPanel({ accessId }: { accessId: string }) {
         </p>
       )}
 
-      <div className="stack" style={{ gap: '0.4rem' }}>
-        <span className="muted" style={{ fontSize: '0.82rem', fontWeight: 600 }}>Tren trafik 24 jam</span>
-        {traffic ? (
-          <TrafficChart points={traffic.points} />
-        ) : (
-          <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>Memuat tren…</p>
-        )}
+      <SubscriberTrafficPanel accessId={accessId} />
+    </div>
+  )
+}
+
+/* ---------- Tab: Trafik (tren bandwidth per akun jaringan) ---------- */
+
+/**
+ * Tab Trafik: satu [SubscriberTrafficPanel] per akun jaringan pelanggan, masing-masing
+ * dengan pemilih rentang + ringkasan throughput/pemakaian sendiri. Menarik daftar akun
+ * lewat [listAccessForCustomer] (jalur baca yang sama dengan tab Akses); toleran gagal.
+ * Digerbang izin `bng.session.view` di pemanggil.
+ */
+function TrafikTab({ customerId }: { customerId: string }) {
+  const [accounts, setAccounts] = useState<SubscriberAccessView[] | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    void listAccessForCustomer(customerId)
+      .then((a) => alive && setAccounts(a))
+      .catch(() => alive && setAccounts([]))
+    return () => {
+      alive = false
+    }
+  }, [customerId])
+
+  if (accounts == null) {
+    return (
+      <div className="card" style={{ display: 'grid', placeItems: 'center', minHeight: 120 }}>
+        <Spinner />
       </div>
+    )
+  }
+
+  if (accounts.length === 0) {
+    return (
+      <div className="card">
+        <p className="muted" style={{ margin: 0 }}>
+          Belum ada akun jaringan untuk pelanggan ini — provisi akun dulu di tab <strong>Akses</strong>.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="stack" style={{ gap: '0.75rem' }}>
+      {accounts.map((account) => (
+        <div key={account.id} className="card stack" style={{ gap: '0.6rem' }}>
+          <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span className="badge neutral tnum">{account.username}</span>
+            <span className="badge">{SERVICE_TYPE_LABEL[account.authType]}</span>
+            <span className="badge accent">{account.planName ?? 'paket tak dikenal'}</span>
+            <span className="badge neutral">{account.nasName ?? 'tanpa BRAS'}</span>
+            <StatusBadge status={account.status} />
+          </div>
+          <SubscriberTrafficPanel accessId={account.id} />
+        </div>
+      ))}
     </div>
   )
 }

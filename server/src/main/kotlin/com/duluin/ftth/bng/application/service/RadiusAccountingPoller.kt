@@ -1,6 +1,7 @@
 package com.duluin.ftth.bng.application.service
 
 import com.duluin.ftth.bng.application.port.outbound.RadiusAccountingReadPort
+import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.tenancy.TenantApi
 import org.slf4j.LoggerFactory
@@ -51,6 +52,7 @@ class RadiusAccountingPoller(
 class RadiusAccountingPollRunner(
     private val tenantApi: TenantApi,
     private val radacct: RadiusAccountingReadPort,
+    private val subscriberAccessRepository: SubscriberAccessRepository,
     private val ingest: BngSessionIngestService,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -60,16 +62,18 @@ class RadiusAccountingPollRunner(
     /**
      * Baca sesi hidup tenant [tenantId] pada waktu [now] lalu serap. Dipisah dari [run] agar
      * bisa diuji dengan jam tetap. Kode tenant (`slug`) diresolusi untuk memfilter+mengupas
-     * prefiks `radacct` — kunci isolasi multi-tenant radius-db (S0). NAS asal = null: baca
-     * `radacct` global cuma menyimpan `nasipaddress` string, bukan UUID NAS kita (tetap
-     * terekam via `nasIp`).
+     * prefiks `radacct` — kunci isolasi multi-tenant radius-db (S0). Username MAC akun aktif
+     * (DHCP/Static) disertakan agar sesinya — yang ditulis polos tanpa prefiks — ikut terbaca.
+     * NAS asal = null: baca `radacct` global cuma menyimpan `nasipaddress` string, bukan UUID
+     * NAS kita (tetap terekam via `nasIp`).
      */
     fun execute(tenantId: UUID, now: Instant) {
         val slug = tenantApi.findById(tenantId)?.slug ?: run {
             log.warn("Tenant {} tak punya slug — poll sesi RADIUS dilewati", tenantId)
             return
         }
-        val observations = radacct.activeSessions(tenantId, slug)
+        val macUsernames = subscriberAccessRepository.findActiveMacUsernames()
+        val observations = radacct.activeSessions(tenantId, slug, macUsernames)
         if (observations.isEmpty()) return
         ingest.ingest(tenantId, now, nasId = null, observations = observations)
     }

@@ -113,9 +113,19 @@ data class TrafficPoint(
     val upMbps: Double?,
 )
 
-/** Tren trafik satu akun dalam rentang [hours] jam ke belakang. */
+/**
+ * Tren trafik satu akun dalam rentang [hours] jam ke belakang.
+ *
+ * [currentDownMbps]/[currentUpMbps] = laju titik terakhir yang terhitung (throughput
+ * "sekarang", rata-rata selang cuplikan terakhir); null bila tak ada titik terhitung
+ * (akun sedang offline). [totalBytes] = total pemakaian data (unggah+unduh) pada rentang,
+ * sadar-reset — sumber angka "kuota terpakai".
+ */
 data class TrafficHistoryView(
     val subscriberAccessId: UUID,
     val hours: Int,
     val points: List<TrafficPoint>,
+    val currentDownMbps: Double?,
+    val currentUpMbps: Double?,
+    val totalBytes: Long,
 )

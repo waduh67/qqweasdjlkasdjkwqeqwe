@@ -39,13 +39,15 @@ class RadacctJdbcAdapterTest {
 
         val out = adapter(db.connection()).activeSessions(tenantId, "acme")
 
-        // Satu statement, disaring per prefiks tenant.
+        // Satu statement, disaring per prefiks tenant + daftar MAC (di sini kosong).
         assertThat(db.sql).isEqualTo(
             "SELECT username, framedipaddress, nasipaddress, acctsessionid, callingstationid, " +
-                "acctsessiontime, acctinputoctets, acctoutputoctets FROM radacct " +
-                "WHERE acctstoptime IS NULL AND username LIKE ? ORDER BY acctstarttime DESC",
+                "acctsessiontime, acctinputoctets, acctoutputoctets, acctinputgigawords, acctoutputgigawords " +
+                "FROM radacct WHERE acctstoptime IS NULL " +
+                "AND (username LIKE ? OR username = ANY(?)) ORDER BY acctstarttime DESC",
         )
         assertThat(db.params).containsExactly("acme:%")
+        assertThat(db.arrayElements).isEmpty()
         assertThat(db.closed).isTrue()
 
         // budi menang (baris pertama), andi ikut; kedua username sudah BARE.
@@ -69,18 +71,43 @@ class RadacctJdbcAdapterTest {
     }
 
     @Test
+    fun `menyertakan akun MAC lewat ANY dan menjumlah gigawords`() {
+        val db = RecordingDb(
+            rows = listOf(
+                // Akun MAC ditulis POLOS (tanpa prefiks) — tertangkap lewat daftar = ANY(?).
+                // Octet melewati batas 32-bit: nilai sebenarnya = octet bawah + gigawords × 2³².
+                row("aa:bb:cc:dd:ee:ff", up = 5, down = 7, upGig = 2, downGig = 3),
+            ),
+        )
+
+        val out = adapter(db.connection()).activeSessions(tenantId, "acme", listOf("aa:bb:cc:dd:ee:ff"))
+
+        // Daftar MAC diikat sebagai array param kedua untuk cabang `username = ANY(?)`.
+        assertThat(db.arrayElements).containsExactly("aa:bb:cc:dd:ee:ff")
+
+        val mac = out.single()
+        // Username MAC polos → tak ada prefiks tenant yang dikupas.
+        assertThat(mac.username).isEqualTo("aa:bb:cc:dd:ee:ff")
+        // Octet kumulatif sebenarnya menjumlah gigawords (anti under-report sesi high-volume).
+        assertThat(mac.inOctets).isEqualTo(5 + 2 * (1L shl 32))
+        assertThat(mac.outOctets).isEqualTo(7 + 3 * (1L shl 32))
+    }
+
+    @Test
     fun `isConfigured meneruskan status resolver`() {
         assertThat(adapter(RecordingDb().connection()).isConfigured()).isTrue()
     }
 
     private fun row(
         username: String,
-        nasIp: String?,
-        framedIp: String?,
-        sessionId: String?,
-        uptime: Long?,
-        up: Long?,
-        down: Long?,
+        nasIp: String? = null,
+        framedIp: String? = null,
+        sessionId: String? = null,
+        uptime: Long? = null,
+        up: Long? = null,
+        down: Long? = null,
+        upGig: Long? = null,
+        downGig: Long? = null,
     ): Map<String, Any?> = mapOf(
         "username" to username,
         "nasipaddress" to nasIp,
@@ -90,6 +117,8 @@ class RadacctJdbcAdapterTest {
         "acctsessiontime" to uptime,
         "acctinputoctets" to up,
         "acctoutputoctets" to down,
+        "acctinputgigawords" to upGig,
+        "acctoutputgigawords" to downGig,
     )
 
     /** Resolver koneksi tiruan (lihat catatan di [FreeRadiusJdbcAdapterTest]). */
@@ -107,6 +136,7 @@ class RadacctJdbcAdapterTest {
     private class RecordingDb(private val rows: List<Map<String, Any?>> = emptyList()) {
         var sql: String? = null
         val params = mutableListOf<String?>()
+        var arrayElements: List<Any?> = emptyList()
         var closed = false
 
         fun connection(): Connection = Proxy.newProxyInstance(
@@ -115,6 +145,11 @@ class RadacctJdbcAdapterTest {
             InvocationHandler { proxy, method, args ->
                 when (method.name) {
                     "prepareStatement" -> statement(args!![0] as String)
+                    // createArrayOf(typeName, elements) → tangkap elemen array MAC untuk asersi.
+                    "createArrayOf" -> {
+                        arrayElements = (args!![1] as Array<*>).toList()
+                        sqlArray()
+                    }
                     "close" -> { closed = true; null }
                     "toString" -> "RecordingConnection"
                     "hashCode" -> System.identityHashCode(proxy)
@@ -124,6 +159,19 @@ class RadacctJdbcAdapterTest {
             },
         ) as Connection
 
+        private fun sqlArray(): java.sql.Array = Proxy.newProxyInstance(
+            javaClass.classLoader,
+            arrayOf(java.sql.Array::class.java),
+            InvocationHandler { proxy, method, args ->
+                when (method.name) {
+                    "toString" -> "RecordingArray"
+                    "hashCode" -> System.identityHashCode(proxy)
+                    "equals" -> proxy === args?.getOrNull(0)
+                    else -> defaultReturn(method.returnType)
+                }
+            },
+        ) as java.sql.Array
+
         private fun statement(sql: String): PreparedStatement {
             this.sql = sql
             return Proxy.newProxyInstance(
@@ -132,6 +180,8 @@ class RadacctJdbcAdapterTest {
                 InvocationHandler { proxy, method, args ->
                     when (method.name) {
                         "setString" -> { params += args!![1] as String?; null }
+                        // Array MAC sudah ditangkap saat createArrayOf; setArray cukup diabaikan.
+                        "setArray" -> null
                         "executeQuery" -> resultSet()
                         "close" -> null
                         "toString" -> "RecordingStatement"

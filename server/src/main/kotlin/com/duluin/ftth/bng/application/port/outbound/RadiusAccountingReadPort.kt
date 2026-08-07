@@ -19,9 +19,18 @@ interface RadiusAccountingReadPort {
     fun isConfigured(): Boolean
 
     /**
-     * Sesi PPPoE yang masih hidup (`acctstoptime IS NULL`) milik tenant [tenantId],
-     * disaring lewat [tenantCode] (= slug/`nas.shortname`) dan di-dedup per akun
+     * Sesi PPPoE/Hotspot/MAC yang masih hidup (`acctstoptime IS NULL`) milik tenant
+     * [tenantId], disaring lewat [tenantCode] (= slug/`nas.shortname`) dan di-dedup per akun
      * (baris terbaru menang). [tenantId] menyertai sebagai jahitan sharding radius-db.
+     *
+     * [macUsernames] = username akun berbasis MAC (DHCP/Static) milik tenant. Berbeda dari
+     * akun login, mereka ditulis ke `radacct` POLOS tanpa prefiks `{kodeTenant}:` (MAC global-
+     * unik), jadi tak tersapu filter prefiks — daftar ini menyaringnya balik secara eksplisit.
+     * Kosong (bawaan) → hanya akun ber-prefiks yang terbaca (perilaku lama).
      */
-    fun activeSessions(tenantId: UUID, tenantCode: String): List<SessionObservation>
+    fun activeSessions(
+        tenantId: UUID,
+        tenantCode: String,
+        macUsernames: List<String> = emptyList(),
+    ): List<SessionObservation>
 }

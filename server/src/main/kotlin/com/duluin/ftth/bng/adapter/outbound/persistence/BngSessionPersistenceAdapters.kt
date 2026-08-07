@@ -122,23 +122,32 @@ class AccountingRecordPersistenceAdapter : AccountingRecordRepository {
     }
 
     /**
-     * Tren trafik satu akun. `LAG` mengambil penghitung & waktu cuplikan sebelumnya;
-     * laju = selisih_octet × 8 / selisih_detik / 1e6 (bit → Mbps). Selisih waktu ≤ 0
-     * atau selisih octet negatif (counter reset) → null. `out` = arah pelanggan (Down),
-     * `in` = unggah (Up).
+     * Tren trafik satu akun. Cuplikan mentah lebih dulu diringkas per ember `time_bucket`
+     * selebar [bucketSeconds] detik (`last()` = penghitung kumulatif di ujung ember) supaya
+     * rentang panjang tak mengirim puluhan ribu titik. `LAG` lalu mengambil penghitung & waktu
+     * ember sebelumnya; laju = selisih_octet × 8 / selisih_detik / 1e6 (bit → Mbps). Selisih
+     * waktu ≤ 0 atau selisih octet negatif (counter reset) → null. `out` = arah pelanggan
+     * (Down), `in` = unggah (Up).
      */
-    override fun trafficSince(subscriberAccessId: UUID, since: Instant): List<TrafficSample> {
+    override fun trafficSince(subscriberAccessId: UUID, since: Instant, bucketSeconds: Long): List<TrafficSample> {
         val sql = """
-            WITH ordered AS (
-                SELECT time,
+            WITH bucketed AS (
+                SELECT time_bucket(make_interval(secs => :bucket), time) AS bt,
+                       last(out_octets, time) AS out_octets,
+                       last(in_octets, time)  AS in_octets
+                FROM accounting_record
+                WHERE subscriber_access_id = CAST(:accessId AS uuid) AND time >= :since
+                GROUP BY bt
+            ),
+            ordered AS (
+                SELECT bt AS time,
                        out_octets,
                        in_octets,
                        lag(out_octets) OVER w AS prev_out,
                        lag(in_octets)  OVER w AS prev_in,
-                       lag(time)       OVER w AS prev_time
-                FROM accounting_record
-                WHERE subscriber_access_id = CAST(:accessId AS uuid) AND time >= :since
-                WINDOW w AS (ORDER BY time)
+                       lag(bt)         OVER w AS prev_time
+                FROM bucketed
+                WINDOW w AS (ORDER BY bt)
             )
             SELECT time,
                    CASE WHEN prev_time IS NOT NULL
@@ -161,6 +170,7 @@ class AccountingRecordPersistenceAdapter : AccountingRecordRepository {
         val rows = entityManager.createNativeQuery(sql)
             .setParameter("accessId", subscriberAccessId.toString())
             .setParameter("since", Timestamp.from(since))
+            .setParameter("bucket", bucketSeconds)
             .resultList as List<Array<Any?>>
 
         return rows.map { row ->
