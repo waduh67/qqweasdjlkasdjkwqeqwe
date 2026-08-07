@@ -6,6 +6,26 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-07 — Default sub-account Pivot pakai dropdown + galat validasi self-diagnosing
+
+**Diperbaiki**
+- **Galat validasi Pivot tak menyebut field yang salah.** Pesan yang tampil hanya wrapper
+  generik ("The request was invalid, or an error occurred in downstream provider") karena parser
+  hanya membaca `message` level atas; field yang gagal sebenarnya ada di `error.details[].message`
+  (string validator Go, mis. `Field validation for 'BusinessStructure' failed on the 'required'
+  tag`). Parser kini mendahulukan `error.details[]`, lalu `errors[]`, baru `message`/`error`
+  generik — sehingga penolakan `POST /v1/sub-merchants` langsung menunjuk field bermasalah
+  (`PivotApiClient`).
+
+**Diubah**
+- **Default sub-account Pivot (`/platform-billing`) kini dropdown, bukan input bebas.** Field
+  yang nilainya harus sama persis dengan daftar Pivot rawan salah ketik (mis. `businessStructure`
+  "PT" vs "PERSEROAN TERBATAS", atau MCC yang tak cocok pasangan industrinya). Struktur bisnis,
+  industri induk→anak, dan negara bisnis/entitas kini dipilih dari daftar; **MCC terisi otomatis**
+  dari anak industri; **district** dipilih lewat combobox pencari atas ~7.200 district (data
+  di-*dynamic import* agar tak membebani bundel awal). Data referensi baru: `pivotReference.ts`,
+  `pivotDistricts.ts` (`PlatformBillingSettingsPage`).
+
 ### 2026-08-07 — Perbaiki provisioning Pivot (400 EOF) & metode pembayaran ke-reset
 
 **Diperbaiki**

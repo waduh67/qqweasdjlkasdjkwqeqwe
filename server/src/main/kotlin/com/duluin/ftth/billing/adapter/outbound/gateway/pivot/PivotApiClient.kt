@@ -147,21 +147,31 @@ class PivotApiClient(
 
     /**
      * Ambil pesan galat dari body Pivot agar kegagalan bisa didiagnosis (mis. nilai referensi
-     * `districtId`/`mcc` tak valid) tanpa membaca log. Body Pivot bervariasi (`message`, `error`,
-     * atau `errors[].message`) — coba beberapa bentuk; kembalikan null bila tak bisa diurai.
+     * `districtId`/`businessStructure` tak valid, atau field wajib kosong) tanpa membaca log.
+     *
+     * Bentuk galat validasi Pivot menyembunyikan field yang gagal di `error.details[].message`
+     * sebagai string validator Go (mis. `Key: 'CreateSubMerchantRequest.PostCode' Error:Field
+     * validation for 'PostCode' failed on the 'required' tag`), sementara `message` di level atas
+     * hanya wrapper generik ("The request was invalid, or an error occurred in downstream
+     * provider"). Karena itu **dahulukan `error.details[]`**; baru jatuh ke `errors[]`, lalu ke
+     * `message`/`error`/`data.message` generik. Kembalikan null bila tak bisa diurai.
      */
     private fun pivotErrorMessage(body: String): String? {
         if (body.isBlank()) return null
         val node = runCatching { objectMapper.readTree(body) }.getOrNull() ?: return null
-        val direct = node.get("message") ?: node.get("error") ?: node.at("/data/message")
-        direct?.takeIf { !it.isNull }?.asString()?.takeIf { it.isNotBlank() }?.let { return it.take(ERR_SNIPPET) }
-        val fromErrors = node.get("errors")?.takeIf { it.isArray && !it.isEmpty }?.let { arr ->
-            (0 until arr.size()).mapNotNull { i ->
-                val el = arr.get(i)
-                (el.get("message") ?: el.get("field"))?.takeIf { !it.isNull }?.asString()?.takeIf { it.isNotBlank() }
-            }.joinToString("; ").takeIf { it.isNotBlank() }
-        }
-        return fromErrors?.take(ERR_SNIPPET)
+        messagesFrom(node.at("/error/details"))?.let { return it.take(ERR_SNIPPET) }
+        messagesFrom(node.get("errors"))?.let { return it.take(ERR_SNIPPET) }
+        val direct = node.get("message") ?: node.get("error")?.takeIf { it.isTextual } ?: node.at("/data/message")
+        return direct?.takeIf { !it.isNull }?.asString()?.takeIf { it.isNotBlank() }?.take(ERR_SNIPPET)
+    }
+
+    /** Gabung `message` (atau `field`) dari array galat Pivot jadi satu baris; null bila kosong/bukan array. */
+    private fun messagesFrom(arr: JsonNode?): String? {
+        if (arr == null || !arr.isArray || arr.isEmpty) return null
+        return (0 until arr.size()).mapNotNull { i ->
+            val el = arr.get(i)
+            (el.get("message") ?: el.get("field"))?.takeIf { !it.isNull }?.asString()?.takeIf { it.isNotBlank() }
+        }.joinToString("; ").takeIf { it.isNotBlank() }
     }
 
     /** [RestClient] baru per-panggilan — base URL bisa beda antar akun (sandbox/prod). */
@@ -183,7 +193,7 @@ class PivotApiClient(
         const val GRANT_TYPE = "client_credentials"
         const val SUBMERCHANT_HEADER = "x-submerchant-id"
         const val REQUEST_ID_HEADER = "X-REQUEST-ID"
-        const val ERR_SNIPPET = 300
+        const val ERR_SNIPPET = 600
         const val DEFAULT_TOKEN_TTL = 900L
         const val TOKEN_REFRESH_SKEW = 60L
         const val MIN_TOKEN_TTL = 30L

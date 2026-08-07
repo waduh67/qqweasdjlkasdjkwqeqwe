@@ -12,7 +12,17 @@ import {
 } from '../api/platformBilling'
 import { useCan } from '../auth/useCan'
 import { Badge, EmptyState, useToast } from '../components/ui'
+import { Combobox } from '../components/Combobox'
 import { IconAlert, IconShield } from '../components/icons'
+import {
+  childrenOfIndustry,
+  districtNameById,
+  mccForIndustry,
+  PIVOT_BUSINESS_STRUCTURES,
+  PIVOT_COUNTRIES,
+  PIVOT_PARENT_INDUSTRIES,
+  searchDistricts,
+} from '../data/pivotReference'
 
 /**
  * Setelan billing langganan SaaS (level platform) — super-admin mengatur default global (harga/
@@ -497,9 +507,11 @@ const BUSINESS_TYPE_OPTIONS = ['INDIVIDUAL', 'COMPANY']
 const DIGITAL_STATUS_OPTIONS = ['Digital', 'Non-digital']
 
 /**
- * Panel default sub-account: dropdown untuk field berdaftar-nilai (businessType/digitalStatus),
- * input untuk nilai referensi (mcc/industri/districtId/postCode) yang harus valid menurut daftar
- * referensi Pivot. Diisi sekali; provisioning tenant menggabungnya dengan profil spesifik-tenant.
+ * Panel default sub-account: field berdaftar-nilai dipilih lewat dropdown (tipe/status/struktur
+ * bisnis, industri induk→anak, negara) dan district lewat combobox pencari — supaya super-admin
+ * tak salah ketik nilai referensi Pivot (mis. "PT" vs "PERSEROAN TERBATAS", atau MCC yang tak
+ * cocok pasangannya). MCC terisi otomatis dari anak industri. Field bebas (kode pos, URL) tetap
+ * input. Diisi sekali; provisioning tenant menggabungnya dengan profil spesifik-tenant.
  */
 function SubAccountDefaultsPanel({
   defaults,
@@ -511,13 +523,41 @@ function SubAccountDefaultsPanel({
   manage: boolean
 }) {
   const set = (patch: Partial<SubAccountDefaultsForm>) => onChange((d) => ({ ...d, ...patch }))
+
+  // Resolusi nama district untuk nilai tersimpan (data district di-lazy-load): null = memuat,
+  // '' = kosong. Combobox baru dirender setelah label siap supaya labelnya benar sejak awal.
+  const [districtLabel, setDistrictLabel] = useState<string | null>(null)
+  useEffect(() => {
+    const id = Number(defaults.defaultDistrictId)
+    if (!id) {
+      setDistrictLabel('')
+      return
+    }
+    let alive = true
+    districtNameById(id).then((name) => {
+      if (alive) setDistrictLabel(name ?? `#${id}`)
+    })
+    return () => {
+      alive = false
+    }
+    // Sekali saat mount: seed label dari nilai tersimpan; pilihan berikutnya dikelola Combobox.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Pertahankan nilai tersimpan yang tak ada di daftar (mis. data lama) sebagai opsi tambahan
+  // agar tak diam-diam hilang dari tampilan.
+  const withCurrent = (options: readonly string[], current: string): string[] =>
+    current && !options.includes(current) ? [current, ...options] : [...options]
+
+  const childOptions = childrenOfIndustry(defaults.defaultParentIndustry)
+
   return (
     <div className="card stack" style={{ gap: '0.85rem' }} aria-disabled={!manage}>
       <strong style={{ fontSize: '0.95rem' }}>Default Sub-account</strong>
       <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
         Data bisnis/industri yang sama untuk semua sub-account tenant (dipakai saat mendaftarkan
-        sub-account ke Pivot). Nilai referensi (MCC, industri, district ID, struktur bisnis) harus
-        valid menurut daftar referensi Pivot — verifikasi di sandbox sebelum produksi.
+        sub-account ke Pivot). Nilai referensi (industri, struktur bisnis, negara, district) dipilih
+        dari daftar Pivot agar tak salah ketik; MCC terisi otomatis dari anak industri.
       </p>
 
       <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -553,40 +593,73 @@ function SubAccountDefaultsPanel({
         </label>
         <label style={{ flex: 1, minWidth: 160 }}>
           <span>Struktur bisnis</span>
-          <input
+          <select
             value={defaults.defaultBusinessStructure}
             onChange={(e) => set({ defaultBusinessStructure: e.target.value })}
-            placeholder="mis. PT, CV"
             disabled={!manage}
-          />
+          >
+            <option value="">— pilih —</option>
+            {withCurrent(PIVOT_BUSINESS_STRUCTURES, defaults.defaultBusinessStructure).map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
 
       <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
         <label style={{ flex: 1, minWidth: 160 }}>
           <span>Industri induk</span>
-          <input
+          <select
             value={defaults.defaultParentIndustry}
-            onChange={(e) => set({ defaultParentIndustry: e.target.value })}
-            placeholder="dari daftar referensi Pivot"
+            onChange={(e) =>
+              // Ganti induk → reset anak & MCC (pasangan lama tak lagi valid).
+              set({ defaultParentIndustry: e.target.value, defaultChildIndustry: '', defaultMcc: '' })
+            }
             disabled={!manage}
-          />
+          >
+            <option value="">— pilih —</option>
+            {withCurrent(PIVOT_PARENT_INDUSTRIES, defaults.defaultParentIndustry).map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
         </label>
         <label style={{ flex: 1, minWidth: 160 }}>
           <span>Industri anak</span>
-          <input
+          <select
             value={defaults.defaultChildIndustry}
-            onChange={(e) => set({ defaultChildIndustry: e.target.value })}
-            placeholder="dari daftar referensi Pivot"
-            disabled={!manage}
-          />
+            onChange={(e) =>
+              // Pilih anak → MCC terisi otomatis dari pasangan induk+anak.
+              set({
+                defaultChildIndustry: e.target.value,
+                defaultMcc: mccForIndustry(defaults.defaultParentIndustry, e.target.value) ?? '',
+              })
+            }
+            disabled={!manage || !defaults.defaultParentIndustry}
+          >
+            <option value="">{defaults.defaultParentIndustry ? '— pilih —' : 'pilih induk dahulu'}</option>
+            {childOptions.map((c) => (
+              <option key={c.child} value={c.child}>
+                {c.child}
+              </option>
+            ))}
+            {/* Nilai tersimpan yang tak ada di daftar anak induk terpilih tetap tampil. */}
+            {defaults.defaultChildIndustry &&
+              !childOptions.some((c) => c.child === defaults.defaultChildIndustry) && (
+                <option value={defaults.defaultChildIndustry}>{defaults.defaultChildIndustry}</option>
+              )}
+          </select>
         </label>
         <label style={{ flex: 1, minWidth: 120 }}>
           <span>MCC</span>
           <input
             value={defaults.defaultMcc}
-            onChange={(e) => set({ defaultMcc: e.target.value })}
-            placeholder="mis. 4899"
+            readOnly
+            placeholder="otomatis dari industri"
+            title="Terisi otomatis dari anak industri"
             disabled={!manage}
           />
         </label>
@@ -595,34 +668,62 @@ function SubAccountDefaultsPanel({
       <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
         <label style={{ flex: 1, minWidth: 120 }}>
           <span>Negara bisnis</span>
-          <input
+          <select
             value={defaults.defaultBusinessCountry}
             onChange={(e) => set({ defaultBusinessCountry: e.target.value })}
-            placeholder="mis. ID"
-            maxLength={8}
             disabled={!manage}
-          />
+          >
+            <option value="">— pilih —</option>
+            {PIVOT_COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.name} ({c.code})
+              </option>
+            ))}
+            {defaults.defaultBusinessCountry &&
+              !PIVOT_COUNTRIES.some((c) => c.code === defaults.defaultBusinessCountry) && (
+                <option value={defaults.defaultBusinessCountry}>{defaults.defaultBusinessCountry}</option>
+              )}
+          </select>
         </label>
         <label style={{ flex: 1, minWidth: 120 }}>
           <span>Negara entitas</span>
-          <input
+          <select
             value={defaults.defaultCountryOfEntity}
             onChange={(e) => set({ defaultCountryOfEntity: e.target.value })}
-            placeholder="mis. ID"
-            maxLength={8}
             disabled={!manage}
-          />
+          >
+            <option value="">— pilih —</option>
+            {PIVOT_COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.name} ({c.code})
+              </option>
+            ))}
+            {defaults.defaultCountryOfEntity &&
+              !PIVOT_COUNTRIES.some((c) => c.code === defaults.defaultCountryOfEntity) && (
+                <option value={defaults.defaultCountryOfEntity}>{defaults.defaultCountryOfEntity}</option>
+              )}
+          </select>
         </label>
-        <label style={{ flex: 1, minWidth: 120 }}>
-          <span>District ID</span>
-          <input
-            type="number"
-            min={0}
-            value={defaults.defaultDistrictId}
-            onChange={(e) => set({ defaultDistrictId: e.target.value })}
-            placeholder="dari daftar referensi Pivot"
-            disabled={!manage}
-          />
+        <label style={{ flex: 1, minWidth: 200 }}>
+          <span>District</span>
+          {districtLabel === null ? (
+            // Tunggu label district ter-resolusi dari nilai tersimpan sebelum merender Combobox,
+            // supaya kolomnya tak sempat menampilkan id mentah lalu berkedip ke nama.
+            <input value="Memuat…" readOnly disabled />
+          ) : (
+            <Combobox
+              value={defaults.defaultDistrictId}
+              initialLabel={districtLabel}
+              onChange={(id) => set({ defaultDistrictId: id })}
+              fetchOptions={(t) => searchDistricts(t)}
+              toId={(d) => String(d.id)}
+              toLabel={(d) => d.name}
+              toMeta={(d) => `ID ${d.id}`}
+              debounceMs={0}
+              placeholder="Cari district…"
+              disabled={!manage}
+            />
+          )}
         </label>
         <label style={{ flex: 1, minWidth: 120 }}>
           <span>Kode pos</span>
