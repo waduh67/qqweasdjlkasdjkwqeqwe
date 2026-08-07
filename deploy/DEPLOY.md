@@ -275,6 +275,33 @@ dikelola HANYA oleh admin platform.
 
 ---
 
+## Pembayaran (gateway Pivot)
+
+Penagihan langganan (dan tagihan pelanggan) memakai gateway **Pivot** mode REDIRECT: pelanggan
+diarahkan ke halaman bayar Pivot, lalu **dikembalikan** ke aplikasi di `<base>/paid`,
+`<base>/failed`, atau `<base>/expired`. URL balik itu WAJIB, jadi aplikasi harus tahu URL
+publiknya.
+
+1. **Set URL publik aplikasi** — di `/opt/ftth/.env`, tambah baris:
+   ```bash
+   FTTH_BILLING_PIVOT_REDIRECT_BASE_URL=https://app.contoh.com   # samakan dgn domain aplikasi
+   ```
+   Kosong/tidak diisi → charge Pivot **gagal** dan tautan bayar tak terbit — di UI muncul
+   *"Tagihan terbit. Tautan bayar belum siap — hubungi admin platform."* (tagihannya sendiri
+   tetap terbit, hanya tanpa link bayar).
+
+2. **Salin ulang compose terbaru** (file compose di-copy manual) lalu terapkan:
+   ```bash
+   scp deploy/docker-compose.prod.yml <user>@<vps>:/opt/ftth/     # dari laptop, root repo
+   cd /opt/ftth && docker compose -f docker-compose.prod.yml up -d
+   ```
+
+3. **Isi kredensial master Pivot** di dashboard admin platform (Merchant ID / Secret / Callback
+   API Key). Halaman balik `/paid`, `/failed`, `/expired` dilayani SPA — tak perlu konfigurasi
+   Caddy tambahan (semua non-`/api` sudah diarahkan ke web).
+
+---
+
 ## Bagian J — Deploy manual (kalau GitHub Actions kena limit)
 
 Kuota **GitHub Actions** (menit compute buat test + build image) bisa habis. Kalau

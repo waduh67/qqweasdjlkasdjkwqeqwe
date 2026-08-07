@@ -118,6 +118,10 @@ services:
       FTTH_JWT_SECRET: ${FTTH_JWT_SECRET}
       FTTH_ENCRYPTION_SECRET: ${FTTH_ENCRYPTION_SECRET}
       FTTH_CORS_ORIGINS: ${FTTH_CORS_ORIGINS}
+      # URL publik aplikasi untuk halaman balik gateway Pivot (mode REDIRECT WAJIB URL balik:
+      # <base>/paid, /failed, /expired). Kosong → charge Pivot gagal jelas & tautan bayar tak
+      # terbit ("Tautan bayar belum siap"). Biasanya = domain aplikasi (sama dgn VPN base URL).
+      FTTH_BILLING_PIVOT_REDIRECT_BASE_URL: ${FTTH_BILLING_PIVOT_REDIRECT_BASE_URL:-}
       # URL publik aplikasi, di-embed ke installer VPN untuk callback dari hub VPS
       # (auth-user-pass-verify & client-connect). Kalau kosong, perintah pasang di
       # dashboard menampilkan placeholder <URL-APLIKASI-ANDA> dan installer gagal.
