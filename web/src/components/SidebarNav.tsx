@@ -24,9 +24,10 @@ export type NavItem = {
 
 export type NavGroup = { label: string | null; items: NavItem[] }
 
-// Kunci penyimpanan status ciut per-seksi; nilai = daftar label seksi yang DICIUTKAN.
-// Menyimpan yang diciutkan (bukan yang terbuka) berarti seksi baru default terbuka.
-function loadCollapsed(storageKey: string): Set<string> {
+// Nilai tersimpan = daftar label seksi yang DIBUKA. Menyimpan yang terbuka (bukan yang
+// diciutkan) berarti seksi default TERTUTUP ala left-nav Azure — user membuka seksi yang
+// ia perlukan dan pilihannya bertahan antar-kunjungan.
+function loadExpanded(storageKey: string): Set<string> {
   try {
     const raw = localStorage.getItem(storageKey)
     return new Set(raw ? (JSON.parse(raw) as string[]) : [])
@@ -45,14 +46,17 @@ export function SidebarNav({
   /** Kunci localStorage unik per-shell agar status ciut tenant & platform terpisah. */
   storageKey: string
 }) {
-  const [collapsed, setCollapsed] = useState<Set<string>>(() => loadCollapsed(storageKey))
+  // Kunci dinaikkan ke `.v2` karena semantik berubah (dulu simpan yang diciutkan) —
+  // data lama diabaikan agar seksi tetap default tertutup.
+  const key = `${storageKey}.v2`
+  const [expanded, setExpanded] = useState<Set<string>>(() => loadExpanded(key))
 
   const toggle = (label: string) =>
-    setCollapsed((prev) => {
+    setExpanded((prev) => {
       const next = new Set(prev)
       if (next.has(label)) next.delete(label)
       else next.add(label)
-      localStorage.setItem(storageKey, JSON.stringify([...next]))
+      localStorage.setItem(key, JSON.stringify([...next]))
       return next
     })
 
@@ -78,7 +82,7 @@ export function SidebarNav({
           )
         }
 
-        const isCollapsed = collapsed.has(group.label)
+        const isCollapsed = !expanded.has(group.label)
         return (
           <div key={group.label} className={`nav-group${isCollapsed ? ' collapsed' : ''}`}>
             <button

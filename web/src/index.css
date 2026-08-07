@@ -170,11 +170,16 @@ body {
   min-height: 100%;
 }
 
+/* Root pada default 16px (1rem = 16px). */
+html {
+  font-size: 16px;
+}
+
 body {
   background: var(--plane);
   color: var(--text);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 1rem;
+  line-height: 1.45;
 }
 
 /* ---------- Scrollbar kustom (Firefox + WebKit) ---------- */
@@ -369,7 +374,7 @@ td {
 }
 thead th {
   color: var(--muted);
-  font-weight: 650;
+  font-weight: 600;
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1339,7 +1344,7 @@ tbody tr.row-selected:hover {
   padding: 0.85rem 0.6rem 0.3rem;
   color: var(--sidebar-muted);
   font-size: 0.66rem;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -1381,7 +1386,7 @@ tbody tr.row-selected:hover {
   padding: 0.55rem 0.7rem;
   border-radius: var(--radius-sm);
   color: var(--sidebar-text);
-  font-weight: 550;
+  font-weight: 400;
   font-size: 0.9rem;
   transition: background 0.12s ease, color 0.12s ease;
 }
@@ -1400,7 +1405,7 @@ tbody tr.row-selected:hover {
 .sidebar nav a.active {
   background: var(--sidebar-active-bg);
   color: var(--sidebar-active-text);
-  font-weight: 650;
+  font-weight: 600;
 }
 /* Rusuk aksen violet di kiri item aktif — penanda posisi ala referensi. */
 .sidebar nav a.active::before {
@@ -1439,13 +1444,13 @@ tbody tr.row-selected:hover {
   border-radius: var(--radius-sm);
   background: var(--sidebar-bg-2);
   border: 1px solid var(--sidebar-border);
-  color: #fff;
-  font-weight: 650;
+  color: var(--sidebar-text);
+  font-weight: 400;
   font-size: 0.9rem;
 }
 .env-switch-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--sidebar-bg-2) 82%, #ffffff);
-  border-color: rgba(255, 255, 255, 0.16);
+  background: color-mix(in srgb, var(--sidebar-bg-2) 88%, var(--sidebar-text));
+  border-color: color-mix(in srgb, var(--sidebar-border) 55%, var(--sidebar-text));
 }
 .env-switch-btn .env-dot {
   width: 8px;
@@ -1463,6 +1468,7 @@ tbody tr.row-selected:hover {
   text-align: left;
 }
 .env-switch-name {
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1521,12 +1527,12 @@ tbody tr.row-selected:hover {
   cursor: pointer;
 }
 .env-menu button:hover {
-  background: var(--sidebar-bg);
-  color: #fff;
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-text);
 }
 .env-menu button.current {
-  color: #fff;
-  font-weight: 650;
+  color: var(--sidebar-active-text);
+  font-weight: 600;
 }
 .env-menu .env-check {
   margin-left: auto;
