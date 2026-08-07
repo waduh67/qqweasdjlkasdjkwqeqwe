@@ -60,6 +60,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
+      radius-db:
+        condition: service_healthy
     environment:
       FTTH_DB_URL: jdbc:postgresql://postgres:5432/ftth
       FTTH_DB_USER: ftth
@@ -71,6 +73,20 @@ services:
       # Seed tenant demo → login tenant admin: admin@demo.ftth / admin12345.
       # Platform admin (lintas tenant): root@ftth.local / rootadmin123.
       FTTH_SEED_DEMO: "true"
+      # --- RADIUS-as-a-service: server pegang radius-db langsung (provision radcheck +
+      #     baca radacct + tembak DAE). Simulator BRAS memerankan sisi-NAS di DB yang sama.
+      #     NB: nama env di application.yml = FTTH_RADIUS_DB_* (bukan FTTH_RADIUS_*). ---
+      FTTH_RADIUS_DB_URL: jdbc:postgresql://radius-db:5432/radius
+      FTTH_RADIUS_DB_USER: radius
+      FTTH_RADIUS_DB_PASSWORD: radius
+      # Host FreeRADIUS pusat yang "tenant arahkan router-nya" — di lab = nama service simulator.
+      FTTH_RADIUS_PUBLIC_HOST: simulator
+      # Poll OLT SNMP tiap 30 dtk (baku PT5M) agar status ONU cepat kelihatan di lab.
+      FTTH_MONITORING_POLL_INTERVAL: PT30S
+      # --- CPE/TR-069: NBI GenieACS di jaringan compose (bukan localhost). ---
+      FTTH_CPE_GENIEACS_BASE_URL: http://genieacs-nbi:7557
+      # Sinkron CPE↔ONU tiap 30 dtk (baku PT5M) agar tautan serial 000000 cepat muncul.
+      FTTH_CPE_SYNC_INTERVAL: PT30S
       # jwt-secret / encryption-secret sengaja tidak di-set → pakai default dev.
 
   # --- Frontend SPA (dibangun dari web/Dockerfile, disajikan Nginx) ---
@@ -117,6 +133,89 @@ services:
       timeout: 3s
       retries: 20
 
+  # --- Simulator peniru-protokol: OLT/SNMP + BRAS/RADIUS (virtual-NAS) dalam satu proses ---
+  # Menggantikan perangkat nyata di lab. Tak mengekspos port ke host: server & sim bicara
+  # lewat nama service di jaringan compose.
+  #   • OLT/SNMP — agen HSGQ palsu di :1161/udp (port sama seperti HSGQ-E04I asli; non-root).
+  #                Server polling langsung ke `simulator:1161` (tanpa collector).
+  #   • BRAS/RADIUS — baca `radcheck` & tulis `radacct` di radius-db (memerankan FreeRADIUS
+  #                   pusat), plus responder DAE di :3799/udp untuk isolir/Reset Login/CoA.
+  simulator:
+    build:
+      context: .
+      dockerfile: simulator/Dockerfile
+    image: ftth-simulator:lab
+    restart: unless-stopped
+    depends_on:
+      radius-db:
+        condition: service_healthy
+    # IP statis: OLT di app butuh IP LITERAL sebagai host manajemen (value-object
+    # ManagementIp menolak hostname). Server polling SNMP ke 172.30.0.10:1161 dan
+    # menembak DAE ke 172.30.0.10:3799 — lihat docker/lab/seed-lab.sh.
+    networks:
+      default:
+        ipv4_address: 172.30.0.10
+    environment:
+      # OLT/SNMP — env ini menyetel OLT-1 (port 1161); OLT-2 (port 1162) didefinisikan di
+      # simulator/application.yml. Simulator menyalakan >1 agen SNMP dari daftar `instances`,
+      # semua di IP kontainer ini — di app tiap OLT didaftarkan dgn IP sama, snmp_port beda.
+      # 1161 non-privileged (cocok non-root) & setia ke HSGQ-E04I nyata.
+      FTTH_SIM_OLT_PORT: "1161"
+      FTTH_SIM_OLT_COMMUNITY: public
+      FTTH_SIM_OLT_PONS: "2"
+      FTTH_SIM_OLT_ONUS_PER_PON: "8"
+      # BRAS/RADIUS — DB yang SAMA dengan yang server pegang (rendezvous radcheck/radacct).
+      FTTH_SIM_RADIUS_DB_URL: jdbc:postgresql://radius-db:5432/radius
+      FTTH_SIM_RADIUS_DB_USER: radius
+      FTTH_SIM_RADIUS_DB_PASSWORD: radius
+      # Secret DAE HARUS sama dengan coaSecret BRAS yang di-seed (lihat seed-lab.sh).
+      FTTH_SIM_RADIUS_DAE_SECRET: testing123
+
+  # --- GenieACS (TR-069) + 1 ONT palsu — modul CPE. Ikut naik dengan lab (bukan profile). ---
+  # Server terhubung ke NBI di http://genieacs-nbi:7557. genieacs-sim muncul dengan serial
+  # "000000"; seed mendaftarkan ONU + CPE ber-serial itu agar tertaut.
+  genieacs-mongo:
+    image: mongo:4.4
+    restart: unless-stopped
+    volumes:
+      - genieacs_mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  genieacs-cwmp:
+    build: ./docker/genieacs
+    image: ftth/genieacs:1.2.16
+    restart: unless-stopped
+    command: genieacs-cwmp
+    environment:
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://genieacs-mongo:27017/genieacs
+    depends_on:
+      genieacs-mongo:
+        condition: service_healthy
+
+  genieacs-nbi:
+    build: ./docker/genieacs
+    image: ftth/genieacs:1.2.16
+    restart: unless-stopped
+    command: genieacs-nbi
+    environment:
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://genieacs-mongo:27017/genieacs
+    depends_on:
+      genieacs-mongo:
+        condition: service_healthy
+
+  genieacs-sim:
+    build: ./docker/genieacs-sim
+    image: ftth/genieacs-sim:local
+    restart: unless-stopped
+    command: ["-u", "http://genieacs-cwmp:7547/"]
+    depends_on:
+      genieacs-cwmp:
+        condition: service_started
+
   # --- Server FreeRADIUS (OPSIONAL) — hanya untuk uji DAE/CoA dengan BRAS nyata ---
   #   docker compose -f docker-compose.lab.yml --profile freeradius up -d freeradius
   freeradius:
@@ -157,5 +256,21 @@ volumes:
   pgdata:
   miniodata:
   radius_db:
+  genieacs_mongo:
   caddy_data:
   caddy_config:
+
+# Subnet tetap agar simulator bisa dapat IP statis (172.30.0.10). Semua service
+# tetap saling kenal lewat nama (DNS embedded Docker) di jaringan default ini.
+#
+# `ip_range` MEMBATASI kolam alokasi dinamis ke paruh atas (172.30.0.128–.254) supaya
+# IP statis simulator (.10) tak pernah ikut dibagikan otomatis. Tanpa ini, bring-up
+# bertahap (backing service dulu) membuat alokator berjalan .2,.3,… dan menyerempet
+# .10 sebelum simulator sempat mengklaimnya → "Address already in use".
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+          ip_range: 172.30.0.128/25
+          gateway: 172.30.0.1
