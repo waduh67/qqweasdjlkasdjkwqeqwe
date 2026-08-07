@@ -155,7 +155,7 @@ class PortalSelfServiceTest {
         cpe: CpeApi = FakeCpeApi(emptyList()),
     ) = PortalSelfService(customer, catalog, billing, bng, cpe)
 
-    private fun customerRef() = CustomerRef(customerId, "C-001", "Budi", "0812", Coordinate(106.8, -6.2), "ACTIVE")
+    private fun customerRef() = CustomerRef(customerId, "C-001", "Budi", "0812", null, Coordinate(106.8, -6.2), "ACTIVE")
 
     private fun subscription(planId: UUID?) =
         SubscriptionRef(UuidV7.generate(), customerId, planId, "Home 100", 100, "ACTIVE")

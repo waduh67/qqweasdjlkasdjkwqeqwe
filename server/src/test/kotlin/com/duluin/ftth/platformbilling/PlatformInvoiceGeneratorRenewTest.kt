@@ -20,6 +20,8 @@ import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.AuthenticatedUser
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.common.tenant.TenantContext
+import com.duluin.ftth.iam.IamApi
+import com.duluin.ftth.iam.UserRef
 import com.duluin.ftth.platformbilling.application.port.outbound.PlatformSettingRepository
 import com.duluin.ftth.platformbilling.application.port.outbound.SubscriptionUsageProbe
 import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionInvoiceRepository
@@ -63,6 +65,11 @@ class PlatformInvoiceGeneratorRenewTest {
     private val today = LocalDate.of(2026, 8, 7)
     private val baseNumber = "SUB-202610-019fcadd"
 
+    private companion object {
+        // Email admin tenant yang di-resolve IamApi → wajib diteruskan ke Pivot (email pelanggan required).
+        const val TENANT_EMAIL = "admin@tenant.test"
+    }
+
     private lateinit var subscriptions: FakeSubscriptionRepository
     private lateinit var invoices: FakeInvoiceRepository
     private lateinit var generator: PlatformInvoiceGenerator
@@ -78,6 +85,7 @@ class PlatformInvoiceGeneratorRenewTest {
             resolver = resolver,
             gatewayRegistry = PaymentGatewayRegistry(emptyList(), BillingProperties()),
             tenantApi = FakeTenantApi(),
+            iamApi = FakeIamApi(TENANT_EMAIL),
             auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
         )
     }
@@ -238,6 +246,27 @@ class PlatformInvoiceGeneratorRenewTest {
         assertThat(view.payUrl).isNull()
     }
 
+    @Test
+    fun `charge langganan meneruskan email admin tenant ke gateway (bukan null)`() {
+        val subscription = activeSubscription().also { subscriptions.save(it) }
+        val gateway = FakePivotGateway("https://pay.test/mail")
+        val gen = PlatformInvoiceGenerator(
+            subscriptionRepository = subscriptions,
+            invoiceRepository = invoices,
+            resolver = PlatformGatewayResolver(FakePlatformSettingRepository(), PivotMasterConfigProvider(EnabledPivotRepository())),
+            gatewayRegistry = PaymentGatewayRegistry(listOf(gateway), BillingProperties()),
+            tenantApi = FakeTenantApi(),
+            iamApi = FakeIamApi(TENANT_EMAIL),
+            auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
+        )
+
+        val issued = gen.issueFor(subscription, today, force = true, months = 1)
+
+        assertThat(issued!!.payUrl).isEqualTo("https://pay.test/mail")
+        // Pivot menolak charge tanpa email → email admin tenant harus ikut, bukan null.
+        assertThat(gateway.lastEmail).isEqualTo(TENANT_EMAIL)
+    }
+
     // --- helper ---
 
     /** Generator dengan gateway PIVOT aktif yang mengembalikan payUrl — untuk menguji charge ulang. */
@@ -247,6 +276,7 @@ class PlatformInvoiceGeneratorRenewTest {
         resolver = PlatformGatewayResolver(FakePlatformSettingRepository(), PivotMasterConfigProvider(EnabledPivotRepository())),
         gatewayRegistry = PaymentGatewayRegistry(listOf(FakePivotGateway(payUrl)), BillingProperties()),
         tenantApi = FakeTenantApi(),
+        iamApi = FakeIamApi(TENANT_EMAIL),
         auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
     )
 
@@ -336,9 +366,20 @@ class PlatformInvoiceGeneratorRenewTest {
     /** Gateway PIVOT tiruan yang selalu mengembalikan tautan bayar tetap (tanpa HTTP). */
     private class FakePivotGateway(private val payUrl: String) : PaymentGateway {
         override val provider = "PIVOT"
-        override fun createCharge(request: ChargeRequest, ctx: ResolvedGatewayContext): ChargeResult =
-            ChargeResult(provider = "PIVOT", gatewayRef = "ref_${request.invoiceNumber}", payUrl = payUrl)
+        /** Email pada charge terakhir — untuk memastikan tenant email diteruskan (bukan null). */
+        var lastEmail: String? = null
+            private set
+        override fun createCharge(request: ChargeRequest, ctx: ResolvedGatewayContext): ChargeResult {
+            lastEmail = request.customerEmail
+            return ChargeResult(provider = "PIVOT", gatewayRef = "ref_${request.invoiceNumber}", payUrl = payUrl)
+        }
         override fun parseCallback(callback: GatewayCallback, ctx: ResolvedGatewayContext): PaymentSettlement? = null
+    }
+
+    private class FakeIamApi(private val email: String?) : IamApi {
+        override fun findUser(id: UUID): UserRef? = null
+        override fun usersByIds(ids: Set<UUID>): List<UserRef> = emptyList()
+        override fun primaryEmailForTenant(tenantId: UUID): String? = email
     }
 
     private class FakeUsageProbe : SubscriptionUsageProbe {

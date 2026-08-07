@@ -37,7 +37,7 @@ class PortalAuthenticationServiceTest {
     private val hasher = PlainTextPortalPasswordHasher()
     private val issuer = StubPortalAccessTokenIssuer()
     private val customers = StubCustomerApi(
-        CustomerRef(customerId, "CUST-000007", "Budi", "0811", Coordinate(0.0, 0.0), "ACTIVE"),
+        CustomerRef(customerId, "CUST-000007", "Budi", "0811", null, Coordinate(0.0, 0.0), "ACTIVE"),
     )
     private val tenants = StubTenantApi(tenant)
     private val auditEvents = mutableListOf<AuditTrailEvent>()
