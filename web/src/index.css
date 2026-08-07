@@ -783,6 +783,25 @@ tbody tr.row-selected:hover {
 
 /* ---------- Modal (dialog terpusat) ---------- */
 
+/* Wadah <dialog> top-layer: reset gaya native (margin/border/bg) jadi transparan &
+   memenuhi viewport; scrim + .modal di dalamnya yang menata tampilan. Top layer memastikan
+   modal (mis. konfirmasi) selalu di atas Blade/OverlayDrawer yang juga top-layer. */
+.modal-host {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+.modal-host::backdrop {
+  background: transparent;
+}
 .modal {
   position: fixed;
   top: 50%;

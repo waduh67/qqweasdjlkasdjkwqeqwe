@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -186,14 +187,29 @@ export function Modal({
   footer?: ReactNode
   wide?: boolean
 }) {
+  // Native `<dialog open>` (showModal) menaruh modal di **top layer** browser — di atas
+  // SEMUA konten ber-z-index, termasuk Blade/OverlayDrawer Fluent yang juga top-layer.
+  // Tanpa ini, dialog konfirmasi "Tutup panel?" muncul DI BELAKANG flyout. Karena dialog
+  // ini dipromosikan ke top layer setelah drawer, ia otomatis menumpuk di atasnya. ESC
+  // ditangani native lewat event `cancel`.
+  const ref = useRef<HTMLDialogElement>(null)
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+    const dlg = ref.current
+    if (dlg && !dlg.open) dlg.showModal()
+    return () => {
+      if (dlg?.open) dlg.close()
+    }
+  }, [])
 
   return (
-    <>
+    <dialog
+      ref={ref}
+      className="modal-host"
+      onCancel={(e) => {
+        e.preventDefault()
+        onClose()
+      }}
+    >
       <div className="scrim" onClick={onClose} />
       <div className={`modal${wide ? ' modal-wide' : ''}`} role="dialog" aria-modal="true">
         <div className="modal-head">
@@ -205,7 +221,7 @@ export function Modal({
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-foot">{footer}</div>}
       </div>
-    </>
+    </dialog>
   )
 }
 
