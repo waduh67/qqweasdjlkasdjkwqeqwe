@@ -48,6 +48,9 @@ class OnboardingExpressPsbIT {
     private val pass = "secret12345"
     private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
 
+    /** Kode otomatis: CUST-{yyyyMMdd}-{6 alfanumerik acak}. */
+    private val autoCodeRegex = "CUST-\\d{8}-[A-Z0-9]{6}"
+
     @Test
     fun `PSB ekspres membuat pelanggan+langganan+akun+WO dalam satu transaksi tanpa provisi RADIUS`() {
         val slug = "onbp${uniq()}"
@@ -126,11 +129,11 @@ class OnboardingExpressPsbIT {
     }
 
     @Test
-    fun `kode pelanggan dibuat otomatis berurut per-tenant saat operator tak mengetiknya`() {
+    fun `kode pelanggan dibuat otomatis unik CUST-tanggal-acak saat operator tak mengetiknya`() {
         val slug = "onbc${uniq()}"
         val token = onboard(slug)
 
-        // Dua pelanggan tanpa 'code' → berurut, mulai dari CUST-000001.
+        // Pelanggan tanpa 'code' → kode otomatis berbentuk CUST-{yyyyMMdd}-{acak}, bukan berurut.
         val c1 = post(
             "/api/customers", token,
             """{"name":"Tanpa Kode 1","address":"Jl. A","location":{"longitude":106.8,"latitude":-6.2}}""",
@@ -139,10 +142,12 @@ class OnboardingExpressPsbIT {
             "/api/customers", token,
             """{"name":"Tanpa Kode 2","address":"Jl. B","location":{"longitude":106.8,"latitude":-6.2}}""",
         )
-        assertThat(JsonPath.read<String>(c1, "$.code")).isEqualTo("CUST-000001")
-        assertThat(JsonPath.read<String>(c2, "$.code")).isEqualTo("CUST-000002")
+        val code1 = JsonPath.read<String>(c1, "$.code")
+        val code2 = JsonPath.read<String>(c2, "$.code")
+        assertThat(code1).matches(autoCodeRegex)
+        assertThat(code2).matches(autoCodeRegex)
 
-        // PSB ekspres tanpa 'code' ikut generator yang sama → CUST-000003.
+        // PSB ekspres tanpa 'code' ikut generator yang sama.
         val planId = createPlan(token)
         val psb = post(
             "/api/onboarding/psb", token,
@@ -150,9 +155,10 @@ class OnboardingExpressPsbIT {
         )
         val customerId = JsonPath.read<String>(psb, "$.customerId")
         val fromPsb = get("/api/customers/$customerId", token)
-        assertThat(JsonPath.read<String>(fromPsb, "$.code")).isEqualTo("CUST-000003")
+        val code3 = JsonPath.read<String>(fromPsb, "$.code")
+        assertThat(code3).matches(autoCodeRegex)
 
-        // Kode manual tetap dihormati (dinormalkan huruf besar) dan tak menggeser urutan otomatis.
+        // Kode manual tetap dihormati (dinormalkan huruf besar).
         val manual = post(
             "/api/customers", token,
             """{"code":"vip-01","name":"Manual","address":"Jl. D","location":{"longitude":106.8,"latitude":-6.2}}""",
@@ -162,7 +168,11 @@ class OnboardingExpressPsbIT {
             "/api/customers", token,
             """{"name":"Tanpa Kode 4","address":"Jl. E","location":{"longitude":106.8,"latitude":-6.2}}""",
         )
-        assertThat(JsonPath.read<String>(c4, "$.code")).isEqualTo("CUST-000004")
+        val code4 = JsonPath.read<String>(c4, "$.code")
+        assertThat(code4).matches(autoCodeRegex)
+
+        // Semua kode otomatis unik (inti dari format acak: tak pernah bentrok).
+        assertThat(listOf(code1, code2, code3, code4)).doesNotHaveDuplicates()
     }
 
     // --- Perkakas HTTP ---
