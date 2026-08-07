@@ -68,4 +68,14 @@ data class SubscriptionInvoiceView(
     val paidAt: Instant?,
     val gatewayProvider: String?,
     val payUrl: String?,
+    /** Instrumen bayar in-app terpilih (VIRTUAL_ACCOUNT/QR) & instruksinya; null bila belum pilih. */
+    val payMethod: String? = null,
+    val vaChannel: String? = null,
+    val vaNumber: String? = null,
+    val vaName: String? = null,
+    val vaExpiresAt: Instant? = null,
+    /** String QRIS mentah (dirender jadi kode QR di klien). */
+    val qrContent: String? = null,
+    val qrUrl: String? = null,
+    val qrExpiresAt: Instant? = null,
 )

@@ -34,6 +34,14 @@ class TenantSubscriptionInvoicePersistenceAdapter(
             gatewayProvider = invoice.gatewayProvider
             gatewayRef = invoice.gatewayRef
             payUrl = invoice.payUrl
+            payMethod = invoice.payMethod
+            vaChannel = invoice.vaChannel
+            vaNumber = invoice.vaNumber
+            vaName = invoice.vaName
+            vaExpiresAt = invoice.vaExpiresAt
+            qrContent = invoice.qrContent
+            qrUrl = invoice.qrUrl
+            qrExpiresAt = invoice.qrExpiresAt
         } ?: TenantSubscriptionInvoiceJpaEntity(
             id = invoice.id,
             tenantId = invoice.tenantId,
@@ -49,6 +57,14 @@ class TenantSubscriptionInvoicePersistenceAdapter(
             gatewayProvider = invoice.gatewayProvider,
             gatewayRef = invoice.gatewayRef,
             payUrl = invoice.payUrl,
+            payMethod = invoice.payMethod,
+            vaChannel = invoice.vaChannel,
+            vaNumber = invoice.vaNumber,
+            vaName = invoice.vaName,
+            vaExpiresAt = invoice.vaExpiresAt,
+            qrContent = invoice.qrContent,
+            qrUrl = invoice.qrUrl,
+            qrExpiresAt = invoice.qrExpiresAt,
         )
         return jpa.save(entity).toDomain()
     }
@@ -69,5 +85,13 @@ class TenantSubscriptionInvoicePersistenceAdapter(
             gatewayProvider = gatewayProvider,
             gatewayRef = gatewayRef,
             payUrl = payUrl,
+            payMethod = payMethod,
+            vaChannel = vaChannel,
+            vaNumber = vaNumber,
+            vaName = vaName,
+            vaExpiresAt = vaExpiresAt,
+            qrContent = qrContent,
+            qrUrl = qrUrl,
+            qrExpiresAt = qrExpiresAt,
         )
 }

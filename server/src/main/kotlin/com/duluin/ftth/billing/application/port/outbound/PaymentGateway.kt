@@ -44,6 +44,12 @@ interface PaymentGateway {
  * [dueDate] = jatuh tempo tagihan. Penyedia yang mendukung batas waktu sesi bayar (mis. Pivot mode
  * STRICT) memakainya sebagai kedaluwarsa tautan bayar; `null` = biarkan penyedia pakai default.
  * Penyedia yang tak punya konsep ini (manual/transfer) mengabaikannya.
+ *
+ * [method] memilih instrumen bayar in-app (mode API): `VIRTUAL_ACCOUNT` atau `QR`. Bila diisi,
+ * penyedia membuat charge mode-API yang mengembalikan instruksi bayar (nomor VA / string QRIS)
+ * langsung di [ChargeResult] — tanpa redirect. `null` = perilaku lama (penyedia bebas memilih;
+ * Pivot memakai halaman ter-host REDIRECT). [vaChannel] bank tujuan VA (mis. `BRI`), wajib bila
+ * [method] = `VIRTUAL_ACCOUNT`.
  */
 @NamedInterface("gateway")
 data class ChargeRequest(
@@ -53,14 +59,42 @@ data class ChargeRequest(
     val customerEmail: String?,
     val description: String,
     val dueDate: LocalDate? = null,
+    val method: String? = null,
+    val vaChannel: String? = null,
 )
 
-/** Hasil charge: referensi & tautan bayar bila penyedia menyediakannya. */
+/**
+ * Hasil charge. [gatewayRef] & [payUrl] tetap ada untuk kompatibilitas (REDIRECT/legacy).
+ * Untuk charge mode-API in-app, [method] menandai instrumen dan salah satu dari [virtualAccount]
+ * / [qr] terisi dengan instruksi bayar yang ditampilkan langsung di aplikasi. [status] adalah
+ * status charge mentah dari penyedia (mis. `WAITING_FOR_USER_ACTION`).
+ */
 @NamedInterface("gateway")
 data class ChargeResult(
     val provider: String,
     val gatewayRef: String?,
     val payUrl: String?,
+    val status: String? = null,
+    val method: String? = null,
+    val virtualAccount: VaInstruction? = null,
+    val qr: QrInstruction? = null,
+)
+
+/** Instruksi Virtual Account untuk ditampilkan in-app: nomor VA + bank + kedaluwarsa. */
+@NamedInterface("gateway")
+data class VaInstruction(
+    val channel: String?,
+    val number: String,
+    val name: String?,
+    val expiresAt: Instant?,
+)
+
+/** Instruksi QRIS untuk ditampilkan in-app: [content] = string QRIS yang dirender jadi kode QR. */
+@NamedInterface("gateway")
+data class QrInstruction(
+    val content: String,
+    val url: String?,
+    val expiresAt: Instant?,
 )
 
 /** Callback mentah dari penyedia — header (untuk verifikasi tanda tangan) + body apa adanya. */

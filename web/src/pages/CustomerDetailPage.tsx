@@ -52,15 +52,23 @@ import {
   type SubscriberAccessView,
 } from '../api/bng'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, Spinner, StatusBadge, useToast } from '../components/ui'
+import { Badge, EmptyState, Modal, Spinner, StatusBadge, useToast } from '../components/ui'
+import { GatewayPayPanel } from '../components/GatewayPayPanel'
 import { OpticalChart } from '../components/OpticalChart'
 import { SubscriberTrafficPanel } from '../components/SubscriberTrafficPanel'
 import { IconAlert, IconCustomers, IconRoute } from '../components/icons'
 import type { SubscriptionView } from '../api/network'
 import { listPlans as listCatalogPlans, SERVICE_TYPE_LABEL, type PlanView, type ServiceType } from '../api/catalog'
-import { listInvoicesForCustomer, refreshPaymentLink, type InvoiceView } from '../api/billing'
+import {
+  getBillingPaymentMethods,
+  listInvoicesForCustomer,
+  refreshPaymentLink,
+  type InvoiceView,
+  type PaymentMethodOption,
+} from '../api/billing'
 import {
   getManualPaymentInstructions,
+  getPaymentGatewaySettings,
   QRIS_IMAGE_PATH,
   type ManualPaymentInstructionsView,
 } from '../api/payment'
@@ -2372,39 +2380,25 @@ function isOutstanding(inv: InvoiceView, today: string): boolean {
  */
 function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub360BillingSummary | null }) {
   const { can } = useCan()
-  const toast = useToast()
   const [invoices, setInvoices] = useState<InvoiceView[] | null>(null)
   // Instruksi bayar manual tenant (bank/QRIS) — ditampilkan untuk tagihan tanpa tautan gateway.
   const [manual, setManual] = useState<ManualPaymentInstructionsView | null>(null)
-  // Tagihan yang sedang disiapkan tautan bayarnya (re-charge lewat penyedia aktif) — cegah dobel-klik.
-  const [paying, setPaying] = useState<string | null>(null)
+  // Penyedia aktif tenant: PIVOT → bayar in-app (VA/QRIS); MANUAL → panel transfer/QRIS statis.
+  const [pivotActive, setPivotActive] = useState(false)
+  const [methods, setMethods] = useState<PaymentMethodOption[]>([])
+  // Tagihan yang panel bayar in-app-nya sedang terbuka.
+  const [paying, setPaying] = useState<InvoiceView | null>(null)
   const canManage = can('billing.invoice.manage')
 
-  /**
-   * Siapkan pembayaran: buat ulang tautan lewat penyedia gateway yang AKTIF sekarang, lalu buka.
-   * Bila operator mengganti penyedia setelah tagihan terbit, ini memastikan pelanggan membayar
-   * lewat penyedia terbaru (bukan tautan penyedia lama yang tersimpan). Tab dibuka SINKRON dulu
-   * agar tak diblokir popup blocker sesudah await.
-   */
-  const handlePay = async (inv: InvoiceView) => {
-    const w = window.open('', '_blank')
-    setPaying(inv.id)
-    try {
-      const updated = await refreshPaymentLink(inv.id)
-      setInvoices((prev) => prev?.map((x) => (x.id === updated.id ? updated : x)) ?? prev)
-      if (updated.payUrl) {
-        if (w) w.location.href = updated.payUrl
-        else window.open(updated.payUrl, '_blank', 'noopener')
-      } else {
-        w?.close()
-        toast.info('Penyedia aktif manual — arahkan pelanggan ke pembayaran transfer/QRIS di bawah.')
-      }
-    } catch (err) {
-      w?.close()
-      toast.error(err instanceof ApiError ? err.message : 'Gagal menyiapkan tautan bayar')
-    } finally {
-      setPaying(null)
-    }
+  // Buka panel bayar in-app (mode API Pivot): operator pilih QRIS/VA lalu tunjukkan instruksi ke
+  // pelanggan — tak lagi redirect ke halaman gateway luar.
+  const handlePay = (inv: InvoiceView) => setPaying(inv)
+
+  // Cek status tagihan (dipakai polling panel) lewat detail tagihan tunggal.
+  const pollInvoiceStatus = async (invoiceId: string): Promise<string | null> => {
+    const list = await listInvoicesForCustomer(customerId)
+    setInvoices(list)
+    return list.find((x) => x.id === invoiceId)?.status ?? null
   }
 
   useEffect(() => {
@@ -2423,6 +2417,13 @@ function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub3
     void getManualPaymentInstructions()
       .then((m) => alive && setManual(m))
       .catch(() => alive && setManual(null))
+    // Penyedia aktif menentukan panel bayar (in-app vs manual).
+    void getPaymentGatewaySettings()
+      .then((s) => alive && setPivotActive(s.provider === 'PIVOT' && s.enabled))
+      .catch(() => alive && setPivotActive(false))
+    void getBillingPaymentMethods()
+      .then((m) => alive && setMethods(m))
+      .catch(() => alive && setMethods([]))
     return () => {
       alive = false
     }
@@ -2509,17 +2510,16 @@ function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub3
                 </td>
                 <td>
                   <Badge tone={INVOICE_TONE[inv.status]}>{INVOICE_LABEL[inv.status]}</Badge>
-                  {/* Tampil untuk tagihan layak bayar (ISSUED/OVERDUE) walau payUrl masih kosong —
-                      re-charge lewat penyedia AKTIF yang membuat/memperbarui tautannya saat diklik. */}
-                  {canManage && (inv.status === 'ISSUED' || inv.status === 'OVERDUE') && (
+                  {/* Bayar in-app hanya bila penyedia aktif PIVOT (mode API VA/QRIS). Provider MANUAL
+                      pakai panel transfer/QRIS statis di bawah. */}
+                  {canManage && pivotActive && (inv.status === 'ISSUED' || inv.status === 'OVERDUE') && (
                     <button
                       type="button"
                       className="ghost"
-                      onClick={() => void handlePay(inv)}
-                      disabled={paying != null}
+                      onClick={() => handlePay(inv)}
                       style={{ marginLeft: '0.5rem', fontSize: '0.8rem' }}
                     >
-                      {paying === inv.id ? 'menyiapkan…' : 'bayar'}
+                      bayar
                     </button>
                   )}
                 </td>
@@ -2529,12 +2529,25 @@ function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub3
         </table>
       </div>
 
-      {/* Cara bayar manual — hanya bila ada tagihan belum lunas tanpa tautan gateway. */}
-      {manual != null &&
+      {/* Cara bayar manual — untuk penyedia MANUAL, saat ada tagihan belum lunas. */}
+      {!pivotActive &&
+        manual != null &&
         (manual.transferEnabled || manual.qrisEnabled) &&
-        invoices.some((inv) => !inv.payUrl && (inv.status === 'ISSUED' || inv.status === 'OVERDUE')) && (
+        invoices.some((inv) => inv.status === 'ISSUED' || inv.status === 'OVERDUE') && (
           <ManualPayPanel manual={manual} />
         )}
+
+      {paying && (
+        <Modal title={`Bayar ${paying.number}`} onClose={() => setPaying(null)}>
+          <GatewayPayPanel
+            subtitle={`${paying.number} · ${fmtRupiah(Number(paying.amount))}`}
+            methods={methods}
+            createCharge={(method, channel) => refreshPaymentLink(paying.id, method, channel)}
+            pollStatus={() => pollInvoiceStatus(paying.id)}
+            onClose={() => setPaying(null)}
+          />
+        </Modal>
+      )}
     </div>
   )
 }

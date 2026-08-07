@@ -31,6 +31,17 @@ interface BillingApi {
     /** Riwayat pembayaran seorang pelanggan, terbaru dulu — untuk portal self-service. */
     fun findCustomerPayments(customerId: UUID): List<CustomerPaymentRef>
 
+    /** Metode bayar in-app yang tersedia (QRIS + Virtual Account) — untuk portal self-service. */
+    fun paymentMethods(): List<PaymentMethodOption>
+
+    /**
+     * Buat charge in-app (VA/QRIS) untuk satu tagihan milik [customerId] dengan instrumen [method]
+     * (`VIRTUAL_ACCOUNT`/`QR`) + [channel] bank (wajib untuk VA), lalu kembalikan tagihan berisi
+     * instruksi bayar. Untuk portal self-service: pelanggan hanya bisa membayar tagihannya sendiri
+     * (dibatasi [customerId]). NotFound bila tagihan bukan miliknya; Validation bila tak dapat dibayar.
+     */
+    fun payCustomerInvoice(customerId: UUID, invoiceId: UUID, method: String, channel: String?): CustomerInvoiceRef
+
     /**
      * Laporan keuangan TENANT untuk rentang [from]..[to] (inklusif) — dipakai modul
      * `reporting` menyusun laporan lintas-domain. Billing tetap satu-satunya yang
@@ -87,6 +98,16 @@ data class CustomerInvoiceRef(
     val paidAt: Instant?,
     val gatewayProvider: String?,
     val payUrl: String?,
+    /** Instrumen bayar in-app terpilih (VIRTUAL_ACCOUNT/QR) & instruksinya; null bila belum pilih. */
+    val payMethod: String? = null,
+    val vaChannel: String? = null,
+    val vaNumber: String? = null,
+    val vaName: String? = null,
+    val vaExpiresAt: Instant? = null,
+    /** String QRIS mentah (dirender jadi kode QR di klien). */
+    val qrContent: String? = null,
+    val qrUrl: String? = null,
+    val qrExpiresAt: Instant? = null,
 )
 
 /** Proyeksi satu pembayaran untuk pelanggan (portal self-service). */

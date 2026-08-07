@@ -6,8 +6,12 @@ import com.duluin.ftth.billing.BillingFinancialReport
 import com.duluin.ftth.billing.CustomerInvoiceRef
 import com.duluin.ftth.billing.CustomerPaymentRef
 import com.duluin.ftth.billing.MonthlyRevenuePoint
+import com.duluin.ftth.billing.PaymentMethodCatalog
+import com.duluin.ftth.billing.PaymentMethodOption
 import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
 import com.duluin.ftth.billing.application.port.outbound.PaymentRepository
+import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
 import org.springframework.stereotype.Service
@@ -31,24 +35,53 @@ import java.util.UUID
 class BillingApiService(
     private val invoiceRepository: InvoiceRepository,
     private val paymentRepository: PaymentRepository,
+    private val invoiceCharger: InvoiceChargePort,
 ) : BillingApi {
 
     override fun findCustomerInvoices(customerId: UUID): List<CustomerInvoiceRef> =
-        invoiceRepository.findByCustomerId(customerId).map { inv ->
-            CustomerInvoiceRef(
-                id = inv.id,
-                number = inv.number,
-                periodStart = inv.periodStart,
-                periodEnd = inv.periodEnd,
-                amount = inv.amount,
-                status = inv.status.name,
-                issuedAt = inv.issuedAt,
-                dueDate = inv.dueDate,
-                paidAt = inv.paidAt,
-                gatewayProvider = inv.gatewayProvider,
-                payUrl = inv.payUrl,
-            )
+        invoiceRepository.findByCustomerId(customerId).map { it.toRef() }
+
+    override fun paymentMethods(): List<PaymentMethodOption> = PaymentMethodCatalog.methods
+
+    @Transactional
+    override fun payCustomerInvoice(
+        customerId: UUID,
+        invoiceId: UUID,
+        method: String,
+        channel: String?,
+    ): CustomerInvoiceRef {
+        // Batasi ke tagihan milik pelanggan ini — pelanggan portal tak boleh membayar tagihan orang lain.
+        val invoice = invoiceRepository.findById(invoiceId)
+            ?.takeIf { it.customerId == customerId }
+            ?: throw NotFoundException("Tagihan tidak ditemukan")
+        if (invoice.status != InvoiceStatus.ISSUED && invoice.status != InvoiceStatus.OVERDUE) {
+            throw ValidationException("Tagihan ini tidak dapat dibayar (status ${invoice.status}).")
         }
+        invoiceCharger.chargeWithMethod(invoice, method, channel)
+        return invoiceRepository.save(invoice).toRef()
+    }
+
+    private fun Invoice.toRef() = CustomerInvoiceRef(
+        id = id,
+        number = number,
+        periodStart = periodStart,
+        periodEnd = periodEnd,
+        amount = amount,
+        status = status.name,
+        issuedAt = issuedAt,
+        dueDate = dueDate,
+        paidAt = paidAt,
+        gatewayProvider = gatewayProvider,
+        payUrl = payUrl,
+        payMethod = payMethod,
+        vaChannel = vaChannel,
+        vaNumber = vaNumber,
+        vaName = vaName,
+        vaExpiresAt = vaExpiresAt,
+        qrContent = qrContent,
+        qrUrl = qrUrl,
+        qrExpiresAt = qrExpiresAt,
+    )
 
     override fun findCustomerPayments(customerId: UUID): List<CustomerPaymentRef> =
         paymentRepository.findByCustomerId(customerId).map { pay ->

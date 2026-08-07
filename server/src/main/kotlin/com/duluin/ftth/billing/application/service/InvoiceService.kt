@@ -55,17 +55,16 @@ class InvoiceService(
         return saved.toView()
     }
 
-    override fun refreshPaymentLink(id: UUID): InvoiceView {
+    override fun chargeInvoice(id: UUID, method: String, channel: String?): InvoiceView {
         val invoice = require(id)
         if (invoice.status == InvoiceStatus.PAID || invoice.status == InvoiceStatus.VOID) {
             throw ConflictException("Tagihan berstatus ${invoice.status} tidak bisa dibuatkan tautan bayar")
         }
-        val changed = invoiceGenerator.refreshCharge(invoice)
-        if (!changed) return invoice.toView()
+        invoiceGenerator.chargeWithMethod(invoice, method, channel)
         val saved = invoiceRepository.save(invoice)
         auditor.record(
             "billing.invoice.recharged", "Invoice", saved.id, saved.tenantId,
-            mapOf("number" to saved.number, "provider" to (saved.gatewayProvider ?: "-")),
+            mapOf("number" to saved.number, "provider" to (saved.gatewayProvider ?: "-"), "method" to (saved.payMethod ?: "-")),
         )
         return saved.toView()
     }
@@ -93,6 +92,14 @@ internal fun Invoice.toView() = InvoiceView(
     paidAt = paidAt,
     gatewayProvider = gatewayProvider,
     payUrl = payUrl,
+    payMethod = payMethod,
+    vaChannel = vaChannel,
+    vaNumber = vaNumber,
+    vaName = vaName,
+    vaExpiresAt = vaExpiresAt,
+    qrContent = qrContent,
+    qrUrl = qrUrl,
+    qrExpiresAt = qrExpiresAt,
 )
 
 internal fun Payment.toView() = PaymentView(

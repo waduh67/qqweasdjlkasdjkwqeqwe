@@ -57,4 +57,29 @@ class TenantSubscriptionInvoiceJpaEntity(
 
     @Column(name = "pay_url", length = 1024)
     var payUrl: String?,
+
+    /** Instrumen bayar in-app terpilih (VIRTUAL_ACCOUNT/QR); null bila belum dipilih/charge REDIRECT. */
+    @Column(name = "pay_method", length = 20)
+    var payMethod: String?,
+
+    @Column(name = "va_channel", length = 20)
+    var vaChannel: String?,
+
+    @Column(name = "va_number", length = 64)
+    var vaNumber: String?,
+
+    @Column(name = "va_name", length = 100)
+    var vaName: String?,
+
+    @Column(name = "va_expires_at")
+    var vaExpiresAt: Instant?,
+
+    @Column(name = "qr_content", columnDefinition = "text")
+    var qrContent: String?,
+
+    @Column(name = "qr_url", length = 1024)
+    var qrUrl: String?,
+
+    @Column(name = "qr_expires_at")
+    var qrExpiresAt: Instant?,
 ) : BaseJpaEntity(id)
