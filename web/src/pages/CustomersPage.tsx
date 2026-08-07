@@ -392,22 +392,10 @@ export function CustomersPage() {
       >
         {draft && (
           <div className="stack">
-            <div className="row">
-              <label style={{ flex: 1 }}>
-                <span>Kode</span>
-                <input
-                  value={draft.code}
-                  onChange={(e) => setDraft({ ...draft, code: e.target.value })}
-                  placeholder="Otomatis: CUST-000001"
-                  disabled={draft.id != null}
-                  title={draft.id ? 'Kode pelanggan tidak dapat diubah' : undefined}
-                />
-              </label>
-              <label style={{ flex: 2 }}>
-                <span>Nama</span>
-                <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} autoFocus />
-              </label>
-            </div>
+            <label>
+              <span>Nama</span>
+              <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} autoFocus />
+            </label>
             <div className="row">
               <label style={{ flex: 1 }}>
                 <span>Telepon</span>
