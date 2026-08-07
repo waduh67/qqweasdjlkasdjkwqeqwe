@@ -23,11 +23,12 @@ interface TenantSelfSubscriptionUseCase {
     fun renew(months: Int = 1): SubscriptionInvoiceView
 
     /**
-     * Siapkan tautan bayar untuk satu tagihan tertunggak milik tenant berjalan (charge ulang bila
-     * tautannya belum sempat terbit), lalu kembalikan tagihannya. NotFound bila tagihan bukan milik
-     * tenant ini; Validation bila tagihan sudah lunas/void (tak dapat dibayar).
+     * Buat charge in-app (VA/QRIS) untuk satu tagihan tertunggak milik tenant berjalan dengan
+     * instrumen [method] (`VIRTUAL_ACCOUNT`/`QR`) + [channel] bank (wajib untuk VA), lalu kembalikan
+     * tagihan berisi instruksi bayar. NotFound bila tagihan bukan milik tenant ini; Validation bila
+     * tagihan sudah lunas/void (tak dapat dibayar) atau metode/channel tak didukung.
      */
-    fun payInvoice(invoiceId: UUID): SubscriptionInvoiceView
+    fun payInvoice(invoiceId: UUID, method: String, channel: String?): SubscriptionInvoiceView
 }
 
 /** Pandangan langganan sisi tenant + pemakaian kosmetik. */

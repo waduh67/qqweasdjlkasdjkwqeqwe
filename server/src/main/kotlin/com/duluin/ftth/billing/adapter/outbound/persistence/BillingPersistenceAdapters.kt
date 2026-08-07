@@ -25,6 +25,14 @@ class InvoicePersistenceAdapter(
             gatewayProvider = invoice.gatewayProvider
             gatewayRef = invoice.gatewayRef
             payUrl = invoice.payUrl
+            payMethod = invoice.payMethod
+            vaChannel = invoice.vaChannel
+            vaNumber = invoice.vaNumber
+            vaName = invoice.vaName
+            vaExpiresAt = invoice.vaExpiresAt
+            qrContent = invoice.qrContent
+            qrUrl = invoice.qrUrl
+            qrExpiresAt = invoice.qrExpiresAt
             dueSoonReminded = invoice.dueSoonReminded
         } ?: InvoiceJpaEntity(
             id = invoice.id,
@@ -45,6 +53,14 @@ class InvoicePersistenceAdapter(
             gatewayProvider = invoice.gatewayProvider,
             gatewayRef = invoice.gatewayRef,
             payUrl = invoice.payUrl,
+            payMethod = invoice.payMethod,
+            vaChannel = invoice.vaChannel,
+            vaNumber = invoice.vaNumber,
+            vaName = invoice.vaName,
+            vaExpiresAt = invoice.vaExpiresAt,
+            qrContent = invoice.qrContent,
+            qrUrl = invoice.qrUrl,
+            qrExpiresAt = invoice.qrExpiresAt,
             dueSoonReminded = invoice.dueSoonReminded,
         )
         return jpa.save(entity).toDomain()
@@ -137,6 +153,14 @@ internal fun InvoiceJpaEntity.toDomain(): Invoice = Invoice.rehydrate(
     gatewayProvider = gatewayProvider,
     gatewayRef = gatewayRef,
     payUrl = payUrl,
+    payMethod = payMethod,
+    vaChannel = vaChannel,
+    vaNumber = vaNumber,
+    vaName = vaName,
+    vaExpiresAt = vaExpiresAt,
+    qrContent = qrContent,
+    qrUrl = qrUrl,
+    qrExpiresAt = qrExpiresAt,
     dueSoonReminded = dueSoonReminded,
 )
 

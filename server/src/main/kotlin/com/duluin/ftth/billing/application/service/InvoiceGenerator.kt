@@ -1,10 +1,12 @@
 package com.duluin.ftth.billing.application.service
 
+import com.duluin.ftth.billing.PaymentMethodCatalog
 import com.duluin.ftth.billing.application.port.outbound.ChargeRequest
 import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
 import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.Proration
+import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.customer.BillableSubscription
 import com.duluin.ftth.customer.CustomerApi
@@ -14,6 +16,16 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
+
+/**
+ * Kontrak sempit "buat charge in-app untuk sebuah tagihan", dipisah agar konsumen yang hanya
+ * butuh mem-*charge* (mis. [BillingApiService] untuk portal) tak perlu menyeret seluruh
+ * kolaborator [InvoiceGenerator]. Diimplementasikan oleh [InvoiceGenerator].
+ */
+interface InvoiceChargePort {
+    /** Lihat [InvoiceGenerator.chargeWithMethod]. Mutasi [invoice] di tempat; pemanggil menyimpan. */
+    fun chargeWithMethod(invoice: Invoice, method: String, channel: String?)
+}
 
 /**
  * Mesin penerbitan tagihan periode berjalan, dipakai bersama oleh trigger manual
@@ -34,7 +46,7 @@ class InvoiceGenerator(
     private val taxResolver: BillingTaxSettingsResolver,
     private val auditor: AuditRecorder,
     private val properties: BillingProperties,
-) {
+) : InvoiceChargePort {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -58,14 +70,7 @@ class InvoiceGenerator(
         }
         if (billable.isEmpty()) return 0
 
-        val customers = customerApi.findCustomersByIds(billable.mapTo(HashSet()) { it.customerId })
-            .associateBy { it.id }
-        // Gateway di-resolve SEKALI per ronde (kredensial + mode tenant aktif); adapter dipilih
-        // dari provider resolver — sumber kebenaran, bukan config global lama.
-        val ctx = gatewayResolver.resolve()
-        val gateway = gatewayRegistry.forProvider(ctx.provider)
-            ?: error("Adapter gateway '${ctx.provider}' tidak tersedia")
-        // Setelan pajak di-resolve SEKALI per ronde (sama seperti gateway): PPN menjadi tarif
+        // Setelan pajak di-resolve SEKALI per ronde: PPN menjadi tarif
         // yang sama untuk semua tagihan periode ini. Nonaktif → null (tagihan tanpa PPN).
         val taxRate = taxResolver.resolve().effectivePpnRate()
         val base = invoiceRepository.countForPeriod(periodStart)
@@ -92,58 +97,36 @@ class InvoiceGenerator(
                 prorated = proration != null,
                 proratedDays = proration?.days,
             )
-            val chargeDescription = if (proration != null) {
-                "Tagihan ${sub.packageName} periode $yyyyMM (prorata ${proration.days} hari)"
-            } else {
-                "Tagihan ${sub.packageName} periode $yyyyMM"
-            }
-            // Satu charge gagal (gateway tenant salah setel / penyedia kerangka) tak boleh
-            // membatalkan seluruh ronde — log lalu lanjut ke langganan berikutnya.
-            runCatching {
-                val charge = gateway.createCharge(
-                    ChargeRequest(
-                        invoiceNumber = number,
-                        amount = invoice.amount,
-                        customerName = customers[sub.customerId]?.name ?: sub.packageName,
-                        // Pivot mewajibkan email pelanggan bila gateway aktif; null bila pelanggan
-                        // tak punya email → charge fail-soft (tagihan tetap terbit, tanpa tautan).
-                        customerEmail = customers[sub.customerId]?.email,
-                        description = chargeDescription,
-                        dueDate = invoice.dueDate,
-                    ),
-                    ctx,
-                )
-                invoice.attachCharge(charge.provider, charge.gatewayRef, charge.payUrl)
-                val saved = invoiceRepository.save(invoice)
-                auditor.record(
-                    "billing.invoice.issued", "Invoice", saved.id, saved.tenantId,
-                    mapOf("number" to saved.number, "amount" to saved.amount),
-                )
-                issued++
-            }.onFailure { e ->
-                log.warn("Gagal membuat charge {} lewat gateway {}: {}", number, ctx.provider, e.message)
-            }
+            // Charge TIDAK dibuat saat terbit: instrumen bayar (VA/QRIS) dipilih pelanggan nanti
+            // lewat "Bayar" → [chargeWithMethod]. Penerbitan cukup menyimpan tagihannya.
+            val saved = invoiceRepository.save(invoice)
+            auditor.record(
+                "billing.invoice.issued", "Invoice", saved.id, saved.tenantId,
+                mapOf("number" to saved.number, "amount" to saved.amount),
+            )
+            issued++
         }
         return issued
     }
 
     /**
-     * Buat ulang charge sebuah [invoice] lewat penyedia gateway yang **aktif sekarang**
-     * (bukan penyedia saat tagihan terbit). Dipakai saat pelanggan hendak membayar sebuah
-     * tagihan lama yang tautannya dibuat penyedia lama, setelah operator mengganti penyedia.
+     * Buat charge in-app (mode API Pivot) untuk [invoice] dengan instrumen [method]
+     * (`VIRTUAL_ACCOUNT`/`QR`) + [channel] bank (wajib untuk VA), lalu lekatkan instruksi bayar
+     * (nomor VA / string QRIS) ke tagihan lewat [Invoice.attachInstruction]. Dipakai saat pelanggan
+     * menekan "Bayar" dan memilih metode. Mengganti metode (VA↔QRIS) membuat charge baru yang
+     * menimpa instruksi lama. Pemanggil wajib menyimpan tagihan.
      *
-     * Mengembalikan `true` bila tautan bayar berganti (charge baru dilekatkan; pemanggil
-     * wajib menyimpan), `false` bila tak ada yang berubah:
-     * - penyedia aktif MANUAL → tak ada tautan gateway (pelanggan bayar transfer/QRIS), atau
-     * - penyedia aktif sama dengan penyedia tagihan dan tautan sudah ada (idempoten).
-     *
-     * Berbeda dari [generateFor], kegagalan charge di sini **dilempar** ke pemanggil (aksi
-     * satu-tagihan yang dipicu pengguna, bukan ronde massal) agar kesalahan setelan terlihat.
+     * Charge memakai penyedia gateway yang **aktif sekarang**. Penyedia MANUAL ditolak (tak ada
+     * instruksi in-app — pelanggan bayar transfer/tunai lewat panel manual). Kegagalan charge
+     * **dilempar** ke pemanggil (aksi dipicu pengguna) agar kesalahan setelan terlihat.
      */
-    fun refreshCharge(invoice: Invoice): Boolean {
+    override fun chargeWithMethod(invoice: Invoice, method: String, channel: String?) {
+        PaymentMethodCatalog.validate(method, channel)
+        val (normMethod, normChannel) = PaymentMethodCatalog.normalize(method, channel)
         val ctx = gatewayResolver.resolve()
-        if (ctx.provider.equals("MANUAL", ignoreCase = true)) return false
-        if (invoice.payUrl != null && invoice.gatewayProvider.equals(ctx.provider, ignoreCase = true)) return false
+        if (ctx.provider.equals("MANUAL", ignoreCase = true)) {
+            throw ConflictException("Gateway aktif MANUAL tidak mendukung pembayaran in-app")
+        }
         val gateway = gatewayRegistry.forProvider(ctx.provider)
             ?: error("Adapter gateway '${ctx.provider}' tidak tersedia")
         val customer = customerApi.findCustomer(invoice.customerId)
@@ -155,11 +138,23 @@ class InvoiceGenerator(
                 customerEmail = customer?.email,
                 description = "Tagihan ${invoice.number}",
                 dueDate = invoice.dueDate,
+                method = normMethod,
+                vaChannel = normChannel,
             ),
             ctx,
         )
-        invoice.attachCharge(charge.provider, charge.gatewayRef, charge.payUrl)
-        return true
+        invoice.attachInstruction(
+            provider = charge.provider,
+            gatewayRef = charge.gatewayRef,
+            method = charge.method ?: normMethod,
+            vaChannel = charge.virtualAccount?.channel ?: normChannel,
+            vaNumber = charge.virtualAccount?.number,
+            vaName = charge.virtualAccount?.name,
+            vaExpiresAt = charge.virtualAccount?.expiresAt,
+            qrContent = charge.qr?.content,
+            qrUrl = charge.qr?.url,
+            qrExpiresAt = charge.qr?.expiresAt,
+        )
     }
 
     /**

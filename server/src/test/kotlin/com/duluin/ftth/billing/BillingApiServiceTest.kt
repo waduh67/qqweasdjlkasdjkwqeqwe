@@ -3,6 +3,7 @@ package com.duluin.ftth.billing
 import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
 import com.duluin.ftth.billing.application.port.outbound.PaymentRepository
 import com.duluin.ftth.billing.application.service.BillingApiService
+import com.duluin.ftth.billing.application.service.InvoiceChargePort
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
 import com.duluin.ftth.billing.domain.model.Payment
@@ -130,8 +131,9 @@ class BillingApiServiceTest {
 
     // --- Perkakas uji ---
 
-    /** Ringkasan rekening tak menyentuh pembayaran; fake payment repo kosong sudah cukup. */
-    private fun billing(invoices: InvoiceRepository) = BillingApiService(invoices, FakePaymentRepository())
+    /** Ringkasan rekening tak menyentuh pembayaran/charge; fake payment repo & charger no-op cukup. */
+    private fun billing(invoices: InvoiceRepository) =
+        BillingApiService(invoices, FakePaymentRepository(), NoopCharger)
 
     private fun paidOn(amount: String, paidAt: String): Invoice =
         paid(amount = amount, dueDate = minusDays(1), paidAt = Instant.parse(paidAt))
@@ -182,6 +184,12 @@ class BillingApiServiceTest {
         override fun findBillableOverdue(asOf: LocalDate) = throw UnsupportedOperationException()
         override fun findRemindableDueSoon(from: LocalDate, to: LocalDate) = throw UnsupportedOperationException()
         override fun hasOverdueForSubscription(subscriptionId: UUID) = throw UnsupportedOperationException()
+    }
+
+    /** Charger no-op: uji ringkasan/laporan tak pernah membuat charge. */
+    private object NoopCharger : InvoiceChargePort {
+        override fun chargeWithMethod(invoice: Invoice, method: String, channel: String?) =
+            throw UnsupportedOperationException()
     }
 
     private class FakePaymentRepository(private val payments: List<Payment> = emptyList()) : PaymentRepository {

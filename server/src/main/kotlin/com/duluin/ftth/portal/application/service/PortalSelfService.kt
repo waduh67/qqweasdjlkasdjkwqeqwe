@@ -1,6 +1,7 @@
 package com.duluin.ftth.portal.application.service
 
 import com.duluin.ftth.billing.BillingApi
+import com.duluin.ftth.billing.CustomerInvoiceRef
 import com.duluin.ftth.bng.BngApi
 import com.duluin.ftth.catalog.CatalogApi
 import com.duluin.ftth.common.domain.error.NotFoundException
@@ -11,8 +12,10 @@ import com.duluin.ftth.portal.application.port.inbound.PortalBillingView
 import com.duluin.ftth.portal.application.port.inbound.PortalConnectionView
 import com.duluin.ftth.portal.application.port.inbound.PortalDeviceView
 import com.duluin.ftth.portal.application.port.inbound.PortalInvoiceView
+import com.duluin.ftth.portal.application.port.inbound.PortalPaymentMethodView
 import com.duluin.ftth.portal.application.port.inbound.PortalPaymentView
 import com.duluin.ftth.portal.application.port.inbound.PortalSelfServiceUseCase
+import com.duluin.ftth.portal.application.port.inbound.PortalVaChannelView
 import com.duluin.ftth.portal.application.port.inbound.PortalSessionView
 import com.duluin.ftth.portal.application.port.inbound.PortalSubscriptionView
 import org.springframework.stereotype.Service
@@ -69,23 +72,7 @@ class PortalSelfService(
 
     override fun billing(customerId: UUID): PortalBillingView {
         val summary = billingApi.findAccountSummary(customerId)
-        val invoices = billingApi.findCustomerInvoices(customerId).map { inv ->
-            // Terbuka = ISSUED/OVERDUE → boleh tampilkan tombol bayar bila ada tautan hosted.
-            val open = inv.status == "ISSUED" || inv.status == "OVERDUE"
-            PortalInvoiceView(
-                id = inv.id,
-                number = inv.number,
-                periodStart = inv.periodStart,
-                periodEnd = inv.periodEnd,
-                amount = inv.amount,
-                status = inv.status,
-                issuedAt = inv.issuedAt,
-                dueDate = inv.dueDate,
-                paidAt = inv.paidAt,
-                payable = open && inv.payUrl != null,
-                payUrl = if (open) inv.payUrl else null,
-            )
-        }
+        val invoices = billingApi.findCustomerInvoices(customerId).map { it.toPortalView() }
         val payments = billingApi.findCustomerPayments(customerId).map { pay ->
             PortalPaymentView(
                 id = pay.id,
@@ -106,6 +93,24 @@ class PortalSelfService(
             payments = payments,
         )
     }
+
+    override fun paymentMethods(customerId: UUID): List<PortalPaymentMethodView> =
+        billingApi.paymentMethods().map { m ->
+            PortalPaymentMethodView(
+                type = m.type,
+                label = m.label,
+                channels = m.channels.map { PortalVaChannelView(it.code, it.label) },
+            )
+        }
+
+    @Transactional
+    override fun payInvoice(
+        customerId: UUID,
+        invoiceId: UUID,
+        method: String,
+        channel: String?,
+    ): PortalInvoiceView =
+        billingApi.payCustomerInvoice(customerId, invoiceId, method, channel).toPortalView()
 
     override fun connection(customerId: UUID): PortalConnectionView {
         val session = bngApi.findSubscriberSession(customerId)?.let {
@@ -134,5 +139,35 @@ class PortalSelfService(
             )
         }
         return PortalConnectionView(session, devices)
+    }
+
+    /**
+     * Petakan referensi tagihan billing → pandangan portal. [PortalInvoiceView.payable] = tagihan
+     * masih terbuka (ISSUED/OVERDUE); pelanggan memilih instrumen (VA/QRIS) lewat "Bayar" yang
+     * lalu memanggil [payInvoice]. Instruksi bayar tersimpan diteruskan agar panel bisa dirender ulang.
+     */
+    private fun CustomerInvoiceRef.toPortalView(): PortalInvoiceView {
+        val open = status == "ISSUED" || status == "OVERDUE"
+        return PortalInvoiceView(
+            id = id,
+            number = number,
+            periodStart = periodStart,
+            periodEnd = periodEnd,
+            amount = amount,
+            status = status,
+            issuedAt = issuedAt,
+            dueDate = dueDate,
+            paidAt = paidAt,
+            payable = open,
+            payUrl = if (open) payUrl else null,
+            payMethod = payMethod,
+            vaChannel = vaChannel,
+            vaNumber = vaNumber,
+            vaName = vaName,
+            vaExpiresAt = vaExpiresAt,
+            qrContent = qrContent,
+            qrUrl = qrUrl,
+            qrExpiresAt = qrExpiresAt,
+        )
     }
 }

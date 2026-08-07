@@ -46,11 +46,10 @@ class TenantSelfSubscriptionService(
         if (subscription.isCancelled) {
             throw ValidationException("Langganan dibatalkan — hubungi admin platform")
         }
-        // Bila sudah ada tagihan tertunggak, lanjutkan bayar yang itu (hindari terbit ganda) —
-        // pastikan punya tautan bayar: charge ulang bila tagihan lama terbit tanpa payUrl (mis.
-        // charge gateway sempat gagal saat terbit) agar tenant benar-benar bisa membayar.
+        // Bila sudah ada tagihan tertunggak, kembalikan yang itu (hindari terbit ganda). Charge
+        // TIDAK dibuat di sini — instrumen bayar (VA/QRIS) dipilih tenant lewat "Bayar" → payInvoice.
         invoiceRepository.findOutstandingBySubscriptionId(subscription.id).firstOrNull()?.let {
-            return invoiceGenerator.ensurePayable(it, subscription).toView()
+            return it.toView()
         }
         val invoice = invoiceGenerator.issueFor(subscription, LocalDate.now(), force = true, months = months)
             ?: throw ValidationException(
@@ -60,7 +59,7 @@ class TenantSelfSubscriptionService(
     }
 
     @Transactional
-    override fun payInvoice(invoiceId: UUID): SubscriptionInvoiceView {
+    override fun payInvoice(invoiceId: UUID, method: String, channel: String?): SubscriptionInvoiceView {
         val subscription = subscriptionRepository.findByTenantId(TenantContext.tenantId())
             ?: throw NotFoundException("Tenant belum berlangganan")
         // Batasi ke tagihan milik langganan tenant ini — tenant tak boleh membayar tagihan tenant lain.
@@ -70,8 +69,7 @@ class TenantSelfSubscriptionService(
         if (!invoice.isOutstanding) {
             throw ValidationException("Tagihan ini tidak dapat dibayar (status ${invoice.status}).")
         }
-        // Charge ulang bila belum ada tautan (mis. gateway sempat gagal saat terbit); idempoten.
-        return invoiceGenerator.ensurePayable(invoice, subscription).toView()
+        return invoiceGenerator.chargeWithMethod(invoice, subscription, method, channel).toView()
     }
 
     private fun TenantSubscription.toSelfView(): TenantSelfSubscriptionView {
@@ -109,5 +107,13 @@ class TenantSelfSubscriptionService(
         paidAt = paidAt,
         gatewayProvider = gatewayProvider,
         payUrl = payUrl,
+        payMethod = payMethod,
+        vaChannel = vaChannel,
+        vaNumber = vaNumber,
+        vaName = vaName,
+        vaExpiresAt = vaExpiresAt,
+        qrContent = qrContent,
+        qrUrl = qrUrl,
+        qrExpiresAt = qrExpiresAt,
     )
 }

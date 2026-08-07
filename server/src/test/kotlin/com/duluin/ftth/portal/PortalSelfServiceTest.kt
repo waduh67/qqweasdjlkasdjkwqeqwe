@@ -94,8 +94,8 @@ class PortalSelfServiceTest {
             billing = FakeBillingApi(
                 summary = summary(outstanding = "175000"),
                 invoices = listOf(
-                    invoice(status = "ISSUED", payUrl = "https://pay/1"),   // terbuka + tautan → payable
-                    invoice(status = "OVERDUE", payUrl = null),             // terbuka tanpa tautan → tak payable
+                    invoice(status = "ISSUED", payUrl = "https://pay/1"),   // terbuka → payable (metode dipilih di app)
+                    invoice(status = "OVERDUE", payUrl = null),             // terbuka tanpa tautan → tetap payable
                     invoice(status = "PAID", payUrl = "https://pay/3"),     // lunas → sembunyikan tautan
                 ),
                 payments = listOf(payment(amount = "100000")),
@@ -106,9 +106,10 @@ class PortalSelfServiceTest {
 
         assertThat(view.outstandingAmount).isEqualByComparingTo("175000")
         val (issued, overdue, paid) = view.invoices
+        // Charge on-demand: tagihan terbuka payable tanpa syarat tautan; instrumen dipilih lewat "Bayar".
         assertThat(issued.payable).isTrue()
         assertThat(issued.payUrl).isEqualTo("https://pay/1")
-        assertThat(overdue.payable).isFalse()
+        assertThat(overdue.payable).isTrue()
         assertThat(overdue.payUrl).isNull()
         assertThat(paid.payable).isFalse()
         assertThat(paid.payUrl).isNull() // tautan disembunyikan untuk tagihan lunas
@@ -217,6 +218,9 @@ class PortalSelfServiceTest {
         override fun findAccountSummary(customerId: UUID) = summary
         override fun findCustomerInvoices(customerId: UUID) = invoices
         override fun findCustomerPayments(customerId: UUID) = payments
+        override fun paymentMethods() = com.duluin.ftth.billing.PaymentMethodCatalog.methods
+        override fun payCustomerInvoice(customerId: UUID, invoiceId: UUID, method: String, channel: String?) =
+            throw UnsupportedOperationException()
         override fun financialReport(from: LocalDate, to: LocalDate) = throw UnsupportedOperationException()
         override fun monthlyRevenue(fromMonth: java.time.YearMonth, toMonth: java.time.YearMonth) =
             throw UnsupportedOperationException()

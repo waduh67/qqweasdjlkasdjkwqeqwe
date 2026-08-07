@@ -5,11 +5,16 @@ import {
   changePortalPassword,
   getPortalBilling,
   getPortalConnection,
+  getPortalPaymentMethods,
   getPortalProfile,
+  payPortalInvoice,
   type PortalAccount,
   type PortalBilling,
   type PortalConnection,
+  type PortalInvoice,
+  type PortalPaymentMethodOption,
 } from './portalApi'
+import { GatewayPayPanel } from '../components/GatewayPayPanel'
 
 type Tab = 'ringkasan' | 'tagihan' | 'koneksi' | 'profil'
 
@@ -51,9 +56,11 @@ export function PortalDashboard() {
   const [billing, setBilling] = useState<PortalBilling | null>(null)
   const [connection, setConnection] = useState<PortalConnection | null>(null)
 
+  const reloadBilling = () => getPortalBilling().then(setBilling).catch(() => setBilling(null))
+
   useEffect(() => {
     void getPortalProfile().then(setProfile).catch(() => setProfile(null))
-    void getPortalBilling().then(setBilling).catch(() => setBilling(null))
+    void reloadBilling()
     void getPortalConnection().then(setConnection).catch(() => setConnection(null))
   }, [])
 
@@ -77,7 +84,7 @@ export function PortalDashboard() {
       </div>
 
       {tab === 'ringkasan' && <RingkasanTab billing={billing} connection={connection} onPay={() => setTab('tagihan')} />}
-      {tab === 'tagihan' && <TagihanTab billing={billing} />}
+      {tab === 'tagihan' && <TagihanTab billing={billing} onReload={reloadBilling} />}
       {tab === 'koneksi' && <KoneksiTab connection={connection} />}
       {tab === 'profil' && <ProfilTab profile={profile} />}
     </div>
@@ -129,7 +136,21 @@ function RingkasanTab({
   )
 }
 
-function TagihanTab({ billing }: { billing: PortalBilling | null }) {
+function TagihanTab({ billing, onReload }: { billing: PortalBilling | null; onReload: () => Promise<unknown> }) {
+  // Metode bayar in-app (QRIS/VA) & tagihan yang panel bayarnya sedang terbuka.
+  const [methods, setMethods] = useState<PortalPaymentMethodOption[]>([])
+  const [paying, setPaying] = useState<PortalInvoice | null>(null)
+
+  useEffect(() => {
+    void getPortalPaymentMethods().then(setMethods).catch(() => setMethods([]))
+  }, [])
+
+  // Cek status tagihan (dipakai polling panel): ambil ulang tagihan lalu cari status-nya.
+  const pollStatus = async (invoiceId: string): Promise<string | null> => {
+    const fresh = await getPortalBilling().catch(() => null)
+    return fresh?.invoices.find((i) => i.id === invoiceId)?.status ?? null
+  }
+
   if (!billing) return <Loading />
   return (
     <div className="stack" style={{ gap: '1rem' }}>
@@ -139,22 +160,39 @@ function TagihanTab({ billing }: { billing: PortalBilling | null }) {
           <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada tagihan.</p>
         ) : (
           billing.invoices.map((inv) => (
-            <div key={inv.id} className="spread" style={{ alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-                <span style={{ fontWeight: 600 }}>{inv.number}</span>
-                <span className="muted" style={{ fontSize: '0.8rem' }}>
-                  {fmtDate(inv.periodStart)}–{fmtDate(inv.periodEnd)} · jatuh tempo {fmtDate(inv.dueDate)}
-                </span>
+            <div key={inv.id} className="stack" style={{ gap: '0.6rem' }}>
+              <div className="spread" style={{ alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <div className="stack" style={{ gap: 2, minWidth: 0 }}>
+                  <span style={{ fontWeight: 600 }}>{inv.number}</span>
+                  <span className="muted" style={{ fontSize: '0.8rem' }}>
+                    {fmtDate(inv.periodStart)}–{fmtDate(inv.periodEnd)} · jatuh tempo {fmtDate(inv.dueDate)}
+                  </span>
+                </div>
+                <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
+                  <span className="tnum" style={{ fontWeight: 700 }}>{rupiah(inv.amount)}</span>
+                  <span className="badge" style={{ color: INVOICE_TONE[inv.status] ?? undefined }}>{inv.status}</span>
+                  {inv.payable && (
+                    <button
+                      className={paying?.id === inv.id ? 'ghost' : 'primary'}
+                      onClick={() => setPaying(paying?.id === inv.id ? null : inv)}
+                    >
+                      {paying?.id === inv.id ? 'Tutup' : 'Bayar'}
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
-                <span className="tnum" style={{ fontWeight: 700 }}>{rupiah(inv.amount)}</span>
-                <span className="badge" style={{ color: INVOICE_TONE[inv.status] ?? undefined }}>{inv.status}</span>
-                {inv.payable && inv.payUrl && (
-                  <a className="button primary" href={inv.payUrl} target="_blank" rel="noreferrer">
-                    Bayar
-                  </a>
-                )}
-              </div>
+              {paying?.id === inv.id && (
+                <div className="card" style={{ background: 'var(--surface-2)' }}>
+                  <GatewayPayPanel
+                    subtitle={`${inv.number} · ${rupiah(inv.amount)}`}
+                    methods={methods}
+                    createCharge={(method, channel) => payPortalInvoice(inv.id, method, channel)}
+                    pollStatus={() => pollStatus(inv.id)}
+                    onPaid={() => void onReload()}
+                    onClose={() => setPaying(null)}
+                  />
+                </div>
+              )}
             </div>
           ))
         )}
