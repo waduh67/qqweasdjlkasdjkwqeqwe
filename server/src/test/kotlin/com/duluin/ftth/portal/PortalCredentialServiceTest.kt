@@ -32,7 +32,7 @@ class PortalCredentialServiceTest {
     private val refreshTokens = RecordingPortalRefreshTokenRepository()
     private val hasher = PlainTextPortalPasswordHasher()
     private val customers = StubCustomerApi(
-        CustomerRef(customerId, "CUST-000007", "Budi", "0811", Coordinate(0.0, 0.0), "ACTIVE"),
+        CustomerRef(customerId, "CUST-000007", "Budi", "0811", null, Coordinate(0.0, 0.0), "ACTIVE"),
     )
     private val currentPortal = MutableCurrentPortalCustomer()
     private val currentUser = NoOperatorCurrentUserProvider()
@@ -78,7 +78,7 @@ class PortalCredentialServiceTest {
     @Test
     fun `provision menolak login yang dipegang pelanggan lain`() {
         val other = UUID.randomUUID()
-        customers.add(CustomerRef(other, "CUST-000008", "Siti", null, Coordinate(0.0, 0.0), "ACTIVE"))
+        customers.add(CustomerRef(other, "CUST-000008", "Siti", null, null, Coordinate(0.0, 0.0), "ACTIVE"))
         service.provisionFor(other, login = "shared", password = "rahasia123")
 
         assertThatThrownBy { service.provisionFor(customerId, login = "shared", password = "rahasia123") }

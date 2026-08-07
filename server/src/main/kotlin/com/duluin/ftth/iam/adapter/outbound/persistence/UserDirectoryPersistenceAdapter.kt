@@ -11,4 +11,7 @@ class UserDirectoryPersistenceAdapter(
 
     override fun findTenantByEmail(emailLower: String): UUID? =
         jpa.findByEmailLower(emailLower)?.tenantId
+
+    override fun primaryEmailForTenant(tenantId: UUID): String? =
+        jpa.findFirstByTenantIdOrderByCreatedAtAsc(tenantId)?.emailLower
 }

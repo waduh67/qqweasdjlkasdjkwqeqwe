@@ -24,6 +24,7 @@ import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
 import com.duluin.ftth.billing.domain.model.TenantPaymentGateway
 import com.duluin.ftth.billing.domain.model.TenantPivotAccount
 import com.duluin.ftth.common.domain.UuidV7
+import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.customer.BillableSubscription
@@ -103,6 +104,32 @@ class BillingCycleTest {
         val invoice = f.repo.saved.single()
         assertThat(invoice.prorated).isFalse()
         assertThat(invoice.amount).isEqualByComparingTo("310000")
+    }
+
+    @Test
+    fun `charge meneruskan email pelanggan ke gateway (Pivot mewajibkannya)`() {
+        val customerId = UuidV7.generate()
+        val sub = billable(customerId = customerId)
+        val customer = CustomerRef(customerId, "CUST-000009", "Budi", "0812", "budi@mail.test", Coordinate(0.0, 0.0), "ACTIVE")
+        val f = fixture(props(), billables = listOf(sub), customers = mapOf(customerId to customer))
+
+        f.generator.generateFor(UuidV7.generate(), LocalDate.of(2026, 7, 20))
+
+        val charge = f.gateway.charges.single()
+        assertThat(charge.customerName).isEqualTo("Budi")
+        assertThat(charge.customerEmail).isEqualTo("budi@mail.test")
+    }
+
+    @Test
+    fun `charge tanpa data email pelanggan mengirim email null (fail-soft, bukan error)`() {
+        val sub = billable()
+        val f = fixture(props(), billables = listOf(sub)) // tanpa CustomerRef → email tak tersedia
+
+        f.generator.generateFor(UuidV7.generate(), LocalDate.of(2026, 7, 20))
+
+        val charge = f.gateway.charges.single()
+        assertThat(charge.customerName).isEqualTo("Home 100") // fallback ke nama paket
+        assertThat(charge.customerEmail).isNull()
     }
 
     // --- Penerbitan: gating tanggal tagih per langganan ---
@@ -245,9 +272,10 @@ class BillingCycleTest {
         billables: List<BillableSubscription> = emptyList(),
         overdue: List<Invoice> = emptyList(),
         byId: Map<UUID, BillableSubscription> = emptyMap(),
+        customers: Map<UUID, CustomerRef> = emptyMap(),
     ): Fixture {
         val repo = FakeInvoiceRepository(overdue)
-        val customerApi = FakeCustomerApi(billables, byId)
+        val customerApi = FakeCustomerApi(billables, byId, customers)
         val gateway = CapturingGateway()
         val registry = PaymentGatewayRegistry(listOf(gateway), props)
         // Tanpa baris config tenant → resolver jatuh ke fallback MANUAL; adapter penangkap
@@ -281,6 +309,7 @@ class BillingCycleTest {
 
     private fun billable(
         subscriptionId: UUID = UuidV7.generate(),
+        customerId: UUID = UuidV7.generate(),
         monthlyFee: BigDecimal = BigDecimal("310000"),
         status: String = "ACTIVE",
         activatedAt: Instant? = null,
@@ -290,7 +319,7 @@ class BillingCycleTest {
         autoIsolir: Boolean? = null,
     ) = BillableSubscription(
         subscriptionId = subscriptionId,
-        customerId = UuidV7.generate(),
+        customerId = customerId,
         packageName = "Home 100",
         monthlyFee = monthlyFee,
         status = status,
@@ -415,6 +444,7 @@ class BillingCycleTest {
     private class FakeCustomerApi(
         private val billables: List<BillableSubscription>,
         private val byId: Map<UUID, BillableSubscription>,
+        private val customers: Map<UUID, CustomerRef> = emptyMap(),
     ) : CustomerApi {
         val isolated = mutableListOf<UUID>()
 
@@ -422,7 +452,7 @@ class BillingCycleTest {
 
         override fun findBillableSubscription(subscriptionId: UUID) = byId[subscriptionId]
 
-        override fun findCustomersByIds(ids: Set<UUID>): List<CustomerRef> = emptyList()
+        override fun findCustomersByIds(ids: Set<UUID>): List<CustomerRef> = ids.mapNotNull { customers[it] }
 
         override fun isolateForBilling(subscriptionId: UUID) {
             isolated.add(subscriptionId)

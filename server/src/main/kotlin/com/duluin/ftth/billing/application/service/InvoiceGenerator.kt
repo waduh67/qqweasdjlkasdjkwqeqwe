@@ -58,8 +58,8 @@ class InvoiceGenerator(
         }
         if (billable.isEmpty()) return 0
 
-        val customerNames = customerApi.findCustomersByIds(billable.mapTo(HashSet()) { it.customerId })
-            .associate { it.id to it.name }
+        val customers = customerApi.findCustomersByIds(billable.mapTo(HashSet()) { it.customerId })
+            .associateBy { it.id }
         // Gateway di-resolve SEKALI per ronde (kredensial + mode tenant aktif); adapter dipilih
         // dari provider resolver — sumber kebenaran, bukan config global lama.
         val ctx = gatewayResolver.resolve()
@@ -104,8 +104,10 @@ class InvoiceGenerator(
                     ChargeRequest(
                         invoiceNumber = number,
                         amount = invoice.amount,
-                        customerName = customerNames[sub.customerId] ?: sub.packageName,
-                        customerEmail = null,
+                        customerName = customers[sub.customerId]?.name ?: sub.packageName,
+                        // Pivot mewajibkan email pelanggan bila gateway aktif; null bila pelanggan
+                        // tak punya email → charge fail-soft (tagihan tetap terbit, tanpa tautan).
+                        customerEmail = customers[sub.customerId]?.email,
                         description = chargeDescription,
                         dueDate = invoice.dueDate,
                     ),
@@ -144,13 +146,13 @@ class InvoiceGenerator(
         if (invoice.payUrl != null && invoice.gatewayProvider.equals(ctx.provider, ignoreCase = true)) return false
         val gateway = gatewayRegistry.forProvider(ctx.provider)
             ?: error("Adapter gateway '${ctx.provider}' tidak tersedia")
-        val customerName = customerApi.findCustomer(invoice.customerId)?.name ?: invoice.number
+        val customer = customerApi.findCustomer(invoice.customerId)
         val charge = gateway.createCharge(
             ChargeRequest(
                 invoiceNumber = invoice.number,
                 amount = invoice.amount,
-                customerName = customerName,
-                customerEmail = null,
+                customerName = customer?.name ?: invoice.number,
+                customerEmail = customer?.email,
                 description = "Tagihan ${invoice.number}",
                 dueDate = invoice.dueDate,
             ),

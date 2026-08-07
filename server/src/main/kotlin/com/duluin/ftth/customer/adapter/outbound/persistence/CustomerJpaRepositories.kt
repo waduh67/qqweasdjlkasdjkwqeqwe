@@ -27,21 +27,6 @@ interface CustomerJpaRepository :
     fun existsByCode(code: String): Boolean
 
     /**
-     * Nomor urut tertinggi di antara kode berbentuk `{prefix}{angka}` (mis. `CUST-000042` → 42),
-     * atau 0. Native Postgres agar bisa memangkas prefiks & membandingkan sebagai integer; RLS
-     * per-koneksi otomatis membatasi ke tenant aktif.
-     */
-    @Query(
-        value = """
-            select coalesce(max(cast(substring(code from '^' || :prefix || '([0-9]+)$') as integer)), 0)
-            from customer
-            where code ~ ('^' || :prefix || '[0-9]+$')
-        """,
-        nativeQuery = true,
-    )
-    fun maxCodeSequence(@Param("prefix") prefix: String): Int
-
-    /**
      * Pelanggan menunggu instalasi: belum diputus dan tak punya satu pun ONU yang
      * terpasang ke ODP. Sub-kueri NOT EXISTS ke ONU ikut disaring `@TenantId`.
      */

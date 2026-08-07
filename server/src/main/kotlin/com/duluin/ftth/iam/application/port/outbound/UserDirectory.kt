@@ -11,4 +11,10 @@ interface UserDirectory {
 
     /** Tenant pemilik sebuah email (harus sudah lowercase), atau null bila tak dikenal. */
     fun findTenantByEmail(emailLower: String): UUID?
+
+    /**
+     * Email login perwakilan sebuah tenant (user terlama = admin onboarding pertama); null bila
+     * tenant tak punya user. Non-RLS → aman dipanggil TANPA tenant context (mis. scheduler platform).
+     */
+    fun primaryEmailForTenant(tenantId: UUID): String?
 }

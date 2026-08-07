@@ -3,6 +3,7 @@ package com.duluin.ftth.platformbilling.application.service
 import com.duluin.ftth.billing.application.port.outbound.ChargeRequest
 import com.duluin.ftth.billing.application.service.PaymentGatewayRegistry
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
+import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionInvoiceRepository
 import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionRepository
 import com.duluin.ftth.platformbilling.domain.model.SubscriptionInvoiceStatus
@@ -31,6 +32,7 @@ class PlatformInvoiceGenerator(
     private val resolver: PlatformGatewayResolver,
     private val gatewayRegistry: PaymentGatewayRegistry,
     private val tenantApi: TenantApi,
+    private val iamApi: IamApi,
     private val auditor: AuditRecorder,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -140,12 +142,14 @@ class PlatformInvoiceGenerator(
         val gateway = gatewayRegistry.forProvider(ctx.provider)
             ?: error("Adapter gateway '${ctx.provider}' tidak tersedia")
         val tenant = tenantApi.requireById(subscription.tenantId)
+        // Pivot mewajibkan email pelanggan → pakai email admin tenant (login onboarding pertama);
+        // resolusi non-RLS agar tetap jalan dari scheduler platform tanpa tenant context.
         val result = gateway.createCharge(
             ChargeRequest(
                 invoiceNumber = invoice.number,
                 amount = invoice.amount,
                 customerName = tenant.name,
-                customerEmail = null,
+                customerEmail = iamApi.primaryEmailForTenant(subscription.tenantId),
                 description = "Langganan aplikasi ${tenant.name} — ${invoice.periodStart.format(YEAR_MONTH)}",
                 dueDate = invoice.dueDate,
             ),

@@ -308,6 +308,8 @@ data class CustomerRef(
     val code: String,
     val name: String,
     val phone: String?,
+    /** Email pelanggan (opsional) — dipakai gateway bayar yang mewajibkan email pelanggan. */
+    val email: String?,
     val location: Coordinate,
     val status: String,
 )

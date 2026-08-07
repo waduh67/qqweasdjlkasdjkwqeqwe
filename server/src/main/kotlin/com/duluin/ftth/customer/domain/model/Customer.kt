@@ -3,6 +3,8 @@ package com.duluin.ftth.customer.domain.model
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.domain.geo.Coordinate
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 enum class CustomerStatus {
@@ -84,14 +86,15 @@ class Customer private constructor(
 
         /**
          * Format kode pelanggan yang dibuat otomatis ketika operator tak mengetiknya sendiri —
-         * berurut per-tenant (`CUST-000001`, `CUST-000002`, …). Prefiks & lebar padding disatukan di
-         * sini agar generator (service) dan kueri urutan (repository) tak berbeda diam-diam.
+         * `CUST-{yyyyMMdd}-{acak}` (mis. `CUST-20260807-K7M2Q9`). Tanggal menjaga keterbacaan &
+         * urutan kasar, sufiks acak menjamin keunikan tanpa kueri urutan global yang rapuh di DB
+         * bersama. Keunikan akhir tetap dijaga UNIQUE(tenant, code); pemanggil mengulang bila bentrok.
          */
         const val AUTO_CODE_PREFIX = "CUST-"
-        private const val AUTO_CODE_WIDTH = 6
+        private val AUTO_CODE_DATE: DateTimeFormatter = DateTimeFormatter.BASIC_ISO_DATE
 
-        fun formatAutoCode(sequence: Int): String =
-            AUTO_CODE_PREFIX + sequence.toString().padStart(AUTO_CODE_WIDTH, '0')
+        fun formatAutoCode(date: LocalDate, randomSuffix: String): String =
+            AUTO_CODE_PREFIX + date.format(AUTO_CODE_DATE) + "-" + randomSuffix
 
         fun create(
             tenantId: UUID,

@@ -17,6 +17,13 @@ interface IamApi {
 
     /** Resolusi sekumpulan id pengguna sekaligus; id yang tak ditemukan diabaikan. */
     fun usersByIds(ids: Set<UUID>): List<UserRef>
+
+    /**
+     * Email kontak penagihan sebuah tenant (login admin onboarding pertama), atau `null` bila
+     * tenant tak punya user. Aman dipanggil dari konteks platform tanpa tenant aktif (mis.
+     * scheduler langganan) — resolusi lewat indeks login non-RLS, bukan agregat user ter-scope.
+     */
+    fun primaryEmailForTenant(tenantId: UUID): String?
 }
 
 /** Pandangan ringkas seorang pengguna untuk konsumen lintas-module. */

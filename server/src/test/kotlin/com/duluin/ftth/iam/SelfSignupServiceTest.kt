@@ -127,5 +127,7 @@ class SelfSignupServiceTest {
             emailLookups += emailLower
             return if (emailLower in takenEmails) UuidV7.generate() else null
         }
+
+        override fun primaryEmailForTenant(tenantId: UUID): String? = null
     }
 }

@@ -17,6 +17,7 @@ import com.duluin.ftth.customer.domain.model.Customer
 import com.duluin.ftth.customer.domain.model.CustomerStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
 import java.util.UUID
 
 @Service
@@ -126,21 +127,26 @@ class CustomerService(
         customerRepository.findById(id) ?: throw NotFoundException("Pelanggan $id tidak ditemukan")
 
     /**
-     * Kode berurut per-tenant (`CUST-000001`). Mulai dari urutan tertinggi + 1, lalu naik selama
-     * kandidatnya sudah terpakai — melompati lubang yang ditinggalkan kode manual (mis. operator
-     * pernah mengetik `CUST-000005` sendiri). Uniknya tetap dijaga akhir oleh UNIQUE(tenant, code).
+     * Kode unik `CUST-{yyyyMMdd}-{acak}` (mis. `CUST-20260807-K7M2Q9`). Sufiks acak dibuat lokal —
+     * tak perlu kueri urutan global (yang rapuh & bikin bentrok di DB bersama). Diulang bila kandidat
+     * kebetulan sudah terpakai; keunikan akhir tetap dijaga UNIQUE(tenant, code).
      */
     private fun generateNextCode(): String {
-        var sequence = customerRepository.maxCodeSequence(Customer.AUTO_CODE_PREFIX) + 1
         repeat(MAX_CODE_ATTEMPTS) {
-            val candidate = Customer.formatAutoCode(sequence)
+            val candidate = Customer.formatAutoCode(LocalDate.now(), randomCodeSuffix())
             if (!customerRepository.existsByCode(candidate)) return candidate
-            sequence++
         }
         throw ConflictException("Gagal membuat kode pelanggan otomatis, coba isi manual")
     }
 
+    private fun randomCodeSuffix(): String =
+        (1..AUTO_CODE_SUFFIX_LEN).map { CODE_ALPHABET.random() }.joinToString("")
+
     private companion object {
         const val MAX_CODE_ATTEMPTS = 100
+        const val AUTO_CODE_SUFFIX_LEN = 6
+
+        /** Base36 tanpa huruf/angka ambigu (tanpa 0/O/1/I) agar kode mudah dibaca & didikte. */
+        const val CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
     }
 }

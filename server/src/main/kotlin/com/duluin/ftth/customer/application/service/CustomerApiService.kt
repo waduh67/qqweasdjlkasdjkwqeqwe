@@ -377,6 +377,7 @@ class CustomerApiService(
         code = code,
         name = name,
         phone = phone,
+        email = email,
         location = location,
         status = status.name,
     )

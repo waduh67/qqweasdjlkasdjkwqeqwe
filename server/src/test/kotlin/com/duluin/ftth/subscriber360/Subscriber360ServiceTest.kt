@@ -125,7 +125,7 @@ class Subscriber360ServiceTest {
 
     private inner class FakeCustomerApi(private val present: Boolean) : CustomerApi {
         override fun findCustomer(id: UUID): CustomerRef? =
-            if (present) CustomerRef(id, "C-001", "Budi", "0812", Coordinate(106.8, -6.2), "ACTIVE") else null
+            if (present) CustomerRef(id, "C-001", "Budi", "0812", null, Coordinate(106.8, -6.2), "ACTIVE") else null
 
         override fun findSubscriptionsByCustomer(customerId: UUID): List<SubscriptionRef> =
             listOf(SubscriptionRef(UuidV7.generate(), customerId, UuidV7.generate(), "Home 100", 100, "ACTIVE"))
