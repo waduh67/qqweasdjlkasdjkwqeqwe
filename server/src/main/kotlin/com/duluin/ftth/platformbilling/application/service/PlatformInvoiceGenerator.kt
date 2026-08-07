@@ -5,6 +5,7 @@ import com.duluin.ftth.billing.application.service.PaymentGatewayRegistry
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionInvoiceRepository
 import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionRepository
+import com.duluin.ftth.platformbilling.domain.model.SubscriptionInvoiceStatus
 import com.duluin.ftth.platformbilling.domain.model.TenantSubscription
 import com.duluin.ftth.platformbilling.domain.model.TenantSubscriptionInvoice
 import com.duluin.ftth.tenancy.TenantApi
@@ -62,7 +63,7 @@ class PlatformInvoiceGenerator(
             else -> due ?: today
         }
         val periodEnd = periodStart.plusMonths(span).minusDays(1)
-        val number = "SUB-${periodStart.format(YEAR_MONTH)}-${tenantShort(subscription.tenantId)}"
+        val baseNumber = "SUB-${periodStart.format(YEAR_MONTH)}-${tenantShort(subscription.tenantId)}"
 
         // Majukan HANYA jadwal tagihan berikutnya (melewati seluruh bulan prabayar) agar langganan
         // tak tersangkut & scheduler tak menagih dobel; masa aktif (`currentPeriodEnd`) TIDAK
@@ -70,9 +71,19 @@ class PlatformInvoiceGenerator(
         subscription.scheduleNextInvoice(periodStart.plusMonths(span))
         subscriptionRepository.save(subscription)
 
-        if (invoiceRepository.findByNumber(number) != null) {
-            log.info("Tagihan langganan {} sudah ada — dilewati", number)
-            return null
+        // Resolusi tabrakan nomor per status tagihan periode ini (nomor bulanan `SUB-<yyyymm>` unik):
+        //  - belum lunas  → idempoten, pakai ulang tagihan itu (klik-ganda renew / scheduler re-run);
+        //  - sudah LUNAS  → jangan terbit ganda (skip);
+        //  - DIBATALKAN   → tagihan lama VOID tak boleh mengunci periode → terbit ulang nomor unik.
+        val existing = invoiceRepository.findByNumber(baseNumber)
+        val number = when (existing?.status) {
+            null -> baseNumber
+            SubscriptionInvoiceStatus.ISSUED, SubscriptionInvoiceStatus.OVERDUE -> return existing
+            SubscriptionInvoiceStatus.PAID -> {
+                log.info("Tagihan langganan {} sudah lunas — dilewati", baseNumber)
+                return null
+            }
+            SubscriptionInvoiceStatus.VOID -> nextReissueNumber(baseNumber)
         }
 
         val dueDate = today.plusDays(setting.defaultDueDays.toLong())
@@ -123,6 +134,13 @@ class PlatformInvoiceGenerator(
         )
         invoice.attachCharge(result.provider, result.gatewayRef, result.payUrl)
         return invoiceRepository.save(invoice)
+    }
+
+    /** Nomor terbit-ulang unik untuk periode yang tagihan lamanya VOID: `<base>-R2`, `-R3`, … */
+    private fun nextReissueNumber(base: String): String {
+        var suffix = 2
+        while (invoiceRepository.findByNumber("$base-R$suffix") != null) suffix++
+        return "$base-R$suffix"
     }
 
     private companion object {

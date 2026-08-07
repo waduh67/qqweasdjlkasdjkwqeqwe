@@ -1,0 +1,225 @@
+package com.duluin.ftth.platformbilling
+
+import com.duluin.ftth.billing.application.port.outbound.PivotMasterConfigRepository
+import com.duluin.ftth.billing.application.service.PaymentGatewayRegistry
+import com.duluin.ftth.billing.application.service.PivotMasterConfigProvider
+import com.duluin.ftth.billing.config.BillingProperties
+import com.duluin.ftth.billing.domain.model.PivotMasterConfig
+import com.duluin.ftth.common.domain.UuidV7
+import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
+import com.duluin.ftth.common.security.AuthenticatedUser
+import com.duluin.ftth.common.security.CurrentUserProvider
+import com.duluin.ftth.common.tenant.TenantContext
+import com.duluin.ftth.platformbilling.application.port.outbound.PlatformSettingRepository
+import com.duluin.ftth.platformbilling.application.port.outbound.SubscriptionUsageProbe
+import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionInvoiceRepository
+import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionRepository
+import com.duluin.ftth.platformbilling.application.port.outbound.UsageCount
+import com.duluin.ftth.platformbilling.application.service.PlatformGatewayResolver
+import com.duluin.ftth.platformbilling.application.service.PlatformInvoiceGenerator
+import com.duluin.ftth.platformbilling.application.service.TenantSelfSubscriptionService
+import com.duluin.ftth.platformbilling.domain.model.PlatformSetting
+import com.duluin.ftth.platformbilling.domain.model.SubscriptionInvoiceStatus
+import com.duluin.ftth.platformbilling.domain.model.SubscriptionStatus
+import com.duluin.ftth.platformbilling.domain.model.TenantSubscription
+import com.duluin.ftth.platformbilling.domain.model.TenantSubscriptionInvoice
+import com.duluin.ftth.tenancy.TenantApi
+import com.duluin.ftth.tenancy.TenantRef
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
+import java.math.BigDecimal
+import java.time.Instant
+import java.time.LocalDate
+import java.util.UUID
+
+/**
+ * Regresi 400 "Tagihan tak dapat diterbitkan saat ini" saat perpanjang langganan: tabrakan nomor
+ * bulanan `SUB-<yyyymm>-<tenant8>` dengan tagihan periode yang sudah VOID/PAID. Fake in-memory
+ * penuh (repo + resolver/registry) tanpa Spring/DB — pola sama [PaymentGatewaySettingsServiceTest].
+ */
+class PlatformInvoiceGeneratorRenewTest {
+
+    // tenant8 = "019fcadd" (8 hex pertama) → mereplikasi tenant produksi yang memicu bug.
+    private val tenantId = UUID.fromString("019fcadd-0000-7000-8000-000000000000")
+    private val subscriptionId = UuidV7.generate()
+
+    // Perpanjangan menyambung dari ujung masa aktif → periode Okt 2026 → nomor SUB-202610-019fcadd.
+    private val activeUntil = LocalDate.of(2026, 10, 4)
+    private val today = LocalDate.of(2026, 8, 7)
+    private val baseNumber = "SUB-202610-019fcadd"
+
+    private lateinit var subscriptions: FakeSubscriptionRepository
+    private lateinit var invoices: FakeInvoiceRepository
+    private lateinit var generator: PlatformInvoiceGenerator
+
+    @BeforeEach
+    fun setUp() {
+        subscriptions = FakeSubscriptionRepository()
+        invoices = FakeInvoiceRepository()
+        val resolver = PlatformGatewayResolver(FakePlatformSettingRepository(), PivotMasterConfigProvider(FakePivotRepository()))
+        generator = PlatformInvoiceGenerator(
+            subscriptionRepository = subscriptions,
+            invoiceRepository = invoices,
+            resolver = resolver,
+            gatewayRegistry = PaymentGatewayRegistry(emptyList(), BillingProperties()),
+            tenantApi = FakeTenantApi(),
+            auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
+        )
+    }
+
+    @AfterEach
+    fun tearDown() = TenantContext.clear()
+
+    @Test
+    fun `tagihan periode VOID diterbitkan ulang dengan nomor unik -R2`() {
+        val subscription = activeSubscription()
+        invoices.save(invoiceFor(baseNumber, SubscriptionInvoiceStatus.VOID))
+
+        val issued = generator.issueFor(subscription, today, force = true, months = 1)
+
+        assertThat(issued).isNotNull()
+        assertThat(issued!!.number).isEqualTo("$baseNumber-R2")
+        assertThat(issued.status).isEqualTo(SubscriptionInvoiceStatus.ISSUED)
+        assertThat(issued.periodStart).isEqualTo(activeUntil)
+        assertThat(issued.periodEnd).isEqualTo(LocalDate.of(2026, 11, 3))
+        // Tagihan VOID lama tetap ada; yang baru bertambah (bukan menimpa).
+        assertThat(invoices.all().map { it.number }).contains(baseNumber, "$baseNumber-R2")
+    }
+
+    @Test
+    fun `tagihan periode belum lunas dikembalikan apa adanya (idempoten)`() {
+        val subscription = activeSubscription()
+        val existing = invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED).also { invoices.save(it) }
+
+        val issued = generator.issueFor(subscription, today, force = true, months = 1)
+
+        assertThat(issued).isSameAs(existing)
+        // Tak ada tagihan baru dibuat.
+        assertThat(invoices.all()).hasSize(1)
+    }
+
+    @Test
+    fun `tagihan periode sudah LUNAS tidak diterbitkan ulang (null)`() {
+        val subscription = activeSubscription()
+        invoices.save(invoiceFor(baseNumber, SubscriptionInvoiceStatus.PAID))
+
+        val issued = generator.issueFor(subscription, today, force = true, months = 1)
+
+        assertThat(issued).isNull()
+        assertThat(invoices.all()).hasSize(1)
+    }
+
+    @Test
+    fun `periode tanpa tagihan menerbitkan nomor SUB bulanan normal`() {
+        val subscription = activeSubscription()
+
+        val issued = generator.issueFor(subscription, today, force = true, months = 1)
+
+        assertThat(issued).isNotNull()
+        assertThat(issued!!.number).isEqualTo(baseNumber)
+        assertThat(issued.status).isEqualTo(SubscriptionInvoiceStatus.ISSUED)
+    }
+
+    @Test
+    fun `renew pada periode sudah lunas melempar pesan sudah dibayar (bukan pesan generik)`() {
+        TenantContext.set(tenantId)
+        val subscription = activeSubscription().also { subscriptions.save(it) }
+        invoices.save(invoiceFor(baseNumber, SubscriptionInvoiceStatus.PAID))
+        val service = TenantSelfSubscriptionService(subscriptions, invoices, generator, FakeUsageProbe())
+
+        assertThatThrownBy { service.renew(months = 1) }
+            .isInstanceOf(ValidationException::class.java)
+            .hasMessageContaining("sudah dibayar")
+    }
+
+    // --- helper ---
+
+    private fun activeSubscription(): TenantSubscription = TenantSubscription.rehydrate(
+        id = subscriptionId,
+        tenantId = tenantId,
+        monthlyFee = BigDecimal("100000.00"),
+        status = SubscriptionStatus.ACTIVE,
+        billingDay = null,
+        graceDays = null,
+        currentPeriodStart = activeUntil.minusMonths(1),
+        currentPeriodEnd = activeUntil,
+        nextInvoiceAt = activeUntil,
+        activatedAt = Instant.parse("2026-01-01T00:00:00Z"),
+    )
+
+    private fun invoiceFor(number: String, status: SubscriptionInvoiceStatus): TenantSubscriptionInvoice {
+        val invoice = TenantSubscriptionInvoice.create(
+            tenantId = tenantId,
+            subscriptionId = subscriptionId,
+            number = number,
+            periodStart = activeUntil,
+            periodEnd = LocalDate.of(2026, 11, 3),
+            amount = BigDecimal("100000.00"),
+            dueDate = activeUntil.plusDays(7),
+        )
+        when (status) {
+            SubscriptionInvoiceStatus.ISSUED -> Unit
+            SubscriptionInvoiceStatus.PAID -> invoice.markPaid(Instant.parse("2026-10-05T00:00:00Z"))
+            SubscriptionInvoiceStatus.OVERDUE -> invoice.markOverdue()
+            SubscriptionInvoiceStatus.VOID -> invoice.void()
+        }
+        return invoice
+    }
+
+    // --- fakes ---
+
+    private class FakeSubscriptionRepository : TenantSubscriptionRepository {
+        private val byId = mutableMapOf<UUID, TenantSubscription>()
+        override fun findByTenantId(tenantId: UUID): TenantSubscription? = byId.values.firstOrNull { it.tenantId == tenantId }
+        override fun findById(id: UUID): TenantSubscription? = byId[id]
+        override fun save(subscription: TenantSubscription): TenantSubscription = subscription.also { byId[it.id] = it }
+        override fun findDueForInvoice(onOrBefore: LocalDate): List<TenantSubscription> = emptyList()
+    }
+
+    private class FakeInvoiceRepository : TenantSubscriptionInvoiceRepository {
+        private val byId = linkedMapOf<UUID, TenantSubscriptionInvoice>()
+        fun all(): List<TenantSubscriptionInvoice> = byId.values.toList()
+        override fun findById(id: UUID): TenantSubscriptionInvoice? = byId[id]
+        override fun findByNumber(number: String): TenantSubscriptionInvoice? = byId.values.firstOrNull { it.number == number }
+        override fun findBySubscriptionId(subscriptionId: UUID): List<TenantSubscriptionInvoice> =
+            byId.values.filter { it.subscriptionId == subscriptionId }
+        override fun findOutstandingBySubscriptionId(subscriptionId: UUID): List<TenantSubscriptionInvoice> =
+            byId.values.filter { it.subscriptionId == subscriptionId && it.isOutstanding }
+        override fun save(invoice: TenantSubscriptionInvoice): TenantSubscriptionInvoice = invoice.also { byId[it.id] = it }
+    }
+
+    private class FakePlatformSettingRepository : PlatformSettingRepository {
+        override fun find(): PlatformSetting? = null
+        override fun save(setting: PlatformSetting): PlatformSetting = setting
+    }
+
+    private class FakePivotRepository : PivotMasterConfigRepository {
+        override fun find(): PivotMasterConfig? = null
+        override fun save(config: PivotMasterConfig): PivotMasterConfig = config
+    }
+
+    private class FakeUsageProbe : SubscriptionUsageProbe {
+        override fun currentTenantUsage(): List<UsageCount> = emptyList()
+    }
+
+    private class FakeTenantApi : TenantApi {
+        private val platformId = UuidV7.generate()
+        override fun platformTenantId(): UUID = platformId
+        override fun findById(id: UUID): TenantRef? = null
+        override fun findBySlug(slug: String): TenantRef? = null
+        override fun requireById(id: UUID): TenantRef = throw NotImplementedError()
+        override fun findActiveTenantIds(): List<UUID> = emptyList()
+        override fun ensureTenant(slug: String, name: String): TenantRef = throw NotImplementedError()
+        override fun suspend(id: UUID): TenantRef = throw NotImplementedError()
+        override fun activate(id: UUID): TenantRef = throw NotImplementedError()
+    }
+
+    private object NoUser : CurrentUserProvider {
+        override fun currentOrNull(): AuthenticatedUser? = null
+    }
+}

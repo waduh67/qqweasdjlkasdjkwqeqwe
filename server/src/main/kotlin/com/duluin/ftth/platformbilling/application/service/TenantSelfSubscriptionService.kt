@@ -50,7 +50,9 @@ class TenantSelfSubscriptionService(
             return it.toView()
         }
         val invoice = invoiceGenerator.issueFor(subscription, LocalDate.now(), force = true, months = months)
-            ?: throw ValidationException("Tagihan tak dapat diterbitkan saat ini")
+            ?: throw ValidationException(
+                "Periode langganan ini sudah dibayar — belum ada tagihan baru untuk diperpanjang.",
+            )
         return invoice.toView()
     }
 
