@@ -25,15 +25,20 @@ import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.iam.UserRef
+import com.duluin.ftth.platformbilling.application.port.inbound.ConfigureSubscriptionCommand
 import com.duluin.ftth.platformbilling.application.port.outbound.PlatformSettingRepository
 import com.duluin.ftth.platformbilling.application.port.outbound.SubscriptionUsageProbe
 import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionInvoiceRepository
+import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionPaymentRepository
 import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionRepository
 import com.duluin.ftth.platformbilling.application.port.outbound.UsageCount
 import com.duluin.ftth.platformbilling.application.service.PlatformGatewayResolver
 import com.duluin.ftth.platformbilling.application.service.PlatformInvoiceGenerator
+import com.duluin.ftth.platformbilling.application.service.PlatformPaymentService
 import com.duluin.ftth.platformbilling.application.service.TenantSelfSubscriptionService
+import com.duluin.ftth.platformbilling.application.service.TenantSubscriptionService
 import com.duluin.ftth.platformbilling.domain.model.PlatformSetting
+import com.duluin.ftth.platformbilling.domain.model.TenantSubscriptionPayment
 import com.duluin.ftth.platformbilling.domain.model.SubscriptionInvoiceStatus
 import com.duluin.ftth.platformbilling.domain.model.SubscriptionStatus
 import com.duluin.ftth.platformbilling.domain.model.TenantSubscription
@@ -274,7 +279,83 @@ class PlatformInvoiceGeneratorRenewTest {
         assertThat(gateway.lastEmail).isEqualTo(TENANT_EMAIL)
     }
 
+    // --- reprice (domain) & super-admin generateInvoice/configure ---
+
+    @Test
+    fun `reprice tagihan belum lunas tanpa charge mengubah nilai`() {
+        val invoice = invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED)
+
+        val changed = invoice.reprice(BigDecimal("250000"))
+
+        assertThat(changed).isTrue()
+        assertThat(invoice.amount).isEqualByComparingTo("250000.00")
+    }
+
+    @Test
+    fun `reprice tagihan yang sudah di-charge dilewati (tak desync gateway)`() {
+        val invoice = invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED)
+        invoice.attachCharge(provider = "PIVOT", gatewayRef = "ref_1", payUrl = "https://pay.example")
+
+        val changed = invoice.reprice(BigDecimal("250000"))
+
+        assertThat(changed).isFalse()
+        assertThat(invoice.amount).isEqualByComparingTo("100000.00")
+    }
+
+    @Test
+    fun `reprice tagihan lunas atau dibatalkan dilewati`() {
+        val paid = invoiceFor(baseNumber, SubscriptionInvoiceStatus.PAID)
+        val void = invoiceFor(baseNumber, SubscriptionInvoiceStatus.VOID)
+
+        assertThat(paid.reprice(BigDecimal("250000"))).isFalse()
+        assertThat(void.reprice(BigDecimal("250000"))).isFalse()
+        assertThat(paid.amount).isEqualByComparingTo("100000.00")
+    }
+
+    @Test
+    fun `generateInvoice idempoten mengembalikan tagihan tertunggak yang ada`() {
+        subscriptions.save(activeSubscription())
+        val existing = invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED).also { invoices.save(it) }
+        val service = subscriptionService()
+
+        val view = service.generateInvoice(tenantId)
+
+        assertThat(view.id).isEqualTo(existing.id)
+        // Tak ada tagihan baru dibuat pada klik berulang.
+        assertThat(invoices.all()).hasSize(1)
+    }
+
+    @Test
+    fun `configure biaya baru menyesuaikan tagihan belum lunas`() {
+        subscriptions.save(activeSubscription())
+        val invoice = invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED).also { invoices.save(it) }
+        val service = subscriptionService()
+
+        service.configure(
+            tenantId,
+            ConfigureSubscriptionCommand(monthlyFee = BigDecimal("250000"), billingDay = null, graceDays = null),
+        )
+
+        assertThat(invoices.findById(invoice.id)!!.amount).isEqualByComparingTo("250000.00")
+    }
+
     // --- helper ---
+
+    /** Service super-admin lengkap dgn fake (paymentService tak dipakai jalur yang diuji). */
+    private fun subscriptionService() = TenantSubscriptionService(
+        subscriptionRepository = subscriptions,
+        invoiceRepository = invoices,
+        invoiceGenerator = generator,
+        paymentService = PlatformPaymentService(
+            invoiceRepository = invoices,
+            paymentRepository = FakePaymentRepository(),
+            subscriptionRepository = subscriptions,
+            tenantApi = FakeTenantApi(),
+            auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
+        ),
+        tenantApi = FakeTenantApi(),
+        auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
+    )
 
     /** Generator dengan gateway PIVOT aktif yang mengembalikan instruksi VA/QR — untuk menguji charge on-demand. */
     private fun chargingGenerator() = PlatformInvoiceGenerator(
@@ -339,6 +420,13 @@ class PlatformInvoiceGeneratorRenewTest {
         override fun findOutstandingBySubscriptionId(subscriptionId: UUID): List<TenantSubscriptionInvoice> =
             byId.values.filter { it.subscriptionId == subscriptionId && it.isOutstanding }
         override fun save(invoice: TenantSubscriptionInvoice): TenantSubscriptionInvoice = invoice.also { byId[it.id] = it }
+    }
+
+    private class FakePaymentRepository : TenantSubscriptionPaymentRepository {
+        private val byId = linkedMapOf<UUID, TenantSubscriptionPayment>()
+        override fun save(payment: TenantSubscriptionPayment): TenantSubscriptionPayment = payment.also { byId[it.id] = it }
+        override fun findByInvoiceId(invoiceId: UUID): List<TenantSubscriptionPayment> =
+            byId.values.filter { it.invoiceId == invoiceId }
     }
 
     private class FakePlatformSettingRepository : PlatformSettingRepository {

@@ -25,7 +25,7 @@ class TenantSubscriptionInvoice private constructor(
     val number: String,
     val periodStart: LocalDate,
     val periodEnd: LocalDate,
-    val amount: BigDecimal,
+    amount: BigDecimal,
     status: SubscriptionInvoiceStatus,
     val issuedAt: Instant,
     val dueDate: LocalDate,
@@ -42,6 +42,10 @@ class TenantSubscriptionInvoice private constructor(
     qrUrl: String?,
     qrExpiresAt: Instant?,
 ) {
+    /** Nilai tagihan (skala 2). Umumnya tetap; hanya diubah lewat [reprice] sebelum di-charge. */
+    var amount: BigDecimal = amount
+        private set
+
     var status: SubscriptionInvoiceStatus = status
         private set
 
@@ -151,6 +155,20 @@ class TenantSubscriptionInvoice private constructor(
     /** Belum lunas & belum dibatalkan (ikut disweep scheduler untuk overdue/suspend). */
     val isOutstanding: Boolean
         get() = status == SubscriptionInvoiceStatus.ISSUED || status == SubscriptionInvoiceStatus.OVERDUE
+
+    /**
+     * Sesuaikan nilai mengikuti biaya bulanan baru — HANYA untuk tagihan belum lunas yang BELUM
+     * di-charge (tanpa instrumen bayar terlekat) agar nilai lokal tak desync dari nominal gateway.
+     * Mengembalikan true bila nilai berubah (pemanggil menyimpan), false bila dilewati/tak berubah.
+     */
+    fun reprice(newAmount: BigDecimal): Boolean {
+        if (!isOutstanding) return false
+        if (gatewayRef != null || payMethod != null) return false
+        val normalized = validateAmount(newAmount)
+        if (normalized.compareTo(amount) == 0) return false
+        amount = normalized
+        return true
+    }
 
     companion object {
         fun create(
