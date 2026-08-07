@@ -1,4 +1,14 @@
-import { useMemo, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useMemo, useState, type KeyboardEvent, type ReactElement, type ReactNode } from 'react'
+import {
+  Checkbox,
+  Menu,
+  MenuTrigger,
+  MenuPopover,
+  MenuList,
+  MenuItem,
+  MenuButton,
+} from '@fluentui/react-components'
+import { MoreHorizontal } from 'lucide-react'
 import { IconChevronDown, IconChevronsUpDown } from './icons'
 import { EmptyState, SkeletonRows } from './ui'
 
@@ -8,6 +18,10 @@ import { EmptyState, SkeletonRows } from './ui'
  * bisa diklik. Filter/pencarian ditaruh di atasnya lewat [Toolbar]; pengurutan
  * dilakukan di sisi klien dari [Column.sortValue] agar tak membebani server untuk
  * daftar berukuran wajar.
+ *
+ * Ekstensi ala Azure DataGrid: kolom **checkbox** multi-select (`selection`) di
+ * paling kiri, dan kolom **menu aksi** (`rowActions`, tombol `…`) tepat setelahnya —
+ * dua-duanya opsional agar 16 pemakai lama tak wajib berubah.
  */
 export type Column<T> = {
   /** Kunci unik kolom — dipakai sebagai React key dan penanda state urut. */
@@ -29,6 +43,21 @@ export type Column<T> = {
   className?: string
 }
 
+/** Satu operasi baris di menu aksi kiri (`…`). */
+export type RowAction = {
+  key: string
+  label: string
+  icon?: ReactElement
+  onClick: () => void
+  disabled?: boolean
+}
+
+/** Kontrak seleksi multi-baris (controlled). */
+export type Selection = {
+  selected: Set<string>
+  onChange: (next: Set<string>) => void
+}
+
 type SortState = { key: string; dir: 'asc' | 'desc' } | null
 
 export function DataTable<T>({
@@ -39,6 +68,8 @@ export function DataTable<T>({
   loading,
   empty,
   initialSort,
+  selection,
+  rowActions,
 }: {
   columns: Column<T>[]
   rows: T[]
@@ -47,6 +78,8 @@ export function DataTable<T>({
   loading?: boolean
   empty?: ReactNode
   initialSort?: { key: string; dir: 'asc' | 'desc' }
+  selection?: Selection
+  rowActions?: (row: T) => RowAction[]
 }) {
   const [sort, setSort] = useState<SortState>(initialSort ?? null)
 
@@ -82,12 +115,46 @@ export function DataTable<T>({
 
   const clickable = !!onRowClick
 
+  // Seleksi: hitung keadaan header (kosong/penuh/campuran) atas baris yang tampak.
+  const allKeys = sorted.map(rowKey)
+  const selCount = selection ? allKeys.filter((k) => selection.selected.has(k)).length : 0
+  const headerChecked: boolean | 'mixed' =
+    selCount === 0 ? false : selCount === allKeys.length ? true : 'mixed'
+
+  const toggleAll = () => {
+    if (!selection) return
+    const next = new Set(selection.selected)
+    if (selCount === allKeys.length) allKeys.forEach((k) => next.delete(k))
+    else allKeys.forEach((k) => next.add(k))
+    selection.onChange(next)
+  }
+
+  const toggleOne = (key: string) => {
+    if (!selection) return
+    const next = new Set(selection.selected)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    selection.onChange(next)
+  }
+
+  const leadCols = (selection ? 1 : 0) + (rowActions ? 1 : 0)
+
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
+              {selection && (
+                <th className="dg-check" style={{ width: '1%' }}>
+                  <Checkbox
+                    checked={headerChecked}
+                    onChange={toggleAll}
+                    aria-label="Pilih semua baris"
+                  />
+                </th>
+              )}
+              {rowActions && <th className="dg-actions" style={{ width: '1%' }} aria-label="Aksi" />}
               {columns.map((col) => {
                 const active = sort?.key === col.key
                 const ariaSort = active
@@ -125,20 +192,66 @@ export function DataTable<T>({
           {!loading && (
             <tbody>
               {sorted.map((row) => {
+                const key = rowKey(row)
                 const onKey = (e: KeyboardEvent<HTMLTableRowElement>) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault()
                     onRowClick!(row)
                   }
                 }
+                const selected = selection?.selected.has(key) ?? false
+                const actions = rowActions?.(row) ?? []
                 return (
                   <tr
-                    key={rowKey(row)}
-                    className={clickable ? 'row-click' : undefined}
+                    key={key}
+                    className={
+                      [clickable ? 'row-click' : '', selected ? 'row-selected' : '']
+                        .filter(Boolean)
+                        .join(' ') || undefined
+                    }
                     onClick={clickable ? () => onRowClick!(row) : undefined}
                     onKeyDown={clickable ? onKey : undefined}
                     tabIndex={clickable ? 0 : undefined}
                   >
+                    {selection && (
+                      <td className="dg-check" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selected}
+                          onChange={() => toggleOne(key)}
+                          aria-label="Pilih baris"
+                        />
+                      </td>
+                    )}
+                    {rowActions && (
+                      <td className="dg-actions" onClick={(e) => e.stopPropagation()}>
+                        {actions.length > 0 && (
+                          <Menu positioning="below-start">
+                            <MenuTrigger disableButtonEnhancement>
+                              <MenuButton
+                                appearance="transparent"
+                                icon={<MoreHorizontal size={16} />}
+                                aria-label="Aksi baris"
+                                size="small"
+                              />
+                            </MenuTrigger>
+                            <MenuPopover>
+                              <MenuList>
+                                {actions.map((a) => (
+                                  <MenuItem
+                                    key={a.key}
+                                    icon={a.icon}
+                                    disabled={a.disabled}
+                                    onClick={a.onClick}
+                                  >
+                                    {a.label}
+                                  </MenuItem>
+                                ))}
+                              </MenuList>
+                            </MenuPopover>
+                          </Menu>
+                        )}
+                      </td>
+                    )}
                     {columns.map((col) => (
                       <td
                         key={col.key}
@@ -159,7 +272,7 @@ export function DataTable<T>({
       </div>
       {loading && (
         <div style={{ padding: '1rem' }}>
-          <SkeletonRows rows={5} cols={columns.length} />
+          <SkeletonRows rows={5} cols={columns.length + leadCols} />
         </div>
       )}
       {!loading && sorted.length === 0 && (

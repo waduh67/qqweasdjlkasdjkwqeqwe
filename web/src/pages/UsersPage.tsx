@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
+import { KeyRound, Plus, Power, RefreshCw, Trash2 } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { Area, PageResponse, Role, User } from '../api/types'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
+import { DataTable, type Column, type RowAction } from '../components/DataTable'
+import { CommandBar, type CommandAction } from '../components/CommandBar'
+import { PageHeader } from '../components/PageHeader'
 import { EmptyState, SearchInput, StatusBadge, Toolbar } from '../components/ui'
-import { IconCheck, IconClose, IconKey, IconPlus, IconPower, IconTrash, IconUsers } from '../components/icons'
+import { IconCheck, IconClose, IconUsers } from '../components/icons'
 
 interface NewUser {
   email: string
@@ -26,6 +29,8 @@ export function UsersPage() {
   const [draft, setDraft] = useState<NewUser | null>(null)
   const [editing, setEditing] = useState<User | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
 
   const reload = useCallback(async () => {
     try {
@@ -97,53 +102,83 @@ export function UsersPage() {
       cell: (u) => roleNames(u) || '–',
     },
     { key: 'area', header: 'Area', className: 'muted', sortValue: (u) => areaCodes(u), cell: (u) => areaCodes(u) },
-    {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (user) => (
-        <div className="row" style={{ justifyContent: 'flex-end' }}>
-          {can('iam.user.assign') && (
-            <button className="small" onClick={() => setEditing(user)}>
-              <IconKey size={15} /> Akses
-            </button>
-          )}
-          {can('iam.user.update') && (
-            <button
-              className="small"
-              onClick={() =>
-                void run(() =>
-                  api.post(`/api/users/${user.id}/${user.status === 'ACTIVE' ? 'disable' : 'enable'}`),
-                )
-              }
-            >
-              <IconPower size={15} /> {user.status === 'ACTIVE' ? 'Nonaktifkan' : 'Aktifkan'}
-            </button>
-          )}
-          {can('iam.user.delete') && (
-            <button
-              className="small danger"
-              onClick={() => confirm(`Hapus ${user.email}?`) && void run(() => api.del(`/api/users/${user.id}`))}
-            >
-              <IconTrash size={15} /> Hapus
-            </button>
-          )}
-        </div>
-      ),
-    },
   ]
 
+  // Aksi per-baris kini di menu `…` ala Azure DataGrid — Akses/Aktivasi/Hapus.
+  const canAssign = can('iam.user.assign')
+  const canUpdate = can('iam.user.update')
+  const canDelete = can('iam.user.delete')
+  const hasRowActions = canAssign || canUpdate || canDelete
+  const rowActions = (user: User): RowAction[] => {
+    const list: RowAction[] = []
+    if (canAssign)
+      list.push({ key: 'access', label: 'Akses', icon: <KeyRound size={16} />, onClick: () => setEditing(user) })
+    if (canUpdate)
+      list.push({
+        key: 'toggle',
+        label: user.status === 'ACTIVE' ? 'Nonaktifkan' : 'Aktifkan',
+        icon: <Power size={16} />,
+        onClick: () =>
+          void run(() =>
+            api.post(`/api/users/${user.id}/${user.status === 'ACTIVE' ? 'disable' : 'enable'}`),
+          ),
+      })
+    if (canDelete)
+      list.push({
+        key: 'delete',
+        label: 'Hapus',
+        icon: <Trash2 size={16} />,
+        onClick: () => {
+          if (confirm(`Hapus ${user.email}?`)) void run(() => api.del(`/api/users/${user.id}`))
+        },
+      })
+    return list
+  }
+
+  // Hapus massal dari CommandBar — nonaktif sampai ada baris tercentang (pola Azure).
+  const deleteSelected = async () => {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    if (!confirm(`Hapus ${ids.length} pengguna terpilih? Tindakan ini tidak dapat dibatalkan.`)) return
+    setDeleting(true)
+    await run(async () => {
+      await Promise.all(ids.map((id) => api.del(`/api/users/${id}`)))
+      setSelected(new Set())
+    })
+    setDeleting(false)
+  }
+
+  const primary: CommandAction | undefined = can('iam.user.create')
+    ? {
+        key: 'create',
+        label: 'Pengguna baru',
+        icon: <Plus size={16} />,
+        onClick: () => setDraft({ ...EMPTY, roleIds: new Set(), areaIds: new Set() }),
+      }
+    : undefined
+
+  const actions: CommandAction[] = []
+  if (canDelete)
+    actions.push({
+      key: 'delete',
+      label: 'Hapus',
+      icon: <Trash2 size={16} />,
+      onClick: () => void deleteSelected(),
+      disabled: selected.size === 0 || deleting,
+    })
+  actions.push({
+    key: 'refresh',
+    label: 'Segarkan',
+    icon: <RefreshCw size={16} />,
+    onClick: () => void reload(),
+    dividerBefore: canDelete,
+  })
+
   return (
-    <div className="stack">
-      <div className="spread">
-        <h1 className="page-title">Pengguna</h1>
-        {can('iam.user.create') && (
-          <button className="primary" onClick={() => setDraft({ ...EMPTY, roleIds: new Set(), areaIds: new Set() })}>
-            <IconPlus size={16} /> Pengguna baru
-          </button>
-        )}
-      </div>
+    <div className="stack" style={{ gap: '1rem' }}>
+      <PageHeader title="Pengguna" subtitle="Akun operator, role, dan cakupan area akses." />
+
+      <CommandBar primary={primary} actions={actions} />
 
       {error && <p className="error">{error}</p>}
 
@@ -157,6 +192,8 @@ export function UsersPage() {
         rowKey={(u) => u.id}
         loading={loading}
         initialSort={{ key: 'name', dir: 'asc' }}
+        selection={canDelete ? { selected, onChange: setSelected } : undefined}
+        rowActions={hasRowActions ? rowActions : undefined}
         empty={
           <EmptyState
             title={query ? 'Tidak ada pengguna yang cocok' : 'Belum ada pengguna'}

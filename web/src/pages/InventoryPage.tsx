@@ -3,11 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type { AssetStatus, OdcView, OdpView, OltView, PonPortView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
+import { Link2, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
+import { DataTable, type Column, type RowAction } from '../components/DataTable'
+import { CommandBar, type CommandAction } from '../components/CommandBar'
+import { PageHeader } from '../components/PageHeader'
 import { LocationPicker } from '../components/LocationPicker'
 import { EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
-import { IconInventory, IconPlus } from '../components/icons'
+import { IconInventory } from '../components/icons'
 
 /**
  * Inventory jaringan dalam satu halaman bertab.
@@ -77,11 +80,11 @@ export function InventoryPage() {
   }
 
   return (
-    <div className="stack" style={{ gap: '1.25rem' }}>
-      <div>
-        <h1 className="page-title">Inventory Jaringan</h1>
-        <p className="page-sub">Kelola site, OLT, ODC, dan ODP — dari POP sampai kotak terminasi.</p>
-      </div>
+    <div className="stack" style={{ gap: '1rem' }}>
+      <PageHeader
+        title="Inventory Jaringan"
+        subtitle="Kelola site, OLT, ODC, dan ODP — dari POP sampai kotak terminasi."
+      />
       <div className="segment" style={{ alignSelf: 'flex-start' }}>
         {visible.map((item) => (
           <button key={item.key} className={tab === item.key ? 'active' : ''} onClick={() => setTab(item.key)}>
@@ -152,15 +155,30 @@ function LocationFields({
 
 function SitesTab() {
   const { can } = useCan()
-  const { items, loading, run } = useList<SiteView>('/api/sites')
+  const { items, loading, reload, run } = useList<SiteView>('/api/sites')
   const empty = { code: '', name: '', address: '', longitude: '', latitude: '' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
   const [query, setQuery] = useState('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
+  const canDelete = can('network.site.delete')
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
     return items.filter((s) => matchesQuery([s.code, s.name, s.address], q))
   }, [items, query])
+
+  const deleteSelected = async () => {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    if (!confirm(`Hapus ${ids.length} site terpilih?`)) return
+    setDeleting(true)
+    await run(async () => {
+      await Promise.all(ids.map((id) => api.del(`/api/sites/${id}`)))
+      setSelected(new Set())
+    })
+    setDeleting(false)
+  }
 
   const columns: Column<SiteView>[] = [
     { key: 'code', header: 'Kode', sortValue: (s) => s.code, cell: (s) => s.code },
@@ -185,28 +203,45 @@ function SitesTab() {
         </span>
       ),
     },
-    {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (s) =>
-        can('network.site.delete') ? (
-          <button onClick={() => void run(() => api.del(`/api/sites/${s.id}`))}>Hapus</button>
-        ) : null,
-    },
   ]
+
+  const rowActions = (s: SiteView): RowAction[] =>
+    canDelete
+      ? [
+          {
+            key: 'delete',
+            label: 'Hapus',
+            icon: <Trash2 size={16} />,
+            onClick: () => {
+              if (confirm(`Hapus site ${s.code}?`)) void run(() => api.del(`/api/sites/${s.id}`))
+            },
+          },
+        ]
+      : []
+
+  const primary: CommandAction | undefined = can('network.site.create')
+    ? { key: 'create', label: 'Tambah site', icon: <Plus size={16} />, onClick: () => setDraft({ ...empty }) }
+    : undefined
+  const actions: CommandAction[] = []
+  if (canDelete)
+    actions.push({
+      key: 'delete',
+      label: 'Hapus',
+      icon: <Trash2 size={16} />,
+      onClick: () => void deleteSelected(),
+      disabled: selected.size === 0 || deleting,
+    })
+  actions.push({
+    key: 'refresh',
+    label: 'Segarkan',
+    icon: <RefreshCw size={16} />,
+    onClick: () => void reload(),
+    dividerBefore: canDelete,
+  })
 
   return (
     <div className="stack">
-      <div className="spread">
-        <span className="muted">{items.length} site</span>
-        {can('network.site.create') && (
-          <button className="primary" onClick={() => setDraft({ ...empty })}>
-            <IconPlus size={15} /> Tambah site
-          </button>
-        )}
-      </div>
+      <CommandBar primary={primary} actions={actions} />
 
       {draft && (
         <div className="card stack">
@@ -261,6 +296,8 @@ function SitesTab() {
         rowKey={(s) => s.id}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
+        selection={canDelete ? { selected, onChange: setSelected } : undefined}
+        rowActions={canDelete ? rowActions : undefined}
         empty={
           <EmptyState
             title={query ? 'Tidak ada site yang cocok' : 'Belum ada site'}
@@ -276,7 +313,7 @@ function SitesTab() {
 function OltsTab() {
   const { can } = useCan()
   const navigate = useNavigate()
-  const { items, loading, run } = useList<OltView>('/api/olts')
+  const { items, loading, reload, run } = useList<OltView>('/api/olts')
   const { items: sites } = useList<SiteView>('/api/sites')
   const empty = {
     siteId: '',
@@ -311,6 +348,9 @@ function OltsTab() {
   const [ports, setPorts] = useState<Record<string, string>>({})
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
+  const canDelete = can('network.olt.delete')
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -320,6 +360,18 @@ function OltsTab() {
         (!statusFilter || o.status === statusFilter),
     )
   }, [items, query, statusFilter])
+
+  const deleteSelected = async () => {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    if (!confirm(`Hapus ${ids.length} OLT terpilih?`)) return
+    setDeleting(true)
+    await run(async () => {
+      await Promise.all(ids.map((id) => api.del(`/api/olts/${id}`)))
+      setSelected(new Set())
+    })
+    setDeleting(false)
+  }
 
   const columns: Column<OltView>[] = [
     {
@@ -384,35 +436,50 @@ function OltsTab() {
         </div>
       ),
     },
-    {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (o) =>
-        can('network.olt.delete') ? (
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              void run(() => api.del(`/api/olts/${o.id}`))
-            }}
-          >
-            Hapus
-          </button>
-        ) : null,
-    },
   ]
+
+  const rowActions = (o: OltView): RowAction[] =>
+    canDelete
+      ? [
+          {
+            key: 'delete',
+            label: 'Hapus',
+            icon: <Trash2 size={16} />,
+            onClick: () => {
+              if (confirm(`Hapus OLT ${o.code}?`)) void run(() => api.del(`/api/olts/${o.id}`))
+            },
+          },
+        ]
+      : []
+
+  const primary: CommandAction | undefined = can('network.olt.create')
+    ? {
+        key: 'create',
+        label: 'Tambah OLT',
+        icon: <Plus size={16} />,
+        onClick: () => setDraft({ ...empty, siteId: sites[0]?.id ?? '' }),
+      }
+    : undefined
+  const actions: CommandAction[] = []
+  if (canDelete)
+    actions.push({
+      key: 'delete',
+      label: 'Hapus',
+      icon: <Trash2 size={16} />,
+      onClick: () => void deleteSelected(),
+      disabled: selected.size === 0 || deleting,
+    })
+  actions.push({
+    key: 'refresh',
+    label: 'Segarkan',
+    icon: <RefreshCw size={16} />,
+    onClick: () => void reload(),
+    dividerBefore: canDelete,
+  })
 
   return (
     <div className="stack">
-      <div className="spread">
-        <span className="muted">{items.length} OLT</span>
-        {can('network.olt.create') && (
-          <button className="primary" onClick={() => setDraft({ ...empty, siteId: sites[0]?.id ?? '' })}>
-            <IconPlus size={15} /> Tambah OLT
-          </button>
-        )}
-      </div>
+      <CommandBar primary={primary} actions={actions} />
 
       {draft && (
         <div className="card stack">
@@ -673,6 +740,8 @@ function OltsTab() {
         onRowClick={(o) => navigate(`/olts/${o.id}`)}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
+        selection={canDelete ? { selected, onChange: setSelected } : undefined}
+        rowActions={canDelete ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada OLT yang cocok' : 'Belum ada OLT'}
@@ -755,13 +824,17 @@ function PonPortPicker({ value, onChange }: { value: string; onChange: (ponPortI
 
 function OdcsTab() {
   const { can } = useCan()
-  const { items, loading, run } = useList<OdcView>('/api/odcs')
+  const { items, loading, reload, run } = useList<OdcView>('/api/odcs')
   const empty = { code: '', name: '', longitude: '', latitude: '', ponPortId: '', splitterRatio: '1:8', capacity: '64' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
   const [uplinkFor, setUplinkFor] = useState<OdcView | null>(null)
   const [uplinkPort, setUplinkPort] = useState('')
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
+  const canUpdate = can('network.odc.update')
+  const canDelete = can('network.odc.delete')
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -769,6 +842,18 @@ function OdcsTab() {
       (o) => matchesQuery([o.code, o.name, o.oltName], q) && (!statusFilter || o.status === statusFilter),
     )
   }, [items, query, statusFilter])
+
+  const deleteSelected = async () => {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    if (!confirm(`Hapus ${ids.length} ODC terpilih?`)) return
+    setDeleting(true)
+    await run(async () => {
+      await Promise.all(ids.map((id) => api.del(`/api/odcs/${id}`)))
+      setSelected(new Set())
+    })
+    setDeleting(false)
+  }
 
   const columns: Column<OdcView>[] = [
     {
@@ -800,41 +885,56 @@ function OdcsTab() {
       sortValue: (o) => (o.energized ? 'ACTIVE' : o.status),
       cell: (o) => (o.energized ? <StatusBadge status="ACTIVE" label="teraliri" /> : <StatusBadge status={o.status} />),
     },
-    {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (o) => (
-        <div className="row" style={{ gap: '0.35rem', justifyContent: 'flex-end' }}>
-          {can('network.odc.update') && (
-            <button
-              onClick={() => {
-                setUplinkFor(o)
-                setUplinkPort('')
-              }}
-            >
-              Uplink
-            </button>
-          )}
-          {can('network.odc.delete') && (
-            <button onClick={() => void run(() => api.del(`/api/odcs/${o.id}`))}>Hapus</button>
-          )}
-        </div>
-      ),
-    },
   ]
+
+  const rowActions = (o: OdcView): RowAction[] => {
+    const list: RowAction[] = []
+    if (canUpdate)
+      list.push({
+        key: 'uplink',
+        label: 'Uplink',
+        icon: <Link2 size={16} />,
+        onClick: () => {
+          setUplinkFor(o)
+          setUplinkPort('')
+        },
+      })
+    if (canDelete)
+      list.push({
+        key: 'delete',
+        label: 'Hapus',
+        icon: <Trash2 size={16} />,
+        onClick: () => {
+          if (confirm(`Hapus ODC ${o.code}?`)) void run(() => api.del(`/api/odcs/${o.id}`))
+        },
+      })
+    return list
+  }
+  const hasRowActions = canUpdate || canDelete
+
+  const primary: CommandAction | undefined = can('network.odc.create')
+    ? { key: 'create', label: 'Tambah ODC', icon: <Plus size={16} />, onClick: () => setDraft({ ...empty }) }
+    : undefined
+  const actions: CommandAction[] = []
+  if (canDelete)
+    actions.push({
+      key: 'delete',
+      label: 'Hapus',
+      icon: <Trash2 size={16} />,
+      onClick: () => void deleteSelected(),
+      disabled: selected.size === 0 || deleting,
+    })
+  actions.push({
+    key: 'refresh',
+    label: 'Segarkan',
+    icon: <RefreshCw size={16} />,
+    onClick: () => void reload(),
+    dividerBefore: canDelete,
+  })
 
   return (
     <div className="stack">
-      <div className="spread">
-        <span className="muted">{items.length} ODC</span>
-        {can('network.odc.create') && (
-          <button className="primary" onClick={() => setDraft({ ...empty })}>
-            <IconPlus size={15} /> Tambah ODC
-          </button>
-        )}
-      </div>
+      <CommandBar primary={primary} actions={actions} />
 
       {draft && (
         <div className="card stack">
@@ -943,6 +1043,8 @@ function OdcsTab() {
         rowKey={(o) => o.id}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
+        selection={canDelete ? { selected, onChange: setSelected } : undefined}
+        rowActions={hasRowActions ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada ODC yang cocok' : 'Belum ada ODC'}
@@ -957,12 +1059,15 @@ function OdcsTab() {
 
 function OdpsTab() {
   const { can } = useCan()
-  const { items, loading, run } = useList<OdpView>('/api/odps')
+  const { items, loading, reload, run } = useList<OdpView>('/api/odps')
   const { items: odcs } = useList<OdcView>('/api/odcs')
   const empty = { code: '', name: '', longitude: '', latitude: '', odcId: '', splitterRatio: '1:8', capacity: '8' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
+  const canDelete = can('network.odp.delete')
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -970,6 +1075,18 @@ function OdpsTab() {
       (o) => matchesQuery([o.code, o.name, o.odcName], q) && (!statusFilter || o.status === statusFilter),
     )
   }, [items, query, statusFilter])
+
+  const deleteSelected = async () => {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    if (!confirm(`Hapus ${ids.length} ODP terpilih?`)) return
+    setDeleting(true)
+    await run(async () => {
+      await Promise.all(ids.map((id) => api.del(`/api/odps/${id}`)))
+      setSelected(new Set())
+    })
+    setDeleting(false)
+  }
 
   const columns: Column<OdpView>[] = [
     {
@@ -987,28 +1104,50 @@ function OdpsTab() {
     { key: 'splitter', header: 'Splitter', sortValue: (o) => o.splitterRatio, cell: (o) => o.splitterRatio },
     { key: 'port', header: 'Port', align: 'right', sortValue: (o) => o.capacity, cell: (o) => o.capacity },
     { key: 'status', header: 'Status', sortValue: (o) => o.status, cell: (o) => <StatusBadge status={o.status} /> },
-    {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (o) =>
-        can('network.odp.delete') ? (
-          <button onClick={() => void run(() => api.del(`/api/odps/${o.id}`))}>Hapus</button>
-        ) : null,
-    },
   ]
+
+  const rowActions = (o: OdpView): RowAction[] =>
+    canDelete
+      ? [
+          {
+            key: 'delete',
+            label: 'Hapus',
+            icon: <Trash2 size={16} />,
+            onClick: () => {
+              if (confirm(`Hapus ODP ${o.code}?`)) void run(() => api.del(`/api/odps/${o.id}`))
+            },
+          },
+        ]
+      : []
+
+  const primary: CommandAction | undefined = can('network.odp.create')
+    ? {
+        key: 'create',
+        label: 'Tambah ODP',
+        icon: <Plus size={16} />,
+        onClick: () => setDraft({ ...empty, odcId: odcs[0]?.id ?? '' }),
+      }
+    : undefined
+  const actions: CommandAction[] = []
+  if (canDelete)
+    actions.push({
+      key: 'delete',
+      label: 'Hapus',
+      icon: <Trash2 size={16} />,
+      onClick: () => void deleteSelected(),
+      disabled: selected.size === 0 || deleting,
+    })
+  actions.push({
+    key: 'refresh',
+    label: 'Segarkan',
+    icon: <RefreshCw size={16} />,
+    onClick: () => void reload(),
+    dividerBefore: canDelete,
+  })
 
   return (
     <div className="stack">
-      <div className="spread">
-        <span className="muted">{items.length} ODP</span>
-        {can('network.odp.create') && (
-          <button className="primary" onClick={() => setDraft({ ...empty, odcId: odcs[0]?.id ?? '' })}>
-            <IconPlus size={15} /> Tambah ODP
-          </button>
-        )}
-      </div>
+      <CommandBar primary={primary} actions={actions} />
 
       {draft && (
         <div className="card stack">
@@ -1091,6 +1230,8 @@ function OdpsTab() {
         rowKey={(o) => o.id}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
+        selection={canDelete ? { selected, onChange: setSelected } : undefined}
+        rowActions={canDelete ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada ODP yang cocok' : 'Belum ada ODP'}

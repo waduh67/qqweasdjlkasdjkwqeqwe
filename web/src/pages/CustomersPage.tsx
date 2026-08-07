@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Download, FileUp, Pencil, Plus, RefreshCw, Trash2, Upload } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type { CustomerStatus, CustomerView } from '../api/network'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
+import { DataTable, type Column, type RowAction } from '../components/DataTable'
+import { CommandBar, type CommandAction } from '../components/CommandBar'
+import { PageHeader } from '../components/PageHeader'
 import { LocationPicker } from '../components/LocationPicker'
 import { exportCustomersCsv } from '../api/onboarding'
 import { EmptyState, Modal, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
-import { IconCustomers, IconDownload, IconInbox, IconPlus, IconUpload } from '../components/icons'
+import { IconCustomers } from '../components/icons'
 
 /**
  * Draft form pelanggan, dipakai bersama untuk tambah & sunting. `id` null = tambah baru;
@@ -73,10 +76,13 @@ export function CustomersPage() {
   const [draft, setDraft] = useState<CustomerDraft | null>(null)
   const [saving, setSaving] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
 
   // Ekspor butuh izin BACA union (pelanggan+langganan+akun) — cocok gating server; disable, bukan sembunyi.
   const canExport =
     can('customer.customer.view') && can('customer.subscription.view') && can('bng.access.view')
+  const canDelete = can('customer.customer.delete')
 
   const exportCsv = async () => {
     setExporting(true)
@@ -168,6 +174,43 @@ export function CustomersPage() {
     }
   }
 
+  // Hapus satu pelanggan lewat menu aksi baris (`…`) — konfirmasi dulu (aksi destruktif),
+  // lalu bersihkan dari seleksi bila kebetulan tercentang agar CommandBar tak salah hitung.
+  const deleteOne = async (c: CustomerView) => {
+    if (!window.confirm(`Hapus pelanggan "${c.name}"? Tindakan ini tidak dapat dibatalkan.`)) return
+    try {
+      await api.del(`/api/customers/${c.id}`)
+      setSelected((prev) => {
+        const next = new Set(prev)
+        next.delete(c.id)
+        return next
+      })
+      await reload()
+      toast.success('Pelanggan dihapus')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus pelanggan')
+    }
+  }
+
+  // Hapus massal dari CommandBar — nonaktif sampai ada baris tercentang (pola Azure).
+  const deleteSelected = async () => {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    if (!window.confirm(`Hapus ${ids.length} pelanggan terpilih? Tindakan ini tidak dapat dibatalkan.`))
+      return
+    setDeleting(true)
+    try {
+      await Promise.all(ids.map((id) => api.del(`/api/customers/${id}`)))
+      setSelected(new Set())
+      await reload()
+      toast.success(`${ids.length} pelanggan dihapus`)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus pelanggan')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const columns: Column<CustomerView>[] = [
     {
       key: 'name',
@@ -195,58 +238,95 @@ export function CustomersPage() {
     { key: 'address', header: 'Alamat', sortValue: (c) => c.address, cell: (c) => c.address },
     { key: 'onu', header: 'ONU', sortValue: (c) => c.onus.length, cell: (c) => onuSummary(c) },
   ]
-  // Aksi sunting per baris: modal terpisah dari klik-baris (yang membuka detail).
-  // stopPropagation mencegah tombol ikut memicu navigasi ke halaman detail.
-  if (can('customer.customer.update')) {
-    columns.push({
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (c) => (
-        <button
-          className="ghost small"
-          onClick={(e) => {
-            e.stopPropagation()
-            startEdit(c)
-          }}
-        >
-          Edit
-        </button>
-      ),
-    })
+
+  // Aksi per-baris kini di menu `…` ala Azure DataGrid (kiri baris), bukan tombol inline.
+  const canUpdate = can('customer.customer.update')
+  const hasRowActions = canUpdate || canDelete
+  const rowActions = (c: CustomerView): RowAction[] => {
+    const list: RowAction[] = []
+    if (canUpdate)
+      list.push({ key: 'edit', label: 'Edit', icon: <Pencil size={16} />, onClick: () => startEdit(c) })
+    if (canDelete)
+      list.push({
+        key: 'delete',
+        label: 'Hapus',
+        icon: <Trash2 size={16} />,
+        onClick: () => void deleteOne(c),
+      })
+    return list
   }
 
+  // CommandBar: primary `+ Tambah` dipatok kiri; sekunder berjajar berkelompok
+  // (hapus | ekspor/impor | segarkan). Pemisah disisipkan di awal tiap kelompok non-kosong.
+  const primary: CommandAction | undefined = can('customer.customer.create')
+    ? {
+        key: 'create',
+        label: 'Tambah pelanggan',
+        icon: <Plus size={16} />,
+        onClick: () => setDraft({ ...EMPTY_CUSTOMER }),
+      }
+    : undefined
+
+  const actions: CommandAction[] = []
+  const pushGroup = (items: CommandAction[]) => {
+    items.forEach((it, i) => actions.push({ ...it, dividerBefore: i === 0 && actions.length > 0 }))
+  }
+  pushGroup(
+    canDelete
+      ? [
+          {
+            key: 'delete',
+            label: 'Hapus',
+            icon: <Trash2 size={16} />,
+            onClick: () => void deleteSelected(),
+            disabled: selected.size === 0 || deleting,
+          },
+        ]
+      : [],
+  )
+  pushGroup([
+    ...(canExport
+      ? [
+          {
+            key: 'export',
+            label: exporting ? 'Mengekspor…' : 'Ekspor CSV',
+            icon: <Download size={16} />,
+            onClick: () => void exportCsv(),
+            disabled: exporting,
+          },
+        ]
+      : []),
+    ...(can('customer.customer.create')
+      ? [
+          {
+            key: 'import-csv',
+            label: 'Impor CSV',
+            icon: <Upload size={16} />,
+            onClick: () => navigate('/import-customers'),
+          },
+          {
+            key: 'import-pppoe',
+            label: 'Impor PPPoE',
+            icon: <FileUp size={16} />,
+            onClick: () => navigate('/import-pppoe'),
+          },
+        ]
+      : []),
+  ])
+  pushGroup([
+    { key: 'refresh', label: 'Segarkan', icon: <RefreshCw size={16} />, onClick: () => void reload() },
+  ])
+
   return (
-    <div className="stack" style={{ gap: '1.25rem' }}>
-      <div className="spread">
-        <div>
-          <h1 className="page-title">Pelanggan</h1>
-          <p className="page-sub">Data pelanggan, perangkat ONU, dan penempatannya di ODP.</p>
-        </div>
-        {/* Impor/ekspor massal menyatu di area Pelanggan (dulu menu sidebar tersendiri). Ekspor
-            digating izin BACA (bisa untuk operator view-only); impor digating izin buat pelanggan. */}
-        <div className="row" style={{ gap: '0.5rem' }}>
-          {canExport && (
-            <button className="ghost" onClick={() => void exportCsv()} disabled={exporting}>
-              <IconDownload size={15} /> {exporting ? 'Mengekspor…' : 'Ekspor CSV'}
-            </button>
-          )}
-          {can('customer.customer.create') && (
-            <>
-              <button className="ghost" onClick={() => navigate('/import-customers')}>
-                <IconUpload size={15} /> Impor CSV
-              </button>
-              <button className="ghost" onClick={() => navigate('/import-pppoe')}>
-                <IconInbox size={15} /> Impor PPPoE
-              </button>
-              <button className="primary" onClick={() => setDraft({ ...EMPTY_CUSTOMER })}>
-                <IconPlus size={15} /> Tambah pelanggan
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+    <div className="stack" style={{ gap: '1rem' }}>
+      <PageHeader
+        title="Pelanggan"
+        subtitle="Data pelanggan, perangkat ONU, dan penempatannya di ODP."
+      />
+
+      {/* Impor/ekspor massal menyatu di area Pelanggan (dulu menu sidebar tersendiri). Ekspor
+          digating izin BACA (bisa untuk operator view-only); impor digating izin buat pelanggan. */}
+      <CommandBar primary={primary} actions={actions} />
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama, kode, alamat, atau telepon…" />
@@ -264,6 +344,8 @@ export function CustomersPage() {
         onRowClick={(c) => navigate(`/customers/${c.id}`)}
         loading={loading}
         initialSort={{ key: 'name', dir: 'asc' }}
+        selection={canDelete ? { selected, onChange: setSelected } : undefined}
+        rowActions={hasRowActions ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada pelanggan yang cocok' : 'Belum ada pelanggan'}

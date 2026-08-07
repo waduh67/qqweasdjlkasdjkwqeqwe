@@ -6,7 +6,31 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
-### 2026-08-07 — Manajemen pengguna sub-account Pivot + sistem local payout (beneficiary bebas, wajib cek saldo)
+### 2026-08-07 — Redesign UI/UX ala Microsoft Azure Portal dengan Fluent UI (Fase 0–2)
+
+Perombakan tampilan & alur kerja agar mencerminkan Azure Portal — bukan sekadar warna,
+tapi juga pola interaksi. Dikerjakan bertahap; detail rencana di
+[`docs/azure-fluent-redesign.md`](docs/azure-fluent-redesign.md).
+
+**Ditambahkan**
+- **Tema Azure + FluentProvider (Fase 0).** `@fluentui/react-components` v9 dengan brand Azure Blue
+  (`#0078D4`), tema terang/gelap terjembatani ke `data-theme`/localStorage lewat `ThemeProvider`
+  (`web/src/theme/`). Ikon memakai `lucide-react`.
+- **Breadcrumb global + kepala halaman (Fase 1).** Komponen `Breadcrumbs` (Fluent Breadcrumb,
+  label Indonesia per-segmen) tampil di atas tiap halaman pada `Layout` & `PlatformLayout`;
+  komponen `PageHeader` menyeragamkan judul + subjudul.
+- **CommandBar ala Azure (Fase 2).** `CommandBar` menaruh aksi primary `+ Tambah` menonjol di
+  paling kiri, aksi sekunder (Hapus/Ekspor/Impor/Segarkan) berjajar berkelompok dengan ikon.
+  Tombol **Hapus nonaktif sampai ada baris terpilih**.
+- **DataGrid multi-select (Fase 2).** `DataTable` kini punya kolom **checkbox** pilih-semua/
+  per-baris dan **menu aksi `…`** per baris (Fluent Menu) — dipakai di halaman Pelanggan, Pengguna,
+  Paket Internet, dan Inventory (Site/OLT/ODC/ODP). Baris terpilih ditandai aksen kiri.
+
+**Diubah**
+- **Sidebar jadi terang ala Azure left-nav** dengan indikator aktif biru Azure, pengelompokan
+  seksi, dan status ciut/lebar.
+- **Aksi per-baris dipindah dari tombol inline ke menu `…`** (Edit/Hapus/Uplink/Akses/Aktivasi),
+  dan tombol Tambah/Ekspor/Impor dari kepala halaman dipindah ke CommandBar.
 
 **Ditambahkan**
 - **Undang & kirim ulang undangan pengguna sub-account.** Tenant bisa mengundang admin ke

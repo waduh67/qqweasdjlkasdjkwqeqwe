@@ -13,10 +13,13 @@ import {
   type SavePlanRequest,
   type ServiceType,
 } from '../api/catalog'
+import { Pencil, Plus, RefreshCw } from 'lucide-react'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
+import { DataTable, type Column, type RowAction } from '../components/DataTable'
+import { CommandBar, type CommandAction } from '../components/CommandBar'
+import { PageHeader } from '../components/PageHeader'
 import { Badge, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
-import { IconPackage, IconPlus } from '../components/icons'
+import { IconPackage } from '../components/icons'
 
 /**
  * Paket internet — SUMBER TUNGGAL harga + kecepatan + QoS + FUP + siklus billing.
@@ -306,44 +309,35 @@ export function CatalogPage() {
           <StatusBadge status="INACTIVE" label="Nonaktif" />
         ),
     },
-    ...(canManage
-      ? [
-          {
-            key: 'actions',
-            header: '',
-            align: 'right' as const,
-            width: '1%',
-            cell: (p: PlanView) => (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  edit(p)
-                }}
-              >
-                Ubah
-              </button>
-            ),
-          },
-        ]
-      : []),
+  ]
+
+  // Aksi per-baris di menu `…` — paket tak dihapus keras (dinonaktifkan via form), jadi hanya "Ubah".
+  const rowActions = (p: PlanView): RowAction[] => [
+    { key: 'edit', label: 'Ubah', icon: <Pencil size={16} />, onClick: () => edit(p) },
+  ]
+
+  const primary: CommandAction | undefined = canManage
+    ? {
+        key: 'create',
+        label: 'Tambah paket',
+        icon: <Plus size={16} />,
+        onClick: () => setDraft({ ...EMPTY_DRAFT }),
+        disabled: draft != null,
+      }
+    : undefined
+
+  const actions: CommandAction[] = [
+    { key: 'refresh', label: 'Segarkan', icon: <RefreshCw size={16} />, onClick: () => void reload() },
   ]
 
   return (
-    <div className="stack">
-      <div className="spread">
-        <div>
-          <h2 style={{ margin: 0 }}>Paket Internet</h2>
-          <p className="muted" style={{ margin: '0.25rem 0 0' }}>
-            Sumber tunggal harga, kecepatan, QoS &amp; FUP. Kecepatan dirakit jadi atribut
-            RADIUS otomatis — tak perlu ketik profil manual.
-          </p>
-        </div>
-        {canManage && !draft && (
-          <button className="primary" onClick={() => setDraft({ ...EMPTY_DRAFT })}>
-            <IconPlus size={15} /> Tambah paket
-          </button>
-        )}
-      </div>
+    <div className="stack" style={{ gap: '1rem' }}>
+      <PageHeader
+        title="Paket Internet"
+        subtitle="Sumber tunggal harga, kecepatan, QoS & FUP. Kecepatan dirakit jadi atribut RADIUS otomatis — tak perlu ketik profil manual."
+      />
+
+      <CommandBar primary={primary} actions={actions} />
 
       {draft && (
         <div className="card stack">
@@ -650,6 +644,7 @@ export function CatalogPage() {
         rows={rows}
         rowKey={(p) => p.id}
         onRowClick={canManage ? edit : undefined}
+        rowActions={canManage ? rowActions : undefined}
         loading={loading}
         initialSort={{ key: 'name', dir: 'asc' }}
         empty={

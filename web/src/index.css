@@ -440,6 +440,28 @@ tbody tr.row-click:focus-visible {
   outline-offset: -2px;
 }
 
+/* ---------- DataGrid: kolom checkbox & menu aksi kiri (Azure) ---------- */
+td.dg-check,
+th.dg-check,
+td.dg-actions,
+th.dg-actions {
+  width: 1%;
+  white-space: nowrap;
+  padding-right: 0;
+}
+td.dg-check,
+td.dg-actions {
+  vertical-align: middle;
+}
+/* Baris terpilih: latar biru-tipis + rusuk kiri aksen, khas seleksi Azure. */
+tbody tr.row-selected {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+tbody tr.row-selected:hover {
+  background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface-2));
+}
+
 /* ---------- Bilah filter (toolbar tabel) ---------- */
 
 .toolbar {
@@ -914,13 +936,22 @@ tbody tr.row-click:focus-visible {
   align-items: flex-start;
   gap: 1rem;
   flex-wrap: wrap;
-  margin-bottom: 1.25rem;
 }
 .page-header-actions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex: none;
+}
+
+/* ---------- CommandBar ala Azure Portal (bilah aksi di atas tabel) ---------- */
+.azure-commandbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.35rem 0.25rem;
+  border-bottom: 1px solid var(--border-strong);
 }
 
 /* ---------- Badge & pil status ---------- */
