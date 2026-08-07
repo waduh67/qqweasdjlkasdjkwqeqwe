@@ -126,12 +126,11 @@ class PivotPaymentGateway(
             put("clientReferenceId", request.invoiceNumber)
             put("amount", mapOf("value" to amountValue, "currency" to "IDR"))
             put("paymentType", "SINGLE")
-            // Batas waktu sesi bayar = jatuh tempo tagihan (STRICT: tak diperpanjang otomatis). Di-clamp
-            // ke rentang aman: expiryAt di luar batas maksimum Pivot ditolak → charge gagal.
-            expiryAt?.let {
-                put("expiryAt", it)
-                put("expirationMode", "STRICT")
-            }
+            // Batas waktu sesi bayar = jatuh tempo tagihan (di-clamp ke maksimum Pivot: expiryAt di
+            // luar batas ditolak → charge gagal). Pivot TAK punya field `expirationMode` —
+            // mengirimnya untuk VA/QR/E-wallet ditolak ("payment method type is not allowed to set
+            // expiration mode").
+            expiryAt?.let { put("expiryAt", it) }
             // redirectUrl WAJIB di kedua mode (Pivot memvalidasinya `required`). Mode-API tak
             // benar-benar me-redirect — instruksi bayar kembali inline di `chargeDetails[0]`.
             put("mode", if (apiMode) "API" else "REDIRECT")
