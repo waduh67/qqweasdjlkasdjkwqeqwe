@@ -42,3 +42,12 @@ export async function getMySubscription(): Promise<TenantSelfSubscriptionView | 
 export function renewMySubscription(months = 1): Promise<SubscriptionInvoiceView> {
   return api.post(`/api/subscription/renew?months=${months}`)
 }
+
+/**
+ * Siapkan tautan bayar untuk satu tagihan tertunggak (server charge ulang ke gateway aktif bila
+ * tautannya belum sempat terbit), lalu kembalikan tagihannya berisi `payUrl`. Dipakai tombol
+ * "Bayar" per-tagihan di Riwayat tagihan.
+ */
+export function payMyInvoice(invoiceId: string): Promise<SubscriptionInvoiceView> {
+  return api.post(`/api/subscription/invoices/${invoiceId}/pay`)
+}
