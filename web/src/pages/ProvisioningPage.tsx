@@ -1,4 +1,5 @@
-import { DiscoveredOnuInbox } from '../components/DiscoveredOnuInbox'
+import { DiscoveredOnuInbox } from '@/components/organisms'
+import { PageHeader } from '@/components/molecules'
 
 /**
  * Halaman Provisioning ONU: kotak masuk auto-provisioning lintas semua OLT.
@@ -11,13 +12,15 @@ import { DiscoveredOnuInbox } from '../components/DiscoveredOnuInbox'
 export function ProvisioningPage() {
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
-      <div>
-        <h1 className="page-title">Provisioning ONU</h1>
-        <p className="page-sub">
-          Perangkat yang dilaporkan OLT tapi belum terdaftar. Sistem menebak pelanggan, ODP, dan port
-          dari topologi — tinggal periksa lalu tuntaskan.
-        </p>
-      </div>
+      <PageHeader
+        title="Provisioning ONU"
+        subtitle={
+          <>
+            Perangkat yang dilaporkan OLT tapi belum terdaftar. Sistem menebak pelanggan, ODP, dan port
+            dari topologi — tinggal periksa lalu tuntaskan.
+          </>
+        }
+      />
       <DiscoveredOnuInbox showAutoProvision />
     </div>
   )

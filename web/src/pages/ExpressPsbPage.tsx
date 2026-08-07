@@ -6,10 +6,12 @@ import { listNas, type NasView } from '../api/bng'
 import { listPlans, SERVICE_TYPE_LABEL, type PlanView, type ServiceType } from '../api/catalog'
 import { onboardPsb, type ExpressPsbResult } from '../api/onboarding'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, useToast } from '../components/ui'
-import { LocationPicker } from '../components/LocationPicker'
-import { MultiCombobox } from '../components/MultiCombobox'
-import { IconPackage, IconPlus } from '../components/icons'
+import { Badge, EmptyState } from '@/components/atoms'
+import { useToast } from '@/system'
+import { LocationPicker } from '@/components/organisms'
+import { MultiCombobox } from '@/components/molecules'
+import { PageHeader } from '@/components/molecules'
+import { IconPackage, IconPlus } from '@/components/atoms/icons'
 
 /** Alfabet secret (tanpa 0/O/1/l/I) — cermin konvensi generator server agar mudah dibaca operator. */
 const SECRET_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
@@ -200,13 +202,10 @@ export function ExpressPsbPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div>
-        <h1 className="page-title">PSB Ekspres</h1>
-        <p className="page-sub">
-          Onboarding pelanggan baru sekali jalan: data pelanggan + paket + akun jaringan + jadwal pemasangan.
-          Semua dibuat dalam satu transaksi; layanan aktif saat Work Order PSB dituntaskan teknisi.
-        </p>
-      </div>
+      <PageHeader
+        title="PSB Ekspres"
+        subtitle="Onboarding pelanggan baru sekali jalan: data pelanggan + paket + akun jaringan + jadwal pemasangan. Semua dibuat dalam satu transaksi; layanan aktif saat Work Order PSB dituntaskan teknisi."
+      />
 
       {result && <ResultCard result={result} onDismiss={() => setResult(null)} />}
 

@@ -3,11 +3,17 @@ import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type { AssetStatus, OdcView, OdpView, OltView, PonPortView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
+import { Link2, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { LocationPicker } from '../components/LocationPicker'
-import { EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
-import { IconInventory, IconPlus } from '../components/icons'
+import { DataTable, type Column, type RowAction } from '@/components/organisms'
+import { CommandBar, type CommandAction } from '@/components/molecules'
+import { PageHeader } from '@/components/molecules'
+import { LocationPicker } from '@/components/organisms'
+import { Blade } from '@/components/organisms'
+import { EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { SearchInput, Tabs } from '@/components/molecules'
+import { useConfirm, useToast } from '@/system'
+import { IconInventory } from '@/components/atoms/icons'
 
 /**
  * Inventory jaringan dalam satu halaman bertab.
@@ -77,18 +83,12 @@ export function InventoryPage() {
   }
 
   return (
-    <div className="stack" style={{ gap: '1.25rem' }}>
-      <div>
-        <h1 className="page-title">Inventory Jaringan</h1>
-        <p className="page-sub">Kelola site, OLT, ODC, dan ODP — dari POP sampai kotak terminasi.</p>
-      </div>
-      <div className="segment" style={{ alignSelf: 'flex-start' }}>
-        {visible.map((item) => (
-          <button key={item.key} className={tab === item.key ? 'active' : ''} onClick={() => setTab(item.key)}>
-            {item.label}
-          </button>
-        ))}
-      </div>
+    <div className="stack" style={{ gap: '1rem' }}>
+      <PageHeader
+        title="Inventory Jaringan"
+        subtitle="Kelola site, OLT, ODC, dan ODP — dari POP sampai kotak terminasi."
+      />
+      <Tabs tabs={visible} active={tab} onChange={setTab} />
       {tab === 'sites' && <SitesTab />}
       {tab === 'olts' && <OltsTab />}
       {tab === 'odcs' && <OdcsTab />}
@@ -152,15 +152,35 @@ function LocationFields({
 
 function SitesTab() {
   const { can } = useCan()
-  const { items, loading, run } = useList<SiteView>('/api/sites')
+  const confirm = useConfirm()
+  const { items, loading, reload, run } = useList<SiteView>('/api/sites')
   const empty = { code: '', name: '', address: '', longitude: '', latitude: '' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
+  const [initialDraft, setInitialDraft] = useState<typeof empty | null>(null)
+  const openDraft = (d: typeof empty) => { setDraft(d); setInitialDraft(d) }
+  const closeDraft = () => { setDraft(null); setInitialDraft(null) }
+  const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
   const [query, setQuery] = useState('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
+  const canDelete = can('network.site.delete')
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
     return items.filter((s) => matchesQuery([s.code, s.name, s.address], q))
   }, [items, query])
+
+  const deleteSelected = async () => {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    if (!(await confirm({ title: 'Hapus site', message: `Hapus ${ids.length} site terpilih?`, confirmLabel: 'Hapus', danger: true }))) return
+    setDeleting(true)
+    await run(async () => {
+      await Promise.all(ids.map((id) => api.del(`/api/sites/${id}`)))
+      setSelected(new Set())
+    })
+    setDeleting(false)
+  }
 
   const columns: Column<SiteView>[] = [
     { key: 'code', header: 'Kode', sortValue: (s) => s.code, cell: (s) => s.code },
@@ -185,71 +205,99 @@ function SitesTab() {
         </span>
       ),
     },
-    {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (s) =>
-        can('network.site.delete') ? (
-          <button onClick={() => void run(() => api.del(`/api/sites/${s.id}`))}>Hapus</button>
-        ) : null,
-    },
   ]
+
+  const rowActions = (s: SiteView): RowAction[] =>
+    canDelete
+      ? [
+          {
+            key: 'delete',
+            label: 'Hapus',
+            icon: <Trash2 size={16} />,
+            onClick: () => void (async () => {
+              if (await confirm({ title: 'Hapus site', message: `Hapus site ${s.code}?`, confirmLabel: 'Hapus', danger: true })) void run(() => api.del(`/api/sites/${s.id}`))
+            })(),
+          },
+        ]
+      : []
+
+  const primary: CommandAction | undefined = can('network.site.create')
+    ? { key: 'create', label: 'Tambah site', icon: <Plus size={16} />, onClick: () => openDraft({ ...empty }) }
+    : undefined
+  const actions: CommandAction[] = []
+  if (canDelete)
+    actions.push({
+      key: 'delete',
+      label: 'Hapus',
+      icon: <Trash2 size={16} />,
+      onClick: () => void deleteSelected(),
+      disabled: selected.size === 0 || deleting,
+    })
+  actions.push({
+    key: 'refresh',
+    label: 'Segarkan',
+    icon: <RefreshCw size={16} />,
+    onClick: () => void reload(),
+    dividerBefore: canDelete,
+  })
 
   return (
     <div className="stack">
-      <div className="spread">
-        <span className="muted">{items.length} site</span>
-        {can('network.site.create') && (
-          <button className="primary" onClick={() => setDraft({ ...empty })}>
-            <IconPlus size={15} /> Tambah site
-          </button>
-        )}
-      </div>
+      <CommandBar primary={primary} actions={actions} />
 
-      {draft && (
-        <div className="card stack">
-          <div className="row">
-            <label style={{ flex: 1 }}>
-              <span>Kode</span>
-              <input value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} placeholder="POP-BKS" />
-            </label>
-            <label style={{ flex: 2 }}>
-              <span>Nama</span>
-              <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-            </label>
-          </div>
-          <label>
-            <span>Alamat</span>
-            <input value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} />
-          </label>
-          <LocationFields
-            longitude={draft.longitude}
-            latitude={draft.latitude}
-            onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
-          />
-          <div className="row">
+      <Blade
+        open={draft != null}
+        title="Tambah site"
+        subtitle="Daftarkan site/POP baru."
+        size="sm"
+        dirty={dirty}
+        onClose={closeDraft}
+        footer={
+          <>
             <button
               className="primary"
               onClick={() =>
                 void run(async () => {
                   await api.post('/api/sites', {
-                    code: draft.code,
-                    name: draft.name,
-                    address: draft.address || null,
-                    location: { longitude: Number(draft.longitude), latitude: Number(draft.latitude) },
+                    code: draft!.code,
+                    name: draft!.name,
+                    address: draft!.address || null,
+                    location: { longitude: Number(draft!.longitude), latitude: Number(draft!.latitude) },
                   })
-                  setDraft(null)
+                  closeDraft()
                 })
               }
             >
               Simpan
             </button>
-            <button onClick={() => setDraft(null)}>Batal</button>
+            <button onClick={closeDraft}>Batal</button>
+          </>
+        }
+      >
+        {draft && (
+          <div className="stack">
+            <div className="row">
+              <label style={{ flex: 1 }}>
+                <span>Kode</span>
+                <input value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} placeholder="POP-BKS" />
+              </label>
+              <label style={{ flex: 2 }}>
+                <span>Nama</span>
+                <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+              </label>
+            </div>
+            <label>
+              <span>Alamat</span>
+              <input value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} />
+            </label>
+            <LocationFields
+              longitude={draft.longitude}
+              latitude={draft.latitude}
+              onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
+            />
           </div>
-        </div>
-      )}
+        )}
+      </Blade>
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari kode, nama, atau alamat…" />
@@ -261,6 +309,8 @@ function SitesTab() {
         rowKey={(s) => s.id}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
+        selection={canDelete ? { selected, onChange: setSelected } : undefined}
+        rowActions={canDelete ? rowActions : undefined}
         empty={
           <EmptyState
             title={query ? 'Tidak ada site yang cocok' : 'Belum ada site'}
@@ -275,8 +325,9 @@ function SitesTab() {
 
 function OltsTab() {
   const { can } = useCan()
+  const confirm = useConfirm()
   const navigate = useNavigate()
-  const { items, loading, run } = useList<OltView>('/api/olts')
+  const { items, loading, reload, run } = useList<OltView>('/api/olts')
   const { items: sites } = useList<SiteView>('/api/sites')
   const empty = {
     siteId: '',
@@ -300,6 +351,10 @@ function OltsTab() {
   }
   type OltDraft = typeof empty
   const [draft, setDraft] = useState<OltDraft | null>(null)
+  const [initialDraft, setInitialDraft] = useState<OltDraft | null>(null)
+  const openDraft = (d: OltDraft) => { setDraft(d); setInitialDraft(d) }
+  const closeDraft = () => { setDraft(null); setInitialDraft(null) }
+  const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
 
   // Ganti vendor = ganti kanal manajemen yang masuk akal: HSGQ dual-channel
   // (SNMP EPON + Web UI, keduanya menyala), selainnya SNMP-first (Web pelengkap,
@@ -311,6 +366,9 @@ function OltsTab() {
   const [ports, setPorts] = useState<Record<string, string>>({})
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
+  const canDelete = can('network.olt.delete')
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -320,6 +378,18 @@ function OltsTab() {
         (!statusFilter || o.status === statusFilter),
     )
   }, [items, query, statusFilter])
+
+  const deleteSelected = async () => {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    if (!(await confirm({ title: 'Hapus OLT', message: `Hapus ${ids.length} OLT terpilih?`, confirmLabel: 'Hapus', danger: true }))) return
+    setDeleting(true)
+    await run(async () => {
+      await Promise.all(ids.map((id) => api.del(`/api/olts/${id}`)))
+      setSelected(new Set())
+    })
+    setDeleting(false)
+  }
 
   const columns: Column<OltView>[] = [
     {
@@ -384,38 +454,99 @@ function OltsTab() {
         </div>
       ),
     },
-    {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (o) =>
-        can('network.olt.delete') ? (
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              void run(() => api.del(`/api/olts/${o.id}`))
-            }}
-          >
-            Hapus
-          </button>
-        ) : null,
-    },
   ]
+
+  const rowActions = (o: OltView): RowAction[] =>
+    canDelete
+      ? [
+          {
+            key: 'delete',
+            label: 'Hapus',
+            icon: <Trash2 size={16} />,
+            onClick: () => void (async () => {
+              if (await confirm({ title: 'Hapus OLT', message: `Hapus OLT ${o.code}?`, confirmLabel: 'Hapus', danger: true })) void run(() => api.del(`/api/olts/${o.id}`))
+            })(),
+          },
+        ]
+      : []
+
+  const primary: CommandAction | undefined = can('network.olt.create')
+    ? {
+        key: 'create',
+        label: 'Tambah OLT',
+        icon: <Plus size={16} />,
+        onClick: () => openDraft({ ...empty, siteId: sites[0]?.id ?? '' }),
+      }
+    : undefined
+  const actions: CommandAction[] = []
+  if (canDelete)
+    actions.push({
+      key: 'delete',
+      label: 'Hapus',
+      icon: <Trash2 size={16} />,
+      onClick: () => void deleteSelected(),
+      disabled: selected.size === 0 || deleting,
+    })
+  actions.push({
+    key: 'refresh',
+    label: 'Segarkan',
+    icon: <RefreshCw size={16} />,
+    onClick: () => void reload(),
+    dividerBefore: canDelete,
+  })
 
   return (
     <div className="stack">
-      <div className="spread">
-        <span className="muted">{items.length} OLT</span>
-        {can('network.olt.create') && (
-          <button className="primary" onClick={() => setDraft({ ...empty, siteId: sites[0]?.id ?? '' })}>
-            <IconPlus size={15} /> Tambah OLT
-          </button>
-        )}
-      </div>
+      <CommandBar primary={primary} actions={actions} />
 
-      {draft && (
-        <div className="card stack">
+      <Blade
+        open={draft != null}
+        title="Tambah OLT"
+        subtitle="Pasang OLT di atas sebuah site."
+        size="lg"
+        dirty={dirty}
+        onClose={closeDraft}
+        footer={
+          <>
+            <button
+              className="primary"
+              onClick={() =>
+                void run(async () => {
+                  const { longitude, latitude } = draft!
+                  await api.post('/api/olts', {
+                    siteId: draft!.siteId,
+                    code: draft!.code,
+                    name: draft!.name,
+                    vendor: draft!.vendor,
+                    model: draft!.model || null,
+                    description: draft!.description || null,
+                    managementIp: draft!.managementIp || null,
+                    snmpEnabled: draft!.snmpEnabled,
+                    snmpCommunity: draft!.snmpCommunity || null,
+                    snmpVersion: draft!.snmpVersion,
+                    snmpPort: Number(draft!.snmpPort) || 161,
+                    webEnabled: draft!.webEnabled,
+                    webProtocol: draft!.webProtocol,
+                    webPort: draft!.webPort ? Number(draft!.webPort) : null,
+                    webUsername: draft!.webUsername || null,
+                    webPassword: draft!.webPassword || null,
+                    location:
+                      longitude && latitude
+                        ? { longitude: Number(longitude), latitude: Number(latitude) }
+                        : null,
+                  })
+                  closeDraft()
+                })
+              }
+            >
+              Simpan
+            </button>
+            <button onClick={closeDraft}>Batal</button>
+          </>
+        }
+      >
+        {draft && (
+          <div className="stack">
           {/* Identitas perangkat */}
           <div className="row">
             <label style={{ flex: 1 }}>
@@ -618,44 +749,9 @@ function OltsTab() {
           <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
             Kosongkan lokasi untuk mengikuti koordinat site. Isi bila ingin OLT tampil di titiknya sendiri di peta.
           </p>
-          <div className="row">
-            <button
-              className="primary"
-              onClick={() =>
-                void run(async () => {
-                  const { longitude, latitude } = draft
-                  await api.post('/api/olts', {
-                    siteId: draft.siteId,
-                    code: draft.code,
-                    name: draft.name,
-                    vendor: draft.vendor,
-                    model: draft.model || null,
-                    description: draft.description || null,
-                    managementIp: draft.managementIp || null,
-                    snmpEnabled: draft.snmpEnabled,
-                    snmpCommunity: draft.snmpCommunity || null,
-                    snmpVersion: draft.snmpVersion,
-                    snmpPort: Number(draft.snmpPort) || 161,
-                    webEnabled: draft.webEnabled,
-                    webProtocol: draft.webProtocol,
-                    webPort: draft.webPort ? Number(draft.webPort) : null,
-                    webUsername: draft.webUsername || null,
-                    webPassword: draft.webPassword || null,
-                    location:
-                      longitude && latitude
-                        ? { longitude: Number(longitude), latitude: Number(latitude) }
-                        : null,
-                  })
-                  setDraft(null)
-                })
-              }
-            >
-              Simpan
-            </button>
-            <button onClick={() => setDraft(null)}>Batal</button>
           </div>
-        </div>
-      )}
+        )}
+      </Blade>
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari kode, nama, site, vendor, atau IP…" />
@@ -673,6 +769,8 @@ function OltsTab() {
         onRowClick={(o) => navigate(`/olts/${o.id}`)}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
+        selection={canDelete ? { selected, onChange: setSelected } : undefined}
+        rowActions={canDelete ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada OLT yang cocok' : 'Belum ada OLT'}
@@ -755,13 +853,22 @@ function PonPortPicker({ value, onChange }: { value: string; onChange: (ponPortI
 
 function OdcsTab() {
   const { can } = useCan()
-  const { items, loading, run } = useList<OdcView>('/api/odcs')
+  const confirm = useConfirm()
+  const { items, loading, reload, run } = useList<OdcView>('/api/odcs')
   const empty = { code: '', name: '', longitude: '', latitude: '', ponPortId: '', splitterRatio: '1:8', capacity: '64' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
+  const [initialDraft, setInitialDraft] = useState<typeof empty | null>(null)
+  const openDraft = (d: typeof empty) => { setDraft(d); setInitialDraft(d) }
+  const closeDraft = () => { setDraft(null); setInitialDraft(null) }
+  const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
   const [uplinkFor, setUplinkFor] = useState<OdcView | null>(null)
   const [uplinkPort, setUplinkPort] = useState('')
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
+  const canUpdate = can('network.odc.update')
+  const canDelete = can('network.odc.delete')
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -769,6 +876,18 @@ function OdcsTab() {
       (o) => matchesQuery([o.code, o.name, o.oltName], q) && (!statusFilter || o.status === statusFilter),
     )
   }, [items, query, statusFilter])
+
+  const deleteSelected = async () => {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    if (!(await confirm({ title: 'Hapus ODC', message: `Hapus ${ids.length} ODC terpilih?`, confirmLabel: 'Hapus', danger: true }))) return
+    setDeleting(true)
+    await run(async () => {
+      await Promise.all(ids.map((id) => api.del(`/api/odcs/${id}`)))
+      setSelected(new Set())
+    })
+    setDeleting(false)
+  }
 
   const columns: Column<OdcView>[] = [
     {
@@ -800,115 +919,143 @@ function OdcsTab() {
       sortValue: (o) => (o.energized ? 'ACTIVE' : o.status),
       cell: (o) => (o.energized ? <StatusBadge status="ACTIVE" label="teraliri" /> : <StatusBadge status={o.status} />),
     },
-    {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (o) => (
-        <div className="row" style={{ gap: '0.35rem', justifyContent: 'flex-end' }}>
-          {can('network.odc.update') && (
-            <button
-              onClick={() => {
-                setUplinkFor(o)
-                setUplinkPort('')
-              }}
-            >
-              Uplink
-            </button>
-          )}
-          {can('network.odc.delete') && (
-            <button onClick={() => void run(() => api.del(`/api/odcs/${o.id}`))}>Hapus</button>
-          )}
-        </div>
-      ),
-    },
   ]
+
+  const rowActions = (o: OdcView): RowAction[] => {
+    const list: RowAction[] = []
+    if (canUpdate)
+      list.push({
+        key: 'uplink',
+        label: 'Uplink',
+        icon: <Link2 size={16} />,
+        onClick: () => {
+          setUplinkFor(o)
+          setUplinkPort('')
+        },
+      })
+    if (canDelete)
+      list.push({
+        key: 'delete',
+        label: 'Hapus',
+        icon: <Trash2 size={16} />,
+        onClick: () => void (async () => {
+          if (await confirm({ title: 'Hapus ODC', message: `Hapus ODC ${o.code}?`, confirmLabel: 'Hapus', danger: true })) void run(() => api.del(`/api/odcs/${o.id}`))
+        })(),
+      })
+    return list
+  }
+  const hasRowActions = canUpdate || canDelete
+
+  const primary: CommandAction | undefined = can('network.odc.create')
+    ? { key: 'create', label: 'Tambah ODC', icon: <Plus size={16} />, onClick: () => openDraft({ ...empty }) }
+    : undefined
+  const actions: CommandAction[] = []
+  if (canDelete)
+    actions.push({
+      key: 'delete',
+      label: 'Hapus',
+      icon: <Trash2 size={16} />,
+      onClick: () => void deleteSelected(),
+      disabled: selected.size === 0 || deleting,
+    })
+  actions.push({
+    key: 'refresh',
+    label: 'Segarkan',
+    icon: <RefreshCw size={16} />,
+    onClick: () => void reload(),
+    dividerBefore: canDelete,
+  })
 
   return (
     <div className="stack">
-      <div className="spread">
-        <span className="muted">{items.length} ODC</span>
-        {can('network.odc.create') && (
-          <button className="primary" onClick={() => setDraft({ ...empty })}>
-            <IconPlus size={15} /> Tambah ODC
-          </button>
-        )}
-      </div>
+      <CommandBar primary={primary} actions={actions} />
 
-      {draft && (
-        <div className="card stack">
-          <div className="row">
-            <label style={{ flex: 1 }}>
-              <span>Kode</span>
-              <input value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} placeholder="ODC-MGH-01" />
-            </label>
-            <label style={{ flex: 2 }}>
-              <span>Nama</span>
-              <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-            </label>
-          </div>
-          <div className="row">
-            <label style={{ flex: 1 }}>
-              <span>Rasio splitter</span>
-              <select value={draft.splitterRatio} onChange={(e) => setDraft({ ...draft, splitterRatio: e.target.value })}>
-                {SPLITTER_RATIOS.map((ratio) => (
-                  <option key={ratio}>{ratio}</option>
-                ))}
-              </select>
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Kapasitas</span>
-              <input value={draft.capacity} onChange={(e) => setDraft({ ...draft, capacity: e.target.value })} />
-            </label>
-          </div>
-          <LocationFields
-            longitude={draft.longitude}
-            latitude={draft.latitude}
-            onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
-          />
-          <PonPortPicker value={draft.ponPortId} onChange={(ponPortId) => setDraft({ ...draft, ponPortId })} />
-          <div className="row">
+      <Blade
+        open={draft != null}
+        title="Tambah ODC"
+        subtitle="Daftarkan ODC untuk memecah distribusi ke ODP."
+        size="sm"
+        dirty={dirty}
+        onClose={closeDraft}
+        footer={
+          <>
             <button
               className="primary"
               onClick={() =>
                 void run(async () => {
                   await api.post('/api/odcs', {
-                    code: draft.code,
-                    name: draft.name,
-                    location: { longitude: Number(draft.longitude), latitude: Number(draft.latitude) },
-                    ponPortId: draft.ponPortId || null,
-                    splitterRatio: draft.splitterRatio,
-                    capacity: Number(draft.capacity),
+                    code: draft!.code,
+                    name: draft!.name,
+                    location: { longitude: Number(draft!.longitude), latitude: Number(draft!.latitude) },
+                    ponPortId: draft!.ponPortId || null,
+                    splitterRatio: draft!.splitterRatio,
+                    capacity: Number(draft!.capacity),
                   })
-                  setDraft(null)
+                  closeDraft()
                 })
               }
             >
               Simpan
             </button>
-            <button onClick={() => setDraft(null)}>Batal</button>
+            <button onClick={closeDraft}>Batal</button>
+          </>
+        }
+      >
+        {draft && (
+          <div className="stack">
+            <div className="row">
+              <label style={{ flex: 1 }}>
+                <span>Kode</span>
+                <input value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} placeholder="ODC-MGH-01" />
+              </label>
+              <label style={{ flex: 2 }}>
+                <span>Nama</span>
+                <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+              </label>
+            </div>
+            <div className="row">
+              <label style={{ flex: 1 }}>
+                <span>Rasio splitter</span>
+                <select value={draft.splitterRatio} onChange={(e) => setDraft({ ...draft, splitterRatio: e.target.value })}>
+                  {SPLITTER_RATIOS.map((ratio) => (
+                    <option key={ratio}>{ratio}</option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ flex: 1 }}>
+                <span>Kapasitas</span>
+                <input value={draft.capacity} onChange={(e) => setDraft({ ...draft, capacity: e.target.value })} />
+              </label>
+            </div>
+            <LocationFields
+              longitude={draft.longitude}
+              latitude={draft.latitude}
+              onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
+            />
+            <PonPortPicker value={draft.ponPortId} onChange={(ponPortId) => setDraft({ ...draft, ponPortId })} />
           </div>
-        </div>
-      )}
+        )}
+      </Blade>
 
-      {uplinkFor && (
-        <div className="card stack">
-          <div className="spread">
-            <strong>Uplink {uplinkFor.code}</strong>
-            <span className="muted" style={{ fontSize: '0.85rem' }}>
-              {uplinkFor.oltName
-                ? `sekarang: ${uplinkFor.oltName} · ${uplinkFor.ponPortLabel}`
-                : 'sekarang: belum di-uplink'}
-            </span>
-          </div>
-          <PonPortPicker value={uplinkPort} onChange={setUplinkPort} />
-          <div className="row">
+      <Blade
+        open={uplinkFor != null}
+        title={uplinkFor ? `Uplink ${uplinkFor.code}` : 'Uplink'}
+        subtitle={
+          uplinkFor?.oltName ? `sekarang: ${uplinkFor.oltName} · ${uplinkFor.ponPortLabel}` : 'sekarang: belum di-uplink'
+        }
+        size="sm"
+        dirty={uplinkPort !== ''}
+        onClose={() => {
+          setUplinkFor(null)
+          setUplinkPort('')
+        }}
+        footer={
+          <>
             <button
               className="primary"
               onClick={() =>
                 void run(async () => {
-                  await api.put(`/api/odcs/${uplinkFor.id}/uplink`, { targetId: uplinkPort || null })
+                  await api.put(`/api/odcs/${uplinkFor!.id}/uplink`, { targetId: uplinkPort || null })
                   setUplinkFor(null)
                   setUplinkPort('')
                 }, 'Uplink ODC diperbarui')
@@ -924,9 +1071,11 @@ function OdcsTab() {
             >
               Batal
             </button>
-          </div>
-        </div>
-      )}
+          </>
+        }
+      >
+        {uplinkFor && <PonPortPicker value={uplinkPort} onChange={setUplinkPort} />}
+      </Blade>
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari kode, nama, atau OLT hulu…" />
@@ -943,6 +1092,8 @@ function OdcsTab() {
         rowKey={(o) => o.id}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
+        selection={canDelete ? { selected, onChange: setSelected } : undefined}
+        rowActions={hasRowActions ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada ODC yang cocok' : 'Belum ada ODC'}
@@ -957,12 +1108,20 @@ function OdcsTab() {
 
 function OdpsTab() {
   const { can } = useCan()
-  const { items, loading, run } = useList<OdpView>('/api/odps')
+  const confirm = useConfirm()
+  const { items, loading, reload, run } = useList<OdpView>('/api/odps')
   const { items: odcs } = useList<OdcView>('/api/odcs')
   const empty = { code: '', name: '', longitude: '', latitude: '', odcId: '', splitterRatio: '1:8', capacity: '8' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
+  const [initialDraft, setInitialDraft] = useState<typeof empty | null>(null)
+  const openDraft = (d: typeof empty) => { setDraft(d); setInitialDraft(d) }
+  const closeDraft = () => { setDraft(null); setInitialDraft(null) }
+  const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
+  const canDelete = can('network.odp.delete')
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -970,6 +1129,18 @@ function OdpsTab() {
       (o) => matchesQuery([o.code, o.name, o.odcName], q) && (!statusFilter || o.status === statusFilter),
     )
   }, [items, query, statusFilter])
+
+  const deleteSelected = async () => {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    if (!(await confirm({ title: 'Hapus ODP', message: `Hapus ${ids.length} ODP terpilih?`, confirmLabel: 'Hapus', danger: true }))) return
+    setDeleting(true)
+    await run(async () => {
+      await Promise.all(ids.map((id) => api.del(`/api/odps/${id}`)))
+      setSelected(new Set())
+    })
+    setDeleting(false)
+  }
 
   const columns: Column<OdpView>[] = [
     {
@@ -987,94 +1158,127 @@ function OdpsTab() {
     { key: 'splitter', header: 'Splitter', sortValue: (o) => o.splitterRatio, cell: (o) => o.splitterRatio },
     { key: 'port', header: 'Port', align: 'right', sortValue: (o) => o.capacity, cell: (o) => o.capacity },
     { key: 'status', header: 'Status', sortValue: (o) => o.status, cell: (o) => <StatusBadge status={o.status} /> },
-    {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (o) =>
-        can('network.odp.delete') ? (
-          <button onClick={() => void run(() => api.del(`/api/odps/${o.id}`))}>Hapus</button>
-        ) : null,
-    },
   ]
+
+  const rowActions = (o: OdpView): RowAction[] =>
+    canDelete
+      ? [
+          {
+            key: 'delete',
+            label: 'Hapus',
+            icon: <Trash2 size={16} />,
+            onClick: () => void (async () => {
+              if (await confirm({ title: 'Hapus ODP', message: `Hapus ODP ${o.code}?`, confirmLabel: 'Hapus', danger: true })) void run(() => api.del(`/api/odps/${o.id}`))
+            })(),
+          },
+        ]
+      : []
+
+  const primary: CommandAction | undefined = can('network.odp.create')
+    ? {
+        key: 'create',
+        label: 'Tambah ODP',
+        icon: <Plus size={16} />,
+        onClick: () => openDraft({ ...empty, odcId: odcs[0]?.id ?? '' }),
+      }
+    : undefined
+  const actions: CommandAction[] = []
+  if (canDelete)
+    actions.push({
+      key: 'delete',
+      label: 'Hapus',
+      icon: <Trash2 size={16} />,
+      onClick: () => void deleteSelected(),
+      disabled: selected.size === 0 || deleting,
+    })
+  actions.push({
+    key: 'refresh',
+    label: 'Segarkan',
+    icon: <RefreshCw size={16} />,
+    onClick: () => void reload(),
+    dividerBefore: canDelete,
+  })
 
   return (
     <div className="stack">
-      <div className="spread">
-        <span className="muted">{items.length} ODP</span>
-        {can('network.odp.create') && (
-          <button className="primary" onClick={() => setDraft({ ...empty, odcId: odcs[0]?.id ?? '' })}>
-            <IconPlus size={15} /> Tambah ODP
-          </button>
-        )}
-      </div>
+      <CommandBar primary={primary} actions={actions} />
 
-      {draft && (
-        <div className="card stack">
-          <div className="row">
-            <label style={{ flex: 1 }}>
-              <span>Kode</span>
-              <input value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} placeholder="ODP-MGH-007" />
-            </label>
-            <label style={{ flex: 2 }}>
-              <span>Nama</span>
-              <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>ODC induk</span>
-              <select value={draft.odcId} onChange={(e) => setDraft({ ...draft, odcId: e.target.value })}>
-                <option value="">— belum tersambung —</option>
-                {odcs.map((odc) => (
-                  <option key={odc.id} value={odc.id}>
-                    {odc.code}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="row">
-            <label style={{ flex: 1 }}>
-              <span>Rasio splitter</span>
-              <select value={draft.splitterRatio} onChange={(e) => setDraft({ ...draft, splitterRatio: e.target.value })}>
-                {SPLITTER_RATIOS.map((ratio) => (
-                  <option key={ratio}>{ratio}</option>
-                ))}
-              </select>
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Jumlah port</span>
-              <input value={draft.capacity} onChange={(e) => setDraft({ ...draft, capacity: e.target.value })} />
-            </label>
-          </div>
-          <LocationFields
-            longitude={draft.longitude}
-            latitude={draft.latitude}
-            onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
-          />
-          <div className="row">
+      <Blade
+        open={draft != null}
+        title="Tambah ODP"
+        subtitle="Daftarkan ODP sebagai kotak terminasi ke pelanggan."
+        size="sm"
+        dirty={dirty}
+        onClose={closeDraft}
+        footer={
+          <>
             <button
               className="primary"
               onClick={() =>
                 void run(async () => {
                   await api.post('/api/odps', {
-                    code: draft.code,
-                    name: draft.name,
-                    location: { longitude: Number(draft.longitude), latitude: Number(draft.latitude) },
-                    odcId: draft.odcId || null,
-                    splitterRatio: draft.splitterRatio,
-                    capacity: Number(draft.capacity),
+                    code: draft!.code,
+                    name: draft!.name,
+                    location: { longitude: Number(draft!.longitude), latitude: Number(draft!.latitude) },
+                    odcId: draft!.odcId || null,
+                    splitterRatio: draft!.splitterRatio,
+                    capacity: Number(draft!.capacity),
                   })
-                  setDraft(null)
+                  closeDraft()
                 })
               }
             >
               Simpan
             </button>
-            <button onClick={() => setDraft(null)}>Batal</button>
+            <button onClick={closeDraft}>Batal</button>
+          </>
+        }
+      >
+        {draft && (
+          <div className="stack">
+            <div className="row">
+              <label style={{ flex: 1 }}>
+                <span>Kode</span>
+                <input value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} placeholder="ODP-MGH-007" />
+              </label>
+              <label style={{ flex: 2 }}>
+                <span>Nama</span>
+                <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+              </label>
+              <label style={{ flex: 1 }}>
+                <span>ODC induk</span>
+                <select value={draft.odcId} onChange={(e) => setDraft({ ...draft, odcId: e.target.value })}>
+                  <option value="">— belum tersambung —</option>
+                  {odcs.map((odc) => (
+                    <option key={odc.id} value={odc.id}>
+                      {odc.code}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="row">
+              <label style={{ flex: 1 }}>
+                <span>Rasio splitter</span>
+                <select value={draft.splitterRatio} onChange={(e) => setDraft({ ...draft, splitterRatio: e.target.value })}>
+                  {SPLITTER_RATIOS.map((ratio) => (
+                    <option key={ratio}>{ratio}</option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ flex: 1 }}>
+                <span>Jumlah port</span>
+                <input value={draft.capacity} onChange={(e) => setDraft({ ...draft, capacity: e.target.value })} />
+              </label>
+            </div>
+            <LocationFields
+              longitude={draft.longitude}
+              latitude={draft.latitude}
+              onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
+            />
           </div>
-        </div>
-      )}
+        )}
+      </Blade>
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari kode, nama, atau ODC induk…" />
@@ -1091,6 +1295,8 @@ function OdpsTab() {
         rowKey={(o) => o.id}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
+        selection={canDelete ? { selected, onChange: setSelected } : undefined}
+        rowActions={canDelete ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada ODP yang cocok' : 'Belum ada ODP'}

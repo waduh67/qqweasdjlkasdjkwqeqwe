@@ -12,9 +12,12 @@ import {
   type VpnAccountView,
 } from '../api/vpn'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
-import { IconAlert, IconPlus } from '../components/icons'
+import { DataTable, type Column } from '@/components/organisms'
+import { EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { SearchInput } from '@/components/molecules'
+import { useConfirm, useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { IconAlert, IconPlus } from '@/components/atoms/icons'
 
 /**
  * Akun VPN (tenant). Alur unggulan satu klik: tekan Generate → sistem meng-AUTO-ASSIGN akun
@@ -93,6 +96,7 @@ export function VpnPage() {
   const canManage = can('vpn.peer.manage')
   const canConfig = can('vpn.config.view')
   const toast = useToast()
+  const confirm = useConfirm()
   const { items: accounts, loading, run } = useResource(listAccounts)
 
   const [label, setLabel] = useState('')
@@ -118,16 +122,34 @@ export function VpnPage() {
     )
 
   const rotate = (a: VpnAccountView) => {
-    if (!window.confirm(`Rotasi password “${a.label}”? Password lama langsung tak berlaku — perbarui di Mikrotik.`))
-      return
-    void run(async () => {
-      setFresh(await rotateAccountPassword(a.id))
-    }, 'Password dirotasi — salin yang baru di bawah')
+    void (async () => {
+      if (
+        !(await confirm({
+          title: 'Rotasi password',
+          message: `Rotasi password “${a.label}”? Password lama langsung tak berlaku — perbarui di Mikrotik.`,
+          confirmLabel: 'Rotasi',
+        }))
+      )
+        return
+      void run(async () => {
+        setFresh(await rotateAccountPassword(a.id))
+      }, 'Password dirotasi — salin yang baru di bawah')
+    })()
   }
 
   const remove = (a: VpnAccountView) => {
-    if (!window.confirm(`Hapus akun “${a.label}”? Koneksi Mikrotik dengan akun ini akan putus.`)) return
-    void run(() => deleteAccount(a.id), 'Akun dihapus')
+    void (async () => {
+      if (
+        !(await confirm({
+          title: 'Hapus akun',
+          message: `Hapus akun “${a.label}”? Koneksi Mikrotik dengan akun ini akan putus.`,
+          confirmLabel: 'Hapus',
+          danger: true,
+        }))
+      )
+        return
+      void run(() => deleteAccount(a.id), 'Akun dihapus')
+    })()
   }
 
   const rows = useMemo(() => {
@@ -234,13 +256,15 @@ export function VpnPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div>
-        <h1 className="page-title">Akun VPN</h1>
-        <p className="page-sub">
-          Butuh remote Mikrotik tanpa IP publik? Cukup <strong>Generate akun</strong> — sistem memilih server VPN
-          otomatis dan memberi Anda host, port, tipe keamanan, username &amp; password siap tempel di Mikrotik.
-        </p>
-      </div>
+      <PageHeader
+        title="Akun VPN"
+        subtitle={
+          <>
+            Butuh remote Mikrotik tanpa IP publik? Cukup <strong>Generate akun</strong> — sistem memilih server VPN
+            otomatis dan memberi Anda host, port, tipe keamanan, username &amp; password siap tempel di Mikrotik.
+          </>
+        }
+      />
 
       {canManage && (
         <div className="card stack" style={{ gap: '0.75rem' }}>

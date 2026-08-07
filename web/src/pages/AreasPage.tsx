@@ -2,9 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { Area } from '../api/types'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { EmptyState, SearchInput, Toolbar, useToast } from '../components/ui'
-import { IconArea } from '../components/icons'
+import { DataTable, type Column } from '@/components/organisms'
+import { EmptyState, Toolbar } from '@/components/atoms'
+import { SearchInput } from '@/components/molecules'
+import { useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { IconArea } from '@/components/atoms/icons'
 
 export function AreasPage() {
   const { can } = useCan()
@@ -79,13 +82,15 @@ export function AreasPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div>
-        <h1 className="page-title">Area / Wilayah</h1>
-        <p className="muted">
-          Area adalah dimensi <em>scope</em> pada RBAC: pengguna yang dibatasi ke area tertentu hanya melihat aset dan
-          tiket di area itu.
-        </p>
-      </div>
+      <PageHeader
+        title="Area / Wilayah"
+        subtitle={
+          <>
+            Area adalah dimensi <em>scope</em> pada RBAC: pengguna yang dibatasi ke area tertentu hanya melihat aset dan
+            tiket di area itu.
+          </>
+        }
+      />
 
       {can('iam.area.create') && (
         <div className="card row" style={{ alignItems: 'flex-end' }}>

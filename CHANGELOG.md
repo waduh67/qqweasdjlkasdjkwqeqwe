@@ -6,7 +6,94 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
-### 2026-08-07 — Manajemen pengguna sub-account Pivot + sistem local payout (beneficiary bebas, wajib cek saldo)
+### 2026-08-07 — Redesign Azure Fase 5: seragamkan header halaman
+
+**Diubah**
+- **Semua header halaman memakai `PageHeader`.** Halaman non-tabel dan realm lain
+  (dashboard tenant/platform, laporan, audit, monitoring, insiden, area, tugas saya,
+  langganan, provisioning, impor CSV/PPPoE, setelan pajak/gateway/billing, PSB ekspres,
+  tenant, VPN, server VPN, BRAS/RADIUS) kini memakai komponen `PageHeader`
+  (judul + subtitle + slot `actions`) menggantikan `<h1 className="page-title">` lepas —
+  header seragam di seluruh konsol. Halaman **detail** (Pelanggan/OLT/Work Order)
+  sengaja dipertahankan karena judulnya menyandingkan badge status inline.
+
+### 2026-08-07 — Redesign Azure Fase 4: kontrol form Fluent + validasi
+
+**Ditambahkan**
+- **Validasi klien inline pada form.** Isian wajib divalidasi sebelum menembak API —
+  galat tampil di bawah field lewat komponen `Field` (`error`/`required`) plus
+  `aria-invalid` pada kontrol, dan toast ringkas bila ada yang kosong. Diterapkan sebagai
+  eksemplar di form Pelanggan (Nama & Alamat wajib) dan penanda wajib di form Role.
+- **Token `--danger`** (merah validasi Fluent, ter-tema terang/gelap) untuk state galat form.
+
+**Diubah**
+- **Keadaan kontrol form ala Fluent.** Input/select/textarea **disabled** kini redup +
+  kursor terlarang; **checkbox & radio** memakai aksen Azure (`accent-color`) dan tak lagi
+  melar 100% lebar; keadaan **tak valid** memberi bingkai + cincin merah (dipicu
+  `.field-error` atau `aria-invalid`).
+
+### 2026-08-07 — Penajaman kesetiaan Azure: tab, blade, dialog, sidebar, konteks
+
+Lanjutan redesign Azure — merapikan pola yang belum konsisten dengan Portal.
+
+**Ditambahkan**
+- **Dialog in-app `useConfirm`/`usePrompt`.** `DialogProvider` (di `App.tsx`) menyediakan
+  `confirm(opts) => Promise<boolean>` & `prompt(opts) => Promise<string | null>` berbasis
+  [Modal], menggantikan **semua** `window.confirm`/`window.prompt`/`alert` bawaan browser
+  (VPN, Server VPN, Pengguna, Role, langganan Tenant, BNG, Inventory, Provisioning, detail
+  Pelanggan, dll). Aksi merusak memakai `danger`.
+- **Seksi sidebar bisa diciutkan (dropdown chevron).** Komponen bersama `SidebarNav` merender
+  tiap grup berlabel sebagai tombol chevron ala Azure left-nav; status ciut per-seksi disimpan
+  di localStorage. Dipakai `Layout` (tenant) & `PlatformLayout` (platform).
+
+**Diubah**
+- **Bilah tab jadi underline-tab ala Azure.** Komponen `Tabs` (indikator garis-bawah + hitungan)
+  menggantikan `.segment` pada navigasi tab halaman: detail Pelanggan, detail OLT, Inventory
+  (Site/OLT/ODC/ODP), dan filter status Provisioning (`DiscoveredOnuInbox`). Kontrol segmented
+  kecil (pemilih periode/scope/perangkat) tetap `.segment`.
+- **Switcher konteks Platform ↔ Tenant.** `EnvSwitcher` berpindah lewat `useNavigate` eksplisit
+  (andal) dan tampil sebagai pemilih direktori/langganan ala Azure (titik status + nama konteks
+  + kapsi + chevron, dropdown pilihan).
+- **Detail Pelanggan kini flyout (Blade), bukan rute.** Rute `/customers/:id` dihapus; detail
+  muncul sebagai Blade dari daftar (lebar 50% di desktop, penuh di tablet/mobile). Tombol
+  **Hapus** di detail dibuang. Blade menerima `className` untuk penyetelan lebar.
+- **Lebar halaman diseragamkan.** `.settings-page` tak lagi dibatasi `max-width`/`margin auto`
+  (mis. `/payment-gateway`, `/platform/billing`) — kini penuh & rata-kiri seperti halaman lain.
+- **Font mendekati Azure** — tumpukan `Segoe UI Variable` di depan + `font-optical-sizing: auto`.
+
+### 2026-08-07 — Redesign UI/UX ala Microsoft Azure Portal dengan Fluent UI (Fase 0–3)
+
+Perombakan tampilan & alur kerja agar mencerminkan Azure Portal — bukan sekadar warna,
+tapi juga pola interaksi. Dikerjakan bertahap; detail rencana di
+[`docs/azure-fluent-redesign.md`](docs/azure-fluent-redesign.md).
+
+**Ditambahkan**
+- **Tema Azure + FluentProvider (Fase 0).** `@fluentui/react-components` v9 dengan brand Azure Blue
+  (`#0078D4`), tema terang/gelap terjembatani ke `data-theme`/localStorage lewat `ThemeProvider`
+  (`web/src/theme/`). Ikon memakai `lucide-react`.
+- **Breadcrumb global + kepala halaman (Fase 1).** Komponen `Breadcrumbs` (Fluent Breadcrumb,
+  label Indonesia per-segmen) tampil di atas tiap halaman pada `Layout` & `PlatformLayout`;
+  komponen `PageHeader` menyeragamkan judul + subjudul.
+- **CommandBar ala Azure (Fase 2).** `CommandBar` menaruh aksi primary `+ Tambah` menonjol di
+  paling kiri, aksi sekunder (Hapus/Ekspor/Impor/Segarkan) berjajar berkelompok dengan ikon.
+  Tombol **Hapus nonaktif sampai ada baris terpilih**.
+- **DataGrid multi-select (Fase 2).** `DataTable` kini punya kolom **checkbox** pilih-semua/
+  per-baris dan **menu aksi `…`** per baris (Fluent Menu) — dipakai di halaman Pelanggan, Pengguna,
+  Paket Internet, dan Inventory (Site/OLT/ODC/ODP). Baris terpilih ditandai aksen kiri.
+- **Blade (panel geser kanan) untuk semua form (Fase 3).** Komponen `Blade` (Fluent `OverlayDrawer`)
+  menggantikan modal terpusat untuk **semua form buat/sunting**: header berjudul + `X`, body ter-scroll,
+  dan **footer sticky** dengan tombol **Simpan** primary di kiri & **Batal** di kanan (konvensi Azure).
+  ESC/klik-luar menutup panel; bila form **kotor** diminta konfirmasi dulu agar perubahan tak hilang.
+  Ukuran mengikuti kompleksitas (`sm`/`lg`/`full`). Turut disertakan primitif `FormSection` & `Field`.
+  Dipakai di Pelanggan, Pengguna (buat + editor Akses), Paket Internet, Inventory (Site/OLT/ODC/ODP +
+  uplink ODC), Work Order, BNG/BRAS, Tenant, langganan Tenant, dan Edit OLT. Dialog **konfirmasi** dan
+  **panel bayar** (alur aksi, bukan form) tetap sebagai modal.
+
+**Diubah**
+- **Sidebar jadi terang ala Azure left-nav** dengan indikator aktif biru Azure, pengelompokan
+  seksi, dan status ciut/lebar.
+- **Aksi per-baris dipindah dari tombol inline ke menu `…`** (Edit/Hapus/Uplink/Akses/Aktivasi),
+  dan tombol Tambah/Ekspor/Impor dari kepala halaman dipindah ke CommandBar.
 
 **Ditambahkan**
 - **Undang & kirim ulang undangan pengguna sub-account.** Tenant bisa mengundang admin ke

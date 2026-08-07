@@ -14,9 +14,13 @@ import {
   type TaxObligationView,
 } from '../api/billing'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { Badge, EmptyState, Modal, SearchInput, Toolbar, useToast, type Tone } from '../components/ui'
-import { IconInbox, IconPlus } from '../components/icons'
+import { DataTable, type Column } from '@/components/organisms'
+import { CommandBar, type CommandAction } from '@/components/molecules'
+import { PageHeader } from '@/components/molecules'
+import { Badge, EmptyState, Toolbar, type Tone } from '@/components/atoms'
+import { Modal, SearchInput } from '@/components/molecules'
+import { useToast } from '@/system'
+import { IconInbox, IconPlus } from '@/components/atoms/icons'
 
 /** Rupiah ringkas dari nilai numerik, mis. "Rp 150.000". */
 function fmtRupiah(n: number): string {
@@ -340,19 +344,21 @@ export function InvoicesPage() {
     },
   ]
 
+  // CommandBar ala Azure: primary `+ Terbitkan tagihan` dipatok kiri, seragam dengan Pelanggan.
+  const primary: CommandAction | undefined = canManage
+    ? {
+        key: 'generate',
+        label: 'Terbitkan tagihan',
+        icon: <IconPlus size={16} />,
+        onClick: () => setConfirmGenerate(true),
+        disabled: busy,
+      }
+    : undefined
+
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div className="spread">
-        <div>
-          <h1 className="page-title">Tagihan</h1>
-          <p className="page-sub">Daftar tagihan seluruh pelanggan — terbitkan, catat pembayaran, atau batalkan.</p>
-        </div>
-        {canManage && (
-          <button className="primary" onClick={() => setConfirmGenerate(true)} disabled={busy}>
-            <IconPlus size={15} /> Terbitkan tagihan
-          </button>
-        )}
-      </div>
+      <PageHeader title="Tagihan" subtitle="Daftar tagihan seluruh pelanggan — terbitkan, catat pembayaran, atau batalkan." />
+      <CommandBar primary={primary} />
 
       <div className="row" style={{ gap: '1rem', flexWrap: 'wrap' }}>
         <SummaryCard

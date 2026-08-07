@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
+import { KeyRound, Plus, Power, RefreshCw, Trash2 } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { Area, PageResponse, Role, User } from '../api/types'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { EmptyState, SearchInput, StatusBadge, Toolbar } from '../components/ui'
-import { IconCheck, IconClose, IconKey, IconPlus, IconPower, IconTrash, IconUsers } from '../components/icons'
+import { DataTable, type Column, type RowAction } from '@/components/organisms'
+import { CommandBar, type CommandAction } from '@/components/molecules'
+import { PageHeader } from '@/components/molecules'
+import { Blade } from '@/components/organisms'
+import { EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { SearchInput } from '@/components/molecules'
+import { useConfirm } from '@/system'
+import { IconUsers } from '@/components/atoms/icons'
 
 interface NewUser {
   email: string
@@ -18,6 +24,7 @@ const EMPTY: NewUser = { email: '', name: '', password: '', roleIds: new Set(), 
 
 export function UsersPage() {
   const { can } = useCan()
+  const confirm = useConfirm()
   const [users, setUsers] = useState<User[]>([])
   const [roles, setRoles] = useState<Role[]>([])
   const [areas, setAreas] = useState<Area[]>([])
@@ -26,6 +33,8 @@ export function UsersPage() {
   const [draft, setDraft] = useState<NewUser | null>(null)
   const [editing, setEditing] = useState<User | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
 
   const reload = useCallback(async () => {
     try {
@@ -97,53 +106,85 @@ export function UsersPage() {
       cell: (u) => roleNames(u) || '–',
     },
     { key: 'area', header: 'Area', className: 'muted', sortValue: (u) => areaCodes(u), cell: (u) => areaCodes(u) },
-    {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (user) => (
-        <div className="row" style={{ justifyContent: 'flex-end' }}>
-          {can('iam.user.assign') && (
-            <button className="small" onClick={() => setEditing(user)}>
-              <IconKey size={15} /> Akses
-            </button>
-          )}
-          {can('iam.user.update') && (
-            <button
-              className="small"
-              onClick={() =>
-                void run(() =>
-                  api.post(`/api/users/${user.id}/${user.status === 'ACTIVE' ? 'disable' : 'enable'}`),
-                )
-              }
-            >
-              <IconPower size={15} /> {user.status === 'ACTIVE' ? 'Nonaktifkan' : 'Aktifkan'}
-            </button>
-          )}
-          {can('iam.user.delete') && (
-            <button
-              className="small danger"
-              onClick={() => confirm(`Hapus ${user.email}?`) && void run(() => api.del(`/api/users/${user.id}`))}
-            >
-              <IconTrash size={15} /> Hapus
-            </button>
-          )}
-        </div>
-      ),
-    },
   ]
 
+  // Aksi per-baris kini di menu `…` ala Azure DataGrid — Akses/Aktivasi/Hapus.
+  const canAssign = can('iam.user.assign')
+  const canUpdate = can('iam.user.update')
+  const canDelete = can('iam.user.delete')
+  const hasRowActions = canAssign || canUpdate || canDelete
+  const rowActions = (user: User): RowAction[] => {
+    const list: RowAction[] = []
+    if (canAssign)
+      list.push({ key: 'access', label: 'Akses', icon: <KeyRound size={16} />, onClick: () => setEditing(user) })
+    if (canUpdate)
+      list.push({
+        key: 'toggle',
+        label: user.status === 'ACTIVE' ? 'Nonaktifkan' : 'Aktifkan',
+        icon: <Power size={16} />,
+        onClick: () =>
+          void run(() =>
+            api.post(`/api/users/${user.id}/${user.status === 'ACTIVE' ? 'disable' : 'enable'}`),
+          ),
+      })
+    if (canDelete)
+      list.push({
+        key: 'delete',
+        label: 'Hapus',
+        icon: <Trash2 size={16} />,
+        onClick: () =>
+          void (async () => {
+            if (await confirm({ title: 'Hapus pengguna', message: `Hapus ${user.email}?`, confirmLabel: 'Hapus', danger: true }))
+              void run(() => api.del(`/api/users/${user.id}`))
+          })(),
+      })
+    return list
+  }
+
+  // Hapus massal dari CommandBar — nonaktif sampai ada baris tercentang (pola Azure).
+  const deleteSelected = async () => {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    if (!(await confirm({ title: 'Hapus pengguna', message: `Hapus ${ids.length} pengguna terpilih? Tindakan ini tidak dapat dibatalkan.`, confirmLabel: 'Hapus', danger: true }))) return
+    setDeleting(true)
+    await run(async () => {
+      await Promise.all(ids.map((id) => api.del(`/api/users/${id}`)))
+      setSelected(new Set())
+    })
+    setDeleting(false)
+  }
+
+  const primary: CommandAction | undefined = can('iam.user.create')
+    ? {
+        key: 'create',
+        label: 'Pengguna baru',
+        icon: <Plus size={16} />,
+        onClick: () => setDraft({ ...EMPTY, roleIds: new Set(), areaIds: new Set() }),
+      }
+    : undefined
+
+  const actions: CommandAction[] = []
+  if (canDelete)
+    actions.push({
+      key: 'delete',
+      label: 'Hapus',
+      icon: <Trash2 size={16} />,
+      onClick: () => void deleteSelected(),
+      disabled: selected.size === 0 || deleting,
+    })
+  actions.push({
+    key: 'refresh',
+    label: 'Segarkan',
+    icon: <RefreshCw size={16} />,
+    onClick: () => void reload(),
+    dividerBefore: canDelete,
+  })
+
   return (
-    <div className="stack">
-      <div className="spread">
-        <h1 className="page-title">Pengguna</h1>
-        {can('iam.user.create') && (
-          <button className="primary" onClick={() => setDraft({ ...EMPTY, roleIds: new Set(), areaIds: new Set() })}>
-            <IconPlus size={16} /> Pengguna baru
-          </button>
-        )}
-      </div>
+    <div className="stack" style={{ gap: '1rem' }}>
+      <PageHeader title="Pengguna" subtitle="Akun operator, role, dan cakupan area akses." />
+
+      <CommandBar primary={primary} actions={actions} />
 
       {error && <p className="error">{error}</p>}
 
@@ -157,6 +198,8 @@ export function UsersPage() {
         rowKey={(u) => u.id}
         loading={loading}
         initialSort={{ key: 'name', dir: 'asc' }}
+        selection={canDelete ? { selected, onChange: setSelected } : undefined}
+        rowActions={hasRowActions ? rowActions : undefined}
         empty={
           <EmptyState
             title={query ? 'Tidak ada pengguna yang cocok' : 'Belum ada pengguna'}
@@ -166,57 +209,70 @@ export function UsersPage() {
         }
       />
 
-      {draft && (
-        <div className="card stack">
-          <h3 style={{ margin: 0 }}>Pengguna baru</h3>
-          <label>
-            <span>Nama</span>
-            <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-          </label>
-          <label>
-            <span>Email</span>
-            <input type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
-          </label>
-          <label>
-            <span>Password (min. 8 karakter)</span>
-            <input
-              type="password"
-              value={draft.password}
-              onChange={(e) => setDraft({ ...draft, password: e.target.value })}
-            />
-          </label>
-          <RoleAreaPicker
-            roles={roles}
-            areas={areas}
-            roleIds={draft.roleIds}
-            areaIds={draft.areaIds}
-            onToggleRole={(id) => setDraft({ ...draft, roleIds: toggle(draft.roleIds, id) })}
-            onToggleArea={(id) => setDraft({ ...draft, areaIds: toggle(draft.areaIds, id) })}
-          />
-          <div className="row">
-            <button
-              className="primary"
-              onClick={() =>
-                void run(async () => {
-                  await api.post('/api/users', {
-                    email: draft.email,
-                    name: draft.name,
-                    password: draft.password,
-                    roleIds: [...draft.roleIds],
-                    areaIds: [...draft.areaIds],
+      <Blade
+        open={draft != null}
+        title="Pengguna baru"
+        subtitle="Buat akun operator lalu tetapkan role & cakupan area."
+        size="sm"
+        dirty={
+          draft != null &&
+          Boolean(draft.name || draft.email || draft.password || draft.roleIds.size || draft.areaIds.size)
+        }
+        onClose={() => setDraft(null)}
+        footer={
+          draft && (
+            <>
+              <button
+                className="primary"
+                onClick={() =>
+                  void run(async () => {
+                    await api.post('/api/users', {
+                      email: draft.email,
+                      name: draft.name,
+                      password: draft.password,
+                      roleIds: [...draft.roleIds],
+                      areaIds: [...draft.areaIds],
+                    })
+                    setDraft(null)
                   })
-                  setDraft(null)
-                })
-              }
-            >
-              <IconCheck size={16} /> Simpan
-            </button>
-            <button onClick={() => setDraft(null)}>
-              <IconClose size={16} /> Batal
-            </button>
+                }
+              >
+                Simpan
+              </button>
+              <button onClick={() => setDraft(null)}>Batal</button>
+            </>
+          )
+        }
+      >
+        {draft && (
+          <div className="stack">
+            <label>
+              <span>Nama</span>
+              <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+            </label>
+            <label>
+              <span>Email</span>
+              <input type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
+            </label>
+            <label>
+              <span>Password (min. 8 karakter)</span>
+              <input
+                type="password"
+                value={draft.password}
+                onChange={(e) => setDraft({ ...draft, password: e.target.value })}
+              />
+            </label>
+            <RoleAreaPicker
+              roles={roles}
+              areas={areas}
+              roleIds={draft.roleIds}
+              areaIds={draft.areaIds}
+              onToggleRole={(id) => setDraft({ ...draft, roleIds: toggle(draft.roleIds, id) })}
+              onToggleArea={(id) => setDraft({ ...draft, areaIds: toggle(draft.areaIds, id) })}
+            />
           </div>
-        </div>
-      )}
+        )}
+      </Blade>
 
       {editing && (
         <AccessEditor
@@ -309,9 +365,27 @@ function AccessEditor({
     return next
   }
 
+  // Kotor bila komposisi role/area berubah dari nilai awal pengguna.
+  const sameSet = (a: Set<string>, b: string[]) => a.size === b.length && b.every((id) => a.has(id))
+  const dirty = !sameSet(roleIds, user.roleIds) || !sameSet(areaIds, user.areaIds)
+
   return (
-    <div className="card stack">
-      <h3 style={{ margin: 0 }}>Akses — {user.email}</h3>
+    <Blade
+      open
+      title={`Akses — ${user.email}`}
+      subtitle="Mengubah akses mencabut refresh token pengguna; izin baru berlaku setelah access-token kedaluwarsa."
+      size="sm"
+      dirty={dirty}
+      onClose={onCancel}
+      footer={
+        <>
+          <button className="primary" onClick={() => onSave([...roleIds], [...areaIds])}>
+            Simpan
+          </button>
+          <button onClick={onCancel}>Batal</button>
+        </>
+      }
+    >
       <RoleAreaPicker
         roles={roles}
         areas={areas}
@@ -320,17 +394,6 @@ function AccessEditor({
         onToggleRole={(id) => setRoleIds(toggle(roleIds, id))}
         onToggleArea={(id) => setAreaIds(toggle(areaIds, id))}
       />
-      <p className="muted">
-        Mengubah akses mencabut refresh token pengguna, sehingga izin baru berlaku setelah access-token kedaluwarsa.
-      </p>
-      <div className="row">
-        <button className="primary" onClick={() => onSave([...roleIds], [...areaIds])}>
-          <IconCheck size={16} /> Simpan
-        </button>
-        <button onClick={onCancel}>
-          <IconClose size={16} /> Batal
-        </button>
-      </div>
-    </div>
+    </Blade>
   )
 }

@@ -11,8 +11,10 @@ import {
   type ImportSource,
 } from '../api/onboarding'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, useToast } from '../components/ui'
-import { IconInbox, IconPackage } from '../components/icons'
+import { Badge, EmptyState } from '@/components/atoms'
+import { useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { IconInbox, IconPackage } from '@/components/atoms/icons'
 
 /** Baris PPPoE untuk pratinjau/impor. [password] hanya ada pada sumber INLINE (paste/upload). */
 type PreviewRow = {
@@ -254,13 +256,15 @@ export function ImportPppoePage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div>
-        <h1 className="page-title">Impor PPPoE</h1>
-        <p className="page-sub">
-          Migrasi akun PPPoE dari RouterOS ke sistem: tiap akun jadi pelanggan + langganan + akun jaringan
-          yang langsung aktif dan diprovisi ke RADIUS pusat. Tanpa Work Order — pelanggan sudah terpasang.
-        </p>
-      </div>
+      <PageHeader
+        title="Impor PPPoE"
+        subtitle={
+          <>
+            Migrasi akun PPPoE dari RouterOS ke sistem: tiap akun jadi pelanggan + langganan + akun jaringan
+            yang langsung aktif dan diprovisi ke RADIUS pusat. Tanpa Work Order — pelanggan sudah terpasang.
+          </>
+        }
+      />
 
       {loading ? (
         <div className="card">Memuat…</div>

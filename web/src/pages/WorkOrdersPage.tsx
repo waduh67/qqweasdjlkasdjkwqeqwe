@@ -12,11 +12,16 @@ import type {
   WorkOrderView,
 } from '../api/workorder'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { Badge, EmptyState, Modal, SearchInput, Toolbar, useToast } from '../components/ui'
-import { Combobox } from '../components/Combobox'
-import { MultiCombobox } from '../components/MultiCombobox'
-import { IconPlus, IconWorkOrder } from '../components/icons'
+import { DataTable, type Column } from '@/components/organisms'
+import { CommandBar, type CommandAction } from '@/components/molecules'
+import { PageHeader } from '@/components/molecules'
+import { Badge, EmptyState, Toolbar } from '@/components/atoms'
+import { SearchInput } from '@/components/molecules'
+import { useToast } from '@/system'
+import { Blade } from '@/components/organisms'
+import { Combobox } from '@/components/molecules'
+import { MultiCombobox } from '@/components/molecules'
+import { IconPlus, IconWorkOrder } from '@/components/atoms/icons'
 import {
   APPROVAL_LABEL,
   PRIORITIES,
@@ -29,9 +34,9 @@ import {
   assigneeLabel,
   fmt,
   priorityTone,
-} from '../components/workorder/labels'
-import { AssigneeChips, WoStatusBadge } from '../components/workorder/views'
-import { useTechnicians } from '../components/workorder/useTechnicians'
+} from '@/utils/woLabels'
+import { AssigneeChips, WoStatusBadge } from '@/components/organisms/workorder/views'
+import { useTechnicians } from '@/hooks/useTechnicians'
 
 type Draft = {
   type: WorkOrderType
@@ -74,8 +79,20 @@ export function WorkOrdersPage() {
   const [approval, setApproval] = useState<WorkOrderApprovalStatus | ''>('')
   const [assignedTo, setAssignedTo] = useState('')
   const [draft, setDraft] = useState<Draft | null>(null)
+  const [initialDraft, setInitialDraft] = useState<Draft | null>(null)
   // Ditambah tiap ada perubahan (buat/tugaskan/lifecycle) agar dashboard menghitung ulang.
   const [dashVersion, setDashVersion] = useState(0)
+
+  // Buka/tutup Blade form + lacak "dirty" via snapshot draft awal.
+  const openDraft = (d: Draft) => {
+    setDraft(d)
+    setInitialDraft(d)
+  }
+  const closeDraft = () => {
+    setDraft(null)
+    setInitialDraft(null)
+  }
+  const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
 
   // Teknisi (pemegang role "Teknisi") untuk pemilih penugasan & filter — best-effort lewat
   // hook; bila operator tak berizin melihatnya, daftarnya kosong dan halaman tetap jalan.
@@ -142,7 +159,7 @@ export function WorkOrdersPage() {
         scheduledAt: toInstant(draft.scheduledAt),
         assignees: draft.assignees,
       })
-      setDraft(null)
+      closeDraft()
     }, 'Work order dibuat')
 
   const columns: Column<WorkOrderView>[] = [
@@ -195,19 +212,20 @@ export function WorkOrdersPage() {
     },
   ]
 
+  // CommandBar ala Azure: primary `+ Buat work order` dipatok kiri, seragam dengan Pelanggan.
+  const primary: CommandAction | undefined = can('workorder.order.create')
+    ? {
+        key: 'create',
+        label: 'Buat work order',
+        icon: <IconPlus size={16} />,
+        onClick: () => openDraft({ ...EMPTY_DRAFT }),
+      }
+    : undefined
+
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div className="spread">
-        <div>
-          <h1 className="page-title">Work Order</h1>
-          <p className="page-sub">Tugas lapangan — penjadwalan, penugasan teknisi, dan lifecycle-nya.</p>
-        </div>
-        {can('workorder.order.create') && (
-          <button className="primary" onClick={() => setDraft({ ...EMPTY_DRAFT })}>
-            <IconPlus size={15} /> Buat work order
-          </button>
-        )}
-      </div>
+      <PageHeader title="Work Order" subtitle="Tugas lapangan — penjadwalan, penugasan teknisi, dan lifecycle-nya." />
+      <CommandBar primary={primary} />
 
       {can('workorder.dashboard.view') && (
         <DispatchDashboard
@@ -255,16 +273,16 @@ export function WorkOrdersPage() {
         </select>
       </Toolbar>
 
-      {draft && (
-        <WorkOrderForm
-          draft={draft}
-          fetchCustomers={fetchCustomers}
-          fetchTechnicians={fetchTechnicians}
-          onChange={setDraft}
-          onSubmit={submitCreate}
-          onCancel={() => setDraft(null)}
-        />
-      )}
+      <WorkOrderForm
+        open={draft != null}
+        draft={draft}
+        dirty={dirty}
+        fetchCustomers={fetchCustomers}
+        fetchTechnicians={fetchTechnicians}
+        onChange={setDraft}
+        onSubmit={submitCreate}
+        onCancel={closeDraft}
+      />
 
       <DataTable
         columns={columns}
@@ -409,14 +427,18 @@ function DispatchDashboard({
 
 /** Form buat work order — tipe & teknisi hanya relevan saat pembuatan. */
 function WorkOrderForm({
+  open,
   draft,
+  dirty,
   fetchCustomers,
   fetchTechnicians,
   onChange,
   onSubmit,
   onCancel,
 }: {
-  draft: Draft
+  open: boolean
+  draft: Draft | null
+  dirty: boolean
   fetchCustomers: (term: string) => Promise<CustomerView[]>
   fetchTechnicians: (term: string) => Promise<User[]>
   onChange: (d: Draft) => void
@@ -424,86 +446,91 @@ function WorkOrderForm({
   onCancel: () => void
 }) {
   return (
-    <Modal
+    <Blade
+      open={open}
       title="Buat work order"
+      subtitle="Tugas lapangan baru — jadwalkan dan tugaskan ke teknisi."
+      size="lg"
+      dirty={dirty}
       onClose={onCancel}
-      wide
       footer={
         <>
-          <button onClick={onCancel}>Batal</button>
           <button className="primary" onClick={onSubmit}>Simpan</button>
+          <button onClick={onCancel}>Batal</button>
         </>
       }
     >
-      <div className="stack">
-        <label className="stack" style={{ gap: '0.25rem' }}>
-          <span>Judul</span>
-          <input
-            autoFocus
-            value={draft.title}
-            onChange={(e) => onChange({ ...draft, title: e.target.value })}
-            placeholder="mis. Ganti drop core putus"
-          />
-        </label>
-        <div className="row wrap">
-          <label style={{ flex: 1, minWidth: 140 }}>
-            <span>Tipe</span>
-            <select value={draft.type} onChange={(e) => onChange({ ...draft, type: e.target.value as WorkOrderType })}>
-              {TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {TYPE_LABEL[t]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label style={{ flex: 1, minWidth: 140 }}>
-            <span>Prioritas</span>
-            <select value={draft.priority} onChange={(e) => onChange({ ...draft, priority: e.target.value as WorkOrderPriority })}>
-              {PRIORITIES.map((p) => (
-                <option key={p} value={p}>
-                  {PRIORITY_LABEL[p]}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <label className="stack" style={{ gap: '0.25rem' }}>
-          <span>Deskripsi (opsional)</span>
-          <textarea rows={3} maxLength={2000} value={draft.description} onChange={(e) => onChange({ ...draft, description: e.target.value })} />
-        </label>
-        <label className="stack" style={{ gap: '0.25rem' }}>
-          <span>Pelanggan (opsional)</span>
-          <Combobox
-            value={draft.customerId}
-            onChange={(id) => onChange({ ...draft, customerId: id })}
-            fetchOptions={fetchCustomers}
-            toId={(c) => c.id}
-            toLabel={(c) => c.name}
-            toMeta={(c) => [c.code, c.phone, c.address].filter(Boolean).join(' · ')}
-            placeholder="Cari nama, kode, telepon, atau alamat pelanggan…"
-            emptyText="Pelanggan tak ditemukan"
-          />
-        </label>
-        <div className="row wrap">
-          <label className="stack" style={{ flex: 1, minWidth: 200, gap: '0.25rem' }}>
-            <span>Teknisi (opsional, bisa lebih dari satu)</span>
-            <MultiCombobox
-              values={draft.assignees}
-              onChange={(ids) => onChange({ ...draft, assignees: ids })}
-              fetchOptions={fetchTechnicians}
-              toId={(t) => t.id}
-              toLabel={(t) => t.name}
-              debounceMs={0}
-              placeholder="Cari teknisi…"
-              emptyText="Tak ada teknisi"
+      {draft && (
+        <div className="stack">
+          <label className="stack" style={{ gap: '0.25rem' }}>
+            <span>Judul</span>
+            <input
+              autoFocus
+              value={draft.title}
+              onChange={(e) => onChange({ ...draft, title: e.target.value })}
+              placeholder="mis. Ganti drop core putus"
             />
           </label>
-          <label style={{ flex: 1, minWidth: 180 }}>
-            <span>Jadwal (opsional)</span>
-            <input type="datetime-local" value={draft.scheduledAt} onChange={(e) => onChange({ ...draft, scheduledAt: e.target.value })} />
+          <div className="row wrap">
+            <label style={{ flex: 1, minWidth: 140 }}>
+              <span>Tipe</span>
+              <select value={draft.type} onChange={(e) => onChange({ ...draft, type: e.target.value as WorkOrderType })}>
+                {TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {TYPE_LABEL[t]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label style={{ flex: 1, minWidth: 140 }}>
+              <span>Prioritas</span>
+              <select value={draft.priority} onChange={(e) => onChange({ ...draft, priority: e.target.value as WorkOrderPriority })}>
+                {PRIORITIES.map((p) => (
+                  <option key={p} value={p}>
+                    {PRIORITY_LABEL[p]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label className="stack" style={{ gap: '0.25rem' }}>
+            <span>Deskripsi (opsional)</span>
+            <textarea rows={3} maxLength={2000} value={draft.description} onChange={(e) => onChange({ ...draft, description: e.target.value })} />
           </label>
+          <label className="stack" style={{ gap: '0.25rem' }}>
+            <span>Pelanggan (opsional)</span>
+            <Combobox
+              value={draft.customerId}
+              onChange={(id) => onChange({ ...draft, customerId: id })}
+              fetchOptions={fetchCustomers}
+              toId={(c) => c.id}
+              toLabel={(c) => c.name}
+              toMeta={(c) => [c.code, c.phone, c.address].filter(Boolean).join(' · ')}
+              placeholder="Cari nama, kode, telepon, atau alamat pelanggan…"
+              emptyText="Pelanggan tak ditemukan"
+            />
+          </label>
+          <div className="row wrap">
+            <label className="stack" style={{ flex: 1, minWidth: 200, gap: '0.25rem' }}>
+              <span>Teknisi (opsional, bisa lebih dari satu)</span>
+              <MultiCombobox
+                values={draft.assignees}
+                onChange={(ids) => onChange({ ...draft, assignees: ids })}
+                fetchOptions={fetchTechnicians}
+                toId={(t) => t.id}
+                toLabel={(t) => t.name}
+                debounceMs={0}
+                placeholder="Cari teknisi…"
+                emptyText="Tak ada teknisi"
+              />
+            </label>
+            <label style={{ flex: 1, minWidth: 180 }}>
+              <span>Jadwal (opsional)</span>
+              <input type="datetime-local" value={draft.scheduledAt} onChange={(e) => onChange({ ...draft, scheduledAt: e.target.value })} />
+            </label>
+          </div>
         </div>
-      </div>
-    </Modal>
+      )}
+    </Blade>
   )
 }

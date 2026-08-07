@@ -7,7 +7,8 @@ import {
 } from '../api/platformBilling'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
-import { StatusBadge } from '../components/ui'
+import { StatusBadge } from '@/components/atoms'
+import { PageHeader } from '@/components/molecules'
 import {
   IconBuilding,
   IconGauge,
@@ -15,7 +16,7 @@ import {
   IconShield,
   IconUsers,
   type IconProps,
-} from '../components/icons'
+} from '@/components/atoms/icons'
 import type { ComponentType } from 'react'
 
 /**
@@ -56,12 +57,10 @@ export function PlatformDashboardPage() {
 
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
-      <div>
-        <h1 className="page-title">
-          {greeting}, {user?.name?.split(' ')[0]}
-        </h1>
-        <p className="page-sub">Ringkasan platform SaaS — portofolio tenant &amp; langganan.</p>
-      </div>
+      <PageHeader
+        title={<>{greeting}, {user?.name?.split(' ')[0]}</>}
+        subtitle={<>Ringkasan platform SaaS — portofolio tenant &amp; langganan.</>}
+      />
 
       <div className="stat-grid">
         {tenants != null && <Stat label="Total tenant" value={customers.length} />}

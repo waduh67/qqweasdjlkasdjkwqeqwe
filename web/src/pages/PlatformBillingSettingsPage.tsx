@@ -11,9 +11,11 @@ import {
   type PlatformFeeType,
 } from '../api/platformBilling'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, useToast } from '../components/ui'
-import { Combobox } from '../components/Combobox'
-import { IconAlert, IconShield } from '../components/icons'
+import { Badge, EmptyState } from '@/components/atoms'
+import { useToast } from '@/system'
+import { Combobox } from '@/components/molecules'
+import { PageHeader } from '@/components/molecules'
+import { IconAlert, IconShield } from '@/components/atoms/icons'
 import {
   childrenOfIndustry,
   districtNameById,
@@ -60,13 +62,10 @@ export function PlatformBillingSettingsPage() {
 
   return (
     <div className="stack settings-page" style={{ gap: '1.5rem' }}>
-      <div>
-        <h1 className="page-title">Billing Langganan Platform</h1>
-        <p className="page-sub">
-          Harga langganan default &amp; akun master Pivot untuk menagih tenant memakai aplikasi ini. Setelan
-          berlaku global untuk seluruh platform.
-        </p>
-      </div>
+      <PageHeader
+        title="Billing Langganan Platform"
+        subtitle="Harga langganan default & akun master Pivot untuk menagih tenant memakai aplikasi ini. Setelan berlaku global untuk seluruh platform."
+      />
 
       <GlobalPanel settings={settings} manage={manage} onSaved={setSettings} />
 

@@ -7,8 +7,11 @@ import {
   type UpdateTaxSettingsRequest,
 } from '../api/billing'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, Modal, useToast } from '../components/ui'
-import { IconAlert, IconShield } from '../components/icons'
+import { Badge, EmptyState } from '@/components/atoms'
+import { Modal } from '@/components/molecules'
+import { useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { IconAlert, IconShield } from '@/components/atoms/icons'
 
 /**
  * Setelan pajak tenant — dua kebijakan berbeda sifat digabung karena keduanya "pajak tenant":
@@ -152,13 +155,10 @@ export function TaxSettingsPage() {
 
   return (
     <div className="stack settings-page">
-      <div>
-        <h1 className="page-title">Pajak &amp; Kontribusi</h1>
-        <p className="page-sub" style={{ margin: '0.25rem 0 0' }}>
-          PPN yang ditagihkan ke pelanggan &amp; kewajiban pelaporan BHP/USO. Perubahan PPN tidak berlaku surut —
-          hanya tagihan yang terbit setelahnya.
-        </p>
-      </div>
+      <PageHeader
+        title="Pajak & Kontribusi"
+        subtitle="PPN yang ditagihkan ke pelanggan & kewajiban pelaporan BHP/USO. Perubahan PPN tidak berlaku surut — hanya tagihan yang terbit setelahnya."
+      />
 
       <StatusPanel saved={saved} />
 

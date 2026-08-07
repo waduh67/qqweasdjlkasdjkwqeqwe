@@ -35,9 +35,12 @@ import {
   type TenantPivotAccountView,
 } from '../api/pivotAccount'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, Modal, useToast, type Tone } from '../components/ui'
-import { Combobox } from '../components/Combobox'
-import { IconAlert, IconShield } from '../components/icons'
+import { Badge, EmptyState, type Tone } from '@/components/atoms'
+import { Modal } from '@/components/molecules'
+import { useToast } from '@/system'
+import { Combobox } from '@/components/molecules'
+import { PageHeader } from '@/components/molecules'
+import { IconAlert, IconShield } from '@/components/atoms/icons'
 import {
   channelNameByCode,
   PIVOT_CHANNEL_TYPE_LABEL,
@@ -211,13 +214,15 @@ export function PaymentGatewaySettingsPage() {
 
   return (
     <div className="stack settings-page">
-      <div>
-        <h1 className="page-title">Payment Gateway</h1>
-        <p className="page-sub" style={{ margin: '0.25rem 0 0' }}>
-          Cara pelanggan Anda membayar: otomatis lewat <strong>Pivot</strong> atau manual (transfer/QRIS).
-          Perubahan minta konfirmasi sebelum berlaku.
-        </p>
-      </div>
+      <PageHeader
+        title="Payment Gateway"
+        subtitle={
+          <>
+            Cara pelanggan Anda membayar: otomatis lewat <strong>Pivot</strong> atau manual (transfer/QRIS).
+            Perubahan minta konfirmasi sebelum berlaku.
+          </>
+        }
+      />
 
       {/* ---- Status yang berlaku sekarang (dari server, bukan suntingan) ---- */}
       <StatusPanel saved={saved} />

@@ -12,9 +12,12 @@ import {
   type VpnServerView,
 } from '../api/vpn'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { Badge, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
-import { IconAlert, IconPlus, IconRoute } from '../components/icons'
+import { DataTable, type Column } from '@/components/organisms'
+import { Badge, EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { SearchInput } from '@/components/molecules'
+import { useConfirm, useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { IconAlert, IconPlus, IconRoute } from '@/components/atoms/icons'
 
 /**
  * Server VPN (PLATFORM). Halaman admin platform untuk mengelola hub OpenVPN yang jalan di VPS
@@ -77,6 +80,7 @@ const statusLabel = (status: string) => STATUS_LABELS[status] ?? status
 export function VpnServersPage() {
   const { can } = useCan()
   const canManage = can('vpn.server.manage')
+  const confirm = useConfirm()
   const { items: servers, loading, run } = useResource(listServers)
 
   const [draft, setDraft] = useState<ServerDraft | null>(null)
@@ -144,20 +148,34 @@ export function VpnServersPage() {
   }
 
   const regenerate = (server: VpnServerView) => {
-    if (
-      !window.confirm(
-        `Rotasi token pasang untuk “${server.name}”? Perintah/token lama langsung tak berlaku dan VPS perlu dipasang ulang dengan yang baru.`,
+    void (async () => {
+      if (
+        !(await confirm({
+          title: 'Rotasi token pasang',
+          message: `Rotasi token pasang untuk “${server.name}”? Perintah/token lama langsung tak berlaku dan VPS perlu dipasang ulang dengan yang baru.`,
+          confirmLabel: 'Rotasi',
+        }))
       )
-    )
-      return
-    void run(async () => {
-      setSecret(await regenerateToken(server.id))
-    }, 'Token pasang dirotasi')
+        return
+      void run(async () => {
+        setSecret(await regenerateToken(server.id))
+      }, 'Token pasang dirotasi')
+    })()
   }
 
   const remove = (server: VpnServerView) => {
-    if (!window.confirm(`Hapus hub “${server.name}”? Ditolak bila masih menampung akun.`)) return
-    void run(() => deleteServer(server.id), 'Hub dihapus')
+    void (async () => {
+      if (
+        !(await confirm({
+          title: 'Hapus hub',
+          message: `Hapus hub “${server.name}”? Ditolak bila masih menampung akun.`,
+          confirmLabel: 'Hapus',
+          danger: true,
+        }))
+      )
+        return
+      void run(() => deleteServer(server.id), 'Hub dihapus')
+    })()
   }
 
   const columns: Column<VpnServerView>[] = [
@@ -218,13 +236,10 @@ export function VpnServersPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div>
-        <h1 className="page-title">Server VPN</h1>
-        <p className="page-sub">
-          Hub OpenVPN platform — jalan di VPS kita dengan IP publik kita. Buat hub, jalankan perintah pasang sekali di
-          VPS, lalu hub siap dipakai. Tenant tinggal generate akun VPN yang di-auto-assign ke hub yang tersedia.
-        </p>
-      </div>
+      <PageHeader
+        title="Server VPN"
+        subtitle="Hub OpenVPN platform — jalan di VPS kita dengan IP publik kita. Buat hub, jalankan perintah pasang sekali di VPS, lalu hub siap dipakai. Tenant tinggal generate akun VPN yang di-auto-assign ke hub yang tersedia."
+      />
 
       <div className="spread">
         <span className="muted">{servers.length} hub</span>

@@ -1,11 +1,12 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Suspense, lazy, type ReactNode } from 'react'
 import { AuthProvider } from './auth/AuthContext'
-import { ToastProvider } from './components/ui'
+import { ToastProvider, DialogProvider } from '@/system'
+import { ThemeProvider } from './theme/ThemeProvider'
 import { useAuth } from './auth/useAuth'
 import { useCan } from './auth/useCan'
-import { Layout } from './components/Layout'
-import { PlatformLayout } from './components/PlatformLayout'
+import { Layout } from '@/components/templates'
+import { PlatformLayout } from '@/components/templates'
 import { LoginPage } from './pages/LoginPage'
 import { SignupPage } from './pages/SignupPage'
 import { PaymentPaidPage, PaymentFailedPage, PaymentExpiredPage } from './pages/PaymentReturnPage'
@@ -14,7 +15,6 @@ import { PlatformDashboardPage } from './pages/PlatformDashboardPage'
 import { InventoryPage } from './pages/InventoryPage'
 import { OltDetailPage } from './pages/OltDetailPage'
 import { CustomersPage } from './pages/CustomersPage'
-import { CustomerDetailPage } from './pages/CustomerDetailPage'
 import { InvoicesPage } from './pages/InvoicesPage'
 import { ExpressPsbPage } from './pages/ExpressPsbPage'
 import { ImportPppoePage } from './pages/ImportPppoePage'
@@ -100,16 +100,20 @@ function RequirePlatformAdmin({ children }: { children: ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <ToastProvider>
-        {/* Realm pelanggan (`/portal/*`) di-mount TERPISAH dari konsol operator: provider,
-            klien HTTP, dan token store sendiri (lihat PortalApp). Dua sesi tak bersinggungan. */}
-        <Routes>
-          <Route path="/portal/*" element={<PortalApp />} />
-          <Route path="/*" element={<OperatorApp />} />
-        </Routes>
-      </ToastProvider>
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <ToastProvider>
+          <DialogProvider>
+            {/* Realm pelanggan (`/portal/*`) di-mount TERPISAH dari konsol operator: provider,
+                klien HTTP, dan token store sendiri (lihat PortalApp). Dua sesi tak bersinggungan. */}
+            <Routes>
+              <Route path="/portal/*" element={<PortalApp />} />
+              <Route path="/*" element={<OperatorApp />} />
+            </Routes>
+          </DialogProvider>
+        </ToastProvider>
+      </BrowserRouter>
+    </ThemeProvider>
   )
 }
 
@@ -165,14 +169,6 @@ function OperatorApp() {
               element={
                 <RequirePermission permission="customer.customer.view">
                   <CustomersPage />
-                </RequirePermission>
-              }
-            />
-            <Route
-              path="customers/:id"
-              element={
-                <RequirePermission permission="customer.customer.view">
-                  <CustomerDetailPage />
                 </RequirePermission>
               }
             />

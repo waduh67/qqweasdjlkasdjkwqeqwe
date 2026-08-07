@@ -8,35 +8,36 @@
  */
 
 :root {
-  /* Bidang & permukaan — biru-abu sejuk ala SaaS (Slate/Indigo), bukan krem hangat. */
-  --plane: #f6f7fb;
+  /* Bidang & permukaan — neutral Fluent/Azure (kanvas #F8F9FA, kartu putih, stroke #EDEBE9). */
+  --plane: #f8f9fa;
   --surface: #ffffff;
-  --surface-2: #f1f3f9;
-  --surface-hover: #eceef6;
-  --border: rgba(15, 23, 42, 0.08);
-  --border-strong: #e3e7f0;
+  --surface-2: #f3f4f6;
+  --surface-hover: #f0f0f0;
+  --border: rgba(0, 0, 0, 0.06);
+  --border-strong: #edebe9;
 
-  /* Tinta (Slate) */
-  --text: #0f172a;
-  --text-2: #475569;
-  --muted: #64748b;
+  /* Tinta (Fluent neutral foreground) */
+  --text: #1b1a19;
+  --text-2: #484644;
+  --muted: #605e5c;
 
-  /* Aksen (Violet — brand primary "Enterprise SaaS") */
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
+  /* Aksen (Azure Blue — brand primary Fluent) */
+  --accent: #0078d4;
+  --accent-hover: #106ebe;
   --accent-ink: #ffffff;
-  --accent-soft: rgba(79, 70, 229, 0.1);
-  --focus-ring: rgba(79, 70, 229, 0.32);
+  --accent-soft: rgba(0, 120, 212, 0.1);
+  --focus-ring: rgba(0, 120, 212, 0.4);
 
   /* Sidebar — selalu gelap (charcoal-navy), lepas dari tema konten seperti referensi. */
-  --sidebar-bg: #14151f;
-  --sidebar-bg-2: #1c1d2b;
-  --sidebar-text: #cbd2e0;
-  --sidebar-muted: #7b8296;
-  --sidebar-border: rgba(255, 255, 255, 0.07);
-  --sidebar-active-bg: rgba(79, 70, 229, 0.24);
-  --sidebar-active-text: #ffffff;
-  --sidebar-active-accent: #818cf8;
+  /* Left-nav TERANG ala Azure Portal (light). */
+  --sidebar-bg: #ffffff;
+  --sidebar-bg-2: #f3f2f1;
+  --sidebar-text: #323130;
+  --sidebar-muted: #605e5c;
+  --sidebar-border: #edebe9;
+  --sidebar-active-bg: #eff6fc;
+  --sidebar-active-text: #0078d4;
+  --sidebar-active-accent: #0078d4;
 
   /* Status — tetap, tidak di-tema; dipasangkan ikon/label, tak pernah warna saja */
   --good: #10b981;
@@ -47,40 +48,58 @@
   --serious-ink: #c2410c;
   --critical: #ef4444;
   --critical-ink: #dc2626;
+  /* Merah validasi form (Fluent) — dipakai [Field] error & keadaan input tak valid. */
+  --danger: #d13438;
 
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
   --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
   --shadow-lg: 0 16px 48px rgba(15, 23, 42, 0.16);
 
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-lg: 16px;
+  /* Fluent memakai sudut jauh lebih kecil dari SaaS bulat sebelumnya. */
+  --radius: 4px;
+  --radius-sm: 2px;
+  --radius-lg: 6px;
 
   color-scheme: light;
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Persis tumpukan font Azure Portal: 'Segoe UI Variable Text' (muka Win11 yang
+     dipakai portal terbaru) di depan, lalu 'Segoe UI' klasik, baru fallback lintas-OS. */
+  font-family: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI',
+    'Segoe UI Web (West European)', -apple-system, BlinkMacSystemFont, system-ui,
+    'Helvetica Neue', Arial, sans-serif;
   font-synthesis: none;
+  font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme='light'])) {
-    --plane: #0b0d12;
-    --surface: #14161d;
-    --surface-2: #1b1e27;
-    --surface-hover: #222530;
-    --border: rgba(255, 255, 255, 0.08);
-    --border-strong: #2a2e3a;
+    --plane: #1b1a19;
+    --surface: #201f1e;
+    --surface-2: #292827;
+    --surface-hover: #323130;
+    --border: rgba(255, 255, 255, 0.09);
+    --border-strong: #3b3a39;
 
-    --text: #f8fafc;
-    --text-2: #cbd2e0;
-    --muted: #8b93a7;
+    --text: #ffffff;
+    --text-2: #d2d0ce;
+    --muted: #a19f9d;
 
-    --accent: #818cf8;
-    --accent-hover: #a5b4fc;
-    --accent-ink: #14161d;
-    --accent-soft: rgba(129, 140, 248, 0.16);
-    --focus-ring: rgba(129, 140, 248, 0.4);
+    --accent: #2899f5;
+    --accent-hover: #62abf5;
+    --accent-ink: #ffffff;
+    --accent-soft: rgba(40, 153, 245, 0.16);
+    --focus-ring: rgba(40, 153, 245, 0.45);
+
+    /* Left-nav gelap ala Azure Portal (dark). */
+    --sidebar-bg: #201f1e;
+    --sidebar-bg-2: #292827;
+    --sidebar-text: #d2d0ce;
+    --sidebar-muted: #a19f9d;
+    --sidebar-border: #3b3a39;
+    --sidebar-active-bg: rgba(40, 153, 245, 0.16);
+    --sidebar-active-text: #2899f5;
+    --sidebar-active-accent: #2899f5;
 
     --good: #34d399;
     --good-ink: #6ee7b7;
@@ -90,6 +109,7 @@
     --serious-ink: #fdba74;
     --critical: #f87171;
     --critical-ink: #fca5a5;
+    --danger: #f1707b;
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
@@ -100,22 +120,32 @@
 }
 
 :root[data-theme='dark'] {
-  --plane: #0b0d12;
-  --surface: #14161d;
-  --surface-2: #1b1e27;
-  --surface-hover: #222530;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: #2a2e3a;
+  --plane: #1b1a19;
+  --surface: #201f1e;
+  --surface-2: #292827;
+  --surface-hover: #323130;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: #3b3a39;
 
-  --text: #f8fafc;
-  --text-2: #cbd2e0;
-  --muted: #8b93a7;
+  --text: #ffffff;
+  --text-2: #d2d0ce;
+  --muted: #a19f9d;
 
-  --accent: #818cf8;
-  --accent-hover: #a5b4fc;
-  --accent-ink: #14161d;
-  --accent-soft: rgba(129, 140, 248, 0.16);
-  --focus-ring: rgba(129, 140, 248, 0.4);
+  --accent: #2899f5;
+  --accent-hover: #62abf5;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(40, 153, 245, 0.16);
+  --focus-ring: rgba(40, 153, 245, 0.45);
+
+  /* Left-nav gelap ala Azure Portal (dark). */
+  --sidebar-bg: #201f1e;
+  --sidebar-bg-2: #292827;
+  --sidebar-text: #d2d0ce;
+  --sidebar-muted: #a19f9d;
+  --sidebar-border: #3b3a39;
+  --sidebar-active-bg: rgba(40, 153, 245, 0.16);
+  --sidebar-active-text: #2899f5;
+  --sidebar-active-accent: #2899f5;
 
   --good: #34d399;
   --good-ink: #6ee7b7;
@@ -125,6 +155,7 @@
   --serious-ink: #fdba74;
   --critical: #f87171;
   --critical-ink: #fca5a5;
+  --danger: #f1707b;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
@@ -143,11 +174,17 @@ body {
   min-height: 100%;
 }
 
+/* Skala tipografi lebih rapat ala Azure Portal: root 13px supaya seluruh ukuran
+   berbasis rem — judul, nav, badge — ikut mengecil proporsional. */
+html {
+  font-size: 13px;
+}
+
 body {
   background: var(--plane);
   color: var(--text);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 1rem;
+  line-height: 1.45;
 }
 
 /* ---------- Scrollbar kustom (Firefox + WebKit) ---------- */
@@ -307,6 +344,39 @@ textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
+/* Kontrol dinonaktifkan: redup + kursor terlarang (mis. field terkunci saat sunting). */
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+/* Checkbox & radio: lebar-auto (bukan 100% dari aturan input umum) + aksen Azure. */
+input[type='checkbox'],
+input[type='radio'] {
+  width: auto;
+  accent-color: var(--accent);
+}
+/* Keadaan tak valid — bingkai & cincin merah; dipicu `.field-error` (dari [Field])
+   atau `aria-invalid` langsung pada kontrol. */
+.field-error input,
+.field-error select,
+.field-error textarea,
+input[aria-invalid='true'],
+select[aria-invalid='true'],
+textarea[aria-invalid='true'] {
+  border-color: var(--danger, #d13438);
+}
+.field-error input:focus,
+.field-error select:focus,
+.field-error textarea:focus,
+input[aria-invalid='true']:focus,
+select[aria-invalid='true']:focus,
+textarea[aria-invalid='true']:focus {
+  border-color: var(--danger, #d13438);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger, #d13438) 30%, transparent);
+}
 
 label {
   display: block;
@@ -342,7 +412,7 @@ td {
 }
 thead th {
   color: var(--muted);
-  font-weight: 650;
+  font-weight: 600;
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -415,6 +485,28 @@ tbody tr.row-click {
 tbody tr.row-click:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
+}
+
+/* ---------- DataGrid: kolom checkbox & menu aksi kiri (Azure) ---------- */
+td.dg-check,
+th.dg-check,
+td.dg-actions,
+th.dg-actions {
+  width: 1%;
+  white-space: nowrap;
+  padding-right: 0;
+}
+td.dg-check,
+td.dg-actions {
+  vertical-align: middle;
+}
+/* Baris terpilih: latar biru-tipis + rusuk kiri aksen, khas seleksi Azure. */
+tbody tr.row-selected {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+tbody tr.row-selected:hover {
+  background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface-2));
 }
 
 /* ---------- Bilah filter (toolbar tabel) ---------- */
@@ -691,6 +783,25 @@ tbody tr.row-click:focus-visible {
 
 /* ---------- Modal (dialog terpusat) ---------- */
 
+/* Wadah <dialog> top-layer: reset gaya native (margin/border/bg) jadi transparan &
+   memenuhi viewport; scrim + .modal di dalamnya yang menata tampilan. Top layer memastikan
+   modal (mis. konfirmasi) selalu di atas Blade/OverlayDrawer yang juga top-layer. */
+.modal-host {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+.modal-host::backdrop {
+  background: transparent;
+}
 .modal {
   position: fixed;
   top: 50%;
@@ -740,6 +851,83 @@ tbody tr.row-click:focus-visible {
   border-top: 1px solid var(--border);
 }
 
+/* ---------- Blade (panel geser-kanan ala Azure) ---------- */
+/* Subjudul di bawah judul header drawer. */
+.azure-blade-sub {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+/* Body scroll dengan ruang napas; footer sticky menutup bawah panel. */
+.azure-blade-body {
+  padding-bottom: 1rem;
+}
+.azure-blade-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 24px;
+  border-top: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+/* Varian lebar ~50% layar untuk panel detail (mis. detail pelanggan). Dipakai bersama
+   size="full" sehingga di tablet/mobile tetap penuh & terbaca; di desktop dipangkas
+   ke 50vw. Dua kelas (spesifisitas 0,2,0) menang atas kelas lebar bawaan Fluent. */
+@media (min-width: 1024px) {
+  .azure-blade.blade-half {
+    width: 50vw;
+    max-width: 50vw;
+    min-width: 680px;
+  }
+}
+
+/* ---------- Primitif form (Field / FormSection) ---------- */
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.form-section + .form-section {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+.form-section-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.form-section-desc {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.field-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-2);
+}
+.field-req {
+  color: var(--danger, #d13438);
+}
+.field-msg {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.field-msg-error {
+  color: var(--danger, #d13438);
+}
+.field-error .field-label {
+  color: var(--danger, #d13438);
+}
+
 /* ---------- Tab (pemecah panel detail) ---------- */
 
 .tabs {
@@ -768,6 +956,7 @@ tbody tr.row-click:focus-visible {
 }
 .tab.active {
   color: var(--text);
+  font-weight: 600;
   border-bottom-color: var(--accent);
 }
 .tab-badge {
@@ -870,13 +1059,43 @@ tbody tr.row-click:focus-visible {
 .page-title {
   margin: 0;
   font-size: 1.6rem;
-  font-weight: 750;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 .page-sub {
   margin: 0.25rem 0 0;
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+/* ---------- Breadcrumb global (Azure) ---------- */
+.breadcrumb-bar {
+  margin-bottom: 1rem;
+}
+
+/* ---------- Kepala halaman (judul + slot CommandBar) ---------- */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: none;
+}
+
+/* ---------- CommandBar ala Azure Portal (bilah aksi di atas tabel) ---------- */
+.azure-commandbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.35rem 0.25rem;
+  border-bottom: 1px solid var(--border-strong);
 }
 
 /* ---------- Badge & pil status ---------- */
@@ -1162,17 +1381,17 @@ tbody tr.row-click:focus-visible {
   align-items: center;
   gap: 0.6rem;
   padding: 0.4rem 0.5rem 0.9rem;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 1.05rem;
   letter-spacing: -0.02em;
-  color: #fff;
+  color: var(--sidebar-text);
 }
 .logo {
   width: 30px;
   height: 30px;
-  border-radius: 9px;
-  background: linear-gradient(135deg, #6366f1, #4338ca);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #2899f5, #0078d4);
+  box-shadow: 0 2px 6px rgba(0, 120, 212, 0.35);
   display: grid;
   place-items: center;
   color: #fff;
@@ -1182,9 +1401,34 @@ tbody tr.row-click:focus-visible {
   padding: 0.85rem 0.6rem 0.3rem;
   color: var(--sidebar-muted);
   font-size: 0.66rem;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+/* Header seksi sebagai tombol pengalih ciut (chevron) ala left-nav Azure. Mewarisi
+   tipografi .nav-label; chevron berputar -90° saat seksi diciutkan. */
+.nav-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  width: 100%;
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.nav-group-toggle:hover {
+  color: var(--sidebar-text);
+}
+.nav-group-chevron {
+  flex: none;
+  opacity: 0.65;
+  transition: transform 0.15s ease;
+}
+.nav-group.collapsed .nav-group-chevron {
+  transform: rotate(-90deg);
 }
 .sidebar nav {
   display: flex;
@@ -1199,7 +1443,7 @@ tbody tr.row-click:focus-visible {
   padding: 0.55rem 0.7rem;
   border-radius: var(--radius-sm);
   color: var(--sidebar-text);
-  font-weight: 550;
+  font-weight: 400;
   font-size: 0.9rem;
   transition: background 0.12s ease, color 0.12s ease;
 }
@@ -1209,7 +1453,7 @@ tbody tr.row-click:focus-visible {
 }
 .sidebar nav a:hover {
   background: var(--sidebar-bg-2);
-  color: #fff;
+  color: var(--sidebar-text);
   text-decoration: none;
 }
 .sidebar nav a:hover svg {
@@ -1218,7 +1462,7 @@ tbody tr.row-click:focus-visible {
 .sidebar nav a.active {
   background: var(--sidebar-active-bg);
   color: var(--sidebar-active-text);
-  font-weight: 650;
+  font-weight: 600;
 }
 /* Rusuk aksen violet di kiri item aktif — penanda posisi ala referensi. */
 .sidebar nav a.active::before {
@@ -1257,13 +1501,13 @@ tbody tr.row-click:focus-visible {
   border-radius: var(--radius-sm);
   background: var(--sidebar-bg-2);
   border: 1px solid var(--sidebar-border);
-  color: #fff;
-  font-weight: 650;
+  color: var(--sidebar-text);
+  font-weight: 400;
   font-size: 0.9rem;
 }
 .env-switch-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--sidebar-bg-2) 82%, #ffffff);
-  border-color: rgba(255, 255, 255, 0.16);
+  background: color-mix(in srgb, var(--sidebar-bg-2) 88%, var(--sidebar-text));
+  border-color: color-mix(in srgb, var(--sidebar-border) 55%, var(--sidebar-text));
 }
 .env-switch-btn .env-dot {
   width: 8px;
@@ -1271,10 +1515,25 @@ tbody tr.row-click:focus-visible {
   border-radius: 50%;
   flex: none;
 }
-.env-switch-btn .env-label {
+/* Info dua baris ala pemilih direktori Azure: nama konteks + keterangan kecil. */
+.env-switch-info {
   flex: 1;
-  text-align: left;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  text-align: left;
+}
+.env-switch-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.env-switch-cap {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--sidebar-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1308,24 +1567,29 @@ tbody tr.row-click:focus-visible {
 .env-menu li {
   margin: 0;
 }
-.env-menu a {
+.env-menu button {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 0.55rem;
   padding: 0.5rem 0.55rem;
+  border: none;
+  background: none;
   border-radius: 6px;
   color: var(--sidebar-text);
+  font-family: inherit;
   font-size: 0.88rem;
   font-weight: 550;
+  text-align: left;
+  cursor: pointer;
 }
-.env-menu a:hover {
-  background: var(--sidebar-bg);
-  color: #fff;
-  text-decoration: none;
+.env-menu button:hover {
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-text);
 }
-.env-menu a.current {
-  color: #fff;
-  font-weight: 650;
+.env-menu button.current {
+  color: var(--sidebar-active-text);
+  font-weight: 600;
 }
 .env-menu .env-check {
   margin-left: auto;
@@ -1344,7 +1608,7 @@ tbody tr.row-click:focus-visible {
   padding-left: 0;
   padding-right: 0;
 }
-.sidebar-collapsed .env-switch-btn .env-label,
+.sidebar-collapsed .env-switch-btn .env-switch-info,
 .sidebar-collapsed .env-switch-btn > svg {
   display: none;
 }
@@ -1381,10 +1645,11 @@ tbody tr.row-click:focus-visible {
 /* Halaman berbasis formulir (billing, payment gateway): satu kolom memanjang ke bawah,
    TERPUSAT agar tak ada gutter kosong lebar di kanan pada layar besar. Sedikit lebih
    lebar dari `.narrow` supaya kartu terasa lapang tanpa jadi baris teks yang melelahkan. */
+/* Halaman setelan (payment gateway, pajak, billing langganan) dulu dibatasi 880px &
+   dipusatkan — membuatnya tampak "sempit sendiri" dibanding halaman lain yang penuh.
+   Kini lebar penuh & rata-kiri agar konsisten dengan seluruh konsol. */
 .settings-page {
-  max-width: 880px;
   width: 100%;
-  margin-inline: auto;
 }
 /* Konten full-bleed (peta): isi seluruh area di bawah header, tanpa padding/kolom
    terpusat. `.main` dikunci setinggi viewport agar anak flex:1 mengisi sisanya. */

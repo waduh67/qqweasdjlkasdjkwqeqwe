@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PermissionCatalog, Role } from '../api/types'
-import { PermissionMatrix } from '../components/PermissionMatrix'
+import { PermissionMatrix } from '@/components/molecules'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { Badge, EmptyState, SearchInput, Toolbar } from '../components/ui'
-import { IconPlus, IconShield } from '../components/icons'
+import { DataTable, type Column } from '@/components/organisms'
+import { CommandBar, type CommandAction } from '@/components/molecules'
+import { PageHeader } from '@/components/molecules'
+import { Field } from '@/components/molecules'
+import { Badge, EmptyState, Toolbar } from '@/components/atoms'
+import { SearchInput } from '@/components/molecules'
+import { useConfirm } from '@/system'
+import { IconPlus, IconShield } from '@/components/atoms/icons'
 
 type Draft = { id: string | null; name: string; description: string; permissionIds: Set<string> }
 
@@ -13,6 +18,7 @@ const EMPTY_DRAFT: Draft = { id: null, name: '', description: '', permissionIds:
 
 export function RolesPage() {
   const { can } = useCan()
+  const confirm = useConfirm()
   const [roles, setRoles] = useState<Role[]>([])
   const [catalog, setCatalog] = useState<PermissionCatalog | null>(null)
   const [draft, setDraft] = useState<Draft | null>(null)
@@ -128,7 +134,7 @@ export function RolesPage() {
   }
 
   async function remove(role: Role) {
-    if (!confirm(`Hapus role "${role.name}"?`)) return
+    if (!(await confirm({ title: 'Hapus role', message: `Hapus role "${role.name}"?`, confirmLabel: 'Hapus', danger: true }))) return
     setError(null)
     try {
       await api.del(`/api/roles/${role.id}`)
@@ -138,16 +144,20 @@ export function RolesPage() {
     }
   }
 
+  // CommandBar ala Azure: primary `+ Role baru` dipatok kiri, seragam dengan Pelanggan.
+  const primary: CommandAction | undefined = can('iam.role.create')
+    ? {
+        key: 'create',
+        label: 'Role baru',
+        icon: <IconPlus size={16} />,
+        onClick: () => setDraft({ ...EMPTY_DRAFT, permissionIds: new Set() }),
+      }
+    : undefined
+
   return (
     <div className="stack">
-      <div className="spread">
-        <h1 className="page-title">Role &amp; Izin</h1>
-        {can('iam.role.create') && (
-          <button className="primary" onClick={() => setDraft({ ...EMPTY_DRAFT, permissionIds: new Set() })}>
-            <IconPlus size={15} /> Role baru
-          </button>
-        )}
-      </div>
+      <PageHeader title="Role & Izin" subtitle="Kelompokkan izin ke dalam peran untuk mengatur akses pengguna." />
+      <CommandBar primary={primary} />
 
       {error && <p className="error">{error}</p>}
 
@@ -174,22 +184,20 @@ export function RolesPage() {
         <div className="card stack">
           <h3 style={{ margin: 0 }}>{draft.id ? 'Ubah role' : 'Role baru'}</h3>
           <div className="row" style={{ alignItems: 'flex-start' }}>
-            <label style={{ flex: 1 }}>
-              <span>Nama</span>
+            <Field label="Nama" required style={{ flex: 1 }}>
               <input
                 value={draft.name}
                 disabled={readOnly}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
               />
-            </label>
-            <label style={{ flex: 2 }}>
-              <span>Deskripsi</span>
+            </Field>
+            <Field label="Deskripsi" style={{ flex: 2 }}>
               <input
                 value={draft.description}
                 disabled={readOnly}
                 onChange={(e) => setDraft({ ...draft, description: e.target.value })}
               />
-            </label>
+            </Field>
           </div>
 
           <div>

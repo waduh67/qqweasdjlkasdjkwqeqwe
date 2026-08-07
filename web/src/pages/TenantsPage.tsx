@@ -3,10 +3,13 @@ import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import { getPlatformBillingSettings } from '../api/platformBilling'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { ConfirmDialog, EmptyState, SearchInput, StatusBadge, Toolbar } from '../components/ui'
-import { IconBuilding, IconPlus } from '../components/icons'
-import { TenantSubscriptionModal } from './TenantSubscriptionModal'
+import { Blade } from '@/components/organisms'
+import { DataTable, type Column } from '@/components/organisms'
+import { EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { ConfirmDialog, SearchInput } from '@/components/molecules'
+import { PageHeader } from '@/components/molecules'
+import { IconBuilding, IconPlus } from '@/components/atoms/icons'
+import { TenantSubscriptionModal } from '@/components/organisms/TenantSubscriptionModal'
 
 interface Tenant {
   id: string
@@ -31,6 +34,7 @@ export function TenantsPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState<typeof EMPTY | null>(null)
+  const [initialDraft, setInitialDraft] = useState<typeof EMPTY | null>(null)
   const [subscription, setSubscription] = useState<{ id: string; name: string } | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<Tenant | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -66,6 +70,17 @@ export function TenantsPage() {
       setError(err instanceof ApiError ? err.message : 'Operasi gagal')
     }
   }
+
+  // Buka/tutup Blade form dengan snapshot untuk deteksi perubahan (dirty).
+  const openDraft = (d: typeof EMPTY) => {
+    setDraft(d)
+    setInitialDraft(d)
+  }
+  const closeDraft = () => {
+    setDraft(null)
+    setInitialDraft(null)
+  }
+  const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -119,17 +134,17 @@ export function TenantsPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div className="spread">
-        <div>
-          <h1 className="page-title">Tenant</h1>
-          <p className="page-sub">Onboarding ISP baru dan kelola status tenant di platform.</p>
-        </div>
-        {can('platform.tenant.create') && (
-          <button className="primary" onClick={() => setDraft({ ...EMPTY })}>
-            <IconPlus size={15} /> Onboarding tenant
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="Tenant"
+        subtitle="Onboarding ISP baru dan kelola status tenant di platform."
+        actions={
+          can('platform.tenant.create') && (
+            <button className="primary" onClick={() => openDraft({ ...EMPTY })}>
+              <IconPlus size={15} /> Onboarding tenant
+            </button>
+          )
+        }
+      />
 
       {error && <p className="error">{error}</p>}
       {notice && <p className="muted">{notice}</p>}
@@ -158,84 +173,91 @@ export function TenantsPage() {
         }
       />
 
-      {draft && (
-        <div className="card stack">
-          <h3 style={{ margin: 0 }}>Onboarding tenant baru</h3>
-          <p className="muted">
-            Membuat tenant, role &quot;Tenant Admin&quot; berisi seluruh izin non-platform, dan user admin pertamanya.
-          </p>
-          <div className="row" style={{ alignItems: 'flex-start' }}>
-            <label style={{ flex: 1 }}>
-              <span>Slug</span>
-              <input value={draft.slug} onChange={(e) => setDraft({ ...draft, slug: e.target.value })} placeholder="pt-fiber" />
-            </label>
-            <label style={{ flex: 2 }}>
-              <span>Nama</span>
-              <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-            </label>
-          </div>
-          <div className="row" style={{ alignItems: 'flex-start' }}>
-            <label style={{ flex: 1 }}>
-              <span>Nama admin</span>
-              <input value={draft.adminName} onChange={(e) => setDraft({ ...draft, adminName: e.target.value })} />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Email admin</span>
-              <input
-                type="email"
-                value={draft.adminEmail}
-                onChange={(e) => setDraft({ ...draft, adminEmail: e.target.value })}
-              />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Password admin</span>
-              <input
-                type="password"
-                value={draft.adminPassword}
-                onChange={(e) => setDraft({ ...draft, adminPassword: e.target.value })}
-              />
-            </label>
-          </div>
-          <div className="row" style={{ alignItems: 'flex-start' }}>
-            <label style={{ flex: 1 }}>
-              <span>Harga bulanan khusus (Rp)</span>
-              <input
-                type="number"
-                min={0}
-                step={1000}
-                value={draft.monthlyFee}
-                onChange={(e) => setDraft({ ...draft, monthlyFee: e.target.value })}
-                placeholder={
-                  defaultFee != null ? `Default Rp ${defaultFee.toLocaleString('id-ID')}` : 'Kosongkan = harga default'
-                }
-              />
-              <span className="muted" style={{ fontSize: '0.8rem' }}>
-                Kosongkan untuk memakai harga default global. Isi untuk harga khusus tenant ini.
-              </span>
-            </label>
-            <div style={{ flex: 1 }} />
-          </div>
-          <div className="row">
+      <Blade
+        open={draft != null}
+        title="Onboarding tenant baru"
+        subtitle='Membuat tenant, role "Tenant Admin" berisi seluruh izin non-platform, dan user admin pertamanya.'
+        size="sm"
+        dirty={dirty}
+        onClose={closeDraft}
+        footer={
+          <>
             <button
               className="primary"
               onClick={() =>
                 void run(async () => {
-                  const { monthlyFee, ...rest } = draft
+                  const { monthlyFee, ...rest } = draft!
                   await api.post('/api/platform/tenants', {
                     ...rest,
                     monthlyFee: monthlyFee.trim() === '' ? undefined : Number(monthlyFee),
                   })
-                  setNotice(`Tenant "${draft.slug}" siap. Admin bisa langsung masuk dengan tenant tersebut.`)
-                  setDraft(null)
+                  setNotice(`Tenant "${draft!.slug}" siap. Admin bisa langsung masuk dengan tenant tersebut.`)
+                  closeDraft()
                 })
               }
             >
-              Buat
+              Simpan
             </button>
-            <button onClick={() => setDraft(null)}>Batal</button>
+            <button onClick={closeDraft}>Batal</button>
+          </>
+        }
+      >
+        {draft && (
+          <div className="stack">
+            <div className="row" style={{ alignItems: 'flex-start' }}>
+              <label style={{ flex: 1 }}>
+                <span>Slug</span>
+                <input value={draft.slug} onChange={(e) => setDraft({ ...draft, slug: e.target.value })} placeholder="pt-fiber" />
+              </label>
+              <label style={{ flex: 2 }}>
+                <span>Nama</span>
+                <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+              </label>
+            </div>
+            <div className="row" style={{ alignItems: 'flex-start' }}>
+              <label style={{ flex: 1 }}>
+                <span>Nama admin</span>
+                <input value={draft.adminName} onChange={(e) => setDraft({ ...draft, adminName: e.target.value })} />
+              </label>
+              <label style={{ flex: 1 }}>
+                <span>Email admin</span>
+                <input
+                  type="email"
+                  value={draft.adminEmail}
+                  onChange={(e) => setDraft({ ...draft, adminEmail: e.target.value })}
+                />
+              </label>
+              <label style={{ flex: 1 }}>
+                <span>Password admin</span>
+                <input
+                  type="password"
+                  value={draft.adminPassword}
+                  onChange={(e) => setDraft({ ...draft, adminPassword: e.target.value })}
+                />
+              </label>
+            </div>
+            <div className="row" style={{ alignItems: 'flex-start' }}>
+              <label style={{ flex: 1 }}>
+                <span>Harga bulanan khusus (Rp)</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1000}
+                  value={draft.monthlyFee}
+                  onChange={(e) => setDraft({ ...draft, monthlyFee: e.target.value })}
+                  placeholder={
+                    defaultFee != null ? `Default Rp ${defaultFee.toLocaleString('id-ID')}` : 'Kosongkan = harga default'
+                  }
+                />
+                <span className="muted" style={{ fontSize: '0.8rem' }}>
+                  Kosongkan untuk memakai harga default global. Isi untuk harga khusus tenant ini.
+                </span>
+              </label>
+              <div style={{ flex: 1 }} />
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Blade>
 
       {subscription && (
         <TenantSubscriptionModal

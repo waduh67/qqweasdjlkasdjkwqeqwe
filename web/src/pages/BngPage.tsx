@@ -15,9 +15,13 @@ import {
 } from '../api/bng'
 import type { Area } from '../api/types'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { Badge, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
-import { IconGauge, IconPlus } from '../components/icons'
+import { Blade } from '@/components/organisms'
+import { DataTable, type Column } from '@/components/organisms'
+import { Badge, EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { SearchInput } from '@/components/molecules'
+import { useConfirm, useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { IconGauge, IconPlus } from '@/components/atoms/icons'
 
 /**
  * Registri BRAS/RADIUS tenant.
@@ -50,14 +54,10 @@ export function BngPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div>
-        <h1 className="page-title">BRAS &amp; RADIUS</h1>
-        <p className="page-sub">
-          Daftarkan router master (BRAS) sebagai klien RADIUS — alamat + shared secret. FreeRADIUS
-          pusat memuatnya otomatis; tak perlu setup server RADIUS sendiri. Config Mikrotik siap-salin
-          muncul di form tiap BRAS.
-        </p>
-      </div>
+      <PageHeader
+        title="BRAS & RADIUS"
+        subtitle="Daftarkan router master (BRAS) sebagai klien RADIUS — alamat + shared secret. FreeRADIUS pusat memuatnya otomatis; tak perlu setup server RADIUS sendiri. Config Mikrotik siap-salin muncul di form tiap BRAS."
+      />
       <NasTab endpoint={endpoint} />
     </div>
   )
@@ -201,6 +201,7 @@ const EMPTY_NAS: NasDraft = {
 
 function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
   const { can } = useCan()
+  const confirm = useConfirm()
   const { items, loading, run } = useResource(listNas)
   const canManage = can('bng.nas.manage')
   const canViewAreas = can('iam.area.view')
@@ -219,13 +220,22 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
   }, [canViewAreas])
   /** Buka draft baru/edit dengan secret tersembunyi (baru terungkap saat "Generate"). */
   const [revealSecret, setRevealSecret] = useState(false)
-  const open = (next: NasDraft | null) => {
+  /** Snapshot draft awal untuk deteksi perubahan (konfirmasi sebelum tutup Blade). */
+  const [initialDraft, setInitialDraft] = useState<NasDraft | null>(null)
+  const openDraft = (next: NasDraft) => {
     setRevealSecret(false)
     setDraft(next)
+    setInitialDraft(next)
   }
+  const closeDraft = () => {
+    setRevealSecret(false)
+    setDraft(null)
+    setInitialDraft(null)
+  }
+  const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
 
   const edit = (nas: NasView) =>
-    open({
+    openDraft({
       id: nas.id,
       name: nas.name,
       vendor: nas.vendor,
@@ -260,7 +270,7 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
     void run(
       async () => {
         await (draft.id ? updateNas(draft.id, body) : createNas(body))
-        open(null)
+        closeDraft()
       },
       draft.id ? 'BRAS diperbarui' : 'BRAS didaftarkan',
     )
@@ -357,9 +367,11 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
                 <button onClick={() => edit(nas)}>Ubah</button>
                 <button
                   onClick={() => {
-                    if (window.confirm(`Hapus BRAS ${nas.name}?`)) {
-                      void run(() => deleteNas(nas.id), 'BRAS dihapus')
-                    }
+                    void (async () => {
+                      if (await confirm({ title: 'Hapus BRAS', message: `Hapus BRAS ${nas.name}?`, confirmLabel: 'Hapus', danger: true })) {
+                        void run(() => deleteNas(nas.id), 'BRAS dihapus')
+                      }
+                    })()
                   }}
                 >
                   Hapus
@@ -376,14 +388,30 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
       <div className="spread">
         <span className="muted">{items.length} BRAS</span>
         {canManage && (
-          <button className="primary" onClick={() => open({ ...EMPTY_NAS })}>
+          <button className="primary" onClick={() => openDraft({ ...EMPTY_NAS })}>
             <IconPlus size={15} /> Tambah BRAS
           </button>
         )}
       </div>
 
-      {draft && (
-        <div className="card stack">
+      <Blade
+        open={draft != null}
+        title={draft?.id ? 'Ubah BRAS' : 'Tambah BRAS'}
+        subtitle="Kredensial RADIUS/REST API BRAS & cakupan area PSB Ekspres."
+        size="lg"
+        dirty={dirty}
+        onClose={closeDraft}
+        footer={
+          <>
+            <button className="primary" onClick={save}>
+              Simpan
+            </button>
+            <button onClick={closeDraft}>Batal</button>
+          </>
+        }
+      >
+        {draft && (
+          <div className="stack">
           <div className="row">
             <label style={{ flex: 2 }}>
               <span>Nama</span>
@@ -575,14 +603,9 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
             </div>
           )}
 
-          <div className="row">
-            <button className="primary" onClick={save}>
-              Simpan
-            </button>
-            <button onClick={() => open(null)}>Batal</button>
           </div>
-        </div>
-      )}
+        )}
+      </Blade>
 
       <Toolbar>
         <SearchInput

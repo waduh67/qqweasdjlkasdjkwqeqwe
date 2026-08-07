@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type {
@@ -52,11 +51,13 @@ import {
   type SubscriberAccessView,
 } from '../api/bng'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, Modal, Spinner, StatusBadge, useToast } from '../components/ui'
-import { GatewayPayPanel } from '../components/GatewayPayPanel'
-import { OpticalChart } from '../components/OpticalChart'
-import { SubscriberTrafficPanel } from '../components/SubscriberTrafficPanel'
-import { IconAlert, IconCustomers, IconRoute } from '../components/icons'
+import { Badge, EmptyState, Spinner, StatusBadge } from '@/components/atoms'
+import { Modal, Tabs } from '@/components/molecules'
+import { useConfirm, useToast } from '@/system'
+import { GatewayPayPanel } from '@/components/organisms'
+import { OpticalChart } from '@/components/atoms'
+import { SubscriberTrafficPanel } from '@/components/organisms'
+import { IconAlert, IconCustomers, IconRoute } from '@/components/atoms/icons'
 import type { SubscriptionView } from '../api/network'
 import { listPlans as listCatalogPlans, SERVICE_TYPE_LABEL, type PlanView, type ServiceType } from '../api/catalog'
 import {
@@ -75,7 +76,7 @@ import {
 import { listIncidentsForCustomer, type IncidentView } from '../api/incident'
 import { listWorkOrdersForCustomer, type WorkOrderStatus, type WorkOrderView } from '../api/workorder'
 import { getSubscriber360, type Sub360BillingSummary, type Subscriber360View } from '../api/subscriber360'
-import { PortalCredentialCard } from '../components/PortalCredentialCard'
+import { PortalCredentialCard } from '@/components/organisms'
 
 /** Warna kesehatan optik selaras token status. */
 const HEALTH_COLOR: Record<string, string> = {
@@ -94,9 +95,11 @@ type Tab = 'ringkasan' | 'jalur' | 'tetangga' | 'metrik' | 'akses' | 'trafik' | 
  * integrasi GenieACS. Navigasinya tetap SPA: klik baris di daftar → rute berganti
  * tanpa memuat ulang halaman.
  */
-export function CustomerDetailPage() {
-  const { id = '' } = useParams()
-  const navigate = useNavigate()
+export function CustomerDetailPage({ customerId }: { customerId: string }) {
+  // Detail pelanggan kini tampil sebagai flyout fullscreen (dibuka dari daftar), bukan rute
+  // tersendiri — jadi `id` datang lewat prop, bukan `useParams`. Alias `id` menjaga sisa berkas
+  // tetap ringkas; penutupan panel ditangani Blade pembungkus di CustomersPage.
+  const id = customerId
   const { can } = useCan()
   const toast = useToast()
 
@@ -211,7 +214,6 @@ export function CustomerDetailPage() {
   if (notFound || !customer) {
     return (
       <div className="stack" style={{ gap: '1rem' }}>
-        <BackLink onClick={() => navigate('/customers')} />
         <div className="card">
           <EmptyState title="Pelanggan tidak ditemukan" hint="Mungkin sudah dihapus." icon={<IconCustomers size={32} />} />
         </div>
@@ -223,10 +225,21 @@ export function CustomerDetailPage() {
   const odpCount = neighbors?.sameOdp.length ?? 0
   const ponCount = neighbors?.samePonPort.length ?? 0
 
+  const tabDefs: { key: Tab; label: ReactNode; badge?: ReactNode }[] = [
+    { key: 'ringkasan', label: 'Ringkasan' },
+    { key: 'jalur', label: 'Jalur' },
+    { key: 'tetangga', label: 'Tetangga', badge: ponCount || undefined },
+    { key: 'metrik', label: 'Metrik' },
+    ...(canAccess ? [{ key: 'akses' as Tab, label: 'Akses' }] : []),
+    ...(canTraffic ? [{ key: 'trafik' as Tab, label: 'Trafik' }] : []),
+    ...(canCpe ? [{ key: 'cpe' as Tab, label: 'CPE' }] : []),
+    ...(canBilling ? [{ key: 'tagihan' as Tab, label: 'Tagihan' }] : []),
+    ...(canIncident || canWorkorder ? [{ key: 'tiket' as Tab, label: 'Tiket & WO' }] : []),
+    ...(canBilling || canIncident || canWorkorder ? [{ key: 'timeline' as Tab, label: 'Timeline' }] : []),
+  ]
+
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <BackLink onClick={() => navigate('/customers')} />
-
       <div className="spread">
         <div>
           <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -239,70 +252,9 @@ export function CustomerDetailPage() {
             {customer.address} · {customer.phone ?? 'tanpa nomor'}
           </p>
         </div>
-        {can('customer.customer.delete') && (
-          <button
-            className="ghost danger"
-            onClick={() =>
-              void (async () => {
-                try {
-                  await api.del(`/api/customers/${customer.id}`)
-                  toast.success('Pelanggan dihapus')
-                  navigate('/customers')
-                } catch (err) {
-                  toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus')
-                }
-              })()
-            }
-          >
-            Hapus
-          </button>
-        )}
       </div>
 
-      <div className="segment" style={{ alignSelf: 'flex-start' }}>
-        <button className={tab === 'ringkasan' ? 'active' : ''} onClick={() => setTab('ringkasan')}>
-          Ringkasan
-        </button>
-        <button className={tab === 'jalur' ? 'active' : ''} onClick={() => setTab('jalur')}>
-          Jalur
-        </button>
-        <button className={tab === 'tetangga' ? 'active' : ''} onClick={() => setTab('tetangga')}>
-          Tetangga{ponCount ? ` (${ponCount})` : ''}
-        </button>
-        <button className={tab === 'metrik' ? 'active' : ''} onClick={() => setTab('metrik')}>
-          Metrik
-        </button>
-        {canAccess && (
-          <button className={tab === 'akses' ? 'active' : ''} onClick={() => setTab('akses')}>
-            Akses
-          </button>
-        )}
-        {canTraffic && (
-          <button className={tab === 'trafik' ? 'active' : ''} onClick={() => setTab('trafik')}>
-            Trafik
-          </button>
-        )}
-        {canCpe && (
-          <button className={tab === 'cpe' ? 'active' : ''} onClick={() => setTab('cpe')}>
-            CPE
-          </button>
-        )}
-        {canBilling && (
-          <button className={tab === 'tagihan' ? 'active' : ''} onClick={() => setTab('tagihan')}>
-            Tagihan
-          </button>
-        )}
-        {(canIncident || canWorkorder) && (
-          <button className={tab === 'tiket' ? 'active' : ''} onClick={() => setTab('tiket')}>
-            Tiket &amp; WO
-          </button>
-        )}
-        {(canBilling || canIncident || canWorkorder) && (
-          <button className={tab === 'timeline' ? 'active' : ''} onClick={() => setTab('timeline')}>
-            Timeline
-          </button>
-        )}
-      </div>
+      <Tabs tabs={tabDefs} active={tab} onChange={setTab} />
 
       {tab === 'ringkasan' && <RingkasanTab customer={customer} odps={odps} run={run} sub360={sub360} />}
       {tab === 'jalur' && <JalurTab trace={trace} connected={connected} />}
@@ -323,14 +275,6 @@ export function CustomerDetailPage() {
         />
       )}
     </div>
-  )
-}
-
-function BackLink({ onClick }: { onClick: () => void }) {
-  return (
-    <button className="ghost" onClick={onClick} style={{ alignSelf: 'flex-start', gap: '0.35rem' }}>
-      <span aria-hidden>←</span> Pelanggan
-    </button>
   )
 }
 
@@ -627,6 +571,7 @@ function OnuManager({
   run: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
 }) {
   const { can } = useCan()
+  const confirm = useConfirm()
   const [serial, setSerial] = useState('')
   const [attach, setAttach] = useState<{ onuId: string; odpId: string; port: string; rx: string } | null>(null)
 
@@ -666,10 +611,20 @@ function OnuManager({
                   </button>
                   <button
                     className="danger"
-                    onClick={() => {
-                      if (!window.confirm(`Hapus permanen ONU ${onu.serialNumber} dari pelanggan ini?`)) return
-                      void run(() => api.del(`/api/customers/onus/${onu.id}`), 'ONU dihapus')
-                    }}
+                    onClick={() =>
+                      void (async () => {
+                        if (
+                          !(await confirm({
+                            title: 'Hapus ONU',
+                            message: `Hapus permanen ONU ${onu.serialNumber} dari pelanggan ini?`,
+                            confirmLabel: 'Hapus',
+                            danger: true,
+                          }))
+                        )
+                          return
+                        void run(() => api.del(`/api/customers/onus/${onu.id}`), 'ONU dihapus')
+                      })()
+                    }
                   >
                     Hapus
                   </button>
@@ -1262,6 +1217,7 @@ function SubscriptionAccessCard({
   canReset: boolean
   run: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
 }) {
+  const confirm = useConfirm()
   const [form, setForm] = useState<'provision' | 'edit' | 'reset' | null>(null)
   const [username, setUsername] = useState('')
   const [secret, setSecret] = useState('')
@@ -1351,35 +1307,39 @@ function SubscriptionAccessCard({
     }, 'Password diganti')
   }
 
-  const remove = () => {
-    if (!account) return
-    if (window.confirm(`Hapus akun jaringan ${account.username}?`)) {
-      void run(() => deleteAccess(account.id), 'Akun dihapus')
-    }
-  }
+  const remove = () =>
+    void (async () => {
+      if (!account) return
+      if (await confirm({ title: 'Hapus akun', message: `Hapus akun jaringan ${account.username}?`, confirmLabel: 'Hapus', danger: true })) {
+        void run(() => deleteAccess(account.id), 'Akun dihapus')
+      }
+    })()
 
   // Kendali jaringan (jalur tulis ke BRAS): efeknya nyata pada sesi pelanggan —
   // memutus koneksi — jadi tiap aksi minta konfirmasi eksplisit lebih dulu.
-  const isolate = () => {
-    if (!account) return
-    if (window.confirm(`Isolir akun ${account.username}? Sesi PPPoE-nya akan diputus sekarang.`)) {
-      void run(() => isolateAccess(account.id), 'Akun diisolir')
-    }
-  }
+  const isolate = () =>
+    void (async () => {
+      if (!account) return
+      if (await confirm({ title: 'Isolir akun', message: `Isolir akun ${account.username}? Sesi PPPoE-nya akan diputus sekarang.`, confirmLabel: 'Isolir', danger: true })) {
+        void run(() => isolateAccess(account.id), 'Akun diisolir')
+      }
+    })()
 
-  const restore = () => {
-    if (!account) return
-    if (window.confirm(`Pulihkan akun ${account.username} dari isolir?`)) {
-      void run(() => restoreAccess(account.id), 'Akun dipulihkan')
-    }
-  }
+  const restore = () =>
+    void (async () => {
+      if (!account) return
+      if (await confirm({ title: 'Pulihkan akun', message: `Pulihkan akun ${account.username} dari isolir?`, confirmLabel: 'Pulihkan' })) {
+        void run(() => restoreAccess(account.id), 'Akun dipulihkan')
+      }
+    })()
 
-  const resetLogin = () => {
-    if (!account) return
-    if (window.confirm(`Reset Login ${account.username}? Sesi diputus agar perangkat login ulang.`)) {
-      void run(() => resetAccessLogin(account.id), 'Perintah Reset Login dikirim')
-    }
-  }
+  const resetLogin = () =>
+    void (async () => {
+      if (!account) return
+      if (await confirm({ title: 'Reset Login', message: `Reset Login ${account.username}? Sesi diputus agar perangkat login ulang.`, confirmLabel: 'Reset Login' })) {
+        void run(() => resetAccessLogin(account.id), 'Perintah Reset Login dikirim')
+      }
+    })()
 
   return (
     <div className="card stack" style={{ gap: '0.6rem' }}>
@@ -2073,6 +2033,7 @@ function FirmwareCard({
   onRan: () => void
 }) {
   const toast = useToast()
+  const confirm = useConfirm()
   const [files, setFiles] = useState<FirmwareFileView[] | null>(null)
   const [pushing, setPushing] = useState<string | null>(null)
 
@@ -2086,7 +2047,7 @@ function FirmwareCard({
 
   const upgrade = async (file: FirmwareFileView) => {
     const versi = file.version ? ` (${file.version})` : ''
-    if (!window.confirm(`Pasang firmware ${file.name}${versi}? Perangkat akan reboot saat memasang.`)) {
+    if (!(await confirm({ title: 'Pasang firmware', message: `Pasang firmware ${file.name}${versi}? Perangkat akan reboot saat memasang.`, confirmLabel: 'Pasang' }))) {
       return
     }
     setPushing(file.name)
@@ -2148,6 +2109,7 @@ function FirmwareCard({
  */
 function AcsCard({ deviceId, onRan }: { deviceId: string; onRan: () => void }) {
   const toast = useToast()
+  const confirm = useConfirm()
   const [acs, setAcs] = useState<AcsRefreshView | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [resetting, setResetting] = useState(false)
@@ -2170,9 +2132,13 @@ function AcsCard({ deviceId, onRan }: { deviceId: string; onRan: () => void }) {
 
   const factoryReset = async () => {
     if (
-      !window.confirm(
-        'Reset pabrik mengembalikan SEMUA setelan perangkat (WiFi, dll) ke bawaan dan memutus koneksi pelanggan. Lanjutkan?',
-      )
+      !(await confirm({
+        title: 'Reset pabrik',
+        message:
+          'Reset pabrik mengembalikan SEMUA setelan perangkat (WiFi, dll) ke bawaan dan memutus koneksi pelanggan. Lanjutkan?',
+        confirmLabel: 'Reset pabrik',
+        danger: true,
+      }))
     ) {
       return
     }

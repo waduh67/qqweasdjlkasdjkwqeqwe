@@ -9,10 +9,13 @@ import type {
   OnuHistoryView,
 } from '../api/monitoring'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '../components/DataTable'
-import { Drawer, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
-import { OpticalChart } from '../components/OpticalChart'
-import { IconAlert, IconPlus } from '../components/icons'
+import { DataTable, type Column } from '@/components/organisms'
+import { EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { Drawer, SearchInput } from '@/components/molecules'
+import { useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { OpticalChart } from '@/components/atoms'
+import { IconAlert, IconPlus } from '@/components/atoms/icons'
 
 /** Peringkat keparahan untuk pengurutan — makin tinggi makin genting (kritis di atas saat desc). */
 const SEVERITY_RANK: Record<string, number> = { CRITICAL: 3, WARNING: 2, INFO: 1 }
@@ -237,10 +240,7 @@ export function MonitoringPage() {
 
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
-      <div>
-        <h1 className="page-title">Monitoring</h1>
-        <p className="page-sub">Kesehatan collector, alarm jaringan, dan tren redaman optik.</p>
-      </div>
+      <PageHeader title="Monitoring" subtitle="Kesehatan collector, alarm jaringan, dan tren redaman optik." />
 
       {dashboard && (
         <div className="stat-grid">

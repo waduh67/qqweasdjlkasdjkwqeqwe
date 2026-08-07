@@ -9,8 +9,10 @@ import {
   type ImportCustomersResult,
 } from '../api/onboarding'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, useToast } from '../components/ui'
-import { IconInbox, IconDownload, IconUpload } from '../components/icons'
+import { Badge, EmptyState } from '@/components/atoms'
+import { useToast } from '@/system'
+import { PageHeader } from '@/components/molecules'
+import { IconInbox, IconDownload, IconUpload } from '@/components/atoms/icons'
 
 /**
  * Impor CSV pelanggan — unggah satu berkas berisi biodata + langganan + akun jaringan, di-UPSERT
@@ -273,19 +275,21 @@ export function ImportCustomersPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div className="spread" style={{ alignItems: 'flex-start' }}>
-        <div>
-          <h1 className="page-title">Impor CSV pelanggan</h1>
-          <p className="page-sub">
+      <PageHeader
+        title="Impor CSV pelanggan"
+        subtitle={
+          <>
             Unggah CSV berisi biodata + paket + akun jaringan. Baris di-UPSERT menurut{' '}
             <code>mikrotik_username</code>: belum ada → dibuat &amp; langsung aktif; sudah ada → diperbarui
             (kolom kosong dipertahankan). Password kosong = pertahankan yang lama.
-          </p>
-        </div>
-        <button className="ghost" onClick={() => navigate('/customers')}>
-          Kembali ke Pelanggan
-        </button>
-      </div>
+          </>
+        }
+        actions={
+          <button className="ghost" onClick={() => navigate('/customers')}>
+            Kembali ke Pelanggan
+          </button>
+        }
+      />
 
       {/* 1. Unggah berkas */}
       <div className="card stack" style={{ gap: '0.8rem' }}>
