@@ -13,7 +13,7 @@ import {
 } from '../api/vpn'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
-import { Badge, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
+import { Badge, EmptyState, SearchInput, StatusBadge, Toolbar, useConfirm, useToast } from '../components/ui'
 import { IconAlert, IconPlus, IconRoute } from '../components/icons'
 
 /**
@@ -77,6 +77,7 @@ const statusLabel = (status: string) => STATUS_LABELS[status] ?? status
 export function VpnServersPage() {
   const { can } = useCan()
   const canManage = can('vpn.server.manage')
+  const confirm = useConfirm()
   const { items: servers, loading, run } = useResource(listServers)
 
   const [draft, setDraft] = useState<ServerDraft | null>(null)
@@ -144,20 +145,34 @@ export function VpnServersPage() {
   }
 
   const regenerate = (server: VpnServerView) => {
-    if (
-      !window.confirm(
-        `Rotasi token pasang untuk “${server.name}”? Perintah/token lama langsung tak berlaku dan VPS perlu dipasang ulang dengan yang baru.`,
+    void (async () => {
+      if (
+        !(await confirm({
+          title: 'Rotasi token pasang',
+          message: `Rotasi token pasang untuk “${server.name}”? Perintah/token lama langsung tak berlaku dan VPS perlu dipasang ulang dengan yang baru.`,
+          confirmLabel: 'Rotasi',
+        }))
       )
-    )
-      return
-    void run(async () => {
-      setSecret(await regenerateToken(server.id))
-    }, 'Token pasang dirotasi')
+        return
+      void run(async () => {
+        setSecret(await regenerateToken(server.id))
+      }, 'Token pasang dirotasi')
+    })()
   }
 
   const remove = (server: VpnServerView) => {
-    if (!window.confirm(`Hapus hub “${server.name}”? Ditolak bila masih menampung akun.`)) return
-    void run(() => deleteServer(server.id), 'Hub dihapus')
+    void (async () => {
+      if (
+        !(await confirm({
+          title: 'Hapus hub',
+          message: `Hapus hub “${server.name}”? Ditolak bila masih menampung akun.`,
+          confirmLabel: 'Hapus',
+          danger: true,
+        }))
+      )
+        return
+      void run(() => deleteServer(server.id), 'Hub dihapus')
+    })()
   }
 
   const columns: Column<VpnServerView>[] = [

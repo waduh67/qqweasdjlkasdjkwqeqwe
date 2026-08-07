@@ -59,9 +59,13 @@
   --radius-lg: 6px;
 
   color-scheme: light;
-  font-family: 'Segoe UI', 'Segoe UI Web (West European)', -apple-system, BlinkMacSystemFont,
-    system-ui, 'Helvetica Neue', sans-serif;
+  /* Persis tumpukan font Azure Portal: 'Segoe UI Variable Text' (muka Win11 yang
+     dipakai portal terbaru) di depan, lalu 'Segoe UI' klasik, baru fallback lintas-OS. */
+  font-family: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI',
+    'Segoe UI Web (West European)', -apple-system, BlinkMacSystemFont, system-ui,
+    'Helvetica Neue', Arial, sans-serif;
   font-synthesis: none;
+  font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -785,6 +789,83 @@ tbody tr.row-selected:hover {
   border-top: 1px solid var(--border);
 }
 
+/* ---------- Blade (panel geser-kanan ala Azure) ---------- */
+/* Subjudul di bawah judul header drawer. */
+.azure-blade-sub {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+/* Body scroll dengan ruang napas; footer sticky menutup bawah panel. */
+.azure-blade-body {
+  padding-bottom: 1rem;
+}
+.azure-blade-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 24px;
+  border-top: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+/* Varian lebar ~50% layar untuk panel detail (mis. detail pelanggan). Dipakai bersama
+   size="full" sehingga di tablet/mobile tetap penuh & terbaca; di desktop dipangkas
+   ke 50vw. Dua kelas (spesifisitas 0,2,0) menang atas kelas lebar bawaan Fluent. */
+@media (min-width: 1024px) {
+  .azure-blade.blade-half {
+    width: 50vw;
+    max-width: 50vw;
+    min-width: 680px;
+  }
+}
+
+/* ---------- Primitif form (Field / FormSection) ---------- */
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.form-section + .form-section {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+.form-section-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.form-section-desc {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.field-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-2);
+}
+.field-req {
+  color: var(--danger, #d13438);
+}
+.field-msg {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.field-msg-error {
+  color: var(--danger, #d13438);
+}
+.field-error .field-label {
+  color: var(--danger, #d13438);
+}
+
 /* ---------- Tab (pemecah panel detail) ---------- */
 
 .tabs {
@@ -813,6 +894,7 @@ tbody tr.row-selected:hover {
 }
 .tab.active {
   color: var(--text);
+  font-weight: 600;
   border-bottom-color: var(--accent);
 }
 .tab-badge {
@@ -1261,6 +1343,31 @@ tbody tr.row-selected:hover {
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
+/* Header seksi sebagai tombol pengalih ciut (chevron) ala left-nav Azure. Mewarisi
+   tipografi .nav-label; chevron berputar -90° saat seksi diciutkan. */
+.nav-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  width: 100%;
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.nav-group-toggle:hover {
+  color: var(--sidebar-text);
+}
+.nav-group-chevron {
+  flex: none;
+  opacity: 0.65;
+  transition: transform 0.15s ease;
+}
+.nav-group.collapsed .nav-group-chevron {
+  transform: rotate(-90deg);
+}
 .sidebar nav {
   display: flex;
   flex-direction: column;
@@ -1346,10 +1453,24 @@ tbody tr.row-selected:hover {
   border-radius: 50%;
   flex: none;
 }
-.env-switch-btn .env-label {
+/* Info dua baris ala pemilih direktori Azure: nama konteks + keterangan kecil. */
+.env-switch-info {
   flex: 1;
-  text-align: left;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  text-align: left;
+}
+.env-switch-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.env-switch-cap {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--sidebar-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1383,22 +1504,27 @@ tbody tr.row-selected:hover {
 .env-menu li {
   margin: 0;
 }
-.env-menu a {
+.env-menu button {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 0.55rem;
   padding: 0.5rem 0.55rem;
+  border: none;
+  background: none;
   border-radius: 6px;
   color: var(--sidebar-text);
+  font-family: inherit;
   font-size: 0.88rem;
   font-weight: 550;
+  text-align: left;
+  cursor: pointer;
 }
-.env-menu a:hover {
+.env-menu button:hover {
   background: var(--sidebar-bg);
   color: #fff;
-  text-decoration: none;
 }
-.env-menu a.current {
+.env-menu button.current {
   color: #fff;
   font-weight: 650;
 }
@@ -1419,7 +1545,7 @@ tbody tr.row-selected:hover {
   padding-left: 0;
   padding-right: 0;
 }
-.sidebar-collapsed .env-switch-btn .env-label,
+.sidebar-collapsed .env-switch-btn .env-switch-info,
 .sidebar-collapsed .env-switch-btn > svg {
   display: none;
 }
@@ -1456,10 +1582,11 @@ tbody tr.row-selected:hover {
 /* Halaman berbasis formulir (billing, payment gateway): satu kolom memanjang ke bawah,
    TERPUSAT agar tak ada gutter kosong lebar di kanan pada layar besar. Sedikit lebih
    lebar dari `.narrow` supaya kartu terasa lapang tanpa jadi baris teks yang melelahkan. */
+/* Halaman setelan (payment gateway, pajak, billing langganan) dulu dibatasi 880px &
+   dipusatkan — membuatnya tampak "sempit sendiri" dibanding halaman lain yang penuh.
+   Kini lebar penuh & rata-kiri agar konsisten dengan seluruh konsol. */
 .settings-page {
-  max-width: 880px;
   width: 100%;
-  margin-inline: auto;
 }
 /* Konten full-bleed (peta): isi seluruh area di bawah header, tanpa padding/kolom
    terpusat. `.main` dikunci setinggi viewport agar anak flex:1 mengisi sisanya. */

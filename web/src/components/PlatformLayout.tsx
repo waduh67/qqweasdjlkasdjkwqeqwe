@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { ThemeToggle } from './ThemeToggle'
 import { EnvSwitcher } from './EnvSwitcher'
 import { Breadcrumbs } from './Breadcrumbs'
+import { SidebarNav, type NavGroup } from './SidebarNav'
 import {
   IconAudit,
   IconBuilding,
@@ -16,24 +17,15 @@ import {
   IconSidebar,
   IconUsers,
 } from './icons'
-import type { ComponentType } from 'react'
-import type { IconProps } from './icons'
 
 /**
  * Shell KHUSUS Platform admin (SaaS super-admin), terpisah dari `Layout` operator
  * tenant. Menu hanya memuat urusan platform: tenant, langganan/billing SaaS,
  * infrastruktur, dan IAM tenant `platform` sendiri. Tetap difilter izin (cermin
- * RBAC server), meski platform admin lolos semua via flag.
+ * RBAC server), meski platform admin lolos semua via flag. Seksi berlabel bisa
+ * diciutkan (lihat [SidebarNav]).
  */
-type NavItem = {
-  to: string
-  label: string
-  permission: string | null
-  icon: ComponentType<IconProps>
-  end?: boolean
-}
-
-const GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
+const GROUPS: NavGroup[] = [
   {
     label: null,
     items: [{ to: '/platform', label: 'Dashboard', permission: null, icon: IconDashboard, end: true }],
@@ -98,23 +90,7 @@ export function PlatformLayout() {
 
         <EnvSwitcher current="platform" />
 
-        {GROUPS.map((group, i) => {
-          const visible = group.items.filter((item) => item.permission === null || can(item.permission))
-          if (visible.length === 0) return null
-          return (
-            <div key={group.label ?? i}>
-              {group.label && <div className="nav-label">{group.label}</div>}
-              <nav>
-                {visible.map((item) => (
-                  <NavLink key={item.to} to={item.to} end={item.end ?? false} title={item.label}>
-                    <item.icon size={18} />
-                    <span className="nav-text">{item.label}</span>
-                  </NavLink>
-                ))}
-              </nav>
-            </div>
-          )
-        })}
+        <SidebarNav groups={GROUPS} can={can} storageKey="ftth.navGroups.platform" />
       </aside>
 
       <div className="main">

@@ -6,8 +6,9 @@ import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '../components/DataTable'
 import { CommandBar, type CommandAction } from '../components/CommandBar'
 import { PageHeader } from '../components/PageHeader'
-import { EmptyState, SearchInput, StatusBadge, Toolbar } from '../components/ui'
-import { IconCheck, IconClose, IconUsers } from '../components/icons'
+import { Blade } from '../components/Blade'
+import { EmptyState, SearchInput, StatusBadge, Toolbar, useConfirm } from '../components/ui'
+import { IconUsers } from '../components/icons'
 
 interface NewUser {
   email: string
@@ -21,6 +22,7 @@ const EMPTY: NewUser = { email: '', name: '', password: '', roleIds: new Set(), 
 
 export function UsersPage() {
   const { can } = useCan()
+  const confirm = useConfirm()
   const [users, setUsers] = useState<User[]>([])
   const [roles, setRoles] = useState<Role[]>([])
   const [areas, setAreas] = useState<Area[]>([])
@@ -128,9 +130,11 @@ export function UsersPage() {
         key: 'delete',
         label: 'Hapus',
         icon: <Trash2 size={16} />,
-        onClick: () => {
-          if (confirm(`Hapus ${user.email}?`)) void run(() => api.del(`/api/users/${user.id}`))
-        },
+        onClick: () =>
+          void (async () => {
+            if (await confirm({ title: 'Hapus pengguna', message: `Hapus ${user.email}?`, confirmLabel: 'Hapus', danger: true }))
+              void run(() => api.del(`/api/users/${user.id}`))
+          })(),
       })
     return list
   }
@@ -139,7 +143,7 @@ export function UsersPage() {
   const deleteSelected = async () => {
     const ids = [...selected]
     if (ids.length === 0) return
-    if (!confirm(`Hapus ${ids.length} pengguna terpilih? Tindakan ini tidak dapat dibatalkan.`)) return
+    if (!(await confirm({ title: 'Hapus pengguna', message: `Hapus ${ids.length} pengguna terpilih? Tindakan ini tidak dapat dibatalkan.`, confirmLabel: 'Hapus', danger: true }))) return
     setDeleting(true)
     await run(async () => {
       await Promise.all(ids.map((id) => api.del(`/api/users/${id}`)))
@@ -203,57 +207,70 @@ export function UsersPage() {
         }
       />
 
-      {draft && (
-        <div className="card stack">
-          <h3 style={{ margin: 0 }}>Pengguna baru</h3>
-          <label>
-            <span>Nama</span>
-            <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-          </label>
-          <label>
-            <span>Email</span>
-            <input type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
-          </label>
-          <label>
-            <span>Password (min. 8 karakter)</span>
-            <input
-              type="password"
-              value={draft.password}
-              onChange={(e) => setDraft({ ...draft, password: e.target.value })}
-            />
-          </label>
-          <RoleAreaPicker
-            roles={roles}
-            areas={areas}
-            roleIds={draft.roleIds}
-            areaIds={draft.areaIds}
-            onToggleRole={(id) => setDraft({ ...draft, roleIds: toggle(draft.roleIds, id) })}
-            onToggleArea={(id) => setDraft({ ...draft, areaIds: toggle(draft.areaIds, id) })}
-          />
-          <div className="row">
-            <button
-              className="primary"
-              onClick={() =>
-                void run(async () => {
-                  await api.post('/api/users', {
-                    email: draft.email,
-                    name: draft.name,
-                    password: draft.password,
-                    roleIds: [...draft.roleIds],
-                    areaIds: [...draft.areaIds],
+      <Blade
+        open={draft != null}
+        title="Pengguna baru"
+        subtitle="Buat akun operator lalu tetapkan role & cakupan area."
+        size="sm"
+        dirty={
+          draft != null &&
+          Boolean(draft.name || draft.email || draft.password || draft.roleIds.size || draft.areaIds.size)
+        }
+        onClose={() => setDraft(null)}
+        footer={
+          draft && (
+            <>
+              <button
+                className="primary"
+                onClick={() =>
+                  void run(async () => {
+                    await api.post('/api/users', {
+                      email: draft.email,
+                      name: draft.name,
+                      password: draft.password,
+                      roleIds: [...draft.roleIds],
+                      areaIds: [...draft.areaIds],
+                    })
+                    setDraft(null)
                   })
-                  setDraft(null)
-                })
-              }
-            >
-              <IconCheck size={16} /> Simpan
-            </button>
-            <button onClick={() => setDraft(null)}>
-              <IconClose size={16} /> Batal
-            </button>
+                }
+              >
+                Simpan
+              </button>
+              <button onClick={() => setDraft(null)}>Batal</button>
+            </>
+          )
+        }
+      >
+        {draft && (
+          <div className="stack">
+            <label>
+              <span>Nama</span>
+              <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+            </label>
+            <label>
+              <span>Email</span>
+              <input type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
+            </label>
+            <label>
+              <span>Password (min. 8 karakter)</span>
+              <input
+                type="password"
+                value={draft.password}
+                onChange={(e) => setDraft({ ...draft, password: e.target.value })}
+              />
+            </label>
+            <RoleAreaPicker
+              roles={roles}
+              areas={areas}
+              roleIds={draft.roleIds}
+              areaIds={draft.areaIds}
+              onToggleRole={(id) => setDraft({ ...draft, roleIds: toggle(draft.roleIds, id) })}
+              onToggleArea={(id) => setDraft({ ...draft, areaIds: toggle(draft.areaIds, id) })}
+            />
           </div>
-        </div>
-      )}
+        )}
+      </Blade>
 
       {editing && (
         <AccessEditor
@@ -346,9 +363,27 @@ function AccessEditor({
     return next
   }
 
+  // Kotor bila komposisi role/area berubah dari nilai awal pengguna.
+  const sameSet = (a: Set<string>, b: string[]) => a.size === b.length && b.every((id) => a.has(id))
+  const dirty = !sameSet(roleIds, user.roleIds) || !sameSet(areaIds, user.areaIds)
+
   return (
-    <div className="card stack">
-      <h3 style={{ margin: 0 }}>Akses — {user.email}</h3>
+    <Blade
+      open
+      title={`Akses — ${user.email}`}
+      subtitle="Mengubah akses mencabut refresh token pengguna; izin baru berlaku setelah access-token kedaluwarsa."
+      size="sm"
+      dirty={dirty}
+      onClose={onCancel}
+      footer={
+        <>
+          <button className="primary" onClick={() => onSave([...roleIds], [...areaIds])}>
+            Simpan
+          </button>
+          <button onClick={onCancel}>Batal</button>
+        </>
+      }
+    >
       <RoleAreaPicker
         roles={roles}
         areas={areas}
@@ -357,17 +392,6 @@ function AccessEditor({
         onToggleRole={(id) => setRoleIds(toggle(roleIds, id))}
         onToggleArea={(id) => setAreaIds(toggle(areaIds, id))}
       />
-      <p className="muted">
-        Mengubah akses mencabut refresh token pengguna, sehingga izin baru berlaku setelah access-token kedaluwarsa.
-      </p>
-      <div className="row">
-        <button className="primary" onClick={() => onSave([...roleIds], [...areaIds])}>
-          <IconCheck size={16} /> Simpan
-        </button>
-        <button onClick={onCancel}>
-          <IconClose size={16} /> Batal
-        </button>
-      </div>
-    </div>
+    </Blade>
   )
 }

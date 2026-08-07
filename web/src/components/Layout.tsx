@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { ThemeToggle } from './ThemeToggle'
 import { EnvSwitcher } from './EnvSwitcher'
 import { Breadcrumbs } from './Breadcrumbs'
+import { SidebarNav, type NavGroup } from './SidebarNav'
 import {
   IconAlert,
   IconArea,
@@ -27,24 +28,13 @@ import {
   IconUsers,
   IconWorkOrder,
 } from './icons'
-import type { ComponentType } from 'react'
-import type { IconProps } from './icons'
-
 /**
  * Navigasi dikelompokkan menurut alur kerja (operasi jaringan vs administrasi),
  * bukan sekadar daftar datar — pada belasan menu, pengelompokan membuat operator
  * menemukan yang dicari tanpa memindai satu per satu. Tiap item tetap difilter
- * izin, cermin RBAC di server.
+ * izin, cermin RBAC di server. Seksi berlabel bisa diciutkan (lihat [SidebarNav]).
  */
-type NavItem = {
-  to: string
-  label: string
-  permission: string | null
-  icon: ComponentType<IconProps>
-  end?: boolean
-}
-
-const GROUPS: Array<{ label: string | null; items: NavItem[] }> = [
+const GROUPS: NavGroup[] = [
   {
     label: null,
     items: [
@@ -141,23 +131,7 @@ export function Layout() {
         {/* Platform admin sedang menengok area tenant — switcher konteks di puncak sidebar. */}
         {isPlatformAdmin && <EnvSwitcher current="tenant" />}
 
-        {GROUPS.map((group, i) => {
-          const visible = group.items.filter((item) => item.permission === null || can(item.permission))
-          if (visible.length === 0) return null
-          return (
-            <div key={group.label ?? i}>
-              {group.label && <div className="nav-label">{group.label}</div>}
-              <nav>
-                {visible.map((item) => (
-                  <NavLink key={item.to} to={item.to} end={item.end ?? false} title={item.label}>
-                    <item.icon size={18} />
-                    <span className="nav-text">{item.label}</span>
-                  </NavLink>
-                ))}
-              </nav>
-            </div>
-          )
-        })}
+        <SidebarNav groups={GROUPS} can={can} storageKey="ftth.navGroups.tenant" />
       </aside>
 
       <div className="main">

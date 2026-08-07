@@ -8,10 +8,12 @@ import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '../components/DataTable'
 import { CommandBar, type CommandAction } from '../components/CommandBar'
 import { PageHeader } from '../components/PageHeader'
+import { Blade } from '../components/Blade'
 import { LocationPicker } from '../components/LocationPicker'
 import { exportCustomersCsv } from '../api/onboarding'
-import { EmptyState, Modal, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
+import { EmptyState, SearchInput, StatusBadge, Toolbar, useConfirm, useToast } from '../components/ui'
 import { IconCustomers } from '../components/icons'
+import { CustomerDetailPage } from './CustomerDetailPage'
 
 /**
  * Draft form pelanggan, dipakai bersama untuk tambah & sunting. `id` null = tambah baru;
@@ -68,16 +70,31 @@ function onuSummary(customer: CustomerView): string {
 export function CustomersPage() {
   const { can } = useCan()
   const toast = useToast()
+  const confirm = useConfirm()
   const navigate = useNavigate()
   const [customers, setCustomers] = useState<CustomerView[]>([])
+  // Detail pelanggan kini tampil sebagai flyout fullscreen (bukan rute) — id yang dipilih ada di sini.
+  const [detailId, setDetailId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<CustomerStatus | ''>('')
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState<CustomerDraft | null>(null)
+  const [initialDraft, setInitialDraft] = useState<CustomerDraft | null>(null)
   const [saving, setSaving] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
+
+  // Buka blade sekaligus simpan snapshot awal untuk deteksi "kotor" (konfirmasi tutup).
+  const openDraft = (d: CustomerDraft) => {
+    setDraft(d)
+    setInitialDraft(d)
+  }
+  const closeDraft = () => {
+    setDraft(null)
+    setInitialDraft(null)
+  }
+  const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
 
   // Ekspor butuh izin BACA union (pelanggan+langganan+akun) — cocok gating server; disable, bukan sembunyi.
   const canExport =
@@ -129,7 +146,7 @@ export function CustomersPage() {
   // Buka modal sunting berisi data pelanggan saat ini. `code` immutable di server, jadi
   // ditampilkan read-only; `email`/`areaId` ikut dibawa agar tak terhapus saat menyimpan.
   const startEdit = (c: CustomerView) =>
-    setDraft({
+    openDraft({
       id: c.id,
       code: c.code,
       name: c.name,
@@ -163,7 +180,7 @@ export function CustomersPage() {
       } else {
         await api.post('/api/customers', body)
       }
-      setDraft(null)
+      closeDraft()
       await reload()
       toast.success(draft.id ? 'Data pelanggan diperbarui' : 'Pelanggan ditambahkan')
     } catch (err) {
@@ -177,7 +194,7 @@ export function CustomersPage() {
   // Hapus satu pelanggan lewat menu aksi baris (`…`) — konfirmasi dulu (aksi destruktif),
   // lalu bersihkan dari seleksi bila kebetulan tercentang agar CommandBar tak salah hitung.
   const deleteOne = async (c: CustomerView) => {
-    if (!window.confirm(`Hapus pelanggan "${c.name}"? Tindakan ini tidak dapat dibatalkan.`)) return
+    if (!(await confirm({ title: 'Hapus pelanggan', message: `Hapus pelanggan "${c.name}"? Tindakan ini tidak dapat dibatalkan.`, confirmLabel: 'Hapus', danger: true }))) return
     try {
       await api.del(`/api/customers/${c.id}`)
       setSelected((prev) => {
@@ -196,7 +213,7 @@ export function CustomersPage() {
   const deleteSelected = async () => {
     const ids = [...selected]
     if (ids.length === 0) return
-    if (!window.confirm(`Hapus ${ids.length} pelanggan terpilih? Tindakan ini tidak dapat dibatalkan.`))
+    if (!(await confirm({ title: 'Hapus pelanggan', message: `Hapus ${ids.length} pelanggan terpilih? Tindakan ini tidak dapat dibatalkan.`, confirmLabel: 'Hapus', danger: true })))
       return
     setDeleting(true)
     try {
@@ -263,7 +280,7 @@ export function CustomersPage() {
         key: 'create',
         label: 'Tambah pelanggan',
         icon: <Plus size={16} />,
-        onClick: () => setDraft({ ...EMPTY_CUSTOMER }),
+        onClick: () => openDraft({ ...EMPTY_CUSTOMER }),
       }
     : undefined
 
@@ -341,7 +358,7 @@ export function CustomersPage() {
         columns={columns}
         rows={rows}
         rowKey={(c) => c.id}
-        onRowClick={(c) => navigate(`/customers/${c.id}`)}
+        onRowClick={(c) => setDetailId(c.id)}
         loading={loading}
         initialSort={{ key: 'name', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
@@ -355,17 +372,25 @@ export function CustomersPage() {
         }
       />
 
-      {draft && (
-        <Modal
-          title={draft.id ? 'Edit pelanggan' : 'Tambah pelanggan'}
-          onClose={() => setDraft(null)}
-          footer={
-            <>
-              <button onClick={() => setDraft(null)}>Batal</button>
-              <button className="primary" onClick={() => void save()} disabled={saving}>Simpan</button>
-            </>
-          }
-        >
+      <Blade
+        open={draft != null}
+        title={draft?.id ? 'Edit pelanggan' : 'Tambah pelanggan'}
+        subtitle={draft?.id ? draft.code : 'Data pokok pelanggan & lokasi ONU'}
+        size="sm"
+        dirty={dirty}
+        onClose={closeDraft}
+        footer={
+          <>
+            <button className="primary" onClick={() => void save()} disabled={saving}>
+              {saving ? 'Menyimpan…' : 'Simpan'}
+            </button>
+            <button onClick={closeDraft} disabled={saving}>
+              Batal
+            </button>
+          </>
+        }
+      >
+        {draft && (
           <div className="stack">
             <div className="row">
               <label style={{ flex: 1 }}>
@@ -416,8 +441,20 @@ export function CustomersPage() {
               />
             </label>
           </div>
-        </Modal>
-      )}
+        )}
+      </Blade>
+
+      {/* Detail pelanggan sebagai flyout — dibuka dari klik baris, bukan rute. Lebar ~50%
+          layar di desktop (blade-half), penuh di tablet/mobile agar tetap terbaca. */}
+      <Blade
+        open={detailId != null}
+        title="Detail pelanggan"
+        size="full"
+        className="blade-half"
+        onClose={() => setDetailId(null)}
+      >
+        {detailId && <CustomerDetailPage customerId={detailId} />}
+      </Blade>
     </div>
   )
 }

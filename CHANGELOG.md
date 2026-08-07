@@ -6,7 +6,36 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
-### 2026-08-07 — Redesign UI/UX ala Microsoft Azure Portal dengan Fluent UI (Fase 0–2)
+### 2026-08-07 — Penajaman kesetiaan Azure: tab, blade, dialog, sidebar, konteks
+
+Lanjutan redesign Azure — merapikan pola yang belum konsisten dengan Portal.
+
+**Ditambahkan**
+- **Dialog in-app `useConfirm`/`usePrompt`.** `DialogProvider` (di `App.tsx`) menyediakan
+  `confirm(opts) => Promise<boolean>` & `prompt(opts) => Promise<string | null>` berbasis
+  [Modal], menggantikan **semua** `window.confirm`/`window.prompt`/`alert` bawaan browser
+  (VPN, Server VPN, Pengguna, Role, langganan Tenant, BNG, Inventory, Provisioning, detail
+  Pelanggan, dll). Aksi merusak memakai `danger`.
+- **Seksi sidebar bisa diciutkan (dropdown chevron).** Komponen bersama `SidebarNav` merender
+  tiap grup berlabel sebagai tombol chevron ala Azure left-nav; status ciut per-seksi disimpan
+  di localStorage. Dipakai `Layout` (tenant) & `PlatformLayout` (platform).
+
+**Diubah**
+- **Bilah tab jadi underline-tab ala Azure.** Komponen `Tabs` (indikator garis-bawah + hitungan)
+  menggantikan `.segment` pada navigasi tab halaman: detail Pelanggan, detail OLT, Inventory
+  (Site/OLT/ODC/ODP), dan filter status Provisioning (`DiscoveredOnuInbox`). Kontrol segmented
+  kecil (pemilih periode/scope/perangkat) tetap `.segment`.
+- **Switcher konteks Platform ↔ Tenant.** `EnvSwitcher` berpindah lewat `useNavigate` eksplisit
+  (andal) dan tampil sebagai pemilih direktori/langganan ala Azure (titik status + nama konteks
+  + kapsi + chevron, dropdown pilihan).
+- **Detail Pelanggan kini flyout (Blade), bukan rute.** Rute `/customers/:id` dihapus; detail
+  muncul sebagai Blade dari daftar (lebar 50% di desktop, penuh di tablet/mobile). Tombol
+  **Hapus** di detail dibuang. Blade menerima `className` untuk penyetelan lebar.
+- **Lebar halaman diseragamkan.** `.settings-page` tak lagi dibatasi `max-width`/`margin auto`
+  (mis. `/payment-gateway`, `/platform/billing`) — kini penuh & rata-kiri seperti halaman lain.
+- **Font mendekati Azure** — tumpukan `Segoe UI Variable` di depan + `font-optical-sizing: auto`.
+
+### 2026-08-07 — Redesign UI/UX ala Microsoft Azure Portal dengan Fluent UI (Fase 0–3)
 
 Perombakan tampilan & alur kerja agar mencerminkan Azure Portal — bukan sekadar warna,
 tapi juga pola interaksi. Dikerjakan bertahap; detail rencana di
@@ -25,6 +54,14 @@ tapi juga pola interaksi. Dikerjakan bertahap; detail rencana di
 - **DataGrid multi-select (Fase 2).** `DataTable` kini punya kolom **checkbox** pilih-semua/
   per-baris dan **menu aksi `…`** per baris (Fluent Menu) — dipakai di halaman Pelanggan, Pengguna,
   Paket Internet, dan Inventory (Site/OLT/ODC/ODP). Baris terpilih ditandai aksen kiri.
+- **Blade (panel geser kanan) untuk semua form (Fase 3).** Komponen `Blade` (Fluent `OverlayDrawer`)
+  menggantikan modal terpusat untuk **semua form buat/sunting**: header berjudul + `X`, body ter-scroll,
+  dan **footer sticky** dengan tombol **Simpan** primary di kiri & **Batal** di kanan (konvensi Azure).
+  ESC/klik-luar menutup panel; bila form **kotor** diminta konfirmasi dulu agar perubahan tak hilang.
+  Ukuran mengikuti kompleksitas (`sm`/`lg`/`full`). Turut disertakan primitif `FormSection` & `Field`.
+  Dipakai di Pelanggan, Pengguna (buat + editor Akses), Paket Internet, Inventory (Site/OLT/ODC/ODP +
+  uplink ODC), Work Order, BNG/BRAS, Tenant, langganan Tenant, dan Edit OLT. Dialog **konfirmasi** dan
+  **panel bayar** (alur aksi, bukan form) tetap sebagai modal.
 
 **Diubah**
 - **Sidebar jadi terang ala Azure left-nav** dengan indikator aktif biru Azure, pengelompokan

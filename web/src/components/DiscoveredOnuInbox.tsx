@@ -11,7 +11,7 @@ import type {
 import type { CustomerView, OdpView } from '../api/network'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from './DataTable'
-import { Badge, Drawer, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from './ui'
+import { Badge, Drawer, EmptyState, SearchInput, StatusBadge, Tabs, Toolbar, useConfirm, useToast } from './ui'
 import { IconInbox } from './icons'
 
 /**
@@ -61,6 +61,7 @@ export function DiscoveredOnuInbox({
 }) {
   const { can } = useCan()
   const toast = useToast()
+  const confirm = useConfirm()
   const manage = can('monitoring.provisioning.manage')
 
   const [state, setState] = useState<DiscoveredOnuState>('DISCOVERED')
@@ -148,8 +149,8 @@ export function DiscoveredOnuInbox({
   // Hapus permanen baris kotak masuk — beda dari "Abaikan" yang cuma menandainya
   // IGNORED (masih tersimpan). Berguna terutama untuk yatim dari OLT yang sudah
   // dihapus: baris itu takkan hilang sendiri karena OLT-nya tak lagi mem-poll.
-  const remove = (onu: DiscoveredOnuView) => {
-    if (!window.confirm(`Hapus permanen ONU ${onu.serialNumber} dari kotak masuk? Kalau OLT masih melihatnya, ia muncul lagi pada polling berikutnya.`)) {
+  const remove = async (onu: DiscoveredOnuView) => {
+    if (!(await confirm({ title: 'Hapus ONU', message: `Hapus permanen ONU ${onu.serialNumber} dari kotak masuk? Kalau OLT masih melihatnya, ia muncul lagi pada polling berikutnya.`, confirmLabel: 'Hapus', danger: true }))) {
       return
     }
     return run(() => api.del(`/api/monitoring/discovered-onus/${onu.id}`), 'ONU dihapus')
@@ -273,15 +274,11 @@ export function DiscoveredOnuInbox({
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
+      {/* Filter status kini strip tab garis-bawah ala Azure (Image #7), di baris sendiri. */}
+      <Tabs tabs={STATES} active={state} onChange={setState} />
+
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari serial, OLT, atau pelanggan tertebak…" />
-        <div className="segment">
-          {STATES.map((s) => (
-            <button key={s.key} className={state === s.key ? 'active' : ''} onClick={() => setState(s.key)}>
-              {s.label}
-            </button>
-          ))}
-        </div>
         {showAutoProvision && manage && autoProvision !== null && (
           <>
             <span className="spacer" />

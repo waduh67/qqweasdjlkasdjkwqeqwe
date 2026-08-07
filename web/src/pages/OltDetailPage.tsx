@@ -17,7 +17,8 @@ import type { Tone } from '../components/ui'
 import type { PageResponse } from '../api/types'
 import { useCan } from '../auth/useCan'
 import { LocationPicker } from '../components/LocationPicker'
-import { Badge, EmptyState, Modal, Spinner, StatusBadge, useToast } from '../components/ui'
+import { Badge, EmptyState, Spinner, StatusBadge, Tabs, useToast } from '../components/ui'
+import { Blade } from '../components/Blade'
 import { IconInventory, IconPlus } from '../components/icons'
 import { DiscoveredOnuInbox } from '../components/DiscoveredOnuInbox'
 import { OltRegisteredOnus } from '../components/OltRegisteredOnus'
@@ -159,24 +160,16 @@ export function OltDetailPage() {
         </div>
       </div>
 
-      <div className="segment" style={{ alignSelf: 'flex-start' }}>
-        <button className={tab === 'ringkasan' ? 'active' : ''} onClick={() => setTab('ringkasan')}>
-          Ringkasan
-        </button>
-        <button className={tab === 'pon' ? 'active' : ''} onClick={() => setTab('pon')}>
-          PON Port{olt.ponPortCount ? ` (${olt.ponPortCount})` : ''}
-        </button>
-        {canOnuList && (
-          <button className={tab === 'onu' ? 'active' : ''} onClick={() => setTab('onu')}>
-            ONU
-          </button>
-        )}
-        {canProvisioning && (
-          <button className={tab === 'onubaru' ? 'active' : ''} onClick={() => setTab('onubaru')}>
-            ONU Baru
-          </button>
-        )}
-      </div>
+      <Tabs
+        tabs={[
+          { key: 'ringkasan' as Tab, label: 'Ringkasan' },
+          { key: 'pon' as Tab, label: 'PON Port', badge: olt.ponPortCount || undefined },
+          ...(canOnuList ? [{ key: 'onu' as Tab, label: 'ONU' }] : []),
+          ...(canProvisioning ? [{ key: 'onubaru' as Tab, label: 'ONU Baru' }] : []),
+        ]}
+        active={tab}
+        onChange={setTab}
+      />
 
       {tab === 'ringkasan' && <RingkasanTab olt={olt} canUpdate={canUpdate} onSaved={load} />}
       {tab === 'pon' && <PonPortTab oltId={olt.id} canUpdate={canUpdate} canDrill={canDrill} onChanged={load} />}
@@ -715,6 +708,26 @@ function EditOltModal({ olt, onClose, onSaved }: { olt: OltView; onClose: () => 
   const [status, setStatus] = useState<AssetStatus>(olt.status)
   const [saving, setSaving] = useState(false)
 
+  // Form kotor bila salah satu field menyimpang dari nilai awal OLT; rahasia
+  // (community/password) dianggap perubahan begitu diisi walau field aslinya kosong.
+  const dirty =
+    siteId !== olt.siteId ||
+    name !== olt.name ||
+    vendor !== olt.vendor ||
+    model !== (olt.model ?? '') ||
+    managementIp !== (olt.managementIp ?? '') ||
+    description !== (olt.description ?? '') ||
+    snmpEnabled !== olt.snmpEnabled ||
+    snmpCommunity !== '' ||
+    snmpVersion !== olt.snmpVersion ||
+    snmpPort !== String(olt.snmpPort) ||
+    webEnabled !== olt.webEnabled ||
+    webProtocol !== olt.webProtocol ||
+    webPort !== (olt.webPort != null ? String(olt.webPort) : '') ||
+    webUsername !== (olt.webUsername ?? '') ||
+    webPassword !== '' ||
+    status !== olt.status
+
   useEffect(() => {
     let alive = true
     api
@@ -765,17 +778,20 @@ function EditOltModal({ olt, onClose, onSaved }: { olt: OltView; onClose: () => 
   }
 
   return (
-    <Modal
+    <Blade
+      open
       title={`Edit ${olt.code}`}
+      subtitle="Identitas, SNMP & akses Web UI OLT. Kode & lokasi diubah di tab Ringkasan."
+      size="lg"
+      dirty={dirty}
       onClose={onClose}
-      wide
       footer={
         <>
-          <button className="ghost" onClick={onClose} disabled={saving}>
-            Batal
-          </button>
           <button className="primary" onClick={() => void save()} disabled={saving || !name.trim() || !siteId}>
             Simpan
+          </button>
+          <button className="ghost" onClick={onClose} disabled={saving}>
+            Batal
           </button>
         </>
       }
@@ -942,7 +958,7 @@ function EditOltModal({ olt, onClose, onSaved }: { olt: OltView; onClose: () => 
           mempertahankan yang tersimpan. Kode OLT tak bisa diubah.
         </p>
       </div>
-    </Modal>
+    </Blade>
   )
 }
 

@@ -4,7 +4,7 @@ import type { PermissionCatalog, Role } from '../api/types'
 import { PermissionMatrix } from '../components/PermissionMatrix'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
-import { Badge, EmptyState, SearchInput, Toolbar } from '../components/ui'
+import { Badge, EmptyState, SearchInput, Toolbar, useConfirm } from '../components/ui'
 import { IconPlus, IconShield } from '../components/icons'
 
 type Draft = { id: string | null; name: string; description: string; permissionIds: Set<string> }
@@ -13,6 +13,7 @@ const EMPTY_DRAFT: Draft = { id: null, name: '', description: '', permissionIds:
 
 export function RolesPage() {
   const { can } = useCan()
+  const confirm = useConfirm()
   const [roles, setRoles] = useState<Role[]>([])
   const [catalog, setCatalog] = useState<PermissionCatalog | null>(null)
   const [draft, setDraft] = useState<Draft | null>(null)
@@ -128,7 +129,7 @@ export function RolesPage() {
   }
 
   async function remove(role: Role) {
-    if (!confirm(`Hapus role "${role.name}"?`)) return
+    if (!(await confirm({ title: 'Hapus role', message: `Hapus role "${role.name}"?`, confirmLabel: 'Hapus', danger: true }))) return
     setError(null)
     try {
       await api.del(`/api/roles/${role.id}`)

@@ -17,6 +17,7 @@ import { Pencil, Plus, RefreshCw } from 'lucide-react'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '../components/DataTable'
 import { CommandBar, type CommandAction } from '../components/CommandBar'
+import { Blade } from '../components/Blade'
 import { PageHeader } from '../components/PageHeader'
 import { Badge, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
 import { IconPackage } from '../components/icons'
@@ -118,9 +119,21 @@ export function CatalogPage() {
   const [items, setItems] = useState<PlanView[]>([])
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState<Draft | null>(null)
+  const [initialDraft, setInitialDraft] = useState<Draft | null>(null)
   const [saving, setSaving] = useState(false)
   const [query, setQuery] = useState('')
   const [serviceFilter, setServiceFilter] = useState<ServiceType | ''>('')
+
+  // Buka/tutup Blade + snapshot untuk deteksi "dirty" (ada perubahan belum disimpan).
+  const openDraft = (d: Draft) => {
+    setDraft(d)
+    setInitialDraft(d)
+  }
+  const closeDraft = () => {
+    setDraft(null)
+    setInitialDraft(null)
+  }
+  const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
 
   const reload = useCallback(async () => {
     try {
@@ -137,7 +150,7 @@ export function CatalogPage() {
   }, [reload])
 
   const edit = (plan: PlanView) =>
-    setDraft({
+    openDraft({
       id: plan.id,
       name: plan.name,
       description: plan.description ?? '',
@@ -207,7 +220,7 @@ export function CatalogPage() {
     setSaving(true)
     try {
       await (draft.id ? updatePlan(draft.id, body) : createPlan(body))
-      setDraft(null)
+      closeDraft()
       await reload()
       toast.success(draft.id ? 'Paket diperbarui' : 'Paket dibuat')
     } catch (err) {
@@ -321,7 +334,7 @@ export function CatalogPage() {
         key: 'create',
         label: 'Tambah paket',
         icon: <Plus size={16} />,
-        onClick: () => setDraft({ ...EMPTY_DRAFT }),
+        onClick: () => openDraft({ ...EMPTY_DRAFT }),
         disabled: draft != null,
       }
     : undefined
@@ -339,9 +352,25 @@ export function CatalogPage() {
 
       <CommandBar primary={primary} actions={actions} />
 
-      {draft && (
-        <div className="card stack">
-          {/* Preview rate-limit — persis yang ditulis ke RADIUS */}
+      <Blade
+        open={draft != null}
+        title={draft?.id ? 'Edit paket' : 'Tambah paket'}
+        subtitle="Harga, kecepatan, QoS & FUP — dirakit jadi atribut RADIUS otomatis."
+        size="lg"
+        dirty={dirty}
+        onClose={closeDraft}
+        footer={
+          <>
+            <button className="primary" onClick={() => void save()} disabled={saving}>
+              {saving ? 'Menyimpan…' : 'Simpan'}
+            </button>
+            <button onClick={closeDraft} disabled={saving}>Batal</button>
+          </>
+        }
+      >
+        {draft && (
+          <div className="stack">
+            {/* Preview rate-limit — persis yang ditulis ke RADIUS */}
           <div
             className="stack"
             style={{
@@ -612,17 +641,9 @@ export function CatalogPage() {
             />
             <span>Status aktif (paket nonaktif tak bisa dipilih untuk langganan baru)</span>
           </label>
-
-          <div className="row">
-            <button className="primary" onClick={() => void save()} disabled={saving}>
-              {saving ? 'Menyimpan…' : 'Simpan'}
-            </button>
-            <button onClick={() => setDraft(null)} disabled={saving}>
-              Batal
-            </button>
           </div>
-        </div>
-      )}
+        )}
+      </Blade>
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama paket…" />

@@ -14,7 +14,8 @@ import {
   type TenantSubscriptionDetailView,
 } from '../api/platformBilling'
 import { useCan } from '../auth/useCan'
-import { Badge, Modal, useToast } from '../components/ui'
+import { Blade } from '../components/Blade'
+import { Badge, useConfirm, usePrompt, useToast } from '../components/ui'
 import type { Tone } from '../components/ui'
 
 /**
@@ -51,6 +52,8 @@ export function TenantSubscriptionModal({
 }) {
   const { can } = useCan()
   const toast = useToast()
+  const confirm = useConfirm()
+  const prompt = usePrompt()
   const manage = can('platform.subscription.manage')
 
   const [sub, setSub] = useState<TenantSubscriptionDetailView | null>(null)
@@ -61,12 +64,18 @@ export function TenantSubscriptionModal({
   const [fee, setFee] = useState('')
   const [billingDay, setBillingDay] = useState('')
   const [graceDays, setGraceDays] = useState('')
+  // Snapshot nilai form saat terakhir dimuat/disimpan — dasar deteksi "kotor" untuk konfirmasi tutup.
+  const [initial, setInitial] = useState('[]')
 
   const applySub = (s: TenantSubscriptionDetailView | null) => {
     setSub(s)
-    setFee(s ? String(s.monthlyFee) : '')
-    setBillingDay(s?.billingDay != null ? String(s.billingDay) : '')
-    setGraceDays(s?.graceDays != null ? String(s.graceDays) : '')
+    const f = s ? String(s.monthlyFee) : ''
+    const b = s?.billingDay != null ? String(s.billingDay) : ''
+    const g = s?.graceDays != null ? String(s.graceDays) : ''
+    setFee(f)
+    setBillingDay(b)
+    setGraceDays(g)
+    setInitial(JSON.stringify([f, b, g]))
   }
 
   useEffect(() => {
@@ -131,8 +140,13 @@ export function TenantSubscriptionModal({
     )
   }
 
-  const payInvoice = (inv: SubscriptionInvoiceView) => {
-    const note = window.prompt(`Catat pelunasan manual tagihan ${inv.number}?\n(Opsional: catatan)`, '')
+  const payInvoice = async (inv: SubscriptionInvoiceView) => {
+    const note = await prompt({
+      title: 'Catat pelunasan',
+      message: `Catat pelunasan manual tagihan ${inv.number}?`,
+      label: 'Catatan (opsional)',
+      multiline: true,
+    })
     if (note === null) return // batal
     void run(
       () => paySubscriptionInvoice(tenantId, inv.id, { amount: null, note: note.trim() || null }),
@@ -140,13 +154,13 @@ export function TenantSubscriptionModal({
     )
   }
 
-  const voidInvoice = (inv: SubscriptionInvoiceView) => {
-    if (!window.confirm(`Batalkan tagihan ${inv.number}? Aksi ini tidak bisa dibatalkan.`)) return
+  const voidInvoice = async (inv: SubscriptionInvoiceView) => {
+    if (!(await confirm({ title: 'Batalkan tagihan', message: `Batalkan tagihan ${inv.number}? Aksi ini tidak bisa dibatalkan.`, confirmLabel: 'Batalkan', danger: true }))) return
     void run(() => voidSubscriptionInvoice(tenantId, inv.id), `Tagihan ${inv.number} dibatalkan`)
   }
 
-  const cancelSub = () => {
-    if (!window.confirm('Hentikan langganan tenant ini? Tenant berhenti ditagih.')) return
+  const cancelSub = async () => {
+    if (!(await confirm({ title: 'Hentikan langganan', message: 'Hentikan langganan tenant ini? Tenant berhenti ditagih.', confirmLabel: 'Hentikan', danger: true }))) return
     void run(() => cancelTenantSubscription(tenantId), 'Langganan dihentikan')
   }
 
@@ -156,8 +170,28 @@ export function TenantSubscriptionModal({
     (billingDay.trim() ? Number(billingDay) : null) !== sub.billingDay ||
     (graceDays.trim() ? Number(graceDays) : null) !== sub.graceDays
 
+  // Form kotor bila nilai kini beda dari snapshot terakhir → konfirmasi sebelum menutup panel.
+  const dirty = JSON.stringify([fee, billingDay, graceDays]) !== initial
+
   return (
-    <Modal title={`Langganan — ${tenantName}`} onClose={onClose} wide>
+    <Blade
+      open
+      title={`Langganan — ${tenantName}`}
+      subtitle="Atur biaya bulanan flat, terbitkan/void tagihan, dan kelola status langganan tenant."
+      size="lg"
+      dirty={dirty}
+      onClose={onClose}
+      footer={
+        <>
+          {manage && (
+            <button className="primary" onClick={saveFee} disabled={!feeDirty || busy || loading}>
+              {sub ? 'Simpan' : 'Aktifkan'}
+            </button>
+          )}
+          <button onClick={onClose}>Batal</button>
+        </>
+      }
+    >
       {loading ? (
         <p className="muted">Memuat langganan…</p>
       ) : (
@@ -216,17 +250,11 @@ export function TenantSubscriptionModal({
               Tanggal tagih &amp; masa tenggang kosong = pakai default global. Menyimpan tenant baru langsung
               menjadwalkan tagihan pertama.
             </span>
-            {manage && (
-              <div className="spread" style={{ alignItems: 'center' }}>
-                {sub && sub.status !== 'CANCELLED' ? (
-                  <button className="ghost" onClick={cancelSub} disabled={busy}>
-                    Hentikan langganan
-                  </button>
-                ) : (
-                  <span />
-                )}
-                <button className="primary" onClick={saveFee} disabled={!feeDirty || busy}>
-                  {sub ? 'Simpan' : 'Aktifkan'}
+            {/* Simpan/Aktifkan kini di footer Blade; sisakan aksi hentikan langganan di sini. */}
+            {manage && sub && sub.status !== 'CANCELLED' && (
+              <div className="row">
+                <button className="ghost" onClick={cancelSub} disabled={busy}>
+                  Hentikan langganan
                 </button>
               </div>
             )}
@@ -268,7 +296,7 @@ export function TenantSubscriptionModal({
           )}
         </div>
       )}
-    </Modal>
+    </Blade>
   )
 }
 
