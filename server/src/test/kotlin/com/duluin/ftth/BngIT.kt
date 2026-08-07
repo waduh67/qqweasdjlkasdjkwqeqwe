@@ -338,14 +338,14 @@ class BngIT {
         assertThat(JsonPath.read<Boolean>(before, "$.online")).isFalse()
         assertThat(JsonPath.read<String>(before, "$.username")).isEqualTo(username)
 
-        // Dua poll berjarak 10 detik, penghitung octet tumbuh: 25 Mbps unduh, 8 Mbps unggah.
-        // out_octets = arah unduh (keluar BRAS), in_octets = unggah.
+        // Dua poll berjarak 30 detik (selang poll nyata), penghitung octet tumbuh: 25 Mbps
+        // unduh, 8 Mbps unggah. out_octets = arah unduh (keluar BRAS), in_octets = unggah.
         val t1 = Instant.now()
-        val t0 = t1.minusSeconds(10)
+        val t0 = t1.minusSeconds(30)
         val out0 = 1_000_000_000L
-        val out1 = out0 + 3_125_000L * 10 // Δ = 25 Mbps selama 10 detik
+        val out1 = out0 + 3_125_000L * 30 // Δ = 25 Mbps selama 30 detik
         val in0 = 500_000_000L
-        val in1 = in0 + 1_000_000L * 10 // Δ = 8 Mbps selama 10 detik
+        val in1 = in0 + 1_000_000L * 30 // Δ = 8 Mbps selama 30 detik
         postAsCollector("/api/collector/bng-sessions", apiKey, bngBatch(nasId, t0, sessionReading(username, out0, in0)))
         postAsCollector("/api/collector/bng-sessions", apiKey, bngBatch(nasId, t1, sessionReading(username, out1, in1)))
 
@@ -355,12 +355,17 @@ class BngIT {
         assertThat(JsonPath.read<String>(session, "$.framedIp")).isEqualTo("10.20.30.40")
         assertThat(JsonPath.read<String>(session, "$.nasName")).isEqualTo("BRAS-Read")
 
-        // Tren trafik: titik pertama tak berlaju (belum ada pembanding), titik kedua ≈25/8 Mbps.
-        val traffic = getJson("/api/bng/access/$accessId/traffic?hours=24", token)
+        // Tren trafik rentang 1 jam → ember = selang poll (30 dtk), tiap cuplikan jadi titik
+        // sendiri: titik pertama tak berlaju (belum ada pembanding), titik kedua ≈25/8 Mbps.
+        val traffic = getJson("/api/bng/access/$accessId/traffic?hours=1", token)
         assertThat(JsonPath.read<List<*>>(traffic, "$.points")).hasSize(2)
         assertThat(JsonPath.read<Any?>(traffic, "$.points[0].downMbps")).isNull()
         assertThat(JsonPath.read<Double>(traffic, "$.points[1].downMbps")).isCloseTo(25.0, within(0.1))
         assertThat(JsonPath.read<Double>(traffic, "$.points[1].upMbps")).isCloseTo(8.0, within(0.1))
+        // Ringkasan hidup: throughput "sekarang" = titik terakhir, total pemakaian = Σ delta.
+        assertThat(JsonPath.read<Double>(traffic, "$.currentDownMbps")).isCloseTo(25.0, within(0.1))
+        assertThat(JsonPath.read<Double>(traffic, "$.currentUpMbps")).isCloseTo(8.0, within(0.1))
+        assertThat((JsonPath.read<Any>(traffic, "$.totalBytes") as Number).toLong()).isEqualTo(123_750_000L)
     }
 
     @Test
