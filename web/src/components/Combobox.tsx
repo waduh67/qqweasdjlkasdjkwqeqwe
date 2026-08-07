@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { Fragment, useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { IconClose, IconSearch } from './icons'
 import { Spinner } from './ui'
 
@@ -24,6 +24,12 @@ export interface ComboboxProps<T> {
   toLabel: (item: T) => string
   /** Baris kedua opsi (kode/telepon/alamat) — opsional. */
   toMeta?: (item: T) => string | undefined
+  /**
+   * Kelompokkan opsi: kembalikan label grup sebuah item. Bila diberikan, header grup dirender saat
+   * label berubah antar item berurutan — jadi pemanggil harus MENGURUT opsi per grup lebih dulu.
+   * Header non-interaktif & tak memengaruhi navigasi keyboard.
+   */
+  groupOf?: (item: T) => string
   /** Label terpilih awal saat [value] sudah terisi tapi itemnya belum di tangan. */
   initialLabel?: string
   placeholder?: string
@@ -40,6 +46,7 @@ export function Combobox<T>({
   toId,
   toLabel,
   toMeta,
+  groupOf,
   initialLabel = '',
   placeholder,
   disabled,
@@ -190,17 +197,22 @@ export function Combobox<T>({
             options.map((item, i) => {
               const id = toId(item)
               const meta = toMeta?.(item)
+              // Header grup saat labelnya berubah dari item sebelumnya (opsi diasumsikan terurut per grup).
+              const group = groupOf?.(item)
+              const showGroup = group !== undefined && (i === 0 || groupOf?.(options[i - 1]) !== group)
               return (
-                <li
-                  key={id}
-                  ref={i === active ? activeRef : undefined}
-                  className={`cb-option${i === active ? ' active' : ''}${id === value ? ' selected' : ''}`}
-                  onMouseEnter={() => setActive(i)}
-                  onClick={() => choose(item)}
-                >
-                  <span className="cb-label">{toLabel(item)}</span>
-                  {meta && <span className="cb-meta">{meta}</span>}
-                </li>
+                <Fragment key={id}>
+                  {showGroup && <li className="cb-group">{group}</li>}
+                  <li
+                    ref={i === active ? activeRef : undefined}
+                    className={`cb-option${i === active ? ' active' : ''}${id === value ? ' selected' : ''}`}
+                    onMouseEnter={() => setActive(i)}
+                    onClick={() => choose(item)}
+                  >
+                    <span className="cb-label">{toLabel(item)}</span>
+                    {meta && <span className="cb-meta">{meta}</span>}
+                  </li>
+                </Fragment>
               )
             })
           )}

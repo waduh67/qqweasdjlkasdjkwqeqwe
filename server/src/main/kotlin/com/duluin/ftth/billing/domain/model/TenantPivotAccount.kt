@@ -171,6 +171,22 @@ class TenantPivotAccount private constructor(
         this.address = address?.trim()?.takeIf { it.isNotEmpty() }
     }
 
+    /**
+     * Setel rekening tujuan payout TANPA validasi inquiry — dipakai saat mengisi profil sebelum
+     * sub-account dibuat (inquiry `POST /v1/inquiry-account` baru bisa jalan setelah sub-account ada).
+     * Rekening ini ikut terkirim sebagai `bankAccount` saat create. Bila rekening berubah, hasil
+     * inquiry lama dikosongkan agar divalidasi ulang (payout jadi "belum siap" sampai inquiry sukses).
+     */
+    fun setPayoutDestination(channelCode: String?, accountNumber: String?) {
+        val cc = channelCode?.trim()?.uppercase()?.takeIf { it.isNotEmpty() }
+        val an = accountNumber?.trim()?.takeIf { it.isNotEmpty() }
+        if (cc == payoutChannelCode && an == payoutAccountNumber) return
+        this.payoutChannelCode = cc
+        this.payoutAccountNumber = an
+        this.payoutAccountName = null
+        this.payoutInquiryId = null
+    }
+
     /** Simpan rekening payout tenant beserta hasil validasi inquiry (nama + inquiryId). */
     fun setPayoutAccount(channelCode: String, accountNumber: String, accountName: String?, inquiryId: String?) {
         this.payoutChannelCode = channelCode.trim().uppercase().takeIf { it.isNotEmpty() }

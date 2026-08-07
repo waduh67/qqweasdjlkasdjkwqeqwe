@@ -655,6 +655,17 @@ tbody tr.row-click:focus-visible {
   font-size: 0.82rem;
   color: var(--muted);
 }
+.cb-group {
+  position: sticky;
+  top: 0;
+  padding: 0.35rem 0.55rem 0.2rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--surface);
+}
 
 /* ── Ringkasan work order — grid definisi rapi (ganti dl inline) ────────────── */
 .wo-desc {

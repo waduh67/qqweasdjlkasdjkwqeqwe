@@ -28,7 +28,14 @@ import {
 } from '../api/pivotAccount'
 import { useCan } from '../auth/useCan'
 import { Badge, EmptyState, Modal, useToast, type Tone } from '../components/ui'
+import { Combobox } from '../components/Combobox'
 import { IconAlert, IconShield } from '../components/icons'
+import {
+  channelNameByCode,
+  PIVOT_CHANNEL_TYPE_LABEL,
+  searchChannelCodes,
+  type PivotChannel,
+} from '../data/pivotReference'
 
 /**
  * Pengaturan Payment Gateway tenant — halaman kritis: salah setel = tagihan tak dapat tautan
@@ -389,6 +396,40 @@ const PIVOT_KYC_TONE: Record<PivotKycStatus, Tone> = {
  * `masterActive` (platform harus mengaktifkan Pivot dulu), lalu menyediakan aksi Provision/Refresh/
  * Ajukan KYC + form rekening payout.
  */
+
+/**
+ * Pemilih kode channel payout (Pivot): bisa dicari & dikelompokkan per tipe (Bank/E-Wallet/Virtual
+ * Account) supaya operator tak salah ketik (mis. `MANDIRI` vs `MANDIRI_TASPEN`). `key` mengikuti
+ * nilai agar label tampil benar saat nilai di-seed asinkron (Combobox memegang label internal).
+ */
+function ChannelCodeField({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string
+  onChange: (code: string) => void
+  disabled?: boolean
+}) {
+  return (
+    <Combobox<PivotChannel>
+      key={`ch-${value}`}
+      value={value}
+      onChange={(code) => onChange(code)}
+      fetchOptions={(t) => Promise.resolve(searchChannelCodes(t))}
+      debounceMs={0}
+      toId={(c) => c.code}
+      toLabel={(c) => c.name}
+      toMeta={(c) => `${PIVOT_CHANNEL_TYPE_LABEL[c.type]} · ${c.code}`}
+      groupOf={(c) => PIVOT_CHANNEL_TYPE_LABEL[c.type]}
+      initialLabel={value ? (channelNameByCode(value) ?? value) : ''}
+      placeholder="cari bank / e-wallet"
+      disabled={disabled}
+      emptyText="Channel tak ditemukan"
+    />
+  )
+}
+
 function PivotAccountCard({ manage }: { manage: boolean }) {
   const toast = useToast()
   const [account, setAccount] = useState<TenantPivotAccountView | null>(null)
@@ -608,11 +649,9 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
                 <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
                   <label style={{ flex: 1, minWidth: 140 }}>
                     <span>Kode channel bank</span>
-                    <input
+                    <ChannelCodeField
                       value={profile.channelCode ?? ''}
-                      onChange={(e) => setProfile((p) => ({ ...p, channelCode: e.target.value }))}
-                      placeholder="mis. BCA, MANDIRI"
-                      maxLength={40}
+                      onChange={(code) => setProfile((p) => ({ ...p, channelCode: code }))}
                       disabled={!manage}
                     />
                   </label>
@@ -628,7 +667,8 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
                   </label>
                 </div>
                 <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
-                  Rekening tujuan pencairan dana pelanggan. Nomor divalidasi ke bank saat disimpan.
+                  Rekening tujuan pencairan dana pelanggan. Divalidasi ke bank otomatis setelah
+                  sub-account terdaftar. Menekan “Daftarkan sub-account” otomatis menyimpan profil.
                 </p>
                 {manage && (
                   <div className="row" style={{ gap: '0.5rem', justifyContent: 'flex-end' }}>
@@ -650,15 +690,15 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
               {!account.provisioned && (
                 <button
                   className="primary"
-                  disabled={busy || !account.masterActive || !profileFilled || profileDirty}
-                  title={
-                    !profileFilled
-                      ? 'Lengkapi profil sub-account dulu'
-                      : profileDirty
-                        ? 'Simpan perubahan profil dulu'
-                        : undefined
+                  disabled={busy || !account.masterActive || !profileFilled}
+                  title={!profileFilled ? 'Lengkapi profil sub-account dulu' : undefined}
+                  onClick={() =>
+                    void run(async () => {
+                      // Satu klik: simpan profil dulu bila ada perubahan, lalu daftarkan.
+                      if (profileDirty) await savePivotProfile(trimmedProfile())
+                      return provisionPivotAccount()
+                    }, 'Sub-account Pivot diprovisi')
                   }
-                  onClick={() => void run(provisionPivotAccount, 'Sub-account Pivot diprovisi')}
                 >
                   Daftarkan sub-account
                 </button>
@@ -699,11 +739,9 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
               <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
                 <label style={{ flex: 1, minWidth: 140 }}>
                   <span>Kode channel bank</span>
-                  <input
+                  <ChannelCodeField
                     value={profile.channelCode ?? ''}
-                    onChange={(e) => setProfile((p) => ({ ...p, channelCode: e.target.value }))}
-                    placeholder="mis. BCA, MANDIRI"
-                    maxLength={40}
+                    onChange={(code) => setProfile((p) => ({ ...p, channelCode: code }))}
                     disabled={!manage}
                   />
                 </label>
@@ -722,7 +760,9 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
                     className="primary"
                     disabled={
                       busy ||
-                      !payoutDirty ||
+                      // Aktif saat rekening berubah ATAU inquiry belum sukses (auto-inquiry saat
+                      // provisioning bisa gagal) — supaya validasi rekening bisa dipicu ulang.
+                      !(payoutDirty || !account.payoutReady) ||
                       !(profile.channelCode ?? '').trim() ||
                       !(profile.accountNumber ?? '').trim()
                     }

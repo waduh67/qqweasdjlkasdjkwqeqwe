@@ -203,6 +203,253 @@ export const PIVOT_COUNTRIES: ReadonlyArray<{ code: string; name: string }> = [
   { code: 'DE', name: 'Jerman' },
 ]
 
+/** Tipe channel tujuan payout Pivot: bank, e-wallet, atau virtual account. */
+export type PivotChannelType = 'BANK' | 'EWALLET' | 'VA'
+
+export const PIVOT_CHANNEL_TYPE_LABEL: Record<PivotChannelType, string> = {
+  BANK: 'Bank',
+  EWALLET: 'E-Wallet',
+  VA: 'Virtual Account',
+}
+
+export interface PivotChannel {
+  /** Kode channel Pivot (mis. `MANDIRI`) — nilai yang dikirim sebagai `channelCode`. */
+  code: string
+  name: string
+  type: PivotChannelType
+}
+
+/**
+ * Daftar mentah channel payout Pivot (Bank + E-Wallet + Virtual Account), transkrip dari dokumen
+ * "Channel Codes" (`api-lists/payout-local/channel-codes`). Beberapa kode muncul ganda: lintas-tipe
+ * (mis. `PERMATA`/`DANAMON`/`BNC` ada di Bank & Virtual Account) atau di dalam Bank sendiri
+ * (mis. `KALIMANTAN_TIMUR`). Dedup dilakukan di [PIVOT_CHANNEL_CODES] — kemunculan pertama menang.
+ */
+const RAW_CHANNELS: readonly PivotChannel[] = [
+  { code: 'BRI', name: 'Bank Rakyat Indonesia', type: 'BANK' },
+  { code: 'EXIMBANK', name: 'Bank Indonesia Eximbank', type: 'BANK' },
+  { code: 'MANDIRI', name: 'Bank Mandiri', type: 'BANK' },
+  { code: 'BNI', name: 'Bank Negara Indonesia', type: 'BANK' },
+  { code: 'DANAMON', name: 'Bank Danamon Indonesia', type: 'BANK' },
+  { code: 'DANAMON_UUS', name: 'Bank Danamon UUS', type: 'BANK' },
+  { code: 'PERMATA', name: 'Bank Permata', type: 'BANK' },
+  { code: 'PERMATA_UUS', name: 'Bank Permata UUS', type: 'BANK' },
+  { code: 'BCA', name: 'Bank Central Asia (BCA)', type: 'BANK' },
+  { code: 'MAYBANK', name: 'Bank Maybank Indonesia', type: 'BANK' },
+  { code: 'PANIN', name: 'Bank Panin Indonesia', type: 'BANK' },
+  { code: 'ARTA_NIAGA_KENCANA', name: 'Bank Arta Niaga Kencana', type: 'BANK' },
+  { code: 'CIMB', name: 'Bank CIMB Niaga', type: 'BANK' },
+  { code: 'CIMB_SYR', name: 'Bank CIMB Niaga Syariah', type: 'BANK' },
+  { code: 'CIMB_UUS', name: 'Bank CIMB Niaga UUS', type: 'BANK' },
+  { code: 'UOB', name: 'Bank UOB Indonesia', type: 'BANK' },
+  { code: 'TMRW', name: 'TMRW by UOB Indonesia', type: 'BANK' },
+  { code: 'LIPPO', name: 'Bank Lippo', type: 'BANK' },
+  { code: 'OCBC', name: 'Bank OCBC NISP', type: 'BANK' },
+  { code: 'OCBC_UUS', name: 'Bank OCBC NISP UUS', type: 'BANK' },
+  { code: 'DANAGUNG_ABADI', name: 'BPR Danagung Abadi', type: 'BANK' },
+  { code: 'DANAGUNG_BAKTI', name: 'BPR Danagung Bakti', type: 'BANK' },
+  { code: 'DANAGUNG_RAMULTI', name: 'BPR Danagung Ramulti', type: 'BANK' },
+  { code: 'AMEX', name: 'American Express Bank Ltd', type: 'BANK' },
+  { code: 'CITIBANK', name: 'Bank Citibank', type: 'BANK' },
+  { code: 'JPMORGAN', name: 'JP Morgan Chase Bank', type: 'BANK' },
+  { code: 'BAML', name: 'Bank of America Merill-Lynch', type: 'BANK' },
+  { code: 'ING', name: 'Bank ING Indonesia', type: 'BANK' },
+  { code: 'BCC', name: 'Bank China Construction', type: 'BANK' },
+  { code: 'MULTICOR', name: 'Bank Multicor', type: 'BANK' },
+  { code: 'ARTHA', name: 'Bank Artha Graha International', type: 'BANK' },
+  { code: 'CREDIT_AGRICOLE', name: 'Bank Credit Agricole Indosuez', type: 'BANK' },
+  { code: 'BANGKOK_BANK', name: 'The Bangkok Bank Company', type: 'BANK' },
+  { code: 'MUFG', name: 'Bank MUFG (Mitsubishi UFJ)', type: 'BANK' },
+  { code: 'SUMITOMO', name: 'Bank Sumitomo Mitsui Indonesia', type: 'BANK' },
+  { code: 'DBS', name: 'Bank DBS Indonesia', type: 'BANK' },
+  { code: 'DIGIBANK', name: 'Digibank', type: 'BANK' },
+  { code: 'RESONA', name: 'Bank Resona Perdania', type: 'BANK' },
+  { code: 'MIZUHO', name: 'Bank Mizuho Indonesia', type: 'BANK' },
+  { code: 'STANDARD_CHARTERED', name: 'Bank Standard Chartered', type: 'BANK' },
+  { code: 'ABN_AMRO', name: 'Bank ABN AMRO', type: 'BANK' },
+  { code: 'KEPPEL', name: 'Bank Keppel Tatlee Buana', type: 'BANK' },
+  { code: 'CAPITAL', name: 'Bank Capital Indonesia', type: 'BANK' },
+  { code: 'BNP_PARIBAS', name: 'Bank BNP Paribas Indonesia', type: 'BANK' },
+  { code: 'KEB_INDONESIA', name: 'Korean Exchange Bank Danamon', type: 'BANK' },
+  { code: 'RABOBANK', name: 'Bank Rabobank International Indonesia', type: 'BANK' },
+  { code: 'ANZ', name: 'Bank ANZ Indonesia', type: 'BANK' },
+  { code: 'DEUTSCHE', name: 'Deutsche Bank', type: 'BANK' },
+  { code: 'WOORI', name: 'Bank Woori Indonesia', type: 'BANK' },
+  { code: 'BOC', name: 'Bank of China', type: 'BANK' },
+  { code: 'BUMI_ARTA', name: 'Bank Bumi Arta', type: 'BANK' },
+  { code: 'HSBC', name: 'Bank HSBC', type: 'BANK' },
+  { code: 'HSBC_UUS', name: 'Bank HSBC UUS', type: 'BANK' },
+  { code: 'ANTARDAERAH', name: 'Bank Antardaerah', type: 'BANK' },
+  { code: 'HAGA', name: 'Bank Haga', type: 'BANK' },
+  { code: 'IFI', name: 'Bank IFI', type: 'BANK' },
+  { code: 'JTRUST', name: 'Bank J Trust Indonesia', type: 'BANK' },
+  { code: 'MAYAPADA', name: 'Bank Mayapada', type: 'BANK' },
+  { code: 'BJB', name: 'Bank Jabar dan Banten (BJB)', type: 'BANK' },
+  { code: 'DKI', name: 'Bank DKI', type: 'BANK' },
+  { code: 'DKI_UUS', name: 'Bank DKI UUS', type: 'BANK' },
+  { code: 'DAERAH_ISTIMEWA', name: 'BPD DI Yogyakarta (DIY)', type: 'BANK' },
+  { code: 'DAERAH_ISTIMEWA_UUS', name: 'BPD DI Yogyakarta (DIY) UUS', type: 'BANK' },
+  { code: 'JAWA_TENGAH', name: 'BPD Jawa Tengah', type: 'BANK' },
+  { code: 'JAWA_TENGAH_UUS', name: 'BPD Jawa Tengah UUS', type: 'BANK' },
+  { code: 'JAWA_TIMUR', name: 'BPD Jawa Timur', type: 'BANK' },
+  { code: 'JAWA_TIMUR_UUS', name: 'BPD Jawa Timur UUS', type: 'BANK' },
+  { code: 'JAMBI', name: 'BPD Jambi', type: 'BANK' },
+  { code: 'JAMBI_UUS', name: 'BPD Jambi UUS', type: 'BANK' },
+  { code: 'ACEH', name: 'BPD Aceh', type: 'BANK' },
+  { code: 'ACEH_UUS', name: 'BPD Aceh UUS', type: 'BANK' },
+  { code: 'ACEH_SYR', name: 'BPD Aceh Syariah', type: 'BANK' },
+  { code: 'SUMUT', name: 'BPD Sumatera Utara (Sumut)', type: 'BANK' },
+  { code: 'SUMUT_UUS', name: 'BPD Sumut UUS', type: 'BANK' },
+  { code: 'SUMATERA_BARAT', name: 'BPD Sumatera Barat (Sumbar)', type: 'BANK' },
+  { code: 'SUMATERA_BARAT_UUS', name: 'BPD Sumbar UUS', type: 'BANK' },
+  { code: 'KALIMANTAN_TIMUR', name: 'BPD Kalimantan Timur', type: 'BANK' },
+  { code: 'KALIMANTAN_TIMUR_UUS', name: 'BPD Kalimantan Timur UUS', type: 'BANK' },
+  { code: 'RIAU_DAN_KEPRI', name: 'BPD Riau dan Kepri', type: 'BANK' },
+  { code: 'RIAU_DAN_KEPRI_SYR', name: 'BPD Riau Kepri Syariah', type: 'BANK' },
+  { code: 'SUMSEL_DAN_BABEL', name: 'BPD Sumsel dan Babel', type: 'BANK' },
+  { code: 'SUMSEL_DAN_BABEL_UUS', name: 'BPD Sumsel dan Babel UUS', type: 'BANK' },
+  { code: 'LAMPUNG', name: 'BPD Lampung', type: 'BANK' },
+  { code: 'KALIMANTAN_SELATAN', name: 'BPD Kalimantan Selatan', type: 'BANK' },
+  { code: 'KALIMANTAN_SELATAN_UUS', name: 'BPD Kalimantan Selatan UUS', type: 'BANK' },
+  { code: 'KALIMANTAN_BARAT', name: 'BPD Kalimantan Barat', type: 'BANK' },
+  { code: 'KALIMANTAN_BARAT_UUS', name: 'BPD Kalimantan Barat UUS', type: 'BANK' },
+  { code: 'KALIMANTAN_TENGAH', name: 'BPD Kalimantan Tengah', type: 'BANK' },
+  { code: 'SULSELBAR', name: 'BPD Sulawesi Selatan dan Barat (Sulselbar)', type: 'BANK' },
+  { code: 'SULSELBAR_UUS', name: 'BPD Sulselbar UUS', type: 'BANK' },
+  { code: 'SULUTGO', name: 'BPD Sulawesi Utara dan Gorontalo (Sulutgo)', type: 'BANK' },
+  { code: 'NUSA_TENGGARA_BARAT', name: 'BPD Nusa Tenggara Barat', type: 'BANK' },
+  { code: 'NTB_SYR', name: 'Bank NTB Syariah', type: 'BANK' },
+  { code: 'BALI', name: 'BPD Bali', type: 'BANK' },
+  { code: 'NUSA_TENGGARA_TIMUR', name: 'BPD Nusa Tenggara Timur', type: 'BANK' },
+  { code: 'MALUKU', name: 'BPD Maluku dan Maluku Utara', type: 'BANK' },
+  { code: 'PAPUA', name: 'BPD Papua', type: 'BANK' },
+  { code: 'BENGKULU', name: 'BPD Bengkulu', type: 'BANK' },
+  { code: 'SULAWESI', name: 'BPD Sulawesi Tengah', type: 'BANK' },
+  { code: 'SULAWESI_TENGGARA', name: 'BPD Sulawesi Tenggara', type: 'BANK' },
+  { code: 'BANTEN', name: 'BPD Banten', type: 'BANK' },
+  { code: 'NUSANTARA_PARAHYANGAN', name: 'Bank Nusantara Parahyangan', type: 'BANK' },
+  { code: 'INDIA', name: 'Bank of India Indonesia', type: 'BANK' },
+  { code: 'MUAMALAT', name: 'Bank Muamalat', type: 'BANK' },
+  { code: 'MESTIKA_DHARMA', name: 'Bank Mestika Dharma', type: 'BANK' },
+  { code: 'SHINHAN', name: 'Bank Shinhan', type: 'BANK' },
+  { code: 'SINARMAS', name: 'Bank Sinarmas', type: 'BANK' },
+  { code: 'SINARMAS_UUS', name: 'Bank Sinarmas UUS', type: 'BANK' },
+  { code: 'MASPION', name: 'Bank Maspion Indonesia', type: 'BANK' },
+  { code: 'HAGAKITA', name: 'Bank Hagakita', type: 'BANK' },
+  { code: 'GANESHA', name: 'Bank Ganesha', type: 'BANK' },
+  { code: 'WINDU_KENTJANA', name: 'Bank Windu Kentjana', type: 'BANK' },
+  { code: 'ICBC', name: 'Bank ICBC Indonesia', type: 'BANK' },
+  { code: 'HARMONI', name: 'Bank Harmoni International', type: 'BANK' },
+  { code: 'QNB_INDONESIA', name: 'Bank QNB Indonesia', type: 'BANK' },
+  { code: 'BTN', name: 'Bank Tabungan Negara (BTN)', type: 'BANK' },
+  { code: 'BTN_UUS', name: 'Bank Syariah Nasional (BTN Syariah)', type: 'BANK' },
+  { code: 'HIMPUNAN_SAUDARA', name: 'Bank Himpunan Saudara 1906', type: 'BANK' },
+  { code: 'WOORI_SAUDARA', name: 'Bank Woori Saudara', type: 'BANK' },
+  { code: 'SMBC_INDONESIA', name: 'Bank SMBC Indonesia', type: 'BANK' },
+  { code: 'JENIUS', name: 'Jenius', type: 'BANK' },
+  { code: 'TABUNGAN_PENSIUNAN_NASIONAL', name: 'Bank BTPN', type: 'BANK' },
+  { code: 'KOP_INTIDANA', name: 'Kop Intidana', type: 'BANK' },
+  { code: 'SWAGUNA', name: 'Bank Swaguna', type: 'BANK' },
+  { code: 'VICTORIA_SYR', name: 'Bank Victoria Syariah', type: 'BANK' },
+  { code: 'BRI_SYR', name: 'Bank Syariah Indonesia (BRI Syariah)', type: 'BANK' },
+  { code: 'BJB_SYR', name: 'Bank BJB Syariah', type: 'BANK' },
+  { code: 'MEGA', name: 'Bank Mega', type: 'BANK' },
+  { code: 'BNI_SYR', name: 'Bank Syariah Indonesia (BNI Syariah)', type: 'BANK' },
+  { code: 'KBID', name: 'Bank KB Bukopin', type: 'BANK' },
+  { code: 'BSI', name: 'Bank Syariah Indonesia', type: 'BANK' },
+  { code: 'KROM', name: 'Bank Krom', type: 'BANK' },
+  { code: 'ANDARA', name: 'Bank Andara', type: 'BANK' },
+  { code: 'SAQU', name: 'Bank Saqu Indonesia', type: 'BANK' },
+  { code: 'HANA', name: 'Bank KEB Hana', type: 'BANK' },
+  { code: 'MNC_INTERNASIONAL', name: 'Bank MNC International', type: 'BANK' },
+  { code: 'BNC', name: 'Bank Neo Commerce', type: 'BANK' },
+  { code: 'MITRANIAGA', name: 'Bank Mitraniaga', type: 'BANK' },
+  { code: 'AGRONIAGA', name: 'Bank Raya', type: 'BANK' },
+  { code: 'SBI_INDONESIA', name: 'Bank SBI Indonesia', type: 'BANK' },
+  { code: 'BCA_DIGITAL', name: 'Bank BCA Digital (blu)', type: 'BANK' },
+  { code: 'NATIONALNOBU', name: 'Bank National Nobu', type: 'BANK' },
+  { code: 'MEGA_SYR', name: 'Bank Mega Syariah', type: 'BANK' },
+  { code: 'INA_PERDANA', name: 'Bank Ina Perdana', type: 'BANK' },
+  { code: 'PANIN_SYR', name: 'Bank Panin Dubai Syariah', type: 'BANK' },
+  { code: 'PRIMA_MASTER', name: 'Bank Prima Master', type: 'BANK' },
+  { code: 'BUKOPIN_SYR', name: 'Bank KB Indonesia', type: 'BANK' },
+  { code: 'SAHABAT_SAMPOERNA', name: 'Bank Sahabat Sampoerna', type: 'BANK' },
+  { code: 'BARCLAYS', name: 'Bank Barclays', type: 'BANK' },
+  { code: 'DINAR_INDONESIA', name: 'Bank Dinar Indonesia', type: 'BANK' },
+  { code: 'OKE', name: 'Bank Oke', type: 'BANK' },
+  { code: 'ANGLOMAS', name: 'Anglomas International Bank', type: 'BANK' },
+  { code: 'AMAR', name: 'Bank Amar Indonesia', type: 'BANK' },
+  { code: 'SEABANK', name: 'SeaBank', type: 'BANK' },
+  { code: 'BCA_SYR', name: 'Bank BCA Syariah', type: 'BANK' },
+  { code: 'JAGO', name: 'Bank Jago', type: 'BANK' },
+  { code: 'BTPN_SYARIAH', name: 'Bank BTPN Syariah', type: 'BANK' },
+  { code: 'MULTI_ARTA_SENTOSA', name: 'Bank Multi Arta Sentosa', type: 'BANK' },
+  { code: 'MAS', name: 'Bank Multiarta Sentosa', type: 'BANK' },
+  { code: 'HIBANK', name: 'Bank Hibank Indonesia', type: 'BANK' },
+  { code: 'INDEX_SELINDO', name: 'Bank Index Selindo', type: 'BANK' },
+  { code: 'PUNDI', name: 'Bank Pundi', type: 'BANK' },
+  { code: 'CNB', name: 'Centratama Nasional Bank', type: 'BANK' },
+  { code: 'SUPERBANK', name: 'Super Bank Indonesia', type: 'BANK' },
+  { code: 'MANDIRI_TASPEN', name: 'Bank Mandiri Taspen Pos', type: 'BANK' },
+  { code: 'VICTORIA_INTERNASIONAL', name: 'Bank Victoria Internasional', type: 'BANK' },
+  { code: 'HARDA_INTERNASIONAL', name: 'Allo Bank Indonesia', type: 'BANK' },
+  { code: 'SUPRA', name: 'BPR Supra Artapersada', type: 'BANK' },
+  { code: 'MANDIRI_BPR', name: 'Mandiri - BPR', type: 'BANK' },
+  { code: 'KS', name: 'BPR KS (Karyajatnika Sedaya)', type: 'BANK' },
+  { code: 'EKA', name: 'Bank Eka Bumi Artha', type: 'BANK' },
+  { code: 'IBK', name: 'Bank IBK Indonesia', type: 'BANK' },
+  { code: 'AGRIS', name: 'Bank Agris', type: 'BANK' },
+  { code: 'MERINCORP', name: 'Bank Merincorp', type: 'BANK' },
+  { code: 'ALADIN', name: 'Bank Aladin Syariah', type: 'BANK' },
+  { code: 'OCBC_INDONESIA', name: 'Bank OCBC Indonesia', type: 'BANK' },
+  { code: 'CTBC', name: 'Bank CTBC Indonesia', type: 'BANK' },
+  { code: 'COMMONWEALTH', name: 'Bank Commonwealth', type: 'BANK' },
+  { code: 'GOPAY', name: 'GoPay', type: 'EWALLET' },
+  { code: 'OVO', name: 'OVO', type: 'EWALLET' },
+  { code: 'SHOPEEPAY', name: 'ShopeePay', type: 'EWALLET' },
+  { code: 'DANA', name: 'DANA', type: 'EWALLET' },
+  { code: 'LINKAJA', name: 'LinkAja', type: 'EWALLET' },
+  // Virtual Account: kodenya identik dengan bank di atas → tersapu dedup (kemunculan pertama menang).
+  { code: 'BNC', name: 'Bank Neo Commerce', type: 'VA' },
+  { code: 'PERMATA', name: 'Bank Permata', type: 'VA' },
+  { code: 'DANAMON', name: 'Bank Danamon Indonesia', type: 'VA' },
+]
+
+/** Channel payout unik (dedup per `code`, kemunculan pertama menang) untuk dropdown. */
+export const PIVOT_CHANNEL_CODES: readonly PivotChannel[] = (() => {
+  const seen = new Set<string>()
+  const out: PivotChannel[] = []
+  for (const c of RAW_CHANNELS) {
+    if (seen.has(c.code)) continue
+    seen.add(c.code)
+    out.push(c)
+  }
+  return out
+})()
+
+const CHANNEL_TYPE_ORDER: Record<PivotChannelType, number> = { BANK: 0, EWALLET: 1, VA: 2 }
+
+/**
+ * Cari channel payout untuk combobox (filter lokal). Cocokkan `code`/`name` (uppercase `includes`);
+ * hasil diurut per grup tipe (Bank → E-Wallet → Virtual Account) lalu nama, dibatasi `limit` agar
+ * dropdown tak sepanjang ratusan bank. Term kosong → `limit` pertama.
+ */
+export function searchChannelCodes(term: string, limit = 50): PivotChannel[] {
+  const q = term.trim().toUpperCase()
+  const matched = q
+    ? PIVOT_CHANNEL_CODES.filter((c) => c.code.includes(q) || c.name.toUpperCase().includes(q))
+    : [...PIVOT_CHANNEL_CODES]
+  matched.sort(
+    (a, b) => CHANNEL_TYPE_ORDER[a.type] - CHANNEL_TYPE_ORDER[b.type] || a.name.localeCompare(b.name),
+  )
+  return matched.slice(0, limit)
+}
+
+/** Nama channel dari kode (untuk seed label saat nilai sudah terisi). */
+export function channelNameByCode(code: string): string | undefined {
+  return PIVOT_CHANNEL_CODES.find((c) => c.code === code)?.name
+}
+
 export interface PivotDistrict {
   id: number
   name: string

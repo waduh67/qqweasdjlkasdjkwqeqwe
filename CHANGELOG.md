@@ -6,6 +6,26 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-07 — Simpan profil sub-account Pivot tak lagi inquiry + daftar satu klik + dropdown channel
+
+**Diperbaiki**
+- **"Simpan profil" gagal `400` "POST /v1/inquiry-account: Make sure value is fulfilled".** Simpan
+  profil dulu memicu inquiry untuk memvalidasi rekening, padahal `inquiry-account` baru bisa jalan
+  SETELAH sub-account ada di Pivot — jadi selalu ditolak sebelum tenant sempat mendaftar. Simpan
+  profil kini murni menyimpan (channel + nomor rekening) tanpa menembak Pivot; inquiry berjalan
+  otomatis best-effort setelah provisioning (`TenantPivotAccount.setPayoutDestination`,
+  `TenantPivotAccountService`).
+
+**Diubah**
+- **"Daftarkan sub-account" jadi satu klik** — otomatis menyimpan profil bila ada perubahan lalu
+  memprovisi, jadi tak perlu lagi menekan "Simpan profil" dulu (yang justru error). "Simpan profil"
+  tetap ada sebagai aksi sekunder untuk menyimpan draf. Bila auto-inquiry saat provisioning gagal,
+  "Simpan rekening" pasca-provisioning bisa memicu ulang validasi (`PaymentGatewaySettingsPage`).
+- **Kode channel bank kini dipilih dari dropdown yang bisa dicari & dikelompokkan per tipe**
+  (Bank / E-Wallet / Virtual Account), bukan input bebas — mencegah salah ketik (mis. `MANDIRI`
+  vs `MANDIRI_TASPEN`). Daftar channel ditranskrip dari dokumen Pivot "Channel Codes"
+  (`data/pivotReference.ts`); `Combobox` menerima prop opsional `groupOf` untuk header grup.
+
 ### 2026-08-07 — Rekening payout digabung ke profil sub-account Pivot
 
 **Diperbaiki**
