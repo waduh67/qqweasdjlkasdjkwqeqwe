@@ -23,11 +23,10 @@ interface ManageInvoiceUseCase {
     fun void(id: UUID): InvoiceView
 
     /**
-     * Buat ulang tautan bayar sebuah tagihan lewat penyedia gateway yang **aktif sekarang**,
-     * lalu kembalikan proyeksinya. Dipakai saat pelanggan hendak membayar: bila penyedia
-     * aktif berbeda dari penyedia tagihan, charge baru dibuat agar pembayaran mengikuti
-     * setelan penyedia terbaru. Idempoten bila penyedianya sudah sama. Ditolak bila tagihan
-     * sudah lunas / dibatalkan.
+     * Buat charge in-app (mode API Pivot) untuk sebuah tagihan dengan instrumen [method]
+     * (`VIRTUAL_ACCOUNT`/`QR`) + [channel] bank (wajib untuk VA), lalu kembalikan proyeksi tagihan
+     * berisi instruksi bayar (nomor VA / string QRIS). Mengganti metode membuat charge baru yang
+     * menimpa instruksi lama. Ditolak bila tagihan sudah lunas / dibatalkan atau gateway MANUAL.
      */
-    fun refreshPaymentLink(id: UUID): InvoiceView
+    fun chargeInvoice(id: UUID, method: String, channel: String?): InvoiceView
 }

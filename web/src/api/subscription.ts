@@ -5,9 +5,9 @@
  */
 
 import { api } from './client'
-import type { SubscriptionInvoiceView, SubscriptionStatus } from './platformBilling'
+import type { PaymentMethodOption, SubscriptionInvoiceView, SubscriptionStatus } from './platformBilling'
 
-export type { SubscriptionInvoiceView, SubscriptionStatus } from './platformBilling'
+export type { PaymentMethodOption, SubscriptionInvoiceView, SubscriptionStatus } from './platformBilling'
 
 /** Satu baris pemakaian kosmetik — `limit` null artinya "Unlimited". */
 export interface UsageMetricView {
@@ -43,11 +43,20 @@ export function renewMySubscription(months = 1): Promise<SubscriptionInvoiceView
   return api.post(`/api/subscription/renew?months=${months}`)
 }
 
+/** Metode bayar in-app yang tersedia (QRIS + Virtual Account) untuk langganan. */
+export function getSubscriptionPaymentMethods(): Promise<PaymentMethodOption[]> {
+  return api.get('/api/subscription/payment-methods')
+}
+
 /**
- * Siapkan tautan bayar untuk satu tagihan tertunggak (server charge ulang ke gateway aktif bila
- * tautannya belum sempat terbit), lalu kembalikan tagihannya berisi `payUrl`. Dipakai tombol
- * "Bayar" per-tagihan di Riwayat tagihan.
+ * Buat charge in-app (VA/QRIS) untuk satu tagihan tertunggak lalu kembalikan tagihan berisi
+ * instruksi bayar (nomor VA / string QRIS). `channel` wajib untuk Virtual Account (kode bank).
+ * Dipakai panel Bayar per-tagihan di Riwayat tagihan.
  */
-export function payMyInvoice(invoiceId: string): Promise<SubscriptionInvoiceView> {
-  return api.post(`/api/subscription/invoices/${invoiceId}/pay`)
+export function payMyInvoice(
+  invoiceId: string,
+  method: string,
+  channel: string | null,
+): Promise<SubscriptionInvoiceView> {
+  return api.post(`/api/subscription/invoices/${invoiceId}/pay`, { method, channel })
 }

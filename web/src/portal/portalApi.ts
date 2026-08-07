@@ -59,9 +59,26 @@ export interface PortalInvoice {
   issuedAt: string
   dueDate: string
   paidAt: string | null
-  /** Bisa dibayar online sekarang (terbuka + ada tautan hosted gateway). */
+  /** Bisa dibayar online sekarang (masih terbuka: ISSUED/OVERDUE). */
   payable: boolean
   payUrl: string | null
+  // Instruksi bayar in-app (mode API Pivot); null bila belum pilih metode.
+  payMethod: string | null
+  vaChannel: string | null
+  vaNumber: string | null
+  vaName: string | null
+  vaExpiresAt: string | null
+  /** String QRIS mentah (dirender jadi kode QR di klien). */
+  qrContent: string | null
+  qrUrl: string | null
+  qrExpiresAt: string | null
+}
+
+/** Satu metode bayar in-app untuk portal; [channels] kosong bila tak perlu pilih bank (QRIS). */
+export interface PortalPaymentMethodOption {
+  type: string
+  label: string
+  channels: { code: string; label: string }[]
 }
 
 export interface PortalPayment {
@@ -123,3 +140,14 @@ export const getPortalConnection = () => portalApiClient.get<PortalConnection>('
 
 export const changePortalPassword = (currentPassword: string, newPassword: string) =>
   portalApiClient.post<void>('/api/portal/me/password', { currentPassword, newPassword })
+
+/** Metode bayar in-app yang tersedia (QRIS + Virtual Account) untuk pelanggan portal. */
+export const getPortalPaymentMethods = () =>
+  portalApiClient.get<PortalPaymentMethodOption[]>('/api/portal/me/payment-methods')
+
+/**
+ * Buat charge in-app (VA/QRIS) untuk satu tagihan pelanggan yang login lalu kembalikan tagihan
+ * berisi instruksi bayar. `channel` wajib untuk Virtual Account (kode bank).
+ */
+export const payPortalInvoice = (invoiceId: string, method: string, channel: string | null) =>
+  portalApiClient.post<PortalInvoice>(`/api/portal/me/invoices/${invoiceId}/pay`, { method, channel })

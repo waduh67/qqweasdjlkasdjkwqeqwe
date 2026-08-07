@@ -1,5 +1,7 @@
 package com.duluin.ftth.billing.adapter.inbound.web
 
+import com.duluin.ftth.billing.PaymentMethodCatalog
+import com.duluin.ftth.billing.PaymentMethodOption
 import com.duluin.ftth.billing.application.port.inbound.InvoiceView
 import com.duluin.ftth.billing.application.port.inbound.ManageInvoiceUseCase
 import com.duluin.ftth.billing.application.port.inbound.PaymentView
@@ -55,10 +57,16 @@ class BillingController(
     @Operation(summary = "Batalkan tagihan (ditolak bila sudah lunas)")
     fun voidInvoice(@PathVariable id: UUID): InvoiceView = invoices.void(id)
 
+    @GetMapping("/payment-methods")
+    @PreAuthorize("@authz.can('billing.invoice.view')")
+    @Operation(summary = "Metode bayar in-app yang tersedia (QRIS + Virtual Account)")
+    fun paymentMethods(): List<PaymentMethodOption> = PaymentMethodCatalog.methods
+
     @PostMapping("/invoices/{id}/recharge")
     @PreAuthorize("@authz.can('billing.invoice.manage')")
-    @Operation(summary = "Buat ulang tautan bayar tagihan lewat penyedia gateway aktif")
-    fun recharge(@PathVariable id: UUID): InvoiceView = invoices.refreshPaymentLink(id)
+    @Operation(summary = "Buat charge in-app (VA/QRIS) untuk tagihan lewat gateway aktif")
+    fun recharge(@PathVariable id: UUID, @RequestBody request: ChargeInvoiceRequest): InvoiceView =
+        invoices.chargeInvoice(id, request.method, request.channel)
 
     @PostMapping("/invoices/{id}/pay")
     @PreAuthorize("@authz.can('billing.payment.manage')")
@@ -76,3 +84,6 @@ class BillingController(
 data class GenerateResult(val created: Int)
 
 data class RecordPaymentRequest(val note: String?)
+
+/** Pilihan instrumen bayar in-app: [method] = VIRTUAL_ACCOUNT/QR, [channel] bank (wajib utk VA). */
+data class ChargeInvoiceRequest(val method: String, val channel: String?)

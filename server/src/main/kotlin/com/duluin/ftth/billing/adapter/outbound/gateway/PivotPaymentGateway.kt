@@ -7,6 +7,8 @@ import com.duluin.ftth.billing.application.port.outbound.ChargeResult
 import com.duluin.ftth.billing.application.port.outbound.GatewayCallback
 import com.duluin.ftth.billing.application.port.outbound.PaymentGateway
 import com.duluin.ftth.billing.application.port.outbound.PaymentSettlement
+import com.duluin.ftth.billing.application.port.outbound.QrInstruction
+import com.duluin.ftth.billing.application.port.outbound.VaInstruction
 import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.billing.domain.model.PivotFeeType
 import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
@@ -84,29 +86,43 @@ class PivotPaymentGateway(
 
     override fun createCharge(request: ChargeRequest, ctx: ResolvedGatewayContext): ChargeResult {
         val creds = ctx.pivotCredentials()
-        val redirectBase = billingProperties.pivot.redirectBaseUrl.trim().trimEnd('/').takeIf { it.isNotEmpty() }
-            ?: throw ConflictException("Pivot butuh redirect base URL — set FTTH_BILLING_PIVOT_REDIRECT_BASE_URL")
-
         val amountValue = request.amount.setScale(0, RoundingMode.HALF_UP).toLong()
+        // Metode diisi (VIRTUAL_ACCOUNT/QR) → charge mode-API in-app (instruksi bayar langsung di
+        // respons, TANPA redirect). Kosong → mode REDIRECT lama (halaman ter-host Pivot).
+        val method = request.method?.trim()?.uppercase()?.takeIf { it.isNotEmpty() }
+        val apiMode = method != null
+        val expiryAt = pivotExpiryAt(request.dueDate, Instant.now(), ZoneId.systemDefault())
+
         val body = buildMap<String, Any> {
             put("clientReferenceId", request.invoiceNumber)
             put("amount", mapOf("value" to amountValue, "currency" to "IDR"))
             put("paymentType", "SINGLE")
-            put("mode", "REDIRECT")
             // Batas waktu sesi bayar = jatuh tempo tagihan (STRICT: tak diperpanjang otomatis). Di-clamp
             // ke rentang aman: expiryAt di luar batas maksimum Pivot ditolak → charge gagal.
-            pivotExpiryAt(request.dueDate, Instant.now(), ZoneId.systemDefault())?.let {
+            expiryAt?.let {
                 put("expiryAt", it)
                 put("expirationMode", "STRICT")
             }
-            put(
-                "redirectUrl",
-                mapOf(
-                    "successReturnUrl" to "$redirectBase/paid",
-                    "failureReturnUrl" to "$redirectBase/failed",
-                    "expirationReturnUrl" to "$redirectBase/expired",
-                ),
-            )
+            if (apiMode) {
+                // Mode API + autoConfirm → Pivot langsung terbitkan instrumen (nomor VA / string QRIS)
+                // di `chargeDetails[0]`; pelanggan membayar dari dalam aplikasi ini, tanpa redirect.
+                put("mode", "API")
+                put("autoConfirm", true)
+                put("paymentMethod", mapOf("type" to method))
+                put("paymentMethodOptions", buildPaymentMethodOptions(method, request, expiryAt))
+            } else {
+                val redirectBase = billingProperties.pivot.redirectBaseUrl.trim().trimEnd('/').takeIf { it.isNotEmpty() }
+                    ?: throw ConflictException("Pivot butuh redirect base URL — set FTTH_BILLING_PIVOT_REDIRECT_BASE_URL")
+                put("mode", "REDIRECT")
+                put(
+                    "redirectUrl",
+                    mapOf(
+                        "successReturnUrl" to "$redirectBase/paid",
+                        "failureReturnUrl" to "$redirectBase/failed",
+                        "expirationReturnUrl" to "$redirectBase/expired",
+                    ),
+                )
+            }
             put(
                 "customer",
                 buildMap<String, Any> {
@@ -154,13 +170,78 @@ class PivotPaymentGateway(
             body = body,
             creds = creds,
             subMerchantId = ctx.subAccountId,
-            requestId = idempotencyKey(request.invoiceNumber),
+            requestId = idempotencyKey(request.invoiceNumber, method),
         )
         val data = node.get("data")
+        return if (apiMode) parseApiCharge(data, method) else parseRedirectCharge(data)
+    }
+
+    /** Opsi metode bayar mode-API sesuai instrumen yang dipilih. */
+    private fun buildPaymentMethodOptions(
+        method: String,
+        request: ChargeRequest,
+        expiryAt: String?,
+    ): Map<String, Any> = when (method) {
+        METHOD_VA -> {
+            val channel = request.vaChannel?.trim()?.uppercase()?.takeIf { it.isNotEmpty() }
+                ?: throw ConflictException("Bank Virtual Account wajib dipilih")
+            mapOf(
+                "virtualAccount" to buildMap<String, Any> {
+                    put("channel", channel)
+                    expiryAt?.let { put("expiryAt", it) }
+                },
+            )
+        }
+        METHOD_QR -> mapOf(
+            "qr" to buildMap<String, Any> {
+                expiryAt?.let { put("expiryAt", it) }
+            },
+        )
+        else -> throw ConflictException("Metode bayar '$method' tidak didukung")
+    }
+
+    /** REDIRECT: baca id sesi & tautan bayar ter-host. */
+    private fun parseRedirectCharge(data: JsonNode?): ChargeResult = ChargeResult(
+        provider = "PIVOT",
+        gatewayRef = data?.get("id")?.asString()?.takeIf { it.isNotBlank() },
+        payUrl = data?.get("paymentUrl")?.asString()?.takeIf { it.isNotBlank() },
+    )
+
+    /** API: baca instruksi bayar in-app dari `chargeDetails[0]` (nomor VA / string QRIS). */
+    private fun parseApiCharge(data: JsonNode?, method: String): ChargeResult {
+        val charge = data?.get("chargeDetails")?.takeIf { it.isArray && !it.isEmpty }?.get(0)
+        val va = charge?.get("virtualAccount")?.takeIf { !it.isNull }?.let { node ->
+            val number = node.get("virtualAccountNumber")?.asString()?.takeIf { it.isNotBlank() }
+            number?.let {
+                VaInstruction(
+                    channel = node.get("channel")?.asString()?.takeIf { c -> c.isNotBlank() },
+                    number = it,
+                    name = node.get("virtualAccountName")?.asString()?.takeIf { n -> n.isNotBlank() },
+                    expiresAt = parseInstant(node.get("expiryAt")),
+                )
+            }
+        }
+        val qr = charge?.get("qr")?.takeIf { !it.isNull }?.let { node ->
+            val content = node.get("qrContent")?.asString()?.takeIf { it.isNotBlank() }
+            content?.let {
+                QrInstruction(
+                    content = it,
+                    url = node.get("qrUrl")?.asString()?.takeIf { u -> u.isNotBlank() },
+                    expiresAt = parseInstant(node.get("expiryAt")),
+                )
+            }
+        }
+        if (va == null && qr == null) {
+            throw ConflictException("Pivot tak mengembalikan instruksi bayar untuk metode '$method'")
+        }
         return ChargeResult(
             provider = "PIVOT",
-            gatewayRef = data?.get("id")?.asString()?.takeIf { it.isNotBlank() },
-            payUrl = data?.get("paymentUrl")?.asString()?.takeIf { it.isNotBlank() },
+            gatewayRef = data.get("id")?.asString()?.takeIf { it.isNotBlank() },
+            payUrl = null,
+            status = charge?.get("status")?.asString()?.takeIf { it.isNotBlank() },
+            method = method,
+            virtualAccount = va,
+            qr = qr,
         )
     }
 
@@ -233,17 +314,32 @@ class PivotPaymentGateway(
     /** Waktu bayar dari `chargeDetails[0].paidAt` bila ada & bisa diurai, else null (pemanggil pakai now). */
     private fun firstChargePaidAt(data: JsonNode): Instant? {
         val charges = data.get("chargeDetails")?.takeIf { it.isArray && !it.isEmpty } ?: return null
-        val text = charges.get(0)?.get("paidAt")?.asString()?.takeIf { it.isNotBlank() } ?: return null
-        return runCatching { Instant.parse(text) }.getOrNull()
+        return parseInstant(charges.get(0)?.get("paidAt"))
+    }
+
+    /**
+     * Urai timestamp ISO-8601 Pivot → [Instant]; abaikan nilai kosong, tak-terurai, atau sentinel
+     * "kosong" (mis. `0001-01-01T…` yang Pivot pakai saat tak ada kedaluwarsa).
+     */
+    private fun parseInstant(node: JsonNode?): Instant? {
+        val text = node?.asString()?.takeIf { it.isNotBlank() } ?: return null
+        val parsed = runCatching { Instant.parse(text) }.getOrNull() ?: return null
+        return parsed.takeIf { it.isAfter(EPOCH_FLOOR) }
     }
 
     /**
      * `X-REQUEST-ID` idempotency: alfanumerik 16–36 char, deterministik dari nomor tagihan agar
-     * retry charge tak menggandakan payment session di Pivot.
+     * retry charge tak menggandakan payment session di Pivot. [method] disisipkan agar ganti
+     * instrumen (VA↔QRIS) menghasilkan sesi bayar baru, bukan echo charge pertama.
      */
-    private fun idempotencyKey(invoiceNumber: String): String {
+    private fun idempotencyKey(invoiceNumber: String, method: String?): String {
         val cleaned = invoiceNumber.filter { it.isLetterOrDigit() }.ifEmpty { "INV" }
-        val padded = (REQUEST_PREFIX + cleaned).take(REQUEST_ID_MAX)
+        val suffix = when (method) {
+            METHOD_VA -> "VA"
+            METHOD_QR -> "QR"
+            else -> ""
+        }
+        val padded = (REQUEST_PREFIX + cleaned + suffix).take(REQUEST_ID_MAX)
         return if (padded.length >= REQUEST_ID_MIN) padded else padded.padEnd(REQUEST_ID_MIN, '0')
     }
 
@@ -257,6 +353,10 @@ class PivotPaymentGateway(
         const val REQUEST_PREFIX = "req"
         const val REQUEST_ID_MIN = 16
         const val REQUEST_ID_MAX = 36
+        const val METHOD_VA = "VIRTUAL_ACCOUNT"
+        const val METHOD_QR = "QR"
+        /** Ambang bawah timestamp valid — nilai sebelum ini dianggap sentinel "kosong" Pivot. */
+        val EPOCH_FLOOR: Instant = Instant.parse("2000-01-01T00:00:00Z")
         val SETTLED_STATUSES = setOf("PAID", "SETTLED", "SUCCESS")
     }
 }

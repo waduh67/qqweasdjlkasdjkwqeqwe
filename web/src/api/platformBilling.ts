@@ -146,6 +146,23 @@ export interface SubscriptionInvoiceView {
   paidAt: string | null
   gatewayProvider: string | null
   payUrl: string | null
+  // Instruksi bayar in-app (mode API Pivot); null bila belum pilih metode.
+  payMethod: string | null
+  vaChannel: string | null
+  vaNumber: string | null
+  vaName: string | null
+  vaExpiresAt: string | null
+  /** String QRIS mentah (dirender jadi kode QR di klien). */
+  qrContent: string | null
+  qrUrl: string | null
+  qrExpiresAt: string | null
+}
+
+/** Satu metode bayar in-app; [channels] kosong bila tak perlu pilih bank (QRIS). */
+export interface PaymentMethodOption {
+  type: string
+  label: string
+  channels: { code: string; label: string }[]
 }
 
 export interface TenantSubscriptionDetailView {

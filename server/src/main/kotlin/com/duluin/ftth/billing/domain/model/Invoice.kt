@@ -60,6 +60,14 @@ class Invoice private constructor(
     gatewayProvider: String?,
     gatewayRef: String?,
     payUrl: String?,
+    payMethod: String?,
+    vaChannel: String?,
+    vaNumber: String?,
+    vaName: String?,
+    vaExpiresAt: Instant?,
+    qrContent: String?,
+    qrUrl: String?,
+    qrExpiresAt: Instant?,
     dueSoonReminded: Boolean,
 ) {
     /** Dasar Pengenaan Pajak (DPP): nilai layanan sebelum PPN = [amount] − [taxAmount]. */
@@ -86,6 +94,31 @@ class Invoice private constructor(
         private set
 
     var payUrl: String? = payUrl
+        private set
+
+    /** Instrumen bayar in-app terpilih (VIRTUAL_ACCOUNT/QR) & instruksinya (nomor VA / string QRIS). */
+    var payMethod: String? = payMethod
+        private set
+
+    var vaChannel: String? = vaChannel
+        private set
+
+    var vaNumber: String? = vaNumber
+        private set
+
+    var vaName: String? = vaName
+        private set
+
+    var vaExpiresAt: Instant? = vaExpiresAt
+        private set
+
+    var qrContent: String? = qrContent
+        private set
+
+    var qrUrl: String? = qrUrl
+        private set
+
+    var qrExpiresAt: Instant? = qrExpiresAt
         private set
 
     /**
@@ -132,6 +165,37 @@ class Invoice private constructor(
         this.payUrl = payUrl
     }
 
+    /**
+     * Lekatkan instruksi bayar in-app (mode API) — nomor VA atau string QRIS — tanpa mengubah nilai.
+     * Membuang [payUrl] (alur in-app tak me-redirect); menimpa instruksi lama saat pelanggan
+     * mengganti instrumen (VA↔QRIS).
+     */
+    @Suppress("LongParameterList")
+    fun attachInstruction(
+        provider: String?,
+        gatewayRef: String?,
+        method: String?,
+        vaChannel: String?,
+        vaNumber: String?,
+        vaName: String?,
+        vaExpiresAt: Instant?,
+        qrContent: String?,
+        qrUrl: String?,
+        qrExpiresAt: Instant?,
+    ) {
+        this.gatewayProvider = provider
+        this.gatewayRef = gatewayRef
+        this.payUrl = null
+        this.payMethod = method
+        this.vaChannel = vaChannel
+        this.vaNumber = vaNumber
+        this.vaName = vaName
+        this.vaExpiresAt = vaExpiresAt
+        this.qrContent = qrContent
+        this.qrUrl = qrUrl
+        this.qrExpiresAt = qrExpiresAt
+    }
+
     companion object {
         /**
          * Terbitkan tagihan dari [baseAmount] (DPP, sebelum pajak). Bila [taxRate] non-null &
@@ -176,6 +240,14 @@ class Invoice private constructor(
                 gatewayProvider = null,
                 gatewayRef = null,
                 payUrl = null,
+                payMethod = null,
+                vaChannel = null,
+                vaNumber = null,
+                vaName = null,
+                vaExpiresAt = null,
+                qrContent = null,
+                qrUrl = null,
+                qrExpiresAt = null,
                 dueSoonReminded = false,
             )
         }
@@ -201,11 +273,20 @@ class Invoice private constructor(
             gatewayProvider: String?,
             gatewayRef: String?,
             payUrl: String?,
+            payMethod: String?,
+            vaChannel: String?,
+            vaNumber: String?,
+            vaName: String?,
+            vaExpiresAt: Instant?,
+            qrContent: String?,
+            qrUrl: String?,
+            qrExpiresAt: Instant?,
             dueSoonReminded: Boolean,
         ): Invoice = Invoice(
             id, tenantId, customerId, subscriptionId, number, periodStart, periodEnd, amount,
             taxAmount, taxRate, prorated, proratedDays, status, issuedAt, dueDate, paidAt,
-            gatewayProvider, gatewayRef, payUrl, dueSoonReminded,
+            gatewayProvider, gatewayRef, payUrl, payMethod, vaChannel, vaNumber, vaName,
+            vaExpiresAt, qrContent, qrUrl, qrExpiresAt, dueSoonReminded,
         )
 
         /**

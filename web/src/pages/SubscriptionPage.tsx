@@ -8,14 +8,17 @@ import {
 } from '../api/platformBilling'
 import {
   getMySubscription,
+  getSubscriptionPaymentMethods,
   payMyInvoice,
   renewMySubscription,
+  type PaymentMethodOption,
   type TenantSelfSubscriptionView,
   type UsageMetricView,
 } from '../api/subscription'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, useToast } from '../components/ui'
+import { Badge, EmptyState, Modal, useToast } from '../components/ui'
 import type { Tone } from '../components/ui'
+import { GatewayPayPanel } from '../components/GatewayPayPanel'
 import {
   IconGauge,
   IconRoute,
@@ -88,6 +91,9 @@ export function SubscriptionPage() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [months, setMonths] = useState(1)
+  // Metode bayar in-app (QRIS/VA) & tagihan yang panel bayarnya sedang terbuka.
+  const [methods, setMethods] = useState<PaymentMethodOption[]>([])
+  const [paying, setPaying] = useState<SubscriptionInvoiceView | null>(null)
 
   const load = () =>
     getMySubscription()
@@ -97,6 +103,8 @@ export function SubscriptionPage() {
 
   useEffect(() => {
     void load()
+    // Metode bayar konstan dari server; non-kritis bila gagal (panel tampil kosong).
+    void getSubscriptionPaymentMethods().then(setMethods).catch(() => setMethods([]))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -116,24 +124,15 @@ export function SubscriptionPage() {
     }
   }
 
-  // Bayar satu tagihan tertunggak: server charge ulang bila belum ada tautan, lalu buka di tab baru.
-  const pay = async (inv: SubscriptionInvoiceView) => {
-    if (busy) return
-    setBusy(true)
-    try {
-      const updated = await payMyInvoice(inv.id)
-      await load()
-      if (updated.payUrl) {
-        window.open(updated.payUrl, '_blank', 'noopener')
-        toast.success(`Membuka pembayaran ${updated.number} di tab baru`)
-      } else {
-        toast.error('Tautan bayar belum siap — hubungi admin platform.')
-      }
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Gagal menyiapkan pembayaran')
-    } finally {
-      setBusy(false)
-    }
+  // Bayar satu tagihan tertunggak: buka panel bayar in-app (pilih QRIS/VA di aplikasi ini —
+  // tak lagi redirect ke halaman gateway luar).
+  const pay = (inv: SubscriptionInvoiceView) => setPaying(inv)
+
+  // Cek status tagihan (dipakai polling panel): ambil ulang langganan lalu cari tagihannya.
+  const pollInvoiceStatus = async (invoiceId: string): Promise<string | null> => {
+    const fresh = await getMySubscription()
+    setSub(fresh)
+    return fresh?.invoices.find((i) => i.id === invoiceId)?.status ?? null
   }
 
   if (loading) return <p className="muted">Memuat langganan…</p>
@@ -327,6 +326,22 @@ export function SubscriptionPage() {
           </div>
         </div>
       </div>
+
+      {paying && (
+        <Modal title={`Bayar ${paying.number}`} onClose={() => setPaying(null)}>
+          <GatewayPayPanel
+            subtitle={`${paying.number} · ${fmtIdr(paying.amount)}`}
+            methods={methods}
+            createCharge={(method, channel) => payMyInvoice(paying.id, method, channel)}
+            pollStatus={() => pollInvoiceStatus(paying.id)}
+            onPaid={() => {
+              void load()
+              toast.success(`Tagihan ${paying.number} lunas — masa aktif diperpanjang.`)
+            }}
+            onClose={() => setPaying(null)}
+          />
+        </Modal>
+      )}
     </div>
   )
 }

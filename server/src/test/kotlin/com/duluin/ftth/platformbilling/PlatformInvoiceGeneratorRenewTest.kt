@@ -6,6 +6,8 @@ import com.duluin.ftth.billing.application.port.outbound.GatewayCallback
 import com.duluin.ftth.billing.application.port.outbound.PaymentGateway
 import com.duluin.ftth.billing.application.port.outbound.PaymentSettlement
 import com.duluin.ftth.billing.application.port.outbound.PivotMasterConfigRepository
+import com.duluin.ftth.billing.application.port.outbound.QrInstruction
+import com.duluin.ftth.billing.application.port.outbound.VaInstruction
 import com.duluin.ftth.billing.application.service.PaymentGatewayRegistry
 import com.duluin.ftth.billing.application.service.PivotMasterConfigProvider
 import com.duluin.ftth.billing.config.BillingProperties
@@ -14,6 +16,7 @@ import com.duluin.ftth.billing.domain.model.PivotMasterConfig
 import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
 import com.duluin.ftth.billing.domain.model.SubAccountDefaults
 import com.duluin.ftth.common.domain.UuidV7
+import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
@@ -156,17 +159,19 @@ class PlatformInvoiceGeneratorRenewTest {
     }
 
     @Test
-    fun `renew pada tagihan tertunggak tanpa payUrl men-charge ulang lalu mengembalikan tautan bayar`() {
+    fun `renew pada tagihan tertunggak mengembalikan tagihan itu tanpa charge`() {
         TenantContext.set(tenantId)
         val subscription = activeSubscription().also { subscriptions.save(it) }
-        // Tagihan tertunggak yang terbit TANPA payUrl (charge gateway sempat gagal saat terbit).
+        // Tagihan tertunggak yang terbit tanpa instruksi bayar (metode dipilih tenant nanti).
         invoices.save(invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED))
-        val service = TenantSelfSubscriptionService(subscriptions, invoices, chargingGenerator("https://pay.test/xyz"), FakeUsageProbe())
+        val service = TenantSelfSubscriptionService(subscriptions, invoices, chargingGenerator(), FakeUsageProbe())
 
         val view = service.renew(months = 1)
 
         assertThat(view.number).isEqualTo(baseNumber)
-        assertThat(view.payUrl).isEqualTo("https://pay.test/xyz")
+        // Belum charge saat renew — instrumen bayar (VA/QRIS) dipilih tenant lewat "Bayar" (payInvoice).
+        assertThat(view.payMethod).isNull()
+        assertThat(view.payUrl).isNull()
         // Tagihan tertunggak yang sama dipakai ulang (tak terbit tagihan baru).
         assertThat(invoices.all()).hasSize(1)
     }
@@ -174,30 +179,33 @@ class PlatformInvoiceGeneratorRenewTest {
     // --- payInvoice (tombol "Bayar" per-tagihan di Riwayat tagihan) ---
 
     @Test
-    fun `bayar tagihan tertunggak tanpa payUrl men-charge ulang lalu mengembalikan tautan bayar`() {
+    fun `bayar tagihan tertunggak dengan QRIS menyimpan string QR in-app`() {
         TenantContext.set(tenantId)
         activeSubscription().also { subscriptions.save(it) }
         val invoice = invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED).also { invoices.save(it) }
-        val service = TenantSelfSubscriptionService(subscriptions, invoices, chargingGenerator("https://pay.test/abc"), FakeUsageProbe())
+        val service = TenantSelfSubscriptionService(subscriptions, invoices, chargingGenerator(), FakeUsageProbe())
 
-        val view = service.payInvoice(invoice.id)
+        val view = service.payInvoice(invoice.id, "QR", null)
 
         assertThat(view.number).isEqualTo(baseNumber)
-        assertThat(view.payUrl).isEqualTo("https://pay.test/abc")
+        assertThat(view.payMethod).isEqualTo("QR")
+        assertThat(view.qrContent).isEqualTo("QRIS-$baseNumber")
+        assertThat(view.payUrl).isNull() // mode API in-app — tanpa redirect
     }
 
     @Test
-    fun `bayar tagihan yang sudah punya tautan tidak men-charge ulang (idempoten)`() {
+    fun `bayar tagihan tertunggak dengan Virtual Account menyimpan nomor VA dan bank`() {
         TenantContext.set(tenantId)
         activeSubscription().also { subscriptions.save(it) }
-        val invoice = invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED)
-            .also { it.attachCharge("PIVOT", "ref-lama", "https://pay.test/lama"); invoices.save(it) }
-        // Gateway mengembalikan URL BEDA — tak boleh dipakai bila tautan lama masih ada.
-        val service = TenantSelfSubscriptionService(subscriptions, invoices, chargingGenerator("https://pay.test/baru"), FakeUsageProbe())
+        val invoice = invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED).also { invoices.save(it) }
+        val service = TenantSelfSubscriptionService(subscriptions, invoices, chargingGenerator(), FakeUsageProbe())
 
-        val view = service.payInvoice(invoice.id)
+        val view = service.payInvoice(invoice.id, "VIRTUAL_ACCOUNT", "BRI")
 
-        assertThat(view.payUrl).isEqualTo("https://pay.test/lama")
+        assertThat(view.payMethod).isEqualTo("VIRTUAL_ACCOUNT")
+        assertThat(view.vaChannel).isEqualTo("BRI")
+        assertThat(view.vaNumber).isEqualTo("8808$baseNumber")
+        assertThat(view.payUrl).isNull()
     }
 
     @Test
@@ -216,7 +224,7 @@ class PlatformInvoiceGeneratorRenewTest {
         ).also { invoices.save(it) }
         val service = TenantSelfSubscriptionService(subscriptions, invoices, generator, FakeUsageProbe())
 
-        assertThatThrownBy { service.payInvoice(alien.id) }
+        assertThatThrownBy { service.payInvoice(alien.id, "QR", null) }
             .isInstanceOf(NotFoundException::class.java)
     }
 
@@ -227,29 +235,28 @@ class PlatformInvoiceGeneratorRenewTest {
         val paid = invoiceFor(baseNumber, SubscriptionInvoiceStatus.PAID).also { invoices.save(it) }
         val service = TenantSelfSubscriptionService(subscriptions, invoices, generator, FakeUsageProbe())
 
-        assertThatThrownBy { service.payInvoice(paid.id) }
+        assertThatThrownBy { service.payInvoice(paid.id, "QR", null) }
             .isInstanceOf(ValidationException::class.java)
             .hasMessageContaining("tidak dapat dibayar")
     }
 
     @Test
-    fun `bayar saat gateway belum dikonfigurasi tetap mengembalikan tagihan tanpa tautan (bukan 500)`() {
+    fun `bayar saat gateway belum dikonfigurasi melempar Conflict (bukan 500)`() {
         TenantContext.set(tenantId)
         activeSubscription().also { subscriptions.save(it) }
         val invoice = invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED).also { invoices.save(it) }
-        // `generator` default → resolver Pivot NONAKTIF → resolveActive() melempar → ditelan ensurePayable.
+        // `generator` default → resolver Pivot NONAKTIF → resolveActive() melempar ConflictException.
+        // Aksi dipicu pengguna → kegagalan charge dilempar (bukan ditelan), controller memetakan 409.
         val service = TenantSelfSubscriptionService(subscriptions, invoices, generator, FakeUsageProbe())
 
-        val view = service.payInvoice(invoice.id)
-
-        assertThat(view.number).isEqualTo(baseNumber)
-        assertThat(view.payUrl).isNull()
+        assertThatThrownBy { service.payInvoice(invoice.id, "QR", null) }
+            .isInstanceOf(ConflictException::class.java)
     }
 
     @Test
     fun `charge langganan meneruskan email admin tenant ke gateway (bukan null)`() {
         val subscription = activeSubscription().also { subscriptions.save(it) }
-        val gateway = FakePivotGateway("https://pay.test/mail")
+        val gateway = FakePivotGateway()
         val gen = PlatformInvoiceGenerator(
             subscriptionRepository = subscriptions,
             invoiceRepository = invoices,
@@ -259,22 +266,22 @@ class PlatformInvoiceGeneratorRenewTest {
             iamApi = FakeIamApi(TENANT_EMAIL),
             auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
         )
+        val invoice = gen.issueFor(subscription, today, force = true, months = 1)!!
 
-        val issued = gen.issueFor(subscription, today, force = true, months = 1)
+        gen.chargeWithMethod(invoice, subscription, "QR", null)
 
-        assertThat(issued!!.payUrl).isEqualTo("https://pay.test/mail")
         // Pivot menolak charge tanpa email → email admin tenant harus ikut, bukan null.
         assertThat(gateway.lastEmail).isEqualTo(TENANT_EMAIL)
     }
 
     // --- helper ---
 
-    /** Generator dengan gateway PIVOT aktif yang mengembalikan payUrl — untuk menguji charge ulang. */
-    private fun chargingGenerator(payUrl: String) = PlatformInvoiceGenerator(
+    /** Generator dengan gateway PIVOT aktif yang mengembalikan instruksi VA/QR — untuk menguji charge on-demand. */
+    private fun chargingGenerator() = PlatformInvoiceGenerator(
         subscriptionRepository = subscriptions,
         invoiceRepository = invoices,
         resolver = PlatformGatewayResolver(FakePlatformSettingRepository(), PivotMasterConfigProvider(EnabledPivotRepository())),
-        gatewayRegistry = PaymentGatewayRegistry(listOf(FakePivotGateway(payUrl)), BillingProperties()),
+        gatewayRegistry = PaymentGatewayRegistry(listOf(FakePivotGateway()), BillingProperties()),
         tenantApi = FakeTenantApi(),
         iamApi = FakeIamApi(TENANT_EMAIL),
         auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
@@ -363,15 +370,33 @@ class PlatformInvoiceGeneratorRenewTest {
         override fun save(config: PivotMasterConfig): PivotMasterConfig = config
     }
 
-    /** Gateway PIVOT tiruan yang selalu mengembalikan tautan bayar tetap (tanpa HTTP). */
-    private class FakePivotGateway(private val payUrl: String) : PaymentGateway {
+    /**
+     * Gateway PIVOT tiruan mode-API (tanpa HTTP): mengembalikan instruksi bayar in-app menurut
+     * [ChargeRequest.method] — string QRIS untuk `QR`, nomor VA + bank untuk `VIRTUAL_ACCOUNT`.
+     */
+    private class FakePivotGateway : PaymentGateway {
         override val provider = "PIVOT"
         /** Email pada charge terakhir — untuk memastikan tenant email diteruskan (bukan null). */
         var lastEmail: String? = null
             private set
         override fun createCharge(request: ChargeRequest, ctx: ResolvedGatewayContext): ChargeResult {
             lastEmail = request.customerEmail
-            return ChargeResult(provider = "PIVOT", gatewayRef = "ref_${request.invoiceNumber}", payUrl = payUrl)
+            return when (request.method) {
+                "QR" -> ChargeResult(
+                    provider = "PIVOT", gatewayRef = "ref_${request.invoiceNumber}", payUrl = null,
+                    status = "WAITING_FOR_USER_ACTION", method = "QR",
+                    qr = QrInstruction(content = "QRIS-${request.invoiceNumber}", url = null, expiresAt = null),
+                )
+                "VIRTUAL_ACCOUNT" -> ChargeResult(
+                    provider = "PIVOT", gatewayRef = "ref_${request.invoiceNumber}", payUrl = null,
+                    status = "WAITING_FOR_USER_ACTION", method = "VIRTUAL_ACCOUNT",
+                    virtualAccount = VaInstruction(
+                        channel = request.vaChannel, number = "8808${request.invoiceNumber}",
+                        name = "Tenant Uji", expiresAt = null,
+                    ),
+                )
+                else -> ChargeResult(provider = "PIVOT", gatewayRef = "ref_${request.invoiceNumber}", payUrl = null)
+            }
         }
         override fun parseCallback(callback: GatewayCallback, ctx: ResolvedGatewayContext): PaymentSettlement? = null
     }

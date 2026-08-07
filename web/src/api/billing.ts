@@ -34,6 +34,23 @@ export interface InvoiceView {
   paidAt: string | null
   gatewayProvider: string | null
   payUrl: string | null
+  // Instruksi bayar in-app (mode API Pivot); null bila belum pilih metode.
+  payMethod: string | null
+  vaChannel: string | null
+  vaNumber: string | null
+  vaName: string | null
+  vaExpiresAt: string | null
+  /** String QRIS mentah (dirender jadi kode QR di klien). */
+  qrContent: string | null
+  qrUrl: string | null
+  qrExpiresAt: string | null
+}
+
+/** Satu metode bayar in-app; [channels] kosong bila tak perlu pilih bank (QRIS). */
+export interface PaymentMethodOption {
+  type: string
+  label: string
+  channels: { code: string; label: string }[]
 }
 
 /** Proyeksi satu pembayaran (manual/gateway) atas sebuah tagihan. */
@@ -73,14 +90,20 @@ export const voidInvoice = (id: string) =>
 export const recordManualPayment = (id: string, note?: string) =>
   api.post<InvoiceView>(`/api/billing/invoices/${id}/pay`, note ? { note } : undefined)
 
+/** Detail satu tagihan (untuk polling status setelah charge in-app dibuat). */
+export const getInvoice = (id: string) => api.get<InvoiceView>(`/api/billing/invoices/${id}`)
+
+/** Metode bayar in-app yang tersedia (QRIS + Virtual Account). */
+export const getBillingPaymentMethods = () =>
+  api.get<PaymentMethodOption[]>('/api/billing/payment-methods')
+
 /**
- * Buat ulang tautan bayar tagihan lewat penyedia gateway yang AKTIF sekarang, lalu kembalikan
- * view terbaru. Dipakai tombol "bayar": bila penyedia aktif berbeda dari penyedia tagihan,
- * charge baru dibuat agar pembayaran mengikuti setelan penyedia terbaru. Idempoten bila sama.
- * `payUrl` bisa null bila penyedia aktif MANUAL (pelanggan bayar transfer/QRIS).
+ * Buat charge in-app (VA/QRIS) untuk tagihan lewat penyedia gateway yang AKTIF sekarang, lalu
+ * kembalikan view terbaru berisi instruksi bayar (nomor VA / string QRIS). `channel` wajib untuk
+ * Virtual Account (kode bank). Ditolak (Conflict) bila penyedia aktif MANUAL.
  */
-export const refreshPaymentLink = (id: string) =>
-  api.post<InvoiceView>(`/api/billing/invoices/${id}/recharge`)
+export const refreshPaymentLink = (id: string, method: string, channel: string | null) =>
+  api.post<InvoiceView>(`/api/billing/invoices/${id}/recharge`, { method, channel })
 
 /** Pembayaran yang tercatat atas sebuah tagihan. */
 export const listPayments = (invoiceId: string) =>

@@ -19,14 +19,22 @@ import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.billing.domain.model.BillingTaxSettings
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
+import com.duluin.ftth.billing.domain.model.ManualPaymentConfig
+import com.duluin.ftth.billing.domain.model.PaymentProvider
+import com.duluin.ftth.billing.domain.model.PivotFeeType
 import com.duluin.ftth.billing.domain.model.PivotMasterConfig
 import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
+import com.duluin.ftth.billing.domain.model.SubAccountDefaults
+import com.duluin.ftth.billing.domain.model.SubAccountKycStatus
+import com.duluin.ftth.billing.domain.model.SubAccountStatus
+import com.duluin.ftth.billing.domain.model.SubAccountType
 import com.duluin.ftth.billing.domain.model.TenantPaymentGateway
 import com.duluin.ftth.billing.domain.model.TenantPivotAccount
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
+import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.customer.BillableSubscription
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.CustomerRef
@@ -35,6 +43,7 @@ import com.duluin.ftth.customer.RegisterCustomerCommand
 import com.duluin.ftth.tenancy.TenantApi
 import com.duluin.ftth.tenancy.TenantRef
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
 import java.math.BigDecimal
@@ -51,10 +60,13 @@ import java.util.UUID
  */
 class BillingCycleTest {
 
+    @AfterEach
+    fun tearDown() = TenantContext.clear()
+
     // --- Penerbitan: prorata & konsistensi tagihan↔charge ---
 
     @Test
-    fun `penerbitan memprorata tagihan dan charge saat aktivasi tengah periode`() {
+    fun `penerbitan memprorata tagihan saat aktivasi tengah periode`() {
         val sub = billable(monthlyFee = BigDecimal("310000"), prorateOnActivation = true, activatedAt = dateAt(2026, 7, 16))
         val f = fixture(props(), billables = listOf(sub))
 
@@ -65,9 +77,8 @@ class BillingCycleTest {
         assertThat(invoice.prorated).isTrue()
         assertThat(invoice.proratedDays).isEqualTo(16) // 16..31 inklusif
         assertThat(invoice.amount).isEqualByComparingTo("160000") // 310000 * 16 / 31
-        // Charge WAJIB memakai nilai yang sama dengan tagihan.
-        assertThat(f.gateway.charges.single().amount).isEqualByComparingTo("160000")
-        assertThat(f.gateway.charges.single().description).contains("prorata 16 hari")
+        // Charge on-demand: penerbitan tak membuat charge (instrumen dipilih pelanggan lewat "Bayar").
+        assertThat(f.gateway.charges).isEmpty()
     }
 
     @Test
@@ -81,7 +92,6 @@ class BillingCycleTest {
         assertThat(invoice.prorated).isFalse()
         assertThat(invoice.proratedDays).isNull()
         assertThat(invoice.amount).isEqualByComparingTo("310000")
-        assertThat(f.gateway.charges.single().amount).isEqualByComparingTo("310000")
     }
 
     @Test
@@ -107,28 +117,35 @@ class BillingCycleTest {
     }
 
     @Test
-    fun `charge meneruskan email pelanggan ke gateway (Pivot mewajibkannya)`() {
+    fun `charge on-demand meneruskan email pelanggan ke gateway (Pivot mewajibkannya)`() {
+        TenantContext.set(UuidV7.generate())
         val customerId = UuidV7.generate()
         val sub = billable(customerId = customerId)
         val customer = CustomerRef(customerId, "CUST-000009", "Budi", "0812", "budi@mail.test", Coordinate(0.0, 0.0), "ACTIVE")
-        val f = fixture(props(), billables = listOf(sub), customers = mapOf(customerId to customer))
-
+        val f = pivotFixture(billables = listOf(sub), customers = mapOf(customerId to customer))
         f.generator.generateFor(UuidV7.generate(), LocalDate.of(2026, 7, 20))
+        val invoice = f.repo.saved.single()
+
+        f.generator.chargeWithMethod(invoice, "QR", null)
 
         val charge = f.gateway.charges.single()
         assertThat(charge.customerName).isEqualTo("Budi")
         assertThat(charge.customerEmail).isEqualTo("budi@mail.test")
+        assertThat(charge.method).isEqualTo("QR")
     }
 
     @Test
-    fun `charge tanpa data email pelanggan mengirim email null (fail-soft, bukan error)`() {
+    fun `charge on-demand tanpa data pelanggan memakai nomor tagihan dan email null (fail-soft)`() {
+        TenantContext.set(UuidV7.generate())
         val sub = billable()
-        val f = fixture(props(), billables = listOf(sub)) // tanpa CustomerRef → email tak tersedia
-
+        val f = pivotFixture(billables = listOf(sub)) // tanpa CustomerRef → nama/email tak tersedia
         f.generator.generateFor(UuidV7.generate(), LocalDate.of(2026, 7, 20))
+        val invoice = f.repo.saved.single()
+
+        f.generator.chargeWithMethod(invoice, "QR", null)
 
         val charge = f.gateway.charges.single()
-        assertThat(charge.customerName).isEqualTo("Home 100") // fallback ke nama paket
+        assertThat(charge.customerName).isEqualTo(invoice.number) // fallback ke nomor tagihan
         assertThat(charge.customerEmail).isNull()
     }
 
@@ -295,6 +312,30 @@ class BillingCycleTest {
         return Fixture(generator, runner, repo, gateway, customerApi, events)
     }
 
+    /**
+     * Fixture dengan gateway aktif PIVOT (resolver menghasilkan konteks PIVOT), untuk menguji
+     * jalur charge on-demand [InvoiceGenerator.chargeWithMethod] — MANUAL ditolak, jadi tak bisa
+     * dipakai fixture default. Sub-account tenant terprovisi + master aktif = prasyarat PIVOT.
+     */
+    private fun pivotFixture(
+        billables: List<BillableSubscription> = emptyList(),
+        customers: Map<UUID, CustomerRef> = emptyMap(),
+    ): Fixture {
+        val props = props()
+        val repo = FakeInvoiceRepository(emptyList())
+        val customerApi = FakeCustomerApi(billables, emptyMap(), customers)
+        val gateway = CapturingGateway("PIVOT")
+        val registry = PaymentGatewayRegistry(listOf(gateway), props)
+        val masterConfig = PivotMasterConfigProvider(EnabledMaster)
+        val resolver = TenantPaymentGatewayResolver(PivotGatewayConfig, ProvisionedPivotAccount, masterConfig, NoTenantApi, props)
+        val taxResolver = BillingTaxSettingsResolver(NoTaxConfig)
+        val auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser)
+        val generator = InvoiceGenerator(repo, customerApi, registry, resolver, taxResolver, auditor, props)
+        val events = CapturingEvents()
+        val runner = BillingCycleRunner(generator, repo, customerApi, auditor, props, events)
+        return Fixture(generator, runner, repo, gateway, customerApi, events)
+    }
+
     private fun props(
         prorate: Boolean = false,
         billingDay: Int = 1,
@@ -356,8 +397,7 @@ class BillingCycleTest {
         }
     }
 
-    private class CapturingGateway : PaymentGateway {
-        override val provider = "MANUAL"
+    private class CapturingGateway(override val provider: String = "MANUAL") : PaymentGateway {
         val charges = mutableListOf<ChargeRequest>()
 
         override fun createCharge(request: ChargeRequest, ctx: ResolvedGatewayContext): ChargeResult {
@@ -373,6 +413,57 @@ class BillingCycleTest {
     private object NoGatewayConfig : TenantPaymentGatewayRepository {
         override fun find(): TenantPaymentGateway? = null
         override fun save(settings: TenantPaymentGateway): TenantPaymentGateway = settings
+    }
+
+    /** Tenant memakai PIVOT & aktif → resolver menghasilkan konteks PIVOT (charge in-app). */
+    private object PivotGatewayConfig : TenantPaymentGatewayRepository {
+        override fun find(): TenantPaymentGateway = TenantPaymentGateway.rehydrate(
+            id = UuidV7.generate(),
+            tenantId = UuidV7.generate(),
+            provider = PaymentProvider.PIVOT,
+            enabled = true,
+            manual = ManualPaymentConfig.EMPTY,
+            qrisStorageKey = null,
+            qrisContentType = null,
+        )
+        override fun save(settings: TenantPaymentGateway): TenantPaymentGateway = settings
+    }
+
+    /** Sub-account Pivot tenant sudah terprovisi & aktif → prasyarat charge PIVOT terpenuhi. */
+    private object ProvisionedPivotAccount : TenantPivotAccountRepository {
+        private val account = TenantPivotAccount.rehydrate(
+            id = UuidV7.generate(),
+            tenantId = UuidV7.generate(),
+            subMerchantUuid = "sub_merchant_uuid",
+            type = SubAccountType.NON_KYC,
+            status = SubAccountStatus.ACTIVE,
+            kycStatus = SubAccountKycStatus.NOT_REQUIRED,
+            shortName = null, legalName = null, merchantEmail = null, merchantPhone = null,
+            picName = null, picEmail = null, picPhone = null, address = null,
+            payoutChannelCode = null, payoutAccountNumber = null, payoutAccountName = null, payoutInquiryId = null,
+        )
+        override fun find(): TenantPivotAccount = account
+        override fun save(account: TenantPivotAccount): TenantPivotAccount = account
+        override fun findByTenant(tenantId: UUID): TenantPivotAccount = account
+    }
+
+    /** Master Pivot aktif + kredensial lengkap → `PivotMasterConfigProvider.current()` non-null. */
+    private object EnabledMaster : PivotMasterConfigRepository {
+        private val config = PivotMasterConfig.rehydrate(
+            id = UuidV7.generate(),
+            enabled = true,
+            merchantId = "merchant_id",
+            merchantSecret = "merchant_secret",
+            callbackApiKey = "cb_key",
+            sandbox = true,
+            platformFeeMinor = 0,
+            platformFeeType = PivotFeeType.FIXED,
+            payoutChannelCode = null,
+            payoutAccountNumber = null,
+            subAccountDefaults = SubAccountDefaults.empty(),
+        )
+        override fun find(): PivotMasterConfig = config
+        override fun save(config: PivotMasterConfig): PivotMasterConfig = config
     }
 
     /** Tenant belum punya sub-account Pivot → salah satu prasyarat PIVOT tak terpenuhi. */
@@ -458,7 +549,7 @@ class BillingCycleTest {
             isolated.add(subscriptionId)
         }
 
-        override fun findCustomer(id: UUID) = throw UnsupportedOperationException()
+        override fun findCustomer(id: UUID): CustomerRef? = customers[id]
         override fun findSubscription(id: UUID) = throw UnsupportedOperationException()
         override fun findSubscriptionsByCustomer(customerId: UUID) = throw UnsupportedOperationException()
         override fun findOccupantsOfOdp(odpId: UUID) = throw UnsupportedOperationException()

@@ -1,5 +1,6 @@
 package com.duluin.ftth.platformbilling.application.service
 
+import com.duluin.ftth.billing.PaymentMethodCatalog
 import com.duluin.ftth.billing.application.port.outbound.ChargeRequest
 import com.duluin.ftth.billing.application.service.PaymentGatewayRegistry
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
@@ -100,11 +101,8 @@ class PlatformInvoiceGenerator(
         )
         invoice = invoiceRepository.save(invoice)
 
-        // Charge ke gateway aktif; kegagalan TIDAK membatalkan tagihan (bisa di-charge ulang).
-        runCatching { attachCharge(invoice, subscription) }
-            .onFailure { log.warn("Charge gateway untuk tagihan {} gagal: {}", number, it.message) }
-            .getOrNull()
-            ?.let { invoice = it }
+        // Charge TIDAK dibuat saat terbit: instrumen bayar (VA/QRIS) dipilih tenant nanti lewat
+        // "Bayar"/"Perpanjang" → [chargeWithMethod]. Penerbitan cukup menyimpan tagihannya.
 
         auditor.record(
             action = "platform.subscription.invoice.issued",
@@ -117,27 +115,21 @@ class PlatformInvoiceGenerator(
     }
 
     /**
-     * Pastikan [invoice] punya tautan bayar: bila belum ([TenantSubscriptionInvoice.payUrl] null —
-     * charge saat terbit gagal, mis. redirect base URL belum diset waktu itu), charge ulang ke
-     * gateway aktif sekarang. Idempoten: `X-REQUEST-ID` Pivot deterministik dari nomor tagihan →
-     * tak menggandakan sesi bayar. Kegagalan charge TIDAK dilempar (kembalikan apa adanya; tenant
-     * bisa mencoba lagi). Dipakai jalur "Bayar sekarang" tenant untuk menebus tagihan tertunggak
-     * yang tautannya belum sempat terbit.
+     * Buat charge in-app (mode API Pivot) untuk [invoice] dengan instrumen [method]
+     * (`VIRTUAL_ACCOUNT`/`QR`) + [channel] bank (wajib untuk VA), lekatkan instruksi bayar (nomor VA /
+     * string QRIS) lewat [TenantSubscriptionInvoice.attachInstruction], simpan, lalu kembalikan.
+     * Dipakai jalur "Bayar"/"Perpanjang" tenant saat tenant memilih metode. Mengganti metode
+     * (VA↔QRIS) membuat charge baru yang menimpa instruksi lama; `X-REQUEST-ID` Pivot beda per
+     * metode → tak tabrakan sesi. Kegagalan charge **dilempar** (aksi dipicu pengguna).
      */
-    fun ensurePayable(
+    fun chargeWithMethod(
         invoice: TenantSubscriptionInvoice,
         subscription: TenantSubscription,
+        method: String,
+        channel: String?,
     ): TenantSubscriptionInvoice {
-        if (invoice.payUrl != null) return invoice
-        return runCatching { attachCharge(invoice, subscription) }
-            .onFailure { log.warn("Charge ulang tagihan {} gagal: {}", invoice.number, it.message) }
-            .getOrDefault(invoice)
-    }
-
-    private fun attachCharge(
-        invoice: TenantSubscriptionInvoice,
-        subscription: TenantSubscription,
-    ): TenantSubscriptionInvoice {
+        PaymentMethodCatalog.validate(method, channel)
+        val (normMethod, normChannel) = PaymentMethodCatalog.normalize(method, channel)
         val ctx = resolver.resolveActive()
         val gateway = gatewayRegistry.forProvider(ctx.provider)
             ?: error("Adapter gateway '${ctx.provider}' tidak tersedia")
@@ -152,10 +144,23 @@ class PlatformInvoiceGenerator(
                 customerEmail = iamApi.primaryEmailForTenant(subscription.tenantId),
                 description = "Langganan aplikasi ${tenant.name} — ${invoice.periodStart.format(YEAR_MONTH)}",
                 dueDate = invoice.dueDate,
+                method = normMethod,
+                vaChannel = normChannel,
             ),
             ctx,
         )
-        invoice.attachCharge(result.provider, result.gatewayRef, result.payUrl)
+        invoice.attachInstruction(
+            provider = result.provider,
+            gatewayRef = result.gatewayRef,
+            method = result.method ?: normMethod,
+            vaChannel = result.virtualAccount?.channel ?: normChannel,
+            vaNumber = result.virtualAccount?.number,
+            vaName = result.virtualAccount?.name,
+            vaExpiresAt = result.virtualAccount?.expiresAt,
+            qrContent = result.qr?.content,
+            qrUrl = result.qr?.url,
+            qrExpiresAt = result.qr?.expiresAt,
+        )
         return invoiceRepository.save(invoice)
     }
 
