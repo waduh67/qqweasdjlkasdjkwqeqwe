@@ -105,6 +105,22 @@ export function TenantsPage() {
                 {t.status === 'ACTIVE' ? 'Suspend' : 'Aktifkan'}
               </button>
             )}
+            {can('platform.tenant.delete') && (
+              <button
+                className="danger"
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      `Hapus tenant "${t.name}" (${t.slug}) beserta SELURUH datanya secara permanen? Tindakan ini tidak bisa dibatalkan.`,
+                    )
+                  )
+                    return
+                  void run(() => api.del(`/api/platform/tenants/${t.id}`))
+                }}
+              >
+                Hapus
+              </button>
+            )}
           </div>
         ) : null,
     },
