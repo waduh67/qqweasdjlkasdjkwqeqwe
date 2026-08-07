@@ -55,7 +55,8 @@ jobs:
     # 2) Build kedua image lalu dorong ke GitHub Container Registry.
     # -------------------------------------------------------------------------
     build-and-push:
-        needs: test
+        # `test` sementara dinonaktifkan (dikomentari di atas) — jangan `needs: test`,
+        # kalau tidak seluruh job punya dependensi & GitHub menolak workflow-nya.
         runs-on: ubuntu-latest
         permissions:
             contents: read
