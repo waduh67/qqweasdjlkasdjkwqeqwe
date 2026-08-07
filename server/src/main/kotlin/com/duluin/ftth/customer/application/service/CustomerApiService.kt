@@ -84,12 +84,22 @@ class CustomerApiService(
             }
 
     /**
-     * Menyusun isi sebuah ODP dalam tiga query tetap (ONU → pelanggan → langganan),
-     * berapa pun jumlah penghuninya.
+     * Isi satu ODP — kasus khusus [findOccupantsForOdps] agar penyusunan penghuni
+     * hanya hidup di satu tempat.
      */
-    override fun findOccupantsOfOdp(odpId: UUID): List<OdpOccupant> {
-        val onus = onuRepository.findByOdpId(odpId)
-        if (onus.isEmpty()) return emptyList()
+    override fun findOccupantsOfOdp(odpId: UUID): List<OdpOccupant> =
+        findOccupantsForOdps(setOf(odpId))[odpId] ?: emptyList()
+
+    /**
+     * Menyusun penghuni sekumpulan ODP dalam tiga query tetap (ONU → pelanggan →
+     * langganan), berapa pun jumlah ODP maupun penghuninya — batch untuk pandangan
+     * per-OLT tanpa N+1. Hasil dikelompokkan per ODP, tiap grup terurut nomor port;
+     * ODP tanpa penghuni tak muncul.
+     */
+    override fun findOccupantsForOdps(odpIds: Set<UUID>): Map<UUID, List<OdpOccupant>> {
+        if (odpIds.isEmpty()) return emptyMap()
+        val onus = onuRepository.findByOdpIds(odpIds)
+        if (onus.isEmpty()) return emptyMap()
 
         val customerIds = onus.mapTo(HashSet()) { it.customerId }
         val customers = customerRepository.findAllByIds(customerIds).associateBy { it.id }
@@ -104,8 +114,9 @@ class CustomerApiService(
         return onus.mapNotNull { onu ->
             val customer = customers[onu.customerId] ?: return@mapNotNull null
             val port = onu.odpPortNumber ?: return@mapNotNull null
+            val odpId = onu.odpId ?: return@mapNotNull null
             val subscription = activeSubscription[customer.id]
-            OdpOccupant(
+            odpId to OdpOccupant(
                 portNumber = port,
                 customerId = customer.id,
                 customerCode = customer.code,
@@ -120,7 +131,8 @@ class CustomerApiService(
                 subscriptionPackage = subscription?.packageName,
                 subscriptionStatus = subscription?.status?.name,
             )
-        }.sortedBy { it.portNumber }
+        }.groupBy({ it.first }, { it.second })
+            .mapValues { (_, occ) -> occ.sortedBy { it.portNumber } }
     }
 
     override fun findOnusBySerialNumbers(serialNumbers: Set<String>): List<OnuRef> {

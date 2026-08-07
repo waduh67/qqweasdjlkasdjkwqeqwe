@@ -76,7 +76,46 @@ interface MapQuery {
      * sudah ada untuk melihat daftar penghuninya.
      */
     fun inspectPonPort(ponPortId: UUID): PonPortInspection
+
+    /**
+     * ONU (pelanggan) terpasang di bawah sebuah OLT — pandangan per-OLT untuk halaman
+     * detail OLT ("ONU siapa saja yang menggantung di OLT ini"). Menyusun dari network
+     * (ODP di bawah OLT lewat primitif downstreamDeviceIds) dan customer (penghuni ODP-ODP
+     * itu dalam satu batch, tiga query tetap) — tanpa module mana pun menyentuh tabel module
+     * lain, dan tanpa N+1 walau OLT menaungi puluhan ODP. Kosong bila OLT tak punya ODP
+     * berpenghuni di hilirnya (atau OLT tak dikenal).
+     */
+    fun listOnusUnderOlt(oltId: UUID): OltOnuList
 }
+
+/** Daftar ONU pelanggan di bawah satu OLT untuk pandangan per-OLT di halaman detail OLT. */
+data class OltOnuList(
+    val oltId: UUID,
+    val onuCount: Int,
+    val onus: List<OltOnuRow>,
+)
+
+/**
+ * Satu ONU terpasang di bawah OLT: perangkat + pemiliknya + di ODP/port mana. [onuStatus]
+ * adalah status tercatat (disegarkan monitoring lewat write-back), bukan tarikan hidup —
+ * jadi baris ini murni dari network + customer tanpa memanggil monitoring per ONU.
+ */
+data class OltOnuRow(
+    val onuId: UUID,
+    val serialNumber: String,
+    val customerId: UUID,
+    val customerCode: String,
+    val customerName: String,
+    val odpId: UUID,
+    val odpCode: String,
+    val portNumber: Int,
+    val onuStatus: String,
+    val opticalHealth: String,
+    /** Redaman baseline saat instalasi; null bila tak dicatat. */
+    val installRxPowerDbm: Double?,
+    val subscriptionPackage: String?,
+    val subscriptionStatus: String?,
+)
 
 /**
  * Drill-down utilisasi satu PON port. [capacity]/[used] adalah TOTAL port pelanggan

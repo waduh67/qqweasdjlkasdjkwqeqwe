@@ -89,6 +89,9 @@ interface OnuJpaRepository : JpaRepository<OnuJpaEntity, UUID> {
     fun findByCustomerIdOrderBySerialNumber(customerId: UUID): List<OnuJpaEntity>
     fun findByCustomerIdIn(customerIds: Collection<UUID>): List<OnuJpaEntity>
     fun findByOdpIdOrderByOdpPortNumber(odpId: UUID): List<OnuJpaEntity>
+
+    /** ONU terpasang di sekumpulan ODP sekaligus (satu query IN) — untuk pandangan per-OLT. */
+    fun findByOdpIdInOrderByOdpPortNumber(odpIds: Collection<UUID>): List<OnuJpaEntity>
     fun existsBySerialNumber(serialNumber: String): Boolean
     fun findBySerialNumberIn(serialNumbers: Collection<String>): List<OnuJpaEntity>
 

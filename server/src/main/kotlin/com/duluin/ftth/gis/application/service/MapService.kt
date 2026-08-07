@@ -23,6 +23,8 @@ import com.duluin.ftth.monitoring.AlarmImpact
 import com.duluin.ftth.gis.application.port.inbound.NeighborView
 import com.duluin.ftth.gis.application.port.inbound.OdpInspection
 import com.duluin.ftth.gis.application.port.inbound.OdpUtilization
+import com.duluin.ftth.gis.application.port.inbound.OltOnuList
+import com.duluin.ftth.gis.application.port.inbound.OltOnuRow
 import com.duluin.ftth.gis.application.port.inbound.PonOdcBranch
 import com.duluin.ftth.gis.application.port.inbound.PonPortInspection
 import com.duluin.ftth.gis.application.port.inbound.SeveredCable
@@ -449,6 +451,43 @@ class MapService(
             odcs = branches,
         )
     }
+
+    /**
+     * Menyusun daftar ONU pelanggan di bawah satu OLT. Network memberi seluruh ODP di
+     * hilir OLT (site → OLT → PON → ODC → ODP) lewat primitif [NetworkApi.downstreamDeviceIds];
+     * customer memberi penghuni ODP-ODP itu dalam SATU batch (tiga query tetap), jadi total
+     * tetap ~query konstan walau OLT menaungi puluhan ODP — bukan N+1. Kode ODP dibawa dari
+     * ref-nya supaya tiap baris tahu menggantung di FAT mana. Terurut per kode ODP lalu port.
+     */
+    override fun listOnusUnderOlt(oltId: UUID): OltOnuList {
+        val odpIds = networkApi.downstreamDeviceIds(setOf(oltId), emptySet()).odpIds
+        if (odpIds.isEmpty()) return OltOnuList(oltId, 0, emptyList())
+
+        val odpCodeById = networkApi.findOdpsByIds(odpIds).associate { it.id to it.code }
+        val rows = customerApi.findOccupantsForOdps(odpIds).entries
+            .flatMap { (odpId, occupants) ->
+                val odpCode = odpCodeById[odpId] ?: "?"
+                occupants.map { it.toOltOnuRow(odpId, odpCode) }
+            }
+            .sortedWith(compareBy({ it.odpCode }, { it.portNumber }))
+        return OltOnuList(oltId, rows.size, rows)
+    }
+
+    private fun OdpOccupant.toOltOnuRow(odpId: UUID, odpCode: String) = OltOnuRow(
+        onuId = onuId,
+        serialNumber = onuSerialNumber,
+        customerId = customerId,
+        customerCode = customerCode,
+        customerName = customerName,
+        odpId = odpId,
+        odpCode = odpCode,
+        portNumber = portNumber,
+        onuStatus = onuStatus,
+        opticalHealth = opticalHealth,
+        installRxPowerDbm = installRxPowerDbm,
+        subscriptionPackage = subscriptionPackage,
+        subscriptionStatus = subscriptionStatus,
+    )
 
     private fun OdpOccupant.toAffected(odpCode: String) = AffectedCustomer(
         customerId = customerId,

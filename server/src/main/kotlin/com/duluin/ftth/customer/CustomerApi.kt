@@ -32,6 +32,18 @@ interface CustomerApi {
     fun findOccupantsOfOdp(odpId: UUID): List<OdpOccupant>
 
     /**
+     * Penghuni sekumpulan ODP sekaligus, dikelompokkan per ODP — untuk pandangan
+     * per-OLT (satu OLT bisa menaungi puluhan ODP). Implementasi nyata membatch
+     * menjadi tiga query tetap (ONU → pelanggan → langganan) berapa pun jumlah ODP,
+     * jadi tak ada N+1. ODP tanpa penghuni tak muncul di peta hasil.
+     *
+     * Default ini menjahit per-ODP lewat [findOccupantsOfOdp] — cukup untuk fake/test;
+     * jalur produksi (CustomerApiService) meng-override-nya dengan versi batch.
+     */
+    fun findOccupantsForOdps(odpIds: Set<UUID>): Map<UUID, List<OdpOccupant>> =
+        odpIds.associateWith { findOccupantsOfOdp(it) }.filterValues { it.isNotEmpty() }
+
+    /**
      * Pelanggan aktif yang belum punya ONU terpasang di ODP mana pun — kandidat
      * pemilik sebuah ONU liar yang baru terlihat OLT. Dipakai monitoring untuk
      * menautkan ONU terdeteksi ke pelanggan yang menunggu instalasi.

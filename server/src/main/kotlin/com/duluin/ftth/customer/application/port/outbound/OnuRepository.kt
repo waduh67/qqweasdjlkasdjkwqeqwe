@@ -21,6 +21,12 @@ interface OnuRepository {
     /** ONU yang terpasang pada sebuah ODP, terurut menurut nomor port. */
     fun findByOdpId(odpId: UUID): List<Onu>
 
+    /**
+     * ONU terpasang pada sekumpulan ODP dalam satu query — versi batch [findByOdpId]
+     * untuk menyusun pandangan per-OLT tanpa N+1 saat OLT menaungi banyak ODP.
+     */
+    fun findByOdpIds(odpIds: Set<UUID>): List<Onu>
+
     fun existsBySerialNumber(serialNumber: String): Boolean
 
     /** Jumlah ONU terpasang per ODP dalam satu query — menghindari N+1 di peta. */

@@ -51,6 +51,10 @@ class OnuPersistenceAdapter(
     override fun findByOdpId(odpId: UUID): List<Onu> =
         jpa.findByOdpIdOrderByOdpPortNumber(odpId).map { it.toDomain() }
 
+    override fun findByOdpIds(odpIds: Set<UUID>): List<Onu> =
+        if (odpIds.isEmpty()) emptyList()
+        else jpa.findByOdpIdInOrderByOdpPortNumber(odpIds).map { it.toDomain() }
+
     override fun existsBySerialNumber(serialNumber: String): Boolean =
         jpa.existsBySerialNumber(serialNumber.trim().uppercase())
 
