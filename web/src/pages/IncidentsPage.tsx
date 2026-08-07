@@ -5,6 +5,7 @@ import type { BroadcastView, NotificationChannel } from '../api/notification'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
 import { Drawer, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
+import { PageHeader } from '../components/PageHeader'
 import { IconAlert } from '../components/icons'
 
 /** Urutan keparahan untuk pengurutan tabel (turun = paling parah di atas). */
@@ -166,12 +167,10 @@ export function IncidentsPage() {
 
   return (
     <div className="stack" style={{ gap: '1.2rem' }}>
-      <div>
-        <h1 className="page-title">Insiden</h1>
-        <p className="page-sub">
-          Banjir alarm dikelompokkan menurut akar masalah — {incidents.length} insiden aktif.
-        </p>
-      </div>
+      <PageHeader
+        title="Insiden"
+        subtitle={<>Banjir alarm dikelompokkan menurut akar masalah — {incidents.length} insiden aktif.</>}
+      />
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari judul atau akar masalah…" />

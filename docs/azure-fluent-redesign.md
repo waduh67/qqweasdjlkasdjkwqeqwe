@@ -91,7 +91,11 @@ ThemeProvider → FluentProvider(azureLight|azureDark)
 - **Phase 4** ✅ Kontrol form Fluent + feedback/validasi: keadaan kontrol (disabled/
   invalid/checkbox aksen Azure), token `--danger`, dan validasi klien inline lewat
   `Field` (`error`/`required` + `aria-invalid`) — eksemplar di Pelanggan & Role.
-- **Phase 5** Realm lain, halaman non-tabel, cleanup, changelog.
+- **Phase 5** ✅ Realm lain & halaman non-tabel: seluruh header halaman diseragamkan ke
+  komponen `PageHeader` (dashboard, laporan, audit, monitoring, insiden, area, tugas saya,
+  langganan, provisioning, impor, setelan pajak/gateway/billing, PSB ekspres, tenant, VPN,
+  BRAS). Pengecualian sadar: halaman **detail** (Pelanggan/OLT/Work Order) tetap memakai
+  header kustom karena judulnya menyandingkan badge status inline dengan `<h1>`.
 
 ## Panduan membuat halaman baru
 1. Bungkus judul dengan `PageHeader` (breadcrumb + title + CommandBar slot).

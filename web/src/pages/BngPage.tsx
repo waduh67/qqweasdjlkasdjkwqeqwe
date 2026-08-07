@@ -18,6 +18,7 @@ import { useCan } from '../auth/useCan'
 import { Blade } from '../components/Blade'
 import { DataTable, type Column } from '../components/DataTable'
 import { Badge, EmptyState, SearchInput, StatusBadge, Toolbar, useConfirm, useToast } from '../components/ui'
+import { PageHeader } from '../components/PageHeader'
 import { IconGauge, IconPlus } from '../components/icons'
 
 /**
@@ -51,14 +52,10 @@ export function BngPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div>
-        <h1 className="page-title">BRAS &amp; RADIUS</h1>
-        <p className="page-sub">
-          Daftarkan router master (BRAS) sebagai klien RADIUS — alamat + shared secret. FreeRADIUS
-          pusat memuatnya otomatis; tak perlu setup server RADIUS sendiri. Config Mikrotik siap-salin
-          muncul di form tiap BRAS.
-        </p>
-      </div>
+      <PageHeader
+        title="BRAS & RADIUS"
+        subtitle="Daftarkan router master (BRAS) sebagai klien RADIUS — alamat + shared secret. FreeRADIUS pusat memuatnya otomatis; tak perlu setup server RADIUS sendiri. Config Mikrotik siap-salin muncul di form tiap BRAS."
+      />
       <NasTab endpoint={endpoint} />
     </div>
   )

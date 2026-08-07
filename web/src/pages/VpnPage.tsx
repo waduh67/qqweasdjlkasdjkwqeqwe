@@ -14,6 +14,7 @@ import {
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
 import { EmptyState, SearchInput, StatusBadge, Toolbar, useConfirm, useToast } from '../components/ui'
+import { PageHeader } from '../components/PageHeader'
 import { IconAlert, IconPlus } from '../components/icons'
 
 /**
@@ -253,13 +254,15 @@ export function VpnPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div>
-        <h1 className="page-title">Akun VPN</h1>
-        <p className="page-sub">
-          Butuh remote Mikrotik tanpa IP publik? Cukup <strong>Generate akun</strong> — sistem memilih server VPN
-          otomatis dan memberi Anda host, port, tipe keamanan, username &amp; password siap tempel di Mikrotik.
-        </p>
-      </div>
+      <PageHeader
+        title="Akun VPN"
+        subtitle={
+          <>
+            Butuh remote Mikrotik tanpa IP publik? Cukup <strong>Generate akun</strong> — sistem memilih server VPN
+            otomatis dan memberi Anda host, port, tipe keamanan, username &amp; password siap tempel di Mikrotik.
+          </>
+        }
+      />
 
       {canManage && (
         <div className="card stack" style={{ gap: '0.75rem' }}>

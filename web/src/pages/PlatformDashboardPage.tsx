@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { StatusBadge } from '../components/ui'
+import { PageHeader } from '../components/PageHeader'
 import {
   IconBuilding,
   IconGauge,
@@ -56,12 +57,10 @@ export function PlatformDashboardPage() {
 
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
-      <div>
-        <h1 className="page-title">
-          {greeting}, {user?.name?.split(' ')[0]}
-        </h1>
-        <p className="page-sub">Ringkasan platform SaaS — portofolio tenant &amp; langganan.</p>
-      </div>
+      <PageHeader
+        title={<>{greeting}, {user?.name?.split(' ')[0]}</>}
+        subtitle={<>Ringkasan platform SaaS — portofolio tenant &amp; langganan.</>}
+      />
 
       <div className="stat-grid">
         {tenants != null && <Stat label="Total tenant" value={customers.length} />}

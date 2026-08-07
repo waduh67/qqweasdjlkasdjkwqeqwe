@@ -37,6 +37,7 @@ import {
 import { useCan } from '../auth/useCan'
 import { Badge, EmptyState, Modal, useToast, type Tone } from '../components/ui'
 import { Combobox } from '../components/Combobox'
+import { PageHeader } from '../components/PageHeader'
 import { IconAlert, IconShield } from '../components/icons'
 import {
   channelNameByCode,
@@ -211,13 +212,15 @@ export function PaymentGatewaySettingsPage() {
 
   return (
     <div className="stack settings-page">
-      <div>
-        <h1 className="page-title">Payment Gateway</h1>
-        <p className="page-sub" style={{ margin: '0.25rem 0 0' }}>
-          Cara pelanggan Anda membayar: otomatis lewat <strong>Pivot</strong> atau manual (transfer/QRIS).
-          Perubahan minta konfirmasi sebelum berlaku.
-        </p>
-      </div>
+      <PageHeader
+        title="Payment Gateway"
+        subtitle={
+          <>
+            Cara pelanggan Anda membayar: otomatis lewat <strong>Pivot</strong> atau manual (transfer/QRIS).
+            Perubahan minta konfirmasi sebelum berlaku.
+          </>
+        }
+      />
 
       {/* ---- Status yang berlaku sekarang (dari server, bukan suntingan) ---- */}
       <StatusPanel saved={saved} />

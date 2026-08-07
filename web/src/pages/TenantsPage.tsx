@@ -6,6 +6,7 @@ import { useCan } from '../auth/useCan'
 import { Blade } from '../components/Blade'
 import { DataTable, type Column } from '../components/DataTable'
 import { ConfirmDialog, EmptyState, SearchInput, StatusBadge, Toolbar } from '../components/ui'
+import { PageHeader } from '../components/PageHeader'
 import { IconBuilding, IconPlus } from '../components/icons'
 import { TenantSubscriptionModal } from './TenantSubscriptionModal'
 
@@ -132,17 +133,17 @@ export function TenantsPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div className="spread">
-        <div>
-          <h1 className="page-title">Tenant</h1>
-          <p className="page-sub">Onboarding ISP baru dan kelola status tenant di platform.</p>
-        </div>
-        {can('platform.tenant.create') && (
-          <button className="primary" onClick={() => openDraft({ ...EMPTY })}>
-            <IconPlus size={15} /> Onboarding tenant
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="Tenant"
+        subtitle="Onboarding ISP baru dan kelola status tenant di platform."
+        actions={
+          can('platform.tenant.create') && (
+            <button className="primary" onClick={() => openDraft({ ...EMPTY })}>
+              <IconPlus size={15} /> Onboarding tenant
+            </button>
+          )
+        }
+      />
 
       {error && <p className="error">{error}</p>}
       {notice && <p className="muted">{notice}</p>}

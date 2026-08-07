@@ -11,6 +11,7 @@ import type {
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
 import { Drawer, EmptyState, SearchInput, StatusBadge, Toolbar, useToast } from '../components/ui'
+import { PageHeader } from '../components/PageHeader'
 import { OpticalChart } from '../components/OpticalChart'
 import { IconAlert, IconPlus } from '../components/icons'
 
@@ -237,10 +238,7 @@ export function MonitoringPage() {
 
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
-      <div>
-        <h1 className="page-title">Monitoring</h1>
-        <p className="page-sub">Kesehatan collector, alarm jaringan, dan tren redaman optik.</p>
-      </div>
+      <PageHeader title="Monitoring" subtitle="Kesehatan collector, alarm jaringan, dan tren redaman optik." />
 
       {dashboard && (
         <div className="stat-grid">

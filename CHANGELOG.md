@@ -6,6 +6,17 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-07 — Redesign Azure Fase 5: seragamkan header halaman
+
+**Diubah**
+- **Semua header halaman memakai `PageHeader`.** Halaman non-tabel dan realm lain
+  (dashboard tenant/platform, laporan, audit, monitoring, insiden, area, tugas saya,
+  langganan, provisioning, impor CSV/PPPoE, setelan pajak/gateway/billing, PSB ekspres,
+  tenant, VPN, server VPN, BRAS/RADIUS) kini memakai komponen `PageHeader`
+  (judul + subtitle + slot `actions`) menggantikan `<h1 className="page-title">` lepas —
+  header seragam di seluruh konsol. Halaman **detail** (Pelanggan/OLT/Work Order)
+  sengaja dipertahankan karena judulnya menyandingkan badge status inline.
+
 ### 2026-08-07 — Redesign Azure Fase 4: kontrol form Fluent + validasi
 
 **Ditambahkan**

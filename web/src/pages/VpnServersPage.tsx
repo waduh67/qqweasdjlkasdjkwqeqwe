@@ -14,6 +14,7 @@ import {
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
 import { Badge, EmptyState, SearchInput, StatusBadge, Toolbar, useConfirm, useToast } from '../components/ui'
+import { PageHeader } from '../components/PageHeader'
 import { IconAlert, IconPlus, IconRoute } from '../components/icons'
 
 /**
@@ -233,13 +234,10 @@ export function VpnServersPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div>
-        <h1 className="page-title">Server VPN</h1>
-        <p className="page-sub">
-          Hub OpenVPN platform — jalan di VPS kita dengan IP publik kita. Buat hub, jalankan perintah pasang sekali di
-          VPS, lalu hub siap dipakai. Tenant tinggal generate akun VPN yang di-auto-assign ke hub yang tersedia.
-        </p>
-      </div>
+      <PageHeader
+        title="Server VPN"
+        subtitle="Hub OpenVPN platform — jalan di VPS kita dengan IP publik kita. Buat hub, jalankan perintah pasang sekali di VPS, lalu hub siap dipakai. Tenant tinggal generate akun VPN yang di-auto-assign ke hub yang tersedia."
+      />
 
       <div className="spread">
         <span className="muted">{servers.length} hub</span>

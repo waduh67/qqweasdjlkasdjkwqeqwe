@@ -6,6 +6,7 @@ import type { AlarmView, MonitoringDashboard } from '../api/monitoring'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { StatusBadge } from '../components/ui'
+import { PageHeader } from '../components/PageHeader'
 import { IconCustomers, IconInventory, IconMap, IconMonitor, type IconProps } from '../components/icons'
 import type { ComponentType } from 'react'
 
@@ -43,12 +44,10 @@ export function DashboardPage() {
 
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
-      <div>
-        <h1 className="page-title">
-          {greeting}, {user?.name?.split(' ')[0]}
-        </h1>
-        <p className="page-sub">Ringkasan operasi jaringan pada tenant {user?.tenantSlug}.</p>
-      </div>
+      <PageHeader
+        title={<>{greeting}, {user?.name?.split(' ')[0]}</>}
+        subtitle={<>Ringkasan operasi jaringan pada tenant {user?.tenantSlug}.</>}
+      />
 
       {monitoring && (
         <div className="stat-grid">

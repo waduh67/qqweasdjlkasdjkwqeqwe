@@ -8,6 +8,7 @@ import {
 } from '../api/billing'
 import { useCan } from '../auth/useCan'
 import { Badge, EmptyState, Modal, useToast } from '../components/ui'
+import { PageHeader } from '../components/PageHeader'
 import { IconAlert, IconShield } from '../components/icons'
 
 /**
@@ -152,13 +153,10 @@ export function TaxSettingsPage() {
 
   return (
     <div className="stack settings-page">
-      <div>
-        <h1 className="page-title">Pajak &amp; Kontribusi</h1>
-        <p className="page-sub" style={{ margin: '0.25rem 0 0' }}>
-          PPN yang ditagihkan ke pelanggan &amp; kewajiban pelaporan BHP/USO. Perubahan PPN tidak berlaku surut —
-          hanya tagihan yang terbit setelahnya.
-        </p>
-      </div>
+      <PageHeader
+        title="Pajak & Kontribusi"
+        subtitle="PPN yang ditagihkan ke pelanggan & kewajiban pelaporan BHP/USO. Perubahan PPN tidak berlaku surut — hanya tagihan yang terbit setelahnya."
+      />
 
       <StatusPanel saved={saved} />
 

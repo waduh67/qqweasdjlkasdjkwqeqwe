@@ -4,6 +4,7 @@ import type { Area } from '../api/types'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
 import { EmptyState, SearchInput, Toolbar, useToast } from '../components/ui'
+import { PageHeader } from '../components/PageHeader'
 import { IconArea } from '../components/icons'
 
 export function AreasPage() {
@@ -79,13 +80,15 @@ export function AreasPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div>
-        <h1 className="page-title">Area / Wilayah</h1>
-        <p className="muted">
-          Area adalah dimensi <em>scope</em> pada RBAC: pengguna yang dibatasi ke area tertentu hanya melihat aset dan
-          tiket di area itu.
-        </p>
-      </div>
+      <PageHeader
+        title="Area / Wilayah"
+        subtitle={
+          <>
+            Area adalah dimensi <em>scope</em> pada RBAC: pengguna yang dibatasi ke area tertentu hanya melihat aset dan
+            tiket di area itu.
+          </>
+        }
+      />
 
       {can('iam.area.create') && (
         <div className="card row" style={{ alignItems: 'flex-end' }}>

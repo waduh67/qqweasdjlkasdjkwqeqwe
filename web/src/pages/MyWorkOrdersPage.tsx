@@ -4,6 +4,7 @@ import { ApiError } from '../api/client'
 import { listMyWorkOrders, type WorkOrderStatus, type WorkOrderView } from '../api/workorder'
 import { DataTable, type Column } from '../components/DataTable'
 import { Badge, EmptyState, Toolbar, useToast } from '../components/ui'
+import { PageHeader } from '../components/PageHeader'
 import { IconWorkOrder } from '../components/icons'
 import {
   PRIORITY_LABEL,
@@ -98,10 +99,10 @@ export function MyWorkOrdersPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div>
-        <h1 className="page-title">Tugas Saya</h1>
-        <p className="page-sub">Work order yang ditugaskan ke kamu — kerjakan, catat redaman, unggah bukti, lalu selesaikan.</p>
-      </div>
+      <PageHeader
+        title="Tugas Saya"
+        subtitle="Work order yang ditugaskan ke kamu — kerjakan, catat redaman, unggah bukti, lalu selesaikan."
+      />
 
       <Toolbar>
         <select value={status} onChange={(e) => setStatus(e.target.value as WorkOrderStatus | '')}>

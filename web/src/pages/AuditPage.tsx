@@ -3,6 +3,7 @@ import { api, ApiError } from '../api/client'
 import type { AuditEntry, PageResponse } from '../api/types'
 import { DataTable, type Column } from '../components/DataTable'
 import { Badge, EmptyState, SearchInput, Toolbar, useToast } from '../components/ui'
+import { PageHeader } from '../components/PageHeader'
 import { IconAudit } from '../components/icons'
 
 /** Ratakan objek detail jadi `k=v, k=v` untuk sel tabel & pencarian. */
@@ -90,10 +91,7 @@ export function AuditPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div>
-        <h1 className="page-title">Jejak Audit</h1>
-        <p className="page-sub">50 aktivitas terbaru — siapa melakukan apa, kapan.</p>
-      </div>
+      <PageHeader title="Jejak Audit" subtitle="50 aktivitas terbaru — siapa melakukan apa, kapan." />
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari aksi, pelaku, objek, atau detail…" />

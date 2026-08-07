@@ -18,6 +18,7 @@ import {
 import { useCan } from '../auth/useCan'
 import { Badge, EmptyState, Modal, useToast } from '../components/ui'
 import type { Tone } from '../components/ui'
+import { PageHeader } from '../components/PageHeader'
 import { GatewayPayPanel } from '../components/GatewayPayPanel'
 import {
   IconGauge,
@@ -348,10 +349,10 @@ export function SubscriptionPage() {
 
 function Header() {
   return (
-    <div>
-      <h1 className="page-title">Langganan Aplikasi</h1>
-      <p className="page-sub">Masa aktif, pemakaian, dan tagihan langganan Anda ke aplikasi.</p>
-    </div>
+    <PageHeader
+      title="Langganan Aplikasi"
+      subtitle="Masa aktif, pemakaian, dan tagihan langganan Anda ke aplikasi."
+    />
   )
 }
 

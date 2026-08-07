@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getReportOverview, type ReportOverview } from '../api/reports'
 import { ApiError } from '../api/client'
 import { EmptyState, Spinner, useToast } from '../components/ui'
+import { PageHeader } from '../components/PageHeader'
 import { IconChart } from '../components/icons'
 
 /**
@@ -102,33 +103,33 @@ export function ReportsPage() {
 
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
-      <div className="row wrap" style={{ justifyContent: 'space-between', alignItems: 'flex-end', gap: '1rem' }}>
-        <div>
-          <h1 className="page-title">Laporan &amp; analitik</h1>
-          <p className="page-sub">Ringkasan keuangan dan pelanggan tenant dalam rentang terpilih.</p>
-        </div>
-        <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
-          <label className="stack" style={{ gap: '0.25rem' }}>
-            <span className="muted" style={{ fontSize: '0.75rem' }}>Dari</span>
-            <input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
-          </label>
-          <label className="stack" style={{ gap: '0.25rem' }}>
-            <span className="muted" style={{ fontSize: '0.75rem' }}>Sampai</span>
-            <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
-          </label>
-          <button className="primary" onClick={apply} disabled={loading}>
-            Terapkan
-          </button>
-          <button
-            className="ghost"
-            onClick={() => overview && downloadCsv(overview)}
-            disabled={!overview || overview.monthlyRevenue.length === 0}
-            title="Unduh tren bulanan sebagai CSV"
-          >
-            Ekspor CSV
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title={<>Laporan &amp; analitik</>}
+        subtitle="Ringkasan keuangan dan pelanggan tenant dalam rentang terpilih."
+        actions={
+          <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
+            <label className="stack" style={{ gap: '0.25rem' }}>
+              <span className="muted" style={{ fontSize: '0.75rem' }}>Dari</span>
+              <input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
+            </label>
+            <label className="stack" style={{ gap: '0.25rem' }}>
+              <span className="muted" style={{ fontSize: '0.75rem' }}>Sampai</span>
+              <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+            </label>
+            <button className="primary" onClick={apply} disabled={loading}>
+              Terapkan
+            </button>
+            <button
+              className="ghost"
+              onClick={() => overview && downloadCsv(overview)}
+              disabled={!overview || overview.monthlyRevenue.length === 0}
+              title="Unduh tren bulanan sebagai CSV"
+            >
+              Ekspor CSV
+            </button>
+          </div>
+        }
+      />
 
       {loading && !overview ? (
         <div className="card row" style={{ gap: '0.6rem', justifyContent: 'center', padding: '2rem' }}>
