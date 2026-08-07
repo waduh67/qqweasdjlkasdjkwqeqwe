@@ -426,6 +426,35 @@ export interface PonPortInspection {
   odcs: PonOdcBranch[]
 }
 
+/**
+ * Satu ONU pelanggan di bawah sebuah OLT — perangkat + pemiliknya + di ODP/port mana.
+ * `onuStatus` adalah status tercatat (disegarkan monitoring lewat write-back), bukan
+ * tarikan hidup; jadi baris ini murni dari network + customer tanpa memanggil monitoring.
+ */
+export interface OltOnuRow {
+  onuId: string
+  serialNumber: string
+  customerId: string
+  customerCode: string
+  customerName: string
+  odpId: string
+  odpCode: string
+  portNumber: number
+  onuStatus: OnuStatus
+  opticalHealth: OpticalHealth
+  /** Redaman baseline saat instalasi; null bila tak dicatat. */
+  installRxPowerDbm: number | null
+  subscriptionPackage: string | null
+  subscriptionStatus: string | null
+}
+
+/** Daftar ONU pelanggan di bawah satu OLT — pandangan per-OLT untuk halaman detail OLT. */
+export interface OltOnuList {
+  oltId: string
+  onuCount: number
+  onus: OltOnuRow[]
+}
+
 /** Ujung kabel tempat pengukuran OTDR dimulai — hulu (awal jalur) atau hilir (akhir jalur). */
 export type CableEnd = 'FROM' | 'TO'
 

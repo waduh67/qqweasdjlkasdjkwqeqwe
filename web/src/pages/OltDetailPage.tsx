@@ -19,6 +19,8 @@ import { useCan } from '../auth/useCan'
 import { LocationPicker } from '../components/LocationPicker'
 import { Badge, EmptyState, Modal, Spinner, StatusBadge, useToast } from '../components/ui'
 import { IconInventory, IconPlus } from '../components/icons'
+import { DiscoveredOnuInbox } from '../components/DiscoveredOnuInbox'
+import { OltRegisteredOnus } from '../components/OltRegisteredOnus'
 
 /**
  * Detail satu OLT sebagai rute tersendiri (`/olts/:id`) — bukan panel peta.
@@ -45,7 +47,7 @@ const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
   { value: 'INACTIVE', label: 'Nonaktif' },
 ]
 
-type Tab = 'ringkasan' | 'pon'
+type Tab = 'ringkasan' | 'pon' | 'onu' | 'onubaru'
 
 export function OltDetailPage() {
   const { id = '' } = useParams()
@@ -61,6 +63,12 @@ export function OltDetailPage() {
   // Drill-down PON → ODC → ODP menembus module gis (topologi + okupansi agregat),
   // jadi butuh izin peta & ODP; disembunyikan bila operator tak berhak memanggilnya.
   const canDrill = can('gis.map.view') && can('network.odp.view')
+  // Daftar ONU per-OLT memuat identitas pelanggan (PII), jadi gerbangnya persis
+  // seperti endpoint `/api/gis/olts/{id}/onus`: inspeksi OLT + lihat pelanggan.
+  const canOnuList =
+    can('gis.map.view') && can('network.olt.view') && can('network.odp.view') && can('customer.customer.view')
+  // Tab "ONU Baru" memakai kotak masuk provisioning — sama seperti halaman Provisioning.
+  const canProvisioning = can('monitoring.provisioning.view')
 
   const [olt, setOlt] = useState<OltView | null>(null)
   const [loading, setLoading] = useState(true)
@@ -158,10 +166,22 @@ export function OltDetailPage() {
         <button className={tab === 'pon' ? 'active' : ''} onClick={() => setTab('pon')}>
           PON Port{olt.ponPortCount ? ` (${olt.ponPortCount})` : ''}
         </button>
+        {canOnuList && (
+          <button className={tab === 'onu' ? 'active' : ''} onClick={() => setTab('onu')}>
+            ONU
+          </button>
+        )}
+        {canProvisioning && (
+          <button className={tab === 'onubaru' ? 'active' : ''} onClick={() => setTab('onubaru')}>
+            ONU Baru
+          </button>
+        )}
       </div>
 
       {tab === 'ringkasan' && <RingkasanTab olt={olt} canUpdate={canUpdate} onSaved={load} />}
       {tab === 'pon' && <PonPortTab oltId={olt.id} canUpdate={canUpdate} canDrill={canDrill} onChanged={load} />}
+      {tab === 'onu' && canOnuList && <OltRegisteredOnus oltId={olt.id} backTo={`/olts/${olt.id}`} />}
+      {tab === 'onubaru' && canProvisioning && <DiscoveredOnuInbox oltId={olt.id} />}
 
       {editing && (
         <EditOltModal
