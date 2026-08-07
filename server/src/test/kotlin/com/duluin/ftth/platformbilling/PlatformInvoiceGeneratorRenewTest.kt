@@ -1,10 +1,18 @@
 package com.duluin.ftth.platformbilling
 
+import com.duluin.ftth.billing.application.port.outbound.ChargeRequest
+import com.duluin.ftth.billing.application.port.outbound.ChargeResult
+import com.duluin.ftth.billing.application.port.outbound.GatewayCallback
+import com.duluin.ftth.billing.application.port.outbound.PaymentGateway
+import com.duluin.ftth.billing.application.port.outbound.PaymentSettlement
 import com.duluin.ftth.billing.application.port.outbound.PivotMasterConfigRepository
 import com.duluin.ftth.billing.application.service.PaymentGatewayRegistry
 import com.duluin.ftth.billing.application.service.PivotMasterConfigProvider
 import com.duluin.ftth.billing.config.BillingProperties
+import com.duluin.ftth.billing.domain.model.PivotFeeType
 import com.duluin.ftth.billing.domain.model.PivotMasterConfig
+import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
+import com.duluin.ftth.billing.domain.model.SubAccountDefaults
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
@@ -26,6 +34,7 @@ import com.duluin.ftth.platformbilling.domain.model.TenantSubscription
 import com.duluin.ftth.platformbilling.domain.model.TenantSubscriptionInvoice
 import com.duluin.ftth.tenancy.TenantApi
 import com.duluin.ftth.tenancy.TenantRef
+import com.duluin.ftth.tenancy.TenantStatus
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
@@ -137,7 +146,33 @@ class PlatformInvoiceGeneratorRenewTest {
             .hasMessageContaining("sudah dibayar")
     }
 
+    @Test
+    fun `renew pada tagihan tertunggak tanpa payUrl men-charge ulang lalu mengembalikan tautan bayar`() {
+        TenantContext.set(tenantId)
+        val subscription = activeSubscription().also { subscriptions.save(it) }
+        // Tagihan tertunggak yang terbit TANPA payUrl (charge gateway sempat gagal saat terbit).
+        invoices.save(invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED))
+        val service = TenantSelfSubscriptionService(subscriptions, invoices, chargingGenerator("https://pay.test/xyz"), FakeUsageProbe())
+
+        val view = service.renew(months = 1)
+
+        assertThat(view.number).isEqualTo(baseNumber)
+        assertThat(view.payUrl).isEqualTo("https://pay.test/xyz")
+        // Tagihan tertunggak yang sama dipakai ulang (tak terbit tagihan baru).
+        assertThat(invoices.all()).hasSize(1)
+    }
+
     // --- helper ---
+
+    /** Generator dengan gateway PIVOT aktif yang mengembalikan payUrl — untuk menguji charge ulang. */
+    private fun chargingGenerator(payUrl: String) = PlatformInvoiceGenerator(
+        subscriptionRepository = subscriptions,
+        invoiceRepository = invoices,
+        resolver = PlatformGatewayResolver(FakePlatformSettingRepository(), PivotMasterConfigProvider(EnabledPivotRepository())),
+        gatewayRegistry = PaymentGatewayRegistry(listOf(FakePivotGateway(payUrl)), BillingProperties()),
+        tenantApi = FakeTenantApi(),
+        auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
+    )
 
     private fun activeSubscription(): TenantSubscription = TenantSubscription.rehydrate(
         id = subscriptionId,
@@ -203,6 +238,33 @@ class PlatformInvoiceGeneratorRenewTest {
         override fun save(config: PivotMasterConfig): PivotMasterConfig = config
     }
 
+    /** Master Pivot AKTIF + kredensial lengkap → `resolveActive()` menghasilkan konteks charge. */
+    private class EnabledPivotRepository : PivotMasterConfigRepository {
+        private val config = PivotMasterConfig.rehydrate(
+            id = UuidV7.generate(),
+            enabled = true,
+            merchantId = "merchant_id",
+            merchantSecret = "merchant_secret",
+            callbackApiKey = "cb_key",
+            sandbox = true,
+            platformFeeMinor = 0,
+            platformFeeType = PivotFeeType.FIXED,
+            payoutChannelCode = null,
+            payoutAccountNumber = null,
+            subAccountDefaults = SubAccountDefaults.empty(),
+        )
+        override fun find(): PivotMasterConfig = config
+        override fun save(config: PivotMasterConfig): PivotMasterConfig = config
+    }
+
+    /** Gateway PIVOT tiruan yang selalu mengembalikan tautan bayar tetap (tanpa HTTP). */
+    private class FakePivotGateway(private val payUrl: String) : PaymentGateway {
+        override val provider = "PIVOT"
+        override fun createCharge(request: ChargeRequest, ctx: ResolvedGatewayContext): ChargeResult =
+            ChargeResult(provider = "PIVOT", gatewayRef = "ref_${request.invoiceNumber}", payUrl = payUrl)
+        override fun parseCallback(callback: GatewayCallback, ctx: ResolvedGatewayContext): PaymentSettlement? = null
+    }
+
     private class FakeUsageProbe : SubscriptionUsageProbe {
         override fun currentTenantUsage(): List<UsageCount> = emptyList()
     }
@@ -212,7 +274,7 @@ class PlatformInvoiceGeneratorRenewTest {
         override fun platformTenantId(): UUID = platformId
         override fun findById(id: UUID): TenantRef? = null
         override fun findBySlug(slug: String): TenantRef? = null
-        override fun requireById(id: UUID): TenantRef = throw NotImplementedError()
+        override fun requireById(id: UUID): TenantRef = TenantRef(id, "tenant-uji", "Tenant Uji", TenantStatus.ACTIVE)
         override fun findActiveTenantIds(): List<UUID> = emptyList()
         override fun ensureTenant(slug: String, name: String): TenantRef = throw NotImplementedError()
         override fun suspend(id: UUID): TenantRef = throw NotImplementedError()

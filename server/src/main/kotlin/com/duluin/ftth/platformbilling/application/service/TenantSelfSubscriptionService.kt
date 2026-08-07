@@ -45,9 +45,11 @@ class TenantSelfSubscriptionService(
         if (subscription.isCancelled) {
             throw ValidationException("Langganan dibatalkan — hubungi admin platform")
         }
-        // Bila sudah ada tagihan tertunggak, lanjutkan bayar yang itu (hindari terbit ganda).
+        // Bila sudah ada tagihan tertunggak, lanjutkan bayar yang itu (hindari terbit ganda) —
+        // pastikan punya tautan bayar: charge ulang bila tagihan lama terbit tanpa payUrl (mis.
+        // charge gateway sempat gagal saat terbit) agar tenant benar-benar bisa membayar.
         invoiceRepository.findOutstandingBySubscriptionId(subscription.id).firstOrNull()?.let {
-            return it.toView()
+            return invoiceGenerator.ensurePayable(it, subscription).toView()
         }
         val invoice = invoiceGenerator.issueFor(subscription, LocalDate.now(), force = true, months = months)
             ?: throw ValidationException(
