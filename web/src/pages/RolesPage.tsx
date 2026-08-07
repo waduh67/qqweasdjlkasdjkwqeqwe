@@ -6,6 +6,7 @@ import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '../components/DataTable'
 import { CommandBar, type CommandAction } from '../components/CommandBar'
 import { PageHeader } from '../components/PageHeader'
+import { Field } from '../components/Blade'
 import { Badge, EmptyState, SearchInput, Toolbar, useConfirm } from '../components/ui'
 import { IconPlus, IconShield } from '../components/icons'
 
@@ -181,22 +182,20 @@ export function RolesPage() {
         <div className="card stack">
           <h3 style={{ margin: 0 }}>{draft.id ? 'Ubah role' : 'Role baru'}</h3>
           <div className="row" style={{ alignItems: 'flex-start' }}>
-            <label style={{ flex: 1 }}>
-              <span>Nama</span>
+            <Field label="Nama" required style={{ flex: 1 }}>
               <input
                 value={draft.name}
                 disabled={readOnly}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
               />
-            </label>
-            <label style={{ flex: 2 }}>
-              <span>Deskripsi</span>
+            </Field>
+            <Field label="Deskripsi" style={{ flex: 2 }}>
               <input
                 value={draft.description}
                 disabled={readOnly}
                 onChange={(e) => setDraft({ ...draft, description: e.target.value })}
               />
-            </label>
+            </Field>
           </div>
 
           <div>

@@ -8,7 +8,7 @@ import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '../components/DataTable'
 import { CommandBar, type CommandAction } from '../components/CommandBar'
 import { PageHeader } from '../components/PageHeader'
-import { Blade } from '../components/Blade'
+import { Blade, Field } from '../components/Blade'
 import { LocationPicker } from '../components/LocationPicker'
 import { exportCustomersCsv } from '../api/onboarding'
 import { EmptyState, SearchInput, StatusBadge, Toolbar, useConfirm, useToast } from '../components/ui'
@@ -80,6 +80,7 @@ export function CustomersPage() {
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState<CustomerDraft | null>(null)
   const [initialDraft, setInitialDraft] = useState<CustomerDraft | null>(null)
+  const [errors, setErrors] = useState<{ name?: string; address?: string }>({})
   const [saving, setSaving] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -89,10 +90,12 @@ export function CustomersPage() {
   const openDraft = (d: CustomerDraft) => {
     setDraft(d)
     setInitialDraft(d)
+    setErrors({})
   }
   const closeDraft = () => {
     setDraft(null)
     setInitialDraft(null)
+    setErrors({})
   }
   const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
 
@@ -163,6 +166,15 @@ export function CustomersPage() {
   // `id` menentukan endpoint. `code` disertakan tapi diabaikan server saat menyunting.
   const save = async () => {
     if (!draft) return
+    // Validasi klien: nama & alamat wajib. Tampilkan galat inline (Field) + toast, tak menembak API.
+    const nextErrors: { name?: string; address?: string } = {}
+    if (!draft.name.trim()) nextErrors.name = 'Nama pelanggan wajib diisi.'
+    if (!draft.address.trim()) nextErrors.address = 'Alamat wajib diisi.'
+    setErrors(nextErrors)
+    if (nextErrors.name || nextErrors.address) {
+      toast.error('Lengkapi dulu isian yang wajib.')
+      return
+    }
     setSaving(true)
     try {
       const body = {
@@ -392,42 +404,51 @@ export function CustomersPage() {
       >
         {draft && (
           <div className="stack">
-            <label>
-              <span>Nama</span>
-              <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} autoFocus />
-            </label>
+            <Field label="Nama" required error={errors.name}>
+              <input
+                value={draft.name}
+                aria-invalid={errors.name ? true : undefined}
+                onChange={(e) => {
+                  setDraft({ ...draft, name: e.target.value })
+                  if (errors.name) setErrors((p) => ({ ...p, name: undefined }))
+                }}
+                autoFocus
+              />
+            </Field>
             <div className="row">
-              <label style={{ flex: 1 }}>
-                <span>Telepon</span>
+              <Field label="Telepon" style={{ flex: 1 }}>
                 <input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} placeholder="08123456789" />
-              </label>
-              <label style={{ flex: 1 }}>
-                <span>NIK / No. identitas</span>
+              </Field>
+              <Field label="NIK / No. identitas" style={{ flex: 1 }}>
                 <input value={draft.idCardNumber} onChange={(e) => setDraft({ ...draft, idCardNumber: e.target.value })} placeholder="opsional" />
-              </label>
+              </Field>
             </div>
-            <label>
-              <span>Email</span>
+            <Field label="Email">
               <input
                 type="email"
                 value={draft.email}
                 onChange={(e) => setDraft({ ...draft, email: e.target.value })}
                 placeholder="opsional"
               />
-            </label>
-            <label>
-              <span>Alamat</span>
-              <input value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} />
-            </label>
-            <label>
-              <span>Lokasi</span>
+            </Field>
+            <Field label="Alamat" required error={errors.address}>
+              <input
+                value={draft.address}
+                aria-invalid={errors.address ? true : undefined}
+                onChange={(e) => {
+                  setDraft({ ...draft, address: e.target.value })
+                  if (errors.address) setErrors((p) => ({ ...p, address: undefined }))
+                }}
+              />
+            </Field>
+            <Field label="Lokasi">
               <LocationPicker
                 longitude={draft.longitude}
                 latitude={draft.latitude}
                 onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
                 onAddress={(address) => setDraft(draft.address.trim() ? draft : { ...draft, address })}
               />
-            </label>
+            </Field>
           </div>
         )}
       </Blade>

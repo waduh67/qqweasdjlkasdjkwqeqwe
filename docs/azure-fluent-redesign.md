@@ -88,7 +88,9 @@ ThemeProvider → FluentProvider(azureLight|azureDark)
 - **Phase 1** Shell: AzureNav, AzureHeader, PageHeader/breadcrumb.
 - **Phase 2** CommandBar + DataGrid.
 - **Phase 3** Blade + Field/FormSection; migrasi ~14 halaman CRUD.
-- **Phase 4** Kontrol form Fluent + feedback/validasi.
+- **Phase 4** ✅ Kontrol form Fluent + feedback/validasi: keadaan kontrol (disabled/
+  invalid/checkbox aksen Azure), token `--danger`, dan validasi klien inline lewat
+  `Field` (`error`/`required` + `aria-invalid`) — eksemplar di Pelanggan & Role.
 - **Phase 5** Realm lain, halaman non-tabel, cleanup, changelog.
 
 ## Panduan membuat halaman baru

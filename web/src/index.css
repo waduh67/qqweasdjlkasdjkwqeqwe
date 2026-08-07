@@ -48,6 +48,8 @@
   --serious-ink: #c2410c;
   --critical: #ef4444;
   --critical-ink: #dc2626;
+  /* Merah validasi form (Fluent) — dipakai [Field] error & keadaan input tak valid. */
+  --danger: #d13438;
 
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
   --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
@@ -107,6 +109,7 @@
     --serious-ink: #fdba74;
     --critical: #f87171;
     --critical-ink: #fca5a5;
+    --danger: #f1707b;
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
@@ -152,6 +155,7 @@
   --serious-ink: #fdba74;
   --critical: #f87171;
   --critical-ink: #fca5a5;
+  --danger: #f1707b;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
@@ -339,6 +343,39 @@ textarea:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--focus-ring);
+}
+/* Kontrol dinonaktifkan: redup + kursor terlarang (mis. field terkunci saat sunting). */
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+/* Checkbox & radio: lebar-auto (bukan 100% dari aturan input umum) + aksen Azure. */
+input[type='checkbox'],
+input[type='radio'] {
+  width: auto;
+  accent-color: var(--accent);
+}
+/* Keadaan tak valid — bingkai & cincin merah; dipicu `.field-error` (dari [Field])
+   atau `aria-invalid` langsung pada kontrol. */
+.field-error input,
+.field-error select,
+.field-error textarea,
+input[aria-invalid='true'],
+select[aria-invalid='true'],
+textarea[aria-invalid='true'] {
+  border-color: var(--danger, #d13438);
+}
+.field-error input:focus,
+.field-error select:focus,
+.field-error textarea:focus,
+input[aria-invalid='true']:focus,
+select[aria-invalid='true']:focus,
+textarea[aria-invalid='true']:focus {
+  border-color: var(--danger, #d13438);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger, #d13438) 30%, transparent);
 }
 
 label {

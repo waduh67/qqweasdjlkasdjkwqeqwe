@@ -6,6 +6,21 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-07 — Redesign Azure Fase 4: kontrol form Fluent + validasi
+
+**Ditambahkan**
+- **Validasi klien inline pada form.** Isian wajib divalidasi sebelum menembak API —
+  galat tampil di bawah field lewat komponen `Field` (`error`/`required`) plus
+  `aria-invalid` pada kontrol, dan toast ringkas bila ada yang kosong. Diterapkan sebagai
+  eksemplar di form Pelanggan (Nama & Alamat wajib) dan penanda wajib di form Role.
+- **Token `--danger`** (merah validasi Fluent, ter-tema terang/gelap) untuk state galat form.
+
+**Diubah**
+- **Keadaan kontrol form ala Fluent.** Input/select/textarea **disabled** kini redup +
+  kursor terlarang; **checkbox & radio** memakai aksen Azure (`accent-color`) dan tak lagi
+  melar 100% lebar; keadaan **tak valid** memberi bingkai + cincin merah (dipicu
+  `.field-error` atau `aria-invalid`).
+
 ### 2026-08-07 — Penajaman kesetiaan Azure: tab, blade, dialog, sidebar, konteks
 
 Lanjutan redesign Azure — merapikan pola yang belum konsisten dengan Portal.
