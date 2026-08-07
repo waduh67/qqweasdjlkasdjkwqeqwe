@@ -73,7 +73,11 @@ export interface TenantPivotAccountView {
   masterActive: boolean
 }
 
-/** Profil bisnis sub-account yang diisi tenant. `legalName` opsional (fallback nama tenant). */
+/**
+ * Profil bisnis sub-account yang diisi tenant. `legalName` opsional (fallback nama tenant).
+ * Rekening payout (`channelCode`+`accountNumber`) kini bagian dari profil — Pivot mewajibkan
+ * `bankAccount` saat create sub-account, jadi diisi sekalian sebelum provisioning.
+ */
 export interface PivotProfileRequest {
   legalName: string | null
   merchantEmail: string | null
@@ -82,6 +86,8 @@ export interface PivotProfileRequest {
   picEmail: string | null
   picPhone: string | null
   address: string | null
+  channelCode: string | null
+  accountNumber: string | null
 }
 
 /** Setel rekening payout sub-account: kode channel bank + nomor rekening. */

@@ -55,6 +55,8 @@ const EMPTY_PROFILE: PivotProfileRequest = {
   picEmail: '',
   picPhone: '',
   address: '',
+  channelCode: '',
+  accountNumber: '',
 }
 
 interface FieldChange {
@@ -392,15 +394,12 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
   const [account, setAccount] = useState<TenantPivotAccountView | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [channelCode, setChannelCode] = useState('')
-  const [accountNumber, setAccountNumber] = useState('')
-  // Profil bisnis sub-account (identitas + PIC + alamat) — wajib sebelum provisioning.
+  // Profil bisnis sub-account (identitas + PIC + alamat + rekening payout) — wajib sebelum
+  // provisioning. Rekening payout ikut di sini karena Pivot mewajibkan `bankAccount` saat create.
   const [profile, setProfile] = useState<PivotProfileRequest>(EMPTY_PROFILE)
 
   const syncFrom = (a: TenantPivotAccountView) => {
     setAccount(a)
-    setChannelCode(a.payoutChannelCode ?? '')
-    setAccountNumber(a.payoutAccountNumber ?? '')
     setProfile({
       legalName: a.legalName ?? '',
       merchantEmail: a.merchantEmail ?? '',
@@ -409,6 +408,8 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
       picEmail: a.picEmail ?? '',
       picPhone: a.picPhone ?? '',
       address: a.address ?? '',
+      channelCode: a.payoutChannelCode ?? '',
+      accountNumber: a.payoutAccountNumber ?? '',
     })
   }
 
@@ -434,17 +435,20 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
 
   const payoutDirty =
     !!account &&
-    (channelCode.trim() !== (account.payoutChannelCode ?? '') ||
-      accountNumber.trim() !== (account.payoutAccountNumber ?? ''))
+    ((profile.channelCode ?? '').trim() !== (account.payoutChannelCode ?? '') ||
+      (profile.accountNumber ?? '').trim() !== (account.payoutAccountNumber ?? ''))
 
-  // Profil dianggap lengkap secara lokal (mirror `profileComplete` server) untuk meng-gate tombol.
+  // Profil dianggap lengkap secara lokal (mirror `profileComplete` server) untuk meng-gate tombol —
+  // termasuk rekening payout, yang kini wajib karena Pivot menuntut `bankAccount` saat create.
   const profileFilled =
     profile.merchantEmail!.trim() !== '' &&
     profile.merchantPhone!.trim() !== '' &&
     profile.picName!.trim() !== '' &&
     profile.picEmail!.trim() !== '' &&
     profile.picPhone!.trim() !== '' &&
-    profile.address!.trim() !== ''
+    profile.address!.trim() !== '' &&
+    profile.channelCode!.trim() !== '' &&
+    profile.accountNumber!.trim() !== ''
 
   const profileDirty =
     !!account &&
@@ -454,7 +458,8 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
       (profile.picName ?? '') !== (account.picName ?? '') ||
       (profile.picEmail ?? '') !== (account.picEmail ?? '') ||
       (profile.picPhone ?? '') !== (account.picPhone ?? '') ||
-      (profile.address ?? '') !== (account.address ?? ''))
+      (profile.address ?? '') !== (account.address ?? '') ||
+      payoutDirty)
 
   const trimmedProfile = (): PivotProfileRequest => ({
     legalName: profile.legalName?.trim() || null,
@@ -464,6 +469,8 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
     picEmail: profile.picEmail?.trim() || null,
     picPhone: profile.picPhone?.trim() || null,
     address: profile.address?.trim() || null,
+    channelCode: profile.channelCode?.trim() || null,
+    accountNumber: profile.accountNumber?.trim() || null,
   })
 
   return (
@@ -597,6 +604,32 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
                     disabled={!manage}
                   />
                 </label>
+                {/* Rekening payout — bagian profil karena Pivot mewajibkan bankAccount saat create. */}
+                <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <label style={{ flex: 1, minWidth: 140 }}>
+                    <span>Kode channel bank</span>
+                    <input
+                      value={profile.channelCode ?? ''}
+                      onChange={(e) => setProfile((p) => ({ ...p, channelCode: e.target.value }))}
+                      placeholder="mis. BCA, MANDIRI"
+                      maxLength={40}
+                      disabled={!manage}
+                    />
+                  </label>
+                  <label style={{ flex: 1, minWidth: 160 }}>
+                    <span>Nomor rekening</span>
+                    <input
+                      value={profile.accountNumber ?? ''}
+                      onChange={(e) => setProfile((p) => ({ ...p, accountNumber: e.target.value }))}
+                      placeholder="mis. 1234567890"
+                      maxLength={60}
+                      disabled={!manage}
+                    />
+                  </label>
+                </div>
+                <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+                  Rekening tujuan pencairan dana pelanggan. Nomor divalidasi ke bank saat disimpan.
+                </p>
                 {manage && (
                   <div className="row" style={{ gap: '0.5rem', justifyContent: 'flex-end' }}>
                     <button
@@ -649,51 +682,67 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
             </div>
           )}
 
-          {/* Rekening payout: ke mana dana pelanggan diteruskan */}
-          <div className="hr" />
-          <SectionTitle>Rekening payout</SectionTitle>
-          <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-            Rekening tujuan pencairan dana dari pembayaran pelanggan Anda.
-            {account.payoutAccountName && (
-              <>
-                {' '}Terverifikasi atas nama <strong>{account.payoutAccountName}</strong>.
-              </>
-            )}
-          </p>
-          <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <label style={{ flex: 1, minWidth: 140 }}>
-              <span>Kode channel bank</span>
-              <input
-                value={channelCode}
-                onChange={(e) => setChannelCode(e.target.value)}
-                placeholder="mis. BCA, MANDIRI"
-                disabled={!manage || !account.provisioned}
-              />
-            </label>
-            <label style={{ flex: 1, minWidth: 160 }}>
-              <span>Nomor rekening</span>
-              <input
-                value={accountNumber}
-                onChange={(e) => setAccountNumber(e.target.value)}
-                placeholder="mis. 1234567890"
-                disabled={!manage || !account.provisioned}
-              />
-            </label>
-            {manage && (
-              <button
-                className="primary"
-                disabled={busy || !account.provisioned || !payoutDirty || !channelCode.trim() || !accountNumber.trim()}
-                onClick={() =>
-                  void run(
-                    () => setPivotPayoutAccount({ channelCode: channelCode.trim(), accountNumber: accountNumber.trim() }),
-                    'Rekening payout tersimpan',
-                  )
-                }
-              >
-                Simpan rekening
-              </button>
-            )}
-          </div>
+          {/* Rekening payout pasca-provisioning: sudah diisi bersama profil saat mendaftar; di sini
+              hanya untuk mengganti rekening tujuan pencairan setelah sub-account aktif. */}
+          {account.provisioned && (
+            <>
+              <div className="hr" />
+              <SectionTitle>Rekening payout</SectionTitle>
+              <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+                Rekening tujuan pencairan dana dari pembayaran pelanggan Anda.
+                {account.payoutAccountName && (
+                  <>
+                    {' '}Terverifikasi atas nama <strong>{account.payoutAccountName}</strong>.
+                  </>
+                )}
+              </p>
+              <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <label style={{ flex: 1, minWidth: 140 }}>
+                  <span>Kode channel bank</span>
+                  <input
+                    value={profile.channelCode ?? ''}
+                    onChange={(e) => setProfile((p) => ({ ...p, channelCode: e.target.value }))}
+                    placeholder="mis. BCA, MANDIRI"
+                    maxLength={40}
+                    disabled={!manage}
+                  />
+                </label>
+                <label style={{ flex: 1, minWidth: 160 }}>
+                  <span>Nomor rekening</span>
+                  <input
+                    value={profile.accountNumber ?? ''}
+                    onChange={(e) => setProfile((p) => ({ ...p, accountNumber: e.target.value }))}
+                    placeholder="mis. 1234567890"
+                    maxLength={60}
+                    disabled={!manage}
+                  />
+                </label>
+                {manage && (
+                  <button
+                    className="primary"
+                    disabled={
+                      busy ||
+                      !payoutDirty ||
+                      !(profile.channelCode ?? '').trim() ||
+                      !(profile.accountNumber ?? '').trim()
+                    }
+                    onClick={() =>
+                      void run(
+                        () =>
+                          setPivotPayoutAccount({
+                            channelCode: (profile.channelCode ?? '').trim(),
+                            accountNumber: (profile.accountNumber ?? '').trim(),
+                          }),
+                        'Rekening payout tersimpan',
+                      )
+                    }
+                  >
+                    Simpan rekening
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </>
       )}
     </div>

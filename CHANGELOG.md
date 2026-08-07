@@ -6,6 +6,22 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-07 — Rekening payout digabung ke profil sub-account Pivot
+
+**Diperbaiki**
+- **Provision sub-account Pivot gagal `400` "channelCode/accountNumber value is fulfilled".**
+  Pivot mewajibkan `bankAccount` (channel + nomor rekening) di body `POST /v1/sub-merchants`, tapi
+  rekening payout dulu disetel di langkah TERPISAH setelah provisioning — sehingga saat create,
+  `bankAccount` kosong dan ditolak.
+
+**Diubah**
+- **Rekening payout kini bagian dari profil sub-account, bukan langkah terpisah.** Kode channel +
+  nomor rekening diisi bersama identitas/PIC/alamat sebelum "Daftarkan sub-account", divalidasi ke
+  bank (`inquiry-account`) saat simpan profil, lalu dikirim sebagai `bankAccount` saat create —
+  jadi rekening selalu ada di body create. Kelengkapan profil (`profileComplete`) kini juga menuntut
+  rekening payout. Bagian "Rekening payout" hanya muncul pasca-provisioning untuk mengganti rekening
+  (`TenantPivotAccount`, `TenantPivotAccountService`, `PaymentGatewaySettingsPage`, `pivotAccount.ts`).
+
 ### 2026-08-07 — Default sub-account Pivot pakai dropdown + galat validasi self-diagnosing
 
 **Diperbaiki**

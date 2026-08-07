@@ -115,13 +115,15 @@ class TenantPivotAccount private constructor(
     val payoutReady: Boolean get() = !payoutInquiryId.isNullOrBlank()
 
     /**
-     * Profil sudah cukup untuk membuat sub-account: identitas & PIC & alamat terisi. `name` boleh
-     * kosong (fallback nama tenant), rekening bank opsional (bisa disetel belakangan via payout).
+     * Profil sudah cukup untuk membuat sub-account: identitas & PIC & alamat + rekening payout terisi.
+     * `name` boleh kosong (fallback nama tenant). Rekening bank kini WAJIB — Pivot menolak create
+     * sub-account tanpa `bankAccount` (channelCode + accountNumber), jadi digabung ke profil.
      */
     val profileComplete: Boolean
         get() = !merchantEmail.isNullOrBlank() && !merchantPhone.isNullOrBlank() &&
             !picName.isNullOrBlank() && !picEmail.isNullOrBlank() && !picPhone.isNullOrBlank() &&
-            !address.isNullOrBlank()
+            !address.isNullOrBlank() &&
+            !payoutChannelCode.isNullOrBlank() && !payoutAccountNumber.isNullOrBlank()
 
     /** Simpan hasil `POST /v1/sub-merchants` (uuid + status awal). */
     fun markProvisioned(subMerchantUuid: String, type: SubAccountType, status: SubAccountStatus, kycStatus: SubAccountKycStatus) {

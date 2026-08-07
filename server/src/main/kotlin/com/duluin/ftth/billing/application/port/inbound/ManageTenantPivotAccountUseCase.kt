@@ -55,7 +55,11 @@ data class TenantPivotAccountView(
     val masterActive: Boolean,
 )
 
-/** Profil bisnis sub-account yang diisi tenant. `legalName` opsional (fallback nama tenant). */
+/**
+ * Profil bisnis sub-account yang diisi tenant. `legalName` opsional (fallback nama tenant).
+ * Rekening payout ([channelCode]+[accountNumber]) kini bagian dari profil — Pivot mewajibkan
+ * `bankAccount` saat create sub-account, jadi tak lagi langkah terpisah pasca-provisioning.
+ */
 data class SaveTenantPivotProfileCommand(
     val legalName: String?,
     val merchantEmail: String?,
@@ -64,6 +68,8 @@ data class SaveTenantPivotProfileCommand(
     val picEmail: String?,
     val picPhone: String?,
     val address: String?,
+    val channelCode: String?,
+    val accountNumber: String?,
 )
 
 /** Setel rekening payout tenant (channel bank + nomor rekening); nama pemilik diisi hasil inquiry. */

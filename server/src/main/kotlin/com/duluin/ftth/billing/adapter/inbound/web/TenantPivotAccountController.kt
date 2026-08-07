@@ -75,6 +75,8 @@ data class PivotProfileRequest(
     @field:Size(max = 160) val picEmail: String? = null,
     @field:Size(max = 40) val picPhone: String? = null,
     @field:Size(max = 500) val address: String? = null,
+    @field:Size(max = 40) val channelCode: String? = null,
+    @field:Size(max = 60) val accountNumber: String? = null,
 ) {
     fun toCommand() = SaveTenantPivotProfileCommand(
         legalName = legalName,
@@ -84,6 +86,8 @@ data class PivotProfileRequest(
         picEmail = picEmail,
         picPhone = picPhone,
         address = address,
+        channelCode = channelCode,
+        accountNumber = accountNumber,
     )
 }
 

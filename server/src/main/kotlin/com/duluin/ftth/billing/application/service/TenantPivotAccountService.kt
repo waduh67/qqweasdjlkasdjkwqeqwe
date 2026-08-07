@@ -100,7 +100,7 @@ class TenantPivotAccountService(
 
     @Transactional
     override fun saveProfile(command: SaveTenantPivotProfileCommand): TenantPivotAccountView {
-        requireMaster()
+        val master = requireMaster()
         val tenantId = TenantContext.tenantId()
         val account = repository.find() ?: TenantPivotAccount.defaultFor(tenantId)
         account.setProfile(
@@ -112,6 +112,19 @@ class TenantPivotAccountService(
             picPhone = command.picPhone,
             address = command.address,
         )
+        // Rekening payout kini bagian dari profil (Pivot mewajibkan `bankAccount` saat create), jadi
+        // divalidasi lewat inquiry & disimpan di sini — bukan langkah terpisah. Inquiry di-skip bila
+        // rekening tak berubah & sudah tervalidasi, agar simpan profil lain tak menembak Pivot ulang.
+        val channelCode = command.channelCode?.trim()?.uppercase()?.takeIf { it.isNotEmpty() }
+        val accountNumber = command.accountNumber?.trim()?.takeIf { it.isNotEmpty() }
+        if (channelCode != null && accountNumber != null) {
+            val unchanged = channelCode == account.payoutChannelCode &&
+                accountNumber == account.payoutAccountNumber && account.payoutReady
+            if (!unchanged) {
+                val inquiry = subMerchant.inquiryAccount(master, channelCode, accountNumber)
+                account.setPayoutAccount(channelCode, accountNumber, inquiry.accountName, inquiry.inquiryId)
+            }
+        }
         val saved = repository.save(account)
         audit("billing.pivot.profile.updated", saved.id, tenantId)
         return saved.toView()
@@ -165,7 +178,8 @@ class TenantPivotAccountService(
     ): SubMerchantCreateRequest {
         if (!account.profileComplete) {
             throw ValidationException(
-                "Lengkapi profil sub-account dulu (email & telepon bisnis, nama/email/telepon PIC, alamat) sebelum mendaftar ke Pivot",
+                "Lengkapi profil sub-account dulu (email & telepon bisnis, nama/email/telepon PIC, " +
+                    "alamat, rekening payout) sebelum mendaftar ke Pivot",
             )
         }
         val d = master.subAccountDefaults
