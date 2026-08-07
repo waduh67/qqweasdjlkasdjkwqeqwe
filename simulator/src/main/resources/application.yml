@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: ftth-simulator
+  main:
+    # Lab peniru protokol: tak butuh server web (slice OLT murni UDP/SNMP).
+    web-application-type: none
+    banner-mode: "off"
+
+ftth:
+  sim:
+    olt:
+      enabled: ${FTTH_SIM_OLT_ENABLED:true}
+      bind-address: ${FTTH_SIM_OLT_BIND:0.0.0.0}
+      # Armada OLT tiruan — tiap entri satu agen SNMP di port sendiri, semua di IP kontainer
+      # yang sama. Daftarkan di app: management_ip sama, snmp_port beda. NAMBAH OLT = tambah
+      # entri di sini dengan `port` & `mac-slot` UNIK, lalu `up -d --force-recreate simulator`.
+      instances:
+        - port: ${FTTH_SIM_OLT_PORT:1161}
+          community: ${FTTH_SIM_OLT_COMMUNITY:public}
+          sys-descr: ${FTTH_SIM_OLT_SYSDESCR:HSGQ-E04I EPON OLT-1 (ftth lab)}
+          pon-count: ${FTTH_SIM_OLT_PONS:2}
+          onus-per-pon: ${FTTH_SIM_OLT_ONUS_PER_PON:8}
+          mac-slot: 1
+        - port: 1162
+          community: public
+          sys-descr: HSGQ-E04I EPON OLT-2 (ftth lab)
+          pon-count: 2
+          onus-per-pon: 8
+          mac-slot: 2
+        - port: 1163
+          community: public
+          sys-descr: HSGQ-E04I EPON OLT-3 (ftth lab)
+          pon-count: 2
+          onus-per-pon: 8
+          mac-slot: 3
+        - port: 1164
+          community: public
+          sys-descr: HSGQ-E04I EPON OLT-4 (ftth lab)
+          pon-count: 2
+          onus-per-pon: 8
+          mac-slot: 4
+        - port: 1165
+          community: public
+          sys-descr: HSGQ-E04I EPON OLT-5 (ftth lab)
+          pon-count: 2
+          onus-per-pon: 8
+          mac-slot: 5
+    radius:
+      enabled: ${FTTH_SIM_RADIUS_ENABLED:true}
+      # Kosong → sim BRAS nonaktif (boot tanpa radius-db). Lab mengisinya via env.
+      url: ${FTTH_SIM_RADIUS_DB_URL:}
+      username: ${FTTH_SIM_RADIUS_DB_USER:}
+      password: ${FTTH_SIM_RADIUS_DB_PASSWORD:}
+      nas-ip: ${FTTH_SIM_RADIUS_NAS_IP:10.0.0.1}
+      dae-bind-address: ${FTTH_SIM_RADIUS_DAE_BIND:0.0.0.0}
+      dae-port: ${FTTH_SIM_RADIUS_DAE_PORT:3799}
+      dae-secret: ${FTTH_SIM_RADIUS_DAE_SECRET:testing123}
+
+logging:
+  level:
+    com.duluin.ftth.simulator: INFO

@@ -1,3 +1,3 @@
 rootProject.name = "ftth"
 
-include("contract", "server", "collector", "snmp")
+include("contract", "server", "collector", "snmp", "simulator")
