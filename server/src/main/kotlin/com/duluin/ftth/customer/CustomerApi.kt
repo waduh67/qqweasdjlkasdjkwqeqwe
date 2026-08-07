@@ -97,9 +97,10 @@ interface CustomerApi {
     /**
      * Memprovisikan sebuah ONU dari perangkat yang terdeteksi jaringan: daftarkan
      * serialnya untuk pelanggan (atau pakai ulang bila sudah terdaftar untuk
-     * pelanggan yang sama) lalu pasang ke port ODP. Aturan port tetap ditegakkan
-     * network. Dipakai module monitoring saat operator menuntaskan ONU dari kotak
-     * masuk provisioning.
+     * pelanggan yang sama), lalu — bila [ProvisionOnuCommand.odpId]/`portNumber` diisi —
+     * pasang ke port ODP itu (aturan port ditegakkan network). Bila ODP dikosongkan,
+     * ONU cukup tertaut ke pelanggan (PENDING) untuk dipasang belakangan. Dipakai module
+     * monitoring saat operator menuntaskan ONU dari kotak masuk provisioning.
      *
      * @throws com.duluin.ftth.common.domain.error.ConflictException bila serial sudah terdaftar untuk pelanggan lain
      */
@@ -282,13 +283,20 @@ data class BillableSubscription(
     val autoIsolir: Boolean?,
 )
 
-/** Perintah memprovisikan ONU liar menjadi pelanggan terpasang. */
+/**
+ * Perintah memprovisikan ONU liar menjadi pelanggan terpasang.
+ *
+ * [odpId]/[portNumber] OPSIONAL dan harus utuh (dua-duanya diisi, atau dua-duanya null):
+ * null = ONU cukup ditautkan ke pelanggan (lahir PENDING) dan dipasang ke port ODP
+ * belakangan — mis. saat teknisi menarik kabel dan menandai ODP-nya di peta. [installRxPowerDbm]
+ * hanya terpakai bila ONU langsung dipasang; tanpa ODP, baseline diambil saat pemasangan nanti.
+ */
 data class ProvisionOnuCommand(
     val serialNumber: String,
     val model: String?,
     val customerId: UUID,
-    val odpId: UUID,
-    val portNumber: Int,
+    val odpId: UUID?,
+    val portNumber: Int?,
     /** Redaman baseline saat instalasi untuk deteksi degradasi; boleh null. */
     val installRxPowerDbm: Double?,
 )

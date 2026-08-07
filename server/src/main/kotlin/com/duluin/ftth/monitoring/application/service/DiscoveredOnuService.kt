@@ -2,6 +2,7 @@ package com.duluin.ftth.monitoring.application.service
 
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.ProvisionOnuCommand
 import com.duluin.ftth.monitoring.application.port.inbound.DiscoveredOnuView
@@ -43,6 +44,10 @@ class DiscoveredOnuService(
         val discovered = require(id)
         if (discovered.state == DiscoveredOnuState.PROVISIONED) {
             throw ConflictException("ONU ${discovered.serialNumber} sudah diprovisikan")
+        }
+        // ODP opsional, tapi harus utuh: ODP tanpa port (atau sebaliknya) ambigu.
+        if ((command.odpId == null) != (command.portNumber == null)) {
+            throw ValidationException("ODP dan nomor port harus diisi bersamaan, atau keduanya dikosongkan")
         }
         customerApi.provisionOnu(
             ProvisionOnuCommand(

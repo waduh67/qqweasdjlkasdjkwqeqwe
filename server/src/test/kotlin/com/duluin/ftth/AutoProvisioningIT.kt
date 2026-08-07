@@ -405,6 +405,71 @@ class AutoProvisioningIT {
     }
 
     @Test
+    fun `provisi tanpa ODP menautkan ONU ke pelanggan sebagai PENDING, ODP menyusul`() {
+        val token = newTenantAdmin("noodp")
+        val (oltCode, odp, customer) = scaffold(token)
+        val apiKey = newCollector(token)
+        val serial = "SN-${uniq().uppercase()}"
+
+        postAsCollector(apiKey, batch(reading(serial, oltCode, -21.0)))
+        val discoveredId = JsonPath.read<String>(inbox(token), "$[0].id")
+
+        // Operator menuntaskan tanpa memilih ODP: cukup tautkan ke pelanggan dulu.
+        val provisioned = post(
+            "/api/monitoring/discovered-onus/$discoveredId/provision", token,
+            """{"customerId":"$customer"}""",
+            expected = 200,
+        )
+        assertThat(JsonPath.read<String>(provisioned, "$.state")).isEqualTo("PROVISIONED")
+
+        // ONU terdaftar untuk pelanggan, PENDING, dan belum tertaut ODP.
+        val onus = getJson("/api/customers/$customer/onus", token)
+        assertThat(JsonPath.read<List<String>>(onus, "$[*].serialNumber")).containsExactly(serial)
+        assertThat(JsonPath.read<String>(onus, "$[0].status")).isEqualTo("PENDING")
+        assertThat(JsonPath.read<String?>(onus, "$[0].odpId")).isNull()
+        assertThat(JsonPath.read<Any?>(onus, "$[0].odpPortNumber")).isNull()
+
+        // Barisnya keluar dari kotak masuk yang menunggu.
+        assertThat(JsonPath.read<List<String>>(inbox(token), "$[*].id")).isEmpty()
+
+        // ODP dipasang belakangan (mis. saat menarik kabel di peta) — tetap sah.
+        val onuId = JsonPath.read<String>(onus, "$[0].id")
+        post("/api/customers/onus/$onuId/attach", token, """{"odpId":"$odp","portNumber":3}""", expected = 200)
+        val attached = getJson("/api/customers/$customer/onus", token)
+        assertThat(JsonPath.read<List<String>>(attached, "$[*].odpId")).containsExactly(odp)
+        assertThat(JsonPath.read<List<Int>>(attached, "$[*].odpPortNumber")).containsExactly(3)
+    }
+
+    @Test
+    fun `provisi dengan ODP tanpa port (atau sebaliknya) ditolak sebagai tak utuh`() {
+        val token = newTenantAdmin("halfodp")
+        val (oltCode, odp, customer) = scaffold(token)
+        val apiKey = newCollector(token)
+        val serial = "SN-${uniq().uppercase()}"
+
+        postAsCollector(apiKey, batch(reading(serial, oltCode, -21.0)))
+        val discoveredId = JsonPath.read<String>(inbox(token), "$[0].id")
+
+        // ODP diisi tapi port kosong → ambigu, tolak dengan 400.
+        post(
+            "/api/monitoring/discovered-onus/$discoveredId/provision", token,
+            """{"customerId":"$customer","odpId":"$odp"}""",
+            expected = 400,
+        )
+
+        // Port diisi tapi ODP kosong → sama-sama ambigu, tolak dengan 400.
+        post(
+            "/api/monitoring/discovered-onus/$discoveredId/provision", token,
+            """{"customerId":"$customer","portNumber":1}""",
+            expected = 400,
+        )
+
+        // Ditolak → baris tetap menunggu, tak ada ONU tersisa separuh jadi.
+        assertThat(JsonPath.read<List<String>>(inbox(token), "$[*].id")).containsExactly(discoveredId)
+        assertThat(JsonPath.read<List<String>>(getJson("/api/customers/$customer/onus", token), "$[*].id")).isEmpty()
+    }
+
+    @Test
     fun `zero-touch mati (default) membiarkan saran HIGH menunggu operator`() {
         val tenant = onboardTenant("ztoff")
         val (oltCode, _, customer) = scaffold(tenant.token)

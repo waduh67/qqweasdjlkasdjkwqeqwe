@@ -171,10 +171,14 @@ class CustomerApiService(
     }
 
     /**
-     * Daftarkan-atau-pakai-ulang lalu pasang, memakai kembali use case yang sama
-     * dengan pemasangan manual sehingga audit dan aturan port ikut berlaku. Serial
-     * yang sudah terdaftar untuk pelanggan yang sama dipakai ulang — memungkinkan
-     * memasang ONU yang tadinya terdaftar tanpa terpasang.
+     * Daftarkan-atau-pakai-ulang lalu — bila ODP+port diisi — pasang, memakai kembali use case
+     * yang sama dengan pemasangan manual sehingga audit dan aturan port ikut berlaku. Serial
+     * yang sudah terdaftar untuk pelanggan yang sama dipakai ulang — memungkinkan memasang ONU
+     * yang tadinya terdaftar tanpa terpasang.
+     *
+     * ODP OPSIONAL ([ProvisionOnuCommand.odpId]/`portNumber` null): ONU cukup ditautkan ke
+     * pelanggan (lahir PENDING) tanpa dipasang — port ODP-nya ditandai belakangan. View hasil
+     * registrasi dipakai ulang untuk jalur tanpa-ODP yang umum agar tak query ulang.
      */
     @Transactional
     override fun provisionOnu(command: ProvisionOnuCommand): OnuRef {
@@ -182,25 +186,29 @@ class CustomerApiService(
             ?: throw NotFoundException("Pelanggan ${command.customerId} tidak ditemukan")
         val serial = command.serialNumber.trim().uppercase()
         val existing = onuRepository.findBySerialNumbers(setOf(serial)).firstOrNull()
-        val onuId = if (existing != null) {
-            if (existing.customerId != command.customerId) {
-                throw ConflictException("ONU $serial sudah terdaftar pada pelanggan lain")
-            }
-            existing.id
-        } else {
-            manageOnu.register(command.customerId, RegisterOnuCommand(command.serialNumber, command.model)).id
+        if (existing != null && existing.customerId != command.customerId) {
+            throw ConflictException("ONU $serial sudah terdaftar pada pelanggan lain")
         }
-        val onu = manageOnu.attach(
-            onuId,
-            AttachOnuCommand(command.odpId, command.portNumber, command.installRxPowerDbm),
-        )
+        val registered = if (existing == null) {
+            manageOnu.register(command.customerId, RegisterOnuCommand(command.serialNumber, command.model))
+        } else {
+            null
+        }
+        val onuId = existing?.id ?: registered!!.id
+
+        val view = if (command.odpId != null && command.portNumber != null) {
+            manageOnu.attach(onuId, AttachOnuCommand(command.odpId, command.portNumber, command.installRxPowerDbm))
+        } else {
+            // Tanpa ODP: pakai view registrasi bila baru; untuk ONU yang dipakai ulang, muat terkini.
+            registered ?: manageOnu.listForCustomer(command.customerId).first { it.id == onuId }
+        }
         return OnuRef(
-            id = onu.id,
-            serialNumber = onu.serialNumber,
-            customerId = onu.customerId,
+            id = view.id,
+            serialNumber = view.serialNumber,
+            customerId = view.customerId,
             customerName = customer.name,
-            odpId = onu.odpId,
-            status = onu.status.name,
+            odpId = view.odpId,
+            status = view.status.name,
         )
     }
 

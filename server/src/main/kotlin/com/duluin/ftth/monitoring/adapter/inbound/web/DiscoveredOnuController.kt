@@ -44,7 +44,7 @@ class DiscoveredOnuController(
 
     @PostMapping("/{id}/provision")
     @PreAuthorize("@authz.can('monitoring.provisioning.manage')")
-    @Operation(summary = "Tuntaskan: daftarkan ONU untuk pelanggan lalu pasang ke port ODP")
+    @Operation(summary = "Tuntaskan: daftarkan ONU untuk pelanggan; ODP+port opsional (tempel belakangan)")
     fun provision(
         @PathVariable id: UUID,
         @Valid @RequestBody request: ProvisionDiscoveredOnuRequest,
@@ -63,8 +63,10 @@ class DiscoveredOnuController(
 
 data class ProvisionDiscoveredOnuRequest(
     @field:NotNull val customerId: UUID,
-    @field:NotNull val odpId: UUID,
-    @field:Min(1) val portNumber: Int,
+    /** ODP tujuan; boleh null = tempel ke pelanggan dulu, ODP menyusul di peta. */
+    val odpId: UUID?,
+    /** Port pada ODP; @Min hanya berlaku bila diisi (null dilewati validasi). */
+    @field:Min(1) val portNumber: Int?,
     val installRxPowerDbm: Double?,
 ) {
     fun toCommand() = ProvisionDiscoveredOnuCommand(

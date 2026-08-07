@@ -21,8 +21,10 @@ interface ManageDiscoveredOnuUseCase {
     fun list(state: DiscoveredOnuState?, oltId: UUID? = null): List<DiscoveredOnuView>
 
     /**
-     * Menuntaskan sebuah ONU terdeteksi: daftarkan serialnya untuk pelanggan lalu
-     * pasang ke port ODP yang dipilih. Baris kotak masuknya ditandai PROVISIONED.
+     * Menuntaskan sebuah ONU terdeteksi: daftarkan serialnya untuk pelanggan, lalu — bila
+     * ODP+port dipilih — pasang ke port itu. ODP OPSIONAL: dikosongkan berarti ONU cukup
+     * ditautkan ke pelanggan dulu (dipasang ke ODP belakangan di peta). Entah bagaimana pun,
+     * baris kotak masuknya ditandai PROVISIONED (keluar dari daftar "menunggu").
      */
     fun provision(id: UUID, command: ProvisionDiscoveredOnuCommand): DiscoveredOnuView
 
@@ -41,8 +43,10 @@ interface ManageDiscoveredOnuUseCase {
 
 data class ProvisionDiscoveredOnuCommand(
     val customerId: UUID,
-    val odpId: UUID,
-    val portNumber: Int,
+    /** ODP tujuan; null = tempel ke pelanggan dulu, ODP menyusul. Harus utuh bersama [portNumber]. */
+    val odpId: UUID?,
+    /** Port pada [odpId]; null bila ODP dikosongkan. */
+    val portNumber: Int?,
     /** Redaman baseline saat instalasi; bila null dipakai redaman terakhir yang teramati. */
     val installRxPowerDbm: Double?,
 )

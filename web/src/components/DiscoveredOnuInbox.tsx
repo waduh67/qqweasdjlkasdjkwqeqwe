@@ -396,7 +396,12 @@ function ProvisionDrawer({
     }
   }, [query])
 
-  const ready = customer != null && odpId !== '' && port !== ''
+  // ODP opsional, tapi utuh: ODP tanpa port (atau sebaliknya) ambigu — tolak.
+  // Kosong dua-duanya = tempel ke pelanggan dulu, ODP menyusul di peta.
+  const odpFilled = odpId !== ''
+  const portFilled = port.trim() !== ''
+  const odpConsistent = odpFilled === portFilled
+  const ready = customer != null && odpConsistent
 
   const submit = async () => {
     if (!ready) return
@@ -404,8 +409,8 @@ function ProvisionDrawer({
     try {
       await api.post(`/api/monitoring/discovered-onus/${discovered.id}/provision`, {
         customerId: customer!.id,
-        odpId,
-        portNumber: Number(port),
+        odpId: odpFilled ? odpId : null,
+        portNumber: portFilled ? Number(port) : null,
         installRxPowerDbm: rx ? Number(rx) : null,
       })
       toast.success(`ONU ${discovered.serialNumber} terprovisi`)
@@ -473,7 +478,7 @@ function ProvisionDrawer({
 
         <div className="row" style={{ alignItems: 'flex-end' }}>
           <label style={{ flex: 2 }}>
-            <span>ODP</span>
+            <span>ODP (opsional)</span>
             <select value={odpId} onChange={(e) => setOdpId(e.target.value)}>
               <option value="">— pilih ODP —</option>
               {odps.map((odp) => (
@@ -488,6 +493,11 @@ function ProvisionDrawer({
             <input value={port} onChange={(e) => setPort(e.target.value)} placeholder="1" />
           </label>
         </div>
+        <span className="muted" style={{ fontSize: '0.78rem', marginTop: '-0.5rem' }}>
+          {odpConsistent
+            ? 'Kosongkan ODP untuk menautkan ke pelanggan dulu; tempel ke ODP belakangan saat menarik kabel di peta.'
+            : 'ODP dan port harus diisi bersamaan, atau keduanya dikosongkan.'}
+        </span>
 
         <label>
           <span>Redaman instalasi (dBm)</span>
