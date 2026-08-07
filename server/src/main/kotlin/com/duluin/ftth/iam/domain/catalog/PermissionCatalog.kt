@@ -17,6 +17,7 @@ object PermissionCatalog {
         platform("platform.tenant.view", "Lihat daftar tenant")
         platform("platform.tenant.create", "Onboarding tenant baru beserta admin awal")
         platform("platform.tenant.manage", "Suspend/aktifkan tenant")
+        platform("platform.tenant.delete", "Hapus tenant permanen beserta seluruh datanya")
         // SaaS billing platform: setelan gateway global + langganan tenant ke aplikasi.
         platform("platform.billing.view", "Lihat setelan billing & payment gateway platform")
         platform("platform.billing.manage", "Kelola gateway aktif & kredensial billing platform")

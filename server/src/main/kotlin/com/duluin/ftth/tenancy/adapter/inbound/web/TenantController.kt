@@ -7,12 +7,15 @@ import com.duluin.ftth.tenancy.TenantStatus
 import com.duluin.ftth.tenancy.application.port.inbound.ManageTenantUseCase
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.springframework.http.HttpStatus
 import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
@@ -53,6 +56,11 @@ class TenantController(
     @PreAuthorize("@authz.can('platform.tenant.manage')")
     fun activate(@PathVariable id: UUID): TenantResponse =
         TenantResponse.from(manageTenant.activate(id))
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("@authz.can('platform.tenant.delete')")
+    fun delete(@PathVariable id: UUID) = manageTenant.delete(id)
 }
 
 data class TenantResponse(

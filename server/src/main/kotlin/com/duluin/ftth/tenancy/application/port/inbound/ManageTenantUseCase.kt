@@ -15,4 +15,7 @@ interface ManageTenantUseCase {
     fun suspend(id: UUID): TenantRef
 
     fun activate(id: UUID): TenantRef
+
+    /** Hapus PERMANEN tenant beserta seluruh datanya. Tenant `platform` tak bisa dihapus. */
+    fun delete(id: UUID)
 }
