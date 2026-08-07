@@ -114,6 +114,24 @@ class PlatformInvoiceGenerator(
         return invoice
     }
 
+    /**
+     * Pastikan [invoice] punya tautan bayar: bila belum ([TenantSubscriptionInvoice.payUrl] null —
+     * charge saat terbit gagal, mis. redirect base URL belum diset waktu itu), charge ulang ke
+     * gateway aktif sekarang. Idempoten: `X-REQUEST-ID` Pivot deterministik dari nomor tagihan →
+     * tak menggandakan sesi bayar. Kegagalan charge TIDAK dilempar (kembalikan apa adanya; tenant
+     * bisa mencoba lagi). Dipakai jalur "Bayar sekarang" tenant untuk menebus tagihan tertunggak
+     * yang tautannya belum sempat terbit.
+     */
+    fun ensurePayable(
+        invoice: TenantSubscriptionInvoice,
+        subscription: TenantSubscription,
+    ): TenantSubscriptionInvoice {
+        if (invoice.payUrl != null) return invoice
+        return runCatching { attachCharge(invoice, subscription) }
+            .onFailure { log.warn("Charge ulang tagihan {} gagal: {}", invoice.number, it.message) }
+            .getOrDefault(invoice)
+    }
+
     private fun attachCharge(
         invoice: TenantSubscriptionInvoice,
         subscription: TenantSubscription,
