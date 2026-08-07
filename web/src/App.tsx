@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Suspense, lazy, type ReactNode } from 'react'
 import { AuthProvider } from './auth/AuthContext'
 import { ToastProvider } from './components/ui'
+import { ThemeProvider } from './theme/ThemeProvider'
 import { useAuth } from './auth/useAuth'
 import { useCan } from './auth/useCan'
 import { Layout } from './components/Layout'
@@ -100,16 +101,18 @@ function RequirePlatformAdmin({ children }: { children: ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <ToastProvider>
-        {/* Realm pelanggan (`/portal/*`) di-mount TERPISAH dari konsol operator: provider,
-            klien HTTP, dan token store sendiri (lihat PortalApp). Dua sesi tak bersinggungan. */}
-        <Routes>
-          <Route path="/portal/*" element={<PortalApp />} />
-          <Route path="/*" element={<OperatorApp />} />
-        </Routes>
-      </ToastProvider>
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <ToastProvider>
+          {/* Realm pelanggan (`/portal/*`) di-mount TERPISAH dari konsol operator: provider,
+              klien HTTP, dan token store sendiri (lihat PortalApp). Dua sesi tak bersinggungan. */}
+          <Routes>
+            <Route path="/portal/*" element={<PortalApp />} />
+            <Route path="/*" element={<OperatorApp />} />
+          </Routes>
+        </ToastProvider>
+      </BrowserRouter>
+    </ThemeProvider>
   )
 }
 
