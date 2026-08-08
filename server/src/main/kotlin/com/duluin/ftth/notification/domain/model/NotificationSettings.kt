@@ -38,7 +38,11 @@ sealed interface WhatsAppGateway {
     data class MetaCloud(
         val phoneNumberId: String,
         val accessToken: String,
-        /** Nama template yang disetujui Meta; null = kirim teks bebas (hanya sah dalam jendela 24 jam). */
+        /**
+         * Nama template yang disetujui Meta; null = kirim teks bebas (hanya sah dalam jendela
+         * 24 jam). Diisi [com.duluin.ftth.notification.application.service.NotificationSender]
+         * dari template yang dipetakan ke pemicu, bukan dari setelan gateway.
+         */
         val templateName: String?,
         val templateLang: String,
     ) : WhatsAppGateway
@@ -71,8 +75,7 @@ class NotificationSettings private constructor(
     httpMessageField: String,
     metaPhoneNumberId: String?,
     metaAccessToken: String?,
-    metaTemplateName: String?,
-    metaTemplateLang: String,
+    metaWabaId: String?,
     notifyOnSubscriptionLifecycle: Boolean,
     notifyOnInvoiceReminder: Boolean,
     notifyOnWorkOrderSchedule: Boolean,
@@ -107,10 +110,11 @@ class NotificationSettings private constructor(
     var metaAccessToken: String? = metaAccessToken
         private set
 
-    var metaTemplateName: String? = metaTemplateName
-        private set
-
-    var metaTemplateLang: String = metaTemplateLang
+    /**
+     * WhatsApp Business Account ID — id publik akun bisnis (bukan rahasia), dipakai untuk
+     * menarik daftar template dari Graph API. Null = fitur "Tarik dari Meta" belum bisa.
+     */
+    var metaWabaId: String? = metaWabaId
         private set
 
     var notifyOnSubscriptionLifecycle: Boolean = notifyOnSubscriptionLifecycle
@@ -135,8 +139,7 @@ class NotificationSettings private constructor(
         httpMessageField: String?,
         metaPhoneNumberId: String?,
         metaAccessToken: String?,
-        metaTemplateName: String?,
-        metaTemplateLang: String?,
+        metaWabaId: String?,
         notifyOnSubscriptionLifecycle: Boolean,
         notifyOnInvoiceReminder: Boolean,
         notifyOnWorkOrderSchedule: Boolean,
@@ -151,8 +154,7 @@ class NotificationSettings private constructor(
         this.httpMessageField = validateFieldName(httpMessageField, DEFAULT_MESSAGE_FIELD, "Field pesan")
         this.metaPhoneNumberId = validatePhoneNumberId(metaPhoneNumberId)
         metaAccessToken?.trim()?.takeIf { it.isNotEmpty() }?.let { this.metaAccessToken = validateToken(it, "Access token Meta", MAX_META_TOKEN) }
-        this.metaTemplateName = validateTemplateName(metaTemplateName)
-        this.metaTemplateLang = validateTemplateLang(metaTemplateLang)
+        this.metaWabaId = validateWabaId(metaWabaId)
         this.notifyOnSubscriptionLifecycle = notifyOnSubscriptionLifecycle
         this.notifyOnInvoiceReminder = notifyOnInvoiceReminder
         this.notifyOnWorkOrderSchedule = notifyOnWorkOrderSchedule
@@ -189,10 +191,23 @@ class NotificationSettings private constructor(
             WhatsAppProvider.META_CLOUD -> {
                 val phoneId = metaPhoneNumberId?.trim()?.takeIf { it.isNotEmpty() } ?: return null
                 val token = metaAccessToken?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-                WhatsAppGateway.MetaCloud(phoneId, token, metaTemplateName, metaTemplateLang)
+                // Template SENGAJA null di sini: pilihannya bergantung pemicu, jadi diisi
+                // NotificationSender dari pemetaan pemicu→template. Tanpa pemetaan = teks biasa.
+                WhatsAppGateway.MetaCloud(phoneId, token, templateName = null, templateLang = DEFAULT_TEMPLATE_LANG)
             }
         }
     }
+
+    /**
+     * Prasyarat pengelolaan template terpenuhi? Yaitu gateway menyala, penyedianya Meta Cloud
+     * resmi, dan kredensialnya (Phone Number ID + access token) SUDAH TERSIMPAN. Satu sumber
+     * kebenaran untuk penjagaan di service maupun status yang ditampilkan ke UI.
+     */
+    fun metaTemplateReady(): Boolean =
+        gatewayEnabled &&
+            provider == WhatsAppProvider.META_CLOUD &&
+            !metaPhoneNumberId.isNullOrBlank() &&
+            !metaAccessToken.isNullOrBlank()
 
     companion object {
         const val DEFAULT_PHONE_FIELD = "target"
@@ -213,8 +228,7 @@ class NotificationSettings private constructor(
             httpMessageField = DEFAULT_MESSAGE_FIELD,
             metaPhoneNumberId = null,
             metaAccessToken = null,
-            metaTemplateName = null,
-            metaTemplateLang = DEFAULT_TEMPLATE_LANG,
+            metaWabaId = null,
             notifyOnSubscriptionLifecycle = false,
             notifyOnInvoiceReminder = false,
             notifyOnWorkOrderSchedule = false,
@@ -233,8 +247,7 @@ class NotificationSettings private constructor(
             httpMessageField: String,
             metaPhoneNumberId: String?,
             metaAccessToken: String?,
-            metaTemplateName: String?,
-            metaTemplateLang: String,
+            metaWabaId: String?,
             notifyOnSubscriptionLifecycle: Boolean,
             notifyOnInvoiceReminder: Boolean,
             notifyOnWorkOrderSchedule: Boolean,
@@ -242,7 +255,7 @@ class NotificationSettings private constructor(
         ): NotificationSettings = NotificationSettings(
             id, tenantId, provider, gatewayEnabled, httpEndpointUrl, httpToken,
             httpPhoneField, httpMessageField, metaPhoneNumberId, metaAccessToken,
-            metaTemplateName, metaTemplateLang, notifyOnSubscriptionLifecycle,
+            metaWabaId, notifyOnSubscriptionLifecycle,
             notifyOnInvoiceReminder, notifyOnWorkOrderSchedule, notifyOnIncidentOpen,
         )
 
@@ -272,15 +285,9 @@ class NotificationSettings private constructor(
             return trimmed
         }
 
-        private fun validateTemplateName(value: String?): String? {
+        private fun validateWabaId(value: String?): String? {
             val trimmed = value?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-            if (trimmed.length > 128) throw ValidationException("Nama template Meta maksimal 128 karakter")
-            return trimmed
-        }
-
-        private fun validateTemplateLang(value: String?): String {
-            val trimmed = value?.trim()?.takeIf { it.isNotEmpty() } ?: return DEFAULT_TEMPLATE_LANG
-            if (trimmed.length > 10) throw ValidationException("Kode bahasa template maksimal 10 karakter")
+            if (trimmed.length > 64) throw ValidationException("WhatsApp Business Account ID maksimal 64 karakter")
             return trimmed
         }
     }

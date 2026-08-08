@@ -24,8 +24,12 @@ data class NotificationSettingsView(
     val httpMessageField: String,
     val metaPhoneNumberId: String?,
     val metaAccessTokenSet: Boolean,
-    val metaTemplateName: String?,
-    val metaTemplateLang: String,
+    val metaWabaId: String?,
+    /**
+     * Prasyarat pengelolaan template terpenuhi (gateway aktif + Meta Cloud + kredensial
+     * tersimpan) — UI memakainya untuk membuka/mengunci kartu template.
+     */
+    val metaTemplateReady: Boolean,
     val notifyOnSubscriptionLifecycle: Boolean,
     val notifyOnInvoiceReminder: Boolean,
     val notifyOnWorkOrderSchedule: Boolean,
@@ -45,8 +49,7 @@ data class UpdateNotificationSettingsCommand(
     val httpMessageField: String?,
     val metaPhoneNumberId: String?,
     val metaAccessToken: String?,
-    val metaTemplateName: String?,
-    val metaTemplateLang: String?,
+    val metaWabaId: String?,
     val notifyOnSubscriptionLifecycle: Boolean,
     val notifyOnInvoiceReminder: Boolean,
     val notifyOnWorkOrderSchedule: Boolean,
