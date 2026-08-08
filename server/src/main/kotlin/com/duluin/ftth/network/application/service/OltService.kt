@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.network.OltDeletedEvent
@@ -17,6 +18,8 @@ import com.duluin.ftth.network.application.port.outbound.OltRepository
 import com.duluin.ftth.network.application.port.outbound.PonPortRepository
 import com.duluin.ftth.network.application.port.outbound.SiteRepository
 import com.duluin.ftth.network.domain.model.AssetStatus
+import com.duluin.ftth.network.domain.model.NetworkNodeKind
+import com.duluin.ftth.network.domain.model.NetworkNodeRef
 import com.duluin.ftth.network.domain.model.Olt
 import com.duluin.ftth.network.domain.model.PonPort
 import com.duluin.ftth.network.domain.model.Site
@@ -33,6 +36,7 @@ class OltService(
     private val siteRepository: SiteRepository,
     private val ponPortRepository: PonPortRepository,
     private val odcRepository: OdcRepository,
+    private val cableAttachment: CableAttachmentService,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
     private val events: ApplicationEventPublisher,
@@ -89,6 +93,10 @@ class OltService(
     override fun update(id: UUID, command: SaveOltCommand): OltView {
         val olt = requireOlt(id)
         val site = requireSite(command.siteId)
+        // Koordinat kosong = pertahankan yang tersimpan; kabel hanya menempel ulang
+        // bila titiknya benar-benar berpindah.
+        val previousLocation = olt.location
+        val newLocation = command.location ?: previousLocation
         olt.update(
             siteId = command.siteId,
             name = command.name,
@@ -96,9 +104,8 @@ class OltService(
             model = command.model,
             managementIp = ManagementIp.ofNullable(command.managementIp),
             snmpPort = command.snmpPort,
-            // Koordinat kosong = pertahankan yang tersimpan; area re-inherit dari site
-            // (menampung kasus OLT dipindah ke site di area lain).
-            location = command.location ?: olt.location,
+            // area re-inherit dari site (menampung kasus OLT dipindah ke site di area lain).
+            location = newLocation,
             areaId = site.areaId,
             description = command.description,
             snmpEnabled = command.snmpEnabled,
@@ -111,8 +118,20 @@ class OltService(
         olt.changeSnmpCommunity(command.snmpCommunity)
         olt.changeWebPassword(command.webPassword)
         val saved = oltRepository.save(olt)
+        if (newLocation != previousLocation) {
+            cableAttachment.resnapForMovedNode(NetworkNodeRef(NetworkNodeKind.OLT, id), saved.location)
+        }
         auditor.record("olt.updated", "Olt", saved.id, saved.tenantId, mapOf("code" to saved.code))
         return saved.toView(site.name, ponPortRepository.findByOltId(id).size)
+    }
+
+    override fun relocate(id: UUID, location: Coordinate): OltView {
+        val olt = requireOlt(id)
+        olt.relocate(location)
+        val saved = oltRepository.save(olt)
+        cableAttachment.resnapForMovedNode(NetworkNodeRef(NetworkNodeKind.OLT, id), saved.location)
+        auditor.record("olt.relocated", "Olt", saved.id, saved.tenantId, mapOf("code" to saved.code))
+        return saved.toView(siteRepository.findById(saved.siteId)?.name, ponPortRepository.findByOltId(id).size)
     }
 
     override fun changeStatus(id: UUID, status: AssetStatus): OltView {

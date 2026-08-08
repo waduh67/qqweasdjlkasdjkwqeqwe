@@ -16,6 +16,9 @@ interface ManageOdpUseCase {
 
     fun update(id: UUID, command: SaveOdpCommand): OdpView
 
+    /** Memindah titik ODP di peta; ujung kabel yang menyentuhnya ikut menempel ulang. */
+    fun relocate(id: UUID, location: Coordinate): OdpView
+
     fun connect(id: UUID, odcId: UUID?): OdpView
 
     fun delete(id: UUID)

@@ -53,6 +53,12 @@ class OdpController(
     fun update(@PathVariable id: UUID, @Valid @RequestBody request: OdpRequest): OdpView =
         manageOdp.update(id, request.toCommand())
 
+    /** Memindah titik ODP di peta (drag); kabel yang menyentuhnya ikut menempel ulang. */
+    @PutMapping("/{id}/location")
+    @PreAuthorize("@authz.can('network.odp.update')")
+    fun relocate(@PathVariable id: UUID, @Valid @RequestBody request: LocationRequest): OdpView =
+        manageOdp.relocate(id, request.toCoordinate())
+
     /** Menyambung ODP ke ODC; `targetId` null melepas sambungan. */
     @PutMapping("/{id}/uplink")
     @PreAuthorize("@authz.can('network.odp.update')")

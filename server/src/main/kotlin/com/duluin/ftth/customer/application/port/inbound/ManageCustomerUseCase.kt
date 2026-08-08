@@ -16,6 +16,9 @@ interface ManageCustomerUseCase {
 
     fun update(id: UUID, command: SaveCustomerCommand): CustomerView
 
+    /** Memindah titik rumah pelanggan di peta; kabel drop-nya ikut menempel ulang. */
+    fun relocate(id: UUID, location: Coordinate): CustomerView
+
     fun changeStatus(id: UUID, status: CustomerStatus): CustomerView
 
     fun delete(id: UUID)

@@ -52,6 +52,12 @@ class OdcController(
     fun update(@PathVariable id: UUID, @Valid @RequestBody request: OdcRequest): OdcView =
         manageOdc.update(id, request.toCommand())
 
+    /** Memindah titik ODC di peta (drag); kabel yang menyentuhnya ikut menempel ulang. */
+    @PutMapping("/{id}/location")
+    @PreAuthorize("@authz.can('network.odc.update')")
+    fun relocate(@PathVariable id: UUID, @Valid @RequestBody request: LocationRequest): OdcView =
+        manageOdc.relocate(id, request.toCoordinate())
+
     /** Menyambung feeder ke PON port; `targetId` null melepas sambungan. */
     @PutMapping("/{id}/uplink")
     @PreAuthorize("@authz.can('network.odc.update')")

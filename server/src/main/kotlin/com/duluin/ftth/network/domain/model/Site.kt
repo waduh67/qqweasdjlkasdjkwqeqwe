@@ -36,6 +36,11 @@ class Site private constructor(
         this.areaId = areaId
     }
 
+    /** Memindah titik site di peta tanpa menyentuh atribut lain. */
+    fun relocate(location: Coordinate) {
+        this.location = location
+    }
+
     companion object {
         fun create(
             tenantId: UUID,

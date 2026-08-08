@@ -4,6 +4,7 @@ import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
 import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -14,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.util.UUID
 
@@ -64,6 +66,16 @@ class CablePortEndpointsIT {
             .andExpect(status().isOk).andReturn().response.contentAsString
 
     private fun idOf(json: String): String = JsonPath.read(json, "$.id")
+
+    private fun put(url: String, token: String, body: String, expected: Int = 200) =
+        mockMvc.perform(
+            put(url).header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON).content(body),
+        ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
+
+    /** Membaca koordinat titik ke-[idx] jalur kabel, tahan tipe angka (Double/BigDecimal). */
+    private fun pointCoord(json: String, idx: Int, axis: String): Double =
+        (JsonPath.read<Any>(json, "$.route.points[$idx].$axis") as Number).toDouble()
 
     /** Simpul jaringan sebuah tenant, dengan id yang dibutuhkan uji port. */
     private data class Fixture(
@@ -258,6 +270,69 @@ class CablePortEndpointsIT {
         val after = getJson("/api/odcs/${fx.odc}", token)
         assertThat(JsonPath.read<Any?>(after, "$.ponPortId")).isNull()
         assertThat(JsonPath.read<Boolean>(after, "$.energized")).isFalse()
+    }
+
+    @Test
+    fun `memindah ODC menempelkan ujung feeder ke titik baru, tikungan tetap`() {
+        val token = newTenantAdmin("relodc")
+        val fx = bootstrap(token)
+
+        // Feeder bertikungan; titik akhir berada di lokasi ODC.
+        val suffix = uniq().uppercase()
+        val cableId = idOf(
+            post(
+                "/api/cables", token,
+                """{"code":"FDR-$suffix","name":"Feeder $suffix","cableType":"FEEDER","coreCount":24,
+                    "route":[{"longitude":106.98,"latitude":-6.23},{"longitude":106.985,"latitude":-6.235},
+                        {"longitude":106.99,"latitude":-6.24}],
+                    "fromKind":"OLT","fromId":"${fx.olt}","toKind":"ODC","toId":"${fx.odc}",
+                    "fromPonPortId":"${fx.pon}"}""",
+            ),
+        )
+
+        put("/api/odcs/${fx.odc}/location", token, """{"longitude":107.21,"latitude":-6.41}""")
+
+        // Ujung `to` (titik akhir) menempel ke lokasi baru; titik awal & tikungan tetap.
+        val json = getJson("/api/cables/$cableId", token)
+        assertThat(JsonPath.read<List<Any>>(json, "$.route.points")).hasSize(3)
+        assertThat(pointCoord(json, 2, "longitude")).isCloseTo(107.21, within(1e-9))
+        assertThat(pointCoord(json, 2, "latitude")).isCloseTo(-6.41, within(1e-9))
+        assertThat(pointCoord(json, 0, "longitude")).isCloseTo(106.98, within(1e-9))
+        assertThat(pointCoord(json, 1, "longitude")).isCloseTo(106.985, within(1e-9))
+    }
+
+    @Test
+    fun `memindah pelanggan menempelkan ujung kabel drop ke titik baru`() {
+        val token = newTenantAdmin("relcust")
+        val fx = bootstrap(token)
+
+        val tag = uniq().uppercase()
+        val customer = idOf(
+            post(
+                "/api/customers", token,
+                """{"name":"Pelanggan $tag","address":"Jl. Uji",
+                    "location":{"longitude":106.996,"latitude":-6.246}}""",
+            ),
+        )
+
+        val suffix = uniq().uppercase()
+        val cableId = idOf(
+            post(
+                "/api/cables", token,
+                """{"code":"DRP-$suffix","name":"Drop $suffix","cableType":"DROP","coreCount":1,
+                    "route":[{"longitude":106.995,"latitude":-6.245},{"longitude":106.996,"latitude":-6.246}],
+                    "fromKind":"ODP","fromId":"${fx.odp}","toKind":"CUSTOMER","toId":"$customer",
+                    "fromPortNumber":5}""",
+            ),
+        )
+
+        put("/api/customers/$customer/location", token, """{"longitude":107.31,"latitude":-6.51}""")
+
+        // Ujung drop di sisi pelanggan (titik akhir) ikut pindah; pangkal di ODP tetap.
+        val json = getJson("/api/cables/$cableId", token)
+        assertThat(pointCoord(json, 1, "longitude")).isCloseTo(107.31, within(1e-9))
+        assertThat(pointCoord(json, 1, "latitude")).isCloseTo(-6.51, within(1e-9))
+        assertThat(pointCoord(json, 0, "longitude")).isCloseTo(106.995, within(1e-9))
     }
 
     @Test

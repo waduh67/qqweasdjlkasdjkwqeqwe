@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.network.application.port.inbound.ManageSiteUseCase
@@ -11,6 +12,8 @@ import com.duluin.ftth.network.application.port.inbound.SaveSiteCommand
 import com.duluin.ftth.network.application.port.inbound.SiteView
 import com.duluin.ftth.network.application.port.outbound.OltRepository
 import com.duluin.ftth.network.application.port.outbound.SiteRepository
+import com.duluin.ftth.network.domain.model.NetworkNodeKind
+import com.duluin.ftth.network.domain.model.NetworkNodeRef
 import com.duluin.ftth.network.domain.model.Site
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -21,6 +24,7 @@ import java.util.UUID
 class SiteService(
     private val siteRepository: SiteRepository,
     private val oltRepository: OltRepository,
+    private val cableAttachment: CableAttachmentService,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
 ) : ManageSiteUseCase {
@@ -54,9 +58,20 @@ class SiteService(
 
     override fun update(id: UUID, command: SaveSiteCommand): SiteView {
         val site = requireSite(id)
+        val moved = site.location != command.location
         site.update(command.name, command.address, command.location, command.areaId)
         val saved = siteRepository.save(site)
+        if (moved) cableAttachment.resnapForMovedNode(NetworkNodeRef(NetworkNodeKind.SITE, id), saved.location)
         auditor.record("site.updated", "Site", saved.id, saved.tenantId, mapOf("code" to saved.code))
+        return saved.toView(oltRepository.countBySiteId(id))
+    }
+
+    override fun relocate(id: UUID, location: Coordinate): SiteView {
+        val site = requireSite(id)
+        site.relocate(location)
+        val saved = siteRepository.save(site)
+        cableAttachment.resnapForMovedNode(NetworkNodeRef(NetworkNodeKind.SITE, id), saved.location)
+        auditor.record("site.relocated", "Site", saved.id, saved.tenantId, mapOf("code" to saved.code))
         return saved.toView(oltRepository.countBySiteId(id))
     }
 

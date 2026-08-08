@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.common.security.areaScope
@@ -15,6 +16,7 @@ import com.duluin.ftth.customer.application.port.outbound.OnuRepository
 import com.duluin.ftth.customer.application.port.outbound.SubscriptionRepository
 import com.duluin.ftth.customer.domain.model.Customer
 import com.duluin.ftth.customer.domain.model.CustomerStatus
+import com.duluin.ftth.network.NetworkApi
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -27,6 +29,7 @@ class CustomerService(
     private val subscriptionRepository: SubscriptionRepository,
     private val onuRepository: OnuRepository,
     private val assembler: CustomerAssembler,
+    private val networkApi: NetworkApi,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
 ) : ManageCustomerUseCase {
@@ -74,6 +77,7 @@ class CustomerService(
 
     override fun update(id: UUID, command: SaveCustomerCommand): CustomerView {
         val customer = requireCustomer(id)
+        val moved = customer.location != command.location
         customer.update(
             name = command.name,
             phone = command.phone,
@@ -84,7 +88,19 @@ class CustomerService(
             idCardNumber = command.idCardNumber,
         )
         val saved = customerRepository.save(customer)
+        // Kabel drop dimiliki module network; minta network menempelkan ujungnya
+        // ke titik baru bila rumah pelanggan berpindah.
+        if (moved) networkApi.resnapCablesForMovedCustomer(id, saved.location)
         auditor.record("customer.updated", "Customer", saved.id, saved.tenantId, mapOf("code" to saved.code))
+        return assemble(saved)
+    }
+
+    override fun relocate(id: UUID, location: Coordinate): CustomerView {
+        val customer = requireCustomer(id)
+        customer.relocate(location)
+        val saved = customerRepository.save(customer)
+        networkApi.resnapCablesForMovedCustomer(id, saved.location)
+        auditor.record("customer.relocated", "Customer", saved.id, saved.tenantId, mapOf("code" to saved.code))
         return assemble(saved)
     }
 

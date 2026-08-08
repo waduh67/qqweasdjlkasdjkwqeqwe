@@ -73,6 +73,11 @@ class Odp private constructor(
         this.odcId = odcId
     }
 
+    /** Memindah titik ODP di peta tanpa menyentuh atribut lain. */
+    fun relocate(location: Coordinate) {
+        this.location = location
+    }
+
     /**
      * Memastikan sebuah port boleh dipakai ONU baru. Melempar, bukan mengembalikan
      * boolean, supaya pemanggil tidak bisa "lupa" memeriksa hasilnya dan agar

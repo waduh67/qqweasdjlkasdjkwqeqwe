@@ -15,6 +15,9 @@ interface ManageSiteUseCase {
 
     fun update(id: UUID, command: SaveSiteCommand): SiteView
 
+    /** Memindah titik site di peta; ujung kabel yang menyentuhnya ikut menempel ulang. */
+    fun relocate(id: UUID, location: Coordinate): SiteView
+
     fun delete(id: UUID)
 }
 

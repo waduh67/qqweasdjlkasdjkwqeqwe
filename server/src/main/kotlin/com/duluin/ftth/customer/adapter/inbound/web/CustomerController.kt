@@ -78,6 +78,12 @@ class CustomerController(
     fun update(@PathVariable id: UUID, @Valid @RequestBody request: CustomerRequest): CustomerView =
         manageCustomer.update(id, request.toCommand())
 
+    /** Memindah titik rumah pelanggan di peta (drag); kabel drop-nya ikut menempel ulang. */
+    @PutMapping("/{id}/location")
+    @PreAuthorize("@authz.can('customer.customer.update')")
+    fun relocate(@PathVariable id: UUID, @Valid @RequestBody request: CustomerLocationRequest): CustomerView =
+        manageCustomer.relocate(id, Coordinate(request.longitude, request.latitude))
+
     @PutMapping("/{id}/status")
     @PreAuthorize("@authz.can('customer.customer.update')")
     fun changeStatus(@PathVariable id: UUID, @RequestBody request: CustomerStatusRequest): CustomerView =

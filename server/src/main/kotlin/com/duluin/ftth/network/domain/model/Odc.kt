@@ -70,6 +70,11 @@ class Odc private constructor(
         this.ponPortId = ponPortId
     }
 
+    /** Memindah titik ODC di peta tanpa menyentuh atribut lain. */
+    fun relocate(location: Coordinate) {
+        this.location = location
+    }
+
     /** ODC tanpa uplink tidak bisa mengalirkan layanan meski statusnya aktif. */
     fun isEnergized(): Boolean = status.acceptsService() && ponPortId != null
 

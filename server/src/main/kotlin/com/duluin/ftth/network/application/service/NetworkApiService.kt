@@ -1,6 +1,7 @@
 package com.duluin.ftth.network.application.service
 
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.network.CableCutImpact
 import com.duluin.ftth.network.CablePath
 import com.duluin.ftth.network.DownstreamIds
@@ -46,6 +47,7 @@ class NetworkApiService(
     private val oltRepository: OltRepository,
     private val siteRepository: SiteRepository,
     private val cableRepository: CableRepository,
+    private val cableAttachment: CableAttachmentService,
     private val tileRenderer: NetworkTileRenderer,
 ) : NetworkApi {
 
@@ -198,6 +200,11 @@ class NetworkApiService(
         val odp = odpRepository.findById(odpId) ?: throw NotFoundException("ODP $odpId tidak ditemukan")
         odp.assertPortAssignable(portNumber, occupiedPorts)
     }
+
+    // Menulis (menggeser ujung kabel), jadi override readOnly kelas.
+    @Transactional
+    override fun resnapCablesForMovedCustomer(customerId: UUID, coord: Coordinate) =
+        cableAttachment.resnapForMovedNode(NetworkNodeRef(NetworkNodeKind.CUSTOMER, customerId), coord)
 
     /**
      * Menelusuri jalur ke hulu satu tingkat demi satu tingkat. Berhenti tanpa

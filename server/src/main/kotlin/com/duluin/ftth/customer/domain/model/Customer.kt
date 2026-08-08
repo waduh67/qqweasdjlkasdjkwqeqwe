@@ -81,6 +81,11 @@ class Customer private constructor(
         this.status = status
     }
 
+    /** Memindah titik rumah pelanggan di peta tanpa menyentuh atribut lain. */
+    fun relocate(location: Coordinate) {
+        this.location = location
+    }
+
     companion object {
         private val CODE_PATTERN = Regex("^[A-Z0-9][A-Z0-9._/-]{1,39}$")
 

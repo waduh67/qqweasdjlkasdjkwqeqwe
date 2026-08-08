@@ -2,6 +2,7 @@ package com.duluin.ftth.network.domain.model
 
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.domain.geo.RoutePath
 import java.util.UUID
 
@@ -115,6 +116,29 @@ class Cable private constructor(
         this.from = from
         this.to = to
         this.status = status
+    }
+
+    /**
+     * Menempelkan ujung kabel yang menyambung ke [ref] pada [coord] — dipakai saat
+     * simpul (OLT/ODC/ODP/site/pelanggan) dipindah di peta. HANYA titik ujung yang
+     * digeser; tikungan di tengah tak disentuh dan panjang otomatis dihitung ulang
+     * lewat [lengthMeters]. Mengembalikan `true` bila ada titik yang benar-benar
+     * bergeser, agar pemanggil bisa melewati penyimpanan yang tak perlu. Idempoten:
+     * ujung yang sudah pas di [coord] dibiarkan. Sebuah kabel tak pernah berawal &
+     * berakhir di simpul sama (dijaga [CableType.assertEndpoints]), jadi paling
+     * banyak satu ujung tergeser per panggilan.
+     */
+    fun snapEndpointTo(ref: NetworkNodeRef, coord: Coordinate): Boolean {
+        var changed = false
+        if (from.ref == ref && route.start != coord) {
+            route = route.withStart(coord)
+            changed = true
+        }
+        if (to.ref == ref && route.end != coord) {
+            route = route.withEnd(coord)
+            changed = true
+        }
+        return changed
     }
 
     companion object {

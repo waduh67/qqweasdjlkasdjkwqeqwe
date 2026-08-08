@@ -44,6 +44,16 @@ interface NetworkApi {
      */
     fun assertOdpPortAssignable(odpId: UUID, portNumber: Int, occupiedPorts: Set<Int>)
 
+    /**
+     * Menempelkan ulang ujung kabel drop yang menyentuh seorang pelanggan ke titik
+     * barunya setelah pelanggan dipindah di peta. Dipakai module customer: network
+     * yang memiliki & menegakkan geometri kabel, customer cukup memberi tahu lokasi
+     * baru. HANYA titik ujung yang menyambung ke pelanggan yang digeser (tikungan
+     * tetap, panjang dihitung ulang). Aman dipanggil untuk pelanggan tanpa kabel
+     * drop — tak melakukan apa-apa.
+     */
+    fun resnapCablesForMovedCustomer(customerId: UUID, coord: Coordinate)
+
     /** Jalur hulu sebuah ODP: ODP → ODC → PON port → OLT → site, untuk telusur & korelasi alarm. */
     fun upstreamOf(odpId: UUID): UpstreamPath
 

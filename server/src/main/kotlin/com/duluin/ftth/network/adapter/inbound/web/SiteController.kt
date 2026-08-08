@@ -52,6 +52,12 @@ class SiteController(
     fun update(@PathVariable id: UUID, @Valid @RequestBody request: SiteRequest): SiteView =
         manageSite.update(id, request.toCommand())
 
+    /** Memindah titik site di peta (drag); kabel yang menyentuhnya ikut menempel ulang. */
+    @PutMapping("/{id}/location")
+    @PreAuthorize("@authz.can('network.site.update')")
+    fun relocate(@PathVariable id: UUID, @Valid @RequestBody request: LocationRequest): SiteView =
+        manageSite.relocate(id, request.toCoordinate())
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("@authz.can('network.site.delete')")

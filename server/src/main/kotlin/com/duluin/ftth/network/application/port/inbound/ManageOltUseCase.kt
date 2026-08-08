@@ -19,6 +19,9 @@ interface ManageOltUseCase {
 
     fun update(id: UUID, command: SaveOltCommand): OltView
 
+    /** Memindah titik OLT di peta; ujung kabel yang menyentuhnya ikut menempel ulang. */
+    fun relocate(id: UUID, location: Coordinate): OltView
+
     fun changeStatus(id: UUID, status: AssetStatus): OltView
 
     fun delete(id: UUID)

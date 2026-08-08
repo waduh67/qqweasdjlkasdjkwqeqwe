@@ -16,6 +16,9 @@ interface ManageOdcUseCase {
 
     fun update(id: UUID, command: SaveOdcCommand): OdcView
 
+    /** Memindah titik ODC di peta; ujung kabel yang menyentuhnya ikut menempel ulang. */
+    fun relocate(id: UUID, location: Coordinate): OdcView
+
     /** Menyambung/melepas feeder ODC ke PON port; `ponPortId` null = melepas. */
     fun connect(id: UUID, ponPortId: UUID?): OdcView
 

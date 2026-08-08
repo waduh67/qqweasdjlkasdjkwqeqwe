@@ -383,17 +383,39 @@ const ASSET_META: Record<AssetKind, { label: string; createPerm: string; deleteP
   ODP: { label: 'ODP', createPerm: 'network.odp.create', deletePerm: 'network.odp.delete', endpoint: '/api/odps' },
 }
 
+/**
+ * Layer titik yang koordinatnya bisa DIGESER langsung di peta. Kunci = id layer
+ * lingkaran (sekaligus source-layer MVT), nilai = endpoint pindah-lokasi + izinnya
+ * + warna pin sementara (senada warna markernya di peta). Semua endpoint menerima
+ * body `{ longitude, latitude }` (`PUT /api/{plural}/{id}/location`), termasuk
+ * pelanggan yang kabel drop-nya ikut menempel ulang di sisi server.
+ */
+const MOVABLE_NODES: Record<string, { plural: string; perm: string; label: string; color: string }> = {
+  customer: { plural: 'customers', perm: 'customer.customer.update', label: 'Pelanggan', color: '#34d399' },
+  odp: { plural: 'odps', perm: 'network.odp.update', label: 'ODP', color: '#fbbf24' },
+  odc: { plural: 'odcs', perm: 'network.odc.update', label: 'ODC', color: '#22d3ee' },
+  olt: { plural: 'olts', perm: 'network.olt.update', label: 'OLT', color: OLT_COLOR },
+  site: { plural: 'sites', perm: 'network.site.update', label: 'Site', color: '#b47cff' },
+}
+
 export function MapPage() {
   const container = useRef<HTMLDivElement>(null)
   const map = useRef<MapLibreMap | null>(null)
   const tool = useRef<CableTool | null>(null)
-  const modeRef = useRef<'idle' | 'draw' | 'edit' | 'place'>('idle')
+  const modeRef = useRef<'idle' | 'draw' | 'edit' | 'place' | 'drag'>('idle')
   // Jenis perangkat yang sedang ditaruh (mode 'place'), dibaca handler klik peta.
   const placeKindRef = useRef<AssetKind | null>(null)
   const animRef = useRef<number | null>(null)
   const impactedRef = useRef<number | null>(null)
   // Pin yang bisa diseret untuk menyetel lokasi perangkat baru sebelum disimpan.
   const placeMarker = useRef<maplibregl.Marker | null>(null)
+  // Keadaan seret simpul (pindah lokasi perangkat/pelanggan langsung di peta):
+  // layer & id yang sedang diseret, apakah pointer benar-benar bergerak (bedakan
+  // dari sekadar klik), dan pin sementara yang mengikuti kursor. `null` = tak menyeret.
+  const dragNode = useRef<{ layer: string; id: string; moved: boolean; marker: maplibregl.Marker | null } | null>(null)
+  // `can` terbaru untuk dibaca dari handler peta yang dipasang sekali saat mount
+  // (efek init ber-dep `[]`, jadi tak bisa menutup `can` yang berubah tiap render).
+  const canRef = useRef<(perm: string) => boolean>(() => false)
   // Popup koordinat: klik lahan kosong → lat/long titik itu yang bisa disalin.
   const coordPopup = useRef<maplibregl.Popup | null>(null)
   // Penyebab per kabel (id → alarm hidup di hilir), diisi tiap overlay disegarkan
@@ -418,11 +440,15 @@ export function MapPage() {
   // Mode taruh perangkat baru: jenis yang dipilih, dan lokasi klik yang menunggu form.
   const [placing, setPlacing] = useState<AssetKind | null>(null)
   const [placeAt, setPlaceAt] = useState<{ kind: AssetKind; lng: number; lat: number } | null>(null)
+  // Label simpul yang sedang diseret di peta (mis. "ODP"), untuk bilah petunjuk.
+  const [draggingLabel, setDraggingLabel] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [basemap, setBasemap] = useState<BasemapMode>(DEFAULT_BASEMAP)
   const { can } = useCan()
   const { user } = useAuth()
   const toast = useToast()
+  // Selalu sediakan `can` mutakhir bagi handler peta bawaan-mount (lihat canRef).
+  canRef.current = can
   // Dipakai tombol "Buka detail" di panel OLT untuk pindah ke halaman lengkapnya.
   const navigate = useNavigate()
 
@@ -724,6 +750,73 @@ export function MapPage() {
       })
       instance.on('mouseleave', layer, () => {
         if (modeRef.current === 'idle') instance.getCanvas().style.cursor = ''
+      })
+    }
+
+    // ── Seret simpul untuk memindah lokasinya ────────────────────────────────
+    // Klik-tahan sebuah titik (perangkat/pelanggan) lalu seret → koordinatnya
+    // dipindah di server saat dilepas; kabel yang menempel ikut disesuaikan
+    // (ujung nempel, tikungan tetap). Mengikuti pola baku MapLibre "draggable
+    // point": `preventDefault()` di mousedown menahan peta agar tak ikut ter-pan,
+    // lalu mousemove/up global menggerakkan pin sementara. Flag `moved` membedakan
+    // seret dari sekadar klik — bila titik tak digeser, handler klik layer tetap
+    // membuka panel inspeksi seperti biasa (mode masih 'idle').
+    const onNodeDragMove = (e: maplibregl.MapMouseEvent) => {
+      const drag = dragNode.current
+      if (!drag) return
+      const cfg = MOVABLE_NODES[drag.layer]
+      if (!drag.moved) {
+        // Gerakan pertama = benar-benar menyeret: sembunyikan titik MVT asli agar
+        // tak dobel dengan pin, kunci mode 'drag' (menggerbang klik-inspeksi), pasang pin.
+        drag.moved = true
+        modeRef.current = 'drag'
+        coordPopup.current?.remove()
+        for (const l of [drag.layer, `${drag.layer}-glow`]) {
+          if (instance.getLayer(l)) instance.setFilter(l, ['!=', ['get', 'id'], drag.id])
+        }
+        drag.marker = new maplibregl.Marker({ color: cfg.color }).setLngLat(e.lngLat).addTo(instance)
+        setDraggingLabel(cfg.label)
+      }
+      drag.marker?.setLngLat(e.lngLat)
+      instance.getCanvas().style.cursor = 'grabbing'
+    }
+
+    const onNodeDragEnd = (e: maplibregl.MapMouseEvent) => {
+      instance.off('mousemove', onNodeDragMove)
+      const drag = dragNode.current
+      dragNode.current = null
+      if (!drag) return
+      // Tak bergeser → klik biasa: tak ada yang perlu dibereskan, handler klik
+      // layer (mode masih 'idle') membuka panelnya seperti biasa.
+      if (!drag.moved) return
+      const { lng, lat } = e.lngLat
+      drag.marker?.remove()
+      for (const l of [drag.layer, `${drag.layer}-glow`]) {
+        if (instance.getLayer(l)) instance.setFilter(l, null)
+      }
+      instance.getCanvas().style.cursor = ''
+      setDraggingLabel(null)
+      void relocateNode(drag.layer, drag.id, lng, lat)
+      // Buka gerbang mode SETELAH 'click' penutup lewat (mouseup selalu memicu
+      // click), agar seret tak sekaligus membuka panel inspeksi titiknya.
+      window.setTimeout(() => {
+        if (modeRef.current === 'drag') modeRef.current = 'idle'
+      }, 0)
+    }
+
+    for (const layer of Object.keys(MOVABLE_NODES)) {
+      instance.on('mousedown', layer, (e) => {
+        // Hanya saat idle, tombol kiri, punya izin ubah, dan belum ada seret lain
+        // (dua layer titik bisa bertumpuk di piksel yang sama → cegah dobel-pasang).
+        if (modeRef.current !== 'idle' || dragNode.current) return
+        if (e.originalEvent.button !== 0) return
+        if (!canRef.current(MOVABLE_NODES[layer].perm)) return
+        const id = e.features?.[0]?.properties?.id as string | undefined
+        if (!id) return
+        e.preventDefault()
+        dragNode.current = { layer, id, moved: false, marker: null }
+        instance.on('mousemove', onNodeDragMove)
+        instance.once('mouseup', onNodeDragEnd)
       })
     }
 
@@ -1097,6 +1190,27 @@ export function MapPage() {
     }
   }
 
+  /**
+   * Menyimpan lokasi baru simpul yang baru saja diseret. Server yang menempelkan
+   * ulang ujung kabel terkait ke titik ini (ujung nempel, tikungan tetap), lalu tile
+   * & overlay disegarkan agar simpul + kabelnya tergambar di posisi baru. Gagal →
+   * toast + tetap segarkan tile supaya titik kembali ke posisi lama (bukan ilusi
+   * tersimpan).
+   */
+  const relocateNode = async (layer: string, id: string, lng: number, lat: number) => {
+    const cfg = MOVABLE_NODES[layer]
+    if (!cfg) return
+    try {
+      await api.put(`/api/${cfg.plural}/${id}/location`, { longitude: lng, latitude: lat })
+      toast.success(`Lokasi ${cfg.label} dipindahkan`)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : `Gagal memindahkan ${cfg.label}`)
+    } finally {
+      refreshTiles()
+      void refreshImpacted()
+    }
+  }
+
   /** Menghapus perangkat titik dari panelnya; server menolak bila masih dipakai hilir. */
   const deleteAsset = async (kind: AssetKind, id: string, code: string, onDone: () => void) => {
     const meta = ASSET_META[kind]
@@ -1291,6 +1405,14 @@ export function MapPage() {
             <Button variant="subtle" size="small" style={{ marginLeft: 'auto' }} onClick={cancelPlace}>
               Batal
             </Button>
+          </div>
+        )}
+
+        {/* Bilah petunjuk saat menyeret simpul untuk memindah lokasinya */}
+        {draggingLabel && (
+          <div className="map-hint">
+            <IconCrosshair size={16} />
+            <span>Lepas untuk memindahkan {draggingLabel} ke titik ini · kabel yang menempel ikut menyesuaikan</span>
           </div>
         )}
 

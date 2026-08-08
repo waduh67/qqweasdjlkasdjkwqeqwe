@@ -59,6 +59,12 @@ class OltController(
     fun update(@PathVariable id: UUID, @Valid @RequestBody request: OltRequest): OltView =
         manageOlt.update(id, request.toCommand())
 
+    /** Memindah titik OLT di peta (drag); kabel yang menyentuhnya ikut menempel ulang. */
+    @PutMapping("/{id}/location")
+    @PreAuthorize("@authz.can('network.olt.update')")
+    fun relocate(@PathVariable id: UUID, @Valid @RequestBody request: LocationRequest): OltView =
+        manageOlt.relocate(id, request.toCoordinate())
+
     @PutMapping("/{id}/status")
     @PreAuthorize("@authz.can('network.olt.update')")
     fun changeStatus(@PathVariable id: UUID, @RequestBody request: StatusRequest): OltView =

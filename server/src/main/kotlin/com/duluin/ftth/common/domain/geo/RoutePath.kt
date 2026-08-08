@@ -54,6 +54,17 @@ data class RoutePath(val points: List<Coordinate>) {
     fun pointAtFraction(fraction: Double): Coordinate =
         pointAtDistance(fraction.coerceIn(0.0, 1.0) * lengthMeters())
 
+    /**
+     * Salinan jalur dengan titik AWAL (ujung `from`) diganti [coord]. Titik lain —
+     * termasuk tikungan di tengah — tetap. Dipakai saat simpul di ujung awal kabel
+     * dipindah di peta: ujung menempel ke lokasi baru tanpa mengubah bentuk jalur.
+     * Jumlah titik tak berubah, jadi jaminan minimal 2 titik tetap terjaga.
+     */
+    fun withStart(coord: Coordinate): RoutePath = RoutePath(listOf(coord) + points.drop(1))
+
+    /** Kembar [withStart] untuk titik AKHIR (ujung `to`). */
+    fun withEnd(coord: Coordinate): RoutePath = RoutePath(points.dropLast(1) + coord)
+
     companion object {
         const val MAX_POINTS = 2_000
         const val DEFAULT_SLACK_PERCENT = 5.0

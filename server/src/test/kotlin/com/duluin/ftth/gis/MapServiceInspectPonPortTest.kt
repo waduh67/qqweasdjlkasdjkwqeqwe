@@ -159,6 +159,11 @@ class MapServiceInspectPonPortTest {
         override fun assertOdpPortAssignable(odpId: UUID, portNumber: Int, occupiedPorts: Set<Int>) =
             throw UnsupportedOperationException()
 
+        override fun resnapCablesForMovedCustomer(
+            customerId: UUID,
+            coord: com.duluin.ftth.common.domain.geo.Coordinate,
+        ) = throw UnsupportedOperationException()
+
         override fun upstreamOf(odpId: UUID): UpstreamPath = throw UnsupportedOperationException()
         override fun renderMapTile(z: Int, x: Int, y: Int, areaIds: Set<UUID>?): ByteArray =
             throw UnsupportedOperationException()

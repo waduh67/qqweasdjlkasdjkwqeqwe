@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.common.security.areaScope
@@ -14,6 +15,8 @@ import com.duluin.ftth.network.application.port.outbound.OdcRepository
 import com.duluin.ftth.network.application.port.outbound.OdpRepository
 import com.duluin.ftth.network.application.port.outbound.OltRepository
 import com.duluin.ftth.network.application.port.outbound.PonPortRepository
+import com.duluin.ftth.network.domain.model.NetworkNodeKind
+import com.duluin.ftth.network.domain.model.NetworkNodeRef
 import com.duluin.ftth.network.domain.model.Odc
 import com.duluin.ftth.network.domain.model.vo.SplitterRatio
 import org.springframework.stereotype.Service
@@ -27,6 +30,7 @@ class OdcService(
     private val odpRepository: OdpRepository,
     private val ponPortRepository: PonPortRepository,
     private val oltRepository: OltRepository,
+    private val cableAttachment: CableAttachmentService,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
 ) : ManageOdcUseCase {
@@ -70,6 +74,7 @@ class OdcService(
 
     override fun update(id: UUID, command: SaveOdcCommand): OdcView {
         val odc = requireOdc(id)
+        val moved = odc.location != command.location
         odc.update(
             name = command.name,
             address = command.address,
@@ -80,7 +85,17 @@ class OdcService(
             status = command.status,
         )
         odcRepository.save(odc)
+        if (moved) cableAttachment.resnapForMovedNode(NetworkNodeRef(NetworkNodeKind.ODC, id), odc.location)
         auditor.record("odc.updated", "Odc", odc.id, odc.tenantId, mapOf("code" to odc.code))
+        return get(id)
+    }
+
+    override fun relocate(id: UUID, location: Coordinate): OdcView {
+        val odc = requireOdc(id)
+        odc.relocate(location)
+        odcRepository.save(odc)
+        cableAttachment.resnapForMovedNode(NetworkNodeRef(NetworkNodeKind.ODC, id), odc.location)
+        auditor.record("odc.relocated", "Odc", odc.id, odc.tenantId, mapOf("code" to odc.code))
         return get(id)
     }
 

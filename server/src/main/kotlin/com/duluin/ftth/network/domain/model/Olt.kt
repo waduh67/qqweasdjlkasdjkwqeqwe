@@ -139,6 +139,11 @@ class Olt private constructor(
         this.webUsername = webUsername?.trim()?.takeIf { it.isNotEmpty() }
     }
 
+    /** Memindah titik OLT di peta tanpa menyentuh atribut lain. */
+    fun relocate(location: Coordinate) {
+        this.location = location
+    }
+
     /** `null` berarti "jangan ubah"; string kosong berarti "hapus kredensial". */
     fun changeSnmpCommunity(community: String?) {
         if (community == null) return
