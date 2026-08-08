@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
-import type { AssetStatus, Coordinate, OdcView, OdpView, OltView, PonPortView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
-import { Link2, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import type { AssetStatus, Coordinate, OdcView, OdpView, OltView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
+import { MapPin, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Checkbox } from '@fluentui/react-components'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
@@ -794,78 +795,6 @@ function OltsTab() {
   )
 }
 
-/**
- * Pemilih uplink ODC dalam dua langkah: pilih OLT dulu, lalu PON port-nya. ODC
- * "nyantol" ke sebuah PON port (`ponPortId`) — inilah sambungan LOGIS yang bikin
- * ODC teraliri (energized), terpisah dari kabel feeder fisik di peta. Port di-fetch
- * per-OLT (`/api/olts/{id}/pon-ports`) begitu OLT dipilih. Nilai keluaran = id PON
- * port ('' berarti belum di-uplink). OLT-nya sendiri disimpan sebagai state internal
- * karena server cukup butuh id port (port sudah tahu OLT-nya).
- */
-function PonPortPicker({ value, onChange }: { value: string; onChange: (ponPortId: string) => void }) {
-  const { items: olts } = useList<OltView>('/api/olts')
-  const [oltId, setOltId] = useState('')
-  const [ports, setPorts] = useState<PonPortView[]>([])
-  const [loadingPorts, setLoadingPorts] = useState(false)
-
-  useEffect(() => {
-    if (!oltId) {
-      setPorts([])
-      return
-    }
-    let alive = true
-    setLoadingPorts(true)
-    api
-      .get<PonPortView[]>(`/api/olts/${oltId}/pon-ports`)
-      .then((list) => alive && setPorts(list))
-      .catch(() => alive && setPorts([]))
-      .finally(() => alive && setLoadingPorts(false))
-    return () => {
-      alive = false
-    }
-  }, [oltId])
-
-  return (
-    <div className="row">
-      <div style={{ flex: 1 }}>
-        <SelectField
-          label="OLT hulu"
-          value={oltId}
-          onChange={(_, data) => {
-            setOltId(data.value)
-            onChange('')
-          }}
-        >
-          <option value="">— belum di-uplink —</option>
-          {olts.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.code} · {o.name}
-            </option>
-          ))}
-        </SelectField>
-      </div>
-      <div style={{ flex: 1 }}>
-        <SelectField
-          label="PON port"
-          value={value}
-          onChange={(_, data) => onChange(data.value)}
-          disabled={!oltId || loadingPorts}
-        >
-          <option value="">
-            {!oltId ? '— pilih OLT dulu —' : loadingPorts ? 'memuat…' : '— pilih port —'}
-          </option>
-          {ports.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.label}
-              {p.odcCount > 0 ? ` · ${p.odcCount} ODC` : ''}
-            </option>
-          ))}
-        </SelectField>
-      </div>
-    </div>
-  )
-}
-
 /** Satu sel info berlabel di panel detail (pola `.stat` yang sama dipakai detail OLT). */
 function DetailField({ label, value }: { label: string; value: string }) {
   return (
@@ -945,8 +874,10 @@ function OdcsTab() {
   const { can } = useCan()
   const confirm = useConfirm()
   const { items, loading, reload, run } = useList<OdcView>('/api/odcs')
-  // `id` kosong = mode BUAT; terisi = mode SUNTING (PUT). `status`/`address` kini
-  // ikut agar bisa disunting; uplink tetap lewat aksi terpisah.
+  const navigate = useNavigate()
+  // Inventory = buku besar: hanya SUNTING (PUT) atribut non-topologi + hapus.
+  // Membuat ODC & menyetel uplink (feeder ke OLT/PON) dilakukan di peta lewat kabel,
+  // jadi form ini tak lagi punya field uplink.
   const empty = {
     id: '',
     code: '',
@@ -954,7 +885,6 @@ function OdcsTab() {
     address: '',
     longitude: '',
     latitude: '',
-    ponPortId: '',
     splitterRatio: '1:8',
     capacity: '64',
     status: 'ACTIVE' as AssetStatus,
@@ -963,8 +893,7 @@ function OdcsTab() {
   const [initialDraft, setInitialDraft] = useState<typeof empty | null>(null)
   const openDraft = (d: typeof empty) => { setDraft(d); setInitialDraft(d) }
   const closeDraft = () => { setDraft(null); setInitialDraft(null) }
-  // Buka blade dalam mode SUNTING dari sebuah ODC (pra-isi dari view). Uplink tetap
-  // lewat aksi terpisah, jadi `ponPortId` dikirim ulang apa adanya agar tak ter-reset.
+  // Buka blade dalam mode SUNTING dari sebuah ODC (pra-isi dari view).
   const openEdit = (o: OdcView) =>
     openDraft({
       id: o.id,
@@ -973,7 +902,6 @@ function OdcsTab() {
       address: o.address ?? '',
       longitude: String(o.location.longitude),
       latitude: String(o.location.latitude),
-      ponPortId: o.ponPortId ?? '',
       splitterRatio: o.splitterRatio,
       capacity: String(o.capacity),
       status: o.status,
@@ -982,8 +910,6 @@ function OdcsTab() {
   // Detail read-only di blade lebar; tombol Edit di dalamnya membuka drawer `draft`
   // yang lebih sempit di atasnya (pola dua-blade Azure, kembar dengan detail OLT).
   const [openOdc, setOpenOdc] = useState<OdcView | null>(null)
-  const [uplinkFor, setUplinkFor] = useState<OdcView | null>(null)
-  const [uplinkPort, setUplinkPort] = useState('')
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -1058,31 +984,15 @@ function OdcsTab() {
     },
   ]
 
-  const rowActions = (o: OdcView): RowAction[] => {
-    const list: RowAction[] = []
-    if (canUpdate)
-      list.push({
-        key: 'uplink',
-        label: 'Uplink',
-        icon: <Link2 size={16} />,
-        onClick: () => {
-          setUplinkFor(o)
-          setUplinkPort('')
-        },
-      })
-    if (canDelete)
-      list.push({
-        key: 'delete',
-        label: 'Hapus',
-        icon: <Trash2 size={16} />,
-        onClick: () => removeOdc(o),
-      })
-    return list
-  }
-  const hasRowActions = canUpdate || canDelete
+  const rowActions = (o: OdcView): RowAction[] =>
+    canDelete
+      ? [{ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdc(o) }]
+      : []
+  const hasRowActions = canDelete
 
+  // ODC dibuat di peta (butuh titik koordinat) — di sini cuma pintasan ke peta.
   const primary: CommandAction | undefined = can('network.odc.create')
-    ? { key: 'create', label: 'Tambah ODC', icon: <Plus size={16} />, onClick: () => openDraft({ ...empty }) }
+    ? { key: 'map', label: 'Tambah di peta', icon: <MapPin size={16} />, onClick: () => navigate('/map') }
     : undefined
   const actions: CommandAction[] = []
   if (canDelete)
@@ -1107,8 +1017,8 @@ function OdcsTab() {
 
       <Blade
         open={draft != null}
-        title={draft?.id ? `Edit ${draft.code}` : 'Tambah ODC'}
-        subtitle={draft?.id ? 'Ubah identitas, kapasitas & status ODC.' : 'Daftarkan ODC untuk memecah distribusi ke ODP.'}
+        title={`Edit ${draft?.code ?? ''}`}
+        subtitle="Ubah identitas, kapasitas & status ODC. Uplink diatur di peta lewat kabel."
         size="full"
         className="blade-edit"
         dirty={dirty}
@@ -1118,24 +1028,18 @@ function OdcsTab() {
             <Button
               variant="primary"
               onClick={() =>
-                void run(
-                  async () => {
-                    const body = {
-                      code: draft!.code,
-                      name: draft!.name,
-                      address: draft!.address || null,
-                      location: { longitude: Number(draft!.longitude), latitude: Number(draft!.latitude) },
-                      ponPortId: draft!.ponPortId || null,
-                      splitterRatio: draft!.splitterRatio,
-                      capacity: Number(draft!.capacity),
-                      status: draft!.status,
-                    }
-                    if (draft!.id) await api.put(`/api/odcs/${draft!.id}`, body)
-                    else await api.post('/api/odcs', body)
-                    closeDraft()
-                  },
-                  draft!.id ? 'ODC diperbarui' : undefined,
-                )
+                void run(async () => {
+                  await api.put(`/api/odcs/${draft!.id}`, {
+                    code: draft!.code,
+                    name: draft!.name,
+                    address: draft!.address || null,
+                    location: { longitude: Number(draft!.longitude), latitude: Number(draft!.latitude) },
+                    splitterRatio: draft!.splitterRatio,
+                    capacity: Number(draft!.capacity),
+                    status: draft!.status,
+                  })
+                  closeDraft()
+                }, 'ODC diperbarui')
               }
             >
               Simpan
@@ -1205,10 +1109,6 @@ function OdcsTab() {
               latitude={draft.latitude}
               onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
             />
-            {/* Uplink hanya di mode BUAT; saat menyunting, ubah uplink lewat aksi "Uplink". */}
-            {!draft.id && (
-              <PonPortPicker value={draft.ponPortId} onChange={(ponPortId) => setDraft({ ...draft, ponPortId })} />
-            )}
           </div>
         )}
       </Blade>
@@ -1258,46 +1158,6 @@ function OdcsTab() {
         )}
       </Blade>
 
-      <Blade
-        open={uplinkFor != null}
-        title={uplinkFor ? `Uplink ${uplinkFor.code}` : 'Uplink'}
-        subtitle={
-          uplinkFor?.oltName ? `sekarang: ${uplinkFor.oltName} · ${uplinkFor.ponPortLabel}` : 'sekarang: belum di-uplink'
-        }
-        size="sm"
-        dirty={uplinkPort !== ''}
-        onClose={() => {
-          setUplinkFor(null)
-          setUplinkPort('')
-        }}
-        footer={
-          <>
-            <Button
-              variant="primary"
-              onClick={() =>
-                void run(async () => {
-                  await api.put(`/api/odcs/${uplinkFor!.id}/uplink`, { targetId: uplinkPort || null })
-                  setUplinkFor(null)
-                  setUplinkPort('')
-                }, 'Uplink ODC diperbarui')
-              }
-            >
-              Simpan uplink
-            </Button>
-            <Button
-              onClick={() => {
-                setUplinkFor(null)
-                setUplinkPort('')
-              }}
-            >
-              Batal
-            </Button>
-          </>
-        }
-      >
-        {uplinkFor && <PonPortPicker value={uplinkPort} onChange={setUplinkPort} />}
-      </Blade>
-
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari kode, nama, atau OLT hulu…" />
         <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value as AssetStatus | '')}>
@@ -1319,7 +1179,7 @@ function OdcsTab() {
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada ODC yang cocok' : 'Belum ada ODC'}
-            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Tambahkan ODC untuk memecah distribusi ke ODP.'}
+            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Tambahkan ODC lewat Peta Jaringan — klik titik lokasinya di peta.'}
             icon={<IconInventory size={32} />}
           />
         }
@@ -1332,9 +1192,10 @@ function OdpsTab() {
   const { can } = useCan()
   const confirm = useConfirm()
   const { items, loading, reload, run } = useList<OdpView>('/api/odps')
-  const { items: odcs } = useList<OdcView>('/api/odcs')
-  // `id` kosong = mode BUAT; terisi = mode SUNTING (PUT). `status`/`address` ikut
-  // agar bisa disunting; ODC induk tetap bisa dipindah di kedua mode.
+  const navigate = useNavigate()
+  // Inventory = buku besar: hanya SUNTING (PUT) atribut non-topologi + hapus.
+  // Membuat ODP & menetapkan ODC induk dilakukan di peta lewat kabel distribusi,
+  // jadi form ini tak lagi punya pemilih ODC induk.
   const empty = {
     id: '',
     code: '',
@@ -1342,7 +1203,6 @@ function OdpsTab() {
     address: '',
     longitude: '',
     latitude: '',
-    odcId: '',
     splitterRatio: '1:8',
     capacity: '8',
     status: 'ACTIVE' as AssetStatus,
@@ -1359,7 +1219,6 @@ function OdpsTab() {
       address: o.address ?? '',
       longitude: String(o.location.longitude),
       latitude: String(o.location.latitude),
-      odcId: o.odcId ?? '',
       splitterRatio: o.splitterRatio,
       capacity: String(o.capacity),
       status: o.status,
@@ -1439,13 +1298,9 @@ function OdpsTab() {
         ]
       : []
 
+  // ODP dibuat di peta (butuh titik koordinat) — di sini cuma pintasan ke peta.
   const primary: CommandAction | undefined = can('network.odp.create')
-    ? {
-        key: 'create',
-        label: 'Tambah ODP',
-        icon: <Plus size={16} />,
-        onClick: () => openDraft({ ...empty, odcId: odcs[0]?.id ?? '' }),
-      }
+    ? { key: 'map', label: 'Tambah di peta', icon: <MapPin size={16} />, onClick: () => navigate('/map') }
     : undefined
   const actions: CommandAction[] = []
   if (canDelete)
@@ -1505,8 +1360,8 @@ function OdpsTab() {
 
       <Blade
         open={draft != null}
-        title={draft?.id ? `Edit ${draft.code}` : 'Tambah ODP'}
-        subtitle={draft?.id ? 'Ubah identitas, ODC induk, kapasitas & status ODP.' : 'Daftarkan ODP sebagai kotak terminasi ke pelanggan.'}
+        title={`Edit ${draft?.code ?? ''}`}
+        subtitle="Ubah identitas, kapasitas & status ODP. ODC induk diatur di peta lewat kabel."
         size="full"
         className="blade-edit"
         dirty={dirty}
@@ -1516,24 +1371,18 @@ function OdpsTab() {
             <Button
               variant="primary"
               onClick={() =>
-                void run(
-                  async () => {
-                    const body = {
-                      code: draft!.code,
-                      name: draft!.name,
-                      address: draft!.address || null,
-                      location: { longitude: Number(draft!.longitude), latitude: Number(draft!.latitude) },
-                      odcId: draft!.odcId || null,
-                      splitterRatio: draft!.splitterRatio,
-                      capacity: Number(draft!.capacity),
-                      status: draft!.status,
-                    }
-                    if (draft!.id) await api.put(`/api/odps/${draft!.id}`, body)
-                    else await api.post('/api/odps', body)
-                    closeDraft()
-                  },
-                  draft!.id ? 'ODP diperbarui' : undefined,
-                )
+                void run(async () => {
+                  await api.put(`/api/odps/${draft!.id}`, {
+                    code: draft!.code,
+                    name: draft!.name,
+                    address: draft!.address || null,
+                    location: { longitude: Number(draft!.longitude), latitude: Number(draft!.latitude) },
+                    splitterRatio: draft!.splitterRatio,
+                    capacity: Number(draft!.capacity),
+                    status: draft!.status,
+                  })
+                  closeDraft()
+                }, 'ODP diperbarui')
               }
             >
               Simpan
@@ -1560,20 +1409,6 @@ function OdpsTab() {
                   value={draft.name}
                   onChange={(_, data) => setDraft({ ...draft, name: data.value })}
                 />
-              </div>
-              <div style={{ flex: 1 }}>
-                <SelectField
-                  label="ODC induk"
-                  value={draft.odcId}
-                  onChange={(_, data) => setDraft({ ...draft, odcId: data.value })}
-                >
-                  <option value="">— belum tersambung —</option>
-                  {odcs.map((odc) => (
-                    <option key={odc.id} value={odc.id}>
-                      {odc.code}
-                    </option>
-                  ))}
-                </SelectField>
               </div>
             </div>
             <TextField
@@ -1642,7 +1477,7 @@ function OdpsTab() {
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada ODP yang cocok' : 'Belum ada ODP'}
-            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Tambahkan ODP sebagai kotak terminasi ke pelanggan.'}
+            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Tambahkan ODP lewat Peta Jaringan — klik titik lokasinya di peta.'}
             icon={<IconInventory size={32} />}
           />
         }

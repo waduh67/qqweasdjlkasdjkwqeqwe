@@ -15,7 +15,6 @@ import type {
   ImpactCause,
   ImpactedOverlay,
   NodeKind,
-  OdcView,
   OdpInspection,
   OltView,
   OnuView,
@@ -2482,9 +2481,10 @@ const VENDORS = ['ZTE', 'HUAWEI', 'FIBERHOME', 'NOKIA', 'HSGQ', 'OTHER']
 
 /**
  * Form isian perangkat titik baru, muncul setelah lokasi diklik di peta. Field
- * menyesuaikan jenis: Site cukup alamat, ODC/ODP butuh rasio splitter & kapasitas,
- * dan ODP boleh langsung ditautkan ke ODC induknya. Koordinat diambil dari titik
- * klik (ditampilkan, tak bisa diubah manual di sini).
+ * menyesuaikan jenis: Site cukup alamat, ODC/ODP butuh rasio splitter & kapasitas.
+ * Uplink (ODC→OLT feeder, ODP→ODC distribusi) TIDAK diisi di sini — ditetapkan
+ * dengan menarik kabel di peta agar fisik = logis dan sumber kebenarannya tunggal.
+ * Koordinat diambil dari titik klik (ditampilkan, tak bisa diubah manual di sini).
  */
 function PlaceAssetForm({
   kind,
@@ -2505,8 +2505,6 @@ function PlaceAssetForm({
   const [address, setAddress] = useState('')
   const [splitterRatio, setSplitterRatio] = useState('1:8')
   const [capacity, setCapacity] = useState(kind === 'ODP' ? 8 : 64)
-  const [odcId, setOdcId] = useState('')
-  const [odcs, setOdcs] = useState<OdcView[]>([])
   // OLT: site induk (wajib), identitas perangkat, dan kesiapan SNMP.
   const [siteId, setSiteId] = useState('')
   const [sites, setSites] = useState<SiteView[]>([])
@@ -2515,23 +2513,6 @@ function PlaceAssetForm({
   const [managementIp, setManagementIp] = useState('')
   const [snmpCommunity, setSnmpCommunity] = useState('')
   const [snmpPort, setSnmpPort] = useState('161')
-
-  // Daftar ODC untuk memilih induk sebuah ODP. Hanya relevan saat menaruh ODP.
-  useEffect(() => {
-    if (kind !== 'ODP') return
-    let alive = true
-    api
-      .get<PageResponse<OdcView>>('/api/odcs?size=100')
-      .then((page) => {
-        if (alive) setOdcs(page.content)
-      })
-      .catch(() => {
-        /* pemilih induk opsional — biarkan kosong bila gagal */
-      })
-    return () => {
-      alive = false
-    }
-  }, [kind])
 
   // Daftar site untuk memilih tempat berdirinya OLT. Wajib dipilih sebelum simpan.
   useEffect(() => {
@@ -2572,7 +2553,6 @@ function PlaceAssetForm({
     }
     base.splitterRatio = splitterRatio
     base.capacity = capacity
-    if (kind === 'ODP' && odcId) base.odcId = odcId
     onSave(base)
   }
 
@@ -2655,14 +2635,10 @@ function PlaceAssetForm({
         <TextField label="Alamat" value={address} onChange={(_, data) => setAddress(data.value)} />
       )}
       {kind === 'ODP' && (
-        <SelectField label="ODC induk" value={odcId} onChange={(_, data) => setOdcId(data.value)}>
-          <option value="">— belum ditautkan —</option>
-          {odcs.map((odc) => (
-            <option key={odc.id} value={odc.id}>
-              {odc.code} — {odc.name}
-            </option>
-          ))}
-        </SelectField>
+        <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+          ODC induk ditetapkan dengan menarik kabel distribusi dari ODC ke ODP ini di peta —
+          bukan di sini — supaya jalur fisik & data uplink selalu sinkron.
+        </p>
       )}
       {(kind === 'ODC' || kind === 'ODP') && (
         <div className="row" style={{ gap: '0.5rem' }}>
