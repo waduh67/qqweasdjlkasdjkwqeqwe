@@ -41,6 +41,13 @@ class PivotMasterConfigJpaEntity(
     @Column(name = "platform_fee_type", nullable = false, length = 20)
     var platformFeeType: PivotFeeType,
 
+    @Column(name = "payout_fee_minor", nullable = false)
+    var payoutFeeMinor: Long,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payout_fee_type", nullable = false, length = 20)
+    var payoutFeeType: PivotFeeType,
+
     @Column(name = "payout_channel_code", length = 40)
     var payoutChannelCode: String?,
 

@@ -1,5 +1,6 @@
 package com.duluin.ftth.billing.application.port.inbound
 
+import com.duluin.ftth.billing.domain.model.PivotFeeType
 import com.duluin.ftth.billing.domain.model.SubAccountKycStatus
 import com.duluin.ftth.billing.domain.model.SubAccountStatus
 import com.duluin.ftth.billing.domain.model.SubAccountType
@@ -64,6 +65,13 @@ data class TenantPivotAccountView(
     val payoutAccountName: String?,
     val payoutReady: Boolean,
     val masterActive: Boolean,
+    /**
+     * Biaya yang bakal dipotong tiap payout tenant (Rp bila FIXED, angka persen bila PERCENTAGE).
+     * Dibuka ke tenant supaya UI bisa menunjukkan berapa yang benar-benar sampai SEBELUM dikirim —
+     * angkanya setelan platform, bukan rahasia. 0 = tak ada potongan.
+     */
+    val payoutFeeMinor: Long,
+    val payoutFeeType: PivotFeeType,
 )
 
 /**

@@ -13,6 +13,7 @@ import com.duluin.ftth.billing.application.port.outbound.PivotSubMerchantPort
 import com.duluin.ftth.billing.application.port.outbound.TenantPayoutRepository
 import com.duluin.ftth.billing.application.port.outbound.TenantPivotAccountRepository
 import com.duluin.ftth.billing.domain.model.PayoutKind
+import com.duluin.ftth.billing.domain.model.PivotFeeType
 import com.duluin.ftth.billing.domain.model.PivotMasterContext
 import com.duluin.ftth.billing.domain.model.SubAccountType
 import com.duluin.ftth.billing.domain.model.TenantPayout
@@ -88,21 +89,26 @@ class TenantPayoutService(
         // Validasi rekening tujuan → inquiryId. Dipakai ulang dari basis data selama rekeningnya tak
         // berubah; inquiry baru hanya ditembak bila datanya beda (lihat resolveInquiryId).
         val inquiryId = resolveInquiryId(master, subId, account, channelCode, accountNumber, accountName)
+        // Biaya dipotong dari nominal yang diminta: tenant minta 50.000 → 46.000 masuk rekeningnya,
+        // 4.000 dipindahkan ke master. TenantPayout.create menolak bila biayanya menelan nominal.
+        val fee = payoutFee(master, amount)
         val payout = TenantPayout.create(
             tenantId = tenantId,
             kind = PayoutKind.PAYOUT,
             amountMinor = amount,
+            feeMinor = fee,
             channelCode = channelCode,
             accountNumber = accountNumber,
             accountName = accountName,
             createdAt = Instant.now(),
         )
+        // Dompet payout harus menanggung KEDUA leg: nominal bersih ke bank + biaya ke master.
         ensurePayoutBalance(master, subId, amount, payout.id, tenantId)
         val dispatch = payoutPort.payout(
             master,
             subId,
             PayoutCommand(
-                amountMinor = amount,
+                amountMinor = payout.netAmountMinor,
                 channelCode = channelCode,
                 accountNumber = accountNumber,
                 accountName = accountName,
@@ -115,8 +121,12 @@ class TenantPayoutService(
         payout.markProcessing(dispatch.reference)
         if (dispatch.settledImmediately) payout.markSuccess()
         val saved = repository.save(payout)
+        collectPayoutFee(master, subId, payout.id, fee, tenantId)
         audit("billing.pivot.payout.dispatched", saved.id, tenantId)
-        log.info("Payout tenant {} sebesar {} ke {}/{} → ref {}", tenantId, amount, channelCode, accountNumber, dispatch.reference)
+        log.info(
+            "Payout tenant {} sebesar {} (biaya {}, bersih {}) ke {}/{} → ref {}",
+            tenantId, amount, fee, payout.netAmountMinor, channelCode, accountNumber, dispatch.reference,
+        )
         return saved.toView()
     }
 
@@ -212,13 +222,67 @@ class TenantPayoutService(
     }
 
     /**
+     * Biaya payout yang ditagihkan platform ke tenant, menurut setelan master. 0 = platform
+     * menanggung sendiri biaya Pivot (perilaku sebelum setelan ini ada).
+     *
+     * Dipotong dari nominal yang diminta, bukan ditambahkan di atasnya: tenant menyebut angka yang
+     * keluar dari dompetnya, dan itu angka yang dia lihat di saldo.
+     */
+    private fun payoutFee(master: PivotMasterContext, amount: Long): Long = when (master.payoutFeeType) {
+        PivotFeeType.FIXED -> master.payoutFeeMinor
+        PivotFeeType.PERCENTAGE -> amount * master.payoutFeeMinor / PERCENT_BASIS
+    }
+
+    /**
+     * Pindahkan biaya payout dari dompet sub ke dompet master (`POST /v1/transfers`). Pivot menagih
+     * biaya payout ke dompet DISBURSEMENT master, jadi tanpa langkah ini platform menombok tiap kali
+     * tenant menyalurkan dana.
+     *
+     * Kegagalannya sengaja TIDAK melempar: payoutnya sudah terkirim ke Pivot dan uangnya sudah
+     * bergerak — menggagalkan transaksi di sini cuma me-rollback catatan lokal, bukan uangnya, dan
+     * malah membuat riwayat tenant tak cocok dengan mutasi bank. Yang tepat adalah menandainya keras
+     * supaya piutang ini bisa ditagih menyusul.
+     */
+    private fun collectPayoutFee(
+        master: PivotMasterContext,
+        subId: String,
+        payoutId: UUID,
+        fee: Long,
+        tenantId: UUID,
+    ) {
+        if (fee <= 0) return
+        try {
+            payoutPort.transferToMaster(
+                master = master,
+                subMerchantId = subId,
+                amountMinor = fee,
+                referenceId = "fee-$payoutId",
+                remarks = "Biaya payout",
+                requestId = requestId(payoutId, "fee"),
+            )
+            audit("billing.pivot.payout.fee_collected", payoutId, tenantId)
+        } catch (e: Exception) {
+            audit("billing.pivot.payout.fee_uncollected", payoutId, tenantId)
+            log.error(
+                "Biaya payout {} tenant {} GAGAL dipindahkan ke master (payout {} tetap jalan): {} — tagih manual",
+                fee, tenantId, payoutId, e.message, e,
+            )
+        }
+    }
+
+    /**
      * Pastikan dompet DISBURSEMENT sanggup membayar [amount] — `POST /v1/payouts` HANYA menarik dari
      * situ, sedangkan uang tenant mendarat di dompet PAYMENT.
      *
      * Saldo payout dicek DULU: kalau sudah cukup, tak ada pemindahan sama sekali. Bila kurang, cuma
      * KEKURANGANNYA yang dipindahkan dari saldo pembayaran (`BALANCE_TRANSFER`) — jangan memindahkan
-     * lebih dari perlu, dana di dompet payout tak bisa dipakai menagih. Kegagalan pemindahan
-     * dibiarkan melempar: payout ikut batal, jadi tak ada payout yang dikirim tanpa saldo.
+     * lebih dari perlu, dana di dompet payout tak bisa dipakai menagih. Kecuali satu hal: Pivot
+     * menolak `BALANCE_TRANSFER` di bawah [MIN_BALANCE_TRANSFER] (`unprocessable_entity`, "The
+     * minimum withdrawal is IDR 10.000"), jadi kekurangan yang lebih kecil dibulatkan naik ke batas
+     * itu. Kelebihannya mengendap di dompet payout dan terpakai payout berikutnya.
+     *
+     * Kegagalan pemindahan dibiarkan melempar: payout ikut batal, jadi tak ada payout yang dikirim
+     * tanpa saldo.
      */
     private fun ensurePayoutBalance(
         master: PivotMasterContext,
@@ -231,27 +295,36 @@ class TenantPayoutService(
         if (payoutBalance >= amount) return
 
         val shortfall = amount - payoutBalance
+        val moveAmount = maxOf(shortfall, MIN_BALANCE_TRANSFER)
         val paymentBalance = payoutPort.balance(master, subId, PivotBalanceUsecase.PAYMENT).availableMinor
-        if (paymentBalance < shortfall) {
+        if (paymentBalance < moveAmount) {
+            // Angkanya bisa lebih besar dari kekurangan payout itu sendiri ketika batas minimum
+            // Pivot yang mengikat — sebutkan alasannya, kalau tidak selisihnya tampak mengada-ada.
+            val floorNote = if (moveAmount > shortfall) {
+                " (pemindahan saldo minimal Rp $MIN_BALANCE_TRANSFER)"
+            } else {
+                ""
+            }
             throw ConflictException(
                 "Saldo tak cukup untuk payout Rp $amount — saldo payout Rp $payoutBalance, " +
-                    "saldo pembayaran Rp $paymentBalance, masih kurang Rp ${shortfall - paymentBalance}.",
+                    "saldo pembayaran Rp $paymentBalance, masih kurang Rp ${moveAmount - paymentBalance}$floorNote.",
             )
         }
 
         payoutPort.transferToPayoutBalance(
             master = master,
             subMerchantId = subId,
-            amountMinor = shortfall,
+            amountMinor = moveAmount,
             referenceId = "trf-$payoutId",
             description = "Isi saldo payout",
             requestId = requestId(payoutId, "trf"),
         )
         audit("billing.pivot.payout.balance_transferred", payoutId, tenantId)
         log.info(
-            "Saldo payout tenant {} kurang {} — dipindahkan dari saldo pembayaran (tersedia {})",
+            "Saldo payout tenant {} kurang {} — dipindahkan {} dari saldo pembayaran (tersedia {})",
             tenantId,
             shortfall,
+            moveAmount,
             paymentBalance,
         )
     }
@@ -288,10 +361,23 @@ class TenantPayoutService(
         tenantId = tenantId,
     )
 
+    private companion object {
+        /** Pembagi fee PERCENTAGE — `payoutFeeMinor` diisi sebagai angka persen (mis. 2 = 2%). */
+        const val PERCENT_BASIS = 100L
+
+        /**
+         * Minimum `BALANCE_TRANSFER` Pivot. Diverifikasi di sandbox: memindahkan Rp 2.000 ditolak
+         * `unprocessable_entity` — "The minimum withdrawal is IDR 10.000. Please adjust the amount."
+         */
+        const val MIN_BALANCE_TRANSFER = 10_000L
+    }
+
     private fun TenantPayout.toView() = TenantPayoutView(
         id = id.toString(),
         kind = kind,
         amountMinor = amountMinor,
+        feeMinor = feeMinor,
+        netAmountMinor = netAmountMinor,
         channelCode = channelCode,
         accountNumber = accountNumber,
         accountName = accountName,

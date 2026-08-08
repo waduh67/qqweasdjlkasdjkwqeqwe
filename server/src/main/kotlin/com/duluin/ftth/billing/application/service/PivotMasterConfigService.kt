@@ -37,6 +37,8 @@ class PivotMasterConfigService(
             sandbox = command.sandbox,
             platformFeeMinor = command.platformFeeMinor,
             platformFeeType = command.platformFeeType,
+            payoutFeeMinor = command.payoutFeeMinor,
+            payoutFeeType = command.payoutFeeType,
             payoutChannelCode = command.payoutChannelCode,
             payoutAccountNumber = command.payoutAccountNumber,
             subAccountDefaults = SubAccountDefaults(
@@ -74,6 +76,8 @@ class PivotMasterConfigService(
         credentialsSet = credentialsSet,
         platformFeeMinor = platformFeeMinor,
         platformFeeType = platformFeeType,
+        payoutFeeMinor = payoutFeeMinor,
+        payoutFeeType = payoutFeeType,
         payoutChannelCode = payoutChannelCode,
         payoutAccountNumber = payoutAccountNumber,
         defaultBusinessType = subAccountDefaults.businessType,

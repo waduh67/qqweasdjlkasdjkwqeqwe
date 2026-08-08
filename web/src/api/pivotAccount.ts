@@ -73,6 +73,12 @@ export interface TenantPivotAccountView {
   payoutAccountName: string | null
   payoutReady: boolean
   masterActive: boolean
+  /**
+   * Biaya yang dipotong tiap payout (Rp bila FIXED, angka persen bila PERCENTAGE) — setelan platform,
+   * dibuka supaya UI bisa menunjukkan berapa yang benar-benar sampai sebelum dikirim. 0 = tak dipotong.
+   */
+  payoutFeeMinor: number
+  payoutFeeType: 'FIXED' | 'PERCENTAGE'
 }
 
 /**
@@ -166,11 +172,18 @@ export interface PivotBalanceView {
   subAccount: boolean
 }
 
-/** Satu baris riwayat penyaluran dana untuk ditampilkan. */
+/**
+ * Satu baris riwayat penyaluran dana untuk ditampilkan.
+ *
+ * `amountMinor` = nominal yang diminta; `feeMinor` = biaya payout yang dipotong (dibekukan per baris
+ * — tarifnya setelan yang bisa berubah); `netAmountMinor` = yang benar-benar mendarat di rekening.
+ */
 export interface TenantPayoutView {
   id: string
   kind: PivotPayoutKind
   amountMinor: number
+  feeMinor: number
+  netAmountMinor: number
   channelCode: string | null
   accountNumber: string | null
   accountName: string | null

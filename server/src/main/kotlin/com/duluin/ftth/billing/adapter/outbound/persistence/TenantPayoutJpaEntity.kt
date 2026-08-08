@@ -26,6 +26,9 @@ class TenantPayoutJpaEntity(
     @Column(name = "amount_minor", nullable = false)
     var amountMinor: Long,
 
+    @Column(name = "fee_minor", nullable = false)
+    var feeMinor: Long,
+
     @Column(name = "channel_code", length = 40)
     var channelCode: String?,
 

@@ -51,6 +51,9 @@ export const PLATFORM_FEE_TYPE_LABEL: Record<PlatformFeeType, string> = {
  * (`*Set`), tak pernah menariknya kembali (labelnya di dashboard Pivot: Client ID / Client Secret /
  * Callback Secret). `platformFeeMinor` = nilai fee (Rp untuk FIXED, angka persen untuk PERCENTAGE).
  * Field `default*` = default sub-account (non-rahasia, ditampilkan apa adanya).
+ *
+ * `payoutFee*` beda urusan dari `platformFee*`: yang pertama dipotong dari tiap PENYALURAN dana
+ * tenant, yang kedua dari tiap PEMBAYARAN pelanggan.
  */
 export interface PivotMasterConfigView {
   enabled: boolean
@@ -61,6 +64,8 @@ export interface PivotMasterConfigView {
   credentialsSet: boolean
   platformFeeMinor: number
   platformFeeType: PlatformFeeType
+  payoutFeeMinor: number
+  payoutFeeType: PlatformFeeType
   payoutChannelCode: string | null
   payoutAccountNumber: string | null
   // Default field wajib create sub-account (non-rahasia).
@@ -87,6 +92,8 @@ export interface PivotMasterConfigRequest {
   callbackApiKey: string | null
   platformFeeMinor: number
   platformFeeType: PlatformFeeType
+  payoutFeeMinor: number
+  payoutFeeType: PlatformFeeType
   payoutChannelCode: string | null
   payoutAccountNumber: string | null
   // Default field wajib create sub-account (non-rahasia).

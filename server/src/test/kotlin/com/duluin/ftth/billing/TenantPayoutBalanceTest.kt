@@ -59,15 +59,18 @@ class TenantPayoutBalanceTest {
     fun setUp() {
         TenantContext.set(tenantId)
         payoutPort = FakePayoutPort()
-        service = TenantPayoutService(
-            repository = FakePayoutRepository(),
-            accounts = FakeAccountRepository(provisionedAccount()),
-            masterConfig = PivotMasterConfigProvider(FakeMasterRepository()),
-            payoutPort = payoutPort,
-            subMerchant = FakeSubMerchantPort(),
-            auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
-        )
+        service = serviceWith(FakeMasterRepository())
     }
+
+    /** Service memakai [payoutPort] yang sama; hanya setelan masternya yang berbeda per test. */
+    private fun serviceWith(master: FakeMasterRepository) = TenantPayoutService(
+        repository = FakePayoutRepository(),
+        accounts = FakeAccountRepository(provisionedAccount()),
+        masterConfig = PivotMasterConfigProvider(master),
+        payoutPort = payoutPort,
+        subMerchant = FakeSubMerchantPort(),
+        auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
+    )
 
     @AfterEach
     fun tearDown() = TenantContext.clear()
@@ -153,6 +156,112 @@ class TenantPayoutBalanceTest {
             .isNotEqualTo(payoutPort.payoutRequestIds.single())
     }
 
+    @Test
+    fun `kekurangan di bawah batas Pivot dibulatkan naik ke 10 ribu`() {
+        // Pivot menolak BALANCE_TRANSFER < Rp 10.000 ("The minimum withdrawal is IDR 10.000"), jadi
+        // kekurangan Rp 2.000 pun harus dipindahkan Rp 10.000. Sisanya mengendap, bukan hilang.
+        payoutPort.balances[PivotBalanceUsecase.DISBURSEMENT] = 498_000
+        payoutPort.balances[PivotBalanceUsecase.PAYMENT] = 856_600
+
+        dispatch(500_000)
+
+        assertThat(payoutPort.transfers).containsExactly(10_000)
+    }
+
+    // --- biaya payout ---
+
+    @Test
+    fun `biaya tetap - dipotong dari nominal dan dipindahkan ke master`() {
+        service = serviceWith(FakeMasterRepository(fee = 4_000))
+        payoutPort.balances[PivotBalanceUsecase.DISBURSEMENT] = 500_000
+
+        val view = dispatch(500_000)
+
+        // Yang sampai ke rekening tujuan = nominal − biaya; biayanya berpindah ke dompet master.
+        assertThat(payoutPort.dispatched.single().amountMinor).isEqualTo(496_000)
+        assertThat(payoutPort.feeTransfers).containsExactly(4_000)
+        assertThat(view.amountMinor).isEqualTo(500_000)
+        assertThat(view.feeMinor).isEqualTo(4_000)
+        assertThat(view.netAmountMinor).isEqualTo(496_000)
+    }
+
+    @Test
+    fun `biaya persen - dihitung dari nominal yang diminta`() {
+        service = serviceWith(FakeMasterRepository(fee = 2, feeType = PivotFeeType.PERCENTAGE))
+        payoutPort.balances[PivotBalanceUsecase.DISBURSEMENT] = 500_000
+
+        dispatch(500_000)
+
+        assertThat(payoutPort.feeTransfers).containsExactly(10_000)
+        assertThat(payoutPort.dispatched.single().amountMinor).isEqualTo(490_000)
+    }
+
+    @Test
+    fun `biaya nol - tak ada pemindahan ke master sama sekali`() {
+        payoutPort.balances[PivotBalanceUsecase.DISBURSEMENT] = 500_000
+
+        dispatch(500_000)
+
+        assertThat(payoutPort.feeTransfers).isEmpty()
+        assertThat(payoutPort.dispatched.single().amountMinor).isEqualTo(500_000)
+    }
+
+    @Test
+    fun `nominal tak menutup biaya - ditolak sebelum menyentuh Pivot`() {
+        service = serviceWith(FakeMasterRepository(fee = 4_000))
+        payoutPort.balances[PivotBalanceUsecase.DISBURSEMENT] = 500_000
+
+        assertThatThrownBy { dispatch(4_000) }
+            .hasMessageContaining("tak menutup biaya payout")
+
+        assertThat(payoutPort.dispatched).isEmpty()
+        assertThat(payoutPort.feeTransfers).isEmpty()
+    }
+
+    @Test
+    fun `saldo yang disiapkan menanggung nominal utuh - bukan cuma yang bersih`() {
+        // Dompet payout membayar DUA leg: bersih ke bank + biaya ke master. Menyiapkan yang bersih
+        // saja bikin leg biayanya kena `balance_insufficient`.
+        service = serviceWith(FakeMasterRepository(fee = 4_000))
+        payoutPort.balances[PivotBalanceUsecase.DISBURSEMENT] = 0
+        payoutPort.balances[PivotBalanceUsecase.PAYMENT] = 856_600
+
+        dispatch(500_000)
+
+        assertThat(payoutPort.transfers).containsExactly(500_000)
+    }
+
+    @Test
+    fun `penagihan biaya gagal - payout tetap sah, tak ikut di-rollback`() {
+        // Uangnya sudah bergerak di Pivot; menggagalkan di sini cuma bikin riwayat lokal tak cocok
+        // mutasi bank. Piutangnya ditandai lewat audit `fee_uncollected`, ditagih menyusul.
+        service = serviceWith(FakeMasterRepository(fee = 4_000))
+        payoutPort.balances[PivotBalanceUsecase.DISBURSEMENT] = 500_000
+        payoutPort.failFeeTransfer = ConflictException("Pivot menolak POST /v1/transfers (400)")
+
+        val view = dispatch(500_000)
+
+        assertThat(view.feeMinor).isEqualTo(4_000)
+        assertThat(payoutPort.dispatched).hasSize(1)
+    }
+
+    @Test
+    fun `pemindahan saldo, payout, dan penagihan biaya memakai request id berbeda`() {
+        service = serviceWith(FakeMasterRepository(fee = 4_000))
+        payoutPort.balances[PivotBalanceUsecase.DISBURSEMENT] = 0
+        payoutPort.balances[PivotBalanceUsecase.PAYMENT] = 856_600
+
+        dispatch(500_000)
+
+        assertThat(
+            listOf(
+                payoutPort.transferRequestIds.single(),
+                payoutPort.payoutRequestIds.single(),
+                payoutPort.feeRequestIds.single(),
+            ),
+        ).doesNotHaveDuplicates()
+    }
+
     // --- fakes ---
 
     private fun provisionedAccount() = TenantPivotAccount.defaultFor(tenantId).apply {
@@ -166,6 +275,12 @@ class TenantPayoutBalanceTest {
         val payoutRequestIds = mutableListOf<String>()
         val dispatched = mutableListOf<PayoutCommand>()
         var failTransfer: RuntimeException? = null
+
+        /** Penagihan biaya payout ke master (`POST /v1/transfers`) — terpisah dari [transfers]. */
+        val feeTransfers = mutableListOf<Long>()
+        val feeReferenceIds = mutableListOf<String>()
+        val feeRequestIds = mutableListOf<String>()
+        var failFeeTransfer: RuntimeException? = null
 
         override fun payout(
             master: PivotMasterContext,
@@ -198,6 +313,20 @@ class TenantPayoutBalanceTest {
             transferRequestIds += requestId
             balances[PivotBalanceUsecase.PAYMENT] = balances.getValue(PivotBalanceUsecase.PAYMENT) - amountMinor
             balances[PivotBalanceUsecase.DISBURSEMENT] = balances.getValue(PivotBalanceUsecase.DISBURSEMENT) + amountMinor
+        }
+
+        override fun transferToMaster(
+            master: PivotMasterContext,
+            subMerchantId: String,
+            amountMinor: Long,
+            referenceId: String,
+            remarks: String,
+            requestId: String,
+        ) {
+            failFeeTransfer?.let { throw it }
+            feeTransfers += amountMinor
+            feeReferenceIds += referenceId
+            feeRequestIds += requestId
         }
 
         override fun balance(
@@ -239,7 +368,11 @@ class TenantPayoutBalanceTest {
         override fun findByTenant(tenantId: UUID): TenantPivotAccount = account
     }
 
-    private class FakeMasterRepository : PivotMasterConfigRepository {
+    /** Nama parameternya sengaja beda dari nama propertinya — di dalam `apply` ia bakal tertutup. */
+    private class FakeMasterRepository(
+        private val fee: Long = 0,
+        private val feeType: PivotFeeType = PivotFeeType.FIXED,
+    ) : PivotMasterConfigRepository {
         override fun find(): PivotMasterConfig = PivotMasterConfig.default().apply {
             update(
                 enabled = true,
@@ -249,6 +382,8 @@ class TenantPayoutBalanceTest {
                 sandbox = true,
                 platformFeeMinor = 0,
                 platformFeeType = PivotFeeType.FIXED,
+                payoutFeeMinor = fee,
+                payoutFeeType = feeType,
                 payoutChannelCode = null,
                 payoutAccountNumber = null,
                 subAccountDefaults = SubAccountDefaults(

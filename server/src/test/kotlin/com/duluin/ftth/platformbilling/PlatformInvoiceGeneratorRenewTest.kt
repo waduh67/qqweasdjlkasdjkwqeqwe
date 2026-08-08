@@ -460,6 +460,8 @@ class PlatformInvoiceGeneratorRenewTest {
             sandbox = true,
             platformFeeMinor = 0,
             platformFeeType = PivotFeeType.FIXED,
+            payoutFeeMinor = 0,
+            payoutFeeType = PivotFeeType.FIXED,
             payoutChannelCode = null,
             payoutAccountNumber = null,
             subAccountDefaults = SubAccountDefaults.empty(),

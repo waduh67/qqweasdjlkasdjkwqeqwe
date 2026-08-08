@@ -10,6 +10,7 @@ import com.duluin.ftth.billing.application.port.inbound.TenantPivotAccountView
 import com.duluin.ftth.billing.application.port.outbound.PivotSubMerchantPort
 import com.duluin.ftth.billing.application.port.outbound.SubMerchantCreateRequest
 import com.duluin.ftth.billing.application.port.outbound.TenantPivotAccountRepository
+import com.duluin.ftth.billing.domain.model.PivotFeeType
 import com.duluin.ftth.billing.domain.model.PivotMasterContext
 import com.duluin.ftth.billing.domain.model.SubAccountType
 import com.duluin.ftth.billing.domain.model.TenantPivotAccount
@@ -306,27 +307,32 @@ class TenantPivotAccountService(
         tenantId = tenantId,
     )
 
-    private fun TenantPivotAccount.toView() = TenantPivotAccountView(
-        provisioned = provisioned,
-        subMerchantUuid = subMerchantUuid,
-        type = type,
-        status = status,
-        kycStatus = kycStatus,
-        shortName = shortName,
-        legalName = legalName,
-        merchantEmail = merchantEmail,
-        merchantPhone = merchantPhone,
-        picName = picName,
-        picEmail = picEmail,
-        picPhone = picPhone,
-        address = address,
-        profileComplete = profileComplete,
-        payoutChannelCode = payoutChannelCode,
-        payoutAccountNumber = payoutAccountNumber,
-        payoutAccountName = payoutAccountName,
-        payoutReady = payoutReady,
-        masterActive = masterConfig.current() != null,
-    )
+    private fun TenantPivotAccount.toView(): TenantPivotAccountView {
+        val master = masterConfig.current()
+        return TenantPivotAccountView(
+            provisioned = provisioned,
+            subMerchantUuid = subMerchantUuid,
+            type = type,
+            status = status,
+            kycStatus = kycStatus,
+            shortName = shortName,
+            legalName = legalName,
+            merchantEmail = merchantEmail,
+            merchantPhone = merchantPhone,
+            picName = picName,
+            picEmail = picEmail,
+            picPhone = picPhone,
+            address = address,
+            profileComplete = profileComplete,
+            payoutChannelCode = payoutChannelCode,
+            payoutAccountNumber = payoutAccountNumber,
+            payoutAccountName = payoutAccountName,
+            payoutReady = payoutReady,
+            masterActive = master != null,
+            payoutFeeMinor = master?.payoutFeeMinor ?: 0,
+            payoutFeeType = master?.payoutFeeType ?: PivotFeeType.FIXED,
+        )
+    }
 
     private companion object {
         const val MAX_DESCRIPTOR = 20
