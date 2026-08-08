@@ -45,6 +45,7 @@ import { NotificationSettingsPage } from './pages/NotificationSettingsPage'
 import { PaymentGatewaySettingsPage } from './pages/PaymentGatewaySettingsPage'
 import { TaxSettingsPage } from './pages/TaxSettingsPage'
 import { PlatformBillingSettingsPage } from './pages/PlatformBillingSettingsPage'
+import { PaymentSimulationPage } from './pages/PaymentSimulationPage'
 import { SubscriptionPage } from './pages/SubscriptionPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { PortalApp } from './portal/PortalApp'
@@ -391,6 +392,14 @@ function OperatorApp() {
               element={
                 <RequirePermission permission="platform.billing.view">
                   <PlatformBillingSettingsPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="payments/simulate"
+              element={
+                <RequirePermission permission="platform.billing.view">
+                  <PaymentSimulationPage />
                 </RequirePermission>
               }
             />

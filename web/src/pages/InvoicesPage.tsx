@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Ban, Printer, Wallet } from 'lucide-react'
+import { Ban, FlaskConical, Printer, Wallet } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type { CustomerView } from '../api/network'
@@ -9,10 +9,12 @@ import {
   listInvoices,
   listPayments,
   recordManualPayment,
+  simulateInvoicePayment,
   voidInvoice,
   type InvoiceStatus,
   type InvoiceView,
   type PaymentView,
+  type SimulatedChargeStatus,
   type TaxObligationView,
 } from '../api/billing'
 import { useCan } from '../auth/useCan'
@@ -23,6 +25,12 @@ import { Badge, Button, EmptyState, SelectField, TextField, Toolbar, type Tone }
 import { Modal, SearchInput } from '@/components/molecules'
 import { useToast } from '@/system'
 import { IconInbox, IconPlus } from '@/components/atoms/icons'
+
+/**
+ * Jeda sebelum memuat ulang daftar setelah simulasi bayar (sandbox): gateway melunasi lewat
+ * webhook, jadi status baru belum ada saat responsnya kembali.
+ */
+const SIMULATION_SETTLE_MS = 2500
 
 /** Rupiah ringkas dari nilai numerik, mis. "Rp 150.000". */
 function fmtRupiah(n: number): string {
@@ -346,6 +354,20 @@ export function InvoicesPage() {
     await run(() => voidInvoice(id), 'Tagihan dibatalkan')
   }
 
+  /**
+   * Simulasi sandbox: minta gateway memaksa sesi bayar jadi lunas/kedaluwarsa. Pelunasan menyusul
+   * lewat webhook (asinkron) — daftar dimuat ulang lagi setelah jeda singkat agar status barunya
+   * terlihat tanpa perlu refresh manual.
+   */
+  const doSimulate = async (inv: InvoiceView, status: SimulatedChargeStatus) => {
+    const label = status === 'SUCCESS' ? 'lunas' : 'kedaluwarsa'
+    await run(
+      () => simulateInvoicePayment(inv.id, status),
+      `Simulasi ${label} dikirim untuk ${inv.number} — status menyusul dari gateway`,
+    )
+    window.setTimeout(() => void reload(), SIMULATION_SETTLE_MS)
+  }
+
   // Klik baris membuka pratinjau (seragam dengan tabel lain). Riwayat pembayaran
   // ditarik terpisah; `detailIdRef` membuang balasan basi bila baris cepat ditukar.
   const detailIdRef = useRef<string | null>(null)
@@ -465,6 +487,24 @@ export function InvoicesPage() {
       })
     if (payable && canManage)
       list.push({ key: 'void', label: 'Batalkan', icon: <Ban size={16} />, disabled: busy, onClick: () => setVoidTarget(i) })
+    // Alat uji: hanya muncul saat gateway Pivot dalam mode sandbox & tagihan sudah punya sesi bayar
+    // (server yang menentukan lewat `simulatable`) — di produksi tak pernah tampil.
+    if (i.simulatable && canManage) {
+      list.push({
+        key: 'simulate-success',
+        label: 'Simulasi: tandai lunas',
+        icon: <FlaskConical size={16} />,
+        disabled: busy,
+        onClick: () => void doSimulate(i, 'SUCCESS'),
+      })
+      list.push({
+        key: 'simulate-expired',
+        label: 'Simulasi: kedaluwarsakan',
+        icon: <FlaskConical size={16} />,
+        disabled: busy,
+        onClick: () => void doSimulate(i, 'EXPIRED'),
+      })
+    }
     return list
   }
 

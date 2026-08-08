@@ -78,4 +78,10 @@ data class SubscriptionInvoiceView(
     val qrContent: String? = null,
     val qrUrl: String? = null,
     val qrExpiresAt: Instant? = null,
+    /**
+     * Tagihan ini bisa dipaksa lunas/kedaluwarsa lewat simulasi sandbox penyedia (alat uji): Pivot
+     * dalam mode sandbox, sesi bayar sudah dibuat, dan tagihan masih tertunggak. UI memakainya
+     * untuk memunculkan aksi "Simulasi bayar" — di produksi selalu `false`.
+     */
+    val simulatable: Boolean = false,
 )

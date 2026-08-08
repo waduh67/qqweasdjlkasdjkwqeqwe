@@ -1,5 +1,7 @@
 package com.duluin.ftth.platformbilling.application.service
 
+import com.duluin.ftth.billing.application.port.outbound.SimulatedChargeStatus
+import com.duluin.ftth.billing.application.service.PivotMasterConfigProvider
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.tenant.TenantContext
@@ -29,6 +31,7 @@ class TenantSelfSubscriptionService(
     private val invoiceRepository: TenantSubscriptionInvoiceRepository,
     private val invoiceGenerator: PlatformInvoiceGenerator,
     private val usageProbe: SubscriptionUsageProbe,
+    private val masterConfig: PivotMasterConfigProvider,
 ) : TenantSelfSubscriptionUseCase {
 
     override fun current(): TenantSelfSubscriptionView? {
@@ -49,13 +52,13 @@ class TenantSelfSubscriptionService(
         // Bila sudah ada tagihan tertunggak, kembalikan yang itu (hindari terbit ganda). Charge
         // TIDAK dibuat di sini — instrumen bayar (VA/QRIS) dipilih tenant lewat "Bayar" → payInvoice.
         invoiceRepository.findOutstandingBySubscriptionId(subscription.id).firstOrNull()?.let {
-            return it.toView()
+            return it.toView(sandboxMode())
         }
         val invoice = invoiceGenerator.issueFor(subscription, LocalDate.now(), force = true, months = months)
             ?: throw ValidationException(
                 "Periode langganan ini sudah dibayar — belum ada tagihan baru untuk diperpanjang.",
             )
-        return invoice.toView()
+        return invoice.toView(sandboxMode())
     }
 
     @Transactional
@@ -69,11 +72,32 @@ class TenantSelfSubscriptionService(
         if (!invoice.isOutstanding) {
             throw ValidationException("Tagihan ini tidak dapat dibayar (status ${invoice.status}).")
         }
-        return invoiceGenerator.chargeWithMethod(invoice, subscription, method, channel).toView()
+        return invoiceGenerator.chargeWithMethod(invoice, subscription, method, channel).toView(sandboxMode())
     }
 
+    @Transactional
+    override fun simulateInvoicePayment(invoiceId: UUID, status: SimulatedChargeStatus): SubscriptionInvoiceView {
+        val subscription = subscriptionRepository.findByTenantId(TenantContext.tenantId())
+            ?: throw NotFoundException("Tenant belum berlangganan")
+        // Sama seperti payInvoice: batasi ke tagihan milik langganan tenant ini.
+        val invoice = invoiceRepository.findById(invoiceId)
+            ?.takeIf { it.subscriptionId == subscription.id }
+            ?: throw NotFoundException("Tagihan tidak ditemukan")
+        if (!invoice.isOutstanding) {
+            throw ValidationException("Tagihan ini tidak dapat disimulasikan (status ${invoice.status}).")
+        }
+        invoiceGenerator.simulatePayment(invoice, status)
+        // Status belum berubah di sini — pelunasan menyusul lewat callback penyedia.
+        return invoice.toView(sandboxMode())
+    }
+
+    /** Pivot master sedang mode sandbox? Penentu apakah simulasi pembayaran boleh ditawarkan. */
+    private fun sandboxMode(): Boolean = masterConfig.current()?.sandbox == true
+
     private fun TenantSubscription.toSelfView(): TenantSelfSubscriptionView {
-        val invoices = invoiceRepository.findBySubscriptionId(id).map { it.toView() }
+        // Flag sandbox dibaca SEKALI per query, bukan per baris — setelan master global.
+        val sandbox = sandboxMode()
+        val invoices = invoiceRepository.findBySubscriptionId(id).map { it.toView(sandbox) }
         val usage = usageProbe.currentTenantUsage().map {
             // Semua kuota "Unlimited" (limit null) — pemakaian bersifat kosmetik.
             UsageMetricView(key = it.key, label = it.label, used = it.used, limit = null)
@@ -94,7 +118,11 @@ class TenantSelfSubscriptionService(
         const val MAX_PREPAY_MONTHS = 12
     }
 
-    private fun TenantSubscriptionInvoice.toView() = SubscriptionInvoiceView(
+    /**
+     * [sandbox] = Pivot master sedang mode sandbox; hanya saat itu [SubscriptionInvoiceView.simulatable]
+     * bisa menyala (tagihan Pivot yang sudah punya sesi bayar & masih tertunggak).
+     */
+    private fun TenantSubscriptionInvoice.toView(sandbox: Boolean) = SubscriptionInvoiceView(
         id = id,
         tenantId = tenantId,
         number = number,
@@ -115,5 +143,9 @@ class TenantSelfSubscriptionService(
         qrContent = qrContent,
         qrUrl = qrUrl,
         qrExpiresAt = qrExpiresAt,
+        simulatable = sandbox &&
+            gatewayProvider.equals("PIVOT", ignoreCase = true) &&
+            !gatewayRef.isNullOrBlank() &&
+            isOutstanding,
     )
 }

@@ -2,7 +2,9 @@ package com.duluin.ftth.platformbilling.application.service
 
 import com.duluin.ftth.billing.PaymentMethodCatalog
 import com.duluin.ftth.billing.application.port.outbound.ChargeRequest
+import com.duluin.ftth.billing.application.port.outbound.SimulatedChargeStatus
 import com.duluin.ftth.billing.application.service.PaymentGatewayRegistry
+import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionInvoiceRepository
@@ -162,6 +164,29 @@ class PlatformInvoiceGenerator(
             qrExpiresAt = result.qr?.expiresAt,
         )
         return invoiceRepository.save(invoice)
+    }
+
+    /**
+     * Paksa sesi bayar [invoice] menjadi [status] lewat simulasi sandbox penyedia — alat uji agar
+     * alur "bayar → webhook → lunas → masa aktif bertambah" bisa dicoba tanpa transaksi sungguhan.
+     * Memakai id sesi bayar yang sudah tersimpan ([TenantSubscriptionInvoice.gatewayRef]).
+     *
+     * TIDAK menyentuh tagihan: pelunasan datang lewat callback penyedia ([PlatformPaymentService]).
+     */
+    fun simulatePayment(invoice: TenantSubscriptionInvoice, status: SimulatedChargeStatus) {
+        val sessionId = invoice.gatewayRef?.takeIf { it.isNotBlank() }
+            ?: throw ConflictException("Tagihan belum punya sesi bayar — tekan Bayar dulu untuk membuat charge")
+        val ctx = resolver.resolveActive()
+        if (!ctx.provider.equals(invoice.gatewayProvider, ignoreCase = true)) {
+            throw ConflictException(
+                "Sesi bayar tagihan ini dibuat lewat '${invoice.gatewayProvider}', " +
+                    "sedangkan gateway aktif '${ctx.provider}' — simulasi tidak bisa dijalankan",
+            )
+        }
+        val gateway = gatewayRegistry.forProvider(ctx.provider)
+            ?: error("Adapter gateway '${ctx.provider}' tidak tersedia")
+        gateway.simulateCharge(sessionId, status, ctx)
+        log.info("Simulasi pembayaran langganan {} dikirim dengan status {}", invoice.number, status)
     }
 
     /** Nomor terbit-ulang unik untuk periode yang tagihan lamanya VOID: `<base>-R2`, `-R3`, … */

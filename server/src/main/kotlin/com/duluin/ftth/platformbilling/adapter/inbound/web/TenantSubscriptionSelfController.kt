@@ -2,6 +2,7 @@ package com.duluin.ftth.platformbilling.adapter.inbound.web
 
 import com.duluin.ftth.billing.PaymentMethodCatalog
 import com.duluin.ftth.billing.PaymentMethodOption
+import com.duluin.ftth.billing.application.port.outbound.SimulatedChargeStatus
 import com.duluin.ftth.platformbilling.application.port.inbound.SubscriptionInvoiceView
 import com.duluin.ftth.platformbilling.application.port.inbound.TenantSelfSubscriptionUseCase
 import com.duluin.ftth.platformbilling.application.port.inbound.TenantSelfSubscriptionView
@@ -59,7 +60,21 @@ class TenantSubscriptionSelfController(
         @PathVariable invoiceId: UUID,
         @RequestBody request: PaySubscriptionInvoiceRequest,
     ): SubscriptionInvoiceView = useCase.payInvoice(invoiceId, request.method, request.channel)
+
+    /**
+     * Simulasi pembayaran (sandbox): paksa sesi bayar tagihan jadi SUCCESS/EXPIRED tanpa transaksi
+     * sungguhan. Pelunasan menyusul lewat webhook penyedia — respons masih berstatus lama.
+     */
+    @PostMapping("/invoices/{invoiceId}/simulate")
+    @PreAuthorize("@authz.can('billing.subscription.renew')")
+    fun simulate(
+        @PathVariable invoiceId: UUID,
+        @RequestBody request: SimulateSubscriptionPaymentRequest,
+    ): SubscriptionInvoiceView = useCase.simulateInvoicePayment(invoiceId, request.status)
 }
 
 /** Pilihan instrumen bayar in-app: [method] = VIRTUAL_ACCOUNT/QR, [channel] bank (wajib utk VA). */
 data class PaySubscriptionInvoiceRequest(val method: String, val channel: String?)
+
+/** Status akhir yang dipaksakan ke sesi bayar saat simulasi sandbox: SUCCESS atau EXPIRED. */
+data class SimulateSubscriptionPaymentRequest(val status: SimulatedChargeStatus)

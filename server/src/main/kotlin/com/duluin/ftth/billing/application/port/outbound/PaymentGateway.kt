@@ -1,6 +1,7 @@
 package com.duluin.ftth.billing.application.port.outbound
 
 import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
+import com.duluin.ftth.common.domain.error.ConflictException
 import org.springframework.modulith.NamedInterface
 import java.math.BigDecimal
 import java.time.Instant
@@ -36,7 +37,21 @@ interface PaymentGateway {
      * bisa dipahami — pemanggil membalas 4xx tanpa menyentuh tagihan.
      */
     fun parseCallback(callback: GatewayCallback, ctx: ResolvedGatewayContext): PaymentSettlement?
+
+    /**
+     * Paksa sesi bayar [paymentSessionId] menjadi [chargeStatus] di lingkungan **sandbox** penyedia —
+     * alat uji agar alur bayar bisa dicoba tanpa transaksi bank/e-wallet sungguhan. Penyedia
+     * mengirim webhook seperti pembayaran nyata, jadi pelunasan tetap lewat [parseCallback]
+     * (method ini TIDAK menyentuh tagihan). Bawaan: menolak — hanya penyedia yang punya endpoint
+     * simulasi (Pivot) yang meng-override.
+     */
+    fun simulateCharge(paymentSessionId: String, chargeStatus: SimulatedChargeStatus, ctx: ResolvedGatewayContext): Unit =
+        throw ConflictException("Penyedia '$provider' tidak mendukung simulasi pembayaran")
 }
+
+/** Status akhir yang dipaksakan ke sesi bayar saat simulasi (sandbox). */
+@NamedInterface("gateway")
+enum class SimulatedChargeStatus { SUCCESS, EXPIRED }
 
 /**
  * Permintaan membuat charge untuk sebuah tagihan.

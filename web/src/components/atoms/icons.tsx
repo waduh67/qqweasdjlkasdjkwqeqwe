@@ -124,6 +124,13 @@ export const IconShield = (p: IconProps) => (
   </Icon>
 )
 
+export const IconFlask = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M10 2v7.5L4.8 20.5a1 1 0 0 0 .9 1.5h12.6a1 1 0 0 0 .9-1.5L14 9.5V2" />
+    <path d="M8.5 2h7M7 16h10" />
+  </Icon>
+)
+
 export const IconArea = (p: IconProps) => (
   <Icon {...p}>
     <path d="M12 21c4-4 7-7.5 7-11a7 7 0 0 0-14 0c0 3.5 3 7 7 11Z" />

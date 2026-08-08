@@ -5,6 +5,7 @@ import com.duluin.ftth.billing.application.port.inbound.ManageInvoiceUseCase
 import com.duluin.ftth.billing.application.port.inbound.PaymentView
 import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
 import com.duluin.ftth.billing.application.port.outbound.PaymentRepository
+import com.duluin.ftth.billing.application.port.outbound.SimulatedChargeStatus
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
 import com.duluin.ftth.billing.domain.model.Payment
@@ -22,6 +23,7 @@ class InvoiceService(
     private val invoiceRepository: InvoiceRepository,
     private val paymentRepository: PaymentRepository,
     private val invoiceGenerator: InvoiceGenerator,
+    private val masterConfig: PivotMasterConfigProvider,
     private val auditor: AuditRecorder,
 ) : ManageInvoiceUseCase {
 
@@ -34,11 +36,13 @@ class InvoiceService(
         }
         // Bila kedua filter diberikan, saring status di memori atas hasil per pelanggan.
         val filtered = if (customerId != null && status != null) invoices.filter { it.status == status } else invoices
-        return filtered.map { it.toView() }
+        // Flag sandbox dibaca SEKALI per query, bukan per baris — setelan master global.
+        val sandbox = sandboxMode()
+        return filtered.map { it.toView(sandbox) }
     }
 
     @Transactional(readOnly = true)
-    override fun get(id: UUID): InvoiceView = require(id).toView()
+    override fun get(id: UUID): InvoiceView = require(id).toView(sandboxMode())
 
     @Transactional(readOnly = true)
     override fun payments(invoiceId: UUID): List<PaymentView> =
@@ -66,14 +70,39 @@ class InvoiceService(
             "billing.invoice.recharged", "Invoice", saved.id, saved.tenantId,
             mapOf("number" to saved.number, "provider" to (saved.gatewayProvider ?: "-"), "method" to (saved.payMethod ?: "-")),
         )
-        return saved.toView()
+        return saved.toView(sandboxMode())
     }
+
+    /**
+     * Alat uji sandbox: minta penyedia memaksa sesi bayar tagihan ini menjadi [status]. Tagihan TAK
+     * diubah di sini — pelunasan datang lewat webhook penyedia (asinkron), jadi proyeksi yang
+     * dikembalikan masih berstatus lama dan klien memuat ulang beberapa saat kemudian.
+     */
+    override fun simulatePayment(id: UUID, status: SimulatedChargeStatus): InvoiceView {
+        val invoice = require(id)
+        if (invoice.status == InvoiceStatus.PAID || invoice.status == InvoiceStatus.VOID) {
+            throw ConflictException("Tagihan berstatus ${invoice.status} tidak bisa disimulasikan")
+        }
+        invoiceGenerator.simulatePayment(invoice, status)
+        auditor.record(
+            "billing.invoice.payment.simulated", "Invoice", invoice.id, invoice.tenantId,
+            mapOf("number" to invoice.number, "chargeStatus" to status.name),
+        )
+        return invoice.toView(sandboxMode())
+    }
+
+    /** Pivot master sedang mode sandbox? Penentu apakah simulasi pembayaran boleh ditawarkan. */
+    private fun sandboxMode(): Boolean = masterConfig.current()?.sandbox == true
 
     private fun require(id: UUID): Invoice =
         invoiceRepository.findById(id) ?: throw NotFoundException("Tagihan $id tidak ditemukan")
 }
 
-internal fun Invoice.toView() = InvoiceView(
+/**
+ * [sandbox] = Pivot master sedang mode sandbox; hanya saat itu [InvoiceView.simulatable] bisa
+ * menyala (tagihan Pivot yang sudah punya sesi bayar & masih tertunggak).
+ */
+internal fun Invoice.toView(sandbox: Boolean = false) = InvoiceView(
     id = id,
     number = number,
     customerId = customerId,
@@ -100,6 +129,10 @@ internal fun Invoice.toView() = InvoiceView(
     qrContent = qrContent,
     qrUrl = qrUrl,
     qrExpiresAt = qrExpiresAt,
+    simulatable = sandbox &&
+        gatewayProvider.equals("PIVOT", ignoreCase = true) &&
+        !gatewayRef.isNullOrBlank() &&
+        (status == InvoiceStatus.ISSUED || status == InvoiceStatus.OVERDUE),
 )
 
 internal fun Payment.toView() = PaymentView(

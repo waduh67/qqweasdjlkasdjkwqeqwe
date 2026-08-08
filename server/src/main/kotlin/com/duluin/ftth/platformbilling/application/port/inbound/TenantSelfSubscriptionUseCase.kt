@@ -1,5 +1,6 @@
 package com.duluin.ftth.platformbilling.application.port.inbound
 
+import com.duluin.ftth.billing.application.port.outbound.SimulatedChargeStatus
 import com.duluin.ftth.platformbilling.domain.model.SubscriptionStatus
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -29,6 +30,14 @@ interface TenantSelfSubscriptionUseCase {
      * tagihan sudah lunas/void (tak dapat dibayar) atau metode/channel tak didukung.
      */
     fun payInvoice(invoiceId: UUID, method: String, channel: String?): SubscriptionInvoiceView
+
+    /**
+     * **Alat uji (sandbox saja)**: paksa sesi bayar tagihan langganan milik tenant berjalan menjadi
+     * [status] (`SUCCESS`/`EXPIRED`) lewat simulasi penyedia, memakai id sesi dari charge terakhir.
+     * Pelunasan (dan perpanjangan masa aktif) tetap datang lewat webhook penyedia, jadi proyeksi
+     * yang dikembalikan BELUM tentu berubah status — klien memuat ulang/polling.
+     */
+    fun simulateInvoicePayment(invoiceId: UUID, status: SimulatedChargeStatus): SubscriptionInvoiceView
 }
 
 /** Pandangan langganan sisi tenant + pemakaian kosmetik. */

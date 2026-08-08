@@ -8,6 +8,7 @@ import com.duluin.ftth.billing.application.port.outbound.GatewayCallback
 import com.duluin.ftth.billing.application.port.outbound.PaymentGateway
 import com.duluin.ftth.billing.application.port.outbound.PaymentSettlement
 import com.duluin.ftth.billing.application.port.outbound.QrInstruction
+import com.duluin.ftth.billing.application.port.outbound.SimulatedChargeStatus
 import com.duluin.ftth.billing.application.port.outbound.VaInstruction
 import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.billing.domain.model.PivotFeeType
@@ -315,6 +316,34 @@ class PivotPaymentGateway(
             log.warn("Callback Pivot tidak bisa diurai: {}", it.message)
             null
         }
+    }
+
+    /**
+     * Simulasi pembayaran Pivot (`POST /v2/payments/simulations`) — HANYA tersedia di lingkungan
+     * testing (`api-stg`), karena itu ditolak tegas bila kredensial bukan sandbox alih-alih
+     * membiarkan produksi menabrak 404. `amount` sengaja tak dikirim: opsional untuk `paymentType`
+     * SINGLE (semua charge di sini SINGLE) sehingga Pivot memakai nominal sesi apa adanya.
+     *
+     * Efeknya asinkron: Pivot mengirim callback pembayaran seperti transaksi nyata, dan pelunasan
+     * tagihan terjadi di jalur webhook (`PivotCallbackService`) — bukan di sini.
+     */
+    override fun simulateCharge(
+        paymentSessionId: String,
+        chargeStatus: SimulatedChargeStatus,
+        ctx: ResolvedGatewayContext,
+    ) {
+        val creds = ctx.pivotCredentials()
+        if (!creds.sandbox) {
+            throw ConflictException("Simulasi pembayaran hanya tersedia saat Pivot dalam mode sandbox")
+        }
+        apiClient.post(
+            path = "/v2/payments/simulations",
+            body = mapOf("paymentSessionId" to paymentSessionId, "chargeStatus" to chargeStatus.name),
+            creds = creds,
+            subMerchantId = ctx.subAccountId,
+            requestId = newRequestId(),
+        )
+        log.info("Simulasi pembayaran Pivot dikirim: sesi={} status={}", paymentSessionId, chargeStatus)
     }
 
     /** Konfigurasi split-routing fee platform, atau null bila tak ada fee / bukan charge on-behalf. */

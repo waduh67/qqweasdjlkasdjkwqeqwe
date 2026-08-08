@@ -44,7 +44,15 @@ export interface InvoiceView {
   qrContent: string | null
   qrUrl: string | null
   qrExpiresAt: string | null
+  /**
+   * Tagihan ini bisa dipaksa lunas/kedaluwarsa lewat simulasi sandbox gateway (alat uji): Pivot
+   * mode sandbox, sesi bayar sudah dibuat, tagihan masih tertunggak. Di produksi selalu false.
+   */
+  simulatable: boolean
 }
+
+/** Status akhir yang dipaksakan ke sesi bayar saat simulasi sandbox. */
+export type SimulatedChargeStatus = 'SUCCESS' | 'EXPIRED'
 
 /** Satu metode bayar in-app; [channels] kosong bila tak perlu pilih bank (QRIS). */
 export interface PaymentMethodOption {
@@ -104,6 +112,14 @@ export const getBillingPaymentMethods = () =>
  */
 export const refreshPaymentLink = (id: string, method: string, channel: string | null) =>
   api.post<InvoiceView>(`/api/billing/invoices/${id}/recharge`, { method, channel })
+
+/**
+ * Alat uji sandbox: paksa sesi bayar tagihan jadi `SUCCESS`/`EXPIRED` lewat simulasi Pivot.
+ * Pelunasan menyusul lewat webhook, jadi tagihan yang dikembalikan MASIH berstatus lama —
+ * pemanggil memuat ulang daftar beberapa saat kemudian.
+ */
+export const simulateInvoicePayment = (id: string, status: SimulatedChargeStatus) =>
+  api.post<InvoiceView>(`/api/billing/invoices/${id}/simulate`, { status })
 
 /** Pembayaran yang tercatat atas sebuah tagihan. */
 export const listPayments = (invoiceId: string) =>

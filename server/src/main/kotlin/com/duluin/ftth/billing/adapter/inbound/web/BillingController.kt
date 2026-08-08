@@ -6,6 +6,7 @@ import com.duluin.ftth.billing.application.port.inbound.InvoiceView
 import com.duluin.ftth.billing.application.port.inbound.ManageInvoiceUseCase
 import com.duluin.ftth.billing.application.port.inbound.PaymentView
 import com.duluin.ftth.billing.application.port.inbound.RecordPaymentUseCase
+import com.duluin.ftth.billing.application.port.outbound.SimulatedChargeStatus
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
@@ -74,6 +75,12 @@ class BillingController(
     fun pay(@PathVariable id: UUID, @RequestBody(required = false) request: RecordPaymentRequest?): InvoiceView =
         payments.recordManual(id, request?.note)
 
+    @PostMapping("/invoices/{id}/simulate")
+    @PreAuthorize("@authz.can('billing.invoice.manage')")
+    @Operation(summary = "Simulasi pembayaran (sandbox): paksa sesi bayar jadi SUCCESS/EXPIRED")
+    fun simulate(@PathVariable id: UUID, @RequestBody request: SimulatePaymentRequest): InvoiceView =
+        invoices.simulatePayment(id, request.status)
+
     @GetMapping("/payments")
     @PreAuthorize("@authz.can('billing.invoice.view')")
     @Operation(summary = "Pembayaran yang tercatat atas sebuah tagihan")
@@ -87,3 +94,6 @@ data class RecordPaymentRequest(val note: String?)
 
 /** Pilihan instrumen bayar in-app: [method] = VIRTUAL_ACCOUNT/QR, [channel] bank (wajib utk VA). */
 data class ChargeInvoiceRequest(val method: String, val channel: String?)
+
+/** Status akhir yang dipaksakan ke sesi bayar saat simulasi sandbox: SUCCESS atau EXPIRED. */
+data class SimulatePaymentRequest(val status: SimulatedChargeStatus)

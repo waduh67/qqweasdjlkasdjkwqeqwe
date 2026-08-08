@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { FlaskConical } from 'lucide-react'
 import { ApiError } from '../api/client'
 import {
   INVOICE_STATUS_LABEL,
@@ -11,7 +12,9 @@ import {
   getSubscriptionPaymentMethods,
   payMyInvoice,
   renewMySubscription,
+  simulateMyInvoicePayment,
   type PaymentMethodOption,
+  type SimulatedChargeStatus,
   type TenantSelfSubscriptionView,
   type UsageMetricView,
 } from '../api/subscription'
@@ -64,6 +67,12 @@ const METRIC_ICON: Record<string, (p: IconProps) => ReactNode> = {
 
 /** Opsi bayar di muka (bulan) — cermin batas server (renew 1..12). */
 const PREPAY_OPTIONS = [1, 3, 6, 12]
+
+/**
+ * Jeda sebelum memuat ulang setelah simulasi bayar (sandbox): gateway melunasi lewat webhook,
+ * jadi status baru belum tersedia saat respons simulasi kembali.
+ */
+const SIMULATION_SETTLE_MS = 2500
 
 const fmtIdr = (n: number) => `Rp ${n.toLocaleString('id-ID')}`
 const fmtDate = (iso: string | null) =>
@@ -130,6 +139,25 @@ export function SubscriptionPage() {
   // Bayar satu tagihan tertunggak: buka panel bayar in-app (pilih QRIS/VA di aplikasi ini —
   // tak lagi redirect ke halaman gateway luar).
   const pay = (inv: SubscriptionInvoiceView) => setPaying(inv)
+
+  // Alat uji sandbox: paksa sesi bayar tagihan jadi lunas/kedaluwarsa. Pelunasan tiba lewat
+  // webhook gateway, jadi muat ulang ditunda sejenak agar status yang tampil sudah terbarui.
+  const simulate = async (inv: SubscriptionInvoiceView, status: SimulatedChargeStatus) => {
+    if (busy) return
+    setBusy(true)
+    try {
+      await simulateMyInvoicePayment(inv.id, status)
+      toast.success(
+        `Simulasi ${status === 'SUCCESS' ? 'lunas' : 'kedaluwarsa'} dikirim untuk ${inv.number} — ` +
+          'status menyusul dari gateway.',
+      )
+      window.setTimeout(() => void load(), SIMULATION_SETTLE_MS)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal mengirim simulasi pembayaran')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   // Cek status tagihan (dipakai polling panel): ambil ulang langganan lalu cari tagihannya.
   const pollInvoiceStatus = async (invoiceId: string): Promise<string | null> => {
@@ -280,7 +308,13 @@ export function SubscriptionPage() {
           ) : (
             <div className="stack" style={{ gap: '0.4rem' }}>
               {sub.invoices.map((inv) => (
-                <InvoiceRow key={inv.id} inv={inv} onPay={pay} busy={busy} />
+                <InvoiceRow
+                  key={inv.id}
+                  inv={inv}
+                  onPay={pay}
+                  onSimulate={canRenew ? simulate : undefined}
+                  busy={busy}
+                />
               ))}
             </div>
           )}
@@ -445,13 +479,20 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
   )
 }
 
+/**
+ * Satu baris riwayat tagihan. `onSimulate` hanya diisi bila pengguna boleh memperpanjang; kontrol
+ * simulasinya sendiri baru muncul saat server menandai `inv.simulatable` (Pivot sandbox + sesi
+ * bayar sudah ada), jadi di produksi baris ini tampil apa adanya.
+ */
 function InvoiceRow({
   inv,
   onPay,
+  onSimulate,
   busy,
 }: {
   inv: SubscriptionInvoiceView
   onPay: (inv: SubscriptionInvoiceView) => void
+  onSimulate?: (inv: SubscriptionInvoiceView, status: SimulatedChargeStatus) => void
   busy: boolean
 }) {
   const outstanding = inv.status === 'ISSUED' || inv.status === 'OVERDUE'
@@ -479,6 +520,30 @@ function InvoiceRow({
         </span>
       </div>
       <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{fmtIdr(inv.amount)}</span>
+      {inv.simulatable && onSimulate && (
+        <div className="row" style={{ gap: '0.25rem' }}>
+          <Button
+            variant="subtle"
+            icon={<FlaskConical size={14} />}
+            onClick={() => onSimulate(inv, 'SUCCESS')}
+            disabled={busy}
+            title="Sandbox: paksa sesi bayar jadi berhasil"
+            style={{ fontSize: '0.75rem', padding: '0.3rem 0.5rem', whiteSpace: 'nowrap' }}
+          >
+            Sim. lunas
+          </Button>
+          <Button
+            variant="subtle"
+            icon={<FlaskConical size={14} />}
+            onClick={() => onSimulate(inv, 'EXPIRED')}
+            disabled={busy}
+            title="Sandbox: paksa sesi bayar jadi kedaluwarsa"
+            style={{ fontSize: '0.75rem', padding: '0.3rem 0.5rem', whiteSpace: 'nowrap' }}
+          >
+            Sim. kedaluwarsa
+          </Button>
+        </div>
+      )}
       {outstanding && (
         <Button
           variant="primary"

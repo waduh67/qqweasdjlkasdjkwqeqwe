@@ -5,9 +5,19 @@
  */
 
 import { api } from './client'
-import type { PaymentMethodOption, SubscriptionInvoiceView, SubscriptionStatus } from './platformBilling'
+import type {
+  PaymentMethodOption,
+  SimulatedChargeStatus,
+  SubscriptionInvoiceView,
+  SubscriptionStatus,
+} from './platformBilling'
 
-export type { PaymentMethodOption, SubscriptionInvoiceView, SubscriptionStatus } from './platformBilling'
+export type {
+  PaymentMethodOption,
+  SimulatedChargeStatus,
+  SubscriptionInvoiceView,
+  SubscriptionStatus,
+} from './platformBilling'
 
 /** Satu baris pemakaian kosmetik — `limit` null artinya "Unlimited". */
 export interface UsageMetricView {
@@ -59,4 +69,16 @@ export function payMyInvoice(
   channel: string | null,
 ): Promise<SubscriptionInvoiceView> {
   return api.post(`/api/subscription/invoices/${invoiceId}/pay`, { method, channel })
+}
+
+/**
+ * Alat uji sandbox: paksa sesi bayar tagihan langganan jadi `SUCCESS`/`EXPIRED` lewat simulasi
+ * Pivot. Pelunasan (dan perpanjangan masa aktif) menyusul lewat webhook, jadi tagihan yang
+ * dikembalikan MASIH berstatus lama — pemanggil memuat ulang beberapa saat kemudian.
+ */
+export function simulateMyInvoicePayment(
+  invoiceId: string,
+  status: SimulatedChargeStatus,
+): Promise<SubscriptionInvoiceView> {
+  return api.post(`/api/subscription/invoices/${invoiceId}/simulate`, { status })
 }
