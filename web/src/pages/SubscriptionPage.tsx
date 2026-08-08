@@ -9,22 +9,19 @@ import {
 } from '../api/platformBilling'
 import {
   getMySubscription,
-  getSubscriptionPaymentMethods,
-  payMyInvoice,
   renewMySubscription,
   simulateMyInvoicePayment,
-  type PaymentMethodOption,
   type SimulatedChargeStatus,
   type TenantSelfSubscriptionView,
   type UsageMetricView,
 } from '../api/subscription'
+import { payLink } from '../api/publicPayment'
 import { useCan } from '../auth/useCan'
+import { useAuth } from '../auth/useAuth'
 import { Badge, Button, EmptyState } from '@/components/atoms'
-import { Modal } from '@/components/molecules'
 import { useToast } from '@/system'
 import { type Tone } from '@/components/atoms'
 import { PageHeader } from '@/components/molecules'
-import { GatewayPayPanel } from '@/components/organisms'
 import {
   IconGauge,
   IconRoute,
@@ -96,6 +93,7 @@ function periodElapsed(start: string | null, end: string | null): number | null 
 
 export function SubscriptionPage() {
   const { can } = useCan()
+  const { user } = useAuth()
   const toast = useToast()
   const canRenew = can('billing.subscription.renew')
 
@@ -103,9 +101,6 @@ export function SubscriptionPage() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [months, setMonths] = useState(1)
-  // Metode bayar in-app (QRIS/VA) & tagihan yang panel bayarnya sedang terbuka.
-  const [methods, setMethods] = useState<PaymentMethodOption[]>([])
-  const [paying, setPaying] = useState<SubscriptionInvoiceView | null>(null)
 
   const load = () =>
     getMySubscription()
@@ -115,8 +110,6 @@ export function SubscriptionPage() {
 
   useEffect(() => {
     void load()
-    // Metode bayar konstan dari server; non-kritis bila gagal (panel tampil kosong).
-    void getSubscriptionPaymentMethods().then(setMethods).catch(() => setMethods([]))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -136,9 +129,9 @@ export function SubscriptionPage() {
     }
   }
 
-  // Bayar satu tagihan tertunggak: buka panel bayar in-app (pilih QRIS/VA di aplikasi ini —
-  // tak lagi redirect ke halaman gateway luar).
-  const pay = (inv: SubscriptionInvoiceView) => setPaying(inv)
+  // Bayar tagihan langganan lewat halaman bayar publik — surface yang sama dengan tagihan
+  // pelanggan, jadi cuma ada satu jalur bayar di seluruh aplikasi.
+  const payUrl = (inv: SubscriptionInvoiceView) => payLink(user?.tenantSlug ?? '', inv.id)
 
   // Alat uji sandbox: paksa sesi bayar tagihan jadi lunas/kedaluwarsa. Pelunasan tiba lewat
   // webhook gateway, jadi muat ulang ditunda sejenak agar status yang tampil sudah terbarui.
@@ -157,13 +150,6 @@ export function SubscriptionPage() {
     } finally {
       setBusy(false)
     }
-  }
-
-  // Cek status tagihan (dipakai polling panel): ambil ulang langganan lalu cari tagihannya.
-  const pollInvoiceStatus = async (invoiceId: string): Promise<string | null> => {
-    const fresh = await getMySubscription()
-    setSub(fresh)
-    return fresh?.invoices.find((i) => i.id === invoiceId)?.status ?? null
   }
 
   if (loading) return <p className="muted">Memuat langganan…</p>
@@ -311,7 +297,7 @@ export function SubscriptionPage() {
                 <InvoiceRow
                   key={inv.id}
                   inv={inv}
-                  onPay={pay}
+                  payUrl={payUrl(inv)}
                   onSimulate={canRenew ? simulate : undefined}
                   busy={busy}
                 />
@@ -346,7 +332,8 @@ export function SubscriptionPage() {
               Pilih <strong>1 / 3 / 6 / 12 bulan</strong> lalu klik <strong>Perpanjang</strong> — tagihan sejumlah itu terbit.
             </Step>
             <Step n={2} title="Bayar">
-              Klik <strong>Bayar</strong> pada tagihan di <strong>Riwayat tagihan</strong> — tab pembayaran gateway terbuka.
+              Klik <strong>Bayar ↗</strong> pada tagihan di <strong>Riwayat tagihan</strong> — halaman bayar
+              tagihan itu terbuka di tab baru (bisa juga disalin lewat <strong>Salin link</strong>).
             </Step>
             <Step n={3} title="Masa aktif bertambah">
               Setelah pembayaran <strong>LUNAS</strong>, masa aktif memanjang sesuai jumlah bulan — menumpuk bila belum habis.
@@ -364,35 +351,6 @@ export function SubscriptionPage() {
         </div>
       </div>
 
-      {paying && (
-        <Modal title={`Bayar ${paying.number}`} onClose={() => setPaying(null)}>
-          <GatewayPayPanel
-            subtitle={`${paying.number} · ${fmtIdr(paying.amount)}`}
-            methods={methods}
-            createCharge={(method, channel) => payMyInvoice(paying.id, method, channel)}
-            pollStatus={() => pollInvoiceStatus(paying.id)}
-            initialInstruction={
-              paying.payMethod
-                ? {
-                    payMethod: paying.payMethod,
-                    vaChannel: paying.vaChannel,
-                    vaNumber: paying.vaNumber,
-                    vaName: paying.vaName,
-                    vaExpiresAt: paying.vaExpiresAt,
-                    qrContent: paying.qrContent,
-                    qrUrl: paying.qrUrl,
-                    qrExpiresAt: paying.qrExpiresAt,
-                  }
-                : null
-            }
-            onPaid={() => {
-              void load()
-              toast.success(`Tagihan ${paying.number} lunas — masa aktif diperpanjang.`)
-            }}
-            onClose={() => setPaying(null)}
-          />
-        </Modal>
-      )}
     </div>
   )
 }
@@ -486,12 +444,13 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
  */
 function InvoiceRow({
   inv,
-  onPay,
+  payUrl,
   onSimulate,
   busy,
 }: {
   inv: SubscriptionInvoiceView
-  onPay: (inv: SubscriptionInvoiceView) => void
+  /** Tautan halaman bayar publik tagihan ini — sekaligus yang disalin tombol "Salin link". */
+  payUrl: string
   onSimulate?: (inv: SubscriptionInvoiceView, status: SimulatedChargeStatus) => void
   busy: boolean
 }) {
@@ -502,6 +461,11 @@ function InvoiceRow({
       ?.writeText(inv.paymentSessionId ?? '')
       .then(() => toast.success('Payment session ID disalin'))
       .catch(() => toast.error('Gagal menyalin payment session ID'))
+  const copyPayLink = () =>
+    navigator.clipboard
+      ?.writeText(payUrl)
+      .then(() => toast.success('Link bayar disalin'))
+      .catch(() => toast.error('Gagal menyalin link bayar'))
   return (
     <div
       className="row"
@@ -565,14 +529,25 @@ function InvoiceRow({
         </div>
       )}
       {outstanding && (
-        <Button
-          variant="primary"
-          onClick={() => onPay(inv)}
-          disabled={busy}
-          style={{ fontSize: '0.8rem', fontWeight: 600, padding: '0.35rem 0.7rem', whiteSpace: 'nowrap' }}
-        >
-          Bayar ↗
-        </Button>
+        <div className="row" style={{ gap: '0.25rem' }}>
+          <Button
+            variant="subtle"
+            icon={<Copy size={14} />}
+            onClick={() => void copyPayLink()}
+            title="Salin tautan halaman bayar tagihan ini"
+            style={{ fontSize: '0.75rem', padding: '0.3rem 0.5rem', whiteSpace: 'nowrap' }}
+          >
+            Salin link
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => window.open(payUrl, '_blank', 'noopener')}
+            disabled={busy}
+            style={{ fontSize: '0.8rem', fontWeight: 600, padding: '0.35rem 0.7rem', whiteSpace: 'nowrap' }}
+          >
+            Bayar ↗
+          </Button>
+        </div>
       )}
     </div>
   )

@@ -106,18 +106,6 @@ export const recordManualPayment = (id: string, note?: string) =>
 /** Detail satu tagihan (untuk polling status setelah charge in-app dibuat). */
 export const getInvoice = (id: string) => api.get<InvoiceView>(`/api/billing/invoices/${id}`)
 
-/** Metode bayar in-app yang tersedia (QRIS + Virtual Account). */
-export const getBillingPaymentMethods = () =>
-  api.get<PaymentMethodOption[]>('/api/billing/payment-methods')
-
-/**
- * Buat charge in-app (VA/QRIS) untuk tagihan lewat penyedia gateway yang AKTIF sekarang, lalu
- * kembalikan view terbaru berisi instruksi bayar (nomor VA / string QRIS). `channel` wajib untuk
- * Virtual Account (kode bank). Ditolak (Conflict) bila penyedia aktif MANUAL.
- */
-export const refreshPaymentLink = (id: string, method: string, channel: string | null) =>
-  api.post<InvoiceView>(`/api/billing/invoices/${id}/recharge`, { method, channel })
-
 /**
  * Alat uji sandbox: paksa sesi bayar tagihan jadi `SUCCESS`/`EXPIRED` lewat simulasi Pivot.
  * Pelunasan menyusul lewat webhook, jadi tagihan yang dikembalikan MASIH berstatus lama —

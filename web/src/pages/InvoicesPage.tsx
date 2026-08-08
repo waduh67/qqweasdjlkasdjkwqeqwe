@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Ban, Copy, FlaskConical, Printer, Wallet } from 'lucide-react'
+import { Ban, Copy, ExternalLink, FlaskConical, Link2, Printer, Wallet } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type { CustomerView } from '../api/network'
@@ -18,6 +18,8 @@ import {
   type TaxObligationView,
 } from '../api/billing'
 import { useCan } from '../auth/useCan'
+import { useAuth } from '../auth/useAuth'
+import { payLink } from '../api/publicPayment'
 import { Blade, DataTable, type Column, type RowAction } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
@@ -218,6 +220,7 @@ function SummaryCard({ label, value, tone }: { label: string; value: string; ton
  */
 export function InvoicesPage() {
   const { can } = useCan()
+  const { user } = useAuth()
   const toast = useToast()
   const [invoices, setInvoices] = useState<InvoiceView[]>([])
   const [obligation, setObligation] = useState<TaxObligationView | null>(null)
@@ -376,6 +379,13 @@ export function InvoicesPage() {
       .then(() => toast.success('Payment session ID disalin'))
       .catch(() => toast.error('Gagal menyalin payment session ID'))
 
+  // Tautan halaman bayar publik tagihan — inilah yang dikirim operator ke pelanggan (WhatsApp dsb).
+  const copyPayLink = (invoiceId: string) =>
+    navigator.clipboard
+      ?.writeText(payLink(user?.tenantSlug ?? '', invoiceId))
+      .then(() => toast.success('Link bayar disalin'))
+      .catch(() => toast.error('Gagal menyalin link bayar'))
+
   // Klik baris membuka pratinjau (seragam dengan tabel lain). Riwayat pembayaran
   // ditarik terpisah; `detailIdRef` membuang balasan basi bila baris cepat ditukar.
   const detailIdRef = useRef<string | null>(null)
@@ -482,6 +492,20 @@ export function InvoicesPage() {
         onClick: () => printInvoice(i, names.get(i.customerId)),
       },
     ]
+    if (payable) {
+      list.push({
+        key: 'open-pay',
+        label: 'Buka halaman bayar',
+        icon: <ExternalLink size={16} />,
+        onClick: () => window.open(payLink(user?.tenantSlug ?? '', i.id), '_blank', 'noopener'),
+      })
+      list.push({
+        key: 'copy-pay-link',
+        label: 'Salin link bayar',
+        icon: <Link2 size={16} />,
+        onClick: () => void copyPayLink(i.id),
+      })
+    }
     if (payable && canPay)
       list.push({
         key: 'pay',

@@ -80,6 +80,9 @@ class SecurityConfig {
                     // Provisioning VPN: VPS mengunduh installer & memanggil balik (verify
                     // user/pass, minta IP overlay) dengan token node-nya sendiri, bukan bearer.
                     "/api/vpn/provision/**",
+                    // Halaman bayar publik: tautan `/bayar/<slug>/<uuid>` dikirim ke pelanggan
+                    // lewat WhatsApp, jadi kapabilitasnya UUID tagihan di path — bukan bearer.
+                    "/api/public/**",
                     "/actuator/health/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",

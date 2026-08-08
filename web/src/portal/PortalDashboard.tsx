@@ -5,16 +5,12 @@ import {
   changePortalPassword,
   getPortalBilling,
   getPortalConnection,
-  getPortalPaymentMethods,
   getPortalProfile,
-  payPortalInvoice,
   type PortalAccount,
   type PortalBilling,
   type PortalConnection,
-  type PortalInvoice,
-  type PortalPaymentMethodOption,
 } from './portalApi'
-import { GatewayPayPanel } from '@/components/organisms'
+import { payLink } from '@/api/publicPayment'
 import { Button, Segmented, TextField } from '@/components/atoms'
 
 type Tab = 'ringkasan' | 'tagihan' | 'koneksi' | 'profil'
@@ -90,7 +86,9 @@ export function PortalDashboard() {
       />
 
       {tab === 'ringkasan' && <RingkasanTab billing={billing} connection={connection} onPay={() => setTab('tagihan')} />}
-      {tab === 'tagihan' && <TagihanTab billing={billing} onReload={reloadBilling} />}
+      {tab === 'tagihan' && (
+        <TagihanTab billing={billing} tenantSlug={customer?.tenantSlug ?? ''} onReload={reloadBilling} />
+      )}
       {tab === 'koneksi' && <KoneksiTab connection={connection} />}
       {tab === 'profil' && <ProfilTab profile={profile} />}
     </div>
@@ -142,26 +140,31 @@ function RingkasanTab({
   )
 }
 
-function TagihanTab({ billing, onReload }: { billing: PortalBilling | null; onReload: () => Promise<unknown> }) {
-  // Metode bayar in-app (QRIS/VA) & tagihan yang panel bayarnya sedang terbuka.
-  const [methods, setMethods] = useState<PortalPaymentMethodOption[]>([])
-  const [paying, setPaying] = useState<PortalInvoice | null>(null)
-
-  useEffect(() => {
-    void getPortalPaymentMethods().then(setMethods).catch(() => setMethods([]))
-  }, [])
-
-  // Cek status tagihan (dipakai polling panel): ambil ulang tagihan lalu cari status-nya.
-  const pollStatus = async (invoiceId: string): Promise<string | null> => {
-    const fresh = await getPortalBilling().catch(() => null)
-    return fresh?.invoices.find((i) => i.id === invoiceId)?.status ?? null
-  }
-
+/**
+ * Tagihan pelanggan. Membayar TIDAK lagi terjadi di panel inline sini: tombol "Bayar" membuka
+ * halaman bayar publik `/bayar/<slug>/<uuid>` — halaman yang sama persis dengan yang diterima
+ * pelanggan lewat tautan WhatsApp, jadi hanya ada satu tampilan bayar yang perlu dipahami.
+ */
+function TagihanTab({
+  billing,
+  tenantSlug,
+  onReload,
+}: {
+  billing: PortalBilling | null
+  tenantSlug: string
+  onReload: () => Promise<unknown>
+}) {
   if (!billing) return <Loading />
   return (
     <div className="stack" style={{ gap: '1rem' }}>
       <div className="card stack" style={{ gap: '0.6rem' }}>
-        <strong style={{ fontSize: '0.95rem' }}>Tagihan</strong>
+        <div className="spread" style={{ alignItems: 'center' }}>
+          <strong style={{ fontSize: '0.95rem' }}>Tagihan</strong>
+          {/* Pembayaran selesai di tab lain, jadi status di sini perlu bisa ditarik ulang manual. */}
+          <Button variant="subtle" onClick={() => void onReload()} style={{ fontSize: '0.8rem' }}>
+            Perbarui status
+          </Button>
+        </div>
         {billing.invoices.length === 0 ? (
           <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada tagihan.</p>
         ) : (
@@ -179,26 +182,14 @@ function TagihanTab({ billing, onReload }: { billing: PortalBilling | null; onRe
                   <span className="badge" style={{ color: INVOICE_TONE[inv.status] ?? undefined }}>{inv.status}</span>
                   {inv.payable && (
                     <Button
-                      variant={paying?.id === inv.id ? 'subtle' : 'primary'}
-                      onClick={() => setPaying(paying?.id === inv.id ? null : inv)}
+                      variant="primary"
+                      onClick={() => window.open(payLink(tenantSlug, inv.id), '_blank', 'noopener')}
                     >
-                      {paying?.id === inv.id ? 'Tutup' : 'Bayar'}
+                      Bayar ↗
                     </Button>
                   )}
                 </div>
               </div>
-              {paying?.id === inv.id && (
-                <div className="card" style={{ background: 'var(--surface-2)' }}>
-                  <GatewayPayPanel
-                    subtitle={`${inv.number} · ${rupiah(inv.amount)}`}
-                    methods={methods}
-                    createCharge={(method, channel) => payPortalInvoice(inv.id, method, channel)}
-                    pollStatus={() => pollStatus(inv.id)}
-                    onPaid={() => void onReload()}
-                    onClose={() => setPaying(null)}
-                  />
-                </div>
-              )}
             </div>
           ))
         )}

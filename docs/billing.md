@@ -58,14 +58,20 @@ BillingScheduler  @Scheduled(fixedDelayString = "${ftth.billing.scheduler-interv
   tak membatalkan ronde.
 - **`enforce`** menandai invoice yang lewat `dueAt + graceDays` menjadi OVERDUE
   dan (opsional) mengisolir langganannya.
+- **`remindDueSoon`** menerbitkan `InvoiceDueSoon`; `enforce` menerbitkan `InvoiceOverdue`.
+  Keduanya membawa **`payUrl`** — tautan [halaman bayar publik](#halaman-bayar-publik-bayartenantsluginvoiceid)
+  yang dirangkai di sini (`pivot.redirect-base-url` + slug tenant + UUID tagihan), supaya module
+  `notification` tak perlu tahu konfigurasi apa pun. Basis URL kosong atau tenant tak terbaca →
+  `payUrl = null` dan pesan tetap terkirim, hanya tanpa tautan.
 
 > **Bayar ikut penyedia aktif.** `payUrl` sebuah invoice dibuat **sekali** saat terbit,
 > lewat penyedia yang aktif saat itu. Bila operator mengganti penyedia setelahnya, tagihan
 > lama masih menyimpan tautan penyedia lama. `POST /invoices/{id}/recharge`
 > (`InvoiceGenerator.refreshCharge` → `ManageInvoiceUseCase.refreshPaymentLink`) me-resolve
 > penyedia **aktif sekarang** dan membuat charge baru bila berbeda (idempoten bila sama;
-> tanpa tautan bila MANUAL; ditolak untuk PAID/VOID). Tombol **bayar** di UI memanggil
-> endpoint ini sebelum membuka tautan, jadi pembayaran selalu ikut setelan terbaru.
+> tanpa tautan bila MANUAL; ditolak untuk PAID/VOID). Endpoint ini kini **tak lagi dipanggil UI**:
+> pelanggan membayar lewat halaman bayar publik yang selalu me-resolve gateway aktif saat itu,
+> jadi `recharge` tinggal jadi alat rekonsiliasi manual.
 
 ---
 
@@ -117,11 +123,55 @@ Pembayaran manual juga bisa lewat `POST /api/billing/invoices/{id}/pay`
 
 ---
 
+## Halaman bayar publik (`/bayar/{tenantSlug}/{invoiceId}`)
+
+Satu-satunya jalur bayar untuk pelanggan: **satu halaman, satu tautan, bisa dibagikan**.
+Modal bayar di konsol operator, portal pelanggan, dan halaman langganan SaaS sudah **dihapus** —
+ketiganya kini hanya membuka/menyalin tautan ini. Pengingat tagihan WhatsApp pun menempelkannya
+di ekor pesan (lihat [Siklus penagihan](#siklus-penagihan-billingscheduler--billingcyclerunner)).
+
+**Kenapa slug tenant ikut di URL.** Tabel `invoice` memakai `@TenantId` + **RLS FORCE**, dan
+resolver memulangkan sentinel `ROOT` saat context kosong — jadi `findById(uuid)` tak mungkin
+menemukan apa pun sebelum tenant terpasang, dan dari UUID saja tenant tak bisa disimpulkan.
+Alternatifnya tabel direktori tanpa RLS; dipilih slug di path karena **nol migrasi** dan persis pola
+yang sudah dipakai webhook Pivot (`metadata.tenantSlug` → `findBySlug` → `TenantContext.runAs`).
+
+| Endpoint (`/api/public/invoices`) | Isi |
+|---|---|
+| `GET /{tenantSlug}/{invoiceId}` | tagihan + instruksi bayar; juga dipakai polling status |
+| `GET /{tenantSlug}/{invoiceId}/methods` | katalog QRIS + Virtual Account |
+| `POST /{tenantSlug}/{invoiceId}/pay` | `{method, channel}` → tagihan berisi instruksinya |
+| `GET /{tenantSlug}/{invoiceId}/qris` | gambar QRIS statis tenant (gateway MANUAL) |
+
+Aturan yang dijaga `PublicInvoicePaymentService` (+ `PublicInvoicePaymentServiceTest`):
+
+- **Dua realm, satu bentuk.** Tagihan pelanggan (module `billing`, ter-RLS) dan tagihan langganan
+  SaaS (`platformbilling`, level platform) dilayani endpoint yang sama; realm dipilih dari
+  *keberadaan* tagihannya, bukan dari parameter klien.
+- **Satu kalimat untuk semua sebab.** Slug asing, UUID asing, dan tagihan milik tenant lain
+  memulangkan `404` dengan pesan yang sama persis — pemegang tautan yang menebak-nebak tak boleh
+  bisa membedakan mana yang salah.
+- **Instruksi hidup dipakai ulang.** `pay()` dengan metode+channel sama dan VA/QRIS belum
+  kedaluwarsa memulangkan instruksi tersimpan **tanpa** memanggil gateway
+  (`PaymentMethodCatalog.stillUsable`) — tautan publik dipegang siapa saja, jadi memuat ulang
+  halaman tak boleh menghambur sesi bayar baru di penyedia. Jalur ter-autentikasi tak berubah:
+  operator tetap punya "Perbarui pembayaran" yang benar-benar membuat charge baru.
+- **Proyeksi paling sempit.** `PublicInvoiceView` tak punya bidang `gatewayRef`, id sesi bayar,
+  `payUrl` penyedia, maupun penanda simulasi.
+
+Batasnya jujur: karena kuncinya UUID tagihan (bukan token), **tautan tak bisa dicabut** — yang bocor
+tetap menampilkan nominal & nama pelanggan sampai tagihannya lunas, dan belum ada pembatasan laju
+untuk `pay()` dengan channel berganti-ganti.
+
+---
+
 ## Keamanan
 
 - **Webhook publik.** `/api/billing/webhooks/**` di-`permitAll` di `SecurityConfig`
   (gateway eksternal tak membawa JWT); keasliannya dijamin **tanda tangan** yang
   diperiksa `parseCallback` tiap provider.
+- **Halaman bayar publik.** `/api/public/**` juga `permitAll` — kapabilitasnya UUID tagihan di
+  path, bukan token (lihat bagian di atas). Isolasi tenant tetap ditegakkan RLS, bukan parameter.
 - **`gatewayRef` tidak pernah bocor** lewat view invoice biasa.
 - **Webhook secret** lewat env (`FTTH_BILLING_WEBHOOK_SECRET`); default dev-only
   wajib di-override di produksi.
@@ -164,6 +214,7 @@ Pembayaran manual juga bisa lewat `POST /api/billing/invoices/{id}/pay`
 | `GET/POST /api/billing/pivot-account/**` (sub-account, saldo, payout) | `billing.gateway.view` / `manage` |
 | `GET/PUT /api/platform/pivot-config` (setelan master Pivot) | `platform.billing.view` / `manage` |
 | `POST /api/billing/webhooks/{tenantSlug}/pivot` · `/pivot-payout` | publik (`X-API-Key` master) |
+| `GET · POST /api/public/invoices/{tenantSlug}/{invoiceId}/**` | publik (kapabilitas = UUID tagihan) |
 
 ---
 

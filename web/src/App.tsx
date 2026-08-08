@@ -10,6 +10,7 @@ import { PlatformLayout } from '@/components/templates'
 import { LoginPage } from './pages/LoginPage'
 import { SignupPage } from './pages/SignupPage'
 import { PaymentPaidPage, PaymentFailedPage, PaymentExpiredPage } from './pages/PaymentReturnPage'
+import { PublicInvoicePage } from './pages/PublicInvoicePage'
 import { DashboardPage } from './pages/DashboardPage'
 import { PlatformDashboardPage } from './pages/PlatformDashboardPage'
 import { InventoryPage } from './pages/InventoryPage'
@@ -109,6 +110,10 @@ export default function App() {
                 klien HTTP, dan token store sendiri (lihat PortalApp). Dua sesi tak bersinggungan. */}
             <Routes>
               <Route path="/portal/*" element={<PortalApp />} />
+              {/* Halaman bayar publik — sejajar (bukan di dalam) konsol operator supaya lolos dari
+                  `AuthProvider` sekaligus catch-all `Navigate to="/"`. Kapabilitasnya UUID tagihan
+                  di URL, jadi tautannya bisa dikirim ke pelanggan lewat WhatsApp. */}
+              <Route path="/bayar/:tenantSlug/:invoiceId" element={<PublicInvoicePage />} />
               <Route path="/*" element={<OperatorApp />} />
             </Routes>
           </DialogProvider>

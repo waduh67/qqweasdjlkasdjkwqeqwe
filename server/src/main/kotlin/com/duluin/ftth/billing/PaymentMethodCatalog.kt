@@ -1,6 +1,7 @@
 package com.duluin.ftth.billing
 
 import com.duluin.ftth.common.domain.error.ValidationException
+import java.time.Instant
 
 /**
  * Katalog metode bayar in-app (mode API Pivot) yang ditawarkan ke tenant/pelanggan: QRIS dan
@@ -58,7 +59,41 @@ object PaymentMethodCatalog {
         val m = method.trim().uppercase()
         return m to if (m == METHOD_VA) channel?.trim()?.uppercase() else null
     }
+
+    /**
+     * Instruksi tersimpan [saved] masih bisa dipakai untuk pilihan [method]/[channel] — jadi tak
+     * perlu membuat sesi bayar baru di penyedia. Syaratnya instrumennya sama persis, instruksinya
+     * benar-benar terisi, dan belum kedaluwarsa pada [now].
+     *
+     * Dipakai halaman bayar publik di KEDUA sisi tagihan (pelanggan & langganan SaaS): tautannya
+     * dipegang siapa saja, jadi memuat ulang halaman tak boleh menghambur sesi bayar baru.
+     * Instruksi tanpa masa berlaku (`*ExpiresAt` null) dianggap masih hidup — penyedia yang tak
+     * memberi batas waktu tak boleh memaksa charge diulang tiap kali halaman dibuka.
+     */
+    fun stillUsable(saved: StoredInstruction, method: String, channel: String?, now: Instant): Boolean {
+        val (normMethod, normChannel) = normalize(method, channel)
+        if (saved.method != normMethod || saved.channel != normChannel) return false
+        return when (normMethod) {
+            METHOD_VA -> saved.vaNumber != null && saved.vaExpiresAt?.isBefore(now) != true
+            METHOD_QRIS -> saved.qrContent != null && saved.qrExpiresAt?.isBefore(now) != true
+            else -> false
+        }
+    }
 }
+
+/**
+ * Cuplikan instruksi bayar yang sudah tersimpan pada sebuah tagihan — bentuk netral agar
+ * [PaymentMethodCatalog.stillUsable] bisa dipakai baik oleh `Invoice` (tagihan pelanggan) maupun
+ * `TenantSubscriptionInvoice` (langganan SaaS) yang menyimpan kolom yang sama.
+ */
+data class StoredInstruction(
+    val method: String?,
+    val channel: String?,
+    val vaNumber: String?,
+    val vaExpiresAt: Instant?,
+    val qrContent: String?,
+    val qrExpiresAt: Instant?,
+)
 
 /** Satu metode bayar yang ditawarkan; [channels] kosong bila tak perlu pilih bank (QRIS). */
 data class PaymentMethodOption(

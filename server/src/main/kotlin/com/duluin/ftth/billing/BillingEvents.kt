@@ -23,6 +23,13 @@ data class InvoiceDueSoon(
     val number: String,
     val amount: BigDecimal,
     val dueDate: LocalDate,
+    /**
+     * Tautan halaman bayar publik tagihan ini (`<web>/bayar/<slug>/<uuid>`) agar pesan pengingat
+     * bisa langsung mengajak bayar. Dirangkai di billing — di sinilah URL basis web & slug tenant
+     * diketahui — jadi `notification` tak perlu tahu konfigurasi apa pun. Null bila basisnya belum
+     * disetel: pesan tetap terkirim, hanya tanpa tautan.
+     */
+    val payUrl: String? = null,
 )
 
 /** Tagihan lewat jatuh tempo (ditandai menunggak) — pelanggan diberi tahu (pemicu INVOICE_OVERDUE). */
@@ -33,4 +40,6 @@ data class InvoiceOverdue(
     val number: String,
     val amount: BigDecimal,
     val dueDate: LocalDate,
+    /** Lihat [InvoiceDueSoon.payUrl]. */
+    val payUrl: String? = null,
 )

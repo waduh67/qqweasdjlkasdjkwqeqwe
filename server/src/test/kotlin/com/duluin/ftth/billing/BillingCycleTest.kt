@@ -308,7 +308,7 @@ class BillingCycleTest {
         // Publisher penangkap khusus buntut siklus (InvoiceDueSoon/InvoiceOverdue) —
         // auditor tetap no-op agar event audit tak mengotori assertion.
         val events = CapturingEvents()
-        val runner = BillingCycleRunner(generator, repo, customerApi, auditor, props, events)
+        val runner = BillingCycleRunner(generator, repo, customerApi, auditor, props, events, NoTenantApi)
         return Fixture(generator, runner, repo, gateway, customerApi, events)
     }
 
@@ -332,7 +332,7 @@ class BillingCycleTest {
         val auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser)
         val generator = InvoiceGenerator(repo, customerApi, registry, resolver, taxResolver, auditor, props)
         val events = CapturingEvents()
-        val runner = BillingCycleRunner(generator, repo, customerApi, auditor, props, events)
+        val runner = BillingCycleRunner(generator, repo, customerApi, auditor, props, events, NoTenantApi)
         return Fixture(generator, runner, repo, gateway, customerApi, events)
     }
 
