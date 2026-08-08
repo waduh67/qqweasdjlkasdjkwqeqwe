@@ -112,15 +112,49 @@ class PivotPayoutGatewayTest {
         assertThat(none).doesNotContainKey("description")
     }
 
-    // --- body payout (tak berubah, dijaga agar tak ikut tergeser) ---
+    // --- body payout ---
+
+    @Suppress("UNCHECKED_CAST")
+    private fun payoutBody(description: String? = "Pencairan Agustus") =
+        (with(gateway) { command(description).toPayoutBody() }["payouts"] as List<Map<String, Any?>>).single()
 
     @Test
     fun `body payout memakai inquiryId bila ada`() {
-        @Suppress("UNCHECKED_CAST")
-        val payout = (with(gateway) { command().toPayoutBody() }["payouts"] as List<Map<String, Any?>>).single()
+        val payout = payoutBody()
 
         assertThat(payout["inquiryId"]).isEqualTo("inq_1")
         assertThat(payout).doesNotContainKey("channelInformation")
-        assertThat(payout["amount"]).isEqualTo(mapOf("value" to 268_000L, "currency" to "IDR"))
+    }
+
+    @Test
+    fun `nominal payout dikirim sebagai string, bukan angka`() {
+        // Angka JSON ditolak Pivot 400 field_format_invalid "Make sure value format is correct" —
+        // dan itu menggagalkan SEMUA payout.
+        assertThat(payoutBody()["amount"]).isEqualTo(mapOf("value" to "268000", "currency" to "IDR"))
+    }
+
+    @Test
+    fun `description payout dipangkas ke 20 karakter dan dibersihkan dari non-alfanumerik`() {
+        // Spec payout jauh lebih ketat daripada withdrawal: 1-20 karakter, alfanumerik saja.
+        assertThat(payoutBody("Pencairan Agustus 2026 — termin ke-2")["description"])
+            .isEqualTo("Pencairan Agustus 20")
+
+        assertThat(payoutBody(null)).doesNotContainKey("description")
+        // Deskripsi yang isinya cuma tanda baca habis dibersihkan → jangan kirim field kosong.
+        assertThat(payoutBody("!!! ---")).doesNotContainKey("description")
+    }
+
+    // --- body pindah saldo PAYMENT → PAYOUT ---
+
+    @Test
+    fun `body balance transfer memakai withdrawType dan balanceType yang benar`() {
+        val body = gateway.balanceTransferBody(500_000, "trf-1", "Isi saldo payout")
+
+        assertThat(body["withdrawType"]).isEqualTo("BALANCE_TRANSFER")
+        // balanceType WAJIB di sini — inilah yang membedakannya dari pencairan ke rekening bank.
+        assertThat(body["balanceType"]).isEqualTo("PAYOUT_BALANCE")
+        assertThat(body["referenceId"]).isEqualTo("trf-1")
+        assertThat(body["isFullAmount"]).isEqualTo(false)
+        assertThat(body["amount"]).isEqualTo(mapOf("value" to "500000", "currency" to "IDR"))
     }
 }

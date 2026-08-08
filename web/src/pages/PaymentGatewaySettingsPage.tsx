@@ -954,8 +954,9 @@ function PivotUsersSection({ manage }: { manage: boolean }) {
 /**
  * Saldo & payout sub-account: tampilkan saldo PEMBAYARAN (dana hasil tagihan pelanggan, on-behalf
  * sub-account) lalu form kirim dana ke rekening beneficiary bebas. Saldo payout sengaja tak
- * ditampilkan — dompet terpisah di Pivot, dan servernya yang memvalidasi kecukupannya. Server juga
- * memvalidasi nama pemilik (inquiry), jadi UI hanya menyodorkan form + galat server apa adanya.
+ * ditampilkan — dompet terpisah di Pivot, dan server yang mengurusnya: kekurangannya dipindahkan
+ * otomatis dari saldo pembayaran sebelum payout dikirim. Server juga memvalidasi nama pemilik
+ * (inquiry), jadi UI hanya menyodorkan form + galat server apa adanya.
  */
 function PivotPayoutSection({ manage }: { manage: boolean }) {
   const toast = useToast()
@@ -1078,8 +1079,8 @@ function PivotPayoutSection({ manage }: { manage: boolean }) {
             label="Deskripsi (opsional)"
             value={description}
             onChange={(_, data) => setDescription(data.value)}
-            placeholder="catatan payout"
-            maxLength={200}
+            placeholder="tampil di mutasi penerima — maks 20 huruf/angka"
+            maxLength={20}
             disabled={!manage}
           />
           {manage && (
@@ -1091,7 +1092,9 @@ function PivotPayoutSection({ manage }: { manage: boolean }) {
           )}
           <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
             Nama pemilik harus persis seperti catatan bank — dicocokkan ke bank (inquiry) sebelum
-            payout dibuat, dan payout ditolak kalau berbeda. Saldo payout juga dicek lebih dulu.
+            payout dibuat, dan payout ditolak kalau berbeda. Payout ditarik dari saldo payout
+            (dompet terpisah dari saldo pembayaran di atas); bila kurang, kekurangannya dipindahkan
+            otomatis dari saldo pembayaran.
           </p>
 
           <div className="hr" />

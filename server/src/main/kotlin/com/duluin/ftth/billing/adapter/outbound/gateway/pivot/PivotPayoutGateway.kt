@@ -42,6 +42,23 @@ class PivotPayoutGateway(
         .post("/v1/withdrawals", command.toWithdrawBody(), master.credentials(), subMerchantId = subMerchantId, requestId = requestId)
         .toDispatch()
 
+    override fun transferToPayoutBalance(
+        master: PivotMasterContext,
+        subMerchantId: String,
+        amountMinor: Long,
+        referenceId: String,
+        description: String?,
+        requestId: String,
+    ) {
+        apiClient.post(
+            "/v1/withdrawals",
+            balanceTransferBody(amountMinor, referenceId, description),
+            master.credentials(),
+            subMerchantId = subMerchantId,
+            requestId = requestId,
+        )
+    }
+
     override fun balance(
         master: PivotMasterContext,
         subMerchantId: String?,
@@ -62,13 +79,19 @@ class PivotPayoutGateway(
         )
     }
 
-    /** Body create payout terdokumentasi: array `payouts` dgn `inquiryId` (bila ada) atau `channelInformation`. */
+    /**
+     * Body create payout terdokumentasi: array `payouts` dgn `inquiryId` (bila ada) atau
+     * `channelInformation`.
+     *
+     * `amount.value` WAJIB string. Pernah dikirim sebagai angka JSON dan Pivot menolak semua payout
+     * `400 field_format_invalid` — "Make sure value format is correct".
+     */
     internal fun PayoutCommand.toPayoutBody(): Map<String, Any?> = mapOf(
         "payouts" to listOf(
             buildMap {
                 put("referenceId", referenceId)
-                put("amount", mapOf("value" to amountMinor, "currency" to "IDR"))
-                description?.let { put("description", it) }
+                put("amount", mapOf("value" to amountMinor.toString(), "currency" to "IDR"))
+                payoutDescription(description)?.let { put("description", it) }
                 if (inquiryId != null) {
                     put("inquiryId", inquiryId)
                 } else {
@@ -99,6 +122,32 @@ class PivotPayoutGateway(
         description?.take(DESCRIPTION_MAX)?.let { put("description", it) }
     }
 
+    /**
+     * Body pindah saldo PAYMENT → PAYOUT (`POST /v1/withdrawals` `withdrawType=BALANCE_TRANSFER`).
+     * Endpoint yang sama dengan pencairan KYC, bedanya cuma [balanceType]: `BANK_TRANSFER` keluar ke
+     * rekening bank, `BALANCE_TRANSFER` pindah antar-dompet sendiri.
+     */
+    internal fun balanceTransferBody(amountMinor: Long, referenceId: String, description: String?): Map<String, Any?> =
+        buildMap {
+            put("referenceId", referenceId)
+            put("withdrawType", "BALANCE_TRANSFER")
+            put("balanceType", "PAYOUT_BALANCE")
+            put("isFullAmount", false)
+            put("amount", mapOf("value" to amountMinor.toString(), "currency" to "IDR"))
+            description?.take(DESCRIPTION_MAX)?.let { put("description", it) }
+        }
+
+    /**
+     * `description` payout jauh lebih ketat daripada withdrawal: maks 20 karakter DAN alfanumerik
+     * saja (spasi dipakai contoh resmi Pivot, jadi ikut dipertahankan). Dibersihkan diam-diam, bukan
+     * ditolak — catatan kosmetik tak layak menggagalkan penyaluran uang.
+     */
+    internal fun payoutDescription(raw: String?): String? = raw
+        ?.filter { it.isLetterOrDigit() || it == ' ' }
+        ?.trim()
+        ?.take(PAYOUT_DESCRIPTION_MAX)
+        ?.takeIf { it.isNotEmpty() }
+
     private fun PivotMasterContext.credentials() = PivotCredentials(merchantId, merchantSecret, sandbox)
 
     private fun JsonNode.toDispatch(): PayoutDispatch {
@@ -127,5 +176,8 @@ class PivotPayoutGateway(
 
         /** Batas `description` withdrawal menurut spec Pivot (1–50). */
         const val DESCRIPTION_MAX = 50
+
+        /** Batas `description` payout — jauh lebih pendek daripada withdrawal (1–20). */
+        const val PAYOUT_DESCRIPTION_MAX = 20
     }
 }
