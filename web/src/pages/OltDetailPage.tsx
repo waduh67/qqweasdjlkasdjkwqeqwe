@@ -13,6 +13,7 @@ import type {
   SnmpVersion,
   WebProtocol,
 } from '../api/network'
+import { onuStatusLabel } from '../api/network'
 import { type Tone } from '@/components/atoms'
 import type { PageResponse } from '../api/types'
 import { useCan } from '../auth/useCan'
@@ -698,7 +699,7 @@ function OdpOccupants({ odpId }: { odpId: string }) {
             <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.customerName}</strong>
             <span className="muted tnum">{o.customerCode}</span>
           </span>
-          <StatusBadge status={o.onuStatus} />
+          <StatusBadge status={o.onuStatus} label={onuStatusLabel(o.onuStatus)} />
         </div>
       ))}
     </div>

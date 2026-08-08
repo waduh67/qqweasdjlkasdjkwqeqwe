@@ -27,6 +27,7 @@ import type {
   TraceHop,
   UtilizationHeatmap,
 } from '../api/network'
+import { onuStatusLabel } from '../api/network'
 import type { PageResponse } from '../api/types'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
@@ -175,7 +176,15 @@ const HEATMAP_COLOR: any = [
   '#ef4444',
 ]
 
-/** Warna ONU pelanggan menurut status hidup — dasar "perangkat modar → merah". */
+/**
+ * Warna ONU pelanggan menurut status hidup — dasar "perangkat modar → merah".
+ *
+ * Amber SENGAJA tak dipakai di sini: itu warna identitas ODP (dan warna simpul
+ * peringatan). Dulu pelanggan OFFLINE ikut amber sehingga di peta titik pelanggan
+ * padam tak bisa dibedakan dari ODP selain dari ukurannya. Kini pelanggan hanya
+ * memakai palet kesehatan: hijau (hidup), merah (mati/LOS), kelabu (belum
+ * terpantau) — persis yang dijanjikan legenda.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const CUSTOMER_COLOR: any = [
   'match',
@@ -183,10 +192,12 @@ const CUSTOMER_COLOR: any = [
   'ONLINE',
   '#34d399',
   'OFFLINE',
-  '#fbbf24',
-  'LOS',
   '#ff5470',
-  '#64748b',
+  'LOS',
+  '#ff3b5c',
+  // Belum pernah terpantau (PENDING) atau dibongkar → kelabu, bukan merah:
+  // tak tahu kabarnya bukan berarti mati.
+  '#8b95a7',
 ]
 
 /**
@@ -2368,10 +2379,11 @@ function CableCauses({ causes }: { causes: ImpactCause[] }) {
   )
 }
 
+/** Titik status ONU di daftar panel — dijaga seirama dengan [CUSTOMER_COLOR] di peta. */
 const ONU_DOT: Record<string, string> = {
   ONLINE: '#34d399',
   LOS: '#ff3b5c',
-  OFFLINE: '#fbbf24',
+  OFFLINE: '#ff5470',
   PENDING: '#8b95a7',
   DISMANTLED: '#8b95a7',
 }
@@ -2505,7 +2517,7 @@ function CustomerTracePanel({
         {trace.customerCode}
       </p>
       <div className="row wrap" style={{ gap: '0.4rem' }}>
-        {trace.onuStatus && <StatusBadge status={trace.onuStatus} />}
+        {trace.onuStatus && <StatusBadge status={trace.onuStatus} label={onuStatusLabel(trace.onuStatus)} />}
         {trace.onuSerialNumber && <span className="badge">{trace.onuSerialNumber}</span>}
         {trace.odpPortNumber != null && <span className="badge">port {trace.odpPortNumber}</span>}
       </div>
@@ -2980,6 +2992,7 @@ function Legend() {
     ['#fbbf24', 'ODP'],
     ['#34d399', 'Pelanggan online'],
     ['#ff5470', 'ONU mati'],
+    ['#8b95a7', 'Belum terpantau'],
   ]
   return (
     <div className="row" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
@@ -3111,7 +3124,7 @@ function OdpPanel({
                       {occupant.onuSerialNumber}
                     </span>
                     <br />
-                    <StatusBadge status={occupant.onuStatus} />
+                    <StatusBadge status={occupant.onuStatus} label={onuStatusLabel(occupant.onuStatus)} />
                   </td>
                   <td>
                     <span style={{ color: HEALTH_COLOR[occupant.opticalHealth], fontWeight: 600 }}>

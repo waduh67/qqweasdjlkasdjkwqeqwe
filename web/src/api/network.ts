@@ -92,6 +92,25 @@ export type CustomerStatus = 'PROSPECT' | 'ACTIVE' | 'SUSPENDED' | 'TERMINATED'
 export type OnuStatus = 'PENDING' | 'ONLINE' | 'OFFLINE' | 'LOS' | 'DISMANTLED'
 export type OpticalHealth = 'GOOD' | 'WARNING' | 'CRITICAL' | 'UNKNOWN'
 
+/**
+ * Label status ONU. `PENDING` sengaja dibaca "Belum terpantau", bukan "Pending":
+ * status ONU hanya lahir dari pengamatan SNMP OLT, jadi PENDING berarti kabarnya
+ * belum pernah sampai (OLT belum dipoll, atau serial yang terdaftar tak pernah
+ * muncul di walk-nya) — bukan "mati". Membedakannya dari OFFLINE penting: yang
+ * satu tak diketahui, yang satu benar-benar terpantau padam.
+ */
+export const ONU_STATUS_LABEL: Record<OnuStatus, string> = {
+  PENDING: 'Belum terpantau',
+  ONLINE: 'Online',
+  OFFLINE: 'Offline',
+  LOS: 'LOS',
+  DISMANTLED: 'Dibongkar',
+}
+
+export function onuStatusLabel(status: string): string {
+  return ONU_STATUS_LABEL[status as OnuStatus] ?? status
+}
+
 export interface OnuView {
   id: string
   customerId: string

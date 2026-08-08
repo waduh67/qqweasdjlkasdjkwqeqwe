@@ -97,7 +97,13 @@ class Onu private constructor(
         this.odpPortNumber = portNumber
         if (rxPowerDbm != null) this.installRxPowerDbm = validateRxPower(rxPowerDbm)
         if (installedAt == null) installedAt = at
-        if (status == OnuStatus.PENDING) status = OnuStatus.OFFLINE
+        // Status SENGAJA tak disentuh: ia cuma boleh lahir dari pengamatan nyata
+        // (polling SNMP OLT lewat recordObservedOnuStatuses) atau tindakan operator.
+        // Dulu memasang ONU langsung menjadikannya OFFLINE, padahal belum pernah
+        // dipantau sama sekali — operator jadi melihat "Offline" yang meyakinkan
+        // untuk ONU yang sebetulnya tak diketahui kabarnya (mis. OLT belum
+        // dikonfigurasi SNMP, atau serialnya tak pernah muncul di walk). PENDING
+        // dibaca sebagai "belum terpantau", dan polling pertama akan menimpanya.
     }
 
     /** Melepas ONU dari ODP, mis. saat pelanggan pindah rumah atau ODP diganti. */

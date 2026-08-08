@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '@/api/client'
 import type { OltOnuList, OltOnuRow } from '@/api/network'
+import { onuStatusLabel } from '@/api/network'
 import { DataTable, type Column } from './DataTable'
 import { Badge, EmptyState, StatusBadge } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
@@ -86,7 +87,12 @@ export function OltRegisteredOnus({ oltId, backTo }: { oltId: string; backTo: st
       sortValue: (o) => o.subscriptionPackage ?? '',
       cell: (o) => <span style={{ fontSize: '0.85rem' }}>{o.subscriptionPackage ?? <span className="muted">—</span>}</span>,
     },
-    { key: 'status', header: 'Status', sortValue: (o) => o.onuStatus, cell: (o) => <StatusBadge status={o.onuStatus} /> },
+    {
+      key: 'status',
+      header: 'Status',
+      sortValue: (o) => o.onuStatus,
+      cell: (o) => <StatusBadge status={o.onuStatus} label={onuStatusLabel(o.onuStatus)} />,
+    },
     {
       key: 'rx',
       header: 'Redaman',

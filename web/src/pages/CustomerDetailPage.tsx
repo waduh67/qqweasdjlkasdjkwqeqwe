@@ -9,6 +9,7 @@ import type {
   OnuView,
   SubscriberNeighbors,
 } from '../api/network'
+import { onuStatusLabel } from '../api/network'
 import { DOWN_CAUSE_LABEL, type OnuHistoryView, type OnuMetricView } from '../api/monitoring'
 import {
   CPE_ACTION_LABEL,
@@ -885,7 +886,7 @@ function NeighborList({ items, showOdp }: { items: NeighborView[] | null; showOd
             </span>
           </div>
           <div className="stack" style={{ gap: 3, alignItems: 'flex-end' }}>
-            <StatusBadge status={n.liveStatus ?? n.onuStatus} />
+            <StatusBadge status={n.liveStatus ?? n.onuStatus} label={onuStatusLabel(n.liveStatus ?? n.onuStatus)} />
             <span className="tnum muted" style={{ fontSize: '0.78rem' }}>
               {fmtDbm(n.liveRxPowerDbm ?? n.installRxPowerDbm)}
               {n.distanceMeters != null && ` · ${n.distanceMeters} m`}
