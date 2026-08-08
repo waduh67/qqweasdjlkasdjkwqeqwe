@@ -5,8 +5,9 @@
 #   docker compose -f docker-compose.prod.yml pull
 #   docker compose -f docker-compose.prod.yml up -d
 #
-# Hanya Caddy yang membuka port ke internet (80/443). Postgres, MinIO, server,
-# dan web hanya bisa diakses dari dalam jaringan compose.
+# Yang membuka port ke luar hanya: caddy (80/443), freeradius (1812/1813 udp),
+# dan genieacs cwmp/fs (7547/7567) — ketiganya memang DIHUBUNGI dari luar. Postgres,
+# MinIO, server, web, dan genieacs-nbi hanya hidup di dalam jaringan compose.
 # ============================================================================
 name: ftth
 
@@ -76,6 +77,67 @@ services:
       - "1812:1812/udp"
       - "1813:1813/udp"
 
+  # --- CPE / TR-069: GenieACS (modul `cpe`) ---
+  # Tiga proses dari SATU image, beda `command:` saja. Pembagian tugasnya yang
+  # menentukan port mana boleh keluar — jangan dibalik:
+  #
+  #   cwmp (7547)  perangkat pelanggan MENGHUBUNGI ini (Inform)  → WAJIB dari luar
+  #   fs   (7567)  perangkat MENGUNDUH firmware dari sini        → WAJIB dari luar
+  #   nbi  (7557)  API admin TANPA otentikasi apa pun            → HARAM ke luar
+  #
+  # Server aplikasi bicara ke `nbi` lewat jaringan compose saja (lihat
+  # FTTH_CPE_GENIEACS_BASE_URL di service `server`), makanya nbi tak punya `ports:`.
+  # Membukanya ke internet = siapa pun boleh reboot/ubah semua router pelanggan.
+  genieacs-mongo:
+    image: mongo:4.4
+    restart: unless-stopped
+    volumes:
+      - genieacs_mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  genieacs-cwmp:
+    image: ${IMAGE_PREFIX}/ftth-genieacs:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    command: genieacs-cwmp
+    environment:
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://genieacs-mongo:27017/genieacs
+      # Alamat yang DIKIRIM ke perangkat saat Download RPC firmware — dirakit jadi
+      # `http://<FS_HOSTNAME>:<FS_PORT>/<berkas>`. Defaultnya hostname container,
+      # yang tak berarti apa-apa bagi ONT pelanggan → wajib IP/host publik VPS.
+      GENIEACS_FS_HOSTNAME: ${FTTH_CPE_PUBLIC_HOST:-}
+      GENIEACS_FS_PORT: ${FTTH_CPE_FS_PORT:-7567}
+    depends_on:
+      genieacs-mongo:
+        condition: service_healthy
+    ports:
+      - "${FTTH_CPE_CWMP_PORT:-7547}:7547"
+
+  genieacs-nbi:
+    image: ${IMAGE_PREFIX}/ftth-genieacs:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    command: genieacs-nbi
+    environment:
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://genieacs-mongo:27017/genieacs
+    depends_on:
+      genieacs-mongo:
+        condition: service_healthy
+
+  genieacs-fs:
+    image: ${IMAGE_PREFIX}/ftth-genieacs:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    command: genieacs-fs
+    environment:
+      GENIEACS_MONGODB_CONNECTION_URL: mongodb://genieacs-mongo:27017/genieacs
+    depends_on:
+      genieacs-mongo:
+        condition: service_healthy
+    ports:
+      - "${FTTH_CPE_FS_PORT:-7567}:7567"
+
   # --- Object storage bukti pengerjaan work order (internal saja) ---
   minio:
     image: minio/minio
@@ -136,6 +198,17 @@ services:
       FTTH_S3_SECRET_KEY: ${FTTH_S3_SECRET_KEY}
       FTTH_S3_BUCKET: ${FTTH_S3_BUCKET:-ftth-evidence}
       FTTH_S3_PATH_STYLE: "true"
+      # CPE/TR-069: server memerintah GenieACS lewat NBI internal. SENGAJA tanpa
+      # `depends_on` — sinkronisasi CPE tahan ACS mati (sekadar WARN sebaris tiap
+      # ronde), jadi tak ada gunanya menyandera startup server pada Mongo.
+      FTTH_CPE_GENIEACS_BASE_URL: http://genieacs-nbi:7557
+      FTTH_CPE_SYNC_INTERVAL: ${FTTH_CPE_SYNC_INTERVAL:-PT5M}
+      FTTH_CPE_ONLINE_STALE_AFTER: ${FTTH_CPE_ONLINE_STALE_AFTER:-PT15M}
+      # Berkas uji "Uji Kecepatan" (TR-143). Yang mengunduh PERANGKAT pelanggan,
+      # bukan server — alamatnya harus terjangkau dari sisi pelanggan. Nilai bawaan
+      # di bawah cuma cermin default aplikasi; speedtest.tele2.net SUDAH DIMATIKAN
+      # Tele2, jadi isi .env dengan berkas milikmu sendiri kalau fitur ini dipakai.
+      FTTH_CPE_DIAGNOSTICS_DOWNLOAD_URL: ${FTTH_CPE_DIAGNOSTICS_DOWNLOAD_URL:-http://speedtest.tele2.net/10MB.zip}
 
   # --- Frontend statis (Nginx) ---
   web:
@@ -163,5 +236,6 @@ volumes:
   pgdata:
   radiusdata:
   miniodata:
+  genieacs_mongo:
   caddy_data:
   caddy_config:

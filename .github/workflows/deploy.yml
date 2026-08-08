@@ -104,6 +104,24 @@ jobs:
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
 
+            # GenieACS (ACS TR-069 untuk modul `cpe`). Isinya cuma `npm i -g
+            # genieacs@<versi pin>`, jadi tak berubah tiap commit — tetap ikut
+            # didorong supaya VPS cukup `pull` seperti image lain (tak perlu build
+            # di sana, dan versinya dikunci repo, bukan image pihak ketiga).
+            - name: Build & push ftth-genieacs
+              uses: docker/build-push-action@v6
+              with:
+                  context: ./docker/genieacs
+                  file: docker/genieacs/Dockerfile
+                  push: true
+                  tags: |
+                      ${{ env.IMAGE_PREFIX }}/ftth-genieacs:latest
+                      ${{ env.IMAGE_PREFIX }}/ftth-genieacs:${{ github.sha }}
+                  provenance: false
+                  sbom: false
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+
     # -------------------------------------------------------------------------
     # 3) SSH ke VPS: tarik image terbaru lalu naikkan ulang stack.
     # -------------------------------------------------------------------------

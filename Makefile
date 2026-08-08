@@ -4,7 +4,8 @@
 # simulator protokol:
 #   • OLT/SNMP   — agen SNMP HSGQ palsu (server polling langsung, tanpa collector)
 #   • BRAS/RADIUS — virtual-NAS (sesi radacct hidup + responder DAE untuk isolir)
-#   • GenieACS/CPE — ACS TR-069 nyata + 1 ONT palsu (serial 000000)
+#   • GenieACS/CPE — ACS TR-069 nyata + 1 ONT palsu (serialnya sengaja disamakan
+#                    dengan salah satu ONU simulator OLT supaya tertaut ke pelanggan)
 # lalu men-seed OLT/BRAS/CPE lewat API agar langsung tersambung ke simulator.
 #
 #   make lab         # bangun + nyalakan + seed (buka http://localhost:8080)
@@ -32,7 +33,7 @@ lab: lab-up lab-seed
 	@printf '\n\033[1;32m✔ Lab siap.\033[0m Buka %s → login \033[1madmin@demo.ftth / admin12345\033[0m\n' "$(BASE)"
 	@printf '  • Armada OLT palsu terpantau di menu Jaringan (server polling SNMP tiap ~30 dtk)\n'
 	@printf '  • Sesi PPPoE + trafik hidup di detail pelanggan (BRAS/RADIUS)\n'
-	@printf '  • CPE/ONT palsu (serial 000000) di menu CPE (GenieACS TR-069)\n'
+	@printf '  • CPE/ONT palsu milik Budi Lab di menu CPE (GenieACS TR-069)\n'
 
 ## lab-up: bangun + jalankan stack Docker BERTAHAP (blokir sampai server sehat)
 lab-up:

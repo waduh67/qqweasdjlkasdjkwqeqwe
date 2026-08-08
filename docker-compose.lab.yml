@@ -85,7 +85,7 @@ services:
       FTTH_MONITORING_POLL_INTERVAL: PT30S
       # --- CPE/TR-069: NBI GenieACS di jaringan compose (bukan localhost). ---
       FTTH_CPE_GENIEACS_BASE_URL: http://genieacs-nbi:7557
-      # Sinkron CPE↔ONU tiap 30 dtk (baku PT5M) agar tautan serial 000000 cepat muncul.
+      # Sinkron CPE↔ONU tiap 30 dtk (baku PT5M) agar tautan serial cepat muncul.
       FTTH_CPE_SYNC_INTERVAL: PT30S
       # jwt-secret / encryption-secret sengaja tidak di-set → pakai default dev.
 
@@ -172,8 +172,9 @@ services:
       FTTH_SIM_RADIUS_DAE_SECRET: testing123
 
   # --- GenieACS (TR-069) + 1 ONT palsu — modul CPE. Ikut naik dengan lab (bukan profile). ---
-  # Server terhubung ke NBI di http://genieacs-nbi:7557. genieacs-sim muncul dengan serial
-  # "000000"; seed mendaftarkan ONU + CPE ber-serial itu agar tertaut.
+  # Server terhubung ke NBI di http://genieacs-nbi:7557. ONT palsu memakai serial yang SAMA
+  # dengan salah satu ONU simulator OLT (lihat SIM_SERIAL), jadi satu ONU pelanggan sekaligus
+  # ONLINE di OLT dan punya CPE — persis seperti perangkat sungguhan.
   genieacs-mongo:
     image: mongo:4.4
     restart: unless-stopped
@@ -211,6 +212,11 @@ services:
     build: ./docker/genieacs-sim
     image: ftth/genieacs-sim:local
     restart: unless-stopped
+    environment:
+      # Serial ONU #5 pada PON 2 milik OLT-LAB-5 (MAC C0:FD:84:<macSlot>:<pon>:<onu>,
+      # lihat OltSimModel). Disamakan dengan ONU_SERIAL di seed-lab.sh — kalau salah
+      # satunya diubah, tautan CPE↔pelanggan putus dan halaman CPE tampil kosong.
+      SIM_SERIAL: C0FD84050205
     command: ["-u", "http://genieacs-cwmp:7547/"]
     depends_on:
       genieacs-cwmp:

@@ -493,6 +493,7 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
   [`docs/monitoring.md`](docs/monitoring.md))
 - **Phase 6 — CPE** ✅ kelola router/ONT pelanggan via GenieACS (TR-069): WiFi,
   reboot, diagnostik ping/speedtest, firmware, factory-reset & refresh ACS
+  (lihat [`docs/cpe.md`](docs/cpe.md); GenieACS ikut di stack prod — `DEPLOY.md` Bagian L)
 - **Phase 7 — BNG (BRAS/RADIUS)** ✅ paket, registri BRAS, akun PPPoE,
   isolir/pulih & reset-login sesi; adapter Mikrotik REST v7 + FreeRADIUS, lab
   docker RADIUS (lihat [`docs/lab-bras-radius.md`](docs/lab-bras-radius.md))

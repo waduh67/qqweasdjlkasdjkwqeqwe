@@ -16,8 +16,10 @@ sekali doang setup-nya. Setelah ini, tiap `git push` ke `main` otomatis nge-depl
                                      ▼
                     ┌──────────── VPS Azure (Ubuntu) ────────────┐
    Browser ──443──▶ │ Caddy (HTTPS) ─┬─ /api/* ─▶ server (Spring)│
-   pelanggan        │                └─ /*     ─▶ web (Nginx+SPA)│
+   operator         │                └─ /*     ─▶ web (Nginx+SPA)│
                     │ Postgres(+PostGIS+Timescale) · MinIO        │
+   Mikrotik ─1812─▶ │ FreeRADIUS + radius-db                      │
+   ONT plgn ─7547─▶ │ GenieACS (cwmp/nbi/fs) + Mongo              │
                     └─────────────────────────────────────────────┘
 ```
 
@@ -39,6 +41,8 @@ Istilah singkat:
 2. Isi:
    - **Image**: Ubuntu Server 24.04 LTS.
    - **Size**: minimal 2 vCPU / 4 GB RAM (mis. `Standard B2s`). Kurang dari ini, build/DB berat.
+     Stack lengkap (termasuk GenieACS + Mongo di Bagian L) makan ~3 GB; 4 GB cukup tapi
+     pas-pasan — kalau mau lega, ambil 8 GB.
    - **Authentication**: SSH public key (Azure bisa generate, atau pakai key kamu).
    - **Username**: `azureuser` (default; catat ini).
 3. **Networking / NSG (firewall Azure)** — buka **inbound port**:
@@ -495,6 +499,121 @@ dengan `sql_user_name`. Dial akun itu dari klien PPPoE → log `freeradius` mena
 
 ---
 
+## Bagian L — CPE / TR-069 (GenieACS) di stack
+
+Stack prod sekarang **sudah menyertakan GenieACS** — ACS (Auto Configuration Server)
+yang dipakai modul `cpe` untuk mengelola router/ONT pelanggan: lihat status, ubah WiFi,
+reboot, factory reset, diagnostik Ping/Speed, dan upgrade firmware. Sebelumnya bagian
+ini absen, jadi menu CPE selalu kosong walau kodenya sudah lengkap.
+
+Empat container baru naik otomatis: `genieacs-mongo` (basis datanya sendiri) plus tiga
+proses GenieACS dari satu image — `genieacs-cwmp`, `genieacs-nbi`, `genieacs-fs`.
+
+### L.1 Siapa menghubungi siapa (ini yang menentukan port)
+
+```
+  ONT/router pelanggan ──7547──▶ genieacs-cwmp   (Inform berkala + connection request)
+  ONT/router pelanggan ──7567──▶ genieacs-fs     (mengunduh berkas firmware)
+  server (aplikasi)    ──7557──▶ genieacs-nbi    (INTERNAL — perintah dari dashboard)
+```
+
+- **7547 & 7567 wajib terbuka** di NSG/firewall VPS. Perangkat pelanggan yang menelepon
+  masuk; kalau ketutup, tak akan pernah ada satu pun CPE muncul di dashboard.
+- **7557 (NBI) HARAM dibuka.** Itu API admin **tanpa otentikasi sama sekali** — siapa pun
+  yang bisa menjangkaunya boleh me-reboot dan mengubah konfigurasi seluruh router
+  pelanggan semua tenant. Di compose ia sengaja tak punya `ports:`, jadi cuma hidup di
+  jaringan internal. Jangan pernah ditambahkan.
+
+> **Batasi 7547/7567 kalau bisa.** Idealnya rentang IP jaringan akses pelangganmu saja,
+> bukan `0.0.0.0/0`. CWMP polos memang lazim di ISP, tapi makin sempit makin baik.
+
+### L.2 Langkah pasang
+
+1. **Buka port di NSG Azure** — inbound `7547/TCP` dan (kalau mau fitur upgrade firmware)
+   `7567/TCP`.
+
+2. **Isi `.env`** di `/opt/ftth` — lihat blok "CPE / TR-069" di `.env.example`. Yang
+   penting satu:
+   ```bash
+   FTTH_CPE_PUBLIC_HOST=20.11.22.33   # IP/host publik VPS ini
+   ```
+   Dipakai merakit URL unduh firmware yang dikirim ke perangkat
+   (`http://<host>:7567/<berkas>`). Kosong → URL memakai hostname container yang tak
+   berarti apa-apa bagi ONT, jadi **upgrade firmware gagal**. Fitur lain (WiFi, reboot,
+   diagnostik) tetap jalan tanpa ini.
+
+3. **Salin ulang compose + naikkan** (file compose disalin manual, ingat):
+   ```bash
+   scp deploy/docker-compose.prod.yml <user>@<vps>:/opt/ftth/     # dari laptop, root repo
+   cd /opt/ftth
+   docker compose -f docker-compose.prod.yml pull
+   docker compose -f docker-compose.prod.yml up -d
+   ```
+
+4. **Cek naik semua**:
+   ```bash
+   docker compose -f docker-compose.prod.yml ps genieacs-mongo genieacs-cwmp genieacs-nbi genieacs-fs
+   docker compose -f docker-compose.prod.yml logs server | grep -i acs   # harus sepi
+   ```
+   Kalau ACS mati, server cuma menulis satu baris `WARN Tak bisa menarik daftar device
+   dari ACS` tiap ronde sinkron — tidak mengganggu fitur lain.
+
+### L.3 Arahkan ONT pelanggan ke ACS ini
+
+Di sisi ONT/router (atau lewat template konfigurasi OLT/vendor), set alamat ACS:
+
+| Parameter TR-069 | Isi |
+|---|---|
+| ACS URL | `http://<IP-VPS>:7547/` |
+| ACS Username / Password | kosongkan (belum dipakai) |
+| Periodic Inform | aktif, interval mis. `300` detik |
+| Connection Request Username / Password | bebas, asal konsisten dengan yang di perangkat |
+
+Setelah Inform pertama masuk, perangkat muncul di GenieACS. **Penautan ke pelanggan
+memakai kecocokan serial**: `CpeSyncScheduler` mencocokkan `Device.DeviceInfo.SerialNumber`
+dengan `serialNumber` ONU pelanggan di aplikasi. Kalau serialnya beda, perangkatnya
+tercatat di ACS tapi tak nempel ke pelanggan mana pun. Sinkron jalan tiap
+`FTTH_CPE_SYNC_INTERVAL` (default 5 menit), jadi tunggu sebentar.
+
+### L.4 Unggah firmware (buat fitur upgrade)
+
+Aplikasi hanya **membaca** daftar firmware dari ACS lalu memerintahkan Download RPC —
+berkasnya sendiri diunggah ke GenieACS. GenieACS UI sengaja **tidak** dipasang (satu
+service + satu secret lagi, padahal dashboard kita sudah jadi UI-nya), jadi unggahnya
+lewat NBI dari dalam VPS:
+
+```bash
+cd /opt/ftth
+docker compose -f docker-compose.prod.yml cp firmware.bin genieacs-nbi:/tmp/firmware.bin
+docker compose -f docker-compose.prod.yml exec genieacs-nbi \
+  curl -X PUT --data-binary @/tmp/firmware.bin \
+    -H 'fileType: 1 Firmware Upgrade Image' \
+    -H 'oui: 002E44' \
+    -H 'productClass: HG8546M' \
+    -H 'version: V5R020C10S115' \
+    http://localhost:7557/files/HG8546M-V5R020C10S115.bin
+```
+
+- `fileType` **harus persis** `1 Firmware Upgrade Image` — itu yang disaring aplikasi.
+- `oui` + `productClass` menentukan firmware ini muncul untuk model apa. Ambil nilainya
+  dari halaman CPE perangkat bersangkutan. Dikosongkan = berlaku untuk semua model
+  (berbahaya, jangan).
+- Cek hasilnya: `curl 'http://localhost:7557/files/?query=%7B%7D'` dari dalam container
+  yang sama. Hapus: `curl -X DELETE http://localhost:7557/files/<nama-berkas>`.
+
+### L.5 Uji Kecepatan (TR-143)
+
+Tombol "Uji Kecepatan" menyuruh **perangkat** mengunduh sebuah berkas uji, bukan server.
+Default bawaannya `http://speedtest.tele2.net/10MB.zip` — layanan itu **sudah dimatikan
+Tele2**, jadi selama tak diganti, uji kecepatan akan selalu gagal. Arahkan ke berkas
+milikmu sendiri (mis. file besar di web server ISP-mu):
+
+```bash
+FTTH_CPE_DIAGNOSTICS_DOWNLOAD_URL=http://cdn.contoh.com/10MB.bin
+```
+
+---
+
 ## Operasional harian
 
 | Mau apa | Perintah (di `/opt/ftth` pada VPS) |
@@ -512,7 +631,8 @@ dengan `sql_user_name`. Dial akun itu dari klien PPPoE → log `freeradius` mena
 - **Ganti `FTTH_ENCRYPTION_SECRET` = kredensial SNMP lama tak terbaca.** Set sekali, jangan diubah.
 - **`FTTH_SEED_DEMO=false` di produksi** — biar tenant demo gak kebawa.
 - **Redis & RabbitMQ tidak dipakai** versi ini (belum ada di kode), makanya gak ada di stack.
-- **GenieACS (fitur CPE/TR-069) belum termasuk** di deploy ini. Selama belum dipasang,
-  akan ada warning sinkronisasi CPE di log — aman diabaikan. Nanti ditambah terpisah.
+- **GenieACS (fitur CPE/TR-069) sudah termasuk** di stack — lihat **Bagian L**. Perlu
+  membuka port `7547` (dan `7567` bila pakai upgrade firmware); port NBI `7557` jangan
+  pernah dibuka ke internet.
 - **Test job di CI** butuh Postgres+Timescale; kalau rewel, bisa longgarin dengan hapus
   `needs: test` di job `build-and-push` (`.github/workflows/deploy.yml`).

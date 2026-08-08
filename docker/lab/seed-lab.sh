@@ -6,7 +6,7 @@
 #   • OLT HSGQ  → server polling SNMP ke 172.30.0.10:1161 (IP statis simulator)
 #   • BRAS      → server tembak DAE ke 172.30.0.10:3799 (isolir/Reset Login/CoA)
 #   • akun PPPoE budi@isp.net → simulator memunculkan sesi radacct hidup
-#   • ONU serial 000000 → tertaut ke CPE/ONT palsu genieacs-sim
+#   • ONU serial C0FD84050205 → ONLINE di OLT sekaligus tertaut ke CPE/ONT genieacs-sim
 #
 # Dijalankan oleh `make lab` (setelah stack sehat) atau manual:
 #   BASE=http://localhost:8080 bash docker/lab/seed-lab.sh
@@ -26,7 +26,10 @@ SIM_IP=172.30.0.10
 # Selaras dengan daftar `ftth.sim.olt.instances` di simulator/src/main/resources/application.yml.
 SIM_OLT_PORTS="1161 1162 1163 1164 1165"
 DAE_SECRET=testing123
-ONU_SERIAL=000000   # serial default genieacs-sim
+# Serial ONU Budi. Sengaja memakai serial yang DIUMUMKAN simulator OLT (ONU #5 / PON 2 /
+# OLT-LAB-5) DAN disetel ke genieacs-sim lewat SIM_SERIAL — satu ONU yang sekaligus ONLINE
+# di OLT dan punya CPE. Harus sama persis dengan SIM_SERIAL di docker-compose.lab.yml.
+ONU_SERIAL=C0FD84050205
 
 say()  { printf '\n\033[1m▶ %s\033[0m\n' "$1"; }
 info() { printf '  %s\n' "$1"; }

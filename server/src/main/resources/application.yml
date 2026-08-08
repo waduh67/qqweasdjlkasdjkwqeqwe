@@ -64,6 +64,13 @@ ftth:
     sync-interval: ${FTTH_CPE_SYNC_INTERVAL:PT5M}
     # ONU dianggap online bila inform terakhirnya dalam ambang ini.
     online-stale-after: ${FTTH_CPE_ONLINE_STALE_AFTER:PT15M}
+    diagnostics:
+      # Berkas yang ditarik saat "Uji Kecepatan" (TR-143 DownloadDiagnostics).
+      # Yang mengunduh PERANGKAT pelanggan, bukan server — jadi alamatnya harus
+      # terjangkau dari sisi pelanggan, dan besarnya menentukan lama uji.
+      # CATATAN: default lama speedtest.tele2.net sudah dimatikan Tele2; arahkan
+      # ke berkas milikmu sendiri kalau fitur ini mau dipakai sungguhan.
+      download-url: ${FTTH_CPE_DIAGNOSTICS_DOWNLOAD_URL:http://speedtest.tele2.net/10MB.zip}
   billing:
     billing-day-of-month: 1
     due-days: 7
