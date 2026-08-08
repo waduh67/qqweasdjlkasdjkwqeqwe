@@ -113,22 +113,18 @@ Buka `https://simulator-ftth.karuhundeveloper.com` → login **`admin@demo.ftth`
 
 ## Bagian B — GitHub Secrets untuk auto-deploy
 
-Repo → **Settings → Secrets and variables → Actions**. Tambah 3 secret **baru** khusus
-demo (reuse `GHCR_USER`/`GHCR_PAT` yang sudah ada untuk prod):
+**Tak ada secret baru.** Karena demo **co-located di host & user yang SAMA** dengan produksi,
+job `deploy-demo` memakai ulang secret SSH prod yang sudah ada:
 
-| Secret | Isi |
-|---|---|
-| `DEMO_HOST` | IP server demo, `20.6.72.13` |
-| `DEMO_USER` | user SSH, `fajar` |
-| `DEMO_SSH_KEY` | **private key** SSH untuk masuk server demo (dipakai rsync + ssh-action) |
+| Secret | Dipakai untuk | Sudah ada? |
+|---|---|---|
+| `VPS_HOST` | host SSH (= `20.6.72.13`, sama dgn prod) | ✅ dari job `deploy` prod |
+| `VPS_USER` | user SSH (= `fajar`) | ✅ |
+| `VPS_SSH_KEY` | private key SSH (rsync + ssh-action) | ✅ |
+| `GHCR_USER` / `GHCR_PAT` | login GHCR untuk `pull` image | ✅ |
 
-Bikin key khusus robot (dari laptop):
-
-```bash
-ssh-keygen -t ed25519 -f ~/.ssh/ftth_demo -N ""
-ssh-copy-id -i ~/.ssh/ftth_demo.pub fajar@20.6.72.13
-cat ~/.ssh/ftth_demo        # SELURUH isinya (BEGIN..END) → jadikan DEMO_SSH_KEY
-```
+Jadi selama stack prod sudah auto-deploy (secret `VPS_*` terisi), `deploy-demo` langsung
+ikut jalan tanpa konfigurasi tambahan.
 
 ---
 

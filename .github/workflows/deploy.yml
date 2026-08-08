@@ -153,7 +153,8 @@ jobs:
     #        /opt/ftth/Caddyfile pada server (lihat deploy/DEPLOY-DEMO.md).
     #      • Stack demo TAK punya Caddy sendiri (tak ada port host yang dibuka).
     #    Image JVM ditarik dari GHCR; image GenieACS dibangun lokal (`--build`).
-    #    Butuh secret DEMO_HOST/DEMO_USER/DEMO_SSH_KEY (+ GHCR_USER/GHCR_PAT).
+    #    Pakai ulang secret SSH prod VPS_HOST/VPS_USER/VPS_SSH_KEY (demo co-located di
+    #    HOST & USER yang SAMA dengan prod) + GHCR_USER/GHCR_PAT — tak ada secret baru.
     # -------------------------------------------------------------------------
     deploy-demo:
         needs: build-and-push
@@ -164,9 +165,9 @@ jobs:
             - name: Siapkan kunci SSH runner→server demo
               run: |
                   mkdir -p ~/.ssh
-                  echo "${{ secrets.DEMO_SSH_KEY }}" > ~/.ssh/id_deploy
+                  echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_deploy
                   chmod 600 ~/.ssh/id_deploy
-                  ssh-keyscan -H "${{ secrets.DEMO_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+                  ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
             # /opt/ftth-demo bukan repo git → sinkronkan file yang dibutuhkan compose
             # (docker-compose.demo.yml, deploy/, docker/) dari runner. `--exclude .env*`
@@ -178,14 +179,14 @@ jobs:
                     --exclude 'web/node_modules' --exclude '**/build' \
                     --exclude '.gradle' --exclude '**/.gradle' \
                     -e "ssh -i ~/.ssh/id_deploy" \
-                    ./ "${{ secrets.DEMO_USER }}@${{ secrets.DEMO_HOST }}:/opt/ftth-demo/"
+                    ./ "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/opt/ftth-demo/"
 
             - name: Deploy + wire ingress + seed
               uses: appleboy/ssh-action@v1
               with:
-                  host: ${{ secrets.DEMO_HOST }}
-                  username: ${{ secrets.DEMO_USER }}
-                  key: ${{ secrets.DEMO_SSH_KEY }}
+                  host: ${{ secrets.VPS_HOST }}
+                  username: ${{ secrets.VPS_USER }}
+                  key: ${{ secrets.VPS_SSH_KEY }}
                   script: |
                       set -e
                       cd /opt/ftth-demo
