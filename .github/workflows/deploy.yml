@@ -143,17 +143,44 @@ jobs:
                       docker image prune -f
 
     # -------------------------------------------------------------------------
-    # 4) SSH ke SERVER DEMO: stack peniru-protokol end-to-end (app + web + simulator
-    #    + GenieACS + RADIUS). Berdiri sendiri, TERPISAH dari `deploy` prod di atas.
-    #    Server memegang checkout repo di /opt/ftth-demo (compose me-mount file repo &
-    #    seeding pakai docker/lab/seed-lab.sh). Image JVM kita ditarik dari GHCR; image
-    #    GenieACS dibangun lokal (`--build`). Butuh secret DEMO_HOST/DEMO_USER/DEMO_SSH_KEY.
+    # 4) SERVER DEMO: stack peniru-protokol end-to-end (app + web + simulator +
+    #    GenieACS + RADIUS) di https://simulator-ftth.karuhundeveloper.com. Berdiri
+    #    sendiri, TERPISAH dari `deploy` prod di atas — TAPI CO-LOCATED di host yang
+    #    sama dengan produksi (ftth.karuhundeveloper.com). Konsekuensinya:
+    #      • /opt/ftth-demo BUKAN git checkout → file di-`rsync` dari runner (bukan git pull).
+    #      • Ingress lewat Caddy PROD (`ftth-caddy-1`): job menyambungkan caddy ke network
+    #        demo lalu reload (idempoten). Site-block domain demo hidup permanen di
+    #        /opt/ftth/Caddyfile pada server (lihat deploy/DEPLOY-DEMO.md).
+    #      • Stack demo TAK punya Caddy sendiri (tak ada port host yang dibuka).
+    #    Image JVM ditarik dari GHCR; image GenieACS dibangun lokal (`--build`).
+    #    Butuh secret DEMO_HOST/DEMO_USER/DEMO_SSH_KEY (+ GHCR_USER/GHCR_PAT).
     # -------------------------------------------------------------------------
     deploy-demo:
         needs: build-and-push
         runs-on: ubuntu-latest
         steps:
-            - name: Deploy demo lewat SSH
+            - uses: actions/checkout@v4
+
+            - name: Siapkan kunci SSH runner→server demo
+              run: |
+                  mkdir -p ~/.ssh
+                  echo "${{ secrets.DEMO_SSH_KEY }}" > ~/.ssh/id_deploy
+                  chmod 600 ~/.ssh/id_deploy
+                  ssh-keyscan -H "${{ secrets.DEMO_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+            # /opt/ftth-demo bukan repo git → sinkronkan file yang dibutuhkan compose
+            # (docker-compose.demo.yml, deploy/, docker/) dari runner. `--exclude .env*`
+            # WAJIB: `.env` server tak boleh ikut terhapus oleh `--delete`.
+            - name: Rsync file repo ke server demo
+              run: |
+                  rsync -az --delete \
+                    --exclude '.git' --exclude '.env' --exclude '.env*' \
+                    --exclude 'web/node_modules' --exclude '**/build' \
+                    --exclude '.gradle' --exclude '**/.gradle' \
+                    -e "ssh -i ~/.ssh/id_deploy" \
+                    ./ "${{ secrets.DEMO_USER }}@${{ secrets.DEMO_HOST }}:/opt/ftth-demo/"
+
+            - name: Deploy + wire ingress + seed
               uses: appleboy/ssh-action@v1
               with:
                   host: ${{ secrets.DEMO_HOST }}
@@ -162,10 +189,20 @@ jobs:
                   script: |
                       set -e
                       cd /opt/ftth-demo
-                      git fetch --depth 1 origin main && git reset --hard origin/main
                       echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
                       docker compose -f docker-compose.demo.yml pull
-                      docker compose -f docker-compose.demo.yml up -d --build
-                      COMPOSE="docker compose -f docker-compose.demo.yml" BASE=http://localhost \
+                      docker compose -f docker-compose.demo.yml up -d --build --remove-orphans
+                      # Ingress co-located: sambungkan Caddy prod ke network demo lalu reload
+                      # (keduanya idempoten — aman diulang tiap deploy).
+                      docker network connect ftth-demo_default ftth-caddy-1 2>/dev/null || true
+                      docker exec ftth-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+                      # Tunggu server demo sehat (via domain) sebelum seeding.
+                      for i in $(seq 1 60); do
+                        code=$(curl -s -o /dev/null -w '%{http_code}' https://simulator-ftth.karuhundeveloper.com/v3/api-docs || true)
+                        [ "$code" = "200" ] && break
+                        sleep 3
+                      done
+                      COMPOSE="docker compose -f docker-compose.demo.yml" \
+                        BASE=https://simulator-ftth.karuhundeveloper.com \
                         bash docker/lab/seed-lab.sh
                       docker image prune -f

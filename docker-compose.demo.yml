@@ -1,23 +1,32 @@
 # ============================================================================
-# Stack DEMO ONLINE ftth — peniru-protokol end-to-end di server publik (mis.
-# fajar@20.6.72.13), diakses lewat browser di http://<IP-SERVER>. Sama isinya
-# dengan docker-compose.lab.yml (app + web + simulator + GenieACS + RADIUS),
-# tapi image JVM kita DITARIK dari GHCR (bukan di-build di server); image GenieACS
-# tetap di-build lokal dari checkout repo.
+# Stack DEMO ONLINE ftth — peniru-protokol end-to-end di server publik
+# (fajar@20.6.72.13), diakses di https://simulator-ftth.karuhundeveloper.com.
+# Sama isinya dengan docker-compose.lab.yml (app + web + simulator + GenieACS +
+# RADIUS), tapi image JVM kita DITARIK dari GHCR (bukan di-build di server);
+# image GenieACS tetap di-build lokal dari checkout repo.
 #
-#   # di server (checkout repo di /opt/ftth-demo), setelah `.env` diisi:
+# INGRESS (penting): stack ini TIDAK punya Caddy sendiri. Server demo ini SATU
+# HOST dengan produksi (ftth.karuhundeveloper.com) yang Caddy-nya sudah memegang
+# port 80/443. Jadi Caddy PROD (`ftth-caddy-1`) yang jadi pintu untuk domain demo:
+# ia disambungkan ke network project ini (`docker network connect ftth-demo_default
+# ftth-caddy-1`) lalu me-reverse-proxy `simulator-ftth.karuhundeveloper.com` ke
+# container `ftth-demo-web-1:80` / `ftth-demo-server-1:8080` (lihat site-block di
+# /opt/ftth/Caddyfile pada server, dan deploy/DEPLOY-DEMO.md). Tak ada port yang
+# diekspos ke host dari stack ini — semua akses lewat Caddy prod.
+#
+#   # di server (file repo di /opt/ftth-demo), setelah `.env` diisi:
 #   docker compose -f docker-compose.demo.yml pull
 #   docker compose -f docker-compose.demo.yml up -d --build
-#   COMPOSE="docker compose -f docker-compose.demo.yml" BASE=http://localhost \
-#     bash docker/lab/seed-lab.sh
-#   # buka http://<IP-SERVER>  → login admin@demo.ftth / admin12345
+#   COMPOSE="docker compose -f docker-compose.demo.yml" \
+#     BASE=https://simulator-ftth.karuhundeveloper.com bash docker/lab/seed-lab.sh
+#   # buka https://simulator-ftth.karuhundeveloper.com → login admin@demo.ftth / admin12345
 #
 # Nilai sensitif diambil dari `.env` (lihat deploy/.env.demo.example) — TAK ada
 # secret di file ini. Secret app lain pakai DEFAULT DEV (jwt/encryption/S3) karena
 # ini DEMO, bukan produksi. JANGAN dipakai untuk data sungguhan.
 #
 # Project name terpisah (`ftth-demo`) agar volume/kontainer tak bentrok dengan lab
-# maupun prod. Hanya Caddy yang membuka port ke host (80).
+# maupun prod. Tak ada port yang diekspos ke host — ingress lewat Caddy prod.
 # ============================================================================
 name: ftth-demo
 
@@ -95,24 +104,8 @@ services:
     image: ${IMAGE_PREFIX:-ghcr.io/waduh67}/ftth-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
 
-  # --- Reverse proxy: satu pintu ke internet (/api → server, sisanya → web) ---
-  caddy:
-    image: caddy:2
-    restart: unless-stopped
-    depends_on:
-      - server
-      - web
-    environment:
-      # ":80" = HTTP saja (akses lewat http://<IP-SERVER>). Ganti ke domain di `.env`
-      # (FTTH_SITE_ADDRESS=app.contoh.com) → Caddy urus HTTPS otomatis (buka 443 juga).
-      FTTH_SITE_ADDRESS: ${FTTH_SITE_ADDRESS:-:80}
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+  # NB: TIDAK ada service `caddy` di stack demo — ingress ditangani Caddy PROD
+  # (`ftth-caddy-1`) yang co-located di host yang sama (lihat header file).
 
   # --- Demo BRAS/RADIUS: Postgres berisi skema FreeRADIUS + 1 sesi contoh hidup ---
   radius-db:
@@ -203,8 +196,6 @@ volumes:
   miniodata:
   radius_db:
   genieacs_mongo:
-  caddy_data:
-  caddy_config:
 
 # Subnet tetap agar simulator bisa dapat IP statis (172.30.0.10). Semua service
 # tetap saling kenal lewat nama (DNS embedded Docker). `ip_range` membatasi kolam
