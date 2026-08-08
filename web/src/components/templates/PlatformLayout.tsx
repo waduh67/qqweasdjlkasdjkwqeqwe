@@ -10,6 +10,7 @@ import {
   IconAudit,
   IconBuilding,
   IconDashboard,
+  IconFlask,
   IconGauge,
   IconLogout,
   IconRoute,
@@ -40,6 +41,12 @@ const GROUPS: NavGroup[] = [
     label: 'Billing Langganan',
     items: [
       { to: '/platform/billing', label: 'Billing Langganan', permission: 'platform.billing.view', icon: IconGauge },
+      {
+        to: '/platform/payments/simulate',
+        label: 'Simulasi Pembayaran',
+        permission: 'platform.billing.view',
+        icon: IconFlask,
+      },
     ],
   },
   {

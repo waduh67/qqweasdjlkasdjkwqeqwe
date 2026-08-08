@@ -156,6 +156,11 @@ export interface SubscriptionInvoiceView {
   qrContent: string | null
   qrUrl: string | null
   qrExpiresAt: string | null
+  /**
+   * Tagihan ini bisa dipaksa lunas/kedaluwarsa lewat simulasi sandbox gateway (alat uji): Pivot
+   * mode sandbox, sesi bayar sudah dibuat, tagihan masih tertunggak. Di produksi selalu false.
+   */
+  simulatable: boolean
 }
 
 /** Satu metode bayar in-app; [channels] kosong bila tak perlu pilih bank (QRIS). */
@@ -229,4 +234,43 @@ export function paySubscriptionInvoice(
 
 export function cancelTenantSubscription(tenantId: string): Promise<TenantSubscriptionDetailView> {
   return api.post(`/api/platform/tenants/${tenantId}/subscription/cancel`)
+}
+
+// ── Simulasi pembayaran (alat uji sandbox) ────────────────────────────────────────────────────
+
+/** Status akhir yang dipaksakan ke sesi bayar saat simulasi sandbox. */
+export type SimulatedChargeStatus = 'SUCCESS' | 'EXPIRED'
+
+/**
+ * Ketersediaan simulasi. `available` = boleh dijalankan (Pivot master aktif DAN mode sandbox);
+ * `reason` menjelaskan penyebab bila tidak.
+ */
+export interface SimulationAvailability {
+  available: boolean
+  configured: boolean
+  sandbox: boolean
+  reason: string | null
+}
+
+export interface SimulatePaymentResult {
+  paymentSessionId: string
+  status: SimulatedChargeStatus
+  provider: string
+}
+
+export function getSimulationAvailability(): Promise<SimulationAvailability> {
+  return api.get('/api/platform/payments/simulate')
+}
+
+/**
+ * Kirim simulasi untuk sebuah payment session ID Pivot (`data.id` saat create payment — nilai yang
+ * sama tersimpan sebagai `gatewayRef` di tagihan). `subMerchantId` hanya untuk sesi yang dibuat
+ * atas nama sub-account tenant (tagihan pelanggan); kosongkan untuk sesi langganan SaaS.
+ */
+export function simulatePayment(body: {
+  paymentSessionId: string
+  status: SimulatedChargeStatus
+  subMerchantId?: string | null
+}): Promise<SimulatePaymentResult> {
+  return api.post('/api/platform/payments/simulate', body)
 }

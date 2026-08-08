@@ -3,6 +3,7 @@ package com.duluin.ftth.billing.application.service
 import com.duluin.ftth.billing.PaymentMethodCatalog
 import com.duluin.ftth.billing.application.port.outbound.ChargeRequest
 import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
+import com.duluin.ftth.billing.application.port.outbound.SimulatedChargeStatus
 import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.Proration
@@ -155,6 +156,31 @@ class InvoiceGenerator(
             qrUrl = charge.qr?.url,
             qrExpiresAt = charge.qr?.expiresAt,
         )
+    }
+
+    /**
+     * Paksa sesi bayar tagihan [invoice] menjadi [status] lewat simulasi sandbox penyedia — alat uji
+     * agar alur "bayar → webhook → lunas" bisa dicoba tanpa transaksi bank/e-wallet sungguhan.
+     * Memakai id sesi bayar yang sudah tersimpan ([Invoice.gatewayRef], hasil charge terakhir).
+     *
+     * TIDAK menyentuh tagihan: penyedia mengirim callback seperti pembayaran nyata, dan pelunasan
+     * terjadi di jalur webhook. Ditolak bila tagihan belum pernah di-charge atau penyedia yang
+     * melekat bukan penyedia aktif sekarang (id sesi milik akun lain).
+     */
+    fun simulatePayment(invoice: Invoice, status: SimulatedChargeStatus) {
+        val sessionId = invoice.gatewayRef?.takeIf { it.isNotBlank() }
+            ?: throw ConflictException("Tagihan belum punya sesi bayar — tekan Bayar dulu untuk membuat charge")
+        val ctx = gatewayResolver.resolve()
+        if (!ctx.provider.equals(invoice.gatewayProvider, ignoreCase = true)) {
+            throw ConflictException(
+                "Sesi bayar tagihan ini dibuat lewat '${invoice.gatewayProvider}', " +
+                    "sedangkan gateway aktif '${ctx.provider}' — simulasi tidak bisa dijalankan",
+            )
+        }
+        val gateway = gatewayRegistry.forProvider(ctx.provider)
+            ?: error("Adapter gateway '${ctx.provider}' tidak tersedia")
+        gateway.simulateCharge(sessionId, status, ctx)
+        log.info("Simulasi pembayaran tagihan {} dikirim dengan status {}", invoice.number, status)
     }
 
     /**

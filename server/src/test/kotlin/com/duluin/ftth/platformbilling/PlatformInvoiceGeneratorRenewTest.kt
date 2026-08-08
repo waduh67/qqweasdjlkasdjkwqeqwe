@@ -156,7 +156,7 @@ class PlatformInvoiceGeneratorRenewTest {
         TenantContext.set(tenantId)
         val subscription = activeSubscription().also { subscriptions.save(it) }
         invoices.save(invoiceFor(baseNumber, SubscriptionInvoiceStatus.PAID))
-        val service = TenantSelfSubscriptionService(subscriptions, invoices, generator, FakeUsageProbe())
+        val service = selfService(generator)
 
         assertThatThrownBy { service.renew(months = 1) }
             .isInstanceOf(ValidationException::class.java)
@@ -169,7 +169,7 @@ class PlatformInvoiceGeneratorRenewTest {
         val subscription = activeSubscription().also { subscriptions.save(it) }
         // Tagihan tertunggak yang terbit tanpa instruksi bayar (metode dipilih tenant nanti).
         invoices.save(invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED))
-        val service = TenantSelfSubscriptionService(subscriptions, invoices, chargingGenerator(), FakeUsageProbe())
+        val service = selfService(chargingGenerator())
 
         val view = service.renew(months = 1)
 
@@ -188,7 +188,7 @@ class PlatformInvoiceGeneratorRenewTest {
         TenantContext.set(tenantId)
         activeSubscription().also { subscriptions.save(it) }
         val invoice = invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED).also { invoices.save(it) }
-        val service = TenantSelfSubscriptionService(subscriptions, invoices, chargingGenerator(), FakeUsageProbe())
+        val service = selfService(chargingGenerator())
 
         val view = service.payInvoice(invoice.id, "QR", null)
 
@@ -203,7 +203,7 @@ class PlatformInvoiceGeneratorRenewTest {
         TenantContext.set(tenantId)
         activeSubscription().also { subscriptions.save(it) }
         val invoice = invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED).also { invoices.save(it) }
-        val service = TenantSelfSubscriptionService(subscriptions, invoices, chargingGenerator(), FakeUsageProbe())
+        val service = selfService(chargingGenerator())
 
         val view = service.payInvoice(invoice.id, "VIRTUAL_ACCOUNT", "BRI")
 
@@ -227,7 +227,7 @@ class PlatformInvoiceGeneratorRenewTest {
             amount = BigDecimal("100000.00"),
             dueDate = activeUntil.plusDays(7),
         ).also { invoices.save(it) }
-        val service = TenantSelfSubscriptionService(subscriptions, invoices, generator, FakeUsageProbe())
+        val service = selfService(generator)
 
         assertThatThrownBy { service.payInvoice(alien.id, "QR", null) }
             .isInstanceOf(NotFoundException::class.java)
@@ -238,7 +238,7 @@ class PlatformInvoiceGeneratorRenewTest {
         TenantContext.set(tenantId)
         activeSubscription().also { subscriptions.save(it) }
         val paid = invoiceFor(baseNumber, SubscriptionInvoiceStatus.PAID).also { invoices.save(it) }
-        val service = TenantSelfSubscriptionService(subscriptions, invoices, generator, FakeUsageProbe())
+        val service = selfService(generator)
 
         assertThatThrownBy { service.payInvoice(paid.id, "QR", null) }
             .isInstanceOf(ValidationException::class.java)
@@ -252,7 +252,7 @@ class PlatformInvoiceGeneratorRenewTest {
         val invoice = invoiceFor(baseNumber, SubscriptionInvoiceStatus.ISSUED).also { invoices.save(it) }
         // `generator` default → resolver Pivot NONAKTIF → resolveActive() melempar ConflictException.
         // Aksi dipicu pengguna → kegagalan charge dilempar (bukan ditelan), controller memetakan 409.
-        val service = TenantSelfSubscriptionService(subscriptions, invoices, generator, FakeUsageProbe())
+        val service = selfService(generator)
 
         assertThatThrownBy { service.payInvoice(invoice.id, "QR", null) }
             .isInstanceOf(ConflictException::class.java)
@@ -428,6 +428,15 @@ class PlatformInvoiceGeneratorRenewTest {
         override fun findByInvoiceId(invoiceId: UUID): List<TenantSubscriptionPayment> =
             byId.values.filter { it.invoiceId == invoiceId }
     }
+
+    /**
+     * Service langganan sisi tenant dengan [gen] sebagai penerbit/charger. Master Pivot sengaja
+     * NONAKTIF ([FakePivotRepository]) → mode sandbox mati, jadi `simulatable` pada proyeksi tagihan
+     * selalu false kecuali sebuah tes memang menguji jalur simulasi.
+     */
+    private fun selfService(gen: PlatformInvoiceGenerator) = TenantSelfSubscriptionService(
+        subscriptions, invoices, gen, FakeUsageProbe(), PivotMasterConfigProvider(FakePivotRepository()),
+    )
 
     private class FakePlatformSettingRepository : PlatformSettingRepository {
         override fun find(): PlatformSetting? = null
