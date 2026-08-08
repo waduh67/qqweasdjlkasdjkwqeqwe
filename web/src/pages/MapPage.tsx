@@ -1735,19 +1735,25 @@ function SourcePortGrid({
         const bg = isSelected ? 'var(--accent-soft)' : o.occupied ? 'var(--surface-2, rgba(148,163,184,0.15))' : 'transparent'
         const border = isSelected ? 'var(--accent)' : o.occupied ? 'var(--border)' : 'var(--good-ink)'
         return (
-          <Button
+          // Tombol native (bukan Fluent Button) supaya inline-style dihormati apa adanya
+          // dan tak terkena min-width 96px Fluent yang membuat sel grid meluber & tumpang tindih.
+          <button
             key={key}
             type="button"
             disabled={!selectable}
             onClick={selectable ? () => onPick({ ponPortId: o.ponPortId, portNumber: o.portNumber }) : undefined}
             title={o.occupied ? `${o.label} · dipakai kabel ${o.occupiedByCable}` : `${o.label} · kosong`}
             style={{
+              minWidth: 0,
+              width: '100%',
+              boxSizing: 'border-box',
               padding: '0.3rem 0.2rem',
               borderRadius: 6,
               border: `1px solid ${border}`,
               background: bg,
               color: o.occupied ? 'var(--muted)' : 'var(--text)',
               cursor: selectable ? 'pointer' : 'default',
+              fontFamily: 'inherit',
               fontSize: '0.7rem',
               lineHeight: 1.2,
               textAlign: 'center',
@@ -1757,7 +1763,7 @@ function SourcePortGrid({
             }}
           >
             {o.label}
-          </Button>
+          </button>
         )
       })}
     </div>
@@ -1800,19 +1806,25 @@ function PortGrid({
               : 'transparent'
         const border = isSelected ? 'var(--accent)' : free.has(n) ? 'var(--good-ink)' : 'var(--border)'
         return (
-          <Button
+          // Tombol native (bukan Fluent Button) supaya inline-style dihormati apa adanya
+          // dan tak terkena min-width 96px Fluent yang membuat sel grid meluber & tumpang tindih.
+          <button
             key={n}
             type="button"
             disabled={!selectable}
             onClick={selectable ? () => onPick?.(n) : undefined}
             title={occ ? `Port ${n} · ${occ.customerCode} ${occ.customerName}` : `Port ${n} · kosong`}
             style={{
+              minWidth: 0,
+              width: '100%',
+              boxSizing: 'border-box',
               padding: '0.3rem 0',
               borderRadius: 6,
               border: `1px solid ${border}`,
               background: bg,
               color: occ && !isOwn ? 'var(--muted)' : 'var(--text)',
               cursor: selectable ? 'pointer' : 'default',
+              fontFamily: 'inherit',
               fontSize: '0.72rem',
               lineHeight: 1.2,
               textAlign: 'center',
@@ -1824,7 +1836,7 @@ function PortGrid({
             <div style={{ fontSize: '0.6rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {occ ? occ.customerCode : '·'}
             </div>
-          </Button>
+          </button>
         )
       })}
     </div>
