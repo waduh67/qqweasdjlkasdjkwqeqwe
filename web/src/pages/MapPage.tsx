@@ -409,13 +409,9 @@ export function MapPage() {
   const impactedRef = useRef<number | null>(null)
   // Pin yang bisa diseret untuk menyetel lokasi perangkat baru sebelum disimpan.
   const placeMarker = useRef<maplibregl.Marker | null>(null)
-  // Keadaan seret simpul (pindah lokasi perangkat/pelanggan langsung di peta):
-  // layer & id yang sedang diseret, apakah pointer benar-benar bergerak (bedakan
-  // dari sekadar klik), dan pin sementara yang mengikuti kursor. `null` = tak menyeret.
-  const dragNode = useRef<{ layer: string; id: string; moved: boolean; marker: maplibregl.Marker | null } | null>(null)
-  // `can` terbaru untuk dibaca dari handler peta yang dipasang sekali saat mount
-  // (efek init ber-dep `[]`, jadi tak bisa menutup `can` yang berubah tiap render).
-  const canRef = useRef<(perm: string) => boolean>(() => false)
+  // Penanda draggable untuk simpul yang SEDANG dipindah lokasinya (mode relokasi);
+  // dibuat/dibuang oleh efek ber-dep `relocating`.
+  const relocateMarker = useRef<maplibregl.Marker | null>(null)
   // Popup koordinat: klik lahan kosong → lat/long titik itu yang bisa disalin.
   const coordPopup = useRef<maplibregl.Popup | null>(null)
   // Penyebab per kabel (id → alarm hidup di hilir), diisi tiap overlay disegarkan
@@ -440,15 +436,18 @@ export function MapPage() {
   // Mode taruh perangkat baru: jenis yang dipilih, dan lokasi klik yang menunggu form.
   const [placing, setPlacing] = useState<AssetKind | null>(null)
   const [placeAt, setPlaceAt] = useState<{ kind: AssetKind; lng: number; lat: number } | null>(null)
-  // Label simpul yang sedang diseret di peta (mis. "ODP"), untuk bilah petunjuk.
-  const [draggingLabel, setDraggingLabel] = useState<string | null>(null)
+  // Simpul (perangkat/pelanggan) yang panel infonya sedang terbuka & bisa dipindah:
+  // dari sini tombol "Pindahkan lokasi" tahu jenis, id, dan titik awalnya.
+  const [movable, setMovable] = useState<{ layer: string; id: string; lng: number; lat: number } | null>(null)
+  // Simpul yang SEDANG dalam mode relokasi (penanda draggable aktif). `null` = tak ada.
+  const [relocating, setRelocating] = useState<
+    { layer: string; id: string; label: string; color: string; lng: number; lat: number } | null
+  >(null)
   const [error, setError] = useState<string | null>(null)
   const [basemap, setBasemap] = useState<BasemapMode>(DEFAULT_BASEMAP)
   const { can } = useCan()
   const { user } = useAuth()
   const toast = useToast()
-  // Selalu sediakan `can` mutakhir bagi handler peta bawaan-mount (lihat canRef).
-  canRef.current = can
   // Dipakai tombol "Buka detail" di panel OLT untuk pindah ke halaman lengkapnya.
   const navigate = useNavigate()
 
@@ -599,6 +598,17 @@ export function MapPage() {
       setTrace(null)
       setSiteInsp(null)
       setOltInsp(null)
+      setMovable(null)
+    }
+
+    /**
+     * Koordinat titik yang diklik, diambil dari geometri fiturnya (bukan titik
+     * kursor) supaya presisi. Dipakai menandai simpul mana yang panel infonya
+     * terbuka sehingga tombol "Pindahkan lokasi" tahu titik awalnya.
+     */
+    const pointAt = (feature: maplibregl.MapGeoJSONFeature | undefined): { lng: number; lat: number } | null => {
+      const g = feature?.geometry
+      return g?.type === 'Point' ? { lng: g.coordinates[0], lat: g.coordinates[1] } : null
     }
 
     // Layer aset/kabel yang bisa diklik — dipakai untuk membedakan "klik lahan kosong"
@@ -661,11 +671,13 @@ export function MapPage() {
       const feature = event.features?.[0]
       const id = feature?.properties?.id as string | undefined
       if (!id) return
+      const at = pointAt(feature)
       api
         .get<OdpInspection>(`/api/gis/odps/${id}`)
         .then((odp) => {
           clearPanels()
           setSelected(odp)
+          if (at) setMovable({ layer: 'odp', id, ...at })
         })
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail ODP'))
     })
@@ -673,13 +685,16 @@ export function MapPage() {
     // Klik pelanggan (mode idle) → telusur jalur ONU → ODP → ODC → OLT.
     instance.on('click', 'customer', (event) => {
       if (modeRef.current !== 'idle') return
-      const id = event.features?.[0]?.properties?.id as string | undefined
+      const feature = event.features?.[0]
+      const id = feature?.properties?.id as string | undefined
       if (!id) return
+      const at = pointAt(feature)
       api
         .get<CustomerTrace>(`/api/gis/trace/customers/${id}`)
         .then((t) => {
           clearPanels()
           setTrace(t)
+          if (at) setMovable({ layer: 'customer', id, ...at })
         })
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat telusur pelanggan'))
     })
@@ -687,13 +702,16 @@ export function MapPage() {
     // Klik site/POP (mode idle) → isi site: OLT + rekap perangkat & pelanggan hilir.
     instance.on('click', 'site', (event) => {
       if (modeRef.current !== 'idle') return
-      const id = event.features?.[0]?.properties?.id as string | undefined
+      const feature = event.features?.[0]
+      const id = feature?.properties?.id as string | undefined
       if (!id) return
+      const at = pointAt(feature)
       api
         .get<SiteInspection>(`/api/gis/sites/${id}`)
         .then((s) => {
           clearPanels()
           setSiteInsp(s)
+          if (at) setMovable({ layer: 'site', id, ...at })
         })
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail site'))
     })
@@ -703,13 +721,16 @@ export function MapPage() {
     // untuk masuk ke halaman lengkap (edit lokasi/identitas/SNMP & PON port).
     instance.on('click', 'olt', (event) => {
       if (modeRef.current !== 'idle') return
-      const id = event.features?.[0]?.properties?.id as string | undefined
+      const feature = event.features?.[0]
+      const id = feature?.properties?.id as string | undefined
       if (!id) return
+      const at = pointAt(feature)
       api
         .get<OltView>(`/api/olts/${id}`)
         .then((o) => {
           clearPanels()
           setOltInsp(o)
+          if (at) setMovable({ layer: 'olt', id, ...at })
         })
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail OLT'))
     })
@@ -717,13 +738,16 @@ export function MapPage() {
     // Klik ODC (mode idle) → blast radius: siapa saja di hilirnya.
     instance.on('click', 'odc', (event) => {
       if (modeRef.current !== 'idle') return
-      const id = event.features?.[0]?.properties?.id as string | undefined
+      const feature = event.features?.[0]
+      const id = feature?.properties?.id as string | undefined
       if (!id) return
+      const at = pointAt(feature)
       api
         .get<BlastRadiusView>(`/api/gis/odcs/${id}/blast-radius`)
         .then((b) => {
           clearPanels()
           setBlast(b)
+          if (at) setMovable({ layer: 'odc', id, ...at })
         })
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat blast radius ODC'))
     })
@@ -750,73 +774,6 @@ export function MapPage() {
       })
       instance.on('mouseleave', layer, () => {
         if (modeRef.current === 'idle') instance.getCanvas().style.cursor = ''
-      })
-    }
-
-    // ── Seret simpul untuk memindah lokasinya ────────────────────────────────
-    // Klik-tahan sebuah titik (perangkat/pelanggan) lalu seret → koordinatnya
-    // dipindah di server saat dilepas; kabel yang menempel ikut disesuaikan
-    // (ujung nempel, tikungan tetap). Mengikuti pola baku MapLibre "draggable
-    // point": `preventDefault()` di mousedown menahan peta agar tak ikut ter-pan,
-    // lalu mousemove/up global menggerakkan pin sementara. Flag `moved` membedakan
-    // seret dari sekadar klik — bila titik tak digeser, handler klik layer tetap
-    // membuka panel inspeksi seperti biasa (mode masih 'idle').
-    const onNodeDragMove = (e: maplibregl.MapMouseEvent) => {
-      const drag = dragNode.current
-      if (!drag) return
-      const cfg = MOVABLE_NODES[drag.layer]
-      if (!drag.moved) {
-        // Gerakan pertama = benar-benar menyeret: sembunyikan titik MVT asli agar
-        // tak dobel dengan pin, kunci mode 'drag' (menggerbang klik-inspeksi), pasang pin.
-        drag.moved = true
-        modeRef.current = 'drag'
-        coordPopup.current?.remove()
-        for (const l of [drag.layer, `${drag.layer}-glow`]) {
-          if (instance.getLayer(l)) instance.setFilter(l, ['!=', ['get', 'id'], drag.id])
-        }
-        drag.marker = new maplibregl.Marker({ color: cfg.color }).setLngLat(e.lngLat).addTo(instance)
-        setDraggingLabel(cfg.label)
-      }
-      drag.marker?.setLngLat(e.lngLat)
-      instance.getCanvas().style.cursor = 'grabbing'
-    }
-
-    const onNodeDragEnd = (e: maplibregl.MapMouseEvent) => {
-      instance.off('mousemove', onNodeDragMove)
-      const drag = dragNode.current
-      dragNode.current = null
-      if (!drag) return
-      // Tak bergeser → klik biasa: tak ada yang perlu dibereskan, handler klik
-      // layer (mode masih 'idle') membuka panelnya seperti biasa.
-      if (!drag.moved) return
-      const { lng, lat } = e.lngLat
-      drag.marker?.remove()
-      for (const l of [drag.layer, `${drag.layer}-glow`]) {
-        if (instance.getLayer(l)) instance.setFilter(l, null)
-      }
-      instance.getCanvas().style.cursor = ''
-      setDraggingLabel(null)
-      void relocateNode(drag.layer, drag.id, lng, lat)
-      // Buka gerbang mode SETELAH 'click' penutup lewat (mouseup selalu memicu
-      // click), agar seret tak sekaligus membuka panel inspeksi titiknya.
-      window.setTimeout(() => {
-        if (modeRef.current === 'drag') modeRef.current = 'idle'
-      }, 0)
-    }
-
-    for (const layer of Object.keys(MOVABLE_NODES)) {
-      instance.on('mousedown', layer, (e) => {
-        // Hanya saat idle, tombol kiri, punya izin ubah, dan belum ada seret lain
-        // (dua layer titik bisa bertumpuk di piksel yang sama → cegah dobel-pasang).
-        if (modeRef.current !== 'idle' || dragNode.current) return
-        if (e.originalEvent.button !== 0) return
-        if (!canRef.current(MOVABLE_NODES[layer].perm)) return
-        const id = e.features?.[0]?.properties?.id as string | undefined
-        if (!id) return
-        e.preventDefault()
-        dragNode.current = { layer, id, moved: false, marker: null }
-        instance.on('mousemove', onNodeDragMove)
-        instance.once('mouseup', onNodeDragEnd)
       })
     }
 
@@ -1016,6 +973,28 @@ export function MapPage() {
     }
   }, [placeAt])
 
+  // Penanda relokasi: pin draggable KHAS (cincin berdenyut, warna sesuai jenis
+  // simpul) yang menandai titik yang sedang dipindah — sengaja beda dari titik
+  // biasa agar jelas "yang ini yang lagi diedit". Posisi kerjanya hidup di penanda
+  // itu sendiri (dibaca saat "Simpan"), jadi menyeretnya tak memicu render ulang.
+  useEffect(() => {
+    const instance = map.current
+    if (!instance || !relocating) return
+    const el = document.createElement('div')
+    el.className = 'relocate-pin'
+    el.style.setProperty('--pin-color', relocating.color)
+    const marker = new maplibregl.Marker({ element: el, draggable: true, anchor: 'center' })
+      .setLngLat([relocating.lng, relocating.lat])
+      .addTo(instance)
+    relocateMarker.current = marker
+    return () => {
+      marker.remove()
+      relocateMarker.current = null
+    }
+    // Hanya id yang menentukan ulang-pasang; lng/lat awal & warna tetap selama sesi relokasi.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relocating?.id])
+
   // Heatmap utilisasi: saat toggle menyala, ambil pemakaian port tiap ODP dan
   // warnai titiknya; saat mati, kosongkan sumbernya. Fetch dibatalkan bila toggle
   // berubah sebelum respons tiba agar tidak menimpa data dengan hasil basi.
@@ -1211,6 +1190,60 @@ export function MapPage() {
     }
   }
 
+  /**
+   * Menyembunyikan titik MVT sebuah simpul (agar tak dobel dengan penanda draggable
+   * saat direlokasi), atau memulihkannya. `null` = tampilkan semua lagi.
+   */
+  const hideNodeDot = (layer: string, id: string | null) => {
+    const instance = map.current
+    if (!instance) return
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const filter: any = id ? ['!=', ['get', 'id'], id] : null
+    for (const l of [layer, `${layer}-glow`]) {
+      if (instance.getLayer(l)) instance.setFilter(l, filter)
+    }
+  }
+
+  /**
+   * Masuk mode relokasi untuk simpul yang panelnya terbuka: tutup panel, kunci mode
+   * (klik peta lain & alat lain digerbang), sembunyikan titik aslinya, lalu munculkan
+   * penanda draggable khas di titiknya (lihat efek `relocating`). Belum menyimpan apa
+   * pun — operator menyeret penanda lalu menekan "Simpan".
+   */
+  const startRelocate = () => {
+    const target = movable
+    if (!target) return
+    const cfg = MOVABLE_NODES[target.layer]
+    if (!cfg) return
+    coordPopup.current?.remove()
+    setSelected(null)
+    setBlast(null)
+    setTrace(null)
+    setSiteInsp(null)
+    setOltInsp(null)
+    setMovable(null)
+    modeRef.current = 'drag'
+    hideNodeDot(target.layer, target.id)
+    setRelocating({ layer: target.layer, id: target.id, label: cfg.label, color: cfg.color, lng: target.lng, lat: target.lat })
+  }
+
+  /** Membereskan mode relokasi: pulihkan titik asli, buka gerbang mode, buang penanda. */
+  const finishRelocate = () => {
+    if (relocating) hideNodeDot(relocating.layer, null)
+    modeRef.current = 'idle'
+    setRelocating(null)
+  }
+
+  /** Simpan posisi penanda saat ini sebagai lokasi baru simpul, lalu keluar mode. */
+  const saveRelocate = async () => {
+    const r = relocating
+    const marker = relocateMarker.current
+    if (!r || !marker) return
+    const { lng, lat } = marker.getLngLat()
+    await relocateNode(r.layer, r.id, lng, lat)
+    finishRelocate()
+  }
+
   /** Menghapus perangkat titik dari panelnya; server menolak bila masih dipakai hilir. */
   const deleteAsset = async (kind: AssetKind, id: string, code: string, onDone: () => void) => {
     const meta = ASSET_META[kind]
@@ -1393,7 +1426,7 @@ export function MapPage() {
 
         {/* Toolbar kiri-atas: tarik kabel + taruh perangkat. Tampil saat idle —
             termasuk state awal sebelum alat pernah dipakai (toolState masih null). */}
-        {(!toolState || toolState.mode === 'idle') && !placing && !placeAt && (
+        {(!toolState || toolState.mode === 'idle') && !placing && !placeAt && !relocating && (
           <MapToolbar can={can} onDraw={startDraw} onPlace={startPlace} onLocate={() => locateMe(true)} />
         )}
 
@@ -1408,11 +1441,17 @@ export function MapPage() {
           </div>
         )}
 
-        {/* Bilah petunjuk saat menyeret simpul untuk memindah lokasinya */}
-        {draggingLabel && (
+        {/* Bilah aksi saat memindah lokasi simpul (mode relokasi) */}
+        {relocating && (
           <div className="map-hint">
             <IconCrosshair size={16} />
-            <span>Lepas untuk memindahkan {draggingLabel} ke titik ini · kabel yang menempel ikut menyesuaikan</span>
+            <span>Seret penanda {relocating.label} ke lokasi baru · kabel yang menempel ikut menyesuaikan</span>
+            <Button variant="primary" size="small" style={{ marginLeft: 'auto' }} onClick={() => void saveRelocate()}>
+              Simpan
+            </Button>
+            <Button variant="subtle" size="small" onClick={finishRelocate}>
+              Batal
+            </Button>
           </div>
         )}
 
@@ -1472,16 +1511,27 @@ export function MapPage() {
           <BlastRadiusPanel
             blast={blast}
             canDelete={can('network.odc.delete')}
+            canRelocate={can('network.odc.update')}
+            onRelocate={startRelocate}
             onDelete={() => void deleteAsset('ODC', blast.odcId, blast.code, () => setBlast(null))}
             onClose={() => setBlast(null)}
           />
         )}
         {whatIf && <CableCutPanel cut={whatIf} onClose={() => setWhatIf(null)} />}
-        {trace && <CustomerTracePanel trace={trace} onClose={() => setTrace(null)} />}
+        {trace && (
+          <CustomerTracePanel
+            trace={trace}
+            canRelocate={can('customer.customer.update')}
+            onRelocate={startRelocate}
+            onClose={() => setTrace(null)}
+          />
+        )}
         {siteInsp && (
           <SitePanel
             site={siteInsp}
             canDelete={can('network.site.delete')}
+            canRelocate={can('network.site.update')}
+            onRelocate={startRelocate}
             onDelete={() => void deleteAsset('SITE', siteInsp.siteId, siteInsp.code, () => setSiteInsp(null))}
             onClose={() => setSiteInsp(null)}
           />
@@ -1490,6 +1540,8 @@ export function MapPage() {
           <OltPanel
             olt={oltInsp}
             canView={can('network.olt.view')}
+            canRelocate={can('network.olt.update')}
+            onRelocate={startRelocate}
             onOpenDetail={() => navigate(`/olts/${oltInsp.id}`, { state: { backTo: '/map', backLabel: 'Peta' } })}
             onClose={() => setOltInsp(null)}
           />
@@ -1498,6 +1550,8 @@ export function MapPage() {
           <OdpPanel
             inspection={selected}
             canDelete={can('network.odp.delete')}
+            canRelocate={can('network.odp.update')}
+            onRelocate={startRelocate}
             onDelete={() => void deleteAsset('ODP', selected.odpId, selected.code, () => setSelected(null))}
             onClose={() => setSelected(null)}
           />
@@ -1586,6 +1640,20 @@ function MapToolbar({
         </Button>
       ))}
     </div>
+  )
+}
+
+/**
+ * Tombol "Pindahkan lokasi" seragam di setiap panel info simpul. Menekannya masuk
+ * mode relokasi: penanda draggable khas muncul di titik itu (lihat startRelocate).
+ * Tersembunyi bila pengguna tak punya izin ubah jenis simpul terkait.
+ */
+function RelocateButton({ show, onClick }: { show: boolean; onClick: () => void }) {
+  if (!show) return null
+  return (
+    <Button variant="subtle" onClick={onClick}>
+      <IconCrosshair size={15} /> Pindahkan lokasi
+    </Button>
   )
 }
 
@@ -2312,11 +2380,15 @@ const ONU_DOT: Record<string, string> = {
 function BlastRadiusPanel({
   blast,
   canDelete,
+  canRelocate,
+  onRelocate,
   onDelete,
   onClose,
 }: {
   blast: BlastRadiusView
   canDelete: boolean
+  canRelocate: boolean
+  onRelocate: () => void
   onDelete: () => void
   onClose: () => void
 }) {
@@ -2358,11 +2430,14 @@ function BlastRadiusPanel({
           {withPhone} nomor siap untuk broadcast pemberitahuan.
         </p>
       )}
-      {canDelete && (
-        <div className="row">
-          <Button variant="danger" onClick={onDelete}>
-            Hapus ODC
-          </Button>
+      {(canRelocate || canDelete) && (
+        <div className="row wrap" style={{ gap: '0.4rem' }}>
+          <RelocateButton show={canRelocate} onClick={onRelocate} />
+          {canDelete && (
+            <Button variant="danger" onClick={onDelete}>
+              Hapus ODC
+            </Button>
+          )}
         </div>
       )}
     </aside>
@@ -2408,7 +2483,17 @@ const HOP_LABEL: Record<string, string> = {
  * sampai OLT, dengan status optik dan perkiraan anggaran redaman — menjawab
  * "kenapa pelanggan ini bermasalah dan lewat mana kabelnya".
  */
-function CustomerTracePanel({ trace, onClose }: { trace: CustomerTrace; onClose: () => void }) {
+function CustomerTracePanel({
+  trace,
+  canRelocate,
+  onRelocate,
+  onClose,
+}: {
+  trace: CustomerTrace
+  canRelocate: boolean
+  onRelocate: () => void
+  onClose: () => void
+}) {
   const up = trace.upstream
   return (
     <aside className="map-panel stack">
@@ -2506,6 +2591,11 @@ function CustomerTracePanel({ trace, onClose }: { trace: CustomerTrace; onClose:
           </ol>
         </div>
       )}
+      {canRelocate && (
+        <div className="row">
+          <RelocateButton show={canRelocate} onClick={onRelocate} />
+        </div>
+      )}
     </aside>
   )
 }
@@ -2518,11 +2608,15 @@ function CustomerTracePanel({ trace, onClose }: { trace: CustomerTrace; onClose:
 function SitePanel({
   site,
   canDelete,
+  canRelocate,
+  onRelocate,
   onDelete,
   onClose,
 }: {
   site: SiteInspection
   canDelete: boolean
+  canRelocate: boolean
+  onRelocate: () => void
   onDelete: () => void
   onClose: () => void
 }) {
@@ -2557,12 +2651,15 @@ function SitePanel({
           ))}
         </div>
       )}
-      {canDelete && (
-        <div className="row">
-          <Button variant="danger" onClick={onDelete} disabled={site.oltCount > 0}>
-            Hapus site
-          </Button>
-          {site.oltCount > 0 && (
+      {(canRelocate || canDelete) && (
+        <div className="row wrap" style={{ gap: '0.4rem' }}>
+          <RelocateButton show={canRelocate} onClick={onRelocate} />
+          {canDelete && (
+            <Button variant="danger" onClick={onDelete} disabled={site.oltCount > 0}>
+              Hapus site
+            </Button>
+          )}
+          {canDelete && site.oltCount > 0 && (
             <span className="muted" style={{ fontSize: '0.78rem', alignSelf: 'center' }}>
               Masih ada OLT terpasang.
             </span>
@@ -2605,11 +2702,15 @@ function SiteOltRow({ olt }: { olt: SiteOlt }) {
 function OltPanel({
   olt,
   canView,
+  canRelocate,
+  onRelocate,
   onOpenDetail,
   onClose,
 }: {
   olt: OltView
   canView: boolean
+  canRelocate: boolean
+  onRelocate: () => void
   onOpenDetail: () => void
   onClose: () => void
 }) {
@@ -2653,11 +2754,14 @@ function OltPanel({
       <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
         Perangkat inti: kalau OLT ini modar, seluruh jalur di hilirnya ikut mati.
       </p>
-      {canView && (
-        <div className="row">
-          <Button variant="primary" onClick={onOpenDetail}>
-            Buka detail
-          </Button>
+      {(canView || canRelocate) && (
+        <div className="row wrap" style={{ gap: '0.4rem' }}>
+          {canView && (
+            <Button variant="primary" onClick={onOpenDetail}>
+              Buka detail
+            </Button>
+          )}
+          <RelocateButton show={canRelocate} onClick={onRelocate} />
         </div>
       )}
     </aside>
@@ -2921,11 +3025,15 @@ function HeatmapLegend() {
 function OdpPanel({
   inspection,
   canDelete,
+  canRelocate,
+  onRelocate,
   onDelete,
   onClose,
 }: {
   inspection: OdpInspection
   canDelete: boolean
+  canRelocate: boolean
+  onRelocate: () => void
   onDelete: () => void
   onClose: () => void
 }) {
@@ -3017,12 +3125,15 @@ function OdpPanel({
         )}
       </div>
 
-      {canDelete && (
-        <div className="row">
-          <Button variant="danger" onClick={onDelete} disabled={inspection.occupants.length > 0}>
-            Hapus ODP
-          </Button>
-          {inspection.occupants.length > 0 && (
+      {(canRelocate || canDelete) && (
+        <div className="row wrap" style={{ gap: '0.4rem' }}>
+          <RelocateButton show={canRelocate} onClick={onRelocate} />
+          {canDelete && (
+            <Button variant="danger" onClick={onDelete} disabled={inspection.occupants.length > 0}>
+              Hapus ODP
+            </Button>
+          )}
+          {canDelete && inspection.occupants.length > 0 && (
             <span className="muted" style={{ fontSize: '0.78rem', alignSelf: 'center' }}>
               Masih ada pelanggan tersambung.
             </span>
