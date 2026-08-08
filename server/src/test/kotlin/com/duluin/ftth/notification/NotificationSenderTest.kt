@@ -7,12 +7,14 @@ import com.duluin.ftth.notification.application.port.outbound.BroadcastRepositor
 import com.duluin.ftth.notification.application.port.outbound.DeliveryOutcome
 import com.duluin.ftth.notification.application.port.outbound.MessageDispatcher
 import com.duluin.ftth.notification.application.port.outbound.NotificationSettingsRepository
+import com.duluin.ftth.notification.application.port.outbound.NotificationTemplateRepository
 import com.duluin.ftth.notification.application.service.NotificationSender
 import com.duluin.ftth.notification.application.service.NotificationSender.Recipient
 import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.notification.domain.model.Broadcast
 import com.duluin.ftth.notification.domain.model.DeliveryStatus
+import com.duluin.ftth.notification.domain.model.NotificationMessageTemplate
 import com.duluin.ftth.notification.domain.model.NotificationSettings
 import com.duluin.ftth.notification.domain.model.NotificationTrigger
 import com.duluin.ftth.notification.domain.model.WhatsAppGateway
@@ -23,9 +25,10 @@ import java.util.UUID
 
 /**
  * Menguji matriks keputusan [NotificationSender] dengan port palsu — tanpa Spring/DB.
- * Fokus empat cabang: pemicu mati ⇒ null (tak kirim, tak catat); gateway mati ⇒ semua
+ * Fokus cabang-cabangnya: pemicu mati ⇒ null (tak kirim, tak catat); gateway mati ⇒ semua
  * SKIPPED tanpa menyentuh dispatcher; nomor kosong ⇒ SKIPPED; jalur bahagia ⇒ SENT +
- * dispatcher terpanggil. Semua dijalankan di dalam [TenantContext.runAs].
+ * dispatcher terpanggil; plus pemilihan template per pemicu (terpetakan ⇒ nama template
+ * ikut, tak terpetakan ⇒ teks biasa). Semua dijalankan di dalam [TenantContext.runAs].
  */
 class NotificationSenderTest {
 
@@ -36,7 +39,7 @@ class NotificationSenderTest {
         val settings = settingsWith(gatewayEnabled = true, subscription = false)
         val dispatcher = RecordingDispatcher()
         val broadcasts = CapturingBroadcastRepo()
-        val sender = NotificationSender(FixedSettingsRepo(settings), broadcasts, dispatcher)
+        val sender = NotificationSender(FixedSettingsRepo(settings), broadcasts, FakeTemplateRepo(), dispatcher)
 
         val result = TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -56,7 +59,7 @@ class NotificationSenderTest {
         val settings = settingsWith(gatewayEnabled = false, subscription = true)
         val dispatcher = RecordingDispatcher()
         val broadcasts = CapturingBroadcastRepo()
-        val sender = NotificationSender(FixedSettingsRepo(settings), broadcasts, dispatcher)
+        val sender = NotificationSender(FixedSettingsRepo(settings), broadcasts, FakeTemplateRepo(), dispatcher)
 
         val result = TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -79,7 +82,7 @@ class NotificationSenderTest {
         val settings = settingsWith(gatewayEnabled = true, subscription = true)
         val dispatcher = RecordingDispatcher()
         val broadcasts = CapturingBroadcastRepo()
-        val sender = NotificationSender(FixedSettingsRepo(settings), broadcasts, dispatcher)
+        val sender = NotificationSender(FixedSettingsRepo(settings), broadcasts, FakeTemplateRepo(), dispatcher)
 
         val result = TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -106,7 +109,7 @@ class NotificationSenderTest {
         // tapi gateway bawaan mati → penerima SKIPPED (bukan null, bukan SENT).
         val dispatcher = RecordingDispatcher()
         val broadcasts = CapturingBroadcastRepo()
-        val sender = NotificationSender(FixedSettingsRepo(null), broadcasts, dispatcher)
+        val sender = NotificationSender(FixedSettingsRepo(null), broadcasts, FakeTemplateRepo(), dispatcher)
 
         val result = TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -121,6 +124,49 @@ class NotificationSenderTest {
         assertThat(broadcasts.saved!!.skippedCount).isEqualTo(1)
     }
 
+    @Test
+    fun `pemicu terpetakan memakai template yang ditunjuk`() {
+        val dispatcher = RecordingDispatcher()
+        val broadcasts = CapturingBroadcastRepo()
+        val template = NotificationMessageTemplate.create(tenantId, "tagihan_jatuh_tempo", "en_US")
+        val templates = FakeTemplateRepo(mapOf(NotificationTrigger.INVOICE_DUE_SOON to template))
+        val sender = NotificationSender(FixedSettingsRepo(metaSettings()), broadcasts, templates, dispatcher)
+
+        TenantContext.runAs(tenantId) {
+            sender.dispatch(
+                NotificationTrigger.INVOICE_DUE_SOON,
+                "pesan",
+                listOf(Recipient(UuidV7.generate(), "Budi", "628111")),
+            )
+        }
+
+        val meta = dispatcher.gateways.single() as WhatsAppGateway.MetaCloud
+        assertThat(meta.templateName).isEqualTo("tagihan_jatuh_tempo")
+        assertThat(meta.templateLang).isEqualTo("en_US")
+    }
+
+    @Test
+    fun `pemicu tanpa pemetaan terkirim sebagai teks biasa`() {
+        val dispatcher = RecordingDispatcher()
+        val broadcasts = CapturingBroadcastRepo()
+        // Template ada untuk pemicu LAIN — pemicu yang dikirim tetap tak terpetakan.
+        val other = NotificationMessageTemplate.create(tenantId, "tagihan_menunggak", null)
+        val templates = FakeTemplateRepo(mapOf(NotificationTrigger.INVOICE_OVERDUE to other))
+        val sender = NotificationSender(FixedSettingsRepo(metaSettings()), broadcasts, templates, dispatcher)
+
+        TenantContext.runAs(tenantId) {
+            sender.dispatch(
+                NotificationTrigger.INVOICE_DUE_SOON,
+                "pesan",
+                listOf(Recipient(UuidV7.generate(), "Budi", "628111")),
+            )
+        }
+
+        val meta = dispatcher.gateways.single() as WhatsAppGateway.MetaCloud
+        assertThat(meta.templateName).isNull()
+        assertThat(broadcasts.saved!!.sentCount).isEqualTo(1)
+    }
+
     // --- perkakas uji ---
 
     private fun settingsWith(gatewayEnabled: Boolean, subscription: Boolean): NotificationSettings =
@@ -128,8 +174,20 @@ class NotificationSenderTest {
             update(
                 provider = WhatsAppProvider.LOG, gatewayEnabled = gatewayEnabled,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
-                metaPhoneNumberId = null, metaAccessToken = null, metaTemplateName = null, metaTemplateLang = null,
+                metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
                 notifyOnSubscriptionLifecycle = subscription, notifyOnInvoiceReminder = false,
+                notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
+            )
+        }
+
+    /** Meta Cloud aktif dengan pemicu tagihan menyala — dasar uji pemetaan template. */
+    private fun metaSettings(): NotificationSettings =
+        NotificationSettings.defaultFor(tenantId).apply {
+            update(
+                provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = true,
+                httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
+                metaPhoneNumberId = "1234567890", metaAccessToken = "EAAtoken", metaWabaId = "9988",
+                notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = true,
                 notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
             )
         }
@@ -139,11 +197,33 @@ class NotificationSenderTest {
         override fun save(settings: NotificationSettings): NotificationSettings = settings
     }
 
-    /** Mengembalikan SENT untuk tiap kirim; mencatat nomor yang benar-benar dikirim. */
+    /** Hanya [findForTrigger] yang dipakai jalur kirim; sisanya bukan urusan sender. */
+    private class FakeTemplateRepo(
+        private val byTrigger: Map<NotificationTrigger, NotificationMessageTemplate> = emptyMap(),
+    ) : NotificationTemplateRepository {
+        override fun findForTrigger(trigger: NotificationTrigger): NotificationMessageTemplate? = byTrigger[trigger]
+
+        override fun findAll(): List<NotificationMessageTemplate> = throw UnsupportedOperationException()
+        override fun findById(id: UUID): NotificationMessageTemplate? = throw UnsupportedOperationException()
+        override fun findByNameAndLanguage(name: String, language: String): NotificationMessageTemplate? =
+            throw UnsupportedOperationException()
+
+        override fun save(template: NotificationMessageTemplate): NotificationMessageTemplate =
+            throw UnsupportedOperationException()
+
+        override fun delete(id: UUID) = throw UnsupportedOperationException()
+        override fun assignments(): Map<NotificationTrigger, UUID> = throw UnsupportedOperationException()
+        override fun replaceAssignments(assignments: Map<NotificationTrigger, UUID>) =
+            throw UnsupportedOperationException()
+    }
+
+    /** Mengembalikan SENT untuk tiap kirim; mencatat nomor & gateway yang benar-benar dipakai. */
     private class RecordingDispatcher : MessageDispatcher {
         val calls = mutableListOf<String>()
+        val gateways = mutableListOf<WhatsAppGateway>()
         override fun send(gateway: WhatsAppGateway, phone: String, message: String): DeliveryOutcome {
             calls += phone
+            gateways += gateway
             return DeliveryOutcome(DeliveryStatus.SENT, "ok")
         }
     }

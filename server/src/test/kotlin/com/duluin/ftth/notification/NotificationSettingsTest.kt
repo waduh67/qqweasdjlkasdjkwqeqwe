@@ -70,7 +70,7 @@ class NotificationSettingsTest {
             update(
                 provider = WhatsAppProvider.LOG, gatewayEnabled = false,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
-                metaPhoneNumberId = null, metaAccessToken = null, metaTemplateName = null, metaTemplateLang = null,
+                metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
                 notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = false,
                 notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
             )
@@ -85,7 +85,7 @@ class NotificationSettingsTest {
             update(
                 provider = WhatsAppProvider.LOG, gatewayEnabled = true,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
-                metaPhoneNumberId = null, metaAccessToken = null, metaTemplateName = null, metaTemplateLang = null,
+                metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
                 notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = false,
                 notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
             )
@@ -101,7 +101,7 @@ class NotificationSettingsTest {
                 provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true,
                 httpEndpointUrl = "https://api.fonnte.com/send", httpToken = "rahasia",
                 httpPhoneField = "target", httpMessageField = "message",
-                metaPhoneNumberId = null, metaAccessToken = null, metaTemplateName = null, metaTemplateLang = null,
+                metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
                 notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = false,
                 notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
             )
@@ -122,7 +122,7 @@ class NotificationSettingsTest {
             update(
                 provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true,
                 httpEndpointUrl = null, httpToken = "rahasia", httpPhoneField = null, httpMessageField = null,
-                metaPhoneNumberId = null, metaAccessToken = null, metaTemplateName = null, metaTemplateLang = null,
+                metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
                 notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = false,
                 notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
             )
@@ -132,13 +132,12 @@ class NotificationSettingsTest {
     }
 
     @Test
-    fun `Meta Cloud lengkap meresolusi dengan phone-id token dan template`() {
+    fun `Meta Cloud lengkap meresolusi dengan phone-id dan token tanpa template`() {
         val settings = defaultSettings().apply {
             update(
                 provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = true,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
-                metaPhoneNumberId = "1234567890", metaAccessToken = "EAAtoken",
-                metaTemplateName = "tagihan", metaTemplateLang = "id",
+                metaPhoneNumberId = "1234567890", metaAccessToken = "EAAtoken", metaWabaId = "9988",
                 notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = false,
                 notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
             )
@@ -149,8 +148,47 @@ class NotificationSettingsTest {
         val meta = gateway as WhatsAppGateway.MetaCloud
         assertThat(meta.phoneNumberId).isEqualTo("1234567890")
         assertThat(meta.accessToken).isEqualTo("EAAtoken")
-        assertThat(meta.templateName).isEqualTo("tagihan")
-        assertThat(meta.templateLang).isEqualTo("id")
+        // Template TAK lagi berasal dari setelan: pilihannya per-pemicu, diisi NotificationSender.
+        assertThat(meta.templateName).isNull()
+        assertThat(meta.templateLang).isEqualTo(NotificationSettings.DEFAULT_TEMPLATE_LANG)
+    }
+
+    // --- metaTemplateReady: prasyarat kartu template ---
+
+    @Test
+    fun `prasyarat template terpenuhi hanya bila Meta Cloud aktif dengan phone-id dan token`() {
+        val ready = defaultSettings().apply {
+            update(
+                provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = true,
+                httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
+                metaPhoneNumberId = "1234567890", metaAccessToken = "EAAtoken", metaWabaId = null,
+                notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = false,
+                notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
+            )
+        }
+        assertThat(ready.metaTemplateReady()).isTrue()
+
+        // Gateway dimatikan → prasyarat gugur walau kredensial masih tersimpan.
+        ready.update(
+            provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = false,
+            httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
+            metaPhoneNumberId = "1234567890", metaAccessToken = null, metaWabaId = null,
+            notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = false,
+            notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
+        )
+        assertThat(ready.metaTemplateReady()).isFalse()
+
+        // Penyedia bukan Meta Cloud → template tak berlaku.
+        val logProvider = defaultSettings().apply {
+            update(
+                provider = WhatsAppProvider.LOG, gatewayEnabled = true,
+                httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
+                metaPhoneNumberId = "1234567890", metaAccessToken = "EAAtoken", metaWabaId = null,
+                notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = false,
+                notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
+            )
+        }
+        assertThat(logProvider.metaTemplateReady()).isFalse()
     }
 
     @Test
@@ -159,7 +197,7 @@ class NotificationSettingsTest {
             update(
                 provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = true,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
-                metaPhoneNumberId = "1234567890", metaAccessToken = null, metaTemplateName = null, metaTemplateLang = null,
+                metaPhoneNumberId = "1234567890", metaAccessToken = null, metaWabaId = null,
                 notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = false,
                 notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
             )
@@ -177,7 +215,7 @@ class NotificationSettingsTest {
                 provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true,
                 httpEndpointUrl = "https://gw.example/send", httpToken = "token-awal",
                 httpPhoneField = null, httpMessageField = null,
-                metaPhoneNumberId = "111", metaAccessToken = "meta-awal", metaTemplateName = null, metaTemplateLang = null,
+                metaPhoneNumberId = "111", metaAccessToken = "meta-awal", metaWabaId = null,
                 notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = false,
                 notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
             )
@@ -188,7 +226,7 @@ class NotificationSettingsTest {
             provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true,
             httpEndpointUrl = "https://gw.example/v2", httpToken = null,
             httpPhoneField = null, httpMessageField = null,
-            metaPhoneNumberId = "111", metaAccessToken = "   ", metaTemplateName = null, metaTemplateLang = null,
+            metaPhoneNumberId = "111", metaAccessToken = "   ", metaWabaId = null,
             notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = false,
             notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
         )
@@ -205,7 +243,7 @@ class NotificationSettingsTest {
                 provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true,
                 httpEndpointUrl = "https://gw.example/send", httpToken = "token-awal",
                 httpPhoneField = null, httpMessageField = null,
-                metaPhoneNumberId = null, metaAccessToken = null, metaTemplateName = null, metaTemplateLang = null,
+                metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
                 notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = false,
                 notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
             )
@@ -215,7 +253,7 @@ class NotificationSettingsTest {
             provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true,
             httpEndpointUrl = "https://gw.example/send", httpToken = "token-baru",
             httpPhoneField = null, httpMessageField = null,
-            metaPhoneNumberId = null, metaAccessToken = null, metaTemplateName = null, metaTemplateLang = null,
+            metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
             notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = false,
             notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
         )
@@ -232,7 +270,7 @@ class NotificationSettingsTest {
                 provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true,
                 httpEndpointUrl = "ftp://gw.example/send", httpToken = null,
                 httpPhoneField = null, httpMessageField = null,
-                metaPhoneNumberId = null, metaAccessToken = null, metaTemplateName = null, metaTemplateLang = null,
+                metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
                 notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = false,
                 notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
             )
@@ -246,7 +284,7 @@ class NotificationSettingsTest {
                 provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true,
                 httpEndpointUrl = "https://gw.example/send", httpToken = null,
                 httpPhoneField = "  ", httpMessageField = null,
-                metaPhoneNumberId = null, metaAccessToken = null, metaTemplateName = null, metaTemplateLang = null,
+                metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
                 notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = false,
                 notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
             )
@@ -254,7 +292,6 @@ class NotificationSettingsTest {
 
         assertThat(settings.httpPhoneField).isEqualTo(NotificationSettings.DEFAULT_PHONE_FIELD)
         assertThat(settings.httpMessageField).isEqualTo(NotificationSettings.DEFAULT_MESSAGE_FIELD)
-        assertThat(settings.metaTemplateLang).isEqualTo(NotificationSettings.DEFAULT_TEMPLATE_LANG)
     }
 
     // --- perkakas uji ---
@@ -270,7 +307,7 @@ class NotificationSettingsTest {
     ) = update(
         provider = WhatsAppProvider.LOG, gatewayEnabled = true,
         httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
-        metaPhoneNumberId = null, metaAccessToken = null, metaTemplateName = null, metaTemplateLang = null,
+        metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
         notifyOnSubscriptionLifecycle = subscription, notifyOnInvoiceReminder = invoice,
         notifyOnWorkOrderSchedule = workOrder, notifyOnIncidentOpen = incident,
     )

@@ -36,8 +36,7 @@ class NotificationSettingsPersistenceAdapter(
             httpMessageField = settings.httpMessageField
             metaPhoneNumberId = settings.metaPhoneNumberId
             metaAccessToken = encryptedMetaToken
-            metaTemplateName = settings.metaTemplateName
-            metaTemplateLang = settings.metaTemplateLang
+            metaWabaId = settings.metaWabaId
             notifyOnSubscriptionLifecycle = settings.notifyOnSubscriptionLifecycle
             notifyOnInvoiceReminder = settings.notifyOnInvoiceReminder
             notifyOnWorkOrderSchedule = settings.notifyOnWorkOrderSchedule
@@ -52,8 +51,7 @@ class NotificationSettingsPersistenceAdapter(
             httpMessageField = settings.httpMessageField,
             metaPhoneNumberId = settings.metaPhoneNumberId,
             metaAccessToken = encryptedMetaToken,
-            metaTemplateName = settings.metaTemplateName,
-            metaTemplateLang = settings.metaTemplateLang,
+            metaWabaId = settings.metaWabaId,
             notifyOnSubscriptionLifecycle = settings.notifyOnSubscriptionLifecycle,
             notifyOnInvoiceReminder = settings.notifyOnInvoiceReminder,
             notifyOnWorkOrderSchedule = settings.notifyOnWorkOrderSchedule,
@@ -73,8 +71,7 @@ class NotificationSettingsPersistenceAdapter(
         httpMessageField = httpMessageField,
         metaPhoneNumberId = metaPhoneNumberId,
         metaAccessToken = cipher.decryptQuietly(metaAccessToken, "meta_access_token", log),
-        metaTemplateName = metaTemplateName,
-        metaTemplateLang = metaTemplateLang,
+        metaWabaId = metaWabaId,
         notifyOnSubscriptionLifecycle = notifyOnSubscriptionLifecycle,
         notifyOnInvoiceReminder = notifyOnInvoiceReminder,
         notifyOnWorkOrderSchedule = notifyOnWorkOrderSchedule,

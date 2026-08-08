@@ -7,13 +7,10 @@ import com.duluin.ftth.notification.domain.model.WhatsAppGateway
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
-import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.stereotype.Component
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.client.RestClient
-import org.springframework.web.client.RestClientResponseException
 import java.net.URI
-import java.time.Duration
 
 /**
  * Dispatcher WhatsApp: satu router yang mengeksekusi transport sesuai tipe
@@ -26,8 +23,8 @@ import java.time.Duration
  *  - [WhatsAppGateway.MetaCloud]  POST JSON ke Graph API `/{phoneNumberId}/messages` dengan
  *                                  bearer token; template (bila diset) atau teks bebas.
  *
- * [RestClient] dibangun sendiri di sini (pola [com.duluin.ftth.bng.adapter.outbound.routeros.RouterOsRestAdapter])
- * alih-alih bean, agar tak bentrok dengan bean `RestClient` GenieACS saat resolusi tipe.
+ * [RestClient] dirakit lewat [MetaGraph.restClient] alih-alih bean, agar tak bentrok dengan bean
+ * `RestClient` GenieACS saat resolusi tipe (pola [com.duluin.ftth.bng.adapter.outbound.routeros.RouterOsRestAdapter]).
  * Endpoint berbeda per-tenant/per-kirim, jadi URI absolut diberikan per panggilan (tanpa baseUrl).
  * Kegagalan transport dipetakan ke [DeliveryStatus.FAILED] (layak dicoba ulang), bukan melempar,
  * agar satu nomor gagal tak menggagalkan seluruh batch broadcast.
@@ -38,7 +35,7 @@ class WhatsAppMessageDispatcher internal constructor(
 ) : MessageDispatcher {
 
     // Konstruktor yang dipakai Spring: rakit client sendiri (tanpa bean RestClient).
-    constructor() : this(defaultRestClient())
+    constructor() : this(MetaGraph.restClient())
 
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -100,7 +97,7 @@ class WhatsAppMessageDispatcher internal constructor(
         }
         return runCatching {
             restClient.post()
-                .uri(URI.create("$GRAPH_BASE/${gateway.phoneNumberId}/messages"))
+                .uri(URI.create("${MetaGraph.BASE}/${gateway.phoneNumberId}/messages"))
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${gateway.accessToken}")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body)
@@ -113,24 +110,5 @@ class WhatsAppMessageDispatcher internal constructor(
     }
 
     /** Rapikan error transport jadi keterangan ringkas (muat kolom detail 300 char). */
-    private fun transportError(label: String, e: Throwable): String = when (e) {
-        is RestClientResponseException ->
-            "$label menolak (${e.statusCode.value()}): ${e.responseBodyAsString.take(180)}"
-        else -> "$label tak terjangkau: ${e.message?.take(180)}"
-    }
-
-    companion object {
-        private const val GRAPH_BASE = "https://graph.facebook.com/v21.0"
-        private val CONNECT_TIMEOUT = Duration.ofSeconds(5)
-        private val READ_TIMEOUT = Duration.ofSeconds(15)
-
-        private fun defaultRestClient(): RestClient = RestClient.builder()
-            .requestFactory(
-                SimpleClientHttpRequestFactory().apply {
-                    setConnectTimeout(CONNECT_TIMEOUT)
-                    setReadTimeout(READ_TIMEOUT)
-                },
-            )
-            .build()
-    }
+    private fun transportError(label: String, e: Throwable): String = MetaGraph.transportError(label, e)
 }

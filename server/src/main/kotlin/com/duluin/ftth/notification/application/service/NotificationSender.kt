@@ -5,11 +5,13 @@ import com.duluin.ftth.notification.application.port.outbound.BroadcastRepositor
 import com.duluin.ftth.notification.application.port.outbound.DeliveryOutcome
 import com.duluin.ftth.notification.application.port.outbound.MessageDispatcher
 import com.duluin.ftth.notification.application.port.outbound.NotificationSettingsRepository
+import com.duluin.ftth.notification.application.port.outbound.NotificationTemplateRepository
 import com.duluin.ftth.notification.domain.model.Broadcast
 import com.duluin.ftth.notification.domain.model.DeliveryStatus
 import com.duluin.ftth.notification.domain.model.NotificationChannel
 import com.duluin.ftth.notification.domain.model.NotificationSettings
 import com.duluin.ftth.notification.domain.model.NotificationTrigger
+import com.duluin.ftth.notification.domain.model.WhatsAppGateway
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -20,7 +22,8 @@ import java.util.UUID
  * empat keputusan di satu tempat agar tiap pemicu tak mengulang-ulangnya:
  *
  *  1. APAKAH boleh kirim — saklar pemicu tenant ([NotificationSettings.isTriggerEnabled]).
- *  2. LEWAT MANA — resolusi gateway aktif ([NotificationSettings.resolveGateway]).
+ *  2. LEWAT MANA — resolusi gateway aktif ([NotificationSettings.resolveGateway]), plus
+ *     template WhatsApp yang dipetakan ke pemicu ini bila penyedianya Meta Cloud.
  *  3. KIRIM — per penerima; nomor kosong / gateway mati ⇒ SKIPPED (bukan gagal).
  *  4. CATAT — simpan [Broadcast] append-only sebagai riwayat, ditandai pemicunya.
  *
@@ -31,6 +34,7 @@ import java.util.UUID
 class NotificationSender(
     private val settingsRepo: NotificationSettingsRepository,
     private val broadcastRepo: BroadcastRepository,
+    private val templateRepo: NotificationTemplateRepository,
     private val dispatcher: MessageDispatcher,
 ) {
     /** Satu penerima: pelanggan (id opsional untuk siaran non-pelanggan) + nomor tujuannya. */
@@ -56,7 +60,7 @@ class NotificationSender(
         if (!settings.isTriggerEnabled(trigger)) return null
 
         // Diresolusi sekali per batch: null = gateway mati/kurang konfigurasi → semua SKIPPED.
-        val gateway = settings.resolveGateway()
+        val gateway = settings.resolveGateway()?.withTemplateFor(trigger)
         val broadcast = Broadcast.compose(tenantId, incidentId, channel, message, createdBy, trigger)
         recipients.forEach { r ->
             val outcome = when {
@@ -67,6 +71,18 @@ class NotificationSender(
             broadcast.record(r.customerId, r.name, r.phone, outcome.status, outcome.detail)
         }
         return broadcastRepo.save(broadcast)
+    }
+
+    /**
+     * Lengkapi gateway Meta Cloud dengan template yang dipetakan ke [trigger]. Pemicu tanpa
+     * pemetaan sengaja dibiarkan tanpa template → dispatcher mengirim teks biasa (perilaku
+     * lama), bukan gagal: mematikan pemetaan tak boleh membungkam notifikasi. Gateway non-Meta
+     * tak mengenal template, jadi dilewatkan apa adanya.
+     */
+    private fun WhatsAppGateway.withTemplateFor(trigger: NotificationTrigger): WhatsAppGateway {
+        if (this !is WhatsAppGateway.MetaCloud) return this
+        val template = templateRepo.findForTrigger(trigger) ?: return this
+        return copy(templateName = template.name, templateLang = template.language)
     }
 
     companion object {

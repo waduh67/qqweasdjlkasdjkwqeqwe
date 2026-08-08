@@ -10,6 +10,7 @@ import {
 } from '../api/notification'
 import { useCan } from '../auth/useCan'
 import { Button, EmptyState, SelectField, TextField } from '@/components/atoms'
+import { WhatsAppTemplateCard } from '@/components/organisms'
 import { Checkbox } from '@fluentui/react-components'
 import { useToast } from '@/system'
 import { IconAlert } from '@/components/atoms/icons'
@@ -88,8 +89,7 @@ export function NotificationSettingsPage() {
       httpMessageField: nullify(form.httpMessageField),
       metaPhoneNumberId: nullify(form.metaPhoneNumberId),
       metaAccessToken: nullify(metaToken),
-      metaTemplateName: nullify(form.metaTemplateName),
-      metaTemplateLang: nullify(form.metaTemplateLang),
+      metaWabaId: nullify(form.metaWabaId),
       notifyOnSubscriptionLifecycle: form.notifyOnSubscriptionLifecycle,
       notifyOnInvoiceReminder: form.notifyOnInvoiceReminder,
       notifyOnWorkOrderSchedule: form.notifyOnWorkOrderSchedule,
@@ -234,31 +234,24 @@ export function NotificationSettingsPage() {
               placeholder={form.metaAccessTokenSet ? 'Biarkan kosong untuk mempertahankan' : 'Token permanen dari Meta'}
               disabled={!manage}
             />
-            <div className="row">
-              <TextField
-                label="Nama template (opsional)"
-                value={form.metaTemplateName ?? ''}
-                onChange={(_, data) => patch({ metaTemplateName: data.value })}
-                placeholder="kosong = kirim pesan teks biasa"
-                disabled={!manage}
-                style={{ flex: 2 }}
-              />
-              <TextField
-                label="Bahasa template"
-                value={form.metaTemplateLang}
-                onChange={(_, data) => patch({ metaTemplateLang: data.value })}
-                placeholder="id"
-                disabled={!manage}
-                style={{ flex: 1 }}
-              />
-            </div>
+            <TextField
+              label="WhatsApp Business Account ID (opsional)"
+              value={form.metaWabaId ?? ''}
+              onChange={(_, data) => patch({ metaWabaId: data.value })}
+              placeholder="102290129340398"
+              disabled={!manage}
+              hint="Terlihat di Meta Business Manager → WhatsApp Accounts; dipakai untuk menarik daftar template."
+            />
             <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-              Bila template diisi, pesan dikirim sebagai template dengan isi sebagai parameter body{' '}
-              <code>{'{{1}}'}</code>. Kosongkan untuk pesan teks biasa (hanya dalam jendela 24 jam).
+              Template yang dipakai tiap pemicu diatur di kartu <strong>Template pesan WhatsApp</strong> di bawah.
+              Pemicu tanpa template dikirim sebagai teks biasa (hanya dalam jendela 24 jam).
             </p>
           </>
         )}
       </div>
+
+      {/* ---- Template pesan WhatsApp ---- */}
+      <WhatsAppTemplateCard templateReady={form.metaTemplateReady} />
 
       {/* ---- Pemicu otomatis ---- */}
       <div className="card stack">
@@ -266,6 +259,11 @@ export function NotificationSettingsPage() {
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
           Nyalakan jenis pesan yang ingin dikirim otomatis. Semua butuh gateway di atas hidup.
         </p>
+        {form.provider === 'META_CLOUD' && (
+          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+            Template yang dipakai tiap pemicu diatur di kartu <strong>Template pesan WhatsApp</strong> di atas.
+          </p>
+        )}
         {TRIGGERS.map((t) => (
           <Checkbox
             key={t.key}

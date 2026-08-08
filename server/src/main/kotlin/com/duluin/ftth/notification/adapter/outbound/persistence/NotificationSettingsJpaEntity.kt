@@ -45,11 +45,8 @@ class NotificationSettingsJpaEntity(
     @Column(name = "meta_access_token", length = 2048)
     var metaAccessToken: String?,
 
-    @Column(name = "meta_template_name", length = 128)
-    var metaTemplateName: String?,
-
-    @Column(name = "meta_template_lang", nullable = false, length = 10)
-    var metaTemplateLang: String,
+    @Column(name = "meta_waba_id", length = 64)
+    var metaWabaId: String?,
 
     @Column(name = "notify_subscription_lifecycle", nullable = false)
     var notifyOnSubscriptionLifecycle: Boolean,

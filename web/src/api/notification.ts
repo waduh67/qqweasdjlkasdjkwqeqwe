@@ -55,8 +55,9 @@ export interface NotificationSettingsView {
   httpMessageField: string
   metaPhoneNumberId: string | null
   metaAccessTokenSet: boolean
-  metaTemplateName: string | null
-  metaTemplateLang: string
+  metaWabaId: string | null
+  /** Prasyarat kartu template terpenuhi (gateway hidup + Meta Cloud + kredensial tersimpan). */
+  metaTemplateReady: boolean
   notifyOnSubscriptionLifecycle: boolean
   notifyOnInvoiceReminder: boolean
   notifyOnWorkOrderSchedule: boolean
@@ -76,8 +77,7 @@ export interface UpdateNotificationSettingsRequest {
   httpMessageField: string | null
   metaPhoneNumberId: string | null
   metaAccessToken: string | null
-  metaTemplateName: string | null
-  metaTemplateLang: string | null
+  metaWabaId: string | null
   notifyOnSubscriptionLifecycle: boolean
   notifyOnInvoiceReminder: boolean
   notifyOnWorkOrderSchedule: boolean
@@ -92,4 +92,119 @@ export function updateNotificationSettings(
   body: UpdateNotificationSettingsRequest,
 ): Promise<NotificationSettingsView> {
   return api.put('/api/notifications/settings', body)
+}
+
+/** ------------------------------------------------------------------
+ *  Template pesan WhatsApp (Meta Cloud) + pemetaan pemicu → template.
+ *  ------------------------------------------------------------------ */
+
+/** Pemicu otomatis di backend. `MANUAL` sengaja tak ditawarkan di UI. */
+export type NotificationTrigger =
+  | 'SUBSCRIPTION_ACTIVATED'
+  | 'SUBSCRIPTION_ISOLATED'
+  | 'SUBSCRIPTION_TERMINATED'
+  | 'INVOICE_DUE_SOON'
+  | 'INVOICE_OVERDUE'
+  | 'WORK_ORDER_SCHEDULED'
+  | 'INCIDENT_OPENED'
+
+/** Urutan tampil = urutan perjalanan pelanggan, bukan urutan enum. */
+export const TRIGGERS: NotificationTrigger[] = [
+  'SUBSCRIPTION_ACTIVATED',
+  'SUBSCRIPTION_ISOLATED',
+  'SUBSCRIPTION_TERMINATED',
+  'INVOICE_DUE_SOON',
+  'INVOICE_OVERDUE',
+  'WORK_ORDER_SCHEDULED',
+  'INCIDENT_OPENED',
+]
+
+export const TRIGGER_LABEL: Record<NotificationTrigger, string> = {
+  SUBSCRIPTION_ACTIVATED: 'Langganan aktif',
+  SUBSCRIPTION_ISOLATED: 'Langganan diisolir',
+  SUBSCRIPTION_TERMINATED: 'Langganan dihentikan',
+  INVOICE_DUE_SOON: 'Tagihan menjelang jatuh tempo',
+  INVOICE_OVERDUE: 'Tagihan menunggak',
+  WORK_ORDER_SCHEDULED: 'Kunjungan teknisi terjadwal',
+  INCIDENT_OPENED: 'Gangguan dibuka',
+}
+
+export type TemplateStatus = 'APPROVED' | 'PENDING' | 'REJECTED' | 'PAUSED' | 'DISABLED' | 'UNKNOWN'
+export type TemplateSource = 'MANUAL' | 'META'
+
+export const TEMPLATE_STATUS_LABEL: Record<TemplateStatus, string> = {
+  APPROVED: 'Disetujui',
+  PENDING: 'Menunggu tinjauan',
+  REJECTED: 'Ditolak',
+  PAUSED: 'Dijeda',
+  DISABLED: 'Dinonaktifkan',
+  UNKNOWN: 'Belum disinkron',
+}
+
+export interface NotificationTemplateView {
+  id: string
+  name: string
+  language: string
+  category: string
+  status: TemplateStatus
+  source: TemplateSource
+  bodyPreview: string | null
+  /** Jumlah `{{n}}` unik di body; server selalu mengirim tepat satu parameter. */
+  bodyParamCount: number
+  syncedAt: string | null
+  usedBy: NotificationTrigger[]
+}
+
+/**
+ * Isi kartu template. `manageable`/`syncable` menentukan aksi mana yang boleh ditawarkan;
+ * `blockedReason` menjelaskan apa yang kurang bila terkunci.
+ */
+export interface TemplateCatalogView {
+  templates: NotificationTemplateView[]
+  /** Pemicu → id template; pemicu yang tak disebut = kirim teks biasa. */
+  assignments: Partial<Record<NotificationTrigger, string>>
+  manageable: boolean
+  syncable: boolean
+  blockedReason: string | null
+}
+
+export interface SaveTemplateRequest {
+  name: string
+  language: string | null
+}
+
+export interface SyncTemplatesResult {
+  fetched: number
+  imported: number
+  updated: number
+  skipped: number
+  message: string
+  catalog: TemplateCatalogView
+}
+
+export function getTemplates(): Promise<TemplateCatalogView> {
+  return api.get('/api/notifications/templates')
+}
+
+export function createTemplate(body: SaveTemplateRequest): Promise<TemplateCatalogView> {
+  return api.post('/api/notifications/templates', body)
+}
+
+export function updateTemplate(id: string, body: SaveTemplateRequest): Promise<TemplateCatalogView> {
+  return api.put(`/api/notifications/templates/${id}`, body)
+}
+
+export function deleteTemplate(id: string): Promise<TemplateCatalogView> {
+  return api.del(`/api/notifications/templates/${id}`)
+}
+
+/** Mengganti SELURUH peta: pemicu yang tak disebut kembali mengirim teks biasa. */
+export function saveTemplateAssignments(
+  assignments: Partial<Record<NotificationTrigger, string | null>>,
+): Promise<TemplateCatalogView> {
+  return api.put('/api/notifications/templates/assignments', { assignments })
+}
+
+export function syncTemplates(): Promise<SyncTemplatesResult> {
+  return api.post('/api/notifications/templates/sync', {})
 }
