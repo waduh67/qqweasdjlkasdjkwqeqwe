@@ -104,6 +104,23 @@ jobs:
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
 
+            # Peniru protokol (OLT/SNMP + BRAS/RADIUS) untuk stack DEMO. Context =
+            # root repo (butuh :contract, :snmp, :simulator). Hanya dipakai deploy-demo;
+            # prod tak menariknya.
+            - name: Build & push ftth-simulator
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  file: simulator/Dockerfile
+                  push: true
+                  tags: |
+                      ${{ env.IMAGE_PREFIX }}/ftth-simulator:latest
+                      ${{ env.IMAGE_PREFIX }}/ftth-simulator:${{ github.sha }}
+                  provenance: false
+                  sbom: false
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+
     # -------------------------------------------------------------------------
     # 3) SSH ke VPS: tarik image terbaru lalu naikkan ulang stack.
     # -------------------------------------------------------------------------
@@ -123,4 +140,32 @@ jobs:
                       echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
                       docker compose -f docker-compose.prod.yml pull
                       docker compose -f docker-compose.prod.yml up -d
+                      docker image prune -f
+
+    # -------------------------------------------------------------------------
+    # 4) SSH ke SERVER DEMO: stack peniru-protokol end-to-end (app + web + simulator
+    #    + GenieACS + RADIUS). Berdiri sendiri, TERPISAH dari `deploy` prod di atas.
+    #    Server memegang checkout repo di /opt/ftth-demo (compose me-mount file repo &
+    #    seeding pakai docker/lab/seed-lab.sh). Image JVM kita ditarik dari GHCR; image
+    #    GenieACS dibangun lokal (`--build`). Butuh secret DEMO_HOST/DEMO_USER/DEMO_SSH_KEY.
+    # -------------------------------------------------------------------------
+    deploy-demo:
+        needs: build-and-push
+        runs-on: ubuntu-latest
+        steps:
+            - name: Deploy demo lewat SSH
+              uses: appleboy/ssh-action@v1
+              with:
+                  host: ${{ secrets.DEMO_HOST }}
+                  username: ${{ secrets.DEMO_USER }}
+                  key: ${{ secrets.DEMO_SSH_KEY }}
+                  script: |
+                      set -e
+                      cd /opt/ftth-demo
+                      git fetch --depth 1 origin main && git reset --hard origin/main
+                      echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+                      docker compose -f docker-compose.demo.yml pull
+                      docker compose -f docker-compose.demo.yml up -d --build
+                      COMPOSE="docker compose -f docker-compose.demo.yml" BASE=http://localhost \
+                        bash docker/lab/seed-lab.sh
                       docker image prune -f
