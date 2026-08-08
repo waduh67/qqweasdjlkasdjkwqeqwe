@@ -17,8 +17,19 @@ interface PivotSubMerchantPort {
     /** Tarik status terbaru sub-account (`GET /v1/sub-merchants/{uuid}`). */
     fun fetch(master: PivotMasterContext, subMerchantUuid: String): SubMerchantResult
 
-    /** Validasi rekening bank sebelum payout; hasilkan `inquiryId` + nama pemilik terverifikasi. */
-    fun inquiryAccount(master: PivotMasterContext, channelCode: String, accountNumber: String): InquiryResult
+    /**
+     * Validasi rekening bank sebelum payout (`POST /v1/inquiry-account`) → `inquiryId` + status
+     * kecocokan nama. [accountName] WAJIB dikirim (Pivot mencocokkannya dengan catatan bank), dan
+     * panggilan WAJIB on-behalf [subMerchantId]: biaya inquiry dibebankan ke saldo pemanggil, jadi
+     * inquiry atas nama master ditolak `balance_insufficient`.
+     */
+    fun inquiryAccount(
+        master: PivotMasterContext,
+        subMerchantId: String,
+        channelCode: String,
+        accountNumber: String,
+        accountName: String,
+    ): InquiryResult
 
     /**
      * Undang/assign user admin ke sub-account tenant (`POST /v1/sub-merchants/admin`), on-behalf lewat
@@ -73,8 +84,20 @@ data class SubMerchantResult(
     val kycStatus: SubAccountKycStatus,
 )
 
-/** Hasil validasi rekening: `inquiryId` untuk payout + nama pemilik terverifikasi (bila dikembalikan). */
+/**
+ * Hasil validasi rekening: `data.uuid` (dipakai sebagai `inquiryId` saat payout) + `data.inquiryResult`.
+ * Pivot TIDAK mengembalikan nama pemilik menurut bank sebagai field tersendiri — kalau namanya tak
+ * cocok, nama versi bank ikut di [detail].
+ */
 data class InquiryResult(
     val inquiryId: String,
-    val accountName: String?,
+    val status: InquiryStatus,
+    /** Penjelasan Pivot saat status bukan VALID (mis. "…Bank record: Dummy Simulation"); null bila VALID. */
+    val detail: String?,
 )
+
+/**
+ * Status kecocokan rekening dari Pivot. Hanya [VALID] yang boleh diteruskan jadi payout —
+ * [WARNING] berarti nomornya ada tapi namanya beda, dan transfer salah alamat tak bisa ditarik balik.
+ */
+enum class InquiryStatus { VALID, WARNING, INVALID, PENDING }

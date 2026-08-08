@@ -117,7 +117,7 @@ class TenantPivotAccountService(
         // hanya DISIMPAN di sini — TANPA inquiry. `POST /v1/inquiry-account` baru bisa jalan setelah
         // sub-account ada, jadi validasi rekening dijalankan best-effort saat provisioning (lihat
         // provisionNonKyc). Simpan profil murni persistensi lokal → tak pernah menembak Pivot / error.
-        account.setPayoutDestination(command.channelCode, command.accountNumber)
+        account.setPayoutDestination(command.channelCode, command.accountNumber, command.accountName)
         val saved = repository.save(account)
         audit("billing.pivot.profile.updated", saved.id, tenantId)
         return saved.toView()
@@ -130,10 +130,16 @@ class TenantPivotAccountService(
             ?: throw ValidationException("Channel bank wajib diisi")
         val accountNumber = command.accountNumber.trim().takeIf { it.isNotEmpty() }
             ?: throw ValidationException("Nomor rekening wajib diisi")
+        val accountName = requireAccountName(command.accountName)
         val tenantId = TenantContext.tenantId()
         val account = repository.find() ?: TenantPivotAccount.defaultFor(tenantId)
-        val inquiry = subMerchant.inquiryAccount(master, channelCode, accountNumber)
-        account.setPayoutAccount(channelCode, accountNumber, inquiry.accountName, inquiry.inquiryId)
+        // Inquiry dibebankan ke saldo pemanggil → wajib on-behalf sub-account, jadi sub-account
+        // harus sudah ada. Sebelum itu rekening cuma disimpan lewat profil (tanpa validasi).
+        val subId = requireProvisioned(account)
+        val inquiry = subMerchant
+            .inquiryAccount(master, subId, channelCode, accountNumber, accountName)
+            .requireValid()
+        account.setPayoutAccount(channelCode, accountNumber, accountName, inquiry.inquiryId)
         val saved = repository.save(account)
         audit("billing.pivot.payout.updated", saved.id, tenantId)
         return saved.toView()
@@ -196,16 +202,21 @@ class TenantPivotAccountService(
 
     /**
      * Validasi rekening payout (`POST /v1/inquiry-account`) setelah sub-account ada, mengisi
-     * `payoutAccountName` + `inquiryId`. Best-effort: bila rekening belum diisi atau Pivot menolak,
-     * cukup log warning — payout tinggal "belum siap" & bisa diulang lewat setPayoutAccount.
+     * `inquiryId` dari rekening + nama yang sudah diisi tenant di profil. Best-effort: bila datanya
+     * belum lengkap, nama tak cocok catatan bank, atau Pivot menolak, cukup log warning — payout
+     * tinggal "belum siap" & bisa diulang lewat setPayoutAccount.
      */
     private fun ensurePayoutInquiry(account: TenantPivotAccount, master: PivotMasterContext) {
         val channelCode = account.payoutChannelCode ?: return
         val accountNumber = account.payoutAccountNumber ?: return
+        val accountName = account.payoutAccountName ?: return
+        val subId = account.subMerchantUuid ?: return
         if (account.payoutReady) return
         try {
-            val inquiry = subMerchant.inquiryAccount(master, channelCode, accountNumber)
-            account.setPayoutAccount(channelCode, accountNumber, inquiry.accountName, inquiry.inquiryId)
+            val inquiry = subMerchant
+                .inquiryAccount(master, subId, channelCode, accountNumber, accountName)
+                .requireValid()
+            account.setPayoutAccount(channelCode, accountNumber, accountName, inquiry.inquiryId)
         } catch (e: Exception) {
             log.warn(
                 "Inquiry rekening payout gagal untuk tenant {} (channel {}): {} — payout belum siap, bisa diulang",

@@ -46,7 +46,13 @@ class TenantPayoutController(
     @Operation(summary = "Salurkan dana ke rekening beneficiary (inquiry + wajib cek saldo)")
     fun payout(@Valid @RequestBody request: DispatchPayoutRequest): TenantPayoutView =
         useCase.dispatchPayout(
-            DispatchPayoutCommand(request.channelCode, request.accountNumber, request.amountMinor, request.description),
+            DispatchPayoutCommand(
+                request.channelCode,
+                request.accountNumber,
+                request.accountName,
+                request.amountMinor,
+                request.description,
+            ),
         )
 
     @PostMapping("/withdrawals")
@@ -56,12 +62,17 @@ class TenantPayoutController(
         useCase.withdraw(WithdrawCommand(request.amountMinor, request.description))
 }
 
-/** Perintah payout beneficiary: bank + nomor rekening tujuan + nominal (rupiah utuh > 0). */
+/**
+ * Perintah payout beneficiary: bank + nomor rekening + nama pemilik tujuan + nominal (rupiah utuh > 0).
+ * Batas 60 karakter untuk [accountName] mengikuti spec `POST /v1/inquiry-account` Pivot.
+ */
 data class DispatchPayoutRequest(
     @field:NotBlank(message = "Channel bank wajib diisi") @field:Size(max = 40)
     val channelCode: String,
     @field:NotBlank(message = "Nomor rekening wajib diisi") @field:Size(max = 60)
     val accountNumber: String,
+    @field:NotBlank(message = "Nama pemilik rekening wajib diisi") @field:Size(max = 60)
+    val accountName: String,
     @field:Positive(message = "Nominal harus lebih dari 0")
     val amountMinor: Long,
     @field:Size(max = 200)
