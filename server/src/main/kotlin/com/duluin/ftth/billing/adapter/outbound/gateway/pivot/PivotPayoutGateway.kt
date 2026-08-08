@@ -3,6 +3,7 @@ package com.duluin.ftth.billing.adapter.outbound.gateway.pivot
 import com.duluin.ftth.billing.application.port.outbound.BalanceSnapshot
 import com.duluin.ftth.billing.application.port.outbound.PayoutCommand
 import com.duluin.ftth.billing.application.port.outbound.PayoutDispatch
+import com.duluin.ftth.billing.application.port.outbound.PivotBalanceUsecase
 import com.duluin.ftth.billing.application.port.outbound.PivotPayoutPort
 import com.duluin.ftth.billing.domain.model.PivotMasterContext
 import com.duluin.ftth.common.domain.error.ConflictException
@@ -11,12 +12,12 @@ import tools.jackson.databind.JsonNode
 import java.math.RoundingMode
 
 /**
- * Adapter port penyaluran dana Pivot (`/v1/payouts`, `/v1/withdrawals`, `/v1/payouts/balance`) di
- * atas [PivotApiClient]. SEMUA panggilan memakai kredensial akun MASTER platform; aksi tenant
- * (payout beneficiary & withdrawal KYC) ditembak on-behalf sub-account (`x-submerchant-id`).
+ * Adapter port penyaluran dana Pivot (`/v1/payouts`, `/v1/withdrawals`, `/v1/balances`) di atas
+ * [PivotApiClient]. SEMUA panggilan memakai kredensial akun MASTER platform; aksi tenant (payout
+ * beneficiary & withdrawal KYC) ditembak on-behalf sub-account (`x-submerchant-id`).
  *
- * Nominal `amount.value` bilangan bulat rupiah (IDR zero-decimal). Saldo payout dikembalikan Pivot
- * sebagai string desimal 2-angka (mis. `"4440916697.16"`) → dibulatkan ke bawah jadi rupiah utuh.
+ * Nominal `amount.value` bilangan bulat rupiah (IDR zero-decimal). Saldo dikembalikan Pivot sebagai
+ * string desimal 2-angka (mis. `"4440916697.16"`) → dibulatkan ke bawah jadi rupiah utuh.
  */
 @Component
 class PivotPayoutGateway(
@@ -41,18 +42,28 @@ class PivotPayoutGateway(
         .post("/v1/withdrawals", command.toWithdrawBody(), master.credentials(), subMerchantId = subMerchantId, requestId = requestId)
         .toDispatch()
 
-    override fun balance(master: PivotMasterContext, subMerchantId: String?): BalanceSnapshot {
-        val node = apiClient.get("/v1/payouts/balance?currency=IDR", master.credentials(), subMerchantId = subMerchantId)
-        val avail = node.dataOrRoot().get("availableBalance")?.takeIf { !it.isNull } ?: node.dataOrRoot()
+    override fun balance(
+        master: PivotMasterContext,
+        subMerchantId: String?,
+        usecase: PivotBalanceUsecase,
+    ): BalanceSnapshot = apiClient
+        .get(balancePath(usecase), master.credentials(), subMerchantId = subMerchantId)
+        .toBalance()
+
+    /** `GET /v1/balances?usecase=…` — dompet dipilih eksplisit, jangan andalkan default Pivot. */
+    internal fun balancePath(usecase: PivotBalanceUsecase): String = "/v1/balances?usecase=$usecase"
+
+    /** Baca `data.availableBalance.{value,currency}`; toleran bila Pivot memipihkan bentuknya. */
+    internal fun JsonNode.toBalance(): BalanceSnapshot {
+        val avail = dataOrRoot().get("availableBalance")?.takeIf { !it.isNull } ?: dataOrRoot()
         return BalanceSnapshot(
             availableMinor = avail.wholeRupiah("value"),
-            pendingMinor = 0,
             currency = avail.textOrNull("currency") ?: "IDR",
         )
     }
 
     /** Body create payout terdokumentasi: array `payouts` dgn `inquiryId` (bila ada) atau `channelInformation`. */
-    private fun PayoutCommand.toPayoutBody(): Map<String, Any?> = mapOf(
+    internal fun PayoutCommand.toPayoutBody(): Map<String, Any?> = mapOf(
         "payouts" to listOf(
             buildMap {
                 put("referenceId", referenceId)
@@ -74,13 +85,18 @@ class PivotPayoutGateway(
         ),
     )
 
-    /** Body withdrawal KYC (`/v1/withdrawals`) — bentuk flat lama, TAK berbagi builder dgn payout. */
-    private fun PayoutCommand.toWithdrawBody(): Map<String, Any?> = buildMap {
-        put("amount", mapOf("value" to amountMinor, "currency" to "IDR"))
-        inquiryId?.let { put("inquiryId", it) }
-        channelCode?.let { put("channelCode", it) }
-        accountNumber?.let { put("accountNumber", it) }
-        description?.let { put("remarks", it) }
+    /**
+     * Body withdrawal KYC (`POST /v1/withdrawals`) — cairkan saldo PAYMENT ke rekening yang SUDAH
+     * terdaftar di sub-account (dikirim sebagai `bankAccount` saat create). Karena itu spec tak
+     * menerima `channelCode`/`accountNumber`/`inquiryId`: tujuannya sudah melekat pada akun.
+     * `balanceType` sengaja tak diisi — itu hanya wajib untuk `withdrawType = BALANCE_TRANSFER`.
+     */
+    internal fun PayoutCommand.toWithdrawBody(): Map<String, Any?> = buildMap {
+        put("referenceId", referenceId)
+        put("withdrawType", "BANK_TRANSFER")
+        put("isFullAmount", false)
+        put("amount", mapOf("value" to amountMinor.toString(), "currency" to "IDR"))
+        description?.take(DESCRIPTION_MAX)?.let { put("description", it) }
     }
 
     private fun PivotMasterContext.credentials() = PivotCredentials(merchantId, merchantSecret, sandbox)
@@ -108,5 +124,8 @@ class PivotPayoutGateway(
 
     private companion object {
         val SETTLED_STATUSES = setOf("SUCCESS", "COMPLETED", "SETTLED", "PAID")
+
+        /** Batas `description` withdrawal menurut spec Pivot (1–50). */
+        const val DESCRIPTION_MAX = 50
     }
 }

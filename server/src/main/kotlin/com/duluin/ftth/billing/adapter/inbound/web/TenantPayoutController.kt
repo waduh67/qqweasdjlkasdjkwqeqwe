@@ -33,7 +33,7 @@ class TenantPayoutController(
 ) {
     @GetMapping("/balance")
     @PreAuthorize("@authz.can('billing.gateway.view')")
-    @Operation(summary = "Saldo Pivot relevan tenant (master untuk NON_KYC, sub-account untuk KYC)")
+    @Operation(summary = "Saldo pembayaran tenant di Pivot (dana hasil tagihan pelanggan)")
     fun balance(): PivotBalanceView = useCase.balance()
 
     @GetMapping("/payouts")

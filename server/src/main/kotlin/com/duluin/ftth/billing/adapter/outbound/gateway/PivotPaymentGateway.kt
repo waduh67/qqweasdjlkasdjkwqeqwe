@@ -14,6 +14,7 @@ import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.billing.domain.model.PivotFeeType
 import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
 import com.duluin.ftth.common.domain.error.ConflictException
+import com.duluin.ftth.common.domain.error.ValidationException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import tools.jackson.databind.JsonNode
@@ -169,7 +170,17 @@ class PivotPaymentGateway(
                 "customer",
                 buildMap<String, Any> {
                     put("givenName", request.customerName)
-                    request.customerEmail?.takeIf { it.isNotBlank() }?.let { put("email", it) }
+                    // `customer.email` WAJIB di Pivot (tanpa itu: 400 "Email ... required"). Tolak
+                    // di sini dengan pesan yang bisa ditindaklanjuti — JANGAN diisi email palsu,
+                    // karena struk & notifikasi penyedia dikirim ke alamat tsb.
+                    put(
+                        "email",
+                        request.customerEmail?.takeIf { it.isNotBlank() }
+                            ?: throw ValidationException(
+                                "Pivot mewajibkan email pembayar, tapi email \"${request.customerName}\" " +
+                                    "masih kosong. Lengkapi email dulu sebelum membuat pembayaran.",
+                            ),
+                    )
                 },
             )
             put(
