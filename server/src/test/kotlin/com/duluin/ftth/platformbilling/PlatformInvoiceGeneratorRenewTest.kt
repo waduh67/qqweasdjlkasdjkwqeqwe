@@ -354,6 +354,7 @@ class PlatformInvoiceGeneratorRenewTest {
             auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
         ),
         tenantApi = FakeTenantApi(),
+        masterConfig = PivotMasterConfigProvider(FakePivotRepository()),
         auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
     )
 

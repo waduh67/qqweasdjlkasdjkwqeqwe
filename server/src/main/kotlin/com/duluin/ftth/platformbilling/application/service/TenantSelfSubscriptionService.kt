@@ -147,5 +147,6 @@ class TenantSelfSubscriptionService(
             gatewayProvider.equals("PIVOT", ignoreCase = true) &&
             !gatewayRef.isNullOrBlank() &&
             isOutstanding,
+        paymentSessionId = gatewayRef?.takeIf { sandbox },
     )
 }

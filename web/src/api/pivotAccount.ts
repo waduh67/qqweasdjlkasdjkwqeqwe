@@ -53,6 +53,8 @@ export const PIVOT_KYC_STATUS_LABEL: Record<PivotKycStatus, string> = {
  */
 export interface TenantPivotAccountView {
   provisioned: boolean
+  /** UUID sub-account di Pivot (`x-submerchant-id`); null bila belum diprovisi. Bukan rahasia. */
+  subMerchantUuid: string | null
   type: PivotAccountType
   status: PivotAccountStatus
   kycStatus: PivotKycStatus

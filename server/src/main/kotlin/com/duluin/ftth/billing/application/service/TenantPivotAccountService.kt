@@ -293,6 +293,7 @@ class TenantPivotAccountService(
 
     private fun TenantPivotAccount.toView() = TenantPivotAccountView(
         provisioned = provisioned,
+        subMerchantUuid = subMerchantUuid,
         type = type,
         status = status,
         kycStatus = kycStatus,
