@@ -383,7 +383,6 @@ function OltsTab() {
     isWebManaged(vendor)
       ? { ...d, vendor, snmpEnabled: true, webEnabled: true }
       : { ...d, vendor, snmpEnabled: true, webEnabled: d.webEnabled }
-  const [ports, setPorts] = useState<Record<string, string>>({})
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -442,38 +441,10 @@ function OltsTab() {
       sortValue: (o) => (o.pollable ? 1 : 0),
       cell: (o) => <span className="badge">{o.pollable ? 'siap dipolling' : 'belum lengkap'}</span>,
     },
-    {
-      key: 'ponPorts',
-      header: 'PON port',
-      sortValue: (o) => o.ponPortCount,
-      cell: (o) => (
-        <div className="stack" style={{ gap: '0.35rem' }}>
-          <span>{o.ponPortCount}</span>
-          {can('network.olt.update') && (
-            // Baris kini bisa diklik menuju detail OLT; hentikan bubbling agar
-            // mengetik/klik kontrol PON port di sel ini tak ikut bernavigasi.
-            <div className="row" style={{ gap: '0.3rem' }} onClick={(e) => e.stopPropagation()}>
-              <TextField
-                style={{ width: '5.5rem' }}
-                placeholder="1/2/3"
-                value={ports[o.id] ?? ''}
-                onChange={(_, data) => setPorts({ ...ports, [o.id]: data.value })}
-              />
-              <Button
-                onClick={() =>
-                  void run(async () => {
-                    await api.post(`/api/olts/${o.id}/pon-ports`, { label: ports[o.id] })
-                    setPorts({ ...ports, [o.id]: '' })
-                  })
-                }
-              >
-                + port
-              </Button>
-            </div>
-          )}
-        </div>
-      ),
-    },
+    // Hanya jumlah port (angka rata-kanan ala grid Azure). Menambah/menghapus PON port
+    // dilakukan di tab "PON Port" halaman detail OLT — klik baris untuk membukanya —
+    // supaya baris grid tetap satu-tinggi & rapat, bukan menyisipkan mini-form per baris.
+    { key: 'ponPorts', header: 'PON port', align: 'right', sortValue: (o) => o.ponPortCount, cell: (o) => o.ponPortCount },
   ]
 
   const rowActions = (o: OltView): RowAction[] =>

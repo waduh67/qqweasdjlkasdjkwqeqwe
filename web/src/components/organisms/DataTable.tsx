@@ -140,7 +140,7 @@ export function DataTable<T>({
   const leadCols = (selection ? 1 : 0) + (rowActions ? 1 : 0)
 
   return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+    <div className="card table-card">
       <div className="table-wrap">
         <table>
           <thead>
