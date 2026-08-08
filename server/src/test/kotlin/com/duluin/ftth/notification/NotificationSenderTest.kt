@@ -17,10 +17,13 @@ import com.duluin.ftth.notification.domain.model.DeliveryStatus
 import com.duluin.ftth.notification.domain.model.NotificationMessageTemplate
 import com.duluin.ftth.notification.domain.model.NotificationSettings
 import com.duluin.ftth.notification.domain.model.NotificationTrigger
+import com.duluin.ftth.notification.domain.model.TemplateCategory
+import com.duluin.ftth.notification.domain.model.TemplateStatus
 import com.duluin.ftth.notification.domain.model.WhatsAppGateway
 import com.duluin.ftth.notification.domain.model.WhatsAppProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -33,6 +36,9 @@ import java.util.UUID
 class NotificationSenderTest {
 
     private val tenantId: UUID = UuidV7.generate()
+
+    /** Isi BODY yang sah: tepat satu `{{1}}`, diisi seluruh pesan rakitan saat kirim. */
+    private val body = "Halo, {{1}}"
 
     @Test
     fun `pemicu dimatikan mengembalikan null tanpa mengirim atau mencatat`() {
@@ -128,7 +134,7 @@ class NotificationSenderTest {
     fun `pemicu terpetakan memakai template yang ditunjuk`() {
         val dispatcher = RecordingDispatcher()
         val broadcasts = CapturingBroadcastRepo()
-        val template = NotificationMessageTemplate.create(tenantId, "tagihan_jatuh_tempo", "en_US")
+        val template = template("tagihan_jatuh_tempo", "en_US")
         val templates = FakeTemplateRepo(mapOf(NotificationTrigger.INVOICE_DUE_SOON to template))
         val sender = NotificationSender(FixedSettingsRepo(metaSettings()), broadcasts, templates, dispatcher)
 
@@ -150,7 +156,7 @@ class NotificationSenderTest {
         val dispatcher = RecordingDispatcher()
         val broadcasts = CapturingBroadcastRepo()
         // Template ada untuk pemicu LAIN — pemicu yang dikirim tetap tak terpetakan.
-        val other = NotificationMessageTemplate.create(tenantId, "tagihan_menunggak", null)
+        val other = template("tagihan_menunggak", "id")
         val templates = FakeTemplateRepo(mapOf(NotificationTrigger.INVOICE_OVERDUE to other))
         val sender = NotificationSender(FixedSettingsRepo(metaSettings()), broadcasts, templates, dispatcher)
 
@@ -167,7 +173,58 @@ class NotificationSenderTest {
         assertThat(broadcasts.saved!!.sentCount).isEqualTo(1)
     }
 
+    @Test
+    fun `Qontak memakai id template penyedia bukan namanya`() {
+        val dispatcher = RecordingDispatcher()
+        val broadcasts = CapturingBroadcastRepo()
+        val template = template("tagihan_jatuh_tempo", "en_US", remoteId = "8f2c-uuid")
+        val templates = FakeTemplateRepo(mapOf(NotificationTrigger.INVOICE_DUE_SOON to template))
+        val sender = NotificationSender(FixedSettingsRepo(qontakSettings()), broadcasts, templates, dispatcher)
+
+        TenantContext.runAs(tenantId) {
+            sender.dispatch(
+                NotificationTrigger.INVOICE_DUE_SOON,
+                "pesan",
+                listOf(Recipient(UuidV7.generate(), "Budi", "628111")),
+            )
+        }
+
+        val qontak = dispatcher.gateways.single() as WhatsAppGateway.Qontak
+        assertThat(qontak.templateId).isEqualTo("8f2c-uuid")
+        assertThat(qontak.templateLang).isEqualTo("en_US")
+    }
+
+    @Test
+    fun `Qontak tanpa id penyedia tak dipaksakan memakai template`() {
+        val dispatcher = RecordingDispatcher()
+        val broadcasts = CapturingBroadcastRepo()
+        // Baris cermin yang pengajuannya belum dijawab penyedia: tak ada id untuk dirujuk.
+        val templates = FakeTemplateRepo(
+            mapOf(NotificationTrigger.INVOICE_DUE_SOON to template("tagihan_jatuh_tempo", "id")),
+        )
+        val sender = NotificationSender(FixedSettingsRepo(qontakSettings()), broadcasts, templates, dispatcher)
+
+        TenantContext.runAs(tenantId) {
+            sender.dispatch(
+                NotificationTrigger.INVOICE_DUE_SOON,
+                "pesan",
+                listOf(Recipient(UuidV7.generate(), "Budi", "628111")),
+            )
+        }
+
+        // Dispatcher-lah yang melapor SKIPPED; sender tak menebak-nebak id yang tak ada.
+        assertThat((dispatcher.gateways.single() as WhatsAppGateway.Qontak).templateId).isNull()
+    }
+
     // --- perkakas uji ---
+
+    /** Template siap-pakai; [remoteId] non-null berarti penyedia sudah menjawab pengajuannya. */
+    private fun template(name: String, language: String, remoteId: String? = null): NotificationMessageTemplate =
+        NotificationMessageTemplate.draft(tenantId, name, language, TemplateCategory.UTILITY, body).also { t ->
+            remoteId?.let {
+                t.applyRemote(it, TemplateCategory.UTILITY, TemplateStatus.APPROVED, body, Instant.EPOCH)
+            }
+        }
 
     private fun settingsWith(gatewayEnabled: Boolean, subscription: Boolean): NotificationSettings =
         NotificationSettings.defaultFor(tenantId).apply {
@@ -175,6 +232,7 @@ class NotificationSenderTest {
                 provider = WhatsAppProvider.LOG, gatewayEnabled = gatewayEnabled,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
+                qontakAccessToken = null, qontakChannelIntegrationId = null,
                 notifyOnSubscriptionLifecycle = subscription, notifyOnInvoiceReminder = false,
                 notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
             )
@@ -187,6 +245,20 @@ class NotificationSenderTest {
                 provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = true,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = "1234567890", metaAccessToken = "EAAtoken", metaWabaId = "9988",
+                qontakAccessToken = null, qontakChannelIntegrationId = null,
+                notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = true,
+                notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
+            )
+        }
+
+    /** Cermin [metaSettings] untuk penyedia Mekari Qontak. */
+    private fun qontakSettings(): NotificationSettings =
+        NotificationSettings.defaultFor(tenantId).apply {
+            update(
+                provider = WhatsAppProvider.QONTAK, gatewayEnabled = true,
+                httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
+                metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
+                qontakAccessToken = "qontak-token", qontakChannelIntegrationId = "kanal-1",
                 notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = true,
                 notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
             )
@@ -221,7 +293,12 @@ class NotificationSenderTest {
     private class RecordingDispatcher : MessageDispatcher {
         val calls = mutableListOf<String>()
         val gateways = mutableListOf<WhatsAppGateway>()
-        override fun send(gateway: WhatsAppGateway, phone: String, message: String): DeliveryOutcome {
+        override fun send(
+            gateway: WhatsAppGateway,
+            phone: String,
+            recipientName: String,
+            message: String,
+        ): DeliveryOutcome {
             calls += phone
             gateways += gateway
             return DeliveryOutcome(DeliveryStatus.SENT, "ok")

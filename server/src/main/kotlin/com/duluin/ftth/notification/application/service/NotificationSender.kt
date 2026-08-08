@@ -66,7 +66,7 @@ class NotificationSender(
             val outcome = when {
                 gateway == null -> DeliveryOutcome(DeliveryStatus.SKIPPED, "Gateway WA nonaktif")
                 r.phone.isNullOrBlank() -> DeliveryOutcome(DeliveryStatus.SKIPPED, "Nomor telepon kosong")
-                else -> dispatcher.send(gateway, r.phone, message)
+                else -> dispatcher.send(gateway, r.phone, r.name, message)
             }
             broadcast.record(r.customerId, r.name, r.phone, outcome.status, outcome.detail)
         }
@@ -74,15 +74,24 @@ class NotificationSender(
     }
 
     /**
-     * Lengkapi gateway Meta Cloud dengan template yang dipetakan ke [trigger]. Pemicu tanpa
-     * pemetaan sengaja dibiarkan tanpa template → dispatcher mengirim teks biasa (perilaku
-     * lama), bukan gagal: mematikan pemetaan tak boleh membungkam notifikasi. Gateway non-Meta
-     * tak mengenal template, jadi dilewatkan apa adanya.
+     * Lengkapi gateway resmi dengan template yang dipetakan ke [trigger]. Pemicu tanpa pemetaan
+     * sengaja dibiarkan tanpa template — mematikan pemetaan tak boleh membungkam notifikasi.
+     * Akibatnya berbeda per penyedia, dan itu diputuskan dispatcher, bukan di sini: Meta jatuh ke
+     * teks biasa, sedangkan Qontak melaporkan SKIPPED karena API-nya memang hanya menerima
+     * template. Gateway LOG/HTTP tak mengenal template, jadi dilewatkan apa adanya.
+     *
+     * Qontak mengacu template lewat ID, bukan nama; template yang belum punya `remoteId` (belum
+     * pernah tersinkron) diperlakukan seperti tak dipetakan.
      */
     private fun WhatsAppGateway.withTemplateFor(trigger: NotificationTrigger): WhatsAppGateway {
-        if (this !is WhatsAppGateway.MetaCloud) return this
+        if (this !is WhatsAppGateway.MetaCloud && this !is WhatsAppGateway.Qontak) return this
         val template = templateRepo.findForTrigger(trigger) ?: return this
-        return copy(templateName = template.name, templateLang = template.language)
+        return when (this) {
+            is WhatsAppGateway.MetaCloud -> copy(templateName = template.name, templateLang = template.language)
+            is WhatsAppGateway.Qontak ->
+                template.remoteId?.let { copy(templateId = it, templateLang = template.language) } ?: this
+            else -> this
+        }
     }
 
     companion object {

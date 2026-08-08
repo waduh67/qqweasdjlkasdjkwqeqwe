@@ -22,8 +22,10 @@ import java.net.URI
  *                                  gateway itu), nama field nomor & pesan mengikut setelan.
  *  - [WhatsAppGateway.MetaCloud]  POST JSON ke Graph API `/{phoneNumberId}/messages` dengan
  *                                  bearer token; template (bila diset) atau teks bebas.
+ *  - [WhatsAppGateway.Qontak]     POST JSON ke `/v1/broadcasts/whatsapp/direct`; HANYA template
+ *                                  — tak ada jalur teks bebas di API itu.
  *
- * [RestClient] dirakit lewat [MetaGraph.restClient] alih-alih bean, agar tak bentrok dengan bean
+ * [RestClient] dirakit lewat [WhatsAppHttp.restClient] alih-alih bean, agar tak bentrok dengan bean
  * `RestClient` GenieACS saat resolusi tipe (pola [com.duluin.ftth.bng.adapter.outbound.routeros.RouterOsRestAdapter]).
  * Endpoint berbeda per-tenant/per-kirim, jadi URI absolut diberikan per panggilan (tanpa baseUrl).
  * Kegagalan transport dipetakan ke [DeliveryStatus.FAILED] (layak dicoba ulang), bukan melempar,
@@ -35,11 +37,16 @@ class WhatsAppMessageDispatcher internal constructor(
 ) : MessageDispatcher {
 
     // Konstruktor yang dipakai Spring: rakit client sendiri (tanpa bean RestClient).
-    constructor() : this(MetaGraph.restClient())
+    constructor() : this(WhatsAppHttp.restClient())
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    override fun send(gateway: WhatsAppGateway, phone: String, message: String): DeliveryOutcome =
+    override fun send(
+        gateway: WhatsAppGateway,
+        phone: String,
+        recipientName: String,
+        message: String,
+    ): DeliveryOutcome =
         when (gateway) {
             WhatsAppGateway.Log -> {
                 log.info("[WA/LOG] → {} : {}", phone, message)
@@ -47,6 +54,7 @@ class WhatsAppMessageDispatcher internal constructor(
             }
             is WhatsAppGateway.HttpGeneric -> sendHttpGeneric(gateway, phone, message)
             is WhatsAppGateway.MetaCloud -> sendMetaCloud(gateway, phone, message)
+            is WhatsAppGateway.Qontak -> sendQontak(gateway, phone, recipientName, message)
         }
 
     private fun sendHttpGeneric(gateway: WhatsAppGateway.HttpGeneric, phone: String, message: String): DeliveryOutcome {
@@ -109,6 +117,58 @@ class WhatsAppMessageDispatcher internal constructor(
         )
     }
 
+    /**
+     * Kirim lewat broadcast langsung Qontak. Dua hal yang membedakannya dari Meta:
+     *
+     *  1. **Tanpa template, tak ada kiriman.** `/broadcasts/whatsapp/direct` hanya menerima
+     *     `message_template_id`; tak ada padanan `type: "text"`. Jadi pemicu yang belum
+     *     dipetakan ke template berakhir [DeliveryStatus.SKIPPED] — bukan FAILED (tak ada yang
+     *     rusak, tak ada gunanya dicoba ulang) dan bukan diam-diam jatuh ke teks biasa seperti Meta.
+     *  2. `to_name` wajib, karena itu [recipientName] dibawa sampai ke sini.
+     *
+     * `parameters.body` memakai konvensi kita: satu variabel `{{1}}` berisi seluruh pesan.
+     * `value` adalah NAMA variabel yang tampil di dasbor, `value_text` isinya yang sebenarnya.
+     */
+    private fun sendQontak(
+        gateway: WhatsAppGateway.Qontak,
+        phone: String,
+        recipientName: String,
+        message: String,
+    ): DeliveryOutcome {
+        val templateId = gateway.templateId
+            ?: return DeliveryOutcome(
+                DeliveryStatus.SKIPPED,
+                "Mekari Qontak hanya bisa mengirim template — pemicu ini belum dipetakan ke template mana pun",
+            )
+        val to = phone.trim().removePrefix("+")
+        val body = mapOf(
+            "to_name" to recipientName.trim().ifEmpty { to },
+            "to_number" to to,
+            "message_template_id" to templateId,
+            "channel_integration_id" to gateway.channelIntegrationId,
+            "language" to mapOf("code" to gateway.templateLang),
+            "parameters" to mapOf(
+                "body" to listOf(
+                    mapOf("key" to "1", "value" to "pesan", "value_text" to message),
+                ),
+            ),
+        )
+        return runCatching {
+            restClient.post()
+                .uri(URI.create("${QontakApi.BASE}/v1/broadcasts/whatsapp/direct"))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${gateway.accessToken}")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body)
+                .retrieve()
+                .toBodilessEntity()
+        }.fold(
+            onSuccess = {
+                DeliveryOutcome(DeliveryStatus.SENT, "Terkirim via ${QontakApi.LABEL} (${it.statusCode.value()})")
+            },
+            onFailure = { DeliveryOutcome(DeliveryStatus.FAILED, transportError(QontakApi.LABEL, it)) },
+        )
+    }
+
     /** Rapikan error transport jadi keterangan ringkas (muat kolom detail 300 char). */
-    private fun transportError(label: String, e: Throwable): String = MetaGraph.transportError(label, e)
+    private fun transportError(label: String, e: Throwable): String = WhatsAppHttp.transportError(label, e)
 }

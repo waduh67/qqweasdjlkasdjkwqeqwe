@@ -14,8 +14,8 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * Satu template pesan di katalog tenant. Mutable: hasil sync menimpa status/kategori/body
- * setiap kali "Tarik dari Meta" dijalankan.
+ * Satu template pesan di katalog tenant — cermin dari template di penyedia. Mutable: hasil
+ * sync menimpa status/kategori/body setiap kali katalog ditarik ulang.
  */
 @Entity
 @Table(name = "notification_message_template")
@@ -40,11 +40,12 @@ class NotificationMessageTemplateJpaEntity(
     @Column(nullable = false, length = 10)
     var source: TemplateSource,
 
-    @Column(name = "meta_template_id", length = 64)
-    var metaTemplateId: String?,
+    /** Id di sisi penyedia: angka untuk Meta, UUID untuk Qontak. */
+    @Column(name = "remote_id", length = 64)
+    var remoteId: String?,
 
-    @Column(name = "body_preview", length = 1024)
-    var bodyPreview: String?,
+    @Column(name = "body_text", length = 1024)
+    var bodyText: String?,
 
     @Column(name = "body_param_count", nullable = false)
     var bodyParamCount: Int,

@@ -7,6 +7,7 @@ import {
   getTemplates,
   saveTemplateAssignments,
   syncTemplates,
+  TEMPLATE_CATEGORY_LABEL,
   TEMPLATE_STATUS_LABEL,
   TRIGGERS,
   TRIGGER_LABEL,
@@ -14,10 +15,11 @@ import {
   type NotificationTemplateView,
   type NotificationTrigger,
   type TemplateCatalogView,
+  type TemplateCategory,
   type TemplateStatus,
 } from '@/api/notification'
 import { useCan } from '@/auth/useCan'
-import { Badge, Button, EmptyState, SelectField, TextField, Toolbar } from '@/components/atoms'
+import { Badge, Button, EmptyState, SelectField, TextField, TextareaField, Toolbar } from '@/components/atoms'
 import { IconAlert } from '@/components/atoms/icons'
 import { ConfirmDialog, Modal } from '@/components/molecules'
 import { useToast } from '@/system'
@@ -27,14 +29,18 @@ import { DataTable, type Column, type RowAction } from './DataTable'
  * Kartu "Template pesan WhatsApp" di halaman Pengaturan Notifikasi.
  *
  * Terpisah dari kartu Gateway karena isinya bukan kredensial: template baru relevan
- * setelah gateway WhatsApp resmi (Meta Cloud) hidup dengan Phone Number ID + access token
+ * setelah gateway WhatsApp resmi (Meta Cloud / Mekari Qontak) hidup dengan kredensialnya
  * TERSIMPAN. Selama prasyarat itu belum terpenuhi, kartu tampil terkunci beserta alasannya
  * — bukan disembunyikan — supaya operator tahu apa yang harus dilengkapi.
  *
- * Template dibuat & disetujui di Meta Business Manager; di sini hanya katalog lokal supaya
- * tiap pemicu otomatis bisa ditunjuk satu template. Satu pemicu maksimal satu template
- * (ditegakkan DB), tapi satu template boleh melayani beberapa pemicu. Pemicu tanpa template
- * dikirim sebagai teks biasa — perilaku lama, bukan gagal kirim.
+ * Katalog di sini adalah CERMIN template di penyedia: menambah berarti mengajukan template
+ * sungguhan (statusnya lalu menunggu peninjauan), menghapus berarti menghapusnya di sana bila
+ * penyedianya mengizinkan. Kemampuan itu berbeda per penyedia dan datang dari server lewat
+ * `canEdit`/`canDeleteRemotely` — tombol yang pasti gagal tak ditawarkan sama sekali.
+ *
+ * Satu pemicu maksimal satu template (ditegakkan DB), tapi satu template boleh melayani
+ * beberapa pemicu. Pemicu tanpa template dikirim sebagai teks biasa — kecuali di Qontak,
+ * yang hanya menerima template sehingga pemicunya justru dilewati.
  */
 export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean }) {
   const { can } = useCan()
@@ -45,8 +51,8 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
   const [catalog, setCatalog] = useState<TemplateCatalogView | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  // Form tambah/ubah manual; null = tertutup, id null = entri baru.
-  const [draft, setDraft] = useState<{ id: string | null; name: string; language: string } | null>(null)
+  // Form tambah/ubah; null = tertutup, id null = pengajuan baru.
+  const [draft, setDraft] = useState<Draft | null>(null)
   const [pendingDelete, setPendingDelete] = useState<NotificationTemplateView | null>(null)
   // Pemetaan yang sedang disunting operator, terpisah dari yang tersimpan agar bisa dibatalkan.
   const [assignments, setAssignments] = useState<Partial<Record<NotificationTrigger, string>>>({})
@@ -72,6 +78,8 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
   const unlocked = templateReady && (catalog?.manageable ?? false)
   const editable = unlocked && canManage
   const lockReason = catalog?.blockedReason ?? (templateReady ? null : 'Simpan setelan gateway di atas dulu.')
+  const provider = catalog?.providerLabel ?? 'penyedia WhatsApp'
+  const templateOnly = catalog?.requiresTemplateForEveryTrigger ?? false
 
   const run = async (action: () => Promise<TemplateCatalogView>, okMessage: string) => {
     setBusy(true)
@@ -91,18 +99,47 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
 
   const saveDraft = async () => {
     if (!draft) return
-    const body = { name: draft.name.trim(), language: draft.language.trim() || null }
-    const ok = await run(
-      () => (draft.id ? updateTemplate(draft.id, body) : createTemplate(body)),
-      draft.id ? 'Template diperbarui' : 'Template ditambahkan',
-    )
+    // Divalidasi di sini juga (server tetap penentu) supaya kesalahan ketik ketahuan
+    // sebelum sebuah pengajuan yang pasti ditolak dikirim ke penyedia.
+    const problem = bodyProblem(draft.bodyText)
+    if (problem) {
+      toast.error(problem)
+      return
+    }
+    const ok = draft.id
+      ? await run(
+          () => updateTemplate(draft.id as string, { category: draft.category, bodyText: draft.bodyText.trim() }),
+          `Perubahan dikirim ke ${provider}; template masuk antrean peninjauan lagi.`,
+        )
+      : await run(
+          () =>
+            createTemplate({
+              name: draft.name.trim(),
+              language: draft.language.trim() || null,
+              category: draft.category,
+              bodyText: draft.bodyText.trim(),
+            }),
+          `Template diajukan ke ${provider}; statusnya menunggu tinjauan sampai disetujui.`,
+        )
     if (ok) setDraft(null)
   }
 
   const removeTemplate = async () => {
     if (!pendingDelete) return
-    const ok = await run(() => deleteTemplate(pendingDelete.id), 'Template dihapus dari katalog')
-    if (ok) setPendingDelete(null)
+    setBusy(true)
+    try {
+      const result = await deleteTemplate(pendingDelete.id)
+      setCatalog(result.catalog)
+      setAssignments(result.catalog.assignments)
+      // Pesan server yang dipakai: hanya server yang tahu template itu benar-benar
+      // ikut terhapus di penyedia atau cuma hilang dari daftar aplikasi.
+      toast.success(result.message)
+      setPendingDelete(null)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus template')
+    } finally {
+      setBusy(false)
+    }
   }
 
   const sync = async () => {
@@ -113,7 +150,7 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
       setAssignments(result.catalog.assignments)
       toast.success(result.message)
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Gagal menarik template dari Meta')
+      toast.error(err instanceof ApiError ? err.message : `Gagal menarik template dari ${provider}`)
     } finally {
       setBusy(false)
     }
@@ -129,9 +166,9 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
       cell: (t) => (
         <div className="stack" style={{ gap: '0.15rem' }}>
           <code>{t.name}</code>
-          {t.bodyPreview && (
+          {t.bodyText && (
             <span className="muted" style={{ fontSize: '0.78rem' }}>
-              {t.bodyPreview.length > 90 ? `${t.bodyPreview.slice(0, 90)}…` : t.bodyPreview}
+              {t.bodyText.length > 90 ? `${t.bodyText.slice(0, 90)}…` : t.bodyText}
             </span>
           )}
         </div>
@@ -150,7 +187,7 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
       header: 'Parameter',
       align: 'right',
       // Dispatcher selalu mengirim TEPAT SATU parameter ({{1}} = seluruh pesan); jumlah lain
-      // akan ditolak Meta saat kirim, jadi ditandai di sini alih-alih saat pesan gagal.
+      // akan ditolak penyedia saat kirim, jadi ditandai di sini alih-alih saat pesan gagal.
       cell: (t) =>
         t.bodyParamCount === 1 || t.status === 'UNKNOWN' ? (
           <span className="tnum">{t.bodyParamCount}</span>
@@ -181,18 +218,29 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
     },
   ]
 
-  const rowActions = (t: NotificationTemplateView): RowAction[] =>
-    editable
-      ? [
-          {
-            key: 'edit',
-            label: 'Ubah',
-            icon: <Pencil size={16} />,
-            onClick: () => setDraft({ id: t.id, name: t.name, language: t.language }),
-          },
-          { key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => setPendingDelete(t) },
-        ]
-      : []
+  // Tombol "Ubah" hanya muncul bila penyedianya memang punya API sunting — Qontak tidak,
+  // dan menawarkan tombol yang selalu berujung 409 cuma memancing operator mencobanya.
+  const rowActions = (t: NotificationTemplateView): RowAction[] => {
+    if (!editable) return []
+    const actions: RowAction[] = []
+    if (catalog?.canEdit) {
+      actions.push({
+        key: 'edit',
+        label: 'Ubah isi',
+        icon: <Pencil size={16} />,
+        onClick: () =>
+          setDraft({
+            id: t.id,
+            name: t.name,
+            language: t.language,
+            category: (t.category as TemplateCategory) ?? 'UTILITY',
+            bodyText: t.bodyText ?? '',
+          }),
+      })
+    }
+    actions.push({ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => setPendingDelete(t) })
+    return actions
+  }
 
   const assignmentsDirty =
     JSON.stringify(normalize(assignments)) !== JSON.stringify(normalize(catalog?.assignments ?? {}))
@@ -205,24 +253,24 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
       </div>
 
       <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-        Template <em>utility</em> dibuat &amp; disetujui di Meta Business Manager. Di sini Anda menarik daftarnya lalu
-        menentukan template mana dipakai tiap pemicu otomatis — satu pemicu satu template.
+        Daftar ini adalah cermin template di {provider}: menambah berarti benar-benar mengajukan template ke sana dan
+        menunggu persetujuan. Setelah disetujui, tentukan template mana dipakai tiap pemicu otomatis — satu pemicu
+        satu template.
       </p>
 
       {!unlocked && lockReason && <Callout>{lockReason}</Callout>}
 
       {editable && (
         <Toolbar>
-          <Button
-            variant="primary"
-            disabled={busy || !catalog?.syncable}
-            title={catalog?.syncable ? undefined : 'Isi WhatsApp Business Account ID di kartu Gateway lalu simpan'}
-            onClick={() => void sync()}
-          >
-            {busy ? 'Memproses…' : 'Tarik dari Meta'}
+          <Button variant="primary" disabled={busy || !catalog?.syncable} onClick={() => void sync()}>
+            {busy ? 'Memproses…' : `Tarik dari ${provider}`}
           </Button>
-          <Button variant="subtle" disabled={busy} onClick={() => setDraft({ id: null, name: '', language: '' })}>
-            Tambah manual
+          <Button
+            variant="subtle"
+            disabled={busy}
+            onClick={() => setDraft({ id: null, name: '', language: '', category: 'UTILITY', bodyText: '' })}
+          >
+            Ajukan template baru
           </Button>
         </Toolbar>
       )}
@@ -239,7 +287,7 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
             title="Belum ada template"
             hint={
               unlocked
-                ? 'Tarik dari Meta untuk memuat template utility yang sudah disetujui.'
+                ? `Tarik dari ${provider} untuk memuat template utility yang sudah disetujui, atau ajukan yang baru.`
                 : 'Lengkapi prasyarat di atas untuk mulai mengelola template.'
             }
             icon={<IconAlert size={28} />}
@@ -250,8 +298,17 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
       {/* ---- Pemakaian per pemicu ---- */}
       <SectionTitle>Pemakaian per pemicu</SectionTitle>
       <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-        Pemicu tanpa template dikirim sebagai pesan teks biasa — hanya sampai bila pelanggan membalas dalam 24 jam
-        terakhir. Satu template boleh dipakai beberapa pemicu.
+        {templateOnly ? (
+          <>
+            {provider} <strong>hanya bisa mengirim template</strong> — pemicu tanpa template akan dilewati, pesannya
+            tak sampai sama sekali. Satu template boleh dipakai beberapa pemicu.
+          </>
+        ) : (
+          <>
+            Pemicu tanpa template dikirim sebagai pesan teks biasa — hanya sampai bila pelanggan membalas dalam 24 jam
+            terakhir. Satu template boleh dipakai beberapa pemicu.
+          </>
+        )}
       </p>
 
       {TRIGGERS.map((trigger) => {
@@ -271,16 +328,21 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
               }
               disabled={!editable || busy}
             >
-              <option value="">— teks biasa —</option>
+              <option value="">{templateOnly ? '— tidak dikirim —' : '— teks biasa —'}</option>
               {templates.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name} ({t.language})
                 </option>
               ))}
             </SelectField>
+            {!selected && templateOnly && (
+              <span style={{ fontSize: '0.8rem', color: 'var(--critical)' }}>
+                Belum dipetakan — pemicu ini tak akan mengirim apa pun lewat {provider}.
+              </span>
+            )}
             {selected && selected.status !== 'APPROVED' && (
               <span className="muted" style={{ fontSize: '0.8rem' }}>
-                Status template ini {TEMPLATE_STATUS_LABEL[selected.status].toLowerCase()} — Meta bisa menolak
+                Status template ini {TEMPLATE_STATUS_LABEL[selected.status].toLowerCase()} — {provider} bisa menolak
                 pengiriman sampai disetujui.
               </span>
             )}
@@ -309,15 +371,19 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
 
       {draft && (
         <Modal
-          title={draft.id ? 'Ubah template' : 'Tambah template manual'}
+          title={draft.id ? 'Ubah isi template' : `Ajukan template baru ke ${provider}`}
           onClose={() => !busy && setDraft(null)}
           footer={
             <>
               <Button variant="subtle" onClick={() => setDraft(null)} disabled={busy}>
                 Batal
               </Button>
-              <Button variant="primary" onClick={() => void saveDraft()} disabled={busy || !draft.name.trim()}>
-                {busy ? 'Menyimpan…' : 'Simpan'}
+              <Button
+                variant="primary"
+                onClick={() => void saveDraft()}
+                disabled={busy || !draft.name.trim() || !draft.bodyText.trim()}
+              >
+                {busy ? 'Mengirim…' : draft.id ? 'Kirim perubahan' : 'Ajukan'}
               </Button>
             </>
           }
@@ -328,18 +394,46 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
               value={draft.name}
               onChange={(_, data) => setDraft({ ...draft, name: data.value })}
               placeholder="tagihan_jatuh_tempo"
-              hint="Persis seperti di Meta: huruf kecil, angka, dan garis bawah."
+              disabled={!!draft.id}
+              hint={
+                draft.id
+                  ? `Nama tak bisa diubah setelah template diajukan — begitu aturan ${provider}. Ganti nama = hapus lalu ajukan baru.`
+                  : 'Huruf kecil, angka, dan garis bawah saja.'
+              }
             />
             <TextField
               label="Bahasa"
               value={draft.language}
               onChange={(_, data) => setDraft({ ...draft, language: data.value })}
               placeholder="id"
-              hint="Kosongkan untuk id. Contoh lain: en, en_US."
+              disabled={!!draft.id}
+              hint={draft.id ? 'Terkunci bersama nama.' : 'Kosongkan untuk id. Contoh lain: en, en_US.'}
+            />
+            <SelectField
+              label="Kategori"
+              value={draft.category}
+              onChange={(_, data) => setDraft({ ...draft, category: data.value as TemplateCategory })}
+            >
+              {(Object.keys(TEMPLATE_CATEGORY_LABEL) as TemplateCategory[]).map((c) => (
+                <option key={c} value={c}>
+                  {TEMPLATE_CATEGORY_LABEL[c]}
+                </option>
+              ))}
+            </SelectField>
+            <TextareaField
+              label="Isi pesan"
+              value={draft.bodyText}
+              onChange={(_, data) => setDraft({ ...draft, bodyText: data.value })}
+              placeholder="Halo, ada info dari kami: {{1}}"
+              rows={4}
+              validationState={draft.bodyText.trim() && bodyProblem(draft.bodyText) ? 'error' : 'none'}
+              validationMessage={draft.bodyText.trim() ? (bodyProblem(draft.bodyText) ?? undefined) : undefined}
+              hint={`Wajib memuat tepat satu variabel {{1}} — variabel itulah yang diisi seluruh isi notifikasi saat pesan dikirim. Maks ${MAX_BODY} karakter.`}
             />
             <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-              Entri manual tak memeriksa apa pun ke Meta — statusnya “belum disinkron” sampai Anda menekan “Tarik dari
-              Meta”.
+              {draft.id
+                ? `Suntingan dikirim ke ${provider} dan template kembali masuk antrean peninjauan.`
+                : `Template dikirim ke ${provider} untuk ditinjau. Sampai disetujui, statusnya “menunggu tinjauan” dan belum bisa dipakai mengirim.`}
             </p>
           </div>
         </Modal>
@@ -351,12 +445,17 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
           message={
             <>
               <p style={{ margin: 0 }}>
-                Hapus <code>{pendingDelete.name}</code> ({pendingDelete.language}) dari katalog? Template di Meta tidak
-                ikut terhapus.
+                Hapus <code>{pendingDelete.name}</code> ({pendingDelete.language})?
+              </p>
+              <p style={{ margin: 0 }}>
+                {catalog?.canDeleteRemotely
+                  ? `Template ini ikut dihapus di ${provider} dan tak bisa dikembalikan.`
+                  : `${provider} tak menyediakan API hapus — template hanya hilang dari daftar aplikasi dan TETAP ADA di sana. Hapus juga lewat dasbornya bila tak ingin terpakai lagi.`}
               </p>
               {pendingDelete.usedBy.length > 0 && (
                 <p style={{ margin: 0 }}>
-                  {pendingDelete.usedBy.length} pemicu yang memakainya akan kembali mengirim pesan teks biasa.
+                  {pendingDelete.usedBy.length} pemicu yang memakainya akan{' '}
+                  {templateOnly ? 'berhenti mengirim pesan' : 'kembali mengirim pesan teks biasa'}.
                 </p>
               )}
             </>
@@ -370,6 +469,36 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
       )}
     </div>
   )
+}
+
+type Draft = {
+  id: string | null
+  name: string
+  language: string
+  category: TemplateCategory
+  bodyText: string
+}
+
+const MAX_BODY = 1024
+
+/**
+ * Cermin `NotificationMessageTemplate.validateBody` di server — server tetap penentu, ini
+ * hanya agar kesalahan ketik ketahuan sebelum pengajuan yang pasti ditolak dikirim ke
+ * penyedia. Aturannya milik Meta/Qontak: tepat satu jenis variabel, tanpa baris kosong,
+ * tab, atau lebih dari empat spasi beruntun.
+ */
+function bodyProblem(bodyText: string): string | null {
+  const text = bodyText.trim()
+  if (!text) return 'Isi pesan wajib diisi'
+  if (text.length > MAX_BODY) return `Isi pesan maksimal ${MAX_BODY} karakter`
+  const indices = new Set(Array.from(text.matchAll(/\{\{\s*(\d+)\s*\}\}/g), (m) => m[1]))
+  if (indices.size !== 1 || !indices.has('1')) {
+    return 'Isi pesan harus memuat tepat satu jenis variabel {{1}}'
+  }
+  if (text.includes('\n\n') || text.includes('\t') || text.includes('     ')) {
+    return 'Tak boleh ada baris kosong, tab, atau lebih dari empat spasi beruntun'
+  }
+  return null
 }
 
 const STATUS_TONE: Record<TemplateStatus, 'neutral' | 'good' | 'warning' | 'serious' | 'critical'> = {

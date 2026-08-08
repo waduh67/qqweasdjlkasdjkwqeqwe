@@ -4,9 +4,12 @@ import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.notification.application.port.inbound.ManageNotificationSettingsUseCase
 import com.duluin.ftth.notification.application.port.inbound.NotificationSettingsView
+import com.duluin.ftth.notification.application.port.inbound.QontakChannelView
 import com.duluin.ftth.notification.application.port.inbound.UpdateNotificationSettingsCommand
 import com.duluin.ftth.notification.application.port.outbound.NotificationSettingsRepository
+import com.duluin.ftth.notification.application.port.outbound.QontakChannelDirectory
 import com.duluin.ftth.notification.domain.model.NotificationSettings
+import com.duluin.ftth.notification.domain.model.WhatsAppProvider
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -19,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class NotificationSettingsService(
     private val repository: NotificationSettingsRepository,
+    private val qontakChannels: QontakChannelDirectory,
     private val auditor: AuditRecorder,
 ) : ManageNotificationSettingsUseCase {
 
@@ -38,6 +42,8 @@ class NotificationSettingsService(
             metaPhoneNumberId = command.metaPhoneNumberId,
             metaAccessToken = command.metaAccessToken,
             metaWabaId = command.metaWabaId,
+            qontakAccessToken = command.qontakAccessToken,
+            qontakChannelIntegrationId = command.qontakChannelIntegrationId,
             notifyOnSubscriptionLifecycle = command.notifyOnSubscriptionLifecycle,
             notifyOnInvoiceReminder = command.notifyOnInvoiceReminder,
             notifyOnWorkOrderSchedule = command.notifyOnWorkOrderSchedule,
@@ -53,6 +59,18 @@ class NotificationSettingsService(
         return saved.toView()
     }
 
+    /**
+     * Token yang dipakai adalah yang TERSIMPAN, bukan yang sedang diketik: dropdown kanal baru
+     * bisa terisi setelah operator menyimpan tokennya. Penyedia lain menghasilkan daftar kosong
+     * alih-alih error — dropdown yang tak relevan memang tak perlu berteriak.
+     */
+    override fun qontakChannels(): List<QontakChannelView> {
+        val settings = repository.find() ?: return emptyList()
+        if (settings.provider != WhatsAppProvider.QONTAK) return emptyList()
+        val token = settings.qontakAccessToken?.trim()?.takeIf { it.isNotEmpty() } ?: return emptyList()
+        return qontakChannels.list(token).map { QontakChannelView(it.id, it.name) }
+    }
+
     private fun NotificationSettings.toView() = NotificationSettingsView(
         provider = provider.name,
         gatewayEnabled = gatewayEnabled,
@@ -63,7 +81,10 @@ class NotificationSettingsService(
         metaPhoneNumberId = metaPhoneNumberId,
         metaAccessTokenSet = !metaAccessToken.isNullOrBlank(),
         metaWabaId = metaWabaId,
-        metaTemplateReady = metaTemplateReady(),
+        qontakAccessTokenSet = !qontakAccessToken.isNullOrBlank(),
+        qontakChannelIntegrationId = qontakChannelIntegrationId,
+        templateReady = templateBlockedReason() == null,
+        templateBlockedReason = templateBlockedReason(),
         notifyOnSubscriptionLifecycle = notifyOnSubscriptionLifecycle,
         notifyOnInvoiceReminder = notifyOnInvoiceReminder,
         notifyOnWorkOrderSchedule = notifyOnWorkOrderSchedule,

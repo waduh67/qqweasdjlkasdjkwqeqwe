@@ -2,9 +2,11 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { ApiError } from '../api/client'
 import {
   getNotificationSettings,
+  getQontakChannels,
   PROVIDER_LABEL,
   updateNotificationSettings,
   type NotificationSettingsView,
+  type QontakChannelView,
   type UpdateNotificationSettingsRequest,
   type WhatsAppProvider,
 } from '../api/notification'
@@ -19,14 +21,14 @@ import { IconAlert } from '@/components/atoms/icons'
  * Pengaturan Notifikasi tenant.
  *
  * Dua bagian: (1) GATEWAY WhatsApp bawa-sendiri — tiap tenant memakai pengirimnya
- * sendiri (LOG mode uji / HTTP generik ala Fonnte-Wablas / Meta Cloud API) supaya
- * identitas pengirim, biaya, dan risiko blokir terpisah antar-tenant; (2) SAKLAR
+ * sendiri (LOG mode uji / HTTP generik ala Fonnte-Wablas / Meta Cloud API / Mekari
+ * Qontak) supaya identitas pengirim, biaya, dan risiko blokir terpisah antar-tenant; (2) SAKLAR
  * pemicu otomatis — nyalakan/matikan tiap jenis pesan (langganan, tagihan, WO, insiden)
  * tanpa mengganggu yang lain. Token bersifat write-only: dikirim saat menyimpan, tak
  * pernah ditarik kembali — server hanya menandai sudah terisi atau belum.
  */
 
-const PROVIDERS: WhatsAppProvider[] = ['LOG', 'HTTP_GENERIC', 'META_CLOUD']
+const PROVIDERS: WhatsAppProvider[] = ['LOG', 'HTTP_GENERIC', 'META_CLOUD', 'QONTAK']
 
 const TRIGGERS: { key: keyof NotificationSettingsView; label: string; hint: string }[] = [
   {
@@ -67,6 +69,11 @@ export function NotificationSettingsPage() {
   // Input token write-only, terpisah dari view: kosong = pertahankan yang tersimpan.
   const [httpToken, setHttpToken] = useState('')
   const [metaToken, setMetaToken] = useState('')
+  const [qontakToken, setQontakToken] = useState('')
+  // Daftar kanal Qontak ditarik atas permintaan, bukan saat memuat halaman: panggilannya
+  // menembak API Qontak dan hanya relevan bagi tenant yang memakai penyedia itu.
+  const [channels, setChannels] = useState<QontakChannelView[] | null>(null)
+  const [loadingChannels, setLoadingChannels] = useState(false)
 
   useEffect(() => {
     getNotificationSettings()
@@ -90,6 +97,8 @@ export function NotificationSettingsPage() {
       metaPhoneNumberId: nullify(form.metaPhoneNumberId),
       metaAccessToken: nullify(metaToken),
       metaWabaId: nullify(form.metaWabaId),
+      qontakAccessToken: nullify(qontakToken),
+      qontakChannelIntegrationId: nullify(form.qontakChannelIntegrationId),
       notifyOnSubscriptionLifecycle: form.notifyOnSubscriptionLifecycle,
       notifyOnInvoiceReminder: form.notifyOnInvoiceReminder,
       notifyOnWorkOrderSchedule: form.notifyOnWorkOrderSchedule,
@@ -100,11 +109,27 @@ export function NotificationSettingsPage() {
       setForm(saved)
       setHttpToken('')
       setMetaToken('')
+      setQontakToken('')
       toast.success('Setelan notifikasi disimpan')
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menyimpan setelan')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const loadChannels = async () => {
+    setLoadingChannels(true)
+    try {
+      const list = await getQontakChannels()
+      setChannels(list)
+      if (list.length === 0) {
+        toast.error('Tak ada kanal WhatsApp aktif di akun Qontak — pastikan tokennya sudah disimpan')
+      }
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal memuat daftar channel Qontak')
+    } finally {
+      setLoadingChannels(false)
     }
   }
 
@@ -248,10 +273,63 @@ export function NotificationSettingsPage() {
             </p>
           </>
         )}
+
+        {form.provider === 'QONTAK' && (
+          <>
+            <TextField
+              label={<>Access token {form.qontakAccessTokenSet && <span className="muted">(tersimpan)</span>}</>}
+              type="password"
+              value={qontakToken}
+              onChange={(_, data) => setQontakToken(data.value)}
+              placeholder={
+                form.qontakAccessTokenSet ? 'Biarkan kosong untuk mempertahankan' : 'Access token dari dasbor Qontak'
+              }
+              disabled={!manage}
+              hint="Dasbor Qontak → Integration → API. Token ini juga dipakai untuk mengelola template."
+            />
+            <div className="row" style={{ alignItems: 'flex-end' }}>
+              <SelectField
+                label="Channel WhatsApp"
+                value={form.qontakChannelIntegrationId ?? ''}
+                onChange={(_, data) => patch({ qontakChannelIntegrationId: data.value || null })}
+                disabled={!manage}
+                style={{ flex: 1 }}
+              >
+                <option value="">— belum dipilih —</option>
+                {/*
+                  Kanal tersimpan selalu ikut ditampilkan meski daftar belum ditarik, supaya
+                  membuka halaman lalu menyimpan tak diam-diam mengosongkan pilihan yang sudah ada.
+                */}
+                {channels === null && form.qontakChannelIntegrationId && (
+                  <option value={form.qontakChannelIntegrationId}>{form.qontakChannelIntegrationId}</option>
+                )}
+                {(channels ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </SelectField>
+              {manage && (
+                <Button onClick={() => void loadChannels()} disabled={loadingChannels}>
+                  {loadingChannels ? 'Memuat…' : 'Muat daftar channel'}
+                </Button>
+              )}
+            </div>
+            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+              Daftar channel ditarik memakai token yang <strong>sudah disimpan</strong> — tempel token lalu klik
+              Simpan dulu, baru “Muat daftar channel”.
+            </p>
+            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+              Qontak <strong>hanya bisa mengirim template</strong>; tak ada jalur teks biasa. Setiap pemicu yang
+              ingin dipakai wajib dipetakan ke satu template di kartu{' '}
+              <strong>Template pesan WhatsApp</strong> di bawah, kalau tidak pesannya dilewati.
+            </p>
+          </>
+        )}
       </div>
 
       {/* ---- Template pesan WhatsApp ---- */}
-      <WhatsAppTemplateCard templateReady={form.metaTemplateReady} />
+      <WhatsAppTemplateCard templateReady={form.templateReady} />
 
       {/* ---- Pemicu otomatis ---- */}
       <div className="card stack">
@@ -259,7 +337,7 @@ export function NotificationSettingsPage() {
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
           Nyalakan jenis pesan yang ingin dikirim otomatis. Semua butuh gateway di atas hidup.
         </p>
-        {form.provider === 'META_CLOUD' && (
+        {(form.provider === 'META_CLOUD' || form.provider === 'QONTAK') && (
           <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
             Template yang dipakai tiap pemicu diatur di kartu <strong>Template pesan WhatsApp</strong> di atas.
           </p>

@@ -9,11 +9,18 @@ import com.duluin.ftth.notification.domain.model.WhatsAppProvider
 interface ManageNotificationSettingsUseCase {
     fun get(): NotificationSettingsView
     fun update(command: UpdateNotificationSettingsCommand): NotificationSettingsView
+
+    /**
+     * Daftar kanal WhatsApp di akun Qontak untuk dropdown pemilihan, memakai token yang SUDAH
+     * TERSIMPAN — token yang baru diketik di form belum bisa dipakai sampai disimpan.
+     */
+    fun qontakChannels(): List<QontakChannelView>
 }
 
 /**
  * Setelan notifikasi untuk ditampilkan. Token TAK pernah dikembalikan — hanya penanda
- * apakah sudah terisi ([httpTokenSet]/[metaAccessTokenSet]), agar rahasia tak bocor ke UI.
+ * apakah sudah terisi ([httpTokenSet]/[metaAccessTokenSet]/[qontakAccessTokenSet]), agar
+ * rahasia tak bocor ke UI.
  */
 data class NotificationSettingsView(
     val provider: String,
@@ -25,21 +32,29 @@ data class NotificationSettingsView(
     val metaPhoneNumberId: String?,
     val metaAccessTokenSet: Boolean,
     val metaWabaId: String?,
+    val qontakAccessTokenSet: Boolean,
+    val qontakChannelIntegrationId: String?,
     /**
-     * Prasyarat pengelolaan template terpenuhi (gateway aktif + Meta Cloud + kredensial
-     * tersimpan) — UI memakainya untuk membuka/mengunci kartu template.
+     * Prasyarat pengelolaan template terpenuhi (gateway aktif + penyedia resmi + kredensial
+     * tersimpan) — UI memakainya untuk membuka/mengunci kartu template. [templateBlockedReason]
+     * menjelaskan apa yang kurang bila belum.
      */
-    val metaTemplateReady: Boolean,
+    val templateReady: Boolean,
+    val templateBlockedReason: String?,
     val notifyOnSubscriptionLifecycle: Boolean,
     val notifyOnInvoiceReminder: Boolean,
     val notifyOnWorkOrderSchedule: Boolean,
     val notifyOnIncidentOpen: Boolean,
 )
 
+/** Satu kanal WhatsApp Qontak untuk dropdown: UUID kanal + nama akun yang bisa dikenali operator. */
+data class QontakChannelView(val id: String, val name: String)
+
 /**
- * Perubahan setelan. Token ([httpToken]/[metaAccessToken]) null/kosong = biarkan apa
- * adanya (tak menimpa yang tersimpan), agar sunting field lain tak menghapus rahasia.
+ * Perubahan setelan. Token ([httpToken]/[metaAccessToken]/[qontakAccessToken]) null/kosong =
+ * biarkan apa adanya (tak menimpa yang tersimpan), agar sunting field lain tak menghapus rahasia.
  */
+@Suppress("LongParameterList")
 data class UpdateNotificationSettingsCommand(
     val provider: WhatsAppProvider,
     val gatewayEnabled: Boolean,
@@ -50,6 +65,8 @@ data class UpdateNotificationSettingsCommand(
     val metaPhoneNumberId: String?,
     val metaAccessToken: String?,
     val metaWabaId: String?,
+    val qontakAccessToken: String?,
+    val qontakChannelIntegrationId: String?,
     val notifyOnSubscriptionLifecycle: Boolean,
     val notifyOnInvoiceReminder: Boolean,
     val notifyOnWorkOrderSchedule: Boolean,

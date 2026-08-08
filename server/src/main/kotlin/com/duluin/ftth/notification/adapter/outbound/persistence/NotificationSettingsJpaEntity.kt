@@ -12,8 +12,8 @@ import java.util.UUID
 /**
  * Satu baris setelan notifikasi per tenant. Berbeda dari [BroadcastJpaEntity] yang
  * append-only, entity ini mutable (kolom tanpa `updatable = false`) karena setelan
- * memang disunting berulang. [httpToken]/[metaAccessToken] menyimpan CIPHERTEXT —
- * enkripsi terjadi di adapter, DB tak pernah melihat token asli.
+ * memang disunting berulang. [httpToken]/[metaAccessToken]/[qontakAccessToken] menyimpan
+ * CIPHERTEXT — enkripsi terjadi di adapter, DB tak pernah melihat token asli.
  */
 @Entity
 @Table(name = "notification_settings")
@@ -47,6 +47,12 @@ class NotificationSettingsJpaEntity(
 
     @Column(name = "meta_waba_id", length = 64)
     var metaWabaId: String?,
+
+    @Column(name = "qontak_access_token", length = 2048)
+    var qontakAccessToken: String?,
+
+    @Column(name = "qontak_channel_integration_id", length = 64)
+    var qontakChannelIntegrationId: String?,
 
     @Column(name = "notify_subscription_lifecycle", nullable = false)
     var notifyOnSubscriptionLifecycle: Boolean,
