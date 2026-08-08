@@ -191,7 +191,8 @@ jobs:
                       set -e
                       cd /opt/ftth-demo
                       echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
-                      docker compose -f docker-compose.demo.yml pull
+                      # --ignore-buildable: lewati image GenieACS (build lokal, tak ada di registry).
+                      docker compose -f docker-compose.demo.yml pull --ignore-buildable
                       docker compose -f docker-compose.demo.yml up -d --build --remove-orphans
                       # Ingress co-located: sambungkan Caddy prod ke network demo lalu reload
                       # (keduanya idempoten — aman diulang tiap deploy).
