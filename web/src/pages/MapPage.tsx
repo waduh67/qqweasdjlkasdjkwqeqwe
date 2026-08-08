@@ -394,6 +394,8 @@ export function MapPage() {
   const impactedRef = useRef<number | null>(null)
   // Pin yang bisa diseret untuk menyetel lokasi perangkat baru sebelum disimpan.
   const placeMarker = useRef<maplibregl.Marker | null>(null)
+  // Popup koordinat: klik lahan kosong → lat/long titik itu yang bisa disalin.
+  const coordPopup = useRef<maplibregl.Popup | null>(null)
   // Penyebab per kabel (id → alarm hidup di hilir), diisi tiap overlay disegarkan
   // dan dibaca saat kabel diklik untuk menjelaskan "kenapa merah".
   const impactedCauses = useRef<Map<string, ImpactCause[]>>(new Map())
@@ -539,6 +541,9 @@ export function MapPage() {
       container: container.current,
       center: INITIAL_CENTER,
       zoom: 14,
+      // Klik-ganda dipakai untuk menampilkan koordinat titik (lihat handler 'dblclick'),
+      // jadi zoom klik-ganda dimatikan; zoom tetap lewat scroll/pinch & kontrol +/−.
+      doubleClickZoom: false,
       // Peta operasi selalu gelap (gaya NOC), lepas dari tema aplikasi — basemap
       // gelap membuat aset & kabel yang bercahaya menonjol. Carto dark cukup untuk
       // pengembangan; untuk produksi pakai penyedia berlangganan / tile sendiri.
@@ -570,16 +575,58 @@ export function MapPage() {
       setOltInsp(null)
     }
 
-    // Menaruh perangkat baru: klik peta mana pun jadi lokasinya, lalu form muncul.
+    // Layer aset/kabel yang bisa diklik — dipakai untuk membedakan "klik lahan kosong"
+    // dari "klik perangkat" pada handler klik umum di bawah.
+    const INTERACTIVE_LAYERS = ['customer', 'odp', 'odc', 'olt', 'site', 'cable']
+
+    // Popup koordinat di sebuah titik: teks "lat, lng" yang, saat diklik, menyalin ke
+    // papan klip (helper lat/long yang sering dibutuhkan). Auto-anchor mengikuti
+    // geser/zoom peta ala Google Maps; tombol X menutupnya. Pondasi untuk fitur
+    // berbasis titik lain (mis. taruh perangkat / ukur jarak dari sini).
+    const showCoordPopup = (lngLat: maplibregl.LngLat) => {
+      const text = `${lngLat.lat.toFixed(6)}, ${lngLat.lng.toFixed(6)}`
+      const val = document.createElement('button')
+      val.type = 'button'
+      val.textContent = text
+      val.title = 'Klik untuk menyalin'
+      val.style.cssText =
+        'font:inherit;font-weight:600;font-variant-numeric:tabular-nums;color:var(--accent);background:none;border:0;padding:0;cursor:pointer'
+      val.onclick = () => void navigator.clipboard?.writeText(text).then(() => toast.success('Koordinat disalin'))
+      const hint = document.createElement('div')
+      hint.textContent = 'klik angka untuk salin'
+      hint.style.cssText = 'margin-top:2px;font-size:0.72rem;color:#605e5c'
+      const node = document.createElement('div')
+      node.append(val, hint)
+      if (!coordPopup.current) {
+        coordPopup.current = new maplibregl.Popup({ closeButton: true, closeOnClick: false, className: 'coord-popup' })
+      }
+      coordPopup.current.setLngLat(lngLat).setDOMContent(node).addTo(instance)
+    }
+
+    // Klik TUNGGAL: (1) saat menaruh perangkat, titik itu jadi lokasinya lalu form
+    // muncul; (2) saat idle, cukup menutup popup koordinat bila terbuka — tak ada aksi
+    // lain di lahan kosong (klik aset/kabel tetap dilayani handler layer di bawah).
     instance.on('click', (event) => {
-      if (modeRef.current !== 'place') return
-      const kind = placeKindRef.current
-      if (!kind) return
-      modeRef.current = 'idle'
-      placeKindRef.current = null
-      setPlacing(null)
-      instance.getCanvas().style.cursor = ''
-      setPlaceAt({ kind, lng: event.lngLat.lng, lat: event.lngLat.lat })
+      if (modeRef.current === 'place') {
+        const kind = placeKindRef.current
+        if (!kind) return
+        modeRef.current = 'idle'
+        placeKindRef.current = null
+        setPlacing(null)
+        instance.getCanvas().style.cursor = ''
+        setPlaceAt({ kind, lng: event.lngLat.lng, lat: event.lngLat.lat })
+        return
+      }
+      if (modeRef.current !== 'idle') return
+      coordPopup.current?.remove()
+    })
+
+    // Klik GANDA di lahan kosong (bukan aset/kabel) → tampilkan koordinat titik itu.
+    instance.on('dblclick', (event) => {
+      if (modeRef.current !== 'idle') return
+      const layers = INTERACTIVE_LAYERS.filter((l) => instance.getLayer(l))
+      if (layers.length > 0 && instance.queryRenderedFeatures(event.point, { layers }).length > 0) return
+      showCoordPopup(event.lngLat)
     })
 
     instance.on('click', 'odp', (event) => {
@@ -685,6 +732,8 @@ export function MapPage() {
       tool.current = createCableTool(instance, (state) => {
         modeRef.current = state.mode
         setToolState(state)
+        // Alat kabel aktif → tutup popup koordinat agar tak menutupi gambar kabel.
+        if (state.mode !== 'idle') coordPopup.current?.remove()
       })
 
       // Overlay kabel terdampak: sorotan merah berdenyut di atas kabel biasa,
@@ -825,6 +874,8 @@ export function MapPage() {
       ro.disconnect()
       tool.current?.destroy()
       tool.current = null
+      coordPopup.current?.remove()
+      coordPopup.current = null
       instance.remove()
       map.current = null
     }
@@ -1005,6 +1056,7 @@ export function MapPage() {
   /** Masuk mode taruh: klik peta berikutnya menentukan lokasi perangkat baru. */
   const startPlace = (kind: AssetKind) => {
     tool.current?.cancel()
+    coordPopup.current?.remove()
     setSelected(null)
     setCable(null)
     setBlast(null)

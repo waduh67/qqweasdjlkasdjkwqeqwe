@@ -1882,6 +1882,19 @@ tbody tr.row-selected:hover {
   height: 100%;
   overflow: hidden;
 }
+/* Kursor peta: ganti "tangan" (grab) bawaan MapLibre jadi panah biasa (default) —
+   hover aset tetap 'pointer' (di-set inline oleh handler), dan panah biasa juga berlaku
+   saat menggeser (:active) supaya kepalan tangan tak muncul. */
+.map-canvas .maplibregl-canvas-container.maplibregl-interactive,
+.map-canvas .maplibregl-canvas-container.maplibregl-interactive:active {
+  cursor: default;
+}
+/* Popup koordinat (klik lahan kosong): kartu putih ringkas ala Google Maps berisi
+   lat/long biru yang bisa disalin. Sengaja putih agar terbaca di basemap gelap. */
+.coord-popup .maplibregl-popup-content {
+  padding: 7px 10px;
+  border-radius: 6px;
+}
 /* Watermark akuntabilitas — label pengguna berulang, sangat samar, tak menghalangi
    interaksi. Muncul di screenshot sehingga tangkapan layar bisa dilacak pemiliknya. */
 .map-watermark {
