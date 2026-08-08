@@ -37,7 +37,7 @@ balance (dibaca via `GET /v1/balances`, lihat [Saldo](#saldo--dua-dompet-yang-be
 
 ---
 
-## Model data — `tenant_payout` (V72)
+## Model data — `tenant_payout` (V72, `fee_minor` di V77)
 
 Satu baris **per percobaan** penyaluran (tenant-scoped + RLS dua-lapis). Jejak audit
 finansial yang direkonsiliasi callback Pivot — bukan buku besar saldo.
@@ -45,7 +45,11 @@ finansial yang direkonsiliasi callback Pivot — bukan buku besar saldo.
 ```
 tenant_payout  (satu baris per percobaan, RLS)
 ├── kind            PAYOUT | WITHDRAWAL                        (CHECK)
-├── amount_minor    nominal minor-unit IDR (> 0)              (CHECK)
+├── amount_minor    nominal minor-unit IDR yang DIMINTA (> 0)  (CHECK)
+├── fee_minor       biaya payout yang dipotong (>= 0)          (CHECK, V77)
+│                   dibekukan per baris — tarifnya setelan yang bisa berubah, riwayat
+│                   harus tetap menunjukkan angka yang berlaku saat itu. 0 pada WITHDRAWAL.
+│                   yang sampai ke rekening = amount_minor − fee_minor
 ├── channel_code    rekening tujuan (snapshot saat dibuat) — non-rahasia
 ├── account_number
 ├── account_name
@@ -80,14 +84,19 @@ POST /api/billing/pivot-account/payouts { channelCode, accountNumber, accountNam
                                           amountMinor, description? }  (billing.gateway.manage)
   └─ TenantPayoutService.dispatchPayout:
        ├─ POST /v1/inquiry-account (x-submerchant-id) → inquiryId, wajib VALID
-       ├─ TenantPayout.create(PAYOUT, amount, rekening snapshot) → PENDING
-       ├─ ensurePayoutBalance  ← jembatan dua dompet, lihat di bawah
+       │    (dipakai ULANG dari payout_inquiry_id bila rekeningnya tak berubah — Rp 450/panggilan)
+       ├─ fee = payoutFee(master, amount)          ← setelan platform, lihat di bawah
+       ├─ TenantPayout.create(PAYOUT, amount, fee, rekening snapshot) → PENDING
+       │    └─ tolak bila fee >= amount (nominalnya tak menutup biayanya)
+       ├─ ensurePayoutBalance(amount UTUH)  ← jembatan dua dompet, lihat di bawah
        ├─ POST /v1/payouts (x-submerchant-id=<sub tenant>)
        │    { payouts: [ { referenceId, inquiryId,
-       │                   amount: { value: "<rupiah utuh>", currency: "IDR" }, description? } ] }
+       │                   amount: { value: "<amount − fee>", currency: "IDR" }, description? } ] }
        │      → PayoutDispatch(reference, settledImmediately)
        ├─ markProcessing(reference)  (+ markSuccess bila settledImmediately)
-       └─ save + audit "billing.pivot.payout.dispatched"
+       ├─ save
+       ├─ collectPayoutFee → POST /v1/transfers sub → master  ← lihat di bawah
+       └─ audit "billing.pivot.payout.dispatched"
 ```
 
 - `amount.value` **string**, bukan angka JSON. Pernah dikirim sebagai angka dan Pivot menolak
@@ -109,13 +118,14 @@ saldo PAYMENT. Dulu ini cuma guard yang melempar "top up dulu"; sekarang dijemba
 saldo DISBURSEMENT >= amount ?  ── ya ──▶ lanjut, TAK ada pemindahan sama sekali
         │ tidak
         ▼
-kurang = amount − saldo DISBURSEMENT
-saldo PAYMENT >= kurang ?  ── tidak ──▶ ConflictException (nominal kurangnya disebut)
+kurang  = amount − saldo DISBURSEMENT
+pindah  = max(kurang, 10.000)          ← minimum BALANCE_TRANSFER Pivot
+saldo PAYMENT >= pindah ?  ── tidak ──▶ ConflictException (nominal kurangnya disebut)
         │ ya
         ▼
 POST /v1/withdrawals (x-submerchant-id)
   { referenceId: "trf-<payoutId>", withdrawType: "BALANCE_TRANSFER",
-    balanceType: "PAYOUT_BALANCE", isFullAmount: false, amount: { value: "<kurang>", … } }
+    balanceType: "PAYOUT_BALANCE", isFullAmount: false, amount: { value: "<pindah>", … } }
   └─ gagal ⇒ MELEMPAR ⇒ payout ikut batal (tak ada payout tanpa saldo)
   └─ audit "billing.pivot.payout.balance_transferred"
 ```
@@ -123,6 +133,12 @@ POST /v1/withdrawals (x-submerchant-id)
 - **Cek dulu, pindah belakangan** — saldo payout yang sudah cukup tak disentuh.
 - Yang dipindahkan **hanya kekurangannya**, bukan nominal penuh: dana di dompet payout tak bisa
   dipakai menagih, jadi jangan memindahkan lebih dari perlu.
+- **Minimum Rp 10.000.** `BALANCE_TRANSFER` di bawah itu ditolak `422 unprocessable_entity` — "The
+  minimum withdrawal is IDR 10.000" (diuji di sandbox dengan Rp 2.000). Kekurangan yang lebih kecil
+  dibulatkan naik ke Rp 10.000; kelebihannya mengendap di dompet payout dan terpakai payout
+  berikutnya.
+- Yang disiapkan adalah nominal **UTUH**, bukan yang bersih: dompet payout membayar dua leg
+  sekaligus — nominal bersih ke bank + biaya payout ke master.
 - `X-REQUEST-ID` pemindahan diberi prefiks `trf`, berbeda dari payoutnya (prefiks `req`). Kalau
   sama, Pivot menganggap payout sekadar pengulangan pemindahan saldo tadi.
 
@@ -146,6 +162,41 @@ Saldo sub-account yang berlimpah **tak menolong** — dibuktikan di sandbox: sub
 Konsekuensi operasional: saldo payout master wajib dijaga positif, dan **gagalnya senyap** —
 tak ada exception yang bisa ditangkap `dispatchPayout`, statusnya baru ketahuan lewat webhook
 atau `GET /v1/payouts/{uuid}`.
+
+### Menagihkan biaya itu ke tenant — `collectPayoutFee`
+
+Karena biayanya jatuh ke dompet master, tanpa langkah tambahan **platform menombok Rp 4.000 tiap
+kali tenant menyalurkan dana**. Memotong nominal saja tak menyelesaikannya: potongannya cuma
+mengendap di dompet tenant, master tetap didebit. Uangnya harus benar-benar **berpindah**.
+
+Setelan: `pivot_master_config.payout_fee_minor` + `payout_fee_type` (`FIXED`/`PERCENTAGE`), diatur
+super-admin di `/platform/billing` → **Biaya Payout**. Beda urusan dari `platform_fee_minor`, yang
+memotong PEMBAYARAN pelanggan lewat split routing ([`pivot-fee-split.md`](pivot-fee-split.md)).
+**Default 0 = perilaku lama**, platform menanggung.
+
+```
+fee = FIXED ? payout_fee_minor : amount × payout_fee_minor / 100
+  ├─ dibekukan di tenant_payout.fee_minor (tarifnya setelan, riwayat harus tetap jujur)
+  ├─ nominal ke bank = amount − fee          (yang diminta tenant tetap `amount`)
+  └─ POST /v1/transfers (x-submerchant-id=<sub tenant>)
+       { referenceId: "fee-<payoutId>", recipientId: "<merchantId master>",
+         transferType: "DIRECT", amount: <fee>, remarks: "Biaya payout" }
+```
+
+- `amount` di `/v1/transfers` **angka JSON polos**, bukan objek `{value, currency}` seperti
+  payout/withdrawal. Ikuti spec-nya apa adanya.
+- Sumber dananya dompet **DISBURSEMENT**, bukan PAYMENT — diuji di sandbox: transfer dari sub yang
+  dompet payoutnya kosong ditolak `balance_insufficient` walau dompet pembayarannya berisi 356.600.
+- Pivot memotong **biaya transfer Rp 1**: kirim 1.000, master menerima 999.
+- **Kegagalannya sengaja tak melempar.** Payoutnya sudah terkirim dan uangnya sudah bergerak;
+  me-rollback di sini cuma membatalkan catatan lokal, bukan uangnya, dan membuat riwayat tenant tak
+  cocok mutasi bank. Yang gagal ditandai audit `billing.pivot.payout.fee_uncollected` + `log.error`
+  supaya piutangnya bisa ditagih menyusul (yang sukses: `…fee_collected`).
+- `X-REQUEST-ID` diberi prefiks `fee` — beda dari payout (`req`) dan pemindahan saldo (`trf`).
+
+Diverifikasi di sandbox (2026-08-08): `BALANCE_TRANSFER` Rp 10.000 mengisi DISBURSEMENT sub, lalu
+`POST /v1/transfers` Rp 1.000 sub → master → sub −1.000, master **+999**, baris riwayat
+`Transfer amt=1000 fee=1`.
 
 ## Alur withdrawal KYC
 
@@ -208,7 +259,9 @@ pembayaran **bisa** dipakai untuk payout, tapi harus dipindahkan dulu, tak bisa 
 
 Tabel di atas soal dompet **sub-account**. Dompet DISBURSEMENT **master** juga ikut terdebit tiap
 payout (biaya payout & inquiry) dan wajib positif — lihat
-[Biaya payout ditagih ke saldo payout MASTER](#biaya-payout-ditagih-ke-saldo-payout-master--bukan-sub-account).
+[Biaya payout ditagih ke saldo payout MASTER](#biaya-payout-ditagih-ke-saldo-payout-master--bukan-sub-account)
+dan [`collectPayoutFee`](#menagihkan-biaya-itu-ke-tenant--collectpayoutfee) yang menariknya balik
+dari tenant.
 
 > **Jangan pakai `GET /v1/payouts/balance`.** Itu alias dompet DISBURSEMENT. Sub-account
 > penagih isinya `0.00` di situ sementara uangnya duduk di PAYMENT — persis bug yang bikin

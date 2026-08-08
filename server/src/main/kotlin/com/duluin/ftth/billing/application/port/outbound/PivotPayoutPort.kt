@@ -57,6 +57,26 @@ interface PivotPayoutPort {
     )
 
     /**
+     * Pindahkan [amountMinor] dari dompet DISBURSEMENT sub-account ke dompet DISBURSEMENT MASTER
+     * (`POST /v1/transfers` `transferType=DIRECT`, `recipientId` = merchantId master), on-behalf
+     * [subMerchantId].
+     *
+     * Dipakai menagihkan biaya payout ke tenant: Pivot menagih biayanya ke dompet master, jadi tanpa
+     * pemindahan balik ini platform menombok tiap kali tenant menyalurkan dana. Sumber dananya dompet
+     * DISBURSEMENT (bukan PAYMENT) — diuji di sandbox: transfer dari sub yang dompet payoutnya kosong
+     * ditolak `balance_insufficient` walau dompet pembayarannya berisi. Pivot memotong biaya transfer
+     * Rp 1 dari nominal yang diterima.
+     */
+    fun transferToMaster(
+        master: PivotMasterContext,
+        subMerchantId: String,
+        amountMinor: Long,
+        referenceId: String,
+        remarks: String,
+        requestId: String,
+    )
+
+    /**
      * Saldo tersedia salah satu dompet (`GET /v1/balances?usecase=…`). [subMerchantId] null = saldo
      * master platform; berisi = saldo sub-account tenant (on-behalf).
      */

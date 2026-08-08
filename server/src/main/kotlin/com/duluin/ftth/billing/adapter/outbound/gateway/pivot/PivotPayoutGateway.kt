@@ -59,6 +59,23 @@ class PivotPayoutGateway(
         )
     }
 
+    override fun transferToMaster(
+        master: PivotMasterContext,
+        subMerchantId: String,
+        amountMinor: Long,
+        referenceId: String,
+        remarks: String,
+        requestId: String,
+    ) {
+        apiClient.post(
+            "/v1/transfers",
+            transferBody(master.merchantId, amountMinor, referenceId, remarks),
+            master.credentials(),
+            subMerchantId = subMerchantId,
+            requestId = requestId,
+        )
+    }
+
     override fun balance(
         master: PivotMasterContext,
         subMerchantId: String?,
@@ -138,6 +155,26 @@ class PivotPayoutGateway(
         }
 
     /**
+     * Body `POST /v1/transfers` — pemindahan searah antar-akun platform. [recipientId] = merchantId
+     * penerima (master), dan arah "keluar"-nya ditentukan header `x-submerchant-id` si pengirim.
+     *
+     * Beda bentuk dari endpoint lain: `amount` di sini angka JSON polos, BUKAN objek
+     * `{value, currency}` seperti payout/withdrawal. Ikuti spec-nya apa adanya.
+     */
+    internal fun transferBody(
+        recipientId: String,
+        amountMinor: Long,
+        referenceId: String,
+        remarks: String,
+    ): Map<String, Any?> = mapOf(
+        "referenceId" to referenceId,
+        "recipientId" to recipientId,
+        "transferType" to "DIRECT",
+        "amount" to amountMinor,
+        "remarks" to remarks.take(REMARKS_MAX),
+    )
+
+    /**
      * `description` payout jauh lebih ketat daripada withdrawal: maks 20 karakter DAN alfanumerik
      * saja (spasi dipakai contoh resmi Pivot, jadi ikut dipertahankan). Dibersihkan diam-diam, bukan
      * ditolak — catatan kosmetik tak layak menggagalkan penyaluran uang.
@@ -179,5 +216,8 @@ class PivotPayoutGateway(
 
         /** Batas `description` payout — jauh lebih pendek daripada withdrawal (1–20). */
         const val PAYOUT_DESCRIPTION_MAX = 20
+
+        /** Batas `remarks` transfer menurut spec Pivot (1–100). */
+        const val REMARKS_MAX = 100
     }
 }

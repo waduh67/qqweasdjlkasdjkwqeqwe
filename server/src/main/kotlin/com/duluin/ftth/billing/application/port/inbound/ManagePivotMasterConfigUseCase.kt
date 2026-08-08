@@ -22,6 +22,13 @@ data class PivotMasterConfigView(
     val credentialsSet: Boolean,
     val platformFeeMinor: Long,
     val platformFeeType: PivotFeeType,
+    /**
+     * Biaya payout yang ditagihkan platform ke tenant (Rp untuk FIXED, angka persen untuk
+     * PERCENTAGE). Menutup biaya `POST /v1/payouts` yang Pivot tagihkan ke dompet DISBURSEMENT
+     * master; 0 = platform menanggung sendiri.
+     */
+    val payoutFeeMinor: Long,
+    val payoutFeeType: PivotFeeType,
     val payoutChannelCode: String?,
     val payoutAccountNumber: String?,
     /** Default field wajib create sub-account (non-rahasia → nilai apa adanya). */
@@ -49,6 +56,13 @@ data class UpdatePivotMasterConfigCommand(
     val callbackApiKey: String?,
     val platformFeeMinor: Long,
     val platformFeeType: PivotFeeType,
+    /**
+     * Biaya payout yang ditagihkan platform ke tenant (Rp untuk FIXED, angka persen untuk
+     * PERCENTAGE). Menutup biaya `POST /v1/payouts` yang Pivot tagihkan ke dompet DISBURSEMENT
+     * master; 0 = platform menanggung sendiri.
+     */
+    val payoutFeeMinor: Long,
+    val payoutFeeType: PivotFeeType,
     val payoutChannelCode: String?,
     val payoutAccountNumber: String?,
     /** Default field wajib create sub-account (non-rahasia). */

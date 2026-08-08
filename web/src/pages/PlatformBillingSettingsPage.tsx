@@ -222,6 +222,8 @@ function PivotMasterPanel({
   const [callbackApiKey, setCallbackApiKey] = useState('')
   const [feeMinor, setFeeMinor] = useState(String(config.platformFeeMinor))
   const [feeType, setFeeType] = useState<PlatformFeeType>(config.platformFeeType)
+  const [payoutFeeMinor, setPayoutFeeMinor] = useState(String(config.payoutFeeMinor))
+  const [payoutFeeType, setPayoutFeeType] = useState<PlatformFeeType>(config.payoutFeeType)
   const [payoutChannel, setPayoutChannel] = useState(config.payoutChannelCode ?? '')
   const [payoutAccount, setPayoutAccount] = useState(config.payoutAccountNumber ?? '')
   const [defaults, setDefaults] = useState<SubAccountDefaultsForm>(() => defaultsFromConfig(config))
@@ -236,6 +238,8 @@ function PivotMasterPanel({
     setCallbackApiKey('')
     setFeeMinor(String(config.platformFeeMinor))
     setFeeType(config.platformFeeType)
+    setPayoutFeeMinor(String(config.payoutFeeMinor))
+    setPayoutFeeType(config.payoutFeeType)
     setPayoutChannel(config.payoutChannelCode ?? '')
     setPayoutAccount(config.payoutAccountNumber ?? '')
     setDefaults(defaultsFromConfig(config))
@@ -251,6 +255,8 @@ function PivotMasterPanel({
     sandbox !== config.sandbox ||
     Number(feeMinor) !== config.platformFeeMinor ||
     feeType !== config.platformFeeType ||
+    Number(payoutFeeMinor) !== config.payoutFeeMinor ||
+    payoutFeeType !== config.payoutFeeType ||
     payoutChannel.trim() !== (config.payoutChannelCode ?? '') ||
     payoutAccount.trim() !== (config.payoutAccountNumber ?? '') ||
     defaultsDirty ||
@@ -277,6 +283,8 @@ function PivotMasterPanel({
         callbackApiKey: callbackApiKey.trim() || null,
         platformFeeMinor: Number(feeMinor),
         platformFeeType: feeType,
+        payoutFeeMinor: Number(payoutFeeMinor),
+        payoutFeeType: payoutFeeType,
         payoutChannelCode: payoutChannel.trim() || null,
         payoutAccountNumber: payoutAccount.trim() || null,
         defaultBusinessType: defaults.defaultBusinessType.trim() || null,
@@ -406,6 +414,46 @@ function PivotMasterPanel({
             style={{ flex: 1, minWidth: 160 }}
           />
         </div>
+      </div>
+
+      {/* Biaya payout */}
+      <div className="card stack" style={{ gap: '0.85rem' }} aria-disabled={!manage}>
+        <strong style={{ fontSize: '0.95rem' }}>Biaya Payout</strong>
+        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+          Potongan per <strong>penyaluran dana tenant</strong> — beda dari Fee Platform yang dipotong dari
+          pembayaran pelanggan. Pivot menagih biaya tiap payout ke saldo master platform, jadi selama ini
+          <strong> platform yang menanggung</strong>. Isi sesuai tarif Pivot (sandbox: Rp 4.000) supaya
+          balik modal, atau lebih besar bila mau ambil margin. <strong>0 = platform tetap menanggung.</strong>
+        </p>
+        <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+          <SelectField
+            label="Jenis biaya"
+            value={payoutFeeType}
+            onChange={(_, data) => setPayoutFeeType(data.value as PlatformFeeType)}
+            disabled={!manage}
+            style={{ flex: 1, minWidth: 180 }}
+          >
+            {FEE_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {PLATFORM_FEE_TYPE_LABEL[t]}
+              </option>
+            ))}
+          </SelectField>
+          <TextField
+            label={payoutFeeType === 'PERCENTAGE' ? 'Nilai (%)' : 'Nilai (Rp)'}
+            type="number"
+            min={0}
+            step={payoutFeeType === 'PERCENTAGE' ? 0.1 : 500}
+            value={payoutFeeMinor}
+            onChange={(_, data) => setPayoutFeeMinor(data.value)}
+            disabled={!manage}
+            style={{ flex: 1, minWidth: 160 }}
+          />
+        </div>
+        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+          Dipotong dari nominal yang diminta tenant: minta Rp 50.000 dengan biaya Rp 4.000 → Rp 46.000 masuk
+          rekening tujuan, Rp 4.000 pindah ke saldo platform.
+        </p>
       </div>
 
       {/* Rekening payout platform */}

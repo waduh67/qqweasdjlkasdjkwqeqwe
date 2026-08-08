@@ -68,6 +68,13 @@ data class PivotMasterContext(
     /** Fee platform per transaksi (minor unit IDR, mis. 1000). 0 = tanpa fee (tanpa split-routing). */
     val platformFeeMinor: Long,
     val platformFeeType: PivotFeeType,
+    /**
+     * Biaya payout yang ditagihkan platform ke tenant (minor unit IDR untuk FIXED, angka persen
+     * untuk PERCENTAGE). 0 = platform menanggung sendiri biaya Pivot. Dipotong dari nominal yang
+     * diminta tenant lalu dipindahkan ke dompet master.
+     */
+    val payoutFeeMinor: Long,
+    val payoutFeeType: PivotFeeType,
     /** Channel bank rekening payout platform (mis. `BCA`); null bila belum diset. */
     val payoutChannelCode: String?,
     /** Nomor rekening payout platform; null bila belum diset. */
@@ -95,6 +102,8 @@ class PivotMasterConfig private constructor(
     sandbox: Boolean,
     platformFeeMinor: Long,
     platformFeeType: PivotFeeType,
+    payoutFeeMinor: Long,
+    payoutFeeType: PivotFeeType,
     payoutChannelCode: String?,
     payoutAccountNumber: String?,
     subAccountDefaults: SubAccountDefaults,
@@ -128,6 +137,19 @@ class PivotMasterConfig private constructor(
     var platformFeeType: PivotFeeType = platformFeeType
         private set
 
+    /**
+     * Biaya payout yang ditagihkan ke tenant (minor unit IDR). Non-rahasia.
+     *
+     * Terpisah dari [platformFeeMinor]: yang itu dipotong dari tagihan PELANGGAN lewat split-routing
+     * dan mendarat di dompet PAYMENT master, sedangkan yang ini menutup biaya `POST /v1/payouts`
+     * yang Pivot tagihkan ke dompet DISBURSEMENT master saat TENANT menyalurkan dana.
+     */
+    var payoutFeeMinor: Long = payoutFeeMinor
+        private set
+
+    var payoutFeeType: PivotFeeType = payoutFeeType
+        private set
+
     /** Channel bank rekening payout platform (non-rahasia). */
     var payoutChannelCode: String? = payoutChannelCode
         private set
@@ -152,6 +174,8 @@ class PivotMasterConfig private constructor(
         sandbox: Boolean,
         platformFeeMinor: Long,
         platformFeeType: PivotFeeType,
+        payoutFeeMinor: Long,
+        payoutFeeType: PivotFeeType,
         payoutChannelCode: String?,
         payoutAccountNumber: String?,
         subAccountDefaults: SubAccountDefaults,
@@ -168,6 +192,12 @@ class PivotMasterConfig private constructor(
         }
         this.platformFeeMinor = platformFeeMinor
         this.platformFeeType = platformFeeType
+        if (payoutFeeMinor < 0) throw ValidationException("Biaya payout tidak boleh negatif")
+        if (payoutFeeType == PivotFeeType.PERCENTAGE && payoutFeeMinor > MAX_PERCENT_BASIS) {
+            throw ValidationException("Biaya payout persentase maksimal 100")
+        }
+        this.payoutFeeMinor = payoutFeeMinor
+        this.payoutFeeType = payoutFeeType
         this.payoutChannelCode = payoutChannelCode?.trim()?.takeIf { it.isNotEmpty() }?.uppercase()
         this.payoutAccountNumber = payoutAccountNumber?.trim()?.takeIf { it.isNotEmpty() }
         this.subAccountDefaults = subAccountDefaults.normalized()
@@ -188,6 +218,8 @@ class PivotMasterConfig private constructor(
             sandbox = sandbox,
             platformFeeMinor = platformFeeMinor,
             platformFeeType = platformFeeType,
+            payoutFeeMinor = payoutFeeMinor,
+            payoutFeeType = payoutFeeType,
             payoutChannelCode = payoutChannelCode,
             payoutAccountNumber = payoutAccountNumber,
             subAccountDefaults = subAccountDefaults,
@@ -208,6 +240,8 @@ class PivotMasterConfig private constructor(
             sandbox = false,
             platformFeeMinor = 0,
             platformFeeType = PivotFeeType.FIXED,
+            payoutFeeMinor = 0,
+            payoutFeeType = PivotFeeType.FIXED,
             payoutChannelCode = null,
             payoutAccountNumber = null,
             subAccountDefaults = SubAccountDefaults.empty(),
@@ -223,12 +257,15 @@ class PivotMasterConfig private constructor(
             sandbox: Boolean,
             platformFeeMinor: Long,
             platformFeeType: PivotFeeType,
+            payoutFeeMinor: Long,
+            payoutFeeType: PivotFeeType,
             payoutChannelCode: String?,
             payoutAccountNumber: String?,
             subAccountDefaults: SubAccountDefaults,
         ): PivotMasterConfig = PivotMasterConfig(
             id, enabled, merchantId, merchantSecret, callbackApiKey, sandbox,
-            platformFeeMinor, platformFeeType, payoutChannelCode, payoutAccountNumber,
+            platformFeeMinor, platformFeeType, payoutFeeMinor, payoutFeeType,
+            payoutChannelCode, payoutAccountNumber,
             subAccountDefaults,
         )
 

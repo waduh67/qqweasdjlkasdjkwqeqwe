@@ -34,6 +34,11 @@ class TenantPayout private constructor(
     val tenantId: UUID,
     val kind: PayoutKind,
     val amountMinor: Long,
+    /**
+     * Biaya platform yang dipotong dari [amountMinor] — dibekukan per baris, bukan dibaca ulang dari
+     * setelan: tarifnya bisa berubah dan riwayat harus tetap menunjukkan angka yang berlaku saat itu.
+     */
+    val feeMinor: Long,
     val channelCode: String?,
     val accountNumber: String?,
     val accountName: String?,
@@ -44,6 +49,9 @@ class TenantPayout private constructor(
 ) {
     var status: PayoutStatus = status
         private set
+
+    /** Nominal yang benar-benar mendarat di rekening tujuan — sisa [amountMinor] setelah [feeMinor]. */
+    val netAmountMinor: Long get() = amountMinor - feeMinor
 
     /** Referensi transaksi di Pivot (`data.id`/`referenceId`) — kunci rekonsiliasi callback. */
     var pivotRef: String? = pivotRef
@@ -77,17 +85,25 @@ class TenantPayout private constructor(
             tenantId: UUID,
             kind: PayoutKind,
             amountMinor: Long,
+            feeMinor: Long = 0,
             channelCode: String?,
             accountNumber: String?,
             accountName: String?,
             createdAt: Instant,
         ): TenantPayout {
             if (amountMinor <= 0) throw ValidationException("Nominal penyaluran harus lebih dari 0")
+            if (feeMinor < 0) throw ValidationException("Biaya penyaluran tidak boleh negatif")
+            if (feeMinor >= amountMinor) {
+                throw ValidationException(
+                    "Nominal Rp $amountMinor tak menutup biaya payout Rp $feeMinor — minta lebih besar dari biayanya",
+                )
+            }
             return TenantPayout(
                 id = UuidV7.generate(),
                 tenantId = tenantId,
                 kind = kind,
                 amountMinor = amountMinor,
+                feeMinor = feeMinor,
                 channelCode = channelCode?.trim()?.uppercase()?.takeIf { it.isNotEmpty() },
                 accountNumber = accountNumber?.trim()?.takeIf { it.isNotEmpty() },
                 accountName = accountName?.trim()?.takeIf { it.isNotEmpty() },
@@ -104,6 +120,7 @@ class TenantPayout private constructor(
             tenantId: UUID,
             kind: PayoutKind,
             amountMinor: Long,
+            feeMinor: Long,
             channelCode: String?,
             accountNumber: String?,
             accountName: String?,
@@ -112,7 +129,7 @@ class TenantPayout private constructor(
             failureReason: String?,
             createdAt: Instant,
         ): TenantPayout = TenantPayout(
-            id, tenantId, kind, amountMinor, channelCode, accountNumber, accountName,
+            id, tenantId, kind, amountMinor, feeMinor, channelCode, accountNumber, accountName,
             status, pivotRef, failureReason, createdAt,
         )
     }

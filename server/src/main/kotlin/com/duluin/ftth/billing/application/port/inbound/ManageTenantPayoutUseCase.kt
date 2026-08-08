@@ -49,11 +49,19 @@ data class WithdrawCommand(
     val description: String?,
 )
 
-/** Satu baris riwayat penyaluran untuk ditampilkan. */
+/**
+ * Satu baris riwayat penyaluran untuk ditampilkan.
+ *
+ * [amountMinor] = nominal yang diminta tenant; [feeMinor] = biaya payout yang dipotong, DIBEKUKAN
+ * per baris (tarifnya setelan yang bisa berubah, riwayat harus tetap menunjukkan angka saat itu);
+ * [netAmountMinor] = yang benar-benar mendarat di rekening tujuan.
+ */
 data class TenantPayoutView(
     val id: String,
     val kind: PayoutKind,
     val amountMinor: Long,
+    val feeMinor: Long,
+    val netAmountMinor: Long,
     val channelCode: String?,
     val accountNumber: String?,
     val accountName: String?,

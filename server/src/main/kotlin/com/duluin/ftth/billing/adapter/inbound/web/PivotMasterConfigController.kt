@@ -58,6 +58,8 @@ data class PivotMasterConfigRequest(
     @field:Size(max = 512) val callbackApiKey: String? = null,
     @field:Min(0) val platformFeeMinor: Long = 0,
     @field:NotNull val platformFeeType: PivotFeeType = PivotFeeType.FIXED,
+    @field:Min(0) val payoutFeeMinor: Long = 0,
+    @field:NotNull val payoutFeeType: PivotFeeType = PivotFeeType.FIXED,
     @field:Size(max = 40) val payoutChannelCode: String? = null,
     @field:Size(max = 60) val payoutAccountNumber: String? = null,
     // Default field wajib create sub-account (non-rahasia).
@@ -82,6 +84,8 @@ data class PivotMasterConfigRequest(
         callbackApiKey = callbackApiKey,
         platformFeeMinor = platformFeeMinor,
         platformFeeType = platformFeeType,
+        payoutFeeMinor = payoutFeeMinor,
+        payoutFeeType = payoutFeeType,
         payoutChannelCode = payoutChannelCode,
         payoutAccountNumber = payoutAccountNumber,
         defaultBusinessType = defaultBusinessType,

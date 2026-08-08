@@ -221,6 +221,15 @@ class TenantPayoutInquiryReuseTest {
             requestId: String,
         ) = Unit
 
+        override fun transferToMaster(
+            master: PivotMasterContext,
+            subMerchantId: String,
+            amountMinor: Long,
+            referenceId: String,
+            remarks: String,
+            requestId: String,
+        ) = Unit
+
         override fun balance(
             master: PivotMasterContext,
             subMerchantId: String?,
@@ -256,6 +265,8 @@ class TenantPayoutInquiryReuseTest {
                 sandbox = true,
                 platformFeeMinor = 0,
                 platformFeeType = PivotFeeType.FIXED,
+                payoutFeeMinor = 0,
+                payoutFeeType = PivotFeeType.FIXED,
                 payoutChannelCode = null,
                 payoutAccountNumber = null,
                 subAccountDefaults = SubAccountDefaults(

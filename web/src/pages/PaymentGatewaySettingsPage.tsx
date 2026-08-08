@@ -1021,8 +1021,17 @@ function PivotPayoutSection({
 
   const amountMinor = Math.trunc(Number(amount))
   const amountValid = amount.trim() !== '' && Number.isFinite(amountMinor) && amountMinor > 0
+  // Cerminan payoutFee() di server — dipakai cuma untuk pratinjau; angka yang mengikat tetap yang
+  // dihitung server dan disimpan per baris riwayat.
+  const feePreview =
+    account.payoutFeeType === 'PERCENTAGE'
+      ? Math.trunc((amountMinor * account.payoutFeeMinor) / 100)
+      : account.payoutFeeMinor
+  // Biaya dipotong dari nominal, jadi nominal yang tak menutupinya ditolak server — tahan di sini
+  // supaya tenant tak perlu menabrak error dulu.
+  const coversFee = amountMinor > feePreview
   // Payout memakai rekening TERSIMPAN, jadi syaratnya cuma rekening siap + nominal sah.
-  const canSubmit = manage && !busy && account.payoutReady && !editorOpen && amountValid
+  const canSubmit = manage && !busy && account.payoutReady && !editorOpen && amountValid && coversFee
 
   const submit = async () => {
     if (!canSubmit) return
@@ -1160,6 +1169,18 @@ function PivotPayoutSection({
               </Button>
             )}
           </div>
+          {!editorOpen && account.payoutFeeMinor > 0 && amountValid && (
+            <p style={{ margin: 0, fontSize: '0.82rem', color: coversFee ? undefined : 'var(--critical)' }}>
+              {coversFee ? (
+                <>
+                  Biaya payout <strong>{formatRupiah(feePreview)}</strong> dipotong dari nominal —{' '}
+                  <strong>{formatRupiah(amountMinor - feePreview)}</strong> masuk ke rekening tujuan.
+                </>
+              ) : (
+                <>Nominal harus lebih besar dari biaya payout {formatRupiah(feePreview)}.</>
+              )}
+            </p>
+          )}
           <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
             {editorOpen
               ? 'Simpan rekening tujuan dulu — payout selalu dikirim ke rekening tersimpan itu.'
@@ -1183,6 +1204,11 @@ function PivotPayoutSection({
                   >
                     <div className="stack" style={{ gap: '0.15rem' }}>
                       <strong>{formatRupiah(p.amountMinor)}</strong>
+                      {p.feeMinor > 0 && (
+                        <span className="muted" style={{ fontSize: '0.78rem' }}>
+                          biaya {formatRupiah(p.feeMinor)} · diterima {formatRupiah(p.netAmountMinor)}
+                        </span>
+                      )}
                       <span className="muted" style={{ fontSize: '0.78rem' }}>{desc || '—'}</span>
                       {p.failureReason && (
                         <span style={{ fontSize: '0.78rem', color: 'var(--critical)' }}>{p.failureReason}</span>

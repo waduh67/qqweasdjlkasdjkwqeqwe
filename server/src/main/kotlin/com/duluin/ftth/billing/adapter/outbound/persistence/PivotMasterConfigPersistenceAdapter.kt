@@ -36,6 +36,8 @@ class PivotMasterConfigPersistenceAdapter(
             sandbox = config.sandbox
             platformFeeMinor = config.platformFeeMinor
             platformFeeType = config.platformFeeType
+            payoutFeeMinor = config.payoutFeeMinor
+            payoutFeeType = config.payoutFeeType
             payoutChannelCode = config.payoutChannelCode
             payoutAccountNumber = config.payoutAccountNumber
             defaultBusinessType = d.businessType
@@ -59,6 +61,8 @@ class PivotMasterConfigPersistenceAdapter(
             sandbox = config.sandbox,
             platformFeeMinor = config.platformFeeMinor,
             platformFeeType = config.platformFeeType,
+            payoutFeeMinor = config.payoutFeeMinor,
+            payoutFeeType = config.payoutFeeType,
             payoutChannelCode = config.payoutChannelCode,
             payoutAccountNumber = config.payoutAccountNumber,
             defaultBusinessType = d.businessType,
@@ -86,6 +90,8 @@ class PivotMasterConfigPersistenceAdapter(
         sandbox = sandbox,
         platformFeeMinor = platformFeeMinor,
         platformFeeType = platformFeeType,
+        payoutFeeMinor = payoutFeeMinor,
+        payoutFeeType = payoutFeeType,
         payoutChannelCode = payoutChannelCode,
         payoutAccountNumber = payoutAccountNumber,
         subAccountDefaults = SubAccountDefaults(
