@@ -1,40 +1,42 @@
-# Deploy DEMO peniru-protokol ke server online (`fajar@20.6.72.13`)
+# Simulator peniru-protokol online untuk testing produksi (`fajar@20.6.72.13`)
 
-Panduan menaikkan **demo end-to-end** (app + web + **simulator** OLT/SNMP & BRAS/RADIUS +
-GenieACS/CPE) supaya bisa dicoba lewat browser di
-**`https://simulator-ftth.karuhundeveloper.com`** TANPA perangkat nyata. Setelah setup
-sekali, tiap `git push` ke `main` otomatis mem-deploy ulang.
+Panduan menaikkan **simulator OLT/SNMP + BRAS/RADIUS** di server publik supaya bisa
+di-poll & ditembak DAE oleh **aplikasi PRODUKSI** (`ftth.karuhundeveloper.com`) yang
+berjalan di host yang sama — untuk **menguji SNMP monitoring & isolir/reset-login tanpa
+perangkat nyata**. Setelah setup sekali, tiap `git push` ke `main` otomatis mem-deploy
+ulang image simulator dan menyambungkan ulang app prod.
 
-Beda dengan `DEPLOY.md` (stack **produksi** tanpa simulator, di `ftth.karuhundeveloper.com`).
+Beda dengan `DEPLOY.md` (stack **produksi** penuh). Ini **bukan** demo end-to-end
+terpisah — tak ada app/web/GenieACS/Caddy kedua; yang mengakses simulator adalah app
+prod itu sendiri.
 
-> **PENTING — co-located dengan produksi.** Server `20.6.72.13` ini **juga** menjalankan
-> stack produksi (`ftth.karuhundeveloper.com`) yang Caddy-nya sudah memegang port **80/443**.
-> Karena satu host cuma boleh punya satu proses di 443, stack demo **TIDAK punya Caddy
-> sendiri**. Caddy **produksi** (`ftth-caddy-1`) yang menjadi pintu untuk domain demo:
-> disambungkan ke network project demo, lalu me-reverse-proxy domain demo ke container demo.
+> **Kenapa dipangkas jadi simulator saja.** Tujuannya hanya "perangkat palsu" yang bisa
+> disentuh app prod. Menjalankan app/web kedua cuma buang RAM. Jadi stack ini = **hanya
+> `simulator` + `radius-db`**.
 
 ```
   push main ─▶ GitHub Actions:
-                1. build image ftth-server + ftth-web + ftth-simulator → GHCR
-                2. rsync file repo → server demo
-                3. SSH: compose pull + up -d --build → sambung caddy prod → reload → seed
+                1. build image ftth-simulator → GHCR
+                2. rsync file repo → server (/opt/ftth-demo)
+                3. SSH: pull simulator → up -d simulator radius-db
+                        → sambung ULANG ftth-server-1 ke network simulator
                        ▼
         ┌──────────────── Server 20.6.72.13 (satu host) ────────────────┐
-        │  ┌─ Caddy PROD (ftth-caddy-1) — satu-satunya pemilik 80/443 ─┐ │
-Browser▶│  │  ftth.karuhundeveloper.com            ─▶ prod server/web  │ │
-        │  │  simulator-ftth.karuhundeveloper.com  ─▶ ftth-demo-web-1  │ │
-        │  └────────────────────────────────────────┬─────────────────┘ │
-        │  Stack ftth (prod)          Stack ftth-demo (network dihubung) │
-        │  ─ server/web/freeradius…   ─ server · web · simulator ·       │
-        │                               radius-db · genieacs(mongo/…)     │
-        └─────────────────────────────────────────────────────────────────┘
+        │  Stack ftth (PROD, project ftth)      Stack ftth-demo (simulator) │
+        │  ┌─ ftth-server-1 (app prod) ─┐        ┌─ simulator 172.30.0.10 ─┐ │
+        │  │  net: ftth_default          │  poll  │  SNMP 1161-1165 public  │ │
+        │  │  net: ftth-demo_default ────┼───────▶│  DAE :3799 testing123   │ │
+        │  └─────────────────────────────┘        └───────────┬────────────┘ │
+        │  ftth-caddy-1 (80/443, prod) — TAK disentuh          │ radius-db     │
+        │                                          (accounting simulator      │
+        │                                           TERPISAH dari DB prod)     │
+        └────────────────────────────────────────────────────────────────────┘
 ```
 
-Image JVM kita (`ftth-server`/`ftth-web`/`ftth-simulator`) **ditarik dari GHCR**; image
-GenieACS **di-build lokal** dari file repo di server (Node ringan). Server memegang salinan
-file repo di `/opt/ftth-demo` (bukan git checkout — di-**rsync** dari runner tiap deploy);
-compose me-mount `deploy/postgres-init`, `docker/radius/initdb` dan seeding pakai
-`docker/lab/seed-lab.sh`.
+**Zero-downtime, tanpa polusi accounting:** app prod cukup disambungkan ke network
+simulator (`docker network connect`) — hot-attach interface, tanpa restart. Slice
+BRAS/RADIUS simulator menulis ke `radius-db` terpisah, jadi accounting tenant prod
+tetap bersih.
 
 ---
 
@@ -43,79 +45,81 @@ compose me-mount `deploy/postgres-init`, `docker/radius/initdb` dan seeding paka
 SSH ke server, lalu:
 
 ```bash
-# 1) Docker Engine + plugin compose + tool seed (jq/curl) — kalau belum ada
-sudo apt-get update && sudo apt-get install -y ca-certificates curl git jq rsync
+# 1) Docker Engine + plugin compose + rsync (kalau belum ada — biasanya sudah, karena prod jalan)
+sudo apt-get update && sudo apt-get install -y ca-certificates curl git rsync
 curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker $USER        # logout-login lagi setelah ini
-```
 
-> `jq` + `curl` wajib ada di host — dipakai `seed-lab.sh`. `rsync` dipakai CI mengirim file.
-
-```bash
-# 2) Siapkan direktori demo + .env (file akan diisi via rsync dari CI)
+# 2) Siapkan direktori simulator + .env (file akan diisi via rsync dari CI)
 sudo mkdir -p /opt/ftth-demo && sudo chown $USER:$USER /opt/ftth-demo
 cd /opt/ftth-demo
 # rsync manual pertama dari laptop (atau tunggu deploy CI pertama):
 #   rsync -az --exclude .git --exclude '**/build' ./ fajar@20.6.72.13:/opt/ftth-demo/
-cp deploy/.env.demo.example .env     # IMAGE_PREFIX + FTTH_CORS_ORIGINS (default domain demo)
-```
+cp deploy/.env.demo.example .env     # cukup IMAGE_PREFIX + IMAGE_TAG
 
-**Firewall / security group** — cukup buka inbound **22** (SSH). Port **80/443** sudah
-dibuka & dipegang Caddy prod (dipakai bersama). Simulator (SNMP/DAE) hanya internal.
-
-```bash
-# 3) Login GHCR (PAT ber-scope read:packages) agar bisa pull image
+# 3) Login GHCR (PAT ber-scope read:packages) agar bisa pull image simulator
 echo '<GHCR_PAT>' | docker login ghcr.io -u <username-github> --password-stdin
 
-# 4) Nyalakan pertama kali (tanpa caddy — stack demo tak punya caddy)
-#    --ignore-buildable: lewati image GenieACS (di-build lokal, tak ada di registry).
-docker compose -f docker-compose.demo.yml pull --ignore-buildable
-docker compose -f docker-compose.demo.yml up -d --build
+# 4) Nyalakan simulator + radius-db
+docker compose -f docker-compose.demo.yml pull simulator
+docker compose -f docker-compose.demo.yml up -d radius-db simulator
+
+# 5) Sambungkan app PRODUKSI ke network simulator (idempoten, zero-downtime)
+docker network connect ftth-demo_default ftth-server-1
 ```
 
-### Wiring ingress ke Caddy prod (sekali; permanen)
+**Firewall / security group** — tak perlu buka port apa pun untuk ini. Simulator
+(SNMP/DAE) hanya diakses internal lewat network Docker `ftth-demo_default`; tak ada port
+yang diekspos ke host.
 
-Sambungkan Caddy prod ke network demo dan tambah site-block domain demo di
-`/opt/ftth/Caddyfile` (Caddyfile prod TIDAK ditimpa oleh CI `deploy` prod — aman permanen):
+### Verifikasi simulator terjangkau app prod
 
 ```bash
-# a) sambungkan caddy prod ke network project demo (nama unik ftth-demo-* jadi resolvable)
-docker network connect ftth-demo_default ftth-caddy-1
-
-# b) tambah blok ini ke /opt/ftth/Caddyfile (setelah blok {$FTTH_SITE_ADDRESS} yang ada):
-#
-#   simulator-ftth.karuhundeveloper.com {
-#       encode zstd gzip
-#       @backend path /api/* /swagger-ui* /v3/api-docs*
-#       handle @backend { reverse_proxy ftth-demo-server-1:8080 }
-#       handle          { reverse_proxy ftth-demo-web-1:80 }
-#   }
-#
-# c) validasi + reload graceful (situs prod tak putus):
-docker exec ftth-caddy-1 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
-docker exec ftth-caddy-1 caddy reload   --config /etc/caddy/Caddyfile --adapter caddyfile
+# Dari container app prod, cek simulator menjawab SNMP:
+docker run --rm --network ftth-demo_default alpine sh -c \
+  'apk add --no-cache net-snmp-tools >/dev/null && snmpget -v2c -c public 172.30.0.10:1161 sysDescr.0'
+# → SNMPv2-MIB::sysDescr.0 = STRING: HSGQ-E04I EPON OLT-1 (ftth lab)
 ```
-
-Caddy menerbitkan sertifikat Let's Encrypt untuk domain demo otomatis (ACME HTTP-01 lewat
-Cloudflare). Set **Cloudflare SSL/TLS ke "Full (strict)"** untuk domain ini.
-
-```bash
-# d) seed OLT/BRAS/CPE ke simulator (idempoten) — BASE = domain demo, bukan localhost!
-COMPOSE="docker compose -f docker-compose.demo.yml" \
-  BASE=https://simulator-ftth.karuhundeveloper.com bash docker/lab/seed-lab.sh
-```
-
-> **Jangan** pakai `BASE=http://localhost` di host ini — port 80 milik Caddy prod, seed
-> akan nyasar ke stack produksi. Selalu seed lewat domain demo.
-
-Buka `https://simulator-ftth.karuhundeveloper.com` → login **`admin@demo.ftth` / `admin12345`**.
 
 ---
 
-## Bagian B — GitHub Secrets untuk auto-deploy
+## Bagian B — Daftarkan simulator di aplikasi PRODUKSI (sekali)
 
-**Tak ada secret baru.** Karena demo **co-located di host & user yang SAMA** dengan produksi,
-job `deploy-demo` memakai ulang secret SSH prod yang sudah ada:
+Login ke `https://ftth.karuhundeveloper.com` sebagai admin tenant, lalu daftarkan
+"perangkat" simulator ini seperti perangkat nyata:
+
+**OLT (SNMP monitoring)** — menu **Jaringan/Inventaris**:
+| Field | Nilai |
+|---|---|
+| Management IP | `172.30.0.10` |
+| SNMP port | `1161` (tersedia `1161`–`1165`, tiap port = 1 OLT, 2 PON × 8 ONU) |
+| SNMP community | `public` |
+
+Dalam ~1 siklus poll (`FTTH_MONITORING_POLL_INTERVAL` prod), armada ONU palsu akan
+terpantau statusnya (online/rx-power/uptime).
+
+**BRAS/NAS (isolir & reset-login via DAE/CoA)** — menu **BRAS/NAS**:
+| Field | Nilai |
+|---|---|
+| Address | `172.30.0.10` |
+| CoA/DAE secret | `testing123` (HARUS sama dgn `FTTH_SIM_RADIUS_DAE_SECRET`) |
+| Reachability | `DIRECT` |
+
+Uji **Isolir / Reset Login** pada pelanggan uji → app prod menembak DAE ke `172.30.0.10:3799`
+→ simulator membalas SUCCESS. Sesi/akunting uji tertulis di `radius-db` simulator (terpisah
+dari DB prod), jadi tak mencemari data tenant asli.
+
+> **Catatan accounting:** simulator butuh sesi RADIUS di `radius-db`-nya agar target DAE
+> ada. Untuk skenario isolir end-to-end, seed sesi contoh ke `radius-db` bila perlu (mis.
+> lewat `docker/lab/seed-lab.sh` yang diarahkan ke DB simulator) — opsional, tergantung apa
+> yang mau diuji.
+
+---
+
+## Bagian C — GitHub Secrets untuk auto-deploy
+
+**Tak ada secret baru.** Karena rig ini **co-located di host & user yang SAMA** dengan
+produksi, job `deploy-demo` memakai ulang secret SSH prod yang sudah ada:
 
 | Secret | Dipakai untuk | Sudah ada? |
 |---|---|---|
@@ -124,43 +128,38 @@ job `deploy-demo` memakai ulang secret SSH prod yang sudah ada:
 | `VPS_SSH_KEY` | private key SSH (rsync + ssh-action) | ✅ |
 | `GHCR_USER` / `GHCR_PAT` | login GHCR untuk `pull` image | ✅ |
 
-Jadi selama stack prod sudah auto-deploy (secret `VPS_*` terisi), `deploy-demo` langsung
-ikut jalan tanpa konfigurasi tambahan.
-
 ---
 
-## Bagian C — Deploy otomatis & operasional
+## Bagian D — Deploy otomatis & operasional
 
-Setelah Bagian A & B beres, **cukup `git push origin main`** — job `deploy-demo` di
-`.github/workflows/deploy.yml`: **rsync** file repo ke server, `compose pull + up -d --build`,
-menyambung Caddy prod ke network demo + reload (idempoten), tunggu server sehat, lalu
-`seed-lab.sh`. Bisa juga dipicu manual dari tab **Actions** (`workflow_dispatch`).
+Setelah Bagian A–C beres, **cukup `git push origin main`** — job `deploy-demo` di
+`.github/workflows/deploy.yml`: **rsync** file ke server, `pull` + `up -d simulator
+radius-db`, lalu **menyambung ulang** `ftth-server-1` ke network simulator (idempoten).
+Bisa juga dipicu manual dari tab **Actions** (`workflow_dispatch`).
+
+> **Durabilitas penting.** Koneksi `ftth-server-1 → ftth-demo_default` HILANG bila job
+> `deploy` prod merecreate container app prod. Karena itu `deploy-demo` `needs: [deploy]`
+> dan **selalu** menjalankan `docker network connect` lagi tiap deploy. Kalau app prod
+> pernah direcreate DI LUAR CI (mis. `docker compose up -d` manual di `/opt/ftth`),
+> jalankan ulang manual: `docker network connect ftth-demo_default ftth-server-1`.
 
 | Mau apa | Perintah (di `/opt/ftth-demo`) |
 |---|---|
-| Status service | `docker compose -f docker-compose.demo.yml ps` |
-| Log realtime | `docker compose -f docker-compose.demo.yml logs -f server` |
-| Seed ulang (idempoten) | `COMPOSE="docker compose -f docker-compose.demo.yml" BASE=https://simulator-ftth.karuhundeveloper.com bash docker/lab/seed-lab.sh` |
-| Restart | `docker compose -f docker-compose.demo.yml restart` |
-| Reset bersih (HAPUS data demo) | `docker compose -f docker-compose.demo.yml down -v` |
-| Cek wiring caddy | `docker exec ftth-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile` |
-
-**Yang muncul setelah seed** (login `admin@demo.ftth`): armada OLT palsu terpantau di menu
-**Jaringan** (SNMP ~30 dtk); sesi PPPoE + trafik hidup di detail pelanggan **Budi Lab**
-(BRAS/RADIUS, ~1 menit); ONT palsu serial `000000` di menu **CPE** (GenieACS TR-069). Uji
-**Isolir/Reset Login** → server tembak DAE ke simulator → SUCCESS.
+| Status | `docker compose -f docker-compose.demo.yml ps` |
+| Log simulator | `docker compose -f docker-compose.demo.yml logs -f simulator` |
+| Restart simulator | `docker compose -f docker-compose.demo.yml restart simulator` |
+| Sambung ulang app prod | `docker network connect ftth-demo_default ftth-server-1` |
+| Reset bersih (HAPUS data uji) | `docker compose -f docker-compose.demo.yml down -v` |
 
 ---
 
 ## Catatan
 
-- **Demo, bukan produksi.** Secret app pakai default dev; `FTTH_SEED_DEMO=true`. Jangan
-  taruh data sungguhan.
-- **Co-located dgn prod di satu host** — hati-hati: `down -v` / `up` demo TIDAK menyentuh
-  prod (project & volume terpisah), tapi keduanya berbagi CPU/RAM & Caddy. Reload Caddy
-  bersifat graceful (validasi dulu), jadi salah config demo tak menjatuhkan situs prod.
-- **Resource:** dua stack penuh dalam satu host → sediakan minimal ~4 vCPU / 8 GB RAM.
-- **Domain & HTTPS:** `simulator-ftth.karuhundeveloper.com` (DNS via Cloudflare, proxied) →
-  origin = Caddy prod, sertifikat Let's Encrypt otomatis. Ganti domain? edit site-block di
-  `/opt/ftth/Caddyfile` + `FTTH_CORS_ORIGINS` di `.env` demo, lalu reload caddy + `up -d`.
-```
+- **Rig-uji, bukan produksi.** Simulator pakai default dev. Slice RADIUS-nya menulis ke
+  `radius-db` TERPISAH → accounting tenant prod tak tercemar.
+- **Tak menyentuh prod.** Stack ini tak punya Caddy dan tak buka port host; `down -v`/`up`
+  di sini tak menjatuhkan situs prod (project & network terpisah). Yang menghubungkan cuma
+  interface network yang di-hot-attach ke `ftth-server-1`.
+- **IP statis wajib.** Simulator harus 172.30.0.10 (value-object `ManagementIp` menolak
+  hostname); subnet tetap `172.30.0.0/24` di blok `networks` compose menjamin ini.
+- **Resource:** ringan — hanya 1 JVM simulator + 1 Postgres kecil di samping stack prod.

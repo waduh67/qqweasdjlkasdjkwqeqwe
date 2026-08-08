@@ -143,23 +143,28 @@ jobs:
                       docker image prune -f
 
     # -------------------------------------------------------------------------
-    # 4) SERVER DEMO: stack peniru-protokol end-to-end (app + web + simulator +
-    #    GenieACS + RADIUS) di https://simulator-ftth.karuhundeveloper.com. Berdiri
-    #    sendiri, TERPISAH dari `deploy` prod di atas — TAPI CO-LOCATED di host yang
-    #    sama dengan produksi (ftth.karuhundeveloper.com). Konsekuensinya:
-    #      • /opt/ftth-demo BUKAN git checkout → file di-`rsync` dari runner (bukan git pull).
-    #      • Ingress lewat Caddy PROD (`ftth-caddy-1`): job menyambungkan caddy ke network
-    #        demo lalu reload (idempoten). Site-block domain demo hidup permanen di
-    #        /opt/ftth/Caddyfile pada server (lihat deploy/DEPLOY-DEMO.md).
-    #      • Stack demo TAK punya Caddy sendiri (tak ada port host yang dibuka).
-    #    Image JVM ditarik dari GHCR; image GenieACS dibangun lokal (`--build`).
-    #    Pakai ulang secret SSH prod VPS_HOST/VPS_USER/VPS_SSH_KEY (demo co-located di
-    #    HOST & USER yang SAMA dengan prod) + GHCR_USER/GHCR_PAT — tak ada secret baru.
+    # 4) SERVER SIMULATOR: rig-uji peniru-protokol (OLT/SNMP + BRAS/RADIUS) yang
+    #    dipakai APLIKASI PRODUKSI (ftth.karuhundeveloper.com) buat testing SNMP/
+    #    isolir tanpa perangkat nyata. CO-LOCATED di host yang sama dengan prod.
+    #    Sengaja DIPANGKAS ke `simulator` + `radius-db` (BUKAN demo penuh) — yang
+    #    mengakses simulator adalah app prod, jadi tak ada app/web/GenieACS/Caddy.
+    #    Konsekuensinya:
+    #      • /opt/ftth-demo BUKAN git checkout → file di-`rsync` dari runner.
+    #      • Tiap deploy MENYAMBUNG ULANG app prod (`ftth-server-1`) ke network
+    #        simulator (idempoten). WAJIB diulang: kalau job `deploy` prod merecreate
+    #        `ftth-server-1`, koneksi ke network demo hilang → langkah ini memasangnya
+    #        lagi. Zero-downtime (hot-attach interface, tanpa restart).
+    #      • Tak menyentuh Caddy prod & tak seed apa pun — pendaftaran OLT/BRAS
+    #        dilakukan manual sekali lewat UI PRODUKSI (lihat deploy/DEPLOY-DEMO.md).
+    #    Image simulator ditarik dari GHCR. Pakai ulang secret prod VPS_HOST/VPS_USER/
+    #    VPS_SSH_KEY (host & user SAMA dengan prod) + GHCR_USER/GHCR_PAT — tak ada
+    #    secret baru.
     #
-    #    `needs: deploy` (BUKAN cuma build-and-push): prod `deploy` & demo ini SSH ke
-    #    HOST yang sama; kalau jalan paralel, dua `docker compose pull` berebut blob di
-    #    content-store containerd → error "failed commit on ref ... rename ... no such
-    #    file". Diserialkan: prod dulu, demo menyusul.
+    #    `needs: deploy` (BUKAN cuma build-and-push): prod `deploy` & job ini SSH ke
+    #    HOST yang sama; kalau paralel, dua `docker compose pull` berebut blob di
+    #    content-store containerd → error "failed commit on ref ... rename". Lagipula
+    #    langkah sambung-ulang app prod harus jalan SETELAH `deploy` selesai merecreate
+    #    `ftth-server-1`. Diserialkan: prod dulu, simulator menyusul.
     # -------------------------------------------------------------------------
     deploy-demo:
         needs: [build-and-push, deploy]
@@ -167,7 +172,7 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: Siapkan kunci SSH runner→server demo
+            - name: Siapkan kunci SSH runner→server simulator
               run: |
                   mkdir -p ~/.ssh
                   echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_deploy
@@ -175,9 +180,9 @@ jobs:
                   ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
             # /opt/ftth-demo bukan repo git → sinkronkan file yang dibutuhkan compose
-            # (docker-compose.demo.yml, deploy/, docker/) dari runner. `--exclude .env*`
-            # WAJIB: `.env` server tak boleh ikut terhapus oleh `--delete`.
-            - name: Rsync file repo ke server demo
+            # (docker-compose.demo.yml, docker/radius/initdb) dari runner. `--exclude
+            # .env*` WAJIB: `.env` server tak boleh ikut terhapus oleh `--delete`.
+            - name: Rsync file repo ke server simulator
               run: |
                   rsync -az --delete \
                     --exclude '.git' --exclude '.env' --exclude '.env*' \
@@ -186,7 +191,7 @@ jobs:
                     -e "ssh -i ~/.ssh/id_deploy" \
                     ./ "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/opt/ftth-demo/"
 
-            - name: Deploy + wire ingress + seed
+            - name: Deploy simulator + sambung ulang app prod
               uses: appleboy/ssh-action@v1
               with:
                   host: ${{ secrets.VPS_HOST }}
@@ -196,20 +201,10 @@ jobs:
                       set -e
                       cd /opt/ftth-demo
                       echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
-                      # --ignore-buildable: lewati image GenieACS (build lokal, tak ada di registry).
-                      docker compose -f docker-compose.demo.yml pull --ignore-buildable
-                      docker compose -f docker-compose.demo.yml up -d --build --remove-orphans
-                      # Ingress co-located: sambungkan Caddy prod ke network demo lalu reload
-                      # (keduanya idempoten — aman diulang tiap deploy).
-                      docker network connect ftth-demo_default ftth-caddy-1 2>/dev/null || true
-                      docker exec ftth-caddy-1 caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
-                      # Tunggu server demo sehat (via domain) sebelum seeding.
-                      for i in $(seq 1 60); do
-                        code=$(curl -s -o /dev/null -w '%{http_code}' https://simulator-ftth.karuhundeveloper.com/v3/api-docs || true)
-                        [ "$code" = "200" ] && break
-                        sleep 3
-                      done
-                      COMPOSE="docker compose -f docker-compose.demo.yml" \
-                        BASE=https://simulator-ftth.karuhundeveloper.com \
-                        bash docker/lab/seed-lab.sh
+                      docker compose -f docker-compose.demo.yml pull simulator
+                      docker compose -f docker-compose.demo.yml up -d --remove-orphans radius-db simulator
+                      # Sambungkan (ulang) app PRODUKSI ke network simulator supaya bisa
+                      # poll SNMP 172.30.0.10 & tembak DAE. Idempoten & zero-downtime;
+                      # WAJIB tiap deploy karena `deploy` prod bisa merecreate container ini.
+                      docker network connect ftth-demo_default ftth-server-1 2>/dev/null || true
                       docker image prune -f
