@@ -136,10 +136,14 @@ class TenantPivotAccountService(
         // Inquiry dibebankan ke saldo pemanggil → wajib on-behalf sub-account, jadi sub-account
         // harus sudah ada. Sebelum itu rekening cuma disimpan lewat profil (tanpa validasi).
         val subId = requireProvisioned(account)
-        val inquiry = subMerchant
-            .inquiryAccount(master, subId, channelCode, accountNumber, accountName)
-            .requireValid()
-        account.setPayoutAccount(channelCode, accountNumber, accountName, inquiry.inquiryId)
+        // Menyimpan ulang rekening yang sama (mis. tenant menekan "Simpan" dua kali) tak perlu
+        // divalidasi lagi — Pivot menagih Rp 450 tiap inquiry walau jawabannya itu-itu juga.
+        val inquiryId = account.cachedInquiryId(channelCode, accountNumber, accountName)
+            ?: subMerchant
+                .inquiryAccount(master, subId, channelCode, accountNumber, accountName)
+                .requireValid()
+                .inquiryId
+        account.setPayoutAccount(channelCode, accountNumber, accountName, inquiryId)
         val saved = repository.save(account)
         audit("billing.pivot.payout.updated", saved.id, tenantId)
         return saved.toView()

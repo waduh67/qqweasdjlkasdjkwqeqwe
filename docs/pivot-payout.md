@@ -76,18 +76,76 @@ create ─▶ PENDING ──dispatch diterima Pivot (markProcessing, simpan ref)
 ## Alur payout NON_KYC
 
 ```
-POST /api/billing/pivot-account/payouts { amountMinor, remarks? }   (billing.gateway.manage)
+POST /api/billing/pivot-account/payouts { channelCode, accountNumber, accountName,
+                                          amountMinor, description? }  (billing.gateway.manage)
   └─ TenantPayoutService.dispatchPayout:
-       ├─ syarat: account.type == NON_KYC & account.payoutReady
+       ├─ POST /v1/inquiry-account (x-submerchant-id) → inquiryId, wajib VALID
        ├─ TenantPayout.create(PAYOUT, amount, rekening snapshot) → PENDING
-       ├─ POST /v1/payouts { amount, channelCode, accountNumber, inquiryId, remarks }
+       ├─ ensurePayoutBalance  ← jembatan dua dompet, lihat di bawah
+       ├─ POST /v1/payouts (x-submerchant-id=<sub tenant>)
+       │    { payouts: [ { referenceId, inquiryId,
+       │                   amount: { value: "<rupiah utuh>", currency: "IDR" }, description? } ] }
        │      → PayoutDispatch(reference, settledImmediately)
        ├─ markProcessing(reference)  (+ markSuccess bila settledImmediately)
        └─ save + audit "billing.pivot.payout.dispatched"
 ```
 
-`inquiryId` berasal dari validasi rekening (`payout_inquiry_id`, lihat
-[`pivot-sub-account.md`](pivot-sub-account.md)).
+- `amount.value` **string**, bukan angka JSON. Pernah dikirim sebagai angka dan Pivot menolak
+  SEMUA payout `400 field_format_invalid` — "Make sure value format is correct".
+- `description` payout jauh lebih ketat daripada withdrawal: **maks 20 karakter, alfanumerik
+  saja** (withdrawal 50, bebas). Dibersihkan diam-diam di gateway — catatan kosmetik tak layak
+  menggagalkan penyaluran uang.
+- Ada **minimum nominal** di sisi Pivot (`amount_below_limit`); nominal receh ditolak.
+- `inquiryId` hasil validasi rekening di alur yang sama (lihat
+  [`pivot-sub-account.md`](pivot-sub-account.md)) — bukan `payout_inquiry_id` tersimpan, karena
+  rekening tujuan payout bebas diketik per transaksi.
+
+### `ensurePayoutBalance` — jembatan dompet PAYMENT → DISBURSEMENT
+
+`POST /v1/payouts` **hanya** menarik dari saldo DISBURSEMENT, sedangkan uang tenant mendarat di
+saldo PAYMENT. Dulu ini cuma guard yang melempar "top up dulu"; sekarang dijembatani:
+
+```
+saldo DISBURSEMENT >= amount ?  ── ya ──▶ lanjut, TAK ada pemindahan sama sekali
+        │ tidak
+        ▼
+kurang = amount − saldo DISBURSEMENT
+saldo PAYMENT >= kurang ?  ── tidak ──▶ ConflictException (nominal kurangnya disebut)
+        │ ya
+        ▼
+POST /v1/withdrawals (x-submerchant-id)
+  { referenceId: "trf-<payoutId>", withdrawType: "BALANCE_TRANSFER",
+    balanceType: "PAYOUT_BALANCE", isFullAmount: false, amount: { value: "<kurang>", … } }
+  └─ gagal ⇒ MELEMPAR ⇒ payout ikut batal (tak ada payout tanpa saldo)
+  └─ audit "billing.pivot.payout.balance_transferred"
+```
+
+- **Cek dulu, pindah belakangan** — saldo payout yang sudah cukup tak disentuh.
+- Yang dipindahkan **hanya kekurangannya**, bukan nominal penuh: dana di dompet payout tak bisa
+  dipakai menagih, jadi jangan memindahkan lebih dari perlu.
+- `X-REQUEST-ID` pemindahan diberi prefiks `trf`, berbeda dari payoutnya (prefiks `req`). Kalau
+  sama, Pivot menganggap payout sekadar pengulangan pemindahan saldo tadi.
+
+### Biaya payout ditagih ke saldo payout MASTER — bukan sub-account
+
+Satu payout mendebit **dua dompet sekaligus**, dan `ensurePayoutBalance` cuma mengurus yang pertama:
+
+| Dompet | Yang didebit |
+| --- | --- |
+| DISBURSEMENT **sub-account** | nominal payout (Rp 10.000 pada uji sandbox) |
+| DISBURSEMENT **master/platform** | biaya payout (Rp 4.000), juga biaya `ACCOUNT_INQUIRY_FEE` Rp 450 per inquiry |
+
+Kalau saldo payout master **tak cukup menutup biayanya**, Pivot tetap membalas `code: 00` +
+`status: IN_PROGRESS` — permintaannya diterima — lalu payout menggantung `status: PENDING`,
+`payouts[0].status: APPROVED`, `reason: "Insufficient Balance"`. Di dashboard ia mendarat di
+**Local Payout → Need Action → Waiting for Top Up**, menunggu di-*retry* atau dibatalkan manual.
+Saldo sub-account yang berlimpah **tak menolong** — dibuktikan di sandbox: sub punya 500.000, master
+−5.400, payout Rp 10.000 tetap tergantung; begitu saldo payout master diisi, payout identik langsung
+`DONE`/`SUCCESS`.
+
+Konsekuensi operasional: saldo payout master wajib dijaga positif, dan **gagalnya senyap** —
+tak ada exception yang bisa ditangkap `dispatchPayout`, statusnya baru ketahuan lewat webhook
+atau `GET /v1/payouts/{uuid}`.
 
 ## Alur withdrawal KYC
 
@@ -107,7 +165,7 @@ POST /api/billing/pivot-account/withdrawals { amountMinor, remarks? }   (billing
 Body-nya **tidak** memuat `channelCode`/`accountNumber`/`inquiryId`: `BANK_TRANSFER` selalu
 menuju rekening yang sudah melekat di sub-account (dikirim sebagai `bankAccount` saat create,
 lihat [`pivot-sub-account.md`](pivot-sub-account.md)). `balanceType` hanya wajib untuk
-`withdrawType = BALANCE_TRANSFER` (memindahkan saldo PAYMENT → PAYOUT), yang belum dipakai.
+`withdrawType = BALANCE_TRANSFER` — varian itu dipakai `ensurePayoutBalance` di alur payout.
 `description` dipangkas ke 50 karakter sesuai batas spec.
 
 ---
@@ -143,7 +201,14 @@ padahal dananya ada, jadi `PivotBalanceUsecase` selalu ditulis eksplisit:
 | Dompet | Endpoint | Isinya | Dipakai untuk |
 |---|---|---|---|
 | **PAYMENT** | `GET /v1/balances?usecase=PAYMENT` | hasil tagihan pelanggan (charge VA/QRIS masuk ke sini) | yang **ditampilkan** ke tenant; sumber dana `POST /v1/withdrawals` |
-| **DISBURSEMENT** | `GET /v1/balances?usecase=DISBURSEMENT` | dana untuk **mengirim** uang keluar, diisi lewat top-up VA | guard saldo sebelum `POST /v1/payouts` |
+| **DISBURSEMENT** | `GET /v1/balances?usecase=DISBURSEMENT` | dana untuk **mengirim** uang keluar; diisi lewat top-up VA atau `BALANCE_TRANSFER` dari PAYMENT | sumber dana `POST /v1/payouts` |
+
+Keduanya dijembatani `ensurePayoutBalance` (lihat [alur payout](#alur-payout-non_kyc)) — saldo
+pembayaran **bisa** dipakai untuk payout, tapi harus dipindahkan dulu, tak bisa ditarik langsung.
+
+Tabel di atas soal dompet **sub-account**. Dompet DISBURSEMENT **master** juga ikut terdebit tiap
+payout (biaya payout & inquiry) dan wajib positif — lihat
+[Biaya payout ditagih ke saldo payout MASTER](#biaya-payout-ditagih-ke-saldo-payout-master--bukan-sub-account).
 
 > **Jangan pakai `GET /v1/payouts/balance`.** Itu alias dompet DISBURSEMENT. Sub-account
 > penagih isinya `0.00` di situ sementara uangnya duduk di PAYMENT — persis bug yang bikin

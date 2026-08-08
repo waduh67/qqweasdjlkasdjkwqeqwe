@@ -760,76 +760,14 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
             </div>
           )}
 
-          {/* Rekening payout pasca-provisioning: sudah diisi bersama profil saat mendaftar; di sini
-              hanya untuk mengganti rekening tujuan pencairan setelah sub-account aktif. */}
-          {account.provisioned && (
-            <>
-              <div className="hr" />
-              <SectionTitle>Rekening payout</SectionTitle>
-              <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-                Rekening tujuan pencairan dana dari pembayaran pelanggan Anda. Nama pemilik dicocokkan
-                dengan catatan bank — kalau berbeda, penyimpanan ditolak beserta nama versi banknya.
-              </p>
-              <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                <label style={{ flex: 1, minWidth: 140 }}>
-                  <span>Kode channel bank</span>
-                  <ChannelCodeField
-                    value={profile.channelCode ?? ''}
-                    onChange={(code) => setProfile((p) => ({ ...p, channelCode: code }))}
-                    disabled={!manage}
-                  />
-                </label>
-                <TextField
-                  label="Nomor rekening"
-                  value={profile.accountNumber ?? ''}
-                  onChange={(_, data) => setProfile((p) => ({ ...p, accountNumber: data.value }))}
-                  placeholder="mis. 1234567890"
-                  maxLength={60}
-                  disabled={!manage}
-                  style={{ flex: 1, minWidth: 160 }}
-                />
-                <TextField
-                  label="Nama pemilik rekening"
-                  value={profile.accountName ?? ''}
-                  onChange={(_, data) => setProfile((p) => ({ ...p, accountName: data.value }))}
-                  placeholder="sesuai catatan bank"
-                  maxLength={60}
-                  disabled={!manage}
-                  style={{ flex: 1, minWidth: 180 }}
-                />
-                {manage && (
-                  <Button
-                    variant="primary"
-                    disabled={
-                      busy ||
-                      // Aktif saat rekening berubah ATAU inquiry belum sukses (auto-inquiry saat
-                      // provisioning bisa gagal) — supaya validasi rekening bisa dipicu ulang.
-                      !(payoutDirty || !account.payoutReady) ||
-                      !(profile.channelCode ?? '').trim() ||
-                      !(profile.accountNumber ?? '').trim() ||
-                      !(profile.accountName ?? '').trim()
-                    }
-                    onClick={() =>
-                      void run(
-                        () =>
-                          setPivotPayoutAccount({
-                            channelCode: (profile.channelCode ?? '').trim(),
-                            accountNumber: (profile.accountNumber ?? '').trim(),
-                            accountName: (profile.accountName ?? '').trim(),
-                          }),
-                        'Rekening payout tersimpan',
-                      )
-                    }
-                  >
-                    Simpan rekening
-                  </Button>
-                )}
-              </div>
-            </>
-          )}
-
           {account.provisioned && <PivotUsersSection manage={manage} />}
-          {account.provisioned && <PivotPayoutSection manage={manage} />}
+          {/* Rekening payout TIDAK lagi punya seksi sendiri: dulu ia berdiri terpisah dari form
+              payout, jadi rekening yang sama diketik di dua tempat dan tenant mengubahnya berkali-
+              kali tanpa perlu — padahal tiap perubahan memicu inquiry berbayar. Sekarang jadi satu
+              di dalam Saldo & Payout, ditampilkan sebagai ringkasan yang dikunci. */}
+          {account.provisioned && (
+            <PivotPayoutSection manage={manage} account={account} onAccountSaved={syncFrom} />
+          )}
         </>
       )}
     </div>
@@ -854,16 +792,26 @@ const PAYOUT_STATUS_LABEL: Record<PivotPayoutStatus, string> = {
 const formatRupiah = (n: number) => `Rp ${n.toLocaleString('id-ID')}`
 
 /**
- * Manajemen pengguna sub-account: undang admin (email + nama) & kirim ulang undangan. Aksi Pivot
- * on-behalf sub-account tenant; keduanya tak mengubah state akun, jadi seksi ini mandiri (busy
- * lokal). Muncul hanya saat sub-account sudah terprovisi.
+ * Manajemen pengguna sub-account: undang admin & kirim ulang undangan. Keduanya aksi SEKALI-SEKALI
+ * (sekali saat menambah admin baru, sekali lagi kalau emailnya tak sampai), jadi kolomnya tak
+ * dibiarkan menetap di halaman — cukup satu tombol yang membuka dialog. Kirim ulang menumpang
+ * dialog yang sama karena datanya sama: satu alamat email.
+ *
+ * Aksi Pivot on-behalf sub-account tenant, tak mengubah state akun → seksi ini mandiri (busy lokal).
+ * Muncul hanya saat sub-account sudah terprovisi.
  */
 function PivotUsersSection({ manage }: { manage: boolean }) {
   const toast = useToast()
+  const [open, setOpen] = useState(false)
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
-  const [resendEmail, setResendEmail] = useState('')
   const [busy, setBusy] = useState(false)
+
+  const close = () => {
+    setOpen(false)
+    setEmail('')
+    setName('')
+  }
 
   const run = async (fn: () => Promise<unknown>, okMsg: string) => {
     if (busy) return
@@ -871,6 +819,7 @@ function PivotUsersSection({ manage }: { manage: boolean }) {
     try {
       await fn()
       toast.success(okMsg)
+      close()
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Operasi gagal')
     } finally {
@@ -881,91 +830,113 @@ function PivotUsersSection({ manage }: { manage: boolean }) {
   return (
     <>
       <div className="hr" />
-      <SectionTitle>Pengguna sub-account</SectionTitle>
-      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-        Undang admin ke sub-account Pivot Anda. Pivot mengirim email undangan ke alamat yang diisi.
-      </p>
-      <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        <TextField
-          label="Email pengguna"
-          type="email"
-          value={email}
-          onChange={(_, data) => setEmail(data.value)}
-          placeholder="mis. admin@usaha.co.id"
-          maxLength={255}
-          disabled={!manage}
-          style={{ flex: 1, minWidth: 200 }}
-        />
-        <TextField
-          label="Nama pengguna"
-          value={name}
-          onChange={(_, data) => setName(data.value)}
-          placeholder="nama lengkap"
-          maxLength={255}
-          disabled={!manage}
-          style={{ flex: 1, minWidth: 160 }}
-        />
+      <div className="spread" style={{ gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="stack" style={{ gap: '0.15rem' }}>
+          <SectionTitle>Pengguna sub-account</SectionTitle>
+          <span className="muted" style={{ fontSize: '0.82rem' }}>
+            Undang admin ke sub-account Pivot Anda — Pivot mengirim email undangannya.
+          </span>
+        </div>
         {manage && (
-          <Button
-            variant="primary"
-            disabled={busy || !email.trim() || !name.trim()}
-            onClick={() =>
-              void run(async () => {
-                await assignSubAccountUser({ email: email.trim(), name: name.trim() })
-                setEmail('')
-                setName('')
-              }, 'Undangan pengguna terkirim')
-            }
-          >
+          <Button variant="subtle" onClick={() => setOpen(true)}>
             Undang pengguna
           </Button>
         )}
       </div>
-      <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        <TextField
-          label="Kirim ulang undangan (email)"
-          type="email"
-          value={resendEmail}
-          onChange={(_, data) => setResendEmail(data.value)}
-          placeholder="email pengguna yang sudah diundang"
-          maxLength={255}
-          disabled={!manage}
-          style={{ flex: 1, minWidth: 200 }}
-        />
-        {manage && (
-          <Button
-            variant="subtle"
-            disabled={busy || !resendEmail.trim()}
-            onClick={() =>
-              void run(
-                () => resendSubAccountInvitation({ email: resendEmail.trim() }),
-                'Undangan dikirim ulang',
-              )
-            }
-          >
-            Kirim ulang undangan
-          </Button>
-        )}
-      </div>
+      {open && (
+        <Modal
+          title="Undang pengguna sub-account"
+          onClose={close}
+          footer={
+            <>
+              <Button variant="subtle" disabled={busy} onClick={close}>
+                Batal
+              </Button>
+              <Button
+                variant="primary"
+                disabled={busy || !email.trim() || !name.trim()}
+                onClick={() =>
+                  void run(
+                    () => assignSubAccountUser({ email: email.trim(), name: name.trim() }),
+                    'Undangan pengguna terkirim',
+                  )
+                }
+              >
+                Kirim undangan
+              </Button>
+            </>
+          }
+        >
+          <div className="stack" style={{ gap: '0.75rem' }}>
+            <TextField
+              label="Email pengguna"
+              type="email"
+              value={email}
+              onChange={(_, data) => setEmail(data.value)}
+              placeholder="mis. admin@usaha.co.id"
+              maxLength={255}
+            />
+            <TextField
+              label="Nama pengguna"
+              value={name}
+              onChange={(_, data) => setName(data.value)}
+              placeholder="nama lengkap"
+              maxLength={255}
+            />
+            <div className="spread" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span className="muted" style={{ fontSize: '0.8rem' }}>
+                Sudah pernah diundang tapi emailnya tak sampai?
+              </span>
+              {/* Kirim ulang cuma butuh email — nama diabaikan, jadi tombolnya hidup lebih awal. */}
+              <Button
+                variant="subtle"
+                disabled={busy || !email.trim()}
+                onClick={() =>
+                  void run(
+                    () => resendSubAccountInvitation({ email: email.trim() }),
+                    'Undangan dikirim ulang',
+                  )
+                }
+              >
+                Kirim ulang undangan
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </>
   )
 }
 
 /**
- * Saldo & payout sub-account: tampilkan saldo PEMBAYARAN (dana hasil tagihan pelanggan, on-behalf
- * sub-account) lalu form kirim dana ke rekening beneficiary bebas. Saldo payout sengaja tak
- * ditampilkan — dompet terpisah di Pivot, dan servernya yang memvalidasi kecukupannya. Server juga
- * memvalidasi nama pemilik (inquiry), jadi UI hanya menyodorkan form + galat server apa adanya.
+ * Saldo & payout sub-account: saldo PEMBAYARAN (dana hasil tagihan pelanggan, on-behalf sub-account)
+ * lalu form kirim dana. Saldo payout sengaja tak ditampilkan — dompet terpisah di Pivot, dan server
+ * yang mengurusnya: kekurangannya dipindahkan otomatis dari saldo pembayaran sebelum payout dikirim.
+ *
+ * Rekening tujuan **dikunci sebagai ringkasan**, bukan tiga kolom yang selalu terbuka. Alasannya
+ * bukan kosmetik: tiap perubahan rekening memicu `POST /v1/inquiry-account` yang ditagih Pivot per
+ * panggilan, sedangkan rekening yang tak berubah memakai `inquiryId` tersimpan dan gratis. Kolomnya
+ * cuma terbuka pada tiga keadaan — belum pernah diisi, tenant menekan "Ubah rekening", atau
+ * rekeningnya memang belum lolos validasi bank.
  */
-function PivotPayoutSection({ manage }: { manage: boolean }) {
+function PivotPayoutSection({
+  manage,
+  account,
+  onAccountSaved,
+}: {
+  manage: boolean
+  account: TenantPivotAccountView
+  onAccountSaved: (a: TenantPivotAccountView) => void
+}) {
   const toast = useToast()
   const [balance, setBalance] = useState<PivotBalanceView | null>(null)
   const [payouts, setPayouts] = useState<TenantPayoutView[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [channelCode, setChannelCode] = useState('')
-  const [accountNumber, setAccountNumber] = useState('')
-  const [accountName, setAccountName] = useState('')
+  const [editing, setEditing] = useState(false)
+  const [channelCode, setChannelCode] = useState(account.payoutChannelCode ?? '')
+  const [accountNumber, setAccountNumber] = useState(account.payoutAccountNumber ?? '')
+  const [accountName, setAccountName] = useState(account.payoutAccountName ?? '')
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
 
@@ -993,24 +964,74 @@ function PivotPayoutSection({ manage }: { manage: boolean }) {
     }
   }
 
+  // Rekening tujuan yang TERSIMPAN — bukan isi kolom. Kolomnya cuma buffer suntingan.
+  const savedChannel = account.payoutChannelCode ?? ''
+  const savedNumber = account.payoutAccountNumber ?? ''
+  const savedName = account.payoutAccountName ?? ''
+  const hasDestination = savedChannel !== '' && savedNumber !== '' && savedName !== ''
+  // Terkunci hanya bila rekeningnya lengkap DAN lolos validasi bank; rekening yang ditolak wajib
+  // dibetulkan, jadi kolomnya dibuka sendiri tanpa tenant perlu menekan "Ubah rekening".
+  const editorOpen = editing || !hasDestination || !account.payoutReady
+
+  const destinationDirty =
+    channelCode.trim() !== savedChannel ||
+    accountNumber.trim() !== savedNumber ||
+    accountName.trim() !== savedName
+  const destinationFilled =
+    channelCode.trim() !== '' && accountNumber.trim() !== '' && accountName.trim() !== ''
+
+  const openEditor = () => {
+    setChannelCode(savedChannel)
+    setAccountNumber(savedNumber)
+    setAccountName(savedName)
+    setEditing(true)
+  }
+
+  const cancelEditor = () => {
+    setChannelCode(savedChannel)
+    setAccountNumber(savedNumber)
+    setAccountName(savedName)
+    setEditing(false)
+  }
+
+  /**
+   * Simpan rekening tujuan sekali di sini — server yang menembak inquiry (berbayar) lalu menyimpan
+   * `inquiryId`-nya, jadi payout berikutnya tinggal pakai. Rekening yang tak berubah tak ditembak
+   * ulang, tapi tetap tak perlu ditekan: tombolnya mati saat tak ada yang berubah.
+   */
+  const saveDestination = async () => {
+    if (busy || !destinationFilled) return
+    setBusy(true)
+    try {
+      onAccountSaved(
+        await setPivotPayoutAccount({
+          channelCode: channelCode.trim(),
+          accountNumber: accountNumber.trim(),
+          accountName: accountName.trim(),
+        }),
+      )
+      setEditing(false)
+      toast.success('Rekening tujuan tersimpan & tervalidasi')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Rekening tujuan gagal divalidasi')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const amountMinor = Math.trunc(Number(amount))
   const amountValid = amount.trim() !== '' && Number.isFinite(amountMinor) && amountMinor > 0
-  const canSubmit =
-    manage &&
-    !busy &&
-    channelCode.trim() !== '' &&
-    accountNumber.trim() !== '' &&
-    accountName.trim() !== '' &&
-    amountValid
+  // Payout memakai rekening TERSIMPAN, jadi syaratnya cuma rekening siap + nominal sah.
+  const canSubmit = manage && !busy && account.payoutReady && !editorOpen && amountValid
 
   const submit = async () => {
     if (!canSubmit) return
     setBusy(true)
     try {
       await createPivotPayout({
-        channelCode: channelCode.trim(),
-        accountNumber: accountNumber.trim(),
-        accountName: accountName.trim(),
+        channelCode: savedChannel,
+        accountNumber: savedNumber,
+        accountName: savedName,
         amountMinor,
         description: description.trim() || null,
       })
@@ -1041,57 +1062,108 @@ function PivotPayoutSection({ manage }: { manage: boolean }) {
             </Button>
           </div>
 
+          {editorOpen ? (
+            <>
+              <div className="spread" style={{ gap: '0.75rem', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Rekening tujuan payout</span>
+                {hasDestination && account.payoutReady && (
+                  <Button variant="subtle" disabled={busy} onClick={cancelEditor}>
+                    Batal
+                  </Button>
+                )}
+              </div>
+              <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+                Diisi sekali saja. Nama pemilik harus persis seperti catatan bank — dicocokkan ke
+                bank sebelum disimpan, dan ditolak kalau berbeda.
+              </p>
+              <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <label style={{ flex: 1, minWidth: 140 }}>
+                  <span>Bank tujuan</span>
+                  <ChannelCodeField value={channelCode} onChange={setChannelCode} disabled={!manage} />
+                </label>
+                <TextField
+                  label="Nomor rekening"
+                  value={accountNumber}
+                  onChange={(_, data) => setAccountNumber(data.value)}
+                  placeholder="mis. 1234567890"
+                  maxLength={60}
+                  disabled={!manage}
+                  style={{ flex: 1, minWidth: 160 }}
+                />
+                <TextField
+                  label="Nama pemilik rekening"
+                  value={accountName}
+                  onChange={(_, data) => setAccountName(data.value)}
+                  placeholder="sesuai catatan bank"
+                  maxLength={60}
+                  disabled={!manage}
+                  style={{ flex: 1, minWidth: 180 }}
+                />
+              </div>
+              {manage && (
+                <div className="row" style={{ gap: '0.5rem', justifyContent: 'flex-end' }}>
+                  <Button
+                    variant="primary"
+                    disabled={busy || !destinationFilled || (!destinationDirty && account.payoutReady)}
+                    onClick={() => void saveDestination()}
+                  >
+                    Simpan &amp; validasi rekening
+                  </Button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div
+              className="spread"
+              style={{ gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}
+            >
+              <div className="stack" style={{ gap: '0.15rem' }}>
+                <span className="muted" style={{ fontSize: '0.78rem' }}>Rekening tujuan payout</span>
+                <strong style={{ fontSize: '0.9rem' }}>
+                  {channelNameByCode(savedChannel) ?? savedChannel} · {savedNumber}
+                </strong>
+                <span className="muted" style={{ fontSize: '0.78rem' }}>
+                  a.n. {savedName} <Badge tone="good">Tervalidasi</Badge>
+                </span>
+              </div>
+              {manage && (
+                <Button variant="subtle" disabled={busy} onClick={openEditor}>
+                  Ubah rekening
+                </Button>
+              )}
+            </div>
+          )}
+
+          <div className="hr" />
           <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <label style={{ flex: 1, minWidth: 140 }}>
-              <span>Bank tujuan</span>
-              <ChannelCodeField value={channelCode} onChange={setChannelCode} disabled={!manage} />
-            </label>
             <TextField
-              label="Nomor rekening"
-              value={accountNumber}
-              onChange={(_, data) => setAccountNumber(data.value)}
-              placeholder="mis. 1234567890"
-              maxLength={60}
-              disabled={!manage}
-              style={{ flex: 1, minWidth: 160 }}
-            />
-            <TextField
-              label="Nama pemilik rekening"
-              value={accountName}
-              onChange={(_, data) => setAccountName(data.value)}
-              placeholder="sesuai catatan bank"
-              maxLength={60}
-              disabled={!manage}
-              style={{ flex: 1, minWidth: 180 }}
-            />
-            <TextField
-              label="Nominal (Rp)"
+              label="Nominal payout (Rp)"
               inputMode="numeric"
               value={amount}
               onChange={(_, data) => setAmount(data.value.replace(/[^\d]/g, ''))}
               placeholder="mis. 100000"
-              disabled={!manage}
-              style={{ flex: 1, minWidth: 120 }}
+              disabled={!manage || editorOpen}
+              style={{ flex: 1, minWidth: 140 }}
             />
-          </div>
-          <TextField
-            label="Deskripsi (opsional)"
-            value={description}
-            onChange={(_, data) => setDescription(data.value)}
-            placeholder="catatan payout"
-            maxLength={200}
-            disabled={!manage}
-          />
-          {manage && (
-            <div className="row" style={{ gap: '0.5rem', justifyContent: 'flex-end' }}>
+            <TextField
+              label="Deskripsi (opsional)"
+              value={description}
+              onChange={(_, data) => setDescription(data.value)}
+              placeholder="tampil di mutasi penerima — maks 20 huruf/angka"
+              maxLength={20}
+              disabled={!manage || editorOpen}
+              style={{ flex: 2, minWidth: 200 }}
+            />
+            {manage && (
               <Button variant="primary" disabled={!canSubmit} onClick={() => void submit()}>
                 Kirim payout
               </Button>
-            </div>
-          )}
+            )}
+          </div>
           <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
-            Nama pemilik harus persis seperti catatan bank — dicocokkan ke bank (inquiry) sebelum
-            payout dibuat, dan payout ditolak kalau berbeda. Saldo payout juga dicek lebih dulu.
+            {editorOpen
+              ? 'Simpan rekening tujuan dulu — payout selalu dikirim ke rekening tersimpan itu.'
+              : 'Payout ditarik dari saldo payout (dompet terpisah dari saldo pembayaran di atas); bila kurang, kekurangannya dipindahkan otomatis dari saldo pembayaran.'}
           </p>
 
           <div className="hr" />

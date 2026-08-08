@@ -7,8 +7,13 @@ import com.duluin.ftth.billing.domain.model.PivotMasterContext
  * platform. Menyembunyikan bentuk JSON Pivot: perintah mengembalikan [PayoutDispatch] (referensi +
  * status awal), pembacaan saldo mengembalikan [BalanceSnapshot] per dompet ([PivotBalanceUsecase]).
  *
- * NON_KYC → [payout] (dana di master, disalurkan platform ke rekening tenant memakai `inquiryId`).
+ * NON_KYC → [payout] on-behalf sub-account: nominalnya keluar dari saldo payout SUB-ACCOUNT (bukan
+ * master, walau kredensial pemanggilnya master), memakai `inquiryId` hasil validasi rekening.
  * KYC → [withdraw] on-behalf sub-account (dana di sub-account tenant, ditarik tenant sendiri).
+ *
+ * Catatan: biaya payout & inquiry TIDAK ikut dompet sub — Pivot menagihnya ke saldo DISBURSEMENT
+ * master. Bila saldo itu tak cukup, payout diterima (`code: 00`) tapi menggantung "Waiting for Top
+ * Up" tanpa error yang bisa ditangkap di sini. Lihat `docs/pivot-payout.md`.
  */
 interface PivotPayoutPort {
     /**
@@ -33,6 +38,23 @@ interface PivotPayoutPort {
         command: PayoutCommand,
         requestId: String,
     ): PayoutDispatch
+
+    /**
+     * Pindahkan [amountMinor] dari dompet PAYMENT ke dompet DISBURSEMENT sub-account
+     * (`POST /v1/withdrawals` `withdrawType=BALANCE_TRANSFER`), on-behalf [subMerchantId].
+     *
+     * Perlu karena `POST /v1/payouts` HANYA menarik dari saldo payout, sedangkan uang tenant
+     * mendarat di saldo pembayaran. [referenceId] wajib unik; [requestId] = idempotency
+     * `X-REQUEST-ID`. Melempar bila Pivot menolak — pemanggil menggagalkan payoutnya sekalian.
+     */
+    fun transferToPayoutBalance(
+        master: PivotMasterContext,
+        subMerchantId: String,
+        amountMinor: Long,
+        referenceId: String,
+        description: String?,
+        requestId: String,
+    )
 
     /**
      * Saldo tersedia salah satu dompet (`GET /v1/balances?usecase=…`). [subMerchantId] null = saldo

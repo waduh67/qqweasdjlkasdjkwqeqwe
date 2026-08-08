@@ -36,7 +36,9 @@ import java.util.UUID
  *
  * Nominal EKSPLISIT (tak ada akrual otomatis) — saldo dibaca langsung dari Pivot. Perhatikan dua
  * dompet yang BERBEDA: [balance] menampilkan saldo PAYMENT (hasil tagihan pelanggan, sumber dana
- * withdrawal), sedangkan guard [dispatchPayout] membaca saldo DISBURSEMENT (sumber dana payout).
+ * withdrawal), sedangkan `POST /v1/payouts` menarik dari saldo DISBURSEMENT. Keduanya dijembatani
+ * `ensurePayoutBalance` — memindahkan kekurangannya saja, itupun cuma bila saldo payout memang tak
+ * cukup.
  * Tiap perintah dicatat [TenantPayout] (PENDING→PROCESSING) lalu difinalkan callback rekonsiliasi
  * ([reconcile], diverifikasi `X-API-Key` master di webhook). Idempotency `X-REQUEST-ID` diturunkan
  * dari id baris → retry perintah yang sama aman.
@@ -83,21 +85,9 @@ class TenantPayoutService(
             ?: throw ValidationException("Nomor rekening wajib diisi")
         val accountName = requireAccountName(command.accountName)
 
-        // Validasi rekening tujuan → inquiryId; on-behalf sub-account karena biayanya dibebankan ke
-        // saldo pemanggil. Wajib cek saldo sebelum create payout.
-        val inquiry = subMerchant
-            .inquiryAccount(master, subId, channelCode, accountNumber, accountName)
-            .requireValid()
-        // Sengaja DISBURSEMENT, bukan PAYMENT: `POST /v1/payouts` menarik dari saldo payout. Kalau
-        // dicek ke saldo pembayaran, request lolos di sini lalu ditolak Pivot "waiting for top up".
-        val snapshot = payoutPort.balance(master, subId, PivotBalanceUsecase.DISBURSEMENT)
-        if (snapshot.availableMinor < amount) {
-            throw ConflictException(
-                "Saldo payout tak cukup — tersedia Rp ${snapshot.availableMinor}, butuh Rp $amount. " +
-                    "Top up saldo payout dulu (saldo pembayaran tak bisa dipakai langsung).",
-            )
-        }
-
+        // Validasi rekening tujuan → inquiryId. Dipakai ulang dari basis data selama rekeningnya tak
+        // berubah; inquiry baru hanya ditembak bila datanya beda (lihat resolveInquiryId).
+        val inquiryId = resolveInquiryId(master, subId, account, channelCode, accountNumber, accountName)
         val payout = TenantPayout.create(
             tenantId = tenantId,
             kind = PayoutKind.PAYOUT,
@@ -107,6 +97,7 @@ class TenantPayoutService(
             accountName = accountName,
             createdAt = Instant.now(),
         )
+        ensurePayoutBalance(master, subId, amount, payout.id, tenantId)
         val dispatch = payoutPort.payout(
             master,
             subId,
@@ -115,7 +106,7 @@ class TenantPayoutService(
                 channelCode = channelCode,
                 accountNumber = accountNumber,
                 accountName = accountName,
-                inquiryId = inquiry.inquiryId,
+                inquiryId = inquiryId,
                 referenceId = payout.id.toString(),
                 description = command.description,
             ),
@@ -185,6 +176,86 @@ class TenantPayoutService(
         log.info("Penyaluran ref {} direkonsiliasi → {}", ref, payout.status)
     }
 
+    /**
+     * `inquiryId` rekening tujuan: dipakai ulang dari basis data bila rekeningnya tak berubah, else
+     * inquiry baru ditembak lalu hasilnya DISIMPAN untuk payout berikutnya.
+     *
+     * `POST /v1/inquiry-account` ditagih Rp 450 per panggilan ke saldo DISBURSEMENT master —
+     * termasuk untuk rekening yang itu-itu juga, dan termasuk saat hasilnya ditolak. Menembaknya
+     * tiap payout berarti membakar biaya untuk jawaban yang sudah kita punya; Pivot sendiri
+     * menganjurkan menyimpan `inquiryId` dan memakainya ulang.
+     */
+    private fun resolveInquiryId(
+        master: PivotMasterContext,
+        subId: String,
+        account: TenantPivotAccount,
+        channelCode: String,
+        accountNumber: String,
+        accountName: String,
+    ): String {
+        account.cachedInquiryId(channelCode, accountNumber, accountName)?.let { return it }
+
+        val inquiry = subMerchant
+            .inquiryAccount(master, subId, channelCode, accountNumber, accountName)
+            .requireValid()
+        // Rekening yang baru divalidasi jadi rekening payout tersimpan — payout berikutnya ke tujuan
+        // yang sama tak perlu inquiry lagi.
+        account.setPayoutAccount(channelCode, accountNumber, accountName, inquiry.inquiryId)
+        accounts.save(account)
+        log.info(
+            "Inquiry rekening payout tenant {} disimpan ({}/{}) — payout berikutnya pakai ulang",
+            account.tenantId,
+            channelCode,
+            accountNumber,
+        )
+        return inquiry.inquiryId
+    }
+
+    /**
+     * Pastikan dompet DISBURSEMENT sanggup membayar [amount] — `POST /v1/payouts` HANYA menarik dari
+     * situ, sedangkan uang tenant mendarat di dompet PAYMENT.
+     *
+     * Saldo payout dicek DULU: kalau sudah cukup, tak ada pemindahan sama sekali. Bila kurang, cuma
+     * KEKURANGANNYA yang dipindahkan dari saldo pembayaran (`BALANCE_TRANSFER`) — jangan memindahkan
+     * lebih dari perlu, dana di dompet payout tak bisa dipakai menagih. Kegagalan pemindahan
+     * dibiarkan melempar: payout ikut batal, jadi tak ada payout yang dikirim tanpa saldo.
+     */
+    private fun ensurePayoutBalance(
+        master: PivotMasterContext,
+        subId: String,
+        amount: Long,
+        payoutId: UUID,
+        tenantId: UUID,
+    ) {
+        val payoutBalance = payoutPort.balance(master, subId, PivotBalanceUsecase.DISBURSEMENT).availableMinor
+        if (payoutBalance >= amount) return
+
+        val shortfall = amount - payoutBalance
+        val paymentBalance = payoutPort.balance(master, subId, PivotBalanceUsecase.PAYMENT).availableMinor
+        if (paymentBalance < shortfall) {
+            throw ConflictException(
+                "Saldo tak cukup untuk payout Rp $amount — saldo payout Rp $payoutBalance, " +
+                    "saldo pembayaran Rp $paymentBalance, masih kurang Rp ${shortfall - paymentBalance}.",
+            )
+        }
+
+        payoutPort.transferToPayoutBalance(
+            master = master,
+            subMerchantId = subId,
+            amountMinor = shortfall,
+            referenceId = "trf-$payoutId",
+            description = "Isi saldo payout",
+            requestId = requestId(payoutId, "trf"),
+        )
+        audit("billing.pivot.payout.balance_transferred", payoutId, tenantId)
+        log.info(
+            "Saldo payout tenant {} kurang {} — dipindahkan dari saldo pembayaran (tersedia {})",
+            tenantId,
+            shortfall,
+            paymentBalance,
+        )
+    }
+
     private fun newPayout(tenantId: UUID, kind: PayoutKind, amount: Long, account: TenantPivotAccount) =
         TenantPayout.create(
             tenantId = tenantId,
@@ -202,9 +273,13 @@ class TenantPayoutService(
     private fun requireMaster(): PivotMasterContext = masterConfig.current()
         ?: throw ConflictException("Pivot belum diaktifkan platform — penyaluran tak bisa dijalankan")
 
-    /** `X-REQUEST-ID` idempotency (alfanumerik 16–36) deterministik dari id baris → retry aman. */
-    private fun requestId(id: UUID): String =
-        ("req" + id.toString().replace("-", "")).take(36)
+    /**
+     * `X-REQUEST-ID` idempotency (alfanumerik 16–36) deterministik dari id baris → retry aman.
+     * [prefix] memisahkan panggilan berbeda untuk baris yang sama (mis. pemindahan saldo vs payout),
+     * kalau dibiarkan sama Pivot menganggapnya pengulangan permintaan yang itu-itu juga.
+     */
+    private fun requestId(id: UUID, prefix: String = "req"): String =
+        (prefix + id.toString().replace("-", "")).take(36)
 
     private fun audit(action: String, entityId: UUID, tenantId: UUID) = auditor.record(
         action = action,
