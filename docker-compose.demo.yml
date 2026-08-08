@@ -1,113 +1,41 @@
 # ============================================================================
-# Stack DEMO ONLINE ftth — peniru-protokol end-to-end di server publik
-# (fajar@20.6.72.13), diakses di https://simulator-ftth.karuhundeveloper.com.
-# Sama isinya dengan docker-compose.lab.yml (app + web + simulator + GenieACS +
-# RADIUS), tapi image JVM kita DITARIK dari GHCR (bukan di-build di server);
-# image GenieACS tetap di-build lokal dari checkout repo.
+# Stack SIMULATOR ONLINE ftth — peniru-protokol OLT/SNMP + BRAS/RADIUS di server
+# publik (fajar@20.6.72.13). TUJUAN: menyediakan "perangkat palsu" yang bisa
+# di-poll & ditembak DAE oleh APLIKASI PRODUKSI (ftth.karuhundeveloper.com) di
+# host yang sama — buat testing SNMP/isolir tanpa perangkat nyata.
 #
-# INGRESS (penting): stack ini TIDAK punya Caddy sendiri. Server demo ini SATU
-# HOST dengan produksi (ftth.karuhundeveloper.com) yang Caddy-nya sudah memegang
-# port 80/443. Jadi Caddy PROD (`ftth-caddy-1`) yang jadi pintu untuk domain demo:
-# ia disambungkan ke network project ini (`docker network connect ftth-demo_default
-# ftth-caddy-1`) lalu me-reverse-proxy `simulator-ftth.karuhundeveloper.com` ke
-# container `ftth-demo-web-1:80` / `ftth-demo-server-1:8080` (lihat site-block di
-# /opt/ftth/Caddyfile pada server, dan deploy/DEPLOY-DEMO.md). Tak ada port yang
-# diekspos ke host dari stack ini — semua akses lewat Caddy prod.
+# CAKUPAN SENGAJA DIPANGKAS ke `simulator` + `radius-db` saja (bukan demo penuh):
+# app/web/GenieACS TIDAK dijalankan di sini — yang mengakses simulator adalah
+# app PRODUKSI, jadi tak perlu app kedua. Tak ada Caddy, tak ada port ke host.
+#
+# CARA PROD MENGAKSES (zero-downtime, tanpa polusi accounting prod):
+#   • Simulator dengar SNMP di IP STATIS 172.30.0.10 (UDP 1161-1165, community
+#     `public`) + DAE/CoA di :3799 (secret `testing123`). IP statis wajib karena
+#     value-object ManagementIp menolak hostname.
+#   • Container app prod (`ftth-server-1`) disambungkan ke network stack ini
+#     (`docker network connect ftth-demo_default ftth-server-1`) → app prod bisa
+#     langsung poll 172.30.0.10 & tembak DAE, TANPA merestart apa pun.
+#   • Slice BRAS/RADIUS simulator menulis ke `radius-db` TERPISAH (bukan DB prod),
+#     jadi accounting tenant produksi tetap bersih.
 #
 #   # di server (file repo di /opt/ftth-demo), setelah `.env` diisi:
-#   docker compose -f docker-compose.demo.yml pull
-#   docker compose -f docker-compose.demo.yml up -d --build
-#   COMPOSE="docker compose -f docker-compose.demo.yml" \
-#     BASE=https://simulator-ftth.karuhundeveloper.com bash docker/lab/seed-lab.sh
-#   # buka https://simulator-ftth.karuhundeveloper.com → login admin@demo.ftth / admin12345
+#   docker compose -f docker-compose.demo.yml pull simulator
+#   docker compose -f docker-compose.demo.yml up -d simulator radius-db
+#   docker network connect ftth-demo_default ftth-server-1   # sambungkan app prod (idempoten)
+#   # lalu daftarkan OLT (172.30.0.10:1161 community public) + BRAS (172.30.0.10
+#   # coaSecret testing123, reachability DIRECT) lewat UI PRODUKSI. Lihat DEPLOY-DEMO.md.
 #
 # Nilai sensitif diambil dari `.env` (lihat deploy/.env.demo.example) — TAK ada
-# secret di file ini. Secret app lain pakai DEFAULT DEV (jwt/encryption/S3) karena
-# ini DEMO, bukan produksi. JANGAN dipakai untuk data sungguhan.
+# secret di file ini. Ini rig-uji, BUKAN produksi; JANGAN dipakai data sungguhan.
 #
-# Project name terpisah (`ftth-demo`) agar volume/kontainer tak bentrok dengan lab
-# maupun prod. Tak ada port yang diekspos ke host — ingress lewat Caddy prod.
+# Project name terpisah (`ftth-demo`) agar network/volume/kontainer tak bentrok
+# dengan prod (`ftth`) maupun lab. Tak ada port yang diekspos ke host.
 # ============================================================================
 name: ftth-demo
 
 services:
-  # --- Database aplikasi (PostGIS + TimescaleDB) — internal ---
-  postgres:
-    image: timescale/timescaledb-ha:pg17
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      FTTH_DB_USER: ftth
-      FTTH_DB_PASSWORD: ftth
-      FTTH_DB_NAME: ftth
-    volumes:
-      - pgdata:/home/postgres/pgdata/data
-      - ./deploy/postgres-init:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-
-  # --- Object storage bukti pengerjaan work order (internal) ---
-  minio:
-    image: minio/minio
-    restart: unless-stopped
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ftth
-      MINIO_ROOT_PASSWORD: ftthminio
-    volumes:
-      - miniodata:/data
-
-  # --- Backend Spring Boot (image dari GHCR) ---
-  server:
-    image: ${IMAGE_PREFIX:-ghcr.io/waduh67}/ftth-server:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      minio:
-        condition: service_started
-      radius-db:
-        condition: service_healthy
-    environment:
-      FTTH_DB_URL: jdbc:postgresql://postgres:5432/ftth
-      FTTH_DB_USER: ftth
-      FTTH_DB_PASSWORD: ftth
-      FTTH_S3_ENDPOINT: http://minio:9000
-      FTTH_S3_ACCESS_KEY: ftth
-      FTTH_S3_SECRET_KEY: ftthminio
-      # Origin publik demo (domain + HTTPS; override lewat `.env` bila ganti domain).
-      FTTH_CORS_ORIGINS: ${FTTH_CORS_ORIGINS:-https://simulator-ftth.karuhundeveloper.com}
-      # Seed tenant demo → login tenant admin: admin@demo.ftth / admin12345.
-      # Platform admin (lintas tenant): root@ftth.local / rootadmin123.
-      FTTH_SEED_DEMO: "true"
-      # --- RADIUS-as-a-service: server pegang radius-db langsung (provision radcheck +
-      #     baca radacct + tembak DAE). Simulator BRAS memerankan sisi-NAS di DB yang sama. ---
-      FTTH_RADIUS_DB_URL: jdbc:postgresql://radius-db:5432/radius
-      FTTH_RADIUS_DB_USER: radius
-      FTTH_RADIUS_DB_PASSWORD: radius
-      # Host FreeRADIUS pusat yang "tenant arahkan router-nya" — di demo = nama service simulator.
-      FTTH_RADIUS_PUBLIC_HOST: simulator
-      # Poll OLT SNMP tiap 30 dtk (baku PT5M) agar status ONU cepat kelihatan di demo.
-      FTTH_MONITORING_POLL_INTERVAL: PT30S
-      # --- CPE/TR-069: NBI GenieACS di jaringan compose (bukan localhost). ---
-      FTTH_CPE_GENIEACS_BASE_URL: http://genieacs-nbi:7557
-      # Sinkron CPE↔ONU tiap 30 dtk (baku PT5M) agar tautan serial 000000 cepat muncul.
-      FTTH_CPE_SYNC_INTERVAL: PT30S
-      # jwt-secret / encryption-secret sengaja tidak di-set → pakai default dev.
-
-  # --- Frontend SPA (image dari GHCR, disajikan Nginx) ---
-  web:
-    image: ${IMAGE_PREFIX:-ghcr.io/waduh67}/ftth-web:${IMAGE_TAG:-latest}
-    restart: unless-stopped
-
-  # NB: TIDAK ada service `caddy` di stack demo — ingress ditangani Caddy PROD
-  # (`ftth-caddy-1`) yang co-located di host yang sama (lihat header file).
-
-  # --- Demo BRAS/RADIUS: Postgres berisi skema FreeRADIUS + 1 sesi contoh hidup ---
+  # --- Slice BRAS/RADIUS simulator: Postgres berisi skema FreeRADIUS terpisah dari
+  #     DB produksi (accounting simulator TIDAK mencemari accounting tenant prod). ---
   radius-db:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -125,9 +53,10 @@ services:
       retries: 20
 
   # --- Simulator peniru-protokol: OLT/SNMP + BRAS/RADIUS (virtual-NAS) — image dari GHCR ---
-  # Menggantikan perangkat nyata. Tak mengekspos port ke host: server & sim bicara
-  # lewat jaringan compose. IP statis 172.30.0.10 (value-object ManagementIp menolak
-  # hostname) — server polling SNMP ke 172.30.0.10:1161 & tembak DAE ke :3799 (lihat seed-lab.sh).
+  # Menggantikan perangkat nyata. Tak mengekspos port ke host: app prod bicara ke
+  # simulator lewat network compose ini (setelah `ftth-server-1` disambungkan).
+  # IP statis 172.30.0.10 (value-object ManagementIp menolak hostname) — app prod
+  # polling SNMP ke 172.30.0.10:1161 & tembak DAE ke :3799.
   simulator:
     image: ${IMAGE_PREFIX:-ghcr.io/waduh67}/ftth-simulator:${IMAGE_TAG:-latest}
     restart: unless-stopped
@@ -145,61 +74,15 @@ services:
       FTTH_SIM_RADIUS_DB_URL: jdbc:postgresql://radius-db:5432/radius
       FTTH_SIM_RADIUS_DB_USER: radius
       FTTH_SIM_RADIUS_DB_PASSWORD: radius
-      # Secret DAE HARUS sama dengan coaSecret BRAS yang di-seed (lihat seed-lab.sh).
+      # Secret DAE HARUS sama dengan coaSecret BRAS yang didaftarkan di app prod.
       FTTH_SIM_RADIUS_DAE_SECRET: testing123
 
-  # --- GenieACS (TR-069) + 1 ONT palsu — modul CPE. Build lokal (image Node ringan). ---
-  genieacs-mongo:
-    image: mongo:4.4
-    restart: unless-stopped
-    volumes:
-      - genieacs_mongo:/data/db
-    healthcheck:
-      test: ["CMD", "mongo", "--quiet", "--eval", "db.adminCommand('ping').ok"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-
-  genieacs-cwmp:
-    build: ./docker/genieacs
-    image: ftth/genieacs:1.2.16
-    restart: unless-stopped
-    command: genieacs-cwmp
-    environment:
-      GENIEACS_MONGODB_CONNECTION_URL: mongodb://genieacs-mongo:27017/genieacs
-    depends_on:
-      genieacs-mongo:
-        condition: service_healthy
-
-  genieacs-nbi:
-    build: ./docker/genieacs
-    image: ftth/genieacs:1.2.16
-    restart: unless-stopped
-    command: genieacs-nbi
-    environment:
-      GENIEACS_MONGODB_CONNECTION_URL: mongodb://genieacs-mongo:27017/genieacs
-    depends_on:
-      genieacs-mongo:
-        condition: service_healthy
-
-  genieacs-sim:
-    build: ./docker/genieacs-sim
-    image: ftth/genieacs-sim:local
-    restart: unless-stopped
-    command: ["-u", "http://genieacs-cwmp:7547/"]
-    depends_on:
-      genieacs-cwmp:
-        condition: service_started
-
 volumes:
-  pgdata:
-  miniodata:
   radius_db:
-  genieacs_mongo:
 
-# Subnet tetap agar simulator bisa dapat IP statis (172.30.0.10). Semua service
-# tetap saling kenal lewat nama (DNS embedded Docker). `ip_range` membatasi kolam
-# alokasi dinamis ke paruh atas supaya IP statis simulator tak pernah terserempet.
+# Subnet tetap agar simulator bisa dapat IP statis (172.30.0.10). `ip_range`
+# membatasi kolam alokasi dinamis ke paruh atas supaya IP statis simulator tak
+# pernah terserempet — termasuk saat `ftth-server-1` prod ikut nyambung ke sini.
 networks:
   default:
     ipam:
