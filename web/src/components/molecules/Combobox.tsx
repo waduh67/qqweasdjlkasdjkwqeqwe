@@ -73,6 +73,14 @@ export function Combobox<T>({
     if (!value) setLabel('')
   }, [value])
 
+  // Nilai bisa di-seed ASINKRON (dimuat dari server sesudah mount) → ikuti label barunya, kalau
+  // tidak kolomnya tampak kosong padahal nilainya ada. Pemanggil TAK perlu me-remount lewat `key`:
+  // remount mengganti <input>, dan kalau komponennya dibungkus <label>, aksi default label akan
+  // memfokuskan input baru itu → onFocus → menu terbuka lagi tepat setelah opsi dipilih.
+  useEffect(() => {
+    if (initialLabel) setLabel(initialLabel)
+  }, [initialLabel])
+
   // Ambil opsi saat terbuka / kata kunci berubah; didebounce, permintaan lama dibatalkan.
   useEffect(() => {
     if (!open) return

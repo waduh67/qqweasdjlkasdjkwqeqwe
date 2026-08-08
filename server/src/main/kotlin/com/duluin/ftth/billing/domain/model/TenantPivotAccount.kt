@@ -177,13 +177,16 @@ class TenantPivotAccount private constructor(
      * Rekening ini ikut terkirim sebagai `bankAccount` saat create. Bila rekening berubah, hasil
      * inquiry lama dikosongkan agar divalidasi ulang (payout jadi "belum siap" sampai inquiry sukses).
      */
-    fun setPayoutDestination(channelCode: String?, accountNumber: String?) {
+    fun setPayoutDestination(channelCode: String?, accountNumber: String?, accountName: String?) {
         val cc = channelCode?.trim()?.uppercase()?.takeIf { it.isNotEmpty() }
         val an = accountNumber?.trim()?.takeIf { it.isNotEmpty() }
-        if (cc == payoutChannelCode && an == payoutAccountNumber) return
+        val nm = accountName?.trim()?.takeIf { it.isNotEmpty() }
+        if (cc == payoutChannelCode && an == payoutAccountNumber && nm == payoutAccountName) return
         this.payoutChannelCode = cc
         this.payoutAccountNumber = an
-        this.payoutAccountName = null
+        // Nama ikut dikirim ke inquiry (Pivot mencocokkannya dengan catatan bank), jadi disimpan —
+        // bukan dikosongkan seperti dulu saat nama dikira datang dari respons Pivot.
+        this.payoutAccountName = nm
         this.payoutInquiryId = null
     }
 

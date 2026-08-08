@@ -1,6 +1,7 @@
 package com.duluin.ftth.billing.adapter.outbound.gateway.pivot
 
 import com.duluin.ftth.billing.application.port.outbound.InquiryResult
+import com.duluin.ftth.billing.application.port.outbound.InquiryStatus
 import com.duluin.ftth.billing.application.port.outbound.PivotSubMerchantPort
 import com.duluin.ftth.billing.application.port.outbound.SubMerchantCreateRequest
 import com.duluin.ftth.billing.application.port.outbound.SubMerchantResult
@@ -56,15 +57,22 @@ class PivotSubMerchantGateway(
     override fun fetch(master: PivotMasterContext, subMerchantUuid: String): SubMerchantResult =
         apiClient.get("/v1/sub-merchants/$subMerchantUuid", master.credentials()).toSubMerchant()
 
-    override fun inquiryAccount(master: PivotMasterContext, channelCode: String, accountNumber: String): InquiryResult {
-        val body = mapOf("channelCode" to channelCode, "accountNumber" to accountNumber)
-        val data = apiClient.post("/v1/inquiry-account", body, master.credentials()).dataOrRoot()
-        val inquiryId = data.textOrNull("inquiryId") ?: data.textOrNull("id")
-            ?: throw ConflictException("Respons inquiry Pivot tak berisi inquiryId")
-        val accountName = data.textOrNull("accountName")
-            ?: data.textOrNull("accountHolderName")
-            ?: data.textOrNull("beneficiaryName")
-        return InquiryResult(inquiryId = inquiryId, accountName = accountName)
+    override fun inquiryAccount(
+        master: PivotMasterContext,
+        subMerchantId: String,
+        channelCode: String,
+        accountNumber: String,
+        accountName: String,
+    ): InquiryResult {
+        val data = apiClient
+            .post(
+                "/v1/inquiry-account",
+                inquiryBody(channelCode, accountNumber, accountName),
+                master.credentials(),
+                subMerchantId = subMerchantId,
+            )
+            .dataOrRoot()
+        return data.toInquiry()
     }
 
     override fun assignUser(master: PivotMasterContext, subMerchantId: String, email: String, name: String) {
@@ -82,6 +90,28 @@ class PivotSubMerchantGateway(
             mapOf("email" to email),
             master.credentials(),
             subMerchantId = subMerchantId,
+        )
+    }
+
+    /**
+     * Body `POST /v1/inquiry-account` — BERSARANG. Bentuk pipih (`accountNumber` di akar) ditolak
+     * Pivot 400 `field_required` dengan pesan berlubang "Make sure  value is fulfilled".
+     */
+    internal fun inquiryBody(channelCode: String, accountNumber: String, accountName: String): Map<String, Any> =
+        mapOf(
+            "channelCode" to channelCode,
+            "channelInformation" to mapOf("accountNumber" to accountNumber, "accountName" to accountName),
+        )
+
+    /** Baca `data.uuid` + `data.inquiryResult.{status,detail}`; toleran bila Pivot memakai nama lain untuk id. */
+    internal fun JsonNode.toInquiry(): InquiryResult {
+        val inquiryId = textOrNull("uuid") ?: textOrNull("inquiryId") ?: textOrNull("id")
+            ?: throw ConflictException("Respons inquiry Pivot tak berisi id")
+        val result = get("inquiryResult")?.takeIf { !it.isNull }
+        return InquiryResult(
+            inquiryId = inquiryId,
+            status = mapInquiryStatus(result?.textOrNull("status")),
+            detail = result?.textOrNull("detail"),
         )
     }
 
@@ -110,6 +140,18 @@ class PivotSubMerchantGateway(
             "DEACTIVATED", "INACTIVE", "SUSPENDED" -> SubAccountStatus.DEACTIVATED
             "REJECTED" -> SubAccountStatus.REJECTED
             else -> SubAccountStatus.CREATED
+        }
+
+        /**
+         * Petakan `inquiryResult.status` Pivot → enum domain. Nilai tak dikenal (termasuk status
+         * absen) dianggap PENDING, bukan VALID: lebih baik payout ditahan daripada diloloskan
+         * berdasarkan hasil validasi yang tak dimengerti.
+         */
+        fun mapInquiryStatus(raw: String?): InquiryStatus = when (raw?.uppercase()) {
+            "VALID" -> InquiryStatus.VALID
+            "WARNING" -> InquiryStatus.WARNING
+            "INVALID" -> InquiryStatus.INVALID
+            else -> InquiryStatus.PENDING
         }
 
         /** Petakan `subAccountKycStatus` Pivot → enum domain; nilai tak dikenal dianggap NOT_REQUIRED. */

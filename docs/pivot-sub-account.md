@@ -28,8 +28,8 @@ tenant_pivot_account  (satu baris per tenant, RLS)
 │   Rekening payout tenant + hasil validasi inquiry:
 ├── payout_channel_code    channel bank (mis. BCA)
 ├── payout_account_number  nomor rekening
-├── payout_account_name    nama pemilik — diisi otomatis hasil POST /v1/inquiry-account
-└── payout_inquiry_id      inquiryId hasil validasi — dipakai POST /v1/payouts
+├── payout_account_name    nama pemilik — DIKETIK tenant, dikirim ke POST /v1/inquiry-account
+└── payout_inquiry_id      data.uuid hasil validasi — dipakai POST /v1/payouts
 ```
 
 Penanda turunan di domain (`TenantPivotAccount`):
@@ -123,12 +123,31 @@ SubAccountKycStatus: NOT_REQUIRED
 tujuan penyaluran dana tenant, **divalidasi lebih dulu** ke Pivot:
 
 ```
-POST /v1/inquiry-account { channelCode, accountNumber }
-   → { inquiryId, accountName }
-      └─ setPayoutAccount(channelCode, accountNumber, accountName, inquiryId)
+POST /v1/inquiry-account            header: x-submerchant-id: <uuid sub-account>
+{ "channelCode": "BCA",
+  "channelInformation": { "accountNumber": "…", "accountName": "…" } }
+   → { "data": { "uuid": "<inquiryId>", "inquiryResult": { "status": …, "detail": … } } }
+      └─ setPayoutAccount(channelCode, accountNumber, accountName, uuid)
 ```
 
-- **Nama pemilik tidak diinput** — diisi otomatis hasil inquiry (`accountName`).
+- **Body harus BERSARANG.** Bentuk pipih (`accountNumber` di akar) ditolak `400 field_required`
+  dengan pesan berlubang `"Make sure  value is fulfilled"` — perhatikan spasi gandanya, nama
+  fieldnya kosong. Ini pernah membuat SEMUA payout gagal.
+- **Nama pemilik DIINPUT tenant** (maks 60 karakter), bukan hasil inquiry — Pivot tak pernah
+  mengembalikan nama pemilik sebagai field. Yang dikembalikan `inquiryResult.status`:
+
+  | status | arti | perlakuan kita |
+  | --- | --- | --- |
+  | `VALID` | nomor & nama cocok | diteruskan |
+  | `WARNING` | nomor ada, nama beda — `detail` memuat nama versi bank | **ditahan** (`ConflictException`), `detail` diteruskan ke UI |
+  | `INVALID` | rekening tak ditemukan | ditahan |
+  | `PENDING` | masih diproses (juga fallback status tak dikenal) | ditahan |
+
+- **Wajib on-behalf `x-submerchant-id`** — biaya inquiry dibebankan ke saldo pemanggil, jadi
+  inquiry atas nama master ditolak `400 balance_insufficient`. Artinya rekening baru bisa
+  divalidasi **setelah** sub-account ada; sebelum itu profil hanya menyimpannya lokal.
+- Inquiry **idempoten** per (channelCode, accountNumber): panggilan berulang mengembalikan `uuid`
+  yang sama.
 - `payout_inquiry_id` inilah yang dibawa `POST /v1/payouts` saat payout NON_KYC (lihat
   [`pivot-payout.md`](pivot-payout.md)). Tanpa inquiry tervalidasi (`payoutReady=false`),
   payout ditolak.

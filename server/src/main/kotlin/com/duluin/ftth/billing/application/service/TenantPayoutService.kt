@@ -81,9 +81,13 @@ class TenantPayoutService(
             ?: throw ValidationException("Channel bank wajib diisi")
         val accountNumber = command.accountNumber.trim().takeIf { it.isNotEmpty() }
             ?: throw ValidationException("Nomor rekening wajib diisi")
+        val accountName = requireAccountName(command.accountName)
 
-        // Validasi rekening tujuan → nama pemilik + inquiryId; wajib cek saldo sebelum create payout.
-        val inquiry = subMerchant.inquiryAccount(master, channelCode, accountNumber)
+        // Validasi rekening tujuan → inquiryId; on-behalf sub-account karena biayanya dibebankan ke
+        // saldo pemanggil. Wajib cek saldo sebelum create payout.
+        val inquiry = subMerchant
+            .inquiryAccount(master, subId, channelCode, accountNumber, accountName)
+            .requireValid()
         // Sengaja DISBURSEMENT, bukan PAYMENT: `POST /v1/payouts` menarik dari saldo payout. Kalau
         // dicek ke saldo pembayaran, request lolos di sini lalu ditolak Pivot "waiting for top up".
         val snapshot = payoutPort.balance(master, subId, PivotBalanceUsecase.DISBURSEMENT)
@@ -100,7 +104,7 @@ class TenantPayoutService(
             amountMinor = amount,
             channelCode = channelCode,
             accountNumber = accountNumber,
-            accountName = inquiry.accountName,
+            accountName = accountName,
             createdAt = Instant.now(),
         )
         val dispatch = payoutPort.payout(
@@ -110,7 +114,7 @@ class TenantPayoutService(
                 amountMinor = amount,
                 channelCode = channelCode,
                 accountNumber = accountNumber,
-                accountName = inquiry.accountName,
+                accountName = accountName,
                 inquiryId = inquiry.inquiryId,
                 referenceId = payout.id.toString(),
                 description = command.description,

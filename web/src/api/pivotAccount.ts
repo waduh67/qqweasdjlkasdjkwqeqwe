@@ -90,12 +90,17 @@ export interface PivotProfileRequest {
   address: string | null
   channelCode: string | null
   accountNumber: string | null
+  accountName: string | null
 }
 
-/** Setel rekening payout sub-account: kode channel bank + nomor rekening. */
+/**
+ * Setel rekening payout sub-account: kode channel bank + nomor rekening + nama pemilik. Nama diketik
+ * tenant (Pivot tak mengembalikannya) lalu dicocokkan dengan catatan bank saat inquiry; maks 60 karakter.
+ */
 export interface PivotPayoutAccountRequest {
   channelCode: string
   accountNumber: string
+  accountName: string
 }
 
 /** Baca ringkasan sub-account Pivot tenant aktif. */
@@ -186,12 +191,13 @@ export function listPivotPayouts(): Promise<TenantPayoutView[]> {
 }
 
 /**
- * Salurkan dana ke rekening beneficiary bebas. Server memvalidasi nama pemilik (inquiry) & wajib
- * mengecek saldo sebelum membuat payout.
+ * Salurkan dana ke rekening beneficiary bebas. Server mencocokkan `accountName` dengan catatan bank
+ * (inquiry) — payout ditolak bila namanya beda — & wajib mengecek saldo sebelum membuat payout.
  */
 export function createPivotPayout(body: {
   channelCode: string
   accountNumber: string
+  accountName: string
   amountMinor: number
   description?: string | null
 }): Promise<TenantPayoutView> {

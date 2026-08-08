@@ -81,12 +81,18 @@ data class SaveTenantPivotProfileCommand(
     val address: String?,
     val channelCode: String?,
     val accountNumber: String?,
+    /** Nama pemilik rekening — dipakai saat inquiry rekening dijalankan pasca-provisioning. */
+    val accountName: String?,
 )
 
-/** Setel rekening payout tenant (channel bank + nomor rekening); nama pemilik diisi hasil inquiry. */
+/**
+ * Setel rekening payout tenant: channel bank + nomor rekening + nama pemilik. Nama WAJIB —
+ * Pivot mencocokkannya dengan catatan bank saat `POST /v1/inquiry-account`.
+ */
 data class SetPivotPayoutAccountCommand(
     val channelCode: String,
     val accountNumber: String,
+    val accountName: String,
 )
 
 /** Assign user admin ke sub-account tenant: alamat email + nama lengkap (undangan dikirim Pivot). */

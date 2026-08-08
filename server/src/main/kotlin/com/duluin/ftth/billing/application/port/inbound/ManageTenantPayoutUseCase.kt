@@ -37,6 +37,8 @@ interface ReconcilePayoutUseCase {
 data class DispatchPayoutCommand(
     val channelCode: String,
     val accountNumber: String,
+    /** Nama pemilik rekening — wajib, dicocokkan Pivot dengan catatan bank saat inquiry. */
+    val accountName: String,
     val amountMinor: Long,
     val description: String?,
 )

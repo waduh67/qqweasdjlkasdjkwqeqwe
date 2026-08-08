@@ -63,7 +63,9 @@ class TenantPivotAccountController(
     @PreAuthorize("@authz.can('billing.gateway.manage')")
     @Operation(summary = "Setel rekening payout tenant (divalidasi via inquiry Pivot)")
     fun setPayoutAccount(@Valid @RequestBody request: PivotPayoutAccountRequest): TenantPivotAccountView =
-        useCase.setPayoutAccount(SetPivotPayoutAccountCommand(request.channelCode, request.accountNumber))
+        useCase.setPayoutAccount(
+            SetPivotPayoutAccountCommand(request.channelCode, request.accountNumber, request.accountName),
+        )
 
     @PostMapping("/users")
     @PreAuthorize("@authz.can('billing.gateway.manage')")
@@ -92,6 +94,7 @@ data class PivotProfileRequest(
     @field:Size(max = 500) val address: String? = null,
     @field:Size(max = 40) val channelCode: String? = null,
     @field:Size(max = 60) val accountNumber: String? = null,
+    @field:Size(max = 60) val accountName: String? = null,
 ) {
     fun toCommand() = SaveTenantPivotProfileCommand(
         legalName = legalName,
@@ -103,15 +106,22 @@ data class PivotProfileRequest(
         address = address,
         channelCode = channelCode,
         accountNumber = accountNumber,
+        accountName = accountName,
     )
 }
 
-/** Rekening payout tenant. Nama pemilik diisi otomatis hasil `POST /v1/inquiry-account`, bukan input. */
+/**
+ * Rekening payout tenant. Nama pemilik diketik tenant (bukan hasil inquiry — Pivot tak
+ * mengembalikannya) lalu dicocokkan dengan catatan bank saat `POST /v1/inquiry-account`; batas 60
+ * karakter mengikuti spec Pivot.
+ */
 data class PivotPayoutAccountRequest(
     @field:NotBlank(message = "Channel bank wajib diisi") @field:Size(max = 40)
     val channelCode: String,
     @field:NotBlank(message = "Nomor rekening wajib diisi") @field:Size(max = 60)
     val accountNumber: String,
+    @field:NotBlank(message = "Nama pemilik rekening wajib diisi") @field:Size(max = 60)
+    val accountName: String,
 )
 
 /** Assign user admin ke sub-account tenant: email + nama lengkap. */
