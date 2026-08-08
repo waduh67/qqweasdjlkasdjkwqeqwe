@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { Button } from '@/components/atoms'
 import { IconClose } from '@/components/atoms/icons'
 
 /**
@@ -46,9 +47,7 @@ export function Modal({
       <div className={`modal${wide ? ' modal-wide' : ''}`} role="dialog" aria-modal="true">
         <div className="modal-head">
           <h3>{title}</h3>
-          <button className="ghost icon-btn" onClick={onClose} aria-label="Tutup">
-            <IconClose size={18} />
-          </button>
+          <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
         </div>
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-foot">{footer}</div>}

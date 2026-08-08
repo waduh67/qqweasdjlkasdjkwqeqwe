@@ -9,7 +9,7 @@ import {
   type ImportCustomersResult,
 } from '../api/onboarding'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState } from '@/components/atoms'
+import { Badge, Button, EmptyState } from '@/components/atoms'
 import { useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
 import { IconInbox, IconDownload, IconUpload } from '@/components/atoms/icons'
@@ -285,9 +285,9 @@ export function ImportCustomersPage() {
           </>
         }
         actions={
-          <button className="ghost" onClick={() => navigate('/customers')}>
+          <Button variant="subtle" onClick={() => navigate('/customers')}>
             Kembali ke Pelanggan
-          </button>
+          </Button>
         }
       />
 
@@ -295,9 +295,9 @@ export function ImportCustomersPage() {
       <div className="card stack" style={{ gap: '0.8rem' }}>
         <div className="spread" style={{ alignItems: 'center' }}>
           <h3 style={{ margin: 0, fontSize: '0.95rem' }}>1. Unggah berkas CSV</h3>
-          <button className="ghost small" onClick={downloadTemplate}>
+          <Button variant="subtle" size="small" onClick={downloadTemplate}>
             <IconDownload size={14} /> Unduh template
-          </button>
+          </Button>
         </div>
         <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
           <input
@@ -402,9 +402,9 @@ export function ImportCustomersPage() {
       {/* 3. Commit */}
       {rows.length > 0 && (
         <div className="row" style={{ gap: '0.5rem' }}>
-          <button className="primary" onClick={() => void submit()} disabled={saving || readyCount === 0}>
+          <Button variant="primary" onClick={() => void submit()} disabled={saving || readyCount === 0}>
             <IconInbox size={15} /> {saving ? 'Mengimpor…' : `Impor ${readyCount} baris`}
-          </button>
+          </Button>
           <span className="muted" style={{ fontSize: '0.8rem', alignSelf: 'center' }}>
             Baris baru langsung aktif &amp; ditulis ke RADIUS. Aktivasi memprorata tagihan dari tanggal pasang.
           </span>
@@ -434,9 +434,9 @@ function ResultCard({ result, onDismiss }: { result: ImportCustomersResult; onDi
           <Badge tone="neutral">{result.skipped} dilewati</Badge>{' '}
           {result.failed > 0 && <Badge tone="critical">{result.failed} gagal</Badge>}
         </h3>
-        <button className="ghost" onClick={onDismiss}>
+        <Button variant="subtle" onClick={onDismiss}>
           Tutup
-        </button>
+        </Button>
       </div>
       <div style={{ maxHeight: 360, overflow: 'auto' }}>
         <table className="table" style={{ fontSize: '0.85rem' }}>

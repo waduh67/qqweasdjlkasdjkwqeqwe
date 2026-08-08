@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import type { AuditEntry, PageResponse } from '../api/types'
 import { DataTable, type Column } from '@/components/organisms'
-import { Badge, EmptyState, Toolbar } from '@/components/atoms'
+import { Badge, EmptyState, SelectField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
@@ -97,14 +97,14 @@ export function AuditPage() {
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari aksi, pelaku, objek, atau detail…" />
-        <select value={action} onChange={(e) => setAction(e.target.value)}>
+        <SelectField value={action} onChange={(_, data) => setAction(data.value)}>
           <option value="">Semua aksi</option>
           {actions.map((a) => (
             <option key={a} value={a}>
               {a}
             </option>
           ))}
-        </select>
+        </SelectField>
       </Toolbar>
 
       <DataTable

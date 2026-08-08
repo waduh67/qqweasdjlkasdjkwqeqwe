@@ -4,13 +4,14 @@ import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type { AssetStatus, OdcView, OdpView, OltView, PonPortView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
 import { Link2, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { Checkbox } from '@fluentui/react-components'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
 import { LocationPicker } from '@/components/organisms'
 import { Blade } from '@/components/organisms'
-import { EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput, Tabs } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { IconInventory } from '@/components/atoms/icons'
@@ -254,8 +255,8 @@ function SitesTab() {
         onClose={closeDraft}
         footer={
           <>
-            <button
-              className="primary"
+            <Button
+              variant="primary"
               onClick={() =>
                 void run(async () => {
                   await api.post('/api/sites', {
@@ -269,27 +270,35 @@ function SitesTab() {
               }
             >
               Simpan
-            </button>
-            <button onClick={closeDraft}>Batal</button>
+            </Button>
+            <Button onClick={closeDraft}>Batal</Button>
           </>
         }
       >
         {draft && (
           <div className="stack">
             <div className="row">
-              <label style={{ flex: 1 }}>
-                <span>Kode</span>
-                <input value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} placeholder="POP-BKS" />
-              </label>
-              <label style={{ flex: 2 }}>
-                <span>Nama</span>
-                <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-              </label>
+              <div style={{ flex: 1 }}>
+                <TextField
+                  label="Kode"
+                  value={draft.code}
+                  onChange={(_, data) => setDraft({ ...draft, code: data.value })}
+                  placeholder="POP-BKS"
+                />
+              </div>
+              <div style={{ flex: 2 }}>
+                <TextField
+                  label="Nama"
+                  value={draft.name}
+                  onChange={(_, data) => setDraft({ ...draft, name: data.value })}
+                />
+              </div>
             </div>
-            <label>
-              <span>Alamat</span>
-              <input value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} />
-            </label>
+            <TextField
+              label="Alamat"
+              value={draft.address}
+              onChange={(_, data) => setDraft({ ...draft, address: data.value })}
+            />
             <LocationFields
               longitude={draft.longitude}
               latitude={draft.latitude}
@@ -433,13 +442,13 @@ function OltsTab() {
             // Baris kini bisa diklik menuju detail OLT; hentikan bubbling agar
             // mengetik/klik kontrol PON port di sel ini tak ikut bernavigasi.
             <div className="row" style={{ gap: '0.3rem' }} onClick={(e) => e.stopPropagation()}>
-              <input
+              <TextField
                 style={{ width: '5.5rem' }}
                 placeholder="1/2/3"
                 value={ports[o.id] ?? ''}
-                onChange={(e) => setPorts({ ...ports, [o.id]: e.target.value })}
+                onChange={(_, data) => setPorts({ ...ports, [o.id]: data.value })}
               />
-              <button
+              <Button
                 onClick={() =>
                   void run(async () => {
                     await api.post(`/api/olts/${o.id}/pon-ports`, { label: ports[o.id] })
@@ -448,7 +457,7 @@ function OltsTab() {
                 }
               >
                 + port
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -508,8 +517,8 @@ function OltsTab() {
         onClose={closeDraft}
         footer={
           <>
-            <button
-              className="primary"
+            <Button
+              variant="primary"
               onClick={() =>
                 void run(async () => {
                   const { longitude, latitude } = draft!
@@ -540,8 +549,8 @@ function OltsTab() {
               }
             >
               Simpan
-            </button>
-            <button onClick={closeDraft}>Batal</button>
+            </Button>
+            <Button onClick={closeDraft}>Batal</Button>
           </>
         }
       >
@@ -549,112 +558,113 @@ function OltsTab() {
           <div className="stack">
           {/* Identitas perangkat */}
           <div className="row">
-            <label style={{ flex: 1 }}>
-              <span>Site</span>
-              <select value={draft.siteId} onChange={(e) => setDraft({ ...draft, siteId: e.target.value })}>
+            <div style={{ flex: 1 }}>
+              <SelectField
+                label="Site"
+                value={draft.siteId}
+                onChange={(_, data) => setDraft({ ...draft, siteId: data.value })}
+              >
                 {sites.map((site) => (
                   <option key={site.id} value={site.id}>
                     {site.code} — {site.name}
                   </option>
                 ))}
-              </select>
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Kode</span>
-              <input value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} placeholder="OLT-BKS-01" />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Nama</span>
-              <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-            </label>
+              </SelectField>
+            </div>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Kode"
+                value={draft.code}
+                onChange={(_, data) => setDraft({ ...draft, code: data.value })}
+                placeholder="OLT-BKS-01"
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Nama"
+                value={draft.name}
+                onChange={(_, data) => setDraft({ ...draft, name: data.value })}
+              />
+            </div>
           </div>
           <div className="row">
-            <label style={{ flex: 1 }}>
-              <span>
-                Vendor <span className="muted">(hardware type)</span>
-              </span>
-              <select value={draft.vendor} onChange={(e) => setDraft(changeVendor(draft, e.target.value))}>
+            <div style={{ flex: 1 }}>
+              <SelectField
+                label={<>Vendor <span className="muted">(hardware type)</span></>}
+                value={draft.vendor}
+                onChange={(_, data) => setDraft(changeVendor(draft, data.value))}
+              >
                 {VENDORS.map((vendor) => (
                   <option key={vendor}>{vendor}</option>
                 ))}
-              </select>
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>
-                Model <span className="muted">(opsional)</span>
-              </span>
-              <input value={draft.model} onChange={(e) => setDraft({ ...draft, model: e.target.value })} placeholder="C320" />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>
-                IP manajemen <span className="muted">(opsional)</span>
-              </span>
-              <input
+              </SelectField>
+            </div>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label={<>Model <span className="muted">(opsional)</span></>}
+                value={draft.model}
+                onChange={(_, data) => setDraft({ ...draft, model: data.value })}
+                placeholder="C320"
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label={<>IP manajemen <span className="muted">(opsional)</span></>}
                 value={draft.managementIp}
-                onChange={(e) => setDraft({ ...draft, managementIp: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, managementIp: data.value })}
                 placeholder="10.10.1.2"
               />
-            </label>
+            </div>
           </div>
-          <label>
-            <span>
-              Deskripsi <span className="muted">(opsional)</span>
-            </span>
-            <input
-              value={draft.description}
-              onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-              placeholder="Lokasi rak, kontak vendor, atau ID kontrak…"
-            />
-          </label>
+          <TextField
+            label={<>Deskripsi <span className="muted">(opsional)</span></>}
+            value={draft.description}
+            onChange={(_, data) => setDraft({ ...draft, description: data.value })}
+            placeholder="Lokasi rak, kontak vendor, atau ID kontrak…"
+          />
 
           {/* Kanal SNMP — utama untuk ZTE/Huawei/dst.; HSGQ EPON pun dipolling lewat SNMP, jadi tampil untuk semua vendor */}
           <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
-            <label className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
-              <input
-                type="checkbox"
-                checked={draft.snmpEnabled}
-                onChange={(e) => setDraft({ ...draft, snmpEnabled: e.target.checked })}
-                style={{ width: 'auto' }}
-              />
-              <span style={{ fontWeight: 600 }}>Aktifkan SNMP untuk OLT ini</span>
-            </label>
+            <Checkbox
+              label={<span style={{ fontWeight: 600 }}>Aktifkan SNMP untuk OLT ini</span>}
+              checked={draft.snmpEnabled}
+              onChange={(e) => setDraft({ ...draft, snmpEnabled: e.target.checked })}
+            />
             {draft.snmpEnabled && (
               <div className="row">
-                <label style={{ flex: 1 }}>
-                  <span>
-                    Community string <span className="muted">(RO/RW)</span>
-                  </span>
-                  <input
+                <div style={{ flex: 1 }}>
+                  <TextField
+                    label={<>Community string <span className="muted">(RO/RW)</span></>}
                     type="password"
                     value={draft.snmpCommunity}
-                    onChange={(e) => setDraft({ ...draft, snmpCommunity: e.target.value })}
+                    onChange={(_, data) => setDraft({ ...draft, snmpCommunity: data.value })}
                     placeholder="public"
                   />
-                </label>
-                <label style={{ width: 130 }}>
-                  <span>Versi</span>
-                  <select
+                </div>
+                <div style={{ width: 130 }}>
+                  <SelectField
+                    label="Versi"
                     value={draft.snmpVersion}
-                    onChange={(e) => setDraft({ ...draft, snmpVersion: e.target.value as SnmpVersion })}
+                    onChange={(_, data) => setDraft({ ...draft, snmpVersion: data.value as SnmpVersion })}
                   >
                     {SNMP_VERSIONS.map((v) => (
                       <option key={v.value} value={v.value}>
                         {v.label}
                       </option>
                     ))}
-                  </select>
-                </label>
-                <label style={{ width: 110 }}>
-                  <span>Port SNMP</span>
-                  <input
+                  </SelectField>
+                </div>
+                <div style={{ width: 110 }}>
+                  <TextField
+                    label="Port SNMP"
                     type="number"
                     min={1}
                     max={65535}
                     value={draft.snmpPort}
-                    onChange={(e) => setDraft({ ...draft, snmpPort: e.target.value })}
+                    onChange={(_, data) => setDraft({ ...draft, snmpPort: data.value })}
                     placeholder="161"
                   />
-                </label>
+                </div>
               </div>
             )}
             <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
@@ -674,15 +684,11 @@ function OltsTab() {
               </div>
             ) : (
               <>
-                <label className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
-                  <input
-                    type="checkbox"
-                    checked={draft.webEnabled}
-                    onChange={(e) => setDraft({ ...draft, webEnabled: e.target.checked })}
-                    style={{ width: 'auto' }}
-                  />
-                  <span style={{ fontWeight: 600 }}>Aktifkan Web Management (metrik)</span>
-                </label>
+                <Checkbox
+                  label={<span style={{ fontWeight: 600 }}>Aktifkan Web Management (metrik)</span>}
+                  checked={draft.webEnabled}
+                  onChange={(e) => setDraft({ ...draft, webEnabled: e.target.checked })}
+                />
                 <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
                   Digunakan untuk mengambil data suhu (temperature) &amp; daya optik (optical power) lewat Web UI.
                 </p>
@@ -690,48 +696,44 @@ function OltsTab() {
             )}
             {(isWebManaged(draft.vendor) || draft.webEnabled) && (
               <div className="row">
-                <label style={{ width: 130 }}>
-                  <span>Protokol</span>
-                  <select
+                <div style={{ width: 130 }}>
+                  <SelectField
+                    label="Protokol"
                     value={draft.webProtocol}
-                    onChange={(e) => setDraft({ ...draft, webProtocol: e.target.value as WebProtocol })}
+                    onChange={(_, data) => setDraft({ ...draft, webProtocol: data.value as WebProtocol })}
                   >
                     <option value="HTTP">HTTP</option>
                     <option value="HTTPS">HTTPS</option>
-                  </select>
-                </label>
-                <label style={{ width: 130 }}>
-                  <span>Port Web</span>
-                  <input
+                  </SelectField>
+                </div>
+                <div style={{ width: 130 }}>
+                  <TextField
+                    label="Port Web"
                     type="number"
                     min={1}
                     max={65535}
                     value={draft.webPort}
-                    onChange={(e) => setDraft({ ...draft, webPort: e.target.value })}
+                    onChange={(_, data) => setDraft({ ...draft, webPort: data.value })}
                     placeholder="80"
                   />
-                </label>
-                <label style={{ flex: 1 }}>
-                  <span>
-                    Web Username <span className="muted">(opsional)</span>
-                  </span>
-                  <input
+                </div>
+                <div style={{ flex: 1 }}>
+                  <TextField
+                    label={<>Web Username <span className="muted">(opsional)</span></>}
                     value={draft.webUsername}
-                    onChange={(e) => setDraft({ ...draft, webUsername: e.target.value })}
+                    onChange={(_, data) => setDraft({ ...draft, webUsername: data.value })}
                     placeholder="admin"
                   />
-                </label>
-                <label style={{ flex: 1 }}>
-                  <span>
-                    Web Password <span className="muted">(opsional)</span>
-                  </span>
-                  <input
+                </div>
+                <div style={{ flex: 1 }}>
+                  <TextField
+                    label={<>Web Password <span className="muted">(opsional)</span></>}
                     type="password"
                     value={draft.webPassword}
-                    onChange={(e) => setDraft({ ...draft, webPassword: e.target.value })}
+                    onChange={(_, data) => setDraft({ ...draft, webPassword: data.value })}
                     placeholder={isWebManaged(draft.vendor) ? 'password Web UI' : 'kalau beda dari Telnet'}
                   />
-                </label>
+                </div>
               </div>
             )}
             {(isWebManaged(draft.vendor) || draft.webEnabled) && (
@@ -755,11 +757,11 @@ function OltsTab() {
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari kode, nama, site, vendor, atau IP…" />
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as AssetStatus | '')}>
+        <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value as AssetStatus | '')}>
           {ASSET_STATUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
-        </select>
+        </SelectField>
       </Toolbar>
 
       <DataTable
@@ -816,12 +818,12 @@ function PonPortPicker({ value, onChange }: { value: string; onChange: (ponPortI
 
   return (
     <div className="row">
-      <label style={{ flex: 1 }}>
-        <span>OLT hulu</span>
-        <select
+      <div style={{ flex: 1 }}>
+        <SelectField
+          label="OLT hulu"
           value={oltId}
-          onChange={(e) => {
-            setOltId(e.target.value)
+          onChange={(_, data) => {
+            setOltId(data.value)
             onChange('')
           }}
         >
@@ -831,11 +833,15 @@ function PonPortPicker({ value, onChange }: { value: string; onChange: (ponPortI
               {o.code} · {o.name}
             </option>
           ))}
-        </select>
-      </label>
-      <label style={{ flex: 1 }}>
-        <span>PON port</span>
-        <select value={value} onChange={(e) => onChange(e.target.value)} disabled={!oltId || loadingPorts}>
+        </SelectField>
+      </div>
+      <div style={{ flex: 1 }}>
+        <SelectField
+          label="PON port"
+          value={value}
+          onChange={(_, data) => onChange(data.value)}
+          disabled={!oltId || loadingPorts}
+        >
           <option value="">
             {!oltId ? '— pilih OLT dulu —' : loadingPorts ? 'memuat…' : '— pilih port —'}
           </option>
@@ -845,8 +851,8 @@ function PonPortPicker({ value, onChange }: { value: string; onChange: (ponPortI
               {p.odcCount > 0 ? ` · ${p.odcCount} ODC` : ''}
             </option>
           ))}
-        </select>
-      </label>
+        </SelectField>
+      </div>
     </div>
   )
 }
@@ -979,8 +985,8 @@ function OdcsTab() {
         onClose={closeDraft}
         footer={
           <>
-            <button
-              className="primary"
+            <Button
+              variant="primary"
               onClick={() =>
                 void run(async () => {
                   await api.post('/api/odcs', {
@@ -996,36 +1002,49 @@ function OdcsTab() {
               }
             >
               Simpan
-            </button>
-            <button onClick={closeDraft}>Batal</button>
+            </Button>
+            <Button onClick={closeDraft}>Batal</Button>
           </>
         }
       >
         {draft && (
           <div className="stack">
             <div className="row">
-              <label style={{ flex: 1 }}>
-                <span>Kode</span>
-                <input value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} placeholder="ODC-MGH-01" />
-              </label>
-              <label style={{ flex: 2 }}>
-                <span>Nama</span>
-                <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-              </label>
+              <div style={{ flex: 1 }}>
+                <TextField
+                  label="Kode"
+                  value={draft.code}
+                  onChange={(_, data) => setDraft({ ...draft, code: data.value })}
+                  placeholder="ODC-MGH-01"
+                />
+              </div>
+              <div style={{ flex: 2 }}>
+                <TextField
+                  label="Nama"
+                  value={draft.name}
+                  onChange={(_, data) => setDraft({ ...draft, name: data.value })}
+                />
+              </div>
             </div>
             <div className="row">
-              <label style={{ flex: 1 }}>
-                <span>Rasio splitter</span>
-                <select value={draft.splitterRatio} onChange={(e) => setDraft({ ...draft, splitterRatio: e.target.value })}>
+              <div style={{ flex: 1 }}>
+                <SelectField
+                  label="Rasio splitter"
+                  value={draft.splitterRatio}
+                  onChange={(_, data) => setDraft({ ...draft, splitterRatio: data.value })}
+                >
                   {SPLITTER_RATIOS.map((ratio) => (
                     <option key={ratio}>{ratio}</option>
                   ))}
-                </select>
-              </label>
-              <label style={{ flex: 1 }}>
-                <span>Kapasitas</span>
-                <input value={draft.capacity} onChange={(e) => setDraft({ ...draft, capacity: e.target.value })} />
-              </label>
+                </SelectField>
+              </div>
+              <div style={{ flex: 1 }}>
+                <TextField
+                  label="Kapasitas"
+                  value={draft.capacity}
+                  onChange={(_, data) => setDraft({ ...draft, capacity: data.value })}
+                />
+              </div>
             </div>
             <LocationFields
               longitude={draft.longitude}
@@ -1051,8 +1070,8 @@ function OdcsTab() {
         }}
         footer={
           <>
-            <button
-              className="primary"
+            <Button
+              variant="primary"
               onClick={() =>
                 void run(async () => {
                   await api.put(`/api/odcs/${uplinkFor!.id}/uplink`, { targetId: uplinkPort || null })
@@ -1062,15 +1081,15 @@ function OdcsTab() {
               }
             >
               Simpan uplink
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => {
                 setUplinkFor(null)
                 setUplinkPort('')
               }}
             >
               Batal
-            </button>
+            </Button>
           </>
         }
       >
@@ -1079,11 +1098,11 @@ function OdcsTab() {
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari kode, nama, atau OLT hulu…" />
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as AssetStatus | '')}>
+        <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value as AssetStatus | '')}>
           {ASSET_STATUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
-        </select>
+        </SelectField>
       </Toolbar>
 
       <DataTable
@@ -1212,8 +1231,8 @@ function OdpsTab() {
         onClose={closeDraft}
         footer={
           <>
-            <button
-              className="primary"
+            <Button
+              variant="primary"
               onClick={() =>
                 void run(async () => {
                   await api.post('/api/odps', {
@@ -1229,47 +1248,63 @@ function OdpsTab() {
               }
             >
               Simpan
-            </button>
-            <button onClick={closeDraft}>Batal</button>
+            </Button>
+            <Button onClick={closeDraft}>Batal</Button>
           </>
         }
       >
         {draft && (
           <div className="stack">
             <div className="row">
-              <label style={{ flex: 1 }}>
-                <span>Kode</span>
-                <input value={draft.code} onChange={(e) => setDraft({ ...draft, code: e.target.value })} placeholder="ODP-MGH-007" />
-              </label>
-              <label style={{ flex: 2 }}>
-                <span>Nama</span>
-                <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-              </label>
-              <label style={{ flex: 1 }}>
-                <span>ODC induk</span>
-                <select value={draft.odcId} onChange={(e) => setDraft({ ...draft, odcId: e.target.value })}>
+              <div style={{ flex: 1 }}>
+                <TextField
+                  label="Kode"
+                  value={draft.code}
+                  onChange={(_, data) => setDraft({ ...draft, code: data.value })}
+                  placeholder="ODP-MGH-007"
+                />
+              </div>
+              <div style={{ flex: 2 }}>
+                <TextField
+                  label="Nama"
+                  value={draft.name}
+                  onChange={(_, data) => setDraft({ ...draft, name: data.value })}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <SelectField
+                  label="ODC induk"
+                  value={draft.odcId}
+                  onChange={(_, data) => setDraft({ ...draft, odcId: data.value })}
+                >
                   <option value="">— belum tersambung —</option>
                   {odcs.map((odc) => (
                     <option key={odc.id} value={odc.id}>
                       {odc.code}
                     </option>
                   ))}
-                </select>
-              </label>
+                </SelectField>
+              </div>
             </div>
             <div className="row">
-              <label style={{ flex: 1 }}>
-                <span>Rasio splitter</span>
-                <select value={draft.splitterRatio} onChange={(e) => setDraft({ ...draft, splitterRatio: e.target.value })}>
+              <div style={{ flex: 1 }}>
+                <SelectField
+                  label="Rasio splitter"
+                  value={draft.splitterRatio}
+                  onChange={(_, data) => setDraft({ ...draft, splitterRatio: data.value })}
+                >
                   {SPLITTER_RATIOS.map((ratio) => (
                     <option key={ratio}>{ratio}</option>
                   ))}
-                </select>
-              </label>
-              <label style={{ flex: 1 }}>
-                <span>Jumlah port</span>
-                <input value={draft.capacity} onChange={(e) => setDraft({ ...draft, capacity: e.target.value })} />
-              </label>
+                </SelectField>
+              </div>
+              <div style={{ flex: 1 }}>
+                <TextField
+                  label="Jumlah port"
+                  value={draft.capacity}
+                  onChange={(_, data) => setDraft({ ...draft, capacity: data.value })}
+                />
+              </div>
             </div>
             <LocationFields
               longitude={draft.longitude}
@@ -1282,11 +1317,11 @@ function OdpsTab() {
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari kode, nama, atau ODC induk…" />
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as AssetStatus | '')}>
+        <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value as AssetStatus | '')}>
           {ASSET_STATUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
-        </select>
+        </SelectField>
       </Toolbar>
 
       <DataTable

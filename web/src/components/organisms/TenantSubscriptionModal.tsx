@@ -15,7 +15,7 @@ import {
 } from '@/api/platformBilling'
 import { useCan } from '@/auth/useCan'
 import { Blade } from '@/components/organisms'
-import { Badge } from '@/components/atoms'
+import { Badge, Button, TextField } from '@/components/atoms'
 import { useConfirm, usePrompt, useToast } from '@/system'
 import { type Tone } from '@/components/atoms'
 
@@ -185,11 +185,11 @@ export function TenantSubscriptionModal({
       footer={
         <>
           {manage && (
-            <button className="primary" onClick={saveFee} disabled={!feeDirty || busy || loading}>
+            <Button variant="primary" onClick={saveFee} disabled={!feeDirty || busy || loading}>
               {sub ? 'Simpan' : 'Aktifkan'}
-            </button>
+            </Button>
           )}
-          <button onClick={onClose}>Batal</button>
+          <Button onClick={onClose}>Batal</Button>
         </>
       }
     >
@@ -211,41 +211,38 @@ export function TenantSubscriptionModal({
           <div className="card stack" style={{ gap: '0.75rem' }}>
             <h4 style={{ margin: 0 }}>{sub ? 'Ubah biaya bulanan' : 'Aktifkan langganan'}</h4>
             <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-              <label style={{ flex: 2, minWidth: 160 }}>
-                <span>Biaya bulanan (Rp)</span>
-                <input
-                  type="number"
-                  min={0}
-                  value={fee}
-                  onChange={(e) => setFee(e.target.value)}
-                  placeholder="mis. 250000"
-                  disabled={!manage}
-                />
-              </label>
-              <label style={{ flex: 1, minWidth: 110 }}>
-                <span>Tanggal tagih</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={28}
-                  value={billingDay}
-                  onChange={(e) => setBillingDay(e.target.value)}
-                  placeholder="global"
-                  disabled={!manage}
-                />
-              </label>
-              <label style={{ flex: 1, minWidth: 110 }}>
-                <span>Masa tenggang</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={90}
-                  value={graceDays}
-                  onChange={(e) => setGraceDays(e.target.value)}
-                  placeholder="global"
-                  disabled={!manage}
-                />
-              </label>
+              <TextField
+                label="Biaya bulanan (Rp)"
+                type="number"
+                min={0}
+                value={fee}
+                onChange={(_, data) => setFee(data.value)}
+                placeholder="mis. 250000"
+                disabled={!manage}
+                style={{ flex: 2, minWidth: 160 }}
+              />
+              <TextField
+                label="Tanggal tagih"
+                type="number"
+                min={1}
+                max={28}
+                value={billingDay}
+                onChange={(_, data) => setBillingDay(data.value)}
+                placeholder="global"
+                disabled={!manage}
+                style={{ flex: 1, minWidth: 110 }}
+              />
+              <TextField
+                label="Masa tenggang"
+                type="number"
+                min={0}
+                max={90}
+                value={graceDays}
+                onChange={(_, data) => setGraceDays(data.value)}
+                placeholder="global"
+                disabled={!manage}
+                style={{ flex: 1, minWidth: 110 }}
+              />
             </div>
             <span className="muted" style={{ fontSize: '0.82rem' }}>
               Tanggal tagih &amp; masa tenggang kosong = pakai default global. Menyimpan tenant baru langsung
@@ -255,9 +252,9 @@ export function TenantSubscriptionModal({
             {/* Simpan/Aktifkan kini di footer Blade; sisakan aksi hentikan langganan di sini. */}
             {manage && sub && sub.status !== 'CANCELLED' && (
               <div className="row">
-                <button className="ghost" onClick={cancelSub} disabled={busy}>
+                <Button variant="subtle" onClick={cancelSub} disabled={busy}>
                   Hentikan langganan
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -268,14 +265,14 @@ export function TenantSubscriptionModal({
               <div className="spread" style={{ alignItems: 'center' }}>
                 <h4 style={{ margin: 0 }}>Tagihan</h4>
                 {manage && sub.status !== 'CANCELLED' && (
-                  <button
+                  <Button
                     onClick={() =>
                       void run(() => generateSubscriptionInvoice(tenantId), 'Tagihan diterbitkan')
                     }
                     disabled={busy}
                   >
                     Terbitkan tagihan
-                  </button>
+                  </Button>
                 )}
               </div>
               {sub.invoices.length === 0 ? (
@@ -352,12 +349,12 @@ function InvoiceRow({
         )}
         {manage && outstanding && (
           <>
-            <button onClick={onPay} disabled={busy}>
+            <Button onClick={onPay} disabled={busy}>
               Tandai lunas
-            </button>
-            <button className="ghost" onClick={onVoid} disabled={busy}>
+            </Button>
+            <Button variant="subtle" onClick={onVoid} disabled={busy}>
               Batalkan
-            </button>
+            </Button>
           </>
         )}
       </div>

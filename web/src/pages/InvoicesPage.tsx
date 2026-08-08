@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { type MouseEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
@@ -17,7 +17,7 @@ import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
-import { Badge, EmptyState, Toolbar, type Tone } from '@/components/atoms'
+import { Badge, Button, EmptyState, SelectField, TextField, Toolbar, type Tone } from '@/components/atoms'
 import { Modal, SearchInput } from '@/components/molecules'
 import { useToast } from '@/system'
 import { IconInbox, IconPlus } from '@/components/atoms/icons'
@@ -314,29 +314,29 @@ export function InvoicesPage() {
         return (
           <div className="row" style={{ gap: '0.3rem', justifyContent: 'flex-end' }}>
             {canPay && (
-              <button
-                className="ghost"
+              <Button
+                variant="subtle"
                 disabled={busy}
-                onClick={(e) => {
+                onClick={(e: MouseEvent<HTMLButtonElement>) => {
                   e.stopPropagation()
                   setPayNote('')
                   setPayTarget(i)
                 }}
               >
                 Catat bayar
-              </button>
+              </Button>
             )}
             {canManage && (
-              <button
-                className="ghost danger"
+              <Button
+                variant="danger"
                 disabled={busy}
-                onClick={(e) => {
+                onClick={(e: MouseEvent<HTMLButtonElement>) => {
                   e.stopPropagation()
                   setVoidTarget(i)
                 }}
               >
                 Batalkan
-              </button>
+              </Button>
             )}
           </div>
         )
@@ -384,11 +384,11 @@ export function InvoicesPage() {
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nomor tagihan, nama, atau kode pelanggan…" />
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as InvoiceStatus | '')}>
+        <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value as InvoiceStatus | '')}>
           {STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
-        </select>
+        </SelectField>
       </Toolbar>
 
       <DataTable
@@ -417,8 +417,8 @@ export function InvoicesPage() {
           onClose={() => setConfirmGenerate(false)}
           footer={
             <>
-              <button onClick={() => setConfirmGenerate(false)}>Batal</button>
-              <button className="primary" onClick={() => void doGenerate()} disabled={busy}>Terbitkan</button>
+              <Button onClick={() => setConfirmGenerate(false)}>Batal</Button>
+              <Button variant="primary" onClick={() => void doGenerate()} disabled={busy}>Terbitkan</Button>
             </>
           }
         >
@@ -435,8 +435,8 @@ export function InvoicesPage() {
           onClose={() => setPayTarget(null)}
           footer={
             <>
-              <button onClick={() => setPayTarget(null)}>Batal</button>
-              <button className="primary" onClick={() => void doPay()} disabled={busy}>Tandai lunas</button>
+              <Button onClick={() => setPayTarget(null)}>Batal</Button>
+              <Button variant="primary" onClick={() => void doPay()} disabled={busy}>Tandai lunas</Button>
             </>
           }
         >
@@ -450,15 +450,13 @@ export function InvoicesPage() {
                 Dasar {fmtRupiah(Number(payTarget.baseAmount))} + PPN {fmtRupiah(Number(payTarget.taxAmount))}.
               </p>
             )}
-            <label>
-              <span>Catatan (opsional)</span>
-              <input
-                value={payNote}
-                onChange={(e) => setPayNote(e.target.value)}
-                placeholder="Mis. transfer BCA 5 Agu"
-                autoFocus
-              />
-            </label>
+            <TextField
+              label="Catatan (opsional)"
+              value={payNote}
+              onChange={(_, data) => setPayNote(data.value)}
+              placeholder="Mis. transfer BCA 5 Agu"
+              autoFocus
+            />
           </div>
         </Modal>
       )}
@@ -469,8 +467,8 @@ export function InvoicesPage() {
           onClose={() => setVoidTarget(null)}
           footer={
             <>
-              <button onClick={() => setVoidTarget(null)}>Batal</button>
-              <button className="danger" onClick={() => void doVoid()} disabled={busy}>Batalkan tagihan</button>
+              <Button onClick={() => setVoidTarget(null)}>Batal</Button>
+              <Button variant="danger" onClick={() => void doVoid()} disabled={busy}>Batalkan tagihan</Button>
             </>
           }
         >

@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
+import { Button } from '@/components/atoms'
 import { IconClose } from '@/components/atoms/icons'
 
 /** Panel geser dari kanan untuk detail (tren ONU, dsb). */
@@ -23,9 +24,7 @@ export function Drawer({
       <aside className="drawer" role="dialog" aria-modal="true">
         <div className="drawer-head">
           <h3 style={{ margin: 0 }}>{title}</h3>
-          <button className="ghost icon-btn" onClick={onClose} aria-label="Tutup">
-            <IconClose size={18} />
-          </button>
+          <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
         </div>
         <div className="drawer-body">{children}</div>
       </aside>

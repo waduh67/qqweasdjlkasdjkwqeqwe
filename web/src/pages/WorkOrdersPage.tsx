@@ -15,7 +15,7 @@ import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
-import { Badge, EmptyState, Toolbar } from '@/components/atoms'
+import { Badge, Button, EmptyState, SelectField, TextField, TextareaField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useToast } from '@/system'
 import { Blade } from '@/components/organisms'
@@ -239,38 +239,38 @@ export function WorkOrdersPage() {
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari kode atau judul…" />
-        <select value={status} onChange={(e) => setStatus(e.target.value as WorkOrderStatus | '')}>
+        <SelectField value={status} onChange={(_, data) => setStatus(data.value as WorkOrderStatus | '')}>
           <option value="">Semua status</option>
           {STATUSES.map((s) => (
             <option key={s} value={s}>
               {STATUS_LABEL[s]}
             </option>
           ))}
-        </select>
-        <select value={type} onChange={(e) => setType(e.target.value as WorkOrderType | '')}>
+        </SelectField>
+        <SelectField value={type} onChange={(_, data) => setType(data.value as WorkOrderType | '')}>
           <option value="">Semua tipe</option>
           {TYPES.map((t) => (
             <option key={t} value={t}>
               {TYPE_LABEL[t]}
             </option>
           ))}
-        </select>
-        <select value={approval} onChange={(e) => setApproval(e.target.value as WorkOrderApprovalStatus | '')}>
+        </SelectField>
+        <SelectField value={approval} onChange={(_, data) => setApproval(data.value as WorkOrderApprovalStatus | '')}>
           <option value="">Semua persetujuan</option>
           {(Object.keys(APPROVAL_LABEL) as WorkOrderApprovalStatus[]).map((a) => (
             <option key={a} value={a}>
               {APPROVAL_LABEL[a]}
             </option>
           ))}
-        </select>
-        <select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)}>
+        </SelectField>
+        <SelectField value={assignedTo} onChange={(_, data) => setAssignedTo(data.value)}>
           <option value="">Semua teknisi</option>
           {technicians.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
             </option>
           ))}
-        </select>
+        </SelectField>
       </Toolbar>
 
       <WorkOrderForm
@@ -394,16 +394,16 @@ function DispatchDashboard({
         {STATUSES.map((s) => {
           const selected = activeStatus === s
           return (
-            <button
+            <Button
               key={s}
               onClick={() => onPickStatus(selected ? '' : s)}
-              className={selected ? 'primary' : 'ghost'}
+              variant={selected ? 'primary' : 'subtle'}
               style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', fontSize: '0.82rem', padding: '0.3rem 0.6rem' }}
               title={`Filter: ${STATUS_LABEL[s]}`}
             >
               {STATUS_LABEL[s]}
               <span className={`badge ${STATUS_TONE[s]}`}>{data.byStatus[s] ?? 0}</span>
-            </button>
+            </Button>
           )
         })}
       </div>
@@ -455,48 +455,53 @@ function WorkOrderForm({
       onClose={onCancel}
       footer={
         <>
-          <button className="primary" onClick={onSubmit}>Simpan</button>
-          <button onClick={onCancel}>Batal</button>
+          <Button variant="primary" onClick={onSubmit}>Simpan</Button>
+          <Button onClick={onCancel}>Batal</Button>
         </>
       }
     >
       {draft && (
         <div className="stack">
-          <label className="stack" style={{ gap: '0.25rem' }}>
-            <span>Judul</span>
-            <input
-              autoFocus
-              value={draft.title}
-              onChange={(e) => onChange({ ...draft, title: e.target.value })}
-              placeholder="mis. Ganti drop core putus"
-            />
-          </label>
+          <TextField
+            label="Judul"
+            autoFocus
+            value={draft.title}
+            onChange={(_, data) => onChange({ ...draft, title: data.value })}
+            placeholder="mis. Ganti drop core putus"
+          />
           <div className="row wrap">
-            <label style={{ flex: 1, minWidth: 140 }}>
-              <span>Tipe</span>
-              <select value={draft.type} onChange={(e) => onChange({ ...draft, type: e.target.value as WorkOrderType })}>
-                {TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {TYPE_LABEL[t]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label style={{ flex: 1, minWidth: 140 }}>
-              <span>Prioritas</span>
-              <select value={draft.priority} onChange={(e) => onChange({ ...draft, priority: e.target.value as WorkOrderPriority })}>
-                {PRIORITIES.map((p) => (
-                  <option key={p} value={p}>
-                    {PRIORITY_LABEL[p]}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <SelectField
+              label="Tipe"
+              value={draft.type}
+              onChange={(_, data) => onChange({ ...draft, type: data.value as WorkOrderType })}
+              style={{ flex: 1, minWidth: 140 }}
+            >
+              {TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {TYPE_LABEL[t]}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField
+              label="Prioritas"
+              value={draft.priority}
+              onChange={(_, data) => onChange({ ...draft, priority: data.value as WorkOrderPriority })}
+              style={{ flex: 1, minWidth: 140 }}
+            >
+              {PRIORITIES.map((p) => (
+                <option key={p} value={p}>
+                  {PRIORITY_LABEL[p]}
+                </option>
+              ))}
+            </SelectField>
           </div>
-          <label className="stack" style={{ gap: '0.25rem' }}>
-            <span>Deskripsi (opsional)</span>
-            <textarea rows={3} maxLength={2000} value={draft.description} onChange={(e) => onChange({ ...draft, description: e.target.value })} />
-          </label>
+          <TextareaField
+            label="Deskripsi (opsional)"
+            rows={3}
+            maxLength={2000}
+            value={draft.description}
+            onChange={(_, data) => onChange({ ...draft, description: data.value })}
+          />
           <label className="stack" style={{ gap: '0.25rem' }}>
             <span>Pelanggan (opsional)</span>
             <Combobox
@@ -524,10 +529,13 @@ function WorkOrderForm({
                 emptyText="Tak ada teknisi"
               />
             </label>
-            <label style={{ flex: 1, minWidth: 180 }}>
-              <span>Jadwal (opsional)</span>
-              <input type="datetime-local" value={draft.scheduledAt} onChange={(e) => onChange({ ...draft, scheduledAt: e.target.value })} />
-            </label>
+            <TextField
+              label="Jadwal (opsional)"
+              type="datetime-local"
+              value={draft.scheduledAt}
+              onChange={(_, data) => onChange({ ...draft, scheduledAt: data.value })}
+              style={{ flex: 1, minWidth: 180 }}
+            />
           </div>
         </div>
       )}

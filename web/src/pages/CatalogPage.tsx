@@ -14,12 +14,13 @@ import {
   type ServiceType,
 } from '../api/catalog'
 import { Pencil, Plus, RefreshCw } from 'lucide-react'
+import { Checkbox } from '@fluentui/react-components'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { Blade } from '@/components/organisms'
 import { PageHeader } from '@/components/molecules'
-import { Badge, EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { Badge, Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useToast } from '@/system'
 import { IconPackage } from '@/components/atoms/icons'
@@ -363,10 +364,10 @@ export function CatalogPage() {
         onClose={closeDraft}
         footer={
           <>
-            <button className="primary" onClick={() => void save()} disabled={saving}>
+            <Button variant="primary" onClick={() => void save()} disabled={saving}>
               {saving ? 'Menyimpan…' : 'Simpan'}
-            </button>
-            <button onClick={closeDraft} disabled={saving}>Batal</button>
+            </Button>
+            <Button onClick={closeDraft} disabled={saving}>Batal</Button>
           </>
         }
       >
@@ -396,64 +397,62 @@ export function CatalogPage() {
           {/* ---- Informasi Dasar ---- */}
           <SectionTitle>Informasi dasar</SectionTitle>
           <div className="row">
-            <label style={{ flex: 2 }}>
-              <span>Nama paket</span>
-              <input
+            <div style={{ flex: 2 }}>
+              <TextField
+                label="Nama paket"
                 value={draft.name}
-                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, name: data.value })}
                 placeholder="Home 50 Mbps"
               />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Harga / bulan (Rp)</span>
-              <input
+            </div>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Harga / bulan (Rp)"
                 value={draft.price}
-                onChange={(e) => setDraft({ ...draft, price: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, price: data.value })}
                 placeholder="150000"
               />
-            </label>
+            </div>
           </div>
-          <label>
-            <span>Deskripsi</span>
-            <input
-              value={draft.description}
-              onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-              placeholder="opsional"
-            />
-          </label>
+          <TextField
+            label="Deskripsi"
+            value={draft.description}
+            onChange={(_, data) => setDraft({ ...draft, description: data.value })}
+            placeholder="opsional"
+          />
           <div className="row">
-            <label style={{ flex: 1 }}>
-              <span>Unduh (Mbps)</span>
-              <input
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Unduh (Mbps)"
                 value={draft.downMbps}
-                onChange={(e) => setDraft({ ...draft, downMbps: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, downMbps: data.value })}
                 placeholder="50"
               />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Unggah (Mbps)</span>
-              <input
+            </div>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Unggah (Mbps)"
                 value={draft.upMbps}
-                onChange={(e) => setDraft({ ...draft, upMbps: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, upMbps: data.value })}
                 placeholder="25"
               />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Prioritas (1=tinggi … 8)</span>
-              <input
+            </div>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Prioritas (1=tinggi … 8)"
                 value={draft.priority}
-                onChange={(e) => setDraft({ ...draft, priority: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, priority: data.value })}
                 placeholder="8"
               />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Batas koneksi</span>
-              <input
+            </div>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Batas koneksi"
                 value={draft.connectionLimit}
-                onChange={(e) => setDraft({ ...draft, connectionLimit: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, connectionLimit: data.value })}
                 placeholder="opsional"
               />
-            </label>
+            </div>
           </div>
 
           {/* ---- Burst & Limit-at ---- */}
@@ -463,103 +462,99 @@ export function CatalogPage() {
             threshold &amp; waktu hanya berlaku bila burst diisi.
           </p>
           <div className="row">
-            <label style={{ flex: 1 }}>
-              <span>Burst unduh (Mbps)</span>
-              <input
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Burst unduh (Mbps)"
                 value={draft.downBurstMbps}
-                onChange={(e) => setDraft({ ...draft, downBurstMbps: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, downBurstMbps: data.value })}
                 placeholder="100"
               />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Burst unggah (Mbps)</span>
-              <input
+            </div>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Burst unggah (Mbps)"
                 value={draft.upBurstMbps}
-                onChange={(e) => setDraft({ ...draft, upBurstMbps: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, upBurstMbps: data.value })}
                 placeholder="50"
               />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Threshold unduh</span>
-              <input
+            </div>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Threshold unduh"
                 value={draft.downThresholdMbps}
-                onChange={(e) => setDraft({ ...draft, downThresholdMbps: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, downThresholdMbps: data.value })}
                 placeholder="75"
               />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Threshold unggah</span>
-              <input
+            </div>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Threshold unggah"
                 value={draft.upThresholdMbps}
-                onChange={(e) => setDraft({ ...draft, upThresholdMbps: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, upThresholdMbps: data.value })}
                 placeholder="35"
               />
-            </label>
+            </div>
           </div>
           <div className="row">
-            <label style={{ flex: 1 }}>
-              <span>Waktu burst (detik)</span>
-              <input
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Waktu burst (detik)"
                 value={draft.burstTimeSec}
-                onChange={(e) => setDraft({ ...draft, burstTimeSec: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, burstTimeSec: data.value })}
                 placeholder="8"
               />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Limit-at unduh (Mbps)</span>
-              <input
+            </div>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Limit-at unduh (Mbps)"
                 value={draft.downMinMbps}
-                onChange={(e) => setDraft({ ...draft, downMinMbps: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, downMinMbps: data.value })}
                 placeholder="opsional"
               />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Limit-at unggah (Mbps)</span>
-              <input
+            </div>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Limit-at unggah (Mbps)"
                 value={draft.upMinMbps}
-                onChange={(e) => setDraft({ ...draft, upMinMbps: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, upMinMbps: data.value })}
                 placeholder="opsional"
               />
-            </label>
+            </div>
           </div>
 
           {/* ---- FUP ---- */}
           <SectionTitle>Fair Usage Policy (FUP)</SectionTitle>
-          <label className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
-            <input
-              type="checkbox"
-              checked={draft.fupEnabled}
-              onChange={(e) => setDraft({ ...draft, fupEnabled: e.target.checked })}
-              style={{ width: 'auto' }}
-            />
-            <span>Aktifkan FUP (turunkan kecepatan setelah kuota terlampaui)</span>
-          </label>
+          <Checkbox
+            label="Aktifkan FUP (turunkan kecepatan setelah kuota terlampaui)"
+            checked={draft.fupEnabled}
+            onChange={(e) => setDraft({ ...draft, fupEnabled: e.target.checked })}
+          />
           {draft.fupEnabled && (
             <div className="row">
-              <label style={{ flex: 1 }}>
-                <span>Kuota (MB){num(draft.fupQuotaMb) ? ` ≈ ${(num(draft.fupQuotaMb)! / 1024).toFixed(0)} GB` : ''}</span>
-                <input
+              <div style={{ flex: 1 }}>
+                <TextField
+                  label={<>Kuota (MB){num(draft.fupQuotaMb) ? ` ≈ ${(num(draft.fupQuotaMb)! / 1024).toFixed(0)} GB` : ''}</>}
                   value={draft.fupQuotaMb}
-                  onChange={(e) => setDraft({ ...draft, fupQuotaMb: e.target.value })}
+                  onChange={(_, data) => setDraft({ ...draft, fupQuotaMb: data.value })}
                   placeholder="500000"
                 />
-              </label>
-              <label style={{ flex: 1 }}>
-                <span>Throttle unduh (Mbps)</span>
-                <input
+              </div>
+              <div style={{ flex: 1 }}>
+                <TextField
+                  label="Throttle unduh (Mbps)"
                   value={draft.fupDownMbps}
-                  onChange={(e) => setDraft({ ...draft, fupDownMbps: e.target.value })}
+                  onChange={(_, data) => setDraft({ ...draft, fupDownMbps: data.value })}
                   placeholder="10"
                 />
-              </label>
-              <label style={{ flex: 1 }}>
-                <span>Throttle unggah (Mbps)</span>
-                <input
+              </div>
+              <div style={{ flex: 1 }}>
+                <TextField
+                  label="Throttle unggah (Mbps)"
                   value={draft.fupUpMbps}
-                  onChange={(e) => setDraft({ ...draft, fupUpMbps: e.target.value })}
+                  onChange={(_, data) => setDraft({ ...draft, fupUpMbps: data.value })}
                   placeholder="4"
                 />
-              </label>
+              </div>
             </div>
           )}
 
@@ -567,15 +562,12 @@ export function CatalogPage() {
           <SectionTitle>Ketersediaan</SectionTitle>
           <div className="row" style={{ gap: '1rem', flexWrap: 'wrap' }}>
             {SERVICE_TYPES.map((svc) => (
-              <label key={svc} className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-                <input
-                  type="checkbox"
-                  checked={draft.serviceTypes.includes(svc)}
-                  onChange={() => toggleService(svc)}
-                  style={{ width: 'auto' }}
-                />
-                <span>{SERVICE_TYPE_LABEL[svc]}</span>
-              </label>
+              <Checkbox
+                key={svc}
+                label={SERVICE_TYPE_LABEL[svc]}
+                checked={draft.serviceTypes.includes(svc)}
+                onChange={() => toggleService(svc)}
+              />
             ))}
           </div>
           <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
@@ -585,73 +577,69 @@ export function CatalogPage() {
           {/* ---- Siklus Billing (override) ---- */}
           <SectionTitle>Siklus billing (override — kosong = ikut kebijakan global)</SectionTitle>
           <div className="row">
-            <label style={{ flex: 1 }}>
-              <span>Prorate saat aktivasi</span>
-              <select
+            <div style={{ flex: 1 }}>
+              <SelectField
+                label="Prorate saat aktivasi"
                 value={draft.prorateOnActivation}
-                onChange={(e) => setDraft({ ...draft, prorateOnActivation: e.target.value as TriState })}
+                onChange={(_, data) => setDraft({ ...draft, prorateOnActivation: data.value as TriState })}
               >
                 <option value="">Ikut global</option>
                 <option value="true">Ya</option>
                 <option value="false">Tidak</option>
-              </select>
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Tanggal tagih (1–31)</span>
-              <input
+              </SelectField>
+            </div>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Tanggal tagih (1–31)"
                 value={draft.billingDayOfMonth}
-                onChange={(e) => setDraft({ ...draft, billingDayOfMonth: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, billingDayOfMonth: data.value })}
                 placeholder="global"
               />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Jatuh tempo (hari)</span>
-              <input
+            </div>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Jatuh tempo (hari)"
                 value={draft.dueDays}
-                onChange={(e) => setDraft({ ...draft, dueDays: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, dueDays: data.value })}
                 placeholder="global"
               />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Grace (hari)</span>
-              <input
+            </div>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Grace (hari)"
                 value={draft.graceDays}
-                onChange={(e) => setDraft({ ...draft, graceDays: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, graceDays: data.value })}
                 placeholder="global"
               />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Auto-isolir</span>
-              <select
+            </div>
+            <div style={{ flex: 1 }}>
+              <SelectField
+                label="Auto-isolir"
                 value={draft.autoIsolir}
-                onChange={(e) => setDraft({ ...draft, autoIsolir: e.target.value as TriState })}
+                onChange={(_, data) => setDraft({ ...draft, autoIsolir: data.value as TriState })}
               >
                 <option value="">Ikut global</option>
                 <option value="true">Ya</option>
                 <option value="false">Tidak</option>
-              </select>
-            </label>
+              </SelectField>
+            </div>
           </div>
 
           {/* ---- Status ---- */}
-          <label className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
-            <input
-              type="checkbox"
-              checked={draft.active}
-              onChange={(e) => setDraft({ ...draft, active: e.target.checked })}
-              style={{ width: 'auto' }}
-            />
-            <span>Status aktif (paket nonaktif tak bisa dipilih untuk langganan baru)</span>
-          </label>
+          <Checkbox
+            label="Status aktif (paket nonaktif tak bisa dipilih untuk langganan baru)"
+            checked={draft.active}
+            onChange={(e) => setDraft({ ...draft, active: e.target.checked })}
+          />
           </div>
         )}
       </Blade>
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama paket…" />
-        <select
+        <SelectField
           value={serviceFilter}
-          onChange={(e) => setServiceFilter(e.target.value as ServiceType | '')}
+          onChange={(_, data) => setServiceFilter(data.value as ServiceType | '')}
         >
           <option value="">Semua layanan</option>
           {SERVICE_TYPES.map((s) => (
@@ -659,7 +647,7 @@ export function CatalogPage() {
               {SERVICE_TYPE_LABEL[s]}
             </option>
           ))}
-        </select>
+        </SelectField>
       </Toolbar>
 
       <DataTable

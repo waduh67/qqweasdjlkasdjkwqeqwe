@@ -51,7 +51,7 @@ import {
   type SubscriberAccessView,
 } from '../api/bng'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, Spinner, StatusBadge } from '@/components/atoms'
+import { Badge, Button, EmptyState, SelectField, Spinner, StatusBadge, TextField } from '@/components/atoms'
 import { Modal, Tabs } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { GatewayPayPanel } from '@/components/organisms'
@@ -359,7 +359,7 @@ function Overview360Card({ sub360 }: { sub360: Subscriber360View | null }) {
             <>
               <div
                 className="tnum"
-                style={{ fontWeight: 700, color: arrears > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
+                style={{ fontWeight: 600, color: arrears > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
               >
                 {fmtRupiah(arrears)}
               </div>
@@ -392,7 +392,7 @@ function Overview360Card({ sub360 }: { sub360: Subscriber360View | null }) {
             <FacetLine text="tak ada" />
           ) : (
             <>
-              <div className="tnum" style={{ fontWeight: 700 }}>
+              <div className="tnum" style={{ fontWeight: 600 }}>
                 {cpeOnline}/{cpeDevices.length}
               </div>
               <FacetLine text="online" />
@@ -408,7 +408,7 @@ function Overview360Card({ sub360 }: { sub360: Subscriber360View | null }) {
             <FacetLine text="tak ada" />
           ) : (
             <>
-              <div className="tnum" style={{ fontWeight: 700 }}>{openWorkOrder.code}</div>
+              <div className="tnum" style={{ fontWeight: 600 }}>{openWorkOrder.code}</div>
               <FacetLine text={openWorkOrder.scheduledAt ? fmtDate(openWorkOrder.scheduledAt.slice(0, 10)) : 'terjadwal —'} />
             </>
           )}
@@ -492,30 +492,31 @@ function SubscriptionManager({
           ) : (
             <>
               <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                <label style={{ flex: '2 1 200px' }}>
-                  <span>Paket</span>
-                  <select value={planId} onChange={(e) => setPlanId(e.target.value)}>
-                    <option value="">— pilih paket —</option>
-                    {plans.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} · {p.downMbps}/{p.upMbps} Mbps · {fmtRupiah(p.price)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label style={{ flex: '1 1 140px' }}>
-                  <span>Harga negosiasi</span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={priceOverride}
-                    onChange={(e) => setPriceOverride(e.target.value)}
-                    placeholder={selected ? String(selected.price) : 'ikut paket'}
-                  />
-                </label>
-                <button className="primary" disabled={!planId || saving} onClick={() => void submit()}>
+                <SelectField
+                  label="Paket"
+                  value={planId}
+                  onChange={(_, data) => setPlanId(data.value)}
+                  style={{ flex: '2 1 200px' }}
+                >
+                  <option value="">— pilih paket —</option>
+                  {plans.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} · {p.downMbps}/{p.upMbps} Mbps · {fmtRupiah(p.price)}
+                    </option>
+                  ))}
+                </SelectField>
+                <TextField
+                  label="Harga negosiasi"
+                  type="number"
+                  min={0}
+                  value={priceOverride}
+                  onChange={(_, data) => setPriceOverride(data.value)}
+                  placeholder={selected ? String(selected.price) : 'ikut paket'}
+                  style={{ flex: '1 1 140px' }}
+                />
+                <Button variant="primary" disabled={!planId || saving} onClick={() => void submit()}>
                   Tambah
-                </button>
+                </Button>
               </div>
               {selected && (
                 <p className="muted tnum" style={{ margin: 0, fontSize: '0.82rem' }}>
@@ -544,18 +545,18 @@ function SubscriptionActions({
   return (
     <div className="row" style={{ gap: '0.35rem' }}>
       {(sub.status === 'PENDING' || sub.status === 'ISOLATED') && (
-        <button className="ghost" onClick={() => void act('activate', 'Langganan diaktifkan')}>
+        <Button variant="subtle" onClick={() => void act('activate', 'Langganan diaktifkan')}>
           Aktifkan
-        </button>
+        </Button>
       )}
       {sub.status === 'ACTIVE' && (
-        <button className="ghost" onClick={() => void act('isolate', 'Langganan diisolir')}>
+        <Button variant="subtle" onClick={() => void act('isolate', 'Langganan diisolir')}>
           Isolir
-        </button>
+        </Button>
       )}
-      <button className="ghost danger" onClick={() => void act('terminate', 'Langganan diakhiri')}>
+      <Button variant="danger" onClick={() => void act('terminate', 'Langganan diakhiri')}>
         Akhiri
-      </button>
+      </Button>
     </div>
   )
 }
@@ -601,16 +602,16 @@ function OnuManager({
               {onu.odpId ? (
                 // Masih terpasang: lepas dulu — hapus sengaja tak ditawarkan agar port
                 // ODP tak menggantung (aturan sama yang ditegakkan OnuService.delete).
-                <button onClick={() => void run(() => api.post(`/api/customers/onus/${onu.id}/detach`), 'ONU dilepas')}>
+                <Button onClick={() => void run(() => api.post(`/api/customers/onus/${onu.id}/detach`), 'ONU dilepas')}>
                   Lepas
-                </button>
+                </Button>
               ) : (
                 <>
-                  <button onClick={() => setAttach({ onuId: onu.id, odpId: odps[0]?.id ?? '', port: '1', rx: '' })}>
+                  <Button onClick={() => setAttach({ onuId: onu.id, odpId: odps[0]?.id ?? '', port: '1', rx: '' })}>
                     Pasang ke ODP
-                  </button>
-                  <button
-                    className="danger"
+                  </Button>
+                  <Button
+                    variant="danger"
                     onClick={() =>
                       void (async () => {
                         if (
@@ -627,7 +628,7 @@ function OnuManager({
                     }
                   >
                     Hapus
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
@@ -637,26 +638,33 @@ function OnuManager({
 
       {attach && (
         <div className="row" style={{ marginTop: '0.4rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <label style={{ flex: 2, minWidth: 160 }}>
-            <span>ODP</span>
-            <select value={attach.odpId} onChange={(e) => setAttach({ ...attach, odpId: e.target.value })}>
-              {odps.map((odp) => (
-                <option key={odp.id} value={odp.id}>
-                  {odp.code} ({odp.capacity} port)
-                </option>
-              ))}
-            </select>
-          </label>
-          <label style={{ flex: 1, minWidth: 80 }}>
-            <span>Port</span>
-            <input value={attach.port} onChange={(e) => setAttach({ ...attach, port: e.target.value })} />
-          </label>
-          <label style={{ flex: 1, minWidth: 100 }}>
-            <span>Redaman (dBm)</span>
-            <input value={attach.rx} onChange={(e) => setAttach({ ...attach, rx: e.target.value })} placeholder="-22.5" />
-          </label>
-          <button
-            className="primary"
+          <SelectField
+            label="ODP"
+            value={attach.odpId}
+            onChange={(_, data) => setAttach({ ...attach, odpId: data.value })}
+            style={{ flex: 2, minWidth: 160 }}
+          >
+            {odps.map((odp) => (
+              <option key={odp.id} value={odp.id}>
+                {odp.code} ({odp.capacity} port)
+              </option>
+            ))}
+          </SelectField>
+          <TextField
+            label="Port"
+            value={attach.port}
+            onChange={(_, data) => setAttach({ ...attach, port: data.value })}
+            style={{ flex: 1, minWidth: 80 }}
+          />
+          <TextField
+            label="Redaman (dBm)"
+            value={attach.rx}
+            onChange={(_, data) => setAttach({ ...attach, rx: data.value })}
+            placeholder="-22.5"
+            style={{ flex: 1, minWidth: 100 }}
+          />
+          <Button
+            variant="primary"
             onClick={() =>
               void run(async () => {
                 await api.post(`/api/customers/onus/${attach.onuId}/attach`, {
@@ -669,19 +677,19 @@ function OnuManager({
             }
           >
             Pasang
-          </button>
-          <button onClick={() => setAttach(null)}>Batal</button>
+          </Button>
+          <Button onClick={() => setAttach(null)}>Batal</Button>
         </div>
       )}
 
       {can('customer.onu.assign') && (
         <div className="row" style={{ marginTop: '0.4rem' }}>
-          <input
+          <TextField
             placeholder="Serial ONU baru, mis. ZTEG-C0FFEE01"
             value={serial}
-            onChange={(e) => setSerial(e.target.value)}
+            onChange={(_, data) => setSerial(data.value)}
           />
-          <button
+          <Button
             onClick={() =>
               void run(async () => {
                 await api.post(`/api/customers/${customer.id}/onus`, { serialNumber: serial })
@@ -690,7 +698,7 @@ function OnuManager({
             }
           >
             Daftarkan ONU
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -1153,16 +1161,18 @@ function PlanField({
   onChange: (v: string) => void
 }) {
   return (
-    <label style={{ flex: 1, minWidth: 160 }}>
-      <span>Paket</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
-        {plans.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name} ({p.downMbps}/{p.upMbps} Mbps)
-          </option>
-        ))}
-      </select>
-    </label>
+    <SelectField
+      label="Paket"
+      value={value}
+      onChange={(_, data) => onChange(data.value)}
+      style={{ flex: 1, minWidth: 160 }}
+    >
+      {plans.map((p) => (
+        <option key={p.id} value={p.id}>
+          {p.name} ({p.downMbps}/{p.upMbps} Mbps)
+        </option>
+      ))}
+    </SelectField>
   )
 }
 
@@ -1177,17 +1187,19 @@ function NasField({
   onChange: (v: string) => void
 }) {
   return (
-    <label style={{ flex: 1, minWidth: 160 }}>
-      <span>BRAS</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">— tanpa BRAS —</option>
-        {nasList.map((n) => (
-          <option key={n.id} value={n.id}>
-            {n.name}
-          </option>
-        ))}
-      </select>
-    </label>
+    <SelectField
+      label="BRAS"
+      value={value}
+      onChange={(_, data) => onChange(data.value)}
+      style={{ flex: 1, minWidth: 160 }}
+    >
+      <option value="">— tanpa BRAS —</option>
+      {nasList.map((n) => (
+        <option key={n.id} value={n.id}>
+          {n.name}
+        </option>
+      ))}
+    </SelectField>
   )
 }
 
@@ -1373,27 +1385,27 @@ function SubscriptionAccessCard({
 
           {form === null && (canManage || canReset || canIsolate) && (
             <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap' }}>
-              {canManage && <button onClick={openEdit}>Ganti paket / BRAS</button>}
-              {canManage && <button onClick={openReset}>Reset password</button>}
+              {canManage && <Button onClick={openEdit}>Ganti paket / BRAS</Button>}
+              {canManage && <Button onClick={openReset}>Reset password</Button>}
               {/* Reset Login: putus sesi agar CPE dial ulang — tak berlaku pada akun terhenti. */}
               {canReset && account.status !== 'TERMINATED' && (
-                <button onClick={resetLogin}>Reset Login</button>
+                <Button onClick={resetLogin}>Reset Login</Button>
               )}
               {/* Isolir/Pulihkan: saling meniadakan sesuai status akun. */}
               {canIsolate && account.status === 'ACTIVE' && (
-                <button className="ghost danger" onClick={isolate}>
+                <Button variant="danger" onClick={isolate}>
                   Isolir
-                </button>
+                </Button>
               )}
               {canIsolate && account.status === 'ISOLATED' && (
-                <button className="primary" onClick={restore}>
+                <Button variant="primary" onClick={restore}>
                   Pulihkan
-                </button>
+                </Button>
               )}
               {canManage && (
-                <button className="ghost danger" onClick={remove}>
+                <Button variant="danger" onClick={remove}>
                   Hapus
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -1402,28 +1414,27 @@ function SubscriptionAccessCard({
             <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
               <PlanField plans={plans} value={planId} onChange={setPlanId} />
               <NasField nasList={nasList} value={nasId} onChange={setNasId} />
-              <button className="primary" onClick={submitEdit} disabled={!planId}>
+              <Button variant="primary" onClick={submitEdit} disabled={!planId}>
                 Simpan
-              </button>
-              <button onClick={close}>Batal</button>
+              </Button>
+              <Button onClick={close}>Batal</Button>
             </div>
           )}
 
           {form === 'reset' && (
             <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <label style={{ flex: 2, minWidth: 180 }}>
-                <span>Password baru</span>
-                <input
-                  type={showSecret ? 'text' : 'password'}
-                  value={secret}
-                  onChange={(e) => setSecret(e.target.value)}
-                />
-              </label>
-              <button onClick={() => setShowSecret((v) => !v)}>{showSecret ? 'Sembunyikan' : 'Lihat'}</button>
-              <button className="primary" onClick={submitReset} disabled={!secret}>
+              <TextField
+                label="Password baru"
+                type={showSecret ? 'text' : 'password'}
+                value={secret}
+                onChange={(_, data) => setSecret(data.value)}
+                style={{ flex: 2, minWidth: 180 }}
+              />
+              <Button onClick={() => setShowSecret((v) => !v)}>{showSecret ? 'Sembunyikan' : 'Lihat'}</Button>
+              <Button variant="primary" onClick={submitReset} disabled={!secret}>
                 Simpan
-              </button>
-              <button onClick={close}>Batal</button>
+              </Button>
+              <Button onClick={close}>Batal</Button>
             </div>
           )}
 
@@ -1443,65 +1454,64 @@ function SubscriptionAccessCard({
         <div className="stack" style={{ gap: '0.5rem' }}>
           <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <PlanField plans={plans} value={planId} onChange={changeProvisionPlan} />
-            <label style={{ flex: 1, minWidth: 140 }}>
-              <span>Tipe layanan</span>
-              <select
-                value={authType}
-                onChange={(e) => setAuthType(e.target.value as ServiceType)}
-                disabled={availableTypes.length <= 1}
-              >
-                {availableTypes.map((t) => (
-                  <option key={t} value={t}>
-                    {SERVICE_TYPE_LABEL[t]}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <SelectField
+              label="Tipe layanan"
+              value={authType}
+              onChange={(_, data) => setAuthType(data.value as ServiceType)}
+              disabled={availableTypes.length <= 1}
+              style={{ flex: 1, minWidth: 140 }}
+            >
+              {availableTypes.map((t) => (
+                <option key={t} value={t}>
+                  {SERVICE_TYPE_LABEL[t]}
+                </option>
+              ))}
+            </SelectField>
           </div>
 
           {macBased ? (
             <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <label style={{ flex: 2, minWidth: 180 }}>
-                <span>MAC Address</span>
-                <input
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="AA:BB:CC:DD:EE:FF"
-                />
-              </label>
-              <label style={{ flex: 2, minWidth: 160 }}>
-                <span>Reserved IP{authType === 'STATIC' ? '' : ' (opsional)'}</span>
-                <input
-                  value={framedIp}
-                  onChange={(e) => setFramedIp(e.target.value)}
-                  placeholder="100.64.0.10"
-                />
-              </label>
+              <TextField
+                label="MAC Address"
+                value={username}
+                onChange={(_, data) => setUsername(data.value)}
+                placeholder="AA:BB:CC:DD:EE:FF"
+                style={{ flex: 2, minWidth: 180 }}
+              />
+              <TextField
+                label={`Reserved IP${authType === 'STATIC' ? '' : ' (opsional)'}`}
+                value={framedIp}
+                onChange={(_, data) => setFramedIp(data.value)}
+                placeholder="100.64.0.10"
+                style={{ flex: 2, minWidth: 160 }}
+              />
             </div>
           ) : (
             <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <label style={{ flex: 2, minWidth: 160 }}>
-                <span>Username</span>
-                <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="pelanggan@isp" />
-              </label>
-              <label style={{ flex: 2, minWidth: 160 }}>
-                <span>Password</span>
-                <input
-                  type={showSecret ? 'text' : 'password'}
-                  value={secret}
-                  onChange={(e) => setSecret(e.target.value)}
-                />
-              </label>
-              <button onClick={() => setShowSecret((v) => !v)}>{showSecret ? 'Sembunyikan' : 'Lihat'}</button>
+              <TextField
+                label="Username"
+                value={username}
+                onChange={(_, data) => setUsername(data.value)}
+                placeholder="pelanggan@isp"
+                style={{ flex: 2, minWidth: 160 }}
+              />
+              <TextField
+                label="Password"
+                type={showSecret ? 'text' : 'password'}
+                value={secret}
+                onChange={(_, data) => setSecret(data.value)}
+                style={{ flex: 2, minWidth: 160 }}
+              />
+              <Button onClick={() => setShowSecret((v) => !v)}>{showSecret ? 'Sembunyikan' : 'Lihat'}</Button>
             </div>
           )}
 
           <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <NasField nasList={nasList} value={nasId} onChange={setNasId} />
-            <button className="primary" onClick={submitProvision} disabled={provisionInvalid}>
+            <Button variant="primary" onClick={submitProvision} disabled={provisionInvalid}>
               Provisi
-            </button>
-            <button onClick={close}>Batal</button>
+            </Button>
+            <Button onClick={close}>Batal</Button>
           </div>
           <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
             {macBased
@@ -1512,9 +1522,9 @@ function SubscriptionAccessCard({
       ) : (
         <div className="spread" style={{ alignItems: 'center' }}>
           <span className="muted" style={{ fontSize: '0.85rem' }}>Belum ada akun jaringan untuk langganan ini.</span>
-          <button className="primary" onClick={openProvision}>
+          <Button variant="primary" onClick={openProvision}>
             Provisi akun
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -1795,9 +1805,9 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
             </span>
           </div>
           {canReboot && (
-            <button className="ghost danger" onClick={() => void reboot()} disabled={rebooting}>
+            <Button variant="danger" onClick={() => void reboot()} disabled={rebooting}>
               {rebooting ? 'Mengirim…' : 'Reboot'}
-            </button>
+            </Button>
           )}
         </div>
         <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
@@ -1931,23 +1941,22 @@ function DiagnosticsCard({
         </p>
       )}
       <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-        <label style={{ flex: 2, minWidth: 160 }}>
-          <span>Sasaran ping</span>
-          <input
-            value={host}
-            placeholder="kosong = bawaan (mis. 8.8.8.8)"
-            onChange={(e) => setHost(e.target.value)}
-          />
-        </label>
-        <button onClick={() => void doPing()} disabled={busy}>
+        <TextField
+          label="Sasaran ping"
+          value={host}
+          placeholder="kosong = bawaan (mis. 8.8.8.8)"
+          onChange={(_, data) => setHost(data.value)}
+          style={{ flex: 2, minWidth: 160 }}
+        />
+        <Button onClick={() => void doPing()} disabled={busy}>
           {running === 'ping' ? 'Menguji…' : 'Ping'}
-        </button>
-        <button onClick={() => void doSpeed('DOWNLOAD')} disabled={busy}>
+        </Button>
+        <Button onClick={() => void doSpeed('DOWNLOAD')} disabled={busy}>
           {running === 'DOWNLOAD' ? 'Menguji…' : 'Uji unduh'}
-        </button>
-        <button onClick={() => void doSpeed('UPLOAD')} disabled={busy}>
+        </Button>
+        <Button onClick={() => void doSpeed('UPLOAD')} disabled={busy}>
           {running === 'UPLOAD' ? 'Menguji…' : 'Uji unggah'}
-        </button>
+        </Button>
       </div>
       {ping && <DiagPingResult ping={ping} />}
       {speed && <DiagSpeedResult speed={speed} />}
@@ -2089,9 +2098,9 @@ function FirmwareCard({
                   {f.sizeBytes != null && ` · ${fmtBytes(f.sizeBytes)}`}
                 </span>
               </div>
-              <button onClick={() => void upgrade(f)} disabled={busy}>
+              <Button onClick={() => void upgrade(f)} disabled={busy}>
                 {pushing === f.name ? 'Mengirim…' : 'Pasang'}
-              </button>
+              </Button>
             </div>
           ))}
         </div>
@@ -2174,12 +2183,12 @@ function AcsCard({ deviceId, onRan }: { deviceId: string; onRan: () => void }) {
         Refresh memaksa perangkat menghubungi ACS sekarang; reset pabrik mengembalikan setelan ke bawaan.
       </p>
       <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
-        <button onClick={() => void refresh()} disabled={busy}>
+        <Button onClick={() => void refresh()} disabled={busy}>
           {refreshing ? 'Menghubungi…' : 'Refresh ACS'}
-        </button>
-        <button className="ghost danger" onClick={() => void factoryReset()} disabled={busy}>
+        </Button>
+        <Button variant="danger" onClick={() => void factoryReset()} disabled={busy}>
           {resetting ? 'Mengirim…' : 'Reset pabrik'}
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -2234,23 +2243,24 @@ function WifiCard({
       </div>
       {canManage ? (
         <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <label style={{ flex: 2, minWidth: 160 }}>
-            <span>SSID</span>
-            <input value={ssid} onChange={(e) => setSsid(e.target.value)} />
-          </label>
-          <label style={{ flex: 2, minWidth: 160 }}>
-            <span>Password</span>
-            <input
-              type={showPass ? 'text' : 'password'}
-              value={passphrase}
-              placeholder={wifi.passphrase == null ? 'tersembunyi — isi untuk mengganti' : ''}
-              onChange={(e) => setPassphrase(e.target.value)}
-            />
-          </label>
-          <button onClick={() => setShowPass((v) => !v)}>{showPass ? 'Sembunyikan' : 'Lihat'}</button>
-          <button className="primary" onClick={() => void save()} disabled={!dirty || saving}>
+          <TextField
+            label="SSID"
+            value={ssid}
+            onChange={(_, data) => setSsid(data.value)}
+            style={{ flex: 2, minWidth: 160 }}
+          />
+          <TextField
+            label="Password"
+            type={showPass ? 'text' : 'password'}
+            value={passphrase}
+            placeholder={wifi.passphrase == null ? 'tersembunyi — isi untuk mengganti' : ''}
+            onChange={(_, data) => setPassphrase(data.value)}
+            style={{ flex: 2, minWidth: 160 }}
+          />
+          <Button onClick={() => setShowPass((v) => !v)}>{showPass ? 'Sembunyikan' : 'Lihat'}</Button>
+          <Button variant="primary" onClick={() => void save()} disabled={!dirty || saving}>
             {saving ? 'Menyimpan…' : 'Simpan'}
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
@@ -2424,7 +2434,7 @@ function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub3
           <strong style={{ fontSize: '0.95rem' }}>Tunggakan</strong>
           <span
             className="tnum"
-            style={{ fontWeight: 700, color: tunggakan > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
+            style={{ fontWeight: 600, color: tunggakan > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
           >
             {fmtRupiah(tunggakan)}
           </span>
@@ -2479,14 +2489,14 @@ function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub3
                   {/* Bayar in-app hanya bila penyedia aktif PIVOT (mode API VA/QRIS). Provider MANUAL
                       pakai panel transfer/QRIS statis di bawah. */}
                   {canManage && pivotActive && (inv.status === 'ISSUED' || inv.status === 'OVERDUE') && (
-                    <button
+                    <Button
                       type="button"
-                      className="ghost"
+                      variant="subtle"
                       onClick={() => handlePay(inv)}
                       style={{ marginLeft: '0.5rem', fontSize: '0.8rem' }}
                     >
                       bayar
-                    </button>
+                    </Button>
                   )}
                 </td>
               </tr>

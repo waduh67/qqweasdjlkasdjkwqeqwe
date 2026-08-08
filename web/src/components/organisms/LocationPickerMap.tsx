@@ -3,7 +3,7 @@ import maplibregl, { type Map as MapLibreMap, type Marker } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { LocationPickerProps } from './LocationPicker'
 import { IconClose, IconSearch } from '@/components/atoms/icons'
-import { Spinner } from '@/components/atoms'
+import { Button, Spinner, TextField } from '@/components/atoms'
 
 /**
  * Isi berat pemilih lokasi: peta MapLibre + geocoder Nominatim. Dipisah dari
@@ -188,17 +188,15 @@ export default function LocationPickerMap({
         />
         {searching && <Spinner />}
         {query && (
-          <button type="button" className="ghost icon-btn" onClick={() => setQuery('')} aria-label="Bersihkan pencarian">
-            <IconClose size={15} />
-          </button>
+          <Button type="button" variant="subtle" icon={<IconClose size={15} />} onClick={() => setQuery('')} aria-label="Bersihkan pencarian" />
         )}
         {open && results.length > 0 && (
           <ul className="lp-results">
             {results.map((r, i) => (
               <li key={`${r.lat},${r.lon},${i}`}>
-                <button type="button" onClick={() => pick(r)}>
+                <Button type="button" onClick={() => pick(r)}>
                   {r.display_name}
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -208,14 +206,20 @@ export default function LocationPickerMap({
       <div ref={containerRef} className="lp-map" style={{ height }} />
 
       <div className="row lp-coords">
-        <label style={{ flex: 1 }}>
-          <span>Longitude</span>
-          <input value={longitude} onChange={(e) => onChange(e.target.value, latitude)} placeholder="106.8" />
-        </label>
-        <label style={{ flex: 1 }}>
-          <span>Latitude</span>
-          <input value={latitude} onChange={(e) => onChange(longitude, e.target.value)} placeholder="-6.2" />
-        </label>
+        <TextField
+          label="Longitude"
+          value={longitude}
+          onChange={(_, data) => onChange(data.value, latitude)}
+          placeholder="106.8"
+          style={{ flex: 1 }}
+        />
+        <TextField
+          label="Latitude"
+          value={latitude}
+          onChange={(_, data) => onChange(longitude, data.value)}
+          placeholder="-6.2"
+          style={{ flex: 1 }}
+        />
       </div>
 
       <p className="muted lp-hint">Klik peta atau seret pin untuk menyetel titik — atau cari alamat di atas.</p>

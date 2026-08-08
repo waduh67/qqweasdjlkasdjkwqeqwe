@@ -31,7 +31,7 @@ import type {
 import type { PageResponse } from '../api/types'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
-import { StatusBadge } from '@/components/atoms'
+import { Button, SelectField, StatusBadge, TextField } from '@/components/atoms'
 import { useToast } from '@/system'
 import { IconClose, IconCrosshair, IconPlus, IconRoute } from '@/components/atoms/icons'
 import { createCableTool, type CableTool, type ToolState } from '../map/cableTool'
@@ -44,10 +44,58 @@ import { createCableTool, type CableTool, type ToolState } from '../map/cableToo
  * di puluhan ribu titik. Klik sebuah ODP untuk melihat siapa yang tersambung.
  */
 
-const MAP_ATTRIBUTION = '&copy; Kontributor OpenStreetMap &copy; CARTO'
+// Atribusi gabungan semua penyedia basemap (Carto & Esri) karena pengguna bisa
+// berpindah mode; tetap ditampilkan apa pun mode yang aktif.
+const MAP_ATTRIBUTION =
+  '&copy; Kontributor OpenStreetMap &copy; CARTO &middot; Citra satelit &copy; Esri'
 
 /** Pusat awal: Bekasi, sekadar titik berangkat sebelum data pertama masuk. */
 const INITIAL_CENTER: [number, number] = [106.995, -6.243]
+
+/**
+ * Mode basemap yang bisa dipilih pengguna. Semua tile raster KEYLESS — memadai untuk
+ * pengembangan; untuk PRODUKSI pindah ke penyedia berlangganan / tile sendiri (Carto
+ * & Esri membatasi pemakaian komersial). Ganti mode cukup menukar tile & opacity
+ * sumber raster `basemap` via `setTiles`, jadi tak menyentuh layer overlay vektor.
+ * Catatan skema ubin: Carto memakai {z}/{x}/{y} (XYZ standar), Esri {z}/{y}/{x}.
+ */
+type BasemapMode = 'streets' | 'satellite' | 'dark'
+
+const BASEMAPS: Record<BasemapMode, { label: string; tiles: string[]; opacity: number }> = {
+  // Jalan/standar ala Google Maps (Carto Voyager) — enak untuk survei alamat.
+  streets: {
+    label: 'Peta',
+    tiles: [
+      'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+      'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+      'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+      'https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+    ],
+    opacity: 1,
+  },
+  // Satelit (Esri World Imagery) — verifikasi tiang/rumah dari citra udara.
+  satellite: {
+    label: 'Satelit',
+    tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+    opacity: 1,
+  },
+  // NOC gelap (bawaan) — aset & kabel bercahaya paling menonjol di sini.
+  dark: {
+    label: 'Gelap',
+    tiles: [
+      'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+      'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+      'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+    ],
+    opacity: 0.85,
+  },
+}
+
+/** Urutan tampil di pemilih: Peta → Satelit → Gelap. */
+const BASEMAP_ORDER: BasemapMode[] = ['streets', 'satellite', 'dark']
+
+/** Mode awal: tetap gelap (gaya NOC) agar aset & kabel bercahaya paling menonjol. */
+const DEFAULT_BASEMAP: BasemapMode = 'dark'
 
 const HEALTH_COLOR: Record<string, string> = {
   GOOD: 'var(--good-ink)',
@@ -216,11 +264,7 @@ const FUTURISTIC_STYLE: any = {
   sources: {
     basemap: {
       type: 'raster',
-      tiles: [
-        'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-        'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-        'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-      ],
+      tiles: BASEMAPS[DEFAULT_BASEMAP].tiles,
       tileSize: 256,
       attribution: MAP_ATTRIBUTION,
     },
@@ -232,7 +276,12 @@ const FUTURISTIC_STYLE: any = {
     },
   },
   layers: [
-    { id: 'basemap', type: 'raster', source: 'basemap', paint: { 'raster-opacity': 0.85 } },
+    {
+      id: 'basemap',
+      type: 'raster',
+      source: 'basemap',
+      paint: { 'raster-opacity': BASEMAPS[DEFAULT_BASEMAP].opacity },
+    },
     // Kabel: halo → garis inti → dash mengalir
     {
       id: 'cable-glow',
@@ -369,6 +418,7 @@ export function MapPage() {
   const [placing, setPlacing] = useState<AssetKind | null>(null)
   const [placeAt, setPlaceAt] = useState<{ kind: AssetKind; lng: number; lat: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [basemap, setBasemap] = useState<BasemapMode>(DEFAULT_BASEMAP)
   const { can } = useCan()
   const { user } = useAuth()
   const toast = useToast()
@@ -462,6 +512,26 @@ export function MapPage() {
     },
     [toast],
   )
+
+  // Pindah basemap saat pengguna memilih mode lain: cukup tukar tile & opacity sumber
+  // raster 'basemap'; layer overlay (aset & kabel) tetap. Mode awal (gelap) sudah jadi
+  // default pada gaya, jadi saat mount efek ini no-op (map belum ada → early return).
+  // Gerbang pakai keberadaan sumber 'basemap' — BUKAN isStyleLoaded() — karena tepat
+  // setelah setTiles gaya sempat "belum termuat" sementara ubin menyusul; memakai
+  // once('load') pada kondisi itu akan menggantung selamanya (event 'load' hanya sekali).
+  useEffect(() => {
+    const m = map.current
+    if (!m) return
+    const preset = BASEMAPS[basemap]
+    const apply = () => {
+      const src = m.getSource('basemap') as maplibregl.RasterTileSource | undefined
+      if (!src) return
+      src.setTiles(preset.tiles)
+      m.setPaintProperty('basemap', 'raster-opacity', preset.opacity)
+    }
+    if (m.getSource('basemap')) apply()
+    else m.once('load', apply)
+  }, [basemap])
 
   useEffect(() => {
     if (!container.current || map.current) return
@@ -1141,16 +1211,18 @@ export function MapPage() {
           <div className="map-info-head">
             <h2>Peta Jaringan</h2>
             {can('network.odp.view') && (
-              <button
-                className={`small ${heatmap ? 'primary' : 'ghost'}`}
+              <Button
+                size="small"
+                variant={heatmap ? 'primary' : 'subtle'}
                 style={{ marginLeft: 'auto' }}
                 onClick={() => setHeatmap((v) => !v)}
                 title="Warnai ODP menurut pemakaian port untuk perencanaan kapasitas"
               >
                 Heatmap utilisasi
-              </button>
+              </Button>
             )}
           </div>
+          <BasemapSwitcher value={basemap} onChange={setBasemap} />
           {heatmap ? <HeatmapLegend /> : <Legend />}
         </div>
 
@@ -1165,9 +1237,9 @@ export function MapPage() {
           <div className="map-hint">
             <IconPlus size={16} />
             <span>Klik lokasi di peta untuk menaruh {ASSET_META[placing].label} baru</span>
-            <button className="ghost small" style={{ marginLeft: 'auto' }} onClick={cancelPlace}>
+            <Button variant="subtle" size="small" style={{ marginLeft: 'auto' }} onClick={cancelPlace}>
               Batal
-            </button>
+            </Button>
           </div>
         )}
 
@@ -1180,13 +1252,13 @@ export function MapPage() {
               {formatLength(toolState.lengthMeters)}
             </span>
             {toolState.bendCount > 0 && !toolState.complete && (
-              <button className="ghost small" onClick={() => tool.current?.removeLastBend()}>
+              <Button variant="subtle" size="small" onClick={() => tool.current?.removeLastBend()}>
                 Urungkan titik
-              </button>
+              </Button>
             )}
-            <button className="ghost small" onClick={cancelTool}>
+            <Button variant="subtle" size="small" onClick={cancelTool}>
               Batal
-            </button>
+            </Button>
           </div>
         )}
 
@@ -1198,12 +1270,12 @@ export function MapPage() {
             <span className="tnum" style={{ marginLeft: 'auto', fontWeight: 600 }}>
               {formatLength(toolState?.lengthMeters ?? 0)}
             </span>
-            <button className="primary small" onClick={() => void saveEdit()}>
+            <Button variant="primary" size="small" onClick={() => void saveEdit()}>
               Simpan
-            </button>
-            <button className="ghost small" onClick={cancelTool}>
+            </Button>
+            <Button variant="subtle" size="small" onClick={cancelTool}>
               Batal
-            </button>
+            </Button>
           </div>
         )}
 
@@ -1295,6 +1367,30 @@ export function MapPage() {
  * tulis (tarik kabel/taruh aset) hanya muncul bila pengguna punya izin terkait; tombol
  * "Lokasi saya" selalu tampil karena geolokasi bukan aksi tulis (semua peran boleh).
  */
+/**
+ * Pemilih basemap: segmen kecil di dalam kartu info (kiri-bawah), dikumpulkan bersama
+ * toggle heatmap & legenda karena sama-sama mengatur "apa yang ditampilkan peta".
+ * Sengaja jauh dari alat-edit (kiri-atas) & panel detail (kanan-atas) agar tak
+ * bertabrakan. Tombol native `.segment` legibel di atas kartu kaca bertema.
+ */
+function BasemapSwitcher({ value, onChange }: { value: BasemapMode; onChange: (mode: BasemapMode) => void }) {
+  return (
+    <div className="segment map-basemap" role="group" aria-label="Mode peta">
+      {BASEMAP_ORDER.map((mode) => (
+        <button
+          key={mode}
+          type="button"
+          className={value === mode ? 'active' : ''}
+          aria-pressed={value === mode}
+          onClick={() => onChange(mode)}
+        >
+          {BASEMAPS[mode].label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function MapToolbar({
   can,
   onDraw,
@@ -1309,18 +1405,18 @@ function MapToolbar({
   const placeable = (Object.keys(ASSET_META) as AssetKind[]).filter((k) => can(ASSET_META[k].createPerm))
   return (
     <div className="map-toolbar">
-      <button className="ghost" onClick={onLocate}>
+      <Button variant="subtle" onClick={onLocate}>
         <IconCrosshair size={15} /> Lokasi saya
-      </button>
+      </Button>
       {can('network.cable.create') && (
-        <button className="primary" onClick={onDraw}>
+        <Button variant="primary" onClick={onDraw}>
           <IconRoute size={16} /> Tarik kabel
-        </button>
+        </Button>
       )}
       {placeable.map((k) => (
-        <button key={k} className="ghost" onClick={() => onPlace(k)}>
+        <Button key={k} variant="subtle" onClick={() => onPlace(k)}>
           <IconPlus size={15} /> {ASSET_META[k].label}
-        </button>
+        </Button>
       ))}
     </div>
   )
@@ -1463,9 +1559,7 @@ function SaveCablePanel({
     <aside className="map-panel stack">
       <div className="spread">
         <h3 style={{ margin: 0 }}>Kabel baru</h3>
-        <button className="ghost icon-btn" onClick={onCancel} aria-label="Batal">
-          <IconClose size={18} />
-        </button>
+        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onCancel} aria-label="Batal" />
       </div>
       <div className="row" style={{ gap: '0.5rem' }}>
         <StatusBadge status="ACTIVE" label={TYPE_LABEL[cableType]} />
@@ -1474,14 +1568,15 @@ function SaveCablePanel({
         </span>
         <span className="badge tnum">{formatLength(lengthMeters)}</span>
       </div>
-      <label>
-        <span>Nama</span>
-        <input value={name} onChange={(e) => setName(e.target.value)} />
-      </label>
-      <label>
-        <span>Jumlah core</span>
-        <input type="number" min={1} max={288} value={coreCount} onChange={(e) => setCoreCount(Number(e.target.value))} />
-      </label>
+      <TextField label="Nama" value={name} onChange={(_, data) => setName(data.value)} />
+      <TextField
+        label="Jumlah core"
+        type="number"
+        min={1}
+        max={288}
+        value={String(coreCount)}
+        onChange={(_, data) => setCoreCount(Number(data.value))}
+      />
 
       {!isDrop && (
         <div className="stack" style={{ gap: '0.4rem' }}>
@@ -1558,12 +1653,12 @@ function SaveCablePanel({
       )}
 
       <div className="row">
-        <button className="primary" disabled={!canSave} onClick={submit}>
+        <Button variant="primary" disabled={!canSave} onClick={submit}>
           Simpan kabel
-        </button>
-        <button className="ghost" onClick={onCancel}>
+        </Button>
+        <Button variant="subtle" onClick={onCancel}>
           Batal
-        </button>
+        </Button>
       </div>
     </aside>
   )
@@ -1595,7 +1690,7 @@ function SourcePortGrid({
         const bg = isSelected ? 'var(--accent-soft)' : o.occupied ? 'var(--surface-2, rgba(148,163,184,0.15))' : 'transparent'
         const border = isSelected ? 'var(--accent)' : o.occupied ? 'var(--border)' : 'var(--good-ink)'
         return (
-          <button
+          <Button
             key={key}
             type="button"
             disabled={!selectable}
@@ -1617,7 +1712,7 @@ function SourcePortGrid({
             }}
           >
             {o.label}
-          </button>
+          </Button>
         )
       })}
     </div>
@@ -1660,7 +1755,7 @@ function PortGrid({
               : 'transparent'
         const border = isSelected ? 'var(--accent)' : free.has(n) ? 'var(--good-ink)' : 'var(--border)'
         return (
-          <button
+          <Button
             key={n}
             type="button"
             disabled={!selectable}
@@ -1684,7 +1779,7 @@ function PortGrid({
             <div style={{ fontSize: '0.6rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {occ ? occ.customerCode : '·'}
             </div>
-          </button>
+          </Button>
         )
       })}
     </div>
@@ -1728,9 +1823,7 @@ function CablePanel({
     <aside className="map-panel stack">
       <div className="spread">
         <h3 style={{ margin: 0 }}>{cable.code}</h3>
-        <button className="ghost icon-btn" onClick={onClose} aria-label="Tutup">
-          <IconClose size={18} />
-        </button>
+        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
       </div>
       <p className="muted" style={{ margin: 0 }}>
         {cable.name}
@@ -1748,9 +1841,9 @@ function CablePanel({
       </p>
       {causes.length > 0 && <CableCauses causes={causes} />}
       {canSimulate && (
-        <button className="ghost" style={{ justifyContent: 'flex-start', color: WHATIF_COLOR }} onClick={onSimulate}>
+        <Button variant="subtle" style={{ justifyContent: 'flex-start', color: WHATIF_COLOR }} onClick={onSimulate}>
           Simulasi putus — siapa yang kena?
-        </button>
+        </Button>
       )}
       {canViewOtdr && (
         <OtdrSection
@@ -1765,14 +1858,14 @@ function CablePanel({
       {(canEdit || canDelete) && (
         <div className="row">
           {canEdit && (
-            <button className="primary" onClick={onEdit}>
+            <Button variant="primary" onClick={onEdit}>
               <IconRoute size={15} /> Edit jalur
-            </button>
+            </Button>
           )}
           {canDelete && (
-            <button className="ghost danger" onClick={onDelete}>
+            <Button variant="danger" onClick={onDelete}>
               Hapus
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -1838,8 +1931,8 @@ function OtdrSection({
         <div className="stack" style={{ gap: '0.25rem', maxHeight: 190, overflowY: 'auto' }}>
           {list.map((t) => (
             <div key={t.id} className="spread" style={{ gap: '0.4rem', alignItems: 'center' }}>
-              <button
-                className="ghost"
+              <Button
+                variant="subtle"
                 style={{ justifyContent: 'flex-start', flex: 1, padding: '0.25rem 0.4rem', fontSize: '0.8rem' }}
                 onClick={() => onFocus(t)}
                 disabled={!t.estimatedPoint}
@@ -1855,11 +1948,9 @@ function OtdrSection({
                     di luar
                   </span>
                 )}
-              </button>
+              </Button>
               {canRecord && (
-                <button className="ghost icon-btn" onClick={() => onDelete(t.id)} aria-label="Hapus uji">
-                  <IconClose size={14} />
-                </button>
+                <Button variant="subtle" icon={<IconClose size={14} />} onClick={() => onDelete(t.id)} aria-label="Hapus uji" />
               )}
             </div>
           ))}
@@ -1874,53 +1965,57 @@ function OtdrSection({
       {canRecord && (
         <div className="stack" style={{ gap: '0.4rem' }}>
           <div className="row" style={{ gap: '0.4rem' }}>
-            <label style={{ flex: 1 }}>
-              <span>Jarak serat (m)</span>
-              <input
-                type="number"
-                min={0}
-                step="0.1"
-                value={distance}
-                onChange={(e) => setDistance(e.target.value)}
-                placeholder="mis. 320"
-              />
-            </label>
-            <label style={{ width: '8.5rem' }}>
-              <span>Diukur dari</span>
-              <select value={measuredFrom} onChange={(e) => setMeasuredFrom(e.target.value as CableEnd)}>
-                <option value="FROM">Hulu ({cable.fromKind})</option>
-                <option value="TO">Hilir ({cable.toKind})</option>
-              </select>
-            </label>
+            <TextField
+              label="Jarak serat (m)"
+              type="number"
+              min={0}
+              step="0.1"
+              value={distance}
+              onChange={(_, data) => setDistance(data.value)}
+              placeholder="mis. 320"
+              style={{ flex: 1 }}
+            />
+            <SelectField
+              label="Diukur dari"
+              value={measuredFrom}
+              onChange={(_, data) => setMeasuredFrom(data.value as CableEnd)}
+              style={{ width: '8.5rem' }}
+            >
+              <option value="FROM">Hulu ({cable.fromKind})</option>
+              <option value="TO">Hilir ({cable.toKind})</option>
+            </SelectField>
           </div>
           <div className="row" style={{ gap: '0.4rem' }}>
-            <label style={{ flex: 1 }}>
-              <span>Peristiwa</span>
-              <select value={eventType} onChange={(e) => setEventType(e.target.value as OtdrEventType)}>
-                {OTDR_EVENT_OPTIONS.map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-            </label>
-            <label style={{ width: '8.5rem' }}>
-              <span>Redaman (dB)</span>
-              <input
-                type="number"
-                min={0}
-                step="0.1"
-                value={lossDb}
-                onChange={(e) => setLossDb(e.target.value)}
-                placeholder="opsional"
-              />
-            </label>
+            <SelectField
+              label="Peristiwa"
+              value={eventType}
+              onChange={(_, data) => setEventType(data.value as OtdrEventType)}
+              style={{ flex: 1 }}
+            >
+              {OTDR_EVENT_OPTIONS.map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </SelectField>
+            <TextField
+              label="Redaman (dB)"
+              type="number"
+              min={0}
+              step="0.1"
+              value={lossDb}
+              onChange={(_, data) => setLossDb(data.value)}
+              placeholder="opsional"
+              style={{ width: '8.5rem' }}
+            />
           </div>
-          <label>
-            <span>Catatan (opsional)</span>
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="mis. dekat tiang 12" />
-          </label>
-          <button className="primary" disabled={!canSubmit} onClick={submit}>
+          <TextField
+            label="Catatan (opsional)"
+            value={note}
+            onChange={(_, data) => setNote(data.value)}
+            placeholder="mis. dekat tiang 12"
+          />
+          <Button variant="primary" disabled={!canSubmit} onClick={submit}>
             Plot &amp; simpan
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -1944,9 +2039,7 @@ function CableCutPanel({ cut, onClose }: { cut: CableCutView; onClose: () => voi
     <aside className="map-panel stack">
       <div className="spread">
         <h3 style={{ margin: 0 }}>{cut.cableCode}</h3>
-        <button className="ghost icon-btn" onClick={onClose} aria-label="Tutup">
-          <IconClose size={18} />
-        </button>
+        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
       </div>
       <p className="muted" style={{ margin: 0 }}>
         Simulasi putus · {CUT_ROOT_LABEL[cut.severedRootKind] ?? cut.severedRootKind}
@@ -2048,9 +2141,7 @@ function BlastRadiusPanel({
     <aside className="map-panel stack">
       <div className="spread">
         <h3 style={{ margin: 0 }}>{blast.code}</h3>
-        <button className="ghost icon-btn" onClick={onClose} aria-label="Tutup">
-          <IconClose size={18} />
-        </button>
+        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
       </div>
       <p className="muted" style={{ margin: 0 }}>
         {blast.name} · blast radius
@@ -2085,9 +2176,9 @@ function BlastRadiusPanel({
       )}
       {canDelete && (
         <div className="row">
-          <button className="ghost danger" onClick={onDelete}>
+          <Button variant="danger" onClick={onDelete}>
             Hapus ODC
-          </button>
+          </Button>
         </div>
       )}
     </aside>
@@ -2139,9 +2230,7 @@ function CustomerTracePanel({ trace, onClose }: { trace: CustomerTrace; onClose:
     <aside className="map-panel stack">
       <div className="spread">
         <h3 style={{ margin: 0 }}>{trace.customerName}</h3>
-        <button className="ghost icon-btn" onClick={onClose} aria-label="Tutup">
-          <IconClose size={18} />
-        </button>
+        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
       </div>
       <p className="muted" style={{ margin: 0 }}>
         {trace.customerCode}
@@ -2257,9 +2346,7 @@ function SitePanel({
     <aside className="map-panel stack">
       <div className="spread">
         <h3 style={{ margin: 0 }}>{site.code}</h3>
-        <button className="ghost icon-btn" onClick={onClose} aria-label="Tutup">
-          <IconClose size={18} />
-        </button>
+        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
       </div>
       <p className="muted" style={{ margin: 0 }}>
         {site.name}
@@ -2288,9 +2375,9 @@ function SitePanel({
       )}
       {canDelete && (
         <div className="row">
-          <button className="ghost danger" onClick={onDelete} disabled={site.oltCount > 0}>
+          <Button variant="danger" onClick={onDelete} disabled={site.oltCount > 0}>
             Hapus site
-          </button>
+          </Button>
           {site.oltCount > 0 && (
             <span className="muted" style={{ fontSize: '0.78rem', alignSelf: 'center' }}>
               Masih ada OLT terpasang.
@@ -2346,9 +2433,7 @@ function OltPanel({
     <aside className="map-panel stack">
       <div className="spread">
         <h3 style={{ margin: 0 }}>{olt.code}</h3>
-        <button className="ghost icon-btn" onClick={onClose} aria-label="Tutup">
-          <IconClose size={18} />
-        </button>
+        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
       </div>
       <p className="muted" style={{ margin: 0 }}>
         {olt.name}
@@ -2386,9 +2471,9 @@ function OltPanel({
       </p>
       {canView && (
         <div className="row">
-          <button className="primary" onClick={onOpenDetail}>
+          <Button variant="primary" onClick={onOpenDetail}>
             Buka detail
-          </button>
+          </Button>
         </div>
       )}
     </aside>
@@ -2504,9 +2589,7 @@ function PlaceAssetForm({
     <aside className="map-panel stack">
       <div className="spread">
         <h3 style={{ margin: 0 }}>{meta.label} baru</h3>
-        <button className="ghost icon-btn" onClick={onCancel} aria-label="Batal">
-          <IconClose size={18} />
-        </button>
+        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onCancel} aria-label="Batal" />
       </div>
       <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
         <span className="tnum">
@@ -2514,121 +2597,111 @@ function PlaceAssetForm({
         </span>{' '}
         · seret pin di peta untuk menyetel lokasi
       </p>
-      <label>
-        <span>Kode</span>
-        <input value={code} onChange={(e) => setCode(e.target.value)} placeholder={`${kind}-001`} />
-      </label>
-      <label>
-        <span>Nama</span>
-        <input value={name} onChange={(e) => setName(e.target.value)} />
-      </label>
+      <TextField label="Kode" value={code} onChange={(_, data) => setCode(data.value)} placeholder={`${kind}-001`} />
+      <TextField label="Nama" value={name} onChange={(_, data) => setName(data.value)} />
       {kind === 'OLT' && (
         <>
-          <label>
-            <span>Site induk</span>
-            <select value={siteId} onChange={(e) => setSiteId(e.target.value)}>
-              <option value="">— pilih site —</option>
-              {sites.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.code} — {s.name}
+          <SelectField label="Site induk" value={siteId} onChange={(_, data) => setSiteId(data.value)}>
+            <option value="">— pilih site —</option>
+            {sites.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.code} — {s.name}
+              </option>
+            ))}
+          </SelectField>
+          <div className="row" style={{ gap: '0.5rem' }}>
+            <SelectField label="Vendor" value={vendor} onChange={(_, data) => setVendor(data.value)} style={{ flex: 1 }}>
+              {VENDORS.map((v) => (
+                <option key={v} value={v}>
+                  {v}
                 </option>
               ))}
-            </select>
-          </label>
-          <div className="row" style={{ gap: '0.5rem' }}>
-            <label style={{ flex: 1 }}>
-              <span>Vendor</span>
-              <select value={vendor} onChange={(e) => setVendor(e.target.value)}>
-                {VENDORS.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Model {<span className="muted">(opsional)</span>}</span>
-              <input value={model} onChange={(e) => setModel(e.target.value)} />
-            </label>
+            </SelectField>
+            <TextField
+              label={<>Model <span className="muted">(opsional)</span></>}
+              value={model}
+              onChange={(_, data) => setModel(data.value)}
+              style={{ flex: 1 }}
+            />
           </div>
-          <label>
-            <span>IP manajemen {<span className="muted">(opsional)</span>}</span>
-            <input value={managementIp} onChange={(e) => setManagementIp(e.target.value)} placeholder="10.0.0.1" />
-          </label>
+          <TextField
+            label={<>IP manajemen <span className="muted">(opsional)</span></>}
+            value={managementIp}
+            onChange={(_, data) => setManagementIp(data.value)}
+            placeholder="10.0.0.1"
+          />
           <div className="row" style={{ gap: '0.5rem' }}>
-            <label style={{ flex: 1 }}>
-              <span>SNMP community {<span className="muted">(opsional)</span>}</span>
-              <input value={snmpCommunity} onChange={(e) => setSnmpCommunity(e.target.value)} placeholder="public" />
-            </label>
-            <label style={{ width: '6.5rem' }}>
-              <span>Port SNMP</span>
-              <input
-                type="number"
-                min={1}
-                max={65535}
-                value={snmpPort}
-                onChange={(e) => setSnmpPort(e.target.value)}
-              />
-            </label>
+            <TextField
+              label={<>SNMP community <span className="muted">(opsional)</span></>}
+              value={snmpCommunity}
+              onChange={(_, data) => setSnmpCommunity(data.value)}
+              placeholder="public"
+              style={{ flex: 1 }}
+            />
+            <TextField
+              label="Port SNMP"
+              type="number"
+              min={1}
+              max={65535}
+              value={snmpPort}
+              onChange={(_, data) => setSnmpPort(data.value)}
+              style={{ width: '6.5rem' }}
+            />
           </div>
         </>
       )}
       {kind !== 'SITE' && kind !== 'OLT' && (
-        <label>
-          <span>Alamat <span className="muted">(opsional)</span></span>
-          <input value={address} onChange={(e) => setAddress(e.target.value)} />
-        </label>
+        <TextField
+          label={<>Alamat <span className="muted">(opsional)</span></>}
+          value={address}
+          onChange={(_, data) => setAddress(data.value)}
+        />
       )}
       {kind === 'SITE' && (
-        <label>
-          <span>Alamat</span>
-          <input value={address} onChange={(e) => setAddress(e.target.value)} />
-        </label>
+        <TextField label="Alamat" value={address} onChange={(_, data) => setAddress(data.value)} />
       )}
       {kind === 'ODP' && (
-        <label>
-          <span>ODC induk</span>
-          <select value={odcId} onChange={(e) => setOdcId(e.target.value)}>
-            <option value="">— belum ditautkan —</option>
-            {odcs.map((odc) => (
-              <option key={odc.id} value={odc.id}>
-                {odc.code} — {odc.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectField label="ODC induk" value={odcId} onChange={(_, data) => setOdcId(data.value)}>
+          <option value="">— belum ditautkan —</option>
+          {odcs.map((odc) => (
+            <option key={odc.id} value={odc.id}>
+              {odc.code} — {odc.name}
+            </option>
+          ))}
+        </SelectField>
       )}
       {(kind === 'ODC' || kind === 'ODP') && (
         <div className="row" style={{ gap: '0.5rem' }}>
-          <label style={{ flex: 1 }}>
-            <span>Rasio splitter</span>
-            <select value={splitterRatio} onChange={(e) => setSplitterRatio(e.target.value)}>
-              {SPLITTER_RATIOS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label style={{ flex: 1 }}>
-            <span>Kapasitas</span>
-            <input
-              type="number"
-              min={1}
-              max={kind === 'ODP' ? 256 : 1024}
-              value={capacity}
-              onChange={(e) => setCapacity(Number(e.target.value))}
-            />
-          </label>
+          <SelectField
+            label="Rasio splitter"
+            value={splitterRatio}
+            onChange={(_, data) => setSplitterRatio(data.value)}
+            style={{ flex: 1 }}
+          >
+            {SPLITTER_RATIOS.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </SelectField>
+          <TextField
+            label="Kapasitas"
+            type="number"
+            min={1}
+            max={kind === 'ODP' ? 256 : 1024}
+            value={String(capacity)}
+            onChange={(_, data) => setCapacity(Number(data.value))}
+            style={{ flex: 1 }}
+          />
         </div>
       )}
       <div className="row">
-        <button className="primary" disabled={!canSubmit} onClick={submit}>
+        <Button variant="primary" disabled={!canSubmit} onClick={submit}>
           Simpan {meta.label}
-        </button>
-        <button className="ghost" onClick={onCancel}>
+        </Button>
+        <Button variant="subtle" onClick={onCancel}>
           Batal
-        </button>
+        </Button>
       </div>
     </aside>
   )
@@ -2700,7 +2773,7 @@ function OdpPanel({
     <aside className="map-panel stack">
       <div className="spread">
         <h3 style={{ margin: 0 }}>{inspection.code}</h3>
-        <button onClick={onClose}>Tutup</button>
+        <Button onClick={onClose}>Tutup</Button>
       </div>
       <p className="muted" style={{ margin: 0 }}>
         {inspection.name}
@@ -2785,9 +2858,9 @@ function OdpPanel({
 
       {canDelete && (
         <div className="row">
-          <button className="ghost danger" onClick={onDelete} disabled={inspection.occupants.length > 0}>
+          <Button variant="danger" onClick={onDelete} disabled={inspection.occupants.length > 0}>
             Hapus ODP
-          </button>
+          </Button>
           {inspection.occupants.length > 0 && (
             <span className="muted" style={{ fontSize: '0.78rem', alignSelf: 'center' }}>
               Masih ada pelanggan tersambung.

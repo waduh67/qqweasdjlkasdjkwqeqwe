@@ -56,7 +56,7 @@ export function OltRegisteredOnus({ oltId, backTo }: { oltId: string; backTo: st
       key: 'serial',
       header: 'Serial',
       sortValue: (o) => o.serialNumber,
-      cell: (o) => <span style={{ fontWeight: 550, whiteSpace: 'nowrap' }}>{o.serialNumber}</span>,
+      cell: (o) => <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{o.serialNumber}</span>,
     },
     {
       key: 'customer',

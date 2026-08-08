@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Button } from '@/components/atoms'
 import { Modal } from './Modal'
 
 /**
@@ -31,12 +32,12 @@ export function ConfirmDialog({
       onClose={() => !busy && onClose()}
       footer={
         <>
-          <button className="ghost" onClick={onClose} disabled={busy}>
+          <Button variant="subtle" onClick={onClose} disabled={busy}>
             {cancelLabel}
-          </button>
-          <button className={danger ? 'danger' : 'primary'} onClick={onConfirm} disabled={busy}>
+          </Button>
+          <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} disabled={busy}>
             {busy ? 'Memproses…' : confirmLabel}
-          </button>
+          </Button>
         </>
       }
     >

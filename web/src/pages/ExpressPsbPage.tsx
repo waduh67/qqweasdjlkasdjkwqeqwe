@@ -6,7 +6,7 @@ import { listNas, type NasView } from '../api/bng'
 import { listPlans, SERVICE_TYPE_LABEL, type PlanView, type ServiceType } from '../api/catalog'
 import { onboardPsb, type ExpressPsbResult } from '../api/onboarding'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState } from '@/components/atoms'
+import { Badge, Button, EmptyState, SelectField, TextField, TextareaField } from '@/components/atoms'
 import { useToast } from '@/system'
 import { LocationPicker } from '@/components/organisms'
 import { MultiCombobox } from '@/components/molecules'
@@ -225,27 +225,20 @@ export function ExpressPsbPage() {
           <section className="stack" style={{ gap: '0.5rem' }}>
             <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Pelanggan</h3>
             <div className="row wrap" style={{ gap: '0.6rem' }}>
-              <label style={{ flex: 1, minWidth: 140 }}>
-                <span>Kode</span>
-                <input value={draft.code} onChange={(e) => set({ code: e.target.value })} placeholder="Otomatis: CUST-000001" />
-              </label>
-              <label style={{ flex: 2, minWidth: 180 }}>
-                <span>Nama *</span>
-                <input value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="Budi Santoso" />
-              </label>
-              <label style={{ flex: 1, minWidth: 140 }}>
-                <span>Telepon</span>
-                <input value={draft.phone} onChange={(e) => set({ phone: e.target.value })} placeholder="08123456789" />
-              </label>
-              <label style={{ flex: 1, minWidth: 140 }}>
-                <span>Email</span>
-                <input value={draft.email} onChange={(e) => set({ email: e.target.value })} placeholder="budi@email.com" />
-              </label>
+              <div style={{ flex: 1, minWidth: 140 }}>
+                <TextField label="Kode" value={draft.code} onChange={(_, data) => set({ code: data.value })} placeholder="Otomatis: CUST-000001" />
+              </div>
+              <div style={{ flex: 2, minWidth: 180 }}>
+                <TextField label="Nama *" value={draft.name} onChange={(_, data) => set({ name: data.value })} placeholder="Budi Santoso" />
+              </div>
+              <div style={{ flex: 1, minWidth: 140 }}>
+                <TextField label="Telepon" value={draft.phone} onChange={(_, data) => set({ phone: data.value })} placeholder="08123456789" />
+              </div>
+              <div style={{ flex: 1, minWidth: 140 }}>
+                <TextField label="Email" value={draft.email} onChange={(_, data) => set({ email: data.value })} placeholder="budi@email.com" />
+              </div>
             </div>
-            <label>
-              <span>Alamat *</span>
-              <input value={draft.address} onChange={(e) => set({ address: e.target.value })} placeholder="Jl. Merdeka No. 10" />
-            </label>
+            <TextField label="Alamat *" value={draft.address} onChange={(_, data) => set({ address: data.value })} placeholder="Jl. Merdeka No. 10" />
             <label>
               <span>Lokasi *</span>
               <LocationPicker
@@ -257,17 +250,20 @@ export function ExpressPsbPage() {
             </label>
             {areas.length > 0 && (
               <div className="row wrap" style={{ gap: '0.6rem' }}>
-                <label style={{ flex: 1, minWidth: 200 }}>
-                  <span>Area {nasByArea.has(draft.areaId) && <span className="muted">· BRAS otomatis terpilih</span>}</span>
-                  <select value={draft.areaId} onChange={(e) => changeArea(e.target.value)}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <SelectField
+                    label={<>Area {nasByArea.has(draft.areaId) && <span className="muted">· BRAS otomatis terpilih</span>}</>}
+                    value={draft.areaId}
+                    onChange={(_, data) => changeArea(data.value)}
+                  >
                     <option value="">— pilih area —</option>
                     {areas.map((a) => (
                       <option key={a.id} value={a.id}>
                         {a.name}
                       </option>
                     ))}
-                  </select>
-                </label>
+                  </SelectField>
+                </div>
               </div>
             )}
           </section>
@@ -276,76 +272,69 @@ export function ExpressPsbPage() {
           <section className="stack" style={{ gap: '0.5rem' }}>
             <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Paket &amp; akun jaringan</h3>
             <div className="row wrap" style={{ gap: '0.6rem', alignItems: 'flex-end' }}>
-              <label style={{ flex: 2, minWidth: 180 }}>
-                <span>Paket *</span>
-                <select value={planId} onChange={(e) => changePlan(e.target.value)}>
+              <div style={{ flex: 2, minWidth: 180 }}>
+                <SelectField label="Paket *" value={planId} onChange={(_, data) => changePlan(data.value)}>
                   {plans.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name} ({p.downMbps}/{p.upMbps} Mbps)
                     </option>
                   ))}
-                </select>
-              </label>
-              <label style={{ flex: 1, minWidth: 140 }}>
-                <span>Tipe layanan</span>
-                <select value={authType} onChange={(e) => setAuthType(e.target.value as ServiceType)} disabled={availableTypes.length <= 1}>
+                </SelectField>
+              </div>
+              <div style={{ flex: 1, minWidth: 140 }}>
+                <SelectField label="Tipe layanan" value={authType} onChange={(_, data) => setAuthType(data.value as ServiceType)} disabled={availableTypes.length <= 1}>
                   {availableTypes.map((t) => (
                     <option key={t} value={t}>
                       {SERVICE_TYPE_LABEL[t]}
                     </option>
                   ))}
-                </select>
-              </label>
-              <label style={{ flex: 1, minWidth: 150 }}>
-                <span>Harga khusus (opsional)</span>
-                <input
+                </SelectField>
+              </div>
+              <div style={{ flex: 1, minWidth: 150 }}>
+                <TextField
+                  label="Harga khusus (opsional)"
                   type="number"
                   min={0}
                   value={draft.monthlyFeeOverride}
-                  onChange={(e) => set({ monthlyFeeOverride: e.target.value })}
+                  onChange={(_, data) => set({ monthlyFeeOverride: data.value })}
                   placeholder="ikuti harga paket"
                 />
-              </label>
+              </div>
             </div>
 
             {macBased ? (
               <div className="row wrap" style={{ gap: '0.6rem', alignItems: 'flex-end' }}>
-                <label style={{ flex: 2, minWidth: 180 }}>
-                  <span>MAC Address *</span>
-                  <input value={draft.username} onChange={(e) => set({ username: e.target.value })} placeholder="AA:BB:CC:DD:EE:FF" />
-                </label>
-                <label style={{ flex: 2, minWidth: 160 }}>
-                  <span>Reserved IP{authType === 'STATIC' ? ' *' : ' (opsional)'}</span>
-                  <input value={draft.framedIp} onChange={(e) => set({ framedIp: e.target.value })} placeholder="100.64.0.10" />
-                </label>
+                <div style={{ flex: 2, minWidth: 180 }}>
+                  <TextField label="MAC Address *" value={draft.username} onChange={(_, data) => set({ username: data.value })} placeholder="AA:BB:CC:DD:EE:FF" />
+                </div>
+                <div style={{ flex: 2, minWidth: 160 }}>
+                  <TextField label={`Reserved IP${authType === 'STATIC' ? ' *' : ' (opsional)'}`} value={draft.framedIp} onChange={(_, data) => set({ framedIp: data.value })} placeholder="100.64.0.10" />
+                </div>
               </div>
             ) : (
               <div className="row wrap" style={{ gap: '0.6rem', alignItems: 'flex-end' }}>
-                <label style={{ flex: 2, minWidth: 160 }}>
-                  <span>Username (opsional)</span>
-                  <input value={draft.username} onChange={(e) => set({ username: e.target.value })} placeholder="otomatis dari kode pelanggan" />
-                </label>
-                <label style={{ flex: 2, minWidth: 160 }}>
-                  <span>Password *</span>
-                  <input type={showSecret ? 'text' : 'password'} value={secret} onChange={(e) => setSecret(e.target.value)} />
-                </label>
-                <button type="button" onClick={() => setShowSecret((v) => !v)}>{showSecret ? 'Sembunyikan' : 'Lihat'}</button>
-                <button type="button" onClick={() => { setSecret(randomSecret()); setShowSecret(true) }}>Generate</button>
+                <div style={{ flex: 2, minWidth: 160 }}>
+                  <TextField label="Username (opsional)" value={draft.username} onChange={(_, data) => set({ username: data.value })} placeholder="otomatis dari kode pelanggan" />
+                </div>
+                <div style={{ flex: 2, minWidth: 160 }}>
+                  <TextField label="Password *" type={showSecret ? 'text' : 'password'} value={secret} onChange={(_, data) => setSecret(data.value)} />
+                </div>
+                <Button type="button" onClick={() => setShowSecret((v) => !v)}>{showSecret ? 'Sembunyikan' : 'Lihat'}</Button>
+                <Button type="button" onClick={() => { setSecret(randomSecret()); setShowSecret(true) }}>Generate</Button>
               </div>
             )}
 
             <div className="row wrap" style={{ gap: '0.6rem', alignItems: 'flex-end' }}>
-              <label style={{ flex: 1, minWidth: 160 }}>
-                <span>BRAS</span>
-                <select value={nasId} onChange={(e) => setNasId(e.target.value)}>
+              <div style={{ flex: 1, minWidth: 160 }}>
+                <SelectField label="BRAS" value={nasId} onChange={(_, data) => setNasId(data.value)}>
                   <option value="">— tanpa BRAS —</option>
                   {nasList.map((n) => (
                     <option key={n.id} value={n.id}>
                       {n.name}
                     </option>
                   ))}
-                </select>
-              </label>
+                </SelectField>
+              </div>
               {draft.areaId !== '' && !nasByArea.has(draft.areaId) && (
                 <span className="muted" style={{ fontSize: '0.8rem', alignSelf: 'center' }}>
                   Area ini belum dipetakan ke BRAS — pilih manual bila perlu.
@@ -364,10 +353,9 @@ export function ExpressPsbPage() {
           <section className="stack" style={{ gap: '0.5rem' }}>
             <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Pemasangan (Work Order PSB)</h3>
             <div className="row wrap" style={{ gap: '0.6rem', alignItems: 'flex-end' }}>
-              <label style={{ flex: 2, minWidth: 200 }}>
-                <span>Judul WO (opsional)</span>
-                <input value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder={`PSB ${draft.name.trim() || 'pelanggan'}`} />
-              </label>
+              <div style={{ flex: 2, minWidth: 200 }}>
+                <TextField label="Judul WO (opsional)" value={draft.title} onChange={(_, data) => set({ title: data.value })} placeholder={`PSB ${draft.name.trim() || 'pelanggan'}`} />
+              </div>
               <label style={{ flex: 1, minWidth: 180 }}>
                 <span>Teknisi (opsional, bisa lebih dari satu)</span>
                 <MultiCombobox
@@ -385,21 +373,23 @@ export function ExpressPsbPage() {
                   emptyText="Tak ada teknisi"
                 />
               </label>
-              <label style={{ flex: 1, minWidth: 180 }}>
-                <span>Jadwal (opsional)</span>
-                <input type="datetime-local" value={draft.scheduledAt} onChange={(e) => set({ scheduledAt: e.target.value })} />
-              </label>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <TextField label="Jadwal (opsional)" type="datetime-local" value={draft.scheduledAt} onChange={(_, data) => set({ scheduledAt: data.value })} />
+              </div>
             </div>
-            <label className="stack" style={{ gap: '0.25rem' }}>
-              <span>Catatan pemasangan (opsional)</span>
-              <textarea rows={2} maxLength={2000} value={draft.description} onChange={(e) => set({ description: e.target.value })} />
-            </label>
+            <TextareaField
+              label="Catatan pemasangan (opsional)"
+              rows={2}
+              maxLength={2000}
+              value={draft.description}
+              onChange={(_, data) => set({ description: data.value })}
+            />
           </section>
 
           <div className="row" style={{ gap: '0.5rem' }}>
-            <button className="primary" onClick={() => void submit()} disabled={saving || invalid}>
+            <Button variant="primary" onClick={() => void submit()} disabled={saving || invalid}>
               <IconPlus size={15} /> {saving ? 'Memproses…' : 'Buat PSB'}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -415,7 +405,7 @@ function ResultCard({ result, onDismiss }: { result: ExpressPsbResult & { secret
         <h3 style={{ margin: 0, fontSize: '0.95rem' }}>
           <Badge tone="good">PSB dibuat</Badge> {result.workOrderCode}
         </h3>
-        <button className="ghost" onClick={onDismiss}>Tutup</button>
+        <Button variant="subtle" onClick={onDismiss}>Tutup</Button>
       </div>
       <dl className="kv" style={{ margin: 0, display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.3rem 0.8rem', fontSize: '0.85rem' }}>
         <dt className="muted">Username</dt>

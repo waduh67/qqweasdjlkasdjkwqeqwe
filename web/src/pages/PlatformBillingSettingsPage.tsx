@@ -11,7 +11,7 @@ import {
   type PlatformFeeType,
 } from '../api/platformBilling'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState } from '@/components/atoms'
+import { Badge, Button, EmptyState, SelectField, TextField } from '@/components/atoms'
 import { useToast } from '@/system'
 import { Combobox } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
@@ -129,59 +129,55 @@ function GlobalPanel({
         label="Harga bulanan default (Rp)"
         hint="Biaya langganan bulanan yang sama untuk semua tenant. Saat onboarding tenant baru, super-admin bisa menimpanya jadi harga khusus."
       >
-        <input
+        <TextField
           type="number"
           min={0}
           step={1000}
           value={monthlyFee}
-          onChange={(e) => setMonthlyFee(e.target.value)}
+          onChange={(_, data) => setMonthlyFee(data.value)}
           disabled={!manage}
         />
       </FormRow>
 
       <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
-        <label style={{ flex: 1, minWidth: 140 }}>
-          <span>Jatuh tempo (hari)</span>
-          <input
-            type="number"
-            min={0}
-            max={90}
-            value={dueDays}
-            onChange={(e) => setDueDays(e.target.value)}
-            disabled={!manage}
-          />
-        </label>
-        <label style={{ flex: 1, minWidth: 140 }}>
-          <span>Masa tenggang (hari)</span>
-          <input
-            type="number"
-            min={0}
-            max={90}
-            value={graceDays}
-            onChange={(e) => setGraceDays(e.target.value)}
-            disabled={!manage}
-          />
-        </label>
-        <label style={{ flex: 1, minWidth: 120 }}>
-          <span>Tanggal tagih</span>
-          <input
-            type="number"
-            min={1}
-            max={28}
-            value={billingDay}
-            onChange={(e) => setBillingDay(e.target.value)}
-            disabled={!manage}
-          />
-        </label>
-        <label style={{ flex: 1, minWidth: 100 }}>
-          <span>Mata uang</span>
-          <input
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
-            maxLength={3}
-            disabled={!manage}
-          />
-        </label>
+        <TextField
+          label="Jatuh tempo (hari)"
+          type="number"
+          min={0}
+          max={90}
+          value={dueDays}
+          onChange={(_, data) => setDueDays(data.value)}
+          disabled={!manage}
+          style={{ flex: 1, minWidth: 140 }}
+        />
+        <TextField
+          label="Masa tenggang (hari)"
+          type="number"
+          min={0}
+          max={90}
+          value={graceDays}
+          onChange={(_, data) => setGraceDays(data.value)}
+          disabled={!manage}
+          style={{ flex: 1, minWidth: 140 }}
+        />
+        <TextField
+          label="Tanggal tagih"
+          type="number"
+          min={1}
+          max={28}
+          value={billingDay}
+          onChange={(_, data) => setBillingDay(data.value)}
+          disabled={!manage}
+          style={{ flex: 1, minWidth: 120 }}
+        />
+        <TextField
+          label="Mata uang"
+          value={currency}
+          onChange={(_, data) => setCurrency(data.value)}
+          maxLength={3}
+          disabled={!manage}
+          style={{ flex: 1, minWidth: 100 }}
+        />
       </div>
       <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
         Jatuh tempo = umur tagihan sejak terbit; masa tenggang = jeda setelah jatuh tempo sebelum tenant
@@ -192,9 +188,9 @@ function GlobalPanel({
         <>
           <div className="hr" />
           <div className="row" style={{ justifyContent: 'flex-end' }}>
-            <button className="primary" onClick={() => void save()} disabled={!dirty || saving}>
+            <Button variant="primary" onClick={() => void save()} disabled={!dirty || saving}>
               {saving ? 'Menyimpan…' : 'Simpan setelan global'}
-            </button>
+            </Button>
           </div>
         </>
       )}
@@ -347,45 +343,33 @@ function PivotMasterPanel({
           />
         </FormRow>
 
-        <label>
-          <span>
-            Client ID {config.merchantIdSet && <span className="muted">· tersimpan</span>}
-          </span>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={merchantId}
-            onChange={(e) => setMerchantId(e.target.value)}
-            placeholder={config.merchantIdSet ? 'Biarkan kosong untuk mempertahankan' : 'Client ID dashboard Pivot (dikirim sebagai X-MERCHANT-ID)'}
-            disabled={!manage}
-          />
-        </label>
-        <label>
-          <span>
-            Client Secret {config.merchantSecretSet && <span className="muted">· tersimpan</span>}
-          </span>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={merchantSecret}
-            onChange={(e) => setMerchantSecret(e.target.value)}
-            placeholder={config.merchantSecretSet ? 'Biarkan kosong untuk mempertahankan' : 'Client Secret dashboard Pivot (dikirim sebagai X-MERCHANT-SECRET)'}
-            disabled={!manage}
-          />
-        </label>
-        <label>
-          <span>
-            Callback Secret {config.callbackApiKeySet && <span className="muted">· tersimpan</span>}
-          </span>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={callbackApiKey}
-            onChange={(e) => setCallbackApiKey(e.target.value)}
-            placeholder={config.callbackApiKeySet ? 'Biarkan kosong untuk mempertahankan' : 'Callback Secret untuk verifikasi header X-API-Key'}
-            disabled={!manage}
-          />
-        </label>
+        <TextField
+          label={<>Client ID {config.merchantIdSet && <span className="muted">· tersimpan</span>}</>}
+          type="password"
+          autoComplete="new-password"
+          value={merchantId}
+          onChange={(_, data) => setMerchantId(data.value)}
+          placeholder={config.merchantIdSet ? 'Biarkan kosong untuk mempertahankan' : 'Client ID dashboard Pivot (dikirim sebagai X-MERCHANT-ID)'}
+          disabled={!manage}
+        />
+        <TextField
+          label={<>Client Secret {config.merchantSecretSet && <span className="muted">· tersimpan</span>}</>}
+          type="password"
+          autoComplete="new-password"
+          value={merchantSecret}
+          onChange={(_, data) => setMerchantSecret(data.value)}
+          placeholder={config.merchantSecretSet ? 'Biarkan kosong untuk mempertahankan' : 'Client Secret dashboard Pivot (dikirim sebagai X-MERCHANT-SECRET)'}
+          disabled={!manage}
+        />
+        <TextField
+          label={<>Callback Secret {config.callbackApiKeySet && <span className="muted">· tersimpan</span>}</>}
+          type="password"
+          autoComplete="new-password"
+          value={callbackApiKey}
+          onChange={(_, data) => setCallbackApiKey(data.value)}
+          placeholder={config.callbackApiKeySet ? 'Biarkan kosong untuk mempertahankan' : 'Callback Secret untuk verifikasi header X-API-Key'}
+          disabled={!manage}
+        />
 
         <PivotCallbackUrls onCopy={(url) => void copyUrl(url)} />
       </div>
@@ -398,27 +382,29 @@ function PivotMasterPanel({
           rupiah (mis. 1000 = Rp1.000); untuk <strong>Persentase</strong> isi angka persen (mis. 2 = 2%).
         </p>
         <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
-          <label style={{ flex: 1, minWidth: 180 }}>
-            <span>Jenis fee</span>
-            <select value={feeType} onChange={(e) => setFeeType(e.target.value as PlatformFeeType)} disabled={!manage}>
-              {FEE_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {PLATFORM_FEE_TYPE_LABEL[t]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label style={{ flex: 1, minWidth: 160 }}>
-            <span>{feeType === 'PERCENTAGE' ? 'Nilai (%)' : 'Nilai (Rp)'}</span>
-            <input
-              type="number"
-              min={0}
-              step={feeType === 'PERCENTAGE' ? 0.1 : 100}
-              value={feeMinor}
-              onChange={(e) => setFeeMinor(e.target.value)}
-              disabled={!manage}
-            />
-          </label>
+          <SelectField
+            label="Jenis fee"
+            value={feeType}
+            onChange={(_, data) => setFeeType(data.value as PlatformFeeType)}
+            disabled={!manage}
+            style={{ flex: 1, minWidth: 180 }}
+          >
+            {FEE_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {PLATFORM_FEE_TYPE_LABEL[t]}
+              </option>
+            ))}
+          </SelectField>
+          <TextField
+            label={feeType === 'PERCENTAGE' ? 'Nilai (%)' : 'Nilai (Rp)'}
+            type="number"
+            min={0}
+            step={feeType === 'PERCENTAGE' ? 0.1 : 100}
+            value={feeMinor}
+            onChange={(_, data) => setFeeMinor(data.value)}
+            disabled={!manage}
+            style={{ flex: 1, minWidth: 160 }}
+          />
         </div>
       </div>
 
@@ -429,24 +415,22 @@ function PivotMasterPanel({
           Rekening tujuan pencairan dana platform (fee terkumpul &amp; penagihan langganan tenant).
         </p>
         <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
-          <label style={{ flex: 1, minWidth: 140 }}>
-            <span>Kode channel bank</span>
-            <input
-              value={payoutChannel}
-              onChange={(e) => setPayoutChannel(e.target.value)}
-              placeholder="mis. BCA, MANDIRI"
-              disabled={!manage}
-            />
-          </label>
-          <label style={{ flex: 1, minWidth: 160 }}>
-            <span>Nomor rekening</span>
-            <input
-              value={payoutAccount}
-              onChange={(e) => setPayoutAccount(e.target.value)}
-              placeholder="mis. 1234567890"
-              disabled={!manage}
-            />
-          </label>
+          <TextField
+            label="Kode channel bank"
+            value={payoutChannel}
+            onChange={(_, data) => setPayoutChannel(data.value)}
+            placeholder="mis. BCA, MANDIRI"
+            disabled={!manage}
+            style={{ flex: 1, minWidth: 140 }}
+          />
+          <TextField
+            label="Nomor rekening"
+            value={payoutAccount}
+            onChange={(_, data) => setPayoutAccount(data.value)}
+            placeholder="mis. 1234567890"
+            disabled={!manage}
+            style={{ flex: 1, minWidth: 160 }}
+          />
         </div>
       </div>
 
@@ -455,9 +439,9 @@ function PivotMasterPanel({
 
       {manage && (
         <div className="row" style={{ justifyContent: 'flex-end' }}>
-          <button className="primary" onClick={() => void save()} disabled={!dirty || saving}>
+          <Button variant="primary" onClick={() => void save()} disabled={!dirty || saving}>
             {saving ? 'Menyimpan…' : 'Simpan konfigurasi Pivot'}
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -560,149 +544,141 @@ function SubAccountDefaultsPanel({
       </p>
 
       <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
-        <label style={{ flex: 1, minWidth: 160 }}>
-          <span>Tipe bisnis</span>
-          <select
-            value={defaults.defaultBusinessType}
-            onChange={(e) => set({ defaultBusinessType: e.target.value })}
-            disabled={!manage}
-          >
-            <option value="">— pilih —</option>
-            {BUSINESS_TYPE_OPTIONS.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label style={{ flex: 1, minWidth: 160 }}>
-          <span>Status digital</span>
-          <select
-            value={defaults.defaultDigitalStatus}
-            onChange={(e) => set({ defaultDigitalStatus: e.target.value })}
-            disabled={!manage}
-          >
-            <option value="">— pilih —</option>
-            {DIGITAL_STATUS_OPTIONS.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label style={{ flex: 1, minWidth: 160 }}>
-          <span>Struktur bisnis</span>
-          <select
-            value={defaults.defaultBusinessStructure}
-            onChange={(e) => set({ defaultBusinessStructure: e.target.value })}
-            disabled={!manage}
-          >
-            <option value="">— pilih —</option>
-            {withCurrent(PIVOT_BUSINESS_STRUCTURES, defaults.defaultBusinessStructure).map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectField
+          label="Tipe bisnis"
+          value={defaults.defaultBusinessType}
+          onChange={(_, data) => set({ defaultBusinessType: data.value })}
+          disabled={!manage}
+          style={{ flex: 1, minWidth: 160 }}
+        >
+          <option value="">— pilih —</option>
+          {BUSINESS_TYPE_OPTIONS.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </SelectField>
+        <SelectField
+          label="Status digital"
+          value={defaults.defaultDigitalStatus}
+          onChange={(_, data) => set({ defaultDigitalStatus: data.value })}
+          disabled={!manage}
+          style={{ flex: 1, minWidth: 160 }}
+        >
+          <option value="">— pilih —</option>
+          {DIGITAL_STATUS_OPTIONS.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </SelectField>
+        <SelectField
+          label="Struktur bisnis"
+          value={defaults.defaultBusinessStructure}
+          onChange={(_, data) => set({ defaultBusinessStructure: data.value })}
+          disabled={!manage}
+          style={{ flex: 1, minWidth: 160 }}
+        >
+          <option value="">— pilih —</option>
+          {withCurrent(PIVOT_BUSINESS_STRUCTURES, defaults.defaultBusinessStructure).map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </SelectField>
       </div>
 
       <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
-        <label style={{ flex: 1, minWidth: 160 }}>
-          <span>Industri induk</span>
-          <select
-            value={defaults.defaultParentIndustry}
-            onChange={(e) =>
-              // Ganti induk → reset anak & MCC (pasangan lama tak lagi valid).
-              set({ defaultParentIndustry: e.target.value, defaultChildIndustry: '', defaultMcc: '' })
-            }
-            disabled={!manage}
-          >
-            <option value="">— pilih —</option>
-            {withCurrent(PIVOT_PARENT_INDUSTRIES, defaults.defaultParentIndustry).map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label style={{ flex: 1, minWidth: 160 }}>
-          <span>Industri anak</span>
-          <select
-            value={defaults.defaultChildIndustry}
-            onChange={(e) =>
-              // Pilih anak → MCC terisi otomatis dari pasangan induk+anak.
-              set({
-                defaultChildIndustry: e.target.value,
-                defaultMcc: mccForIndustry(defaults.defaultParentIndustry, e.target.value) ?? '',
-              })
-            }
-            disabled={!manage || !defaults.defaultParentIndustry}
-          >
-            <option value="">{defaults.defaultParentIndustry ? '— pilih —' : 'pilih induk dahulu'}</option>
-            {childOptions.map((c) => (
-              <option key={c.child} value={c.child}>
-                {c.child}
-              </option>
-            ))}
-            {/* Nilai tersimpan yang tak ada di daftar anak induk terpilih tetap tampil. */}
-            {defaults.defaultChildIndustry &&
-              !childOptions.some((c) => c.child === defaults.defaultChildIndustry) && (
-                <option value={defaults.defaultChildIndustry}>{defaults.defaultChildIndustry}</option>
-              )}
-          </select>
-        </label>
-        <label style={{ flex: 1, minWidth: 120 }}>
-          <span>MCC</span>
-          <input
-            value={defaults.defaultMcc}
-            readOnly
-            placeholder="otomatis dari industri"
-            title="Terisi otomatis dari anak industri"
-            disabled={!manage}
-          />
-        </label>
+        <SelectField
+          label="Industri induk"
+          value={defaults.defaultParentIndustry}
+          onChange={(_, data) =>
+            // Ganti induk → reset anak & MCC (pasangan lama tak lagi valid).
+            set({ defaultParentIndustry: data.value, defaultChildIndustry: '', defaultMcc: '' })
+          }
+          disabled={!manage}
+          style={{ flex: 1, minWidth: 160 }}
+        >
+          <option value="">— pilih —</option>
+          {withCurrent(PIVOT_PARENT_INDUSTRIES, defaults.defaultParentIndustry).map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </SelectField>
+        <SelectField
+          label="Industri anak"
+          value={defaults.defaultChildIndustry}
+          onChange={(_, data) =>
+            // Pilih anak → MCC terisi otomatis dari pasangan induk+anak.
+            set({
+              defaultChildIndustry: data.value,
+              defaultMcc: mccForIndustry(defaults.defaultParentIndustry, data.value) ?? '',
+            })
+          }
+          disabled={!manage || !defaults.defaultParentIndustry}
+          style={{ flex: 1, minWidth: 160 }}
+        >
+          <option value="">{defaults.defaultParentIndustry ? '— pilih —' : 'pilih induk dahulu'}</option>
+          {childOptions.map((c) => (
+            <option key={c.child} value={c.child}>
+              {c.child}
+            </option>
+          ))}
+          {/* Nilai tersimpan yang tak ada di daftar anak induk terpilih tetap tampil. */}
+          {defaults.defaultChildIndustry &&
+            !childOptions.some((c) => c.child === defaults.defaultChildIndustry) && (
+              <option value={defaults.defaultChildIndustry}>{defaults.defaultChildIndustry}</option>
+            )}
+        </SelectField>
+        <TextField
+          label="MCC"
+          value={defaults.defaultMcc}
+          readOnly
+          placeholder="otomatis dari industri"
+          title="Terisi otomatis dari anak industri"
+          disabled={!manage}
+          style={{ flex: 1, minWidth: 120 }}
+        />
       </div>
 
       <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
-        <label style={{ flex: 1, minWidth: 120 }}>
-          <span>Negara bisnis</span>
-          <select
-            value={defaults.defaultBusinessCountry}
-            onChange={(e) => set({ defaultBusinessCountry: e.target.value })}
-            disabled={!manage}
-          >
-            <option value="">— pilih —</option>
-            {PIVOT_COUNTRIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.name} ({c.code})
-              </option>
-            ))}
-            {defaults.defaultBusinessCountry &&
-              !PIVOT_COUNTRIES.some((c) => c.code === defaults.defaultBusinessCountry) && (
-                <option value={defaults.defaultBusinessCountry}>{defaults.defaultBusinessCountry}</option>
-              )}
-          </select>
-        </label>
-        <label style={{ flex: 1, minWidth: 120 }}>
-          <span>Negara entitas</span>
-          <select
-            value={defaults.defaultCountryOfEntity}
-            onChange={(e) => set({ defaultCountryOfEntity: e.target.value })}
-            disabled={!manage}
-          >
-            <option value="">— pilih —</option>
-            {PIVOT_COUNTRIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.name} ({c.code})
-              </option>
-            ))}
-            {defaults.defaultCountryOfEntity &&
-              !PIVOT_COUNTRIES.some((c) => c.code === defaults.defaultCountryOfEntity) && (
-                <option value={defaults.defaultCountryOfEntity}>{defaults.defaultCountryOfEntity}</option>
-              )}
-          </select>
-        </label>
+        <SelectField
+          label="Negara bisnis"
+          value={defaults.defaultBusinessCountry}
+          onChange={(_, data) => set({ defaultBusinessCountry: data.value })}
+          disabled={!manage}
+          style={{ flex: 1, minWidth: 120 }}
+        >
+          <option value="">— pilih —</option>
+          {PIVOT_COUNTRIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.name} ({c.code})
+            </option>
+          ))}
+          {defaults.defaultBusinessCountry &&
+            !PIVOT_COUNTRIES.some((c) => c.code === defaults.defaultBusinessCountry) && (
+              <option value={defaults.defaultBusinessCountry}>{defaults.defaultBusinessCountry}</option>
+            )}
+        </SelectField>
+        <SelectField
+          label="Negara entitas"
+          value={defaults.defaultCountryOfEntity}
+          onChange={(_, data) => set({ defaultCountryOfEntity: data.value })}
+          disabled={!manage}
+          style={{ flex: 1, minWidth: 120 }}
+        >
+          <option value="">— pilih —</option>
+          {PIVOT_COUNTRIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.name} ({c.code})
+            </option>
+          ))}
+          {defaults.defaultCountryOfEntity &&
+            !PIVOT_COUNTRIES.some((c) => c.code === defaults.defaultCountryOfEntity) && (
+              <option value={defaults.defaultCountryOfEntity}>{defaults.defaultCountryOfEntity}</option>
+            )}
+        </SelectField>
         <label style={{ flex: 1, minWidth: 200 }}>
           <span>District</span>
           {districtLabel === null ? (
@@ -724,37 +700,34 @@ function SubAccountDefaultsPanel({
             />
           )}
         </label>
-        <label style={{ flex: 1, minWidth: 120 }}>
-          <span>Kode pos</span>
-          <input
-            value={defaults.defaultPostCode}
-            onChange={(e) => set({ defaultPostCode: e.target.value })}
-            placeholder="mis. 40111"
-            maxLength={20}
-            disabled={!manage}
-          />
-        </label>
+        <TextField
+          label="Kode pos"
+          value={defaults.defaultPostCode}
+          onChange={(_, data) => set({ defaultPostCode: data.value })}
+          placeholder="mis. 40111"
+          maxLength={20}
+          disabled={!manage}
+          style={{ flex: 1, minWidth: 120 }}
+        />
       </div>
 
       <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
-        <label style={{ flex: 1, minWidth: 200 }}>
-          <span>Website</span>
-          <input
-            value={defaults.defaultWebsite}
-            onChange={(e) => set({ defaultWebsite: e.target.value })}
-            placeholder="https://…"
-            disabled={!manage}
-          />
-        </label>
-        <label style={{ flex: 1, minWidth: 200 }}>
-          <span>URL logo</span>
-          <input
-            value={defaults.defaultLogoUrl}
-            onChange={(e) => set({ defaultLogoUrl: e.target.value })}
-            placeholder="https://…/logo.png"
-            disabled={!manage}
-          />
-        </label>
+        <TextField
+          label="Website"
+          value={defaults.defaultWebsite}
+          onChange={(_, data) => set({ defaultWebsite: data.value })}
+          placeholder="https://…"
+          disabled={!manage}
+          style={{ flex: 1, minWidth: 200 }}
+        />
+        <TextField
+          label="URL logo"
+          value={defaults.defaultLogoUrl}
+          onChange={(_, data) => set({ defaultLogoUrl: data.value })}
+          placeholder="https://…/logo.png"
+          disabled={!manage}
+          style={{ flex: 1, minWidth: 200 }}
+        />
       </div>
     </div>
   )
@@ -798,15 +771,15 @@ function PivotCallbackUrls({ onCopy }: { onCopy: (url: string) => void }) {
                 {label} <span className="muted" style={{ fontWeight: 400 }}>· {product}</span>
               </span>
               <div className="row" style={{ gap: '0.5rem', alignItems: 'stretch' }}>
-                <input
+                <TextField
                   value={url}
                   readOnly
                   onFocus={(e) => e.target.select()}
                   style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.82rem' }}
                 />
-                <button type="button" className="ghost" onClick={() => onCopy(url)} style={{ whiteSpace: 'nowrap' }}>
+                <Button type="button" variant="subtle" onClick={() => onCopy(url)} style={{ whiteSpace: 'nowrap' }}>
                   Salin
-                </button>
+                </Button>
               </div>
             </div>
           )

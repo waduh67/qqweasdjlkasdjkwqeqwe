@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { WorkOrderDetail } from '../api/workorder'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, Spinner } from '@/components/atoms'
+import { Badge, Button, EmptyState, Spinner } from '@/components/atoms'
 import { useToast } from '@/system'
 import { IconWorkOrder } from '@/components/atoms/icons'
 import { APPROVAL_LABEL, APPROVAL_TONE, PRIORITY_LABEL, type ActFn } from '@/utils/woLabels'
@@ -109,8 +109,8 @@ export function WorkOrderDetailPage({ backTo, backLabel }: { backTo: string; bac
 
 function BackLink({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button className="ghost" onClick={onClick} style={{ alignSelf: 'flex-start', gap: '0.35rem' }}>
+    <Button variant="subtle" onClick={onClick} style={{ alignSelf: 'flex-start', gap: '0.35rem' }}>
       <span aria-hidden>←</span> {label}
-    </button>
+    </Button>
   )
 }

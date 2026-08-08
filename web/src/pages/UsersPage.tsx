@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { KeyRound, Plus, Power, RefreshCw, Trash2 } from 'lucide-react'
+import { Checkbox } from '@fluentui/react-components'
 import { api, ApiError } from '../api/client'
 import type { Area, PageResponse, Role, User } from '../api/types'
 import { useCan } from '../auth/useCan'
@@ -7,7 +8,7 @@ import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
 import { Blade } from '@/components/organisms'
-import { EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { Button, EmptyState, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useConfirm } from '@/system'
 import { IconUsers } from '@/components/atoms/icons'
@@ -222,8 +223,8 @@ export function UsersPage() {
         footer={
           draft && (
             <>
-              <button
-                className="primary"
+              <Button
+                variant="primary"
                 onClick={() =>
                   void run(async () => {
                     await api.post('/api/users', {
@@ -238,30 +239,31 @@ export function UsersPage() {
                 }
               >
                 Simpan
-              </button>
-              <button onClick={() => setDraft(null)}>Batal</button>
+              </Button>
+              <Button onClick={() => setDraft(null)}>Batal</Button>
             </>
           )
         }
       >
         {draft && (
           <div className="stack">
-            <label>
-              <span>Nama</span>
-              <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-            </label>
-            <label>
-              <span>Email</span>
-              <input type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
-            </label>
-            <label>
-              <span>Password (min. 8 karakter)</span>
-              <input
-                type="password"
-                value={draft.password}
-                onChange={(e) => setDraft({ ...draft, password: e.target.value })}
-              />
-            </label>
+            <TextField
+              label="Nama"
+              value={draft.name}
+              onChange={(_, data) => setDraft({ ...draft, name: data.value })}
+            />
+            <TextField
+              label="Email"
+              type="email"
+              value={draft.email}
+              onChange={(_, data) => setDraft({ ...draft, email: data.value })}
+            />
+            <TextField
+              label="Password (min. 8 karakter)"
+              type="password"
+              value={draft.password}
+              onChange={(_, data) => setDraft({ ...draft, password: data.value })}
+            />
             <RoleAreaPicker
               roles={roles}
               areas={areas}
@@ -312,30 +314,26 @@ function RoleAreaPicker({
       <div>
         <strong>Role</strong>
         {roles.map((role) => (
-          <label key={role.id} className="row" style={{ marginTop: '0.4rem' }}>
-            <input
-              type="checkbox"
-              style={{ width: 'auto' }}
+          <div key={role.id} style={{ marginTop: '0.2rem' }}>
+            <Checkbox
+              label={role.name}
               checked={roleIds.has(role.id)}
               onChange={() => onToggleRole(role.id)}
             />
-            {role.name}
-          </label>
+          </div>
         ))}
       </div>
       <div>
         <strong>Area (kosong = semua area)</strong>
         {areas.length === 0 && <p className="muted">Belum ada area.</p>}
         {areas.map((area) => (
-          <label key={area.id} className="row" style={{ marginTop: '0.4rem' }}>
-            <input
-              type="checkbox"
-              style={{ width: 'auto' }}
+          <div key={area.id} style={{ marginTop: '0.2rem' }}>
+            <Checkbox
+              label={`${area.code} — ${area.name}`}
               checked={areaIds.has(area.id)}
               onChange={() => onToggleArea(area.id)}
             />
-            {area.code} — {area.name}
-          </label>
+          </div>
         ))}
       </div>
     </div>
@@ -379,10 +377,10 @@ function AccessEditor({
       onClose={onCancel}
       footer={
         <>
-          <button className="primary" onClick={() => onSave([...roleIds], [...areaIds])}>
+          <Button variant="primary" onClick={() => onSave([...roleIds], [...areaIds])}>
             Simpan
-          </button>
-          <button onClick={onCancel}>Batal</button>
+          </Button>
+          <Button onClick={onCancel}>Batal</Button>
         </>
       }
     >

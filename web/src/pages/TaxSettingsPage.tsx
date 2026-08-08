@@ -7,7 +7,7 @@ import {
   type UpdateTaxSettingsRequest,
 } from '../api/billing'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState } from '@/components/atoms'
+import { Badge, Button, EmptyState, TextField } from '@/components/atoms'
 import { Modal } from '@/components/molecules'
 import { useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
@@ -240,12 +240,12 @@ export function TaxSettingsPage() {
                 {dirty ? `${changes.length} perubahan belum disimpan` : 'Tak ada perubahan'}
               </span>
               <div className="row" style={{ gap: '0.5rem' }}>
-                <button className="ghost" onClick={discard} disabled={!dirty || saving}>
+                <Button variant="subtle" onClick={discard} disabled={!dirty || saving}>
                   Batalkan
-                </button>
-                <button className="primary" onClick={() => setConfirmOpen(true)} disabled={!dirty || !valid || saving}>
+                </Button>
+                <Button variant="primary" onClick={() => setConfirmOpen(true)} disabled={!dirty || !valid || saving}>
                   Tinjau &amp; simpan…
-                </button>
+                </Button>
               </div>
             </div>
           </>
@@ -258,12 +258,12 @@ export function TaxSettingsPage() {
           onClose={() => !saving && setConfirmOpen(false)}
           footer={
             <>
-              <button className="ghost" onClick={() => setConfirmOpen(false)} disabled={saving}>
+              <Button variant="subtle" onClick={() => setConfirmOpen(false)} disabled={saving}>
                 Batal
-              </button>
-              <button className="primary" onClick={() => void doSave()} disabled={saving}>
+              </Button>
+              <Button variant="primary" onClick={() => void doSave()} disabled={saving}>
                 {saving ? 'Menyimpan…' : 'Ya, simpan'}
-              </button>
+              </Button>
             </>
           }
         >
@@ -338,31 +338,23 @@ function PercentField({
 }) {
   const invalid = !validPct(value)
   return (
-    <div className="stack" style={{ gap: '0.35rem', minWidth: 180 }}>
-      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{label}</span>
-      <div className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-        <input
-          type="number"
-          inputMode="decimal"
-          min={0}
-          max={99.9999}
-          step={0.05}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          style={{ width: 120 }}
-        />
-        <span className="muted">%</span>
-      </div>
-      {invalid ? (
-        <span style={{ fontSize: '0.82rem', color: 'var(--critical-ink, crimson)' }}>Isi angka 0–99.99.</span>
-      ) : (
-        hint && (
-          <span className="muted" style={{ fontSize: '0.82rem' }}>
-            {hint}
-          </span>
-        )
-      )}
+    <div style={{ minWidth: 180 }}>
+      <TextField
+        label={label}
+        type="number"
+        inputMode="decimal"
+        min={0}
+        max={99.9999}
+        step={0.05}
+        value={value}
+        onChange={(_, data) => onChange(data.value)}
+        disabled={disabled}
+        contentAfter={<span className="muted">%</span>}
+        validationState={invalid ? 'error' : 'none'}
+        validationMessage={invalid ? 'Isi angka 0–99.99.' : undefined}
+        hint={invalid ? undefined : hint}
+        style={{ width: 160 }}
+      />
     </div>
   )
 }
@@ -431,5 +423,5 @@ function Callout({ children }: { children: ReactNode }) {
 }
 
 function SectionTitle({ children }: { children: ReactNode }) {
-  return <h3 style={{ margin: '0.25rem 0 0', fontSize: '0.95rem', fontWeight: 650 }}>{children}</h3>
+  return <h3 style={{ margin: '0.25rem 0 0', fontSize: '0.95rem', fontWeight: 600 }}>{children}</h3>
 }

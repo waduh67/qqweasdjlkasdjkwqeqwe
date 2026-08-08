@@ -17,7 +17,8 @@ import { type Tone } from '@/components/atoms'
 import type { PageResponse } from '../api/types'
 import { useCan } from '../auth/useCan'
 import { LocationPicker } from '@/components/organisms'
-import { Badge, EmptyState, Spinner, StatusBadge } from '@/components/atoms'
+import { Badge, Button, EmptyState, SelectField, Spinner, StatusBadge, TextField } from '@/components/atoms'
+import { Checkbox } from '@fluentui/react-components'
 import { Tabs } from '@/components/molecules'
 import { useToast } from '@/system'
 import { Blade } from '@/components/organisms'
@@ -150,14 +151,14 @@ export function OltDetailPage() {
         </div>
         <div className="row" style={{ gap: '0.5rem', flexShrink: 0 }}>
           {canUpdate && (
-            <button className="ghost" onClick={() => setEditing(true)}>
+            <Button variant="subtle" onClick={() => setEditing(true)}>
               Edit
-            </button>
+            </Button>
           )}
           {canDelete && (
-            <button className="ghost danger" onClick={() => void remove()}>
+            <Button variant="danger" onClick={() => void remove()}>
               Hapus
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -314,11 +315,11 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
             />
             {moved && (
               <div className="row">
-                <button className="primary" disabled={saving} onClick={() => void saveLocation()}>
+                <Button variant="primary" disabled={saving} onClick={() => void saveLocation()}>
                   Simpan lokasi
-                </button>
-                <button
-                  className="ghost"
+                </Button>
+                <Button
+                  variant="subtle"
                   disabled={saving}
                   onClick={() => {
                     setLon(String(olt.location.longitude))
@@ -326,7 +327,7 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
                   }}
                 >
                   Batal
-                </button>
+                </Button>
               </div>
             )}
             <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
@@ -406,10 +407,15 @@ function PonPortTab({
         <h3 style={{ margin: 0 }}>PON Port</h3>
         {canUpdate && (
           <div className="row" style={{ gap: '0.35rem' }}>
-            <input style={{ width: '7rem' }} placeholder="1/2/3" value={label} onChange={(e) => setLabel(e.target.value)} />
-            <button className="primary" disabled={busy || !label.trim()} onClick={() => void add()}>
+            <TextField
+              style={{ width: '7rem' }}
+              placeholder="1/2/3"
+              value={label}
+              onChange={(_, data) => setLabel(data.value)}
+            />
+            <Button variant="primary" disabled={busy || !label.trim()} onClick={() => void add()}>
               <IconPlus size={14} /> Tambah
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -461,9 +467,9 @@ function PonPortTab({
                   <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
                     <span className="badge">{p.odcCount} ODC</span>
                     {canUpdate && (
-                      <button className="ghost danger" disabled={p.odcCount > 0} onClick={() => void remove(p)}>
+                      <Button variant="danger" disabled={p.odcCount > 0} onClick={() => void remove(p)}>
                         Hapus
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -789,168 +795,177 @@ function EditOltModal({ olt, onClose, onSaved }: { olt: OltView; onClose: () => 
       onClose={onClose}
       footer={
         <>
-          <button className="primary" onClick={() => void save()} disabled={saving || !name.trim() || !siteId}>
+          <Button variant="primary" onClick={() => void save()} disabled={saving || !name.trim() || !siteId}>
             Simpan
-          </button>
-          <button className="ghost" onClick={onClose} disabled={saving}>
+          </Button>
+          <Button variant="subtle" onClick={onClose} disabled={saving}>
             Batal
-          </button>
+          </Button>
         </>
       }
     >
       <div className="stack" style={{ gap: '0.75rem' }}>
         <div className="row" style={{ gap: '0.5rem' }}>
-          <label style={{ flex: 1 }}>
-            <span>Site</span>
-            <select value={siteId} onChange={(e) => setSiteId(e.target.value)}>
-              {sites.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.code} — {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label style={{ flex: 1 }}>
-            <span>Nama</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} />
-          </label>
+          <SelectField label="Site" value={siteId} onChange={(_, data) => setSiteId(data.value)} style={{ flex: 1 }}>
+            {sites.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.code} — {s.name}
+              </option>
+            ))}
+          </SelectField>
+          <TextField label="Nama" value={name} onChange={(_, data) => setName(data.value)} style={{ flex: 1 }} />
         </div>
         <div className="row" style={{ gap: '0.5rem' }}>
-          <label style={{ flex: 1 }}>
-            <span>Vendor</span>
-            <select value={vendor} onChange={(e) => setVendor(e.target.value)}>
-              {VENDORS.map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-              {!VENDORS.includes(vendor) && <option value={vendor}>{vendor}</option>}
-            </select>
-          </label>
-          <label style={{ flex: 1 }}>
-            <span>
-              Model <span className="muted">(opsional)</span>
-            </span>
-            <input value={model} onChange={(e) => setModel(e.target.value)} placeholder="C320" />
-          </label>
-          <label style={{ flex: 1 }}>
-            <span>Status</span>
-            <select value={status} onChange={(e) => setStatus(e.target.value as AssetStatus)}>
-              {STATUS_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectField label="Vendor" value={vendor} onChange={(_, data) => setVendor(data.value)} style={{ flex: 1 }}>
+            {VENDORS.map((v) => (
+              <option key={v} value={v}>
+                {v}
+              </option>
+            ))}
+            {!VENDORS.includes(vendor) && <option value={vendor}>{vendor}</option>}
+          </SelectField>
+          <TextField
+            label={
+              <>
+                Model <span className="muted">(opsional)</span>
+              </>
+            }
+            value={model}
+            onChange={(_, data) => setModel(data.value)}
+            placeholder="C320"
+            style={{ flex: 1 }}
+          />
+          <SelectField
+            label="Status"
+            value={status}
+            onChange={(_, data) => setStatus(data.value as AssetStatus)}
+            style={{ flex: 1 }}
+          >
+            {STATUS_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </SelectField>
         </div>
         <div className="row" style={{ gap: '0.5rem' }}>
-          <label style={{ flex: 1 }}>
-            <span>
-              IP manajemen <span className="muted">(opsional)</span>
-            </span>
-            <input value={managementIp} onChange={(e) => setManagementIp(e.target.value)} placeholder="10.10.1.2" />
-          </label>
-          <label style={{ flex: 2 }}>
-            <span>
-              Deskripsi <span className="muted">(opsional)</span>
-            </span>
-            <input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Lokasi rak, kontak vendor, atau ID kontrak…"
-            />
-          </label>
+          <TextField
+            label={
+              <>
+                IP manajemen <span className="muted">(opsional)</span>
+              </>
+            }
+            value={managementIp}
+            onChange={(_, data) => setManagementIp(data.value)}
+            placeholder="10.10.1.2"
+            style={{ flex: 1 }}
+          />
+          <TextField
+            label={
+              <>
+                Deskripsi <span className="muted">(opsional)</span>
+              </>
+            }
+            value={description}
+            onChange={(_, data) => setDescription(data.value)}
+            placeholder="Lokasi rak, kontak vendor, atau ID kontrak…"
+            style={{ flex: 2 }}
+          />
         </div>
 
         {/* Kanal SNMP */}
         <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
-          <label className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
-            <input
-              type="checkbox"
-              checked={snmpEnabled}
-              onChange={(e) => setSnmpEnabled(e.target.checked)}
-              style={{ width: 'auto' }}
-            />
-            <span style={{ fontWeight: 600 }}>Aktifkan SNMP untuk OLT ini</span>
-          </label>
+          <Checkbox
+            label="Aktifkan SNMP untuk OLT ini"
+            checked={snmpEnabled}
+            onChange={(_, data) => setSnmpEnabled(!!data.checked)}
+          />
           {snmpEnabled && (
             <div className="row" style={{ gap: '0.5rem' }}>
-              <label style={{ flex: 1 }}>
-                <span>
-                  Community string <span className="muted">(RO/RW)</span>
-                </span>
-                <input
-                  type="password"
-                  value={snmpCommunity}
-                  onChange={(e) => setSnmpCommunity(e.target.value)}
-                  placeholder={olt.snmpConfigured ? '(tersimpan)' : 'public'}
-                />
-              </label>
-              <label style={{ width: 120 }}>
-                <span>Versi</span>
-                <select value={snmpVersion} onChange={(e) => setSnmpVersion(e.target.value as SnmpVersion)}>
-                  {SNMP_VERSIONS.map((v) => (
-                    <option key={v.value} value={v.value}>
-                      {v.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label style={{ width: 110 }}>
-                <span>Port SNMP</span>
-                <input type="number" min={1} max={65535} value={snmpPort} onChange={(e) => setSnmpPort(e.target.value)} />
-              </label>
+              <TextField
+                label={
+                  <>
+                    Community string <span className="muted">(RO/RW)</span>
+                  </>
+                }
+                type="password"
+                value={snmpCommunity}
+                onChange={(_, data) => setSnmpCommunity(data.value)}
+                placeholder={olt.snmpConfigured ? '(tersimpan)' : 'public'}
+                style={{ flex: 1 }}
+              />
+              <SelectField
+                label="Versi"
+                value={snmpVersion}
+                onChange={(_, data) => setSnmpVersion(data.value as SnmpVersion)}
+                style={{ width: 120 }}
+              >
+                {SNMP_VERSIONS.map((v) => (
+                  <option key={v.value} value={v.value}>
+                    {v.label}
+                  </option>
+                ))}
+              </SelectField>
+              <TextField
+                label="Port SNMP"
+                type="number"
+                min={1}
+                max={65535}
+                value={snmpPort}
+                onChange={(_, data) => setSnmpPort(data.value)}
+                style={{ width: 110 }}
+              />
             </div>
           )}
         </div>
 
         {/* Kanal Web UI / HTTP */}
         <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
-          <label className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
-            <input
-              type="checkbox"
-              checked={webEnabled}
-              onChange={(e) => setWebEnabled(e.target.checked)}
-              style={{ width: 'auto' }}
-            />
-            <span style={{ fontWeight: 600 }}>Aktifkan Web UI / HTTP</span>
-          </label>
+          <Checkbox
+            label="Aktifkan Web UI / HTTP"
+            checked={webEnabled}
+            onChange={(_, data) => setWebEnabled(!!data.checked)}
+          />
           {webEnabled && (
             <div className="row" style={{ gap: '0.5rem' }}>
-              <label style={{ width: 120 }}>
-                <span>Protokol</span>
-                <select value={webProtocol} onChange={(e) => setWebProtocol(e.target.value as WebProtocol)}>
-                  <option value="HTTP">HTTP</option>
-                  <option value="HTTPS">HTTPS</option>
-                </select>
-              </label>
-              <label style={{ width: 120 }}>
-                <span>Port Web</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={65535}
-                  value={webPort}
-                  onChange={(e) => setWebPort(e.target.value)}
-                  placeholder="80"
-                />
-              </label>
-              <label style={{ flex: 1 }}>
-                <span>
-                  Web Username <span className="muted">(opsional)</span>
-                </span>
-                <input value={webUsername} onChange={(e) => setWebUsername(e.target.value)} placeholder="admin" />
-              </label>
-              <label style={{ flex: 1 }}>
-                <span>Web Password</span>
-                <input
-                  type="password"
-                  value={webPassword}
-                  onChange={(e) => setWebPassword(e.target.value)}
-                  placeholder={olt.webPasswordConfigured ? '(tersimpan)' : 'password Web UI'}
-                />
-              </label>
+              <SelectField
+                label="Protokol"
+                value={webProtocol}
+                onChange={(_, data) => setWebProtocol(data.value as WebProtocol)}
+                style={{ width: 120 }}
+              >
+                <option value="HTTP">HTTP</option>
+                <option value="HTTPS">HTTPS</option>
+              </SelectField>
+              <TextField
+                label="Port Web"
+                type="number"
+                min={1}
+                max={65535}
+                value={webPort}
+                onChange={(_, data) => setWebPort(data.value)}
+                placeholder="80"
+                style={{ width: 120 }}
+              />
+              <TextField
+                label={
+                  <>
+                    Web Username <span className="muted">(opsional)</span>
+                  </>
+                }
+                value={webUsername}
+                onChange={(_, data) => setWebUsername(data.value)}
+                placeholder="admin"
+                style={{ flex: 1 }}
+              />
+              <TextField
+                label="Web Password"
+                type="password"
+                value={webPassword}
+                onChange={(_, data) => setWebPassword(data.value)}
+                placeholder={olt.webPasswordConfigured ? '(tersimpan)' : 'password Web UI'}
+                style={{ flex: 1 }}
+              />
             </div>
           )}
         </div>
@@ -975,8 +990,8 @@ function Field({ label, value }: { label: string; value: string }) {
 
 function BackLink({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button className="ghost" onClick={onClick} style={{ alignSelf: 'flex-start', gap: '0.35rem' }}>
+    <Button variant="subtle" onClick={onClick} style={{ alignSelf: 'flex-start', gap: '0.35rem' }}>
       <span aria-hidden>←</span> {label}
-    </button>
+    </Button>
   )
 }

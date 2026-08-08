@@ -12,7 +12,7 @@ import { Field } from '@/components/molecules'
 import { Blade } from '@/components/organisms'
 import { LocationPicker } from '@/components/organisms'
 import { exportCustomersCsv } from '../api/onboarding'
-import { EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { IconCustomers } from '@/components/atoms/icons'
@@ -362,11 +362,11 @@ export function CustomersPage() {
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama, kode, alamat, atau telepon…" />
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as CustomerStatus | '')}>
+        <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value as CustomerStatus | '')}>
           {STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
-        </select>
+        </SelectField>
       </Toolbar>
 
       <DataTable
@@ -396,54 +396,55 @@ export function CustomersPage() {
         onClose={closeDraft}
         footer={
           <>
-            <button className="primary" onClick={() => void save()} disabled={saving}>
+            <Button variant="primary" onClick={() => void save()} disabled={saving}>
               {saving ? 'Menyimpan…' : 'Simpan'}
-            </button>
-            <button onClick={closeDraft} disabled={saving}>
+            </Button>
+            <Button onClick={closeDraft} disabled={saving}>
               Batal
-            </button>
+            </Button>
           </>
         }
       >
         {draft && (
           <div className="stack">
-            <Field label="Nama" required error={errors.name}>
-              <input
-                value={draft.name}
-                aria-invalid={errors.name ? true : undefined}
-                onChange={(e) => {
-                  setDraft({ ...draft, name: e.target.value })
-                  if (errors.name) setErrors((p) => ({ ...p, name: undefined }))
-                }}
-                autoFocus
-              />
-            </Field>
+            <TextField
+              label="Nama"
+              required
+              value={draft.name}
+              validationState={errors.name ? 'error' : 'none'}
+              validationMessage={errors.name}
+              onChange={(_, data) => {
+                setDraft({ ...draft, name: data.value })
+                if (errors.name) setErrors((p) => ({ ...p, name: undefined }))
+              }}
+              autoFocus
+            />
             <div className="row">
-              <Field label="Telepon" style={{ flex: 1 }}>
-                <input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} placeholder="08123456789" />
-              </Field>
-              <Field label="NIK / No. identitas" style={{ flex: 1 }}>
-                <input value={draft.idCardNumber} onChange={(e) => setDraft({ ...draft, idCardNumber: e.target.value })} placeholder="opsional" />
-              </Field>
+              <div style={{ flex: 1 }}>
+                <TextField label="Telepon" value={draft.phone} onChange={(_, data) => setDraft({ ...draft, phone: data.value })} placeholder="08123456789" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <TextField label="NIK / No. identitas" value={draft.idCardNumber} onChange={(_, data) => setDraft({ ...draft, idCardNumber: data.value })} placeholder="opsional" />
+              </div>
             </div>
-            <Field label="Email">
-              <input
-                type="email"
-                value={draft.email}
-                onChange={(e) => setDraft({ ...draft, email: e.target.value })}
-                placeholder="opsional"
-              />
-            </Field>
-            <Field label="Alamat" required error={errors.address}>
-              <input
-                value={draft.address}
-                aria-invalid={errors.address ? true : undefined}
-                onChange={(e) => {
-                  setDraft({ ...draft, address: e.target.value })
-                  if (errors.address) setErrors((p) => ({ ...p, address: undefined }))
-                }}
-              />
-            </Field>
+            <TextField
+              label="Email"
+              type="email"
+              value={draft.email}
+              onChange={(_, data) => setDraft({ ...draft, email: data.value })}
+              placeholder="opsional"
+            />
+            <TextField
+              label="Alamat"
+              required
+              value={draft.address}
+              validationState={errors.address ? 'error' : 'none'}
+              validationMessage={errors.address}
+              onChange={(_, data) => {
+                setDraft({ ...draft, address: data.value })
+                if (errors.address) setErrors((p) => ({ ...p, address: undefined }))
+              }}
+            />
             <Field label="Lokasi">
               <LocationPicker
                 longitude={draft.longitude}

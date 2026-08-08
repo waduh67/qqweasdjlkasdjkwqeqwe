@@ -9,7 +9,8 @@ import {
   type WhatsAppProvider,
 } from '../api/notification'
 import { useCan } from '../auth/useCan'
-import { EmptyState } from '@/components/atoms'
+import { Button, EmptyState, SelectField, TextField } from '@/components/atoms'
+import { Checkbox } from '@fluentui/react-components'
 import { useToast } from '@/system'
 import { IconAlert } from '@/components/atoms/icons'
 
@@ -128,9 +129,9 @@ export function NotificationSettingsPage() {
           </p>
         </div>
         {manage && (
-          <button className="primary" onClick={() => void save()} disabled={saving}>
+          <Button variant="primary" onClick={() => void save()} disabled={saving}>
             {saving ? 'Menyimpan…' : 'Simpan'}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -144,34 +145,28 @@ export function NotificationSettingsPage() {
       <div className="card stack">
         <SectionTitle>Gateway WhatsApp</SectionTitle>
 
-        <label className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
-          <input
-            type="checkbox"
-            checked={form.gatewayEnabled}
-            onChange={(e) => patch({ gatewayEnabled: e.target.checked })}
-            disabled={!manage}
-            style={{ width: 'auto' }}
-          />
-          <span>Aktifkan pengiriman (gateway hidup)</span>
-        </label>
+        <Checkbox
+          label="Aktifkan pengiriman (gateway hidup)"
+          checked={form.gatewayEnabled}
+          onChange={(_, data) => patch({ gatewayEnabled: !!data.checked })}
+          disabled={!manage}
+        />
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
           Saat mati, pesan pemicu tetap dicatat di riwayat sebagai <em>SKIPPED</em> — tak ada yang benar-benar terkirim.
         </p>
 
-        <label>
-          <span>Penyedia</span>
-          <select
-            value={form.provider}
-            onChange={(e) => patch({ provider: e.target.value as WhatsAppProvider })}
-            disabled={!manage}
-          >
-            {PROVIDERS.map((p) => (
-              <option key={p} value={p}>
-                {PROVIDER_LABEL[p]}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectField
+          label="Penyedia"
+          value={form.provider}
+          onChange={(_, data) => patch({ provider: data.value as WhatsAppProvider })}
+          disabled={!manage}
+        >
+          {PROVIDERS.map((p) => (
+            <option key={p} value={p}>
+              {PROVIDER_LABEL[p]}
+            </option>
+          ))}
+        </SelectField>
 
         {form.provider === 'LOG' && (
           <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
@@ -182,44 +177,38 @@ export function NotificationSettingsPage() {
 
         {form.provider === 'HTTP_GENERIC' && (
           <>
-            <label>
-              <span>URL endpoint</span>
-              <input
-                value={form.httpEndpointUrl ?? ''}
-                onChange={(e) => patch({ httpEndpointUrl: e.target.value })}
-                placeholder="https://api.fonnte.com/send"
-                disabled={!manage}
-              />
-            </label>
-            <label>
-              <span>Token / API key {form.httpTokenSet && <span className="muted">(tersimpan)</span>}</span>
-              <input
-                type="password"
-                value={httpToken}
-                onChange={(e) => setHttpToken(e.target.value)}
-                placeholder={form.httpTokenSet ? 'Biarkan kosong untuk mempertahankan' : 'Token dikirim sebagai header Authorization'}
-                disabled={!manage}
-              />
-            </label>
+            <TextField
+              label="URL endpoint"
+              value={form.httpEndpointUrl ?? ''}
+              onChange={(_, data) => patch({ httpEndpointUrl: data.value })}
+              placeholder="https://api.fonnte.com/send"
+              disabled={!manage}
+            />
+            <TextField
+              label={<>Token / API key {form.httpTokenSet && <span className="muted">(tersimpan)</span>}</>}
+              type="password"
+              value={httpToken}
+              onChange={(_, data) => setHttpToken(data.value)}
+              placeholder={form.httpTokenSet ? 'Biarkan kosong untuk mempertahankan' : 'Token dikirim sebagai header Authorization'}
+              disabled={!manage}
+            />
             <div className="row">
-              <label style={{ flex: 1 }}>
-                <span>Nama field nomor</span>
-                <input
-                  value={form.httpPhoneField}
-                  onChange={(e) => patch({ httpPhoneField: e.target.value })}
-                  placeholder="target"
-                  disabled={!manage}
-                />
-              </label>
-              <label style={{ flex: 1 }}>
-                <span>Nama field pesan</span>
-                <input
-                  value={form.httpMessageField}
-                  onChange={(e) => patch({ httpMessageField: e.target.value })}
-                  placeholder="message"
-                  disabled={!manage}
-                />
-              </label>
+              <TextField
+                label="Nama field nomor"
+                value={form.httpPhoneField}
+                onChange={(_, data) => patch({ httpPhoneField: data.value })}
+                placeholder="target"
+                disabled={!manage}
+                style={{ flex: 1 }}
+              />
+              <TextField
+                label="Nama field pesan"
+                value={form.httpMessageField}
+                onChange={(_, data) => patch({ httpMessageField: data.value })}
+                placeholder="message"
+                disabled={!manage}
+                style={{ flex: 1 }}
+              />
             </div>
             <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
               Server mengirim POST <code>form-urlencoded</code> dengan kedua field di atas. Sesuaikan namanya dengan
@@ -230,44 +219,38 @@ export function NotificationSettingsPage() {
 
         {form.provider === 'META_CLOUD' && (
           <>
-            <label>
-              <span>Phone Number ID</span>
-              <input
-                value={form.metaPhoneNumberId ?? ''}
-                onChange={(e) => patch({ metaPhoneNumberId: e.target.value })}
-                placeholder="1234567890"
-                disabled={!manage}
-              />
-            </label>
-            <label>
-              <span>Access token {form.metaAccessTokenSet && <span className="muted">(tersimpan)</span>}</span>
-              <input
-                type="password"
-                value={metaToken}
-                onChange={(e) => setMetaToken(e.target.value)}
-                placeholder={form.metaAccessTokenSet ? 'Biarkan kosong untuk mempertahankan' : 'Token permanen dari Meta'}
-                disabled={!manage}
-              />
-            </label>
+            <TextField
+              label="Phone Number ID"
+              value={form.metaPhoneNumberId ?? ''}
+              onChange={(_, data) => patch({ metaPhoneNumberId: data.value })}
+              placeholder="1234567890"
+              disabled={!manage}
+            />
+            <TextField
+              label={<>Access token {form.metaAccessTokenSet && <span className="muted">(tersimpan)</span>}</>}
+              type="password"
+              value={metaToken}
+              onChange={(_, data) => setMetaToken(data.value)}
+              placeholder={form.metaAccessTokenSet ? 'Biarkan kosong untuk mempertahankan' : 'Token permanen dari Meta'}
+              disabled={!manage}
+            />
             <div className="row">
-              <label style={{ flex: 2 }}>
-                <span>Nama template (opsional)</span>
-                <input
-                  value={form.metaTemplateName ?? ''}
-                  onChange={(e) => patch({ metaTemplateName: e.target.value })}
-                  placeholder="kosong = kirim pesan teks biasa"
-                  disabled={!manage}
-                />
-              </label>
-              <label style={{ flex: 1 }}>
-                <span>Bahasa template</span>
-                <input
-                  value={form.metaTemplateLang}
-                  onChange={(e) => patch({ metaTemplateLang: e.target.value })}
-                  placeholder="id"
-                  disabled={!manage}
-                />
-              </label>
+              <TextField
+                label="Nama template (opsional)"
+                value={form.metaTemplateName ?? ''}
+                onChange={(_, data) => patch({ metaTemplateName: data.value })}
+                placeholder="kosong = kirim pesan teks biasa"
+                disabled={!manage}
+                style={{ flex: 2 }}
+              />
+              <TextField
+                label="Bahasa template"
+                value={form.metaTemplateLang}
+                onChange={(_, data) => patch({ metaTemplateLang: data.value })}
+                placeholder="id"
+                disabled={!manage}
+                style={{ flex: 1 }}
+              />
             </div>
             <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
               Bila template diisi, pesan dikirim sebagai template dengan isi sebagai parameter body{' '}
@@ -284,22 +267,21 @@ export function NotificationSettingsPage() {
           Nyalakan jenis pesan yang ingin dikirim otomatis. Semua butuh gateway di atas hidup.
         </p>
         {TRIGGERS.map((t) => (
-          <label key={t.key} className="row" style={{ gap: '0.6rem', alignItems: 'flex-start' }}>
-            <input
-              type="checkbox"
-              checked={form[t.key] as boolean}
-              onChange={(e) => patch({ [t.key]: e.target.checked } as Partial<NotificationSettingsView>)}
-              disabled={!manage}
-              style={{ width: 'auto', marginTop: '0.2rem' }}
-            />
-            <span>
-              {t.label}
-              <br />
-              <span className="muted" style={{ fontSize: '0.85rem' }}>
-                {t.hint}
+          <Checkbox
+            key={t.key}
+            label={
+              <span>
+                {t.label}
+                <br />
+                <span className="muted" style={{ fontSize: '0.85rem' }}>
+                  {t.hint}
+                </span>
               </span>
-            </span>
-          </label>
+            }
+            checked={form[t.key] as boolean}
+            onChange={(_, data) => patch({ [t.key]: !!data.checked } as Partial<NotificationSettingsView>)}
+            disabled={!manage}
+          />
         ))}
       </div>
     </div>
@@ -308,6 +290,6 @@ export function NotificationSettingsPage() {
 
 function SectionTitle({ children }: { children: ReactNode }) {
   return (
-    <h3 style={{ margin: '0.25rem 0 0', fontSize: '0.95rem', fontWeight: 650 }}>{children}</h3>
+    <h3 style={{ margin: '0.25rem 0 0', fontSize: '0.95rem', fontWeight: 600 }}>{children}</h3>
   )
 }

@@ -80,6 +80,39 @@ export function PlatformLayout() {
 
   return (
     <div className={`app${collapsed ? ' sidebar-collapsed' : ''}`}>
+      {/* Header Azure full-width: anak langsung .app (grid-area topbar) agar bar biru
+          membentang di atas sidebar & konten, bukan hanya kolom kanan. */}
+      <header className="topbar">
+        <div className="row" style={{ gap: '0.5rem' }}>
+          <button
+            className="ghost icon-btn"
+            onClick={toggleSidebar}
+            aria-label={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
+            title={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
+          >
+            <IconSidebar size={18} />
+          </button>
+          <span className="badge accent">platform admin</span>
+        </div>
+        <div className="row" style={{ gap: '0.75rem' }}>
+          <ThemeToggle />
+          <div className="user-chip">
+            <span className="avatar" aria-hidden>
+              {initials}
+            </span>
+            <div style={{ lineHeight: 1.2 }}>
+              <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{user?.name}</div>
+              <div className="muted" style={{ fontSize: '0.75rem' }}>
+                {user?.email}
+              </div>
+            </div>
+          </div>
+          <button className="ghost icon-btn" onClick={() => void logout()} aria-label="Keluar" title="Keluar">
+            <IconLogout size={18} />
+          </button>
+        </div>
+      </header>
+
       <aside className="sidebar">
         <div className="brand">
           <span className="logo" aria-hidden>
@@ -94,37 +127,6 @@ export function PlatformLayout() {
       </aside>
 
       <div className="main">
-        <header className="topbar">
-          <div className="row" style={{ gap: '0.5rem' }}>
-            <button
-              className="ghost icon-btn"
-              onClick={toggleSidebar}
-              aria-label={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
-              title={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
-            >
-              <IconSidebar size={18} />
-            </button>
-            <span className="badge accent">platform admin</span>
-          </div>
-          <div className="row" style={{ gap: '0.75rem' }}>
-            <ThemeToggle />
-            <div className="user-chip">
-              <span className="avatar" aria-hidden>
-                {initials}
-              </span>
-              <div style={{ lineHeight: 1.2 }}>
-                <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{user?.name}</div>
-                <div className="muted" style={{ fontSize: '0.75rem' }}>
-                  {user?.email}
-                </div>
-              </div>
-            </div>
-            <button className="ghost icon-btn" onClick={() => void logout()} aria-label="Keluar" title="Keluar">
-              <IconLogout size={18} />
-            </button>
-          </div>
-        </header>
-
         <main className="content">
           <div className="breadcrumb-bar">
             <Breadcrumbs />

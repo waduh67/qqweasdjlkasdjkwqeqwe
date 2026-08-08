@@ -16,7 +16,7 @@ import {
   type UsageMetricView,
 } from '../api/subscription'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState } from '@/components/atoms'
+import { Badge, Button, EmptyState } from '@/components/atoms'
 import { Modal } from '@/components/molecules'
 import { useToast } from '@/system'
 import { type Tone } from '@/components/atoms'
@@ -219,22 +219,22 @@ export function SubscriptionPage() {
           {canPrepay && (
             <div className="row" style={{ gap: '0.3rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               {PREPAY_OPTIONS.map((m) => (
-                <button
+                <Button
                   key={m}
-                  className={m === months ? 'primary' : 'ghost'}
+                  variant={m === months ? 'primary' : 'subtle'}
                   onClick={() => setMonths(m)}
                   disabled={busy}
                   style={{ padding: '0.28rem 0.5rem', fontSize: '0.76rem', minWidth: 44 }}
                 >
                   {m} bln
-                </button>
+                </Button>
               ))}
             </div>
           )}
           {canRenew && sub.status !== 'CANCELLED' && (
-            <button className="primary" onClick={() => void renew()} disabled={busy} style={{ padding: '0.6rem 1.1rem' }}>
+            <Button variant="primary" onClick={() => void renew()} disabled={busy} style={{ padding: '0.6rem 1.1rem' }}>
               {renewLabel}
-            </button>
+            </Button>
           )}
           <span className="muted" style={{ fontSize: '0.75rem', textAlign: 'center' }}>
             {canPrepay ? (
@@ -431,7 +431,7 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
           background: 'var(--accent)',
           color: 'var(--accent-ink)',
           fontSize: '0.78rem',
-          fontWeight: 700,
+          fontWeight: 600,
           flexShrink: 0,
         }}
       >
@@ -480,14 +480,14 @@ function InvoiceRow({
       </div>
       <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{fmtIdr(inv.amount)}</span>
       {outstanding && (
-        <button
-          className="primary"
+        <Button
+          variant="primary"
           onClick={() => onPay(inv)}
           disabled={busy}
           style={{ fontSize: '0.8rem', fontWeight: 600, padding: '0.35rem 0.7rem', whiteSpace: 'nowrap' }}
         >
           Bayar ↗
-        </button>
+        </Button>
       )}
     </div>
   )

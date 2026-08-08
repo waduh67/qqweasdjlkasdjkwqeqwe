@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { signupTenant, type SignupResult } from '../api/signup'
 import { IconMap } from '@/components/atoms/icons'
-import { Spinner } from '@/components/atoms'
+import { Button, Spinner, TextField } from '@/components/atoms'
 
 /** Ubah nama ISP jadi kandidat slug: huruf kecil, spasi/simbol → strip. */
 function slugify(value: string): string {
@@ -58,13 +58,13 @@ export function SignupPage() {
             <h2 style={{ margin: 0, fontSize: '1.15rem' }}>Pendaftaran berhasil 🎉</h2>
             <p className="muted" style={{ margin: '0.4rem 0 0', fontSize: '0.88rem' }}>{done.message}</p>
           </div>
-          <button
-            className="primary"
+          <Button
+            variant="primary"
             style={{ width: '100%', padding: '0.6rem' }}
             onClick={() => navigate('/login', { state: { email: done.adminEmail } })}
           >
             Masuk sekarang
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -85,45 +85,50 @@ export function SignupPage() {
           </div>
         </div>
 
-        <label>
-          <span>Nama ISP</span>
-          <input value={name} onChange={(e) => onNameChange(e.target.value)} required autoFocus placeholder="mis. Net Media" />
-        </label>
-        <label>
-          <span>Kode ISP</span>
-          <input
-            value={slug}
-            onChange={(e) => {
-              setSlugTouched(true)
-              setSlug(e.target.value)
-            }}
-            required
-            autoComplete="off"
-            placeholder="mis. netmedia"
-          />
-          <span className="muted" style={{ fontSize: '0.75rem' }}>
-            Huruf kecil, angka &amp; strip; diawali huruf. Dipakai pelanggan &amp; tim untuk masuk.
-          </span>
-        </label>
-        <label>
-          <span>Nama admin</span>
-          <input value={adminName} onChange={(e) => setAdminName(e.target.value)} required autoComplete="name" />
-        </label>
-        <label>
-          <span>Email admin</span>
-          <input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} required autoComplete="email" />
-        </label>
-        <label>
-          <span>Password (min. 8 karakter)</span>
-          <input
-            type="password"
-            value={adminPassword}
-            onChange={(e) => setAdminPassword(e.target.value)}
-            required
-            minLength={8}
-            autoComplete="new-password"
-          />
-        </label>
+        <TextField
+          label="Nama ISP"
+          value={name}
+          onChange={(_, data) => onNameChange(data.value)}
+          required
+          autoFocus
+          placeholder="mis. Net Media"
+        />
+        <TextField
+          label="Kode ISP"
+          value={slug}
+          onChange={(_, data) => {
+            setSlugTouched(true)
+            setSlug(data.value)
+          }}
+          required
+          autoComplete="off"
+          placeholder="mis. netmedia"
+          hint="Huruf kecil, angka & strip; diawali huruf. Dipakai pelanggan & tim untuk masuk."
+        />
+        <TextField
+          label="Nama admin"
+          value={adminName}
+          onChange={(_, data) => setAdminName(data.value)}
+          required
+          autoComplete="name"
+        />
+        <TextField
+          label="Email admin"
+          type="email"
+          value={adminEmail}
+          onChange={(_, data) => setAdminEmail(data.value)}
+          required
+          autoComplete="email"
+        />
+        <TextField
+          label="Password (min. 8 karakter)"
+          type="password"
+          value={adminPassword}
+          onChange={(_, data) => setAdminPassword(data.value)}
+          required
+          minLength={8}
+          autoComplete="new-password"
+        />
 
         {error && (
           <p className="error" style={{ margin: 0, fontSize: '0.85rem' }}>
@@ -131,9 +136,9 @@ export function SignupPage() {
           </p>
         )}
 
-        <button className="primary" type="submit" disabled={busy} style={{ width: '100%', padding: '0.6rem' }}>
+        <Button variant="primary" type="submit" disabled={busy} style={{ width: '100%', padding: '0.6rem' }}>
           {busy ? <Spinner /> : 'Daftar'}
-        </button>
+        </Button>
         <p className="muted" style={{ margin: 0, fontSize: '0.83rem', textAlign: 'center' }}>
           Sudah punya akun? <Link to="/login">Masuk</Link>
         </p>

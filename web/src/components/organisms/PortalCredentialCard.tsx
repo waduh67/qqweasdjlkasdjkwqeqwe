@@ -10,7 +10,7 @@ import {
   type PortalCredentialStatus,
 } from '@/api/portalAdmin'
 import { useCan } from '@/auth/useCan'
-import { Badge, Spinner } from '@/components/atoms'
+import { Badge, Button, Spinner, TextField } from '@/components/atoms'
 import { useToast } from '@/system'
 
 /**
@@ -121,16 +121,16 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
           <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>Password sementara (salin sekarang):</span>
           <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <code className="tnum" style={{ fontSize: '0.95rem', userSelect: 'all' }}>{reveal.temporaryPassword}</code>
-            <button
-              className="ghost"
+            <Button
+              variant="subtle"
               onClick={() => {
                 void navigator.clipboard?.writeText(reveal.temporaryPassword ?? '')
                 toast.success('Password disalin')
               }}
             >
               Salin
-            </button>
-            <button className="ghost" onClick={() => setReveal(null)}>Tutup</button>
+            </Button>
+            <Button variant="subtle" onClick={() => setReveal(null)}>Tutup</Button>
           </div>
           <span className="muted" style={{ fontSize: '0.78rem' }}>
             Login <span className="tnum">{reveal.login}</span> · tak bisa dilihat lagi setelah ditutup.
@@ -142,45 +142,45 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
         <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap' }}>
           {!status?.provisioned ? (
             <>
-              <button
-                className="primary"
+              <Button
+                variant="primary"
                 disabled={busy}
                 onClick={() => void runRevealing(() => provisionPortalCredential(customerId, {}), 'Kredensial dibuat')}
               >
                 Buatkan login (password otomatis)
-              </button>
-              <button className="ghost" disabled={busy} onClick={() => setForm('provision')}>
+              </Button>
+              <Button variant="subtle" disabled={busy} onClick={() => setForm('provision')}>
                 Isi manual…
-              </button>
+              </Button>
             </>
           ) : (
             <>
-              <button
-                className="ghost"
+              <Button
+                variant="subtle"
                 disabled={busy}
                 onClick={() => void runRevealing(() => resetPortalPassword(customerId), 'Password direset')}
               >
                 Reset password (otomatis)
-              </button>
-              <button className="ghost" disabled={busy} onClick={() => setForm('reset')}>
+              </Button>
+              <Button variant="subtle" disabled={busy} onClick={() => setForm('reset')}>
                 Reset manual…
-              </button>
+              </Button>
               {status.active ? (
-                <button
-                  className="ghost danger"
+                <Button
+                  variant="danger"
                   disabled={busy}
                   onClick={() => void run(() => disablePortalCredential(customerId), 'Login dinonaktifkan')}
                 >
                   Nonaktifkan
-                </button>
+                </Button>
               ) : (
-                <button
-                  className="ghost"
+                <Button
+                  variant="subtle"
                   disabled={busy}
                   onClick={() => void run(() => enablePortalCredential(customerId), 'Login diaktifkan')}
                 >
                   Aktifkan
-                </button>
+                </Button>
               )}
             </>
           )}
@@ -190,25 +190,26 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
       {canManage && form !== null && (
         <div className="stack" style={{ gap: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '0.6rem' }}>
           {form === 'provision' && (
-            <label>
-              <span>Login (kosong = kode pelanggan)</span>
-              <input value={login} onChange={(e) => setLogin(e.target.value)} placeholder="mis. budi.santoso" autoFocus />
-            </label>
-          )}
-          <label>
-            <span>Password (kosong = generate otomatis)</span>
-            <input
-              type="text"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="minimal 8 karakter"
-              autoComplete="new-password"
-              autoFocus={form === 'reset'}
+            <TextField
+              label="Login (kosong = kode pelanggan)"
+              value={login}
+              onChange={(_, data) => setLogin(data.value)}
+              placeholder="mis. budi.santoso"
+              autoFocus
             />
-          </label>
+          )}
+          <TextField
+            label="Password (kosong = generate otomatis)"
+            type="text"
+            value={password}
+            onChange={(_, data) => setPassword(data.value)}
+            placeholder="minimal 8 karakter"
+            autoComplete="new-password"
+            autoFocus={form === 'reset'}
+          />
           <div className="row" style={{ gap: '0.4rem' }}>
-            <button
-              className="primary"
+            <Button
+              variant="primary"
               disabled={busy}
               onClick={() =>
                 void runRevealing(
@@ -224,8 +225,8 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
               }
             >
               Simpan
-            </button>
-            <button className="ghost" disabled={busy} onClick={closeForm}>Batal</button>
+            </Button>
+            <Button variant="subtle" disabled={busy} onClick={closeForm}>Batal</Button>
           </div>
         </div>
       )}

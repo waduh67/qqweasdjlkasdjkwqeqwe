@@ -6,8 +6,7 @@ import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
-import { Field } from '@/components/molecules'
-import { Badge, EmptyState, Toolbar } from '@/components/atoms'
+import { Badge, Button, EmptyState, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useConfirm } from '@/system'
 import { IconPlus, IconShield } from '@/components/atoms/icons'
@@ -90,7 +89,7 @@ export function RolesPage() {
       width: '1%',
       cell: (role) => (
         <div className="row" style={{ justifyContent: 'flex-end' }}>
-          <button
+          <Button
             onClick={() =>
               setDraft({
                 id: role.id,
@@ -101,11 +100,11 @@ export function RolesPage() {
             }
           >
             {readOnly ? 'Lihat' : 'Ubah'}
-          </button>
+          </Button>
           {can('iam.role.delete') && !role.systemRole && (
-            <button className="danger" onClick={() => void remove(role)}>
+            <Button variant="danger" onClick={() => void remove(role)}>
               Hapus
-            </button>
+            </Button>
           )}
         </div>
       ),
@@ -184,20 +183,23 @@ export function RolesPage() {
         <div className="card stack">
           <h3 style={{ margin: 0 }}>{draft.id ? 'Ubah role' : 'Role baru'}</h3>
           <div className="row" style={{ alignItems: 'flex-start' }}>
-            <Field label="Nama" required style={{ flex: 1 }}>
-              <input
+            <div style={{ flex: 1 }}>
+              <TextField
+                label="Nama"
+                required
                 value={draft.name}
                 disabled={readOnly}
-                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, name: data.value })}
               />
-            </Field>
-            <Field label="Deskripsi" style={{ flex: 2 }}>
-              <input
+            </div>
+            <div style={{ flex: 2 }}>
+              <TextField
+                label="Deskripsi"
                 value={draft.description}
                 disabled={readOnly}
-                onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                onChange={(_, data) => setDraft({ ...draft, description: data.value })}
               />
-            </Field>
+            </div>
           </div>
 
           <div>
@@ -214,10 +216,10 @@ export function RolesPage() {
           </div>
 
           <div className="row">
-            <button className="primary" onClick={() => void save()} disabled={busy || readOnly || !draft.name}>
+            <Button variant="primary" onClick={() => void save()} disabled={busy || readOnly || !draft.name}>
               {busy ? 'Menyimpan…' : 'Simpan'}
-            </button>
-            <button onClick={() => setDraft(null)}>Batal</button>
+            </Button>
+            <Button onClick={() => setDraft(null)}>Batal</Button>
           </div>
         </div>
       )}

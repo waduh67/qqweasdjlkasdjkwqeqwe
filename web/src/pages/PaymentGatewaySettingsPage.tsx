@@ -35,7 +35,7 @@ import {
   type TenantPivotAccountView,
 } from '../api/pivotAccount'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState, type Tone } from '@/components/atoms'
+import { Badge, Button, EmptyState, TextField, TextareaField, type Tone } from '@/components/atoms'
 import { Modal } from '@/components/molecules'
 import { useToast } from '@/system'
 import { Combobox } from '@/components/molecules'
@@ -280,12 +280,12 @@ export function PaymentGatewaySettingsPage() {
                 {dirty ? `${changes.length} perubahan belum disimpan` : 'Tak ada perubahan'}
               </span>
               <div className="row" style={{ gap: '0.5rem' }}>
-                <button className="ghost" onClick={discard} disabled={!dirty || saving}>
+                <Button variant="subtle" onClick={discard} disabled={!dirty || saving}>
                   Batalkan
-                </button>
-                <button className="primary" onClick={() => setConfirmOpen(true)} disabled={!dirty || saving}>
+                </Button>
+                <Button variant="primary" onClick={() => setConfirmOpen(true)} disabled={!dirty || saving}>
                   Tinjau &amp; simpan…
-                </button>
+                </Button>
               </div>
             </div>
           </>
@@ -301,12 +301,12 @@ export function PaymentGatewaySettingsPage() {
           onClose={() => !saving && setConfirmOpen(false)}
           footer={
             <>
-              <button className="ghost" onClick={() => setConfirmOpen(false)} disabled={saving}>
+              <Button variant="subtle" onClick={() => setConfirmOpen(false)} disabled={saving}>
                 Batal
-              </button>
-              <button className="primary" onClick={() => void doSave()} disabled={saving}>
+              </Button>
+              <Button variant="primary" onClick={() => void doSave()} disabled={saving}>
                 {saving ? 'Menyimpan…' : 'Ya, simpan'}
-              </button>
+              </Button>
             </>
           }
         >
@@ -581,83 +581,73 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
                 sebelum sub-account bisa diprovisi.
               </p>
               <div className="stack" style={{ gap: '0.6rem' }}>
-                <label>
-                  <span>Nama legal bisnis (opsional)</span>
-                  <input
-                    value={profile.legalName ?? ''}
-                    onChange={(e) => setProfile((p) => ({ ...p, legalName: e.target.value }))}
-                    placeholder="kosong = pakai nama tenant"
-                    maxLength={200}
-                    disabled={!manage}
-                  />
-                </label>
+                <TextField
+                  label="Nama legal bisnis (opsional)"
+                  value={profile.legalName ?? ''}
+                  onChange={(_, data) => setProfile((p) => ({ ...p, legalName: data.value }))}
+                  placeholder="kosong = pakai nama tenant"
+                  maxLength={200}
+                  disabled={!manage}
+                />
                 <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <label style={{ flex: 1, minWidth: 200 }}>
-                    <span>Email bisnis</span>
-                    <input
-                      type="email"
-                      value={profile.merchantEmail ?? ''}
-                      onChange={(e) => setProfile((p) => ({ ...p, merchantEmail: e.target.value }))}
-                      placeholder="mis. billing@usaha.co.id"
-                      maxLength={160}
-                      disabled={!manage}
-                    />
-                  </label>
-                  <label style={{ flex: 1, minWidth: 160 }}>
-                    <span>Telepon bisnis</span>
-                    <input
-                      value={profile.merchantPhone ?? ''}
-                      onChange={(e) => setProfile((p) => ({ ...p, merchantPhone: e.target.value }))}
-                      placeholder="mis. 081234567890"
-                      maxLength={40}
-                      disabled={!manage}
-                    />
-                  </label>
-                </div>
-                <label>
-                  <span>Nama PIC</span>
-                  <input
-                    value={profile.picName ?? ''}
-                    onChange={(e) => setProfile((p) => ({ ...p, picName: e.target.value }))}
-                    placeholder="penanggung jawab"
+                  <TextField
+                    label="Email bisnis"
+                    type="email"
+                    value={profile.merchantEmail ?? ''}
+                    onChange={(_, data) => setProfile((p) => ({ ...p, merchantEmail: data.value }))}
+                    placeholder="mis. billing@usaha.co.id"
                     maxLength={160}
                     disabled={!manage}
+                    style={{ flex: 1, minWidth: 200 }}
                   />
-                </label>
-                <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <label style={{ flex: 1, minWidth: 200 }}>
-                    <span>Email PIC</span>
-                    <input
-                      type="email"
-                      value={profile.picEmail ?? ''}
-                      onChange={(e) => setProfile((p) => ({ ...p, picEmail: e.target.value }))}
-                      placeholder="mis. pic@usaha.co.id"
-                      maxLength={160}
-                      disabled={!manage}
-                    />
-                  </label>
-                  <label style={{ flex: 1, minWidth: 160 }}>
-                    <span>Telepon PIC</span>
-                    <input
-                      value={profile.picPhone ?? ''}
-                      onChange={(e) => setProfile((p) => ({ ...p, picPhone: e.target.value }))}
-                      placeholder="mis. 081234567890"
-                      maxLength={40}
-                      disabled={!manage}
-                    />
-                  </label>
-                </div>
-                <label>
-                  <span>Alamat bisnis</span>
-                  <textarea
-                    value={profile.address ?? ''}
-                    onChange={(e) => setProfile((p) => ({ ...p, address: e.target.value }))}
-                    placeholder="alamat lengkap usaha"
-                    maxLength={500}
-                    rows={2}
+                  <TextField
+                    label="Telepon bisnis"
+                    value={profile.merchantPhone ?? ''}
+                    onChange={(_, data) => setProfile((p) => ({ ...p, merchantPhone: data.value }))}
+                    placeholder="mis. 081234567890"
+                    maxLength={40}
                     disabled={!manage}
+                    style={{ flex: 1, minWidth: 160 }}
                   />
-                </label>
+                </div>
+                <TextField
+                  label="Nama PIC"
+                  value={profile.picName ?? ''}
+                  onChange={(_, data) => setProfile((p) => ({ ...p, picName: data.value }))}
+                  placeholder="penanggung jawab"
+                  maxLength={160}
+                  disabled={!manage}
+                />
+                <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <TextField
+                    label="Email PIC"
+                    type="email"
+                    value={profile.picEmail ?? ''}
+                    onChange={(_, data) => setProfile((p) => ({ ...p, picEmail: data.value }))}
+                    placeholder="mis. pic@usaha.co.id"
+                    maxLength={160}
+                    disabled={!manage}
+                    style={{ flex: 1, minWidth: 200 }}
+                  />
+                  <TextField
+                    label="Telepon PIC"
+                    value={profile.picPhone ?? ''}
+                    onChange={(_, data) => setProfile((p) => ({ ...p, picPhone: data.value }))}
+                    placeholder="mis. 081234567890"
+                    maxLength={40}
+                    disabled={!manage}
+                    style={{ flex: 1, minWidth: 160 }}
+                  />
+                </div>
+                <TextareaField
+                  label="Alamat bisnis"
+                  value={profile.address ?? ''}
+                  onChange={(_, data) => setProfile((p) => ({ ...p, address: data.value }))}
+                  placeholder="alamat lengkap usaha"
+                  maxLength={500}
+                  rows={2}
+                  disabled={!manage}
+                />
                 {/* Rekening payout — bagian profil karena Pivot mewajibkan bankAccount saat create. */}
                 <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
                   <label style={{ flex: 1, minWidth: 140 }}>
@@ -668,16 +658,15 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
                       disabled={!manage}
                     />
                   </label>
-                  <label style={{ flex: 1, minWidth: 160 }}>
-                    <span>Nomor rekening</span>
-                    <input
-                      value={profile.accountNumber ?? ''}
-                      onChange={(e) => setProfile((p) => ({ ...p, accountNumber: e.target.value }))}
-                      placeholder="mis. 1234567890"
-                      maxLength={60}
-                      disabled={!manage}
-                    />
-                  </label>
+                  <TextField
+                    label="Nomor rekening"
+                    value={profile.accountNumber ?? ''}
+                    onChange={(_, data) => setProfile((p) => ({ ...p, accountNumber: data.value }))}
+                    placeholder="mis. 1234567890"
+                    maxLength={60}
+                    disabled={!manage}
+                    style={{ flex: 1, minWidth: 160 }}
+                  />
                 </div>
                 <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
                   Rekening tujuan pencairan dana pelanggan. Divalidasi ke bank otomatis setelah
@@ -685,13 +674,13 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
                 </p>
                 {manage && (
                   <div className="row" style={{ gap: '0.5rem', justifyContent: 'flex-end' }}>
-                    <button
-                      className="ghost"
+                    <Button
+                      variant="subtle"
                       disabled={busy || !profileDirty}
                       onClick={() => void run(() => savePivotProfile(trimmedProfile()), 'Profil sub-account tersimpan')}
                     >
                       Simpan profil
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -701,8 +690,8 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
           {manage && (
             <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
               {!account.provisioned && (
-                <button
-                  className="primary"
+                <Button
+                  variant="primary"
                   disabled={busy || !account.masterActive || !profileFilled}
                   title={!profileFilled ? 'Lengkapi profil sub-account dulu' : undefined}
                   onClick={() =>
@@ -714,23 +703,23 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
                   }
                 >
                   Daftarkan sub-account
-                </button>
+                </Button>
               )}
-              <button
-                className="ghost"
+              <Button
+                variant="subtle"
                 disabled={busy || !account.provisioned}
                 onClick={() => void run(refreshPivotAccount, 'Status sub-account disegarkan')}
               >
                 Refresh
-              </button>
+              </Button>
               {account.provisioned && account.type === 'NON_KYC' && (
-                <button
-                  className="ghost"
+                <Button
+                  variant="subtle"
                   disabled={busy}
                   onClick={() => void run(requestPivotKyc, 'Pengajuan KYC dikirim')}
                 >
                   Ajukan KYC
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -758,19 +747,18 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
                     disabled={!manage}
                   />
                 </label>
-                <label style={{ flex: 1, minWidth: 160 }}>
-                  <span>Nomor rekening</span>
-                  <input
-                    value={profile.accountNumber ?? ''}
-                    onChange={(e) => setProfile((p) => ({ ...p, accountNumber: e.target.value }))}
-                    placeholder="mis. 1234567890"
-                    maxLength={60}
-                    disabled={!manage}
-                  />
-                </label>
+                <TextField
+                  label="Nomor rekening"
+                  value={profile.accountNumber ?? ''}
+                  onChange={(_, data) => setProfile((p) => ({ ...p, accountNumber: data.value }))}
+                  placeholder="mis. 1234567890"
+                  maxLength={60}
+                  disabled={!manage}
+                  style={{ flex: 1, minWidth: 160 }}
+                />
                 {manage && (
-                  <button
-                    className="primary"
+                  <Button
+                    variant="primary"
                     disabled={
                       busy ||
                       // Aktif saat rekening berubah ATAU inquiry belum sukses (auto-inquiry saat
@@ -791,7 +779,7 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
                     }
                   >
                     Simpan rekening
-                  </button>
+                  </Button>
                 )}
               </div>
             </>
@@ -855,30 +843,28 @@ function PivotUsersSection({ manage }: { manage: boolean }) {
         Undang admin ke sub-account Pivot Anda. Pivot mengirim email undangan ke alamat yang diisi.
       </p>
       <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        <label style={{ flex: 1, minWidth: 200 }}>
-          <span>Email pengguna</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="mis. admin@usaha.co.id"
-            maxLength={255}
-            disabled={!manage}
-          />
-        </label>
-        <label style={{ flex: 1, minWidth: 160 }}>
-          <span>Nama pengguna</span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="nama lengkap"
-            maxLength={255}
-            disabled={!manage}
-          />
-        </label>
+        <TextField
+          label="Email pengguna"
+          type="email"
+          value={email}
+          onChange={(_, data) => setEmail(data.value)}
+          placeholder="mis. admin@usaha.co.id"
+          maxLength={255}
+          disabled={!manage}
+          style={{ flex: 1, minWidth: 200 }}
+        />
+        <TextField
+          label="Nama pengguna"
+          value={name}
+          onChange={(_, data) => setName(data.value)}
+          placeholder="nama lengkap"
+          maxLength={255}
+          disabled={!manage}
+          style={{ flex: 1, minWidth: 160 }}
+        />
         {manage && (
-          <button
-            className="primary"
+          <Button
+            variant="primary"
             disabled={busy || !email.trim() || !name.trim()}
             onClick={() =>
               void run(async () => {
@@ -889,24 +875,23 @@ function PivotUsersSection({ manage }: { manage: boolean }) {
             }
           >
             Undang pengguna
-          </button>
+          </Button>
         )}
       </div>
       <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        <label style={{ flex: 1, minWidth: 200 }}>
-          <span>Kirim ulang undangan (email)</span>
-          <input
-            type="email"
-            value={resendEmail}
-            onChange={(e) => setResendEmail(e.target.value)}
-            placeholder="email pengguna yang sudah diundang"
-            maxLength={255}
-            disabled={!manage}
-          />
-        </label>
+        <TextField
+          label="Kirim ulang undangan (email)"
+          type="email"
+          value={resendEmail}
+          onChange={(_, data) => setResendEmail(data.value)}
+          placeholder="email pengguna yang sudah diundang"
+          maxLength={255}
+          disabled={!manage}
+          style={{ flex: 1, minWidth: 200 }}
+        />
         {manage && (
-          <button
-            className="ghost"
+          <Button
+            variant="subtle"
             disabled={busy || !resendEmail.trim()}
             onClick={() =>
               void run(
@@ -916,7 +901,7 @@ function PivotUsersSection({ manage }: { manage: boolean }) {
             }
           >
             Kirim ulang undangan
-          </button>
+          </Button>
         )}
       </div>
     </>
@@ -1005,9 +990,9 @@ function PivotPayoutSection({ manage }: { manage: boolean }) {
                 (tertahan {formatRupiah(balance.pendingMinor)})
               </span>
             )}
-            <button className="ghost" disabled={busy} onClick={() => void refresh()}>
+            <Button variant="subtle" disabled={busy} onClick={() => void refresh()}>
               Segarkan saldo
-            </button>
+            </Button>
           </div>
 
           <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -1015,42 +1000,38 @@ function PivotPayoutSection({ manage }: { manage: boolean }) {
               <span>Bank tujuan</span>
               <ChannelCodeField value={channelCode} onChange={setChannelCode} disabled={!manage} />
             </label>
-            <label style={{ flex: 1, minWidth: 160 }}>
-              <span>Nomor rekening</span>
-              <input
-                value={accountNumber}
-                onChange={(e) => setAccountNumber(e.target.value)}
-                placeholder="mis. 1234567890"
-                maxLength={60}
-                disabled={!manage}
-              />
-            </label>
-            <label style={{ flex: 1, minWidth: 120 }}>
-              <span>Nominal (Rp)</span>
-              <input
-                inputMode="numeric"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))}
-                placeholder="mis. 100000"
-                disabled={!manage}
-              />
-            </label>
-          </div>
-          <label>
-            <span>Deskripsi (opsional)</span>
-            <input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="catatan payout"
-              maxLength={200}
+            <TextField
+              label="Nomor rekening"
+              value={accountNumber}
+              onChange={(_, data) => setAccountNumber(data.value)}
+              placeholder="mis. 1234567890"
+              maxLength={60}
               disabled={!manage}
+              style={{ flex: 1, minWidth: 160 }}
             />
-          </label>
+            <TextField
+              label="Nominal (Rp)"
+              inputMode="numeric"
+              value={amount}
+              onChange={(_, data) => setAmount(data.value.replace(/[^\d]/g, ''))}
+              placeholder="mis. 100000"
+              disabled={!manage}
+              style={{ flex: 1, minWidth: 120 }}
+            />
+          </div>
+          <TextField
+            label="Deskripsi (opsional)"
+            value={description}
+            onChange={(_, data) => setDescription(data.value)}
+            placeholder="catatan payout"
+            maxLength={200}
+            disabled={!manage}
+          />
           {manage && (
             <div className="row" style={{ gap: '0.5rem', justifyContent: 'flex-end' }}>
-              <button className="primary" disabled={!canSubmit} onClick={() => void submit()}>
+              <Button variant="primary" disabled={!canSubmit} onClick={() => void submit()}>
                 Kirim payout
-              </button>
+              </Button>
             </div>
           )}
           <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
@@ -1140,36 +1121,30 @@ function ManualPaymentSection({
       </FormRow>
       {form.manualTransferEnabled && (
         <div className="stack" style={{ gap: '0.6rem', paddingLeft: '0.5rem' }}>
-          <label>
-            <span>Nama bank</span>
-            <input
-              value={form.bankName ?? ''}
-              onChange={(e) => onChange({ bankName: e.target.value })}
-              placeholder="mis. BCA, Mandiri, BRI"
-              maxLength={120}
-              disabled={disabled}
-            />
-          </label>
-          <label>
-            <span>Nomor rekening</span>
-            <input
-              value={form.accountNumber ?? ''}
-              onChange={(e) => onChange({ accountNumber: e.target.value })}
-              placeholder="mis. 1234567890"
-              maxLength={60}
-              disabled={disabled}
-            />
-          </label>
-          <label>
-            <span>Atas nama</span>
-            <input
-              value={form.accountHolder ?? ''}
-              onChange={(e) => onChange({ accountHolder: e.target.value })}
-              placeholder="nama pemilik rekening"
-              maxLength={160}
-              disabled={disabled}
-            />
-          </label>
+          <TextField
+            label="Nama bank"
+            value={form.bankName ?? ''}
+            onChange={(_, data) => onChange({ bankName: data.value })}
+            placeholder="mis. BCA, Mandiri, BRI"
+            maxLength={120}
+            disabled={disabled}
+          />
+          <TextField
+            label="Nomor rekening"
+            value={form.accountNumber ?? ''}
+            onChange={(_, data) => onChange({ accountNumber: data.value })}
+            placeholder="mis. 1234567890"
+            maxLength={60}
+            disabled={disabled}
+          />
+          <TextField
+            label="Atas nama"
+            value={form.accountHolder ?? ''}
+            onChange={(_, data) => onChange({ accountHolder: data.value })}
+            placeholder="nama pemilik rekening"
+            maxLength={160}
+            disabled={disabled}
+          />
         </div>
       )}
 
@@ -1196,9 +1171,9 @@ function ManualPaymentSection({
                 {!disabled && (
                   <div className="row" style={{ gap: '0.5rem' }}>
                     <QrisUploadButton label="Ganti gambar" onPick={onPickQris} />
-                    <button className="ghost" onClick={onRemoveQris}>
+                    <Button variant="subtle" onClick={onRemoveQris}>
                       Batalkan
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -1211,9 +1186,9 @@ function ManualPaymentSection({
                 {!disabled && (
                   <div className="row" style={{ gap: '0.5rem' }}>
                     <QrisUploadButton label="Ganti gambar" onPick={onPickQris} />
-                    <button className="ghost" onClick={onRemoveQris}>
+                    <Button variant="subtle" onClick={onRemoveQris}>
                       Hapus
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -1383,5 +1358,5 @@ function Callout({ children }: { children: ReactNode }) {
 }
 
 function SectionTitle({ children }: { children: ReactNode }) {
-  return <h3 style={{ margin: '0.25rem 0 0', fontSize: '0.95rem', fontWeight: 650 }}>{children}</h3>
+  return <h3 style={{ margin: '0.25rem 0 0', fontSize: '0.95rem', fontWeight: 600 }}>{children}</h3>
 }

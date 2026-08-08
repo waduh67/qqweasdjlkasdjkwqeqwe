@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { listMyWorkOrders, type WorkOrderStatus, type WorkOrderView } from '../api/workorder'
 import { DataTable, type Column } from '@/components/organisms'
-import { Badge, EmptyState, Toolbar } from '@/components/atoms'
+import { Badge, EmptyState, SelectField, Toolbar } from '@/components/atoms'
 import { useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
 import { IconWorkOrder } from '@/components/atoms/icons'
@@ -106,14 +106,14 @@ export function MyWorkOrdersPage() {
       />
 
       <Toolbar>
-        <select value={status} onChange={(e) => setStatus(e.target.value as WorkOrderStatus | '')}>
+        <SelectField value={status} onChange={(_, data) => setStatus(data.value as WorkOrderStatus | '')}>
           <option value="">Semua status</option>
           {STATUSES.map((s) => (
             <option key={s} value={s}>
               {STATUS_LABEL[s]}
             </option>
           ))}
-        </select>
+        </SelectField>
       </Toolbar>
 
       <DataTable

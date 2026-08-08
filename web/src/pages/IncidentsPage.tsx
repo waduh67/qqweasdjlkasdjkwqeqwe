@@ -4,7 +4,7 @@ import type { IncidentAlarm, IncidentDetail, IncidentEventView, IncidentView } f
 import type { BroadcastView, NotificationChannel } from '../api/notification'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '@/components/organisms'
-import { EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { Button, EmptyState, SelectField, StatusBadge, TextareaField, Toolbar } from '@/components/atoms'
 import { Drawer, SearchInput } from '@/components/molecules'
 import { useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
@@ -176,11 +176,11 @@ export function IncidentsPage() {
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari judul atau akar masalah…" />
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+        <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value)}>
           <option value="">Semua status</option>
           <option value="OPEN">Terbuka</option>
           <option value="ACKNOWLEDGED">Diakui</option>
-        </select>
+        </SelectField>
       </Toolbar>
 
       <DataTable
@@ -253,14 +253,14 @@ function IncidentDetailBody({
       {(canAck || canResolve) && (
         <div className="row" style={{ gap: '0.5rem' }}>
           {canAck && inc.status !== 'ACKNOWLEDGED' && (
-            <button className="ghost" onClick={onAcknowledge}>
+            <Button variant="subtle" onClick={onAcknowledge}>
               Akui
-            </button>
+            </Button>
           )}
           {canResolve && (
-            <button className="primary" onClick={onResolve}>
+            <Button variant="primary" onClick={onResolve}>
               Tutup insiden
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -364,9 +364,9 @@ function BroadcastComposer({
   if (!open) {
     return (
       <div className="row" style={{ gap: '0.5rem' }}>
-        <button className="ghost" onClick={() => setOpen(true)}>
+        <Button variant="subtle" onClick={() => setOpen(true)}>
           Broadcast ke pelanggan
-        </button>
+        </Button>
       </div>
     )
   }
@@ -377,25 +377,29 @@ function BroadcastComposer({
       <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
         Menyasar {affectedCount} pelanggan terdampak. Yang tak punya nomor akan dilewati otomatis.
       </p>
-      <label className="stack" style={{ gap: '0.25rem' }}>
-        <span>Kanal</span>
-        <select value={channel} onChange={(e) => setChannel(e.target.value as NotificationChannel)}>
-          <option value="WHATSAPP">WhatsApp</option>
-          <option value="SMS">SMS</option>
-          <option value="TELEGRAM">Telegram</option>
-        </select>
-      </label>
-      <label className="stack" style={{ gap: '0.25rem' }}>
-        <span>Pesan</span>
-        <textarea rows={4} maxLength={2000} value={message} onChange={(e) => setMessage(e.target.value)} />
-      </label>
+      <SelectField
+        label="Kanal"
+        value={channel}
+        onChange={(_, data) => setChannel(data.value as NotificationChannel)}
+      >
+        <option value="WHATSAPP">WhatsApp</option>
+        <option value="SMS">SMS</option>
+        <option value="TELEGRAM">Telegram</option>
+      </SelectField>
+      <TextareaField
+        label="Pesan"
+        rows={4}
+        maxLength={2000}
+        value={message}
+        onChange={(_, data) => setMessage(data.value)}
+      />
       <div className="row" style={{ gap: '0.5rem' }}>
-        <button className="primary" onClick={() => void submit()} disabled={sending}>
+        <Button variant="primary" onClick={() => void submit()} disabled={sending}>
           {sending ? 'Mengirim…' : 'Kirim broadcast'}
-        </button>
-        <button className="ghost" onClick={() => setOpen(false)} disabled={sending}>
+        </Button>
+        <Button variant="subtle" onClick={() => setOpen(false)} disabled={sending}>
           Batal
-        </button>
+        </Button>
       </div>
     </section>
   )

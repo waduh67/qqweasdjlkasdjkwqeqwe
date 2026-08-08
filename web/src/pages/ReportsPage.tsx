@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getReportOverview, type ReportOverview } from '../api/reports'
 import { ApiError } from '../api/client'
-import { EmptyState, Spinner } from '@/components/atoms'
+import { Button, EmptyState, Spinner, TextField } from '@/components/atoms'
 import { useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
 import { IconChart } from '@/components/atoms/icons'
@@ -109,25 +109,19 @@ export function ReportsPage() {
         subtitle="Ringkasan keuangan dan pelanggan tenant dalam rentang terpilih."
         actions={
           <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
-            <label className="stack" style={{ gap: '0.25rem' }}>
-              <span className="muted" style={{ fontSize: '0.75rem' }}>Dari</span>
-              <input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
-            </label>
-            <label className="stack" style={{ gap: '0.25rem' }}>
-              <span className="muted" style={{ fontSize: '0.75rem' }}>Sampai</span>
-              <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
-            </label>
-            <button className="primary" onClick={apply} disabled={loading}>
+            <TextField label="Dari" type="date" value={from} max={to} onChange={(_, data) => setFrom(data.value)} />
+            <TextField label="Sampai" type="date" value={to} min={from} onChange={(_, data) => setTo(data.value)} />
+            <Button variant="primary" onClick={apply} disabled={loading}>
               Terapkan
-            </button>
-            <button
-              className="ghost"
+            </Button>
+            <Button
+              variant="subtle"
               onClick={() => overview && downloadCsv(overview)}
               disabled={!overview || overview.monthlyRevenue.length === 0}
               title="Unduh tren bulanan sebagai CSV"
             >
               Ekspor CSV
-            </button>
+            </Button>
           </div>
         }
       />

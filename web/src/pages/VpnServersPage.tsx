@@ -13,7 +13,7 @@ import {
 } from '../api/vpn'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '@/components/organisms'
-import { Badge, EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { Badge, Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
@@ -226,9 +226,9 @@ export function VpnServersPage() {
       width: '1%',
       cell: (s) => (
         <div className="row" style={{ justifyContent: 'flex-end' }}>
-          <button onClick={() => regenerate(s)}>Perintah pasang</button>
-          <button onClick={() => edit(s)}>Ubah</button>
-          <button onClick={() => remove(s)}>Hapus</button>
+          <Button onClick={() => regenerate(s)}>Perintah pasang</Button>
+          <Button onClick={() => edit(s)}>Ubah</Button>
+          <Button onClick={() => remove(s)}>Hapus</Button>
         </div>
       ),
     })
@@ -244,9 +244,9 @@ export function VpnServersPage() {
       <div className="spread">
         <span className="muted">{servers.length} hub</span>
         {canManage && (
-          <button className="primary" onClick={() => setDraft({ ...EMPTY_SERVER })}>
+          <Button variant="primary" onClick={() => setDraft({ ...EMPTY_SERVER })}>
             <IconPlus size={15} /> Tambah hub
-          </button>
+          </Button>
         )}
       </div>
 
@@ -256,12 +256,12 @@ export function VpnServersPage() {
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama, titik dial, atau subnet…" />
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+        <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value)}>
           <option value="">Semua status</option>
           {statuses.map((s) => (
             <option key={s} value={s}>{statusLabel(s)}</option>
           ))}
-        </select>
+        </SelectField>
       </Toolbar>
 
       <DataTable
@@ -302,40 +302,45 @@ function ServerForm({
   return (
     <div className="card stack">
       <div className="row">
-        <label style={{ flex: 2 }}>
-          <span>Nama hub</span>
-          <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Hub Utama" />
-        </label>
-        <label style={{ flex: 2 }}>
-          <span>Host / IP publik VPS</span>
-          <input
-            value={draft.host}
-            onChange={(e) => setDraft({ ...draft, host: e.target.value })}
-            placeholder="vpn.isp-anda.com"
-          />
-        </label>
-        <label style={{ flex: 1 }}>
-          <span>Port</span>
-          <input value={draft.port} onChange={(e) => setDraft({ ...draft, port: e.target.value })} placeholder="1194" />
-        </label>
-        <label style={{ flex: 1 }}>
-          <span>Protokol</span>
-          <select value={draft.protocol} onChange={(e) => setDraft({ ...draft, protocol: e.target.value as VpnProtocol })}>
-            <option value="UDP">UDP</option>
-            <option value="TCP">TCP</option>
-          </select>
-        </label>
+        <TextField
+          label="Nama hub"
+          value={draft.name}
+          onChange={(_, data) => setDraft({ ...draft, name: data.value })}
+          placeholder="Hub Utama"
+          style={{ flex: 2 }}
+        />
+        <TextField
+          label="Host / IP publik VPS"
+          value={draft.host}
+          onChange={(_, data) => setDraft({ ...draft, host: data.value })}
+          placeholder="vpn.isp-anda.com"
+          style={{ flex: 2 }}
+        />
+        <TextField
+          label="Port"
+          value={draft.port}
+          onChange={(_, data) => setDraft({ ...draft, port: data.value })}
+          placeholder="1194"
+          style={{ flex: 1 }}
+        />
+        <SelectField
+          label="Protokol"
+          value={draft.protocol}
+          onChange={(_, data) => setDraft({ ...draft, protocol: data.value as VpnProtocol })}
+          style={{ flex: 1 }}
+        >
+          <option value="UDP">UDP</option>
+          <option value="TCP">TCP</option>
+        </SelectField>
       </div>
 
       {draft.id === null ? (
-        <label>
-          <span>Subnet overlay (CIDR)</span>
-          <input
-            value={draft.tunnelCidr}
-            onChange={(e) => setDraft({ ...draft, tunnelCidr: e.target.value })}
-            placeholder="10.8.0.0/24"
-          />
-        </label>
+        <TextField
+          label="Subnet overlay (CIDR)"
+          value={draft.tunnelCidr}
+          onChange={(_, data) => setDraft({ ...draft, tunnelCidr: data.value })}
+          placeholder="10.8.0.0/24"
+        />
       ) : (
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
           Subnet overlay <code>{draft.tunnelCidr}</code> tetap setelah hub dibuat (IP akun sudah teralokasi darinya).
@@ -347,10 +352,10 @@ function ServerForm({
         satu-baris muncul sekali setelah simpan.
       </p>
       <div className="row">
-        <button className="primary" onClick={onSave}>
+        <Button variant="primary" onClick={onSave}>
           Simpan
-        </button>
-        <button onClick={onCancel}>Batal</button>
+        </Button>
+        <Button onClick={onCancel}>Batal</Button>
       </div>
     </div>
   )
@@ -388,21 +393,22 @@ function InstallSecretCard({ server, onDismiss }: { server: VpnServerView; onDis
         Token node: <code>{token}</code>
       </p>
       <div className="row">
-        <button
-          className="small"
+        <Button
+          size="small"
           onClick={() => void navigator.clipboard?.writeText(command).then(() => toast.success('Perintah pasang disalin'))}
         >
           Salin perintah
-        </button>
-        <button
-          className="small ghost"
+        </Button>
+        <Button
+          variant="subtle"
+          size="small"
           onClick={() => void navigator.clipboard?.writeText(token).then(() => toast.success('Token node disalin'))}
         >
           Salin token
-        </button>
-        <button className="ghost small" onClick={onDismiss}>
+        </Button>
+        <Button variant="subtle" size="small" onClick={onDismiss}>
           Selesai
-        </button>
+        </Button>
       </div>
     </div>
   )

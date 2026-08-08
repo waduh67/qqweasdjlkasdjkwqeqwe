@@ -5,7 +5,7 @@ import { getPlatformBillingSettings } from '../api/platformBilling'
 import { useCan } from '../auth/useCan'
 import { Blade } from '@/components/organisms'
 import { DataTable, type Column } from '@/components/organisms'
-import { EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { ConfirmDialog, SearchInput } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
 import { IconBuilding, IconPlus } from '@/components/atoms/icons'
@@ -109,10 +109,10 @@ export function TenantsPage() {
         t.slug !== 'platform' ? (
           <div className="row" style={{ justifyContent: 'flex-end', gap: '0.4rem' }}>
             {can('platform.subscription.view') && (
-              <button onClick={() => setSubscription({ id: t.id, name: t.name })}>Langganan</button>
+              <Button onClick={() => setSubscription({ id: t.id, name: t.name })}>Langganan</Button>
             )}
             {can('platform.tenant.manage') && (
-              <button
+              <Button
                 onClick={() =>
                   void run(() =>
                     api.post(`/api/platform/tenants/${t.id}/${t.status === 'ACTIVE' ? 'suspend' : 'activate'}`),
@@ -120,12 +120,12 @@ export function TenantsPage() {
                 }
               >
                 {t.status === 'ACTIVE' ? 'Suspend' : 'Aktifkan'}
-              </button>
+              </Button>
             )}
             {can('platform.tenant.delete') && (
-              <button className="danger" onClick={() => setConfirmDelete(t)}>
+              <Button variant="danger" onClick={() => setConfirmDelete(t)}>
                 Hapus
-              </button>
+              </Button>
             )}
           </div>
         ) : null,
@@ -139,9 +139,9 @@ export function TenantsPage() {
         subtitle="Onboarding ISP baru dan kelola status tenant di platform."
         actions={
           can('platform.tenant.create') && (
-            <button className="primary" onClick={() => openDraft({ ...EMPTY })}>
+            <Button variant="primary" onClick={() => openDraft({ ...EMPTY })}>
               <IconPlus size={15} /> Onboarding tenant
-            </button>
+            </Button>
           )
         }
       />
@@ -151,11 +151,11 @@ export function TenantsPage() {
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama atau slug…" />
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+        <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value)}>
           {STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
-        </select>
+        </SelectField>
       </Toolbar>
 
       <DataTable
@@ -182,8 +182,8 @@ export function TenantsPage() {
         onClose={closeDraft}
         footer={
           <>
-            <button
-              className="primary"
+            <Button
+              variant="primary"
               onClick={() =>
                 void run(async () => {
                   const { monthlyFee, ...rest } = draft!
@@ -197,62 +197,57 @@ export function TenantsPage() {
               }
             >
               Simpan
-            </button>
-            <button onClick={closeDraft}>Batal</button>
+            </Button>
+            <Button onClick={closeDraft}>Batal</Button>
           </>
         }
       >
         {draft && (
           <div className="stack">
             <div className="row" style={{ alignItems: 'flex-start' }}>
-              <label style={{ flex: 1 }}>
-                <span>Slug</span>
-                <input value={draft.slug} onChange={(e) => setDraft({ ...draft, slug: e.target.value })} placeholder="pt-fiber" />
-              </label>
-              <label style={{ flex: 2 }}>
-                <span>Nama</span>
-                <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-              </label>
+              <div style={{ flex: 1 }}>
+                <TextField label="Slug" value={draft.slug} onChange={(_, data) => setDraft({ ...draft, slug: data.value })} placeholder="pt-fiber" />
+              </div>
+              <div style={{ flex: 2 }}>
+                <TextField label="Nama" value={draft.name} onChange={(_, data) => setDraft({ ...draft, name: data.value })} />
+              </div>
             </div>
             <div className="row" style={{ alignItems: 'flex-start' }}>
-              <label style={{ flex: 1 }}>
-                <span>Nama admin</span>
-                <input value={draft.adminName} onChange={(e) => setDraft({ ...draft, adminName: e.target.value })} />
-              </label>
-              <label style={{ flex: 1 }}>
-                <span>Email admin</span>
-                <input
+              <div style={{ flex: 1 }}>
+                <TextField label="Nama admin" value={draft.adminName} onChange={(_, data) => setDraft({ ...draft, adminName: data.value })} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <TextField
+                  label="Email admin"
                   type="email"
                   value={draft.adminEmail}
-                  onChange={(e) => setDraft({ ...draft, adminEmail: e.target.value })}
+                  onChange={(_, data) => setDraft({ ...draft, adminEmail: data.value })}
                 />
-              </label>
-              <label style={{ flex: 1 }}>
-                <span>Password admin</span>
-                <input
+              </div>
+              <div style={{ flex: 1 }}>
+                <TextField
+                  label="Password admin"
                   type="password"
                   value={draft.adminPassword}
-                  onChange={(e) => setDraft({ ...draft, adminPassword: e.target.value })}
+                  onChange={(_, data) => setDraft({ ...draft, adminPassword: data.value })}
                 />
-              </label>
+              </div>
             </div>
             <div className="row" style={{ alignItems: 'flex-start' }}>
-              <label style={{ flex: 1 }}>
-                <span>Harga bulanan khusus (Rp)</span>
-                <input
+              <div style={{ flex: 1 }}>
+                <TextField
+                  label="Harga bulanan khusus (Rp)"
                   type="number"
                   min={0}
                   step={1000}
                   value={draft.monthlyFee}
-                  onChange={(e) => setDraft({ ...draft, monthlyFee: e.target.value })}
+                  onChange={(_, data) => setDraft({ ...draft, monthlyFee: data.value })}
                   placeholder={
                     defaultFee != null ? `Default Rp ${defaultFee.toLocaleString('id-ID')}` : 'Kosongkan = harga default'
                   }
+                  hint="Kosongkan untuk memakai harga default global. Isi untuk harga khusus tenant ini."
                 />
-                <span className="muted" style={{ fontSize: '0.8rem' }}>
-                  Kosongkan untuk memakai harga default global. Isi untuk harga khusus tenant ini.
-                </span>
-              </label>
+              </div>
               <div style={{ flex: 1 }} />
             </div>
           </div>

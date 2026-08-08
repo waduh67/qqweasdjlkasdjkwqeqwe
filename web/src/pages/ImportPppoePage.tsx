@@ -11,7 +11,8 @@ import {
   type ImportSource,
 } from '../api/onboarding'
 import { useCan } from '../auth/useCan'
-import { Badge, EmptyState } from '@/components/atoms'
+import { Badge, Button, EmptyState, SelectField, TextField, TextareaField } from '@/components/atoms'
+import { Checkbox } from '@fluentui/react-components'
 import { useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
 import { IconInbox, IconPackage } from '@/components/atoms/icons'
@@ -282,12 +283,12 @@ export function ImportPppoePage() {
           <div className="card stack" style={{ gap: '0.8rem' }}>
             <h3 style={{ margin: 0, fontSize: '0.95rem' }}>1. Sumber &amp; BRAS tujuan</h3>
             <div className="row wrap" style={{ gap: '0.6rem', alignItems: 'flex-end' }}>
-              <label style={{ flex: 1, minWidth: 200 }}>
-                <span>BRAS tujuan *</span>
-                <select
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <SelectField
+                  label="BRAS tujuan *"
                   value={nasId}
-                  onChange={(e) => {
-                    setNasId(e.target.value)
+                  onChange={(_, data) => {
+                    setNasId(data.value)
                     resetPreview()
                   }}
                 >
@@ -296,28 +297,28 @@ export function ImportPppoePage() {
                       {n.name}
                     </option>
                   ))}
-                </select>
-              </label>
-              <label style={{ flex: 1, minWidth: 200 }}>
-                <span>Sumber daftar</span>
-                <select
+                </SelectField>
+              </div>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <SelectField
+                  label="Sumber daftar"
                   value={source}
-                  onChange={(e) => {
-                    setSource(e.target.value as ImportSource)
+                  onChange={(_, data) => {
+                    setSource(data.value as ImportSource)
                     resetPreview()
                   }}
                 >
                   <option value="NAS">Tarik langsung dari BRAS (RouterOS REST)</option>
                   <option value="INLINE">Tempel / upload hasil export</option>
-                </select>
-              </label>
+                </SelectField>
+              </div>
             </div>
 
             {source === 'NAS' ? (
               <div className="row" style={{ gap: '0.5rem' }}>
-                <button onClick={() => void loadFromNas()} disabled={fetching || !nasId}>
+                <Button onClick={() => void loadFromNas()} disabled={fetching || !nasId}>
                   {fetching ? 'Menarik…' : 'Ambil daftar dari BRAS'}
-                </button>
+                </Button>
                 <span className="muted" style={{ fontSize: '0.8rem', alignSelf: 'center' }}>
                   Hanya MikroTik (RouterOS) dengan alamat &amp; kredensial kontrol REST terisi. Password
                   ditarik server saat commit — tak melewati browser.
@@ -325,10 +326,10 @@ export function ImportPppoePage() {
               </div>
             ) : (
               <div className="stack" style={{ gap: '0.4rem' }}>
-                <textarea
+                <TextareaField
                   rows={6}
                   value={paste}
-                  onChange={(e) => setPaste(e.target.value)}
+                  onChange={(_, data) => setPaste(data.value)}
                   placeholder={
                     '/ppp secret\nadd name="budi" password="rahasia" profile="vip" comment="Budi"\n…\n\n' +
                     'atau CSV: name,password,profile,comment'
@@ -350,9 +351,9 @@ export function ImportPppoePage() {
                   <label htmlFor="pppoe-upload" className="ghost" style={{ cursor: 'pointer', padding: '0.4rem 0.7rem', borderRadius: 6, border: '1px solid var(--line, #ccc)', fontSize: '0.85rem' }}>
                     Upload file
                   </label>
-                  <button onClick={loadFromPaste} disabled={!paste.trim()}>
+                  <Button onClick={loadFromPaste} disabled={!paste.trim()}>
                     Baca daftar
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -365,9 +366,9 @@ export function ImportPppoePage() {
                 <h3 style={{ margin: 0, fontSize: '0.95rem' }}>
                   2. Pilih akun <span className="muted">({selected.size}/{rows.length} terpilih)</span>
                 </h3>
-                <button className="ghost" onClick={toggleAll}>
+                <Button variant="subtle" onClick={toggleAll}>
                   {selected.size === rows.length ? 'Kosongkan' : 'Pilih semua'}
-                </button>
+                </Button>
               </div>
               <div style={{ maxHeight: 320, overflow: 'auto' }}>
                 <table className="table" style={{ fontSize: '0.85rem' }}>
@@ -384,7 +385,7 @@ export function ImportPppoePage() {
                     {rows.map((r) => (
                       <tr key={r.name}>
                         <td>
-                          <input type="checkbox" checked={selected.has(r.name)} onChange={() => toggle(r.name)} />
+                          <Checkbox checked={selected.has(r.name)} onChange={() => toggle(r.name)} />
                         </td>
                         <td>
                           <code>{r.name}</code>
@@ -410,10 +411,10 @@ export function ImportPppoePage() {
                     <span style={{ minWidth: 160 }}>
                       {prof === NO_PROFILE ? <span className="muted">(tanpa profil)</span> : <code>{prof}</code>}
                     </span>
-                    <select
+                    <SelectField
                       style={{ minWidth: 220 }}
                       value={profilePlan[prof] ?? ''}
-                      onChange={(e) => setProfilePlan((m) => ({ ...m, [prof]: e.target.value }))}
+                      onChange={(_, data) => setProfilePlan((m) => ({ ...m, [prof]: data.value }))}
                     >
                       <option value="">— pakai paket default —</option>
                       {plans.map((p) => (
@@ -421,19 +422,19 @@ export function ImportPppoePage() {
                           {p.name} ({p.downMbps}/{p.upMbps} Mbps)
                         </option>
                       ))}
-                    </select>
+                    </SelectField>
                   </div>
                 ))}
                 <div className="row wrap" style={{ gap: '0.6rem', alignItems: 'center' }}>
                   <span style={{ minWidth: 160 }}>Paket default</span>
-                  <select style={{ minWidth: 220 }} value={defaultPlanId} onChange={(e) => setDefaultPlanId(e.target.value)}>
+                  <SelectField style={{ minWidth: 220 }} value={defaultPlanId} onChange={(_, data) => setDefaultPlanId(data.value)}>
                     <option value="">— tak ada (baris tak terpetakan dilewati) —</option>
                     {plans.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name} ({p.downMbps}/{p.upMbps} Mbps)
                       </option>
                     ))}
-                  </select>
+                  </SelectField>
                 </div>
               </div>
               {unresolved > 0 && (
@@ -454,34 +455,31 @@ export function ImportPppoePage() {
               </p>
               <div className="row wrap" style={{ gap: '0.6rem', alignItems: 'flex-end' }}>
                 {areas.length > 0 && (
-                  <label style={{ flex: 1, minWidth: 180 }}>
-                    <span>Area (opsional)</span>
-                    <select value={areaId} onChange={(e) => setAreaId(e.target.value)}>
+                  <div style={{ flex: 1, minWidth: 180 }}>
+                    <SelectField label="Area (opsional)" value={areaId} onChange={(_, data) => setAreaId(data.value)}>
                       <option value="">— tanpa area —</option>
                       {areas.map((a) => (
                         <option key={a.id} value={a.id}>
                           {a.name}
                         </option>
                       ))}
-                    </select>
-                  </label>
+                    </SelectField>
+                  </div>
                 )}
-                <label style={{ flex: 2, minWidth: 200 }}>
-                  <span>Alamat placeholder</span>
-                  <input
+                <div style={{ flex: 2, minWidth: 200 }}>
+                  <TextField
+                    label="Alamat placeholder"
                     value={defaultAddress}
-                    onChange={(e) => setDefaultAddress(e.target.value)}
+                    onChange={(_, data) => setDefaultAddress(data.value)}
                     placeholder="(impor PPPoE — lengkapi alamat)"
                   />
-                </label>
-                <label style={{ flex: 1, minWidth: 120 }}>
-                  <span>Longitude</span>
-                  <input value={lng} onChange={(e) => setLng(e.target.value)} placeholder="106.8" />
-                </label>
-                <label style={{ flex: 1, minWidth: 120 }}>
-                  <span>Latitude</span>
-                  <input value={lat} onChange={(e) => setLat(e.target.value)} placeholder="-6.2" />
-                </label>
+                </div>
+                <div style={{ flex: 1, minWidth: 120 }}>
+                  <TextField label="Longitude" value={lng} onChange={(_, data) => setLng(data.value)} placeholder="106.8" />
+                </div>
+                <div style={{ flex: 1, minWidth: 120 }}>
+                  <TextField label="Latitude" value={lat} onChange={(_, data) => setLat(data.value)} placeholder="-6.2" />
+                </div>
               </div>
             </div>
           )}
@@ -489,9 +487,9 @@ export function ImportPppoePage() {
           {/* 5. Commit */}
           {rows.length > 0 && (
             <div className="row" style={{ gap: '0.5rem' }}>
-              <button className="primary" onClick={() => void submit()} disabled={saving || selectedRows.length === 0}>
+              <Button variant="primary" onClick={() => void submit()} disabled={saving || selectedRows.length === 0}>
                 <IconInbox size={15} /> {saving ? 'Mengimpor…' : `Impor ${selectedRows.length} akun`}
-              </button>
+              </Button>
               <span className="muted" style={{ fontSize: '0.8rem', alignSelf: 'center' }}>
                 Tiap akun langsung aktif &amp; ditulis ke RADIUS. Aktivasi memprorata tagihan dari sekarang.
               </span>
@@ -521,9 +519,9 @@ function ResultCard({ result, onDismiss }: { result: ImportPppoeResult; onDismis
           <Badge tone="neutral">{result.skipped} dilewati</Badge>{' '}
           {result.failed > 0 && <Badge tone="critical">{result.failed} gagal</Badge>}
         </h3>
-        <button className="ghost" onClick={onDismiss}>
+        <Button variant="subtle" onClick={onDismiss}>
           Tutup
-        </button>
+        </Button>
       </div>
       <div style={{ maxHeight: 320, overflow: 'auto' }}>
         <table className="table" style={{ fontSize: '0.85rem' }}>

@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { ApiError } from '../api/client'
 import { IconMap } from '@/components/atoms/icons'
-import { Spinner } from '@/components/atoms'
+import { Button, Spinner, TextField } from '@/components/atoms'
 
 export function LoginPage() {
   const { login } = useAuth()
@@ -43,27 +43,23 @@ export function LoginPage() {
           </div>
         </div>
 
-        <label>
-          <span>Email</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoFocus
-            autoComplete="username"
-          />
-        </label>
-        <label>
-          <span>Password</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-          />
-        </label>
+        <TextField
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(_, data) => setEmail(data.value)}
+          required
+          autoFocus
+          autoComplete="username"
+        />
+        <TextField
+          label="Password"
+          type="password"
+          value={password}
+          onChange={(_, data) => setPassword(data.value)}
+          required
+          autoComplete="current-password"
+        />
 
         {error && (
           <p className="error" style={{ margin: 0, fontSize: '0.85rem' }}>
@@ -71,9 +67,9 @@ export function LoginPage() {
           </p>
         )}
 
-        <button className="primary" type="submit" disabled={busy} style={{ width: '100%', padding: '0.6rem' }}>
+        <Button variant="primary" type="submit" disabled={busy} style={{ width: '100%', padding: '0.6rem' }}>
           {busy ? <Spinner /> : 'Masuk'}
-        </button>
+        </Button>
         <p className="muted" style={{ margin: 0, fontSize: '0.83rem', textAlign: 'center' }}>
           Punya jaringan FTTH sendiri? <Link to="/signup">Daftar ISP baru</Link>
         </p>

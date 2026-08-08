@@ -19,7 +19,7 @@ import type {
 } from '@/api/workorder'
 import { useCan } from '@/auth/useCan'
 import { MultiCombobox } from '@/components/molecules'
-import { Badge, SkeletonRows } from '@/components/atoms'
+import { Badge, Button, SelectField, SkeletonRows, TextField, TextareaField } from '@/components/atoms'
 import { useToast } from '@/system'
 import {
   EVENT_LABEL,
@@ -137,13 +137,13 @@ export function WorkOrderDetailBody({
                   emptyText="Tak ada teknisi"
                 />
               </label>
-              <button
-                className="primary"
+              <Button
+                variant="primary"
                 disabled={assignees.length === 0 || sameRoster(assignees, wo.assignees)}
                 onClick={() => onAct(() => api.post(`/api/work-orders/${id}/assign`, { technicianIds: assignees }), 'Teknisi ditugaskan', true)}
               >
                 {wo.assignees.length > 0 ? 'Tugaskan ulang' : 'Tugaskan'}
-              </button>
+              </Button>
             </div>
           </section>
         )}
@@ -152,15 +152,15 @@ export function WorkOrderDetailBody({
         {((canStart && wo.status === 'ASSIGNED') || (canUpdate && wo.status === 'DRAFT')) && (
           <div className="row wrap" style={{ gap: '0.5rem' }}>
             {canStart && wo.status === 'ASSIGNED' && (
-              <button onClick={() => onAct(() => api.post(`/api/work-orders/${id}/start`), 'Pengerjaan dimulai', true)}>Mulai</button>
+              <Button onClick={() => onAct(() => api.post(`/api/work-orders/${id}/start`), 'Pengerjaan dimulai', true)}>Mulai</Button>
             )}
             {canUpdate && wo.status === 'DRAFT' && (
-              <button
-                className="ghost danger"
+              <Button
+                variant="danger"
                 onClick={() => onAct(() => api.del(`/api/work-orders/${id}`), 'Work order dihapus', false)}
               >
                 Hapus
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -168,16 +168,19 @@ export function WorkOrderDetailBody({
         {/* Selesaikan — hanya saat sedang dikerjakan (aksi lapangan). */}
         {canComplete && wo.status === 'IN_PROGRESS' && (
           <section className="stack" style={{ gap: '0.4rem' }}>
-            <label className="stack" style={{ gap: '0.25rem' }}>
-              <span>Catatan penyelesaian (opsional)</span>
-              <textarea rows={2} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} />
-            </label>
-            <button
-              className="primary"
+            <TextareaField
+              label="Catatan penyelesaian (opsional)"
+              rows={2}
+              maxLength={2000}
+              value={note}
+              onChange={(_, data) => setNote(data.value)}
+            />
+            <Button
+              variant="primary"
               onClick={() => onAct(() => api.post(`/api/work-orders/${id}/complete`, { resolutionNote: note.trim() || null }), 'Work order selesai', true)}
             >
               Selesaikan
-            </button>
+            </Button>
           </section>
         )}
 
@@ -185,31 +188,29 @@ export function WorkOrderDetailBody({
         {canApprove && awaitingApproval && (
           <section className="stack" style={{ gap: '0.5rem' }}>
             <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Persetujuan hasil kerja</h3>
-            <label className="stack" style={{ gap: '0.25rem' }}>
-              <span>Catatan (opsional untuk setuju, wajib bila menolak)</span>
-              <textarea
-                rows={2}
-                maxLength={500}
-                value={decisionNote}
-                onChange={(e) => setDecisionNote(e.target.value)}
-                placeholder="mis. redaman OK, pemasangan rapi"
-              />
-            </label>
+            <TextareaField
+              label="Catatan (opsional untuk setuju, wajib bila menolak)"
+              rows={2}
+              maxLength={500}
+              value={decisionNote}
+              onChange={(_, data) => setDecisionNote(data.value)}
+              placeholder="mis. redaman OK, pemasangan rapi"
+            />
             <div className="row" style={{ gap: '0.5rem' }}>
-              <button
-                className="primary"
+              <Button
+                variant="primary"
                 onClick={() => onAct(() => api.post(`/api/work-orders/${id}/approve`, { note: decisionNote.trim() || null }), 'Hasil kerja disetujui', true)}
               >
                 Setujui
-              </button>
-              <button
-                className="ghost danger"
+              </Button>
+              <Button
+                variant="danger"
                 disabled={!decisionNote.trim()}
                 onClick={() => onAct(() => api.post(`/api/work-orders/${id}/reject`, { reason: decisionNote.trim() }), 'Hasil kerja ditolak, WO dibuka kembali', true)}
                 title={decisionNote.trim() ? undefined : 'Isi alasan penolakan dulu'}
               >
                 Tolak &amp; buka kembali
-              </button>
+              </Button>
             </div>
           </section>
         )}
@@ -217,16 +218,18 @@ export function WorkOrderDetailBody({
         {/* Pembatalan — selagi belum selesai/batal. */}
         {canClose && !terminal && (
           <section className="stack" style={{ gap: '0.4rem' }}>
-            <label className="stack" style={{ gap: '0.25rem' }}>
-              <span>Batalkan work order</span>
-              <input placeholder="Alasan (opsional)" value={reason} onChange={(e) => setReason(e.target.value)} />
-            </label>
-            <button
-              className="ghost danger"
+            <TextField
+              label="Batalkan work order"
+              placeholder="Alasan (opsional)"
+              value={reason}
+              onChange={(_, data) => setReason(data.value)}
+            />
+            <Button
+              variant="danger"
               onClick={() => onAct(() => api.post(`/api/work-orders/${id}/cancel`, { reason: reason.trim() || null }), 'Work order dibatalkan', true)}
             >
               Batalkan
-            </button>
+            </Button>
           </section>
         )}
       </div>
@@ -313,27 +316,41 @@ function OpticalSection({ wo, canEdit, onAct }: { wo: WorkOrderView; canEdit: bo
       <div className="spread" style={{ alignItems: 'center' }}>
         <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Redaman optik</h3>
         {canEdit && !editing && (
-          <button className="ghost" style={{ fontSize: '0.78rem', padding: '0.2rem 0.5rem' }} onClick={() => setEditing(true)}>
+          <Button variant="subtle" style={{ fontSize: '0.78rem', padding: '0.2rem 0.5rem' }} onClick={() => setEditing(true)}>
             {hasReading ? 'Ubah' : 'Catat'}
-          </button>
+          </Button>
         )}
       </div>
 
       {editing ? (
         <div className="stack" style={{ gap: '0.5rem' }}>
           <div className="row wrap" style={{ gap: '0.6rem' }}>
-            <label style={{ flex: 1, minWidth: 130 }}>
-              <span>Rx sebelum (dBm)</span>
-              <input type="number" step="0.01" min={-40} max={0} value={before} onChange={(e) => setBefore(e.target.value)} placeholder="mis. -24.5" />
-            </label>
-            <label style={{ flex: 1, minWidth: 130 }}>
-              <span>Rx sesudah (dBm)</span>
-              <input type="number" step="0.01" min={-40} max={0} value={after} onChange={(e) => setAfter(e.target.value)} placeholder="mis. -20.1" />
-            </label>
+            <TextField
+              label="Rx sebelum (dBm)"
+              type="number"
+              step="0.01"
+              min={-40}
+              max={0}
+              value={before}
+              onChange={(_, data) => setBefore(data.value)}
+              placeholder="mis. -24.5"
+              style={{ flex: 1, minWidth: 130 }}
+            />
+            <TextField
+              label="Rx sesudah (dBm)"
+              type="number"
+              step="0.01"
+              min={-40}
+              max={0}
+              value={after}
+              onChange={(_, data) => setAfter(data.value)}
+              placeholder="mis. -20.1"
+              style={{ flex: 1, minWidth: 130 }}
+            />
           </div>
           <div className="row" style={{ gap: '0.5rem' }}>
-            <button className="primary" onClick={save}>Simpan</button>
-            <button onClick={cancelEdit}>Batal</button>
+            <Button variant="primary" onClick={save}>Simpan</Button>
+            <Button onClick={cancelEdit}>Batal</Button>
           </div>
           <p className="muted" style={{ margin: 0, fontSize: '0.75rem' }}>GPON selalu negatif; rentang wajar −40..0 dBm. Kosongkan bila belum diukur.</p>
         </div>
@@ -508,9 +525,9 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
                       {ph.caption && <span className="muted" style={{ fontSize: '0.72rem' }}>{ph.caption}</span>}
                       {ph.uploadedByName && <span className="muted" style={{ fontSize: '0.68rem' }}>oleh {ph.uploadedByName}</span>}
                       {canManage && (
-                        <button className="ghost danger" style={{ fontSize: '0.72rem', padding: '0.15rem 0.4rem' }} onClick={() => void removePhoto(ph.id)}>
+                        <Button variant="danger" style={{ fontSize: '0.72rem', padding: '0.15rem 0.4rem' }} onClick={() => void removePhoto(ph.id)}>
                           Hapus
-                        </button>
+                        </Button>
                       )}
                     </div>
                   ))}
@@ -523,9 +540,9 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
                   <AuthedImage path={`/api/work-orders/${workOrderId}/signature/content`} alt={`Tanda tangan ${signature.signerName}`} size={140} />
                   <span className="muted" style={{ fontSize: '0.72rem' }}>{fmt(signature.signedAt)}</span>
                   {canManage && (
-                    <button className="ghost danger" style={{ fontSize: '0.72rem', padding: '0.15rem 0.4rem' }} onClick={() => void removeSignature()}>
+                    <Button variant="danger" style={{ fontSize: '0.72rem', padding: '0.15rem 0.4rem' }} onClick={() => void removeSignature()}>
                       Hapus tanda tangan
-                    </button>
+                    </Button>
                   )}
                 </div>
               )}
@@ -534,24 +551,31 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
 
           {canManage && documentable && (
             <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
-              <label style={{ minWidth: 130 }}>
-                <span>Jenis</span>
-                <select value={kind} onChange={(e) => setKind(e.target.value as EvidenceKind)}>
-                  {KINDS.map((k) => (
-                    <option key={k} value={k}>
-                      {KIND_LABEL[k]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label style={{ flex: 1, minWidth: 160 }}>
-                <span>Keterangan (opsional)</span>
-                <input value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="mis. sambungan core setelah splice" />
-              </label>
+              <SelectField
+                label="Jenis"
+                value={kind}
+                onChange={(_, data) => setKind(data.value as EvidenceKind)}
+                style={{ minWidth: 130 }}
+              >
+                {KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {KIND_LABEL[k]}
+                  </option>
+                ))}
+              </SelectField>
+              <TextField
+                label="Keterangan (opsional)"
+                value={caption}
+                onChange={(_, data) => setCaption(data.value)}
+                placeholder="mis. sambungan core setelah splice"
+                style={{ flex: 1, minWidth: 160 }}
+              />
+              {/* Input file dibiarkan native: butuh ref untuk baca `.files` & reset `.value`;
+                  Fluent Input tak mendukung type=file (ref-nya tak menunjuk ke elemen input). */}
               <input ref={fileRef} type="file" accept="image/*" style={{ maxWidth: 200 }} />
-              <button className="primary" disabled={busy} onClick={() => void upload()}>
+              <Button variant="primary" disabled={busy} onClick={() => void upload()}>
                 {busy ? 'Mengunggah…' : 'Unggah foto'}
-              </button>
+              </Button>
             </div>
           )}
         </>

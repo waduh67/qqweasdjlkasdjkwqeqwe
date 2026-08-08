@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import QRCode from 'react-qr-code'
+import { Button, SelectField } from '@/components/atoms'
 
 /**
  * Panel bayar in-app (mode API Pivot) — dipakai seragam di TIGA surface: langganan tenant
@@ -151,9 +152,9 @@ export function GatewayPayPanel({
           <strong style={{ fontSize: '1rem' }}>{title}</strong>
           {subtitle && <span className="muted" style={{ fontSize: '0.82rem' }}>{subtitle}</span>}
         </div>
-        <button type="button" className="ghost" onClick={onClose} style={{ fontSize: '0.8rem' }}>
+        <Button type="button" variant="subtle" onClick={onClose} style={{ fontSize: '0.8rem' }}>
           Tutup
-        </button>
+        </Button>
       </div>
 
       {paid ? (
@@ -178,10 +179,10 @@ export function GatewayPayPanel({
             <span className="muted" style={{ fontSize: '0.8rem' }}>Metode pembayaran</span>
             <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap' }}>
               {methods.map((m) => (
-                <button
+                <Button
                   key={m.type}
                   type="button"
-                  className={m.type === method ? 'primary' : 'ghost'}
+                  variant={m.type === method ? 'primary' : 'subtle'}
                   onClick={() => {
                     setMethod(m.type)
                     setChannel(m.channels[0]?.code ?? '')
@@ -192,7 +193,7 @@ export function GatewayPayPanel({
                   style={{ fontSize: '0.82rem' }}
                 >
                   {m.label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -201,10 +202,10 @@ export function GatewayPayPanel({
           {needsChannel && (
             <div className="stack" style={{ gap: '0.4rem' }}>
               <span className="muted" style={{ fontSize: '0.8rem' }}>Bank Virtual Account</span>
-              <select
+              <SelectField
                 value={channel}
-                onChange={(e) => {
-                  setChannel(e.target.value)
+                onChange={(_, data) => {
+                  setChannel(data.value)
                   setInstruction(null)
                 }}
                 disabled={busy}
@@ -213,13 +214,13 @@ export function GatewayPayPanel({
                 {selectedMethod?.channels.map((c) => (
                   <option key={c.code} value={c.code}>{c.label}</option>
                 ))}
-              </select>
+              </SelectField>
             </div>
           )}
 
-          <button className="primary" onClick={() => void submit()} disabled={busy || !selectedMethod}>
+          <Button variant="primary" onClick={() => void submit()} disabled={busy || !selectedMethod}>
             {busy ? 'Memproses…' : instruction ? 'Perbarui pembayaran' : 'Buat pembayaran'}
-          </button>
+          </Button>
 
           {error && (
             <div
@@ -246,9 +247,9 @@ export function GatewayPayPanel({
                 <strong style={{ fontFamily: 'monospace', fontSize: '1.25rem', letterSpacing: '0.03em' }}>
                   {instruction.vaNumber}
                 </strong>
-                <button type="button" className="ghost" onClick={() => void copyVa()} style={{ fontSize: '0.8rem' }}>
+                <Button type="button" variant="subtle" onClick={() => void copyVa()} style={{ fontSize: '0.8rem' }}>
                   {copied ? 'Tersalin ✓' : 'Salin'}
-                </button>
+                </Button>
               </div>
               {instruction.vaName && (
                 <span className="muted" style={{ fontSize: '0.8rem' }}>a.n. {instruction.vaName}</span>

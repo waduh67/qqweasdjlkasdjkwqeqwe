@@ -60,6 +60,9 @@
   --radius-sm: 2px;
   --radius-lg: 6px;
 
+  /* Tinggi header Azure (bar biru full-width) — dipakai grid shell & offset sticky. */
+  --topbar-h: 48px;
+
   color-scheme: light;
   /* Persis tumpukan font Azure Portal: 'Segoe UI Variable Text' (muka Win11 yang
      dipakai portal terbaru) di depan, lalu 'Segoe UI' klasik, baru fallback lintas-OS. */
@@ -174,10 +177,11 @@ body {
   min-height: 100%;
 }
 
-/* Skala tipografi lebih rapat ala Azure Portal: root 13px supaya seluruh ukuran
-   berbasis rem — judul, nav, badge — ikut mengecil proporsional. */
+/* Root 14px = fontSizeBase300 (body1) Fluent 2 / Azure. Komponen Fluent memakai px
+   tetap 14px, jadi menyamakan root ke 14px membuat seluruh teks rem-based kustom
+   (judul, nav, badge, tabel) sejajar dengan komponen Fluent — bukan 1px lebih kecil. */
 html {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 body {
@@ -232,7 +236,8 @@ h2,
 h3,
 h4 {
   line-height: 1.25;
-  font-weight: 650;
+  /* Azure hemat bold: judul cukup semibold (600), bukan lebih tebal. */
+  font-weight: 600;
   letter-spacing: -0.01em;
 }
 
@@ -252,9 +257,15 @@ th,
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Kontrol ---------- */
+/* ---------- Kontrol ----------
+   Aturan elemen polos di bawah hanya untuk kontrol NATIVE yang tersisa: tombol
+   segmen/tab (.active), .th-sort, .icon-btn, tombol dialog sistem, input file, dsb.
+   Komponen Fluent v9 membawa kelas ber-awalan `fui-` dan diberi gaya oleh tema-nya
+   sendiri, jadi dikecualikan lewat `:not([class*='fui-'])` supaya gaya global tak
+   bocor ke sana (mis. cincin fokus ganda pada Input Fluent). Aturan kelas tombol
+   (.primary/.ghost/.danger/.small/.icon-btn) dibiarkan — hanya cocok ke tombol native. */
 
-button {
+button:not([class*='fui-']) {
   font: inherit;
   display: inline-flex;
   align-items: center;
@@ -266,22 +277,23 @@ button {
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
-  font-weight: 550;
+  /* Azure: tombol bilah-perintah berbobot normal; hanya tombol utama yang semibold. */
+  font-weight: 400;
   white-space: nowrap;
   transition: background 0.12s ease, border-color 0.12s ease, transform 0.05s ease;
 }
-button:hover:not(:disabled) {
+button:not([class*='fui-']):hover:not(:disabled) {
   background: var(--surface-hover);
   border-color: var(--muted);
 }
-button:active:not(:disabled) {
+button:not([class*='fui-']):active:not(:disabled) {
   transform: translateY(0.5px);
 }
-button:disabled {
+button:not([class*='fui-']):disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
-button:focus-visible {
+button:not([class*='fui-']):focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
@@ -290,12 +302,12 @@ button.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-ink);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 30%, transparent);
+  /* Azure: tombol utama datar (tanpa bayangan), hanya sedikit lebih tebal. */
+  font-weight: 600;
 }
 button.primary:hover:not(:disabled) {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 38%, transparent);
 }
 button.ghost {
   background: transparent;
@@ -322,9 +334,9 @@ button.icon-btn {
   aspect-ratio: 1;
 }
 
-input,
-select,
-textarea {
+input:not([class*='fui-']),
+select:not([class*='fui-']),
+textarea:not([class*='fui-']) {
   font: inherit;
   width: 100%;
   padding: 0.5rem 0.7rem;
@@ -334,57 +346,61 @@ textarea {
   color: var(--text);
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
-input::placeholder {
+input:not([class*='fui-'])::placeholder {
   color: var(--muted);
 }
-input:focus,
-select:focus,
-textarea:focus {
+input:not([class*='fui-']):focus,
+select:not([class*='fui-']):focus,
+textarea:not([class*='fui-']):focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 /* Kontrol dinonaktifkan: redup + kursor terlarang (mis. field terkunci saat sunting). */
-input:disabled,
-select:disabled,
-textarea:disabled {
+input:not([class*='fui-']):disabled,
+select:not([class*='fui-']):disabled,
+textarea:not([class*='fui-']):disabled {
   background: var(--surface-2);
   color: var(--muted);
   cursor: not-allowed;
 }
 /* Checkbox & radio: lebar-auto (bukan 100% dari aturan input umum) + aksen Azure. */
-input[type='checkbox'],
-input[type='radio'] {
+input[type='checkbox']:not([class*='fui-']),
+input[type='radio']:not([class*='fui-']) {
   width: auto;
   accent-color: var(--accent);
 }
-/* Keadaan tak valid — bingkai & cincin merah; dipicu `.field-error` (dari [Field])
-   atau `aria-invalid` langsung pada kontrol. */
+/* Keadaan tak valid — bingkai & cincin merah; dipicu `.field-error` (dari [Field] molekul)
+   atau `aria-invalid` langsung pada kontrol native. Input Fluent pakai indikator galatnya
+   sendiri, jadi selektor `aria-invalid` dikecualikan dari `fui-`. */
 .field-error input,
 .field-error select,
 .field-error textarea,
-input[aria-invalid='true'],
-select[aria-invalid='true'],
-textarea[aria-invalid='true'] {
+input[aria-invalid='true']:not([class*='fui-']),
+select[aria-invalid='true']:not([class*='fui-']),
+textarea[aria-invalid='true']:not([class*='fui-']) {
   border-color: var(--danger, #d13438);
 }
 .field-error input:focus,
 .field-error select:focus,
 .field-error textarea:focus,
-input[aria-invalid='true']:focus,
-select[aria-invalid='true']:focus,
-textarea[aria-invalid='true']:focus {
+input[aria-invalid='true']:not([class*='fui-']):focus,
+select[aria-invalid='true']:not([class*='fui-']):focus,
+textarea[aria-invalid='true']:not([class*='fui-']):focus {
   border-color: var(--danger, #d13438);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger, #d13438) 30%, transparent);
 }
 
-label {
+/* Label native (molekul Field, Combobox, pemicu input file). Label Fluent dikecualikan
+   agar tanda wajib `*` (span di dalam .fui-Label) tak ikut jadi block & turun sebaris. */
+label:not([class*='fui-']) {
   display: block;
   color: var(--text-2);
   font-size: 0.82rem;
-  font-weight: 550;
+  /* Label boleh semibold — salah satu dari sedikit tempat Azure memakai bobot tebal. */
+  font-weight: 600;
 }
-label > span {
+label:not([class*='fui-']) > span {
   display: block;
   margin-bottom: 0.3rem;
 }
@@ -411,15 +427,15 @@ td {
   vertical-align: middle;
 }
 thead th {
-  color: var(--muted);
+  /* Header tabel ala Azure grid: sentence-case (BUKAN UPPERCASE), semibold, tinta
+     gelap-samar di atas latar putih, dibatasi garis bawah — bukan blok abu-abu. */
+  color: var(--text-2);
   font-weight: 600;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 0.8rem;
   border-bottom-color: var(--border-strong);
   position: sticky;
   top: 0;
-  background: var(--surface-2);
+  background: var(--surface);
   z-index: 1;
 }
 tbody tr {
@@ -472,7 +488,7 @@ tbody tr:last-child td {
   opacity: 0.32;
 }
 thead th[aria-sort] {
-  color: var(--text-2);
+  color: var(--text);
 }
 th.num,
 td.num {
@@ -1059,7 +1075,7 @@ tbody tr.row-selected:hover {
 .page-title {
   margin: 0;
   font-size: 1.6rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.02em;
 }
 .page-sub {
@@ -1089,76 +1105,151 @@ tbody tr.row-selected:hover {
 }
 
 /* ---------- CommandBar ala Azure Portal (bilah aksi di atas tabel) ---------- */
+/* ---------- Command bar ala Azure ---------- */
+
+/* Bilah perintah: deretan tombol DATAR ikon+teks (ikon beraksen, teks netral bobot
+   normal), tanpa isian/kotak; hover abu tipis — BUKAN putih. Meniru command bar Azure. */
 .azure-commandbar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.25rem;
-  padding: 0.35rem 0.25rem;
-  border-bottom: 1px solid var(--border-strong);
+  gap: 0.1rem;
+  padding: 0.15rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Override tombol global: command button itu datar, transparan, tak berkotak. */
+.azure-commandbar .cmd-btn {
+  gap: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font-weight: 400;
+}
+.azure-commandbar .cmd-btn:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: transparent;
+}
+.azure-commandbar .cmd-btn:disabled {
+  /* Azure meredupkan warna ikon+teks, bukan menurunkan opacity seluruh tombol. */
+  opacity: 1;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+/* Aksi utama (mis. `+ Tambah`): CTA biru terisi, tetap setinggi tombol datar lain. */
+.azure-commandbar .cmd-btn.cmd-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.azure-commandbar .cmd-btn.cmd-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+/* Ikon primary ikut warna teks (putih di atas biru), bukan aksen biru. */
+.azure-commandbar .cmd-btn.cmd-primary .cmd-icon {
+  color: inherit;
+}
+.azure-commandbar .cmd-btn.cmd-primary:disabled {
+  color: var(--accent-ink);
+  opacity: 0.5;
+}
+
+/* Ikon perintah beraksen (biru Azure); menyusut mengikuti teks, meredup saat disabled. */
+.azure-commandbar .cmd-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--accent);
+  flex: none;
+}
+.azure-commandbar .cmd-btn:disabled .cmd-icon {
+  color: var(--muted);
+}
+
+/* Pemisah vertikal tipis antar-kelompok aksi. */
+.azure-commandbar .cmd-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 0.25rem 0.3rem;
+  background: var(--border-strong);
 }
 
 /* ---------- Badge & pil status ---------- */
 
+/* Chip tag/kode (mis. kode WO, nomor invoice): isian tipis, TANPA border, bobot
+   normal — Azure hemat bold. Untuk STATUS pakai [StatusBadge] (punya .dot): aturan
+   :has di bawah otomatis melepas chip jadi sekadar titik + teks. */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.18rem 0.55rem;
-  border-radius: 6px;
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
-  border: 1px solid var(--border);
-  font-size: 0.72rem;
-  font-weight: 650;
-  letter-spacing: 0.01em;
+  border: none;
+  font-size: 0.75rem;
+  font-weight: 400;
   color: var(--text-2);
   white-space: nowrap;
 }
 .badge .dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: currentColor;
   flex: none;
 }
 
-/* Nada status: latar lembut + tinta beraksesibilitas, selalu berdampingan label */
-.badge.good {
-  color: var(--good-ink);
-  background: color-mix(in srgb, var(--good) 14%, var(--surface));
-  border-color: color-mix(in srgb, var(--good) 30%, transparent);
-}
-.badge.warning {
-  color: var(--warning-ink);
-  background: color-mix(in srgb, var(--warning) 18%, var(--surface));
-  border-color: color-mix(in srgb, var(--warning) 34%, transparent);
-}
-.badge.serious {
-  color: var(--serious-ink);
-  background: color-mix(in srgb, var(--serious) 16%, var(--surface));
-  border-color: color-mix(in srgb, var(--serious) 32%, transparent);
-}
-.badge.critical {
-  color: var(--critical-ink);
-  background: color-mix(in srgb, var(--critical) 15%, var(--surface));
-  border-color: color-mix(in srgb, var(--critical) 32%, transparent);
-}
-.badge.accent {
-  color: var(--accent);
-  background: var(--accent-soft);
-  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+/* Badge status = ada titik → buang chip sepenuhnya: cukup titik berwarna + teks
+   netral berbobot normal (persis pola status Azure "● Running"), tanpa kotak/border. */
+.badge:has(.dot) {
+  padding: 0;
+  gap: 0.4rem;
+  background: none;
+  border-radius: 0;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--text);
 }
 
-/* Dugaan sebab blast-radius: mati listrik (amber) vs fiber putus (merah) */
+/* Nada status hanya mewarnai TITIK-nya; teksnya tetap netral agar tenang & terbaca. */
+.badge.good .dot {
+  background: var(--good);
+}
+.badge.warning .dot {
+  background: var(--warning);
+}
+.badge.serious .dot {
+  background: var(--serious);
+}
+.badge.critical .dot {
+  background: var(--critical);
+}
+.badge.neutral .dot {
+  background: var(--muted);
+}
+.badge.accent .dot {
+  background: var(--accent);
+}
+
+/* Tag aksen tanpa titik (mis. kode WO) tetap bernuansa biru lembut. */
+.badge.accent:not(:has(.dot)) {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* Dugaan sebab blast-radius sebagai chip tint lembut (tanpa border), bukan pil tebal. */
 .badge.cause-power_outage {
   color: var(--warning-ink);
-  background: color-mix(in srgb, var(--warning) 18%, var(--surface));
-  border-color: color-mix(in srgb, var(--warning) 34%, transparent);
+  background: color-mix(in srgb, var(--warning) 16%, var(--surface));
 }
 .badge.cause-fiber_cut {
   color: var(--critical-ink);
-  background: color-mix(in srgb, var(--critical) 15%, var(--surface));
-  border-color: color-mix(in srgb, var(--critical) 32%, transparent);
+  background: color-mix(in srgb, var(--critical) 14%, var(--surface));
 }
 
 /* ---------- Meter (utilisasi) ---------- */
@@ -1204,7 +1295,7 @@ tbody tr.row-selected:hover {
 .stat-label {
   color: var(--muted);
   font-size: 0.74rem;
-  font-weight: 650;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   display: flex;
@@ -1213,14 +1304,15 @@ tbody tr.row-selected:hover {
 }
 .stat-value {
   font-size: 1.95rem;
-  font-weight: 750;
+  /* Angka metrik cukup semibold — Azure tak memakai bobot ekstra-tebal. */
+  font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
 .stat-note {
   color: var(--text-2);
   font-size: 0.76rem;
-  font-weight: 550;
+  font-weight: 400;
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -1336,9 +1428,16 @@ tbody tr.row-selected:hover {
 
 /* ---------- Shell aplikasi ---------- */
 
+/* Shell ala Azure Portal: header BIRU membentang penuh di baris atas, lalu sidebar
+   (kiri) + konten (kanan) di baris bawah. `grid-template-areas` membuat header lepas
+   dari kolom sidebar sehingga bar biru menempel edge-to-edge seperti portal. */
 .app {
   display: grid;
   grid-template-columns: 236px 1fr;
+  grid-template-rows: var(--topbar-h) 1fr;
+  grid-template-areas:
+    'topbar topbar'
+    'sidebar main';
   min-height: 100vh;
   transition: grid-template-columns 0.16s ease;
 }
@@ -1347,6 +1446,7 @@ tbody tr.row-selected:hover {
   grid-template-columns: 64px 1fr;
 }
 .sidebar {
+  grid-area: sidebar;
   background: var(--sidebar-bg);
   color: var(--sidebar-text);
   border-right: 1px solid var(--sidebar-border);
@@ -1355,8 +1455,8 @@ tbody tr.row-selected:hover {
   flex-direction: column;
   gap: 0.35rem;
   position: sticky;
-  top: 0;
-  height: 100vh;
+  top: var(--topbar-h);
+  height: calc(100vh - var(--topbar-h));
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -1381,7 +1481,7 @@ tbody tr.row-selected:hover {
   align-items: center;
   gap: 0.6rem;
   padding: 0.4rem 0.5rem 0.9rem;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 1.05rem;
   letter-spacing: -0.02em;
   color: var(--sidebar-text);
@@ -1391,7 +1491,6 @@ tbody tr.row-selected:hover {
   height: 30px;
   border-radius: var(--radius-sm);
   background: linear-gradient(135deg, #2899f5, #0078d4);
-  box-shadow: 0 2px 6px rgba(0, 120, 212, 0.35);
   display: grid;
   place-items: center;
   color: #fff;
@@ -1579,7 +1678,7 @@ tbody tr.row-selected:hover {
   color: var(--sidebar-text);
   font-family: inherit;
   font-size: 0.88rem;
-  font-weight: 550;
+  font-weight: 400;
   text-align: left;
   cursor: pointer;
 }
@@ -1614,22 +1713,46 @@ tbody tr.row-selected:hover {
 }
 
 .main {
+  grid-area: main;
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
+/* Header Azure: bar biru membentang penuh, ikon & teks putih; sticky di puncak. */
 .topbar {
+  grid-area: topbar;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  padding: 0.7rem 1.5rem;
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 80%, transparent);
-  backdrop-filter: blur(8px);
+  height: var(--topbar-h);
+  padding: 0 1.25rem;
+  background: var(--accent);
+  color: #fff;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
+}
+/* Kontrol & teks di header dibuat putih agar kontras di atas bar biru. */
+.topbar .muted {
+  color: rgba(255, 255, 255, 0.82);
+}
+.topbar button.ghost {
+  color: #fff;
+}
+.topbar button.ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: transparent;
+}
+.topbar .avatar {
+  background: rgba(255, 255, 255, 0.24);
+  color: #fff;
+}
+/* Chip konteks (tenant/platform) di header: kaca putih transparan, bukan biru lembut. */
+.topbar .badge,
+.topbar .badge.accent:not(:has(.dot)) {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
 }
 /* Konten memakai LEBAR PENUH — tabel & data padat butuh ruang; kolom terpusat
    sempit membuang layar lebar. Halaman berbasis formulir membungkus isinya dalam
@@ -1652,9 +1775,10 @@ tbody tr.row-selected:hover {
   width: 100%;
 }
 /* Konten full-bleed (peta): isi seluruh area di bawah header, tanpa padding/kolom
-   terpusat. `.main` dikunci setinggi viewport agar anak flex:1 mengisi sisanya. */
+   terpusat. `.main` dikunci setinggi viewport MINUS header agar anak flex:1 mengisi
+   sisanya (header kini bar terpisah di atas grid, bukan lagi di dalam .main). */
 .main:has(.content-flush) {
-  height: 100vh;
+  height: calc(100vh - var(--topbar-h));
 }
 .content-flush {
   flex: 1;
@@ -1677,7 +1801,7 @@ tbody tr.row-selected:hover {
   color: var(--accent);
   display: grid;
   place-items: center;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.8rem;
   flex: none;
 }
@@ -1700,7 +1824,6 @@ tbody tr.row-selected:hover {
 }
 .segment button.active {
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
   color: var(--text);
 }
 
@@ -1849,30 +1972,25 @@ tbody tr.row-selected:hover {
   color: var(--muted);
 }
 
-/* Overlay alat kabel di atas kanvas peta */
+/* Toolbar alat kabel mengambang (kiri-atas). Dibungkus kartu kaca bertema — sama
+   seperti kartu info & panel — supaya tombol Fluent SELALU terbaca di atas basemap
+   apa pun (gelap, jalan/streets, atau satelit). Legibilitas tombol kini bergantung
+   pada kartunya, bukan warna peta, jadi pindah mode basemap tak lagi menyembunyikan
+   tombol seperti pada mode ghost lama. */
 .map-toolbar {
   position: absolute;
   top: 0.75rem;
   left: 0.75rem;
   z-index: 5;
   display: flex;
-  gap: 0.5rem;
-}
-.map-toolbar button {
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-strong);
   box-shadow: var(--shadow-md);
-}
-/* Peta operasi selalu gelap, jadi tombol alat tak boleh ikut tema aplikasi:
-   di tema terang mode ghost mewarisi tinta gelap (`--text` ≈ hitam) sehingga
-   gelap-di-atas-gelap dan hilang. Kunci ke kaca gelap + tinta terang. */
-.map-toolbar button.ghost {
-  background: color-mix(in srgb, #0b1220 78%, transparent);
-  border-color: color-mix(in srgb, #ffffff 22%, transparent);
-  color: #f5f7fb;
-  backdrop-filter: blur(8px);
-}
-.map-toolbar button.ghost:hover:not(:disabled) {
-  background: color-mix(in srgb, #0b1220 92%, transparent);
-  border-color: color-mix(in srgb, #ffffff 34%, transparent);
 }
 
 /* Bilah petunjuk saat menggambar/mengedit kabel */
@@ -1894,9 +2012,6 @@ tbody tr.row-selected:hover {
   box-shadow: var(--shadow-md);
   font-size: 0.85rem;
   white-space: nowrap;
-}
-.map-hint button {
-  padding: 0.25rem 0.55rem;
 }
 
 /* Kartu info mengambang di pojok kiri-bawah: judul, toggle heatmap, dan legenda —
@@ -1925,8 +2040,13 @@ tbody tr.row-selected:hover {
 .map-info-head h2 {
   margin: 0;
   font-size: 0.95rem;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: -0.01em;
+}
+/* Segmen pemilih basemap di kartu info — dijaga sekompak isinya (jangan melar
+   memenuhi lebar kartu karena kartu memakai flex-column). */
+.map-basemap {
+  align-self: flex-start;
 }
 /* Galat peta mengambang di atas kanvas, tak menggeser tata letak full-bleed.
    Diberi latar kaca agar teks kritis tetap terbaca di atas basemap gelap. */
@@ -1949,9 +2069,15 @@ tbody tr.row-selected:hover {
 /* ---------- Responsif ---------- */
 
 @media (max-width: 820px) {
+  /* Satu kolom: header (full-width) → sidebar (bar horizontal) → konten. */
   .app,
   .app.sidebar-collapsed {
     grid-template-columns: 1fr;
+    grid-template-rows: var(--topbar-h) auto 1fr;
+    grid-template-areas:
+      'topbar'
+      'sidebar'
+      'main';
   }
   /* Di layar sempit sidebar jadi bar horizontal; abaikan mode ciut (rel ikon). */
   .sidebar-collapsed .brand-text,

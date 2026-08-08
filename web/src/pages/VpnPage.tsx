@@ -13,7 +13,7 @@ import {
 } from '../api/vpn'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '@/components/organisms'
-import { EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
@@ -230,23 +230,23 @@ export function VpnPage() {
         <div className="row" style={{ justifyContent: 'flex-end' }}>
           {canConfig && (
             <>
-              <button
+              <Button
                 onClick={() => void saveBlob(() => downloadAccountRouterOs(a.id), `${a.username}.rsc`, toast.error)}
               >
                 RouterOS
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => void saveBlob(() => downloadAccountOvpn(a.id), `${a.username}.ovpn`, toast.error)}
               >
                 .ovpn
-              </button>
+              </Button>
             </>
           )}
           {canManage && (
             <>
-              <button onClick={() => toggle(a)}>{a.status === 'ENABLED' ? 'Nonaktifkan' : 'Aktifkan'}</button>
-              <button onClick={() => rotate(a)}>Rotasi password</button>
-              <button onClick={() => remove(a)}>Hapus</button>
+              <Button onClick={() => toggle(a)}>{a.status === 'ENABLED' ? 'Nonaktifkan' : 'Aktifkan'}</Button>
+              <Button onClick={() => rotate(a)}>Rotasi password</Button>
+              <Button onClick={() => remove(a)}>Hapus</Button>
             </>
           )}
         </div>
@@ -269,18 +269,17 @@ export function VpnPage() {
       {canManage && (
         <div className="card stack" style={{ gap: '0.75rem' }}>
           <div className="row" style={{ alignItems: 'flex-end' }}>
-            <label style={{ flex: 1 }}>
-              <span>Label (opsional)</span>
-              <input
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !busy && generate()}
-                placeholder="mis. Mikrotik Bekasi"
-              />
-            </label>
-            <button className="primary" onClick={generate} disabled={busy}>
+            <TextField
+              label="Label (opsional)"
+              value={label}
+              onChange={(_, data) => setLabel(data.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !busy && generate()}
+              placeholder="mis. Mikrotik Bekasi"
+              style={{ flex: 1 }}
+            />
+            <Button variant="primary" onClick={generate} disabled={busy}>
               <IconPlus size={15} /> {busy ? 'Membuat…' : 'Generate akun'}
-            </button>
+            </Button>
           </div>
           <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
             Server dipilih otomatis. Password hanya tampil sekali setelah dibuat — salin atau unduh config-nya.
@@ -292,13 +291,13 @@ export function VpnPage() {
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari label, server, username, atau IP…" />
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+        <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value)}>
           {STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
           ))}
-        </select>
+        </SelectField>
       </Toolbar>
 
       <DataTable
@@ -367,9 +366,9 @@ function CredentialCard({ account, onDismiss }: { account: VpnAccountView; onDis
               </td>
               <td style={{ width: '4rem' }}>
                 {r.copy && (
-                  <button className="small ghost" onClick={() => copy(r.value, r.label)}>
+                  <Button variant="subtle" size="small" onClick={() => copy(r.value, r.label)}>
                     Salin
-                  </button>
+                  </Button>
                 )}
               </td>
             </tr>
@@ -407,22 +406,23 @@ function CredentialCard({ account, onDismiss }: { account: VpnAccountView; onDis
         />
       )}
       <div className="row" style={{ flexWrap: 'wrap' }}>
-        <button
-          className="small"
+        <Button
+          size="small"
           onClick={() => void saveBlob(() => downloadAccountRouterOs(account.id), `${account.username}.rsc`, toast.error)}
         >
           Unduh RouterOS
-        </button>
-        <button
-          className="small ghost"
+        </Button>
+        <Button
+          variant="subtle"
+          size="small"
           onClick={() => void saveBlob(() => downloadAccountOvpn(account.id), `${account.username}.ovpn`, toast.error)}
         >
           Unduh .ovpn
-        </button>
+        </Button>
         {account.supportsV6 && (
           <>
-            <button
-              className="small"
+            <Button
+              size="small"
               onClick={() =>
                 void saveBlob(
                   () => downloadAccountRouterOs(account.id, 'V6'),
@@ -432,20 +432,21 @@ function CredentialCard({ account, onDismiss }: { account: VpnAccountView; onDis
               }
             >
               Unduh RouterOS v6
-            </button>
-            <button
-              className="small ghost"
+            </Button>
+            <Button
+              variant="subtle"
+              size="small"
               onClick={() =>
                 void saveBlob(() => downloadAccountOvpn(account.id, 'V6'), `${account.username}-v6.ovpn`, toast.error)
               }
             >
               Unduh .ovpn v6
-            </button>
+            </Button>
           </>
         )}
-        <button className="ghost small" onClick={onDismiss}>
+        <Button variant="subtle" size="small" onClick={onDismiss}>
           Selesai
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -472,9 +473,9 @@ function CommandBlock({
         <span className="muted" style={{ fontSize: '0.82rem' }}>
           {title}
         </span>
-        <button className="small ghost" onClick={onCopy}>
+        <Button variant="subtle" size="small" onClick={onCopy}>
           {copyLabel}
-        </button>
+        </Button>
       </div>
       <pre
         style={{

@@ -17,7 +17,8 @@ import type { Area } from '../api/types'
 import { useCan } from '../auth/useCan'
 import { Blade } from '@/components/organisms'
 import { DataTable, type Column } from '@/components/organisms'
-import { Badge, EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { Badge, Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
+import { Checkbox } from '@fluentui/react-components'
 import { SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
@@ -97,15 +98,15 @@ function MikrotikSnippet({ script }: { script: string }) {
         {script}
       </code>
       <div>
-        <button
+        <Button
           type="button"
-          className="small"
+          size="small"
           onClick={() =>
             void navigator.clipboard?.writeText(script).then(() => toast.success('Config Mikrotik disalin'))
           }
         >
           Salin config Mikrotik
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -364,8 +365,8 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
             width: '1%',
             cell: (nas: NasView) => (
               <div className="row" style={{ justifyContent: 'flex-end' }}>
-                <button onClick={() => edit(nas)}>Ubah</button>
-                <button
+                <Button onClick={() => edit(nas)}>Ubah</Button>
+                <Button
                   onClick={() => {
                     void (async () => {
                       if (await confirm({ title: 'Hapus BRAS', message: `Hapus BRAS ${nas.name}?`, confirmLabel: 'Hapus', danger: true })) {
@@ -375,7 +376,7 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
                   }}
                 >
                   Hapus
-                </button>
+                </Button>
               </div>
             ),
           } satisfies Column<NasView>,
@@ -388,9 +389,9 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
       <div className="spread">
         <span className="muted">{items.length} BRAS</span>
         {canManage && (
-          <button className="primary" onClick={() => openDraft({ ...EMPTY_NAS })}>
+          <Button variant="primary" onClick={() => openDraft({ ...EMPTY_NAS })}>
             <IconPlus size={15} /> Tambah BRAS
-          </button>
+          </Button>
         )}
       </div>
 
@@ -403,67 +404,62 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
         onClose={closeDraft}
         footer={
           <>
-            <button className="primary" onClick={save}>
+            <Button variant="primary" onClick={save}>
               Simpan
-            </button>
-            <button onClick={closeDraft}>Batal</button>
+            </Button>
+            <Button onClick={closeDraft}>Batal</Button>
           </>
         }
       >
         {draft && (
           <div className="stack">
           <div className="row">
-            <label style={{ flex: 2 }}>
-              <span>Nama</span>
-              <input
-                value={draft.name}
-                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                placeholder="BRAS-BKS-01"
-              />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>Vendor</span>
-              <select
-                value={draft.vendor}
-                onChange={(e) => setDraft({ ...draft, vendor: e.target.value as NasView['vendor'] })}
-              >
-                {NAS_VENDORS.map((vendor) => (
-                  <option key={vendor} value={vendor}>
-                    {NAS_VENDOR_LABEL[vendor]}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <TextField
+              label="Nama"
+              value={draft.name}
+              onChange={(_, data) => setDraft({ ...draft, name: data.value })}
+              placeholder="BRAS-BKS-01"
+              style={{ flex: 2 }}
+            />
+            <SelectField
+              label="Vendor"
+              value={draft.vendor}
+              onChange={(_, data) => setDraft({ ...draft, vendor: data.value as NasView['vendor'] })}
+              style={{ flex: 1 }}
+            >
+              {NAS_VENDORS.map((vendor) => (
+                <option key={vendor} value={vendor}>
+                  {NAS_VENDOR_LABEL[vendor]}
+                </option>
+              ))}
+            </SelectField>
           </div>
           <div className="row">
-            <label style={{ flex: 1 }}>
-              <span>Alamat manajemen</span>
-              <input
-                value={draft.address}
-                onChange={(e) => setDraft({ ...draft, address: e.target.value })}
-                placeholder="IP publik / overlay VPN, mis. 10.20.0.1"
-              />
-            </label>
-            <label style={{ flex: 1 }}>
-              <span>NAS-Identifier</span>
-              <input
-                value={draft.nasIdentifier}
-                onChange={(e) => setDraft({ ...draft, nasIdentifier: e.target.value })}
-                placeholder="opsional"
-              />
-            </label>
+            <TextField
+              label="Alamat manajemen"
+              value={draft.address}
+              onChange={(_, data) => setDraft({ ...draft, address: data.value })}
+              placeholder="IP publik / overlay VPN, mis. 10.20.0.1"
+              style={{ flex: 1 }}
+            />
+            <TextField
+              label="NAS-Identifier"
+              value={draft.nasIdentifier}
+              onChange={(_, data) => setDraft({ ...draft, nasIdentifier: data.value })}
+              placeholder="opsional"
+              style={{ flex: 1 }}
+            />
           </div>
           <div className="row" style={{ alignItems: 'flex-end' }}>
-            <label style={{ flex: 2 }}>
-              <span>Shared Secret RADIUS</span>
-              <input
-                type={revealSecret ? 'text' : 'password'}
-                value={draft.coaSecret}
-                onChange={(e) => setDraft({ ...draft, coaSecret: e.target.value })}
-                placeholder={draft.hasCoaSecret ? 'terisi — isi untuk mengganti' : 'ketik atau Generate'}
-              />
-            </label>
-            <button
+            <TextField
+              label="Shared Secret RADIUS"
+              type={revealSecret ? 'text' : 'password'}
+              value={draft.coaSecret}
+              onChange={(_, data) => setDraft({ ...draft, coaSecret: data.value })}
+              placeholder={draft.hasCoaSecret ? 'terisi — isi untuk mengganti' : 'ketik atau Generate'}
+              style={{ flex: 2 }}
+            />
+            <Button
               type="button"
               onClick={() => {
                 setDraft({ ...draft, coaSecret: randomSecret() })
@@ -471,10 +467,10 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
               }}
             >
               Generate
-            </button>
-            <button type="button" onClick={() => setRevealSecret((v) => !v)}>
+            </Button>
+            <Button type="button" onClick={() => setRevealSecret((v) => !v)}>
               {revealSecret ? 'Sembunyikan' : 'Lihat'}
-            </button>
+            </Button>
           </div>
 
           {draft.vendor === 'MIKROTIK' && (
@@ -483,53 +479,42 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
                 Kredensial REST API (RouterOS v7)
               </p>
               <div className="row">
-                <label style={{ flex: 1 }}>
-                  <span>User API</span>
-                  <input
-                    value={draft.apiUsername}
-                    onChange={(e) => setDraft({ ...draft, apiUsername: e.target.value })}
-                    placeholder="mis. ftth-api"
-                  />
-                </label>
-                <label style={{ flex: 1 }}>
-                  <span>Password API</span>
-                  <input
-                    type="password"
-                    value={draft.apiSecret}
-                    onChange={(e) => setDraft({ ...draft, apiSecret: e.target.value })}
-                    placeholder={draft.hasApiSecret ? 'terisi — isi untuk mengganti' : 'password user API'}
-                  />
-                </label>
-                <label style={{ flex: 1 }}>
-                  <span>Port</span>
-                  <input
-                    value={draft.apiPort}
-                    onChange={(e) => setDraft({ ...draft, apiPort: e.target.value })}
-                    placeholder={draft.apiUseTls ? '443' : '80'}
-                  />
-                </label>
-              </div>
-              <label className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
-                <input
-                  type="checkbox"
-                  checked={draft.apiUseTls}
-                  onChange={(e) => setDraft({ ...draft, apiUseTls: e.target.checked })}
-                  style={{ width: 'auto' }}
+                <TextField
+                  label="User API"
+                  value={draft.apiUsername}
+                  onChange={(_, data) => setDraft({ ...draft, apiUsername: data.value })}
+                  placeholder="mis. ftth-api"
+                  style={{ flex: 1 }}
                 />
-                <span>Pakai HTTPS (www-ssl)</span>
-              </label>
+                <TextField
+                  label="Password API"
+                  type="password"
+                  value={draft.apiSecret}
+                  onChange={(_, data) => setDraft({ ...draft, apiSecret: data.value })}
+                  placeholder={draft.hasApiSecret ? 'terisi — isi untuk mengganti' : 'password user API'}
+                  style={{ flex: 1 }}
+                />
+                <TextField
+                  label="Port"
+                  value={draft.apiPort}
+                  onChange={(_, data) => setDraft({ ...draft, apiPort: data.value })}
+                  placeholder={draft.apiUseTls ? '443' : '80'}
+                  style={{ flex: 1 }}
+                />
+              </div>
+              <Checkbox
+                label="Pakai HTTPS (www-ssl)"
+                checked={draft.apiUseTls}
+                onChange={(_, data) => setDraft({ ...draft, apiUseTls: !!data.checked })}
+              />
             </>
           )}
 
-          <label className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
-            <input
-              type="checkbox"
-              checked={draft.enabled}
-              onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
-              style={{ width: 'auto' }}
-            />
-            <span>Aktif</span>
-          </label>
+          <Checkbox
+            label="Aktif"
+            checked={draft.enabled}
+            onChange={(_, data) => setDraft({ ...draft, enabled: !!data.checked })}
+          />
 
           <div className="stack" style={{ gap: '0.35rem' }}>
             <span className="muted" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
@@ -557,22 +542,19 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
                 }}
               >
                 {areas.map((area) => (
-                  <label key={area.id} className="row" style={{ gap: '0.4rem', alignItems: 'center', width: 'auto' }}>
-                    <input
-                      type="checkbox"
-                      checked={draft.areaIds.includes(area.id)}
-                      onChange={(e) =>
-                        setDraft({
-                          ...draft,
-                          areaIds: e.target.checked
-                            ? [...draft.areaIds, area.id]
-                            : draft.areaIds.filter((id) => id !== area.id),
-                        })
-                      }
-                      style={{ width: 'auto' }}
-                    />
-                    <span style={{ fontSize: '0.85rem' }}>{area.name}</span>
-                  </label>
+                  <Checkbox
+                    key={area.id}
+                    label={area.name}
+                    checked={draft.areaIds.includes(area.id)}
+                    onChange={(_, data) =>
+                      setDraft({
+                        ...draft,
+                        areaIds: data.checked
+                          ? [...draft.areaIds, area.id]
+                          : draft.areaIds.filter((id) => id !== area.id),
+                      })
+                    }
+                  />
                 ))}
               </div>
             )}
@@ -613,22 +595,22 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
           onChange={setQuery}
           placeholder="Cari nama, alamat, NAS-Identifier, atau vendor…"
         />
-        <select value={vendorFilter} onChange={(e) => setVendorFilter(e.target.value as NasVendor | '')}>
+        <SelectField value={vendorFilter} onChange={(_, data) => setVendorFilter(data.value as NasVendor | '')}>
           <option value="">Semua vendor</option>
           {NAS_VENDORS.map((vendor) => (
             <option key={vendor} value={vendor}>
               {NAS_VENDOR_LABEL[vendor]}
             </option>
           ))}
-        </select>
-        <select
+        </SelectField>
+        <SelectField
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as '' | 'enabled' | 'disabled')}
+          onChange={(_, data) => setStatusFilter(data.value as '' | 'enabled' | 'disabled')}
         >
           <option value="">Semua status</option>
           <option value="enabled">Aktif</option>
           <option value="disabled">Nonaktif</option>
-        </select>
+        </SelectField>
       </Toolbar>
 
       <DataTable

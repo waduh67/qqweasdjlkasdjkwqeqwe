@@ -15,6 +15,7 @@ import {
   type PortalPaymentMethodOption,
 } from './portalApi'
 import { GatewayPayPanel } from '@/components/organisms'
+import { Button, TextField } from '@/components/atoms'
 
 type Tab = 'ringkasan' | 'tagihan' | 'koneksi' | 'profil'
 
@@ -73,7 +74,7 @@ export function PortalDashboard() {
             {customer?.code} · {customer?.tenantSlug}
           </p>
         </div>
-        <button className="ghost" onClick={() => void logout()}>Keluar</button>
+        <Button variant="subtle" onClick={() => void logout()}>Keluar</Button>
       </header>
 
       <div className="segment" style={{ alignSelf: 'flex-start', flexWrap: 'wrap' }}>
@@ -109,7 +110,7 @@ function RingkasanTab({
           <div className="stat-label">Tunggakan</div>
           <div
             className="tnum"
-            style={{ fontSize: '1.4rem', fontWeight: 700, color: arrears > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
+            style={{ fontSize: '1.4rem', fontWeight: 600, color: arrears > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
           >
             {rupiah(arrears)}
           </div>
@@ -119,7 +120,7 @@ function RingkasanTab({
         </div>
         <div className="card stat">
           <div className="stat-label">Status koneksi</div>
-          <div style={{ fontSize: '1.4rem', fontWeight: 700, color: online ? 'var(--good-ink)' : 'var(--muted)' }}>
+          <div style={{ fontSize: '1.4rem', fontWeight: 600, color: online ? 'var(--good-ink)' : 'var(--muted)' }}>
             {connection?.session ? (online ? 'Online' : 'Offline') : '—'}
           </div>
           <div className="muted" style={{ fontSize: '0.82rem' }}>
@@ -128,9 +129,9 @@ function RingkasanTab({
         </div>
       </div>
       {arrears > 0 && (
-        <button className="primary" style={{ alignSelf: 'flex-start' }} onClick={onPay}>
+        <Button variant="primary" style={{ alignSelf: 'flex-start' }} onClick={onPay}>
           Bayar tagihan
-        </button>
+        </Button>
       )}
     </div>
   )
@@ -169,15 +170,15 @@ function TagihanTab({ billing, onReload }: { billing: PortalBilling | null; onRe
                   </span>
                 </div>
                 <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
-                  <span className="tnum" style={{ fontWeight: 700 }}>{rupiah(inv.amount)}</span>
+                  <span className="tnum" style={{ fontWeight: 600 }}>{rupiah(inv.amount)}</span>
                   <span className="badge" style={{ color: INVOICE_TONE[inv.status] ?? undefined }}>{inv.status}</span>
                   {inv.payable && (
-                    <button
-                      className={paying?.id === inv.id ? 'ghost' : 'primary'}
+                    <Button
+                      variant={paying?.id === inv.id ? 'subtle' : 'primary'}
                       onClick={() => setPaying(paying?.id === inv.id ? null : inv)}
                     >
                       {paying?.id === inv.id ? 'Tutup' : 'Bayar'}
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -332,18 +333,27 @@ function ChangePassword() {
         </p>
       ) : (
         <>
-          <label>
-            <span>Password saat ini</span>
-            <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required autoComplete="current-password" />
-          </label>
-          <label>
-            <span>Password baru (min. 8 karakter)</span>
-            <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
-          </label>
+          <TextField
+            label="Password saat ini"
+            type="password"
+            value={currentPassword}
+            onChange={(_, data) => setCurrentPassword(data.value)}
+            required
+            autoComplete="current-password"
+          />
+          <TextField
+            label="Password baru (min. 8 karakter)"
+            type="password"
+            value={newPassword}
+            onChange={(_, data) => setNewPassword(data.value)}
+            required
+            minLength={8}
+            autoComplete="new-password"
+          />
           {error && <p className="error" style={{ margin: 0, fontSize: '0.85rem' }}>{error}</p>}
-          <button className="primary" type="submit" disabled={busy} style={{ alignSelf: 'flex-start' }}>
+          <Button variant="primary" type="submit" disabled={busy} style={{ alignSelf: 'flex-start' }}>
             {busy ? 'Menyimpan…' : 'Simpan'}
-          </button>
+          </Button>
         </>
       )}
     </form>
@@ -354,7 +364,7 @@ function Field({ label, value, tone }: { label: string; value: string; tone?: st
   return (
     <div className="stat">
       <div className="stat-label">{label}</div>
-      <div style={{ fontSize: '0.9rem', color: tone ?? 'var(--text-2)', fontWeight: tone ? 700 : 400, wordBreak: 'break-word' }}>
+      <div style={{ fontSize: '0.9rem', color: tone ?? 'var(--text-2)', fontWeight: tone ? 600 : 400, wordBreak: 'break-word' }}>
         {value}
       </div>
     </div>

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { usePortalAuth } from './PortalAuthContext'
 import { PortalApiError } from './portalClient'
+import { Button, TextField } from '@/components/atoms'
 
 /**
  * Halaman masuk PORTAL pelanggan — sengaja layar sendiri, terpisah dari login operator.
@@ -40,37 +41,31 @@ export function PortalLoginPage() {
           </p>
         </div>
 
-        <label>
-          <span>Kode ISP</span>
-          <input
-            value={tenant}
-            onChange={(e) => setTenant(e.target.value)}
-            required
-            autoFocus={!tenant}
-            autoComplete="organization"
-            placeholder="mis. netmedia"
-          />
-        </label>
-        <label>
-          <span>Login</span>
-          <input
-            value={loginId}
-            onChange={(e) => setLoginId(e.target.value)}
-            required
-            autoFocus={!!tenant}
-            autoComplete="username"
-          />
-        </label>
-        <label>
-          <span>Password</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-          />
-        </label>
+        <TextField
+          label="Kode ISP"
+          value={tenant}
+          onChange={(_, data) => setTenant(data.value)}
+          required
+          autoFocus={!tenant}
+          autoComplete="organization"
+          placeholder="mis. netmedia"
+        />
+        <TextField
+          label="Login"
+          value={loginId}
+          onChange={(_, data) => setLoginId(data.value)}
+          required
+          autoFocus={!!tenant}
+          autoComplete="username"
+        />
+        <TextField
+          label="Password"
+          type="password"
+          value={password}
+          onChange={(_, data) => setPassword(data.value)}
+          required
+          autoComplete="current-password"
+        />
 
         {error && (
           <p className="error" style={{ margin: 0, fontSize: '0.85rem' }}>
@@ -78,9 +73,9 @@ export function PortalLoginPage() {
           </p>
         )}
 
-        <button className="primary" type="submit" disabled={busy} style={{ width: '100%', padding: '0.6rem' }}>
+        <Button type="submit" variant="primary" disabled={busy} style={{ width: '100%', padding: '0.6rem' }}>
           {busy ? 'Masuk…' : 'Masuk'}
-        </button>
+        </Button>
       </form>
     </div>
   )

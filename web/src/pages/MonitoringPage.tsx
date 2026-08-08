@@ -10,7 +10,7 @@ import type {
 } from '../api/monitoring'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '@/components/organisms'
-import { EmptyState, StatusBadge, Toolbar } from '@/components/atoms'
+import { Button, EmptyState, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { Drawer, SearchInput } from '@/components/molecules'
 import { useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
@@ -103,7 +103,7 @@ export function MonitoringPage() {
       sortValue: (c) => c.name,
       cell: (c) => (
         <div>
-          <div style={{ fontWeight: 550 }}>{c.name}</div>
+          <div style={{ fontWeight: 600 }}>{c.name}</div>
           <div className="muted" style={{ fontSize: '0.78rem' }}>
             {c.apiKeyHint}… · tiap {c.pollIntervalSeconds}s
           </div>
@@ -149,12 +149,13 @@ export function MonitoringPage() {
       align: 'right',
       width: '1%',
       cell: (c) => (
-        <button
-          className="ghost small danger"
+        <Button
+          variant="danger"
+          size="small"
           onClick={() => void run(() => api.del(`/api/monitoring/collectors/${c.id}`), 'Collector dihapus')}
         >
           Hapus
-        </button>
+        </Button>
       ),
     })
   }
@@ -219,19 +220,19 @@ export function MonitoringPage() {
       cell: (a) => (
         <div className="row" style={{ justifyContent: 'flex-end', gap: '0.35rem', flexWrap: 'nowrap' }}>
           {a.entityType === 'ONU' && can('monitoring.metric.view') && (
-            <button className="ghost small" onClick={() => void openHistory(a.entityId, a.entityLabel)}>
+            <Button variant="subtle" size="small" onClick={() => void openHistory(a.entityId, a.entityLabel)}>
               Redaman
-            </button>
+            </Button>
           )}
           {can('monitoring.alarm.ack') && a.status === 'ACTIVE' && (
-            <button className="small" onClick={() => void run(() => api.post(`/api/monitoring/alarms/${a.id}/acknowledge`), 'Alarm diakui')}>
+            <Button size="small" onClick={() => void run(() => api.post(`/api/monitoring/alarms/${a.id}/acknowledge`), 'Alarm diakui')}>
               Akui
-            </button>
+            </Button>
           )}
           {can('monitoring.alarm.ack') && a.status !== 'CLEARED' && (
-            <button className="ghost small" onClick={() => void run(() => api.post(`/api/monitoring/alarms/${a.id}/clear`), 'Alarm ditutup')}>
+            <Button variant="subtle" size="small" onClick={() => void run(() => api.post(`/api/monitoring/alarms/${a.id}/clear`), 'Alarm ditutup')}>
               Tutup
-            </button>
+            </Button>
           )}
         </div>
       ),
@@ -258,14 +259,15 @@ export function MonitoringPage() {
             <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Collector</h2>
             {canManageCollector && (
               <div className="row">
-                <input
+                <TextField
                   placeholder="Nama collector baru"
                   value={draftName}
-                  onChange={(e) => setDraftName(e.target.value)}
+                  onChange={(_, data) => setDraftName(data.value)}
                   style={{ width: 200 }}
                 />
-                <button
-                  className="primary small"
+                <Button
+                  variant="primary"
+                  size="small"
                   disabled={!draftName.trim()}
                   onClick={() =>
                     void run(async () => {
@@ -279,7 +281,7 @@ export function MonitoringPage() {
                   }
                 >
                   <IconPlus size={15} /> Buat
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -298,12 +300,12 @@ export function MonitoringPage() {
                 <code>FTTH_COLLECTOR_KEY</code>.
               </p>
               <div className="row">
-                <button className="small" onClick={() => void navigator.clipboard?.writeText(newKey.apiKey).then(() => toast.success('API key disalin'))}>
+                <Button size="small" onClick={() => void navigator.clipboard?.writeText(newKey.apiKey).then(() => toast.success('API key disalin'))}>
                   Salin
-                </button>
-                <button className="ghost small" onClick={() => setNewKey(null)}>
+                </Button>
+                <Button variant="subtle" size="small" onClick={() => setNewKey(null)}>
                   Selesai
-                </button>
+                </Button>
               </div>
             </div>
           )}

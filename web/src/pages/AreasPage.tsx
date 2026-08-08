@@ -3,7 +3,7 @@ import { api, ApiError } from '../api/client'
 import type { Area } from '../api/types'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '@/components/organisms'
-import { EmptyState, Toolbar } from '@/components/atoms'
+import { Button, EmptyState, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
@@ -73,9 +73,9 @@ export function AreasPage() {
       width: '1%',
       cell: (a) =>
         can('iam.area.delete') ? (
-          <button className="danger" onClick={() => void run(() => api.del(`/api/areas/${a.id}`), 'Area dihapus')}>
+          <Button variant="danger" onClick={() => void run(() => api.del(`/api/areas/${a.id}`), 'Area dihapus')}>
             Hapus
-          </button>
+          </Button>
         ) : null,
     },
   ]
@@ -94,16 +94,14 @@ export function AreasPage() {
 
       {can('iam.area.create') && (
         <div className="card row" style={{ alignItems: 'flex-end' }}>
-          <label style={{ flex: 1, marginBottom: 0 }}>
-            <span>Kode</span>
-            <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="BKS" />
-          </label>
-          <label style={{ flex: 2, marginBottom: 0 }}>
-            <span>Nama</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Bekasi" />
-          </label>
-          <button
-            className="primary"
+          <div style={{ flex: 1, marginBottom: 0 }}>
+            <TextField label="Kode" value={code} onChange={(_, data) => setCode(data.value)} placeholder="BKS" />
+          </div>
+          <div style={{ flex: 2, marginBottom: 0 }}>
+            <TextField label="Nama" value={name} onChange={(_, data) => setName(data.value)} placeholder="Bekasi" />
+          </div>
+          <Button
+            variant="primary"
             disabled={!code || !name}
             onClick={() =>
               void run(async () => {
@@ -114,7 +112,7 @@ export function AreasPage() {
             }
           >
             Tambah
-          </button>
+          </Button>
         </div>
       )}
 
