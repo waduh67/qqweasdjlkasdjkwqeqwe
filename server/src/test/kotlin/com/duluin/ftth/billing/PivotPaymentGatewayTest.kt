@@ -9,7 +9,9 @@ import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.billing.config.PivotProperties
 import com.duluin.ftth.billing.domain.model.GatewayMode
 import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
+import com.duluin.ftth.common.domain.error.ValidationException
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import tools.jackson.databind.json.JsonMapper
 import java.math.BigDecimal
@@ -206,6 +208,29 @@ class PivotPaymentGatewayTest {
         @Suppress("UNCHECKED_CAST")
         val va = (body["paymentMethodOptions"] as Map<String, Any>)["virtualAccount"] as Map<String, Any>
         assertThat(va["channel"]).isEqualTo("BNI")
+    }
+
+    @Test
+    fun `email pembayar dikirim apa adanya`() {
+        val body = chargingGateway.buildChargeBody(request(), ctx("cb_key"), null)
+
+        @Suppress("UNCHECKED_CAST")
+        val customer = body["customer"] as Map<String, Any>
+        assertThat(customer["email"]).isEqualTo("budi@contoh.com")
+    }
+
+    @Test
+    fun `email pembayar kosong ditolak sebelum memanggil Pivot`() {
+        // Pivot memvalidasi customer.email `required` → gagal 400. Ditolak lebih awal dengan pesan
+        // yang bisa ditindaklanjuti operator (lengkapi email pelanggan), BUKAN diisi email palsu.
+        listOf(null, "", "   ").forEach { email ->
+            assertThatThrownBy {
+                chargingGateway.buildChargeBody(request().copy(customerEmail = email), ctx("cb_key"), "QR")
+            }
+                .isInstanceOf(ValidationException::class.java)
+                .hasMessageContaining("email")
+                .hasMessageContaining("Budi")
+        }
     }
 
     @Test
