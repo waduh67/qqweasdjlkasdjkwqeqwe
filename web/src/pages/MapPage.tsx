@@ -1583,11 +1583,14 @@ function SaveCablePanel({
     }
   }, [isDrop, fromId, toId])
 
-  // Kesiapan simpan: feeder/distribusi butuh port sumber terpilih (kecuali simpul
-  // tanpa port, mis. feeder SITE → daftar kosong). Drop butuh pelanggan ber-ONU.
+  // Kesiapan simpan: feeder/distribusi WAJIB port sumber terpilih. Satu-satunya
+  // pengecualian "daftar kosong boleh" adalah feeder dari SITE (POP tak lewat PON
+  // port). OLT tanpa PON port juga berdaftar kosong, TAPI di situ port tetap wajib —
+  // menyimpan tanpa port berarti uplink diam-diam tak ter-set (feeder "yatim").
+  const siteFeeder = fromKind === 'SITE'
   const sourceReady = isDrop
     ? true
-    : srcOptions != null && (srcOptions.length === 0 || srcPort != null)
+    : srcOptions != null && (srcPort != null || (siteFeeder && srcOptions.length === 0))
   const dropReady = !isDrop || onu != null
   const canSave = name.trim() !== '' && sourceReady && dropReady
 
@@ -1634,7 +1637,9 @@ function SaveCablePanel({
             <span className="muted" style={{ fontSize: '0.78rem' }}>
               {fromKind === 'SITE'
                 ? 'Feeder dari POP tak melalui PON port — langsung tersambung.'
-                : 'Tak ada port keluaran di simpul ini.'}
+                : fromKind === 'OLT'
+                  ? 'OLT ini belum punya PON port. Tambahkan dulu di detail OLT (tab PON Port) sebelum menarik feeder.'
+                  : 'Tak ada port keluaran di simpul ini — tak bisa menarik kabel dari sini.'}
             </span>
           ) : (
             <>
