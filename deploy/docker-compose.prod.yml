@@ -142,38 +142,6 @@ services:
     image: ${IMAGE_PREFIX}/ftth-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
 
-  # --- Simulator peniru-protokol (OLT/SNMP + BRAS/RADIUS) — OPT-IN, tidak ikut `up -d` biasa ---
-  # Di balik profile `simulator`: JALAN HANYA bila diminta eksplisit —
-  #   docker compose -f docker-compose.prod.yml --profile simulator up -d simulator
-  # Kenapa opt-in di prod: slice RADIUS sim MENULIS sesi `radacct` untuk tiap akun di
-  # `radcheck` → kalau dinyalakan bareng tenant NYATA, ia memalsukan sesi "online"
-  # (accounting kotor). Aktifkan hanya untuk demo/uji di server tanpa tenant nyata,
-  # lalu matikan lagi: `docker compose -f docker-compose.prod.yml stop simulator`.
-  # IP statis wajib: app mendaftarkan OLT dgn IP LITERAL (ManagementIp menolak hostname);
-  # server polling SNMP ke 172.30.0.10:1161 & tembak DAE ke :3799 (lihat docker/lab/seed-lab.sh).
-  simulator:
-    image: ${IMAGE_PREFIX}/ftth-simulator:${IMAGE_TAG:-latest}
-    profiles: ["simulator"]
-    restart: unless-stopped
-    depends_on:
-      radius-db:
-        condition: service_started
-    networks:
-      default:
-        ipv4_address: 172.30.0.10
-    environment:
-      FTTH_SIM_OLT_PORT: "1161"
-      FTTH_SIM_OLT_COMMUNITY: public
-      FTTH_SIM_OLT_PONS: "2"
-      FTTH_SIM_OLT_ONUS_PER_PON: "8"
-      # RADIUS sim → radius-db yang SAMA dengan server/freeradius. Kosongkan
-      # FTTH_SIM_RADIUS_DB_URL di `.env` untuk mematikan slice RADIUS (SNMP-only).
-      FTTH_SIM_RADIUS_DB_URL: ${FTTH_SIM_RADIUS_DB_URL-jdbc:postgresql://radius-db:5432/${RADIUS_DB_NAME:-radius}}
-      FTTH_SIM_RADIUS_DB_USER: ${RADIUS_DB_USER:-radius}
-      FTTH_SIM_RADIUS_DB_PASSWORD: ${RADIUS_DB_PASSWORD:?wajib diisi di .env}
-      # Secret DAE HARUS sama dgn coaSecret BRAS yang di-seed (lihat seed-lab.sh).
-      FTTH_SIM_RADIUS_DAE_SECRET: ${FTTH_SIM_DAE_SECRET:-testing123}
-
   # --- Reverse proxy + TLS otomatis (satu-satunya yang terekspos ke internet) ---
   caddy:
     image: caddy:2
@@ -197,16 +165,3 @@ volumes:
   miniodata:
   caddy_data:
   caddy_config:
-
-# Subnet tetap agar simulator (profile opt-in) bisa dapat IP statis 172.30.0.10.
-# Service lain tetap saling kenal lewat nama (DNS embedded Docker). `ip_range`
-# membatasi alokasi dinamis ke paruh atas supaya IP statis simulator tak terserempet.
-# CATATAN: menambah blok ini membuat `up -d` berikutnya MERECREATE network default
-# sekali (semua container restart singkat) — normal, cukup terjadi sekali.
-networks:
-  default:
-    ipam:
-      config:
-        - subnet: 172.30.0.0/24
-          ip_range: 172.30.0.128/25
-          gateway: 172.30.0.1
