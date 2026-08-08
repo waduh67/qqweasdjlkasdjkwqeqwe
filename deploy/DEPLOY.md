@@ -495,6 +495,32 @@ dengan `sql_user_name`. Dial akun itu dari klien PPPoE → log `freeradius` mena
 
 ---
 
+## Bagian L — (Opsional) Simulator peniru-protokol di prod (OPT-IN)
+
+Stack prod menyertakan service `simulator` (OLT/SNMP + BRAS/RADIUS palsu) **di balik
+profile `simulator`** — jadi **tidak ikut naik** saat `docker compose up -d` biasa. Gunanya
+untuk demo/uji perangkat tanpa hardware nyata.
+
+> ⚠️ **Jangan nyalakan di prod yang sudah punya tenant/akun PPPoE nyata.** Slice RADIUS
+> simulator menulis sesi `radacct` untuk tiap akun di `radcheck` → ia akan memalsukan sesi
+> "online" untuk pelanggan asli (accounting kotor). Aman hanya di server tanpa tenant nyata,
+> atau matikan slice RADIUS (SNMP-only) dgn set `FTTH_SIM_RADIUS_DB_URL=` (kosong) di `.env`.
+
+Nyalakan (setelah image `ftth-simulator` ada di GHCR — dibuild CI):
+```bash
+cd /opt/ftth
+docker compose -f docker-compose.prod.yml --profile simulator up -d simulator
+# daftarkan OLT/BRAS/CPE palsu ke app (idempoten):
+COMPOSE="docker compose -f docker-compose.prod.yml" BASE=http://localhost \
+  bash docker/lab/seed-lab.sh     # butuh checkout repo + jq di server
+```
+Matikan lagi: `docker compose -f docker-compose.prod.yml stop simulator`.
+
+> Menambah service ini membuat `up -d` berikutnya **merecreate network default sekali**
+> (semua container restart singkat) karena kini pakai subnet tetap `172.30.0.0/24` — normal.
+
+---
+
 ## Operasional harian
 
 | Mau apa | Perintah (di `/opt/ftth` pada VPS) |
