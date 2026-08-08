@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { Area } from '../api/types'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '@/components/organisms'
+import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { Button, EmptyState, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useToast } from '@/system'
@@ -66,17 +67,16 @@ export function AreasPage() {
         return p ? <span className="muted">{p}</span> : <span className="muted">—</span>
       },
     },
+  ]
+
+  // Aksi per-baris di menu `…` ala Azure DataGrid (seragam dengan Pelanggan), bukan tombol inline.
+  const canDelete = can('iam.area.delete')
+  const rowActions = (a: Area): RowAction[] => [
     {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (a) =>
-        can('iam.area.delete') ? (
-          <Button variant="danger" onClick={() => void run(() => api.del(`/api/areas/${a.id}`), 'Area dihapus')}>
-            Hapus
-          </Button>
-        ) : null,
+      key: 'delete',
+      label: 'Hapus',
+      icon: <Trash2 size={16} />,
+      onClick: () => void run(() => api.del(`/api/areas/${a.id}`), 'Area dihapus'),
     },
   ]
 
@@ -126,6 +126,7 @@ export function AreasPage() {
         rowKey={(a) => a.id}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
+        rowActions={canDelete ? rowActions : undefined}
         empty={
           <EmptyState
             title={query ? 'Tidak ada area yang cocok' : 'Belum ada area'}

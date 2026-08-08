@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Pencil, RefreshCw, Trash2 } from 'lucide-react'
 import { ApiError } from '../api/client'
 import {
   createServer,
@@ -12,7 +13,7 @@ import {
   type VpnServerView,
 } from '../api/vpn'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '@/components/organisms'
+import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { Badge, Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
@@ -218,21 +219,13 @@ export function VpnServersPage() {
       cell: (s) => <Badge tone={s.pkiReady ? 'good' : 'warning'}>{s.pkiReady ? 'siap' : 'belum'}</Badge>,
     },
   ]
-  if (canManage) {
-    columns.push({
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (s) => (
-        <div className="row" style={{ justifyContent: 'flex-end' }}>
-          <Button onClick={() => regenerate(s)}>Perintah pasang</Button>
-          <Button onClick={() => edit(s)}>Ubah</Button>
-          <Button onClick={() => remove(s)}>Hapus</Button>
-        </div>
-      ),
-    })
-  }
+
+  // Aksi per-baris di menu `…` ala Azure DataGrid (seragam dengan Pelanggan), bukan tombol inline.
+  const rowActions = (s: VpnServerView): RowAction[] => [
+    { key: 'regenerate', label: 'Perintah pasang', icon: <RefreshCw size={16} />, onClick: () => regenerate(s) },
+    { key: 'edit', label: 'Ubah', icon: <Pencil size={16} />, onClick: () => edit(s) },
+    { key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => remove(s) },
+  ]
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
@@ -270,6 +263,7 @@ export function VpnServersPage() {
         rowKey={(s) => s.id}
         loading={loading}
         initialSort={{ key: 'name', dir: 'asc' }}
+        rowActions={canManage ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada hub yang cocok' : 'Belum ada hub'}

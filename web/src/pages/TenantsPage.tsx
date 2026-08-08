@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import { CreditCard, Pause, Play, Trash2 } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import { getPlatformBillingSettings } from '../api/platformBilling'
 import { useCan } from '../auth/useCan'
 import { Blade } from '@/components/organisms'
-import { DataTable, type Column } from '@/components/organisms'
+import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { ConfirmDialog, SearchInput } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
@@ -100,37 +101,29 @@ export function TenantsPage() {
       sortValue: (t) => t.status,
       cell: (t) => <StatusBadge status={t.status} />,
     },
-    {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (t) =>
-        t.slug !== 'platform' ? (
-          <div className="row" style={{ justifyContent: 'flex-end', gap: '0.4rem' }}>
-            {can('platform.subscription.view') && (
-              <Button onClick={() => setSubscription({ id: t.id, name: t.name })}>Langganan</Button>
-            )}
-            {can('platform.tenant.manage') && (
-              <Button
-                onClick={() =>
-                  void run(() =>
-                    api.post(`/api/platform/tenants/${t.id}/${t.status === 'ACTIVE' ? 'suspend' : 'activate'}`),
-                  )
-                }
-              >
-                {t.status === 'ACTIVE' ? 'Suspend' : 'Aktifkan'}
-              </Button>
-            )}
-            {can('platform.tenant.delete') && (
-              <Button variant="danger" onClick={() => setConfirmDelete(t)}>
-                Hapus
-              </Button>
-            )}
-          </div>
-        ) : null,
-    },
   ]
+
+  // Aksi per-baris di menu `…` ala Azure DataGrid (seragam dengan Pelanggan), bukan tombol inline.
+  // Tenant `platform` tak punya aksi → menu `…` tak muncul (rowActions balik array kosong).
+  const canSubscription = can('platform.subscription.view')
+  const canManageTenant = can('platform.tenant.manage')
+  const canDeleteTenant = can('platform.tenant.delete')
+  const rowActions = (t: Tenant): RowAction[] => {
+    if (t.slug === 'platform') return []
+    const list: RowAction[] = []
+    if (canSubscription)
+      list.push({ key: 'subscription', label: 'Langganan', icon: <CreditCard size={16} />, onClick: () => setSubscription({ id: t.id, name: t.name }) })
+    if (canManageTenant)
+      list.push({
+        key: 'toggle',
+        label: t.status === 'ACTIVE' ? 'Suspend' : 'Aktifkan',
+        icon: t.status === 'ACTIVE' ? <Pause size={16} /> : <Play size={16} />,
+        onClick: () => void run(() => api.post(`/api/platform/tenants/${t.id}/${t.status === 'ACTIVE' ? 'suspend' : 'activate'}`)),
+      })
+    if (canDeleteTenant)
+      list.push({ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => setConfirmDelete(t) })
+    return list
+  }
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
@@ -164,6 +157,7 @@ export function TenantsPage() {
         rowKey={(t) => t.id}
         loading={loading}
         initialSort={{ key: 'name', dir: 'asc' }}
+        rowActions={canSubscription || canManageTenant || canDeleteTenant ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada tenant yang cocok' : 'Belum ada tenant'}

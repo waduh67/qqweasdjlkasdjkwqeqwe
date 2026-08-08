@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Eye, Pencil, Trash2 } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PermissionCatalog, Role } from '../api/types'
 import { PermissionMatrix } from '@/components/molecules'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '@/components/organisms'
+import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
 import { Badge, Button, EmptyState, TextField, Toolbar } from '@/components/atoms'
@@ -82,34 +83,31 @@ export function RolesPage() {
       sortValue: (r) => r.permissionIds.length,
       cell: (r) => r.permissionIds.length,
     },
-    {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (role) => (
-        <div className="row" style={{ justifyContent: 'flex-end' }}>
-          <Button
-            onClick={() =>
-              setDraft({
-                id: role.id,
-                name: role.name,
-                description: role.description ?? '',
-                permissionIds: new Set(role.permissionIds),
-              })
-            }
-          >
-            {readOnly ? 'Lihat' : 'Ubah'}
-          </Button>
-          {can('iam.role.delete') && !role.systemRole && (
-            <Button variant="danger" onClick={() => void remove(role)}>
-              Hapus
-            </Button>
-          )}
-        </div>
-      ),
-    },
   ]
+
+  // Buka kartu sunting/lihat berisi role terpilih (read-only bila tak boleh ubah).
+  const startEdit = (role: Role) =>
+    setDraft({
+      id: role.id,
+      name: role.name,
+      description: role.description ?? '',
+      permissionIds: new Set(role.permissionIds),
+    })
+
+  // Aksi per-baris di menu `…` ala Azure DataGrid (seragam dengan Pelanggan), bukan tombol inline.
+  const rowActions = (role: Role): RowAction[] => {
+    const list: RowAction[] = [
+      {
+        key: 'edit',
+        label: readOnly ? 'Lihat' : 'Ubah',
+        icon: readOnly ? <Eye size={16} /> : <Pencil size={16} />,
+        onClick: () => startEdit(role),
+      },
+    ]
+    if (can('iam.role.delete') && !role.systemRole)
+      list.push({ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => void remove(role) })
+    return list
+  }
 
   async function save() {
     if (!draft) return
@@ -170,6 +168,7 @@ export function RolesPage() {
         rowKey={(r) => r.id}
         loading={loading}
         initialSort={{ key: 'name', dir: 'asc' }}
+        rowActions={rowActions}
         empty={
           <EmptyState
             title={query ? 'Tidak ada role yang cocok' : 'Belum ada role'}

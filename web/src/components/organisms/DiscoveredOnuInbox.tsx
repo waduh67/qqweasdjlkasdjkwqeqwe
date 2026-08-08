@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Ban, Check, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Field, Input } from '@fluentui/react-components'
 import { api, ApiError } from '@/api/client'
 import type { PageResponse } from '@/api/types'
@@ -11,7 +12,7 @@ import type {
 } from '@/api/monitoring'
 import type { CustomerView } from '@/api/network'
 import { useCan } from '@/auth/useCan'
-import { DataTable, type Column } from './DataTable'
+import { DataTable, type Column, type RowAction } from './DataTable'
 import { Badge, Button, EmptyState, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { Drawer, SearchInput, Tabs } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
@@ -229,45 +230,26 @@ export function DiscoveredOnuInbox({
       cell: (o) => <SuggestionCell suggestion={o.suggestion} />,
     })
   }
-  if (showActions) {
-    columns.push({
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (onu) => (
-        <div className="row" style={{ justifyContent: 'flex-end', gap: '0.35rem', flexWrap: 'nowrap' }}>
-          {state === 'DISCOVERED' && (
-            <>
-              {hasCustomer(onu.suggestion) ? (
-                <>
-                  <Button variant="primary" size="small" onClick={() => void accept(onu)}>
-                    Terima
-                  </Button>
-                  <Button variant="subtle" size="small" onClick={() => setProvision(onu)}>
-                    Ubah
-                  </Button>
-                </>
-              ) : (
-                <Button variant="primary" size="small" onClick={() => setProvision(onu)}>
-                  Provisi
-                </Button>
-              )}
-              <Button
-                variant="subtle"
-                size="small"
-                onClick={() => void run(() => api.post(`/api/monitoring/discovered-onus/${onu.id}/ignore`), 'ONU diabaikan')}
-              >
-                Abaikan
-              </Button>
-            </>
-          )}
-          <Button variant="danger" size="small" onClick={() => void remove(onu)}>
-            Hapus
-          </Button>
-        </div>
-      ),
-    })
+
+  // Aksi per-baris di menu `…` ala Azure DataGrid (seragam dengan Pelanggan), bukan deretan tombol inline.
+  const rowActions = (onu: DiscoveredOnuView): RowAction[] => {
+    const list: RowAction[] = []
+    if (state === 'DISCOVERED') {
+      if (hasCustomer(onu.suggestion)) {
+        list.push({ key: 'accept', label: 'Terima', icon: <Check size={16} />, onClick: () => void accept(onu) })
+        list.push({ key: 'edit', label: 'Ubah', icon: <Pencil size={16} />, onClick: () => setProvision(onu) })
+      } else {
+        list.push({ key: 'provision', label: 'Provisi', icon: <Plus size={16} />, onClick: () => setProvision(onu) })
+      }
+      list.push({
+        key: 'ignore',
+        label: 'Abaikan',
+        icon: <Ban size={16} />,
+        onClick: () => void run(() => api.post(`/api/monitoring/discovered-onus/${onu.id}/ignore`), 'ONU diabaikan'),
+      })
+    }
+    list.push({ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => void remove(onu) })
+    return list
   }
 
   return (
@@ -298,6 +280,7 @@ export function DiscoveredOnuInbox({
         rowKey={(o) => o.id}
         loading={loading}
         initialSort={{ key: 'seen', dir: 'desc' }}
+        rowActions={showActions ? rowActions : undefined}
         empty={
           <EmptyState
             title={query ? 'Tidak ada yang cocok' : state === 'DISCOVERED' ? 'Tidak ada ONU menunggu' : 'Kosong'}

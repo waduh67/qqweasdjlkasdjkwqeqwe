@@ -1,5 +1,5 @@
-import { type MouseEvent, useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Ban, Printer, Wallet } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type { CustomerView } from '../api/network'
@@ -7,14 +7,16 @@ import {
   generateInvoices,
   getTaxObligation,
   listInvoices,
+  listPayments,
   recordManualPayment,
   voidInvoice,
   type InvoiceStatus,
   type InvoiceView,
+  type PaymentView,
   type TaxObligationView,
 } from '../api/billing'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '@/components/organisms'
+import { Blade, DataTable, type Column, type RowAction } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
 import { Badge, Button, EmptyState, SelectField, TextField, Toolbar, type Tone } from '@/components/atoms'
@@ -40,6 +42,95 @@ function fmtDate(localDate: string | null): string {
 function todayLocalDate(): string {
   const n = new Date()
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
+}
+
+/** Escape teks pengguna sebelum disisipkan ke HTML cetak (hindari HTML injection). */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+/**
+ * Cetak/unduh PDF tagihan sepenuhnya di sisi klien (tak ada endpoint PDF di server):
+ * merakit dokumen HTML rapi ke dalam iframe tersembunyi lalu memanggil `print()` —
+ * dialog cetak browser memberi opsi "Simpan sebagai PDF". Nilai dari pengguna di-escape.
+ */
+function printInvoice(inv: InvoiceView, customer: CustomerLite | undefined) {
+  const base = Number(inv.baseAmount)
+  const tax = Number(inv.taxAmount)
+  const total = Number(inv.amount)
+  const taxPct = inv.taxRate ? `${(Number(inv.taxRate) * 100).toFixed(2).replace(/\.?0+$/, '')}%` : null
+  const custName = escapeHtml(customer?.name ?? 'Pelanggan')
+  const custCode = customer?.code ? escapeHtml(customer.code) : null
+  const row = (label: string, value: string, strong = false) =>
+    `<tr><td class="lbl">${label}</td><td class="val"${strong ? ' style="font-weight:700"' : ''}>${value}</td></tr>`
+
+  const html = `<!doctype html><html lang="id"><head><meta charset="utf-8">
+<title>Tagihan ${escapeHtml(inv.number)}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #1a1a1a; margin: 0; padding: 32px; font-size: 13px; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1a1a1a; padding-bottom: 12px; margin-bottom: 20px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: 0.5px; }
+  .num { font-family: monospace; font-size: 14px; margin-top: 4px; color: #555; }
+  .meta { text-align: right; font-size: 12px; color: #555; line-height: 1.6; }
+  .party { margin-bottom: 20px; }
+  .party .h { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: #888; margin-bottom: 3px; }
+  .party .n { font-size: 15px; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; }
+  .amt { margin-top: 8px; }
+  .amt td { padding: 7px 0; border-bottom: 1px solid #eee; }
+  .amt td.lbl { color: #555; }
+  .amt td.val { text-align: right; font-variant-numeric: tabular-nums; }
+  .amt tr.total td { border-top: 2px solid #1a1a1a; border-bottom: none; font-size: 16px; padding-top: 12px; }
+  .foot { margin-top: 28px; font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
+  .status { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; border: 1px solid #ccc; }
+</style></head><body>
+  <div class="head">
+    <div><h1>TAGIHAN</h1><div class="num">${escapeHtml(inv.number)}</div></div>
+    <div class="meta">
+      <div>Tanggal terbit: <strong>${fmtDate(inv.issuedAt.slice(0, 10))}</strong></div>
+      <div>Jatuh tempo: <strong>${fmtDate(inv.dueDate)}</strong></div>
+      <div>Status: <span class="status">${INVOICE_LABEL[inv.status]}</span></div>
+    </div>
+  </div>
+  <div class="party">
+    <div class="h">Ditagihkan kepada</div>
+    <div class="n">${custName}</div>
+    ${custCode ? `<div style="color:#555">${custCode}</div>` : ''}
+  </div>
+  <table><tbody>
+    ${row('Periode layanan', `${fmtDate(inv.periodStart)} – ${fmtDate(inv.periodEnd)}`)}
+    ${inv.prorated ? row('Prorata', `${inv.proratedDays ?? '—'} hari`) : ''}
+  </tbody></table>
+  <table class="amt"><tbody>
+    ${row('Dasar pengenaan (DPP)', fmtRupiah(base))}
+    ${tax > 0 ? row(`PPN${taxPct ? ` (${taxPct})` : ''}`, fmtRupiah(tax)) : ''}
+    <tr class="total"><td class="lbl">Total tagihan</td><td class="val">${fmtRupiah(total)}</td></tr>
+  </tbody></table>
+  ${inv.paidAt ? `<p style="margin-top:16px;color:#128a3a;font-weight:600">Lunas pada ${fmtDate(inv.paidAt.slice(0, 10))}</p>` : ''}
+  <div class="foot">Dokumen ini dibuat otomatis oleh sistem. Nomor tagihan: ${escapeHtml(inv.number)}.</div>
+</body></html>`
+
+  const iframe = document.createElement('iframe')
+  iframe.setAttribute('aria-hidden', 'true')
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;'
+  iframe.srcdoc = html
+  iframe.onload = () => {
+    const win = iframe.contentWindow
+    if (!win) return
+    win.focus()
+    win.print()
+    // Bersihkan setelah dialog cetak selesai; timeout jadi jaring pengaman lintas-browser.
+    win.onafterprint = () => iframe.remove()
+    setTimeout(() => {
+      if (document.body.contains(iframe)) iframe.remove()
+    }, 60_000)
+  }
+  document.body.appendChild(iframe)
 }
 
 const INVOICE_TONE: Record<InvoiceStatus, Tone> = {
@@ -89,6 +180,16 @@ async function fetchCustomerNames(): Promise<Map<string, CustomerLite>> {
   return map
 }
 
+/** Baris "label · nilai" di pratinjau tagihan (rincian nominal & tanggal). */
+function DetailLine({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
+  return (
+    <div className="spread">
+      <span className="muted" style={{ fontSize: '0.85rem' }}>{label}</span>
+      <span className={muted ? 'muted' : 'tnum'} style={{ fontSize: '0.85rem' }}>{value}</span>
+    </div>
+  )
+}
+
 /** Satu metrik ringkasan di strip atas (tunggakan, jumlah menunggak, dsb.). */
 function SummaryCard({ label, value, tone }: { label: string; value: string; tone?: 'critical' | 'good' }) {
   const color = tone === 'critical' ? 'var(--critical-ink)' : tone === 'good' ? 'var(--good-ink)' : undefined
@@ -110,7 +211,6 @@ function SummaryCard({ label, value, tone }: { label: string; value: string; ton
 export function InvoicesPage() {
   const { can } = useCan()
   const toast = useToast()
-  const navigate = useNavigate()
   const [invoices, setInvoices] = useState<InvoiceView[]>([])
   const [obligation, setObligation] = useState<TaxObligationView | null>(null)
   const [names, setNames] = useState<Map<string, CustomerLite>>(new Map())
@@ -122,6 +222,10 @@ export function InvoicesPage() {
   const [payTarget, setPayTarget] = useState<InvoiceView | null>(null)
   const [payNote, setPayNote] = useState('')
   const [voidTarget, setVoidTarget] = useState<InvoiceView | null>(null)
+  // Pratinjau tagihan (flyout ala klik baris tabel lain), plus riwayat pembayarannya.
+  const [detail, setDetail] = useState<InvoiceView | null>(null)
+  const [payments, setPayments] = useState<PaymentView[]>([])
+  const [loadingPayments, setLoadingPayments] = useState(false)
 
   const canManage = can('billing.invoice.manage')
   const canPay = can('billing.payment.manage')
@@ -242,6 +346,36 @@ export function InvoicesPage() {
     await run(() => voidInvoice(id), 'Tagihan dibatalkan')
   }
 
+  // Klik baris membuka pratinjau (seragam dengan tabel lain). Riwayat pembayaran
+  // ditarik terpisah; `detailIdRef` membuang balasan basi bila baris cepat ditukar.
+  const detailIdRef = useRef<string | null>(null)
+  const openDetail = (inv: InvoiceView) => {
+    detailIdRef.current = inv.id
+    setDetail(inv)
+    setPayments([])
+    setLoadingPayments(true)
+    listPayments(inv.id)
+      .then((p) => {
+        if (detailIdRef.current === inv.id) setPayments(p)
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (detailIdRef.current === inv.id) setLoadingPayments(false)
+      })
+  }
+  const closeDetail = () => {
+    detailIdRef.current = null
+    setDetail(null)
+    setPayments([])
+  }
+
+  // Jaga isi pratinjau tetap terkini setelah bayar/batal memuat ulang daftar.
+  useEffect(() => {
+    if (!detail) return
+    const fresh = invoices.find((i) => i.id === detail.id)
+    if (fresh && fresh !== detail) setDetail(fresh)
+  }, [invoices, detail])
+
   const columns: Column<InvoiceView>[] = [
     {
       key: 'number',
@@ -304,45 +438,35 @@ export function InvoicesPage() {
         </div>
       ),
     },
-    {
-      key: 'actions',
-      header: '',
-      width: '1%',
-      cell: (i) => {
-        const payable = i.status === 'ISSUED' || i.status === 'OVERDUE'
-        if (!payable || (!canPay && !canManage)) return null
-        return (
-          <div className="row" style={{ gap: '0.3rem', justifyContent: 'flex-end' }}>
-            {canPay && (
-              <Button
-                variant="subtle"
-                disabled={busy}
-                onClick={(e: MouseEvent<HTMLButtonElement>) => {
-                  e.stopPropagation()
-                  setPayNote('')
-                  setPayTarget(i)
-                }}
-              >
-                Catat bayar
-              </Button>
-            )}
-            {canManage && (
-              <Button
-                variant="danger"
-                disabled={busy}
-                onClick={(e: MouseEvent<HTMLButtonElement>) => {
-                  e.stopPropagation()
-                  setVoidTarget(i)
-                }}
-              >
-                Batalkan
-              </Button>
-            )}
-          </div>
-        )
-      },
-    },
   ]
+
+  // Aksi per-baris di menu `…` ala Azure DataGrid (seragam dengan Pelanggan), bukan tombol inline.
+  // Cetak/Unduh PDF selalu ada; Catat bayar & Batalkan hanya untuk tagihan yang masih tertagih.
+  const rowActions = (i: InvoiceView): RowAction[] => {
+    const payable = i.status === 'ISSUED' || i.status === 'OVERDUE'
+    const list: RowAction[] = [
+      {
+        key: 'print',
+        label: 'Cetak / Unduh PDF',
+        icon: <Printer size={16} />,
+        onClick: () => printInvoice(i, names.get(i.customerId)),
+      },
+    ]
+    if (payable && canPay)
+      list.push({
+        key: 'pay',
+        label: 'Catat bayar',
+        icon: <Wallet size={16} />,
+        disabled: busy,
+        onClick: () => {
+          setPayNote('')
+          setPayTarget(i)
+        },
+      })
+    if (payable && canManage)
+      list.push({ key: 'void', label: 'Batalkan', icon: <Ban size={16} />, disabled: busy, onClick: () => setVoidTarget(i) })
+    return list
+  }
 
   // CommandBar ala Azure: primary `+ Terbitkan tagihan` dipatok kiri, seragam dengan Pelanggan.
   const primary: CommandAction | undefined = canManage
@@ -395,7 +519,8 @@ export function InvoicesPage() {
         columns={columns}
         rows={rows}
         rowKey={(i) => i.id}
-        onRowClick={(i) => navigate(`/customers/${i.customerId}`)}
+        onRowClick={openDetail}
+        rowActions={rowActions}
         loading={loading}
         initialSort={{ key: 'due', dir: 'desc' }}
         empty={
@@ -410,6 +535,90 @@ export function InvoicesPage() {
           />
         }
       />
+
+      <Blade
+        open={detail != null}
+        title={detail ? `Tagihan ${detail.number}` : ''}
+        subtitle={detail ? names.get(detail.customerId)?.name ?? 'Pelanggan' : undefined}
+        size="sm"
+        onClose={closeDetail}
+        footer={
+          detail && (
+            <>
+              <Button variant="primary" onClick={() => printInvoice(detail, names.get(detail.customerId))}>
+                <Printer size={15} /> Cetak / Unduh PDF
+              </Button>
+              {(detail.status === 'ISSUED' || detail.status === 'OVERDUE') && canPay && (
+                <Button
+                  disabled={busy}
+                  onClick={() => {
+                    setPayNote('')
+                    setPayTarget(detail)
+                  }}
+                >
+                  Catat bayar
+                </Button>
+              )}
+              <Button onClick={closeDetail}>Tutup</Button>
+            </>
+          )
+        }
+      >
+        {detail && (
+          <div className="stack" style={{ gap: '1rem' }}>
+            <div className="row" style={{ gap: '0.3rem', flexWrap: 'wrap' }}>
+              <Badge tone={INVOICE_TONE[detail.status]}>{INVOICE_LABEL[detail.status]}</Badge>
+              {detail.prorated && <Badge tone="accent">prorata{detail.proratedDays ? ` ${detail.proratedDays} hari` : ''}</Badge>}
+              {detail.gatewayProvider && <Badge tone="neutral">{detail.gatewayProvider}</Badge>}
+            </div>
+
+            <div className="card stack" style={{ gap: '0.4rem' }}>
+              <DetailLine label="Dasar (DPP)" value={fmtRupiah(Number(detail.baseAmount))} />
+              {Number(detail.taxAmount) > 0 && (
+                <DetailLine
+                  label={`PPN${detail.taxRate ? ` (${(Number(detail.taxRate) * 100).toFixed(2).replace(/\.?0+$/, '')}%)` : ''}`}
+                  value={fmtRupiah(Number(detail.taxAmount))}
+                />
+              )}
+              <div className="spread" style={{ borderTop: '1px solid var(--line)', paddingTop: '0.4rem' }}>
+                <strong>Total</strong>
+                <strong className="tnum">{fmtRupiah(Number(detail.amount))}</strong>
+              </div>
+            </div>
+
+            <div className="stack" style={{ gap: '0.4rem' }}>
+              <DetailLine label="Periode" value={`${fmtDate(detail.periodStart)} – ${fmtDate(detail.periodEnd)}`} muted />
+              <DetailLine label="Tanggal terbit" value={fmtDate(detail.issuedAt.slice(0, 10))} muted />
+              <DetailLine label="Jatuh tempo" value={fmtDate(detail.dueDate)} muted />
+              {detail.paidAt && <DetailLine label="Dibayar" value={fmtDate(detail.paidAt.slice(0, 10))} muted />}
+            </div>
+
+            <div className="stack" style={{ gap: '0.4rem' }}>
+              <strong style={{ fontSize: '0.9rem' }}>Riwayat pembayaran</strong>
+              {loadingPayments ? (
+                <span className="muted" style={{ fontSize: '0.85rem' }}>Memuat…</span>
+              ) : payments.length === 0 ? (
+                <span className="muted" style={{ fontSize: '0.85rem' }}>Belum ada pembayaran tercatat.</span>
+              ) : (
+                payments.map((p) => (
+                  <div key={p.id} className="card spread" style={{ gap: '0.5rem', padding: '0.5rem 0.65rem' }}>
+                    <div className="stack" style={{ gap: '0.1rem' }}>
+                      <span className="tnum">{fmtRupiah(Number(p.amount))}</span>
+                      <span className="muted" style={{ fontSize: '0.78rem' }}>
+                        {p.provider}
+                        {p.note ? ` · ${p.note}` : ''}
+                      </span>
+                    </div>
+                    <span className="muted" style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
+                      {fmtDate(p.paidAt.slice(0, 10))}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </Blade>
 
       {confirmGenerate && (
         <Modal

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import {
   createNas,
@@ -16,7 +17,7 @@ import {
 import type { Area } from '../api/types'
 import { useCan } from '../auth/useCan'
 import { Blade } from '@/components/organisms'
-import { DataTable, type Column } from '@/components/organisms'
+import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { Badge, Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { Checkbox } from '@fluentui/react-components'
 import { SearchInput } from '@/components/molecules'
@@ -356,32 +357,19 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
         <StatusBadge status={nas.enabled ? 'ACTIVE' : 'INACTIVE'} label={nas.enabled ? 'aktif' : 'nonaktif'} />
       ),
     },
-    ...(canManage
-      ? [
-          {
-            key: 'actions',
-            header: '',
-            align: 'right',
-            width: '1%',
-            cell: (nas: NasView) => (
-              <div className="row" style={{ justifyContent: 'flex-end' }}>
-                <Button onClick={() => edit(nas)}>Ubah</Button>
-                <Button
-                  onClick={() => {
-                    void (async () => {
-                      if (await confirm({ title: 'Hapus BRAS', message: `Hapus BRAS ${nas.name}?`, confirmLabel: 'Hapus', danger: true })) {
-                        void run(() => deleteNas(nas.id), 'BRAS dihapus')
-                      }
-                    })()
-                  }}
-                >
-                  Hapus
-                </Button>
-              </div>
-            ),
-          } satisfies Column<NasView>,
-        ]
-      : []),
+  ]
+
+  // Aksi per-baris di menu `…` ala Azure DataGrid (seragam dengan Pelanggan), bukan tombol inline.
+  const remove = (nas: NasView) => {
+    void (async () => {
+      if (await confirm({ title: 'Hapus BRAS', message: `Hapus BRAS ${nas.name}?`, confirmLabel: 'Hapus', danger: true })) {
+        void run(() => deleteNas(nas.id), 'BRAS dihapus')
+      }
+    })()
+  }
+  const rowActions = (nas: NasView): RowAction[] => [
+    { key: 'edit', label: 'Ubah', icon: <Pencil size={16} />, onClick: () => edit(nas) },
+    { key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => remove(nas) },
   ]
 
   return (
@@ -619,6 +607,7 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
         rowKey={(nas) => nas.id}
         loading={loading}
         initialSort={{ key: 'name', dir: 'asc' }}
+        rowActions={canManage ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || vendorFilter || statusFilter ? 'Tidak ada BRAS yang cocok' : 'Belum ada BRAS'}

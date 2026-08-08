@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Download, KeyRound, Power, PowerOff, Trash2 } from 'lucide-react'
 import { ApiError } from '../api/client'
 import {
   deleteAccount,
@@ -12,7 +13,7 @@ import {
   type VpnAccountView,
 } from '../api/vpn'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '@/components/organisms'
+import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
@@ -221,38 +222,37 @@ export function VpnPage() {
       sortValue: (a) => (a.online ? 1 : 0),
       cell: (a) => <LiveIndicator online={a.online} lastHandshakeAt={a.lastHandshakeAt} />,
     },
-    {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (a) => (
-        <div className="row" style={{ justifyContent: 'flex-end' }}>
-          {canConfig && (
-            <>
-              <Button
-                onClick={() => void saveBlob(() => downloadAccountRouterOs(a.id), `${a.username}.rsc`, toast.error)}
-              >
-                RouterOS
-              </Button>
-              <Button
-                onClick={() => void saveBlob(() => downloadAccountOvpn(a.id), `${a.username}.ovpn`, toast.error)}
-              >
-                .ovpn
-              </Button>
-            </>
-          )}
-          {canManage && (
-            <>
-              <Button onClick={() => toggle(a)}>{a.status === 'ENABLED' ? 'Nonaktifkan' : 'Aktifkan'}</Button>
-              <Button onClick={() => rotate(a)}>Rotasi password</Button>
-              <Button onClick={() => remove(a)}>Hapus</Button>
-            </>
-          )}
-        </div>
-      ),
-    },
   ]
+
+  // Aksi per-baris di menu `…` ala Azure DataGrid (seragam dengan Pelanggan), bukan deretan tombol inline.
+  const rowActions = (a: VpnAccountView): RowAction[] => {
+    const list: RowAction[] = []
+    if (canConfig) {
+      list.push({
+        key: 'routeros',
+        label: 'Unduh RouterOS',
+        icon: <Download size={16} />,
+        onClick: () => void saveBlob(() => downloadAccountRouterOs(a.id), `${a.username}.rsc`, toast.error),
+      })
+      list.push({
+        key: 'ovpn',
+        label: 'Unduh .ovpn',
+        icon: <Download size={16} />,
+        onClick: () => void saveBlob(() => downloadAccountOvpn(a.id), `${a.username}.ovpn`, toast.error),
+      })
+    }
+    if (canManage) {
+      list.push({
+        key: 'toggle',
+        label: a.status === 'ENABLED' ? 'Nonaktifkan' : 'Aktifkan',
+        icon: a.status === 'ENABLED' ? <PowerOff size={16} /> : <Power size={16} />,
+        onClick: () => toggle(a),
+      })
+      list.push({ key: 'rotate', label: 'Rotasi password', icon: <KeyRound size={16} />, onClick: () => rotate(a) })
+      list.push({ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => remove(a) })
+    }
+    return list
+  }
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
@@ -306,6 +306,7 @@ export function VpnPage() {
         rowKey={(a) => a.id}
         loading={loading}
         initialSort={{ key: 'label', dir: 'asc' }}
+        rowActions={canConfig || canManage ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada akun yang cocok' : 'Belum ada akun VPN'}

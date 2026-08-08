@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Activity, Check, Trash2, X } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type {
@@ -9,7 +10,7 @@ import type {
   OnuHistoryView,
 } from '../api/monitoring'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column } from '@/components/organisms'
+import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { Button, EmptyState, Segmented, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { Drawer, SearchInput } from '@/components/molecules'
 import { useToast } from '@/system'
@@ -142,23 +143,16 @@ export function MonitoringPage() {
       ),
     },
   ]
-  if (canManageCollector) {
-    collectorColumns.push({
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (c) => (
-        <Button
-          variant="danger"
-          size="small"
-          onClick={() => void run(() => api.del(`/api/monitoring/collectors/${c.id}`), 'Collector dihapus')}
-        >
-          Hapus
-        </Button>
-      ),
-    })
-  }
+
+  // Aksi per-baris di menu `…` ala Azure DataGrid (seragam dengan Pelanggan), bukan tombol inline.
+  const collectorActions = (c: CollectorView): RowAction[] => [
+    {
+      key: 'delete',
+      label: 'Hapus',
+      icon: <Trash2 size={16} />,
+      onClick: () => void run(() => api.del(`/api/monitoring/collectors/${c.id}`), 'Collector dihapus'),
+    },
+  ]
 
   const filteredAlarms = useMemo(() => {
     const q = alarmQuery.trim().toLowerCase()
@@ -212,32 +206,21 @@ export function MonitoringPage() {
         </span>
       ),
     },
-    {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      width: '1%',
-      cell: (a) => (
-        <div className="row" style={{ justifyContent: 'flex-end', gap: '0.35rem', flexWrap: 'nowrap' }}>
-          {a.entityType === 'ONU' && can('monitoring.metric.view') && (
-            <Button variant="subtle" size="small" onClick={() => void openHistory(a.entityId, a.entityLabel)}>
-              Redaman
-            </Button>
-          )}
-          {can('monitoring.alarm.ack') && a.status === 'ACTIVE' && (
-            <Button size="small" onClick={() => void run(() => api.post(`/api/monitoring/alarms/${a.id}/acknowledge`), 'Alarm diakui')}>
-              Akui
-            </Button>
-          )}
-          {can('monitoring.alarm.ack') && a.status !== 'CLEARED' && (
-            <Button variant="subtle" size="small" onClick={() => void run(() => api.post(`/api/monitoring/alarms/${a.id}/clear`), 'Alarm ditutup')}>
-              Tutup
-            </Button>
-          )}
-        </div>
-      ),
-    },
   ]
+
+  // Aksi per-baris di menu `…` ala Azure DataGrid (seragam dengan Pelanggan), bukan tombol inline.
+  const canMetric = can('monitoring.metric.view')
+  const canAck = can('monitoring.alarm.ack')
+  const alarmActions = (a: AlarmView): RowAction[] => {
+    const list: RowAction[] = []
+    if (a.entityType === 'ONU' && canMetric)
+      list.push({ key: 'history', label: 'Redaman', icon: <Activity size={16} />, onClick: () => void openHistory(a.entityId, a.entityLabel) })
+    if (canAck && a.status === 'ACTIVE')
+      list.push({ key: 'ack', label: 'Akui', icon: <Check size={16} />, onClick: () => void run(() => api.post(`/api/monitoring/alarms/${a.id}/acknowledge`), 'Alarm diakui') })
+    if (canAck && a.status !== 'CLEARED')
+      list.push({ key: 'clear', label: 'Tutup', icon: <X size={16} />, onClick: () => void run(() => api.post(`/api/monitoring/alarms/${a.id}/clear`), 'Alarm ditutup') })
+    return list
+  }
 
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
@@ -321,6 +304,7 @@ export function MonitoringPage() {
             rowKey={(c) => c.id}
             loading={loading}
             initialSort={{ key: 'name', dir: 'asc' }}
+            rowActions={canManageCollector ? collectorActions : undefined}
             empty={
               <EmptyState
                 title={collectorQuery ? 'Tidak ada collector yang cocok' : 'Belum ada collector'}
@@ -351,6 +335,7 @@ export function MonitoringPage() {
           rowKey={(a) => a.id}
           loading={loading}
           initialSort={{ key: 'severity', dir: 'desc' }}
+          rowActions={canMetric || canAck ? alarmActions : undefined}
           empty={
             <EmptyState
               title={alarmQuery ? 'Tidak ada alarm yang cocok' : statusFilter === 'ACTIVE' ? 'Tidak ada alarm aktif' : 'Belum ada alarm'}
