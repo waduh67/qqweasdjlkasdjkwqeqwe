@@ -6,6 +6,28 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-08 — Redesign Azure Fase 6: seragamkan aksi tabel ke menu `…` + pratinjau tagihan
+
+**Diubah**
+- **Semua tabel data memakai menu aksi per-baris `…` (kebab)** ala tabel Pelanggan,
+  menggantikan tombol inline (Hapus/Ubah/Batal, dll.) yang memenuhi kolom. Tercakup:
+  Area, Role, BRAS/RADIUS, Server VPN, Monitoring (collector + alarm), Tenant, Akun VPN,
+  dan inbox Provisioning ONU. Aksi tetap tergerbang izin — baris tanpa aksi (mis. tenant
+  `platform`) tak menampilkan menu.
+- **Akun VPN dirampingkan** dari 5 tombol per baris menjadi satu menu `…` (Unduh
+  RouterOS/`.ovpn`, Nonaktifkan/Aktifkan, Rotasi password, Hapus).
+
+**Diperbaiki**
+- **Klik baris tagihan tak lagi nyasar ke dashboard.** Sebelumnya baris Tagihan
+  menembak rute mati `/customers/:id`; kini membuka **Blade pratinjau** seperti tabel
+  lain — berisi rincian DPP/PPN/Total, tanggal (periode/terbit/jatuh tempo/dibayar),
+  dan riwayat pembayaran.
+
+**Ditambahkan**
+- **Cetak / Unduh PDF tagihan** dari menu `…` dan footer pratinjau — merakit HTML
+  tagihan dan memanggil cetak browser lewat `<iframe>` tersembunyi (tanpa endpoint PDF
+  server). Aksi lain di menu: Catat bayar & Batalkan, sesuai izin.
+
 ### 2026-08-07 — Redesign Azure Fase 5: seragamkan header halaman
 
 **Diubah**

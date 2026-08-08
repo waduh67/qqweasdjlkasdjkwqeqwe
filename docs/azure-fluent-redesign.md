@@ -96,6 +96,12 @@ ThemeProvider → FluentProvider(azureLight|azureDark)
   langganan, provisioning, impor, setelan pajak/gateway/billing, PSB ekspres, tenant, VPN,
   BRAS). Pengecualian sadar: halaman **detail** (Pelanggan/OLT/Work Order) tetap memakai
   header kustom karena judulnya menyandingkan badge status inline dengan `<h1>`.
+- **Phase 6** ✅ Seragamkan aksi tabel ke menu `…` (kebab) `rowActions` ala Pelanggan —
+  **tak ada tombol inline** (Hapus/Ubah/Batal) di kolom tabel. Migrasi mencakup Area,
+  Role, BRAS, Server VPN, Monitoring (collector + alarm), Tenant, Akun VPN (5 tombol → 1
+  menu), dan inbox Provisioning ONU. Klik baris membuka **Blade** detail (bukan navigasi);
+  Tagihan kini punya Blade **pratinjau** (rincian + riwayat bayar) plus aksi **Cetak /
+  Unduh PDF** via cetak browser (`<iframe>`, tanpa endpoint PDF server).
 
 ## Panduan membuat halaman baru
 1. Bungkus judul dengan `PageHeader` (breadcrumb + title + CommandBar slot).
