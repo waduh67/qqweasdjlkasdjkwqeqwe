@@ -155,9 +155,14 @@ jobs:
     #    Image JVM ditarik dari GHCR; image GenieACS dibangun lokal (`--build`).
     #    Pakai ulang secret SSH prod VPS_HOST/VPS_USER/VPS_SSH_KEY (demo co-located di
     #    HOST & USER yang SAMA dengan prod) + GHCR_USER/GHCR_PAT — tak ada secret baru.
+    #
+    #    `needs: deploy` (BUKAN cuma build-and-push): prod `deploy` & demo ini SSH ke
+    #    HOST yang sama; kalau jalan paralel, dua `docker compose pull` berebut blob di
+    #    content-store containerd → error "failed commit on ref ... rename ... no such
+    #    file". Diserialkan: prod dulu, demo menyusul.
     # -------------------------------------------------------------------------
     deploy-demo:
-        needs: build-and-push
+        needs: [build-and-push, deploy]
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
