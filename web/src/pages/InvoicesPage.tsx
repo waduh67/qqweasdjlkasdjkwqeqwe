@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Ban, FlaskConical, Printer, Wallet } from 'lucide-react'
+import { Ban, Copy, FlaskConical, Printer, Wallet } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type { CustomerView } from '../api/network'
@@ -368,6 +368,14 @@ export function InvoicesPage() {
     window.setTimeout(() => void reload(), SIMULATION_SETTLE_MS)
   }
 
+  // Salin id sesi bayar penyedia — dipakai di panel Simulasi Pembayaran (/platform) untuk
+  // tagihan yang sesinya perlu dipaksa lunas/kedaluwarsa secara manual.
+  const copySessionId = (sessionId: string) =>
+    navigator.clipboard
+      ?.writeText(sessionId)
+      .then(() => toast.success('Payment session ID disalin'))
+      .catch(() => toast.error('Gagal menyalin payment session ID'))
+
   // Klik baris membuka pratinjau (seragam dengan tabel lain). Riwayat pembayaran
   // ditarik terpisah; `detailIdRef` membuang balasan basi bila baris cepat ditukar.
   const detailIdRef = useRef<string | null>(null)
@@ -503,6 +511,14 @@ export function InvoicesPage() {
         icon: <FlaskConical size={16} />,
         disabled: busy,
         onClick: () => void doSimulate(i, 'EXPIRED'),
+      })
+    }
+    if (i.paymentSessionId) {
+      list.push({
+        key: 'copy-session',
+        label: 'Salin payment session ID',
+        icon: <Copy size={16} />,
+        onClick: () => void copySessionId(i.paymentSessionId!),
       })
     }
     return list

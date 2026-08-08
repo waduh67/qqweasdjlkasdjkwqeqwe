@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { FlaskConical } from 'lucide-react'
+import { Copy, FlaskConical } from 'lucide-react'
 import { ApiError } from '../api/client'
 import {
   INVOICE_STATUS_LABEL,
@@ -495,7 +495,13 @@ function InvoiceRow({
   onSimulate?: (inv: SubscriptionInvoiceView, status: SimulatedChargeStatus) => void
   busy: boolean
 }) {
+  const toast = useToast()
   const outstanding = inv.status === 'ISSUED' || inv.status === 'OVERDUE'
+  const copySession = () =>
+    navigator.clipboard
+      ?.writeText(inv.paymentSessionId ?? '')
+      .then(() => toast.success('Payment session ID disalin'))
+      .catch(() => toast.error('Gagal menyalin payment session ID'))
   return (
     <div
       className="row"
@@ -518,6 +524,20 @@ function InvoiceRow({
           {fmtDate(inv.periodStart)}–{fmtDate(inv.periodEnd)} · jatuh tempo {fmtDate(inv.dueDate)}
           {inv.paidAt && ` · lunas ${fmtDate(inv.paidAt)}`}
         </span>
+        {inv.paymentSessionId && (
+          <span className="row muted" style={{ gap: '0.3rem', alignItems: 'center', fontSize: '0.72rem' }}>
+            <span>Session:</span>
+            <code style={{ fontFamily: 'monospace' }}>{inv.paymentSessionId}</code>
+            <Button
+              variant="subtle"
+              icon={<Copy size={12} />}
+              onClick={() => void copySession()}
+              title="Salin payment session ID"
+              aria-label="Salin payment session ID"
+              style={{ minWidth: 'auto', padding: '0.1rem 0.25rem' }}
+            />
+          </span>
+        )}
       </div>
       <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{fmtIdr(inv.amount)}</span>
       {inv.simulatable && onSimulate && (

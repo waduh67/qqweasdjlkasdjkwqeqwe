@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { Copy } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import {
   deleteQrisImage,
@@ -568,6 +569,26 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
           {account.shortName && (
             <span className="muted" style={{ fontSize: '0.82rem' }}>
               Nama singkat: <strong>{account.shortName}</strong>
+            </span>
+          )}
+
+          {/* Sub-merchant ID dipakai saat rekonsiliasi & panel Simulasi Pembayaran platform. */}
+          {account.subMerchantUuid && (
+            <span className="row muted" style={{ gap: '0.35rem', alignItems: 'center', fontSize: '0.82rem' }}>
+              <span>Sub-merchant ID:</span>
+              <code style={{ fontFamily: 'monospace' }}>{account.subMerchantUuid}</code>
+              <Button
+                variant="subtle"
+                icon={<Copy size={13} />}
+                onClick={() =>
+                  void navigator.clipboard
+                    ?.writeText(account.subMerchantUuid ?? '')
+                    .then(() => toast.success('Sub-merchant ID disalin'))
+                }
+                title="Salin sub-merchant ID"
+                aria-label="Salin sub-merchant ID"
+                style={{ minWidth: 'auto', padding: '0.1rem 0.25rem' }}
+              />
             </span>
           )}
 

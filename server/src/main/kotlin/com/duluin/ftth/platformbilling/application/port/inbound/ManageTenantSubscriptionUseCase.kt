@@ -84,4 +84,9 @@ data class SubscriptionInvoiceView(
      * untuk memunculkan aksi "Simulasi bayar" — di produksi selalu `false`.
      */
     val simulatable: Boolean = false,
+    /**
+     * Id sesi bayar penyedia (`gateway_ref`, mis. `data.id` Pivot) — dibuka HANYA saat [simulatable]
+     * agar penguji bisa menyalinnya ke panel simulasi platform. Di produksi selalu `null`.
+     */
+    val paymentSessionId: String? = null,
 )

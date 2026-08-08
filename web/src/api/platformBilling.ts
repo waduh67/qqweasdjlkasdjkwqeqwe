@@ -161,6 +161,11 @@ export interface SubscriptionInvoiceView {
    * mode sandbox, sesi bayar sudah dibuat, tagihan masih tertunggak. Di produksi selalu false.
    */
   simulatable: boolean
+  /**
+   * Id sesi bayar penyedia (`data.id` Pivot) — hanya terisi saat mode sandbox, dipakai untuk
+   * disalin ke panel Simulasi Pembayaran di /platform. Di produksi selalu null.
+   */
+  paymentSessionId: string | null
 }
 
 /** Satu metode bayar in-app; [channels] kosong bila tak perlu pilih bank (QRIS). */

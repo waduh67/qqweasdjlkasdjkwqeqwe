@@ -42,6 +42,11 @@ interface ManageTenantPivotAccountUseCase {
  */
 data class TenantPivotAccountView(
     val provisioned: Boolean,
+    /**
+     * UUID sub-account di Pivot (header `x-submerchant-id`); null bila belum diprovisi. Bukan
+     * rahasia — ditampilkan agar bisa dipakai saat rekonsiliasi & panel simulasi pembayaran.
+     */
+    val subMerchantUuid: String?,
     val type: SubAccountType,
     val status: SubAccountStatus,
     val kycStatus: SubAccountKycStatus,

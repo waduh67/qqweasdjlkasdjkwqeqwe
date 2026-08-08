@@ -133,6 +133,7 @@ internal fun Invoice.toView(sandbox: Boolean = false) = InvoiceView(
         gatewayProvider.equals("PIVOT", ignoreCase = true) &&
         !gatewayRef.isNullOrBlank() &&
         (status == InvoiceStatus.ISSUED || status == InvoiceStatus.OVERDUE),
+    paymentSessionId = gatewayRef?.takeIf { sandbox },
 )
 
 internal fun Payment.toView() = PaymentView(

@@ -1,5 +1,6 @@
 package com.duluin.ftth.platformbilling.application.service
 
+import com.duluin.ftth.billing.application.service.PivotMasterConfigProvider
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.platformbilling.application.port.inbound.ConfigureSubscriptionCommand
@@ -32,6 +33,7 @@ class TenantSubscriptionService(
     private val invoiceGenerator: PlatformInvoiceGenerator,
     private val paymentService: PlatformPaymentService,
     private val tenantApi: TenantApi,
+    private val masterConfig: PivotMasterConfigProvider,
     private val auditor: AuditRecorder,
 ) : ManageTenantSubscriptionUseCase {
 
@@ -84,11 +86,11 @@ class TenantSubscriptionService(
         // yang baru (hindari tagihan dobel saat "Terbitkan tagihan" diklik berulang) — seragam
         // dengan jalur perpanjangan mandiri tenant (TenantSelfSubscriptionService.renew).
         invoiceRepository.findOutstandingBySubscriptionId(subscription.id).firstOrNull()?.let {
-            return it.toView()
+            return it.toView(sandboxMode())
         }
         val invoice = invoiceGenerator.issueFor(subscription, LocalDate.now(), force = true)
             ?: throw NotFoundException("Tagihan tak dapat diterbitkan (langganan dibatalkan atau tagihan periode ini sudah ada)")
-        return invoice.toView()
+        return invoice.toView(sandboxMode())
     }
 
     @Transactional
@@ -104,12 +106,12 @@ class TenantSubscriptionService(
             tenantId = tenantApi.platformTenantId(),
             detail = mapOf("number" to saved.number),
         )
-        return saved.toView()
+        return saved.toView(sandboxMode())
     }
 
     @Transactional
     override fun recordManualPayment(invoiceId: UUID, command: ManualPaymentCommand): SubscriptionInvoiceView =
-        paymentService.recordManualPayment(invoiceId, command.amount, command.note).toView()
+        paymentService.recordManualPayment(invoiceId, command.amount, command.note).toView(sandboxMode())
 
     @Transactional
     override fun cancel(tenantId: UUID): TenantSubscriptionDetailView {
@@ -128,7 +130,8 @@ class TenantSubscriptionService(
     }
 
     private fun TenantSubscription.toDetailView(): TenantSubscriptionDetailView {
-        val invoices = invoiceRepository.findBySubscriptionId(id).map { it.toView() }
+        val sandbox = sandboxMode()
+        val invoices = invoiceRepository.findBySubscriptionId(id).map { it.toView(sandbox) }
         return TenantSubscriptionDetailView(
             tenantId = tenantId,
             monthlyFee = monthlyFee,
@@ -143,7 +146,11 @@ class TenantSubscriptionService(
         )
     }
 
-    private fun TenantSubscriptionInvoice.toView() = SubscriptionInvoiceView(
+    /**
+     * [sandbox] = Pivot master sedang mode sandbox; hanya saat itu id sesi bayar dibuka agar
+     * super-admin bisa menyalinnya ke panel Simulasi Pembayaran.
+     */
+    private fun TenantSubscriptionInvoice.toView(sandbox: Boolean) = SubscriptionInvoiceView(
         id = id,
         tenantId = tenantId,
         number = number,
@@ -156,5 +163,12 @@ class TenantSubscriptionService(
         paidAt = paidAt,
         gatewayProvider = gatewayProvider,
         payUrl = payUrl,
+        simulatable = sandbox &&
+            gatewayProvider.equals("PIVOT", ignoreCase = true) &&
+            !gatewayRef.isNullOrBlank() &&
+            isOutstanding,
+        paymentSessionId = gatewayRef?.takeIf { sandbox },
     )
+
+    private fun sandboxMode(): Boolean = masterConfig.current()?.sandbox == true
 }
