@@ -27,6 +27,7 @@ class NotificationSettingsPersistenceAdapter(
     override fun save(settings: NotificationSettings): NotificationSettings {
         val encryptedHttpToken = settings.httpToken?.let(cipher::encrypt)
         val encryptedMetaToken = settings.metaAccessToken?.let(cipher::encrypt)
+        val encryptedQontakToken = settings.qontakAccessToken?.let(cipher::encrypt)
         val entity = jpa.findById(settings.id).orElse(null)?.apply {
             provider = settings.provider
             gatewayEnabled = settings.gatewayEnabled
@@ -37,6 +38,8 @@ class NotificationSettingsPersistenceAdapter(
             metaPhoneNumberId = settings.metaPhoneNumberId
             metaAccessToken = encryptedMetaToken
             metaWabaId = settings.metaWabaId
+            qontakAccessToken = encryptedQontakToken
+            qontakChannelIntegrationId = settings.qontakChannelIntegrationId
             notifyOnSubscriptionLifecycle = settings.notifyOnSubscriptionLifecycle
             notifyOnInvoiceReminder = settings.notifyOnInvoiceReminder
             notifyOnWorkOrderSchedule = settings.notifyOnWorkOrderSchedule
@@ -52,6 +55,8 @@ class NotificationSettingsPersistenceAdapter(
             metaPhoneNumberId = settings.metaPhoneNumberId,
             metaAccessToken = encryptedMetaToken,
             metaWabaId = settings.metaWabaId,
+            qontakAccessToken = encryptedQontakToken,
+            qontakChannelIntegrationId = settings.qontakChannelIntegrationId,
             notifyOnSubscriptionLifecycle = settings.notifyOnSubscriptionLifecycle,
             notifyOnInvoiceReminder = settings.notifyOnInvoiceReminder,
             notifyOnWorkOrderSchedule = settings.notifyOnWorkOrderSchedule,
@@ -72,6 +77,8 @@ class NotificationSettingsPersistenceAdapter(
         metaPhoneNumberId = metaPhoneNumberId,
         metaAccessToken = cipher.decryptQuietly(metaAccessToken, "meta_access_token", log),
         metaWabaId = metaWabaId,
+        qontakAccessToken = cipher.decryptQuietly(qontakAccessToken, "qontak_access_token", log),
+        qontakChannelIntegrationId = qontakChannelIntegrationId,
         notifyOnSubscriptionLifecycle = notifyOnSubscriptionLifecycle,
         notifyOnInvoiceReminder = notifyOnInvoiceReminder,
         notifyOnWorkOrderSchedule = notifyOnWorkOrderSchedule,

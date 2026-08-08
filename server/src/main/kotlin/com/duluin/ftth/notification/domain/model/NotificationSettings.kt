@@ -12,8 +12,36 @@ import java.util.UUID
  *  - [HTTP_GENERIC] gateway HTTP pihak-ketiga (Fonnte/Wablas/dsb): satu POST form ke
  *                   endpoint tenant, nama field nomor & pesan dapat disetel.
  *  - [META_CLOUD]   WhatsApp Business Cloud API resmi Meta: kirim template ke Graph API.
+ *  - [QONTAK]       Mekari Qontak, BSP resmi WhatsApp: kirim template lewat Open API-nya.
+ *
+ * Dua yang terakhir adalah jalur WhatsApp RESMI — hanya keduanya yang mengenal template
+ * dan karenanya bisa mengelola katalog template dari aplikasi.
  */
-enum class WhatsAppProvider { LOG, HTTP_GENERIC, META_CLOUD }
+enum class WhatsAppProvider {
+    LOG,
+    HTTP_GENERIC,
+    META_CLOUD,
+    QONTAK,
+    ;
+
+    /** Penyedia resmi WhatsApp (punya API template) — dipakai untuk membuka kartu template. */
+    val official: Boolean get() = this == META_CLOUD || this == QONTAK
+}
+
+/**
+ * Kredensial SIAP-PAKAI untuk API pengelolaan template di sisi penyedia — cermin
+ * [WhatsAppGateway] tapi untuk jalur *manajemen*, bukan jalur *kirim*. Sengaja dipisah:
+ * mengelola template butuh WABA ID (Meta) yang tak dipakai saat mengirim, dan mengirim
+ * butuh Phone Number ID (Meta) yang tak dipakai saat mengelola.
+ *
+ * Hanya lahir bila prasyarat lengkap; kalau tidak, [NotificationSettings.resolveTemplateApi]
+ * mengembalikan null dan [NotificationSettings.templateBlockedReason] menjelaskan apa yang kurang.
+ */
+sealed interface TemplateApi {
+    data class Meta(val wabaId: String, val accessToken: String) : TemplateApi
+
+    data class Qontak(val accessToken: String, val channelIntegrationId: String) : TemplateApi
+}
 
 /**
  * Gateway WhatsApp yang SUDAH teresolusi & terdekripsi — bentuk siap-pakai yang
@@ -46,6 +74,22 @@ sealed interface WhatsAppGateway {
         val templateName: String?,
         val templateLang: String,
     ) : WhatsAppGateway
+
+    /**
+     * Mekari Qontak: kirim lewat `POST /v1/broadcasts/whatsapp/direct` pada kanal
+     * [channelIntegrationId] dengan bearer [accessToken].
+     *
+     * Qontak mengacu template lewat ID, bukan nama seperti Meta. [templateId] null berarti
+     * pemicu belum dipetakan ke template mana pun — dan berbeda dari Meta, itu berarti pesan
+     * TAK BISA dikirim sama sekali: API broadcast direct Qontak hanya menerima template, tak
+     * ada jalur teks bebas di luar jendela percakapan.
+     */
+    data class Qontak(
+        val accessToken: String,
+        val channelIntegrationId: String,
+        val templateId: String?,
+        val templateLang: String,
+    ) : WhatsAppGateway
 }
 
 /**
@@ -76,6 +120,8 @@ class NotificationSettings private constructor(
     metaPhoneNumberId: String?,
     metaAccessToken: String?,
     metaWabaId: String?,
+    qontakAccessToken: String?,
+    qontakChannelIntegrationId: String?,
     notifyOnSubscriptionLifecycle: Boolean,
     notifyOnInvoiceReminder: Boolean,
     notifyOnWorkOrderSchedule: Boolean,
@@ -117,6 +163,17 @@ class NotificationSettings private constructor(
     var metaWabaId: String? = metaWabaId
         private set
 
+    /** Plaintext di domain; terenkripsi di batas persistence (cermin [metaAccessToken]). */
+    var qontakAccessToken: String? = qontakAccessToken
+        private set
+
+    /**
+     * UUID kanal WhatsApp di Qontak (`channel_integration_id`) — dipilih operator dari daftar
+     * yang ditarik lewat `GET /v1/integrations?target_channel=wa`, bukan diketik manual.
+     */
+    var qontakChannelIntegrationId: String? = qontakChannelIntegrationId
+        private set
+
     var notifyOnSubscriptionLifecycle: Boolean = notifyOnSubscriptionLifecycle
         private set
 
@@ -140,6 +197,8 @@ class NotificationSettings private constructor(
         metaPhoneNumberId: String?,
         metaAccessToken: String?,
         metaWabaId: String?,
+        qontakAccessToken: String?,
+        qontakChannelIntegrationId: String?,
         notifyOnSubscriptionLifecycle: Boolean,
         notifyOnInvoiceReminder: Boolean,
         notifyOnWorkOrderSchedule: Boolean,
@@ -155,6 +214,8 @@ class NotificationSettings private constructor(
         this.metaPhoneNumberId = validatePhoneNumberId(metaPhoneNumberId)
         metaAccessToken?.trim()?.takeIf { it.isNotEmpty() }?.let { this.metaAccessToken = validateToken(it, "Access token Meta", MAX_META_TOKEN) }
         this.metaWabaId = validateWabaId(metaWabaId)
+        qontakAccessToken?.trim()?.takeIf { it.isNotEmpty() }?.let { this.qontakAccessToken = validateToken(it, "Access token Qontak", MAX_META_TOKEN) }
+        this.qontakChannelIntegrationId = validateChannelIntegrationId(qontakChannelIntegrationId)
         this.notifyOnSubscriptionLifecycle = notifyOnSubscriptionLifecycle
         this.notifyOnInvoiceReminder = notifyOnInvoiceReminder
         this.notifyOnWorkOrderSchedule = notifyOnWorkOrderSchedule
@@ -195,19 +256,65 @@ class NotificationSettings private constructor(
                 // NotificationSender dari pemetaan pemicu→template. Tanpa pemetaan = teks biasa.
                 WhatsAppGateway.MetaCloud(phoneId, token, templateName = null, templateLang = DEFAULT_TEMPLATE_LANG)
             }
+            WhatsAppProvider.QONTAK -> {
+                val token = qontakAccessToken?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+                val channel = qontakChannelIntegrationId?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+                // templateId SENGAJA null di sini, sama alasannya dengan cabang Meta di atas.
+                WhatsAppGateway.Qontak(token, channel, templateId = null, templateLang = DEFAULT_TEMPLATE_LANG)
+            }
         }
     }
 
     /**
-     * Prasyarat pengelolaan template terpenuhi? Yaitu gateway menyala, penyedianya Meta Cloud
-     * resmi, dan kredensialnya (Phone Number ID + access token) SUDAH TERSIMPAN. Satu sumber
-     * kebenaran untuk penjagaan di service maupun status yang ditampilkan ke UI.
+     * Kredensial API template siap-pakai, atau null bila prasyarat belum terpenuhi. Prasyarat
+     * dihitung dari setelan yang SUDAH TERSIMPAN, jadi token yang baru diketik di form tapi
+     * belum disimpan memang belum membuka pengelolaan template.
+     *
+     * Berpasangan dengan [templateBlockedReason]: satu memberi kredensialnya, satu memberi
+     * alasannya bila tak ada — keduanya membaca kondisi yang sama persis.
      */
-    fun metaTemplateReady(): Boolean =
-        gatewayEnabled &&
-            provider == WhatsAppProvider.META_CLOUD &&
-            !metaPhoneNumberId.isNullOrBlank() &&
-            !metaAccessToken.isNullOrBlank()
+    fun resolveTemplateApi(): TemplateApi? {
+        if (templateBlockedReason() != null) return null
+        return when (provider) {
+            WhatsAppProvider.META_CLOUD -> TemplateApi.Meta(metaWabaId!!.trim(), metaAccessToken!!.trim())
+            WhatsAppProvider.QONTAK ->
+                TemplateApi.Qontak(qontakAccessToken!!.trim(), qontakChannelIntegrationId!!.trim())
+            else -> null
+        }
+    }
+
+    /**
+     * Apa yang menghalangi pengelolaan template, sebagai kalimat siap-tampil — atau null bila
+     * tak ada halangan. Satu sumber kebenaran untuk penjagaan di service maupun kunci di UI,
+     * supaya keduanya tak pernah berbeda pendapat.
+     *
+     * Berbeda dari [resolveGateway], WABA ID Meta termasuk prasyarat WAJIB di sini: tanpa itu
+     * tak ada satu pun operasi template yang bisa dilakukan (semuanya beralamat ke WABA).
+     */
+    @Suppress("ReturnCount")
+    fun templateBlockedReason(): String? {
+        if (!gatewayEnabled) return "Gateway WhatsApp masih nonaktif — nyalakan dulu di kartu Gateway WhatsApp."
+        if (!provider.official) {
+            return "Template hanya berlaku untuk WhatsApp resmi — pilih penyedia Meta Cloud atau Mekari Qontak dulu."
+        }
+        return when (provider) {
+            WhatsAppProvider.META_CLOUD -> when {
+                metaPhoneNumberId.isNullOrBlank() -> "Phone Number ID Meta belum diisi."
+                metaAccessToken.isNullOrBlank() -> "Access token Meta belum tersimpan — simpan setelan gateway dulu."
+                metaWabaId.isNullOrBlank() ->
+                    "WhatsApp Business Account ID belum diisi — lengkapi di kartu Gateway WhatsApp."
+                else -> null
+            }
+            WhatsAppProvider.QONTAK -> when {
+                qontakAccessToken.isNullOrBlank() ->
+                    "Access token Qontak belum tersimpan — simpan setelan gateway dulu."
+                qontakChannelIntegrationId.isNullOrBlank() ->
+                    "Channel WhatsApp Qontak belum dipilih — muat daftar channel di kartu Gateway lalu simpan."
+                else -> null
+            }
+            else -> null
+        }
+    }
 
     companion object {
         const val DEFAULT_PHONE_FIELD = "target"
@@ -229,6 +336,8 @@ class NotificationSettings private constructor(
             metaPhoneNumberId = null,
             metaAccessToken = null,
             metaWabaId = null,
+            qontakAccessToken = null,
+            qontakChannelIntegrationId = null,
             notifyOnSubscriptionLifecycle = false,
             notifyOnInvoiceReminder = false,
             notifyOnWorkOrderSchedule = false,
@@ -248,6 +357,8 @@ class NotificationSettings private constructor(
             metaPhoneNumberId: String?,
             metaAccessToken: String?,
             metaWabaId: String?,
+            qontakAccessToken: String?,
+            qontakChannelIntegrationId: String?,
             notifyOnSubscriptionLifecycle: Boolean,
             notifyOnInvoiceReminder: Boolean,
             notifyOnWorkOrderSchedule: Boolean,
@@ -255,7 +366,7 @@ class NotificationSettings private constructor(
         ): NotificationSettings = NotificationSettings(
             id, tenantId, provider, gatewayEnabled, httpEndpointUrl, httpToken,
             httpPhoneField, httpMessageField, metaPhoneNumberId, metaAccessToken,
-            metaWabaId, notifyOnSubscriptionLifecycle,
+            metaWabaId, qontakAccessToken, qontakChannelIntegrationId, notifyOnSubscriptionLifecycle,
             notifyOnInvoiceReminder, notifyOnWorkOrderSchedule, notifyOnIncidentOpen,
         )
 
@@ -288,6 +399,12 @@ class NotificationSettings private constructor(
         private fun validateWabaId(value: String?): String? {
             val trimmed = value?.trim()?.takeIf { it.isNotEmpty() } ?: return null
             if (trimmed.length > 64) throw ValidationException("WhatsApp Business Account ID maksimal 64 karakter")
+            return trimmed
+        }
+
+        private fun validateChannelIntegrationId(value: String?): String? {
+            val trimmed = value?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+            if (trimmed.length > 64) throw ValidationException("Channel integration ID Qontak maksimal 64 karakter")
             return trimmed
         }
     }

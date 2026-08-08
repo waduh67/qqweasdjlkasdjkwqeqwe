@@ -37,8 +37,8 @@ class NotificationTemplatePersistenceAdapter(
             category = template.category
             status = template.status
             source = template.source
-            metaTemplateId = template.metaTemplateId
-            bodyPreview = template.bodyPreview
+            remoteId = template.remoteId
+            bodyText = template.bodyText
             bodyParamCount = template.bodyParamCount
             syncedAt = template.syncedAt
         } ?: NotificationMessageTemplateJpaEntity(
@@ -48,8 +48,8 @@ class NotificationTemplatePersistenceAdapter(
             category = template.category,
             status = template.status,
             source = template.source,
-            metaTemplateId = template.metaTemplateId,
-            bodyPreview = template.bodyPreview,
+            remoteId = template.remoteId,
+            bodyText = template.bodyText,
             bodyParamCount = template.bodyParamCount,
             syncedAt = template.syncedAt,
         )
@@ -93,8 +93,8 @@ class NotificationTemplatePersistenceAdapter(
         category = category,
         status = status,
         source = source,
-        metaTemplateId = metaTemplateId,
-        bodyPreview = bodyPreview,
+        remoteId = remoteId,
+        bodyText = bodyText,
         bodyParamCount = bodyParamCount,
         syncedAt = syncedAt,
     )

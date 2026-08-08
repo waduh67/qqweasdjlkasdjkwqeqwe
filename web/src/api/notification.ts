@@ -34,17 +34,19 @@ export interface BroadcastDetail {
  *  Setelan notifikasi tenant: gateway WA bawa-sendiri + saklar pemicu.
  *  ------------------------------------------------------------------ */
 
-export type WhatsAppProvider = 'LOG' | 'HTTP_GENERIC' | 'META_CLOUD'
+export type WhatsAppProvider = 'LOG' | 'HTTP_GENERIC' | 'META_CLOUD' | 'QONTAK'
 
 export const PROVIDER_LABEL: Record<WhatsAppProvider, string> = {
   LOG: 'Catat ke log (mode uji)',
   HTTP_GENERIC: 'HTTP generik (Fonnte, Wablas, WAHA, dsb.)',
   META_CLOUD: 'Meta WhatsApp Cloud API',
+  QONTAK: 'Mekari Qontak (WhatsApp Business API)',
 }
 
 /**
  * Setelan seperti dibaca dari server. Token TAK pernah dikembalikan — hanya penanda
- * sudah terisi (`httpTokenSet`/`metaAccessTokenSet`) agar rahasia tak bocor ke UI.
+ * sudah terisi (`httpTokenSet`/`metaAccessTokenSet`/`qontakAccessTokenSet`) agar rahasia
+ * tak bocor ke UI.
  */
 export interface NotificationSettingsView {
   provider: WhatsAppProvider
@@ -56,8 +58,12 @@ export interface NotificationSettingsView {
   metaPhoneNumberId: string | null
   metaAccessTokenSet: boolean
   metaWabaId: string | null
-  /** Prasyarat kartu template terpenuhi (gateway hidup + Meta Cloud + kredensial tersimpan). */
-  metaTemplateReady: boolean
+  qontakAccessTokenSet: boolean
+  qontakChannelIntegrationId: string | null
+  /** Prasyarat kartu template terpenuhi (gateway hidup + penyedia resmi + kredensial tersimpan). */
+  templateReady: boolean
+  /** Kalimat siap-tampil tentang apa yang kurang; null bila sudah siap. */
+  templateBlockedReason: string | null
   notifyOnSubscriptionLifecycle: boolean
   notifyOnInvoiceReminder: boolean
   notifyOnWorkOrderSchedule: boolean
@@ -65,8 +71,8 @@ export interface NotificationSettingsView {
 }
 
 /**
- * Perubahan setelan. Token (`httpToken`/`metaAccessToken`) null/kosong = biarkan yang
- * tersimpan apa adanya, jadi menyunting field lain tak menghapus rahasia.
+ * Perubahan setelan. Token (`httpToken`/`metaAccessToken`/`qontakAccessToken`) null/kosong =
+ * biarkan yang tersimpan apa adanya, jadi menyunting field lain tak menghapus rahasia.
  */
 export interface UpdateNotificationSettingsRequest {
   provider: WhatsAppProvider
@@ -78,10 +84,18 @@ export interface UpdateNotificationSettingsRequest {
   metaPhoneNumberId: string | null
   metaAccessToken: string | null
   metaWabaId: string | null
+  qontakAccessToken: string | null
+  qontakChannelIntegrationId: string | null
   notifyOnSubscriptionLifecycle: boolean
   notifyOnInvoiceReminder: boolean
   notifyOnWorkOrderSchedule: boolean
   notifyOnIncidentOpen: boolean
+}
+
+/** Satu kanal WhatsApp di akun Qontak, untuk dropdown pemilihan channel. */
+export interface QontakChannelView {
+  id: string
+  name: string
 }
 
 export function getNotificationSettings(): Promise<NotificationSettingsView> {
@@ -94,8 +108,15 @@ export function updateNotificationSettings(
   return api.put('/api/notifications/settings', body)
 }
 
+/** Kanal WA di akun Qontak — memakai token yang SUDAH tersimpan, bukan yang sedang diketik. */
+export function getQontakChannels(): Promise<QontakChannelView[]> {
+  return api.get('/api/notifications/settings/qontak/channels')
+}
+
 /** ------------------------------------------------------------------
- *  Template pesan WhatsApp (Meta Cloud) + pemetaan pemicu → template.
+ *  Template pesan WhatsApp (Meta Cloud / Mekari Qontak) + pemetaan
+ *  pemicu → template. Katalog lokal adalah CERMIN dari penyedia:
+ *  tambah/ubah/hapus di sini benar-benar memanggil API mereka.
  *  ------------------------------------------------------------------ */
 
 /** Pemicu otomatis di backend. `MANUAL` sengaja tak ditawarkan di UI. */
@@ -130,7 +151,15 @@ export const TRIGGER_LABEL: Record<NotificationTrigger, string> = {
 }
 
 export type TemplateStatus = 'APPROVED' | 'PENDING' | 'REJECTED' | 'PAUSED' | 'DISABLED' | 'UNKNOWN'
-export type TemplateSource = 'MANUAL' | 'META'
+export type TemplateSource = 'MANUAL' | 'REMOTE'
+
+export type TemplateCategory = 'UTILITY' | 'MARKETING' | 'AUTHENTICATION'
+
+export const TEMPLATE_CATEGORY_LABEL: Record<TemplateCategory, string> = {
+  UTILITY: 'Utility — pesan transaksional (tagihan, jadwal, gangguan)',
+  MARKETING: 'Marketing — promosi & penawaran',
+  AUTHENTICATION: 'Authentication — kode OTP',
+}
 
 export const TEMPLATE_STATUS_LABEL: Record<TemplateStatus, string> = {
   APPROVED: 'Disetujui',
@@ -148,7 +177,8 @@ export interface NotificationTemplateView {
   category: string
   status: TemplateStatus
   source: TemplateSource
-  bodyPreview: string | null
+  /** Teks komponen BODY yang diajukan ke penyedia. */
+  bodyText: string | null
   /** Jumlah `{{n}}` unik di body; server selalu mengirim tepat satu parameter. */
   bodyParamCount: number
   syncedAt: string | null
@@ -157,7 +187,8 @@ export interface NotificationTemplateView {
 
 /**
  * Isi kartu template. `manageable`/`syncable` menentukan aksi mana yang boleh ditawarkan;
- * `blockedReason` menjelaskan apa yang kurang bila terkunci.
+ * `blockedReason` menjelaskan apa yang kurang bila terkunci. `canEdit`/`canDeleteRemotely`
+ * mencerminkan kemampuan PENYEDIA aktif — Qontak tak punya API ubah maupun hapus.
  */
 export interface TemplateCatalogView {
   templates: NotificationTemplateView[]
@@ -166,11 +197,25 @@ export interface TemplateCatalogView {
   manageable: boolean
   syncable: boolean
   blockedReason: string | null
+  /** Nama penyedia aktif untuk teks UI, mis. "Meta Cloud". */
+  providerLabel: string | null
+  canEdit: boolean
+  canDeleteRemotely: boolean
+  /** Penyedia tak bisa kirim teks biasa → pemicu tanpa template akan dilewati (Qontak). */
+  requiresTemplateForEveryTrigger: boolean
 }
 
-export interface SaveTemplateRequest {
+export interface CreateTemplateRequest {
   name: string
   language: string | null
+  category: TemplateCategory
+  bodyText: string
+}
+
+/** Suntingan: nama & bahasa terkunci di penyedia, jadi tak ikut dikirim. */
+export interface EditTemplateRequest {
+  category: TemplateCategory
+  bodyText: string
 }
 
 export interface SyncTemplatesResult {
@@ -178,6 +223,15 @@ export interface SyncTemplatesResult {
   imported: number
   updated: number
   skipped: number
+  /** Baris lokal yang tak lagi ada di penyedia; ditandai nonaktif, bukan dihapus. */
+  missing: number
+  message: string
+  catalog: TemplateCatalogView
+}
+
+/** `removedRemotely` false = template MASIH ada di penyedia; `message` menjelaskannya. */
+export interface DeleteTemplateResult {
+  removedRemotely: boolean
   message: string
   catalog: TemplateCatalogView
 }
@@ -186,15 +240,15 @@ export function getTemplates(): Promise<TemplateCatalogView> {
   return api.get('/api/notifications/templates')
 }
 
-export function createTemplate(body: SaveTemplateRequest): Promise<TemplateCatalogView> {
+export function createTemplate(body: CreateTemplateRequest): Promise<TemplateCatalogView> {
   return api.post('/api/notifications/templates', body)
 }
 
-export function updateTemplate(id: string, body: SaveTemplateRequest): Promise<TemplateCatalogView> {
+export function updateTemplate(id: string, body: EditTemplateRequest): Promise<TemplateCatalogView> {
   return api.put(`/api/notifications/templates/${id}`, body)
 }
 
-export function deleteTemplate(id: string): Promise<TemplateCatalogView> {
+export function deleteTemplate(id: string): Promise<DeleteTemplateResult> {
   return api.del(`/api/notifications/templates/${id}`)
 }
 
