@@ -190,6 +190,23 @@ class TenantPivotAccount private constructor(
         this.payoutInquiryId = null
     }
 
+    /**
+     * `inquiryId` tersimpan bila rekening yang diminta PERSIS sama dengan yang sudah divalidasi —
+     * else null, artinya pemanggil wajib inquiry ulang.
+     *
+     * Pivot menagih Rp 450 tiap `POST /v1/inquiry-account`, termasuk untuk rekening yang itu-itu
+     * juga (hasilnya pun uuid yang sama), dan biayanya dibebankan ke saldo DISBURSEMENT master.
+     * Dokumentasi Pivot sendiri menganjurkan menyimpan `inquiryId` dan memakainya ulang selama
+     * rekening tujuannya tak berubah. Nama ikut dibandingkan karena Pivot mencocokkannya dengan
+     * catatan bank — ganti nama = hasil validasi lama tak berlaku lagi.
+     */
+    fun cachedInquiryId(channelCode: String, accountNumber: String, accountName: String): String? =
+        payoutInquiryId?.takeIf {
+            payoutChannelCode == channelCode.trim().uppercase() &&
+                payoutAccountNumber == accountNumber.trim() &&
+                payoutAccountName == accountName.trim()
+        }
+
     /** Simpan rekening payout tenant beserta hasil validasi inquiry (nama + inquiryId). */
     fun setPayoutAccount(channelCode: String, accountNumber: String, accountName: String?, inquiryId: String?) {
         this.payoutChannelCode = channelCode.trim().uppercase().takeIf { it.isNotEmpty() }

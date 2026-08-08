@@ -85,11 +85,9 @@ class TenantPayoutService(
             ?: throw ValidationException("Nomor rekening wajib diisi")
         val accountName = requireAccountName(command.accountName)
 
-        // Validasi rekening tujuan → inquiryId; on-behalf sub-account karena biayanya dibebankan ke
-        // saldo pemanggil. Wajib cek saldo sebelum create payout.
-        val inquiry = subMerchant
-            .inquiryAccount(master, subId, channelCode, accountNumber, accountName)
-            .requireValid()
+        // Validasi rekening tujuan → inquiryId. Dipakai ulang dari basis data selama rekeningnya tak
+        // berubah; inquiry baru hanya ditembak bila datanya beda (lihat resolveInquiryId).
+        val inquiryId = resolveInquiryId(master, subId, account, channelCode, accountNumber, accountName)
         val payout = TenantPayout.create(
             tenantId = tenantId,
             kind = PayoutKind.PAYOUT,
@@ -108,7 +106,7 @@ class TenantPayoutService(
                 channelCode = channelCode,
                 accountNumber = accountNumber,
                 accountName = accountName,
-                inquiryId = inquiry.inquiryId,
+                inquiryId = inquiryId,
                 referenceId = payout.id.toString(),
                 description = command.description,
             ),
@@ -176,6 +174,41 @@ class TenantPayoutService(
         if (success) payout.markSuccess() else payout.markFailed(reason)
         repository.save(payout)
         log.info("Penyaluran ref {} direkonsiliasi → {}", ref, payout.status)
+    }
+
+    /**
+     * `inquiryId` rekening tujuan: dipakai ulang dari basis data bila rekeningnya tak berubah, else
+     * inquiry baru ditembak lalu hasilnya DISIMPAN untuk payout berikutnya.
+     *
+     * `POST /v1/inquiry-account` ditagih Rp 450 per panggilan ke saldo DISBURSEMENT master —
+     * termasuk untuk rekening yang itu-itu juga, dan termasuk saat hasilnya ditolak. Menembaknya
+     * tiap payout berarti membakar biaya untuk jawaban yang sudah kita punya; Pivot sendiri
+     * menganjurkan menyimpan `inquiryId` dan memakainya ulang.
+     */
+    private fun resolveInquiryId(
+        master: PivotMasterContext,
+        subId: String,
+        account: TenantPivotAccount,
+        channelCode: String,
+        accountNumber: String,
+        accountName: String,
+    ): String {
+        account.cachedInquiryId(channelCode, accountNumber, accountName)?.let { return it }
+
+        val inquiry = subMerchant
+            .inquiryAccount(master, subId, channelCode, accountNumber, accountName)
+            .requireValid()
+        // Rekening yang baru divalidasi jadi rekening payout tersimpan — payout berikutnya ke tujuan
+        // yang sama tak perlu inquiry lagi.
+        account.setPayoutAccount(channelCode, accountNumber, accountName, inquiry.inquiryId)
+        accounts.save(account)
+        log.info(
+            "Inquiry rekening payout tenant {} disimpan ({}/{}) — payout berikutnya pakai ulang",
+            account.tenantId,
+            channelCode,
+            accountNumber,
+        )
+        return inquiry.inquiryId
     }
 
     /**
