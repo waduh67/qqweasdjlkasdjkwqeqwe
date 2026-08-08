@@ -152,12 +152,11 @@ export type PivotPayoutKind = 'PAYOUT' | 'WITHDRAWAL'
 export type PivotPayoutStatus = 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED'
 
 /**
- * Cuplikan saldo payout tenant (rupiah utuh). `subAccount` = saldo dibaca on-behalf sub-account
- * tenant (bukan saldo master platform).
+ * Cuplikan saldo PEMBAYARAN tenant (rupiah utuh) — dana hasil tagihan pelanggan, bukan saldo payout
+ * (dompet terpisah di Pivot). `subAccount` = saldo dibaca on-behalf sub-account tenant.
  */
 export interface PivotBalanceView {
   availableMinor: number
-  pendingMinor: number
   currency: string
   subAccount: boolean
 }
@@ -176,7 +175,7 @@ export interface TenantPayoutView {
   createdAt: string
 }
 
-/** Baca saldo payout relevan tenant (on-behalf sub-account bila sudah terprovisi). */
+/** Baca saldo pembayaran tenant (on-behalf sub-account bila sudah terprovisi). */
 export function getPivotBalance(): Promise<PivotBalanceView> {
   return api.get('/api/billing/pivot-account/balance')
 }

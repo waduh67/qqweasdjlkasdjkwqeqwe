@@ -930,9 +930,10 @@ function PivotUsersSection({ manage }: { manage: boolean }) {
 }
 
 /**
- * Saldo & payout sub-account: tampilkan saldo payout (on-behalf sub-account) lalu form kirim dana ke
- * rekening beneficiary bebas. Server memvalidasi nama pemilik (inquiry) & WAJIB mengecek saldo
- * sebelum membuat payout, jadi UI hanya menyodorkan form + menampilkan galat server apa adanya.
+ * Saldo & payout sub-account: tampilkan saldo PEMBAYARAN (dana hasil tagihan pelanggan, on-behalf
+ * sub-account) lalu form kirim dana ke rekening beneficiary bebas. Saldo payout sengaja tak
+ * ditampilkan — dompet terpisah di Pivot, dan servernya yang memvalidasi kecukupannya. Server juga
+ * memvalidasi nama pemilik (inquiry), jadi UI hanya menyodorkan form + galat server apa adanya.
  */
 function PivotPayoutSection({ manage }: { manage: boolean }) {
   const toast = useToast()
@@ -1004,13 +1005,8 @@ function PivotPayoutSection({ manage }: { manage: boolean }) {
       ) : (
         <>
           <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <span className="muted" style={{ fontSize: '0.82rem' }}>Saldo tersedia:</span>
+            <span className="muted" style={{ fontSize: '0.82rem' }}>Saldo pembayaran:</span>
             <strong>{balance ? formatRupiah(balance.availableMinor) : '—'}</strong>
-            {balance && balance.pendingMinor > 0 && (
-              <span className="muted" style={{ fontSize: '0.8rem' }}>
-                (tertahan {formatRupiah(balance.pendingMinor)})
-              </span>
-            )}
             <Button variant="subtle" disabled={busy} onClick={() => void refresh()}>
               Segarkan saldo
             </Button>

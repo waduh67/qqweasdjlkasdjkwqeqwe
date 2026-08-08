@@ -7,6 +7,7 @@ import com.duluin.ftth.billing.application.port.inbound.ReconcilePayoutUseCase
 import com.duluin.ftth.billing.application.port.inbound.TenantPayoutView
 import com.duluin.ftth.billing.application.port.inbound.WithdrawCommand
 import com.duluin.ftth.billing.application.port.outbound.PayoutCommand
+import com.duluin.ftth.billing.application.port.outbound.PivotBalanceUsecase
 import com.duluin.ftth.billing.application.port.outbound.PivotPayoutPort
 import com.duluin.ftth.billing.application.port.outbound.PivotSubMerchantPort
 import com.duluin.ftth.billing.application.port.outbound.TenantPayoutRepository
@@ -33,7 +34,9 @@ import java.util.UUID
  *  - **WITHDRAWAL (KYC)** — tenant menarik saldo sub-account-nya sendiri, `POST /v1/withdrawals`
  *    on-behalf (`x-submerchant-id`).
  *
- * Nominal EKSPLISIT (tak ada akrual otomatis) — saldo dibaca langsung dari Pivot ([balance]).
+ * Nominal EKSPLISIT (tak ada akrual otomatis) — saldo dibaca langsung dari Pivot. Perhatikan dua
+ * dompet yang BERBEDA: [balance] menampilkan saldo PAYMENT (hasil tagihan pelanggan, sumber dana
+ * withdrawal), sedangkan guard [dispatchPayout] membaca saldo DISBURSEMENT (sumber dana payout).
  * Tiap perintah dicatat [TenantPayout] (PENDING→PROCESSING) lalu difinalkan callback rekonsiliasi
  * ([reconcile], diverifikasi `X-API-Key` master di webhook). Idempotency `X-REQUEST-ID` diturunkan
  * dari id baris → retry perintah yang sama aman.
@@ -56,12 +59,11 @@ class TenantPayoutService(
     override fun balance(): PivotBalanceView {
         val master = requireMaster()
         val account = accounts.find()
-        // Saldo payout dibaca on-behalf sub-account tenant bila sudah terprovisi; else saldo master.
+        // Saldo dibaca on-behalf sub-account tenant bila sudah terprovisi; else saldo master.
         val subId = account?.takeIf { it.provisioned }?.subMerchantUuid
-        val snapshot = payoutPort.balance(master, subId)
+        val snapshot = payoutPort.balance(master, subId, PivotBalanceUsecase.PAYMENT)
         return PivotBalanceView(
             availableMinor = snapshot.availableMinor,
-            pendingMinor = snapshot.pendingMinor,
             currency = snapshot.currency,
             subAccount = subId != null,
         )
@@ -82,10 +84,13 @@ class TenantPayoutService(
 
         // Validasi rekening tujuan → nama pemilik + inquiryId; wajib cek saldo sebelum create payout.
         val inquiry = subMerchant.inquiryAccount(master, channelCode, accountNumber)
-        val snapshot = payoutPort.balance(master, subId)
+        // Sengaja DISBURSEMENT, bukan PAYMENT: `POST /v1/payouts` menarik dari saldo payout. Kalau
+        // dicek ke saldo pembayaran, request lolos di sini lalu ditolak Pivot "waiting for top up".
+        val snapshot = payoutPort.balance(master, subId, PivotBalanceUsecase.DISBURSEMENT)
         if (snapshot.availableMinor < amount) {
             throw ConflictException(
-                "Saldo payout tak cukup — tersedia Rp ${snapshot.availableMinor}, butuh Rp $amount",
+                "Saldo payout tak cukup — tersedia Rp ${snapshot.availableMinor}, butuh Rp $amount. " +
+                    "Top up saldo payout dulu (saldo pembayaran tak bisa dipakai langsung).",
             )
         }
 
@@ -132,6 +137,14 @@ class TenantPayoutService(
         val subId = account.subMerchantUuid
             ?: throw ConflictException("Sub-account tenant belum punya UUID di Pivot")
         if (!account.payoutReady) throw ConflictException("Rekening payout tenant belum divalidasi")
+
+        // Withdrawal mencairkan saldo PAYMENT (hasil tagihan pelanggan) ke rekening terdaftar.
+        val snapshot = payoutPort.balance(master, subId, PivotBalanceUsecase.PAYMENT)
+        if (snapshot.availableMinor < amount) {
+            throw ConflictException(
+                "Saldo pembayaran tak cukup — tersedia Rp ${snapshot.availableMinor}, butuh Rp $amount",
+            )
+        }
 
         val payout = newPayout(tenantId, PayoutKind.WITHDRAWAL, amount, account)
         val dispatch = payoutPort.withdraw(

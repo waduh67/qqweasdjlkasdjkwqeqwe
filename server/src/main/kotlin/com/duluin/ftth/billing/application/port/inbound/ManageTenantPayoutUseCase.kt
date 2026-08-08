@@ -14,7 +14,7 @@ interface ManageTenantPayoutUseCase {
     /** Riwayat penyaluran tenant aktif, terbaru-dahulu. */
     fun history(): List<TenantPayoutView>
 
-    /** Saldo tersedia relevan tenant (master untuk NON_KYC, sub-account untuk KYC). */
+    /** Saldo pembayaran tenant — hasil tagihan pelanggan (master bila sub-account belum terprovisi). */
     fun balance(): PivotBalanceView
 
     /** Salurkan dana ke rekening beneficiary bebas (validasi inquiry + wajib cek saldo dulu). */
@@ -61,10 +61,12 @@ data class TenantPayoutView(
     val createdAt: Instant,
 )
 
-/** Cuplikan saldo untuk UI (minor-unit IDR). [subAccount] = benar bila saldo sub-account (KYC). */
+/**
+ * Cuplikan saldo PEMBAYARAN tenant (rupiah utuh) — dana hasil tagihan pelanggan, bukan saldo payout.
+ * [subAccount] = benar bila saldo dibaca on-behalf sub-account tenant (bukan master platform).
+ */
 data class PivotBalanceView(
     val availableMinor: Long,
-    val pendingMinor: Long,
     val currency: String,
     val subAccount: Boolean,
 )
