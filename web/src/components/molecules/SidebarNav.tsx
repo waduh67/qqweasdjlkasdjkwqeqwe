@@ -84,15 +84,16 @@ export function SidebarNav({
 
         const isCollapsed = !expanded.has(group.label)
         return (
-          <div key={group.label} className={`nav-group${isCollapsed ? ' collapsed' : ''}`}>
+          <div key={group.label} className={`nav-group nav-group--labeled${isCollapsed ? ' collapsed' : ''}`}>
             <button
               type="button"
               className="nav-label nav-group-toggle"
               onClick={() => toggle(group.label as string)}
               aria-expanded={!isCollapsed}
             >
+              {/* Chevron di KIRI label — pola pohon left-nav Azure (⌄ terbuka / › tertutup). */}
+              <ChevronDown size={16} className="nav-group-chevron" aria-hidden />
               <span>{group.label}</span>
-              <ChevronDown size={14} className="nav-group-chevron" aria-hidden />
             </button>
             {!isCollapsed && (
               <nav>

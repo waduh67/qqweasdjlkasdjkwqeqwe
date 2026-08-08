@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import type { ReactNode } from 'react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
-import type { AssetStatus, OdcView, OdpView, OltView, PonPortView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
+import type { AssetStatus, Coordinate, OdcView, OdpView, OltView, PonPortView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
 import { Link2, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Checkbox } from '@fluentui/react-components'
 import { useCan } from '../auth/useCan'
@@ -11,7 +11,8 @@ import { CommandBar, type CommandAction } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
 import { LocationPicker } from '@/components/organisms'
 import { Blade } from '@/components/organisms'
-import { Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
+import { OltDetail } from './OltDetailPage'
+import { Badge, Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput, Tabs } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { IconInventory } from '@/components/atoms/icons'
@@ -57,6 +58,14 @@ function isWebManaged(vendor: string): boolean {
 
 const ASSET_STATUS_OPTIONS: { value: AssetStatus | ''; label: string }[] = [
   { value: '', label: 'Semua status' },
+  { value: 'PLANNED', label: 'Rencana' },
+  { value: 'ACTIVE', label: 'Aktif' },
+  { value: 'MAINTENANCE', label: 'Perawatan' },
+  { value: 'INACTIVE', label: 'Nonaktif' },
+]
+
+/** Pilihan status untuk FORM buat/sunting (tanpa opsi "Semua" yang hanya untuk filter). */
+const ASSET_STATUS_FORM_OPTIONS: { value: AssetStatus; label: string }[] = [
   { value: 'PLANNED', label: 'Rencana' },
   { value: 'ACTIVE', label: 'Aktif' },
   { value: 'MAINTENANCE', label: 'Perawatan' },
@@ -335,7 +344,9 @@ function SitesTab() {
 function OltsTab() {
   const { can } = useCan()
   const confirm = useConfirm()
-  const navigate = useNavigate()
+  // Baris OLT membuka DETAIL di blade non-modal (bukan pindah halaman) — pola
+  // dua-blade Azure. Simpan baris terpilih; ganti baris = tukar isi blade.
+  const [openOlt, setOpenOlt] = useState<OltView | null>(null)
   const { items, loading, reload, run } = useList<OltView>('/api/olts')
   const { items: sites } = useList<SiteView>('/api/sites')
   const empty = {
@@ -764,11 +775,38 @@ function OltsTab() {
         </SelectField>
       </Toolbar>
 
+      {/* Blade DETAIL OLT (non-modal): tab Ringkasan/PON/ONU + Edit, tanpa pindah
+          halaman. `key` per-id memaksa muat-ulang saat baris lain diklik (tukar data).
+          Tutup/hapus menyegarkan daftar agar perubahan langsung tampak. */}
+      <Blade
+        open={openOlt != null}
+        size="full"
+        className="blade-detail"
+        title={openOlt?.code ?? ''}
+        subtitle={openOlt ? `${openOlt.name}${openOlt.siteName ? ` · Site ${openOlt.siteName}` : ''}` : undefined}
+        onClose={() => {
+          setOpenOlt(null)
+          void reload()
+        }}
+      >
+        {openOlt && (
+          <OltDetail
+            key={openOlt.id}
+            oltId={openOlt.id}
+            compact
+            onDeleted={() => {
+              setOpenOlt(null)
+              void reload()
+            }}
+          />
+        )}
+      </Blade>
+
       <DataTable
         columns={columns}
         rows={rows}
         rowKey={(o) => o.id}
-        onRowClick={(o) => navigate(`/olts/${o.id}`)}
+        onRowClick={(o) => setOpenOlt(o)}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
@@ -857,16 +895,122 @@ function PonPortPicker({ value, onChange }: { value: string; onChange: (ponPortI
   )
 }
 
+/** Satu sel info berlabel di panel detail (pola `.stat` yang sama dipakai detail OLT). */
+function DetailField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="stat">
+      <div className="stat-label">{label}</div>
+      <div style={{ fontSize: '0.9rem', color: 'var(--text-2)', wordBreak: 'break-word' }}>{value}</div>
+    </div>
+  )
+}
+
+/**
+ * Panel detail read-only untuk ODC & ODP di dalam blade lebar (`blade-detail`) — kembar
+ * perilaku dengan detail OLT: klik baris membuka panel ini, tombol Edit membuka drawer
+ * sunting yang lebih sempit (`blade-edit`) DI ATAS-nya (non-modal, tak menutup penuh).
+ * Sengaja read-only: semua perubahan—termasuk lokasi—lewat drawer Edit yang sudah punya
+ * peta pemilih, jadi detail = baca, edit = tulis (tanpa duplikasi form). Presentasional
+ * murni: dipakai dua tab dengan `badges`/`fields` yang berbeda.
+ */
+function AssetDetailPanel({
+  badges,
+  subtitle,
+  fields,
+  address,
+  location,
+  canUpdate,
+  canDelete,
+  onEdit,
+  onDelete,
+}: {
+  badges: ReactNode
+  subtitle?: string
+  fields: Array<{ label: string; value: string }>
+  address?: string | null
+  location: Coordinate
+  canUpdate: boolean
+  canDelete: boolean
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div className="stack" style={{ gap: '1.25rem' }}>
+      <div className="spread" style={{ gap: '0.75rem', alignItems: 'flex-start' }}>
+        <div className="stack" style={{ gap: '0.35rem' }}>
+          <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'center' }}>{badges}</div>
+          {subtitle && <p className="page-sub" style={{ margin: 0 }}>{subtitle}</p>}
+        </div>
+        <div className="row" style={{ gap: '0.5rem', flexShrink: 0 }}>
+          {canUpdate && <Button variant="subtle" onClick={onEdit}>Edit</Button>}
+          {canDelete && <Button variant="danger" onClick={onDelete}>Hapus</Button>}
+        </div>
+      </div>
+
+      <div className="card stack">
+        <h3 style={{ margin: 0 }}>Informasi</h3>
+        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+          {fields.map((f) => (
+            <DetailField key={f.label} label={f.label} value={f.value} />
+          ))}
+        </div>
+        {address && <DetailField label="Alamat" value={address} />}
+      </div>
+
+      <div className="card stack">
+        <h3 style={{ margin: 0 }}>Lokasi</h3>
+        <p className="muted tnum" style={{ margin: 0, fontSize: '0.85rem' }}>
+          {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+        </p>
+        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+          Ubah identitas & lokasi lewat tombol Edit.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function OdcsTab() {
   const { can } = useCan()
   const confirm = useConfirm()
   const { items, loading, reload, run } = useList<OdcView>('/api/odcs')
-  const empty = { code: '', name: '', longitude: '', latitude: '', ponPortId: '', splitterRatio: '1:8', capacity: '64' }
+  // `id` kosong = mode BUAT; terisi = mode SUNTING (PUT). `status`/`address` kini
+  // ikut agar bisa disunting; uplink tetap lewat aksi terpisah.
+  const empty = {
+    id: '',
+    code: '',
+    name: '',
+    address: '',
+    longitude: '',
+    latitude: '',
+    ponPortId: '',
+    splitterRatio: '1:8',
+    capacity: '64',
+    status: 'ACTIVE' as AssetStatus,
+  }
   const [draft, setDraft] = useState<typeof empty | null>(null)
   const [initialDraft, setInitialDraft] = useState<typeof empty | null>(null)
   const openDraft = (d: typeof empty) => { setDraft(d); setInitialDraft(d) }
   const closeDraft = () => { setDraft(null); setInitialDraft(null) }
+  // Buka blade dalam mode SUNTING dari sebuah ODC (pra-isi dari view). Uplink tetap
+  // lewat aksi terpisah, jadi `ponPortId` dikirim ulang apa adanya agar tak ter-reset.
+  const openEdit = (o: OdcView) =>
+    openDraft({
+      id: o.id,
+      code: o.code,
+      name: o.name,
+      address: o.address ?? '',
+      longitude: String(o.location.longitude),
+      latitude: String(o.location.latitude),
+      ponPortId: o.ponPortId ?? '',
+      splitterRatio: o.splitterRatio,
+      capacity: String(o.capacity),
+      status: o.status,
+    })
   const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
+  // Detail read-only di blade lebar; tombol Edit di dalamnya membuka drawer `draft`
+  // yang lebih sempit di atasnya (pola dua-blade Azure, kembar dengan detail OLT).
+  const [openOdc, setOpenOdc] = useState<OdcView | null>(null)
   const [uplinkFor, setUplinkFor] = useState<OdcView | null>(null)
   const [uplinkPort, setUplinkPort] = useState('')
   const [query, setQuery] = useState('')
@@ -882,6 +1026,22 @@ function OdcsTab() {
       (o) => matchesQuery([o.code, o.name, o.oltName], q) && (!statusFilter || o.status === statusFilter),
     )
   }, [items, query, statusFilter])
+
+  // Selaraskan detail terbuka dengan data terbaru tiap daftar dimuat ulang (mis. usai
+  // Edit) — atau tutup panel bila ODC-nya sudah terhapus. Konvergen: find mengembalikan
+  // ref yang sama saat data tak berubah sehingga setState di-bail React.
+  useEffect(() => {
+    if (!openOdc) return
+    setOpenOdc(items.find((it) => it.id === openOdc.id) ?? null)
+  }, [items, openOdc])
+
+  const removeOdc = (o: OdcView) =>
+    void (async () => {
+      if (await confirm({ title: 'Hapus ODC', message: `Hapus ODC ${o.code}?`, confirmLabel: 'Hapus', danger: true })) {
+        setOpenOdc(null)
+        void run(() => api.del(`/api/odcs/${o.id}`))
+      }
+    })()
 
   const deleteSelected = async () => {
     const ids = [...selected]
@@ -944,9 +1104,7 @@ function OdcsTab() {
         key: 'delete',
         label: 'Hapus',
         icon: <Trash2 size={16} />,
-        onClick: () => void (async () => {
-          if (await confirm({ title: 'Hapus ODC', message: `Hapus ODC ${o.code}?`, confirmLabel: 'Hapus', danger: true })) void run(() => api.del(`/api/odcs/${o.id}`))
-        })(),
+        onClick: () => removeOdc(o),
       })
     return list
   }
@@ -978,9 +1136,10 @@ function OdcsTab() {
 
       <Blade
         open={draft != null}
-        title="Tambah ODC"
-        subtitle="Daftarkan ODC untuk memecah distribusi ke ODP."
-        size="sm"
+        title={draft?.id ? `Edit ${draft.code}` : 'Tambah ODC'}
+        subtitle={draft?.id ? 'Ubah identitas, kapasitas & status ODC.' : 'Daftarkan ODC untuk memecah distribusi ke ODP.'}
+        size="full"
+        className="blade-edit"
         dirty={dirty}
         onClose={closeDraft}
         footer={
@@ -988,17 +1147,24 @@ function OdcsTab() {
             <Button
               variant="primary"
               onClick={() =>
-                void run(async () => {
-                  await api.post('/api/odcs', {
-                    code: draft!.code,
-                    name: draft!.name,
-                    location: { longitude: Number(draft!.longitude), latitude: Number(draft!.latitude) },
-                    ponPortId: draft!.ponPortId || null,
-                    splitterRatio: draft!.splitterRatio,
-                    capacity: Number(draft!.capacity),
-                  })
-                  closeDraft()
-                })
+                void run(
+                  async () => {
+                    const body = {
+                      code: draft!.code,
+                      name: draft!.name,
+                      address: draft!.address || null,
+                      location: { longitude: Number(draft!.longitude), latitude: Number(draft!.latitude) },
+                      ponPortId: draft!.ponPortId || null,
+                      splitterRatio: draft!.splitterRatio,
+                      capacity: Number(draft!.capacity),
+                      status: draft!.status,
+                    }
+                    if (draft!.id) await api.put(`/api/odcs/${draft!.id}`, body)
+                    else await api.post('/api/odcs', body)
+                    closeDraft()
+                  },
+                  draft!.id ? 'ODC diperbarui' : undefined,
+                )
               }
             >
               Simpan
@@ -1016,6 +1182,7 @@ function OdcsTab() {
                   value={draft.code}
                   onChange={(_, data) => setDraft({ ...draft, code: data.value })}
                   placeholder="ODC-MGH-01"
+                  disabled={!!draft.id}
                 />
               </div>
               <div style={{ flex: 2 }}>
@@ -1026,6 +1193,11 @@ function OdcsTab() {
                 />
               </div>
             </div>
+            <TextField
+              label={<>Alamat <span className="muted">(opsional)</span></>}
+              value={draft.address}
+              onChange={(_, data) => setDraft({ ...draft, address: data.value })}
+            />
             <div className="row">
               <div style={{ flex: 1 }}>
                 <SelectField
@@ -1045,14 +1217,73 @@ function OdcsTab() {
                   onChange={(_, data) => setDraft({ ...draft, capacity: data.value })}
                 />
               </div>
+              <div style={{ flex: 1 }}>
+                <SelectField
+                  label="Status"
+                  value={draft.status}
+                  onChange={(_, data) => setDraft({ ...draft, status: data.value as AssetStatus })}
+                >
+                  {ASSET_STATUS_FORM_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </SelectField>
+              </div>
             </div>
             <LocationFields
               longitude={draft.longitude}
               latitude={draft.latitude}
               onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
             />
-            <PonPortPicker value={draft.ponPortId} onChange={(ponPortId) => setDraft({ ...draft, ponPortId })} />
+            {/* Uplink hanya di mode BUAT; saat menyunting, ubah uplink lewat aksi "Uplink". */}
+            {!draft.id && (
+              <PonPortPicker value={draft.ponPortId} onChange={(ponPortId) => setDraft({ ...draft, ponPortId })} />
+            )}
           </div>
+        )}
+      </Blade>
+
+      {/* Blade DETAIL ODC (non-modal, lebar >½ layar): klik baris → panel ini; tombol
+          Edit membuka drawer sunting yang lebih sempit di atasnya tanpa menutup penuh. */}
+      <Blade
+        open={openOdc != null}
+        size="full"
+        className="blade-detail"
+        title={openOdc?.code ?? ''}
+        subtitle={openOdc?.name}
+        onClose={() => setOpenOdc(null)}
+      >
+        {openOdc && (
+          <AssetDetailPanel
+            badges={
+              <>
+                {openOdc.energized ? (
+                  <StatusBadge status="ACTIVE" label="teraliri" />
+                ) : (
+                  <StatusBadge status={openOdc.status} />
+                )}
+                <Badge>{openOdc.splitterRatio}</Badge>
+              </>
+            }
+            subtitle={
+              openOdc.oltName ? `Hulu: ${openOdc.oltName} · ${openOdc.ponPortLabel}` : 'Belum di-uplink'
+            }
+            fields={[
+              { label: 'Nama', value: openOdc.name },
+              {
+                label: 'Hulu (OLT · PON)',
+                value: openOdc.oltName ? `${openOdc.oltName} · ${openOdc.ponPortLabel}` : 'belum di-uplink',
+              },
+              { label: 'Rasio splitter', value: openOdc.splitterRatio },
+              { label: 'Kapasitas', value: String(openOdc.capacity) },
+              { label: 'Jumlah ODP', value: String(openOdc.odpCount) },
+            ]}
+            address={openOdc.address}
+            location={openOdc.location}
+            canUpdate={canUpdate}
+            canDelete={canDelete}
+            onEdit={() => openEdit(openOdc)}
+            onDelete={() => removeOdc(openOdc)}
+          />
         )}
       </Blade>
 
@@ -1109,6 +1340,7 @@ function OdcsTab() {
         columns={columns}
         rows={rows}
         rowKey={(o) => o.id}
+        onRowClick={(o) => setOpenOdc(o)}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
@@ -1130,16 +1362,46 @@ function OdpsTab() {
   const confirm = useConfirm()
   const { items, loading, reload, run } = useList<OdpView>('/api/odps')
   const { items: odcs } = useList<OdcView>('/api/odcs')
-  const empty = { code: '', name: '', longitude: '', latitude: '', odcId: '', splitterRatio: '1:8', capacity: '8' }
+  // `id` kosong = mode BUAT; terisi = mode SUNTING (PUT). `status`/`address` ikut
+  // agar bisa disunting; ODC induk tetap bisa dipindah di kedua mode.
+  const empty = {
+    id: '',
+    code: '',
+    name: '',
+    address: '',
+    longitude: '',
+    latitude: '',
+    odcId: '',
+    splitterRatio: '1:8',
+    capacity: '8',
+    status: 'ACTIVE' as AssetStatus,
+  }
   const [draft, setDraft] = useState<typeof empty | null>(null)
   const [initialDraft, setInitialDraft] = useState<typeof empty | null>(null)
   const openDraft = (d: typeof empty) => { setDraft(d); setInitialDraft(d) }
   const closeDraft = () => { setDraft(null); setInitialDraft(null) }
+  const openEdit = (o: OdpView) =>
+    openDraft({
+      id: o.id,
+      code: o.code,
+      name: o.name,
+      address: o.address ?? '',
+      longitude: String(o.location.longitude),
+      latitude: String(o.location.latitude),
+      odcId: o.odcId ?? '',
+      splitterRatio: o.splitterRatio,
+      capacity: String(o.capacity),
+      status: o.status,
+    })
   const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
+  // Detail read-only di blade lebar; tombol Edit membuka drawer `draft` yang lebih
+  // sempit di atasnya (pola dua-blade Azure, kembar dengan detail OLT & ODC).
+  const [openOdp, setOpenOdp] = useState<OdpView | null>(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
+  const canUpdate = can('network.odp.update')
   const canDelete = can('network.odp.delete')
 
   const rows = useMemo(() => {
@@ -1148,6 +1410,21 @@ function OdpsTab() {
       (o) => matchesQuery([o.code, o.name, o.odcName], q) && (!statusFilter || o.status === statusFilter),
     )
   }, [items, query, statusFilter])
+
+  // Selaraskan detail terbuka dengan data terbaru tiap daftar dimuat ulang (mis. usai
+  // Edit) — atau tutup panel bila ODP-nya sudah terhapus.
+  useEffect(() => {
+    if (!openOdp) return
+    setOpenOdp(items.find((it) => it.id === openOdp.id) ?? null)
+  }, [items, openOdp])
+
+  const removeOdp = (o: OdpView) =>
+    void (async () => {
+      if (await confirm({ title: 'Hapus ODP', message: `Hapus ODP ${o.code}?`, confirmLabel: 'Hapus', danger: true })) {
+        setOpenOdp(null)
+        void run(() => api.del(`/api/odps/${o.id}`))
+      }
+    })()
 
   const deleteSelected = async () => {
     const ids = [...selected]
@@ -1186,9 +1463,7 @@ function OdpsTab() {
             key: 'delete',
             label: 'Hapus',
             icon: <Trash2 size={16} />,
-            onClick: () => void (async () => {
-              if (await confirm({ title: 'Hapus ODP', message: `Hapus ODP ${o.code}?`, confirmLabel: 'Hapus', danger: true })) void run(() => api.del(`/api/odps/${o.id}`))
-            })(),
+            onClick: () => removeOdp(o),
           },
         ]
       : []
@@ -1222,11 +1497,47 @@ function OdpsTab() {
     <div className="stack">
       <CommandBar primary={primary} actions={actions} />
 
+      {/* Blade DETAIL ODP (non-modal, lebar >½ layar): klik baris → panel ini; tombol
+          Edit membuka drawer sunting yang lebih sempit di atasnya tanpa menutup penuh. */}
+      <Blade
+        open={openOdp != null}
+        size="full"
+        className="blade-detail"
+        title={openOdp?.code ?? ''}
+        subtitle={openOdp?.name}
+        onClose={() => setOpenOdp(null)}
+      >
+        {openOdp && (
+          <AssetDetailPanel
+            badges={
+              <>
+                <StatusBadge status={openOdp.status} />
+                <Badge>{openOdp.splitterRatio}</Badge>
+              </>
+            }
+            subtitle={openOdp.odcName ? `ODC induk: ${openOdp.odcName}` : 'Belum tersambung ke ODC'}
+            fields={[
+              { label: 'Nama', value: openOdp.name },
+              { label: 'ODC induk', value: openOdp.odcName ?? '—' },
+              { label: 'Rasio splitter', value: openOdp.splitterRatio },
+              { label: 'Jumlah port', value: String(openOdp.capacity) },
+            ]}
+            address={openOdp.address}
+            location={openOdp.location}
+            canUpdate={canUpdate}
+            canDelete={canDelete}
+            onEdit={() => openEdit(openOdp)}
+            onDelete={() => removeOdp(openOdp)}
+          />
+        )}
+      </Blade>
+
       <Blade
         open={draft != null}
-        title="Tambah ODP"
-        subtitle="Daftarkan ODP sebagai kotak terminasi ke pelanggan."
-        size="sm"
+        title={draft?.id ? `Edit ${draft.code}` : 'Tambah ODP'}
+        subtitle={draft?.id ? 'Ubah identitas, ODC induk, kapasitas & status ODP.' : 'Daftarkan ODP sebagai kotak terminasi ke pelanggan.'}
+        size="full"
+        className="blade-edit"
         dirty={dirty}
         onClose={closeDraft}
         footer={
@@ -1234,17 +1545,24 @@ function OdpsTab() {
             <Button
               variant="primary"
               onClick={() =>
-                void run(async () => {
-                  await api.post('/api/odps', {
-                    code: draft!.code,
-                    name: draft!.name,
-                    location: { longitude: Number(draft!.longitude), latitude: Number(draft!.latitude) },
-                    odcId: draft!.odcId || null,
-                    splitterRatio: draft!.splitterRatio,
-                    capacity: Number(draft!.capacity),
-                  })
-                  closeDraft()
-                })
+                void run(
+                  async () => {
+                    const body = {
+                      code: draft!.code,
+                      name: draft!.name,
+                      address: draft!.address || null,
+                      location: { longitude: Number(draft!.longitude), latitude: Number(draft!.latitude) },
+                      odcId: draft!.odcId || null,
+                      splitterRatio: draft!.splitterRatio,
+                      capacity: Number(draft!.capacity),
+                      status: draft!.status,
+                    }
+                    if (draft!.id) await api.put(`/api/odps/${draft!.id}`, body)
+                    else await api.post('/api/odps', body)
+                    closeDraft()
+                  },
+                  draft!.id ? 'ODP diperbarui' : undefined,
+                )
               }
             >
               Simpan
@@ -1262,6 +1580,7 @@ function OdpsTab() {
                   value={draft.code}
                   onChange={(_, data) => setDraft({ ...draft, code: data.value })}
                   placeholder="ODP-MGH-007"
+                  disabled={!!draft.id}
                 />
               </div>
               <div style={{ flex: 2 }}>
@@ -1286,6 +1605,11 @@ function OdpsTab() {
                 </SelectField>
               </div>
             </div>
+            <TextField
+              label={<>Alamat <span className="muted">(opsional)</span></>}
+              value={draft.address}
+              onChange={(_, data) => setDraft({ ...draft, address: data.value })}
+            />
             <div className="row">
               <div style={{ flex: 1 }}>
                 <SelectField
@@ -1304,6 +1628,17 @@ function OdpsTab() {
                   value={draft.capacity}
                   onChange={(_, data) => setDraft({ ...draft, capacity: data.value })}
                 />
+              </div>
+              <div style={{ flex: 1 }}>
+                <SelectField
+                  label="Status"
+                  value={draft.status}
+                  onChange={(_, data) => setDraft({ ...draft, status: data.value as AssetStatus })}
+                >
+                  {ASSET_STATUS_FORM_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </SelectField>
               </div>
             </div>
             <LocationFields
@@ -1328,6 +1663,7 @@ function OdpsTab() {
         columns={columns}
         rows={rows}
         rowKey={(o) => o.id}
+        onRowClick={(o) => setOpenOdp(o)}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}

@@ -53,13 +53,25 @@ const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
 
 type Tab = 'ringkasan' | 'pon' | 'onu' | 'onubaru'
 
-export function OltDetailPage() {
-  const { id = '' } = useParams()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const back = (location.state as { backTo?: string; backLabel?: string } | null) ?? null
-  const backTo = back?.backTo ?? '/inventory'
-  const backLabel = back?.backLabel ?? 'Inventaris'
+/**
+ * Konten detail satu OLT — komponen dipakai-ulang oleh DUA pemanggil:
+ * 1. rute `/olts/:id` ([OltDetailPage]) sebagai halaman penuh (deep-link peta), dan
+ * 2. blade non-modal di Inventory (klik baris OLT) — pola dua-blade Azure.
+ *
+ * `compact` menyembunyikan judul besar `<h1>` karena header blade sudah menampilkan
+ * kode OLT. `onDeleted` dipanggil seusai OLT dihapus agar pemanggil menutup panel
+ * (blade) atau bernavigasi kembali (halaman).
+ */
+export function OltDetail({
+  oltId,
+  compact = false,
+  onDeleted,
+}: {
+  oltId: string
+  compact?: boolean
+  onDeleted?: () => void
+}) {
+  const id = oltId
   const toast = useToast()
   const { can } = useCan()
   const canUpdate = can('network.olt.update')
@@ -100,7 +112,7 @@ export function OltDetailPage() {
     try {
       await api.del(`/api/olts/${olt.id}`)
       toast.success(`OLT ${olt.code} dihapus`)
-      navigate(backTo)
+      onDeleted?.()
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus OLT')
     }
@@ -108,38 +120,30 @@ export function OltDetailPage() {
 
   if (loading) {
     return (
-      <div className="stack" style={{ gap: '1.25rem' }}>
-        <BackLink label={backLabel} onClick={() => navigate(backTo)} />
-        <div className="card" style={{ display: 'grid', placeItems: 'center', padding: '3rem' }}>
-          <Spinner />
-        </div>
+      <div className="card" style={{ display: 'grid', placeItems: 'center', padding: '3rem' }}>
+        <Spinner />
       </div>
     )
   }
 
   if (notFound || !olt) {
     return (
-      <div className="stack" style={{ gap: '1rem' }}>
-        <BackLink label={backLabel} onClick={() => navigate(backTo)} />
-        <div className="card">
-          <EmptyState
-            title="OLT tidak ditemukan"
-            hint="Mungkin sudah dihapus atau kamu tak berizin melihatnya."
-            icon={<IconInventory size={32} />}
-          />
-        </div>
+      <div className="card">
+        <EmptyState
+          title="OLT tidak ditemukan"
+          hint="Mungkin sudah dihapus atau kamu tak berizin melihatnya."
+          icon={<IconInventory size={32} />}
+        />
       </div>
     )
   }
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <BackLink label={backLabel} onClick={() => navigate(backTo)} />
-
       <div className="spread" style={{ gap: '0.75rem', alignItems: 'flex-start' }}>
         <div className="stack" style={{ gap: '0.35rem' }}>
           <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'center' }}>
-            <h1 className="page-title" style={{ margin: 0 }}>{olt.code}</h1>
+            {!compact && <h1 className="page-title" style={{ margin: 0 }}>{olt.code}</h1>}
             <StatusBadge status={olt.status} />
             <Badge>{olt.vendor}</Badge>
             {olt.pollable ? <Badge tone="good">SNMP siap</Badge> : <Badge tone="neutral">SNMP belum lengkap</Badge>}
@@ -189,6 +193,28 @@ export function OltDetailPage() {
           }}
         />
       )}
+    </div>
+  )
+}
+
+/**
+ * Detail satu OLT sebagai rute tersendiri (`/olts/:id`) — bukan panel peta.
+ *
+ * Pembungkus tipis di atas [OltDetail]: menambah tautan "kembali" yang menyesuaikan
+ * asalnya (baris Inventaris / marker peta) lewat `location.state`, lalu mendelegasikan
+ * seluruh isi ke komponen bersama. Hapus OLT → kembali ke asal.
+ */
+export function OltDetailPage() {
+  const { id = '' } = useParams()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const back = (location.state as { backTo?: string; backLabel?: string } | null) ?? null
+  const backTo = back?.backTo ?? '/inventory'
+  const backLabel = back?.backLabel ?? 'Inventaris'
+  return (
+    <div className="stack" style={{ gap: '1.25rem' }}>
+      <BackLink label={backLabel} onClick={() => navigate(backTo)} />
+      <OltDetail oltId={id} onDeleted={() => navigate(backTo)} />
     </div>
   )
 }
@@ -790,7 +816,8 @@ function EditOltModal({ olt, onClose, onSaved }: { olt: OltView; onClose: () => 
       open
       title={`Edit ${olt.code}`}
       subtitle="Identitas, SNMP & akses Web UI OLT. Kode & lokasi diubah di tab Ringkasan."
-      size="lg"
+      size="full"
+      className="blade-edit"
       dirty={dirty}
       onClose={onClose}
       footer={

@@ -868,6 +868,11 @@ tbody tr.row-selected:hover {
 }
 
 /* ---------- Blade (panel geser-kanan ala Azure) ---------- */
+/* Non-modal (tanpa scrim): beri bayangan kiri tegas agar blade "mengambang" jelas
+   di atas daftar yang masih terlihat & bisa diklik di belakangnya. */
+.azure-blade {
+  box-shadow: -8px 0 28px -10px rgba(0, 0, 0, 0.32);
+}
 /* Subjudul di bawah judul header drawer. */
 .azure-blade-sub {
   margin: 0.25rem 0 0;
@@ -888,14 +893,28 @@ tbody tr.row-selected:hover {
   border-top: 1px solid var(--border-strong);
   background: var(--surface);
 }
-/* Varian lebar ~50% layar untuk panel detail (mis. detail pelanggan). Dipakai bersama
-   size="full" sehingga di tablet/mobile tetap penuh & terbaca; di desktop dipangkas
-   ke 50vw. Dua kelas (spesifisitas 0,2,0) menang atas kelas lebar bawaan Fluent. */
+/* Varian lebar untuk panel non-modal, semuanya dipakai bersama size="full" sehingga di
+   tablet/mobile tetap penuh & terbaca; di desktop dipangkas ke lebar-vw. Dua kelas
+   (spesifisitas 0,2,0) menang atas kelas lebar bawaan Fluent.
+   Pola blade bertumpuk ala Azure: panel DETAIL perangkat (induk) lebih lebar dari
+   separuh layar, sedangkan drawer EDIT (anak) lebih sempit — dibuka non-modal DI ATAS
+   detail sehingga sisi kiri detail tetap terlihat (tak tertimpa penuh) & ukurannya
+   jelas berbeda. Selisih 64vw−44vw = 20vw detail yang selalu mengintip di kiri. */
 @media (min-width: 1024px) {
   .azure-blade.blade-half {
     width: 50vw;
     max-width: 50vw;
     min-width: 680px;
+  }
+  .azure-blade.blade-detail {
+    width: 64vw;
+    max-width: 64vw;
+    min-width: 760px;
+  }
+  .azure-blade.blade-edit {
+    width: 44vw;
+    max-width: 44vw;
+    min-width: 560px;
   }
 }
 
@@ -1497,33 +1516,42 @@ tbody tr.row-selected:hover {
   flex: none;
 }
 .nav-label {
-  padding: 0.85rem 0.6rem 0.3rem;
-  color: var(--sidebar-muted);
-  font-size: 0.66rem;
+  padding: 0.6rem 0.55rem 0.3rem;
+  color: var(--sidebar-text);
+  font-size: 0.82rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
 }
-/* Header seksi sebagai tombol pengalih ciut (chevron) ala left-nav Azure. Mewarisi
-   tipografi .nav-label; chevron berputar -90° saat seksi diciutkan. */
-.nav-group-toggle {
+/* Header seksi = baris pohon left-nav Azure: chevron di KIRI lalu label (sentence
+   case, bukan kapital), rata kiri seperti item. Chevron berputar -90° (⌄ → ›) saat
+   diciutkan. Baris ikut mendapat hover halus agar terasa bisa diklik. */
+/* Selektor di-scope `.sidebar button.nav-group-toggle` (spesifisitas 0,2,1) agar
+   MENANG atas gaya tombol native global `button:not([class*='fui-'])` (0,1,1) yang
+   jika tidak akan memberi border + background surface + rata-tengah + warna/`font`
+   sendiri — membuat header seksi tampak seperti tombol/pill, bukan baris pohon Azure. */
+.sidebar button.nav-group-toggle {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 0.4rem;
   width: 100%;
+  padding: 0.5rem 0.55rem;
   border: none;
   background: none;
+  color: var(--sidebar-text);
   font-family: inherit;
+  font-size: 0.82rem;
   text-align: left;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
-.nav-group-toggle:hover {
+.sidebar button.nav-group-toggle:hover {
   color: var(--sidebar-text);
+  background: var(--sidebar-bg-2);
+  border-color: transparent;
 }
 .nav-group-chevron {
   flex: none;
-  opacity: 0.65;
+  color: var(--sidebar-muted);
   transition: transform 0.15s ease;
 }
 .nav-group.collapsed .nav-group-chevron {
@@ -1533,6 +1561,12 @@ tbody tr.row-selected:hover {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+}
+/* Anak seksi berlabel di-indent sedikit agar sejajar setelah chevron induk —
+   memperkuat hierarki pohon ala Azure. Indent luruh saat sidebar diciutkan
+   (aturan .sidebar-collapsed lebih spesifik menormalkan padding). */
+.nav-group--labeled nav a {
+  padding-left: 1.55rem;
 }
 .sidebar nav a {
   position: relative;
