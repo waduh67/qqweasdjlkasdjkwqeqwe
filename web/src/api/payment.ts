@@ -67,20 +67,3 @@ export function deleteQrisImage(): Promise<PaymentGatewaySettingsView> {
   return api.del(QRIS_IMAGE_PATH)
 }
 
-/**
- * Instruksi bayar manual ringkas untuk ditunjukkan ke pelanggan (halaman detail pelanggan) pada
- * tagihan MANUAL. Non-rahasia; gambar QRIS diambil lewat `QRIS_IMAGE_PATH`.
- */
-export interface ManualPaymentInstructionsView {
-  transferEnabled: boolean
-  bankName: string | null
-  accountNumber: string | null
-  accountHolder: string | null
-  qrisEnabled: boolean
-  qrisImageAvailable: boolean
-}
-
-/** Instruksi bayar manual tenant aktif (di-gate `billing.invoice.view`). */
-export function getManualPaymentInstructions(): Promise<ManualPaymentInstructionsView> {
-  return api.get('/api/billing/manual-payment-instructions')
-}

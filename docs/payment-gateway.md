@@ -131,10 +131,11 @@ multipart terpisah.
 simpan" bersama edit transfer — PUT setelan dulu, baru unggah/hapus byte. Preview gambar
 pakai pola `AuthedImage` (`api.blob` → `createObjectURL`).
 
-**Tampilan ke pelanggan.** `CustomerDetailPage` memanggil
-`GET /api/billing/manual-payment-instructions` untuk merender panel "Cara bayar" pada
-tagihan MANUAL yang belum lunas: rekening (bila transfer aktif) + gambar QRIS (bila QRIS
-aktif & tersedia).
+**Tampilan ke pelanggan.** Instruksi manual ikut menumpang **halaman bayar publik**
+`/bayar/{tenantSlug}/{invoiceId}`: `GET /api/public/invoices/{slug}/{id}` memulangkan
+`payableOnline = false` + blok `manual` (rekening bila transfer aktif, penanda QRIS bila
+tersedia), dan gambarnya diambil dari `…/qris` — tanpa token, jadi `<img src>` biasa cukup.
+Panel "Cara bayar" di konsol operator sudah dihapus; satu halaman melayani kedua mode gateway.
 
 ---
 
@@ -147,7 +148,8 @@ aktif & tersedia).
 | `POST /api/billing/gateway-settings/qris` (multipart `file`) | `billing.gateway.manage` |
 | `DELETE /api/billing/gateway-settings/qris` | `billing.gateway.manage` |
 | `GET /api/billing/gateway-settings/qris` (byte gambar) | `billing.gateway.view` / `billing.invoice.view` |
-| `GET /api/billing/manual-payment-instructions` | `billing.invoice.view` |
+| `GET /api/billing/manual-payment-instructions` | `billing.invoice.view` — tak dipakai UI lagi (digantikan halaman bayar publik) |
+| `GET · POST /api/public/invoices/{tenantSlug}/{invoiceId}/**` | publik — halaman bayar, lihat [`billing.md`](billing.md#halaman-bayar-publik-bayartenantsluginvoiceid) |
 | `GET/POST /api/billing/pivot-account/**` (sub-account, saldo, payout) | `billing.gateway.view` / `manage` — lihat [`pivot-sub-account.md`](pivot-sub-account.md) / [`pivot-payout.md`](pivot-payout.md) |
 | `GET/PUT /api/platform/pivot-config` (setelan master Pivot) | `platform.billing.view` / `manage` |
 | `POST /api/billing/webhooks/{tenantSlug}/pivot` | publik (`X-API-Key` master) |
@@ -163,7 +165,7 @@ Gateway** menampilkan metode aktif, status sub-account, dan seksi pembayaran man
 | Properti / env | Bawaan | Guna |
 |---|---|---|
 | `webhook-secret` · `FTTH_BILLING_WEBHOOK_SECRET` | *(dev)* | secret verifikasi callback **MANUAL** (fallback global) |
-| `pivot.redirect-base-url` · `FTTH_BILLING_PIVOT_REDIRECT_BASE_URL` | `""` | Pivot: basis URL balik (mode REDIRECT WAJIB); kosong = charge Pivot gagal jelas |
+| `pivot.redirect-base-url` · `FTTH_BILLING_PIVOT_REDIRECT_BASE_URL` | `""` | Pivot: basis URL balik (mode REDIRECT WAJIB); kosong = charge Pivot gagal jelas. Dipakai ulang sebagai basis tautan halaman bayar publik di pengingat WhatsApp — kosong = pengingat terkirim tanpa tautan |
 
 > Kredensial & lingkungan (sandbox) Pivot **tidak** di env melainkan di `pivot_master_config`
 > (setelan super-admin), agar dirotasi tanpa redeploy. `default-provider` lawas usang —

@@ -118,8 +118,13 @@ membayar. Memberi 1 bulan aktif di depan (tagihan pertama terbit menjelang habis
 2. Bila tidak → terbitkan tagihan baru (`issueFor(..., force = true, months = N)`) lewat gateway
    aktif; nilai `biaya × N`, periode membentang N bulan **menyambung** dari ujung masa aktif berjalan;
    kembalikan `payUrl`.
-3. Tenant membayar di tab gateway. Saat webhook **settle**, `PlatformPaymentService.applySettlement`
-   → `extendOnPayment(today, N)` → masa aktif memanjang N bulan.
+3. Tenant membayar di **halaman bayar publik** `/bayar/{tenantSlug}/{invoiceId}` — halaman yang sama
+   dengan tagihan pelanggan, dibuka di tab baru dan tautannya bisa disalin (lihat
+   [`billing.md`](billing.md#halaman-bayar-publik-bayartenantsluginvoiceid)). Modal bayar di halaman
+   langganan sudah dihapus; halaman publik itu realm kedua yang mencari tagihan di
+   `tenant_subscription_invoice` setelah realm tagihan pelanggan tak menemukan apa pun. Saat webhook
+   **settle**, `PlatformPaymentService.applySettlement` → `extendOnPayment(today, N)` → masa aktif
+   memanjang N bulan.
 
 **Bayar di muka (1 / 3 / 6 / 12 bulan)**: tenant memilih durasi di halaman langganan sebelum
 menekan *Perpanjang*. Ini murni opsional — scheduler tetap menerbitkan tagihan bulanan otomatis
@@ -233,8 +238,9 @@ val tenantIds = tenantApi.findActiveTenantIds().filterNot { it == platformId }
 - **Halaman tenant** `/subscription` (`SubscriptionPage.tsx`, izin `billing.subscription.view`):
   tata letak lebar penuh — *hero* biaya + masa aktif (bar progres periode), pemilih durasi bayar
   di muka **1 / 3 / 6 / 12 bulan** dengan total langsung, tombol *Perpanjang*/*Bayar sekarang*,
-  kartu pemakaian kosmetik ("N / Unlimited" — `limit` selalu `null`), riwayat tagihan dengan tautan
-  bayar, dan panel penjelas "cara perpanjangan".
+  kartu pemakaian kosmetik ("N / Unlimited" — `limit` selalu `null`), riwayat tagihan dengan tombol
+  **Bayar ↗** (buka halaman bayar publik di tab baru) + **Salin link**, dan panel penjelas
+  "cara perpanjangan".
 - **Onboarding** (`TenantsPage.tsx`): input *Harga bulanan khusus* (kosong = default global,
   di-load dari setelan platform bila punya `platform.billing.view`).
 - **Setelan platform** (`PlatformBillingSettingsPage.tsx`): input *Harga bulanan default*.

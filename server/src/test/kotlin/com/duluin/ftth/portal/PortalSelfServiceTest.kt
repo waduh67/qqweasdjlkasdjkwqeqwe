@@ -224,6 +224,10 @@ class PortalSelfServiceTest {
         override fun financialReport(from: LocalDate, to: LocalDate) = throw UnsupportedOperationException()
         override fun monthlyRevenue(fromMonth: java.time.YearMonth, toMonth: java.time.YearMonth) =
             throw UnsupportedOperationException()
+        override fun findInvoiceForPublicLink(invoiceId: UUID) = throw UnsupportedOperationException()
+        override fun payInvoiceForPublicLink(invoiceId: UUID, method: String, channel: String?) =
+            throw UnsupportedOperationException()
+        override fun manualQrisImage() = throw UnsupportedOperationException()
     }
 
     private class FakeBngApi(private val session: SubscriberSessionRef?) : BngApi {

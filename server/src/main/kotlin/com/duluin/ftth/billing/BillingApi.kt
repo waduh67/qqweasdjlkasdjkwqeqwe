@@ -1,5 +1,6 @@
 package com.duluin.ftth.billing
 
+import com.duluin.ftth.common.storage.StoredObject
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
@@ -41,6 +42,25 @@ interface BillingApi {
      * (dibatasi [customerId]). NotFound bila tagihan bukan miliknya; Validation bila tak dapat dibayar.
      */
     fun payCustomerInvoice(customerId: UUID, invoiceId: UUID, method: String, channel: String?): CustomerInvoiceRef
+
+    /**
+     * Satu tagihan untuk HALAMAN BAYAR PUBLIK — TANPA penyaringan pemilik: kapabilitasnya adalah
+     * UUID tagihan itu sendiri (bandingkan [payCustomerInvoice] yang dibatasi customerId). Isolasi
+     * tenant tetap ditegakkan RLS: pemanggil wajib sudah memasang `TenantContext`. `null` bila
+     * tagihannya tak ada di tenant aktif.
+     */
+    fun findInvoiceForPublicLink(invoiceId: UUID): PublicInvoiceRef?
+
+    /**
+     * Buat charge in-app (VA/QRIS) untuk tagihan dari halaman bayar publik. Sama seperti
+     * [payCustomerInvoice] minus pembatasan pemilik. Instruksi bayar yang MASIH HIDUP dan cocok
+     * (metode + channel sama, belum kedaluwarsa) dipakai ulang alih-alih memanggil gateway lagi —
+     * tautan publik dipegang siapa saja, jadi tiap muat ulang tak boleh membuat sesi bayar baru.
+     */
+    fun payInvoiceForPublicLink(invoiceId: UUID, method: String, channel: String?): PublicInvoiceRef
+
+    /** Gambar QRIS statis pembayaran manual tenant aktif (byte + tipe konten); null bila tak dipasang. */
+    fun manualQrisImage(): StoredObject?
 
     /**
      * Laporan keuangan TENANT untuk rentang [from]..[to] (inklusif) — dipakai modul
@@ -108,6 +128,52 @@ data class CustomerInvoiceRef(
     val qrContent: String? = null,
     val qrUrl: String? = null,
     val qrExpiresAt: Instant? = null,
+)
+
+/**
+ * Proyeksi satu tagihan untuk HALAMAN BAYAR PUBLIK — subset paling sempit yang cukup untuk
+ * membayar. Sengaja TIDAK memuat `gatewayRef`/id sesi bayar/penanda simulasi: pemegang tautan
+ * belum tentu pemilik tagihan, dan itu alat uji sandbox, bukan konsumsi publik.
+ *
+ * [payableOnline] = tagihan masih terbuka DAN gateway aktif tenant bukan MANUAL, jadi panel
+ * VA/QRIS layak dirender. Bila false karena MANUAL, [manual] berisi instruksi transfer/QRIS
+ * statis tenant sebagai gantinya. Semua nilai uang pada skala 2.
+ */
+data class PublicInvoiceRef(
+    val id: UUID,
+    val number: String,
+    val customerName: String,
+    val periodStart: LocalDate,
+    val periodEnd: LocalDate,
+    val amount: BigDecimal,
+    /** Nama [com.duluin.ftth.billing.domain.model.InvoiceStatus], mis. "ISSUED". */
+    val status: String,
+    val dueDate: LocalDate,
+    val paidAt: Instant?,
+    val payableOnline: Boolean,
+    /** Instrumen bayar in-app terpilih (VIRTUAL_ACCOUNT/QR) & instruksinya; null bila belum pilih. */
+    val payMethod: String? = null,
+    val vaChannel: String? = null,
+    val vaNumber: String? = null,
+    val vaName: String? = null,
+    val vaExpiresAt: Instant? = null,
+    /** String QRIS mentah (dirender jadi kode QR di klien). */
+    val qrContent: String? = null,
+    val qrExpiresAt: Instant? = null,
+    val manual: ManualInstructionsRef? = null,
+)
+
+/**
+ * Instruksi bayar manual tenant (gateway MANUAL) untuk halaman publik — non-rahasia. Gambar QRIS
+ * diambil terpisah lewat [BillingApi.manualQrisImage]; di sini hanya penandanya.
+ */
+data class ManualInstructionsRef(
+    val transferEnabled: Boolean,
+    val bankName: String?,
+    val accountNumber: String?,
+    val accountHolder: String?,
+    val qrisEnabled: Boolean,
+    val qrisImageAvailable: Boolean,
 )
 
 /** Proyeksi satu pembayaran untuk pelanggan (portal self-service). */

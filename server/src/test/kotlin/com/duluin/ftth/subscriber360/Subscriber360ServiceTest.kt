@@ -200,6 +200,10 @@ class Subscriber360ServiceTest {
         override fun paymentMethods() = throw UnsupportedOperationException()
         override fun payCustomerInvoice(customerId: UUID, invoiceId: UUID, method: String, channel: String?) =
             throw UnsupportedOperationException()
+        override fun findInvoiceForPublicLink(invoiceId: UUID) = throw UnsupportedOperationException()
+        override fun payInvoiceForPublicLink(invoiceId: UUID, method: String, channel: String?) =
+            throw UnsupportedOperationException()
+        override fun manualQrisImage() = throw UnsupportedOperationException()
     }
 
     private inner class FakeCpeApi : CpeApi {

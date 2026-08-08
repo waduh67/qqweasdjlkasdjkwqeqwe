@@ -42,7 +42,8 @@ class InvoiceNotificationListener(
         NotificationTrigger.INVOICE_DUE_SOON,
     ) { name ->
         "Halo $name, tagihan internet Anda No. ${event.number} sebesar ${rupiah(event.amount)} akan " +
-            "jatuh tempo pada ${date(event.dueDate)}. Mohon lakukan pembayaran sebelum jatuh tempo. Terima kasih."
+            "jatuh tempo pada ${date(event.dueDate)}. Mohon lakukan pembayaran sebelum jatuh tempo. Terima kasih." +
+            payLink(event.payUrl)
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
@@ -53,7 +54,8 @@ class InvoiceNotificationListener(
     ) { name ->
         "Halo $name, tagihan internet Anda No. ${event.number} sebesar ${rupiah(event.amount)} telah " +
             "melewati jatuh tempo (${date(event.dueDate)}) dan belum kami terima. Mohon segera lakukan " +
-            "pembayaran agar layanan tidak terganggu. Terima kasih."
+            "pembayaran agar layanan tidak terganggu. Terima kasih." +
+            payLink(event.payUrl)
     }
 
     private fun notify(
@@ -75,6 +77,13 @@ class InvoiceNotificationListener(
             log.warn("Notifikasi {} gagal untuk tenant {} pelanggan {}", trigger, tenantId, customerId, ex)
         }
     }
+
+    /**
+     * Ekor pesan berisi tautan halaman bayar publik tagihan itu — biar pelanggan bisa membayar
+     * langsung dari WhatsApp tanpa login portal. Kosong bila billing tak bisa merangkainya (URL
+     * basis web belum disetel): pesan lama terkirim apa adanya.
+     */
+    private fun payLink(payUrl: String?): String = payUrl?.let { "\n\nBayar di sini: $it" } ?: ""
 
     private fun rupiah(amount: BigDecimal): String = "Rp " + RUPIAH.format(amount)
 

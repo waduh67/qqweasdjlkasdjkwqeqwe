@@ -70,6 +70,7 @@ class BillingCycleRunner(
     private val auditor: AuditRecorder,
     private val properties: BillingProperties,
     private val events: ApplicationEventPublisher,
+    private val tenantApi: TenantApi,
 ) {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -100,7 +101,10 @@ class BillingCycleRunner(
             // Beri tahu pelanggan tagihannya menunggak (notification memutuskan kirim/tidak
             // lewat saklar pemicu). Sekali per tagihan: begitu OVERDUE ia tak terpilih lagi.
             events.publishEvent(
-                InvoiceOverdue(saved.tenantId, saved.id, saved.customerId, saved.number, saved.amount, saved.dueDate),
+                InvoiceOverdue(
+                    saved.tenantId, saved.id, saved.customerId, saved.number, saved.amount, saved.dueDate,
+                    payUrl(saved.tenantId, saved.id),
+                ),
             )
             val autoIsolir = sub?.autoIsolir ?: properties.autoIsolir
             if (autoIsolir) customerApi.isolateForBilling(saved.subscriptionId)
@@ -121,8 +125,23 @@ class BillingCycleRunner(
             invoice.markDueSoonReminded()
             val saved = invoiceRepository.save(invoice)
             events.publishEvent(
-                InvoiceDueSoon(saved.tenantId, saved.id, saved.customerId, saved.number, saved.amount, saved.dueDate),
+                InvoiceDueSoon(
+                    saved.tenantId, saved.id, saved.customerId, saved.number, saved.amount, saved.dueDate,
+                    payUrl(saved.tenantId, saved.id),
+                ),
             )
         }
+    }
+
+    /**
+     * Tautan halaman bayar publik tagihan, dirangkai dari URL basis web yang sama dengan yang
+     * dipakai URL balik Pivot (`ftth.billing.pivot.redirect-base-url`) + slug tenant. Null bila
+     * basisnya belum disetel atau tenant tak terbaca — pengingat tetap dikirim tanpa tautan,
+     * bukan gagal.
+     */
+    private fun payUrl(tenantId: UUID, invoiceId: UUID): String? {
+        val base = properties.pivot.redirectBaseUrl.trim().trimEnd('/').takeIf { it.isNotEmpty() } ?: return null
+        val slug = runCatching { tenantApi.findById(tenantId)?.slug }.getOrNull() ?: return null
+        return "$base/bayar/$slug/$invoiceId"
     }
 }

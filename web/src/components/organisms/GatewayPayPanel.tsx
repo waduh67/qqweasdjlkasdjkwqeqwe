@@ -56,6 +56,7 @@ export function GatewayPayPanel({
   pollStatus,
   onPaid,
   onClose,
+  dismissible = true,
   initialInstruction,
 }: {
   title?: string
@@ -68,7 +69,12 @@ export function GatewayPayPanel({
   pollStatus?: () => Promise<string | null>
   /** Dipanggil sekali saat tagihan terdeteksi lunas. */
   onPaid?: () => void
-  onClose: () => void
+  onClose?: () => void
+  /**
+   * Tampilkan tombol "Tutup". Panel yang dirender INLINE sebagai isi utama halaman (halaman bayar
+   * publik) tak punya apa pun untuk ditutup, jadi setel `false` di sana.
+   */
+  dismissible?: boolean
   /**
    * Instruksi bayar yang sudah dibuat sebelumnya (mis. VA/QRIS tersimpan di tagihan). Bila diisi,
    * panel langsung menampilkannya saat dibuka — tak perlu buat ulang; metode & bank ikut ter-set
@@ -152,9 +158,11 @@ export function GatewayPayPanel({
           <strong style={{ fontSize: '1rem' }}>{title}</strong>
           {subtitle && <span className="muted" style={{ fontSize: '0.82rem' }}>{subtitle}</span>}
         </div>
-        <Button type="button" variant="subtle" onClick={onClose} style={{ fontSize: '0.8rem' }}>
-          Tutup
-        </Button>
+        {dismissible && (
+          <Button type="button" variant="subtle" onClick={onClose} style={{ fontSize: '0.8rem' }}>
+            Tutup
+          </Button>
+        )}
       </div>
 
       {paid ? (

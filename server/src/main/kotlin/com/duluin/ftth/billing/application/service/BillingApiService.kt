@@ -5,15 +5,22 @@ import com.duluin.ftth.billing.BillingApi
 import com.duluin.ftth.billing.BillingFinancialReport
 import com.duluin.ftth.billing.CustomerInvoiceRef
 import com.duluin.ftth.billing.CustomerPaymentRef
+import com.duluin.ftth.billing.ManualInstructionsRef
 import com.duluin.ftth.billing.MonthlyRevenuePoint
 import com.duluin.ftth.billing.PaymentMethodCatalog
 import com.duluin.ftth.billing.PaymentMethodOption
+import com.duluin.ftth.billing.PublicInvoiceRef
+import com.duluin.ftth.billing.StoredInstruction
+import com.duluin.ftth.billing.application.port.inbound.ManagePaymentGatewaySettingsUseCase
+import com.duluin.ftth.billing.application.port.inbound.ManualPaymentInstructionsView
 import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
 import com.duluin.ftth.billing.application.port.outbound.PaymentRepository
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.common.storage.StoredObject
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
+import com.duluin.ftth.customer.CustomerApi
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
@@ -36,6 +43,9 @@ class BillingApiService(
     private val invoiceRepository: InvoiceRepository,
     private val paymentRepository: PaymentRepository,
     private val invoiceCharger: InvoiceChargePort,
+    private val customerApi: CustomerApi,
+    private val gatewayProbe: ActiveGatewayProbe,
+    private val gatewaySettings: ManagePaymentGatewaySettingsUseCase,
 ) : BillingApi {
 
     override fun findCustomerInvoices(customerId: UUID): List<CustomerInvoiceRef> =
@@ -60,6 +70,70 @@ class BillingApiService(
         invoiceCharger.chargeWithMethod(invoice, method, channel)
         return invoiceRepository.save(invoice).toRef()
     }
+
+    override fun findInvoiceForPublicLink(invoiceId: UUID): PublicInvoiceRef? =
+        invoiceRepository.findById(invoiceId)?.toPublicRef()
+
+    @Transactional
+    override fun payInvoiceForPublicLink(invoiceId: UUID, method: String, channel: String?): PublicInvoiceRef {
+        // Tanpa penyaringan pemilik — UUID tagihan ITU kapabilitasnya; RLS yang membatasi tenant.
+        val invoice = invoiceRepository.findById(invoiceId)
+            ?: throw NotFoundException("Tagihan tidak ditemukan")
+        if (invoice.status != InvoiceStatus.ISSUED && invoice.status != InvoiceStatus.OVERDUE) {
+            throw ValidationException("Tagihan ini tidak dapat dibayar (status ${invoice.status}).")
+        }
+        PaymentMethodCatalog.validate(method, channel)
+        // Instruksi hidup yang sama dipakai ulang: tautan publik dipegang siapa saja, dan tiap
+        // charge baru berarti satu sesi bayar baru di penyedia.
+        if (invoice.hasLiveInstructionFor(method, channel)) return invoice.toPublicRef()
+        invoiceCharger.chargeWithMethod(invoice, method, channel)
+        return invoiceRepository.save(invoice).toPublicRef()
+    }
+
+    override fun manualQrisImage(): StoredObject? = gatewaySettings.getQrisImage()
+
+    /** Lihat [PaymentMethodCatalog.stillUsable]. */
+    private fun Invoice.hasLiveInstructionFor(method: String, channel: String?): Boolean =
+        PaymentMethodCatalog.stillUsable(
+            StoredInstruction(payMethod, vaChannel, vaNumber, vaExpiresAt, qrContent, qrExpiresAt),
+            method,
+            channel,
+            Instant.now(),
+        )
+
+    private fun Invoice.toPublicRef(): PublicInvoiceRef {
+        val manual = gatewayProbe.manualOnly()
+        val open = status == InvoiceStatus.ISSUED || status == InvoiceStatus.OVERDUE
+        return PublicInvoiceRef(
+            id = id,
+            number = number,
+            customerName = customerApi.findCustomer(customerId)?.name ?: "Pelanggan",
+            periodStart = periodStart,
+            periodEnd = periodEnd,
+            amount = amount,
+            status = status.name,
+            dueDate = dueDate,
+            paidAt = paidAt,
+            payableOnline = open && !manual,
+            payMethod = payMethod,
+            vaChannel = vaChannel,
+            vaNumber = vaNumber,
+            vaName = vaName,
+            vaExpiresAt = vaExpiresAt,
+            qrContent = qrContent,
+            qrExpiresAt = qrExpiresAt,
+            manual = if (manual) gatewaySettings.manualPaymentInstructions().toRef() else null,
+        )
+    }
+
+    private fun ManualPaymentInstructionsView.toRef() = ManualInstructionsRef(
+        transferEnabled = transferEnabled,
+        bankName = bankName,
+        accountNumber = accountNumber,
+        accountHolder = accountHolder,
+        qrisEnabled = qrisEnabled,
+        qrisImageAvailable = qrisImageAvailable,
+    )
 
     private fun Invoice.toRef() = CustomerInvoiceRef(
         id = id,

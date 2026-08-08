@@ -11,6 +11,17 @@ import com.duluin.ftth.tenancy.TenantApi
 import org.springframework.stereotype.Component
 
 /**
+ * Kontrak sempit "gateway aktif tenant tidak mendukung bayar in-app", dipisah dengan alasan yang
+ * sama seperti [InvoiceChargePort]: konsumen yang cuma perlu tahu apakah panel VA/QRIS layak
+ * dirender (mis. [BillingApiService] untuk halaman bayar publik) tak perlu menyeret seluruh
+ * kolaborator [TenantPaymentGatewayResolver]. Diimplementasikan oleh [TenantPaymentGatewayResolver].
+ */
+interface ActiveGatewayProbe {
+    /** true = charge in-app tak tersedia (MANUAL/fallback) → tunjukkan instruksi transfer/QRIS. */
+    fun manualOnly(): Boolean
+}
+
+/**
  * Menyelesaikan gateway aktif untuk tenant saat ini. Model Pivot "business as platform":
  * bila tenant memakai PIVOT dan sub-account-nya sudah terprovisi (aktif), charge dibuat di akun
  * MASTER platform ([com.duluin.ftth.billing.domain.model.PivotMasterConfig]) atas nama sub-account
@@ -27,7 +38,10 @@ class TenantPaymentGatewayResolver(
     private val masterConfig: PivotMasterConfigProvider,
     private val tenantApi: TenantApi,
     private val props: BillingProperties,
-) {
+) : ActiveGatewayProbe {
+
+    override fun manualOnly(): Boolean = resolve().provider.equals("MANUAL", ignoreCase = true)
+
     fun resolve(): ResolvedGatewayContext {
         val settings = repo.find()
         if (settings != null && settings.usesPivot) {
