@@ -68,7 +68,8 @@ dibuka & dipegang Caddy prod (dipakai bersama). Simulator (SNMP/DAE) hanya inter
 echo '<GHCR_PAT>' | docker login ghcr.io -u <username-github> --password-stdin
 
 # 4) Nyalakan pertama kali (tanpa caddy — stack demo tak punya caddy)
-docker compose -f docker-compose.demo.yml pull
+#    --ignore-buildable: lewati image GenieACS (di-build lokal, tak ada di registry).
+docker compose -f docker-compose.demo.yml pull --ignore-buildable
 docker compose -f docker-compose.demo.yml up -d --build
 ```
 
