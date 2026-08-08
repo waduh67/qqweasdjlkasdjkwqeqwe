@@ -108,12 +108,15 @@ function PaymentReturnPage({ variant }: { variant: Variant }) {
 
         <Link
           to={copy.ctaTo}
-          className="primary"
           style={{
+            display: 'block',
             width: '100%',
             padding: '0.6rem',
             textAlign: 'center',
             textDecoration: 'none',
+            fontWeight: 600,
+            color: 'var(--accent-ink)',
+            background: 'var(--accent)',
             borderRadius: 'var(--radius)',
           }}
         >

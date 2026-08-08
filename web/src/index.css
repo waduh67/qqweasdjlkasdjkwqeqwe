@@ -257,81 +257,21 @@ th,
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Kontrol ----------
-   Aturan elemen polos di bawah hanya untuk kontrol NATIVE yang tersisa: tombol
-   segmen/tab (.active), .th-sort, .icon-btn, tombol dialog sistem, input file, dsb.
-   Komponen Fluent v9 membawa kelas ber-awalan `fui-` dan diberi gaya oleh tema-nya
-   sendiri, jadi dikecualikan lewat `:not([class*='fui-'])` supaya gaya global tak
-   bocor ke sana (mis. cincin fokus ganda pada Input Fluent). Aturan kelas tombol
-   (.primary/.ghost/.danger/.small/.icon-btn) dibiarkan — hanya cocok ke tombol native. */
-
-button:not([class*='fui-']) {
-  font: inherit;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.5rem 0.85rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-strong);
-  background: var(--surface);
-  color: var(--text);
-  cursor: pointer;
-  /* Azure: tombol bilah-perintah berbobot normal; hanya tombol utama yang semibold. */
-  font-weight: 400;
-  white-space: nowrap;
-  transition: background 0.12s ease, border-color 0.12s ease, transform 0.05s ease;
-}
-button:not([class*='fui-']):hover:not(:disabled) {
-  background: var(--surface-hover);
-  border-color: var(--muted);
-}
-button:not([class*='fui-']):active:not(:disabled) {
-  transform: translateY(0.5px);
-}
-button:not([class*='fui-']):disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-button:not([class*='fui-']):focus-visible {
+/* ---------- Kontrol form native yang tersisa ----------
+   Tombol kini SEMUA Fluent (atom [Button]/[Segmented] di atas Fluent, ber-kelas `fui-`)
+   ATAU kontrol Azure bespoke dgn CSS mandiri (.cmd-btn, .env-switch-btn, .nav-group-toggle,
+   `th button.th-sort`, tombol drill inline). Aturan tombol native global + kelas
+   .primary/.ghost/.danger/.small/.icon-btn SUDAH DIHAPUS — itulah sumber "gaya native
+   bocor" (mis. kepala grid tampak seperti pil abu). Yang tersisa di bawah hanya untuk
+   input/label native, dikecualikan dari `fui-` agar tak bentrok gaya tema Fluent.
+   Cincin fokus tombol bespoke disatukan di sini (tak lagi diwarisi aturan global). */
+.cmd-btn:focus-visible,
+.env-switch-btn:focus-visible,
+.env-menu button:focus-visible,
+.sidebar button.nav-group-toggle:focus-visible,
+th button.th-sort:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
-}
-
-button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-ink);
-  /* Azure: tombol utama datar (tanpa bayangan), hanya sedikit lebih tebal. */
-  font-weight: 600;
-}
-button.primary:hover:not(:disabled) {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
-}
-button.ghost {
-  background: transparent;
-  border-color: transparent;
-}
-button.ghost:hover:not(:disabled) {
-  background: var(--surface-hover);
-  border-color: transparent;
-}
-button.danger {
-  color: var(--critical-ink);
-  border-color: color-mix(in srgb, var(--critical) 40%, var(--border-strong));
-}
-button.danger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--critical) 12%, var(--surface));
-  border-color: var(--critical);
-}
-button.small {
-  padding: 0.3rem 0.55rem;
-  font-size: 0.8rem;
-}
-button.icon-btn {
-  padding: 0.45rem;
-  aspect-ratio: 1;
 }
 
 input:not([class*='fui-']),
@@ -463,10 +403,10 @@ tbody tr:last-child td {
 }
 
 /* Kepala kolom yang bisa diurut — TEKS polos + panah kecil, PERSIS grid Azure (bukan
-   pil/tombol). Selektor `th button.th-sort` (spesifisitas 0,2,1) WAJIB mengalahkan aturan
-   tombol native global `button:not([class*='fui-'])` (0,1,1) yang jika tidak akan
-   menyuntikkan border + background + padding → kepala kolom tampak seperti pil abu-abu.
-   Ini akar "masih terlihat native" yang dikeluhkan: gaya tombol bocor ke header grid. */
+   pil/tombol). Aturannya menyetel sendiri semua gaya (border/background/padding none) supaya
+   header tetap tampil datar. Dulu ada reset tombol native global `button:not([class*='fui-'])`
+   yang membocorkan border+background+padding ke sini → kepala kolom seperti pil abu-abu; reset
+   itu sudah dihapus (semua tombol kini atom Fluent), jadi tak ada lagi yang bocor. */
 th button.th-sort {
   display: inline-flex;
   align-items: center;
@@ -557,42 +497,6 @@ tbody tr.row-selected:hover {
 }
 .toolbar .spacer {
   flex: 1;
-}
-
-.search-input {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0 0.6rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-strong);
-  background: var(--surface);
-  min-width: 14rem;
-  flex: 1 1 16rem;
-  max-width: 24rem;
-  transition: border-color 0.12s ease, box-shadow 0.12s ease;
-}
-.search-input:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--focus-ring);
-}
-.search-input svg {
-  color: var(--muted);
-  flex: none;
-}
-.search-input input {
-  border: none;
-  background: none;
-  padding: 0.5rem 0;
-}
-.search-input input:focus {
-  outline: none;
-  box-shadow: none;
-}
-.search-input button {
-  padding: 0.2rem;
-  border: none;
-  background: none;
 }
 
 /* ---------- Pemilih lokasi (peta klik + cari alamat) ---------- */
@@ -715,18 +619,19 @@ tbody tr.row-selected:hover {
 }
 .cb-field input {
   flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--text);
   border: none;
   background: none;
   padding: 0.5rem 0;
 }
+.cb-field input::placeholder {
+  color: var(--muted);
+}
 .cb-field input:focus {
   outline: none;
   box-shadow: none;
-}
-.cb-field button {
-  padding: 0.2rem;
-  border: none;
-  background: none;
 }
 .combobox.is-disabled {
   opacity: 0.6;
@@ -1162,15 +1067,22 @@ tbody tr.row-selected:hover {
   border-bottom: 1px solid var(--border);
 }
 
-/* Override tombol global: command button itu datar, transparan, tak berkotak. */
+/* Command button: datar, transparan, tak berkotak. Self-contained (tak bergantung
+   aturan tombol native global yang sudah dihapus): reset font/tata-letak sendiri. */
 .azure-commandbar .cmd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 0.4rem;
   padding: 0.4rem 0.6rem;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text);
+  font: inherit;
   font-weight: 400;
+  white-space: nowrap;
+  cursor: pointer;
 }
 .azure-commandbar .cmd-btn:hover:not(:disabled) {
   background: var(--surface-hover);
@@ -1549,10 +1461,10 @@ tbody tr.row-selected:hover {
 /* Header seksi = baris pohon left-nav Azure: chevron di KIRI lalu label (sentence
    case, bukan kapital), rata kiri seperti item. Chevron berputar -90° (⌄ → ›) saat
    diciutkan. Baris ikut mendapat hover halus agar terasa bisa diklik. */
-/* Selektor di-scope `.sidebar button.nav-group-toggle` (spesifisitas 0,2,1) agar
-   MENANG atas gaya tombol native global `button:not([class*='fui-'])` (0,1,1) yang
-   jika tidak akan memberi border + background surface + rata-tengah + warna/`font`
-   sendiri — membuat header seksi tampak seperti tombol/pill, bukan baris pohon Azure. */
+/* Aturan ini menyetel sendiri seluruh gayanya (border/background none, rata kiri, warna/
+   `font` sendiri) supaya header seksi tampil sebagai baris pohon Azure, bukan tombol/pill.
+   Dulu reset tombol native global `button:not([class*='fui-'])` membocorkan gaya tombol ke
+   sini; reset itu sudah dihapus (semua tombol kini atom Fluent), jadi tak ada lagi bocoran. */
 .sidebar button.nav-group-toggle {
   display: flex;
   align-items: center;
@@ -1660,8 +1572,10 @@ tbody tr.row-selected:hover {
   background: var(--sidebar-bg-2);
   border: 1px solid var(--sidebar-border);
   color: var(--sidebar-text);
+  font-family: inherit;
   font-weight: 400;
   font-size: 0.9rem;
+  cursor: pointer;
 }
 .env-switch-btn:hover:not(:disabled) {
   background: color-mix(in srgb, var(--sidebar-bg-2) 88%, var(--sidebar-text));
@@ -1796,12 +1710,15 @@ tbody tr.row-selected:hover {
 .topbar .muted {
   color: rgba(255, 255, 255, 0.82);
 }
-.topbar button.ghost {
+/* Tombol ikon Fluent subtle (tema/keluar/ciutkan sidebar) di header: dibuat putih agar
+   kontras di atas bar biru. Selektor `.topbar .fui-Button` (0,2,0) menang atas kelas atomik
+   Griffel Fluent (0,1,0) tanpa perlu !important. */
+.topbar .fui-Button {
   color: #fff;
 }
-.topbar button.ghost:hover:not(:disabled) {
+.topbar .fui-Button:hover {
   background: rgba(255, 255, 255, 0.16);
-  border-color: transparent;
+  color: #fff;
 }
 .topbar .avatar {
   background: rgba(255, 255, 255, 0.24);
@@ -1863,27 +1780,6 @@ tbody tr.row-selected:hover {
   font-weight: 600;
   font-size: 0.8rem;
   flex: none;
-}
-
-/* ---------- Segmen (toggle filter) ---------- */
-
-.segment {
-  display: inline-flex;
-  padding: 2px;
-  gap: 2px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-}
-.segment button {
-  border: none;
-  background: transparent;
-  padding: 0.35rem 0.7rem;
-  font-size: 0.82rem;
-}
-.segment button.active {
-  background: var(--surface);
-  color: var(--text);
 }
 
 /* ---------- Drawer ---------- */

@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { Checkbox } from '@fluentui/react-components'
 import type { PermissionCatalog } from '@/api/types'
 
 interface Props {
@@ -45,12 +46,10 @@ export function PermissionMatrix({ catalog, selected, onChange, disabled }: Prop
         return (
           <section className="matrix-module" key={module.name}>
             <div className="row">
-              <input
-                type="checkbox"
-                style={{ width: 'auto' }}
+              <Checkbox
                 checked={allChecked}
                 disabled={disabled}
-                onChange={(e) => toggle(allIds, e.target.checked)}
+                onChange={(_, data) => toggle(allIds, data.checked === true)}
                 aria-label={`Pilih semua izin ${module.name}`}
               />
               <h4>{module.name}</h4>
@@ -74,11 +73,10 @@ export function PermissionMatrix({ catalog, selected, onChange, disabled }: Prop
                       return (
                         <td key={action}>
                           {permission ? (
-                            <input
-                              type="checkbox"
+                            <Checkbox
                               checked={selected.has(permission.id)}
                               disabled={disabled}
-                              onChange={(e) => toggle([permission.id], e.target.checked)}
+                              onChange={(_, data) => toggle([permission.id], data.checked === true)}
                               title={permission.description ?? permission.code}
                               aria-label={permission.code}
                             />

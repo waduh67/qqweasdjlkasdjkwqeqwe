@@ -15,7 +15,7 @@ import {
   type PortalPaymentMethodOption,
 } from './portalApi'
 import { GatewayPayPanel } from '@/components/organisms'
-import { Button, TextField } from '@/components/atoms'
+import { Button, Segmented, TextField } from '@/components/atoms'
 
 type Tab = 'ringkasan' | 'tagihan' | 'koneksi' | 'profil'
 
@@ -77,12 +77,17 @@ export function PortalDashboard() {
         <Button variant="subtle" onClick={() => void logout()}>Keluar</Button>
       </header>
 
-      <div className="segment" style={{ alignSelf: 'flex-start', flexWrap: 'wrap' }}>
-        <button className={tab === 'ringkasan' ? 'active' : ''} onClick={() => setTab('ringkasan')}>Ringkasan</button>
-        <button className={tab === 'tagihan' ? 'active' : ''} onClick={() => setTab('tagihan')}>Tagihan</button>
-        <button className={tab === 'koneksi' ? 'active' : ''} onClick={() => setTab('koneksi')}>Koneksi</button>
-        <button className={tab === 'profil' ? 'active' : ''} onClick={() => setTab('profil')}>Profil</button>
-      </div>
+      <Segmented
+        ariaLabel="Bagian dasbor"
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: 'ringkasan', label: 'Ringkasan' },
+          { value: 'tagihan', label: 'Tagihan' },
+          { value: 'koneksi', label: 'Koneksi' },
+          { value: 'profil', label: 'Profil' },
+        ]}
+      />
 
       {tab === 'ringkasan' && <RingkasanTab billing={billing} connection={connection} onPay={() => setTab('tagihan')} />}
       {tab === 'tagihan' && <TagihanTab billing={billing} onReload={reloadBilling} />}

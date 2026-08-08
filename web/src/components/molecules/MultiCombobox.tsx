@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react'
 import { IconClose, IconSearch } from '@/components/atoms/icons'
-import { Spinner } from '@/components/atoms'
+import { Button, Spinner } from '@/components/atoms'
 
 /**
  * Pemilih JAMAK yang bisa dicari — saudara [Combobox] untuk kasus "banyak nilai"
@@ -159,15 +159,14 @@ export function MultiCombobox<T>({
             >
               {labels[id] ?? id}
               {!disabled && (
-                <button
-                  type="button"
-                  className="ghost icon-btn"
-                  onMouseDown={(e) => e.preventDefault()}
+                <Button
+                  variant="subtle"
+                  size="small"
+                  icon={<IconClose size={12} />}
+                  onMouseDown={(e: ReactMouseEvent) => e.preventDefault()}
                   onClick={() => remove(id)}
                   aria-label="Lepas teknisi"
-                >
-                  <IconClose size={12} />
-                </button>
+                />
               )}
             </span>
           ))}

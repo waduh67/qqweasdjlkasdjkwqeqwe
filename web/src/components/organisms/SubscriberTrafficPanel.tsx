@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getBrasTraffic, type TrafficHistoryView } from '@/api/bng'
-import { TrafficChart } from '@/components/atoms'
+import { Segmented, TrafficChart } from '@/components/atoms'
 
 /**
  * Panel trafik satu akun jaringan: throughput "sekarang" (Down/Up), total pemakaian data,
@@ -58,17 +58,12 @@ export function SubscriberTrafficPanel({ accessId }: { accessId: string }) {
         </div>
 
         {/* Pemilih rentang: memicu tarik ulang lewat state [hours]. */}
-        <div className="segment">
-          {WINDOWS.map((w) => (
-            <button
-              key={w.hours}
-              className={hours === w.hours ? 'active' : ''}
-              onClick={() => setHours(w.hours)}
-            >
-              {w.label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          ariaLabel="Rentang waktu tren"
+          value={hours}
+          onChange={setHours}
+          options={WINDOWS.map((w) => ({ value: w.hours, label: w.label }))}
+        />
       </div>
 
       {loading && !traffic ? (

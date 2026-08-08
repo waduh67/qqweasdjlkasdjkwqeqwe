@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { Button, TextField, TextareaField } from '@/components/atoms'
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog'
 import { Modal } from '@/components/molecules/Modal'
 
@@ -88,39 +89,38 @@ export function DialogProvider({ children }: { children: ReactNode }) {
           onClose={() => settle(null)}
           footer={
             <>
-              <button className="ghost" onClick={() => settle(null)}>
+              <Button variant="subtle" onClick={() => settle(null)}>
                 {pending.opts.cancelLabel ?? 'Batal'}
-              </button>
-              <button className="primary" onClick={() => settle(value)} disabled={promptRequired}>
+              </Button>
+              <Button variant="primary" onClick={() => settle(value)} disabled={promptRequired}>
                 {pending.opts.confirmLabel ?? 'OK'}
-              </button>
+              </Button>
             </>
           }
         >
           <div className="stack" style={{ gap: '0.6rem' }}>
             {pending.opts.message && <p style={{ margin: 0 }}>{pending.opts.message}</p>}
-            <label>
-              {pending.opts.label && <span>{pending.opts.label}</span>}
-              {pending.opts.multiline ? (
-                <textarea
-                  autoFocus
-                  rows={4}
-                  value={value}
-                  placeholder={pending.opts.placeholder}
-                  onChange={(e) => setValue(e.target.value)}
-                />
-              ) : (
-                <input
-                  autoFocus
-                  value={value}
-                  placeholder={pending.opts.placeholder}
-                  onChange={(e) => setValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !promptRequired) settle(value)
-                  }}
-                />
-              )}
-            </label>
+            {pending.opts.multiline ? (
+              <TextareaField
+                label={pending.opts.label as string | undefined}
+                autoFocus
+                rows={4}
+                value={value}
+                placeholder={pending.opts.placeholder}
+                onChange={(_, data) => setValue(data.value)}
+              />
+            ) : (
+              <TextField
+                label={pending.opts.label as string | undefined}
+                autoFocus
+                value={value}
+                placeholder={pending.opts.placeholder}
+                onChange={(_, data) => setValue(data.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !promptRequired) settle(value)
+                }}
+              />
+            )}
           </div>
         </Modal>
       )}

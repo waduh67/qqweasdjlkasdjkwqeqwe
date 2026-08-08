@@ -2,6 +2,7 @@
 export * from './icons'
 export { Button } from './Button'
 export type { AppButtonProps, ButtonVariant } from './Button'
+export { Segmented } from './Segmented'
 export { TextField, SelectField, TextareaField } from './Field'
 export { Badge, StatusBadge } from './Badge'
 export type { Tone } from './Badge'

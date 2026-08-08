@@ -1,6 +1,6 @@
-import { Fragment, useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { Fragment, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react'
 import { IconClose, IconSearch } from '@/components/atoms/icons'
-import { Spinner } from '@/components/atoms'
+import { Button, Spinner } from '@/components/atoms'
 
 /**
  * Pemilih tunggal yang bisa dicari (combobox/typeahead) — pengganti proper untuk
@@ -174,15 +174,14 @@ export function Combobox<T>({
         />
         {loading && <Spinner />}
         {value && !loading && (
-          <button
-            type="button"
-            className="ghost icon-btn"
-            onMouseDown={(e) => e.preventDefault()}
+          <Button
+            variant="subtle"
+            size="small"
+            icon={<IconClose size={15} />}
+            onMouseDown={(e: ReactMouseEvent) => e.preventDefault()}
             onClick={clear}
             aria-label="Hapus pilihan"
-          >
-            <IconClose size={15} />
-          </button>
+          />
         )}
       </div>
 

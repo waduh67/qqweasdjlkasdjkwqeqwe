@@ -10,7 +10,7 @@ import type {
 } from '../api/monitoring'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '@/components/organisms'
-import { Button, EmptyState, StatusBadge, TextField, Toolbar } from '@/components/atoms'
+import { Button, EmptyState, Segmented, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { Drawer, SearchInput } from '@/components/molecules'
 import { useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
@@ -335,14 +335,15 @@ export function MonitoringPage() {
         <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Alarm</h2>
         <Toolbar>
           <SearchInput value={alarmQuery} onChange={setAlarmQuery} placeholder="Cari entitas, jenis, atau pesan…" />
-          <div className="segment">
-            <button className={statusFilter === 'ACTIVE' ? 'active' : ''} onClick={() => setStatusFilter('ACTIVE')}>
-              Aktif
-            </button>
-            <button className={statusFilter === 'ALL' ? 'active' : ''} onClick={() => setStatusFilter('ALL')}>
-              Semua
-            </button>
-          </div>
+          <Segmented
+            ariaLabel="Saring status alarm"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { value: 'ACTIVE', label: 'Aktif' },
+              { value: 'ALL', label: 'Semua' },
+            ]}
+          />
         </Toolbar>
         <DataTable
           columns={alarmColumns}

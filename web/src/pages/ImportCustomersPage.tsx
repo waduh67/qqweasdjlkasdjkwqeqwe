@@ -313,8 +313,7 @@ export function ImportCustomersPage() {
           />
           <label
             htmlFor="customer-csv-upload"
-            className="ghost"
-            style={{ cursor: 'pointer', padding: '0.4rem 0.7rem', borderRadius: 6, border: '1px solid var(--border)' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', padding: '0.4rem 0.7rem', borderRadius: 6, border: '1px solid var(--border)' }}
           >
             <IconUpload size={14} /> Pilih berkas…
           </label>

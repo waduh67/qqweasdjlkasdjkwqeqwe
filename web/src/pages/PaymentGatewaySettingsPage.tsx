@@ -35,7 +35,7 @@ import {
   type TenantPivotAccountView,
 } from '../api/pivotAccount'
 import { useCan } from '../auth/useCan'
-import { Badge, Button, EmptyState, TextField, TextareaField, type Tone } from '@/components/atoms'
+import { Badge, Button, EmptyState, Segmented, TextField, TextareaField, type Tone } from '@/components/atoms'
 import { Modal } from '@/components/molecules'
 import { useToast } from '@/system'
 import { Combobox } from '@/components/molecules'
@@ -1212,7 +1212,7 @@ function ManualPaymentSection({
 /** Tombol pemicu `<input type=file>` tersembunyi untuk memilih gambar QRIS (unggah saat menyimpan). */
 function QrisUploadButton({ label, onPick }: { label: string; onPick: (file: File) => void }) {
   return (
-    <label className="ghost" style={{ cursor: 'pointer' }}>
+    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', padding: '0.4rem 0.7rem', borderRadius: 6, border: '1px solid var(--border)', fontSize: '0.85rem' }}>
       {label}
       <input
         type="file"
@@ -1290,35 +1290,6 @@ function AuthedImage({ path, version, alt, size }: { path: string; version: numb
     <a href={url} target="_blank" rel="noreferrer" title={alt}>
       <img src={url} alt={alt} style={box} />
     </a>
-  )
-}
-
-function Segmented<T extends string>({
-  value,
-  options,
-  onChange,
-  disabled,
-}: {
-  value: T
-  options: { value: T; label: string }[]
-  onChange: (value: T) => void
-  disabled?: boolean
-}) {
-  return (
-    <div className="segment" role="group">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          className={value === o.value ? 'active' : ''}
-          aria-pressed={value === o.value}
-          onClick={() => onChange(o.value)}
-          disabled={disabled}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
   )
 }
 

@@ -31,7 +31,7 @@ import type {
 import type { PageResponse } from '../api/types'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
-import { Button, SelectField, StatusBadge, TextField } from '@/components/atoms'
+import { Button, Segmented, SelectField, StatusBadge, TextField } from '@/components/atoms'
 import { useToast } from '@/system'
 import { IconClose, IconCrosshair, IconPlus, IconRoute } from '@/components/atoms/icons'
 import { createCableTool, type CableTool, type ToolState } from '../map/cableTool'
@@ -1371,23 +1371,17 @@ export function MapPage() {
  * Pemilih basemap: segmen kecil di dalam kartu info (kiri-bawah), dikumpulkan bersama
  * toggle heatmap & legenda karena sama-sama mengatur "apa yang ditampilkan peta".
  * Sengaja jauh dari alat-edit (kiri-atas) & panel detail (kanan-atas) agar tak
- * bertabrakan. Tombol native `.segment` legibel di atas kartu kaca bertema.
+ * bertabrakan. Pakai atom `Segmented` (Fluent) yang legibel di atas kartu kaca bertema.
  */
 function BasemapSwitcher({ value, onChange }: { value: BasemapMode; onChange: (mode: BasemapMode) => void }) {
   return (
-    <div className="segment map-basemap" role="group" aria-label="Mode peta">
-      {BASEMAP_ORDER.map((mode) => (
-        <button
-          key={mode}
-          type="button"
-          className={value === mode ? 'active' : ''}
-          aria-pressed={value === mode}
-          onClick={() => onChange(mode)}
-        >
-          {BASEMAPS[mode].label}
-        </button>
-      ))}
-    </div>
+    <Segmented
+      className="map-basemap"
+      ariaLabel="Mode peta"
+      value={value}
+      onChange={onChange}
+      options={BASEMAP_ORDER.map((mode) => ({ value: mode, label: BASEMAPS[mode].label }))}
+    />
   )
 }
 

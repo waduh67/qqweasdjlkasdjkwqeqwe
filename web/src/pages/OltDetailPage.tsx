@@ -471,8 +471,12 @@ function PonPortTab({
                     style={{
                       flex: 1,
                       minWidth: 0,
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'flex-start',
                       gap: '0.5rem',
+                      font: 'inherit',
+                      color: 'inherit',
                       background: 'none',
                       border: 'none',
                       padding: 0,
@@ -608,8 +612,12 @@ function OdpRow({ odp, canDrillOdp }: { odp: OdpUtilization; canDrillOdp: boolea
         title={canDrillOdp ? 'Lihat pelanggan di ODP ini' : undefined}
         style={{
           width: '100%',
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'space-between',
           gap: '0.5rem',
+          font: 'inherit',
+          color: 'inherit',
           background: 'none',
           border: 'none',
           padding: '0.4rem 0',

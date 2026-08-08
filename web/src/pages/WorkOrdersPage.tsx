@@ -334,7 +334,7 @@ function Stat({
       type="button"
       className={cls}
       onClick={onClick}
-      style={{ textAlign: 'left', cursor: 'pointer', outline: active ? '2px solid var(--accent, #4c8bf5)' : undefined }}
+      style={{ font: 'inherit', color: 'inherit', textAlign: 'left', cursor: 'pointer', outline: active ? '2px solid var(--accent, #4c8bf5)' : undefined }}
     >
       {body}
     </button>

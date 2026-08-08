@@ -348,7 +348,7 @@ export function ImportPppoePage() {
                       void f.text().then((t) => setPaste(t))
                     }}
                   />
-                  <label htmlFor="pppoe-upload" className="ghost" style={{ cursor: 'pointer', padding: '0.4rem 0.7rem', borderRadius: 6, border: '1px solid var(--line, #ccc)', fontSize: '0.85rem' }}>
+                  <label htmlFor="pppoe-upload" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', padding: '0.4rem 0.7rem', borderRadius: 6, border: '1px solid var(--border)', fontSize: '0.85rem' }}>
                     Upload file
                   </label>
                   <Button onClick={loadFromPaste} disabled={!paste.trim()}>

@@ -7,7 +7,7 @@ import {
   type UpdateTaxSettingsRequest,
 } from '../api/billing'
 import { useCan } from '../auth/useCan'
-import { Badge, Button, EmptyState, TextField } from '@/components/atoms'
+import { Badge, Button, EmptyState, Segmented, TextField } from '@/components/atoms'
 import { Modal } from '@/components/molecules'
 import { useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
@@ -355,35 +355,6 @@ function PercentField({
         hint={invalid ? undefined : hint}
         style={{ width: 160 }}
       />
-    </div>
-  )
-}
-
-function Segmented<T extends string>({
-  value,
-  options,
-  onChange,
-  disabled,
-}: {
-  value: T
-  options: { value: T; label: string }[]
-  onChange: (value: T) => void
-  disabled?: boolean
-}) {
-  return (
-    <div className="segment" role="group">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          className={value === o.value ? 'active' : ''}
-          aria-pressed={value === o.value}
-          onClick={() => onChange(o.value)}
-          disabled={disabled}
-        >
-          {o.label}
-        </button>
-      ))}
     </div>
   )
 }

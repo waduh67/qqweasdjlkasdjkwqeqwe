@@ -51,7 +51,7 @@ import {
   type SubscriberAccessView,
 } from '../api/bng'
 import { useCan } from '../auth/useCan'
-import { Badge, Button, EmptyState, SelectField, Spinner, StatusBadge, TextField } from '@/components/atoms'
+import { Badge, Button, EmptyState, Segmented, SelectField, Spinner, StatusBadge, TextField } from '@/components/atoms'
 import { Modal, Tabs } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { GatewayPayPanel } from '@/components/organisms'
@@ -824,14 +824,15 @@ function TetanggaTab({
   }
   return (
     <div className="stack" style={{ gap: '0.75rem' }}>
-      <div className="segment" style={{ alignSelf: 'flex-start' }}>
-        <button className={scope === 'odp' ? 'active' : ''} onClick={() => setScope('odp')}>
-          Se-ODP{odpCount ? ` (${odpCount})` : ''}
-        </button>
-        <button className={scope === 'pon' ? 'active' : ''} onClick={() => setScope('pon')}>
-          Se-PON{ponCount ? ` (${ponCount})` : ''}
-        </button>
-      </div>
+      <Segmented
+        ariaLabel="Cakupan tetangga"
+        value={scope}
+        onChange={setScope}
+        options={[
+          { value: 'odp', label: `Se-ODP${odpCount ? ` (${odpCount})` : ''}` },
+          { value: 'pon', label: `Se-PON${ponCount ? ` (${ponCount})` : ''}` },
+        ]}
+      />
       <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
         {scope === 'odp'
           ? 'Penghuni ODP yang sama — berbagi kabel drop & splitter ODP.'
@@ -1698,13 +1699,12 @@ function CpeTab({ customerId }: { customerId: string }) {
   return (
     <div className="stack" style={{ gap: '1rem' }}>
       {devices.length > 1 && (
-        <div className="segment" style={{ alignSelf: 'flex-start', flexWrap: 'wrap' }}>
-          {devices.map((d) => (
-            <button key={d.id} className={selected === d.id ? 'active' : ''} onClick={() => setSelected(d.id)}>
-              {d.model ?? d.serialNumber}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          ariaLabel="Pilih perangkat CPE"
+          value={selected ?? ''}
+          onChange={setSelected}
+          options={devices.map((d) => ({ value: d.id, label: d.model ?? d.serialNumber }))}
+        />
       )}
       {selected && <CpeDevicePanel key={selected} deviceId={selected} />}
     </div>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
 import { useCan } from '@/auth/useCan'
-import { ThemeToggle } from '@/components/atoms'
+import { Button, ThemeToggle } from '@/components/atoms'
 import { EnvSwitcher } from '@/components/molecules'
 import { Breadcrumbs } from '@/components/molecules'
 import { SidebarNav, type NavGroup } from '@/components/molecules'
@@ -124,14 +124,13 @@ export function Layout() {
           membentang di atas sidebar & konten, bukan hanya kolom kanan. */}
       <header className="topbar">
         <div className="row" style={{ gap: '0.5rem' }}>
-          <button
-            className="ghost icon-btn"
+          <Button
+            variant="subtle"
+            icon={<IconSidebar size={18} />}
             onClick={toggleSidebar}
             aria-label={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
             title={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
-          >
-            <IconSidebar size={18} />
-          </button>
+          />
           <span className="badge accent">{user?.tenantSlug}</span>
           {user?.platformAdmin && <span className="badge">platform admin</span>}
         </div>
@@ -148,9 +147,13 @@ export function Layout() {
               </div>
             </div>
           </div>
-          <button className="ghost icon-btn" onClick={() => void logout()} aria-label="Keluar" title="Keluar">
-            <IconLogout size={18} />
-          </button>
+          <Button
+            variant="subtle"
+            icon={<IconLogout size={18} />}
+            onClick={() => void logout()}
+            aria-label="Keluar"
+            title="Keluar"
+          />
         </div>
       </header>
 
