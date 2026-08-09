@@ -1950,6 +1950,12 @@ tbody tr.row-selected:hover {
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
 }
+/* Tombol tutup menempel ke atas: subjudul boleh membungkus dua baris tanpa
+   membuat tanda silang melayang di tengah. */
+.blade-head .spread {
+  align-items: flex-start;
+  gap: 0.5rem;
+}
 /* Judul blade: satu baris, memotong dengan elipsis — nama pelanggan bisa panjang
    dan pembungkusan baris akan menggeser command bar naik-turun. */
 .blade-title {
@@ -1966,15 +1972,12 @@ tbody tr.row-selected:hover {
   color: var(--muted);
 }
 /* Command bar di dalam blade cukup diberi padding sisi; garis bawahnya sudah
-   dibawa .azure-commandbar sendiri. Tombolnya dirapatkan & dikecilkan karena blade
-   hanya selebar 28rem — dengan ukuran halaman penuh, enam aksi memanjang jadi tiga
-   baris dan kepala blade memakan separuh panel. */
+   dibawa .azure-commandbar sendiri. Ukuran tombol SENGAJA tak di-override supaya
+   persis sama dengan command bar halaman tabel — bilah aksi yang mengecil di panel
+   membuat aplikasi terasa dijahit dari dua sistem yang berbeda. Label aksi panel
+   yang dipendekkan (mis. "Pindahkan"), bukan tombolnya. */
 .map-panel.blade .azure-commandbar {
   padding: 0.15rem 0.5rem;
-}
-.map-panel.blade .azure-commandbar .cmd-btn {
-  padding: 0.35rem 0.45rem;
-  font-size: 0.8rem;
 }
 .blade-body {
   padding: 0.85rem 0.95rem 1rem;

@@ -42,10 +42,13 @@ import {
   IconClose,
   IconCrosshair,
   IconCustomers,
+  IconFlask,
   IconKey,
+  IconMonitor,
   IconPlus,
   IconPower,
   IconRoute,
+  IconTrash,
   IconWorkOrder,
 } from '@/components/atoms/icons'
 import { createCableTool, type CableTool, type ToolState } from '../map/cableTool'
@@ -1698,13 +1701,66 @@ function MapToolbar({
  * mode relokasi: penanda draggable khas muncul di titik itu (lihat startRelocate).
  * Tersembunyi bila pengguna tak punya izin ubah jenis simpul terkait.
  */
-function RelocateButton({ show, onClick }: { show: boolean; onClick: () => void }) {
-  if (!show) return null
+/* ---------- Primitif blade panel peta ----------
+   Semua panel peta memakai kerangka yang sama — kepala lengket, command bar datar,
+   badan berisi daftar properti "Essentials" — supaya klik ODP, OLT, ODC, site, atau
+   pelanggan menghasilkan bentuk yang seragam, persis blade Azure Portal. */
+
+/**
+ * Kepala blade: judul (kode aset), baris jenis sumber daya, dan tombol tutup.
+ * Judul dipotong elipsis, bukan dibungkus, agar tinggi kepala tetap dan command
+ * bar di bawahnya tak naik-turun mengikuti panjang nama.
+ */
+function BladeHead({
+  title,
+  subtitle,
+  onClose,
+  closeLabel = 'Tutup',
+}: {
+  title: string
+  subtitle?: string
+  onClose: () => void
+  closeLabel?: string
+}) {
   return (
-    <Button variant="subtle" onClick={onClick}>
-      <IconCrosshair size={15} /> Pindahkan lokasi
-    </Button>
+    <header className="blade-head">
+      <div className="spread">
+        <div style={{ minWidth: 0 }}>
+          <h3 className="blade-title">{title}</h3>
+          {subtitle && <span className="blade-sub">{subtitle}</span>}
+        </div>
+        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label={closeLabel} />
+      </div>
+    </header>
   )
+}
+
+/**
+ * Satu baris properti pada daftar Essentials. Melewatkan diri saat nilainya kosong
+ * supaya blade tak dipenuhi baris "—" yang tak menambah apa pun.
+ */
+function Ess({ label, children }: { label: string; children: ReactNode }) {
+  if (children == null || children === false || children === '') return null
+  return (
+    <>
+      <dt>{label}</dt>
+      <dd>{children}</dd>
+    </>
+  )
+}
+
+/**
+ * Aksi "pindahkan lokasi" — sama persis di setiap panel aset, jadi dirakit sekali.
+ * Labelnya dipendekkan jadi "Pindahkan": blade cuma selebar 28rem dan konteks
+ * "lokasi" sudah jelas dari petanya sendiri.
+ */
+function relocateAction(onClick: () => void, dividerBefore = false): CommandAction {
+  return { key: 'relocate', label: 'Pindahkan', icon: <IconCrosshair size={15} />, onClick, dividerBefore }
+}
+
+/** Aksi hapus aset. Datar seperti "Hapus" di command bar halaman tabel, bukan tombol merah. */
+function deleteAction(label: string, onClick: () => void, disabled = false): CommandAction {
+  return { key: 'delete', label, icon: <IconTrash size={15} />, onClick, disabled }
 }
 
 const TYPE_LABEL: Record<CableType, string> = {
@@ -1844,111 +1900,108 @@ function SaveCablePanel({
     })
 
   return (
-    <aside className="map-panel stack">
-      <div className="spread">
-        <h3 style={{ margin: 0 }}>Kabel baru</h3>
-        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onCancel} aria-label="Batal" />
-      </div>
-      <div className="row" style={{ gap: '0.5rem' }}>
-        <StatusBadge status="ACTIVE" label={TYPE_LABEL[cableType]} />
-        <span className="badge accent">
-          {from} → {to}
-        </span>
-        <span className="badge tnum">{formatLength(lengthMeters)}</span>
-      </div>
-      <TextField label="Nama" value={name} onChange={(_, data) => setName(data.value)} />
-      <TextField
-        label="Jumlah core"
-        type="number"
-        min={1}
-        max={288}
-        value={String(coreCount)}
-        onChange={(_, data) => setCoreCount(Number(data.value))}
+    <aside className="map-panel blade">
+      <BladeHead
+        title="Kabel baru"
+        subtitle={`${TYPE_LABEL[cableType]} · ${from} → ${to} · ${formatLength(lengthMeters)}`}
+        onClose={onCancel}
+        closeLabel="Batal"
       />
+      <div className="blade-body stack">
+        <TextField label="Nama" value={name} onChange={(_, data) => setName(data.value)} />
+        <TextField
+          label="Jumlah core"
+          type="number"
+          min={1}
+          max={288}
+          value={String(coreCount)}
+          onChange={(_, data) => setCoreCount(Number(data.value))}
+        />
 
-      {!isDrop && (
-        <div className="stack" style={{ gap: '0.4rem' }}>
-          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Port sumber {from}</span>
-          {srcOptions == null ? (
-            <span className="muted" style={{ fontSize: '0.82rem' }}>
-              Memuat port…
-            </span>
-          ) : srcOptions.length === 0 ? (
-            <span className="muted" style={{ fontSize: '0.78rem' }}>
-              {fromKind === 'SITE'
-                ? 'Feeder dari POP tak melalui PON port — langsung tersambung.'
-                : fromKind === 'OLT'
-                  ? 'OLT ini belum punya PON port. Tambahkan dulu di detail OLT (tab PON Port) sebelum menarik feeder.'
-                  : 'Tak ada port keluaran di simpul ini — tak bisa menarik kabel dari sini.'}
-            </span>
-          ) : (
-            <>
-              <SourcePortGrid options={srcOptions} selected={srcPort} onPick={setSrcPort} />
-              <span className="muted" style={{ fontSize: '0.78rem' }}>
-                {srcPort == null
-                  ? 'Pilih port keluaran dulu — kabel tak bisa ditarik tanpa port.'
-                  : `Menarik kabel ini otomatis menyetel uplink ${to}.`}
+        {!isDrop && (
+          <div className="stack" style={{ gap: '0.4rem' }}>
+            <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Port sumber {from}</span>
+            {srcOptions == null ? (
+              <span className="muted" style={{ fontSize: '0.82rem' }}>
+                Memuat port…
               </span>
-            </>
-          )}
-        </div>
-      )}
+            ) : srcOptions.length === 0 ? (
+              <span className="muted" style={{ fontSize: '0.78rem' }}>
+                {fromKind === 'SITE'
+                  ? 'Feeder dari POP tak melalui PON port — langsung tersambung.'
+                  : fromKind === 'OLT'
+                    ? 'OLT ini belum punya PON port. Tambahkan dulu di detail OLT (tab PON Port) sebelum menarik feeder.'
+                    : 'Tak ada port keluaran di simpul ini — tak bisa menarik kabel dari sini.'}
+              </span>
+            ) : (
+              <>
+                <SourcePortGrid options={srcOptions} selected={srcPort} onPick={setSrcPort} />
+                <span className="muted" style={{ fontSize: '0.78rem' }}>
+                  {srcPort == null
+                    ? 'Pilih port keluaran dulu — kabel tak bisa ditarik tanpa port.'
+                    : `Menarik kabel ini otomatis menyetel uplink ${to}.`}
+                </span>
+              </>
+            )}
+          </div>
+        )}
 
-      {isDrop && (
-        <div className="stack" style={{ gap: '0.4rem' }}>
-          <div className="spread">
-            <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Port ODP {odp?.code ?? from}</span>
-            {odp && (
-              <span className="muted" style={{ fontSize: '0.8rem' }}>
-                {odp.usedPorts}/{odp.capacity} terpakai
+        {isDrop && (
+          <div className="stack" style={{ gap: '0.4rem' }}>
+            <div className="spread">
+              <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Port ODP {odp?.code ?? from}</span>
+              {odp && (
+                <span className="muted" style={{ fontSize: '0.8rem' }}>
+                  {odp.usedPorts}/{odp.capacity} terpakai
+                </span>
+              )}
+            </div>
+            {loadingPorts ? (
+              <span className="muted" style={{ fontSize: '0.82rem' }}>
+                Memuat port…
+              </span>
+            ) : odp ? (
+              <>
+                <PortGrid
+                  inspection={odp}
+                  selected={selectedPort}
+                  ownPort={onu?.odpId === odp.odpId ? onu?.odpPortNumber ?? null : null}
+                  onPick={canAssignPort && onu ? setSelectedPort : undefined}
+                />
+                {!onu ? (
+                  <span className="muted" style={{ fontSize: '0.78rem' }}>
+                    Pelanggan belum punya ONU terpasang — kabel drop tak bisa ditarik ke sini.
+                  </span>
+                ) : !canAssignPort ? (
+                  <span className="muted" style={{ fontSize: '0.78rem' }}>
+                    Butuh izin <span className="tnum">customer.onu.assign</span> untuk menautkan port.
+                  </span>
+                ) : selectedPort == null ? (
+                  <span className="muted" style={{ fontSize: '0.78rem' }}>
+                    Pilih slot kosong untuk menautkan ONU pelanggan.
+                  </span>
+                ) : (
+                  <span className="muted" style={{ fontSize: '0.78rem' }}>
+                    ONU {onu.serialNumber} → slot {selectedPort}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="muted" style={{ fontSize: '0.82rem' }}>
+                Gagal memuat port ODP.
               </span>
             )}
           </div>
-          {loadingPorts ? (
-            <span className="muted" style={{ fontSize: '0.82rem' }}>
-              Memuat port…
-            </span>
-          ) : odp ? (
-            <>
-              <PortGrid
-                inspection={odp}
-                selected={selectedPort}
-                ownPort={onu?.odpId === odp.odpId ? onu?.odpPortNumber ?? null : null}
-                onPick={canAssignPort && onu ? setSelectedPort : undefined}
-              />
-              {!onu ? (
-                <span className="muted" style={{ fontSize: '0.78rem' }}>
-                  Pelanggan belum punya ONU terpasang — kabel drop tak bisa ditarik ke sini.
-                </span>
-              ) : !canAssignPort ? (
-                <span className="muted" style={{ fontSize: '0.78rem' }}>
-                  Butuh izin <span className="tnum">customer.onu.assign</span> untuk menautkan port.
-                </span>
-              ) : selectedPort == null ? (
-                <span className="muted" style={{ fontSize: '0.78rem' }}>
-                  Pilih slot kosong untuk menautkan ONU pelanggan.
-                </span>
-              ) : (
-                <span className="muted" style={{ fontSize: '0.78rem' }}>
-                  ONU {onu.serialNumber} → slot {selectedPort}
-                </span>
-              )}
-            </>
-          ) : (
-            <span className="muted" style={{ fontSize: '0.82rem' }}>
-              Gagal memuat port ODP.
-            </span>
-          )}
-        </div>
-      )}
+        )}
 
-      <div className="row">
-        <Button variant="primary" disabled={!canSave} onClick={submit}>
-          Simpan kabel
-        </Button>
-        <Button variant="subtle" onClick={onCancel}>
-          Batal
-        </Button>
+        <div className="row">
+          <Button variant="primary" disabled={!canSave} onClick={submit}>
+            Simpan kabel
+          </Button>
+          <Button variant="subtle" onClick={onCancel}>
+            Batal
+          </Button>
+        </div>
       </div>
     </aside>
   )
@@ -2121,56 +2174,55 @@ function CablePanel({
   onSimulate: () => void
   onClose: () => void
 }) {
+  const primary: CommandAction | undefined = canEdit
+    ? { key: 'edit', label: 'Edit jalur', icon: <IconRoute size={15} />, onClick: onEdit }
+    : undefined
+  const actions: CommandAction[] = []
+  if (canSimulate)
+    actions.push({ key: 'simulate', label: 'Simulasi putus', icon: <IconFlask size={15} />, onClick: onSimulate })
+  if (canDelete) actions.push(deleteAction('Hapus', onDelete))
+
   return (
-    <aside className="map-panel stack">
-      <div className="spread">
-        <h3 style={{ margin: 0 }}>{cable.code}</h3>
-        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
+    <aside className="map-panel blade">
+      {/* Nama yang memimpin, bukan kode: kode kabel kerap auto-generate (UUID) sehingga
+          tak dikenali operator — sedangkan namanya menyebut kedua ujung ruas. */}
+      <BladeHead title={cable.name} subtitle={`Kabel ${TYPE_LABEL[cable.cableType]} · ${cable.code}`} onClose={onClose} />
+      {(primary || actions.length > 0) && <CommandBar primary={primary} actions={actions} />}
+
+      <div className="blade-body stack" style={{ gap: '0.9rem' }}>
+        {causes.length > 0 && <CableCauses causes={causes} />}
+
+        <dl className="essentials">
+          <Ess label="Status">
+            <StatusBadge status={cable.status} />
+          </Ess>
+          <Ess label="Jenis">{TYPE_LABEL[cable.cableType]}</Ess>
+          <Ess label="Jumlah core">{cable.coreCount}</Ess>
+          <Ess label="Panjang">
+            <span className="tnum">{formatLength(cable.lengthMeters)}</span>
+          </Ess>
+          <Ess label="Dari">
+            {cable.fromKind}
+            {cable.fromPortLabel && <span className="muted"> · {cable.fromPortLabel}</span>}
+          </Ess>
+          <Ess label="Ke">
+            {cable.toKind}
+            {cable.toPortNumber != null && <span className="muted"> · port {cable.toPortNumber}</span>}
+          </Ess>
+          <Ess label="Titik jalur">{cable.route.points.length}</Ess>
+        </dl>
+
+        {canViewOtdr && (
+          <OtdrSection
+            cable={cable}
+            tests={otdrTests}
+            canRecord={canRecordOtdr}
+            onRecord={onRecordOtdr}
+            onDelete={onDeleteOtdr}
+            onFocus={onFocusOtdr}
+          />
+        )}
       </div>
-      <p className="muted" style={{ margin: 0 }}>
-        {cable.name}
-      </p>
-      <div className="row wrap" style={{ gap: '0.4rem' }}>
-        <StatusBadge status="ACTIVE" label={TYPE_LABEL[cable.cableType]} />
-        <span className="badge">{cable.coreCount} core</span>
-        <span className="badge tnum">{formatLength(cable.lengthMeters)}</span>
-        <StatusBadge status={cable.status} />
-      </div>
-      <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-        {cable.fromKind}
-        {cable.fromPortLabel ? ` · ${cable.fromPortLabel}` : ''} → {cable.toKind}
-        {cable.toPortNumber != null ? ` · Port ${cable.toPortNumber}` : ''} · {cable.route.points.length} titik jalur
-      </p>
-      {causes.length > 0 && <CableCauses causes={causes} />}
-      {canSimulate && (
-        <Button variant="subtle" style={{ justifyContent: 'flex-start', color: WHATIF_COLOR }} onClick={onSimulate}>
-          Simulasi putus — siapa yang kena?
-        </Button>
-      )}
-      {canViewOtdr && (
-        <OtdrSection
-          cable={cable}
-          tests={otdrTests}
-          canRecord={canRecordOtdr}
-          onRecord={onRecordOtdr}
-          onDelete={onDeleteOtdr}
-          onFocus={onFocusOtdr}
-        />
-      )}
-      {(canEdit || canDelete) && (
-        <div className="row">
-          {canEdit && (
-            <Button variant="primary" onClick={onEdit}>
-              <IconRoute size={15} /> Edit jalur
-            </Button>
-          )}
-          {canDelete && (
-            <Button variant="danger" onClick={onDelete}>
-              Hapus
-            </Button>
-          )}
-        </div>
-      )}
     </aside>
   )
 }
@@ -2338,39 +2390,39 @@ const CUT_ROOT_LABEL: Record<string, string> = {
 function CableCutPanel({ cut, onClose }: { cut: CableCutView; onClose: () => void }) {
   const withPhone = cut.customers.filter((c) => c.phone).length
   return (
-    <aside className="map-panel stack">
-      <div className="spread">
-        <h3 style={{ margin: 0 }}>{cut.cableCode}</h3>
-        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
-      </div>
-      <p className="muted" style={{ margin: 0 }}>
-        Simulasi putus · {CUT_ROOT_LABEL[cut.severedRootKind] ?? cut.severedRootKind}
-      </p>
-      <div className="row wrap" style={{ gap: '0.4rem' }}>
-        {cut.odcCount > 0 && <span className="badge">{cut.odcCount} ODC</span>}
-        {cut.odpCount > 0 && <span className="badge">{cut.odpCount} ODP</span>}
-        <span className="badge">{cut.customerCount} pelanggan</span>
-        {cut.downCount > 0 && (
-          <span className="badge" style={{ color: '#ff5470', borderColor: '#ff5470' }}>
-            {cut.downCount} sudah mati
-          </span>
+    <aside className="map-panel blade">
+      <BladeHead
+        title="Simulasi putus"
+        subtitle={`Kabel ${TYPE_LABEL[cut.cableType]} · ${CUT_ROOT_LABEL[cut.severedRootKind] ?? cut.severedRootKind}`}
+        onClose={onClose}
+      />
+
+      <div className="blade-body stack" style={{ gap: '0.9rem' }}>
+        <MessageBar intent="warning">
+          <MessageBarBody>Kalau ruas ini putus, {cut.customerCount} pelanggan kehilangan layanan.</MessageBarBody>
+        </MessageBar>
+
+        <dl className="essentials">
+          <Ess label="ODC terdampak">{cut.odcCount > 0 && cut.odcCount}</Ess>
+          <Ess label="ODP terdampak">{cut.odpCount > 0 && cut.odpCount}</Ess>
+          <Ess label="Pelanggan">{cut.customerCount}</Ess>
+          <Ess label="Sudah mati">
+            {cut.downCount > 0 && <span style={{ color: 'var(--critical-ink)', fontWeight: 600 }}>{cut.downCount}</span>}
+          </Ess>
+          <Ess label="Siap broadcast">{withPhone > 0 && `${withPhone} nomor`}</Ess>
+        </dl>
+
+        {cut.customers.length > 0 && (
+          <div className="stack" style={{ gap: '0.45rem' }}>
+            <p className="blade-section-title">Pelanggan terdampak ({cut.customers.length})</p>
+            <div className="stack" style={{ gap: '0.3rem', maxHeight: 280, overflowY: 'auto' }}>
+              {cut.customers.map((c) => (
+                <AffectedRow key={c.customerId} c={c} />
+              ))}
+            </div>
+          </div>
         )}
       </div>
-      <p style={{ margin: 0, fontSize: '0.82rem', color: WHATIF_COLOR }}>
-        Kalau ruas ini putus, {cut.customerCount} pelanggan kehilangan layanan.
-      </p>
-      {cut.customers.length > 0 && (
-        <div className="stack" style={{ gap: '0.3rem', maxHeight: 280, overflowY: 'auto' }}>
-          {cut.customers.map((c) => (
-            <AffectedRow key={c.customerId} c={c} />
-          ))}
-        </div>
-      )}
-      {withPhone > 0 && (
-        <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
-          {withPhone} nomor siap untuk broadcast pemberitahuan.
-        </p>
-      )}
     </aside>
   )
 }
@@ -2390,10 +2442,10 @@ const CAUSE_DOT: Record<string, string> = { CRITICAL: '#ff3b5c', WARNING: '#fbbf
 /** Bagian "kenapa merah": alarm hidup di hilir yang menyorot kabel ini. */
 function CableCauses({ causes }: { causes: ImpactCause[] }) {
   return (
-    <div className="stack" style={{ gap: '0.4rem', borderTop: '1px solid var(--line, #2a3550)', paddingTop: '0.6rem' }}>
-      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#ff5470' }}>
-        Kenapa merah — {causes.length} alarm hidup di hilir
-      </span>
+    <div className="stack" style={{ gap: '0.5rem' }}>
+      <MessageBar intent="error">
+        <MessageBarBody>Kenapa merah — {causes.length} alarm hidup di hilir ruas ini.</MessageBarBody>
+      </MessageBar>
       {causes.map((c, i) => (
         <div key={`${c.kind}-${c.label}-${i}`} className="row" style={{ gap: '0.45rem', alignItems: 'center' }}>
           <span
@@ -2408,7 +2460,7 @@ function CableCauses({ causes }: { causes: ImpactCause[] }) {
           <span className="badge">{ALARM_LABEL[c.kind] ?? c.kind}</span>
           <span
             className="muted"
-            style={{ fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            style={{ fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
             {c.label}
           </span>
@@ -2444,53 +2496,50 @@ function BlastRadiusPanel({
   onClose: () => void
 }) {
   const withPhone = blast.customers.filter((c) => c.phone).length
+  const actions: CommandAction[] = []
+  if (canRelocate) actions.push(relocateAction(onRelocate))
+  if (canDelete) actions.push(deleteAction('Hapus ODC', onDelete))
+
   return (
-    <aside className="map-panel stack">
-      <div className="spread">
-        <h3 style={{ margin: 0 }}>{blast.code}</h3>
-        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
-      </div>
-      <p className="muted" style={{ margin: 0 }}>
-        {blast.name} · blast radius
-      </p>
-      <div className="row wrap" style={{ gap: '0.4rem' }}>
-        <StatusBadge
-          status={blast.energized ? 'ACTIVE' : 'INACTIVE'}
-          label={blast.energized ? 'Berenergi' : 'Tanpa uplink'}
-        />
-        <span className="badge">{blast.odpCount} ODP</span>
-        <span className="badge">{blast.customerCount} pelanggan</span>
-        {blast.downCount > 0 && (
-          <span className="badge" style={{ color: '#ff5470', borderColor: '#ff5470' }}>
-            {blast.downCount} mati
-          </span>
+    <aside className="map-panel blade">
+      <BladeHead title={blast.code} subtitle={`ODC (FDT) · ${blast.name}`} onClose={onClose} />
+      {actions.length > 0 && <CommandBar actions={actions} />}
+
+      <div className="blade-body stack" style={{ gap: '0.9rem' }}>
+        <MessageBar intent={blast.energized ? 'warning' : 'error'}>
+          <MessageBarBody>
+            {blast.energized
+              ? `Kalau ODC ini putus, ${blast.customerCount} pelanggan kehilangan layanan.`
+              : `ODC tanpa uplink — ${blast.customerCount} pelanggan di hilirnya sudah tak punya jalur.`}
+          </MessageBarBody>
+        </MessageBar>
+
+        <dl className="essentials">
+          <Ess label="Uplink">
+            <StatusBadge
+              status={blast.energized ? 'ACTIVE' : 'INACTIVE'}
+              label={blast.energized ? 'Berenergi' : 'Tanpa uplink'}
+            />
+          </Ess>
+          <Ess label="ODP di hilir">{blast.odpCount}</Ess>
+          <Ess label="Pelanggan">{blast.customerCount}</Ess>
+          <Ess label="Sudah mati">
+            {blast.downCount > 0 && <span style={{ color: 'var(--critical-ink)', fontWeight: 600 }}>{blast.downCount}</span>}
+          </Ess>
+          <Ess label="Siap broadcast">{withPhone > 0 && `${withPhone} nomor`}</Ess>
+        </dl>
+
+        {blast.customers.length > 0 && (
+          <div className="stack" style={{ gap: '0.45rem' }}>
+            <p className="blade-section-title">Pelanggan terdampak ({blast.customers.length})</p>
+            <div className="stack" style={{ gap: '0.3rem', maxHeight: 280, overflowY: 'auto' }}>
+              {blast.customers.map((c) => (
+                <AffectedRow key={c.customerId} c={c} />
+              ))}
+            </div>
+          </div>
         )}
       </div>
-      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-        Kalau ODC ini putus, {blast.customerCount} pelanggan kehilangan layanan.
-      </p>
-      {blast.customers.length > 0 && (
-        <div className="stack" style={{ gap: '0.3rem', maxHeight: 280, overflowY: 'auto' }}>
-          {blast.customers.map((c) => (
-            <AffectedRow key={c.customerId} c={c} />
-          ))}
-        </div>
-      )}
-      {withPhone > 0 && (
-        <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
-          {withPhone} nomor siap untuk broadcast pemberitahuan.
-        </p>
-      )}
-      {(canRelocate || canDelete) && (
-        <div className="row wrap" style={{ gap: '0.4rem' }}>
-          <RelocateButton show={canRelocate} onClick={onRelocate} />
-          {canDelete && (
-            <Button variant="danger" onClick={onDelete}>
-              Hapus ODC
-            </Button>
-          )}
-        </div>
-      )}
     </aside>
   )
 }
@@ -2606,20 +2655,6 @@ function agoLabel(iso: string): string {
   const hours = Math.round(minutes / 60)
   if (hours < 24) return `${hours} jam lalu`
   return `${Math.round(hours / 24)} hari lalu`
-}
-
-/**
- * Satu baris properti pada daftar Essentials. Melewatkan diri saat nilainya kosong
- * supaya blade tak dipenuhi baris "—" yang tak menambah apa pun.
- */
-function Ess({ label, children }: { label: string; children: ReactNode }) {
-  if (children == null || children === false || children === '') return null
-  return (
-    <>
-      <dt>{label}</dt>
-      <dd>{children}</dd>
-    </>
-  )
 }
 
 /**
@@ -2765,15 +2800,7 @@ function CustomerTracePanel({
       disabled: busy != null,
       dividerBefore: actions.length > 0,
     })
-  if (canRelocate)
-    actions.push({
-      key: 'relocate',
-      label: 'Pindahkan lokasi',
-      icon: <IconCrosshair size={15} />,
-      onClick: onRelocate,
-      disabled: busy != null,
-      dividerBefore: actions.length > 0 && !canOpenCustomer,
-    })
+  if (canRelocate) actions.push({ ...relocateAction(onRelocate, !canOpenCustomer && actions.length > 0), disabled: busy != null })
 
   const onuStatus = trace.liveOnuStatus ?? trace.onuStatus
   // Kode ODP tak dibawa sebagai kolom tersendiri di trace — hop ODP-lah sumbernya.
@@ -2781,15 +2808,7 @@ function CustomerTracePanel({
 
   return (
     <aside className="map-panel blade">
-      <header className="blade-head">
-        <div className="spread">
-          <div style={{ minWidth: 0 }}>
-            <h3 className="blade-title">{trace.customerName}</h3>
-            <span className="blade-sub">Pelanggan · {trace.customerCode}</span>
-          </div>
-          <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
-        </div>
-      </header>
+      <BladeHead title={trace.customerName} subtitle={`Pelanggan · ${trace.customerCode}`} onClose={onClose} />
 
       {(primaryAction || actions.length > 0) && <CommandBar primary={primaryAction} actions={actions} />}
 
@@ -2942,52 +2961,45 @@ function SitePanel({
   onDelete: () => void
   onClose: () => void
 }) {
+  // Server menolak hapus site selama masih ada OLT berdiri di sini, jadi tombolnya
+  // dikunci lebih dulu — lebih jujur daripada membiarkan operator kena galat.
+  const deleteBlocked = site.oltCount > 0
+  const actions: CommandAction[] = []
+  if (canRelocate) actions.push(relocateAction(onRelocate))
+  if (canDelete) actions.push(deleteAction('Hapus site', onDelete, deleteBlocked))
+
   return (
-    <aside className="map-panel stack">
-      <div className="spread">
-        <h3 style={{ margin: 0 }}>{site.code}</h3>
-        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
-      </div>
-      <p className="muted" style={{ margin: 0 }}>
-        {site.name}
-      </p>
-      {site.address && (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-          {site.address}
+    <aside className="map-panel blade">
+      <BladeHead title={site.code} subtitle={`Site/POP · ${site.name}`} onClose={onClose} />
+      {actions.length > 0 && <CommandBar actions={actions} />}
+
+      <div className="blade-body stack" style={{ gap: '0.9rem' }}>
+        {canDelete && deleteBlocked && (
+          <MessageBar intent="info">
+            <MessageBarBody>Site tak bisa dihapus selama masih ada {site.oltCount} OLT terpasang.</MessageBarBody>
+          </MessageBar>
+        )}
+
+        <dl className="essentials">
+          <Ess label="Alamat">{site.address}</Ess>
+          <Ess label="OLT">{site.oltCount}</Ess>
+          <Ess label="ODC">{site.odcCount}</Ess>
+          <Ess label="ODP">{site.odpCount}</Ess>
+          <Ess label="Pelanggan">{site.customerCount}</Ess>
+        </dl>
+        <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
+          Seluruh perangkat &amp; pelanggan yang bergantung pada site ini.
         </p>
-      )}
-      <div className="row wrap" style={{ gap: '0.4rem' }}>
-        <span className="badge">{site.oltCount} OLT</span>
-        <span className="badge">{site.odcCount} ODC</span>
-        <span className="badge">{site.odpCount} ODP</span>
-        <span className="badge accent">{site.customerCount} pelanggan</span>
+
+        {site.olts.length > 0 && (
+          <div className="stack" style={{ gap: '0.45rem' }}>
+            <p className="blade-section-title">OLT di site ini ({site.olts.length})</p>
+            {site.olts.map((olt) => (
+              <SiteOltRow key={olt.id} olt={olt} />
+            ))}
+          </div>
+        )}
       </div>
-      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-        Seluruh perangkat & pelanggan yang bergantung pada site ini.
-      </p>
-      {site.olts.length > 0 && (
-        <div className="stack" style={{ gap: '0.3rem' }}>
-          <strong style={{ fontSize: '0.85rem' }}>OLT di site ini</strong>
-          {site.olts.map((olt) => (
-            <SiteOltRow key={olt.id} olt={olt} />
-          ))}
-        </div>
-      )}
-      {(canRelocate || canDelete) && (
-        <div className="row wrap" style={{ gap: '0.4rem' }}>
-          <RelocateButton show={canRelocate} onClick={onRelocate} />
-          {canDelete && (
-            <Button variant="danger" onClick={onDelete} disabled={site.oltCount > 0}>
-              Hapus site
-            </Button>
-          )}
-          {canDelete && site.oltCount > 0 && (
-            <span className="muted" style={{ fontSize: '0.78rem', alignSelf: 'center' }}>
-              Masih ada OLT terpasang.
-            </span>
-          )}
-        </div>
-      )}
     </aside>
   )
 }
@@ -3036,56 +3048,49 @@ function OltPanel({
   onOpenDetail: () => void
   onClose: () => void
 }) {
+  const primary: CommandAction | undefined = canView
+    ? { key: 'detail', label: 'Buka detail', icon: <IconMonitor size={15} />, onClick: onOpenDetail }
+    : undefined
+  const actions: CommandAction[] = canRelocate ? [relocateAction(onRelocate)] : []
+
   return (
-    <aside className="map-panel stack">
-      <div className="spread">
-        <h3 style={{ margin: 0 }}>{olt.code}</h3>
-        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
-      </div>
-      <p className="muted" style={{ margin: 0 }}>
-        {olt.name}
-      </p>
-      <div className="row wrap" style={{ gap: '0.4rem' }}>
-        <StatusBadge status={olt.status} />
-        <span className="badge">{olt.vendor}</span>
-        {olt.model && <span className="badge">{olt.model}</span>}
-        <span className="badge">{olt.ponPortCount} port PON</span>
-      </div>
-      {olt.siteName && (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-          Site {olt.siteName}
-        </p>
-      )}
-      <div className="row wrap" style={{ gap: '0.4rem', alignItems: 'center' }}>
-        {olt.managementIp && (
-          <span className="muted tnum" style={{ fontSize: '0.82rem' }}>
-            IP {olt.managementIp}
-          </span>
+    <aside className="map-panel blade">
+      <BladeHead title={olt.code} subtitle={`OLT · ${olt.name}`} onClose={onClose} />
+      {(primary || actions.length > 0) && <CommandBar primary={primary} actions={actions} />}
+
+      <div className="blade-body stack" style={{ gap: '0.9rem' }}>
+        {/* SNMP mati bukan sekadar keterangan — tanpa itu OLT ini tak terpantau sama
+            sekali, jadi diangkat jadi peringatan alih-alih lencana abu di tengah baris. */}
+        {!olt.pollable && (
+          <MessageBar intent="warning">
+            <MessageBarBody>SNMP belum diset — status ONU di bawah OLT ini tak akan pernah ter-poll.</MessageBarBody>
+          </MessageBar>
         )}
-        <span
-          className="badge"
-          style={
-            olt.pollable
-              ? { color: 'var(--good-ink)', borderColor: 'var(--good-ink)' }
-              : { color: 'var(--muted)' }
-          }
-        >
-          {olt.pollable ? `SNMP siap · port ${olt.snmpPort}` : 'SNMP belum diset'}
-        </span>
+
+        <dl className="essentials">
+          <Ess label="Status">
+            <StatusBadge status={olt.status} />
+          </Ess>
+          <Ess label="Vendor">{olt.vendor}</Ess>
+          <Ess label="Model">{olt.model}</Ess>
+          <Ess label="Port PON">{olt.ponPortCount}</Ess>
+          <Ess label="Site">{olt.siteName}</Ess>
+          <Ess label="IP manajemen">{olt.managementIp && <span className="tnum">{olt.managementIp}</span>}</Ess>
+          <Ess label="SNMP">
+            {olt.pollable ? (
+              <>
+                <StatusBadge status="ACTIVE" label="Siap" />
+                <span className="muted"> · port {olt.snmpPort}</span>
+              </>
+            ) : (
+              <span className="muted">Belum diset</span>
+            )}
+          </Ess>
+        </dl>
+        <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
+          Perangkat inti: kalau OLT ini modar, seluruh jalur di hilirnya ikut mati.
+        </p>
       </div>
-      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-        Perangkat inti: kalau OLT ini modar, seluruh jalur di hilirnya ikut mati.
-      </p>
-      {(canView || canRelocate) && (
-        <div className="row wrap" style={{ gap: '0.4rem' }}>
-          {canView && (
-            <Button variant="primary" onClick={onOpenDetail}>
-              Buka detail
-            </Button>
-          )}
-          <RelocateButton show={canRelocate} onClick={onRelocate} />
-        </div>
-      )}
     </aside>
   )
 }
@@ -3177,118 +3182,116 @@ function PlaceAssetForm({
   const canSubmit = code.trim() !== '' && name.trim() !== '' && (kind !== 'OLT' || siteId !== '')
 
   return (
-    <aside className="map-panel stack">
-      <div className="spread">
-        <h3 style={{ margin: 0 }}>{meta.label} baru</h3>
-        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onCancel} aria-label="Batal" />
-      </div>
-      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-        <span className="tnum">
-          {lat.toFixed(6)}, {lng.toFixed(6)}
-        </span>{' '}
-        · seret pin di peta untuk menyetel lokasi
-      </p>
-      <TextField label="Kode" value={code} onChange={(_, data) => setCode(data.value)} placeholder={`${kind}-001`} />
-      <TextField label="Nama" value={name} onChange={(_, data) => setName(data.value)} />
-      {kind === 'OLT' && (
-        <>
-          <SelectField label="Site induk" value={siteId} onChange={(_, data) => setSiteId(data.value)}>
-            <option value="">— pilih site —</option>
-            {sites.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.code} — {s.name}
-              </option>
-            ))}
-          </SelectField>
+    <aside className="map-panel blade">
+      <BladeHead
+        title={`${meta.label} baru`}
+        subtitle={`${lat.toFixed(6)}, ${lng.toFixed(6)} · seret pin untuk menggeser`}
+        onClose={onCancel}
+        closeLabel="Batal"
+      />
+      <div className="blade-body stack">
+        <TextField label="Kode" value={code} onChange={(_, data) => setCode(data.value)} placeholder={`${kind}-001`} />
+        <TextField label="Nama" value={name} onChange={(_, data) => setName(data.value)} />
+        {kind === 'OLT' && (
+          <>
+            <SelectField label="Site induk" value={siteId} onChange={(_, data) => setSiteId(data.value)}>
+              <option value="">— pilih site —</option>
+              {sites.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.code} — {s.name}
+                </option>
+              ))}
+            </SelectField>
+            <div className="row" style={{ gap: '0.5rem' }}>
+              <SelectField label="Vendor" value={vendor} onChange={(_, data) => setVendor(data.value)} style={{ flex: 1 }}>
+                {VENDORS.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </SelectField>
+              <TextField
+                label={<>Model <span className="muted">(opsional)</span></>}
+                value={model}
+                onChange={(_, data) => setModel(data.value)}
+                style={{ flex: 1 }}
+              />
+            </div>
+            <TextField
+              label={<>IP manajemen <span className="muted">(opsional)</span></>}
+              value={managementIp}
+              onChange={(_, data) => setManagementIp(data.value)}
+              placeholder="10.0.0.1"
+            />
+            <div className="row" style={{ gap: '0.5rem' }}>
+              <TextField
+                label={<>SNMP community <span className="muted">(opsional)</span></>}
+                value={snmpCommunity}
+                onChange={(_, data) => setSnmpCommunity(data.value)}
+                placeholder="public"
+                style={{ flex: 1 }}
+              />
+              <TextField
+                label="Port SNMP"
+                type="number"
+                min={1}
+                max={65535}
+                value={snmpPort}
+                onChange={(_, data) => setSnmpPort(data.value)}
+                style={{ width: '6.5rem' }}
+              />
+            </div>
+          </>
+        )}
+        {kind !== 'SITE' && kind !== 'OLT' && (
+          <TextField
+            label={<>Alamat <span className="muted">(opsional)</span></>}
+            value={address}
+            onChange={(_, data) => setAddress(data.value)}
+          />
+        )}
+        {kind === 'SITE' && (
+          <TextField label="Alamat" value={address} onChange={(_, data) => setAddress(data.value)} />
+        )}
+        {kind === 'ODP' && (
+          <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+            ODC induk ditetapkan dengan menarik kabel distribusi dari ODC ke ODP ini di peta —
+            bukan di sini — supaya jalur fisik & data uplink selalu sinkron.
+          </p>
+        )}
+        {(kind === 'ODC' || kind === 'ODP') && (
           <div className="row" style={{ gap: '0.5rem' }}>
-            <SelectField label="Vendor" value={vendor} onChange={(_, data) => setVendor(data.value)} style={{ flex: 1 }}>
-              {VENDORS.map((v) => (
-                <option key={v} value={v}>
-                  {v}
+            <SelectField
+              label="Rasio splitter"
+              value={splitterRatio}
+              onChange={(_, data) => setSplitterRatio(data.value)}
+              style={{ flex: 1 }}
+            >
+              {SPLITTER_RATIOS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
                 </option>
               ))}
             </SelectField>
             <TextField
-              label={<>Model <span className="muted">(opsional)</span></>}
-              value={model}
-              onChange={(_, data) => setModel(data.value)}
-              style={{ flex: 1 }}
-            />
-          </div>
-          <TextField
-            label={<>IP manajemen <span className="muted">(opsional)</span></>}
-            value={managementIp}
-            onChange={(_, data) => setManagementIp(data.value)}
-            placeholder="10.0.0.1"
-          />
-          <div className="row" style={{ gap: '0.5rem' }}>
-            <TextField
-              label={<>SNMP community <span className="muted">(opsional)</span></>}
-              value={snmpCommunity}
-              onChange={(_, data) => setSnmpCommunity(data.value)}
-              placeholder="public"
-              style={{ flex: 1 }}
-            />
-            <TextField
-              label="Port SNMP"
+              label="Kapasitas"
               type="number"
               min={1}
-              max={65535}
-              value={snmpPort}
-              onChange={(_, data) => setSnmpPort(data.value)}
-              style={{ width: '6.5rem' }}
+              max={kind === 'ODP' ? 256 : 1024}
+              value={String(capacity)}
+              onChange={(_, data) => setCapacity(Number(data.value))}
+              style={{ flex: 1 }}
             />
           </div>
-        </>
-      )}
-      {kind !== 'SITE' && kind !== 'OLT' && (
-        <TextField
-          label={<>Alamat <span className="muted">(opsional)</span></>}
-          value={address}
-          onChange={(_, data) => setAddress(data.value)}
-        />
-      )}
-      {kind === 'SITE' && (
-        <TextField label="Alamat" value={address} onChange={(_, data) => setAddress(data.value)} />
-      )}
-      {kind === 'ODP' && (
-        <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
-          ODC induk ditetapkan dengan menarik kabel distribusi dari ODC ke ODP ini di peta —
-          bukan di sini — supaya jalur fisik & data uplink selalu sinkron.
-        </p>
-      )}
-      {(kind === 'ODC' || kind === 'ODP') && (
-        <div className="row" style={{ gap: '0.5rem' }}>
-          <SelectField
-            label="Rasio splitter"
-            value={splitterRatio}
-            onChange={(_, data) => setSplitterRatio(data.value)}
-            style={{ flex: 1 }}
-          >
-            {SPLITTER_RATIOS.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </SelectField>
-          <TextField
-            label="Kapasitas"
-            type="number"
-            min={1}
-            max={kind === 'ODP' ? 256 : 1024}
-            value={String(capacity)}
-            onChange={(_, data) => setCapacity(Number(data.value))}
-            style={{ flex: 1 }}
-          />
+        )}
+        <div className="row">
+          <Button variant="primary" disabled={!canSubmit} onClick={submit}>
+            Simpan {meta.label}
+          </Button>
+          <Button variant="subtle" onClick={onCancel}>
+            Batal
+          </Button>
         </div>
-      )}
-      <div className="row">
-        <Button variant="primary" disabled={!canSubmit} onClick={submit}>
-          Simpan {meta.label}
-        </Button>
-        <Button variant="subtle" onClick={onCancel}>
-          Batal
-        </Button>
       </div>
     </aside>
   )
@@ -3361,108 +3364,113 @@ function OdpPanel({
   onClose: () => void
 }) {
   const { upstream } = inspection
+  // Sama seperti site: server menolak hapus ODP yang masih dihuni, jadi dikunci di sini.
+  const deleteBlocked = inspection.occupants.length > 0
+  const actions: CommandAction[] = []
+  if (canRelocate) actions.push(relocateAction(onRelocate))
+  if (canDelete) actions.push(deleteAction('Hapus ODP', onDelete, deleteBlocked))
+
   return (
-    <aside className="map-panel stack">
-      <div className="spread">
-        <h3 style={{ margin: 0 }}>{inspection.code}</h3>
-        <Button onClick={onClose}>Tutup</Button>
-      </div>
-      <p className="muted" style={{ margin: 0 }}>
-        {inspection.name}
-      </p>
+    <aside className="map-panel blade">
+      <BladeHead title={inspection.code} subtitle={`ODP (FAT) · ${inspection.name}`} onClose={onClose} />
+      {actions.length > 0 && <CommandBar actions={actions} />}
 
-      <div>
-        <div className="spread" style={{ marginBottom: '0.35rem' }}>
-          <strong>
-            {inspection.usedPorts}/{inspection.capacity} port terpakai
-          </strong>
-          <span className="badge">{inspection.utilizationPercent}%</span>
-        </div>
-        <div className="meter">
-          <div
-            className={`meter-fill ${
-              inspection.utilizationPercent >= 90 ? 'crit' : inspection.utilizationPercent >= 70 ? 'warn' : ''
-            }`}
-            style={{ width: `${inspection.utilizationPercent}%` }}
-          />
-        </div>
-        <p className="muted" style={{ margin: '0.4rem 0 0', fontSize: '0.85rem' }}>
-          Port kosong: {inspection.availablePortNumbers.join(', ') || '—'}
-        </p>
-      </div>
-
-      <div>
-        <strong>Jalur hulu</strong>
-        <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', lineHeight: 1.6 }}>
-          ODC {upstream.odcCode ?? '—'} → PON {upstream.ponPortLabel ?? '—'} → OLT {upstream.oltCode ?? '—'} → site{' '}
-          {upstream.siteCode ?? '—'}
-          <br />
-          Rugi splitter {upstream.splitterLossDb.toFixed(1)} dB{' '}
-          {!upstream.complete && <span className="badge">jalur belum lengkap</span>}
-        </p>
-      </div>
-
-      <div>
-        <strong>Pelanggan ({inspection.occupants.length})</strong>
-        {inspection.occupants.length === 0 ? (
-          <p className="muted" style={{ margin: '0.25rem 0 0' }}>
-            Belum ada pelanggan tersambung.
-          </p>
-        ) : (
-          <table style={{ marginTop: '0.5rem' }}>
-            <thead>
-              <tr>
-                <th>Port</th>
-                <th>Pelanggan</th>
-                <th>ONU</th>
-                <th>Optik</th>
-              </tr>
-            </thead>
-            <tbody>
-              {inspection.occupants.map((occupant) => (
-                <tr key={occupant.portNumber}>
-                  <td>{occupant.portNumber}</td>
-                  <td>
-                    {occupant.customerName}
-                    <br />
-                    <span className="muted" style={{ fontSize: '0.8rem' }}>
-                      {occupant.phone ?? occupant.customerCode}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="muted" style={{ fontSize: '0.8rem' }}>
-                      {occupant.onuSerialNumber}
-                    </span>
-                    <br />
-                    <StatusBadge status={occupant.onuStatus} label={onuStatusLabel(occupant.onuStatus)} />
-                  </td>
-                  <td>
-                    <span style={{ color: HEALTH_COLOR[occupant.opticalHealth], fontWeight: 600 }}>
-                      {occupant.installRxPowerDbm != null ? `${occupant.installRxPowerDbm} dBm` : occupant.opticalHealth}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="blade-body stack" style={{ gap: '0.9rem' }}>
+        {!upstream.complete && (
+          <MessageBar intent="warning">
+            <MessageBarBody>Jalur hulu belum lengkap — ODP ini belum tersambung utuh sampai OLT.</MessageBarBody>
+          </MessageBar>
         )}
-      </div>
+        {canDelete && deleteBlocked && (
+          <MessageBar intent="info">
+            <MessageBarBody>
+              ODP tak bisa dihapus selama masih ada {inspection.occupants.length} pelanggan tersambung.
+            </MessageBarBody>
+          </MessageBar>
+        )}
 
-      {(canRelocate || canDelete) && (
-        <div className="row wrap" style={{ gap: '0.4rem' }}>
-          <RelocateButton show={canRelocate} onClick={onRelocate} />
-          {canDelete && (
-            <Button variant="danger" onClick={onDelete} disabled={inspection.occupants.length > 0}>
-              Hapus ODP
-            </Button>
-          )}
-          {canDelete && inspection.occupants.length > 0 && (
-            <span className="muted" style={{ fontSize: '0.78rem', alignSelf: 'center' }}>
-              Masih ada pelanggan tersambung.
+        <div className="stack" style={{ gap: '0.35rem' }}>
+          <div className="spread">
+            <span style={{ fontSize: '0.82rem' }}>
+              {inspection.usedPorts}/{inspection.capacity} port terpakai
             </span>
+            <span className="tnum" style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+              {inspection.utilizationPercent}%
+            </span>
+          </div>
+          <div className="meter">
+            <div
+              className={`meter-fill ${
+                inspection.utilizationPercent >= 90 ? 'crit' : inspection.utilizationPercent >= 70 ? 'warn' : ''
+              }`}
+              style={{ width: `${inspection.utilizationPercent}%` }}
+            />
+          </div>
+        </div>
+
+        <dl className="essentials">
+          <Ess label="Port kosong">
+            {inspection.availablePortNumbers.length > 0 ? (
+              <span className="tnum">{inspection.availablePortNumbers.join(', ')}</span>
+            ) : (
+              <span className="muted">Penuh</span>
+            )}
+          </Ess>
+          <Ess label="ODC induk">{upstream.odcCode}</Ess>
+          <Ess label="PON">{upstream.ponPortLabel}</Ess>
+          <Ess label="OLT">{upstream.oltCode}</Ess>
+          <Ess label="Site">{upstream.siteCode}</Ess>
+          <Ess label="Rugi splitter">
+            <span className="tnum">{upstream.splitterLossDb.toFixed(1)} dB</span>
+          </Ess>
+        </dl>
+
+        <div className="stack" style={{ gap: '0.45rem' }}>
+          <p className="blade-section-title">Pelanggan ({inspection.occupants.length})</p>
+          {inspection.occupants.length === 0 ? (
+            <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+              Belum ada pelanggan tersambung.
+            </p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Port</th>
+                  <th>Pelanggan</th>
+                  <th>ONU</th>
+                  <th>Optik</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inspection.occupants.map((occupant) => (
+                  <tr key={occupant.portNumber}>
+                    <td className="tnum">{occupant.portNumber}</td>
+                    <td>
+                      {occupant.customerName}
+                      <br />
+                      <span className="muted" style={{ fontSize: '0.8rem' }}>
+                        {occupant.phone ?? occupant.customerCode}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="muted tnum" style={{ fontSize: '0.8rem' }}>
+                        {occupant.onuSerialNumber}
+                      </span>
+                      <br />
+                      <StatusBadge status={occupant.onuStatus} label={onuStatusLabel(occupant.onuStatus)} />
+                    </td>
+                    <td>
+                      <span className="tnum" style={{ color: HEALTH_COLOR[occupant.opticalHealth], fontWeight: 600 }}>
+                        {occupant.installRxPowerDbm != null ? `${occupant.installRxPowerDbm} dBm` : occupant.opticalHealth}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
-      )}
+      </div>
     </aside>
   )
 }
