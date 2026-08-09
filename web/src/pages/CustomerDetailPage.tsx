@@ -53,6 +53,7 @@ import {
   type NasView,
   type SubscriberAccessView,
 } from '../api/bng'
+import { mapFocusState } from './mapFocus'
 import { useCan } from '../auth/useCan'
 import { useAuth } from '../auth/useAuth'
 import { Badge, Button, EmptyState, Segmented, SelectField, Spinner, StatusBadge, TextField } from '@/components/atoms'
@@ -280,7 +281,8 @@ export function CustomerDetailPage({
       key: 'map',
       label: 'Lihat di peta',
       icon: <IconMap size={16} />,
-      onClick: () => (onShowOnMap ? onShowOnMap() : navigate('/map', { state: { focusCustomerId: id } })),
+      onClick: () =>
+        onShowOnMap ? onShowOnMap() : navigate('/map', mapFocusState('customer', id, customer.location)),
       dividerBefore: true,
     },
   ]

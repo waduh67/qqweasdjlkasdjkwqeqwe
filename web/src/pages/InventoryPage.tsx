@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, type NavigateFunction } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type { AssetStatus, Coordinate, OdcView, OdpView, OltView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
@@ -17,6 +17,7 @@ import { Badge, Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar
 import { SearchInput, Tabs } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { IconInventory } from '@/components/atoms/icons'
+import { mapFocusState, type MapFocusLayer } from './mapFocus'
 
 /**
  * Inventory jaringan dalam satu halaman bertab.
@@ -77,6 +78,25 @@ const ASSET_STATUS_FORM_OPTIONS: { value: AssetStatus; label: string }[] = [
 function matchesQuery(fields: Array<string | null | undefined>, q: string): boolean {
   if (!q) return true
   return fields.some((f) => (f ?? '').toLowerCase().includes(q))
+}
+
+/**
+ * Aksi baris "Lihat di peta", bentuknya sama di keempat tab.
+ *
+ * Inventory menjawab "apa saja yang saya punya"; pertanyaan lanjutan operator hampir
+ * selalu "yang ini di sebelah mana, dan nyantol ke apa" — dan itu hanya bisa dijawab
+ * peta. Sebelumnya jawabannya adalah menyalin koordinat lalu mencarinya sendiri di peta.
+ *
+ * Koordinat baris ikut dititipkan lewat `mapFocusState`, jadi peta bisa langsung terbang
+ * tanpa menarik ulang aset yang datanya sudah ada di tangan.
+ */
+function mapRowAction(navigate: NavigateFunction, layer: MapFocusLayer, id: string, at: Coordinate): RowAction {
+  return {
+    key: 'map',
+    label: 'Lihat di peta',
+    icon: <MapPin size={16} />,
+    onClick: () => navigate('/map', mapFocusState(layer, id, at)),
+  }
 }
 
 export function InventoryPage() {
@@ -164,6 +184,7 @@ function LocationFields({
 function SitesTab() {
   const { can } = useCan()
   const confirm = useConfirm()
+  const navigate = useNavigate()
   const { items, loading, reload, run } = useList<SiteView>('/api/sites')
   const empty = { code: '', name: '', address: '', longitude: '', latitude: '' }
   const [draft, setDraft] = useState<typeof empty | null>(null)
@@ -175,6 +196,7 @@ function SitesTab() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
   const canDelete = can('network.site.delete')
+  const canMap = can('gis.map.view')
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -218,19 +240,20 @@ function SitesTab() {
     },
   ]
 
-  const rowActions = (s: SiteView): RowAction[] =>
-    canDelete
-      ? [
-          {
-            key: 'delete',
-            label: 'Hapus',
-            icon: <Trash2 size={16} />,
-            onClick: () => void (async () => {
-              if (await confirm({ title: 'Hapus site', message: `Hapus site ${s.code}?`, confirmLabel: 'Hapus', danger: true })) void run(() => api.del(`/api/sites/${s.id}`))
-            })(),
-          },
-        ]
-      : []
+  const rowActions = (s: SiteView): RowAction[] => {
+    const list: RowAction[] = []
+    if (canMap) list.push(mapRowAction(navigate, 'site', s.id, s.location))
+    if (canDelete)
+      list.push({
+        key: 'delete',
+        label: 'Hapus',
+        icon: <Trash2 size={16} />,
+        onClick: () => void (async () => {
+          if (await confirm({ title: 'Hapus site', message: `Hapus site ${s.code}?`, confirmLabel: 'Hapus', danger: true })) void run(() => api.del(`/api/sites/${s.id}`))
+        })(),
+      })
+    return list
+  }
 
   const primary: CommandAction | undefined = can('network.site.create')
     ? { key: 'create', label: 'Tambah site', icon: <Plus size={16} />, onClick: () => openDraft({ ...empty }) }
@@ -329,7 +352,7 @@ function SitesTab() {
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
-        rowActions={canDelete ? rowActions : undefined}
+        rowActions={canDelete || canMap ? rowActions : undefined}
         empty={
           <EmptyState
             title={query ? 'Tidak ada site yang cocok' : 'Belum ada site'}
@@ -345,6 +368,7 @@ function SitesTab() {
 function OltsTab() {
   const { can } = useCan()
   const confirm = useConfirm()
+  const navigate = useNavigate()
   // Baris OLT membuka DETAIL di blade non-modal (bukan pindah halaman) — pola
   // dua-blade Azure. Simpan baris terpilih; ganti baris = tukar isi blade.
   const [openOlt, setOpenOlt] = useState<OltView | null>(null)
@@ -389,6 +413,7 @@ function OltsTab() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
   const canDelete = can('network.olt.delete')
+  const canMap = can('gis.map.view')
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -448,19 +473,20 @@ function OltsTab() {
     { key: 'ponPorts', header: 'PON port', align: 'right', sortValue: (o) => o.ponPortCount, cell: (o) => o.ponPortCount },
   ]
 
-  const rowActions = (o: OltView): RowAction[] =>
-    canDelete
-      ? [
-          {
-            key: 'delete',
-            label: 'Hapus',
-            icon: <Trash2 size={16} />,
-            onClick: () => void (async () => {
-              if (await confirm({ title: 'Hapus OLT', message: `Hapus OLT ${o.code}?`, confirmLabel: 'Hapus', danger: true })) void run(() => api.del(`/api/olts/${o.id}`))
-            })(),
-          },
-        ]
-      : []
+  const rowActions = (o: OltView): RowAction[] => {
+    const list: RowAction[] = []
+    if (canMap) list.push(mapRowAction(navigate, 'olt', o.id, o.location))
+    if (canDelete)
+      list.push({
+        key: 'delete',
+        label: 'Hapus',
+        icon: <Trash2 size={16} />,
+        onClick: () => void (async () => {
+          if (await confirm({ title: 'Hapus OLT', message: `Hapus OLT ${o.code}?`, confirmLabel: 'Hapus', danger: true })) void run(() => api.del(`/api/olts/${o.id}`))
+        })(),
+      })
+    return list
+  }
 
   const primary: CommandAction | undefined = can('network.olt.create')
     ? {
@@ -782,7 +808,7 @@ function OltsTab() {
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
-        rowActions={canDelete ? rowActions : undefined}
+        rowActions={canDelete || canMap ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada OLT yang cocok' : 'Belum ada OLT'}
@@ -916,6 +942,7 @@ function OdcsTab() {
   const [deleting, setDeleting] = useState(false)
   const canUpdate = can('network.odc.update')
   const canDelete = can('network.odc.delete')
+  const canMap = can('gis.map.view')
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -984,11 +1011,13 @@ function OdcsTab() {
     },
   ]
 
-  const rowActions = (o: OdcView): RowAction[] =>
-    canDelete
-      ? [{ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdc(o) }]
-      : []
-  const hasRowActions = canDelete
+  const rowActions = (o: OdcView): RowAction[] => {
+    const list: RowAction[] = []
+    if (canMap) list.push(mapRowAction(navigate, 'odc', o.id, o.location))
+    if (canDelete) list.push({ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdc(o) })
+    return list
+  }
+  const hasRowActions = canDelete || canMap
 
   // ODC dibuat di peta (butuh titik koordinat) — di sini cuma pintasan ke peta.
   const primary: CommandAction | undefined = can('network.odc.create')
@@ -1233,6 +1262,7 @@ function OdpsTab() {
   const [deleting, setDeleting] = useState(false)
   const canUpdate = can('network.odp.update')
   const canDelete = can('network.odp.delete')
+  const canMap = can('gis.map.view')
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -1286,17 +1316,12 @@ function OdpsTab() {
     { key: 'status', header: 'Status', sortValue: (o) => o.status, cell: (o) => <StatusBadge status={o.status} /> },
   ]
 
-  const rowActions = (o: OdpView): RowAction[] =>
-    canDelete
-      ? [
-          {
-            key: 'delete',
-            label: 'Hapus',
-            icon: <Trash2 size={16} />,
-            onClick: () => removeOdp(o),
-          },
-        ]
-      : []
+  const rowActions = (o: OdpView): RowAction[] => {
+    const list: RowAction[] = []
+    if (canMap) list.push(mapRowAction(navigate, 'odp', o.id, o.location))
+    if (canDelete) list.push({ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdp(o) })
+    return list
+  }
 
   // ODP dibuat di peta (butuh titik koordinat) — di sini cuma pintasan ke peta.
   const primary: CommandAction | undefined = can('network.odp.create')
@@ -1473,7 +1498,7 @@ function OdpsTab() {
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
-        rowActions={canDelete ? rowActions : undefined}
+        rowActions={canDelete || canMap ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada ODP yang cocok' : 'Belum ada ODP'}

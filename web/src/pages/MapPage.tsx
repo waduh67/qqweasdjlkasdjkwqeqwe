@@ -38,6 +38,7 @@ import { Button, Segmented, SelectField, StatusBadge, TextField } from '@/compon
 import { CommandBar, Ess, type CommandAction } from '@/components/molecules'
 import { Blade } from '@/components/organisms'
 import { CustomerDetailPage } from './CustomerDetailPage'
+import type { MapFocus } from './mapFocus'
 import { useConfirm, useToast } from '@/system'
 import {
   IconChevronDown,
@@ -487,36 +488,23 @@ export function MapPage() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Datang dari "Lihat di peta" pada detail pelanggan: pusatkan peta ke rumahnya dan
-  // buka panel telusurnya, supaya operator melihat posisi + jalur hulunya sekaligus.
-  const focusCustomerId = (location.state as { focusCustomerId?: string } | null)?.focusCustomerId
-  useEffect(() => {
-    if (!focusCustomerId) return
-    let alive = true
-    void api
-      .get<CustomerTrace>(`/api/gis/trace/customers/${focusCustomerId}`)
-      .then((t) => {
-        if (!alive) return
-        const center: [number, number] = [t.location.longitude, t.location.latitude]
-        setTrace(t)
-        setMovable({ layer: 'customer', id: focusCustomerId, lng: center[0], lat: center[1] })
-        // Zoom 17: satu blok perumahan — cukup rapat untuk melihat rumah mana, cukup
-        // lebar untuk menampilkan ODP terdekat di layar yang sama.
-        map.current?.flyTo({ center, zoom: 17 })
-      })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat telusur pelanggan'))
-      .finally(() => {
-        // Pesan router dibersihkan SETELAH telusur terpasang, bukan sebelum: membersihkannya
-        // di awal mengubah dependensi efek ini, efeknya dijalankan ulang, dan pembersih
-        // `alive` membuang hasil tarikan yang belum sempat mendarat — peta diam di tempat.
-        // Tetap wajib dibersihkan supaya menyegarkan halaman tak melompat lagi ke pelanggan
-        // lama yang sudah tak relevan.
-        if (alive) navigate(location.pathname, { replace: true, state: null })
-      })
-    return () => {
-      alive = false
-    }
-  }, [focusCustomerId, location.pathname, navigate])
+  // Pesan "buka di peta" dari halaman lain (Inventory, detail pelanggan). Dibaca di sini,
+  // tapi dikerjakan efek jauh di bawah — sesudah efek yang MEMBUAT peta, sebab menyuruh
+  // peta terbang sebelum ia ada tak berbunyi apa-apa.
+  const focus = (location.state as { focus?: MapFocus } | null)?.focus
+
+  // Menutup semua panel info sebelum membuka yang baru — hanya satu tampil.
+  const clearPanels = useCallback(() => {
+    setSelected(null)
+    setCable(null)
+    setOtdrTests(null)
+    setBlast(null)
+    setWhatIf(null)
+    setTrace(null)
+    setSiteInsp(null)
+    setOltInsp(null)
+    setMovable(null)
+  }, [])
 
   // Label watermark: siapa yang sedang melihat peta ini. Dihitung sekali per user.
   const watermark = useMemo(() => {
@@ -654,19 +642,6 @@ export function MapPage() {
     instance.addControl(new maplibregl.NavigationControl(), 'bottom-right')
     // Skala ikut di kanan-bawah; pojok kiri-bawah kini ditempati kartu info peta.
     instance.addControl(new maplibregl.ScaleControl(), 'bottom-right')
-
-    // Menutup semua panel info sebelum membuka yang baru — hanya satu tampil.
-    const clearPanels = () => {
-      setSelected(null)
-      setCable(null)
-      setOtdrTests(null)
-      setBlast(null)
-      setWhatIf(null)
-      setTrace(null)
-      setSiteInsp(null)
-      setOltInsp(null)
-      setMovable(null)
-    }
 
     /**
      * Koordinat titik yang diklik, diambil dari geometri fiturnya (bukan titik
@@ -978,7 +953,9 @@ export function MapPage() {
 
     // Saat peta pertama dibuka, coba pusatkan ke lokasi pengguna (diam bila ditolak —
     // peta tetap di default). Operator bisa memusatkan ulang lewat tombol "Lokasi saya".
-    locateMe(false)
+    // DILEWATI bila kita datang membawa pesan sorot: geolokasi menjawab belakangan dan
+    // akan menerbangkan peta pergi dari aset yang justru baru saja diminta dilihat.
+    if (!focus) locateMe(false)
 
     // Sidebar bisa diciutkan/dilebarkan, jadi lebar kanvas berubah tanpa resize
     // jendela — MapLibre perlu diberi tahu agar peta mengisi ulang penuh.
@@ -997,9 +974,79 @@ export function MapPage() {
       map.current = null
     }
     // Init peta sekali saat mount; `locateMe` stabil (useCallback) & sengaja tak jadi dep
-    // agar peta tak dibangun ulang.
+    // agar peta tak dibangun ulang. `focus` sengaja dibaca dari render pertama — yang
+    // penting cuma ada/tidaknya pesan sorot saat peta lahir.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  /**
+   * Menjalankan pesan "buka di peta" dari halaman lain: terbang ke titiknya lalu buka
+   * panel infonya. Hasilnya sengaja sama persis dengan operator mengklik penanda itu
+   * sendiri — endpoint dan panelnya pun sama — jadi tak ada tampilan kedua yang harus
+   * dipelajari untuk data yang sama.
+   *
+   * Berdiri SETELAH efek pembuat peta supaya `map.current` dijamin ada: efek dijalankan
+   * menurut urutan deklarasi, dan `flyTo` ke peta yang belum lahir hilang tanpa jejak.
+   */
+  useEffect(() => {
+    if (!focus) return
+    const { layer, id, lng, lat } = focus
+    let alive = true
+
+    // Terbang lebih dulu, tak menunggu tarikan panel: gerak peta adalah tanda pertama
+    // bahwa tombolnya bekerja. Zoom 17 = satu blok perumahan — cukup rapat untuk melihat
+    // titik mana, cukup lebar untuk menampilkan tetangga hulunya di layar yang sama.
+    map.current?.flyTo({ center: [lng, lat], zoom: 17 })
+    clearPanels()
+    setMovable({ layer, id, lng, lat })
+
+    // Tarikan dipisah dari pemasangan supaya penjaga `alive` memeriksa keadaan TERBARU,
+    // bukan keadaan saat permintaan dikirim.
+    const load = async (): Promise<() => void> => {
+      switch (layer) {
+        case 'customer': {
+          const t = await api.get<CustomerTrace>(`/api/gis/trace/customers/${id}`)
+          return () => setTrace(t)
+        }
+        case 'odp': {
+          const o = await api.get<OdpInspection>(`/api/gis/odps/${id}`)
+          return () => setSelected(o)
+        }
+        case 'odc': {
+          const b = await api.get<BlastRadiusView>(`/api/gis/odcs/${id}/blast-radius`)
+          return () => setBlast(b)
+        }
+        case 'olt': {
+          const o = await api.get<OltView>(`/api/olts/${id}`)
+          return () => setOltInsp(o)
+        }
+        case 'site': {
+          const s = await api.get<SiteInspection>(`/api/gis/sites/${id}`)
+          return () => setSiteInsp(s)
+        }
+      }
+    }
+
+    void load()
+      .then((apply) => {
+        if (alive) apply()
+      })
+      .catch((err) => {
+        if (alive) setError(err instanceof ApiError ? err.message : 'Gagal memuat detail aset')
+      })
+      .finally(() => {
+        // Pesan router dibersihkan SETELAH panel terpasang, bukan sebelum: membersihkannya
+        // di awal mengubah dependensi efek ini, efeknya dijalankan ulang, dan pembersih
+        // `alive` membuang hasil tarikan yang belum sempat mendarat — peta diam di tempat.
+        // Tetap wajib dibersihkan supaya menyegarkan halaman tak melompat lagi ke aset
+        // lama yang sudah tak relevan.
+        if (alive) navigate(location.pathname, { replace: true, state: null })
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [focus, clearPanels, location.pathname, navigate])
 
   // Menyorot subpohon terputus saat panel simulasi terbuka; kosongkan saat tutup.
   useEffect(() => {
