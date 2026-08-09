@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { RefreshCw } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type {
@@ -54,11 +56,30 @@ import {
 import { useCan } from '../auth/useCan'
 import { useAuth } from '../auth/useAuth'
 import { Badge, Button, EmptyState, Segmented, SelectField, Spinner, StatusBadge, TextField } from '@/components/atoms'
-import { Tabs } from '@/components/molecules'
+import { CommandBar, Ess, Tabs, type CommandAction } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { OpticalChart } from '@/components/atoms'
 import { SubscriberTrafficPanel } from '@/components/organisms'
-import { IconAlert, IconCustomers, IconRoute } from '@/components/atoms/icons'
+import {
+  IconAlert,
+  IconAudit,
+  IconChart,
+  IconChevronDown,
+  IconCustomers,
+  IconFlask,
+  IconGauge,
+  IconInventory,
+  IconMap,
+  IconMonitor,
+  IconPackage,
+  IconReceipt,
+  IconRoute,
+  IconShield,
+  IconUpload,
+  IconUsers,
+  IconWifi,
+  IconWorkOrder,
+} from '@/components/atoms/icons'
 import type { SubscriptionView } from '../api/network'
 import { listPlans as listCatalogPlans, SERVICE_TYPE_LABEL, type PlanView, type ServiceType } from '../api/catalog'
 import { listInvoicesForCustomer, type InvoiceView } from '../api/billing'
@@ -79,19 +100,34 @@ const HEALTH_COLOR: Record<string, string> = {
 type Tab = 'ringkasan' | 'jalur' | 'tetangga' | 'metrik' | 'akses' | 'trafik' | 'cpe' | 'tagihan' | 'tiket' | 'timeline'
 
 /**
- * Halaman detail satu pelanggan sebagai rute tersendiri (`/customers/:id`), bukan
- * drawer — di sini ada ruang untuk banyak data (profil, perangkat, jalur, tetangga
- * sejalur, metrik hidup) yang dibagi ke dalam tab, dan siap ditambah tab CPE saat
- * integrasi GenieACS. Navigasinya tetap SPA: klik baris di daftar → rute berganti
- * tanpa memuat ulang halaman.
+ * Detail satu pelanggan bergaya blade Azure: kepala + command bar, blok "Essentials"
+ * yang bisa dilipat, lalu tab-tab (Jalur, Tetangga, Metrik, Akses, Trafik, CPE,
+ * Tagihan, Tiket & WO, Timeline). Dipakai sebagai isi flyout — baik dari daftar
+ * pelanggan maupun dari panel telusur di halaman Peta.
  */
-export function CustomerDetailPage({ customerId }: { customerId: string }) {
+export function CustomerDetailPage({
+  customerId,
+  onShowOnMap,
+}: {
+  customerId: string
+  /**
+   * Perilaku aksi "Lihat di peta". Diisi oleh pembungkus yang PETANYA sudah tampil di
+   * belakang flyout (halaman Peta): di sana cukup menutup flyout agar penanda pelanggan
+   * terlihat, bukan berpindah rute ke peta yang sama. Bila kosong, aksi pindah ke /map
+   * sambil membawa pesan agar peta memusat ke pelanggan ini.
+   */
+  onShowOnMap?: () => void
+}) {
   // Detail pelanggan kini tampil sebagai flyout fullscreen (dibuka dari daftar), bukan rute
   // tersendiri — jadi `id` datang lewat prop, bukan `useParams`. Alias `id` menjaga sisa berkas
   // tetap ringkas; penutupan panel ditangani Blade pembungkus di CustomersPage.
   const id = customerId
   const { can } = useCan()
   const toast = useToast()
+  const navigate = useNavigate()
+  // Penanda "segarkan": dinaikkan tombol command bar agar SEMUA tarikan halaman
+  // (360°, jalur, tetangga, metrik) diputar ulang, bukan cuma profil pelanggan.
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const [customer, setCustomer] = useState<CustomerView | null>(null)
   const [odps, setOdps] = useState<OdpView[]>([])
@@ -130,7 +166,7 @@ export function CustomerDetailPage({ customerId }: { customerId: string }) {
     return () => {
       alive = false
     }
-  }, [id])
+  }, [id, refreshKey])
 
   // Gerbang izin sebagai boolean primitif: `can` dari useCan berganti identitas
   // tiap render, jadi tak boleh masuk daftar dependensi effect (memicu loop).
@@ -168,7 +204,7 @@ export function CustomerDetailPage({ customerId }: { customerId: string }) {
     return () => {
       alive = false
     }
-  }, [id])
+  }, [id, refreshKey])
 
   // Bacaan hidup ONU — untuk tab Metrik; disaring per serial di bawah.
   useEffect(() => {
@@ -181,7 +217,7 @@ export function CustomerDetailPage({ customerId }: { customerId: string }) {
     return () => {
       alive = false
     }
-  }, [canMetric, id])
+  }, [canMetric, id, refreshKey])
 
   const run = async (action: () => Promise<unknown>, okMessage?: string) => {
     try {
@@ -228,25 +264,43 @@ export function CustomerDetailPage({ customerId }: { customerId: string }) {
     ...(canBilling || canIncident || canWorkorder ? [{ key: 'timeline' as Tab, label: 'Timeline' }] : []),
   ]
 
+  // Command bar blade: aksi yang berlaku untuk pelanggan secara keseluruhan, bukan
+  // untuk satu tab. Sengaja datar & seragam dengan command bar halaman tabel.
+  const commands: CommandAction[] = [
+    {
+      key: 'refresh',
+      label: 'Segarkan',
+      icon: <RefreshCw size={16} />,
+      onClick: () => {
+        void reload()
+        setRefreshKey((v) => v + 1)
+      },
+    },
+    {
+      key: 'map',
+      label: 'Lihat di peta',
+      icon: <IconMap size={16} />,
+      onClick: () => (onShowOnMap ? onShowOnMap() : navigate('/map', { state: { focusCustomerId: id } })),
+      dividerBefore: true,
+    },
+  ]
+
   return (
-    <div className="stack" style={{ gap: '1.25rem' }}>
-      <div className="spread">
-        <div>
-          <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <h1 className="page-title" style={{ margin: 0 }}>{customer.name}</h1>
-            <span className="badge">{customer.code}</span>
-            <StatusBadge status={customer.status} />
-            {customer.awaitingInstallation && <StatusBadge status="PENDING" label="menunggu instalasi" />}
-          </div>
-          <p className="page-sub" style={{ margin: '0.25rem 0 0' }}>
-            {customer.address} · {customer.phone ?? 'tanpa nomor'}
-          </p>
-        </div>
+    <div className="stack flat-sections" style={{ gap: '0.85rem' }}>
+      <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <h1 className="page-title" style={{ margin: 0 }}>{customer.name}</h1>
+        <span className="badge">{customer.code}</span>
+        <StatusBadge status={customer.status} />
+        {customer.awaitingInstallation && <StatusBadge status="PENDING" label="menunggu instalasi" />}
       </div>
+
+      <CommandBar actions={commands} />
+
+      <EssentialsBlock customer={customer} sub360={sub360} trace={trace} />
 
       <Tabs tabs={tabDefs} active={tab} onChange={setTab} />
 
-      {tab === 'ringkasan' && <RingkasanTab customer={customer} odps={odps} run={run} sub360={sub360} />}
+      {tab === 'ringkasan' && <RingkasanTab customer={customer} odps={odps} run={run} />}
       {tab === 'jalur' && <JalurTab trace={trace} connected={connected} />}
       {tab === 'tetangga' && <TetanggaTab neighbors={neighbors} connected={connected} odpCount={odpCount} ponCount={ponCount} />}
       {tab === 'metrik' && <MetrikTab customer={customer} metrics={metrics} />}
@@ -268,142 +322,199 @@ export function CustomerDetailPage({ customerId }: { customerId: string }) {
   )
 }
 
-/* ---------- Tab: Ringkasan (profil, langganan, perangkat ONU) ---------- */
+/* ---------- Essentials: ringkasan properti di kepala blade ---------- */
 
-function RingkasanTab({
-  customer,
-  odps,
-  run,
-  sub360,
-}: {
-  customer: CustomerView
-  odps: OdpView[]
-  run: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
-  sub360: Subscriber360View | null
-}) {
+/**
+ * Kepala seksi bergaya blade Azure: ikon beraksen + judul tebal, tanpa bingkai.
+ * Pemisah antar-seksi dikerjakan garis rambut wadah `.flat-sections`.
+ */
+function SectionHead({ icon, title, aside }: { icon: ReactNode; title: string; aside?: ReactNode }) {
   return (
-    <div className="stack" style={{ gap: '1rem' }}>
-      <Overview360Card sub360={sub360} />
-
-      <div className="card stack" style={{ gap: '0.75rem' }}>
-        <strong style={{ fontSize: '0.95rem' }}>Profil</strong>
-        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          <Field label="Alamat" value={customer.address} />
-          <Field label="Telepon" value={customer.phone ?? '—'} />
-          <Field label="Email" value={customer.email ?? '—'} />
-          <Field label="NIK / No. identitas" value={customer.idCardNumber ?? '—'} />
-          <Field label="Koordinat" value={`${customer.location.latitude}, ${customer.location.longitude}`} />
-        </div>
+    <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
+      <div className="section-head">
+        <span className="ico" aria-hidden>
+          {icon}
+        </span>
+        <h3 className="section-title">{title}</h3>
       </div>
-
-      <SubscriptionManager customer={customer} run={run} />
-
-      <OnuManager customer={customer} odps={odps} run={run} />
-
-      <PortalCredentialCard customerId={customer.id} />
-    </div>
-  )
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="stat">
-      <div className="stat-label">{label}</div>
-      <div style={{ fontSize: '0.9rem', color: 'var(--text-2)', wordBreak: 'break-word' }}>{value}</div>
-    </div>
-  )
-}
-
-/** Baris kecil di dalam sel facet 360°; membedakan "terkunci" (abu-abu) dari isi. */
-function FacetLine({ text, muted = true }: { text: string; muted?: boolean }) {
-  return (
-    <div className={muted ? 'muted' : undefined} style={{ fontSize: '0.85rem' }}>
-      {text}
+      {aside}
     </div>
   )
 }
 
 /**
- * Strip ringkasan 360° dari satu panggilan agregat server (`/api/subscriber-360/:id`) —
- * menyatukan tunggakan (dihitung SERVER), sesi PPPoE, CPE, dan work order terbuka dalam
- * satu tarikan, menggantikan fan-out lintas-modul sisi klien untuk pandangan sekilas.
+ * Blok "Essentials": dua kolom pasangan label:nilai yang menjawab pertanyaan pertama
+ * operator — siapa orangnya, di mana, berlangganan apa, dan sedang sehat atau tidak —
+ * tanpa perlu berpindah tab.
  *
- * Tiap facet digerbang izin modulnya di server: facet yang tak diizinkan tampil sebagai
- * sel "terkunci" (dibedakan dari "memang kosong" lewat [Subscriber360View.access]).
- * Detail penuh tetap ada di tab masing-masing (Akses/CPE/Tagihan/Tiket & WO).
+ * Menggantikan dua kartu lama ("Ringkasan 360°" + "Profil"): isinya sama, tapi sebagai
+ * daftar properti rapat ia memakan sekitar sepertiga tinggi kartu-kartu itu, dan bisa
+ * dilipat saat operator ingin ruang penuh untuk tab di bawahnya. Angka bisnis (tunggakan,
+ * sesi, CPE, WO) datang dari satu panggilan agregat `/api/subscriber-360/:id` yang tiap
+ * facet-nya digerbang izin di server — facet tanpa izin ditulis "terkunci" agar berbeda
+ * jelas dari "memang kosong". Detail penuhnya tetap di tab masing-masing.
  */
-function Overview360Card({ sub360 }: { sub360: Subscriber360View | null }) {
-  if (!sub360) return null
-  const { billing, session, cpeDevices, openWorkOrder, access } = sub360
+function EssentialsBlock({
+  customer,
+  sub360,
+  trace,
+}: {
+  customer: CustomerView
+  sub360: Subscriber360View | null
+  trace: CustomerTrace | null
+}) {
+  const [open, setOpen] = useState(true)
+  const billing = sub360?.billing ?? null
+  const session = sub360?.session ?? null
+  const cpeDevices = sub360?.cpeDevices ?? null
+  const openWorkOrder = sub360?.openWorkOrder ?? null
+  const access = sub360?.access ?? null
   const arrears = billing ? Number(billing.outstandingAmount) : 0
   const cpeOnline = cpeDevices?.filter((d) => d.online).length ?? 0
+  const active = customer.subscriptions.filter((s) => s.status !== 'TERMINATED')
+  const attachedOnu = customer.onus.find((o) => o.odpId) ?? customer.onus[0] ?? null
+
+  // Facet yang belum diizinkan ditulis sekali di sini supaya keempat baris layanan
+  // memakai kalimat yang sama persis. Selama `access` masih null (tarikan 360° belum
+  // selesai / gagal) barisnya DIHILANGKAN, bukan diisi nol — "Rp 0" yang ternyata
+  // cuma keadaan memuat adalah kebohongan yang mahal di layar tagihan.
+  const locked = <span className="muted">terkunci</span>
+
   return (
-    <div className="card stack" style={{ gap: '0.75rem' }}>
-      <strong style={{ fontSize: '0.95rem' }}>Ringkasan 360°</strong>
-      <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
-        <div className="stat">
-          <div className="stat-label">Tunggakan</div>
-          {!access.billing ? (
-            <FacetLine text="terkunci" />
-          ) : (
-            <>
-              <div
-                className="tnum"
-                style={{ fontWeight: 600, color: arrears > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
-              >
-                {fmtRupiah(arrears)}
-              </div>
-              <FacetLine text={billing && billing.outstandingCount > 0 ? `${billing.outstandingCount} tagihan jatuh tempo` : 'lunas'} />
-            </>
-          )}
-        </div>
+    <section className="stack" style={{ gap: '0.6rem' }}>
+      <button type="button" className="blade-disclosure" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        <span className="chev" aria-hidden>
+          <IconChevronDown size={14} />
+        </span>
+        Essentials
+      </button>
 
-        <div className="stat">
-          <div className="stat-label">Sesi PPPoE</div>
-          {!access.session ? (
-            <FacetLine text="terkunci" />
-          ) : !session ? (
-            <FacetLine text="belum ada" />
-          ) : (
-            <>
-              <div>
-                <Badge tone={session.online ? 'good' : 'neutral'}>{session.online ? 'Online' : 'Offline'}</Badge>
-              </div>
-              <FacetLine text={session.framedIp ?? session.username} />
-            </>
-          )}
-        </div>
+      {open && (
+        <div className="ess-cols">
+          <dl className="essentials wide">
+            <Ess label="Kode">
+              <span className="tnum">{customer.code}</span>
+            </Ess>
+            <Ess label="Status">
+              <StatusBadge status={customer.status} />
+            </Ess>
+            <Ess label="Alamat">{customer.address}</Ess>
+            <Ess label="Telepon">{customer.phone}</Ess>
+            <Ess label="Email">{customer.email}</Ess>
+            <Ess label="NIK / identitas">{customer.idCardNumber}</Ess>
+            <Ess label="Koordinat">
+              <span className="tnum">
+                {customer.location.latitude}, {customer.location.longitude}
+              </span>
+            </Ess>
+          </dl>
 
-        <div className="stat">
-          <div className="stat-label">CPE</div>
-          {!access.cpe ? (
-            <FacetLine text="terkunci" />
-          ) : !cpeDevices || cpeDevices.length === 0 ? (
-            <FacetLine text="tak ada" />
-          ) : (
-            <>
-              <div className="tnum" style={{ fontWeight: 600 }}>
-                {cpeOnline}/{cpeDevices.length}
-              </div>
-              <FacetLine text="online" />
-            </>
-          )}
+          <dl className="essentials wide">
+            <Ess label="Paket">
+              {active.length === 0 ? (
+                <span className="muted">belum berlangganan</span>
+              ) : (
+                active.map((s) => `${s.packageName} · ${s.bandwidthMbps} Mbps`).join(', ')
+              )}
+            </Ess>
+            <Ess label="Tunggakan">
+              {!access ? null : !access.billing ? (
+                locked
+              ) : (
+                <span
+                  className="tnum"
+                  style={{ fontWeight: 600, color: arrears > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
+                >
+                  {fmtRupiah(arrears)}
+                  {billing && billing.outstandingCount > 0 && (
+                    <span className="muted" style={{ fontWeight: 400 }}> · {billing.outstandingCount} jatuh tempo</span>
+                  )}
+                </span>
+              )}
+            </Ess>
+            <Ess label="Sesi PPPoE">
+              {!access ? null : !access.session ? (
+                locked
+              ) : !session ? (
+                <span className="muted">belum ada</span>
+              ) : (
+                <span className="row" style={{ gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Badge tone={session.online ? 'good' : 'neutral'}>{session.online ? 'Online' : 'Offline'}</Badge>
+                  <span className="tnum muted">{session.framedIp ?? session.username}</span>
+                </span>
+              )}
+            </Ess>
+            <Ess label="ONU">
+              {!attachedOnu ? (
+                <span className="muted">belum ada</span>
+              ) : (
+                <span>
+                  <span className="tnum">{attachedOnu.serialNumber}</span>
+                  {attachedOnu.odpCode && (
+                    <span className="muted"> · {attachedOnu.odpCode} port {attachedOnu.odpPortNumber}</span>
+                  )}
+                </span>
+              )}
+            </Ess>
+            <Ess label="Redaman">
+              {trace?.liveRxPowerDbm != null || trace?.installRxPowerDbm != null ? (
+                <span className="tnum" style={{ color: HEALTH_COLOR[trace.opticalHealth ?? 'UNKNOWN'] }}>
+                  {fmtDbm(trace.liveRxPowerDbm ?? trace.installRxPowerDbm)}
+                </span>
+              ) : null}
+            </Ess>
+            <Ess label="CPE">
+              {!access ? null : !access.cpe ? (
+                locked
+              ) : !cpeDevices || cpeDevices.length === 0 ? (
+                <span className="muted">tak ada</span>
+              ) : (
+                <span className="tnum">
+                  {cpeOnline}/{cpeDevices.length} <span className="muted">online</span>
+                </span>
+              )}
+            </Ess>
+            <Ess label="WO terbuka">
+              {!access ? null : !access.workOrder ? (
+                locked
+              ) : !openWorkOrder ? (
+                <span className="muted">tak ada</span>
+              ) : (
+                <span className="tnum">
+                  {openWorkOrder.code}
+                  {openWorkOrder.scheduledAt && (
+                    <span className="muted"> · {fmtDate(openWorkOrder.scheduledAt.slice(0, 10))}</span>
+                  )}
+                </span>
+              )}
+            </Ess>
+          </dl>
         </div>
+      )}
+    </section>
+  )
+}
 
-        <div className="stat">
-          <div className="stat-label">WO terbuka</div>
-          {!access.workOrder ? (
-            <FacetLine text="terkunci" />
-          ) : !openWorkOrder ? (
-            <FacetLine text="tak ada" />
-          ) : (
-            <>
-              <div className="tnum" style={{ fontWeight: 600 }}>{openWorkOrder.code}</div>
-              <FacetLine text={openWorkOrder.scheduledAt ? fmtDate(openWorkOrder.scheduledAt.slice(0, 10)) : 'terjadwal —'} />
-            </>
-          )}
-        </div>
-      </div>
+/* ---------- Tab: Ringkasan (langganan, perangkat ONU, portal) ---------- */
+
+function RingkasanTab({
+  customer,
+  odps,
+  run,
+}: {
+  customer: CustomerView
+  odps: OdpView[]
+  run: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
+}) {
+  // Profil & angka 360° kini hidup di blok Essentials permanen di atas tab, jadi tab
+  // ini tinggal berisi yang benar-benar bisa DIKERJAKAN: langganan, ONU, akun portal.
+  return (
+    <div className="stack" style={{ gap: '0.25rem' }}>
+      <SubscriptionManager customer={customer} run={run} />
+
+      <OnuManager customer={customer} odps={odps} run={run} />
+
+      <PortalCredentialCard customerId={customer.id} />
     </div>
   )
 }
@@ -455,7 +566,7 @@ function SubscriptionManager({
 
   return (
     <div className="card stack" style={{ gap: '0.75rem' }}>
-      <strong style={{ fontSize: '0.95rem' }}>Langganan</strong>
+      <SectionHead icon={<IconPackage size={16} />} title="Langganan" />
 
       {customer.subscriptions.length === 0 ? (
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada langganan.</p>
@@ -568,7 +679,7 @@ function OnuManager({
 
   return (
     <div className="card stack" style={{ gap: '0.5rem' }}>
-      <strong style={{ fontSize: '0.95rem' }}>Perangkat ONU</strong>
+      <SectionHead icon={<IconInventory size={16} />} title="Perangkat ONU" />
       {customer.onus.length === 0 && (
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada ONU terdaftar.</p>
       )}
@@ -730,62 +841,88 @@ function JalurTab({ trace, connected }: { trace: CustomerTrace | null; connected
   }
   const bras = trace.bras
   return (
-    <div className="card stack" style={{ gap: '0.75rem' }}>
-      <div className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-        <IconRoute size={16} />
-        <strong style={{ fontSize: '0.95rem' }}>Jalur ke hulu</strong>
-      </div>
-      <div className="row" style={{ flexWrap: 'wrap', gap: '0.4rem' }}>
-        {trace.hops.map((hop, index) => {
-          // Hop BRAS diwarnai menurut keadaan sesi: hijau online, merah offline.
-          const brasClass = hop.kind === 'BRAS' ? (hop.online ? 'badge good' : 'badge critical') : 'badge'
-          return (
-            <span key={`${hop.kind}-${index}`} className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-              <span
-                className={brasClass}
-                title={hop.detail ?? undefined}
-                style={{ display: 'inline-flex', flexDirection: 'column', gap: 1, alignItems: 'flex-start' }}
-              >
-                <span>
-                  {HOP_LABEL[hop.kind] ?? hop.kind}
-                  {hop.code && ` ${hop.code}`}
+    <div className="stack" style={{ gap: '0.25rem' }}>
+      <div className="card stack" style={{ gap: '0.75rem' }}>
+        <SectionHead icon={<IconRoute size={16} />} title="Jalur ke hulu" />
+        <div className="row" style={{ flexWrap: 'wrap', gap: '0.4rem' }}>
+          {trace.hops.map((hop, index) => {
+            // Hop BRAS diwarnai menurut keadaan sesi: hijau online, merah offline.
+            const brasClass = hop.kind === 'BRAS' ? (hop.online ? 'badge good' : 'badge critical') : 'badge'
+            return (
+              <span key={`${hop.kind}-${index}`} className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
+                <span
+                  className={brasClass}
+                  title={hop.detail ?? undefined}
+                  style={{ display: 'inline-flex', flexDirection: 'column', gap: 1, alignItems: 'flex-start' }}
+                >
+                  <span>
+                    {HOP_LABEL[hop.kind] ?? hop.kind}
+                    {hop.code && ` ${hop.code}`}
+                  </span>
+                  {hop.detail && (
+                    <span style={{ fontSize: '0.68rem', opacity: 0.8, fontWeight: 400 }}>{hop.detail}</span>
+                  )}
                 </span>
-                {hop.detail && (
-                  <span style={{ fontSize: '0.68rem', opacity: 0.8, fontWeight: 400 }}>{hop.detail}</span>
-                )}
+                {index < trace.hops.length - 1 && <span className="muted">→</span>}
               </span>
-              {index < trace.hops.length - 1 && <span className="muted">→</span>}
-            </span>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
+
+      {/* Angka segmen optik & sesi BRAS dulu satu kalimat panjang bertitik-tengah; sebagai
+          daftar properti tiap angka punya label sendiri, jadi bisa dibaca sekilas dan
+          disalin tanpa memotong kalimat. */}
       {connected && (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-          ONU {trace.onuSerialNumber} · port {trace.odpPortNumber} · redaman terpasang{' '}
-          <span style={{ color: HEALTH_COLOR[trace.opticalHealth ?? 'UNKNOWN'] }}>
-            {trace.installRxPowerDbm != null ? `${trace.installRxPowerDbm} dBm` : '—'}
-          </span>
-          {trace.liveRxPowerDbm != null && (
-            <>
-              {' · '}Rx hidup <span className="tnum">{fmtDbm(trace.liveRxPowerDbm)}</span>
-              {trace.distanceMeters != null && ` · ${trace.distanceMeters} m`}
-            </>
-          )}
-          {trace.estimatedLossDb != null && ` · perkiraan rugi jalur ${trace.estimatedLossDb.toFixed(1)} dB`}
-        </p>
+        <div className="card stack" style={{ gap: '0.6rem' }}>
+          <SectionHead icon={<IconGauge size={16} />} title="Segmen optik" />
+          <dl className="essentials wide">
+            <Ess label="ONU">
+              <span className="tnum">{trace.onuSerialNumber}</span>
+            </Ess>
+            <Ess label="Port ODP">
+              <span className="tnum">{trace.odpPortNumber}</span>
+            </Ess>
+            <Ess label="Redaman pasang">
+              <span className="tnum" style={{ color: HEALTH_COLOR[trace.opticalHealth ?? 'UNKNOWN'] }}>
+                {trace.installRxPowerDbm != null ? `${trace.installRxPowerDbm} dBm` : '—'}
+              </span>
+            </Ess>
+            <Ess label="Rx hidup">
+              {trace.liveRxPowerDbm != null && <span className="tnum">{fmtDbm(trace.liveRxPowerDbm)}</span>}
+            </Ess>
+            <Ess label="Jarak dari OLT">
+              {trace.distanceMeters != null && <span className="tnum">{trace.distanceMeters} m</span>}
+            </Ess>
+            <Ess label="Perkiraan rugi">
+              {trace.estimatedLossDb != null && (
+                <span className="tnum">{trace.estimatedLossDb.toFixed(1)} dB</span>
+              )}
+            </Ess>
+          </dl>
+        </div>
       )}
+
       {bras && (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-          BRAS: <strong style={{ fontWeight: 600 }}>{bras.username}</strong>
-          {' · '}
-          <span style={{ color: bras.online ? 'var(--good-ink)' : 'var(--critical-ink)', fontWeight: 600 }}>
-            {bras.online ? 'Online' : 'Offline'}
-          </span>
-          {bras.framedIp && <> · IP <span className="tnum">{bras.framedIp}</span></>}
-          {bras.nasName && ` · ${bras.nasName}`}
-          {bras.online && bras.uptimeSeconds != null && ` · uptime ${fmtUptime(bras.uptimeSeconds)}`}
-          {bras.rateProfileName && ` · ${bras.rateProfileName}`}
-        </p>
+        <div className="card stack" style={{ gap: '0.6rem' }}>
+          <SectionHead icon={<IconChart size={16} />} title="Sesi BRAS" />
+          <dl className="essentials wide">
+            <Ess label="Username">
+              <span className="tnum">{bras.username}</span>
+            </Ess>
+            <Ess label="Status">
+              <Badge tone={bras.online ? 'good' : 'critical'}>{bras.online ? 'Online' : 'Offline'}</Badge>
+            </Ess>
+            <Ess label="IP">{bras.framedIp && <span className="tnum">{bras.framedIp}</span>}</Ess>
+            <Ess label="NAS">{bras.nasName}</Ess>
+            <Ess label="Uptime">
+              {bras.online && bras.uptimeSeconds != null && (
+                <span className="tnum">{fmtUptime(bras.uptimeSeconds)}</span>
+              )}
+            </Ess>
+            <Ess label="Profil laju">{bras.rateProfileName}</Ess>
+          </dl>
+        </div>
       )}
     </div>
   )
@@ -813,24 +950,30 @@ function TetanggaTab({
     )
   }
   return (
-    <div className="stack" style={{ gap: '0.75rem' }}>
-      <Segmented
-        ariaLabel="Cakupan tetangga"
-        value={scope}
-        onChange={setScope}
-        options={[
-          { value: 'odp', label: `Se-ODP${odpCount ? ` (${odpCount})` : ''}` },
-          { value: 'pon', label: `Se-PON${ponCount ? ` (${ponCount})` : ''}` },
-        ]}
+    <div className="card stack" style={{ gap: '0.6rem' }}>
+      {/* Pemilih cakupan duduk di baris judul, bukan sebagai baris sendiri: ia menyetel
+          seksi yang sama, jadi memisahkannya cuma menambah tinggi. */}
+      <SectionHead
+        icon={<IconUsers size={16} />}
+        title="Tetangga sejalur"
+        aside={
+          <Segmented
+            ariaLabel="Cakupan tetangga"
+            value={scope}
+            onChange={setScope}
+            options={[
+              { value: 'odp', label: `Se-ODP${odpCount ? ` (${odpCount})` : ''}` },
+              { value: 'pon', label: `Se-PON${ponCount ? ` (${ponCount})` : ''}` },
+            ]}
+          />
+        }
       />
       <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
         {scope === 'odp'
           ? 'Penghuni ODP yang sama — berbagi kabel drop & splitter ODP.'
           : 'Seluruh ODP di bawah PON port yang sama — berbagi port OLT (superset se-ODP).'}
       </p>
-      <div className="card">
-        <NeighborList items={scope === 'odp' ? neighbors?.sameOdp ?? null : neighbors?.samePonPort ?? null} showOdp={scope === 'pon'} />
-      </div>
+      <NeighborList items={scope === 'odp' ? neighbors?.sameOdp ?? null : neighbors?.samePonPort ?? null} showOdp={scope === 'pon'} />
     </div>
   )
 }
@@ -965,7 +1108,7 @@ function MetrikTab({ customer, metrics }: { customer: CustomerView; metrics: Onu
   return (
     <div className="stack" style={{ gap: '1rem' }}>
       <div className="card stack" style={{ gap: '0.6rem' }}>
-        <strong style={{ fontSize: '0.95rem' }}>Bacaan hidup — {onu.serialNumber}</strong>
+        <SectionHead icon={<IconGauge size={16} />} title={`Bacaan hidup — ${onu.serialNumber}`} />
         {live ? (
           <>
             <div className="row" style={{ gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1000,7 +1143,7 @@ function MetrikTab({ customer, metrics }: { customer: CustomerView; metrics: Onu
       </div>
 
       <div className="card stack" style={{ gap: '0.75rem' }}>
-        <strong style={{ fontSize: '0.95rem' }}>Tren redaman 24 jam</strong>
+        <SectionHead icon={<IconChart size={16} />} title="Tren redaman 24 jam" />
         {history ? (
           <>
             <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))' }}>
@@ -1778,7 +1921,12 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
         <div className="spread" style={{ alignItems: 'flex-start', gap: '0.5rem', flexWrap: 'wrap' }}>
           <div className="stack" style={{ gap: '0.35rem' }}>
             <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <strong style={{ fontSize: '0.95rem' }}>{d.model ?? d.productClass ?? 'CPE'}</strong>
+              <div className="section-head">
+                <span className="ico" aria-hidden>
+                  <IconMonitor size={16} />
+                </span>
+                <h3 className="section-title">{d.model ?? d.productClass ?? 'CPE'}</h3>
+              </div>
               <span
                 className="badge"
                 title={d.online ? 'Inform terakhir masih baru' : 'Tak ada inform terbaru dari ACS'}
@@ -1800,17 +1948,19 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
             </Button>
           )}
         </div>
-        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
-          <Field label="Inform terakhir" value={fmtInstant(d.lastInformAt)} />
-          <Field label="OUI" value={d.oui ?? '—'} />
-          <Field label="Kelas produk" value={d.productClass ?? '—'} />
-          <Field label="GenieACS ID" value={d.genieacsId} />
-        </div>
+        <dl className="essentials wide">
+          <Ess label="Inform terakhir">{fmtInstant(d.lastInformAt)}</Ess>
+          <Ess label="OUI">{d.oui}</Ess>
+          <Ess label="Kelas produk">{d.productClass}</Ess>
+          <Ess label="GenieACS ID">
+            <span className="tnum">{d.genieacsId}</span>
+          </Ess>
+        </dl>
       </div>
 
       {canWifiView && (
         <div className="card stack" style={{ gap: '0.75rem' }}>
-          <strong style={{ fontSize: '0.95rem' }}>WiFi</strong>
+          <SectionHead icon={<IconWifi size={16} />} title="WiFi" />
           {live == null ? (
             <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Memuat dari ACS…</p>
           ) : live.wifi.length === 0 ? (
@@ -1830,7 +1980,7 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
 
       {canWifiView && (
         <div className="card stack" style={{ gap: '0.6rem' }}>
-          <strong style={{ fontSize: '0.95rem' }}>Perangkat tersambung</strong>
+          <SectionHead icon={<IconMonitor size={16} />} title="Perangkat tersambung" />
           {live == null ? (
             <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Memuat…</p>
           ) : live.hosts.length === 0 ? (
@@ -1924,7 +2074,7 @@ function DiagnosticsCard({
   const busy = running !== null
   return (
     <div className="card stack" style={{ gap: '0.75rem' }}>
-      <strong style={{ fontSize: '0.95rem' }}>Diagnostik</strong>
+      <SectionHead icon={<IconFlask size={16} />} title="Diagnostik" />
       {!online && (
         <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
           Perangkat sedang offline — diagnostik bisa gagal atau menunggu lama.
@@ -2065,12 +2215,15 @@ function FirmwareCard({
   const busy = pushing !== null
   return (
     <div className="card stack" style={{ gap: '0.75rem' }}>
-      <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
-        <strong style={{ fontSize: '0.95rem' }}>Firmware</strong>
-        <span className="muted" style={{ fontSize: '0.82rem' }}>
-          terpasang: {currentVersion ?? '—'}
-        </span>
-      </div>
+      <SectionHead
+        icon={<IconUpload size={16} />}
+        title="Firmware"
+        aside={
+          <span className="muted" style={{ fontSize: '0.82rem' }}>
+            terpasang: {currentVersion ?? '—'}
+          </span>
+        }
+      />
       {files == null ? (
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Memuat dari ACS…</p>
       ) : files.length === 0 ? (
@@ -2157,18 +2310,21 @@ function AcsCard({ deviceId, onRan }: { deviceId: string; onRan: () => void }) {
   const busy = refreshing || resetting
   return (
     <div className="card stack" style={{ gap: '0.75rem' }}>
-      <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
-        <strong style={{ fontSize: '0.95rem' }}>ACS &amp; pemeliharaan</strong>
-        {acs != null && (
-          <span
-            className="badge"
-            title={acs.message}
-            style={{ color: acs.connected ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
-          >
-            {acs.connected ? 'ACS Connect' : 'Not Connect'}
-          </span>
-        )}
-      </div>
+      <SectionHead
+        icon={<IconShield size={16} />}
+        title="ACS & pemeliharaan"
+        aside={
+          acs != null && (
+            <span
+              className="badge"
+              title={acs.message}
+              style={{ color: acs.connected ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
+            >
+              {acs.connected ? 'ACS Connect' : 'Not Connect'}
+            </span>
+          )
+        }
+      />
       <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
         Refresh memaksa perangkat menghubungi ACS sekarang; reset pabrik mengembalikan setelan ke bawaan.
       </p>
@@ -2253,10 +2409,10 @@ function WifiCard({
           </Button>
         </div>
       ) : (
-        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
-          <Field label="SSID" value={wifi.ssid} />
-          <Field label="Password" value={wifi.passphrase ?? 'tersembunyi'} />
-        </div>
+        <dl className="essentials wide">
+          <Ess label="SSID">{wifi.ssid}</Ess>
+          <Ess label="Password">{wifi.passphrase ?? <span className="muted">tersembunyi</span>}</Ess>
+        </dl>
       )}
     </div>
   )
@@ -2267,7 +2423,7 @@ function CpeActionLog({ actions }: { actions: CpeActionView[] }) {
   if (actions.length === 0) return null
   return (
     <div className="card stack" style={{ gap: '0.5rem' }}>
-      <strong style={{ fontSize: '0.95rem' }}>Jejak aksi</strong>
+      <SectionHead icon={<IconAudit size={16} />} title="Jejak aksi" />
       <div className="stack" style={{ gap: '0.35rem' }}>
         {actions.map((a) => (
           <div key={a.id} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
@@ -2399,15 +2555,18 @@ function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub3
   return (
     <div className="stack" style={{ gap: '1rem' }}>
       <div className="card stack" style={{ gap: '0.4rem' }}>
-        <div className="spread" style={{ alignItems: 'center' }}>
-          <strong style={{ fontSize: '0.95rem' }}>Tunggakan</strong>
-          <span
-            className="tnum"
-            style={{ fontWeight: 600, color: tunggakan > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
-          >
-            {fmtRupiah(tunggakan)}
-          </span>
-        </div>
+        <SectionHead
+          icon={<IconReceipt size={16} />}
+          title="Tunggakan"
+          aside={
+            <span
+              className="tnum"
+              style={{ fontWeight: 600, color: tunggakan > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
+            >
+              {fmtRupiah(tunggakan)}
+            </span>
+          }
+        />
         <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
           Jumlah tagihan jatuh tempo yang belum dibayar.
         </p>
@@ -2554,10 +2713,11 @@ function TiketWoTab({
     <div className="stack" style={{ gap: '1rem' }}>
       {canIncident && (
         <div className="card stack" style={{ gap: '0.6rem' }}>
-          <div className="spread" style={{ alignItems: 'center' }}>
-            <strong style={{ fontSize: '0.95rem' }}>Insiden aktif</strong>
-            <span className="muted" style={{ fontSize: '0.8rem' }}>gangguan yang sedang berdampak</span>
-          </div>
+          <SectionHead
+            icon={<IconAlert size={16} />}
+            title="Insiden aktif"
+            aside={<span className="muted" style={{ fontSize: '0.8rem' }}>gangguan yang sedang berdampak</span>}
+          />
           {incidents == null ? (
             <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Memuat insiden…</p>
           ) : incidents.length === 0 ? (
@@ -2583,10 +2743,11 @@ function TiketWoTab({
 
       {canWorkorder && (
         <div className="card stack" style={{ gap: '0.6rem' }}>
-          <div className="spread" style={{ alignItems: 'center' }}>
-            <strong style={{ fontSize: '0.95rem' }}>Riwayat work order</strong>
-            <span className="muted" style={{ fontSize: '0.8rem' }}>semua status</span>
-          </div>
+          <SectionHead
+            icon={<IconWorkOrder size={16} />}
+            title="Riwayat work order"
+            aside={<span className="muted" style={{ fontSize: '0.8rem' }}>semua status</span>}
+          />
           {orders == null ? (
             <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Memuat work order…</p>
           ) : orders.length === 0 ? (
@@ -2718,7 +2879,7 @@ function TimelineTab({
 
   return (
     <div className="card stack" style={{ gap: '0.5rem' }}>
-      <strong style={{ fontSize: '0.95rem' }}>Aktivitas terbaru</strong>
+      <SectionHead icon={<IconAudit size={16} />} title="Aktivitas terbaru" />
       <div className="stack" style={{ gap: '0.4rem' }}>
         {entries.map((e, i) => (
           <div key={`${e.at}-${i}`} className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>

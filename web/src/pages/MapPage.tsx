@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { api, ApiError, tokenStore } from '../api/client'
@@ -35,7 +35,9 @@ import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { MessageBar, MessageBarBody } from '@fluentui/react-components'
 import { Button, Segmented, SelectField, StatusBadge, TextField } from '@/components/atoms'
-import { CommandBar, type CommandAction } from '@/components/molecules'
+import { CommandBar, Ess, type CommandAction } from '@/components/molecules'
+import { Blade } from '@/components/organisms'
+import { CustomerDetailPage } from './CustomerDetailPage'
 import { useConfirm, useToast } from '@/system'
 import {
   IconChevronDown,
@@ -455,6 +457,11 @@ export function MapPage() {
   // Simulasi "kalau kabel ini putus" — panel + sorotan subpohon terputus.
   const [whatIf, setWhatIf] = useState<CableCutView | null>(null)
   const [trace, setTrace] = useState<CustomerTrace | null>(null)
+  // Detail pelanggan lengkap sebagai flyout DI ATAS peta. Operator yang menelusuri satu
+  // pelanggan hampir selalu perlu melihat sekitarnya lagi setelah membaca detailnya —
+  // pindah rute ke halaman Pelanggan membuang konteks peta (zoom, sorotan, panel telusur)
+  // dan memaksa dia mencari titik itu lagi.
+  const [detailCustomerId, setDetailCustomerId] = useState<string | null>(null)
   const [siteInsp, setSiteInsp] = useState<SiteInspection | null>(null)
   const [oltInsp, setOltInsp] = useState<OltView | null>(null)
   // Heatmap utilisasi port: menyala/mati lewat toggle, mewarnai ODP menurut pemakaian.
@@ -478,6 +485,38 @@ export function MapPage() {
   const toast = useToast()
   // Dipakai tombol "Buka detail" di panel OLT untuk pindah ke halaman lengkapnya.
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Datang dari "Lihat di peta" pada detail pelanggan: pusatkan peta ke rumahnya dan
+  // buka panel telusurnya, supaya operator melihat posisi + jalur hulunya sekaligus.
+  const focusCustomerId = (location.state as { focusCustomerId?: string } | null)?.focusCustomerId
+  useEffect(() => {
+    if (!focusCustomerId) return
+    let alive = true
+    void api
+      .get<CustomerTrace>(`/api/gis/trace/customers/${focusCustomerId}`)
+      .then((t) => {
+        if (!alive) return
+        const center: [number, number] = [t.location.longitude, t.location.latitude]
+        setTrace(t)
+        setMovable({ layer: 'customer', id: focusCustomerId, lng: center[0], lat: center[1] })
+        // Zoom 17: satu blok perumahan — cukup rapat untuk melihat rumah mana, cukup
+        // lebar untuk menampilkan ODP terdekat di layar yang sama.
+        map.current?.flyTo({ center, zoom: 17 })
+      })
+      .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat telusur pelanggan'))
+      .finally(() => {
+        // Pesan router dibersihkan SETELAH telusur terpasang, bukan sebelum: membersihkannya
+        // di awal mengubah dependensi efek ini, efeknya dijalankan ulang, dan pembersih
+        // `alive` membuang hasil tarikan yang belum sempat mendarat — peta diam di tempat.
+        // Tetap wajib dibersihkan supaya menyegarkan halaman tak melompat lagi ke pelanggan
+        // lama yang sudah tak relevan.
+        if (alive) navigate(location.pathname, { replace: true, state: null })
+      })
+    return () => {
+      alive = false
+    }
+  }, [focusCustomerId, location.pathname, navigate])
 
   // Label watermark: siapa yang sedang melihat peta ini. Dihitung sekali per user.
   const watermark = useMemo(() => {
@@ -1575,7 +1614,7 @@ export function MapPage() {
                 },
               })
             }
-            onOpenCustomer={() => navigate('/customers', { state: { openCustomerId: trace.customerId } })}
+            onOpenCustomer={() => setDetailCustomerId(trace.customerId)}
             onClose={() => setTrace(null)}
           />
         )}
@@ -1638,6 +1677,24 @@ export function MapPage() {
           />
         )}
       </div>
+
+      {/* Detail pelanggan tampil sebagai flyout separuh layar DI ATAS peta — bentuk yang
+          sama persis dengan yang dibuka dari menu Pelanggan, jadi operator tak perlu
+          belajar dua tampilan untuk data yang sama. Peta tetap hidup di belakangnya;
+          menutup flyout mengembalikan konteks telusur apa adanya. */}
+      <Blade
+        open={detailCustomerId != null}
+        title="Detail pelanggan"
+        size="full"
+        className="blade-half"
+        onClose={() => setDetailCustomerId(null)}
+      >
+        {detailCustomerId && (
+          // "Lihat di peta" di sini cukup menutup flyout: petanya sudah terbentang di
+          // belakang, lengkap dengan penanda pelanggan yang panel telusurnya terbuka.
+          <CustomerDetailPage customerId={detailCustomerId} onShowOnMap={() => setDetailCustomerId(null)} />
+        )}
+      </Blade>
     </div>
   )
 }
@@ -1732,20 +1789,6 @@ function BladeHead({
         <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label={closeLabel} />
       </div>
     </header>
-  )
-}
-
-/**
- * Satu baris properti pada daftar Essentials. Melewatkan diri saat nilainya kosong
- * supaya blade tak dipenuhi baris "—" yang tak menambah apa pun.
- */
-function Ess({ label, children }: { label: string; children: ReactNode }) {
-  if (children == null || children === false || children === '') return null
-  return (
-    <>
-      <dt>{label}</dt>
-      <dd>{children}</dd>
-    </>
   )
 }
 

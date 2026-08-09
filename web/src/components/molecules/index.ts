@@ -1,5 +1,6 @@
 // Molecules — gabungan beberapa atom jadi kontrol yang masih generik.
 export { Field, FormSection } from './Field'
+export { Ess } from './Essentials'
 export { SearchInput } from './SearchInput'
 export { Tabs } from './Tabs'
 export { Modal } from './Modal'

@@ -117,6 +117,15 @@ export const IconMonitor = (p: IconProps) => (
   </Icon>
 )
 
+export const IconWifi = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M2 8.5a16 16 0 0 1 20 0" />
+    <path d="M5 12a11 11 0 0 1 14 0" />
+    <path d="M8.5 15.5a6 6 0 0 1 7 0" />
+    <path d="M12 19h.01" />
+  </Icon>
+)
+
 export const IconShield = (p: IconProps) => (
   <Icon {...p}>
     <path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6l-7-3Z" />

@@ -11,6 +11,8 @@ import {
 } from '@/api/portalAdmin'
 import { useCan } from '@/auth/useCan'
 import { Badge, Button, Spinner, TextField } from '@/components/atoms'
+import { IconKey } from '@/components/atoms/icons'
+import { Ess } from '@/components/molecules'
 import { useToast } from '@/system'
 
 /**
@@ -88,8 +90,15 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
 
   return (
     <div className="card stack" style={{ gap: '0.75rem' }}>
-      <div className="spread" style={{ alignItems: 'center' }}>
-        <strong style={{ fontSize: '0.95rem' }}>Kredensial Portal</strong>
+      {/* Kepala seksi seragam dengan seksi lain di detail pelanggan: ikon beraksen +
+          judul, tanpa bingkai sendiri (wadahnya yang meratakan). */}
+      <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
+        <div className="section-head">
+          <span className="ico" aria-hidden>
+            <IconKey size={16} />
+          </span>
+          <h3 className="section-title">Kredensial Portal</h3>
+        </div>
         {status?.provisioned && (
           <Badge tone={status.active ? 'good' : 'neutral'}>{status.active ? 'aktif' : 'nonaktif'}</Badge>
         )}
@@ -104,12 +113,11 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
           Pelanggan belum punya login portal self-service.
         </p>
       ) : (
-        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          <div className="stat">
-            <div className="stat-label">Login</div>
-            <div className="tnum" style={{ fontSize: '0.9rem' }}>{status.login}</div>
-          </div>
-        </div>
+        <dl className="essentials wide">
+          <Ess label="Login">
+            <span className="tnum">{status.login}</span>
+          </Ess>
+        </dl>
       )}
 
       {/* Password sementara — hanya muncul saat server yang membangkitkan. */}
