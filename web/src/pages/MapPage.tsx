@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -33,9 +33,21 @@ import { resetAccessLogin } from '../api/bng'
 import { rebootCpe, runCpePing } from '../api/cpe'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
+import { MessageBar, MessageBarBody } from '@fluentui/react-components'
 import { Button, Segmented, SelectField, StatusBadge, TextField } from '@/components/atoms'
+import { CommandBar, type CommandAction } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
-import { IconClose, IconCrosshair, IconPlus, IconRoute } from '@/components/atoms/icons'
+import {
+  IconChevronDown,
+  IconClose,
+  IconCrosshair,
+  IconCustomers,
+  IconKey,
+  IconPlus,
+  IconPower,
+  IconRoute,
+  IconWorkOrder,
+} from '@/components/atoms/icons'
 import { createCableTool, type CableTool, type ToolState } from '../map/cableTool'
 
 /**
@@ -2527,11 +2539,30 @@ const RX_CRIT_DBM = -27
 
 type VerdictTone = 'good' | 'warning' | 'critical' | 'neutral'
 
+/** Nada vonis → `intent` MessageBar Fluent, agar ikon & tint-nya digambar tema. */
+const VERDICT_INTENT: Record<VerdictTone, 'success' | 'warning' | 'error' | 'info'> = {
+  good: 'success',
+  warning: 'warning',
+  critical: 'error',
+  neutral: 'info',
+}
+
 const VERDICT_COLOR: Record<VerdictTone, string> = {
   good: 'var(--good-ink)',
   warning: 'var(--warning-ink)',
   critical: 'var(--critical-ink)',
   neutral: 'var(--muted)',
+}
+
+/**
+ * Kata sifat pendamping angka Rx. Warna saja tak boleh jadi satu-satunya pembawa
+ * arti (buta warna, cetakan hitam-putih), jadi nilainya selalu didampingi kata.
+ */
+const RX_WORD: Record<VerdictTone, string> = {
+  good: 'wajar',
+  warning: 'lemah',
+  critical: 'parah',
+  neutral: '',
 }
 
 /**
@@ -2578,13 +2609,28 @@ function agoLabel(iso: string): string {
 }
 
 /**
+ * Satu baris properti pada daftar Essentials. Melewatkan diri saat nilainya kosong
+ * supaya blade tak dipenuhi baris "—" yang tak menambah apa pun.
+ */
+function Ess({ label, children }: { label: string; children: ReactNode }) {
+  if (children == null || children === false || children === '') return null
+  return (
+    <>
+      <dt>{label}</dt>
+      <dd>{children}</dd>
+    </>
+  )
+}
+
+/**
  * Panel telusur pelanggan: jalur fisik dari rumah pelanggan menaiki topologi
  * sampai BRAS — menjawab "kenapa pelanggan ini bermasalah dan apa tindakannya".
  *
- * Dirancang sebagai alat kerja, bukan papan baca: vonis satu kalimat di paling
- * atas, lalu tombol tindakan yang datanya sudah dibawa `trace` (tak ada panggilan
- * susulan), baru rincian. Rantai hop dilipat saat semuanya sehat — yang menarik
- * cuma saat ada yang salah.
+ * Disusun seperti blade Azure Portal: kepala (nama + jenis sumber daya), command
+ * bar datar berisi aksi, lalu badan berupa MessageBar vonis + daftar properti
+ * "Essentials" dua kolom. Bentuk ini dipilih karena operator MEMINDAI properti,
+ * bukan membaca kalimat bersambung titik-tengah. Rantai hop tetap dilipat: yang
+ * menarik cuma saat ada yang salah, dan ringkasannya sudah ada di baris "Jalur".
  */
 function CustomerTracePanel({
   trace,
@@ -2677,175 +2723,201 @@ function CustomerTracePanel({
 
   const showResetLogin = canResetLogin && bras != null
   const showCpeActions = trace.cpeDeviceId != null
-  const hasActions =
-    showResetLogin || (showCpeActions && (canRebootCpe || canDiagnose)) || canCreateWorkOrder || canOpenCustomer || canRelocate
+
+  // Command bar ala Azure: aksi utama dipatok kiri sebagai CTA biru, aksi perangkat
+  // menyusul, lalu aksi navigasi dipisah garis vertikal. Label berubah saat sibuk —
+  // tombol datar tak punya spinner, jadi teksnyalah yang menjadi tanda kerja jalan.
+  const primaryAction: CommandAction | undefined = canCreateWorkOrder
+    ? { key: 'wo', label: 'Buat WO', icon: <IconWorkOrder size={15} />, onClick: onCreateWorkOrder, disabled: busy != null }
+    : undefined
+
+  const actions: CommandAction[] = []
+  if (showResetLogin)
+    actions.push({
+      key: 'reset',
+      label: busy === 'reset' ? 'Memutus…' : 'Reset Login',
+      icon: <IconKey size={15} />,
+      onClick: () => void doResetLogin(),
+      disabled: busy != null,
+    })
+  if (showCpeActions && canRebootCpe)
+    actions.push({
+      key: 'reboot',
+      label: busy === 'reboot' ? 'Mengirim…' : 'Reboot ONT',
+      icon: <IconPower size={15} />,
+      onClick: () => void doReboot(),
+      disabled: busy != null,
+    })
+  if (showCpeActions && canDiagnose)
+    actions.push({
+      key: 'ping',
+      label: busy === 'ping' ? 'Ping…' : 'Ping',
+      icon: <IconRoute size={15} />,
+      onClick: () => void doPing(),
+      disabled: busy != null,
+    })
+  if (canOpenCustomer)
+    actions.push({
+      key: 'detail',
+      label: 'Detail pelanggan',
+      icon: <IconCustomers size={15} />,
+      onClick: onOpenCustomer,
+      disabled: busy != null,
+      dividerBefore: actions.length > 0,
+    })
+  if (canRelocate)
+    actions.push({
+      key: 'relocate',
+      label: 'Pindahkan lokasi',
+      icon: <IconCrosshair size={15} />,
+      onClick: onRelocate,
+      disabled: busy != null,
+      dividerBefore: actions.length > 0 && !canOpenCustomer,
+    })
+
+  const onuStatus = trace.liveOnuStatus ?? trace.onuStatus
+  // Kode ODP tak dibawa sebagai kolom tersendiri di trace — hop ODP-lah sumbernya.
+  const odpHop = trace.hops.find((h) => h.kind === 'ODP')
 
   return (
-    <aside className="map-panel stack">
-      <div className="spread">
-        <h3 style={{ margin: 0 }}>{trace.customerName}</h3>
-        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
-      </div>
-      <p className="muted" style={{ margin: 0 }}>
-        {trace.customerCode}
-      </p>
-
-      <p
-        style={{
-          margin: 0,
-          padding: '0.5rem 0.65rem',
-          borderRadius: 8,
-          borderLeft: `3px solid ${VERDICT_COLOR[verdict.tone]}`,
-          background: 'var(--surface-2, rgba(255,255,255,0.04))',
-          color: VERDICT_COLOR[verdict.tone],
-          fontWeight: 600,
-          fontSize: '0.86rem',
-          lineHeight: 1.5,
-        }}
-      >
-        {verdict.text}
-      </p>
-
-      {hasActions && (
-        <div className="row wrap" style={{ gap: '0.4rem' }}>
-          {showResetLogin && (
-            <Button size="small" disabled={busy != null} onClick={() => void doResetLogin()}>
-              {busy === 'reset' ? 'Memutus…' : 'Reset Login'}
-            </Button>
-          )}
-          {showCpeActions && canRebootCpe && (
-            <Button size="small" disabled={busy != null} onClick={() => void doReboot()}>
-              {busy === 'reboot' ? 'Mengirim…' : 'Reboot ONT'}
-            </Button>
-          )}
-          {showCpeActions && canDiagnose && (
-            <Button size="small" disabled={busy != null} onClick={() => void doPing()}>
-              {busy === 'ping' ? 'Ping…' : 'Ping'}
-            </Button>
-          )}
-          {canCreateWorkOrder && (
-            <Button size="small" disabled={busy != null} onClick={onCreateWorkOrder}>
-              Buat WO
-            </Button>
-          )}
-          {canOpenCustomer && (
-            <Button size="small" disabled={busy != null} onClick={onOpenCustomer}>
-              Detail pelanggan
-            </Button>
-          )}
-          <RelocateButton show={canRelocate} onClick={onRelocate} />
+    <aside className="map-panel blade">
+      <header className="blade-head">
+        <div className="spread">
+          <div style={{ minWidth: 0 }}>
+            <h3 className="blade-title">{trace.customerName}</h3>
+            <span className="blade-sub">Pelanggan · {trace.customerCode}</span>
+          </div>
+          <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
         </div>
-      )}
+      </header>
 
-      <div className="row wrap" style={{ gap: '0.4rem' }}>
-        {trace.onuStatus && <StatusBadge status={trace.onuStatus} label={onuStatusLabel(trace.onuStatus)} />}
-        {trace.onuSerialNumber && <span className="badge">{trace.onuSerialNumber}</span>}
-        {trace.odpPortNumber != null && <span className="badge">port {trace.odpPortNumber}</span>}
-      </div>
+      {(primaryAction || actions.length > 0) && <CommandBar primary={primaryAction} actions={actions} />}
 
-      {(rxLive != null || trace.installRxPowerDbm != null || trace.estimatedLossDb != null) && (
-        <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'baseline' }}>
-          {rxLive != null ? (
-            <>
-              <span className="tnum" style={{ color: VERDICT_COLOR[rxTone], fontWeight: 600 }}>
-                {rxLive.toFixed(1)} dBm
-              </span>
-              <span className="muted" style={{ fontSize: '0.8rem' }}>
-                Rx terukur
-                {trace.distanceMeters != null && <> · jarak serat {trace.distanceMeters} m</>}
-                {trace.installRxPowerDbm != null && <> · saat pasang {trace.installRxPowerDbm.toFixed(1)} dBm</>}
-              </span>
-            </>
-          ) : (
-            <>
-              {trace.installRxPowerDbm != null && (
-                <span className="tnum" style={{ color: HEALTH_COLOR[trace.opticalHealth ?? 'UNKNOWN'], fontWeight: 600 }}>
-                  {trace.installRxPowerDbm.toFixed(1)} dBm
+      <div className="blade-body stack" style={{ gap: '0.9rem' }}>
+        <MessageBar intent={VERDICT_INTENT[verdict.tone]}>
+          <MessageBarBody>{verdict.text}</MessageBarBody>
+        </MessageBar>
+
+        <dl className="essentials">
+          <Ess label="Status ONU">
+            {onuStatus ? (
+              <StatusBadge status={onuStatus} label={onuStatusLabel(onuStatus)} />
+            ) : (
+              <span className="muted">Belum terpasang</span>
+            )}
+          </Ess>
+          <Ess label="Serial ONU">{trace.onuSerialNumber && <span className="tnum">{trace.onuSerialNumber}</span>}</Ess>
+          <Ess label="Titik ODP">
+            {odpHop && (
+              <>
+                {odpHop.code}
+                {trace.odpPortNumber != null && <span className="muted"> · port {trace.odpPortNumber}</span>}
+              </>
+            )}
+          </Ess>
+          <Ess label="Redaman Rx">
+            {rxLive != null ? (
+              <>
+                <span className="tnum" style={{ color: VERDICT_COLOR[rxTone], fontWeight: 600 }}>
+                  {rxLive.toFixed(1)} dBm
                 </span>
-              )}
-              <span className="muted" style={{ fontSize: '0.8rem' }}>
-                {trace.installRxPowerDbm != null ? 'redaman saat pasang · ' : ''}belum ada bacaan hidup
-                {/* Estimasi hanya berguna selagi tak ada ukuran nyata; menampilkannya
-                    bersama Rx terukur cuma memancing "yang mana yang benar". */}
-                {trace.estimatedLossDb != null && <> · perkiraan rugi {trace.estimatedLossDb.toFixed(1)} dB</>}
+                <span className="muted">
+                  {' '}
+                  {RX_WORD[rxTone]}
+                  {trace.installRxPowerDbm != null && ` · saat pasang ${trace.installRxPowerDbm.toFixed(1)} dBm`}
+                </span>
+              </>
+            ) : trace.installRxPowerDbm != null ? (
+              <>
+                <span className="tnum">{trace.installRxPowerDbm.toFixed(1)} dBm</span>
+                <span className="muted"> saat pasang · belum ada bacaan hidup</span>
+              </>
+            ) : (
+              /* Estimasi hanya berguna selagi tak ada ukuran nyata; menampilkannya
+                 bersama Rx terukur cuma memancing "yang mana yang benar". */
+              trace.estimatedLossDb != null && (
+                <span className="muted">perkiraan rugi {trace.estimatedLossDb.toFixed(1)} dB · belum pernah terukur</span>
+              )
+            )}
+          </Ess>
+          <Ess label="Jarak serat">{trace.distanceMeters != null && `${trace.distanceMeters} m`}</Ess>
+          <Ess label="Sesi PPPoE">
+            {bras ? (
+              <>
+                <StatusBadge status={bras.online ? 'ONLINE' : 'OFFLINE'} label={bras.online ? 'Online' : 'Offline'} />
+                {!bras.online && bras.lastSeenAt && <span className="muted"> · terakhir {agoLabel(bras.lastSeenAt)}</span>}
+              </>
+            ) : (
+              <span className="muted">Belum ada akun</span>
+            )}
+          </Ess>
+          <Ess label="Akun">{bras?.username}</Ess>
+          <Ess label="Alamat IP">{bras?.framedIp && <span className="tnum">{bras.framedIp}</span>}</Ess>
+          <Ess label="Paket">{bras?.rateProfileName}</Ess>
+          <Ess label="BRAS">{bras?.nasName}</Ess>
+          <Ess label="Router (ACS)">
+            {trace.cpeDeviceId != null && (
+              <StatusBadge
+                status={trace.cpeOnline ? 'ONLINE' : 'OFFLINE'}
+                label={trace.cpeOnline ? 'Melapor' : 'Tak melapor'}
+              />
+            )}
+          </Ess>
+        </dl>
+
+        {trace.hops.length > 0 && (
+          <div className="stack" style={{ gap: '0.5rem' }}>
+            <button
+              type="button"
+              className="blade-disclosure"
+              onClick={() => setHopsOpen((v) => !v)}
+              aria-expanded={hopsOpen}
+            >
+              <span className="chev" aria-hidden>
+                <IconChevronDown size={14} />
               </span>
-            </>
-          )}
-        </div>
-      )}
-
-      {bras && (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.6 }}>
-          <span style={{ color: bras.online ? 'var(--good-ink)' : 'var(--critical-ink)', fontWeight: 600 }}>
-            PPPoE {bras.online ? 'online' : 'offline'}
-          </span>{' '}
-          · {bras.username}
-          {bras.framedIp && <> · IP <span className="tnum">{bras.framedIp}</span></>}
-          {bras.nasName && ` · ${bras.nasName}`}
-          {bras.rateProfileName && ` · ${bras.rateProfileName}`}
-          {!bras.online && bras.lastSeenAt && ` · terakhir ${agoLabel(bras.lastSeenAt)}`}
-        </p>
-      )}
-
-      {trace.hops.length > 0 && (
-        <div className="stack" style={{ gap: '0.35rem' }}>
-          <button
-            type="button"
-            className="link-button"
-            onClick={() => setHopsOpen((v) => !v)}
-            style={{
-              alignSelf: 'flex-start',
-              background: 'none',
-              border: 0,
-              padding: 0,
-              cursor: 'pointer',
-              color: 'inherit',
-              font: 'inherit',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-            }}
-            aria-expanded={hopsOpen}
-          >
-            Telusur jalur ({trace.hops.length}) {hopsOpen ? '▾' : '▸'}
-          </button>
-          {hopsOpen ? (
-            <ol className="timeline" style={{ marginTop: '0.15rem' }}>
-              {trace.hops.map((hop: TraceHop, i: number) => {
-                const hopColor =
-                  hop.online == null ? undefined : hop.online ? 'var(--good-ink)' : 'var(--critical-ink)'
-                return (
-                  <li key={`${hop.kind}-${hop.code}-${i}`}>
-                    <span
-                      className="tl-dot"
-                      aria-hidden="true"
-                      style={hopColor ? { background: hopColor } : undefined}
-                    />
-                    <div className="stack" style={{ gap: '0.1rem' }}>
-                      <strong style={{ fontSize: '0.85rem', color: hopColor }}>
-                        {[HOP_LABEL[hop.kind] ?? hop.kind, hop.code].filter(Boolean).join(' ')}
-                      </strong>
-                      <span className="muted" style={{ fontSize: '0.8rem' }}>
-                        {hop.name}
-                      </span>
-                      {hop.detail && (
-                        <span className="muted tnum" style={{ fontSize: '0.78rem' }}>
-                          {hop.detail}
+              Telusur jalur ({trace.hops.length} hop)
+            </button>
+            {!hopsOpen && (
+              <p className="muted" style={{ margin: 0, fontSize: '0.78rem', lineHeight: 1.6 }}>
+                {/* Hop pelanggan tak ber-kode (cuma "Rumah pelanggan") — pakai namanya
+                    agar remah-remah jalur tak diawali panah menggantung. */}
+                {trace.hops.map((h) => h.code || h.name).join(' → ')}
+              </p>
+            )}
+            {hopsOpen && (
+              <ol className="timeline">
+                {trace.hops.map((hop: TraceHop, i: number) => {
+                  const hopColor =
+                    hop.online == null ? undefined : hop.online ? 'var(--good-ink)' : 'var(--critical-ink)'
+                  return (
+                    <li key={`${hop.kind}-${hop.code}-${i}`}>
+                      <span
+                        className="tl-dot"
+                        aria-hidden="true"
+                        style={hopColor ? { background: hopColor } : undefined}
+                      />
+                      <div className="stack" style={{ gap: '0.1rem' }}>
+                        <strong style={{ fontSize: '0.82rem', color: hopColor }}>
+                          {[HOP_LABEL[hop.kind] ?? hop.kind, hop.code].filter(Boolean).join(' ')}
+                        </strong>
+                        <span className="muted" style={{ fontSize: '0.78rem' }}>
+                          {hop.name}
                         </span>
-                      )}
-                    </div>
-                  </li>
-                )
-              })}
-            </ol>
-          ) : (
-            <p className="muted" style={{ margin: 0, fontSize: '0.8rem', lineHeight: 1.6 }}>
-              {/* Hop pelanggan tak ber-kode (cuma "Rumah pelanggan") — pakai namanya
-                  agar remah-remah jalur tak diawali panah menggantung. */}
-              {trace.hops.map((h) => h.code || h.name).join(' → ')}
-            </p>
-          )}
-        </div>
-      )}
+                        {hop.detail && (
+                          <span className="muted tnum" style={{ fontSize: '0.76rem' }}>
+                            {hop.detail}
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  )
+                })}
+              </ol>
+            )}
+          </div>
+        )}
+      </div>
     </aside>
   )
 }

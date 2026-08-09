@@ -1930,6 +1930,121 @@ tbody tr.row-selected:hover {
     width: auto;
   }
 }
+
+/* ---------- Panel peta bergaya blade Azure ---------- */
+
+/* Varian [.map-panel] yang menata isi seperti blade Azure Portal: kepala lengket,
+   command bar datar, lalu badan yang menggulung. Padding pindah dari wadah ke tiap
+   bagian — kalau ditinggal di wadah, garis pemisah jadi menggantung di kiri-kanan
+   dan panel kembali terbaca sebagai kartu biasa, bukan blade. */
+.map-panel.blade {
+  padding: 0;
+}
+.blade-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 0.8rem 0.95rem 0.65rem;
+  /* Latar sendiri (bukan transparan) supaya isi yang tergulung tak menembus judul. */
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+/* Judul blade: satu baris, memotong dengan elipsis — nama pelanggan bisa panjang
+   dan pembungkusan baris akan menggeser command bar naik-turun. */
+.blade-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.blade-sub {
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+/* Command bar di dalam blade cukup diberi padding sisi; garis bawahnya sudah
+   dibawa .azure-commandbar sendiri. Tombolnya dirapatkan & dikecilkan karena blade
+   hanya selebar 28rem — dengan ukuran halaman penuh, enam aksi memanjang jadi tiga
+   baris dan kepala blade memakan separuh panel. */
+.map-panel.blade .azure-commandbar {
+  padding: 0.15rem 0.5rem;
+}
+.map-panel.blade .azure-commandbar .cmd-btn {
+  padding: 0.35rem 0.45rem;
+  font-size: 0.8rem;
+}
+.blade-body {
+  padding: 0.85rem 0.95rem 1rem;
+}
+/* Judul bagian di dalam blade — kecil, tegas, tanpa garis; pemisah antar-bagian
+   dikerjakan jarak, seperti Azure. */
+.blade-section-title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+/* Daftar properti ala bagian "Essentials" pada blade Azure: dua kolom rapat,
+   label meredup di kiri, nilai di kanan. Operator MEMINDAI baris — jauh lebih
+   cepat daripada mengurai kalimat bersambung titik-tengah. */
+.essentials {
+  display: grid;
+  grid-template-columns: minmax(5rem, 7.5rem) 1fr;
+  column-gap: 0.9rem;
+  row-gap: 0.45rem;
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.essentials dt {
+  color: var(--muted);
+  min-width: 0;
+}
+.essentials dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+/* Tombol buka-tutup bagian (chevron + label), sepadan dengan .cmd-btn: datar,
+   tak berkotak, hover abu tipis. Margin kiri negatif menarik area hover-nya agar
+   teksnya tetap sejajar dengan konten di bawahnya. */
+.blade-disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  align-self: flex-start;
+  margin-left: -0.4rem;
+  padding: 0.25rem 0.4rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.blade-disclosure:hover {
+  background: var(--surface-hover);
+}
+.blade-disclosure:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+.blade-disclosure .chev {
+  display: inline-flex;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+.blade-disclosure[aria-expanded='true'] .chev {
+  transform: rotate(180deg);
+}
 .maplibregl-ctrl-attrib,
 .maplibregl-ctrl-scale {
   background: color-mix(in srgb, var(--surface) 82%, transparent) !important;
