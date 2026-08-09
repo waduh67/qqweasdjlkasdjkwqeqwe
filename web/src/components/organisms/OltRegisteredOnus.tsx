@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '@/api/client'
 import type { OltOnuList, OltOnuRow } from '@/api/network'
 import { onuStatusLabel } from '@/api/network'
@@ -14,14 +13,20 @@ import { IconCustomers } from '@/components/atoms/icons'
  * kitabill: "ONU siapa saja di OLT ini", lengkap dengan pelanggan, ODP, dan port-nya.
  *
  * Disusun server dari topologi (OLT → PON → ODC → ODP → ONU) + data pelanggan lewat
- * `GET /api/gis/olts/{id}/onus`, jadi tak ada join ONU→OLT di sini. Baris diklik →
- * menuju detail pelanggan (bawa `backTo` agar tombol kembali menunjuk ke OLT ini).
+ * `GET /api/gis/olts/{id}/onus`, jadi tak ada join ONU→OLT di sini.
  *
- * @param backTo rute halaman OLT ini, untuk tautan kembali dari detail pelanggan.
+ * @param onOpenCustomer dipanggil saat baris diklik. Pemanggil yang membuka detail
+ *   pelanggannya (sebagai flyout di atas konteks ini) — daftar ini sengaja tak tahu
+ *   caranya, supaya ia tetap bisa dipakai di halaman OLT maupun di dalam blade.
  */
-export function OltRegisteredOnus({ oltId, backTo }: { oltId: string; backTo: string }) {
+export function OltRegisteredOnus({
+  oltId,
+  onOpenCustomer,
+}: {
+  oltId: string
+  onOpenCustomer?: (customerId: string) => void
+}) {
   const toast = useToast()
-  const navigate = useNavigate()
   const [data, setData] = useState<OltOnuList | null>(null)
   const [query, setQuery] = useState('')
 
@@ -116,9 +121,7 @@ export function OltRegisteredOnus({ oltId, backTo }: { oltId: string; backTo: st
         rows={rows}
         rowKey={(o) => o.onuId}
         loading={data == null}
-        onRowClick={(o) =>
-          navigate(`/customers/${o.customerId}`, { state: { backTo, backLabel: 'OLT' } })
-        }
+        onRowClick={onOpenCustomer ? (o) => onOpenCustomer(o.customerId) : undefined}
         initialSort={{ key: 'odp', dir: 'asc' }}
         empty={
           <EmptyState

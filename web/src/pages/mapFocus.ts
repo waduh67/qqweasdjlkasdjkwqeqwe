@@ -23,10 +23,19 @@ export interface MapFocus {
 }
 
 /**
+ * Bentuk argumen kedua `navigate('/map', …)`. Diberi nama supaya komponen yang cuma
+ * MENERUSKAN pesan sorot (tanpa menyusunnya sendiri) bisa mengetiknya tanpa menyalin
+ * strukturnya.
+ */
+export interface MapFocusState {
+  state: { focus: MapFocus }
+}
+
+/**
  * Argumen kedua `navigate('/map', …)` untuk menyorot satu aset. Dibungkus fungsi supaya
  * bentuk pesannya ditulis di SATU tempat — pemanggil cukup menyebut lapisan, id, dan
  * titiknya, bukan menyalin struktur state yang gampang meleset satu huruf.
  */
-export function mapFocusState(layer: MapFocusLayer, id: string, at: Coordinate): { state: { focus: MapFocus } } {
+export function mapFocusState(layer: MapFocusLayer, id: string, at: Coordinate): MapFocusState {
   return { state: { focus: { layer, id, lng: at.longitude, lat: at.latitude } } }
 }

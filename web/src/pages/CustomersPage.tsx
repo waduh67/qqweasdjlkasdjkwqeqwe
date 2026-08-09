@@ -16,7 +16,7 @@ import { Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from
 import { SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { IconCustomers } from '@/components/atoms/icons'
-import { CustomerDetailPage } from './CustomerDetailPage'
+import { CustomerDetailBlade } from './CustomerDetailPage'
 
 /**
  * Draft form pelanggan, dipakai bersama untuk tambah & sunting. `id` null = tambah baru;
@@ -467,17 +467,8 @@ export function CustomersPage() {
         )}
       </Blade>
 
-      {/* Detail pelanggan sebagai flyout — dibuka dari klik baris, bukan rute. Lebar ~50%
-          layar di desktop (blade-half), penuh di tablet/mobile agar tetap terbaca. */}
-      <Blade
-        open={detailId != null}
-        title="Detail pelanggan"
-        size="full"
-        className="blade-half"
-        onClose={() => setDetailId(null)}
-      >
-        {detailId && <CustomerDetailPage customerId={detailId} />}
-      </Blade>
+      {/* Detail pelanggan sebagai flyout — dibuka dari klik baris, bukan rute. */}
+      <CustomerDetailBlade customerId={detailId} onClose={() => setDetailId(null)} />
     </div>
   )
 }

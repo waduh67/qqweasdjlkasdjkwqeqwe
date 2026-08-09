@@ -53,7 +53,7 @@ import {
   type NasView,
   type SubscriberAccessView,
 } from '../api/bng'
-import { mapFocusState } from './mapFocus'
+import { mapFocusState, type MapFocusState } from './mapFocus'
 import { useCan } from '../auth/useCan'
 import { useAuth } from '../auth/useAuth'
 import { Badge, Button, EmptyState, Segmented, SelectField, Spinner, StatusBadge, TextField } from '@/components/atoms'
@@ -89,6 +89,41 @@ import { listIncidentsForCustomer, type IncidentView } from '../api/incident'
 import { listWorkOrdersForCustomer, type WorkOrderStatus, type WorkOrderView } from '../api/workorder'
 import { getSubscriber360, type Sub360BillingSummary, type Subscriber360View } from '../api/subscriber360'
 import { PortalCredentialCard } from '@/components/organisms'
+import { Blade } from '@/components/organisms'
+
+/**
+ * Detail pelanggan sebagai flyout — SATU-SATUNYA cara membukanya di aplikasi ini.
+ *
+ * Sengaja tak ada rute `/customers/:id`: detail selalu muncul sebagai panel di atas
+ * konteks asalnya (daftar pelanggan, panel telusur peta, daftar ONU sebuah OLT) supaya
+ * operator tak kehilangan tempat berdirinya — menutup panel mengembalikan layar persis
+ * seperti sebelum diklik, tanpa memutar ulang pencarian atau posisi peta.
+ *
+ * Dipusatkan di sini agar semua pemanggil memakai judul, ukuran, dan lebar yang sama.
+ */
+export function CustomerDetailBlade({
+  customerId,
+  onClose,
+  onShowOnMap,
+}: {
+  /** `null` = tertutup. Menggantinya dengan id lain cukup menukar isi panel. */
+  customerId: string | null
+  onClose: () => void
+  /** Diteruskan ke command bar detail; lihat [CustomerDetailPage]. */
+  onShowOnMap?: (focus: MapFocusState) => void
+}) {
+  return (
+    <Blade
+      open={customerId != null}
+      title="Detail pelanggan"
+      size="full"
+      className="blade-half"
+      onClose={onClose}
+    >
+      {customerId && <CustomerDetailPage customerId={customerId} onShowOnMap={onShowOnMap} />}
+    </Blade>
+  )
+}
 
 /** Warna kesehatan optik selaras token status. */
 const HEALTH_COLOR: Record<string, string> = {
@@ -116,8 +151,12 @@ export function CustomerDetailPage({
    * belakang flyout (halaman Peta): di sana cukup menutup flyout agar penanda pelanggan
    * terlihat, bukan berpindah rute ke peta yang sama. Bila kosong, aksi pindah ke /map
    * sambil membawa pesan agar peta memusat ke pelanggan ini.
+   *
+   * Pesan sorotnya ikut diserahkan supaya pembungkus yang perlu MENGGESER peta di
+   * belakangnya (mis. flyout pelanggan yang bertumpuk di atas panel OLT) tinggal
+   * meneruskannya ke `navigate('/map', focus)` setelah menutup panel-panelnya.
    */
-  onShowOnMap?: () => void
+  onShowOnMap?: (focus: MapFocusState) => void
 }) {
   // Detail pelanggan kini tampil sebagai flyout fullscreen (dibuka dari daftar), bukan rute
   // tersendiri — jadi `id` datang lewat prop, bukan `useParams`. Alias `id` menjaga sisa berkas
@@ -281,8 +320,11 @@ export function CustomerDetailPage({
       key: 'map',
       label: 'Lihat di peta',
       icon: <IconMap size={16} />,
-      onClick: () =>
-        onShowOnMap ? onShowOnMap() : navigate('/map', mapFocusState('customer', id, customer.location)),
+      onClick: () => {
+        const focus = mapFocusState('customer', id, customer.location)
+        if (onShowOnMap) onShowOnMap(focus)
+        else navigate('/map', focus)
+      },
       dividerBefore: true,
     },
   ]

@@ -37,7 +37,8 @@ import { MessageBar, MessageBarBody } from '@fluentui/react-components'
 import { Button, Segmented, SelectField, StatusBadge, TextField } from '@/components/atoms'
 import { CommandBar, Ess, type CommandAction } from '@/components/molecules'
 import { Blade } from '@/components/organisms'
-import { CustomerDetailPage } from './CustomerDetailPage'
+import { CustomerDetailBlade } from './CustomerDetailPage'
+import { OltDetail } from './OltDetailPage'
 import type { MapFocus } from './mapFocus'
 import { useConfirm, useToast } from '@/system'
 import {
@@ -463,6 +464,9 @@ export function MapPage() {
   // pindah rute ke halaman Pelanggan membuang konteks peta (zoom, sorotan, panel telusur)
   // dan memaksa dia mencari titik itu lagi.
   const [detailCustomerId, setDetailCustomerId] = useState<string | null>(null)
+  // Detail OLT dengan alasan yang sama persis: perangkat inti dibaca sambil melihat
+  // hilirnya di peta, jadi ia datang sebagai panel — bukan rute yang membuang peta.
+  const [detailOltId, setDetailOltId] = useState<string | null>(null)
   const [siteInsp, setSiteInsp] = useState<SiteInspection | null>(null)
   const [oltInsp, setOltInsp] = useState<OltView | null>(null)
   // Heatmap utilisasi port: menyala/mati lewat toggle, mewarnai ODP menurut pemakaian.
@@ -1681,7 +1685,7 @@ export function MapPage() {
             canView={can('network.olt.view')}
             canRelocate={can('network.olt.update')}
             onRelocate={startRelocate}
-            onOpenDetail={() => navigate(`/olts/${oltInsp.id}`, { state: { backTo: '/map', backLabel: 'Peta' } })}
+            onOpenDetail={() => setDetailOltId(oltInsp.id)}
             onClose={() => setOltInsp(null)}
           />
         )}
@@ -1728,18 +1732,41 @@ export function MapPage() {
       {/* Detail pelanggan tampil sebagai flyout separuh layar DI ATAS peta — bentuk yang
           sama persis dengan yang dibuka dari menu Pelanggan, jadi operator tak perlu
           belajar dua tampilan untuk data yang sama. Peta tetap hidup di belakangnya;
-          menutup flyout mengembalikan konteks telusur apa adanya. */}
-      <Blade
-        open={detailCustomerId != null}
-        title="Detail pelanggan"
-        size="full"
-        className="blade-half"
+          menutup flyout mengembalikan konteks telusur apa adanya.
+          "Lihat di peta" di sini cukup menutup flyout: petanya sudah terbentang di
+          belakang, lengkap dengan penanda pelanggan yang panel telusurnya terbuka. */}
+      <CustomerDetailBlade
+        customerId={detailCustomerId}
         onClose={() => setDetailCustomerId(null)}
+        onShowOnMap={() => setDetailCustomerId(null)}
+      />
+
+      {/* Detail OLT — isi yang sama dengan blade Inventory & halaman `/olts/:id`, tampil
+          di atas peta supaya membaca perangkat tak menghapus konteks jaringannya. */}
+      <Blade
+        open={detailOltId != null}
+        title="Detail OLT"
+        size="full"
+        className="blade-detail"
+        onClose={() => setDetailOltId(null)}
       >
-        {detailCustomerId && (
-          // "Lihat di peta" di sini cukup menutup flyout: petanya sudah terbentang di
-          // belakang, lengkap dengan penanda pelanggan yang panel telusurnya terbuka.
-          <CustomerDetailPage customerId={detailCustomerId} onShowOnMap={() => setDetailCustomerId(null)} />
+        {detailOltId && (
+          <OltDetail
+            // `key` per-id: memilih OLT lain menukar isi panel, bukan mewarisi tab &
+            // data OLT sebelumnya.
+            key={detailOltId}
+            oltId={detailOltId}
+            // Petanya sudah terbentang di belakang panel ini, lengkap dengan penanda OLT
+            // yang panel inspeksinya terbuka — "Lihat di peta" cukup menyingkir.
+            onShowOnMap={() => setDetailOltId(null)}
+            onDeleted={() => {
+              // OLT-nya lenyap: tutup panelnya lalu gambar ulang tile agar markernya
+              // benar-benar hilang dari peta, bukan cuma dari panel.
+              setDetailOltId(null)
+              setOltInsp(null)
+              refreshTiles()
+            }}
+          />
         )}
       </Blade>
     </div>

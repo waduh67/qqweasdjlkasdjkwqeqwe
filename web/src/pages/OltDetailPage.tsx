@@ -26,6 +26,7 @@ import { Blade } from '@/components/organisms'
 import { IconInventory, IconMap, IconPlus } from '@/components/atoms/icons'
 import { Pencil, Trash2 } from 'lucide-react'
 import { mapFocusState } from './mapFocus'
+import { CustomerDetailBlade } from './CustomerDetailPage'
 import { DiscoveredOnuInbox } from '@/components/organisms'
 import { OltRegisteredOnus } from '@/components/organisms'
 
@@ -69,10 +70,17 @@ export function OltDetail({
   oltId,
   compact = false,
   onDeleted,
+  onShowOnMap,
 }: {
   oltId: string
   compact?: boolean
   onDeleted?: () => void
+  /**
+   * Perilaku aksi "Lihat di peta". Diisi oleh pemanggil yang PETANYA sudah tampil di
+   * belakang panel ini (blade di halaman Peta) — di sana cukup menutup panel, tak perlu
+   * pindah rute. Bila kosong, aksinya bernavigasi ke `/map` sambil menyorot OLT ini.
+   */
+  onShowOnMap?: () => void
 }) {
   const id = oltId
   const toast = useToast()
@@ -86,8 +94,9 @@ export function OltDetail({
   const canDrill = canMap && can('network.odp.view')
   // Daftar ONU per-OLT memuat identitas pelanggan (PII), jadi gerbangnya persis
   // seperti endpoint `/api/gis/olts/{id}/onus`: inspeksi OLT + lihat pelanggan.
+  const canCustomer = can('customer.customer.view')
   const canOnuList =
-    can('gis.map.view') && can('network.olt.view') && can('network.odp.view') && can('customer.customer.view')
+    canMap && can('network.olt.view') && can('network.odp.view') && canCustomer
   // Tab "ONU Baru" memakai kotak masuk provisioning — sama seperti halaman Provisioning.
   const canProvisioning = can('monitoring.provisioning.view')
 
@@ -96,6 +105,10 @@ export function OltDetail({
   const [notFound, setNotFound] = useState(false)
   const [tab, setTab] = useState<Tab>('ringkasan')
   const [editing, setEditing] = useState(false)
+  // Pelanggan di daftar ONU dibuka sebagai flyout DI ATAS panel ini — bukan pindah rute.
+  // Operator yang sedang membedah satu OLT biasanya memeriksa beberapa pelanggan
+  // berturut-turut; membuang halaman OLT tiap kali berarti memuat & mencari ulang.
+  const [detailCustomerId, setDetailCustomerId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -152,7 +165,8 @@ export function OltDetail({
       key: 'map',
       label: 'Lihat di peta',
       icon: <IconMap size={16} />,
-      onClick: () => navigate('/map', mapFocusState('olt', olt.id, olt.location)),
+      onClick: () =>
+        onShowOnMap ? onShowOnMap() : navigate('/map', mapFocusState('olt', olt.id, olt.location)),
     })
   if (canUpdate)
     commands.push({ key: 'edit', label: 'Edit', icon: <Pencil size={16} />, onClick: () => setEditing(true), dividerBefore: commands.length > 0 })
@@ -192,7 +206,9 @@ export function OltDetail({
 
       {tab === 'ringkasan' && <RingkasanTab olt={olt} canUpdate={canUpdate} onSaved={load} />}
       {tab === 'pon' && <PonPortTab oltId={olt.id} canUpdate={canUpdate} canDrill={canDrill} onChanged={load} />}
-      {tab === 'onu' && canOnuList && <OltRegisteredOnus oltId={olt.id} backTo={`/olts/${olt.id}`} />}
+      {tab === 'onu' && canOnuList && (
+        <OltRegisteredOnus oltId={olt.id} onOpenCustomer={canCustomer ? setDetailCustomerId : undefined} />
+      )}
       {tab === 'onubaru' && canProvisioning && <DiscoveredOnuInbox oltId={olt.id} />}
 
       {editing && (
@@ -205,6 +221,23 @@ export function OltDetail({
           }}
         />
       )}
+
+      <CustomerDetailBlade
+        customerId={detailCustomerId}
+        onClose={() => setDetailCustomerId(null)}
+        // Saat panel OLT ini sendiri menumpang di atas peta, "Lihat di peta" pelanggan
+        // harus menyingkirkan KEDUA panel dulu — kalau tidak, peta memang bergeser ke
+        // pelanggannya tapi tetap tertutup dan operator mengira tombolnya mati.
+        onShowOnMap={
+          onShowOnMap
+            ? (focus) => {
+                setDetailCustomerId(null)
+                onShowOnMap()
+                navigate('/map', focus)
+              }
+            : undefined
+        }
+      />
     </div>
   )
 }
