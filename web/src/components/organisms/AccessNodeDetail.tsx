@@ -1,0 +1,430 @@
+import { useCallback, useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
+import { Pencil, Trash2 } from 'lucide-react'
+import { api, ApiError } from '@/api/client'
+import type { AssetStatus, Coordinate, OdcView, OdpView } from '@/api/network'
+import { useCan } from '@/auth/useCan'
+import { Badge, Button, EmptyState, SelectField, Spinner, StatusBadge, TextField } from '@/components/atoms'
+import { IconInventory, IconMap } from '@/components/atoms/icons'
+import { CommandBar, type CommandAction } from '@/components/molecules'
+import { useConfirm, useToast } from '@/system'
+import { mapFocusState, type MapFocusState } from '@/map/mapFocus'
+import { Blade } from './Blade'
+import { LocationPicker } from './LocationPicker'
+
+const SPLITTER_RATIOS = ['1:2', '1:4', '1:8', '1:16', '1:32', '1:64']
+
+const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
+  { value: 'PLANNED', label: 'Rencana' },
+  { value: 'ACTIVE', label: 'Aktif' },
+  { value: 'MAINTENANCE', label: 'Perawatan' },
+  { value: 'INACTIVE', label: 'Nonaktif' },
+]
+
+/** Satu sel info berlabel di panel detail (pola `.stat` yang sama dipakai detail OLT). */
+function DetailField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="stat">
+      <div className="stat-label">{label}</div>
+      <div style={{ fontSize: '0.9rem', color: 'var(--text-2)', wordBreak: 'break-word' }}>{value}</div>
+    </div>
+  )
+}
+
+/**
+ * Panel detail read-only sebuah aset jaringan di dalam blade lebar (`blade-detail`) —
+ * kembar perilaku dengan detail OLT: klik baris membuka panel ini, tombol Edit membuka
+ * drawer sunting yang lebih sempit (`blade-edit`) DI ATAS-nya (non-modal, tak menutup
+ * penuh). Sengaja read-only: semua perubahan—termasuk lokasi—lewat drawer Edit yang
+ * sudah punya peta pemilih, jadi detail = baca, edit = tulis (tanpa duplikasi form).
+ * Presentasional murni: `badges`/`fields` datang dari pemanggil.
+ */
+export function AssetDetailPanel({
+  badges,
+  subtitle,
+  fields,
+  address,
+  location,
+  canUpdate,
+  canDelete,
+  onEdit,
+  onDelete,
+  onShowOnMap,
+}: {
+  badges: ReactNode
+  subtitle?: string
+  fields: Array<{ label: string; value: string }>
+  address?: string | null
+  location: Coordinate
+  canUpdate: boolean
+  canDelete: boolean
+  /** Kosongkan bila aset ini memang tak bisa disunting dari sini (mis. site). */
+  onEdit?: () => void
+  onDelete: () => void
+  /** Kosongkan bila operator tak berizin membuka peta. */
+  onShowOnMap?: () => void
+}) {
+  // Aksi tingkat-aset duduk di command bar blade, sejajar dengan detail pelanggan:
+  // satu tempat yang sama untuk "apa yang bisa kulakukan pada benda ini".
+  const commands: CommandAction[] = []
+  if (onShowOnMap)
+    commands.push({ key: 'map', label: 'Lihat di peta', icon: <IconMap size={16} />, onClick: onShowOnMap })
+  if (canUpdate && onEdit)
+    commands.push({ key: 'edit', label: 'Edit', icon: <Pencil size={16} />, onClick: onEdit, dividerBefore: commands.length > 0 })
+  if (canDelete)
+    commands.push({ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: onDelete, dividerBefore: commands.length > 0 })
+
+  return (
+    <div className="stack" style={{ gap: '1.25rem' }}>
+      <div className="stack" style={{ gap: '0.35rem' }}>
+        <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'center' }}>{badges}</div>
+        {subtitle && <p className="page-sub" style={{ margin: 0 }}>{subtitle}</p>}
+      </div>
+
+      {commands.length > 0 && <CommandBar actions={commands} />}
+
+      <div className="card stack">
+        <h3 style={{ margin: 0 }}>Informasi</h3>
+        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+          {fields.map((f) => (
+            <DetailField key={f.label} label={f.label} value={f.value} />
+          ))}
+        </div>
+        {address && <DetailField label="Alamat" value={address} />}
+      </div>
+
+      <div className="card stack">
+        <h3 style={{ margin: 0 }}>Lokasi</h3>
+        <p className="muted tnum" style={{ margin: 0, fontSize: '0.85rem' }}>
+          {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+        </p>
+        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+          {onEdit ? 'Ubah identitas & lokasi lewat tombol Edit.' : 'Lihat penempatannya lewat tombol Lihat di peta.'}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/** Simpul akses yang punya splitter: ODC (distribusi) dan ODP (terminasi). */
+export type AccessNodeKind = 'odc' | 'odp'
+
+/**
+ * Perbedaan ODC vs ODP tinggal kata-katanya: bentuk datanya (kode, nama, alamat,
+ * splitter, kapasitas, status, titik) identik, jadi satu komponen melayani keduanya
+ * dan tabel inilah yang menampung selisihnya.
+ */
+const KIND = {
+  odc: {
+    label: 'ODC',
+    path: 'odcs',
+    updatePerm: 'network.odc.update',
+    deletePerm: 'network.odc.delete',
+    capacityLabel: 'Kapasitas',
+    editHint: 'Ubah identitas, kapasitas & status ODC. Uplink diatur di peta lewat kabel.',
+  },
+  odp: {
+    label: 'ODP',
+    path: 'odps',
+    updatePerm: 'network.odp.update',
+    deletePerm: 'network.odp.delete',
+    capacityLabel: 'Jumlah port',
+    editHint: 'Ubah identitas, kapasitas & status ODP. ODC induk diatur di peta lewat kabel.',
+  },
+} as const
+
+/** Bentuk formulir sunting — semua string karena datang dari input. */
+interface NodeDraft {
+  code: string
+  name: string
+  address: string
+  longitude: string
+  latitude: string
+  splitterRatio: string
+  capacity: string
+  status: AssetStatus
+}
+
+function toDraft(node: OdcView | OdpView): NodeDraft {
+  return {
+    code: node.code,
+    name: node.name,
+    address: node.address ?? '',
+    longitude: String(node.location.longitude),
+    latitude: String(node.location.latitude),
+    splitterRatio: node.splitterRatio,
+    capacity: String(node.capacity),
+    status: node.status,
+  }
+}
+
+/**
+ * Detail satu ODC/ODP — SATU implementasi yang dipakai di mana pun simpul itu dibuka.
+ *
+ * Memuat sendiri lewat `GET /api/{odcs|odps}/{id}` dan mengurus sunting & hapusnya,
+ * jadi pemanggil cukup menyodorkan id: daftar Inventory punya viewnya, panel peta cuma
+ * punya id — keduanya tetap melihat panel yang sama persis. Pola & kontraknya kembar
+ * dengan [OltDetail]; lihat juga [CustomerDetailBlade].
+ */
+export function AccessNodeDetail({
+  kind,
+  nodeId,
+  onChanged,
+  onDeleted,
+  onShowOnMap,
+}: {
+  kind: AccessNodeKind
+  nodeId: string
+  /** Dipanggil seusai sunting tersimpan — pemanggil menyegarkan daftar/tile-nya. */
+  onChanged?: () => void
+  /** Dipanggil seusai simpul dihapus — pemanggil menutup panelnya. */
+  onDeleted?: () => void
+  /**
+   * Perilaku aksi "Lihat di peta". Pesan sorotnya sudah disiapkan, jadi pemanggil yang
+   * belum menampilkan peta tinggal meneruskannya ke `navigate('/map', focus)`; pemanggil
+   * yang PETANYA sudah terbentang di belakang panel cukup menutup panel. Kosong = aksi
+   * disembunyikan (operator tak berizin membuka peta).
+   */
+  onShowOnMap?: (focus: MapFocusState) => void
+}) {
+  const meta = KIND[kind]
+  const { can } = useCan()
+  const toast = useToast()
+  const confirm = useConfirm()
+  const canUpdate = can(meta.updatePerm)
+  const canDelete = can(meta.deletePerm)
+
+  const [node, setNode] = useState<OdcView | OdpView | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+  const [draft, setDraft] = useState<NodeDraft | null>(null)
+  const [initialDraft, setInitialDraft] = useState<NodeDraft | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  const load = useCallback(async () => {
+    try {
+      setNode(await api.get<OdcView | OdpView>(`/api/${meta.path}/${nodeId}`))
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) setNotFound(true)
+      else toast.error(err instanceof ApiError ? err.message : `Gagal memuat detail ${meta.label}`)
+    } finally {
+      setLoading(false)
+    }
+  }, [meta.label, meta.path, nodeId, toast])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const closeDraft = () => {
+    setDraft(null)
+    setInitialDraft(null)
+  }
+
+  const save = async () => {
+    if (!draft) return
+    setSaving(true)
+    try {
+      await api.put(`/api/${meta.path}/${nodeId}`, {
+        code: draft.code,
+        name: draft.name,
+        address: draft.address || null,
+        location: { longitude: Number(draft.longitude), latitude: Number(draft.latitude) },
+        splitterRatio: draft.splitterRatio,
+        capacity: Number(draft.capacity),
+        status: draft.status,
+      })
+      closeDraft()
+      await load()
+      onChanged?.()
+      toast.success(`${meta.label} diperbarui`)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : `Gagal menyimpan ${meta.label}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const remove = async () => {
+    if (!node) return
+    if (
+      !(await confirm({
+        title: `Hapus ${meta.label}`,
+        message: `Hapus ${meta.label} ${node.code}?`,
+        confirmLabel: 'Hapus',
+        danger: true,
+      }))
+    )
+      return
+    try {
+      await api.del(`/api/${meta.path}/${nodeId}`)
+      toast.success(`${meta.label} ${node.code} dihapus`)
+      onDeleted?.()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : `Gagal menghapus ${meta.label}`)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="card" style={{ display: 'grid', placeItems: 'center', padding: '3rem' }}>
+        <Spinner />
+      </div>
+    )
+  }
+
+  if (notFound || !node) {
+    return (
+      <div className="card">
+        <EmptyState
+          title={`${meta.label} tidak ditemukan`}
+          hint="Mungkin sudah dihapus atau kamu tak berizin melihatnya."
+          icon={<IconInventory size={32} />}
+        />
+      </div>
+    )
+  }
+
+  const odc = kind === 'odc' ? (node as OdcView) : null
+  const odp = kind === 'odp' ? (node as OdpView) : null
+  const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
+
+  return (
+    <>
+      <AssetDetailPanel
+        badges={
+          <>
+            {odc?.energized ? <StatusBadge status="ACTIVE" label="teraliri" /> : <StatusBadge status={node.status} />}
+            <Badge>{node.splitterRatio}</Badge>
+          </>
+        }
+        subtitle={
+          odc
+            ? odc.oltName
+              ? `Hulu: ${odc.oltName} · ${odc.ponPortLabel}`
+              : 'Belum di-uplink'
+            : odp?.odcName
+              ? `ODC induk: ${odp.odcName}`
+              : 'Belum tersambung ke ODC'
+        }
+        fields={
+          odc
+            ? [
+                { label: 'Nama', value: odc.name },
+                {
+                  label: 'Hulu (OLT · PON)',
+                  value: odc.oltName ? `${odc.oltName} · ${odc.ponPortLabel}` : 'belum di-uplink',
+                },
+                { label: 'Rasio splitter', value: odc.splitterRatio },
+                { label: meta.capacityLabel, value: String(odc.capacity) },
+                { label: 'Jumlah ODP', value: String(odc.odpCount) },
+              ]
+            : [
+                { label: 'Nama', value: node.name },
+                { label: 'ODC induk', value: odp?.odcName ?? '—' },
+                { label: 'Rasio splitter', value: node.splitterRatio },
+                { label: meta.capacityLabel, value: String(node.capacity) },
+              ]
+        }
+        address={node.address}
+        location={node.location}
+        canUpdate={canUpdate}
+        canDelete={canDelete}
+        onEdit={() => {
+          const d = toDraft(node)
+          setDraft(d)
+          setInitialDraft(d)
+        }}
+        onDelete={() => void remove()}
+        onShowOnMap={onShowOnMap ? () => onShowOnMap(mapFocusState(kind, nodeId, node.location)) : undefined}
+      />
+
+      {/* Drawer sunting lebih sempit yang menumpang DI ATAS detail — panel induknya tetap
+          mengintip di kiri supaya operator tahu benda mana yang sedang ia ubah. */}
+      <Blade
+        open={draft != null}
+        title={`Edit ${node.code}`}
+        subtitle={meta.editHint}
+        size="full"
+        className="blade-edit"
+        dirty={dirty}
+        onClose={closeDraft}
+        footer={
+          <>
+            <Button variant="primary" disabled={saving} onClick={() => void save()}>
+              Simpan
+            </Button>
+            <Button onClick={closeDraft}>Batal</Button>
+          </>
+        }
+      >
+        {draft && (
+          <div className="stack">
+            <div className="row">
+              <div style={{ flex: 1 }}>
+                <TextField
+                  label="Kode"
+                  value={draft.code}
+                  onChange={(_, data) => setDraft({ ...draft, code: data.value })}
+                  disabled
+                />
+              </div>
+              <div style={{ flex: 2 }}>
+                <TextField
+                  label="Nama"
+                  value={draft.name}
+                  onChange={(_, data) => setDraft({ ...draft, name: data.value })}
+                />
+              </div>
+            </div>
+            <TextField
+              label={<>Alamat <span className="muted">(opsional)</span></>}
+              value={draft.address}
+              onChange={(_, data) => setDraft({ ...draft, address: data.value })}
+            />
+            <div className="row">
+              <div style={{ flex: 1 }}>
+                <SelectField
+                  label="Rasio splitter"
+                  value={draft.splitterRatio}
+                  onChange={(_, data) => setDraft({ ...draft, splitterRatio: data.value })}
+                >
+                  {SPLITTER_RATIOS.map((ratio) => (
+                    <option key={ratio}>{ratio}</option>
+                  ))}
+                </SelectField>
+              </div>
+              <div style={{ flex: 1 }}>
+                <TextField
+                  label={meta.capacityLabel}
+                  value={draft.capacity}
+                  onChange={(_, data) => setDraft({ ...draft, capacity: data.value })}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <SelectField
+                  label="Status"
+                  value={draft.status}
+                  onChange={(_, data) => setDraft({ ...draft, status: data.value as AssetStatus })}
+                >
+                  {STATUS_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </SelectField>
+              </div>
+            </div>
+            <label>
+              <span>Lokasi</span>
+              <LocationPicker
+                longitude={draft.longitude}
+                latitude={draft.latitude}
+                onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
+                height={240}
+              />
+            </label>
+          </div>
+        )}
+      </Blade>
+    </>
+  )
+}

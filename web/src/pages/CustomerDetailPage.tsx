@@ -53,7 +53,7 @@ import {
   type NasView,
   type SubscriberAccessView,
 } from '../api/bng'
-import { mapFocusState, type MapFocusState } from './mapFocus'
+import { mapFocusState, type MapFocusState } from '@/map/mapFocus'
 import { useCan } from '../auth/useCan'
 import { useAuth } from '../auth/useAuth'
 import { Badge, Button, EmptyState, Segmented, SelectField, Spinner, StatusBadge, TextField } from '@/components/atoms'

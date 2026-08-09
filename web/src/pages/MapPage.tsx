@@ -36,10 +36,10 @@ import { useCan } from '../auth/useCan'
 import { MessageBar, MessageBarBody } from '@fluentui/react-components'
 import { Button, Segmented, SelectField, StatusBadge, TextField } from '@/components/atoms'
 import { CommandBar, Ess, type CommandAction } from '@/components/molecules'
-import { Blade } from '@/components/organisms'
+import { AccessNodeDetail, Blade, type AccessNodeKind } from '@/components/organisms'
 import { CustomerDetailBlade } from './CustomerDetailPage'
 import { OltDetail } from './OltDetailPage'
-import type { MapFocus } from './mapFocus'
+import type { MapFocus } from '@/map/mapFocus'
 import { useConfirm, useToast } from '@/system'
 import {
   IconChevronDown,
@@ -467,6 +467,10 @@ export function MapPage() {
   // Detail OLT dengan alasan yang sama persis: perangkat inti dibaca sambil melihat
   // hilirnya di peta, jadi ia datang sebagai panel — bukan rute yang membuang peta.
   const [detailOltId, setDetailOltId] = useState<string | null>(null)
+  // ODC & ODP ikut aturan yang sama. Panel inspeksinya menjawab pertanyaan lapangan
+  // (siapa ikut mati, port mana kosong); detailnya menyimpan identitas, kapasitas, dan
+  // satu-satunya jalan menyuntingnya — dulu itu hanya ada di Inventory.
+  const [detailNode, setDetailNode] = useState<{ kind: AccessNodeKind; id: string; code: string } | null>(null)
   const [siteInsp, setSiteInsp] = useState<SiteInspection | null>(null)
   const [oltInsp, setOltInsp] = useState<OltView | null>(null)
   // Heatmap utilisasi port: menyala/mati lewat toggle, mewarnai ODP menurut pemakaian.
@@ -520,6 +524,20 @@ export function MapPage() {
   const refreshTiles = () => {
     const src = map.current?.getSource('ftth') as { setTiles?: (t: string[]) => void } | undefined
     src?.setTiles?.([`${window.location.origin}/api/gis/tiles/{z}/{x}/{y}.mvt?v=${Date.now()}`])
+  }
+
+  /**
+   * Menarik ulang panel inspeksi sebuah ODC/ODP setelah detailnya disunting — tanpa ini
+   * panel di belakang blade tetap memajang nama/kapasitas lama tepat di sebelah detail
+   * yang sudah benar. Gagal tarik dibiarkan diam: panelnya cuma basi, bukan rusak.
+   */
+  const reloadNodePanel = async (kind: AccessNodeKind, id: string) => {
+    try {
+      if (kind === 'odp') setSelected(await api.get<OdpInspection>(`/api/gis/odps/${id}`))
+      else setBlast(await api.get<BlastRadiusView>(`/api/gis/odcs/${id}/blast-radius`))
+    } catch {
+      /* biarkan panel apa adanya */
+    }
   }
 
   /**
@@ -1631,6 +1649,9 @@ export function MapPage() {
             canDelete={can('network.odc.delete')}
             canRelocate={can('network.odc.update')}
             onRelocate={startRelocate}
+            onOpenDetail={
+              can('network.odc.view') ? () => setDetailNode({ kind: 'odc', id: blast.odcId, code: blast.code }) : undefined
+            }
             onDelete={() => void deleteAsset('ODC', blast.odcId, blast.code, () => setBlast(null))}
             onClose={() => setBlast(null)}
           />
@@ -1695,6 +1716,11 @@ export function MapPage() {
             canDelete={can('network.odp.delete')}
             canRelocate={can('network.odp.update')}
             onRelocate={startRelocate}
+            onOpenDetail={
+              can('network.odp.view')
+                ? () => setDetailNode({ kind: 'odp', id: selected.odpId, code: selected.code })
+                : undefined
+            }
             onDelete={() => void deleteAsset('ODP', selected.odpId, selected.code, () => setSelected(null))}
             onClose={() => setSelected(null)}
           />
@@ -1766,6 +1792,42 @@ export function MapPage() {
               setOltInsp(null)
               refreshTiles()
             }}
+          />
+        )}
+      </Blade>
+
+      {/* Detail ODC/ODP — panel yang sama dengan tab Inventory, termasuk tombol Edit.
+          Sebelumnya menyunting nama/kapasitas sebuah ODP berarti meninggalkan peta,
+          mencarinya lagi di daftar, lalu kembali; sekarang cukup di tempat. */}
+      <Blade
+        open={detailNode != null}
+        title={detailNode ? `Detail ${detailNode.kind.toUpperCase()}` : ''}
+        subtitle={detailNode?.code}
+        size="full"
+        className="blade-detail"
+        onClose={() => setDetailNode(null)}
+      >
+        {detailNode && (
+          <AccessNodeDetail
+            // `key`: pindah ke simpul lain menukar isi panel, bukan menumpuk state lama.
+            key={detailNode.id}
+            kind={detailNode.kind}
+            nodeId={detailNode.id}
+            // Kode, nama, atau titiknya bisa berubah. Tile digambar ulang DAN panel
+            // inspeksi di belakang ditarik ulang — tanpa itu panelnya tetap memajang
+            // nama lama tepat di sebelah detail yang sudah benar.
+            onChanged={() => {
+              refreshTiles()
+              void reloadNodePanel(detailNode.kind, detailNode.id)
+            }}
+            onDeleted={() => {
+              setDetailNode(null)
+              if (detailNode.kind === 'odc') setBlast(null)
+              else setSelected(null)
+              refreshTiles()
+            }}
+            // Petanya sudah di belakang panel & penandanya tersorot — cukup menyingkir.
+            onShowOnMap={() => setDetailNode(null)}
           />
         )}
       </Blade>
@@ -2602,6 +2664,7 @@ function BlastRadiusPanel({
   canDelete,
   canRelocate,
   onRelocate,
+  onOpenDetail,
   onDelete,
   onClose,
 }: {
@@ -2609,10 +2672,17 @@ function BlastRadiusPanel({
   canDelete: boolean
   canRelocate: boolean
   onRelocate: () => void
+  /** Kosong = operator tak berizin melihat detail ODC. */
+  onOpenDetail?: () => void
   onDelete: () => void
   onClose: () => void
 }) {
   const withPhone = blast.customers.filter((c) => c.phone).length
+  // Panel ini menjawab "siapa yang ikut mati"; identitas & kapasitasnya ada di detail —
+  // dibuka sebagai blade di atas peta, sama seperti OLT & pelanggan.
+  const primary: CommandAction | undefined = onOpenDetail
+    ? { key: 'detail', label: 'Buka detail', icon: <IconMonitor size={15} />, onClick: onOpenDetail }
+    : undefined
   const actions: CommandAction[] = []
   if (canRelocate) actions.push(relocateAction(onRelocate))
   if (canDelete) actions.push(deleteAction('Hapus ODC', onDelete))
@@ -2620,7 +2690,7 @@ function BlastRadiusPanel({
   return (
     <aside className="map-panel blade">
       <BladeHead title={blast.code} subtitle={`ODC (FDT) · ${blast.name}`} onClose={onClose} />
-      {actions.length > 0 && <CommandBar actions={actions} />}
+      {(primary || actions.length > 0) && <CommandBar primary={primary} actions={actions} />}
 
       <div className="blade-body stack" style={{ gap: '0.9rem' }}>
         <MessageBar intent={blast.energized ? 'warning' : 'error'}>
@@ -3470,6 +3540,7 @@ function OdpPanel({
   canDelete,
   canRelocate,
   onRelocate,
+  onOpenDetail,
   onDelete,
   onClose,
 }: {
@@ -3477,12 +3548,18 @@ function OdpPanel({
   canDelete: boolean
   canRelocate: boolean
   onRelocate: () => void
+  /** Kosong = operator tak berizin melihat detail ODP. */
+  onOpenDetail?: () => void
   onDelete: () => void
   onClose: () => void
 }) {
   const { upstream } = inspection
   // Sama seperti site: server menolak hapus ODP yang masih dihuni, jadi dikunci di sini.
   const deleteBlocked = inspection.occupants.length > 0
+  // Panel ini soal port & penghuni; identitas, kapasitas, dan suntingnya ada di detail.
+  const primary: CommandAction | undefined = onOpenDetail
+    ? { key: 'detail', label: 'Buka detail', icon: <IconMonitor size={15} />, onClick: onOpenDetail }
+    : undefined
   const actions: CommandAction[] = []
   if (canRelocate) actions.push(relocateAction(onRelocate))
   if (canDelete) actions.push(deleteAction('Hapus ODP', onDelete, deleteBlocked))
@@ -3490,7 +3567,7 @@ function OdpPanel({
   return (
     <aside className="map-panel blade">
       <BladeHead title={inspection.code} subtitle={`ODP (FAT) · ${inspection.name}`} onClose={onClose} />
-      {actions.length > 0 && <CommandBar actions={actions} />}
+      {(primary || actions.length > 0) && <CommandBar primary={primary} actions={actions} />}
 
       <div className="blade-body stack" style={{ gap: '0.9rem' }}>
         {!upstream.complete && (

@@ -1,4 +1,6 @@
 // Organisms — komponen kaya yang menggabungkan molekul + data/logika domain.
+export { AccessNodeDetail, AssetDetailPanel } from './AccessNodeDetail'
+export type { AccessNodeKind } from './AccessNodeDetail'
 export { Blade } from './Blade'
 export type { BladeSize } from './Blade'
 export { DataTable } from './DataTable'
