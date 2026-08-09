@@ -128,6 +128,7 @@ export type NotificationTrigger =
   | 'INVOICE_OVERDUE'
   | 'WORK_ORDER_SCHEDULED'
   | 'INCIDENT_OPENED'
+  | 'PORTAL_PASSWORD_RESET'
 
 /** Urutan tampil = urutan perjalanan pelanggan, bukan urutan enum. */
 export const TRIGGERS: NotificationTrigger[] = [
@@ -138,6 +139,7 @@ export const TRIGGERS: NotificationTrigger[] = [
   'INVOICE_OVERDUE',
   'WORK_ORDER_SCHEDULED',
   'INCIDENT_OPENED',
+  'PORTAL_PASSWORD_RESET',
 ]
 
 export const TRIGGER_LABEL: Record<NotificationTrigger, string> = {
@@ -148,6 +150,9 @@ export const TRIGGER_LABEL: Record<NotificationTrigger, string> = {
   INVOICE_OVERDUE: 'Tagihan menunggak',
   WORK_ORDER_SCHEDULED: 'Kunjungan teknisi terjadwal',
   INCIDENT_OPENED: 'Gangguan dibuka',
+  // Bukan pemberitahuan yang bisa dimatikan pelanggan: tanpa ini akun tak bisa dipulihkan.
+  // Templatenya sebaiknya berkategori AUTHENTICATION (Meta memperlakukan OTP secara khusus).
+  PORTAL_PASSWORD_RESET: 'Kode pemulihan password portal',
 }
 
 export type TemplateStatus = 'APPROVED' | 'PENDING' | 'REJECTED' | 'PAUSED' | 'DISABLED' | 'UNKNOWN'

@@ -18,6 +18,7 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
+import java.util.UUID
 
 /**
  * Bagian autentikasi portal yang berjalan DI DALAM tenant context yang sudah dipasang
@@ -25,7 +26,10 @@ import java.time.Instant
  * sini penting: session Hibernate baru terbuka setelah tenant ter-set, sehingga query
  * kredensial ter-scope tenant yang benar (RLS).
  *
- * Pesan error autentikasi seragam ("login atau password salah") untuk mencegah enumerasi.
+ * Perannya sengaja sempit: MEMERIKSA dan MENERBITKAN, bukan memutuskan. Keputusan "identitas
+ * ini milik siapa dan di ISP mana" berada di [PortalAuthenticationService], karena satu
+ * percobaan masuk bisa menyentuh beberapa tenant sekaligus — sesuatu yang menurut definisi
+ * tak bisa dijawab dari dalam satu tenant context.
  */
 @Service
 @Transactional
@@ -39,13 +43,27 @@ class PortalTenantScopedAuthenticator(
     private val tenantApi: TenantApi,
     private val events: ApplicationEventPublisher,
 ) {
-    fun authenticateAndIssue(rawLogin: String, rawPassword: String): PortalAuthTokens {
-        val login = normalizeLogin(rawLogin) ?: throw invalidCredentials()
-        val credential = credentials.findByLogin(login) ?: throw invalidCredentials()
-        if (!credential.active) throw AuthenticationException("Akun portal dinonaktifkan")
-        if (!passwordHasher.matches(rawPassword, credential.passwordHash)) throw invalidCredentials()
-        return issue(credential, "portal.auth.login")
-    }
+    /**
+     * Kredensial pelanggan ini BILA passwordnya cocok; null bila tidak (termasuk bila
+     * pelanggan tak punya kredensial sama sekali).
+     *
+     * Status aktif SENGAJA tidak diperiksa di sini melainkan oleh pemanggil, setelah password
+     * terbukti. Urutan itu penting: memeriksa aktif lebih dulu membuat "akun dinonaktifkan"
+     * bisa dipancing tanpa tahu password — pembeda yang cukup untuk memetakan siapa saja yang
+     * punya akun di sebuah ISP.
+     */
+    @Transactional(readOnly = true)
+    fun verifyPassword(customerId: UUID, rawPassword: String): PortalCredential? =
+        credentials.findByCustomerId(customerId)
+            ?.takeIf { passwordHasher.matches(rawPassword, it.passwordHash) }
+
+    /** Cari kredensial menurut username — jalur cadangan saat indeks identitas belum terisi. */
+    @Transactional(readOnly = true)
+    fun findByLogin(rawLogin: String): PortalCredential? =
+        normalizeLogin(rawLogin)?.let { credentials.findByLogin(it) }
+
+    /** Terbitkan token untuk kredensial yang passwordnya SUDAH terverifikasi pemanggil. */
+    fun issueFor(credential: PortalCredential): PortalAuthTokens = issue(credential, "portal.auth.login")
 
     fun rotateAndIssue(presented: PortalRefreshToken): PortalAuthTokens {
         presented.revoke()
@@ -106,6 +124,4 @@ class PortalTenantScopedAuthenticator(
 
     private fun normalizeLogin(raw: String): String? =
         runCatching { PortalCredential.normalizeLogin(raw) }.getOrNull()
-
-    private fun invalidCredentials() = AuthenticationException("Login atau password salah")
 }

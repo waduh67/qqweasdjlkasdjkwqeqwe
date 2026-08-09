@@ -5,13 +5,11 @@ import com.duluin.ftth.notification.application.port.outbound.BroadcastRepositor
 import com.duluin.ftth.notification.application.port.outbound.DeliveryOutcome
 import com.duluin.ftth.notification.application.port.outbound.MessageDispatcher
 import com.duluin.ftth.notification.application.port.outbound.NotificationSettingsRepository
-import com.duluin.ftth.notification.application.port.outbound.NotificationTemplateRepository
 import com.duluin.ftth.notification.domain.model.Broadcast
 import com.duluin.ftth.notification.domain.model.DeliveryStatus
 import com.duluin.ftth.notification.domain.model.NotificationChannel
 import com.duluin.ftth.notification.domain.model.NotificationSettings
 import com.duluin.ftth.notification.domain.model.NotificationTrigger
-import com.duluin.ftth.notification.domain.model.WhatsAppGateway
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -34,7 +32,7 @@ import java.util.UUID
 class NotificationSender(
     private val settingsRepo: NotificationSettingsRepository,
     private val broadcastRepo: BroadcastRepository,
-    private val templateRepo: NotificationTemplateRepository,
+    private val templates: WhatsAppTemplateResolver,
     private val dispatcher: MessageDispatcher,
 ) {
     /** Satu penerima: pelanggan (id opsional untuk siaran non-pelanggan) + nomor tujuannya. */
@@ -60,7 +58,7 @@ class NotificationSender(
         if (!settings.isTriggerEnabled(trigger)) return null
 
         // Diresolusi sekali per batch: null = gateway mati/kurang konfigurasi → semua SKIPPED.
-        val gateway = settings.resolveGateway()?.withTemplateFor(trigger)
+        val gateway = settings.resolveGateway()?.let { templates.withTemplateFor(it, trigger) }
         val broadcast = Broadcast.compose(tenantId, incidentId, channel, message, createdBy, trigger)
         recipients.forEach { r ->
             val outcome = when {
@@ -71,27 +69,6 @@ class NotificationSender(
             broadcast.record(r.customerId, r.name, r.phone, outcome.status, outcome.detail)
         }
         return broadcastRepo.save(broadcast)
-    }
-
-    /**
-     * Lengkapi gateway resmi dengan template yang dipetakan ke [trigger]. Pemicu tanpa pemetaan
-     * sengaja dibiarkan tanpa template — mematikan pemetaan tak boleh membungkam notifikasi.
-     * Akibatnya berbeda per penyedia, dan itu diputuskan dispatcher, bukan di sini: Meta jatuh ke
-     * teks biasa, sedangkan Qontak melaporkan SKIPPED karena API-nya memang hanya menerima
-     * template. Gateway LOG/HTTP tak mengenal template, jadi dilewatkan apa adanya.
-     *
-     * Qontak mengacu template lewat ID, bukan nama; template yang belum punya `remoteId` (belum
-     * pernah tersinkron) diperlakukan seperti tak dipetakan.
-     */
-    private fun WhatsAppGateway.withTemplateFor(trigger: NotificationTrigger): WhatsAppGateway {
-        if (this !is WhatsAppGateway.MetaCloud && this !is WhatsAppGateway.Qontak) return this
-        val template = templateRepo.findForTrigger(trigger) ?: return this
-        return when (this) {
-            is WhatsAppGateway.MetaCloud -> copy(templateName = template.name, templateLang = template.language)
-            is WhatsAppGateway.Qontak ->
-                template.remoteId?.let { copy(templateId = it, templateLang = template.language) } ?: this
-            else -> this
-        }
     }
 
     companion object {

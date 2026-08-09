@@ -1,11 +1,18 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { portalTokenStore, refreshPortalSession } from './portalClient'
-import { portalLogin, portalLogout, type PortalProfile } from './portalApi'
+import { portalLogin, portalLogout, type PortalProfile, type PortalTenantChoice } from './portalApi'
+
+/**
+ * Hasil `login` bagi halaman: sudah masuk, atau perlu memilih ISP dulu. Bentuk union ini
+ * sengaja diteruskan apa adanya ke halaman — konteks tak menyimpan "login yang tertunda",
+ * supaya password tak perlu hidup lebih lama dari satu penekanan tombol.
+ */
+export type PortalLoginOutcome = { done: true } | { done: false; choices: PortalTenantChoice[] }
 
 interface PortalAuthState {
   customer: PortalProfile | null
   loading: boolean
-  login: (tenant: string, login: string, password: string) => Promise<void>
+  login: (identifier: string, password: string, tenant?: string) => Promise<PortalLoginOutcome>
   logout: () => Promise<void>
 }
 
@@ -42,12 +49,19 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const login = useCallback(async (tenant: string, loginId: string, password: string) => {
-    const tokens = await portalLogin(tenant, loginId, password)
-    portalTokenStore.setAccessToken(tokens.accessToken)
-    portalTokenStore.setRefreshToken(tokens.refreshToken)
-    setCustomer(tokens.customer)
-  }, [])
+  const login = useCallback(
+    async (identifier: string, password: string, tenant?: string): Promise<PortalLoginOutcome> => {
+      const result = await portalLogin(identifier, password, tenant)
+      if (result.status === 'CHOOSE_TENANT' || !result.tokens) {
+        return { done: false, choices: result.choices }
+      }
+      portalTokenStore.setAccessToken(result.tokens.accessToken)
+      portalTokenStore.setRefreshToken(result.tokens.refreshToken)
+      setCustomer(result.tokens.customer)
+      return { done: true }
+    },
+    [],
+  )
 
   const logout = useCallback(async () => {
     const refreshToken = portalTokenStore.getRefreshToken()

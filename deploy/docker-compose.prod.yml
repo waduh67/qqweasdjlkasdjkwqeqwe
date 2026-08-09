@@ -180,6 +180,16 @@ services:
       FTTH_JWT_SECRET: ${FTTH_JWT_SECRET}
       FTTH_ENCRYPTION_SECRET: ${FTTH_ENCRYPTION_SECRET}
       FTTH_CORS_ORIGINS: ${FTTH_CORS_ORIGINS}
+      # SMTP milik PLATFORM (satu untuk semua tenant), dipakai pesan transaksional yang tak
+      # boleh menumpang gateway WA tenant — mis. kode "lupa password" portal pelanggan.
+      # FTTH_MAIL_FROM kosong = kanal email MATI: pesannya cuma masuk log server, jadi
+      # pelanggan yang cuma punya email tak akan pernah bisa memulihkan akunnya sendiri.
+      FTTH_MAIL_HOST: ${FTTH_MAIL_HOST:-}
+      FTTH_MAIL_PORT: ${FTTH_MAIL_PORT:-587}
+      FTTH_MAIL_USERNAME: ${FTTH_MAIL_USERNAME:-}
+      FTTH_MAIL_PASSWORD: ${FTTH_MAIL_PASSWORD:-}
+      FTTH_MAIL_FROM: ${FTTH_MAIL_FROM:-}
+      FTTH_MAIL_FROM_NAME: ${FTTH_MAIL_FROM_NAME:-NetOps Console}
       # URL publik aplikasi untuk halaman balik gateway Pivot (mode REDIRECT WAJIB URL balik:
       # <base>/paid, /failed, /expired). Kosong → charge Pivot gagal jelas & tautan bayar tak
       # terbit ("Tautan bayar belum siap"). Biasanya = domain aplikasi (sama dgn VPN base URL).

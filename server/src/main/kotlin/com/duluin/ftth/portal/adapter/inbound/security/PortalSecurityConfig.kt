@@ -47,8 +47,14 @@ class PortalSecurityConfig(
             .cors { }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
-                // Masuk & refresh terbuka (kredensial diverifikasi di dalam); sisanya wajib token portal.
-                it.requestMatchers("/api/portal/auth/login", "/api/portal/auth/refresh").permitAll()
+                // Masuk, refresh, & pemulihan password terbuka (diverifikasi di dalam — kode
+                // pemulihan sendirilah buktinya); sisanya wajib token portal.
+                it.requestMatchers(
+                    "/api/portal/auth/login",
+                    "/api/portal/auth/refresh",
+                    "/api/portal/auth/forgot-password",
+                    "/api/portal/auth/reset-password",
+                ).permitAll()
                 it.anyRequest().authenticated()
             }
             .oauth2ResourceServer { oauth2 ->

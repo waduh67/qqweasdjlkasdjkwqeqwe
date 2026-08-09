@@ -121,11 +121,44 @@ export interface PortalConnection {
   devices: PortalDevice[]
 }
 
-export const portalLogin = (tenant: string, login: string, password: string) =>
-  portalApiClient.post<PortalTokenResponse>('/api/portal/auth/login', { tenant, login, password })
+/** Satu ISP yang bisa dipilih ketika identitas yang sama dipakai di lebih dari satu tempat. */
+export interface PortalTenantChoice {
+  tenantSlug: string
+  tenantName: string
+}
+
+/**
+ * Hasil satu percobaan masuk. `CHOOSE_TENANT` hanya muncul bila password sudah terbukti
+ * benar di lebih dari satu ISP — server tak pernah membocorkan daftar ISP sebelum itu.
+ */
+export interface PortalLoginResponse {
+  status: 'AUTHENTICATED' | 'CHOOSE_TENANT'
+  tokens: PortalTokenResponse | null
+  choices: PortalTenantChoice[]
+}
+
+/**
+ * `identifier` = email, nomor HP, atau username — apa pun yang diingat pelanggan.
+ * `tenant` hanya dikirim saat pelanggan datang lewat tautan ber-ISP atau baru saja memilih
+ * ISP di layar lanjutan; pelanggan tak pernah diminta mengetiknya sendiri.
+ */
+export const portalLogin = (identifier: string, password: string, tenant?: string) =>
+  portalApiClient.post<PortalLoginResponse>('/api/portal/auth/login', { identifier, password, tenant })
 
 export const portalLogout = (refreshToken: string) =>
   portalApiClient.post<void>('/api/portal/auth/logout', { refreshToken })
+
+/**
+ * Minta kode pemulihan. SELALU sukses — server sengaja tak memberi tahu apakah identitasnya
+ * dikenal, jadi UI tak boleh menjanjikan "kode sudah dikirim ke email Anda" melainkan
+ * kalimat yang benar untuk kedua kemungkinan.
+ */
+export const portalForgotPassword = (identifier: string, tenant?: string) =>
+  portalApiClient.post<void>('/api/portal/auth/forgot-password', { identifier, tenant })
+
+/** Tukar kode dengan password baru. Di sini kegagalan dilaporkan apa adanya. */
+export const portalResetPassword = (identifier: string, code: string, newPassword: string) =>
+  portalApiClient.post<void>('/api/portal/auth/reset-password', { identifier, code, newPassword })
 
 export const getPortalProfile = () => portalApiClient.get<PortalAccount>('/api/portal/me/profile')
 export const getPortalBilling = () => portalApiClient.get<PortalBilling>('/api/portal/me/billing')

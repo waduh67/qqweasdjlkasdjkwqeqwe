@@ -4,7 +4,10 @@ import com.duluin.ftth.portal.application.port.inbound.ManagePortalCredentialUse
 import com.duluin.ftth.portal.application.port.inbound.PortalAuthTokens
 import com.duluin.ftth.portal.application.port.inbound.PortalAuthenticationUseCase
 import com.duluin.ftth.portal.application.port.inbound.PortalLoginCommand
+import com.duluin.ftth.portal.application.port.inbound.PortalLoginResult
+import com.duluin.ftth.portal.application.port.inbound.PortalPasswordRecoveryUseCase
 import com.duluin.ftth.portal.application.port.inbound.PortalProfileView
+import com.duluin.ftth.portal.application.port.inbound.PortalResetPasswordCommand
 import com.duluin.ftth.portal.security.CurrentPortalCustomer
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -23,22 +26,44 @@ import java.util.UUID
  * Endpoint realm PORTAL pelanggan (path berawalan `/api/portal/`, rantai keamanan
  * [com.duluin.ftth.portal.adapter.inbound.security.PortalSecurityConfig]).
  *
- * `login`/`refresh` terbuka; sisanya butuh token portal. Login memakai SLUG tenant + login
- * pelanggan (bukan email global) karena login boleh kembar antar-tenant.
+ * `login`, `refresh`, dan pemulihan password terbuka; sisanya butuh token portal.
+ *
+ * Pelanggan masuk cukup dengan SATU identitas — email, nomor HP, atau username — tanpa
+ * menyebut ISP-nya. Kode ISP sengaja tak lagi diminta: itu hal yang tak pernah dihafal
+ * pelanggan, dan sebetulnya bisa disimpulkan sendiri oleh server dari identitasnya.
  */
 @RestController
 @RequestMapping("/api/portal")
 @Tag(name = "Portal")
 class PortalAuthController(
     private val authentication: PortalAuthenticationUseCase,
+    private val passwordRecovery: PortalPasswordRecoveryUseCase,
     private val credentials: ManagePortalCredentialUseCase,
     private val currentPortalCustomer: CurrentPortalCustomer,
 ) {
 
     @PostMapping("/auth/login")
-    fun login(@Valid @RequestBody request: PortalLoginRequest): PortalTokenResponse =
-        PortalTokenResponse.from(
-            authentication.login(PortalLoginCommand(request.tenant, request.login, request.password)),
+    fun login(@Valid @RequestBody request: PortalLoginRequest): PortalLoginResponse =
+        PortalLoginResponse.from(
+            authentication.login(PortalLoginCommand(request.identifier, request.password, request.tenant)),
+        )
+
+    /**
+     * Minta kode pemulihan. SELALU 204, apa pun yang terjadi di dalam — jawaban yang
+     * membedakan "identitas dikenal" dari "tidak" akan menjadikan endpoint ini alat
+     * memetakan pelanggan sebuah ISP satu per satu.
+     */
+    @PostMapping("/auth/forgot-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun forgotPassword(@Valid @RequestBody request: PortalForgotPasswordRequest) =
+        passwordRecovery.requestReset(request.identifier, request.tenant)
+
+    /** Tukar kode dengan password baru. Di sini kegagalan dilaporkan apa adanya (400). */
+    @PostMapping("/auth/reset-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun resetPassword(@Valid @RequestBody request: PortalResetPasswordRequest) =
+        passwordRecovery.completeReset(
+            PortalResetPasswordCommand(request.identifier, request.code, request.newPassword),
         )
 
     @PostMapping("/auth/refresh")
@@ -64,10 +89,26 @@ class PortalAuthController(
         credentials.changeOwnPassword(request.currentPassword, request.newPassword)
 }
 
+/**
+ * [identifier] = email / nomor HP / username, apa pun yang diingat pelanggan.
+ * [tenant] opsional dan hanya terisi bila pelanggan datang lewat tautan ber-ISP atau baru
+ * saja memilih ISP di layar lanjutan — bukan sesuatu yang perlu ia ketik sendiri.
+ */
 data class PortalLoginRequest(
-    @field:NotBlank val tenant: String,
-    @field:NotBlank val login: String,
+    @field:NotBlank val identifier: String,
     @field:NotBlank val password: String,
+    val tenant: String? = null,
+)
+
+data class PortalForgotPasswordRequest(
+    @field:NotBlank val identifier: String,
+    val tenant: String? = null,
+)
+
+data class PortalResetPasswordRequest(
+    @field:NotBlank val identifier: String,
+    @field:NotBlank val code: String,
+    @field:NotBlank val newPassword: String,
 )
 
 data class PortalRefreshRequest(
@@ -105,6 +146,39 @@ data class PortalTokenResponse(
         )
     }
 }
+
+/**
+ * Hasil satu percobaan masuk: langsung diterima, atau — bila identitas yang sama ternyata
+ * dipakai di lebih dari satu ISP — daftar ISP untuk dipilih.
+ *
+ * [choices] hanya pernah terisi setelah password TERBUKTI benar di ISP-ISP itu. Tanpa syarat
+ * itu, layar masuk berubah jadi alat intip: mengetik nomor HP orang lain sudah cukup untuk
+ * tahu ia pelanggan siapa.
+ */
+data class PortalLoginResponse(
+    /** `AUTHENTICATED` atau `CHOOSE_TENANT`. */
+    val status: String,
+    val tokens: PortalTokenResponse?,
+    val choices: List<PortalTenantChoiceResponse>,
+) {
+    companion object {
+        fun from(result: PortalLoginResult): PortalLoginResponse = when (result) {
+            is PortalLoginResult.Authenticated ->
+                PortalLoginResponse("AUTHENTICATED", PortalTokenResponse.from(result.tokens), emptyList())
+
+            is PortalLoginResult.ChooseTenant -> PortalLoginResponse(
+                status = "CHOOSE_TENANT",
+                tokens = null,
+                choices = result.choices.map { PortalTenantChoiceResponse(it.tenantSlug, it.tenantName) },
+            )
+        }
+    }
+}
+
+data class PortalTenantChoiceResponse(
+    val tenantSlug: String,
+    val tenantName: String,
+)
 
 data class PortalProfileResponse(
     val customerId: UUID,

@@ -36,6 +36,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 
+    // Kanal email platform (SMTP) — dipakai pemulihan password portal pelanggan. Tanpa
+    // `spring.mail.host`, autokonfigurasi Boot tak membuat bean pengirim dan adapter jatuh
+    // ke mode catat-ke-log; jadi kehadiran dependensi ini tak mewajibkan server SMTP.
+    implementation("org.springframework.boot:spring-boot-starter-mail")
+
     implementation("org.springframework.modulith:spring-modulith-starter-core")
 
     // Boot 4 memecah autoconfigure per teknologi; FlywayAutoConfiguration ada di modul ini.

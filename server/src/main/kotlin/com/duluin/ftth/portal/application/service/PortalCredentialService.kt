@@ -41,6 +41,7 @@ class PortalCredentialService(
     private val customerApi: CustomerApi,
     private val currentPortalCustomer: CurrentPortalCustomer,
     private val currentUserProvider: CurrentUserProvider,
+    private val identitySync: PortalIdentitySyncService,
     private val events: ApplicationEventPublisher,
 ) : ManagePortalCredentialUseCase {
 
@@ -71,6 +72,9 @@ class PortalCredentialService(
         val saved = credentials.save(credential)
         // Kredensial baru/di-reset → matikan sesi lama.
         refreshTokens.revokeAllForCustomer(customerId)
+        // Baru sekarang pelanggan ini punya jalan masuk — daftarkan (atau perbarui, bila
+        // operator mengganti username) semua identitas yang boleh dipakai untuk masuk.
+        identitySync.sync(customerId)
         auditOperator("portal.credential.provision", customerId, saved.login)
 
         return PortalCredentialProvisioned(customerId, saved.login, saved.active, generatedPassword)

@@ -11,6 +11,20 @@ spring:
       ddl-auto: none
   flyway:
     locations: classpath:db/migration
+  mail:
+    # SMTP milik PLATFORM (satu untuk semua tenant) — dipakai pesan transaksional yang tak
+    # boleh bergantung pada gateway WA tenant, mis. kode pemulihan password portal. Host
+    # kosong = email hanya dicatat ke log (aman untuk dev; lihat SmtpEmailDispatcher).
+    host: ${FTTH_MAIL_HOST:}
+    port: ${FTTH_MAIL_PORT:587}
+    username: ${FTTH_MAIL_USERNAME:}
+    password: ${FTTH_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${FTTH_MAIL_AUTH:true}
+          starttls:
+            enable: ${FTTH_MAIL_STARTTLS:true}
   servlet:
     multipart:
       # Bukti foto lapangan; batas keras di sini, validasi lebih ketat di service.
@@ -41,6 +55,11 @@ ftth:
     refresh-token-ttl: 30d
   cors:
     allowed-origins: ${FTTH_CORS_ORIGINS:http://localhost:5173}
+  mail:
+    # Alamat pengirim. KOSONG = SMTP dianggap belum disetel dan email jatuh ke log — jadi
+    # ini yang menghidupkan kanal email, bukan `spring.mail.host` semata.
+    from: ${FTTH_MAIL_FROM:}
+    from-name: ${FTTH_MAIL_FROM_NAME:NetOps Console}
   bootstrap:
     platform-admin-email: ${FTTH_PLATFORM_ADMIN_EMAIL:root@ftth.local}
     platform-admin-password: ${FTTH_PLATFORM_ADMIN_PASSWORD:rootadmin123}

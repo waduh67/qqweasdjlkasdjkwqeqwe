@@ -8,6 +8,7 @@ import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.customer.CustomerRef
 import com.duluin.ftth.portal.application.service.PortalCredentialService
+import com.duluin.ftth.portal.application.service.PortalIdentitySyncService
 import com.duluin.ftth.portal.security.PortalCustomer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -36,9 +37,12 @@ class PortalCredentialServiceTest {
     )
     private val currentPortal = MutableCurrentPortalCustomer()
     private val currentUser = NoOperatorCurrentUserProvider()
+    private val directory = InMemoryPortalIdentityDirectory()
+    private val identitySync = PortalIdentitySyncService(directory, credentials, customers)
 
     private val service = PortalCredentialService(
-        credentials, refreshTokens, hasher, customers, currentPortal, currentUser, { /* audit no-op */ },
+        credentials, refreshTokens, hasher, customers, currentPortal, currentUser, identitySync,
+        { /* audit no-op */ },
     )
 
     // Operator memanggil dalam request terautentikasi → tenant sudah terpasang di context (RLS).

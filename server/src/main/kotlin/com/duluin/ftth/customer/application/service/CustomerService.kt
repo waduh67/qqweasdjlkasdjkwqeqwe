@@ -14,9 +14,11 @@ import com.duluin.ftth.customer.application.port.inbound.SaveCustomerCommand
 import com.duluin.ftth.customer.application.port.outbound.CustomerRepository
 import com.duluin.ftth.customer.application.port.outbound.OnuRepository
 import com.duluin.ftth.customer.application.port.outbound.SubscriptionRepository
+import com.duluin.ftth.customer.CustomerContactChanged
 import com.duluin.ftth.customer.domain.model.Customer
 import com.duluin.ftth.customer.domain.model.CustomerStatus
 import com.duluin.ftth.network.NetworkApi
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -32,6 +34,7 @@ class CustomerService(
     private val networkApi: NetworkApi,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
+    private val events: ApplicationEventPublisher,
 ) : ManageCustomerUseCase {
 
     @Transactional(readOnly = true)
@@ -72,6 +75,7 @@ class CustomerService(
             "customer.created", "Customer", customer.id, customer.tenantId,
             mapOf("code" to customer.code, "name" to customer.name),
         )
+        events.publishEvent(customer.contactChanged())
         return assemble(customer)
     }
 
@@ -92,6 +96,7 @@ class CustomerService(
         // ke titik baru bila rumah pelanggan berpindah.
         if (moved) networkApi.resnapCablesForMovedCustomer(id, saved.location)
         auditor.record("customer.updated", "Customer", saved.id, saved.tenantId, mapOf("code" to saved.code))
+        events.publishEvent(saved.contactChanged())
         return assemble(saved)
     }
 
@@ -132,6 +137,12 @@ class CustomerService(
         customerRepository.deleteById(id)
         auditor.record("customer.deleted", "Customer", id, customer.tenantId, mapOf("code" to customer.code))
     }
+
+    /**
+     * Hanya `create`/`update` yang memancarkan ini — `relocate` dan `changeStatus` memang tak
+     * bisa menyentuh kontak, jadi menerbitkannya di sana hanya akan jadi kerja sia-sia.
+     */
+    private fun Customer.contactChanged() = CustomerContactChanged(tenantId, id, email, phone)
 
     private fun assemble(customer: Customer): CustomerView = assembler.toViews(
         customers = listOf(customer),

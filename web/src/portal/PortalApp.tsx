@@ -2,6 +2,7 @@ import { type ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { PortalAuthProvider, usePortalAuth } from './PortalAuthContext'
 import { PortalLoginPage } from './PortalLoginPage'
+import { PortalForgotPasswordPage } from './PortalForgotPasswordPage'
 import { PortalDashboard } from './PortalDashboard'
 
 /** Menahan rute sampai sesi portal dipulihkan, lalu arahkan ke login bila belum masuk. */
@@ -12,12 +13,16 @@ function RequirePortalAuth({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
-/** Di halaman login: kalau sudah masuk, lempar ke dasbor. */
-function PortalLoginRoute() {
+/**
+ * Rute yang hanya masuk akal saat BELUM login (masuk, lupa password): kalau sesi sudah ada,
+ * lempar ke dasbor — biar tak ada layar "lupa password" nongol untuk orang yang sudah masuk
+ * (ganti password buat mereka ada di dasbor, lewat password lama).
+ */
+function PortalGuestRoute({ children }: { children: ReactNode }) {
   const { customer, loading } = usePortalAuth()
   if (loading) return <div className="login-shell muted">Memuat…</div>
   if (customer) return <Navigate to="/portal" replace />
-  return <PortalLoginPage />
+  return <>{children}</>
 }
 
 /**
@@ -30,7 +35,22 @@ export function PortalApp() {
   return (
     <PortalAuthProvider>
       <Routes>
-        <Route path="login" element={<PortalLoginRoute />} />
+        <Route
+          path="login"
+          element={
+            <PortalGuestRoute>
+              <PortalLoginPage />
+            </PortalGuestRoute>
+          }
+        />
+        <Route
+          path="lupa-password"
+          element={
+            <PortalGuestRoute>
+              <PortalForgotPasswordPage />
+            </PortalGuestRoute>
+          }
+        />
         <Route
           index
           element={

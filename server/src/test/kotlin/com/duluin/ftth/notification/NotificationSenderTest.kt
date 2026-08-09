@@ -10,6 +10,7 @@ import com.duluin.ftth.notification.application.port.outbound.NotificationSettin
 import com.duluin.ftth.notification.application.port.outbound.NotificationTemplateRepository
 import com.duluin.ftth.notification.application.service.NotificationSender
 import com.duluin.ftth.notification.application.service.NotificationSender.Recipient
+import com.duluin.ftth.notification.application.service.WhatsAppTemplateResolver
 import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.notification.domain.model.Broadcast
@@ -45,7 +46,7 @@ class NotificationSenderTest {
         val settings = settingsWith(gatewayEnabled = true, subscription = false)
         val dispatcher = RecordingDispatcher()
         val broadcasts = CapturingBroadcastRepo()
-        val sender = NotificationSender(FixedSettingsRepo(settings), broadcasts, FakeTemplateRepo(), dispatcher)
+        val sender = NotificationSender(FixedSettingsRepo(settings), broadcasts, WhatsAppTemplateResolver(FakeTemplateRepo()), dispatcher)
 
         val result = TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -65,7 +66,7 @@ class NotificationSenderTest {
         val settings = settingsWith(gatewayEnabled = false, subscription = true)
         val dispatcher = RecordingDispatcher()
         val broadcasts = CapturingBroadcastRepo()
-        val sender = NotificationSender(FixedSettingsRepo(settings), broadcasts, FakeTemplateRepo(), dispatcher)
+        val sender = NotificationSender(FixedSettingsRepo(settings), broadcasts, WhatsAppTemplateResolver(FakeTemplateRepo()), dispatcher)
 
         val result = TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -88,7 +89,7 @@ class NotificationSenderTest {
         val settings = settingsWith(gatewayEnabled = true, subscription = true)
         val dispatcher = RecordingDispatcher()
         val broadcasts = CapturingBroadcastRepo()
-        val sender = NotificationSender(FixedSettingsRepo(settings), broadcasts, FakeTemplateRepo(), dispatcher)
+        val sender = NotificationSender(FixedSettingsRepo(settings), broadcasts, WhatsAppTemplateResolver(FakeTemplateRepo()), dispatcher)
 
         val result = TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -115,7 +116,7 @@ class NotificationSenderTest {
         // tapi gateway bawaan mati → penerima SKIPPED (bukan null, bukan SENT).
         val dispatcher = RecordingDispatcher()
         val broadcasts = CapturingBroadcastRepo()
-        val sender = NotificationSender(FixedSettingsRepo(null), broadcasts, FakeTemplateRepo(), dispatcher)
+        val sender = NotificationSender(FixedSettingsRepo(null), broadcasts, WhatsAppTemplateResolver(FakeTemplateRepo()), dispatcher)
 
         val result = TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -136,7 +137,7 @@ class NotificationSenderTest {
         val broadcasts = CapturingBroadcastRepo()
         val template = template("tagihan_jatuh_tempo", "en_US")
         val templates = FakeTemplateRepo(mapOf(NotificationTrigger.INVOICE_DUE_SOON to template))
-        val sender = NotificationSender(FixedSettingsRepo(metaSettings()), broadcasts, templates, dispatcher)
+        val sender = NotificationSender(FixedSettingsRepo(metaSettings()), broadcasts, WhatsAppTemplateResolver(templates), dispatcher)
 
         TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -158,7 +159,7 @@ class NotificationSenderTest {
         // Template ada untuk pemicu LAIN — pemicu yang dikirim tetap tak terpetakan.
         val other = template("tagihan_menunggak", "id")
         val templates = FakeTemplateRepo(mapOf(NotificationTrigger.INVOICE_OVERDUE to other))
-        val sender = NotificationSender(FixedSettingsRepo(metaSettings()), broadcasts, templates, dispatcher)
+        val sender = NotificationSender(FixedSettingsRepo(metaSettings()), broadcasts, WhatsAppTemplateResolver(templates), dispatcher)
 
         TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -179,7 +180,7 @@ class NotificationSenderTest {
         val broadcasts = CapturingBroadcastRepo()
         val template = template("tagihan_jatuh_tempo", "en_US", remoteId = "8f2c-uuid")
         val templates = FakeTemplateRepo(mapOf(NotificationTrigger.INVOICE_DUE_SOON to template))
-        val sender = NotificationSender(FixedSettingsRepo(qontakSettings()), broadcasts, templates, dispatcher)
+        val sender = NotificationSender(FixedSettingsRepo(qontakSettings()), broadcasts, WhatsAppTemplateResolver(templates), dispatcher)
 
         TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -202,7 +203,7 @@ class NotificationSenderTest {
         val templates = FakeTemplateRepo(
             mapOf(NotificationTrigger.INVOICE_DUE_SOON to template("tagihan_jatuh_tempo", "id")),
         )
-        val sender = NotificationSender(FixedSettingsRepo(qontakSettings()), broadcasts, templates, dispatcher)
+        val sender = NotificationSender(FixedSettingsRepo(qontakSettings()), broadcasts, WhatsAppTemplateResolver(templates), dispatcher)
 
         TenantContext.runAs(tenantId) {
             sender.dispatch(

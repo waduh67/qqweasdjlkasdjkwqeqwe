@@ -29,4 +29,14 @@ internal object PortalTokens {
     /** Password sementara 10 karakter dari alfabet non-ambigu — dibagikan operator sekali. */
     fun readablePassword(length: Int = 10): String =
         (1..length).map { READABLE_ALPHABET[random.nextInt(READABLE_ALPHABET.length)] }.joinToString("")
+
+    /**
+     * Kode numerik sekali-pakai untuk pemulihan password. Angka semua karena kodenya sering
+     * dibacakan lewat telepon atau disalin dari WhatsApp, dan dari [SecureRandom] karena
+     * ditebaknya kode = masuknya orang lain ke akun pelanggan.
+     */
+    fun numericCode(digits: Int): String =
+        (1..digits).map { '0' + random.nextInt(DECIMAL_BASE) }.joinToString("")
+
+    private const val DECIMAL_BASE = 10
 }

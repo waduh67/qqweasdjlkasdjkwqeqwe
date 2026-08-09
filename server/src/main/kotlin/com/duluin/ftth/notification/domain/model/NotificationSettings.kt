@@ -222,9 +222,18 @@ class NotificationSettings private constructor(
         this.notifyOnIncidentOpen = notifyOnIncidentOpen
     }
 
-    /** Apakah pemicu ini boleh mengirim untuk tenant ini. `MANUAL` selalu boleh. */
+    /**
+     * Apakah pemicu ini boleh mengirim untuk tenant ini. `MANUAL` selalu boleh.
+     *
+     * `PORTAL_PASSWORD_RESET` juga selalu boleh, dan itu disengaja: pemulihan akun bukan
+     * notifikasi pemasaran melainkan bagian dari mekanisme masuk. ISP yang mematikan
+     * pemberitahuan langganan tak boleh diam-diam ikut mematikan satu-satunya jalan
+     * pelanggannya kembali ke akunnya sendiri.
+     */
     fun isTriggerEnabled(trigger: NotificationTrigger): Boolean = when (trigger) {
-        NotificationTrigger.MANUAL -> true
+        NotificationTrigger.MANUAL,
+        NotificationTrigger.PORTAL_PASSWORD_RESET,
+        -> true
         NotificationTrigger.SUBSCRIPTION_ACTIVATED,
         NotificationTrigger.SUBSCRIPTION_ISOLATED,
         NotificationTrigger.SUBSCRIPTION_TERMINATED,
