@@ -20,10 +20,12 @@ import { useCan } from '../auth/useCan'
 import { LocationPicker } from '@/components/organisms'
 import { Badge, Button, EmptyState, SelectField, Spinner, StatusBadge, TextField } from '@/components/atoms'
 import { Checkbox } from '@fluentui/react-components'
-import { Tabs } from '@/components/molecules'
+import { CommandBar, Tabs, type CommandAction } from '@/components/molecules'
 import { useToast } from '@/system'
 import { Blade } from '@/components/organisms'
-import { IconInventory, IconPlus } from '@/components/atoms/icons'
+import { IconInventory, IconMap, IconPlus } from '@/components/atoms/icons'
+import { Pencil, Trash2 } from 'lucide-react'
+import { mapFocusState } from './mapFocus'
 import { DiscoveredOnuInbox } from '@/components/organisms'
 import { OltRegisteredOnus } from '@/components/organisms'
 
@@ -74,12 +76,14 @@ export function OltDetail({
 }) {
   const id = oltId
   const toast = useToast()
+  const navigate = useNavigate()
   const { can } = useCan()
   const canUpdate = can('network.olt.update')
   const canDelete = can('network.olt.delete')
+  const canMap = can('gis.map.view')
   // Drill-down PON → ODC → ODP menembus module gis (topologi + okupansi agregat),
   // jadi butuh izin peta & ODP; disembunyikan bila operator tak berhak memanggilnya.
-  const canDrill = can('gis.map.view') && can('network.odp.view')
+  const canDrill = canMap && can('network.odp.view')
   // Daftar ONU per-OLT memuat identitas pelanggan (PII), jadi gerbangnya persis
   // seperti endpoint `/api/gis/olts/{id}/onus`: inspeksi OLT + lihat pelanggan.
   const canOnuList =
@@ -139,34 +143,41 @@ export function OltDetail({
     )
   }
 
+  // Aksi tingkat-OLT di command bar datar ala Azure — sejajar dengan detail pelanggan &
+  // panel detail ODC/ODP, jadi operator mencari "apa yang bisa kulakukan" di tempat yang
+  // sama di seluruh aplikasi.
+  const commands: CommandAction[] = []
+  if (canMap)
+    commands.push({
+      key: 'map',
+      label: 'Lihat di peta',
+      icon: <IconMap size={16} />,
+      onClick: () => navigate('/map', mapFocusState('olt', olt.id, olt.location)),
+    })
+  if (canUpdate)
+    commands.push({ key: 'edit', label: 'Edit', icon: <Pencil size={16} />, onClick: () => setEditing(true), dividerBefore: commands.length > 0 })
+  if (canDelete)
+    commands.push({ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => void remove(), dividerBefore: commands.length > 0 })
+
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div className="spread" style={{ gap: '0.75rem', alignItems: 'flex-start' }}>
-        <div className="stack" style={{ gap: '0.35rem' }}>
-          <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'center' }}>
-            {!compact && <h1 className="page-title" style={{ margin: 0 }}>{olt.code}</h1>}
-            <StatusBadge status={olt.status} />
-            <Badge>{olt.vendor}</Badge>
-            {olt.pollable ? <Badge tone="good">SNMP siap</Badge> : <Badge tone="neutral">SNMP belum lengkap</Badge>}
-          </div>
+      <div className="stack" style={{ gap: '0.35rem' }}>
+        <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'center' }}>
+          {!compact && <h1 className="page-title" style={{ margin: 0 }}>{olt.code}</h1>}
+          <StatusBadge status={olt.status} />
+          <Badge>{olt.vendor}</Badge>
+          {olt.pollable ? <Badge tone="good">SNMP siap</Badge> : <Badge tone="neutral">SNMP belum lengkap</Badge>}
+        </div>
+        {/* Di blade, header-nya sudah memuat nama & site — jangan diulang di badan. */}
+        {!compact && (
           <p className="page-sub" style={{ margin: 0 }}>
             {olt.name}
             {olt.siteName ? ` · Site ${olt.siteName}` : ''}
           </p>
-        </div>
-        <div className="row" style={{ gap: '0.5rem', flexShrink: 0 }}>
-          {canUpdate && (
-            <Button variant="subtle" onClick={() => setEditing(true)}>
-              Edit
-            </Button>
-          )}
-          {canDelete && (
-            <Button variant="danger" onClick={() => void remove()}>
-              Hapus
-            </Button>
-          )}
-        </div>
+        )}
       </div>
+
+      {commands.length > 0 && <CommandBar actions={commands} />}
 
       <Tabs
         tabs={[

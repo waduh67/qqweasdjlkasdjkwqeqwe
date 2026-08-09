@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { useNavigate, type NavigateFunction } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type { AssetStatus, Coordinate, OdcView, OdpView, OltView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
-import { MapPin, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { MapPin, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Checkbox } from '@fluentui/react-components'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
@@ -16,8 +16,8 @@ import { OltDetail } from './OltDetailPage'
 import { Badge, Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput, Tabs } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
-import { IconInventory } from '@/components/atoms/icons'
-import { mapFocusState, type MapFocusLayer } from './mapFocus'
+import { IconInventory, IconMap } from '@/components/atoms/icons'
+import { mapFocusState } from './mapFocus'
 
 /**
  * Inventory jaringan dalam satu halaman bertab.
@@ -78,25 +78,6 @@ const ASSET_STATUS_FORM_OPTIONS: { value: AssetStatus; label: string }[] = [
 function matchesQuery(fields: Array<string | null | undefined>, q: string): boolean {
   if (!q) return true
   return fields.some((f) => (f ?? '').toLowerCase().includes(q))
-}
-
-/**
- * Aksi baris "Lihat di peta", bentuknya sama di keempat tab.
- *
- * Inventory menjawab "apa saja yang saya punya"; pertanyaan lanjutan operator hampir
- * selalu "yang ini di sebelah mana, dan nyantol ke apa" — dan itu hanya bisa dijawab
- * peta. Sebelumnya jawabannya adalah menyalin koordinat lalu mencarinya sendiri di peta.
- *
- * Koordinat baris ikut dititipkan lewat `mapFocusState`, jadi peta bisa langsung terbang
- * tanpa menarik ulang aset yang datanya sudah ada di tangan.
- */
-function mapRowAction(navigate: NavigateFunction, layer: MapFocusLayer, id: string, at: Coordinate): RowAction {
-  return {
-    key: 'map',
-    label: 'Lihat di peta',
-    icon: <MapPin size={16} />,
-    onClick: () => navigate('/map', mapFocusState(layer, id, at)),
-  }
 }
 
 export function InventoryPage() {
@@ -197,11 +178,21 @@ function SitesTab() {
   const [deleting, setDeleting] = useState(false)
   const canDelete = can('network.site.delete')
   const canMap = can('gis.map.view')
+  // Klik baris membuka DETAIL di blade — sama seperti tab OLT/ODC/ODP, supaya aksi
+  // tingkat-aset (termasuk "Lihat di peta") punya satu rumah yang sama di keempat tab.
+  const [openSite, setOpenSite] = useState<SiteView | null>(null)
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
     return items.filter((s) => matchesQuery([s.code, s.name, s.address], q))
   }, [items, query])
+
+  // Selaraskan detail terbuka dengan data terbaru tiap daftar dimuat ulang — atau
+  // tutup panel bila site-nya sudah terhapus.
+  useEffect(() => {
+    if (!openSite) return
+    setOpenSite(items.find((it) => it.id === openSite.id) ?? null)
+  }, [items, openSite])
 
   const deleteSelected = async () => {
     const ids = [...selected]
@@ -240,20 +231,17 @@ function SitesTab() {
     },
   ]
 
-  const rowActions = (s: SiteView): RowAction[] => {
-    const list: RowAction[] = []
-    if (canMap) list.push(mapRowAction(navigate, 'site', s.id, s.location))
-    if (canDelete)
-      list.push({
-        key: 'delete',
-        label: 'Hapus',
-        icon: <Trash2 size={16} />,
-        onClick: () => void (async () => {
-          if (await confirm({ title: 'Hapus site', message: `Hapus site ${s.code}?`, confirmLabel: 'Hapus', danger: true })) void run(() => api.del(`/api/sites/${s.id}`))
-        })(),
-      })
-    return list
-  }
+  const removeSite = (s: SiteView) =>
+    void (async () => {
+      if (await confirm({ title: 'Hapus site', message: `Hapus site ${s.code}?`, confirmLabel: 'Hapus', danger: true })) {
+        setOpenSite(null)
+        void run(() => api.del(`/api/sites/${s.id}`))
+      }
+    })()
+
+  const rowActions = (s: SiteView): RowAction[] => [
+    { key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeSite(s) },
+  ]
 
   const primary: CommandAction | undefined = can('network.site.create')
     ? { key: 'create', label: 'Tambah site', icon: <Plus size={16} />, onClick: () => openDraft({ ...empty }) }
@@ -341,6 +329,34 @@ function SitesTab() {
         )}
       </Blade>
 
+      {/* Blade DETAIL SITE (non-modal, lebar >½ layar): klik baris → panel ini. Site tak
+          punya form sunting di inventory (identitas & titiknya diatur saat dibuat), jadi
+          panelnya murni baca + aksi. */}
+      <Blade
+        open={openSite != null}
+        size="full"
+        className="blade-detail"
+        title={openSite?.code ?? ''}
+        subtitle={openSite?.name}
+        onClose={() => setOpenSite(null)}
+      >
+        {openSite && (
+          <AssetDetailPanel
+            badges={<Badge>{openSite.oltCount} OLT</Badge>}
+            fields={[
+              { label: 'Nama', value: openSite.name },
+              { label: 'Jumlah OLT', value: String(openSite.oltCount) },
+            ]}
+            address={openSite.address}
+            location={openSite.location}
+            canUpdate={false}
+            canDelete={canDelete}
+            onDelete={() => removeSite(openSite)}
+            onShowOnMap={canMap ? () => navigate('/map', mapFocusState('site', openSite.id, openSite.location)) : undefined}
+          />
+        )}
+      </Blade>
+
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari kode, nama, atau alamat…" />
       </Toolbar>
@@ -349,10 +365,11 @@ function SitesTab() {
         columns={columns}
         rows={rows}
         rowKey={(s) => s.id}
+        onRowClick={(s) => setOpenSite(s)}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
-        rowActions={canDelete || canMap ? rowActions : undefined}
+        rowActions={canDelete ? rowActions : undefined}
         empty={
           <EmptyState
             title={query ? 'Tidak ada site yang cocok' : 'Belum ada site'}
@@ -368,7 +385,6 @@ function SitesTab() {
 function OltsTab() {
   const { can } = useCan()
   const confirm = useConfirm()
-  const navigate = useNavigate()
   // Baris OLT membuka DETAIL di blade non-modal (bukan pindah halaman) — pola
   // dua-blade Azure. Simpan baris terpilih; ganti baris = tukar isi blade.
   const [openOlt, setOpenOlt] = useState<OltView | null>(null)
@@ -413,7 +429,6 @@ function OltsTab() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
   const canDelete = can('network.olt.delete')
-  const canMap = can('gis.map.view')
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -473,20 +488,16 @@ function OltsTab() {
     { key: 'ponPorts', header: 'PON port', align: 'right', sortValue: (o) => o.ponPortCount, cell: (o) => o.ponPortCount },
   ]
 
-  const rowActions = (o: OltView): RowAction[] => {
-    const list: RowAction[] = []
-    if (canMap) list.push(mapRowAction(navigate, 'olt', o.id, o.location))
-    if (canDelete)
-      list.push({
-        key: 'delete',
-        label: 'Hapus',
-        icon: <Trash2 size={16} />,
-        onClick: () => void (async () => {
-          if (await confirm({ title: 'Hapus OLT', message: `Hapus OLT ${o.code}?`, confirmLabel: 'Hapus', danger: true })) void run(() => api.del(`/api/olts/${o.id}`))
-        })(),
-      })
-    return list
-  }
+  const rowActions = (o: OltView): RowAction[] => [
+    {
+      key: 'delete',
+      label: 'Hapus',
+      icon: <Trash2 size={16} />,
+      onClick: () => void (async () => {
+        if (await confirm({ title: 'Hapus OLT', message: `Hapus OLT ${o.code}?`, confirmLabel: 'Hapus', danger: true })) void run(() => api.del(`/api/olts/${o.id}`))
+      })(),
+    },
+  ]
 
   const primary: CommandAction | undefined = can('network.olt.create')
     ? {
@@ -808,7 +819,7 @@ function OltsTab() {
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
-        rowActions={canDelete || canMap ? rowActions : undefined}
+        rowActions={canDelete ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada OLT yang cocok' : 'Belum ada OLT'}
@@ -837,7 +848,7 @@ function DetailField({ label, value }: { label: string; value: string }) {
  * sunting yang lebih sempit (`blade-edit`) DI ATAS-nya (non-modal, tak menutup penuh).
  * Sengaja read-only: semua perubahan—termasuk lokasi—lewat drawer Edit yang sudah punya
  * peta pemilih, jadi detail = baca, edit = tulis (tanpa duplikasi form). Presentasional
- * murni: dipakai dua tab dengan `badges`/`fields` yang berbeda.
+ * murni: dipakai tiga tab dengan `badges`/`fields` yang berbeda.
  */
 function AssetDetailPanel({
   badges,
@@ -849,6 +860,7 @@ function AssetDetailPanel({
   canDelete,
   onEdit,
   onDelete,
+  onShowOnMap,
 }: {
   badges: ReactNode
   subtitle?: string
@@ -857,21 +869,30 @@ function AssetDetailPanel({
   location: Coordinate
   canUpdate: boolean
   canDelete: boolean
-  onEdit: () => void
+  /** Kosongkan bila aset ini memang tak bisa disunting dari inventory (mis. site). */
+  onEdit?: () => void
   onDelete: () => void
+  /** Kosongkan bila operator tak berizin membuka peta. */
+  onShowOnMap?: () => void
 }) {
+  // Aksi tingkat-aset duduk di command bar blade, sejajar dengan detail pelanggan:
+  // satu tempat yang sama untuk "apa yang bisa kulakukan pada benda ini".
+  const commands: CommandAction[] = []
+  if (onShowOnMap)
+    commands.push({ key: 'map', label: 'Lihat di peta', icon: <IconMap size={16} />, onClick: onShowOnMap })
+  if (canUpdate && onEdit)
+    commands.push({ key: 'edit', label: 'Edit', icon: <Pencil size={16} />, onClick: onEdit, dividerBefore: commands.length > 0 })
+  if (canDelete)
+    commands.push({ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: onDelete, dividerBefore: commands.length > 0 })
+
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <div className="spread" style={{ gap: '0.75rem', alignItems: 'flex-start' }}>
-        <div className="stack" style={{ gap: '0.35rem' }}>
-          <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'center' }}>{badges}</div>
-          {subtitle && <p className="page-sub" style={{ margin: 0 }}>{subtitle}</p>}
-        </div>
-        <div className="row" style={{ gap: '0.5rem', flexShrink: 0 }}>
-          {canUpdate && <Button variant="subtle" onClick={onEdit}>Edit</Button>}
-          {canDelete && <Button variant="danger" onClick={onDelete}>Hapus</Button>}
-        </div>
+      <div className="stack" style={{ gap: '0.35rem' }}>
+        <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'center' }}>{badges}</div>
+        {subtitle && <p className="page-sub" style={{ margin: 0 }}>{subtitle}</p>}
       </div>
+
+      {commands.length > 0 && <CommandBar actions={commands} />}
 
       <div className="card stack">
         <h3 style={{ margin: 0 }}>Informasi</h3>
@@ -889,7 +910,7 @@ function AssetDetailPanel({
           {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
         </p>
         <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-          Ubah identitas & lokasi lewat tombol Edit.
+          {onEdit ? 'Ubah identitas & lokasi lewat tombol Edit.' : 'Lihat penempatannya lewat tombol Lihat di peta.'}
         </p>
       </div>
     </div>
@@ -1011,13 +1032,9 @@ function OdcsTab() {
     },
   ]
 
-  const rowActions = (o: OdcView): RowAction[] => {
-    const list: RowAction[] = []
-    if (canMap) list.push(mapRowAction(navigate, 'odc', o.id, o.location))
-    if (canDelete) list.push({ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdc(o) })
-    return list
-  }
-  const hasRowActions = canDelete || canMap
+  const rowActions = (o: OdcView): RowAction[] => [
+    { key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdc(o) },
+  ]
 
   // ODC dibuat di peta (butuh titik koordinat) — di sini cuma pintasan ke peta.
   const primary: CommandAction | undefined = can('network.odc.create')
@@ -1183,6 +1200,7 @@ function OdcsTab() {
             canDelete={canDelete}
             onEdit={() => openEdit(openOdc)}
             onDelete={() => removeOdc(openOdc)}
+            onShowOnMap={canMap ? () => navigate('/map', mapFocusState('odc', openOdc.id, openOdc.location)) : undefined}
           />
         )}
       </Blade>
@@ -1204,7 +1222,7 @@ function OdcsTab() {
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
-        rowActions={hasRowActions ? rowActions : undefined}
+        rowActions={canDelete ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada ODC yang cocok' : 'Belum ada ODC'}
@@ -1316,12 +1334,9 @@ function OdpsTab() {
     { key: 'status', header: 'Status', sortValue: (o) => o.status, cell: (o) => <StatusBadge status={o.status} /> },
   ]
 
-  const rowActions = (o: OdpView): RowAction[] => {
-    const list: RowAction[] = []
-    if (canMap) list.push(mapRowAction(navigate, 'odp', o.id, o.location))
-    if (canDelete) list.push({ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdp(o) })
-    return list
-  }
+  const rowActions = (o: OdpView): RowAction[] => [
+    { key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdp(o) },
+  ]
 
   // ODP dibuat di peta (butuh titik koordinat) — di sini cuma pintasan ke peta.
   const primary: CommandAction | undefined = can('network.odp.create')
@@ -1379,6 +1394,7 @@ function OdpsTab() {
             canDelete={canDelete}
             onEdit={() => openEdit(openOdp)}
             onDelete={() => removeOdp(openOdp)}
+            onShowOnMap={canMap ? () => navigate('/map', mapFocusState('odp', openOdp.id, openOdp.location)) : undefined}
           />
         )}
       </Blade>
@@ -1498,7 +1514,7 @@ function OdpsTab() {
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
-        rowActions={canDelete || canMap ? rowActions : undefined}
+        rowActions={canDelete ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada ODP yang cocok' : 'Belum ada ODP'}
