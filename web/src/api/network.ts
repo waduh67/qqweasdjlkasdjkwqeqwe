@@ -229,6 +229,8 @@ export interface TraceHop {
 
 /** Hop BRAS: identitas jaringan pelanggan (akun PPPoE) + keadaan sesi terkininya. */
 export interface BrasHopView {
+  /** Id akun jaringan — dipakai panel peta untuk menembak aksi (Reset Login) langsung. */
+  accessId: string
   username: string
   accessStatus: string
   rateProfileName: string | null
@@ -237,6 +239,10 @@ export interface BrasHopView {
   nasName: string | null
   nasIp: string | null
   uptimeSeconds: number | null
+  /** Mulai sesi yang sedang berjalan; `null` bila tak sedang online. */
+  startedAt: string | null
+  /** Terakhir kali BRAS melaporkan akun ini — saat offline, inilah "putus sejak kapan". */
+  lastSeenAt: string | null
 }
 
 export interface CustomerTrace {
@@ -258,6 +264,9 @@ export interface CustomerTrace {
   liveRxPowerDbm: number | null
   distanceMeters: number | null
   hops: TraceHop[]
+  /** Perangkat TR-069 pelanggan bila ada di ACS; `null` bila tak ada CPE tertaut. */
+  cpeDeviceId: string | null
+  cpeOnline: boolean | null
 }
 
 /** Satu tetangga sejalur: identitas + kondisi terpasang + bacaan hidup ONU-nya. */

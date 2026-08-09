@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Download, FileUp, Pencil, Plus, RefreshCw, Trash2, Upload } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
@@ -88,6 +88,16 @@ export function CustomersPage() {
   const [exporting, setExporting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
+
+  // Titipan halaman lain (mis. "Detail pelanggan" di panel peta): langsung buka
+  // flyout-nya, lalu bersihkan router state supaya refresh/back tak membukanya lagi.
+  const location = useLocation()
+  const openCustomerId = (location.state as { openCustomerId?: string } | null)?.openCustomerId
+  useEffect(() => {
+    if (!openCustomerId) return
+    setDetailId(openCustomerId)
+    navigate(location.pathname, { replace: true, state: null })
+  }, [openCustomerId, location.pathname, navigate])
 
   // Buka blade sekaligus simpan snapshot awal untuk deteksi "kotor" (konfirmasi tutup).
   const openDraft = (d: CustomerDraft) => {

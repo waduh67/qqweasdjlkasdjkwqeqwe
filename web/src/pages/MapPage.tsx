@@ -29,10 +29,12 @@ import type {
 } from '../api/network'
 import { onuStatusLabel } from '../api/network'
 import type { PageResponse } from '../api/types'
+import { resetAccessLogin } from '../api/bng'
+import { rebootCpe, runCpePing } from '../api/cpe'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { Button, Segmented, SelectField, StatusBadge, TextField } from '@/components/atoms'
-import { useToast } from '@/system'
+import { useConfirm, useToast } from '@/system'
 import { IconClose, IconCrosshair, IconPlus, IconRoute } from '@/components/atoms/icons'
 import { createCableTool, type CableTool, type ToolState } from '../map/cableTool'
 
@@ -1531,9 +1533,34 @@ export function MapPage() {
         {whatIf && <CableCutPanel cut={whatIf} onClose={() => setWhatIf(null)} />}
         {trace && (
           <CustomerTracePanel
+            // key: panel menyimpan state sendiri (lipatan hop, tombol sibuk) — ganti
+            // pelanggan harus memulainya bersih, bukan mewarisi keadaan yang lama.
+            key={trace.customerId}
             trace={trace}
             canRelocate={can('customer.customer.update')}
+            canResetLogin={can('bng.session.reset')}
+            canRebootCpe={can('cpe.device.reboot')}
+            canDiagnose={can('cpe.diagnostic.run')}
+            canCreateWorkOrder={can('workorder.order.create')}
+            canOpenCustomer={can('customer.customer.view')}
             onRelocate={startRelocate}
+            // Draft WO dibawa lewat router state: pelanggan, tipe (belum tersambung →
+            // pasang baru, sisanya perbaikan), dan vonis panel sebagai deskripsi awal —
+            // supaya teknisi membaca temuan yang sama dengan yang dilihat dispatcher.
+            onCreateWorkOrder={() =>
+              navigate('/work-orders', {
+                state: {
+                  woDraft: {
+                    customerId: trace.customerId,
+                    customerName: trace.customerName,
+                    type: trace.upstream ? 'REPAIR' : 'PSB',
+                    title: `${trace.upstream ? 'Perbaikan' : 'Pasang baru'} ${trace.customerName}`,
+                    description: traceVerdict(trace).text,
+                  },
+                },
+              })
+            }
+            onOpenCustomer={() => navigate('/customers', { state: { openCustomerId: trace.customerId } })}
             onClose={() => setTrace(null)}
           />
         )}
@@ -2491,22 +2518,168 @@ const HOP_LABEL: Record<string, string> = {
 }
 
 /**
+ * Ambang redaman Rx (dBm) untuk memberi vonis di panel. Sengaja disamakan dengan
+ * ambang alarm `ONU_LOW_RX` di modul monitoring supaya kalimat vonis dan warna
+ * simpul di peta tak pernah bertengkar.
+ */
+const RX_WARN_DBM = -25
+const RX_CRIT_DBM = -27
+
+type VerdictTone = 'good' | 'warning' | 'critical' | 'neutral'
+
+const VERDICT_COLOR: Record<VerdictTone, string> = {
+  good: 'var(--good-ink)',
+  warning: 'var(--warning-ink)',
+  critical: 'var(--critical-ink)',
+  neutral: 'var(--muted)',
+}
+
+/**
+ * Satu kalimat "apa yang salah dan tindakan pertamanya apa" — pengganti kerja
+ * membaca-silang enam angka. Urutannya sengaja mengikuti urutan kerja operator:
+ * yang paling hulu (belum tersambung) dan paling fisik (LOS/mati) lebih dulu,
+ * sebab tak ada gunanya menyalahkan PPPoE kalau fibernya putus. Isolir berada di
+ * atas pemeriksaan redaman karena itulah alasan sesungguhnya layanan mati.
+ */
+function traceVerdict(trace: CustomerTrace): { tone: VerdictTone; text: string } {
+  const onu = trace.liveOnuStatus ?? trace.onuStatus
+  const rx = trace.liveRxPowerDbm ?? trace.installRxPowerDbm
+  const bras = trace.bras
+
+  if (!trace.onuSerialNumber || !trace.upstream)
+    return { tone: 'neutral', text: 'Belum tersambung — ONU/port ODP belum ditetapkan. Butuh WO pemasangan.' }
+  if (onu === 'LOS')
+    return { tone: 'critical', text: 'ONU LOS — sinyal fiber hilang. Curigai drop core putus atau konektor lepas.' }
+  if (onu && onu !== 'ONLINE')
+    return { tone: 'critical', text: 'ONU mati — pastikan listrik/adaptor di rumah dulu sebelum turun ke fiber.' }
+  if (bras?.accessStatus === 'ISOLATED')
+    return { tone: 'warning', text: 'Akun diisolir — layanan sengaja diputus. Pulihkan dari detail pelanggan.' }
+  if (rx != null && rx <= RX_CRIT_DBM)
+    return { tone: 'critical', text: `Redaman parah ${rx.toFixed(1)} dBm — perlu perbaikan splicing/konektor.` }
+  if (rx != null && rx <= RX_WARN_DBM)
+    return { tone: 'warning', text: `Redaman lemah ${rx.toFixed(1)} dBm — masih jalan tapi rawan. Jadwalkan cek jalur.` }
+  if (!bras)
+    return { tone: 'warning', text: 'ONU online tapi belum punya akun PPPoE — layanan belum bisa dipakai.' }
+  if (!bras.online)
+    return { tone: 'warning', text: 'Fisik sehat, PPPoE tak tersambung — coba Reset Login, lalu cek user/password.' }
+  if (trace.cpeOnline === false)
+    return { tone: 'warning', text: 'Layanan jalan, tapi router tak melapor ke ACS — remote management mati.' }
+  return { tone: 'good', text: 'Sehat — ONU online, sinyal wajar, sesi PPPoE tersambung.' }
+}
+
+/** "3 hari lalu" / "2 jam lalu" — cukup untuk menakar seberapa basi sebuah bacaan. */
+function agoLabel(iso: string): string {
+  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000)
+  if (minutes < 1) return 'barusan'
+  if (minutes < 60) return `${minutes} menit lalu`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours} jam lalu`
+  return `${Math.round(hours / 24)} hari lalu`
+}
+
+/**
  * Panel telusur pelanggan: jalur fisik dari rumah pelanggan menaiki topologi
- * sampai OLT, dengan status optik dan perkiraan anggaran redaman — menjawab
- * "kenapa pelanggan ini bermasalah dan lewat mana kabelnya".
+ * sampai BRAS — menjawab "kenapa pelanggan ini bermasalah dan apa tindakannya".
+ *
+ * Dirancang sebagai alat kerja, bukan papan baca: vonis satu kalimat di paling
+ * atas, lalu tombol tindakan yang datanya sudah dibawa `trace` (tak ada panggilan
+ * susulan), baru rincian. Rantai hop dilipat saat semuanya sehat — yang menarik
+ * cuma saat ada yang salah.
  */
 function CustomerTracePanel({
   trace,
   canRelocate,
+  canResetLogin,
+  canRebootCpe,
+  canDiagnose,
+  canCreateWorkOrder,
+  canOpenCustomer,
   onRelocate,
+  onCreateWorkOrder,
+  onOpenCustomer,
   onClose,
 }: {
   trace: CustomerTrace
   canRelocate: boolean
+  canResetLogin: boolean
+  canRebootCpe: boolean
+  canDiagnose: boolean
+  canCreateWorkOrder: boolean
+  canOpenCustomer: boolean
   onRelocate: () => void
+  onCreateWorkOrder: () => void
+  onOpenCustomer: () => void
   onClose: () => void
 }) {
-  const up = trace.upstream
+  const toast = useToast()
+  const confirm = useConfirm()
+  const [busy, setBusy] = useState<string | null>(null)
+  const verdict = traceVerdict(trace)
+  // Rantai hop terbuka sendiri saat ada masalah; saat sehat cukup remah-remah jalur.
+  const [hopsOpen, setHopsOpen] = useState(verdict.tone !== 'good')
+
+  const bras = trace.bras
+  const rxLive = trace.liveRxPowerDbm
+  // Warna Rx dihitung dari angkanya sendiri, bukan dari `opticalHealth` — health itu
+  // turunan redaman SAAT INSTALASI dan sering UNKNOWN, jadi tak boleh mengaburkan
+  // bacaan hidup yang justru paling dipercaya operator.
+  const rxTone = rxLive == null ? 'neutral' : rxLive <= RX_CRIT_DBM ? 'critical' : rxLive <= RX_WARN_DBM ? 'warning' : 'good'
+
+  const act = async (key: string, run: () => Promise<string>) => {
+    setBusy(key)
+    try {
+      toast.success(await run())
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Aksi gagal')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const doResetLogin = async () => {
+    if (!bras) return
+    const ok = await confirm({
+      title: 'Reset Login',
+      message: `Putus sesi PPPoE ${bras.username} agar router dial ulang? Pelanggan terputus beberapa detik.`,
+      confirmLabel: 'Reset Login',
+    })
+    if (!ok) return
+    await act('reset', async () => {
+      await resetAccessLogin(bras.accessId)
+      return 'Sesi diputus — router akan dial ulang'
+    })
+  }
+
+  const doReboot = async () => {
+    if (!trace.cpeDeviceId) return
+    const ok = await confirm({
+      title: 'Reboot ONT/router',
+      message: `Reboot perangkat ${trace.customerName}? Layanan mati sekitar 1–2 menit.`,
+      confirmLabel: 'Reboot',
+      danger: true,
+    })
+    if (!ok) return
+    await act('reboot', async () => {
+      const res = await rebootCpe(trace.cpeDeviceId as string)
+      return res.status === 'SUCCESS' ? 'Reboot dikirim ke perangkat' : (res.detail ?? 'Reboot gagal dikirim')
+    })
+  }
+
+  const doPing = () =>
+    act('ping', async () => {
+      const res = await runCpePing(trace.cpeDeviceId as string)
+      if (!res.ok) return res.message
+      const avg = res.averageResponseMs
+      return `Ping ${res.host}: ${res.successCount ?? 0} ok / ${res.failureCount ?? 0} gagal${
+        avg != null ? ` · rata-rata ${avg} ms` : ''
+      }`
+    })
+
+  const showResetLogin = canResetLogin && bras != null
+  const showCpeActions = trace.cpeDeviceId != null
+  const hasActions =
+    showResetLogin || (showCpeActions && (canRebootCpe || canDiagnose)) || canCreateWorkOrder || canOpenCustomer || canRelocate
+
   return (
     <aside className="map-panel stack">
       <div className="spread">
@@ -2516,96 +2689,161 @@ function CustomerTracePanel({
       <p className="muted" style={{ margin: 0 }}>
         {trace.customerCode}
       </p>
+
+      <p
+        style={{
+          margin: 0,
+          padding: '0.5rem 0.65rem',
+          borderRadius: 8,
+          borderLeft: `3px solid ${VERDICT_COLOR[verdict.tone]}`,
+          background: 'var(--surface-2, rgba(255,255,255,0.04))',
+          color: VERDICT_COLOR[verdict.tone],
+          fontWeight: 600,
+          fontSize: '0.86rem',
+          lineHeight: 1.5,
+        }}
+      >
+        {verdict.text}
+      </p>
+
+      {hasActions && (
+        <div className="row wrap" style={{ gap: '0.4rem' }}>
+          {showResetLogin && (
+            <Button size="small" disabled={busy != null} onClick={() => void doResetLogin()}>
+              {busy === 'reset' ? 'Memutus…' : 'Reset Login'}
+            </Button>
+          )}
+          {showCpeActions && canRebootCpe && (
+            <Button size="small" disabled={busy != null} onClick={() => void doReboot()}>
+              {busy === 'reboot' ? 'Mengirim…' : 'Reboot ONT'}
+            </Button>
+          )}
+          {showCpeActions && canDiagnose && (
+            <Button size="small" disabled={busy != null} onClick={() => void doPing()}>
+              {busy === 'ping' ? 'Ping…' : 'Ping'}
+            </Button>
+          )}
+          {canCreateWorkOrder && (
+            <Button size="small" disabled={busy != null} onClick={onCreateWorkOrder}>
+              Buat WO
+            </Button>
+          )}
+          {canOpenCustomer && (
+            <Button size="small" disabled={busy != null} onClick={onOpenCustomer}>
+              Detail pelanggan
+            </Button>
+          )}
+          <RelocateButton show={canRelocate} onClick={onRelocate} />
+        </div>
+      )}
+
       <div className="row wrap" style={{ gap: '0.4rem' }}>
         {trace.onuStatus && <StatusBadge status={trace.onuStatus} label={onuStatusLabel(trace.onuStatus)} />}
         {trace.onuSerialNumber && <span className="badge">{trace.onuSerialNumber}</span>}
         {trace.odpPortNumber != null && <span className="badge">port {trace.odpPortNumber}</span>}
       </div>
 
-      {(trace.installRxPowerDbm != null ||
-        trace.opticalHealth ||
-        trace.liveRxPowerDbm != null ||
-        trace.estimatedLossDb != null) && (
-        <div className="row wrap" style={{ gap: '0.4rem', alignItems: 'center' }}>
-          {trace.installRxPowerDbm != null && (
-            <span style={{ color: HEALTH_COLOR[trace.opticalHealth ?? 'UNKNOWN'], fontWeight: 600 }}>
-              {trace.installRxPowerDbm} dBm
-            </span>
-          )}
-          {trace.opticalHealth && trace.installRxPowerDbm == null && (
-            <span style={{ color: HEALTH_COLOR[trace.opticalHealth], fontWeight: 600 }}>{trace.opticalHealth}</span>
-          )}
-          {trace.liveRxPowerDbm != null && (
-            <span className="muted" style={{ fontSize: '0.82rem' }}>
-              Rx hidup <span className="tnum">{trace.liveRxPowerDbm.toFixed(1)} dBm</span>
-              {trace.distanceMeters != null && ` · ${trace.distanceMeters} m`}
-            </span>
-          )}
-          {trace.estimatedLossDb != null && (
-            <span className="muted" style={{ fontSize: '0.82rem' }}>
-              perkiraan rugi total {trace.estimatedLossDb.toFixed(1)} dB
-            </span>
+      {(rxLive != null || trace.installRxPowerDbm != null || trace.estimatedLossDb != null) && (
+        <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'baseline' }}>
+          {rxLive != null ? (
+            <>
+              <span className="tnum" style={{ color: VERDICT_COLOR[rxTone], fontWeight: 600 }}>
+                {rxLive.toFixed(1)} dBm
+              </span>
+              <span className="muted" style={{ fontSize: '0.8rem' }}>
+                Rx terukur
+                {trace.distanceMeters != null && <> · jarak serat {trace.distanceMeters} m</>}
+                {trace.installRxPowerDbm != null && <> · saat pasang {trace.installRxPowerDbm.toFixed(1)} dBm</>}
+              </span>
+            </>
+          ) : (
+            <>
+              {trace.installRxPowerDbm != null && (
+                <span className="tnum" style={{ color: HEALTH_COLOR[trace.opticalHealth ?? 'UNKNOWN'], fontWeight: 600 }}>
+                  {trace.installRxPowerDbm.toFixed(1)} dBm
+                </span>
+              )}
+              <span className="muted" style={{ fontSize: '0.8rem' }}>
+                {trace.installRxPowerDbm != null ? 'redaman saat pasang · ' : ''}belum ada bacaan hidup
+                {/* Estimasi hanya berguna selagi tak ada ukuran nyata; menampilkannya
+                    bersama Rx terukur cuma memancing "yang mana yang benar". */}
+                {trace.estimatedLossDb != null && <> · perkiraan rugi {trace.estimatedLossDb.toFixed(1)} dB</>}
+              </span>
+            </>
           )}
         </div>
       )}
 
-      {trace.bras && (
-        <div>
-          <strong>BRAS / sesi PPPoE</strong>
-          <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', lineHeight: 1.6 }}>
-            <span style={{ color: trace.bras.online ? 'var(--good-ink)' : 'var(--critical-ink)', fontWeight: 600 }}>
-              {trace.bras.online ? 'Online' : 'Offline'}
-            </span>{' '}
-            · {trace.bras.username}
-            {trace.bras.framedIp && <> · IP <span className="tnum">{trace.bras.framedIp}</span></>}
-            {trace.bras.nasName && ` · ${trace.bras.nasName}`}
-            {trace.bras.rateProfileName && ` · ${trace.bras.rateProfileName}`}
-          </p>
-        </div>
-      )}
-
-      {up && (
-        <div>
-          <strong>Jalur hulu</strong>
-          <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', lineHeight: 1.6 }}>
-            ODC {up.odcCode ?? '—'} → PON {up.ponPortLabel ?? '—'} → OLT {up.oltCode ?? '—'} → site{' '}
-            {up.siteCode ?? '—'} {!up.complete && <span className="badge">jalur belum lengkap</span>}
-          </p>
-        </div>
+      {bras && (
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.6 }}>
+          <span style={{ color: bras.online ? 'var(--good-ink)' : 'var(--critical-ink)', fontWeight: 600 }}>
+            PPPoE {bras.online ? 'online' : 'offline'}
+          </span>{' '}
+          · {bras.username}
+          {bras.framedIp && <> · IP <span className="tnum">{bras.framedIp}</span></>}
+          {bras.nasName && ` · ${bras.nasName}`}
+          {bras.rateProfileName && ` · ${bras.rateProfileName}`}
+          {!bras.online && bras.lastSeenAt && ` · terakhir ${agoLabel(bras.lastSeenAt)}`}
+        </p>
       )}
 
       {trace.hops.length > 0 && (
-        <div>
-          <strong>Telusur jalur ({trace.hops.length})</strong>
-          <ol className="timeline" style={{ marginTop: '0.5rem' }}>
-            {trace.hops.map((hop: TraceHop, i: number) => {
-              const hopColor =
-                hop.online == null ? undefined : hop.online ? 'var(--good-ink)' : 'var(--critical-ink)'
-              return (
-                <li key={`${hop.kind}-${hop.code}-${i}`}>
-                  <span className="tl-dot" aria-hidden="true" style={hopColor ? { background: hopColor } : undefined} />
-                  <div className="stack" style={{ gap: '0.1rem' }}>
-                    <strong style={{ fontSize: '0.85rem', color: hopColor }}>
-                      {HOP_LABEL[hop.kind] ?? hop.kind} {hop.code}
-                    </strong>
-                    <span className="muted" style={{ fontSize: '0.8rem' }}>
-                      {hop.name}
-                    </span>
-                    {hop.detail && (
-                      <span className="muted tnum" style={{ fontSize: '0.78rem' }}>
-                        {hop.detail}
+        <div className="stack" style={{ gap: '0.35rem' }}>
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => setHopsOpen((v) => !v)}
+            style={{
+              alignSelf: 'flex-start',
+              background: 'none',
+              border: 0,
+              padding: 0,
+              cursor: 'pointer',
+              color: 'inherit',
+              font: 'inherit',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+            }}
+            aria-expanded={hopsOpen}
+          >
+            Telusur jalur ({trace.hops.length}) {hopsOpen ? '▾' : '▸'}
+          </button>
+          {hopsOpen ? (
+            <ol className="timeline" style={{ marginTop: '0.15rem' }}>
+              {trace.hops.map((hop: TraceHop, i: number) => {
+                const hopColor =
+                  hop.online == null ? undefined : hop.online ? 'var(--good-ink)' : 'var(--critical-ink)'
+                return (
+                  <li key={`${hop.kind}-${hop.code}-${i}`}>
+                    <span
+                      className="tl-dot"
+                      aria-hidden="true"
+                      style={hopColor ? { background: hopColor } : undefined}
+                    />
+                    <div className="stack" style={{ gap: '0.1rem' }}>
+                      <strong style={{ fontSize: '0.85rem', color: hopColor }}>
+                        {[HOP_LABEL[hop.kind] ?? hop.kind, hop.code].filter(Boolean).join(' ')}
+                      </strong>
+                      <span className="muted" style={{ fontSize: '0.8rem' }}>
+                        {hop.name}
                       </span>
-                    )}
-                  </div>
-                </li>
-              )
-            })}
-          </ol>
-        </div>
-      )}
-      {canRelocate && (
-        <div className="row">
-          <RelocateButton show={canRelocate} onClick={onRelocate} />
+                      {hop.detail && (
+                        <span className="muted tnum" style={{ fontSize: '0.78rem' }}>
+                          {hop.detail}
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                )
+              })}
+            </ol>
+          ) : (
+            <p className="muted" style={{ margin: 0, fontSize: '0.8rem', lineHeight: 1.6 }}>
+              {/* Hop pelanggan tak ber-kode (cuma "Rumah pelanggan") — pakai namanya
+                  agar remah-remah jalur tak diawali panah menggantung. */}
+              {trace.hops.map((h) => h.code || h.name).join(' → ')}
+            </p>
+          )}
         </div>
       )}
     </aside>

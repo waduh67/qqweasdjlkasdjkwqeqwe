@@ -2,6 +2,7 @@ package com.duluin.ftth.gis.application.port.inbound
 
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.customer.OdpOccupant
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -338,6 +339,15 @@ data class CustomerTrace(
     val liveRxPowerDbm: Double?,
     val distanceMeters: Int?,
     val hops: List<TraceHop>,
+    /**
+     * Perangkat CPE/ONT pelanggan bila ada di ACS — dibawa agar panel peta bisa
+     * langsung menawarkan Reboot/Ping tanpa memanggil daftar perangkat lebih dulu.
+     * `null` berarti tak ada CPE tertaut (serial ONU tak cocok, atau memang bukan
+     * perangkat TR-069).
+     */
+    val cpeDeviceId: UUID?,
+    /** Status online CPE menurut ACS; `null` bila [cpeDeviceId] null. */
+    val cpeOnline: Boolean?,
 )
 
 /**
@@ -346,6 +356,11 @@ data class CustomerTrace(
  * melaporkan akun tak sedang tersambung (atau belum pernah terpantau).
  */
 data class BrasHopView(
+    /**
+     * Id akun jaringan — dibawa supaya panel peta bisa langsung menembak aksi
+     * (Reset Login, isolir) tanpa memanggil balik daftar akun pelanggan.
+     */
+    val accessId: UUID,
     val username: String,
     /** Status akun jaringan: ACTIVE/ISOLATED/TERMINATED. */
     val accessStatus: String,
@@ -355,6 +370,13 @@ data class BrasHopView(
     val nasName: String?,
     val nasIp: String?,
     val uptimeSeconds: Long?,
+    /** Mulai sesi yang sedang berjalan; `null` bila tak sedang online. */
+    val startedAt: Instant?,
+    /**
+     * Terakhir kali BRAS melaporkan akun ini. Saat [online] false inilah "putus sejak
+     * kapan" — pembeda antara baru saja lepas dan sudah lama menghilang.
+     */
+    val lastSeenAt: Instant?,
 )
 
 data class TraceHop(

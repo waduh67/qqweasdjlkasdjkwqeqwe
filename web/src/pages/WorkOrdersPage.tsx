@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { PageResponse, User } from '../api/types'
 import type { CustomerView } from '../api/network'
@@ -80,6 +80,9 @@ export function WorkOrdersPage() {
   const [assignedTo, setAssignedTo] = useState('')
   const [draft, setDraft] = useState<Draft | null>(null)
   const [initialDraft, setInitialDraft] = useState<Draft | null>(null)
+  // Nama pelanggan untuk draft titipan: combobox hanya tahu id, jadi label tampilannya
+  // harus di-seed — tanpa ini operator melihat kolom pelanggan kosong padahal terisi.
+  const [draftCustomerLabel, setDraftCustomerLabel] = useState('')
   // Ditambah tiap ada perubahan (buat/tugaskan/lifecycle) agar dashboard menghitung ulang.
   const [dashVersion, setDashVersion] = useState(0)
 
@@ -91,8 +94,23 @@ export function WorkOrdersPage() {
   const closeDraft = () => {
     setDraft(null)
     setInitialDraft(null)
+    setDraftCustomerLabel('')
   }
   const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
+
+  // Draft titipan halaman lain (mis. tombol "Buat WO" di panel peta): buka form
+  // sudah terisi, lalu BERSIHKAN router state agar refresh/back tak membukanya lagi.
+  const location = useLocation()
+  const woDraft = (location.state as { woDraft?: Partial<Draft> & { customerName?: string } } | null)?.woDraft
+  useEffect(() => {
+    if (!woDraft) return
+    const { customerName, ...fields } = woDraft
+    openDraft({ ...EMPTY_DRAFT, ...fields })
+    setDraftCustomerLabel(customerName ?? '')
+    navigate(location.pathname, { replace: true, state: null })
+    // openDraft stabil secara perilaku (hanya setState); sengaja tak jadi dependensi.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [woDraft, location.pathname, navigate])
 
   // Teknisi (pemegang role "Teknisi") untuk pemilih penugasan & filter — best-effort lewat
   // hook; bila operator tak berizin melihatnya, daftarnya kosong dan halaman tetap jalan.
@@ -277,6 +295,7 @@ export function WorkOrdersPage() {
         open={draft != null}
         draft={draft}
         dirty={dirty}
+        customerLabel={draftCustomerLabel}
         fetchCustomers={fetchCustomers}
         fetchTechnicians={fetchTechnicians}
         onChange={setDraft}
@@ -430,6 +449,7 @@ function WorkOrderForm({
   open,
   draft,
   dirty,
+  customerLabel,
   fetchCustomers,
   fetchTechnicians,
   onChange,
@@ -439,6 +459,8 @@ function WorkOrderForm({
   open: boolean
   draft: Draft | null
   dirty: boolean
+  /** Label pelanggan yang sudah terpilih dari luar (draft titipan) — combobox cuma tahu id. */
+  customerLabel: string
   fetchCustomers: (term: string) => Promise<CustomerView[]>
   fetchTechnicians: (term: string) => Promise<User[]>
   onChange: (d: Draft) => void
@@ -506,6 +528,7 @@ function WorkOrderForm({
             <span>Pelanggan (opsional)</span>
             <Combobox
               value={draft.customerId}
+              initialLabel={customerLabel}
               onChange={(id) => onChange({ ...draft, customerId: id })}
               fetchOptions={fetchCustomers}
               toId={(c) => c.id}

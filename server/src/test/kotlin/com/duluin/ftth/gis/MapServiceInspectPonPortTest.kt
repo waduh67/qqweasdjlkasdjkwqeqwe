@@ -144,6 +144,7 @@ class MapServiceInspectPonPortTest {
         customerApi = customer,
         monitoringApi = ThrowingMonitoringApi(),
         bngApi = ThrowingBngApi(),
+        cpeApi = ThrowingCpeApi(),
         currentUser = ThrowingCurrentUser(),
     )
 
@@ -244,6 +245,10 @@ class MapServiceInspectPonPortTest {
         override fun findAccessByUsername(username: String) = throw UnsupportedOperationException()
         override fun updateAccessFromImport(accessId: UUID, planId: UUID, nasId: UUID?, secret: String?) = throw UnsupportedOperationException()
         override fun exportAccesses(): List<com.duluin.ftth.bng.AccessExportRef> = throw UnsupportedOperationException()
+    }
+
+    private class ThrowingCpeApi : com.duluin.ftth.cpe.CpeApi {
+        override fun findDevicesForCustomer(customerId: UUID) = throw UnsupportedOperationException()
     }
 
     private class ThrowingCurrentUser : CurrentUserProvider {

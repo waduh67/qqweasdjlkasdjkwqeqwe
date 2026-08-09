@@ -6,6 +6,7 @@ import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.common.security.areaScope
+import com.duluin.ftth.cpe.CpeApi
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.CustomerRef
 import com.duluin.ftth.customer.OdpOccupant
@@ -51,6 +52,7 @@ class MapService(
     private val customerApi: CustomerApi,
     private val monitoringApi: MonitoringApi,
     private val bngApi: BngApi,
+    private val cpeApi: CpeApi,
     private val currentUser: CurrentUserProvider,
 ) : MapQuery {
 
@@ -102,6 +104,9 @@ class MapService(
         val live = placement?.let { monitoringApi.latestMetricsByOnuIds(setOf(it.onuId))[it.onuId] }
         // Identitas jaringan + sesi PPPoE terkini — puncak jalur, di atas OLT.
         val bras = bngApi.findSubscriberSession(customerId)
+        // Perangkat TR-069 pelanggan, bila serial ONU-nya cocok dengan device di ACS.
+        // Cukup yang pertama: panel peta menawarkan aksi cepat, bukan mengelola armada CPE.
+        val cpe = cpeApi.findDevicesForCustomer(customerId).firstOrNull()
 
         return CustomerTrace(
             customerId = customer.id,
@@ -120,6 +125,8 @@ class MapService(
             liveRxPowerDbm = live?.rxPowerDbm,
             distanceMeters = live?.distanceMeters,
             hops = buildHops(customer.location, upstream, bras, live),
+            cpeDeviceId = cpe?.deviceId,
+            cpeOnline = cpe?.online,
         )
     }
 
@@ -602,6 +609,7 @@ class MapService(
     }
 
     private fun SubscriberSessionRef.toHopView() = BrasHopView(
+        accessId = subscriberAccessId,
         username = username,
         accessStatus = accessStatus,
         rateProfileName = rateProfileName,
@@ -610,6 +618,8 @@ class MapService(
         nasName = nasName,
         nasIp = nasIp,
         uptimeSeconds = uptimeSeconds,
+        startedAt = startedAt,
+        lastSeenAt = lastSeenAt,
     )
 
     private fun formatDbm(dbm: Double): String = String.format(Locale.US, "%.1f dBm", dbm)
