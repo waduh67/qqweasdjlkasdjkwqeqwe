@@ -1950,6 +1950,93 @@ tbody tr.row-selected:hover {
   max-width: 400px;
 }
 
+/* ---------- Portal pelanggan ---------- */
+
+/* Portal punya kerangkanya sendiri: bar aksen + strip menu, tanpa sidebar. Bentuknya
+   mengikuti konsol operator supaya terasa satu produk, tapi navigasinya datar karena
+   pelanggan cuma punya lima menu dan hampir selalu membukanya dari ponsel. */
+.portal-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--plane);
+}
+.portal-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  height: var(--topbar-h);
+  padding: 0 1.25rem;
+  background: var(--accent);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+/* Sama seperti header konsol: isi bar dibuat putih agar kontras di atas biru. */
+.portal-topbar .muted {
+  color: rgba(255, 255, 255, 0.82);
+}
+.portal-topbar .fui-Button {
+  color: #fff;
+}
+.portal-topbar .fui-Button:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+.portal-topbar .avatar {
+  background: rgba(255, 255, 255, 0.24);
+  color: #fff;
+}
+/* Strip menu menempel persis di bawah bar: tetap terlihat saat halaman digulir, dan
+   digeser mendatar di layar sempit (aturan `[role='tablist']` global). */
+.portal-nav {
+  position: sticky;
+  top: var(--topbar-h);
+  z-index: 19;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 1.25rem;
+}
+/* Satu kolom terpusat: isi portal sedikit (tagihan, sesi, paket), dan baris selebar
+   layar desktop membuatnya terbaca seperti dokumen yang tercecer. */
+.portal-content {
+  width: 100%;
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+}
+/* Angka metrik portal lebih kecil dari konsol: nominal rupiah utuh tak muat di kartu
+   selebar layar ponsel pada ukuran aslinya. */
+.portal-shell .stat-value {
+  font-size: 1.5rem;
+}
+/* Kartu sambutan diberi semburat aksen tipis — penanda "ini akunmu" di puncak halaman,
+   tanpa menambah warna baru di luar token. */
+.portal-hero {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, var(--surface)), var(--surface));
+}
+@media (max-width: 560px) {
+  .portal-topbar,
+  .portal-nav {
+    padding: 0 0.75rem;
+  }
+  .portal-content {
+    padding: 1rem 0.75rem 2.5rem;
+  }
+  /* Dua kartu metrik per baris di ponsel: angka dikecilkan lagi agar tanggal & nominal
+     tak pecah jadi dua baris di kolom sesempit itu. */
+  .portal-shell .stat-value {
+    font-size: 1.3rem;
+  }
+  /* Di layar sempit avatar sudah cukup mewakili identitas; nama & kode mengalah pada
+     tombol keluar dan peralih tema. */
+  .portal-user-name {
+    display: none;
+  }
+}
+
 /* ---------- Matriks izin ---------- */
 
 .matrix-module {

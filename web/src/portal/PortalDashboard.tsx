@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { usePortalAuth } from './PortalAuthContext'
 import { PortalApiError } from './portalClient'
 import {
@@ -18,7 +18,22 @@ import {
 } from './portalApi'
 import { BantuanTab } from './PortalHelpTab'
 import { payLink } from '@/api/publicPayment'
-import { Button, Segmented, SelectField, TextField } from '@/components/atoms'
+import {
+  Badge,
+  BrandMark,
+  Button,
+  EmptyState,
+  IconLogout,
+  IconReceipt,
+  IconWifi,
+  SelectField,
+  Spinner,
+  StatusBadge,
+  TextField,
+  ThemeToggle,
+  type Tone,
+} from '@/components/atoms'
+import { Ess, Tabs } from '@/components/molecules'
 import { printInvoiceSheet } from '@/utils/invoiceSheet'
 
 type Tab = 'ringkasan' | 'tagihan' | 'koneksi' | 'bantuan' | 'profil'
@@ -40,12 +55,28 @@ function fmtDate(value: string | null): string {
     : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-const INVOICE_TONE: Record<string, string> = {
-  PAID: 'var(--good-ink)',
-  ISSUED: 'var(--warning-ink)',
-  OVERDUE: 'var(--critical-ink)',
-  VOID: 'var(--muted)',
-  REFUNDED: 'var(--accent)',
+/** Lama sesi menyala, dibulatkan ke satuan yang wajar diucapkan ("3 hari 4 jam"). */
+function fmtUptime(seconds: number | null): string {
+  if (seconds == null || seconds <= 0) return '—'
+  const d = Math.floor(seconds / 86400)
+  const h = Math.floor((seconds % 86400) / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  if (d > 0) return `${d} hari ${h} jam`
+  if (h > 0) return `${h} jam ${m} menit`
+  return `${m} menit`
+}
+
+/**
+ * Status tagihan bukan status domain yang dikenal `StatusBadge` (PAID/ISSUED/… tak ada di
+ * `STATUS_TONE`), jadi nadanya dipetakan di sini — tetap lewat `<Badge tone>` supaya warnanya
+ * datang dari token yang sama, bukan gaya sebaris.
+ */
+const INVOICE_TONE: Record<string, Tone> = {
+  PAID: 'good',
+  ISSUED: 'warning',
+  OVERDUE: 'critical',
+  VOID: 'neutral',
+  REFUNDED: 'accent',
 }
 
 /** Status ditulis dengan bahasa pelanggan — portal bukan tempat memamerkan nama enum. */
@@ -58,10 +89,15 @@ const INVOICE_STATUS_LABEL: Record<string, string> = {
 }
 
 /**
- * Dasbor PORTAL pelanggan — realm terisolasi, empat menu MVP: Ringkasan, Tagihan
- * (+ Bayar online lewat tautan hosted gateway), Koneksi (sesi PPPoE + perangkat), dan
- * Profil (paket + ganti password). Data ditarik sekali per menu, ter-scope ke pelanggan
+ * Dasbor PORTAL pelanggan — realm terisolasi, lima menu: Ringkasan, Tagihan (+ Bayar online
+ * lewat tautan hosted gateway), Koneksi (sesi PPPoE + perangkat), Bantuan, dan Profil (paket +
+ * ganti password). Data ditarik sekali di sini lalu dibagikan ke menu, ter-scope ke pelanggan
  * yang login di server.
+ *
+ * Kerangkanya sengaja meniru konsol operator (bar aksen di puncak + strip tab di bawahnya),
+ * bukan halaman melayang tanpa identitas: portal adalah wajah ISP ke pelanggannya, jadi ia
+ * harus terasa bagian dari produk yang sama — hanya tanpa sidebar, karena lima menu tak
+ * membutuhkannya dan sebagian besar pelanggan membukanya dari ponsel.
  */
 export function PortalDashboard() {
   const { customer, logout } = usePortalAuth()
@@ -70,94 +106,299 @@ export function PortalDashboard() {
   const [profile, setProfile] = useState<PortalAccount | null>(null)
   const [billing, setBilling] = useState<PortalBilling | null>(null)
   const [connection, setConnection] = useState<PortalConnection | null>(null)
+  // Dibedakan dari "data masih null": permintaan yang GAGAL juga berakhir null, dan layar
+  // yang menulis "Memuat…" selamanya lebih membingungkan ketimbang mengaku tak dapat data.
+  const [ready, setReady] = useState(false)
 
   const reloadBilling = () => getPortalBilling().then(setBilling).catch(() => setBilling(null))
 
   useEffect(() => {
-    void getPortalProfile().then(setProfile).catch(() => setProfile(null))
-    void reloadBilling()
-    void getPortalConnection().then(setConnection).catch(() => setConnection(null))
+    void Promise.allSettled([
+      getPortalProfile().then(setProfile).catch(() => setProfile(null)),
+      reloadBilling(),
+      getPortalConnection().then(setConnection).catch(() => setConnection(null)),
+    ]).then(() => setReady(true))
   }, [])
 
+  const initials = (customer?.name ?? '?')
+    .split(' ')
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase())
+    .join('')
+
+  const tenantSlug = customer?.tenantSlug ?? ''
+
   return (
-    <div className="stack" style={{ gap: '1.25rem', maxWidth: 860, margin: '0 auto', padding: '1.25rem' }}>
-      <header className="spread" style={{ alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-        <div>
-          <h1 className="page-title" style={{ margin: 0 }}>Halo, {customer?.name ?? 'Pelanggan'}</h1>
-          <p className="page-sub" style={{ margin: '0.2rem 0 0' }}>
-            {customer?.code} · {customer?.tenantSlug}
-          </p>
+    <div className="portal-shell">
+      <header className="portal-topbar">
+        <div className="row" style={{ gap: '0.6rem', minWidth: 0 }}>
+          <BrandMark size={22} />
+          <div style={{ lineHeight: 1.2, minWidth: 0 }}>
+            <div style={{ fontWeight: 650, fontSize: '0.9rem' }}>Portal Pelanggan</div>
+            <div className="muted" style={{ fontSize: '0.74rem' }}>{tenantSlug}</div>
+          </div>
         </div>
-        <Button variant="subtle" onClick={() => void logout()}>Keluar</Button>
+        <div className="row" style={{ gap: '0.5rem' }}>
+          <ThemeToggle />
+          {/* Identitas yang dipakai: pelanggan perlu yakin sedang melihat akunnya sendiri —
+              nama saja tak cukup bila satu keluarga punya beberapa titik langganan. */}
+          <span className="user-chip">
+            <span className="avatar" aria-hidden>{initials}</span>
+            <div className="portal-user-name" style={{ lineHeight: 1.2 }}>
+              <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{customer?.name}</div>
+              <div className="muted tnum" style={{ fontSize: '0.74rem' }}>{customer?.code}</div>
+            </div>
+          </span>
+          <Button
+            variant="subtle"
+            icon={<IconLogout size={18} />}
+            onClick={() => void logout()}
+            aria-label="Keluar"
+            title="Keluar"
+          />
+        </div>
       </header>
 
-      <Segmented
-        ariaLabel="Bagian dasbor"
-        value={tab}
-        onChange={setTab}
-        options={[
-          { value: 'ringkasan', label: 'Ringkasan' },
-          { value: 'tagihan', label: 'Tagihan' },
-          { value: 'koneksi', label: 'Koneksi' },
-          { value: 'bantuan', label: 'Bantuan' },
-          { value: 'profil', label: 'Profil' },
-        ]}
-      />
+      <nav className="portal-nav" aria-label="Menu portal">
+        <Tabs
+          active={tab}
+          onChange={setTab}
+          tabs={[
+            { key: 'ringkasan' as Tab, label: 'Ringkasan' },
+            {
+              key: 'tagihan' as Tab,
+              label: 'Tagihan',
+              // Angka di tab = tagihan yang belum dibayar (termasuk yang belum jatuh tempo);
+              // itulah alasan paling sering pelanggan membuka portal.
+              badge: billing && billing.unpaidCount > 0 ? billing.unpaidCount : undefined,
+            },
+            { key: 'koneksi' as Tab, label: 'Koneksi' },
+            { key: 'bantuan' as Tab, label: 'Bantuan' },
+            { key: 'profil' as Tab, label: 'Profil' },
+          ]}
+        />
+      </nav>
 
-      {tab === 'ringkasan' && <RingkasanTab billing={billing} connection={connection} onPay={() => setTab('tagihan')} />}
-      {tab === 'tagihan' && (
-        <TagihanTab billing={billing} tenantSlug={customer?.tenantSlug ?? ''} onReload={reloadBilling} />
-      )}
-      {tab === 'koneksi' && <KoneksiTab connection={connection} />}
-      {/* Bantuan menarik datanya sendiri: utasnya hidup (balas-membalas), tak cocok
-          dengan pemuatan sekali-jalan milik tab lain. */}
-      {tab === 'bantuan' && <BantuanTab />}
-      {tab === 'profil' && <ProfilTab profile={profile} />}
+      <main className="portal-content stack" style={{ gap: '1.1rem' }}>
+        {tab === 'ringkasan' && (
+          <RingkasanTab
+            profile={profile}
+            billing={billing}
+            connection={connection}
+            ready={ready}
+            tenantSlug={tenantSlug}
+            customerName={customer?.name ?? 'Pelanggan'}
+            onGo={setTab}
+          />
+        )}
+        {tab === 'tagihan' && (
+          <TagihanTab billing={billing} ready={ready} tenantSlug={tenantSlug} onReload={reloadBilling} />
+        )}
+        {tab === 'koneksi' && <KoneksiTab connection={connection} ready={ready} />}
+        {/* Bantuan menarik datanya sendiri: utasnya hidup (balas-membalas), tak cocok
+            dengan pemuatan sekali-jalan milik tab lain. */}
+        {tab === 'bantuan' && <BantuanTab />}
+        {tab === 'profil' && <ProfilTab profile={profile} ready={ready} />}
+      </main>
     </div>
   )
 }
 
+/**
+ * Ringkasan = jawaban atas tiga pertanyaan yang membawa pelanggan ke portal: "berapa yang harus
+ * saya bayar?", "kenapa internet saya begini?", dan "saya berlangganan apa?". Karena itu isinya
+ * kartu sambutan + metrik + tagihan terdekat + keadaan sambungan — bukan sekadar dua angka.
+ */
 function RingkasanTab({
+  profile,
   billing,
   connection,
-  onPay,
+  ready,
+  tenantSlug,
+  customerName,
+  onGo,
 }: {
+  profile: PortalAccount | null
   billing: PortalBilling | null
   connection: PortalConnection | null
-  onPay: () => void
+  ready: boolean
+  tenantSlug: string
+  customerName: string
+  onGo: (tab: Tab) => void
 }) {
+  if (!ready) return <Loading />
+
+  // `outstandingAmount` server = yang MENUNGGAK saja (lewat jatuh tempo); tagihan bulan
+  // berjalan yang belum jatuh tempo tak masuk hitungan itu — karenanya dijumlah sendiri,
+  // supaya portal tak pernah menulis "lunas" sementara ada tagihan terbuka di bawahnya.
   const arrears = billing ? Number(billing.outstandingAmount) : 0
-  const online = connection?.session?.online ?? false
+  const unpaidCount = billing?.unpaidCount ?? 0
+  const session = connection?.session ?? null
+  const online = session?.online ?? false
+  // Langganan yang berlaku; bila pelanggan punya beberapa, yang aktif yang diwakilkan.
+  const sub = profile?.subscriptions.find((s) => s.status === 'ACTIVE') ?? profile?.subscriptions[0] ?? null
+  const speed = sub ? (sub.downMbps && sub.upMbps ? `${sub.downMbps}/${sub.upMbps} Mbps` : `${sub.bandwidthMbps} Mbps`) : '—'
+  const open = (billing?.invoices ?? []).filter((i) => i.payable)
+  const openTotal = open.reduce((sum, i) => sum + Number(i.amount), 0)
+  // Tagihan terbuka yang paling dekat jatuh temponya — itulah yang dicari lebih dulu.
+  const due = [...open].sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0]
+
   return (
-    <div className="stack" style={{ gap: '1rem' }}>
-      <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-        <div className="card stat">
-          <div className="stat-label">Tunggakan</div>
-          <div
-            className="tnum"
-            style={{ fontSize: '1.4rem', fontWeight: 600, color: arrears > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
-          >
-            {rupiah(arrears)}
+    <div className="stack" style={{ gap: '1.1rem' }}>
+      <section className="card portal-hero stack" style={{ gap: '0.9rem' }}>
+        <div className="spread" style={{ alignItems: 'flex-start', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div className="stack" style={{ gap: '0.15rem' }}>
+            <h1 className="page-title" style={{ margin: 0 }}>Halo, {customerName}</h1>
+            <p className="page-sub" style={{ margin: 0 }}>
+              {sub ? `${sub.packageName} · ${speed}` : 'Belum ada paket aktif di akun ini'}
+            </p>
           </div>
-          <div className="muted" style={{ fontSize: '0.82rem' }}>
-            {billing && billing.outstandingCount > 0 ? `${billing.outstandingCount} tagihan jatuh tempo` : 'lunas'}
-          </div>
+          {sub && <StatusBadge status={sub.status} />}
         </div>
-        <div className="card stat">
-          <div className="stat-label">Status koneksi</div>
-          <div style={{ fontSize: '1.4rem', fontWeight: 600, color: online ? 'var(--good-ink)' : 'var(--muted)' }}>
-            {connection?.session ? (online ? 'Online' : 'Offline') : '—'}
-          </div>
-          <div className="muted" style={{ fontSize: '0.82rem' }}>
-            {connection?.session?.framedIp ?? connection?.session?.username ?? 'belum ada sesi'}
-          </div>
+        <div className="row wrap" style={{ gap: '0.5rem' }}>
+          <Button variant="primary" onClick={() => onGo('tagihan')}>
+            {due ? 'Bayar tagihan' : 'Lihat tagihan'}
+          </Button>
+          <Button variant="subtle" onClick={() => onGo('bantuan')}>Lapor gangguan</Button>
         </div>
+      </section>
+
+      <div className="stat-grid">
+        {arrears > 0 ? (
+          <Stat
+            label="Tunggakan"
+            value={rupiah(arrears)}
+            valueColor="var(--critical-ink)"
+            tone="crit"
+            note={`${billing?.outstandingCount ?? 0} tagihan lewat jatuh tempo`}
+          />
+        ) : unpaidCount > 0 ? (
+          <Stat
+            label="Belum dibayar"
+            value={rupiah(openTotal)}
+            tone="warn"
+            note={`${unpaidCount} tagihan, belum jatuh tempo`}
+          />
+        ) : (
+          <Stat
+            label="Tagihan"
+            value="Lunas"
+            valueColor="var(--good-ink)"
+            tone="good"
+            note="Tak ada tagihan terbuka"
+          />
+        )}
+        <Stat
+          label="Status koneksi"
+          value={session ? (online ? 'Online' : 'Offline') : '—'}
+          valueColor={session ? (online ? 'var(--good-ink)' : 'var(--critical-ink)') : 'var(--muted)'}
+          tone={session ? (online ? 'good' : 'crit') : undefined}
+          note={session ? (session.framedIp ?? session.username) : 'Belum ada sesi tercatat'}
+        />
+        <Stat
+          label="Kecepatan paket"
+          value={speed}
+          note={sub ? sub.packageName : 'Belum ada langganan'}
+        />
+        {due ? (
+          <Stat
+            label="Jatuh tempo terdekat"
+            value={fmtDate(due.dueDate)}
+            tone={arrears > 0 ? 'crit' : 'warn'}
+            note={`Tagihan ${due.number}`}
+          />
+        ) : (
+          <Stat
+            label="Terakhir bayar"
+            value={fmtDate(billing?.lastPaidAt ?? null)}
+            note={billing?.lastPaidAt ? 'Pembayaran terakhir diterima' : 'Belum ada pembayaran'}
+          />
+        )}
       </div>
-      {arrears > 0 && (
-        <Button variant="primary" style={{ alignSelf: 'flex-start' }} onClick={onPay}>
-          Bayar tagihan
-        </Button>
-      )}
+
+      <section className="card stack" style={{ gap: '0.7rem' }}>
+        <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
+          <strong style={{ fontSize: '0.95rem' }}>Tagihan berjalan</strong>
+          <Button variant="subtle" onClick={() => onGo('tagihan')} style={{ fontSize: '0.8rem' }}>
+            Semua tagihan
+          </Button>
+        </div>
+        {!due ? (
+          <EmptyState
+            title="Tak ada tagihan terbuka"
+            hint="Semua tagihanmu sudah lunas — terima kasih."
+            icon={<IconReceipt size={32} />}
+          />
+        ) : (
+          <div className="spread" style={{ alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <div className="stack" style={{ gap: 2, minWidth: 0 }}>
+              <span style={{ fontWeight: 600 }}>{due.number}</span>
+              <span className="muted" style={{ fontSize: '0.8rem' }}>
+                {fmtDate(due.periodStart)}–{fmtDate(due.periodEnd)} · jatuh tempo {fmtDate(due.dueDate)}
+              </span>
+            </div>
+            <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
+              <span className="tnum" style={{ fontWeight: 600, fontSize: '1.05rem' }}>{rupiah(due.amount)}</span>
+              <Button
+                variant="primary"
+                onClick={() => window.open(payLink(tenantSlug, due.id), '_blank', 'noopener')}
+              >
+                Bayar ↗
+              </Button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="card stack" style={{ gap: '0.7rem' }}>
+        <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
+          <strong style={{ fontSize: '0.95rem' }}>Sambungan</strong>
+          <Button variant="subtle" onClick={() => onGo('koneksi')} style={{ fontSize: '0.8rem' }}>
+            Detail koneksi
+          </Button>
+        </div>
+        {!session ? (
+          <EmptyState
+            title="Belum ada sesi internet"
+            hint="Sesi muncul setelah perangkatmu tersambung ke jaringan."
+            icon={<IconWifi size={32} />}
+          />
+        ) : (
+          <dl className="essentials wide">
+            <Ess label="Menyala selama">{fmtUptime(session.uptimeSeconds)}</Ess>
+            <Ess label="Alamat IP">
+              <span className="tnum">{session.framedIp ?? '—'}</span>
+            </Ess>
+            <Ess label="Perangkat">
+              {connection?.devices.length ? `${connection.devices.length} terpantau` : 'belum terpantau'}
+            </Ess>
+          </dl>
+        )}
+      </section>
+    </div>
+  )
+}
+
+/** Kartu metrik portal — memakai kelas `.stat` konsol supaya angkanya tampil seragam. */
+function Stat({
+  label,
+  value,
+  note,
+  tone,
+  valueColor,
+}: {
+  label: string
+  value: ReactNode
+  note?: string
+  tone?: 'good' | 'warn' | 'crit'
+  valueColor?: string
+}) {
+  const bar = tone === 'good' ? ' accent-bar' : tone === 'warn' ? ' warn-bar' : tone === 'crit' ? ' crit-bar' : ''
+  return (
+    <div className={`stat${bar}`}>
+      <div className="stat-label">{label}</div>
+      <div className="stat-value" style={valueColor ? { color: valueColor } : undefined}>{value}</div>
+      {note && <div className="stat-note">{note}</div>}
     </div>
   )
 }
@@ -169,14 +410,16 @@ function RingkasanTab({
  */
 function TagihanTab({
   billing,
+  ready,
   tenantSlug,
   onReload,
 }: {
   billing: PortalBilling | null
+  ready: boolean
   tenantSlug: string
   onReload: () => Promise<unknown>
 }) {
-  if (!billing) return <Loading />
+  if (!billing) return ready ? <Unavailable what="Tagihan" /> : <Loading />
   return (
     <div className="stack" style={{ gap: '1rem' }}>
       <div className="card stack" style={{ gap: '0.6rem' }}>
@@ -201,9 +444,9 @@ function TagihanTab({
                 </div>
                 <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
                   <span className="tnum" style={{ fontWeight: 600 }}>{rupiah(inv.amount)}</span>
-                  <span className="badge" style={{ color: INVOICE_TONE[inv.status] ?? undefined }}>
+                  <Badge tone={INVOICE_TONE[inv.status] ?? 'neutral'}>
                     {INVOICE_STATUS_LABEL[inv.status] ?? inv.status}
-                  </span>
+                  </Badge>
                   <PrintInvoiceButton invoiceId={inv.id} />
                   {inv.payable && (
                     <Button
@@ -288,8 +531,8 @@ function PrintInvoiceButton({ invoiceId }: { invoiceId: string }) {
   )
 }
 
-function KoneksiTab({ connection }: { connection: PortalConnection | null }) {
-  if (!connection) return <Loading />
+function KoneksiTab({ connection, ready }: { connection: PortalConnection | null; ready: boolean }) {
+  if (!connection) return ready ? <Unavailable what="Data koneksi" /> : <Loading />
   const s = connection.session
   return (
     <div className="stack" style={{ gap: '1rem' }}>
@@ -298,12 +541,19 @@ function KoneksiTab({ connection }: { connection: PortalConnection | null }) {
         {!s ? (
           <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada sesi PPPoE.</p>
         ) : (
-          <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
-            <Field label="Status" value={s.online ? 'Online' : 'Offline'} tone={s.online ? 'var(--good-ink)' : 'var(--muted)'} />
-            <Field label="Username" value={s.username} />
-            <Field label="IP" value={s.framedIp ?? '—'} />
-            <Field label="Paket" value={s.planName ?? '—'} />
-          </div>
+          <dl className="essentials wide">
+            <Ess label="Status">
+              <StatusBadge status={s.online ? 'ONLINE' : 'OFFLINE'} />
+            </Ess>
+            <Ess label="Username">
+              <span className="tnum">{s.username}</span>
+            </Ess>
+            <Ess label="Menyala selama">{fmtUptime(s.uptimeSeconds)}</Ess>
+            <Ess label="Alamat IP">
+              <span className="tnum">{s.framedIp ?? '—'}</span>
+            </Ess>
+            <Ess label="Paket">{s.planName ?? '—'}</Ess>
+          </dl>
         )}
       </div>
 
@@ -318,9 +568,7 @@ function KoneksiTab({ connection }: { connection: PortalConnection | null }) {
                 <span style={{ fontWeight: 600 }}>{[d.manufacturer, d.model].filter(Boolean).join(' ') || d.serialNumber}</span>
                 <span className="muted tnum" style={{ fontSize: '0.8rem' }}>{d.serialNumber}</span>
               </div>
-              <span className="badge" style={{ color: d.online ? 'var(--good-ink)' : 'var(--muted)' }}>
-                {d.online ? 'online' : 'offline'}
-              </span>
+              <StatusBadge status={d.online ? 'ONLINE' : 'OFFLINE'} />
             </div>
           ))
         )}
@@ -329,18 +577,22 @@ function KoneksiTab({ connection }: { connection: PortalConnection | null }) {
   )
 }
 
-function ProfilTab({ profile }: { profile: PortalAccount | null }) {
-  if (!profile) return <Loading />
+function ProfilTab({ profile, ready }: { profile: PortalAccount | null; ready: boolean }) {
+  if (!profile) return ready ? <Unavailable what="Profil" /> : <Loading />
   return (
     <div className="stack" style={{ gap: '1rem' }}>
       <div className="card stack" style={{ gap: '0.6rem' }}>
         <strong style={{ fontSize: '0.95rem' }}>Profil</strong>
-        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          <Field label="Nama" value={profile.name} />
-          <Field label="Kode pelanggan" value={profile.code} />
-          <Field label="Telepon" value={profile.phone ?? '—'} />
-          <Field label="Status" value={profile.status} />
-        </div>
+        <dl className="essentials wide">
+          <Ess label="Nama">{profile.name}</Ess>
+          <Ess label="Kode pelanggan">
+            <span className="tnum">{profile.code}</span>
+          </Ess>
+          <Ess label="Telepon">{profile.phone ?? '—'}</Ess>
+          <Ess label="Status">
+            <StatusBadge status={profile.status} />
+          </Ess>
+        </dl>
       </div>
 
       <div className="card stack" style={{ gap: '0.6rem' }}>
@@ -359,7 +611,7 @@ function ProfilTab({ profile }: { profile: PortalAccount | null }) {
               </div>
               <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
                 {sub.monthlyFee && <span className="tnum" style={{ fontWeight: 600 }}>{rupiah(sub.monthlyFee)}/bln</span>}
-                <span className="badge">{sub.status}</span>
+                <StatusBadge status={sub.status} />
               </div>
             </div>
           ))
@@ -532,21 +784,22 @@ function ChangePassword() {
   )
 }
 
-function Field({ label, value, tone }: { label: string; value: string; tone?: string }) {
+function Loading() {
   return (
-    <div className="stat">
-      <div className="stat-label">{label}</div>
-      <div style={{ fontSize: '0.9rem', color: tone ?? 'var(--text-2)', fontWeight: tone ? 600 : 400, wordBreak: 'break-word' }}>
-        {value}
+    <div className="card" style={{ display: 'grid', placeItems: 'center', minHeight: 160 }}>
+      <div className="stack" style={{ alignItems: 'center', gap: '0.6rem' }}>
+        <Spinner />
+        <span className="muted" style={{ fontSize: '0.85rem' }}>Memuat…</span>
       </div>
     </div>
   )
 }
 
-function Loading() {
+/** Pemuatan sudah selesai tapi datanya tak sampai — dikatakan apa adanya, bukan berputar terus. */
+function Unavailable({ what }: { what: string }) {
   return (
-    <div className="card" style={{ display: 'grid', placeItems: 'center', minHeight: 120 }}>
-      <span className="muted">Memuat…</span>
+    <div className="card">
+      <EmptyState title={`${what} belum bisa ditampilkan`} hint="Coba muat ulang halaman sebentar lagi." />
     </div>
   )
 }
