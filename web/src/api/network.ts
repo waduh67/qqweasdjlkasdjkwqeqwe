@@ -154,6 +154,20 @@ export interface CustomerView {
   awaitingInstallation: boolean
 }
 
+/**
+ * Pelanggan yang belum punya titik di peta — impor massal menaruhnya di koordinat
+ * penampung (0,0). Sengaja bukan [CustomerView]: pemilih di peta hanya perlu cukup
+ * untuk mengenali orangnya, bukan langganan & ONU-nya.
+ */
+export interface UnmappedCustomer {
+  id: string
+  code: string
+  name: string
+  address: string
+  phone: string | null
+  status: CustomerStatus
+}
+
 export interface OdpOccupant {
   portNumber: number
   customerId: string

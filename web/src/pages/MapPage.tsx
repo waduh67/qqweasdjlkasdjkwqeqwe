@@ -25,6 +25,7 @@ import type {
   SiteOlt,
   SiteView,
   TraceHop,
+  UnmappedCustomer,
   UtilizationHeatmap,
 } from '../api/network'
 import { onuStatusLabel } from '../api/network'
@@ -415,6 +416,24 @@ function watermarkTile(label: string): string {
 /** Perangkat titik yang bisa ditaruh langsung di peta (punya koordinat sendiri). */
 type AssetKind = 'SITE' | 'OLT' | 'ODC' | 'ODP'
 
+/**
+ * Ambang gerak-isyarat menu "tambah di sini". 500 ms mengikuti tekan-lama bawaan
+ * peramban seluler (jadi terasa sama dengan yang sudah dikenal jari operator), dan
+ * 10 px memberi ruang goyang tangan tanpa menelan geseran peta yang sesungguhnya.
+ */
+const LONG_PRESS_MS = 500
+const HOLD_DRIFT_PX = 10
+
+/** Jeda buang-klik sesudah menu terbuka — cukup untuk klik susulan dari jari yang sama. */
+const CLICK_SWALLOW_MS = 500
+
+/** Perkiraan ukuran kartu menu (lihat `.map-menu`), dipakai menahannya di dalam kanvas. */
+const MENU_WIDTH_PX = 224
+const MENU_HEIGHT_PX = 210
+
+/** Endapan ketikan pencarian: satu kueri per jeda mengetik, bukan per huruf. */
+const SEARCH_DEBOUNCE_MS = 300
+
 const ASSET_META: Record<AssetKind, { label: string; createPerm: string; deletePerm: string; endpoint: string }> = {
   SITE: { label: 'Site/POP', createPerm: 'network.site.create', deletePerm: 'network.site.delete', endpoint: '/api/sites' },
   OLT: { label: 'OLT', createPerm: 'network.olt.create', deletePerm: 'network.olt.delete', endpoint: '/api/olts' },
@@ -441,9 +460,11 @@ export function MapPage() {
   const container = useRef<HTMLDivElement>(null)
   const map = useRef<MapLibreMap | null>(null)
   const tool = useRef<CableTool | null>(null)
-  const modeRef = useRef<'idle' | 'draw' | 'edit' | 'place' | 'drag'>('idle')
-  // Jenis perangkat yang sedang ditaruh (mode 'place'), dibaca handler klik peta.
-  const placeKindRef = useRef<AssetKind | null>(null)
+  const modeRef = useRef<'idle' | 'draw' | 'edit' | 'drag'>('idle')
+  // Sampai kapan (ms epoch) klik peta diabaikan. Tahan-lama di layar sentuh melahirkan
+  // menu DAN sebuah klik dari jari yang sama; tanpa jeda ini menu tambah baru muncul
+  // lalu langsung tertutup — atau lebih buruk, membuka panel perangkat di bawahnya.
+  const swallowClickUntil = useRef(0)
   const animRef = useRef<number | null>(null)
   const impactedRef = useRef<number | null>(null)
   // Pin yang bisa diseret untuk menyetel lokasi perangkat baru sebelum disimpan.
@@ -484,9 +505,12 @@ export function MapPage() {
   const [heatmap, setHeatmap] = useState(false)
   const [editing, setEditing] = useState<CableView | null>(null)
   const [toolState, setToolState] = useState<ToolState | null>(null)
-  // Mode taruh perangkat baru: jenis yang dipilih, dan lokasi klik yang menunggu form.
-  const [placing, setPlacing] = useState<AssetKind | null>(null)
-  const [placeAt, setPlaceAt] = useState<{ kind: AssetKind; lng: number; lat: number } | null>(null)
+  // Menu "tambah di sini": muncul di titik klik kanan / tahan-lama. `x`/`y` piksel
+  // layar untuk menaruh kartunya, `lng`/`lat` titik peta yang jadi lokasi barunya.
+  const [addMenu, setAddMenu] = useState<{ lng: number; lat: number; x: number; y: number } | null>(null)
+  // Titik yang sudah dipilih & menunggu formnya: perangkat baru, atau pelanggan lama
+  // yang belum berkoordinat. Pin draggable-nya sama untuk keduanya.
+  const [placeAt, setPlaceAt] = useState<{ kind: AssetKind | 'CUSTOMER'; lng: number; lat: number } | null>(null)
   // Simpul (perangkat/pelanggan) yang panel infonya sedang terbuka & bisa dipindah:
   // dari sini tombol "Pindahkan lokasi" tahu jenis, id, dan titik awalnya, dan tombol
   // "Tarik kabel" tahu ujung awal mana yang harus dikunci (`code` = labelnya di bilah
@@ -718,21 +742,98 @@ export function MapPage() {
       coordPopup.current.setLngLat(lngLat).setDOMContent(node).addTo(instance)
     }
 
-    // Klik TUNGGAL: (1) saat menaruh perangkat, titik itu jadi lokasinya lalu form
-    // muncul; (2) saat idle, cukup menutup popup koordinat bila terbuka — tak ada aksi
-    // lain di lahan kosong (klik aset/kabel tetap dilayani handler layer di bawah).
-    instance.on('click', (event) => {
-      if (modeRef.current === 'place') {
-        const kind = placeKindRef.current
-        if (!kind) return
-        modeRef.current = 'idle'
-        placeKindRef.current = null
-        setPlacing(null)
-        instance.getCanvas().style.cursor = ''
-        setPlaceAt({ kind, lng: event.lngLat.lng, lat: event.lngLat.lat })
-        return
-      }
+    /**
+     * Peta menerima klik? Tidak selagi alat kabel/relokasi memegangnya, dan tidak untuk
+     * klik "hantu" yang lahir dari tahan-lama pembuka menu tambah (lihat [swallowClickUntil]).
+     */
+    const acceptsClick = () => modeRef.current === 'idle' && Date.now() >= swallowClickUntil.current
+
+    /**
+     * Membuka menu "tambah di sini" pada satu titik peta. Satu pintu untuk dua pemicu
+     * yang maksudnya sama: klik kanan di desktop, tahan-lama di layar sentuh.
+     */
+    const openAddMenu = (lngLat: maplibregl.LngLat, x: number, y: number) => {
       if (modeRef.current !== 'idle') return
+      coordPopup.current?.remove()
+      // Jari yang sama akan melepas dan melahirkan sebuah klik; jangan sampai klik itu
+      // menutup menu yang baru saja dimintanya.
+      swallowClickUntil.current = Date.now() + CLICK_SWALLOW_MS
+      // Ditahan di dalam kanvas: menu yang terbit di dekat tepi kanan/bawah akan
+      // terpotong, dan pilihan yang terpotong sama saja dengan pilihan yang hilang.
+      const box = instance.getCanvas().getBoundingClientRect()
+      setAddMenu({
+        lng: lngLat.lng,
+        lat: lngLat.lat,
+        x: Math.max(0, Math.min(x, box.width - MENU_WIDTH_PX)),
+        y: Math.max(0, Math.min(y, box.height - MENU_HEIGHT_PX)),
+      })
+    }
+
+    // Klik kanan di peta → menu tambah. `originalEvent.preventDefault()` menahan menu
+    // konteks bawaan peramban, yang kalau muncul akan menutupi menu kita sendiri.
+    instance.on('contextmenu', (event) => {
+      event.preventDefault()
+      event.originalEvent.preventDefault()
+      openAddMenu(event.lngLat, event.point.x, event.point.y)
+    })
+
+    // Padanan sentuhnya: tahan satu jari diam di satu titik. Dideteksi sendiri, bukan
+    // menumpang `contextmenu` — peramban seluler tak seragam memunculkannya di atas
+    // kanvas WebGL, jadi menyandarkan fitur ini padanya berarti fitur itu hilang di
+    // sebagian ponsel. Jari yang bergeser = operator sedang menggeser peta, batal.
+    const canvasArea = instance.getCanvasContainer()
+    let holdTimer: number | null = null
+    let holdFrom: { x: number; y: number } | null = null
+    let holdFired = false
+    const cancelHold = () => {
+      if (holdTimer != null) window.clearTimeout(holdTimer)
+      holdTimer = null
+      holdFrom = null
+    }
+    const onTouchStart = (event: TouchEvent) => {
+      cancelHold()
+      holdFired = false
+      // Dua jari = cubit untuk zoom, bukan tahan-lama.
+      if (event.touches.length !== 1) return
+      const touch = event.touches[0]
+      const rect = canvasArea.getBoundingClientRect()
+      const x = touch.clientX - rect.left
+      const y = touch.clientY - rect.top
+      holdFrom = { x: touch.clientX, y: touch.clientY }
+      holdTimer = window.setTimeout(() => {
+        holdTimer = null
+        holdFired = true
+        openAddMenu(instance.unproject([x, y]), x, y)
+      }, LONG_PRESS_MS)
+    }
+    const onTouchMove = (event: TouchEvent) => {
+      const touch = event.touches[0]
+      if (!holdFrom || !touch) return cancelHold()
+      const drift = Math.hypot(touch.clientX - holdFrom.x, touch.clientY - holdFrom.y)
+      if (drift > HOLD_DRIFT_PX) cancelHold()
+    }
+    const onTouchEnd = () => {
+      // Jeda buang-klik dihitung ulang DARI SAAT JARI DIANGKAT: menu terbit di detik
+      // pertama tahanan, sedangkan jari bisa saja menempel beberapa detik lagi — dan
+      // klik susulannya baru lahir sesudah itu.
+      if (holdFired) swallowClickUntil.current = Date.now() + CLICK_SWALLOW_MS
+      holdFired = false
+      cancelHold()
+    }
+    canvasArea.addEventListener('touchstart', onTouchStart, { passive: true })
+    canvasArea.addEventListener('touchmove', onTouchMove, { passive: true })
+    canvasArea.addEventListener('touchend', onTouchEnd)
+    canvasArea.addEventListener('touchcancel', onTouchEnd)
+
+    // Menu tambah menempel pada satu titik layar; begitu petanya digeser/di-zoom, titik
+    // itu tak lagi menunjuk tempat yang sama — jadi ditutup, bukan dibiarkan berbohong.
+    instance.on('movestart', () => setAddMenu(null))
+
+    // Klik TUNGGAL di lahan kosong: menutup yang sedang mengambang (menu tambah, popup
+    // koordinat). Klik aset/kabel tetap dilayani handler layer di bawah.
+    instance.on('click', () => {
+      if (!acceptsClick()) return
+      setAddMenu(null)
       coordPopup.current?.remove()
     })
 
@@ -745,8 +846,8 @@ export function MapPage() {
     })
 
     instance.on('click', 'odp', (event) => {
-      // Selagi menggambar/mengedit kabel atau menaruh perangkat, klik dikuasai alat itu.
-      if (modeRef.current !== 'idle') return
+      // Selagi menggambar/mengedit kabel atau memindah simpul, klik dikuasai alat itu.
+      if (!acceptsClick()) return
       const feature = event.features?.[0]
       const id = feature?.properties?.id as string | undefined
       if (!id) return
@@ -763,7 +864,7 @@ export function MapPage() {
 
     // Klik pelanggan (mode idle) → telusur jalur ONU → ODP → ODC → OLT.
     instance.on('click', 'customer', (event) => {
-      if (modeRef.current !== 'idle') return
+      if (!acceptsClick()) return
       const feature = event.features?.[0]
       const id = feature?.properties?.id as string | undefined
       if (!id) return
@@ -780,7 +881,7 @@ export function MapPage() {
 
     // Klik site/POP (mode idle) → isi site: OLT + rekap perangkat & pelanggan hilir.
     instance.on('click', 'site', (event) => {
-      if (modeRef.current !== 'idle') return
+      if (!acceptsClick()) return
       const feature = event.features?.[0]
       const id = feature?.properties?.id as string | undefined
       if (!id) return
@@ -799,7 +900,7 @@ export function MapPage() {
     // SNMP), seragam dengan ODC/ODP/site. Panelnya menyediakan tombol "Buka detail"
     // untuk masuk ke halaman lengkap (edit lokasi/identitas/SNMP & PON port).
     instance.on('click', 'olt', (event) => {
-      if (modeRef.current !== 'idle') return
+      if (!acceptsClick()) return
       const feature = event.features?.[0]
       const id = feature?.properties?.id as string | undefined
       if (!id) return
@@ -816,7 +917,7 @@ export function MapPage() {
 
     // Klik ODC (mode idle) → blast radius: siapa saja di hilirnya.
     instance.on('click', 'odc', (event) => {
-      if (modeRef.current !== 'idle') return
+      if (!acceptsClick()) return
       const feature = event.features?.[0]
       const id = feature?.properties?.id as string | undefined
       if (!id) return
@@ -833,7 +934,7 @@ export function MapPage() {
 
     // Klik kabel (mode idle) → tampilkan detail + aksi edit/hapus.
     instance.on('click', 'cable', (event) => {
-      if (modeRef.current !== 'idle') return
+      if (!acceptsClick()) return
       const id = event.features?.[0]?.properties?.id as string | undefined
       if (!id) return
       api
@@ -1277,9 +1378,9 @@ export function MapPage() {
    */
   const startDrawFrom = () => {
     if (!cableOrigin) return
-    // Satu alat aktif pada satu waktu: batalkan taruh-perangkat & tutup panel dulu.
-    if (placing) cancelPlace()
+    // Satu alat aktif pada satu waktu: tutup panel & titik yang menunggu form dulu.
     coordPopup.current?.remove()
+    setPlaceAt(null)
     clearPanels()
     setEditing(null)
     tool.current?.startDraw(cableOrigin)
@@ -1290,35 +1391,24 @@ export function MapPage() {
     setEditing(null)
   }
 
-  /** Masuk mode taruh: klik peta berikutnya menentukan lokasi perangkat baru. */
-  const startPlace = (kind: AssetKind) => {
+  /**
+   * Titik dari menu "tambah di sini" diteruskan ke formnya. Tak ada lagi mode taruh
+   * berlangkah dua (pilih jenis di toolbar → cari lagi titiknya di peta): klik kanan
+   * sudah menyebut tempatnya, jadi jenis yang dipilih di menu langsung mendarat di situ.
+   */
+  const startPlaceAt = (kind: AssetKind | 'CUSTOMER') => {
+    if (!addMenu) return
     tool.current?.cancel()
     coordPopup.current?.remove()
-    setSelected(null)
-    setCable(null)
-    setBlast(null)
-    setTrace(null)
-    setSiteInsp(null)
-    setOltInsp(null)
+    clearPanels()
     setEditing(null)
-    setPlaceAt(null)
-    placeKindRef.current = kind
-    modeRef.current = 'place'
-    setPlacing(kind)
-    if (map.current) map.current.getCanvas().style.cursor = 'crosshair'
-  }
-
-  const cancelPlace = () => {
-    placeKindRef.current = null
-    modeRef.current = 'idle'
-    setPlacing(null)
-    setPlaceAt(null)
-    if (map.current) map.current.getCanvas().style.cursor = ''
+    setAddMenu(null)
+    setPlaceAt({ kind, lng: addMenu.lng, lat: addMenu.lat })
   }
 
   /** Menyimpan perangkat titik baru di lokasi yang diklik, lalu menyegarkan tile. */
   const savePlacedAsset = async (payload: Record<string, unknown>) => {
-    if (!placeAt) return
+    if (!placeAt || placeAt.kind === 'CUSTOMER') return
     const meta = ASSET_META[placeAt.kind]
     try {
       await api.post(meta.endpoint, {
@@ -1331,6 +1421,28 @@ export function MapPage() {
       void refreshImpacted()
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : `Gagal menyimpan ${meta.label}`)
+    }
+  }
+
+  /**
+   * Menaruh pelanggan lama di titik yang dipilih. Bukan membuat pelanggan baru:
+   * yang belum berkoordinat itu pelanggan hasil impor massal (tanpa kolom lat/long)
+   * yang tersimpan di koordinat penampung 0,0 — jadi yang dikerjakan di sini persis
+   * sama dengan memindahkan titiknya, lewat endpoint yang sama pula.
+   */
+  const savePlacedCustomer = async (customer: UnmappedCustomer) => {
+    if (!placeAt) return
+    try {
+      await api.put(`/api/customers/${customer.id}/location`, {
+        longitude: placeAt.lng,
+        latitude: placeAt.lat,
+      })
+      toast.success(`${customer.code} ditaruh di peta`)
+      setPlaceAt(null)
+      refreshTiles()
+      void refreshImpacted()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal menaruh pelanggan')
     }
   }
 
@@ -1586,24 +1698,26 @@ export function MapPage() {
             )}
           </div>
           <BasemapSwitcher value={basemap} onChange={setBasemap} />
+          {/* Gerak-isyarat menambah perangkat tak punya tombol lagi, jadi ia harus
+              disebutkan di suatu tempat — sekali baca, ingat seterusnya. */}
+          <p className="map-tip">Klik kanan (atau tahan di layar sentuh) pada peta untuk menambah perangkat & pelanggan</p>
           {heatmap ? <HeatmapLegend /> : <Legend />}
         </div>
 
-        {/* Toolbar kiri-atas: tarik kabel + taruh perangkat. Tampil saat idle —
-            termasuk state awal sebelum alat pernah dipakai (toolState masih null). */}
-        {(!toolState || toolState.mode === 'idle') && !placing && !placeAt && !relocating && (
-          <MapToolbar can={can} onPlace={startPlace} onLocate={() => locateMe(true)} />
+        {/* Toolbar kiri-atas. Tampil saat idle — termasuk state awal sebelum alat
+            pernah dipakai (toolState masih null). */}
+        {(!toolState || toolState.mode === 'idle') && !placeAt && !relocating && (
+          <MapToolbar onLocate={() => locateMe(true)} />
         )}
 
-        {/* Bilah petunjuk saat menaruh perangkat baru */}
-        {placing && (
-          <div className="map-hint">
-            <IconPlus size={16} />
-            <span>Klik lokasi di peta untuk menaruh {ASSET_META[placing].label} baru</span>
-            <Button variant="subtle" size="small" style={{ marginLeft: 'auto' }} onClick={cancelPlace}>
-              Batal
-            </Button>
-          </div>
+        {/* Menu "tambah di sini" pada titik klik kanan / tahan-lama */}
+        {addMenu && (
+          <AddHereMenu
+            at={addMenu}
+            can={can}
+            onPick={startPlaceAt}
+            onClose={() => setAddMenu(null)}
+          />
         )}
 
         {/* Bilah aksi saat memindah lokasi simpul (mode relokasi) */}
@@ -1758,15 +1872,23 @@ export function MapPage() {
             onClose={() => setSelected(null)}
           />
         )}
-        {placeAt && (
-          <PlaceAssetForm
-            kind={placeAt.kind}
-            lng={placeAt.lng}
-            lat={placeAt.lat}
-            onCancel={() => setPlaceAt(null)}
-            onSave={savePlacedAsset}
-          />
-        )}
+        {placeAt &&
+          (placeAt.kind === 'CUSTOMER' ? (
+            <PlaceCustomerForm
+              lng={placeAt.lng}
+              lat={placeAt.lat}
+              onCancel={() => setPlaceAt(null)}
+              onSave={savePlacedCustomer}
+            />
+          ) : (
+            <PlaceAssetForm
+              kind={placeAt.kind}
+              lng={placeAt.lng}
+              lat={placeAt.lat}
+              onCancel={() => setPlaceAt(null)}
+              onSave={savePlacedAsset}
+            />
+          ))}
         {cable && (
           <CablePanel
             cable={cable}
@@ -1891,26 +2013,79 @@ function BasemapSwitcher({ value, onChange }: { value: BasemapMode; onChange: (m
   )
 }
 
-function MapToolbar({
+/**
+ * Menu "tambah di sini": daftar yang bisa dibuat PADA titik yang barusan ditunjuk.
+ * Muncul di titik itu juga, bukan di pojok layar — supaya hubungan "yang ini, di
+ * sini" tak perlu diingat-ingat operator. Kosong kalau operator tak berizin membuat
+ * apa pun; pemanggil yang memutuskan tak menampilkannya sama sekali.
+ *
+ * Menutup lewat Escape & klik di luar (peta sendiri menutupnya lewat handler klik).
+ */
+function AddHereMenu({
+  at,
   can,
-  onPlace,
-  onLocate,
+  onPick,
+  onClose,
 }: {
+  at: { lng: number; lat: number; x: number; y: number }
   can: (perm: string) => boolean
-  onPlace: (kind: AssetKind) => void
-  onLocate: () => void
+  onPick: (kind: AssetKind | 'CUSTOMER') => void
+  onClose: () => void
 }) {
-  const placeable = (Object.keys(ASSET_META) as AssetKind[]).filter((k) => can(ASSET_META[k].createPerm))
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const assets = (Object.keys(ASSET_META) as AssetKind[]).filter((k) => can(ASSET_META[k].createPerm))
+  // Menaruh pelanggan = memberi koordinat pada pelanggan yang SUDAH ada (impor massal
+  // menaruhnya di 0,0), jadi izinnya "ubah pelanggan", bukan "buat pelanggan".
+  const canPlaceCustomer = can('customer.customer.update')
+  if (assets.length === 0 && !canPlaceCustomer) return null
+
+  return (
+    <div
+      className="map-menu"
+      style={{ left: at.x, top: at.y }}
+      role="menu"
+    >
+      <div className="map-menu-head tnum">
+        {at.lat.toFixed(6)}, {at.lng.toFixed(6)}
+      </div>
+      {assets.map((k) => (
+        <button key={k} type="button" className="map-menu-item" role="menuitem" onClick={() => onPick(k)}>
+          <IconPlus size={15} /> {ASSET_META[k].label}
+        </button>
+      ))}
+      {canPlaceCustomer && (
+        <button
+          type="button"
+          className="map-menu-item"
+          role="menuitem"
+          onClick={() => onPick('CUSTOMER')}
+          title="Pelanggan hasil impor yang belum punya titik di peta"
+        >
+          <IconCustomers size={15} /> Pelanggan belum berkoordinat
+        </button>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Toolbar kiri-atas. Tinggal satu tombol: menambah perangkat kini lewat menu klik
+ * kanan / tahan-lama di titik yang dituju, sehingga peta tak lagi dipenuhi tombol
+ * yang semuanya berakhir dengan "sekarang klik lokasinya".
+ */
+function MapToolbar({ onLocate }: { onLocate: () => void }) {
   return (
     <div className="map-toolbar">
       <Button variant="subtle" onClick={onLocate}>
         <IconCrosshair size={15} /> Lokasi saya
       </Button>
-      {placeable.map((k) => (
-        <Button key={k} variant="subtle" onClick={() => onPlace(k)}>
-          <IconPlus size={15} /> {ASSET_META[k].label}
-        </Button>
-      ))}
     </div>
   )
 }
@@ -3537,6 +3712,115 @@ function PlaceAssetForm({
         <div className="row">
           <Button variant="primary" disabled={!canSubmit} onClick={submit}>
             Simpan {meta.label}
+          </Button>
+          <Button variant="subtle" onClick={onCancel}>
+            Batal
+          </Button>
+        </div>
+      </div>
+    </aside>
+  )
+}
+
+/**
+ * Pemilih "pelanggan belum berkoordinat" untuk titik yang barusan ditunjuk. Peta tak
+ * membuat pelanggan baru — pendaftaran ada di halaman Pelanggan lengkap dengan paket
+ * & identitas; yang kurang di peta justru sebaliknya: pelanggan hasil impor massal
+ * yang sudah terdaftar tapi tak pernah dapat titik. Jadi ini daftar-pilih, bukan form.
+ */
+function PlaceCustomerForm({
+  lng,
+  lat,
+  onCancel,
+  onSave,
+}: {
+  lng: number
+  lat: number
+  onCancel: () => void
+  onSave: (customer: UnmappedCustomer) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [rows, setRows] = useState<UnmappedCustomer[] | null>(null)
+  const [picked, setPicked] = useState<UnmappedCustomer | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  // Ketikan diendapkan dulu: daftarnya dicari di server (yang belum berkoordinat bisa
+  // ribuan sesudah impor), dan menembakkan satu kueri per huruf hanya membuat hasil
+  // lama menimpa hasil baru. `alive` menjaga respons basi tak mendarat.
+  useEffect(() => {
+    let alive = true
+    const timer = window.setTimeout(() => {
+      api
+        .get<UnmappedCustomer[]>(`/api/customers/unmapped?limit=30&query=${encodeURIComponent(query.trim())}`)
+        .then((list) => {
+          if (alive) setRows(list)
+        })
+        .catch(() => {
+          if (alive) setRows([])
+        })
+    }, SEARCH_DEBOUNCE_MS)
+    return () => {
+      alive = false
+      window.clearTimeout(timer)
+    }
+  }, [query])
+
+  const submit = () => {
+    if (!picked) return
+    setBusy(true)
+    onSave(picked)
+  }
+
+  return (
+    <aside className="map-panel blade">
+      <BladeHead
+        title="Taruh pelanggan"
+        subtitle={`${lat.toFixed(6)}, ${lng.toFixed(6)} · seret pin untuk menggeser`}
+        onClose={onCancel}
+        closeLabel="Batal"
+      />
+      <div className="blade-body stack">
+        <TextField
+          label="Cari pelanggan"
+          value={query}
+          onChange={(_, data) => setQuery(data.value)}
+          placeholder="Kode, nama, alamat, atau nomor HP"
+        />
+
+        {rows == null && <p className="muted" style={{ margin: 0 }}>Memuat…</p>}
+        {rows != null && rows.length === 0 && (
+          <MessageBar intent="info">
+            <MessageBarBody>
+              {query.trim()
+                ? 'Tak ada pelanggan belum berkoordinat yang cocok.'
+                : 'Semua pelanggan sudah punya titik di peta. Pelanggan baru didaftarkan di halaman Pelanggan.'}
+            </MessageBarBody>
+          </MessageBar>
+        )}
+        {rows != null && rows.length > 0 && (
+          <ul className="pick-list" role="listbox" aria-label="Pelanggan belum berkoordinat">
+            {rows.map((c) => (
+              <li key={c.id}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={picked?.id === c.id}
+                  className={`pick-item${picked?.id === c.id ? ' is-picked' : ''}`}
+                  onClick={() => setPicked(c)}
+                >
+                  <span className="pick-title">
+                    {c.code} — {c.name}
+                  </span>
+                  <span className="muted">{[c.address, c.phone].filter(Boolean).join(' · ')}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="row">
+          <Button variant="primary" disabled={!picked || busy} onClick={submit}>
+            {picked ? `Taruh ${picked.code} di sini` : 'Pilih pelanggan dulu'}
           </Button>
           <Button variant="subtle" onClick={onCancel}>
             Batal
