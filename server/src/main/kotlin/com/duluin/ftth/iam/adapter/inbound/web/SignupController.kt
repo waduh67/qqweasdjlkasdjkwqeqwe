@@ -1,9 +1,11 @@
 package com.duluin.ftth.iam.adapter.inbound.web
 
+import com.duluin.ftth.common.infrastructure.security.AttemptThrottle
 import com.duluin.ftth.iam.application.port.inbound.SelfSignupCommand
 import com.duluin.ftth.iam.application.port.inbound.SelfSignupResult
 import com.duluin.ftth.iam.application.port.inbound.SelfSignupUseCase
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
@@ -25,11 +27,15 @@ import org.springframework.web.bind.annotation.RestController
 @Tag(name = "Signup")
 class SignupController(
     private val signup: SelfSignupUseCase,
+    private val throttle: AttemptThrottle,
 ) {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    fun register(@Valid @RequestBody request: SignupRequest): SignupResponse =
-        SignupResponse.from(
+    fun register(@Valid @RequestBody request: SignupRequest, http: HttpServletRequest): SignupResponse {
+        // Satu tenant baru = satu skema data + langganan trial. Tanpa rem, satu skrip bisa
+        // membanjiri platform dengan ISP hantu yang harus disuspensi manual satu per satu.
+        throttle.spendSignup(http.remoteAddr)
+        return SignupResponse.from(
             signup.signup(
                 SelfSignupCommand(
                     slug = request.slug,
@@ -40,6 +46,7 @@ class SignupController(
                 ),
             ),
         )
+    }
 }
 
 /**

@@ -33,6 +33,14 @@ spring:
 
 server:
   port: 8080
+  # Aplikasi selalu berada di belakang reverse proxy (Caddy di prod, Vite saat dev), jadi
+  # `remoteAddr` mentah adalah IP proxy — sama untuk SEMUA orang. Rem laju per-IP yang
+  # dibangun di atasnya akan salah total: satu penyerang bisa mengunci seluruh dunia, dan
+  # sebaliknya batasnya tak pernah mengenai siapa pun secara pribadi. Strategi `framework`
+  # membuat Spring membaca `X-Forwarded-For`/`Forwarded` (dipasang Caddy) sebagai sumber
+  # kebenaran. Ini AMAN hanya selama server tak terekspos langsung ke internet — di stack
+  # produksi kita port 8080 memang tak pernah dipublikasikan (lihat docker-compose.prod.yml).
+  forward-headers-strategy: framework
 
 management:
   endpoints:
@@ -53,6 +61,26 @@ ftth:
     encryption-secret: ${FTTH_ENCRYPTION_SECRET:dev-only-encryption-key-ftth-change-me-too!}
     access-token-ttl: 15m
     refresh-token-ttl: 30d
+  throttle:
+    # Rem laju endpoint publik yang menerima rahasia (masuk, pemulihan akun, daftar mandiri).
+    # Matikan HANYA untuk uji beban — lihat ThrottleProperties untuk alasan tiap angka.
+    enabled: ${FTTH_THROTTLE_ENABLED:true}
+    login-per-identity:
+      limit: ${FTTH_THROTTLE_LOGIN_IDENTITY:8}
+      window: 15m
+    login-per-ip:
+      # Longgar disengaja: satu kantor ISP kerap keluar lewat satu NAT.
+      limit: ${FTTH_THROTTLE_LOGIN_IP:40}
+      window: 15m
+    recovery-per-ip:
+      limit: ${FTTH_THROTTLE_RECOVERY_IP:10}
+      window: 1h
+    recovery-redeem-per-ip:
+      limit: ${FTTH_THROTTLE_RECOVERY_REDEEM_IP:30}
+      window: 1h
+    signup-per-ip:
+      limit: ${FTTH_THROTTLE_SIGNUP_IP:5}
+      window: 6h
   cors:
     allowed-origins: ${FTTH_CORS_ORIGINS:http://localhost:5173}
   mail:

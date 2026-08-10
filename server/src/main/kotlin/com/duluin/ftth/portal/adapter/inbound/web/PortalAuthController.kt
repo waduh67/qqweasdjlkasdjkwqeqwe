@@ -1,5 +1,6 @@
 package com.duluin.ftth.portal.adapter.inbound.web
 
+import com.duluin.ftth.common.infrastructure.security.AttemptThrottle
 import com.duluin.ftth.portal.application.port.inbound.ManagePortalCredentialUseCase
 import com.duluin.ftth.portal.application.port.inbound.PortalAuthTokens
 import com.duluin.ftth.portal.application.port.inbound.PortalAuthenticationUseCase
@@ -8,8 +9,10 @@ import com.duluin.ftth.portal.application.port.inbound.PortalLoginResult
 import com.duluin.ftth.portal.application.port.inbound.PortalPasswordRecoveryUseCase
 import com.duluin.ftth.portal.application.port.inbound.PortalProfileView
 import com.duluin.ftth.portal.application.port.inbound.PortalResetPasswordCommand
+import com.duluin.ftth.portal.domain.model.PortalIdentifier
 import com.duluin.ftth.portal.security.CurrentPortalCustomer
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import org.springframework.http.HttpStatus
@@ -40,31 +43,56 @@ class PortalAuthController(
     private val passwordRecovery: PortalPasswordRecoveryUseCase,
     private val credentials: ManagePortalCredentialUseCase,
     private val currentPortalCustomer: CurrentPortalCustomer,
+    private val throttle: AttemptThrottle,
 ) {
 
+    /**
+     * Identitas dinormalisasi dulu ke bentuk kanonisnya untuk kunci rem: tanpa itu
+     * "0811-222-333", "0811222333", dan "+62811222333" adalah tiga ember berbeda untuk
+     * akun yang sama, dan jatah tebakannya tinggal dikalikan tiga.
+     */
     @PostMapping("/auth/login")
-    fun login(@Valid @RequestBody request: PortalLoginRequest): PortalLoginResponse =
-        PortalLoginResponse.from(
-            authentication.login(PortalLoginCommand(request.identifier, request.password, request.tenant)),
-        )
+    fun login(@Valid @RequestBody request: PortalLoginRequest, http: HttpServletRequest): PortalLoginResponse =
+        throttle.guardLogin("portal", http.remoteAddr, throttleKey(request.identifier)) {
+            PortalLoginResponse.from(
+                authentication.login(PortalLoginCommand(request.identifier, request.password, request.tenant)),
+            )
+        }
 
     /**
      * Minta kode pemulihan. SELALU 204, apa pun yang terjadi di dalam — jawaban yang
      * membedakan "identitas dikenal" dari "tidak" akan menjadikan endpoint ini alat
      * memetakan pelanggan sebuah ISP satu per satu.
+     *
+     * Justru karena tak ada konsep "gagal" di sini, SETIAP panggilan menghabiskan jatah:
+     * kalau tidak, endpoint ini jadi tombol gratis untuk memompa tagihan gateway WA tenant
+     * dan membakar reputasi kirim SMTP platform.
      */
     @PostMapping("/auth/forgot-password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun forgotPassword(@Valid @RequestBody request: PortalForgotPasswordRequest) =
+    fun forgotPassword(@Valid @RequestBody request: PortalForgotPasswordRequest, http: HttpServletRequest) {
+        throttle.spendRecoveryRequest(http.remoteAddr)
         passwordRecovery.requestReset(request.identifier, request.tenant)
+    }
 
-    /** Tukar kode dengan password baru. Di sini kegagalan dilaporkan apa adanya (400). */
+    /**
+     * Tukar kode dengan password baru. Di sini kegagalan dilaporkan apa adanya (400).
+     *
+     * Tiap kode punya jatah tebakannya sendiri, tapi itu tak menahan penyemprotan kode ke
+     * BANYAK identitas sekaligus — 6 digit jadi murah kalau boleh dicoba tanpa batas
+     * lintas akun. Rem per-IP inilah yang menutup celah itu.
+     */
     @PostMapping("/auth/reset-password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun resetPassword(@Valid @RequestBody request: PortalResetPasswordRequest) =
+    fun resetPassword(@Valid @RequestBody request: PortalResetPasswordRequest, http: HttpServletRequest) {
+        throttle.spendRecoveryRedeem(http.remoteAddr)
         passwordRecovery.completeReset(
             PortalResetPasswordCommand(request.identifier, request.code, request.newPassword),
         )
+    }
+
+    private fun throttleKey(identifier: String): String =
+        PortalIdentifier.candidates(identifier).firstOrNull() ?: identifier.trim().lowercase()
 
     @PostMapping("/auth/refresh")
     fun refresh(@Valid @RequestBody request: PortalRefreshRequest): PortalTokenResponse =

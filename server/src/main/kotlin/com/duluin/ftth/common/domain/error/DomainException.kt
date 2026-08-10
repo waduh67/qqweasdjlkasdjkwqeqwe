@@ -23,3 +23,12 @@ class AuthenticationException(message: String) : DomainException(message)
 
 /** Terautentikasi tapi tidak berwenang atas operasi/data ini (→ 403). */
 class AccessDeniedException(message: String) : DomainException(message)
+
+/**
+ * Terlalu sering mencoba (→ 429). [retryAfter] diteruskan ke header `Retry-After` supaya
+ * klien tahu harus menunggu berapa lama, bukan sekadar ditolak tanpa penjelasan.
+ */
+class TooManyRequestsException(
+    message: String,
+    val retryAfter: java.time.Duration,
+) : DomainException(message)

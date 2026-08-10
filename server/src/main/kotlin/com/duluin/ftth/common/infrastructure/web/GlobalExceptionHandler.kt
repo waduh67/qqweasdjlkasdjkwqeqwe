@@ -4,9 +4,12 @@ import com.duluin.ftth.common.domain.error.AccessDeniedException
 import com.duluin.ftth.common.domain.error.AuthenticationException
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.domain.error.TooManyRequestsException
 import com.duluin.ftth.common.domain.error.ValidationException
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
+import org.springframework.http.ResponseEntity
 import org.springframework.security.access.AccessDeniedException as SpringAccessDeniedException
 import org.springframework.security.authorization.AuthorizationDeniedException
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -40,6 +43,20 @@ class GlobalExceptionHandler {
     @ExceptionHandler(AuthorizationDeniedException::class, SpringAccessDeniedException::class)
     fun handleSpringDenied(ex: RuntimeException) =
         problem(HttpStatus.FORBIDDEN, "Tidak punya izin untuk operasi ini")
+
+    /**
+     * Satu-satunya handler yang menyusun response sendiri: `Retry-After` adalah header,
+     * bukan isi body, dan tanpa itu klien cuma tahu "ditolak" tanpa tahu sampai kapan.
+     */
+    @ExceptionHandler(TooManyRequestsException::class)
+    fun handleTooManyRequests(ex: TooManyRequestsException): ResponseEntity<ProblemDetail> {
+        val seconds = maxOf(ex.retryAfter.seconds, 1)
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .header(HttpHeaders.RETRY_AFTER, seconds.toString())
+            .body(problem(HttpStatus.TOO_MANY_REQUESTS, ex.message).apply {
+                setProperty("retryAfterSeconds", seconds)
+            })
+    }
 
     @ExceptionHandler(MaxUploadSizeExceededException::class)
     fun handleUploadTooLarge(ex: MaxUploadSizeExceededException) =

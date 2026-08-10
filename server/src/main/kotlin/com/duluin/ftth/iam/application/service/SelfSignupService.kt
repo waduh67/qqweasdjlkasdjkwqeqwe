@@ -16,9 +16,11 @@ import org.springframework.stereotype.Service
  * langganan trial lewat event). Tenant langsung AKTIF dengan periode langganan awal satu
  * bulan (de-facto trial) — platform admin bisa menyuspensi bila menyalahgunakan.
  *
- * Catatan: endpoint publik ini rawan spam. Belum ada rate-limit/captcha di codebase, jadi
- * mitigasi untuk saat ini = suspensi manual oleh platform admin. Tambahkan pembatasan laju
- * di gerbang (reverse proxy) bila perlu.
+ * Endpoint publik ini rawan spam, jadi laju pendaftaran per-IP direm di adapter
+ * ([com.duluin.ftth.iam.adapter.inbound.web.SignupController] →
+ * [com.duluin.ftth.common.infrastructure.security.AttemptThrottle]). Rem itu menahan
+ * banjir dari satu sumber, bukan pendaftar tekun berganti IP — untuk itu tetap tersedia
+ * suspensi manual oleh platform admin.
  */
 @Service
 class SelfSignupService(
