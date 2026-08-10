@@ -2811,3 +2811,130 @@ tbody tr.row-selected:hover {
   margin-top: 0.3rem;
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
+
+/* ---------- Kisi core kabel ---------- */
+
+/* Core digambar sebagai chip berwarna ASLI seratnya (TIA-598) dan dipecah per
+   tube, bukan sebagai baris tabel: susunannya jadi cerminan langsung dari yang
+   dilihat teknisi ketika tube dibuka, dan kabel 24 core muat sekali pandang.
+   Dua belas kolom bukan angka estetis — itu isi satu tube, jadi satu baris kisi
+   selalu berarti satu tube penuh. */
+.core-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 0.2rem;
+}
+.core-chip {
+  position: relative;
+  aspect-ratio: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 0;
+  font: inherit;
+  font-size: 0.66rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+.core-chip:disabled {
+  cursor: default;
+}
+.core-chip:not(:disabled):hover {
+  transform: scale(1.12);
+}
+/* Core terpakai diredupkan supaya yang MASIH BEBAS-lah yang menonjol — itu
+   pertanyaan yang dibawa orang ke layar ini. */
+.core-chip.is-used {
+  opacity: 0.5;
+}
+.core-chip.is-selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  transform: scale(1.12);
+}
+.core-chip:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+/* Coretan diagonal untuk core rusak: cincin merah saja mudah terlewat saat
+   sepuluh chip lain juga berwarna. Sengaja tipis dan agak tembus pandang —
+   nomor core adalah IDENTITASNYA (yang diucapkan lewat radio ke rekan di ujung
+   sana), jadi coretan tak boleh menutupinya; ia cuma perlu terbaca sekilas. */
+.core-slash {
+  position: absolute;
+  inset: 12%;
+  opacity: 0.85;
+  background: linear-gradient(
+    to top right,
+    transparent 46.5%,
+    var(--critical) 46.5%,
+    var(--critical) 53.5%,
+    transparent 53.5%
+  );
+}
+/* Titik kecil = core ini punya catatan lapangan (isinya muncul di tooltip). */
+.core-note-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.core-tube-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.core-tube-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+}
+.core-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+/* Angka ringkasan sekaligus alat pilih-cepat: "semua yang rusak" adalah seleksi
+   yang paling sering dibutuhkan dan paling menyebalkan diklik satu-satu. */
+.core-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+.core-count:not(:disabled):hover {
+  background: var(--surface-hover);
+}
+.core-count:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.core-count-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.core-editor {
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}

@@ -2,10 +2,13 @@ package com.duluin.ftth.network.adapter.inbound.web
 
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.infrastructure.web.PageResponse
+import com.duluin.ftth.network.application.port.inbound.CableCoreListView
 import com.duluin.ftth.network.application.port.inbound.CablePortOption
 import com.duluin.ftth.network.application.port.inbound.CableView
+import com.duluin.ftth.network.application.port.inbound.ManageCableCoreUseCase
 import com.duluin.ftth.network.application.port.inbound.ManageCableUseCase
 import com.duluin.ftth.network.application.port.inbound.SaveCableCommand
+import com.duluin.ftth.network.application.port.inbound.UpdateCableCoresCommand
 import com.duluin.ftth.network.domain.model.CableType
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
@@ -31,6 +34,7 @@ import java.util.UUID
 @SecurityRequirement(name = "bearer-jwt")
 class CableController(
     private val manageCable: ManageCableUseCase,
+    private val manageCableCore: ManageCableCoreUseCase,
 ) {
     @GetMapping
     @PreAuthorize("@authz.can('network.cable.view')")
@@ -68,6 +72,25 @@ class CableController(
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("@authz.can('network.cable.delete')")
     fun delete(@PathVariable id: UUID) = manageCable.delete(id)
+
+    /** Barisan core kabel + hitungan per status — bahan layar "Kelola Core". */
+    @GetMapping("/{id}/cores")
+    @PreAuthorize("@authz.can('network.cable.view')")
+    fun cores(@PathVariable id: UUID): CableCoreListView = manageCableCore.list(id)
+
+    /** Setel status/catatan satu atau banyak core sekaligus. */
+    @PutMapping("/{id}/cores")
+    @PreAuthorize("@authz.can('network.cable.update')")
+    fun updateCores(@PathVariable id: UUID, @Valid @RequestBody request: CableCoresRequest): CableCoreListView =
+        manageCableCore.update(
+            id,
+            UpdateCableCoresCommand(
+                coreNumbers = request.coreNumbers,
+                status = request.status,
+                note = request.note,
+                clearNote = request.clearNote,
+            ),
+        )
 }
 
 private fun CableRequest.toCommand() = SaveCableCommand(

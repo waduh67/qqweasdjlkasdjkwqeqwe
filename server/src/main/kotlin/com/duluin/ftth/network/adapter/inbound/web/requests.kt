@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.network.domain.model.AssetStatus
 import com.duluin.ftth.network.domain.model.CableEnd
 import com.duluin.ftth.network.domain.model.CableType
+import com.duluin.ftth.network.domain.model.CoreStatus
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import com.duluin.ftth.network.domain.model.OltVendor
 import com.duluin.ftth.network.domain.model.OtdrEventType
@@ -116,6 +117,18 @@ data class CableRequest(
     /** Input tujuan (opsional). */
     @field:Min(1) val toPortNumber: Int? = null,
     val status: AssetStatus = AssetStatus.ACTIVE,
+)
+
+/**
+ * Setel status/catatan sekumpulan core sekaligus. `status` & `note` null =
+ * bidang itu tak diubah, jadi "tandai enam core ini terpakai" tak menghapus
+ * catatan lapangan masing-masing.
+ */
+data class CableCoresRequest(
+    @field:NotEmpty @field:Size(max = 288) val coreNumbers: List<Int>,
+    val status: CoreStatus? = null,
+    @field:Size(max = 200) val note: String? = null,
+    val clearNote: Boolean = false,
 )
 
 data class OtdrTestRequest(

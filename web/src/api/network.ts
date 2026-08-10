@@ -345,6 +345,48 @@ export interface CableView {
   status: AssetStatus
 }
 
+export type CoreStatus = 'FREE' | 'USED' | 'RESERVED' | 'DAMAGED'
+
+export const CORE_STATUS_LABEL: Record<CoreStatus, string> = {
+  FREE: 'Bebas',
+  USED: 'Terpakai',
+  RESERVED: 'Dicadangkan',
+  DAMAGED: 'Rusak',
+}
+
+/**
+ * Sehelai core di dalam kabel — unit yang sesungguhnya menyalurkan layanan
+ * (satu ODP = satu core). Warna datang dari server: itu warna FISIK selubung
+ * serat menurut TIA-598, bukan token tema, jadi tak boleh ditebak ulang di sini.
+ */
+export interface CableCoreView {
+  id: string
+  tubeNumber: number
+  coreNumber: number
+  /** Posisi core dalam tube-nya — penentu warna; core 13 kembali ke posisi 1. */
+  positionInTube: number
+  color: string
+  colorHex: string
+  tubeColor: string
+  tubeColorHex: string
+  status: CoreStatus
+  note: string | null
+}
+
+/** Barisan core sebuah kabel plus hitungan per status. */
+export interface CableCoreList {
+  cableId: string
+  cableCode: string
+  cableName: string
+  coreCount: number
+  coresPerTube: number
+  free: number
+  used: number
+  reserved: number
+  damaged: number
+  cores: CableCoreView[]
+}
+
 /**
  * Satu pilihan port KELUARAN pada simpul sumber, untuk picker "colok dari port
  * mana" saat menarik kabel. `ponPortId` terisi untuk OLT (PON port), `portNumber`

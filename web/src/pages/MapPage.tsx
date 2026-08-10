@@ -37,7 +37,7 @@ import { useCan } from '../auth/useCan'
 import { Checkbox, MessageBar, MessageBarBody } from '@fluentui/react-components'
 import { Button, Segmented, SelectField, StatusBadge, TextField } from '@/components/atoms'
 import { CommandBar, Ess, type CommandAction } from '@/components/molecules'
-import { AccessNodeDetail, Blade, type AccessNodeKind } from '@/components/organisms'
+import { AccessNodeDetail, Blade, CableCoreManager, type AccessNodeKind } from '@/components/organisms'
 import { CustomerDetailBlade } from './CustomerDetailPage'
 import { OltDetail } from './OltDetailPage'
 import type { MapFocus } from '@/map/mapFocus'
@@ -2732,6 +2732,17 @@ function CablePanel({
           </Ess>
           <Ess label="Titik jalur">{cable.route.points.length}</Ess>
         </dl>
+
+        {/* Core lebih dulu daripada OTDR: inilah yang dibuka orang tiap hari
+            ("core mana yang masih bebas buat pasangan besok"), sedangkan OTDR
+            cuma dibuka saat ada gangguan. */}
+        <div className="stack" style={{ gap: '0.5rem', borderTop: '1px solid var(--line)', paddingTop: '0.6rem' }}>
+          <div className="spread">
+            <strong style={{ fontSize: '0.85rem' }}>Core kabel</strong>
+            <span className="muted" style={{ fontSize: '0.75rem' }}>{cable.coreCount} core</span>
+          </div>
+          <CableCoreManager cableId={cable.id} canEdit={canEdit} />
+        </div>
 
         {canViewOtdr && (
           <OtdrSection

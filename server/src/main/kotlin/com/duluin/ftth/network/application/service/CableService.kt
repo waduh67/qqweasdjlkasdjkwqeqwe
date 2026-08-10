@@ -13,6 +13,7 @@ import com.duluin.ftth.network.application.port.inbound.CablePortOption
 import com.duluin.ftth.network.application.port.inbound.CableView
 import com.duluin.ftth.network.application.port.inbound.ManageCableUseCase
 import com.duluin.ftth.network.application.port.inbound.SaveCableCommand
+import com.duluin.ftth.network.application.port.outbound.CableCoreRepository
 import com.duluin.ftth.network.application.port.outbound.CableRepository
 import com.duluin.ftth.network.application.port.outbound.OdcRepository
 import com.duluin.ftth.network.application.port.outbound.OdpRepository
@@ -20,7 +21,9 @@ import com.duluin.ftth.network.application.port.outbound.OltRepository
 import com.duluin.ftth.network.application.port.outbound.PonPortRepository
 import com.duluin.ftth.network.application.port.outbound.SiteRepository
 import com.duluin.ftth.network.domain.model.Cable
+import com.duluin.ftth.network.domain.model.CableCore
 import com.duluin.ftth.network.domain.model.CableType
+import com.duluin.ftth.network.domain.model.CoreStatus
 import com.duluin.ftth.network.domain.model.NetworkEndpoint
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import com.duluin.ftth.network.domain.model.NetworkNodeRef
@@ -32,6 +35,7 @@ import java.util.UUID
 @Transactional
 class CableService(
     private val cableRepository: CableRepository,
+    private val cableCoreRepository: CableCoreRepository,
     private val siteRepository: SiteRepository,
     private val oltRepository: OltRepository,
     private val odcRepository: OdcRepository,
@@ -104,6 +108,9 @@ class CableService(
                 status = command.status,
             ),
         )
+        cableCoreRepository.saveAll(
+            CableCore.generate(cable.tenantId, cable.id, from = 1, to = cable.coreCount),
+        )
         applyUplink(cable)
         auditor.record(
             "cable.created", "Cable", cable.id, cable.tenantId,
@@ -118,6 +125,7 @@ class CableService(
         val to = command.toEndpoint()
         assertNodesExist(from.ref, to.ref)
         validateSourcePort(from, excludeCableId = id)
+        val previousCoreCount = cable.coreCount
         cable.update(
             name = command.name,
             cableType = command.cableType,
@@ -128,9 +136,40 @@ class CableService(
             status = command.status,
         )
         val saved = cableRepository.save(cable)
+        syncCores(saved, previousCoreCount)
         applyUplink(saved)
         auditor.record("cable.updated", "Cable", saved.id, saved.tenantId, mapOf("code" to saved.code))
         return saved.toView()
+    }
+
+    /**
+     * Menyelaraskan barisan core dengan jumlah core kabel setelah diedit.
+     *
+     * Naik → core baru ditambahkan di ekor; core lama beserta status & catatannya
+     * TAK disentuh. Turun → ditolak bila core yang mau dibuang masih terpakai:
+     * kabel yang menyusut di data padahal seratnya masih menyalurkan layanan
+     * adalah cara paling rapi untuk kehilangan jejak pelanggan. Kalau semuanya
+     * bebas, barulah dibuang.
+     */
+    private fun syncCores(cable: Cable, previousCoreCount: Int) {
+        val target = cable.coreCount
+        if (target == previousCoreCount) return
+        if (target > previousCoreCount) {
+            cableCoreRepository.saveAll(
+                CableCore.generate(cable.tenantId, cable.id, from = previousCoreCount + 1, to = target),
+            )
+            return
+        }
+        val doomed = cableCoreRepository.findByCableId(cable.id)
+            .filter { it.coreNumber > target && it.status != CoreStatus.FREE }
+        if (doomed.isNotEmpty()) {
+            val numbers = doomed.joinToString(", ") { it.coreNumber.toString() }
+            throw ConflictException(
+                "Jumlah core tak bisa dikurangi jadi $target: core $numbers masih dipakai. " +
+                    "Bebaskan dulu di layar Kelola Core.",
+            )
+        }
+        cableCoreRepository.deleteAboveCoreNumber(cable.id, target)
     }
 
     override fun delete(id: UUID) {

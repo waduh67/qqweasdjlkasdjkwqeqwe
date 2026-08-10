@@ -99,3 +99,10 @@ interface OdpJpaRepository : JpaRepository<OdpJpaEntity, UUID>, JpaSpecification
 interface CableJpaRepository : JpaRepository<CableJpaEntity, UUID>, JpaSpecificationExecutor<CableJpaEntity> {
     fun existsByCode(code: String): Boolean
 }
+
+interface CableCoreJpaRepository : JpaRepository<CableCoreJpaEntity, UUID> {
+    fun findByCableIdOrderByCoreNumber(cableId: UUID): List<CableCoreJpaEntity>
+
+    /** Dipakai saat jumlah core kabel dikurangi; core sisanya tak tersentuh. */
+    fun deleteByCableIdAndCoreNumberGreaterThan(cableId: UUID, coreNumber: Int)
+}

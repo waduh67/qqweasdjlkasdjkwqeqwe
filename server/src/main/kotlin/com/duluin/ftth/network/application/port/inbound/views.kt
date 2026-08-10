@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.domain.geo.RoutePath
 import com.duluin.ftth.network.domain.model.AssetStatus
 import com.duluin.ftth.network.domain.model.CableType
+import com.duluin.ftth.network.domain.model.CoreStatus
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import com.duluin.ftth.network.domain.model.OltVendor
 import com.duluin.ftth.network.domain.model.SnmpVersion
@@ -131,4 +132,42 @@ data class CableView(
     /** Label siap-tampil port keluaran sumber, mis. "PON 1/1/1" / "Kaki 3" / "Slot 5". */
     val fromPortLabel: String?,
     val status: AssetStatus,
+)
+
+/**
+ * Sehelai core siap tampil. Warna dikirim sebagai label + hex sekaligus: hex-nya
+ * warna FISIK selubung serat (TIA-598), bukan token tema — klien menggambar
+ * chip persis seperti yang dipegang teknisi tanpa menyalin tabel warna sendiri.
+ */
+data class CableCoreView(
+    val id: UUID,
+    val tubeNumber: Int,
+    val coreNumber: Int,
+    /** Posisi core di dalam tube-nya — penentu warna, mis. core 13 = posisi 1. */
+    val positionInTube: Int,
+    val color: String,
+    val colorHex: String,
+    val tubeColor: String,
+    val tubeColorHex: String,
+    val status: CoreStatus,
+    val note: String?,
+)
+
+/**
+ * Barisan core sebuah kabel plus hitungan per status — ringkasan "berapa yang
+ * masih bisa dijual" yang selalu ditanya duluan, tanpa klien harus menghitung
+ * sendiri dari daftarnya.
+ */
+data class CableCoreListView(
+    val cableId: UUID,
+    val cableCode: String,
+    val cableName: String,
+    val coreCount: Int,
+    /** Isi satu tube; klien memakainya untuk memecah grid per tube. */
+    val coresPerTube: Int,
+    val free: Int,
+    val used: Int,
+    val reserved: Int,
+    val damaged: Int,
+    val cores: List<CableCoreView>,
 )
