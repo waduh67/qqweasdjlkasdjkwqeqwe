@@ -592,8 +592,9 @@ sungguhan, bukan pada tampilan:
   ONU di bawah satu ODC) menjadi satu insiden ber-akar-masalah, lalu broadcast
   proaktif ke pelanggan terdampak
 - **Phase 4 — Work order** ✅ tiket lapangan (PSB/perbaikan/migrasi/dismantle),
-  alur assign→mulai→selesai→approve, bukti foto + tanda tangan di MinIO/S3.
-  Aplikasi teknisi (Compose Multiplatform) menyusul paling akhir.
+  alur assign→mulai→selesai→approve, bukti foto + tanda tangan di MinIO/S3
+  (lihat [`docs/work-order.md`](docs/work-order.md)). Aplikasi teknisi
+  (Compose Multiplatform) menyusul paling akhir.
 - **Phase 5 — Fitur advanced** ✅ what-if/blast-radius, heatmap utilisasi port,
   predictive maintenance, OTDR plotting, auto-provisioning ONU (server polling OLT
   via SNMP → kotak masuk ONU terdeteksi + kebijakan zero-touch, lihat
