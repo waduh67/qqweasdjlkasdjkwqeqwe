@@ -34,6 +34,13 @@ data class ObservabilityProperties(
     val stallGrace: Duration = Duration.ofMinutes(10),
     /** Selang watchdog memeriksa seluruh job. */
     val stallCheckInterval: Duration = Duration.ofMinutes(5),
+    /**
+     * Selang pengingat untuk kemacetan yang belum juga dibereskan. Peringatan pertama
+     * dikirim seketika; sesudah itu ditahan selama ini supaya satu job yang mati semalaman
+     * tak mengirim ratusan email — banjir peringatan berakhir sebagai aturan filter, dan
+     * sesudah itu peringatan berikutnya tak pernah sampai ke siapa pun.
+     */
+    val alertRepeat: Duration = Duration.ofHours(6),
 ) {
     init {
         require(stallFactor >= 1) { "ftth.observability.stall-factor minimal 1" }
@@ -41,5 +48,6 @@ data class ObservabilityProperties(
         require(!stallCheckInterval.isNegative && !stallCheckInterval.isZero) {
             "ftth.observability.stall-check-interval harus > 0"
         }
+        require(!alertRepeat.isNegative && !alertRepeat.isZero) { "ftth.observability.alert-repeat harus > 0" }
     }
 }
