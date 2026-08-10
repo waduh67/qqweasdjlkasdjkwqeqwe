@@ -38,7 +38,7 @@ class AuthenticationService(
         if (tenant.status != TenantStatus.ACTIVE) throw AuthenticationException("Tenant tidak aktif")
 
         return TenantContext.runAs(tenant.id) {
-            authenticator.authenticateAndIssue(command.email, command.password)
+            authenticator.authenticateAndIssue(command.email, command.password, command.otpCode)
         }
     }
 

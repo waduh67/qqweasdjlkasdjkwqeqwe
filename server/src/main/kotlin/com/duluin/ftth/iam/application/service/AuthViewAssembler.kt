@@ -38,6 +38,7 @@ class AuthViewAssembler(
             roleIds = user.roleIds.toList(),
             permissions = permissionCodes.sorted(),
             areaIds = user.areaIds.toList(),
+            twoFactorEnabled = user.twoFactorEnabled,
         )
     }
 }

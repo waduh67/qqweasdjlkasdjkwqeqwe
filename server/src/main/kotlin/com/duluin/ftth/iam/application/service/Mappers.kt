@@ -45,4 +45,5 @@ internal fun User.toView() = UserView(
     roleIds = roleIds.toList(),
     areaIds = areaIds.toList(),
     createdAt = createdAt,
+    twoFactorEnabled = twoFactorEnabled,
 )

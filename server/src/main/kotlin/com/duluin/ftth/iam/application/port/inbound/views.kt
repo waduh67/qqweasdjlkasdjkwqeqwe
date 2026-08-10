@@ -52,6 +52,8 @@ data class UserView(
     val roleIds: List<UUID>,
     val areaIds: List<UUID>,
     val createdAt: Instant,
+    /** Ditampilkan di daftar pengguna: siapa yang sudah memasang faktor kedua, siapa belum. */
+    val twoFactorEnabled: Boolean,
 )
 
 /** Profil ringkas untuk endpoint `/me` dan payload login — apa yang perlu diketahui UI. */
@@ -65,4 +67,5 @@ data class AuthUserView(
     val roleIds: List<UUID>,
     val permissions: List<String>,
     val areaIds: List<UUID>,
+    val twoFactorEnabled: Boolean,
 )

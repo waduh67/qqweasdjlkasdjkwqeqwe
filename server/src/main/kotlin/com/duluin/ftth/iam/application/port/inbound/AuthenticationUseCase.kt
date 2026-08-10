@@ -15,6 +15,12 @@ interface AuthenticationUseCase {
 data class LoginCommand(
     val email: String,
     val password: String,
+    /**
+     * Kode faktor kedua: 6 digit dari aplikasi autentikator ATAU satu kode pemulihan.
+     * Null pada percobaan pertama — klien belum tahu akun ini memakai 2FA sampai server
+     * memintanya lewat `TwoFactorRequiredException`.
+     */
+    val otpCode: String? = null,
 )
 
 data class AuthTokens(

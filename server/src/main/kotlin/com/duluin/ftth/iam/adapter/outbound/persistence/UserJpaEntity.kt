@@ -12,6 +12,7 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.Table
 import org.hibernate.annotations.BatchSize
+import java.time.Instant
 import java.util.UUID
 
 @Entity
@@ -46,4 +47,15 @@ class UserJpaEntity(
     @Column(name = "area_id", nullable = false)
     @BatchSize(size = 50)
     var areaIds: MutableSet<UUID> = mutableSetOf(),
+
+    /** Rahasia TOTP terenkripsi (AES-GCM). Terisi tapi `totpEnabledAt` null = pendaftaran menggantung. */
+    @Column(name = "totp_secret")
+    var totpSecret: String? = null,
+
+    @Column(name = "totp_enabled_at")
+    var totpEnabledAt: Instant? = null,
+
+    /** Langkah waktu TOTP terakhir yang terpakai — penangkal pemakaian ulang kode. */
+    @Column(name = "totp_last_step")
+    var totpLastStep: Long? = null,
 ) : TenantAwareJpaEntity(id)

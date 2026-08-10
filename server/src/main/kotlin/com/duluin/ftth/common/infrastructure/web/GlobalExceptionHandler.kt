@@ -5,6 +5,7 @@ import com.duluin.ftth.common.domain.error.AuthenticationException
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.TooManyRequestsException
+import com.duluin.ftth.common.domain.error.TwoFactorRequiredException
 import com.duluin.ftth.common.domain.error.ValidationException
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -36,6 +37,15 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthenticationException::class)
     fun handleAuthentication(ex: AuthenticationException) = problem(HttpStatus.UNAUTHORIZED, ex.message)
+
+    /**
+     * Tetap 401, tapi dengan penanda `code` yang bisa dibedakan mesin. Tanpa itu, halaman
+     * masuk cuma melihat "401 lagi" dan tak punya cara memutuskan kapan harus menampilkan
+     * kolom kode — selain menebak-nebak dari kalimat pesannya.
+     */
+    @ExceptionHandler(TwoFactorRequiredException::class)
+    fun handleTwoFactorRequired(ex: TwoFactorRequiredException): ProblemDetail =
+        problem(HttpStatus.UNAUTHORIZED, ex.message).apply { setProperty("code", "TWO_FACTOR_REQUIRED") }
 
     @ExceptionHandler(AccessDeniedException::class)
     fun handleAccessDenied(ex: AccessDeniedException) = problem(HttpStatus.FORBIDDEN, ex.message)

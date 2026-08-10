@@ -25,6 +25,9 @@ class UserPersistenceAdapter(
             status = user.status
             roleIds = user.roleIds.toMutableSet()
             areaIds = user.areaIds.toMutableSet()
+            totpSecret = user.totpSecret
+            totpEnabledAt = user.totpEnabledAt
+            totpLastStep = user.totpLastStep
         } ?: UserJpaEntity(
             id = user.id,
             email = user.email.value,
@@ -34,6 +37,9 @@ class UserPersistenceAdapter(
             platformAdmin = user.platformAdmin,
             roleIds = user.roleIds.toMutableSet(),
             areaIds = user.areaIds.toMutableSet(),
+            totpSecret = user.totpSecret,
+            totpEnabledAt = user.totpEnabledAt,
+            totpLastStep = user.totpLastStep,
         )
         val saved = jpa.save(entity)
         upsertDirectory(saved.id, user.tenantId, user.email.value.lowercase())
@@ -83,4 +89,7 @@ private fun UserJpaEntity.toDomain(): User =
         roleIds = roleIds.toSet(),
         areaIds = areaIds.toSet(),
         createdAt = createdAt,
+        totpSecret = totpSecret,
+        totpEnabledAt = totpEnabledAt,
+        totpLastStep = totpLastStep,
     )

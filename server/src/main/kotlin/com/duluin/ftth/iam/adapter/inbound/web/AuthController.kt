@@ -35,7 +35,7 @@ class AuthController(
     fun login(@Valid @RequestBody request: LoginRequest, http: HttpServletRequest): TokenResponse =
         throttle.guardLogin("op", http.remoteAddr, request.email.trim().lowercase()) {
             TokenResponse.from(
-                authentication.login(LoginCommand(request.email, request.password)),
+                authentication.login(LoginCommand(request.email, request.password, request.otpCode)),
             )
         }
 
@@ -52,6 +52,8 @@ class AuthController(
 data class LoginRequest(
     @field:NotBlank val email: String,
     @field:NotBlank val password: String,
+    /** Diisi hanya pada percobaan kedua, setelah server menjawab `code=TWO_FACTOR_REQUIRED`. */
+    val otpCode: String? = null,
 )
 
 data class RefreshRequest(
@@ -89,6 +91,7 @@ data class ProfileResponse(
     val roleIds: List<UUID>,
     val permissions: List<String>,
     val areaIds: List<UUID>,
+    val twoFactorEnabled: Boolean,
 ) {
     companion object {
         fun from(view: AuthUserView) = ProfileResponse(
@@ -101,6 +104,7 @@ data class ProfileResponse(
             roleIds = view.roleIds,
             permissions = view.permissions,
             areaIds = view.areaIds,
+            twoFactorEnabled = view.twoFactorEnabled,
         )
     }
 }

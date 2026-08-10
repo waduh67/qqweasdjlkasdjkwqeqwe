@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.infrastructure.web.PageResponse
 import com.duluin.ftth.iam.application.port.inbound.AssignAccessCommand
 import com.duluin.ftth.iam.application.port.inbound.CreateUserCommand
+import com.duluin.ftth.iam.application.port.inbound.ManageTwoFactorUseCase
 import com.duluin.ftth.iam.application.port.inbound.ManageUserUseCase
 import com.duluin.ftth.iam.application.port.inbound.UpdateUserCommand
 import com.duluin.ftth.iam.application.port.inbound.UserView
@@ -31,6 +32,7 @@ import java.util.UUID
 @SecurityRequirement(name = "bearer-jwt")
 class UserController(
     private val manageUser: ManageUserUseCase,
+    private val twoFactor: ManageTwoFactorUseCase,
 ) {
     @GetMapping
     @PreAuthorize("@authz.can('iam.user.view')")
@@ -75,6 +77,16 @@ class UserController(
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("@authz.can('iam.user.delete')")
     fun delete(@PathVariable id: UUID) = manageUser.delete(id)
+
+    /**
+     * Kosongkan 2FA orang lain — untuk ponsel hilang tanpa kode pemulihan tersisa. Bukan
+     * memindahkan faktor kedua ke perangkat siapa pun: pemiliknya masuk lagi dengan
+     * password saja, lalu mendaftarkan perangkat barunya sendiri.
+     */
+    @PostMapping("/{id}/2fa/reset")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("@authz.can('iam.user.update')")
+    fun resetTwoFactor(@PathVariable id: UUID) = twoFactor.resetFor(id)
 }
 
 data class CreateUserRequest(

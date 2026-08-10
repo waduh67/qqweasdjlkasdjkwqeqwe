@@ -21,6 +21,16 @@ class ConflictException(message: String) : DomainException(message)
 /** Gagal autentikasi — kredensial/token tidak valid (→ 401). */
 class AuthenticationException(message: String) : DomainException(message)
 
+/**
+ * Password sudah benar, tinggal faktor keduanya (→ 401 dengan penanda khusus).
+ *
+ * SENGAJA bukan turunan [AuthenticationException]: ini bukan percobaan yang gagal
+ * melainkan langkah berikutnya, jadi ia tak boleh ikut menghabiskan jatah percobaan di
+ * rem anti-tebak — kalau ikut dihitung, setiap login 2FA yang normal memakan jatah dua
+ * kali dan orang yang login berulang kali di hari sibuk akan mengunci dirinya sendiri.
+ */
+class TwoFactorRequiredException(message: String) : DomainException(message)
+
 /** Terautentikasi tapi tidak berwenang atas operasi/data ini (→ 403). */
 class AccessDeniedException(message: String) : DomainException(message)
 
