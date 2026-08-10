@@ -4,16 +4,20 @@ Platform SaaS multi-tenant untuk manajemen infrastruktur FTTH: inventory jaringa
 (OLT → ODC → ODP → pelanggan), peta GIS jalur kabel, monitoring OLT/ONU, incident
 management dengan alarm correlation, work order teknisi, manajemen router
 pelanggan (GenieACS/TR-069), BRAS/RADIUS (sesi PPPoE), tagihan + pembayaran,
-akses remote perangkat via VPN, dan RBAC super-dinamis.
+portal pelanggan + helpdesk, akses remote perangkat via VPN, dan RBAC
+super-dinamis.
 
-**Status: Phase 0–7 + billing + VPN berjalan end-to-end** — multi-tenancy,
-IAM/RBAC dinamis, audit, inventory jaringan, pelanggan + ONU, peta vector-tile,
-collector + metrik TimescaleDB + mesin alarm, incident + korelasi + notifikasi
-proaktif, work order + bukti lapangan, fitur advanced (what-if, heatmap,
-predictive, OTDR, auto-provisioning ONU), CPE via GenieACS, BNG (BRAS/RADIUS),
-billing (tagihan + auto-isolir), dan back-haul OpenVPN. Hanya adapter SNMP vendor
-sungguhan (Phase 2b) yang menunggu verifikasi terhadap perangkat fisik (lihat
-[Roadmap](#roadmap)).
+**Status: Phase 0–7 + billing + langganan SaaS + VPN + portal pelanggan berjalan
+end-to-end** — multi-tenancy, IAM/RBAC dinamis, audit, inventory jaringan,
+pelanggan + ONU, peta vector-tile, polling SNMP sisi server + metrik TimescaleDB
++ mesin alarm, incident + korelasi + notifikasi proaktif (WhatsApp & email), work
+order + bukti lapangan, fitur advanced (what-if, heatmap, predictive, OTDR,
+auto-provisioning ONU), CPE via GenieACS, BNG (BRAS/RADIUS + RADIUS-as-a-service),
+katalog paket, billing (tagihan + auto-isolir + payment gateway per-tenant),
+penagihan platform → tenant, portal pelanggan + helpdesk, subscriber-360,
+back-haul OpenVPN, serta pengerasan operasional: rem anti-tebak + 2FA operator,
+backup terjadwal, dan pemantauan job latar. Hanya adapter SNMP **GPON** vendor
+yang menunggu verifikasi terhadap perangkat fisik (lihat [Roadmap](#roadmap)).
 
 ---
 
@@ -25,7 +29,7 @@ sungguhan (Phase 2b) yang menunggu verifikasi terhadap perangkat fisik (lihat
 | Database | PostgreSQL + PostGIS + TimescaleDB (metrik deret waktu) |
 | Frontend | React 19 + TypeScript + Vite + MapLibre GL (vector tiles) |
 | Auth | JWT HS256 (access) + refresh token opaque ber-rotasi |
-| Collector | Kotlin agent tanpa Spring — SNMP ke OLT, push outbound |
+| Monitoring | Polling SNMP dari server (bawaan) · agent collector on-prem (opsional) |
 
 Monorepo: `server/` (API), `web/` (SPA), `collector/` (agent), `contract/`
 (tipe wire collector↔server, Kotlin murni tanpa framework).
@@ -61,7 +65,10 @@ Module inti: `common` (shared kernel, OPEN), `tenancy`, `iam`, `audit`,
 `network`, `customer`, `gis`, `monitoring`. Di atasnya bertumpuk module layanan:
 `incident`, `workorder`, `helpdesk` (keluhan yang dilaporkan pelanggan sendiri),
 `notification`, `cpe` (router pelanggan via GenieACS/TR-069), `bng` (BRAS/RADIUS,
-sesi PPPoE), `billing` (tagihan + pembayaran), `vpn` (back-haul OpenVPN).
+sesi PPPoE), `catalog` (paket internet), `billing` (tagihan + pembayaran),
+`platformbilling` (langganan SaaS platform → tenant), `portal` (portal pelanggan),
+`onboarding` (PSB ekspres + impor massal), `subscriber360` (satu layar riwayat
+pelanggan), `reporting` (laporan lintas-module), `vpn` (back-haul OpenVPN).
 
 ### Ketergantungan antar-module
 
@@ -99,12 +106,20 @@ tak pernah menyentuh tabel module lain — batas ini ditegakkan `ModularityTests
   ber-akar-masalah alih-alih puluhan tiket.
 - **workorder** — tiket lapangan (PSB/perbaikan/migrasi/dismantle), bukti foto +
   tanda tangan disimpan di MinIO/S3.
-- **notification** — broadcast proaktif ke pelanggan terdampak.
+- **helpdesk** — keluhan yang **dilaporkan pelanggan sendiri** dari portal jadi
+  tiket ber-SLA; operator membalas di utas yang sama dan bisa mengeskalasi satu
+  tiket menjadi work order perbaikan. Bedanya dengan `incident`: yang di sini
+  lahir dari manusia, yang di sana lahir dari alarm.
+- **notification** — broadcast proaktif ke pelanggan terdampak, dua kanal nyata:
+  WhatsApp & email (SMTP). Template per-jenis-kejadian bisa disunting operator.
 - **cpe** — kelola router/ONT pelanggan lewat GenieACS (TR-069): WiFi, reboot,
   diagnostik ping/speedtest, firmware, factory-reset.
 - **bng** — BRAS/RADIUS: paket, registri BRAS, akun PPPoE. Bereaksi atas event
   langganan `customer` untuk memutus/memulihkan sesi PPPoE (adapter Mikrotik REST
   v7 + FreeRADIUS).
+- **catalog** — paket internet (kecepatan, harga, siklus, kuota FUP) sebagai satu
+  sumber kebenaran: dipakai `customer` saat berlangganan, `billing` saat menagih,
+  dan `bng` saat menerjemahkannya jadi profil rate-limit RADIUS.
 - **billing** — menerbitkan tagihan atas langganan lalu menggerakkan
   isolir/aktivasi `customer` (yang mengalir ke `bng`) saat jatuh tempo/lunas;
   **payment gateway per-tenant** (Xendit BYO & PLATFORM/xenPlatform; Pivot & Paywuz
@@ -116,6 +131,18 @@ tak pernah menyentuh tabel module lain — batas ini ditegakkan `ModularityTests
   bertambah saat **LUNAS**), auto-suspend/pulih tenant saat menunggak. Level platform
   (tanpa RLS); memakai ulang mesin gateway `billing` lewat named interface `gateway`
   (lihat [`docs/saas-subscription.md`](docs/saas-subscription.md)).
+- **portal** — portal pelanggan: identitas & sesi **terpisah** dari operator
+  (login pakai email/nomor HP, tanpa perlu tahu kode ISP; lupa password lewat
+  email), lihat tagihan & bayar, riwayat pemakaian, status sambungan, dan lapor
+  gangguan yang mendarat di `helpdesk`.
+- **onboarding** — mempercepat ISP pindah ke sini dan menerima pelanggan baru:
+  wizard **PSB ekspres** (pelanggan → ODP → akun akses → work order dalam satu
+  formulir) plus impor massal akun PPPoE & pelanggan dari CSV.
+- **subscriber360** — satu layar yang menyatukan riwayat seorang pelanggan dari
+  semua module (tagihan, sesi, tiket, work order, perangkat) tanpa membuat
+  operator berpindah-pindah halaman. Module baca-saja.
+- **reporting** — ringkasan lintas-module untuk pemilik ISP: pertumbuhan
+  pelanggan, pendapatan, gangguan, dan kinerja penyelesaian.
 - **vpn** — **swasembada** (tanpa taut lintas-module): VPN-as-a-service. Hub
   OpenVPN adalah infrastruktur **platform** (jalan di VPS kita, IP publik kita,
   app jadi CA-nya sendiri + installer satu-perintah). **Tenant tinggal generate
@@ -222,18 +249,38 @@ terdampak (customer/network) → geometri kabel yang menyentuhnya (network) plus
 dan mewarnai ulang marker yang id-nya cocok, menyegarkannya tiap 30 detik. Komposisi
 lintas module lewat kontrak publik — `gis` tidak menyentuh tabel milik module lain.
 
-### Monitoring & collector
+### Monitoring: dua jalan masuk metrik
 
 ```
-┌── jaringan ISP ──┐                    ┌──── cloud ────┐
-│ OLT ◀─SNMP─ agent├──HTTPS outbound───▶│ /api/collector│
-└──────────────────┘  (tanpa buka port) └───────┬───────┘
-                                                ▼
+A. server-side (bawaan — yang dipakai produksi)
+   ┌── jaringan ISP ──┐                   ┌──────── cloud ────────┐
+   │ OLT              ├◀── SNMP walk ─────┤ ServerSideOltPoller   │
+   └──────────────────┘  (IP publik / VPN)│  tiap 5 mnt, /tenant  │
+                                          │                       │
+B. collector on-prem (opsional)           │                       │
+   ┌── jaringan ISP ──┐                   │                       │
+   │ OLT ◀─SNMP─ agent├── HTTPS outbound ─┤ /api/collector        │
+   └──────────────────┘  (tanpa buka port)└───────────┬───────────┘
+                                                      ▼
                               onu_metric (hypertable) → mesin alarm → alarm
 ```
 
-Collector selalu menyambung **keluar**. ISP tidak perlu membuka port atau
-port-forwarding, dan server tak pernah perlu tahu alamat jaringan pelanggan.
+**Jalur bawaan hari ini adalah A**: server men-*walk* SNMP OLT langsung tiap 5
+menit (`ftth.monitoring.poll-interval`, kill-switch
+`ftth.monitoring.server-poll-enabled`), lintas tenant, dengan tenant context
+dipasang per tenant supaya RLS tetap menyaring. Alasannya sederhana: ISP tak perlu
+memasang apa pun, dan OLT-nya toh sudah terjangkau lewat IP publik atau terowongan
+VPN kita. Sudah diadu dengan perangkat sungguhan (HSGQ EPON — perhatikan port SNMP
+non-standarnya, 1161).
+
+Jalur **B tetap ada di repo dan tetap diuji, tapi tidak di-deploy** — disiapkan
+untuk ISP yang OLT-nya sama sekali tak boleh dijangkau dari luar. Bedanya cuma
+siapa yang menjalankan walk-nya: adapter SNMP-nya satu dan sama (module `:snmp`),
+jadi tak ada penafsiran MIB yang digandakan. Pada jalur B, collector selalu
+menyambung **keluar** — ISP tidak perlu membuka port atau port-forwarding, dan
+server tak pernah perlu tahu alamat jaringan pelanggan.
+
+Sisa bagian ini menjelaskan jalur B.
 
 - **Konfigurasi datang dari server**, dikirim balik pada tiap denyut. Operator
   menambah OLT atau mengubah interval dari UI dan collector menyesuaikan pada
@@ -419,14 +466,18 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
 | Endpoint | Izin |
 |---|---|
 | `POST /api/auth/login` · `/refresh` · `/logout` | publik |
+| `POST /api/signup` | publik (daftar tenant sendiri) |
 | `GET /api/me` | terautentikasi |
+| `GET /api/me/2fa` · `POST /setup` · `/enable` · `/disable` · `/recovery-codes` | terautentikasi (akun sendiri) |
 | `GET/POST/PUT/DELETE /api/users` | `iam.user.*` |
 | `PUT /api/users/{id}/access` | `iam.user.assign` |
+| `POST /api/users/{id}/2fa/reset` | `iam.user.update` |
 | `GET/POST/PUT/DELETE /api/roles` | `iam.role.*` |
 | `GET /api/permissions` · `/catalog` | `iam.permission.view` |
 | `GET/POST/PUT/DELETE /api/areas` | `iam.area.*` |
 | `GET /api/audit-logs` | `audit.log.view` |
 | `GET /api/platform/tenants` · `POST` · `/{id}/suspend` | `platform.tenant.*` |
+| `GET /api/platform/jobs` (kesehatan job terjadwal) | `platform.ops.view` |
 | `GET/POST/PUT/DELETE /api/sites` | `network.site.*` |
 | `GET/POST/PUT/DELETE /api/olts` · `/{id}/pon-ports` | `network.olt.*` |
 | `GET/POST/PUT/DELETE /api/odcs` · `PUT /{id}/uplink` | `network.odc.*` |
@@ -448,7 +499,18 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
 | `GET /api/incidents` · `/{id}` · `POST /{id}/acknowledge` · `/resolve` | `incident.ticket.*` |
 | `GET/POST/PUT/DELETE /api/work-orders` · `/dashboard` · `/{id}/assign` · `/start` · `/complete` · `/approve` | `workorder.order.*` / `.dashboard.view` |
 | `GET/POST/DELETE /api/work-orders/{id}/evidence` · `/signature` | `workorder.evidence.*` |
+| `GET /api/helpdesk/tickets` · `/summary` · `/{id}` | `helpdesk.ticket.view` |
+| `POST /api/helpdesk/tickets/{id}/replies` · `/status` · `/escalate` | `helpdesk.ticket.reply` / `.manage` |
+| `GET/POST/PUT /api/catalog/plans` | `catalog.plan.view` / `.manage` |
+| `GET /api/reports/overview` | `reporting.report.view` |
+| `GET /api/subscriber-360/{customerId}` | `customer.customer.view` |
+| `POST /api/onboarding/psb` · `/import/pppoe` · `/import/customers` · `GET /export/customers` | `customer.customer.create` (+ `bng.access.*` untuk PPPoE) |
+| `POST /api/portal/auth/{login,forgot-password,reset-password,refresh,logout}` | publik (sesi pelanggan, terpisah dari operator) |
+| `GET/PUT /api/portal/me` · `/password` · `/billing` · `/invoices/{id}/pay` · `/connection` · `/tickets` | sesi portal pelanggan |
+| `GET/POST/DELETE /api/portal-admin/customers/{id}/credential` | `portal.credential.view` / `.manage` |
 | `GET/POST /api/notifications/broadcasts` | `notification.broadcast.view` / `.send` |
+| `GET/PUT /api/notifications/settings` | `notification.settings.view` / `.manage` |
+| `GET/POST/PUT/DELETE /api/notifications/templates` | `notification.template.view` / `.manage` |
 | `GET /api/cpe/devices` · `/{id}/live` · `POST /{id}/{reboot,wifi,firmware,factory-reset,refresh}` · `/diagnostics/{ping,speedtest}` | `cpe.*` |
 | `GET/POST/PUT/DELETE /api/bng/plans` · `/nas` · `/access` | `bng.plan.*` / `bng.nas.*` / `bng.access.*` |
 | `POST /api/bng/access/{id}/isolate` · `/restore` · `/reset-login` · `GET /session` · `/traffic` | `bng.access.isolate` / `bng.session.*` |
@@ -512,5 +574,30 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
   platform (app jadi CA + installer satu-perintah + verifikasi via callback), tenant
   tinggal generate akun (auto-assign) → kredensial siap tempel di Mikrotik, IP overlay
   tetap, unduh `.ovpn`/RouterOS, rahasia terenkripsi (lihat [`docs/vpn.md`](docs/vpn.md))
-- **Berikutnya** — subscriber-360 (satu layar: langganan + tagihan + tiket + CPE +
-  sesi PPPoE), lalu aplikasi teknisi Compose Multiplatform
+- **RADIUS-as-a-service** ✅ satu FreeRADIUS pusat melayani banyak tenant & banyak
+  router: username kembar antar-tenant boleh (dipisah kode tenant), server yang
+  memegang data-plane, client dinamis, CoA lewat overlay VPN (lihat
+  [`docs/radius-as-a-service.md`](docs/radius-as-a-service.md) & `DEPLOY.md` Bagian K)
+- **Katalog paket** ✅ paket internet sebagai satu sumber kebenaran (kecepatan,
+  harga, siklus, kuota FUP) yang dipakai langganan, tagihan, dan profil rate-limit
+  RADIUS sekaligus (lihat [`docs/catalog.md`](docs/catalog.md))
+- **Portal pelanggan** ✅ identitas & sesi terpisah dari operator: masuk pakai
+  email/nomor HP tanpa perlu tahu kode ISP, lupa password lewat email, lihat &
+  bayar tagihan, riwayat pemakaian, status sambungan
+- **Helpdesk** ✅ pelanggan melaporkan gangguan dari portal → tiket ber-SLA →
+  balasan operator di utas yang sama → eskalasi jadi work order perbaikan
+- **Subscriber-360** ✅ satu layar riwayat pelanggan: langganan + tagihan + tiket +
+  CPE + sesi PPPoE, tanpa berpindah halaman
+- **Ops onboarding** ✅ mempercepat ISP pindah & menerima pelanggan: wizard **PSB
+  ekspres** (pelanggan → ODP → akun akses → work order dalam satu formulir), akun
+  akses lahir `PENDING` dan baru di-provision saat WO PSB selesai, plus impor massal
+  PPPoE & pelanggan dari CSV
+- **Pengerasan operasional** ✅ rem anti-tebak login (throttle per identitas & per IP,
+  operator maupun portal), **2FA operator (TOTP)** dengan kode pemulihan + reset oleh
+  admin, email jadi kanal notifikasi kelas satu (WhatsApp & email; kanal yang tak
+  pernah punya dispatcher dihapus), cadangan database terjadwal + prosedur pulih yang
+  sudah diuji (`DEPLOY.md` Bagian M), dan pemantauan pekerjaan latar yang diam-diam
+  berhenti (metrik + watchdog + alert email, `DEPLOY.md` Bagian N)
+- **Berikutnya** — drill-down PON/FAT di monitoring, lalu aplikasi teknisi Compose
+  Multiplatform. Yang masih menunggu perangkat fisik: adapter SNMP **GPON**
+  (ZTE/Huawei/Fiberhome) — jalur EPON sudah divalidasi lapangan.
