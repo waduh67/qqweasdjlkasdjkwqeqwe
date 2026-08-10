@@ -134,6 +134,8 @@ internal fun Invoice.toView(sandbox: Boolean = false) = InvoiceView(
         !gatewayRef.isNullOrBlank() &&
         (status == InvoiceStatus.ISSUED || status == InvoiceStatus.OVERDUE),
     paymentSessionId = gatewayRef?.takeIf { sandbox },
+    refundedAmount = refundedAmount,
+    refundableAmount = refundableAmount,
 )
 
 internal fun Payment.toView() = PaymentView(

@@ -88,6 +88,11 @@ interface BillingApi {
  * - [outstandingAmount]/[outstandingInvoiceCount]: tunggakan SNAPSHOT saat laporan dibuat
  *   (OVERDUE, atau ISSUED yang sudah lewat jatuh tempo) — sengaja tak dibatasi rentang,
  *   karena "yang belum dibayar sekarang" adalah potret, bukan aliran periode.
+ * - [refundedAmount]/[refundCount]: pengembalian dana yang BENAR-BENAR selesai dalam rentang
+ *   (by `completedAt`) — refund yang masih berjalan belum menjadi uang keluar, jadi tak dihitung.
+ * - [netRevenue]: [revenueCollected] − [refundedAmount], uang yang benar-benar tinggal. Keduanya
+ *   dipaparkan terpisah, tidak dilebur, karena "menerima 10 juta lalu memulangkan 2" bukan cerita
+ *   yang sama dengan "menerima 8 juta" — yang pertama menandakan ada yang salah di operasional.
  * - [statusCounts]: jumlah SELURUH tagihan tenant per nama status (potret distribusi).
  */
 data class BillingFinancialReport(
@@ -98,6 +103,9 @@ data class BillingFinancialReport(
     val outstandingAmount: BigDecimal,
     val outstandingInvoiceCount: Int,
     val statusCounts: Map<String, Int>,
+    val refundedAmount: BigDecimal = BigDecimal.ZERO,
+    val refundCount: Int = 0,
+    val netRevenue: BigDecimal = revenueCollected,
 )
 
 /**
@@ -186,11 +194,16 @@ data class CustomerPaymentRef(
     val note: String?,
 )
 
-/** Satu titik tren: pendapatan tertagih pada satu bulan kalender ([month] = "YYYY-MM"). */
+/**
+ * Satu titik tren: pendapatan tertagih pada satu bulan kalender ([month] = "YYYY-MM").
+ * [revenue] bruto (uang masuk bulan itu), [refunded] pengembalian yang selesai bulan itu —
+ * keduanya bisa jatuh di bulan berbeda, jadi selisihnya sengaja tak dilebur jadi satu angka.
+ */
 data class MonthlyRevenuePoint(
     val month: String,
     val revenue: BigDecimal,
     val paidInvoiceCount: Int,
+    val refunded: BigDecimal = BigDecimal.ZERO,
 )
 
 /**

@@ -19,6 +19,7 @@ const INVOICE_STATUS_LABEL: Record<string, string> = {
   PAID: 'Lunas',
   OVERDUE: 'Menunggak',
   VOID: 'Batal',
+  REFUNDED: 'Dikembalikan',
 }
 
 /** Label Indonesia untuk status langganan (kunci `subscriptionsByStatus`). */
@@ -55,8 +56,16 @@ function csvCell(v: string): string {
 
 /** Unduh tren bulanan sebagai CSV di sisi klien — tabel paling berguna untuk diolah lanjut. */
 function downloadCsv(overview: ReportOverview) {
-  const rows = [['Bulan', 'Pendapatan tertagih', 'Jumlah tagihan lunas']]
-  overview.monthlyRevenue.forEach((p) => rows.push([p.month, p.revenue, String(p.paidInvoiceCount)]))
+  const rows = [['Bulan', 'Pendapatan tertagih', 'Jumlah tagihan lunas', 'Pengembalian dana', 'Pendapatan bersih']]
+  overview.monthlyRevenue.forEach((p) =>
+    rows.push([
+      p.month,
+      p.revenue,
+      String(p.paidInvoiceCount),
+      p.refunded,
+      String(Number(p.revenue) - Number(p.refunded)),
+    ]),
+  )
   const csv = rows.map((r) => r.map(csvCell).join(',')).join('\n')
   const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
@@ -141,6 +150,9 @@ export function ReportsPage() {
 
 function ReportBody({ overview }: { overview: ReportOverview }) {
   const { finance, subscribers } = overview
+  // Refund baru ditampilkan bila memang pernah terjadi — tenant yang tak pernah mengembalikan
+  // uang tak perlu melihat kartu "Rp 0" yang cuma menambah kebisingan.
+  const hasRefund = finance.refundCount > 0
 
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
@@ -149,7 +161,11 @@ function ReportBody({ overview }: { overview: ReportOverview }) {
         <Stat
           label="Pendapatan tertagih"
           value={fmtRupiah(finance.revenueCollected)}
-          note={`${finance.paidInvoiceCount.toLocaleString('id-ID')} tagihan lunas`}
+          note={
+            hasRefund
+              ? `${finance.paidInvoiceCount.toLocaleString('id-ID')} tagihan lunas · bersih ${fmtRupiah(finance.netRevenue)}`
+              : `${finance.paidInvoiceCount.toLocaleString('id-ID')} tagihan lunas`
+          }
         />
         <Stat
           label="Tunggakan"
@@ -170,6 +186,14 @@ function ReportBody({ overview }: { overview: ReportOverview }) {
           value={fmtRupiah(finance.issuedAmount)}
           note={`${finance.issuedInvoiceCount.toLocaleString('id-ID')} tagihan pada rentang`}
         />
+        {hasRefund && (
+          <Stat
+            label="Pengembalian dana"
+            value={fmtRupiah(finance.refundedAmount)}
+            note={`${finance.refundCount.toLocaleString('id-ID')} refund selesai pada rentang`}
+            accent="warn"
+          />
+        )}
       </div>
 
       <div className="row wrap" style={{ alignItems: 'stretch', gap: '1rem' }}>
@@ -215,7 +239,12 @@ function RevenueChart({ overview }: { overview: ReportOverview }) {
                 : Math.round(Number(p.revenue) / 1000).toLocaleString('id-ID') + 'rb'}
             </div>
             <div
-              title={`${fmtMonth(p.month)}: ${fmtRupiah(p.revenue)} (${p.paidInvoiceCount} lunas)`}
+              title={
+                `${fmtMonth(p.month)}: ${fmtRupiah(p.revenue)} (${p.paidInvoiceCount} lunas)` +
+                (Number(p.refunded) > 0
+                  ? ` · dikembalikan ${fmtRupiah(p.refunded)} → bersih ${fmtRupiah(String(Number(p.revenue) - Number(p.refunded)))}`
+                  : '')
+              }
               style={{
                 width: '100%',
                 maxWidth: 44,
@@ -224,8 +253,24 @@ function RevenueChart({ overview }: { overview: ReportOverview }) {
                 background: 'var(--accent)',
                 borderRadius: '4px 4px 0 0',
                 transition: 'height 0.2s',
+                position: 'relative',
+                overflow: 'hidden',
               }}
-            />
+            >
+              {/* Potongan bawah batang = bagian yang uangnya kembali keluar bulan itu. */}
+              {Number(p.refunded) > 0 && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: `${Math.min(100, (Number(p.refunded) / Math.max(1, Number(p.revenue))) * 100)}%`,
+                    background: 'var(--warning)',
+                  }}
+                />
+              )}
+            </div>
             <div className="muted" style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
               {MONTH_SHORT[Number(p.month.split('-')[1]) - 1] ?? p.month}
             </div>

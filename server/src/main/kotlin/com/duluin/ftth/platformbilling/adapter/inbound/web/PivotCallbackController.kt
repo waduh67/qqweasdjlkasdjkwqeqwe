@@ -67,11 +67,9 @@ class PivotCallbackController(
     ): Map<String, String> = disbursement(headers, body)
 
     @PostMapping("/refund")
-    @Operation(summary = "Callback produk REFUND (diverifikasi & dicatat, belum diproses)")
-    fun refund(@RequestBody body: String, @RequestHeader headers: Map<String, String>): Map<String, String> {
-        callbacks.handleRefund(headers, body)
-        return ack("acknowledged")
-    }
+    @Operation(summary = "Callback produk REFUND (menutup baris pengembalian dana tenant)")
+    fun refund(@RequestBody body: String, @RequestHeader headers: Map<String, String>): Map<String, String> =
+        ack(if (callbacks.handleRefund(headers, body)) "reconciled" else "ignored")
 
     @PostMapping("/sub-account-registration")
     @Operation(summary = "Callback produk SUB_ACCOUNT_REGISTRATION (status & KYC sub-account)")

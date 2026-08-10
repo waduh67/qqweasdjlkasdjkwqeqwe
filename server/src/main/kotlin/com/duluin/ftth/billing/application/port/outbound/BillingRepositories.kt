@@ -4,6 +4,7 @@ import com.duluin.ftth.billing.domain.model.BillingTaxSettings
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
 import com.duluin.ftth.billing.domain.model.Payment
+import com.duluin.ftth.billing.domain.model.Refund
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -71,6 +72,31 @@ interface PaymentRepository {
 
     /** Riwayat pembayaran seorang pelanggan, terbaru dulu — untuk portal self-service. */
     fun findByCustomerId(customerId: UUID): List<Payment>
+}
+
+/**
+ * Riwayat pengembalian dana (tenant-scoped + RLS). [findByReference] memulangkan callback penyedia
+ * ke barisnya; [findByInvoiceId] jadi dasar penjagaan kuota refund satu tagihan.
+ */
+interface RefundRepository {
+
+    fun save(refund: Refund): Refund
+
+    fun findById(id: UUID): Refund?
+
+    fun findByInvoiceId(invoiceId: UUID): List<Refund>
+
+    /** Cari baris refund lewat referensi penyedia (`gateway_ref`) — kunci rekonsiliasi callback. */
+    fun findByReference(reference: String): Refund?
+
+    /** Seluruh pengembalian tenant, terbaru dulu — daftar & laporan. */
+    fun findAll(): List<Refund>
+
+    /**
+     * Pengembalian BERHASIL yang tuntas di [from]..[toExclusive) — dipakai laporan keuangan
+     * mengurangkan uang yang balik dari pendapatan periode tersebut.
+     */
+    fun findSettledBetween(from: Instant, toExclusive: Instant): List<Refund>
 }
 
 /**

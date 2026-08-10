@@ -2519,11 +2519,12 @@ function todayLocalDate(): string {
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
 }
 
-const INVOICE_TONE: Record<InvoiceView['status'], 'good' | 'warning' | 'critical' | 'neutral'> = {
+const INVOICE_TONE: Record<InvoiceView['status'], 'good' | 'warning' | 'critical' | 'neutral' | 'accent'> = {
   PAID: 'good',
   ISSUED: 'warning',
   OVERDUE: 'critical',
   VOID: 'neutral',
+  REFUNDED: 'accent',
 }
 
 const INVOICE_LABEL: Record<InvoiceView['status'], string> = {
@@ -2531,6 +2532,7 @@ const INVOICE_LABEL: Record<InvoiceView['status'], string> = {
   ISSUED: 'Terbit',
   OVERDUE: 'Jatuh tempo',
   VOID: 'Batal',
+  REFUNDED: 'Dikembalikan',
 }
 
 /** Tagihan menunggak: berstatus OVERDUE, atau ISSUED yang sudah lewat jatuh tempo. */

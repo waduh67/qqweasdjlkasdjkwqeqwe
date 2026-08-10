@@ -16,8 +16,13 @@ import java.util.UUID
  * ISSUED → PAID (lunas) atau OVERDUE (lewat jatuh tempo) → PAID; VOID untuk yang
  * dibatalkan. Perpindahannya dijaga sebagai mesin keadaan eksplisit karena
  * memicu efek nyata (auto-isolir saat menunggak, auto-pulih saat lunas).
+ *
+ * REFUNDED = sudah lunas lalu uangnya dikembalikan PENUH. Statusnya sendiri, bukan VOID:
+ * tagihan yang dibatalkan tak pernah menghasilkan uang, sedangkan yang direfund menghasilkan
+ * lalu mengembalikannya — dua hal yang harus bisa dibedakan di laporan pendapatan. Refund
+ * SEBAGIAN membiarkan tagihan tetap PAID (lihat [Invoice.refundedAmount]).
  */
-enum class InvoiceStatus { ISSUED, PAID, OVERDUE, VOID }
+enum class InvoiceStatus { ISSUED, PAID, OVERDUE, VOID, REFUNDED }
 
 /**
  * Hasil perhitungan prorata: [amount] yang harus ditagih (skala 2) untuk [days] hari
@@ -69,6 +74,7 @@ class Invoice private constructor(
     qrUrl: String?,
     qrExpiresAt: Instant?,
     dueSoonReminded: Boolean,
+    refundedAmount: BigDecimal = ZERO_MONEY,
 ) {
     /** Dasar Pengenaan Pajak (DPP): nilai layanan sebelum PPN = [amount] − [taxAmount]. */
     val baseAmount: BigDecimal get() = amount.subtract(taxAmount)
@@ -86,6 +92,18 @@ class Invoice private constructor(
 
     var paidAt: Instant? = paidAt
         private set
+
+    /**
+     * Total uang yang SUDAH benar-benar kembali ke pelanggan atas tagihan ini (skala 2). Hanya
+     * pengembalian yang berhasil yang dijumlah di sini — permintaan yang masih berjalan ditahan
+     * di baris [Refund], bukan di tagihan, supaya angka ini selalu bisa dibaca apa adanya:
+     * "sebanyak inilah yang bukan lagi pendapatan".
+     */
+    var refundedAmount: BigDecimal = refundedAmount
+        private set
+
+    /** Sisa yang masih boleh dikembalikan = [amount] − [refundedAmount]; tak pernah negatif. */
+    val refundableAmount: BigDecimal get() = amount.subtract(refundedAmount).max(ZERO_MONEY)
 
     var gatewayProvider: String? = gatewayProvider
         private set
@@ -130,11 +148,38 @@ class Invoice private constructor(
         when (status) {
             InvoiceStatus.PAID -> return
             InvoiceStatus.VOID -> throw ConflictException("Tagihan yang dibatalkan tidak bisa ditandai lunas")
+            // Sudah lunas lalu dikembalikan penuh: kalau pelanggan membayar lagi, itu tagihan/
+            // pembayaran baru — menimpanya jadi PAID akan menyembunyikan refund yang sudah terjadi.
+            InvoiceStatus.REFUNDED ->
+                throw ConflictException("Tagihan yang sudah dikembalikan tidak bisa ditandai lunas lagi")
             InvoiceStatus.ISSUED, InvoiceStatus.OVERDUE -> {
                 status = InvoiceStatus.PAID
                 paidAt = at
             }
         }
+    }
+
+    /**
+     * Catat bahwa [amount] rupiah benar-benar kembali ke pelanggan. Menaikkan [refundedAmount] dan —
+     * hanya bila seluruh nilai tagihan sudah kembali — memindahkan status ke REFUNDED. Refund
+     * sebagian membiarkan status PAID: layanannya tetap terbayar, cuma sebagian uangnya balik.
+     *
+     * Menolak melampaui nilai tagihan; batas ini ditegakkan di sini (bukan cuma di service) karena
+     * mengembalikan lebih dari yang diterima adalah kebocoran uang, bukan sekadar data janggal.
+     */
+    fun applyRefund(amount: BigDecimal) {
+        if (amount.signum() <= 0) throw ValidationException("Nilai pengembalian harus lebih dari 0")
+        if (status != InvoiceStatus.PAID && status != InvoiceStatus.REFUNDED) {
+            throw ConflictException("Hanya tagihan lunas yang bisa dikembalikan (status sekarang: $status)")
+        }
+        val next = refundedAmount.add(amount).setScale(2, RoundingMode.HALF_UP)
+        if (next > this.amount) {
+            throw ConflictException(
+                "Pengembalian melebihi nilai tagihan — sisa yang bisa dikembalikan Rp $refundableAmount",
+            )
+        }
+        refundedAmount = next
+        if (next.compareTo(this.amount) == 0) status = InvoiceStatus.REFUNDED
     }
 
     /** Tandai bahwa pengingat mendekati jatuh tempo sudah dikirim (idempoten). */
@@ -150,9 +195,9 @@ class Invoice private constructor(
         status = InvoiceStatus.OVERDUE
     }
 
-    /** Batalkan tagihan; ditolak bila sudah lunas agar riwayat pembayaran tak hilang. */
+    /** Batalkan tagihan; ditolak bila sudah lunas/dikembalikan agar riwayat uangnya tak hilang. */
     fun void() {
-        if (status == InvoiceStatus.PAID) {
+        if (status == InvoiceStatus.PAID || status == InvoiceStatus.REFUNDED) {
             throw ConflictException("Tagihan yang sudah lunas tidak bisa dibatalkan")
         }
         status = InvoiceStatus.VOID
@@ -249,6 +294,7 @@ class Invoice private constructor(
                 qrUrl = null,
                 qrExpiresAt = null,
                 dueSoonReminded = false,
+                refundedAmount = ZERO_MONEY,
             )
         }
 
@@ -282,11 +328,13 @@ class Invoice private constructor(
             qrUrl: String?,
             qrExpiresAt: Instant?,
             dueSoonReminded: Boolean,
+            refundedAmount: BigDecimal? = null,
         ): Invoice = Invoice(
             id, tenantId, customerId, subscriptionId, number, periodStart, periodEnd, amount,
             taxAmount, taxRate, prorated, proratedDays, status, issuedAt, dueDate, paidAt,
             gatewayProvider, gatewayRef, payUrl, payMethod, vaChannel, vaNumber, vaName,
             vaExpiresAt, qrContent, qrUrl, qrExpiresAt, dueSoonReminded,
+            refundedAmount?.setScale(2, RoundingMode.HALF_UP) ?: ZERO_MONEY,
         )
 
         /**

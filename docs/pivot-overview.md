@@ -107,7 +107,7 @@ dijamin `X-API-Key`. Key kosong/tak cocok → callback ditolak 4xx tanpa menyent
 | PAYOUT | `POST /api/platform/pivot/callbacks/payout` | rekonsiliasi baris `tenant_payout` via referensi Pivot (idempotent) |
 | WITHDRAWAL | `POST /api/platform/pivot/callbacks/withdrawal` | idem — rekonsiliasi `tenant_payout` (idempotent) |
 | INTERNATIONAL_PAYOUT | `POST /api/platform/pivot/callbacks/international-payout` | idem — rekonsiliasi `tenant_payout` (idempotent) |
-| REFUND | `POST /api/platform/pivot/callbacks/refund` | di-ACK + dicatat log; belum ada domain refund (follow-up) |
+| REFUND | `POST /api/platform/pivot/callbacks/refund` | tutup baris `refund` lintas tenant via `data.id` (ref Pivot) atau `data.clientReferenceId` (id baris kita), lalu terapkan di tenant pemiliknya (idempotent) |
 | SUB_ACCOUNT_REGISTRATION | `POST /api/platform/pivot/callbacks/sub-account-registration` | update status/KYC `tenant_pivot_account` |
 | WALLET | `POST /api/platform/pivot/callbacks/wallet` | produk wallet tak dipakai — verifikasi `X-API-Key` lalu ACK 200 (no-op) |
 | WALLETS | `POST /api/platform/pivot/callbacks/wallets` | idem — no-op ACK 200 |

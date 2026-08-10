@@ -15,6 +15,7 @@ import com.duluin.ftth.billing.application.port.inbound.ManagePaymentGatewaySett
 import com.duluin.ftth.billing.application.port.inbound.ManualPaymentInstructionsView
 import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
 import com.duluin.ftth.billing.application.port.outbound.PaymentRepository
+import com.duluin.ftth.billing.application.port.outbound.RefundRepository
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.storage.StoredObject
@@ -42,6 +43,7 @@ import java.util.UUID
 class BillingApiService(
     private val invoiceRepository: InvoiceRepository,
     private val paymentRepository: PaymentRepository,
+    private val refundRepository: RefundRepository,
     private val invoiceCharger: InvoiceChargePort,
     private val customerApi: CustomerApi,
     private val gatewayProbe: ActiveGatewayProbe,
@@ -190,15 +192,23 @@ class BillingApiService(
         val paid = invoiceRepository.findPaidBetween(fromInstant, toExclusive)
         val issued = invoiceRepository.findIssuedBetween(fromInstant, toExclusive)
         val outstanding = invoiceRepository.findOutstanding(LocalDate.now())
+        // Refund dihitung menurut KAPAN UANGNYA KELUAR (completedAt), bukan kapan diajukan — dan hanya
+        // yang berhasil; permintaan yang masih berjalan belum mengurangi kas.
+        val refunds = refundRepository.findSettledBetween(fromInstant, toExclusive)
+        val revenue = paid.sumOfAmount()
+        val refunded = refunds.fold(BigDecimal.ZERO) { acc, r -> acc + r.amount }
 
         return BillingFinancialReport(
-            revenueCollected = paid.sumOfAmount(),
+            revenueCollected = revenue,
             paidInvoiceCount = paid.size,
             issuedAmount = issued.sumOfAmount(),
             issuedInvoiceCount = issued.size,
             outstandingAmount = outstanding.sumOfAmount(),
             outstandingInvoiceCount = outstanding.size,
             statusCounts = invoiceRepository.countByStatus().entries.associate { (s, n) -> s.name to n.toInt() },
+            refundedAmount = refunded,
+            refundCount = refunds.size,
+            netRevenue = revenue.subtract(refunded),
         )
     }
 
@@ -210,6 +220,9 @@ class BillingApiService(
         // yang memakai LocalDate.now()), lalu tebar ke SELURUH bulan rentang agar bolong ikut nol.
         val byMonth = invoiceRepository.findPaidBetween(fromInstant, toExclusive)
             .groupBy { YearMonth.from(it.paidAt!!.atZone(zone)) }
+        // Refund ditempatkan di bulan uangnya keluar, yang boleh berbeda dari bulan tagihannya lunas.
+        val refundsByMonth = refundRepository.findSettledBetween(fromInstant, toExclusive)
+            .groupBy { YearMonth.from(it.completedAt!!.atZone(zone)) }
 
         val points = mutableListOf<MonthlyRevenuePoint>()
         var m = fromMonth
@@ -219,6 +232,7 @@ class BillingApiService(
                 month = m.toString(),
                 revenue = invoices.sumOfAmount(),
                 paidInvoiceCount = invoices.size,
+                refunded = refundsByMonth[m].orEmpty().fold(BigDecimal.ZERO) { acc, r -> acc + r.amount },
             )
             m = m.plusMonths(1)
         }

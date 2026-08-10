@@ -6,8 +6,11 @@ import { api } from './client'
  * Tagihan lintas-pelanggan (daftar semua tagihan + penerbitan/pembatalan/bayar manual).
  */
 
-/** ISSUED (terbit, belum bayar), PAID (lunas), OVERDUE (lewat jatuh tempo), VOID (dibatalkan). */
-export type InvoiceStatus = 'ISSUED' | 'PAID' | 'OVERDUE' | 'VOID'
+/**
+ * ISSUED (terbit, belum bayar), PAID (lunas), OVERDUE (lewat jatuh tempo), VOID (dibatalkan),
+ * REFUNDED (lunas lalu uangnya dikembalikan PENUH — beda dengan VOID yang tak pernah menghasilkan).
+ */
+export type InvoiceStatus = 'ISSUED' | 'PAID' | 'OVERDUE' | 'VOID' | 'REFUNDED'
 
 /** Proyeksi satu tagihan. `amount` diserialkan sebagai string oleh Jackson (BigDecimal). */
 export interface InvoiceView {
@@ -54,6 +57,10 @@ export interface InvoiceView {
    * disalin ke panel Simulasi Pembayaran di /platform. Di produksi selalu null.
    */
   paymentSessionId: string | null
+  /** Total yang sudah BENAR-BENAR dikembalikan ke pelanggan; "0" bila belum pernah ada refund. */
+  refundedAmount: string | null
+  /** Sisa yang masih bisa dikembalikan (`amount` − `refundedAmount`). */
+  refundableAmount: string | null
 }
 
 /** Status akhir yang dipaksakan ke sesi bayar saat simulasi sandbox. */
@@ -117,6 +124,52 @@ export const simulateInvoicePayment = (id: string, status: SimulatedChargeStatus
 /** Pembayaran yang tercatat atas sebuah tagihan. */
 export const listPayments = (invoiceId: string) =>
   api.get<PaymentView[]>(`/api/billing/payments?invoiceId=${invoiceId}`)
+
+/** Alasan pengembalian dana — nilainya sama persis dengan enum `reason` penyedia. */
+export type RefundReason =
+  | 'REQUESTED_BY_CUSTOMER'
+  | 'DUPLICATE'
+  | 'CANCELLATION'
+  | 'SUSPECT_FRAUDULENT'
+  | 'OTHERS'
+
+/** PENDING/PROCESSING = uang masih dalam perjalanan pulang; SUCCESS/FAILED = final. */
+export type RefundStatus = 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED'
+
+/** Proyeksi satu pengembalian dana (satu baris = satu PERCOBAAN, bukan satu hasil). */
+export interface RefundView {
+  id: string
+  invoiceId: string
+  invoiceNumber: string | null
+  customerId: string
+  amount: string
+  reason: RefundReason
+  status: RefundStatus
+  /** Penyedia yang mengembalikan uangnya — dibekukan dari cara tagihan itu dulu dibayar. */
+  provider: string
+  note: string | null
+  failureReason: string | null
+  requestedAt: string
+  completedAt: string | null
+}
+
+/** Pengembalian dana tenant; `invoiceId` menyaring ke satu tagihan. */
+export const listRefunds = (invoiceId?: string) =>
+  api.get<RefundView[]>(`/api/billing/refunds${invoiceId ? `?invoiceId=${invoiceId}` : ''}`)
+
+/**
+ * Ajukan pengembalian dana. `amount` kosong = seluruh sisa tagihan. Baris berpenyedia otomatis
+ * (Pivot) berhenti di PROCESSING sampai callback penyedia menutupnya; MANUAL berhenti di PENDING
+ * sampai operator menyatakan transfernya lewat [settleRefund].
+ */
+export const requestRefund = (
+  invoiceId: string,
+  body?: { amount?: string; reason?: RefundReason; note?: string },
+) => api.post<RefundView>(`/api/billing/invoices/${invoiceId}/refund`, body ?? {})
+
+/** Tutup pengembalian MANUAL: nyatakan transfer baliknya berhasil, atau gagal beserta alasannya. */
+export const settleRefund = (id: string, success: boolean, reason?: string) =>
+  api.post<RefundView>(`/api/billing/refunds/${id}/settle`, { success, reason })
 
 /**
  * Setelan pajak tenant. PPN adalah komponen yang DITAGIHKAN ke pelanggan (menambah total

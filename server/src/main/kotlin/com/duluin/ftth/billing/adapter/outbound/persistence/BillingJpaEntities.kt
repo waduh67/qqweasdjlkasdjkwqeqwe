@@ -1,6 +1,8 @@
 package com.duluin.ftth.billing.adapter.outbound.persistence
 
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
+import com.duluin.ftth.billing.domain.model.RefundReason
+import com.duluin.ftth.billing.domain.model.RefundStatus
 import com.duluin.ftth.common.infrastructure.persistence.TenantAwareJpaEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -103,6 +105,10 @@ class InvoiceJpaEntity(
 
     @Column(name = "due_soon_reminded", nullable = false)
     var dueSoonReminded: Boolean,
+
+    /** Uang yang sudah dikembalikan ke pelanggan atas tagihan ini; 0 untuk tagihan yang tak direfund. */
+    @Column(name = "refunded_amount", nullable = false, precision = 14, scale = 2)
+    var refundedAmount: BigDecimal,
 ) : TenantAwareJpaEntity(id)
 
 /**
@@ -134,4 +140,52 @@ class PaymentJpaEntity(
 
     @Column(length = 500, updatable = false)
     var note: String?,
+) : TenantAwareJpaEntity(id)
+
+/**
+ * Pengembalian dana. Permintaan & nilainya tak berubah setelah diajukan (`updatable = false`);
+ * yang berpindah hanya status, referensi penyedia, alasan gagal, dan waktu selesainya.
+ */
+@Entity
+@Table(name = "refund")
+class RefundJpaEntity(
+    id: UUID,
+
+    @Column(name = "invoice_id", nullable = false, updatable = false)
+    var invoiceId: UUID,
+
+    @Column(name = "customer_id", nullable = false, updatable = false)
+    var customerId: UUID,
+
+    @Column(name = "payment_id", updatable = false)
+    var paymentId: UUID?,
+
+    @Column(nullable = false, precision = 14, scale = 2, updatable = false)
+    var amount: BigDecimal,
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30, updatable = false)
+    var reason: RefundReason,
+
+    @Column(nullable = false, length = 40, updatable = false)
+    var provider: String,
+
+    @Column(length = 200, updatable = false)
+    var note: String?,
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    var status: RefundStatus,
+
+    @Column(name = "gateway_ref", length = 200)
+    var gatewayRef: String?,
+
+    @Column(name = "failure_reason", length = 200)
+    var failureReason: String?,
+
+    @Column(name = "requested_at", nullable = false, updatable = false)
+    var requestedAt: Instant,
+
+    @Column(name = "completed_at")
+    var completedAt: Instant?,
 ) : TenantAwareJpaEntity(id)

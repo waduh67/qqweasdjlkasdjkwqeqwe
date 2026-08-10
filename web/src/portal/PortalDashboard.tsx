@@ -38,6 +38,16 @@ const INVOICE_TONE: Record<string, string> = {
   ISSUED: 'var(--warning-ink)',
   OVERDUE: 'var(--critical-ink)',
   VOID: 'var(--muted)',
+  REFUNDED: 'var(--accent)',
+}
+
+/** Status ditulis dengan bahasa pelanggan — portal bukan tempat memamerkan nama enum. */
+const INVOICE_STATUS_LABEL: Record<string, string> = {
+  PAID: 'Lunas',
+  ISSUED: 'Belum dibayar',
+  OVERDUE: 'Jatuh tempo',
+  VOID: 'Batal',
+  REFUNDED: 'Dikembalikan',
 }
 
 /**
@@ -184,7 +194,9 @@ function TagihanTab({
                 </div>
                 <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
                   <span className="tnum" style={{ fontWeight: 600 }}>{rupiah(inv.amount)}</span>
-                  <span className="badge" style={{ color: INVOICE_TONE[inv.status] ?? undefined }}>{inv.status}</span>
+                  <span className="badge" style={{ color: INVOICE_TONE[inv.status] ?? undefined }}>
+                    {INVOICE_STATUS_LABEL[inv.status] ?? inv.status}
+                  </span>
                   {inv.payable && (
                     <Button
                       variant="primary"

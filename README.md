@@ -521,6 +521,7 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
 | `GET/POST/PUT/DELETE /api/bng/plans` · `/nas` · `/access` | `bng.plan.*` / `bng.nas.*` / `bng.access.*` |
 | `POST /api/bng/access/{id}/isolate` · `/restore` · `/reset-login` · `GET /session` · `/traffic` | `bng.access.isolate` / `bng.session.*` |
 | `GET/POST /api/billing/invoices` · `/generate` · `/{id}/void` · `/pay` · `GET /payments` | `billing.invoice.*` / `billing.payment.manage` |
+| `GET /api/billing/refunds` · `POST /invoices/{id}/refund` · `/refunds/{id}/settle` | `billing.invoice.view` / `billing.refund.manage` |
 | `GET/PUT /api/billing/gateway-settings` · `POST/DELETE/GET /gateway-settings/qris` · `POST /platform/gateway/{tenantId}/xendit-subaccount` | `billing.gateway.view`/`.manage` / `.provision` (platform) |
 | `GET /api/billing/manual-payment-instructions` | `billing.invoice.view` |
 | `POST /api/billing/webhooks/{tenantSlug}/{provider}` | publik (tanda tangan gateway) |

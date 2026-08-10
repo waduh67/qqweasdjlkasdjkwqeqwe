@@ -147,6 +147,9 @@ object PermissionCatalog {
         perm("billing.invoice.view", "Lihat tagihan & pembayaran")
         perm("billing.invoice.manage", "Terbitkan/batalkan tagihan")
         perm("billing.payment.manage", "Catat pembayaran manual")
+        // Izin tersendiri, bukan menumpang billing.payment.manage: mengembalikan uang keluar dari
+        // rekening tenant, jadi kasir yang boleh mencatat pembayaran masuk belum tentu boleh ini.
+        perm("billing.refund.manage", "Ajukan & tutup pengembalian dana (refund)")
         perm("billing.gateway.view", "Lihat setelan payment gateway")
         perm("billing.gateway.manage", "Kelola penyedia & kredensial payment gateway")
         perm("billing.tax.view", "Lihat setelan pajak & kewajiban BHP/USO")

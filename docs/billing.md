@@ -19,9 +19,13 @@ Invoice (agregat)                         Payment (agregat, append-only)
 ├── customerId · subscriptionId           ├── amount · provider
 ├── periodStart · periodEnd               ├── gatewayRef · paidAt
 ├── amount (BigDecimal, scale 2)          └── (tak pernah diubah setelah dicatat)
-├── issuedAt · dueAt
-├── status  ISSUED → PAID / OVERDUE / VOID
-└── charge  (provider, gatewayRef, payUrl)   ← ditempel saat createCharge gateway
+├── refundedAmount (≤ amount)
+├── issuedAt · dueAt                      Refund (agregat, satu baris = satu PERCOBAAN)
+├── status  ISSUED → PAID / OVERDUE       ├── invoiceId · customerId · paymentId?
+│            / VOID / REFUNDED            ├── amount · reason · provider
+└── charge  (provider, gatewayRef,        ├── status PENDING → PROCESSING → SUCCESS/FAILED
+             payUrl)                      └── gatewayRef · failureReason · completedAt
+     ↑ ditempel saat createCharge gateway
 ```
 
 **Status invoice** dan transisinya (dijaga di domain, bukan di service):
@@ -32,8 +36,12 @@ Invoice (agregat)                         Payment (agregat, append-only)
 | ISSUED | `markOverdue` | OVERDUE | hanya dari ISSUED |
 | OVERDUE | `markPaid` | PAID | pembayaran telat tetap diterima |
 | ISSUED/OVERDUE | `void` | VOID | menolak bila sudah PAID |
+| PAID | `applyRefund` (sebagian) | PAID | `refundedAmount` naik; sisa masih bisa dikembalikan |
+| PAID | `applyRefund` (penuh) | REFUNDED | lunas lalu uangnya kembali PENUH — beda dari VOID yang tak pernah menghasilkan |
 
 Nominal negatif ditolak; semua nominal di-`setScale(2, HALF_UP)`.
+
+Tagihan REFUNDED bersifat final: tak bisa di-`markPaid` maupun di-`void` lagi.
 
 ---
 
@@ -120,6 +128,36 @@ POST /api/billing/webhooks/{tenantSlug}/{provider}   (TANPA bearer — publik)
 
 Pembayaran manual juga bisa lewat `POST /api/billing/invoices/{id}/pay`
 (izin `billing.payment.manage`).
+
+---
+
+## Pengembalian dana (refund)
+
+Uang **keluar** dari rekening tenant, jadi izinnya sendiri: `billing.refund.manage` — kasir yang
+boleh mencatat pembayaran masuk (`billing.payment.manage`) belum tentu boleh mengembalikan.
+
+```
+POST /api/billing/invoices/{id}/refund   {amount?, reason?, note?}
+  └─ RefundService.request():
+       ├─ invoice harus PAID; nominal kosong = seluruh SISA (amount − refundedAmount)
+       ├─ tolak bila melebihi sisa — kuota memperhitungkan refund yang MASIH BERJALAN,
+       │  jadi dua permintaan penuh tak bisa lolos berbarengan
+       ├─ provider DIBEKUKAN dari cara tagihan itu dulu dibayar (PIVOT / MANUAL)
+       └─ PIVOT  → gateway.refund() → PROCESSING, tunggu callback REFUND.*
+          MANUAL → berhenti di PENDING sampai operator menyatakan transfernya
+```
+
+- **Penutupan otomatis** — callback `REFUND.SUCCESS`/`REFUND.FAILED` masuk lewat
+  `POST /api/platform/pivot/callbacks/refund`, dicocokkan via `data.id` (ref Pivot) **atau**
+  `data.clientReferenceId` (id baris kita, untuk callback yang mendahului respons `POST /v1/refunds`).
+  Idempoten: baris yang sudah final tak berubah lagi, termasuk `FAILED` telat setelah `SUCCESS`.
+- **Penutupan manual** — `POST /api/billing/refunds/{id}/settle` `{success, reason?}`; hanya untuk
+  baris berpenyedia `MANUAL`. Gagal mengembalikan kuotanya, jadi pengajuan ulang tetap mungkin.
+- **Efek ke tagihan** — hanya refund `SUCCESS` yang menaikkan `refundedAmount`; setelah menutupi
+  seluruh nominal, tagihan jadi `REFUNDED`.
+- **Efek ke laporan** — `revenueCollected` tetap **bruto**; `refundedAmount`/`refundCount`/
+  `netRevenue` jadi kolom tersendiri di `BillingFinancialReport`, dihitung menurut **kapan uangnya
+  keluar** (`completedAt`), bukan kapan tagihannya lunas atau refundnya diajukan.
 
 ---
 
@@ -210,6 +248,9 @@ untuk `pay()` dengan channel berganti-ganti.
 | `POST /api/billing/invoices/{id}/recharge` | `billing.invoice.manage` |
 | `POST /api/billing/invoices/{id}/pay` | `billing.payment.manage` |
 | `GET /api/billing/payments` | `billing.invoice.view` |
+| `GET /api/billing/refunds` | `billing.invoice.view` |
+| `POST /api/billing/invoices/{id}/refund` | `billing.refund.manage` |
+| `POST /api/billing/refunds/{id}/settle` | `billing.refund.manage` |
 | `GET · PUT /api/billing/gateway-settings` | `billing.gateway.view` / `billing.gateway.manage` |
 | `GET/POST /api/billing/pivot-account/**` (sub-account, saldo, payout) | `billing.gateway.view` / `manage` |
 | `GET/PUT /api/platform/pivot-config` (setelan master Pivot) | `platform.billing.view` / `manage` |

@@ -55,6 +55,10 @@ data class InvoiceView(
      * agar penguji bisa menyalinnya ke panel simulasi platform. Di produksi selalu `null`.
      */
     val paymentSessionId: String? = null,
+    /** Uang yang sudah dikembalikan ke pelanggan atas tagihan ini; nol untuk tagihan biasa. */
+    val refundedAmount: BigDecimal? = null,
+    /** Sisa yang masih boleh dikembalikan — dipakai UI membatasi isian nominal refund. */
+    val refundableAmount: BigDecimal? = null,
 )
 
 /** Proyeksi satu pembayaran untuk UI. */
@@ -67,4 +71,23 @@ data class PaymentView(
     val gatewayRef: String?,
     val paidAt: Instant,
     val note: String?,
+)
+
+/**
+ * Proyeksi satu pengembalian dana untuk UI. [status] & [reason] dikirim sebagai nama enum
+ * (label Indonesianya dirakit di klien, sama seperti status tagihan).
+ */
+data class RefundView(
+    val id: UUID,
+    val invoiceId: UUID,
+    val invoiceNumber: String?,
+    val customerId: UUID,
+    val amount: BigDecimal,
+    val reason: String,
+    val status: String,
+    val provider: String,
+    val note: String?,
+    val failureReason: String?,
+    val requestedAt: Instant,
+    val completedAt: Instant?,
 )

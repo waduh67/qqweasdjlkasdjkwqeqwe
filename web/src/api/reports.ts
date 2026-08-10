@@ -14,8 +14,16 @@ export interface BillingFinancialReport {
   issuedInvoiceCount: number
   outstandingAmount: string
   outstandingInvoiceCount: number
-  /** Cacah seluruh tagihan per status (ISSUED/PAID/OVERDUE/VOID). */
+  /** Cacah seluruh tagihan per status (ISSUED/PAID/OVERDUE/VOID/REFUNDED). */
   statusCounts: Record<string, number>
+  /**
+   * Uang yang BENAR-BENAR keluar lagi dalam rentang ini — dihitung menurut kapan refundnya
+   * selesai, bukan kapan tagihannya lunas. `revenueCollected` tetap BRUTO (tak dikurangi).
+   */
+  refundedAmount: string
+  refundCount: number
+  /** `revenueCollected` − `refundedAmount`: pendapatan yang benar-benar tinggal di kas. */
+  netRevenue: string
 }
 
 /** Potret pelanggan & langganan tenant (lihat `SubscriberStats` di server). */
@@ -31,6 +39,8 @@ export interface MonthlyRevenuePoint {
   month: string
   revenue: string
   paidInvoiceCount: number
+  /** Refund yang selesai di bulan itu (bruto `revenue` belum dikurangi ini). */
+  refunded: string
 }
 
 /** Ringkasan bisnis satu tenant untuk sebuah rentang + tren. */

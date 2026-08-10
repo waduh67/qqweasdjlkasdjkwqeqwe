@@ -4,10 +4,13 @@ import com.duluin.ftth.billing.adapter.outbound.gateway.PivotChargeScope
 import com.duluin.ftth.billing.application.port.inbound.PivotCallbackApi
 import com.duluin.ftth.billing.application.port.inbound.RecordPaymentUseCase
 import com.duluin.ftth.billing.application.port.inbound.ReconcilePayoutUseCase
+import com.duluin.ftth.billing.application.port.inbound.ReconcileRefundUseCase
 import com.duluin.ftth.billing.application.port.outbound.GatewayCallback
+import com.duluin.ftth.billing.application.port.outbound.RefundRepository
 import com.duluin.ftth.billing.application.port.outbound.TenantPayoutRepository
 import com.duluin.ftth.billing.application.port.outbound.TenantPivotAccountRepository
 import com.duluin.ftth.billing.domain.model.GatewayMode
+import com.duluin.ftth.billing.domain.model.Refund
 import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
 import com.duluin.ftth.billing.domain.model.SubAccountKycStatus
 import com.duluin.ftth.billing.domain.model.SubAccountStatus
@@ -39,8 +42,10 @@ class PivotCallbackService(
     private val registry: PaymentGatewayRegistry,
     private val recordPayment: RecordPaymentUseCase,
     private val reconciler: ReconcilePayoutUseCase,
+    private val refundReconciler: ReconcileRefundUseCase,
     private val accounts: TenantPivotAccountRepository,
     private val payouts: TenantPayoutRepository,
+    private val refunds: RefundRepository,
     private val tenantApi: TenantApi,
     private val objectMapper: ObjectMapper,
 ) : PivotCallbackApi {
@@ -124,14 +129,50 @@ class PivotCallbackService(
         return true
     }
 
+    /**
+     * Callback `REFUND.*`. Referensi utamanya `data.id` (yang kita simpan saat perintah refund
+     * diterima Pivot); `clientReferenceId` — id baris refund kita sendiri — jadi cadangan untuk
+     * callback yang mendahului respons HTTP-nya, saat `gateway_ref` belum sempat tersimpan.
+     *
+     * `REFUND.PENDING`/`REFUND.WAITING_BANK_TRANFER` (ejaan Pivot) belum final: di-ACK tanpa
+     * menyentuh baris, sama seperti status antara di callback penyaluran.
+     */
     override fun handleRefund(headers: Map<String, String>, body: String): Boolean {
         verifySignature(headers)
-        val data = payloadData(body)
+        val root = objectMapper.readTree(body)
+        val data = root.get("data")?.takeIf { !it.isNull } ?: root
         val reference = data.textOrNull("id") ?: data.textOrNull("referenceId") ?: data.textOrNull("reference")
-        // Belum ada domain refund — cukup ACK + log agar Pivot berhenti retry. TODO: proses balik.
-        log.info("Callback refund Pivot diterima (ref '{}') — di-ACK, belum diproses (follow-up)", reference)
+        val clientRef = data.textOrNull("clientReferenceId")
+        if (reference == null && clientRef == null) {
+            log.warn("Callback refund tanpa referensi — diabaikan")
+            return false
+        }
+        val outcome = resolveOutcome(root.textOrNull("event"), data.textOrNull("status"))
+        if (outcome == null) {
+            log.info("Callback refund ref '{}' belum final — di-ACK tanpa perubahan", reference ?: clientRef)
+            return true
+        }
+        val reason = data.textOrNull("failureReason") ?: data.textOrNull("reason")
+
+        // Refund tak membawa metadata routing seperti charge, jadi tenantnya dicari lintas tenant.
+        val tenantId = resolveTenant { locateRefund(reference, clientRef) != null }
+        if (tenantId == null) {
+            log.warn("Callback refund ref '{}' tak cocok baris tenant mana pun — diabaikan", reference ?: clientRef)
+            return false
+        }
+        TenantContext.runAs(tenantId) { refundReconciler.reconcile(reference, clientRef, outcome, reason) }
         return true
     }
+
+    /**
+     * Baris refund milik tenant aktif: lewat referensi penyedia dulu, lalu lewat id baris kita
+     * (`clientReferenceId`) — callback bisa mendahului respons HTTP yang membawa `data.id`, dan
+     * saat itu `gateway_ref` belum tersimpan.
+     */
+    private fun locateRefund(reference: String?, clientRef: String?): Refund? =
+        reference?.let { refunds.findByReference(it) }
+            ?: clientRef?.let { raw -> runCatching { UUID.fromString(raw) }.getOrNull() }
+                ?.let { refunds.findById(it) }
 
     override fun verifySignature(headers: Map<String, String>) {
         val master = masterConfig.current()

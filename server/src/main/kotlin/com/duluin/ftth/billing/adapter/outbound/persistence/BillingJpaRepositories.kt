@@ -1,6 +1,7 @@
 package com.duluin.ftth.billing.adapter.outbound.persistence
 
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
+import com.duluin.ftth.billing.domain.model.RefundStatus
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
@@ -58,4 +59,17 @@ interface InvoiceJpaRepository : JpaRepository<InvoiceJpaEntity, UUID> {
 interface PaymentJpaRepository : JpaRepository<PaymentJpaEntity, UUID> {
     fun findByInvoiceIdOrderByPaidAtDesc(invoiceId: UUID): List<PaymentJpaEntity>
     fun findByCustomerIdOrderByPaidAtDesc(customerId: UUID): List<PaymentJpaEntity>
+}
+
+interface RefundJpaRepository : JpaRepository<RefundJpaEntity, UUID> {
+    fun findAllByOrderByRequestedAtDesc(): List<RefundJpaEntity>
+    fun findByInvoiceIdOrderByRequestedAtDesc(invoiceId: UUID): List<RefundJpaEntity>
+    fun findByGatewayRef(gatewayRef: String): RefundJpaEntity?
+
+    /** Pengembalian BERHASIL yang tuntas di [from]..[to) — pengurang pendapatan periode itu. */
+    fun findByStatusAndCompletedAtGreaterThanEqualAndCompletedAtLessThan(
+        status: RefundStatus,
+        from: Instant,
+        toExclusive: Instant,
+    ): List<RefundJpaEntity>
 }

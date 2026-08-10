@@ -5,12 +5,16 @@ import com.duluin.ftth.billing.application.port.inbound.ManualPaymentInstruction
 import com.duluin.ftth.billing.application.port.inbound.UpdatePaymentGatewaySettingsCommand
 import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
 import com.duluin.ftth.billing.application.port.outbound.PaymentRepository
+import com.duluin.ftth.billing.application.port.outbound.RefundRepository
 import com.duluin.ftth.billing.application.service.ActiveGatewayProbe
 import com.duluin.ftth.billing.application.service.BillingApiService
 import com.duluin.ftth.billing.application.service.InvoiceChargePort
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
 import com.duluin.ftth.billing.domain.model.Payment
+import com.duluin.ftth.billing.domain.model.Refund
+import com.duluin.ftth.billing.domain.model.RefundReason
+import com.duluin.ftth.billing.domain.model.RefundStatus
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.domain.geo.Coordinate
@@ -123,6 +127,28 @@ class BillingApiServiceTest {
     }
 
     @Test
+    fun `refund yang selesai mengurangi pendapatan bersih tanpa mengubah yang bruto`() {
+        val service = billing(
+            FakeInvoiceRepository(
+                invoices = emptyList(),
+                paid = listOf(paidOn("120000", "2026-07-05T12:00:00Z"), paidOn("80000", "2026-07-20T12:00:00Z")),
+            ),
+            refunds = listOf(
+                settledRefund("50000", "2026-07-10T12:00:00Z"),
+                settledRefund("30000", "2026-07-28T12:00:00Z"),
+                settledRefund("999000", "2026-08-02T12:00:00Z"), // di luar rentang → tak ikut
+            ),
+        )
+
+        val report = service.financialReport(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31))
+
+        assertThat(report.revenueCollected).isEqualByComparingTo("200000") // bruto tetap apa adanya
+        assertThat(report.refundedAmount).isEqualByComparingTo("80000") // 50000 + 30000
+        assertThat(report.refundCount).isEqualTo(2)
+        assertThat(report.netRevenue).isEqualByComparingTo("120000") // 200000 − 80000
+    }
+
+    @Test
     fun `monthlyRevenue mengelompokkan per bulan dan menebar bolong jadi nol`() {
         val service = billing(
             FakeInvoiceRepository(
@@ -144,6 +170,22 @@ class BillingApiServiceTest {
         assertThat(series[2].paidInvoiceCount).isEqualTo(2)
         assertThat(series[3].revenue).isEqualByComparingTo("60000") // Agu
         assertThat(series[3].paidInvoiceCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `refund jatuh di bulan uangnya keluar, bukan bulan tagihannya lunas`() {
+        val service = billing(
+            FakeInvoiceRepository(invoices = emptyList(), paid = listOf(paidOn("100000", "2026-07-10T12:00:00Z"))),
+            // Dibayar Juli, dikembalikan Agustus — refundnya harus muncul di Agustus.
+            refunds = listOf(settledRefund("40000", "2026-08-04T12:00:00Z")),
+        )
+
+        val series = service.monthlyRevenue(java.time.YearMonth.of(2026, 7), java.time.YearMonth.of(2026, 8))
+
+        assertThat(series[0].revenue).isEqualByComparingTo("100000")
+        assertThat(series[0].refunded).isEqualByComparingTo("0")
+        assertThat(series[1].revenue).isEqualByComparingTo("0")
+        assertThat(series[1].refunded).isEqualByComparingTo("40000")
     }
 
     // --- Halaman bayar publik ---
@@ -255,7 +297,34 @@ class BillingApiServiceTest {
         charger: InvoiceChargePort = NoopCharger,
         probe: ActiveGatewayProbe = PivotProbe,
         settings: ManagePaymentGatewaySettingsUseCase = StubSettings,
-    ) = BillingApiService(invoices, FakePaymentRepository(), charger, StubCustomerApi, probe, settings)
+        refunds: List<Refund> = emptyList(),
+    ) = BillingApiService(
+        invoices,
+        FakePaymentRepository(),
+        FakeRefundRepository(refunds),
+        charger,
+        StubCustomerApi,
+        probe,
+        settings,
+    )
+
+    /** Refund yang sudah selesai pada [completedAt] — satu-satunya bentuk yang masuk laporan. */
+    private fun settledRefund(amount: String, completedAt: String): Refund = Refund.rehydrate(
+        id = UuidV7.generate(),
+        tenantId = UuidV7.generate(),
+        invoiceId = UuidV7.generate(),
+        customerId = customerId,
+        paymentId = null,
+        amount = BigDecimal(amount),
+        reason = RefundReason.REQUESTED_BY_CUSTOMER,
+        provider = "PIVOT",
+        note = null,
+        status = RefundStatus.SUCCESS,
+        gatewayRef = "rfn-test",
+        failureReason = null,
+        requestedAt = Instant.parse(completedAt).minusSeconds(3600),
+        completedAt = Instant.parse(completedAt),
+    )
 
     private fun paidOn(amount: String, paidAt: String): Invoice =
         paid(amount = amount, dueDate = minusDays(1), paidAt = Instant.parse(paidAt))
@@ -430,5 +499,17 @@ class BillingApiServiceTest {
         override fun findByCustomerId(customerId: UUID): List<Payment> = payments
         override fun findByInvoiceId(invoiceId: UUID) = throw UnsupportedOperationException()
         override fun save(payment: Payment) = throw UnsupportedOperationException()
+    }
+
+    /** Hanya jalur laporan yang dipakai: refund selesai disaring menurut [Refund.completedAt]. */
+    private class FakeRefundRepository(private val refunds: List<Refund> = emptyList()) : RefundRepository {
+        override fun findSettledBetween(from: Instant, toExclusive: Instant): List<Refund> =
+            refunds.filter { it.completedAt != null && it.completedAt!! >= from && it.completedAt!! < toExclusive }
+
+        override fun save(refund: Refund) = throw UnsupportedOperationException()
+        override fun findById(id: UUID) = throw UnsupportedOperationException()
+        override fun findByInvoiceId(invoiceId: UUID) = throw UnsupportedOperationException()
+        override fun findByReference(reference: String) = throw UnsupportedOperationException()
+        override fun findAll() = throw UnsupportedOperationException()
     }
 }

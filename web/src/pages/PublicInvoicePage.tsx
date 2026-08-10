@@ -28,6 +28,8 @@ import { Spinner, StatusBadge } from '@/components/atoms'
 
 const SETTLED = new Set(['PAID', 'SETTLED', 'SUCCESS'])
 const CLOSED = new Set(['VOID'])
+/** Sudah lunas lalu uangnya dikembalikan penuh — bukan tagihan batal, dan tak boleh dibayar lagi. */
+const REFUNDED = new Set(['REFUNDED'])
 
 const rupiah = (amount: number): string =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(
@@ -123,6 +125,7 @@ export function PublicInvoicePage() {
 
   const paid = SETTLED.has(invoice.status.toUpperCase())
   const closed = CLOSED.has(invoice.status.toUpperCase())
+  const refunded = REFUNDED.has(invoice.status.toUpperCase())
 
   return (
     <div className="login-shell">
@@ -151,7 +154,16 @@ export function PublicInvoicePage() {
 
         {closed && <Banner tone="var(--muted)" ink="var(--text)" title="Tagihan dibatalkan" body="Tagihan ini sudah dibatalkan penerbitnya — tak perlu dibayar." />}
 
-        {!paid && !closed && invoice.payableOnline && methods.length > 0 && (
+        {refunded && (
+          <Banner
+            tone="var(--muted)"
+            ink="var(--text)"
+            title="Dana sudah dikembalikan"
+            body="Tagihan ini pernah lunas lalu uangnya dikembalikan penuh — tak perlu dibayar lagi."
+          />
+        )}
+
+        {!paid && !closed && !refunded && invoice.payableOnline && methods.length > 0 && (
           <div style={{ paddingTop: '0.4rem', borderTop: '1px solid var(--border)' }}>
             <GatewayPayPanel
               title="Bayar tagihan"
@@ -202,6 +214,7 @@ const STATUS_LABEL: Record<string, string> = {
   OVERDUE: 'Jatuh tempo',
   PAID: 'Lunas',
   VOID: 'Batal',
+  REFUNDED: 'Dikembalikan',
 }
 
 function Banner({ tone, ink, title, body }: { tone: string; ink: string; title: string; body: string }) {

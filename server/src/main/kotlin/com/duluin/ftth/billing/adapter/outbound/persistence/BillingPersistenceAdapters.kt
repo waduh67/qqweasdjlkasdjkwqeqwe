@@ -2,9 +2,12 @@ package com.duluin.ftth.billing.adapter.outbound.persistence
 
 import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
 import com.duluin.ftth.billing.application.port.outbound.PaymentRepository
+import com.duluin.ftth.billing.application.port.outbound.RefundRepository
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
 import com.duluin.ftth.billing.domain.model.Payment
+import com.duluin.ftth.billing.domain.model.Refund
+import com.duluin.ftth.billing.domain.model.RefundStatus
 import com.duluin.ftth.common.tenant.TenantContext
 import org.springframework.stereotype.Component
 import java.time.Instant
@@ -34,6 +37,7 @@ class InvoicePersistenceAdapter(
             qrUrl = invoice.qrUrl
             qrExpiresAt = invoice.qrExpiresAt
             dueSoonReminded = invoice.dueSoonReminded
+            refundedAmount = invoice.refundedAmount
         } ?: InvoiceJpaEntity(
             id = invoice.id,
             customerId = invoice.customerId,
@@ -62,6 +66,7 @@ class InvoicePersistenceAdapter(
             qrUrl = invoice.qrUrl,
             qrExpiresAt = invoice.qrExpiresAt,
             dueSoonReminded = invoice.dueSoonReminded,
+            refundedAmount = invoice.refundedAmount,
         )
         return jpa.save(entity).toDomain()
     }
@@ -162,6 +167,7 @@ internal fun InvoiceJpaEntity.toDomain(): Invoice = Invoice.rehydrate(
     qrUrl = qrUrl,
     qrExpiresAt = qrExpiresAt,
     dueSoonReminded = dueSoonReminded,
+    refundedAmount = refundedAmount,
 )
 
 internal fun PaymentJpaEntity.toDomain(): Payment = Payment.rehydrate(
@@ -174,4 +180,65 @@ internal fun PaymentJpaEntity.toDomain(): Payment = Payment.rehydrate(
     gatewayRef = gatewayRef,
     paidAt = paidAt,
     note = note,
+)
+
+@Component
+class RefundPersistenceAdapter(
+    private val jpa: RefundJpaRepository,
+) : RefundRepository {
+
+    override fun save(refund: Refund): Refund {
+        val entity = jpa.findById(refund.id).orElse(null)?.apply {
+            // Permintaannya (tagihan, nominal, alasan, penyedia) tak disentuh — hanya hasilnya.
+            status = refund.status
+            gatewayRef = refund.gatewayRef
+            failureReason = refund.failureReason
+            completedAt = refund.completedAt
+        } ?: RefundJpaEntity(
+            id = refund.id,
+            invoiceId = refund.invoiceId,
+            customerId = refund.customerId,
+            paymentId = refund.paymentId,
+            amount = refund.amount,
+            reason = refund.reason,
+            provider = refund.provider,
+            note = refund.note,
+            status = refund.status,
+            gatewayRef = refund.gatewayRef,
+            failureReason = refund.failureReason,
+            requestedAt = refund.requestedAt,
+            completedAt = refund.completedAt,
+        )
+        return jpa.save(entity).toDomain()
+    }
+
+    override fun findById(id: UUID): Refund? = jpa.findById(id).orElse(null)?.toDomain()
+
+    override fun findByInvoiceId(invoiceId: UUID): List<Refund> =
+        jpa.findByInvoiceIdOrderByRequestedAtDesc(invoiceId).map { it.toDomain() }
+
+    override fun findByReference(reference: String): Refund? = jpa.findByGatewayRef(reference)?.toDomain()
+
+    override fun findAll(): List<Refund> = jpa.findAllByOrderByRequestedAtDesc().map { it.toDomain() }
+
+    override fun findSettledBetween(from: Instant, toExclusive: Instant): List<Refund> =
+        jpa.findByStatusAndCompletedAtGreaterThanEqualAndCompletedAtLessThan(RefundStatus.SUCCESS, from, toExclusive)
+            .map { it.toDomain() }
+}
+
+internal fun RefundJpaEntity.toDomain(): Refund = Refund.rehydrate(
+    id = id,
+    tenantId = tenantId ?: TenantContext.tenantId(),
+    invoiceId = invoiceId,
+    customerId = customerId,
+    paymentId = paymentId,
+    amount = amount,
+    reason = reason,
+    provider = provider,
+    note = note,
+    status = status,
+    gatewayRef = gatewayRef,
+    failureReason = failureReason,
+    requestedAt = requestedAt,
+    completedAt = completedAt,
 )

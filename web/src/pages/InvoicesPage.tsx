@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Ban, Copy, ExternalLink, FlaskConical, Link2, Printer, Wallet } from 'lucide-react'
+import { Ban, Copy, ExternalLink, FlaskConical, Link2, Printer, Undo2, Wallet } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
 import type { CustomerView } from '../api/network'
@@ -8,12 +8,18 @@ import {
   getTaxObligation,
   listInvoices,
   listPayments,
+  listRefunds,
   recordManualPayment,
+  requestRefund,
+  settleRefund,
   simulateInvoicePayment,
   voidInvoice,
   type InvoiceStatus,
   type InvoiceView,
   type PaymentView,
+  type RefundReason,
+  type RefundStatus,
+  type RefundView,
   type SimulatedChargeStatus,
   type TaxObligationView,
 } from '../api/billing'
@@ -148,6 +154,7 @@ const INVOICE_TONE: Record<InvoiceStatus, Tone> = {
   ISSUED: 'warning',
   OVERDUE: 'critical',
   VOID: 'neutral',
+  REFUNDED: 'accent',
 }
 
 const INVOICE_LABEL: Record<InvoiceStatus, string> = {
@@ -155,6 +162,7 @@ const INVOICE_LABEL: Record<InvoiceStatus, string> = {
   ISSUED: 'Terbit',
   OVERDUE: 'Jatuh tempo',
   VOID: 'Batal',
+  REFUNDED: 'Dikembalikan',
 }
 
 const STATUS_OPTIONS: { value: InvoiceStatus | ''; label: string }[] = [
@@ -163,11 +171,52 @@ const STATUS_OPTIONS: { value: InvoiceStatus | ''; label: string }[] = [
   { value: 'OVERDUE', label: 'Jatuh tempo' },
   { value: 'PAID', label: 'Lunas' },
   { value: 'VOID', label: 'Batal' },
+  { value: 'REFUNDED', label: 'Dikembalikan' },
 ]
+
+/** Label alasan refund untuk operator — nilainya sendiri adalah enum penyedia. */
+const REFUND_REASON_LABEL: Record<RefundReason, string> = {
+  REQUESTED_BY_CUSTOMER: 'Diminta pelanggan',
+  DUPLICATE: 'Pembayaran ganda',
+  CANCELLATION: 'Pembatalan layanan',
+  SUSPECT_FRAUDULENT: 'Dugaan penipuan',
+  OTHERS: 'Lainnya',
+}
+
+const REFUND_REASON_OPTIONS: RefundReason[] = [
+  'REQUESTED_BY_CUSTOMER',
+  'DUPLICATE',
+  'CANCELLATION',
+  'SUSPECT_FRAUDULENT',
+  'OTHERS',
+]
+
+const REFUND_TONE: Record<RefundStatus, Tone> = {
+  PENDING: 'warning',
+  PROCESSING: 'accent',
+  SUCCESS: 'good',
+  FAILED: 'critical',
+}
+
+const REFUND_LABEL: Record<RefundStatus, string> = {
+  PENDING: 'Menunggu',
+  PROCESSING: 'Diproses',
+  SUCCESS: 'Berhasil',
+  FAILED: 'Gagal',
+}
 
 /** Tagihan menunggak: berstatus OVERDUE, atau ISSUED yang sudah lewat jatuh tempo. */
 function isOutstanding(inv: InvoiceView, today: string): boolean {
   return inv.status === 'OVERDUE' || (inv.status === 'ISSUED' && inv.dueDate < today)
+}
+
+/**
+ * Masih ada uang yang bisa dikembalikan: tagihan sudah lunas dan sisanya > 0. Tagihan lama
+ * (sebelum ada domain refund) membawa `refundableAmount` null — diperlakukan sebagai "penuh".
+ */
+function refundable(inv: InvoiceView): boolean {
+  if (inv.status !== 'PAID') return false
+  return inv.refundableAmount == null || Number(inv.refundableAmount) > 0
 }
 
 /** Ringkas nama pelanggan per-id. Nama tak ada di [InvoiceView], jadi digabung sisi klien. */
@@ -233,13 +282,24 @@ export function InvoicesPage() {
   const [payTarget, setPayTarget] = useState<InvoiceView | null>(null)
   const [payNote, setPayNote] = useState('')
   const [voidTarget, setVoidTarget] = useState<InvoiceView | null>(null)
+  // Pengajuan refund: nominal kosong = seluruh sisa yang masih bisa dikembalikan.
+  const [refundTarget, setRefundTarget] = useState<InvoiceView | null>(null)
+  const [refundAmount, setRefundAmount] = useState('')
+  const [refundReason, setRefundReason] = useState<RefundReason>('REQUESTED_BY_CUSTOMER')
+  const [refundNote, setRefundNote] = useState('')
+  // Penutupan refund MANUAL oleh operator: berhasil, atau gagal beserta alasannya.
+  const [settleTarget, setSettleTarget] = useState<RefundView | null>(null)
+  const [settleSuccess, setSettleSuccess] = useState(true)
+  const [settleReason, setSettleReason] = useState('')
   // Pratinjau tagihan (flyout ala klik baris tabel lain), plus riwayat pembayarannya.
   const [detail, setDetail] = useState<InvoiceView | null>(null)
   const [payments, setPayments] = useState<PaymentView[]>([])
+  const [refunds, setRefunds] = useState<RefundView[]>([])
   const [loadingPayments, setLoadingPayments] = useState(false)
 
   const canManage = can('billing.invoice.manage')
   const canPay = can('billing.payment.manage')
+  const canRefund = can('billing.refund.manage')
   const canViewTax = can('billing.tax.view')
 
   const reload = useCallback(async () => {
@@ -357,6 +417,46 @@ export function InvoicesPage() {
     await run(() => voidInvoice(id), 'Tagihan dibatalkan')
   }
 
+  /** Buka modal refund dengan isian bersih agar sisa ketikan tagihan lain tak terbawa. */
+  const openRefund = (inv: InvoiceView) => {
+    setRefundAmount('')
+    setRefundReason('REQUESTED_BY_CUSTOMER')
+    setRefundNote('')
+    setRefundTarget(inv)
+  }
+
+  /**
+   * Ajukan pengembalian dana. Nominal kosong = seluruh sisa (server yang menghitungnya), jadi
+   * kolomnya sengaja opsional. Baris berpenyedia otomatis ditutup callback; MANUAL menunggu
+   * operator menyatakan transfer baliknya lewat [doSettleRefund].
+   */
+  const doRefund = async () => {
+    if (!refundTarget) return
+    const id = refundTarget.id
+    const amount = refundAmount.trim()
+    const reason = refundReason
+    const note = refundNote.trim()
+    setRefundTarget(null)
+    await run(
+      () => requestRefund(id, { amount: amount || undefined, reason, note: note || undefined }),
+      'Pengembalian dana diajukan',
+    )
+    if (detailIdRef.current === id) loadHistory(id)
+  }
+
+  const doSettleRefund = async () => {
+    if (!settleTarget) return
+    const { id, invoiceId } = settleTarget
+    const success = settleSuccess
+    const reason = settleReason.trim()
+    setSettleTarget(null)
+    await run(
+      () => settleRefund(id, success, reason || undefined),
+      success ? 'Pengembalian dana ditutup: berhasil' : 'Pengembalian dana ditandai gagal',
+    )
+    if (detailIdRef.current === invoiceId) loadHistory(invoiceId)
+  }
+
   /**
    * Simulasi sandbox: minta gateway memaksa sesi bayar jadi lunas/kedaluwarsa. Pelunasan menyusul
    * lewat webhook (asinkron) — daftar dimuat ulang lagi setelah jeda singkat agar status barunya
@@ -389,24 +489,33 @@ export function InvoicesPage() {
   // Klik baris membuka pratinjau (seragam dengan tabel lain). Riwayat pembayaran
   // ditarik terpisah; `detailIdRef` membuang balasan basi bila baris cepat ditukar.
   const detailIdRef = useRef<string | null>(null)
+  const loadHistory = useCallback((invoiceId: string) => {
+    setLoadingPayments(true)
+    // Pembayaran & pengembalian ditarik bersamaan: keduanya mengisi satu blok riwayat uang
+    // di pratinjau, jadi tak ada gunanya menampilkan salah satunya lebih dulu.
+    Promise.all([listPayments(invoiceId), listRefunds(invoiceId)])
+      .then(([p, r]) => {
+        if (detailIdRef.current !== invoiceId) return
+        setPayments(p)
+        setRefunds(r)
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (detailIdRef.current === invoiceId) setLoadingPayments(false)
+      })
+  }, [])
   const openDetail = (inv: InvoiceView) => {
     detailIdRef.current = inv.id
     setDetail(inv)
     setPayments([])
-    setLoadingPayments(true)
-    listPayments(inv.id)
-      .then((p) => {
-        if (detailIdRef.current === inv.id) setPayments(p)
-      })
-      .catch(() => undefined)
-      .finally(() => {
-        if (detailIdRef.current === inv.id) setLoadingPayments(false)
-      })
+    setRefunds([])
+    loadHistory(inv.id)
   }
   const closeDetail = () => {
     detailIdRef.current = null
     setDetail(null)
     setPayments([])
+    setRefunds([])
   }
 
   // Jaga isi pratinjau tetap terkini setelah bayar/batal memuat ulang daftar.
@@ -519,6 +628,16 @@ export function InvoicesPage() {
       })
     if (payable && canManage)
       list.push({ key: 'void', label: 'Batalkan', icon: <Ban size={16} />, disabled: busy, onClick: () => setVoidTarget(i) })
+    // Refund hanya masuk akal untuk tagihan yang uangnya SUDAH masuk dan masih ada sisa yang
+    // bisa dikembalikan (server juga menjaganya — ini sekadar menyembunyikan aksi yang pasti gagal).
+    if (canRefund && refundable(i))
+      list.push({
+        key: 'refund',
+        label: 'Kembalikan dana',
+        icon: <Undo2 size={16} />,
+        disabled: busy,
+        onClick: () => openRefund(i),
+      })
     // Alat uji: hanya muncul saat gateway Pivot dalam mode sandbox & tagihan sudah punya sesi bayar
     // (server yang menentukan lewat `simulatable`) — di produksi tak pernah tampil.
     if (i.simulatable && canManage) {
@@ -639,6 +758,11 @@ export function InvoicesPage() {
                   Catat bayar
                 </Button>
               )}
+              {canRefund && refundable(detail) && (
+                <Button disabled={busy} onClick={() => openRefund(detail)}>
+                  <Undo2 size={15} /> Kembalikan dana
+                </Button>
+              )}
               <Button onClick={closeDetail}>Tutup</Button>
             </>
           )
@@ -664,6 +788,17 @@ export function InvoicesPage() {
                 <strong>Total</strong>
                 <strong className="tnum">{fmtRupiah(Number(detail.amount))}</strong>
               </div>
+              {Number(detail.refundedAmount ?? 0) > 0 && (
+                <>
+                  <DetailLine label="Sudah dikembalikan" value={`− ${fmtRupiah(Number(detail.refundedAmount))}`} />
+                  <div className="spread">
+                    <span className="muted" style={{ fontSize: '0.85rem' }}>Sisa yang bisa dikembalikan</span>
+                    <span className="tnum" style={{ fontSize: '0.85rem' }}>
+                      {fmtRupiah(Number(detail.refundableAmount ?? 0))}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="stack" style={{ gap: '0.4rem' }}>
@@ -696,6 +831,59 @@ export function InvoicesPage() {
                 ))
               )}
             </div>
+
+            {refunds.length > 0 && (
+              <div className="stack" style={{ gap: '0.4rem' }}>
+                <strong style={{ fontSize: '0.9rem' }}>Pengembalian dana</strong>
+                {refunds.map((r) => (
+                  <div key={r.id} className="card stack" style={{ gap: '0.3rem', padding: '0.5rem 0.65rem' }}>
+                    <div className="spread" style={{ gap: '0.5rem' }}>
+                      <div className="stack" style={{ gap: '0.1rem' }}>
+                        <span className="tnum">− {fmtRupiah(Number(r.amount))}</span>
+                        <span className="muted" style={{ fontSize: '0.78rem' }}>
+                          {REFUND_REASON_LABEL[r.reason]} · {r.provider}
+                          {r.note ? ` · ${r.note}` : ''}
+                        </span>
+                      </div>
+                      <div className="stack" style={{ gap: '0.2rem', alignItems: 'flex-end' }}>
+                        <Badge tone={REFUND_TONE[r.status]}>{REFUND_LABEL[r.status]}</Badge>
+                        <span className="muted" style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
+                          {fmtDate((r.completedAt ?? r.requestedAt).slice(0, 10))}
+                        </span>
+                      </div>
+                    </div>
+                    {r.failureReason && (
+                      <span style={{ fontSize: '0.78rem', color: 'var(--critical-ink)' }}>{r.failureReason}</span>
+                    )}
+                    {/* Hanya baris MANUAL yang ditutup tangan — yang berpenyedia menunggu callback. */}
+                    {canRefund && r.provider === 'MANUAL' && (r.status === 'PENDING' || r.status === 'PROCESSING') && (
+                      <div className="row" style={{ gap: '0.4rem' }}>
+                        <Button
+                          disabled={busy}
+                          onClick={() => {
+                            setSettleSuccess(true)
+                            setSettleReason('')
+                            setSettleTarget(r)
+                          }}
+                        >
+                          Sudah ditransfer
+                        </Button>
+                        <Button
+                          disabled={busy}
+                          onClick={() => {
+                            setSettleSuccess(false)
+                            setSettleReason('')
+                            setSettleTarget(r)
+                          }}
+                        >
+                          Tandai gagal
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </Blade>
@@ -764,6 +952,98 @@ export function InvoicesPage() {
           <p style={{ margin: 0 }}>
             Membatalkan <strong>{voidTarget.number}</strong>. Tagihan yang sudah lunas tidak bisa dibatalkan.
           </p>
+        </Modal>
+      )}
+
+      {refundTarget && (
+        <Modal
+          title={`Kembalikan dana · ${refundTarget.number}`}
+          onClose={() => setRefundTarget(null)}
+          footer={
+            <>
+              <Button onClick={() => setRefundTarget(null)}>Batal</Button>
+              <Button variant="danger" onClick={() => void doRefund()} disabled={busy}>Ajukan pengembalian</Button>
+            </>
+          }
+        >
+          <div className="stack">
+            <p style={{ margin: 0 }}>
+              Mengembalikan uang pelanggan atas <strong>{refundTarget.number}</strong>. Sisa yang masih bisa
+              dikembalikan:{' '}
+              <strong>{fmtRupiah(Number(refundTarget.refundableAmount ?? refundTarget.amount))}</strong>.
+            </p>
+            <TextField
+              label="Nominal (kosongkan untuk seluruh sisa)"
+              value={refundAmount}
+              onChange={(_, data) => setRefundAmount(data.value)}
+              placeholder={String(Number(refundTarget.refundableAmount ?? refundTarget.amount))}
+              inputMode="decimal"
+              autoFocus
+            />
+            <SelectField
+              label="Alasan"
+              value={refundReason}
+              onChange={(_, data) => setRefundReason(data.value as RefundReason)}
+            >
+              {REFUND_REASON_OPTIONS.map((r) => (
+                <option key={r} value={r}>{REFUND_REASON_LABEL[r]}</option>
+              ))}
+            </SelectField>
+            <TextField
+              label="Catatan (opsional)"
+              value={refundNote}
+              onChange={(_, data) => setRefundNote(data.value)}
+              placeholder="Mis. salah tagih periode Juli"
+            />
+            <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+              Tagihan yang dibayar lewat gateway dikembalikan otomatis oleh penyedia — statusnya menyusul
+              lewat callback. Pembayaran manual harus ditransfer sendiri, lalu ditutup dari pratinjau tagihan.
+            </p>
+          </div>
+        </Modal>
+      )}
+
+      {settleTarget && (
+        <Modal
+          title={settleSuccess ? 'Tutup pengembalian: berhasil' : 'Tutup pengembalian: gagal'}
+          onClose={() => setSettleTarget(null)}
+          footer={
+            <>
+              <Button onClick={() => setSettleTarget(null)}>Batal</Button>
+              <Button
+                variant={settleSuccess ? 'primary' : 'danger'}
+                onClick={() => void doSettleRefund()}
+                disabled={busy}
+              >
+                {settleSuccess ? 'Nyatakan berhasil' : 'Tandai gagal'}
+              </Button>
+            </>
+          }
+        >
+          <div className="stack">
+            <p style={{ margin: 0 }}>
+              {settleSuccess ? (
+                <>
+                  Menyatakan <strong>{fmtRupiah(Number(settleTarget.amount))}</strong> sudah benar-benar
+                  ditransfer balik ke pelanggan. Tagihannya ikut ditandai dikembalikan.
+                </>
+              ) : (
+                <>
+                  Menandai pengembalian <strong>{fmtRupiah(Number(settleTarget.amount))}</strong> gagal —
+                  kuotanya kembali, jadi pengajuan ulang tetap mungkin.
+                </>
+              )}
+            </p>
+            {!settleSuccess && (
+              <TextField
+                label="Alasan gagal"
+                value={settleReason}
+                onChange={(_, data) => setSettleReason(data.value)}
+                placeholder="Mis. rekening tujuan tak valid"
+                autoFocus
+              />
+            )}
+          </div>
         </Modal>
       )}
     </div>

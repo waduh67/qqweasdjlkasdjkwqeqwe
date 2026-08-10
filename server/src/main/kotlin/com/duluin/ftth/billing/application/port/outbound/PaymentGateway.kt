@@ -47,11 +47,53 @@ interface PaymentGateway {
      */
     fun simulateCharge(paymentSessionId: String, chargeStatus: SimulatedChargeStatus, ctx: ResolvedGatewayContext): Unit =
         throw ConflictException("Penyedia '$provider' tidak mendukung simulasi pembayaran")
+
+    /**
+     * Perintahkan penyedia mengembalikan uang pelanggan. Hasilnya JARANG langsung final — penyedia
+     * mengantre transfer balik dan mengabarkannya lewat callback — jadi kembaliannya cuma referensi
+     * + status mentah; yang mengubah tagihan adalah jalur rekonsiliasi, bukan method ini.
+     *
+     * Bawaan: menolak. Penyedia MANUAL (transfer tangan) tak punya API balik; pengembaliannya
+     * dicatat operator dan dinyatakan selesai lewat jalur manual.
+     */
+    fun refund(request: RefundRequest, ctx: ResolvedGatewayContext): RefundResult =
+        throw ConflictException("Penyedia '$provider' tidak mendukung pengembalian dana otomatis")
 }
 
 /** Status akhir yang dipaksakan ke sesi bayar saat simulasi (sandbox). */
 @NamedInterface("gateway")
 enum class SimulatedChargeStatus { SUCCESS, EXPIRED }
+
+/**
+ * Permintaan pengembalian dana ke penyedia.
+ *
+ * [paymentSessionId] adalah referensi charge yang dulu melunasi tagihan (`Invoice.gatewayRef`) —
+ * penyedia mengembalikan uang ke instrumen yang dipakai membayar, jadi tanpa ini tak ada tujuan.
+ * [referenceId] adalah id baris refund kita, dikirim sebagai `clientReferenceId` supaya callback
+ * bisa dipulangkan ke barisnya. [fullAmount] menandai pengembalian seluruh nilai charge —
+ * dibedakan dari nominal yang kebetulan sama besar karena penyedia menghitungnya sendiri.
+ */
+@NamedInterface("gateway")
+data class RefundRequest(
+    val paymentSessionId: String,
+    val amount: BigDecimal,
+    val fullAmount: Boolean,
+    val reason: String,
+    val referenceId: String,
+    val description: String? = null,
+)
+
+/**
+ * Hasil perintah refund. [status] status mentah penyedia (mis. `PENDING`, `WAITING_BANK_TRANSFER`,
+ * `SUCCESS`); [settled] true hanya bila penyedia menyatakan uangnya SUDAH kembali di respons yang
+ * sama — selain itu pemanggil menunggu callback.
+ */
+@NamedInterface("gateway")
+data class RefundResult(
+    val reference: String?,
+    val status: String?,
+    val settled: Boolean = false,
+)
 
 /**
  * Permintaan membuat charge untuk sebuah tagihan.

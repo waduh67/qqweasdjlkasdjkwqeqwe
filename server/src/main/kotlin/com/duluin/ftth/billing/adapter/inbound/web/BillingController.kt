@@ -4,10 +4,14 @@ import com.duluin.ftth.billing.PaymentMethodCatalog
 import com.duluin.ftth.billing.PaymentMethodOption
 import com.duluin.ftth.billing.application.port.inbound.InvoiceView
 import com.duluin.ftth.billing.application.port.inbound.ManageInvoiceUseCase
+import com.duluin.ftth.billing.application.port.inbound.ManageRefundUseCase
 import com.duluin.ftth.billing.application.port.inbound.PaymentView
 import com.duluin.ftth.billing.application.port.inbound.RecordPaymentUseCase
+import com.duluin.ftth.billing.application.port.inbound.RefundView
+import com.duluin.ftth.billing.application.port.inbound.RequestRefundCommand
 import com.duluin.ftth.billing.application.port.outbound.SimulatedChargeStatus
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
+import com.duluin.ftth.billing.domain.model.RefundReason
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -19,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.math.BigDecimal
 import java.util.UUID
 
 /**
@@ -33,6 +38,7 @@ import java.util.UUID
 class BillingController(
     private val invoices: ManageInvoiceUseCase,
     private val payments: RecordPaymentUseCase,
+    private val refunds: ManageRefundUseCase,
 ) {
 
     @GetMapping("/invoices")
@@ -85,6 +91,30 @@ class BillingController(
     @PreAuthorize("@authz.can('billing.invoice.view')")
     @Operation(summary = "Pembayaran yang tercatat atas sebuah tagihan")
     fun listPayments(@RequestParam invoiceId: UUID): List<PaymentView> = invoices.payments(invoiceId)
+
+    @GetMapping("/refunds")
+    @PreAuthorize("@authz.can('billing.invoice.view')")
+    @Operation(summary = "Pengembalian dana (boleh disaring per tagihan)")
+    fun listRefunds(@RequestParam(required = false) invoiceId: UUID?): List<RefundView> = refunds.list(invoiceId)
+
+    @PostMapping("/invoices/{id}/refund")
+    @PreAuthorize("@authz.can('billing.refund.manage')")
+    @Operation(summary = "Ajukan pengembalian dana (nominal kosong = seluruh sisa tagihan)")
+    fun refund(@PathVariable id: UUID, @RequestBody(required = false) request: RefundInvoiceRequest?): RefundView =
+        refunds.request(
+            RequestRefundCommand(
+                invoiceId = id,
+                amount = request?.amount,
+                reason = request?.reason ?: RefundReason.REQUESTED_BY_CUSTOMER,
+                note = request?.note,
+            ),
+        )
+
+    @PostMapping("/refunds/{id}/settle")
+    @PreAuthorize("@authz.can('billing.refund.manage')")
+    @Operation(summary = "Tutup pengembalian MANUAL: nyatakan transfer baliknya berhasil/gagal")
+    fun settleRefund(@PathVariable id: UUID, @RequestBody request: SettleRefundRequest): RefundView =
+        refunds.settleManual(id, request.success, request.reason)
 }
 
 /** Ringkasan hasil penerbitan massal: berapa tagihan yang dibuat. */
@@ -97,3 +127,16 @@ data class ChargeInvoiceRequest(val method: String, val channel: String?)
 
 /** Status akhir yang dipaksakan ke sesi bayar saat simulasi sandbox: SUCCESS atau EXPIRED. */
 data class SimulatePaymentRequest(val status: SimulatedChargeStatus)
+
+/**
+ * Pengajuan refund. [amount] kosong = seluruh sisa yang masih bisa dikembalikan (jalur paling sering);
+ * diisi = refund sebagian. [reason] mengikuti alasan baku penyedia, [note] catatan internal operator.
+ */
+data class RefundInvoiceRequest(
+    val amount: BigDecimal? = null,
+    val reason: RefundReason? = null,
+    val note: String? = null,
+)
+
+/** Penutupan refund MANUAL: [success] false wajib disertai [reason] agar jejaknya bisa dibaca. */
+data class SettleRefundRequest(val success: Boolean, val reason: String? = null)

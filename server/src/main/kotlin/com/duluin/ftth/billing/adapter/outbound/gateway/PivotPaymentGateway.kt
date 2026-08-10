@@ -8,6 +8,8 @@ import com.duluin.ftth.billing.application.port.outbound.GatewayCallback
 import com.duluin.ftth.billing.application.port.outbound.PaymentGateway
 import com.duluin.ftth.billing.application.port.outbound.PaymentSettlement
 import com.duluin.ftth.billing.application.port.outbound.QrInstruction
+import com.duluin.ftth.billing.application.port.outbound.RefundRequest
+import com.duluin.ftth.billing.application.port.outbound.RefundResult
 import com.duluin.ftth.billing.application.port.outbound.SimulatedChargeStatus
 import com.duluin.ftth.billing.application.port.outbound.VaInstruction
 import com.duluin.ftth.billing.config.BillingProperties
@@ -357,6 +359,73 @@ class PivotPaymentGateway(
         log.info("Simulasi pembayaran Pivot dikirim: sesi={} status={}", paymentSessionId, chargeStatus)
     }
 
+    /**
+     * Pengembalian dana Pivot (`POST /v1/refunds`), on-behalf sub-account tenant — uang ditarik dari
+     * balance tenant yang dulu menerimanya, bukan dari master.
+     *
+     * `clientReferenceId` = id baris refund kita, jadi callback `REFUND.*` bisa dipulangkan ke
+     * barisnya tanpa menebak. `X-REQUEST-ID` diturunkan DETERMINISTIK dari id yang sama (bukan UUID
+     * acak seperti create charge): kalau jaringan putus setelah Pivot menerima perintahnya, percobaan
+     * ulang harus dikenali sebagai perintah yang sama — refund ganda berarti uang keluar dua kali.
+     *
+     * Respons refund hampir selalu belum final (`PENDING`/`WAITING_BANK_TRANSFER`); yang menutup
+     * baris refund adalah callback, sama seperti alur pembayaran.
+     */
+    override fun refund(request: RefundRequest, ctx: ResolvedGatewayContext): RefundResult {
+        val creds = ctx.pivotCredentials()
+        val body = buildRefundBody(request)
+        val node = apiClient.post(
+            path = "/v1/refunds",
+            body = body,
+            creds = creds,
+            subMerchantId = ctx.subAccountId,
+            requestId = refundRequestId(request.referenceId),
+        )
+        val data = node.get("data")
+        val status = data?.get("status")?.asString()?.takeIf { it.isNotBlank() }?.uppercase()
+        log.info(
+            "Refund Pivot dikirim: sesi={} ref={} status={}",
+            request.paymentSessionId,
+            request.referenceId,
+            status,
+        )
+        return RefundResult(
+            reference = data?.get("id")?.asString()?.takeIf { it.isNotBlank() },
+            status = status,
+            settled = status == REFUND_SETTLED,
+        )
+    }
+
+    /**
+     * Rakit body `POST /v1/refunds`. Murni (tanpa HTTP) agar bisa diuji. `amount` HANYA dikirim saat
+     * refund sebagian — untuk refund penuh Pivot menghitung sendiri nominal charge-nya, dan
+     * mengirimkan angka kita sendiri hanya menambah peluang selisih pembulatan menolak perintahnya.
+     */
+    internal fun buildRefundBody(request: RefundRequest): Map<String, Any> = buildMap {
+        put("clientReferenceId", request.referenceId)
+        put("paymentSessionId", request.paymentSessionId)
+        put("isFullAmount", request.fullAmount)
+        if (!request.fullAmount) {
+            val value = request.amount.setScale(0, RoundingMode.HALF_UP).toLong()
+            put("amount", mapOf("value" to value.toString(), "currency" to "IDR"))
+        }
+        put("reason", request.reason)
+        // `description` Pivot dibatasi 50 karakter — dipotong di sini, bukan ditolak: catatan operator
+        // adalah keterangan internal, tak layak menggagalkan pengembalian uang karena kepanjangan.
+        request.description?.trim()?.takeIf { it.isNotEmpty() }
+            ?.let { put("description", it.take(MAX_REFUND_DESCRIPTION)) }
+        put("method", "AUTO")
+    }
+
+    /**
+     * `X-REQUEST-ID` refund: DETERMINISTIK dari id baris refund (`rfn` + hex uuid = 35 char, masuk
+     * rentang 16–36 alfanumerik). Berlawanan dengan [newRequestId] yang sengaja acak untuk create
+     * charge: di sana sesi ganda cuma sampah yang kedaluwarsa sendiri, di sini perintah ganda adalah
+     * uang yang keluar dua kali.
+     */
+    internal fun refundRequestId(refundId: String): String =
+        (REFUND_PREFIX + refundId.replace("-", "")).take(REQUEST_ID_MAX)
+
     /** Konfigurasi split-routing fee platform, atau null bila tak ada fee / bukan charge on-behalf. */
     private fun splitRouting(ctx: ResolvedGatewayContext, amountValue: Long): List<Map<String, Any>>? {
         if (ctx.subAccountId.isNullOrBlank()) return null
@@ -430,7 +499,10 @@ class PivotPaymentGateway(
         const val MAX_ITEM_NAME = 255
         const val PERCENT_BASIS = 100L
         const val REQUEST_PREFIX = "req"
+        const val REFUND_PREFIX = "rfn"
         const val REQUEST_ID_MAX = 36
+        const val MAX_REFUND_DESCRIPTION = 50
+        const val REFUND_SETTLED = "SUCCESS"
         const val METHOD_VA = "VIRTUAL_ACCOUNT"
         const val METHOD_QR = "QR"
         /** Ambang bawah timestamp valid — nilai sebelum ini dianggap sentinel "kosong" Pivot. */

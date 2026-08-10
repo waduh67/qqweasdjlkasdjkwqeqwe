@@ -5,6 +5,7 @@ import com.duluin.ftth.billing.adapter.outbound.gateway.pivot.PivotApiClient
 import com.duluin.ftth.billing.adapter.outbound.gateway.pivotExpiryAt
 import com.duluin.ftth.billing.application.port.outbound.ChargeRequest
 import com.duluin.ftth.billing.application.port.outbound.GatewayCallback
+import com.duluin.ftth.billing.application.port.outbound.RefundRequest
 import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.billing.config.PivotProperties
 import com.duluin.ftth.billing.domain.model.GatewayMode
@@ -251,5 +252,56 @@ class PivotPaymentGatewayTest {
         assertThat(a).isNotEqualTo(b)
         assertThat(a).startsWith("SUB-202608-abcd1234-")
         assertThat(b).startsWith("SUB-202608-abcd1234-")
+    }
+
+    // --- Refund ---
+
+    private fun refundRequest(amount: String, full: Boolean, description: String? = null) = RefundRequest(
+        paymentSessionId = "ps_123",
+        amount = BigDecimal(amount),
+        fullAmount = full,
+        reason = "REQUESTED_BY_CUSTOMER",
+        referenceId = "0198c0de-1234-7abc-8def-0123456789ab",
+        description = description,
+    )
+
+    @Test
+    fun `refund penuh tak mengirim nominal — Pivot yang menghitungnya sendiri`() {
+        val body = chargingGateway.buildRefundBody(refundRequest("150000.00", full = true))
+
+        assertThat(body["isFullAmount"]).isEqualTo(true)
+        assertThat(body).doesNotContainKey("amount")
+        assertThat(body["paymentSessionId"]).isEqualTo("ps_123")
+        assertThat(body["reason"]).isEqualTo("REQUESTED_BY_CUSTOMER")
+        assertThat(body["method"]).isEqualTo("AUTO")
+    }
+
+    @Test
+    fun `refund sebagian mengirim nominal rupiah bulat`() {
+        val body = chargingGateway.buildRefundBody(refundRequest("50000.49", full = false))
+
+        @Suppress("UNCHECKED_CAST")
+        val amount = body["amount"] as Map<String, Any>
+        assertThat(amount["value"]).isEqualTo("50000") // zero-decimal IDR
+        assertThat(amount["currency"]).isEqualTo("IDR")
+    }
+
+    @Test
+    fun `deskripsi dipangkas ke batas Pivot dan yang kosong tak dikirim`() {
+        val long = chargingGateway.buildRefundBody(refundRequest("1000", false, description = "x".repeat(80)))
+        val blank = chargingGateway.buildRefundBody(refundRequest("1000", false, description = "   "))
+
+        assertThat(long["description"] as String).hasSize(50)
+        assertThat(blank).doesNotContainKey("description")
+    }
+
+    @Test
+    fun `X-REQUEST-ID refund deterministik agar percobaan ulang tak jadi refund kedua`() {
+        val a = chargingGateway.refundRequestId("0198c0de-1234-7abc-8def-0123456789ab")
+        val b = chargingGateway.refundRequestId("0198c0de-1234-7abc-8def-0123456789ab")
+
+        assertThat(a).isEqualTo(b)
+        assertThat(a).matches("[A-Za-z0-9]+")
+        assertThat(a.length).isLessThanOrEqualTo(36)
     }
 }

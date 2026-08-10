@@ -40,8 +40,11 @@ interface PivotCallbackApi {
     fun handleSubAccountRegistration(headers: Map<String, String>, body: String): Boolean
 
     /**
-     * Callback produk REFUND. Belum ada domain refund — untuk saat ini diverifikasi & dicatat ke log
-     * (di-ACK agar Pivot berhenti retry). Selalu `true` bila tanda tangan sah. TODO: proses balik.
+     * Callback produk REFUND (`REFUND.SUCCESS`/`REFUND.FAILED`). Cari baris `refund` lintas tenant via
+     * referensi Pivot (`data.id`) atau id baris kita (`data.clientReferenceId`), lalu tutup di tenant
+     * pemiliknya. `true` bila barisnya ditemukan & diperbarui, atau bila statusnya memang belum final
+     * (`REFUND.PENDING`/`WAITING_BANK_TRANFER` → di-ACK tanpa perubahan); `false` bila referensinya tak
+     * dikenal sama sekali.
      */
     fun handleRefund(headers: Map<String, String>, body: String): Boolean
 
