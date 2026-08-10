@@ -631,7 +631,8 @@ sungguhan, bukan pada tampilan:
   bayar tagihan, riwayat pembayaran + cetak bukti tagihan, ajuan ganti paket,
   riwayat pemakaian, status sambungan
 - **Helpdesk** ✅ pelanggan melaporkan gangguan dari portal → tiket ber-SLA →
-  balasan operator di utas yang sama → eskalasi jadi work order perbaikan
+  balasan operator di utas yang sama → eskalasi jadi work order perbaikan (lihat
+  [`docs/helpdesk.md`](docs/helpdesk.md))
 - **Subscriber-360** ✅ satu layar riwayat pelanggan: langganan + tagihan + tiket +
   CPE + sesi PPPoE, tanpa berpindah halaman
 - **Ops onboarding** ✅ mempercepat ISP pindah & menerima pelanggan: wizard **PSB
