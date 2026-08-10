@@ -20,6 +20,11 @@ ftth:
     # menyala. Dimatikan di sini agar tes tak menembak SNMP nyata ke host OLT seed
     # (lambat) maupun menaikkan alarm OLT_UNREACHABLE yang mengganggu tes monitoring.
     server-poll-enabled: false
+  observability:
+    # Disetel di sini, bukan lewat @SpringBootTest(properties = ...), supaya ObservabilityIT
+    # ikut memakai context yang sama dengan tes lain — properti khusus per kelas tes membuat
+    # Spring membangun context baru dan seluruh suite jadi jauh lebih lambat.
+    metrics-token: token-metrik-uji-yang-cukup-panjang-untuk-serius
   security:
     jwt-secret: test-only-secret-ftth-oss-1234567890-abcdef
     encryption-secret: test-only-encryption-ftth-oss-0987654321-fedcba

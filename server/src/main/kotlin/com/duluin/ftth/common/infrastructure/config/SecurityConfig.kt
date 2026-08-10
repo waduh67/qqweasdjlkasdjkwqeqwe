@@ -2,9 +2,13 @@ package com.duluin.ftth.common.infrastructure.config
 
 import com.duluin.ftth.common.infrastructure.security.JwtAuthenticationConverter
 import com.duluin.ftth.common.infrastructure.security.TenantContextFilter
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.annotation.Order
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
+import org.springframework.security.authorization.AuthorizationDecision
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer
@@ -25,6 +29,8 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import javax.crypto.spec.SecretKeySpec
 
 @Configuration
@@ -55,6 +61,35 @@ class SecurityConfig {
             allowCredentials = true
         }
         return UrlBasedCorsConfigurationSource().apply { registerCorsConfiguration("/**", config) }
+    }
+
+    /**
+     * Chain khusus `/actuator/prometheus`, dipasang SEBELUM chain utama.
+     *
+     * Yang menjemput metrik adalah Prometheus, bukan manusia: ia tak bisa masuk, tak bisa
+     * menyegarkan token, dan hidup selama bertahun-tahun. Jadi bearer JWT kita yang berumur
+     * 15 menit sama sekali tak cocok, sementara membuka endpoint ini tanpa syarat berarti
+     * membagikan bentuk sistem, nama job, dan volume kerja tiap tenant kepada siapa saja
+     * yang menebak URL-nya. Jalan tengahnya token statis panjang, dibandingkan dengan
+     * waktu tetap, dan MATI secara bawaan — belum disetel berarti tertutup, bukan terbuka.
+     */
+    @Bean
+    @Order(1)
+    fun metricsFilterChain(http: HttpSecurity, observability: ObservabilityProperties): SecurityFilterChain {
+        val expected = observability.metricsToken
+        http
+            .securityMatcher("/actuator/prometheus")
+            .csrf { it.disable() }
+            .cors { it.disable() }
+            .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .authorizeHttpRequests { registry ->
+                registry.anyRequest().access { _, context ->
+                    AuthorizationDecision(matchesMetricsToken(context.request, expected))
+                }
+            }
+            .httpBasic { it.disable() }
+            .formLogin { it.disable() }
+        return http.build()
     }
 
     @Bean
@@ -102,5 +137,22 @@ class SecurityConfig {
             .addFilterAfter(TenantContextFilter(), BearerTokenAuthenticationFilter::class.java)
             .anonymous(AbstractHttpConfigurer<*, *>::disable)
         return http.build()
+    }
+
+    private companion object {
+        /**
+         * Token kosong = tertutup. Perbandingan lewat [MessageDigest.isEqual] yang berwaktu
+         * tetap, supaya lamanya jawaban tak membocorkan berapa karakter awal yang benar.
+         */
+        fun matchesMetricsToken(request: HttpServletRequest, expected: String): Boolean {
+            if (expected.isBlank()) return false
+            val presented = request.getHeader("X-Metrics-Token")
+                ?: request.getHeader(HttpHeaders.AUTHORIZATION)?.removePrefix("Bearer ")?.trim()
+                ?: return false
+            return MessageDigest.isEqual(
+                presented.toByteArray(StandardCharsets.UTF_8),
+                expected.toByteArray(StandardCharsets.UTF_8),
+            )
+        }
     }
 }

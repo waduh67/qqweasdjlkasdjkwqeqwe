@@ -25,6 +25,16 @@ spring:
           auth: ${FTTH_MAIL_AUTH:true}
           starttls:
             enable: ${FTTH_MAIL_STARTTLS:true}
+  task:
+    scheduling:
+      # Belasan pekerjaan latar berbagi kolam ini, dan bawaan Spring cuma SATU utas: satu
+      # walk SNMP yang menggantung akan membekukan penagihan, provisioning RADIUS, sampai
+      # alarm PPPoE sekaligus — tanpa satu baris galat pun, karena tak ada yang gagal, cuma
+      # tak pernah dapat giliran. Empat utas memberi jalan memutar; pool Hikari (10) tetap
+      # lega karena tak semua job menyentuh database bersamaan.
+      pool:
+        size: ${FTTH_SCHEDULER_POOL_SIZE:4}
+      thread-name-prefix: ftth-sched-
   servlet:
     multipart:
       # Bukti foto lapangan; batas keras di sini, validasi lebih ketat di service.
@@ -46,7 +56,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        # `prometheus` dibuka di lapis actuator, TAPI dijaga token statis di SecurityConfig
+        # (chain terpisah). Tanpa FTTH_METRICS_TOKEN endpoint ini menolak semua orang —
+        # daftar metrik memuat nama tenant & bentuk sistem yang tak perlu jadi konsumsi umum.
+        include: health,info,prometheus
 
 springdoc:
   swagger-ui:
@@ -81,6 +94,12 @@ ftth:
     signup-per-ip:
       limit: ${FTTH_THROTTLE_SIGNUP_IP:5}
       window: 6h
+  observability:
+    # Token statis untuk /actuator/prometheus (dikirim scraper sebagai `Authorization:
+    # Bearer <token>` atau header `X-Metrics-Token`). Kosong = endpoint metrik tertutup.
+    metrics-token: ${FTTH_METRICS_TOKEN:}
+    # Ke mana peringatan "pekerjaan latar macet" dikirim. Kosong = hanya dicatat ke log.
+    alert-email: ${FTTH_ALERT_EMAIL:}
   cors:
     allowed-origins: ${FTTH_CORS_ORIGINS:http://localhost:5173}
   mail:
