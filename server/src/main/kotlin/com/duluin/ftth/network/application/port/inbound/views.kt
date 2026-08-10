@@ -102,6 +102,24 @@ data class OdpView(
 )
 
 /**
+ * Tanpa `splitterRatio` — dan itu memang inti perbedaannya dengan ODC/ODP.
+ * [spliceCount] adalah isi kotaknya saat ini, dipakai UI untuk menampilkan
+ * "12/24 sambungan" tanpa memuat daftarnya.
+ */
+data class JointBoxView(
+    val id: UUID,
+    val code: String,
+    val name: String,
+    val address: String?,
+    val location: Coordinate,
+    val areaId: UUID?,
+    val trayCount: Int,
+    val capacity: Int,
+    val spliceCount: Long,
+    val status: AssetStatus,
+)
+
+/**
  * Satu pilihan port KELUARAN pada simpul sumber, untuk picker "colok dari port
  * mana" saat menarik kabel. [ponPortId] terisi untuk OLT (PON port berlabel),
  * [portNumber] untuk kaki splitter ODC / slot ODP. [occupied] menandai port yang

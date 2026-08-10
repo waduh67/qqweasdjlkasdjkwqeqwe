@@ -199,8 +199,8 @@ class FiberConnectionIT {
         post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), splitterOut(odp, 99)), expected = 400)
         // Splitter milik simpul lain — sampai splitter jadi entitas sendiri, satu simpul satu splitter.
         post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), splitterIn(odc)), expected = 400)
-        // Closure yang simpulnya memang belum ada di sistem.
-        post("/api/fiber-connections", token, connectBody("JOINT_BOX", odp, core(core1), splitterIn(odp)), expected = 400)
+        // Closure yang simpulnya memang belum ada di sistem (ODF menyusul di potongan D).
+        post("/api/fiber-connections", token, connectBody("ODF", odp, core(core1), splitterIn(odp)), expected = 400)
     }
 
     @Test

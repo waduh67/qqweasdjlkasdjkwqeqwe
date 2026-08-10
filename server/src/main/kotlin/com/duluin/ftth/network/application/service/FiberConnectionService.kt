@@ -16,6 +16,7 @@ import com.duluin.ftth.network.application.port.inbound.UpdateFiberConnectionCom
 import com.duluin.ftth.network.application.port.outbound.CableCoreRepository
 import com.duluin.ftth.network.application.port.outbound.CableRepository
 import com.duluin.ftth.network.application.port.outbound.FiberConnectionRepository
+import com.duluin.ftth.network.application.port.outbound.JointBoxRepository
 import com.duluin.ftth.network.application.port.outbound.OdcRepository
 import com.duluin.ftth.network.application.port.outbound.OdpRepository
 import com.duluin.ftth.network.domain.model.Cable
@@ -46,6 +47,7 @@ class FiberConnectionService(
     private val cableCoreRepository: CableCoreRepository,
     private val odcRepository: OdcRepository,
     private val odpRepository: OdpRepository,
+    private val jointBoxRepository: JointBoxRepository,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
 ) : ManageFiberConnectionUseCase {
@@ -68,6 +70,7 @@ class FiberConnectionService(
         val a = command.a.toPoint()
         val b = command.b.toPoint()
         val cores = listOf(a, b).mapNotNull { point -> validate(point, closure) }
+        assertRoomLeft(closure)
 
         val saved = connections.save(
             FiberConnection.create(
@@ -133,12 +136,14 @@ class FiberConnectionService(
         ConnectionPointKind.CORE -> validateCore(point, closure)
 
         ConnectionPointKind.SPLITTER_IN -> {
+            requireSplitter(closure)
             requireOwnNode(point, closure)
             assertFree(point, closure)
             null
         }
 
         ConnectionPointKind.SPLITTER_OUT -> {
+            requireSplitter(closure)
             requireOwnNode(point, closure)
             val leg = point.portNumber ?: 0
             if (leg !in 1..closure.splitterLegs) {
@@ -203,6 +208,20 @@ class FiberConnectionService(
     }
 
     /**
+     * Joint box tak berisi splitter — di dalamnya cuma tray dan sambungan serat ke
+     * serat. Menolaknya di sini, bukan lewat "kapasitas 0", supaya pesannya
+     * menerangkan bendanya dan bukan angkanya.
+     */
+    private fun requireSplitter(closure: Closure) {
+        if (!closure.kind.hasSplitter) {
+            throw ValidationException(
+                "${closure.code} adalah ${closure.kind.label} yang tak berisi splitter — " +
+                    "di dalamnya serat disambung langsung ke serat",
+            )
+        }
+    }
+
+    /**
      * Splitter belum jadi entitas sendiri (potongan E), jadi untuk sekarang satu
      * simpul = satu splitter dan id-nya adalah id simpul itu. Menerima id lain
      * berarti menyimpan rujukan ke splitter yang tak ada.
@@ -254,8 +273,13 @@ class FiberConnectionService(
         val code: String,
         val name: String,
         val location: Coordinate,
-        /** Jumlah kaki keluar splitter di simpul ini. */
+        /** Jumlah kaki keluar splitter di simpul ini; 0 untuk closure tanpa splitter. */
         val splitterLegs: Int,
+        /**
+         * Batas jumlah sambungan yang muat di dalam kotaknya; null = tak dibatasi.
+         * ODC/ODP dibatasi oleh kaki splitternya, joint box oleh jumlah tray.
+         */
+        val spliceCapacity: Int? = null,
     )
 
     private fun requireClosure(kind: ClosureKind, id: UUID): Closure {
@@ -269,8 +293,26 @@ class FiberConnectionService(
             ClosureKind.ODP -> odpRepository.findById(id)?.let {
                 Closure(kind, it.id, it.code, it.name, it.location, it.capacity)
             }
+            ClosureKind.JOINT_BOX -> jointBoxRepository.findById(id)?.let {
+                Closure(kind, it.id, it.code, it.name, it.location, splitterLegs = 0, spliceCapacity = it.capacity)
+            }
             else -> null
         } ?: throw NotFoundException("${kind.label} $id tidak ditemukan")
+    }
+
+    /**
+     * Kotak sambung punya batas fisik: tray-nya habis. Diperiksa saat menyambung,
+     * bukan saat menggambar kabel, karena yang memakan tempat memang sambungannya
+     * — core yang cuma lewat tak menghabiskan apa pun.
+     */
+    private fun assertRoomLeft(closure: Closure) {
+        val limit = closure.spliceCapacity ?: return
+        val used = connections.countByClosureId(closure.id)
+        if (used >= limit) {
+            throw ConflictException(
+                "${closure.code} sudah penuh: $used dari $limit sambungan terpakai",
+            )
+        }
     }
 
     private fun requireConnection(id: UUID): FiberConnection =

@@ -97,6 +97,12 @@ interface OdpJpaRepository : JpaRepository<OdpJpaEntity, UUID>, JpaSpecification
     fun findIdsByOdcIds(@Param("odcIds") odcIds: Collection<UUID>): Set<UUID>
 }
 
+interface JointBoxJpaRepository :
+    JpaRepository<JointBoxJpaEntity, UUID>,
+    JpaSpecificationExecutor<JointBoxJpaEntity> {
+    fun existsByCode(code: String): Boolean
+}
+
 interface CableJpaRepository : JpaRepository<CableJpaEntity, UUID>, JpaSpecificationExecutor<CableJpaEntity> {
     fun existsByCode(code: String): Boolean
 }
@@ -110,6 +116,15 @@ interface CableCoreJpaRepository : JpaRepository<CableCoreJpaEntity, UUID> {
 
 interface FiberConnectionJpaRepository : JpaRepository<FiberConnectionJpaEntity, UUID> {
     fun findByClosureId(closureId: UUID): List<FiberConnectionJpaEntity>
+    fun countByClosureId(closureId: UUID): Long
+
+    @Query(
+        """
+        select c.closureId as parentId, count(c) as total from FiberConnectionJpaEntity c
+        where c.closureId in :closureIds group by c.closureId
+        """,
+    )
+    fun countGroupedByClosure(@Param("closureIds") closureIds: Collection<UUID>): List<ChildCount>
 }
 
 interface FiberConnectionEndJpaRepository : JpaRepository<FiberConnectionEndJpaEntity, UUID> {

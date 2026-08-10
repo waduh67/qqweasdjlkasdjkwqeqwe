@@ -104,6 +104,17 @@ data class OdpRequest(
     val status: AssetStatus = AssetStatus.ACTIVE,
 )
 
+data class JointBoxRequest(
+    @field:NotBlank @field:Size(max = 40) val code: String,
+    @field:NotBlank @field:Size(max = 150) val name: String,
+    @field:Size(max = 500) val address: String? = null,
+    @field:Valid val location: LocationRequest,
+    val areaId: UUID? = null,
+    @field:Min(1) @field:Max(64) val trayCount: Int = 1,
+    @field:Min(1) @field:Max(1536) val capacity: Int,
+    val status: AssetStatus = AssetStatus.ACTIVE,
+)
+
 data class CableRequest(
     /** Opsional — kosong = backend auto-generate UUIDv7 (tak diisi dari frontend). */
     @field:Size(max = 40) val code: String? = null,

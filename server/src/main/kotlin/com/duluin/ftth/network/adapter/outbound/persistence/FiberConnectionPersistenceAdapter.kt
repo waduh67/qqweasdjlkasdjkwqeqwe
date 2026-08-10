@@ -27,6 +27,12 @@ class FiberConnectionPersistenceAdapter(
     override fun findByClosureId(closureId: UUID): List<FiberConnection> =
         compose(jpa.findByClosureId(closureId))
 
+    override fun countByClosureId(closureId: UUID): Long = jpa.countByClosureId(closureId)
+
+    override fun countByClosureIds(closureIds: Set<UUID>): Map<UUID, Long> =
+        if (closureIds.isEmpty()) emptyMap()
+        else jpa.countGroupedByClosure(closureIds).associate { it.parentId to it.total }
+
     override fun findByCoreIds(coreIds: Collection<UUID>): List<FiberConnection> {
         if (coreIds.isEmpty()) return emptyList()
         return byEnds(ends.findByCoreIdIn(coreIds))

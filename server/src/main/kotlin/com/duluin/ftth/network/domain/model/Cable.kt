@@ -10,19 +10,34 @@ import java.util.UUID
  * Peran kabel dalam hierarki distribusi, sekaligus pasangan simpul yang sah di
  * kedua ujungnya. Menyimpan aturan ini di enum mencegah data mustahil seperti
  * kabel drop yang menghubungkan dua OLT.
+ *
+ * JOINT_BOX sah di kedua sisi pada SEMUA jenis kabel, dan itu bukan kelonggaran
+ * asal-asalan: kabel dijual per haspel, jadi ruas panjang apa pun cepat atau
+ * lambat terpotong jadi beberapa kabel yang bertemu di kotak sambung — begitu
+ * pula tiap perbaikan darurat. Melarangnya berarti memaksa operator menggambar
+ * satu kabel utuh yang di lapangan sudah lama tak utuh.
  */
 enum class CableType(
     val validFrom: Set<NetworkNodeKind>,
     val validTo: Set<NetworkNodeKind>,
 ) {
     /** OLT → ODC. Kabel berkapasitas besar dari POP ke kabinet distribusi. */
-    FEEDER(setOf(NetworkNodeKind.SITE, NetworkNodeKind.OLT), setOf(NetworkNodeKind.ODC)),
+    FEEDER(
+        setOf(NetworkNodeKind.SITE, NetworkNodeKind.OLT, NetworkNodeKind.JOINT_BOX),
+        setOf(NetworkNodeKind.ODC, NetworkNodeKind.JOINT_BOX),
+    ),
 
     /** ODC → ODP, atau ODP → ODP saat ODP dirangkai berantai. */
-    DISTRIBUTION(setOf(NetworkNodeKind.ODC, NetworkNodeKind.ODP), setOf(NetworkNodeKind.ODP)),
+    DISTRIBUTION(
+        setOf(NetworkNodeKind.ODC, NetworkNodeKind.ODP, NetworkNodeKind.JOINT_BOX),
+        setOf(NetworkNodeKind.ODP, NetworkNodeKind.JOINT_BOX),
+    ),
 
     /** ODP → rumah pelanggan. */
-    DROP(setOf(NetworkNodeKind.ODP), setOf(NetworkNodeKind.CUSTOMER)),
+    DROP(
+        setOf(NetworkNodeKind.ODP, NetworkNodeKind.JOINT_BOX),
+        setOf(NetworkNodeKind.CUSTOMER, NetworkNodeKind.JOINT_BOX),
+    ),
     ;
 
     fun assertEndpoints(from: NetworkEndpoint, to: NetworkEndpoint) {

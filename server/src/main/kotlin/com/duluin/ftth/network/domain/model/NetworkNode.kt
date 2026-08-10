@@ -8,6 +8,13 @@ enum class NetworkNodeKind {
     OLT,
     ODC,
     ODP,
+
+    /**
+     * Kotak sambung. Satu-satunya simpul yang tak punya port keluaran: kabel
+     * berhenti di sini bukan karena "dicolok", melainkan karena seratnya
+     * disambung ke serat kabel berikutnya.
+     */
+    JOINT_BOX,
     CUSTOMER,
 }
 

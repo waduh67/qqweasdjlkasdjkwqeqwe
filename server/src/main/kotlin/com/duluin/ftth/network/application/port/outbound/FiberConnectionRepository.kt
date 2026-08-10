@@ -11,6 +11,12 @@ interface FiberConnectionRepository {
     /** Semua sambungan di dalam sebuah closure — isi kotak yang dibuka teknisi. */
     fun findByClosureId(closureId: UUID): List<FiberConnection>
 
+    /** Isi kotak tanpa memuatnya: untuk batas kapasitas dan angka "12/24" di daftar. */
+    fun countByClosureId(closureId: UUID): Long
+
+    /** Isi banyak kotak sekaligus — satu query untuk satu halaman daftar. */
+    fun countByClosureIds(closureIds: Set<UUID>): Map<UUID, Long>
+
     /** Sambungan yang menyentuh salah satu core ini, di closure mana pun. */
     fun findByCoreIds(coreIds: Collection<UUID>): List<FiberConnection>
 

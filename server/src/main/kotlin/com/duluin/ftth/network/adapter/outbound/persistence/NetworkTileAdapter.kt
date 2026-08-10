@@ -38,7 +38,7 @@ class NetworkTileAdapter : NetworkTileRenderer {
     }
 
     /**
-     * Menggabungkan empat layer menjadi satu tile. Rangkaian byte MVT boleh
+     * Menggabungkan seluruh layer menjadi satu tile. Rangkaian byte MVT boleh
      * disambung begitu saja: `layers` adalah repeated field protobuf, sehingga
      * hasil sambungan tetap tile yang sah berisi seluruh layer.
      *
@@ -92,6 +92,16 @@ class NetworkTileAdapter : NetworkTileRenderer {
                                a.splitter_ratio AS splitter_ratio, a.odc_id::text AS odc_id,
                                ST_AsMVTGeom(ST_Transform(a.location, 3857), env.mercator, 4096, 64, true) AS geom
                         FROM odp a CROSS JOIN env
+                        WHERE a.location && env.wgs84 $areaFilter
+                    ) t WHERE t.geom IS NOT NULL
+                ), ''::bytea)
+                ||
+                COALESCE((
+                    SELECT ST_AsMVT(t, 'joint_box', 4096, 'geom') FROM (
+                        SELECT a.id::text AS id, a.code AS code, a.name AS name,
+                               a.capacity AS capacity, a.tray_count AS tray_count, a.status AS status,
+                               ST_AsMVTGeom(ST_Transform(a.location, 3857), env.mercator, 4096, 64, true) AS geom
+                        FROM joint_box a CROSS JOIN env
                         WHERE a.location && env.wgs84 $areaFilter
                     ) t WHERE t.geom IS NOT NULL
                 ), ''::bytea)

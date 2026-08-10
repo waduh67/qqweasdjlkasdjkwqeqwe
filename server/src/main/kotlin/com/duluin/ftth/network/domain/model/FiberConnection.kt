@@ -14,7 +14,7 @@ enum class ClosureKind(val label: String) {
     ODC("ODC"),
     ODP("ODP"),
 
-    /** Sambungan di tengah jalur, bukan di simpul distribusi — potongan C. */
+    /** Sambungan di tengah jalur, bukan di simpul distribusi. */
     JOINT_BOX("Joint box"),
 
     /** Terminasi rapi di rak POP — potongan D. */
@@ -22,7 +22,15 @@ enum class ClosureKind(val label: String) {
     ;
 
     /** Jenis yang simpulnya sudah ada di sistem; sisanya menyusul per potongan. */
-    val available: Boolean get() = this == ODC || this == ODP
+    val available: Boolean get() = this != ODF
+
+    /**
+     * Apakah di dalamnya ada splitter. Joint box TIDAK: isinya cuma tray dan
+     * sambungan core-ke-core. Membedakannya di sini membuat penolakan "kaki
+     * splitter di joint box" berbunyi sebagai aturan fisik, bukan sebagai
+     * kapasitas nol yang kebetulan tak muat.
+     */
+    val hasSplitter: Boolean get() = this == ODC || this == ODP
 }
 
 /**

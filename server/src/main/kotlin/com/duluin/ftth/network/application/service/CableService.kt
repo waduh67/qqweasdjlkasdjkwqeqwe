@@ -16,6 +16,7 @@ import com.duluin.ftth.network.application.port.inbound.ManageFiberConnectionUse
 import com.duluin.ftth.network.application.port.inbound.SaveCableCommand
 import com.duluin.ftth.network.application.port.outbound.CableCoreRepository
 import com.duluin.ftth.network.application.port.outbound.CableRepository
+import com.duluin.ftth.network.application.port.outbound.JointBoxRepository
 import com.duluin.ftth.network.application.port.outbound.OdcRepository
 import com.duluin.ftth.network.application.port.outbound.OdpRepository
 import com.duluin.ftth.network.application.port.outbound.OltRepository
@@ -41,6 +42,7 @@ class CableService(
     private val oltRepository: OltRepository,
     private val odcRepository: OdcRepository,
     private val odpRepository: OdpRepository,
+    private val jointBoxRepository: JointBoxRepository,
     private val ponPortRepository: PonPortRepository,
     private val manageFiberConnection: ManageFiberConnectionUseCase,
     private val currentUser: CurrentUserProvider,
@@ -83,7 +85,10 @@ class CableService(
                     CablePortOption(null, slot, "Slot $slot", cable != null, cable?.code)
                 }
             }
-            NetworkNodeKind.SITE, NetworkNodeKind.CUSTOMER -> emptyList()
+            // Joint box tak punya port keluaran: kabel berikutnya berangkat dari
+            // sana karena seratnya DISAMBUNG, bukan dicolok ke kaki splitter.
+            // Yang mengatur core mana ke core mana adalah layar sambungan.
+            NetworkNodeKind.JOINT_BOX, NetworkNodeKind.SITE, NetworkNodeKind.CUSTOMER -> emptyList()
         }
     }
 
@@ -231,8 +236,9 @@ class CableService(
                 conflictingSourceCable(from, excludeCableId) { it.portNumber == port }
                     ?.let { throw ConflictException("Slot $port ODP ${odp.code} sudah dipakai kabel ${it.code}") }
             }
-            // SITE feeder tak mengenal PON port; CUSTOMER tak pernah jadi sumber kabel.
-            NetworkNodeKind.SITE, NetworkNodeKind.CUSTOMER -> Unit
+            // SITE feeder tak mengenal PON port; JOINT_BOX tak punya port sama
+            // sekali; CUSTOMER tak pernah jadi sumber kabel.
+            NetworkNodeKind.SITE, NetworkNodeKind.JOINT_BOX, NetworkNodeKind.CUSTOMER -> Unit
         }
     }
 
@@ -285,10 +291,27 @@ class CableService(
     }
 
     /** ODC hulu sebuah ujung distribusi: ODC itu sendiri, atau ODC dari ODP yang dirangkai. */
-    private fun resolveUpstreamOdcId(from: NetworkEndpoint): UUID? = when (from.kind) {
-        NetworkNodeKind.ODC -> from.id
-        NetworkNodeKind.ODP -> odpRepository.findById(from.id)?.odcId
-        else -> null
+    private fun resolveUpstreamOdcId(from: NetworkEndpoint): UUID? = resolveUpstreamOdcId(from.ref, HashSet())
+
+    /**
+     * Penelusuran mundur satu tujuan: menemukan ODC hulu, menembus joint box.
+     *
+     * JB tak punya identitas logis — ia cuma menyambung serat — jadi ODC hulunya
+     * ada di seberang kabel yang MASUK ke sana. Tanpa penelusuran ini, ODP di
+     * balik sebuah sambungan haspel akan kehilangan induknya dan hilang dari
+     * daftar "ODP di bawah ODC ini". [visited] menjaga rute melingkar (yang di
+     * data sangat mungkin salah gambar) tidak berputar selamanya.
+     */
+    private fun resolveUpstreamOdcId(ref: NetworkNodeRef, visited: MutableSet<UUID>): UUID? {
+        if (!visited.add(ref.id)) return null
+        return when (ref.kind) {
+            NetworkNodeKind.ODC -> ref.id
+            NetworkNodeKind.ODP -> odpRepository.findById(ref.id)?.odcId
+            NetworkNodeKind.JOINT_BOX -> cableRepository.findByEndpoint(ref)
+                .filter { it.to.ref == ref }
+                .firstNotNullOfOrNull { resolveUpstreamOdcId(it.from.ref, visited) }
+            else -> null
+        }
     }
 
     /**
@@ -308,6 +331,7 @@ class CableService(
                 NetworkNodeKind.OLT -> oltRepository.findById(node.id) != null
                 NetworkNodeKind.ODC -> odcRepository.findById(node.id) != null
                 NetworkNodeKind.ODP -> odpRepository.findById(node.id) != null
+                NetworkNodeKind.JOINT_BOX -> jointBoxRepository.findById(node.id) != null
                 NetworkNodeKind.CUSTOMER -> true
             }
             if (!exists) throw NotFoundException("${node.kind} ${node.id} tidak ditemukan")
