@@ -718,6 +718,19 @@ tbody tr.row-selected:hover {
   color: var(--text);
 }
 
+/* Galeri bukti pengerjaan. Jalur grid bernilai TETAP (bukan `1fr`) supaya satu foto
+   tak melar selebar kartu; di ponsel jalurnya diganti lentur (lihat blok responsif). */
+.evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 96px);
+  gap: 0.6rem;
+}
+/* Pemilih berkas native tak punya lebar wajar sendiri — dibatasi agar tak mendorong
+   tombol unggah keluar baris. */
+.wo-file {
+  max-width: 12.5rem;
+}
+
 /* ---------- Modal (dialog terpusat) ---------- */
 
 /* Wadah <dialog> top-layer: reset gaya native (margin/border/bg) jadi transparan &
@@ -2455,6 +2468,25 @@ tbody tr.row-selected:hover {
      tak lagi terpotong di kolom sempit. */
   .wo-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* Bukti pengerjaan — layar yang paling sering dipakai teknisi di lapangan. Ubin foto
+     dibesarkan jadi dua per baris supaya isinya bisa dinilai tanpa dibuka satu per satu,
+     dan tiap kontrol formulir unggah turun selebar layar: berjejer di lebar 390px
+     menyisakan kolom yang tak terbaca maupun tersentuh. */
+  .evidence-grid {
+    grid-template-columns: repeat(auto-fill, minmax(45%, 1fr));
+  }
+  .wo-upload > * {
+    width: 100%;
+    min-width: 0;
+  }
+  .wo-upload .fui-Input,
+  .wo-upload .fui-Select,
+  .wo-file {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
   }
 
   /* Kontrol tersegmen (mis. lima menu portal) digulung, bukan melebar keluar layar. */

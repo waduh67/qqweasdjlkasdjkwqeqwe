@@ -316,7 +316,7 @@ function OpticalSection({ wo, canEdit, onAct }: { wo: WorkOrderView; canEdit: bo
       <div className="spread" style={{ alignItems: 'center' }}>
         <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Redaman optik</h3>
         {canEdit && !editing && (
-          <Button variant="subtle" style={{ fontSize: '0.78rem', padding: '0.2rem 0.5rem' }} onClick={() => setEditing(true)}>
+          <Button variant="subtle" size="small" onClick={() => setEditing(true)}>
             {hasReading ? 'Ubah' : 'Catat'}
           </Button>
         )}
@@ -334,7 +334,10 @@ function OpticalSection({ wo, canEdit, onAct }: { wo: WorkOrderView; canEdit: bo
               value={before}
               onChange={(_, data) => setBefore(data.value)}
               placeholder="mis. -24.5"
-              style={{ flex: 1, minWidth: 130 }}
+              // Lebar minimum 160: di layar ponsel dua kolom tak lagi muat berdampingan
+              // sehingga keduanya menumpuk selebar layar — angka minus berkoma terbaca
+              // utuh, dan salah ketik saat berdiri di tiang jadi lebih kecil peluangnya.
+              style={{ flex: 1, minWidth: 160 }}
             />
             <TextField
               label="Rx sesudah (dBm)"
@@ -345,7 +348,7 @@ function OpticalSection({ wo, canEdit, onAct }: { wo: WorkOrderView; canEdit: bo
               value={after}
               onChange={(_, data) => setAfter(data.value)}
               placeholder="mis. -20.1"
-              style={{ flex: 1, minWidth: 130 }}
+              style={{ flex: 1, minWidth: 160 }}
             />
           </div>
           <div className="row" style={{ gap: '0.5rem' }}>
@@ -378,8 +381,12 @@ function OpticalSection({ wo, canEdit, onAct }: { wo: WorkOrderView; canEdit: bo
  * Gambar berkonten terautentikasi. `<img src>` biasa tak bisa mengirim header
  * Bearer, jadi byte-nya diambil sebagai blob lalu dijadikan object URL; URL-nya
  * dicabut saat unmount / ganti sumber agar tak bocor memori.
+ *
+ * `size` = sisi ubin dalam piksel; `'fill'` menyerahkan lebarnya pada induk (jalur
+ * grid galeri) dan menjaga bentuk bujur sangkar — dipakai agar ubin foto ikut
+ * membesar di ponsel tanpa perlu tahu lebar layar dari JavaScript.
  */
-function AuthedImage({ path, alt, size }: { path: string; alt: string; size: number }) {
+function AuthedImage({ path, alt, size }: { path: string; alt: string; size: number | 'fill' }) {
   const [url, setUrl] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
 
@@ -402,9 +409,11 @@ function AuthedImage({ path, alt, size }: { path: string; alt: string; size: num
     }
   }, [path])
 
+  const fill = size === 'fill'
   const box: CSSProperties = {
-    width: size,
-    height: size,
+    width: fill ? '100%' : size,
+    height: fill ? undefined : size,
+    aspectRatio: fill ? '1 / 1' : undefined,
     borderRadius: 8,
     objectFit: 'cover',
     background: 'var(--surface-2, #1e2530)',
@@ -517,15 +526,15 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
           ) : (
             <div className="stack" style={{ gap: '0.6rem' }}>
               {photos.length > 0 && (
-                <div className="row wrap" style={{ gap: '0.6rem' }}>
+                <div className="evidence-grid">
                   {photos.map((ph) => (
-                    <div key={ph.id} className="stack" style={{ gap: '0.25rem', width: 96 }}>
-                      <AuthedImage path={`/api/work-orders/${workOrderId}/evidence/${ph.id}/content`} alt={ph.caption ?? KIND_LABEL[ph.kind]} size={96} />
+                    <div key={ph.id} className="stack" style={{ gap: '0.25rem', minWidth: 0 }}>
+                      <AuthedImage path={`/api/work-orders/${workOrderId}/evidence/${ph.id}/content`} alt={ph.caption ?? KIND_LABEL[ph.kind]} size="fill" />
                       <span className="badge" style={{ fontSize: '0.7rem' }}>{KIND_LABEL[ph.kind]}</span>
                       {ph.caption && <span className="muted" style={{ fontSize: '0.72rem' }}>{ph.caption}</span>}
                       {ph.uploadedByName && <span className="muted" style={{ fontSize: '0.68rem' }}>oleh {ph.uploadedByName}</span>}
                       {canManage && (
-                        <Button variant="danger" style={{ fontSize: '0.72rem', padding: '0.15rem 0.4rem' }} onClick={() => void removePhoto(ph.id)}>
+                        <Button variant="danger" size="small" onClick={() => void removePhoto(ph.id)}>
                           Hapus
                         </Button>
                       )}
@@ -540,7 +549,7 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
                   <AuthedImage path={`/api/work-orders/${workOrderId}/signature/content`} alt={`Tanda tangan ${signature.signerName}`} size={140} />
                   <span className="muted" style={{ fontSize: '0.72rem' }}>{fmt(signature.signedAt)}</span>
                   {canManage && (
-                    <Button variant="danger" style={{ fontSize: '0.72rem', padding: '0.15rem 0.4rem' }} onClick={() => void removeSignature()}>
+                    <Button variant="danger" size="small" onClick={() => void removeSignature()}>
                       Hapus tanda tangan
                     </Button>
                   )}
@@ -550,7 +559,9 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
           )}
 
           {canManage && documentable && (
-            <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
+            /* `wo-upload` = kail responsif: di ponsel tiap kontrol turun selebar layar
+               (lihat index.css) karena di sinilah teknisi bekerja dari lapangan. */
+            <div className="row wrap wo-upload" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
               <SelectField
                 label="Jenis"
                 value={kind}
@@ -571,8 +582,10 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
                 style={{ flex: 1, minWidth: 160 }}
               />
               {/* Input file dibiarkan native: butuh ref untuk baca `.files` & reset `.value`;
-                  Fluent Input tak mendukung type=file (ref-nya tak menunjuk ke elemen input). */}
-              <input ref={fileRef} type="file" accept="image/*" style={{ maxWidth: 200 }} />
+                  Fluent Input tak mendukung type=file (ref-nya tak menunjuk ke elemen input).
+                  `capture` sengaja TAK dipasang — teknisi kerap memotret dulu lalu mengunggah
+                  belakangan, dan `capture` mengunci pilihan hanya ke kamera saat itu juga. */}
+              <input ref={fileRef} className="wo-file" type="file" accept="image/*" />
               <Button variant="primary" disabled={busy} onClick={() => void upload()}>
                 {busy ? 'Mengunggah…' : 'Unggah foto'}
               </Button>
