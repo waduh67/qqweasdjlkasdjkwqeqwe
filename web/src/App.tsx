@@ -13,6 +13,7 @@ import { PaymentPaidPage, PaymentFailedPage, PaymentExpiredPage } from './pages/
 import { PublicInvoicePage } from './pages/PublicInvoicePage'
 import { DashboardPage } from './pages/DashboardPage'
 import { PlatformDashboardPage } from './pages/PlatformDashboardPage'
+import { PlatformJobsPage } from './pages/PlatformJobsPage'
 import { InventoryPage } from './pages/InventoryPage'
 import { OltDetailPage } from './pages/OltDetailPage'
 import { CustomersPage } from './pages/CustomersPage'
@@ -422,6 +423,14 @@ function OperatorApp() {
               element={
                 <RequirePermission permission="vpn.server.view">
                   <VpnServersPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="jobs"
+              element={
+                <RequirePermission permission="platform.ops.view">
+                  <PlatformJobsPage />
                 </RequirePermission>
               }
             />

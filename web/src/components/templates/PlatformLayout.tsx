@@ -13,6 +13,7 @@ import {
   IconFlask,
   IconGauge,
   IconLogout,
+  IconMonitor,
   IconRoute,
   IconShield,
   IconSidebar,
@@ -53,6 +54,7 @@ const GROUPS: NavGroup[] = [
     label: 'Infrastruktur',
     items: [
       { to: '/platform/vpn-servers', label: 'Server VPN', permission: 'vpn.server.view', icon: IconRoute },
+      { to: '/platform/jobs', label: 'Pekerjaan Latar', permission: 'platform.ops.view', icon: IconMonitor },
     ],
   },
   {

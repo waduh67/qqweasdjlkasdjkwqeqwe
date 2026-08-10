@@ -23,6 +23,8 @@ object PermissionCatalog {
         platform("platform.billing.manage", "Kelola gateway aktif & kredensial billing platform")
         platform("platform.subscription.view", "Lihat langganan & tagihan tenant ke aplikasi")
         platform("platform.subscription.manage", "Kelola biaya bulanan, tagihan & pembayaran langganan tenant")
+        // Kesehatan proses server sendiri (pekerjaan latar) — lintas-tenant, bukan urusan ISP.
+        platform("platform.ops.view", "Lihat kesehatan pekerjaan latar server")
 
         // IAM
         perm("iam.user.view", "Lihat pengguna")

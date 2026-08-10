@@ -2,14 +2,18 @@ package com.duluin.ftth
 
 import com.duluin.ftth.common.infrastructure.observability.JobHealth
 import com.duluin.ftth.common.infrastructure.observability.JobHealthRegistry
+import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.Duration
 
 /**
@@ -97,6 +101,30 @@ class ObservabilityIT {
 
         assertThat(coreThreads).isGreaterThan(1.0)
         assertThat(scraped).contains("""executor_queued_tasks{name="taskScheduler"}""")
+    }
+
+    @Test
+    fun `daftar kesehatan job hanya untuk platform admin`() {
+        assertThat(mockMvc.perform(get("/api/platform/jobs")).andReturn().response.status).isEqualTo(401)
+
+        val token = loginAsPlatformRoot()
+        val json = mockMvc.perform(get("/api/platform/jobs").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk)
+            .andReturn().response.contentAsString
+
+        assertThat(json).contains("BillingScheduler.issueInvoices").contains(""""module":"billing"""")
+        // Durasi dikirim sebagai angka detik, bukan "PT12H": halaman tak perlu mengurai ISO-8601.
+        assertThat(JsonPath.read<List<Int>>(json, "$[?(@.name=='BillingScheduler.issueInvoices')].intervalSeconds"))
+            .containsExactly(43_200)
+        assertThat(JsonPath.read<List<Boolean>>(json, "$[*].stalled")).doesNotContain(true)
+    }
+
+    private fun loginAsPlatformRoot(): String {
+        val body = """{"tenantSlug":"platform","email":"root@ftth.local","password":"rootadmin123"}"""
+        val json = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isOk)
+            .andReturn().response.contentAsString
+        return JsonPath.read(json, "$.accessToken")
     }
 
     /**
