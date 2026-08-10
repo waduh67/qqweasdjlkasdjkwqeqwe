@@ -629,7 +629,7 @@ sungguhan, bukan pada tampilan:
 - **Portal pelanggan** ✅ identitas & sesi terpisah dari operator: masuk pakai
   email/nomor HP tanpa perlu tahu kode ISP, lupa password lewat email, lihat &
   bayar tagihan, riwayat pembayaran + cetak bukti tagihan, ajuan ganti paket,
-  riwayat pemakaian, status sambungan
+  riwayat pemakaian, status sambungan (lihat [`docs/portal.md`](docs/portal.md))
 - **Helpdesk** ✅ pelanggan melaporkan gangguan dari portal → tiket ber-SLA →
   balasan operator di utas yang sama → eskalasi jadi work order perbaikan (lihat
   [`docs/helpdesk.md`](docs/helpdesk.md))
