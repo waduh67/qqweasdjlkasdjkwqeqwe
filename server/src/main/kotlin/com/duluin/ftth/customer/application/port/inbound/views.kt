@@ -28,6 +28,20 @@ data class CustomerView(
         get() = status != CustomerStatus.TERMINATED && onus.none { it.odpId != null }
 }
 
+/**
+ * Baris ringkas untuk pemilih "pelanggan belum berkoordinat" di peta. Sengaja bukan
+ * [CustomerView]: yang dibutuhkan hanya secukupnya untuk mengenali orangnya, sedangkan
+ * langganan & ONU-nya menyeret dua kueri tambahan yang tak dipakai sama sekali di sana.
+ */
+data class UnmappedCustomerView(
+    val id: UUID,
+    val code: String,
+    val name: String,
+    val address: String,
+    val phone: String?,
+    val status: CustomerStatus,
+)
+
 data class SubscriptionView(
     val id: UUID,
     val customerId: UUID,

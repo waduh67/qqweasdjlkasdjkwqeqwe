@@ -10,6 +10,8 @@ import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.customer.application.port.outbound.CustomerRepository
 import com.duluin.ftth.customer.domain.model.Customer
 import com.duluin.ftth.customer.domain.model.CustomerStatus
+import jakarta.persistence.EntityManager
+import jakarta.persistence.PersistenceContext
 import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Component
 import java.util.UUID
@@ -18,6 +20,9 @@ import java.util.UUID
 class CustomerPersistenceAdapter(
     private val jpa: CustomerJpaRepository,
 ) : CustomerRepository {
+
+    @PersistenceContext
+    private lateinit var entityManager: EntityManager
 
     override fun save(customer: Customer): Customer {
         val entity = jpa.findById(customer.id).orElse(null)?.apply {
@@ -54,6 +59,45 @@ class CustomerPersistenceAdapter(
         areaIds.isEmpty() -> emptyList()
         else -> jpa.findAwaitingInstallationInAreas(CustomerStatus.TERMINATED, areaIds)
     }.map { it.toDomain() }
+
+    /**
+     * Satu-satunya kueri native di module ini, dan alasannya sempit: predikatnya
+     * membandingkan **isi geometri** (`ST_X`/`ST_Y`), yang tak punya padanan di JPQL
+     * maupun Criteria. Lewat [EntityManager] — sama seperti renderer tile — supaya
+     * RLS tetap mendapat GUC tenant-nya; `SELECT *` dipetakan balik ke entitas
+     * sehingga tak ada pemetaan kolom manual yang bisa basi saat skema berubah.
+     *
+     * TERMINATED dibuang: menaruh titik pelanggan yang sudah putus di peta hanya
+     * meramaikan daftar pilihan tanpa ada yang akan memasangnya.
+     */
+    override fun findUnmapped(query: String, areaIds: Set<UUID>?, limit: Int): List<Customer> {
+        if (areaIds != null && areaIds.isEmpty()) return emptyList()
+        val needle = query.trim().lowercase()
+        val areaFilter = if (areaIds == null) "" else "AND c.area_id::text = ANY(string_to_array(:areaIds, ','))"
+        val textFilter = if (needle.isEmpty()) {
+            ""
+        } else {
+            """
+            AND (lower(c.code) LIKE :needle OR lower(c.name) LIKE :needle
+                 OR lower(c.address) LIKE :needle OR lower(COALESCE(c.phone, '')) LIKE :needle)
+            """.trimIndent()
+        }
+        val sql = """
+            SELECT * FROM customer c
+            WHERE ST_X(c.location) = 0 AND ST_Y(c.location) = 0
+              AND c.status <> 'TERMINATED'
+              $areaFilter
+              $textFilter
+            ORDER BY c.code
+        """.trimIndent()
+        val jpaQuery = entityManager.createNativeQuery(sql, CustomerJpaEntity::class.java)
+            .setMaxResults(limit)
+        if (areaIds != null) jpaQuery.setParameter("areaIds", areaIds.joinToString(",") { it.toString() })
+        if (needle.isNotEmpty()) jpaQuery.setParameter("needle", "%$needle%")
+
+        @Suppress("UNCHECKED_CAST")
+        return (jpaQuery.resultList as List<CustomerJpaEntity>).map { it.toDomain() }
+    }
 
     override fun search(
         query: String,

@@ -11,6 +11,7 @@ import com.duluin.ftth.common.security.areaScope
 import com.duluin.ftth.customer.application.port.inbound.CustomerView
 import com.duluin.ftth.customer.application.port.inbound.ManageCustomerUseCase
 import com.duluin.ftth.customer.application.port.inbound.SaveCustomerCommand
+import com.duluin.ftth.customer.application.port.inbound.UnmappedCustomerView
 import com.duluin.ftth.customer.application.port.outbound.CustomerRepository
 import com.duluin.ftth.customer.application.port.outbound.OnuRepository
 import com.duluin.ftth.customer.application.port.outbound.SubscriptionRepository
@@ -48,6 +49,11 @@ class CustomerService(
         ).associateBy { it.id }
         return page.map { views.getValue(it.id) }
     }
+
+    @Transactional(readOnly = true)
+    override fun findUnmapped(query: String, limit: Int): List<UnmappedCustomerView> =
+        customerRepository.findUnmapped(query, currentUser.current().areaScope(), limit.coerceIn(1, MAX_UNMAPPED))
+            .map { UnmappedCustomerView(it.id, it.code, it.name, it.address, it.phone, it.status) }
 
     @Transactional(readOnly = true)
     override fun get(id: UUID): CustomerView = assemble(requireCustomer(id))
@@ -170,6 +176,8 @@ class CustomerService(
         (1..AUTO_CODE_SUFFIX_LEN).map { CODE_ALPHABET.random() }.joinToString("")
 
     private companion object {
+        /** Pemilih di peta hanya perlu daftar pendek; batas keras agar tak bisa dipakai menguras tabel. */
+        const val MAX_UNMAPPED = 100
         const val MAX_CODE_ATTEMPTS = 100
         const val AUTO_CODE_SUFFIX_LEN = 6
 

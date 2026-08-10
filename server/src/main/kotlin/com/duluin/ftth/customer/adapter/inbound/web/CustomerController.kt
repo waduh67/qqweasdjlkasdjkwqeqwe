@@ -13,6 +13,7 @@ import com.duluin.ftth.customer.application.port.inbound.RegisterOnuCommand
 import com.duluin.ftth.customer.application.port.inbound.SaveCustomerCommand
 import com.duluin.ftth.customer.application.port.inbound.SaveSubscriptionCommand
 import com.duluin.ftth.customer.application.port.inbound.SubscriptionView
+import com.duluin.ftth.customer.application.port.inbound.UnmappedCustomerView
 import com.duluin.ftth.customer.domain.model.CustomerStatus
 import com.duluin.ftth.customer.domain.model.OnuStatus
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
@@ -62,6 +63,18 @@ class CustomerController(
     ): PageResponse<CustomerView> = PageResponse.from(
         manageCustomer.search(query.orEmpty(), status, PageRequest(page, size, sort = "code")),
     )
+
+    /**
+     * Pelanggan yang belum punya titik di peta — impor massal menaruhnya di koordinat
+     * penampung (0,0). Peta memakainya untuk memilih siapa yang ditaruh di titik klik,
+     * lalu menyimpannya lewat `PUT /{id}/location`.
+     */
+    @GetMapping("/unmapped")
+    @PreAuthorize("@authz.can('customer.customer.view')")
+    fun unmapped(
+        @RequestParam(required = false) query: String?,
+        @RequestParam(defaultValue = "20") limit: Int,
+    ): List<UnmappedCustomerView> = manageCustomer.findUnmapped(query.orEmpty(), limit)
 
     @GetMapping("/{id}")
     @PreAuthorize("@authz.can('customer.customer.view')")

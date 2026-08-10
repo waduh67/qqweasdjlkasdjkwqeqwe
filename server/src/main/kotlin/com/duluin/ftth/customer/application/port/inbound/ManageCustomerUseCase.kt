@@ -10,6 +10,12 @@ interface ManageCustomerUseCase {
 
     fun search(query: String, status: CustomerStatus?, pageRequest: PageRequest): Page<CustomerView>
 
+    /**
+     * Pelanggan yang belum punya titik di peta (impor massal menaruhnya di koordinat
+     * penampung 0,0). Dipakai peta untuk memilih siapa yang mau ditaruh di titik klik.
+     */
+    fun findUnmapped(query: String, limit: Int): List<UnmappedCustomerView>
+
     fun get(id: UUID): CustomerView
 
     fun create(command: SaveCustomerCommand): CustomerView

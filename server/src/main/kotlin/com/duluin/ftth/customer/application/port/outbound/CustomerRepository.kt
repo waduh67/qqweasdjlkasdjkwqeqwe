@@ -20,6 +20,12 @@ interface CustomerRepository {
      */
     fun findAwaitingInstallation(areaIds: Set<UUID>?): List<Customer>
 
+    /**
+     * Pelanggan yang koordinatnya masih penampung (0,0) — hasil impor massal tanpa
+     * kolom lat/long. `null` = seluruh area; set kosong = tanpa hasil.
+     */
+    fun findUnmapped(query: String, areaIds: Set<UUID>?, limit: Int): List<Customer>
+
     fun search(
         query: String,
         areaIds: Set<UUID>?,
