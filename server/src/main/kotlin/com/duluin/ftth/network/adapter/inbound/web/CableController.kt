@@ -107,4 +107,6 @@ private fun CableRequest.toCommand() = SaveCableCommand(
     fromPortNumber = fromPortNumber,
     toPortNumber = toPortNumber,
     status = status,
+    installation = installation,
+    ownership = ownership,
 )

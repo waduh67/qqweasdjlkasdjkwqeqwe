@@ -2,6 +2,8 @@ package com.duluin.ftth.network.adapter.outbound.persistence
 
 import com.duluin.ftth.common.infrastructure.persistence.TenantAwareJpaEntity
 import com.duluin.ftth.network.domain.model.AssetStatus
+import com.duluin.ftth.network.domain.model.CableInstallation
+import com.duluin.ftth.network.domain.model.CableOwnership
 import com.duluin.ftth.network.domain.model.CableType
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import jakarta.persistence.Column
@@ -66,4 +68,13 @@ class CableJpaEntity(
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var status: AssetStatus,
+
+    /** Null = belum disurvei; bukan "tak terpasang". Lihat V88. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "installation_method", length = 20)
+    var installationMethod: CableInstallation?,
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    var ownership: CableOwnership,
 ) : TenantAwareJpaEntity(id)

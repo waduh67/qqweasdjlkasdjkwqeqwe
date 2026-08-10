@@ -106,6 +106,8 @@ class CableService(
                 from = from,
                 to = to,
                 status = command.status,
+                installation = command.installation,
+                ownership = command.ownership,
             ),
         )
         cableCoreRepository.saveAll(
@@ -134,6 +136,8 @@ class CableService(
             from = from,
             to = to,
             status = command.status,
+            installation = command.installation,
+            ownership = command.ownership,
         )
         val saved = cableRepository.save(cable)
         syncCores(saved, previousCoreCount)
@@ -323,6 +327,10 @@ class CableService(
         toPortNumber = to.portNumber,
         fromPortLabel = resolveFromPortLabel(),
         status = status,
+        installation = installation,
+        installationLabel = installation?.label,
+        ownership = ownership,
+        ownershipLabel = ownership.label,
     )
 
     /**

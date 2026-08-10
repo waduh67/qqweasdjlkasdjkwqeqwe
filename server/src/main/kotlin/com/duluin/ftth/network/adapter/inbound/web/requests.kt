@@ -3,6 +3,8 @@ package com.duluin.ftth.network.adapter.inbound.web
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.network.domain.model.AssetStatus
 import com.duluin.ftth.network.domain.model.CableEnd
+import com.duluin.ftth.network.domain.model.CableInstallation
+import com.duluin.ftth.network.domain.model.CableOwnership
 import com.duluin.ftth.network.domain.model.CableType
 import com.duluin.ftth.network.domain.model.CoreStatus
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
@@ -117,6 +119,9 @@ data class CableRequest(
     /** Input tujuan (opsional). */
     @field:Min(1) val toPortNumber: Int? = null,
     val status: AssetStatus = AssetStatus.ACTIVE,
+    /** Cara pasang; boleh kosong = belum disurvei. */
+    val installation: CableInstallation? = null,
+    val ownership: CableOwnership = CableOwnership.OWNED,
 )
 
 /**

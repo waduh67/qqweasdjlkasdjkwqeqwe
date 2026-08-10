@@ -4,6 +4,8 @@ import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.network.domain.model.AssetStatus
+import com.duluin.ftth.network.domain.model.CableInstallation
+import com.duluin.ftth.network.domain.model.CableOwnership
 import com.duluin.ftth.network.domain.model.CableType
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import java.util.UUID
@@ -46,4 +48,7 @@ data class SaveCableCommand(
     /** Input tujuan (opsional, umumnya tunggal). */
     val toPortNumber: Int? = null,
     val status: AssetStatus,
+    /** Null = belum disurvei; disimpan apa adanya, tidak ditebak jadi AERIAL. */
+    val installation: CableInstallation? = null,
+    val ownership: CableOwnership = CableOwnership.OWNED,
 )

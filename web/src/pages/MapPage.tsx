@@ -8,6 +8,8 @@ import type {
   BlastRadiusView,
   CableCutView,
   CableEnd,
+  CableInstallation,
+  CableOwnership,
   CablePortOption,
   CableType,
   CableView,
@@ -28,7 +30,7 @@ import type {
   UnmappedCustomer,
   UtilizationHeatmap,
 } from '../api/network'
-import { onuStatusLabel } from '../api/network'
+import { CABLE_INSTALLATION_LABEL, CABLE_OWNERSHIP_LABEL, onuStatusLabel } from '../api/network'
 import type { PageResponse } from '../api/types'
 import { resetAccessLogin } from '../api/bng'
 import { rebootCpe, runCpePing } from '../api/cpe'
@@ -1553,6 +1555,9 @@ export function MapPage() {
     fromPortNumber?: number
     // Drop → pelanggan: ONU yang ditautkan ke slot ODP sumber (form.fromPortNumber).
     onuId?: string
+    // Fisik jalur; installation null = belum disurvei (bukan ditebak "udara").
+    installation: CableInstallation | null
+    ownership: CableOwnership
   }) => {
     const route = tool.current?.route() ?? []
     const state = toolState
@@ -1571,6 +1576,8 @@ export function MapPage() {
         fromPonPortId: form.fromPonPortId,
         fromPortNumber: form.fromPortNumber,
         status: 'ACTIVE',
+        installation: form.installation,
+        ownership: form.ownership,
       })
       // Drop ke pelanggan: tautkan ONU-nya ke slot ODP yang sama, sehingga
       // "port mana" tercatat di penempatan ONU — sumber kebenaran port ODP.
@@ -1632,6 +1639,10 @@ export function MapPage() {
         fromPortNumber: editing.fromPortNumber ?? undefined,
         toPortNumber: editing.toPortNumber ?? undefined,
         status: editing.status,
+        // Idem: fisik jalur bukan urusan mode edit geometri, tapi PUT mengganti
+        // seluruh kabel — tak dikirim ulang berarti hasil survei ikut terhapus.
+        installation: editing.installation,
+        ownership: editing.ownership,
       })
       toast.success(`Jalur ${editing.code} diperbarui`)
       cancelTool()
@@ -1639,6 +1650,45 @@ export function MapPage() {
       void refreshImpacted()
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal memperbarui jalur')
+    }
+  }
+
+  /**
+   * Setel cara pasang / kepemilikan langsung dari panel kabel. Dua fakta ini
+   * biasanya baru diketahui SETELAH surveyor turun — jauh setelah jalurnya
+   * digambar di peta. Memaksa operator masuk mode "Edit jalur" hanya untuk
+   * mengubah dua dropdown berarti menyeret titik rute yang sudah benar ke dalam
+   * risiko tergeser, jadi perubahannya berdiri sendiri di sini.
+   */
+  const saveCablePhysical = async (
+    c: CableView,
+    patch: { installation?: CableInstallation | null; ownership?: CableOwnership },
+  ) => {
+    try {
+      const updated = await api.put<CableView>(`/api/cables/${c.id}`, {
+        code: c.code,
+        name: c.name,
+        cableType: c.cableType,
+        coreCount: c.coreCount,
+        route: c.route.points,
+        fromKind: c.fromKind,
+        fromId: c.fromId,
+        toKind: c.toKind,
+        toId: c.toId,
+        fromPonPortId: c.fromPonPortId ?? undefined,
+        fromPortNumber: c.fromPortNumber ?? undefined,
+        toPortNumber: c.toPortNumber ?? undefined,
+        status: c.status,
+        // `undefined` di patch = bidang itu tak disentuh; `null` pada installation
+        // adalah nilai sah ("dikembalikan ke belum disurvei"), jadi tak boleh
+        // diperlakukan sama dengan tak-disentuh oleh `??`.
+        installation: patch.installation !== undefined ? patch.installation : c.installation,
+        ownership: patch.ownership ?? c.ownership,
+      })
+      setCable(updated)
+      toast.success(`Data fisik ${updated.name} diperbarui`)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal memperbarui data fisik kabel')
     }
   }
 
@@ -1929,6 +1979,7 @@ export function MapPage() {
             onEdit={() => startEdit(cable)}
             onDelete={() => void deleteCable(cable)}
             onSimulate={() => void simulateCut(cable)}
+            onPhysicalChange={(patch) => void saveCablePhysical(cable, patch)}
             onClose={() => setCable(null)}
           />
         )}
@@ -2305,6 +2356,59 @@ function drawHint(state: ToolState): string {
 /** Port keluaran sumber yang dipilih: PON port OLT (ponPortId) atau kaki/slot (portNumber). */
 type SourcePort = { ponPortId: string | null; portNumber: number | null }
 
+/**
+ * Sepasang dropdown "fisik jalur", dipakai form kabel baru maupun panel kabel
+ * tersimpan supaya pilihan dan katanya persis sama di kedua tempat. Nilai ''
+ * pada [installation] berarti belum disurvei — dilaporkan ke pemanggil sebagai
+ * `null`, bukan ditebak.
+ */
+function CablePhysicalFields({
+  installation,
+  ownership,
+  onInstallation,
+  onOwnership,
+}: {
+  installation: CableInstallation | ''
+  ownership: CableOwnership
+  onInstallation: (value: CableInstallation | null) => void
+  onOwnership: (value: CableOwnership) => void
+}) {
+  return (
+    <div className="stack" style={{ gap: '0.3rem' }}>
+      <div className="row" style={{ gap: '0.4rem' }}>
+        <SelectField
+          label="Cara pasang"
+          value={installation}
+          onChange={(_, data) => onInstallation(data.value === '' ? null : (data.value as CableInstallation))}
+          style={{ flex: 1 }}
+        >
+          <option value="">Belum disurvei</option>
+          {(Object.keys(CABLE_INSTALLATION_LABEL) as CableInstallation[]).map((value) => (
+            <option key={value} value={value}>
+              {CABLE_INSTALLATION_LABEL[value]}
+            </option>
+          ))}
+        </SelectField>
+        <SelectField
+          label="Kepemilikan"
+          value={ownership}
+          onChange={(_, data) => onOwnership(data.value as CableOwnership)}
+          style={{ width: '9rem' }}
+        >
+          {(Object.keys(CABLE_OWNERSHIP_LABEL) as CableOwnership[]).map((value) => (
+            <option key={value} value={value}>
+              {CABLE_OWNERSHIP_LABEL[value]}
+            </option>
+          ))}
+        </SelectField>
+      </div>
+      <span className="muted" style={{ fontSize: '0.78rem' }}>
+        Penentu siapa yang berangkat saat putus: tim tangga untuk jalur udara, tim galian untuk jalur tanam.
+      </span>
+    </div>
+  )
+}
+
 function SaveCablePanel({
   from,
   to,
@@ -2335,10 +2439,17 @@ function SaveCablePanel({
     fromPonPortId?: string
     fromPortNumber?: number
     onuId?: string
+    installation: CableInstallation | null
+    ownership: CableOwnership
   }) => void
 }) {
   const [name, setName] = useState(`${TYPE_LABEL[cableType]} ${from} → ${to}`)
   const [coreCount, setCoreCount] = useState(DEFAULT_CORES[cableType])
+  // Sengaja tanpa prasetel per jenis kabel: menebak "drop pasti udara" akan
+  // menuliskan hasil survei palsu ke basis data, dan yang membayarnya adalah
+  // teknisi yang datang bertangga ke gangguan di dalam duct.
+  const [installation, setInstallation] = useState<CableInstallation | ''>('')
+  const [ownership, setOwnership] = useState<CableOwnership>('OWNED')
 
   const isDrop = cableType === 'DROP'
 
@@ -2418,6 +2529,8 @@ function SaveCablePanel({
       fromPonPortId: srcPort?.ponPortId ?? undefined,
       fromPortNumber: isDrop ? selectedPort ?? undefined : srcPort?.portNumber ?? undefined,
       onuId: isDrop && onu && selectedPort != null ? onu.id : undefined,
+      installation: installation === '' ? null : installation,
+      ownership,
     })
 
   return (
@@ -2437,6 +2550,12 @@ function SaveCablePanel({
           max={288}
           value={String(coreCount)}
           onChange={(_, data) => setCoreCount(Number(data.value))}
+        />
+        <CablePhysicalFields
+          installation={installation}
+          ownership={ownership}
+          onInstallation={(value) => setInstallation(value ?? '')}
+          onOwnership={setOwnership}
         />
 
         {!isDrop && (
@@ -2677,6 +2796,7 @@ function CablePanel({
   onEdit,
   onDelete,
   onSimulate,
+  onPhysicalChange,
   onClose,
 }: {
   cable: CableView
@@ -2693,6 +2813,8 @@ function CablePanel({
   onEdit: () => void
   onDelete: () => void
   onSimulate: () => void
+  /** Simpan seketika; hanya bidang yang disebut yang berubah. */
+  onPhysicalChange: (patch: { installation?: CableInstallation | null; ownership?: CableOwnership }) => void
   onClose: () => void
 }) {
   const primary: CommandAction | undefined = canEdit
@@ -2731,7 +2853,27 @@ function CablePanel({
             {cable.toPortNumber != null && <span className="muted"> · port {cable.toPortNumber}</span>}
           </Ess>
           <Ess label="Titik jalur">{cable.route.points.length}</Ess>
+          {!canEdit && (
+            <>
+              <Ess label="Cara pasang">
+                {cable.installationLabel ?? <span className="muted">Belum disurvei</span>}
+              </Ess>
+              <Ess label="Kepemilikan">{cable.ownershipLabel}</Ess>
+            </>
+          )}
         </dl>
+
+        {/* Yang berhak mengubah langsung dapat dropdown-nya — hasil survei sering
+            baru masuk berhari-hari setelah jalurnya digambar, dan tersimpan
+            begitu dipilih tanpa tombol simpan terpisah. */}
+        {canEdit && (
+          <CablePhysicalFields
+            installation={cable.installation ?? ''}
+            ownership={cable.ownership}
+            onInstallation={(installation) => onPhysicalChange({ installation })}
+            onOwnership={(ownership) => onPhysicalChange({ ownership })}
+          />
+        )}
 
         {/* Core lebih dulu daripada OTDR: inilah yang dibuka orang tiap hari
             ("core mana yang masih bebas buat pasangan besok"), sedangkan OTDR

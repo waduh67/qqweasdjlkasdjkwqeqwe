@@ -317,6 +317,33 @@ export interface SubscriberNeighbors {
 export type CableType = 'FEEDER' | 'DISTRIBUTION' | 'DROP'
 export type NodeKind = 'SITE' | 'OLT' | 'ODC' | 'ODP' | 'CUSTOMER'
 
+/**
+ * Cara kabel terpasang di lapangan. Bukan hiasan data: ia yang menentukan siapa
+ * yang dikirim saat putus — tim tangga untuk jalur udara, tim galian untuk jalur
+ * tanam. `null` berarti BELUM DISURVEI, dan sengaja tak ditebak.
+ */
+export type CableInstallation = 'AERIAL' | 'BURIED' | 'DUCT'
+
+/** Milik sendiri atau numpang/sewa milik pihak lain (PLN, Telkom, sesama ISP). */
+export type CableOwnership = 'OWNED' | 'LEASED'
+
+/**
+ * Label untuk PILIHAN di form — saat kabel belum ada, belum ada view dari server
+ * yang bisa dipinjam labelnya. Untuk MENAMPILKAN kabel yang sudah tersimpan,
+ * pakai `installationLabel`/`ownershipLabel` bawaan view supaya kata yang dibaca
+ * operator hanya punya satu sumber.
+ */
+export const CABLE_INSTALLATION_LABEL: Record<CableInstallation, string> = {
+  AERIAL: 'Udara (tiang)',
+  BURIED: 'Tanam langsung',
+  DUCT: 'Duct / HDPE',
+}
+
+export const CABLE_OWNERSHIP_LABEL: Record<CableOwnership, string> = {
+  OWNED: 'Milik sendiri',
+  LEASED: 'Sewa',
+}
+
 /** Bentuk `route` dari server: LineString sebagai daftar titik. */
 export interface RoutePath {
   points: Coordinate[]
@@ -343,6 +370,11 @@ export interface CableView {
   /** Label siap-tampil port keluaran sumber, mis. "PON 1/1/1" / "Kaki 3" / "Slot 5". */
   fromPortLabel: string | null
   status: AssetStatus
+  /** Cara pasang; null = belum disurvei (bukan "tak terpasang"). */
+  installation: CableInstallation | null
+  installationLabel: string | null
+  ownership: CableOwnership
+  ownershipLabel: string
 }
 
 export type CoreStatus = 'FREE' | 'USED' | 'RESERVED' | 'DAMAGED'

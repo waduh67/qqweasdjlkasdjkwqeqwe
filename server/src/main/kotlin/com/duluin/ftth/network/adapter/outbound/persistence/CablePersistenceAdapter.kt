@@ -35,6 +35,8 @@ class CablePersistenceAdapter(
             fromPortNumber = cable.from.portNumber
             toPortNumber = cable.to.portNumber
             status = cable.status
+            installationMethod = cable.installation
+            ownership = cable.ownership
         } ?: CableJpaEntity(
             id = cable.id,
             code = cable.code,
@@ -51,6 +53,8 @@ class CablePersistenceAdapter(
             fromPortNumber = cable.from.portNumber,
             toPortNumber = cable.to.portNumber,
             status = cable.status,
+            installationMethod = cable.installation,
+            ownership = cable.ownership,
         )
         return jpa.save(entity).toDomain()
     }
@@ -86,4 +90,6 @@ internal fun CableJpaEntity.toDomain(): Cable = Cable.rehydrate(
     from = NetworkEndpoint(fromKind, fromId, ponPortId = fromPonPortId, portNumber = fromPortNumber),
     to = NetworkEndpoint(toKind, toId, portNumber = toPortNumber),
     status = status,
+    installation = installationMethod,
+    ownership = ownership,
 )

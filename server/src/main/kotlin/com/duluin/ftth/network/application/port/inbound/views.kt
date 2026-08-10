@@ -3,6 +3,8 @@ package com.duluin.ftth.network.application.port.inbound
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.domain.geo.RoutePath
 import com.duluin.ftth.network.domain.model.AssetStatus
+import com.duluin.ftth.network.domain.model.CableInstallation
+import com.duluin.ftth.network.domain.model.CableOwnership
 import com.duluin.ftth.network.domain.model.CableType
 import com.duluin.ftth.network.domain.model.CoreStatus
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
@@ -132,6 +134,11 @@ data class CableView(
     /** Label siap-tampil port keluaran sumber, mis. "PON 1/1/1" / "Kaki 3" / "Slot 5". */
     val fromPortLabel: String?,
     val status: AssetStatus,
+    /** Cara pasang; null = belum disurvei (bukan "tak terpasang"). */
+    val installation: CableInstallation?,
+    val installationLabel: String?,
+    val ownership: CableOwnership,
+    val ownershipLabel: String,
 )
 
 /**

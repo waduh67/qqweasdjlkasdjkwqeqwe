@@ -57,6 +57,39 @@ enum class CableType(
 }
 
 /**
+ * Cara kabel terpasang di lapangan. Bukan hiasan katalog: inilah yang menentukan
+ * siapa yang berangkat saat putus dan bawa apa. Kabel udara cukup tangga dan bisa
+ * disambung sore itu juga; kabel tanam butuh galian, izin, dan sering bermalam.
+ *
+ * Sengaja NULLABLE di kabel (lihat V88): "belum disurvei" adalah keadaan yang
+ * jujur dan berguna, sedangkan menebak "udara" untuk semua kabel lama melahirkan
+ * data yang terlihat lengkap tapi menyesatkan.
+ */
+enum class CableInstallation(val label: String) {
+    /** Digantung di tiang — milik sendiri atau numpang PLN/Telkom. */
+    AERIAL("Udara (tiang)"),
+
+    /** Ditanam langsung ke tanah tanpa pelindung duct. */
+    BURIED("Tanam langsung"),
+
+    /** Di dalam duct/HDPE — bisa ditarik ulang tanpa menggali seluruh jalur. */
+    DUCT("Duct / HDPE"),
+}
+
+/**
+ * Siapa pemilik ruas ini. Menentukan siapa yang boleh menyentuhnya saat gangguan
+ * dan siapa yang menagih tiap bulan: pada ruas sewa, memotong-sambung sendiri
+ * biasanya melanggar kontrak dan perbaikannya harus lewat pemiliknya.
+ */
+enum class CableOwnership(val label: String) {
+    /** Dibangun & dimiliki sendiri. Default untuk kabel yang digambar di peta sendiri. */
+    OWNED("Milik sendiri"),
+
+    /** Sewa / dark fiber operator lain. Kekecualian yang harus ditandai sadar. */
+    LEASED("Sewa"),
+}
+
+/**
  * Ruas kabel fiber beserta jalur fisiknya di peta.
  *
  * Panjang selalu diturunkan dari geometri (termasuk cadangan slack), tidak pernah
@@ -74,6 +107,8 @@ class Cable private constructor(
     from: NetworkEndpoint,
     to: NetworkEndpoint,
     status: AssetStatus,
+    installation: CableInstallation?,
+    ownership: CableOwnership,
 ) {
     var name: String = name
         private set
@@ -96,9 +131,17 @@ class Cable private constructor(
     var status: AssetStatus = status
         private set
 
+    /** Null = belum disurvei, bukan "tak ada". Lihat [CableInstallation]. */
+    var installation: CableInstallation? = installation
+        private set
+
+    var ownership: CableOwnership = ownership
+        private set
+
     /** Panjang material termasuk slack, dalam meter. */
     val lengthMeters: Double get() = route.withSlack()
 
+    @Suppress("LongParameterList")
     fun update(
         name: String,
         cableType: CableType,
@@ -107,6 +150,8 @@ class Cable private constructor(
         from: NetworkEndpoint,
         to: NetworkEndpoint,
         status: AssetStatus,
+        installation: CableInstallation?,
+        ownership: CableOwnership,
     ) {
         cableType.assertEndpoints(from, to)
         this.name = AssetNaming.name(name, "kabel")
@@ -116,6 +161,8 @@ class Cable private constructor(
         this.from = from
         this.to = to
         this.status = status
+        this.installation = installation
+        this.ownership = ownership
     }
 
     /**
@@ -144,6 +191,7 @@ class Cable private constructor(
     companion object {
         const val MAX_CORE_COUNT = 288
 
+        @Suppress("LongParameterList")
         fun create(
             tenantId: UUID,
             code: String,
@@ -154,6 +202,8 @@ class Cable private constructor(
             from: NetworkEndpoint,
             to: NetworkEndpoint,
             status: AssetStatus = AssetStatus.ACTIVE,
+            installation: CableInstallation? = null,
+            ownership: CableOwnership = CableOwnership.OWNED,
         ): Cable {
             cableType.assertEndpoints(from, to)
             return Cable(
@@ -167,6 +217,8 @@ class Cable private constructor(
                 from = from,
                 to = to,
                 status = status,
+                installation = installation,
+                ownership = ownership,
             )
         }
 
@@ -182,7 +234,11 @@ class Cable private constructor(
             from: NetworkEndpoint,
             to: NetworkEndpoint,
             status: AssetStatus,
-        ): Cable = Cable(id, tenantId, code, name, cableType, coreCount, route, from, to, status)
+            installation: CableInstallation?,
+            ownership: CableOwnership,
+        ): Cable = Cable(
+            id, tenantId, code, name, cableType, coreCount, route, from, to, status, installation, ownership,
+        )
 
         private fun validateCoreCount(coreCount: Int): Int {
             if (coreCount !in 1..MAX_CORE_COUNT) {
