@@ -121,6 +121,35 @@ export interface PortalConnection {
   devices: PortalDevice[]
 }
 
+/**
+ * Laporan gangguan yang dibuat pelanggan sendiri (module `helpdesk` di server).
+ * `status`/`category` = nama enum; nama staf sudah disamarkan server jadi "Tim dukungan".
+ */
+export interface PortalTicket {
+  id: string
+  code: string
+  category: string
+  subject: string
+  status: string
+  /** Kode work order bila keluhannya sudah dijadwalkan ke teknisi. */
+  workOrderCode: string | null
+  openedAt: string
+  lastActivityAt: string
+}
+
+export interface PortalTicketMessage {
+  author: 'CUSTOMER' | 'OPERATOR' | 'SYSTEM'
+  authorName: string
+  body: string
+  at: string
+}
+
+export interface PortalTicketDetail {
+  ticket: PortalTicket
+  description: string
+  messages: PortalTicketMessage[]
+}
+
 /** Satu ISP yang bisa dipilih ketika identitas yang sama dipakai di lebih dari satu tempat. */
 export interface PortalTenantChoice {
   tenantSlug: string
@@ -166,4 +195,19 @@ export const getPortalConnection = () => portalApiClient.get<PortalConnection>('
 
 export const changePortalPassword = (currentPassword: string, newPassword: string) =>
   portalApiClient.post<void>('/api/portal/me/password', { currentPassword, newPassword })
+
+export const getPortalTickets = () => portalApiClient.get<PortalTicket[]>('/api/portal/me/tickets')
+
+export const getPortalTicket = (id: string) =>
+  portalApiClient.get<PortalTicketDetail>(`/api/portal/me/tickets/${id}`)
+
+export const submitPortalTicket = (category: string, subject: string, description: string) =>
+  portalApiClient.post<PortalTicketDetail>('/api/portal/me/tickets', { category, subject, description })
+
+export const replyPortalTicket = (id: string, body: string) =>
+  portalApiClient.post<PortalTicketDetail>(`/api/portal/me/tickets/${id}/replies`, { body })
+
+/** "Sudah beres" — pelanggan menutup sendiri laporannya; utasnya berhenti menerima balasan. */
+export const closePortalTicket = (id: string) =>
+  portalApiClient.post<PortalTicketDetail>(`/api/portal/me/tickets/${id}/close`)
 

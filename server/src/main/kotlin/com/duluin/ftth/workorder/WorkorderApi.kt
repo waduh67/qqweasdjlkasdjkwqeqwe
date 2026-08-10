@@ -28,6 +28,13 @@ interface WorkorderApi {
      * RADIUS). Prioritas NORMAL — operator bisa menaikkannya lewat UI work order.
      */
     fun raisePsb(command: RaisePsbCommand): WorkOrderRef
+
+    /**
+     * Helpdesk: buka WO perbaikan (REPAIR) dari keluhan pelanggan yang butuh kunjungan
+     * teknisi. Lahir tanpa roster (dispatcher yang menugaskan) dan tanpa area — WO ini
+     * datang dari meja bantuan, bukan dari peta.
+     */
+    fun raiseRepair(command: RaiseRepairCommand): WorkOrderRef
 }
 
 /** Perintah membuka WO PSB dari orkestrasi onboarding; selalu bertaut ke pelanggan + langganannya. */
@@ -40,6 +47,21 @@ data class RaisePsbCommand(
     val scheduledAt: Instant?,
     /** Roster teknisi awal (tim datar); kosong = WO lahir belum ditugaskan. */
     val assignees: Set<UUID> = emptySet(),
+)
+
+/**
+ * Perintah membuka WO perbaikan dari keluhan pelanggan (module helpdesk).
+ *
+ * [priority] dikirim sebagai NAMA [com.duluin.ftth.workorder.domain.model.WorkOrderPriority]
+ * (`LOW`/`NORMAL`/`HIGH`/`URGENT`) — konvensi yang sama dengan status langganan di
+ * `CustomerApi`: enum internal tak menyeberang batas module. Nilai tak dikenal ditolak.
+ */
+data class RaiseRepairCommand(
+    val customerId: UUID,
+    val title: String,
+    val description: String?,
+    val priority: String = "NORMAL",
+    val scheduledAt: Instant? = null,
 )
 
 /** Pandangan ringkas sebuah work order untuk konsumen lintas-module. */

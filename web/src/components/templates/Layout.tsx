@@ -11,6 +11,7 @@ import {
   IconArea,
   IconAudit,
   IconChart,
+  IconChat,
   IconCustomers,
   IconDashboard,
   IconGauge,
@@ -61,6 +62,9 @@ const GROUPS: NavGroup[] = [
       // Impor PPPoE tak lagi menu tersendiri — pintu masuknya kini tombol di halaman Pelanggan
       // (menyatu dengan rencana impor/ekspor pelanggan via CSV). Rute /import-pppoe tetap ada.
       { to: '/customers', label: 'Pelanggan', permission: 'customer.customer.view', icon: IconCustomers },
+      // Keluhan yang dilaporkan pelanggan sendiri dari portal — tetangga Pelanggan, bukan
+      // Insiden: yang di sini lahir dari manusia, yang di Lapangan lahir dari alarm.
+      { to: '/helpdesk', label: 'Meja Bantuan', permission: 'helpdesk.ticket.view', icon: IconChat },
       { to: '/invoices', label: 'Tagihan', permission: 'billing.invoice.view', icon: IconReceipt },
       { to: '/catalog', label: 'Paket Internet', permission: 'catalog.plan.view', icon: IconPackage },
     ],

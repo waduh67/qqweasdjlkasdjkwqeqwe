@@ -1,6 +1,8 @@
 package com.duluin.ftth.workorder.application.service
 
+import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.workorder.RaisePsbCommand
+import com.duluin.ftth.workorder.RaiseRepairCommand
 import com.duluin.ftth.workorder.WorkOrderRef
 import com.duluin.ftth.workorder.WorkorderApi
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderUseCase
@@ -46,6 +48,34 @@ class WorkOrderApiService(
                 areaId = command.areaId,
                 scheduledAt = command.scheduledAt,
                 assignees = command.assignees,
+            ),
+        )
+        return WorkOrderRef(
+            id = view.id,
+            code = view.code,
+            customerId = command.customerId,
+            areaId = view.areaId,
+            scheduledAt = view.scheduledAt,
+        )
+    }
+
+    @Transactional
+    override fun raiseRepair(command: RaiseRepairCommand): WorkOrderRef {
+        val priority = WorkOrderPriority.entries.firstOrNull { it.name == command.priority }
+            ?: throw ValidationException("Prioritas '${command.priority}' tidak dikenal")
+        val view = manageWorkOrder.create(
+            SaveWorkOrderCommand(
+                type = WorkOrderType.REPAIR,
+                title = command.title,
+                description = command.description,
+                priority = priority,
+                customerId = command.customerId,
+                subscriptionId = null,
+                incidentId = null,
+                // Tanpa area: keluhan datang dari meja bantuan, dispatcher yang menempatkannya.
+                areaId = null,
+                scheduledAt = command.scheduledAt,
+                assignees = emptySet(),
             ),
         )
         return WorkOrderRef(

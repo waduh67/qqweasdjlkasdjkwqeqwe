@@ -25,6 +25,7 @@ import com.duluin.ftth.customer.RegisterCustomerCommand
 import com.duluin.ftth.customer.SubscriptionRef
 import com.duluin.ftth.subscriber360.application.service.Subscriber360Service
 import com.duluin.ftth.workorder.RaisePsbCommand
+import com.duluin.ftth.workorder.RaiseRepairCommand
 import com.duluin.ftth.workorder.WorkOrderRef
 import com.duluin.ftth.workorder.WorkorderApi
 import org.assertj.core.api.Assertions.assertThat
@@ -218,6 +219,8 @@ class Subscriber360ServiceTest {
         )
 
         override fun raisePsb(command: RaisePsbCommand): WorkOrderRef = throw UnsupportedOperationException()
+
+        override fun raiseRepair(command: RaiseRepairCommand): WorkOrderRef = throw UnsupportedOperationException()
     }
 
     private companion object {

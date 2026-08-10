@@ -23,6 +23,7 @@ import { ImportCustomersPage } from './pages/ImportCustomersPage'
 import { MonitoringPage } from './pages/MonitoringPage'
 import { ProvisioningPage } from './pages/ProvisioningPage'
 import { IncidentsPage } from './pages/IncidentsPage'
+import { HelpdeskPage } from './pages/HelpdeskPage'
 import { WorkOrdersPage } from './pages/WorkOrdersPage'
 import { MyWorkOrdersPage } from './pages/MyWorkOrdersPage'
 import { WorkOrderDetailPage } from './pages/WorkOrderDetailPage'
@@ -259,6 +260,14 @@ function OperatorApp() {
               element={
                 <RequirePermission permission="incident.ticket.view">
                   <IncidentsPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="helpdesk"
+              element={
+                <RequirePermission permission="helpdesk.ticket.view">
+                  <HelpdeskPage />
                 </RequirePermission>
               }
             />

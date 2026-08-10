@@ -10,10 +10,11 @@ import {
   type PortalBilling,
   type PortalConnection,
 } from './portalApi'
+import { BantuanTab } from './PortalHelpTab'
 import { payLink } from '@/api/publicPayment'
 import { Button, Segmented, TextField } from '@/components/atoms'
 
-type Tab = 'ringkasan' | 'tagihan' | 'koneksi' | 'profil'
+type Tab = 'ringkasan' | 'tagihan' | 'koneksi' | 'bantuan' | 'profil'
 
 /** Rupiah tanpa desimal, dari nilai string BigDecimal server. */
 function rupiah(amount: string | number): string {
@@ -81,6 +82,7 @@ export function PortalDashboard() {
           { value: 'ringkasan', label: 'Ringkasan' },
           { value: 'tagihan', label: 'Tagihan' },
           { value: 'koneksi', label: 'Koneksi' },
+          { value: 'bantuan', label: 'Bantuan' },
           { value: 'profil', label: 'Profil' },
         ]}
       />
@@ -90,6 +92,9 @@ export function PortalDashboard() {
         <TagihanTab billing={billing} tenantSlug={customer?.tenantSlug ?? ''} onReload={reloadBilling} />
       )}
       {tab === 'koneksi' && <KoneksiTab connection={connection} />}
+      {/* Bantuan menarik datanya sendiri: utasnya hidup (balas-membalas), tak cocok
+          dengan pemuatan sekali-jalan milik tab lain. */}
+      {tab === 'bantuan' && <BantuanTab />}
       {tab === 'profil' && <ProfilTab profile={profile} />}
     </div>
   )

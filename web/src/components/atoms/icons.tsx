@@ -292,3 +292,11 @@ export const IconCrosshair = (p: IconProps) => (
     <circle cx="12" cy="12" r="1" />
   </Icon>
 )
+
+/** Balon percakapan — meja bantuan: keluhan pelanggan yang dibalas bolak-balik. */
+export const IconChat = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 20.5l1.5-4.2A8.4 8.4 0 0 1 12 3.5a8.4 8.4 0 0 1 9 8Z" />
+    <path d="M8.5 11h.01M12 11h.01M15.5 11h.01" />
+  </Icon>
+)

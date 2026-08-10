@@ -59,9 +59,9 @@ dipetakan di adapter. Batas antar-module ditegakkan otomatis oleh test
 
 Module inti: `common` (shared kernel, OPEN), `tenancy`, `iam`, `audit`,
 `network`, `customer`, `gis`, `monitoring`. Di atasnya bertumpuk module layanan:
-`incident`, `workorder`, `notification`, `cpe` (router pelanggan via
-GenieACS/TR-069), `bng` (BRAS/RADIUS, sesi PPPoE), `billing` (tagihan +
-pembayaran), `vpn` (back-haul OpenVPN).
+`incident`, `workorder`, `helpdesk` (keluhan yang dilaporkan pelanggan sendiri),
+`notification`, `cpe` (router pelanggan via GenieACS/TR-069), `bng` (BRAS/RADIUS,
+sesi PPPoE), `billing` (tagihan + pembayaran), `vpn` (back-haul OpenVPN).
 
 ### Ketergantungan antar-module
 

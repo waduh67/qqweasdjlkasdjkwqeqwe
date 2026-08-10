@@ -114,6 +114,11 @@ object PermissionCatalog {
         perm("workorder.evidence.view", "Lihat bukti pengerjaan")
         perm("workorder.evidence.manage", "Unggah/hapus bukti pengerjaan")
 
+        // Helpdesk (keluhan yang dilaporkan pelanggan sendiri dari portal)
+        perm("helpdesk.ticket.view", "Lihat tiket bantuan pelanggan")
+        perm("helpdesk.ticket.reply", "Balas tiket bantuan pelanggan")
+        perm("helpdesk.ticket.manage", "Ubah status & eskalasi tiket ke work order")
+
         // CPE (router/ONT pelanggan via GenieACS)
         perm("cpe.device.view", "Lihat perangkat CPE pelanggan")
         perm("cpe.device.reboot", "Reboot perangkat CPE")
