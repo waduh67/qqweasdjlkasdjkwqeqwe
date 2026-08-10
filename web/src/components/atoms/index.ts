@@ -1,5 +1,7 @@
 // Atoms — primitif UI paling dasar (tanpa logika domain). API publik tingkat atom.
 export * from './icons'
+export { BrandMark } from './BrandMark'
+export type { BrandMarkProps } from './BrandMark'
 export { Button } from './Button'
 export type { AppButtonProps, ButtonVariant } from './Button'
 export { Segmented } from './Segmented'

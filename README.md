@@ -1,4 +1,10 @@
+<img src="web/public/logo-netops.svg" alt="NetOps Console" height="48">
+
 # FTTH OSS
+
+> Nama tampilan produknya **NetOps Console**; `ftth` adalah codename internal
+> (repo, package, module) yang tak pernah tampil ke pengguna. Panduan lambang &
+> palet: [`docs/brand.md`](docs/brand.md).
 
 Platform SaaS multi-tenant untuk manajemen infrastruktur FTTH: inventory jaringan
 (OLT → ODC → ODP → pelanggan), peta GIS jalur kabel, monitoring OLT/ONU, incident

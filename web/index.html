@@ -3,6 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- iOS mengabaikan favicon SVG dan memberi sudut membulatnya sendiri, jadi ikon
+         layar-utama dipasok terpisah sebagai PNG penuh-bidang (tanpa rx). Cara membuat
+         ulang ada di docs/brand.md. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0078d4" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Plus Jakarta Sans: font geometrik untuk kesan SaaS yang rapi. Degradasi mulus
          ke system-ui bila jaringan font tak tersedia (lihat font-family di index.css). -->

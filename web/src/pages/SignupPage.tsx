@@ -2,8 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { signupTenant, type SignupResult } from '../api/signup'
-import { IconMap } from '@/components/atoms/icons'
-import { Button, Spinner, TextField } from '@/components/atoms'
+import { BrandMark, Button, Spinner, TextField } from '@/components/atoms'
 
 /** Ubah nama ISP jadi kandidat slug: huruf kecil, spasi/simbol → strip. */
 function slugify(value: string): string {
@@ -75,7 +74,7 @@ export function SignupPage() {
       <form className="card login-card stack" onSubmit={onSubmit}>
         <div className="row" style={{ gap: '0.6rem' }}>
           <span className="logo" aria-hidden style={{ width: 34, height: 34 }}>
-            <IconMap size={20} />
+            <BrandMark size={26} />
           </span>
           <div>
             <h2 style={{ margin: 0, fontSize: '1.15rem' }}>Daftar ISP baru</h2>

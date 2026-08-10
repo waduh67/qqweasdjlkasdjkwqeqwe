@@ -2,8 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { ApiError } from '../api/client'
-import { IconMap, IconShield } from '@/components/atoms/icons'
-import { Button, Spinner, TextField } from '@/components/atoms'
+import { IconShield } from '@/components/atoms/icons'
+import { BrandMark, Button, Spinner, TextField } from '@/components/atoms'
 
 /**
  * Masuk dua langkah, tanpa state di server: langkah pertama mengirim email+password;
@@ -56,7 +56,7 @@ export function LoginPage() {
       <form className="card login-card stack" onSubmit={onSubmit}>
         <div className="row" style={{ gap: '0.6rem' }}>
           <span className="logo" aria-hidden style={{ width: 34, height: 34 }}>
-            {otpRequired ? <IconShield size={20} /> : <IconMap size={20} />}
+            {otpRequired ? <IconShield size={20} /> : <BrandMark size={26} />}
           </span>
           <div>
             <h2 style={{ margin: 0, fontSize: '1.15rem' }}>NetOps Console</h2>

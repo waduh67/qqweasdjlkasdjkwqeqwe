@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
 import { useCan } from '@/auth/useCan'
-import { Button, ThemeToggle } from '@/components/atoms'
+import { BrandMark, Button, ThemeToggle } from '@/components/atoms'
 import { EnvSwitcher } from '@/components/molecules'
 import { Breadcrumbs } from '@/components/molecules'
 import { SidebarNav, type NavGroup } from '@/components/molecules'
@@ -128,7 +128,7 @@ export function PlatformLayout() {
       <aside className="sidebar">
         <div className="brand">
           <span className="logo" aria-hidden>
-            <IconBuilding size={17} />
+            <BrandMark size={22} />
           </span>
           <span className="brand-text">NetOps · Platform</span>
         </div>

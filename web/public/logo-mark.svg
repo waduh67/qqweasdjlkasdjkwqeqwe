@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="NetOps Console">
+  <!--
+    Glyph tanpa tile — versi untuk latar terang, cetak, tanda air, dan tanda tangan
+    dokumen. Warnanya aksen merek (#0078D4). Untuk latar gelap, ganti fill/stroke
+    jadi #FFFFFF; bentuknya sengaja tetap terbaca dalam satu warna apa pun.
+    Bentuk kanonisnya ada di favicon.svg — kalau salah satu berubah, ubah keduanya.
+  -->
+  <g fill="none" stroke="#0078d4" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="7.6" cy="16" r="2.9"/>
+    <path d="M11.7 16H22.8"/>
+    <path d="M16.8 16v-5a3 3 0 0 1 3-3h3"/>
+    <path d="M16.8 16v5a3 3 0 0 0 3 3h3"/>
+  </g>
+  <g fill="#0078d4">
+    <circle cx="25.6" cy="8" r="2.6"/>
+    <circle cx="25.6" cy="16" r="2.6"/>
+    <circle cx="25.6" cy="24" r="2.6"/>
+  </g>
+</svg>
