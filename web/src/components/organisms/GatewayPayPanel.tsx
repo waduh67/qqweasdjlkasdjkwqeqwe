@@ -5,7 +5,7 @@ import { Button, SelectField } from '@/components/atoms'
 /**
  * Panel bayar in-app (mode API Pivot) — dipakai seragam di TIGA surface: langganan tenant
  * (`SubscriptionPage`), konsol pelanggan (`CustomerDetailPage`), dan portal pelanggan
- * (`PortalDashboard`). Alih-alih me-*redirect* ke halaman ter-host gateway, tenant/pelanggan
+ * (halaman bayar publik). Alih-alih me-*redirect* ke halaman ter-host gateway, tenant/pelanggan
  * memilih metode (QRIS / Virtual Account + bank) di dalam aplikasi ini, lalu instruksi bayar
  * (string QRIS dirender jadi kode QR, atau nomor VA + tombol Salin) tampil di sini.
  *

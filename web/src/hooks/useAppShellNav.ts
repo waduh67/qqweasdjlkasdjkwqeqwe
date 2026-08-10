@@ -16,11 +16,15 @@ import { useLocation } from 'react-router-dom'
  * tata letak berkedip saat memuat.
  */
 const MOBILE_QUERY = '(max-width: 820px)'
-const COLLAPSE_KEY = 'ftth.sidebarCollapsed'
 
-export function useAppShellNav() {
+/**
+ * @param collapseKey kunci localStorage untuk status ciut. Dibedakan per-shell: portal
+ *   pelanggan realm sendiri, jadi pilihan operator di konsol tak boleh ikut menciutkan
+ *   sidebar pelanggan (dan sebaliknya).
+ */
+export function useAppShellNav(collapseKey = 'ftth.sidebarCollapsed') {
   const location = useLocation()
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1')
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(collapseKey) === '1')
   const [navOpen, setNavOpen] = useState(false)
 
   // Pindah halaman harus menutup laci: kalau tidak, menu tetap menutupi halaman yang
@@ -38,10 +42,10 @@ export function useAppShellNav() {
     }
     setCollapsed((v) => {
       const next = !v
-      localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0')
+      localStorage.setItem(collapseKey, next ? '1' : '0')
       return next
     })
-  }, [])
+  }, [collapseKey])
 
   /** Kelas untuk elemen `.app`; `nav-open` hanya berarti di lebar ponsel. */
   const shellClass = `app${collapsed ? ' sidebar-collapsed' : ''}${navOpen ? ' nav-open' : ''}`

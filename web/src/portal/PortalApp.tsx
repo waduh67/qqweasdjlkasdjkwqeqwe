@@ -3,7 +3,12 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { PortalAuthProvider, usePortalAuth } from './PortalAuthContext'
 import { PortalLoginPage } from './PortalLoginPage'
 import { PortalForgotPasswordPage } from './PortalForgotPasswordPage'
-import { PortalDashboard } from './PortalDashboard'
+import { PortalLayout } from './PortalLayout'
+import { PortalRingkasanPage } from './PortalRingkasanPage'
+import { PortalTagihanPage } from './PortalTagihanPage'
+import { PortalKoneksiPage } from './PortalKoneksiPage'
+import { PortalProfilPage } from './PortalProfilPage'
+import { BantuanTab } from './PortalHelpTab'
 
 /** Menahan rute sampai sesi portal dipulihkan, lalu arahkan ke login bila belum masuk. */
 function RequirePortalAuth({ children }: { children: ReactNode }) {
@@ -16,7 +21,7 @@ function RequirePortalAuth({ children }: { children: ReactNode }) {
 /**
  * Rute yang hanya masuk akal saat BELUM login (masuk, lupa password): kalau sesi sudah ada,
  * lempar ke dasbor — biar tak ada layar "lupa password" nongol untuk orang yang sudah masuk
- * (ganti password buat mereka ada di dasbor, lewat password lama).
+ * (ganti password buat mereka ada di menu Profil, lewat password lama).
  */
 function PortalGuestRoute({ children }: { children: ReactNode }) {
   const { customer, loading } = usePortalAuth()
@@ -30,6 +35,10 @@ function PortalGuestRoute({ children }: { children: ReactNode }) {
  * operator: provider, klien HTTP, dan token store sendiri. Dipisah di level rute (bukan
  * di dalam `AuthProvider` operator) supaya kedua sesi tak pernah bersinggungan, dan agar
  * portal gampang diangkat ke domain sendiri nanti — cukup mount `<PortalApp>` di root app.
+ *
+ * Isi portal BERUTE (bukan state tab lokal) karena sidebar bersama ([SidebarNav]) menandai
+ * posisi lewat `NavLink`: tiap menu wajib punya alamatnya sendiri supaya bisa ditandai aktif,
+ * ditautkan dari halaman lain, di-bookmark, dan dibuka ulang oleh tombol back peramban.
  */
 export function PortalApp() {
   return (
@@ -51,14 +60,21 @@ export function PortalApp() {
             </PortalGuestRoute>
           }
         />
+        {/* Rute berlayout: profil/tagihan/koneksi ditarik sekali di `PortalLayout` lalu
+            dibagikan ke anaknya lewat outlet context — pindah menu tak menembak ulang API. */}
         <Route
-          index
           element={
             <RequirePortalAuth>
-              <PortalDashboard />
+              <PortalLayout />
             </RequirePortalAuth>
           }
-        />
+        >
+          <Route index element={<PortalRingkasanPage />} />
+          <Route path="tagihan" element={<PortalTagihanPage />} />
+          <Route path="koneksi" element={<PortalKoneksiPage />} />
+          <Route path="bantuan" element={<BantuanTab />} />
+          <Route path="profil" element={<PortalProfilPage />} />
+        </Route>
         <Route path="*" element={<Navigate to="/portal" replace />} />
       </Routes>
     </PortalAuthProvider>

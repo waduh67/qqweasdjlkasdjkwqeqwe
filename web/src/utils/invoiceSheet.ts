@@ -1,6 +1,6 @@
 /**
  * Lembar tagihan siap cetak — dipakai bersama konsol operator (`InvoicesPage`) dan portal
- * pelanggan (`PortalDashboard`). Satu template supaya kertas yang dipegang pelanggan sama
+ * pelanggan (`PortalTagihanPage`). Satu template supaya kertas yang dipegang pelanggan sama
  * persis, dari mana pun ia dicetak.
  *
  * Tak ada endpoint PDF di server: dokumen HTML dirakit di klien lalu dicetak lewat iframe
