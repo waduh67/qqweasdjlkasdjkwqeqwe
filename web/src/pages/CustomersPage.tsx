@@ -16,6 +16,7 @@ import { Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from
 import { SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { IconCustomers } from '@/components/atoms/icons'
+import { downloadBlob } from '@/utils/download'
 import { CustomerDetailBlade } from './CustomerDetailPage'
 
 /**
@@ -121,15 +122,7 @@ export function CustomersPage() {
     setExporting(true)
     try {
       // Byte ter-gate (butuh Bearer) → ambil Blob dulu, lalu jadikan unduhan lewat object URL.
-      const blob = await exportCustomersCsv()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'pelanggan.csv'
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
+      downloadBlob(await exportCustomersCsv(), 'pelanggan.csv')
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal mengekspor CSV')
     } finally {

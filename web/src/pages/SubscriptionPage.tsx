@@ -16,8 +16,10 @@ import {
   type UsageMetricView,
 } from '../api/subscription'
 import { payLink } from '../api/publicPayment'
+import { downloadTenantArchive } from '../api/tenant'
 import { useCan } from '../auth/useCan'
 import { useAuth } from '../auth/useAuth'
+import { downloadBlob } from '@/utils/download'
 import { Badge, Button, EmptyState } from '@/components/atoms'
 import { useToast } from '@/system'
 import { type Tone } from '@/components/atoms'
@@ -96,11 +98,13 @@ export function SubscriptionPage() {
   const { user } = useAuth()
   const toast = useToast()
   const canRenew = can('billing.subscription.renew')
+  const canExport = can('tenancy.data.export')
 
   const [sub, setSub] = useState<TenantSelfSubscriptionView | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [months, setMonths] = useState(1)
+  const [exporting, setExporting] = useState(false)
 
   const load = () =>
     getMySubscription()
@@ -149,6 +153,24 @@ export function SubscriptionPage() {
       toast.error(err instanceof ApiError ? err.message : 'Gagal mengirim simulasi pembayaran')
     } finally {
       setBusy(false)
+    }
+  }
+
+  // Arsipnya di-stream dari server dan bisa besar; tak ada progres yang bisa ditampilkan
+  // (panjangnya memang tak diketahui), jadi tombolnya dikunci selama unduhan berjalan agar
+  // tak ada yang mengklik dua kali dan menarik salinan kedua.
+  const exportData = async () => {
+    if (exporting) return
+    setExporting(true)
+    try {
+      const blob = await downloadTenantArchive()
+      const today = new Date().toISOString().slice(0, 10)
+      downloadBlob(blob, `netops-${user?.tenantSlug ?? 'tenant'}-${today}.zip`)
+      toast.success('Arsip data tenant selesai diunduh.')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal mengunduh arsip data')
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -348,6 +370,27 @@ export function SubscriptionPage() {
               </p>
             )}
           </div>
+
+          {/* Portabilitas data bertetangga dengan langganan bukan karena kemiripan teknis,
+              melainkan karena di sinilah orang berada saat mempertimbangkan berhenti. */}
+          {canExport && (
+            <div className="card stack" style={{ gap: '0.6rem' }}>
+              <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Data Anda tetap milik Anda</h2>
+              <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+                Unduh seluruh data tenant ini — pelanggan, langganan, tagihan, perangkat jaringan,
+                tiket, work order — sebagai satu arsip ZIP berisi berkas CSV yang bisa dibuka di
+                Excel atau diimpor ke sistem lain. Kata sandi dan kunci tidak ikut serta.
+              </p>
+              <div>
+                <Button onClick={() => void exportData()} disabled={exporting}>
+                  {exporting ? 'Menyiapkan arsip…' : 'Unduh arsip data (ZIP)'}
+                </Button>
+              </div>
+              <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
+                Arsip berukuran besar bisa perlu waktu. Setiap pengunduhan tercatat di Jejak Audit.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

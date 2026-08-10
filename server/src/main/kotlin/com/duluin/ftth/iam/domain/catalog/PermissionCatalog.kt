@@ -176,6 +176,11 @@ object PermissionCatalog {
         // Laporan & analitik (agregasi lintas-domain: keuangan + langganan)
         perm("reporting.report.view", "Lihat laporan & analitik")
 
+        // Portabilitas data tenant — satu unduhan berisi SELURUH basis data pelanggan tenant,
+        // jadi izinnya berdiri sendiri: yang boleh melihat data sehari-hari belum tentu boleh
+        // membawa semuanya keluar sekaligus.
+        perm("tenancy.data.export", "Unduh arsip seluruh data tenant (offboarding)")
+
         // Audit
         perm("audit.log.view", "Lihat jejak audit")
 
