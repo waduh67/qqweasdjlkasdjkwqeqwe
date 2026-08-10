@@ -13,6 +13,8 @@ interface CableRepository {
 
     fun findById(id: UUID): Cable?
 
+    fun findByIds(ids: Collection<UUID>): List<Cable>
+
     fun search(query: String, cableType: CableType?, pageRequest: PageRequest): Page<Cable>
 
     /** Kabel yang menyentuh simpul tertentu di salah satu ujungnya. */

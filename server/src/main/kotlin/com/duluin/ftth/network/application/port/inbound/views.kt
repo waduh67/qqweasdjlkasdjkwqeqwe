@@ -6,10 +6,13 @@ import com.duluin.ftth.network.domain.model.AssetStatus
 import com.duluin.ftth.network.domain.model.CableInstallation
 import com.duluin.ftth.network.domain.model.CableOwnership
 import com.duluin.ftth.network.domain.model.CableType
+import com.duluin.ftth.network.domain.model.ClosureKind
+import com.duluin.ftth.network.domain.model.ConnectionPointKind
 import com.duluin.ftth.network.domain.model.CoreStatus
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import com.duluin.ftth.network.domain.model.OltVendor
 import com.duluin.ftth.network.domain.model.SnmpVersion
+import com.duluin.ftth.network.domain.model.SpliceMethod
 import com.duluin.ftth.network.domain.model.WebProtocol
 import java.util.UUID
 
@@ -158,6 +161,55 @@ data class CableCoreView(
     val tubeColorHex: String,
     val status: CoreStatus,
     val note: String?,
+)
+
+/**
+ * Satu ujung sambungan, siap tampil.
+ *
+ * Titik core dilengkapi asal-usulnya (kabel, nomor, warna) karena di lapangan
+ * orang tak pernah menyebut core lewat id-nya — yang dipegang teknisi adalah
+ * "serat hijau di tube pertama kabel Dist-01". Tanpa itu layar splicing cuma
+ * deretan UUID.
+ */
+data class FiberConnectionPointView(
+    val kind: ConnectionPointKind,
+    val kindLabel: String,
+    /** Uraian siap-pakai, mis. "Core 3 · Hijau · DIST-01" atau "Kaki splitter 4". */
+    val label: String,
+    val coreId: UUID?,
+    val cableId: UUID?,
+    val cableCode: String?,
+    val coreNumber: Int?,
+    /** Warna FISIK selubung serat (TIA-598), bukan token tema. */
+    val colorHex: String?,
+    val nodeId: UUID?,
+    val portNumber: Int?,
+)
+
+data class FiberConnectionView(
+    val id: UUID,
+    val closureKind: ClosureKind,
+    val closureId: UUID,
+    val a: FiberConnectionPointView,
+    val b: FiberConnectionPointView,
+    val method: SpliceMethod,
+    val methodLabel: String,
+    /** Rugi hasil ukur; null = belum diukur, bukan nol. */
+    val lossDb: Double?,
+    val note: String?,
+)
+
+/**
+ * Isi sebuah closure: identitasnya plus semua sambungan di dalamnya — persis
+ * yang dilihat saat kotaknya dibuka. Identitas ikut dikirim supaya layar
+ * splicing tak perlu memanggil endpoint ODC/ODP hanya demi judul.
+ */
+data class ClosureSpliceView(
+    val closureKind: ClosureKind,
+    val closureId: UUID,
+    val closureCode: String,
+    val closureName: String,
+    val connections: List<FiberConnectionView>,
 )
 
 /**

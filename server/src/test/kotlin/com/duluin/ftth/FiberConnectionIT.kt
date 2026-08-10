@@ -1,0 +1,238 @@
+package com.duluin.ftth
+
+import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
+import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
+import com.jayway.jsonpath.JsonPath
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.http.MediaType
+import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.util.UUID
+
+/**
+ * Sambungan serat — inti desain ulang perkabelan.
+ *
+ * Skenario induk di sini adalah yang selama ini tak bisa dicatat: SATU kabel
+ * distribusi 8 core ditarik dari ODC melewati beberapa ODP, dan tiap ODP cuma
+ * "memakan" satu core lewat mid-span tapping. Dulu itu memaksa operator
+ * menggambar kabel palsu ODC→ODP satu per satu; sekarang kabelnya tetap satu
+ * baris dan yang tersambung adalah seratnya.
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+class FiberConnectionIT {
+
+    @Autowired
+    private lateinit var mockMvc: MockMvc
+
+    @Autowired
+    private lateinit var onboarding: OnboardTenantUseCase
+
+    private val pass = "secret12345"
+
+    private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
+
+    private fun login(slug: String, email: String): String {
+        val body = """{"tenantSlug":"$slug","email":"$email","password":"$pass"}"""
+        val json = mockMvc.perform(
+            post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body),
+        ).andExpect(status().isOk).andReturn().response.contentAsString
+        return JsonPath.read(json, "$.accessToken")
+    }
+
+    private fun newTenantAdmin(prefix: String): String {
+        val slug = "$prefix${uniq()}"
+        val admin = "admin@$slug.test"
+        onboarding.onboard(OnboardTenantCommand(slug, "Tenant $slug", admin, "Admin", pass))
+        return login(slug, admin)
+    }
+
+    private fun post(url: String, token: String, body: String, expected: Int = 201): String =
+        mockMvc.perform(
+            post(url).header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON).content(body),
+        ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
+            .andReturn().response.contentAsString
+
+    private fun getJson(url: String, token: String): String =
+        mockMvc.perform(get(url).header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andReturn().response.contentAsString
+
+    private fun deleteAt(url: String, token: String, expected: Int = 204) {
+        mockMvc.perform(delete(url).header("Authorization", "Bearer $token"))
+            .andExpect { assertThat(it.response.status).isEqualTo(expected) }
+    }
+
+    private fun idOf(json: String): String = JsonPath.read(json, "$.id")
+
+    private fun newOdc(token: String, lon: Double, lat: Double): String = idOf(
+        post(
+            "/api/odcs", token,
+            """{"code":"ODC-${uniq().uppercase()}","name":"ODC uji","location":{"longitude":$lon,"latitude":$lat},
+                "splitterRatio":"1:8","capacity":8}""",
+        ),
+    )
+
+    private fun newOdp(token: String, lon: Double, lat: Double): String = idOf(
+        post(
+            "/api/odps", token,
+            """{"code":"ODP-${uniq().uppercase()}","name":"ODP uji","location":{"longitude":$lon,"latitude":$lat},
+                "splitterRatio":"1:8","capacity":8}""",
+        ),
+    )
+
+    /** Kabel distribusi 8 core dari [odc] menuju [odpEnd] — melewati ODP di antaranya. */
+    private fun newDistribution(token: String, odc: String, odpEnd: String, endLon: Double): String = idOf(
+        post(
+            "/api/cables", token,
+            """{"name":"Distribusi utara","cableType":"DISTRIBUTION","coreCount":8,
+                "route":[{"longitude":106.99,"latitude":-6.24},{"longitude":$endLon,"latitude":-6.24}],
+                "fromKind":"ODC","fromId":"$odc","toKind":"ODP","toId":"$odpEnd"}""",
+        ),
+    )
+
+    /** Id core bernomor [number] pada kabel. */
+    private fun coreId(token: String, cable: String, number: Int): String =
+        JsonPath.read(getJson("/api/cables/$cable/cores", token), "$.cores[${number - 1}].id")
+
+    private fun coreStatus(token: String, cable: String, number: Int): String =
+        JsonPath.read(getJson("/api/cables/$cable/cores", token), "$.cores[${number - 1}].status")
+
+    private fun connectBody(closure: String, closureId: String, a: String, b: String, extra: String = "") =
+        """{"closureKind":"$closure","closureId":"$closureId","a":$a,"b":$b$extra}"""
+
+    private fun core(id: String) = """{"kind":"CORE","coreId":"$id"}"""
+    private fun splitterIn(nodeId: String) = """{"kind":"SPLITTER_IN","nodeId":"$nodeId"}"""
+    private fun splitterOut(nodeId: String, leg: Int) =
+        """{"kind":"SPLITTER_OUT","nodeId":"$nodeId","portNumber":$leg}"""
+
+    @Test
+    fun `satu kabel melewati beberapa ODP dan tiap ODP cuma memakan satu core`() {
+        val token = newTenantAdmin("tap")
+        val odc = newOdc(token, 106.99, -6.24)
+        // Tiga ODP berjajar di garis yang sama; kabel berujung di yang terjauh.
+        val odp1 = newOdp(token, 106.995, -6.24)
+        val odp2 = newOdp(token, 107.000, -6.24)
+        val odp3 = newOdp(token, 107.005, -6.24)
+        val cable = newDistribution(token, odc, odp3, endLon = 107.005)
+
+        // ODP-1 dan ODP-2 bukan ujung kabel — mereka dilewati di tengah jalur.
+        // Dulu ini butuh kabel palsu sendiri-sendiri; sekarang cukup satu serat.
+        post(token = token, url = "/api/fiber-connections", body = connectBody("ODP", odp1, core(coreId(token, cable, 1)), splitterIn(odp1)))
+        post(token = token, url = "/api/fiber-connections", body = connectBody("ODP", odp2, core(coreId(token, cable, 2)), splitterIn(odp2)))
+
+        // Ujung hulu core 1 disambung ke kaki splitter ODC — sehelai serat memang
+        // punya DUA ujung, dan keduanya sah karena closure-nya berbeda.
+        val hulu = post(
+            "/api/fiber-connections", token,
+            connectBody("ODC", odc, core(coreId(token, cable, 1)), splitterOut(odc, 1), ""","method":"FUSION","lossDb":0.08"""),
+        )
+        assertThat(JsonPath.read<Double>(hulu, "$.lossDb")).isEqualTo(0.08)
+        assertThat(JsonPath.read<String>(hulu, "$.methodLabel")).isEqualTo("Fusion (las)")
+
+        // Yang habis cuma dua core dari delapan — sisanya lewat terus, utuh.
+        assertThat(coreStatus(token, cable, 1)).isEqualTo("USED")
+        assertThat(coreStatus(token, cable, 2)).isEqualTo("USED")
+        assertThat(coreStatus(token, cable, 3)).isEqualTo("FREE")
+
+        val isiOdp1 = getJson("/api/fiber-connections?closureKind=ODP&closureId=$odp1", token)
+        assertThat(JsonPath.read<List<*>>(isiOdp1, "$.connections")).hasSize(1)
+        // Teknisi menyebut serat lewat warna & kabelnya, bukan lewat UUID.
+        assertThat(JsonPath.read<String>(isiOdp1, "$.connections[0].a.label")).contains("Core 1", "Biru")
+        assertThat(JsonPath.read<String>(isiOdp1, "$.connections[0].b.label")).isEqualTo("Input splitter")
+    }
+
+    @Test
+    fun `satu titik tak bisa dipakai dua sambungan`() {
+        val token = newTenantAdmin("rebut")
+        val odc = newOdc(token, 106.99, -6.24)
+        val odp = newOdp(token, 107.005, -6.24)
+        val cable = newDistribution(token, odc, odp, endLon = 107.005)
+        val core1 = coreId(token, cable, 1)
+        val core2 = coreId(token, cable, 2)
+
+        post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), splitterIn(odp)))
+
+        // Core yang sama, closure yang sama: inilah "satu core dijual ke dua pelanggan".
+        post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), splitterOut(odp, 1)), expected = 409)
+        // Kaki masuk splitter juga cuma satu — serat lain tak bisa ikut menempel.
+        post("/api/fiber-connections", token, connectBody("ODP", odp, core(core2), splitterIn(odp)), expected = 409)
+    }
+
+    @Test
+    fun `serat yang tak lewat closure ditolak, lengkap dengan jaraknya`() {
+        val token = newTenantAdmin("jauh")
+        val odc = newOdc(token, 106.99, -6.24)
+        val odp = newOdp(token, 107.005, -6.24)
+        val cable = newDistribution(token, odc, odp, endLon = 107.005)
+        // ODP di kecamatan sebelah — kabelnya jelas tak lewat sini.
+        val nyasar = newOdp(token, 107.10, -6.31)
+
+        val error = post(
+            "/api/fiber-connections", token,
+            connectBody("ODP", nyasar, core(coreId(token, cable, 1)), splitterIn(nyasar)),
+            expected = 400,
+        )
+        assertThat(error).contains("tak lewat")
+    }
+
+    @Test
+    fun `bentuk titik yang mustahil ditolak sebelum menyentuh basis data`() {
+        val token = newTenantAdmin("bentuk")
+        val odc = newOdc(token, 106.99, -6.24)
+        val odp = newOdp(token, 107.005, -6.24)
+        val cable = newDistribution(token, odc, odp, endLon = 107.005)
+        val core1 = coreId(token, cable, 1)
+
+        // Titik core tanpa core-nya.
+        post("/api/fiber-connections", token, connectBody("ODP", odp, """{"kind":"CORE"}""", splitterIn(odp)), expected = 400)
+        // Kaki splitter di luar kapasitas 1:8.
+        post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), splitterOut(odp, 99)), expected = 400)
+        // Splitter milik simpul lain — sampai splitter jadi entitas sendiri, satu simpul satu splitter.
+        post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), splitterIn(odc)), expected = 400)
+        // Closure yang simpulnya memang belum ada di sistem.
+        post("/api/fiber-connections", token, connectBody("JOINT_BOX", odp, core(core1), splitterIn(odp)), expected = 400)
+    }
+
+    @Test
+    fun `core baru benar-benar bebas setelah kedua ujungnya lepas`() {
+        val token = newTenantAdmin("lepas")
+        val odc = newOdc(token, 106.99, -6.24)
+        val odp = newOdp(token, 107.005, -6.24)
+        val cable = newDistribution(token, odc, odp, endLon = 107.005)
+        val core1 = coreId(token, cable, 1)
+
+        val hilir = idOf(post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), splitterIn(odp))))
+        val hulu = idOf(post("/api/fiber-connections", token, connectBody("ODC", odc, core(core1), splitterOut(odc, 1))))
+
+        deleteAt("/api/fiber-connections/$hilir", token)
+        // Ujung satunya masih tersambung — seratnya belum bebas.
+        assertThat(coreStatus(token, cable, 1)).isEqualTo("USED")
+
+        deleteAt("/api/fiber-connections/$hulu", token)
+        assertThat(coreStatus(token, cable, 1)).isEqualTo("FREE")
+    }
+
+    @Test
+    fun `menghapus kabel ikut memutus sambungannya, bukan meninggalkan jalur hantu`() {
+        val token = newTenantAdmin("hapus")
+        val odc = newOdc(token, 106.99, -6.24)
+        val odp = newOdp(token, 107.005, -6.24)
+        val cable = newDistribution(token, odc, odp, endLon = 107.005)
+
+        post("/api/fiber-connections", token, connectBody("ODP", odp, core(coreId(token, cable, 1)), splitterIn(odp)))
+        deleteAt("/api/cables/$cable", token)
+
+        val isi = getJson("/api/fiber-connections?closureKind=ODP&closureId=$odp", token)
+        assertThat(JsonPath.read<List<*>>(isi, "$.connections")).isEmpty()
+    }
+}

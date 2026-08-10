@@ -12,6 +12,7 @@ import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.network.application.port.inbound.CablePortOption
 import com.duluin.ftth.network.application.port.inbound.CableView
 import com.duluin.ftth.network.application.port.inbound.ManageCableUseCase
+import com.duluin.ftth.network.application.port.inbound.ManageFiberConnectionUseCase
 import com.duluin.ftth.network.application.port.inbound.SaveCableCommand
 import com.duluin.ftth.network.application.port.outbound.CableCoreRepository
 import com.duluin.ftth.network.application.port.outbound.CableRepository
@@ -41,6 +42,7 @@ class CableService(
     private val odcRepository: OdcRepository,
     private val odpRepository: OdpRepository,
     private val ponPortRepository: PonPortRepository,
+    private val manageFiberConnection: ManageFiberConnectionUseCase,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
 ) : ManageCableUseCase {
@@ -178,6 +180,11 @@ class CableService(
 
     override fun delete(id: UUID) {
         val cable = requireCable(id)
+        // Sambungan dulu, baru kabelnya: core ikut terhapus bersama kabel, dan
+        // sambungan yang menunjuk serat yang tak ada lagi membuat telusur jalur
+        // menunjuk jalur yang sudah digulung. Sekalian membebaskan core di sisi
+        // seberang yang jadi menganggur.
+        manageFiberConnection.disconnectAllOfCable(id)
         cableRepository.deleteById(id)
         releaseUplink(cable)
         auditor.record("cable.deleted", "Cable", id, cable.tenantId, mapOf("code" to cable.code))

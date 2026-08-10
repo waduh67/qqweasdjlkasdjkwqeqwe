@@ -65,6 +65,36 @@ data class RoutePath(val points: List<Coordinate>) {
     /** Kembar [withStart] untuk titik AKHIR (ujung `to`). */
     fun withEnd(coord: Coordinate): RoutePath = RoutePath(points.dropLast(1) + coord)
 
+    /**
+     * Jarak terpendek dari [coord] ke jalur ini, dalam meter — nol bila titiknya
+     * tepat di atas garis.
+     *
+     * Dipakai untuk menjawab "apakah kabel ini benar-benar lewat depan simpul
+     * itu": ODP menempel di TENGAH kabel distribusi, bukan di ujungnya, jadi
+     * keanggotaan sebuah simpul pada sebuah kabel tak bisa disimpulkan dari
+     * pasangan from/to-nya.
+     */
+    fun distanceTo(coord: Coordinate): Double =
+        points.zipWithNext { a, b -> distanceToSegment(coord, a, b) }.min()
+
+    /**
+     * Jarak titik ke satu ruas. Proyeksinya dihitung di bidang lokal — derajat
+     * bujur diperpendek cos(lintang) — lalu jaraknya diukur haversine seperti
+     * sisa berkas ini, supaya satuannya tetap meter sejati.
+     */
+    private fun distanceToSegment(p: Coordinate, a: Coordinate, b: Coordinate): Double {
+        val scale = Math.cos(Math.toRadians(a.latitude))
+        val bx = (b.longitude - a.longitude) * scale
+        val by = b.latitude - a.latitude
+        val lengthSquared = bx * bx + by * by
+        if (lengthSquared == 0.0) return p.distanceTo(a)
+        val px = (p.longitude - a.longitude) * scale
+        val py = p.latitude - a.latitude
+        // Dijepit 0..1 supaya proyeksi di luar ruas jatuh ke ujung terdekatnya.
+        val t = ((px * bx + py * by) / lengthSquared).coerceIn(0.0, 1.0)
+        return p.distanceTo(a.interpolate(b, t))
+    }
+
     companion object {
         const val MAX_POINTS = 2_000
         const val DEFAULT_SLACK_PERCENT = 5.0

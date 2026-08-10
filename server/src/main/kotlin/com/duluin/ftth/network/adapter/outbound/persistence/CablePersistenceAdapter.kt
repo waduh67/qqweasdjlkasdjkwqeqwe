@@ -61,6 +61,9 @@ class CablePersistenceAdapter(
 
     override fun findById(id: UUID): Cable? = jpa.findById(id).orElse(null)?.toDomain()
 
+    override fun findByIds(ids: Collection<UUID>): List<Cable> =
+        if (ids.isEmpty()) emptyList() else jpa.findAllById(ids).map { it.toDomain() }
+
     override fun search(query: String, cableType: CableType?, pageRequest: PageRequest): Page<Cable> {
         val spec = NetworkSpecifications.textMatches<CableJpaEntity>(query)
             .and(NetworkSpecifications.equals("cableType", cableType))

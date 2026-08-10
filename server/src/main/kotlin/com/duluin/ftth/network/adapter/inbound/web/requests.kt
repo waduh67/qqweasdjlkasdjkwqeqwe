@@ -6,11 +6,14 @@ import com.duluin.ftth.network.domain.model.CableEnd
 import com.duluin.ftth.network.domain.model.CableInstallation
 import com.duluin.ftth.network.domain.model.CableOwnership
 import com.duluin.ftth.network.domain.model.CableType
+import com.duluin.ftth.network.domain.model.ClosureKind
+import com.duluin.ftth.network.domain.model.ConnectionPointKind
 import com.duluin.ftth.network.domain.model.CoreStatus
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import com.duluin.ftth.network.domain.model.OltVendor
 import com.duluin.ftth.network.domain.model.OtdrEventType
 import com.duluin.ftth.network.domain.model.SnmpVersion
+import com.duluin.ftth.network.domain.model.SpliceMethod
 import com.duluin.ftth.network.domain.model.WebProtocol
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
@@ -134,6 +137,35 @@ data class CableCoresRequest(
     val status: CoreStatus? = null,
     @field:Size(max = 200) val note: String? = null,
     val clearNote: Boolean = false,
+)
+
+/**
+ * Satu ujung sambungan. Bidang mana yang harus terisi ditentukan [kind] — dijaga
+ * domain (ConnectionPoint) supaya aturannya cuma ada di satu tempat.
+ */
+data class ConnectionPointRequest(
+    val kind: ConnectionPointKind,
+    val coreId: UUID? = null,
+    val nodeId: UUID? = null,
+    @field:Min(1) val portNumber: Int? = null,
+)
+
+data class FiberConnectionRequest(
+    val closureKind: ClosureKind,
+    val closureId: UUID,
+    @field:Valid val a: ConnectionPointRequest,
+    @field:Valid val b: ConnectionPointRequest,
+    val method: SpliceMethod = SpliceMethod.FUSION,
+    /** Rugi hasil ukur; kosong = belum diukur, bukan nol. */
+    @field:PositiveOrZero val lossDb: Double? = null,
+    @field:Size(max = 200) val note: String? = null,
+)
+
+/** Keterangan sambungan yang boleh menyusul: cara pasang, hasil ukur, catatan. */
+data class FiberSpliceDetailRequest(
+    val method: SpliceMethod,
+    @field:PositiveOrZero val lossDb: Double? = null,
+    @field:Size(max = 200) val note: String? = null,
 )
 
 data class OtdrTestRequest(

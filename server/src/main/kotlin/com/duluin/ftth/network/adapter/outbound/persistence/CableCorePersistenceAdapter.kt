@@ -11,8 +11,13 @@ class CableCorePersistenceAdapter(
     private val jpa: CableCoreJpaRepository,
 ) : CableCoreRepository {
 
+    override fun findById(id: UUID): CableCore? = jpa.findById(id).orElse(null)?.toDomain()
+
     override fun findByCableId(cableId: UUID): List<CableCore> =
         jpa.findByCableIdOrderByCoreNumber(cableId).map { it.toDomain() }
+
+    override fun findByIds(ids: Collection<UUID>): List<CableCore> =
+        if (ids.isEmpty()) emptyList() else jpa.findAllById(ids).map { it.toDomain() }
 
     /**
      * Nomor & tube tak pernah berubah setelah core dibuat (kolomnya

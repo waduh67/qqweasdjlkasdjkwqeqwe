@@ -1,5 +1,6 @@
 package com.duluin.ftth.network.adapter.outbound.persistence
 
+import com.duluin.ftth.network.domain.model.ConnectionPointKind
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Query
@@ -105,4 +106,35 @@ interface CableCoreJpaRepository : JpaRepository<CableCoreJpaEntity, UUID> {
 
     /** Dipakai saat jumlah core kabel dikurangi; core sisanya tak tersentuh. */
     fun deleteByCableIdAndCoreNumberGreaterThan(cableId: UUID, coreNumber: Int)
+}
+
+interface FiberConnectionJpaRepository : JpaRepository<FiberConnectionJpaEntity, UUID> {
+    fun findByClosureId(closureId: UUID): List<FiberConnectionJpaEntity>
+}
+
+interface FiberConnectionEndJpaRepository : JpaRepository<FiberConnectionEndJpaEntity, UUID> {
+    fun findByConnectionIdIn(connectionIds: Collection<UUID>): List<FiberConnectionEndJpaEntity>
+    fun findByClosureIdAndCoreId(closureId: UUID, coreId: UUID): FiberConnectionEndJpaEntity?
+    fun findByCoreIdIn(coreIds: Collection<UUID>): List<FiberConnectionEndJpaEntity>
+    fun deleteByConnectionIdIn(connectionIds: Collection<UUID>)
+
+    /**
+     * Semua ujung pada sebuah simpul non-core. Nomor port sengaja TIDAK ikut
+     * disaring di sini: parameter bernilai null dalam JPQL menghasilkan `= null`
+     * yang tak pernah cocok, sedangkan titik tak-bernomor (input splitter, PON,
+     * ONU) justru bernomor null. Jumlah barisnya sekecil jumlah kaki splitter,
+     * jadi penyaringan sisanya di Kotlin tak berbiaya.
+     */
+    fun findByPointKindAndNodeId(
+        pointKind: ConnectionPointKind,
+        nodeId: UUID,
+    ): List<FiberConnectionEndJpaEntity>
+
+    @Query(
+        """
+        select e from FiberConnectionEndJpaEntity e
+        where e.coreId in (select c.id from CableCoreJpaEntity c where c.cableId = :cableId)
+        """,
+    )
+    fun findByCableId(@Param("cableId") cableId: UUID): List<FiberConnectionEndJpaEntity>
 }
