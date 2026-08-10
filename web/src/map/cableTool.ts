@@ -58,7 +58,11 @@ export interface EditableCable {
 }
 
 export interface CableTool {
-  startDraw(): void
+  /**
+   * [origin] = ujung awal yang sudah dipilih di luar peta (dari panel perangkat
+   * yang sedang terbuka); tanpa itu operator memilih ujung awal dengan mengklik.
+   */
+  startDraw(origin?: SnappedDevice): void
   startEdit(cable: EditableCable): void
   removeLastBend(): void
   cancel(): void
@@ -71,6 +75,11 @@ export interface CableTool {
 const DEVICE_LAYERS = ['customer', 'odp', 'odc', 'olt', 'site']
 const LAYER_KIND: Record<string, NodeKind> = { site: 'SITE', olt: 'OLT', odc: 'ODC', odp: 'ODP', customer: 'CUSTOMER' }
 
+/** Jenis simpul dari id layer peta — dipakai pemanggil yang memulai kabel dari panel. */
+export function layerNodeKind(layer: string): NodeKind | null {
+  return LAYER_KIND[layer] ?? null
+}
+
 /** Pasangan ujung yang sah beserta tipe kabel yang tersirat (cermin aturan server). */
 function inferType(from: NodeKind, to: NodeKind): CableType | null {
   if ((from === 'SITE' || from === 'OLT') && to === 'ODC') return 'FEEDER'
@@ -79,8 +88,12 @@ function inferType(from: NodeKind, to: NodeKind): CableType | null {
   return null
 }
 
-/** Perangkat yang boleh jadi TITIK AWAL kabel. */
-function canStartFrom(kind: NodeKind): boolean {
+/**
+ * Perangkat yang boleh jadi TITIK AWAL kabel. Diekspor supaya panel perangkat
+ * memakai aturan yang sama persis dengan alatnya — tombol "Tarik kabel" yang muncul
+ * di simpul yang tak bisa jadi awal hanya akan mengantar operator ke jalan buntu.
+ */
+export function canStartCableFrom(kind: NodeKind): boolean {
   return kind === 'SITE' || kind === 'OLT' || kind === 'ODC' || kind === 'ODP'
 }
 
@@ -365,7 +378,7 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
     // Saat mencari ujung awal, hanya perangkat yang boleh jadi awal yang disorot.
     // Saat mencari ujung akhir, hanya perangkat yang membentuk tipe kabel sah.
     if (!from) {
-      snap = candidate && canStartFrom(candidate.kind) ? candidate : null
+      snap = candidate && canStartCableFrom(candidate.kind) ? candidate : null
     } else {
       snap =
         candidate && candidate.id !== from.id && inferType(from.kind, candidate.kind) != null ? candidate : null
@@ -379,7 +392,7 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
     if (mode !== 'draw') return
     const candidate = deviceAt(e.point)
     if (!from) {
-      if (candidate && canStartFrom(candidate.kind)) {
+      if (candidate && canStartCableFrom(candidate.kind)) {
         from = candidate
         snap = null
       }
@@ -568,12 +581,17 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
   // ---------- API publik ----------
 
   return {
-    startDraw() {
+    startDraw(origin?: SnappedDevice) {
       if (mode !== 'idle') this.cancel()
       ensureSourcesAndLayers()
       mode = 'draw'
       reset()
+      // Ujung awal boleh datang dari panel perangkat yang sedang terbuka: operator
+      // sudah menunjuk perangkatnya, jadi klik pertama di peta langsung berarti
+      // titik belok / perangkat tujuan — bukan mengulang memilih yang sama.
+      if (origin && canStartCableFrom(origin.kind)) from = origin
       attachDraw()
+      renderDraw()
       emit()
     },
 

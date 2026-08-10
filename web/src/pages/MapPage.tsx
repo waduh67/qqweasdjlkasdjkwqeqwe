@@ -55,7 +55,14 @@ import {
   IconTrash,
   IconWorkOrder,
 } from '@/components/atoms/icons'
-import { createCableTool, type CableTool, type ToolState } from '../map/cableTool'
+import {
+  canStartCableFrom,
+  createCableTool,
+  layerNodeKind,
+  type CableTool,
+  type SnappedDevice,
+  type ToolState,
+} from '../map/cableTool'
 
 /**
  * Peta jaringan berbasis vector tile.
@@ -481,8 +488,12 @@ export function MapPage() {
   const [placing, setPlacing] = useState<AssetKind | null>(null)
   const [placeAt, setPlaceAt] = useState<{ kind: AssetKind; lng: number; lat: number } | null>(null)
   // Simpul (perangkat/pelanggan) yang panel infonya sedang terbuka & bisa dipindah:
-  // dari sini tombol "Pindahkan lokasi" tahu jenis, id, dan titik awalnya.
-  const [movable, setMovable] = useState<{ layer: string; id: string; lng: number; lat: number } | null>(null)
+  // dari sini tombol "Pindahkan lokasi" tahu jenis, id, dan titik awalnya, dan tombol
+  // "Tarik kabel" tahu ujung awal mana yang harus dikunci (`code` = labelnya di bilah
+  // petunjuk, jadi operator melihat "Dari ODP-012" alih-alih ujung tanpa nama).
+  const [movable, setMovable] = useState<
+    { layer: string; id: string; code: string; lng: number; lat: number } | null
+  >(null)
   // Simpul yang SEDANG dalam mode relokasi (penanda draggable aktif). `null` = tak ada.
   const [relocating, setRelocating] = useState<
     { layer: string; id: string; label: string; color: string; lng: number; lat: number } | null
@@ -675,6 +686,10 @@ export function MapPage() {
       return g?.type === 'Point' ? { lng: g.coordinates[0], lat: g.coordinates[1] } : null
     }
 
+    /** Kode aset dari properti tile — label ujung kabel & judul mode pindah. */
+    const codeOf = (feature: maplibregl.MapGeoJSONFeature | undefined): string =>
+      String(feature?.properties?.code ?? '')
+
     // Layer aset/kabel yang bisa diklik — dipakai untuk membedakan "klik lahan kosong"
     // dari "klik perangkat" pada handler klik umum di bawah.
     const INTERACTIVE_LAYERS = ['customer', 'odp', 'odc', 'olt', 'site', 'cable']
@@ -741,7 +756,7 @@ export function MapPage() {
         .then((odp) => {
           clearPanels()
           setSelected(odp)
-          if (at) setMovable({ layer: 'odp', id, ...at })
+          if (at) setMovable({ layer: 'odp', id, code: codeOf(feature), ...at })
         })
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail ODP'))
     })
@@ -758,7 +773,7 @@ export function MapPage() {
         .then((t) => {
           clearPanels()
           setTrace(t)
-          if (at) setMovable({ layer: 'customer', id, ...at })
+          if (at) setMovable({ layer: 'customer', id, code: codeOf(feature), ...at })
         })
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat telusur pelanggan'))
     })
@@ -775,7 +790,7 @@ export function MapPage() {
         .then((s) => {
           clearPanels()
           setSiteInsp(s)
-          if (at) setMovable({ layer: 'site', id, ...at })
+          if (at) setMovable({ layer: 'site', id, code: codeOf(feature), ...at })
         })
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail site'))
     })
@@ -794,7 +809,7 @@ export function MapPage() {
         .then((o) => {
           clearPanels()
           setOltInsp(o)
-          if (at) setMovable({ layer: 'olt', id, ...at })
+          if (at) setMovable({ layer: 'olt', id, code: codeOf(feature), ...at })
         })
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail OLT'))
     })
@@ -811,7 +826,7 @@ export function MapPage() {
         .then((b) => {
           clearPanels()
           setBlast(b)
-          if (at) setMovable({ layer: 'odc', id, ...at })
+          if (at) setMovable({ layer: 'odc', id, code: codeOf(feature), ...at })
         })
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat blast radius ODC'))
     })
@@ -1020,38 +1035,41 @@ export function MapPage() {
     // titik mana, cukup lebar untuk menampilkan tetangga hulunya di layar yang sama.
     map.current?.flyTo({ center: [lng, lat], zoom: 17 })
     clearPanels()
-    setMovable({ layer, id, lng, lat })
+    // Kodenya belum diketahui sampai tarikan mendarat; diisi di `.then` di bawah.
+    setMovable({ layer, id, code: '', lng, lat })
 
     // Tarikan dipisah dari pemasangan supaya penjaga `alive` memeriksa keadaan TERBARU,
     // bukan keadaan saat permintaan dikirim.
-    const load = async (): Promise<() => void> => {
+    const load = async (): Promise<{ code: string; apply: () => void }> => {
       switch (layer) {
         case 'customer': {
           const t = await api.get<CustomerTrace>(`/api/gis/trace/customers/${id}`)
-          return () => setTrace(t)
+          return { code: t.customerCode, apply: () => setTrace(t) }
         }
         case 'odp': {
           const o = await api.get<OdpInspection>(`/api/gis/odps/${id}`)
-          return () => setSelected(o)
+          return { code: o.code, apply: () => setSelected(o) }
         }
         case 'odc': {
           const b = await api.get<BlastRadiusView>(`/api/gis/odcs/${id}/blast-radius`)
-          return () => setBlast(b)
+          return { code: b.code, apply: () => setBlast(b) }
         }
         case 'olt': {
           const o = await api.get<OltView>(`/api/olts/${id}`)
-          return () => setOltInsp(o)
+          return { code: o.code, apply: () => setOltInsp(o) }
         }
         case 'site': {
           const s = await api.get<SiteInspection>(`/api/gis/sites/${id}`)
-          return () => setSiteInsp(s)
+          return { code: s.code, apply: () => setSiteInsp(s) }
         }
       }
     }
 
     void load()
-      .then((apply) => {
-        if (alive) apply()
+      .then(({ code, apply }) => {
+        if (!alive) return
+        apply()
+        setMovable({ layer, id, code, lng, lat })
       })
       .catch((err) => {
         if (alive) setError(err instanceof ApiError ? err.message : 'Gagal memuat detail aset')
@@ -1247,13 +1265,24 @@ export function MapPage() {
     })
   }
 
-  const startDraw = () => {
-    // Kalau sedang menaruh perangkat, batalkan dulu — satu alat aktif pada satu waktu.
+  // Ujung awal kabel = simpul yang panel infonya sedang terbuka. Kosong bila tak
+  // berizin, titiknya tak diketahui, atau jenisnya memang tak boleh jadi awal.
+  const cableOrigin = cableOriginOf(movable, can('network.cable.create'))
+
+  /**
+   * Menarik kabel BERMULA dari perangkat yang panelnya terbuka. Alur lama (tekan
+   * "Tarik kabel" di toolbar, lalu cari perangkat sumbernya di peta) menuntut operator
+   * menunjuk dua kali: sekali untuk membuka perangkatnya, sekali lagi untuk memilihnya
+   * sebagai ujung awal — padahal yang terpampang di layar sudah yang dia maksud.
+   */
+  const startDrawFrom = () => {
+    if (!cableOrigin) return
+    // Satu alat aktif pada satu waktu: batalkan taruh-perangkat & tutup panel dulu.
     if (placing) cancelPlace()
-    setSelected(null)
-    setCable(null)
+    coordPopup.current?.remove()
+    clearPanels()
     setEditing(null)
-    tool.current?.startDraw()
+    tool.current?.startDraw(cableOrigin)
   }
 
   const cancelTool = () => {
@@ -1563,7 +1592,7 @@ export function MapPage() {
         {/* Toolbar kiri-atas: tarik kabel + taruh perangkat. Tampil saat idle —
             termasuk state awal sebelum alat pernah dipakai (toolState masih null). */}
         {(!toolState || toolState.mode === 'idle') && !placing && !placeAt && !relocating && (
-          <MapToolbar can={can} onDraw={startDraw} onPlace={startPlace} onLocate={() => locateMe(true)} />
+          <MapToolbar can={can} onPlace={startPlace} onLocate={() => locateMe(true)} />
         )}
 
         {/* Bilah petunjuk saat menaruh perangkat baru */}
@@ -1649,6 +1678,7 @@ export function MapPage() {
             canDelete={can('network.odc.delete')}
             canRelocate={can('network.odc.update')}
             onRelocate={startRelocate}
+            onDrawCable={cableOrigin ? startDrawFrom : undefined}
             onOpenDetail={
               can('network.odc.view') ? () => setDetailNode({ kind: 'odc', id: blast.odcId, code: blast.code }) : undefined
             }
@@ -1696,6 +1726,7 @@ export function MapPage() {
             canDelete={can('network.site.delete')}
             canRelocate={can('network.site.update')}
             onRelocate={startRelocate}
+            onDrawCable={cableOrigin ? startDrawFrom : undefined}
             onDelete={() => void deleteAsset('SITE', siteInsp.siteId, siteInsp.code, () => setSiteInsp(null))}
             onClose={() => setSiteInsp(null)}
           />
@@ -1706,6 +1737,7 @@ export function MapPage() {
             canView={can('network.olt.view')}
             canRelocate={can('network.olt.update')}
             onRelocate={startRelocate}
+            onDrawCable={cableOrigin ? startDrawFrom : undefined}
             onOpenDetail={() => setDetailOltId(oltInsp.id)}
             onClose={() => setOltInsp(null)}
           />
@@ -1716,6 +1748,7 @@ export function MapPage() {
             canDelete={can('network.odp.delete')}
             canRelocate={can('network.odp.update')}
             onRelocate={startRelocate}
+            onDrawCable={cableOrigin ? startDrawFrom : undefined}
             onOpenDetail={
               can('network.odp.view')
                 ? () => setDetailNode({ kind: 'odp', id: selected.odpId, code: selected.code })
@@ -1860,12 +1893,10 @@ function BasemapSwitcher({ value, onChange }: { value: BasemapMode; onChange: (m
 
 function MapToolbar({
   can,
-  onDraw,
   onPlace,
   onLocate,
 }: {
   can: (perm: string) => boolean
-  onDraw: () => void
   onPlace: (kind: AssetKind) => void
   onLocate: () => void
 }) {
@@ -1875,11 +1906,6 @@ function MapToolbar({
       <Button variant="subtle" onClick={onLocate}>
         <IconCrosshair size={15} /> Lokasi saya
       </Button>
-      {can('network.cable.create') && (
-        <Button variant="primary" onClick={onDraw}>
-          <IconRoute size={16} /> Tarik kabel
-        </Button>
-      )}
       {placeable.map((k) => (
         <Button key={k} variant="subtle" onClick={() => onPlace(k)}>
           <IconPlus size={15} /> {ASSET_META[k].label}
@@ -1887,6 +1913,21 @@ function MapToolbar({
       ))}
     </div>
   )
+}
+
+/**
+ * Ujung awal kabel dari simpul yang panelnya terbuka — `null` = tombol "Tarik kabel"
+ * tak usah muncul. Aturan "siapa boleh jadi awal" dipinjam dari alat kabelnya sendiri
+ * supaya panel tak pernah menawarkan awalan yang nanti ditolak alatnya.
+ */
+function cableOriginOf(
+  movable: { layer: string; id: string; code: string; lng: number; lat: number } | null,
+  allowed: boolean,
+): SnappedDevice | null {
+  if (!movable || !allowed) return null
+  const kind = layerNodeKind(movable.layer)
+  if (!kind || !canStartCableFrom(kind)) return null
+  return { kind, id: movable.id, code: movable.code, lng: movable.lng, lat: movable.lat }
 }
 
 /**
@@ -1935,6 +1976,15 @@ function BladeHead({
  */
 function relocateAction(onClick: () => void, dividerBefore = false): CommandAction {
   return { key: 'relocate', label: 'Pindahkan', icon: <IconCrosshair size={15} />, onClick, dividerBefore }
+}
+
+/**
+ * Aksi "Tarik kabel" di panel perangkat: ujung awalnya perangkat ini, tinggal klik
+ * titik belok lalu perangkat tujuan. Ditaruh paling depan karena menarik kabel jauh
+ * lebih sering dilakukan dari sebuah simpul ketimbang memindahkannya.
+ */
+function cableAction(onClick: () => void): CommandAction {
+  return { key: 'cable', label: 'Tarik kabel', icon: <IconRoute size={15} />, onClick }
 }
 
 /** Aksi hapus aset. Datar seperti "Hapus" di command bar halaman tabel, bukan tombol merah. */
@@ -2664,6 +2714,7 @@ function BlastRadiusPanel({
   canDelete,
   canRelocate,
   onRelocate,
+  onDrawCable,
   onOpenDetail,
   onDelete,
   onClose,
@@ -2672,6 +2723,8 @@ function BlastRadiusPanel({
   canDelete: boolean
   canRelocate: boolean
   onRelocate: () => void
+  /** Kosong = ujung awal kabel tak boleh dari sini (tak berizin / titiknya tak diketahui). */
+  onDrawCable?: () => void
   /** Kosong = operator tak berizin melihat detail ODC. */
   onOpenDetail?: () => void
   onDelete: () => void
@@ -2684,6 +2737,7 @@ function BlastRadiusPanel({
     ? { key: 'detail', label: 'Buka detail', icon: <IconMonitor size={15} />, onClick: onOpenDetail }
     : undefined
   const actions: CommandAction[] = []
+  if (onDrawCable) actions.push(cableAction(onDrawCable))
   if (canRelocate) actions.push(relocateAction(onRelocate))
   if (canDelete) actions.push(deleteAction('Hapus ODC', onDelete))
 
@@ -3138,6 +3192,7 @@ function SitePanel({
   canDelete,
   canRelocate,
   onRelocate,
+  onDrawCable,
   onDelete,
   onClose,
 }: {
@@ -3145,6 +3200,8 @@ function SitePanel({
   canDelete: boolean
   canRelocate: boolean
   onRelocate: () => void
+  /** Kosong = ujung awal kabel tak boleh dari sini (tak berizin / titiknya tak diketahui). */
+  onDrawCable?: () => void
   onDelete: () => void
   onClose: () => void
 }) {
@@ -3152,6 +3209,7 @@ function SitePanel({
   // dikunci lebih dulu — lebih jujur daripada membiarkan operator kena galat.
   const deleteBlocked = site.oltCount > 0
   const actions: CommandAction[] = []
+  if (onDrawCable) actions.push(cableAction(onDrawCable))
   if (canRelocate) actions.push(relocateAction(onRelocate))
   if (canDelete) actions.push(deleteAction('Hapus site', onDelete, deleteBlocked))
 
@@ -3225,6 +3283,7 @@ function OltPanel({
   canView,
   canRelocate,
   onRelocate,
+  onDrawCable,
   onOpenDetail,
   onClose,
 }: {
@@ -3232,13 +3291,17 @@ function OltPanel({
   canView: boolean
   canRelocate: boolean
   onRelocate: () => void
+  /** Kosong = ujung awal kabel tak boleh dari sini (tak berizin / titiknya tak diketahui). */
+  onDrawCable?: () => void
   onOpenDetail: () => void
   onClose: () => void
 }) {
   const primary: CommandAction | undefined = canView
     ? { key: 'detail', label: 'Buka detail', icon: <IconMonitor size={15} />, onClick: onOpenDetail }
     : undefined
-  const actions: CommandAction[] = canRelocate ? [relocateAction(onRelocate)] : []
+  const actions: CommandAction[] = []
+  if (onDrawCable) actions.push(cableAction(onDrawCable))
+  if (canRelocate) actions.push(relocateAction(onRelocate))
 
   return (
     <aside className="map-panel blade">
@@ -3540,6 +3603,7 @@ function OdpPanel({
   canDelete,
   canRelocate,
   onRelocate,
+  onDrawCable,
   onOpenDetail,
   onDelete,
   onClose,
@@ -3548,6 +3612,8 @@ function OdpPanel({
   canDelete: boolean
   canRelocate: boolean
   onRelocate: () => void
+  /** Kosong = ujung awal kabel tak boleh dari sini (tak berizin / titiknya tak diketahui). */
+  onDrawCable?: () => void
   /** Kosong = operator tak berizin melihat detail ODP. */
   onOpenDetail?: () => void
   onDelete: () => void
@@ -3561,6 +3627,7 @@ function OdpPanel({
     ? { key: 'detail', label: 'Buka detail', icon: <IconMonitor size={15} />, onClick: onOpenDetail }
     : undefined
   const actions: CommandAction[] = []
+  if (onDrawCable) actions.push(cableAction(onDrawCable))
   if (canRelocate) actions.push(relocateAction(onRelocate))
   if (canDelete) actions.push(deleteAction('Hapus ODP', onDelete, deleteBlocked))
 
