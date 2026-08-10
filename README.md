@@ -412,7 +412,8 @@ Flyway memigrasi skema, lalu bootstrap men-seed katalog izin, tenant `platform`
 cd web && npm install && npm run dev
 ```
 
-Buka <http://localhost:5173> (request `/api` di-proxy ke `:8080`).
+Buka <http://localhost:5173> (request `/api` di-proxy ke `:8080`). Pemeriksaan
+sebelum commit: `npm run lint && npm test && npm run build`.
 
 ### 4. Collector (opsional)
 
@@ -473,6 +474,28 @@ ulang.
 
 Test integrasi memakai Postgres lokal (`application-test.yml`), bukan
 Testcontainers, karena mesin pengembangan ini tidak punya Docker.
+
+### Web
+
+```bash
+cd web && npm test          # vitest, sekali jalan
+cd web && npm run test:watch
+```
+
+Uji web sengaja dipusatkan pada bagian yang salahnya tak kelihatan sampai dipakai
+sungguhan, bukan pada tampilan:
+
+- `api/client` — rotasi refresh token: 401 → rotasi → ulangi request, sesi
+  dibersihkan saat rotasi ikut ditolak, dan **dedupe** rotasi berbarengan (refresh
+  token sekali-pakai; dua rotasi paralel akan saling mematikan sesi).
+- `utils/invoiceSheet` — isi lembar tagihan: baris PPN hanya muncul bila dipungut,
+  prorata, pembayaran masuk, dan escaping nilai dari operator.
+- `utils/woLabels` — ambang redaman Rx GPON (sehat/waspada/lemah) dan pembanding
+  roster teknisi.
+- `components/organisms/DataTable` — pengurutan tri-state, seleksi baris, dan
+  `data-label` yang jadi bahan mode kartu di ponsel.
+- `hooks/useAppShellNav` — satu tombol dua arti: menciutkan sidebar di layar lebar,
+  membuka laci nav di ponsel (dan menutupnya saat pindah halaman).
 
 ---
 

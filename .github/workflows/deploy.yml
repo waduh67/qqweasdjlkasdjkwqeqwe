@@ -52,11 +52,37 @@ jobs:
     #       run: ./gradlew :server:test --no-daemon
 
     # -------------------------------------------------------------------------
-    # 2) Build kedua image lalu dorong ke GitHub Container Registry.
+    # 2) Uji web (vitest). Beda dari test server di atas, job ini tak butuh service
+    #    apa pun dan selesai dalam hitungan detik — jadi ia LAYAK jadi gerbang deploy.
+    # -------------------------------------------------------------------------
+    web-test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: npm
+                  cache-dependency-path: web/package-lock.json
+
+            - run: npm ci
+              working-directory: web
+
+            - run: npm run lint
+              working-directory: web
+
+            - run: npm test
+              working-directory: web
+
+    # -------------------------------------------------------------------------
+    # 3) Build kedua image lalu dorong ke GitHub Container Registry.
     # -------------------------------------------------------------------------
     build-and-push:
-        # `test` sementara dinonaktifkan (dikomentari di atas) — jangan `needs: test`,
-        # kalau tidak seluruh job punya dependensi & GitHub menolak workflow-nya.
+        # `test` server sementara dinonaktifkan (dikomentari di atas) — jangan
+        # `needs: test`, kalau tidak GitHub menolak workflow-nya. Uji web ikut jadi
+        # gerbang: image tak dibangun kalau konsolnya sendiri sudah gagal diuji.
+        needs: web-test
         runs-on: ubuntu-latest
         permissions:
             contents: read
@@ -123,7 +149,7 @@ jobs:
                   cache-to: type=gha,mode=max
 
     # -------------------------------------------------------------------------
-    # 3) SSH ke VPS: tarik image terbaru lalu naikkan ulang stack.
+    # 4) SSH ke VPS: tarik image terbaru lalu naikkan ulang stack.
     # -------------------------------------------------------------------------
     deploy:
         needs: build-and-push

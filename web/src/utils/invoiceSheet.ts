@@ -100,7 +100,12 @@ const STYLES = `
   .status { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; border: 1px solid #ccc; }
 `
 
-function buildSheetHtml(data: InvoiceSheetData): string {
+/**
+ * Merakit dokumen HTML lembar tagihan. Dipisah dari [printInvoiceSheet] dan diekspor
+ * karena inilah bagian yang berisi keputusan (escape, prorata, baris PPN yang muncul
+ * hanya bila dipungut) — bisa diperiksa sebagai string, tanpa dialog cetak.
+ */
+export function buildInvoiceSheetHtml(data: InvoiceSheetData): string {
   const taxPct = fmtTaxRate(data.taxRate)
   const tax = toNumber(data.taxAmount)
   const row = (label: string, value: string, cls = '') =>
@@ -160,7 +165,7 @@ export function printInvoiceSheet(data: InvoiceSheetData): void {
   const iframe = document.createElement('iframe')
   iframe.setAttribute('aria-hidden', 'true')
   iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;'
-  iframe.srcdoc = buildSheetHtml(data)
+  iframe.srcdoc = buildInvoiceSheetHtml(data)
   iframe.onload = () => {
     const win = iframe.contentWindow
     if (!win) return
