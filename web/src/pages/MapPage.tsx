@@ -34,7 +34,7 @@ import { resetAccessLogin } from '../api/bng'
 import { rebootCpe, runCpePing } from '../api/cpe'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
-import { MessageBar, MessageBarBody } from '@fluentui/react-components'
+import { Checkbox, MessageBar, MessageBarBody } from '@fluentui/react-components'
 import { Button, Segmented, SelectField, StatusBadge, TextField } from '@/components/atoms'
 import { CommandBar, Ess, type CommandAction } from '@/components/molecules'
 import { AccessNodeDetail, Blade, type AccessNodeKind } from '@/components/organisms'
@@ -53,6 +53,7 @@ import {
   IconPlus,
   IconPower,
   IconRoute,
+  IconSettings,
   IconTrash,
   IconWorkOrder,
 } from '@/components/atoms/icons'
@@ -123,8 +124,28 @@ const BASEMAPS: Record<BasemapMode, { label: string; tiles: string[]; opacity: n
 /** Urutan tampil di pemilih: Peta → Satelit → Gelap. */
 const BASEMAP_ORDER: BasemapMode[] = ['streets', 'satellite', 'dark']
 
+/** Untuk apa tiap tema dipakai — supaya pilihannya soal pekerjaan, bukan selera. */
+const BASEMAP_HINTS: Record<BasemapMode, string> = {
+  streets: 'Nama jalan & alamat terbaca — enak untuk survei dan menuntun teknisi.',
+  satellite: 'Citra udara — memastikan tiang, gang, dan atap rumah yang sebenarnya.',
+  dark: 'Latar gelap; aset & kabel paling menyala — pandangan NOC.',
+}
+
 /** Mode awal: tetap gelap (gaya NOC) agar aset & kabel bercahaya paling menonjol. */
 const DEFAULT_BASEMAP: BasemapMode = 'dark'
+
+/**
+ * Setelan tampilan peta diingat antar-kunjungan. Ini preferensi mata satu orang di
+ * satu perangkat (tema basemap, legenda ditampilkan atau tidak) — bukan data tenant,
+ * jadi rumahnya `localStorage`, bukan server. Nilai asing/rusak jatuh ke bawaan.
+ */
+const PREF_BASEMAP = 'ftth.map.basemap'
+const PREF_LEGEND = 'ftth.map.legend'
+
+function savedBasemap(): BasemapMode {
+  const saved = localStorage.getItem(PREF_BASEMAP)
+  return BASEMAP_ORDER.includes(saved as BasemapMode) ? (saved as BasemapMode) : DEFAULT_BASEMAP
+}
 
 const HEALTH_COLOR: Record<string, string> = {
   GOOD: 'var(--good-ink)',
@@ -523,7 +544,15 @@ export function MapPage() {
     { layer: string; id: string; label: string; color: string; lng: number; lat: number } | null
   >(null)
   const [error, setError] = useState<string | null>(null)
-  const [basemap, setBasemap] = useState<BasemapMode>(DEFAULT_BASEMAP)
+  const [basemap, setBasemap] = useState<BasemapMode>(savedBasemap)
+  // Laci setelan (kanan). Satu-satunya penghuni sisi kanan pada satu waktu — panel
+  // info menutupnya lewat `clearPanels`, jadi keduanya tak pernah bertumpuk.
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  // Legenda boleh disembunyikan: operator yang sudah hafal warnanya lebih butuh
+  // pandangan peta yang lapang daripada kartu yang menjelaskannya lagi.
+  const [showLegend, setShowLegend] = useState(() => localStorage.getItem(PREF_LEGEND) !== 'off')
+  // Menandai peta sudah berdiri & gayanya termuat — lihat efek basemap di bawah.
+  const [mapReady, setMapReady] = useState(false)
   const { can } = useCan()
   const { user } = useAuth()
   const toast = useToast()
@@ -547,6 +576,7 @@ export function MapPage() {
     setSiteInsp(null)
     setOltInsp(null)
     setMovable(null)
+    setSettingsOpen(false)
   }, [])
 
   // Label watermark: siapa yang sedang melihat peta ini. Dihitung sekali per user.
@@ -669,7 +699,15 @@ export function MapPage() {
     }
     if (m.getSource('basemap')) apply()
     else m.once('load', apply)
-  }, [basemap])
+    localStorage.setItem(PREF_BASEMAP, basemap)
+    // `mapReady` ikut jadi pemicu, bukan hiasan: saat mount efek ini berjalan LEBIH
+    // DULU daripada efek yang membuat petanya, jadi tanpa itu pilihan basemap yang
+    // tersimpan tak pernah terpasang — peta selalu terbuka dengan gaya bawaannya.
+  }, [basemap, mapReady])
+
+  useEffect(() => {
+    localStorage.setItem(PREF_LEGEND, showLegend ? 'on' : 'off')
+  }, [showLegend])
 
   useEffect(() => {
     if (!container.current || map.current) return
@@ -959,6 +997,7 @@ export function MapPage() {
 
     // Alat kabel dibuat setelah gaya termuat agar sumber & lapisannya bisa dipasang.
     instance.on('load', () => {
+      setMapReady(true)
       tool.current = createCableTool(instance, (state) => {
         modeRef.current = state.mode
         setToolState(state)
@@ -1366,6 +1405,23 @@ export function MapPage() {
     })
   }
 
+  // Sisi kanan peta dihuni satu hal saja pada satu waktu: panel info/telusur, form
+  // titik baru, atau laci setelan. Dipakai menyembunyikan tombol gerigi.
+  const rightSideBusy = !!(
+    selected ||
+    cable ||
+    blast ||
+    whatIf ||
+    trace ||
+    siteInsp ||
+    oltInsp ||
+    placeAt ||
+    detailCustomerId ||
+    detailOltId ||
+    detailNode ||
+    toolState?.complete
+  )
+
   // Ujung awal kabel = simpul yang panel infonya sedang terbuka. Kosong bila tak
   // berizin, titiknya tak diketahui, atau jenisnya memang tak boleh jadi awal.
   const cableOrigin = cableOriginOf(movable, can('network.cable.create'))
@@ -1680,34 +1736,49 @@ export function MapPage() {
           <div className="map-watermark" aria-hidden="true" style={{ backgroundImage: watermark }} />
         </div>
 
-        {/* Judul + toggle heatmap + legenda dikumpulkan di kartu mengambang pojok
-            kiri-bawah, agar peta bisa mengisi penuh tanpa blok info mencuri tinggi. */}
-        <div className="map-info">
-          <div className="map-info-head">
-            <h2>Peta Jaringan</h2>
-            {can('network.odp.view') && (
-              <Button
-                size="small"
-                variant={heatmap ? 'primary' : 'subtle'}
-                style={{ marginLeft: 'auto' }}
-                onClick={() => setHeatmap((v) => !v)}
-                title="Warnai ODP menurut pemakaian port untuk perencanaan kapasitas"
-              >
-                Heatmap utilisasi
-              </Button>
-            )}
+        {/* Kartu pojok kiri-bawah tinggal legenda — pemilih tema, saklar heatmap, dan
+            petunjuk pindah ke laci setelan. Boleh disembunyikan sekalian dari laci. */}
+        {showLegend && (
+          <div className="map-info">
+            {heatmap ? <HeatmapLegend /> : <Legend />}
           </div>
-          <BasemapSwitcher value={basemap} onChange={setBasemap} />
-          {/* Gerak-isyarat menambah perangkat tak punya tombol lagi, jadi ia harus
-              disebutkan di suatu tempat — sekali baca, ingat seterusnya. */}
-          <p className="map-tip">Klik kanan (atau tahan di layar sentuh) pada peta untuk menambah perangkat & pelanggan</p>
-          {heatmap ? <HeatmapLegend /> : <Legend />}
-        </div>
+        )}
 
         {/* Toolbar kiri-atas. Tampil saat idle — termasuk state awal sebelum alat
             pernah dipakai (toolState masih null). */}
         {(!toolState || toolState.mode === 'idle') && !placeAt && !relocating && (
           <MapToolbar onLocate={() => locateMe(true)} />
+        )}
+
+        {/* Tombol setelan pojok kanan-atas + lacinya. Disembunyikan selama panel info
+            terbuka: keduanya menghuni sisi kanan, dan yang ditunggu operator saat itu
+            jelas panelnya — bukan tombol yang akan menimpanya. */}
+        {!settingsOpen && !rightSideBusy && (
+          <button
+            type="button"
+            className="map-settings-btn"
+            title="Setelan peta"
+            aria-label="Setelan peta"
+            onClick={() => {
+              coordPopup.current?.remove()
+              setAddMenu(null)
+              setSettingsOpen(true)
+            }}
+          >
+            <IconSettings size={18} />
+          </button>
+        )}
+        {settingsOpen && (
+          <MapSettingsDrawer
+            basemap={basemap}
+            onBasemap={setBasemap}
+            heatmap={heatmap}
+            onHeatmap={setHeatmap}
+            canHeatmap={can('network.odp.view')}
+            showLegend={showLegend}
+            onShowLegend={setShowLegend}
+            onClose={() => setSettingsOpen(false)}
+          />
         )}
 
         {/* Menu "tambah di sini" pada titik klik kanan / tahan-lama */}
@@ -2001,6 +2072,92 @@ export function MapPage() {
  * Sengaja jauh dari alat-edit (kiri-atas) & panel detail (kanan-atas) agar tak
  * bertabrakan. Pakai atom `Segmented` (Fluent) yang legibel di atas kartu kaca bertema.
  */
+/**
+ * Laci setelan peta (kanan). Alasan keberadaannya bukan "tempat menaruh kontrol",
+ * melainkan MENGOSONGKAN peta: pemilih tema, saklar heatmap, dan legenda dulu
+ * bertumpuk di kartu mengambang yang menemani operator sepanjang hari padahal
+ * disentuh sekali-dua. Di laci, semuanya sejangkauan tapi tak ikut menutupi jaringan.
+ *
+ * Pilihan tema & legenda diingat di [localStorage] (lihat PREF_*) — preferensi mata
+ * satu orang di satu perangkat, bukan data tenant.
+ */
+function MapSettingsDrawer({
+  basemap,
+  onBasemap,
+  heatmap,
+  onHeatmap,
+  canHeatmap,
+  showLegend,
+  onShowLegend,
+  onClose,
+}: {
+  basemap: BasemapMode
+  onBasemap: (mode: BasemapMode) => void
+  heatmap: boolean
+  onHeatmap: (on: boolean) => void
+  canHeatmap: boolean
+  showLegend: boolean
+  onShowLegend: (on: boolean) => void
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <aside className="map-panel blade map-settings">
+      <BladeHead title="Setelan peta" onClose={onClose} />
+      <div className="blade-body stack" style={{ gap: '1.1rem' }}>
+        <section className="stack" style={{ gap: '0.4rem' }}>
+          <h4 className="map-settings-title">Tema peta</h4>
+          <BasemapSwitcher value={basemap} onChange={onBasemap} />
+          <p className="muted" style={{ margin: 0, fontSize: '0.75rem' }}>
+            {BASEMAP_HINTS[basemap]}
+          </p>
+        </section>
+
+        <section className="stack" style={{ gap: '0.4rem' }}>
+          <h4 className="map-settings-title">Tampilan</h4>
+          {canHeatmap && (
+            <>
+              <Checkbox
+                label="Heatmap utilisasi ODP"
+                checked={heatmap}
+                onChange={(_, data) => onHeatmap(!!data.checked)}
+              />
+              <p className="muted" style={{ margin: 0, fontSize: '0.75rem' }}>
+                Mewarnai ODP menurut pemakaian port — untuk melihat di mana kapasitas hampir habis.
+              </p>
+            </>
+          )}
+          <Checkbox
+            label="Tampilkan legenda"
+            checked={showLegend}
+            onChange={(_, data) => onShowLegend(!!data.checked)}
+          />
+        </section>
+
+        <section className="stack" style={{ gap: '0.4rem' }}>
+          <h4 className="map-settings-title">Petunjuk</h4>
+          <p className="muted" style={{ margin: 0, fontSize: '0.78rem', lineHeight: 1.45 }}>
+            <strong>Klik kanan</strong> (atau tahan di layar sentuh) pada peta untuk menambah site, OLT, ODC,
+            ODP, atau menaruh pelanggan yang belum berkoordinat.
+            <br />
+            <strong>Tarik kabel</strong> dimulai dari panel perangkatnya: klik perangkatnya dulu, lalu tekan
+            &quot;Tarik kabel&quot;.
+            <br />
+            <strong>Klik ganda</strong> di lahan kosong menampilkan koordinat titik itu.
+          </p>
+        </section>
+      </div>
+    </aside>
+  )
+}
+
 function BasemapSwitcher({ value, onChange }: { value: BasemapMode; onChange: (mode: BasemapMode) => void }) {
   return (
     <Segmented

@@ -2380,31 +2380,45 @@ tbody tr.row-selected:hover {
   border: 1px solid var(--border-strong);
   box-shadow: var(--shadow-md);
 }
-.map-info-head {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.map-info-head h2 {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-/* Segmen pemilih basemap di kartu info — dijaga sekompak isinya (jangan melar
-   memenuhi lebar kartu karena kartu memakai flex-column). */
+/* Segmen pemilih basemap di laci setelan — dijaga sekompak isinya (jangan melar
+   memenuhi lebar laci karena isinya disusun flex-column). */
 .map-basemap {
   align-self: flex-start;
 }
-/* Petunjuk gerak-isyarat di kartu info — sengaja setenang mungkin: ia hanya perlu
-   terbaca sekali, sesudah itu jangan ikut meramaikan peta. */
-.map-tip {
-  margin: 0;
-  max-width: 22rem;
-  color: var(--muted);
-  font-size: 0.72rem;
-  line-height: 1.35;
+/* Tombol gerigi pojok kanan-atas: pintu satu-satunya ke laci setelan. Bulat & kecil
+   supaya terbaca sebagai kontrol peta (seperti tombol zoom), bukan aksi data. */
+.map-settings-btn {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-md);
+  color: var(--text-2);
+  cursor: pointer;
 }
+.map-settings-btn:hover {
+  color: var(--accent);
+}
+/* Laci setelan memakai kerangka panel peta (posisi & lebar sama), jadi ia menggantikan
+   panel di tempat yang sama alih-alih menjadi lapisan baru yang harus dihindari. */
+.map-settings-title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 /* Galat peta mengambang di atas kanvas, tak menggeser tata letak full-bleed.
    Diberi latar kaca agar teks kritis tetap terbaca di atas basemap gelap. */
 .map-error {
