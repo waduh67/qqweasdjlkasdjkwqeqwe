@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
-import type { AssetStatus, OdcView, OdpView, OltView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
+import type { AssetStatus, JointBoxView, OdcView, OdpView, OltView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
 import { MapPin, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Checkbox } from '@fluentui/react-components'
 import { useCan } from '../auth/useCan'
@@ -27,13 +27,16 @@ import { mapFocusState } from '@/map/mapFocus'
  * yang seragam dengan bilah pencarian & filter di atasnya.
  */
 
-type Tab = 'sites' | 'olts' | 'odcs' | 'odps'
+type Tab = 'sites' | 'olts' | 'odcs' | 'odps' | 'joint_boxes'
 
 const TABS: Array<{ key: Tab; label: string; permission: string }> = [
   { key: 'sites', label: 'Site / POP', permission: 'network.site.view' },
   { key: 'olts', label: 'OLT', permission: 'network.olt.view' },
   { key: 'odcs', label: 'ODC', permission: 'network.odc.view' },
   { key: 'odps', label: 'ODP', permission: 'network.odp.view' },
+  // Paling kanan karena joint box tak ikut urutan hulu-ke-hilir itu: ia bisa
+  // menclok di ruas mana saja, jadi menyelipkannya di tengah malah merusak alur baca.
+  { key: 'joint_boxes', label: 'Joint box', permission: 'network.jointbox.view' },
 ]
 
 const VENDORS = ['ZTE', 'HUAWEI', 'FIBERHOME', 'NOKIA', 'HSGQ', 'OTHER']
@@ -88,13 +91,14 @@ export function InventoryPage() {
     <div className="stack" style={{ gap: '1rem' }}>
       <PageHeader
         title="Inventory Jaringan"
-        subtitle="Kelola site, OLT, ODC, dan ODP — dari POP sampai kotak terminasi."
+        subtitle="Kelola site, OLT, ODC, ODP, dan joint box — dari POP sampai kotak terminasi."
       />
       <Tabs tabs={visible} active={tab} onChange={setTab} />
       {tab === 'sites' && <SitesTab />}
       {tab === 'olts' && <OltsTab />}
       {tab === 'odcs' && <OdcsTab />}
       {tab === 'odps' && <OdpsTab />}
+      {tab === 'joint_boxes' && <JointBoxesTab />}
     </div>
   )
 }
@@ -1130,6 +1134,194 @@ function OdpsTab() {
           <EmptyState
             title={query || statusFilter ? 'Tidak ada ODP yang cocok' : 'Belum ada ODP'}
             hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Tambahkan ODP lewat Peta Jaringan — klik titik lokasinya di peta.'}
+            icon={<IconInventory size={32} />}
+          />
+        }
+      />
+    </div>
+  )
+}
+
+/**
+ * Daftar joint box — kotak sambung di tengah jalur (dua haspel bertemu, jalur
+ * bercabang di persimpangan, kabel putus disambung darurat).
+ *
+ * Bentuknya kembar tab ODC/ODP, tapi kolomnya beda karena isinya beda: tak ada
+ * splitter dan tak ada "induk" untuk ditampilkan — yang ingin diketahui orang dari
+ * sebuah kotak sambung cuma seberapa penuh ia, jadi kolomnya tray & sambungan.
+ */
+function JointBoxesTab() {
+  const { can } = useCan()
+  const confirm = useConfirm()
+  const { items, loading, reload, run } = useList<JointBoxView>('/api/joint-boxes')
+  const navigate = useNavigate()
+  const [openBox, setOpenBox] = useState<JointBoxView | null>(null)
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
+  const canDelete = can('network.jointbox.delete')
+  const canMap = can('gis.map.view')
+
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return items.filter(
+      (b) => matchesQuery([b.code, b.name, b.address], q) && (!statusFilter || b.status === statusFilter),
+    )
+  }, [items, query, statusFilter])
+
+  useEffect(() => {
+    if (!openBox) return
+    setOpenBox(items.find((it) => it.id === openBox.id) ?? null)
+  }, [items, openBox])
+
+  const removeBox = (b: JointBoxView) =>
+    void (async () => {
+      if (
+        await confirm({
+          title: 'Hapus joint box',
+          message: `Hapus joint box ${b.code}?`,
+          confirmLabel: 'Hapus',
+          danger: true,
+        })
+      ) {
+        setOpenBox(null)
+        void run(() => api.del(`/api/joint-boxes/${b.id}`))
+      }
+    })()
+
+  const deleteSelected = async () => {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    if (
+      !(await confirm({
+        title: 'Hapus joint box',
+        message: `Hapus ${ids.length} joint box terpilih?`,
+        confirmLabel: 'Hapus',
+        danger: true,
+      }))
+    )
+      return
+    setDeleting(true)
+    await run(async () => {
+      await Promise.all(ids.map((id) => api.del(`/api/joint-boxes/${id}`)))
+      setSelected(new Set())
+    })
+    setDeleting(false)
+  }
+
+  const columns: Column<JointBoxView>[] = [
+    {
+      key: 'code',
+      header: 'Kode',
+      sortValue: (b) => b.code,
+      cell: (b) => (
+        <div className="stack" style={{ gap: '0.15rem' }}>
+          <strong>{b.code}</strong>
+          <span className="muted" style={{ fontSize: '0.8rem' }}>{b.name}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'address',
+      header: 'Alamat',
+      sortValue: (b) => b.address,
+      cell: (b) => <span className="muted">{b.address ?? '—'}</span>,
+    },
+    { key: 'tray', header: 'Tray', align: 'right', sortValue: (b) => b.trayCount, cell: (b) => b.trayCount },
+    {
+      key: 'splice',
+      header: 'Sambungan',
+      align: 'right',
+      // Diurut berdasarkan JUMLAH sambungan, bukan persen: yang dicari operator saat
+      // mengurut kolom ini adalah kotak tergemuk, bukan yang rasionya paling ketat.
+      sortValue: (b) => b.spliceCount,
+      cell: (b) => (
+        <span className="tnum">
+          {b.spliceCount}/{b.capacity}
+        </span>
+      ),
+    },
+    { key: 'status', header: 'Status', sortValue: (b) => b.status, cell: (b) => <StatusBadge status={b.status} /> },
+  ]
+
+  const rowActions = (b: JointBoxView): RowAction[] => [
+    { key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeBox(b) },
+  ]
+
+  // Sama seperti ODC/ODP: joint box lahir dari titik di peta, jadi di sini cuma pintasan.
+  const primary: CommandAction | undefined = can('network.jointbox.create')
+    ? { key: 'map', label: 'Tambah di peta', icon: <MapPin size={16} />, onClick: () => navigate('/map') }
+    : undefined
+  const actions: CommandAction[] = []
+  if (canDelete)
+    actions.push({
+      key: 'delete',
+      label: 'Hapus',
+      icon: <Trash2 size={16} />,
+      onClick: () => void deleteSelected(),
+      disabled: selected.size === 0 || deleting,
+    })
+  actions.push({
+    key: 'refresh',
+    label: 'Segarkan',
+    icon: <RefreshCw size={16} />,
+    onClick: () => void reload(),
+    dividerBefore: canDelete,
+  })
+
+  return (
+    <div className="stack">
+      <CommandBar primary={primary} actions={actions} />
+
+      <Blade
+        open={openBox != null}
+        size="full"
+        className="blade-detail"
+        title={openBox?.code ?? ''}
+        subtitle={openBox?.name}
+        onClose={() => setOpenBox(null)}
+      >
+        {openBox && (
+          <AccessNodeDetail
+            kind="joint_box"
+            nodeId={openBox.id}
+            onChanged={() => void reload()}
+            onDeleted={() => {
+              setOpenBox(null)
+              void reload()
+            }}
+            onShowOnMap={canMap ? (focus) => navigate('/map', focus) : undefined}
+          />
+        )}
+      </Blade>
+
+      <Toolbar>
+        <SearchInput value={query} onChange={setQuery} placeholder="Cari kode, nama, atau alamat…" />
+        <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value as AssetStatus | '')}>
+          {ASSET_STATUS_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </SelectField>
+      </Toolbar>
+
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(b) => b.id}
+        onRowClick={(b) => setOpenBox(b)}
+        loading={loading}
+        initialSort={{ key: 'code', dir: 'asc' }}
+        selection={canDelete ? { selected, onChange: setSelected } : undefined}
+        rowActions={canDelete ? rowActions : undefined}
+        empty={
+          <EmptyState
+            title={query || statusFilter ? 'Tidak ada joint box yang cocok' : 'Belum ada joint box'}
+            hint={
+              query || statusFilter
+                ? 'Coba ubah kata kunci atau filter.'
+                : 'Tambahkan joint box lewat Peta Jaringan — klik titik sambungnya di peta.'
+            }
             icon={<IconInventory size={32} />}
           />
         }

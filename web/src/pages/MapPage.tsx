@@ -16,6 +16,7 @@ import type {
   CustomerTrace,
   ImpactCause,
   ImpactedOverlay,
+  JointBoxView,
   NodeKind,
   OdpInspection,
   OltView,
@@ -63,6 +64,7 @@ import {
   canStartCableFrom,
   createCableTool,
   layerNodeKind,
+  legalCableTypes,
   type CableTool,
   type SnappedDevice,
   type ToolState,
@@ -179,6 +181,14 @@ const SEVERITY_COLOR: any = ['match', ['get', 'severity'], 'CRITICAL', '#ff3b5c'
 
 /** Warna marker OLT — biru, sengaja lepas dari cyan ODC & ungu site agar perangkat aktif menonjol. */
 const OLT_COLOR = '#4f9dff'
+
+/**
+ * Warna marker joint box — merah muda, satu-satunya rona yang belum dipakai jalur
+ * utama (ungu site → biru OLT → cyan ODC → amber ODP → hijau pelanggan). Sengaja
+ * lepas dari gradasi itu: joint box bukan tingkat baru dalam rantai, ia titik
+ * sambung yang bisa menclok di tingkat mana saja.
+ */
+const JOINT_BOX_COLOR = '#f472b6'
 
 /** Warna simpul terdampak (OLT/ODC/ODP/pelanggan) saat alarm hidup — merah/amber, sama palet kabel. */
 const NODE_CRITICAL_COLOR = '#ff3b5c'
@@ -376,10 +386,26 @@ const FUTURISTIC_STYLE: any = {
     },
     // Aset bercahaya
     ...glowCircle('customer', 'customer', CUSTOMER_COLOR, 4),
+    // Joint box digambar lebih kecil dari ODP dan di bawahnya: ia perangkat PASIF
+    // (tak ada splitter, tak ada port), jadi ia tak boleh menarik mata lebih dulu
+    // daripada kotak yang benar-benar melayani pelanggan.
+    ...glowCircle('joint_box', 'joint_box', JOINT_BOX_COLOR, 5),
     ...glowCircle('odp', 'odp', '#fbbf24', 6),
     ...glowCircle('odc', 'odc', '#22d3ee', 8),
     ...glowCircle('olt', 'olt', OLT_COLOR, 9),
     ...glowCircle('site', 'site', '#b47cff', 10),
+    {
+      // Label joint box baru muncul sangat dekat (z16): kotak sambung padat di
+      // sepanjang jalur panjang, dan menamai semuanya lebih awal cuma menutupi
+      // ODP & pelanggan yang justru dicari orang.
+      id: 'joint_box-label',
+      type: 'symbol',
+      source: 'ftth',
+      'source-layer': 'joint_box',
+      minzoom: 16,
+      layout: { 'text-field': ['get', 'code'], 'text-size': 10, 'text-offset': [0, 1.4] },
+      paint: { 'text-color': '#fbcfe8', 'text-halo-color': '#0a0e14', 'text-halo-width': 1.5 },
+    },
     {
       id: 'odp-label',
       type: 'symbol',
@@ -409,6 +435,7 @@ const FUTURISTIC_STYLE: any = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const NODE_LAYERS: Array<{ id: string; base: any }> = [
   { id: 'customer', base: CUSTOMER_COLOR },
+  { id: 'joint_box', base: JOINT_BOX_COLOR },
   { id: 'odp', base: '#fbbf24' },
   { id: 'odc', base: '#22d3ee' },
   { id: 'olt', base: OLT_COLOR },
@@ -437,7 +464,7 @@ function watermarkTile(label: string): string {
 }
 
 /** Perangkat titik yang bisa ditaruh langsung di peta (punya koordinat sendiri). */
-type AssetKind = 'SITE' | 'OLT' | 'ODC' | 'ODP'
+type AssetKind = 'SITE' | 'OLT' | 'ODC' | 'ODP' | 'JOINT_BOX'
 
 /**
  * Ambang gerak-isyarat menu "tambah di sini". 500 ms mengikuti tekan-lama bawaan
@@ -462,6 +489,19 @@ const ASSET_META: Record<AssetKind, { label: string; createPerm: string; deleteP
   OLT: { label: 'OLT', createPerm: 'network.olt.create', deletePerm: 'network.olt.delete', endpoint: '/api/olts' },
   ODC: { label: 'ODC', createPerm: 'network.odc.create', deletePerm: 'network.odc.delete', endpoint: '/api/odcs' },
   ODP: { label: 'ODP', createPerm: 'network.odp.create', deletePerm: 'network.odp.delete', endpoint: '/api/odps' },
+  JOINT_BOX: {
+    label: 'Joint box',
+    createPerm: 'network.jointbox.create',
+    deletePerm: 'network.jointbox.delete',
+    endpoint: '/api/joint-boxes',
+  },
+}
+
+/** Nama jenis simpul untuk judul blade detail — "JOINT_BOX" bukan bahasa manusia. */
+const NODE_KIND_LABEL: Record<AccessNodeKind, string> = {
+  odc: 'ODC',
+  odp: 'ODP',
+  joint_box: 'Joint box',
 }
 
 /**
@@ -474,6 +514,9 @@ const ASSET_META: Record<AssetKind, { label: string; createPerm: string; deleteP
 const MOVABLE_NODES: Record<string, { plural: string; perm: string; label: string; color: string }> = {
   customer: { plural: 'customers', perm: 'customer.customer.update', label: 'Pelanggan', color: '#34d399' },
   odp: { plural: 'odps', perm: 'network.odp.update', label: 'ODP', color: '#fbbf24' },
+  // `joint-boxes` (bertanda hubung) — bukan sekadar layer + "s": itulah bentuk jamak
+  // yang dipakai controllernya, dan URL yang meleset satu huruf gagal tanpa suara.
+  joint_box: { plural: 'joint-boxes', perm: 'network.jointbox.update', label: 'Joint box', color: JOINT_BOX_COLOR },
   odc: { plural: 'odcs', perm: 'network.odc.update', label: 'ODC', color: '#22d3ee' },
   olt: { plural: 'olts', perm: 'network.olt.update', label: 'OLT', color: OLT_COLOR },
   site: { plural: 'sites', perm: 'network.site.update', label: 'Site', color: '#b47cff' },
@@ -522,6 +565,10 @@ export function MapPage() {
   const [detailNode, setDetailNode] = useState<{ kind: AccessNodeKind; id: string; code: string } | null>(null)
   const [siteInsp, setSiteInsp] = useState<SiteInspection | null>(null)
   const [oltInsp, setOltInsp] = useState<OltView | null>(null)
+  // Joint box yang panelnya terbuka. Tak ada endpoint "inspeksi" khusus seperti ODP:
+  // kotak sambung tak punya hilir sendiri untuk diringkas — isinya justru sambungan
+  // core, dan itu urusan layar sambungan. Jadi panelnya cukup memakai view CRUD-nya.
+  const [jointBox, setJointBox] = useState<JointBoxView | null>(null)
   // Heatmap utilisasi port: menyala/mati lewat toggle, mewarnai ODP menurut pemakaian.
   const [heatmap, setHeatmap] = useState(false)
   const [editing, setEditing] = useState<CableView | null>(null)
@@ -575,6 +622,7 @@ export function MapPage() {
     setTrace(null)
     setSiteInsp(null)
     setOltInsp(null)
+    setJointBox(null)
     setMovable(null)
     setSettingsOpen(false)
   }, [])
@@ -599,6 +647,7 @@ export function MapPage() {
   const reloadNodePanel = async (kind: AccessNodeKind, id: string) => {
     try {
       if (kind === 'odp') setSelected(await api.get<OdpInspection>(`/api/gis/odps/${id}`))
+      else if (kind === 'joint_box') setJointBox(await api.get<JointBoxView>(`/api/joint-boxes/${id}`))
       else setBlast(await api.get<BlastRadiusView>(`/api/gis/odcs/${id}/blast-radius`))
     } catch {
       /* biarkan panel apa adanya */
@@ -933,6 +982,26 @@ export function MapPage() {
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat blast radius ODC'))
     })
 
+    // Klik joint box (mode idle) → panel kotak sambung: seberapa penuh traynya,
+    // lalu jalan ke sambungan di dalamnya. Bukan endpoint GIS: yang menarik dari
+    // sebuah joint box bukan "siapa di hilirnya" (ia meneruskan apa adanya),
+    // melainkan isi kotaknya sendiri.
+    instance.on('click', 'joint_box', (event) => {
+      if (!acceptsClick()) return
+      const feature = event.features?.[0]
+      const id = feature?.properties?.id as string | undefined
+      if (!id) return
+      const at = pointAt(feature)
+      api
+        .get<JointBoxView>(`/api/joint-boxes/${id}`)
+        .then((jb) => {
+          clearPanels()
+          setJointBox(jb)
+          if (at) setMovable({ layer: 'joint_box', id, code: codeOf(feature), ...at })
+        })
+        .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail joint box'))
+    })
+
     // Klik kabel (mode idle) → tampilkan detail + aksi edit/hapus.
     instance.on('click', 'cable', (event) => {
       if (!acceptsClick()) return
@@ -949,7 +1018,7 @@ export function MapPage() {
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail kabel'))
     })
 
-    for (const layer of ['odp', 'odc', 'olt', 'cable', 'customer', 'site']) {
+    for (const layer of ['odp', 'odc', 'olt', 'cable', 'customer', 'site', 'joint_box']) {
       instance.on('mouseenter', layer, () => {
         if (modeRef.current === 'idle') instance.getCanvas().style.cursor = 'pointer'
       })
@@ -1160,6 +1229,10 @@ export function MapPage() {
         case 'site': {
           const s = await api.get<SiteInspection>(`/api/gis/sites/${id}`)
           return { code: s.code, apply: () => setSiteInsp(s) }
+        }
+        case 'joint_box': {
+          const jb = await api.get<JointBoxView>(`/api/joint-boxes/${id}`)
+          return { code: jb.code, apply: () => setJointBox(jb) }
         }
       }
     }
@@ -1374,6 +1447,7 @@ export function MapPage() {
     trace ||
     siteInsp ||
     oltInsp ||
+    jointBox ||
     placeAt ||
     detailCustomerId ||
     detailOltId ||
@@ -1510,6 +1584,7 @@ export function MapPage() {
     setTrace(null)
     setSiteInsp(null)
     setOltInsp(null)
+    setJointBox(null)
     setMovable(null)
     modeRef.current = 'drag'
     hideNodeDot(target.layer, target.id)
@@ -1550,6 +1625,9 @@ export function MapPage() {
   const saveNewCable = async (form: {
     name: string
     coreCount: number
+    // Jenis yang DIPILIH operator di panel — sama dengan tersirat dari sepasang
+    // ujungnya, kecuali joint box → joint box yang jenisnya diwarisi kabel hulu.
+    cableType: CableType
     // Feeder: PON port OLT sumber. Distribusi/drop: kaki/slot sumber.
     fromPonPortId?: string
     fromPortNumber?: number
@@ -1566,7 +1644,7 @@ export function MapPage() {
     try {
       await api.post('/api/cables', {
         name: form.name,
-        cableType: state.cableType,
+        cableType: form.cableType,
         coreCount: form.coreCount,
         route: route.map(([longitude, latitude]) => ({ longitude, latitude })),
         fromKind: state.from.kind,
@@ -1851,6 +1929,7 @@ export function MapPage() {
             to={toolState.to.code}
             fromKind={toolState.from.kind}
             fromId={toolState.from.id}
+            toKind={toolState.to.kind}
             toId={toolState.to.id}
             cableType={toolState.cableType}
             lengthMeters={toolState.lengthMeters}
@@ -1928,6 +2007,21 @@ export function MapPage() {
             onDrawCable={cableOrigin ? startDrawFrom : undefined}
             onOpenDetail={() => setDetailOltId(oltInsp.id)}
             onClose={() => setOltInsp(null)}
+          />
+        )}
+        {jointBox && (
+          <JointBoxPanel
+            jointBox={jointBox}
+            canView={can('network.jointbox.view')}
+            canDelete={can('network.jointbox.delete')}
+            canRelocate={can('network.jointbox.update')}
+            onRelocate={startRelocate}
+            onDrawCable={cableOrigin ? startDrawFrom : undefined}
+            onOpenDetail={() => setDetailNode({ kind: 'joint_box', id: jointBox.id, code: jointBox.code })}
+            onDelete={() =>
+              void deleteAsset('JOINT_BOX', jointBox.id, jointBox.code, () => setJointBox(null))
+            }
+            onClose={() => setJointBox(null)}
           />
         )}
         {selected && (
@@ -2031,7 +2125,7 @@ export function MapPage() {
           mencarinya lagi di daftar, lalu kembali; sekarang cukup di tempat. */}
       <Blade
         open={detailNode != null}
-        title={detailNode ? `Detail ${detailNode.kind.toUpperCase()}` : ''}
+        title={detailNode ? `Detail ${NODE_KIND_LABEL[detailNode.kind]}` : ''}
         subtitle={detailNode?.code}
         size="full"
         className="blade-detail"
@@ -2052,7 +2146,11 @@ export function MapPage() {
             }}
             onDeleted={() => {
               setDetailNode(null)
+              // Panel inspeksi di belakangnya ikut ditutup — membiarkannya memajang
+              // simpul yang barusan lenyap dari peta lebih membingungkan daripada
+              // layar kosong.
               if (detailNode.kind === 'odc') setBlast(null)
+              else if (detailNode.kind === 'joint_box') setJointBox(null)
               else setSelected(null)
               refreshTiles()
             }}
@@ -2414,6 +2512,7 @@ function SaveCablePanel({
   to,
   fromKind,
   fromId,
+  toKind,
   toId,
   cableType,
   lengthMeters,
@@ -2427,6 +2526,8 @@ function SaveCablePanel({
   fromKind: NodeKind
   /** Id perangkat ujung awal (untuk drop = ODP tempat port dipilih). */
   fromId: string
+  /** Jenis perangkat ujung akhir — pembeda drop ke pelanggan vs drop ke joint box. */
+  toKind: NodeKind
   /** Id perangkat ujung akhir (untuk drop = pelanggan yang ONU-nya ditautkan). */
   toId: string
   cableType: CableType
@@ -2436,6 +2537,8 @@ function SaveCablePanel({
   onSave: (form: {
     name: string
     coreCount: number
+    /** Jenis akhir yang dipilih operator — sama dengan tersirat kecuali joint box→joint box. */
+    cableType: CableType
     fromPonPortId?: string
     fromPortNumber?: number
     onuId?: string
@@ -2443,6 +2546,13 @@ function SaveCablePanel({
     ownership: CableOwnership
   }) => void
 }) {
+  // Jenis kabel hampir selalu tersirat dari sepasang ujungnya, jadi ia datang sebagai
+  // prop dan operator tak ditanya hal yang sudah jelas. Pengecualiannya cuma saat
+  // ujung akhirnya joint box — kotak sambung tak mengaku melayani apa (lihat
+  // [legalCableTypes]) — dan di situ saja pemilih di bawah muncul.
+  const typeOptions = useMemo(() => legalCableTypes(fromKind, toKind), [fromKind, toKind])
+  const ambiguousType = typeOptions.length > 1
+  const [type, setType] = useState<CableType>(cableType)
   const [name, setName] = useState(`${TYPE_LABEL[cableType]} ${from} → ${to}`)
   const [coreCount, setCoreCount] = useState(DEFAULT_CORES[cableType])
   // Sengaja tanpa prasetel per jenis kabel: menebak "drop pasti udara" akan
@@ -2451,15 +2561,28 @@ function SaveCablePanel({
   const [installation, setInstallation] = useState<CableInstallation | ''>('')
   const [ownership, setOwnership] = useState<CableOwnership>('OWNED')
 
-  const isDrop = cableType === 'DROP'
+  /**
+   * Drop yang benar-benar berujung di ONU pelanggan lewat slot ODP — hanya di situ
+   * peta port & penautan ONU berlaku. Drop yang salah satu ujungnya joint box (mis.
+   * sambungan haspel di tengah jalur drop) tak punya ONU untuk ditautkan, dan
+   * menuntutnya membuat kabel yang sah jadi tak bisa disimpan.
+   */
+  const customerDrop = cableType === 'DROP' && fromKind === 'ODP' && toKind === 'CUSTOMER'
+
+  /**
+   * Simpul yang memang tak punya port keluaran: POP tak melalui PON port, dan joint
+   * box menyambung serat langsung (tak ada kaki yang dicolok). Daftar port kosong di
+   * sini SAH — beda dari OLT tanpa PON port, yang kosongnya berarti belum disiapkan.
+   */
+  const portlessSource = fromKind === 'SITE' || fromKind === 'JOINT_BOX'
 
   // Feeder/distribusi: pilih port KELUARAN sumber (PON port OLT / kaki ODC / slot
   // ODP). Feeder dari SITE tak punya PON port → daftar kosong, port tak diperlukan.
-  const [srcOptions, setSrcOptions] = useState<CablePortOption[] | null>(isDrop ? [] : null)
+  const [srcOptions, setSrcOptions] = useState<CablePortOption[] | null>(customerDrop ? [] : null)
   const [srcPort, setSrcPort] = useState<SourcePort | null>(null)
 
   useEffect(() => {
-    if (isDrop) return
+    if (customerDrop) return
     let alive = true
     setSrcOptions(null)
     void api
@@ -2473,16 +2596,16 @@ function SaveCablePanel({
     return () => {
       alive = false
     }
-  }, [isDrop, fromKind, fromId])
+  }, [customerDrop, fromKind, fromId])
 
   // Untuk kabel drop, tampilkan peta port ODP tujuan supaya port tidak ditebak.
   const [odp, setOdp] = useState<OdpInspection | null>(null)
   const [onu, setOnu] = useState<OnuView | null>(null)
-  const [loadingPorts, setLoadingPorts] = useState(isDrop)
+  const [loadingPorts, setLoadingPorts] = useState(customerDrop)
   const [selectedPort, setSelectedPort] = useState<number | null>(null)
 
   useEffect(() => {
-    if (!isDrop) return
+    if (!customerDrop) return
     let alive = true
     setLoadingPorts(true)
     void (async () => {
@@ -2509,26 +2632,38 @@ function SaveCablePanel({
     return () => {
       alive = false
     }
-  }, [isDrop, fromId, toId])
+  }, [customerDrop, fromId, toId])
 
-  // Kesiapan simpan: feeder/distribusi WAJIB port sumber terpilih. Satu-satunya
-  // pengecualian "daftar kosong boleh" adalah feeder dari SITE (POP tak lewat PON
-  // port). OLT tanpa PON port juga berdaftar kosong, TAPI di situ port tetap wajib —
-  // menyimpan tanpa port berarti uplink diam-diam tak ter-set (feeder "yatim").
-  const siteFeeder = fromKind === 'SITE'
-  const sourceReady = isDrop
+  // Kesiapan simpan: feeder/distribusi WAJIB port sumber terpilih. Pengecualian
+  // "daftar kosong boleh" hanya untuk simpul yang memang tak berport (POP tak lewat
+  // PON port, joint box menyambung serat langsung). OLT tanpa PON port juga
+  // berdaftar kosong, TAPI di situ port tetap wajib — menyimpan tanpa port berarti
+  // uplink diam-diam tak ter-set (feeder "yatim").
+  const sourceReady = customerDrop
     ? true
-    : srcOptions != null && (srcPort != null || (siteFeeder && srcOptions.length === 0))
-  const dropReady = !isDrop || onu != null
+    : srcOptions != null && (srcPort != null || (portlessSource && srcOptions.length === 0))
+  const dropReady = !customerDrop || onu != null
   const canSave = name.trim() !== '' && sourceReady && dropReady
+
+  /**
+   * Ganti jenis ikut memperbarui nama & jumlah core BILA keduanya masih persis
+   * bawaan jenis sebelumnya — nilai bawaan jelas bukan ketikan orang, sedangkan
+   * yang sudah disunting tak boleh ditimpa diam-diam.
+   */
+  const pickType = (next: CableType) => {
+    if (name === `${TYPE_LABEL[type]} ${from} → ${to}`) setName(`${TYPE_LABEL[next]} ${from} → ${to}`)
+    if (coreCount === DEFAULT_CORES[type]) setCoreCount(DEFAULT_CORES[next])
+    setType(next)
+  }
 
   const submit = () =>
     onSave({
       name,
       coreCount,
+      cableType: type,
       fromPonPortId: srcPort?.ponPortId ?? undefined,
-      fromPortNumber: isDrop ? selectedPort ?? undefined : srcPort?.portNumber ?? undefined,
-      onuId: isDrop && onu && selectedPort != null ? onu.id : undefined,
+      fromPortNumber: customerDrop ? selectedPort ?? undefined : srcPort?.portNumber ?? undefined,
+      onuId: customerDrop && onu && selectedPort != null ? onu.id : undefined,
       installation: installation === '' ? null : installation,
       ownership,
     })
@@ -2537,11 +2672,28 @@ function SaveCablePanel({
     <aside className="map-panel blade">
       <BladeHead
         title="Kabel baru"
-        subtitle={`${TYPE_LABEL[cableType]} · ${from} → ${to} · ${formatLength(lengthMeters)}`}
+        subtitle={`${TYPE_LABEL[type]} · ${from} → ${to} · ${formatLength(lengthMeters)}`}
         onClose={onCancel}
         closeLabel="Batal"
       />
       <div className="blade-body stack">
+        {ambiguousType && (
+          <div className="stack" style={{ gap: '0.35rem' }}>
+            <SelectField
+              label="Jenis kabel"
+              value={type}
+              onChange={(_, data) => pickType(data.value as CableType)}
+            >
+              {typeOptions.map((t) => (
+                <option key={t} value={t}>{TYPE_LABEL[t]}</option>
+              ))}
+            </SelectField>
+            <span className="muted" style={{ fontSize: '0.78rem' }}>
+              Ruas yang berakhir di joint box tak menunjukkan jenisnya sendiri — pilih jenis
+              kabel HULUNYA, sebab kotak sambung cuma menerus apa yang masuk.
+            </span>
+          </div>
+        )}
         <TextField label="Nama" value={name} onChange={(_, data) => setName(data.value)} />
         <TextField
           label="Jumlah core"
@@ -2558,7 +2710,7 @@ function SaveCablePanel({
           onOwnership={setOwnership}
         />
 
-        {!isDrop && (
+        {!customerDrop && (
           <div className="stack" style={{ gap: '0.4rem' }}>
             <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Port sumber {from}</span>
             {srcOptions == null ? (
@@ -2569,9 +2721,11 @@ function SaveCablePanel({
               <span className="muted" style={{ fontSize: '0.78rem' }}>
                 {fromKind === 'SITE'
                   ? 'Feeder dari POP tak melalui PON port — langsung tersambung.'
-                  : fromKind === 'OLT'
-                    ? 'OLT ini belum punya PON port. Tambahkan dulu di detail OLT (tab PON Port) sebelum menarik feeder.'
-                    : 'Tak ada port keluaran di simpul ini — tak bisa menarik kabel dari sini.'}
+                  : fromKind === 'JOINT_BOX'
+                    ? 'Joint box tak punya port — serat masuk disambung langsung ke serat keluar, jadi pasangan core-nya diatur di sambungan kotak ini, bukan di sini.'
+                    : fromKind === 'OLT'
+                      ? 'OLT ini belum punya PON port. Tambahkan dulu di detail OLT (tab PON Port) sebelum menarik feeder.'
+                      : 'Tak ada port keluaran di simpul ini — tak bisa menarik kabel dari sini.'}
               </span>
             ) : (
               <>
@@ -2586,7 +2740,7 @@ function SaveCablePanel({
           </div>
         )}
 
-        {isDrop && (
+        {customerDrop && (
           <div className="stack" style={{ gap: '0.4rem' }}>
             <div className="spread">
               <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Port ODP {odp?.code ?? from}</span>
@@ -3790,6 +3944,99 @@ function OltPanel({
   )
 }
 
+/**
+ * Panel joint box saat markernya diklik.
+ *
+ * Kotak sambung tak punya "hilir" yang bisa diringkas seperti ODC/ODP: ia meneruskan
+ * apa pun yang lewat, jadi pertanyaan lapangan di sini berbeda — "masih muat tidak?"
+ * dan "kabel mana saja yang ketemu di sini?". Yang pertama dijawab bilah kapasitas di
+ * bawah; yang kedua lahir sendiri begitu operator menarik kabel dari/ke kotak ini.
+ */
+function JointBoxPanel({
+  jointBox,
+  canView,
+  canDelete,
+  canRelocate,
+  onRelocate,
+  onDrawCable,
+  onOpenDetail,
+  onDelete,
+  onClose,
+}: {
+  jointBox: JointBoxView
+  canView: boolean
+  canDelete: boolean
+  canRelocate: boolean
+  onRelocate: () => void
+  /** Kosong = ujung awal kabel tak boleh dari sini (tak berizin / titiknya tak diketahui). */
+  onDrawCable?: () => void
+  onOpenDetail: () => void
+  onDelete: () => void
+  onClose: () => void
+}) {
+  const primary: CommandAction | undefined = canView
+    ? { key: 'detail', label: 'Buka detail', icon: <IconMonitor size={15} />, onClick: onOpenDetail }
+    : undefined
+  const actions: CommandAction[] = []
+  if (onDrawCable) actions.push(cableAction(onDrawCable))
+  if (canRelocate) actions.push(relocateAction(onRelocate))
+  if (canDelete) actions.push(deleteAction('Hapus', onDelete, jointBox.spliceCount > 0))
+
+  const used = jointBox.capacity > 0 ? Math.min(100, (jointBox.spliceCount / jointBox.capacity) * 100) : 0
+
+  return (
+    <aside className="map-panel blade">
+      <BladeHead title={jointBox.code} subtitle={`Joint box · ${jointBox.name}`} onClose={onClose} />
+      {(primary || actions.length > 0) && <CommandBar primary={primary} actions={actions} />}
+
+      <div className="blade-body stack" style={{ gap: '0.9rem' }}>
+        <dl className="essentials">
+          <Ess label="Status">
+            <StatusBadge status={jointBox.status} />
+          </Ess>
+          <Ess label="Tray">{jointBox.trayCount}</Ess>
+          <Ess label="Sambungan">
+            <span className="tnum">
+              {jointBox.spliceCount}/{jointBox.capacity}
+            </span>
+          </Ess>
+          <Ess label="Alamat">{jointBox.address}</Ess>
+        </dl>
+
+        {/* Bilah isi kotak: satu-satunya angka yang menentukan boleh-tidaknya sambungan
+            berikutnya dikerjakan di sini, jadi ia digambar, bukan cuma ditulis. */}
+        <div className="stack" style={{ gap: '0.3rem' }}>
+          <div
+            style={{
+              height: 6,
+              borderRadius: 999,
+              background: 'var(--surface-3, rgba(255,255,255,0.08))',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{ width: `${used}%`, height: '100%', background: JOINT_BOX_COLOR }} />
+          </div>
+          <span className="muted" style={{ fontSize: '0.78rem' }}>
+            {jointBox.spliceCount >= jointBox.capacity
+              ? 'Kotak penuh — sambungan baru harus pindah ke kotak lain.'
+              : `Sisa ${jointBox.capacity - jointBox.spliceCount} tempat sambungan.`}
+          </span>
+        </div>
+
+        <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
+          Di dalam joint box tak ada splitter — serat masuk disambung langsung ke serat keluar,
+          jadi ia tak menambah redaman pembagian, hanya redaman sambungan.
+        </p>
+        {jointBox.spliceCount > 0 && canDelete && (
+          <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
+            Tak bisa dihapus selama masih berisi sambungan — lepas dulu isinya.
+          </p>
+        )}
+      </div>
+    </aside>
+  )
+}
+
 /** Rasio splitter yang lazim dipakai — cukup untuk sebagian besar pemasangan. */
 const SPLITTER_RATIOS = ['1:2', '1:4', '1:8', '1:16', '1:32', '1:64']
 
@@ -3798,7 +4045,8 @@ const VENDORS = ['ZTE', 'HUAWEI', 'FIBERHOME', 'NOKIA', 'HSGQ', 'OTHER']
 
 /**
  * Form isian perangkat titik baru, muncul setelah lokasi diklik di peta. Field
- * menyesuaikan jenis: Site cukup alamat, ODC/ODP butuh rasio splitter & kapasitas.
+ * menyesuaikan jenis: Site cukup alamat, ODC/ODP butuh rasio splitter & kapasitas,
+ * joint box butuh jumlah tray & kapasitas sambungan (di dalamnya tak ada splitter).
  * Uplink (ODC→OLT feeder, ODP→ODC distribusi) TIDAK diisi di sini — ditetapkan
  * dengan menarik kabel di peta agar fisik = logis dan sumber kebenarannya tunggal.
  * Koordinat diambil dari titik klik (ditampilkan, tak bisa diubah manual di sini).
@@ -3821,7 +4069,10 @@ function PlaceAssetForm({
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
   const [splitterRatio, setSplitterRatio] = useState('1:8')
-  const [capacity, setCapacity] = useState(kind === 'ODP' ? 8 : 64)
+  // Joint box: 2 tray × 12 sambungan = 24, ukuran closure inline yang paling lazim
+  // dipakai untuk menyambung haspel di lapangan.
+  const [trayCount, setTrayCount] = useState(2)
+  const [capacity, setCapacity] = useState(kind === 'ODP' ? 8 : kind === 'JOINT_BOX' ? 24 : 64)
   // OLT: site induk (wajib), identitas perangkat, dan kesiapan SNMP.
   const [siteId, setSiteId] = useState('')
   const [sites, setSites] = useState<SiteView[]>([])
@@ -3868,6 +4119,13 @@ function PlaceAssetForm({
       onSave(base)
       return
     }
+    // Joint box tak berisi splitter: ukurannya tray & jumlah sambungan yang muat.
+    if (kind === 'JOINT_BOX') {
+      base.trayCount = trayCount
+      base.capacity = capacity
+      onSave(base)
+      return
+    }
     base.splitterRatio = splitterRatio
     base.capacity = capacity
     onSave(base)
@@ -3885,7 +4143,12 @@ function PlaceAssetForm({
         closeLabel="Batal"
       />
       <div className="blade-body stack">
-        <TextField label="Kode" value={code} onChange={(_, data) => setCode(data.value)} placeholder={`${kind}-001`} />
+        <TextField
+          label="Kode"
+          value={code}
+          onChange={(_, data) => setCode(data.value)}
+          placeholder={kind === 'JOINT_BOX' ? 'JB-001' : `${kind}-001`}
+        />
         <TextField label="Nama" value={name} onChange={(_, data) => setName(data.value)} />
         {kind === 'OLT' && (
           <>
@@ -3953,6 +4216,35 @@ function PlaceAssetForm({
             ODC induk ditetapkan dengan menarik kabel distribusi dari ODC ke ODP ini di peta —
             bukan di sini — supaya jalur fisik & data uplink selalu sinkron.
           </p>
+        )}
+        {kind === 'JOINT_BOX' && (
+          <>
+            <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+              Kotak sambung: tempat dua haspel kabel bertemu, jalur bercabang di persimpangan,
+              atau kabel putus disambung darurat. Tak ada splitter di dalamnya — serat masuk
+              disambung langsung ke serat keluar.
+            </p>
+            <div className="row" style={{ gap: '0.5rem' }}>
+              <TextField
+                label="Jumlah tray"
+                type="number"
+                min={1}
+                max={64}
+                value={String(trayCount)}
+                onChange={(_, data) => setTrayCount(Number(data.value))}
+                style={{ flex: 1 }}
+              />
+              <TextField
+                label="Kapasitas sambungan"
+                type="number"
+                min={1}
+                max={1536}
+                value={String(capacity)}
+                onChange={(_, data) => setCapacity(Number(data.value))}
+                style={{ flex: 1 }}
+              />
+            </div>
+          </>
         )}
         {(kind === 'ODC' || kind === 'ODP') && (
           <div className="row" style={{ gap: '0.5rem' }}>
@@ -4107,6 +4399,7 @@ function Legend() {
     [OLT_COLOR, 'OLT'],
     ['#22d3ee', 'ODC'],
     ['#fbbf24', 'ODP'],
+    [JOINT_BOX_COLOR, 'Joint box'],
     ['#34d399', 'Pelanggan online'],
     ['#ff5470', 'ONU mati'],
     ['#8b95a7', 'Belum terpantau'],

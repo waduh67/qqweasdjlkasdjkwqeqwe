@@ -13,7 +13,7 @@ import type { Coordinate } from '@/api/network'
  */
 
 /** Lapisan yang bisa dituju. Namanya sengaja sama dengan nama layer MapLibre-nya. */
-export type MapFocusLayer = 'site' | 'olt' | 'odc' | 'odp' | 'customer'
+export type MapFocusLayer = 'site' | 'olt' | 'odc' | 'odp' | 'joint_box' | 'customer'
 
 export interface MapFocus {
   layer: MapFocusLayer

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { api, ApiError } from '@/api/client'
-import type { AssetStatus, Coordinate, OdcView, OdpView } from '@/api/network'
+import type { AssetStatus, Coordinate, JointBoxView, OdcView, OdpView } from '@/api/network'
 import { useCan } from '@/auth/useCan'
 import { Badge, Button, EmptyState, SelectField, Spinner, StatusBadge, TextField } from '@/components/atoms'
 import { IconInventory, IconMap } from '@/components/atoms/icons'
@@ -106,13 +106,21 @@ export function AssetDetailPanel({
   )
 }
 
-/** Simpul akses yang punya splitter: ODC (distribusi) dan ODP (terminasi). */
-export type AccessNodeKind = 'odc' | 'odp'
+/**
+ * Simpul jaringan berkotak yang detailnya dibaca lewat panel ini: ODC (distribusi),
+ * ODP (terminasi), dan joint box (kotak sambung di tengah jalur).
+ *
+ * Nilainya sengaja sama persis dengan nama layer petanya — dengan begitu ia bisa
+ * dioper langsung ke [mapFocusState] tanpa tabel penerjemah yang gampang meleset.
+ */
+export type AccessNodeKind = 'odc' | 'odp' | 'joint_box'
 
 /**
- * Perbedaan ODC vs ODP tinggal kata-katanya: bentuk datanya (kode, nama, alamat,
- * splitter, kapasitas, status, titik) identik, jadi satu komponen melayani keduanya
- * dan tabel inilah yang menampung selisihnya.
+ * Perbedaan ketiganya tinggal kata-katanya: bentuk datanya (kode, nama, alamat,
+ * kapasitas, status, titik) identik, jadi satu komponen melayani semuanya dan tabel
+ * inilah yang menampung selisihnya. Satu selisih yang BUKAN sekadar kata:
+ * [hasSplitter] — joint box tak berisi splitter, isinya cuma tray dan sambungan
+ * serat ke serat, jadi di formnya rasio splitter berganti jumlah tray.
  */
 const KIND = {
   odc: {
@@ -121,6 +129,7 @@ const KIND = {
     updatePerm: 'network.odc.update',
     deletePerm: 'network.odc.delete',
     capacityLabel: 'Kapasitas',
+    hasSplitter: true,
     editHint: 'Ubah identitas, kapasitas & status ODC. Uplink diatur di peta lewat kabel.',
   },
   odp: {
@@ -129,7 +138,17 @@ const KIND = {
     updatePerm: 'network.odp.update',
     deletePerm: 'network.odp.delete',
     capacityLabel: 'Jumlah port',
+    hasSplitter: true,
     editHint: 'Ubah identitas, kapasitas & status ODP. ODC induk diatur di peta lewat kabel.',
+  },
+  joint_box: {
+    label: 'Joint box',
+    path: 'joint-boxes',
+    updatePerm: 'network.jointbox.update',
+    deletePerm: 'network.jointbox.delete',
+    capacityLabel: 'Kapasitas sambungan',
+    hasSplitter: false,
+    editHint: 'Ubah identitas, jumlah tray & kapasitas. Kabel yang masuk-keluar diatur di peta.',
   },
 } as const
 
@@ -140,19 +159,25 @@ interface NodeDraft {
   address: string
   longitude: string
   latitude: string
+  /** Kosong untuk simpul tanpa splitter (joint box). */
   splitterRatio: string
+  /** Hanya dipakai joint box; simpul bersplitter mengirimnya sebagai 0. */
+  trayCount: string
   capacity: string
   status: AssetStatus
 }
 
-function toDraft(node: OdcView | OdpView): NodeDraft {
+type NodeView = OdcView | OdpView | JointBoxView
+
+function toDraft(node: NodeView): NodeDraft {
   return {
     code: node.code,
     name: node.name,
     address: node.address ?? '',
     longitude: String(node.location.longitude),
     latitude: String(node.location.latitude),
-    splitterRatio: node.splitterRatio,
+    splitterRatio: 'splitterRatio' in node ? node.splitterRatio : '',
+    trayCount: 'trayCount' in node ? String(node.trayCount) : '',
     capacity: String(node.capacity),
     status: node.status,
   }
@@ -194,7 +219,7 @@ export function AccessNodeDetail({
   const canUpdate = can(meta.updatePerm)
   const canDelete = can(meta.deletePerm)
 
-  const [node, setNode] = useState<OdcView | OdpView | null>(null)
+  const [node, setNode] = useState<NodeView | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [draft, setDraft] = useState<NodeDraft | null>(null)
@@ -203,7 +228,7 @@ export function AccessNodeDetail({
 
   const load = useCallback(async () => {
     try {
-      setNode(await api.get<OdcView | OdpView>(`/api/${meta.path}/${nodeId}`))
+      setNode(await api.get<NodeView>(`/api/${meta.path}/${nodeId}`))
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) setNotFound(true)
       else toast.error(err instanceof ApiError ? err.message : `Gagal memuat detail ${meta.label}`)
@@ -230,7 +255,10 @@ export function AccessNodeDetail({
         name: draft.name,
         address: draft.address || null,
         location: { longitude: Number(draft.longitude), latitude: Number(draft.latitude) },
-        splitterRatio: draft.splitterRatio,
+        // Simpul bersplitter mengirim rasionya; joint box mengirim jumlah tray.
+        // Mengirim keduanya sekaligus berarti menuliskan angka karangan ke salah
+        // satunya — server menolak field yang tak dikenalnya pun tak menolongnya.
+        ...(meta.hasSplitter ? { splitterRatio: draft.splitterRatio } : { trayCount: Number(draft.trayCount) }),
         capacity: Number(draft.capacity),
         status: draft.status,
       })
@@ -287,7 +315,21 @@ export function AccessNodeDetail({
 
   const odc = kind === 'odc' ? (node as OdcView) : null
   const odp = kind === 'odp' ? (node as OdpView) : null
+  const jointBox = kind === 'joint_box' ? (node as JointBoxView) : null
   const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
+
+  // Ringkasan sebaris di bawah lencana: apa yang paling ingin diketahui orang yang
+  // baru membuka kotak ini. ODC/ODP → hulunya; joint box → seberapa penuh traynya,
+  // sebab kotak sambung tak punya hulu logis (ia cuma menerus).
+  const subtitle = jointBox
+    ? `${jointBox.spliceCount}/${jointBox.capacity} sambungan terpakai`
+    : odc
+      ? odc.oltName
+        ? `Hulu: ${odc.oltName} · ${odc.ponPortLabel}`
+        : 'Belum di-uplink'
+      : odp?.odcName
+        ? `ODC induk: ${odp.odcName}`
+        : 'Belum tersambung ke ODC'
 
   return (
     <>
@@ -295,36 +337,35 @@ export function AccessNodeDetail({
         badges={
           <>
             {odc?.energized ? <StatusBadge status="ACTIVE" label="teraliri" /> : <StatusBadge status={node.status} />}
-            <Badge>{node.splitterRatio}</Badge>
+            <Badge>{jointBox ? `${jointBox.trayCount} tray` : (node as OdcView | OdpView).splitterRatio}</Badge>
           </>
         }
-        subtitle={
-          odc
-            ? odc.oltName
-              ? `Hulu: ${odc.oltName} · ${odc.ponPortLabel}`
-              : 'Belum di-uplink'
-            : odp?.odcName
-              ? `ODC induk: ${odp.odcName}`
-              : 'Belum tersambung ke ODC'
-        }
+        subtitle={subtitle}
         fields={
-          odc
+          jointBox
             ? [
-                { label: 'Nama', value: odc.name },
-                {
-                  label: 'Hulu (OLT · PON)',
-                  value: odc.oltName ? `${odc.oltName} · ${odc.ponPortLabel}` : 'belum di-uplink',
-                },
-                { label: 'Rasio splitter', value: odc.splitterRatio },
-                { label: meta.capacityLabel, value: String(odc.capacity) },
-                { label: 'Jumlah ODP', value: String(odc.odpCount) },
+                { label: 'Nama', value: jointBox.name },
+                { label: 'Jumlah tray', value: String(jointBox.trayCount) },
+                { label: meta.capacityLabel, value: String(jointBox.capacity) },
+                { label: 'Sambungan terpasang', value: String(jointBox.spliceCount) },
               ]
-            : [
-                { label: 'Nama', value: node.name },
-                { label: 'ODC induk', value: odp?.odcName ?? '—' },
-                { label: 'Rasio splitter', value: node.splitterRatio },
-                { label: meta.capacityLabel, value: String(node.capacity) },
-              ]
+            : odc
+              ? [
+                  { label: 'Nama', value: odc.name },
+                  {
+                    label: 'Hulu (OLT · PON)',
+                    value: odc.oltName ? `${odc.oltName} · ${odc.ponPortLabel}` : 'belum di-uplink',
+                  },
+                  { label: 'Rasio splitter', value: odc.splitterRatio },
+                  { label: meta.capacityLabel, value: String(odc.capacity) },
+                  { label: 'Jumlah ODP', value: String(odc.odpCount) },
+                ]
+              : [
+                  { label: 'Nama', value: node.name },
+                  { label: 'ODC induk', value: odp?.odcName ?? '—' },
+                  { label: 'Rasio splitter', value: odp?.splitterRatio ?? '—' },
+                  { label: meta.capacityLabel, value: String(node.capacity) },
+                ]
         }
         address={node.address}
         location={node.location}
@@ -384,15 +425,23 @@ export function AccessNodeDetail({
             />
             <div className="row">
               <div style={{ flex: 1 }}>
-                <SelectField
-                  label="Rasio splitter"
-                  value={draft.splitterRatio}
-                  onChange={(_, data) => setDraft({ ...draft, splitterRatio: data.value })}
-                >
-                  {SPLITTER_RATIOS.map((ratio) => (
-                    <option key={ratio}>{ratio}</option>
-                  ))}
-                </SelectField>
+                {meta.hasSplitter ? (
+                  <SelectField
+                    label="Rasio splitter"
+                    value={draft.splitterRatio}
+                    onChange={(_, data) => setDraft({ ...draft, splitterRatio: data.value })}
+                  >
+                    {SPLITTER_RATIOS.map((ratio) => (
+                      <option key={ratio}>{ratio}</option>
+                    ))}
+                  </SelectField>
+                ) : (
+                  <TextField
+                    label="Jumlah tray"
+                    value={draft.trayCount}
+                    onChange={(_, data) => setDraft({ ...draft, trayCount: data.value })}
+                  />
+                )}
               </div>
               <div style={{ flex: 1 }}>
                 <TextField

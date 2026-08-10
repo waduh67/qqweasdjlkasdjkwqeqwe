@@ -19,7 +19,7 @@ import type {
  * jalur dan "siapa terdampak kalau putus" bergantung padanya.
  */
 
-export type NodeKind = 'SITE' | 'OLT' | 'ODC' | 'ODP' | 'CUSTOMER'
+export type NodeKind = 'SITE' | 'OLT' | 'ODC' | 'ODP' | 'JOINT_BOX' | 'CUSTOMER'
 export type CableType = 'FEEDER' | 'DISTRIBUTION' | 'DROP'
 
 export interface SnappedDevice {
@@ -72,29 +72,62 @@ export interface CableTool {
 }
 
 /** Lapisan perangkat yang bisa jadi sasaran snap. Urutan = prioritas saat bertumpuk. */
-const DEVICE_LAYERS = ['customer', 'odp', 'odc', 'olt', 'site']
-const LAYER_KIND: Record<string, NodeKind> = { site: 'SITE', olt: 'OLT', odc: 'ODC', odp: 'ODP', customer: 'CUSTOMER' }
+const DEVICE_LAYERS = ['customer', 'joint_box', 'odp', 'odc', 'olt', 'site']
+const LAYER_KIND: Record<string, NodeKind> = {
+  site: 'SITE',
+  olt: 'OLT',
+  odc: 'ODC',
+  odp: 'ODP',
+  joint_box: 'JOINT_BOX',
+  customer: 'CUSTOMER',
+}
 
 /** Jenis simpul dari id layer peta — dipakai pemanggil yang memulai kabel dari panel. */
 export function layerNodeKind(layer: string): NodeKind | null {
   return LAYER_KIND[layer] ?? null
 }
 
-/** Pasangan ujung yang sah beserta tipe kabel yang tersirat (cermin aturan server). */
+/**
+ * Sisi yang sah per jenis kabel — cermin tabel aturan di server (`Cable.kt`), ditulis
+ * sebentuk dengannya supaya selisih apa pun ketahuan saat dibandingkan sebaris-sebaris.
+ *
+ * Joint box boleh berdiri di kedua sisi apa pun jenis kabelnya, dan itu bukan
+ * kelonggaran: kabel dijual per haspel, jadi setiap jalur yang lebih panjang dari satu
+ * haspel PASTI terpotong dan disambung di tengahnya — potongan itu tetap kabel
+ * feeder/distribusi/drop yang sama.
+ */
+const ENDPOINT_RULES: Array<{ type: CableType; from: NodeKind[]; to: NodeKind[] }> = [
+  { type: 'FEEDER', from: ['SITE', 'OLT', 'JOINT_BOX'], to: ['ODC', 'JOINT_BOX'] },
+  { type: 'DISTRIBUTION', from: ['ODC', 'ODP', 'JOINT_BOX'], to: ['ODP', 'JOINT_BOX'] },
+  { type: 'DROP', from: ['ODP', 'JOINT_BOX'], to: ['CUSTOMER', 'JOINT_BOX'] },
+]
+
+/**
+ * Jenis kabel yang MASUK AKAL untuk sepasang ujung — biasanya tepat satu, jadi
+ * operator tak pernah ditanya hal yang sudah jelas dari gambar.
+ *
+ * Lebih dari satu hanya bila ujung akhirnya joint box, sebab kotak sambung tak
+ * mengaku dirinya melayani apa: ODP → JB bisa ruas distribusi menuju ODP berikutnya
+ * ATAU ruas drop menuju pelanggan, dan JB → JB (dua haspel bertemu) bisa apa saja —
+ * jenisnya diwarisi kabel hulunya, dan yang tahu itu operatornya. Di situlah pemilih
+ * jenis di panel simpan kabel muncul; urutan daftar ini = urutan tebakan awalnya.
+ */
+export function legalCableTypes(from: NodeKind, to: NodeKind): CableType[] {
+  return ENDPOINT_RULES.filter((r) => r.from.includes(from) && r.to.includes(to)).map((r) => r.type)
+}
+
 function inferType(from: NodeKind, to: NodeKind): CableType | null {
-  if ((from === 'SITE' || from === 'OLT') && to === 'ODC') return 'FEEDER'
-  if ((from === 'ODC' || from === 'ODP') && to === 'ODP') return 'DISTRIBUTION'
-  if (from === 'ODP' && to === 'CUSTOMER') return 'DROP'
-  return null
+  return legalCableTypes(from, to)[0] ?? null
 }
 
 /**
- * Perangkat yang boleh jadi TITIK AWAL kabel. Diekspor supaya panel perangkat
- * memakai aturan yang sama persis dengan alatnya — tombol "Tarik kabel" yang muncul
- * di simpul yang tak bisa jadi awal hanya akan mengantar operator ke jalan buntu.
+ * Perangkat yang boleh jadi TITIK AWAL kabel — semuanya kecuali pelanggan, yang
+ * memang cuma pernah jadi UJUNG sebuah drop. Diekspor supaya panel perangkat memakai
+ * aturan yang sama persis dengan alatnya — tombol "Tarik kabel" yang muncul di simpul
+ * yang tak bisa jadi awal hanya akan mengantar operator ke jalan buntu.
  */
 export function canStartCableFrom(kind: NodeKind): boolean {
-  return kind === 'SITE' || kind === 'OLT' || kind === 'ODC' || kind === 'ODP'
+  return kind !== 'CUSTOMER'
 }
 
 const EARTH_RADIUS_M = 6_371_008.8

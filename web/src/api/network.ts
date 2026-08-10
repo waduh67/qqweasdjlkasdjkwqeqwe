@@ -88,6 +88,31 @@ export interface OdpView {
   status: AssetStatus
 }
 
+/**
+ * Kotak sambung di tengah jalur — tempat dua haspel kabel bertemu, jalur bercabang
+ * di persimpangan, atau kabel putus disambung darurat.
+ *
+ * Bedanya dengan ODC/ODP bukan sekadar nama: DI DALAMNYA TAK ADA SPLITTER, jadi tak
+ * ada `splitterRatio` dan tak ada port keluaran yang bisa dicolok — serat masuk
+ * disambung langsung ke serat keluar. Karena itu ukurannya dinyatakan dalam tray &
+ * jumlah sambungan yang muat, bukan dalam kaki splitter.
+ */
+export interface JointBoxView {
+  id: string
+  code: string
+  name: string
+  address: string | null
+  location: Coordinate
+  areaId: string | null
+  /** Jumlah tray (kaset) di dalam kotak — wadah fisik tempat sambungan ditata. */
+  trayCount: number
+  /** Batas jumlah sambungan yang muat di kotak ini. */
+  capacity: number
+  /** Sambungan yang sudah terpasang di dalamnya. */
+  spliceCount: number
+  status: AssetStatus
+}
+
 export type CustomerStatus = 'PROSPECT' | 'ACTIVE' | 'SUSPENDED' | 'TERMINATED'
 export type OnuStatus = 'PENDING' | 'ONLINE' | 'OFFLINE' | 'LOS' | 'DISMANTLED'
 export type OpticalHealth = 'GOOD' | 'WARNING' | 'CRITICAL' | 'UNKNOWN'
@@ -315,7 +340,7 @@ export interface SubscriberNeighbors {
 }
 
 export type CableType = 'FEEDER' | 'DISTRIBUTION' | 'DROP'
-export type NodeKind = 'SITE' | 'OLT' | 'ODC' | 'ODP' | 'CUSTOMER'
+export type NodeKind = 'SITE' | 'OLT' | 'ODC' | 'ODP' | 'JOINT_BOX' | 'CUSTOMER'
 
 /**
  * Cara kabel terpasang di lapangan. Bukan hiasan data: ia yang menentukan siapa
