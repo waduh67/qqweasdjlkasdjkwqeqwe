@@ -493,8 +493,6 @@ export function MapPage() {
   // Penanda draggable untuk simpul yang SEDANG dipindah lokasinya (mode relokasi);
   // dibuat/dibuang oleh efek ber-dep `relocating`.
   const relocateMarker = useRef<maplibregl.Marker | null>(null)
-  // Popup koordinat: klik lahan kosong → lat/long titik itu yang bisa disalin.
-  const coordPopup = useRef<maplibregl.Popup | null>(null)
   // Penyebab per kabel (id → alarm hidup di hilir), diisi tiap overlay disegarkan
   // dan dibaca saat kabel diklik untuk menjelaskan "kenapa merah".
   const impactedCauses = useRef<Map<string, ImpactCause[]>>(new Map())
@@ -716,8 +714,9 @@ export function MapPage() {
       container: container.current,
       center: INITIAL_CENTER,
       zoom: 14,
-      // Klik-ganda dipakai untuk menampilkan koordinat titik (lihat handler 'dblclick'),
-      // jadi zoom klik-ganda dimatikan; zoom tetap lewat scroll/pinch & kontrol +/−.
+      // Klik-ganda dipakai untuk menghapus titik belok saat kabel diedit; kalau ia juga
+      // men-zoom, peta melompat tiap kali titik dibuang. Zoom tetap lewat scroll/pinch
+      // & kontrol +/−.
       doubleClickZoom: false,
       // Peta operasi selalu gelap (gaya NOC), lepas dari tema aplikasi — basemap
       // gelap membuat aset & kabel yang bercahaya menonjol. Carto dark cukup untuk
@@ -752,34 +751,6 @@ export function MapPage() {
     const codeOf = (feature: maplibregl.MapGeoJSONFeature | undefined): string =>
       String(feature?.properties?.code ?? '')
 
-    // Layer aset/kabel yang bisa diklik — dipakai untuk membedakan "klik lahan kosong"
-    // dari "klik perangkat" pada handler klik umum di bawah.
-    const INTERACTIVE_LAYERS = ['customer', 'odp', 'odc', 'olt', 'site', 'cable']
-
-    // Popup koordinat di sebuah titik: teks "lat, lng" yang, saat diklik, menyalin ke
-    // papan klip (helper lat/long yang sering dibutuhkan). Auto-anchor mengikuti
-    // geser/zoom peta ala Google Maps; tombol X menutupnya. Pondasi untuk fitur
-    // berbasis titik lain (mis. taruh perangkat / ukur jarak dari sini).
-    const showCoordPopup = (lngLat: maplibregl.LngLat) => {
-      const text = `${lngLat.lat.toFixed(6)}, ${lngLat.lng.toFixed(6)}`
-      const val = document.createElement('button')
-      val.type = 'button'
-      val.textContent = text
-      val.title = 'Klik untuk menyalin'
-      val.style.cssText =
-        'font:inherit;font-weight:600;font-variant-numeric:tabular-nums;color:var(--accent);background:none;border:0;padding:0;cursor:pointer'
-      val.onclick = () => void navigator.clipboard?.writeText(text).then(() => toast.success('Koordinat disalin'))
-      const hint = document.createElement('div')
-      hint.textContent = 'klik angka untuk salin'
-      hint.style.cssText = 'margin-top:2px;font-size:0.72rem;color:#605e5c'
-      const node = document.createElement('div')
-      node.append(val, hint)
-      if (!coordPopup.current) {
-        coordPopup.current = new maplibregl.Popup({ closeButton: true, closeOnClick: false, className: 'coord-popup' })
-      }
-      coordPopup.current.setLngLat(lngLat).setDOMContent(node).addTo(instance)
-    }
-
     /**
      * Peta menerima klik? Tidak selagi alat kabel/relokasi memegangnya, dan tidak untuk
      * klik "hantu" yang lahir dari tahan-lama pembuka menu tambah (lihat [swallowClickUntil]).
@@ -792,7 +763,6 @@ export function MapPage() {
      */
     const openAddMenu = (lngLat: maplibregl.LngLat, x: number, y: number) => {
       if (modeRef.current !== 'idle') return
-      coordPopup.current?.remove()
       // Jari yang sama akan melepas dan melahirkan sebuah klik; jangan sampai klik itu
       // menutup menu yang baru saja dimintanya.
       swallowClickUntil.current = Date.now() + CLICK_SWALLOW_MS
@@ -867,20 +837,11 @@ export function MapPage() {
     // itu tak lagi menunjuk tempat yang sama — jadi ditutup, bukan dibiarkan berbohong.
     instance.on('movestart', () => setAddMenu(null))
 
-    // Klik TUNGGAL di lahan kosong: menutup yang sedang mengambang (menu tambah, popup
-    // koordinat). Klik aset/kabel tetap dilayani handler layer di bawah.
+    // Klik TUNGGAL di lahan kosong menutup menu tambah yang sedang mengambang.
+    // Klik aset/kabel tetap dilayani handler layer di bawah.
     instance.on('click', () => {
       if (!acceptsClick()) return
       setAddMenu(null)
-      coordPopup.current?.remove()
-    })
-
-    // Klik GANDA di lahan kosong (bukan aset/kabel) → tampilkan koordinat titik itu.
-    instance.on('dblclick', (event) => {
-      if (modeRef.current !== 'idle') return
-      const layers = INTERACTIVE_LAYERS.filter((l) => instance.getLayer(l))
-      if (layers.length > 0 && instance.queryRenderedFeatures(event.point, { layers }).length > 0) return
-      showCoordPopup(event.lngLat)
     })
 
     instance.on('click', 'odp', (event) => {
@@ -1001,8 +962,6 @@ export function MapPage() {
       tool.current = createCableTool(instance, (state) => {
         modeRef.current = state.mode
         setToolState(state)
-        // Alat kabel aktif → tutup popup koordinat agar tak menutupi gambar kabel.
-        if (state.mode !== 'idle') coordPopup.current?.remove()
       })
 
       // Overlay kabel terdampak: sorotan merah berdenyut di atas kabel biasa,
@@ -1145,8 +1104,6 @@ export function MapPage() {
       ro.disconnect()
       tool.current?.destroy()
       tool.current = null
-      coordPopup.current?.remove()
-      coordPopup.current = null
       instance.remove()
       map.current = null
     }
@@ -1435,7 +1392,6 @@ export function MapPage() {
   const startDrawFrom = () => {
     if (!cableOrigin) return
     // Satu alat aktif pada satu waktu: tutup panel & titik yang menunggu form dulu.
-    coordPopup.current?.remove()
     setPlaceAt(null)
     clearPanels()
     setEditing(null)
@@ -1455,7 +1411,6 @@ export function MapPage() {
   const startPlaceAt = (kind: AssetKind | 'CUSTOMER') => {
     if (!addMenu) return
     tool.current?.cancel()
-    coordPopup.current?.remove()
     clearPanels()
     setEditing(null)
     setAddMenu(null)
@@ -1548,7 +1503,6 @@ export function MapPage() {
     if (!target) return
     const cfg = MOVABLE_NODES[target.layer]
     if (!cfg) return
-    coordPopup.current?.remove()
     setSelected(null)
     setBlast(null)
     setTrace(null)
@@ -1760,7 +1714,6 @@ export function MapPage() {
             title="Setelan peta"
             aria-label="Setelan peta"
             onClick={() => {
-              coordPopup.current?.remove()
               setAddMenu(null)
               setSettingsOpen(true)
             }}
@@ -2149,8 +2102,6 @@ function MapSettingsDrawer({
             <br />
             <strong>Tarik kabel</strong> dimulai dari panel perangkatnya: klik perangkatnya dulu, lalu tekan
             &quot;Tarik kabel&quot;.
-            <br />
-            <strong>Klik ganda</strong> di lahan kosong menampilkan koordinat titik itu.
           </p>
         </section>
       </div>
@@ -2197,6 +2148,7 @@ function AddHereMenu({
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  const toast = useToast()
   const assets = (Object.keys(ASSET_META) as AssetKind[]).filter((k) => can(ASSET_META[k].createPerm))
   // Menaruh pelanggan = memberi koordinat pada pelanggan yang SUDAH ada (impor massal
   // menaruhnya di 0,0), jadi izinnya "ubah pelanggan", bukan "buat pelanggan".
@@ -2209,9 +2161,17 @@ function AddHereMenu({
       style={{ left: at.x, top: at.y }}
       role="menu"
     >
-      <div className="map-menu-head tnum">
+      <button
+        type="button"
+        className="map-menu-head tnum"
+        title="Klik untuk menyalin koordinat"
+        onClick={() => {
+          const text = `${at.lat.toFixed(6)}, ${at.lng.toFixed(6)}`
+          void navigator.clipboard?.writeText(text).then(() => toast.success('Koordinat disalin'))
+        }}
+      >
         {at.lat.toFixed(6)}, {at.lng.toFixed(6)}
-      </div>
+      </button>
       {assets.map((k) => (
         <button key={k} type="button" className="map-menu-item" role="menuitem" onClick={() => onPick(k)}>
           <IconPlus size={15} /> {ASSET_META[k].label}

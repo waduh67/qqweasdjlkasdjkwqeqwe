@@ -2002,12 +2002,6 @@ tbody tr.row-selected:hover {
 .map-canvas .maplibregl-canvas-container.maplibregl-interactive:active {
   cursor: default;
 }
-/* Popup koordinat (klik lahan kosong): kartu putih ringkas ala Google Maps berisi
-   lat/long biru yang bisa disalin. Sengaja putih agar terbaca di basemap gelap. */
-.coord-popup .maplibregl-popup-content {
-  padding: 7px 10px;
-  border-radius: 6px;
-}
 /* Watermark akuntabilitas — label pengguna berulang, sangat samar, tak menghalangi
    interaksi. Muncul di screenshot sehingga tangkapan layar bisa dilacak pemiliknya. */
 .map-watermark {
@@ -2276,12 +2270,25 @@ tbody tr.row-selected:hover {
   border: 1px solid var(--border-strong);
   box-shadow: var(--shadow-md);
 }
+/* Kepala menu = koordinat titik yang diklik, sekaligus tombol salin (dulu tugas popup
+   klik-ganda). Tampil sebagai teks samar, bukan tombol, supaya tak menyaingi pilihan
+   di bawahnya; petunjuknya lewat hover. */
 .map-menu-head {
+  display: block;
+  width: 100%;
   padding: 0.35rem 0.6rem 0.4rem;
+  border: 0;
   border-bottom: 1px solid var(--border);
   margin-bottom: 0.25rem;
+  background: none;
   color: var(--muted);
+  font: inherit;
   font-size: 0.72rem;
+  text-align: left;
+  cursor: pointer;
+}
+.map-menu-head:hover {
+  color: var(--text-2);
 }
 .map-menu-item {
   display: flex;
