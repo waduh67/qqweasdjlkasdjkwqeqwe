@@ -1,7 +1,7 @@
-import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
 import { useCan } from '@/auth/useCan'
+import { useAppShellNav } from '@/hooks/useAppShellNav'
 import { BrandMark, Button, ThemeToggle } from '@/components/atoms'
 import { EnvSwitcher } from '@/components/molecules'
 import { Breadcrumbs } from '@/components/molecules'
@@ -99,20 +99,11 @@ const GROUPS: NavGroup[] = [
  */
 const FLUSH_ROUTES = new Set(['/map'])
 
-const COLLAPSE_KEY = 'ftth.sidebarCollapsed'
-
 export function Layout() {
   const { user, logout } = useAuth()
   const { can, isPlatformAdmin } = useCan()
   const location = useLocation()
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1')
-
-  const toggleSidebar = () =>
-    setCollapsed((v) => {
-      const next = !v
-      localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0')
-      return next
-    })
+  const { collapsed, navOpen, toggleNav, closeNav, shellClass } = useAppShellNav()
 
   const flush = FLUSH_ROUTES.has(location.pathname)
 
@@ -123,17 +114,20 @@ export function Layout() {
     .join('')
 
   return (
-    <div className={`app${collapsed ? ' sidebar-collapsed' : ''}`}>
+    <div className={shellClass}>
       {/* Header Azure full-width: anak langsung .app (grid-area topbar) agar bar biru
           membentang di atas sidebar & konten, bukan hanya kolom kanan. */}
       <header className="topbar">
         <div className="row" style={{ gap: '0.5rem' }}>
+          {/* Satu tombol, dua arti: menciutkan sidebar di layar lebar, membuka laci nav
+              di ponsel (lihat useAppShellNav) — sesuai yang dilihat pengguna di layarnya. */}
           <Button
             variant="subtle"
             icon={<IconSidebar size={18} />}
-            onClick={toggleSidebar}
+            onClick={toggleNav}
             aria-label={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
             title={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
+            aria-expanded={navOpen}
           />
           <span className="badge accent">{user?.tenantSlug}</span>
           {user?.platformAdmin && <span className="badge">platform admin</span>}
@@ -180,6 +174,10 @@ export function Layout() {
           />
         </div>
       </header>
+
+      {/* Latar gelap di belakang laci nav ponsel: menutup laci saat disentuh di luar,
+          sekaligus memberi tahu bahwa konten di belakang sedang tak aktif. */}
+      {navOpen && <button type="button" className="nav-scrim" aria-label="Tutup menu" onClick={closeNav} />}
 
       <aside className="sidebar">
         <div className="brand">

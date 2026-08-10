@@ -1,7 +1,7 @@
-import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
 import { useCan } from '@/auth/useCan'
+import { useAppShellNav } from '@/hooks/useAppShellNav'
 import { BrandMark, Button, ThemeToggle } from '@/components/atoms'
 import { EnvSwitcher } from '@/components/molecules'
 import { Breadcrumbs } from '@/components/molecules'
@@ -67,19 +67,10 @@ const GROUPS: NavGroup[] = [
   },
 ]
 
-const COLLAPSE_KEY = 'ftth.sidebarCollapsed'
-
 export function PlatformLayout() {
   const { user, logout } = useAuth()
   const { can } = useCan()
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1')
-
-  const toggleSidebar = () =>
-    setCollapsed((v) => {
-      const next = !v
-      localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0')
-      return next
-    })
+  const { collapsed, navOpen, toggleNav, closeNav, shellClass } = useAppShellNav()
 
   const initials = (user?.name ?? '?')
     .split(' ')
@@ -88,7 +79,7 @@ export function PlatformLayout() {
     .join('')
 
   return (
-    <div className={`app${collapsed ? ' sidebar-collapsed' : ''}`}>
+    <div className={shellClass}>
       {/* Header Azure full-width: anak langsung .app (grid-area topbar) agar bar biru
           membentang di atas sidebar & konten, bukan hanya kolom kanan. */}
       <header className="topbar">
@@ -96,9 +87,10 @@ export function PlatformLayout() {
           <Button
             variant="subtle"
             icon={<IconSidebar size={18} />}
-            onClick={toggleSidebar}
+            onClick={toggleNav}
             aria-label={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
             title={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
+            aria-expanded={navOpen}
           />
           <span className="badge accent">platform admin</span>
         </div>
@@ -124,6 +116,8 @@ export function PlatformLayout() {
           />
         </div>
       </header>
+
+      {navOpen && <button type="button" className="nav-scrim" aria-label="Tutup menu" onClick={closeNav} />}
 
       <aside className="sidebar">
         <div className="brand">

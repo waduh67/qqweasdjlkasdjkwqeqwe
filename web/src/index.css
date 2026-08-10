@@ -2279,21 +2279,31 @@ tbody tr.row-selected:hover {
 
 /* ---------- Responsif ---------- */
 
+/* Ponsel & tablet sempit. Sidebar TIDAK lagi dijadikan bar horizontal yang membungkus:
+   dengan dua puluhan menu, bar itu memakan separuh layar sebelum konten mulai. Sebagai
+   gantinya ia jadi LACI melayang yang dibuka tombol header (lihat `useAppShellNav`) —
+   pola yang sama dipakai Azure Portal di ponsel. */
 @media (max-width: 820px) {
-  /* Satu kolom: header (full-width) → sidebar (bar horizontal) → konten. */
+  /* Satu kolom: header (full-width) lalu konten; sidebar keluar dari alur grid. */
   .app,
   .app.sidebar-collapsed {
     grid-template-columns: 1fr;
-    grid-template-rows: var(--topbar-h) auto 1fr;
+    grid-template-rows: var(--topbar-h) 1fr;
     grid-template-areas:
       'topbar'
-      'sidebar'
       'main';
   }
-  /* Di layar sempit sidebar jadi bar horizontal; abaikan mode ciut (rel ikon). */
+  /* Laci selalu tampil versi lengkap (ikon + teks); mode rel-ikon tak berlaku di sini. */
   .sidebar-collapsed .brand-text,
-  .sidebar-collapsed .nav-text {
+  .sidebar-collapsed .nav-text,
+  .sidebar-collapsed .nav-label {
     display: inline;
+  }
+  .sidebar-collapsed .sidebar nav a,
+  .sidebar-collapsed .brand {
+    justify-content: flex-start;
+    padding-left: 0.7rem;
+    padding-right: 0.7rem;
   }
   .main:has(.content-flush) {
     height: auto;
@@ -2302,22 +2312,170 @@ tbody tr.row-selected:hover {
     min-height: 78vh;
   }
   .sidebar {
-    position: static;
-    height: auto;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
+    position: fixed;
+    top: var(--topbar-h);
+    bottom: 0;
+    left: 0;
+    width: min(19rem, 84vw);
+    z-index: 41;
+    transform: translateX(-100%);
+    transition: transform 0.18s ease;
+    box-shadow: 6px 0 24px -12px rgba(0, 0, 0, 0.5);
+  }
+  .app.nav-open .sidebar {
+    transform: none;
+  }
+  /* Konten sesak di ponsel: padding halaman dipangkas agar kartu tak jadi lorong sempit. */
+  .content {
+    padding: 1rem 0.85rem 2rem;
+  }
+}
+
+/* Scrim laci nav — hanya dirender saat laci terbuka, jadi tak perlu digerbang media query.
+   Tombol (bukan div) supaya "tutup menu" tetap bisa dicapai keyboard & pembaca layar. */
+.nav-scrim {
+  position: fixed;
+  inset: var(--topbar-h) 0 0;
+  z-index: 40;
+  border: none;
+  padding: 0;
+  background: rgba(11, 11, 11, 0.45);
+  animation: toast-in 0.15s ease;
+}
+
+/* ---------- Responsif: ponsel ---------- */
+
+@media (max-width: 720px) {
+  /* Blade ala Azure lahir untuk layar lebar; di ponsel ia harus jadi lembar penuh.
+     Kelas digandakan (spesifisitas 0,2,0) agar menang atas kelas lebar bawaan Fluent —
+     trik yang sama dipakai varian `.blade-half`/`.blade-detail` di atas. */
+  .azure-blade.azure-blade {
+    width: 100vw;
+    max-width: 100vw;
+    min-width: 0;
+  }
+  .azure-blade-foot {
+    padding-inline: 1rem;
+  }
+
+  /* Command bar & bilah filter: menggulung mendatar, bukan membungkus jadi banyak baris
+     yang mendorong tabel turun dari layar. */
+  .azure-commandbar {
     overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
   }
-  .sidebar .brand {
-    padding-bottom: 0.4rem;
-  }
-  .nav-label {
+  .azure-commandbar::-webkit-scrollbar {
     display: none;
   }
-  .sidebar nav {
-    flex-direction: row;
+  .azure-commandbar .cmd-btn {
+    flex: none;
+  }
+
+  /* Kepala halaman: judul di atas, aksi di bawah selebar layar. */
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+  }
+  .page-header-actions {
+    justify-content: flex-start;
     flex-wrap: wrap;
+  }
+
+  /* Filter tabel: tiap kontrol selebar layar — dropdown selebar 8,5rem berjejer
+     menyisakan potongan sempit yang sulit disentuh. */
+  .toolbar select,
+  .toolbar .btn-auto,
+  .toolbar .fui-Field {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* TABEL JADI KARTU. Menggulung mendatar berarti pengguna harus menggeser bolak-balik
+     untuk membaca SATU baris; sebagai gantinya tiap baris ditumpuk jadi kartu "label:
+     nilai". Label diambil dari `data-label` yang diisi DataTable dari judul kolomnya. */
+  .table-card .table-wrap {
+    overflow-x: visible;
+  }
+  /* Bingkai luar grid dilepas: yang membingkai kini tiap kartu baris, dan dua bingkai
+     bertumpuk membuat daftar terlihat seperti kotak di dalam kotak. */
+  .card.table-card {
+    border: none;
+    background: transparent;
+  }
+  .table-card table,
+  .table-card tbody,
+  .table-card tbody tr,
+  .table-card tbody td {
+    display: block;
+    width: 100%;
+  }
+  .table-card thead {
+    display: none;
+  }
+  .table-card tbody tr {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.55rem 0.7rem;
+    margin-bottom: 0.55rem;
+  }
+  .table-card tbody tr:last-child {
+    margin-bottom: 0;
+  }
+  .table-card tbody td {
+    border-bottom: none;
+    padding: 0.3rem 0;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.9rem;
+    text-align: left;
+  }
+  .table-card tbody td::before {
+    content: attr(data-label);
+    flex: none;
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  /* Sel tanpa label (checkbox & menu aksi) tetap sebaris di puncak kartu. */
+  .table-card tbody td:not([data-label])::before,
+  .table-card tbody td[data-label='']::before {
+    content: none;
+  }
+  .table-card tbody td.dg-check,
+  .table-card tbody td.dg-actions {
+    display: inline-flex;
+    width: auto;
+    justify-content: flex-start;
+  }
+  /* Detail work order: dua kolom jadi satu — nilai panjang (nama pelanggan, catatan)
+     tak lagi terpotong di kolom sempit. */
+  .wo-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Kontrol tersegmen (mis. lima menu portal) digulung, bukan melebar keluar layar. */
+  .segmented {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .segmented::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Perangkat sentuh (bukan sekadar layar sempit): sasaran sentuh minimal ~40px. Ukuran
+   font tombol kecil di beberapa panel sengaja tak diubah — yang diperbesar TINGGI-nya,
+   supaya tata letak tak berubah bentuk di desktop bermouse. */
+@media (pointer: coarse) {
+  .fui-Button,
+  .azure-commandbar .cmd-btn,
+  .sidebar nav a {
+    min-height: 40px;
   }
 }
 

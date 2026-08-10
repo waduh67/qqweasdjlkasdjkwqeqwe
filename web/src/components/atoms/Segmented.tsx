@@ -48,7 +48,9 @@ export function Segmented<T extends string | number>({
 }) {
   const s = useStyles()
   return (
-    <div className={mergeClasses(s.root, className)} role="group" aria-label={ariaLabel}>
+    // Kelas polos `segmented` ikut dipasang sebagai kail responsif: di ponsel track-nya
+    // digulung mendatar (lihat index.css) supaya lima pilihan tak melebar keluar layar.
+    <div className={mergeClasses(s.root, 'segmented', className)} role="group" aria-label={ariaLabel}>
       {options.map((o) => {
         const active = o.value === value
         return (

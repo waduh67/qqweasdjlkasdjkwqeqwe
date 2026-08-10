@@ -255,6 +255,11 @@ export function DataTable<T>({
                     {columns.map((col) => (
                       <td
                         key={col.key}
+                        // Di ponsel kepala tabel disembunyikan dan tiap baris ditumpuk jadi
+                        // kartu; `data-label` inilah yang dicetak CSS sebagai label sel,
+                        // jadi nilai tak melayang tanpa keterangan. Judul non-teks (ikon,
+                        // elemen) dilewati — tak ada yang bisa dijadikan teks label.
+                        data-label={typeof col.header === 'string' ? col.header : undefined}
                         className={[col.align === 'right' ? 'num' : '', col.className ?? '']
                           .filter(Boolean)
                           .join(' ') || undefined}
