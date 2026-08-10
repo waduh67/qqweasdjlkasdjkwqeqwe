@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
 import { useCan } from '@/auth/useCan'
 import { Button, ThemeToggle } from '@/components/atoms'
@@ -140,7 +140,14 @@ export function Layout() {
         </div>
         <div className="row" style={{ gap: '0.75rem' }}>
           <ThemeToggle />
-          <div className="user-chip">
+          {/* Chip pengguna = pintu ke keamanan akun. Titik oranye muncul selama 2FA
+              belum dipasang — pengingat yang selalu terlihat tanpa memblokir kerja. */}
+          <Link
+            to="/account/security"
+            className="user-chip"
+            title="Keamanan akun"
+            style={{ textDecoration: 'none', color: 'inherit' }}
+          >
             <span className="avatar" aria-hidden>
               {initials}
             </span>
@@ -150,7 +157,20 @@ export function Layout() {
                 {user?.email}
               </div>
             </div>
-          </div>
+            {user && !user.twoFactorEnabled && (
+              <span
+                aria-label="Verifikasi dua langkah belum aktif"
+                title="Verifikasi dua langkah belum aktif"
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: 'var(--warning, #f0a30a)',
+                  flexShrink: 0,
+                }}
+              />
+            )}
+          </Link>
           <Button
             variant="subtle"
             icon={<IconLogout size={18} />}

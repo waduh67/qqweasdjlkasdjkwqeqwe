@@ -54,25 +54,34 @@ export const tokenStore = {
 export class ApiError extends Error {
   status: number
   errors?: Record<string, string>
+  /**
+   * Kode mesin dari `ProblemDetail` server, bila ada. Dipakai untuk kegagalan yang
+   * BUKAN pesan-untuk-dibaca melainkan instruksi bagi UI — mis. `TWO_FACTOR_REQUIRED`
+   * yang berarti "tampilkan kolom kode", bukan "kredensial salah".
+   */
+  code?: string
 
-  constructor(status: number, message: string, errors?: Record<string, string>) {
+  constructor(status: number, message: string, errors?: Record<string, string>, code?: string) {
     super(message)
     this.status = status
     this.errors = errors
+    this.code = code
   }
 }
 
 async function parseError(response: Response): Promise<ApiError> {
   let detail = response.statusText
   let errors: Record<string, string> | undefined
+  let code: string | undefined
   try {
     const body = await response.json()
     detail = body.detail ?? body.message ?? detail
     errors = body.errors
+    code = body.code
   } catch {
     /* respons tanpa body JSON */
   }
-  return new ApiError(response.status, detail, errors)
+  return new ApiError(response.status, detail, errors, code)
 }
 
 /**

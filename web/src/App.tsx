@@ -39,6 +39,7 @@ import { VpnServersPage } from './pages/VpnServersPage'
  * layar login.
  */
 const MapPage = lazy(() => import('./pages/MapPage').then((m) => ({ default: m.MapPage })))
+import { AccountSecurityPage } from './pages/AccountSecurityPage'
 import { UsersPage } from './pages/UsersPage'
 import { RolesPage } from './pages/RolesPage'
 import { AreasPage } from './pages/AreasPage'
@@ -146,6 +147,10 @@ function OperatorApp() {
             }
           >
             <Route index element={<DashboardPage />} />
+            {/* Akun sendiri: tanpa gerbang izin — mengamankan akunmu bukan wewenang
+                yang perlu diberikan siapa pun, dan menggerbanginya berarti sebagian
+                operator tak boleh memasang 2FA. */}
+            <Route path="account/security" element={<AccountSecurityPage />} />
             <Route
               path="map"
               element={

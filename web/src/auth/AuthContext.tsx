@@ -5,7 +5,8 @@ import type { Profile, TokenResponse } from '../api/types'
 interface AuthState {
   user: Profile | null
   loading: boolean
-  login: (email: string, password: string) => Promise<void>
+  /** `otpCode` diisi hanya pada percobaan kedua, setelah server minta faktor kedua. */
+  login: (email: string, password: string, otpCode?: string) => Promise<void>
   logout: () => Promise<void>
   /** Ambil ulang profil (izin efektif terbaru) tanpa menunggu token kedaluwarsa. */
   refreshProfile: () => Promise<void>
@@ -45,8 +46,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const login = useCallback(async (email: string, password: string) => {
-    const tokens = await api.post<TokenResponse>('/api/auth/login', { email, password })
+  const login = useCallback(async (email: string, password: string, otpCode?: string) => {
+    const tokens = await api.post<TokenResponse>('/api/auth/login', { email, password, otpCode })
     tokenStore.setAccessToken(tokens.accessToken)
     tokenStore.setRefreshToken(tokens.refreshToken)
     setUser(tokens.user)

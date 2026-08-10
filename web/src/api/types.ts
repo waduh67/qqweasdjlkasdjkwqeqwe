@@ -10,6 +10,7 @@ export interface Profile {
   roleIds: string[]
   permissions: string[]
   areaIds: string[]
+  twoFactorEnabled: boolean
 }
 
 export interface TokenResponse {
@@ -52,6 +53,7 @@ export interface User {
   roleIds: string[]
   areaIds: string[]
   createdAt: string
+  twoFactorEnabled: boolean
 }
 
 export interface Area {

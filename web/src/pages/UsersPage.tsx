@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
-import { KeyRound, Plus, Power, RefreshCw, Trash2 } from 'lucide-react'
+import { KeyRound, Plus, Power, RefreshCw, ShieldOff, Trash2 } from 'lucide-react'
 import { Checkbox } from '@fluentui/react-components'
 import { api, ApiError } from '../api/client'
+import { resetTwoFactorFor } from '../api/account'
 import type { Area, PageResponse, Role, User } from '../api/types'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
 import { Blade } from '@/components/organisms'
-import { Button, EmptyState, StatusBadge, TextField, Toolbar } from '@/components/atoms'
+import { Badge, Button, EmptyState, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useConfirm } from '@/system'
 import { IconUsers } from '@/components/atoms/icons'
@@ -100,6 +101,13 @@ export function UsersPage() {
       cell: (u) => <StatusBadge status={u.status} />,
     },
     {
+      key: 'twoFactor',
+      header: '2FA',
+      sortValue: (u) => (u.twoFactorEnabled ? 1 : 0),
+      cell: (u) =>
+        u.twoFactorEnabled ? <Badge tone="good">Aktif</Badge> : <span className="muted">–</span>,
+    },
+    {
       key: 'role',
       header: 'Role',
       className: 'muted',
@@ -127,6 +135,25 @@ export function UsersPage() {
           void run(() =>
             api.post(`/api/users/${user.id}/${user.status === 'ACTIVE' ? 'disable' : 'enable'}`),
           ),
+      })
+    // Ponsel hilang tanpa kode pemulihan tersisa: satu-satunya jalan masuk kembali.
+    // Bukan memindahkan 2FA ke perangkat siapa pun — pagarnya dilepas, dan pemiliknya
+    // memasang lagi sendiri. Tercatat di jejak audit.
+    if (canUpdate && user.twoFactorEnabled)
+      list.push({
+        key: 'reset-2fa',
+        label: 'Setel ulang 2FA',
+        icon: <ShieldOff size={16} />,
+        onClick: () =>
+          void (async () => {
+            const ok = await confirm({
+              title: 'Setel ulang 2FA',
+              message: `Kosongkan verifikasi dua langkah milik ${user.email}? Setelah ini ia bisa masuk dengan password saja sampai memasang autentikator baru.`,
+              confirmLabel: 'Setel ulang',
+              danger: true,
+            })
+            if (ok) void run(() => resetTwoFactorFor(user.id))
+          })(),
       })
     if (canDelete)
       list.push({
