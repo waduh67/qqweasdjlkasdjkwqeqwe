@@ -27,6 +27,9 @@ class NotificationSettingsJpaEntity(
     @Column(name = "gateway_enabled", nullable = false)
     var gatewayEnabled: Boolean,
 
+    @Column(name = "email_enabled", nullable = false)
+    var emailEnabled: Boolean,
+
     @Column(name = "http_endpoint_url", length = 500)
     var httpEndpointUrl: String?,
 

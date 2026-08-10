@@ -59,6 +59,9 @@ class NotificationSettingsController(
 data class NotificationSettingsRequest(
     @field:NotNull val provider: WhatsAppProvider,
     @field:NotNull val gatewayEnabled: Boolean,
+    // Berdefault mati agar klien lama yang belum mengenal kanal email tak mendadak
+    // membuat tenant mengirim email tanpa pernah memintanya.
+    val emailEnabled: Boolean = false,
     @field:Size(max = 500) val httpEndpointUrl: String? = null,
     @field:Size(max = 255) val httpToken: String? = null,
     @field:Size(max = 50) val httpPhoneField: String? = null,
@@ -76,6 +79,7 @@ data class NotificationSettingsRequest(
     fun toCommand() = UpdateNotificationSettingsCommand(
         provider = provider,
         gatewayEnabled = gatewayEnabled,
+        emailEnabled = emailEnabled,
         httpEndpointUrl = httpEndpointUrl,
         httpToken = httpToken,
         httpPhoneField = httpPhoneField,

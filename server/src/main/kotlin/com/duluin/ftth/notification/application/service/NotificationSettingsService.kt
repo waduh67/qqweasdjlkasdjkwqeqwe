@@ -35,6 +35,7 @@ class NotificationSettingsService(
         settings.update(
             provider = command.provider,
             gatewayEnabled = command.gatewayEnabled,
+            emailEnabled = command.emailEnabled,
             httpEndpointUrl = command.httpEndpointUrl,
             httpToken = command.httpToken,
             httpPhoneField = command.httpPhoneField,
@@ -74,6 +75,7 @@ class NotificationSettingsService(
     private fun NotificationSettings.toView() = NotificationSettingsView(
         provider = provider.name,
         gatewayEnabled = gatewayEnabled,
+        emailEnabled = emailEnabled,
         httpEndpointUrl = httpEndpointUrl,
         httpTokenSet = !httpToken.isNullOrBlank(),
         httpPhoneField = httpPhoneField,

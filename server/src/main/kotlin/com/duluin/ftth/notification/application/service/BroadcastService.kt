@@ -43,7 +43,12 @@ class BroadcastService(
         // Melempar NotFound bila insidennya tak ada — validasi keberadaan sekaligus.
         val contacts = incidentApi.affectedContacts(command.incidentId)
         val recipients = contacts.map {
-            NotificationSender.Recipient(customerId = it.customerId, name = it.name, phone = it.phone)
+            NotificationSender.Recipient(
+                customerId = it.customerId,
+                name = it.name,
+                phone = it.phone,
+                email = it.email,
+            )
         }
         // MANUAL selalu aktif, jadi dispatch tak pernah null di sini.
         val broadcast = sender.dispatch(
@@ -94,7 +99,7 @@ class BroadcastService(
     private fun BroadcastRecipient.toView() = BroadcastRecipientView(
         customerId = customerId,
         customerName = customerName,
-        phone = phone,
+        destination = destination,
         status = status.name,
         detail = detail,
         at = at,

@@ -15,5 +15,11 @@ package com.duluin.ftth.notification.application.port.outbound
  */
 interface EmailDispatcher {
 
-    fun send(to: String, subject: String, body: String): DeliveryOutcome
+    /**
+     * @param fromName nama pengirim yang tampil di kotak masuk pelanggan. Diisi nama ISP,
+     *        karena alamat pengirimnya milik platform: tanpa ini pelanggan menerima tagihan
+     *        internetnya dari nama yang tak pernah ia kenal, yang lebih mirip penipuan
+     *        daripada pemberitahuan. Null = pakai nama bawaan platform.
+     */
+    fun send(to: String, subject: String, body: String, fromName: String? = null): DeliveryOutcome
 }

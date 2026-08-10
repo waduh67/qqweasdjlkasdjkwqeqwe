@@ -4,8 +4,19 @@ import com.duluin.ftth.common.domain.UuidV7
 import java.time.Instant
 import java.util.UUID
 
-/** Kanal pengiriman pesan ke pelanggan. */
-enum class NotificationChannel { WHATSAPP, SMS, TELEGRAM }
+/**
+ * Kanal pengiriman pesan ke pelanggan.
+ *
+ * [WHATSAPP] lewat gateway milik tenant sendiri (BYO), [EMAIL] lewat SMTP platform — dua
+ * jalur dengan pemilik, biaya, dan kegagalan yang berbeda, karena itu tiap kanal punya
+ * catatan [Broadcast] sendiri walau pesannya sama.
+ *
+ * `SMS` dan `TELEGRAM` pernah ada di sini tanpa pernah punya pengirim. Akibatnya bukan
+ * sekadar mati: memilihnya di layar broadcast tetap mengirim lewat WhatsApp lalu mencatat
+ * riwayatnya sebagai SMS — operator membaca sesuatu yang tak pernah terjadi. Keduanya
+ * dibuang; kanal baru ditambahkan bersama pengirimnya, bukan sebelum.
+ */
+enum class NotificationChannel { WHATSAPP, EMAIL }
 
 /**
  * Hasil pengiriman ke satu penerima.
@@ -22,7 +33,13 @@ class BroadcastRecipient private constructor(
     val broadcastId: UUID,
     val customerId: UUID?,
     val customerName: String,
-    val phone: String?,
+    /**
+     * Ke mana pesan ini ditujukan — nomor WhatsApp atau alamat email, sesuai kanal
+     * broadcast-nya. Disimpan apa adanya (bukan hanya nomor) supaya operator yang membaca
+     * riwayat tahu alamat mana yang dipakai saat itu, termasuk ketika data pelanggan
+     * berubah setelahnya. `null` bila pelanggan memang tak punya alamat di kanal itu.
+     */
+    val destination: String?,
     val status: DeliveryStatus,
     val detail: String?,
     val at: Instant,
@@ -34,11 +51,13 @@ class BroadcastRecipient private constructor(
             broadcastId: UUID,
             customerId: UUID?,
             customerName: String,
-            phone: String?,
+            destination: String?,
             status: DeliveryStatus,
             detail: String?,
             at: Instant,
-        ) = BroadcastRecipient(UuidV7.generate(), tenantId, broadcastId, customerId, customerName, phone, status, detail, at)
+        ) = BroadcastRecipient(
+            UuidV7.generate(), tenantId, broadcastId, customerId, customerName, destination, status, detail, at,
+        )
 
         @Suppress("LongParameterList")
         fun rehydrate(
@@ -47,11 +66,11 @@ class BroadcastRecipient private constructor(
             broadcastId: UUID,
             customerId: UUID?,
             customerName: String,
-            phone: String?,
+            destination: String?,
             status: DeliveryStatus,
             detail: String?,
             at: Instant,
-        ) = BroadcastRecipient(id, tenantId, broadcastId, customerId, customerName, phone, status, detail, at)
+        ) = BroadcastRecipient(id, tenantId, broadcastId, customerId, customerName, destination, status, detail, at)
     }
 }
 
@@ -90,12 +109,12 @@ class Broadcast private constructor(
     fun record(
         customerId: UUID?,
         customerName: String,
-        phone: String?,
+        destination: String?,
         status: DeliveryStatus,
         detail: String?,
         at: Instant = Instant.now(),
     ) {
-        _recipients += BroadcastRecipient.of(tenantId, id, customerId, customerName, phone, status, detail, at)
+        _recipients += BroadcastRecipient.of(tenantId, id, customerId, customerName, destination, status, detail, at)
     }
 
     companion object {

@@ -14,16 +14,16 @@ import org.springframework.transaction.event.TransactionalEventListener
 import java.util.UUID
 
 /**
- * Memberi tahu pelanggan lewat WhatsApp saat daur hidup langganannya berubah
- * (aktif / isolir / berhenti) — pemicu `SUBSCRIPTION_*`.
+ * Memberi tahu pelanggan saat daur hidup langganannya berubah (aktif / isolir / berhenti) —
+ * pemicu `SUBSCRIPTION_*`.
  *
  * Berjalan pada fase AFTER_COMMIT: pesan hanya dikirim untuk perubahan langganan yang
  * benar-benar ter-commit. Tenant context dipasang dari event karena penerbitnya (module
  * customer / billing / workorder) bisa berjalan di luar konteks pengguna. `fallbackExecution`
- * agar event tanpa transaksi tetap diproses. [NotificationSender.dispatch] sendiri yang
- * memutuskan kirim/tidak lewat saklar pemicu tenant — di sini kegagalan cukup di-log agar
- * tak menggagalkan operasi langganan yang menerbitkannya. Pelanggan tanpa nomor telepon
- * tetap tercatat SKIPPED oleh sender.
+ * agar event tanpa transaksi tetap diproses. [NotificationSender.dispatchAuto] sendiri yang
+ * memutuskan kirim/tidak lewat saklar pemicu tenant sekaligus memilih kanalnya — di sini
+ * kegagalan cukup di-log agar tak menggagalkan operasi langganan yang menerbitkannya.
+ * Pelanggan tanpa alamat di kanal yang dipakai tetap tercatat SKIPPED oleh sender.
  */
 @Component
 class SubscriptionNotificationListener(
@@ -65,10 +65,10 @@ class SubscriptionNotificationListener(
         try {
             TenantContext.runAs(tenantId) {
                 val customer = customers.findCustomer(customerId) ?: return@runAs
-                sender.dispatch(
+                sender.dispatchAuto(
                     trigger = trigger,
                     message = message(customer.name),
-                    recipients = listOf(Recipient(customer.id, customer.name, customer.phone)),
+                    recipients = listOf(Recipient(customer.id, customer.name, customer.phone, customer.email)),
                 )
             }
         } catch (ex: Exception) {

@@ -66,8 +66,10 @@ class BroadcastRecipientJpaEntity(
     @Column(name = "customer_name", nullable = false, length = 150, updatable = false)
     var customerName: String,
 
-    @Column(length = 30, updatable = false)
-    var phone: String?,
+    // Menampung nomor WhatsApp maupun alamat email, karena itu panjangnya mengikuti
+    // batas praktis alamat email (RFC 5321: 254), bukan panjang nomor telepon.
+    @Column(length = 254, updatable = false)
+    var destination: String?,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20, updatable = false)

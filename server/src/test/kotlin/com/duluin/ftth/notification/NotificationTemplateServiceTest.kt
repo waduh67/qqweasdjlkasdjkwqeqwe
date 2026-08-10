@@ -92,7 +92,7 @@ class NotificationTemplateServiceTest {
     fun `penyedia tak resmi memblokir pengelolaan template`() {
         settings.row = NotificationSettings.defaultFor(tenantId).apply {
             update(
-                provider = WhatsAppProvider.LOG, gatewayEnabled = true,
+                provider = WhatsAppProvider.LOG, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = "123", metaAccessToken = "tok", metaWabaId = "9988",
                 qontakAccessToken = null, qontakChannelIntegrationId = null,
@@ -310,7 +310,7 @@ class NotificationTemplateServiceTest {
     private fun metaSettings(wabaId: String? = "9988"): NotificationSettings =
         NotificationSettings.defaultFor(tenantId).apply {
             update(
-                provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = true,
+                provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = "1234567890", metaAccessToken = "EAAtoken", metaWabaId = wabaId,
                 qontakAccessToken = null, qontakChannelIntegrationId = null,
@@ -322,7 +322,7 @@ class NotificationTemplateServiceTest {
     private fun qontakSettings(): NotificationSettings =
         NotificationSettings.defaultFor(tenantId).apply {
             update(
-                provider = WhatsAppProvider.QONTAK, gatewayEnabled = true,
+                provider = WhatsAppProvider.QONTAK, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
                 qontakAccessToken = "qontak-token", qontakChannelIntegrationId = "kanal-1",

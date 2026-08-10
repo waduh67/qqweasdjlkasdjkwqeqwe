@@ -37,7 +37,8 @@ data class BroadcastDetail(
 data class BroadcastRecipientView(
     val customerId: UUID?,
     val customerName: String,
-    val phone: String?,
+    /** Alamat tujuan sesuai kanal siarannya: nomor WhatsApp atau alamat email. */
+    val destination: String?,
     val status: String,
     val detail: String?,
     val at: Instant,

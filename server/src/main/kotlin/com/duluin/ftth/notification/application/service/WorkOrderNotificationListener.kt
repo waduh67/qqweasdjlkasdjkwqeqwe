@@ -24,8 +24,9 @@ import java.util.Locale
  * teknisi (push aplikasi lapangan) sengaja belum ditangani di sini.
  *
  * Berjalan pada fase AFTER_COMMIT; tenant context dipasang dari event karena penugasan bisa
- * berjalan di luar konteks pengguna. [NotificationSender.dispatch] yang memutuskan kirim/tidak
- * lewat saklar pemicu tenant. Kegagalan cukup di-log agar tak menggagalkan penugasan WO.
+ * berjalan di luar konteks pengguna. [NotificationSender.dispatchAuto] yang memutuskan
+ * kirim/tidak lewat saklar pemicu tenant sekaligus memilih kanalnya. Kegagalan cukup di-log
+ * agar tak menggagalkan penugasan WO.
  */
 @Component
 class WorkOrderNotificationListener(
@@ -41,10 +42,10 @@ class WorkOrderNotificationListener(
         try {
             TenantContext.runAs(event.tenantId) {
                 val customer = customers.findCustomer(customerId) ?: return@runAs
-                sender.dispatch(
+                sender.dispatchAuto(
                     trigger = NotificationTrigger.WORK_ORDER_SCHEDULED,
                     message = composeMessage(customer.name, event, scheduledAt),
-                    recipients = listOf(Recipient(customer.id, customer.name, customer.phone)),
+                    recipients = listOf(Recipient(customer.id, customer.name, customer.phone, customer.email)),
                 )
             }
         } catch (ex: Exception) {

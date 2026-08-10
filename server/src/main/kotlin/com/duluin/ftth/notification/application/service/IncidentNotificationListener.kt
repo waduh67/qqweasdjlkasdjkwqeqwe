@@ -17,7 +17,7 @@ import org.springframework.transaction.event.TransactionalEventListener
  * Berjalan pada fase AFTER_COMMIT: daftar pelanggan terdampak baru bisa dihitung setelah
  * insiden benar-benar ter-commit ([IncidentApi.affectedContacts] membaca insiden itu). Tenant
  * context dipasang dari event karena korelasi insiden berjalan di luar konteks pengguna.
- * [NotificationSender.dispatch] yang memutuskan kirim/tidak lewat saklar pemicu tenant; siaran
+ * [NotificationSender.dispatchAuto] memutuskan kirim/tidak lewat saklar pemicu tenant; siaran
  * dicatat menaut ke [IncidentOpened.incidentId] persis seperti broadcast insiden manual.
  * Kegagalan cukup di-log agar tak menggagalkan korelasi insiden yang menerbitkannya.
  */
@@ -33,9 +33,9 @@ class IncidentNotificationListener(
         try {
             TenantContext.runAs(event.tenantId) {
                 val recipients = incidents.affectedContacts(event.incidentId)
-                    .map { Recipient(it.customerId, it.name, it.phone) }
+                    .map { Recipient(it.customerId, it.name, it.phone, it.email) }
                 if (recipients.isEmpty()) return@runAs
-                sender.dispatch(
+                sender.dispatchAuto(
                     trigger = NotificationTrigger.INCIDENT_OPENED,
                     message = composeMessage(event),
                     recipients = recipients,

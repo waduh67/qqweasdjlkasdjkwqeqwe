@@ -105,7 +105,11 @@ sealed interface WhatsAppGateway {
  * yang mengenkripsi ke DB — sama seperti secret CoA BRAS. Pada [update], token null/kosong
  * berarti "biarkan apa adanya" agar sunting field lain tak menghapus rahasia tanpa sengaja.
  *
- * Default aman: provider [WhatsAppProvider.LOG], gateway MATI, semua saklar pemicu MATI —
+ * Kanal EMAIL ([emailEnabled]) berdiri sejajar tapi berbeda asal-usulnya: SMTP-nya milik
+ * PLATFORM (satu untuk semua tenant), jadi yang disetel tenant hanya "pakai atau tidak" —
+ * tak ada kredensial email di sini sama sekali.
+ *
+ * Default aman: provider [WhatsAppProvider.LOG], kedua kanal MATI, semua saklar pemicu MATI —
  * tenant harus menyalakan pengiriman & tiap pemicu dengan sadar.
  */
 class NotificationSettings private constructor(
@@ -113,6 +117,7 @@ class NotificationSettings private constructor(
     val tenantId: UUID,
     provider: WhatsAppProvider,
     gatewayEnabled: Boolean,
+    emailEnabled: Boolean,
     httpEndpointUrl: String?,
     httpToken: String?,
     httpPhoneField: String,
@@ -130,8 +135,20 @@ class NotificationSettings private constructor(
     var provider: WhatsAppProvider = provider
         private set
 
-    /** Saklar induk: mati = tak ada pesan keluar apa pun, apa pun saklar pemicunya. */
+    /** Saklar induk kanal WhatsApp: mati = tak ada pesan WA keluar, apa pun saklar pemicunya. */
     var gatewayEnabled: Boolean = gatewayEnabled
+        private set
+
+    /**
+     * Saklar kanal EMAIL, sejajar dengan [gatewayEnabled] dan bebas satu sama lain: ISP boleh
+     * memakai email saja (belum punya gateway WA), WA saja, atau keduanya sekaligus.
+     *
+     * Tak ada kredensial menyertainya karena SMTP-nya milik platform — yang disetel tenant
+     * hanyalah "mau dipakai atau tidak". Konsekuensinya alamat pengirim adalah alamat
+     * platform; nama ISP-lah yang tampil sebagai nama pengirim supaya pelanggan tetap
+     * mengenali dari siapa emailnya.
+     */
+    var emailEnabled: Boolean = emailEnabled
         private set
 
     var httpEndpointUrl: String? = httpEndpointUrl
@@ -190,6 +207,7 @@ class NotificationSettings private constructor(
     fun update(
         provider: WhatsAppProvider,
         gatewayEnabled: Boolean,
+        emailEnabled: Boolean,
         httpEndpointUrl: String?,
         httpToken: String?,
         httpPhoneField: String?,
@@ -206,6 +224,7 @@ class NotificationSettings private constructor(
     ) {
         this.provider = provider
         this.gatewayEnabled = gatewayEnabled
+        this.emailEnabled = emailEnabled
         this.httpEndpointUrl = validateEndpointUrl(httpEndpointUrl)
         // Null/kosong = biarkan apa adanya, agar rahasia tak terhapus saat menyunting field lain.
         httpToken?.trim()?.takeIf { it.isNotEmpty() }?.let { this.httpToken = validateToken(it, "Token gateway HTTP", MAX_HTTP_TOKEN) }
@@ -244,6 +263,21 @@ class NotificationSettings private constructor(
         NotificationTrigger.WORK_ORDER_SCHEDULED -> notifyOnWorkOrderSchedule
         NotificationTrigger.INCIDENT_OPENED -> notifyOnIncidentOpen
     }
+
+    /**
+     * Kanal yang dipakai pemicu OTOMATIS. Keduanya menyala = pesan yang sama berangkat lewat
+     * WhatsApp DAN email, masing-masing dengan catatan riwayatnya sendiri; itu pilihan sadar
+     * tenant, bukan efek samping.
+     *
+     * Bila tak satu pun menyala, jawabannya tetap WhatsApp — bukan "tak usah kirim". Pemicu
+     * yang menyala harus meninggalkan jejak: riwayat mencatatnya SKIPPED beserta alasannya,
+     * sehingga operator yang bertanya "kenapa pelanggan tak dapat pesan?" menemukan
+     * jawabannya di riwayat alih-alih menghadapi kekosongan.
+     */
+    fun activeChannels(): List<NotificationChannel> = buildList {
+        if (gatewayEnabled) add(NotificationChannel.WHATSAPP)
+        if (emailEnabled) add(NotificationChannel.EMAIL)
+    }.ifEmpty { listOf(NotificationChannel.WHATSAPP) }
 
     /**
      * Bentuk gateway siap-pakai untuk dispatcher, atau null bila gateway mati atau
@@ -332,12 +366,13 @@ class NotificationSettings private constructor(
         private const val MAX_HTTP_TOKEN = 255
         private const val MAX_META_TOKEN = 1024
 
-        /** Setelan bawaan tenant yang belum pernah menyetel — LOG, gateway & semua pemicu MATI. */
+        /** Setelan bawaan tenant yang belum pernah menyetel — LOG, kedua kanal & semua pemicu MATI. */
         fun defaultFor(tenantId: UUID): NotificationSettings = NotificationSettings(
             id = UuidV7.generate(),
             tenantId = tenantId,
             provider = WhatsAppProvider.LOG,
             gatewayEnabled = false,
+            emailEnabled = false,
             httpEndpointUrl = null,
             httpToken = null,
             httpPhoneField = DEFAULT_PHONE_FIELD,
@@ -359,6 +394,7 @@ class NotificationSettings private constructor(
             tenantId: UUID,
             provider: WhatsAppProvider,
             gatewayEnabled: Boolean,
+            emailEnabled: Boolean,
             httpEndpointUrl: String?,
             httpToken: String?,
             httpPhoneField: String,
@@ -373,7 +409,7 @@ class NotificationSettings private constructor(
             notifyOnWorkOrderSchedule: Boolean,
             notifyOnIncidentOpen: Boolean,
         ): NotificationSettings = NotificationSettings(
-            id, tenantId, provider, gatewayEnabled, httpEndpointUrl, httpToken,
+            id, tenantId, provider, gatewayEnabled, emailEnabled, httpEndpointUrl, httpToken,
             httpPhoneField, httpMessageField, metaPhoneNumberId, metaAccessToken,
             metaWabaId, qontakAccessToken, qontakChannelIntegrationId, notifyOnSubscriptionLifecycle,
             notifyOnInvoiceReminder, notifyOnWorkOrderSchedule, notifyOnIncidentOpen,

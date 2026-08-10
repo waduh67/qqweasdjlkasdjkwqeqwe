@@ -25,6 +25,8 @@ interface ManageNotificationSettingsUseCase {
 data class NotificationSettingsView(
     val provider: String,
     val gatewayEnabled: Boolean,
+    /** Saklar kanal email (SMTP platform), bebas dari [gatewayEnabled]. */
+    val emailEnabled: Boolean,
     val httpEndpointUrl: String?,
     val httpTokenSet: Boolean,
     val httpPhoneField: String,
@@ -58,6 +60,7 @@ data class QontakChannelView(val id: String, val name: String)
 data class UpdateNotificationSettingsCommand(
     val provider: WhatsAppProvider,
     val gatewayEnabled: Boolean,
+    val emailEnabled: Boolean,
     val httpEndpointUrl: String?,
     val httpToken: String?,
     val httpPhoneField: String?,

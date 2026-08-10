@@ -30,16 +30,18 @@ class SmtpEmailDispatcher(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    override fun send(to: String, subject: String, body: String): DeliveryOutcome {
+    override fun send(to: String, subject: String, body: String, fromName: String?): DeliveryOutcome {
         val from = properties.from.trim()
         val sender = senderProvider.getIfAvailable()
         if (sender == null || from.isEmpty()) {
             log.info("[MAIL/LOG] → {} | {} | {}", to, subject, body)
             return DeliveryOutcome(DeliveryStatus.SENT, "dicatat ke log (SMTP belum disetel)")
         }
+        // Nama ISP menang atas nama platform bila pemanggil menyebutnya.
+        val displayName = fromName?.trim()?.takeIf { it.isNotEmpty() } ?: properties.fromName.trim()
         val message = SimpleMailMessage().apply {
             // Nama tampilan digabung ke header From; alamat wajib berada dalam kurung sudut.
-            setFrom(properties.fromName.trim().takeIf { it.isNotEmpty() }?.let { "$it <$from>" } ?: from)
+            setFrom(displayName.takeIf { it.isNotEmpty() }?.let { "$it <$from>" } ?: from)
             setTo(to)
             setSubject(subject)
             setText(body)

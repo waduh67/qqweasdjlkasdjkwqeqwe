@@ -19,14 +19,15 @@ import java.util.Locale
 import java.util.UUID
 
 /**
- * Mengingatkan pelanggan soal tagihannya lewat WhatsApp — pemicu `INVOICE_DUE_SOON`
- * (mendekati jatuh tempo) dan `INVOICE_OVERDUE` (sudah menunggak).
+ * Mengingatkan pelanggan soal tagihannya — pemicu `INVOICE_DUE_SOON` (mendekati jatuh tempo)
+ * dan `INVOICE_OVERDUE` (sudah menunggak).
  *
  * Billing yang memutuskan KAPAN memicu (jendela pengingat + penjaga idempoten
  * `due_soon_reminded`, serta transisi OVERDUE yang hanya terjadi sekali); listener ini
- * hanya menyusun pesan & meneruskan ke [NotificationSender.dispatch], yang lalu menimbang
- * saklar pemicu tenant. Berjalan pada fase AFTER_COMMIT; tenant context dipasang dari event
- * karena sweep penagihan berjalan di luar konteks pengguna. Kegagalan cukup di-log.
+ * hanya menyusun pesan & meneruskan ke [NotificationSender.dispatchAuto], yang lalu menimbang
+ * saklar pemicu tenant dan memilih kanalnya (WhatsApp/email/keduanya). Berjalan pada fase
+ * AFTER_COMMIT; tenant context dipasang dari event karena sweep penagihan berjalan di luar
+ * konteks pengguna. Kegagalan cukup di-log.
  */
 @Component
 class InvoiceNotificationListener(
@@ -67,10 +68,10 @@ class InvoiceNotificationListener(
         try {
             TenantContext.runAs(tenantId) {
                 val customer = customers.findCustomer(customerId) ?: return@runAs
-                sender.dispatch(
+                sender.dispatchAuto(
                     trigger = trigger,
                     message = message(customer.name),
-                    recipients = listOf(Recipient(customer.id, customer.name, customer.phone)),
+                    recipients = listOf(Recipient(customer.id, customer.name, customer.phone, customer.email)),
                 )
             }
         } catch (ex: Exception) {

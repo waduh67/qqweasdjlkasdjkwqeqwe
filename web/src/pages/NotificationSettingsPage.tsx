@@ -20,12 +20,14 @@ import { IconAlert } from '@/components/atoms/icons'
 /**
  * Pengaturan Notifikasi tenant.
  *
- * Dua bagian: (1) GATEWAY WhatsApp bawa-sendiri — tiap tenant memakai pengirimnya
+ * Tiga bagian: (1) GATEWAY WhatsApp bawa-sendiri — tiap tenant memakai pengirimnya
  * sendiri (LOG mode uji / HTTP generik ala Fonnte-Wablas / Meta Cloud API / Mekari
- * Qontak) supaya identitas pengirim, biaya, dan risiko blokir terpisah antar-tenant; (2) SAKLAR
- * pemicu otomatis — nyalakan/matikan tiap jenis pesan (langganan, tagihan, WO, insiden)
- * tanpa mengganggu yang lain. Token bersifat write-only: dikirim saat menyimpan, tak
- * pernah ditarik kembali — server hanya menandai sudah terisi atau belum.
+ * Qontak) supaya identitas pengirim, biaya, dan risiko blokir terpisah antar-tenant;
+ * (2) KANAL EMAIL — cuma satu saklar, karena server SMTP-nya milik platform, bukan
+ * milik tenant; (3) SAKLAR pemicu otomatis — nyalakan/matikan tiap jenis pesan
+ * (langganan, tagihan, WO, insiden) tanpa mengganggu yang lain; pesan yang menyala
+ * berangkat lewat SEMUA kanal yang hidup. Token bersifat write-only: dikirim saat
+ * menyimpan, tak pernah ditarik kembali — server hanya menandai sudah terisi atau belum.
  */
 
 const PROVIDERS: WhatsAppProvider[] = ['LOG', 'HTTP_GENERIC', 'META_CLOUD', 'QONTAK']
@@ -90,6 +92,7 @@ export function NotificationSettingsPage() {
     const body: UpdateNotificationSettingsRequest = {
       provider: form.provider,
       gatewayEnabled: form.gatewayEnabled,
+      emailEnabled: form.emailEnabled,
       httpEndpointUrl: nullify(form.httpEndpointUrl),
       httpToken: nullify(httpToken),
       httpPhoneField: nullify(form.httpPhoneField),
@@ -150,7 +153,7 @@ export function NotificationSettingsPage() {
         <div>
           <h2 style={{ margin: 0 }}>Pengaturan Notifikasi</h2>
           <p className="muted" style={{ margin: '0.25rem 0 0' }}>
-            Gateway WhatsApp bawa-sendiri &amp; saklar pemicu pesan otomatis ke pelanggan.
+            Kanal pengiriman (WhatsApp &amp; email) dan saklar pemicu pesan otomatis ke pelanggan.
           </p>
         </div>
         {manage && (
@@ -328,6 +331,27 @@ export function NotificationSettingsPage() {
         )}
       </div>
 
+      {/* ---- Kanal email ---- */}
+      <div className="card stack">
+        <SectionTitle>Kanal email</SectionTitle>
+
+        <Checkbox
+          label="Kirim juga lewat email"
+          checked={form.emailEnabled}
+          onChange={(_, data) => patch({ emailEnabled: !!data.checked })}
+          disabled={!manage}
+        />
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          Berdiri sendiri dari gateway WhatsApp: boleh keduanya hidup (pelanggan menerima dua-duanya, tercatat
+          sebagai dua siaran terpisah), atau email saja bila Anda belum punya gateway WA.
+        </p>
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          Server email disediakan platform — tak ada SMTP yang perlu Anda setel. Surat berangkat atas{' '}
+          <strong>nama perusahaan Anda</strong>, jadi pelanggan tetap mengenali pengirimnya. Pelanggan tanpa
+          alamat email dilewati dan tercatat di riwayat.
+        </p>
+      </div>
+
       {/* ---- Template pesan WhatsApp ---- */}
       <WhatsAppTemplateCard templateReady={form.templateReady} />
 
@@ -335,7 +359,8 @@ export function NotificationSettingsPage() {
       <div className="card stack">
         <SectionTitle>Pemicu otomatis</SectionTitle>
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-          Nyalakan jenis pesan yang ingin dikirim otomatis. Semua butuh gateway di atas hidup.
+          Nyalakan jenis pesan yang ingin dikirim otomatis. Tiap pesan berangkat lewat semua kanal yang hidup di
+          atas; tanpa satu pun kanal hidup, pesannya hanya tercatat sebagai <em>SKIPPED</em>.
         </p>
         {(form.provider === 'META_CLOUD' || form.provider === 'QONTAK') && (
           <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>

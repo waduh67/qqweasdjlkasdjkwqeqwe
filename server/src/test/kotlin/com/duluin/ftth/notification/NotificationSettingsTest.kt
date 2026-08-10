@@ -2,6 +2,7 @@ package com.duluin.ftth.notification
 
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.notification.domain.model.NotificationChannel
 import com.duluin.ftth.notification.domain.model.NotificationSettings
 import com.duluin.ftth.notification.domain.model.NotificationTrigger
 import com.duluin.ftth.notification.domain.model.TemplateApi
@@ -63,13 +64,33 @@ class NotificationSettingsTest {
         assertThat(incident.isTriggerEnabled(NotificationTrigger.WORK_ORDER_SCHEDULED)).isFalse()
     }
 
+    // --- activeChannels ---
+
+    @Test
+    fun `kanal aktif mengikuti dua saklar yang berdiri sendiri`() {
+        assertThat(channelsWhen(gateway = true, email = false))
+            .containsExactly(NotificationChannel.WHATSAPP)
+        assertThat(channelsWhen(gateway = false, email = true))
+            .containsExactly(NotificationChannel.EMAIL)
+        assertThat(channelsWhen(gateway = true, email = true))
+            .containsExactly(NotificationChannel.WHATSAPP, NotificationChannel.EMAIL)
+    }
+
+    @Test
+    fun `tanpa kanal menyala tetap menyisakan WhatsApp demi jejak SKIPPED`() {
+        // Daftar kosong akan membuat pemicu yang menyala lenyap dari riwayat; layar setelan
+        // justru menjanjikan sebaliknya — tercatat, dengan status SKIPPED.
+        assertThat(channelsWhen(gateway = false, email = false))
+            .containsExactly(NotificationChannel.WHATSAPP)
+    }
+
     // --- resolveGateway ---
 
     @Test
     fun `gateway mati mengembalikan null berapa pun providernya`() {
         val settings = defaultSettings().apply {
             update(
-                provider = WhatsAppProvider.LOG, gatewayEnabled = false,
+                provider = WhatsAppProvider.LOG, gatewayEnabled = false, emailEnabled = false,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
                 qontakAccessToken = null, qontakChannelIntegrationId = null,
@@ -85,7 +106,7 @@ class NotificationSettingsTest {
     fun `LOG aktif meresolusi ke gateway Log`() {
         val settings = defaultSettings().apply {
             update(
-                provider = WhatsAppProvider.LOG, gatewayEnabled = true,
+                provider = WhatsAppProvider.LOG, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
                 qontakAccessToken = null, qontakChannelIntegrationId = null,
@@ -101,7 +122,7 @@ class NotificationSettingsTest {
     fun `HTTP generik lengkap meresolusi dengan field yang disetel`() {
         val settings = defaultSettings().apply {
             update(
-                provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true,
+                provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = "https://api.fonnte.com/send", httpToken = "rahasia",
                 httpPhoneField = "target", httpMessageField = "message",
                 metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
@@ -124,7 +145,7 @@ class NotificationSettingsTest {
     fun `HTTP generik tanpa URL meresolusi null walau gateway hidup`() {
         val settings = defaultSettings().apply {
             update(
-                provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true,
+                provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = null, httpToken = "rahasia", httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
                 qontakAccessToken = null, qontakChannelIntegrationId = null,
@@ -140,7 +161,7 @@ class NotificationSettingsTest {
     fun `Meta Cloud lengkap meresolusi dengan phone-id dan token tanpa template`() {
         val settings = defaultSettings().apply {
             update(
-                provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = true,
+                provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = "1234567890", metaAccessToken = "EAAtoken", metaWabaId = "9988",
                 qontakAccessToken = null, qontakChannelIntegrationId = null,
@@ -163,7 +184,7 @@ class NotificationSettingsTest {
     fun `Qontak lengkap meresolusi dengan token dan kanal tanpa template`() {
         val settings = defaultSettings().apply {
             update(
-                provider = WhatsAppProvider.QONTAK, gatewayEnabled = true,
+                provider = WhatsAppProvider.QONTAK, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
                 qontakAccessToken = "qontak-token", qontakChannelIntegrationId = "kanal-1",
@@ -183,7 +204,7 @@ class NotificationSettingsTest {
     fun `Qontak tanpa kanal meresolusi null walau tokennya ada`() {
         val settings = defaultSettings().apply {
             update(
-                provider = WhatsAppProvider.QONTAK, gatewayEnabled = true,
+                provider = WhatsAppProvider.QONTAK, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
                 qontakAccessToken = "qontak-token", qontakChannelIntegrationId = null,
@@ -213,7 +234,7 @@ class NotificationSettingsTest {
         // beralamat ke WABA — jadi kartu template harus tetap terkunci.
         val settings = defaultSettings().apply {
             update(
-                provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = true,
+                provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = "1234567890", metaAccessToken = "EAAtoken", metaWabaId = null,
                 qontakAccessToken = null, qontakChannelIntegrationId = null,
@@ -231,7 +252,7 @@ class NotificationSettingsTest {
     fun `gateway mati mengunci kartu template walau kredensial lengkap`() {
         val settings = metaTemplateSettings().apply {
             update(
-                provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = false,
+                provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = false, emailEnabled = false,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = "1234567890", metaAccessToken = null, metaWabaId = "9988",
                 qontakAccessToken = null, qontakChannelIntegrationId = null,
@@ -248,7 +269,7 @@ class NotificationSettingsTest {
     fun `penyedia tak resmi tak mengenal template sama sekali`() {
         val settings = defaultSettings().apply {
             update(
-                provider = WhatsAppProvider.LOG, gatewayEnabled = true,
+                provider = WhatsAppProvider.LOG, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = "1234567890", metaAccessToken = "EAAtoken", metaWabaId = "9988",
                 qontakAccessToken = null, qontakChannelIntegrationId = null,
@@ -265,7 +286,7 @@ class NotificationSettingsTest {
     fun `Qontak butuh token dan kanal sebelum template bisa dikelola`() {
         val settings = defaultSettings().apply {
             update(
-                provider = WhatsAppProvider.QONTAK, gatewayEnabled = true,
+                provider = WhatsAppProvider.QONTAK, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
                 qontakAccessToken = null, qontakChannelIntegrationId = null,
@@ -277,7 +298,7 @@ class NotificationSettingsTest {
 
         // Token tersimpan tapi kanal belum dipilih — masih terkunci, dengan alasan yang berbeda.
         settings.update(
-            provider = WhatsAppProvider.QONTAK, gatewayEnabled = true,
+            provider = WhatsAppProvider.QONTAK, gatewayEnabled = true, emailEnabled = false,
             httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
             metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
             qontakAccessToken = "qontak-token", qontakChannelIntegrationId = null,
@@ -287,7 +308,7 @@ class NotificationSettingsTest {
         assertThat(settings.templateBlockedReason()).contains("Channel WhatsApp Qontak")
 
         settings.update(
-            provider = WhatsAppProvider.QONTAK, gatewayEnabled = true,
+            provider = WhatsAppProvider.QONTAK, gatewayEnabled = true, emailEnabled = false,
             httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
             metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
             qontakAccessToken = null, qontakChannelIntegrationId = "kanal-1",
@@ -304,7 +325,7 @@ class NotificationSettingsTest {
     fun `Meta Cloud tanpa token meresolusi null`() {
         val settings = defaultSettings().apply {
             update(
-                provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = true,
+                provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = "1234567890", metaAccessToken = null, metaWabaId = null,
                 qontakAccessToken = null, qontakChannelIntegrationId = null,
@@ -322,7 +343,7 @@ class NotificationSettingsTest {
     fun `token kosong atau null saat update mempertahankan yang tersimpan`() {
         val settings = defaultSettings().apply {
             update(
-                provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true,
+                provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = "https://gw.example/send", httpToken = "token-awal",
                 httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = "111", metaAccessToken = "meta-awal", metaWabaId = null,
@@ -334,7 +355,7 @@ class NotificationSettingsTest {
 
         // Sunting field lain tanpa mengirim token (null) dan token kosong ("  ") — rahasia harus tetap.
         settings.update(
-            provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true,
+            provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true, emailEnabled = false,
             httpEndpointUrl = "https://gw.example/v2", httpToken = null,
             httpPhoneField = null, httpMessageField = null,
             metaPhoneNumberId = "111", metaAccessToken = "   ", metaWabaId = null,
@@ -352,7 +373,7 @@ class NotificationSettingsTest {
     fun `token baru saat update menimpa yang lama`() {
         val settings = defaultSettings().apply {
             update(
-                provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true,
+                provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = "https://gw.example/send", httpToken = "token-awal",
                 httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
@@ -363,7 +384,7 @@ class NotificationSettingsTest {
         }
 
         settings.update(
-            provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true,
+            provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true, emailEnabled = false,
             httpEndpointUrl = "https://gw.example/send", httpToken = "token-baru",
             httpPhoneField = null, httpMessageField = null,
             metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
@@ -381,7 +402,7 @@ class NotificationSettingsTest {
 
         assertThatThrownBy {
             settings.update(
-                provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true,
+                provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = "ftp://gw.example/send", httpToken = null,
                 httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
@@ -396,7 +417,7 @@ class NotificationSettingsTest {
     fun `field kosong jatuh ke nama bawaan`() {
         val settings = defaultSettings().apply {
             update(
-                provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true,
+                provider = WhatsAppProvider.HTTP_GENERIC, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = "https://gw.example/send", httpToken = null,
                 httpPhoneField = "  ", httpMessageField = null,
                 metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
@@ -417,7 +438,7 @@ class NotificationSettingsTest {
     /** Meta Cloud aktif dengan SELURUH prasyarat template terpenuhi, WABA ID termasuk. */
     private fun metaTemplateSettings() = defaultSettings().apply {
         update(
-            provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = true,
+            provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = true, emailEnabled = false,
             httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
             metaPhoneNumberId = "1234567890", metaAccessToken = "EAAtoken", metaWabaId = "9988",
             qontakAccessToken = null, qontakChannelIntegrationId = null,
@@ -426,6 +447,18 @@ class NotificationSettingsTest {
         )
     }
 
+    /** Kanal aktif setelah menyetel kedua saklar kanal. */
+    private fun channelsWhen(gateway: Boolean, email: Boolean) = defaultSettings().apply {
+        update(
+            provider = WhatsAppProvider.LOG, gatewayEnabled = gateway, emailEnabled = email,
+            httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
+            metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
+            qontakAccessToken = null, qontakChannelIntegrationId = null,
+            notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = false,
+            notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
+        )
+    }.activeChannels()
+
     /** Menyalakan saklar tertentu lewat [NotificationSettings.update], sisanya mati. */
     private fun NotificationSettings.updateToggles(
         subscription: Boolean = false,
@@ -433,7 +466,7 @@ class NotificationSettingsTest {
         workOrder: Boolean = false,
         incident: Boolean = false,
     ) = update(
-        provider = WhatsAppProvider.LOG, gatewayEnabled = true,
+        provider = WhatsAppProvider.LOG, gatewayEnabled = true, emailEnabled = false,
         httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
         metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
         qontakAccessToken = null, qontakChannelIntegrationId = null,

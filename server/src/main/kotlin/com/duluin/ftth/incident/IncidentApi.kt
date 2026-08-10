@@ -22,10 +22,15 @@ interface IncidentApi {
     fun affectedContacts(incidentId: UUID): List<AffectedContact>
 }
 
-/** Satu pelanggan terdampak insiden — sasaran broadcast. */
+/**
+ * Satu pelanggan terdampak insiden — sasaran broadcast. Membawa alamat di KEDUA kanal
+ * karena yang memilih kanal adalah setelan tenant, bukan pemanggil: kontak yang hanya
+ * berisi nomor telepon akan membuat siaran email selalu kosong.
+ */
 data class AffectedContact(
     val customerId: UUID,
     val code: String,
     val name: String,
     val phone: String?,
+    val email: String?,
 )

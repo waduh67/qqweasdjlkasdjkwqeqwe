@@ -31,6 +31,7 @@ class NotificationSettingsPersistenceAdapter(
         val entity = jpa.findById(settings.id).orElse(null)?.apply {
             provider = settings.provider
             gatewayEnabled = settings.gatewayEnabled
+            emailEnabled = settings.emailEnabled
             httpEndpointUrl = settings.httpEndpointUrl
             httpToken = encryptedHttpToken
             httpPhoneField = settings.httpPhoneField
@@ -48,6 +49,7 @@ class NotificationSettingsPersistenceAdapter(
             id = settings.id,
             provider = settings.provider,
             gatewayEnabled = settings.gatewayEnabled,
+            emailEnabled = settings.emailEnabled,
             httpEndpointUrl = settings.httpEndpointUrl,
             httpToken = encryptedHttpToken,
             httpPhoneField = settings.httpPhoneField,
@@ -70,6 +72,7 @@ class NotificationSettingsPersistenceAdapter(
         tenantId = tenantId ?: TenantContext.tenantId(),
         provider = provider,
         gatewayEnabled = gatewayEnabled,
+        emailEnabled = emailEnabled,
         httpEndpointUrl = httpEndpointUrl,
         httpToken = cipher.decryptQuietly(httpToken, "http_token", log),
         httpPhoneField = httpPhoneField,

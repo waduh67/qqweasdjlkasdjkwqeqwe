@@ -34,7 +34,7 @@ class IncidentApiService(
             val customerId = customerApi.placementsForOnus(setOf(incident.rootId))
                 .firstOrNull()?.customerId ?: return emptyList()
             val customer = customerApi.findCustomer(customerId) ?: return emptyList()
-            return listOf(AffectedContact(customer.id, customer.code, customer.name, customer.phone))
+            return listOf(AffectedContact(customer.id, customer.code, customer.name, customer.phone, customer.email))
         }
 
         // OLT/ODC/ODP: kumpulkan ODP di hilir akar, lalu ambil penghuninya.
@@ -50,11 +50,19 @@ class IncidentApiService(
 
         // Satu pelanggan bisa muncul di lebih dari satu ODP (kasus langka) — dedup per id,
         // yang pertama menang. Terurut menurut nama agar riwayat broadcast enak dibaca.
-        return odpIds.asSequence()
+        val occupants = odpIds.asSequence()
             .flatMap { customerApi.findOccupantsOfOdp(it).asSequence() }
             .distinctBy { it.customerId }
-            .map { AffectedContact(it.customerId, it.customerCode, it.customerName, it.phone) }
-            .sortedBy { it.name }
             .toList()
+
+        // Penghuni ODP hanya membawa nomor telepon (bentuknya dipakai panel peta), padahal
+        // siaran bisa lewat email. Emailnya diambil sekali untuk seluruh penghuni — satu
+        // query tambahan, bukan satu per pelanggan.
+        val emails = customerApi.findCustomersByIds(occupants.mapTo(mutableSetOf()) { it.customerId })
+            .associate { it.id to it.email }
+
+        return occupants
+            .map { AffectedContact(it.customerId, it.customerCode, it.customerName, it.phone, emails[it.customerId]) }
+            .sortedBy { it.name }
     }
 }

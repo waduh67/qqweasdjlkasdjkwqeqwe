@@ -2,7 +2,13 @@
 
 import { api } from './client'
 
-export type NotificationChannel = 'WHATSAPP' | 'SMS' | 'TELEGRAM'
+/** Kanal yang benar-benar punya pengirim: WA lewat gateway tenant, email lewat SMTP platform. */
+export type NotificationChannel = 'WHATSAPP' | 'EMAIL'
+
+export const CHANNEL_LABEL: Record<NotificationChannel, string> = {
+  WHATSAPP: 'WhatsApp',
+  EMAIL: 'Email',
+}
 
 export interface BroadcastView {
   id: string
@@ -19,7 +25,8 @@ export interface BroadcastView {
 export interface BroadcastRecipientView {
   customerId: string | null
   customerName: string
-  phone: string | null
+  /** Tujuan sesuai kanal siarannya: nomor WhatsApp atau alamat email. */
+  destination: string | null
   status: string
   detail: string | null
   at: string
@@ -51,6 +58,8 @@ export const PROVIDER_LABEL: Record<WhatsAppProvider, string> = {
 export interface NotificationSettingsView {
   provider: WhatsAppProvider
   gatewayEnabled: boolean
+  /** Saklar kanal email (SMTP platform), berdiri sendiri di luar gateway WA. */
+  emailEnabled: boolean
   httpEndpointUrl: string | null
   httpTokenSet: boolean
   httpPhoneField: string
@@ -77,6 +86,7 @@ export interface NotificationSettingsView {
 export interface UpdateNotificationSettingsRequest {
   provider: WhatsAppProvider
   gatewayEnabled: boolean
+  emailEnabled: boolean
   httpEndpointUrl: string | null
   httpToken: string | null
   httpPhoneField: string | null

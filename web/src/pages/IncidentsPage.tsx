@@ -375,7 +375,8 @@ function BroadcastComposer({
     <section className="stack" style={{ gap: '0.55rem' }}>
       <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Broadcast pemberitahuan</h3>
       <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-        Menyasar {affectedCount} pelanggan terdampak. Yang tak punya nomor akan dilewati otomatis.
+        Menyasar {affectedCount} pelanggan terdampak. Yang tak punya alamat di kanal terpilih akan
+        dilewati otomatis.
       </p>
       <SelectField
         label="Kanal"
@@ -383,8 +384,7 @@ function BroadcastComposer({
         onChange={(_, data) => setChannel(data.value as NotificationChannel)}
       >
         <option value="WHATSAPP">WhatsApp</option>
-        <option value="SMS">SMS</option>
-        <option value="TELEGRAM">Telegram</option>
+        <option value="EMAIL">Email</option>
       </SelectField>
       <TextareaField
         label="Pesan"

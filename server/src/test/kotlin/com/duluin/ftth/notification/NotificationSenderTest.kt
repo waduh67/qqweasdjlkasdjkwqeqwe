@@ -5,6 +5,7 @@ import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.notification.application.port.outbound.BroadcastDigest
 import com.duluin.ftth.notification.application.port.outbound.BroadcastRepository
 import com.duluin.ftth.notification.application.port.outbound.DeliveryOutcome
+import com.duluin.ftth.notification.application.port.outbound.EmailDispatcher
 import com.duluin.ftth.notification.application.port.outbound.MessageDispatcher
 import com.duluin.ftth.notification.application.port.outbound.NotificationSettingsRepository
 import com.duluin.ftth.notification.application.port.outbound.NotificationTemplateRepository
@@ -15,6 +16,7 @@ import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.notification.domain.model.Broadcast
 import com.duluin.ftth.notification.domain.model.DeliveryStatus
+import com.duluin.ftth.notification.domain.model.NotificationChannel
 import com.duluin.ftth.notification.domain.model.NotificationMessageTemplate
 import com.duluin.ftth.notification.domain.model.NotificationSettings
 import com.duluin.ftth.notification.domain.model.NotificationTrigger
@@ -22,6 +24,9 @@ import com.duluin.ftth.notification.domain.model.TemplateCategory
 import com.duluin.ftth.notification.domain.model.TemplateStatus
 import com.duluin.ftth.notification.domain.model.WhatsAppGateway
 import com.duluin.ftth.notification.domain.model.WhatsAppProvider
+import com.duluin.ftth.tenancy.TenantApi
+import com.duluin.ftth.tenancy.TenantRef
+import com.duluin.ftth.tenancy.TenantStatus
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -32,7 +37,9 @@ import java.util.UUID
  * Fokus cabang-cabangnya: pemicu mati ⇒ null (tak kirim, tak catat); gateway mati ⇒ semua
  * SKIPPED tanpa menyentuh dispatcher; nomor kosong ⇒ SKIPPED; jalur bahagia ⇒ SENT +
  * dispatcher terpanggil; plus pemilihan template per pemicu (terpetakan ⇒ nama template
- * ikut, tak terpetakan ⇒ teks biasa). Semua dijalankan di dalam [TenantContext.runAs].
+ * ikut, tak terpetakan ⇒ teks biasa). Kanal email diuji sejajar: alamat kosong ⇒ SKIPPED,
+ * kanal mati ⇒ SKIPPED, dua kanal menyala ⇒ dua broadcast terpisah, dan surat berangkat
+ * atas nama ISP. Semua dijalankan di dalam [TenantContext.runAs].
  */
 class NotificationSenderTest {
 
@@ -46,7 +53,7 @@ class NotificationSenderTest {
         val settings = settingsWith(gatewayEnabled = true, subscription = false)
         val dispatcher = RecordingDispatcher()
         val broadcasts = CapturingBroadcastRepo()
-        val sender = NotificationSender(FixedSettingsRepo(settings), broadcasts, WhatsAppTemplateResolver(FakeTemplateRepo()), dispatcher)
+        val sender = sender(settings, broadcasts, dispatcher)
 
         val result = TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -66,7 +73,7 @@ class NotificationSenderTest {
         val settings = settingsWith(gatewayEnabled = false, subscription = true)
         val dispatcher = RecordingDispatcher()
         val broadcasts = CapturingBroadcastRepo()
-        val sender = NotificationSender(FixedSettingsRepo(settings), broadcasts, WhatsAppTemplateResolver(FakeTemplateRepo()), dispatcher)
+        val sender = sender(settings, broadcasts, dispatcher)
 
         val result = TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -89,7 +96,7 @@ class NotificationSenderTest {
         val settings = settingsWith(gatewayEnabled = true, subscription = true)
         val dispatcher = RecordingDispatcher()
         val broadcasts = CapturingBroadcastRepo()
-        val sender = NotificationSender(FixedSettingsRepo(settings), broadcasts, WhatsAppTemplateResolver(FakeTemplateRepo()), dispatcher)
+        val sender = sender(settings, broadcasts, dispatcher)
 
         val result = TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -116,7 +123,7 @@ class NotificationSenderTest {
         // tapi gateway bawaan mati → penerima SKIPPED (bukan null, bukan SENT).
         val dispatcher = RecordingDispatcher()
         val broadcasts = CapturingBroadcastRepo()
-        val sender = NotificationSender(FixedSettingsRepo(null), broadcasts, WhatsAppTemplateResolver(FakeTemplateRepo()), dispatcher)
+        val sender = sender(null, broadcasts, dispatcher)
 
         val result = TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -137,7 +144,7 @@ class NotificationSenderTest {
         val broadcasts = CapturingBroadcastRepo()
         val template = template("tagihan_jatuh_tempo", "en_US")
         val templates = FakeTemplateRepo(mapOf(NotificationTrigger.INVOICE_DUE_SOON to template))
-        val sender = NotificationSender(FixedSettingsRepo(metaSettings()), broadcasts, WhatsAppTemplateResolver(templates), dispatcher)
+        val sender = sender(metaSettings(), broadcasts, dispatcher, templates)
 
         TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -159,7 +166,7 @@ class NotificationSenderTest {
         // Template ada untuk pemicu LAIN — pemicu yang dikirim tetap tak terpetakan.
         val other = template("tagihan_menunggak", "id")
         val templates = FakeTemplateRepo(mapOf(NotificationTrigger.INVOICE_OVERDUE to other))
-        val sender = NotificationSender(FixedSettingsRepo(metaSettings()), broadcasts, WhatsAppTemplateResolver(templates), dispatcher)
+        val sender = sender(metaSettings(), broadcasts, dispatcher, templates)
 
         TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -180,7 +187,7 @@ class NotificationSenderTest {
         val broadcasts = CapturingBroadcastRepo()
         val template = template("tagihan_jatuh_tempo", "en_US", remoteId = "8f2c-uuid")
         val templates = FakeTemplateRepo(mapOf(NotificationTrigger.INVOICE_DUE_SOON to template))
-        val sender = NotificationSender(FixedSettingsRepo(qontakSettings()), broadcasts, WhatsAppTemplateResolver(templates), dispatcher)
+        val sender = sender(qontakSettings(), broadcasts, dispatcher, templates)
 
         TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -203,7 +210,7 @@ class NotificationSenderTest {
         val templates = FakeTemplateRepo(
             mapOf(NotificationTrigger.INVOICE_DUE_SOON to template("tagihan_jatuh_tempo", "id")),
         )
-        val sender = NotificationSender(FixedSettingsRepo(qontakSettings()), broadcasts, WhatsAppTemplateResolver(templates), dispatcher)
+        val sender = sender(qontakSettings(), broadcasts, dispatcher, templates)
 
         TenantContext.runAs(tenantId) {
             sender.dispatch(
@@ -217,7 +224,140 @@ class NotificationSenderTest {
         assertThat((dispatcher.gateways.single() as WhatsAppGateway.Qontak).templateId).isNull()
     }
 
+    @Test
+    fun `kanal email menyurati yang beralamat dan melewati yang tidak`() {
+        val dispatcher = RecordingDispatcher()
+        val emails = RecordingEmailDispatcher()
+        val broadcasts = CapturingBroadcastRepo()
+        val settings = settingsWith(gatewayEnabled = false, subscription = true, emailEnabled = true)
+        val sender = sender(settings, broadcasts, dispatcher, emails = emails)
+
+        TenantContext.runAs(tenantId) {
+            sender.dispatch(
+                NotificationTrigger.SUBSCRIPTION_ACTIVATED,
+                "pesan",
+                listOf(
+                    Recipient(UuidV7.generate(), "Budi", "628111", "budi@contoh.id"),
+                    Recipient(UuidV7.generate(), "Tanpa Email", "628222", null),
+                ),
+                channel = NotificationChannel.EMAIL,
+            )
+        }
+
+        // Gateway WA mati tak menghalangi kanal email: keduanya memang saklar terpisah.
+        assertThat(dispatcher.calls).isEmpty()
+        assertThat(emails.sent).containsExactly("budi@contoh.id")
+        assertThat(broadcasts.saved!!.sentCount).isEqualTo(1)
+        assertThat(broadcasts.saved!!.skippedCount).isEqualTo(1)
+        // Riwayat menyimpan alamat yang benar-benar dituju, bukan nomor teleponnya.
+        assertThat(broadcasts.saved!!.recipients.first().destination).isEqualTo("budi@contoh.id")
+        assertThat(broadcasts.saved!!.recipients.last().detail).isEqualTo("Alamat email kosong")
+    }
+
+    @Test
+    fun `email dikirim atas nama ISP bukan nama platform`() {
+        val emails = RecordingEmailDispatcher()
+        val settings = settingsWith(gatewayEnabled = false, subscription = true, emailEnabled = true)
+        val sender = sender(settings, CapturingBroadcastRepo(), RecordingDispatcher(), emails = emails)
+
+        TenantContext.runAs(tenantId) {
+            sender.dispatch(
+                NotificationTrigger.SUBSCRIPTION_ACTIVATED,
+                "pesan",
+                listOf(Recipient(UuidV7.generate(), "Budi", null, "budi@contoh.id")),
+                channel = NotificationChannel.EMAIL,
+            )
+        }
+
+        assertThat(emails.fromNames).containsExactly(TENANT_NAME)
+        assertThat(emails.subjects).containsExactly("Layanan internet Anda sudah aktif")
+    }
+
+    @Test
+    fun `kanal email mati mencatat SKIPPED tanpa menyurati siapa pun`() {
+        val emails = RecordingEmailDispatcher()
+        val broadcasts = CapturingBroadcastRepo()
+        val settings = settingsWith(gatewayEnabled = true, subscription = true, emailEnabled = false)
+        val sender = sender(settings, broadcasts, RecordingDispatcher(), emails = emails)
+
+        TenantContext.runAs(tenantId) {
+            sender.dispatch(
+                NotificationTrigger.SUBSCRIPTION_ACTIVATED,
+                "pesan",
+                listOf(Recipient(UuidV7.generate(), "Budi", "628111", "budi@contoh.id")),
+                channel = NotificationChannel.EMAIL,
+            )
+        }
+
+        assertThat(emails.sent).isEmpty()
+        assertThat(broadcasts.saved!!.skippedCount).isEqualTo(1)
+        assertThat(broadcasts.saved!!.recipients.single().detail).isEqualTo("Kanal email nonaktif")
+    }
+
+    @Test
+    fun `dua kanal menyala menghasilkan dua broadcast terpisah`() {
+        val dispatcher = RecordingDispatcher()
+        val emails = RecordingEmailDispatcher()
+        val broadcasts = CollectingBroadcastRepo()
+        val settings = settingsWith(gatewayEnabled = true, subscription = true, emailEnabled = true)
+        val sender = sender(settings, broadcasts, dispatcher, emails = emails)
+
+        val result = TenantContext.runAs(tenantId) {
+            sender.dispatchAuto(
+                NotificationTrigger.SUBSCRIPTION_ACTIVATED,
+                "pesan",
+                listOf(Recipient(UuidV7.generate(), "Budi", "628111", "budi@contoh.id")),
+            )
+        }
+
+        assertThat(result).hasSize(2)
+        assertThat(result.map { it.channel })
+            .containsExactly(NotificationChannel.WHATSAPP, NotificationChannel.EMAIL)
+        assertThat(dispatcher.calls).containsExactly("628111")
+        assertThat(emails.sent).containsExactly("budi@contoh.id")
+        // Riwayat terpisah per kanal — bukan satu catatan bercabang.
+        assertThat(broadcasts.saved).hasSize(2)
+        assertThat(broadcasts.saved.map { it.sentCount }).containsExactly(1, 1)
+    }
+
+    @Test
+    fun `tenant tanpa kanal apa pun tetap meninggalkan jejak WhatsApp SKIPPED`() {
+        val broadcasts = CollectingBroadcastRepo()
+        val settings = settingsWith(gatewayEnabled = false, subscription = true, emailEnabled = false)
+        val sender = sender(settings, broadcasts, RecordingDispatcher())
+
+        val result = TenantContext.runAs(tenantId) {
+            sender.dispatchAuto(
+                NotificationTrigger.SUBSCRIPTION_ACTIVATED,
+                "pesan",
+                listOf(Recipient(UuidV7.generate(), "Budi", "628111", "budi@contoh.id")),
+            )
+        }
+
+        // Diam total akan menghapus jejaknya dari riwayat, padahal layar setelan menjanjikan
+        // pemicu yang menyala tetap tercatat SKIPPED saat kanalnya mati.
+        assertThat(result).hasSize(1)
+        assertThat(result.single().channel).isEqualTo(NotificationChannel.WHATSAPP)
+        assertThat(result.single().skippedCount).isEqualTo(1)
+    }
+
     // --- perkakas uji ---
+
+    /** Merakit sender dengan port palsu; tiap uji cukup menyebut yang benar-benar diamatinya. */
+    private fun sender(
+        settings: NotificationSettings?,
+        broadcasts: BroadcastRepository,
+        dispatcher: MessageDispatcher,
+        templates: NotificationTemplateRepository = FakeTemplateRepo(),
+        emails: EmailDispatcher = RecordingEmailDispatcher(),
+    ) = NotificationSender(
+        settingsRepo = FixedSettingsRepo(settings),
+        broadcastRepo = broadcasts,
+        templates = WhatsAppTemplateResolver(templates),
+        dispatcher = dispatcher,
+        emailDispatcher = emails,
+        tenants = FakeTenantApi(tenantId),
+    )
 
     /** Template siap-pakai; [remoteId] non-null berarti penyedia sudah menjawab pengajuannya. */
     private fun template(name: String, language: String, remoteId: String? = null): NotificationMessageTemplate =
@@ -227,10 +367,15 @@ class NotificationSenderTest {
             }
         }
 
-    private fun settingsWith(gatewayEnabled: Boolean, subscription: Boolean): NotificationSettings =
+    private fun settingsWith(
+        gatewayEnabled: Boolean,
+        subscription: Boolean,
+        emailEnabled: Boolean = false,
+    ): NotificationSettings =
         NotificationSettings.defaultFor(tenantId).apply {
             update(
                 provider = WhatsAppProvider.LOG, gatewayEnabled = gatewayEnabled,
+                emailEnabled = emailEnabled,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
                 qontakAccessToken = null, qontakChannelIntegrationId = null,
@@ -243,7 +388,7 @@ class NotificationSenderTest {
     private fun metaSettings(): NotificationSettings =
         NotificationSettings.defaultFor(tenantId).apply {
             update(
-                provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = true,
+                provider = WhatsAppProvider.META_CLOUD, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = "1234567890", metaAccessToken = "EAAtoken", metaWabaId = "9988",
                 qontakAccessToken = null, qontakChannelIntegrationId = null,
@@ -256,7 +401,7 @@ class NotificationSenderTest {
     private fun qontakSettings(): NotificationSettings =
         NotificationSettings.defaultFor(tenantId).apply {
             update(
-                provider = WhatsAppProvider.QONTAK, gatewayEnabled = true,
+                provider = WhatsAppProvider.QONTAK, gatewayEnabled = true, emailEnabled = false,
                 httpEndpointUrl = null, httpToken = null, httpPhoneField = null, httpMessageField = null,
                 metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
                 qontakAccessToken = "qontak-token", qontakChannelIntegrationId = "kanal-1",
@@ -306,6 +451,34 @@ class NotificationSenderTest {
         }
     }
 
+    /** Mengembalikan SENT untuk tiap surat; mencatat tujuan, subjek, dan nama pengirimnya. */
+    private class RecordingEmailDispatcher : EmailDispatcher {
+        val sent = mutableListOf<String>()
+        val subjects = mutableListOf<String>()
+        val fromNames = mutableListOf<String?>()
+        override fun send(to: String, subject: String, body: String, fromName: String?): DeliveryOutcome {
+            sent += to
+            subjects += subject
+            fromNames += fromName
+            return DeliveryOutcome(DeliveryStatus.SENT, "ok")
+        }
+    }
+
+    /** Hanya [findById] yang dipakai sender (nama ISP untuk kop email); sisanya bukan urusannya. */
+    private class FakeTenantApi(private val tenantId: UUID) : TenantApi {
+        override fun findById(id: UUID): TenantRef? =
+            TenantRef(id, "demo", TENANT_NAME, TenantStatus.ACTIVE).takeIf { id == tenantId }
+
+        override fun findBySlug(slug: String): TenantRef = notUsed()
+        override fun requireById(id: UUID): TenantRef = notUsed()
+        override fun platformTenantId(): UUID = notUsed()
+        override fun findActiveTenantIds(): List<UUID> = notUsed()
+        override fun ensureTenant(slug: String, name: String): TenantRef = notUsed()
+        override fun suspend(id: UUID): TenantRef = notUsed()
+        override fun activate(id: UUID): TenantRef = notUsed()
+        private fun notUsed(): Nothing = throw UnsupportedOperationException("tak dipakai di uji ini")
+    }
+
     private class CapturingBroadcastRepo : BroadcastRepository {
         var saved: Broadcast? = null
         override fun save(broadcast: Broadcast): Broadcast {
@@ -315,5 +488,21 @@ class NotificationSenderTest {
 
         override fun findById(id: UUID): Broadcast? = throw UnsupportedOperationException()
         override fun recent(request: PageRequest): Page<BroadcastDigest> = throw UnsupportedOperationException()
+    }
+
+    /** Varian yang menyimpan SEMUA siaran — untuk kirim multi-kanal yang menghasilkan lebih dari satu. */
+    private class CollectingBroadcastRepo : BroadcastRepository {
+        val saved = mutableListOf<Broadcast>()
+        override fun save(broadcast: Broadcast): Broadcast {
+            saved += broadcast
+            return broadcast
+        }
+
+        override fun findById(id: UUID): Broadcast? = throw UnsupportedOperationException()
+        override fun recent(request: PageRequest): Page<BroadcastDigest> = throw UnsupportedOperationException()
+    }
+
+    private companion object {
+        const val TENANT_NAME = "PT Sinar Jaya Net"
     }
 }

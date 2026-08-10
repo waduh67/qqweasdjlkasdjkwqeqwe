@@ -78,12 +78,13 @@ class NotificationIT {
         return Chain(odc, odp)
     }
 
-    /** Daftar pelanggan (opsional bertelepon) + ONU, pasang ke port ODP, kembalikan serial ONU. */
-    private fun attachOnu(token: String, odpId: String, port: Int, phone: String?): String {
+    /** Daftar pelanggan (opsional bertelepon/beralamat email) + ONU, pasang ke port ODP, kembalikan serial ONU. */
+    private fun attachOnu(token: String, odpId: String, port: Int, phone: String?, email: String? = null): String {
         val s = uniq().uppercase()
         val phoneField = phone?.let { ""","phone":"$it"""" } ?: ""
+        val emailField = email?.let { ""","email":"$it"""" } ?: ""
         val customer = id(
-            post("/api/customers", token, """{"code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","location":{"longitude":106.99,"latitude":-6.24}$phoneField}"""),
+            post("/api/customers", token, """{"code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji","location":{"longitude":106.99,"latitude":-6.24}$phoneField$emailField}"""),
         )
         val serial = "SN-$s"
         val onu = id(post("/api/customers/$customer/onus", token, """{"serialNumber":"$serial"}"""))
@@ -114,12 +115,19 @@ class NotificationIT {
      * jadi tanpa ini tiap broadcast — termasuk MANUAL — hanya dicatat SKIPPED "Gateway WA nonaktif".
      * Mode LOG "mengirim" ke log dan dihitung SENT, jadi cukup untuk menguji jalur kirim.
      */
-    private fun enableWhatsAppGateway(token: String) {
+    private fun enableWhatsAppGateway(token: String) = setChannels(token, gateway = true, email = false)
+
+    /**
+     * Menyetel kedua saklar kanal sekaligus. SMTP platform tak disetel di lingkungan uji, jadi
+     * kanal email jatuh ke mode log dan dihitung SENT — cukup untuk menguji jalur pemilihan
+     * kanal, alamat tujuan, dan pencatatan riwayatnya.
+     */
+    private fun setChannels(token: String, gateway: Boolean, email: Boolean) {
         mockMvc.perform(
             put("/api/notifications/settings").header("Authorization", "Bearer $token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
-                    """{"provider":"LOG","gatewayEnabled":true,"notifyOnSubscriptionLifecycle":false,"notifyOnInvoiceReminder":false,"notifyOnWorkOrderSchedule":false,"notifyOnIncidentOpen":false}""",
+                    """{"provider":"LOG","gatewayEnabled":$gateway,"emailEnabled":$email,"notifyOnSubscriptionLifecycle":false,"notifyOnInvoiceReminder":false,"notifyOnWorkOrderSchedule":false,"notifyOnIncidentOpen":false}""",
                 ),
         ).andExpect(status().isOk)
     }
@@ -162,6 +170,36 @@ class NotificationIT {
         assertThat(JsonPath.read<List<Any>>(detail, "$.recipients[*]")).hasSize(3)
         assertThat(JsonPath.read<List<String>>(detail, "$.recipients[*].status"))
             .containsExactlyInAnyOrder("SENT", "SENT", "SKIPPED")
+    }
+
+    @Test
+    fun `broadcast lewat kanal email menyurati alamat pelanggan dan mencatatnya di riwayat`() {
+        val token = newTenantAdmin("notifmail")
+        setChannels(token, gateway = false, email = true)
+        val chain = buildChain(token)
+        // Satu pelanggan beralamat email, satu hanya bertelepon — di kanal email yang kedua dilewati.
+        val a = attachOnu(token, chain.odp, port = 1, phone = "628110000003", email = "a@contoh.id")
+        val b = attachOnu(token, chain.odp, port = 2, phone = "628110000004")
+        val apiKey = newCollector(token)
+
+        sendMetrics(apiKey, reading(a, "LOS", null), reading(b, "LOS", null))
+        val incidentId = JsonPath.read<String>(get("/api/incidents", token), "$[0].id")
+
+        val created = post(
+            "/api/notifications/broadcasts", token,
+            """{"incidentId":"$incidentId","message":"Layanan Anda sedang terganggu.","channel":"EMAIL"}""",
+        )
+        assertThat(JsonPath.read<String>(created, "$.channel")).isEqualTo("EMAIL")
+        assertThat(JsonPath.read<Int>(created, "$.sentCount")).isEqualTo(1)
+        assertThat(JsonPath.read<Int>(created, "$.skippedCount")).isEqualTo(1)
+
+        // Riwayat menyimpan alamat email sebagai tujuan, bukan nomor teleponnya.
+        val detail = get("/api/notifications/broadcasts/${JsonPath.read<String>(created, "$.id")}", token)
+        assertThat(JsonPath.read<List<String?>>(detail, "$.recipients[*].destination"))
+            .contains("a@contoh.id")
+            .doesNotContain("628110000004")
+        assertThat(JsonPath.read<List<String>>(detail, "$.recipients[*].detail"))
+            .contains("Alamat email kosong")
     }
 
     @Test
