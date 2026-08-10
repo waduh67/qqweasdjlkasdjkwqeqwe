@@ -1,0 +1,926 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Topologi Kabel FTTH — desain ulang core, ODF, joint box &amp; splicing</title>
+<style>
+  :root{
+    --bg:#f1f5f9; --card:#ffffff; --border:#e2e8f0; --text:#0f172a; --muted:#64748b;
+    --pop:#1e3a8a; --odf:#6d28d9; --odc:#0f766e; --jb:#b45309; --odp:#15803d; --cust:#475569;
+    --patch:#0ea5e9; --bad:#b91c1c; --good:#15803d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+  .wrap{max-width:1320px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+  h1{font-size:2rem;margin:0 0 .3rem;letter-spacing:-.02em}
+  h2{font-size:1.35rem;margin:3rem 0 .4rem;letter-spacing:-.01em;
+     border-left:4px solid var(--odc);padding-left:.6rem}
+  h3{font-size:1.05rem;margin:1.8rem 0 .3rem}
+  p{margin:.5rem 0}
+  .lead{color:var(--muted);margin:0 0 1.2rem;font-size:1.02rem}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;
+        padding:1.1rem 1.2rem;margin:1rem 0;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+  .fig{background:var(--card);border:1px solid var(--border);border-radius:14px;
+       padding:.8rem;margin:1rem 0;overflow-x:auto;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+  .fig svg{display:block;width:100%;height:auto;min-width:900px}
+  .cap{color:var(--muted);font-size:.85rem;margin:.5rem .3rem 0}
+  table{border-collapse:collapse;width:100%;margin:.8rem 0;font-size:.9rem;background:var(--card)}
+  th,td{border:1px solid var(--border);padding:.5rem .65rem;text-align:left;vertical-align:top}
+  th{background:#f8fafc;font-weight:600}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.87em}
+  .tag{display:inline-block;padding:.05rem .45rem;border-radius:99px;font-size:.72rem;
+       font-weight:700;letter-spacing:.03em;vertical-align:middle}
+  .t-new{background:#dcfce7;color:#166534}
+  .t-mod{background:#fef3c7;color:#92400e}
+  .t-old{background:#e2e8f0;color:#475569}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}
+  ul{margin:.4rem 0 .4rem 1.1rem;padding:0}
+  li{margin:.25rem 0}
+  .bad{color:var(--bad);font-weight:600}
+  .good{color:var(--good);font-weight:600}
+  .legend{display:flex;flex-wrap:wrap;gap:1rem;font-size:.82rem;color:var(--muted);margin:.4rem .3rem 0}
+  .legend span{display:inline-flex;align-items:center;gap:.35rem}
+  .sw{width:22px;height:5px;border-radius:3px;display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Topologi kabel FTTH — desain yang benar</h1>
+<p class="lead">Kenapa 1 ODC ke 8 ODP itu <strong>satu kabel</strong>, bukan delapan. Plus: ODF itu apa,
+tipe kabel mana yang perlu, dan bentuk data + layar Splicing &amp; Patching Manager.</p>
+
+<div class="card">
+  <strong>Masalahnya sekarang (<span class="mono">Cable.kt:66</span>, <span class="mono">V2__network_and_customer.sql:129</span>)</strong>
+  <p style="margin:.4rem 0 0">Satu baris <code>cable</code> = satu pasang ujung (<code>from</code>/<code>to</code>) +
+  <code>core_count</code> yang cuma angka telanjang. Tidak ada tabel core, tidak ada joint box, tidak ada tabel sambungan.
+  Akibatnya 8 ODP = <span class="bad">8 baris kabel, 8 polyline</span>, dan supaya tidak terlihat aneh dipakailah
+  rantai ODP→ODP (<code>CableType.DISTRIBUTION.validFrom = {ODC, ODP}</code>). Fisiknya satu tarikan, datanya delapan kabel.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>1. Rantai lengkap: OLT → ODF → ODC → ODP → rumah</h2>
+<p>Empat lapis, empat peran kabel. Perhatikan ODP <strong>menempel di tengah</strong> kabel distribusi, bukan di ujungnya.</p>
+
+<div class="fig">
+<svg viewBox="0 0 1240 600" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+  <!-- POP -->
+  <rect x="20" y="60" width="250" height="200" rx="12" fill="#eef2ff" stroke="#c7d2fe"/>
+  <text x="32" y="82" font-size="11" font-weight="700" fill="#4338ca" letter-spacing="1">POP / SENTRAL</text>
+
+  <rect x="40" y="95" width="210" height="54" rx="8" fill="#1e3a8a"/>
+  <text x="52" y="118" font-size="15" font-weight="700" fill="#fff">OLT-01</text>
+  <text x="52" y="136" font-size="11" fill="#c7d2fe">PON port 1/1/1</text>
+
+  <rect x="40" y="185" width="210" height="54" rx="8" fill="#6d28d9"/>
+  <text x="52" y="208" font-size="15" font-weight="700" fill="#fff">ODF-POP-01</text>
+  <text x="52" y="226" font-size="11" fill="#ddd6fe">port 01 · depan ↔ belakang</text>
+
+  <line x1="145" y1="149" x2="145" y2="185" stroke="#0ea5e9" stroke-width="3" stroke-dasharray="5 4"/>
+  <text x="155" y="172" font-size="11" fill="#0284c7" font-weight="600">patchcord</text>
+
+  <!-- feeder -->
+  <line x1="250" y1="212" x2="620" y2="212" stroke="#1d4ed8" stroke-width="7" stroke-linecap="round"/>
+  <text x="288" y="196" font-size="12.5" font-weight="700" fill="#1d4ed8">KABEL FEEDER · 24 core</text>
+  <text x="288" y="240" font-size="11" fill="#64748b">POP → kabinet. Semua core diterminasi di ODF.</text>
+  <circle cx="435" cy="212" r="14" fill="#b45309" stroke="#fff" stroke-width="2.5"/>
+  <text x="435" y="216" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">JB</text>
+
+  <!-- ODC -->
+  <rect x="620" y="168" width="152" height="92" rx="10" fill="#0f766e"/>
+  <text x="634" y="194" font-size="16" font-weight="700" fill="#fff">ODC-A</text>
+  <text x="634" y="214" font-size="11.5" fill="#99f6e4">splitter 1:16</text>
+  <text x="634" y="231" font-size="11.5" fill="#99f6e4">16 port keluar</text>
+  <text x="634" y="250" font-size="10.5" fill="#5eead4">feeder core #3 masuk</text>
+
+  <!-- distribution -->
+  <line x1="772" y1="212" x2="1172" y2="212" stroke="#16a34a" stroke-width="7" stroke-linecap="round"/>
+  <text x="790" y="196" font-size="12.5" font-weight="700" fill="#15803d">KABEL DISTRIBUSI · 12 core — SATU tarikan</text>
+
+  <!-- taps -->
+  <g stroke="#16a34a" stroke-width="2.5">
+    <line x1="850" y1="212" x2="850" y2="300"/>
+    <line x1="960" y1="212" x2="960" y2="300"/>
+    <line x1="1070" y1="212" x2="1070" y2="300"/>
+  </g>
+  <g fill="#fff" stroke="#15803d" stroke-width="3">
+    <circle cx="850" cy="212" r="6"/><circle cx="960" cy="212" r="6"/><circle cx="1070" cy="212" r="6"/>
+  </g>
+  <text x="858" y="252" font-size="11" font-weight="700" fill="#166534">core 1</text>
+  <text x="968" y="252" font-size="11" font-weight="700" fill="#166534">core 2</text>
+  <text x="1078" y="252" font-size="11" font-weight="700" fill="#166534">core 3</text>
+  <text x="858" y="270" font-size="10" fill="#64748b">tap</text>
+  <text x="968" y="270" font-size="10" fill="#64748b">tap</text>
+  <text x="1078" y="270" font-size="10" fill="#64748b">tap</text>
+
+  <!-- ODP -->
+  <g>
+    <rect x="805" y="300" width="90" height="56" rx="8" fill="#15803d"/>
+    <text x="850" y="323" font-size="13.5" font-weight="700" fill="#fff" text-anchor="middle">ODP-1</text>
+    <text x="850" y="341" font-size="11" fill="#bbf7d0" text-anchor="middle">1:8</text>
+    <rect x="915" y="300" width="90" height="56" rx="8" fill="#15803d"/>
+    <text x="960" y="323" font-size="13.5" font-weight="700" fill="#fff" text-anchor="middle">ODP-2</text>
+    <text x="960" y="341" font-size="11" fill="#bbf7d0" text-anchor="middle">1:8</text>
+    <rect x="1025" y="300" width="90" height="56" rx="8" fill="#15803d"/>
+    <text x="1070" y="323" font-size="13.5" font-weight="700" fill="#fff" text-anchor="middle">ODP-3</text>
+    <text x="1070" y="341" font-size="11" fill="#bbf7d0" text-anchor="middle">1:8</text>
+  </g>
+
+  <!-- JB-02 lanjut -->
+  <circle cx="1168" cy="212" r="14" fill="#b45309" stroke="#fff" stroke-width="2.5"/>
+  <text x="1168" y="216" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">JB</text>
+  <text x="1222" y="170" font-size="10.5" fill="#b45309" font-weight="600" text-anchor="end">core 4–8 lanjut</text>
+  <text x="1222" y="156" font-size="10.5" fill="#b45309" font-weight="600" text-anchor="end">ke ODP-4 … ODP-8</text>
+
+  <!-- drop -->
+  <g stroke="#94a3b8" stroke-width="2">
+    <line x1="820" y1="356" x2="800" y2="415"/>
+    <line x1="850" y1="356" x2="850" y2="415"/>
+    <line x1="880" y1="356" x2="900" y2="415"/>
+  </g>
+  <g fill="#cbd5e1" stroke="#475569" stroke-width="1.5">
+    <path d="M786,443 l0,-16 l14,-11 l14,11 l0,16 z"/>
+    <path d="M836,443 l0,-16 l14,-11 l14,11 l0,16 z"/>
+    <path d="M886,443 l0,-16 l14,-11 l14,11 l0,16 z"/>
+  </g>
+  <text x="925" y="437" font-size="11" fill="#475569">… sampai 8 rumah (1 core per rumah)</text>
+  <text x="620" y="437" font-size="11.5" font-weight="700" fill="#475569">KABEL DROP · 1 core</text>
+  <text x="960" y="390" font-size="20" fill="#cbd5e1">⋮</text>
+  <text x="1070" y="390" font-size="20" fill="#cbd5e1">⋮</text>
+
+  <!-- catatan -->
+  <rect x="20" y="470" width="1200" height="112" rx="12" fill="#fff" stroke="#e2e8f0"/>
+  <text x="40" y="497" font-size="12.5" fill="#0f172a"><tspan font-weight="700">1 ODP = 1 core.</tspan> ODC 1:16 → sampai 16 ODP → butuh 16 core distribusi. Lazimnya dipecah 2 arah: 2 × 12 core (8 pakai + 4 cadangan per arah).</text>
+  <text x="40" y="522" font-size="12.5" fill="#0f172a"><tspan font-weight="700">ODP nempel di TENGAH kabel</tspan> (mid-span tapping) — bukan di ujung. Itu sebabnya cukup satu tarikan, bukan delapan.</text>
+  <text x="40" y="547" font-size="12.5" fill="#0f172a"><tspan font-weight="700">Kabel = selubung + rute.</tspan> Konektivitas melekat pada CORE-nya, bukan pada kabelnya. Ini inti perbaikannya.</text>
+  <text x="40" y="570" font-size="12.5" fill="#0f172a"><tspan font-weight="700">Joint box</tspan> = tempat core disambung (fusion), bukan perangkat aktif. Tidak ada splitter di dalamnya.</text>
+</svg>
+<div class="legend">
+  <span><i class="sw" style="background:#1d4ed8"></i> Feeder</span>
+  <span><i class="sw" style="background:#16a34a"></i> Distribusi</span>
+  <span><i class="sw" style="background:#94a3b8"></i> Drop</span>
+  <span><i class="sw" style="background:#0ea5e9"></i> Patchcord</span>
+  <span><i class="sw" style="background:#b45309"></i> Joint box</span>
+</div>
+<div class="cap">Gambar 1 — rantai lengkap. Warna kabel di gambar = peran, bukan warna fisik.</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>2. ODF itu apa, dan kenapa dia ada</h2>
+<p><strong>ODF (Optical Distribution Frame)</strong> = rak terminasi serat di dalam ruangan POP. Kabel outdoor
+(loose-tube, puluhan/ratusan core) <em>berhenti</em> di ODF: tiap core di-splice ke pigtail, pigtail dipasang ke
+adapter, dan dari adapter itulah patchcord ditarik ke PON port OLT.</p>
+
+<div class="fig">
+<svg viewBox="0 0 1140 430" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+  <line x1="20" y1="215" x2="300" y2="215" stroke="#1d4ed8" stroke-width="8" stroke-linecap="round"/>
+  <text x="24" y="196" font-size="12" font-weight="700" fill="#1d4ed8">KABEL FEEDER 24 core</text>
+  <text x="24" y="240" font-size="11" fill="#64748b">outdoor · loose tube · tanpa konektor</text>
+
+  <rect x="300" y="112" width="140" height="206" rx="10" fill="#ede9fe" stroke="#6d28d9"/>
+  <text x="370" y="134" font-size="11" font-weight="700" fill="#5b21b6" text-anchor="middle">SPLICE TRAY</text>
+  <g>
+    <line x1="310" y1="165" x2="430" y2="165" stroke="#1d4ed8" stroke-width="2.5"/>
+    <line x1="310" y1="205" x2="430" y2="205" stroke="#ea580c" stroke-width="2.5"/>
+    <line x1="310" y1="245" x2="430" y2="245" stroke="#16a34a" stroke-width="2.5"/>
+    <line x1="310" y1="285" x2="430" y2="285" stroke="#78350f" stroke-width="2.5"/>
+  </g>
+  <g fill="#fff" stroke="#5b21b6" stroke-width="2">
+    <circle cx="370" cy="165" r="5"/><circle cx="370" cy="205" r="5"/>
+    <circle cx="370" cy="245" r="5"/><circle cx="370" cy="285" r="5"/>
+  </g>
+  <text x="370" y="308" font-size="10" fill="#5b21b6" text-anchor="middle">core → pigtail (fusion)</text>
+
+  <rect x="460" y="112" width="230" height="206" rx="10" fill="#6d28d9"/>
+  <text x="575" y="136" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">ODF-POP-01</text>
+  <g fill="#ffffff" fill-opacity="0.16">
+    <rect x="476" y="150" width="198" height="30" rx="5"/>
+    <rect x="476" y="190" width="198" height="30" rx="5"/>
+    <rect x="476" y="230" width="198" height="30" rx="5"/>
+    <rect x="476" y="270" width="198" height="30" rx="5"/>
+  </g>
+  <g font-size="11.5" fill="#ede9fe">
+    <text x="488" y="170">port 01 ⇢ PON 1/1/1</text>
+    <text x="488" y="210">port 02 ⇢ PON 1/1/2</text>
+    <text x="488" y="250">port 03 ⇢ PON 1/1/3</text>
+    <text x="488" y="290">port 04 — kosong</text>
+  </g>
+
+  <g stroke="#0ea5e9" stroke-width="2.5" stroke-dasharray="6 4">
+    <line x1="690" y1="165" x2="880" y2="182"/>
+    <line x1="690" y1="205" x2="880" y2="212"/>
+    <line x1="690" y1="245" x2="880" y2="242"/>
+  </g>
+  <text x="712" y="150" font-size="11" font-weight="700" fill="#0284c7">patchcord</text>
+
+  <rect x="880" y="150" width="220" height="130" rx="10" fill="#1e3a8a"/>
+  <text x="990" y="180" font-size="15" font-weight="700" fill="#fff" text-anchor="middle">OLT-01</text>
+  <text x="990" y="204" font-size="11.5" fill="#c7d2fe" text-anchor="middle">PON 1/1/1 … 1/1/16</text>
+  <text x="990" y="228" font-size="11" fill="#93c5fd" text-anchor="middle">perangkat aktif</text>
+
+  <text x="300" y="352" font-size="11.5" font-weight="700" fill="#5b21b6">◀ SISI BELAKANG — di-splice permanen</text>
+  <text x="700" y="352" font-size="11.5" font-weight="700" fill="#0284c7">SISI DEPAN — dicolok/dicabut harian ▶</text>
+
+  <rect x="20" y="372" width="1100" height="46" rx="10" fill="#fff" stroke="#e2e8f0"/>
+  <text x="40" y="400" font-size="12.5" fill="#0f172a">ODF = titik demarkasi POP. Yang dicabut-colok teknisi tiap hari itu <tspan font-weight="700">patchcord di ODF</tspan>, bukan kabel outdoor. Tanpa ODF, "core mana ke PON mana" cuma ada di kepala orang.</text>
+</svg>
+<div class="cap">Gambar 2 — ODF dari belakang ke depan. Satu port ODF punya DUA sisi, dan dua-duanya adalah sambungan.</div>
+</div>
+
+<h3>Perlu tidak?</h3>
+<table>
+<tr><th style="width:170px">Kondisi</th><th>Putusan</th></tr>
+<tr><td>ISP punya POP beneran (rak, OLT, banyak feeder)</td><td class="good"><strong>Perlu.</strong> Tanpa ODF, mapping core-feeder ↔ PON port tidak terekam, dan tiap gangguan jadi tebak-tebakan.</td></tr>
+<tr><td>ISP kecil, OLT nempel di dinding, feeder langsung splice ke pigtail OLT</td><td>Boleh dilewati — ODF <strong>opsional</strong>: kalau tidak dipakai, core feeder langsung terminasi ke PON port.</td></tr>
+</table>
+<p>Karena itu ODF dimodelkan sebagai <strong>simpul opsional</strong>, bukan wajib. Kompetitor punya, dan ISP menengah pasti menanyakannya.</p>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>3. Tipe kabel: backbone / feeder / distribusi / drop</h2>
+
+<div class="fig">
+<svg viewBox="0 0 1180 260" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+  <g font-size="12" font-weight="700" text-anchor="middle">
+    <rect x="30" y="70" width="120" height="52" rx="9" fill="#1e3a8a"/><text x="90" y="94" fill="#fff">POP-A</text><text x="90" y="111" fill="#c7d2fe" font-weight="400" font-size="10.5">OLT + ODF</text>
+    <rect x="330" y="70" width="120" height="52" rx="9" fill="#1e3a8a"/><text x="390" y="94" fill="#fff">POP-B</text><text x="390" y="111" fill="#c7d2fe" font-weight="400" font-size="10.5">OLT + ODF</text>
+    <rect x="630" y="70" width="120" height="52" rx="9" fill="#0f766e"/><text x="690" y="94" fill="#fff">ODC</text><text x="690" y="111" fill="#99f6e4" font-weight="400" font-size="10.5">1:16</text>
+    <rect x="880" y="70" width="120" height="52" rx="9" fill="#15803d"/><text x="940" y="94" fill="#fff">ODP</text><text x="940" y="111" fill="#bbf7d0" font-weight="400" font-size="10.5">1:8</text>
+    <rect x="1080" y="70" width="76" height="52" rx="9" fill="#475569"/><text x="1118" y="94" fill="#fff">ONU</text><text x="1118" y="111" fill="#cbd5e1" font-weight="400" font-size="10.5">rumah</text>
+  </g>
+  <line x1="150" y1="96" x2="330" y2="96" stroke="#4c1d95" stroke-width="9" stroke-linecap="round"/>
+  <line x1="450" y1="96" x2="630" y2="96" stroke="#1d4ed8" stroke-width="7" stroke-linecap="round"/>
+  <line x1="750" y1="96" x2="880" y2="96" stroke="#16a34a" stroke-width="5.5" stroke-linecap="round"/>
+  <line x1="1000" y1="96" x2="1080" y2="96" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+  <g font-size="11.5" font-weight="700" text-anchor="middle">
+    <text x="240" y="60" fill="#4c1d95">BACKBONE</text><text x="240" y="140" fill="#64748b" font-weight="400">48–288 core · ring antar-POP</text>
+    <text x="540" y="60" fill="#1d4ed8">FEEDER</text><text x="540" y="140" fill="#64748b" font-weight="400">12–48 core · POP → kabinet</text>
+    <text x="815" y="60" fill="#15803d">DISTRIBUSI</text><text x="815" y="140" fill="#64748b" font-weight="400">8–24 core · 1 core / ODP</text>
+    <text x="1040" y="60" fill="#475569">DROP</text><text x="1040" y="140" fill="#64748b" font-weight="400">1–2 core</text>
+  </g>
+  <rect x="30" y="175" width="1126" height="62" rx="10" fill="#fff" stroke="#e2e8f0"/>
+  <text x="50" y="200" font-size="12.5" fill="#0f172a">Bedanya bukan gaya-gayaan: tiap tipe punya <tspan font-weight="700">ujung yang sah berbeda</tspan>, jumlah core tipikal berbeda, dan boleh/tidaknya bawa pelanggan berbeda.</text>
+  <text x="50" y="222" font-size="12.5" fill="#0f172a">Itu yang bikin sistem bisa menolak data mustahil — misalnya kabel drop yang menghubungkan dua OLT.</text>
+</svg>
+<div class="cap">Gambar 3 — empat peran kabel. "Drop core" di kompetitor = kabel DROP 1 core.</div>
+</div>
+
+<table>
+<tr><th style="width:120px">Tipe</th><th style="width:250px">Ujung sah</th><th style="width:110px">Core tipikal</th><th>Perlu?</th></tr>
+<tr><td><code>BACKBONE</code> <span class="tag t-new">BARU</span></td><td>POP/ODF ↔ POP/ODF, ODC ↔ ODC, lewat JB</td><td>48–288</td>
+    <td>Perlu kalau ISP punya &gt;1 POP atau ring antar-wilayah. Tidak bawa pelanggan langsung.</td></tr>
+<tr><td><code>FEEDER</code> <span class="tag t-old">ADA</span></td><td>ODF/OLT → ODC (lewat JB)</td><td>12–48</td>
+    <td>Wajib. Sudah ada, tinggal boleh mampir ODF &amp; JB.</td></tr>
+<tr><td><code>DISTRIBUTION</code> <span class="tag t-mod">UBAH</span></td><td>ODC → ODP / JB, dan ODP → ODP <em>hanya</em> untuk splitter bertingkat</td><td>8–24</td>
+    <td>Wajib. Rantai ODP→ODP <span class="bad">sebagai penyamar satu kabel menerus</span> dicabut. Tapi ODP→ODP yang <span class="good">beneran cascade</span> (kaki splitter menyuapi splitter berikutnya) tetap sah — bedanya kelihatan dari baris sambungannya, bukan dari tipe kabelnya.</td></tr>
+<tr><td><code>DROP</code> <span class="tag t-old">ADA</span></td><td>ODP → pelanggan</td><td>1–2</td>
+    <td>Wajib. Sudah benar.</td></tr>
+</table>
+<p style="color:#64748b;font-size:.9rem">Catatan: banyak ISP lokal menyebut feeder sebagai "backbone". Dipisah tetap berguna — begitu ada POP kedua,
+kabel antar-POP tidak punya ODC di ujungnya, jadi validasi feeder akan menolaknya.</p>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>4. Kenapa cukup satu kabel: mid-span tapping</h2>
+<p>Ini bagian yang bikin bingung. Teknisi <strong>tidak</strong> memotong kabelnya. Selubung dibuka di depan ODP,
+satu core ditarik keluar dan dipotong, sisanya lewat terus tanpa disentuh.</p>
+
+<div class="fig">
+<svg viewBox="0 0 1140 480" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+  <defs><marker id="ar" markerWidth="9" markerHeight="9" refX="6" refY="4.5" orient="auto">
+    <path d="M0,0 L9,4.5 L0,9 z" fill="#b91c1c"/></marker></defs>
+
+  <rect x="60" y="112" width="1000" height="160" fill="#f8fafc" stroke="#94a3b8" stroke-width="3"/>
+  <text x="60" y="102" font-size="11.5" font-weight="700" fill="#475569">SELUBUNG KABEL DISTRIBUSI · 8 core · TIDAK diputus</text>
+
+  <g stroke-width="3.5">
+    <line x1="60" y1="146" x2="1060" y2="146" stroke="#ea580c"/>
+    <line x1="60" y1="164" x2="1060" y2="164" stroke="#16a34a"/>
+    <line x1="60" y1="182" x2="1060" y2="182" stroke="#78350f"/>
+    <line x1="60" y1="200" x2="1060" y2="200" stroke="#94a3b8"/>
+    <line x1="60" y1="218" x2="1060" y2="218" stroke="#cbd5e1"/>
+    <line x1="62" y1="218" x2="1058" y2="218" stroke="#ffffff" stroke-width="2"/>
+    <line x1="60" y1="236" x2="1060" y2="236" stroke="#dc2626"/>
+    <line x1="60" y1="254" x2="1060" y2="254" stroke="#111827"/>
+  </g>
+  <g font-size="9.5" fill="#94a3b8" text-anchor="end">
+    <text x="1054" y="142">c2 jingga</text><text x="1054" y="160">c3 hijau</text><text x="1054" y="178">c4 coklat</text>
+    <text x="1054" y="196">c5 abu</text><text x="1054" y="214">c6 putih</text><text x="1054" y="232">c7 merah</text><text x="1054" y="250">c8 hitam</text>
+  </g>
+
+  <line x1="60" y1="128" x2="520" y2="128" stroke="#1d4ed8" stroke-width="3.5"/>
+  <path d="M520,128 C 580,128 590,330 645,330" fill="none" stroke="#1d4ed8" stroke-width="3.5"/>
+  <line x1="534" y1="128" x2="1060" y2="128" stroke="#cbd5e1" stroke-width="3" stroke-dasharray="4 5"/>
+  <circle cx="520" cy="128" r="7" fill="#fff" stroke="#b91c1c" stroke-width="3"/>
+
+  <text x="520" y="56" font-size="12.5" font-weight="700" fill="#b91c1c" text-anchor="middle">core 1 (biru) DIPOTONG di sini</text>
+  <line x1="520" y1="66" x2="520" y2="106" stroke="#b91c1c" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="1060" y="90" font-size="10.5" fill="#94a3b8" text-anchor="end">sisa core 1 setelah titik potong: mati, tak dipakai</text>
+
+  <rect x="645" y="300" width="170" height="60" rx="9" fill="#15803d"/>
+  <text x="730" y="325" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">ODP-3</text>
+  <text x="730" y="344" font-size="11" fill="#bbf7d0" text-anchor="middle">input splitter 1:8</text>
+
+  <text x="70" y="298" font-size="11.5" fill="#64748b">◀ dari ODC-A</text>
+  <text x="520" y="298" font-size="12" font-weight="700" fill="#475569" text-anchor="middle">core 2–8 lewat terus, utuh</text>
+  <text x="1060" y="298" font-size="11.5" fill="#64748b" text-anchor="end">ke ODP berikutnya ▶</text>
+
+  <rect x="60" y="390" width="1000" height="72" rx="10" fill="#fff" stroke="#e2e8f0"/>
+  <text x="80" y="418" font-size="12.5" fill="#0f172a">Yang "habis" per ODP cuma <tspan font-weight="700">satu core</tspan> — bukan satu kabel. Kabel 8 core = jatah 8 ODP di sepanjang jalur itu.</text>
+  <text x="80" y="442" font-size="12.5" fill="#0f172a">Di data: kabelnya <tspan font-weight="700">satu baris</tspan>, corenya <tspan font-weight="700">delapan baris</tspan>, dan tiap core punya ujung A dan ujung B-nya sendiri.</text>
+</svg>
+<div class="cap">Gambar 4 — mid-span tapping. Urutan &amp; jarak titik tap bisa dihitung otomatis dari geometri (PostGIS <code>ST_LineLocatePoint</code>), tidak perlu diinput.</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>5. Joint box: menyambung, memecah, dan persimpangan</h2>
+<p>JB dipakai saat kabel habis dan harus disambung, atau saat satu kabel dipecah ke beberapa arah.
+Tidak ada splitter di dalamnya — cuma tray dan sambungan fusion.</p>
+
+<div class="fig">
+<svg viewBox="0 0 1140 470" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+  <line x1="30" y1="235" x2="330" y2="235" stroke="#16a34a" stroke-width="8" stroke-linecap="round"/>
+  <text x="34" y="216" font-size="12" font-weight="700" fill="#15803d">DIST-01 · 8 core</text>
+
+  <rect x="330" y="60" width="420" height="350" rx="14" fill="#fffbeb" stroke="#b45309" stroke-width="2"/>
+  <text x="350" y="90" font-size="15" font-weight="700" fill="#92400e">JB-TEBET-01</text>
+  <text x="350" y="108" font-size="11" fill="#b45309">joint closure · 2 tray · kapasitas 24 splice</text>
+
+  <rect x="350" y="125" width="380" height="120" rx="9" fill="#fff" stroke="#fde68a"/>
+  <text x="362" y="145" font-size="10.5" font-weight="700" fill="#92400e">TRAY 1</text>
+  <line x1="362" y1="175" x2="718" y2="175" stroke="#94a3b8" stroke-width="3"/>
+  <line x1="362" y1="215" x2="718" y2="215" stroke="#cbd5e1" stroke-width="4"/>
+  <line x1="364" y1="215" x2="716" y2="215" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="540" cy="175" r="6" fill="#fff" stroke="#92400e" stroke-width="2.5"/>
+  <circle cx="540" cy="215" r="6" fill="#fff" stroke="#92400e" stroke-width="2.5"/>
+  <text x="364" y="169" font-size="10" fill="#475569">c5 abu</text>
+  <text x="676" y="169" font-size="10" fill="#475569">c1 biru</text>
+  <text x="364" y="209" font-size="10" fill="#475569">c6 putih</text>
+  <text x="672" y="209" font-size="10" fill="#475569">c2 jingga</text>
+
+  <rect x="350" y="265" width="380" height="120" rx="9" fill="#fff" stroke="#fde68a"/>
+  <text x="362" y="285" font-size="10.5" font-weight="700" fill="#92400e">TRAY 2</text>
+  <line x1="362" y1="325" x2="718" y2="325" stroke="#dc2626" stroke-width="3"/>
+  <circle cx="540" cy="325" r="6" fill="#fff" stroke="#92400e" stroke-width="2.5"/>
+  <text x="364" y="319" font-size="10" fill="#475569">c7 merah</text>
+  <text x="676" y="319" font-size="10" fill="#475569">c1 biru</text>
+  <text x="362" y="360" font-size="10.5" fill="#94a3b8">core 1–4 tidak masuk tray → lewat begitu saja (pass-through)</text>
+
+  <line x1="750" y1="175" x2="1110" y2="175" stroke="#16a34a" stroke-width="7" stroke-linecap="round"/>
+  <text x="900" y="158" font-size="12" font-weight="700" fill="#15803d">DIST-02 · 12 core → utara</text>
+  <line x1="750" y1="325" x2="1110" y2="325" stroke="#16a34a" stroke-width="5" stroke-linecap="round"/>
+  <text x="900" y="308" font-size="12" font-weight="700" fill="#15803d">DIST-03 · 4 core → selatan</text>
+
+  <rect x="30" y="425" width="1080" height="36" rx="9" fill="#fff" stroke="#e2e8f0"/>
+  <text x="50" y="449" font-size="12.5" fill="#0f172a">Core tanpa baris sambungan = <tspan font-weight="700">lewat</tspan>. Tidak perlu dicatat — yang dicatat cuma yang benar-benar disambung.</text>
+</svg>
+<div class="cap">Gambar 5 — joint box. Tiap sambungan menyimpan metode (fusion/mekanik) dan rugi (dB) untuk anggaran redaman.</div>
+</div>
+
+<h3>Kalau jalurnya tidak lurus — persimpangan</h3>
+<p>Bisa, dan ini normal. Serat tidak bisa "dibelokkan" jadi dua arah tanpa dibuka; setiap percabangan
+<strong>wajib</strong> ada closure-nya. Tiga cara, tergantung simpangnya ada di mana:</p>
+
+<div class="fig">
+<svg viewBox="0 0 1180 640" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+  <rect x="30" y="196" width="130" height="64" rx="10" fill="#0f766e"/>
+  <text x="95" y="222" font-size="15" font-weight="700" fill="#fff" text-anchor="middle">ODC-A</text>
+  <text x="95" y="242" font-size="11" fill="#99f6e4" text-anchor="middle">1:16</text>
+
+  <line x1="160" y1="228" x2="522" y2="228" stroke="#16a34a" stroke-width="7" stroke-linecap="round"/>
+  <text x="200" y="212" font-size="12" font-weight="700" fill="#15803d">DIST-01 · 12 core</text>
+  <text x="200" y="252" font-size="10.5" fill="#64748b">satu tarikan sampai simpang</text>
+
+  <rect x="520" y="196" width="146" height="64" rx="10" fill="#fffbeb" stroke="#b45309" stroke-width="2"/>
+  <text x="593" y="221" font-size="12.5" font-weight="700" fill="#92400e" text-anchor="middle">JB-SIMPANG-01</text>
+  <text x="593" y="241" font-size="11" fill="#b45309" text-anchor="middle">6 core → kanan · 6 → kiri</text>
+
+  <path d="M666,214 L 762,120 L 1122,120" fill="none" stroke="#16a34a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="800" y="104" font-size="12" font-weight="700" fill="#15803d">DIST-02 · 6 core → arah kanan</text>
+  <g fill="#fff" stroke="#15803d" stroke-width="3"><circle cx="900" cy="120" r="6"/><circle cx="1030" cy="120" r="6"/></g>
+  <g stroke="#16a34a" stroke-width="2.5"><line x1="900" y1="120" x2="900" y2="66"/><line x1="1030" y1="120" x2="1030" y2="66"/></g>
+  <rect x="855" y="14" width="90" height="52" rx="8" fill="#15803d"/>
+  <text x="900" y="36" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">ODP-1A</text>
+  <text x="900" y="54" font-size="10.5" fill="#bbf7d0" text-anchor="middle">core 1</text>
+  <rect x="985" y="14" width="90" height="52" rx="8" fill="#15803d"/>
+  <text x="1030" y="36" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">ODP-2A</text>
+  <text x="1030" y="54" font-size="10.5" fill="#bbf7d0" text-anchor="middle">core 2</text>
+
+  <path d="M666,242 L 762,336 L 1122,336" fill="none" stroke="#16a34a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="800" y="320" font-size="12" font-weight="700" fill="#15803d">DIST-03 · 6 core → arah kiri</text>
+  <g fill="#fff" stroke="#15803d" stroke-width="3"><circle cx="900" cy="336" r="6"/><circle cx="1030" cy="336" r="6"/></g>
+  <g stroke="#16a34a" stroke-width="2.5"><line x1="900" y1="336" x2="900" y2="392"/><line x1="1030" y1="336" x2="1030" y2="392"/></g>
+  <rect x="855" y="392" width="90" height="52" rx="8" fill="#15803d"/>
+  <text x="900" y="414" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">ODP-1B</text>
+  <text x="900" y="432" font-size="10.5" fill="#bbf7d0" text-anchor="middle">core 1</text>
+  <rect x="985" y="392" width="90" height="52" rx="8" fill="#15803d"/>
+  <text x="1030" y="414" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">ODP-2B</text>
+  <text x="1030" y="432" font-size="10.5" fill="#bbf7d0" text-anchor="middle">core 2</text>
+
+  <rect x="30" y="470" width="1120" height="152" rx="12" fill="#fff" stroke="#e2e8f0"/>
+  <text x="50" y="496" font-size="12.5" font-weight="700" fill="#0f172a">Tiga cara di lapangan — pilih sesuai letak simpangnya:</text>
+  <text x="50" y="522" font-size="12.5" fill="#0f172a"><tspan font-weight="700">1.</tspan> Simpang PAS di ODC → tak perlu JB sama sekali: tarik dua kabel langsung dari ODC (mis. 2 × 8 core). Paling bersih, pakai ini kalau bisa.</text>
+  <text x="50" y="546" font-size="12.5" fill="#0f172a"><tspan font-weight="700">2.</tspan> Simpang di tengah jalur → pasang joint box di simpang, core dipecah ke dua kabel cabang (seperti gambar di atas).</text>
+  <text x="50" y="570" font-size="12.5" fill="#0f172a"><tspan font-weight="700">3.</tspan> Kabel utama harus tetap lanjut lurus TAPI ada cabang → JB mid-span: selubung dibuka, hanya core yang dipakai dipotong &amp; disambung ke kabel cabang, sisanya lewat terus.</text>
+  <text x="50" y="600" font-size="12.5" fill="#0f172a"><tspan font-weight="700">Di data:</tspan> closure TIDAK harus jadi ujung kabel. JB/ODP boleh berada di tengah rute — sambungan menempel ke <tspan font-family="ui-monospace,monospace">closure_id</tspan>, bukan ke ujung selubung.</text>
+</svg>
+<div class="cap">Gambar 6 — persimpangan. Penomoran core mulai dari 1 lagi di tiap kabel cabang; JB-lah yang menyimpan pemetaannya (mis. DIST-01 c1 → DIST-02 c1, DIST-01 c7 → DIST-03 c1).</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>6. Isi ODC yang sebenarnya — dan kenapa model kita masih salah di sini</h2>
+<p>Ini cacat yang belum gw sebut di awal. Di model sekarang, <code>odc</code> punya <strong>satu</strong>
+<code>splitter_ratio</code>. Di lapangan, satu kabinet ODC itu isinya <strong>beberapa modul splitter</strong>,
+masing-masing disuapi PON port yang berbeda — dan rasionya boleh beda-beda.</p>
+
+<div class="fig">
+<svg viewBox="0 0 1180 620" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+  <line x1="20" y1="300" x2="180" y2="300" stroke="#1d4ed8" stroke-width="7" stroke-linecap="round"/>
+  <text x="20" y="282" font-size="12" font-weight="700" fill="#1d4ed8">FEEDER 24 core</text>
+
+  <rect x="150" y="60" width="750" height="430" rx="14" fill="#f0fdfa" stroke="#0f766e" stroke-width="2"/>
+  <text x="172" y="92" font-size="14" font-weight="700" fill="#0f766e">ODC-A · kabinet 96 core</text>
+
+  <rect x="175" y="120" width="90" height="300" rx="8" fill="#fff" stroke="#5eead4"/>
+  <text x="220" y="142" font-size="9.5" font-weight="700" fill="#0f766e" text-anchor="middle">TRAY SPLICE</text>
+  <g stroke="#0f766e" stroke-width="2">
+    <line x1="188" y1="180" x2="252" y2="180"/><line x1="188" y1="240" x2="252" y2="240"/>
+    <line x1="188" y1="300" x2="252" y2="300"/><line x1="188" y1="360" x2="252" y2="360"/>
+  </g>
+  <text x="220" y="404" font-size="9" fill="#64748b" text-anchor="middle">core → pigtail</text>
+  <g stroke="#0f766e" stroke-width="2">
+    <line x1="265" y1="180" x2="285" y2="180"/><line x1="265" y1="240" x2="285" y2="240"/>
+    <line x1="265" y1="300" x2="285" y2="300"/><line x1="265" y1="360" x2="285" y2="360"/>
+  </g>
+
+  <rect x="285" y="120" width="120" height="300" rx="8" fill="#0f766e"/>
+  <text x="345" y="142" font-size="9.5" font-weight="700" fill="#fff" text-anchor="middle">PANEL MASUK</text>
+  <g fill="#ffffff" fill-opacity="0.16">
+    <rect x="296" y="158" width="98" height="44" rx="5"/><rect x="296" y="218" width="98" height="44" rx="5"/>
+    <rect x="296" y="278" width="98" height="44" rx="5"/><rect x="296" y="338" width="98" height="44" rx="5"/>
+  </g>
+  <g font-size="10" fill="#ccfbf1" text-anchor="middle">
+    <text x="345" y="185">p01 · core 1</text><text x="345" y="245">p02 · core 2</text>
+    <text x="345" y="305">p03 · core 3</text><text x="345" y="365">p04 — kosong</text>
+  </g>
+
+  <g stroke="#0ea5e9" stroke-width="2" stroke-dasharray="5 3">
+    <line x1="405" y1="180" x2="430" y2="180"/><line x1="405" y1="240" x2="430" y2="240"/><line x1="405" y1="300" x2="430" y2="300"/>
+  </g>
+
+  <rect x="430" y="154" width="210" height="52" rx="8" fill="#0d9488"/>
+  <text x="444" y="176" font-size="12" font-weight="700" fill="#fff">SPL-1 · 1:8</text>
+  <text x="444" y="194" font-size="10" fill="#ccfbf1">disuapi PON 1/1/1</text>
+  <rect x="430" y="214" width="210" height="52" rx="8" fill="#0d9488"/>
+  <text x="444" y="236" font-size="12" font-weight="700" fill="#fff">SPL-2 · 1:8</text>
+  <text x="444" y="254" font-size="10" fill="#ccfbf1">disuapi PON 1/1/2</text>
+  <rect x="430" y="274" width="210" height="52" rx="8" fill="#0d9488"/>
+  <text x="444" y="296" font-size="12" font-weight="700" fill="#fff">SPL-3 · 1:16</text>
+  <text x="444" y="314" font-size="10" fill="#ccfbf1">disuapi PON 1/1/3 — rasio beda!</text>
+  <rect x="430" y="334" width="210" height="52" rx="8" fill="#fff" stroke="#5eead4" stroke-dasharray="5 4"/>
+  <text x="535" y="365" font-size="11.5" fill="#64748b" text-anchor="middle">slot kosong — buat nanti</text>
+
+  <g stroke="#0d9488" stroke-width="2">
+    <line x1="640" y1="180" x2="670" y2="180"/><line x1="640" y1="240" x2="670" y2="240"/><line x1="640" y1="300" x2="670" y2="300"/>
+  </g>
+
+  <rect x="670" y="120" width="120" height="300" rx="8" fill="#0f766e"/>
+  <text x="730" y="142" font-size="9.5" font-weight="700" fill="#fff" text-anchor="middle">PANEL KELUAR</text>
+  <g fill="#ffffff" fill-opacity="0.16">
+    <rect x="681" y="158" width="98" height="112" rx="5"/><rect x="681" y="282" width="98" height="100" rx="5"/>
+  </g>
+  <g font-size="10" fill="#ccfbf1" text-anchor="middle">
+    <text x="730" y="200">kaki 1–8</text><text x="730" y="218">SPL-1</text>
+    <text x="730" y="316">kaki 1–8</text><text x="730" y="334">SPL-2</text>
+  </g>
+
+  <line x1="790" y1="200" x2="1160" y2="200" stroke="#16a34a" stroke-width="6" stroke-linecap="round"/>
+  <text x="910" y="182" font-size="12" font-weight="700" fill="#15803d">DIST-01 · 12 core → utara</text>
+  <line x1="790" y1="320" x2="1160" y2="320" stroke="#16a34a" stroke-width="6" stroke-linecap="round"/>
+  <text x="910" y="302" font-size="12" font-weight="700" fill="#15803d">DIST-02 · 12 core → selatan</text>
+
+  <rect x="20" y="510" width="1140" height="100" rx="12" fill="#fff" stroke="#e2e8f0"/>
+  <text x="42" y="537" font-size="12.5" fill="#0f172a">Satu ODC = <tspan font-weight="700">banyak splitter</tspan>, dari PON port berbeda, rasio boleh beda. Ada juga ODC <tspan font-weight="700">tanpa splitter sama sekali</tspan> — murni cross-connect, splitter-nya nanti di ODP.</text>
+  <text x="42" y="562" font-size="12.5" fill="#0f172a">Karena itu <tspan font-family="ui-monospace,monospace">odc.splitter_ratio</tspan> yang tunggal harus dipecah jadi entitas <tspan font-family="ui-monospace,monospace" font-weight="700">splitter</tspan> sendiri (punya input, rasio, dan n kaki keluar).</text>
+  <text x="42" y="587" font-size="12.5" fill="#0f172a">Efek sampingnya bagus: "PON 1/1/1 sudah dipakai berapa pelanggan" jadi bisa dihitung — batas GPON 64 ONU per PON port itu nyata.</text>
+</svg>
+<div class="cap">Gambar 7 — isi kabinet ODC. Rantai fisiknya: core feeder → tray splice → panel masuk → splitter → panel keluar → core distribusi.</div>
+</div>
+
+<h2>7. Anggaran redaman — angka yang bikin sistem ini beneran dipakai teknisi</h2>
+<p>Begitu core, sambungan, dan panjang rute terekam, redaman ujung-ke-ujung bisa <strong>dihitung</strong>, bukan
+ditebak. Ini yang bikin sistem bisa bilang "jalur ini mepet, ONU-nya bakal rewel pas hujan" sebelum pelanggan komplain.</p>
+
+<div class="fig">
+<svg viewBox="0 0 1180 400" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+  <line x1="70" y1="152" x2="1110" y2="152" stroke="#cbd5e1" stroke-width="4"/>
+  <g text-anchor="middle">
+    <rect x="30" y="128" width="86" height="48" rx="8" fill="#1e3a8a"/><text x="73" y="150" font-size="12" font-weight="700" fill="#fff">OLT</text><text x="73" y="166" font-size="9.5" fill="#c7d2fe">PON 1/1/1</text>
+    <rect x="186" y="128" width="86" height="48" rx="8" fill="#6d28d9"/><text x="229" y="150" font-size="12" font-weight="700" fill="#fff">ODF</text><text x="229" y="166" font-size="9.5" fill="#ddd6fe">patch</text>
+    <rect x="342" y="128" width="86" height="48" rx="8" fill="#b45309"/><text x="385" y="150" font-size="12" font-weight="700" fill="#fff">JB</text><text x="385" y="166" font-size="9.5" fill="#fde68a">haspel</text>
+    <rect x="498" y="128" width="86" height="48" rx="8" fill="#0f766e"/><text x="541" y="150" font-size="12" font-weight="700" fill="#fff">ODC</text><text x="541" y="166" font-size="9.5" fill="#99f6e4">1:8</text>
+    <rect x="654" y="128" width="86" height="48" rx="8" fill="#b45309"/><text x="697" y="150" font-size="12" font-weight="700" fill="#fff">JB</text><text x="697" y="166" font-size="9.5" fill="#fde68a">simpang</text>
+    <rect x="810" y="128" width="86" height="48" rx="8" fill="#15803d"/><text x="853" y="150" font-size="12" font-weight="700" fill="#fff">ODP</text><text x="853" y="166" font-size="9.5" fill="#bbf7d0">1:8</text>
+    <rect x="1024" y="128" width="86" height="48" rx="8" fill="#475569"/><text x="1067" y="150" font-size="12" font-weight="700" fill="#fff">ONU</text><text x="1067" y="166" font-size="9.5" fill="#cbd5e1">rumah</text>
+  </g>
+  <g font-size="10.5" text-anchor="middle" fill="#334155">
+    <text x="151" y="112">konektor</text><text x="151" y="98" font-weight="700" fill="#b45309">0,5 dB</text>
+    <text x="307" y="112">3,2 km serat</text><text x="307" y="98" font-weight="700" fill="#b45309">1,1 dB</text>
+    <text x="463" y="112">splice</text><text x="463" y="98" font-weight="700" fill="#b45309">0,1 dB</text>
+    <text x="619" y="112">0,45 km</text><text x="619" y="98" font-weight="700" fill="#b45309">0,15 dB</text>
+    <text x="775" y="112">0,45 km + splice</text><text x="775" y="98" font-weight="700" fill="#b45309">0,25 dB</text>
+    <text x="960" y="112">drop 150 m + konektor</text><text x="960" y="98" font-weight="700" fill="#b45309">0,55 dB</text>
+    <text x="541" y="200">splitter 1:8</text><text x="541" y="216" font-weight="700" fill="#b91c1c">10,5 dB</text>
+    <text x="853" y="200">splitter 1:8</text><text x="853" y="216" font-weight="700" fill="#b91c1c">10,5 dB</text>
+  </g>
+
+  <text x="70" y="278" font-size="12.5" font-weight="700" fill="#0f172a">Total 23,65 dB dari pagu 28 dB (GPON Class B+)</text>
+  <rect x="70" y="292" width="1040" height="28" rx="6" fill="#f1f5f9" stroke="#e2e8f0"/>
+  <rect x="70" y="292" width="878" height="28" rx="6" fill="#15803d"/>
+  <line x1="948" y1="286" x2="948" y2="326" stroke="#0f172a" stroke-width="2"/>
+  <text x="1100" y="311" font-size="11" fill="#64748b" text-anchor="end">pagu 28 dB</text>
+  <text x="86" y="311" font-size="11.5" font-weight="700" fill="#fff">terpakai 23,65 dB</text>
+  <text x="70" y="348" font-size="12" fill="#334155">Sisa margin <tspan font-weight="700">4,35 dB</tspan> — aman tapi tak longgar. Yang boros itu <tspan font-weight="700">dua tingkat splitter</tspan> (1:8 × 1:8 = 1:64) = 21 dB; serat + sambungan cuma ~2,6 dB.</text>
+  <text x="70" y="372" font-size="12" fill="#334155">Artinya: nambah satu splice darurat (0,1 dB) aman; nambah satu tingkat splitter lagi — <tspan font-weight="700" fill="#b91c1c">tidak akan muat</tspan>. Sistem harus menolaknya, bukan membiarkan teknisi coba-coba.</text>
+</svg>
+<div class="cap">Gambar 8 — anggaran redaman. Serat 0,35 dB/km @1310 nm; splice fusion 0,05–0,1 dB; konektor 0,3–0,5 dB; splitter dari <code>SplitterRatio</code> yang sudah ada di kode.</div>
+</div>
+
+<h2>8. Titik sambung universal — ini yang bikin Splicing Manager jalan di SEMUA simpul</h2>
+<p>Lu bilang di kompetitor, ODP / ODC / ODF / JB semuanya punya layar Splicing &amp; Patching.
+Supaya satu layar bisa melayani empat simpul, yang disambung <strong>tidak boleh</strong> cuma "kabel ke kabel".
+Ada enam jenis titik sambung:</p>
+
+<div class="fig">
+<svg viewBox="0 0 1160 380" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+  <g font-size="12">
+    <rect x="30" y="40" width="250" height="66" rx="10" fill="#eff6ff" stroke="#1d4ed8"/>
+    <text x="46" y="66" font-weight="700" fill="#1d4ed8">CORE</text>
+    <text x="46" y="88" fill="#475569" font-size="11">core ke-n sebuah kabel</text>
+
+    <rect x="30" y="126" width="250" height="66" rx="10" fill="#f5f3ff" stroke="#6d28d9"/>
+    <text x="46" y="152" font-weight="700" fill="#6d28d9">ODF_PORT</text>
+    <text x="46" y="174" fill="#475569" font-size="11">port ODF · sisi BELAKANG / DEPAN</text>
+
+    <rect x="30" y="212" width="250" height="66" rx="10" fill="#f0fdfa" stroke="#0f766e"/>
+    <text x="46" y="238" font-weight="700" fill="#0f766e">SPLITTER_IN</text>
+    <text x="46" y="260" fill="#475569" font-size="11">kaki masuk splitter ODC/ODP</text>
+
+    <rect x="310" y="40" width="250" height="66" rx="10" fill="#f0fdf4" stroke="#15803d"/>
+    <text x="326" y="66" font-weight="700" fill="#15803d">SPLITTER_OUT</text>
+    <text x="326" y="88" fill="#475569" font-size="11">kaki keluar 1..16 / 1..8</text>
+
+    <rect x="310" y="126" width="250" height="66" rx="10" fill="#eef2ff" stroke="#1e3a8a"/>
+    <text x="326" y="152" font-weight="700" fill="#1e3a8a">PON_PORT</text>
+    <text x="326" y="174" fill="#475569" font-size="11">port PON di OLT</text>
+
+    <rect x="310" y="212" width="250" height="66" rx="10" fill="#f8fafc" stroke="#475569"/>
+    <text x="326" y="238" font-weight="700" fill="#475569">ONU</text>
+    <text x="326" y="260" fill="#475569" font-size="11">ujung drop di rumah pelanggan</text>
+  </g>
+
+  <text x="620" y="60" font-size="13" font-weight="700" fill="#0f172a">Sambungan = pasangan dua titik di satu simpul</text>
+  <g font-size="12" fill="#334155">
+    <text x="620" y="92">di <tspan font-weight="700" fill="#6d28d9">ODF</tspan> — CORE ↔ ODF_PORT(belakang), ODF_PORT(depan) ↔ PON_PORT</text>
+    <text x="620" y="120">di <tspan font-weight="700" fill="#0f766e">ODC</tspan> — CORE ↔ SPLITTER_IN, SPLITTER_OUT ↔ CORE</text>
+    <text x="620" y="148">di <tspan font-weight="700" fill="#15803d">ODP</tspan> — CORE ↔ SPLITTER_IN, SPLITTER_OUT ↔ CORE(drop)</text>
+    <text x="620" y="176">di <tspan font-weight="700" fill="#b45309">JB</tspan> — CORE ↔ CORE</text>
+    <text x="620" y="204">di rumah — CORE(drop) ↔ ONU</text>
+  </g>
+  <rect x="600" y="228" width="530" height="126" rx="10" fill="#fff" stroke="#e2e8f0"/>
+  <text x="618" y="252" font-size="12.5" font-weight="700" fill="#0f172a">Konsekuensi bagusnya:</text>
+  <text x="618" y="276" font-size="12" fill="#334155">satu tabel sambungan → satu layar Splicing &amp; Patching untuk</text>
+  <text x="618" y="296" font-size="12" fill="#334155">semua simpul, dan telusur OLT → pelanggan jadi jalan-jalan di</text>
+  <text x="618" y="316" font-size="12" fill="#334155">graf (recursive CTE), bukan tebak-tebakan dari geometri peta.</text>
+  <text x="618" y="340" font-size="11.5" fill="#64748b">Bonus: anggaran redaman = jumlah rugi tiap hop + loss splitter.</text>
+</svg>
+<div class="cap">Gambar 9 — enam jenis titik sambung, satu tabel sambungan.</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>9. Bentuk datanya</h2>
+
+<div class="fig">
+<svg viewBox="0 0 1200 560" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+  <!-- cable -->
+  <rect x="30" y="40" width="270" height="168" rx="10" fill="#fff" stroke="#1d4ed8" stroke-width="2"/>
+  <rect x="30" y="40" width="270" height="30" rx="10" fill="#1d4ed8"/>
+  <text x="44" y="61" font-size="13.5" font-weight="700" fill="#fff" font-family="ui-monospace,monospace">cable</text>
+  <text x="232" y="60" font-size="10" font-weight="700" fill="#bfdbfe">DIUBAH</text>
+  <g font-size="11.5" fill="#334155" font-family="ui-monospace,monospace">
+    <text x="44" y="90">code, name, cable_type</text>
+    <text x="44" y="110">route  (LineString)</text>
+    <text x="44" y="130">core_count</text>
+    <text x="44" y="152" fill="#94a3b8">from/to = ujung SELUBUNG</text>
+    <text x="44" y="170" fill="#94a3b8">(ODF|ODC|ODP|JB|CUST)</text>
+    <text x="44" y="192" fill="#b91c1c">− from_port_number  usang</text>
+  </g>
+
+  <!-- cable_core -->
+  <rect x="360" y="40" width="270" height="168" rx="10" fill="#fff" stroke="#15803d" stroke-width="2"/>
+  <rect x="360" y="40" width="270" height="30" rx="10" fill="#15803d"/>
+  <text x="374" y="61" font-size="13.5" font-weight="700" fill="#fff" font-family="ui-monospace,monospace">cable_core</text>
+  <text x="586" y="60" font-size="10" font-weight="700" fill="#bbf7d0">BARU</text>
+  <g font-size="11.5" fill="#334155" font-family="ui-monospace,monospace">
+    <text x="374" y="90">cable_id, tube_no, core_no</text>
+    <text x="374" y="110">color        (auto TIA-598)</text>
+    <text x="374" y="130">status  FREE|USED|</text>
+    <text x="374" y="148">        RESERVED|DAMAGED</text>
+    <text x="374" y="168">note</text>
+    <text x="374" y="192" fill="#94a3b8">unik (cable_id, core_no)</text>
+  </g>
+
+  <!-- fiber_connection -->
+  <rect x="700" y="40" width="330" height="262" rx="10" fill="#fff" stroke="#b45309" stroke-width="2"/>
+  <rect x="700" y="40" width="330" height="30" rx="10" fill="#b45309"/>
+  <text x="714" y="61" font-size="13.5" font-weight="700" fill="#fff" font-family="ui-monospace,monospace">fiber_connection</text>
+  <text x="986" y="60" font-size="10" font-weight="700" fill="#fde68a">BARU</text>
+  <g font-size="11.5" fill="#334155" font-family="ui-monospace,monospace">
+    <text x="714" y="90">closure_kind  ODF|ODC|ODP|JB</text>
+    <text x="714" y="108">closure_id</text>
+    <text x="714" y="132" font-weight="700" fill="#0f172a">sisi A + sisi B, tiap sisi:</text>
+    <text x="714" y="152">  point_kind  CORE|ODF_PORT|</text>
+    <text x="714" y="170">    SPLITTER_IN|SPLITTER_OUT|</text>
+    <text x="714" y="188">    PON_PORT|ONU</text>
+    <text x="714" y="206">  core_id | node_id + port_no</text>
+    <text x="714" y="230">method FUSION|MEKANIK|KONEKTOR</text>
+    <text x="714" y="250">loss_db, note</text>
+    <text x="714" y="274" fill="#94a3b8">1 titik dipakai 1x → UNIQUE index</text>
+    <text x="714" y="292" fill="#94a3b8">(anti "core dipakai 2 pelanggan")</text>
+  </g>
+
+  <!-- joint_box -->
+  <rect x="30" y="250" width="270" height="120" rx="10" fill="#fff" stroke="#b45309" stroke-width="2"/>
+  <rect x="30" y="250" width="270" height="30" rx="10" fill="#b45309"/>
+  <text x="44" y="271" font-size="13.5" font-weight="700" fill="#fff" font-family="ui-monospace,monospace">joint_box</text>
+  <text x="256" y="270" font-size="10" font-weight="700" fill="#fde68a">BARU</text>
+  <g font-size="11.5" fill="#334155" font-family="ui-monospace,monospace">
+    <text x="44" y="300">code, name, address</text>
+    <text x="44" y="320">location (Point)</text>
+    <text x="44" y="340">tray_count, capacity</text>
+    <text x="44" y="360">status</text>
+  </g>
+
+  <!-- odf -->
+  <rect x="360" y="250" width="270" height="140" rx="10" fill="#fff" stroke="#6d28d9" stroke-width="2"/>
+  <rect x="360" y="250" width="270" height="30" rx="10" fill="#6d28d9"/>
+  <text x="374" y="271" font-size="13.5" font-weight="700" fill="#fff" font-family="ui-monospace,monospace">odf</text>
+  <text x="586" y="270" font-size="10" font-weight="700" fill="#ddd6fe">BARU</text>
+  <g font-size="11.5" fill="#334155" font-family="ui-monospace,monospace">
+    <text x="374" y="300">code, name</text>
+    <text x="374" y="320">site_id  (POP)</text>
+    <text x="374" y="340">location (Point)</text>
+    <text x="374" y="360">port_count</text>
+    <text x="374" y="380">status</text>
+  </g>
+
+  <!-- existing -->
+  <rect x="700" y="330" width="330" height="96" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5 4"/>
+  <text x="714" y="356" font-size="12.5" font-weight="700" fill="#475569" font-family="ui-monospace,monospace">olt · pon_port · odc · odp · site</text>
+  <text x="714" y="378" font-size="11.5" fill="#64748b">sudah ada — tidak berubah bentuknya,</text>
+  <text x="714" y="396" font-size="11.5" fill="#64748b">cuma jadi pemilik titik sambung</text>
+  <text x="714" y="414" font-size="11.5" fill="#64748b">(SPLITTER_IN / SPLITTER_OUT / PON_PORT)</text>
+
+  <!-- relasi -->
+  <line x1="300" y1="120" x2="360" y2="120" stroke="#334155" stroke-width="2"/>
+  <text x="312" y="112" font-size="11" fill="#334155" font-weight="700">1 : N</text>
+  <line x1="630" y1="120" x2="700" y2="120" stroke="#334155" stroke-width="2"/>
+  <text x="640" y="112" font-size="11" fill="#334155" font-weight="700">1 : 0..2</text>
+  <text x="676" y="470" font-size="11.5" fill="#64748b">↑ closure_id &amp; node_id menunjuk ke salah satu tabel simpul</text>
+  <text x="676" y="488" font-size="11.5" fill="#64748b">(joint_box · odf · odc · odp · olt), sesuai closure_kind</text>
+
+  <rect x="30" y="420" width="600" height="118" rx="10" fill="#fff" stroke="#e2e8f0"/>
+  <text x="50" y="446" font-size="12.5" font-weight="700" fill="#0f172a">Kenapa titik sambung TIDAK dibuatkan tabel sendiri?</text>
+  <text x="50" y="470" font-size="12" fill="#334155">Kalau tiap port ODC/ODP/ODF dibikin baris, tiap ganti kapasitas harus sinkron ulang</text>
+  <text x="50" y="490" font-size="12" fill="#334155">— sumber bug diam-diam. Core tetap punya tabel (butuh status &amp; catatan sendiri),</text>
+  <text x="50" y="510" font-size="12" fill="#334155">port cukup jadi deskriptor di baris sambungan. Ketat lewat CHECK + UNIQUE.</text>
+</svg>
+<div class="cap">Gambar 10 — model data. Empat tabel baru (<code>splitter</code> menyusul di §13-E), satu tabel diubah, sisanya tetap.</div>
+</div>
+
+<h3>Titik tap dihitung, bukan diinput</h3>
+<p>Kabel distribusi lewat depan ODP-1, ODP-2, ODP-3 — tapi <code>from</code>/<code>to</code>-nya cuma dua.
+Urutan &amp; jarak tap tidak perlu diketik: proyeksikan lokasi ODP ke garis kabel dengan
+<code>ST_LineLocatePoint(route, odp.location) × length</code>. Dapat "ODP-2 ada di meter 640 dari ODC" —
+gratis, dan langsung berguna buat mencocokkan hasil OTDR dengan titik gangguan.</p>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>10. Layar Splicing &amp; Patching Manager</h2>
+<p>Sama idenya dengan kompetitor, tapi barisnya <strong>per core</strong> — bukan per kabel. Itu bedanya alat yang kepakai
+di lapangan dan alat yang cuma cakep di demo.</p>
+
+<div class="fig">
+<svg viewBox="0 0 1200 640" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+  <rect x="20" y="20" width="1160" height="600" rx="14" fill="#fff" stroke="#cbd5e1"/>
+  <text x="48" y="60" font-size="19" font-weight="700" fill="#0f172a">Splicing &amp; Patching</text>
+  <text x="258" y="60" font-size="13" fill="#64748b" font-family="ui-monospace,monospace">JB-TEBET-01</text>
+  <text x="1140" y="60" font-size="18" fill="#94a3b8" text-anchor="end">✕</text>
+  <line x1="20" y1="78" x2="1180" y2="78" stroke="#e2e8f0"/>
+
+  <!-- kiri -->
+  <rect x="48" y="100" width="470" height="270" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="66" y="126" font-size="13" font-weight="700" fill="#0f172a">Titik masuk</text>
+  <text x="66" y="145" font-size="11" fill="#64748b" font-family="ui-monospace,monospace">DIST-01 · 8 core</text>
+  <g font-size="12" font-family="ui-monospace,monospace">
+    <rect x="66" y="156" width="434" height="26" rx="5" fill="#fff" stroke="#e2e8f0"/>
+    <circle cx="82" cy="169" r="6" fill="#1d4ed8"/><text x="98" y="173" fill="#334155">c1  biru</text><text x="380" y="173" fill="#15803d">terpakai → ODP-1</text>
+    <rect x="66" y="188" width="434" height="26" rx="5" fill="#fff" stroke="#e2e8f0"/>
+    <circle cx="82" cy="201" r="6" fill="#ea580c"/><text x="98" y="205" fill="#334155">c2  jingga</text><text x="380" y="205" fill="#15803d">terpakai → ODP-2</text>
+    <rect x="66" y="220" width="434" height="26" rx="5" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+    <circle cx="82" cy="233" r="6" fill="#94a3b8"/><text x="98" y="237" fill="#334155">c5  abu-abu</text><text x="404" y="237" fill="#1d4ed8" font-weight="700">dipilih</text>
+    <rect x="66" y="252" width="434" height="26" rx="5" fill="#fff" stroke="#e2e8f0"/>
+    <circle cx="82" cy="265" r="6" fill="#f1f5f9" stroke="#cbd5e1"/><text x="98" y="269" fill="#334155">c6  putih</text><text x="424" y="269" fill="#64748b">kosong</text>
+    <rect x="66" y="284" width="434" height="26" rx="5" fill="#fff" stroke="#e2e8f0"/>
+    <circle cx="82" cy="297" r="6" fill="#dc2626"/><text x="98" y="301" fill="#334155">c7  merah</text><text x="410" y="301" fill="#b45309">cadangan</text>
+    <rect x="66" y="316" width="434" height="26" rx="5" fill="#fff" stroke="#e2e8f0"/>
+    <circle cx="82" cy="329" r="6" fill="#111827"/><text x="98" y="333" fill="#334155">c8  hitam</text><text x="428" y="333" fill="#b91c1c">rusak</text>
+  </g>
+
+  <!-- tombol tengah -->
+  <g>
+    <circle cx="600" cy="180" r="24" fill="#1d4ed8"/><text x="600" y="187" font-size="17" fill="#fff" text-anchor="middle">→</text>
+    <circle cx="600" cy="240" r="24" fill="#fee2e2" stroke="#fca5a5"/><text x="600" y="247" font-size="17" fill="#b91c1c" text-anchor="middle">✕</text>
+    <circle cx="600" cy="300" r="24" fill="#dcfce7" stroke="#86efac"/><text x="600" y="307" font-size="16" fill="#15803d" text-anchor="middle">⚡</text>
+    <text x="600" y="345" font-size="10" fill="#64748b" text-anchor="middle">sambung 1:1 otomatis</text>
+  </g>
+
+  <!-- kanan -->
+  <rect x="682" y="100" width="470" height="270" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="700" y="126" font-size="13" font-weight="700" fill="#0f172a">Titik tujuan</text>
+  <text x="700" y="145" font-size="11" fill="#64748b" font-family="ui-monospace,monospace">DIST-02 · 12 core   |   DIST-03 · 4 core</text>
+  <g font-size="12" font-family="ui-monospace,monospace">
+    <rect x="700" y="156" width="434" height="26" rx="5" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+    <circle cx="716" cy="169" r="6" fill="#1d4ed8"/><text x="732" y="173" fill="#334155">DIST-02 c1  biru</text><text x="1050" y="173" fill="#15803d" font-weight="700">dipilih</text>
+    <rect x="700" y="188" width="434" height="26" rx="5" fill="#fff" stroke="#e2e8f0"/>
+    <circle cx="716" cy="201" r="6" fill="#ea580c"/><text x="732" y="205" fill="#334155">DIST-02 c2  jingga</text><text x="1058" y="205" fill="#64748b">kosong</text>
+    <rect x="700" y="220" width="434" height="26" rx="5" fill="#fff" stroke="#e2e8f0"/>
+    <circle cx="716" cy="233" r="6" fill="#1d4ed8"/><text x="732" y="237" fill="#334155">DIST-03 c1  biru</text><text x="1058" y="237" fill="#64748b">kosong</text>
+    <rect x="700" y="252" width="434" height="26" rx="5" fill="#fff" stroke="#e2e8f0"/>
+    <text x="732" y="269" fill="#334155">▣ ODP-3 · input splitter</text><text x="1058" y="269" fill="#64748b">kosong</text>
+    <text x="700" y="300" font-size="11" fill="#94a3b8">Daftar ini menyesuaikan simpulnya: di ODF muncul port &amp; PON,</text>
+    <text x="700" y="318" font-size="11" fill="#94a3b8">di ODC/ODP muncul kaki splitter, di JB cuma core.</text>
+  </g>
+
+  <!-- tabel -->
+  <rect x="48" y="392" width="1104" height="164" rx="10" fill="#fff" stroke="#e2e8f0"/>
+  <text x="66" y="418" font-size="13" font-weight="700" fill="#0f172a">Sambungan saat ini</text>
+  <line x1="48" y1="430" x2="1152" y2="430" stroke="#e2e8f0"/>
+  <g font-size="11" font-weight="700" fill="#64748b" letter-spacing=".04em">
+    <text x="66" y="450">INPUT</text><text x="400" y="450">TUJUAN</text><text x="740" y="450">METODE</text><text x="900" y="450">RUGI</text><text x="1100" y="450">AKSI</text>
+  </g>
+  <g font-size="12" font-family="ui-monospace,monospace" fill="#334155">
+    <text x="66" y="478">DIST-01 c5 abu</text><text x="400" y="478">DIST-02 c1 biru</text><text x="740" y="478">fusion</text><text x="900" y="478">0.05 dB</text><text x="1100" y="478" fill="#b91c1c">hapus</text>
+    <line x1="66" y1="490" x2="1134" y2="490" stroke="#f1f5f9"/>
+    <text x="66" y="512">DIST-01 c6 putih</text><text x="400" y="512">DIST-02 c2 jingga</text><text x="740" y="512">fusion</text><text x="900" y="512">0.03 dB</text><text x="1100" y="512" fill="#b91c1c">hapus</text>
+    <line x1="66" y1="524" x2="1134" y2="524" stroke="#f1f5f9"/>
+    <text x="66" y="546">DIST-01 c7 merah</text><text x="400" y="546">DIST-03 c1 biru</text><text x="740" y="546">fusion</text><text x="900" y="546">0.08 dB</text><text x="1100" y="546" fill="#b91c1c">hapus</text>
+  </g>
+
+  <rect x="880" y="576" width="120" height="34" rx="7" fill="#fff" stroke="#cbd5e1"/>
+  <text x="940" y="598" font-size="12.5" fill="#334155" text-anchor="middle">Batal</text>
+  <rect x="1014" y="576" width="138" height="34" rx="7" fill="#1d4ed8"/>
+  <text x="1083" y="598" font-size="12.5" fill="#fff" text-anchor="middle" font-weight="600">Simpan</text>
+</svg>
+<div class="cap">Gambar 11 — layar yang sama dipakai ODF, ODC, ODP, dan JB; isi panel kanan menyesuaikan jenis simpul.</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>11. Skenario lapangan yang harus kepegang</h2>
+<p>Daftar ini yang dipakai buat menguji rancangan di atas — bukan cuma kasus lurus. Kolom terakhir menunjuk
+potongan kerja di §13.</p>
+
+<table>
+<tr><th style="width:34%">Skenario di lapangan</th><th>Yang dituntut dari model</th><th style="width:70px">Potongan</th></tr>
+
+<tr><td><strong>Kabel datang per haspel</strong> — satu haspel cuma 2–4 km, jalur 9 km berarti wajib disambung 2–3 kali</td>
+    <td>Joint box itu <strong>rutin di backbone/feeder</strong>, bukan cuma di simpang. Satu jalur logis = beberapa kabel fisik yang disambung berurutan.</td><td>C</td></tr>
+
+<tr><td><strong>Persimpangan</strong> — ODP-1A ke kanan, ODP-1B ke kiri</td>
+    <td>JB pecah core ke dua kabel cabang, atau dua kabel langsung dari ODC kalau simpangnya pas di kabinet (Gambar 6).</td><td>C</td></tr>
+
+<tr><td><strong>ODC isi banyak splitter</strong> dari PON port berbeda, rasio beda-beda — atau ODC tanpa splitter sama sekali</td>
+    <td><code>odc.splitter_ratio</code> tunggal <span class="bad">tidak cukup</span>. Perlu entitas <code>splitter</code> (input, rasio, n kaki).</td><td>E</td></tr>
+
+<tr><td><strong>Splitter bertingkat</strong> — ODC 1:4 lalu ODP 1:16</td>
+    <td>Redaman menumpuk lintas tingkat; dan kabel ODP→ODP <strong>sah</strong> untuk kasus ini (kaki splitter menyuapi splitter berikutnya). Yang dilarang cuma rantai palsu penyamar satu kabel menerus.</td><td>E, G</td></tr>
+
+<tr><td><strong>Core rusak</strong> — redaman tinggi, pelanggan harus digeser ke core cadangan</td>
+    <td>Status <code>DAMAGED</code> + aksi <strong>"pindah core"</strong> satu langkah (bukan hapus lalu bikin baru — riwayatnya hilang).</td><td>A, H</td></tr>
+
+<tr><td><strong>Nomor core tidak urut</strong> — core 1 &amp; 2 rusak, ODP-1 dikasih core 3</td>
+    <td>"ODP ke-n = core ke-n" itu <strong>saran default</strong>, bukan aturan. Sistem tak boleh memaksa.</td><td>A</td></tr>
+
+<tr><td><strong>Kabel 24 core ke atas</strong> — isinya tube @12 core, warna core berulang tiap tube</td>
+    <td><code>tube_number</code> + warna tube ikut diturunkan otomatis. Tanpa ini teknisi salah baca core di kabel besar.</td><td>A</td></tr>
+
+<tr><td><strong>Kabel putus kena backhoe</strong> — disambung darurat di tengah rute</td>
+    <td>JB baru muncul di tengah rute (bukan di ujung), panjang &amp; redaman bertambah, dan kejadiannya nyantol ke Work Order + teknisi.</td><td>C, G, H</td></tr>
+
+<tr><td><strong>Pelanggan cabut</strong> — port ODP dibebaskan, tapi kabel drop biasanya ditinggal di tiang</td>
+    <td>Sambungan dilepas &amp; core kembali kosong, tapi kabel drop bisa berstatus <strong>ditinggal</strong> — supaya tak dikira kabel siap pakai.</td><td>H</td></tr>
+
+<tr><td><strong>Pelanggan korporat dedicated</strong> — point-to-point dari OLT/switch, tanpa splitter</td>
+    <td>Jalur core boleh sampai pelanggan <strong>tanpa melewati splitter</strong>; jangan diwajibkan lewat ODC/ODP.</td><td>B, G</td></tr>
+
+<tr><td><strong>PON port kepenuhan</strong> — batas GPON 64 ONU per port</td>
+    <td>Jumlah ONU per PON dihitung dari graf sambungan, lalu diperingatkan sebelum tembus.</td><td>G</td></tr>
+
+<tr><td><strong>Redaman mepet</strong> — pelanggan ujung sering <em>los</em> pas hujan</td>
+    <td>Anggaran redaman dihitung otomatis (Gambar 8) dan jadi penolak saat orang mau nambah tingkat splitter.</td><td>G</td></tr>
+
+<tr><td><strong>OTDR bilang gangguan di meter 1.240</strong></td>
+    <td>Jarak dipetakan ke titik nyata di rute: "jatuh di JB-03" atau "antara ODP-2 dan ODP-3". Modul OTDR sudah ada, tinggal dikawinkan.</td><td>G</td></tr>
+
+<tr><td><strong>Survey / sales</strong> — "rumah ini bisa dipasang nggak?"</td>
+    <td>Kapasitas terdekat: port ODP kosong + core kosong di jalur itu, bukan cuma jarak di peta.</td><td>G</td></tr>
+
+<tr><td><strong>Kabel numpang tiang PLN/Telkom, atau ditanam dalam duct</strong></td>
+    <td>Atribut pemasangan (udara/tanam/duct) &amp; kepemilikan (milik sendiri/sewa) — nempel ke biaya sewa tiang, izin, dan SLA perbaikan.</td><td>A</td></tr>
+
+<tr><td><strong>ODP padat, rasio splitter dinaikkan</strong> 1:8 → 1:16</td>
+    <td>Ganti rasio harus ditolak kalau ada kaki terpakai di luar rasio baru, dan redaman ikut dihitung ulang.</td><td>E, H</td></tr>
+</table>
+
+<h2>12. Sebelum vs sesudah</h2>
+<table>
+<tr><th style="width:50%">Sekarang</th><th>Setelah perbaikan</th></tr>
+<tr><td class="bad">8 baris <code>cable</code>, 8 polyline digambar manual</td><td class="good">1 baris <code>cable</code>, 1 polyline</td></tr>
+<tr><td class="bad"><code>core_count = 1</code> (bohong — fisiknya 8 core)</td><td class="good">8 baris <code>cable_core</code>, warna otomatis</td></tr>
+<tr><td class="bad">Rantai ODP→ODP palsu</td><td class="good">Tap per core, urutan dihitung dari geometri</td></tr>
+<tr><td class="bad">"Core mana yang masih kosong?" — tidak terjawab</td><td class="good">Status per core: kosong / terpakai / cadangan / rusak</td></tr>
+<tr><td class="bad">Joint box &amp; ODF tidak ada</td><td class="good">Simpul sendiri + Splicing Manager</td></tr>
+<tr><td class="bad">"Siapa mati kalau kabel ini putus?" — tebak manual</td><td class="good">Telusur graf sambungan sampai daftar pelanggan</td></tr>
+<tr><td class="bad">Anggaran redaman tidak bisa dihitung utuh</td><td class="good">Jumlah rugi tiap hop + loss splitter</td></tr>
+</table>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2>13. Rencana kerja</h2>
+<p>Delapan potong, tiap potong satu commit, tiap potong bisa dipakai sendiri tanpa menunggu yang berikutnya.
+Data lama tetap sah di semua tahap. Urutannya sengaja: <strong>A–B fondasi</strong>, <strong>C–E simpul</strong>,
+<strong>F layar</strong>, <strong>G–H yang bikin dipakai harian</strong>.</p>
+
+<table>
+<tr><th style="width:56px">#</th><th style="width:220px">Isi</th><th>Rincian</th></tr>
+<tr><td><strong>A</strong></td><td>Core kabel</td>
+  <td>Migrasi <code>cable_core</code> + backfill dari <code>core_count</code> kabel lama · <strong>nomor tube</strong> +
+      warna TIA-598 diturunkan otomatis dari nomor core · status FREE/USED/RESERVED/DAMAGED + catatan ·
+      kolom kabel: cara pasang (udara/tanam/duct) &amp; kepemilikan · API <code>GET/PATCH /cables/{id}/cores</code> ·
+      layar <em>Kelola Core</em> waktu kabel diklik di peta.</td></tr>
+<tr><td><strong>B</strong></td><td>Sambungan &amp; terminasi</td>
+  <td>Migrasi <code>fiber_connection</code> (2 sisi + CHECK bentuk + UNIQUE anti-rebutan) · aturan domain: satu titik
+      dipakai sekali, jenis titik harus cocok dengan jenis simpul, jalur boleh tanpa splitter (pelanggan dedicated) ·
+      API sambung/putus.</td></tr>
+<tr><td><strong>C</strong></td><td>Joint box</td>
+  <td>Tabel + domain + CRUD + ikon &amp; layer peta · <code>NetworkNodeKind.JOINT_BOX</code> · JB boleh jadi ujung kabel
+      <em>maupun</em> titik di tengah rute (sambungan haspel &amp; perbaikan darurat).</td></tr>
+<tr><td><strong>D</strong></td><td>ODF</td>
+  <td>Tabel + domain + CRUD + layer peta · port dua sisi (belakang/depan) · feeder boleh berujung di ODF ·
+      patchcord ODF→PON sebagai sambungan, bukan kabel bergeometri.</td></tr>
+<tr><td><strong>E</strong></td><td>Splitter jadi entitas sendiri</td>
+  <td>Pecah <code>odc.splitter_ratio</code> jadi tabel <code>splitter</code> (pemilik ODC/ODP, rasio, input, n kaki) ·
+      backfill: tiap ODC/ODP lama → satu splitter dengan rasio lamanya · ODC boleh punya banyak splitter atau nol ·
+      splitter bertingkat sah · ganti rasio ditolak kalau ada kaki terpakai di luar rasio baru.</td></tr>
+<tr><td><strong>F</strong></td><td>Splicing &amp; Patching Manager</td>
+  <td>Satu komponen dipakai ODF/ODC/ODP/JB · dua panel + tabel sambungan (Gambar 11) · aksi otomatis "sambung 1:1" ·
+      titik tap dihitung <code>ST_LineLocatePoint</code> · alur pasang pelanggan ikut berubah: pilih port ODP <em>+ core drop</em>.</td></tr>
+<tr><td><strong>G</strong></td><td>Telusur graf &amp; angka teknik</td>
+  <td>Recursive CTE OLT→pelanggan · <strong>dampak putus</strong> ("siapa mati kalau kabel/JB ini kena") ·
+      <strong>anggaran redaman</strong> (Gambar 8) sebagai penolak, bukan sekadar info · hitungan ONU per PON port ·
+      cocokkan jarak OTDR ke titik nyata · kapasitas untuk survey (core &amp; port kosong terdekat).</td></tr>
+<tr><td><strong>H</strong></td><td>Aksi siklus hidup + bersih-bersih</td>
+  <td><strong>Pindah core</strong> satu langkah (core rusak → cadangan) · pelanggan cabut: core bebas tapi drop bisa
+      berstatus ditinggal · perubahan splicing nyantol ke Work Order &amp; teknisi · <code>BACKBONE</code> masuk enum ·
+      rantai ODP→ODP palsu dicabut (yang cascade tetap sah) · <code>from_port_number</code> ditandai usang.</td></tr>
+</table>
+
+<div class="card">
+<strong>Yang sengaja TIDAK dikerjakan sekarang</strong>
+<ul>
+  <li><strong>Tiang/pole sebagai aset tersendiri</strong> (milik sendiri vs numpang) — cukup jadi atribut kabel dulu; jadi entitas kalau ISP mulai ditagih sewa tiang per titik.</li>
+  <li><strong>Sewa core / dark fiber dari operator lain</strong> — dua kolom saja nanti (<code>owner</code>, <code>leased_cores</code>), belum mendesak.</li>
+  <li><strong>Diagram skematik otomatis</strong> (auto-layout) — mahal, dan peta + layar splicing sudah menjawab pertanyaan harian.</li>
+  <li><strong>Impor massal dari Excel</strong> milik ISP — nunggu bentuk datanya stabil dulu.</li>
+  <li><strong>Proteksi ring / dual-feed ODC</strong> (jalur cadangan otomatis) — jarang di ISP menengah; model tak menghalangi kalau nanti perlu.</li>
+</ul>
+</div>
+
+<div class="card">
+<strong>Risiko yang gw lihat</strong>
+<ul>
+  <li><strong>Migrasi kabel lama.</strong> Rantai ODP→ODP yang terlanjur dibuat tidak otomatis jadi satu kabel —
+      digabung manual lewat layar baru. Backfill cuma bikin core, tidak mengarang sambungan.</li>
+  <li><strong>Potongan E menyentuh data yang sudah jalan</strong> (rasio splitter ODC/ODP dipakai perhitungan yang ada).
+      Backfill harus 1:1 supaya angka lama tidak berubah sedetik pun.</li>
+  <li><strong>Peta jadi ramai</strong> dengan dua jenis simpul baru (JB, ODF). Ikutkan ke laci setelan layer yang sudah ada.</li>
+  <li><strong>Potongan F mengubah alur pasang pelanggan</strong>: "pilih port ODP" jadi "pilih port ODP + core drop".
+      Dikerjakan sekaligus di F supaya tak setengah jalan.</li>
+  <li><strong>Anggaran redaman yang menolak</strong> bisa bikin teknisi kesal kalau datanya belum lengkap. Fase awal:
+      peringatan dulu, penolakan keras menyusul setelah data core terisi rapi.</li>
+</ul>
+</div>
+
+<p style="color:#64748b;font-size:.88rem;margin-top:2rem">Dokumen ini dibuat sebagai spesifikasi desain sebelum implementasi — bukan catatan setelahnya.</p>
+
+</div>
+</body>
+</html>
