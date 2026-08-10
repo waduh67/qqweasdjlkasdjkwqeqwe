@@ -3,6 +3,7 @@ package com.duluin.ftth.helpdesk.adapter.outbound.persistence
 import com.duluin.ftth.common.infrastructure.persistence.TenantAwareJpaEntity
 import com.duluin.ftth.helpdesk.domain.model.TicketAuthor
 import com.duluin.ftth.helpdesk.domain.model.TicketCategory
+import com.duluin.ftth.helpdesk.domain.model.TicketPriority
 import com.duluin.ftth.helpdesk.domain.model.TicketStatus
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -42,6 +43,18 @@ class TicketJpaEntity(
     @Column(nullable = false, length = 20)
     var status: TicketStatus,
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    var priority: TicketPriority,
+
+    // Operator pemegang tiket; id lintas-module tanpa FK, namanya disalin agar antrean
+    // terbaca tanpa resolusi ke module iam per baris.
+    @Column(name = "assignee_id")
+    var assigneeId: UUID?,
+
+    @Column(name = "assignee_name", length = 150)
+    var assigneeName: String?,
+
     @Column(name = "work_order_id")
     var workOrderId: UUID?,
 
@@ -53,6 +66,19 @@ class TicketJpaEntity(
 
     @Column(name = "last_activity_at", nullable = false)
     var lastActivityAt: Instant,
+
+    @Column(name = "first_response_at")
+    var firstResponseAt: Instant?,
+
+    /** Null = bola tak sedang di tangan operator (sudah dibalas / tiket tertutup). */
+    @Column(name = "response_due_at")
+    var responseDueAt: Instant?,
+
+    @Column(name = "resolution_due_at", nullable = false)
+    var resolutionDueAt: Instant,
+
+    @Column(name = "sla_alerted_at")
+    var slaAlertedAt: Instant?,
 
     @Column(name = "resolved_at")
     var resolvedAt: Instant?,

@@ -20,11 +20,27 @@ export interface TicketView {
   category: TicketCategory
   subject: string
   status: TicketStatus
+  priority: TicketPriority
+  /** Operator pemegang tiket; null = masih di antrean bersama. */
+  assigneeId: string | null
+  assigneeName: string | null
   /** Work order hasil eskalasi; null selama keluhan belum butuh kunjungan teknisi. */
   workOrderId: string | null
   workOrderCode: string | null
   openedAt: string
   lastActivityAt: string
+  /** Balasan tim yang pertama — bahan laporan, bukan penanda SLA berjalan. */
+  firstResponseAt: string | null
+  /** Tenggat balasan yang sedang ditunggu pelanggan; null = bola tak di tangan tim. */
+  responseDueAt: string | null
+  resolutionDueAt: string
+  /**
+   * Sudah lewat tenggat, DIHITUNG SERVER. Sengaja tidak dibandingkan ulang dengan
+   * `Date.now()` di sini: jam browser operator bisa meleset dan "lewat SLA" harus
+   * sama persis dengan yang dipakai laporan.
+   */
+  responseOverdue: boolean
+  resolutionOverdue: boolean
   resolvedAt: string | null
   closedAt: string | null
 }
@@ -47,6 +63,10 @@ export interface TicketSummaryView {
   open: number
   inProgress: number
   resolved: number
+  /** Tiket hidup yang belum dipegang siapa pun. */
+  unassigned: number
+  /** Tiket hidup yang salah satu tenggat SLA-nya sudah lewat. */
+  overdue: number
 }
 
 export interface TicketFilter {
@@ -54,6 +74,9 @@ export interface TicketFilter {
   status?: TicketStatus | ''
   category?: TicketCategory | ''
   customerId?: string
+  assigneeId?: string
+  unassigned?: boolean
+  overdue?: boolean
 }
 
 export const TICKET_STATUS_LABEL: Record<TicketStatus, string> = {
@@ -61,6 +84,13 @@ export const TICKET_STATUS_LABEL: Record<TicketStatus, string> = {
   IN_PROGRESS: 'Ditangani',
   RESOLVED: 'Menunggu konfirmasi',
   CLOSED: 'Selesai',
+}
+
+export const TICKET_PRIORITY_LABEL: Record<TicketPriority, string> = {
+  LOW: 'Rendah',
+  NORMAL: 'Normal',
+  HIGH: 'Tinggi',
+  URGENT: 'Mendesak',
 }
 
 export const TICKET_CATEGORY_LABEL: Record<TicketCategory, string> = {
@@ -77,6 +107,9 @@ export function listTickets(filter: TicketFilter = {}, size = 100): Promise<Page
   if (filter.status) params.set('status', filter.status)
   if (filter.category) params.set('category', filter.category)
   if (filter.customerId) params.set('customerId', filter.customerId)
+  if (filter.assigneeId) params.set('assigneeId', filter.assigneeId)
+  if (filter.unassigned) params.set('unassigned', 'true')
+  if (filter.overdue) params.set('overdue', 'true')
   return api.get<PageResponse<TicketView>>(`/api/helpdesk/tickets?${params}`)
 }
 
@@ -89,6 +122,14 @@ export const replyTicket = (id: string, body: string) =>
 
 export const changeTicketStatus = (id: string, status: TicketStatus) =>
   api.post<TicketDetail>(`/api/helpdesk/tickets/${id}/status`, { status })
+
+/** `userId` null mengembalikan tiket ke antrean bersama. */
+export const assignTicket = (id: string, userId: string | null) =>
+  api.post<TicketDetail>(`/api/helpdesk/tickets/${id}/assignee`, { userId })
+
+/** Menggeser kedua tenggat SLA tiket sekaligus. */
+export const changeTicketPriority = (id: string, priority: TicketPriority) =>
+  api.post<TicketDetail>(`/api/helpdesk/tickets/${id}/priority`, { priority })
 
 /** Terbitkan work order REPAIR dari keluhan ini; satu tiket hanya boleh sekali. */
 export const escalateTicket = (id: string, priority: TicketPriority, note?: string) =>

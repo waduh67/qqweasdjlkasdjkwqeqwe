@@ -6,6 +6,7 @@ import com.duluin.ftth.helpdesk.application.port.inbound.TicketFilter
 import com.duluin.ftth.helpdesk.domain.model.Ticket
 import com.duluin.ftth.helpdesk.domain.model.TicketMessage
 import com.duluin.ftth.helpdesk.domain.model.TicketStatus
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -31,4 +32,17 @@ interface TicketRepository {
 
     /** Tiket pelanggan yang belum ditutup — rem sederhana agar portal tak jadi corong spam. */
     fun countOpenOf(customerId: UUID): Long
+
+    /** Tiket hidup yang belum dipegang siapa pun — angka yang paling sering ditanya penyelia. */
+    fun countUnassigned(): Long
+
+    /**
+     * Tiket hidup yang salah satu tenggatnya sudah lewat pada [now]. Dipakai kartu ringkasan
+     * dan penjaga SLA; [onlyUnalerted] menyaring yang belum pernah diteriakkan agar penjaga
+     * tak mengulang tiket yang sama tiap ronde.
+     */
+    fun findOverdue(now: Instant, onlyUnalerted: Boolean = false): List<Ticket>
+
+    /** Cacah tiket lewat tenggat tanpa menarik barisnya — kartu ringkasan memanggilnya tiap muat. */
+    fun countOverdue(now: Instant): Long
 }

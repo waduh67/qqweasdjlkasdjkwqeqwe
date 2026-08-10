@@ -20,6 +20,9 @@ interface TicketJpaRepository :
 
     fun countByCustomerIdAndStatusNot(customerId: UUID, status: TicketStatus): Long
 
+    /** Tiket hidup yang belum dipegang siapa pun — kartu "belum ditugaskan" di kepala antrean. */
+    fun countByAssigneeIdIsNullAndStatusNot(status: TicketStatus): Long
+
     @Query("select t.status as status, count(t) as total from TicketJpaEntity t group by t.status")
     fun countGroupedByStatus(): List<TicketStatusCount>
 }

@@ -13,6 +13,7 @@ import com.duluin.ftth.helpdesk.domain.model.TicketMessage
 import com.duluin.ftth.helpdesk.domain.model.TicketStatus
 import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Component
+import java.time.Instant
 import java.util.UUID
 
 @Component
@@ -24,9 +25,16 @@ class TicketPersistenceAdapter(
     override fun save(ticket: Ticket): Ticket {
         val entity = jpa.findById(ticket.id).orElse(null)?.apply {
             status = ticket.status
+            priority = ticket.priority
+            assigneeId = ticket.assigneeId
+            assigneeName = ticket.assigneeName
             workOrderId = ticket.workOrderId
             workOrderCode = ticket.workOrderCode
             lastActivityAt = ticket.lastActivityAt
+            firstResponseAt = ticket.firstResponseAt
+            responseDueAt = ticket.responseDueAt
+            resolutionDueAt = ticket.resolutionDueAt
+            slaAlertedAt = ticket.slaAlertedAt
             resolvedAt = ticket.resolvedAt
             closedAt = ticket.closedAt
         } ?: TicketJpaEntity(
@@ -38,10 +46,17 @@ class TicketPersistenceAdapter(
             subject = ticket.subject,
             description = ticket.description,
             status = ticket.status,
+            priority = ticket.priority,
+            assigneeId = ticket.assigneeId,
+            assigneeName = ticket.assigneeName,
             workOrderId = ticket.workOrderId,
             workOrderCode = ticket.workOrderCode,
             openedAt = ticket.openedAt,
             lastActivityAt = ticket.lastActivityAt,
+            firstResponseAt = ticket.firstResponseAt,
+            responseDueAt = ticket.responseDueAt,
+            resolutionDueAt = ticket.resolutionDueAt,
+            slaAlertedAt = ticket.slaAlertedAt,
             resolvedAt = ticket.resolvedAt,
             closedAt = ticket.closedAt,
         )
@@ -76,6 +91,8 @@ class TicketPersistenceAdapter(
             .and(hasStatus(filter.status))
             .and(hasCategory(filter.category))
             .and(hasCustomer(filter.customerId))
+            .and(hasAssignee(filter.assigneeId, filter.unassigned))
+            .and(isOverdue(filter.overdue, Instant.now()))
         return jpa.findAll(spec, pageRequest.toPageable()).toDomainPage().map { it.toDomain() }
     }
 
@@ -87,6 +104,20 @@ class TicketPersistenceAdapter(
 
     override fun countOpenOf(customerId: UUID): Long =
         jpa.countByCustomerIdAndStatusNot(customerId, TicketStatus.CLOSED)
+
+    override fun countUnassigned(): Long =
+        jpa.countByAssigneeIdIsNullAndStatusNot(TicketStatus.CLOSED)
+
+    override fun findOverdue(now: Instant, onlyUnalerted: Boolean): List<Ticket> {
+        val spec = isOverdue(true, now).and(
+            Specification<TicketJpaEntity> { root, _, cb ->
+                if (onlyUnalerted) cb.isNull(root.get<Instant>("slaAlertedAt")) else cb.conjunction()
+            },
+        )
+        return jpa.findAll(spec).map { it.toDomain() }
+    }
+
+    override fun countOverdue(now: Instant): Long = jpa.count(isOverdue(true, now))
 
     private fun matchesText(query: String?) = Specification<TicketJpaEntity> { root, _, cb ->
         val needle = query?.trim()?.lowercase().orEmpty()
@@ -113,6 +144,39 @@ class TicketPersistenceAdapter(
     private fun hasCustomer(customerId: UUID?) = Specification<TicketJpaEntity> { root, _, cb ->
         if (customerId == null) cb.conjunction() else cb.equal(root.get<UUID>("customerId"), customerId)
     }
+
+    /** [unassigned] menang atas [assigneeId] bila keduanya terisi — "belum dipegang siapa pun". */
+    private fun hasAssignee(assigneeId: UUID?, unassigned: Boolean?) = Specification<TicketJpaEntity> { root, _, cb ->
+        when {
+            unassigned == true -> cb.isNull(root.get<UUID>("assigneeId"))
+            assigneeId != null -> cb.equal(root.get<UUID>("assigneeId"), assigneeId)
+            else -> cb.conjunction()
+        }
+    }
+
+    /**
+     * Cermin [Ticket.slaOverdue] dalam SQL. Hanya menyaring saat diminta `true`; "belum lewat"
+     * tak pernah jadi filter tersendiri karena antrean bawaan sudah berisi keduanya.
+     *
+     * `response_due_at < now` aman terhadap NULL: perbandingan dengan NULL bernilai unknown,
+     * jadi tiket yang bolanya tak di tangan operator tak pernah ikut tersaring.
+     */
+    private fun isOverdue(overdue: Boolean?, now: Instant) = Specification<TicketJpaEntity> { root, _, cb ->
+        if (overdue != true) {
+            cb.conjunction()
+        } else {
+            cb.and(
+                cb.notEqual(root.get<TicketStatus>("status"), TicketStatus.CLOSED),
+                cb.or(
+                    cb.lessThan(root.get("responseDueAt"), now),
+                    cb.and(
+                        cb.isNull(root.get<Instant>("resolvedAt")),
+                        cb.lessThan(root.get("resolutionDueAt"), now),
+                    ),
+                ),
+            )
+        }
+    }
 }
 
 private fun TicketJpaEntity.toDomain() = Ticket.rehydrate(
@@ -125,10 +189,17 @@ private fun TicketJpaEntity.toDomain() = Ticket.rehydrate(
     subject = subject,
     description = description,
     status = status,
+    priority = priority,
+    assigneeId = assigneeId,
+    assigneeName = assigneeName,
     workOrderId = workOrderId,
     workOrderCode = workOrderCode,
     openedAt = openedAt,
     lastActivityAt = lastActivityAt,
+    firstResponseAt = firstResponseAt,
+    responseDueAt = responseDueAt,
+    resolutionDueAt = resolutionDueAt,
+    slaAlertedAt = slaAlertedAt,
     resolvedAt = resolvedAt,
     closedAt = closedAt,
 )

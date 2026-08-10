@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiError } from '../api/client'
+import type { User } from '../api/types'
 import {
+  assignTicket,
+  changeTicketPriority,
   changeTicketStatus,
   escalateTicket,
   getTicket,
@@ -9,6 +12,7 @@ import {
   listTickets,
   replyTicket,
   TICKET_CATEGORY_LABEL,
+  TICKET_PRIORITY_LABEL,
   TICKET_STATUS_LABEL,
   type TicketCategory,
   type TicketDetail,
@@ -18,10 +22,12 @@ import {
   type TicketSummaryView,
   type TicketView,
 } from '../api/helpdesk'
+import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column } from '@/components/organisms'
-import { Button, EmptyState, SelectField, TextareaField, Toolbar } from '@/components/atoms'
+import { Button, EmptyState, Segmented, SelectField, TextareaField, Toolbar } from '@/components/atoms'
 import { Drawer, PageHeader, SearchInput } from '@/components/molecules'
+import { useStaff } from '@/hooks/useStaff'
 import { useToast } from '@/system'
 import { IconChat } from '@/components/atoms/icons'
 
@@ -39,6 +45,12 @@ const AUTHOR_LABEL: Record<TicketMessageView['author'], string> = {
   SYSTEM: 'Sistem',
 }
 
+/** Prioritas hanya diwarnai saat di atas normal — kalau semuanya berwarna, tak ada yang menonjol. */
+const PRIORITY_TONE: Partial<Record<TicketPriority, string>> = {
+  HIGH: 'var(--warning-ink)',
+  URGENT: 'var(--critical-ink)',
+}
+
 function timeAgo(iso: string): string {
   const secs = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000))
   if (secs < 60) return 'baru saja'
@@ -48,6 +60,36 @@ function timeAgo(iso: string): string {
   if (hours < 24) return `${hours} jam lalu`
   return `${Math.floor(hours / 24)} hari lalu`
 }
+
+/** Jarak waktu ringkas ("2j 10m") — dipakai dua arah: sisa tenggat maupun keterlambatan. */
+function gapSingkat(iso: string): string {
+  const mins = Math.max(0, Math.round(Math.abs(new Date(iso).getTime() - Date.now()) / 60000))
+  if (mins < 60) return `${mins}m`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return mins % 60 ? `${hours}j ${mins % 60}m` : `${hours}j`
+  return `${Math.floor(hours / 24)}h`
+}
+
+/**
+ * Ringkasan janji waktu satu tiket dalam satu baris.
+ *
+ * Status "telat" diambil dari flag SERVER (`responseOverdue`/`resolutionOverdue`), bukan
+ * dibandingkan ulang di sini — jam browser bisa meleset dan angka yang sama dipakai
+ * laporan. Yang dihitung lokal cuma jaraknya, karena itu memang harus berdetak.
+ */
+function slaInfo(t: TicketView): { label: string; tone?: string } {
+  if (t.status === 'CLOSED') return { label: '—' }
+  if (t.responseOverdue) return { label: `Telat balas ${gapSingkat(t.responseDueAt!)}`, tone: 'var(--critical-ink)' }
+  if (t.resolutionOverdue) {
+    return { label: `Telat selesai ${gapSingkat(t.resolutionDueAt)}`, tone: 'var(--serious-ink)' }
+  }
+  if (t.responseDueAt) return { label: `Balas dalam ${gapSingkat(t.responseDueAt)}` }
+  if (t.resolvedAt) return { label: '—' }
+  return { label: `Selesai dalam ${gapSingkat(t.resolutionDueAt)}` }
+}
+
+/** Sudut pandang antrean; "saya" hanya masuk akal bila operator memang punya tiket. */
+type QueueView = 'semua' | 'saya' | 'antrean' | 'telat'
 
 /**
  * Meja bantuan: keluhan yang dilaporkan PELANGGAN SENDIRI dari portal — beda dari
@@ -59,6 +101,7 @@ function timeAgo(iso: string): string {
  */
 export function HelpdeskPage() {
   const { can } = useCan()
+  const { user } = useAuth()
   const toast = useToast()
   const [tickets, setTickets] = useState<TicketView[]>([])
   const [summary, setSummary] = useState<TicketSummaryView | null>(null)
@@ -67,9 +110,11 @@ export function HelpdeskPage() {
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<TicketStatus | ''>('')
   const [categoryFilter, setCategoryFilter] = useState<TicketCategory | ''>('')
+  const [queueView, setQueueView] = useState<QueueView>('semua')
 
   const canReply = can('helpdesk.ticket.reply')
   const canManage = can('helpdesk.ticket.manage')
+  const staff = useStaff(canManage)
 
   const reload = useCallback(async () => {
     try {
@@ -108,8 +153,21 @@ export function HelpdeskPage() {
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
+    const cocokAntrean = (t: TicketView) => {
+      switch (queueView) {
+        case 'saya':
+          return t.assigneeId === user?.id
+        case 'antrean':
+          return !t.assigneeId && t.status !== 'CLOSED'
+        case 'telat':
+          return t.responseOverdue || t.resolutionOverdue
+        default:
+          return true
+      }
+    }
     return tickets.filter(
       (t) =>
+        cocokAntrean(t) &&
         (!statusFilter || t.status === statusFilter) &&
         (!categoryFilter || t.category === categoryFilter) &&
         (!q ||
@@ -117,7 +175,7 @@ export function HelpdeskPage() {
           t.subject.toLowerCase().includes(q) ||
           t.customerName.toLowerCase().includes(q)),
     )
-  }, [tickets, query, statusFilter, categoryFilter])
+  }, [tickets, query, statusFilter, categoryFilter, queueView, user?.id])
 
   const columns: Column<TicketView>[] = [
     {
@@ -127,7 +185,14 @@ export function HelpdeskPage() {
       cell: (t) => (
         <div className="stack" style={{ gap: '0.2rem' }}>
           <strong>{t.subject}</strong>
-          <span className="muted tnum" style={{ fontSize: '0.78rem' }}>{t.code}</span>
+          <span className="muted tnum" style={{ fontSize: '0.78rem' }}>
+            {t.code}
+            {t.priority !== 'NORMAL' && (
+              <span style={{ color: PRIORITY_TONE[t.priority], marginLeft: '0.4rem' }}>
+                · {TICKET_PRIORITY_LABEL[t.priority]}
+              </span>
+            )}
+          </span>
         </div>
       ),
     },
@@ -146,6 +211,27 @@ export function HelpdeskPage() {
       header: 'Kategori',
       sortValue: (t) => t.category,
       cell: (t) => <span className="badge">{TICKET_CATEGORY_LABEL[t.category] ?? t.category}</span>,
+    },
+    {
+      key: 'assignee',
+      header: 'Penanggung jawab',
+      // Yang belum dipegang siapa pun diurut paling awal: itulah yang butuh keputusan.
+      sortValue: (t) => t.assigneeName ?? '',
+      cell: (t) =>
+        t.assigneeName ? (
+          <span>{t.assigneeName}</span>
+        ) : (
+          <span className="muted">Belum ditugaskan</span>
+        ),
+    },
+    {
+      key: 'sla',
+      header: 'SLA',
+      sortValue: (t) => t.responseDueAt ?? t.resolutionDueAt,
+      cell: (t) => {
+        const sla = slaInfo(t)
+        return <span style={{ color: sla.tone, fontSize: '0.82rem' }}>{sla.label}</span>
+      },
     },
     {
       key: 'workOrder',
@@ -198,10 +284,32 @@ export function HelpdeskPage() {
             tone="var(--good-ink)"
             hint="pelanggan bisa membuka lagi"
           />
+          <SummaryCard
+            label="Belum ditugaskan"
+            value={summary.unassigned}
+            hint="milik semua sekaligus tak seorang pun"
+          />
+          <SummaryCard
+            label="Lewat SLA"
+            value={summary.overdue}
+            tone={summary.overdue > 0 ? 'var(--critical-ink)' : undefined}
+            hint="janji waktu terlewat"
+          />
         </div>
       )}
 
       <Toolbar>
+        <Segmented
+          ariaLabel="Sudut pandang antrean"
+          value={queueView}
+          onChange={(v) => setQueueView(v)}
+          options={[
+            { value: 'semua', label: 'Semua' },
+            { value: 'saya', label: 'Tugas saya' },
+            { value: 'antrean', label: 'Belum ditugaskan' },
+            { value: 'telat', label: 'Lewat SLA' },
+          ]}
+        />
         <SearchInput value={query} onChange={setQuery} placeholder="Cari kode, judul, atau pelanggan…" />
         <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value as TicketStatus | '')}>
           <option value="">Semua status</option>
@@ -246,9 +354,23 @@ export function HelpdeskPage() {
             detail={detail}
             canReply={canReply}
             canManage={canManage}
+            staff={staff}
+            currentUserId={user?.id}
             onReply={(body) => act(() => replyTicket(detail.ticket.id, body), 'Balasan terkirim')}
             onStatus={(status) =>
               act(() => changeTicketStatus(detail.ticket.id, status), `Status jadi ${TICKET_STATUS_LABEL[status]}`)
+            }
+            onAssign={(userId) =>
+              act(
+                () => assignTicket(detail.ticket.id, userId),
+                userId ? 'Tiket ditugaskan' : 'Tiket dikembalikan ke antrean',
+              )
+            }
+            onPriority={(priority) =>
+              act(
+                () => changeTicketPriority(detail.ticket.id, priority),
+                `Prioritas jadi ${TICKET_PRIORITY_LABEL[priority]}`,
+              )
             }
             onEscalate={(priority, note) =>
               act(() => escalateTicket(detail.ticket.id, priority, note), 'Work order diterbitkan')
@@ -284,25 +406,39 @@ function TicketDetailBody({
   detail,
   canReply,
   canManage,
+  staff,
+  currentUserId,
   onReply,
   onStatus,
+  onAssign,
+  onPriority,
   onEscalate,
 }: {
   detail: TicketDetail
   canReply: boolean
   canManage: boolean
+  staff: User[]
+  currentUserId?: string
   onReply: (body: string) => Promise<void>
   onStatus: (status: TicketStatus) => Promise<void>
+  onAssign: (userId: string | null) => Promise<void>
+  onPriority: (priority: TicketPriority) => Promise<void>
   onEscalate: (priority: TicketPriority, note?: string) => Promise<void>
 }) {
   const t = detail.ticket
   const open = t.status !== 'CLOSED'
+  const sla = slaInfo(t)
   return (
     <div className="stack" style={{ gap: '1.1rem' }}>
       <div className="row wrap" style={{ gap: '0.4rem' }}>
         <span className={`badge ${STATUS_TONE[t.status]}`}>{TICKET_STATUS_LABEL[t.status]}</span>
         <span className="badge">{TICKET_CATEGORY_LABEL[t.category] ?? t.category}</span>
         <span className="badge tnum">{t.code}</span>
+        {t.priority !== 'NORMAL' && (
+          <span className="badge" style={{ color: PRIORITY_TONE[t.priority] }}>
+            {TICKET_PRIORITY_LABEL[t.priority]}
+          </span>
+        )}
         {t.workOrderId && (
           <Link to={`/work-orders/${t.workOrderId}`} className="badge accent">{t.workOrderCode}</Link>
         )}
@@ -311,9 +447,20 @@ function TicketDetailBody({
       <div className="stack" style={{ gap: '0.15rem' }}>
         <Link to={`/customers/${t.customerId}`}>{t.customerName}</Link>
         <span className="muted" style={{ fontSize: '0.78rem' }}>
-          Dilaporkan {new Date(t.openedAt).toLocaleString('id-ID')}
+          Dilaporkan {new Date(t.openedAt).toLocaleString('id-ID')} · {t.assigneeName ?? 'belum ditugaskan'}
         </span>
+        {open && <span style={{ fontSize: '0.78rem', color: sla.tone ?? 'var(--text-2)' }}>{sla.label}</span>}
       </div>
+
+      {canManage && open && (
+        <AssignmentControls
+          ticket={t}
+          staff={staff}
+          currentUserId={currentUserId}
+          onAssign={onAssign}
+          onPriority={onPriority}
+        />
+      )}
 
       {canManage && open && <ManageActions ticket={t} onStatus={onStatus} onEscalate={onEscalate} />}
 
@@ -340,6 +487,79 @@ function TicketDetailBody({
   )
 }
 
+/**
+ * Penanggung jawab & prioritas. Keduanya langsung berlaku begitu dipilih — tanpa tombol
+ * "Simpan": ini keputusan sekali-klik yang sering diambil sambil menelusuri antrean, dan
+ * langkah konfirmasi tambahan hanya membuat orang malas menugaskan sama sekali.
+ *
+ * "Ambil tiket ini" ditaruh terpisah karena itulah gerakan yang paling sering dipakai:
+ * operator yang membuka keluhan dan memutuskan mengerjakannya sendiri.
+ */
+function AssignmentControls({
+  ticket,
+  staff,
+  currentUserId,
+  onAssign,
+  onPriority,
+}: {
+  ticket: TicketView
+  staff: User[]
+  currentUserId?: string
+  onAssign: (userId: string | null) => Promise<void>
+  onPriority: (priority: TicketPriority) => Promise<void>
+}) {
+  const [busy, setBusy] = useState(false)
+
+  const run = async (fn: () => Promise<void>) => {
+    setBusy(true)
+    try {
+      await fn()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Nama pemegang tiket tetap muncul walau ia tak ada di daftar (nonaktif setelah ditugaskan,
+  // atau operator ini tak berizin melihat daftar user) — kalau tidak, pemilihnya akan
+  // tampak kosong dan seolah tiketnya tak bertuan.
+  const pilihan = staff.some((u) => u.id === ticket.assigneeId)
+    ? staff
+    : ticket.assigneeId
+      ? [{ id: ticket.assigneeId, name: ticket.assigneeName ?? 'Operator' } as User, ...staff]
+      : staff
+
+  return (
+    <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
+      <SelectField
+        label="Penanggung jawab"
+        value={ticket.assigneeId ?? ''}
+        disabled={busy}
+        onChange={(_, data) => void run(() => onAssign(data.value || null))}
+      >
+        <option value="">Belum ditugaskan</option>
+        {pilihan.map((u) => (
+          <option key={u.id} value={u.id}>{u.name}</option>
+        ))}
+      </SelectField>
+      <SelectField
+        label="Prioritas"
+        value={ticket.priority}
+        disabled={busy}
+        onChange={(_, data) => void run(() => onPriority(data.value as TicketPriority))}
+      >
+        {Object.entries(TICKET_PRIORITY_LABEL).map(([value, label]) => (
+          <option key={value} value={value}>{label}</option>
+        ))}
+      </SelectField>
+      {currentUserId && ticket.assigneeId !== currentUserId && (
+        <Button variant="subtle" disabled={busy} onClick={() => void run(() => onAssign(currentUserId))}>
+          Ambil tiket ini
+        </Button>
+      )}
+    </div>
+  )
+}
+
 /** Ubah status & eskalasi; keduanya izin `helpdesk.ticket.manage`. */
 function ManageActions({
   ticket,
@@ -351,7 +571,9 @@ function ManageActions({
   onEscalate: (priority: TicketPriority, note?: string) => Promise<void>
 }) {
   const [escalating, setEscalating] = useState(false)
-  const [priority, setPriority] = useState<TicketPriority>('NORMAL')
+  // Ikut prioritas tiketnya, bukan selalu NORMAL: keluhan mendesak yang lahir jadi work order
+  // biasa adalah cara paling sunyi untuk kehilangan urgensi di tengah jalan.
+  const [priority, setPriority] = useState<TicketPriority>(ticket.priority)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -398,10 +620,9 @@ function ManageActions({
             value={priority}
             onChange={(_, data) => setPriority(data.value as TicketPriority)}
           >
-            <option value="LOW">Rendah</option>
-            <option value="NORMAL">Normal</option>
-            <option value="HIGH">Tinggi</option>
-            <option value="URGENT">Mendesak</option>
+            {Object.entries(TICKET_PRIORITY_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
           </SelectField>
           <TextareaField
             label="Catatan untuk teknisi (opsional)"

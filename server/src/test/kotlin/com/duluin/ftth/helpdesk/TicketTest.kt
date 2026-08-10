@@ -5,10 +5,12 @@ import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.helpdesk.domain.model.Ticket
 import com.duluin.ftth.helpdesk.domain.model.TicketAuthor
 import com.duluin.ftth.helpdesk.domain.model.TicketCategory
+import com.duluin.ftth.helpdesk.domain.model.TicketPriority
 import com.duluin.ftth.helpdesk.domain.model.TicketStatus
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 
@@ -134,5 +136,106 @@ class TicketTest {
         assertThatThrownBy { t.replyByCustomer("   ", at.plusSeconds(60)) }
             .isInstanceOf(ValidationException::class.java)
         assertThat(t.pendingMessages()).isEmpty()
+    }
+
+    @Test
+    fun `tiket baru lahir dengan dua tenggat sesuai prioritas normalnya`() {
+        val t = ticket()
+
+        assertThat(t.priority).isEqualTo(TicketPriority.NORMAL)
+        assertThat(t.responseDueAt).isEqualTo(at.plus(Duration.ofHours(4)))
+        assertThat(t.resolutionDueAt).isEqualTo(at.plus(Duration.ofHours(24)))
+        assertThat(t.slaOverdue(at.plusSeconds(60))).isFalse()
+    }
+
+    @Test
+    fun `tenggat balasan yang lewat menandai tiket telat`() {
+        val t = ticket()
+
+        val lewat = at.plus(Duration.ofHours(5))
+        assertThat(t.responseOverdue(lewat)).isTrue()
+        assertThat(t.resolutionOverdue(lewat)).isFalse()
+    }
+
+    @Test
+    fun `balasan operator menghentikan jam balasan, bukan jam penyelesaian`() {
+        val t = ticket()
+
+        t.replyByOperator(operatorId, "Rina", "Sedang kami cek.", at.plusSeconds(60))
+
+        assertThat(t.responseDueAt).isNull()
+        assertThat(t.firstResponseAt).isEqualTo(at.plusSeconds(60))
+        // Sudah dibalas, tapi belum tuntas: lewat 24 jam tetap terhitung telat selesai.
+        assertThat(t.responseOverdue(at.plus(Duration.ofHours(25)))).isFalse()
+        assertThat(t.resolutionOverdue(at.plus(Duration.ofHours(25)))).isTrue()
+    }
+
+    @Test
+    fun `pelanggan yang membalas lagi memulai ulang jam balasan`() {
+        val t = ticket()
+        t.replyByOperator(operatorId, "Rina", "Sudah kami cek, coba restart.", at.plusSeconds(60))
+
+        val balasan = at.plus(Duration.ofHours(2))
+        t.replyByCustomer("Masih mati.", balasan)
+
+        // Bukan "tenggat balasan pertama": pelanggan yang menunggu lagi harus terlihat menunggu.
+        assertThat(t.responseDueAt).isEqualTo(balasan.plus(Duration.ofHours(4)))
+        assertThat(t.firstResponseAt).isEqualTo(at.plusSeconds(60))
+    }
+
+    @Test
+    fun `menaikkan prioritas memperpendek sisa waktu, bukan memperpanjangnya`() {
+        val t = ticket()
+
+        t.changePriority(TicketPriority.URGENT, at.plus(Duration.ofHours(3)))
+
+        // Jam mulainya dipertahankan: 4 jam sejak dibuka jadi 30 menit sejak dibuka —
+        // tiket yang sudah 3 jam menganggur langsung terlihat telat, bukan dapat waktu baru.
+        assertThat(t.responseDueAt).isEqualTo(at.plus(Duration.ofMinutes(30)))
+        assertThat(t.resolutionDueAt).isEqualTo(at.plus(Duration.ofHours(4)))
+        assertThat(t.responseOverdue(at.plus(Duration.ofHours(3)))).isTrue()
+    }
+
+    @Test
+    fun `tiket yang dibuka kembali mendapat ronde tenggat yang baru`() {
+        val t = ticket()
+        t.changeStatus(TicketStatus.RESOLVED, operatorId, "Rina", at.plusSeconds(60))
+
+        val dibukaLagi = at.plus(Duration.ofDays(2))
+        t.changeStatus(TicketStatus.OPEN, operatorId, "Rina", dibukaLagi)
+
+        assertThat(t.responseDueAt).isEqualTo(dibukaLagi.plus(Duration.ofHours(4)))
+        assertThat(t.resolutionDueAt).isEqualTo(dibukaLagi.plus(Duration.ofHours(24)))
+        assertThat(t.slaOverdue(dibukaLagi)).isFalse()
+    }
+
+    @Test
+    fun `penugasan tak mengubah status dan tak menulis apa pun ke utas`() {
+        val t = ticket()
+
+        t.assignTo(operatorId, "Rina", at.plusSeconds(60))
+
+        assertThat(t.assigneeId).isEqualTo(operatorId)
+        assertThat(t.assigneeName).isEqualTo("Rina")
+        assertThat(t.status).isEqualTo(TicketStatus.OPEN)
+        // Utasnya dibaca pelanggan; pembagian kerja internal bukan urusan mereka.
+        assertThat(t.pendingMessages()).isEmpty()
+
+        t.assignTo(null, null, at.plusSeconds(120))
+        assertThat(t.assigneeId).isNull()
+        assertThat(t.assigneeName).isNull()
+    }
+
+    @Test
+    fun `penanda peringatan SLA dibersihkan begitu tiketnya bergerak`() {
+        val t = ticket()
+        t.markSlaAlerted(at.plus(Duration.ofHours(5)))
+        assertThat(t.slaAlertedAt).isNotNull()
+
+        t.replyByOperator(operatorId, "Rina", "Maaf terlambat, sedang kami cek.", at.plus(Duration.ofHours(6)))
+
+        // Kalau penandanya dibiarkan, pelanggaran tenggat penyelesaian nanti tak akan
+        // pernah diteriakkan lagi.
+        assertThat(t.slaAlertedAt).isNull()
     }
 }

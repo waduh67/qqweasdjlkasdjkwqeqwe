@@ -52,11 +52,22 @@ class TicketController(
         @RequestParam(required = false) status: TicketStatus?,
         @RequestParam(required = false) category: TicketCategory?,
         @RequestParam(required = false) customerId: UUID?,
+        @RequestParam(required = false) assigneeId: UUID?,
+        @RequestParam(required = false) unassigned: Boolean?,
+        @RequestParam(required = false) overdue: Boolean?,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
     ): PageResponse<TicketView> = PageResponse.from(
         this.query.search(
-            TicketFilter(query = query, status = status, category = category, customerId = customerId),
+            TicketFilter(
+                query = query,
+                status = status,
+                category = category,
+                customerId = customerId,
+                assigneeId = assigneeId,
+                unassigned = unassigned,
+                overdue = overdue,
+            ),
             // Yang paling baru bergerak di atas: antrean bantuan dibaca dari percakapan terakhir.
             PageRequest(page, size, sort = "lastActivityAt", descending = true),
         ),
@@ -80,13 +91,24 @@ class TicketController(
     fun changeStatus(@PathVariable id: UUID, @Valid @RequestBody request: TicketStatusRequest): TicketDetail =
         manage.changeStatus(id, request.status!!)
 
+    /** `userId` kosong = tiket dikembalikan ke antrean bersama. */
+    @PostMapping("/{id}/assignee")
+    @PreAuthorize("@authz.can('helpdesk.ticket.manage')")
+    fun assign(@PathVariable id: UUID, @RequestBody request: TicketAssignRequest): TicketDetail =
+        manage.assign(id, request.userId)
+
+    @PostMapping("/{id}/priority")
+    @PreAuthorize("@authz.can('helpdesk.ticket.manage')")
+    fun changePriority(@PathVariable id: UUID, @Valid @RequestBody request: TicketPriorityRequest): TicketDetail =
+        manage.changePriority(id, request.priority!!)
+
     @PostMapping("/{id}/escalate")
     @PreAuthorize("@authz.can('helpdesk.ticket.manage')")
     fun escalate(@PathVariable id: UUID, @Valid @RequestBody request: EscalateRequest): TicketDetail =
         manage.escalate(
             id,
             EscalateTicketCommand(
-                priority = request.priority ?: TicketPriority.NORMAL,
+                priority = request.priority,
                 scheduledAt = request.scheduledAt,
                 note = request.note,
             ),
@@ -101,7 +123,16 @@ data class TicketStatusRequest(
     @field:NotNull val status: TicketStatus? = null,
 )
 
-/** Prioritas kosong = NORMAL; [note] jadi konteks tambahan di deskripsi work order. */
+/** [userId] null sengaja sah: itulah cara melepas tiket kembali ke antrean bersama. */
+data class TicketAssignRequest(
+    val userId: UUID? = null,
+)
+
+data class TicketPriorityRequest(
+    @field:NotNull val priority: TicketPriority? = null,
+)
+
+/** Prioritas kosong = ikut prioritas tiketnya; [note] jadi konteks tambahan di deskripsi work order. */
 data class EscalateRequest(
     val priority: TicketPriority? = null,
     val scheduledAt: Instant? = null,
