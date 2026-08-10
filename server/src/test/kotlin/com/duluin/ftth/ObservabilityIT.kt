@@ -85,7 +85,11 @@ class ObservabilityIT {
             .contains("ftth_job_success_age_seconds")
             .contains("ftth_job_runs_total")
             .contains("ftth_job_stalled")
-            .contains("""job="RadiusProvisioningDispatcher.dispatch"""")
+            // `job_name`, bukan `job`: label `job` sudah dipakai Prometheus untuk nama
+            // scrape-config-nya sendiri, dan yang bentrok diganti diam-diam jadi
+            // `exported_job` — aturan alert yang menyebut `job=` tak akan pernah menyala.
+            .contains("""job_name="RadiusProvisioningDispatcher.dispatch"""")
+            .doesNotContain("""ftth_job_stalled{job="""")
     }
 
     @Test

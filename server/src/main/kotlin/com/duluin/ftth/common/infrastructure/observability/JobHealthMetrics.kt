@@ -72,5 +72,12 @@ class JobHealthMetrics(
             .register(meters)
     }
 
-    private fun tagsOf(job: JobHealth): Tags = Tags.of("job", job.name, "module", job.module)
+    /**
+     * Labelnya `job_name`, BUKAN `job`: Prometheus memakai `job` untuk nama scrape-config-nya
+     * sendiri, dan label yang bentrok diam-diam diganti namanya jadi `exported_job` saat
+     * diserap. Aturan alert yang ditulis dengan `job=` akan cocok dengan hal yang sama sekali
+     * berbeda — kesalahan yang tak menimbulkan galat apa pun, cuma peringatan yang tak pernah
+     * menyala.
+     */
+    private fun tagsOf(job: JobHealth): Tags = Tags.of("job_name", job.name, "module", job.module)
 }

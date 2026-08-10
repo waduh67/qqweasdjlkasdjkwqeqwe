@@ -219,6 +219,14 @@ services:
       # di bawah cuma cermin default aplikasi; speedtest.tele2.net SUDAH DIMATIKAN
       # Tele2, jadi isi .env dengan berkas milikmu sendiri kalau fitur ini dipakai.
       FTTH_CPE_DIAGNOSTICS_DOWNLOAD_URL: ${FTTH_CPE_DIAGNOSTICS_DOWNLOAD_URL:-http://speedtest.tele2.net/10MB.zip}
+      # Pemantauan. Token metrik kosong = /actuator/prometheus TERTUTUP (profil
+      # `monitoring` tak akan bisa men-scrape apa pun). Alamat alert kosong = kemacetan
+      # pekerjaan latar cuma tercatat di log — tak ada yang tahu sampai ada yang mengeluh.
+      FTTH_METRICS_TOKEN: ${FTTH_METRICS_TOKEN:-}
+      FTTH_ALERT_EMAIL: ${FTTH_ALERT_EMAIL:-}
+      # Kolam utas penjadwal. Satu utas berarti satu job yang menggantung membekukan
+      # SEMUA job lain; naikkan kalau metrik `executor_queued_tasks` betah di atas nol.
+      FTTH_SCHEDULER_POOL_SIZE: ${FTTH_SCHEDULER_POOL_SIZE:-4}
 
   # --- Cadangan otomatis kedua database ---
   # Dua service, bukan satu, karena versi klien harus cocok dengan versi server:
@@ -301,6 +309,77 @@ services:
       - caddy_data:/data
       - caddy_config:/config
 
+  # --- Pemantauan (Prometheus + Grafana) — OPSIONAL, profile "monitoring" ---
+  # Tak ikut naik pada `docker compose up` biasa. Nyalakan dengan:
+  #     docker compose -f docker-compose.prod.yml --profile monitoring up -d
+  #
+  # Ini LAPIS KEDUA, bukan syarat: peringatan job macet lewat email dikirim aplikasi
+  # sendiri (FTTH_ALERT_EMAIL), jadi deploy tanpa profil ini tetap terjaga. Yang
+  # ditambahkan di sini adalah riwayat & grafik — dan satu hal yang mustahil dilaporkan
+  # aplikasi: ketika prosesnya sendiri yang mati, tak ada yang tersisa untuk mengirim email.
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    # Token scrape ditulis ke berkas saat start: Prometheus tak mengembangkan variabel
+    # lingkungan di berkas config-nya, dan token mentah di dalam config berarti secret
+    # yang ikut masuk Git. `$$` = biar shell container yang mengembangkan, bukan compose.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        [ -n "$$FTTH_METRICS_TOKEN" ] ||
+        { echo 'FTTH_METRICS_TOKEN kosong di .env — endpoint metrik tertutup, scrape mustahil'; exit 1; };
+        printf '%s' "$$FTTH_METRICS_TOKEN" > /prometheus/token &&
+        exec /bin/prometheus
+        --config.file=/etc/prometheus/prometheus.yml
+        --storage.tsdb.path=/prometheus
+        --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}
+        --web.enable-lifecycle
+    # Sengaja `:-` (bukan `:?`): compose menafsirkan SELURUH berkas ini walau profilnya
+    # tak dipakai, jadi `:?` di sini akan menggagalkan `up` biasa milik deploy yang tak
+    # memakai pemantauan sama sekali. Ketiadaannya diperiksa di dalam container saja.
+    environment:
+      FTTH_METRICS_TOKEN: ${FTTH_METRICS_TOKEN:-}
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/rules.yml:/etc/prometheus/rules.yml:ro
+      - promdata:/prometheus
+    # 127.0.0.1 = HANYA dari dalam VPS. Prometheus tak punya login sama sekali; membukanya
+    # ke internet berarti menyerahkan seluruh metrik operasional ke siapa saja. Aksesnya
+    # lewat terowongan SSH: ssh -L 9090:localhost:9090 <user>@<ip-vps>
+    ports:
+      - "127.0.0.1:9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    # Menolak jalan tanpa sandi admin. Grafana yang menerima sandi kosong tetap bisa
+    # login — dan "cuma di localhost" berhenti benar begitu ada satu terowongan SSH
+    # yang lupa ditutup.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >
+        [ -n "$$GF_SECURITY_ADMIN_PASSWORD" ] ||
+        { echo 'GRAFANA_ADMIN_PASSWORD wajib diisi di .env untuk profil monitoring'; exit 1; };
+        exec /run.sh
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      # Grafana diakses lewat terowongan SSH ke localhost, jadi domain/URL publik tak berlaku.
+      GF_SERVER_ROOT_URL: http://localhost:3000
+    volumes:
+      - ./monitoring/grafana/datasources.yml:/etc/grafana/provisioning/datasources/ftth.yml:ro
+      - ./monitoring/grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/ftth.yml:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafanadata:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+
 volumes:
   pgdata:
   radiusdata:
@@ -308,3 +387,5 @@ volumes:
   genieacs_mongo:
   caddy_data:
   caddy_config:
+  promdata:
+  grafanadata:

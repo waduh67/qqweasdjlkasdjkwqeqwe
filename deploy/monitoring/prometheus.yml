@@ -1,0 +1,35 @@
+# Prometheus untuk stack ftth — OPSIONAL (profile "monitoring").
+#
+# Sasarannya HANYA server aplikasi lewat jaringan internal compose. Endpoint metrik
+# tak pernah menyentuh internet: Caddy cuma meneruskan /api/*, /swagger-ui*, dan
+# /v3/api-docs*, jadi /actuator/prometheus mustahil dijangkau dari luar walaupun
+# tokennya bocor. Prometheus & Grafana sendiri diikat ke 127.0.0.1 di VPS —
+# dibuka lewat terowongan SSH, bukan dipublikasikan.
+#
+# Token dibaca dari berkas yang ditulis entrypoint container dari FTTH_METRICS_TOKEN
+# di .env — Prometheus tak mengembangkan variabel lingkungan di berkas config, dan
+# menuliskan token mentah di sini akan membuatnya ikut masuk Git.
+
+global:
+  scrape_interval: 30s
+  scrape_timeout: 10s
+  external_labels:
+    stack: ftth
+
+rule_files:
+  - /etc/prometheus/rules.yml
+
+scrape_configs:
+  - job_name: ftth-server
+    metrics_path: /actuator/prometheus
+    authorization:
+      type: Bearer
+      credentials_file: /prometheus/token
+    static_configs:
+      - targets: ['server:8080']
+
+  # Prometheus memantau dirinya sendiri; berguna untuk membedakan "job aplikasi mati"
+  # dari "yang memantaunya yang mati".
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']

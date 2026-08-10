@@ -1,0 +1,195 @@
+{
+  "uid": "ftth-jobs",
+  "title": "ftth — Pekerjaan Latar",
+  "tags": ["ftth"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Pekerjaan macet",
+      "description": "Nol adalah satu-satunya angka yang benar di sini. Selain nol, ada pekerjaan yang sudah berhenti berhasil melewati ambangnya sendiri.",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "ftth-prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(ftth_job_stalled)",
+          "datasource": { "type": "prometheus", "uid": "ftth-prometheus" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Pekerjaan terpantau",
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "ftth-prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count(ftth_job_stalled)",
+          "datasource": { "type": "prometheus", "uid": "ftth-prometheus" }
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Kegagalan 1 jam terakhir",
+      "gridPos": { "h": 5, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "ftth-prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(ftth_job_failures_total[1h]))",
+          "datasource": { "type": "prometheus", "uid": "ftth-prometheus" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Umur sukses terakhir (relatif terhadap ambang macet)",
+      "description": "Nilai 1 = tepat di ambang. Garis yang menanjak terus tanpa pernah jatuh ke bawah adalah tanda job berhenti bekerja — sering kali satu-satunya tanda yang ada.",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "ftth-prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ftth_job_success_age_seconds / on(job_name) group_left ftth_job_interval_seconds",
+          "legendFormat": "{{job_name}}",
+          "datasource": { "type": "prometheus", "uid": "ftth-prometheus" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": { "drawStyle": "line", "lineWidth": 1, "fillOpacity": 0 }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Ronde per menit",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "ftth-prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(ftth_job_runs_total[10m]) * 60",
+          "legendFormat": "{{job_name}}",
+          "datasource": { "type": "prometheus", "uid": "ftth-prometheus" }
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Lama ronde terakhir",
+      "description": "Ronde yang makin lama biasanya mendahului kemacetan: satu job yang menggantung ikut menahan job lain di kolam utas yang sama.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "ftth-prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ftth_job_duration_last_seconds",
+          "legendFormat": "{{job_name}}",
+          "datasource": { "type": "prometheus", "uid": "ftth-prometheus" }
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Antrean penjadwal",
+      "description": "Di atas nol berarti ada tugas terjadwal yang menunggu utas. Bertahan lama = kolam utas kekecilan atau ada job yang nyangkut (FTTH_SCHEDULER_POOL_SIZE).",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 22 },
+      "datasource": { "type": "prometheus", "uid": "ftth-prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "executor_queued_tasks{name=\"taskScheduler\"}",
+          "legendFormat": "antre",
+          "datasource": { "type": "prometheus", "uid": "ftth-prometheus" }
+        },
+        {
+          "refId": "B",
+          "expr": "executor_active_threads{name=\"taskScheduler\"}",
+          "legendFormat": "utas aktif",
+          "datasource": { "type": "prometheus", "uid": "ftth-prometheus" }
+        },
+        {
+          "refId": "C",
+          "expr": "executor_pool_core_threads{name=\"taskScheduler\"}",
+          "legendFormat": "ukuran kolam",
+          "datasource": { "type": "prometheus", "uid": "ftth-prometheus" }
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      }
+    }
+  ]
+}

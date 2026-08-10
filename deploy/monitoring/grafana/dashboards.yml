@@ -1,0 +1,14 @@
+# Muat dasbor dari berkas JSON di folder ini. Dasbor yang disediakan begini tak bisa
+# disimpan-ulang lewat UI (editable: false) — kalau mau mengubah, salin jadi dasbor
+# baru di Grafana, atau ubah JSON-nya di repo lalu restart container.
+apiVersion: 1
+
+providers:
+  - name: ftth
+    orgId: 1
+    folder: ftth
+    type: file
+    disableDeletion: false
+    editable: false
+    options:
+      path: /etc/grafana/dashboards

@@ -1,0 +1,13 @@
+# Sumber data Grafana — disediakan otomatis supaya tak ada langkah klik-klik setelah
+# `docker compose --profile monitoring up -d`. Alamatnya nama service compose, bukan
+# localhost: keduanya container terpisah di jaringan yang sama.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: ftth-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

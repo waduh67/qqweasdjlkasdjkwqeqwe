@@ -773,6 +773,136 @@ terenkripsi dan jangan di folder yang tersinkron sembarangan.
 
 ---
 
+## Bagian N — Pemantauan (pekerjaan latar yang diam-diam berhenti)
+
+Aplikasi ini menjalankan belasan pekerjaan latar: menerbitkan tagihan, menegakkan
+tunggakan, memoll OLT, menarik sesi RADIUS, menyinkron CPE, mengeksekusi provisioning.
+Semuanya berjalan tanpa ditonton siapa pun — dan itulah masalahnya. Kalau salah satu
+berhenti, **tak ada layar yang berubah merah**. Tagihan sekadar tak terbit bulan itu.
+Sesi PPPoE sekadar tak tercatat. Biasanya baru ketahuan seminggu kemudian, lewat
+keluhan pelanggan, dan saat itu kerusakannya sudah harus dibereskan dengan tangan.
+
+Karena itu setiap metode terjadwal mendaftarkan dirinya sendiri saat aplikasi hidup —
+tak ada daftar yang harus dirawat manual, job baru ikut terpantau otomatis — lalu
+denyutnya (mulai, sukses, gagal, lama ronde) dicatat tiap kali berjalan.
+
+### N.1 Tiga lapis, dan yang mana yang benar-benar perlu
+
+| Lapis | Perlu setelan? | Untuk apa |
+|---|---|---|
+| Halaman **Pekerjaan Latar** di app | tidak, sudah jalan | melihat kondisi saat ini |
+| **Email peringatan** | `FTTH_ALERT_EMAIL` (1 baris) | diberi tahu saat ada yang macet |
+| **Prometheus + Grafana** | profil `monitoring` (opsional) | grafik & riwayat |
+
+Yang wajib cuma satu: isi `FTTH_ALERT_EMAIL`. Dua lainnya pelengkap. Sebuah halaman
+hanya menolong kalau ada yang membukanya, dan tak ada yang membuka halaman kesehatan
+server di hari yang tenang — justru hari yang tenang itulah job-nya diam-diam mati.
+
+### N.2 Halaman "Pekerjaan Latar"
+
+Masuk sebagai admin **platform** → menu **Infrastruktur → Pekerjaan Latar**
+(`/platform/jobs`, izin `platform.ops.view`). Isinya seluruh job beserta interval,
+sukses terakhir, jumlah ronde & kegagalan, lama ronde terakhir, dan pesan galat
+terakhir bila ada. Halaman menyegarkan dirinya tiap 15 detik.
+
+Ini urusan lintas-tenant — kesehatan proses server kita sendiri, bukan urusan ISP —
+jadi admin tenant tak melihatnya sama sekali.
+
+Sengaja **tidak ada tombol "jalankan sekarang"**. Menyuntik ronde tagihan dengan
+tangan dari halaman diagnosa adalah cara termudah menerbitkan tagihan ganda.
+
+### N.3 Email peringatan (bagian yang penting)
+
+```bash
+FTTH_ALERT_EMAIL=ops@contoh.com
+```
+
+Butuh SMTP platform yang sudah terisi (`FTTH_MAIL_*`, blok "Email keluar" di `.env`) —
+tanpa itu peringatan cuma jatuh ke log server.
+
+Penjaganya memeriksa seluruh job tiap 5 menit dan menyatakan sebuah job **macet** bila
+sukses terakhirnya lebih tua dari `interval × 3`, dengan tenggang minimum 10 menit
+(supaya job berinterval 30 detik tak berteriak hanya karena satu ronde tersendat).
+Contoh: penerbit tagihan berjalan tiap 12 jam → diperingatkan setelah 36 jam tanpa
+sukses.
+
+Yang dikirim:
+
+| Kejadian | Subjek |
+|---|---|
+| pertama kali macet | `[NetOps Console] MACET: BillingScheduler.issueInvoices` |
+| masih macet (tiap 6 jam) | `[NetOps Console] MASIH MACET: …` |
+| jalan lagi | `[NetOps Console] Pulih: …` |
+
+Isinya menyebut modul, interval, berapa lama sejak sukses terakhir, jumlah ronde &
+kegagalan, dan galat terakhir. Pengingatnya ditahan 6 jam dengan sengaja: job yang mati
+semalaman akan mengirim ratusan email, dan banjir peringatan selalu berakhir jadi aturan
+filter di inbox — sesudah itu peringatan berikutnya tak pernah sampai ke siapa pun.
+
+Peringatan ini memakai SMTP **platform**, bukan kanal notifikasi tenant. Kesehatan
+server kita bukan sesuatu yang boleh dimatikan dari setelan notifikasi sebuah ISP.
+
+> **Job macet, lalu apa?** Buka halaman Pekerjaan Latar, lihat kolom galat terakhir,
+> cocokkan dengan log: `docker compose -f docker-compose.prod.yml logs --tail 300 server
+> | grep -i <NamaJob>`. Sebagian besar kemacetan bermuara pada satu ronde yang
+> menggantung (radius-db/ACS tak menjawab, tanpa timeout) dan hilang setelah
+> `restart server`. Kalau antrean penjadwal ikut menumpuk, naikkan
+> `FTTH_SCHEDULER_POOL_SIZE` — bawaannya 4 utas untuk **semua** job.
+
+### N.4 (Opsional) Prometheus + Grafana untuk grafik & riwayat
+
+Halaman dan email menjawab "sekarang sehat?". Untuk "sejak kapan melambat?" ada profil
+`monitoring` — dua container tambahan yang **tidak** ikut `up -d` biasa.
+
+Setel dulu di `.env`:
+
+```bash
+FTTH_METRICS_TOKEN=$(openssl rand -base64 32)   # tanpa ini endpoint metrik tertutup
+GRAFANA_ADMIN_PASSWORD=sandi-grafana-yang-kuat
+PROMETHEUS_RETENTION=30d
+```
+
+Lalu:
+
+```bash
+cd /opt/ftth
+docker compose -f docker-compose.prod.yml up -d server            # muat token metrik
+docker compose -f docker-compose.prod.yml --profile monitoring up -d
+```
+
+**Keduanya tidak terbuka ke internet** — Caddy hanya meneruskan `/api/*`,
+`/swagger-ui*`, dan `/v3/api-docs*`, sedangkan Prometheus & Grafana terikat di
+`127.0.0.1` VPS saja. Aksesnya lewat terowongan SSH dari laptop:
+
+```bash
+ssh -i ~/.ssh/kunci-vps -L 3000:localhost:3000 -L 9090:localhost:9090 fajar@IP-VPS
+# lalu buka http://localhost:3000  (admin / GRAFANA_ADMIN_PASSWORD)
+```
+
+Grafana sudah terisi sendiri: sumber data Prometheus + dasbor **ftth — Pekerjaan
+Latar** (pekerjaan macet, kegagalan 1 jam terakhir, umur sukses relatif terhadap ambang
+macet, ronde per menit, lama ronde, antrean penjadwal). Empat aturan alert ikut
+dimuat — server tak terjangkau, pekerjaan latar macet, sering gagal, dan penjadwal
+kehabisan utas — semuanya terlihat di `http://localhost:9090/alerts`. Prometheus di
+sini tidak mengirim notifikasi ke mana-mana (itu tugas email di N.3); ia menyimpan
+riwayat dan memperlihatkan alert yang menyala.
+
+Mematikannya lagi: `docker compose -f docker-compose.prod.yml --profile monitoring down`
+(aplikasinya tak tersentuh).
+
+> **Menulis kueri sendiri?** Nama job ada di label **`job_name`**, bukan `job`.
+> Prometheus memakai `job` untuk nama scrape-config-nya sendiri, dan label aplikasi yang
+> bentrok diganti diam-diam jadi `exported_job` saat diserap — aturan yang menyebut
+> `job="…"` tak akan pernah menyala, tanpa pesan galat apa pun.
+
+Sudah punya Prometheus sendiri? Lewati profil ini, tapi ingat `/actuator` tak
+diteruskan Caddy — jadi `https://app.contoh.com/actuator/prometheus` tak akan pernah
+menjawab. Scrape-nya harus lewat jalur lain: buka port `8080` server ke jaringan
+pemantauanmu (dibatasi firewall) atau lewat terowongan SSH, dengan header
+`Authorization: Bearer $FTTH_METRICS_TOKEN`.
+
+---
+
 ## Operasional harian
 
 | Mau apa | Perintah (di `/opt/ftth` pada VPS) |
@@ -783,6 +913,8 @@ terenkripsi dan jangan di folder yang tersinkron sembarangan.
 | Cek cadangan semalam | `sudo cat backups/app/last-backup.txt` (otomatis tiap malam — **Bagian M**) |
 | Cadangkan sekarang juga | `docker compose -f docker-compose.prod.yml exec backup sh /opt/backup/backup.sh` |
 | Latihan pemulihan | `docker compose -f docker-compose.prod.yml run --rm --entrypoint sh backup /opt/backup/restore.sh latest` |
+| Cek pekerjaan latar sehat | buka **Infrastruktur → Pekerjaan Latar** di app (**Bagian N**) |
+| Nyalakan grafik Prometheus/Grafana | `docker compose -f docker-compose.prod.yml --profile monitoring up -d` |
 | Matikan sementara | `docker compose -f docker-compose.prod.yml down` (data aman di volume) |
 
 ---
@@ -797,5 +929,8 @@ terenkripsi dan jangan di folder yang tersinkron sembarangan.
   pernah dibuka ke internet.
 - **Cadangan jalan otomatis** (Bagian M), tapi dua hal tetap tugasmu: menyalin
   `backups/` + `.env` ke luar VPS, dan sekali-sekali betul-betul mencoba memulihkannya.
+- **Isi `FTTH_ALERT_EMAIL`** (Bagian N). Pekerjaan latar gagal dengan cara paling jahat:
+  diam. Tanpa alamat ini, tagihan yang berhenti terbit baru ketahuan dari keluhan
+  pelanggan, berhari-hari kemudian.
 - **Test job di CI** butuh Postgres+Timescale; kalau rewel, bisa longgarin dengan hapus
   `needs: test` di job `build-and-push` (`.github/workflows/deploy.yml`).

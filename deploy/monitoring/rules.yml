@@ -1,0 +1,58 @@
+# Aturan peringatan Prometheus untuk stack ftth.
+#
+# Ini LAPIS KEDUA. Peringatan job macet lewat email dikirim aplikasi sendiri
+# (JobStallWatchdog → FTTH_ALERT_EMAIL) supaya deploy tanpa Prometheus pun tetap
+# terjaga. Yang di sini menangkap justru hal yang tak mungkin dilaporkan aplikasi:
+# ketika seluruh prosesnya mati, tak ada yang tersisa untuk mengirim email.
+#
+# Tanpa Alertmanager, peringatan ini muncul di halaman "Alerts" Prometheus (dan bisa
+# dijadikan panel Grafana). Pasang Alertmanager kalau mau dikirim ke Telegram/Slack.
+
+groups:
+  - name: ftth-jobs
+    rules:
+      - alert: ServerTidakTerjangkau
+        expr: up{job="ftth-server"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Server aplikasi tak bisa di-scrape"
+          description: >
+            Prometheus gagal mengambil metrik selama 2 menit. Proses mungkin mati,
+            atau tokennya berubah tanpa Prometheus ikut di-restart. Selama ini
+            berlangsung, peringatan email dari aplikasi juga TIDAK akan datang.
+
+      - alert: PekerjaanLatarMacet
+        expr: ftth_job_stalled == 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Job {{ $labels.job_name }} macet (modul {{ $labels.module }})"
+          description: >
+            Sukses terakhirnya sudah melewati ambang macet. Selama macet, pekerjaan
+            ini tak menghasilkan apa pun dan tak ada layar yang berubah karenanya.
+
+      - alert: PekerjaanLatarSeringGagal
+        expr: increase(ftth_job_failures_total[1h]) > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Job {{ $labels.job_name }} gagal berulang"
+          description: >
+            Lebih dari 5 kegagalan dalam sejam terakhir. Job-nya masih terjadwal
+            (jadi belum "macet"), tapi hasilnya tak pernah selesai.
+
+      - alert: PenjadwalKehabisanUtas
+        expr: executor_queued_tasks{name="taskScheduler"} > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Antrean penjadwal tak pernah kosong"
+          description: >
+            Ada tugas terjadwal yang menunggu utas selama 15 menit. Biasanya satu job
+            menggantung (mis. SNMP ke OLT yang tak menjawab) dan menahan job lain di
+            belakangnya. Naikkan FTTH_SCHEDULER_POOL_SIZE atau cari job yang nyangkut.
