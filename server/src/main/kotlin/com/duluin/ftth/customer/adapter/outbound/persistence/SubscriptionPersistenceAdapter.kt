@@ -6,6 +6,7 @@ import com.duluin.ftth.customer.domain.model.Subscription
 import com.duluin.ftth.customer.domain.model.SubscriptionStatus
 import org.springframework.stereotype.Component
 import java.math.BigDecimal
+import java.time.Instant
 import java.util.UUID
 
 @Component
@@ -63,6 +64,14 @@ class SubscriptionPersistenceAdapter(
 
     override fun sumMonthlyRecurringRevenue(): BigDecimal =
         jpa.sumMonthlyFeeByStatusIn(BILLABLE_STATUSES)
+
+    override fun countActivatedBetween(from: Instant, toExclusive: Instant): Long =
+        jpa.countByActivatedAtGreaterThanEqualAndActivatedAtLessThan(from, toExclusive)
+
+    override fun countTerminatedBetween(from: Instant, toExclusive: Instant): Long =
+        jpa.countByTerminatedAtGreaterThanEqualAndTerminatedAtLessThan(from, toExclusive)
+
+    override fun countLiveAt(at: Instant): Long = jpa.countLiveAt(at)
 
     override fun deleteById(id: UUID) = jpa.deleteById(id)
 

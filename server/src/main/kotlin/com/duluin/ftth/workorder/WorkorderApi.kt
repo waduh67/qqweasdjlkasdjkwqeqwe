@@ -1,6 +1,7 @@
 package com.duluin.ftth.workorder
 
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -35,7 +36,45 @@ interface WorkorderApi {
      * datang dari meja bantuan, bukan dari peta.
      */
     fun raiseRepair(command: RaiseRepairCommand): WorkOrderRef
+
+    /**
+     * Laporan kerja lapangan untuk rentang [from]..[to] (inklusif, zona server), dihitung dari WO
+     * yang SELESAI di dalamnya. Dipakai modul `reporting`; workorder tetap satu-satunya yang
+     * menyentuh tabel WO.
+     */
+    fun fieldOpsReport(from: LocalDate, to: LocalDate): FieldOpsReport
 }
+
+/**
+ * Kinerja lapangan satu tenant pada satu rentang.
+ *
+ * [completedCount] = WO yang tuntas di rentang; [completedByType] cacahnya per nama
+ * [com.duluin.ftth.workorder.domain.model.WorkOrderType]. [avgResolutionHours] = rata-rata jam
+ * dari WO dibuka sampai selesai; [avgRepairResolutionHours] = MTTR khusus perbaikan (REPAIR) —
+ * angka inilah yang biasanya dijanjikan ke pelanggan, dan mencampurnya dengan PSB/preventif
+ * membuatnya tak berarti. [avgResponseHours] = jeda dibuka→mulai dikerjakan (kecepatan respons
+ * dispatch). Semua rata-rata `null` bila tak ada data — bukan nol, karena "tak ada WO selesai"
+ * bukan berarti "selesai dalam 0 jam".
+ *
+ * [technicians] = produktivitas per teknisi di roster WO yang selesai, terbanyak dulu. Satu WO
+ * yang dikerjakan berdua dihitung untuk KEDUANYA (tim datar, tak ada porsi kontribusi), jadi
+ * jumlah kolomnya boleh melebihi [completedCount].
+ */
+data class FieldOpsReport(
+    val completedCount: Int,
+    val completedByType: Map<String, Int>,
+    val avgResolutionHours: Double?,
+    val avgRepairResolutionHours: Double?,
+    val avgResponseHours: Double?,
+    val technicians: List<TechnicianProductivity>,
+)
+
+/** Produktivitas satu teknisi: berapa WO ia tuntaskan dan rata-rata lamanya. */
+data class TechnicianProductivity(
+    val technicianId: UUID,
+    val completedCount: Int,
+    val avgResolutionHours: Double?,
+)
 
 /** Perintah membuka WO PSB dari orkestrasi onboarding; selalu bertaut ke pelanggan + langganannya. */
 data class RaisePsbCommand(

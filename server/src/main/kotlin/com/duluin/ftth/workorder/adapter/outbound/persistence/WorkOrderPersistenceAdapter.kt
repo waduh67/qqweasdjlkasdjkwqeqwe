@@ -176,6 +176,19 @@ class WorkOrderPersistenceAdapter(
         return entities.map { it.toDomain(rosters[it.id].orEmpty()) }
     }
 
+    override fun findCompletedBetween(from: Instant, toExclusive: Instant): List<WorkOrder> {
+        val spec = Specification<WorkOrderJpaEntity> { root, _, cb ->
+            cb.and(
+                cb.equal(root.get<WorkOrderStatus>("status"), WorkOrderStatus.DONE),
+                cb.greaterThanOrEqualTo(root.get("completedAt"), from),
+                cb.lessThan(root.get("completedAt"), toExclusive),
+            )
+        }
+        val entities = jpa.findAll(spec)
+        val rosters = rostersOf(entities.map { it.id })
+        return entities.map { it.toDomain(rosters[it.id].orEmpty()) }
+    }
+
     override fun deleteById(id: UUID) = jpa.deleteById(id)
 
     /** Roster teknisi satu WO. */

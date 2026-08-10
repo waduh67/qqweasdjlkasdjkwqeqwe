@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.math.BigDecimal
+import java.time.Instant
 import java.util.UUID
 
 /** Jumlah ONU terpasang per ODP — proyeksi beralias agar tidak bergantung urutan kolom. */
@@ -68,6 +69,20 @@ interface SubscriptionJpaRepository : JpaRepository<SubscriptionJpaEntity, UUID>
     /** Jumlah tarif bulanan langganan pada status tertentu (MRR = ACTIVE+ISOLATED). */
     @Query("select coalesce(sum(s.monthlyFee), 0) from SubscriptionJpaEntity s where s.status in :statuses")
     fun sumMonthlyFeeByStatusIn(@Param("statuses") statuses: Collection<SubscriptionStatus>): BigDecimal
+
+    fun countByActivatedAtGreaterThanEqualAndActivatedAtLessThan(from: Instant, toExclusive: Instant): Long
+
+    fun countByTerminatedAtGreaterThanEqualAndTerminatedAtLessThan(from: Instant, toExclusive: Instant): Long
+
+    /** Hidup pada [at] = sudah teraktivasi (≤ at) dan belum diakhiri (null atau > at). */
+    @Query(
+        """
+        select count(s) from SubscriptionJpaEntity s
+        where s.activatedAt is not null and s.activatedAt <= :at
+          and (s.terminatedAt is null or s.terminatedAt > :at)
+        """,
+    )
+    fun countLiveAt(@Param("at") at: Instant): Long
 }
 
 interface OnuJpaRepository : JpaRepository<OnuJpaEntity, UUID> {

@@ -24,6 +24,15 @@ interface IamApi {
      * scheduler langganan) — resolusi lewat indeks login non-RLS, bukan agregat user ter-scope.
      */
     fun primaryEmailForTenant(tenantId: UUID): String?
+
+    /**
+     * Resolusi sekumpulan id area menjadi namanya; id yang tak ditemukan diabaikan.
+     *
+     * Area hidup di module iam karena ia dimensi SCOPE RBAC, tapi module lain menyimpannya
+     * sebagai `uuid` polos (pelanggan, work order). Kontrak inilah yang menerjemahkan id itu jadi
+     * label yang bisa dibaca manusia — mis. laporan pendapatan per wilayah.
+     */
+    fun areasByIds(ids: Set<UUID>): List<AreaRef>
 }
 
 /** Pandangan ringkas seorang pengguna untuk konsumen lintas-module. */
@@ -32,4 +41,11 @@ data class UserRef(
     val name: String,
     val email: String,
     val active: Boolean,
+)
+
+/** Pandangan ringkas sebuah area/wilayah operasional untuk konsumen lintas-module. */
+data class AreaRef(
+    val id: UUID,
+    val code: String,
+    val name: String,
 )

@@ -147,8 +147,14 @@ tak pernah menyentuh tabel module lain — batas ini ditegakkan `ModularityTests
 - **subscriber360** — satu layar yang menyatukan riwayat seorang pelanggan dari
   semua module (tagihan, sesi, tiket, work order, perangkat) tanpa membuat
   operator berpindah-pindah halaman. Module baca-saja.
-- **reporting** — ringkasan lintas-module untuk pemilik ISP: pertumbuhan
-  pelanggan, pendapatan, gangguan, dan kinerja penyelesaian.
+- **reporting** — ringkasan lintas-module, dua sudut pandang. **Keuangan**:
+  pendapatan & tren, ARPU, **umur piutang** (0/30/60/90+ hari, termasuk yang
+  belum jatuh tempo), **pendapatan per paket & per wilayah**, dan **churn**
+  (masuk vs berhenti). **Operasional**: **MTTR** gangguan, kecepatan mulai
+  dikerjakan, **produktivitas per teknisi**, serta respons & kepatuhan SLA meja
+  bantuan. Module baca-saja tanpa tabel sendiri — ia menjahit angka dari kontrak
+  publik `billing` + `customer` + `workorder` + `helpdesk` + `iam`, karena tak
+  satu pun module boleh tahu uang, paket, dan wilayah sekaligus.
 - **vpn** — **swasembada** (tanpa taut lintas-module): VPN-as-a-service. Hub
   OpenVPN adalah infrastruktur **platform** (jalan di VPS kita, IP publik kita,
   app jadi CA-nya sendiri + installer satu-perintah). **Tenant tinggal generate
@@ -508,7 +514,7 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
 | `GET /api/helpdesk/tickets` · `/summary` · `/{id}` | `helpdesk.ticket.view` |
 | `POST /api/helpdesk/tickets/{id}/replies` · `/status` · `/escalate` | `helpdesk.ticket.reply` / `.manage` |
 | `GET/POST/PUT /api/catalog/plans` | `catalog.plan.view` / `.manage` |
-| `GET /api/reports/overview` | `reporting.report.view` |
+| `GET /api/reports/overview` · `/operations` | `reporting.report.view` |
 | `GET /api/subscriber-360/{customerId}` | `customer.customer.view` |
 | `POST /api/onboarding/psb` · `/import/pppoe` · `/import/customers` · `GET /export/customers` | `customer.customer.create` (+ `bng.access.*` untuk PPPoE) |
 | `POST /api/portal/auth/{login,forgot-password,reset-password,refresh,logout}` | publik (sesi pelanggan, terpisah dari operator) |

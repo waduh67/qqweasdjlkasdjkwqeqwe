@@ -505,6 +505,7 @@ class PlatformInvoiceGeneratorRenewTest {
         override fun findUser(id: UUID): UserRef? = null
         override fun usersByIds(ids: Set<UUID>): List<UserRef> = emptyList()
         override fun primaryEmailForTenant(tenantId: UUID): String? = email
+        override fun areasByIds(ids: Set<UUID>) = emptyList<com.duluin.ftth.iam.AreaRef>()
     }
 
     private class FakeUsageProbe : SubscriptionUsageProbe {

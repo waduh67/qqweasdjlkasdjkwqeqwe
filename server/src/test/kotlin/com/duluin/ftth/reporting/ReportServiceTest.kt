@@ -3,10 +3,25 @@ package com.duluin.ftth.reporting
 import com.duluin.ftth.billing.BillingApi
 import com.duluin.ftth.billing.BillingFinancialReport
 import com.duluin.ftth.billing.MonthlyRevenuePoint
+import com.duluin.ftth.billing.ReceivableAging
+import com.duluin.ftth.billing.SubscriptionRevenue
 import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.customer.ChurnReport
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.SubscriberStats
+import com.duluin.ftth.customer.SubscriptionDimension
+import com.duluin.ftth.helpdesk.HelpdeskReportApi
+import com.duluin.ftth.helpdesk.HelpdeskSupportReport
+import com.duluin.ftth.iam.AreaRef
+import com.duluin.ftth.iam.IamApi
+import com.duluin.ftth.iam.UserRef
 import com.duluin.ftth.reporting.application.service.ReportService
+import com.duluin.ftth.workorder.FieldOpsReport
+import com.duluin.ftth.workorder.RaisePsbCommand
+import com.duluin.ftth.workorder.RaiseRepairCommand
+import com.duluin.ftth.workorder.TechnicianProductivity
+import com.duluin.ftth.workorder.WorkOrderRef
+import com.duluin.ftth.workorder.WorkorderApi
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -16,9 +31,10 @@ import java.time.YearMonth
 import java.util.UUID
 
 /**
- * Menguji perakitan laporan: ARPU = MRR ÷ langganan billable (pembulatan & kasus nol),
- * jendela bulan tren dihitung mundur dari tanggal akhir, dan validasi rentang/trailing.
- * Fake murni — reporting tak menyentuh DB, hanya merangkai kontrak billing + customer.
+ * Menguji perakitan laporan: ARPU = MRR ÷ langganan billable (pembulatan & kasus nol), jendela
+ * bulan tren dihitung mundur dari tanggal akhir, penjahitan uang→dimensi (paket/wilayah) yang
+ * hanya bisa terjadi di modul ini, resolusi nama teknisi, dan validasi rentang/trailing.
+ * Fake murni — reporting tak menyentuh DB, hanya merangkai kontrak modul lain.
  */
 class ReportServiceTest {
 
@@ -32,10 +48,15 @@ class ReportServiceTest {
         statusCounts = mapOf("PAID" to 5, "ISSUED" to 2),
     )
 
+    private val subA = UUID.randomUUID()
+    private val subB = UUID.randomUUID()
+    private val subC = UUID.randomUUID()
+    private val areaBekasi = UUID.randomUUID()
+
     @Test
     fun `overview menghitung ARPU dan jendela tren mundur dari tanggal akhir`() {
         val billing = FakeBillingApi(finance)
-        val service = ReportService(
+        val service = service(
             billing,
             FakeCustomerApi(SubscriberStats(totalCustomers = 10, subscriptionsByStatus = mapOf("ACTIVE" to 3), billableCount = 3, mrr = BigDecimal("300000"))),
         )
@@ -52,7 +73,7 @@ class ReportServiceTest {
 
     @Test
     fun `ARPU nol saat tak ada langganan billable`() {
-        val service = ReportService(
+        val service = service(
             FakeBillingApi(finance),
             FakeCustomerApi(SubscriberStats(totalCustomers = 0, subscriptionsByStatus = emptyMap(), billableCount = 0, mrr = BigDecimal.ZERO)),
         )
@@ -63,16 +84,87 @@ class ReportServiceTest {
     }
 
     @Test
-    fun `menolak rentang terbalik`() {
-        val service = ReportService(FakeBillingApi(finance), FakeCustomerApi(zeroStats()))
+    fun `pendapatan dibedah per paket dan wilayah, terbesar dulu`() {
+        val billing = FakeBillingApi(
+            finance,
+            revenue = listOf(
+                SubscriptionRevenue(subA, BigDecimal("300000"), 3),
+                SubscriptionRevenue(subB, BigDecimal("100000"), 1),
+                SubscriptionRevenue(subC, BigDecimal("50000"), 1),
+            ),
+        )
+        val service = service(billing, FakeCustomerApi(zeroStats()))
 
-        assertThatThrownBy { service.overview(LocalDate.of(2026, 8, 31), LocalDate.of(2026, 8, 1), 6) }
+        val view = service.overview(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31), trailingMonths = 6)
+
+        assertThat(view.revenueByPackage.map { it.label }).containsExactly("Home 50M", "Home 20M")
+        assertThat(view.revenueByPackage.first().amount).isEqualByComparingTo("350000")
+        assertThat(view.revenueByPackage.first().subscriptionCount).isEqualTo(2)
+        assertThat(view.revenueByPackage.first().paidInvoiceCount).isEqualTo(4)
+        // subC tak punya wilayah → masuk penampung, bukan dibuang: total keratan = total pendapatan.
+        assertThat(view.revenueByArea.map { it.label }).containsExactly("Bekasi", "Tanpa wilayah")
+        assertThat(view.revenueByArea.sumOf { it.amount }).isEqualByComparingTo("450000")
+    }
+
+    @Test
+    fun `pendapatan tanpa dimensi tak memanggil resolusi dimensi`() {
+        val customer = FakeCustomerApi(zeroStats())
+        val service = service(FakeBillingApi(finance), customer)
+
+        val view = service.overview(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31), trailingMonths = 6)
+
+        assertThat(view.revenueByPackage).isEmpty()
+        assertThat(view.revenueByArea).isEmpty()
+        assertThat(customer.dimensionCalls).isZero()
+    }
+
+    @Test
+    fun `operations melekatkan nama teknisi dan meneruskan laporan meja bantuan`() {
+        val teknisi = UUID.randomUUID()
+        val hilang = UUID.randomUUID()
+        val workorder = FakeWorkorderApi(
+            FieldOpsReport(
+                completedCount = 5,
+                completedByType = mapOf("PSB" to 3, "REPAIR" to 2),
+                avgResolutionHours = 12.5,
+                avgRepairResolutionHours = 4.0,
+                avgResponseHours = 1.5,
+                technicians = listOf(
+                    TechnicianProductivity(teknisi, 4, 10.0),
+                    TechnicianProductivity(hilang, 1, null),
+                ),
+            ),
+        )
+        val service = service(
+            FakeBillingApi(finance),
+            FakeCustomerApi(zeroStats()),
+            workorder = workorder,
+            iam = FakeIamApi(users = mapOf(teknisi to "Budi")),
+        )
+
+        val view = service.operations(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31))
+
+        assertThat(view.fieldOps.avgRepairResolutionHours).isEqualTo(4.0)
+        assertThat(view.fieldOps.technicians.map { it.technicianName })
+            .containsExactly("Budi", "(tidak dikenal)")
+        assertThat(view.support.resolvedCount).isEqualTo(2)
+    }
+
+    @Test
+    fun `menolak rentang terbalik`() {
+        val service = service(FakeBillingApi(finance), FakeCustomerApi(zeroStats()))
+        val terbalikFrom = LocalDate.of(2026, 8, 31)
+        val terbalikTo = LocalDate.of(2026, 8, 1)
+
+        assertThatThrownBy { service.overview(terbalikFrom, terbalikTo, 6) }
+            .isInstanceOf(ValidationException::class.java)
+        assertThatThrownBy { service.operations(terbalikFrom, terbalikTo) }
             .isInstanceOf(ValidationException::class.java)
     }
 
     @Test
     fun `menolak trailingMonths di luar rentang`() {
-        val service = ReportService(FakeBillingApi(finance), FakeCustomerApi(zeroStats()))
+        val service = service(FakeBillingApi(finance), FakeCustomerApi(zeroStats()))
         val from = LocalDate.of(2026, 8, 1)
         val to = LocalDate.of(2026, 8, 15)
 
@@ -80,9 +172,19 @@ class ReportServiceTest {
         assertThatThrownBy { service.overview(from, to, 25) }.isInstanceOf(ValidationException::class.java)
     }
 
+    private fun service(
+        billing: BillingApi,
+        customer: CustomerApi,
+        workorder: WorkorderApi = FakeWorkorderApi(EMPTY_FIELD_OPS),
+        iam: IamApi = FakeIamApi(),
+    ) = ReportService(billing, customer, workorder, FakeHelpdeskReportApi(), iam)
+
     private fun zeroStats() = SubscriberStats(0, emptyMap(), 0, BigDecimal.ZERO)
 
-    private class FakeBillingApi(private val report: BillingFinancialReport) : BillingApi {
+    private class FakeBillingApi(
+        private val report: BillingFinancialReport,
+        private val revenue: List<SubscriptionRevenue> = emptyList(),
+    ) : BillingApi {
         var askedFrom: YearMonth? = null
         var askedTo: YearMonth? = null
 
@@ -93,6 +195,10 @@ class ReportServiceTest {
             askedTo = toMonth
             return listOf(MonthlyRevenuePoint(fromMonth.toString(), BigDecimal.ZERO, 0))
         }
+
+        override fun receivableAging(asOf: LocalDate) = ReceivableAging(asOf, BigDecimal.ZERO, 0, emptyList())
+
+        override fun revenueBySubscription(from: LocalDate, to: LocalDate) = revenue
 
         override fun findAccountSummary(customerId: UUID) = throw UnsupportedOperationException()
         override fun findCustomerInvoices(customerId: UUID) = throw UnsupportedOperationException()
@@ -106,8 +212,22 @@ class ReportServiceTest {
         override fun manualQrisImage() = throw UnsupportedOperationException()
     }
 
-    private class FakeCustomerApi(private val stats: SubscriberStats) : CustomerApi {
+    private inner class FakeCustomerApi(private val stats: SubscriberStats) : CustomerApi {
+        var dimensionCalls = 0
+
         override fun subscriberStats() = stats
+
+        override fun subscriptionDimensions(subscriptionIds: Set<UUID>): List<SubscriptionDimension> {
+            dimensionCalls++
+            return listOf(
+                SubscriptionDimension(subA, UUID.randomUUID(), "Home 50M", areaBekasi),
+                SubscriptionDimension(subB, UUID.randomUUID(), "Home 20M", areaBekasi),
+                SubscriptionDimension(subC, UUID.randomUUID(), "Home 50M", null),
+            ).filter { it.subscriptionId in subscriptionIds }
+        }
+
+        override fun churnReport(from: LocalDate, to: LocalDate) =
+            ChurnReport(baseCount = 10, activatedCount = 2, terminatedCount = 1, netGrowth = 1, churnRatePercent = BigDecimal("10.00"))
 
         override fun findCustomer(id: UUID) = throw UnsupportedOperationException()
         override fun findCustomersByIds(ids: Set<UUID>) = throw UnsupportedOperationException()
@@ -134,6 +254,41 @@ class ReportServiceTest {
         override fun updateCustomerBiodata(command: com.duluin.ftth.customer.UpdateCustomerBiodataCommand) = throw UnsupportedOperationException()
         override fun activateImportedSubscription(subscriptionId: UUID, activatedAt: java.time.Instant?, billingDayOfMonth: Int?) = throw UnsupportedOperationException()
         override fun overrideSubscriptionBillingDay(subscriptionId: UUID, billingDayOfMonth: Int?) = throw UnsupportedOperationException()
-        override fun findExportRows(subscriptionIds: Set<java.util.UUID>): List<com.duluin.ftth.customer.CustomerExportRow> = throw UnsupportedOperationException()
+        override fun findExportRows(subscriptionIds: Set<UUID>): List<com.duluin.ftth.customer.CustomerExportRow> = throw UnsupportedOperationException()
+    }
+
+    private class FakeWorkorderApi(private val report: FieldOpsReport) : WorkorderApi {
+        override fun fieldOpsReport(from: LocalDate, to: LocalDate) = report
+        override fun openPsbByCustomer(): Map<UUID, WorkOrderRef> = throw UnsupportedOperationException()
+        override fun raisePsb(command: RaisePsbCommand) = throw UnsupportedOperationException()
+        override fun raiseRepair(command: RaiseRepairCommand) = throw UnsupportedOperationException()
+    }
+
+    private inner class FakeIamApi(private val users: Map<UUID, String> = emptyMap()) : IamApi {
+        override fun usersByIds(ids: Set<UUID>) =
+            ids.mapNotNull { id -> users[id]?.let { UserRef(id, it, "$it@demo.ftth", true) } }
+
+        override fun areasByIds(ids: Set<UUID>) =
+            ids.filter { it == areaBekasi }.map { AreaRef(it, "BKS", "Bekasi") }
+
+        override fun findUser(id: UUID) = throw UnsupportedOperationException()
+        override fun primaryEmailForTenant(tenantId: UUID) = throw UnsupportedOperationException()
+    }
+
+    private class FakeHelpdeskReportApi : HelpdeskReportApi {
+        override fun supportReport(from: LocalDate, to: LocalDate) = HelpdeskSupportReport(
+            openedCount = 3,
+            resolvedCount = 2,
+            openedByCategory = mapOf("KONEKSI_PUTUS" to 3),
+            avgFirstResponseHours = 0.5,
+            avgResolutionHours = 6.0,
+            responseBreachedCount = 0,
+            resolutionBreachedCount = 1,
+            slaCompliancePercent = BigDecimal("50.00"),
+        )
+    }
+
+    private companion object {
+        val EMPTY_FIELD_OPS = FieldOpsReport(0, emptyMap(), null, null, null, emptyList())
     }
 }

@@ -161,6 +161,8 @@ class ExportCustomersServiceTest {
     }
 
     private class FakeCustomerApi(private val rows: List<CustomerExportRow>) : CustomerApi {
+        override fun subscriptionDimensions(subscriptionIds: Set<java.util.UUID>) = throw UnsupportedOperationException()
+        override fun churnReport(from: java.time.LocalDate, to: java.time.LocalDate) = throw UnsupportedOperationException()
         override fun findExportRows(subscriptionIds: Set<UUID>): List<CustomerExportRow> =
             rows.filter { it.subscriptionId in subscriptionIds }
 

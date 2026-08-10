@@ -227,6 +227,8 @@ class PortalSelfServiceTest {
         override fun findInvoiceForPublicLink(invoiceId: UUID) = throw UnsupportedOperationException()
         override fun payInvoiceForPublicLink(invoiceId: UUID, method: String, channel: String?) =
             throw UnsupportedOperationException()
+        override fun receivableAging(asOf: java.time.LocalDate) = throw UnsupportedOperationException()
+        override fun revenueBySubscription(from: java.time.LocalDate, to: java.time.LocalDate) = throw UnsupportedOperationException()
         override fun manualQrisImage() = throw UnsupportedOperationException()
     }
 

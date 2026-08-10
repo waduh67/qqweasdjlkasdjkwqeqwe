@@ -45,4 +45,14 @@ interface TicketRepository {
 
     /** Cacah tiket lewat tenggat tanpa menarik barisnya — kartu ringkasan memanggilnya tiap muat. */
     fun countOverdue(now: Instant): Long
+
+    /** Tiket yang DIBUKA (`openedAt`) di [from]..[toExclusive) — beban masuk periode itu. */
+    fun findOpenedBetween(from: Instant, toExclusive: Instant): List<Ticket>
+
+    /**
+     * Tiket yang SELESAI (`resolvedAt`) di [from]..[toExclusive). Dipisah dari [findOpenedBetween]
+     * karena tiket yang dibuka akhir bulan dan beres awal bulan berikutnya adalah beban bulan
+     * pertama tapi penyelesaian bulan kedua — dicampur, MTTR jadi bohong.
+     */
+    fun findResolvedBetween(from: Instant, toExclusive: Instant): List<Ticket>
 }

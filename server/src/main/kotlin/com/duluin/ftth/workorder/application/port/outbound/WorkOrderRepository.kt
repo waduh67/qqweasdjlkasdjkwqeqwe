@@ -7,6 +7,7 @@ import com.duluin.ftth.workorder.domain.model.WorkOrderApprovalStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderEvent
 import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderType
+import java.time.Instant
 import java.util.UUID
 
 /** Port persistence untuk agregat [WorkOrder]. Query ter-scope tenant otomatis (Hibernate + RLS). */
@@ -51,6 +52,13 @@ interface WorkOrderRepository {
 
     /** Semua WO ber-[type] yang masih terbuka (belum selesai/batal) — bahan pencocokan lintas-module. */
     fun findOpenByType(type: WorkOrderType): List<WorkOrder>
+
+    /**
+     * WO yang SELESAI (`completedAt`) di [from]..[toExclusive) — dasar MTTR & produktivitas
+     * teknisi. Setengah-terbuka di ujung kanan supaya batas hari/bulan tak dobel-hitung.
+     * Roster teknisi ikut terisi karena laporan produktivitas membacanya.
+     */
+    fun findCompletedBetween(from: Instant, toExclusive: Instant): List<WorkOrder>
 
     fun deleteById(id: UUID)
 }

@@ -10,7 +10,10 @@ import com.duluin.ftth.billing.MonthlyRevenuePoint
 import com.duluin.ftth.billing.PaymentMethodCatalog
 import com.duluin.ftth.billing.PaymentMethodOption
 import com.duluin.ftth.billing.PublicInvoiceRef
+import com.duluin.ftth.billing.ReceivableAging
+import com.duluin.ftth.billing.ReceivableAgingBucket
 import com.duluin.ftth.billing.StoredInstruction
+import com.duluin.ftth.billing.SubscriptionRevenue
 import com.duluin.ftth.billing.application.port.inbound.ManagePaymentGatewaySettingsUseCase
 import com.duluin.ftth.billing.application.port.inbound.ManualPaymentInstructionsView
 import com.duluin.ftth.billing.application.port.outbound.InvoiceRepository
@@ -29,6 +32,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /**
@@ -239,6 +243,53 @@ class BillingApiService(
         return points
     }
 
+    override fun receivableAging(asOf: LocalDate): ReceivableAging {
+        // Seluruh tagihan yang belum lunas — termasuk yang BELUM jatuh tempo, karena umur piutang
+        // yang hanya memuat tunggakan tak bisa menjawab "berapa yang akan masuk kalau semua bayar".
+        val unpaid = invoiceRepository.findByStatus(InvoiceStatus.ISSUED) +
+            invoiceRepository.findByStatus(InvoiceStatus.OVERDUE)
+
+        val grouped = unpaid.groupBy { agingBucketOf(it.dueDate, asOf) }
+        val buckets = AGING_BUCKETS.map { code ->
+            val rows = grouped[code].orEmpty()
+            ReceivableAgingBucket(bucket = code, amount = rows.sumOfAmount(), invoiceCount = rows.size)
+        }
+
+        return ReceivableAging(
+            asOf = asOf,
+            totalAmount = unpaid.sumOfAmount(),
+            totalInvoiceCount = unpaid.size,
+            buckets = buckets,
+        )
+    }
+
+    override fun revenueBySubscription(from: LocalDate, to: LocalDate): List<SubscriptionRevenue> {
+        val fromInstant = from.atStartOfDay(zone).toInstant()
+        val toExclusive = to.plusDays(1).atStartOfDay(zone).toInstant()
+
+        return invoiceRepository.findPaidBetween(fromInstant, toExclusive)
+            .groupBy { it.subscriptionId }
+            .map { (subscriptionId, invoices) ->
+                SubscriptionRevenue(subscriptionId, invoices.sumOfAmount(), invoices.size)
+            }
+            .sortedByDescending { it.amount }
+    }
+
+    /**
+     * Umur sebuah piutang: selisih hari antara jatuh tempo dan [asOf]. Belum lewat = `NOT_DUE`
+     * (termasuk yang jatuh tempo persis hari ini — masih ada waktu sampai tutup hari).
+     */
+    private fun agingBucketOf(dueDate: LocalDate, asOf: LocalDate): String {
+        val daysLate = ChronoUnit.DAYS.between(dueDate, asOf)
+        return when {
+            daysLate <= 0 -> "NOT_DUE"
+            daysLate <= 30 -> "D1_30"
+            daysLate <= 60 -> "D31_60"
+            daysLate <= 90 -> "D61_90"
+            else -> "D90_PLUS"
+        }
+    }
+
     private fun List<Invoice>.sumOfAmount(): BigDecimal =
         fold(BigDecimal.ZERO) { acc, inv -> acc + inv.amount }
 
@@ -252,5 +303,8 @@ class BillingApiService(
     private companion object {
         /** Batas hari→instant memakai zona server, selaras dengan penjadwal billing (LocalDate.now()). */
         val zone: ZoneId = ZoneId.systemDefault()
+
+        /** Urutan kelompok umur piutang, dari paling muda ke paling tua. */
+        val AGING_BUCKETS = listOf("NOT_DUE", "D1_30", "D31_60", "D61_90", "D90_PLUS")
     }
 }

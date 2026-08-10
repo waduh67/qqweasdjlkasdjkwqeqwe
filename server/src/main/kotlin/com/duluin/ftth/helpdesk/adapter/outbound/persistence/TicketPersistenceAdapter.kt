@@ -119,6 +119,21 @@ class TicketPersistenceAdapter(
 
     override fun countOverdue(now: Instant): Long = jpa.count(isOverdue(true, now))
 
+    override fun findOpenedBetween(from: Instant, toExclusive: Instant): List<Ticket> =
+        jpa.findAll(inHalfOpenRange("openedAt", from, toExclusive)).map { it.toDomain() }
+
+    override fun findResolvedBetween(from: Instant, toExclusive: Instant): List<Ticket> =
+        jpa.findAll(inHalfOpenRange("resolvedAt", from, toExclusive)).map { it.toDomain() }
+
+    /** `[from]..[toExclusive)` pada satu kolom waktu; NULL tak pernah lolos (perbandingan unknown). */
+    private fun inHalfOpenRange(field: String, from: Instant, toExclusive: Instant) =
+        Specification<TicketJpaEntity> { root, _, cb ->
+            cb.and(
+                cb.greaterThanOrEqualTo(root.get(field), from),
+                cb.lessThan(root.get(field), toExclusive),
+            )
+        }
+
     private fun matchesText(query: String?) = Specification<TicketJpaEntity> { root, _, cb ->
         val needle = query?.trim()?.lowercase().orEmpty()
         if (needle.isEmpty()) {

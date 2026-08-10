@@ -183,6 +183,8 @@ class PublicInvoicePaymentServiceTest {
             return findInvoiceForPublicLink(invoiceId) ?: throw NotFoundException("Tagihan tidak ditemukan")
         }
 
+        override fun receivableAging(asOf: java.time.LocalDate) = throw UnsupportedOperationException()
+        override fun revenueBySubscription(from: java.time.LocalDate, to: java.time.LocalDate) = throw UnsupportedOperationException()
         override fun manualQrisImage() = StoredObject("image/png", ByteArray(4))
         override fun paymentMethods() = PaymentMethodCatalog.methods
 

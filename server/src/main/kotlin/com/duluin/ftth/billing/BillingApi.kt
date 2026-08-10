@@ -76,7 +76,52 @@ interface BillingApi {
      * jadi deret siap digambar tanpa pemanggil menambal bolong.
      */
     fun monthlyRevenue(fromMonth: YearMonth, toMonth: YearMonth): List<MonthlyRevenuePoint>
+
+    /**
+     * Umur piutang per [asOf]: seluruh tagihan belum lunas dikelompokkan menurut berapa lama
+     * lewat jatuh tempo. Potret, bukan aliran periode — "siapa yang nunggak dan seberapa lama"
+     * hanya punya arti pada satu titik waktu.
+     */
+    fun receivableAging(asOf: LocalDate): ReceivableAging
+
+    /**
+     * Pendapatan tertagih rentang [from]..[to] (inklusif) dikelompokkan per LANGGANAN.
+     *
+     * Billing tahu langganan mana yang membayar berapa, tapi TIDAK tahu paket/wilayahnya — itu
+     * milik module `customer`/`iam`. Jadi kontrak ini sengaja berhenti di `subscriptionId`;
+     * modul `reporting`-lah yang menjahitnya jadi "pendapatan per paket" dan "per wilayah".
+     */
+    fun revenueBySubscription(from: LocalDate, to: LocalDate): List<SubscriptionRevenue>
 }
+
+/**
+ * Umur piutang satu tenant pada [asOf]. [buckets] selalu lengkap dan berurut dari yang paling
+ * muda ke paling tua, termasuk yang bernilai nol — tabel piutang yang bolong-bolong justru
+ * menyembunyikan kabar baik ("tak ada yang nunggak >90 hari").
+ */
+data class ReceivableAging(
+    val asOf: LocalDate,
+    val totalAmount: BigDecimal,
+    val totalInvoiceCount: Int,
+    val buckets: List<ReceivableAgingBucket>,
+)
+
+/**
+ * Satu kelompok umur piutang. [bucket] adalah KODE stabil yang dilabeli klien:
+ * `NOT_DUE` (belum jatuh tempo), `D1_30`, `D31_60`, `D61_90`, `D90_PLUS`.
+ */
+data class ReceivableAgingBucket(
+    val bucket: String,
+    val amount: BigDecimal,
+    val invoiceCount: Int,
+)
+
+/** Pendapatan tertagih satu langganan pada satu rentang (skala 2). */
+data class SubscriptionRevenue(
+    val subscriptionId: UUID,
+    val amount: BigDecimal,
+    val paidInvoiceCount: Int,
+)
 
 /**
  * Ringkasan keuangan satu tenant pada satu rentang. Semua nilai uang pada skala 2.

@@ -159,6 +159,8 @@ class Subscriber360ServiceTest {
         override fun updateCustomerBiodata(command: com.duluin.ftth.customer.UpdateCustomerBiodataCommand) = throw UnsupportedOperationException()
         override fun activateImportedSubscription(subscriptionId: UUID, activatedAt: java.time.Instant?, billingDayOfMonth: Int?) = throw UnsupportedOperationException()
         override fun overrideSubscriptionBillingDay(subscriptionId: UUID, billingDayOfMonth: Int?) = throw UnsupportedOperationException()
+        override fun subscriptionDimensions(subscriptionIds: Set<java.util.UUID>) = throw UnsupportedOperationException()
+        override fun churnReport(from: java.time.LocalDate, to: java.time.LocalDate) = throw UnsupportedOperationException()
         override fun findExportRows(subscriptionIds: Set<java.util.UUID>): List<com.duluin.ftth.customer.CustomerExportRow> = throw UnsupportedOperationException()
     }
 
@@ -204,6 +206,8 @@ class Subscriber360ServiceTest {
         override fun findInvoiceForPublicLink(invoiceId: UUID) = throw UnsupportedOperationException()
         override fun payInvoiceForPublicLink(invoiceId: UUID, method: String, channel: String?) =
             throw UnsupportedOperationException()
+        override fun receivableAging(asOf: java.time.LocalDate) = throw UnsupportedOperationException()
+        override fun revenueBySubscription(from: java.time.LocalDate, to: java.time.LocalDate) = throw UnsupportedOperationException()
         override fun manualQrisImage() = throw UnsupportedOperationException()
     }
 
@@ -221,6 +225,9 @@ class Subscriber360ServiceTest {
         override fun raisePsb(command: RaisePsbCommand): WorkOrderRef = throw UnsupportedOperationException()
 
         override fun raiseRepair(command: RaiseRepairCommand): WorkOrderRef = throw UnsupportedOperationException()
+
+        override fun fieldOpsReport(from: java.time.LocalDate, to: java.time.LocalDate) =
+            throw UnsupportedOperationException()
     }
 
     private companion object {

@@ -224,6 +224,8 @@ class MapServiceListOnusUnderOltTest {
         override fun overrideSubscriptionBillingDay(subscriptionId: UUID, billingDayOfMonth: Int?) =
             throw UnsupportedOperationException()
 
+        override fun subscriptionDimensions(subscriptionIds: Set<java.util.UUID>) = throw UnsupportedOperationException()
+        override fun churnReport(from: java.time.LocalDate, to: java.time.LocalDate) = throw UnsupportedOperationException()
         override fun findExportRows(subscriptionIds: Set<UUID>): List<com.duluin.ftth.customer.CustomerExportRow> =
             throw UnsupportedOperationException()
     }

@@ -1,5 +1,6 @@
 package com.duluin.ftth.reporting.adapter.inbound.web
 
+import com.duluin.ftth.reporting.application.port.inbound.OperationsReport
 import com.duluin.ftth.reporting.application.port.inbound.ReportOverview
 import com.duluin.ftth.reporting.application.port.inbound.ReportQuery
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
@@ -35,5 +36,16 @@ class ReportController(
         val end = to ?: LocalDate.now()
         val start = from ?: end.withDayOfMonth(1)
         return query.overview(start, end, trailingMonths)
+    }
+
+    @GetMapping("/operations")
+    @PreAuthorize("@authz.can('reporting.report.view')")
+    fun operations(
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) from: LocalDate?,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) to: LocalDate?,
+    ): OperationsReport {
+        val end = to ?: LocalDate.now()
+        val start = from ?: end.withDayOfMonth(1)
+        return query.operations(start, end)
     }
 }

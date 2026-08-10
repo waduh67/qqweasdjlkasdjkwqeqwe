@@ -135,5 +135,7 @@ class HelpdeskSlaSweeperTest {
         override fun countOpenOf(customerId: UUID): Long = 0
         override fun countUnassigned(): Long = 0
         override fun countOverdue(now: Instant): Long = findOverdue(now).size.toLong()
+        override fun findOpenedBetween(from: Instant, toExclusive: Instant): List<Ticket> = emptyList()
+        override fun findResolvedBetween(from: Instant, toExclusive: Instant): List<Ticket> = emptyList()
     }
 }

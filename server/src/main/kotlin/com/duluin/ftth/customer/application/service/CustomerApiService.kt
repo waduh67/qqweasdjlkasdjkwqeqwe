@@ -3,6 +3,7 @@ package com.duluin.ftth.customer.application.service
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.customer.BillableSubscription
+import com.duluin.ftth.customer.ChurnReport
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.CustomerPlacement
 import com.duluin.ftth.customer.CustomerExportRow
@@ -13,6 +14,7 @@ import com.duluin.ftth.customer.OnuRef
 import com.duluin.ftth.customer.ProvisionOnuCommand
 import com.duluin.ftth.customer.RegisterCustomerCommand
 import com.duluin.ftth.customer.SubscriberStats
+import com.duluin.ftth.customer.SubscriptionDimension
 import com.duluin.ftth.customer.SubscriptionRef
 import com.duluin.ftth.customer.UpdateCustomerBiodataCommand
 import com.duluin.ftth.customer.domain.model.Customer
@@ -32,7 +34,11 @@ import com.duluin.ftth.customer.domain.model.Subscription
 import com.duluin.ftth.customer.domain.model.SubscriptionStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 
 @Service
@@ -358,6 +364,46 @@ class CustomerApiService(
         }
     }
 
+    override fun subscriptionDimensions(subscriptionIds: Set<UUID>): List<SubscriptionDimension> {
+        if (subscriptionIds.isEmpty()) return emptyList()
+        val subscriptions = subscriptionRepository.findByIds(subscriptionIds)
+        if (subscriptions.isEmpty()) return emptyList()
+        // Wilayah melekat pada PELANGGAN, bukan langganan — satu query batch, bukan N+1 per langganan.
+        val areaByCustomer = customerRepository.findAllByIds(subscriptions.mapTo(HashSet()) { it.customerId })
+            .associate { it.id to it.areaId }
+        return subscriptions.map { subscription ->
+            SubscriptionDimension(
+                subscriptionId = subscription.id,
+                customerId = subscription.customerId,
+                packageName = subscription.packageName,
+                areaId = areaByCustomer[subscription.customerId],
+            )
+        }
+    }
+
+    override fun churnReport(from: LocalDate, to: LocalDate): ChurnReport {
+        val fromInstant = from.atStartOfDay(zone).toInstant()
+        val toExclusive = to.plusDays(1).atStartOfDay(zone).toInstant()
+
+        val base = subscriptionRepository.countLiveAt(fromInstant)
+        val activated = subscriptionRepository.countActivatedBetween(fromInstant, toExclusive)
+        val terminated = subscriptionRepository.countTerminatedBetween(fromInstant, toExclusive)
+
+        val rate = if (base > 0) {
+            BigDecimal(terminated).multiply(HUNDRED).divide(BigDecimal(base), 2, RoundingMode.HALF_UP)
+        } else {
+            BigDecimal.ZERO
+        }
+
+        return ChurnReport(
+            baseCount = base.toInt(),
+            activatedCount = activated.toInt(),
+            terminatedCount = terminated.toInt(),
+            netGrowth = (activated - terminated).toInt(),
+            churnRatePercent = rate,
+        )
+    }
+
     private fun Subscription.toBillable() = BillableSubscription(
         subscriptionId = id,
         customerId = customerId,
@@ -389,4 +435,10 @@ class CustomerApiService(
         location = location,
         status = status.name,
     )
+
+    private companion object {
+        /** Batas hari→instant memakai zona server, selaras dengan penjadwal billing (LocalDate.now()). */
+        val zone: ZoneId = ZoneId.systemDefault()
+        val HUNDRED: BigDecimal = BigDecimal(100)
+    }
 }

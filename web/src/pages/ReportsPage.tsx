@@ -1,16 +1,28 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { getReportOverview, type ReportOverview } from '../api/reports'
+import {
+  getOperationsReport,
+  getReportOverview,
+  type OperationsReport,
+  type ReceivableAging,
+  type ReportOverview,
+  type RevenueSlice,
+} from '../api/reports'
+import { TICKET_CATEGORY_LABEL } from '../api/helpdesk'
 import { ApiError } from '../api/client'
-import { Button, EmptyState, Spinner, TextField } from '@/components/atoms'
+import { Button, EmptyState, Segmented, Spinner, TextField } from '@/components/atoms'
 import { useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
 import { IconChart } from '@/components/atoms/icons'
+import { TYPE_LABEL } from '@/utils/woLabels'
 
 /**
- * Laporan & analitik — potret bisnis satu tenant. Merangkai angka keuangan
- * (billing) dan pelanggan/langganan (customer) yang sudah diagregasi server jadi
- * kartu ringkas + tren pendapatan. Read-only: tak ada mutasi, hanya membaca satu
- * endpoint `/api/reports/overview` dan mengekspor CSV di sisi klien.
+ * Laporan & analitik — potret bisnis satu tenant. Read-only: tak ada mutasi, hanya
+ * membaca dua endpoint dan mengekspor CSV di sisi klien.
+ *
+ * Dua tab karena dua pertanyaan yang berbeda pembacanya: **Keuangan** (uang masuk, umur
+ * piutang, pendapatan per paket/wilayah, churn) dibaca pemilik; **Operasional** (MTTR,
+ * produktivitas teknisi, kepatuhan SLA meja bantuan) dibaca penyelia. Tab operasional
+ * dimuat saat dibuka saja — yang tak dilihat tak perlu dihitung server.
  */
 
 /** Label Indonesia untuk status tagihan (kunci `statusCounts`). */
@@ -30,7 +42,18 @@ const SUBSCRIPTION_STATUS_LABEL: Record<string, string> = {
   TERMINATED: 'Berhenti',
 }
 
+/** Label ember umur piutang (kunci `aging.buckets[].bucket`), urut dari termuda. */
+const AGING_BUCKET_LABEL: Record<string, string> = {
+  NOT_DUE: 'Belum jatuh tempo',
+  D1_30: 'Telat 1–30 hari',
+  D31_60: 'Telat 31–60 hari',
+  D61_90: 'Telat 61–90 hari',
+  D90_PLUS: 'Telat > 90 hari',
+}
+
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+
+type Tab = 'keuangan' | 'operasional'
 
 /** yyyy-mm-dd dari komponen tanggal LOKAL (hindari geseran hari akibat toISOString UTC). */
 function isoLocal(d: Date): string {
@@ -49,13 +72,36 @@ function fmtMonth(m: string): string {
   return `${MONTH_SHORT[Number(mo) - 1] ?? mo} ${y}`
 }
 
+/**
+ * Durasi rata-rata. `null` ditampilkan "—", BUKAN "0 jam": tak ada yang selesai bukan
+ * berarti selesai seketika. Di bawah sejam pakai menit supaya SLA respons terbaca wajar.
+ */
+function fmtHours(h: number | null): string {
+  if (h == null) return '—'
+  if (h < 1) return `${Math.round(h * 60)} mnt`
+  if (h < 48) return `${h.toLocaleString('id-ID', { maximumFractionDigits: 1 })} jam`
+  return `${(h / 24).toLocaleString('id-ID', { maximumFractionDigits: 1 })} hari`
+}
+
 /** Bungkus satu sel CSV bila mengandung koma/kutip/baris baru (RFC-4180). */
 function csvCell(v: string): string {
   return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
 }
 
-/** Unduh tren bulanan sebagai CSV di sisi klien — tabel paling berguna untuk diolah lanjut. */
-function downloadCsv(overview: ReportOverview) {
+/** Rangkai baris jadi berkas CSV dan picu unduhannya (BOM agar Excel membaca UTF-8). */
+function saveCsv(rows: string[][], filename: string) {
+  const csv = rows.map((r) => r.map(csvCell).join(',')).join('\n')
+  const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+/** Unduh tren bulanan + bedah pendapatan — tabel paling berguna untuk diolah lanjut. */
+function downloadFinanceCsv(overview: ReportOverview) {
   const rows = [['Bulan', 'Pendapatan tertagih', 'Jumlah tagihan lunas', 'Pengembalian dana', 'Pendapatan bersih']]
   overview.monthlyRevenue.forEach((p) =>
     rows.push([
@@ -66,14 +112,27 @@ function downloadCsv(overview: ReportOverview) {
       String(Number(p.revenue) - Number(p.refunded)),
     ]),
   )
-  const csv = rows.map((r) => r.map(csvCell).join(',')).join('\n')
-  const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `laporan-${overview.rangeStart}_${overview.rangeEnd}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+  const slices = (title: string, list: RevenueSlice[]) => {
+    if (list.length === 0) return
+    rows.push([], [title, 'Pendapatan', 'Tagihan lunas', 'Langganan'])
+    list.forEach((s) => rows.push([s.label, s.amount, String(s.paidInvoiceCount), String(s.subscriptionCount)]))
+  }
+  slices('Paket', overview.revenueByPackage)
+  slices('Wilayah', overview.revenueByArea)
+  rows.push([], ['Umur piutang per', overview.aging.asOf], ['Ember', 'Nilai', 'Jumlah tagihan'])
+  overview.aging.buckets.forEach((b) =>
+    rows.push([AGING_BUCKET_LABEL[b.bucket] ?? b.bucket, b.amount, String(b.invoiceCount)]),
+  )
+  saveCsv(rows, `laporan-keuangan-${overview.rangeStart}_${overview.rangeEnd}.csv`)
+}
+
+/** Unduh produktivitas teknisi — yang paling sering diminta untuk penilaian bulanan. */
+function downloadOpsCsv(report: OperationsReport) {
+  const rows = [['Teknisi', 'Work order selesai', 'Rata-rata penyelesaian (jam)']]
+  report.fieldOps.technicians.forEach((t) =>
+    rows.push([t.technicianName, String(t.completedCount), t.avgResolutionHours?.toFixed(2) ?? '']),
+  )
+  saveCsv(rows, `laporan-operasional-${report.rangeStart}_${report.rangeEnd}.csv`)
 }
 
 export function ReportsPage() {
@@ -81,16 +140,24 @@ export function ReportsPage() {
   const today = useMemo(() => new Date(), [])
   const [from, setFrom] = useState(() => isoLocal(new Date(today.getFullYear(), today.getMonth(), 1)))
   const [to, setTo] = useState(() => isoLocal(today))
+  const [tab, setTab] = useState<Tab>('keuangan')
   const [overview, setOverview] = useState<ReportOverview | null>(null)
+  const [ops, setOps] = useState<OperationsReport | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Rentang yang sedang TERPAKAI — beda dari `from`/`to` di kotak tanggal yang boleh
+  // diutak-atik tanpa memuat ulang. Tab operasional memuat pakai yang terpakai ini.
+  const [applied, setApplied] = useState<{ from: string; to: string }>({ from, to })
 
   const load = useCallback(
-    (f: string, t: string) => {
+    (f: string, t: string, which: Tab) => {
       setLoading(true)
       setError(null)
-      getReportOverview({ from: f, to: t, trailingMonths: 6 })
-        .then(setOverview)
+      const fetch =
+        which === 'keuangan'
+          ? getReportOverview({ from: f, to: t, trailingMonths: 6 }).then(setOverview)
+          : getOperationsReport({ from: f, to: t }).then(setOps)
+      fetch
         .catch((e) => setError(e instanceof ApiError ? e.message : 'Gagal memuat laporan'))
         .finally(() => setLoading(false))
     },
@@ -98,24 +165,36 @@ export function ReportsPage() {
   )
 
   useEffect(() => {
-    load(from, to)
-    // Muat sekali saat mount dengan default (bulan berjalan); refresh berikutnya via tombol.
+    // Muat tab aktif dengan rentang terpakai. Tab yang belum pernah dibuka tak menembak
+    // server; setelah dimuat, pindah tab bolak-balik memakai data yang sudah ada.
+    if (tab === 'keuangan' ? overview : ops) {
+      setLoading(false)
+      setError(null)
+      return
+    }
+    load(applied.from, applied.to, tab)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [tab, applied])
 
   const apply = () => {
     if (from > to) {
       toast.error('Tanggal awal tak boleh setelah tanggal akhir.')
       return
     }
-    load(from, to)
+    // Rentang berubah → kedua tab basi; buang keduanya supaya tak ada angka rentang lama
+    // yang tertinggal di tab sebelah.
+    setOverview(null)
+    setOps(null)
+    setApplied({ from, to })
   }
+
+  const data = tab === 'keuangan' ? overview : ops
 
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
       <PageHeader
         title={<>Laporan &amp; analitik</>}
-        subtitle="Ringkasan keuangan dan pelanggan tenant dalam rentang terpilih."
+        subtitle="Ringkasan keuangan dan operasional tenant dalam rentang terpilih."
         actions={
           <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
             <TextField label="Dari" type="date" value={from} max={to} onChange={(_, data) => setFrom(data.value)} />
@@ -125,9 +204,9 @@ export function ReportsPage() {
             </Button>
             <Button
               variant="subtle"
-              onClick={() => overview && downloadCsv(overview)}
-              disabled={!overview || overview.monthlyRevenue.length === 0}
-              title="Unduh tren bulanan sebagai CSV"
+              onClick={() => (tab === 'keuangan' ? overview && downloadFinanceCsv(overview) : ops && downloadOpsCsv(ops))}
+              disabled={!data}
+              title="Unduh laporan tab ini sebagai CSV"
             >
               Ekspor CSV
             </Button>
@@ -135,21 +214,33 @@ export function ReportsPage() {
         }
       />
 
-      {loading && !overview ? (
+      <Segmented
+        ariaLabel="Jenis laporan"
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: 'keuangan', label: 'Keuangan' },
+          { value: 'operasional', label: 'Operasional' },
+        ]}
+      />
+
+      {loading && !data ? (
         <div className="card row" style={{ gap: '0.6rem', justifyContent: 'center', padding: '2rem' }}>
           <Spinner /> <span className="muted">Memuat laporan…</span>
         </div>
       ) : error ? (
         <EmptyState icon={<IconChart size={28} />} title="Gagal memuat" hint={error} />
-      ) : overview ? (
-        <ReportBody overview={overview} />
-      ) : null}
+      ) : tab === 'keuangan' ? (
+        overview && <ReportBody overview={overview} />
+      ) : (
+        ops && <OperationsBody report={ops} />
+      )}
     </div>
   )
 }
 
 function ReportBody({ overview }: { overview: ReportOverview }) {
-  const { finance, subscribers } = overview
+  const { finance, subscribers, churn } = overview
   // Refund baru ditampilkan bila memang pernah terjadi — tenant yang tak pernah mengembalikan
   // uang tak perlu melihat kartu "Rp 0" yang cuma menambah kebisingan.
   const hasRefund = finance.refundCount > 0
@@ -196,6 +287,33 @@ function ReportBody({ overview }: { overview: ReportOverview }) {
         )}
       </div>
 
+      {/* Perputaran langganan: yang datang vs yang pergi pada rentang. */}
+      <div className="stat-grid">
+        <Stat
+          label="Langganan baru"
+          value={`+${churn.activatedCount.toLocaleString('id-ID')}`}
+          note="diaktifkan pada rentang"
+        />
+        <Stat
+          label="Berhenti"
+          value={churn.terminatedCount.toLocaleString('id-ID')}
+          note="dihentikan pada rentang"
+          accent={churn.terminatedCount > 0 ? 'warn' : undefined}
+        />
+        <Stat
+          label="Pertumbuhan bersih"
+          value={`${churn.netGrowth > 0 ? '+' : ''}${churn.netGrowth.toLocaleString('id-ID')}`}
+          note={`dari basis ${churn.baseCount.toLocaleString('id-ID')} langganan hidup`}
+          accent={churn.netGrowth < 0 ? 'crit' : undefined}
+        />
+        <Stat
+          label="Churn"
+          value={`${Number(churn.churnRatePercent).toLocaleString('id-ID', { maximumFractionDigits: 2 })}%`}
+          note="berhenti ÷ basis awal rentang"
+          accent={Number(churn.churnRatePercent) >= 5 ? 'crit' : undefined}
+        />
+      </div>
+
       <div className="row wrap" style={{ alignItems: 'stretch', gap: '1rem' }}>
         {/* Tren pendapatan bulanan. */}
         <div className="card grow" style={{ minWidth: 340 }}>
@@ -212,6 +330,201 @@ function ReportBody({ overview }: { overview: ReportOverview }) {
           <Distribution counts={subscribers.subscriptionsByStatus} labels={SUBSCRIPTION_STATUS_LABEL} empty="Belum ada langganan." />
           <h3 style={{ marginBottom: '0.5rem', marginTop: '1.25rem' }}>Sebaran tagihan</h3>
           <Distribution counts={finance.statusCounts} labels={INVOICE_STATUS_LABEL} empty="Belum ada tagihan." />
+        </div>
+      </div>
+
+      <div className="row wrap" style={{ alignItems: 'stretch', gap: '1rem' }}>
+        <div className="card grow" style={{ minWidth: 300 }}>
+          <AgingTable aging={overview.aging} />
+        </div>
+        <div className="card grow" style={{ minWidth: 260 }}>
+          <h3 style={{ marginTop: 0 }}>Pendapatan per paket</h3>
+          <SliceTable slices={overview.revenueByPackage} empty="Belum ada tagihan lunas pada rentang." />
+        </div>
+        <div className="card grow" style={{ minWidth: 260 }}>
+          <h3 style={{ marginTop: 0 }}>Pendapatan per wilayah</h3>
+          <SliceTable slices={overview.revenueByArea} empty="Belum ada tagihan lunas pada rentang." />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Umur piutang — potret hari ini (bukan per ujung rentang): utang tak punya periode, ia
+ * keadaan. Ember "belum jatuh tempo" sengaja ikut supaya tabelnya juga menjawab "berapa
+ * yang akan masuk kalau semua bayar", bukan cuma "siapa yang telat".
+ */
+function AgingTable({ aging }: { aging: ReceivableAging }) {
+  const total = Math.max(1, Number(aging.totalAmount))
+  return (
+    <div className="stack" style={{ gap: '0.75rem' }}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <h3 style={{ margin: 0 }}>Umur piutang</h3>
+        <span className="muted" style={{ fontSize: '0.8rem' }}>per {aging.asOf}</span>
+      </div>
+      <div>
+        <div style={{ fontSize: '1.4rem', fontWeight: 600 }}>{fmtRupiah(aging.totalAmount)}</div>
+        <div className="muted" style={{ fontSize: '0.8rem' }}>
+          {aging.totalInvoiceCount.toLocaleString('id-ID')} tagihan belum lunas
+        </div>
+      </div>
+      <div className="stack" style={{ gap: '0.5rem' }}>
+        {aging.buckets.map((b) => {
+          const late = b.bucket !== 'NOT_DUE'
+          const bad = b.bucket === 'D61_90' || b.bucket === 'D90_PLUS'
+          return (
+            <div key={b.bucket} className="stack" style={{ gap: '0.2rem' }}>
+              <div className="row" style={{ justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ color: bad ? 'var(--critical-ink)' : late ? 'var(--warning-ink)' : undefined }}>
+                  {AGING_BUCKET_LABEL[b.bucket] ?? b.bucket}
+                </span>
+                <span style={{ fontWeight: 600 }}>
+                  {fmtRupiah(b.amount)}{' '}
+                  <span className="muted" style={{ fontWeight: 400 }}>({b.invoiceCount})</span>
+                </span>
+              </div>
+              <div style={{ height: 6, background: 'var(--line)', borderRadius: 3, overflow: 'hidden' }}>
+                <div
+                  style={{
+                    width: `${(Number(b.amount) / total) * 100}%`,
+                    height: '100%',
+                    background: bad ? 'var(--critical-ink)' : late ? 'var(--warning)' : 'var(--accent)',
+                  }}
+                />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/** Tabel keratan pendapatan (paket/wilayah) dengan bilah proporsi terhadap keratan terbesar. */
+function SliceTable({ slices, empty }: { slices: RevenueSlice[]; empty: string }) {
+  if (slices.length === 0) return <div className="muted" style={{ fontSize: '0.85rem' }}>{empty}</div>
+  const max = Math.max(1, ...slices.map((s) => Number(s.amount)))
+  return (
+    <div className="stack" style={{ gap: '0.55rem' }}>
+      {slices.map((s) => (
+        <div key={s.label} className="stack" style={{ gap: '0.2rem' }}>
+          <div className="row" style={{ justifyContent: 'space-between', fontSize: '0.85rem', gap: '0.5rem' }}>
+            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {s.label}
+            </span>
+            <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+              {fmtRupiah(s.amount)}{' '}
+              <span className="muted" style={{ fontWeight: 400 }}>({s.subscriptionCount})</span>
+            </span>
+          </div>
+          <div style={{ height: 6, background: 'var(--line)', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{ width: `${(Number(s.amount) / max) * 100}%`, height: '100%', background: 'var(--accent)' }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * Laporan operasional: seberapa cepat kerja diselesaikan dan seberapa patuh SLA meja
+ * bantuan. Angka jam sengaja "—" saat tak ada data — nol jam itu klaim, bukan ketiadaan.
+ */
+function OperationsBody({ report }: { report: OperationsReport }) {
+  const { fieldOps, support } = report
+  const slaOk = support.slaCompliancePercent == null ? null : Number(support.slaCompliancePercent)
+
+  return (
+    <div className="stack" style={{ gap: '1.5rem' }}>
+      {/* Kerja lapangan. */}
+      <div className="stat-grid">
+        <Stat
+          label="Work order selesai"
+          value={fieldOps.completedCount.toLocaleString('id-ID')}
+          note="pada rentang terpilih"
+        />
+        <Stat
+          label="MTTR gangguan"
+          value={fmtHours(fieldOps.avgRepairResolutionHours)}
+          note="rata-rata perbaikan dari dibuat s/d selesai"
+        />
+        <Stat
+          label="Rata-rata penyelesaian"
+          value={fmtHours(fieldOps.avgResolutionHours)}
+          note="semua jenis work order"
+        />
+        <Stat
+          label="Rata-rata mulai dikerjakan"
+          value={fmtHours(fieldOps.avgResponseHours)}
+          note="dari dibuat s/d teknisi berangkat"
+        />
+      </div>
+
+      {/* Meja bantuan. */}
+      <div className="stat-grid">
+        <Stat label="Tiket masuk" value={support.openedCount.toLocaleString('id-ID')} note="dibuka pada rentang" />
+        <Stat label="Tiket selesai" value={support.resolvedCount.toLocaleString('id-ID')} note="dituntaskan pada rentang" />
+        <Stat
+          label="Rata-rata respons pertama"
+          value={fmtHours(support.avgFirstResponseHours)}
+          note={`${support.responseBreachedCount.toLocaleString('id-ID')} lewat tenggat respons`}
+          accent={support.responseBreachedCount > 0 ? 'warn' : undefined}
+        />
+        <Stat
+          label="Kepatuhan SLA"
+          value={slaOk == null ? '—' : `${slaOk.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%`}
+          note={`${support.resolutionBreachedCount.toLocaleString('id-ID')} selesai melewati tenggat`}
+          accent={slaOk != null && slaOk < 90 ? 'crit' : undefined}
+        />
+      </div>
+
+      <div className="row wrap" style={{ alignItems: 'stretch', gap: '1rem' }}>
+        {/* Produktivitas teknisi. */}
+        <div className="card grow" style={{ minWidth: 340 }}>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <h3 style={{ margin: 0 }}>Produktivitas teknisi</h3>
+            <span className="muted" style={{ fontSize: '0.8rem' }}>work order selesai</span>
+          </div>
+          {fieldOps.technicians.length === 0 ? (
+            <div className="muted" style={{ fontSize: '0.85rem', marginTop: '0.75rem' }}>
+              Belum ada work order selesai pada rentang ini.
+            </div>
+          ) : (
+            <>
+              <table className="table" style={{ marginTop: '0.75rem' }}>
+                <thead>
+                  <tr>
+                    <th>Teknisi</th>
+                    <th style={{ textAlign: 'right' }}>Selesai</th>
+                    <th style={{ textAlign: 'right' }}>Rata-rata</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fieldOps.technicians.map((t) => (
+                    <tr key={t.technicianId}>
+                      <td>{t.technicianName}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{t.completedCount.toLocaleString('id-ID')}</td>
+                      <td style={{ textAlign: 'right' }}>{fmtHours(t.avgResolutionHours)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {/* Wajib dibaca sebelum menjumlah kolomnya. */}
+              <div className="muted" style={{ fontSize: '0.78rem', marginTop: '0.5rem' }}>
+                Work order yang dikerjakan beberapa teknisi dihitung untuk masing-masing, jadi jumlah kolom
+                ini bisa melebihi {fieldOps.completedCount.toLocaleString('id-ID')} work order.
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Sebaran jenis pekerjaan & kategori keluhan. */}
+        <div className="card grow" style={{ minWidth: 260 }}>
+          <h3 style={{ marginTop: 0 }}>Jenis work order</h3>
+          <Distribution counts={fieldOps.completedByType} labels={TYPE_LABEL} empty="Belum ada work order selesai." />
+          <h3 style={{ marginBottom: '0.5rem', marginTop: '1.25rem' }}>Kategori keluhan</h3>
+          <Distribution counts={support.openedByCategory} labels={TICKET_CATEGORY_LABEL} empty="Belum ada tiket masuk." />
         </div>
       </div>
     </div>

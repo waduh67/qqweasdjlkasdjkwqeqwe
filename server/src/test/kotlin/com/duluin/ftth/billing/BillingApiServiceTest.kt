@@ -426,6 +426,8 @@ class BillingApiServiceTest {
             throw UnsupportedOperationException()
 
         override fun subscriberStats() = throw UnsupportedOperationException()
+        override fun subscriptionDimensions(subscriptionIds: Set<java.util.UUID>) = throw UnsupportedOperationException()
+        override fun churnReport(from: java.time.LocalDate, to: java.time.LocalDate) = throw UnsupportedOperationException()
         override fun findExportRows(subscriptionIds: Set<UUID>) = throw UnsupportedOperationException()
     }
 

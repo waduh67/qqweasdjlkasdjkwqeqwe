@@ -2,6 +2,7 @@ package com.duluin.ftth.customer
 
 import com.duluin.ftth.common.domain.geo.Coordinate
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -196,7 +197,52 @@ interface CustomerApi {
      * jaringan menurut subscriptionId. RLS-scoped.
      */
     fun findExportRows(subscriptionIds: Set<UUID>): List<CustomerExportRow>
+
+    /**
+     * DIMENSI sekumpulan langganan (paket + wilayah pemiliknya) untuk membedah angka uang
+     * milik `billing` — yang hanya mengenal `subscriptionId`. Id yang tak ditemukan diabaikan.
+     *
+     * Bentuknya sengaja setipis mungkin: hanya kunci pengelompokan, bukan pandangan langganan
+     * utuh. Nama wilayah tak diresolusi di sini — [SubscriptionDimension.areaId] tetap id polos
+     * karena agregat `Area` milik module `iam`, bukan customer.
+     */
+    fun subscriptionDimensions(subscriptionIds: Set<UUID>): List<SubscriptionDimension>
+
+    /**
+     * Perputaran pelanggan pada rentang [from]..[to] (inklusif): berapa langganan mulai hidup,
+     * berapa yang berhenti, dan berapa persen dari basis awal periode yang pergi.
+     */
+    fun churnReport(from: LocalDate, to: LocalDate): ChurnReport
 }
+
+/**
+ * Kunci pengelompokan satu langganan untuk laporan lintas-domain: [packageName] (snapshot beku
+ * di langganan, jadi laporan historis tak berubah saat harga/nama paket direvisi) dan [areaId]
+ * wilayah pemiliknya (`null` = pelanggan belum diberi area).
+ */
+data class SubscriptionDimension(
+    val subscriptionId: UUID,
+    val customerId: UUID,
+    val packageName: String,
+    val areaId: UUID?,
+)
+
+/**
+ * Perputaran langganan satu tenant pada satu rentang.
+ *
+ * [baseCount] = langganan yang sudah hidup tepat SEBELUM rentang dimulai (aktif dan belum
+ * diakhiri) — penyebut churn. [activatedCount]/[terminatedCount] = yang mulai/berhenti di dalam
+ * rentang. [churnRatePercent] = [terminatedCount] ÷ [baseCount] × 100 (skala 2; nol bila basis
+ * kosong, karena "100% churn dari nol pelanggan" bukan angka yang bermakna). [netGrowth] =
+ * pertambahan bersih, boleh negatif.
+ */
+data class ChurnReport(
+    val baseCount: Int,
+    val activatedCount: Int,
+    val terminatedCount: Int,
+    val netGrowth: Int,
+    val churnRatePercent: java.math.BigDecimal,
+)
 
 /**
  * Baris ekspor gabungan langganan + biodata pemiliknya untuk CSV pelanggan. Berbeda dari
