@@ -614,6 +614,165 @@ FTTH_CPE_DIAGNOSTICS_DOWNLOAD_URL=http://cdn.contoh.com/10MB.bin
 
 ---
 
+## Bagian M — Cadangan & pemulihan database
+
+Stack ini mencadangkan dirinya sendiri: dua service (`backup` dan `backup-radius`) tidur
+sampai jam yang kamu tentukan, men-dump satu database masing-masing, memverifikasi
+hasilnya, lalu membuang cadangan yang kedaluwarsa. Tak ada cron di host, tak ada yang
+perlu dipasang — begitu `docker compose up -d`, keduanya ikut jalan.
+
+### M.1 Apa yang dicadangkan (dan apa yang tidak)
+
+| Isi | Dicadangkan? | Keterangan |
+|---|---|---|
+| DB aplikasi (`ftth`) | ✅ tiap hari | pelanggan, langganan, tagihan, WO, tiket, metrik ONU |
+| DB RADIUS (`radius`) | ✅ tiap hari | `nas`, `radcheck`, `radgroupreply`, riwayat `radacct` |
+| Bukti foto WO (MinIO) | ❌ | volume `miniodata` — salin sendiri bila dianggap penting |
+| Data GenieACS (Mongo) | ❌ | proyeksi; terbentuk lagi sendiri saat perangkat Inform |
+| `.env` | ❌ | **berisi semua secret — simpan salinannya di luar VPS, sekarang** |
+
+Kehilangan `.env` sama gawatnya dengan kehilangan database: tanpa
+`FTTH_ENCRYPTION_SECRET` yang sama, kredensial SNMP di dalam cadangan tak bisa dibaca
+lagi.
+
+### M.2 Setelan
+
+Empat baris di `.env` (semuanya punya nilai bawaan, boleh dibiarkan):
+
+```bash
+BACKUP_TZ=Asia/Jakarta      # zona waktu jam di bawah
+BACKUP_AT=02:30             # cadangan DB aplikasi
+BACKUP_RADIUS_AT=03:00      # cadangan DB radius (digeser agar tak rebutan I/O)
+BACKUP_RETENTION_DAYS=14    # lebih tua dari ini dibuang
+```
+
+Hasilnya menumpuk di `/opt/ftth/backups/app/` dan `/opt/ftth/backups/radius/`, mode
+`600` milik root (isinya seluruh basis data — perlakukan seperti secret).
+
+Kalau container ikut restart tiap deploy, cadangan tak akan terlewat: saat start ia
+memeriksa umur cadangan terakhir, dan langsung menjalankan satu ronde bila sudah lewat
+26 jam.
+
+> **Kenapa cadangan berjalan sebagai superuser `postgres`, bukan sebagai `ftth`?**
+> Semua tabel ber-tenant memakai `FORCE ROW LEVEL SECURITY`, yang berlaku bahkan untuk
+> pemilik tabel. Sesi `pg_dump` tak pernah menyetel `app.tenant_id`, jadi dump oleh role
+> `ftth` menghasilkan file yang tampak wajar, punya skema lengkap — dan **nol baris**.
+> `backup.sh` menolak jalan kalau role-nya tunduk RLS, supaya kesalahan itu tak pernah
+> bisa terjadi diam-diam.
+
+### M.3 Memeriksa cadangan masih hidup
+
+```bash
+cd /opt/ftth
+docker compose -f docker-compose.prod.yml logs --tail 20 backup
+sudo cat backups/app/last-backup.txt      # status=OK, ukuran, jumlah yang disimpan
+sudo ls -lh backups/app backups/radius
+```
+
+Setiap dump diverifikasi dengan `pg_restore --list` sebelum diterima, dan khusus DB
+aplikasi dicek harus memuat data tabel `tenant` — file terpotong atau cadangan hampa
+ditolak dan dilaporkan `status=GAGAL`, bukan disimpan diam-diam.
+
+### M.4 Latihan pemulihan (lakukan sekali, lalu ulangi tiap kuartal)
+
+Cadangan yang belum pernah dipulihkan bukan cadangan, cuma harapan. Mode latihan
+memulihkan ke **database baru** di server yang sama, jadi aman dijalankan di produksi
+yang sedang melayani pelanggan (yang dibutuhkan cuma ruang disk sebesar databasenya).
+
+```bash
+cd /opt/ftth
+C="docker compose -f docker-compose.prod.yml run --rm --entrypoint sh"
+
+$C backup /opt/backup/restore.sh              # lihat daftar cadangan
+$C backup /opt/backup/restore.sh latest       # pulihkan yang terbaru ke DB latihan
+```
+
+Yang harus kamu lihat di ujungnya — angka-angka ini yang membuktikan cadangannya
+berisi, termasuk `onu_metric` (hypertable TimescaleDB, bagian yang paling gampang
+diam-diam hilang):
+
+```
+[restore:app] isi database 'ftth_drill_20260810_093850':
+    tenant           2 baris
+    customer         318 baris
+    invoice          1204 baris
+    onu_metric       412880 baris
+```
+
+Kalau ada baris yang 0 padahal produksi jelas punya isinya, **berhenti dan benahi
+cadangannya** — jangan tunggu hari kamu benar-benar membutuhkannya. Selesai memeriksa,
+buang DB latihannya:
+
+```bash
+docker compose -f docker-compose.prod.yml exec postgres \
+  psql -U postgres -c 'DROP DATABASE "ftth_drill_20260810_093850"'
+```
+
+Untuk DB radius sama persis, tinggal ganti servicenya:
+
+```bash
+$C backup-radius /opt/backup/restore.sh latest
+```
+
+### M.5 Pemulihan sungguhan (data produksi rusak/hilang)
+
+Ini menghapus database yang sekarang. Hentikan aplikasinya dulu supaya tak ada yang
+menulis di tengah proses:
+
+```bash
+cd /opt/ftth
+docker compose -f docker-compose.prod.yml stop server
+docker compose -f docker-compose.prod.yml run --rm --entrypoint sh \
+  backup /opt/backup/restore.sh latest --replace
+# ketik nama database ('ftth') saat diminta konfirmasi
+docker compose -f docker-compose.prod.yml start server
+```
+
+Skrip memasang `postgis`+`timescaledb`, memanggil `timescaledb_pre_restore()` sebelum
+dan `timescaledb_post_restore()` sesudah `pg_restore` (tanpa itu hypertable-nya kacau),
+lalu `ANALYZE` dan menghitung isi tiap tabel penting. Kalau image aplikasi lebih baru
+daripada cadangannya, Flyway menjalankan migrasi yang kurang saat server nyala lagi —
+tak ada langkah tambahan.
+
+Butuh memulihkan **satu tenant** saja? Pulihkan ke DB latihan (M.4), lalu salin
+baris-barisnya dengan tangan. Cadangan ini se-database, bukan per-tenant.
+
+### M.6 Membangun ulang di VPS baru (VPS lama hilang total)
+
+1. Ikuti **Bagian B & C** (Docker + folder deploy).
+2. Kembalikan `.env` dari salinan luar-VPS-mu — nilainya harus **persis sama**,
+   terutama `FTTH_ENCRYPTION_SECRET`.
+3. Salin folder `backups/` ke `/opt/ftth/backups/`.
+4. `docker compose -f docker-compose.prod.yml up -d postgres radius-db` — boot pertama
+   membuat role, database, dan extension-nya dari `.env`.
+5. Pulihkan keduanya:
+   ```bash
+   C="docker compose -f docker-compose.prod.yml run --rm --entrypoint sh"
+   $C backup        /opt/backup/restore.sh latest --replace
+   $C backup-radius /opt/backup/restore.sh latest --replace
+   ```
+6. `docker compose -f docker-compose.prod.yml up -d`.
+
+Berkas `globals-*.sql` di samping tiap dump berisi definisi role level-cluster —
+jaring pengaman kalau di kemudian hari ada role yang dibuat dengan tangan, di luar
+`.env`.
+
+### M.7 Salin cadangan ke luar VPS (jangan dilewat)
+
+Cadangan yang tinggal di mesin yang sama tak menolong saat mesinnya yang hilang —
+disk rusak, akun ditutup, VPS terhapus. Tarik berkalanya dari laptop/NAS-mu:
+
+```bash
+rsync -avz --rsync-path='sudo rsync' \
+  -e 'ssh -i ~/.ssh/kunci-vps' \
+  fajar@IP-VPS:/opt/ftth/backups/ ~/cadangan-ftth/
+```
+
+(atau `rclone` ke object storage mana pun). Isinya seluruh data pelanggan — simpan
+terenkripsi dan jangan di folder yang tersinkron sembarangan.
+
+---
+
 ## Operasional harian
 
 | Mau apa | Perintah (di `/opt/ftth` pada VPS) |
@@ -621,7 +780,9 @@ FTTH_CPE_DIAGNOSTICS_DOWNLOAD_URL=http://cdn.contoh.com/10MB.bin
 | Update ke versi terbaru | cukup `git push main` dari laptop — otomatis (kalau Actions limit → **Bagian J**) |
 | Restart semua | `docker compose -f docker-compose.prod.yml restart` |
 | Lihat log realtime | `docker compose -f docker-compose.prod.yml logs -f server` |
-| Backup database | `docker compose -f docker-compose.prod.yml exec postgres pg_dump -U postgres ftth > backup_$(date +%F).sql` |
+| Cek cadangan semalam | `sudo cat backups/app/last-backup.txt` (otomatis tiap malam — **Bagian M**) |
+| Cadangkan sekarang juga | `docker compose -f docker-compose.prod.yml exec backup sh /opt/backup/backup.sh` |
+| Latihan pemulihan | `docker compose -f docker-compose.prod.yml run --rm --entrypoint sh backup /opt/backup/restore.sh latest` |
 | Matikan sementara | `docker compose -f docker-compose.prod.yml down` (data aman di volume) |
 
 ---
@@ -634,5 +795,7 @@ FTTH_CPE_DIAGNOSTICS_DOWNLOAD_URL=http://cdn.contoh.com/10MB.bin
 - **GenieACS (fitur CPE/TR-069) sudah termasuk** di stack — lihat **Bagian L**. Perlu
   membuka port `7547` (dan `7567` bila pakai upgrade firmware); port NBI `7557` jangan
   pernah dibuka ke internet.
+- **Cadangan jalan otomatis** (Bagian M), tapi dua hal tetap tugasmu: menyalin
+  `backups/` + `.env` ke luar VPS, dan sekali-sekali betul-betul mencoba memulihkannya.
 - **Test job di CI** butuh Postgres+Timescale; kalau rewel, bisa longgarin dengan hapus
   `needs: test` di job `build-and-push` (`.github/workflows/deploy.yml`).

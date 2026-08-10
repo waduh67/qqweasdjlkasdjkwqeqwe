@@ -17,6 +17,8 @@ web/.env.local
 # Env & secrets
 .env
 *.local.yml
+# Hasil dump database di VPS (bind mount service `backup`) — jangan pernah masuk repo.
+deploy/backups/
 
 # OS
 .DS_Store

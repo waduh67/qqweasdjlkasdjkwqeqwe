@@ -220,6 +220,65 @@ services:
       # Tele2, jadi isi .env dengan berkas milikmu sendiri kalau fitur ini dipakai.
       FTTH_CPE_DIAGNOSTICS_DOWNLOAD_URL: ${FTTH_CPE_DIAGNOSTICS_DOWNLOAD_URL:-http://speedtest.tele2.net/10MB.zip}
 
+  # --- Cadangan otomatis kedua database ---
+  # Dua service, bukan satu, karena versi klien harus cocok dengan versi server:
+  # dump dari pg_dump 17 memuat `SET transaction_timeout` yang DITOLAK server pg16,
+  # sedangkan pg_dump 16 menolak mendump server pg17. Jadi DB aplikasi dicadangkan
+  # oleh image pg17 dan DB radius oleh image pg16 — keduanya image yang SUDAH ada di
+  # host ini (dipakai service postgres & radius-db), tak menambah unduhan apa pun.
+  #
+  # Keduanya menjalankan skrip yang sama dari ./backup, menulis ke ./backups di VPS
+  # (bind mount, bukan volume, supaya operator bisa menyalinnya keluar dengan scp).
+  # `user: root` supaya berkasnya bisa ditulis apa pun kepemilikan foldernya — isinya
+  # seluruh basis data, jadi memang sepantasnya cuma root yang boleh baca (chmod 600).
+  backup:
+    image: timescale/timescaledb-ha:pg17
+    restart: unless-stopped
+    user: root
+    entrypoint: ["/bin/sh", "/opt/backup/entrypoint.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      BACKUP_TARGET: app
+      BACKUP_AT: ${BACKUP_AT:-02:30}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      # Pemilik database saat dipulihkan — role aplikasi, bukan superuser yang mendump.
+      BACKUP_DB_OWNER: ${FTTH_DB_USER}
+      TZ: ${BACKUP_TZ:-UTC}
+      PGHOST: postgres
+      # WAJIB superuser: tabel ber-tenant memakai FORCE ROW LEVEL SECURITY, jadi dump
+      # oleh role aplikasi menghasilkan cadangan KOSONG tanpa pesan galat (backup.sh
+      # menolak jalan kalau rolenya tunduk RLS).
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_SUPER_PASSWORD}
+      PGDATABASE: ${FTTH_DB_NAME}
+    volumes:
+      - ./backup:/opt/backup:ro
+      - ./backups:/backups
+
+  backup-radius:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    user: root
+    entrypoint: ["/bin/sh", "/opt/backup/entrypoint.sh"]
+    depends_on:
+      radius-db:
+        condition: service_healthy
+    environment:
+      BACKUP_TARGET: radius
+      # Digeser setengah jam dari cadangan aplikasi supaya dua pg_dump tak berebut I/O.
+      BACKUP_AT: ${BACKUP_RADIUS_AT:-03:00}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      TZ: ${BACKUP_TZ:-UTC}
+      PGHOST: radius-db
+      PGUSER: ${RADIUS_DB_USER:-radius}
+      PGPASSWORD: ${RADIUS_DB_PASSWORD:?wajib diisi di .env}
+      PGDATABASE: ${RADIUS_DB_NAME:-radius}
+    volumes:
+      - ./backup:/opt/backup:ro
+      - ./backups:/backups
+
   # --- Frontend statis (Nginx) ---
   web:
     image: ${IMAGE_PREFIX}/ftth-web:${IMAGE_TAG:-latest}
