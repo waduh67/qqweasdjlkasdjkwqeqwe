@@ -13,6 +13,8 @@ import com.duluin.ftth.snmp.HsgqEponSnmpAdapter
 import com.duluin.ftth.snmp.MibProfiles
 import com.duluin.ftth.snmp.OltAdapter
 import com.duluin.ftth.snmp.ProbeResult
+import com.duluin.ftth.snmp.SnmpReaderFactory
+import com.duluin.ftth.snmp.SnmpSession
 import com.duluin.ftth.tenancy.TenantApi
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -193,4 +195,14 @@ class ServerSnmpPollingConfig {
     @Bean
     fun oltAdapterRegistry(): AdapterRegistry =
         AdapterRegistry(MibProfiles.all().map { GponSnmpAdapter(it) } + HsgqEponSnmpAdapter())
+
+    /**
+     * Pembuka sesi SNMP untuk jalur DIAGNOSTIK (lihat
+     * [com.duluin.ftth.monitoring.adapter.outbound.snmp.OltSnmpProbeAdapter]). Adapter
+     * polling di atas membuat sesinya sendiri lewat default konstruktor yang sama, jadi
+     * kedua jalur tetap berbicara dengan perangkat memakai timeout & retry yang identik.
+     */
+    @Bean
+    fun snmpReaderFactory(): SnmpReaderFactory =
+        SnmpReaderFactory { host, port, community -> SnmpSession.open(host, port, community) }
 }

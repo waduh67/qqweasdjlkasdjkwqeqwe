@@ -84,6 +84,23 @@ class GponSnmpAdapter(
         }
     }
 
+    /**
+     * Peran tiap OID profil, memakai penafsir adapter ini sendiri — sehingga alat validasi
+     * lapangan menampilkan persis nilai yang akan dipakai polling, bukan tafsiran kedua.
+     * Serial + status wajib: tanpa keduanya sebuah baris tak bisa jadi [OnuReading].
+     */
+    override val oidPlan: List<OidRole> get() = listOf(
+        OidRole("SERIAL", "Serial number ONU", profile.serialNumberOid, essential = true, interpret = ::normalizeSerial),
+        OidRole("STATUS", "Status ONU", profile.statusOid, essential = true) { profile.statusMapping[it]?.name },
+        OidRole("RX_POWER", "Redaman terima (RX)", profile.rxPowerOid, essential = true, interpret = ::dbmOrNull),
+        OidRole("TX_POWER", "Daya kirim (TX)", profile.txPowerOid, interpret = ::dbmOrNull),
+        OidRole("DISTANCE", "Jarak ranging", profile.distanceOid) { it.toIntOrNull()?.let { m -> "$m m" } },
+        OidRole("UPTIME", "Lama menyala", profile.uptimeOid) { it.toLongOrNull()?.let { s -> "$s dtk" } },
+        OidRole("DOWN_CAUSE", "Sebab putus terakhir", profile.downCauseOid) { profile.downCauseMapping[it]?.name },
+        OidRole("LAST_OFF", "Waktu putus terakhir", profile.lastOffAtOid) { timestampOf(it)?.toString() },
+        OidRole("LAST_ON", "Waktu nyala terakhir", profile.lastOnAtOid) { timestampOf(it)?.toString() },
+    )
+
     override fun pollOnus(target: OltTarget): List<OnuReading> {
         val community = target.snmpCommunity
             ?: throw OltProtocolException("Community string SNMP belum diisi untuk ${target.oltCode}")
@@ -141,11 +158,17 @@ class GponSnmpAdapter(
      * Selama OID vendor belum diisi, hasilnya `null`; format sebenarnya diverifikasi
      * saat `snmpwalk` di perangkat sungguhan (Phase 2b).
      */
-    private fun timestampAt(oid: String?, row: Map<String, String>): Instant? {
-        val raw = oid?.let { row[it] }?.trim()?.takeIf { it.isNotBlank() } ?: return null
-        raw.toLongOrNull()?.let { return Instant.ofEpochSecond(it) }
-        return runCatching { Instant.parse(raw) }.getOrNull()
+    private fun timestampAt(oid: String?, row: Map<String, String>): Instant? =
+        oid?.let { row[it] }?.let(::timestampOf)
+
+    private fun timestampOf(raw: String): Instant? {
+        val text = raw.trim().takeIf { it.isNotBlank() } ?: return null
+        text.toLongOrNull()?.let { return Instant.ofEpochSecond(it) }
+        return runCatching { Instant.parse(text) }.getOrNull()
     }
+
+    /** Nilai optik mentah sebagai teks siap baca; `null` bila sentinel/di luar nalar. */
+    private fun dbmOrNull(raw: String): String? = opticalPower(raw)?.let { "$it dBm" }
 
     /**
      * Menerjemahkan register "last down cause" OLT ke [OnuDownCause]. Nilai mentah

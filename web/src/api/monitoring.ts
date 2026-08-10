@@ -159,3 +159,62 @@ export interface DiscoveredOnuView {
   /** Tebakan auto-link; `null` untuk baris yang tak lagi menunggu tindakan. */
   suggestion: ProvisioningSuggestion | null
 }
+
+/**
+ * Vonis satu OID pada perangkat sungguhan.
+ * - `OK` — menjawab dan nilainya terbaca aturan vendor.
+ * - `EMPTY` — sub-tree kosong: OID-nya salah untuk firmware ini, atau fiturnya mati.
+ * - `UNREADABLE` — menjawab tapi tak satu pun nilainya bisa ditafsirkan (skala/satuan beda).
+ * - `NOT_CONFIGURED` — profil vendor kami memang belum memuat OID ini.
+ */
+export type OidVerdict = 'OK' | 'EMPTY' | 'UNREADABLE' | 'NOT_CONFIGURED'
+
+export interface OidSampleView {
+  index: string
+  raw: string
+  /** `null` = nilai mentahnya tak cocok dengan aturan vendor — inti temuan alat ini. */
+  interpreted: string | null
+}
+
+export interface OidCheck {
+  role: string
+  label: string
+  oid: string | null
+  /** Tanpa OID ini polling tak menghasilkan baris apa pun. */
+  essential: boolean
+  verdict: OidVerdict
+  sampleCount: number
+  samples: OidSampleView[]
+  hint: string | null
+}
+
+/** Hasil menguji peta OID kami terhadap satu OLT nyata. */
+export interface OltSnmpCheck {
+  oltId: string
+  oltCode: string
+  vendor: string
+  /** `false` = vendornya belum punya adapter, jadi tak ada OID untuk diuji. */
+  supported: boolean
+  reachable: boolean
+  systemDescription: string | null
+  roundTripMillis: number | null
+  failureReason: string | null
+  checkedAt: string
+  oids: OidCheck[]
+}
+
+export interface SnmpWalkRow {
+  /** OID penuh (akar + indeks), siap disalin ke profil MIB. */
+  oid: string
+  value: string
+}
+
+export interface OltSnmpWalk {
+  oltId: string
+  oltCode: string
+  rootOid: string
+  sampleCount: number
+  truncated: boolean
+  elapsedMillis: number
+  rows: SnmpWalkRow[]
+}

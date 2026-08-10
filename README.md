@@ -506,6 +506,7 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
 | `GET /api/monitoring/alarms` · `/{id}/acknowledge` · `/clear` | `monitoring.alarm.view` / `.ack` |
 | `GET /api/monitoring/onus/{id}/history` | `monitoring.metric.view` |
 | `GET/POST /api/monitoring/discovered-onus` · `/auto-provision-policy` | `monitoring.provisioning.*` |
+| `GET /api/monitoring/olts/{id}/snmp-check` · `/snmp-walk` | `monitoring.collector.manage` |
 | `POST /api/collector/heartbeat` · `/metrics` | API key collector (bukan RBAC) |
 | `GET /api/cables/{id}/otdr` · `POST` · `DELETE` | `network.otdr.*` |
 | `GET /api/incidents` · `/{id}` · `POST /{id}/acknowledge` · `/resolve` | `incident.ticket.*` |
@@ -555,7 +556,12 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
   HSGQ-E04I sungguhan** end-to-end (poll → kotak masuk). Adapter **GPON**
   (`MibProfiles`: ZTE/HUAWEI/FIBERHOME) OID-nya dari dokumentasi MIB publik dan
   **belum diuji terhadap perangkat GPON nyata** — firmware berbeda kerap menggeser
-  sub-tree; simulator OLT menutupi pengujian. Lihat [`docs/monitoring.md`](docs/monitoring.md).
+  sub-tree; simulator OLT menutupi pengujian. Karena itu detail OLT punya tab
+  **Diagnostik**: server menguji tiap OID peta MIB ke perangkat sungguhan dan
+  memvonisnya (terbaca / kosong / **menjawab tapi tak terbaca** / belum dipetakan),
+  plus walk OID manual untuk berburu OID yang benar — tanpa `snmpwalk` maupun akses
+  shell, dan community string tak pernah keluar dari server. Lihat
+  [`docs/monitoring.md`](docs/monitoring.md).
 - **Phase 3 — Incident + korelasi + notifikasi** ✅ banjir alarm sejenis (mis. 30
   ONU di bawah satu ODC) menjadi satu insiden ber-akar-masalah, lalu broadcast
   proaktif ke pelanggan terdampak

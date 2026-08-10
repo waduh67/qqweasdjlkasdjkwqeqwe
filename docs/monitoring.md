@@ -84,6 +84,48 @@ HSGQ EPON tak punya serial GPON — identitasnya **MAC** (mis. `C0FD8465FD12`).
 
 ---
 
+## Diagnostik SNMP: "OLT nyambung tapi ONU-nya nol"
+
+Ini kegagalan paling nyebelin karena **gak ada error sama sekali**: OLT bisa
+dihubungi (gak ada alarm OLT_UNREACHABLE), polling jalan, tapi ONU-nya nol terus.
+Sebabnya biasanya **OID-nya meleset**. Peta MIB GPON kami (`MibProfiles`:
+ZTE/HUAWEI/FIBERHOME) disusun dari dokumentasi vendor dan **belum diadu dengan
+perangkat GPON nyata**; firmware yang beda kerap menggeser sub-tree. Kalau OID salah,
+walk-nya balik kosong — dan "kosong" gak dibedain dari "OLT-nya emang gak punya ONU".
+
+Buat itu ada **tab Diagnostik** di detail OLT (izin `monitoring.collector.manage`).
+Server yang nembak perangkatnya — teknisi gak perlu `snmpwalk`, gak perlu SSH ke
+server, dan community string gak pernah keluar dari server.
+
+**1. Uji peta OID** (`GET /api/monitoring/olts/{id}/snmp-check`) — nanya perangkat
+pakai OID yang **persis dipakai polling**, lalu kasih vonis per peran:
+
+| Vonis | Artinya | Tindakan |
+|---|---|---|
+| **Terbaca** | menjawab & nilainya masuk akal | aman |
+| **Kosong** | sub-tree gak dijawab: OID salah buat firmware ini, atau fiturnya mati | cari OID benernya pakai walk manual |
+| **Tak terbaca** | **menjawab tapi gak satu pun nilainya kebaca** — skala/satuan atau pemetaan status beda | paling licin: polling "sukses" tapi metrik kosong |
+| **Belum dipetakan** | profil vendor kami emang belum punya OID buat peran itu | metrik itu selalu kosong |
+
+Peran ber-label **wajib** (serial/MAC, status, redaman RX) yang gak "Terbaca"
+= polling gak bakal ngasih baris sama sekali. Nilai **mentah** ikut ditampilkan
+di samping tafsirannya — dari situ kelihatan skalanya: `-2350` itu 0,01 dBm,
+`-23500` itu 0,001 dBm.
+
+**2. Walk OID manual** (`GET /api/monitoring/olts/{id}/snmp-walk?oid=…&limit=50`) —
+telusuri sub-tree buat **nyari** OID yang bener. Hasilnya OID penuh + nilai, siap
+disalin. Dua batasan yang disengaja:
+- OID wajib di bawah `1.3.6.1` dan **minimal 7 angka** — walk dari akar di OLT
+  produksi bisa jalan belasan menit sambil bikin CPU manajemennya megap-megap.
+- Sasarannya **cuma OLT yang ada di inventory tenant ini**; host/community diambil
+  server dari basis data, gak nerima dari pemanggil. Jadi endpoint ini gak bisa
+  dipelintir jadi pemindai jaringan.
+
+Kalau ketemu OID yang bener buat firmware-mu, kirim hasil walk-nya ke tim — profil
+MIB-nya yang diperbaiki, bukan ditambal per-perangkat.
+
+---
+
 ## Kotak masuk auto-provisioning (menu Provisioning)
 
 Isinya ONU yang OLT lihat tapi belum jadi pelanggan. Kolom penting: serial/MAC,
@@ -169,6 +211,8 @@ Status ONU pelanggan: `PENDING` → `ONLINE`/`OFFLINE`/`LOS` (dari pembacaan) �
   `snmpget` beneran.
 - **Community/port salah = OLT_UNREACHABLE, bukan "0 ONU".** Kalau alarm unreachable
   nyala, cek community + port + reachability, jangan nyari-nyari ONU dulu.
+- **OLT nyambung tapi ONU nol = curigai OID, bukan jaringan.** Buka tab **Diagnostik**
+  di detail OLT dan jalankan uji peta OID (lihat bagian Diagnostik SNMP di atas).
 - **Vendor NOKIA/OTHER dilewati diam-diam.** Gak ada ONU, gak ada alarm. Ganti ke
   vendor yang ada adapternya (ZTE/HUAWEI/FIBERHOME/HSGQ).
 - **Discovery gak instan.** Setelah daftar OLT, tunggu satu siklus (≤5 menit).
@@ -185,6 +229,9 @@ Status ONU pelanggan: `PENDING` → `ONLINE`/`OFFLINE`/`LOS` (dari pembacaan) �
   community, dan **port** yang benar (HSGQ = **1161**).
 - Adapter ada buat **ZTE/HUAWEI/FIBERHOME (GPON)** + **HSGQ (EPON, identitas MAC)**;
   NOKIA/OTHER dilewati diam-diam.
+- **ONU nol padahal OLT nyambung** → tab **Diagnostik** di detail OLT: uji peta OID
+  (Terbaca / Kosong / Tak terbaca / Belum dipetakan) + walk OID manual buat nyari
+  OID yang bener.
 - ONU liar masuk **kotak masuk Provisioning**: Terima (tautkan) / Abaikan (sembunyi) /
   Hapus (buang, bisa ke-detect lagi kalau masih nyala). Zero-touch = auto-terima yang
   HIGH. Hapus OLT membersihkan kotak masuk yatimnya.

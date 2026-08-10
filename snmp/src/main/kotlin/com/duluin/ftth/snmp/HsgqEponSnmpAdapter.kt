@@ -56,6 +56,19 @@ class HsgqEponSnmpAdapter(
         }
     }
 
+    /**
+     * OID di sini sudah terverifikasi lapangan, jadi rencana ini dipakai untuk arah
+     * sebaliknya: memastikan PERANGKAT-nya yang benar (firmware/varian OEM lain) ketika
+     * sebuah unit HSGQ tak menghasilkan pembacaan.
+     */
+    override val oidPlan: List<OidRole> get() = listOf(
+        OidRole("SERIAL", "MAC ONU (identitas)", MAC_OID, essential = true, interpret = ::normalizeMac),
+        OidRole("STATUS", "Status ONU", STATUS_OID, essential = true) { STATUS_MAPPING[it]?.name },
+        OidRole("NAME", "Nama ONU di OLT", NAME_OID) { it.trim().takeIf(String::isNotBlank) },
+        OidRole("RX_POWER", "Redaman terima (RX)", RX_POWER_OID, essential = true, interpret = ::dbmOrNull),
+        OidRole("TX_POWER", "Daya kirim (TX)", TX_POWER_OID, interpret = ::dbmOrNull),
+    )
+
     override fun pollOnus(target: OltTarget): List<OnuReading> {
         val community = target.snmpCommunity
             ?: throw OltProtocolException("Community string SNMP belum diisi untuk ${target.oltCode}")
@@ -138,6 +151,9 @@ class HsgqEponSnmpAdapter(
         }
         return Math.round(dbm * 100) / 100.0
     }
+
+    /** Nilai optik mentah sebagai teks siap baca; `null` bila sentinel/di luar nalar. */
+    private fun dbmOrNull(raw: String): String? = opticalPower(raw)?.let { "$it dBm" }
 
     companion object {
         const val VENDOR = "HSGQ"

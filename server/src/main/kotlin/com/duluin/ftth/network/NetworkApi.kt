@@ -84,8 +84,13 @@ interface NetworkApi {
      *
      * Dipisahkan dari [findOltsByIds] dan dinamai eksplisit supaya jelas bahwa
      * ini satu-satunya jalan kredensial perangkat keluar dari module network.
-     * Pemanggilnya hanya endpoint collector yang sudah terautentikasi; API
-     * pengguna biasa tidak pernah menyentuhnya.
+     *
+     * Pemanggilnya ada tiga, semuanya di dalam server: endpoint collector yang sudah
+     * terautentikasi, poller server-side, dan alat validasi OID
+     * ([com.duluin.ftth.monitoring.application.port.inbound.SnmpDiagnosticUseCase]) —
+     * yang terakhir dipicu operator lewat API, tapi community string-nya tetap tak
+     * pernah ikut ke jawaban HTTP: yang menyeberang hanya hasil pembacaannya. API
+     * pengguna biasa tidak pernah menyentuh method ini.
      */
     fun findPollingTargets(oltIds: Set<UUID>): List<OltPollingTarget>
 

@@ -29,6 +29,7 @@ import { mapFocusState } from '@/map/mapFocus'
 import { CustomerDetailBlade } from './CustomerDetailPage'
 import { DiscoveredOnuInbox } from '@/components/organisms'
 import { OltRegisteredOnus } from '@/components/organisms'
+import { SnmpDiagnosticPanel } from '@/components/organisms'
 
 /**
  * Detail satu OLT sebagai rute tersendiri (`/olts/:id`) — bukan panel peta.
@@ -55,7 +56,7 @@ const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
   { value: 'INACTIVE', label: 'Nonaktif' },
 ]
 
-type Tab = 'ringkasan' | 'pon' | 'onu' | 'onubaru'
+type Tab = 'ringkasan' | 'pon' | 'onu' | 'onubaru' | 'diagnostik'
 
 /**
  * Konten detail satu OLT — komponen dipakai-ulang oleh DUA pemanggil:
@@ -99,6 +100,11 @@ export function OltDetail({
     canMap && can('network.olt.view') && can('network.odp.view') && canCustomer
   // Tab "ONU Baru" memakai kotak masuk provisioning — sama seperti halaman Provisioning.
   const canProvisioning = can('monitoring.provisioning.view')
+  // Diagnostik SNMP menyuruh server menembak perangkat sungguhan dan menyingkap peta OID
+  // kami, jadi gerbangnya sama dengan menyetel polling: "Kelola collector & polling".
+  // Sengaja TIDAK digerbang `snmpEnabled` — justru sebelum SNMP dinyalakan-lah operator
+  // ingin membuktikan community & OID-nya benar.
+  const canDiagnose = can('monitoring.collector.manage')
 
   const [olt, setOlt] = useState<OltView | null>(null)
   const [loading, setLoading] = useState(true)
@@ -199,6 +205,7 @@ export function OltDetail({
           { key: 'pon' as Tab, label: 'PON Port', badge: olt.ponPortCount || undefined },
           ...(canOnuList ? [{ key: 'onu' as Tab, label: 'ONU' }] : []),
           ...(canProvisioning ? [{ key: 'onubaru' as Tab, label: 'ONU Baru' }] : []),
+          ...(canDiagnose ? [{ key: 'diagnostik' as Tab, label: 'Diagnostik' }] : []),
         ]}
         active={tab}
         onChange={setTab}
@@ -210,6 +217,7 @@ export function OltDetail({
         <OltRegisteredOnus oltId={olt.id} onOpenCustomer={canCustomer ? setDetailCustomerId : undefined} />
       )}
       {tab === 'onubaru' && canProvisioning && <DiscoveredOnuInbox oltId={olt.id} />}
+      {tab === 'diagnostik' && canDiagnose && <SnmpDiagnosticPanel oltId={olt.id} />}
 
       {editing && (
         <EditOltModal
