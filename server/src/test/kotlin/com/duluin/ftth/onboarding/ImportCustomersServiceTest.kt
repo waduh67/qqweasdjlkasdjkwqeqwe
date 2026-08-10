@@ -373,6 +373,7 @@ class ImportCustomersServiceTest {
 
         override fun findPlanCommercial(planId: UUID) = throw UnsupportedOperationException()
         override fun findPlanNetwork(planId: UUID) = throw UnsupportedOperationException()
+        override fun findActivePlans() = throw UnsupportedOperationException()
     }
 
     private class FakeBngApi(

@@ -27,6 +27,13 @@ interface CatalogApi {
 
     /** Sisi jaringan paket untuk penegakan RADIUS. `null` bila paket tak ada. */
     fun findPlanNetwork(planId: UUID): PlanNetworkRef?
+
+    /**
+     * Paket yang MASIH DIJUAL (aktif), terurut nama — daftar pilihan saat pelanggan portal
+     * mengajukan ganti paket. Paket nonaktif sengaja tak ikut: ia masih dipakai langganan
+     * lama, tapi menawarkannya ke orang baru berarti menjual sesuatu yang sudah ditarik.
+     */
+    fun findActivePlans(): List<PlanCommercialRef>
 }
 
 /**

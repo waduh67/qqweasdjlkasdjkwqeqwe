@@ -33,6 +33,25 @@ interface PortalSelfServiceUseCase {
 
     /** Status koneksi: sesi PPPoE terkini + perangkat CPE. */
     fun connection(customerId: UUID): PortalConnectionView
+
+    /**
+     * Satu tagihan LENGKAP untuk lembar cetak: penerbit, penerima, rincian pajak, dan
+     * pembayaran yang sudah masuk. Dibatasi ke [customerId]; NotFound bila bukan miliknya.
+     */
+    fun invoiceForPrint(customerId: UUID, invoiceId: UUID): PortalInvoicePrintView
+
+    /**
+     * Paket yang bisa dipilih pelanggan saat mengajukan ganti paket, dengan penanda paket
+     * yang sedang dipakainya sekarang.
+     */
+    fun planOptions(customerId: UUID): List<PortalPlanOptionView>
+
+    /**
+     * Pelanggan mengajukan pindah paket. Ajuan tak langsung mengubah langganan — ia menjadi
+     * TIKET berkategori `GANTI_PAKET` agar operator memutuskan (harga, prorata, kunjungan
+     * teknisi bila perlu ganti perangkat). Pelanggan menerima nomor tiket untuk diikuti.
+     */
+    fun requestPlanChange(customerId: UUID, command: PortalPlanChangeCommand): PortalPlanChangeReceiptView
 }
 
 data class PortalAccountView(
@@ -109,10 +128,67 @@ data class PortalVaChannelView(
 data class PortalPaymentView(
     val id: UUID,
     val invoiceId: UUID,
+    /** Nomor tagihan yang dilunasi; null bila tagihannya sudah tak ada di daftar pelanggan. */
+    val invoiceNumber: String?,
     val amount: BigDecimal,
     val provider: String,
     val paidAt: Instant,
     val note: String?,
+)
+
+/**
+ * Lembar tagihan siap cetak. Sengaja MEMBAWA SENDIRI identitas penerbit & penerima alih-alih
+ * mengandalkan klien menempelkannya: yang dicetak lalu disimpan/dilampirkan pelanggan harus
+ * lengkap berdiri sendiri, dan nilainya tak boleh berubah bila tampilan portal berubah.
+ *
+ * [issuerName] = nama ISP (tenant) apa adanya; portal tak menyimpan alamat/NPWP tenant, jadi
+ * lembar ini adalah bukti tagihan, bukan faktur pajak.
+ */
+data class PortalInvoicePrintView(
+    val issuerName: String,
+    val customerName: String,
+    val customerCode: String,
+    val packageName: String?,
+    val invoice: PortalInvoiceView,
+    /** DPP (sebelum PPN) — sama dengan `invoice.amount` bila tenant tak memungut PPN. */
+    val baseAmount: BigDecimal,
+    val taxAmount: BigDecimal,
+    val taxRate: BigDecimal?,
+    val prorated: Boolean,
+    val proratedDays: Int?,
+    val payments: List<PortalPaymentView>,
+)
+
+/**
+ * Satu paket yang bisa dipilih di ajuan ganti paket. [current] menandai paket yang sedang
+ * dipakai langganan yang sedang dilihat — supaya pelanggan tak mengajukan pindah ke paket
+ * yang sudah dipakainya.
+ */
+data class PortalPlanOptionView(
+    val planId: UUID,
+    val name: String,
+    val monthlyFee: BigDecimal,
+    val bandwidthMbps: Int,
+    val downMbps: Int?,
+    val upMbps: Int?,
+    val fupEnabled: Boolean,
+    val fupQuotaMb: Long?,
+    val current: Boolean,
+)
+
+/** [note] alasan/catatan pelanggan (opsional) — ikut jadi badan tiket. */
+data class PortalPlanChangeCommand(
+    val subscriptionId: UUID,
+    val targetPlanId: UUID,
+    val note: String?,
+)
+
+/** Bukti ajuan: nomor tiket yang bisa diikuti pelanggan di menu Bantuan. */
+data class PortalPlanChangeReceiptView(
+    val ticketId: UUID,
+    val ticketCode: String,
+    val subject: String,
+    val status: String,
 )
 
 data class PortalConnectionView(

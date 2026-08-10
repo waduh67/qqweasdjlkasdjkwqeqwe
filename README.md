@@ -139,8 +139,11 @@ tak pernah menyentuh tabel module lain — batas ini ditegakkan `ModularityTests
   (lihat [`docs/saas-subscription.md`](docs/saas-subscription.md)).
 - **portal** — portal pelanggan: identitas & sesi **terpisah** dari operator
   (login pakai email/nomor HP, tanpa perlu tahu kode ISP; lupa password lewat
-  email), lihat tagihan & bayar, riwayat pemakaian, status sambungan, dan lapor
-  gangguan yang mendarat di `helpdesk`.
+  email), lihat tagihan & bayar, riwayat pembayaran (menyebut tagihan mana yang
+  lunas), **cetak bukti tagihan**, riwayat pemakaian, status sambungan, lapor
+  gangguan yang mendarat di `helpdesk`, dan **ajukan ganti paket** — ajuannya
+  jadi tiket berkategori `GANTI_PAKET` (bukan perubahan langsung: harga, profil
+  bandwidth, dan kadang kunjungan teknisi perlu ditinjau operator dulu).
 - **onboarding** — mempercepat ISP pindah ke sini dan menerima pelanggan baru:
   wizard **PSB ekspres** (pelanggan → ODP → akun akses → work order dalam satu
   formulir) plus impor massal akun PPPoE & pelanggan dari CSV.
@@ -519,7 +522,7 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
 | `GET /api/subscriber-360/{customerId}` | `customer.customer.view` |
 | `POST /api/onboarding/psb` · `/import/pppoe` · `/import/customers` · `GET /export/customers` | `customer.customer.create` (+ `bng.access.*` untuk PPPoE) |
 | `POST /api/portal/auth/{login,forgot-password,reset-password,refresh,logout}` | publik (sesi pelanggan, terpisah dari operator) |
-| `GET/PUT /api/portal/me` · `/password` · `/billing` · `/invoices/{id}/pay` · `/connection` · `/tickets` | sesi portal pelanggan |
+| `GET/PUT /api/portal/me` · `/password` · `/billing` · `/invoices/{id}/pay` · `/invoices/{id}/print` · `/connection` · `/tickets` · `/plan-options` · `POST /plan-change` | sesi portal pelanggan |
 | `GET/POST/DELETE /api/portal-admin/customers/{id}/credential` | `portal.credential.view` / `.manage` |
 | `GET/POST /api/notifications/broadcasts` | `notification.broadcast.view` / `.send` |
 | `GET/PUT /api/notifications/settings` | `notification.settings.view` / `.manage` |
@@ -602,7 +605,8 @@ Testcontainers, karena mesin pengembangan ini tidak punya Docker.
   RADIUS sekaligus (lihat [`docs/catalog.md`](docs/catalog.md))
 - **Portal pelanggan** ✅ identitas & sesi terpisah dari operator: masuk pakai
   email/nomor HP tanpa perlu tahu kode ISP, lupa password lewat email, lihat &
-  bayar tagihan, riwayat pemakaian, status sambungan
+  bayar tagihan, riwayat pembayaran + cetak bukti tagihan, ajuan ganti paket,
+  riwayat pemakaian, status sambungan
 - **Helpdesk** ✅ pelanggan melaporkan gangguan dari portal → tiket ber-SLA →
   balasan operator di utas yang sama → eskalasi jadi work order perbaikan
 - **Subscriber-360** ✅ satu layar riwayat pelanggan: langganan + tagihan + tiket +

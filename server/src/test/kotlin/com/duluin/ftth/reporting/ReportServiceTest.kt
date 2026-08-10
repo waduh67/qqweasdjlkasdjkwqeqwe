@@ -203,6 +203,7 @@ class ReportServiceTest {
         override fun findAccountSummary(customerId: UUID) = throw UnsupportedOperationException()
         override fun findCustomerInvoices(customerId: UUID) = throw UnsupportedOperationException()
         override fun findCustomerPayments(customerId: UUID) = throw UnsupportedOperationException()
+        override fun findCustomerInvoiceDetail(customerId: UUID, invoiceId: UUID) = throw UnsupportedOperationException()
         override fun paymentMethods() = throw UnsupportedOperationException()
         override fun payCustomerInvoice(customerId: UUID, invoiceId: UUID, method: String, channel: String?) =
             throw UnsupportedOperationException()

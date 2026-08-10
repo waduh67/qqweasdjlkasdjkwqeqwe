@@ -29,6 +29,9 @@ class CatalogApiService(
     override fun findPlanNetwork(planId: UUID): PlanNetworkRef? =
         planRepository.findById(planId)?.toNetworkRef()
 
+    override fun findActivePlans(): List<PlanCommercialRef> =
+        planRepository.findAll().filter { it.attributes.active }.map { it.toCommercialRef() }
+
     private fun Plan.toCommercialRef() = PlanCommercialRef(
         planId = id,
         packageName = attributes.name,

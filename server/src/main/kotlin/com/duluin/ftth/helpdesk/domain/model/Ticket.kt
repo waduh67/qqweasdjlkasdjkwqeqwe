@@ -11,8 +11,13 @@ import java.util.UUID
  * Jenis keluhan yang bisa dipilih pelanggan saat melapor. Sengaja sedikit dan berbahasa
  * pelanggan (bukan istilah jaringan) — daftar panjang membuat orang asal pilih, dan yang
  * menentukan penanganan tetap isi laporannya, bukan kategorinya.
+ *
+ * [GANTI_PAKET] bukan keluhan melainkan PERMINTAAN: pelanggan ingin naik/turun paket. Ia
+ * ikut jadi tiket karena butuh perkakas yang sama persis (penanggung jawab, tenggat, utas
+ * balasan, eskalasi ke work order bila perlu ganti perangkat) — tapi berkategori sendiri
+ * agar bisa disaring & dilaporkan terpisah dari gangguan.
  */
-enum class TicketCategory { KONEKSI_PUTUS, KONEKSI_LAMBAT, PERANGKAT, TAGIHAN, LAINNYA }
+enum class TicketCategory { KONEKSI_PUTUS, KONEKSI_LAMBAT, PERANGKAT, TAGIHAN, LAINNYA, GANTI_PAKET }
 
 /**
  * Alur tiket: `OPEN → IN_PROGRESS → RESOLVED → CLOSED`. [RESOLVED] artinya operator

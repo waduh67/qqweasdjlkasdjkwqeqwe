@@ -34,12 +34,23 @@ const STATUS_TONE: Record<string, string> = {
   CLOSED: 'var(--muted)',
 }
 
-const CATEGORY_LABEL: Record<string, string> = {
+/** Jenis gangguan yang boleh dipilih sendiri pelanggan di formulir laporan baru. */
+const REPORTABLE_CATEGORY: Record<string, string> = {
   KONEKSI_PUTUS: 'Internet mati total',
   KONEKSI_LAMBAT: 'Internet lambat',
   PERANGKAT: 'Perangkat/modem bermasalah',
   TAGIHAN: 'Tagihan & pembayaran',
   LAINNYA: 'Lainnya',
+}
+
+/**
+ * Label untuk MENAMPILKAN laporan yang sudah ada. Lebih luas dari daftar di atas karena
+ * `GANTI_PAKET` lahir dari menu Profil (isinya dirakit server dari harga katalog), jadi ia
+ * muncul di daftar ini tapi tak boleh bisa dipilih sebagai "gangguan" di formulir.
+ */
+const CATEGORY_LABEL: Record<string, string> = {
+  ...REPORTABLE_CATEGORY,
+  GANTI_PAKET: 'Ajuan ganti paket',
 }
 
 function fmtWhen(iso: string): string {
@@ -172,7 +183,7 @@ function NewTicketForm({
     <form className="card stack" style={{ gap: '0.6rem' }} onSubmit={onSubmit}>
       <strong style={{ fontSize: '0.95rem' }}>Laporan baru</strong>
       <SelectField label="Jenis gangguan" value={category} onChange={(_, data) => setCategory(data.value)}>
-        {Object.entries(CATEGORY_LABEL).map(([value, label]) => (
+        {Object.entries(REPORTABLE_CATEGORY).map(([value, label]) => (
           <option key={value} value={value}>{label}</option>
         ))}
       </SelectField>

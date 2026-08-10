@@ -232,6 +232,7 @@ private class FakeCatalogApi(private val plans: Map<UUID, PlanNetworkRef?>) : Ca
     override fun findPlanNetwork(planId: UUID): PlanNetworkRef? = plans[planId]
     override fun findPlanCommercial(planId: UUID): PlanCommercialRef? = throw UnsupportedOperationException()
     override fun findPlanByName(name: String) = throw UnsupportedOperationException()
+    override fun findActivePlans() = throw UnsupportedOperationException()
 }
 
 private class FakeBngActionRepo : BngActionRepository {

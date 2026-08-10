@@ -8,7 +8,14 @@ import type { PageResponse } from './types'
  */
 
 export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
-export type TicketCategory = 'KONEKSI_PUTUS' | 'KONEKSI_LAMBAT' | 'PERANGKAT' | 'TAGIHAN' | 'LAINNYA'
+/** `GANTI_PAKET` bukan gangguan melainkan ajuan pindah paket yang dikirim pelanggan dari portal. */
+export type TicketCategory =
+  | 'KONEKSI_PUTUS'
+  | 'KONEKSI_LAMBAT'
+  | 'PERANGKAT'
+  | 'TAGIHAN'
+  | 'LAINNYA'
+  | 'GANTI_PAKET'
 export type TicketAuthor = 'CUSTOMER' | 'OPERATOR' | 'SYSTEM'
 export type TicketPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT'
 
@@ -99,6 +106,7 @@ export const TICKET_CATEGORY_LABEL: Record<TicketCategory, string> = {
   PERANGKAT: 'Perangkat',
   TAGIHAN: 'Tagihan',
   LAINNYA: 'Lainnya',
+  GANTI_PAKET: 'Ajuan ganti paket',
 }
 
 export function listTickets(filter: TicketFilter = {}, size = 100): Promise<PageResponse<TicketView>> {

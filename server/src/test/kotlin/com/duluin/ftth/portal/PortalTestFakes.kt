@@ -201,7 +201,8 @@ class StubCustomerApi(vararg seed: CustomerRef) : CustomerApi {
     override fun findCustomer(id: UUID): CustomerRef? = byId[id]
 
     override fun findCustomersByIds(ids: Set<UUID>) = ids.mapNotNull { byId[it] }
-    override fun findSubscription(id: UUID) = throw UnsupportedOperationException()
+    override fun findSubscription(id: UUID): SubscriptionRef? =
+        subscriptions.values.flatten().firstOrNull { it.id == id }
     override fun findSubscriptionsByCustomer(customerId: UUID): List<SubscriptionRef> =
         subscriptions[customerId].orEmpty()
     override fun findOccupantsOfOdp(odpId: UUID) = throw UnsupportedOperationException()

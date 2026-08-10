@@ -5,14 +5,21 @@ import {
   changePortalPassword,
   getPortalBilling,
   getPortalConnection,
+  getPortalInvoicePrint,
+  getPortalPlanOptions,
   getPortalProfile,
+  requestPortalPlanChange,
   type PortalAccount,
   type PortalBilling,
   type PortalConnection,
+  type PortalPlanChangeReceipt,
+  type PortalPlanOption,
+  type PortalSubscription,
 } from './portalApi'
 import { BantuanTab } from './PortalHelpTab'
 import { payLink } from '@/api/publicPayment'
-import { Button, Segmented, TextField } from '@/components/atoms'
+import { Button, Segmented, SelectField, TextField } from '@/components/atoms'
+import { printInvoiceSheet } from '@/utils/invoiceSheet'
 
 type Tab = 'ringkasan' | 'tagihan' | 'koneksi' | 'bantuan' | 'profil'
 
@@ -197,6 +204,7 @@ function TagihanTab({
                   <span className="badge" style={{ color: INVOICE_TONE[inv.status] ?? undefined }}>
                     {INVOICE_STATUS_LABEL[inv.status] ?? inv.status}
                   </span>
+                  <PrintInvoiceButton invoiceId={inv.id} />
                   {inv.payable && (
                     <Button
                       variant="primary"
@@ -218,14 +226,65 @@ function TagihanTab({
           <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada pembayaran.</p>
         ) : (
           billing.payments.map((pay) => (
-            <div key={pay.id} className="spread" style={{ alignItems: 'center' }}>
-              <span className="muted" style={{ fontSize: '0.85rem' }}>{fmtDate(pay.paidAt)} · {pay.provider}</span>
+            <div key={pay.id} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
+              <div className="stack" style={{ gap: 2, minWidth: 0 }}>
+                {/* Nomor tagihan ikut ditulis: "Rp150.000 · xendit" saja tak menjawab
+                    pertanyaan yang sebenarnya, yaitu tagihan bulan mana yang lunas. */}
+                <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{pay.invoiceNumber ?? 'Pembayaran'}</span>
+                <span className="muted" style={{ fontSize: '0.8rem' }}>{fmtDate(pay.paidAt)} · {pay.provider}</span>
+              </div>
               <span className="tnum" style={{ fontWeight: 600, color: 'var(--good-ink)' }}>{rupiah(pay.amount)}</span>
             </div>
           ))
         )}
       </div>
     </div>
+  )
+}
+
+/**
+ * "Cetak" satu tagihan: lembarnya dirakit SERVER (`/invoices/{id}/print`) lalu dicetak lewat
+ * template bersama `printInvoiceSheet` — sama dengan yang dipakai operator. Data ditarik saat
+ * ditekan, bukan di muka, supaya membuka tab Tagihan tak menembak N permintaan sekaligus.
+ */
+function PrintInvoiceButton({ invoiceId }: { invoiceId: string }) {
+  const [busy, setBusy] = useState(false)
+
+  async function onPrint() {
+    setBusy(true)
+    try {
+      const sheet = await getPortalInvoicePrint(invoiceId)
+      printInvoiceSheet({
+        issuerName: sheet.issuerName,
+        number: sheet.invoice.number,
+        issuedAt: sheet.invoice.issuedAt,
+        dueDate: sheet.invoice.dueDate,
+        statusLabel: INVOICE_STATUS_LABEL[sheet.invoice.status] ?? sheet.invoice.status,
+        customerName: sheet.customerName,
+        customerCode: sheet.customerCode,
+        packageName: sheet.packageName,
+        periodStart: sheet.invoice.periodStart,
+        periodEnd: sheet.invoice.periodEnd,
+        prorated: sheet.prorated,
+        proratedDays: sheet.proratedDays,
+        baseAmount: sheet.baseAmount,
+        taxAmount: sheet.taxAmount,
+        totalAmount: sheet.invoice.amount,
+        taxRate: sheet.taxRate,
+        paidAt: sheet.invoice.paidAt,
+        payments: sheet.payments.map((p) => ({ paidAt: p.paidAt, amount: p.amount, provider: p.provider })),
+      })
+    } catch {
+      // Gagal ambil lembar cetak bukan alasan mengganggu layar tagihan; tombol cukup pulih.
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Button variant="subtle" onClick={() => void onPrint()} disabled={busy} style={{ fontSize: '0.8rem' }}>
+      {busy ? 'Menyiapkan…' : 'Cetak'}
+    </Button>
   )
 }
 
@@ -307,8 +366,108 @@ function ProfilTab({ profile }: { profile: PortalAccount | null }) {
         )}
       </div>
 
+      {profile.subscriptions.length > 0 && <RequestPlanChange subscriptions={profile.subscriptions} />}
+
       <ChangePassword />
     </div>
+  )
+}
+
+/**
+ * Ajuan pindah paket. Sengaja TIDAK mengubah langganan seketika: paket berubah berarti harga,
+ * profil bandwidth, dan kadang kunjungan teknisi — jadi ajuannya masuk sebagai laporan
+ * berkategori "Ajuan ganti paket" yang ditinjau operator, dan pelanggan mengikutinya di menu
+ * Bantuan seperti laporan lain. Harga yang dikutip ke operator diambil server dari katalog,
+ * bukan dari angka yang tampil di layar ini.
+ */
+function RequestPlanChange({ subscriptions }: { subscriptions: PortalSubscription[] }) {
+  const [options, setOptions] = useState<PortalPlanOption[] | null>(null)
+  const [subscriptionId, setSubscriptionId] = useState(subscriptions[0]?.subscriptionId ?? '')
+  const [planId, setPlanId] = useState('')
+  const [note, setNote] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [receipt, setReceipt] = useState<PortalPlanChangeReceipt | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    void getPortalPlanOptions()
+      .then((list) => alive && setOptions(list))
+      .catch(() => alive && setOptions([]))
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  // Paket yang sedang dipakai tak perlu ditawarkan — mengajukannya pasti ditolak server.
+  const choices = (options ?? []).filter((p) => !p.current)
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault()
+    setError(null)
+    setBusy(true)
+    try {
+      setReceipt(await requestPortalPlanChange(subscriptionId, planId, note))
+    } catch (err) {
+      setError(err instanceof PortalApiError ? err.message : 'Ajuan gagal dikirim')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (options === null) return null
+  if (choices.length === 0) return null
+
+  if (receipt) {
+    return (
+      <div className="card stack" style={{ gap: '0.4rem' }}>
+        <strong style={{ fontSize: '0.95rem' }}>Ajuan ganti paket terkirim</strong>
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          Nomor ajuan <strong className="tnum">{receipt.ticketCode}</strong>. Tim kami akan menghubungimu untuk
+          memastikan jadwal dan biayanya — perkembangannya bisa kamu ikuti di menu <strong>Bantuan</strong>.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <form className="card stack" style={{ gap: '0.6rem' }} onSubmit={onSubmit}>
+      <strong style={{ fontSize: '0.95rem' }}>Ajukan ganti paket</strong>
+      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        Paket tidak langsung berubah: ajuanmu ditinjau dulu oleh tim, termasuk biaya dan jadwalnya.
+      </p>
+      {subscriptions.length > 1 && (
+        <SelectField
+          label="Langganan yang mau diganti"
+          value={subscriptionId}
+          onChange={(_, data) => setSubscriptionId(data.value)}
+        >
+          {subscriptions.map((s) => (
+            <option key={s.subscriptionId} value={s.subscriptionId}>{s.packageName}</option>
+          ))}
+        </SelectField>
+      )}
+      <SelectField label="Paket yang diinginkan" value={planId} onChange={(_, data) => setPlanId(data.value)} required>
+        <option value="">— pilih paket —</option>
+        {choices.map((p) => (
+          <option key={p.planId} value={p.planId}>
+            {p.name} · {p.downMbps && p.upMbps ? `${p.downMbps}/${p.upMbps}` : p.bandwidthMbps} Mbps ·{' '}
+            {rupiah(p.monthlyFee)}/bln
+          </option>
+        ))}
+      </SelectField>
+      <TextField
+        label="Catatan (opsional)"
+        value={note}
+        onChange={(_, data) => setNote(data.value)}
+        maxLength={1000}
+        placeholder="Mis. mulai bulan depan saja"
+      />
+      {error && <p className="error" style={{ margin: 0, fontSize: '0.85rem' }}>{error}</p>}
+      <Button variant="primary" type="submit" disabled={busy || !planId} style={{ alignSelf: 'flex-start' }}>
+        {busy ? 'Mengirim…' : 'Kirim ajuan'}
+      </Button>
+    </form>
   )
 }
 

@@ -32,6 +32,16 @@ interface BillingApi {
     /** Riwayat pembayaran seorang pelanggan, terbaru dulu — untuk portal self-service. */
     fun findCustomerPayments(customerId: UUID): List<CustomerPaymentRef>
 
+    /**
+     * Satu tagihan pelanggan LENGKAP untuk DICETAK: rincian pajak (DPP + PPN), penanda prorata,
+     * dan pembayaran yang sudah masuk atasnya. Dibatasi pemilik ([customerId]) seperti
+     * [payCustomerInvoice] — `null` bila tagihannya bukan milik pelanggan itu (atau tak ada).
+     *
+     * Dipisah dari [findCustomerInvoices] karena rincian pajak hanya berarti pada SATU tagihan
+     * yang sedang dilihat; membawanya di setiap baris daftar cuma menggemukkan payload portal.
+     */
+    fun findCustomerInvoiceDetail(customerId: UUID, invoiceId: UUID): CustomerInvoiceDetailRef?
+
     /** Metode bayar in-app yang tersedia (QRIS + Virtual Account) — untuk portal self-service. */
     fun paymentMethods(): List<PaymentMethodOption>
 
@@ -227,6 +237,29 @@ data class ManualInstructionsRef(
     val accountHolder: String?,
     val qrisEnabled: Boolean,
     val qrisImageAvailable: Boolean,
+)
+
+/**
+ * Satu tagihan pelanggan beserta rincian yang hanya perlu saat DICETAK.
+ *
+ * [baseAmount] = DPP (nilai layanan sebelum PPN) dan [taxAmount] komponen PPN yang SUDAH
+ * termasuk di `invoice.amount` — dipisah supaya lembar cetak bisa menuliskan keduanya, karena
+ * tagihan yang cuma menyebut total tak bisa dipakai pelanggan badan usaha untuk pembukuan.
+ * [taxRate] null pada tagihan tanpa PPN (termasuk tagihan lama sebelum fitur pajak).
+ *
+ * [payments] adalah pembayaran yang MASUK atas tagihan ini — dasar tulisan "LUNAS" beserta
+ * tanggal & kanalnya di lembar cetak.
+ */
+data class CustomerInvoiceDetailRef(
+    val invoice: CustomerInvoiceRef,
+    val subscriptionId: UUID,
+    val baseAmount: BigDecimal,
+    val taxAmount: BigDecimal,
+    val taxRate: BigDecimal?,
+    /** Tagihan diprorata (aktivasi tengah periode) — nilainya kurang dari tarif sebulan penuh. */
+    val prorated: Boolean,
+    val proratedDays: Int?,
+    val payments: List<CustomerPaymentRef>,
 )
 
 /** Proyeksi satu pembayaran untuk pelanggan (portal self-service). */

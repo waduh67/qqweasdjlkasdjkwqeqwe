@@ -3,6 +3,7 @@ package com.duluin.ftth.billing.application.service
 import com.duluin.ftth.billing.BillingAccountSummary
 import com.duluin.ftth.billing.BillingApi
 import com.duluin.ftth.billing.BillingFinancialReport
+import com.duluin.ftth.billing.CustomerInvoiceDetailRef
 import com.duluin.ftth.billing.CustomerInvoiceRef
 import com.duluin.ftth.billing.CustomerPaymentRef
 import com.duluin.ftth.billing.ManualInstructionsRef
@@ -24,6 +25,7 @@ import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.storage.StoredObject
 import com.duluin.ftth.billing.domain.model.Invoice
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
+import com.duluin.ftth.billing.domain.model.Payment
 import com.duluin.ftth.customer.CustomerApi
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -164,16 +166,31 @@ class BillingApiService(
     )
 
     override fun findCustomerPayments(customerId: UUID): List<CustomerPaymentRef> =
-        paymentRepository.findByCustomerId(customerId).map { pay ->
-            CustomerPaymentRef(
-                id = pay.id,
-                invoiceId = pay.invoiceId,
-                amount = pay.amount,
-                provider = pay.provider,
-                paidAt = pay.paidAt,
-                note = pay.note,
-            )
-        }
+        paymentRepository.findByCustomerId(customerId).map { it.toRef() }
+
+    override fun findCustomerInvoiceDetail(customerId: UUID, invoiceId: UUID): CustomerInvoiceDetailRef? {
+        // Sama seperti jalur bayar portal: tagihan orang lain dijawab "tak ada", bukan "tak berhak".
+        val invoice = invoiceRepository.findById(invoiceId)?.takeIf { it.customerId == customerId } ?: return null
+        return CustomerInvoiceDetailRef(
+            invoice = invoice.toRef(),
+            subscriptionId = invoice.subscriptionId,
+            baseAmount = invoice.baseAmount,
+            taxAmount = invoice.taxAmount,
+            taxRate = invoice.taxRate,
+            prorated = invoice.prorated,
+            proratedDays = invoice.proratedDays,
+            payments = paymentRepository.findByInvoiceId(invoiceId).map { it.toRef() },
+        )
+    }
+
+    private fun Payment.toRef() = CustomerPaymentRef(
+        id = id,
+        invoiceId = invoiceId,
+        amount = amount,
+        provider = provider,
+        paidAt = paidAt,
+        note = note,
+    )
 
     override fun findAccountSummary(customerId: UUID): BillingAccountSummary {
         val invoices = invoiceRepository.findByCustomerId(customerId)

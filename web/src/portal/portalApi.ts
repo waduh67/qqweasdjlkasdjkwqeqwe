@@ -77,10 +77,52 @@ export interface PortalInvoice {
 export interface PortalPayment {
   id: string
   invoiceId: string
+  /** Nomor tagihan yang dilunasi; null bila tagihannya sudah tak ada di daftar. */
+  invoiceNumber: string | null
   amount: string
   provider: string
   paidAt: string
   note: string | null
+}
+
+/**
+ * Lembar tagihan siap cetak — dirakit UTUH di server (penerbit, penerima, rincian pajak,
+ * pembayaran masuk) supaya isi kertas yang disimpan pelanggan tak bergantung tampilan portal.
+ */
+export interface PortalInvoicePrint {
+  issuerName: string
+  customerName: string
+  customerCode: string
+  packageName: string | null
+  invoice: PortalInvoice
+  /** DPP sebelum PPN; sama dengan `invoice.amount` bila ISP tak memungut PPN. */
+  baseAmount: string
+  taxAmount: string
+  taxRate: string | null
+  prorated: boolean
+  proratedDays: number | null
+  payments: PortalPayment[]
+}
+
+/** Satu paket yang bisa dipilih di ajuan ganti paket; `current` = yang dipakai sekarang. */
+export interface PortalPlanOption {
+  planId: string
+  name: string
+  monthlyFee: string
+  bandwidthMbps: number
+  downMbps: number | null
+  upMbps: number | null
+  fupEnabled: boolean
+  fupQuotaMb: number | null
+  current: boolean
+}
+
+/** Bukti ajuan ganti paket: nomor tiket yang bisa diikuti pelanggan di menu Bantuan. */
+export interface PortalPlanChangeReceipt {
+  ticketId: string
+  ticketCode: string
+  subject: string
+  status: string
 }
 
 export interface PortalBilling {
@@ -192,6 +234,22 @@ export const portalResetPassword = (identifier: string, code: string, newPasswor
 export const getPortalProfile = () => portalApiClient.get<PortalAccount>('/api/portal/me/profile')
 export const getPortalBilling = () => portalApiClient.get<PortalBilling>('/api/portal/me/billing')
 export const getPortalConnection = () => portalApiClient.get<PortalConnection>('/api/portal/me/connection')
+
+/** Lembar cetak satu tagihan; tagihan milik orang lain dijawab 404 oleh server. */
+export const getPortalInvoicePrint = (invoiceId: string) =>
+  portalApiClient.get<PortalInvoicePrint>(`/api/portal/me/invoices/${invoiceId}/print`)
+
+/** Daftar paket yang masih dijual + penanda paket yang sedang dipakai pelanggan. */
+export const getPortalPlanOptions = () =>
+  portalApiClient.get<PortalPlanOption[]>('/api/portal/me/plan-options')
+
+/** Ajuan pindah paket — jadi tiket berkategori `GANTI_PAKET`, bukan perubahan langsung. */
+export const requestPortalPlanChange = (subscriptionId: string, targetPlanId: string, note: string | null) =>
+  portalApiClient.post<PortalPlanChangeReceipt>('/api/portal/me/plan-change', {
+    subscriptionId,
+    targetPlanId,
+    note: note?.trim() || null,
+  })
 
 export const changePortalPassword = (currentPassword: string, newPassword: string) =>
   portalApiClient.post<void>('/api/portal/me/password', { currentPassword, newPassword })

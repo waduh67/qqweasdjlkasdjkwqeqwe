@@ -33,6 +33,7 @@ import { Badge, Button, EmptyState, SelectField, TextField, Toolbar, type Tone }
 import { Modal, SearchInput } from '@/components/molecules'
 import { useToast } from '@/system'
 import { IconInbox, IconPlus } from '@/components/atoms/icons'
+import { printInvoiceSheet } from '@/utils/invoiceSheet'
 
 /**
  * Jeda sebelum memuat ulang daftar setelah simulasi bayar (sandbox): gateway melunasi lewat
@@ -60,93 +61,28 @@ function todayLocalDate(): string {
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
 }
 
-/** Escape teks pengguna sebelum disisipkan ke HTML cetak (hindari HTML injection). */
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
 /**
- * Cetak/unduh PDF tagihan sepenuhnya di sisi klien (tak ada endpoint PDF di server):
- * merakit dokumen HTML rapi ke dalam iframe tersembunyi lalu memanggil `print()` —
- * dialog cetak browser memberi opsi "Simpan sebagai PDF". Nilai dari pengguna di-escape.
+ * Cetak/unduh PDF tagihan sepenuhnya di sisi klien — templatnya dipakai bersama portal
+ * pelanggan (lihat `utils/invoiceSheet`), jadi kertas dari operator dan dari portal sama persis.
  */
 function printInvoice(inv: InvoiceView, customer: CustomerLite | undefined) {
-  const base = Number(inv.baseAmount)
-  const tax = Number(inv.taxAmount)
-  const total = Number(inv.amount)
-  const taxPct = inv.taxRate ? `${(Number(inv.taxRate) * 100).toFixed(2).replace(/\.?0+$/, '')}%` : null
-  const custName = escapeHtml(customer?.name ?? 'Pelanggan')
-  const custCode = customer?.code ? escapeHtml(customer.code) : null
-  const row = (label: string, value: string, strong = false) =>
-    `<tr><td class="lbl">${label}</td><td class="val"${strong ? ' style="font-weight:700"' : ''}>${value}</td></tr>`
-
-  const html = `<!doctype html><html lang="id"><head><meta charset="utf-8">
-<title>Tagihan ${escapeHtml(inv.number)}</title>
-<style>
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #1a1a1a; margin: 0; padding: 32px; font-size: 13px; }
-  .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1a1a1a; padding-bottom: 12px; margin-bottom: 20px; }
-  h1 { font-size: 22px; margin: 0; letter-spacing: 0.5px; }
-  .num { font-family: monospace; font-size: 14px; margin-top: 4px; color: #555; }
-  .meta { text-align: right; font-size: 12px; color: #555; line-height: 1.6; }
-  .party { margin-bottom: 20px; }
-  .party .h { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: #888; margin-bottom: 3px; }
-  .party .n { font-size: 15px; font-weight: 600; }
-  table { width: 100%; border-collapse: collapse; }
-  .amt { margin-top: 8px; }
-  .amt td { padding: 7px 0; border-bottom: 1px solid #eee; }
-  .amt td.lbl { color: #555; }
-  .amt td.val { text-align: right; font-variant-numeric: tabular-nums; }
-  .amt tr.total td { border-top: 2px solid #1a1a1a; border-bottom: none; font-size: 16px; padding-top: 12px; }
-  .foot { margin-top: 28px; font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
-  .status { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; border: 1px solid #ccc; }
-</style></head><body>
-  <div class="head">
-    <div><h1>TAGIHAN</h1><div class="num">${escapeHtml(inv.number)}</div></div>
-    <div class="meta">
-      <div>Tanggal terbit: <strong>${fmtDate(inv.issuedAt.slice(0, 10))}</strong></div>
-      <div>Jatuh tempo: <strong>${fmtDate(inv.dueDate)}</strong></div>
-      <div>Status: <span class="status">${INVOICE_LABEL[inv.status]}</span></div>
-    </div>
-  </div>
-  <div class="party">
-    <div class="h">Ditagihkan kepada</div>
-    <div class="n">${custName}</div>
-    ${custCode ? `<div style="color:#555">${custCode}</div>` : ''}
-  </div>
-  <table><tbody>
-    ${row('Periode layanan', `${fmtDate(inv.periodStart)} – ${fmtDate(inv.periodEnd)}`)}
-    ${inv.prorated ? row('Prorata', `${inv.proratedDays ?? '—'} hari`) : ''}
-  </tbody></table>
-  <table class="amt"><tbody>
-    ${row('Dasar pengenaan (DPP)', fmtRupiah(base))}
-    ${tax > 0 ? row(`PPN${taxPct ? ` (${taxPct})` : ''}`, fmtRupiah(tax)) : ''}
-    <tr class="total"><td class="lbl">Total tagihan</td><td class="val">${fmtRupiah(total)}</td></tr>
-  </tbody></table>
-  ${inv.paidAt ? `<p style="margin-top:16px;color:#128a3a;font-weight:600">Lunas pada ${fmtDate(inv.paidAt.slice(0, 10))}</p>` : ''}
-  <div class="foot">Dokumen ini dibuat otomatis oleh sistem. Nomor tagihan: ${escapeHtml(inv.number)}.</div>
-</body></html>`
-
-  const iframe = document.createElement('iframe')
-  iframe.setAttribute('aria-hidden', 'true')
-  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;'
-  iframe.srcdoc = html
-  iframe.onload = () => {
-    const win = iframe.contentWindow
-    if (!win) return
-    win.focus()
-    win.print()
-    // Bersihkan setelah dialog cetak selesai; timeout jadi jaring pengaman lintas-browser.
-    win.onafterprint = () => iframe.remove()
-    setTimeout(() => {
-      if (document.body.contains(iframe)) iframe.remove()
-    }, 60_000)
-  }
-  document.body.appendChild(iframe)
+  printInvoiceSheet({
+    number: inv.number,
+    issuedAt: inv.issuedAt,
+    dueDate: inv.dueDate,
+    statusLabel: INVOICE_LABEL[inv.status],
+    customerName: customer?.name ?? 'Pelanggan',
+    customerCode: customer?.code ?? null,
+    periodStart: inv.periodStart,
+    periodEnd: inv.periodEnd,
+    prorated: inv.prorated,
+    proratedDays: inv.proratedDays,
+    baseAmount: inv.baseAmount,
+    taxAmount: inv.taxAmount,
+    totalAmount: inv.amount,
+    taxRate: inv.taxRate,
+    paidAt: inv.paidAt,
+  })
 }
 
 const INVOICE_TONE: Record<InvoiceStatus, Tone> = {
