@@ -4,6 +4,7 @@ import { useCan } from '@/auth/useCan'
 import { useAppShellNav } from '@/hooks/useAppShellNav'
 import { BrandMark, Button, ThemeToggle } from '@/components/atoms'
 import { EnvSwitcher } from '@/components/molecules'
+import { NotificationBell } from '@/components/organisms'
 import { Breadcrumbs } from '@/components/molecules'
 import { SidebarNav, type NavGroup } from '@/components/molecules'
 import {
@@ -133,6 +134,9 @@ export function Layout() {
           {user?.platformAdmin && <span className="badge">platform admin</span>}
         </div>
         <div className="row" style={{ gap: '0.75rem' }}>
+          {/* Lonceng sebelum kendali lain: inilah satu-satunya kontrol di header yang
+              berubah sendiri tanpa disentuh, jadi ia yang paling sering dilirik. */}
+          <NotificationBell />
           <ThemeToggle />
           {/* Chip pengguna = pintu ke keamanan akun. Titik oranye muncul selama 2FA
               belum dipasang — pengingat yang selalu terlihat tanpa memblokir kerja. */}

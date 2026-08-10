@@ -293,6 +293,14 @@ export const IconCrosshair = (p: IconProps) => (
   </Icon>
 )
 
+/** Lonceng — kotak masuk operator: peristiwa yang menuntut tindakan manusia. */
+export const IconBell = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M18 8a6 6 0 0 0-12 0c0 6-2 7-2 7h16s-2-1-2-7" />
+    <path d="M10.5 19.5a2 2 0 0 0 3 0" />
+  </Icon>
+)
+
 /** Balon percakapan — meja bantuan: keluhan pelanggan yang dibalas bolak-balik. */
 export const IconChat = (p: IconProps) => (
   <Icon {...p}>

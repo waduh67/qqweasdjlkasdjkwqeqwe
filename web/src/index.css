@@ -1810,6 +1810,91 @@ tbody tr.row-selected:hover {
   flex: none;
 }
 
+/* ---------- Lonceng pemberitahuan (kotak masuk operator) ---------- */
+
+/* Pembungkus tombol lonceng: jangkar posisi untuk lencana angkanya. */
+.inbox-bell {
+  position: relative;
+  display: inline-flex;
+}
+/* Lencana MENIMPA sudut lonceng, bukan berdiri di sebelahnya: di header yang sempit,
+   pil terpisah membuat tombolnya melebar tiap kali angkanya bertambah digit. */
+.inbox-badge {
+  position: absolute;
+  top: -1px;
+  right: -3px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--critical-ink);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+  pointer-events: none;
+}
+.inbox-panel {
+  width: min(380px, 86vw);
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
+}
+.inbox-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.inbox-item {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0.55rem 0.5rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.inbox-item:hover {
+  background: var(--surface-2);
+}
+/* Yang belum dibaca diberi garis tepi, bukan latar penuh: daftar yang seluruhnya berwarna
+   sama sulitnya dipindai dengan daftar yang seragam polos. */
+.inbox-item.unread {
+  border-left: 3px solid var(--accent);
+  padding-left: calc(0.5rem - 3px);
+}
+.inbox-item-icon {
+  flex: none;
+  margin-top: 2px;
+}
+.inbox-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+.inbox-item-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.inbox-item-text .muted {
+  font-size: 0.78rem;
+}
+.inbox-item-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
 /* ---------- Drawer ---------- */
 
 .scrim {

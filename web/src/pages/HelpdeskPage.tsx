@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import type { User } from '../api/types'
 import {
@@ -28,6 +28,7 @@ import { DataTable, type Column } from '@/components/organisms'
 import { Button, EmptyState, Segmented, SelectField, TextareaField, Toolbar } from '@/components/atoms'
 import { Drawer, PageHeader, SearchInput } from '@/components/molecules'
 import { useStaff } from '@/hooks/useStaff'
+import { timeAgo } from '@/utils/timeAgo'
 import { useToast } from '@/system'
 import { IconChat } from '@/components/atoms/icons'
 
@@ -49,16 +50,6 @@ const AUTHOR_LABEL: Record<TicketMessageView['author'], string> = {
 const PRIORITY_TONE: Partial<Record<TicketPriority, string>> = {
   HIGH: 'var(--warning-ink)',
   URGENT: 'var(--critical-ink)',
-}
-
-function timeAgo(iso: string): string {
-  const secs = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000))
-  if (secs < 60) return 'baru saja'
-  const mins = Math.floor(secs / 60)
-  if (mins < 60) return `${mins} menit lalu`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours} jam lalu`
-  return `${Math.floor(hours / 24)} hari lalu`
 }
 
 /** Jarak waktu ringkas ("2j 10m") — dipakai dua arah: sisa tenggat maupun keterlambatan. */
@@ -111,6 +102,7 @@ export function HelpdeskPage() {
   const [statusFilter, setStatusFilter] = useState<TicketStatus | ''>('')
   const [categoryFilter, setCategoryFilter] = useState<TicketCategory | ''>('')
   const [queueView, setQueueView] = useState<QueueView>('semua')
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const canReply = can('helpdesk.ticket.reply')
   const canManage = can('helpdesk.ticket.manage')
@@ -132,12 +124,31 @@ export function HelpdeskPage() {
     void reload()
   }, [reload])
 
-  const openDetail = async (id: string) => {
-    try {
-      setDetail(await getTicket(id))
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Gagal memuat detail tiket')
-    }
+  const openDetail = useCallback(
+    async (id: string) => {
+      try {
+        setDetail(await getTicket(id))
+      } catch (err) {
+        toast.error(err instanceof ApiError ? err.message : 'Gagal memuat detail tiket')
+      }
+    },
+    [toast],
+  )
+
+  /**
+   * `?ticket=<id>` membuka tiketnya langsung. Dipakai lonceng pemberitahuan: peringatan
+   * "tiket lewat tenggat" yang hanya mendaratkan orang di antrean panjang menyuruhnya
+   * mencari sendiri tiket yang barusan diteriakkan.
+   */
+  const deepLinkId = searchParams.get('ticket')
+  useEffect(() => {
+    if (deepLinkId) void openDetail(deepLinkId)
+  }, [deepLinkId, openDetail])
+
+  /** Menutup panel sekaligus melepas parameternya — kalau tidak, ia terbuka lagi tiap render. */
+  const closeDetail = () => {
+    setDetail(null)
+    if (deepLinkId) setSearchParams({}, { replace: true })
   }
 
   /** Satu jalur untuk semua aksi: pakai detail yang dikembalikan server, lalu segarkan antrean. */
@@ -349,7 +360,7 @@ export function HelpdeskPage() {
       />
 
       {detail && (
-        <Drawer title={detail.ticket.subject} onClose={() => setDetail(null)}>
+        <Drawer title={detail.ticket.subject} onClose={closeDetail}>
           <TicketDetailBody
             detail={detail}
             canReply={canReply}

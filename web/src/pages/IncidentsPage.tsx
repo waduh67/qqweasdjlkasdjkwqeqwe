@@ -9,6 +9,7 @@ import { Drawer, SearchInput } from '@/components/molecules'
 import { useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
 import { IconAlert } from '@/components/atoms/icons'
+import { timeAgo } from '@/utils/timeAgo'
 
 /** Urutan keparahan untuk pengurutan tabel (turun = paling parah di atas). */
 const SEV_RANK: Record<string, number> = { CRITICAL: 5, MAJOR: 4, MINOR: 3, WARNING: 2, INFO: 1 }
@@ -44,16 +45,6 @@ const DOWN_CAUSE_LABEL: Record<string, string> = {
   DYING_GASP: 'mati listrik',
   LOS: 'sinyal hilang',
   UNKNOWN: 'sebab tak diketahui',
-}
-
-function timeAgo(iso: string): string {
-  const secs = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000))
-  if (secs < 60) return 'baru saja'
-  const mins = Math.floor(secs / 60)
-  if (mins < 60) return `${mins} menit lalu`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours} jam lalu`
-  return `${Math.floor(hours / 24)} hari lalu`
 }
 
 /**
