@@ -645,7 +645,8 @@ sungguhan, bukan pada tampilan:
   admin, email jadi kanal notifikasi kelas satu (WhatsApp & email; kanal yang tak
   pernah punya dispatcher dihapus), cadangan database terjadwal + prosedur pulih yang
   sudah diuji (`DEPLOY.md` Bagian M), dan pemantauan pekerjaan latar yang diam-diam
-  berhenti (metrik + watchdog + alert email, `DEPLOY.md` Bagian N)
+  berhenti (metrik + watchdog + alert email — lihat
+  [`docs/observability.md`](docs/observability.md) & `DEPLOY.md` Bagian N)
 - **Berikutnya** — drill-down PON/FAT di monitoring, lalu aplikasi teknisi Compose
   Multiplatform. Yang masih menunggu perangkat fisik: adapter SNMP **GPON**
   (ZTE/Huawei/Fiberhome) — jalur EPON sudah divalidasi lapangan.
