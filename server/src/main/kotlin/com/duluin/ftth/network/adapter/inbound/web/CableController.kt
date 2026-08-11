@@ -2,9 +2,11 @@ package com.duluin.ftth.network.adapter.inbound.web
 
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.infrastructure.web.PageResponse
+import com.duluin.ftth.network.application.port.inbound.CableChainView
 import com.duluin.ftth.network.application.port.inbound.CableCoreListView
 import com.duluin.ftth.network.application.port.inbound.CablePortOption
 import com.duluin.ftth.network.application.port.inbound.CableView
+import com.duluin.ftth.network.application.port.inbound.CheckCableChainUseCase
 import com.duluin.ftth.network.application.port.inbound.ManageCableCoreUseCase
 import com.duluin.ftth.network.application.port.inbound.ManageCableUseCase
 import com.duluin.ftth.network.application.port.inbound.SaveCableCommand
@@ -35,6 +37,7 @@ import java.util.UUID
 class CableController(
     private val manageCable: ManageCableUseCase,
     private val manageCableCore: ManageCableCoreUseCase,
+    private val checkCableChain: CheckCableChainUseCase,
 ) {
     @GetMapping
     @PreAuthorize("@authz.can('network.cable.view')")
@@ -49,6 +52,17 @@ class CableController(
     @GetMapping("/{id}")
     @PreAuthorize("@authz.can('network.cable.view')")
     fun get(@PathVariable id: UUID): CableView = manageCable.get(id)
+
+    /**
+     * "Rantai ODP → ODP ini beneran atau cuma penyamar?" — dibaca dari baris
+     * sambungan di kotak hulu, dan tak mengubah apa pun.
+     *
+     * Izinnya `network.splice.view`, bukan `network.cable.view`: yang dibocorkan
+     * jawaban ini memang isi meja sambung.
+     */
+    @GetMapping("/{id}/chain-check")
+    @PreAuthorize("@authz.can('network.splice.view')")
+    fun chainCheck(@PathVariable id: UUID): CableChainView = checkCableChain.check(id)
 
     /** Port keluaran yang tersedia di simpul sumber — untuk picker "colok dari port mana". */
     @GetMapping("/source-ports")
