@@ -83,10 +83,10 @@ class FiberConnectionPersistenceAdapter(
         compose(jpa.findByWorkOrderIdOrderBySplicedAtAsc(workOrderId))
 
     /**
-     * Ujung sambungan tak pernah berubah setelah dibuat — memindah serat berarti
-     * memutus lalu menyambung lagi. Jadi penyimpanan ulang hanya menyentuh cara
-     * pasang, redaman, catatan, dan work order tempat pekerjaannya dibukukan
-     * (yang memang boleh menyusul).
+     * Ujung sambungan hampir tak pernah berubah: yang bergerak cuma cara pasang,
+     * redaman, catatan, dan work order tempat pekerjaannya dibukukan. Satu
+     * pengecualian — serat yang putus dipindahkan ke helai cadangan — disalurkan
+     * lewat [syncCores]; jenis titik dan nomor portnya tetap terkunci di kolomnya.
      */
     override fun save(connection: FiberConnection): FiberConnection {
         val existing = jpa.findById(connection.id).orElse(null)
@@ -96,6 +96,7 @@ class FiberConnectionPersistenceAdapter(
             existing.note = connection.note
             existing.workOrderId = connection.workOrderId
             jpa.save(existing)
+            syncCores(connection)
             return connection
         }
         jpa.save(
@@ -128,6 +129,23 @@ class FiberConnectionPersistenceAdapter(
         // lewat JPA menjaga persistence context tak memegang baris hantu.
         ends.deleteByConnectionIdIn(ids)
         jpa.deleteAllById(ids)
+    }
+
+    /**
+     * Menyelaraskan serat yang ditunjuk kedua sisi dengan keadaan agregatnya.
+     *
+     * Hampir selalu tak menulis apa-apa — dipanggil di tiap penyimpanan ulang
+     * justru supaya pemindahan core tak perlu jalur simpan tersendiri yang bisa
+     * terlupa dipanggil. Sisi non-core tak tersentuh: core-nya null di kedua
+     * belah, jadi tak pernah masuk daftar yang berubah.
+     */
+    private fun syncCores(connection: FiberConnection) {
+        val wanted = mapOf(ConnectionSide.A to connection.a.coreId, ConnectionSide.B to connection.b.coreId)
+        val changed = ends.findByConnectionIdIn(listOf(connection.id))
+            .filter { it.coreId != wanted[it.side] }
+        if (changed.isEmpty()) return
+        changed.forEach { it.coreId = wanted[it.side] }
+        ends.saveAll(changed)
     }
 
     private fun byEnds(matched: List<FiberConnectionEndJpaEntity>): List<FiberConnection> {

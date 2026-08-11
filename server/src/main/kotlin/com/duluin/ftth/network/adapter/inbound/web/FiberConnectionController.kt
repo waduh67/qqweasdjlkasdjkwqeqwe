@@ -3,8 +3,10 @@ package com.duluin.ftth.network.adapter.inbound.web
 import com.duluin.ftth.network.application.port.inbound.ClosureSpliceView
 import com.duluin.ftth.network.application.port.inbound.ConnectFiberCommand
 import com.duluin.ftth.network.application.port.inbound.ConnectionPointCommand
+import com.duluin.ftth.network.application.port.inbound.CoreMoveView
 import com.duluin.ftth.network.application.port.inbound.FiberConnectionView
 import com.duluin.ftth.network.application.port.inbound.ManageFiberConnectionUseCase
+import com.duluin.ftth.network.application.port.inbound.MoveCoreCommand
 import com.duluin.ftth.network.application.port.inbound.SpliceWorkbenchView
 import com.duluin.ftth.network.application.port.inbound.UpdateFiberConnectionCommand
 import com.duluin.ftth.network.domain.model.ClosureKind
@@ -118,6 +120,25 @@ class FiberConnectionController(
     ): FiberConnectionView = manageConnection.update(
         id,
         UpdateFiberConnectionCommand(request.method, request.lossDb, request.note, request.workOrderId),
+    )
+
+    /**
+     * "Pindah ke core cadangan" — satu tombol untuk serat yang putus.
+     *
+     * POST, bukan PUT ke salah satu sambungan: yang berubah bisa banyak baris di
+     * beberapa kotak sekaligus, dan tak satu pun di antaranya berhak jadi wakil
+     * pekerjaan itu. Izinnya sama dengan menyambung — inilah menyambung ulang.
+     */
+    @PostMapping("/move-core")
+    @PreAuthorize("@authz.can('network.splice.manage')")
+    fun moveCore(@Valid @RequestBody request: MoveCoreRequest): CoreMoveView = manageConnection.moveCore(
+        MoveCoreCommand(
+            fromCoreId = request.fromCoreId,
+            toCoreId = request.toCoreId,
+            workOrderId = request.workOrderId,
+            reason = request.reason,
+            markSourceDamaged = request.markSourceDamaged,
+        ),
     )
 
     @DeleteMapping("/{id}")

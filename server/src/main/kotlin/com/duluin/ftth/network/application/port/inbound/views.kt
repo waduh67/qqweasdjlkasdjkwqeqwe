@@ -318,6 +318,23 @@ data class ClosureSpliceView(
 )
 
 /**
+ * Hasil pindah serat: keadaan kedua helai SESUDAHNYA plus sambungan yang ikut
+ * berpindah.
+ *
+ * Dikembalikan selengkap ini supaya layar bisa langsung memperlihatkan apa yang
+ * berubah tanpa memuat ulang seisi meja kerja — dan supaya orang yang menekan
+ * tombolnya melihat hitam di atas putih berapa sambungan yang tersentuh, bukan
+ * cuma "berhasil".
+ */
+data class CoreMoveView(
+    val cableId: UUID,
+    val cableCode: String,
+    val fromCore: CableCoreView,
+    val toCore: CableCoreView,
+    val movedConnections: List<FiberConnectionView>,
+)
+
+/**
  * Sehelai core sebagaimana terlihat DARI DALAM sebuah kotak.
  *
  * [connectionId] dan [connectedElsewhere] menjawab dua pertanyaan berbeda yang

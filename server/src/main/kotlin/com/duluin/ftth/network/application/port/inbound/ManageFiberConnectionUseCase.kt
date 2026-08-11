@@ -9,11 +9,16 @@ import java.util.UUID
 /**
  * Sambung & putus serat di dalam sebuah closure.
  *
- * Sengaja hanya tiga kata kerja — lihat isi closure, sambung, putus — karena
- * itulah yang benar-benar dilakukan di lapangan. Tak ada "pindahkan": memindah
- * sambungan berarti membuka pelindung, memotong, lalu menyambung lagi, dan
- * mencatatnya sebagai satu operasi diam-diam menghapus jejak bahwa jalur lama
- * pernah ada.
+ * Sengaja sedikit kata kerja — lihat isi closure, sambung, putus — karena itulah
+ * yang benar-benar dilakukan di lapangan. Tak ada "pindahkan sambungan ke titik
+ * lain": menggeser ujung sambungan berarti membuka pelindung, memotong, lalu
+ * menyambung lagi, dan mencatatnya sebagai satu operasi diam-diam menghapus jejak
+ * bahwa jalur lama pernah ada.
+ *
+ * [moveCore] adalah pengecualian yang sengaja sempit dan berlawanan alasannya:
+ * di situ justru pekerjaan yang sama dipertahankan utuh — kotak, kaki splitter,
+ * tiket, pelaksana — dan yang diganti cuma sehelai serat yang putus dengan helai
+ * cadangan di selubung yang sama.
  *
  * Bidang [UpdateFiberConnectionCommand] terpisah karena hasil ukur redaman
  * sering baru masuk belakangan (OPM baru dibawa besoknya) — itu memperbarui
@@ -57,6 +62,22 @@ interface ManageFiberConnectionUseCase {
 
     fun update(id: UUID, command: UpdateFiberConnectionCommand): FiberConnectionView
 
+    /**
+     * Memindahkan SELURUH pekerjaan sehelai serat ke helai cadangan di kabel yang
+     * sama — satu langkah untuk apa yang di lapangan memang satu kunjungan.
+     *
+     * Tanpa ini, teknisi harus mencari sendiri setiap kotak yang disinggahi serat
+     * itu, melepas sambungannya satu-satu, lalu membuatnya ulang dengan core baru:
+     * pekerjaan yang mudah tertinggal separuh (ujung ODC dipindah, ujung ODP lupa)
+     * dan yang menghapus riwayat siapa memasangnya kapan. Di sini kedua ujung
+     * berpindah bersama, dalam satu transaksi, dengan barisnya dipertahankan.
+     *
+     * Serat lama ditandai RUSAK, bukan dihapus — ia masih ada secara fisik di
+     * dalam selubung, dan orang berikutnya yang membuka kotak itu harus tahu
+     * jangan memakainya lagi.
+     */
+    fun moveCore(command: MoveCoreCommand): CoreMoveView
+
     fun disconnect(id: UUID)
 
     /**
@@ -97,6 +118,24 @@ data class ConnectFiberCommand(
     val note: String? = null,
     /** Work order tempat pekerjaan ini dibukukan; kosong = kerja rutin tanpa tiket. */
     val workOrderId: UUID? = null,
+)
+
+/**
+ * Pindah serat: dari helai yang bermasalah ke helai cadangan di kabel yang sama.
+ *
+ * [markSourceDamaged] hampir selalu benar — yang memaksa orang naik ke tiang
+ * biasanya serat putus atau redamannya jeblok. Bisa dimatikan untuk pemindahan
+ * yang sifatnya penataan (mis. merapikan core agar berurutan), sebab menandai
+ * serat sehat sebagai rusak berarti mengubur kapasitas yang masih bisa dijual.
+ */
+data class MoveCoreCommand(
+    val fromCoreId: UUID,
+    val toCoreId: UUID,
+    /** Tiket yang menaungi pemindahan; kosong = kerja darurat tanpa tiket. */
+    val workOrderId: UUID? = null,
+    /** Alasan singkat; ditulis ke catatan serat lama supaya terbaca di grid core. */
+    val reason: String? = null,
+    val markSourceDamaged: Boolean = true,
 )
 
 data class UpdateFiberConnectionCommand(

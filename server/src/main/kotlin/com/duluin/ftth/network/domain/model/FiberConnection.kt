@@ -150,8 +150,8 @@ class FiberConnection private constructor(
     val tenantId: UUID,
     val closureKind: ClosureKind,
     val closureId: UUID,
-    val a: ConnectionPoint,
-    val b: ConnectionPoint,
+    a: ConnectionPoint,
+    b: ConnectionPoint,
     method: SpliceMethod,
     lossDb: Double?,
     note: String?,
@@ -164,6 +164,17 @@ class FiberConnection private constructor(
     val splicedBy: UUID?,
     val splicedAt: Instant,
 ) {
+    /**
+     * Kedua ujung sambungan. Praktis tetap seumur hidup barisnya — satu-satunya
+     * yang boleh menggesernya adalah [moveCore], dan itu pun hanya menukar SERAT
+     * yang ditunjuk, tak pernah jenis titik maupun nomor portnya.
+     */
+    var a: ConnectionPoint = a
+        private set
+
+    var b: ConnectionPoint = b
+        private set
+
     var method: SpliceMethod = method
         private set
 
@@ -190,6 +201,37 @@ class FiberConnection private constructor(
 
     /** Core yang disentuh sambungan ini — nol, satu, atau dua helai. */
     val coreIds: List<UUID> get() = listOfNotNull(a.coreId, b.coreId)
+
+    /**
+     * Menukar serat yang dipegang sambungan ini: dari [fromCoreId] ke [toCoreId].
+     *
+     * Yang terjadi di lapangan saat sehelai serat putus bukan "bikin sambungan
+     * baru" melainkan memindahkan pekerjaan yang SAMA ke helai cadangan di
+     * selubung yang sama — kaki splitter, port ODF, dan kotaknya tak bergeser
+     * sesenti pun, cuma seratnya yang diganti. Karena itu barisnya dipertahankan
+     * beserta tiket, pelaksana, dan waktu aslinya: menghapus lalu membuat ulang
+     * akan menghilangkan jawaban atas "sejak kapan jalur ini hidup" tepat pada
+     * saat riwayat itu paling dibutuhkan.
+     *
+     * Hasil ukur redaman TIDAK dibawa — angka lama milik serat lama. Dibersihkan
+     * di sini supaya tak ada yang menilai sambungan baru dengan bukti ukur yang
+     * sudah tak berlaku.
+     */
+    fun moveCore(fromCoreId: UUID, toCoreId: UUID) {
+        if (fromCoreId == toCoreId) throw ValidationException("Core asal dan tujuan sama")
+        val moved = { point: ConnectionPoint ->
+            if (point.coreId == fromCoreId) ConnectionPoint.core(toCoreId) else point
+        }
+        val nextA = moved(a)
+        val nextB = moved(b)
+        if (nextA == a && nextB == b) {
+            throw ValidationException("Sambungan ini tak menyentuh core yang dipindah")
+        }
+        if (nextA == nextB) throw ConflictException("Core tujuan sudah jadi ujung seberang sambungan ini")
+        a = nextA
+        b = nextB
+        lossDb = null
+    }
 
     fun update(method: SpliceMethod, lossDb: Double?, note: String?) {
         this.method = method

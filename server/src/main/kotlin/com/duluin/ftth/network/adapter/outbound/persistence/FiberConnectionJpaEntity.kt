@@ -78,7 +78,13 @@ class FiberConnectionEndJpaEntity(
     @Column(name = "point_kind", nullable = false, length = 20, updatable = false)
     var pointKind: ConnectionPointKind,
 
-    @Column(name = "core_id", updatable = false)
+    /**
+     * Satu-satunya kolom ujung yang boleh berubah: serat yang putus dipindahkan
+     * ke helai cadangan di selubung yang sama (lihat FiberConnection.moveCore).
+     * Jenis titik, sisi, dan nomor port tetap terkunci — yang berpindah cuma
+     * seratnya, bukan tempatnya di dalam kotak.
+     */
+    @Column(name = "core_id")
     var coreId: UUID?,
 
     @Column(name = "node_id", updatable = false)

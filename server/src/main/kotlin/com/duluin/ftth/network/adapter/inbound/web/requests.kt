@@ -249,6 +249,22 @@ data class FiberBulkConnectRequest(
     val workOrderId: UUID? = null,
 )
 
+/**
+ * Memindahkan seluruh sambungan sehelai serat ke helai cadangan di kabel yang sama.
+ *
+ * Kabelnya tak disebut: ia sudah tersirat dari core-nya, dan menyebutkannya lagi
+ * cuma membuka peluang klien mengirim kabel yang tak cocok dengan core yang dikirim.
+ */
+data class MoveCoreRequest(
+    val fromCoreId: UUID,
+    val toCoreId: UUID,
+    /** Tiket yang menaungi pemindahan; kosong = kerja darurat tanpa work order. */
+    val workOrderId: UUID? = null,
+    @field:Size(max = 200) val reason: String? = null,
+    /** Default true: yang memaksa pindah biasanya memang serat yang sudah tak layak. */
+    val markSourceDamaged: Boolean = true,
+)
+
 /** Keterangan sambungan yang boleh menyusul: cara pasang, hasil ukur, catatan. */
 data class FiberSpliceDetailRequest(
     val method: SpliceMethod,

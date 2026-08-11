@@ -11,9 +11,11 @@ import com.duluin.ftth.network.SpliceWorkOrderPort
 import com.duluin.ftth.network.application.port.inbound.ClosureSpliceView
 import com.duluin.ftth.network.application.port.inbound.ConnectFiberCommand
 import com.duluin.ftth.network.application.port.inbound.ConnectionPointCommand
+import com.duluin.ftth.network.application.port.inbound.CoreMoveView
 import com.duluin.ftth.network.application.port.inbound.FiberConnectionPointView
 import com.duluin.ftth.network.application.port.inbound.FiberConnectionView
 import com.duluin.ftth.network.application.port.inbound.ManageFiberConnectionUseCase
+import com.duluin.ftth.network.application.port.inbound.MoveCoreCommand
 import com.duluin.ftth.network.application.port.inbound.SpliceCableView
 import com.duluin.ftth.network.application.port.inbound.SpliceCoreView
 import com.duluin.ftth.network.application.port.inbound.SplicePointView
@@ -202,6 +204,92 @@ class FiberConnectionService(
             )
         }
         return listOf(saved).toViews().first()
+    }
+
+    /**
+     * Pindah serat satu langkah: semua sambungan helai lama diangkat ke helai
+     * cadangan, di semua kotak yang disinggahinya, dalam satu transaksi.
+     *
+     * Urutannya penting — seluruh penolakan diselesaikan SEBELUM baris pertama
+     * disentuh, sebab pemindahan yang gagal di tengah meninggalkan serat yang
+     * separuh di sini separuh di sana: keadaan yang di lapangan berarti pelanggan
+     * mati dan tak seorang pun tahu kenapa.
+     */
+    override fun moveCore(command: MoveCoreCommand): CoreMoveView {
+        val from = requireCore(command.fromCoreId)
+        val to = requireCore(command.toCoreId)
+        if (from.id == to.id) throw ValidationException("Core asal dan tujuan sama — tak ada yang dipindah")
+        val cable = cableRepository.findById(from.cableId)
+            ?: throw NotFoundException("Kabel core ${from.coreNumber} tidak ditemukan")
+        // Selubung yang sama, sebab yang dijanjikan langkah ini adalah "ganti
+        // helai, jalur tetap". Helai di kabel lain menempuh rute lain dan berujung
+        // di kotak lain — itu pembangunan jalur baru, bukan pemindahan.
+        if (to.cableId != from.cableId) {
+            throw ValidationException(
+                "Core tujuan harus sehelai di kabel yang sama (${cable.code}) — " +
+                    "pindah ke kabel lain berarti membangun jalur baru, bukan mengganti serat",
+            )
+        }
+        if (to.status != CoreStatus.FREE) {
+            throw ConflictException(
+                "Core ${to.coreNumber} kabel ${cable.code} berstatus ${to.status.label} — pilih helai yang bebas",
+            )
+        }
+
+        val touching = connections.findByCoreIds(listOf(from.id, to.id))
+        if (touching.any { to.id in it.coreIds }) {
+            throw ConflictException("Core ${to.coreNumber} kabel ${cable.code} ternyata masih dipakai sambungan lain")
+        }
+        val moving = touching.filter { from.id in it.coreIds }
+        if (moving.isEmpty()) {
+            throw ConflictException(
+                "Core ${from.coreNumber} kabel ${cable.code} belum menyalurkan apa-apa — " +
+                    "cukup ubah statusnya, tak ada yang perlu dipindah",
+            )
+        }
+        val workOrder = command.workOrderId?.let { requireWorkOrder(it) }
+
+        moving.forEach { connection ->
+            connection.moveCore(from.id, to.id)
+            // Tiket cuma ditempelkan ke yang belum punya: sambungan lama yang lahir
+            // dari WO pembangunan tetap menunjuk WO itu — di situlah jawabannya kalau
+            // suatu hari ditanya "jalur ini dulu dipasang dalam rangka apa".
+            if (workOrder != null && connection.workOrderId == null) connection.attachWorkOrder(workOrder.id)
+        }
+        val saved = moving.map { connections.save(it) }
+        to.update(CoreStatus.USED, to.note)
+        from.update(
+            if (command.markSourceDamaged) CoreStatus.DAMAGED else CoreStatus.FREE,
+            command.reason ?: from.note,
+        )
+        cableCoreRepository.saveAll(listOf(from, to))
+
+        auditor.record(
+            "fiber.core.moved", "CABLE", cable.id, from.tenantId,
+            mapOf(
+                "cable" to cable.code,
+                "from" to from.coreNumber,
+                "to" to to.coreNumber,
+                "connections" to saved.size,
+                "sourceDamaged" to command.markSourceDamaged,
+                "reason" to (command.reason ?: "-"),
+            ),
+        )
+        workOrder?.let {
+            workOrders.noteSpliceActivity(
+                it.id,
+                "Serat kabel ${cable.code} dipindah: core ${from.coreNumber} → core ${to.coreNumber}, " +
+                    "${saved.size} sambungan ikut" + (command.reason?.let { why -> " ($why)" } ?: ""),
+                currentUser.currentOrNull()?.userId,
+            )
+        }
+        return CoreMoveView(
+            cableId = cable.id,
+            cableCode = cable.code,
+            fromCore = from.toView(),
+            toCore = to.toView(),
+            movedConnections = saved.toViews(),
+        )
     }
 
     override fun disconnect(id: UUID) {
@@ -648,6 +736,9 @@ class FiberConnectionService(
 
     private fun requireConnection(id: UUID): FiberConnection =
         connections.findById(id) ?: throw NotFoundException("Sambungan $id tidak ditemukan")
+
+    private fun requireCore(id: UUID): CableCore =
+        cableCoreRepository.findById(id) ?: throw NotFoundException("Core $id tidak ditemukan")
 
     // ------------------------------------------------------------------
     // Work order
