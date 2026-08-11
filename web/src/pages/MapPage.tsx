@@ -56,6 +56,7 @@ import {
   CableChainNotice,
   CableCoreManager,
   OdfDetail,
+  ReleaseDropDialog,
   type AccessNodeKind,
 } from '@/components/organisms'
 import { CustomerDetailBlade } from './CustomerDetailPage'
@@ -63,6 +64,7 @@ import { OltDetail } from './OltDetailPage'
 import type { MapFocus } from '@/map/mapFocus'
 import { useConfirm, useToast } from '@/system'
 import {
+  IconCheck,
   IconChevronDown,
   IconClose,
   IconCrosshair,
@@ -1974,19 +1976,7 @@ export function MapPage() {
   ) => {
     try {
       const updated = await api.put<CableView>(`/api/cables/${c.id}`, {
-        code: c.code,
-        name: c.name,
-        cableType: c.cableType,
-        coreCount: c.coreCount,
-        route: c.route.points,
-        fromKind: c.fromKind,
-        fromId: c.fromId,
-        toKind: c.toKind,
-        toId: c.toId,
-        fromPonPortId: c.fromPonPortId ?? undefined,
-        fromPortNumber: c.fromPortNumber ?? undefined,
-        toPortNumber: c.toPortNumber ?? undefined,
-        status: c.status,
+        ...cableRequestBody(c),
         // `undefined` di patch = bidang itu tak disentuh; `null` pada installation
         // adalah nilai sah ("dikembalikan ke belum disurvei"), jadi tak boleh
         // diperlakukan sama dengan tak-disentuh oleh `??`.
@@ -1997,6 +1987,40 @@ export function MapPage() {
       toast.success(`Data fisik ${updated.name} diperbarui`)
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal memperbarui data fisik kabel')
+    }
+  }
+
+  /**
+   * Kebalikan dari "ditinggal": rumah yang sama berlangganan lagi atas nama
+   * penghuni baru, dan drop yang sudah tergantung di sana tinggal disambung
+   * ulang. Tanpa jalan pulang ini, status ditinggal jadi lubang satu arah —
+   * operator akhirnya menggambar kabel baru di atas kabel yang sudah ada, dan
+   * peta pelan-pelan berisi dua serat untuk satu tiang.
+   */
+  const reuseCable = async (c: CableView) => {
+    try {
+      const updated = await api.put<CableView>(`/api/cables/${c.id}`, { ...cableRequestBody(c), status: 'ACTIVE' })
+      setCable(updated)
+      refreshTiles()
+      toast.success(`${updated.name} kembali siap pakai`)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal mengembalikan status kabel')
+    }
+  }
+
+  /**
+   * Baca ulang satu kabel setelah keadaannya berubah dari dalam panel (mis.
+   * pelanggannya dicabut). Statusnya bisa berubah jadi "Ditinggal" dan pelanggan
+   * yang tadinya terdampak kini tak lagi — dua hal yang tergambar di panel dan di
+   * peta, jadi keduanya ikut disegarkan.
+   */
+  const reloadCable = async (id: string) => {
+    try {
+      setCable(await api.get<CableView>(`/api/cables/${id}`))
+      refreshTiles()
+      void refreshImpacted()
+    } catch {
+      /* panelnya sudah menampilkan hasil aksinya; gagal muat ulang tak fatal */
     }
   }
 
@@ -2328,6 +2352,7 @@ export function MapPage() {
             canEdit={can('network.cable.update')}
             canDelete={can('network.cable.delete')}
             canSimulate={can('customer.customer.view')}
+            canReleaseDrop={can('network.splice.manage') && can('network.cable.update')}
             canViewOtdr={can('network.otdr.view')}
             canRecordOtdr={can('network.otdr.record')}
             otdrTests={otdrTests}
@@ -2337,6 +2362,8 @@ export function MapPage() {
             onEdit={() => startEdit(cable)}
             onDelete={() => void deleteCable(cable)}
             onSimulate={() => void simulateCut(cable)}
+            onReleased={() => void reloadCable(cable.id)}
+            onReuse={() => void reuseCable(cable)}
             onPhysicalChange={(patch) => void saveCablePhysical(cable, patch)}
             onClose={() => setCable(null)}
           />
@@ -2777,6 +2804,32 @@ function BladeHead({
       </div>
     </header>
   )
+}
+
+/**
+ * Badan permintaan PUT kabel yang menyalin keadaan sekarang apa adanya — dasar
+ * untuk suntingan sepotong dari panel. API kabel memakai PUT utuh (bukan PATCH),
+ * jadi bidang yang tak disebut akan terhapus; merakitnya di satu tempat menutup
+ * kemungkinan satu pemanggil lupa membawa serta rute atau ujung-ujungnya.
+ */
+function cableRequestBody(c: CableView) {
+  return {
+    code: c.code,
+    name: c.name,
+    cableType: c.cableType,
+    coreCount: c.coreCount,
+    route: c.route.points,
+    fromKind: c.fromKind,
+    fromId: c.fromId,
+    toKind: c.toKind,
+    toId: c.toId,
+    fromPonPortId: c.fromPonPortId ?? undefined,
+    fromPortNumber: c.fromPortNumber ?? undefined,
+    toPortNumber: c.toPortNumber ?? undefined,
+    status: c.status,
+    installation: c.installation,
+    ownership: c.ownership,
+  }
 }
 
 /**
@@ -3343,6 +3396,7 @@ function CablePanel({
   canEdit,
   canDelete,
   canSimulate,
+  canReleaseDrop,
   canViewOtdr,
   canRecordOtdr,
   otdrTests,
@@ -3352,6 +3406,8 @@ function CablePanel({
   onEdit,
   onDelete,
   onSimulate,
+  onReleased,
+  onReuse,
   onPhysicalChange,
   onClose,
 }: {
@@ -3360,6 +3416,7 @@ function CablePanel({
   canEdit: boolean
   canDelete: boolean
   canSimulate: boolean
+  canReleaseDrop: boolean
   canViewOtdr: boolean
   canRecordOtdr: boolean
   otdrTests: OtdrTest[] | null
@@ -3369,14 +3426,38 @@ function CablePanel({
   onEdit: () => void
   onDelete: () => void
   onSimulate: () => void
+  /** Pelanggan sudah dicabut — panel & peta perlu membaca ulang keadaannya. */
+  onReleased: () => void
+  /** Kabel yang tadinya ditinggal dinyatakan siap pakai lagi. */
+  onReuse: () => void
   /** Simpan seketika; hanya bidang yang disebut yang berubah. */
   onPhysicalChange: (patch: { installation?: CableInstallation | null; ownership?: CableOwnership }) => void
   onClose: () => void
 }) {
+  // Hanya drop yang punya tombol ini: ruas distribusi menyuapi banyak rumah, dan
+  // "lepas semua" di sana adalah pemadaman satu klaster dengan satu klik. Server
+  // menolaknya juga — tapi tombol yang tak pernah boleh ditekan lebih baik tak
+  // ditawarkan sejak awal.
+  const abandoned = cable.status === 'ABANDONED'
+  const releasable = canReleaseDrop && cable.cableType === 'DROP' && !abandoned
+  const [releasing, setReleasing] = useState(false)
+  // Membebaskan core mengubah isi "Kelola core" yang memuat dirinya sendiri;
+  // menaikkan angka ini memaksanya membaca ulang dari server.
+  const [coreEpoch, setCoreEpoch] = useState(0)
+
   const primary: CommandAction | undefined = canEdit
     ? { key: 'edit', label: 'Edit jalur', icon: <IconRoute size={15} />, onClick: onEdit }
     : undefined
   const actions: CommandAction[] = []
+  if (releasable)
+    actions.push({
+      key: 'release',
+      label: 'Cabut pelanggan',
+      icon: <IconPower size={15} />,
+      onClick: () => setReleasing(true),
+    })
+  if (abandoned && canEdit)
+    actions.push({ key: 'reuse', label: 'Pakai lagi', icon: <IconCheck size={15} />, onClick: onReuse })
   if (canSimulate)
     actions.push({ key: 'simulate', label: 'Simulasi putus', icon: <IconFlask size={15} />, onClick: onSimulate })
   if (canDelete) actions.push(deleteAction('Hapus', onDelete))
@@ -3395,6 +3476,18 @@ function CablePanel({
             dirinya — splitter bertingkat atau selubung yang dipecah. Angka
             panjang & core di bawahnya baru bisa dipercaya setelah itu terjawab. */}
         <CableChainNotice cableId={cable.id} fromKind={cable.fromKind} toKind={cable.toKind} />
+
+        {/* Lencana "Ditinggal" saja tak cukup menjelaskan akibatnya: yang perlu
+            diketahui orang yang membuka ruas ini adalah kabelnya masih ada di
+            tiang, tapi tak boleh direncanakan untuk pelanggan baru. */}
+        {abandoned && (
+          <MessageBar intent="info">
+            <MessageBarBody>
+              Kabel ini ditandai ditinggal — seratnya masih tergantung di tiang, tapi tak dihitung sebagai kabel
+              siap pakai. {canEdit && 'Pakai “Pakai lagi” bila rumahnya berlangganan kembali.'}
+            </MessageBarBody>
+          </MessageBar>
+        )}
 
 
         <dl className="essentials">
@@ -3445,7 +3538,7 @@ function CablePanel({
             <strong style={{ fontSize: '0.85rem' }}>Core kabel</strong>
             <span className="muted" style={{ fontSize: '0.75rem' }}>{cable.coreCount} core</span>
           </div>
-          <CableCoreManager cableId={cable.id} canEdit={canEdit} />
+          <CableCoreManager key={coreEpoch} cableId={cable.id} canEdit={canEdit} />
         </div>
 
         {canViewOtdr && (
@@ -3459,6 +3552,17 @@ function CablePanel({
           />
         )}
       </div>
+
+      {releasing && (
+        <ReleaseDropDialog
+          cable={cable}
+          onClose={() => setReleasing(false)}
+          onDone={() => {
+            setCoreEpoch((n) => n + 1)
+            onReleased()
+          }}
+        />
+      )}
     </aside>
   )
 }

@@ -5,7 +5,22 @@ export interface Coordinate {
   latitude: number
 }
 
-export type AssetStatus = 'PLANNED' | 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE'
+/**
+ * `ABANDONED` = fisiknya masih terpasang tapi sudah tak dipakai — paling sering
+ * kabel drop bekas pelanggan yang cabut. Beda dari `INACTIVE` yang berarti
+ * "sengaja dimatikan, sewaktu-waktu dinyalakan lagi".
+ */
+export type AssetStatus = 'PLANNED' | 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE' | 'ABANDONED'
+
+/** Hasil pencabutan sebuah drop; angkanya disebut supaya bisa diperiksa. */
+export interface DropReleaseView {
+  cableId: string
+  cableCode: string
+  removedConnections: number
+  freedCores: number
+  status: AssetStatus
+  message: string
+}
 
 export type SnmpVersion = 'V1' | 'V2C' | 'V3'
 export type WebProtocol = 'HTTP' | 'HTTPS'

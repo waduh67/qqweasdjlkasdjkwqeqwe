@@ -22,6 +22,11 @@ const STATUS_TONE: Record<string, Tone> = {
   OFFLINE: 'serious',
   UNKNOWN: 'neutral',
   INACTIVE: 'neutral',
+  // Fisiknya masih terpasang tapi sudah tak dipakai (mis. drop bekas pelanggan
+  // yang cabut). Bukan 'neutral' seperti INACTIVE: yang nonaktif masih menunggu
+  // dinyalakan lagi, yang ditinggal tak akan — dan barang mati yang mengaku
+  // netral pelan-pelan menumpuk di peta tanpa ada yang membereskannya.
+  ABANDONED: 'serious',
   PROSPECT: 'neutral',
   DISABLED: 'neutral',
   TERMINATED: 'critical',
@@ -34,12 +39,20 @@ const STATUS_TONE: Record<string, Tone> = {
   CLEARED: 'neutral',
 }
 
+/**
+ * Istilah Indonesia untuk status yang terjemahan otomatisnya (lihat [prettify])
+ * salah atau kaku. Sengaja pendek: yang lain memang sudah terbaca apa adanya.
+ */
+const STATUS_LABEL: Record<string, string> = {
+  ABANDONED: 'Ditinggal',
+}
+
 export function StatusBadge({ status, label }: { status: string; label?: string }) {
   const tone = STATUS_TONE[status] ?? 'neutral'
   return (
     <span className={`badge ${tone}`}>
       <span className="dot" />
-      {label ?? prettify(status)}
+      {label ?? STATUS_LABEL[status] ?? prettify(status)}
     </span>
   )
 }

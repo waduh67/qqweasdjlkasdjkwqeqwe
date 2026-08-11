@@ -18,6 +18,9 @@ const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
   { value: 'ACTIVE', label: 'Aktif' },
   { value: 'MAINTENANCE', label: 'Perawatan' },
   { value: 'INACTIVE', label: 'Nonaktif' },
+  // Rak yang masih terpasang tapi sudah tak dilayani lagi — dibedakan dari yang
+  // sengaja dimatikan sementara.
+  { value: 'ABANDONED', label: 'Ditinggal' },
 ]
 
 /** Bentuk formulir sunting — semua string karena datang dari input. */

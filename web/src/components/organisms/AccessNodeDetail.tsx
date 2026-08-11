@@ -21,6 +21,9 @@ const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
   { value: 'ACTIVE', label: 'Aktif' },
   { value: 'MAINTENANCE', label: 'Perawatan' },
   { value: 'INACTIVE', label: 'Nonaktif' },
+  // Kotak yang ditinggal di tiang setelah satu klaster dibongkar: fisiknya masih
+  // ada, tapi tak akan dipakai lagi — bukan sekadar sedang dimatikan.
+  { value: 'ABANDONED', label: 'Ditinggal' },
 ]
 
 /** Satu sel info berlabel di panel detail (pola `.stat` yang sama dipakai detail OLT). */

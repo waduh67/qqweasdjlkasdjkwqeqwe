@@ -68,6 +68,10 @@ const ASSET_STATUS_OPTIONS: { value: AssetStatus | ''; label: string }[] = [
   { value: 'ACTIVE', label: 'Aktif' },
   { value: 'MAINTENANCE', label: 'Perawatan' },
   { value: 'INACTIVE', label: 'Nonaktif' },
+  // "Ditinggal" ≠ "Nonaktif": yang nonaktif menunggu dinyalakan lagi, yang
+  // ditinggal fisiknya masih di tiang tapi tak akan dipakai lagi. Dipisah supaya
+  // laporan aset bisa menjawab "berapa barang saya yang sebetulnya mati".
+  { value: 'ABANDONED', label: 'Ditinggal' },
 ]
 
 /** Apakah salah satu kolom teks memuat kata kunci (kata kunci sudah huruf kecil). */
