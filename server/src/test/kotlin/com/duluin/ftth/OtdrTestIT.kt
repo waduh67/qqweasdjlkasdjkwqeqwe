@@ -151,4 +151,122 @@ class OtdrTestIT {
             expected = 400,
         )
     }
+
+    /**
+     * Angka alat diterjemahkan jadi nama kotak.
+     *
+     * Yang dinilai bukan ketelitian meteran — itu sudah diuji di atas — melainkan
+     * apakah sistem berani menyebut BENDA. "1.847 m dari ODC" masih menyuruh orang
+     * menebak; "jatuh di JB-x" menentukan apakah tim berangkat bawa kunci closure
+     * atau bawa alat gali. Karena itu patokannya diambil dari kotak yang seratnya
+     * benar-benar dibuka di sana, bukan dari aset yang kebetulan dekat jalur.
+     */
+    @Test
+    fun `jarak OTDR ditunjukkan sebagai kotak nyata di sepanjang kabel`() {
+        val slug = "otdrjb${uniq()}"
+        val admin = "admin@$slug.test"
+        onboarding.onboard(OnboardTenantCommand(slug, "Otdr JB Co", admin, "Admin", pass))
+        val token = login(slug, admin)
+        val s = uniq().uppercase()
+
+        // ODC (106,990) — JB tepat di tengah (106,9925) — ODP (106,995), satu garis.
+        val odc = id(
+            post(
+                "/api/odcs", token,
+                """{"code":"ODC-$s","name":"ODC $s","location":{"longitude":106.99,"latitude":-6.24},
+                    "splitterRatio":"1:8","capacity":8}""",
+            ),
+        )
+        val odp = id(
+            post(
+                "/api/odps", token,
+                """{"code":"ODP-$s","name":"ODP $s","location":{"longitude":106.995,"latitude":-6.245},
+                    "splitterRatio":"1:8","capacity":8}""",
+            ),
+        )
+        val odpCabang = id(
+            post(
+                "/api/odps", token,
+                """{"code":"ODPB-$s","name":"ODP cabang $s","location":{"longitude":106.9925,"latitude":-6.25},
+                    "splitterRatio":"1:8","capacity":8}""",
+            ),
+        )
+        val jb = id(
+            post(
+                "/api/joint-boxes", token,
+                """{"code":"JB-$s","name":"JB $s","location":{"longitude":106.9925,"latitude":-6.2425},
+                    "trayCount":2,"capacity":24}""",
+            ),
+        )
+        val utama = id(
+            post(
+                "/api/cables", token,
+                """{"code":"DST-$s","name":"Distribusi $s","cableType":"DISTRIBUTION","coreCount":8,
+                    "route":[{"longitude":106.99,"latitude":-6.24},{"longitude":106.995,"latitude":-6.245}],
+                    "fromKind":"ODC","fromId":"$odc","toKind":"ODP","toId":"$odp"}""",
+            ),
+        )
+        // Kabel cabang menyadap di JB — inilah yang membuat JB jadi patokan: ada
+        // serat kabel utama yang benar-benar dibuka di sana.
+        val cabang = id(
+            post(
+                "/api/cables", token,
+                """{"code":"BR-$s","name":"Cabang $s","cableType":"DISTRIBUTION","coreCount":4,
+                    "route":[{"longitude":106.9925,"latitude":-6.2425},{"longitude":106.9925,"latitude":-6.25}],
+                    "fromKind":"JOINT_BOX","fromId":"$jb","toKind":"ODP","toId":"$odpCabang"}""",
+            ),
+        )
+        fun core(cable: String, number: Int): String =
+            JsonPath.read(getJson("/api/cables/$cable/cores", token), "$.cores[${number - 1}].id")
+        post(
+            "/api/fiber-connections", token,
+            """{"closureKind":"JOINT_BOX","closureId":"$jb",
+                "a":{"kind":"CORE","coreId":"${core(utama, 2)}"},
+                "b":{"kind":"CORE","coreId":"${core(cabang, 1)}"}}""",
+        )
+
+        val length = num(getJson("/api/cables/$utama", token), "$.lengthMeters")
+
+        // Tepat di tengah → jatuh di JB, dan itu dikatakan sebagai "jatuh di", bukan
+        // "sekitar 0 m dari": bedanya menentukan orang membuka kotak atau menggali.
+        val diJb = post(
+            "/api/cables/$utama/otdr", token,
+            """{"distanceMeters":${length / 2}, "measuredFrom":"FROM", "eventType":"HIGH_LOSS", "lossDb":1.8}""",
+        )
+        assertThat(JsonPath.read<Boolean>(diJb, "$.placement.atClosure")).isTrue()
+        assertThat(JsonPath.read<String>(diJb, "$.placement.nearestCode")).isEqualTo("JB-$s")
+        assertThat(JsonPath.read<String>(diJb, "$.placement.nearestKind")).isEqualTo("JOINT_BOX")
+        assertThat(JsonPath.read<String>(diJb, "$.placement.summary")).startsWith("Jatuh di JB-$s")
+
+        // Tiga patokan urut dari pangkal: kedua ujung kabel + sadapan di tengah.
+        assertThat(JsonPath.read<List<String>>(diJb, "$.placement.landmarks[*].code"))
+            .containsExactly("ODC-$s", "JB-$s", "ODP-$s")
+        assertThat(JsonPath.read<List<Boolean>>(diJb, "$.placement.landmarks[*].endpoint"))
+            .containsExactly(true, false, true)
+        assertThat(num(diJb, "$.placement.landmarks[1].distanceMeters")).isEqualTo(length / 2, within(1.0))
+
+        // 80% bentang → di ruas JB…ODP, bukan di kotak mana pun. Yang dicari orang
+        // di sini adalah ruas galiannya, jadi kedua ujung ruas ikut disebut.
+        val diRuas = post(
+            "/api/cables/$utama/otdr", token,
+            """{"distanceMeters":${length * 0.8}, "measuredFrom":"FROM", "eventType":"BREAK"}""",
+        )
+        assertThat(JsonPath.read<Boolean>(diRuas, "$.placement.atClosure")).isFalse()
+        assertThat(JsonPath.read<String>(diRuas, "$.placement.beforeCode")).isEqualTo("JB-$s")
+        assertThat(JsonPath.read<String>(diRuas, "$.placement.afterCode")).isEqualTo("ODP-$s")
+        assertThat(JsonPath.read<String>(diRuas, "$.placement.summary"))
+            .startsWith("Di antara JB-$s dan ODP-$s")
+
+        // Arah ukur dinormalkan: jarak yang sama dari hilir menunjuk ruas ODC…JB.
+        val dariHilir = post(
+            "/api/cables/$utama/otdr", token,
+            """{"distanceMeters":${length * 0.8}, "measuredFrom":"TO", "eventType":"BREAK"}""",
+        )
+        assertThat(JsonPath.read<String>(dariHilir, "$.placement.beforeCode")).isEqualTo("ODC-$s")
+        assertThat(JsonPath.read<String>(dariHilir, "$.placement.afterCode")).isEqualTo("JB-$s")
+
+        // Riwayat ikut membawa penempatan tiap uji, bukan cuma hasil pencatatan barusan.
+        assertThat(JsonPath.read<List<String>>(getJson("/api/cables/$utama/otdr", token), "$.[*].placement.summary"))
+            .hasSize(3)
+    }
 }

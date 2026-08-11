@@ -5,6 +5,7 @@ import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.iam.IamApi
+import com.duluin.ftth.network.application.port.inbound.OtdrLandmarkView
 import com.duluin.ftth.network.application.port.inbound.OtdrTestUseCase
 import com.duluin.ftth.network.application.port.inbound.OtdrTestView
 import com.duluin.ftth.network.application.port.inbound.RecordOtdrTestCommand
@@ -36,6 +37,7 @@ class OtdrTestService(
     private val iamApi: IamApi,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
+    private val placements: OtdrPlacementResolver,
 ) : OtdrTestUseCase {
 
     @Transactional
@@ -58,14 +60,17 @@ class OtdrTestService(
             "otdr.recorded", "Cable", cable.id, test.tenantId,
             mapOf("cableCode" to cable.code, "distanceMeters" to test.distanceMeters, "event" to test.eventType.name),
         )
-        return test.toView(cable, iamApi.findUser(test.recordedBy)?.name)
+        return test.toView(cable, placements.landmarksOf(cable), iamApi.findUser(test.recordedBy)?.name)
     }
 
     override fun list(cableId: UUID): List<OtdrTestView> {
         val cable = requireCable(cableId)
         val history = tests.listByCable(cableId)
         val names = iamApi.usersByIds(history.mapTo(HashSet()) { it.recordedBy }).associate { it.id to it.name }
-        return history.map { it.toView(cable, names[it.recordedBy]) }
+        // Patokan kabelnya sama untuk seluruh riwayat — dikumpulkan sekali, bukan
+        // sekali per baris.
+        val landmarks = placements.landmarksOf(cable)
+        return history.map { it.toView(cable, landmarks, names[it.recordedBy]) }
     }
 
     @Transactional
@@ -79,17 +84,25 @@ class OtdrTestService(
     private fun requireCable(id: UUID): Cable =
         cables.findById(id) ?: throw NotFoundException("Kabel $id tidak ditemukan")
 
-    private fun OtdrTest.toView(cable: Cable, recordedByName: String?): OtdrTestView {
+    private fun OtdrTest.toView(
+        cable: Cable,
+        landmarks: List<OtdrLandmarkView>,
+        recordedByName: String?,
+    ): OtdrTestView {
         val optical = cable.lengthMeters
         val beyond = distanceMeters > optical
+        // Semua perhitungan berikutnya memakai satu acuan: jarak dari PANGKAL
+        // jalur. Ujung tempat alat ditembakkan boleh berpindah-pindah antar-uji,
+        // dan menormalkannya sekali di sini yang membuat titik peta dan patokan
+        // kotak tak pernah bisa saling bertentangan.
+        val fromStart = when (measuredFrom) {
+            CableEnd.FROM -> distanceMeters
+            CableEnd.TO -> optical - distanceMeters
+        }
         val point: Coordinate = if (optical <= 0) {
             cable.route.start
         } else {
-            val fromStart = when (measuredFrom) {
-                CableEnd.FROM -> distanceMeters / optical
-                CableEnd.TO -> 1.0 - distanceMeters / optical
-            }
-            cable.route.pointAtFraction(fromStart)
+            cable.route.pointAtFraction(fromStart / optical)
         }
         return OtdrTestView(
             id = id,
@@ -105,6 +118,7 @@ class OtdrTestService(
             estimatedPoint = point,
             beyondCable = beyond,
             cableLengthMeters = optical,
+            placement = placements.resolve(landmarks, fromStart),
         )
     }
 }
