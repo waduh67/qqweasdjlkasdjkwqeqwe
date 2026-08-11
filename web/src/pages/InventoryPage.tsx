@@ -1025,6 +1025,20 @@ function OdfsTab() {
   )
 }
 
+/**
+ * Sel kolom "Splitter" untuk ODC & ODP. Rasio saja tak cukup begitu satu kabinet
+ * boleh berisi beberapa modul: yang dicari orang saat memindai daftar adalah
+ * KAPASITAS CABANG-nya, dan itu jumlah kaki — bukan angka di belakang titik dua.
+ */
+function splitterCell(node: { splitterRatio: string; splitterCount: number; splitterLegs: number }) {
+  if (node.splitterCount === 0) return <span className="muted">tanpa splitter</span>
+  return (
+    <span>
+      {node.splitterRatio} <span className="muted">· {node.splitterLegs} kaki</span>
+    </span>
+  )
+}
+
 function OdcsTab() {
   const { can } = useCan()
   const confirm = useConfirm()
@@ -1098,7 +1112,7 @@ function OdcsTab() {
         </span>
       ),
     },
-    { key: 'splitter', header: 'Splitter', sortValue: (o) => o.splitterRatio, cell: (o) => o.splitterRatio },
+    { key: 'splitter', header: 'Splitter', sortValue: (o) => o.splitterLegs, cell: splitterCell },
     { key: 'odp', header: 'ODP', align: 'right', sortValue: (o) => o.odpCount, cell: (o) => o.odpCount },
     {
       key: 'status',
@@ -1253,7 +1267,7 @@ function OdpsTab() {
       ),
     },
     { key: 'odc', header: 'ODC induk', sortValue: (o) => o.odcName, cell: (o) => <span className="muted">{o.odcName ?? '—'}</span> },
-    { key: 'splitter', header: 'Splitter', sortValue: (o) => o.splitterRatio, cell: (o) => o.splitterRatio },
+    { key: 'splitter', header: 'Splitter', sortValue: (o) => o.splitterLegs, cell: splitterCell },
     { key: 'port', header: 'Port', align: 'right', sortValue: (o) => o.capacity, cell: (o) => o.capacity },
     { key: 'status', header: 'Status', sortValue: (o) => o.status, cell: (o) => <StatusBadge status={o.status} /> },
   ]

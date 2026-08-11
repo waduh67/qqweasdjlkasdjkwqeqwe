@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { api, ApiError } from '@/api/client'
 import type { AssetStatus, Coordinate, JointBoxView, OdcView, OdpView } from '@/api/network'
+import { SPLITTER_RATIOS } from '@/api/network'
 import { useCan } from '@/auth/useCan'
 import { Badge, Button, EmptyState, SelectField, Spinner, StatusBadge, TextField } from '@/components/atoms'
 import { IconInventory, IconMap } from '@/components/atoms/icons'
@@ -11,8 +12,7 @@ import { useConfirm, useToast } from '@/system'
 import { mapFocusState, type MapFocusState } from '@/map/mapFocus'
 import { Blade } from './Blade'
 import { LocationPicker } from './LocationPicker'
-
-const SPLITTER_RATIOS = ['1:2', '1:4', '1:8', '1:16', '1:32', '1:64']
+import { SplitterPanel } from './SplitterPanel'
 
 const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
   { value: 'PLANNED', label: 'Rencana' },
@@ -50,6 +50,7 @@ export function AssetDetailPanel({
   onEdit,
   onDelete,
   onShowOnMap,
+  children,
 }: {
   badges: ReactNode
   subtitle?: string
@@ -63,6 +64,12 @@ export function AssetDetailPanel({
   onDelete: () => void
   /** Kosongkan bila operator tak berizin membuka peta. */
   onShowOnMap?: () => void
+  /**
+   * Kartu khas aset ini — mis. isi kabinet untuk ODC/ODP. Ditaruh SETELAH
+   * "Informasi" dan sebelum "Lokasi": isi kotaknya lebih sering dicari daripada
+   * koordinatnya, yang toh sudah kelihatan di peta.
+   */
+  children?: ReactNode
 }) {
   // Aksi tingkat-aset duduk di command bar blade, sejajar dengan detail pelanggan:
   // satu tempat yang sama untuk "apa yang bisa kulakukan pada benda ini".
@@ -92,6 +99,8 @@ export function AssetDetailPanel({
         </div>
         {address && <DetailField label="Alamat" value={address} />}
       </div>
+
+      {children}
 
       <div className="card stack">
         <h3 style={{ margin: 0 }}>Lokasi</h3>
@@ -159,8 +168,10 @@ interface NodeDraft {
   address: string
   longitude: string
   latitude: string
-  /** Kosong untuk simpul tanpa splitter (joint box). */
+  /** Rasio modul TUNGGAL kabinet; kosong = tanpa splitter, dan itu bentuk yang sah. */
   splitterRatio: string
+  /** Berapa modul yang ada sekarang — penentu apakah isian di atas masih mewakili isi kabinet. */
+  splitterCount: number
   /** Hanya dipakai joint box; simpul bersplitter mengirimnya sebagai 0. */
   trayCount: string
   capacity: string
@@ -169,14 +180,32 @@ interface NodeDraft {
 
 type NodeView = OdcView | OdpView | JointBoxView
 
+/**
+ * Isi splitter sebuah kabinet dalam satu kalimat. "1:8" saja menyesatkan begitu
+ * kabinet berisi lebih dari satu modul, dan kabinet TANPA splitter bukan data
+ * yang kurang — itu ODC cross-connect yang cuma meneruskan serat.
+ */
+function describeSplitter(node: OdcView | OdpView): string {
+  if (node.splitterCount === 0) return 'Tanpa splitter (cross-connect)'
+  const legs = `${node.splitterLegs} kaki`
+  return node.splitterCount === 1
+    ? `${node.splitterRatio} · ${legs}`
+    : `${node.splitterRatio} · ${node.splitterCount} modul, ${legs}`
+}
+
 function toDraft(node: NodeView): NodeDraft {
+  const splitterCount = 'splitterCount' in node ? node.splitterCount : 0
   return {
     code: node.code,
     name: node.name,
     address: node.address ?? '',
     longitude: String(node.location.longitude),
     latitude: String(node.location.latitude),
-    splitterRatio: 'splitterRatio' in node ? node.splitterRatio : '',
+    // Ringkasan hanya sama dengan rasio saat modulnya PERSIS satu; kabinet berisi
+    // banyak modul memang tak bisa diwakili satu isian, jadi isiannya dikosongkan
+    // dan formnya menyerahkan urusan itu ke panel "Isi kabinet".
+    splitterRatio: splitterCount === 1 ? (node as OdcView | OdpView).splitterRatio : '',
+    splitterCount,
     trayCount: 'trayCount' in node ? String(node.trayCount) : '',
     capacity: String(node.capacity),
     status: node.status,
@@ -258,7 +287,13 @@ export function AccessNodeDetail({
         // Simpul bersplitter mengirim rasionya; joint box mengirim jumlah tray.
         // Mengirim keduanya sekaligus berarti menuliskan angka karangan ke salah
         // satunya — server menolak field yang tak dikenalnya pun tak menolongnya.
-        ...(meta.hasSplitter ? { splitterRatio: draft.splitterRatio } : { trayCount: Number(draft.trayCount) }),
+        // Kabinet berisi BANYAK modul tak mengirim rasio sama sekali: satu isian
+        // tak bisa mewakili tiga modul, jadi isinya diurus panel "Isi kabinet".
+        ...(meta.hasSplitter
+          ? draft.splitterCount > 1
+            ? {}
+            : { splitterRatio: draft.splitterRatio || null }
+          : { trayCount: Number(draft.trayCount) }),
         capacity: Number(draft.capacity),
         status: draft.status,
       })
@@ -316,6 +351,7 @@ export function AccessNodeDetail({
   const odc = kind === 'odc' ? (node as OdcView) : null
   const odp = kind === 'odp' ? (node as OdpView) : null
   const jointBox = kind === 'joint_box' ? (node as JointBoxView) : null
+  const cabinet = odc ?? odp
   const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
 
   // Ringkasan sebaris di bawah lencana: apa yang paling ingin diketahui orang yang
@@ -337,7 +373,13 @@ export function AccessNodeDetail({
         badges={
           <>
             {odc?.energized ? <StatusBadge status="ACTIVE" label="teraliri" /> : <StatusBadge status={node.status} />}
-            <Badge>{jointBox ? `${jointBox.trayCount} tray` : (node as OdcView | OdpView).splitterRatio}</Badge>
+            <Badge>
+              {jointBox
+                ? `${jointBox.trayCount} tray`
+                : cabinet!.splitterCount === 0
+                  ? 'tanpa splitter'
+                  : `${cabinet!.splitterRatio} · ${cabinet!.splitterLegs} kaki`}
+            </Badge>
           </>
         }
         subtitle={subtitle}
@@ -356,14 +398,14 @@ export function AccessNodeDetail({
                     label: 'Hulu (OLT · PON)',
                     value: odc.oltName ? `${odc.oltName} · ${odc.ponPortLabel}` : 'belum di-uplink',
                   },
-                  { label: 'Rasio splitter', value: odc.splitterRatio },
+                  { label: 'Splitter', value: describeSplitter(odc) },
                   { label: meta.capacityLabel, value: String(odc.capacity) },
                   { label: 'Jumlah ODP', value: String(odc.odpCount) },
                 ]
               : [
                   { label: 'Nama', value: node.name },
                   { label: 'ODC induk', value: odp?.odcName ?? '—' },
-                  { label: 'Rasio splitter', value: odp?.splitterRatio ?? '—' },
+                  { label: 'Splitter', value: odp ? describeSplitter(odp) : '—' },
                   { label: meta.capacityLabel, value: String(node.capacity) },
                 ]
         }
@@ -378,7 +420,20 @@ export function AccessNodeDetail({
         }}
         onDelete={() => void remove()}
         onShowOnMap={onShowOnMap ? () => onShowOnMap(mapFocusState(kind, nodeId, node.location)) : undefined}
-      />
+      >
+        {/* Joint box tak kebagian panel ini bukan karena disembunyikan: di dalamnya
+            memang tak ada splitter, serat langsung disambung ke serat. */}
+        {cabinet && (
+          <SplitterPanel
+            ownerKind={kind === 'odc' ? 'ODC' : 'ODP'}
+            ownerId={nodeId}
+            onChanged={() => {
+              void load()
+              onChanged?.()
+            }}
+          />
+        )}
+      </AssetDetailPanel>
 
       {/* Drawer sunting lebih sempit yang menumpang DI ATAS detail — panel induknya tetap
           mengintip di kiri supaya operator tahu benda mana yang sedang ia ubah. */}
@@ -426,15 +481,28 @@ export function AccessNodeDetail({
             <div className="row">
               <div style={{ flex: 1 }}>
                 {meta.hasSplitter ? (
-                  <SelectField
-                    label="Rasio splitter"
-                    value={draft.splitterRatio}
-                    onChange={(_, data) => setDraft({ ...draft, splitterRatio: data.value })}
-                  >
-                    {SPLITTER_RATIOS.map((ratio) => (
-                      <option key={ratio}>{ratio}</option>
-                    ))}
-                  </SelectField>
+                  draft.splitterCount > 1 ? (
+                    // Kabinet berisi banyak modul: satu isian tak bisa mewakilinya,
+                    // jadi form ini melapor apa adanya dan menunjuk panel yang benar.
+                    <TextField
+                      label="Splitter"
+                      value={`${draft.splitterCount} modul — atur di "Isi kabinet"`}
+                      disabled
+                    />
+                  ) : (
+                    <SelectField
+                      label="Splitter"
+                      value={draft.splitterRatio}
+                      onChange={(_, data) => setDraft({ ...draft, splitterRatio: data.value })}
+                    >
+                      {/* Kabinet tanpa splitter itu benda nyata (cross-connect), bukan
+                          isian yang lupa diisi — jadi ia punya pilihannya sendiri. */}
+                      <option value="">Tanpa splitter</option>
+                      {SPLITTER_RATIOS.map((ratio) => (
+                        <option key={ratio}>{ratio}</option>
+                      ))}
+                    </SelectField>
+                  )
                 ) : (
                   <TextField
                     label="Jumlah tray"

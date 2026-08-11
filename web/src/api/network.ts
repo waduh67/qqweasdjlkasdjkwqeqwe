@@ -92,7 +92,12 @@ export interface OdcView {
   ponPortId: string | null
   ponPortLabel: string | null
   oltName: string | null
+  /** Ringkasan isi kabinet, mis. "1:8", "1:8 ×2 · 1:16", atau "—" bila tanpa splitter. */
   splitterRatio: string
+  /** Jumlah modul splitter di dalamnya — 0 berarti kabinet cross-connect. */
+  splitterCount: number
+  /** Total kaki keluaran seluruh modul; inilah kapasitas cabang yang sebenarnya. */
+  splitterLegs: number
   capacity: number
   odpCount: number
   status: AssetStatus
@@ -108,7 +113,10 @@ export interface OdpView {
   areaId: string | null
   odcId: string | null
   odcName: string | null
+  /** Lihat [OdcView.splitterRatio] — ODP pun boleh berisi lebih dari satu modul. */
   splitterRatio: string
+  splitterCount: number
+  splitterLegs: number
   capacity: number
   status: AssetStatus
 }
@@ -137,6 +145,54 @@ export interface JointBoxView {
   spliceCount: number
   status: AssetStatus
 }
+
+/**
+ * Kotak tempat serat disambung. Bukan sekadar penamaan: ODC & ODP BOLEH berisi
+ * modul splitter, ODF & joint box tidak — di dalam keduanya serat langsung
+ * bertemu serat.
+ */
+export type ClosureKind = 'ODC' | 'ODP' | 'JOINT_BOX' | 'ODF'
+
+/**
+ * Satu MODUL splitter di dalam sebuah kabinet — benda yang bisa dipegang, bukan
+ * kolom di baris ODC.
+ *
+ * Kabinet lapangan sungguhan sering berisi lebih dari satu: satu modul 1:8 untuk
+ * cabang perumahan lama plus 1:16 untuk yang baru, atau splitter bertingkat
+ * (kaki modul pertama jadi input modul kedua). Karena itu "kaki 3" baru punya
+ * arti setelah jelas kaki modul yang mana — dan itu pula yang ditunjuk sebuah
+ * sambungan serat, bukan kabinetnya.
+ */
+export interface SplitterView {
+  id: string
+  ownerKind: ClosureKind
+  ownerId: string
+  ownerCode: string | null
+  /** Penanda modul di dalam kabinetnya: SPL-1, SPL-2, … */
+  code: string
+  /** Rasio siap-baca, mis. "1:8". */
+  ratio: string
+  legCount: number
+  /** Redaman sisip modul ini (dB) — bawaan rasionya, bukan angka yang diketik. */
+  insertionLossDb: number
+  /** Nomor kaki yang sudah tersambung; sisanya bebas. */
+  usedLegs: number[]
+  /** Sisi masukan sudah dapat serat dari hulu. */
+  inputConnected: boolean
+  note: string | null
+}
+
+/** Isi sebuah kabinet: identitasnya plus seluruh modul di dalamnya. */
+export interface ClosureSplitterView {
+  ownerKind: ClosureKind
+  ownerId: string
+  ownerCode: string
+  ownerName: string
+  splitters: SplitterView[]
+}
+
+/** Rasio yang dijual di pasaran — dipakai semua form yang memasang splitter. */
+export const SPLITTER_RATIOS = ['1:2', '1:4', '1:8', '1:16', '1:32', '1:64']
 
 export type CustomerStatus = 'PROSPECT' | 'ACTIVE' | 'SUSPENDED' | 'TERMINATED'
 export type OnuStatus = 'PENDING' | 'ONLINE' | 'OFFLINE' | 'LOS' | 'DISMANTLED'

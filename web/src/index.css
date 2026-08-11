@@ -2938,3 +2938,50 @@ tbody tr.row-selected:hover {
   border-radius: var(--radius-sm);
   background: var(--surface-2);
 }
+
+/* ---------- Isi kabinet: modul splitter ---------- */
+
+/* Satu kotak = satu modul splitter yang bisa dipegang teknisi, bukan sebaris
+   tabel: kabinet berisi tiga modul harus TERLIHAT berisi tiga benda. */
+.splitter-module {
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+/* Kaki digambar satu per satu karena "1:8" tak menjawab pertanyaan yang dibawa
+   orang ke layar ini — "masih ada slot?" — sedangkan delapan kotak dengan tiga
+   di antaranya padam menjawabnya tanpa perlu dibaca. Lebar minimum dipatok agar
+   modul 1:64 tetap muat dalam beberapa baris rapat. */
+.splitter-legs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(22px, 1fr));
+  gap: 0.2rem;
+}
+.splitter-leg {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+/* Terpakai = terisi penuh; yang bebas sengaja dibiarkan pucat supaya sisa
+   kapasitas yang menonjol, bukan yang sudah habis. */
+.splitter-leg.is-used {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.splitter-warn {
+  font-size: 0.7rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  color: var(--warning-ink);
+  background: color-mix(in srgb, var(--warning) 16%, var(--surface));
+}

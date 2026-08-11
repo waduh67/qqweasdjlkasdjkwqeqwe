@@ -32,7 +32,12 @@ import type {
   UnmappedCustomer,
   UtilizationHeatmap,
 } from '../api/network'
-import { CABLE_INSTALLATION_LABEL, CABLE_OWNERSHIP_LABEL, onuStatusLabel } from '../api/network'
+import {
+  CABLE_INSTALLATION_LABEL,
+  CABLE_OWNERSHIP_LABEL,
+  SPLITTER_RATIOS,
+  onuStatusLabel,
+} from '../api/network'
 import type { PageResponse } from '../api/types'
 import { resetAccessLogin } from '../api/bng'
 import { rebootCpe, runCpePing } from '../api/cpe'
@@ -4411,9 +4416,6 @@ function OdfPanel({
   )
 }
 
-/** Rasio splitter yang lazim dipakai — cukup untuk sebagian besar pemasangan. */
-const SPLITTER_RATIOS = ['1:2', '1:4', '1:8', '1:16', '1:32', '1:64']
-
 /** Vendor OLT yang didukung — selaras dengan daftar di halaman Inventaris. */
 const VENDORS = ['ZTE', 'HUAWEI', 'FIBERHOME', 'NOKIA', 'HSGQ', 'OTHER']
 
@@ -4512,7 +4514,8 @@ function PlaceAssetForm({
       onSave(base)
       return
     }
-    base.splitterRatio = splitterRatio
+    // Kosong = kabinet tanpa splitter (cross-connect), bukan isian yang terlewat.
+    base.splitterRatio = splitterRatio || null
     base.capacity = capacity
     onSave(base)
   }
@@ -4661,11 +4664,14 @@ function PlaceAssetForm({
         {(kind === 'ODC' || kind === 'ODP') && (
           <div className="row" style={{ gap: '0.5rem' }}>
             <SelectField
-              label="Rasio splitter"
+              label="Splitter"
               value={splitterRatio}
               onChange={(_, data) => setSplitterRatio(data.value)}
               style={{ flex: 1 }}
             >
+              {/* Kabinet cross-connect memang tak berisi splitter — dan modul kedua,
+                  ketiga, dst. ditambahkan belakangan dari panel "Isi kabinet". */}
+              <option value="">Tanpa splitter</option>
               {SPLITTER_RATIOS.map((r) => (
                 <option key={r} value={r}>
                   {r}
