@@ -289,18 +289,22 @@ export function PlaceAssetForm({
         )}
         {(kind === 'ODC' || kind === 'ODP') && (
           <>
-            <SelectField label="Ukuran kotak" value={size} onChange={(_, data) => applySize(data.value)}>
+            <SelectField
+              label="Ukuran kotak"
+              value={size}
+              onChange={(_, data) => applySize(data.value)}
+              hint={
+                kind === 'ODP'
+                  ? 'Splitter di dalam kotak dan jumlah lubang drop-nya sepaket — persis seperti memesan "ODP 8 port". Modul tambahan menyusul lewat panel "Isi kabinet".'
+                  : 'Kapasitas kabinet dihitung dalam CABANG ke ODP, bukan pelanggan: pemecahan besar dikerjakan splitter di ODP, dekat rumah, supaya redaman tak habis di tengah jalan. Modul kedua dst. ditambah lewat panel "Isi kabinet".'
+              }
+            >
               {closureSizes.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
                 </option>
               ))}
             </SelectField>
-            <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
-              {kind === 'ODP'
-                ? 'Satu pilihan menetapkan splitter di dalam kotak sekaligus jumlah lubang drop-nya — persis seperti memesan "ODP 8 port". Modul tambahan menyusul lewat panel "Isi kabinet".'
-                : 'Kapasitas kabinet dihitung dalam CABANG ke ODP, bukan pelanggan: pemecahan besar dikerjakan splitter di ODP, dekat rumah, supaya redaman tak habis di tengah jalan. Modul kedua dst. ditambah lewat panel "Isi kabinet".'}
-            </p>
             {size === CUSTOM_SIZE && (
               <div className="row" style={{ gap: '0.5rem' }}>
                 <SelectField

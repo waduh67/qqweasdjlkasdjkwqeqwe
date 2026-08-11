@@ -10,6 +10,14 @@ import { IconInventory, IconMap } from '@/components/atoms/icons'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { mapFocusState, type MapFocusState } from '@/map/mapFocus'
+import {
+  CUSTOM_SIZE,
+  JOINT_BOX_SIZES,
+  matchClosureSize,
+  matchJointBoxSize,
+  ODC_SIZES,
+  ODP_SIZES,
+} from '@/utils/closureSizing'
 import { Blade } from './Blade'
 import { LocationPicker } from './LocationPicker'
 import { FiberTracePanel } from './FiberTracePanel'
@@ -173,6 +181,13 @@ interface NodeDraft {
   address: string
   longitude: string
   latitude: string
+  /**
+   * Preset ukuran kotak — satu pilihan yang menyetel isi & jumlah port sekaligus,
+   * kata-katanya sama dengan form taruh-perangkat di peta. [CUSTOM_SIZE] berarti
+   * kotaknya berukuran tak lazim (atau berisi banyak modul) dan isian mentahnya
+   * yang ditampilkan.
+   */
+  size: string
   /** Rasio modul TUNGGAL kabinet; kosong = tanpa splitter, dan itu bentuk yang sah. */
   splitterRatio: string
   /** Berapa modul yang ada sekarang — penentu apakah isian di atas masih mewakili isi kabinet. */
@@ -198,7 +213,7 @@ function describeSplitter(node: OdcView | OdpView): string {
     : `${node.splitterRatio} · ${node.splitterCount} modul, ${legs}`
 }
 
-function toDraft(node: NodeView): NodeDraft {
+function toDraft(node: NodeView, kind: AccessNodeKind): NodeDraft {
   const splitterCount = 'splitterCount' in node ? node.splitterCount : 0
   return {
     code: node.code,
@@ -206,6 +221,18 @@ function toDraft(node: NodeView): NodeDraft {
     address: node.address ?? '',
     longitude: String(node.location.longitude),
     latitude: String(node.location.latitude),
+    // Kabinet berisi banyak modul tak punya "ukuran" tunggal — ia langsung jatuh ke
+    // isian mentah, sama seperti kotak yang jumlah portnya memang tak standar.
+    size:
+      'trayCount' in node
+        ? matchJointBoxSize(node.trayCount, node.capacity)
+        : splitterCount > 1
+          ? CUSTOM_SIZE
+          : matchClosureSize(
+              kind === 'odc' ? ODC_SIZES : ODP_SIZES,
+              (node as OdcView | OdpView).splitterRatio,
+              node.capacity,
+            ),
     // Ringkasan hanya sama dengan rasio saat modulnya PERSIS satu; kabinet berisi
     // banyak modul memang tak bisa diwakili satu isian, jadi isiannya dikosongkan
     // dan formnya menyerahkan urusan itu ke panel "Isi kabinet".
@@ -280,6 +307,37 @@ export function AccessNodeDetail({
   const closeDraft = () => {
     setDraft(null)
     setInitialDraft(null)
+  }
+
+  /**
+   * Memilih ukuran mengisikan angka-angkanya sekaligus, sama seperti di form
+   * taruh-perangkat. "Atur sendiri" tak mengosongkan apa pun — nilai kotak yang
+   * sedang disunting tetap berdiri sebagai titik mula.
+   */
+  const applySize = (current: NodeDraft, value: string) => {
+    if (value === CUSTOM_SIZE) {
+      setDraft({ ...current, size: value })
+      return
+    }
+    if (meta.hasSplitter) {
+      const preset = (kind === 'odc' ? ODC_SIZES : ODP_SIZES).find((s) => s.value === value)
+      if (!preset) return
+      setDraft({
+        ...current,
+        size: value,
+        splitterRatio: preset.splitterRatio ?? '',
+        capacity: String(preset.capacity),
+      })
+      return
+    }
+    const preset = JOINT_BOX_SIZES.find((s) => s.value === value)
+    if (!preset) return
+    setDraft({
+      ...current,
+      size: value,
+      trayCount: String(preset.trayCount),
+      capacity: String(preset.capacity),
+    })
   }
 
   const save = async () => {
@@ -421,7 +479,7 @@ export function AccessNodeDetail({
         canUpdate={canUpdate}
         canDelete={canDelete}
         onEdit={() => {
-          const d = toDraft(node)
+          const d = toDraft(node, kind)
           setDraft(d)
           setInitialDraft(d)
         }}
@@ -508,44 +566,32 @@ export function AccessNodeDetail({
               onChange={(_, data) => setDraft({ ...draft, address: data.value })}
             />
             <div className="row">
-              <div style={{ flex: 1 }}>
-                {meta.hasSplitter ? (
-                  draft.splitterCount > 1 ? (
-                    // Kabinet berisi banyak modul: satu isian tak bisa mewakilinya,
-                    // jadi form ini melapor apa adanya dan menunjuk panel yang benar.
-                    <TextField
-                      label="Splitter"
-                      value={`${draft.splitterCount} modul — atur di "Isi kabinet"`}
-                      disabled
-                    />
-                  ) : (
-                    <SelectField
-                      label="Splitter"
-                      value={draft.splitterRatio}
-                      onChange={(_, data) => setDraft({ ...draft, splitterRatio: data.value })}
-                    >
-                      {/* Kabinet tanpa splitter itu benda nyata (cross-connect), bukan
-                          isian yang lupa diisi — jadi ia punya pilihannya sendiri. */}
-                      <option value="">Tanpa splitter</option>
-                      {SPLITTER_RATIOS.map((ratio) => (
-                        <option key={ratio}>{ratio}</option>
-                      ))}
-                    </SelectField>
-                  )
-                ) : (
-                  <TextField
-                    label="Jumlah tray"
-                    value={draft.trayCount}
-                    onChange={(_, data) => setDraft({ ...draft, trayCount: data.value })}
-                  />
-                )}
-              </div>
-              <div style={{ flex: 1 }}>
-                <TextField
-                  label={meta.capacityLabel}
-                  value={draft.capacity}
-                  onChange={(_, data) => setDraft({ ...draft, capacity: data.value })}
-                />
+              <div style={{ flex: 2 }}>
+                <SelectField
+                  label="Ukuran kotak"
+                  value={draft.size}
+                  onChange={(_, data) => applySize(draft, data.value)}
+                  // Kabinet berisi beberapa modul tak punya ukuran tunggal: memilih preset
+                  // di sini seolah menjanjikan isinya ikut berubah, padahal modulnya
+                  // diurus panel "Isi kabinet". Jadi ia dikunci di isian mentah.
+                  disabled={draft.splitterCount > 1}
+                  hint={
+                    draft.splitterCount > 1
+                      ? `Berisi ${draft.splitterCount} modul — isinya diatur di panel "Isi kabinet"`
+                      : undefined
+                  }
+                >
+                  {(meta.hasSplitter
+                    ? kind === 'odc'
+                      ? ODC_SIZES
+                      : ODP_SIZES
+                    : JOINT_BOX_SIZES
+                  ).map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </SelectField>
               </div>
               <div style={{ flex: 1 }}>
                 <SelectField
@@ -559,6 +605,49 @@ export function AccessNodeDetail({
                 </SelectField>
               </div>
             </div>
+            {draft.size === CUSTOM_SIZE && (
+              <div className="row">
+                <div style={{ flex: 1 }}>
+                  {meta.hasSplitter ? (
+                    draft.splitterCount > 1 ? (
+                      // Kabinet berisi banyak modul: satu isian tak bisa mewakilinya,
+                      // jadi form ini melapor apa adanya dan menunjuk panel yang benar.
+                      <TextField
+                        label="Splitter"
+                        value={`${draft.splitterCount} modul — atur di "Isi kabinet"`}
+                        disabled
+                      />
+                    ) : (
+                      <SelectField
+                        label="Splitter"
+                        value={draft.splitterRatio}
+                        onChange={(_, data) => setDraft({ ...draft, splitterRatio: data.value })}
+                      >
+                        {/* Kabinet tanpa splitter itu benda nyata (cross-connect), bukan
+                            isian yang lupa diisi — jadi ia punya pilihannya sendiri. */}
+                        <option value="">Tanpa splitter</option>
+                        {SPLITTER_RATIOS.map((ratio) => (
+                          <option key={ratio}>{ratio}</option>
+                        ))}
+                      </SelectField>
+                    )
+                  ) : (
+                    <TextField
+                      label="Jumlah tray"
+                      value={draft.trayCount}
+                      onChange={(_, data) => setDraft({ ...draft, trayCount: data.value })}
+                    />
+                  )}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <TextField
+                    label={meta.capacityLabel}
+                    value={draft.capacity}
+                    onChange={(_, data) => setDraft({ ...draft, capacity: data.value })}
+                  />
+                </div>
+              </div>
+            )}
             <label>
               <span>Lokasi</span>
               <LocationPicker
