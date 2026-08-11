@@ -20,10 +20,6 @@ import com.duluin.ftth.network.application.port.inbound.UpdateFiberConnectionCom
 import com.duluin.ftth.network.application.port.outbound.CableCoreRepository
 import com.duluin.ftth.network.application.port.outbound.CableRepository
 import com.duluin.ftth.network.application.port.outbound.FiberConnectionRepository
-import com.duluin.ftth.network.application.port.outbound.JointBoxRepository
-import com.duluin.ftth.network.application.port.outbound.OdcRepository
-import com.duluin.ftth.network.application.port.outbound.OdfRepository
-import com.duluin.ftth.network.application.port.outbound.OdpRepository
 import com.duluin.ftth.network.application.port.outbound.OltRepository
 import com.duluin.ftth.network.application.port.outbound.PonPortRepository
 import com.duluin.ftth.network.application.port.outbound.SplitterRepository
@@ -56,10 +52,7 @@ class FiberConnectionService(
     private val connections: FiberConnectionRepository,
     private val cableRepository: CableRepository,
     private val cableCoreRepository: CableCoreRepository,
-    private val odcRepository: OdcRepository,
-    private val odpRepository: OdpRepository,
-    private val jointBoxRepository: JointBoxRepository,
-    private val odfRepository: OdfRepository,
+    private val closures: ClosureLookup,
     private val oltRepository: OltRepository,
     private val ponPortRepository: PonPortRepository,
     private val splitters: SplitterRepository,
@@ -186,7 +179,7 @@ class FiberConnectionService(
      * non-core). Dua hal yang dijaga: titiknya masuk akal untuk closure ini, dan
      * titiknya belum dipakai sambungan lain.
      */
-    private fun validate(point: ConnectionPoint, closure: Closure): CableCore? = when (point.kind) {
+    private fun validate(point: ConnectionPoint, closure: ClosureRef): CableCore? = when (point.kind) {
         ConnectionPointKind.CORE -> validateCore(point, closure)
 
         ConnectionPointKind.SPLITTER_IN -> {
@@ -216,10 +209,11 @@ class FiberConnectionService(
             // yang menjaga port tak dobel-pakai adalah [assertFree], dan itu
             // berlaku global.
             val odfId = requireNotNull(point.nodeId)
-            val odf = odfRepository.findById(odfId) ?: throw NotFoundException("ODF $odfId tidak ditemukan")
+            val odf = closures.require(ClosureKind.ODF, odfId)
+            val portCount = odf.portCount ?: 0
             val port = point.portNumber ?: 0
-            if (!odf.hasPort(port)) {
-                throw ValidationException("Port $port di luar kapasitas ODF ${odf.code} (1-${odf.portCount})")
+            if (port !in 1..portCount) {
+                throw ValidationException("Port $port di luar kapasitas ODF ${odf.code} (1-$portCount)")
             }
             assertFree(point, closure)
             null
@@ -237,7 +231,7 @@ class FiberConnectionService(
             throw ValidationException("Ujung ONU tercatat lewat pemasangan ONU pelanggan, bukan di layar sambungan")
     }
 
-    private fun validateCore(point: ConnectionPoint, closure: Closure): CableCore {
+    private fun validateCore(point: ConnectionPoint, closure: ClosureRef): CableCore {
         val coreId = requireNotNull(point.coreId)
         val core = cableCoreRepository.findById(coreId) ?: throw NotFoundException("Core $coreId tidak ditemukan")
         val cable = cableRepository.findById(core.cableId)
@@ -266,7 +260,7 @@ class FiberConnectionService(
      * digambar kasar tetap lolos; yang ditolak adalah kabel yang memang tak ada
      * di sana.
      */
-    private fun assertCableReaches(cable: Cable, closure: Closure) {
+    private fun assertCableReaches(cable: Cable, closure: ClosureRef) {
         if (reaches(cable, closure)) return
         val distance = cable.route.distanceTo(closure.location)
         throw ValidationException(
@@ -280,7 +274,7 @@ class FiberConnectionService(
      * menyusun daftar kabel yang boleh dipilih di meja kerja. Satu sumber supaya
      * layar tak pernah menawarkan kabel yang akan ditolak sedetik kemudian.
      */
-    private fun reaches(cable: Cable, closure: Closure): Boolean =
+    private fun reaches(cable: Cable, closure: ClosureRef): Boolean =
         cable.from.id == closure.id ||
             cable.to.id == closure.id ||
             cable.route.distanceTo(closure.location) <= MID_SPAN_TOLERANCE_METERS
@@ -335,7 +329,7 @@ class FiberConnectionService(
     }
 
     /** Port ODF & PON port cuma ada artinya di dalam rak; di kotak lain tak ada raknya. */
-    private fun requireRack(closure: Closure, what: String) {
+    private fun requireRack(closure: ClosureRef, what: String) {
         if (closure.kind != ClosureKind.ODF) {
             throw ValidationException(
                 "$what disambung di dalam rak ODF — ${closure.code} adalah ${closure.kind.label}",
@@ -352,7 +346,7 @@ class FiberConnectionService(
      * tray dan sambungan serat ke serat), dan modul milik kabinet sebelah yang
      * ikut terbawa karena salah pilih di layar.
      */
-    private fun requireSplitterOf(point: ConnectionPoint, closure: Closure): Splitter {
+    private fun requireSplitterOf(point: ConnectionPoint, closure: ClosureRef): Splitter {
         if (!closure.kind.hasSplitter) {
             throw ValidationException(
                 "${closure.code} adalah ${closure.kind.label} yang tak berisi splitter — " +
@@ -368,7 +362,7 @@ class FiberConnectionService(
         return splitter
     }
 
-    private fun assertFree(point: ConnectionPoint, closure: Closure) {
+    private fun assertFree(point: ConnectionPoint, closure: ClosureRef) {
         connections.findByNodePoint(
             point.kind,
             requireNotNull(point.nodeId),
@@ -407,47 +401,7 @@ class FiberConnectionService(
     // Pemuatan & pemetaan
     // ------------------------------------------------------------------
 
-    /** Closure yang sudah pasti ada, diratakan jadi satu bentuk apa pun jenisnya. */
-    private data class Closure(
-        val kind: ClosureKind,
-        val id: UUID,
-        val code: String,
-        val name: String,
-        val location: Coordinate,
-        /**
-         * Batas jumlah sambungan yang muat di dalam kotaknya; null = tak dibatasi.
-         * Joint box dibatasi jumlah tray, ODF jumlah sisi adapter. ODC/ODP tak
-         * dibatasi di sini — yang membatasinya adalah kaki modul splitternya
-         * masing-masing, dan itu diperiksa saat kaki ditunjuk.
-         */
-        val spliceCapacity: Int? = null,
-        /** Jumlah adapter rak; null untuk kotak selain ODF. */
-        val portCount: Int? = null,
-        /** POP tempat rak berdiri — sumber daftar PON port; null untuk kotak lain. */
-        val siteId: UUID? = null,
-    )
-
-    private fun requireClosure(kind: ClosureKind, id: UUID): Closure = when (kind) {
-        ClosureKind.ODC -> odcRepository.findById(id)?.let {
-            Closure(kind, it.id, it.code, it.name, it.location)
-        }
-        ClosureKind.ODP -> odpRepository.findById(id)?.let {
-            Closure(kind, it.id, it.code, it.name, it.location)
-        }
-        ClosureKind.JOINT_BOX -> jointBoxRepository.findById(id)?.let {
-            Closure(kind, it.id, it.code, it.name, it.location, spliceCapacity = it.capacity)
-        }
-        // Batas rak dihitung dari SISI, bukan port: tiap adapter memang menampung
-        // dua sambungan, belakang dan depan.
-        ClosureKind.ODF -> odfRepository.findById(id)?.let {
-            Closure(
-                kind, it.id, it.code, it.name, it.location,
-                spliceCapacity = it.portCount * 2,
-                portCount = it.portCount,
-                siteId = it.siteId,
-            )
-        }
-    } ?: throw NotFoundException("${kind.label} $id tidak ditemukan")
+    private fun requireClosure(kind: ClosureKind, id: UUID): ClosureRef = closures.require(kind, id)
 
     // ------------------------------------------------------------------
     // Meja kerja
@@ -460,13 +414,13 @@ class FiberConnectionService(
      * Radius query dipakai sebagai penyaring kasar berindeks; putusan akhirnya
      * tetap [reaches], supaya daftar dan penolakan tak pernah berbeda pendapat.
      */
-    private fun reachableCables(closure: Closure): List<Cable> =
+    private fun reachableCables(closure: ClosureRef): List<Cable> =
         (cableRepository.findByEndpointNodeIds(setOf(closure.id)) +
             cableRepository.findPassing(closure.location, MID_SPAN_TOLERANCE_METERS))
             .distinctBy { it.id }
             .filter { reaches(it, closure) }
 
-    private fun List<Cable>.toCableViews(closure: Closure): List<SpliceCableView> {
+    private fun List<Cable>.toCableViews(closure: ClosureRef): List<SpliceCableView> {
         if (isEmpty()) return emptyList()
         val coresByCable = cableCoreRepository.findByCableIds(map { it.id }).groupBy { it.cableId }
         // Satu query untuk seluruh core semua kabel: yang dicari adalah "core ini
@@ -508,13 +462,13 @@ class FiberConnectionService(
      * cuma bertemu serat, dan menawarkan "kaki splitter" di sana akan menyesatkan
      * orang yang berdiri di depan kotaknya.
      */
-    private fun pointsOf(closure: Closure): List<SplicePointView> = when (closure.kind) {
+    private fun pointsOf(closure: ClosureRef): List<SplicePointView> = when (closure.kind) {
         ClosureKind.ODC, ClosureKind.ODP -> splitterPoints(closure)
         ClosureKind.ODF -> odfPoints(closure) + ponPoints(closure)
         ClosureKind.JOINT_BOX -> emptyList()
     }
 
-    private fun splitterPoints(closure: Closure): List<SplicePointView> {
+    private fun splitterPoints(closure: ClosureRef): List<SplicePointView> {
         val modules = splitters.findByOwnerId(closure.id)
         if (modules.isEmpty()) return emptyList()
         val ids = modules.mapTo(HashSet()) { it.id }
@@ -553,7 +507,7 @@ class FiberConnectionService(
      * pekerjaan berbeda: belakang tempat pigtail dilas ke core kabel luar, depan
      * tempat patchcord dicolok ke OLT.
      */
-    private fun odfPoints(closure: Closure): List<SplicePointView> {
+    private fun odfPoints(closure: ClosureRef): List<SplicePointView> {
         val ports = closure.portCount ?: return emptyList()
         val used = occupancyOf(ConnectionPointKind.ODF_PORT, setOf(closure.id))
         val group = "Rak ${closure.code}"
@@ -577,7 +531,7 @@ class FiberConnectionService(
      * karena patchcord tak menyeberang gedung — menawarkan PON port kota sebelah
      * cuma memperbesar daftar dan peluang salah colok.
      */
-    private fun ponPoints(closure: Closure): List<SplicePointView> {
+    private fun ponPoints(closure: ClosureRef): List<SplicePointView> {
         val siteId = closure.siteId ?: return emptyList()
         val olts = oltRepository.findBySiteId(siteId)
         if (olts.isEmpty()) return emptyList()
@@ -616,7 +570,7 @@ class FiberConnectionService(
      * bukan saat menggambar kabel, karena yang memakan tempat memang sambungannya
      * — core yang cuma lewat tak menghabiskan apa pun.
      */
-    private fun assertRoomLeft(closure: Closure) {
+    private fun assertRoomLeft(closure: ClosureRef) {
         val limit = closure.spliceCapacity ?: return
         val used = connections.countByClosureId(closure.id)
         if (used >= limit) {

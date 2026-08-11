@@ -9,6 +9,8 @@ import com.duluin.ftth.network.domain.model.CableType
 import com.duluin.ftth.network.domain.model.ClosureKind
 import com.duluin.ftth.network.domain.model.ConnectionPointKind
 import com.duluin.ftth.network.domain.model.CoreStatus
+import com.duluin.ftth.network.domain.model.FiberHopKind
+import com.duluin.ftth.network.domain.model.FiberTraceEnd
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import com.duluin.ftth.network.domain.model.OdfPortSide
 import com.duluin.ftth.network.domain.model.OltVendor
@@ -396,4 +398,58 @@ data class CableCoreListView(
     val reserved: Int,
     val damaged: Int,
     val cores: List<CableCoreView>,
+)
+
+/**
+ * Satu langkah dalam penelusuran jalur — apa yang dilewati cahaya dan berapa
+ * ongkosnya di situ.
+ *
+ * [lossDb] hop ini sendiri, [cumulativeLossDb] jumlah dari OLT sampai hop ini.
+ * Dua-duanya dibawa supaya layar bisa menunjuk hop mana yang menghabiskan
+ * anggaran, bukan cuma memberi satu angka akhir yang tak bisa ditindaklanjuti.
+ */
+data class FiberHopView(
+    val kind: FiberHopKind,
+    val kindLabel: String,
+    val label: String,
+    val detail: String,
+    val lossDb: Double,
+    val cumulativeLossDb: Double,
+    /** Rugi hop ini hasil UKUR; false = angka tipikal komponen. */
+    val measured: Boolean,
+    /** Kotak tempat hop ini berada — untuk mengarahkan orang ke lokasinya. */
+    val closureKind: ClosureKind?,
+    val closureId: UUID?,
+    val closureCode: String?,
+    /** Kabel yang seratnya dilewati; hanya untuk hop serat. */
+    val cableId: UUID?,
+    /** Splitter/ODF/PON port yang dilewati; hanya untuk hop perangkat. */
+    val nodeId: UUID?,
+)
+
+/**
+ * Jalur satu helai cahaya dari OLT sampai titik yang ditanyakan, lengkap dengan
+ * anggaran redamannya.
+ *
+ * Hop diurut dari OLT ke titik awal telusur — arah CAHAYA, bukan arah orang
+ * berjalan menyusurinya. Itu yang membuat "rugi kumulatif" punya arti: tiap
+ * angka menjawab "sampai di sini, berapa yang sudah habis".
+ */
+data class FiberPathView(
+    val startLabel: String,
+    val end: FiberTraceEnd,
+    val endLabel: String,
+    val hops: List<FiberHopView>,
+    val totalLossDb: Double,
+    /** Anggaran daya kelas B+ yang dipakai sebagai pembanding. */
+    val budgetDb: Double,
+    /** Sisa anggaran; negatif berarti jalur ini secara hitungan sudah gelap. */
+    val marginDb: Double,
+    val fiberMeters: Double,
+    val splitterCount: Int,
+    val spliceCount: Int,
+    /** Hop yang rugi-nya masih angka tipikal, belum diukur. */
+    val estimatedHops: Int,
+    /** Kalimat siap-baca; kosong berarti jalurnya sehat dan utuh. */
+    val warnings: List<String>,
 )

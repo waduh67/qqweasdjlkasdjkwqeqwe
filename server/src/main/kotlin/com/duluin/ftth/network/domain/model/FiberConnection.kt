@@ -35,10 +35,10 @@ enum class ClosureKind(val label: String) {
  * ±0,05 dB, mekanik ±0,3 dB, konektor ±0,5 dB. Disimpan supaya angka rugi hasil
  * ukur bisa dinilai "masuk akal atau tidak" tanpa menebak-nebak cara pasangnya.
  */
-enum class SpliceMethod(val label: String) {
-    FUSION("Fusion (las)"),
-    MECHANICAL("Mekanik"),
-    CONNECTOR("Konektor (patch)"),
+enum class SpliceMethod(val label: String, val typicalLossDb: Double) {
+    FUSION("Fusion (las)", 0.05),
+    MECHANICAL("Mekanik", 0.3),
+    CONNECTOR("Konektor (patch)", 0.5),
 }
 
 /**
