@@ -2,6 +2,7 @@ package com.duluin.ftth.network.application.port.outbound
 
 import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
+import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.network.domain.model.Odp
 import java.util.UUID
 
@@ -40,6 +41,17 @@ interface OdpRepository {
 
     /** Id ODP yang menggantung pada salah satu ODC tersebut. */
     fun findIdsByOdcIds(odcIds: Set<UUID>): Set<UUID>
+
+    /**
+     * Kotak yang berdiri dalam radius sekian meter dari sebuah titik — dipakai
+     * survey calon pelanggan: yang menentukan bisa-tidaknya sebuah alamat dilayani
+     * adalah jarak fisik ke kotak terdekat, bukan keanggotaan area di peta.
+     *
+     * Radius diukur pada `geography` supaya satuannya meter sejati; di lintang
+     * Indonesia satu derajat bujur ±111 km, dan radius yang salah satuan akan
+     * menyapu seluruh kota.
+     */
+    fun findNear(location: Coordinate, radiusMeters: Double): List<Odp>
 
     fun deleteById(id: UUID)
 }

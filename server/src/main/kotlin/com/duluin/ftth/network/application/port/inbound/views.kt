@@ -531,3 +531,71 @@ data class FiberCutClosureView(
     /** Berapa ruas serat dari titik putus; 0 = kotak tempat core ini berakhir. */
     val depth: Int,
 )
+
+/**
+ * Jawaban survey untuk satu titik alamat: apa yang tersedia di sekitarnya.
+ *
+ * [verdict] sengaja ada di paling depan dan berupa kalimat, bukan kode: yang
+ * membaca layar ini sering sales yang sedang berdiri di depan calon pelanggan,
+ * dan yang ia butuhkan satu kalimat yang bisa langsung diucapkan.
+ */
+data class SurveyCapacityView(
+    val location: Coordinate,
+    val radiusMeters: Double,
+    val verdict: String,
+    /** Bisa dipasang hari ini: ada kotak siap pakai dalam radius. */
+    val serviceable: Boolean,
+    val odps: List<SurveyOdpView>,
+    val cables: List<SurveyCableView>,
+    val warnings: List<String>,
+)
+
+/**
+ * Sebuah kotak beserta sisa tempatnya.
+ *
+ * Dua angka yang tampak sama tapi berbeda di lapangan sengaja dipisah:
+ * [freePorts] adalah lubang di panel depan, [freeLegs] adalah kaki splitter yang
+ * belum dilas ke apa pun. Panel berlubang delapan dengan splitter 1:8 yang
+ * kakinya sudah habis TIDAK bisa dijual — dan justru begitulah cara sebuah kotak
+ * "kosong" menjatuhkan jadwal pemasangan di hari-H.
+ */
+data class SurveyOdpView(
+    val odpId: UUID,
+    val code: String,
+    val name: String,
+    val address: String?,
+    val location: Coordinate,
+    /** Garis lurus dari titik survey; kabel drop nyatanya selalu lebih panjang. */
+    val distanceMeters: Double,
+    val capacity: Int,
+    val usedPorts: Int,
+    val freePorts: Int,
+    val splitterLegs: Int,
+    val freeLegs: Int,
+    /** Port kosong DAN kaki splitter kosong — baru boleh dijanjikan ke pelanggan. */
+    val ready: Boolean,
+    /** Kenapa belum siap, bila belum. */
+    val note: String? = null,
+)
+
+/**
+ * Selubung yang lewat di dekat titik survey, beserta core yang masih menganggur.
+ *
+ * Inilah jalan keluar saat semua kotak penuh: kabel tak harus ditarik ulang dari
+ * kabinet — cukup dikupas di tengah bentang, satu core diambil, satu kotak baru
+ * berdiri di depan gang. [tapDistanceMeters] adalah letak kupasan itu diukur dari
+ * ujung awal kabel, angka yang dipakai teknisi mencari titiknya di lapangan.
+ */
+data class SurveyCableView(
+    val cableId: UUID,
+    val code: String,
+    val name: String,
+    val cableType: CableType,
+    /** Jarak titik survey ke jalur kabel — tegak lurus, bukan ke ujungnya. */
+    val distanceMeters: Double,
+    val tapDistanceMeters: Double,
+    val coreCount: Int,
+    val freeCores: Int,
+    /** Nomor core yang menganggur, beberapa yang pertama saja — sisanya tinggal dibuka di layar core. */
+    val freeCoreNumbers: List<Int>,
+)
