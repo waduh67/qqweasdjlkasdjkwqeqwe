@@ -2938,17 +2938,23 @@ function SaveCablePanel({
   const customerDrop = cableType === 'DROP' && fromKind === 'ODP' && toKind === 'CUSTOMER'
 
   /**
-   * Simpul yang memang tak punya port keluaran: POP tak melalui PON port, joint box
-   * menyambung serat langsung (tak ada kaki yang dicolok), dan ODF — portnya bernomor,
-   * tapi yang dicolok di sana patchcord, bukan ujung kabel outdoor; kabel yang
-   * berangkat dari rak menempel lewat sambungan di sisi belakang port. Daftar port
-   * kosong di sini SAH — beda dari OLT tanpa PON port, yang kosongnya berarti
-   * perangkatnya belum disiapkan.
+   * Simpul yang tak menyebut "port asal" untuk kabel yang berangkat darinya: POP
+   * tak melalui PON port, joint box menyambung serat langsung (tak ada kaki yang
+   * dicolok), dan ODF — portnya bernomor, tapi yang dicolok di sana patchcord,
+   * bukan ujung kabel outdoor.
+   *
+   * ODC & ODP kini ikut: sebuah selubung berangkat dari kabinet lewat SERATNYA,
+   * satu core ke satu kaki splitter, dan pasangan itu dicatat di meja sambung yang
+   * menyebut modul & core-nya. Satu nomor kaki di ujung kabel cuma sanggup
+   * menyimpan satu dari delapan pasangan yang sebenarnya ada.
+   *
+   * Daftar port kosong di sini SAH — beda dari OLT tanpa PON port, yang kosongnya
+   * berarti perangkatnya belum disiapkan.
    */
-  const portlessSource = fromKind === 'SITE' || fromKind === 'JOINT_BOX' || fromKind === 'ODF'
+  const portlessSource = fromKind !== 'OLT'
 
-  // Feeder/distribusi: pilih port KELUARAN sumber (PON port OLT / kaki ODC / slot
-  // ODP). Feeder dari SITE tak punya PON port → daftar kosong, port tak diperlukan.
+  // Feeder dari OLT: pilih PON port sumber — di situ kabel memang benar-benar
+  // dicolok, dan pilihannya sekaligus menyetel uplink simpul hilir.
   const [srcOptions, setSrcOptions] = useState<CablePortOption[] | null>(customerDrop ? [] : null)
   const [srcPort, setSrcPort] = useState<SourcePort | null>(null)
 
@@ -3006,10 +3012,10 @@ function SaveCablePanel({
   }, [customerDrop, fromId, toId])
 
   // Kesiapan simpan: feeder/distribusi WAJIB port sumber terpilih. Pengecualian
-  // "daftar kosong boleh" hanya untuk simpul yang memang tak berport (POP tak lewat
-  // PON port, joint box menyambung serat langsung). OLT tanpa PON port juga
-  // berdaftar kosong, TAPI di situ port tetap wajib — menyimpan tanpa port berarti
-  // uplink diam-diam tak ter-set (feeder "yatim").
+  // "daftar kosong boleh" berlaku untuk semua simpul yang tak menyebut port asal
+  // (POP, joint box, ODF, kabinet & kotak — lihat [portlessSource]). OLT tanpa PON
+  // port juga berdaftar kosong, TAPI di situ port tetap wajib — menyimpan tanpa
+  // port berarti uplink diam-diam tak ter-set (feeder "yatim").
   const sourceReady = customerDrop
     ? true
     : srcOptions != null && (srcPort != null || (portlessSource && srcOptions.length === 0))
@@ -3096,9 +3102,11 @@ function SaveCablePanel({
                     ? 'Joint box tak punya port — serat masuk disambung langsung ke serat keluar, jadi pasangan core-nya diatur di sambungan kotak ini, bukan di sini.'
                     : fromKind === 'ODF'
                       ? 'Port ODF memang bernomor, tapi yang dicolok di sana patchcord — bukan ujung kabel luar. Kabel ini menempel lewat sambungan di sisi belakang portnya, diatur di layar sambungan rak.'
-                      : fromKind === 'OLT'
-                        ? 'OLT ini belum punya PON port. Tambahkan dulu di detail OLT (tab PON Port) sebelum menarik feeder.'
-                        : 'Tak ada port keluaran di simpul ini — tak bisa menarik kabel dari sini.'}
+                      : fromKind === 'ODC' || fromKind === 'ODP'
+                        ? 'Kabel ini berangkat lewat SERATNYA, bukan lewat satu kaki splitter: tiap core disambung ke kaki yang berbeda. Pasangannya diatur di meja sambung kotak ini setelah kabelnya tergambar.'
+                        : fromKind === 'OLT'
+                          ? 'OLT ini belum punya PON port. Tambahkan dulu di detail OLT (tab PON Port) sebelum menarik feeder.'
+                          : 'Tak ada port keluaran di simpul ini — tak bisa menarik kabel dari sini.'}
               </span>
             ) : (
               <>
