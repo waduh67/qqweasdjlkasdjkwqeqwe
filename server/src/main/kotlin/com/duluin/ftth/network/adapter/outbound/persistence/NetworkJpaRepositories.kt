@@ -121,6 +121,8 @@ interface CableJpaRepository : JpaRepository<CableJpaEntity, UUID>, JpaSpecifica
 interface CableCoreJpaRepository : JpaRepository<CableCoreJpaEntity, UUID> {
     fun findByCableIdOrderByCoreNumber(cableId: UUID): List<CableCoreJpaEntity>
 
+    fun findByCableIdInOrderByCableIdAscCoreNumberAsc(cableIds: Collection<UUID>): List<CableCoreJpaEntity>
+
     /** Dipakai saat jumlah core kabel dikurangi; core sisanya tak tersentuh. */
     fun deleteByCableIdAndCoreNumberGreaterThan(cableId: UUID, coreNumber: Int)
 }

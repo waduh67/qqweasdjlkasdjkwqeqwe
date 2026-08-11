@@ -67,6 +67,11 @@ class FiberConnectionPersistenceAdapter(
             .mapValues { (_, ports) -> ports.toSortedSet() }
     }
 
+    override fun findByNodeIds(kind: ConnectionPointKind, nodeIds: Set<UUID>): List<FiberConnection> {
+        if (nodeIds.isEmpty()) return emptyList()
+        return byEnds(ends.findByPointKindAndNodeIdIn(kind, nodeIds))
+    }
+
     override fun nodesWithPoint(kind: ConnectionPointKind, nodeIds: Set<UUID>): Set<UUID> {
         if (nodeIds.isEmpty()) return emptySet()
         return ends.findByPointKindAndNodeIdIn(kind, nodeIds).mapNotNullTo(HashSet()) { it.nodeId }

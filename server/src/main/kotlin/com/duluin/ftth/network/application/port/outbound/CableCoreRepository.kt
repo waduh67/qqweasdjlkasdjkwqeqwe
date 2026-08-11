@@ -10,6 +10,12 @@ interface CableCoreRepository {
     /** Semua core sebuah kabel, terurut nomor. */
     fun findByCableId(cableId: UUID): List<CableCore>
 
+    /**
+     * Core beberapa kabel sekaligus, terurut nomor. Layar splicing membuka semua
+     * kabel yang lewat sebuah kotak berbarengan — satu query, bukan satu per kabel.
+     */
+    fun findByCableIds(cableIds: Collection<UUID>): List<CableCore>
+
     /** Ambil sekaligus — dipakai layar sambungan yang menyebut core lintas kabel. */
     fun findByIds(ids: Collection<UUID>): List<CableCore>
 

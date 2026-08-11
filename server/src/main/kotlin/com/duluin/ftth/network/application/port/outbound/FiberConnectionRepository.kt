@@ -66,6 +66,16 @@ interface FiberConnectionRepository {
     /** Versi banyak-simpul, satu query untuk satu halaman daftar. */
     fun countUsedPortsOfNodes(kind: ConnectionPointKind, nodeIds: Set<UUID>): Map<UUID, Long>
 
+    /**
+     * Sambungan yang menyentuh titik jenis [kind] pada salah satu [nodeIds] — apa
+     * adanya, bukan sekadar hitungannya.
+     *
+     * Bedanya dengan [usedPortNumbersOfNodes]: layar splicing perlu tahu bukan
+     * cuma "kaki 3 terpakai", melainkan TERPAKAI OLEH APA, supaya tombol "lepas"
+     * di sebelah kaki itu punya sesuatu untuk dilepas.
+     */
+    fun findByNodeIds(kind: ConnectionPointKind, nodeIds: Set<UUID>): List<FiberConnection>
+
     /** Sambungan yang menyentuh core milik kabel ini. */
     fun findByCableId(cableId: UUID): List<FiberConnection>
 

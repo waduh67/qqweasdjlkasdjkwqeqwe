@@ -23,7 +23,26 @@ interface ManageFiberConnectionUseCase {
 
     fun list(closureKind: ClosureKind, closureId: UUID): ClosureSpliceView
 
+    /**
+     * [list] plus seluruh bahan untuk MENYAMBUNG: kabel yang lewat kotak ini
+     * beserta core-nya, dan titik simpul yang tersedia di dalamnya. Terpisah dari
+     * [list] karena yang cuma ingin melihat isi kotak (mis. panel peta) tak perlu
+     * membayar penelusuran geometri kabel di sekitarnya.
+     */
+    fun workbench(closureKind: ClosureKind, closureId: UUID): SpliceWorkbenchView
+
     fun connect(command: ConnectFiberCommand): FiberConnectionView
+
+    /**
+     * Menyambung sekaligus — bahan tombol "sambung 1:1 otomatis", yang di kotak
+     * 24 core berarti dua puluh empat sambungan sekali tekan.
+     *
+     * Semua atau tak sama sekali: kalau pasangan ke-17 ditolak (core rusak, kaki
+     * sudah dipakai), tak ada satu pun yang tersimpan. Setengah tersambung lebih
+     * buruk daripada gagal — teknisi mengira pekerjaannya batal lalu mengulanginya,
+     * dan yang terlanjur masuk jadi sambungan hantu.
+     */
+    fun connectAll(commands: List<ConnectFiberCommand>): List<FiberConnectionView>
 
     fun update(id: UUID, command: UpdateFiberConnectionCommand): FiberConnectionView
 

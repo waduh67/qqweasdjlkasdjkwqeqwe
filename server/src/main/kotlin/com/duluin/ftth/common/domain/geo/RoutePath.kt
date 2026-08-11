@@ -75,24 +75,54 @@ data class RoutePath(val points: List<Coordinate>) {
      * pasangan from/to-nya.
      */
     fun distanceTo(coord: Coordinate): Double =
-        points.zipWithNext { a, b -> distanceToSegment(coord, a, b) }.min()
+        points.zipWithNext { a, b -> coord.distanceTo(footOn(coord, a, b)) }.min()
 
     /**
-     * Jarak titik ke satu ruas. Proyeksinya dihitung di bidang lokal — derajat
-     * bujur diperpendek cos(lintang) — lalu jaraknya diukur haversine seperti
-     * sisa berkas ini, supaya satuannya tetap meter sejati.
+     * Jarak dari [start] ke titik jalur yang paling dekat dengan [coord], diukur
+     * MENYUSURI jalurnya. Kembaran murni-Kotlin dari
+     * `ST_LineLocatePoint(route, p) × ST_Length(route)`.
+     *
+     * Inilah "titik tap" sebuah ODP pada kabel distribusi: bukan angka yang
+     * diketik orang, melainkan akibat dari letak kotaknya di peta. Dipakai layar
+     * splicing untuk mengurutkan kotak sepanjang bentang ("kotak ini di meter
+     * ke-820 dari ODC") dan untuk mencocokkan jarak hasil OTDR dengan simpul yang
+     * memang berdiri di sana.
      */
-    private fun distanceToSegment(p: Coordinate, a: Coordinate, b: Coordinate): Double {
+    fun distanceAlongTo(coord: Coordinate): Double {
+        var traversed = 0.0
+        var nearest = Double.MAX_VALUE
+        var along = 0.0
+        for ((a, b) in points.zipWithNext()) {
+            val foot = footOn(coord, a, b)
+            val gap = coord.distanceTo(foot)
+            // Ruas TERDEKAT yang menentukan, bukan ruas pertama yang kebetulan
+            // searah: jalur yang berbelok balik (huruf U) melewati satu titik dua
+            // kali, dan yang dimaksud selalu lintasan yang benar-benar di sebelahnya.
+            if (gap < nearest) {
+                nearest = gap
+                along = traversed + a.distanceTo(foot)
+            }
+            traversed += a.distanceTo(b)
+        }
+        return along
+    }
+
+    /**
+     * Kaki tegak lurus [p] pada ruas a→b. Proyeksinya dihitung di bidang lokal —
+     * derajat bujur diperpendek cos(lintang) — lalu jaraknya diukur haversine
+     * seperti sisa berkas ini, supaya satuannya tetap meter sejati.
+     */
+    private fun footOn(p: Coordinate, a: Coordinate, b: Coordinate): Coordinate {
         val scale = Math.cos(Math.toRadians(a.latitude))
         val bx = (b.longitude - a.longitude) * scale
         val by = b.latitude - a.latitude
         val lengthSquared = bx * bx + by * by
-        if (lengthSquared == 0.0) return p.distanceTo(a)
+        if (lengthSquared == 0.0) return a
         val px = (p.longitude - a.longitude) * scale
         val py = p.latitude - a.latitude
         // Dijepit 0..1 supaya proyeksi di luar ruas jatuh ke ujung terdekatnya.
         val t = ((px * bx + py * by) / lengthSquared).coerceIn(0.0, 1.0)
-        return p.distanceTo(a.interpolate(b, t))
+        return a.interpolate(b, t)
     }
 
     companion object {

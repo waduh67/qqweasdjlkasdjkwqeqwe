@@ -12,6 +12,10 @@ import com.duluin.ftth.network.application.port.inbound.ConnectionPointCommand
 import com.duluin.ftth.network.application.port.inbound.FiberConnectionPointView
 import com.duluin.ftth.network.application.port.inbound.FiberConnectionView
 import com.duluin.ftth.network.application.port.inbound.ManageFiberConnectionUseCase
+import com.duluin.ftth.network.application.port.inbound.SpliceCableView
+import com.duluin.ftth.network.application.port.inbound.SpliceCoreView
+import com.duluin.ftth.network.application.port.inbound.SplicePointView
+import com.duluin.ftth.network.application.port.inbound.SpliceWorkbenchView
 import com.duluin.ftth.network.application.port.inbound.UpdateFiberConnectionCommand
 import com.duluin.ftth.network.application.port.outbound.CableCoreRepository
 import com.duluin.ftth.network.application.port.outbound.CableRepository
@@ -20,6 +24,7 @@ import com.duluin.ftth.network.application.port.outbound.JointBoxRepository
 import com.duluin.ftth.network.application.port.outbound.OdcRepository
 import com.duluin.ftth.network.application.port.outbound.OdfRepository
 import com.duluin.ftth.network.application.port.outbound.OdpRepository
+import com.duluin.ftth.network.application.port.outbound.OltRepository
 import com.duluin.ftth.network.application.port.outbound.PonPortRepository
 import com.duluin.ftth.network.application.port.outbound.SplitterRepository
 import com.duluin.ftth.network.domain.model.Cable
@@ -55,6 +60,7 @@ class FiberConnectionService(
     private val odpRepository: OdpRepository,
     private val jointBoxRepository: JointBoxRepository,
     private val odfRepository: OdfRepository,
+    private val oltRepository: OltRepository,
     private val ponPortRepository: PonPortRepository,
     private val splitters: SplitterRepository,
     private val currentUser: CurrentUserProvider,
@@ -70,6 +76,32 @@ class FiberConnectionService(
             closureId = closure.id,
             closureCode = closure.code,
             closureName = closure.name,
+            connections = rows.toViews(),
+        )
+    }
+
+    /**
+     * Meja kerja splicing sebuah kotak, dirakit dalam sekali jalan.
+     *
+     * Urutan kabelnya sengaja: yang BERUJUNG di sini duluan, lalu yang cuma lewat
+     * menurut letak kupasannya. Di depan kotak yang terbuka, kabel yang berakhir
+     * di situ adalah yang paling sering dicari — sisanya baru masuk hitungan saat
+     * mencari core cadangan.
+     */
+    @Transactional(readOnly = true)
+    override fun workbench(closureKind: ClosureKind, closureId: UUID): SpliceWorkbenchView {
+        val closure = requireClosure(closureKind, closureId)
+        val rows = connections.findByClosureId(closureId)
+        val cables = reachableCables(closure)
+        return SpliceWorkbenchView(
+            closureKind = closure.kind,
+            closureId = closure.id,
+            closureCode = closure.code,
+            closureName = closure.name,
+            spliceCapacity = closure.spliceCapacity,
+            spliceCount = rows.size,
+            cables = cables.toCableViews(closure),
+            points = pointsOf(closure),
             connections = rows.toViews(),
         )
     }
@@ -100,6 +132,18 @@ class FiberConnectionService(
             mapOf("closure" to closure.code, "a" to a.description, "b" to b.description),
         )
         return listOf(saved).toViews().first()
+    }
+
+    /**
+     * Semua atau tak sama sekali — dijamin oleh transaksi milik method ini:
+     * penolakan pasangan ke-berapa pun melempar keluar, dan yang terlanjur masuk
+     * ikut tergulung balik. Pemeriksaan "titik sudah dipakai" pun tetap sahih di
+     * dalam satu batch, sebab query berikutnya memaksa Hibernate menyiram
+     * sambungan yang baru ditulis lebih dulu.
+     */
+    override fun connectAll(commands: List<ConnectFiberCommand>): List<FiberConnectionView> {
+        if (commands.isEmpty()) throw ValidationException("Tak ada pasangan yang disambung")
+        return commands.map { connect(it) }
     }
 
     override fun update(id: UUID, command: UpdateFiberConnectionCommand): FiberConnectionView {
@@ -223,15 +267,23 @@ class FiberConnectionService(
      * di sana.
      */
     private fun assertCableReaches(cable: Cable, closure: Closure) {
-        if (cable.from.id == closure.id || cable.to.id == closure.id) return
+        if (reaches(cable, closure)) return
         val distance = cable.route.distanceTo(closure.location)
-        if (distance > MID_SPAN_TOLERANCE_METERS) {
-            throw ValidationException(
-                "Kabel ${cable.code} tak lewat ${closure.code} — jaraknya ${distance.roundToInt()} m dari rute. " +
-                    "Perbaiki dulu rute kabelnya bila memang lewat sini.",
-            )
-        }
+        throw ValidationException(
+            "Kabel ${cable.code} tak lewat ${closure.code} — jaraknya ${distance.roundToInt()} m dari rute. " +
+                "Perbaiki dulu rute kabelnya bila memang lewat sini.",
+        )
     }
+
+    /**
+     * Aturan yang sama dipakai dua arah: menolak sambungan yang mustahil, DAN
+     * menyusun daftar kabel yang boleh dipilih di meja kerja. Satu sumber supaya
+     * layar tak pernah menawarkan kabel yang akan ditolak sedetik kemudian.
+     */
+    private fun reaches(cable: Cable, closure: Closure): Boolean =
+        cable.from.id == closure.id ||
+            cable.to.id == closure.id ||
+            cable.route.distanceTo(closure.location) <= MID_SPAN_TOLERANCE_METERS
 
     /**
      * Pasangan yang benar-benar punya bentuk fisik di dalam rak.
@@ -369,6 +421,10 @@ class FiberConnectionService(
          * masing-masing, dan itu diperiksa saat kaki ditunjuk.
          */
         val spliceCapacity: Int? = null,
+        /** Jumlah adapter rak; null untuk kotak selain ODF. */
+        val portCount: Int? = null,
+        /** POP tempat rak berdiri — sumber daftar PON port; null untuk kotak lain. */
+        val siteId: UUID? = null,
     )
 
     private fun requireClosure(kind: ClosureKind, id: UUID): Closure = when (kind) {
@@ -384,9 +440,176 @@ class FiberConnectionService(
         // Batas rak dihitung dari SISI, bukan port: tiap adapter memang menampung
         // dua sambungan, belakang dan depan.
         ClosureKind.ODF -> odfRepository.findById(id)?.let {
-            Closure(kind, it.id, it.code, it.name, it.location, spliceCapacity = it.portCount * 2)
+            Closure(
+                kind, it.id, it.code, it.name, it.location,
+                spliceCapacity = it.portCount * 2,
+                portCount = it.portCount,
+                siteId = it.siteId,
+            )
         }
     } ?: throw NotFoundException("${kind.label} $id tidak ditemukan")
+
+    // ------------------------------------------------------------------
+    // Meja kerja
+    // ------------------------------------------------------------------
+
+    /**
+     * Kabel yang boleh disentuh dari dalam kotak ini. Dua sumber digabung karena
+     * keduanya sah dan tak saling menggantikan: yang BERUJUNG di sini (diambil
+     * dari pasangan from/to) dan yang cuma LEWAT (diambil dari geometri rutenya).
+     * Radius query dipakai sebagai penyaring kasar berindeks; putusan akhirnya
+     * tetap [reaches], supaya daftar dan penolakan tak pernah berbeda pendapat.
+     */
+    private fun reachableCables(closure: Closure): List<Cable> =
+        (cableRepository.findByEndpointNodeIds(setOf(closure.id)) +
+            cableRepository.findPassing(closure.location, MID_SPAN_TOLERANCE_METERS))
+            .distinctBy { it.id }
+            .filter { reaches(it, closure) }
+
+    private fun List<Cable>.toCableViews(closure: Closure): List<SpliceCableView> {
+        if (isEmpty()) return emptyList()
+        val coresByCable = cableCoreRepository.findByCableIds(map { it.id }).groupBy { it.cableId }
+        // Satu query untuk seluruh core semua kabel: yang dicari adalah "core ini
+        // sudah dilas di mana", dan jawabannya bisa berada di kotak mana pun.
+        val touching = connections.findByCoreIds(coresByCable.values.flatten().map { it.id })
+        val here = HashMap<UUID, UUID>()
+        val elsewhere = HashSet<UUID>()
+        touching.forEach { connection ->
+            connection.coreIds.forEach { coreId ->
+                if (connection.closureId == closure.id) here[coreId] = connection.id else elsewhere += coreId
+            }
+        }
+        return map { cable ->
+            val terminates = cable.from.id == closure.id || cable.to.id == closure.id
+            SpliceCableView(
+                cableId = cable.id,
+                code = cable.code,
+                name = cable.name,
+                cableType = cable.cableType,
+                coreCount = cable.coreCount,
+                lengthMeters = cable.lengthMeters,
+                terminatesHere = terminates,
+                tapDistanceMeters = cable.route.distanceAlongTo(closure.location),
+                offsetMeters = cable.route.distanceTo(closure.location),
+                cores = coresByCable[cable.id].orEmpty().map { core ->
+                    SpliceCoreView(
+                        core = core.toView(),
+                        connectionId = here[core.id],
+                        connectedElsewhere = core.id in elsewhere,
+                    )
+                },
+            )
+        }.sortedWith(compareByDescending<SpliceCableView> { it.terminatesHere }.thenBy { it.tapDistanceMeters })
+    }
+
+    /**
+     * Titik non-core yang tersedia di kotak ini — dan hanya yang memang ada
+     * bentuk fisiknya. Joint box tak menghasilkan satu pun: di dalamnya serat
+     * cuma bertemu serat, dan menawarkan "kaki splitter" di sana akan menyesatkan
+     * orang yang berdiri di depan kotaknya.
+     */
+    private fun pointsOf(closure: Closure): List<SplicePointView> = when (closure.kind) {
+        ClosureKind.ODC, ClosureKind.ODP -> splitterPoints(closure)
+        ClosureKind.ODF -> odfPoints(closure) + ponPoints(closure)
+        ClosureKind.JOINT_BOX -> emptyList()
+    }
+
+    private fun splitterPoints(closure: Closure): List<SplicePointView> {
+        val modules = splitters.findByOwnerId(closure.id)
+        if (modules.isEmpty()) return emptyList()
+        val ids = modules.mapTo(HashSet()) { it.id }
+        val inputs = occupancyOf(ConnectionPointKind.SPLITTER_IN, ids)
+        val legs = occupancyOf(ConnectionPointKind.SPLITTER_OUT, ids)
+        return modules.flatMap { module ->
+            val group = "${module.code} · ${module.ratio.label}"
+            // Input lebih dulu: modul tanpa masukan tak menyalurkan apa pun, jadi
+            // itulah yang harus pertama terlihat saat kabinet baru dipasang.
+            listOf(
+                SplicePointView(
+                    kind = ConnectionPointKind.SPLITTER_IN,
+                    nodeId = module.id,
+                    portNumber = null,
+                    portSide = null,
+                    label = "Input ${module.code}",
+                    group = group,
+                    connectionId = inputs[PointKey(module.id, null, null)],
+                ),
+            ) + (1..module.legCount).map { leg ->
+                SplicePointView(
+                    kind = ConnectionPointKind.SPLITTER_OUT,
+                    nodeId = module.id,
+                    portNumber = leg,
+                    portSide = null,
+                    label = "${module.code} kaki $leg",
+                    group = group,
+                    connectionId = legs[PointKey(module.id, leg, null)],
+                )
+            }
+        }
+    }
+
+    /**
+     * Kedua SISI tiap adapter dimunculkan terpisah, sebab keduanya memang dua
+     * pekerjaan berbeda: belakang tempat pigtail dilas ke core kabel luar, depan
+     * tempat patchcord dicolok ke OLT.
+     */
+    private fun odfPoints(closure: Closure): List<SplicePointView> {
+        val ports = closure.portCount ?: return emptyList()
+        val used = occupancyOf(ConnectionPointKind.ODF_PORT, setOf(closure.id))
+        val group = "Rak ${closure.code}"
+        return (1..ports).flatMap { port ->
+            OdfPortSide.entries.map { side ->
+                SplicePointView(
+                    kind = ConnectionPointKind.ODF_PORT,
+                    nodeId = closure.id,
+                    portNumber = port,
+                    portSide = side,
+                    label = "Port $port ${side.label.lowercase()}",
+                    group = group,
+                    connectionId = used[PointKey(closure.id, port, side)],
+                )
+            }
+        }
+    }
+
+    /**
+     * PON port OLT yang berdiri di POP yang sama dengan raknya. Dibatasi per POP
+     * karena patchcord tak menyeberang gedung — menawarkan PON port kota sebelah
+     * cuma memperbesar daftar dan peluang salah colok.
+     */
+    private fun ponPoints(closure: Closure): List<SplicePointView> {
+        val siteId = closure.siteId ?: return emptyList()
+        val olts = oltRepository.findBySiteId(siteId)
+        if (olts.isEmpty()) return emptyList()
+        val ports = olts.associateWith { ponPortRepository.findByOltId(it.id) }
+        val used = occupancyOf(
+            ConnectionPointKind.PON_PORT,
+            ports.values.flatMapTo(HashSet()) { list -> list.map { it.id } },
+        )
+        return ports.entries.flatMap { (olt, list) ->
+            list.map { port ->
+                SplicePointView(
+                    kind = ConnectionPointKind.PON_PORT,
+                    nodeId = port.id,
+                    portNumber = null,
+                    portSide = null,
+                    label = "PON ${port.label}",
+                    group = "${olt.code} · ${olt.name}",
+                    connectionId = used[PointKey(port.id, null, null)],
+                )
+            }
+        }
+    }
+
+    /** Identitas sebuah titik simpul: nomor & sisi ikut, sebab keduanya membedakan. */
+    private data class PointKey(val nodeId: UUID, val portNumber: Int?, val portSide: OdfPortSide?)
+
+    /** Siapa memakai titik yang mana — dicari global, seperti [assertFree] menilainya. */
+    private fun occupancyOf(kind: ConnectionPointKind, nodeIds: Set<UUID>): Map<PointKey, UUID> =
+        connections.findByNodeIds(kind, nodeIds)
+            .flatMap { connection -> listOf(connection.a, connection.b).map { it to connection.id } }
+            .filter { (point, _) -> point.kind == kind && point.nodeId in nodeIds }
+            .associate { (point, id) -> PointKey(point.nodeId!!, point.portNumber, point.portSide) to id }
 
     /**
      * Kotak sambung punya batas fisik: tray-nya habis. Diperiksa saat menyambung,

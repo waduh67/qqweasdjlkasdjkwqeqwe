@@ -300,6 +300,86 @@ data class ClosureSpliceView(
 )
 
 /**
+ * Sehelai core sebagaimana terlihat DARI DALAM sebuah kotak.
+ *
+ * [connectionId] dan [connectedElsewhere] menjawab dua pertanyaan berbeda yang
+ * mudah tertukar. Core yang sudah disambung DI SINI tak boleh disambung dua kali
+ * di kotak yang sama. Core yang tersambung di kotak LAIN justru masih boleh
+ * dipakai di sini — sehelai serat punya dua ujung, dan itu memang bentuk
+ * normalnya: ujung ODC dilas di ODC, ujung ODP dilas di ODP.
+ */
+data class SpliceCoreView(
+    val core: CableCoreView,
+    val connectionId: UUID?,
+    val connectedElsewhere: Boolean,
+)
+
+/**
+ * Satu kabel yang bisa disentuh dari dalam kotak yang sedang dibuka.
+ *
+ * [terminatesHere] memisahkan dua kejadian yang tampak sama di layar tapi
+ * berbeda di lapangan: kabel yang BERUJUNG di sini (seluruh core-nya keluar), dan
+ * kabel yang cuma LEWAT lalu dikupas di tengah untuk diambil satu-dua core-nya
+ * (mid-span tapping). [tapDistanceMeters] adalah letak kupasan itu diukur dari
+ * ujung awal kabel — dihitung dari geometri, tak pernah diketik orang.
+ */
+data class SpliceCableView(
+    val cableId: UUID,
+    val code: String,
+    val name: String,
+    val cableType: CableType,
+    val coreCount: Int,
+    val lengthMeters: Double,
+    val terminatesHere: Boolean,
+    val tapDistanceMeters: Double,
+    /** Meleset berapa meter kotak ini dari garis rute — penanda survei kasar. */
+    val offsetMeters: Double,
+    val cores: List<SpliceCoreView>,
+)
+
+/**
+ * Titik NON-core yang tersedia di kotak ini: kaki & input splitter, sisi port
+ * ODF, PON port OLT. Daftarnya menyesuaikan jenis simpul — joint box tak
+ * memunculkan satu pun, sebab di dalamnya serat memang cuma bertemu serat.
+ *
+ * [group] adalah judul kelompok siap-tampil ("SPL-1 · 1:8", "Rak ODF-01",
+ * "OLT-POP-A") supaya klien tak perlu merangkai label sendiri dari beberapa
+ * endpoint.
+ */
+data class SplicePointView(
+    val kind: ConnectionPointKind,
+    val nodeId: UUID,
+    val portNumber: Int?,
+    val portSide: OdfPortSide?,
+    val label: String,
+    val group: String,
+    /** Sambungan yang memakainya, di kotak mana pun; null = titik masih bebas. */
+    val connectionId: UUID?,
+)
+
+/**
+ * Seisi meja kerja Splicing & Patching untuk SATU kotak: kabel yang lewat beserta
+ * core-nya, titik-titik simpul yang tersedia, dan sambungan yang sudah ada.
+ *
+ * Dikirim sebagai satu bongkah karena begitulah pekerjaannya: kotak dibuka
+ * sekali, dan semua yang ada di dalamnya harus terlihat berbarengan. Merakitnya
+ * dari lima endpoint terpisah di sisi klien berarti layar yang berkedip
+ * sepotong-sepotong di atas koneksi lapangan yang lambat.
+ */
+data class SpliceWorkbenchView(
+    val closureKind: ClosureKind,
+    val closureId: UUID,
+    val closureCode: String,
+    val closureName: String,
+    /** Batas jumlah sambungan yang muat; null = tak dibatasi (ODC/ODP). */
+    val spliceCapacity: Int?,
+    val spliceCount: Int,
+    val cables: List<SpliceCableView>,
+    val points: List<SplicePointView>,
+    val connections: List<FiberConnectionView>,
+)
+
+/**
  * Barisan core sebuah kabel plus hitungan per status — ringkasan "berapa yang
  * masih bisa dijual" yang selalu ditanya duluan, tanpa klien harus menghitung
  * sendiri dari daftarnya.

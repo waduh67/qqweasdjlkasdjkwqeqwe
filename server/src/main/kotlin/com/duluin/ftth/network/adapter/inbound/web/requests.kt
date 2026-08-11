@@ -213,6 +213,28 @@ data class FiberConnectionRequest(
     @field:Size(max = 200) val note: String? = null,
 )
 
+/** Sepasang titik di dalam kotak yang sama — satu baris "sambung 1:1 otomatis". */
+data class FiberPairRequest(
+    @field:Valid val a: ConnectionPointRequest,
+    @field:Valid val b: ConnectionPointRequest,
+    val method: SpliceMethod = SpliceMethod.FUSION,
+    @field:PositiveOrZero val lossDb: Double? = null,
+    @field:Size(max = 200) val note: String? = null,
+)
+
+/**
+ * Menyambung sekaligus di SATU kotak. Closure ditaruh di luar daftar, bukan
+ * diulang tiap pasangan: satu batch adalah satu kali kotak dibuka, dan bentuk
+ * seperti ini menutup kemungkinan separuh isinya diam-diam menunjuk kotak lain.
+ *
+ * Batas 288 = kabel 288 core, selubung terbesar yang lazim dipakai di lapangan.
+ */
+data class FiberBulkConnectRequest(
+    val closureKind: ClosureKind,
+    val closureId: UUID,
+    @field:Valid @field:Size(min = 1, max = 288) val pairs: List<FiberPairRequest>,
+)
+
 /** Keterangan sambungan yang boleh menyusul: cara pasang, hasil ukur, catatan. */
 data class FiberSpliceDetailRequest(
     val method: SpliceMethod,

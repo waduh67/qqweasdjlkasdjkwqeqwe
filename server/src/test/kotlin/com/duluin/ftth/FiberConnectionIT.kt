@@ -361,6 +361,81 @@ class FiberConnectionIT {
         assertThat(coreStatus(token, cable, 1)).isEqualTo("FREE")
     }
 
+    /**
+     * Meja kerja splicing sebuah kotak yang cuma DILEWATI kabel.
+     *
+     * Yang diuji bukan sekadar "daftarnya keluar", melainkan bahwa kotak di tengah
+     * bentang tahu kabel apa yang lewat depan pintunya — tanpa ada satu pun baris
+     * kabel yang menyebut kotak itu sebagai ujung. Jarak tapnya pun dihitung dari
+     * geometri, bukan diketik siapa pun.
+     */
+    @Test
+    fun `meja kerja mengenali kabel yang cuma lewat, lengkap dengan jarak tapnya`() {
+        val token = newTenantAdmin("meja")
+        val odc = newOdc(token, 106.99, -6.24)
+        val tengah = newOdp(token, 107.000, -6.24)
+        val ujung = newOdp(token, 107.005, -6.24)
+        val cable = newDistribution(token, odc, ujung, endLon = 107.005)
+        val spl = splitterOf(token, "ODP", tengah)
+        post("/api/fiber-connections", token, connectBody("ODP", tengah, core(coreId(token, cable, 3)), splitterIn(spl)))
+
+        val meja = getJson("/api/fiber-connections/workbench?closureKind=ODP&closureId=$tengah", token)
+
+        assertThat(JsonPath.read<List<*>>(meja, "$.cables")).hasSize(1)
+        assertThat(JsonPath.read<String>(meja, "$.cables[0].cableId")).isEqualTo(cable)
+        // Kotak ini bukan ujung kabel — ia dikupas di tengah bentang.
+        assertThat(JsonPath.read<Boolean>(meja, "$.cables[0].terminatesHere")).isFalse()
+        // ±1,1 km dari ODC di ujung barat; angkanya datang dari rute, bukan dari isian.
+        assertThat(JsonPath.read<Double>(meja, "$.cables[0].tapDistanceMeters")).isBetween(1_000.0, 1_200.0)
+        assertThat(JsonPath.read<Double>(meja, "$.cables[0].offsetMeters")).isLessThan(50.0)
+        assertThat(JsonPath.read<List<*>>(meja, "$.cables[0].cores")).hasSize(8)
+
+        // Core 3 sudah dilas DI SINI; core 1 belum tersentuh di mana pun.
+        assertThat(JsonPath.read<String>(meja, "$.cables[0].cores[2].connectionId")).isNotBlank()
+        assertThat(JsonPath.read<Any?>(meja, "$.cables[0].cores[0].connectionId")).isNull()
+        assertThat(JsonPath.read<Boolean>(meja, "$.cables[0].cores[0].connectedElsewhere")).isFalse()
+
+        // Satu input + delapan kaki: isi kotak ODP 1:8, apa adanya.
+        assertThat(JsonPath.read<List<*>>(meja, "$.points")).hasSize(9)
+        assertThat(JsonPath.read<String>(meja, "$.points[0].kind")).isEqualTo("SPLITTER_IN")
+        assertThat(JsonPath.read<String>(meja, "$.points[0].connectionId")).isNotBlank()
+        assertThat(JsonPath.read<Any?>(meja, "$.points[1].connectionId")).isNull()
+        // ODP tak dibatasi jumlah sambungan — yang membatasinya kaki splitternya.
+        assertThat(JsonPath.read<Any?>(meja, "$.spliceCapacity")).isNull()
+        assertThat(JsonPath.read<Int>(meja, "$.spliceCount")).isEqualTo(1)
+    }
+
+    /**
+     * "Sambung 1:1 otomatis" — dan janji yang menyertainya: kalau satu pasangan
+     * ditolak, tak ada satu pun yang tersimpan. Setengah tersambung adalah keadaan
+     * paling mahal, sebab teknisi mengira pekerjaannya batal lalu mengulanginya.
+     */
+    @Test
+    fun `sambung sekaligus — semua masuk, atau tak ada yang masuk`() {
+        val token = newTenantAdmin("borongan")
+        val site = newSite(token)
+        val odf = newOdf(token, site, portCount = 12)
+        val feeder = newFeeder(token, odf, newOdc(token, 107.02, -6.24))
+        fun pair(coreNumber: Int, port: Int) =
+            """{"a":${core(coreId(token, feeder, coreNumber))},"b":${odfPort(odf, port, "BACK")}}"""
+
+        // Pasangan terakhir merebut port yang sudah dipakai pasangan pertama.
+        val ditolak = post(
+            "/api/fiber-connections/bulk", token,
+            """{"closureKind":"ODF","closureId":"$odf","pairs":[${pair(1, 1)},${pair(2, 2)},${pair(3, 1)}]}""",
+            expected = 409,
+        )
+        assertThat(ditolak).contains("sudah dipakai")
+        assertThat(JsonPath.read<List<*>>(getJson("/api/fiber-connections?closureKind=ODF&closureId=$odf", token), "$.connections")).isEmpty()
+
+        val jadi = post(
+            "/api/fiber-connections/bulk", token,
+            """{"closureKind":"ODF","closureId":"$odf","pairs":[${pair(1, 1)},${pair(2, 2)},${pair(3, 3)}]}""",
+        )
+        assertThat(JsonPath.read<List<*>>(jadi, "$")).hasSize(3)
+        assertThat(coreStatus(token, feeder, 3)).isEqualTo("USED")
+    }
+
     @Test
     fun `menghapus kabel ikut memutus sambungannya, bukan meninggalkan jalur hantu`() {
         val token = newTenantAdmin("hapus")

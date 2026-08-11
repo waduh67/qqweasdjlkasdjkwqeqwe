@@ -2,6 +2,7 @@ package com.duluin.ftth.network.adapter.outbound.persistence
 
 import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
+import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.infrastructure.persistence.geo.Geometries
 import com.duluin.ftth.common.infrastructure.persistence.geo.toRoutePath
 import com.duluin.ftth.common.infrastructure.persistence.toDomainPage
@@ -12,6 +13,8 @@ import com.duluin.ftth.network.domain.model.Cable
 import com.duluin.ftth.network.domain.model.CableType
 import com.duluin.ftth.network.domain.model.NetworkEndpoint
 import com.duluin.ftth.network.domain.model.NetworkNodeRef
+import jakarta.persistence.EntityManager
+import jakarta.persistence.PersistenceContext
 import org.springframework.stereotype.Component
 import java.util.UUID
 
@@ -19,6 +22,9 @@ import java.util.UUID
 class CablePersistenceAdapter(
     private val jpa: CableJpaRepository,
 ) : CableRepository {
+
+    @PersistenceContext
+    private lateinit var entityManager: EntityManager
 
     override fun save(cable: Cable): Cable {
         val entity = jpa.findById(cable.id).orElse(null)?.apply {
@@ -76,6 +82,35 @@ class CablePersistenceAdapter(
     override fun findByEndpointNodeIds(nodeIds: Set<UUID>): List<Cable> =
         if (nodeIds.isEmpty()) emptyList()
         else jpa.findAll(NetworkSpecifications.endpointInNodes(nodeIds)).map { it.toDomain() }
+
+    /**
+     * PENTING — dijalankan lewat [EntityManager], BUKAN `JdbcTemplate`. GUC
+     * `app.tenant_id` yang menghidupkan Row-Level Security hanya menempel pada
+     * connection pinjaman Hibernate; connection mentah dari pool akan ditolak RLS
+     * dan hasilnya kosong tanpa penjelasan.
+     *
+     * Jarak diukur pada `geography` supaya satuannya meter sejati, bukan derajat —
+     * di lintang Indonesia satu derajat bujur ±111 km, dan toleransi mid-span
+     * yang salah satuan akan menyapu setengah kota.
+     */
+    override fun findPassing(location: Coordinate, radiusMeters: Double): List<Cable> {
+        val ids = entityManager.createNativeQuery(
+            """
+            SELECT c.id::text FROM cable c
+            WHERE ST_DWithin(
+                c.route::geography,
+                ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography,
+                :radius
+            )
+            """.trimIndent(),
+        )
+            .setParameter("lon", location.longitude)
+            .setParameter("lat", location.latitude)
+            .setParameter("radius", radiusMeters)
+            .resultList
+            .map { UUID.fromString(it as String) }
+        return findByIds(ids)
+    }
 
     override fun existsByCode(code: String): Boolean = jpa.existsByCode(code)
 

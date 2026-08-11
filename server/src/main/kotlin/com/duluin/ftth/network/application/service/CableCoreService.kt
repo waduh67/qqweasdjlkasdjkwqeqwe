@@ -78,17 +78,18 @@ class CableCoreService(
             cores = cores.map { it.toView() },
         )
     }
-
-    private fun CableCore.toView() = CableCoreView(
-        id = id,
-        tubeNumber = tubeNumber,
-        coreNumber = coreNumber,
-        positionInTube = positionInTube,
-        color = color.label,
-        colorHex = color.hex,
-        tubeColor = tubeColor.label,
-        tubeColorHex = tubeColor.hex,
-        status = status,
-        note = note,
-    )
 }
+
+/** Dipakai bersama layar core kabel dan meja kerja splicing — satu bentuk core untuk keduanya. */
+internal fun CableCore.toView() = CableCoreView(
+    id = id,
+    tubeNumber = tubeNumber,
+    coreNumber = coreNumber,
+    positionInTube = positionInTube,
+    color = color.label,
+    colorHex = color.hex,
+    tubeColor = tubeColor.label,
+    tubeColorHex = tubeColor.hex,
+    status = status,
+    note = note,
+)

@@ -16,6 +16,10 @@ class CableCorePersistenceAdapter(
     override fun findByCableId(cableId: UUID): List<CableCore> =
         jpa.findByCableIdOrderByCoreNumber(cableId).map { it.toDomain() }
 
+    override fun findByCableIds(cableIds: Collection<UUID>): List<CableCore> =
+        if (cableIds.isEmpty()) emptyList()
+        else jpa.findByCableIdInOrderByCableIdAscCoreNumberAsc(cableIds).map { it.toDomain() }
+
     override fun findByIds(ids: Collection<UUID>): List<CableCore> =
         if (ids.isEmpty()) emptyList() else jpa.findAllById(ids).map { it.toDomain() }
 

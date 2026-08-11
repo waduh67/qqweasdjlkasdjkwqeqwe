@@ -5,6 +5,7 @@ import com.duluin.ftth.network.application.port.inbound.ConnectFiberCommand
 import com.duluin.ftth.network.application.port.inbound.ConnectionPointCommand
 import com.duluin.ftth.network.application.port.inbound.FiberConnectionView
 import com.duluin.ftth.network.application.port.inbound.ManageFiberConnectionUseCase
+import com.duluin.ftth.network.application.port.inbound.SpliceWorkbenchView
 import com.duluin.ftth.network.application.port.inbound.UpdateFiberConnectionCommand
 import com.duluin.ftth.network.domain.model.ClosureKind
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
@@ -44,6 +45,19 @@ class FiberConnectionController(
         @RequestParam closureId: UUID,
     ): ClosureSpliceView = manageConnection.list(closureKind, closureId)
 
+    /**
+     * Seisi meja kerja: kabel yang lewat kotak ini beserta core-nya, titik simpul
+     * yang tersedia, dan sambungan yang sudah ada — satu panggilan untuk satu
+     * layar. Izinnya sama dengan [list]; yang dikembalikan cuma lebih lengkap,
+     * bukan lebih rahasia.
+     */
+    @GetMapping("/workbench")
+    @PreAuthorize("@authz.can('network.splice.view')")
+    fun workbench(
+        @RequestParam closureKind: ClosureKind,
+        @RequestParam closureId: UUID,
+    ): SpliceWorkbenchView = manageConnection.workbench(closureKind, closureId)
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("@authz.can('network.splice.manage')")
@@ -58,6 +72,29 @@ class FiberConnectionController(
                 lossDb = request.lossDb,
                 note = request.note,
             ),
+        )
+
+    /**
+     * "Sambung 1:1 otomatis" — pasangannya dihitung di layar, di sini cuma
+     * diterapkan. Semua atau tak sama sekali: satu pasangan ditolak berarti tak
+     * ada yang tersimpan.
+     */
+    @PostMapping("/bulk")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("@authz.can('network.splice.manage')")
+    fun connectAll(@Valid @RequestBody request: FiberBulkConnectRequest): List<FiberConnectionView> =
+        manageConnection.connectAll(
+            request.pairs.map { pair ->
+                ConnectFiberCommand(
+                    closureKind = request.closureKind,
+                    closureId = request.closureId,
+                    a = pair.a.toCommand(),
+                    b = pair.b.toCommand(),
+                    method = pair.method,
+                    lossDb = pair.lossDb,
+                    note = pair.note,
+                )
+            },
         )
 
     /** Hasil ukur redaman & catatan; tak mengubah apa tersambung ke apa. */
