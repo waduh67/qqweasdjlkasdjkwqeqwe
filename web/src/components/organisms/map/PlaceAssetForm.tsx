@@ -5,15 +5,17 @@ import type { PageResponse } from '@/api/types'
 import { Button, SelectField, TextField } from '@/components/atoms'
 import { BladeHead } from '@/components/molecules'
 import { ASSET_META, type AssetKind } from '@/map/mapAssets'
+import { CUSTOM_SIZE, JOINT_BOX_SIZES, ODC_SIZES, ODP_SIZES } from '@/utils/closureSizing'
 
 /** Vendor OLT yang didukung — selaras dengan daftar di halaman Inventaris. */
 const VENDORS = ['ZTE', 'HUAWEI', 'FIBERHOME', 'NOKIA', 'HSGQ', 'OTHER']
 
 /**
  * Form isian perangkat titik baru, muncul setelah lokasi diklik di peta. Field
- * menyesuaikan jenis: Site cukup alamat, ODC/ODP butuh rasio splitter & kapasitas,
- * joint box butuh jumlah tray & kapasitas sambungan (di dalamnya tak ada splitter),
- * ODF butuh POP induk & jumlah port (rak tak punya alamat sendiri — alamatnya POP-nya).
+ * menyesuaikan jenis: Site cukup alamat, ODC/ODP/joint box cukup SATU pilihan
+ * ukuran kotak (lihat `closureSizing` — dua isian yang saling menentukan cuma
+ * bikin salah ketik), ODF butuh POP induk & jumlah port (rak tak punya alamat
+ * sendiri — alamatnya POP-nya).
  * Uplink (ODC→OLT feeder, ODP→ODC distribusi) TIDAK diisi di sini — ditetapkan
  * dengan menarik kabel di peta agar fisik = logis dan sumber kebenarannya tunggal.
  * Koordinat diambil dari titik klik (ditampilkan, tak bisa diubah manual di sini).
@@ -35,11 +37,14 @@ export function PlaceAssetForm({
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
+  // Ukuran kotak: satu pilihan yang menetapkan isi & jumlah port sekaligus. Bawaannya
+  // yang paling sering dipasang — ODC/ODP bersplitter 1:8, joint box 2 tray (24
+  // sambungan), ukuran closure inline yang paling lazim untuk menyambung haspel.
+  const closureSizes = kind === 'ODC' ? ODC_SIZES : ODP_SIZES
+  const [size, setSize] = useState(kind === 'JOINT_BOX' ? '2' : '1:8')
   const [splitterRatio, setSplitterRatio] = useState('1:8')
-  // Joint box: 2 tray × 12 sambungan = 24, ukuran closure inline yang paling lazim
-  // dipakai untuk menyambung haspel di lapangan.
   const [trayCount, setTrayCount] = useState(2)
-  const [capacity, setCapacity] = useState(kind === 'ODP' ? 8 : kind === 'JOINT_BOX' ? 24 : 64)
+  const [capacity, setCapacity] = useState(kind === 'JOINT_BOX' ? 24 : 8)
   // ODF: 24 port = satu panel 1U penuh, ukuran rak POP kecil yang paling lazim.
   const [portCount, setPortCount] = useState(24)
   // OLT & ODF: site induk (wajib), lalu identitas perangkat & kesiapan SNMP (OLT saja).
@@ -71,6 +76,27 @@ export function PlaceAssetForm({
 
   // Normalisasi kode aset: rapikan spasi & seragamkan huruf besar (kode aset konvensinya uppercase).
   const sanitizeCode = (raw: string) => raw.trim().replace(/\s+/g, ' ').toUpperCase()
+
+  /**
+   * Memilih ukuran mengisikan angka-angkanya sekaligus. "Atur sendiri" sengaja TIDAK
+   * mengosongkan apa pun: nilai preset terakhir jadi titik mula yang bisa diubah,
+   * bukan form kosong yang harus diisi dari nol.
+   */
+  const applySize = (value: string) => {
+    setSize(value)
+    if (value === CUSTOM_SIZE) return
+    if (kind === 'JOINT_BOX') {
+      const preset = JOINT_BOX_SIZES.find((s) => s.value === value)
+      if (!preset) return
+      setTrayCount(preset.trayCount)
+      setCapacity(preset.capacity)
+      return
+    }
+    const preset = closureSizes.find((s) => s.value === value)
+    if (!preset) return
+    setSplitterRatio(preset.splitterRatio ?? '')
+    setCapacity(preset.capacity)
+  }
 
   const submit = () => {
     const base: Record<string, unknown> = { code: sanitizeCode(code), name: name.trim() }
@@ -227,57 +253,83 @@ export function PlaceAssetForm({
             <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
               Kotak sambung: tempat dua haspel kabel bertemu, jalur bercabang di persimpangan,
               atau kabel putus disambung darurat. Tak ada splitter di dalamnya — serat masuk
-              disambung langsung ke serat keluar.
+              disambung langsung ke serat keluar. Satu tray memuat 12 sambungan (satu tube
+              berisi 12 serat), jadi ukurannya cukup dipilih.
             </p>
-            <div className="row" style={{ gap: '0.5rem' }}>
-              <TextField
-                label="Jumlah tray"
-                type="number"
-                min={1}
-                max={64}
-                value={String(trayCount)}
-                onChange={(_, data) => setTrayCount(Number(data.value))}
-                style={{ flex: 1 }}
-              />
-              <TextField
-                label="Kapasitas sambungan"
-                type="number"
-                min={1}
-                max={1536}
-                value={String(capacity)}
-                onChange={(_, data) => setCapacity(Number(data.value))}
-                style={{ flex: 1 }}
-              />
-            </div>
-          </>
-        )}
-        {(kind === 'ODC' || kind === 'ODP') && (
-          <div className="row" style={{ gap: '0.5rem' }}>
-            <SelectField
-              label="Splitter"
-              value={splitterRatio}
-              onChange={(_, data) => setSplitterRatio(data.value)}
-              style={{ flex: 1 }}
-            >
-              {/* Kabinet cross-connect memang tak berisi splitter — dan modul kedua,
-                  ketiga, dst. ditambahkan belakangan dari panel "Isi kabinet". */}
-              <option value="">Tanpa splitter</option>
-              {SPLITTER_RATIOS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
+            <SelectField label="Ukuran kotak" value={size} onChange={(_, data) => applySize(data.value)}>
+              {JOINT_BOX_SIZES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
                 </option>
               ))}
             </SelectField>
-            <TextField
-              label="Kapasitas"
-              type="number"
-              min={1}
-              max={kind === 'ODP' ? 256 : 1024}
-              value={String(capacity)}
-              onChange={(_, data) => setCapacity(Number(data.value))}
-              style={{ flex: 1 }}
-            />
-          </div>
+            {size === CUSTOM_SIZE && (
+              <div className="row" style={{ gap: '0.5rem' }}>
+                <TextField
+                  label="Jumlah tray"
+                  type="number"
+                  min={1}
+                  max={64}
+                  value={String(trayCount)}
+                  onChange={(_, data) => setTrayCount(Number(data.value))}
+                  style={{ flex: 1 }}
+                />
+                <TextField
+                  label="Kapasitas sambungan"
+                  type="number"
+                  min={1}
+                  max={1536}
+                  value={String(capacity)}
+                  onChange={(_, data) => setCapacity(Number(data.value))}
+                  style={{ flex: 1 }}
+                />
+              </div>
+            )}
+          </>
+        )}
+        {(kind === 'ODC' || kind === 'ODP') && (
+          <>
+            <SelectField label="Ukuran kotak" value={size} onChange={(_, data) => applySize(data.value)}>
+              {closureSizes.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </SelectField>
+            <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+              {kind === 'ODP'
+                ? 'Satu pilihan menetapkan splitter di dalam kotak sekaligus jumlah lubang drop-nya — persis seperti memesan "ODP 8 port". Modul tambahan menyusul lewat panel "Isi kabinet".'
+                : 'Kapasitas kabinet dihitung dalam CABANG ke ODP, bukan pelanggan: pemecahan besar dikerjakan splitter di ODP, dekat rumah, supaya redaman tak habis di tengah jalan. Modul kedua dst. ditambah lewat panel "Isi kabinet".'}
+            </p>
+            {size === CUSTOM_SIZE && (
+              <div className="row" style={{ gap: '0.5rem' }}>
+                <SelectField
+                  label="Splitter"
+                  value={splitterRatio}
+                  onChange={(_, data) => setSplitterRatio(data.value)}
+                  style={{ flex: 1 }}
+                >
+                  {/* Kabinet cross-connect memang tak berisi splitter — dan modul kedua,
+                      ketiga, dst. ditambahkan belakangan dari panel "Isi kabinet". */}
+                  <option value="">Tanpa splitter</option>
+                  {SPLITTER_RATIOS.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </SelectField>
+                <TextField
+                  label={kind === 'ODP' ? 'Jumlah port' : 'Kapasitas cabang'}
+                  type="number"
+                  min={1}
+                  max={kind === 'ODP' ? 256 : 1024}
+                  value={String(capacity)}
+                  onChange={(_, data) => setCapacity(Number(data.value))}
+                  style={{ flex: 1 }}
+                />
+              </div>
+            )}
+          </>
         )}
         <div className="row">
           <Button variant="primary" disabled={!canSubmit} onClick={submit}>
