@@ -526,6 +526,30 @@ export interface CableCoreList {
 }
 
 /**
+ * Kesimpulan pemeriksaan rantai ODP → ODP.
+ *
+ * `CASCADE` = splitter bertingkat, sah. `SUSPECT` = bertanda satu selubung yang
+ * dipecah jadi beberapa ruas. `UNKNOWN` = catatannya belum cukup untuk
+ * menyimpulkan apa pun — dan itu dikatakan apa adanya, bukan disamarkan jadi
+ * "aman". `NOT_CHAINED` = kabelnya memang bukan ruas kotak-ke-kotak.
+ */
+export type ChainVerdict = 'NOT_CHAINED' | 'CASCADE' | 'SUSPECT' | 'UNKNOWN'
+
+export interface CableChainView {
+  cableId: string
+  verdict: ChainVerdict
+  headline: string
+  /** Alasan yang bisa dicek sendiri oleh yang membacanya, bukan sekadar vonis. */
+  evidence: string[]
+  suggestion: string | null
+  upstreamClosureCode: string | null
+  upstreamCableId: string | null
+  upstreamCableCode: string | null
+  /** Kaki splitter yang terbukti menyuapi kabel ini. */
+  cascadeLegs: number[]
+}
+
+/**
  * Satu pilihan port KELUARAN pada simpul sumber, untuk picker "colok dari port
  * mana" saat menarik kabel. `ponPortId` terisi untuk OLT (PON port), `portNumber`
  * untuk kaki splitter ODC / slot ODP. `occupied` menandai port yang sudah dipakai

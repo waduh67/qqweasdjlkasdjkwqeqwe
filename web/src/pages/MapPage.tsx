@@ -50,7 +50,14 @@ import { useCan } from '../auth/useCan'
 import { Checkbox, MessageBar, MessageBarBody } from '@fluentui/react-components'
 import { Button, Segmented, SelectField, StatusBadge, TextField } from '@/components/atoms'
 import { CommandBar, Ess, type CommandAction } from '@/components/molecules'
-import { AccessNodeDetail, Blade, CableCoreManager, OdfDetail, type AccessNodeKind } from '@/components/organisms'
+import {
+  AccessNodeDetail,
+  Blade,
+  CableChainNotice,
+  CableCoreManager,
+  OdfDetail,
+  type AccessNodeKind,
+} from '@/components/organisms'
 import { CustomerDetailBlade } from './CustomerDetailPage'
 import { OltDetail } from './OltDetailPage'
 import type { MapFocus } from '@/map/mapFocus'
@@ -3071,6 +3078,20 @@ function SaveCablePanel({
             </span>
           </div>
         )}
+        {/* Ruas kotak-ke-kotak: satu-satunya bentuk yang gampang salah gambar.
+            Diperingatkan SEBELUM disimpan, sebab membatalkan gambar jauh lebih
+            murah daripada membongkar ruas yang core-nya sudah dipakai orang. */}
+        {fromKind === 'ODP' && toKind === 'ODP' && (
+          <MessageBar intent="info">
+            <MessageBarBody>
+              Ruas kotak ke kotak cuma sah bila kaki splitter {from} benar-benar menyuapi {to}
+              (splitter bertingkat). Kalau ini sebenarnya SATU selubung yang lewat di depan
+              kedua kotak, gambar satu kabel menerus sampai kotak terakhir lalu kupas di tiap
+              kotak lewat meja sambung — panjang materialnya tak dihitung dobel dan simulasi
+              putusnya jadi jujur.
+            </MessageBarBody>
+          </MessageBar>
+        )}
         <TextField label="Nama" value={name} onChange={(_, data) => setName(data.value)} />
         <TextField
           label="Jumlah core"
@@ -3369,6 +3390,12 @@ function CablePanel({
 
       <div className="blade-body stack" style={{ gap: '0.9rem' }}>
         {causes.length > 0 && <CableCauses causes={causes} />}
+
+        {/* Sebelum apa pun yang lain: ruas kotak-ke-kotak wajib menjelaskan
+            dirinya — splitter bertingkat atau selubung yang dipecah. Angka
+            panjang & core di bawahnya baru bisa dipercaya setelah itu terjawab. */}
+        <CableChainNotice cableId={cable.id} fromKind={cable.fromKind} toKind={cable.toKind} />
+
 
         <dl className="essentials">
           <Ess label="Status">
