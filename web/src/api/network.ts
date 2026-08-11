@@ -97,7 +97,27 @@ export interface OdfView {
   status: AssetStatus
 }
 
-export interface OdcView {
+/**
+ * Cara sebuah kotak menempel di dunia nyata — bukan kosmetik: inilah yang
+ * menentukan alat yang dibawa teknisi sebelum berangkat. Tiang butuh tangga,
+ * handhole butuh kunci dan pompa air, pedestal bisa dibuka sambil berdiri.
+ */
+export type MountingType = 'POLE' | 'WALL' | 'AERIAL' | 'PEDESTAL' | 'UNDERGROUND' | 'INDOOR'
+
+/**
+ * Data lapangan yang dimiliki setiap kotak (ODC/ODP/joint box). Ketiganya boleh
+ * kosong: kotak lama tak pernah ditanyai hal ini, dan mengarang isinya lebih
+ * berbahaya daripada membiarkannya kosong.
+ */
+export interface ClosureFieldData {
+  /** Tanggal pasang (ISO `YYYY-MM-DD`) — umur aset, dasar jadwal preventif. */
+  installedOn: string | null
+  mounting: MountingType | null
+  /** Pesan teknisi untuk teknisi berikutnya: "kunci di pos satpam", dst. */
+  notes: string | null
+}
+
+export interface OdcView extends ClosureFieldData {
   id: string
   code: string
   name: string
@@ -119,7 +139,7 @@ export interface OdcView {
   energized: boolean
 }
 
-export interface OdpView {
+export interface OdpView extends ClosureFieldData {
   id: string
   code: string
   name: string
@@ -145,7 +165,7 @@ export interface OdpView {
  * disambung langsung ke serat keluar. Karena itu ukurannya dinyatakan dalam tray &
  * jumlah sambungan yang muat, bukan dalam kaki splitter.
  */
-export interface JointBoxView {
+export interface JointBoxView extends ClosureFieldData {
   id: string
   code: string
   name: string

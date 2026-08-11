@@ -5,11 +5,12 @@ import { api, ApiError } from '@/api/client'
 import type { AssetStatus, Coordinate, JointBoxView, OdcView, OdpView } from '@/api/network'
 import { SPLITTER_RATIOS } from '@/api/network'
 import { useCan } from '@/auth/useCan'
-import { Badge, Button, EmptyState, SelectField, Spinner, StatusBadge, TextField } from '@/components/atoms'
+import { Badge, Button, EmptyState, SelectField, Spinner, StatusBadge, TextareaField, TextField } from '@/components/atoms'
 import { IconInventory, IconMap } from '@/components/atoms/icons'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { mapFocusState, type MapFocusState } from '@/map/mapFocus'
+import { describeInstalledOn, MOUNTING_OPTIONS, mountingLabel, todayIso } from '@/utils/closureFieldData'
 import {
   CUSTOM_SIZE,
   JOINT_BOX_SIZES,
@@ -57,6 +58,7 @@ export function AssetDetailPanel({
   subtitle,
   fields,
   address,
+  notes,
   location,
   canUpdate,
   canDelete,
@@ -69,6 +71,12 @@ export function AssetDetailPanel({
   subtitle?: string
   fields: Array<{ label: string; value: string }>
   address?: string | null
+  /**
+   * Catatan teknis kotak. Sebaris sendiri di bawah alamat, bukan satu sel di
+   * antara angka-angka: isinya kalimat ("kunci di pos satpam", "tiang miring")
+   * yang harus terbaca utuh sebelum orang berangkat, bukan dipotong tiga kata.
+   */
+  notes?: string | null
   location: Coordinate
   canUpdate: boolean
   canDelete: boolean
@@ -111,6 +119,7 @@ export function AssetDetailPanel({
           ))}
         </div>
         {address && <DetailField label="Alamat" value={address} />}
+        {notes && <DetailField label="Catatan teknis" value={notes} />}
       </div>
 
       {children}
@@ -196,6 +205,10 @@ interface NodeDraft {
   trayCount: string
   capacity: string
   status: AssetStatus
+  /** Data lapangan; kosong = belum pernah dicatat, dan itu jawaban yang sah. */
+  installedOn: string
+  mounting: string
+  notes: string
 }
 
 type NodeView = OdcView | OdpView | JointBoxView
@@ -241,6 +254,9 @@ function toDraft(node: NodeView, kind: AccessNodeKind): NodeDraft {
     trayCount: 'trayCount' in node ? String(node.trayCount) : '',
     capacity: String(node.capacity),
     status: node.status,
+    installedOn: node.installedOn ?? '',
+    mounting: node.mounting ?? '',
+    notes: node.notes ?? '',
   }
 }
 
@@ -361,6 +377,11 @@ export function AccessNodeDetail({
           : { trayCount: Number(draft.trayCount) }),
         capacity: Number(draft.capacity),
         status: draft.status,
+        // Dikosongkan operator = memang dihapus, bukan "tak disebut": form ini
+        // ganti-utuh, jadi catatan yang sudah tak berlaku ikut hilang.
+        installedOn: draft.installedOn || null,
+        mounting: draft.mounting || null,
+        notes: draft.notes.trim() || null,
       })
       closeDraft()
       await load()
@@ -448,8 +469,8 @@ export function AccessNodeDetail({
           </>
         }
         subtitle={subtitle}
-        fields={
-          jointBox
+        fields={[
+          ...(jointBox
             ? [
                 { label: 'Nama', value: jointBox.name },
                 { label: 'Jumlah tray', value: String(jointBox.trayCount) },
@@ -472,9 +493,15 @@ export function AccessNodeDetail({
                   { label: 'ODC induk', value: odp?.odcName ?? '—' },
                   { label: 'Splitter', value: odp ? describeSplitter(odp) : '—' },
                   { label: meta.capacityLabel, value: String(node.capacity) },
-                ]
-        }
+                ]),
+          // Dua sel terakhir untuk orang yang akan MENDATANGI kotak ini: umurnya
+          // (tersangka pertama saat satu klaster meredup) dan dudukannya (yang
+          // menentukan tangga atau kunci handhole ikut dibawa atau tidak).
+          { label: 'Dipasang', value: describeInstalledOn(node.installedOn) },
+          { label: 'Dudukan', value: mountingLabel(node.mounting) },
+        ]}
         address={node.address}
+        notes={node.notes}
         location={node.location}
         canUpdate={canUpdate}
         canDelete={canDelete}
@@ -648,6 +675,41 @@ export function AccessNodeDetail({
                 </div>
               </div>
             )}
+            <div className="row">
+              <div style={{ flex: 1 }}>
+                <TextField
+                  label="Tanggal pasang"
+                  type="date"
+                  value={draft.installedOn}
+                  max={todayIso()}
+                  onChange={(_, data) => setDraft({ ...draft, installedOn: data.value })}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <SelectField
+                  label="Dudukan"
+                  value={draft.mounting}
+                  onChange={(_, data) => setDraft({ ...draft, mounting: data.value })}
+                >
+                  {/* "Belum tahu" tetap jadi pilihan: mengarang dudukan kotak yang tak
+                      pernah dilihat siapa pun mengirim tim dengan alat yang salah. */}
+                  <option value="">— belum tahu —</option>
+                  {MOUNTING_OPTIONS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </SelectField>
+              </div>
+            </div>
+            <TextareaField
+              label={<>Catatan teknis <span className="muted">(opsional)</span></>}
+              value={draft.notes}
+              onChange={(_, data) => setDraft({ ...draft, notes: data.value })}
+              rows={2}
+              maxLength={1000}
+              placeholder="Kunci dititip di pos satpam; core 5-8 disisakan untuk klaster sebelah…"
+            />
             <label>
               <span>Lokasi</span>
               <LocationPicker

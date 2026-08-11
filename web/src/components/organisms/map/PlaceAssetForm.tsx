@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { api } from '@/api/client'
 import { SPLITTER_RATIOS, type SiteView } from '@/api/network'
 import type { PageResponse } from '@/api/types'
-import { Button, SelectField, TextField } from '@/components/atoms'
+import { Button, SelectField, TextareaField, TextField } from '@/components/atoms'
 import { BladeHead } from '@/components/molecules'
 import { ASSET_META, type AssetKind } from '@/map/mapAssets'
+import { MOUNTING_OPTIONS, todayIso } from '@/utils/closureFieldData'
 import { CUSTOM_SIZE, JOINT_BOX_SIZES, ODC_SIZES, ODP_SIZES } from '@/utils/closureSizing'
 
 /** Vendor OLT yang didukung — selaras dengan daftar di halaman Inventaris. */
@@ -45,6 +46,14 @@ export function PlaceAssetForm({
   const [splitterRatio, setSplitterRatio] = useState('1:8')
   const [trayCount, setTrayCount] = useState(2)
   const [capacity, setCapacity] = useState(kind === 'JOINT_BOX' ? 24 : 8)
+  // Data lapangan kotak. Tanggal pasang terisi hari ini karena kotak yang baru
+  // ditaruh di peta memang biasanya baru dipasang — tetap bisa dimundurkan saat
+  // yang digambar adalah jaringan lama. Dudukan sengaja TIDAK ditebak: salah
+  // tebak mengirim tim tanpa tangga atau tanpa kunci handhole, dan kosong lebih
+  // jujur daripada "Tiang" yang tak pernah dilihat siapa pun.
+  const [installedOn, setInstalledOn] = useState(todayIso)
+  const [mounting, setMounting] = useState('')
+  const [notes, setNotes] = useState('')
   // ODF: 24 port = satu panel 1U penuh, ukuran rak POP kecil yang paling lazim.
   const [portCount, setPortCount] = useState(24)
   // OLT & ODF: site induk (wajib), lalu identitas perangkat & kesiapan SNMP (OLT saja).
@@ -123,6 +132,11 @@ export function PlaceAssetForm({
       onSave(base)
       return
     }
+    // Data lapangan cuma milik kotak (ODC/ODP/JB): yang dikirim hanya yang benar
+    // terisi — bidang kosong berarti "belum tahu", dan itu jawaban yang sah.
+    if (installedOn) base.installedOn = installedOn
+    if (mounting) base.mounting = mounting
+    if (notes.trim()) base.notes = notes.trim()
     // Joint box tak berisi splitter: ukurannya tray & jumlah sambungan yang muat.
     if (kind === 'JOINT_BOX') {
       base.trayCount = trayCount
@@ -333,6 +347,45 @@ export function PlaceAssetForm({
                 />
               </div>
             )}
+          </>
+        )}
+        {/* Data lapangan — bagian yang menentukan tim datang dengan alat yang benar.
+            Ditaruh paling bawah karena isinya boleh dilewati: kotak tetap tersimpan
+            meski dudukan & catatannya menyusul setelah teknisi berdiri di depannya. */}
+        {(kind === 'ODC' || kind === 'ODP' || kind === 'JOINT_BOX') && (
+          <>
+            <div className="row" style={{ gap: '0.5rem' }}>
+              <TextField
+                label="Tanggal pasang"
+                type="date"
+                value={installedOn}
+                max={todayIso()}
+                onChange={(_, data) => setInstalledOn(data.value)}
+                style={{ flex: 1 }}
+              />
+              <SelectField
+                label={<>Dudukan <span className="muted">(opsional)</span></>}
+                value={mounting}
+                onChange={(_, data) => setMounting(data.value)}
+                style={{ flex: 1 }}
+              >
+                <option value="">— belum tahu —</option>
+                {MOUNTING_OPTIONS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+            <TextareaField
+              label={<>Catatan teknis <span className="muted">(opsional)</span></>}
+              value={notes}
+              onChange={(_, data) => setNotes(data.value)}
+              rows={2}
+              maxLength={1000}
+              placeholder="Kunci dititip di pos satpam; tiang miring, jangan dipanjat sendirian…"
+              hint="Pesan untuk teknisi berikutnya — yang biasanya cuma beredar di grup WhatsApp lalu hilang."
+            />
           </>
         )}
         <div className="row">
