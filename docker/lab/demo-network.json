@@ -1,0 +1,1494 @@
+{
+ "plans": [
+  {
+   "name": "Home 10 Mbps",
+   "downMbps": 10,
+   "upMbps": 3,
+   "price": 165000,
+   "description": "Paket rumahan paling laris — 10 Mbps unlimited."
+  },
+  {
+   "name": "Home 20 Mbps",
+   "downMbps": 20,
+   "upMbps": 5,
+   "price": 235000,
+   "description": "Untuk keluarga yang streaming bareng."
+  },
+  {
+   "name": "Home 50 Mbps",
+   "downMbps": 50,
+   "upMbps": 10,
+   "price": 350000,
+   "description": "Rumah dengan banyak perangkat & kerja dari rumah."
+  },
+  {
+   "name": "Bisnis 100 Mbps",
+   "downMbps": 100,
+   "upMbps": 25,
+   "price": 850000,
+   "description": "Paket usaha: prioritas trafik lebih tinggi."
+  }
+ ],
+ "odcs": [
+  {
+   "code": "ODC-TBT-01",
+   "name": "ODC Tebet Barat",
+   "location": [106.845676, -6.229637],
+   "address": "Jl. Tebet Raya, Jakarta Selatan",
+   "ponPort": 0
+  },
+  {
+   "code": "ODC-TBT-02",
+   "name": "ODC Tebet Timur",
+   "location": [106.857007, -6.229045],
+   "address": "Jalan Tebet Timur Dalam III H, Jakarta Selatan",
+   "ponPort": 1
+  },
+  {
+   "code": "ODC-TBT-03",
+   "name": "ODC Menteng Dalam",
+   "location": [106.848011, -6.220428],
+   "address": "Jalan Al Barkah, Jakarta Selatan",
+   "ponPort": 2
+  }
+ ],
+ "jointBoxes": [
+  {
+   "code": "JB-TBT-01",
+   "name": "JB Menteng Dalam",
+   "location": [106.847557, -6.223808],
+   "address": "Jalan Dokter Saharjo, Jakarta Selatan"
+  }
+ ],
+ "odps": [
+  {
+   "code": "ODP-TBT-001",
+   "name": "ODP Merpati 01",
+   "location": [106.845384, -6.229977],
+   "address": "Jalan Merpati, Jakarta Selatan",
+   "odc": "ODC-TBT-01"
+  },
+  {
+   "code": "ODP-TBT-002",
+   "name": "ODP Persada II 02",
+   "location": [106.84447, -6.229396],
+   "address": "Jalan Persada II, Jakarta Selatan",
+   "odc": "ODC-TBT-01"
+  },
+  {
+   "code": "ODP-TBT-003",
+   "name": "ODP Persada II 03",
+   "location": [106.843121, -6.229461],
+   "address": "Jalan Persada II, Jakarta Selatan",
+   "odc": "ODC-TBT-01"
+  },
+  {
+   "code": "ODP-TBT-004",
+   "name": "ODP Flamboyan I 04",
+   "location": [106.842288, -6.23008],
+   "address": "Jalan Flamboyan I, Jakarta Selatan",
+   "odc": "ODC-TBT-01"
+  },
+  {
+   "code": "ODP-TBT-005",
+   "name": "ODP Tebet Timur Dalam III H 05",
+   "location": [106.857633, -6.228949],
+   "address": "Jalan Tebet Timur Dalam III H, Jakarta Selatan",
+   "odc": "ODC-TBT-02"
+  },
+  {
+   "code": "ODP-TBT-006",
+   "name": "ODP Tebet Timur Dalam III 06",
+   "location": [106.856862, -6.229371],
+   "address": "Jalan Tebet Timur Dalam III, Jakarta Selatan",
+   "odc": "ODC-TBT-02"
+  },
+  {
+   "code": "ODP-TBT-007",
+   "name": "ODP Tebet Timur Dalam II 07",
+   "location": [106.856062, -6.22855],
+   "address": "Jalan Tebet Timur Dalam II, Jakarta Selatan",
+   "odc": "ODC-TBT-02"
+  },
+  {
+   "code": "ODP-TBT-008",
+   "name": "ODP Al Barkah 08",
+   "location": [106.847384, -6.220344],
+   "address": "Jalan Al Barkah, Jakarta Selatan",
+   "odc": "ODC-TBT-03"
+  },
+  {
+   "code": "ODP-TBT-009",
+   "name": "ODP Al Barkah 09",
+   "location": [106.846029, -6.220394],
+   "address": "Jalan Al Barkah, Jakarta Selatan",
+   "odc": "ODC-TBT-03"
+  },
+  {
+   "code": "ODP-TBT-010",
+   "name": "ODP Dokter Saharjo 10",
+   "location": [106.8455, -6.219221],
+   "address": "Jalan Dokter Saharjo, Jakarta Selatan",
+   "odc": "ODC-TBT-03"
+  }
+ ],
+ "cables": [
+  {
+   "code": "FDR-OLT-TBT-01-ODC-TBT-01",
+   "name": "Feeder OLT-TBT-01 → ODC-TBT-01",
+   "cableType": "FEEDER",
+   "coreCount": 24,
+   "fromKind": "OLT",
+   "from": "OLT-TBT-01",
+   "ponPort": 0,
+   "toKind": "ODC",
+   "to": "ODC-TBT-01",
+   "route": [
+    [106.850998, -6.226155],
+    [106.850876, -6.22616],
+    [106.850719, -6.22615],
+    [106.850558, -6.226135],
+    [106.850369, -6.22699],
+    [106.85035, -6.227084],
+    [106.850283, -6.227463],
+    [106.850265, -6.22755],
+    [106.850136, -6.228166],
+    [106.850124, -6.228211],
+    [106.850004, -6.228642],
+    [106.849991, -6.228681],
+    [106.849865, -6.229049],
+    [106.849851, -6.229091],
+    [106.849709, -6.229491],
+    [106.849648, -6.22964],
+    [106.849629, -6.229689],
+    [106.849353, -6.229587],
+    [106.84931, -6.229571],
+    [106.849242, -6.22955],
+    [106.849216, -6.229543],
+    [106.84919, -6.229535],
+    [106.848887, -6.229447],
+    [106.848766, -6.229409],
+    [106.84872, -6.229395],
+    [106.848651, -6.229373],
+    [106.848584, -6.229347],
+    [106.848528, -6.229325],
+    [106.848012, -6.229131],
+    [106.847947, -6.229107],
+    [106.847502, -6.22896],
+    [106.84747, -6.228951],
+    [106.847413, -6.228934],
+    [106.847364, -6.228919],
+    [106.847242, -6.228903],
+    [106.847229, -6.228981],
+    [106.847194, -6.22919],
+    [106.847177, -6.229294],
+    [106.847121, -6.229633],
+    [106.847107, -6.229702],
+    [106.847053, -6.229968],
+    [106.847039, -6.229965],
+    [106.846984, -6.229954],
+    [106.846891, -6.229927],
+    [106.846774, -6.229906],
+    [106.846546, -6.229886],
+    [106.845917, -6.229922],
+    [106.845705, -6.229944],
+    [106.845676, -6.229637]
+   ],
+   "installation": "DUCT"
+  },
+  {
+   "code": "FDR-OLT-TBT-01-ODC-TBT-02",
+   "name": "Feeder OLT-TBT-01 → ODC-TBT-02",
+   "cableType": "FEEDER",
+   "coreCount": 24,
+   "fromKind": "OLT",
+   "from": "OLT-TBT-01",
+   "ponPort": 1,
+   "toKind": "ODC",
+   "to": "ODC-TBT-02",
+   "route": [
+    [106.850998, -6.226155],
+    [106.850876, -6.22616],
+    [106.850719, -6.22615],
+    [106.850558, -6.226135],
+    [106.850369, -6.22699],
+    [106.85035, -6.227084],
+    [106.850283, -6.227463],
+    [106.850265, -6.22755],
+    [106.850136, -6.228166],
+    [106.850124, -6.228211],
+    [106.850004, -6.228642],
+    [106.849991, -6.228681],
+    [106.849865, -6.229049],
+    [106.849851, -6.229091],
+    [106.849709, -6.229491],
+    [106.849648, -6.22964],
+    [106.849629, -6.229689],
+    [106.850557, -6.230031],
+    [106.850913, -6.230124],
+    [106.851263, -6.230181],
+    [106.851384, -6.230191],
+    [106.851524, -6.230204],
+    [106.851587, -6.230209],
+    [106.851647, -6.230207],
+    [106.851835, -6.230193],
+    [106.851953, -6.230186],
+    [106.852059, -6.230177],
+    [106.852133, -6.230161],
+    [106.852173, -6.23015],
+    [106.852253, -6.230119],
+    [106.852409, -6.230028],
+    [106.85245, -6.230003],
+    [106.852511, -6.22997],
+    [106.852782, -6.229819],
+    [106.853393, -6.22948],
+    [106.853532, -6.229402],
+    [106.85459, -6.228815],
+    [106.854892, -6.228647],
+    [106.855239, -6.228455],
+    [106.855843, -6.228182],
+    [106.855869, -6.228223],
+    [106.856076, -6.228573],
+    [106.856274, -6.228899],
+    [106.856426, -6.229211],
+    [106.856453, -6.229311],
+    [106.856476, -6.229413],
+    [106.856528, -6.229411],
+    [106.856959, -6.22936],
+    [106.857308, -6.229332],
+    [106.857593, -6.229292],
+    [106.857758, -6.229267],
+    [106.857756, -6.229185],
+    [106.857759, -6.228941],
+    [106.857731, -6.22894],
+    [106.857704, -6.228939],
+    [106.857406, -6.228982],
+    [106.857007, -6.229045]
+   ],
+   "installation": "AERIAL"
+  },
+  {
+   "code": "FDR-OLT-TBT-01-JB-TBT-01",
+   "name": "Feeder OLT-TBT-01 → JB-TBT-01",
+   "cableType": "FEEDER",
+   "coreCount": 24,
+   "fromKind": "OLT",
+   "from": "OLT-TBT-01",
+   "ponPort": 2,
+   "toKind": "JOINT_BOX",
+   "to": "JB-TBT-01",
+   "route": [
+    [106.850998, -6.226155],
+    [106.850876, -6.22616],
+    [106.850719, -6.22615],
+    [106.850558, -6.226135],
+    [106.850369, -6.22699],
+    [106.85035, -6.227084],
+    [106.850299, -6.227058],
+    [106.850157, -6.227025],
+    [106.850099, -6.227016],
+    [106.850057, -6.227003],
+    [106.850024, -6.226983],
+    [106.849995, -6.226953],
+    [106.849975, -6.226917],
+    [106.849943, -6.226881],
+    [106.849905, -6.226859],
+    [106.849673, -6.226774],
+    [106.849473, -6.226768],
+    [106.848559, -6.226739],
+    [106.848242, -6.226729],
+    [106.847925, -6.226719],
+    [106.84787, -6.226715],
+    [106.847662, -6.226711],
+    [106.847603, -6.226709],
+    [106.84756, -6.226707],
+    [106.847521, -6.226705],
+    [106.847522, -6.226523],
+    [106.847523, -6.226326],
+    [106.847517, -6.225926],
+    [106.847487, -6.225431],
+    [106.847483, -6.225322],
+    [106.84748, -6.225232],
+    [106.847464, -6.224919],
+    [106.84746, -6.224817],
+    [106.847459, -6.224782],
+    [106.847459, -6.224752],
+    [106.847461, -6.224688],
+    [106.847462, -6.224656],
+    [106.847466, -6.22454],
+    [106.847478, -6.224393],
+    [106.847484, -6.224311],
+    [106.847486, -6.22427],
+    [106.847504, -6.224183],
+    [106.847542, -6.224001],
+    [106.847548, -6.223971],
+    [106.847557, -6.223808]
+   ],
+   "installation": "AERIAL"
+  },
+  {
+   "code": "FDR-JB-TBT-01-ODC-TBT-03",
+   "name": "Feeder JB-TBT-01 → ODC-TBT-03",
+   "cableType": "FEEDER",
+   "coreCount": 24,
+   "fromKind": "JOINT_BOX",
+   "from": "JB-TBT-01",
+   "toKind": "ODC",
+   "to": "ODC-TBT-03",
+   "route": [
+    [106.847557, -6.223808],
+    [106.847561, -6.223735],
+    [106.847564, -6.223661],
+    [106.847566, -6.223554],
+    [106.847566, -6.223478],
+    [106.847566, -6.223413],
+    [106.847556, -6.223332],
+    [106.847534, -6.223267],
+    [106.847502, -6.223184],
+    [106.847428, -6.223014],
+    [106.847411, -6.222974],
+    [106.847404, -6.22296],
+    [106.847395, -6.222939],
+    [106.847373, -6.222898],
+    [106.847297, -6.222766],
+    [106.846978, -6.222213],
+    [106.846761, -6.221811],
+    [106.846661, -6.221651],
+    [106.846485, -6.221393],
+    [106.846331, -6.221174],
+    [106.846207, -6.220998],
+    [106.846202, -6.220993],
+    [106.846114, -6.220809],
+    [106.845935, -6.220399],
+    [106.84599, -6.220396],
+    [106.846778, -6.220352],
+    [106.846962, -6.220343],
+    [106.847287, -6.220333],
+    [106.847334, -6.22034],
+    [106.847497, -6.220353],
+    [106.847672, -6.220379],
+    [106.848011, -6.220428]
+   ],
+   "installation": "AERIAL"
+  },
+  {
+   "code": "DIST-ODC-TBT-01-ODP-TBT-001",
+   "name": "Distribusi ODC-TBT-01 → ODP-TBT-001",
+   "cableType": "DISTRIBUTION",
+   "coreCount": 12,
+   "fromKind": "ODC",
+   "from": "ODC-TBT-01",
+   "toKind": "ODP",
+   "to": "ODP-TBT-001",
+   "route": [
+    [106.845676, -6.229637],
+    [106.845705, -6.229944],
+    [106.845384, -6.229977]
+   ],
+   "installation": "AERIAL"
+  },
+  {
+   "code": "DIST-ODP-TBT-001-ODP-TBT-002",
+   "name": "Distribusi ODP-TBT-001 → ODP-TBT-002",
+   "cableType": "DISTRIBUTION",
+   "coreCount": 12,
+   "fromKind": "ODP",
+   "from": "ODP-TBT-001",
+   "toKind": "ODP",
+   "to": "ODP-TBT-002",
+   "route": [
+    [106.845384, -6.229977],
+    [106.84504, -6.230012],
+    [106.845029, -6.229918],
+    [106.844981, -6.229738],
+    [106.844891, -6.229716],
+    [106.844866, -6.229703],
+    [106.844857, -6.229688],
+    [106.844779, -6.22942],
+    [106.844476, -6.229397],
+    [106.84447, -6.229396]
+   ],
+   "installation": "AERIAL"
+  },
+  {
+   "code": "DIST-ODP-TBT-002-ODP-TBT-003",
+   "name": "Distribusi ODP-TBT-002 → ODP-TBT-003",
+   "cableType": "DISTRIBUTION",
+   "coreCount": 12,
+   "fromKind": "ODP",
+   "from": "ODP-TBT-002",
+   "toKind": "ODP",
+   "to": "ODP-TBT-003",
+   "route": [
+    [106.84447, -6.229396],
+    [106.844258, -6.229375],
+    [106.844181, -6.22937],
+    [106.844114, -6.229368],
+    [106.843969, -6.229379],
+    [106.84385, -6.229398],
+    [106.843752, -6.229417],
+    [106.843727, -6.229419],
+    [106.843257, -6.229439],
+    [106.843213, -6.229443],
+    [106.843121, -6.229461]
+   ],
+   "installation": "AERIAL"
+  },
+  {
+   "code": "DIST-ODP-TBT-003-ODP-TBT-004",
+   "name": "Distribusi ODP-TBT-003 → ODP-TBT-004",
+   "cableType": "DISTRIBUTION",
+   "coreCount": 12,
+   "fromKind": "ODP",
+   "from": "ODP-TBT-003",
+   "toKind": "ODP",
+   "to": "ODP-TBT-004",
+   "route": [
+    [106.843121, -6.229461],
+    [106.842947, -6.229495],
+    [106.842646, -6.229551],
+    [106.842673, -6.229967],
+    [106.842664, -6.230007],
+    [106.842655, -6.230031],
+    [106.842637, -6.230056],
+    [106.842625, -6.230069],
+    [106.842609, -6.230077],
+    [106.84247, -6.230074],
+    [106.84235, -6.230078],
+    [106.842288, -6.23008]
+   ],
+   "installation": "AERIAL"
+  },
+  {
+   "code": "DIST-ODC-TBT-02-ODP-TBT-005",
+   "name": "Distribusi ODC-TBT-02 → ODP-TBT-005",
+   "cableType": "DISTRIBUTION",
+   "coreCount": 12,
+   "fromKind": "ODC",
+   "from": "ODC-TBT-02",
+   "toKind": "ODP",
+   "to": "ODP-TBT-005",
+   "route": [
+    [106.857007, -6.229045],
+    [106.857406, -6.228982],
+    [106.857633, -6.228949]
+   ],
+   "installation": "AERIAL"
+  },
+  {
+   "code": "DIST-ODP-TBT-005-ODP-TBT-006",
+   "name": "Distribusi ODP-TBT-005 → ODP-TBT-006",
+   "cableType": "DISTRIBUTION",
+   "coreCount": 12,
+   "fromKind": "ODP",
+   "from": "ODP-TBT-005",
+   "toKind": "ODP",
+   "to": "ODP-TBT-006",
+   "route": [
+    [106.857633, -6.228949],
+    [106.857704, -6.228939],
+    [106.857731, -6.22894],
+    [106.857759, -6.228941],
+    [106.857756, -6.229185],
+    [106.857758, -6.229267],
+    [106.857593, -6.229292],
+    [106.857308, -6.229332],
+    [106.856959, -6.22936],
+    [106.856862, -6.229371]
+   ],
+   "installation": "AERIAL"
+  },
+  {
+   "code": "DIST-ODP-TBT-006-ODP-TBT-007",
+   "name": "Distribusi ODP-TBT-006 → ODP-TBT-007",
+   "cableType": "DISTRIBUTION",
+   "coreCount": 12,
+   "fromKind": "ODP",
+   "from": "ODP-TBT-006",
+   "toKind": "ODP",
+   "to": "ODP-TBT-007",
+   "route": [
+    [106.856862, -6.229371],
+    [106.856528, -6.229411],
+    [106.856476, -6.229413],
+    [106.856453, -6.229311],
+    [106.856426, -6.229211],
+    [106.856274, -6.228899],
+    [106.856076, -6.228573],
+    [106.856062, -6.22855]
+   ],
+   "installation": "AERIAL"
+  },
+  {
+   "code": "DIST-ODC-TBT-03-ODP-TBT-008",
+   "name": "Distribusi ODC-TBT-03 → ODP-TBT-008",
+   "cableType": "DISTRIBUTION",
+   "coreCount": 12,
+   "fromKind": "ODC",
+   "from": "ODC-TBT-03",
+   "toKind": "ODP",
+   "to": "ODP-TBT-008",
+   "route": [
+    [106.848011, -6.220428],
+    [106.847672, -6.220379],
+    [106.847497, -6.220353],
+    [106.847384, -6.220344]
+   ],
+   "installation": "AERIAL"
+  },
+  {
+   "code": "DIST-ODP-TBT-008-ODP-TBT-009",
+   "name": "Distribusi ODP-TBT-008 → ODP-TBT-009",
+   "cableType": "DISTRIBUTION",
+   "coreCount": 12,
+   "fromKind": "ODP",
+   "from": "ODP-TBT-008",
+   "toKind": "ODP",
+   "to": "ODP-TBT-009",
+   "route": [
+    [106.847384, -6.220344],
+    [106.847334, -6.22034],
+    [106.847287, -6.220333],
+    [106.846962, -6.220343],
+    [106.846778, -6.220352],
+    [106.846029, -6.220394]
+   ],
+   "installation": "AERIAL"
+  },
+  {
+   "code": "DIST-ODP-TBT-009-ODP-TBT-010",
+   "name": "Distribusi ODP-TBT-009 → ODP-TBT-010",
+   "cableType": "DISTRIBUTION",
+   "coreCount": 12,
+   "fromKind": "ODP",
+   "from": "ODP-TBT-009",
+   "toKind": "ODP",
+   "to": "ODP-TBT-010",
+   "route": [
+    [106.846029, -6.220394],
+    [106.84599, -6.220396],
+    [106.845935, -6.220399],
+    [106.845822, -6.220101],
+    [106.845735, -6.219869],
+    [106.845721, -6.219839],
+    [106.845597, -6.219484],
+    [106.8455, -6.219221]
+   ],
+   "installation": "AERIAL"
+  }
+ ],
+ "customers": [
+  {
+   "code": "TBT-001",
+   "name": "Budi Santoso",
+   "phone": "08782405389",
+   "address": "Jl. Merpati No. 57, Jakarta Selatan",
+   "location": [106.845557, -6.229765],
+   "plan": 0,
+   "odp": "ODP-TBT-001",
+   "port": 1,
+   "rx": -18.5,
+   "serial": "ZTEGA8163DA3",
+   "model": "ZXHN F670L",
+   "drop": [
+    [106.845384, -6.229977],
+    [106.845618, -6.229953],
+    [106.845557, -6.229765]
+   ]
+  },
+  {
+   "code": "TBT-002",
+   "name": "Siti Rahayu",
+   "phone": "08575533250",
+   "address": "Jl. Merpati No. 4, Jakarta Selatan",
+   "location": [106.845515, -6.230181],
+   "plan": 0,
+   "odp": "ODP-TBT-001",
+   "port": 2,
+   "rx": -18.8,
+   "serial": "ZTEGD818DB9A",
+   "model": "ZXHN F660",
+   "drop": [
+    [106.845384, -6.229977],
+    [106.845492, -6.229966],
+    [106.845515, -6.230181]
+   ]
+  },
+  {
+   "code": "TBT-003",
+   "name": "Agus Setiawan",
+   "phone": "08127711282",
+   "address": "Jl. Merpati No. 21, Jakarta Selatan",
+   "location": [106.845324, -6.229748],
+   "plan": 0,
+   "odp": "ODP-TBT-001",
+   "port": 3,
+   "rx": -17.9,
+   "serial": "ZTEG0EE89261",
+   "model": "ZXHN F670L",
+   "drop": [
+    [106.845384, -6.229977],
+    [106.845348, -6.229981],
+    [106.845324, -6.229748]
+   ]
+  },
+  {
+   "code": "TBT-004",
+   "name": "Dewi Lestari",
+   "phone": "08132177258",
+   "address": "Jl. Merpati No. 16, Jakarta Selatan",
+   "location": [106.84523, -6.230245],
+   "plan": 1,
+   "odp": "ODP-TBT-001",
+   "port": 4,
+   "rx": -18.0,
+   "serial": "ZTEG012F5D54",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.845384, -6.229977],
+    [106.845204, -6.229995],
+    [106.84523, -6.230245]
+   ]
+  },
+  {
+   "code": "TBT-005",
+   "name": "Eko Prasetyo",
+   "phone": "08785494640",
+   "address": "Jl. Merpati No. 9, Jakarta Selatan",
+   "location": [106.84515, -6.229854],
+   "plan": 1,
+   "odp": "ODP-TBT-001",
+   "port": 5,
+   "rx": -25.4,
+   "serial": "ZTEGE921526A",
+   "model": "ZXHN F660",
+   "drop": [
+    [106.845384, -6.229977],
+    [106.84506, -6.23001],
+    [106.84515, -6.229854]
+   ],
+   "note": "Redaman naik — konektor drop kotor, jadwal bersih ulang."
+  },
+  {
+   "code": "TBT-006",
+   "name": "Rina Marlina",
+   "phone": "08126808281",
+   "address": "Jl. Merpati No. 32, Jakarta Selatan",
+   "location": [106.845884, -6.229985],
+   "plan": 0,
+   "odp": "ODP-TBT-001",
+   "port": 6,
+   "rx": -18.0,
+   "serial": "ZTEG796235D1",
+   "model": "ZXHN F670L",
+   "drop": [
+    [106.845384, -6.229977],
+    [106.845701, -6.229906],
+    [106.845884, -6.229985]
+   ]
+  },
+  {
+   "code": "TBT-007",
+   "name": "Hendra Gunawan",
+   "phone": "08215782394",
+   "address": "Jl. Merpati No. 9, Jakarta Selatan",
+   "location": [106.845284, -6.229823],
+   "plan": 2,
+   "odp": "ODP-TBT-001",
+   "port": 8,
+   "rx": -18.4,
+   "serial": "ZTEG9CB092B3",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.845384, -6.229977],
+    [106.845021, -6.229889],
+    [106.845284, -6.229823]
+   ]
+  },
+  {
+   "code": "TBT-008",
+   "name": "Sri Wahyuni",
+   "phone": "08138953679",
+   "address": "Jl. Persada II No. 51, Jakarta Selatan",
+   "location": [106.844766, -6.229226],
+   "plan": 0,
+   "odp": "ODP-TBT-002",
+   "port": 1,
+   "rx": -18.4,
+   "serial": "ZTEGB74B3658",
+   "model": "ZXHN F670L",
+   "drop": [
+    [106.84447, -6.229396],
+    [106.844704, -6.229414],
+    [106.844766, -6.229226]
+   ]
+  },
+  {
+   "code": "TBT-009",
+   "name": "Joko Suprapto",
+   "phone": "08524590837",
+   "address": "Jl. Persada II No. 57, Jakarta Selatan",
+   "location": [106.844561, -6.22962],
+   "plan": 1,
+   "odp": "ODP-TBT-002",
+   "port": 2,
+   "rx": -18.9,
+   "serial": "ZTEGF6C727ED",
+   "model": "ZXHN F670L",
+   "drop": [
+    [106.84447, -6.229396],
+    [106.844578, -6.229405],
+    [106.844561, -6.22962]
+   ]
+  },
+  {
+   "code": "TBT-010",
+   "name": "Nia Kurniasih",
+   "phone": "08785824914",
+   "address": "Jl. Persada II No. 66, Jakarta Selatan",
+   "location": [106.844456, -6.22916],
+   "plan": 0,
+   "odp": "ODP-TBT-002",
+   "port": 3,
+   "rx": -18.5,
+   "serial": "ZTEGC43A01D8",
+   "model": "ZXHN F670L",
+   "drop": [
+    [106.84447, -6.229396],
+    [106.844434, -6.229393],
+    [106.844456, -6.22916]
+   ]
+  },
+  {
+   "code": "TBT-011",
+   "name": "Bambang Sutrisno",
+   "phone": "08952684517",
+   "address": "Jl. Persada II No. 14, Jakarta Selatan",
+   "location": [106.844268, -6.229629],
+   "plan": 0,
+   "odp": "ODP-TBT-002",
+   "port": 5,
+   "rx": -17.8,
+   "serial": "ZTEG8BD39ACF",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.84447, -6.229396],
+    [106.84429, -6.229378],
+    [106.844268, -6.229629]
+   ]
+  },
+  {
+   "code": "TBT-012",
+   "name": "Ratna Sari",
+   "phone": "08574538436",
+   "address": "Jl. Persada II No. 67, Jakarta Selatan",
+   "location": [106.844147, -6.229189],
+   "plan": 2,
+   "odp": "ODP-TBT-002",
+   "port": 6,
+   "rx": -18.9,
+   "serial": "ZTEG0852336C",
+   "model": "ZXHN F660",
+   "drop": [
+    [106.84447, -6.229396],
+    [106.844146, -6.229369],
+    [106.844147, -6.229189]
+   ]
+  },
+  {
+   "code": "TBT-013",
+   "name": "Dedi Kurniawan",
+   "phone": "08211757858",
+   "address": "Jl. Persada II No. 81, Jakarta Selatan",
+   "location": [106.844632, -6.229587],
+   "plan": 1,
+   "odp": "ODP-TBT-002",
+   "port": 8,
+   "rx": -18.7,
+   "serial": "ZTEGDD093150",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.84447, -6.229396],
+    [106.844793, -6.22947],
+    [106.844632, -6.229587]
+   ],
+   "state": "ISOLIR",
+   "note": "Isolir: tagihan 2 bulan belum dibayar."
+  },
+  {
+   "code": "TBT-014",
+   "name": "Yuni Astuti",
+   "phone": "08784905732",
+   "address": "Jl. Persada II No. 7, Jakarta Selatan",
+   "location": [106.843344, -6.229237],
+   "plan": 0,
+   "odp": "ODP-TBT-003",
+   "port": 1,
+   "rx": -19.0,
+   "serial": "ZTEG25F956B7",
+   "model": "ZXHN F660",
+   "drop": [
+    [106.843121, -6.229461],
+    [106.843354, -6.229435],
+    [106.843344, -6.229237]
+   ]
+  },
+  {
+   "code": "TBT-015",
+   "name": "Rizky Ramadhan",
+   "phone": "08128543885",
+   "address": "Jl. Persada II No. 20, Jakarta Selatan",
+   "location": [106.843252, -6.229656],
+   "plan": 3,
+   "odp": "ODP-TBT-003",
+   "port": 4,
+   "rx": -18.7,
+   "serial": "ZTEGE54CDC31",
+   "model": "ZXHN F670L",
+   "drop": [
+    [106.843121, -6.229461],
+    [106.843227, -6.229442],
+    [106.843252, -6.229656]
+   ]
+  },
+  {
+   "code": "TBT-016",
+   "name": "Fitri Handayani",
+   "phone": "08788955634",
+   "address": "Jl. Persada II No. 19, Jakarta Selatan",
+   "location": [106.84304, -6.229238],
+   "plan": 0,
+   "odp": "ODP-TBT-003",
+   "port": 6,
+   "rx": -18.8,
+   "serial": "ZTEGBA557744",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.843121, -6.229461],
+    [106.843085, -6.229468],
+    [106.84304, -6.229238]
+   ]
+  },
+  {
+   "code": "TBT-017",
+   "name": "Andi Saputra",
+   "phone": "08526671609",
+   "address": "Jl. Persada II No. 63, Jakarta Selatan",
+   "location": [106.842991, -6.229743],
+   "plan": 0,
+   "odp": "ODP-TBT-003",
+   "port": 8,
+   "rx": -18.6,
+   "serial": "ZTEGAEACD632",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.843121, -6.229461],
+    [106.842943, -6.229496],
+    [106.842991, -6.229743]
+   ]
+  },
+  {
+   "code": "TBT-018",
+   "name": "Maya Puspita",
+   "phone": "08218626820",
+   "address": "Jl. Flamboyan I No. 41, Jakarta Selatan",
+   "location": [106.842498, -6.229879],
+   "plan": 0,
+   "odp": "ODP-TBT-004",
+   "port": 2,
+   "rx": -18.0,
+   "serial": "ZTEG40D60232",
+   "model": "ZXHN F670L",
+   "drop": [
+    [106.842288, -6.23008],
+    [106.842523, -6.230075],
+    [106.842498, -6.229879]
+   ]
+  },
+  {
+   "code": "TBT-019",
+   "name": "Iwan Setiadi",
+   "phone": "08213872701",
+   "address": "Jl. Flamboyan I No. 48, Jakarta Selatan",
+   "location": [106.842402, -6.230292],
+   "plan": 1,
+   "odp": "ODP-TBT-004",
+   "port": 3,
+   "rx": -18.0,
+   "serial": "ZTEGAAF12D37",
+   "model": "ZXHN F660",
+   "drop": [
+    [106.842288, -6.23008],
+    [106.842397, -6.230076],
+    [106.842402, -6.230292]
+   ]
+  },
+  {
+   "code": "TBT-020",
+   "name": "Lilis Suryani",
+   "phone": "08785877483",
+   "address": "Jl. Flamboyan I No. 58, Jakarta Selatan",
+   "location": [106.842243, -6.229847],
+   "plan": 1,
+   "odp": "ODP-TBT-004",
+   "port": 4,
+   "rx": -17.9,
+   "serial": "ZTEGB32F3218",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.842288, -6.23008],
+    [106.842252, -6.230081],
+    [106.842243, -6.229847]
+   ]
+  },
+  {
+   "code": "TBT-021",
+   "name": "Taufik Hidayat",
+   "phone": "08216827230",
+   "address": "Jl. Flamboyan I No. 64, Jakarta Selatan",
+   "location": [106.842119, -6.23034],
+   "plan": 0,
+   "odp": "ODP-TBT-004",
+   "port": 5,
+   "rx": -18.0,
+   "serial": "ZTEGE3FD188C",
+   "model": "ZXHN F660",
+   "drop": [
+    [106.842288, -6.23008],
+    [106.842107, -6.230088],
+    [106.842119, -6.23034]
+   ],
+   "onuStatus": "LOS",
+   "note": "LOS sejak semalam — drop tersangkut truk boks."
+  },
+  {
+   "code": "TBT-022",
+   "name": "Nurul Aini",
+   "phone": "08524249820",
+   "address": "Jl. Flamboyan I No. 72, Jakarta Selatan",
+   "location": [106.841953, -6.229916],
+   "plan": 2,
+   "odp": "ODP-TBT-004",
+   "port": 7,
+   "rx": -18.6,
+   "serial": "ZTEG19A7A0BE",
+   "model": "ZXHN F660",
+   "drop": [
+    [106.842288, -6.23008],
+    [106.841963, -6.230096],
+    [106.841953, -6.229916]
+   ]
+  },
+  {
+   "code": "TBT-023",
+   "name": "Ahmad Fauzi",
+   "phone": "08789408158",
+   "address": "Jl. Tebet Timur Dalam III H No. 81, Jakarta Selatan",
+   "location": [106.85743, -6.229179],
+   "plan": 0,
+   "odp": "ODP-TBT-005",
+   "port": 1,
+   "rx": -18.9,
+   "serial": "ZTEGB9626AD9",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.857633, -6.228949],
+    [106.8574, -6.228983],
+    [106.85743, -6.229179]
+   ]
+  },
+  {
+   "code": "TBT-024",
+   "name": "Wulan Sari",
+   "phone": "08135688245",
+   "address": "Jl. Tebet Timur Dalam III H No. 23, Jakarta Selatan",
+   "location": [106.857494, -6.228751],
+   "plan": 1,
+   "odp": "ODP-TBT-005",
+   "port": 2,
+   "rx": -18.8,
+   "serial": "ZTEG19B29401",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.857633, -6.228949],
+    [106.857525, -6.228965],
+    [106.857494, -6.228751]
+   ]
+  },
+  {
+   "code": "TBT-025",
+   "name": "Doni Firmansyah",
+   "phone": "08127878397",
+   "address": "Jl. Tebet Timur Dalam III H No. 8, Jakarta Selatan",
+   "location": [106.857645, -6.229177],
+   "plan": 0,
+   "odp": "ODP-TBT-005",
+   "port": 3,
+   "rx": -18.1,
+   "serial": "ZTEGFC947CE8",
+   "model": "ZXHN F660",
+   "drop": [
+    [106.857633, -6.228949],
+    [106.857669, -6.228944],
+    [106.857645, -6.229177]
+   ]
+  },
+  {
+   "code": "TBT-026",
+   "name": "Indah Permata",
+   "phone": "08217691940",
+   "address": "Jl. Tebet Timur Dalam III H No. 88, Jakarta Selatan",
+   "location": [106.857992, -6.228897],
+   "plan": 0,
+   "odp": "ODP-TBT-005",
+   "port": 4,
+   "rx": -18.1,
+   "serial": "ZTEG2F1B4253",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.857633, -6.228949],
+    [106.857758, -6.228995],
+    [106.857992, -6.228897]
+   ]
+  },
+  {
+   "code": "TBT-027",
+   "name": "Rudi Hartono",
+   "phone": "08576629749",
+   "address": "Jl. Tebet Timur Dalam III H No. 78, Jakarta Selatan",
+   "location": [106.857576, -6.229135],
+   "plan": 2,
+   "odp": "ODP-TBT-005",
+   "port": 5,
+   "rx": -18.8,
+   "serial": "ZTEG4490AACD",
+   "model": "ZXHN F660",
+   "drop": [
+    [106.857633, -6.228949],
+    [106.857757, -6.229139],
+    [106.857576, -6.229135]
+   ]
+  },
+  {
+   "code": "TBT-028",
+   "name": "Tuti Herawati",
+   "phone": "08789132361",
+   "address": "Jl. Tebet Timur Dalam III H No. 32, Jakarta Selatan",
+   "location": [106.857244, -6.228808],
+   "plan": 1,
+   "odp": "ODP-TBT-005",
+   "port": 6,
+   "rx": -18.2,
+   "serial": "ZTEG8AF8A002",
+   "model": "ZXHN F670L",
+   "drop": [
+    [106.857633, -6.228949],
+    [106.857275, -6.229003],
+    [106.857244, -6.228808]
+   ]
+  },
+  {
+   "code": "TBT-029",
+   "name": "Slamet Riyadi",
+   "phone": "08213771636",
+   "address": "Jl. Tebet Timur Dalam III H No. 41, Jakarta Selatan",
+   "location": [106.857555, -6.229075],
+   "plan": 0,
+   "odp": "ODP-TBT-005",
+   "port": 7,
+   "rx": -26.9,
+   "serial": "ZTEGA4082173",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.857633, -6.228949],
+    [106.857743, -6.229269],
+    [106.857555, -6.229075]
+   ],
+   "note": "Nyaris di ambang sensitivitas — drop tertekuk di tiang."
+  },
+  {
+   "code": "TBT-030",
+   "name": "Ani Yulianti",
+   "phone": "08525235052",
+   "address": "Jl. Tebet Timur Dalam III H No. 14, Jakarta Selatan",
+   "location": [106.857104, -6.228738],
+   "plan": 3,
+   "odp": "ODP-TBT-005",
+   "port": 8,
+   "rx": -19.1,
+   "serial": "ZTEG3F0DC8B2",
+   "model": "ZXHN F660",
+   "drop": [
+    [106.857633, -6.228949],
+    [106.85715, -6.229022],
+    [106.857104, -6.228738]
+   ]
+  },
+  {
+   "code": "TBT-031",
+   "name": "Firman Maulana",
+   "phone": "08959267076",
+   "address": "Jl. Tebet Timur Dalam III No. 55, Jakarta Selatan",
+   "location": [106.857081, -6.229152],
+   "plan": 0,
+   "odp": "ODP-TBT-006",
+   "port": 1,
+   "rx": -19.1,
+   "serial": "ZTEG05AE299B",
+   "model": "ZXHN F660",
+   "drop": [
+    [106.856862, -6.229371],
+    [106.857097, -6.229349],
+    [106.857081, -6.229152]
+   ]
+  },
+  {
+   "code": "TBT-032",
+   "name": "Desi Anggraini",
+   "phone": "08136374475",
+   "address": "Jl. Tebet Timur Dalam III No. 28, Jakarta Selatan",
+   "location": [106.856992, -6.229574],
+   "plan": 0,
+   "odp": "ODP-TBT-006",
+   "port": 5,
+   "rx": -18.3,
+   "serial": "ZTEGD39964F8",
+   "model": "ZXHN F670L",
+   "drop": [
+    [106.856862, -6.229371],
+    [106.85697, -6.229359],
+    [106.856992, -6.229574]
+   ]
+  },
+  {
+   "code": "TBT-033",
+   "name": "Yusuf Ibrahim",
+   "phone": "08528965899",
+   "address": "Jl. Tebet Timur Dalam III No. 56, Jakarta Selatan",
+   "location": [106.856798, -6.229144],
+   "plan": 0,
+   "odp": "ODP-TBT-006",
+   "port": 8,
+   "rx": -18.1,
+   "serial": "ZTEG2DB5E698",
+   "model": "ZXHN F670L",
+   "drop": [
+    [106.856862, -6.229371],
+    [106.856826, -6.229376],
+    [106.856798, -6.229144]
+   ]
+  },
+  {
+   "code": "TBT-034",
+   "name": "Sinta Dewi",
+   "phone": "08782143506",
+   "address": "Jl. Tebet Timur Dalam II No. 30, Jakarta Selatan",
+   "location": [106.856354, -6.228647],
+   "plan": 1,
+   "odp": "ODP-TBT-007",
+   "port": 2,
+   "rx": -18.3,
+   "serial": "ZTEG378DCC94",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.856062, -6.22855],
+    [106.856184, -6.22875],
+    [106.856354, -6.228647]
+   ],
+   "state": "ISOLIR",
+   "note": "Isolir: tagihan 1 bulan belum dibayar."
+  },
+  {
+   "code": "TBT-035",
+   "name": "Arif Rahman",
+   "phone": "08955409406",
+   "address": "Jl. Tebet Timur Dalam II No. 26, Jakarta Selatan",
+   "location": [106.855932, -6.228753],
+   "plan": 1,
+   "odp": "ODP-TBT-007",
+   "port": 3,
+   "rx": -18.8,
+   "serial": "ZTEGA535F2D9",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.856062, -6.22855],
+    [106.856118, -6.228642],
+    [106.855932, -6.228753]
+   ]
+  },
+  {
+   "code": "TBT-036",
+   "name": "Melati Putri",
+   "phone": "08574390384",
+   "address": "Jl. Tebet Timur Dalam II No. 15, Jakarta Selatan",
+   "location": [106.856246, -6.2284],
+   "plan": 0,
+   "odp": "ODP-TBT-007",
+   "port": 4,
+   "rx": -18.7,
+   "serial": "ZTEG079EE68D",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.856062, -6.22855],
+    [106.856044, -6.228519],
+    [106.856246, -6.2284]
+   ]
+  },
+  {
+   "code": "TBT-037",
+   "name": "Gunawan Wibowo",
+   "phone": "08127571995",
+   "address": "Jl. Tebet Timur Dalam II No. 26, Jakarta Selatan",
+   "location": [106.855752, -6.228522],
+   "plan": 2,
+   "odp": "ODP-TBT-007",
+   "port": 5,
+   "rx": -19.0,
+   "serial": "ZTEG623D7170",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.856062, -6.22855],
+    [106.855971, -6.228395],
+    [106.855752, -6.228522]
+   ]
+  },
+  {
+   "code": "TBT-038",
+   "name": "Ika Novita",
+   "phone": "08526403150",
+   "address": "Jl. Tebet Timur Dalam II No. 29, Jakarta Selatan",
+   "location": [106.85604, -6.22816],
+   "plan": 0,
+   "odp": "ODP-TBT-007",
+   "port": 6,
+   "rx": -18.5,
+   "serial": "ZTEG24D2AC90",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.856062, -6.22855],
+    [106.855897, -6.228271],
+    [106.85604, -6.22816]
+   ]
+  },
+  {
+   "code": "TBT-039",
+   "name": "Hasan Basri",
+   "phone": "08578517859",
+   "address": "Jl. Al Barkah No. 45, Jakarta Selatan",
+   "location": [106.847645, -6.220175],
+   "plan": 1,
+   "odp": "ODP-TBT-008",
+   "port": 1,
+   "rx": -18.4,
+   "serial": "ZTEG8763DBB0",
+   "model": "ZXHN F670L",
+   "drop": [
+    [106.847384, -6.220344],
+    [106.847617, -6.220371],
+    [106.847645, -6.220175]
+   ]
+  },
+  {
+   "code": "TBT-040",
+   "name": "Retno Wulandari",
+   "phone": "08784448026",
+   "address": "Jl. Al Barkah No. 6, Jakarta Selatan",
+   "location": [106.847468, -6.220567],
+   "plan": 0,
+   "odp": "ODP-TBT-008",
+   "port": 3,
+   "rx": -18.3,
+   "serial": "ZTEG00F7988D",
+   "model": "ZXHN F660",
+   "drop": [
+    [106.847384, -6.220344],
+    [106.847492, -6.220353],
+    [106.847468, -6.220567]
+   ]
+  },
+  {
+   "code": "TBT-041",
+   "name": "Bayu Aditya",
+   "phone": "08573877996",
+   "address": "Jl. Al Barkah No. 20, Jakarta Selatan",
+   "location": [106.847363, -6.220108],
+   "plan": 0,
+   "odp": "ODP-TBT-008",
+   "port": 5,
+   "rx": -18.7,
+   "serial": "ZTEG6285885D",
+   "model": "ZXHN F670L",
+   "drop": [
+    [106.847384, -6.220344],
+    [106.847348, -6.220341],
+    [106.847363, -6.220108]
+   ]
+  },
+  {
+   "code": "TBT-042",
+   "name": "Sari Melati",
+   "phone": "08525971948",
+   "address": "Jl. Al Barkah No. 17, Jakarta Selatan",
+   "location": [106.847203, -6.220588],
+   "plan": 2,
+   "odp": "ODP-TBT-008",
+   "port": 6,
+   "rx": -18.9,
+   "serial": "ZTEGDDF59364",
+   "model": "ZXHN F670L",
+   "drop": [
+    [106.847384, -6.220344],
+    [106.847203, -6.220336],
+    [106.847203, -6.220588]
+   ],
+   "onuStatus": "OFFLINE",
+   "note": "Modem dimatikan pelanggan (rumah kosong)."
+  },
+  {
+   "code": "TBT-043",
+   "name": "Cahyo Nugroho",
+   "phone": "08136874445",
+   "address": "Jl. Al Barkah No. 51, Jakarta Selatan",
+   "location": [106.847053, -6.22016],
+   "plan": 1,
+   "odp": "ODP-TBT-008",
+   "port": 7,
+   "rx": -18.6,
+   "serial": "ZTEG2B0D801A",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.847384, -6.220344],
+    [106.847059, -6.22034],
+    [106.847053, -6.22016]
+   ]
+  },
+  {
+   "code": "TBT-044",
+   "name": "Vina Oktaviani",
+   "phone": "08122903308",
+   "address": "Jl. Al Barkah No. 58, Jakarta Selatan",
+   "location": [106.847713, -6.220585],
+   "plan": 0,
+   "odp": "ODP-TBT-008",
+   "port": 8,
+   "rx": -18.3,
+   "serial": "ZTEGFD4AE609",
+   "model": "ZXHN F660",
+   "drop": [
+    [106.847384, -6.220344],
+    [106.847742, -6.220389],
+    [106.847713, -6.220585]
+   ]
+  },
+  {
+   "code": "TBT-045",
+   "name": "Reza Pratama",
+   "phone": "08951073620",
+   "address": "Jl. Al Barkah No. 75, Jakarta Selatan",
+   "location": [106.846253, -6.220183],
+   "plan": 3,
+   "odp": "ODP-TBT-009",
+   "port": 3,
+   "rx": -18.4,
+   "serial": "ZTEGA6FE5E03",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.846029, -6.220394],
+    [106.846264, -6.220381],
+    [106.846253, -6.220183]
+   ]
+  },
+  {
+   "code": "TBT-046",
+   "name": "Lia Amalia",
+   "phone": "08952988846",
+   "address": "Jl. Al Barkah No. 31, Jakarta Selatan",
+   "location": [106.846149, -6.220604],
+   "plan": 0,
+   "odp": "ODP-TBT-009",
+   "port": 8,
+   "rx": -18.9,
+   "serial": "ZTEG066E896A",
+   "model": "ZXHN F670L",
+   "drop": [
+    [106.846029, -6.220394],
+    [106.846137, -6.220388],
+    [106.846149, -6.220604]
+   ]
+  },
+  {
+   "code": "TBT-047",
+   "name": "Surya Darma",
+   "phone": "08135002924",
+   "address": "Jl. Dokter Saharjo No. 66, Jakarta Selatan",
+   "location": [106.845768, -6.219373],
+   "plan": 0,
+   "odp": "ODP-TBT-010",
+   "port": 1,
+   "rx": -18.7,
+   "serial": "ZTEG8005D48D",
+   "model": "ZXHN F670L",
+   "drop": [
+    [106.8455, -6.219221],
+    [106.845581, -6.21944],
+    [106.845768, -6.219373]
+   ],
+   "state": "PSB",
+   "note": "PSB baru: WO instalasi belum selesai, ONU belum dipasang."
+  },
+  {
+   "code": "TBT-048",
+   "name": "Ela Nuraini",
+   "phone": "08787036049",
+   "address": "Jl. Dokter Saharjo No. 5, Jakarta Selatan",
+   "location": [106.845333, -6.219397],
+   "plan": 0,
+   "odp": "ODP-TBT-010",
+   "port": 4,
+   "rx": -18.0,
+   "serial": "ZTEG087183AB",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.8455, -6.219221],
+    [106.845537, -6.219322],
+    [106.845333, -6.219397]
+   ]
+  },
+  {
+   "code": "TBT-049",
+   "name": "Rahmat Hidayat",
+   "phone": "08782613434",
+   "address": "Jl. Dokter Saharjo No. 61, Jakarta Selatan",
+   "location": [106.845707, -6.219103],
+   "plan": 1,
+   "odp": "ODP-TBT-010",
+   "port": 6,
+   "rx": -18.4,
+   "serial": "ZTEGEF0DE8CF",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.8455, -6.219221],
+    [106.845487, -6.219187],
+    [106.845707, -6.219103]
+   ]
+  },
+  {
+   "code": "TBT-050",
+   "name": "Putri Ayu",
+   "phone": "08785688565",
+   "address": "Jl. Dokter Saharjo No. 50, Jakarta Selatan",
+   "location": [106.845199, -6.219148],
+   "plan": 1,
+   "odp": "ODP-TBT-010",
+   "port": 8,
+   "rx": -18.5,
+   "serial": "ZTEG9CDE3702",
+   "model": "ZXHN F609",
+   "drop": [
+    [106.8455, -6.219221],
+    [106.845434, -6.219053],
+    [106.845199, -6.219148]
+   ]
+  }
+ ]
+}

@@ -6,10 +6,13 @@
 #   • BRAS/RADIUS — virtual-NAS (sesi radacct hidup + responder DAE untuk isolir)
 #   • GenieACS/CPE — ACS TR-069 nyata + 1 ONT palsu (serialnya sengaja disamakan
 #                    dengan salah satu ONU simulator OLT supaya tertaut ke pelanggan)
-# lalu men-seed OLT/BRAS/CPE lewat API agar langsung tersambung ke simulator.
+# lalu men-seed OLT/BRAS/CPE lewat API agar langsung tersambung ke simulator,
+# ditutup dengan menggambar satu jaringan berukuran nyata (POP Tebet: 3 ODC, 10 ODP,
+# 50 pelanggan, kabel menyusuri jalan) supaya peta & laporan tak kosong melompong.
 #
 #   make lab         # bangun + nyalakan + seed (buka http://localhost:8080)
-#   make lab-seed    # ulangi seeding saja (stack sudah jalan) — idempoten
+#   make lab-seed    # ulangi seeding simulator saja (stack sudah jalan) — idempoten
+#   make lab-network # ulangi seeding topologi POP Tebet saja — idempoten
 #   make lab-logs    # ikuti log semua service
 #
 # ── Aman (DATA TETAP UTUH — volume DB/RADIUS/GenieACS tak disentuh): ──
@@ -26,14 +29,15 @@
 COMPOSE := docker compose -f docker-compose.lab.yml
 BASE    ?= http://localhost:8080
 
-.PHONY: lab lab-up lab-seed lab-logs lab-down lab-ps lab-update lab-restart lab-stop
+.PHONY: lab lab-up lab-seed lab-network lab-logs lab-down lab-ps lab-update lab-restart lab-stop
 
 ## lab: bangun image, nyalakan seluruh stack + simulator, lalu seed via API
-lab: lab-up lab-seed
+lab: lab-up lab-seed lab-network
 	@printf '\n\033[1;32m✔ Lab siap.\033[0m Buka %s → login \033[1madmin@demo.ftth / admin12345\033[0m\n' "$(BASE)"
 	@printf '  • Armada OLT palsu terpantau di menu Jaringan (server polling SNMP tiap ~30 dtk)\n'
 	@printf '  • Sesi PPPoE + trafik hidup di detail pelanggan (BRAS/RADIUS)\n'
 	@printf '  • CPE/ONT palsu milik Budi Lab di menu CPE (GenieACS TR-069)\n'
+	@printf '  • POP Tebet di peta: 10 ODP berantai + 50 pelanggan + jalur kabel menyusuri jalan\n'
 
 ## lab-up: bangun + jalankan stack Docker BERTAHAP (blokir sampai server sehat)
 lab-up:
@@ -65,6 +69,12 @@ lab-up:
 ## lab-seed: daftarkan OLT + BRAS + CPE ke simulator lewat API (idempoten)
 lab-seed:
 	BASE=$(BASE) bash docker/lab/seed-lab.sh
+
+## lab-network: gambar topologi POP Tebet (3 ODC, 10 ODP, 50 pelanggan, kabel ikut jalan) — idempoten.
+## Dipisah dari lab-seed karena tak menyentuh simulator sama sekali: murni menggambar peta lewat API,
+## jadi aman diulang sendirian saat cuma butuh mengembalikan data demo yang kehapus.
+lab-network:
+	BASE=$(BASE) python3 docker/lab/seed-demo-network.py
 
 ## lab-logs: ikuti log gabungan semua service
 lab-logs:
