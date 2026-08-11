@@ -1855,6 +1855,9 @@ export function MapPage() {
   }
 
   const saveNewCable = async (form: {
+    // Kosong = server yang merakit kodenya dari kode kedua ujung, lengkap dengan
+    // akhiran angka bila sudah ada yang memakainya.
+    code?: string
     name: string
     coreCount: number
     // Jenis yang DIPILIH operator di panel — sama dengan tersirat dari sepasang
@@ -1874,7 +1877,8 @@ export function MapPage() {
     if (!state?.from || !state?.to || !state.cableType) return
     const odpId = state.from.id
     try {
-      await api.post('/api/cables', {
+      const saved = await api.post<CableView>('/api/cables', {
+        code: form.code,
         name: form.name,
         cableType: form.cableType,
         coreCount: form.coreCount,
@@ -1905,7 +1909,10 @@ export function MapPage() {
           )
         }
       }
-      toast.success(`Kabel tersimpan (${Math.round(state.lengthMeters)} m)${portNote}`)
+      // Kode hasilnya disebut, bukan sekadar "tersimpan": bila tadi bentrok, server
+      // memberinya akhiran angka — dan yang harus ditulis di label selubung adalah
+      // kode yang benar-benar tersimpan, bukan yang sempat terlihat di formulir.
+      toast.success(`Kabel ${saved.code} tersimpan (${Math.round(state.lengthMeters)} m)${portNote}`)
       cancelTool()
       refreshTiles()
       void refreshImpacted()
@@ -1987,6 +1994,26 @@ export function MapPage() {
       toast.success(`Data fisik ${updated.name} diperbarui`)
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal memperbarui data fisik kabel')
+    }
+  }
+
+  /**
+   * Ganti kode kabel dari panelnya — jalan pulang bagi ruas yang terlanjur berkode
+   * buruk, termasuk kabel lama yang kodenya masih UUID hasil generate versi dulu.
+   * Tanpa ini, satu-satunya cara merapikan label adalah menghapus kabelnya dan
+   * menggambar ulang — yang berarti ikut membuang seluruh baris meja sambung,
+   * riwayat OTDR, dan core yang sudah terpakai pelanggan.
+   */
+  const renameCable = async (c: CableView, code: string) => {
+    const next = code.trim().toUpperCase()
+    if (next === '' || next === c.code) return
+    try {
+      const updated = await api.put<CableView>(`/api/cables/${c.id}`, { ...cableRequestBody(c), code: next })
+      setCable(updated)
+      refreshTiles()
+      toast.success(`Kode kabel jadi ${updated.code}`)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal mengganti kode kabel')
     }
   }
 
@@ -2365,6 +2392,7 @@ export function MapPage() {
             onReleased={() => void reloadCable(cable.id)}
             onReuse={() => void reuseCable(cable)}
             onPhysicalChange={(patch) => void saveCablePhysical(cable, patch)}
+            onRename={(code) => void renameCable(cable, code)}
             onClose={() => setCable(null)}
           />
         )}
@@ -2869,6 +2897,32 @@ const TYPE_LABEL: Record<CableType, string> = {
  */
 const DEFAULT_CORES: Record<CableType, number> = { BACKBONE: 96, FEEDER: 24, DISTRIBUTION: 12, DROP: 1 }
 
+/** Awalan kode per jenis — cermin [CableNaming] di server, supaya isian form = yang tersimpan. */
+const CODE_PREFIX: Record<CableType, string> = { BACKBONE: 'BB', FEEDER: 'FDR', DISTRIBUTION: 'DIST', DROP: 'DROP' }
+
+/** Batas panjang kode yang ditegakkan domain; lebih dari ini ditolak server. */
+const CODE_MAX = 40
+
+/**
+ * Merakit kode kabel dari jenis + kode kedua ujungnya — bentuk yang bisa DIUCAPKAN
+ * lewat radio dan ditulis tangan di label selubung ("DIST-ODC-JKT-01-ODP-07").
+ *
+ * Aturannya sengaja sama persis dengan `CableNaming` di server: yang tampil di kolom
+ * inilah yang dikirim, jadi operator tak pernah melihat satu kode lalu menemukan kode
+ * lain tersimpan. Ujung yang kepanjangan dipangkas dari DEPAN — bagian pembeda sebuah
+ * kode aset (nomor urutnya) selalu ada di belakang.
+ */
+function autoCableCode(type: CableType, parts: string[]): string {
+  const prefix = CODE_PREFIX[type]
+  const cleaned = parts
+    .map((p) => p.toUpperCase().replace(/[^A-Z0-9._/-]/g, '-').replace(/-{2,}/g, '-').replace(/^-+|-+$/g, ''))
+    .filter((p) => p !== '')
+  if (cleaned.length === 0) return prefix
+  const perPart = Math.max(1, Math.floor((CODE_MAX - prefix.length - cleaned.length) / cleaned.length))
+  const trimmed = cleaned.map((p) => p.slice(-perPart).replace(/^-+|-+$/g, '')).filter((p) => p !== '')
+  return [prefix, ...trimmed].join('-')
+}
+
 function formatLength(meters: number): string {
   return meters >= 1000 ? `${(meters / 1000).toFixed(2)} km` : `${Math.round(meters)} m`
 }
@@ -2963,6 +3017,8 @@ function SaveCablePanel({
   canAssignPort: boolean
   onCancel: () => void
   onSave: (form: {
+    /** Kode di label selubung; kosong = server yang merakitnya. */
+    code?: string
     name: string
     coreCount: number
     /** Jenis akhir yang dipilih operator — sama dengan tersirat kecuali joint box→joint box. */
@@ -2983,6 +3039,12 @@ function SaveCablePanel({
   const [type, setType] = useState<CableType>(cableType)
   const [name, setName] = useState(`${TYPE_LABEL[cableType]} ${from} → ${to}`)
   const [coreCount, setCoreCount] = useState(DEFAULT_CORES[cableType])
+  const [code, setCode] = useState('')
+  // Sekali kolom kode disentuh, ia berhenti ikut berubah. Kode yang DIKETIK orang
+  // biasanya sudah menuruti penomoran perusahaan, dan menimpanya diam-diam cuma
+  // karena jenis/port diperbaiki setelahnya berarti kertas yang dibawa ke lapangan
+  // berbeda dari yang tersimpan.
+  const [codeTouched, setCodeTouched] = useState(false)
   // Sengaja tanpa prasetel per jenis kabel: menebak "drop pasti udara" akan
   // menuliskan hasil survei palsu ke basis data, dan yang membayarnya adalah
   // teknisi yang datang bertangga ke gangguan di dalam duct.
@@ -3071,6 +3133,21 @@ function SaveCablePanel({
     }
   }, [customerDrop, fromId, toId])
 
+  /**
+   * Bunyi kode yang akan dipakai — persis aturan server, jadi kolomnya bisa dibiarkan
+   * apa adanya. Drop ke pelanggan berlabuh pada ODP + nomor slotnya, bukan pada kode
+   * pelanggan: begitulah orang lapangan menyebutnya ("drop dari kotak itu, port tiga"),
+   * dan kode pelanggan memang tak dikenal modul jaringan.
+   */
+  const autoCode = useMemo(
+    () => autoCableCode(type, customerDrop ? [from, selectedPort != null ? `P${selectedPort}` : ''] : [from, to]),
+    [type, customerDrop, from, to, selectedPort],
+  )
+
+  useEffect(() => {
+    if (!codeTouched) setCode(autoCode)
+  }, [autoCode, codeTouched])
+
   // Kesiapan simpan: feeder/distribusi WAJIB port sumber terpilih. Pengecualian
   // "daftar kosong boleh" berlaku untuk semua simpul yang tak menyebut port asal
   // (POP, joint box, ODF, kabinet & kotak — lihat [portlessSource]). OLT tanpa PON
@@ -3095,6 +3172,11 @@ function SaveCablePanel({
 
   const submit = () =>
     onSave({
+      // Kode yang belum disentuh dikirim KOSONG walau kolomnya terisi: isinya cuma
+      // pratinjau dari aturan yang sama, dan membiarkan server yang merakit membuat
+      // ruas kedua antara sepasang kotak yang sama dapat akhiran angka — bukan gagal
+      // simpan gara-gara bentrok nama yang tak pernah diketik siapa pun.
+      code: codeTouched ? code.trim() || undefined : undefined,
       name,
       coreCount,
       cableType: type,
@@ -3145,6 +3227,24 @@ function SaveCablePanel({
             </MessageBarBody>
           </MessageBar>
         )}
+        {/* Kode di atas nama: inilah yang disebut lewat radio dan ditulis di label
+            selubung, sedangkan nama cuma dibaca di layar. Terisi sendiri supaya tak
+            seorang pun tergoda mengosongkannya, tapi tetap bisa ditimpa penomoran
+            perusahaan yang sudah berjalan. */}
+        <TextField
+          label="Kode"
+          value={code}
+          maxLength={CODE_MAX}
+          hint={
+            codeTouched
+              ? 'Dipakai apa adanya — kalau sudah dipakai kabel lain, simpannya ditolak.'
+              : 'Terisi otomatis dari kedua ujungnya. Biarkan saja: ruas kedua ke tujuan yang sama otomatis diberi akhiran angka.'
+          }
+          onChange={(_, data) => {
+            setCodeTouched(true)
+            setCode(data.value)
+          }}
+        />
         <TextField label="Nama" value={name} onChange={(_, data) => setName(data.value)} />
         <TextField
           label="Jumlah core"
@@ -3409,6 +3509,7 @@ function CablePanel({
   onReleased,
   onReuse,
   onPhysicalChange,
+  onRename,
   onClose,
 }: {
   cable: CableView
@@ -3432,6 +3533,8 @@ function CablePanel({
   onReuse: () => void
   /** Simpan seketika; hanya bidang yang disebut yang berubah. */
   onPhysicalChange: (patch: { installation?: CableInstallation | null; ownership?: CableOwnership }) => void
+  /** Ganti kode di label selubung — jalur perapian kabel lama yang kodenya UUID. */
+  onRename: (code: string) => void
   onClose: () => void
 }) {
   // Hanya drop yang punya tombol ini: ruas distribusi menyuapi banyak rumah, dan
@@ -3441,6 +3544,12 @@ function CablePanel({
   const abandoned = cable.status === 'ABANDONED'
   const releasable = canReleaseDrop && cable.cableType === 'DROP' && !abandoned
   const [releasing, setReleasing] = useState(false)
+  // Null = tak sedang diganti. Kode disunting di tempat, bukan lewat "Edit jalur":
+  // merapikan label tak semestinya menyeret rute yang sudah benar ke dalam risiko
+  // tergeser satu titik.
+  const [renaming, setRenaming] = useState<string | null>(null)
+  // Kabel dari versi lama: kodenya UUID hasil generate, mustahil dieja lewat radio.
+  const legacyCode = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(cable.code)
   // Membebaskan core mengubah isi "Kelola core" yang memuat dirinya sendiri;
   // menaikkan angka ini memaksanya membaca ulang dari server.
   const [coreEpoch, setCoreEpoch] = useState(0)
@@ -3464,8 +3573,10 @@ function CablePanel({
 
   return (
     <aside className="map-panel blade">
-      {/* Nama yang memimpin, bukan kode: kode kabel kerap auto-generate (UUID) sehingga
-          tak dikenali operator — sedangkan namanya menyebut kedua ujung ruas. */}
+      {/* Nama yang memimpin, kode mengekor: nama ditulis sebagai kalimat ("Distribusi
+          ODC-01 → ODP-07"), sedangkan kode dipakai saat menyebut ruas ini ke orang
+          lain. Keduanya disebut di sini supaya panel yang terbuka dari peta langsung
+          cocok dengan kertas yang dipegang teknisi. */}
       <BladeHead title={cable.name} subtitle={`Kabel ${TYPE_LABEL[cable.cableType]} · ${cable.code}`} onClose={onClose} />
       {(primary || actions.length > 0) && <CommandBar primary={primary} actions={actions} />}
 
@@ -3490,7 +3601,61 @@ function CablePanel({
         )}
 
 
+        {/* Kabel warisan: kodenya UUID, dan itu bukan sekadar jelek dipandang —
+            tak ada yang sanggup mengejanya lewat radio ke teknisi di tiang. Yang
+            berhak menyunting ditawari merapikannya di tempat, tanpa menggambar
+            ulang ruasnya (yang berarti membuang meja sambung & riwayat OTDR-nya). */}
+        {legacyCode && canEdit && renaming == null && (
+          <MessageBar intent="warning">
+            <MessageBarBody>
+              Kode ruas ini masih bergaya UUID — tak bisa disebut lewat radio maupun ditulis di
+              label selubung. Ganti jadi sesuatu seperti DIST-ODC-01-ODP-07 lewat “Ubah” di baris
+              Kode; sambungan, core, dan riwayat ukurnya tetap utuh.
+            </MessageBarBody>
+          </MessageBar>
+        )}
+
+        {/* Penyuntingan kode dibentangkan penuh, di luar daftar ringkas: kode bisa
+            sepanjang 40 karakter dan kolom nilai di daftar itu cuma selebar dua
+            kata — mengetik di sana berarti mengetik yang tak terbaca. */}
+        {renaming != null && (
+          <div className="stack" style={{ gap: '0.4rem' }}>
+            <TextField
+              label="Kode kabel"
+              value={renaming}
+              maxLength={CODE_MAX}
+              hint="Yang tertulis di label selubung & disebut lewat radio. Sambungan, core, dan riwayat ukur tak ikut berubah."
+              onChange={(_, data) => setRenaming(data.value)}
+            />
+            <div className="row" style={{ gap: '0.4rem' }}>
+              <Button
+                variant="primary"
+                size="small"
+                onClick={() => {
+                  onRename(renaming)
+                  setRenaming(null)
+                }}
+              >
+                Simpan kode
+              </Button>
+              <Button variant="subtle" size="small" onClick={() => setRenaming(null)}>
+                Batal
+              </Button>
+            </div>
+          </div>
+        )}
+
         <dl className="essentials">
+          <Ess label="Kode">
+            <span className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
+              <span>{cable.code}</span>
+              {canEdit && renaming == null && (
+                <Button variant="subtle" size="small" onClick={() => setRenaming(cable.code)}>
+                  Ubah
+                </Button>
+              )}
+            </span>
+          </Ess>
           <Ess label="Status">
             <StatusBadge status={cable.status} />
           </Ess>
