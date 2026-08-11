@@ -22,6 +22,30 @@ enum class CableType(
     val validTo: Set<NetworkNodeKind>,
 ) {
     /**
+     * Ruas antar-POP atau antar-kabinet — tulang punggung yang tak membawa
+     * pelanggan satu pun secara langsung.
+     *
+     * Banyak ISP lokal terbiasa menyebut feeder sebagai "backbone", dan selama
+     * POP-nya cuma satu kedua istilah itu memang menunjuk kabel yang sama.
+     * Bedanya baru terasa begitu POP kedua berdiri: kabel antar-POP tidak punya
+     * ODC di ujungnya, jadi aturan feeder ("harus berakhir di kabinet") akan
+     * menolaknya — dan operator terpaksa menggambar ODC bohongan supaya kabelnya
+     * mau tersimpan. Jenis tersendiri ini yang menghapus dorongan itu.
+     *
+     * Kedua ujungnya harus SEDERAJAT — lihat [assertSameTier].
+     */
+    BACKBONE(
+        setOf(
+            NetworkNodeKind.SITE, NetworkNodeKind.OLT, NetworkNodeKind.ODF,
+            NetworkNodeKind.ODC, NetworkNodeKind.JOINT_BOX,
+        ),
+        setOf(
+            NetworkNodeKind.SITE, NetworkNodeKind.OLT, NetworkNodeKind.ODF,
+            NetworkNodeKind.ODC, NetworkNodeKind.JOINT_BOX,
+        ),
+    ),
+
+    /**
      * POP → ODC. Kabel berkapasitas besar dari POP ke kabinet distribusi.
      *
      * ODF sah di kedua sisi: di POP asal ia titik berangkat yang benar (kabel luar
@@ -55,8 +79,36 @@ enum class CableType(
             throw ValidationException("Kabel $name tidak boleh berakhir di ${to.kind}, harus salah satu dari $validTo")
         }
         if (from.ref == to.ref) throw ValidationException("Kabel tidak boleh berawal dan berakhir di simpul yang sama")
+        if (this == BACKBONE) assertSameTier(from, to)
         assertPortShape(from)
         assertPortShape(to)
+    }
+
+    /**
+     * Backbone menghubungkan yang SEDERAJAT: POP dengan POP, atau kabinet dengan
+     * kabinet. Turun satu tingkat — POP ke kabinet — sudah punya namanya sendiri
+     * sejak dulu, yaitu FEEDER, dan membiarkan dua nama untuk benda yang sama
+     * membuat laporan panjang kabel per jenis kehilangan artinya.
+     *
+     * Joint box tak punya derajat: ia cuma tempat dua haspel bertemu, jadi ia
+     * cocok di sisi mana pun tanpa ikut menentukan tingkat.
+     */
+    private fun assertSameTier(from: NetworkEndpoint, to: NetworkEndpoint) {
+        val a = tierOf(from.kind)
+        val b = tierOf(to.kind)
+        if (a != null && b != null && a != b) {
+            throw ValidationException(
+                "Kabel BACKBONE menghubungkan simpul sederajat (POP ke POP, atau ODC ke ODC). " +
+                    "Untuk ${from.kind} ke ${to.kind} pakai FEEDER.",
+            )
+        }
+    }
+
+    /** Tingkat hierarki sebuah simpul; null = tak bertingkat (joint box). */
+    private fun tierOf(kind: NetworkNodeKind): String? = when (kind) {
+        NetworkNodeKind.SITE, NetworkNodeKind.OLT, NetworkNodeKind.ODF -> "POP"
+        NetworkNodeKind.ODC -> "KABINET"
+        else -> null
     }
 
     /**

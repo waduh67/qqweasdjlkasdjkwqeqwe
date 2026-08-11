@@ -297,7 +297,11 @@ class CableService(
                     odpRepository.save(odp)
                 }
             }
-            CableType.DROP -> Unit
+            // BACKBONE tak pernah menentukan induk siapa pun: ruas antar-POP tak
+            // punya simpul hilir, dan ODC ↔ ODC memang dipasang justru supaya ada
+            // dua jalan menuju kabinet yang sama. Menyetel uplink dari sini akan
+            // membalik induk kabinet setiap kali ring digambar dari arah lain.
+            CableType.BACKBONE, CableType.DROP -> Unit
         }
     }
 
