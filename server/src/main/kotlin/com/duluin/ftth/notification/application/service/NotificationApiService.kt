@@ -32,17 +32,33 @@ class NotificationApiService(
     private val templates: WhatsAppTemplateResolver,
     private val dispatcher: MessageDispatcher,
     private val emailDispatcher: EmailDispatcher,
+    private val branding: EmailBrandingResolver,
+    private val renderer: EmailRenderer,
 ) : NotificationApi {
 
     @Transactional(readOnly = true)
     override fun sendTransactional(message: TransactionalMessage): TransactionalDelivery {
         val outcome = when (message.channel) {
-            TransactionalChannel.EMAIL ->
-                emailDispatcher.send(message.destination, message.subject, message.body)
+            TransactionalChannel.EMAIL -> sendEmail(message)
             TransactionalChannel.WHATSAPP -> sendWhatsApp(message)
         }
         return TransactionalDelivery(delivered = outcome.status == DeliveryStatus.SENT, detail = outcome.detail)
     }
+
+    /**
+     * Subjeknya datang dari pemanggil (module portal), bukan dari [EmailSubjectResolver]:
+     * pesan di sini tak lahir dari pemicu yang punya baris subjek sendiri. Yang tetap
+     * dipinjam adalah BUNGKUSNYA, supaya email pemulihan password tak tampak asing di
+     * kotak masuk dibanding pemberitahuan lain dari ISP yang sama.
+     */
+    private fun sendEmail(message: TransactionalMessage) = emailDispatcher.send(
+        renderer.render(
+            to = message.destination,
+            subject = message.subject,
+            body = message.body,
+            identity = branding.forCurrentTenant(),
+        ),
+    )
 
     private fun sendWhatsApp(message: TransactionalMessage): DeliveryOutcome {
         val settings = settingsRepo.find() ?: NotificationSettings.defaultFor(TenantContext.tenantId())

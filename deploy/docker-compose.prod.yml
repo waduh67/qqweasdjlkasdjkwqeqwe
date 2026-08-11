@@ -184,12 +184,20 @@ services:
       # boleh menumpang gateway WA tenant — mis. kode "lupa password" portal pelanggan.
       # FTTH_MAIL_FROM kosong = kanal email MATI: pesannya cuma masuk log server, jadi
       # pelanggan yang cuma punya email tak akan pernah bisa memulihkan akunnya sendiri.
+      #
+      # Blok ini CADANGAN. Setelan yang sama bisa diisi dari layar Setelan Email platform,
+      # dan baris di DB yang host-nya terisi menang atas nilai di sini — keunggulannya:
+      # ganti relay SMTP tak lagi menuntut akses shell + restart container.
       FTTH_MAIL_HOST: ${FTTH_MAIL_HOST:-}
       FTTH_MAIL_PORT: ${FTTH_MAIL_PORT:-587}
       FTTH_MAIL_USERNAME: ${FTTH_MAIL_USERNAME:-}
       FTTH_MAIL_PASSWORD: ${FTTH_MAIL_PASSWORD:-}
       FTTH_MAIL_FROM: ${FTTH_MAIL_FROM:-}
       FTTH_MAIL_FROM_NAME: ${FTTH_MAIL_FROM_NAME:-NetOps Console}
+      # URL absolut aplikasi untuk merangkai <img src> logo di badan email. Kosong = email
+      # tetap terkirim, hanya tanpa logo (klien email tak mengerti path relatif). Biasanya
+      # sama dengan domain aplikasi, mis. https://app.contoh.net.
+      FTTH_MAIL_PUBLIC_BASE_URL: ${FTTH_MAIL_PUBLIC_BASE_URL:-}
       # URL publik aplikasi untuk halaman balik gateway Pivot (mode REDIRECT WAJIB URL balik:
       # <base>/paid, /failed, /expired). Kosong → charge Pivot gagal jelas & tautan bayar tak
       # terbit ("Tautan bayar belum siap"). Biasanya = domain aplikasi (sama dgn VPN base URL).

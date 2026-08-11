@@ -49,6 +49,7 @@ import { NotificationSettingsPage } from './pages/NotificationSettingsPage'
 import { PaymentGatewaySettingsPage } from './pages/PaymentGatewaySettingsPage'
 import { TaxSettingsPage } from './pages/TaxSettingsPage'
 import { PlatformBillingSettingsPage } from './pages/PlatformBillingSettingsPage'
+import { PlatformEmailSettingsPage } from './pages/PlatformEmailSettingsPage'
 import { PaymentSimulationPage } from './pages/PaymentSimulationPage'
 import { SubscriptionPage } from './pages/SubscriptionPage'
 import { ReportsPage } from './pages/ReportsPage'
@@ -436,6 +437,14 @@ function OperatorApp() {
               element={
                 <RequirePermission permission="platform.ops.view">
                   <PlatformJobsPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="email"
+              element={
+                <RequirePermission permission="platform.email.view">
+                  <PlatformEmailSettingsPage />
                 </RequirePermission>
               }
             />

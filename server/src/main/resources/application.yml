@@ -13,8 +13,13 @@ spring:
     locations: classpath:db/migration
   mail:
     # SMTP milik PLATFORM (satu untuk semua tenant) — dipakai pesan transaksional yang tak
-    # boleh bergantung pada gateway WA tenant, mis. kode pemulihan password portal. Host
-    # kosong = email hanya dicatat ke log (aman untuk dev; lihat SmtpEmailDispatcher).
+    # boleh bergantung pada gateway WA tenant, mis. kode pemulihan password portal.
+    #
+    # CADANGAN, bukan lagi satu-satunya sumber: sejak layar Setelan Email platform ada
+    # (`/api/platform/email-settings`), baris di DB yang host-nya terisi MENANG atas blok
+    # ini. Nilai di sini dipakai selama host di DB masih kosong — deploy lama karena itu
+    # tetap berjalan tanpa disentuh. Dua-duanya kosong = email hanya dicatat ke log (aman
+    # untuk dev; lihat SmtpSenderFactory & SmtpEmailDispatcher).
     host: ${FTTH_MAIL_HOST:}
     port: ${FTTH_MAIL_PORT:587}
     username: ${FTTH_MAIL_USERNAME:}
@@ -103,10 +108,15 @@ ftth:
   cors:
     allowed-origins: ${FTTH_CORS_ORIGINS:http://localhost:5173}
   mail:
-    # Alamat pengirim. KOSONG = SMTP dianggap belum disetel dan email jatuh ke log — jadi
-    # ini yang menghidupkan kanal email, bukan `spring.mail.host` semata.
+    # Alamat pengirim CADANGAN, dipakai bila setelan email platform di DB belum mengisinya.
+    # Kosong di dua-duanya = SMTP dianggap belum disetel dan email jatuh ke log — jadi ini
+    # yang menghidupkan kanal email, bukan `spring.mail.host` semata.
     from: ${FTTH_MAIL_FROM:}
     from-name: ${FTTH_MAIL_FROM_NAME:NetOps Console}
+    # URL absolut aplikasi untuk merangkai <img src> logo di badan email. Klien email tak
+    # mengerti path relatif, jadi kosong = email tetap terkirim, hanya tanpa logo. Setelan
+    # yang sama di layar platform menang atas nilai ini.
+    public-base-url: ${FTTH_MAIL_PUBLIC_BASE_URL:}
   bootstrap:
     platform-admin-email: ${FTTH_PLATFORM_ADMIN_EMAIL:root@ftth.local}
     platform-admin-password: ${FTTH_PLATFORM_ADMIN_PASSWORD:rootadmin123}

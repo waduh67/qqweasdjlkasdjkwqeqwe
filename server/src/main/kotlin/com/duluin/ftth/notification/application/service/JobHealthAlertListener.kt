@@ -27,6 +27,8 @@ import java.time.Duration
 @Component
 class JobHealthAlertListener(
     private val email: EmailDispatcher,
+    private val branding: EmailBrandingResolver,
+    private val renderer: EmailRenderer,
     private val properties: ObservabilityProperties,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -50,7 +52,11 @@ class JobHealthAlertListener(
     private fun deliver(to: String, subject: String, body: String) {
         // Kegagalan kirim TIDAK dilempar: peristiwanya terbit dari utas penjaga, dan penjaga
         // yang mati gara-gara SMTP mati adalah cara paling konyol kehilangan pemantauan.
-        val outcome = runCatching { email.send(to, subject, body, BRAND) }.getOrElse { failure ->
+        // Merek yang dipakai selalu merek PLATFORM — timpaan tenant tak relevan di sini, dan
+        // utas penjaga memang berjalan tanpa konteks tenant sama sekali.
+        val outcome = runCatching {
+            email.send(renderer.render(to, subject, body, branding.platformOnly()))
+        }.getOrElse { failure ->
             log.warn("Peringatan job gagal dikirim ke {}: {}", to, failure.message, failure)
             return
         }

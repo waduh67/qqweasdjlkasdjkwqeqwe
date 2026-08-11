@@ -118,8 +118,10 @@ class DeleteTenantIT {
                 ).setParameter("id", customerId).setParameter("t", tenantId)
                     .setParameter("code", "CUST-$suffix").executeUpdate()
                 em.createNativeQuery(
-                    "INSERT INTO odp (id, tenant_id, code, name, location, splitter_ratio, capacity) " +
-                        "VALUES (:id, :t, :code, 'ODP Test', ST_SetSRID(ST_MakePoint(106.8, -6.2), 4326), '1:8', 8)",
+                    // `splitter_ratio` tak lagi ada di sini sejak V92 memindahkan rasio ke tabel
+                    // `splitter` tersendiri (satu ODP boleh punya lebih dari satu kaki).
+                    "INSERT INTO odp (id, tenant_id, code, name, location, capacity) " +
+                        "VALUES (:id, :t, :code, 'ODP Test', ST_SetSRID(ST_MakePoint(106.8, -6.2), 4326), 8)",
                 ).setParameter("id", odpId).setParameter("t", tenantId)
                     .setParameter("code", "ODP-$suffix").executeUpdate()
                 em.createNativeQuery(

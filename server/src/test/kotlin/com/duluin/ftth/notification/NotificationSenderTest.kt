@@ -9,6 +9,8 @@ import com.duluin.ftth.notification.application.port.outbound.EmailDispatcher
 import com.duluin.ftth.notification.application.port.outbound.MessageDispatcher
 import com.duluin.ftth.notification.application.port.outbound.NotificationSettingsRepository
 import com.duluin.ftth.notification.application.port.outbound.NotificationTemplateRepository
+import com.duluin.ftth.notification.application.service.EmailRenderer
+import com.duluin.ftth.notification.application.service.EmailSubjectResolver
 import com.duluin.ftth.notification.application.service.NotificationSender
 import com.duluin.ftth.notification.application.service.NotificationSender.Recipient
 import com.duluin.ftth.notification.application.service.WhatsAppTemplateResolver
@@ -24,9 +26,6 @@ import com.duluin.ftth.notification.domain.model.TemplateCategory
 import com.duluin.ftth.notification.domain.model.TemplateStatus
 import com.duluin.ftth.notification.domain.model.WhatsAppGateway
 import com.duluin.ftth.notification.domain.model.WhatsAppProvider
-import com.duluin.ftth.tenancy.TenantApi
-import com.duluin.ftth.tenancy.TenantRef
-import com.duluin.ftth.tenancy.TenantStatus
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -269,7 +268,7 @@ class NotificationSenderTest {
             )
         }
 
-        assertThat(emails.fromNames).containsExactly(TENANT_NAME)
+        assertThat(emails.fromNames).containsExactly(DEMO_TENANT_NAME)
         assertThat(emails.subjects).containsExactly("Layanan internet Anda sudah aktif")
     }
 
@@ -343,7 +342,13 @@ class NotificationSenderTest {
 
     // --- perkakas uji ---
 
-    /** Merakit sender dengan port palsu; tiap uji cukup menyebut yang benar-benar diamatinya. */
+    /**
+     * Merakit sender dengan port palsu; tiap uji cukup menyebut yang benar-benar diamatinya.
+     *
+     * Rantai merek & subjeknya dibiarkan polos (platform belum menyetel apa pun, tenant tak
+     * menimpa apa pun) supaya yang diuji di sini tetap matriks keputusan sender — pewarisan
+     * merek dan subjek punya kelas ujinya sendiri.
+     */
     private fun sender(
         settings: NotificationSettings?,
         broadcasts: BroadcastRepository,
@@ -356,7 +361,9 @@ class NotificationSenderTest {
         templates = WhatsAppTemplateResolver(templates),
         dispatcher = dispatcher,
         emailDispatcher = emails,
-        tenants = FakeTenantApi(tenantId),
+        branding = brandingResolver(tenants = FakeTenantApi(tenantId)),
+        subjects = EmailSubjectResolver(FakeEmailSubjectRepository()),
+        renderer = EmailRenderer(),
     )
 
     /** Template siap-pakai; [remoteId] non-null berarti penyedia sudah menjawab pengajuannya. */
@@ -451,34 +458,6 @@ class NotificationSenderTest {
         }
     }
 
-    /** Mengembalikan SENT untuk tiap surat; mencatat tujuan, subjek, dan nama pengirimnya. */
-    private class RecordingEmailDispatcher : EmailDispatcher {
-        val sent = mutableListOf<String>()
-        val subjects = mutableListOf<String>()
-        val fromNames = mutableListOf<String?>()
-        override fun send(to: String, subject: String, body: String, fromName: String?): DeliveryOutcome {
-            sent += to
-            subjects += subject
-            fromNames += fromName
-            return DeliveryOutcome(DeliveryStatus.SENT, "ok")
-        }
-    }
-
-    /** Hanya [findById] yang dipakai sender (nama ISP untuk kop email); sisanya bukan urusannya. */
-    private class FakeTenantApi(private val tenantId: UUID) : TenantApi {
-        override fun findById(id: UUID): TenantRef? =
-            TenantRef(id, "demo", TENANT_NAME, TenantStatus.ACTIVE).takeIf { id == tenantId }
-
-        override fun findBySlug(slug: String): TenantRef = notUsed()
-        override fun requireById(id: UUID): TenantRef = notUsed()
-        override fun platformTenantId(): UUID = notUsed()
-        override fun findActiveTenantIds(): List<UUID> = notUsed()
-        override fun ensureTenant(slug: String, name: String): TenantRef = notUsed()
-        override fun suspend(id: UUID): TenantRef = notUsed()
-        override fun activate(id: UUID): TenantRef = notUsed()
-        private fun notUsed(): Nothing = throw UnsupportedOperationException("tak dipakai di uji ini")
-    }
-
     private class CapturingBroadcastRepo : BroadcastRepository {
         var saved: Broadcast? = null
         override fun save(broadcast: Broadcast): Broadcast {
@@ -500,9 +479,5 @@ class NotificationSenderTest {
 
         override fun findById(id: UUID): Broadcast? = throw UnsupportedOperationException()
         override fun recent(request: PageRequest): Page<BroadcastDigest> = throw UnsupportedOperationException()
-    }
-
-    private companion object {
-        const val TENANT_NAME = "PT Sinar Jaya Net"
     }
 }
