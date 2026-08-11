@@ -12,7 +12,7 @@ import {
 } from '../api/notification'
 import { useCan } from '../auth/useCan'
 import { Button, EmptyState, SelectField, TextField } from '@/components/atoms'
-import { WhatsAppTemplateCard } from '@/components/organisms'
+import { TenantEmailBrandingCard, WhatsAppTemplateCard } from '@/components/organisms'
 import { Checkbox } from '@fluentui/react-components'
 import { useToast } from '@/system'
 import { IconAlert } from '@/components/atoms/icons'
@@ -351,6 +351,9 @@ export function NotificationSettingsPage() {
           alamat email dilewati dan tercatat di riwayat.
         </p>
       </div>
+
+      {/* ---- Identitas & tampilan email (timpaan atas bawaan platform) ---- */}
+      <TenantEmailBrandingCard manage={manage} />
 
       {/* ---- Template pesan WhatsApp ---- */}
       <WhatsAppTemplateCard templateReady={form.templateReady} />

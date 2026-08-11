@@ -25,6 +25,9 @@ object PermissionCatalog {
         platform("platform.subscription.manage", "Kelola biaya bulanan, tagihan & pembayaran langganan tenant")
         // Kesehatan proses server sendiri (pekerjaan latar) — lintas-tenant, bukan urusan ISP.
         platform("platform.ops.view", "Lihat kesehatan pekerjaan latar server")
+        // Relay SMTP + tampilan bawaan email: satu untuk semua tenant, jadi wewenang platform.
+        platform("platform.email.view", "Lihat setelan email & template platform")
+        platform("platform.email.manage", "Kelola SMTP, logo & template email platform")
 
         // IAM
         perm("iam.user.view", "Lihat pengguna")

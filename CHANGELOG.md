@@ -6,6 +6,41 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-11 — Setelan email platform + template & logo yang bisa ditimpa tenant
+
+**Ditambahkan**
+- **Layar Setelan Email platform** (`/platform/email`, izin baru `platform.email.view` /
+  `platform.email.manage`): server SMTP (host, port, kredensial, auth, STARTTLS), alamat &
+  nama pengirim, URL publik aplikasi, tampilan bawaan email (logo, warna aksen, footer,
+  tanda tangan), dan baris subjek per pemicu notifikasi. Password SMTP **write-only** —
+  tersimpan terenkripsi, yang kembali ke layar hanya penandanya.
+- **Timpaan per tenant** di Pengaturan Notifikasi: nama & alamat pengirim, logo, warna,
+  footer, tanda tangan, dan subjek per pemicu. Kolom yang dikosongkan **mewarisi**
+  setelan platform, dan tiap kolom menampilkan nilai warisannya sebagai placeholder.
+- **Email berangkat sebagai HTML berlogo** (multipart: HTML + teks polos). Logo disajikan
+  endpoint publik `/api/public/email-logo[/{tenantId}]` — klien email tak punya token, dan
+  alamat bertenant tetap menyajikan logo platform setelah tenant menekan "kembalikan ke
+  bawaan", supaya surat yang terlanjur terkirim tak berlubang.
+- **Pratinjau & kirim email uji** di kedua layar, menempuh jalur render dan transport yang
+  sama persis dengan email sungguhan.
+
+**Diubah**
+- **Sumber SMTP: baris DB menang, `spring.mail.*` jadi cadangan.** Deploy yang sudah
+  berjalan tetap mengirim tanpa disentuh selama host di DB masih kosong; setelan yang
+  disimpan dari layar admin langsung berlaku tanpa restart container.
+- **Alamat pengirim tenant dipakai apa adanya sebagai `From`, plus `Reply-To`** ke alamat
+  yang sama, disertai peringatan SPF/DKIM di UI — balasan pelanggan mendarat di tenant.
+- **Nama pengirim tanpa timpaan = nama ISP-nya**, bukan nama platform: pelanggan menerima
+  tagihan internetnya dari nama yang ia kenal.
+- Baris subjek notifikasi tak lagi dipaku di `NotificationSender`; konstantanya pindah ke
+  `EmailSubjectResolver` supaya bisa ditampilkan UI sebagai bawaan yang bisa ditimpa.
+
+**Diperbaiki**
+- **SMTP yang tak disetel di mana pun kembali jatuh ke mode catat-ke-log.** `spring.mail.host`
+  selalu hadir di `application.yml` (`${FTTH_MAIL_HOST:}`) walau nilainya kosong, sehingga
+  Spring Boot tetap membuat pengirim tanpa host — dan pengiriman gagal dengan "Mail server
+  host not specified" alih-alih tercatat di log.
+
 ### 2026-08-08 — Redesign Azure Fase 6: seragamkan aksi tabel ke menu `…` + pratinjau tagihan
 
 **Diubah**

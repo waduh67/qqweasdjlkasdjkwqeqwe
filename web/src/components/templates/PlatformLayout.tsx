@@ -13,6 +13,7 @@ import {
   IconFlask,
   IconGauge,
   IconLogout,
+  IconMail,
   IconMonitor,
   IconRoute,
   IconShield,
@@ -60,6 +61,7 @@ const GROUPS: NavGroup[] = [
   {
     label: 'Administrasi Platform',
     items: [
+      { to: '/platform/email', label: 'Setelan Email', permission: 'platform.email.view', icon: IconMail },
       { to: '/platform/users', label: 'Pengguna', permission: 'iam.user.view', icon: IconUsers },
       { to: '/platform/roles', label: 'Role & Izin', permission: 'iam.role.view', icon: IconShield },
       { to: '/platform/audit', label: 'Jejak Audit', permission: 'audit.log.view', icon: IconAudit },

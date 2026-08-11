@@ -11,7 +11,6 @@ import com.duluin.ftth.notification.domain.model.DeliveryStatus
 import com.duluin.ftth.notification.domain.model.NotificationChannel
 import com.duluin.ftth.notification.domain.model.NotificationSettings
 import com.duluin.ftth.notification.domain.model.NotificationTrigger
-import com.duluin.ftth.tenancy.TenantApi
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -42,7 +41,9 @@ class NotificationSender(
     private val templates: WhatsAppTemplateResolver,
     private val dispatcher: MessageDispatcher,
     private val emailDispatcher: EmailDispatcher,
-    private val tenants: TenantApi,
+    private val branding: EmailBrandingResolver,
+    private val subjects: EmailSubjectResolver,
+    private val renderer: EmailRenderer,
 ) {
     /**
      * Satu penerima: pelanggan (id opsional untuk siaran non-pelanggan) beserta alamatnya di
@@ -142,9 +143,13 @@ class NotificationSender(
     }
 
     /**
-     * Kanal email tak punya "gateway" untuk diresolusi — SMTP-nya milik platform. Yang
+     * Kanal email tak punya "gateway" untuk diresolusi — relay SMTP-nya milik platform. Yang
      * ditimbang hanyalah saklar tenant, sehingga siaran email yang diminta saat kanalnya
      * mati tetap meninggalkan jejak SKIPPED alih-alih diam-diam terkirim.
+     *
+     * Identitas & subjek diresolusi SEKALI per batch, bukan per penerima: keduanya sama untuk
+     * seluruh siaran, dan meresolusinya berulang berarti membaca setelan tenant sebanyak
+     * jumlah pelanggan terdampak.
      */
     private fun sendEmail(
         tenantId: UUID,
@@ -154,36 +159,16 @@ class NotificationSender(
         recipients: List<Recipient>,
         broadcast: Broadcast,
     ) {
-        val subject = subjectFor(trigger)
-        // Nama ISP, bukan nama platform: lihat alasannya di EmailDispatcher.send.
-        val senderName = tenants.findById(tenantId)?.name
+        val subject = subjects.forCurrentTenant(trigger)
+        val identity = branding.forTenant(tenantId)
         recipients.forEach { r ->
             val outcome = when {
                 !settings.emailEnabled -> DeliveryOutcome(DeliveryStatus.SKIPPED, "Kanal email nonaktif")
                 r.email.isNullOrBlank() -> DeliveryOutcome(DeliveryStatus.SKIPPED, "Alamat email kosong")
-                else -> emailDispatcher.send(r.email, subject, message, senderName)
+                else -> emailDispatcher.send(renderer.render(r.email, subject, message, identity))
             }
             broadcast.record(r.customerId, r.name, r.email, outcome.status, outcome.detail)
         }
-    }
-
-    /**
-     * Baris subjek per pemicu. Isi pesannya sendiri sudah dirangkai pemanggil dan dipakai apa
-     * adanya di badan email — hanya subjek yang perlu dijahit di sini karena WhatsApp tak
-     * mengenal padanannya.
-     */
-    private fun subjectFor(trigger: NotificationTrigger): String = when (trigger) {
-        NotificationTrigger.SUBSCRIPTION_ACTIVATED -> "Layanan internet Anda sudah aktif"
-        NotificationTrigger.SUBSCRIPTION_ISOLATED -> "Layanan internet Anda dinonaktifkan sementara"
-        NotificationTrigger.SUBSCRIPTION_TERMINATED -> "Layanan internet Anda telah dihentikan"
-        NotificationTrigger.INVOICE_DUE_SOON -> "Tagihan internet Anda akan jatuh tempo"
-        NotificationTrigger.INVOICE_OVERDUE -> "Tagihan internet Anda telah melewati jatuh tempo"
-        NotificationTrigger.WORK_ORDER_SCHEDULED -> "Jadwal kunjungan teknisi"
-        NotificationTrigger.INCIDENT_OPENED -> "Pemberitahuan gangguan layanan"
-        NotificationTrigger.MANUAL -> "Pemberitahuan dari penyedia layanan internet Anda"
-        // Tak pernah lewat sini (jalurnya NotificationApi, tanpa riwayat) — cabang ini ada
-        // supaya menambah pemicu baru memaksa memikirkan subjeknya, bukan diam-diam lolos.
-        NotificationTrigger.PORTAL_PASSWORD_RESET -> "Kode pemulihan password"
     }
 
     companion object {
