@@ -33,4 +33,17 @@ internal object AssetNaming {
 
     fun requiredAddress(value: String): String =
         address(value) ?: throw ValidationException("Alamat wajib diisi")
+
+    /**
+     * Catatan teknis kotak — "kunci di pos satpam", "tiang miring, pakai tangga
+     * panjang", "core 5-8 disisakan untuk klaster sebelah". Lebih longgar dari
+     * alamat karena isinya kalimat teknisi, bukan satu baris alamat.
+     */
+    fun notes(value: String?): String? = value?.trim()?.takeIf { it.isNotEmpty() }?.also {
+        if (it.length > MAX_NOTES_LENGTH) {
+            throw ValidationException("Catatan teknis maksimal $MAX_NOTES_LENGTH karakter")
+        }
+    }
+
+    const val MAX_NOTES_LENGTH = 1_000
 }

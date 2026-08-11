@@ -283,6 +283,41 @@ class NetworkEndToEndIT {
         put("/api/odcs/$odc", token, body(2))
     }
 
+    /**
+     * Tanggal pasang, dudukan, dan catatan teknis harus benar-benar pulang lagi
+     * lewat API. Kalau salah satu lapisan menelannya, teknisi berangkat tanpa tahu
+     * kotaknya di handhole dan kuncinya dititip di pos satpam — persis kegagalan
+     * yang bikin tim pulang tanpa hasil.
+     */
+    @Test
+    fun `data lapangan kotak tersimpan dan terbaca kembali`() {
+        val token = newTenantAdmin("fielddata")
+        val odp = buildChain(token)
+        val base = """"code":"ODP-X","name":"ODP X","location":{"longitude":106.995,"latitude":-6.245},"capacity":8"""
+
+        put(
+            "/api/odps/$odp", token,
+            """{$base,"installedOn":"2021-03-17","mounting":"UNDERGROUND","notes":"  Kunci di pos satpam  "}""",
+        )
+        val saved = getJson("/api/odps/$odp", token)
+        assertThat(JsonPath.read<String>(saved, "$.installedOn")).isEqualTo("2021-03-17")
+        assertThat(JsonPath.read<String>(saved, "$.mounting")).isEqualTo("UNDERGROUND")
+        // Catatan dirapikan lebih dulu, bukan disimpan apa adanya.
+        assertThat(JsonPath.read<String>(saved, "$.notes")).isEqualTo("Kunci di pos satpam")
+
+        // PUT tanpa ketiganya = pengosongan yang disengaja; ini form ganti-utuh,
+        // jadi bidang yang dihapus operator memang harus ikut hilang.
+        put("/api/odps/$odp", token, """{$base}""")
+        val cleared = getJson("/api/odps/$odp", token)
+        assertThat(JsonPath.read<String?>(cleared, "$.installedOn")).isNull()
+        assertThat(JsonPath.read<String?>(cleared, "$.mounting")).isNull()
+        assertThat(JsonPath.read<String?>(cleared, "$.notes")).isNull()
+
+        // Dudukan di luar daftar ditolak — kolom bebas bikin laporan "berapa kotak
+        // saya yang di bawah tanah" tak pernah bisa dipercaya.
+        put("/api/odps/$odp", token, """{$base,"mounting":"DIGANTUNG DI POHON"}""", expected = 400)
+    }
+
     @Test
     fun `ODP yang masih dipakai pelanggan tidak bisa dihapus`() {
         val token = newTenantAdmin("del")

@@ -32,6 +32,9 @@ class OdpPersistenceAdapter(
             odcId = odp.odcId
             capacity = odp.capacity
             status = odp.status
+            installedOn = odp.installedOn
+            mounting = odp.mounting
+            notes = odp.notes
         } ?: OdpJpaEntity(
             id = odp.id,
             code = odp.code,
@@ -42,6 +45,9 @@ class OdpPersistenceAdapter(
             odcId = odp.odcId,
             capacity = odp.capacity,
             status = odp.status,
+            installedOn = odp.installedOn,
+            mounting = odp.mounting,
+            notes = odp.notes,
         )
         return jpa.save(entity).toDomain()
     }
@@ -111,4 +117,7 @@ internal fun OdpJpaEntity.toDomain(): Odp = Odp.rehydrate(
     odcId = odcId,
     capacity = capacity,
     status = status,
+    installedOn = installedOn,
+    mounting = mounting,
+    notes = notes,
 )

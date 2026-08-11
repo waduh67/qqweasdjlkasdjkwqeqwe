@@ -9,6 +9,7 @@ import com.duluin.ftth.network.domain.model.CableType
 import com.duluin.ftth.network.domain.model.ClosureKind
 import com.duluin.ftth.network.domain.model.ConnectionPointKind
 import com.duluin.ftth.network.domain.model.CoreStatus
+import com.duluin.ftth.network.domain.model.MountingType
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import com.duluin.ftth.network.domain.model.OdfPortSide
 import com.duluin.ftth.network.domain.model.OltVendor
@@ -24,6 +25,7 @@ import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.PositiveOrZero
 import jakarta.validation.constraints.Size
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -111,6 +113,13 @@ data class OdcRequest(
     val splitterRatio: String? = null,
     @field:Min(1) @field:Max(1024) val capacity: Int,
     val status: AssetStatus = AssetStatus.ACTIVE,
+    /**
+     * Data lapangan; ketiganya opsional. Kotak lama tak pernah ditanyai hal ini,
+     * dan mengarang isinya lebih berbahaya daripada membiarkannya kosong.
+     */
+    val installedOn: LocalDate? = null,
+    val mounting: MountingType? = null,
+    @field:Size(max = 1000) val notes: String? = null,
 )
 
 /** Lihat [OdcRequest] soal `splitterRatio`. */
@@ -124,6 +133,10 @@ data class OdpRequest(
     val splitterRatio: String? = null,
     @field:Min(1) @field:Max(256) val capacity: Int,
     val status: AssetStatus = AssetStatus.ACTIVE,
+    /** Lihat [OdcRequest.installedOn] dkk. */
+    val installedOn: LocalDate? = null,
+    val mounting: MountingType? = null,
+    @field:Size(max = 1000) val notes: String? = null,
 )
 
 /**
@@ -152,6 +165,10 @@ data class JointBoxRequest(
     @field:Min(1) @field:Max(64) val trayCount: Int = 1,
     @field:Min(1) @field:Max(1536) val capacity: Int,
     val status: AssetStatus = AssetStatus.ACTIVE,
+    /** Lihat [OdcRequest.installedOn] dkk. */
+    val installedOn: LocalDate? = null,
+    val mounting: MountingType? = null,
+    @field:Size(max = 1000) val notes: String? = null,
 )
 
 data class CableRequest(

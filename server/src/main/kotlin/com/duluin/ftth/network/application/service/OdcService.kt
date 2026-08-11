@@ -71,6 +71,9 @@ class OdcService(
                 ponPortId = command.ponPortId,
                 capacity = command.capacity,
                 status = command.status,
+                installedOn = command.installedOn,
+                mounting = command.mounting,
+                notes = command.notes,
             ),
         )
         splitters.applyPrimaryRatio(ClosureKind.ODC, odc.id, command.splitterRatio)
@@ -89,6 +92,9 @@ class OdcService(
             areaId = command.areaId,
             capacity = command.capacity,
             status = command.status,
+            installedOn = command.installedOn,
+            mounting = command.mounting,
+            notes = command.notes,
         )
         odcRepository.save(odc)
         splitters.applyPrimaryRatio(ClosureKind.ODC, odc.id, command.splitterRatio)
@@ -182,4 +188,7 @@ private fun Odc.toView(uplink: Uplink?, odpCount: Long, contents: List<Splitter>
     odpCount = odpCount,
     status = status,
     energized = isEnergized(),
+    installedOn = installedOn,
+    mounting = mounting,
+    notes = notes,
 )

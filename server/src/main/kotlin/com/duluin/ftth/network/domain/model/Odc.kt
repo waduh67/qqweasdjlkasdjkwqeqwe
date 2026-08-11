@@ -3,6 +3,7 @@ package com.duluin.ftth.network.domain.model
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.domain.geo.Coordinate
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -24,6 +25,9 @@ class Odc private constructor(
     ponPortId: UUID?,
     capacity: Int,
     status: AssetStatus,
+    installedOn: LocalDate?,
+    mounting: MountingType?,
+    notes: String?,
 ) {
     var name: String = name
         private set
@@ -46,6 +50,19 @@ class Odc private constructor(
     var status: AssetStatus = status
         private set
 
+    /** Tanggal pemasangan — umur aset, dasar jadwal preventif & klaim garansi. */
+    var installedOn: LocalDate? = installedOn
+        private set
+
+    /** Dudukan kabinet; menentukan alat yang dibawa teknisi. Lihat [MountingType]. */
+    var mounting: MountingType? = mounting
+        private set
+
+    /** Pesan teknisi untuk teknisi berikutnya — "kunci di pos satpam", dst. */
+    var notes: String? = notes
+        private set
+
+    @Suppress("LongParameterList")
     fun update(
         name: String,
         address: String?,
@@ -53,6 +70,9 @@ class Odc private constructor(
         areaId: UUID?,
         capacity: Int,
         status: AssetStatus,
+        installedOn: LocalDate?,
+        mounting: MountingType?,
+        notes: String?,
     ) {
         this.name = AssetNaming.name(name, "ODC")
         this.address = AssetNaming.address(address)
@@ -60,6 +80,9 @@ class Odc private constructor(
         this.areaId = areaId
         this.capacity = validateCapacity(capacity)
         this.status = status
+        this.installedOn = installedOn
+        this.mounting = mounting
+        this.notes = AssetNaming.notes(notes)
     }
 
     /** Menyambungkan ODC ke feeder; `null` melepaskannya (mis. saat migrasi OLT). */
@@ -89,6 +112,9 @@ class Odc private constructor(
             ponPortId: UUID?,
             capacity: Int,
             status: AssetStatus = AssetStatus.ACTIVE,
+            installedOn: LocalDate? = null,
+            mounting: MountingType? = null,
+            notes: String? = null,
         ): Odc = Odc(
             id = UuidV7.generate(),
             tenantId = tenantId,
@@ -100,6 +126,9 @@ class Odc private constructor(
             ponPortId = ponPortId,
             capacity = validateCapacity(capacity),
             status = status,
+            installedOn = installedOn,
+            mounting = mounting,
+            notes = AssetNaming.notes(notes),
         )
 
         @Suppress("LongParameterList")
@@ -114,7 +143,13 @@ class Odc private constructor(
             ponPortId: UUID?,
             capacity: Int,
             status: AssetStatus,
-        ): Odc = Odc(id, tenantId, code, name, address, location, areaId, ponPortId, capacity, status)
+            installedOn: LocalDate?,
+            mounting: MountingType?,
+            notes: String?,
+        ): Odc = Odc(
+            id, tenantId, code, name, address, location, areaId, ponPortId, capacity, status,
+            installedOn, mounting, notes,
+        )
 
         private fun validateCapacity(capacity: Int): Int {
             if (capacity !in 1..MAX_CAPACITY) {

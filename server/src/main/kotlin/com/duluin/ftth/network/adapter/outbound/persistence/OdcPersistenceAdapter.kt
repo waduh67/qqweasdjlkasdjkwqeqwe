@@ -26,6 +26,9 @@ class OdcPersistenceAdapter(
             ponPortId = odc.ponPortId
             capacity = odc.capacity
             status = odc.status
+            installedOn = odc.installedOn
+            mounting = odc.mounting
+            notes = odc.notes
         } ?: OdcJpaEntity(
             id = odc.id,
             code = odc.code,
@@ -36,6 +39,9 @@ class OdcPersistenceAdapter(
             ponPortId = odc.ponPortId,
             capacity = odc.capacity,
             status = odc.status,
+            installedOn = odc.installedOn,
+            mounting = odc.mounting,
+            notes = odc.notes,
         )
         return jpa.save(entity).toDomain()
     }
@@ -78,4 +84,7 @@ internal fun OdcJpaEntity.toDomain(): Odc = Odc.rehydrate(
     ponPortId = ponPortId,
     capacity = capacity,
     status = status,
+    installedOn = installedOn,
+    mounting = mounting,
+    notes = notes,
 )

@@ -3,6 +3,7 @@ package com.duluin.ftth.network.domain.model
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.domain.geo.Coordinate
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -28,6 +29,9 @@ class JointBox private constructor(
     trayCount: Int,
     capacity: Int,
     status: AssetStatus,
+    installedOn: LocalDate?,
+    mounting: MountingType?,
+    notes: String?,
 ) {
     var name: String = name
         private set
@@ -52,6 +56,18 @@ class JointBox private constructor(
     var status: AssetStatus = status
         private set
 
+    /** Tanggal pemasangan — umur aset, dasar jadwal preventif & klaim garansi. */
+    var installedOn: LocalDate? = installedOn
+        private set
+
+    /** Dudukan kotak; menentukan alat yang dibawa teknisi. Lihat [MountingType]. */
+    var mounting: MountingType? = mounting
+        private set
+
+    /** Pesan teknisi untuk teknisi berikutnya — "kunci di pos satpam", dst. */
+    var notes: String? = notes
+        private set
+
     @Suppress("LongParameterList")
     fun update(
         name: String,
@@ -61,6 +77,9 @@ class JointBox private constructor(
         trayCount: Int,
         capacity: Int,
         status: AssetStatus,
+        installedOn: LocalDate?,
+        mounting: MountingType?,
+        notes: String?,
     ) {
         this.name = AssetNaming.name(name, "joint box")
         this.address = AssetNaming.address(address)
@@ -69,6 +88,9 @@ class JointBox private constructor(
         this.trayCount = validateTrayCount(trayCount)
         this.capacity = validateCapacity(capacity)
         this.status = status
+        this.installedOn = installedOn
+        this.mounting = mounting
+        this.notes = AssetNaming.notes(notes)
     }
 
     /** Memindah titik JB di peta tanpa menyentuh atribut lain. */
@@ -91,6 +113,9 @@ class JointBox private constructor(
             trayCount: Int,
             capacity: Int,
             status: AssetStatus = AssetStatus.ACTIVE,
+            installedOn: LocalDate? = null,
+            mounting: MountingType? = null,
+            notes: String? = null,
         ): JointBox = JointBox(
             id = UuidV7.generate(),
             tenantId = tenantId,
@@ -102,6 +127,9 @@ class JointBox private constructor(
             trayCount = validateTrayCount(trayCount),
             capacity = validateCapacity(capacity),
             status = status,
+            installedOn = installedOn,
+            mounting = mounting,
+            notes = AssetNaming.notes(notes),
         )
 
         @Suppress("LongParameterList")
@@ -116,7 +144,13 @@ class JointBox private constructor(
             trayCount: Int,
             capacity: Int,
             status: AssetStatus,
-        ): JointBox = JointBox(id, tenantId, code, name, address, location, areaId, trayCount, capacity, status)
+            installedOn: LocalDate?,
+            mounting: MountingType?,
+            notes: String?,
+        ): JointBox = JointBox(
+            id, tenantId, code, name, address, location, areaId, trayCount, capacity, status,
+            installedOn, mounting, notes,
+        )
 
         private fun validateTrayCount(trayCount: Int): Int {
             if (trayCount !in 1..MAX_TRAY_COUNT) {

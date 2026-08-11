@@ -56,6 +56,9 @@ class JointBoxService(
                 trayCount = command.trayCount,
                 capacity = command.capacity,
                 status = command.status,
+                installedOn = command.installedOn,
+                mounting = command.mounting,
+                notes = command.notes,
             ),
         )
         auditor.record(
@@ -77,6 +80,9 @@ class JointBoxService(
             trayCount = command.trayCount,
             capacity = command.capacity,
             status = command.status,
+            installedOn = command.installedOn,
+            mounting = command.mounting,
+            notes = command.notes,
         )
         jointBoxRepository.save(jointBox)
         if (moved) cableAttachment.resnapForMovedNode(NetworkNodeRef(NetworkNodeKind.JOINT_BOX, id), jointBox.location)
@@ -149,5 +155,8 @@ class JointBoxService(
         capacity = capacity,
         spliceCount = spliceCount,
         status = status,
+        installedOn = installedOn,
+        mounting = mounting,
+        notes = notes,
     )
 }

@@ -69,6 +69,9 @@ class OdpService(
                 odcId = command.odcId,
                 capacity = command.capacity,
                 status = command.status,
+                installedOn = command.installedOn,
+                mounting = command.mounting,
+                notes = command.notes,
             ),
         )
         splitters.applyPrimaryRatio(ClosureKind.ODP, odp.id, command.splitterRatio)
@@ -90,6 +93,9 @@ class OdpService(
             areaId = command.areaId,
             capacity = command.capacity,
             status = command.status,
+            installedOn = command.installedOn,
+            mounting = command.mounting,
+            notes = command.notes,
         )
         odpRepository.save(odp)
         splitters.applyPrimaryRatio(ClosureKind.ODP, odp.id, command.splitterRatio)
@@ -191,4 +197,7 @@ internal fun Odp.toView(odcName: String?, contents: List<Splitter>) = OdpView(
     splitterLegs = contents.sumOf { it.legCount },
     capacity = capacity,
     status = status,
+    installedOn = installedOn,
+    mounting = mounting,
+    notes = notes,
 )

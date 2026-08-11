@@ -74,4 +74,7 @@ private fun JointBoxRequest.toCommand() = SaveJointBoxCommand(
     trayCount = trayCount,
     capacity = capacity,
     status = status,
+    installedOn = installedOn,
+    mounting = mounting,
+    notes = notes,
 )

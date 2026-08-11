@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.domain.geo.Coordinate
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -27,6 +28,9 @@ class Odp private constructor(
     odcId: UUID?,
     capacity: Int,
     status: AssetStatus,
+    installedOn: LocalDate?,
+    mounting: MountingType?,
+    notes: String?,
 ) {
     var name: String = name
         private set
@@ -49,6 +53,19 @@ class Odp private constructor(
     var status: AssetStatus = status
         private set
 
+    /** Tanggal pemasangan — umur aset, dasar jadwal preventif & klaim garansi. */
+    var installedOn: LocalDate? = installedOn
+        private set
+
+    /** Dudukan kotak; menentukan alat yang dibawa teknisi. Lihat [MountingType]. */
+    var mounting: MountingType? = mounting
+        private set
+
+    /** Pesan teknisi untuk teknisi berikutnya — "kunci di pos satpam", dst. */
+    var notes: String? = notes
+        private set
+
+    @Suppress("LongParameterList")
     fun update(
         name: String,
         address: String?,
@@ -56,6 +73,9 @@ class Odp private constructor(
         areaId: UUID?,
         capacity: Int,
         status: AssetStatus,
+        installedOn: LocalDate?,
+        mounting: MountingType?,
+        notes: String?,
     ) {
         this.name = AssetNaming.name(name, "ODP")
         this.address = AssetNaming.address(address)
@@ -63,6 +83,9 @@ class Odp private constructor(
         this.areaId = areaId
         this.capacity = validateCapacity(capacity)
         this.status = status
+        this.installedOn = installedOn
+        this.mounting = mounting
+        this.notes = AssetNaming.notes(notes)
     }
 
     fun connectTo(odcId: UUID?) {
@@ -111,6 +134,9 @@ class Odp private constructor(
             odcId: UUID?,
             capacity: Int,
             status: AssetStatus = AssetStatus.ACTIVE,
+            installedOn: LocalDate? = null,
+            mounting: MountingType? = null,
+            notes: String? = null,
         ): Odp = Odp(
             id = UuidV7.generate(),
             tenantId = tenantId,
@@ -122,6 +148,9 @@ class Odp private constructor(
             odcId = odcId,
             capacity = validateCapacity(capacity),
             status = status,
+            installedOn = installedOn,
+            mounting = mounting,
+            notes = AssetNaming.notes(notes),
         )
 
         @Suppress("LongParameterList")
@@ -136,7 +165,13 @@ class Odp private constructor(
             odcId: UUID?,
             capacity: Int,
             status: AssetStatus,
-        ): Odp = Odp(id, tenantId, code, name, address, location, areaId, odcId, capacity, status)
+            installedOn: LocalDate?,
+            mounting: MountingType?,
+            notes: String?,
+        ): Odp = Odp(
+            id, tenantId, code, name, address, location, areaId, odcId, capacity, status,
+            installedOn, mounting, notes,
+        )
 
         private fun validateCapacity(capacity: Int): Int {
             if (capacity !in 1..MAX_CAPACITY) {

@@ -11,6 +11,7 @@ import com.duluin.ftth.network.domain.model.ConnectionPointKind
 import com.duluin.ftth.network.domain.model.CoreStatus
 import com.duluin.ftth.network.domain.model.FiberHopKind
 import com.duluin.ftth.network.domain.model.FiberTraceEnd
+import com.duluin.ftth.network.domain.model.MountingType
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import com.duluin.ftth.network.domain.model.OdfPortSide
 import com.duluin.ftth.network.domain.model.OltVendor
@@ -18,6 +19,7 @@ import com.duluin.ftth.network.domain.model.SnmpVersion
 import com.duluin.ftth.network.domain.model.SpliceMethod
 import com.duluin.ftth.network.domain.model.WebProtocol
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -93,6 +95,10 @@ data class OdcView(
     val odpCount: Long,
     val status: AssetStatus,
     val energized: Boolean,
+    /** Data lapangan; null selama belum pernah diisi. Lihat [MountingType]. */
+    val installedOn: LocalDate?,
+    val mounting: MountingType?,
+    val notes: String?,
 )
 
 data class OdpView(
@@ -110,6 +116,10 @@ data class OdpView(
     val splitterLegs: Int,
     val capacity: Int,
     val status: AssetStatus,
+    /** Lihat [OdcView.installedOn] dkk. */
+    val installedOn: LocalDate?,
+    val mounting: MountingType?,
+    val notes: String?,
 )
 
 /**
@@ -163,6 +173,10 @@ data class JointBoxView(
     val capacity: Int,
     val spliceCount: Long,
     val status: AssetStatus,
+    /** Lihat [OdcView.installedOn] dkk. */
+    val installedOn: LocalDate?,
+    val mounting: MountingType?,
+    val notes: String?,
 )
 
 /**

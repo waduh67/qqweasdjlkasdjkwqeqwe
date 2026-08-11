@@ -81,4 +81,7 @@ private fun OdpRequest.toCommand() = SaveOdpCommand(
     splitterRatio = splitterRatio,
     capacity = capacity,
     status = status,
+    installedOn = installedOn,
+    mounting = mounting,
+    notes = notes,
 )

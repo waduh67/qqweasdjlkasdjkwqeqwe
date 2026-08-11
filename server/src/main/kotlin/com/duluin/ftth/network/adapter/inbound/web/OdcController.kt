@@ -80,4 +80,7 @@ private fun OdcRequest.toCommand() = SaveOdcCommand(
     splitterRatio = splitterRatio,
     capacity = capacity,
     status = status,
+    installedOn = installedOn,
+    mounting = mounting,
+    notes = notes,
 )

@@ -26,6 +26,9 @@ class JointBoxPersistenceAdapter(
             trayCount = jointBox.trayCount
             capacity = jointBox.capacity
             status = jointBox.status
+            installedOn = jointBox.installedOn
+            mounting = jointBox.mounting
+            notes = jointBox.notes
         } ?: JointBoxJpaEntity(
             id = jointBox.id,
             code = jointBox.code,
@@ -36,6 +39,9 @@ class JointBoxPersistenceAdapter(
             trayCount = jointBox.trayCount,
             capacity = jointBox.capacity,
             status = jointBox.status,
+            installedOn = jointBox.installedOn,
+            mounting = jointBox.mounting,
+            notes = jointBox.notes,
         )
         return jpa.save(entity).toDomain()
     }
@@ -64,4 +70,7 @@ internal fun JointBoxJpaEntity.toDomain(): JointBox = JointBox.rehydrate(
     trayCount = trayCount,
     capacity = capacity,
     status = status,
+    installedOn = installedOn,
+    mounting = mounting,
+    notes = notes,
 )

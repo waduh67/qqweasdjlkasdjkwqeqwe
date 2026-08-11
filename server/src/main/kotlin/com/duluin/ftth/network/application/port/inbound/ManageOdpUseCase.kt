@@ -4,6 +4,8 @@ import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.network.domain.model.AssetStatus
+import com.duluin.ftth.network.domain.model.MountingType
+import java.time.LocalDate
 import java.util.UUID
 
 interface ManageOdpUseCase {
@@ -35,4 +37,8 @@ data class SaveOdpCommand(
     val splitterRatio: String?,
     val capacity: Int,
     val status: AssetStatus,
+    /** Lihat [SaveOdcCommand.installedOn] dkk. */
+    val installedOn: LocalDate? = null,
+    val mounting: MountingType? = null,
+    val notes: String? = null,
 )
