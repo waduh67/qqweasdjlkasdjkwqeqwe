@@ -30,6 +30,7 @@ import { CustomerDetailBlade } from './CustomerDetailPage'
 import { DiscoveredOnuInbox } from '@/components/organisms'
 import { OltRegisteredOnus } from '@/components/organisms'
 import { SnmpDiagnosticPanel } from '@/components/organisms'
+import { PonPortLoadPanel } from '@/components/organisms'
 
 /**
  * Detail satu OLT sebagai rute tersendiri (`/olts/:id`) — bukan panel peta.
@@ -511,7 +512,10 @@ function PonPortTab({
       ) : (
         <div className="stack" style={{ gap: 0 }}>
           {ports.map((p) => {
-            const drillable = canDrill && p.odcCount > 0
+            // Port kosong pun layak dibuka sekarang: muatannya dihitung dari graf
+            // sambungan, jadi port yang belum punya ODC tertaut bisa saja sudah
+            // menyuapi kabinet lewat serat yang tercatat di meja splicing.
+            const drillable = canDrill
             const isOpen = expanded === p.id
             return (
               <div key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
@@ -520,7 +524,7 @@ function PonPortTab({
                     type="button"
                     onClick={() => drillable && setExpanded(isOpen ? null : p.id)}
                     disabled={!drillable}
-                    title={drillable ? 'Lihat ODC & ODP di bawah port ini' : undefined}
+                    title={drillable ? 'Lihat muatan, ODC & ODP di bawah port ini' : undefined}
                     style={{
                       flex: 1,
                       minWidth: 0,
@@ -592,7 +596,16 @@ function PonDrilldown({ ponPortId, canDrillOdp }: { ponPortId: string; canDrillO
     }
   }, [ponPortId, toast])
 
-  if (failed) return null
+  // Topologi ODC gagal dimuat bukan alasan menyembunyikan muatan portnya —
+  // keduanya datang dari endpoint yang berbeda, dan yang satu tetap berguna
+  // tanpa yang lain.
+  if (failed) {
+    return (
+      <div className="stack" style={{ gap: '0.6rem', padding: '0.15rem 0 0.85rem 1.4rem' }}>
+        <PonPortLoadPanel ponPortId={ponPortId} />
+      </div>
+    )
+  }
   if (!data) {
     return (
       <div style={{ display: 'grid', placeItems: 'center', padding: '1rem' }}>
@@ -601,22 +614,27 @@ function PonDrilldown({ ponPortId, canDrillOdp }: { ponPortId: string; canDrillO
     )
   }
 
-  if (data.odcs.length === 0) {
-    return (
-      <p className="muted" style={{ margin: 0, padding: '0 0 0.85rem 1.4rem', fontSize: '0.85rem' }}>
-        Belum ada ODC di bawah port ini.
-      </p>
-    )
-  }
-
   return (
     <div className="stack" style={{ gap: '0.6rem', padding: '0.15rem 0 0.85rem 1.4rem' }}>
-      <div className="muted tnum" style={{ fontSize: '0.82rem' }}>
-        {data.odcCount} ODC · {data.odpCount} ODP · {data.used}/{data.capacity} port terpakai ({data.utilizationPercent}%)
-      </div>
-      {data.odcs.map((odc) => (
-        <OdcBranchCard key={odc.odcId} odc={odc} canDrillOdp={canDrillOdp} />
-      ))}
+      {/* Muatan port paling atas: plafon 64 ONU milik GPON adalah batas yang
+          menghentikan pertumbuhan, dan ia harus terbaca sebelum orang tenggelam
+          dalam daftar ODC di bawahnya. */}
+      <PonPortLoadPanel ponPortId={ponPortId} />
+      {data.odcs.length === 0 ? (
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          Belum ada ODC di bawah port ini.
+        </p>
+      ) : (
+        <>
+          <div className="muted tnum" style={{ fontSize: '0.82rem' }}>
+            {data.odcCount} ODC · {data.odpCount} ODP · {data.used}/{data.capacity} port terpakai (
+            {data.utilizationPercent}%)
+          </div>
+          {data.odcs.map((odc) => (
+            <OdcBranchCard key={odc.odcId} odc={odc} canDrillOdp={canDrillOdp} />
+          ))}
+        </>
+      )}
     </div>
   )
 }

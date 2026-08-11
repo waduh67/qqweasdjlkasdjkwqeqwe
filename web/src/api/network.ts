@@ -707,6 +707,42 @@ export interface FiberPathView {
   warnings: string[]
 }
 
+/** Satu kotak di hilir sebuah port PON beserta sumbangannya pada muatan port itu. */
+export interface PonClosureLoadView {
+  closureKind: ClosureKind
+  closureId: string
+  code: string
+  name: string
+  /** Berapa ruas serat dari port PON; 0 = rak POP, 1 = kabinet pertama. */
+  depth: number
+  splitterLegs: number
+  usedLegs: number
+  onuCount: number
+}
+
+/**
+ * Muatan satu port PON terhadap plafon 64 ONU milik GPON.
+ *
+ * `fromSplicing` menentukan seberapa jauh angkanya boleh dipercaya: true berarti
+ * dirangkai dari catatan sambungan yang sesungguhnya, false berarti dari tautan
+ * ODC→PON port yang diisi tangan saat kabinet dibuat.
+ */
+export interface PonPortLoadView {
+  ponPortId: string
+  label: string
+  oltId: string
+  oltCode: string | null
+  oltName: string | null
+  closures: PonClosureLoadView[]
+  splitterLegs: number
+  usedLegs: number
+  onuCount: number
+  onuLimit: number
+  loadPercent: number
+  fromSplicing: boolean
+  warnings: string[]
+}
+
 /** Satu alarm hidup yang membuat sebuah kabel merah — jawaban "kenapa" saat diklik. */
 export interface ImpactCause {
   label: string
