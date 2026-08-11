@@ -26,9 +26,7 @@ import type {
 } from '../api/network'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
-import { Checkbox } from '@fluentui/react-components'
-import { Button, Segmented } from '@/components/atoms'
-import { BladeHead } from '@/components/molecules'
+import { Button } from '@/components/atoms'
 import {
   AccessNodeDetail,
   Blade,
@@ -36,12 +34,15 @@ import {
   type AccessNodeKind,
 } from '@/components/organisms'
 import {
+  AddHereMenu,
   BlastRadiusPanel,
   CableCutPanel,
   CablePanel,
   CustomerTracePanel,
   HeatmapLegend,
   Legend,
+  MapSettingsDrawer,
+  MapToolbar,
   JointBoxPanel,
   OdfPanel,
   OdpPanel,
@@ -57,8 +58,6 @@ import { OltDetail } from './OltDetailPage'
 import type { MapFocus } from '@/map/mapFocus'
 import {
   BASEMAPS,
-  BASEMAP_HINTS,
-  BASEMAP_ORDER,
   DASH_SEQUENCE,
   FUTURISTIC_STYLE,
   HEATMAP_COLOR,
@@ -101,8 +100,6 @@ import { traceVerdict } from '@/map/traceVerdict'
 import { useToast } from '@/system'
 import {
   IconCrosshair,
-  IconCustomers,
-  IconPlus,
   IconRoute,
   IconSettings,
 } from '@/components/atoms/icons'
@@ -1994,270 +1991,3 @@ export function MapPage() {
     </div>
   )
 }
-
-/**
- * Toolbar kiri-atas peta: lokasi saya + tarik kabel + tombol taruh perangkat. Tombol
- * tulis (tarik kabel/taruh aset) hanya muncul bila pengguna punya izin terkait; tombol
- * "Lokasi saya" selalu tampil karena geolokasi bukan aksi tulis (semua peran boleh).
- */
-/**
- * Pemilih basemap: segmen kecil di dalam kartu info (kiri-bawah), dikumpulkan bersama
- * toggle heatmap & legenda karena sama-sama mengatur "apa yang ditampilkan peta".
- * Sengaja jauh dari alat-edit (kiri-atas) & panel detail (kanan-atas) agar tak
- * bertabrakan. Pakai atom `Segmented` (Fluent) yang legibel di atas kartu kaca bertema.
- */
-/**
- * Laci setelan peta (kanan). Alasan keberadaannya bukan "tempat menaruh kontrol",
- * melainkan MENGOSONGKAN peta: pemilih tema, saklar heatmap, dan legenda dulu
- * bertumpuk di kartu mengambang yang menemani operator sepanjang hari padahal
- * disentuh sekali-dua. Di laci, semuanya sejangkauan tapi tak ikut menutupi jaringan.
- *
- * Pilihan tema & legenda diingat di [localStorage] (lihat PREF_*) — preferensi mata
- * satu orang di satu perangkat, bukan data tenant.
- */
-function MapSettingsDrawer({
-  basemap,
-  onBasemap,
-  heatmap,
-  onHeatmap,
-  canHeatmap,
-  showLegend,
-  onShowLegend,
-  hiddenLayers,
-  onToggleLayer,
-  onShowAllLayers,
-  can,
-  onClose,
-}: {
-  basemap: BasemapMode
-  onBasemap: (mode: BasemapMode) => void
-  heatmap: boolean
-  onHeatmap: (on: boolean) => void
-  canHeatmap: boolean
-  showLegend: boolean
-  onShowLegend: (on: boolean) => void
-  hiddenLayers: Set<string>
-  onToggleLayer: (key: string, visible: boolean) => void
-  onShowAllLayers: () => void
-  can: (permission: string) => boolean
-  onClose: () => void
-}) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
-  const groups = MAP_LAYER_GROUPS.filter((g) => !g.perm || can(g.perm))
-  const anyHidden = groups.some((g) => hiddenLayers.has(g.key))
-
-  return (
-    <aside className="map-panel blade map-settings">
-      <BladeHead title="Setelan peta" onClose={onClose} />
-      <div className="blade-body stack" style={{ gap: '1.1rem' }}>
-        <section className="stack" style={{ gap: '0.4rem' }}>
-          <h4 className="map-settings-title">Tema peta</h4>
-          <BasemapSwitcher value={basemap} onChange={onBasemap} />
-          <p className="muted" style={{ margin: 0, fontSize: '0.75rem' }}>
-            {BASEMAP_HINTS[basemap]}
-          </p>
-        </section>
-
-        <section className="stack" style={{ gap: '0.4rem' }}>
-          <h4 className="map-settings-title">Tampilan</h4>
-          {canHeatmap && (
-            <>
-              <Checkbox
-                label="Heatmap utilisasi ODP"
-                checked={heatmap}
-                onChange={(_, data) => onHeatmap(!!data.checked)}
-              />
-              <p className="muted" style={{ margin: 0, fontSize: '0.75rem' }}>
-                Mewarnai ODP menurut pemakaian port — untuk melihat di mana kapasitas hampir habis.
-              </p>
-            </>
-          )}
-          <Checkbox
-            label="Tampilkan legenda"
-            checked={showLegend}
-            onChange={(_, data) => onShowLegend(!!data.checked)}
-          />
-        </section>
-
-        {/* Saklar lapisan. Yang tak berizin dilihat tak usah ditawarkan mati-hidupnya —
-            operator akan bertanya-tanya kenapa mencentangnya tak memunculkan apa pun. */}
-        {groups.length > 0 && (
-          <section className="stack" style={{ gap: '0.4rem' }}>
-            <div className="spread">
-              <h4 className="map-settings-title" style={{ margin: 0 }}>Lapisan</h4>
-              {anyHidden && (
-                <Button variant="subtle" size="small" onClick={onShowAllLayers}>
-                  Tampilkan semua
-                </Button>
-              )}
-            </div>
-            {groups.map((group) => (
-              <Checkbox
-                key={group.key}
-                checked={!hiddenLayers.has(group.key)}
-                onChange={(_, data) => onToggleLayer(group.key, !!data.checked)}
-                label={
-                  <span className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-                    <span
-                      aria-hidden="true"
-                      style={
-                        group.color
-                          ? { width: 10, height: 10, borderRadius: '50%', background: group.color, display: 'inline-block' }
-                          : // Kabel: contoh berbentuk garis, sebab warnanya berganti
-                            // menurut jenis kabelnya (lihat [MAP_LAYER_GROUPS]).
-                            { width: 10, height: 2, borderRadius: 999, background: '#7c8aa5', display: 'inline-block' }
-                      }
-                    />
-                    {group.label}
-                  </span>
-                }
-              />
-            ))}
-            <p className="muted" style={{ margin: 0, fontSize: '0.75rem' }}>
-              Lapisan yang dimatikan tak bisa diklik maupun dijadikan ujung kabel — berguna saat
-              titik-titik di satu POP saling menutupi.
-            </p>
-          </section>
-        )}
-
-        <section className="stack" style={{ gap: '0.4rem' }}>
-          <h4 className="map-settings-title">Petunjuk</h4>
-          <p className="muted" style={{ margin: 0, fontSize: '0.78rem', lineHeight: 1.45 }}>
-            <strong>Klik kanan</strong> (atau tahan di layar sentuh) pada peta untuk menambah site, OLT, ODF,
-            ODC, ODP, joint box, atau menaruh pelanggan yang belum berkoordinat.
-            <br />
-            <strong>Tarik kabel</strong> dimulai dari panel perangkatnya: klik perangkatnya dulu, lalu tekan
-            &quot;Tarik kabel&quot;.
-          </p>
-        </section>
-      </div>
-    </aside>
-  )
-}
-
-function BasemapSwitcher({ value, onChange }: { value: BasemapMode; onChange: (mode: BasemapMode) => void }) {
-  return (
-    <Segmented
-      className="map-basemap"
-      ariaLabel="Mode peta"
-      value={value}
-      onChange={onChange}
-      options={BASEMAP_ORDER.map((mode) => ({ value: mode, label: BASEMAPS[mode].label }))}
-    />
-  )
-}
-
-/**
- * Menu "tambah di sini": daftar yang bisa dibuat PADA titik yang barusan ditunjuk.
- * Muncul di titik itu juga, bukan di pojok layar — supaya hubungan "yang ini, di
- * sini" tak perlu diingat-ingat operator. Kosong kalau operator tak berizin membuat
- * apa pun; pemanggil yang memutuskan tak menampilkannya sama sekali.
- *
- * Menutup lewat Escape & klik di luar (peta sendiri menutupnya lewat handler klik).
- */
-function AddHereMenu({
-  at,
-  can,
-  onPick,
-  onSurvey,
-  onClose,
-}: {
-  at: { lng: number; lat: number; x: number; y: number }
-  can: (perm: string) => boolean
-  onPick: (kind: AssetKind | 'CUSTOMER') => void
-  onSurvey: () => void
-  onClose: () => void
-}) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
-  const toast = useToast()
-  const assets = (Object.keys(ASSET_META) as AssetKind[]).filter((k) => can(ASSET_META[k].createPerm))
-  // Menaruh pelanggan = memberi koordinat pada pelanggan yang SUDAH ada (impor massal
-  // menaruhnya di 0,0), jadi izinnya "ubah pelanggan", bukan "buat pelanggan".
-  const canPlaceCustomer = can('customer.customer.update')
-  // Mengecek kapasitas tidak mengubah apa pun, jadi izinnya cukup "lihat ODP" —
-  // dan justru orang yang tak boleh menambah aset (sales) yang paling sering
-  // menanyakannya.
-  const canSurvey = can('network.odp.view')
-  if (assets.length === 0 && !canPlaceCustomer && !canSurvey) return null
-
-  return (
-    <div
-      className="map-menu"
-      style={{ left: at.x, top: at.y }}
-      role="menu"
-    >
-      <button
-        type="button"
-        className="map-menu-head tnum"
-        title="Klik untuk menyalin koordinat"
-        onClick={() => {
-          const text = `${at.lat.toFixed(6)}, ${at.lng.toFixed(6)}`
-          void navigator.clipboard?.writeText(text).then(() => toast.success('Koordinat disalin'))
-        }}
-      >
-        {at.lat.toFixed(6)}, {at.lng.toFixed(6)}
-      </button>
-      {assets.map((k) => (
-        <button key={k} type="button" className="map-menu-item" role="menuitem" onClick={() => onPick(k)}>
-          <IconPlus size={15} /> {ASSET_META[k].label}
-        </button>
-      ))}
-      {canPlaceCustomer && (
-        <button
-          type="button"
-          className="map-menu-item"
-          role="menuitem"
-          onClick={() => onPick('CUSTOMER')}
-          title="Pelanggan hasil impor yang belum punya titik di peta"
-        >
-          <IconCustomers size={15} /> Pelanggan belum berkoordinat
-        </button>
-      )}
-      {canSurvey && (
-        <button
-          type="button"
-          className="map-menu-item"
-          role="menuitem"
-          onClick={onSurvey}
-          title="Kotak siap pakai & core menganggur di sekitar titik ini"
-        >
-          <IconCrosshair size={15} /> Cek kapasitas di sini
-        </button>
-      )}
-    </div>
-  )
-}
-
-/**
- * Toolbar kiri-atas. Tinggal satu tombol: menambah perangkat kini lewat menu klik
- * kanan / tahan-lama di titik yang dituju, sehingga peta tak lagi dipenuhi tombol
- * yang semuanya berakhir dengan "sekarang klik lokasinya".
- */
-function MapToolbar({ onLocate }: { onLocate: () => void }) {
-  return (
-    <div className="map-toolbar">
-      <Button variant="subtle" onClick={onLocate}>
-        <IconCrosshair size={15} /> Lokasi saya
-      </Button>
-    </div>
-  )
-}
-
-/* ---------- Primitif blade panel peta ----------
-   Semua panel peta memakai kerangka yang sama — kepala lengket, command bar datar,
-   badan berisi daftar properti "Essentials" — supaya klik ODP, OLT, ODC, site, atau
-   pelanggan menghasilkan bentuk yang seragam, persis blade Azure Portal. */
