@@ -26,6 +26,7 @@ import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.iam.UserRef
 import com.duluin.ftth.platformbilling.application.port.inbound.ConfigureSubscriptionCommand
+import com.duluin.ftth.platformbilling.application.port.inbound.GrantFreeMonthsCommand
 import com.duluin.ftth.platformbilling.application.port.outbound.PlatformSettingRepository
 import com.duluin.ftth.platformbilling.application.port.outbound.SubscriptionUsageProbe
 import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionInvoiceRepository
@@ -80,12 +81,14 @@ class PlatformInvoiceGeneratorRenewTest {
 
     private lateinit var subscriptions: FakeSubscriptionRepository
     private lateinit var invoices: FakeInvoiceRepository
+    private lateinit var payments: FakePaymentRepository
     private lateinit var generator: PlatformInvoiceGenerator
 
     @BeforeEach
     fun setUp() {
         subscriptions = FakeSubscriptionRepository()
         invoices = FakeInvoiceRepository()
+        payments = FakePaymentRepository()
         val resolver = PlatformGatewayResolver(FakePlatformSettingRepository(), PivotMasterConfigProvider(FakePivotRepository()))
         generator = PlatformInvoiceGenerator(
             subscriptionRepository = subscriptions,
@@ -339,21 +342,100 @@ class PlatformInvoiceGeneratorRenewTest {
         assertThat(invoices.findById(invoice.id)!!.amount).isEqualByComparingTo("250000.00")
     }
 
+    // --- bonus bulan gratis (grantFreeMonths) ---
+
+    @Test
+    fun `bonus menyambung dari ujung masa aktif dan menahan tagihan selama masa bonus`() {
+        subscriptions.save(activeSubscription())
+        val service = subscriptionService()
+
+        val view = service.grantFreeMonths(tenantId, GrantFreeMonthsCommand(months = 3, reason = "promo"))
+
+        // Menumpuk di ujung masa aktif, bukan menimpa dari hari ini.
+        assertThat(view.currentPeriodEnd).isEqualTo(activeUntil.plusMonths(3))
+        // Jadwal tagih digeser ke ujung masa aktif baru → scheduler tak menagih selama masa bonus.
+        assertThat(view.nextInvoiceAt).isEqualTo(view.currentPeriodEnd)
+    }
+
+    @Test
+    fun `bonus saat masa aktif sudah lewat memulai periode baru dari hari ini`() {
+        subscriptions.save(expiredSubscription())
+        val service = subscriptionService()
+
+        val view = service.grantFreeMonths(tenantId, GrantFreeMonthsCommand(months = 2, reason = null))
+
+        assertThat(view.currentPeriodEnd).isEqualTo(LocalDate.now().plusMonths(2))
+    }
+
+    @Test
+    fun `bonus menerbitkan tagihan FREE Rp 0 lunas dengan pembayaran GRANT`() {
+        subscriptions.save(activeSubscription())
+        val service = subscriptionService()
+
+        val view = service.grantFreeMonths(tenantId, GrantFreeMonthsCommand(months = 1, reason = "kompensasi gangguan"))
+
+        val grant = view.invoices.single()
+        assertThat(grant.number).startsWith(TenantSubscriptionInvoice.GRANT_PREFIX)
+        assertThat(grant.grant).isTrue()
+        assertThat(grant.amount).isEqualByComparingTo("0.00")
+        assertThat(grant.status).isEqualTo(SubscriptionInvoiceStatus.PAID)
+        // Jejak pembayarannya bukan uang sungguhan: penyedia semu GRANT + alasan tersimpan.
+        val payment = payments.all().single()
+        assertThat(payment.provider).isEqualTo("GRANT")
+        assertThat(payment.note).isEqualTo("kompensasi gangguan")
+    }
+
+    @Test
+    fun `bonus membatalkan tunggakan dan memulihkan tenant yang tersuspend`() {
+        subscriptions.save(suspendedSubscription())
+        val overdue = invoiceFor(baseNumber, SubscriptionInvoiceStatus.OVERDUE).also { invoices.save(it) }
+        val tenants = FakeTenantApi(TenantStatus.SUSPENDED)
+
+        val view = subscriptionService(tenants).grantFreeMonths(tenantId, GrantFreeMonthsCommand(2, null))
+
+        // Tanpa pembebasan tunggakan, PlatformBillingRunner akan men-suspend ulang tenantnya.
+        assertThat(invoices.findById(overdue.id)!!.status).isEqualTo(SubscriptionInvoiceStatus.VOID)
+        assertThat(view.status).isEqualTo(SubscriptionStatus.ACTIVE)
+        assertThat(tenants.activated).isTrue()
+    }
+
+    @Test
+    fun `bonus pada langganan yang dibatalkan ditolak`() {
+        subscriptions.save(activeSubscription().also { it.cancel() })
+        val service = subscriptionService()
+
+        assertThatThrownBy { service.grantFreeMonths(tenantId, GrantFreeMonthsCommand(1, null)) }
+            .isInstanceOf(ValidationException::class.java)
+            .hasMessageContaining("dibatalkan")
+    }
+
+    @Test
+    fun `nomor bonus untuk bulan yang sudah terpakai memakai sufiks unik -R2`() {
+        val taken = "${TenantSubscriptionInvoice.GRANT_PREFIX}202610-019fcadd"
+        invoices.save(invoiceFor(taken, SubscriptionInvoiceStatus.PAID))
+
+        // Nomor tagihan unik global → bonus bulan yang sama tak boleh menabrak nomor yang ada.
+        assertThat(generator.grantNumber(tenantId, activeUntil)).isEqualTo("$taken-R2")
+    }
+
     // --- helper ---
 
-    /** Service super-admin lengkap dgn fake (paymentService tak dipakai jalur yang diuji). */
-    private fun subscriptionService() = TenantSubscriptionService(
+    /**
+     * Service super-admin lengkap dgn fake. [tenantApi] dibagi ke [PlatformPaymentService] agar tes
+     * bonus bisa memeriksa pemulihan tenant lewat instance yang sama.
+     */
+    private fun subscriptionService(tenantApi: FakeTenantApi = FakeTenantApi()) = TenantSubscriptionService(
         subscriptionRepository = subscriptions,
         invoiceRepository = invoices,
         invoiceGenerator = generator,
         paymentService = PlatformPaymentService(
             invoiceRepository = invoices,
-            paymentRepository = FakePaymentRepository(),
+            paymentRepository = payments,
             subscriptionRepository = subscriptions,
-            tenantApi = FakeTenantApi(),
+            tenantApi = tenantApi,
             auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
         ),
-        tenantApi = FakeTenantApi(),
+        tenantApi = tenantApi,
         masterConfig = PivotMasterConfigProvider(FakePivotRepository()),
         auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
     )
@@ -369,18 +451,34 @@ class PlatformInvoiceGeneratorRenewTest {
         auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
     )
 
-    private fun activeSubscription(): TenantSubscription = TenantSubscription.rehydrate(
-        id = subscriptionId,
-        tenantId = tenantId,
-        monthlyFee = BigDecimal("100000.00"),
+    private fun activeSubscription(): TenantSubscription =
+        subscription(SubscriptionStatus.ACTIVE, activeUntil)
+
+    /** Masa aktif sudah lewat jauh — bonus harus memulai periode baru dari hari ini. */
+    private fun expiredSubscription(): TenantSubscription = subscription(
         status = SubscriptionStatus.ACTIVE,
-        billingDay = null,
-        graceDays = null,
-        currentPeriodStart = activeUntil.minusMonths(1),
-        currentPeriodEnd = activeUntil,
-        nextInvoiceAt = activeUntil,
-        activatedAt = Instant.parse("2026-01-01T00:00:00Z"),
+        periodEnd = LocalDate.of(2020, 1, 1),
     )
+
+    /** Tenant menunggak melewati masa tenggang: langganan & tenantnya sudah disuspend scheduler. */
+    private fun suspendedSubscription(): TenantSubscription = subscription(
+        status = SubscriptionStatus.SUSPENDED,
+        periodEnd = LocalDate.of(2020, 1, 1),
+    )
+
+    private fun subscription(status: SubscriptionStatus, periodEnd: LocalDate): TenantSubscription =
+        TenantSubscription.rehydrate(
+            id = subscriptionId,
+            tenantId = tenantId,
+            monthlyFee = BigDecimal("100000.00"),
+            status = status,
+            billingDay = null,
+            graceDays = null,
+            currentPeriodStart = periodEnd.minusMonths(1),
+            currentPeriodEnd = periodEnd,
+            nextInvoiceAt = periodEnd,
+            activatedAt = Instant.parse("2026-01-01T00:00:00Z"),
+        )
 
     private fun invoiceFor(number: String, status: SubscriptionInvoiceStatus): TenantSubscriptionInvoice {
         val invoice = TenantSubscriptionInvoice.create(
@@ -425,6 +523,7 @@ class PlatformInvoiceGeneratorRenewTest {
 
     private class FakePaymentRepository : TenantSubscriptionPaymentRepository {
         private val byId = linkedMapOf<UUID, TenantSubscriptionPayment>()
+        fun all(): List<TenantSubscriptionPayment> = byId.values.toList()
         override fun save(payment: TenantSubscriptionPayment): TenantSubscriptionPayment = payment.also { byId[it.id] = it }
         override fun findByInvoiceId(invoiceId: UUID): List<TenantSubscriptionPayment> =
             byId.values.filter { it.invoiceId == invoiceId }
@@ -512,16 +611,31 @@ class PlatformInvoiceGeneratorRenewTest {
         override fun currentTenantUsage(): List<UsageCount> = emptyList()
     }
 
-    private class FakeTenantApi : TenantApi {
+    /** Tenant tiruan yang mengingat status & mencatat pemulihannya (dipakai jalur bonus bulan gratis). */
+    private class FakeTenantApi(private var status: TenantStatus = TenantStatus.ACTIVE) : TenantApi {
         private val platformId = UuidV7.generate()
+
+        /** Tenant sempat diaktifkan kembali — bukti bonus memulihkan akses tenant yang tersuspend. */
+        var activated = false
+            private set
+
         override fun platformTenantId(): UUID = platformId
-        override fun findById(id: UUID): TenantRef? = null
+        override fun findById(id: UUID): TenantRef? = ref(id)
         override fun findBySlug(slug: String): TenantRef? = null
-        override fun requireById(id: UUID): TenantRef = TenantRef(id, "tenant-uji", "Tenant Uji", TenantStatus.ACTIVE)
+        override fun requireById(id: UUID): TenantRef = ref(id)
         override fun findActiveTenantIds(): List<UUID> = emptyList()
         override fun ensureTenant(slug: String, name: String): TenantRef = throw NotImplementedError()
-        override fun suspend(id: UUID): TenantRef = throw NotImplementedError()
-        override fun activate(id: UUID): TenantRef = throw NotImplementedError()
+        override fun suspend(id: UUID): TenantRef {
+            status = TenantStatus.SUSPENDED
+            return ref(id)
+        }
+        override fun activate(id: UUID): TenantRef {
+            activated = true
+            status = TenantStatus.ACTIVE
+            return ref(id)
+        }
+
+        private fun ref(id: UUID) = TenantRef(id, "tenant-uji", "Tenant Uji", status)
     }
 
     private object NoUser : CurrentUserProvider {

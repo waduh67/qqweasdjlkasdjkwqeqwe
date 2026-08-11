@@ -2,8 +2,10 @@ package com.duluin.ftth.platformbilling.application.service
 
 import com.duluin.ftth.billing.application.service.PivotMasterConfigProvider
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.platformbilling.application.port.inbound.ConfigureSubscriptionCommand
+import com.duluin.ftth.platformbilling.application.port.inbound.GrantFreeMonthsCommand
 import com.duluin.ftth.platformbilling.application.port.inbound.ManageTenantSubscriptionUseCase
 import com.duluin.ftth.platformbilling.application.port.inbound.ManualPaymentCommand
 import com.duluin.ftth.platformbilling.application.port.inbound.SubscriptionInvoiceView
@@ -113,6 +115,80 @@ class TenantSubscriptionService(
     override fun recordManualPayment(invoiceId: UUID, command: ManualPaymentCommand): SubscriptionInvoiceView =
         paymentService.recordManualPayment(invoiceId, command.amount, command.note).toView(sandboxMode())
 
+    /**
+     * Bonus masa aktif gratis (promo/kompensasi). Jalannya sengaja lewat sebuah tagihan Rp 0 yang
+     * langsung dilunasi penyedia semu `GRANT`: masa aktif tetap hanya bertambah lewat jalur pelunasan
+     * ([PlatformPaymentService]) — tak ada sumber kebenaran kedua — sekaligus meninggalkan jejak yang
+     * ikut terlihat tenant di halaman langganannya.
+     *
+     * Tunggakan yang ada dibebaskan lebih dulu; tanpa itu [PlatformBillingRunner] akan men-suspend
+     * ulang tenant karena tagihan lama dan bonusnya jadi percuma.
+     */
+    @Transactional
+    override fun grantFreeMonths(tenantId: UUID, command: GrantFreeMonthsCommand): TenantSubscriptionDetailView {
+        val subscription = subscriptionRepository.findByTenantId(tenantId)
+            ?: throw NotFoundException("Tenant belum berlangganan — set biaya bulanan dulu")
+        if (subscription.isCancelled) {
+            throw ValidationException("Langganan yang dibatalkan tidak bisa diberi bulan gratis")
+        }
+
+        // Periode bonus dihitung sebelum apa pun dimutasi: menyambung dari ujung masa aktif bila masih
+        // berjalan, atau mulai hari ini bila sudah lewat/belum pernah aktif — cermin `extendOnPayment`.
+        val today = LocalDate.now()
+        val months = command.months.toLong()
+        val periodStart = subscription.currentPeriodEnd?.takeIf { !it.isBefore(today) } ?: today
+        val periodEnd = periodStart.plusMonths(months).minusDays(1)
+
+        // Bebaskan tunggakan (harus mendahului pelunasan bonus agar tenant benar-benar dipulihkan).
+        invoiceRepository.findOutstandingBySubscriptionId(subscription.id).forEach { invoice ->
+            invoice.void()
+            val voided = invoiceRepository.save(invoice)
+            auditor.record(
+                action = "platform.subscription.invoice.voided",
+                entityType = "TenantSubscriptionInvoice",
+                entityId = voided.id,
+                tenantId = tenantApi.platformTenantId(),
+                detail = mapOf("number" to voided.number, "reason" to "bonus bulan gratis"),
+            )
+        }
+
+        val grantInvoice = invoiceRepository.save(
+            TenantSubscriptionInvoice.create(
+                tenantId = tenantId,
+                subscriptionId = subscription.id,
+                number = invoiceGenerator.grantNumber(tenantId, periodStart),
+                periodStart = periodStart,
+                periodEnd = periodEnd,
+                amount = BigDecimal.ZERO,
+                dueDate = periodStart,
+            ),
+        )
+        // Ini yang memperpanjang masa aktif (jumlah bulan diturunkan dari rentang periode tagihan)
+        // sekaligus memulihkan langganan & tenant yang sempat tersuspend.
+        paymentService.recordGrant(grantInvoice.id, command.reason)
+
+        // Jangan tagih selama masa bonus: jadwal tagihan berikutnya digeser ke ujung masa aktif baru.
+        val extended = checkNotNull(subscriptionRepository.findByTenantId(tenantId)) {
+            "Langganan hilang di tengah pemberian bonus"
+        }
+        extended.deferNextInvoiceToPeriodEnd()
+        val saved = subscriptionRepository.save(extended)
+
+        auditor.record(
+            action = "platform.subscription.granted",
+            entityType = "TenantSubscription",
+            entityId = saved.id,
+            tenantId = tenantApi.platformTenantId(),
+            detail = mapOf(
+                "tenantId" to tenantId.toString(),
+                "months" to command.months.toString(),
+                "reason" to command.reason,
+                "activeUntil" to saved.currentPeriodEnd?.toString(),
+            ),
+        )
+        return saved.toDetailView()
+    }
+
     @Transactional
     override fun cancel(tenantId: UUID): TenantSubscriptionDetailView {
         val subscription = subscriptionRepository.findByTenantId(tenantId)
@@ -163,6 +239,7 @@ class TenantSubscriptionService(
         paidAt = paidAt,
         gatewayProvider = gatewayProvider,
         payUrl = payUrl,
+        grant = isGrant,
         simulatable = sandbox &&
             gatewayProvider.equals("PIVOT", ignoreCase = true) &&
             !gatewayRef.isNullOrBlank() &&

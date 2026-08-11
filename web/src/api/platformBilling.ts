@@ -153,6 +153,8 @@ export interface SubscriptionInvoiceView {
   paidAt: string | null
   gatewayProvider: string | null
   payUrl: string | null
+  /** Tagihan bonus bulan gratis (Rp 0, langsung lunas) — tak pernah ditagihkan ke tenant. */
+  grant: boolean
   // Instruksi bayar in-app (mode API Pivot); null bila belum pilih metode.
   payMethod: string | null
   vaChannel: string | null
@@ -206,6 +208,12 @@ export interface ManualPaymentRequest {
   note: string | null
 }
 
+/** Bonus masa aktif gratis; server membatasi `months` 1–24. */
+export interface GrantFreeMonthsRequest {
+  months: number
+  reason: string | null
+}
+
 /** Ringkasan langganan tenant; null bila belum berlangganan (server balas 404). */
 export async function getTenantSubscription(
   tenantId: string,
@@ -242,6 +250,17 @@ export function paySubscriptionInvoice(
   body: ManualPaymentRequest,
 ): Promise<SubscriptionInvoiceView> {
   return api.post(`/api/platform/tenants/${tenantId}/subscription/invoices/${invoiceId}/pay`, body)
+}
+
+/**
+ * Beri bonus masa aktif gratis. Server membebaskan tunggakan yang ada, menerbitkan tagihan Rp 0
+ * berstatus lunas sebagai jejak, dan memulihkan tenant yang sempat tersuspend.
+ */
+export function grantFreeMonths(
+  tenantId: string,
+  body: GrantFreeMonthsRequest,
+): Promise<TenantSubscriptionDetailView> {
+  return api.post(`/api/platform/tenants/${tenantId}/subscription/grant`, body)
 }
 
 export function cancelTenantSubscription(tenantId: string): Promise<TenantSubscriptionDetailView> {

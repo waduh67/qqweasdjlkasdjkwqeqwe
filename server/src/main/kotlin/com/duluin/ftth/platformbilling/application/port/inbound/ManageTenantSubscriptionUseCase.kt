@@ -27,6 +27,12 @@ interface ManageTenantSubscriptionUseCase {
     /** Catat pembayaran manual (mis. transfer di luar gateway) atas tagihan. */
     fun recordManualPayment(invoiceId: UUID, command: ManualPaymentCommand): SubscriptionInvoiceView
 
+    /**
+     * Beri bonus masa aktif gratis (promo/kompensasi) tanpa menagih tenant: tunggakan yang ada
+     * dibebaskan, masa aktif bertambah [GrantFreeMonthsCommand.months] bulan.
+     */
+    fun grantFreeMonths(tenantId: UUID, command: GrantFreeMonthsCommand): TenantSubscriptionDetailView
+
     /** Hentikan langganan tenant (berhenti ditagih). */
     fun cancel(tenantId: UUID): TenantSubscriptionDetailView
 }
@@ -40,6 +46,12 @@ data class ConfigureSubscriptionCommand(
 data class ManualPaymentCommand(
     val amount: BigDecimal?,
     val note: String?,
+)
+
+/** [months] dibatasi 1..24 di controller; [reason] tersimpan sebagai catatan pembayaran bonus. */
+data class GrantFreeMonthsCommand(
+    val months: Int,
+    val reason: String?,
 )
 
 data class TenantSubscriptionDetailView(
@@ -68,6 +80,8 @@ data class SubscriptionInvoiceView(
     val paidAt: Instant?,
     val gatewayProvider: String?,
     val payUrl: String?,
+    /** Tagihan bonus bulan gratis (Rp 0, langsung lunas) — bukan tagihan yang pernah ditagihkan. */
+    val grant: Boolean = false,
     /** Instrumen bayar in-app terpilih (VIRTUAL_ACCOUNT/QR) & instruksinya; null bila belum pilih. */
     val payMethod: String? = null,
     val vaChannel: String? = null,

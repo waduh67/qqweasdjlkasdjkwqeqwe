@@ -135,6 +135,7 @@ class TenantSelfSubscriptionService(
         paidAt = paidAt,
         gatewayProvider = gatewayProvider,
         payUrl = payUrl,
+        grant = isGrant,
         payMethod = payMethod,
         vaChannel = vaChannel,
         vaNumber = vaNumber,

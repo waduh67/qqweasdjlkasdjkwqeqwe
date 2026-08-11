@@ -67,6 +67,24 @@ class PlatformPaymentService(
         )
     }
 
+    /**
+     * "Lunasi" tagihan bonus bulan gratis (Rp 0) — bukan pembayaran nyata, penyedianya `GRANT`.
+     * Lewat jalur pelunasan yang sama supaya masa aktif bertambah, langganan & tenant yang sempat
+     * tersuspend pulih, dan jejaknya tercatat persis seperti pelunasan biasa.
+     */
+    fun recordGrant(invoiceId: UUID, note: String?): TenantSubscriptionInvoice {
+        val invoice = invoiceRepository.findById(invoiceId)
+            ?: throw NotFoundException("Tagihan langganan tidak ditemukan")
+        return applyPayment(
+            invoice = invoice,
+            amount = BigDecimal.ZERO,
+            provider = "GRANT",
+            gatewayRef = null,
+            paidAt = Instant.now(),
+            note = note,
+        )
+    }
+
     private fun applyPayment(
         invoice: TenantSubscriptionInvoice,
         amount: BigDecimal,

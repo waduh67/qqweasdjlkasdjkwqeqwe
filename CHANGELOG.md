@@ -6,6 +6,22 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-11 — Bonus bulan langganan gratis untuk tenant
+
+**Ditambahkan**
+- **Beri bulan gratis dari panel Langganan** (`/platform/tenants` → ⋯ → Langganan, izin
+  `platform.subscription.manage`): pilih 1/2/3/6/12 bulan atau ketik angka sendiri (1–24),
+  isi alasan opsional, dan masa aktif tenant bertambah **tanpa ditagih**. Untuk promo,
+  kompensasi gangguan, atau memperpanjang masa percobaan.
+- Bonus **membebaskan tunggakan** yang ada dan **memulihkan tenant yang tersuspend** —
+  tanpa itu scheduler akan men-suspend ulang tenantnya karena tagihan lama dan bonusnya
+  jadi percuma. Selama masa bonus tenant tidak ditagih.
+- Jejaknya terlihat dua sisi: tagihan `FREE-…` senilai Rp 0 berstatus lunas dengan badge
+  **Bonus** di panel super-admin **dan** di halaman `/subscription` milik tenant, ditambah
+  entri audit `platform.subscription.granted` berisi jumlah bulan & alasannya.
+- Panel Langganan kini juga menampilkan **masa aktif ("aktif s/d")**, bukan cuma tanggal
+  tagih berikutnya — tanpa itu efek bonus tak kelihatan.
+
 ### 2026-08-11 — Setelan email platform + template & logo yang bisa ditimpa tenant
 
 **Ditambahkan**

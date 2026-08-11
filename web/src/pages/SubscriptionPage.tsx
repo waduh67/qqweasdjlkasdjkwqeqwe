@@ -526,6 +526,7 @@ function InvoiceRow({
         <span className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
           <strong style={{ fontSize: '0.85rem', fontFamily: 'monospace' }}>{inv.number}</strong>
           <Badge tone={INVOICE_TONE[inv.status]}>{INVOICE_STATUS_LABEL[inv.status]}</Badge>
+          {inv.grant && <Badge tone="accent">Bonus</Badge>}
         </span>
         <span className="muted" style={{ fontSize: '0.78rem' }}>
           {fmtDate(inv.periodStart)}–{fmtDate(inv.periodEnd)} · jatuh tempo {fmtDate(inv.dueDate)}

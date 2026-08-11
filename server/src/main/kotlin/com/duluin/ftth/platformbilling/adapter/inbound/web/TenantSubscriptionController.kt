@@ -1,6 +1,7 @@
 package com.duluin.ftth.platformbilling.adapter.inbound.web
 
 import com.duluin.ftth.platformbilling.application.port.inbound.ConfigureSubscriptionCommand
+import com.duluin.ftth.platformbilling.application.port.inbound.GrantFreeMonthsCommand
 import com.duluin.ftth.platformbilling.application.port.inbound.ManageTenantSubscriptionUseCase
 import com.duluin.ftth.platformbilling.application.port.inbound.ManualPaymentCommand
 import com.duluin.ftth.platformbilling.application.port.inbound.SubscriptionInvoiceView
@@ -12,6 +13,7 @@ import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Size
 import org.springframework.http.HttpStatus
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
@@ -80,6 +82,14 @@ class TenantSubscriptionController(
     ): SubscriptionInvoiceView =
         useCase.recordManualPayment(invoiceId, ManualPaymentCommand(body.amount, body.note))
 
+    @PostMapping("/grant")
+    @PreAuthorize("@authz.can('platform.subscription.manage')")
+    fun grantFreeMonths(
+        @PathVariable tenantId: UUID,
+        @Valid @RequestBody body: GrantFreeMonthsRequest,
+    ): TenantSubscriptionDetailView =
+        useCase.grantFreeMonths(tenantId, GrantFreeMonthsCommand(body.months!!, body.reason?.trim()?.ifBlank { null }))
+
     @PostMapping("/cancel")
     @PreAuthorize("@authz.can('platform.subscription.manage')")
     fun cancel(@PathVariable tenantId: UUID): TenantSubscriptionDetailView = useCase.cancel(tenantId)
@@ -93,6 +103,16 @@ data class ConfigureRequest(
     val billingDay: Int? = null,
     @field:Min(0) @field:Max(90)
     val graceDays: Int? = null,
+)
+
+/** Batas 24 bulan menahan salah ketik yang memberi masa aktif bertahun-tahun secara tak sengaja. */
+data class GrantFreeMonthsRequest(
+    @field:NotNull(message = "Jumlah bulan wajib diisi")
+    @field:Min(value = 1, message = "Bonus minimal 1 bulan")
+    @field:Max(value = 24, message = "Bonus maksimal 24 bulan")
+    val months: Int?,
+    @field:Size(max = 500, message = "Alasan maksimal 500 karakter")
+    val reason: String? = null,
 )
 
 data class ManualPaymentRequest(

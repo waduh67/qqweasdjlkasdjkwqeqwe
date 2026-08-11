@@ -110,6 +110,15 @@ class TenantSubscription private constructor(
         if (activatedAt == null) activatedAt = Instant.now()
     }
 
+    /**
+     * Setelah bonus bulan gratis "dilunasi": geser jadwal tagihan berikutnya ke ujung masa aktif baru
+     * agar scheduler tak menagih selama masa bonus. Konvensinya sama dengan [seedInitialPeriod] —
+     * jadwal tagih = akhir masa aktif. Masa aktifnya sendiri tetap hanya ditambah [extendOnPayment].
+     */
+    fun deferNextInvoiceToPeriodEnd() {
+        nextInvoiceAt = currentPeriodEnd
+    }
+
     /** Ada tagihan lewat jatuh tempo (masih dalam grace). Idempoten; tak berlaku bila CANCELLED. */
     fun markPastDue() {
         if (status == SubscriptionStatus.CANCELLED || status == SubscriptionStatus.SUSPENDED) return

@@ -135,6 +135,32 @@ optimistis di sisi terbit.
 
 ---
 
+## Bonus bulan gratis (super-admin)
+
+`POST /api/platform/tenants/{tenantId}/subscription/grant` (izin `platform.subscription.manage`,
+body `{months: 1..24, reason?}`) — promo, kompensasi gangguan, atau memperpanjang masa percobaan
+tanpa menagih tenant. Panelnya ada di *Langganan* pada `/platform/tenants`.
+
+Bonus **tidak** memutasi masa aktif langsung: ia menempuh jalur LUNAS yang sama supaya tak ada
+sumber kebenaran kedua atas `current_period_end`.
+
+1. Tunggakan yang ada (ISSUED/OVERDUE) di-**VOID**. Wajib: tanpa ini `PlatformBillingRunner.enforce()`
+   akan men-suspend ulang tenant karena tagihan lama dan bonusnya percuma.
+2. Terbit tagihan **`FREE-<yyyymm>-<tenant8>` senilai Rp 0** berperiode N bulan, menyambung dari ujung
+   masa aktif berjalan (atau mulai hari ini bila sudah lewat). Bentrok nomor diselesaikan sufiks `-R2`,
+   `-R3`, … lewat `PlatformInvoiceGenerator.grantNumber`.
+3. `PlatformPaymentService.recordGrant` melunasinya dengan penyedia semu **`GRANT`** (nilai 0, `reason`
+   tersimpan sebagai `note`) → `extendOnPayment` menambah masa aktif → `reactivateIfCleared` memulihkan
+   langganan **dan** tenant yang sempat tersuspend.
+4. `deferNextInvoiceToPeriodEnd()` menggeser `next_invoice_at` ke ujung masa aktif baru → tak ditagih
+   selama masa bonus.
+
+Jejaknya terlihat dua sisi: tagihan berbadge **Bonus** (`SubscriptionInvoiceView.grant`, diturunkan
+dari awalan nomor) muncul di panel super-admin dan di `/subscription` milik tenant, ditambah audit
+`platform.subscription.granted`. Langganan `CANCELLED` ditolak — buat langganan baru dulu.
+
+---
+
 ## Scheduler penagihan (`PlatformBillingScheduler`, tiap `PT12H`)
 
 Level platform → **tidak** `TenantContext.runAs` (beda dari `BillingScheduler` tenant). Tiap
@@ -208,14 +234,14 @@ gagal).
 | `billing.subscription.view` | tenant: lihat langganan sendiri (auto ke role Tenant Admin) |
 | `billing.subscription.renew` | tenant: perpanjang mandiri |
 | `platform.subscription.view` | super-admin: lihat langganan & tagihan semua tenant |
-| `platform.subscription.manage` | super-admin: kelola biaya, tagihan, pembayaran |
+| `platform.subscription.manage` | super-admin: kelola biaya, tagihan, pembayaran, bonus bulan gratis |
 | `platform.billing.view` / `platform.billing.manage` | super-admin: setelan + gateway platform |
 
 | Endpoint | Izin |
 |---|---|
 | `GET /api/subscription` · `POST /api/subscription/renew?months=N` | `billing.subscription.*` (tenant) |
 | `GET/PUT /api/platform/billing/settings` | `platform.billing.*` |
-| `.../tenants/{id}/subscription` · `/invoices` · `/invoices/{id}/pay`·`/void` · `/cancel` | `platform.subscription.*` |
+| `.../tenants/{id}/subscription` · `/invoices` · `/invoices/{id}/pay`·`/void` · `/grant` · `/cancel` | `platform.subscription.*` |
 | `POST /api/platform/billing/webhooks/{provider}` | publik (verifikasi tanda tangan gateway) |
 
 ---

@@ -5,6 +5,7 @@ import {
   configureTenantSubscription,
   generateSubscriptionInvoice,
   getTenantSubscription,
+  grantFreeMonths,
   INVOICE_STATUS_LABEL,
   paySubscriptionInvoice,
   SUBSCRIPTION_STATUS_LABEL,
@@ -39,8 +40,21 @@ const INVOICE_TONE: Record<SubscriptionInvoiceView['status'], Tone> = {
   VOID: 'neutral',
 }
 
+/** Pilihan cepat lama bonus (bulan); angka lain tetap bisa diketik — server membatasi 1–24. */
+const GRANT_PRESETS = [1, 2, 3, 6, 12]
+
 const fmtIdr = (n: number) => `Rp ${n.toLocaleString('id-ID')}`
 const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—')
+
+/**
+ * Baca kolom angka opsional: kosong → `null`, di luar rentang/bukan bilangan → `undefined` (ditolak).
+ * Divalidasi di klien agar pesannya jelas, bukan menunggu tolakan server.
+ */
+function parseInRange(raw: string, min: number, max: number): number | null | undefined {
+  if (raw.trim() === '') return null
+  const n = Number(raw)
+  return Number.isInteger(n) && n >= min && n <= max ? n : undefined
+}
 
 export function TenantSubscriptionModal({
   tenantId,
@@ -67,6 +81,9 @@ export function TenantSubscriptionModal({
   const [graceDays, setGraceDays] = useState('')
   // Snapshot nilai form saat terakhir dimuat/disimpan — dasar deteksi "kotor" untuk konfirmasi tutup.
   const [initial, setInitial] = useState('[]')
+  // Form bonus bulan gratis. Bukan bagian dari "kotor": ini form AKSI, bukan nilai tersimpan.
+  const [grantMonths, setGrantMonths] = useState('1')
+  const [grantReason, setGrantReason] = useState('')
 
   const applySub = (s: TenantSubscriptionDetailView | null) => {
     setSub(s)
@@ -113,13 +130,7 @@ export function TenantSubscriptionModal({
       toast.error('Biaya bulanan tidak valid')
       return
     }
-    // Tanggal tagih & masa tenggang opsional (kosong = default global), tapi bila diisi harus
-    // dalam rentang — validasi di klien agar errornya jelas, bukan menunggu tolakan server.
-    const parseInRange = (raw: string, min: number, max: number): number | null | undefined => {
-      if (raw.trim() === '') return null
-      const n = Number(raw)
-      return Number.isInteger(n) && n >= min && n <= max ? n : undefined
-    }
+    // Tanggal tagih & masa tenggang opsional (kosong = default global), tapi bila diisi harus dalam rentang.
     const billingDayVal = parseInRange(billingDay, 1, 28)
     if (billingDayVal === undefined) {
       toast.error('Tanggal tagih harus bilangan 1–28')
@@ -158,6 +169,26 @@ export function TenantSubscriptionModal({
   const voidInvoice = async (inv: SubscriptionInvoiceView) => {
     if (!(await confirm({ title: 'Batalkan tagihan', message: `Batalkan tagihan ${inv.number}? Aksi ini tidak bisa dibatalkan.`, confirmLabel: 'Batalkan', danger: true }))) return
     void run(() => voidSubscriptionInvoice(tenantId, inv.id), `Tagihan ${inv.number} dibatalkan`)
+  }
+
+  const giveFreeMonths = async () => {
+    const months = parseInRange(grantMonths, 1, 24)
+    if (months === null || months === undefined) {
+      toast.error('Jumlah bulan bonus harus bilangan 1–24')
+      return
+    }
+    const ok = await confirm({
+      title: 'Beri bulan gratis',
+      message:
+        `Beri ${months} bulan langganan gratis untuk ${tenantName}? Tagihan yang belum lunas akan ` +
+        'dibatalkan dan tenant yang tersuspend dipulihkan.',
+      confirmLabel: 'Beri gratis',
+    })
+    if (!ok) return
+    void run(
+      () => grantFreeMonths(tenantId, { months, reason: grantReason.trim() || null }),
+      `${months} bulan gratis diberikan`,
+    ).then(() => setGrantReason(''))
   }
 
   const cancelSub = async () => {
@@ -202,7 +233,8 @@ export function TenantSubscriptionModal({
             <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
               <Badge tone={STATUS_TONE[sub.status]}>{SUBSCRIPTION_STATUS_LABEL[sub.status]}</Badge>
               <span className="muted" style={{ fontSize: '0.85rem' }}>
-                {fmtIdr(sub.monthlyFee)}/bln · tagih berikutnya {fmtDate(sub.nextInvoiceAt)}
+                {fmtIdr(sub.monthlyFee)}/bln · aktif s/d {fmtDate(sub.currentPeriodEnd)} · tagih berikutnya{' '}
+                {fmtDate(sub.nextInvoiceAt)}
               </span>
             </div>
           )}
@@ -258,6 +290,54 @@ export function TenantSubscriptionModal({
               </div>
             )}
           </div>
+
+          {/* Bonus bulan gratis (promo/kompensasi) — menambah masa aktif tanpa menagih tenant. */}
+          {manage && sub && sub.status !== 'CANCELLED' && (
+            <div className="card stack" style={{ gap: '0.75rem' }}>
+              <h4 style={{ margin: 0 }}>Bonus bulan gratis</h4>
+              <div className="row" style={{ gap: '0.35rem', flexWrap: 'wrap' }}>
+                {GRANT_PRESETS.map((n) => (
+                  <Button
+                    key={n}
+                    size="small"
+                    variant={Number(grantMonths) === n ? 'primary' : 'default'}
+                    onClick={() => setGrantMonths(String(n))}
+                    disabled={busy}
+                  >
+                    {n} bln
+                  </Button>
+                ))}
+              </div>
+              <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                <TextField
+                  label="Jumlah bulan"
+                  type="number"
+                  min={1}
+                  max={24}
+                  value={grantMonths}
+                  onChange={(_, data) => setGrantMonths(data.value)}
+                  style={{ flex: 1, minWidth: 110 }}
+                />
+                <TextField
+                  label="Alasan (opsional)"
+                  value={grantReason}
+                  onChange={(_, data) => setGrantReason(data.value)}
+                  placeholder="mis. promo peluncuran"
+                  maxLength={500}
+                  style={{ flex: 2, minWidth: 180 }}
+                />
+              </div>
+              <span className="muted" style={{ fontSize: '0.82rem' }}>
+                Masa aktif bertambah dari ujungnya (bukan ditimpa), tagihan yang belum lunas dibatalkan, dan
+                tenant yang tersuspend dipulihkan. Selama masa bonus tenant tidak ditagih.
+              </span>
+              <div className="row">
+                <Button onClick={giveFreeMonths} disabled={busy}>
+                  Beri gratis
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Tagihan */}
           {sub && (
@@ -329,6 +409,7 @@ function InvoiceRow({
         <span className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
           <strong style={{ fontSize: '0.85rem', fontFamily: 'monospace' }}>{inv.number}</strong>
           <Badge tone={INVOICE_TONE[inv.status]}>{INVOICE_STATUS_LABEL[inv.status]}</Badge>
+          {inv.grant && <Badge tone="accent">Bonus</Badge>}
         </span>
         <span className="muted" style={{ fontSize: '0.78rem' }}>
           {fmtDate(inv.periodStart)}–{fmtDate(inv.periodEnd)} · jatuh tempo {fmtDate(inv.dueDate)}

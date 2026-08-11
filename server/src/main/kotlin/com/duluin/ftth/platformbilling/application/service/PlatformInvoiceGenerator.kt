@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 /**
  * Mesin penerbitan tagihan langganan tenant, dipakai bersama trigger manual (service) dan
@@ -189,7 +190,16 @@ class PlatformInvoiceGenerator(
         log.info("Simulasi pembayaran langganan {} dikirim dengan status {}", invoice.number, status)
     }
 
-    /** Nomor terbit-ulang unik untuk periode yang tagihan lamanya VOID: `<base>-R2`, `-R3`, … */
+    /**
+     * Nomor tagihan bonus bulan gratis untuk periode mulai [periodStart]: `FREE-<yyyymm>-<tenant8>`,
+     * bersufiks `-R2`, `-R3`, … bila bulan itu sudah pernah diberi bonus (nomor tagihan unik global).
+     */
+    fun grantNumber(tenantId: UUID, periodStart: LocalDate): String {
+        val base = "${TenantSubscriptionInvoice.GRANT_PREFIX}${periodStart.format(YEAR_MONTH)}-${tenantShort(tenantId)}"
+        return if (invoiceRepository.findByNumber(base) == null) base else nextReissueNumber(base)
+    }
+
+    /** Nomor unik berikutnya untuk nomor dasar yang sudah terpakai: `<base>-R2`, `-R3`, … */
     private fun nextReissueNumber(base: String): String {
         var suffix = 2
         while (invoiceRepository.findByNumber("$base-R$suffix") != null) suffix++
@@ -198,7 +208,7 @@ class PlatformInvoiceGenerator(
 
     private companion object {
         val YEAR_MONTH: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMM")
-        fun tenantShort(tenantId: java.util.UUID): String =
+        fun tenantShort(tenantId: UUID): String =
             tenantId.toString().replace("-", "").take(8)
     }
 }

@@ -157,6 +157,13 @@ class TenantSubscriptionInvoice private constructor(
         get() = status == SubscriptionInvoiceStatus.ISSUED || status == SubscriptionInvoiceStatus.OVERDUE
 
     /**
+     * Tagihan bonus bulan gratis, dikenali dari awalan nomornya ([GRANT_PREFIX]) — nilainya Rp 0 dan
+     * langsung lunas, jadi tak pernah ditagihkan ke tenant.
+     */
+    val isGrant: Boolean
+        get() = number.startsWith(GRANT_PREFIX)
+
+    /**
      * Sesuaikan nilai mengikuti biaya bulanan baru — HANYA untuk tagihan belum lunas yang BELUM
      * di-charge (tanpa instrumen bayar terlekat) agar nilai lokal tak desync dari nominal gateway.
      * Mengembalikan true bila nilai berubah (pemanggil menyimpan), false bila dilewati/tak berubah.
@@ -171,6 +178,9 @@ class TenantSubscriptionInvoice private constructor(
     }
 
     companion object {
+        /** Awalan nomor tagihan bonus bulan gratis (`FREE-<yyyymm>-<tenant8>`), lawan `SUB-` biasa. */
+        const val GRANT_PREFIX = "FREE-"
+
         fun create(
             tenantId: UUID,
             subscriptionId: UUID,
