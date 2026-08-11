@@ -623,6 +623,27 @@ export interface FiberConnectionView {
   /** Rugi hasil ukur; null = belum diukur, bukan nol. */
   lossDb: number | null
   note: string | null
+  /** Tiket yang membuat kotak ini dibuka; null = sambungan lama / kerja tanpa tiket. */
+  workOrderId: string | null
+  workOrderCode: string | null
+  /** Tangan yang mengerjakan — diisi server dari sesi, tak bisa diketik. */
+  splicedById: string | null
+  splicedByName: string | null
+  splicedAt: string
+}
+
+/**
+ * Sambungan yang lahir dari satu work order, dikelompokkan per kotak yang dibuka —
+ * bentuk yang sama dengan cara teknisi menceritakan pekerjaannya ("di JB-01 saya
+ * sambung tiga, di ODP-07 satu"). Kotak yang keburu dihapus tetap ditampilkan
+ * (dengan nama pengganti) supaya kerja yang sudah terjadi tak hilang dari catatan.
+ */
+export interface ClosureSpliceView {
+  closureKind: ClosureKind
+  closureId: string
+  closureCode: string
+  closureName: string
+  connections: FiberConnectionView[]
 }
 
 /**

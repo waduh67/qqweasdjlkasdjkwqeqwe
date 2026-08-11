@@ -118,6 +118,31 @@ export const listWorkOrdersForCustomer = (customerId: string) =>
     .get<PageResponse<WorkOrderView>>(`/api/work-orders?customerId=${customerId}&size=100`)
     .then((page) => page.content)
 
+/** Work order yang belum tutup buku — satu-satunya yang masuk akal jadi wadah kerja baru. */
+const OPEN = (wo: WorkOrderView) => wo.status !== 'DONE' && wo.status !== 'CANCELLED'
+
+/**
+ * Kandidat tiket untuk picker "kerja ini bagian dari tugas mana", dipakai meja splicing.
+ *
+ * Dua sumber, sesuai izin pemakainya: dispatcher/operator (`workorder.order.view`) mencari
+ * ke seluruh papan lewat pencarian server, teknisi lapangan hanya melihat tugasnya sendiri
+ * (`/mine`) dan disaring di sini karena endpoint itu tak menerima kata kunci. Yang sudah
+ * selesai/batal disingkirkan: menempelkan kerja lapangan ke tiket yang sudah tutup buku
+ * hampir selalu salah pilih, dan server pun akan menolaknya kalau memang bukan tiketnya.
+ */
+export const searchOpenWorkOrders = async (term: string, mine: boolean): Promise<WorkOrderView[]> => {
+  const keyword = term.trim()
+  const path = mine
+    ? '/api/work-orders/mine?size=50'
+    : `/api/work-orders?size=50${keyword ? `&query=${encodeURIComponent(keyword)}` : ''}`
+  const page = await api.get<PageResponse<WorkOrderView>>(path)
+  const needle = keyword.toLowerCase()
+  return page.content
+    .filter(OPEN)
+    .filter((wo) => !mine || !needle || `${wo.code} ${wo.title}`.toLowerCase().includes(needle))
+    .slice(0, 20)
+}
+
 /**
  * Papan tugas milik teknisi yang sedang login (`GET /api/work-orders/mine`), opsional
  * disaring status. Kontrak yang sama dikonsumsi aplikasi teknisi mobile untuk

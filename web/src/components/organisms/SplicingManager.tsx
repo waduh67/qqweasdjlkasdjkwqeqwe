@@ -8,9 +8,12 @@ import type {
   SpliceWorkbenchView,
 } from '@/api/network'
 import { SPLICE_METHOD_LABEL } from '@/api/network'
+import { searchOpenWorkOrders } from '@/api/workorder'
 import { useCan } from '@/auth/useCan'
 import { Badge, Button, SelectField, TextField } from '@/components/atoms'
+import { Combobox } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
+import { timeAgo } from '@/utils/timeAgo'
 
 /**
  * Meja kerja splicing & patching — satu layar untuk SEMUA kotak: ODF, ODC, ODP,
@@ -35,6 +38,12 @@ import { useConfirm, useToast } from '@/system'
  *    core 1↔1 … 8↔8 satu per satu adalah 8 klik yang hasilnya sudah bisa
  *    ditebak. Satu tombol mengerjakannya sekaligus, dan server menerapkannya
  *    sebagai satu transaksi — semua masuk, atau tak ada yang masuk.
+ * 4. **Tiap sambungan membawa tiket & nama teknisinya.** Kotak tak pernah dibuka
+ *    tanpa alasan: ada work order yang menyuruhnya. Pilih tiketnya sekali di
+ *    atas, lalu semua sambungan pada sesi itu ikut terbukukan ke sana — dan
+ *    balasannya masuk ke linimasa tiket, jadi penyelia melihat kerja seratnya
+ *    tanpa harus membuka peta. Siapa yang menyambung diisi server dari sesi,
+ *    tak bisa diketik.
  */
 
 /** Satu titik yang bisa diklik di salah satu panel — core maupun port/kaki. */
@@ -64,6 +73,9 @@ interface Group {
 const METHODS: SpliceMethod[] = ['FUSION', 'MECHANICAL', 'CONNECTOR']
 
 const free = (slot: Slot) => slot.connectionId == null && !slot.blocked
+
+/** Tanggal singkat pada opsi tiket — saat memilih tugas, jamnya belum penting. */
+const shortDate = (iso: string) => new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
 
 /**
  * Hitam atau putih di atas warna serat, mengikuti luminansi yang dirasakan mata —
@@ -241,6 +253,10 @@ export function SplicingManager({
   const confirm = useConfirm()
   const canView = can('network.splice.view')
   const canManage = can('network.splice.manage')
+  // Dispatcher mencari ke seluruh papan; teknisi lapangan cuma boleh melihat tugasnya
+  // sendiri. Yang tak punya keduanya tetap bisa menyambung — cuma tanpa penunjuk tiket.
+  const canSeeAllWorkOrders = can('workorder.order.view')
+  const canPickWorkOrder = canSeeAllWorkOrders || can('workorder.order.field')
 
   const [data, setData] = useState<SpliceWorkbenchView | null>(null)
   const [loading, setLoading] = useState(true)
@@ -251,11 +267,21 @@ export function SplicingManager({
   const [method, setMethod] = useState<SpliceMethod>('FUSION')
   const [lossDb, setLossDb] = useState('')
   const [busy, setBusy] = useState(false)
+  // Tiket yang menaungi sesi ini; dipilih sekali lalu menempel ke tiap sambungan
+  // yang dibuat sesudahnya — satu kali buka kotak biasanya satu tiket.
+  const [workOrderId, setWorkOrderId] = useState('')
   // Baris sambungan yang sedang disunting keterangannya (hasil ukur menyusul besoknya).
   const [editing, setEditing] = useState<string | null>(null)
   const [editMethod, setEditMethod] = useState<SpliceMethod>('FUSION')
   const [editLoss, setEditLoss] = useState('')
   const [editNote, setEditNote] = useState('')
+  // Tiket yang ditempelkan menyusul ke baris lama; kosong = biarkan apa adanya.
+  const [editWorkOrder, setEditWorkOrder] = useState('')
+
+  const fetchWorkOrders = useCallback(
+    (term: string) => searchOpenWorkOrders(term, !canSeeAllWorkOrders),
+    [canSeeAllWorkOrders],
+  )
 
   const load = useCallback(async () => {
     try {
@@ -312,6 +338,8 @@ export function SplicingManager({
     return Array.from({ length: n }, (_, i) => ({ a: a[i], b: b[i] }))
   }, [groups, leftKey, rightKey])
 
+  // Tiket sengaja TIDAK ikut dibersihkan: satu kali kotak dibuka biasanya menghasilkan
+  // beberapa sambungan berturut-turut, semuanya milik tugas yang sama.
   const afterChange = async () => {
     setLeftPick(null)
     setRightPick(null)
@@ -331,6 +359,7 @@ export function SplicingManager({
         b: rightPick.point,
         method,
         lossDb: lossDb.trim() === '' ? null : Number(lossDb),
+        workOrderId: workOrderId || null,
       })
       toast.success(`${leftPick.label} ↔ ${rightPick.label} tersambung`)
       await afterChange()
@@ -361,6 +390,7 @@ export function SplicingManager({
         closureKind,
         closureId,
         pairs: autoPairs.map((pair) => ({ a: pair.a.point, b: pair.b.point, method })),
+        workOrderId: workOrderId || null,
       })
       toast.success(`${autoPairs.length} sambungan dibuat`)
       await afterChange()
@@ -397,6 +427,9 @@ export function SplicingManager({
         method: editMethod,
         lossDb: editLoss.trim() === '' ? null : Number(editLoss),
         note: editNote.trim() === '' ? null : editNote.trim(),
+        // Kosong = jangan diapa-apakan. Tiket hanya bisa DITEMPELKAN, tak bisa dipindah:
+        // sambungan adalah bukti siapa membuka kotak apa karena tugas mana.
+        workOrderId: editWorkOrder || null,
       })
       setEditing(null)
       toast.success('Keterangan sambungan disimpan')
@@ -431,6 +464,25 @@ export function SplicingManager({
         </p>
       ) : (
         <>
+          {canManage && canPickWorkOrder && (
+            <label className="stack" style={{ gap: '0.25rem' }}>
+              <span style={{ fontSize: '0.82rem' }}>Work order (opsional)</span>
+              <Combobox
+                value={workOrderId}
+                onChange={(id) => setWorkOrderId(id)}
+                fetchOptions={fetchWorkOrders}
+                toId={(wo) => wo.id}
+                toLabel={(wo) => `${wo.code} · ${wo.title}`}
+                toMeta={(wo) => [wo.customerName, wo.scheduledAt ? shortDate(wo.scheduledAt) : null].filter(Boolean).join(' · ')}
+                placeholder={canSeeAllWorkOrders ? 'Cari kode atau judul tiket…' : 'Pilih dari tugas saya…'}
+                emptyText="Tak ada work order terbuka"
+              />
+              <span className="muted" style={{ fontSize: '0.72rem' }}>
+                Sambungan yang dibuat setelah ini dibukukan ke tiket tersebut, dan tercatat di linimasanya.
+              </span>
+            </label>
+          )}
+
           <div className="splice-bench">
             <SidePanel
               title="Titik masuk"
@@ -513,6 +565,7 @@ export function SplicingManager({
                 <th>Titik tujuan</th>
                 <th>Metode</th>
                 <th>Rugi</th>
+                <th>Dikerjakan</th>
                 {canManage && <th />}
               </tr>
             </thead>
@@ -541,6 +594,30 @@ export function SplicingManager({
                       <td>{row.methodLabel}</td>
                       {/* Kosong berarti BELUM DIUKUR, bukan nol — jangan ditulis "0 dB". */}
                       <td className="tnum">{row.lossDb == null ? '—' : `${row.lossDb.toFixed(2)} dB`}</td>
+                      {/* Jejak pekerjaannya: tiket yang menyuruh kotak ini dibuka, tangan yang
+                          mengerjakannya, dan kapan. Sambungan lama (dibuat sebelum ini dicatat)
+                          tak punya pelaksana — waktunya pun ikut disembunyikan, sebab yang
+                          tersimpan cuma saat kolomnya ditambahkan, bukan saat serat dilas. */}
+                      <td>
+                        <span className="stack" style={{ gap: '0.15rem' }}>
+                          {row.workOrderCode ? (
+                            <Badge tone="accent">{row.workOrderCode}</Badge>
+                          ) : (
+                            <span className="muted" style={{ fontSize: '0.78rem' }}>tanpa tiket</span>
+                          )}
+                          {row.splicedById ? (
+                            <span
+                              className="muted"
+                              style={{ fontSize: '0.72rem' }}
+                              title={new Date(row.splicedAt).toLocaleString('id-ID')}
+                            >
+                              {row.splicedByName ?? 'pengguna terhapus'} · {timeAgo(row.splicedAt)}
+                            </span>
+                          ) : (
+                            <span className="muted" style={{ fontSize: '0.72rem' }}>pelaksana tak tercatat</span>
+                          )}
+                        </span>
+                      </td>
                       {canManage && (
                         <td>
                           <div className="row" style={{ gap: '0.3rem', justifyContent: 'flex-end' }}>
@@ -551,6 +628,7 @@ export function SplicingManager({
                                 setEditMethod(row.method)
                                 setEditLoss(row.lossDb == null ? '' : String(row.lossDb))
                                 setEditNote(row.note ?? '')
+                                setEditWorkOrder('')
                               }}
                               disabled={editing === row.id}
                             >
@@ -565,7 +643,7 @@ export function SplicingManager({
                     </tr>
                     {editing === row.id && (
                       <tr>
-                        <td colSpan={canManage ? 5 : 4}>
+                        <td colSpan={canManage ? 6 : 5}>
                           <div className="splice-actions">
                             <SelectField
                               label="Metode"
@@ -591,6 +669,23 @@ export function SplicingManager({
                               onChange={(_, d) => setEditNote(d.value)}
                               maxLength={200}
                             />
+                            {/* Tiket boleh menyusul (hasil ukur kerap baru masuk keesokan harinya),
+                                tapi yang sudah punya tiket tak ditawari pindah — server pun menolak. */}
+                            {canPickWorkOrder && !row.workOrderId && (
+                              <label className="stack" style={{ flex: 1, minWidth: 200, gap: '0.25rem' }}>
+                                <span style={{ fontSize: '0.82rem' }}>Bukukan ke work order</span>
+                                <Combobox
+                                  value={editWorkOrder}
+                                  onChange={(id) => setEditWorkOrder(id)}
+                                  fetchOptions={fetchWorkOrders}
+                                  toId={(wo) => wo.id}
+                                  toLabel={(wo) => `${wo.code} · ${wo.title}`}
+                                  toMeta={(wo) => wo.customerName ?? undefined}
+                                  placeholder="Biarkan kosong bila tak perlu"
+                                  emptyText="Tak ada work order terbuka"
+                                />
+                              </label>
+                            )}
                             <Button
                               variant="primary"
                               disabled={busy}

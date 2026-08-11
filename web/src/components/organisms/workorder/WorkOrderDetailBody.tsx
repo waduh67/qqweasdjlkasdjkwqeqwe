@@ -34,6 +34,7 @@ import {
   type ActFn,
 } from '@/utils/woLabels'
 import { AssigneeChips, WoField } from './views'
+import { WorkOrderFiberWork } from './WorkOrderFiberWork'
 
 /** Detail + aksi lifecycle. Tombol yang muncul mengikuti status & izin. */
 export function WorkOrderDetailBody({
@@ -241,6 +242,10 @@ export function WorkOrderDetailBody({
           {showEvidence && <EvidenceSection workOrderId={id} status={wo.status} />}
         </div>
       )}
+
+      {/* Kerja serat yang dibukukan ke tiket ini — kartunya menampilkan diri sendiri
+          hanya bila ada isinya (lihat komponennya). */}
+      <WorkOrderFiberWork workOrderId={id} />
 
       <div className="card stack" style={{ gap: '0.5rem' }}>
         <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Riwayat</h3>
