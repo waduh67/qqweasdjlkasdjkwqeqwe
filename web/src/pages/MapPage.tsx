@@ -90,6 +90,30 @@ import {
   zoomWidth,
   type BasemapMode,
 } from '@/map/mapStyle'
+import {
+  ASSET_META,
+  CLICK_SWALLOW_MS,
+  HOLD_DRIFT_PX,
+  LONG_PRESS_MS,
+  MENU_HEIGHT_PX,
+  MENU_WIDTH_PX,
+  MOVABLE_NODES,
+  NODE_KIND_LABEL,
+  SEARCH_DEBOUNCE_MS,
+  SURVEY_RADIUS_M,
+  type AssetKind,
+} from '@/map/mapAssets'
+import {
+  CODE_MAX,
+  DEFAULT_CORES,
+  TYPE_LABEL,
+  autoCableCode,
+  cableOriginOf,
+  cableRequestBody,
+  drawHint,
+  formatLength,
+  type SourcePort,
+} from '@/map/cableFormat'
 import { useConfirm, useToast } from '@/system'
 import {
   IconCheck,
@@ -107,15 +131,7 @@ import {
   IconTrash,
   IconWorkOrder,
 } from '@/components/atoms/icons'
-import {
-  canStartCableFrom,
-  createCableTool,
-  layerNodeKind,
-  legalCableTypes,
-  type CableTool,
-  type SnappedDevice,
-  type ToolState,
-} from '../map/cableTool'
+import { createCableTool, legalCableTypes, type CableTool, type ToolState } from '../map/cableTool'
 
 /**
  * Peta jaringan berbasis vector tile.
@@ -136,75 +152,6 @@ const OTDR_EVENT_LABEL: Record<OtdrEventType, string> = {
 
 const OTDR_EVENT_OPTIONS = Object.entries(OTDR_EVENT_LABEL) as [OtdrEventType, string][]
 
-
-/** Perangkat titik yang bisa ditaruh langsung di peta (punya koordinat sendiri). */
-type AssetKind = 'SITE' | 'OLT' | 'ODF' | 'ODC' | 'ODP' | 'JOINT_BOX'
-
-/**
- * Ambang gerak-isyarat menu "tambah di sini". 500 ms mengikuti tekan-lama bawaan
- * peramban seluler (jadi terasa sama dengan yang sudah dikenal jari operator), dan
- * 10 px memberi ruang goyang tangan tanpa menelan geseran peta yang sesungguhnya.
- */
-/**
- * Radius cek kapasitas. 300 m adalah jarak yang masih masuk akal ditarik drop
- * atau dikupas dari selubung yang lewat; lebih jauh dari itu jawabannya "bisa,
- * tapi perlu tiang & kabel baru" — dan itu bukan lagi keputusan yang boleh
- * diambil sales sambil berdiri di depan rumah orang.
- */
-const SURVEY_RADIUS_M = 300
-
-const LONG_PRESS_MS = 500
-const HOLD_DRIFT_PX = 10
-
-/** Jeda buang-klik sesudah menu terbuka — cukup untuk klik susulan dari jari yang sama. */
-const CLICK_SWALLOW_MS = 500
-
-/** Perkiraan ukuran kartu menu (lihat `.map-menu`), dipakai menahannya di dalam kanvas. */
-const MENU_WIDTH_PX = 224
-const MENU_HEIGHT_PX = 248
-
-/** Endapan ketikan pencarian: satu kueri per jeda mengetik, bukan per huruf. */
-const SEARCH_DEBOUNCE_MS = 300
-
-const ASSET_META: Record<AssetKind, { label: string; createPerm: string; deletePerm: string; endpoint: string }> = {
-  SITE: { label: 'Site/POP', createPerm: 'network.site.create', deletePerm: 'network.site.delete', endpoint: '/api/sites' },
-  OLT: { label: 'OLT', createPerm: 'network.olt.create', deletePerm: 'network.olt.delete', endpoint: '/api/olts' },
-  ODF: { label: 'ODF (rak POP)', createPerm: 'network.odf.create', deletePerm: 'network.odf.delete', endpoint: '/api/odfs' },
-  ODC: { label: 'ODC', createPerm: 'network.odc.create', deletePerm: 'network.odc.delete', endpoint: '/api/odcs' },
-  ODP: { label: 'ODP', createPerm: 'network.odp.create', deletePerm: 'network.odp.delete', endpoint: '/api/odps' },
-  JOINT_BOX: {
-    label: 'Joint box',
-    createPerm: 'network.jointbox.create',
-    deletePerm: 'network.jointbox.delete',
-    endpoint: '/api/joint-boxes',
-  },
-}
-
-/** Nama jenis simpul untuk judul blade detail — "JOINT_BOX" bukan bahasa manusia. */
-const NODE_KIND_LABEL: Record<AccessNodeKind, string> = {
-  odc: 'ODC',
-  odp: 'ODP',
-  joint_box: 'Joint box',
-}
-
-/**
- * Layer titik yang koordinatnya bisa DIGESER langsung di peta. Kunci = id layer
- * lingkaran (sekaligus source-layer MVT), nilai = endpoint pindah-lokasi + izinnya
- * + warna pin sementara (senada warna markernya di peta). Semua endpoint menerima
- * body `{ longitude, latitude }` (`PUT /api/{plural}/{id}/location`), termasuk
- * pelanggan yang kabel drop-nya ikut menempel ulang di sisi server.
- */
-const MOVABLE_NODES: Record<string, { plural: string; perm: string; label: string; color: string }> = {
-  customer: { plural: 'customers', perm: 'customer.customer.update', label: 'Pelanggan', color: '#34d399' },
-  odp: { plural: 'odps', perm: 'network.odp.update', label: 'ODP', color: '#fbbf24' },
-  // `joint-boxes` (bertanda hubung) — bukan sekadar layer + "s": itulah bentuk jamak
-  // yang dipakai controllernya, dan URL yang meleset satu huruf gagal tanpa suara.
-  joint_box: { plural: 'joint-boxes', perm: 'network.jointbox.update', label: 'Joint box', color: JOINT_BOX_COLOR },
-  odc: { plural: 'odcs', perm: 'network.odc.update', label: 'ODC', color: '#22d3ee' },
-  odf: { plural: 'odfs', perm: 'network.odf.update', label: 'ODF', color: ODF_COLOR },
-  olt: { plural: 'olts', perm: 'network.olt.update', label: 'OLT', color: OLT_COLOR },
-  site: { plural: 'sites', perm: 'network.site.update', label: 'Site', color: '#b47cff' },
-}
 
 export function MapPage() {
   const container = useRef<HTMLDivElement>(null)
@@ -2351,21 +2298,6 @@ function MapToolbar({ onLocate }: { onLocate: () => void }) {
  * tak usah muncul. Aturan "siapa boleh jadi awal" dipinjam dari alat kabelnya sendiri
  * supaya panel tak pernah menawarkan awalan yang nanti ditolak alatnya.
  */
-function cableOriginOf(
-  movable: { layer: string; id: string; code: string; lng: number; lat: number } | null,
-  allowed: boolean,
-): SnappedDevice | null {
-  if (!movable || !allowed) return null
-  const kind = layerNodeKind(movable.layer)
-  if (!kind || !canStartCableFrom(kind)) return null
-  return { kind, id: movable.id, code: movable.code, lng: movable.lng, lat: movable.lat }
-}
-
-/**
- * Tombol "Pindahkan lokasi" seragam di setiap panel info simpul. Menekannya masuk
- * mode relokasi: penanda draggable khas muncul di titik itu (lihat startRelocate).
- * Tersembunyi bila pengguna tak punya izin ubah jenis simpul terkait.
- */
 /* ---------- Primitif blade panel peta ----------
    Semua panel peta memakai kerangka yang sama — kepala lengket, command bar datar,
    badan berisi daftar properti "Essentials" — supaya klik ODP, OLT, ODC, site, atau
@@ -2400,31 +2332,6 @@ function BladeHead({
   )
 }
 
-/**
- * Badan permintaan PUT kabel yang menyalin keadaan sekarang apa adanya — dasar
- * untuk suntingan sepotong dari panel. API kabel memakai PUT utuh (bukan PATCH),
- * jadi bidang yang tak disebut akan terhapus; merakitnya di satu tempat menutup
- * kemungkinan satu pemanggil lupa membawa serta rute atau ujung-ujungnya.
- */
-function cableRequestBody(c: CableView) {
-  return {
-    code: c.code,
-    name: c.name,
-    cableType: c.cableType,
-    coreCount: c.coreCount,
-    route: c.route.points,
-    fromKind: c.fromKind,
-    fromId: c.fromId,
-    toKind: c.toKind,
-    toId: c.toId,
-    fromPonPortId: c.fromPonPortId ?? undefined,
-    fromPortNumber: c.fromPortNumber ?? undefined,
-    toPortNumber: c.toPortNumber ?? undefined,
-    status: c.status,
-    installation: c.installation,
-    ownership: c.ownership,
-  }
-}
 
 /**
  * Aksi "pindahkan lokasi" — sama persis di setiap panel aset, jadi dirakit sekali.
@@ -2448,59 +2355,6 @@ function cableAction(onClick: () => void): CommandAction {
 function deleteAction(label: string, onClick: () => void, disabled = false): CommandAction {
   return { key: 'delete', label, icon: <IconTrash size={15} />, onClick, disabled }
 }
-
-const TYPE_LABEL: Record<CableType, string> = {
-  BACKBONE: 'Backbone',
-  FEEDER: 'Feeder',
-  DISTRIBUTION: 'Distribusi',
-  DROP: 'Drop',
-}
-
-/**
- * Tebakan jumlah core per jenis — angka yang paling sering benar, bukan batas.
- * Backbone berkapasitas besar karena ia dipasang sekali untuk belasan tahun ke
- * depan: menariknya ulang jauh lebih mahal daripada membeli core cadangan.
- */
-const DEFAULT_CORES: Record<CableType, number> = { BACKBONE: 96, FEEDER: 24, DISTRIBUTION: 12, DROP: 1 }
-
-/** Awalan kode per jenis — cermin [CableNaming] di server, supaya isian form = yang tersimpan. */
-const CODE_PREFIX: Record<CableType, string> = { BACKBONE: 'BB', FEEDER: 'FDR', DISTRIBUTION: 'DIST', DROP: 'DROP' }
-
-/** Batas panjang kode yang ditegakkan domain; lebih dari ini ditolak server. */
-const CODE_MAX = 40
-
-/**
- * Merakit kode kabel dari jenis + kode kedua ujungnya — bentuk yang bisa DIUCAPKAN
- * lewat radio dan ditulis tangan di label selubung ("DIST-ODC-JKT-01-ODP-07").
- *
- * Aturannya sengaja sama persis dengan `CableNaming` di server: yang tampil di kolom
- * inilah yang dikirim, jadi operator tak pernah melihat satu kode lalu menemukan kode
- * lain tersimpan. Ujung yang kepanjangan dipangkas dari DEPAN — bagian pembeda sebuah
- * kode aset (nomor urutnya) selalu ada di belakang.
- */
-function autoCableCode(type: CableType, parts: string[]): string {
-  const prefix = CODE_PREFIX[type]
-  const cleaned = parts
-    .map((p) => p.toUpperCase().replace(/[^A-Z0-9._/-]/g, '-').replace(/-{2,}/g, '-').replace(/^-+|-+$/g, ''))
-    .filter((p) => p !== '')
-  if (cleaned.length === 0) return prefix
-  const perPart = Math.max(1, Math.floor((CODE_MAX - prefix.length - cleaned.length) / cleaned.length))
-  const trimmed = cleaned.map((p) => p.slice(-perPart).replace(/^-+|-+$/g, '')).filter((p) => p !== '')
-  return [prefix, ...trimmed].join('-')
-}
-
-function formatLength(meters: number): string {
-  return meters >= 1000 ? `${(meters / 1000).toFixed(2)} km` : `${Math.round(meters)} m`
-}
-
-function drawHint(state: ToolState): string {
-  if (!state.from) return 'Klik perangkat sumber (POP, ODC, atau ODP)'
-  if (!state.to) return `Dari ${state.from.code} — klik titik belok, lalu klik perangkat tujuan`
-  return 'Selesai — isi detail kabel'
-}
-
-/** Port keluaran sumber yang dipilih: PON port OLT (ponPortId) atau kaki/slot (portNumber). */
-type SourcePort = { ponPortId: string | null; portNumber: number | null }
 
 /**
  * Sepasang dropdown "fisik jalur", dipakai form kabel baru maupun panel kabel
