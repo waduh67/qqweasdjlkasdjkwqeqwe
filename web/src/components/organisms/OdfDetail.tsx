@@ -10,6 +10,7 @@ import { mapFocusState, type MapFocusState } from '@/map/mapFocus'
 import { AssetDetailPanel } from './AccessNodeDetail'
 import { Blade } from './Blade'
 import { LocationPicker } from './LocationPicker'
+import { SplicingManager } from './SplicingManager'
 
 const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
   { value: 'PLANNED', label: 'Rencana' },
@@ -219,7 +220,12 @@ export function OdfDetail({
         }}
         onDelete={() => void remove()}
         onShowOnMap={onShowOnMap ? () => onShowOnMap(mapFocusState('odf', odfId, odf.location)) : undefined}
-      />
+      >
+        {/* Rak ODF adalah satu-satunya kotak yang sisi tujuannya bukan serat: di
+            sini core kabel luar bertemu port (sisi belakang), lalu patchcord dari
+            sisi depan lanjut ke PON port OLT. */}
+        <SplicingManager closureKind="ODF" closureId={odfId} onChanged={() => void load()} />
+      </AssetDetailPanel>
 
       <Blade
         open={draft != null}

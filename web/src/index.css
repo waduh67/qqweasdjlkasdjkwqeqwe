@@ -2985,3 +2985,94 @@ tbody tr.row-selected:hover {
   color: var(--warning-ink);
   background: color-mix(in srgb, var(--warning) 16%, var(--surface));
 }
+
+/* ---------- Meja kerja splicing & patching ---------- */
+
+/* Dua panel bersisian karena begitulah pekerjaannya: satu kotak dibuka, dua
+   ujung ditaruh di hadapan teknisi, lalu disambung sehelai demi sehelai. Di
+   layar sempit keduanya menumpuk — urutan atas-bawah tetap masuk-lalu-tujuan. */
+.splice-bench {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.6rem;
+}
+.splice-side {
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  min-width: 0;
+}
+/* Rak ODF 144 port tak boleh mendorong tabel sambungan ke bawah horizon: isinya
+   digulung di dalam panelnya sendiri. */
+.splice-side .core-grid,
+.splice-side .splice-slots {
+  max-height: 260px;
+  overflow-y: auto;
+}
+/* Titik non-core (port ODF, kaki splitter, PON) berlabel kata, bukan angka, jadi
+   bentuknya pil selebar isinya — bukan chip persegi seperti core. */
+.splice-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 0.2rem;
+}
+.splice-slot {
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.splice-slot:not(:disabled):hover {
+  background: var(--surface-hover);
+}
+/* Sudah tersambung = diredupkan dan tak bisa diklik; yang MASIH BEBAS-lah yang
+   harus menonjol, sebab itu pertanyaan yang dibawa orang ke layar ini. */
+.splice-slot.is-used {
+  opacity: 0.45;
+  cursor: default;
+}
+.splice-slot.is-selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  background: var(--accent-soft);
+}
+.splice-slot:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+/* Metode + rugi + tombol dalam satu baris yang rata-bawah, supaya "sambung" ada
+   tepat di sebelah dua isian yang menyertainya. */
+.splice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+.splice-actions > .fui-Field {
+  flex: 1 1 140px;
+  min-width: 120px;
+}
+.splice-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+/* Warna selubung serat ikut ke tabel: nomor core saja tak cukup saat teknisi
+   mencocokkannya dengan helai yang sedang dipegang. */
+.splice-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  flex: none;
+}

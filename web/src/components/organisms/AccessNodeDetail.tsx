@@ -12,6 +12,7 @@ import { useConfirm, useToast } from '@/system'
 import { mapFocusState, type MapFocusState } from '@/map/mapFocus'
 import { Blade } from './Blade'
 import { LocationPicker } from './LocationPicker'
+import { SplicingManager } from './SplicingManager'
 import { SplitterPanel } from './SplitterPanel'
 
 const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
@@ -433,6 +434,17 @@ export function AccessNodeDetail({
             }}
           />
         )}
+
+        {/* Splicing datang SETELAH splitter: modulnya harus sudah ada sebelum
+            kakinya bisa ditunjuk sebagai tujuan sambungan. */}
+        <SplicingManager
+          closureKind={kind === 'odc' ? 'ODC' : kind === 'odp' ? 'ODP' : 'JOINT_BOX'}
+          closureId={nodeId}
+          onChanged={() => {
+            void load()
+            onChanged?.()
+          }}
+        />
       </AssetDetailPanel>
 
       {/* Drawer sunting lebih sempit yang menumpang DI ATAS detail — panel induknya tetap

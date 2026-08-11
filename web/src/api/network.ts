@@ -539,6 +539,126 @@ export interface CablePortOption {
   occupiedByCable: string | null
 }
 
+/**
+ * Jenis titik yang bisa jadi ujung sebuah sambungan di dalam kotak. Yang penting
+ * bukan namanya, melainkan bahwa keenamnya SETARA: sambungan menghubungkan dua
+ * titik, apa pun jenisnya — core ke kaki splitter, core ke port ODF, port ODF ke
+ * PON. Itu sebabnya satu layar bisa melayani ODF, ODC, ODP, dan joint box.
+ */
+export type ConnectionPointKind = 'CORE' | 'ODF_PORT' | 'SPLITTER_IN' | 'SPLITTER_OUT' | 'PON_PORT' | 'ONU'
+
+/** Sisi port ODF: belakang menghadap kabel luar, depan menghadap perangkat. */
+export type OdfPortSide = 'BACK' | 'FRONT'
+
+export type SpliceMethod = 'FUSION' | 'MECHANICAL' | 'CONNECTOR'
+
+export const SPLICE_METHOD_LABEL: Record<SpliceMethod, string> = {
+  FUSION: 'Fusion (dilebur)',
+  MECHANICAL: 'Mekanik',
+  CONNECTOR: 'Konektor (patch)',
+}
+
+/** Satu ujung sambungan, sudah berlabel dari server — layar tak merangkai namanya sendiri. */
+export interface FiberConnectionPointView {
+  kind: ConnectionPointKind
+  kindLabel: string
+  label: string
+  coreId: string | null
+  cableId: string | null
+  cableCode: string | null
+  coreNumber: number | null
+  colorHex: string | null
+  nodeId: string | null
+  portNumber: number | null
+  portSide: OdfPortSide | null
+}
+
+export interface FiberConnectionView {
+  id: string
+  closureKind: ClosureKind
+  closureId: string
+  a: FiberConnectionPointView
+  b: FiberConnectionPointView
+  method: SpliceMethod
+  methodLabel: string
+  /** Rugi hasil ukur; null = belum diukur, bukan nol. */
+  lossDb: number | null
+  note: string | null
+}
+
+/**
+ * Sehelai core dilihat DARI DALAM sebuah kotak: selain identitas seratnya,
+ * yang menentukan bisa-tidaknya ia dipakai adalah apakah ia sudah tersambung —
+ * di sini (`connectionId`) atau di kotak lain (`connectedElsewhere`).
+ */
+export interface SpliceCoreView {
+  core: CableCoreView
+  connectionId: string | null
+  connectedElsewhere: boolean
+}
+
+/**
+ * Kabel yang bisa dijangkau dari dalam kotak ini — termasuk yang cuma LEWAT di
+ * depannya, bukan berujung di sini. Justru itu kejadian yang paling sering:
+ * satu kabel distribusi 8 core melewati delapan ODP dan dikupas di tiap kotak
+ * untuk mengambil satu core.
+ */
+export interface SpliceCableView {
+  cableId: string
+  code: string
+  name: string
+  cableType: CableType
+  coreCount: number
+  lengthMeters: number
+  /** Kotak ini adalah ujung kabel (bukan sekadar dilewati). */
+  terminatesHere: boolean
+  /** Jarak titik kupas dari pangkal kabel, diukur menyusuri rutenya. */
+  tapDistanceMeters: number
+  /** Meleset berapa meter kotak ini dari garis rute — penanda survei kasar. */
+  offsetMeters: number
+  cores: SpliceCoreView[]
+}
+
+/**
+ * Titik non-core di dalam kotak: kaki splitter (ODC/ODP), port ODF & PON port
+ * (ODF). Daftarnya menyesuaikan jenis kotaknya, jadi joint box memang kosong —
+ * di sana serat cuma bertemu serat.
+ */
+export interface SplicePointView {
+  kind: ConnectionPointKind
+  nodeId: string
+  portNumber: number | null
+  portSide: OdfPortSide | null
+  label: string
+  /** Judul kelompok, mis. "SPL-1 · 1:8" atau "Rak ODF-01". */
+  group: string
+  /** Sambungan yang memakainya; null = titik masih bebas. */
+  connectionId: string | null
+}
+
+/** Seisi meja kerja splicing sebuah kotak — satu panggilan untuk satu layar. */
+export interface SpliceWorkbenchView {
+  closureKind: ClosureKind
+  closureId: string
+  closureCode: string
+  closureName: string
+  /** Batas jumlah sambungan yang muat; null = tak dibatasi (ODC/ODP). */
+  spliceCapacity: number | null
+  spliceCount: number
+  cables: SpliceCableView[]
+  points: SplicePointView[]
+  connections: FiberConnectionView[]
+}
+
+/** Satu ujung sambungan dalam bentuk yang dikirim ke server. */
+export interface ConnectionPointRequest {
+  kind: ConnectionPointKind
+  coreId?: string | null
+  nodeId?: string | null
+  portNumber?: number | null
+  portSide?: OdfPortSide | null
+}
+
 /** Satu alarm hidup yang membuat sebuah kabel merah — jawaban "kenapa" saat diklik. */
 export interface ImpactCause {
   label: string
