@@ -146,10 +146,27 @@ const DEFAULT_BASEMAP: BasemapMode = 'dark'
  */
 const PREF_BASEMAP = 'ftth.map.basemap'
 const PREF_LEGEND = 'ftth.map.legend'
+/**
+ * Yang disimpan lapisan yang DISEMBUNYIKAN, bukan yang ditampilkan — dan itu bukan
+ * selera penulisan. Kalau daftar "tampil" yang disimpan, setiap jenis simpul baru
+ * (ODF & joint box baru saja lahir, dan akan ada lagi) mendarat sebagai tak-tercentang
+ * di layar orang yang pernah menyentuh laci ini: fitur baru yang tak kelihatan sama
+ * sekali. Menyimpan yang disembunyikan membuat bawaannya selalu "semua tampak".
+ */
+const PREF_HIDDEN_LAYERS = 'ftth.map.hidden-layers'
 
 function savedBasemap(): BasemapMode {
   const saved = localStorage.getItem(PREF_BASEMAP)
   return BASEMAP_ORDER.includes(saved as BasemapMode) ? (saved as BasemapMode) : DEFAULT_BASEMAP
+}
+
+function savedHiddenLayers(): Set<string> {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PREF_HIDDEN_LAYERS) ?? '[]')
+    return new Set(Array.isArray(raw) ? raw.filter((k): k is string => typeof k === 'string') : [])
+  } catch {
+    return new Set()
+  }
 }
 
 const HEALTH_COLOR: Record<string, string> = {
@@ -465,6 +482,50 @@ const NODE_LAYERS: Array<{ id: string; base: any }> = [
   { id: 'site', base: '#b47cff' },
 ]
 
+/**
+ * Kelompok lapisan yang bisa disembunyikan sendiri-sendiri dari laci setelan.
+ *
+ * Peta sekarang menumpuk tujuh jenis simpul di atas satu sama lain, dan di POP yang
+ * padat titik-titiknya memang saling menutupi — rak, OLT, dan site berdiri di alamat
+ * yang sama persis. Saklar ini bukan hiasan: ia satu-satunya cara melihat apa yang
+ * ada DI BAWAH tumpukan itu tanpa menggeser apa pun.
+ *
+ * Satu baris = satu kelompok, sebab lingkaran + halo + labelnya sebenarnya tiga
+ * lapisan MapLibre yang harus hidup-mati berbarengan; memisahkannya cuma melahirkan
+ * keadaan aneh (label melayang tanpa titiknya). Urutannya hulu→hilir seperti alur
+ * jaringannya, dengan kabel di paling bawah karena ia latar, bukan simpul.
+ */
+const MAP_LAYER_GROUPS: Array<{ key: string; label: string; color?: string; layers: string[]; perm?: string }> = [
+  { key: 'site', label: 'Site / POP', color: '#b47cff', layers: ['site', 'site-glow'], perm: 'network.site.view' },
+  { key: 'olt', label: 'OLT', color: OLT_COLOR, layers: ['olt', 'olt-glow', 'olt-label'], perm: 'network.olt.view' },
+  { key: 'odf', label: 'ODF', color: ODF_COLOR, layers: ['odf', 'odf-glow', 'odf-label'], perm: 'network.odf.view' },
+  { key: 'odc', label: 'ODC', color: '#22d3ee', layers: ['odc', 'odc-glow'], perm: 'network.odc.view' },
+  { key: 'odp', label: 'ODP', color: '#fbbf24', layers: ['odp', 'odp-glow', 'odp-label'], perm: 'network.odp.view' },
+  {
+    key: 'joint_box',
+    label: 'Joint box',
+    color: JOINT_BOX_COLOR,
+    layers: ['joint_box', 'joint_box-glow', 'joint_box-label'],
+    perm: 'network.jointbox.view',
+  },
+  {
+    key: 'customer',
+    label: 'Pelanggan',
+    // Hijau "online" — warna markernya sesungguhnya berganti menurut status ONU,
+    // dan yang dipakai di sini keadaan sehatnya, sama seperti di legenda.
+    color: '#34d399',
+    layers: ['customer', 'customer-glow'],
+    perm: 'customer.customer.view',
+  },
+  // Tanpa warna, sengaja: kabel berganti rona menurut jenisnya (ungu feeder, cyan
+  // distribusi, hijau drop), jadi satu bulatan apa pun warnanya akan berbohong.
+  // Barisnya memakai contoh berbentuk garis — lihat [LayerToggleRow].
+  //
+  // Juga tak berizin sendiri: yang boleh membuka peta pasti boleh melihat jalurnya
+  // — tanpa garis, sekumpulan titik tak bercerita apa-apa.
+  { key: 'cable', label: 'Kabel', layers: ['cable', 'cable-glow', 'cable-flow'] },
+]
+
 /** Meng-escape teks agar aman disisipkan ke markup SVG watermark. */
 function escapeXml(raw: string): string {
   return raw.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
@@ -629,6 +690,8 @@ export function MapPage() {
   // Legenda boleh disembunyikan: operator yang sudah hafal warnanya lebih butuh
   // pandangan peta yang lapang daripada kartu yang menjelaskannya lagi.
   const [showLegend, setShowLegend] = useState(() => localStorage.getItem(PREF_LEGEND) !== 'off')
+  // Kelompok lapisan yang sedang DISEMBUNYIKAN (lihat [MAP_LAYER_GROUPS]).
+  const [hiddenLayers, setHiddenLayers] = useState<Set<string>>(savedHiddenLayers)
   // Menandai peta sudah berdiri & gayanya termuat — lihat efek basemap di bawah.
   const [mapReady, setMapReady] = useState(false)
   const { can } = useCan()
@@ -789,6 +852,34 @@ export function MapPage() {
   useEffect(() => {
     localStorage.setItem(PREF_LEGEND, showLegend ? 'on' : 'off')
   }, [showLegend])
+
+  /**
+   * Memasang saklar lapisan ke peta. Sama seperti efek basemap, `mapReady` ikut jadi
+   * pemicu karena efek ini berjalan lebih dulu daripada efek pembuat petanya —
+   * tanpa itu pilihan yang tersimpan tak pernah terpasang saat halaman dibuka.
+   *
+   * Menyembunyikan lapisan juga membuatnya tak bisa diklik maupun dijadikan ujung
+   * kabel: `queryRenderedFeatures` cuma menjawab yang tergambar. Itu memang yang
+   * diharapkan — yang tak terlihat tak bisa ditunjuk — dan disebutkan di lacinya.
+   */
+  useEffect(() => {
+    const m = map.current
+    if (!m) return
+    const apply = () => {
+      for (const group of MAP_LAYER_GROUPS) {
+        const visibility = hiddenLayers.has(group.key) ? 'none' : 'visible'
+        for (const id of group.layers) {
+          if (m.getLayer(id)) m.setLayoutProperty(id, 'visibility', visibility)
+        }
+      }
+    }
+    // Gerbangnya keberadaan salah satu lapisan gaya — BUKAN `isStyleLoaded()`, yang
+    // sesaat berkata "belum" tiap kali basemap ditukar dan membuat saklar ini
+    // tertunda ke pendengar yang tak pernah berbunyi lagi. Sama seperti efek basemap.
+    if (m.getLayer('cable')) apply()
+    else m.once('load', apply)
+    localStorage.setItem(PREF_HIDDEN_LAYERS, JSON.stringify([...hiddenLayers]))
+  }, [hiddenLayers, mapReady])
 
   useEffect(() => {
     if (!container.current || map.current) return
@@ -1253,6 +1344,15 @@ export function MapPage() {
     // bahwa tombolnya bekerja. Zoom 17 = satu blok perumahan — cukup rapat untuk melihat
     // titik mana, cukup lebar untuk menampilkan tetangga hulunya di layar yang sama.
     map.current?.flyTo({ center: [lng, lat], zoom: 17 })
+    // Permintaan tegas "tunjukkan yang ini" mengalahkan saklar lapisan yang tersimpan:
+    // terbang ke titik yang lapisannya sedang dimatikan cuma memamerkan peta kosong.
+    // Nama lapisan sorot memang sama dengan kunci kelompoknya — lihat [MAP_LAYER_GROUPS].
+    setHiddenLayers((prev) => {
+      if (!prev.has(layer)) return prev
+      const next = new Set(prev)
+      next.delete(layer)
+      return next
+    })
     clearPanels()
     // Kodenya belum diketahui sampai tarikan mendarat; diisi di `.then` di bawah.
     setMovable({ layer, id, code: '', lng, lat })
@@ -1880,7 +1980,9 @@ export function MapPage() {
             petunjuk pindah ke laci setelan. Boleh disembunyikan sekalian dari laci. */}
         {showLegend && (
           <div className="map-info">
-            {heatmap ? <HeatmapLegend /> : <Legend />}
+            {/* Legenda ikut menyusut saat lapisan disembunyikan: menjelaskan warna
+                yang tak ada di layar cuma menambah yang harus dibaca. */}
+            {heatmap ? <HeatmapLegend /> : <Legend hidden={hiddenLayers} />}
           </div>
         )}
 
@@ -1916,6 +2018,17 @@ export function MapPage() {
             canHeatmap={can('network.odp.view')}
             showLegend={showLegend}
             onShowLegend={setShowLegend}
+            hiddenLayers={hiddenLayers}
+            onToggleLayer={(key, visible) =>
+              setHiddenLayers((prev) => {
+                const next = new Set(prev)
+                if (visible) next.delete(key)
+                else next.add(key)
+                return next
+              })
+            }
+            onShowAllLayers={() => setHiddenLayers(new Set())}
+            can={can}
             onClose={() => setSettingsOpen(false)}
           />
         )}
@@ -2298,6 +2411,10 @@ function MapSettingsDrawer({
   canHeatmap,
   showLegend,
   onShowLegend,
+  hiddenLayers,
+  onToggleLayer,
+  onShowAllLayers,
+  can,
   onClose,
 }: {
   basemap: BasemapMode
@@ -2307,6 +2424,10 @@ function MapSettingsDrawer({
   canHeatmap: boolean
   showLegend: boolean
   onShowLegend: (on: boolean) => void
+  hiddenLayers: Set<string>
+  onToggleLayer: (key: string, visible: boolean) => void
+  onShowAllLayers: () => void
+  can: (permission: string) => boolean
   onClose: () => void
 }) {
   useEffect(() => {
@@ -2316,6 +2437,9 @@ function MapSettingsDrawer({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  const groups = MAP_LAYER_GROUPS.filter((g) => !g.perm || can(g.perm))
+  const anyHidden = groups.some((g) => hiddenLayers.has(g.key))
 
   return (
     <aside className="map-panel blade map-settings">
@@ -2349,6 +2473,47 @@ function MapSettingsDrawer({
             onChange={(_, data) => onShowLegend(!!data.checked)}
           />
         </section>
+
+        {/* Saklar lapisan. Yang tak berizin dilihat tak usah ditawarkan mati-hidupnya —
+            operator akan bertanya-tanya kenapa mencentangnya tak memunculkan apa pun. */}
+        {groups.length > 0 && (
+          <section className="stack" style={{ gap: '0.4rem' }}>
+            <div className="spread">
+              <h4 className="map-settings-title" style={{ margin: 0 }}>Lapisan</h4>
+              {anyHidden && (
+                <Button variant="subtle" size="small" onClick={onShowAllLayers}>
+                  Tampilkan semua
+                </Button>
+              )}
+            </div>
+            {groups.map((group) => (
+              <Checkbox
+                key={group.key}
+                checked={!hiddenLayers.has(group.key)}
+                onChange={(_, data) => onToggleLayer(group.key, !!data.checked)}
+                label={
+                  <span className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
+                    <span
+                      aria-hidden="true"
+                      style={
+                        group.color
+                          ? { width: 10, height: 10, borderRadius: '50%', background: group.color, display: 'inline-block' }
+                          : // Kabel: contoh berbentuk garis, sebab warnanya berganti
+                            // menurut jenis kabelnya (lihat [MAP_LAYER_GROUPS]).
+                            { width: 10, height: 2, borderRadius: 999, background: '#7c8aa5', display: 'inline-block' }
+                      }
+                    />
+                    {group.label}
+                  </span>
+                }
+              />
+            ))}
+            <p className="muted" style={{ margin: 0, fontSize: '0.75rem' }}>
+              Lapisan yang dimatikan tak bisa diklik maupun dijadikan ujung kabel — berguna saat
+              titik-titik di satu POP saling menutupi.
+            </p>
+          </section>
+        )}
 
         <section className="stack" style={{ gap: '0.4rem' }}>
           <h4 className="map-settings-title">Petunjuk</h4>
@@ -4640,18 +4805,27 @@ function PlaceCustomerForm({
   )
 }
 
-function Legend() {
-  const items: Array<[string, string]> = [
-    ['#b47cff', 'Site/POP'],
-    [OLT_COLOR, 'OLT'],
-    [ODF_COLOR, 'ODF'],
-    ['#22d3ee', 'ODC'],
-    ['#fbbf24', 'ODP'],
-    [JOINT_BOX_COLOR, 'Joint box'],
-    ['#34d399', 'Pelanggan online'],
-    ['#ff5470', 'ONU mati'],
-    ['#8b95a7', 'Belum terpantau'],
-  ]
+/**
+ * Kartu legenda kiri-bawah. `hidden` = kelompok lapisan yang sedang dimatikan dari
+ * laci setelan; barisnya ikut hilang, sebab menjelaskan warna yang tak ada di layar
+ * cuma menambah yang harus dibaca tanpa menambah yang bisa dilihat.
+ */
+function Legend({ hidden }: { hidden: Set<string> }) {
+  const items = (
+    [
+      ['site', '#b47cff', 'Site/POP'],
+      ['olt', OLT_COLOR, 'OLT'],
+      ['odf', ODF_COLOR, 'ODF'],
+      ['odc', '#22d3ee', 'ODC'],
+      ['odp', '#fbbf24', 'ODP'],
+      ['joint_box', JOINT_BOX_COLOR, 'Joint box'],
+      ['customer', '#34d399', 'Pelanggan online'],
+      ['customer', '#ff5470', 'ONU mati'],
+      ['customer', '#8b95a7', 'Belum terpantau'],
+    ] as Array<[string, string, string]>
+  )
+    .filter(([group]) => !hidden.has(group))
+    .map(([, color, label]) => [color, label] as [string, string])
   return (
     <div className="row" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
       {items.map(([color, label]) => (
