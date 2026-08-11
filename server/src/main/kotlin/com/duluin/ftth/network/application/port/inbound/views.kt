@@ -217,7 +217,11 @@ data class CableView(
     val toId: UUID,
     /** FEEDER: PON port OLT sumber; null bila kabel legacy / ujung SITE. */
     val fromPonPortId: UUID?,
-    /** Sumber: kaki splitter ODC / slot ODP; null bila legacy. */
+    /**
+     * Slot ODP asal sebuah drop; untuk sumber ODC (kaki splitter) kolom ini USANG
+     * — lihat [com.duluin.ftth.network.domain.model.NetworkEndpoint]. Tetap
+     * dikirim supaya catatan lama tetap terbaca di layar.
+     */
     val fromPortNumber: Int?,
     /** Input tujuan; null bila tak dipilih. */
     val toPortNumber: Int?,

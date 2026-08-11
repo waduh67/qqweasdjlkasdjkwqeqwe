@@ -335,6 +335,65 @@ class CablePortEndpointsIT {
         assertThat(pointCoord(json, 0, "longitude")).isCloseTo(106.995, within(1e-9))
     }
 
+    /**
+     * Kaki splitter tak lagi ditawarkan sebagai "port asal kabel". Sejak splitter
+     * jadi benda tersendiri, "kaki 3" tak menyebut modul yang mana, dan selubung 8
+     * core berangkat dari delapan kaki sekaligus — satu kolom cuma sanggup
+     * menyimpan satu di antaranya. Pasangan kaki ↔ core dicatat di meja sambung.
+     *
+     * Yang HARUS tetap jalan: kabelnya tetap bisa disimpan tanpa port, dan uplink
+     * ODP tetap ter-set — uplink memang tak pernah bergantung pada nomor kaki.
+     */
+    @Test
+    fun `kabinet tak lagi menawarkan kaki sebagai port asal, dan kabel tetap menyetel uplink`() {
+        val token = newTenantAdmin("usang")
+        val fx = bootstrap(token)
+
+        assertThat(JsonPath.read<List<Any>>(getJson("/api/cables/source-ports?kind=ODC&id=${fx.odc}", token), "$"))
+            .isEmpty()
+        assertThat(JsonPath.read<List<Any>>(getJson("/api/cables/source-ports?kind=ODP&id=${fx.odp}", token), "$"))
+            .isEmpty()
+
+        val suffix = uniq().uppercase()
+        val id = idOf(
+            post(
+                "/api/cables", token,
+                """{"code":"DST-$suffix","name":"Distribusi $suffix","cableType":"DISTRIBUTION","coreCount":8,
+                    "route":[{"longitude":106.99,"latitude":-6.24},{"longitude":106.995,"latitude":-6.245}],
+                    "fromKind":"ODC","fromId":"${fx.odc}","toKind":"ODP","toId":"${fx.odp}"}""",
+            ),
+        )
+
+        assertThat(JsonPath.read<Any?>(getJson("/api/cables/$id", token), "$.fromPortNumber")).isNull()
+        assertThat(JsonPath.read<String>(getJson("/api/odps/${fx.odp}", token), "$.odcId")).isEqualTo(fx.odc)
+    }
+
+    /**
+     * Kolomnya usang, bukan dibuang: catatan lama tetap dibaca dan tetap punya
+     * label siap-tampil. Membuang riwayat bertahun-tahun demi kerapian skema
+     * adalah kerugian yang tak bisa dibatalkan.
+     */
+    @Test
+    fun `nomor kaki yang terlanjur tercatat tetap terbaca beserta labelnya`() {
+        val token = newTenantAdmin("warisan")
+        val fx = bootstrap(token)
+
+        val suffix = uniq().uppercase()
+        val id = idOf(
+            post(
+                "/api/cables", token,
+                """{"code":"DST-$suffix","name":"Distribusi $suffix","cableType":"DISTRIBUTION","coreCount":8,
+                    "route":[{"longitude":106.99,"latitude":-6.24},{"longitude":106.995,"latitude":-6.245}],
+                    "fromKind":"ODC","fromId":"${fx.odc}","toKind":"ODP","toId":"${fx.odp}",
+                    "fromPortNumber":3}""",
+            ),
+        )
+
+        val json = getJson("/api/cables/$id", token)
+        assertThat(JsonPath.read<Int>(json, "$.fromPortNumber")).isEqualTo(3)
+        assertThat(JsonPath.read<String>(json, "$.fromPortLabel")).isEqualTo("Kaki 3")
+    }
+
     @Test
     fun `source-ports OLT menandai PON port yang terpakai`() {
         val token = newTenantAdmin("srcports")

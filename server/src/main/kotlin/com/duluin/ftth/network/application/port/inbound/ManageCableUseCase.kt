@@ -43,7 +43,11 @@ data class SaveCableCommand(
     val toId: UUID,
     /** FEEDER: PON port OLT sumber. Null = tanpa port (kabel legacy / ujung SITE). */
     val fromPonPortId: UUID? = null,
-    /** Sumber: kaki splitter ODC / slot ODP. */
+    /**
+     * Slot ODP asal drop. Sebagai "kaki splitter ODC" ia USANG — masih diterima
+     * demi klien lama, tapi meja sambung yang jadi patokan; lihat
+     * [com.duluin.ftth.network.domain.model.NetworkEndpoint].
+     */
     val fromPortNumber: Int? = null,
     /** Input tujuan (opsional, umumnya tunggal). */
     val toPortNumber: Int? = null,

@@ -71,29 +71,18 @@ class CableService(
                     CablePortOption(port.id, null, port.label, cable != null, cable?.code)
                 }
             }
-            NetworkNodeKind.ODC -> {
-                val odc = odcRepository.findById(id) ?: throw NotFoundException("ODC $id tidak ditemukan")
-                val byLeg = outgoing.mapNotNull { c -> c.from.portNumber?.let { it to c } }.toMap()
-                (1..odc.capacity).map { leg ->
-                    val cable = byLeg[leg]
-                    CablePortOption(null, leg, "Kaki $leg", cable != null, cable?.code)
-                }
-            }
-            NetworkNodeKind.ODP -> {
-                val odp = odpRepository.findById(id) ?: throw NotFoundException("ODP $id tidak ditemukan")
-                val bySlot = outgoing.mapNotNull { c -> c.from.portNumber?.let { it to c } }.toMap()
-                (1..odp.capacity).map { slot ->
-                    val cable = bySlot[slot]
-                    CablePortOption(null, slot, "Slot $slot", cable != null, cable?.code)
-                }
-            }
-            // Joint box tak punya port keluaran: kabel berikutnya berangkat dari
-            // sana karena seratnya DISAMBUNG, bukan dicolok ke kaki splitter.
-            // Yang mengatur core mana ke core mana adalah layar sambungan.
+            // Kabinet & kotak sudah tak menawarkan "port asal" lagi — lihat
+            // catatan USANG di [NetworkEndpoint]. Sebuah selubung berangkat dari
+            // sana lewat SERATNYA, satu core ke satu kaki splitter, dan pasangan
+            // itu dicatat di meja sambung yang menyebut modul & core-nya. Nomor
+            // setingkat-kabinet di ujung kabel cuma bisa menyimpan satu dari
+            // delapan pasangan yang sebenarnya ada, jadi ia berhenti ditanyakan.
             //
-            // ODF sama: portnya memang bernomor, tapi yang dicolok di sana
-            // patchcord — bukan ujung kabel outdoor. Kabel yang berangkat dari
-            // rak menempel lewat sambungan di sisi belakang port.
+            // Joint box tak punya port keluaran sejak awal: seratnya DISAMBUNG,
+            // bukan dicolok. ODF punya port bernomor, tapi yang dicolok di sana
+            // patchcord — bukan ujung kabel outdoor; kabel yang berangkat dari rak
+            // menempel lewat sambungan di sisi belakang portnya.
+            NetworkNodeKind.ODC, NetworkNodeKind.ODP,
             NetworkNodeKind.JOINT_BOX, NetworkNodeKind.ODF,
             NetworkNodeKind.SITE, NetworkNodeKind.CUSTOMER,
             -> emptyList()

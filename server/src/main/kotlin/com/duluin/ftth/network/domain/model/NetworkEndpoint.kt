@@ -12,9 +12,24 @@ import java.util.UUID
  *
  * Konvensi port per jenis simpul:
  * - OLT      → [ponPortId] (PON port berlabel, entitas tersendiri); [portNumber] null.
- * - ODC      → [portNumber] = kaki splitter 1..kapasitas di sisi keluaran; input tunggal.
- * - ODP      → [portNumber] = slot pelanggan 1..kapasitas di sisi keluaran; input tunggal.
+ * - ODP      → [portNumber] = slot pelanggan tempat drop dicolok; hanya untuk drop
+ *              yang benar-benar berujung di rumah orang.
+ * - ODC      → [portNumber] USANG, lihat di bawah.
  * - CUSTOMER → terminal, tanpa port.
+ *
+ * USANG — [portNumber] sebagai "kaki splitter asal kabel":
+ *
+ * Sebuah kabel distribusi tidak dicolok ke kaki splitter. Yang dicolok/disambung
+ * adalah CORE-nya, satu per satu, di dalam kabinet — dan sejak splitter jadi benda
+ * tersendiri, satu ODC bisa berisi beberapa modul dengan rasio berbeda. Nomor kaki
+ * setingkat-kabinet karena itu tak lagi cukup: "kaki 3" tak mengatakan kaki 3
+ * MILIK SPLITTER YANG MANA, dan selubung 8 core yang menyuapi delapan ODP memang
+ * berangkat dari delapan kaki sekaligus — satu kolom tak bisa menyimpannya.
+ *
+ * Penggantinya sudah ada dan lebih tepat: baris sambungan di meja splicing
+ * (kaki splitter ↔ core), yang menyebut modulnya dan core-nya. Kolom lama tetap
+ * dibaca & ditampilkan supaya catatan tahun-tahun sebelumnya tak hilang, tapi
+ * tidak lagi diminta saat menggambar kabel baru.
  *
  * Semua port opsional demi kompatibilitas kabel lama yang direkam sebelum fitur
  * ini ada (kolomnya NULL). Validasi bentuk/penempatan port ada di
