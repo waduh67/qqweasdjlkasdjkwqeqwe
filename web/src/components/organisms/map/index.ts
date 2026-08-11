@@ -7,3 +7,5 @@
  * lain memakainya lalu menyeret MapLibre ke bundel yang tak membutuhkannya.
  */
 export { cableAction, deleteAction, relocateAction } from './mapActions'
+export { CablePhysicalFields } from './CablePhysicalFields'
+export { SaveCablePanel } from './SaveCablePanel'
