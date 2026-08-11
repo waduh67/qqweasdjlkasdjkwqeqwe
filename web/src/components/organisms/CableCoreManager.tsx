@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Checkbox, MessageBar, MessageBarBody } from '@fluentui/react-components'
 import { api } from '@/api/client'
-import type { CableCoreList, CableCoreView, CoreStatus } from '@/api/network'
+import type { CableCoreList, CableCoreView, CoreMoveView, CoreStatus } from '@/api/network'
 import { CORE_STATUS_LABEL } from '@/api/network'
+import { useCan } from '@/auth/useCan'
 import { Button, SelectField, TextField } from '@/components/atoms'
+import { Combobox } from '@/components/molecules'
+import { useOpenWorkOrders } from '@/hooks/useOpenWorkOrders'
+import { useToast } from '@/system'
 
 /**
  * Kelola core sebuah kabel — pengganti tabel "CORE # | WARNA | STATUS | CATATAN"
@@ -18,6 +23,12 @@ import { Button, SelectField, TextField } from '@/components/atoms'
  * pilih beberapa chip — atau klik angka ringkasan untuk memilih semua core
  * berstatus itu — lalu setel sekali jalan. Bidang yang dikosongkan tidak diubah,
  * sehingga catatan lapangan tiap core selamat saat statusnya disetel massal.
+ *
+ * Perbedaan ketiga: **pindah ke core cadangan** satu langkah. Serat putus adalah
+ * gangguan paling sering, dan tanpa tombol ini penanganannya berarti berkeliling
+ * ke tiap kotak yang dilewati serat itu untuk melepas lalu menyambung ulang —
+ * pekerjaan yang gampang tertinggal separuh dan menghapus riwayat pemasangannya.
+ * Di sini kedua ujungnya berpindah bersama dan barisnya bertahan.
  */
 
 const STATUS_ORDER: CoreStatus[] = ['FREE', 'USED', 'RESERVED', 'DAMAGED']
@@ -43,6 +54,13 @@ function inkOn(hex: string): string {
 }
 
 export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdit: boolean }) {
+  const { can } = useCan()
+  const toast = useToast()
+  const { canPick: canPickWorkOrder, searchesAll, fetchWorkOrders } = useOpenWorkOrders()
+  // Memindahkan serat berarti menyambung ulang — izinnya izin splicing, bukan izin
+  // mengubah data kabel. Yang cuma boleh menyunting status core tak melihat tombolnya.
+  const canMove = can('network.splice.manage')
+
   const [data, setData] = useState<CableCoreList | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<number[]>([])
@@ -50,6 +68,14 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
   const [status, setStatus] = useState<CoreStatus | ''>('')
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
+  // Serat yang sedang dipindahkan; null = panel pindah tertutup. Dipisah dari
+  // [selected] supaya panelnya jadi MODE tersendiri — dua formulir bertombol
+  // "Simpan" di layar yang sama cuma bikin orang menekan yang salah.
+  const [moveFrom, setMoveFrom] = useState<CableCoreView | null>(null)
+  const [moveTo, setMoveTo] = useState('')
+  const [moveReason, setMoveReason] = useState('')
+  const [moveWorkOrder, setMoveWorkOrder] = useState('')
+  const [markDamaged, setMarkDamaged] = useState(true)
 
   const load = useCallback(async () => {
     try {
@@ -63,6 +89,7 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
   useEffect(() => {
     setSelected([])
     setAnchor(null)
+    setMoveFrom(null)
     void load()
   }, [load])
 
@@ -137,6 +164,44 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
     }
   }
 
+  const openMove = (core: CableCoreView) => {
+    // Helai bebas pertama sebagai tebakan awal: di lapangan yang diambil memang
+    // cadangan terdekat, dan operator tinggal mengubahnya kalau punya alasan lain.
+    setMoveFrom(core)
+    setMoveTo((data?.cores ?? []).find((c) => c.status === 'FREE')?.id ?? '')
+    setMoveReason('')
+    setMoveWorkOrder('')
+    setMarkDamaged(true)
+  }
+
+  const moveCore = async () => {
+    if (!moveFrom || moveTo === '' || busy) return
+    setBusy(true)
+    try {
+      const result = await api.post<CoreMoveView>('/api/fiber-connections/move-core', {
+        fromCoreId: moveFrom.id,
+        toCoreId: moveTo,
+        workOrderId: moveWorkOrder || null,
+        reason: moveReason.trim() === '' ? null : moveReason.trim(),
+        markSourceDamaged: markDamaged,
+      })
+      // Jumlah sambungannya disebut: itulah bukti kedua ujung ikut terangkat, bukan
+      // cuma yang di kotak yang kebetulan sedang dipikirkan orangnya.
+      toast.success(
+        `${result.movedConnections.length} sambungan pindah dari core ${result.fromCore.coreNumber} ` +
+          `ke core ${result.toCore.coreNumber}`,
+      )
+      setMoveFrom(null)
+      applySelection([])
+      setAnchor(null)
+      await load()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Gagal memindahkan core')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (error && !data) return <p className="muted" style={{ fontSize: '0.8rem' }}>{error}</p>
   if (!data) return <p className="muted" style={{ fontSize: '0.8rem' }}>Memuat core…</p>
 
@@ -146,6 +211,12 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
     RESERVED: data.reserved,
     DAMAGED: data.damaged,
   }
+
+  const spares = data.cores.filter((c) => c.status === 'FREE')
+  // Yang ditawari pindah hanya helai yang benar-benar MENYALURKAN sesuatu: helai
+  // bebas/dicadangkan tak punya apa pun untuk dipindahkan, dan server pun menolaknya.
+  const single = selected.length === 1 ? data.cores.find((c) => c.coreNumber === selected[0]) : undefined
+  const movable = single && (single.status === 'USED' || single.status === 'DAMAGED')
 
   return (
     <div className="stack" style={{ gap: '0.6rem' }}>
@@ -204,7 +275,7 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
         </div>
       ))}
 
-      {canEdit && selected.length > 0 && (
+      {canEdit && selected.length > 0 && !moveFrom && (
         <div className="core-editor stack" style={{ gap: '0.5rem' }}>
           <div className="spread" style={{ alignItems: 'center' }}>
             <strong style={{ fontSize: '0.82rem' }}>
@@ -229,11 +300,95 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
             placeholder={selected.length > 1 ? 'Kosong = catatan tiap core dibiarkan' : 'mis. ke ODP-3 Jl. Melati'}
             maxLength={200}
           />
-          <div className="row" style={{ gap: '0.4rem' }}>
+          <div className="row wrap" style={{ gap: '0.4rem' }}>
             <Button variant="primary" onClick={() => void save()} disabled={busy}>
               {busy ? 'Menyimpan…' : 'Simpan'}
             </Button>
             <Button variant="subtle" onClick={() => applySelection([])} disabled={busy}>
+              Batal
+            </Button>
+            {/* Bukan bagian formulir di atasnya — ini pekerjaan lapangan tersendiri,
+                jadi didorong ke ujung dan membuka panelnya sendiri. */}
+            {canMove && movable && (
+              <Button
+                variant="subtle"
+                style={{ marginLeft: 'auto' }}
+                onClick={() => openMove(single)}
+                disabled={busy || spares.length === 0}
+                title={
+                  spares.length === 0
+                    ? 'Tak ada helai bebas di kabel ini — semua sudah terpakai/rusak'
+                    : `Angkat semua sambungan core ${single.coreNumber} ke helai cadangan`
+                }
+              >
+                Pindah ke core cadangan
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {moveFrom && (
+        <div className="core-editor stack" style={{ gap: '0.5rem' }}>
+          <div className="spread" style={{ alignItems: 'center', gap: '0.4rem' }}>
+            <strong style={{ fontSize: '0.82rem' }}>Pindah core {moveFrom.coreNumber} ke helai cadangan</strong>
+            <span className="muted" style={{ fontSize: '0.72rem' }}>{moveFrom.color}</span>
+          </div>
+          {/* Yang paling sering disalahpahami disebut lebih dulu: pindahnya SATU
+              SERAT UTUH, jadi menyentuh semua kotak yang dilewatinya. */}
+          <MessageBar intent="warning">
+            <MessageBarBody>
+              Semua sambungan core {moveFrom.coreNumber} ikut pindah — di setiap kotak yang
+              dilewatinya, bukan cuma satu. Tiket, pelaksana, dan tanggal pemasangannya
+              dipertahankan; hasil ukur redaman dikosongkan karena angkanya milik serat lama.
+            </MessageBarBody>
+          </MessageBar>
+          <SelectField label="Core tujuan" value={moveTo} onChange={(_, d) => setMoveTo(d.value)}>
+            {spares.map((c) => (
+              <option key={c.id} value={c.id}>
+                Core {c.coreNumber} · {c.color}
+              </option>
+            ))}
+          </SelectField>
+          <TextField
+            label="Alasan"
+            value={moveReason}
+            onChange={(_, d) => setMoveReason(d.value)}
+            placeholder="mis. putus kena galian"
+            maxLength={200}
+          />
+          {canPickWorkOrder && (
+            <label className="stack" style={{ gap: '0.25rem' }}>
+              <span style={{ fontSize: '0.82rem' }}>Work order (opsional)</span>
+              <Combobox
+                value={moveWorkOrder}
+                onChange={(id) => setMoveWorkOrder(id)}
+                fetchOptions={fetchWorkOrders}
+                toId={(wo) => wo.id}
+                toLabel={(wo) => `${wo.code} · ${wo.title}`}
+                toMeta={(wo) => wo.customerName ?? undefined}
+                placeholder={searchesAll ? 'Cari kode atau judul tiket…' : 'Pilih dari tugas saya…'}
+                emptyText="Tak ada work order terbuka"
+              />
+            </label>
+          )}
+          <Checkbox
+            label={`Tandai core ${moveFrom.coreNumber} rusak — jangan dipakai lagi`}
+            checked={markDamaged}
+            onChange={(_, d) => setMarkDamaged(!!d.checked)}
+            disabled={busy}
+          />
+          {!markDamaged && (
+            <p className="muted" style={{ margin: 0, fontSize: '0.72rem' }}>
+              Tanpa tanda rusak, core {moveFrom.coreNumber} kembali bebas dan bisa dipakai pelanggan
+              berikutnya. Pilih ini hanya untuk penataan, bukan untuk serat yang bermasalah.
+            </p>
+          )}
+          <div className="row wrap" style={{ gap: '0.4rem' }}>
+            <Button variant="primary" onClick={() => void moveCore()} disabled={busy || moveTo === ''}>
+              {busy ? 'Memindahkan…' : 'Pindahkan'}
+            </Button>
+            <Button variant="subtle" onClick={() => setMoveFrom(null)} disabled={busy}>
               Batal
             </Button>
           </div>

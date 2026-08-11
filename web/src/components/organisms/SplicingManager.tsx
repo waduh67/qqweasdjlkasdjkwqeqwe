@@ -8,10 +8,10 @@ import type {
   SpliceWorkbenchView,
 } from '@/api/network'
 import { SPLICE_METHOD_LABEL } from '@/api/network'
-import { searchOpenWorkOrders } from '@/api/workorder'
 import { useCan } from '@/auth/useCan'
 import { Badge, Button, SelectField, TextField } from '@/components/atoms'
 import { Combobox } from '@/components/molecules'
+import { useOpenWorkOrders } from '@/hooks/useOpenWorkOrders'
 import { useConfirm, useToast } from '@/system'
 import { timeAgo } from '@/utils/timeAgo'
 
@@ -253,10 +253,11 @@ export function SplicingManager({
   const confirm = useConfirm()
   const canView = can('network.splice.view')
   const canManage = can('network.splice.manage')
-  // Dispatcher mencari ke seluruh papan; teknisi lapangan cuma boleh melihat tugasnya
-  // sendiri. Yang tak punya keduanya tetap bisa menyambung — cuma tanpa penunjuk tiket.
-  const canSeeAllWorkOrders = can('workorder.order.view')
-  const canPickWorkOrder = canSeeAllWorkOrders || can('workorder.order.field')
+  const {
+    canPick: canPickWorkOrder,
+    searchesAll: canSeeAllWorkOrders,
+    fetchWorkOrders,
+  } = useOpenWorkOrders()
 
   const [data, setData] = useState<SpliceWorkbenchView | null>(null)
   const [loading, setLoading] = useState(true)
@@ -277,11 +278,6 @@ export function SplicingManager({
   const [editNote, setEditNote] = useState('')
   // Tiket yang ditempelkan menyusul ke baris lama; kosong = biarkan apa adanya.
   const [editWorkOrder, setEditWorkOrder] = useState('')
-
-  const fetchWorkOrders = useCallback(
-    (term: string) => searchOpenWorkOrders(term, !canSeeAllWorkOrders),
-    [canSeeAllWorkOrders],
-  )
 
   const load = useCallback(async () => {
     try {

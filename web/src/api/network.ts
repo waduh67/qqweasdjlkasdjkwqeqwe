@@ -541,6 +541,22 @@ export interface CableCoreList {
 }
 
 /**
+ * Hasil "pindah ke core cadangan": keadaan kedua helai SESUDAHNYA plus sambungan
+ * yang ikut terangkat.
+ *
+ * Jumlah sambungan itulah yang dilaporkan ke operator — angka itu yang
+ * membuktikan kedua ujung ikut pindah, bukan cuma yang di kotak yang kebetulan
+ * sedang terbuka.
+ */
+export interface CoreMoveView {
+  cableId: string
+  cableCode: string
+  fromCore: CableCoreView
+  toCore: CableCoreView
+  movedConnections: FiberConnectionView[]
+}
+
+/**
  * Kesimpulan pemeriksaan rantai ODP → ODP.
  *
  * `CASCADE` = splitter bertingkat, sah. `SUSPECT` = bertanda satu selubung yang
