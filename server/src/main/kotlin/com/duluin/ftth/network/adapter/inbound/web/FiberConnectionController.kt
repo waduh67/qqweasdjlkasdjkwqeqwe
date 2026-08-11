@@ -75,4 +75,5 @@ class FiberConnectionController(
     fun disconnect(@PathVariable id: UUID) = manageConnection.disconnect(id)
 }
 
-private fun ConnectionPointRequest.toCommand() = ConnectionPointCommand(kind, coreId, nodeId, portNumber)
+private fun ConnectionPointRequest.toCommand() =
+    ConnectionPointCommand(kind, coreId, nodeId, portNumber, portSide)

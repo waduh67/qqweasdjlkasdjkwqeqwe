@@ -18,7 +18,9 @@ import com.duluin.ftth.network.application.port.outbound.CableRepository
 import com.duluin.ftth.network.application.port.outbound.FiberConnectionRepository
 import com.duluin.ftth.network.application.port.outbound.JointBoxRepository
 import com.duluin.ftth.network.application.port.outbound.OdcRepository
+import com.duluin.ftth.network.application.port.outbound.OdfRepository
 import com.duluin.ftth.network.application.port.outbound.OdpRepository
+import com.duluin.ftth.network.application.port.outbound.PonPortRepository
 import com.duluin.ftth.network.domain.model.Cable
 import com.duluin.ftth.network.domain.model.CableCore
 import com.duluin.ftth.network.domain.model.ClosureKind
@@ -26,6 +28,8 @@ import com.duluin.ftth.network.domain.model.ConnectionPoint
 import com.duluin.ftth.network.domain.model.ConnectionPointKind
 import com.duluin.ftth.network.domain.model.CoreStatus
 import com.duluin.ftth.network.domain.model.FiberConnection
+import com.duluin.ftth.network.domain.model.OdfPortSide
+import com.duluin.ftth.network.domain.model.PonPort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -48,6 +52,8 @@ class FiberConnectionService(
     private val odcRepository: OdcRepository,
     private val odpRepository: OdpRepository,
     private val jointBoxRepository: JointBoxRepository,
+    private val odfRepository: OdfRepository,
+    private val ponPortRepository: PonPortRepository,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
 ) : ManageFiberConnectionUseCase {
@@ -69,6 +75,7 @@ class FiberConnectionService(
         val closure = requireClosure(command.closureKind, command.closureId)
         val a = command.a.toPoint()
         val b = command.b.toPoint()
+        assertPairMakesSense(a, b)
         val cores = listOf(a, b).mapNotNull { point -> validate(point, closure) }
         assertRoomLeft(closure)
 
@@ -155,13 +162,30 @@ class FiberConnectionService(
             null
         }
 
-        // Sengaja ditolak, bukan diam-diam diterima: simpulnya belum ada di sistem,
-        // jadi menerimanya berarti menyimpan id yang tak menunjuk apa pun.
-        ConnectionPointKind.ODF_PORT ->
-            throw ValidationException("Port ODF menyusul bersama simpul ODF; sementara ini core feeder langsung ke ODC")
+        ConnectionPointKind.ODF_PORT -> {
+            requireRack(closure, "Port ODF")
+            // Port yang ditunjuk TAK harus milik rak closure-nya: sehelai
+            // patchcord memang bisa membentang antara dua rak dalam satu POP.
+            // Yang dicatat closure adalah di kotak mana pekerjaan itu dilakukan;
+            // yang menjaga port tak dobel-pakai adalah [assertFree], dan itu
+            // berlaku global.
+            val odfId = requireNotNull(point.nodeId)
+            val odf = odfRepository.findById(odfId) ?: throw NotFoundException("ODF $odfId tidak ditemukan")
+            val port = point.portNumber ?: 0
+            if (!odf.hasPort(port)) {
+                throw ValidationException("Port $port di luar kapasitas ODF ${odf.code} (1-${odf.portCount})")
+            }
+            assertFree(point, closure)
+            null
+        }
 
-        ConnectionPointKind.PON_PORT ->
-            throw ValidationException("PON port disambung lewat ODF; simpul ODF menyusul")
+        ConnectionPointKind.PON_PORT -> {
+            requireRack(closure, "PON port")
+            val ponPortId = requireNotNull(point.nodeId)
+            ponPortRepository.findById(ponPortId) ?: throw NotFoundException("PON port $ponPortId tidak ditemukan")
+            assertFree(point, closure)
+            null
+        }
 
         ConnectionPointKind.ONU ->
             throw ValidationException("Ujung ONU tercatat lewat pemasangan ONU pelanggan, bukan di layar sambungan")
@@ -208,6 +232,64 @@ class FiberConnectionService(
     }
 
     /**
+     * Pasangan yang benar-benar punya bentuk fisik di dalam rak.
+     *
+     * Sisi BELAKANG cuma bertemu core kabel luar — di situlah pigtail dilas, dan
+     * setelah itu tak disentuh bertahun-tahun. Sisi DEPAN cuma menerima
+     * patchcord: ke PON port OLT, atau ke sisi depan port lain saat sebuah POP
+     * hanya DILEWATI feeder (masuk di satu port, keluar di port lain, tanpa
+     * menyentuh OLT). PON port pun tak punya pasangan lain: kabel outdoor tak
+     * pernah dicolok langsung ke badan OLT.
+     *
+     * Ini bukan kelonggaran yang belum sempat ditulis — menyambung core langsung
+     * ke sisi depan berarti mengaku ada konektor di ujung kabel luar, dan jalur
+     * yang ditelusuri dari data itu tak akan pernah cocok dengan raknya.
+     */
+    private fun assertPairMakesSense(a: ConnectionPoint, b: ConnectionPoint) {
+        listOf(a to b, b to a).forEach { (point, other) ->
+            when (point.kind) {
+                ConnectionPointKind.ODF_PORT -> when (point.portSide) {
+                    OdfPortSide.BACK -> if (other.kind != ConnectionPointKind.CORE) {
+                        throw ValidationException(
+                            "${point.description} hanya disambung ke core kabel — " +
+                                "di sisi belakang itulah pigtail dilas, bukan ${other.description}",
+                        )
+                    }
+                    OdfPortSide.FRONT -> {
+                        val patchable = other.kind == ConnectionPointKind.PON_PORT ||
+                            (other.kind == ConnectionPointKind.ODF_PORT && other.portSide == OdfPortSide.FRONT)
+                        if (!patchable) {
+                            throw ValidationException(
+                                "${point.description} hanya menerima patchcord: ke PON port OLT, " +
+                                    "atau ke sisi depan port ODF lain bila POP ini cuma dilewati",
+                            )
+                        }
+                    }
+                    null -> Unit // Tak mungkin: ConnectionPoint mewajibkan sisi untuk port ODF.
+                }
+
+                ConnectionPointKind.PON_PORT ->
+                    if (other.kind != ConnectionPointKind.ODF_PORT || other.portSide != OdfPortSide.FRONT) {
+                        throw ValidationException(
+                            "PON port disambung lewat patchcord dari sisi depan port ODF, bukan ${other.description}",
+                        )
+                    }
+
+                else -> Unit
+            }
+        }
+    }
+
+    /** Port ODF & PON port cuma ada artinya di dalam rak; di kotak lain tak ada raknya. */
+    private fun requireRack(closure: Closure, what: String) {
+        if (closure.kind != ClosureKind.ODF) {
+            throw ValidationException(
+                "$what disambung di dalam rak ODF — ${closure.code} adalah ${closure.kind.label}",
+            )
+        }
+    }
+
+    /**
      * Joint box tak berisi splitter — di dalamnya cuma tray dan sambungan serat ke
      * serat. Menolaknya di sini, bukan lewat "kapasitas 0", supaya pesannya
      * menerangkan bendanya dan bukan angkanya.
@@ -233,7 +315,12 @@ class FiberConnectionService(
     }
 
     private fun assertFree(point: ConnectionPoint, closure: Closure) {
-        connections.findByNodePoint(point.kind, requireNotNull(point.nodeId), point.portNumber)?.let {
+        connections.findByNodePoint(
+            point.kind,
+            requireNotNull(point.nodeId),
+            point.portNumber,
+            point.portSide,
+        )?.let {
             throw ConflictException("${point.description} di ${closure.code} sudah dipakai sambungan lain")
         }
     }
@@ -282,23 +369,22 @@ class FiberConnectionService(
         val spliceCapacity: Int? = null,
     )
 
-    private fun requireClosure(kind: ClosureKind, id: UUID): Closure {
-        if (!kind.available) {
-            throw ValidationException("Sambungan di ${kind.label} belum didukung — simpulnya belum ada di sistem")
+    private fun requireClosure(kind: ClosureKind, id: UUID): Closure = when (kind) {
+        ClosureKind.ODC -> odcRepository.findById(id)?.let {
+            Closure(kind, it.id, it.code, it.name, it.location, it.capacity)
         }
-        return when (kind) {
-            ClosureKind.ODC -> odcRepository.findById(id)?.let {
-                Closure(kind, it.id, it.code, it.name, it.location, it.capacity)
-            }
-            ClosureKind.ODP -> odpRepository.findById(id)?.let {
-                Closure(kind, it.id, it.code, it.name, it.location, it.capacity)
-            }
-            ClosureKind.JOINT_BOX -> jointBoxRepository.findById(id)?.let {
-                Closure(kind, it.id, it.code, it.name, it.location, splitterLegs = 0, spliceCapacity = it.capacity)
-            }
-            else -> null
-        } ?: throw NotFoundException("${kind.label} $id tidak ditemukan")
-    }
+        ClosureKind.ODP -> odpRepository.findById(id)?.let {
+            Closure(kind, it.id, it.code, it.name, it.location, it.capacity)
+        }
+        ClosureKind.JOINT_BOX -> jointBoxRepository.findById(id)?.let {
+            Closure(kind, it.id, it.code, it.name, it.location, splitterLegs = 0, spliceCapacity = it.capacity)
+        }
+        // Batas rak dihitung dari SISI, bukan port: tiap adapter memang menampung
+        // dua sambungan, belakang dan depan.
+        ClosureKind.ODF -> odfRepository.findById(id)?.let {
+            Closure(kind, it.id, it.code, it.name, it.location, splitterLegs = 0, spliceCapacity = it.portCount * 2)
+        }
+    } ?: throw NotFoundException("${kind.label} $id tidak ditemukan")
 
     /**
      * Kotak sambung punya batas fisik: tray-nya habis. Diperiksa saat menyambung,
@@ -326,13 +412,19 @@ class FiberConnectionService(
         if (isEmpty()) return emptyList()
         val cores = cableCoreRepository.findByIds(flatMap { it.coreIds }.distinct()).associateBy { it.id }
         val cables = cableRepository.findByIds(cores.values.map { it.cableId }.distinct()).associateBy { it.id }
+        // "PON port OLT" saja tak menolong siapa pun di depan rak — yang dicari
+        // teknisi adalah labelnya (1/1/3). Diambil sekali untuk seluruh daftar.
+        val ponPorts = flatMap { listOf(it.a, it.b) }
+            .filter { it.kind == ConnectionPointKind.PON_PORT }
+            .mapNotNullTo(HashSet()) { it.nodeId }
+            .let { if (it.isEmpty()) emptyMap() else ponPortRepository.findAllByIds(it).associateBy { p -> p.id } }
         return map { connection ->
             FiberConnectionView(
                 id = connection.id,
                 closureKind = connection.closureKind,
                 closureId = connection.closureId,
-                a = connection.a.toView(cores, cables),
-                b = connection.b.toView(cores, cables),
+                a = connection.a.toView(cores, cables, ponPorts),
+                b = connection.b.toView(cores, cables, ponPorts),
                 method = connection.method,
                 methodLabel = connection.method.label,
                 lossDb = connection.lossDb,
@@ -344,13 +436,16 @@ class FiberConnectionService(
     private fun ConnectionPoint.toView(
         cores: Map<UUID, CableCore>,
         cables: Map<UUID, Cable>,
+        ponPorts: Map<UUID, PonPort>,
     ): FiberConnectionPointView {
         val core = coreId?.let { cores[it] }
         val cable = core?.let { cables[it.cableId] }
+        val ponPort = nodeId?.takeIf { kind == ConnectionPointKind.PON_PORT }?.let { ponPorts[it] }
         return FiberConnectionPointView(
             kind = kind,
             kindLabel = kind.label,
             label = core?.let { "Core ${it.coreNumber} · ${it.color.label}" + (cable?.let { c -> " · ${c.code}" } ?: "") }
+                ?: ponPort?.let { "PON ${it.label}" }
                 ?: description,
             coreId = coreId,
             cableId = core?.cableId,
@@ -359,6 +454,7 @@ class FiberConnectionService(
             colorHex = core?.color?.hex,
             nodeId = nodeId,
             portNumber = portNumber,
+            portSide = portSide,
         )
     }
 
@@ -371,4 +467,4 @@ class FiberConnectionService(
     }
 }
 
-private fun ConnectionPointCommand.toPoint() = ConnectionPoint(kind, coreId, nodeId, portNumber)
+private fun ConnectionPointCommand.toPoint() = ConnectionPoint(kind, coreId, nodeId, portNumber, portSide)

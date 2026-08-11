@@ -10,6 +10,7 @@ import com.duluin.ftth.network.domain.model.ClosureKind
 import com.duluin.ftth.network.domain.model.ConnectionPointKind
 import com.duluin.ftth.network.domain.model.CoreStatus
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
+import com.duluin.ftth.network.domain.model.OdfPortSide
 import com.duluin.ftth.network.domain.model.OltVendor
 import com.duluin.ftth.network.domain.model.OtdrEventType
 import com.duluin.ftth.network.domain.model.SnmpVersion
@@ -77,6 +78,20 @@ data class OltRequest(
 data class PonPortRequest(
     @field:NotBlank @field:Size(max = 30) val label: String,
     @field:Size(max = 255) val description: String? = null,
+    val status: AssetStatus = AssetStatus.ACTIVE,
+)
+
+/**
+ * Rak terminasi di POP. `siteId` wajib — ODF selalu berdiri di dalam sebuah POP,
+ * beda dari joint box yang justru hidup di tengah rute.
+ */
+data class OdfRequest(
+    @field:NotBlank @field:Size(max = 40) val code: String,
+    @field:NotBlank @field:Size(max = 150) val name: String,
+    val siteId: UUID,
+    @field:Valid val location: LocationRequest,
+    val areaId: UUID? = null,
+    @field:Min(1) @field:Max(1152) val portCount: Int,
     val status: AssetStatus = AssetStatus.ACTIVE,
 )
 
@@ -159,6 +174,8 @@ data class ConnectionPointRequest(
     val coreId: UUID? = null,
     val nodeId: UUID? = null,
     @field:Min(1) val portNumber: Int? = null,
+    /** Wajib untuk port ODF, terlarang untuk titik lain — lihat ConnectionPoint. */
+    val portSide: OdfPortSide? = null,
 )
 
 data class FiberConnectionRequest(

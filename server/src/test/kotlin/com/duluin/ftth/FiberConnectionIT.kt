@@ -115,6 +115,47 @@ class FiberConnectionIT {
     private fun splitterOut(nodeId: String, leg: Int) =
         """{"kind":"SPLITTER_OUT","nodeId":"$nodeId","portNumber":$leg}"""
 
+    private fun odfPort(nodeId: String, port: Int, side: String) =
+        """{"kind":"ODF_PORT","nodeId":"$nodeId","portNumber":$port,"portSide":"$side"}"""
+
+    private fun ponPort(id: String) = """{"kind":"PON_PORT","nodeId":"$id"}"""
+
+    private fun newSite(token: String): String = idOf(
+        post(
+            "/api/sites", token,
+            """{"code":"POP-${uniq().uppercase()}","name":"POP uji",
+                "location":{"longitude":106.98,"latitude":-6.23}}""",
+        ),
+    )
+
+    private fun newOlt(token: String, site: String): String = idOf(
+        post(
+            "/api/olts", token,
+            """{"siteId":"$site","code":"OLT-${uniq().uppercase()}","name":"OLT uji","vendor":"ZTE"}""",
+        ),
+    )
+
+    private fun newPonPort(token: String, olt: String, label: String): String =
+        idOf(post("/api/olts/$olt/pon-ports", token, """{"label":"$label"}"""))
+
+    private fun newOdf(token: String, site: String, portCount: Int): String = idOf(
+        post(
+            "/api/odfs", token,
+            """{"code":"ODF-${uniq().uppercase()}","name":"ODF uji","siteId":"$site",
+                "location":{"longitude":106.98,"latitude":-6.23},"portCount":$portCount}""",
+        ),
+    )
+
+    /** Feeder yang BERANGKAT dari rak menuju ODC — ujung hulunya rak, bukan badan OLT. */
+    private fun newFeeder(token: String, odf: String, odc: String): String = idOf(
+        post(
+            "/api/cables", token,
+            """{"name":"Feeder barat","cableType":"FEEDER","coreCount":12,
+                "route":[{"longitude":106.98,"latitude":-6.23},{"longitude":107.02,"latitude":-6.24}],
+                "fromKind":"ODF","fromId":"$odf","toKind":"ODC","toId":"$odc"}""",
+        ),
+    )
+
     @Test
     fun `satu kabel melewati beberapa ODP dan tiap ODP cuma memakan satu core`() {
         val token = newTenantAdmin("tap")
@@ -199,8 +240,81 @@ class FiberConnectionIT {
         post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), splitterOut(odp, 99)), expected = 400)
         // Splitter milik simpul lain — sampai splitter jadi entitas sendiri, satu simpul satu splitter.
         post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), splitterIn(odc)), expected = 400)
-        // Closure yang simpulnya memang belum ada di sistem (ODF menyusul di potongan D).
-        post("/api/fiber-connections", token, connectBody("ODF", odp, core(core1), splitterIn(odp)), expected = 400)
+        // Closure ODF yang id-nya ternyata ODP: raknya memang tak ada.
+        post("/api/fiber-connections", token, connectBody("ODF", odp, core(core1), splitterIn(odp)), expected = 404)
+        // Port ODF di dalam ODP — rak tak bisa dibawa-bawa ke kotak distribusi.
+        post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), odfPort(odp, 1, "BACK")), expected = 400)
+    }
+
+    /**
+     * Perjalanan penuh sehelai serat di dalam POP, dan alasan ODF ada sama sekali:
+     * kabel outdoor BERHENTI di rak, seratnya dilas ke pigtail di sisi belakang
+     * port, lalu dari sisi depan port itu patchcord ditarik ke PON port OLT.
+     * Satu adapter, dua sambungan — dan keduanya pekerjaan yang berbeda.
+     */
+    @Test
+    fun `feeder berhenti di rak, lalu patchcord melanjutkannya ke PON port`() {
+        val token = newTenantAdmin("rak")
+        val site = newSite(token)
+        val pon = newPonPort(token, newOlt(token, site), "1/1/1")
+        val odf = newOdf(token, site, portCount = 12)
+        val odc = newOdc(token, 107.02, -6.24)
+        val feeder = newFeeder(token, odf, odc)
+        val core1 = coreId(token, feeder, 1)
+
+        // Belakang: core kabel luar dilas ke pigtail.
+        post("/api/fiber-connections", token, connectBody("ODF", odf, core(core1), odfPort(odf, 3, "BACK")))
+        // Depan port yang SAMA: patchcord ke OLT. Bukan tabrakan — sisinya beda.
+        post("/api/fiber-connections", token, connectBody("ODF", odf, odfPort(odf, 3, "FRONT"), ponPort(pon)))
+
+        val isi = getJson("/api/fiber-connections?closureKind=ODF&closureId=$odf", token)
+        assertThat(JsonPath.read<List<*>>(isi, "$.connections")).hasSize(2)
+        assertThat(isi).contains("PON 1/1/1")
+
+        // Sisi yang sama dua kali tetap haram.
+        val bentrok = post(
+            "/api/fiber-connections", token,
+            connectBody("ODF", odf, core(coreId(token, feeder, 2)), odfPort(odf, 3, "BACK")),
+            expected = 409,
+        )
+        assertThat(bentrok).contains("sudah dipakai")
+
+        // Port di luar rak 12-port adalah salah ketik, bukan port yang belum dipasang.
+        post(
+            "/api/fiber-connections", token,
+            connectBody("ODF", odf, core(coreId(token, feeder, 2)), odfPort(odf, 99, "BACK")),
+            expected = 400,
+        )
+    }
+
+    /**
+     * Sisi bukan label yang boleh ditukar-tukar: kabel outdoor tak berkonektor,
+     * jadi ia tak pernah nyantol di sisi depan; dan PON port tak pernah dilas ke
+     * core, ia selalu lewat patchcord.
+     */
+    @Test
+    fun `sisi port menentukan apa yang boleh menempel padanya`() {
+        val token = newTenantAdmin("sisi")
+        val site = newSite(token)
+        val pon = newPonPort(token, newOlt(token, site), "1/1/1")
+        val odf = newOdf(token, site, portCount = 12)
+        val odc = newOdc(token, 107.02, -6.24)
+        val feeder = newFeeder(token, odf, odc)
+        val core1 = coreId(token, feeder, 1)
+
+        val depan = post(
+            "/api/fiber-connections", token,
+            connectBody("ODF", odf, core(core1), odfPort(odf, 1, "FRONT")),
+            expected = 400,
+        )
+        assertThat(depan).contains("patchcord")
+
+        val belakang = post(
+            "/api/fiber-connections", token,
+            connectBody("ODF", odf, odfPort(odf, 1, "BACK"), ponPort(pon)),
+            expected = 400,
+        )
+        assertThat(belakang).contains("pigtail")
     }
 
     @Test

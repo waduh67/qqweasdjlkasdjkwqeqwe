@@ -17,12 +17,9 @@ enum class ClosureKind(val label: String) {
     /** Sambungan di tengah jalur, bukan di simpul distribusi. */
     JOINT_BOX("Joint box"),
 
-    /** Terminasi rapi di rak POP — potongan D. */
+    /** Terminasi rapi di rak POP — tempat kabel luar bertemu patchcord. */
     ODF("ODF"),
     ;
-
-    /** Jenis yang simpulnya sudah ada di sistem; sisanya menyusul per potongan. */
-    val available: Boolean get() = this != ODF
 
     /**
      * Apakah di dalamnya ada splitter. Joint box TIDAK: isinya cuma tray dan
@@ -87,6 +84,14 @@ data class ConnectionPoint(
     val nodeId: UUID? = null,
     /** Terisi hanya untuk titik bernomor (kaki splitter, port ODF). */
     val portNumber: Int? = null,
+    /**
+     * Sisi port ODF; wajib untuk [ConnectionPointKind.ODF_PORT] dan terlarang
+     * untuk yang lain. Sisi ikut jadi bagian identitas titik karena satu port ODF
+     * memang dipakai DUA sambungan — belakangnya ke core kabel luar, depannya ke
+     * patchcord OLT. Tanpa ini, "satu titik dipakai sekali" akan melarang
+     * sambungan kedua yang justru wajib ada.
+     */
+    val portSide: OdfPortSide? = null,
 ) {
     init {
         if (kind == ConnectionPointKind.CORE) {
@@ -103,16 +108,26 @@ data class ConnectionPoint(
         } else if (portNumber != null) {
             throw ValidationException("${kind.label} tak bernomor port")
         }
+        if (kind == ConnectionPointKind.ODF_PORT) {
+            if (portSide == null) throw ValidationException("Port ODF wajib menyebut sisinya (belakang/depan)")
+        } else if (portSide != null) {
+            throw ValidationException("${kind.label} tak bersisi — sisi hanya ada pada port ODF")
+        }
     }
 
-    /** Uraian singkat untuk pesan galat, mis. "Kaki splitter 3". */
-    val description: String get() = if (portNumber != null) "${kind.label} $portNumber" else kind.label
+    /** Uraian singkat untuk pesan galat, mis. "Kaki splitter 3", "Port ODF 7 depan". */
+    val description: String
+        get() = listOfNotNull(kind.label, portNumber?.toString(), portSide?.label?.lowercase()).joinToString(" ")
 
     companion object {
         fun core(coreId: UUID) = ConnectionPoint(ConnectionPointKind.CORE, coreId = coreId)
 
         fun node(kind: ConnectionPointKind, nodeId: UUID, portNumber: Int? = null) =
             ConnectionPoint(kind, nodeId = nodeId, portNumber = portNumber)
+
+        /** Satu sisi sebuah port ODF — bentuk yang paling sering dipakai layar splicing. */
+        fun odfPort(odfId: UUID, portNumber: Int, side: OdfPortSide) =
+            ConnectionPoint(ConnectionPointKind.ODF_PORT, nodeId = odfId, portNumber = portNumber, portSide = side)
     }
 }
 

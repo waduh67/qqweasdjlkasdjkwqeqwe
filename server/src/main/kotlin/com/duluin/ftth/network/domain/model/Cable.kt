@@ -21,10 +21,17 @@ enum class CableType(
     val validFrom: Set<NetworkNodeKind>,
     val validTo: Set<NetworkNodeKind>,
 ) {
-    /** OLT → ODC. Kabel berkapasitas besar dari POP ke kabinet distribusi. */
+    /**
+     * POP → ODC. Kabel berkapasitas besar dari POP ke kabinet distribusi.
+     *
+     * ODF sah di kedua sisi: di POP asal ia titik berangkat yang benar (kabel luar
+     * berhenti di rak, bukan di badan OLT), dan di POP tujuan ia titik berhenti
+     * feeder antar-POP. Ujung SITE/OLT tetap diterima untuk ISP yang rak-nya belum
+     * ada — ODF memang opsional.
+     */
     FEEDER(
-        setOf(NetworkNodeKind.SITE, NetworkNodeKind.OLT, NetworkNodeKind.JOINT_BOX),
-        setOf(NetworkNodeKind.ODC, NetworkNodeKind.JOINT_BOX),
+        setOf(NetworkNodeKind.SITE, NetworkNodeKind.OLT, NetworkNodeKind.ODF, NetworkNodeKind.JOINT_BOX),
+        setOf(NetworkNodeKind.ODC, NetworkNodeKind.ODF, NetworkNodeKind.JOINT_BOX),
     ),
 
     /** ODC → ODP, atau ODP → ODP saat ODP dirangkai berantai. */

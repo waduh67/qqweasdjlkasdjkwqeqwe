@@ -18,6 +18,7 @@ import com.duluin.ftth.network.application.port.outbound.CableCoreRepository
 import com.duluin.ftth.network.application.port.outbound.CableRepository
 import com.duluin.ftth.network.application.port.outbound.JointBoxRepository
 import com.duluin.ftth.network.application.port.outbound.OdcRepository
+import com.duluin.ftth.network.application.port.outbound.OdfRepository
 import com.duluin.ftth.network.application.port.outbound.OdpRepository
 import com.duluin.ftth.network.application.port.outbound.OltRepository
 import com.duluin.ftth.network.application.port.outbound.PonPortRepository
@@ -43,6 +44,7 @@ class CableService(
     private val odcRepository: OdcRepository,
     private val odpRepository: OdpRepository,
     private val jointBoxRepository: JointBoxRepository,
+    private val odfRepository: OdfRepository,
     private val ponPortRepository: PonPortRepository,
     private val manageFiberConnection: ManageFiberConnectionUseCase,
     private val currentUser: CurrentUserProvider,
@@ -88,7 +90,13 @@ class CableService(
             // Joint box tak punya port keluaran: kabel berikutnya berangkat dari
             // sana karena seratnya DISAMBUNG, bukan dicolok ke kaki splitter.
             // Yang mengatur core mana ke core mana adalah layar sambungan.
-            NetworkNodeKind.JOINT_BOX, NetworkNodeKind.SITE, NetworkNodeKind.CUSTOMER -> emptyList()
+            //
+            // ODF sama: portnya memang bernomor, tapi yang dicolok di sana
+            // patchcord — bukan ujung kabel outdoor. Kabel yang berangkat dari
+            // rak menempel lewat sambungan di sisi belakang port.
+            NetworkNodeKind.JOINT_BOX, NetworkNodeKind.ODF,
+            NetworkNodeKind.SITE, NetworkNodeKind.CUSTOMER,
+            -> emptyList()
         }
     }
 
@@ -237,8 +245,11 @@ class CableService(
                     ?.let { throw ConflictException("Slot $port ODP ${odp.code} sudah dipakai kabel ${it.code}") }
             }
             // SITE feeder tak mengenal PON port; JOINT_BOX tak punya port sama
-            // sekali; CUSTOMER tak pernah jadi sumber kabel.
-            NetworkNodeKind.SITE, NetworkNodeKind.JOINT_BOX, NetworkNodeKind.CUSTOMER -> Unit
+            // sekali; ODF punya port tapi bukan port KABEL (lihat sourcePorts);
+            // CUSTOMER tak pernah jadi sumber kabel.
+            NetworkNodeKind.SITE, NetworkNodeKind.JOINT_BOX,
+            NetworkNodeKind.ODF, NetworkNodeKind.CUSTOMER,
+            -> Unit
         }
     }
 
@@ -332,6 +343,7 @@ class CableService(
                 NetworkNodeKind.ODC -> odcRepository.findById(node.id) != null
                 NetworkNodeKind.ODP -> odpRepository.findById(node.id) != null
                 NetworkNodeKind.JOINT_BOX -> jointBoxRepository.findById(node.id) != null
+                NetworkNodeKind.ODF -> odfRepository.findById(node.id) != null
                 NetworkNodeKind.CUSTOMER -> true
             }
             if (!exists) throw NotFoundException("${node.kind} ${node.id} tidak ditemukan")

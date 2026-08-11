@@ -3,6 +3,7 @@ package com.duluin.ftth.network.adapter.outbound.persistence
 import com.duluin.ftth.common.infrastructure.persistence.TenantAwareJpaEntity
 import com.duluin.ftth.network.domain.model.ClosureKind
 import com.duluin.ftth.network.domain.model.ConnectionPointKind
+import com.duluin.ftth.network.domain.model.OdfPortSide
 import com.duluin.ftth.network.domain.model.SpliceMethod
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -74,4 +75,13 @@ class FiberConnectionEndJpaEntity(
 
     @Column(name = "port_number", updatable = false)
     var portNumber: Int?,
+
+    /**
+     * Sisi port ODF; null untuk titik jenis lain. Ikut ke unique index (V91)
+     * karena satu port ODF memang dipakai DUA sambungan — belakang ke core kabel
+     * luar, depan ke patchcord OLT.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "port_side", length = 5, updatable = false)
+    var portSide: OdfPortSide?,
 ) : TenantAwareJpaEntity(id)

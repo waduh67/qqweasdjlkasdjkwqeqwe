@@ -2,6 +2,7 @@ package com.duluin.ftth.network.application.port.outbound
 
 import com.duluin.ftth.network.domain.model.ConnectionPointKind
 import com.duluin.ftth.network.domain.model.FiberConnection
+import com.duluin.ftth.network.domain.model.OdfPortSide
 import java.util.UUID
 
 interface FiberConnectionRepository {
@@ -31,8 +32,25 @@ interface FiberConnectionRepository {
      * Pemakai sebuah titik non-core, dicari GLOBAL. Kaki splitter, port ODF, PON
      * port, dan ONU hanya ada satu-satunya di seluruh jaringan, jadi tak perlu —
      * dan tak boleh — dibatasi per closure.
+     *
+     * [portSide] ikut jadi bagian identitas untuk port ODF: yang boleh dipakai
+     * sekali adalah SISI, bukan portnya. Null untuk titik jenis lain.
      */
-    fun findByNodePoint(kind: ConnectionPointKind, nodeId: UUID, portNumber: Int?): FiberConnection?
+    fun findByNodePoint(
+        kind: ConnectionPointKind,
+        nodeId: UUID,
+        portNumber: Int?,
+        portSide: OdfPortSide? = null,
+    ): FiberConnection?
+
+    /**
+     * Berapa port berbeda di simpul ini yang sudah terpakai — angka "sisa slot"
+     * untuk rak ODF. Satu port yang kedua sisinya tersambung tetap dihitung satu.
+     */
+    fun countUsedPortsOfNode(kind: ConnectionPointKind, nodeId: UUID): Long
+
+    /** Versi banyak-simpul, satu query untuk satu halaman daftar. */
+    fun countUsedPortsOfNodes(kind: ConnectionPointKind, nodeIds: Set<UUID>): Map<UUID, Long>
 
     /** Sambungan yang menyentuh core milik kabel ini. */
     fun findByCableId(cableId: UUID): List<FiberConnection>

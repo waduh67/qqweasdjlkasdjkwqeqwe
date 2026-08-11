@@ -2,6 +2,7 @@ package com.duluin.ftth.network.application.port.inbound
 
 import com.duluin.ftth.network.domain.model.ClosureKind
 import com.duluin.ftth.network.domain.model.ConnectionPointKind
+import com.duluin.ftth.network.domain.model.OdfPortSide
 import com.duluin.ftth.network.domain.model.SpliceMethod
 import java.util.UUID
 
@@ -43,6 +44,8 @@ data class ConnectionPointCommand(
     val coreId: UUID? = null,
     val nodeId: UUID? = null,
     val portNumber: Int? = null,
+    /** Sisi port ODF (belakang/depan); wajib untuk ODF_PORT, terlarang untuk lainnya. */
+    val portSide: OdfPortSide? = null,
 )
 
 data class ConnectFiberCommand(

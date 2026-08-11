@@ -6,6 +6,13 @@ import java.util.UUID
 enum class NetworkNodeKind {
     SITE,
     OLT,
+
+    /**
+     * Rak terminasi di dalam POP. Ujung kabel yang SEBENARNYA di sisi hulu: kabel
+     * luar berhenti di sini, dan yang berlanjut ke OLT cuma patchcord — dicatat
+     * sebagai sambungan, bukan sebagai kabel bergeometri.
+     */
+    ODF,
     ODC,
     ODP,
 

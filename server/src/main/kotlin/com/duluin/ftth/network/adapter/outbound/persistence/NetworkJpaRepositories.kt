@@ -62,6 +62,11 @@ interface PonPortJpaRepository : JpaRepository<PonPortJpaEntity, UUID> {
     fun countGroupedByOlt(@Param("oltIds") oltIds: Collection<UUID>): List<ChildCount>
 }
 
+interface OdfJpaRepository : JpaRepository<OdfJpaEntity, UUID>, JpaSpecificationExecutor<OdfJpaEntity> {
+    fun existsByCode(code: String): Boolean
+    fun countBySiteId(siteId: UUID): Long
+}
+
 interface OdcJpaRepository : JpaRepository<OdcJpaEntity, UUID>, JpaSpecificationExecutor<OdcJpaEntity> {
     fun existsByCode(code: String): Boolean
     fun countByPonPortId(ponPortId: UUID): Long
@@ -152,4 +157,33 @@ interface FiberConnectionEndJpaRepository : JpaRepository<FiberConnectionEndJpaE
         """,
     )
     fun findByCableId(@Param("cableId") cableId: UUID): List<FiberConnectionEndJpaEntity>
+
+    /**
+     * Berapa PORT berbeda pada sebuah simpul yang sudah tersentuh sambungan.
+     * `distinct` bukan hiasan: satu port ODF dipakai dua sisi, sedangkan yang
+     * habis di rak adalah adapternya — menghitung sisi akan melaporkan rak
+     * 24-port sebagai penuh padahal baru dua belas adapter terpakai.
+     */
+    @Query(
+        """
+        select count(distinct e.portNumber) from FiberConnectionEndJpaEntity e
+        where e.pointKind = :kind and e.nodeId = :nodeId
+        """,
+    )
+    fun countDistinctPorts(
+        @Param("kind") kind: ConnectionPointKind,
+        @Param("nodeId") nodeId: UUID,
+    ): Long
+
+    @Query(
+        """
+        select e.nodeId as parentId, count(distinct e.portNumber) as total
+        from FiberConnectionEndJpaEntity e
+        where e.pointKind = :kind and e.nodeId in :nodeIds group by e.nodeId
+        """,
+    )
+    fun countDistinctPortsGrouped(
+        @Param("kind") kind: ConnectionPointKind,
+        @Param("nodeIds") nodeIds: Collection<UUID>,
+    ): List<ChildCount>
 }

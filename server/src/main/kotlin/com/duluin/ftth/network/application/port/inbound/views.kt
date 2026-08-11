@@ -10,6 +10,7 @@ import com.duluin.ftth.network.domain.model.ClosureKind
 import com.duluin.ftth.network.domain.model.ConnectionPointKind
 import com.duluin.ftth.network.domain.model.CoreStatus
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
+import com.duluin.ftth.network.domain.model.OdfPortSide
 import com.duluin.ftth.network.domain.model.OltVendor
 import com.duluin.ftth.network.domain.model.SnmpVersion
 import com.duluin.ftth.network.domain.model.SpliceMethod
@@ -120,6 +121,30 @@ data class JointBoxView(
 )
 
 /**
+ * Rak terminasi di POP. Dua angka pemakaian, dan keduanya perlu:
+ *
+ *  - [usedPortCount] menjawab "masih ada slot kosong?" — satu port dihitung
+ *    sekali walau kedua sisinya sudah tersambung, sebab yang habis di rak adalah
+ *    adapternya, bukan sisinya.
+ *  - [spliceCount] menjawab "berapa banyak sambungan di dalamnya" — sisi
+ *    belakang dan depan dihitung sendiri-sendiri karena keduanya memang kerja
+ *    terpisah.
+ */
+data class OdfView(
+    val id: UUID,
+    val code: String,
+    val name: String,
+    val siteId: UUID,
+    val siteName: String?,
+    val location: Coordinate,
+    val areaId: UUID?,
+    val portCount: Int,
+    val usedPortCount: Long,
+    val spliceCount: Long,
+    val status: AssetStatus,
+)
+
+/**
  * Satu pilihan port KELUARAN pada simpul sumber, untuk picker "colok dari port
  * mana" saat menarik kabel. [ponPortId] terisi untuk OLT (PON port berlabel),
  * [portNumber] untuk kaki splitter ODC / slot ODP. [occupied] menandai port yang
@@ -202,6 +227,8 @@ data class FiberConnectionPointView(
     val colorHex: String?,
     val nodeId: UUID?,
     val portNumber: Int?,
+    /** Sisi port ODF (belakang/depan); null untuk titik jenis lain. */
+    val portSide: OdfPortSide?,
 )
 
 data class FiberConnectionView(

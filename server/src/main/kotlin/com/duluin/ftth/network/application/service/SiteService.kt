@@ -10,6 +10,7 @@ import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.network.application.port.inbound.ManageSiteUseCase
 import com.duluin.ftth.network.application.port.inbound.SaveSiteCommand
 import com.duluin.ftth.network.application.port.inbound.SiteView
+import com.duluin.ftth.network.application.port.outbound.OdfRepository
 import com.duluin.ftth.network.application.port.outbound.OltRepository
 import com.duluin.ftth.network.application.port.outbound.SiteRepository
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
@@ -24,6 +25,7 @@ import java.util.UUID
 class SiteService(
     private val siteRepository: SiteRepository,
     private val oltRepository: OltRepository,
+    private val odfRepository: OdfRepository,
     private val cableAttachment: CableAttachmentService,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
@@ -80,6 +82,12 @@ class SiteService(
         val oltCount = oltRepository.countBySiteId(id)
         if (oltCount > 0) {
             throw ConflictException("Site ${site.code} masih menaungi $oltCount OLT, pindahkan atau hapus dulu")
+        }
+        // Rak ber-foreign-key ke site, jadi tanpa penjagaan ini yang muncul di
+        // layar adalah galat constraint database, bukan kalimat yang menjelaskan.
+        val odfCount = odfRepository.countBySiteId(id)
+        if (odfCount > 0) {
+            throw ConflictException("Site ${site.code} masih menaungi $odfCount ODF, pindahkan atau hapus dulu")
         }
         siteRepository.deleteById(id)
         auditor.record("site.deleted", "Site", id, site.tenantId, mapOf("code" to site.code))

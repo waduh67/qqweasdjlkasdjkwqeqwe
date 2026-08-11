@@ -6,6 +6,7 @@ import com.duluin.ftth.network.application.port.outbound.FiberConnectionReposito
 import com.duluin.ftth.network.domain.model.ConnectionPoint
 import com.duluin.ftth.network.domain.model.ConnectionPointKind
 import com.duluin.ftth.network.domain.model.FiberConnection
+import com.duluin.ftth.network.domain.model.OdfPortSide
 import org.springframework.stereotype.Component
 import java.util.UUID
 
@@ -41,10 +42,22 @@ class FiberConnectionPersistenceAdapter(
     override fun findByCoreInClosure(closureId: UUID, coreId: UUID): FiberConnection? =
         ends.findByClosureIdAndCoreId(closureId, coreId)?.let { findById(it.connectionId) }
 
-    override fun findByNodePoint(kind: ConnectionPointKind, nodeId: UUID, portNumber: Int?): FiberConnection? =
+    override fun findByNodePoint(
+        kind: ConnectionPointKind,
+        nodeId: UUID,
+        portNumber: Int?,
+        portSide: OdfPortSide?,
+    ): FiberConnection? =
         ends.findByPointKindAndNodeId(kind, nodeId)
-            .firstOrNull { it.portNumber == portNumber }
+            .firstOrNull { it.portNumber == portNumber && it.portSide == portSide }
             ?.let { findById(it.connectionId) }
+
+    override fun countUsedPortsOfNode(kind: ConnectionPointKind, nodeId: UUID): Long =
+        ends.countDistinctPorts(kind, nodeId)
+
+    override fun countUsedPortsOfNodes(kind: ConnectionPointKind, nodeIds: Set<UUID>): Map<UUID, Long> =
+        if (nodeIds.isEmpty()) emptyMap()
+        else ends.countDistinctPortsGrouped(kind, nodeIds).associate { it.parentId to it.total }
 
     override fun findByCableId(cableId: UUID): List<FiberConnection> = byEnds(ends.findByCableId(cableId))
 
@@ -128,6 +141,7 @@ private fun FiberConnection.endEntity(side: ConnectionSide, point: ConnectionPoi
     coreId = point.coreId,
     nodeId = point.nodeId,
     portNumber = point.portNumber,
+    portSide = point.portSide,
 )
 
 private fun FiberConnectionEndJpaEntity.toPoint() = ConnectionPoint(
@@ -135,4 +149,5 @@ private fun FiberConnectionEndJpaEntity.toPoint() = ConnectionPoint(
     coreId = coreId,
     nodeId = nodeId,
     portNumber = portNumber,
+    portSide = portSide,
 )
