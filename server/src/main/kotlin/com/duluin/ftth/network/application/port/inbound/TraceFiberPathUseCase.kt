@@ -49,4 +49,21 @@ interface TraceFiberPathUseCase {
      * ONU pelanggan baru menolak daftar dengan teknisi sudah di lokasi.
      */
     fun tracePonPortLoad(ponPortId: UUID): PonPortLoadView
+
+    /**
+     * Kotak mana saja yang gelap bila sebuah kabel putus, menurut catatan splicing.
+     *
+     * Pertanyaannya sudah lama dijawab dengan menyusuri graf KABEL: dari ujung
+     * hilir kabel, ikuti kabel berikutnya, begitu seterusnya. Cara itu benar
+     * selama tiap pasang kotak dihubungkan kabelnya sendiri — dan justru itulah
+     * yang ditinggalkan desain ini. Satu selubung 8 core yang dikupas di delapan
+     * ODP tergambar sebagai SATU kabel dengan satu ujung hilir; graf kabel cuma
+     * melihat ODP terakhir, sedangkan backhoe memutus kedelapan-delapannya.
+     *
+     * Maka yang ditelusuri di sini core, bukan kabel: tiap core dicari sisi
+     * hulunya (yang bermuara di OLT), lalu sisi seberangnya dituruni. Hasilnya
+     * dipakai melengkapi simulasi putus, bukan menggantikannya — tenant yang
+     * belum mendata splicing tetap dilayani jawaban lama.
+     */
+    fun traceCableCut(cableId: UUID): FiberCutView
 }

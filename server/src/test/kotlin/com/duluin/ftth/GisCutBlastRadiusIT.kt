@@ -158,4 +158,147 @@ class GisCutBlastRadiusIT {
         assertThat(JsonPath.read<Int>(dropCut, "$.customerCount")).isEqualTo(1)
         assertThat(JsonPath.read<List<String>>(dropCut, "$.customers[*].customerId")).containsExactly(customer)
     }
+
+    /**
+     * Satu selubung yang dikupas di tengah jalan: inilah bentuk yang sebenarnya
+     * dipasang orang di lapangan, dan justru bentuk yang paling lama salah dibaca.
+     *
+     * Kabel distribusi 8 core berangkat dari kabinet dan berakhir di ODP paling
+     * ujung; dua ODP di tengah bentang tak punya kabel sendiri — seratnya diambil
+     * dengan mengupas selubung yang lewat di depan pintunya, satu core satu kotak.
+     * Graf KABEL cuma melihat ujung hilirnya, jadi simulasi putus lama melaporkan
+     * satu ODP padahal backhoe menjatuhkan ketiganya beserta pelanggan di dalamnya.
+     *
+     * Yang dibuktikan di sini: catatan splicing dipakai melengkapi jawaban itu,
+     * sampai ke nama pelanggan yang harus ditelepon lebih dulu.
+     */
+    @Test
+    fun `putus satu selubung menjatuhkan semua ODP yang dikupas di tengah bentang`() {
+        val slug = "tap${uniq()}"
+        val admin = "admin@$slug.test"
+        onboarding.onboard(OnboardTenantCommand(slug, "Tap Co", admin, "Admin", pass))
+        val token = login(slug, admin)
+        val s = uniq().uppercase()
+        val lat = -6.24
+
+        // Rak POP → kabinet, supaya tiap core punya hulu yang benar-benar bermuara
+        // di OLT. Tanpa itu penelusuran menolak menebak arah dan tak melaporkan apa pun.
+        val site = id(
+            post("/api/sites", token, """{"code":"POP-$s","name":"POP $s","location":{"longitude":106.98,"latitude":$lat}}"""),
+        )
+        val olt = id(post("/api/olts", token, """{"siteId":"$site","code":"OLT-$s","name":"OLT $s","vendor":"ZTE"}"""))
+        val pon = id(post("/api/olts/$olt/pon-ports", token, """{"label":"1/1/1"}"""))
+        val odf = id(
+            post(
+                "/api/odfs", token,
+                """{"code":"ODF-$s","name":"ODF $s","siteId":"$site",
+                    "location":{"longitude":106.98,"latitude":$lat},"portCount":12}""",
+            ),
+        )
+        val odc = id(
+            post(
+                "/api/odcs", token,
+                """{"code":"ODC-$s","name":"ODC $s","location":{"longitude":107.00,"latitude":$lat},
+                    "ponPortId":"$pon","splitterRatio":"1:8","capacity":64}""",
+            ),
+        )
+        val odps = (1..3).map { urutan ->
+            id(
+                post(
+                    "/api/odps", token,
+                    """{"code":"ODP-$s-$urutan","name":"ODP $s-$urutan","odcId":"$odc",
+                        "location":{"longitude":${107.00 + urutan * 0.01},"latitude":$lat},
+                        "splitterRatio":"1:8","capacity":8}""",
+                ),
+            )
+        }
+
+        val feeder = id(
+            post(
+                "/api/cables", token,
+                """{"code":"FDR-$s","name":"Feeder $s","cableType":"FEEDER","coreCount":12,
+                    "route":[{"longitude":106.98,"latitude":$lat},{"longitude":107.00,"latitude":$lat}],
+                    "fromKind":"ODF","fromId":"$odf","toKind":"ODC","toId":"$odc"}""",
+            ),
+        )
+        // SATU kabel untuk tiga kotak — ujung gambarnya cuma menyentuh ODP terakhir.
+        val selubung = id(
+            post(
+                "/api/cables", token,
+                """{"code":"DST-$s","name":"Distribusi $s","cableType":"DISTRIBUTION","coreCount":8,
+                    "route":[{"longitude":107.00,"latitude":$lat},{"longitude":107.03,"latitude":$lat}],
+                    "fromKind":"ODC","fromId":"$odc","toKind":"ODP","toId":"${odps[2]}"}""",
+            ),
+        )
+
+        // Di rak: core feeder dilas ke pigtail, patchcord dari sisi depan ke PON port.
+        connect(token, "ODF", odf, core(coreId(token, feeder, 1)), """{"kind":"ODF_PORT","nodeId":"$odf","portNumber":1,"portSide":"BACK"}""")
+        connect(
+            token, "ODF", odf,
+            """{"kind":"ODF_PORT","nodeId":"$odf","portNumber":1,"portSide":"FRONT"}""",
+            """{"kind":"PON_PORT","nodeId":"$pon"}""",
+        )
+        // Di kabinet: feeder masuk splitter, tiga kakinya menyuapi tiga core selubung.
+        val splOdc = splitterOf(token, "ODC", odc)
+        connect(token, "ODC", odc, core(coreId(token, feeder, 1)), """{"kind":"SPLITTER_IN","nodeId":"$splOdc"}""")
+        odps.indices.forEach { i ->
+            connect(
+                token, "ODC", odc,
+                """{"kind":"SPLITTER_OUT","nodeId":"$splOdc","portNumber":${i + 1}}""",
+                core(coreId(token, selubung, i + 1)),
+            )
+        }
+        // Di tiap kotak: selubung yang sama dikupas, satu core diambil, sisanya lewat.
+        odps.forEachIndexed { i, odp ->
+            connect(
+                token, "ODP", odp, core(coreId(token, selubung, i + 1)),
+                """{"kind":"SPLITTER_IN","nodeId":"${splitterOf(token, "ODP", odp)}"}""",
+            )
+        }
+
+        // Dua pelanggan: satu di kotak tengah bentang (yang selama ini luput), satu
+        // di kotak ujung (yang sudah ketahuan sejak dulu).
+        val pelangganTengah = pasangPelanggan(token, "T-$s", odps[0])
+        val pelangganUjung = pasangPelanggan(token, "U-$s", odps[2])
+
+        val putus = cutBlast(token, selubung)
+
+        assertThat(JsonPath.read<Int>(putus, "$.odpCount")).isEqualTo(3)
+        assertThat(JsonPath.read<Int>(putus, "$.customerCount")).isEqualTo(2)
+        assertThat(JsonPath.read<List<String>>(putus, "$.customers[*].customerId"))
+            .containsExactlyInAnyOrder(pelangganTengah, pelangganUjung)
+        // Kabinetnya sendiri tetap menyala: yang putus di hilirnya.
+        assertThat(JsonPath.read<Int>(putus, "$.odcCount")).isEqualTo(0)
+    }
+
+    private fun connect(token: String, closureKind: String, closureId: String, a: String, b: String) =
+        post(
+            "/api/fiber-connections", token,
+            """{"closureKind":"$closureKind","closureId":"$closureId","a":$a,"b":$b}""",
+        )
+
+    private fun core(coreId: String) = """{"kind":"CORE","coreId":"$coreId"}"""
+
+    private fun coreId(token: String, cableId: String, number: Int): String =
+        JsonPath.read(getJson("/api/cables/$cableId/cores", token), "$.cores[${number - 1}].id")
+
+    private fun splitterOf(token: String, ownerKind: String, ownerId: String): String =
+        JsonPath.read(getJson("/api/splitters?ownerKind=$ownerKind&ownerId=$ownerId", token), "$.splitters[0].id")
+
+    private fun getJson(url: String, token: String): String =
+        mockMvc.perform(get(url).header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk).andReturn().response.contentAsString
+
+    private fun pasangPelanggan(token: String, kode: String, odpId: String): String {
+        val customer = id(
+            post(
+                "/api/customers", token,
+                """{"code":"$kode","name":"Pelanggan $kode","address":"Jl. Uji",
+                    "location":{"longitude":107.01,"latitude":-6.241}}""",
+            ),
+        )
+        val onu = id(post("/api/customers/$customer/onus", token, """{"serialNumber":"SN-$kode"}"""))
+        post("/api/customers/onus/$onu/attach", token, """{"odpId":"$odpId","portNumber":1}""", 200)
+        return customer
+    }
 }

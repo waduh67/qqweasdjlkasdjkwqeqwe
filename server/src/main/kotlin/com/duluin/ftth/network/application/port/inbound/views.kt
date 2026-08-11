@@ -500,3 +500,34 @@ data class PonClosureLoadView(
     val usedLegs: Int,
     val onuCount: Int,
 )
+
+/**
+ * Yang kehilangan cahaya bila sebuah kabel putus, dirangkai dari catatan splicing.
+ *
+ * Dibedakan dari jawaban lama (graf kabel + tautan ODP→ODC) karena keduanya
+ * menjawab pertanyaan yang berbeda: yang lama menjawab "kabel mana yang
+ * tergantung di bawah kabel ini", yang ini menjawab "serat siapa saja yang lewat
+ * di dalam selubung yang digorok". Untuk kabel yang dikupas di banyak kotak,
+ * cuma yang kedua yang benar.
+ */
+data class FiberCutView(
+    val cableId: UUID,
+    val cableCode: String,
+    /** Core kabel yang benar-benar tersambung — bukan jumlah core yang tercetak di selubungnya. */
+    val splicedCores: Int,
+    /** Core yang sisi hulunya bisa dipastikan, jadi hilirnya sah disebut terdampak. */
+    val tracedCores: Int,
+    /** Kotak yang gelap bila kabel ini putus, terdekat dulu. */
+    val closures: List<FiberCutClosureView>,
+    val warnings: List<String>,
+)
+
+/** Satu kotak yang kehilangan uplink karena kabel putus. */
+data class FiberCutClosureView(
+    val closureKind: ClosureKind,
+    val closureId: UUID,
+    val code: String,
+    val name: String,
+    /** Berapa ruas serat dari titik putus; 0 = kotak tempat core ini berakhir. */
+    val depth: Int,
+)

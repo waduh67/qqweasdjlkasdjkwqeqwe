@@ -14,6 +14,7 @@ import com.duluin.ftth.network.PonPortTopology
 import com.duluin.ftth.network.OltRef
 import com.duluin.ftth.network.SiteRef
 import com.duluin.ftth.network.domain.model.Cable
+import com.duluin.ftth.network.domain.model.ClosureKind
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import com.duluin.ftth.network.domain.model.NetworkNodeRef
 import com.duluin.ftth.network.domain.model.Odc
@@ -21,6 +22,7 @@ import com.duluin.ftth.network.domain.model.Olt
 import com.duluin.ftth.network.domain.model.Site
 import com.duluin.ftth.network.UpstreamHop
 import com.duluin.ftth.network.UpstreamPath
+import com.duluin.ftth.network.application.port.inbound.TraceFiberPathUseCase
 import com.duluin.ftth.network.application.port.outbound.CableRepository
 import com.duluin.ftth.network.application.port.outbound.OdcRepository
 import com.duluin.ftth.network.application.port.outbound.OdpRepository
@@ -51,6 +53,8 @@ class NetworkApiService(
     private val cableAttachment: CableAttachmentService,
     private val splitterRepository: SplitterRepository,
     private val tileRenderer: NetworkTileRenderer,
+    /** Sumber kebenaran kedua untuk dampak putus — lihat [TraceFiberPathUseCase.traceCableCut]. */
+    private val fiberTrace: TraceFiberPathUseCase,
 ) : NetworkApi {
 
     override fun renderMapTile(z: Int, x: Int, y: Int, areaIds: Set<UUID>?): ByteArray =
@@ -144,9 +148,24 @@ class NetworkApiService(
                 }
         }
 
-        // Keanggotaan ODP di bawah sebuah ODC dicatat lewat `odp.odcId`, tidak
-        // selalu digambar sebagai kabel distribusi — jadi putus feeder melengkapi
-        // daftar ODP lewat pohon perangkat agar tak ada pelanggan yang terlewat.
+        // Graf SAMBUNGAN menangkap apa yang graf kabel tak bisa lihat: selubung
+        // yang dikupas di banyak kotak. Ia menambah, tak menggantikan — tenant
+        // yang belum mendata splicing tetap dapat jawaban lama, dan yang sudah
+        // mendata mendapat kotak-kotak yang selama ini luput.
+        val spliced = fiberTrace.traceCableCut(cable.id)
+        spliced.closures.forEach { hit ->
+            when (hit.closureKind) {
+                ClosureKind.ODC -> odcIds += hit.closureId
+                ClosureKind.ODP -> odpIds += hit.closureId
+                // Joint box dan rak ODF ikut gelap, tapi keduanya tak menampung
+                // pelanggan — yang dicari panel ini siapa yang kehilangan layanan.
+                ClosureKind.JOINT_BOX, ClosureKind.ODF -> Unit
+            }
+        }
+        // Keanggotaan ODP di bawah sebuah ODC dicatat lewat `odp.odcId` dan tidak
+        // selalu digambar sebagai kabel distribusi — jadi tiap ODC yang gelap,
+        // dari sumber mana pun ia ketahuan, dilengkapi anak-anaknya lewat pohon
+        // perangkat agar tak ada pelanggan yang terlewat.
         if (odcIds.isNotEmpty()) {
             odpIds += downstreamDeviceIds(emptySet(), odcIds).odpIds
         }

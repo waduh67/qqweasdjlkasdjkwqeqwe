@@ -3,6 +3,8 @@ package com.duluin.ftth.network.application.service
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.network.OdpUsageProbe
 import com.duluin.ftth.network.application.port.inbound.ConnectionPointCommand
+import com.duluin.ftth.network.application.port.inbound.FiberCutClosureView
+import com.duluin.ftth.network.application.port.inbound.FiberCutView
 import com.duluin.ftth.network.application.port.inbound.FiberHopView
 import com.duluin.ftth.network.application.port.inbound.FiberPathView
 import com.duluin.ftth.network.application.port.inbound.PonClosureLoadView
@@ -188,6 +190,90 @@ class FiberTraceService(
             fromSplicing = fromSplicing,
             warnings = loadWarnings(onuCount, fromSplicing, odpIds, linkedOdpIds),
         )
+    }
+
+    override fun traceCableCut(cableId: UUID): FiberCutView {
+        val cable = cableRepository.findById(cableId)
+            ?: throw NotFoundException("Kabel $cableId tidak ditemukan")
+
+        // Satu putus memutus SELURUH core di dalam selubungnya — backhoe tak
+        // memilih serat. Jadi yang dikerjakan di sini: untuk tiap core yang
+        // tercatat tersambung, tentukan sisi mana yang hulu, lalu turuni sisi
+        // seberangnya.
+        val coreIds = cableCoreRepository.findByCableId(cable.id).mapTo(HashSet()) { it.id }
+        val touching = connections.findByCableId(cable.id)
+            .groupBy { connection -> connection.coreIds.first { it in coreIds } }
+
+        val starts = ArrayList<Cursor>()
+        val seeds = ArrayList<Reached>()
+        var traced = 0
+        touching.forEach { (coreId, ends) ->
+            val downstream = downstreamEndOf(coreId, ends) ?: return@forEach
+            traced++
+            val corePoint = ConnectionPoint.core(coreId)
+            val opposite = downstream.opposite(corePoint) ?: return@forEach
+            // Kotak tempat core itu berakhir ikut gelap: putusnya ada di hulu-nya.
+            closures.find(downstream.closureKind, downstream.closureId)?.let { seeds += Reached(it, depth = 0) }
+            starts += Cursor(point = opposite, viaConnection = true, lastConnection = downstream.id, depth = 0)
+        }
+
+        val reached = descendFrom(starts, seeds)
+        return FiberCutView(
+            cableId = cable.id,
+            cableCode = cable.code,
+            splicedCores = touching.size,
+            tracedCores = traced,
+            closures = reached.map {
+                FiberCutClosureView(
+                    closureKind = it.ref.kind,
+                    closureId = it.ref.id,
+                    code = it.ref.code,
+                    name = it.ref.name,
+                    depth = it.depth,
+                )
+            },
+            warnings = cutWarnings(cable, touching.size, traced),
+        )
+    }
+
+    /**
+     * Sisi HILIR sehelai core: sambungan yang bukan sisi hulunya.
+     *
+     * Arah tak bisa dibaca dari data — sebuah sambungan sengaja setara di kedua
+     * sisinya — jadi satu-satunya cara adalah mencoba: berdiri di core, berjalan
+     * lewat tiap sisi, dan lihat sisi mana yang bermuara di port PON. Sisi yang
+     * TIDAK bermuara di sana itulah hilirnya.
+     *
+     * Kembali null bila tak satu sisi pun sampai OLT. Itu bukan kegagalan: core
+     * yang hulunya belum didata memang tak bisa dipastikan arahnya, dan menebak
+     * di sini berarti melaporkan pelanggan yang sebenarnya tak terdampak.
+     */
+    private fun downstreamEndOf(coreId: UUID, ends: List<FiberConnection>): FiberConnection? {
+        if (ends.isEmpty()) return null
+        val corePoint = ConnectionPoint.core(coreId)
+        val upstream = ends.filter { via ->
+            val other = ends.firstOrNull { it.id != via.id }
+            walk(corePoint, arrivedByConnection = false, lastConnectionId = other?.id).end == FiberTraceEnd.SOURCE
+        }
+        // Dua-duanya sampai OLT = data yang mustahil (sehelai core tak mungkin
+        // disuapi dua sumber); jangan dijadikan dasar klaim dampak.
+        if (upstream.size != 1) return null
+        return ends.firstOrNull { it.id != upstream.first().id }
+    }
+
+    private fun cutWarnings(cable: Cable, spliced: Int, traced: Int): List<String> = buildList {
+        if (spliced == 0) {
+            add(
+                "Belum ada core kabel ${cable.code} yang tercatat tersambung, jadi dampaknya masih " +
+                    "ditaksir dari gambar kabel. Catat splicing-nya supaya putus di ruas ini bisa " +
+                    "dihitung sampai ke pelanggan.",
+            )
+        } else if (traced < spliced) {
+            add(
+                "${spliced - traced} dari $spliced core tersambung belum bisa dipastikan arah hulunya — " +
+                    "jalurnya belum utuh sampai OLT. Dampak sebenarnya kemungkinan lebih luas.",
+            )
+        }
     }
 
     // ------------------------------------------------------------------
@@ -403,16 +489,34 @@ class FiberTraceService(
      * memakai potongan yang sama persis dengan telusur hulu. Serat memang tak
      * peduli ke arah mana cahaya lewat.
      */
-    private fun descend(ponPortId: UUID): List<Reached> {
+    private fun descend(ponPortId: UUID): List<Reached> = descendFrom(
+        listOf(
+            Cursor(
+                point = ConnectionPoint.node(ConnectionPointKind.PON_PORT, ponPortId),
+                viaConnection = false,
+                lastConnection = null,
+                depth = 0,
+            ),
+        ),
+    )
+
+    /**
+     * Mesin penelusuran hilir, berangkat dari titik mana pun.
+     *
+     * Dipisahkan dari [descend] karena simulasi putus tidak berangkat dari port
+     * PON melainkan dari tengah jaringan — dari sisi hilir sehelai core yang
+     * barusan digorok. Aturan langkahnya persis sama; yang berbeda cuma dari mana
+     * antreannya dimulai.
+     */
+    private fun descendFrom(starts: List<Cursor>, seeds: List<Reached> = emptyList()): List<Reached> {
         val found = LinkedHashMap<UUID, Reached>()
+        seeds.forEach { seed ->
+            val existing = found[seed.ref.id]
+            if (existing == null || seed.depth < existing.depth) found[seed.ref.id] = seed
+        }
         val seen = HashSet<ConnectionPoint>()
         val queue = ArrayDeque<Cursor>()
-        queue += Cursor(
-            point = ConnectionPoint.node(ConnectionPointKind.PON_PORT, ponPortId),
-            viaConnection = false,
-            lastConnection = null,
-            depth = 0,
-        )
+        queue += starts
 
         var visits = 0
         while (queue.isNotEmpty() && visits++ < maxDownstreamVisits) {
