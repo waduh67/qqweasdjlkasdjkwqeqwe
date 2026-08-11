@@ -11,8 +11,10 @@ import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.network.application.port.inbound.CablePortOption
 import com.duluin.ftth.network.application.port.inbound.CableView
+import com.duluin.ftth.network.application.port.inbound.DropReleaseView
 import com.duluin.ftth.network.application.port.inbound.ManageCableUseCase
 import com.duluin.ftth.network.application.port.inbound.ManageFiberConnectionUseCase
+import com.duluin.ftth.network.application.port.inbound.ReleaseDropCommand
 import com.duluin.ftth.network.application.port.inbound.SaveCableCommand
 import com.duluin.ftth.network.application.port.outbound.CableCoreRepository
 import com.duluin.ftth.network.application.port.outbound.CableRepository
@@ -178,6 +180,74 @@ class CableService(
             )
         }
         cableCoreRepository.deleteAboveCoreNumber(cable.id, target)
+    }
+
+    /**
+     * Pencabutan pelanggan dalam satu langkah — lihat [ManageCableUseCase.releaseDrop].
+     *
+     * Urutannya penting: sambungan dulu (itu yang membebaskan kaki splitter di ODP
+     * dan mengembalikan core ke BEBAS), status kabel belakangan. Terbalik pun
+     * hasilnya sama, tapi kalau ada yang gagal di tengah, kabel yang terlanjur
+     * ditandai ditinggal padahal core-nya masih terpakai jauh lebih membingungkan
+     * daripada sebaliknya.
+     */
+    override fun releaseDrop(id: UUID, command: ReleaseDropCommand): DropReleaseView {
+        val cable = requireCable(id)
+        if (cable.cableType != CableType.DROP) {
+            throw ValidationException(
+                "Hanya kabel drop yang bisa dicabut sekaligus. ${cable.code} adalah " +
+                    "${cable.cableType.name.lowercase()} yang menyuapi banyak pelanggan — " +
+                    "lepas per core di meja sambung kotaknya.",
+            )
+        }
+        val busyBefore = cableCoreRepository.findByCableId(id).count { it.status == CoreStatus.USED }
+        val removed = manageFiberConnection.disconnectAllOfCable(id, cableSurvives = true)
+        val busyAfter = cableCoreRepository.findByCableId(id).count { it.status == CoreStatus.USED }
+        val freed = busyBefore - busyAfter
+
+        if (command.abandon) {
+            cable.abandon()
+            cableRepository.save(cable)
+        }
+        auditor.record(
+            "cable.drop_released", "Cable", cable.id, cable.tenantId,
+            mapOf(
+                "code" to cable.code,
+                "removedConnections" to removed,
+                "freedCores" to freed,
+                "status" to cable.status.name,
+                "note" to (command.note ?: "-"),
+            ),
+        )
+        return DropReleaseView(
+            cableId = cable.id,
+            cableCode = cable.code,
+            removedConnections = removed,
+            freedCores = freed,
+            status = cable.status,
+            message = releaseMessage(removed, freed, command.abandon),
+        )
+    }
+
+    /**
+     * Kalimat hasil, disusun dari yang benar-benar terjadi — bukan template yang
+     * selalu berbunyi sukses. Nol sambungan itu kabar penting: berarti drop ini
+     * memang belum pernah didata sambungannya, dan kaki splitter di ODP-nya masih
+     * dikira terpakai oleh sesuatu yang lain.
+     */
+    private fun releaseMessage(removed: Int, freed: Int, abandoned: Boolean): String {
+        val inti = if (removed == 0) {
+            "Tak ada sambungan tercatat pada drop ini, jadi tak ada yang perlu dilepas."
+        } else {
+            "$removed sambungan dilepas" + if (freed > 0) ", $freed core kembali bebas." else "."
+        }
+        val ekor = if (abandoned) {
+            " Kabelnya ditandai ditinggal — fisiknya masih di tiang, tapi tak akan " +
+                "terhitung sebagai kabel siap pakai."
+        } else {
+            " Kabelnya dibiarkan apa adanya, siap dipakai penghuni berikutnya."
+        }
+        return inti + ekor
     }
 
     override fun delete(id: UUID) {

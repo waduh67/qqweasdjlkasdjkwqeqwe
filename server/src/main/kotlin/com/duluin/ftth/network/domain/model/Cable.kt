@@ -240,6 +240,23 @@ class Cable private constructor(
     }
 
     /**
+     * Menandai kabel yang fisiknya masih terpasang tapi sudah tak dipakai —
+     * lihat [AssetStatus.ABANDONED].
+     *
+     * Sengaja terpisah dari [update] yang meminta sembilan bidang sekaligus:
+     * "pelanggannya cabut" adalah SATU keputusan, dan memaksa orang menyunting
+     * seluruh formulir kabel untuk menyatakannya membuat tindakan ini jarang
+     * dilakukan — lalu peta penuh kabel mati yang mengaku aktif.
+     *
+     * Idempoten, dan tak menghapus apa pun: rutenya, panjangnya, dan barisan
+     * core-nya tetap utuh supaya kabel bekas ini bisa dihidupkan lagi kalau
+     * ternyata rumah yang sama berlangganan lagi — hal yang sering terjadi.
+     */
+    fun abandon() {
+        status = AssetStatus.ABANDONED
+    }
+
+    /**
      * Menempelkan ujung kabel yang menyambung ke [ref] pada [coord] — dipakai saat
      * simpul (OLT/ODC/ODP/site/pelanggan) dipindah di peta. HANYA titik ujung yang
      * digeser; tikungan di tengah tak disentuh dan panjang otomatis dihitung ulang

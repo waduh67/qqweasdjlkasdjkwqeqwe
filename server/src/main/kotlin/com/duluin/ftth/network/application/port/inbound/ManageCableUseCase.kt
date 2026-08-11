@@ -27,8 +27,45 @@ interface ManageCableUseCase {
 
     fun update(id: UUID, command: SaveCableCommand): CableView
 
+    /**
+     * "Pelanggannya cabut" dalam satu langkah: sambungan drop ini dilepas, core-nya
+     * kembali bebas, dan kabelnya boleh ditandai ditinggal.
+     *
+     * Tanpa ini, mencabut satu pelanggan berarti membuka meja sambung, mencari
+     * baris yang benar — di ODP dan di rumah — melepasnya satu-satu, lalu menyunting
+     * status kabelnya di formulir lain. Yang biasanya terjadi: kaki splitternya tak
+     * pernah dibebaskan, dan bulan depan kapasitas ODP terlihat penuh padahal
+     * seperempatnya milik orang yang sudah pindah dua tahun lalu.
+     *
+     * Hanya untuk kabel DROP. Melepas seluruh sambungan sebuah feeder/distribusi
+     * dalam sekali klik akan memadamkan satu kampung; yang begitu memang harus
+     * dikerjakan per core di meja sambung, dengan tangan yang ragu-ragu.
+     */
+    fun releaseDrop(id: UUID, command: ReleaseDropCommand): DropReleaseView
+
     fun delete(id: UUID)
 }
+
+data class ReleaseDropCommand(
+    /**
+     * Tandai kabelnya ditinggal. Bukan otomatis: drop yang baru saja dilepas
+     * sering langsung dipakai lagi oleh penghuni berikutnya di rumah yang sama,
+     * dan menandainya ditinggal cuma menambah pekerjaan menghidupkannya kembali.
+     */
+    val abandon: Boolean = false,
+    val note: String? = null,
+)
+
+/** Hasil pencabutan sebuah drop — angkanya disebut supaya bisa diperiksa. */
+data class DropReleaseView(
+    val cableId: UUID,
+    val cableCode: String,
+    val removedConnections: Int,
+    val freedCores: Int,
+    val status: AssetStatus,
+    /** Satu kalimat yang siap ditempel di toast, menyebut apa yang benar-benar terjadi. */
+    val message: String,
+)
 
 data class SaveCableCommand(
     /** Null/kosong = backend auto-generate UUIDv7 saat create. */

@@ -49,12 +49,21 @@ interface ManageFiberConnectionUseCase {
     fun disconnect(id: UUID)
 
     /**
-     * Memutus semua sambungan yang menyentuh core kabel ini. Dipanggil sebelum
-     * kabel dihapus: core ikut lenyap bersama kabelnya, dan sambungan yang
-     * menggantung ke serat yang tak ada lagi adalah kebohongan yang paling
-     * mahal — ia membuat telusur jalur menunjuk ke jalur yang sudah digulung.
+     * Memutus semua sambungan yang menyentuh core kabel ini, lalu mengembalikan
+     * berapa baris yang benar-benar lepas.
+     *
+     * Dipanggil sebelum kabel dihapus: core ikut lenyap bersama kabelnya, dan
+     * sambungan yang menggantung ke serat yang tak ada lagi adalah kebohongan
+     * yang paling mahal — ia membuat telusur jalur menunjuk ke jalur yang sudah
+     * digulung.
+     *
+     * [cableSurvives] dipakai saat kabelnya TETAP ADA dan yang dilepas cuma
+     * isinya — mis. drop bekas pelanggan yang cabut. Di situ core kabel ini
+     * sendiri ikut dikembalikan ke BEBAS, sebab helai yang tak lagi tersambung
+     * ke mana-mana memang siap dipakai pelanggan berikutnya; saat kabelnya
+     * dihapus, core-nya lenyap sehingga merapikan statusnya cuma pekerjaan sia-sia.
      */
-    fun disconnectAllOfCable(cableId: UUID)
+    fun disconnectAllOfCable(cableId: UUID, cableSurvives: Boolean = false): Int
 }
 
 /** Satu ujung yang mau disambung; bentuknya diperiksa domain (lihat ConnectionPoint). */

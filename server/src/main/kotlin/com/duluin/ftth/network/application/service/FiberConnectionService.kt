@@ -160,14 +160,17 @@ class FiberConnectionService(
         )
     }
 
-    override fun disconnectAllOfCable(cableId: UUID) {
+    override fun disconnectAllOfCable(cableId: UUID, cableSurvives: Boolean): Int {
         val doomed = connections.findByCableId(cableId)
-        if (doomed.isEmpty()) return
+        if (doomed.isEmpty()) return 0
         connections.deleteAll(doomed)
-        // Core sisi seberang (milik kabel LAIN) ikut dibebaskan; core kabel ini
-        // hilang bersama kabelnya, jadi statusnya tak perlu dirapikan.
+        // Core sisi seberang (milik kabel LAIN) selalu ikut dibebaskan. Core kabel
+        // ini sendiri hanya dirapikan bila kabelnya tetap ada — kalau ia sedang
+        // dihapus, core-nya lenyap bersamanya.
         val own = cableCoreRepository.findByCableId(cableId).map { it.id }.toSet()
-        release(doomed.flatMap { it.coreIds }.filterNot { it in own })
+        val touched = doomed.flatMap { it.coreIds }
+        release(if (cableSurvives) touched else touched.filterNot { it in own })
+        return doomed.size
     }
 
     // ------------------------------------------------------------------

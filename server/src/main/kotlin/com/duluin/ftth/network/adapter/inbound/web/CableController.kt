@@ -7,8 +7,10 @@ import com.duluin.ftth.network.application.port.inbound.CableCoreListView
 import com.duluin.ftth.network.application.port.inbound.CablePortOption
 import com.duluin.ftth.network.application.port.inbound.CableView
 import com.duluin.ftth.network.application.port.inbound.CheckCableChainUseCase
+import com.duluin.ftth.network.application.port.inbound.DropReleaseView
 import com.duluin.ftth.network.application.port.inbound.ManageCableCoreUseCase
 import com.duluin.ftth.network.application.port.inbound.ManageCableUseCase
+import com.duluin.ftth.network.application.port.inbound.ReleaseDropCommand
 import com.duluin.ftth.network.application.port.inbound.SaveCableCommand
 import com.duluin.ftth.network.application.port.inbound.UpdateCableCoresCommand
 import com.duluin.ftth.network.domain.model.CableType
@@ -81,6 +83,19 @@ class CableController(
     @PreAuthorize("@authz.can('network.cable.update')")
     fun update(@PathVariable id: UUID, @Valid @RequestBody request: CableRequest): CableView =
         manageCable.update(id, request.toCommand())
+
+    /**
+     * "Pelanggannya cabut" — sambungan drop dilepas, core kembali bebas, kabelnya
+     * boleh ditandai ditinggal.
+     *
+     * Dua izin sekaligus karena tindakan ini memang menyentuh dua wilayah: ia
+     * membongkar baris meja sambung DAN mengubah status kabel. Yang cuma boleh
+     * menggambar kabel tak semestinya bisa memutus serat orang lewat pintu ini.
+     */
+    @PostMapping("/{id}/release-drop")
+    @PreAuthorize("@authz.can('network.splice.manage') and @authz.can('network.cable.update')")
+    fun releaseDrop(@PathVariable id: UUID, @Valid @RequestBody request: ReleaseDropRequest): DropReleaseView =
+        manageCable.releaseDrop(id, ReleaseDropCommand(abandon = request.abandon, note = request.note))
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

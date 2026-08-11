@@ -178,6 +178,16 @@ data class CableRequest(
 )
 
 /**
+ * Cabut pelanggan dari sebuah drop. Kosong pun sah — bawaannya melepas sambungan
+ * TANPA menandai kabelnya ditinggal, pilihan yang paling sering benar untuk drop
+ * yang rumahnya masih akan dipakai orang lain.
+ */
+data class ReleaseDropRequest(
+    val abandon: Boolean = false,
+    @field:Size(max = 200) val note: String? = null,
+)
+
+/**
  * Setel status/catatan sekumpulan core sekaligus. `status` & `note` null =
  * bidang itu tak diubah, jadi "tandai enam core ini terpakai" tak menghapus
  * catatan lapangan masing-masing.
