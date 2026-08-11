@@ -3076,3 +3076,70 @@ tbody tr.row-selected:hover {
   border: 1px solid var(--border-strong);
   flex: none;
 }
+
+/* ---------- Telusur jalur & anggaran redaman ---------- */
+
+/* Track selebar ANGGARAN, bukan selebar total rugi: batang yang selalu penuh tak
+   memberi tahu apa pun. Ruang kosong di kanan justru bagian terpentingnya —
+   itulah jatah yang masih tersisa. */
+.budget-bar {
+  display: flex;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.budget-block {
+  height: 100%;
+  min-width: 2px;
+}
+.budget-block + .budget-block {
+  border-left: 1px solid var(--surface);
+}
+
+/* Rantai hop dibaca dari atas ke bawah searah cahaya; garis penghubungnya
+   digambar dari titik, bukan dari border item, supaya ujung atas & bawah tak
+   menggantung. */
+.hop-chain {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.hop {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  position: relative;
+}
+.hop:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 14px;
+  bottom: -0.55rem;
+  width: 1px;
+  background: var(--border);
+}
+.hop-dot {
+  width: 9px;
+  height: 9px;
+  margin-top: 5px;
+  border-radius: 50%;
+  flex: none;
+  position: relative;
+  z-index: 1;
+}
+.hop-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.hop-body .spread {
+  gap: 0.6rem;
+}

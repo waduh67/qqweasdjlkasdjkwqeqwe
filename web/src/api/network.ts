@@ -659,6 +659,54 @@ export interface ConnectionPointRequest {
   portSide?: OdfPortSide | null
 }
 
+/** Jenis satu langkah dalam jalur serat — apa yang dilewati cahaya, bukan di mana ia berada. */
+export type FiberHopKind = 'PON_PORT' | 'FIBER' | 'SPLICE' | 'SPLITTER' | 'ODF_PORT' | 'ONU'
+
+/**
+ * Kenapa penelusuran berhenti. Yang penting bukan berhasil/gagal melainkan APA
+ * yang ditemukan di ujung — jalur buntu adalah temuan, bukan galat.
+ */
+export type FiberTraceEnd =
+  | 'SOURCE'
+  | 'SUBSCRIBER'
+  | 'DEAD_END'
+  | 'AMBIGUOUS'
+  | 'LOOP'
+  | 'TOO_LONG'
+
+export interface FiberHopView {
+  kind: FiberHopKind
+  kindLabel: string
+  label: string
+  detail: string
+  lossDb: number
+  cumulativeLossDb: number
+  /** Rugi sambungan ini hasil UKUR, bukan angka tipikal cara pasangnya. */
+  measured: boolean
+  closureKind: ClosureKind | null
+  closureId: string | null
+  closureCode: string | null
+  cableId: string | null
+  nodeId: string | null
+}
+
+export interface FiberPathView {
+  startLabel: string
+  end: FiberTraceEnd
+  endLabel: string
+  /** Terurut SEARAH CAHAYA: PON port lebih dulu, ujung hilir paling belakang. */
+  hops: FiberHopView[]
+  totalLossDb: number
+  budgetDb: number
+  marginDb: number
+  fiberMeters: number
+  splitterCount: number
+  spliceCount: number
+  /** Sambungan yang rugimya masih perkiraan — penanda seberapa bisa dipercaya angkanya. */
+  estimatedHops: number
+  warnings: string[]
+}
+
 /** Satu alarm hidup yang membuat sebuah kabel merah — jawaban "kenapa" saat diklik. */
 export interface ImpactCause {
   label: string

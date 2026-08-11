@@ -10,6 +10,7 @@ import { mapFocusState, type MapFocusState } from '@/map/mapFocus'
 import { AssetDetailPanel } from './AccessNodeDetail'
 import { Blade } from './Blade'
 import { LocationPicker } from './LocationPicker'
+import { FiberTracePanel } from './FiberTracePanel'
 import { SplicingManager } from './SplicingManager'
 
 const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
@@ -81,6 +82,8 @@ export function OdfDetail({
   const [initialDraft, setInitialDraft] = useState<OdfDraft | null>(null)
   const [sites, setSites] = useState<SiteView[]>([])
   const [saving, setSaving] = useState(false)
+  /** Naik tiap kali sambungan berubah — jalurnya ikut dirangkai ulang. */
+  const [spliceVersion, setSpliceVersion] = useState(0)
 
   const load = useCallback(async () => {
     try {
@@ -221,10 +224,21 @@ export function OdfDetail({
         onDelete={() => void remove()}
         onShowOnMap={onShowOnMap ? () => onShowOnMap(mapFocusState('odf', odfId, odf.location)) : undefined}
       >
+        {/* Jalur di ATAS meja kerja: yang dicari orang saat membuka rak adalah
+            "port ini bermuara ke mana", bukan formulir menyambung. */}
+        <FiberTracePanel closureKind="ODF" closureId={odfId} reloadKey={spliceVersion} />
+
         {/* Rak ODF adalah satu-satunya kotak yang sisi tujuannya bukan serat: di
             sini core kabel luar bertemu port (sisi belakang), lalu patchcord dari
             sisi depan lanjut ke PON port OLT. */}
-        <SplicingManager closureKind="ODF" closureId={odfId} onChanged={() => void load()} />
+        <SplicingManager
+          closureKind="ODF"
+          closureId={odfId}
+          onChanged={() => {
+            void load()
+            setSpliceVersion((v) => v + 1)
+          }}
+        />
       </AssetDetailPanel>
 
       <Blade

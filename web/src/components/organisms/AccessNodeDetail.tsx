@@ -12,6 +12,7 @@ import { useConfirm, useToast } from '@/system'
 import { mapFocusState, type MapFocusState } from '@/map/mapFocus'
 import { Blade } from './Blade'
 import { LocationPicker } from './LocationPicker'
+import { FiberTracePanel } from './FiberTracePanel'
 import { SplicingManager } from './SplicingManager'
 import { SplitterPanel } from './SplitterPanel'
 
@@ -255,6 +256,8 @@ export function AccessNodeDetail({
   const [draft, setDraft] = useState<NodeDraft | null>(null)
   const [initialDraft, setInitialDraft] = useState<NodeDraft | null>(null)
   const [saving, setSaving] = useState(false)
+  /** Naik tiap kali splitter/sambungan berubah — jalurnya ikut dirangkai ulang. */
+  const [spliceVersion, setSpliceVersion] = useState(0)
 
   const load = useCallback(async () => {
     try {
@@ -430,10 +433,20 @@ export function AccessNodeDetail({
             ownerId={nodeId}
             onChanged={() => {
               void load()
+              setSpliceVersion((v) => v + 1)
               onChanged?.()
             }}
           />
         )}
+
+        {/* Jalur mendahului meja kerja: "kotak ini disuapi PON port yang mana"
+            adalah yang pertama ditanya orang saat membukanya, dan jawabannya
+            muat dalam beberapa baris. */}
+        <FiberTracePanel
+          closureKind={kind === 'odc' ? 'ODC' : kind === 'odp' ? 'ODP' : 'JOINT_BOX'}
+          closureId={nodeId}
+          reloadKey={spliceVersion}
+        />
 
         {/* Splicing datang SETELAH splitter: modulnya harus sudah ada sebelum
             kakinya bisa ditunjuk sebagai tujuan sambungan. */}
@@ -442,6 +455,7 @@ export function AccessNodeDetail({
           closureId={nodeId}
           onChanged={() => {
             void load()
+            setSpliceVersion((v) => v + 1)
             onChanged?.()
           }}
         />
