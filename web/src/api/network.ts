@@ -961,4 +961,8 @@ export interface CableCutView {
   downCount: number
   customers: AffectedCustomer[]
   severedCables: SeveredCable[]
+  /** Angkanya dirangkai dari catatan splicing, bukan ditaksir dari gambar kabel. */
+  fromSplicing: boolean
+  /** Kenapa daftar ini mungkin masih kurang panjang. */
+  warnings: string[]
 }
