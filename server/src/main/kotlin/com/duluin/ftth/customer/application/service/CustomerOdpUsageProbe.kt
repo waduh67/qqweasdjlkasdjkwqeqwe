@@ -20,5 +20,12 @@ class CustomerOdpUsageProbe(
     override fun countAttachedTo(odpIds: Set<UUID>): Map<UUID, Long> =
         if (odpIds.isEmpty()) emptyMap() else onuRepository.countByOdpIds(odpIds)
 
+    /**
+     * ONU yang belum ditempelkan ke port mana pun (baru didaftarkan, menunggu
+     * pemasangan) tak menempati apa-apa, jadi tak ikut menahan pengecilan kotak.
+     */
+    override fun occupiedPortsOn(odpId: UUID): Set<Int> =
+        onuRepository.findByOdpId(odpId).mapNotNullTo(HashSet()) { it.odpPortNumber }
+
     override fun describeUsage(): String = "ONU pelanggan"
 }

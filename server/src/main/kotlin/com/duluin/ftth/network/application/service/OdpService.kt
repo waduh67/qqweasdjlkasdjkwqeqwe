@@ -81,6 +81,7 @@ class OdpService(
 
     override fun update(id: UUID, command: SaveOdpCommand): OdpView {
         val odp = requireOdp(id)
+        assertCapacityFitsOccupants(odp, command.capacity)
         val moved = odp.location != command.location
         odp.update(
             name = command.name,
@@ -139,6 +140,33 @@ class OdpService(
         splitters.removeAllOf(id)
         odpRepository.deleteById(id)
         auditor.record("odp.deleted", "Odp", id, odp.tenantId, mapOf("code" to odp.code))
+    }
+
+    /**
+     * Kapasitas boleh dinaikkan kapan saja, tapi tak boleh diturunkan sampai
+     * meninggalkan port yang sedang dihuni.
+     *
+     * Bukan soal angka: pelanggan di port 12 tetap tersambung di lapangan, sedangkan
+     * kotak yang mengaku cuma punya 8 port membuatnya lenyap dari daftar port,
+     * heatmap, dan pencarian kapasitas — dan port 12 itu justru akan ditawarkan lagi
+     * ke pemasangan berikutnya bila kapasitasnya dinaikkan kembali.
+     *
+     * Yang menghuni bisa saja bukan cuma ONU (module lain boleh ikut menempel),
+     * jadi jawabannya dikumpulkan dari seluruh [OdpUsageProbe] — sama seperti
+     * penjagaan penghapusan.
+     */
+    private fun assertCapacityFitsOccupants(odp: Odp, capacity: Int) {
+        val orphaned = usageProbes
+            .flatMap { it.occupiedPortsOn(odp.id) }
+            .filter { it > capacity }
+            .distinct()
+            .sorted()
+        if (orphaned.isNotEmpty()) {
+            throw ConflictException(
+                "Kapasitas ODP ${odp.code} tak bisa diturunkan jadi $capacity: port " +
+                    "${orphaned.joinToString(", ")} masih dihuni. Pindahkan dulu pelanggannya.",
+            )
+        }
     }
 
     private fun requireOdp(id: UUID): Odp =

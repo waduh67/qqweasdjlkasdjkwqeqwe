@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.Instant
 import java.util.UUID
@@ -57,6 +58,13 @@ class NetworkEndToEndIT {
     private fun post(url: String, token: String, body: String, expected: Int = 201): String =
         mockMvc.perform(
             post(url).header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON).content(body),
+        ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
+            .andReturn().response.contentAsString
+
+    private fun put(url: String, token: String, body: String, expected: Int = 200): String =
+        mockMvc.perform(
+            put(url).header("Authorization", "Bearer $token")
                 .contentType(MediaType.APPLICATION_JSON).content(body),
         ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
             .andReturn().response.contentAsString
@@ -234,6 +242,45 @@ class NetworkEndToEndIT {
         val odp = buildChain(token, capacity = 8)
 
         attachNewCustomer(token, odp, port = 99, expected = 400)
+    }
+
+    /**
+     * Mengecilkan kotak jadi semudah satu klik sejak formnya memakai preset ukuran
+     * ("16 port" → "8 port"), jadi penjagaannya harus di server.
+     */
+    @Test
+    fun `kapasitas ODP tak bisa diturunkan meninggalkan port yang sedang dihuni`() {
+        val token = newTenantAdmin("shrink")
+        val odp = buildChain(token, capacity = 16)
+        attachNewCustomer(token, odp, port = 12)
+        val body = { capacity: Int ->
+            """{"code":"ODP-X","name":"ODP X","location":{"longitude":106.995,"latitude":-6.245},
+                "capacity":$capacity}"""
+        }
+
+        // Pelanggan di port 12 tetap tersambung di lapangan; kotak yang mengaku cuma
+        // punya 8 port menyembunyikannya dari daftar port, heatmap, dan survei
+        // kapasitas — lalu menawarkan port itu lagi ke pemasangan berikutnya.
+        put("/api/odps/$odp", token, body(8), expected = 409)
+        // Sampai penghuni terakhir tetap boleh: port 12 masih punya badan.
+        put("/api/odps/$odp", token, body(12))
+    }
+
+    @Test
+    fun `kapasitas ODC tak bisa diturunkan di bawah jumlah ODP di bawahnya`() {
+        val token = newTenantAdmin("cabinet")
+        buildChain(token)
+        val odc = firstOdcId(token)
+        addOdp(token, odc)
+
+        // Kabinetnya kini menyuapi dua ODP; mengaku muat satu cabang membuat setiap
+        // hitungan sisa kapasitas bohong sejak angka pertama.
+        val body = { capacity: Int ->
+            """{"code":"ODC-X","name":"ODC X","location":{"longitude":106.99,"latitude":-6.24},
+                "capacity":$capacity}"""
+        }
+        put("/api/odcs/$odc", token, body(1), expected = 409)
+        put("/api/odcs/$odc", token, body(2))
     }
 
     @Test

@@ -32,6 +32,18 @@ interface OdpUsageProbe {
     fun countAttachedTo(odpIds: Set<UUID>): Map<UUID, Long> =
         odpIds.associateWith { countAttachedTo(it) }
 
+    /**
+     * Nomor port yang sedang DITEMPATI di sebuah ODP — bukan sekadar berapa
+     * banyak. Yang bertanya adalah pengecilan kapasitas: kotak 16 port berisi tiga
+     * pelanggan boleh saja mereka duduk di port 1, 2, dan 12, jadi hitungan "tiga"
+     * tak bisa menjawab apakah kotaknya masih boleh diperkecil jadi 8.
+     *
+     * Sengaja tanpa nilai bawaan, tak seperti [countAttachedTo] versi banyak-ODP:
+     * probe yang diam-diam menjawab "kosong" akan meloloskan pengecilan yang
+     * membuat pelanggan di port 12 lenyap dari kotak yang cuma mengaku punya 8.
+     */
+    fun occupiedPortsOn(odpId: UUID): Set<Int>
+
     /** Sebutan untuk pesan galat, mis. "ONU pelanggan". */
     fun describeUsage(): String
 }

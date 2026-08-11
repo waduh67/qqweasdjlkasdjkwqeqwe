@@ -80,6 +80,7 @@ class OdcService(
 
     override fun update(id: UUID, command: SaveOdcCommand): OdcView {
         val odc = requireOdc(id)
+        assertCapacityFitsBranches(odc, command.capacity)
         val moved = odc.location != command.location
         odc.update(
             name = command.name,
@@ -135,6 +136,23 @@ class OdcService(
         val oltNames = oltRepository.findAllByIds(ports.mapTo(HashSet()) { it.oltId })
             .associate { it.id to it.name }
         return ports.associate { it.id to Uplink(it.label, oltNames[it.oltId]) }
+    }
+
+    /**
+     * Kapasitas ODC dihitung dalam CABANG distribusi ke ODP, jadi ia tak boleh
+     * diturunkan di bawah jumlah ODP yang sudah disuapinya: kabinet yang mengaku
+     * muat 4 cabang padahal 6 ODP sudah menggantung di bawahnya membuat setiap
+     * hitungan sisa kapasitas — survei, heatmap, rencana ekspansi — bohong sejak
+     * angka pertama.
+     */
+    private fun assertCapacityFitsBranches(odc: Odc, capacity: Int) {
+        val branches = odpRepository.countByOdcId(odc.id)
+        if (capacity < branches) {
+            throw ConflictException(
+                "Kapasitas ODC ${odc.code} tak bisa diturunkan jadi $capacity: " +
+                    "sudah ada $branches ODP yang menggantung di bawahnya",
+            )
+        }
     }
 
     private fun requireOdc(id: UUID): Odc =
