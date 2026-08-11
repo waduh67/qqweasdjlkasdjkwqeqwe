@@ -343,6 +343,8 @@ class MapService(
             severedCables = impact.severedCables.map {
                 SeveredCable(id = it.id, code = it.code, cableType = it.cableType, points = it.points)
             },
+            fromSplicing = impact.fromSplicing,
+            warnings = impact.warnings,
         )
     }
 

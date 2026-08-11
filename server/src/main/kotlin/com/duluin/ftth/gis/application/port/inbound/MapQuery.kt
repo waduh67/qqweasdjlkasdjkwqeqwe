@@ -233,6 +233,10 @@ data class CableCutView(
     val customers: List<AffectedCustomer>,
     /** Kabel yang lenyap bila ruas ini putus (termasuk ruas itu sendiri), untuk disorot. */
     val severedCables: List<SeveredCable>,
+    /** Angkanya dirangkai dari catatan splicing, bukan ditaksir dari gambar kabel. */
+    val fromSplicing: Boolean = false,
+    /** Kenapa daftar ini mungkin masih kurang panjang. */
+    val warnings: List<String> = emptyList(),
 )
 
 data class SeveredCable(

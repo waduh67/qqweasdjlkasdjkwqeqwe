@@ -141,6 +141,10 @@ class GisCutBlastRadiusIT {
         assertThat(JsonPath.read<List<String>>(feederCut, "$.customers[*].customerId")).containsExactly(customer)
         assertThat(JsonPath.read<List<String>>(feederCut, "$.severedCables[*].id"))
             .contains(feeder, distribution, drop)
+        // Tak ada satu pun splicing didata di sini, dan panelnya mengaku begitu
+        // alih-alih menyajikan taksiran gambar sebagai kepastian.
+        assertThat(JsonPath.read<Boolean>(feederCut, "$.fromSplicing")).isFalse()
+        assertThat(JsonPath.read<List<String>>(feederCut, "$.warnings").joinToString()).contains("gambar kabel")
 
         // Putus distribusi → ODP di ujung: pelanggan itu kena, ODC tak dihitung.
         val distributionCut = cutBlast(token, distribution)
@@ -269,6 +273,9 @@ class GisCutBlastRadiusIT {
             .containsExactlyInAnyOrder(pelangganTengah, pelangganUjung)
         // Kabinetnya sendiri tetap menyala: yang putus di hilirnya.
         assertThat(JsonPath.read<Int>(putus, "$.odcCount")).isEqualTo(0)
+        // Ketiga core yang tersambung terbaca utuh sampai OLT — tak ada yang perlu diakui kurang.
+        assertThat(JsonPath.read<Boolean>(putus, "$.fromSplicing")).isTrue()
+        assertThat(JsonPath.read<List<*>>(putus, "$.warnings")).isEmpty()
     }
 
     private fun connect(token: String, closureKind: String, closureId: String, a: String, b: String) =

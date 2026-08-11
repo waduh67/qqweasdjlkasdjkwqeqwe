@@ -180,6 +180,8 @@ class NetworkApiService(
             odpIds = odpIds,
             customerIds = customerIds,
             severedCables = severedCables.values.map { it.toCablePath() },
+            fromSplicing = spliced.splicedCores > 0,
+            warnings = spliced.warnings,
         )
     }
 

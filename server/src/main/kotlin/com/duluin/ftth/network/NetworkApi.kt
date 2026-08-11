@@ -164,6 +164,15 @@ data class CableCutImpact(
     val customerIds: Set<UUID>,
     /** Ruas kabel dalam subpohon terputus (termasuk kabel yang diputus) untuk disorot di peta. */
     val severedCables: List<CablePath>,
+    /**
+     * Benar bila jawabannya ikut dirangkai dari catatan splicing, bukan cuma dari
+     * gambar kabel. Selubung yang dikupas di banyak kotak hanya terbaca lewat jalan
+     * itu — jadi angka yang bukan `fromSplicing` adalah taksiran, dan pemakainya
+     * berhak tahu yang mana yang sedang ia baca.
+     */
+    val fromSplicing: Boolean = false,
+    /** Sebab-sebab jawabannya mungkin kurang luas, dalam bahasa yang bisa ditindaklanjuti. */
+    val warnings: List<String> = emptyList(),
 )
 
 /** Perangkat hilir dari sekumpulan OLT/ODC yang bermasalah. */
