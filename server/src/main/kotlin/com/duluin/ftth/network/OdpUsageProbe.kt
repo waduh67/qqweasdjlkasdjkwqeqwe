@@ -20,6 +20,18 @@ interface OdpUsageProbe {
     /** Berapa banyak entitas milik module ini yang masih menempel pada ODP tersebut. */
     fun countAttachedTo(odpId: UUID): Long
 
+    /**
+     * Versi banyak-ODP, untuk pertanyaan yang lingkupnya sekumpulan kotak —
+     * mis. "berapa ONU yang menggantung di seluruh ODP di bawah port PON ini".
+     *
+     * Bawaannya menanya satu per satu supaya implementasi lama tetap sah tanpa
+     * diubah; yang punya query agregat menimpanya. Satu port PON bisa menaungi
+     * puluhan ODP, dan hitungan yang N+1 di situ berarti panel muatannya jadi
+     * lambat justru pada jaringan yang paling perlu diperiksa.
+     */
+    fun countAttachedTo(odpIds: Set<UUID>): Map<UUID, Long> =
+        odpIds.associateWith { countAttachedTo(it) }
+
     /** Sebutan untuk pesan galat, mis. "ONU pelanggan". */
     fun describeUsage(): String
 }

@@ -453,3 +453,50 @@ data class FiberPathView(
     /** Kalimat siap-baca; kosong berarti jalurnya sehat dan utuh. */
     val warnings: List<String>,
 )
+
+/**
+ * Muatan satu port PON: apa saja yang benar-benar tergantung di bawahnya, dan
+ * seberapa dekat ia ke plafon 64 ONU milik GPON.
+ *
+ * Angka [onuCount] datang dari GRAF SAMBUNGAN, bukan dari kolom "ODC ini milik
+ * PON port itu" — sebab kolom itu diisi tangan saat kabinet dibuat dan tak
+ * pernah diperbarui ketika seratnya dipindah di lapangan. [fromSplicing]
+ * mengaku terus terang mana dari keduanya yang dipakai, karena hitungan muatan
+ * yang sumbernya disembunyikan lebih berbahaya daripada tak ada hitungan sama
+ * sekali.
+ */
+data class PonPortLoadView(
+    val ponPortId: UUID,
+    val label: String,
+    val oltId: UUID,
+    val oltCode: String?,
+    val oltName: String?,
+    /** Kotak di hilir port ini, urut dari yang terdekat. */
+    val closures: List<PonClosureLoadView>,
+    /** Total kaki splitter di seluruh kotak itu — plafon fisik yang bisa dijual. */
+    val splitterLegs: Int,
+    /** Kaki yang sudah tersambung ke sesuatu. */
+    val usedLegs: Int,
+    /** ONU pelanggan yang menggantung di ODP-ODP di bawah port ini. */
+    val onuCount: Int,
+    /** Plafon keras GPON, dibawa supaya klien tak menuliskan 64 sendiri. */
+    val onuLimit: Int,
+    val loadPercent: Int,
+    /** true = dirangkai dari catatan splicing; false = dari tautan ODC→PON lama. */
+    val fromSplicing: Boolean,
+    /** Kalimat siap-baca; kosong berarti port ini masih lapang dan datanya utuh. */
+    val warnings: List<String>,
+)
+
+/** Satu kotak di hilir port PON beserta sumbangannya pada muatan port itu. */
+data class PonClosureLoadView(
+    val closureKind: ClosureKind,
+    val closureId: UUID,
+    val code: String,
+    val name: String,
+    /** Berapa ruas serat dari port PON; 1 = kotak pertama sesudah rak ODF. */
+    val depth: Int,
+    val splitterLegs: Int,
+    val usedLegs: Int,
+    val onuCount: Int,
+)

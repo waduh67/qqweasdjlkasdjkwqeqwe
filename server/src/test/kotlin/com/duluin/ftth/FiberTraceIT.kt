@@ -301,4 +301,76 @@ class FiberTraceIT {
         assertThat(JsonPath.read<Double>(jalur, "$.marginDb")).isBetween(0.0, 3.0)
         assertThat(JsonPath.read<List<String>>(jalur, "$.warnings").joinToString()).contains("Sisa anggaran")
     }
+
+    /**
+     * Muatan port PON dirangkai ke arah HILIR — arah yang bercabang.
+     *
+     * Yang dibuktikan di sini: penelusuran tak berhenti di kaki splitter pertama
+     * melainkan memecah ke tiap kaki yang tersambung, lalu meneruskan perjalanan
+     * lewat serat di baliknya. Tanpa itu, sebuah port PON akan selamanya terlihat
+     * cuma menaungi satu kabinet, dan plafon 64 ONU tak pernah terlihat mendekat.
+     *
+     * Kedalaman ikut diperiksa karena ia yang menyusun urutan bacanya: rak POP
+     * lebih dulu, kabinet satu ruas kemudian, kotak pelanggan dua ruas.
+     */
+    @Test
+    fun `muatan port PON dirangkai dari kotak-kotak yang benar-benar tersambung`() {
+        val token = newTenantAdmin("muatan")
+        val net = bangunJaringan(token)
+
+        val muatan = getJson("/api/fiber-trace/pon-port/${net.pon}", token)
+
+        assertThat(JsonPath.read<String>(muatan, "$.label")).isEqualTo("1/1/1")
+        assertThat(JsonPath.read<Boolean>(muatan, "$.fromSplicing")).isTrue()
+        assertThat(JsonPath.read<Int>(muatan, "$.onuLimit")).isEqualTo(64)
+
+        val kotak = JsonPath.read<List<Map<String, Any>>>(muatan, "$.closures")
+        assertThat(kotak.map { it["closureKind"] }).containsExactly("ODF", "ODC", "ODP")
+        assertThat(kotak.map { it["depth"] }).containsExactly(0, 1, 2)
+
+        // Kaki yang bisa dijual dari port ini: 8 di kabinet + 8 di kotak; yang
+        // sudah terpakai baru satu, yaitu kaki kabinet yang menyuapi ODP-nya.
+        assertThat(JsonPath.read<Int>(muatan, "$.splitterLegs")).isEqualTo(16)
+        assertThat(JsonPath.read<Int>(muatan, "$.usedLegs")).isEqualTo(1)
+        assertThat(JsonPath.read<Int>(muatan, "$.onuCount")).isEqualTo(0)
+        assertThat(JsonPath.read<List<*>>(muatan, "$.warnings")).isEmpty()
+    }
+
+    /**
+     * Jaringan yang kabinetnya sudah ditautkan ke port PON tapi seratnya belum
+     * pernah didata.
+     *
+     * Jawaban yang benar di sini BUKAN "0 ODP": nol yang salah tak akan pernah
+     * memicu peringatan plafon, dan port yang sebenarnya penuh akan terlihat
+     * lapang sampai ada ONU yang menolak daftar di lapangan. Yang dilakukan
+     * sistem adalah memakai tautan lama sambil mengaku terus terang bahwa itulah
+     * yang ia pakai.
+     */
+    @Test
+    fun `port yang belum didata splicingnya jatuh ke tautan lama dan mengakuinya`() {
+        val token = newTenantAdmin("tautan")
+        val site = newSite(token)
+        val pon = newPonPort(token, newOlt(token, site), "1/2/1")
+        val odc = idOf(
+            post(
+                "/api/odcs", token,
+                """{"code":"ODC-${uniq().uppercase()}","name":"ODC tertaut","ponPortId":"$pon",
+                    "location":{"longitude":107.00,"latitude":$lat},"splitterRatio":"1:8","capacity":8}""",
+            ),
+        )
+        repeat(2) {
+            post(
+                "/api/odps", token,
+                """{"code":"ODP-${uniq().uppercase()}","name":"ODP tertaut","odcId":"$odc",
+                    "location":{"longitude":107.02,"latitude":$lat},"splitterRatio":"1:8","capacity":8}""",
+            )
+        }
+
+        val muatan = getJson("/api/fiber-trace/pon-port/$pon", token)
+
+        assertThat(JsonPath.read<Boolean>(muatan, "$.fromSplicing")).isFalse()
+        assertThat(JsonPath.read<List<*>>(muatan, "$.closures")).hasSize(3)
+        assertThat(JsonPath.read<List<String>>(muatan, "$.warnings").joinToString())
+            .contains("tautan ODC→PON port")
+    }
 }

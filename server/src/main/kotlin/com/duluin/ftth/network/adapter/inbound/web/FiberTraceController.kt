@@ -2,6 +2,7 @@ package com.duluin.ftth.network.adapter.inbound.web
 
 import com.duluin.ftth.network.application.port.inbound.ConnectionPointCommand
 import com.duluin.ftth.network.application.port.inbound.FiberPathView
+import com.duluin.ftth.network.application.port.inbound.PonPortLoadView
 import com.duluin.ftth.network.application.port.inbound.TraceFiberPathUseCase
 import com.duluin.ftth.network.domain.model.ClosureKind
 import com.duluin.ftth.network.domain.model.ConnectionPointKind
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -52,4 +54,12 @@ class FiberTraceController(
         @RequestParam closureKind: ClosureKind,
         @RequestParam closureId: UUID,
     ): List<FiberPathView> = trace.traceClosure(closureKind, closureId)
+
+    /**
+     * Muatan sebuah port PON. Dipisah dari dua endpoint di atas karena arahnya
+     * memang lain — ke hilir, dan hasilnya rekap, bukan rantai hop.
+     */
+    @GetMapping("/pon-port/{id}")
+    @PreAuthorize("@authz.can('network.splice.view')")
+    fun ponPortLoad(@PathVariable id: UUID): PonPortLoadView = trace.tracePonPortLoad(id)
 }

@@ -16,5 +16,9 @@ class CustomerOdpUsageProbe(
 
     override fun countAttachedTo(odpId: UUID): Long = onuRepository.findByOdpId(odpId).size.toLong()
 
+    /** Satu query agregat, bukan satu query per ODP — lihat alasannya di kontraknya. */
+    override fun countAttachedTo(odpIds: Set<UUID>): Map<UUID, Long> =
+        if (odpIds.isEmpty()) emptyMap() else onuRepository.countByOdpIds(odpIds)
+
     override fun describeUsage(): String = "ONU pelanggan"
 }

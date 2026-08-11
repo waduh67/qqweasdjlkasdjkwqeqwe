@@ -1,12 +1,18 @@
 package com.duluin.ftth.network.application.service
 
+import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.network.OdpUsageProbe
 import com.duluin.ftth.network.application.port.inbound.ConnectionPointCommand
 import com.duluin.ftth.network.application.port.inbound.FiberHopView
 import com.duluin.ftth.network.application.port.inbound.FiberPathView
+import com.duluin.ftth.network.application.port.inbound.PonClosureLoadView
+import com.duluin.ftth.network.application.port.inbound.PonPortLoadView
 import com.duluin.ftth.network.application.port.inbound.TraceFiberPathUseCase
 import com.duluin.ftth.network.application.port.outbound.CableCoreRepository
 import com.duluin.ftth.network.application.port.outbound.CableRepository
 import com.duluin.ftth.network.application.port.outbound.FiberConnectionRepository
+import com.duluin.ftth.network.application.port.outbound.OdcRepository
+import com.duluin.ftth.network.application.port.outbound.OdpRepository
 import com.duluin.ftth.network.application.port.outbound.OltRepository
 import com.duluin.ftth.network.application.port.outbound.PonPortRepository
 import com.duluin.ftth.network.application.port.outbound.SplitterRepository
@@ -20,6 +26,7 @@ import com.duluin.ftth.network.domain.model.FiberHopKind
 import com.duluin.ftth.network.domain.model.FiberTraceEnd
 import com.duluin.ftth.network.domain.model.OdfPortSide
 import com.duluin.ftth.network.domain.model.OpticalBudget
+import com.duluin.ftth.network.domain.model.PonCapacity
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.Locale
@@ -57,7 +64,11 @@ class FiberTraceService(
     private val splitters: SplitterRepository,
     private val ponPortRepository: PonPortRepository,
     private val oltRepository: OltRepository,
+    private val odcRepository: OdcRepository,
+    private val odpRepository: OdpRepository,
     private val closures: ClosureLookup,
+    /** Diisi module lain (customer) — lihat [OdpUsageProbe] soal arah dependensinya. */
+    private val usageProbes: List<OdpUsageProbe>,
 ) : TraceFiberPathUseCase {
 
     override fun traceUpstream(point: ConnectionPointCommand): FiberPathView {
@@ -122,6 +133,61 @@ class FiberTraceService(
             }
             ClosureKind.JOINT_BOX -> emptyList()
         }
+    }
+
+    override fun tracePonPortLoad(ponPortId: UUID): PonPortLoadView {
+        val ponPort = ponPortRepository.findById(ponPortId)
+            ?: throw NotFoundException("PON port $ponPortId tidak ditemukan")
+        val olt = oltRepository.findById(ponPort.oltId)
+
+        // Dua sumber kebenaran, sengaja dibaca dua-duanya. Graf sambungan adalah
+        // yang benar; tautan ODC→PON adalah yang ADA di hampir semua tenant
+        // sekarang. Membandingkannya justru yang paling berguna: selisihnya
+        // menunjuk persis kabinet mana yang catatan splicingnya belum masuk.
+        val spliced = descend(ponPortId)
+        val linkedOdpIds = linkedOdpIds(ponPortId)
+
+        val fromSplicing = spliced.isNotEmpty()
+        val reached = if (fromSplicing) spliced else fallback(ponPortId, linkedOdpIds)
+
+        val splittersByOwner = splitters.findByOwnerIds(reached.mapTo(HashSet()) { it.ref.id })
+        val usedLegs = connections.usedPortNumbersOfNodes(
+            ConnectionPointKind.SPLITTER_OUT,
+            splittersByOwner.values.flatMapTo(HashSet()) { modules -> modules.map { it.id } },
+        )
+        val odpIds = reached.filterTo(HashSet()) { it.ref.kind == ClosureKind.ODP }.mapTo(HashSet()) { it.ref.id }
+        val onuByOdp = countOnus(odpIds)
+
+        val rows = reached.map { hit ->
+            val modules = splittersByOwner[hit.ref.id].orEmpty()
+            PonClosureLoadView(
+                closureKind = hit.ref.kind,
+                closureId = hit.ref.id,
+                code = hit.ref.code,
+                name = hit.ref.name,
+                depth = hit.depth,
+                splitterLegs = modules.sumOf { it.legCount },
+                usedLegs = modules.sumOf { usedLegs[it.id].orEmpty().size },
+                onuCount = (onuByOdp[hit.ref.id] ?: 0L).toInt(),
+            )
+        }
+
+        val onuCount = rows.sumOf { it.onuCount }
+        return PonPortLoadView(
+            ponPortId = ponPort.id,
+            label = ponPort.label,
+            oltId = ponPort.oltId,
+            oltCode = olt?.code,
+            oltName = olt?.name,
+            closures = rows,
+            splitterLegs = rows.sumOf { it.splitterLegs },
+            usedLegs = rows.sumOf { it.usedLegs },
+            onuCount = onuCount,
+            onuLimit = PonCapacity.GPON_MAX_ONU,
+            loadPercent = (onuCount * 100.0 / PonCapacity.GPON_MAX_ONU).roundToInt(),
+            fromSplicing = fromSplicing,
+            warnings = loadWarnings(onuCount, fromSplicing, odpIds, linkedOdpIds),
+        )
     }
 
     // ------------------------------------------------------------------
@@ -297,6 +363,204 @@ class FiberTraceService(
             viaConnection = true,
             lastConnection = onward.id,
         )
+    }
+
+    // ------------------------------------------------------------------
+    // Muatan port PON — penelusuran ke arah HILIR
+    // ------------------------------------------------------------------
+
+    /**
+     * Sebuah kotak yang tercapai dari port PON, beserta jaraknya dalam ruas serat.
+     */
+    private data class Reached(val ref: ClosureRef, val depth: Int)
+
+    /** Posisi kerja penelusuran hilir; sama seperti telusur hulu, "di mana" itu sepasang. */
+    private data class Cursor(
+        val point: ConnectionPoint,
+        val viaConnection: Boolean,
+        val lastConnection: UUID?,
+        val depth: Int,
+    )
+
+    /**
+     * Batas simpul yang disinggahi saat menuruni satu port PON. Port yang sehat
+     * menaungi puluhan kotak, bukan ribuan; angka yang melebihinya berarti data
+     * sambungannya bercabang tak wajar, dan penelusuran yang tak berhenti lebih
+     * buruk daripada jawaban yang terpotong.
+     */
+    private val maxDownstreamVisits = 512
+
+    /**
+     * Menuruni graf sambungan dari sebuah port PON dan mengumpulkan kotak yang
+     * benar-benar tersuapi olehnya.
+     *
+     * Bedanya dengan telusur hulu cuma satu, tapi mendasar: di kaki MASUK
+     * splitter, jalur ke hilir tidak tunggal — ia pecah ke seluruh kaki keluar
+     * yang tersambung. Karena itu bentuknya antrean (BFS), bukan rantai; dan
+     * karena itu pula hasilnya rekap, bukan daftar hop.
+     *
+     * Sisa langkahnya — menyeberangi sambungan, adapter ODF, dan sehelai core —
+     * memakai potongan yang sama persis dengan telusur hulu. Serat memang tak
+     * peduli ke arah mana cahaya lewat.
+     */
+    private fun descend(ponPortId: UUID): List<Reached> {
+        val found = LinkedHashMap<UUID, Reached>()
+        val seen = HashSet<ConnectionPoint>()
+        val queue = ArrayDeque<Cursor>()
+        queue += Cursor(
+            point = ConnectionPoint.node(ConnectionPointKind.PON_PORT, ponPortId),
+            viaConnection = false,
+            lastConnection = null,
+            depth = 0,
+        )
+
+        var visits = 0
+        while (queue.isNotEmpty() && visits++ < maxDownstreamVisits) {
+            val cursor = queue.removeFirst()
+            if (!seen.add(cursor.point)) continue
+            for (next in descendStep(cursor, found)) {
+                if (next.point !in seen) queue += next
+            }
+        }
+        // Terurut dari yang terdekat: rak dulu, kabinet, lalu kotak pelanggan —
+        // urutan yang sama dengan orang menyusuri jaringannya di lapangan.
+        return found.values.sortedBy { it.depth }
+    }
+
+    /**
+     * Satu langkah ke hilir. Mengembalikan lanjutan yang mungkin (kosong = ujung)
+     * dan menitipkan kotak yang dilewati ke [found].
+     */
+    private fun descendStep(cursor: Cursor, found: MutableMap<UUID, Reached>): List<Cursor> {
+        val point = cursor.point
+        // Kaki masuk splitter: satu-satunya titik yang bercabang. Kaki keluar yang
+        // menganggur sengaja tak diantre — ia memang belum menyuapi apa pun.
+        if (point.kind == ConnectionPointKind.SPLITTER_IN && cursor.viaConnection) {
+            val splitterId = requireNotNull(point.nodeId)
+            val legs = connections.usedPortNumbersOfNodes(ConnectionPointKind.SPLITTER_OUT, setOf(splitterId))
+            return legs[splitterId].orEmpty().map { leg ->
+                cursor.copy(
+                    point = ConnectionPoint.node(ConnectionPointKind.SPLITTER_OUT, splitterId, leg),
+                    viaConnection = false,
+                    lastConnection = null,
+                )
+            }
+        }
+        // Kaki KELUAR yang didatangi lewat sambungan berarti kita menaiki serat,
+        // bukan menuruninya — itu urusan telusur hulu, bukan di sini.
+        if (point.kind == ConnectionPointKind.SPLITTER_OUT && cursor.viaConnection) return emptyList()
+        if (point.kind == ConnectionPointKind.ONU) return emptyList()
+        if (point.kind == ConnectionPointKind.PON_PORT && cursor.viaConnection) return emptyList()
+
+        val step = when (point.kind) {
+            ConnectionPointKind.CORE -> crossFiber(point, cursor.lastConnection)
+            ConnectionPointKind.ODF_PORT ->
+                if (cursor.viaConnection) crossAdapter(point) else crossConnection(point, cursor.lastConnection)
+            else -> crossConnection(point, cursor.lastConnection)
+        }
+        val trail = when (step) {
+            is Step.Go -> step.trail
+            is Step.Stop -> step.trail
+        }
+        // Kedalaman kotak = jumlah ruas serat sampai ke sana, jadi ia bertambah
+        // TEPAT saat hop serat dilewati — bukan sesudah seluruh langkah selesai.
+        // Satu langkah menyeberangi core memuat dua hop sekaligus (seratnya dan
+        // sambungan di ujung sana), dan yang di ujung sana itu sudah satu ruas jauhnya.
+        var depth = cursor.depth
+        trail.forEach { hop ->
+            if (hop.kind == FiberHopKind.FIBER) depth++
+            hop.closure?.let { ref ->
+                // Kotak yang tercapai lewat dua kaki splitter berbeda tetap satu
+                // baris, dengan jarak yang paling dekat.
+                val existing = found[ref.id]
+                if (existing == null || depth < existing.depth) found[ref.id] = Reached(ref, depth)
+            }
+        }
+        if (step !is Step.Go) return emptyList()
+        return listOf(
+            Cursor(
+                point = step.next,
+                viaConnection = step.viaConnection,
+                lastConnection = step.lastConnection ?: cursor.lastConnection,
+                depth = depth,
+            ),
+        )
+    }
+
+    /** ODP yang menurut tautan lama (ODC→PON port) menggantung di port ini. */
+    private fun linkedOdpIds(ponPortId: UUID): Set<UUID> {
+        val odcIds = odcRepository.findIdsByPonPortIds(setOf(ponPortId))
+        return if (odcIds.isEmpty()) emptySet() else odpRepository.findIdsByOdcIds(odcIds)
+    }
+
+    /**
+     * Isi port menurut tautan lama, dipakai HANYA bila catatan splicing belum ada
+     * sama sekali. Tanpa ini, tenant yang belum sempat mendata sambungannya akan
+     * membaca "0 ONU" pada port yang sebenarnya sudah penuh — dan angka nol yang
+     * salah tak akan pernah memicu peringatan apa pun.
+     */
+    private fun fallback(ponPortId: UUID, odpIds: Set<UUID>): List<Reached> {
+        val odcs = odcRepository.findAllByIds(odcRepository.findIdsByPonPortIds(setOf(ponPortId)))
+            .map { Reached(ClosureRef(ClosureKind.ODC, it.id, it.code, it.name, it.location), depth = 1) }
+        val odps = odpRepository.findAllByIds(odpIds)
+            .map { Reached(ClosureRef(ClosureKind.ODP, it.id, it.code, it.name, it.location), depth = 2) }
+        return odcs + odps
+    }
+
+    /**
+     * Berapa ONU pelanggan menggantung di tiap ODP. Ditanyakan lewat [OdpUsageProbe]
+     * karena module network tak boleh — dan tak perlu — tahu apa itu pelanggan;
+     * yang ia tahu cuma "ada sesuatu milik orang lain yang menempel di sini".
+     */
+    private fun countOnus(odpIds: Set<UUID>): Map<UUID, Long> {
+        if (odpIds.isEmpty()) return emptyMap()
+        val total = HashMap<UUID, Long>()
+        usageProbes.forEach { probe ->
+            probe.countAttachedTo(odpIds).forEach { (odpId, count) ->
+                total.merge(odpId, count, Long::plus)
+            }
+        }
+        return total
+    }
+
+    private fun loadWarnings(
+        onuCount: Int,
+        fromSplicing: Boolean,
+        splicedOdpIds: Set<UUID>,
+        linkedOdpIds: Set<UUID>,
+    ): List<String> = buildList {
+        when {
+            PonCapacity.overflowing(onuCount) ->
+                add(
+                    "Port ini sudah menaungi $onuCount ONU, melewati plafon ${PonCapacity.GPON_MAX_ONU} " +
+                        "milik GPON. ONU di atas batas tak akan pernah dapat giliran bicara — pindahkan " +
+                        "sebagian kabinetnya ke port PON lain.",
+                )
+            PonCapacity.crowded(onuCount) ->
+                add(
+                    "Tinggal ${PonCapacity.GPON_MAX_ONU - onuCount} slot lagi sebelum plafon " +
+                        "${PonCapacity.GPON_MAX_ONU} ONU. Satu ODP baru saja sudah cukup menembusnya — " +
+                        "rencanakan port PON berikutnya sekarang, bukan saat teknisi sudah di rumah pelanggan.",
+                )
+        }
+        if (!fromSplicing && linkedOdpIds.isNotEmpty()) {
+            add(
+                "Angka di atas dihitung dari tautan ODC→PON port, bukan dari catatan splicing — " +
+                    "belum ada satu pun sambungan tercatat yang bermuara ke port ini.",
+            )
+        }
+        // Selisih antara dua sumber itulah temuannya: kabinet yang tertaut tapi
+        // tak pernah muncul di graf berarti seratnya belum didata, dan muatan
+        // port ini terhitung lebih kecil daripada kenyataannya.
+        if (fromSplicing) {
+            val missing = linkedOdpIds - splicedOdpIds
+            if (missing.isNotEmpty()) {
+                add(
+                    "${missing.size} ODP tertaut ke port ini lewat kabinetnya tapi tak tersambung di " +
+                        "catatan splicing. Muatan sebenarnya kemungkinan lebih besar dari $onuCount ONU.",
+                )
+            }
+        }
     }
 
     // ------------------------------------------------------------------

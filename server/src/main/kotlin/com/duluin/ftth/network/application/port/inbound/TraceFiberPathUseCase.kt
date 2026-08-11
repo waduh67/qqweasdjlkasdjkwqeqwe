@@ -37,4 +37,16 @@ interface TraceFiberPathUseCase {
      * lewat di sana terlihat sebagai hop pada jalur kotak di hilirnya.
      */
     fun traceClosure(closureKind: ClosureKind, closureId: UUID): List<FiberPathView>
+
+    /**
+     * Arah sebaliknya, dan karena itu bentuknya juga sebaliknya: dari sebuah port
+     * PON ke seluruh yang tergantung di bawahnya.
+     *
+     * Hasilnya bukan daftar jalur melainkan REKAP, sebab yang ditanya di sini
+     * bukan "lewat mana" melainkan "berapa banyak" — satu port GPON cuma sanggup
+     * menjadwalkan 64 ONU, dan tak ada satu pun layar yang selama ini menunjukkan
+     * angka itu. Kabinet ditambah satu per satu, dan plafonnya baru ketahuan saat
+     * ONU pelanggan baru menolak daftar dengan teknisi sudah di lokasi.
+     */
+    fun tracePonPortLoad(ponPortId: UUID): PonPortLoadView
 }
