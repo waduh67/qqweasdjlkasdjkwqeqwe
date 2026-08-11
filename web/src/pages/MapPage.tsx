@@ -188,11 +188,17 @@ const HEALTH_COLOR: Record<string, string> = {
 /**
  * Warna kabel per tipe, dipakai bersama oleh lapisan glow & garis inti supaya
  * konsisten. Nada terang agar bercahaya di atas basemap gelap.
+ *
+ * Backbone memakai indigo pekat — serumpun dengan ungu feeder karena keduanya
+ * memang sisi hulu yang tak membawa pelanggan, tapi lebih gelap supaya tulang
+ * punggung tetap terbaca sebagai lapisan tersendiri saat keduanya bersisian.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const CABLE_COLOR: any = [
   'match',
   ['get', 'cable_type'],
+  'BACKBONE',
+  '#7c5cff',
   'FEEDER',
   '#b47cff',
   'DISTRIBUTION',
@@ -2790,12 +2796,18 @@ function deleteAction(label: string, onClick: () => void, disabled = false): Com
 }
 
 const TYPE_LABEL: Record<CableType, string> = {
+  BACKBONE: 'Backbone',
   FEEDER: 'Feeder',
   DISTRIBUTION: 'Distribusi',
   DROP: 'Drop',
 }
 
-const DEFAULT_CORES: Record<CableType, number> = { FEEDER: 24, DISTRIBUTION: 12, DROP: 1 }
+/**
+ * Tebakan jumlah core per jenis — angka yang paling sering benar, bukan batas.
+ * Backbone berkapasitas besar karena ia dipasang sekali untuk belasan tahun ke
+ * depan: menariknya ulang jauh lebih mahal daripada membeli core cadangan.
+ */
+const DEFAULT_CORES: Record<CableType, number> = { BACKBONE: 96, FEEDER: 24, DISTRIBUTION: 12, DROP: 1 }
 
 function formatLength(meters: number): string {
   return meters >= 1000 ? `${(meters / 1000).toFixed(2)} km` : `${Math.round(meters)} m`

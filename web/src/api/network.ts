@@ -420,7 +420,7 @@ export interface SubscriberNeighbors {
   samePonPort: NeighborView[]
 }
 
-export type CableType = 'FEEDER' | 'DISTRIBUTION' | 'DROP'
+export type CableType = 'BACKBONE' | 'FEEDER' | 'DISTRIBUTION' | 'DROP'
 export type NodeKind = 'SITE' | 'OLT' | 'ODF' | 'ODC' | 'ODP' | 'JOINT_BOX' | 'CUSTOMER'
 
 /**

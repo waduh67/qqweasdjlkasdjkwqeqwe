@@ -20,7 +20,7 @@ import type {
  */
 
 export type NodeKind = 'SITE' | 'OLT' | 'ODF' | 'ODC' | 'ODP' | 'JOINT_BOX' | 'CUSTOMER'
-export type CableType = 'FEEDER' | 'DISTRIBUTION' | 'DROP'
+export type CableType = 'BACKBONE' | 'FEEDER' | 'DISTRIBUTION' | 'DROP'
 
 export interface SnappedDevice {
   kind: NodeKind
@@ -100,11 +100,21 @@ export function layerNodeKind(layer: string): NodeKind | null {
  * ODF ada di kedua sisi FEEDER: di POP asal ia titik berangkat yang benar (kabel luar
  * berhenti di rak, bukan di badan OLT), di POP tujuan ia titik berhentinya. Ujung
  * SITE/OLT tetap diterima — rak memang opsional bagi ISP yang belum memasangnya.
+ *
+ * BACKBONE menempati DUA baris, bukan satu: ia cuma sah antar-sederajat (POP dengan
+ * POP, kabinet dengan kabinet), dan satu pasang daftar dari/ke tak bisa mengatakan
+ * itu — ia akan diam-diam ikut mengizinkan POP → kabinet, yang justru feeder. Server
+ * menuliskan aturan yang sama sebagai pemeriksaan derajat di `Cable.assertSameTier`.
+ * Ia sengaja ditaruh PALING BAWAH: saat sepasang ujung sah untuk lebih dari satu
+ * jenis (hanya terjadi lewat joint box), tebakan awalnya tetap jenis yang lebih
+ * sering ditarik.
  */
 const ENDPOINT_RULES: Array<{ type: CableType; from: NodeKind[]; to: NodeKind[] }> = [
   { type: 'FEEDER', from: ['SITE', 'OLT', 'ODF', 'JOINT_BOX'], to: ['ODC', 'ODF', 'JOINT_BOX'] },
   { type: 'DISTRIBUTION', from: ['ODC', 'ODP', 'JOINT_BOX'], to: ['ODP', 'JOINT_BOX'] },
   { type: 'DROP', from: ['ODP', 'JOINT_BOX'], to: ['CUSTOMER', 'JOINT_BOX'] },
+  { type: 'BACKBONE', from: ['SITE', 'OLT', 'ODF', 'JOINT_BOX'], to: ['SITE', 'OLT', 'ODF', 'JOINT_BOX'] },
+  { type: 'BACKBONE', from: ['ODC', 'JOINT_BOX'], to: ['ODC', 'JOINT_BOX'] },
 ]
 
 /**
@@ -118,7 +128,9 @@ const ENDPOINT_RULES: Array<{ type: CableType; from: NodeKind[]; to: NodeKind[] 
  * jenis di panel simpan kabel muncul; urutan daftar ini = urutan tebakan awalnya.
  */
 export function legalCableTypes(from: NodeKind, to: NodeKind): CableType[] {
-  return ENDPOINT_RULES.filter((r) => r.from.includes(from) && r.to.includes(to)).map((r) => r.type)
+  const matched = ENDPOINT_RULES.filter((r) => r.from.includes(from) && r.to.includes(to)).map((r) => r.type)
+  // JB → JB cocok dengan KEDUA baris backbone; ia tetap satu pilihan di layar.
+  return [...new Set(matched)]
 }
 
 function inferType(from: NodeKind, to: NodeKind): CableType | null {
