@@ -58,6 +58,16 @@ class FiberConnectionController(
         @RequestParam closureId: UUID,
     ): SpliceWorkbenchView = manageConnection.workbench(closureKind, closureId)
 
+    /**
+     * Pekerjaan serat yang dibukukan ke sebuah work order — bahan seksi "Pekerjaan
+     * serat" di halaman WO. Berdiri di module network, bukan workorder, supaya
+     * tiket tak perlu tahu apa-apa soal core dan closure.
+     */
+    @GetMapping("/by-work-order")
+    @PreAuthorize("@authz.can('network.splice.view')")
+    fun byWorkOrder(@RequestParam workOrderId: UUID): List<ClosureSpliceView> =
+        manageConnection.byWorkOrder(workOrderId)
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("@authz.can('network.splice.manage')")
@@ -71,6 +81,7 @@ class FiberConnectionController(
                 method = request.method,
                 lossDb = request.lossDb,
                 note = request.note,
+                workOrderId = request.workOrderId,
             ),
         )
 
@@ -93,6 +104,7 @@ class FiberConnectionController(
                     method = pair.method,
                     lossDb = pair.lossDb,
                     note = pair.note,
+                    workOrderId = request.workOrderId,
                 )
             },
         )
@@ -103,8 +115,10 @@ class FiberConnectionController(
     fun update(
         @PathVariable id: UUID,
         @Valid @RequestBody request: FiberSpliceDetailRequest,
-    ): FiberConnectionView =
-        manageConnection.update(id, UpdateFiberConnectionCommand(request.method, request.lossDb, request.note))
+    ): FiberConnectionView = manageConnection.update(
+        id,
+        UpdateFiberConnectionCommand(request.method, request.lossDb, request.note, request.workOrderId),
+    )
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

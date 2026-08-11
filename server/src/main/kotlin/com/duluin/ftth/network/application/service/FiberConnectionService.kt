@@ -6,6 +6,8 @@ import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
+import com.duluin.ftth.iam.IamApi
+import com.duluin.ftth.network.SpliceWorkOrderPort
 import com.duluin.ftth.network.application.port.inbound.ClosureSpliceView
 import com.duluin.ftth.network.application.port.inbound.ConnectFiberCommand
 import com.duluin.ftth.network.application.port.inbound.ConnectionPointCommand
@@ -58,6 +60,8 @@ class FiberConnectionService(
     private val splitters: SplitterRepository,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
+    private val workOrders: SpliceWorkOrderPort,
+    private val iam: IamApi,
 ) : ManageFiberConnectionUseCase {
 
     @Transactional(readOnly = true)
@@ -71,6 +75,34 @@ class FiberConnectionService(
             closureName = closure.name,
             connections = rows.toViews(),
         )
+    }
+
+    /**
+     * Pekerjaan serat sebuah work order, dikelompokkan per kotak yang dibuka.
+     *
+     * Kotak yang sudah dihapus setelah pekerjaannya dicatat tetap muncul —
+     * dengan kode apa adanya dari jenisnya — sebab menyembunyikan barisnya
+     * membuat tiket terbaca seolah lebih sedikit dikerjakan daripada
+     * sesungguhnya.
+     */
+    @Transactional(readOnly = true)
+    override fun byWorkOrder(workOrderId: UUID): List<ClosureSpliceView> {
+        val rows = connections.findByWorkOrderId(workOrderId)
+        if (rows.isEmpty()) return emptyList()
+        val views = rows.toViews().associateBy { it.id }
+        return rows.groupBy { it.closureKind to it.closureId }
+            .map { (key, group) ->
+                val (kind, id) = key
+                val closure = closures.find(kind, id)
+                ClosureSpliceView(
+                    closureKind = kind,
+                    closureId = id,
+                    closureCode = closure?.code ?: kind.label,
+                    closureName = closure?.name ?: "Kotak sudah dihapus",
+                    connections = group.mapNotNull { views[it.id] },
+                )
+            }
+            .sortedBy { it.closureCode }
     }
 
     /**
@@ -107,9 +139,11 @@ class FiberConnectionService(
         val cores = listOf(a, b).mapNotNull { point -> validate(point, closure) }
         assertRoomLeft(closure)
 
+        val actor = currentUser.current()
+        val workOrderId = command.workOrderId?.let { requireWorkOrder(it).id }
         val saved = connections.save(
             FiberConnection.create(
-                tenantId = currentUser.current().tenantId,
+                tenantId = actor.tenantId,
                 closureKind = closure.kind,
                 closureId = closure.id,
                 a = a,
@@ -117,13 +151,21 @@ class FiberConnectionService(
                 method = command.method,
                 lossDb = command.lossDb,
                 note = command.note,
+                workOrderId = workOrderId,
+                splicedBy = actor.userId,
             ),
         )
         occupy(cores)
         auditor.record(
             "fiber.connected", closure.kind.name, closure.id, saved.tenantId,
-            mapOf("closure" to closure.code, "a" to a.description, "b" to b.description),
+            mapOf(
+                "closure" to closure.code,
+                "a" to a.description,
+                "b" to b.description,
+                "workOrder" to (workOrderId?.toString() ?: "-"),
+            ),
         )
+        noteToWorkOrder(saved, "Serat disambung di ${closure.code}: ${a.description} ↔ ${b.description}")
         return listOf(saved).toViews().first()
     }
 
@@ -141,12 +183,24 @@ class FiberConnectionService(
 
     override fun update(id: UUID, command: UpdateFiberConnectionCommand): FiberConnectionView {
         val connection = requireConnection(id)
+        val attaching = command.workOrderId != null && command.workOrderId != connection.workOrderId
+        command.workOrderId?.let { connection.attachWorkOrder(requireWorkOrder(it).id) }
         connection.update(command.method, command.lossDb, command.note)
         val saved = connections.save(connection)
         auditor.record(
             "fiber.connection.updated", saved.closureKind.name, saved.closureId, saved.tenantId,
             mapOf("lossDb" to (saved.lossDb ?: "-"), "method" to saved.method.name),
         )
+        // Hanya saat WO-nya baru menempel: hasil ukur redaman yang menyusul tiap
+        // hari tak perlu memenuhi linimasa tiket dengan baris yang sama berulang.
+        if (attaching) {
+            val closure = closures.find(saved.closureKind, saved.closureId)
+            noteToWorkOrder(
+                saved,
+                "Sambungan di ${closure?.code ?: saved.closureKind.label} dibukukan ke work order ini: " +
+                    "${saved.a.description} ↔ ${saved.b.description}",
+            )
+        }
         return listOf(saved).toViews().first()
     }
 
@@ -157,6 +211,15 @@ class FiberConnectionService(
         auditor.record(
             "fiber.disconnected", connection.closureKind.name, connection.closureId, connection.tenantId,
             mapOf("a" to connection.a.description, "b" to connection.b.description),
+        )
+        // Barisnya hilang dari tabel, tapi WO-nya harus tetap ingat pernah ada
+        // sambungan ini — kalau tidak, tiket yang seratnya dilepas kembali
+        // terbaca seolah tak pernah disentuh.
+        val closure = closures.find(connection.closureKind, connection.closureId)
+        noteToWorkOrder(
+            connection,
+            "Sambungan di ${closure?.code ?: connection.closureKind.label} dilepas: " +
+                "${connection.a.description} ↔ ${connection.b.description}",
         )
     }
 
@@ -586,6 +649,33 @@ class FiberConnectionService(
     private fun requireConnection(id: UUID): FiberConnection =
         connections.findById(id) ?: throw NotFoundException("Sambungan $id tidak ditemukan")
 
+    // ------------------------------------------------------------------
+    // Work order
+    // ------------------------------------------------------------------
+
+    /**
+     * Menolak nomor WO yang tak ada SEBELUM seratnya tercatat tersambung.
+     *
+     * Di sini tegas, karena teknisi sendiri yang memilih tiketnya di layar:
+     * salah ketik berarti pekerjaan hari itu menggantung di work order hantu dan
+     * tak pernah ketemu lagi. Berbeda dengan penulisan linimasa yang menyusul —
+     * lihat [noteToWorkOrder].
+     */
+    private fun requireWorkOrder(id: UUID) = workOrders.findWorkOrder(id)
+        ?: throw NotFoundException("Work order $id tidak ditemukan")
+
+    /**
+     * Menempelkan sebaris jejak ke linimasa work order-nya, bila memang ada.
+     *
+     * Sengaja tak melempar apa pun: pekerjaan seratnya sudah tersimpan dan itulah
+     * yang bernilai. Tiket yang lenyap di antara dua langkah tak boleh menggulung
+     * balik sambungan yang secara fisik memang sudah dilas di dalam kotak.
+     */
+    private fun noteToWorkOrder(connection: FiberConnection, message: String) {
+        val workOrderId = connection.workOrderId ?: return
+        workOrders.noteSpliceActivity(workOrderId, message, currentUser.currentOrNull()?.userId)
+    }
+
     /**
      * Memetakan sekaligus supaya asal-usul core (kabel, nomor, warna) diambil
      * dalam dua query, bukan dua query per baris sambungan.
@@ -594,6 +684,11 @@ class FiberConnectionService(
         if (isEmpty()) return emptyList()
         val cores = cableCoreRepository.findByIds(flatMap { it.coreIds }.distinct()).associateBy { it.id }
         val cables = cableRepository.findByIds(cores.values.map { it.cableId }.distinct()).associateBy { it.id }
+        // Kode WO & nama teknisi diresolusi sekali untuk seluruh daftar. Satu kotak
+        // 24 core berisi 24 baris; menanyakannya per baris berarti 48 pertanyaan
+        // untuk satu layar yang isinya cuma dua nama.
+        val tickets = mapNotNullTo(HashSet()) { it.workOrderId }.mapNotNull { workOrders.findWorkOrder(it) }.associateBy { it.id }
+        val technicians = iam.usersByIds(mapNotNullTo(HashSet()) { it.splicedBy }).associateBy { it.id }
         // "PON port OLT" saja tak menolong siapa pun di depan rak — yang dicari
         // teknisi adalah labelnya (1/1/3). Diambil sekali untuk seluruh daftar.
         val ponPorts = flatMap { listOf(it.a, it.b) }
@@ -611,6 +706,11 @@ class FiberConnectionService(
                 methodLabel = connection.method.label,
                 lossDb = connection.lossDb,
                 note = connection.note,
+                workOrderId = connection.workOrderId,
+                workOrderCode = connection.workOrderId?.let { tickets[it]?.code },
+                splicedById = connection.splicedBy,
+                splicedByName = connection.splicedBy?.let { technicians[it]?.name },
+                splicedAt = connection.splicedAt,
             )
         }
     }

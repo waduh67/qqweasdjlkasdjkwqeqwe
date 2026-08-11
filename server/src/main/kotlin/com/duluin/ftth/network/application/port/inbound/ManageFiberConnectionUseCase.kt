@@ -24,6 +24,17 @@ interface ManageFiberConnectionUseCase {
     fun list(closureKind: ClosureKind, closureId: UUID): ClosureSpliceView
 
     /**
+     * Pekerjaan serat yang dibukukan ke sebuah work order, dikelompokkan per
+     * kotak yang dibuka.
+     *
+     * Dikelompokkan begitu karena begitulah kerjanya berlangsung: teknisi
+     * mendatangi kotak, membukanya, mengerjakan beberapa sambungan sekaligus,
+     * lalu pindah. Daftar datar berisi dua puluh baris sambungan tak menceritakan
+     * bahwa yang didatangi cuma dua kotak.
+     */
+    fun byWorkOrder(workOrderId: UUID): List<ClosureSpliceView>
+
+    /**
      * [list] plus seluruh bahan untuk MENYAMBUNG: kabel yang lewat kotak ini
      * beserta core-nya, dan titik simpul yang tersedia di dalamnya. Terpisah dari
      * [list] karena yang cuma ingin melihat isi kotak (mis. panel peta) tak perlu
@@ -84,10 +95,17 @@ data class ConnectFiberCommand(
     val method: SpliceMethod = SpliceMethod.FUSION,
     val lossDb: Double? = null,
     val note: String? = null,
+    /** Work order tempat pekerjaan ini dibukukan; kosong = kerja rutin tanpa tiket. */
+    val workOrderId: UUID? = null,
 )
 
 data class UpdateFiberConnectionCommand(
     val method: SpliceMethod,
     val lossDb: Double? = null,
     val note: String? = null,
+    /**
+     * Menempelkan work order yang tadinya belum diisi. Hanya menambah: sambungan
+     * yang sudah punya WO tak bisa dipindahkan ke WO lain lewat jalan ini.
+     */
+    val workOrderId: UUID? = null,
 )

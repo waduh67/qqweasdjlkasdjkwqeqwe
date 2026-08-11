@@ -131,6 +131,9 @@ interface FiberConnectionJpaRepository : JpaRepository<FiberConnectionJpaEntity,
     fun findByClosureId(closureId: UUID): List<FiberConnectionJpaEntity>
     fun countByClosureId(closureId: UUID): Long
 
+    /** Pekerjaan serat yang dibukukan ke sebuah work order, terlama dulu (urut kerja). */
+    fun findByWorkOrderIdOrderBySplicedAtAsc(workOrderId: UUID): List<FiberConnectionJpaEntity>
+
     @Query(
         """
         select c.closureId as parentId, count(c) as total from FiberConnectionJpaEntity c

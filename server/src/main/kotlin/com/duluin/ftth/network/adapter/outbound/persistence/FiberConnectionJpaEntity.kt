@@ -10,6 +10,7 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Table
+import java.time.Instant
 import java.util.UUID
 
 @Entity
@@ -33,6 +34,16 @@ class FiberConnectionJpaEntity(
 
     @Column(length = 200)
     var note: String?,
+
+    /** Work order tempat pekerjaan ini dibukukan; boleh menyusul, karena itu tak `updatable = false`. */
+    @Column(name = "work_order_id")
+    var workOrderId: UUID?,
+
+    @Column(name = "spliced_by", updatable = false)
+    var splicedBy: UUID?,
+
+    @Column(name = "spliced_at", nullable = false, updatable = false)
+    var splicedAt: Instant,
 ) : TenantAwareJpaEntity(id)
 
 /**

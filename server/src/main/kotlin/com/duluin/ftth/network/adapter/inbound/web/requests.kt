@@ -221,6 +221,8 @@ data class FiberConnectionRequest(
     /** Rugi hasil ukur; kosong = belum diukur, bukan nol. */
     @field:PositiveOrZero val lossDb: Double? = null,
     @field:Size(max = 200) val note: String? = null,
+    /** Tiket yang sedang dikerjakan; kosong = kerja rutin tanpa work order. */
+    val workOrderId: UUID? = null,
 )
 
 /** Sepasang titik di dalam kotak yang sama — satu baris "sambung 1:1 otomatis". */
@@ -243,6 +245,8 @@ data class FiberBulkConnectRequest(
     val closureKind: ClosureKind,
     val closureId: UUID,
     @field:Valid @field:Size(min = 1, max = 288) val pairs: List<FiberPairRequest>,
+    /** Satu batch = satu kali kotak dibuka, jadi tiketnya pun satu untuk semua pasangan. */
+    val workOrderId: UUID? = null,
 )
 
 /** Keterangan sambungan yang boleh menyusul: cara pasang, hasil ukur, catatan. */
@@ -250,6 +254,12 @@ data class FiberSpliceDetailRequest(
     val method: SpliceMethod,
     @field:PositiveOrZero val lossDb: Double? = null,
     @field:Size(max = 200) val note: String? = null,
+    /**
+     * Membukukan sambungan yang tadinya tanpa tiket ke sebuah work order —
+     * dipakai saat pekerjaan lapangan didokumentasikan menyusul dari kantor.
+     * Hanya menempel: yang sudah punya WO tak bisa dipindah lewat sini.
+     */
+    val workOrderId: UUID? = null,
 )
 
 data class OtdrTestRequest(

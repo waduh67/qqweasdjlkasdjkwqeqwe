@@ -79,10 +79,14 @@ class FiberConnectionPersistenceAdapter(
 
     override fun findByCableId(cableId: UUID): List<FiberConnection> = byEnds(ends.findByCableId(cableId))
 
+    override fun findByWorkOrderId(workOrderId: UUID): List<FiberConnection> =
+        compose(jpa.findByWorkOrderIdOrderBySplicedAtAsc(workOrderId))
+
     /**
      * Ujung sambungan tak pernah berubah setelah dibuat — memindah serat berarti
      * memutus lalu menyambung lagi. Jadi penyimpanan ulang hanya menyentuh cara
-     * pasang, redaman, dan catatan.
+     * pasang, redaman, catatan, dan work order tempat pekerjaannya dibukukan
+     * (yang memang boleh menyusul).
      */
     override fun save(connection: FiberConnection): FiberConnection {
         val existing = jpa.findById(connection.id).orElse(null)
@@ -90,6 +94,7 @@ class FiberConnectionPersistenceAdapter(
             existing.method = connection.method
             existing.lossDb = connection.lossDb
             existing.note = connection.note
+            existing.workOrderId = connection.workOrderId
             jpa.save(existing)
             return connection
         }
@@ -101,6 +106,9 @@ class FiberConnectionPersistenceAdapter(
                 method = connection.method,
                 lossDb = connection.lossDb,
                 note = connection.note,
+                workOrderId = connection.workOrderId,
+                splicedBy = connection.splicedBy,
+                splicedAt = connection.splicedAt,
             ),
         )
         // Induk lebih dulu: sisi ber-foreign-key gabungan ke (id, closure_id)-nya.
@@ -145,6 +153,9 @@ class FiberConnectionPersistenceAdapter(
                 method = parent.method,
                 lossDb = parent.lossDb,
                 note = parent.note,
+                workOrderId = parent.workOrderId,
+                splicedBy = parent.splicedBy,
+                splicedAt = parent.splicedAt,
             )
         }
     }

@@ -79,6 +79,15 @@ interface FiberConnectionRepository {
     /** Sambungan yang menyentuh core milik kabel ini. */
     fun findByCableId(cableId: UUID): List<FiberConnection>
 
+    /**
+     * Pekerjaan serat yang dibukukan ke sebuah work order, terlama dulu.
+     *
+     * Inilah yang dibaca penyelia saat memeriksa hasil kerja: bukan "tiketnya
+     * ditutup", melainkan kotak mana saja yang dibuka dan apa yang disambung di
+     * dalamnya.
+     */
+    fun findByWorkOrderId(workOrderId: UUID): List<FiberConnection>
+
     fun save(connection: FiberConnection): FiberConnection
 
     fun deleteAll(connections: List<FiberConnection>)

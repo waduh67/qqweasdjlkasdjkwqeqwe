@@ -293,7 +293,23 @@ class WorkOrder private constructor(
         record(WorkOrderEventType.UPDATED, "Pengukuran redaman optik direkam", at, actorId)
     }
 
+    /**
+     * Menempelkan satu peristiwa lapangan yang dikerjakan module lain — mis.
+     * serat yang disambung di kotak, dibukukan ke WO ini.
+     *
+     * Sengaja TIDAK memeriksa status. Dokumentasi kerap menyusul setelah tiket
+     * ditutup (teknisi pulang dulu, catatan menyusul dari kantor), dan menolaknya
+     * bukan membuat data lebih rapi — ia membuat jejaknya hilang sama sekali.
+     * Tak ada bidang agregat yang berubah: ini catatan, bukan transisi.
+     */
+    fun noteFieldActivity(message: String, at: Instant, actorId: UUID?) {
+        record(WorkOrderEventType.UPDATED, message.take(MAX_EVENT_MESSAGE), at, actorId)
+    }
+
     companion object {
+        /** Sepanjang kolom `message` di tabel timeline; dipotong di sini agar tak jadi galat DB. */
+        private const val MAX_EVENT_MESSAGE = 500
+
         private const val MIN_RX_DBM = -40.0
         private const val MAX_RX_DBM = 0.0
 

@@ -1,7 +1,9 @@
 package com.duluin.ftth.network.domain.model
 
 import com.duluin.ftth.common.domain.UuidV7
+import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.ValidationException
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -153,8 +155,23 @@ class FiberConnection private constructor(
     method: SpliceMethod,
     lossDb: Double?,
     note: String?,
+    workOrderId: UUID?,
+    /**
+     * Akun yang mencatat sambungan ini — di aplikasi lapangan, teknisi yang
+     * membuka kotaknya. Null untuk baris warisan dari sebelum jejak ini ada;
+     * bukan "tak ada yang mengerjakan", melainkan "tak tercatat".
+     */
+    val splicedBy: UUID?,
+    val splicedAt: Instant,
 ) {
     var method: SpliceMethod = method
+        private set
+
+    /**
+     * Work order tempat pekerjaan ini dibukukan. Null bukan cacat data: banyak
+     * sambungan lahir saat pembangunan awal, jauh sebelum ada tiket.
+     */
+    var workOrderId: UUID? = workOrderId
         private set
 
     /** Rugi hasil ukur (dB). Null = belum diukur — bukan nol. */
@@ -180,6 +197,25 @@ class FiberConnection private constructor(
         this.note = sanitizeNote(note)
     }
 
+    /**
+     * Membukukan sambungan ini ke sebuah work order — boleh menyusul, sebab
+     * teknisi kerap menyambung dulu dan mengisi nomor tiketnya setelah turun dari
+     * tangga.
+     *
+     * Yang TIDAK disediakan: melepas atau memindahkannya ke WO lain. Sambungan
+     * ini bukti bahwa suatu pekerjaan pernah dilakukan; memindahkan buktinya ke
+     * tiket lain menghapus jawaban atas satu-satunya pertanyaan yang benar-benar
+     * ditanyakan saat gangguan berulang — "waktu itu siapa yang buka kotak ini,
+     * dan dalam rangka apa".
+     */
+    fun attachWorkOrder(id: UUID) {
+        val current = workOrderId
+        if (current != null && current != id) {
+            throw ConflictException("Sambungan ini sudah dibukukan ke work order lain")
+        }
+        workOrderId = id
+    }
+
     companion object {
         const val MAX_NOTE_LENGTH = 200
 
@@ -199,6 +235,9 @@ class FiberConnection private constructor(
             method: SpliceMethod,
             lossDb: Double? = null,
             note: String? = null,
+            workOrderId: UUID? = null,
+            splicedBy: UUID? = null,
+            splicedAt: Instant = Instant.now(),
         ): FiberConnection {
             if (a == b) throw ValidationException("Sebuah titik tak bisa disambung ke dirinya sendiri")
             return FiberConnection(
@@ -211,6 +250,9 @@ class FiberConnection private constructor(
                 method = method,
                 lossDb = validateLoss(lossDb),
                 note = sanitizeNote(note),
+                workOrderId = workOrderId,
+                splicedBy = splicedBy,
+                splicedAt = splicedAt,
             )
         }
 
@@ -225,7 +267,12 @@ class FiberConnection private constructor(
             method: SpliceMethod,
             lossDb: Double?,
             note: String?,
-        ): FiberConnection = FiberConnection(id, tenantId, closureKind, closureId, a, b, method, lossDb, note)
+            workOrderId: UUID?,
+            splicedBy: UUID?,
+            splicedAt: Instant,
+        ): FiberConnection = FiberConnection(
+            id, tenantId, closureKind, closureId, a, b, method, lossDb, note, workOrderId, splicedBy, splicedAt,
+        )
 
         private fun validateLoss(lossDb: Double?): Double? {
             val value = lossDb ?: return null

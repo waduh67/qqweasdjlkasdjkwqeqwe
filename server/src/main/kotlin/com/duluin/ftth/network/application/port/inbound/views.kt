@@ -17,6 +17,7 @@ import com.duluin.ftth.network.domain.model.OltVendor
 import com.duluin.ftth.network.domain.model.SnmpVersion
 import com.duluin.ftth.network.domain.model.SpliceMethod
 import com.duluin.ftth.network.domain.model.WebProtocol
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -290,6 +291,17 @@ data class FiberConnectionView(
     /** Rugi hasil ukur; null = belum diukur, bukan nol. */
     val lossDb: Double?,
     val note: String?,
+    /**
+     * Jejak pengerjaan: tiket mana, siapa, kapan. Semua boleh null untuk baris
+     * lama yang lahir sebelum jejak ini ada — dan itu dibiarkan apa adanya, sebab
+     * mengarang pelaku demi kolom yang penuh jauh lebih berbahaya daripada
+     * kolom kosong yang jujur.
+     */
+    val workOrderId: UUID?,
+    val workOrderCode: String?,
+    val splicedById: UUID?,
+    val splicedByName: String?,
+    val splicedAt: Instant,
 )
 
 /**
