@@ -30,6 +30,8 @@ import type {
   SiteInspection,
   SiteOlt,
   SiteView,
+  SurveyCapacityView,
+  SurveyOdp,
   TraceHop,
   UnmappedCustomer,
   UtilizationHeatmap,
@@ -562,6 +564,14 @@ type AssetKind = 'SITE' | 'OLT' | 'ODF' | 'ODC' | 'ODP' | 'JOINT_BOX'
  * peramban seluler (jadi terasa sama dengan yang sudah dikenal jari operator), dan
  * 10 px memberi ruang goyang tangan tanpa menelan geseran peta yang sesungguhnya.
  */
+/**
+ * Radius cek kapasitas. 300 m adalah jarak yang masih masuk akal ditarik drop
+ * atau dikupas dari selubung yang lewat; lebih jauh dari itu jawabannya "bisa,
+ * tapi perlu tiang & kabel baru" — dan itu bukan lagi keputusan yang boleh
+ * diambil sales sambil berdiri di depan rumah orang.
+ */
+const SURVEY_RADIUS_M = 300
+
 const LONG_PRESS_MS = 500
 const HOLD_DRIFT_PX = 10
 
@@ -675,6 +685,7 @@ export function MapPage() {
   // Menu "tambah di sini": muncul di titik klik kanan / tahan-lama. `x`/`y` piksel
   // layar untuk menaruh kartunya, `lng`/`lat` titik peta yang jadi lokasi barunya.
   const [addMenu, setAddMenu] = useState<{ lng: number; lat: number; x: number; y: number } | null>(null)
+  const [survey, setSurvey] = useState<SurveyCapacityView | null>(null)
   // Titik yang sudah dipilih & menunggu formnya: perangkat baru, atau pelanggan lama
   // yang belum berkoordinat. Pin draggable-nya sama untuk keduanya.
   const [placeAt, setPlaceAt] = useState<{ kind: AssetKind | 'CUSTOMER'; lng: number; lat: number } | null>(null)
@@ -725,6 +736,7 @@ export function MapPage() {
     setOltInsp(null)
     setJointBox(null)
     setOdf(null)
+    setSurvey(null)
     setMovable(null)
     setSettingsOpen(false)
   }, [])
@@ -1611,6 +1623,7 @@ export function MapPage() {
     oltInsp ||
     jointBox ||
     odf ||
+    survey ||
     placeAt ||
     detailCustomerId ||
     detailOltId ||
@@ -1655,6 +1668,45 @@ export function MapPage() {
     setEditing(null)
     setAddMenu(null)
     setPlaceAt({ kind, lng: addMenu.lng, lat: addMenu.lat })
+  }
+
+  /**
+   * "Bisa dipasang di sini?" dijawab di tempat yang ditanyakan: titik yang barusan
+   * diklik kanan, tanpa mode berlangkah dua dan tanpa pindah halaman. Panelnya
+   * menggantikan penghuni sisi kanan seperti panel lain — satu hal pada satu waktu.
+   */
+  const checkCapacityHere = async () => {
+    if (!addMenu) return
+    const { lng, lat } = addMenu
+    tool.current?.cancel()
+    clearPanels()
+    setEditing(null)
+    setAddMenu(null)
+    try {
+      const view = await api.get<SurveyCapacityView>(
+        `/api/network/survey/capacity?longitude=${lng}&latitude=${lat}&radiusMeters=${SURVEY_RADIUS_M}`,
+      )
+      setSurvey(view)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal mengecek kapasitas di titik ini')
+    }
+  }
+
+  /**
+   * Dari baris kotak di panel survey ke kotak itu sendiri. Terbang lebih dulu —
+   * gerak peta adalah tanda pertama bahwa barisnya bisa diklik — baru panelnya
+   * menyusul, sama seperti alur "tunjukkan yang ini" dari halaman lain.
+   */
+  const openSurveyOdp = async (odpId: string, lng: number, lat: number) => {
+    map.current?.flyTo({ center: [lng, lat], zoom: 17 })
+    try {
+      const view = await api.get<OdpInspection>(`/api/gis/odps/${odpId}`)
+      clearPanels()
+      setSelected(view)
+      setMovable({ layer: 'odp', id: odpId, code: view.code, lng, lat })
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal memuat kotak itu')
+    }
   }
 
   /** Menyimpan perangkat titik baru di lokasi yang diklik, lalu menyegarkan tile. */
@@ -2046,6 +2098,7 @@ export function MapPage() {
             at={addMenu}
             can={can}
             onPick={startPlaceAt}
+            onSurvey={() => void checkCapacityHere()}
             onClose={() => setAddMenu(null)}
           />
         )}
@@ -2132,6 +2185,13 @@ export function MapPage() {
           />
         )}
         {whatIf && <CableCutPanel cut={whatIf} onClose={() => setWhatIf(null)} />}
+        {survey && (
+          <SurveyPanel
+            survey={survey}
+            onOpenOdp={(row) => void openSurveyOdp(row.odpId, row.location.longitude, row.location.latitude)}
+            onClose={() => setSurvey(null)}
+          />
+        )}
         {trace && (
           <CustomerTracePanel
             // key: panel menyimpan state sendiri (lipatan hop, tombol sibuk) — ganti
@@ -2561,11 +2621,13 @@ function AddHereMenu({
   at,
   can,
   onPick,
+  onSurvey,
   onClose,
 }: {
   at: { lng: number; lat: number; x: number; y: number }
   can: (perm: string) => boolean
   onPick: (kind: AssetKind | 'CUSTOMER') => void
+  onSurvey: () => void
   onClose: () => void
 }) {
   useEffect(() => {
@@ -2581,7 +2643,11 @@ function AddHereMenu({
   // Menaruh pelanggan = memberi koordinat pada pelanggan yang SUDAH ada (impor massal
   // menaruhnya di 0,0), jadi izinnya "ubah pelanggan", bukan "buat pelanggan".
   const canPlaceCustomer = can('customer.customer.update')
-  if (assets.length === 0 && !canPlaceCustomer) return null
+  // Mengecek kapasitas tidak mengubah apa pun, jadi izinnya cukup "lihat ODP" —
+  // dan justru orang yang tak boleh menambah aset (sales) yang paling sering
+  // menanyakannya.
+  const canSurvey = can('network.odp.view')
+  if (assets.length === 0 && !canPlaceCustomer && !canSurvey) return null
 
   return (
     <div
@@ -2614,6 +2680,17 @@ function AddHereMenu({
           title="Pelanggan hasil impor yang belum punya titik di peta"
         >
           <IconCustomers size={15} /> Pelanggan belum berkoordinat
+        </button>
+      )}
+      {canSurvey && (
+        <button
+          type="button"
+          className="map-menu-item"
+          role="menuitem"
+          onClick={onSurvey}
+          title="Kotak siap pakai & core menganggur di sekitar titik ini"
+        >
+          <IconCrosshair size={15} /> Cek kapasitas di sini
         </button>
       )}
     </div>
@@ -3617,6 +3694,116 @@ function CableCutPanel({ cut, onClose }: { cut: CableCutView; onClose: () => voi
         )}
 
         {cut.warnings.map((w) => (
+          <p key={w} className="dim" style={{ margin: 0, fontSize: '0.72rem', lineHeight: 1.35 }}>
+            {w}
+          </p>
+        ))}
+      </div>
+    </aside>
+  )
+}
+
+/**
+ * Panel cek kapasitas untuk survey.
+ *
+ * Susunannya mengikuti urutan orang mengambil keputusan di lapangan, bukan
+ * urutan data di server: kalimat kesimpulan dulu (itu yang diucapkan ke calon
+ * pelanggan), lalu kotak yang siap pakai, baru selubung yang lewat sebagai jalan
+ * keluar kalau semua kotak penuh. Angka detail — sisa port, sisa kaki splitter,
+ * nomor core kosong — ada di bawahnya untuk yang mau memeriksa.
+ */
+function SurveyPanel({
+  survey,
+  onOpenOdp,
+  onClose,
+}: {
+  survey: SurveyCapacityView
+  onOpenOdp: (row: SurveyOdp) => void
+  onClose: () => void
+}) {
+  return (
+    <aside className="map-panel blade">
+      <BladeHead
+        title="Cek kapasitas"
+        subtitle={`${survey.location.latitude.toFixed(6)}, ${survey.location.longitude.toFixed(6)} · radius ${formatLength(survey.radiusMeters)}`}
+        onClose={onClose}
+      />
+
+      <div className="blade-body stack" style={{ gap: '0.9rem' }}>
+        <MessageBar intent={survey.serviceable ? 'success' : survey.cables.length > 0 ? 'warning' : 'error'}>
+          <MessageBarBody>{survey.verdict}</MessageBarBody>
+        </MessageBar>
+
+        {survey.odps.length > 0 && (
+          <div className="stack" style={{ gap: '0.45rem' }}>
+            <p className="blade-section-title">Kotak dalam jangkauan ({survey.odps.length})</p>
+            {survey.odps.map((o) => (
+              <button
+                key={o.odpId}
+                type="button"
+                className="card clickable"
+                style={{ textAlign: 'left', width: '100%', padding: '0.55rem 0.7rem' }}
+                onClick={() => onOpenOdp(o)}
+              >
+                <div className="spread" style={{ gap: '0.5rem' }}>
+                  <span style={{ fontWeight: 600 }}>{o.code}</span>
+                  <span className="tnum muted">{formatLength(o.distanceMeters)}</span>
+                </div>
+                <div className="row wrap" style={{ gap: '0.35rem', marginTop: '0.3rem' }}>
+                  <span
+                    className="badge"
+                    style={{
+                      color: o.ready ? 'var(--good-ink)' : 'var(--warning-ink)',
+                      borderColor: o.ready ? 'var(--good-ink)' : 'var(--warning-ink)',
+                    }}
+                  >
+                    {o.ready ? 'siap pakai' : 'belum bisa'}
+                  </span>
+                  <span className="muted tnum">
+                    {o.freePorts}/{o.capacity} port kosong
+                  </span>
+                  {o.splitterLegs > 0 && (
+                    <span className="muted tnum">
+                      · {o.freeLegs}/{o.splitterLegs} kaki splitter
+                    </span>
+                  )}
+                </div>
+                {o.note && (
+                  <p className="dim" style={{ margin: '0.3rem 0 0', fontSize: '0.72rem', lineHeight: 1.35 }}>
+                    {o.note}
+                  </p>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {survey.cables.length > 0 && (
+          <div className="stack" style={{ gap: '0.45rem' }}>
+            <p className="blade-section-title">Selubung yang lewat ({survey.cables.length})</p>
+            {survey.cables.map((c) => (
+              <div key={c.cableId} className="card" style={{ padding: '0.55rem 0.7rem' }}>
+                <div className="spread" style={{ gap: '0.5rem' }}>
+                  <span style={{ fontWeight: 600 }}>{c.code}</span>
+                  <span className="tnum muted">{formatLength(c.distanceMeters)}</span>
+                </div>
+                <div className="row wrap" style={{ gap: '0.35rem', marginTop: '0.3rem' }}>
+                  <span className="badge">{TYPE_LABEL[c.cableType]}</span>
+                  <span className="muted tnum">
+                    {c.freeCores}/{c.coreCount} core menganggur
+                  </span>
+                </div>
+                <p className="dim" style={{ margin: '0.3rem 0 0', fontSize: '0.72rem', lineHeight: 1.35 }}>
+                  Kupas di {formatLength(c.tapDistanceMeters)} dari ujung awal kabel · core kosong{' '}
+                  {c.freeCoreNumbers.join(', ')}
+                  {c.freeCores > c.freeCoreNumbers.length && ', …'}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {survey.warnings.map((w) => (
           <p key={w} className="dim" style={{ margin: 0, fontSize: '0.72rem', lineHeight: 1.35 }}>
             {w}
           </p>

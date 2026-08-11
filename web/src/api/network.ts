@@ -948,6 +948,55 @@ export interface RecordOtdrTest {
   note?: string | null
 }
 
+/**
+ * Jawaban cek kapasitas untuk satu titik alamat: apa yang tersedia di sekitarnya.
+ * `verdict` sengaja kalimat utuh — yang membacanya sering sales di depan calon
+ * pelanggan, dan yang ia butuhkan sesuatu yang bisa langsung diucapkan.
+ */
+export interface SurveyCapacityView {
+  location: Coordinate
+  radiusMeters: number
+  verdict: string
+  /** Ada kotak siap pakai dalam radius — bisa dipasang hari ini. */
+  serviceable: boolean
+  odps: SurveyOdp[]
+  cables: SurveyCable[]
+  warnings: string[]
+}
+
+/** Sebuah kotak beserta sisa tempatnya. Port panel & kaki splitter dibedakan. */
+export interface SurveyOdp {
+  odpId: string
+  code: string
+  name: string
+  address: string | null
+  location: Coordinate
+  distanceMeters: number
+  capacity: number
+  usedPorts: number
+  freePorts: number
+  splitterLegs: number
+  freeLegs: number
+  /** Port kosong DAN kaki splitter kosong — baru boleh dijanjikan ke pelanggan. */
+  ready: boolean
+  note: string | null
+}
+
+/** Selubung yang lewat di dekat titik survey, beserta core yang masih menganggur. */
+export interface SurveyCable {
+  cableId: string
+  code: string
+  name: string
+  cableType: CableType
+  /** Jarak tegak lurus titik survey ke jalur kabel. */
+  distanceMeters: number
+  /** Letak kupasan diukur dari ujung awal kabel. */
+  tapDistanceMeters: number
+  coreCount: number
+  freeCores: number
+  freeCoreNumbers: number[]
+}
+
 /** Simulasi "kalau kabel ini putus, siapa yang kena" — hasil dari klik sebuah kabel. */
 export interface CableCutView {
   cableId: string
