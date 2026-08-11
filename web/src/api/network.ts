@@ -887,6 +887,37 @@ export type CableEnd = 'FROM' | 'TO'
 /** Jenis peristiwa yang terbaca reflektometer OTDR. */
 export type OtdrEventType = 'BREAK' | 'HIGH_LOSS' | 'REFLECTION' | 'SPLICE' | 'END'
 
+/** Sebuah kotak yang berdiri di sepanjang kabel, dengan jaraknya dari pangkal (meter serat). */
+export interface OtdrLandmark {
+  closureKind: ClosureKind
+  closureId: string
+  code: string
+  name: string
+  distanceMeters: number
+  /** Kotak ini salah satu ujung kabelnya, bukan sadapan di tengah bentang. */
+  endpoint: boolean
+}
+
+/**
+ * Angka OTDR yang sudah diterjemahkan jadi tempat — "jatuh di JB-03", bukan
+ * "1.847 m". Pin di peta menuntun ke lokasi; nama kotak menentukan apa yang
+ * dibawa tim, dan apakah perlu menggali sama sekali.
+ */
+export interface OtdrPlacement {
+  summary: string
+  /** Saran tindakan; terpisah dari ringkasan supaya daftar tetap enak dipindai. */
+  advice: string | null
+  atClosure: boolean
+  nearestKind: ClosureKind | null
+  nearestId: string | null
+  nearestCode: string | null
+  /** Selisih ke kotak terdekat; positif = sesudahnya (menjauh dari pangkal kabel). */
+  offsetMeters: number | null
+  beforeCode: string | null
+  afterCode: string | null
+  landmarks: OtdrLandmark[]
+}
+
 /** Satu hasil uji OTDR pada kabel, dengan titik perkiraan gangguan di jalurnya. */
 export interface OtdrTest {
   id: string
@@ -904,6 +935,8 @@ export interface OtdrTest {
   /** Jarak uji melampaui panjang kabel — titik dijepit ke ujung. */
   beyondCable: boolean
   cableLengthMeters: number
+  /** Titik itu jatuh di kotak mana — jawaban yang dibawa ke lapangan. */
+  placement: OtdrPlacement
 }
 
 /** Badan request untuk mencatat satu uji OTDR. */
