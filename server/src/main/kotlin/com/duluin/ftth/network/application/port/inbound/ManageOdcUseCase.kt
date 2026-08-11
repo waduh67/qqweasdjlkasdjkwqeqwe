@@ -32,7 +32,12 @@ data class SaveOdcCommand(
     val location: Coordinate,
     val areaId: UUID?,
     val ponPortId: UUID?,
-    val splitterRatio: String,
+    /**
+     * Jalan pintas kabinet satu modul: mengisi/mengganti rasio splitter tunggalnya,
+     * null/kosong = kabinet tanpa splitter. Kabinet berisi banyak modul tak tersentuh
+     * bidang ini — modulnya diurus lewat [ManageSplitterUseCase].
+     */
+    val splitterRatio: String?,
     val capacity: Int,
     val status: AssetStatus,
 )

@@ -111,9 +111,18 @@ class FiberConnectionIT {
         """{"closureKind":"$closure","closureId":"$closureId","a":$a,"b":$b$extra}"""
 
     private fun core(id: String) = """{"kind":"CORE","coreId":"$id"}"""
-    private fun splitterIn(nodeId: String) = """{"kind":"SPLITTER_IN","nodeId":"$nodeId"}"""
-    private fun splitterOut(nodeId: String, leg: Int) =
-        """{"kind":"SPLITTER_OUT","nodeId":"$nodeId","portNumber":$leg}"""
+
+    /**
+     * Modul splitter di dalam sebuah kabinet. Yang ditunjuk titik sambung adalah
+     * MODULNYA, bukan kabinetnya: satu ODC boleh berisi beberapa modul dengan
+     * rasio berbeda, jadi "kaki 3" baru punya arti setelah jelas kaki modul mana.
+     */
+    private fun splitterOf(token: String, ownerKind: String, ownerId: String): String =
+        JsonPath.read(getJson("/api/splitters?ownerKind=$ownerKind&ownerId=$ownerId", token), "$.splitters[0].id")
+
+    private fun splitterIn(splitterId: String) = """{"kind":"SPLITTER_IN","nodeId":"$splitterId"}"""
+    private fun splitterOut(splitterId: String, leg: Int) =
+        """{"kind":"SPLITTER_OUT","nodeId":"$splitterId","portNumber":$leg}"""
 
     private fun odfPort(nodeId: String, port: Int, side: String) =
         """{"kind":"ODF_PORT","nodeId":"$nodeId","portNumber":$port,"portSide":"$side"}"""
@@ -168,14 +177,14 @@ class FiberConnectionIT {
 
         // ODP-1 dan ODP-2 bukan ujung kabel — mereka dilewati di tengah jalur.
         // Dulu ini butuh kabel palsu sendiri-sendiri; sekarang cukup satu serat.
-        post(token = token, url = "/api/fiber-connections", body = connectBody("ODP", odp1, core(coreId(token, cable, 1)), splitterIn(odp1)))
-        post(token = token, url = "/api/fiber-connections", body = connectBody("ODP", odp2, core(coreId(token, cable, 2)), splitterIn(odp2)))
+        post(token = token, url = "/api/fiber-connections", body = connectBody("ODP", odp1, core(coreId(token, cable, 1)), splitterIn(splitterOf(token, "ODP", odp1))))
+        post(token = token, url = "/api/fiber-connections", body = connectBody("ODP", odp2, core(coreId(token, cable, 2)), splitterIn(splitterOf(token, "ODP", odp2))))
 
         // Ujung hulu core 1 disambung ke kaki splitter ODC — sehelai serat memang
         // punya DUA ujung, dan keduanya sah karena closure-nya berbeda.
         val hulu = post(
             "/api/fiber-connections", token,
-            connectBody("ODC", odc, core(coreId(token, cable, 1)), splitterOut(odc, 1), ""","method":"FUSION","lossDb":0.08"""),
+            connectBody("ODC", odc, core(coreId(token, cable, 1)), splitterOut(splitterOf(token, "ODC", odc), 1), ""","method":"FUSION","lossDb":0.08"""),
         )
         assertThat(JsonPath.read<Double>(hulu, "$.lossDb")).isEqualTo(0.08)
         assertThat(JsonPath.read<String>(hulu, "$.methodLabel")).isEqualTo("Fusion (las)")
@@ -200,13 +209,14 @@ class FiberConnectionIT {
         val cable = newDistribution(token, odc, odp, endLon = 107.005)
         val core1 = coreId(token, cable, 1)
         val core2 = coreId(token, cable, 2)
+        val spl = splitterOf(token, "ODP", odp)
 
-        post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), splitterIn(odp)))
+        post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), splitterIn(spl)))
 
         // Core yang sama, closure yang sama: inilah "satu core dijual ke dua pelanggan".
-        post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), splitterOut(odp, 1)), expected = 409)
+        post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), splitterOut(spl, 1)), expected = 409)
         // Kaki masuk splitter juga cuma satu — serat lain tak bisa ikut menempel.
-        post("/api/fiber-connections", token, connectBody("ODP", odp, core(core2), splitterIn(odp)), expected = 409)
+        post("/api/fiber-connections", token, connectBody("ODP", odp, core(core2), splitterIn(spl)), expected = 409)
     }
 
     @Test
@@ -220,7 +230,7 @@ class FiberConnectionIT {
 
         val error = post(
             "/api/fiber-connections", token,
-            connectBody("ODP", nyasar, core(coreId(token, cable, 1)), splitterIn(nyasar)),
+            connectBody("ODP", nyasar, core(coreId(token, cable, 1)), splitterIn(splitterOf(token, "ODP", nyasar))),
             expected = 400,
         )
         assertThat(error).contains("tak lewat")
@@ -233,15 +243,20 @@ class FiberConnectionIT {
         val odp = newOdp(token, 107.005, -6.24)
         val cable = newDistribution(token, odc, odp, endLon = 107.005)
         val core1 = coreId(token, cable, 1)
+        val spl = splitterOf(token, "ODP", odp)
 
         // Titik core tanpa core-nya.
-        post("/api/fiber-connections", token, connectBody("ODP", odp, """{"kind":"CORE"}""", splitterIn(odp)), expected = 400)
+        post("/api/fiber-connections", token, connectBody("ODP", odp, """{"kind":"CORE"}""", splitterIn(spl)), expected = 400)
         // Kaki splitter di luar kapasitas 1:8.
-        post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), splitterOut(odp, 99)), expected = 400)
-        // Splitter milik simpul lain — sampai splitter jadi entitas sendiri, satu simpul satu splitter.
-        post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), splitterIn(odc)), expected = 400)
+        post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), splitterOut(spl, 99)), expected = 400)
+        // Modul milik kabinet sebelah — salah pilih di layar, bukan splitter kotak ini.
+        post(
+            "/api/fiber-connections", token,
+            connectBody("ODP", odp, core(core1), splitterIn(splitterOf(token, "ODC", odc))),
+            expected = 400,
+        )
         // Closure ODF yang id-nya ternyata ODP: raknya memang tak ada.
-        post("/api/fiber-connections", token, connectBody("ODF", odp, core(core1), splitterIn(odp)), expected = 404)
+        post("/api/fiber-connections", token, connectBody("ODF", odp, core(core1), splitterIn(spl)), expected = 404)
         // Port ODF di dalam ODP — rak tak bisa dibawa-bawa ke kotak distribusi.
         post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), odfPort(odp, 1, "BACK")), expected = 400)
     }
@@ -325,8 +340,18 @@ class FiberConnectionIT {
         val cable = newDistribution(token, odc, odp, endLon = 107.005)
         val core1 = coreId(token, cable, 1)
 
-        val hilir = idOf(post("/api/fiber-connections", token, connectBody("ODP", odp, core(core1), splitterIn(odp))))
-        val hulu = idOf(post("/api/fiber-connections", token, connectBody("ODC", odc, core(core1), splitterOut(odc, 1))))
+        val hilir = idOf(
+            post(
+                "/api/fiber-connections", token,
+                connectBody("ODP", odp, core(core1), splitterIn(splitterOf(token, "ODP", odp))),
+            ),
+        )
+        val hulu = idOf(
+            post(
+                "/api/fiber-connections", token,
+                connectBody("ODC", odc, core(core1), splitterOut(splitterOf(token, "ODC", odc), 1)),
+            ),
+        )
 
         deleteAt("/api/fiber-connections/$hilir", token)
         // Ujung satunya masih tersambung — seratnya belum bebas.
@@ -343,7 +368,10 @@ class FiberConnectionIT {
         val odp = newOdp(token, 107.005, -6.24)
         val cable = newDistribution(token, odc, odp, endLon = 107.005)
 
-        post("/api/fiber-connections", token, connectBody("ODP", odp, core(coreId(token, cable, 1)), splitterIn(odp)))
+        post(
+            "/api/fiber-connections", token,
+            connectBody("ODP", odp, core(coreId(token, cable, 1)), splitterIn(splitterOf(token, "ODP", odp))),
+        )
         deleteAt("/api/cables/$cable", token)
 
         val isi = getJson("/api/fiber-connections?closureKind=ODP&closureId=$odp", token)

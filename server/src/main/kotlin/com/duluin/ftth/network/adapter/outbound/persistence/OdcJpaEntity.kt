@@ -33,10 +33,6 @@ class OdcJpaEntity(
     @Column(name = "pon_port_id")
     var ponPortId: UUID?,
 
-    /** Disimpan sebagai label lapangan ("1:8"), bukan nama konstanta enum. */
-    @Column(name = "splitter_ratio", nullable = false, length = 10)
-    var splitterRatio: String,
-
     @Column(nullable = false)
     var capacity: Int,
 

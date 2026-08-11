@@ -81,7 +81,11 @@ data class OdcView(
     val ponPortId: UUID?,
     val ponPortLabel: String?,
     val oltName: String?,
+    /** Ringkasan isi kabinet: "1:8", "1:8 ×2 · 1:16", atau "—" bila tak bersplitter. */
     val splitterRatio: String,
+    val splitterCount: Int,
+    /** Jumlah kaki keluar seluruh modul — "berapa yang bisa dijual dari kabinet ini". */
+    val splitterLegs: Int,
     val capacity: Int,
     val odpCount: Long,
     val status: AssetStatus,
@@ -97,9 +101,47 @@ data class OdpView(
     val areaId: UUID?,
     val odcId: UUID?,
     val odcName: String?,
+    /** Ringkasan isi kotak; lihat [OdcView.splitterRatio]. */
     val splitterRatio: String,
+    val splitterCount: Int,
+    val splitterLegs: Int,
     val capacity: Int,
     val status: AssetStatus,
+)
+
+/**
+ * Satu modul splitter siap tampil.
+ *
+ * [usedLegs] dikirim sebagai daftar nomor, bukan sekadar jumlah: yang ditanya di
+ * depan kabinet adalah "kaki mana yang masih kosong", dan jumlah saja tak bisa
+ * menjawabnya begitu kaki dilepas di tengah (3 terpakai bisa berarti kaki 1,2,5).
+ * [inputConnected] memisahkan modul yang sudah disuapi feeder dari modul yang
+ * terpasang tapi belum hidup — bedanya nyata saat mencari kenapa satu blok mati.
+ */
+data class SplitterView(
+    val id: UUID,
+    val ownerKind: ClosureKind,
+    val ownerId: UUID,
+    val ownerCode: String?,
+    val code: String,
+    val ratio: String,
+    val legCount: Int,
+    val insertionLossDb: Double,
+    val usedLegs: List<Int>,
+    val inputConnected: Boolean,
+    val note: String?,
+)
+
+/**
+ * Isi sebuah kabinet: identitasnya plus modul-modulnya. Identitas ikut dikirim
+ * supaya layar splitter tak perlu memanggil endpoint ODC/ODP hanya demi judul.
+ */
+data class ClosureSplitterView(
+    val ownerKind: ClosureKind,
+    val ownerId: UUID,
+    val ownerCode: String,
+    val ownerName: String,
+    val splitters: List<SplitterView>,
 )
 
 /**

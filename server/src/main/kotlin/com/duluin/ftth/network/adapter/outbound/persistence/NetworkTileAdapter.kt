@@ -88,7 +88,6 @@ class NetworkTileAdapter : NetworkTileRenderer {
                     SELECT ST_AsMVT(t, 'odc', 4096, 'geom') FROM (
                         SELECT a.id::text AS id, a.code AS code, a.name AS name,
                                a.capacity AS capacity, a.status AS status,
-                               a.splitter_ratio AS splitter_ratio,
                                ST_AsMVTGeom(ST_Transform(a.location, 3857), env.mercator, 4096, 64, true) AS geom
                         FROM odc a CROSS JOIN env
                         WHERE a.location && env.wgs84 $areaFilter
@@ -99,7 +98,7 @@ class NetworkTileAdapter : NetworkTileRenderer {
                     SELECT ST_AsMVT(t, 'odp', 4096, 'geom') FROM (
                         SELECT a.id::text AS id, a.code AS code, a.name AS name,
                                a.capacity AS capacity, a.status AS status,
-                               a.splitter_ratio AS splitter_ratio, a.odc_id::text AS odc_id,
+                               a.odc_id::text AS odc_id,
                                ST_AsMVTGeom(ST_Transform(a.location, 3857), env.mercator, 4096, 64, true) AS geom
                         FROM odp a CROSS JOIN env
                         WHERE a.location && env.wgs84 $areaFilter

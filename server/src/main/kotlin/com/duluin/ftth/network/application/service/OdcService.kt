@@ -15,10 +15,11 @@ import com.duluin.ftth.network.application.port.outbound.OdcRepository
 import com.duluin.ftth.network.application.port.outbound.OdpRepository
 import com.duluin.ftth.network.application.port.outbound.OltRepository
 import com.duluin.ftth.network.application.port.outbound.PonPortRepository
+import com.duluin.ftth.network.domain.model.ClosureKind
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import com.duluin.ftth.network.domain.model.NetworkNodeRef
 import com.duluin.ftth.network.domain.model.Odc
-import com.duluin.ftth.network.domain.model.vo.SplitterRatio
+import com.duluin.ftth.network.domain.model.Splitter
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -31,6 +32,7 @@ class OdcService(
     private val ponPortRepository: PonPortRepository,
     private val oltRepository: OltRepository,
     private val cableAttachment: CableAttachmentService,
+    private val splitters: SplitterService,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
 ) : ManageOdcUseCase {
@@ -39,15 +41,19 @@ class OdcService(
     override fun search(query: String, pageRequest: PageRequest): Page<OdcView> {
         val page = odcRepository.search(query, currentUser.current().areaScope(), pageRequest)
         val uplinks = resolveUplinks(page.content.mapNotNullTo(HashSet()) { it.ponPortId })
-        val odpCounts = odpRepository.countByOdcIds(page.content.mapTo(HashSet()) { it.id })
-        return page.map { it.toView(uplinks[it.ponPortId], odpCounts[it.id] ?: 0) }
+        val ids = page.content.mapTo(HashSet()) { it.id }
+        val odpCounts = odpRepository.countByOdcIds(ids)
+        val contents = splitters.contentsOf(ids)
+        return page.map {
+            it.toView(uplinks[it.ponPortId], odpCounts[it.id] ?: 0, contents[it.id].orEmpty())
+        }
     }
 
     @Transactional(readOnly = true)
     override fun get(id: UUID): OdcView {
         val odc = requireOdc(id)
         val uplink = odc.ponPortId?.let { resolveUplinks(setOf(it))[it] }
-        return odc.toView(uplink, odpRepository.countByOdcId(id))
+        return odc.toView(uplink, odpRepository.countByOdcId(id), splitters.contentsOf(setOf(id))[id].orEmpty())
     }
 
     override fun create(command: SaveOdcCommand): OdcView {
@@ -63,11 +69,11 @@ class OdcService(
                 location = command.location,
                 areaId = command.areaId,
                 ponPortId = command.ponPortId,
-                splitterRatio = SplitterRatio.of(command.splitterRatio),
                 capacity = command.capacity,
                 status = command.status,
             ),
         )
+        splitters.applyPrimaryRatio(ClosureKind.ODC, odc.id, command.splitterRatio)
         auditor.record("odc.created", "Odc", odc.id, odc.tenantId, mapOf("code" to odc.code))
         return get(odc.id)
     }
@@ -80,11 +86,11 @@ class OdcService(
             address = command.address,
             location = command.location,
             areaId = command.areaId,
-            splitterRatio = SplitterRatio.of(command.splitterRatio),
             capacity = command.capacity,
             status = command.status,
         )
         odcRepository.save(odc)
+        splitters.applyPrimaryRatio(ClosureKind.ODC, odc.id, command.splitterRatio)
         if (moved) cableAttachment.resnapForMovedNode(NetworkNodeRef(NetworkNodeKind.ODC, id), odc.location)
         auditor.record("odc.updated", "Odc", odc.id, odc.tenantId, mapOf("code" to odc.code))
         return get(id)
@@ -117,6 +123,7 @@ class OdcService(
         if (odpCount > 0) {
             throw ConflictException("ODC ${odc.code} masih menyuplai $odpCount ODP, lepas dulu sambungannya")
         }
+        splitters.removeAllOf(id)
         odcRepository.deleteById(id)
         auditor.record("odc.deleted", "Odc", id, odc.tenantId, mapOf("code" to odc.code))
     }
@@ -140,7 +147,7 @@ class OdcService(
 
 private data class Uplink(val ponPortLabel: String, val oltName: String?)
 
-private fun Odc.toView(uplink: Uplink?, odpCount: Long) = OdcView(
+private fun Odc.toView(uplink: Uplink?, odpCount: Long, contents: List<Splitter>) = OdcView(
     id = id,
     code = code,
     name = name,
@@ -150,7 +157,9 @@ private fun Odc.toView(uplink: Uplink?, odpCount: Long) = OdcView(
     ponPortId = ponPortId,
     ponPortLabel = uplink?.ponPortLabel,
     oltName = uplink?.oltName,
-    splitterRatio = splitterRatio.label,
+    splitterRatio = Splitter.summarize(contents),
+    splitterCount = contents.size,
+    splitterLegs = contents.sumOf { it.legCount },
     capacity = capacity,
     odpCount = odpCount,
     status = status,

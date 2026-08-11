@@ -95,6 +95,12 @@ data class OdfRequest(
     val status: AssetStatus = AssetStatus.ACTIVE,
 )
 
+/**
+ * `splitterRatio` adalah jalan pintas untuk kabinet berisi SATU modul — bentuk
+ * yang paling umum di lapangan. Kosong = kabinet tanpa splitter (ODC
+ * cross-connect murni), dan itu sah. Kabinet berisi beberapa modul dikelola
+ * lewat `/api/splitters`; isian ini tak menyentuhnya.
+ */
 data class OdcRequest(
     @field:NotBlank @field:Size(max = 40) val code: String,
     @field:NotBlank @field:Size(max = 150) val name: String,
@@ -102,11 +108,12 @@ data class OdcRequest(
     @field:Valid val location: LocationRequest,
     val areaId: UUID? = null,
     val ponPortId: UUID? = null,
-    @field:NotBlank val splitterRatio: String,
+    val splitterRatio: String? = null,
     @field:Min(1) @field:Max(1024) val capacity: Int,
     val status: AssetStatus = AssetStatus.ACTIVE,
 )
 
+/** Lihat [OdcRequest] soal `splitterRatio`. */
 data class OdpRequest(
     @field:NotBlank @field:Size(max = 40) val code: String,
     @field:NotBlank @field:Size(max = 150) val name: String,
@@ -114,9 +121,26 @@ data class OdpRequest(
     @field:Valid val location: LocationRequest,
     val areaId: UUID? = null,
     val odcId: UUID? = null,
-    @field:NotBlank val splitterRatio: String,
+    val splitterRatio: String? = null,
     @field:Min(1) @field:Max(256) val capacity: Int,
     val status: AssetStatus = AssetStatus.ACTIVE,
+)
+
+/**
+ * Modul splitter baru. `code` boleh kosong — server menomorinya sendiri
+ * (SPL-1, SPL-2, …) supaya orang di lapangan tak perlu mengarang label.
+ */
+data class SplitterRequest(
+    val ownerKind: ClosureKind,
+    val ownerId: UUID,
+    @field:Size(max = 40) val code: String? = null,
+    @field:NotBlank val ratio: String,
+    @field:Size(max = 200) val note: String? = null,
+)
+
+data class UpdateSplitterRequest(
+    @field:NotBlank val ratio: String,
+    @field:Size(max = 200) val note: String? = null,
 )
 
 data class JointBoxRequest(

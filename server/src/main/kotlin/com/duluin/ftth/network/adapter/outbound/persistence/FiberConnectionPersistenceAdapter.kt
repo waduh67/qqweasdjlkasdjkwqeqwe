@@ -59,6 +59,19 @@ class FiberConnectionPersistenceAdapter(
         if (nodeIds.isEmpty()) emptyMap()
         else ends.countDistinctPortsGrouped(kind, nodeIds).associate { it.parentId to it.total }
 
+    override fun usedPortNumbersOfNodes(kind: ConnectionPointKind, nodeIds: Set<UUID>): Map<UUID, Set<Int>> {
+        if (nodeIds.isEmpty()) return emptyMap()
+        return ends.findByPointKindAndNodeIdIn(kind, nodeIds)
+            .mapNotNull { end -> end.nodeId?.let { node -> end.portNumber?.let { node to it } } }
+            .groupBy({ it.first }, { it.second })
+            .mapValues { (_, ports) -> ports.toSortedSet() }
+    }
+
+    override fun nodesWithPoint(kind: ConnectionPointKind, nodeIds: Set<UUID>): Set<UUID> {
+        if (nodeIds.isEmpty()) return emptySet()
+        return ends.findByPointKindAndNodeIdIn(kind, nodeIds).mapNotNullTo(HashSet()) { it.nodeId }
+    }
+
     override fun findByCableId(cableId: UUID): List<FiberConnection> = byEnds(ends.findByCableId(cableId))
 
     /**

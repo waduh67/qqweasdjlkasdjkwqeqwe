@@ -31,7 +31,8 @@ data class SaveOdpCommand(
     val location: Coordinate,
     val areaId: UUID?,
     val odcId: UUID?,
-    val splitterRatio: String,
+    /** Lihat [SaveOdcCommand.splitterRatio]. */
+    val splitterRatio: String?,
     val capacity: Int,
     val status: AssetStatus,
 )

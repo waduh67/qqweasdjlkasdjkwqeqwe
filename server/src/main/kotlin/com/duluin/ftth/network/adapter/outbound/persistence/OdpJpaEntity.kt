@@ -33,9 +33,6 @@ class OdpJpaEntity(
     @Column(name = "odc_id")
     var odcId: UUID?,
 
-    @Column(name = "splitter_ratio", nullable = false, length = 10)
-    var splitterRatio: String,
-
     @Column(nullable = false)
     var capacity: Int,
 

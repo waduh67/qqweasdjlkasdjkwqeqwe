@@ -28,6 +28,7 @@ import com.duluin.ftth.network.application.port.outbound.NetworkTileRenderer
 import com.duluin.ftth.network.application.port.outbound.OltRepository
 import com.duluin.ftth.network.application.port.outbound.PonPortRepository
 import com.duluin.ftth.network.application.port.outbound.SiteRepository
+import com.duluin.ftth.network.application.port.outbound.SplitterRepository
 import com.duluin.ftth.network.domain.model.Odp
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -48,6 +49,7 @@ class NetworkApiService(
     private val siteRepository: SiteRepository,
     private val cableRepository: CableRepository,
     private val cableAttachment: CableAttachmentService,
+    private val splitterRepository: SplitterRepository,
     private val tileRenderer: NetworkTileRenderer,
 ) : NetworkApi {
 
@@ -218,7 +220,7 @@ class NetworkApiService(
         val olt = ponPort?.let { oltRepository.findById(it.oltId) }
         val site = olt?.let { siteRepository.findById(it.siteId) }
 
-        val splitterLoss = odp.splitterRatio.insertionLossDb + (odc?.splitterRatio?.insertionLossDb ?: 0.0)
+        val splitterLoss = insertionLossOf(odp.id) + (odc?.let { insertionLossOf(it.id) } ?: 0.0)
 
         return UpstreamPath(
             odp = odp.toRef(),
@@ -229,6 +231,18 @@ class NetworkApiService(
             splitterLossDb = splitterLoss,
         )
     }
+
+    /**
+     * Redaman splitter sebuah kabinet, diambil dari modul PERTAMA-nya.
+     *
+     * Kabinet berisi banyak modul memang punya beberapa angka, dan yang benar
+     * tergantung lewat modul mana serat pelanggan ini sebetulnya jalan —
+     * pertanyaan yang baru bisa dijawab setelah penelusuran graf (potongan G).
+     * Sampai itu ada, satu modul = jawaban yang persis sama dengan sebelumnya,
+     * dan kabinet tanpa splitter memang tak meredam apa pun.
+     */
+    private fun insertionLossOf(closureId: UUID): Double =
+        splitterRepository.findByOwnerId(closureId).firstOrNull()?.insertionLossDb ?: 0.0
 }
 
 private fun Site.toRef() = SiteRef(

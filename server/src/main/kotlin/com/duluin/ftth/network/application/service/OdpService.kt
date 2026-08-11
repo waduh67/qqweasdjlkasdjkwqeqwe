@@ -14,10 +14,11 @@ import com.duluin.ftth.network.application.port.inbound.OdpView
 import com.duluin.ftth.network.application.port.inbound.SaveOdpCommand
 import com.duluin.ftth.network.application.port.outbound.OdcRepository
 import com.duluin.ftth.network.application.port.outbound.OdpRepository
+import com.duluin.ftth.network.domain.model.ClosureKind
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import com.duluin.ftth.network.domain.model.NetworkNodeRef
 import com.duluin.ftth.network.domain.model.Odp
-import com.duluin.ftth.network.domain.model.vo.SplitterRatio
+import com.duluin.ftth.network.domain.model.Splitter
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -28,6 +29,7 @@ class OdpService(
     private val odpRepository: OdpRepository,
     private val odcRepository: OdcRepository,
     private val cableAttachment: CableAttachmentService,
+    private val splitters: SplitterService,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
     /** Kosong bila belum ada module lain yang menempel pada ODP. */
@@ -39,13 +41,17 @@ class OdpService(
         val page = odpRepository.search(query, currentUser.current().areaScope(), odcId, pageRequest)
         val odcNames = odcRepository.findAllByIds(page.content.mapNotNullTo(HashSet()) { it.odcId })
             .associate { it.id to it.name }
-        return page.map { it.toView(odcNames[it.odcId]) }
+        val contents = splitters.contentsOf(page.content.mapTo(HashSet()) { it.id })
+        return page.map { it.toView(odcNames[it.odcId], contents[it.id].orEmpty()) }
     }
 
     @Transactional(readOnly = true)
     override fun get(id: UUID): OdpView {
         val odp = requireOdp(id)
-        return odp.toView(odp.odcId?.let { odcRepository.findById(it)?.name })
+        return odp.toView(
+            odp.odcId?.let { odcRepository.findById(it)?.name },
+            splitters.contentsOf(setOf(id))[id].orEmpty(),
+        )
     }
 
     override fun create(command: SaveOdpCommand): OdpView {
@@ -61,11 +67,11 @@ class OdpService(
                 location = command.location,
                 areaId = command.areaId,
                 odcId = command.odcId,
-                splitterRatio = SplitterRatio.of(command.splitterRatio),
                 capacity = command.capacity,
                 status = command.status,
             ),
         )
+        splitters.applyPrimaryRatio(ClosureKind.ODP, odp.id, command.splitterRatio)
         auditor.record(
             "odp.created", "Odp", odp.id, odp.tenantId,
             mapOf("code" to odp.code, "capacity" to odp.capacity),
@@ -81,11 +87,11 @@ class OdpService(
             address = command.address,
             location = command.location,
             areaId = command.areaId,
-            splitterRatio = SplitterRatio.of(command.splitterRatio),
             capacity = command.capacity,
             status = command.status,
         )
         odpRepository.save(odp)
+        splitters.applyPrimaryRatio(ClosureKind.ODP, odp.id, command.splitterRatio)
         if (moved) cableAttachment.resnapForMovedNode(NetworkNodeRef(NetworkNodeKind.ODP, id), odp.location)
         auditor.record("odp.updated", "Odp", odp.id, odp.tenantId, mapOf("code" to odp.code))
         return get(id)
@@ -130,6 +136,7 @@ class OdpService(
                 )
             }
         }
+        splitters.removeAllOf(id)
         odpRepository.deleteById(id)
         auditor.record("odp.deleted", "Odp", id, odp.tenantId, mapOf("code" to odp.code))
     }
@@ -142,7 +149,7 @@ class OdpService(
     }
 }
 
-internal fun Odp.toView(odcName: String?) = OdpView(
+internal fun Odp.toView(odcName: String?, contents: List<Splitter>) = OdpView(
     id = id,
     code = code,
     name = name,
@@ -151,7 +158,9 @@ internal fun Odp.toView(odcName: String?) = OdpView(
     areaId = areaId,
     odcId = odcId,
     odcName = odcName,
-    splitterRatio = splitterRatio.label,
+    splitterRatio = Splitter.summarize(contents),
+    splitterCount = contents.size,
+    splitterLegs = contents.sumOf { it.legCount },
     capacity = capacity,
     status = status,
 )

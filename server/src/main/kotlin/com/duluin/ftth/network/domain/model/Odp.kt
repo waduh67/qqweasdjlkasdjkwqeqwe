@@ -4,15 +4,17 @@ import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.domain.geo.Coordinate
-import com.duluin.ftth.network.domain.model.vo.SplitterRatio
 import java.util.UUID
 
 /**
- * Optical Distribution Point — kotak terminasi di tiang/dinding, splitter tingkat
- * kedua, tempat kabel drop ke rumah pelanggan ditarik.
+ * Optical Distribution Point — kotak terminasi di tiang/dinding, tempat kabel
+ * drop ke rumah pelanggan ditarik.
  *
  * Simpul paling sibuk di operasional harian: pertanyaan "port mana yang kosong di
  * ODP ini?" dan "siapa saja yang mati kalau ODP ini bermasalah?" bermuara di sini.
+ *
+ * Splitter di dalamnya benda tersendiri (lihat [Splitter]) — biasanya satu modul,
+ * tapi kotak tanpa splitter (murni sambungan lewat) juga ada.
  */
 class Odp private constructor(
     val id: UUID,
@@ -23,7 +25,6 @@ class Odp private constructor(
     location: Coordinate,
     areaId: UUID?,
     odcId: UUID?,
-    splitterRatio: SplitterRatio,
     capacity: Int,
     status: AssetStatus,
 ) {
@@ -42,9 +43,6 @@ class Odp private constructor(
     var odcId: UUID? = odcId
         private set
 
-    var splitterRatio: SplitterRatio = splitterRatio
-        private set
-
     var capacity: Int = capacity
         private set
 
@@ -56,7 +54,6 @@ class Odp private constructor(
         address: String?,
         location: Coordinate,
         areaId: UUID?,
-        splitterRatio: SplitterRatio,
         capacity: Int,
         status: AssetStatus,
     ) {
@@ -64,7 +61,6 @@ class Odp private constructor(
         this.address = AssetNaming.address(address)
         this.location = location
         this.areaId = areaId
-        this.splitterRatio = splitterRatio
         this.capacity = validateCapacity(capacity)
         this.status = status
     }
@@ -104,6 +100,7 @@ class Odp private constructor(
     companion object {
         const val MAX_CAPACITY = 256
 
+        @Suppress("LongParameterList")
         fun create(
             tenantId: UUID,
             code: String,
@@ -112,7 +109,6 @@ class Odp private constructor(
             location: Coordinate,
             areaId: UUID?,
             odcId: UUID?,
-            splitterRatio: SplitterRatio,
             capacity: Int,
             status: AssetStatus = AssetStatus.ACTIVE,
         ): Odp = Odp(
@@ -124,7 +120,6 @@ class Odp private constructor(
             location = location,
             areaId = areaId,
             odcId = odcId,
-            splitterRatio = splitterRatio,
             capacity = validateCapacity(capacity),
             status = status,
         )
@@ -139,10 +134,9 @@ class Odp private constructor(
             location: Coordinate,
             areaId: UUID?,
             odcId: UUID?,
-            splitterRatio: SplitterRatio,
             capacity: Int,
             status: AssetStatus,
-        ): Odp = Odp(id, tenantId, code, name, address, location, areaId, odcId, splitterRatio, capacity, status)
+        ): Odp = Odp(id, tenantId, code, name, address, location, areaId, odcId, capacity, status)
 
         private fun validateCapacity(capacity: Int): Int {
             if (capacity !in 1..MAX_CAPACITY) {

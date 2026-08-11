@@ -49,6 +49,20 @@ interface FiberConnectionRepository {
      */
     fun countUsedPortsOfNode(kind: ConnectionPointKind, nodeId: UUID): Long
 
+    /**
+     * NOMOR port yang terpakai di tiap simpul, bukan sekadar jumlahnya — yang
+     * ditanya di depan kabinet adalah "kaki mana yang masih kosong", dan jumlah
+     * saja tak menjawabnya begitu ada kaki yang dilepas di tengah.
+     */
+    fun usedPortNumbersOfNodes(kind: ConnectionPointKind, nodeIds: Set<UUID>): Map<UUID, Set<Int>>
+
+    /**
+     * Simpul yang titik TAK-BERNOMOR-nya sudah tersambung, mis. input splitter.
+     * Terpisah dari [usedPortNumbersOfNodes] karena titik semacam itu memang tak
+     * punya nomor untuk dikumpulkan.
+     */
+    fun nodesWithPoint(kind: ConnectionPointKind, nodeIds: Set<UUID>): Set<UUID>
+
     /** Versi banyak-simpul, satu query untuk satu halaman daftar. */
     fun countUsedPortsOfNodes(kind: ConnectionPointKind, nodeIds: Set<UUID>): Map<UUID, Long>
 

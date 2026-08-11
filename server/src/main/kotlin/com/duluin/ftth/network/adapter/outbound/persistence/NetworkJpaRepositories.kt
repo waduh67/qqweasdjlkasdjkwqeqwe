@@ -102,6 +102,12 @@ interface OdpJpaRepository : JpaRepository<OdpJpaEntity, UUID>, JpaSpecification
     fun findIdsByOdcIds(@Param("odcIds") odcIds: Collection<UUID>): Set<UUID>
 }
 
+interface SplitterJpaRepository : JpaRepository<SplitterJpaEntity, UUID> {
+    fun findByOwnerIdOrderByCode(ownerId: UUID): List<SplitterJpaEntity>
+    fun findByOwnerIdInOrderByCode(ownerIds: Collection<UUID>): List<SplitterJpaEntity>
+    fun existsByOwnerIdAndCode(ownerId: UUID, code: String): Boolean
+}
+
 interface JointBoxJpaRepository :
     JpaRepository<JointBoxJpaEntity, UUID>,
     JpaSpecificationExecutor<JointBoxJpaEntity> {
@@ -148,6 +154,12 @@ interface FiberConnectionEndJpaRepository : JpaRepository<FiberConnectionEndJpaE
     fun findByPointKindAndNodeId(
         pointKind: ConnectionPointKind,
         nodeId: UUID,
+    ): List<FiberConnectionEndJpaEntity>
+
+    /** Versi banyak-simpul; dipakai layar splitter untuk mengisi "kaki mana yang terpakai". */
+    fun findByPointKindAndNodeIdIn(
+        pointKind: ConnectionPointKind,
+        nodeIds: Collection<UUID>,
     ): List<FiberConnectionEndJpaEntity>
 
     @Query(

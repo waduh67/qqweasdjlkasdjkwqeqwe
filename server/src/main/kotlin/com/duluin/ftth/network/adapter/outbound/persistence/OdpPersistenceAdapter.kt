@@ -9,7 +9,6 @@ import com.duluin.ftth.common.infrastructure.persistence.toPageable
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.network.application.port.outbound.OdpRepository
 import com.duluin.ftth.network.domain.model.Odp
-import com.duluin.ftth.network.domain.model.vo.SplitterRatio
 import org.springframework.stereotype.Component
 import java.util.UUID
 
@@ -25,7 +24,6 @@ class OdpPersistenceAdapter(
             location = Geometries.point(odp.location)
             areaId = odp.areaId
             odcId = odp.odcId
-            splitterRatio = odp.splitterRatio.label
             capacity = odp.capacity
             status = odp.status
         } ?: OdpJpaEntity(
@@ -36,7 +34,6 @@ class OdpPersistenceAdapter(
             location = Geometries.point(odp.location),
             areaId = odp.areaId,
             odcId = odp.odcId,
-            splitterRatio = odp.splitterRatio.label,
             capacity = odp.capacity,
             status = odp.status,
         )
@@ -82,7 +79,6 @@ internal fun OdpJpaEntity.toDomain(): Odp = Odp.rehydrate(
     location = location.toCoordinate(),
     areaId = areaId,
     odcId = odcId,
-    splitterRatio = SplitterRatio.of(splitterRatio),
     capacity = capacity,
     status = status,
 )

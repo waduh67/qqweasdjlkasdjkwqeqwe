@@ -3,12 +3,15 @@ package com.duluin.ftth.network.domain.model
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.domain.geo.Coordinate
-import com.duluin.ftth.network.domain.model.vo.SplitterRatio
 import java.util.UUID
 
 /**
- * Optical Distribution Cabinet — kabinet splitter tingkat pertama. Menerima satu
- * feeder dari sebuah PON port dan memecahnya ke sejumlah ODP.
+ * Optical Distribution Cabinet — kabinet distribusi tingkat pertama. Menerima
+ * feeder dari PON port dan meneruskannya ke sejumlah ODP.
+ *
+ * Splitter di dalamnya BUKAN atribut kabinet melainkan benda tersendiri (lihat
+ * [Splitter]): satu kabinet berisi beberapa modul dengan rasio berbeda, dan ada
+ * pula yang murni cross-connect tanpa splitter sama sekali.
  */
 class Odc private constructor(
     val id: UUID,
@@ -19,7 +22,6 @@ class Odc private constructor(
     location: Coordinate,
     areaId: UUID?,
     ponPortId: UUID?,
-    splitterRatio: SplitterRatio,
     capacity: Int,
     status: AssetStatus,
 ) {
@@ -38,9 +40,6 @@ class Odc private constructor(
     var ponPortId: UUID? = ponPortId
         private set
 
-    var splitterRatio: SplitterRatio = splitterRatio
-        private set
-
     var capacity: Int = capacity
         private set
 
@@ -52,7 +51,6 @@ class Odc private constructor(
         address: String?,
         location: Coordinate,
         areaId: UUID?,
-        splitterRatio: SplitterRatio,
         capacity: Int,
         status: AssetStatus,
     ) {
@@ -60,7 +58,6 @@ class Odc private constructor(
         this.address = AssetNaming.address(address)
         this.location = location
         this.areaId = areaId
-        this.splitterRatio = splitterRatio
         this.capacity = validateCapacity(capacity)
         this.status = status
     }
@@ -81,6 +78,7 @@ class Odc private constructor(
     companion object {
         const val MAX_CAPACITY = 1_024
 
+        @Suppress("LongParameterList")
         fun create(
             tenantId: UUID,
             code: String,
@@ -89,7 +87,6 @@ class Odc private constructor(
             location: Coordinate,
             areaId: UUID?,
             ponPortId: UUID?,
-            splitterRatio: SplitterRatio,
             capacity: Int,
             status: AssetStatus = AssetStatus.ACTIVE,
         ): Odc = Odc(
@@ -101,7 +98,6 @@ class Odc private constructor(
             location = location,
             areaId = areaId,
             ponPortId = ponPortId,
-            splitterRatio = splitterRatio,
             capacity = validateCapacity(capacity),
             status = status,
         )
@@ -116,10 +112,9 @@ class Odc private constructor(
             location: Coordinate,
             areaId: UUID?,
             ponPortId: UUID?,
-            splitterRatio: SplitterRatio,
             capacity: Int,
             status: AssetStatus,
-        ): Odc = Odc(id, tenantId, code, name, address, location, areaId, ponPortId, splitterRatio, capacity, status)
+        ): Odc = Odc(id, tenantId, code, name, address, location, areaId, ponPortId, capacity, status)
 
         private fun validateCapacity(capacity: Int): Int {
             if (capacity !in 1..MAX_CAPACITY) {

@@ -21,6 +21,7 @@ import com.duluin.ftth.network.application.port.outbound.OdcRepository
 import com.duluin.ftth.network.application.port.outbound.OdfRepository
 import com.duluin.ftth.network.application.port.outbound.OdpRepository
 import com.duluin.ftth.network.application.port.outbound.PonPortRepository
+import com.duluin.ftth.network.application.port.outbound.SplitterRepository
 import com.duluin.ftth.network.domain.model.Cable
 import com.duluin.ftth.network.domain.model.CableCore
 import com.duluin.ftth.network.domain.model.ClosureKind
@@ -30,6 +31,7 @@ import com.duluin.ftth.network.domain.model.CoreStatus
 import com.duluin.ftth.network.domain.model.FiberConnection
 import com.duluin.ftth.network.domain.model.OdfPortSide
 import com.duluin.ftth.network.domain.model.PonPort
+import com.duluin.ftth.network.domain.model.Splitter
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -54,6 +56,7 @@ class FiberConnectionService(
     private val jointBoxRepository: JointBoxRepository,
     private val odfRepository: OdfRepository,
     private val ponPortRepository: PonPortRepository,
+    private val splitters: SplitterRepository,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
 ) : ManageFiberConnectionUseCase {
@@ -143,19 +146,18 @@ class FiberConnectionService(
         ConnectionPointKind.CORE -> validateCore(point, closure)
 
         ConnectionPointKind.SPLITTER_IN -> {
-            requireSplitter(closure)
-            requireOwnNode(point, closure)
+            requireSplitterOf(point, closure)
             assertFree(point, closure)
             null
         }
 
         ConnectionPointKind.SPLITTER_OUT -> {
-            requireSplitter(closure)
-            requireOwnNode(point, closure)
+            val splitter = requireSplitterOf(point, closure)
             val leg = point.portNumber ?: 0
-            if (leg !in 1..closure.splitterLegs) {
+            if (!splitter.hasLeg(leg)) {
                 throw ValidationException(
-                    "Kaki splitter $leg di luar kapasitas ${closure.code} (1-${closure.splitterLegs})",
+                    "Kaki $leg di luar splitter ${splitter.code} ${closure.code} " +
+                        "yang rasionya ${splitter.ratio.label} (1-${splitter.legCount})",
                 )
             }
             assertFree(point, closure)
@@ -290,28 +292,28 @@ class FiberConnectionService(
     }
 
     /**
-     * Joint box tak berisi splitter — di dalamnya cuma tray dan sambungan serat ke
-     * serat. Menolaknya di sini, bukan lewat "kapasitas 0", supaya pesannya
-     * menerangkan bendanya dan bukan angkanya.
+     * Modul splitter yang benar-benar ada DI DALAM kotak yang sedang dibuka.
+     *
+     * Sebuah kabinet bisa berisi beberapa modul dengan rasio berbeda, jadi titik
+     * sambungnya menunjuk splitter — bukan kabinetnya. Dua penolakan di sini:
+     * kotak yang memang tak pernah berisi splitter (joint box, ODF: isinya cuma
+     * tray dan sambungan serat ke serat), dan modul milik kabinet sebelah yang
+     * ikut terbawa karena salah pilih di layar.
      */
-    private fun requireSplitter(closure: Closure) {
+    private fun requireSplitterOf(point: ConnectionPoint, closure: Closure): Splitter {
         if (!closure.kind.hasSplitter) {
             throw ValidationException(
                 "${closure.code} adalah ${closure.kind.label} yang tak berisi splitter — " +
                     "di dalamnya serat disambung langsung ke serat",
             )
         }
-    }
-
-    /**
-     * Splitter belum jadi entitas sendiri (potongan E), jadi untuk sekarang satu
-     * simpul = satu splitter dan id-nya adalah id simpul itu. Menerima id lain
-     * berarti menyimpan rujukan ke splitter yang tak ada.
-     */
-    private fun requireOwnNode(point: ConnectionPoint, closure: Closure) {
-        if (point.nodeId != closure.id) {
-            throw ValidationException("${point.kind.label} yang ditunjuk bukan milik ${closure.code}")
+        val splitterId = requireNotNull(point.nodeId)
+        val splitter = splitters.findById(splitterId)
+            ?: throw NotFoundException("Splitter $splitterId tidak ditemukan")
+        if (splitter.ownerId != closure.id) {
+            throw ValidationException("Splitter ${splitter.code} bukan isi ${closure.code}")
         }
+        return splitter
     }
 
     private fun assertFree(point: ConnectionPoint, closure: Closure) {
@@ -360,29 +362,29 @@ class FiberConnectionService(
         val code: String,
         val name: String,
         val location: Coordinate,
-        /** Jumlah kaki keluar splitter di simpul ini; 0 untuk closure tanpa splitter. */
-        val splitterLegs: Int,
         /**
          * Batas jumlah sambungan yang muat di dalam kotaknya; null = tak dibatasi.
-         * ODC/ODP dibatasi oleh kaki splitternya, joint box oleh jumlah tray.
+         * Joint box dibatasi jumlah tray, ODF jumlah sisi adapter. ODC/ODP tak
+         * dibatasi di sini — yang membatasinya adalah kaki modul splitternya
+         * masing-masing, dan itu diperiksa saat kaki ditunjuk.
          */
         val spliceCapacity: Int? = null,
     )
 
     private fun requireClosure(kind: ClosureKind, id: UUID): Closure = when (kind) {
         ClosureKind.ODC -> odcRepository.findById(id)?.let {
-            Closure(kind, it.id, it.code, it.name, it.location, it.capacity)
+            Closure(kind, it.id, it.code, it.name, it.location)
         }
         ClosureKind.ODP -> odpRepository.findById(id)?.let {
-            Closure(kind, it.id, it.code, it.name, it.location, it.capacity)
+            Closure(kind, it.id, it.code, it.name, it.location)
         }
         ClosureKind.JOINT_BOX -> jointBoxRepository.findById(id)?.let {
-            Closure(kind, it.id, it.code, it.name, it.location, splitterLegs = 0, spliceCapacity = it.capacity)
+            Closure(kind, it.id, it.code, it.name, it.location, spliceCapacity = it.capacity)
         }
         // Batas rak dihitung dari SISI, bukan port: tiap adapter memang menampung
         // dua sambungan, belakang dan depan.
         ClosureKind.ODF -> odfRepository.findById(id)?.let {
-            Closure(kind, it.id, it.code, it.name, it.location, splitterLegs = 0, spliceCapacity = it.portCount * 2)
+            Closure(kind, it.id, it.code, it.name, it.location, spliceCapacity = it.portCount * 2)
         }
     } ?: throw NotFoundException("${kind.label} $id tidak ditemukan")
 
