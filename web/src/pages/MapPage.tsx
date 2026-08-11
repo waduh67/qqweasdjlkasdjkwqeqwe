@@ -18,6 +18,7 @@ import type {
   ImpactedOverlay,
   JointBoxView,
   NodeKind,
+  OdfView,
   OdpInspection,
   OltView,
   OnuView,
@@ -40,7 +41,7 @@ import { useCan } from '../auth/useCan'
 import { Checkbox, MessageBar, MessageBarBody } from '@fluentui/react-components'
 import { Button, Segmented, SelectField, StatusBadge, TextField } from '@/components/atoms'
 import { CommandBar, Ess, type CommandAction } from '@/components/molecules'
-import { AccessNodeDetail, Blade, CableCoreManager, type AccessNodeKind } from '@/components/organisms'
+import { AccessNodeDetail, Blade, CableCoreManager, OdfDetail, type AccessNodeKind } from '@/components/organisms'
 import { CustomerDetailBlade } from './CustomerDetailPage'
 import { OltDetail } from './OltDetailPage'
 import type { MapFocus } from '@/map/mapFocus'
@@ -189,6 +190,13 @@ const OLT_COLOR = '#4f9dff'
  * sambung yang bisa menclok di tingkat mana saja.
  */
 const JOINT_BOX_COLOR = '#f472b6'
+
+/**
+ * Warna marker ODF — indigo, sengaja duduk PERSIS di antara ungu site dan biru OLT.
+ * Itu memang tempatnya dalam cerita: rak berdiri di dalam POP dan jadi pendamping
+ * pasif OLT, tempat kabel luar berhenti sebelum patchcord melanjutkannya ke perangkat.
+ */
+const ODF_COLOR = '#818cf8'
 
 /** Warna simpul terdampak (OLT/ODC/ODP/pelanggan) saat alarm hidup — merah/amber, sama palet kabel. */
 const NODE_CRITICAL_COLOR = '#ff3b5c'
@@ -392,6 +400,10 @@ const FUTURISTIC_STYLE: any = {
     ...glowCircle('joint_box', 'joint_box', JOINT_BOX_COLOR, 5),
     ...glowCircle('odp', 'odp', '#fbbf24', 6),
     ...glowCircle('odc', 'odc', '#22d3ee', 8),
+    // Rak digambar tepat DI BAWAH OLT dan sedikit lebih kecil: keduanya berdiri di
+    // titik yang nyaris sama (satu POP), dan yang dicari orang saat menyapu peta
+    // adalah perangkat aktifnya — rak baru dicari setelah OLT-nya ketemu.
+    ...glowCircle('odf', 'odf', ODF_COLOR, 7),
     ...glowCircle('olt', 'olt', OLT_COLOR, 9),
     ...glowCircle('site', 'site', '#b47cff', 10),
     {
@@ -414,6 +426,17 @@ const FUTURISTIC_STYLE: any = {
       minzoom: 15,
       layout: { 'text-field': ['get', 'code'], 'text-size': 11, 'text-offset': [0, 1.5] },
       paint: { 'text-color': '#dbeafe', 'text-halo-color': '#0a0e14', 'text-halo-width': 1.5 },
+    },
+    {
+      // Label rak menyusul label OLT (z14, bukan z13): saat keduanya bertumpuk di
+      // satu POP, nama perangkatnya yang lebih dulu perlu terbaca.
+      id: 'odf-label',
+      type: 'symbol',
+      source: 'ftth',
+      'source-layer': 'odf',
+      minzoom: 14,
+      layout: { 'text-field': ['get', 'code'], 'text-size': 11, 'text-offset': [0, 1.5] },
+      paint: { 'text-color': '#c7d2fe', 'text-halo-color': '#0a0e14', 'text-halo-width': 1.5 },
     },
     {
       id: 'olt-label',
@@ -464,7 +487,7 @@ function watermarkTile(label: string): string {
 }
 
 /** Perangkat titik yang bisa ditaruh langsung di peta (punya koordinat sendiri). */
-type AssetKind = 'SITE' | 'OLT' | 'ODC' | 'ODP' | 'JOINT_BOX'
+type AssetKind = 'SITE' | 'OLT' | 'ODF' | 'ODC' | 'ODP' | 'JOINT_BOX'
 
 /**
  * Ambang gerak-isyarat menu "tambah di sini". 500 ms mengikuti tekan-lama bawaan
@@ -479,7 +502,7 @@ const CLICK_SWALLOW_MS = 500
 
 /** Perkiraan ukuran kartu menu (lihat `.map-menu`), dipakai menahannya di dalam kanvas. */
 const MENU_WIDTH_PX = 224
-const MENU_HEIGHT_PX = 210
+const MENU_HEIGHT_PX = 248
 
 /** Endapan ketikan pencarian: satu kueri per jeda mengetik, bukan per huruf. */
 const SEARCH_DEBOUNCE_MS = 300
@@ -487,6 +510,7 @@ const SEARCH_DEBOUNCE_MS = 300
 const ASSET_META: Record<AssetKind, { label: string; createPerm: string; deletePerm: string; endpoint: string }> = {
   SITE: { label: 'Site/POP', createPerm: 'network.site.create', deletePerm: 'network.site.delete', endpoint: '/api/sites' },
   OLT: { label: 'OLT', createPerm: 'network.olt.create', deletePerm: 'network.olt.delete', endpoint: '/api/olts' },
+  ODF: { label: 'ODF (rak POP)', createPerm: 'network.odf.create', deletePerm: 'network.odf.delete', endpoint: '/api/odfs' },
   ODC: { label: 'ODC', createPerm: 'network.odc.create', deletePerm: 'network.odc.delete', endpoint: '/api/odcs' },
   ODP: { label: 'ODP', createPerm: 'network.odp.create', deletePerm: 'network.odp.delete', endpoint: '/api/odps' },
   JOINT_BOX: {
@@ -518,6 +542,7 @@ const MOVABLE_NODES: Record<string, { plural: string; perm: string; label: strin
   // yang dipakai controllernya, dan URL yang meleset satu huruf gagal tanpa suara.
   joint_box: { plural: 'joint-boxes', perm: 'network.jointbox.update', label: 'Joint box', color: JOINT_BOX_COLOR },
   odc: { plural: 'odcs', perm: 'network.odc.update', label: 'ODC', color: '#22d3ee' },
+  odf: { plural: 'odfs', perm: 'network.odf.update', label: 'ODF', color: ODF_COLOR },
   olt: { plural: 'olts', perm: 'network.olt.update', label: 'OLT', color: OLT_COLOR },
   site: { plural: 'sites', perm: 'network.site.update', label: 'Site', color: '#b47cff' },
 }
@@ -569,6 +594,12 @@ export function MapPage() {
   // kotak sambung tak punya hilir sendiri untuk diringkas — isinya justru sambungan
   // core, dan itu urusan layar sambungan. Jadi panelnya cukup memakai view CRUD-nya.
   const [jointBox, setJointBox] = useState<JointBoxView | null>(null)
+  // Rak POP yang panelnya terbuka. Sama seperti joint box, tak ada endpoint inspeksi
+  // GIS: yang menarik dari sebuah rak bukan "siapa di hilirnya" melainkan berapa
+  // adapter yang masih kosong — dan itu sudah ada di view CRUD-nya.
+  const [odf, setOdf] = useState<OdfView | null>(null)
+  // Detail rak sebagai blade penuh di atas peta, sejalan dengan detail OLT/ODC/ODP.
+  const [detailOdfId, setDetailOdfId] = useState<string | null>(null)
   // Heatmap utilisasi port: menyala/mati lewat toggle, mewarnai ODP menurut pemakaian.
   const [heatmap, setHeatmap] = useState(false)
   const [editing, setEditing] = useState<CableView | null>(null)
@@ -623,6 +654,7 @@ export function MapPage() {
     setSiteInsp(null)
     setOltInsp(null)
     setJointBox(null)
+    setOdf(null)
     setMovable(null)
     setSettingsOpen(false)
   }, [])
@@ -1002,6 +1034,25 @@ export function MapPage() {
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail joint box'))
     })
 
+    // Klik ODF (mode idle) → panel rak: berapa adapter yang masih kosong. Sama seperti
+    // joint box, tak lewat endpoint GIS — rak tak punya "hilir" sendiri, ia cuma tempat
+    // kabel luar berhenti dan patchcord melanjutkannya.
+    instance.on('click', 'odf', (event) => {
+      if (!acceptsClick()) return
+      const feature = event.features?.[0]
+      const id = feature?.properties?.id as string | undefined
+      if (!id) return
+      const at = pointAt(feature)
+      api
+        .get<OdfView>(`/api/odfs/${id}`)
+        .then((o) => {
+          clearPanels()
+          setOdf(o)
+          if (at) setMovable({ layer: 'odf', id, code: codeOf(feature), ...at })
+        })
+        .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail ODF'))
+    })
+
     // Klik kabel (mode idle) → tampilkan detail + aksi edit/hapus.
     instance.on('click', 'cable', (event) => {
       if (!acceptsClick()) return
@@ -1018,7 +1069,7 @@ export function MapPage() {
         .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat detail kabel'))
     })
 
-    for (const layer of ['odp', 'odc', 'olt', 'cable', 'customer', 'site', 'joint_box']) {
+    for (const layer of ['odp', 'odc', 'olt', 'cable', 'customer', 'site', 'joint_box', 'odf']) {
       instance.on('mouseenter', layer, () => {
         if (modeRef.current === 'idle') instance.getCanvas().style.cursor = 'pointer'
       })
@@ -1234,6 +1285,10 @@ export function MapPage() {
           const jb = await api.get<JointBoxView>(`/api/joint-boxes/${id}`)
           return { code: jb.code, apply: () => setJointBox(jb) }
         }
+        case 'odf': {
+          const o = await api.get<OdfView>(`/api/odfs/${id}`)
+          return { code: o.code, apply: () => setOdf(o) }
+        }
       }
     }
 
@@ -1448,9 +1503,11 @@ export function MapPage() {
     siteInsp ||
     oltInsp ||
     jointBox ||
+    odf ||
     placeAt ||
     detailCustomerId ||
     detailOltId ||
+    detailOdfId ||
     detailNode ||
     toolState?.complete
   )
@@ -1585,6 +1642,7 @@ export function MapPage() {
     setSiteInsp(null)
     setOltInsp(null)
     setJointBox(null)
+    setOdf(null)
     setMovable(null)
     modeRef.current = 'drag'
     hideNodeDot(target.layer, target.id)
@@ -2024,6 +2082,19 @@ export function MapPage() {
             onClose={() => setJointBox(null)}
           />
         )}
+        {odf && (
+          <OdfPanel
+            odf={odf}
+            canView={can('network.odf.view')}
+            canDelete={can('network.odf.delete')}
+            canRelocate={can('network.odf.update')}
+            onRelocate={startRelocate}
+            onDrawCable={cableOrigin ? startDrawFrom : undefined}
+            onOpenDetail={() => setDetailOdfId(odf.id)}
+            onDelete={() => void deleteAsset('ODF', odf.id, odf.code, () => setOdf(null))}
+            onClose={() => setOdf(null)}
+          />
+        )}
         {selected && (
           <OdpPanel
             inspection={selected}
@@ -2116,6 +2187,42 @@ export function MapPage() {
               setOltInsp(null)
               refreshTiles()
             }}
+          />
+        )}
+      </Blade>
+
+      {/* Detail ODF — sama persis dengan yang dibuka dari tab Inventory. Tak ikut blade
+          `detailNode` di bawah karena rak bukan simpul akses: bentuk datanya beda (POP
+          induk & port dua sisi, bukan alamat & rasio splitter). */}
+      <Blade
+        open={detailOdfId != null}
+        title="Detail ODF"
+        size="full"
+        className="blade-detail"
+        onClose={() => setDetailOdfId(null)}
+      >
+        {detailOdfId && (
+          <OdfDetail
+            key={detailOdfId}
+            odfId={detailOdfId}
+            onChanged={() => {
+              refreshTiles()
+              // Panel rak di belakang blade ditarik ulang supaya nama/jumlah portnya
+              // tak tertinggal versi lama tepat di sebelah detail yang sudah benar.
+              api
+                .get<OdfView>(`/api/odfs/${detailOdfId}`)
+                .then(setOdf)
+                .catch(() => {
+                  /* panelnya cuma basi, bukan rusak */
+                })
+            }}
+            onDeleted={() => {
+              setDetailOdfId(null)
+              setOdf(null)
+              refreshTiles()
+            }}
+            // Petanya sudah terbentang di belakang, penandanya pun tersorot.
+            onShowOnMap={() => setDetailOdfId(null)}
           />
         )}
       </Blade>
@@ -2246,8 +2353,8 @@ function MapSettingsDrawer({
         <section className="stack" style={{ gap: '0.4rem' }}>
           <h4 className="map-settings-title">Petunjuk</h4>
           <p className="muted" style={{ margin: 0, fontSize: '0.78rem', lineHeight: 1.45 }}>
-            <strong>Klik kanan</strong> (atau tahan di layar sentuh) pada peta untuk menambah site, OLT, ODC,
-            ODP, atau menaruh pelanggan yang belum berkoordinat.
+            <strong>Klik kanan</strong> (atau tahan di layar sentuh) pada peta untuk menambah site, OLT, ODF,
+            ODC, ODP, joint box, atau menaruh pelanggan yang belum berkoordinat.
             <br />
             <strong>Tarik kabel</strong> dimulai dari panel perangkatnya: klik perangkatnya dulu, lalu tekan
             &quot;Tarik kabel&quot;.
@@ -2570,11 +2677,14 @@ function SaveCablePanel({
   const customerDrop = cableType === 'DROP' && fromKind === 'ODP' && toKind === 'CUSTOMER'
 
   /**
-   * Simpul yang memang tak punya port keluaran: POP tak melalui PON port, dan joint
-   * box menyambung serat langsung (tak ada kaki yang dicolok). Daftar port kosong di
-   * sini SAH — beda dari OLT tanpa PON port, yang kosongnya berarti belum disiapkan.
+   * Simpul yang memang tak punya port keluaran: POP tak melalui PON port, joint box
+   * menyambung serat langsung (tak ada kaki yang dicolok), dan ODF — portnya bernomor,
+   * tapi yang dicolok di sana patchcord, bukan ujung kabel outdoor; kabel yang
+   * berangkat dari rak menempel lewat sambungan di sisi belakang port. Daftar port
+   * kosong di sini SAH — beda dari OLT tanpa PON port, yang kosongnya berarti
+   * perangkatnya belum disiapkan.
    */
-  const portlessSource = fromKind === 'SITE' || fromKind === 'JOINT_BOX'
+  const portlessSource = fromKind === 'SITE' || fromKind === 'JOINT_BOX' || fromKind === 'ODF'
 
   // Feeder/distribusi: pilih port KELUARAN sumber (PON port OLT / kaki ODC / slot
   // ODP). Feeder dari SITE tak punya PON port → daftar kosong, port tak diperlukan.
@@ -2723,9 +2833,11 @@ function SaveCablePanel({
                   ? 'Feeder dari POP tak melalui PON port — langsung tersambung.'
                   : fromKind === 'JOINT_BOX'
                     ? 'Joint box tak punya port — serat masuk disambung langsung ke serat keluar, jadi pasangan core-nya diatur di sambungan kotak ini, bukan di sini.'
-                    : fromKind === 'OLT'
-                      ? 'OLT ini belum punya PON port. Tambahkan dulu di detail OLT (tab PON Port) sebelum menarik feeder.'
-                      : 'Tak ada port keluaran di simpul ini — tak bisa menarik kabel dari sini.'}
+                    : fromKind === 'ODF'
+                      ? 'Port ODF memang bernomor, tapi yang dicolok di sana patchcord — bukan ujung kabel luar. Kabel ini menempel lewat sambungan di sisi belakang portnya, diatur di layar sambungan rak.'
+                      : fromKind === 'OLT'
+                        ? 'OLT ini belum punya PON port. Tambahkan dulu di detail OLT (tab PON Port) sebelum menarik feeder.'
+                        : 'Tak ada port keluaran di simpul ini — tak bisa menarik kabel dari sini.'}
               </span>
             ) : (
               <>
@@ -4037,6 +4149,103 @@ function JointBoxPanel({
   )
 }
 
+/**
+ * Panel ODF saat markernya diklik.
+ *
+ * Pertanyaan lapangan di depan sebuah rak cuma satu: "masih ada adapter kosong buat
+ * kabel yang baru datang?". Karena itu yang digambar port TERPAKAI, bukan jumlah
+ * sambungan — satu port memuat dua sambungan (belakang ke core kabel luar, depan ke
+ * patchcord OLT), jadi bilah berbasis sambungan akan berbohong dua kali lipat penuh.
+ */
+function OdfPanel({
+  odf,
+  canView,
+  canDelete,
+  canRelocate,
+  onRelocate,
+  onDrawCable,
+  onOpenDetail,
+  onDelete,
+  onClose,
+}: {
+  odf: OdfView
+  canView: boolean
+  canDelete: boolean
+  canRelocate: boolean
+  onRelocate: () => void
+  /** Kosong = ujung awal kabel tak boleh dari sini (tak berizin / titiknya tak diketahui). */
+  onDrawCable?: () => void
+  onOpenDetail: () => void
+  onDelete: () => void
+  onClose: () => void
+}) {
+  const primary: CommandAction | undefined = canView
+    ? { key: 'detail', label: 'Buka detail', icon: <IconMonitor size={15} />, onClick: onOpenDetail }
+    : undefined
+  const actions: CommandAction[] = []
+  if (onDrawCable) actions.push(cableAction(onDrawCable))
+  if (canRelocate) actions.push(relocateAction(onRelocate))
+  if (canDelete) actions.push(deleteAction('Hapus', onDelete, odf.spliceCount > 0))
+
+  const used = odf.portCount > 0 ? Math.min(100, (odf.usedPortCount / odf.portCount) * 100) : 0
+  const free = Math.max(0, odf.portCount - odf.usedPortCount)
+
+  return (
+    <aside className="map-panel blade">
+      <BladeHead title={odf.code} subtitle={`ODF · ${odf.name}`} onClose={onClose} />
+      {(primary || actions.length > 0) && <CommandBar primary={primary} actions={actions} />}
+
+      <div className="blade-body stack" style={{ gap: '0.9rem' }}>
+        <dl className="essentials">
+          <Ess label="Status">
+            <StatusBadge status={odf.status} />
+          </Ess>
+          <Ess label="POP">{odf.siteName}</Ess>
+          <Ess label="Port terpakai">
+            <span className="tnum">
+              {odf.usedPortCount}/{odf.portCount}
+            </span>
+          </Ess>
+          <Ess label="Sambungan">
+            <span className="tnum">{odf.spliceCount}</span>
+          </Ess>
+        </dl>
+
+        {/* Bilah adapter kosong: angka yang menentukan boleh-tidaknya kabel berikutnya
+            diterima di rak ini, jadi ia digambar, bukan cuma ditulis. */}
+        <div className="stack" style={{ gap: '0.3rem' }}>
+          <div
+            style={{
+              height: 6,
+              borderRadius: 999,
+              background: 'var(--surface-3, rgba(255,255,255,0.08))',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{ width: `${used}%`, height: '100%', background: ODF_COLOR }} />
+          </div>
+          <span className="muted" style={{ fontSize: '0.78rem' }}>
+            {free === 0
+              ? 'Rak penuh — kabel berikutnya butuh rak atau panel tambahan.'
+              : `Sisa ${free} port kosong.`}
+          </span>
+        </div>
+
+        <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
+          Kabel luar berhenti di sini: seratnya dilas ke pigtail di sisi BELAKANG port, lalu
+          patchcord dari sisi DEPAN-nya yang mencolok ke port PON. Patchcord itu sambungan,
+          bukan kabel bergeometri — ia tak digambar di peta.
+        </p>
+        {odf.spliceCount > 0 && canDelete && (
+          <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
+            Tak bisa dihapus selama masih ada sambungan di dalamnya — lepas dulu isinya.
+          </p>
+        )}
+      </div>
+    </aside>
+  )
+}
+
 /** Rasio splitter yang lazim dipakai — cukup untuk sebagian besar pemasangan. */
 const SPLITTER_RATIOS = ['1:2', '1:4', '1:8', '1:16', '1:32', '1:64']
 
@@ -4046,7 +4255,8 @@ const VENDORS = ['ZTE', 'HUAWEI', 'FIBERHOME', 'NOKIA', 'HSGQ', 'OTHER']
 /**
  * Form isian perangkat titik baru, muncul setelah lokasi diklik di peta. Field
  * menyesuaikan jenis: Site cukup alamat, ODC/ODP butuh rasio splitter & kapasitas,
- * joint box butuh jumlah tray & kapasitas sambungan (di dalamnya tak ada splitter).
+ * joint box butuh jumlah tray & kapasitas sambungan (di dalamnya tak ada splitter),
+ * ODF butuh POP induk & jumlah port (rak tak punya alamat sendiri — alamatnya POP-nya).
  * Uplink (ODC→OLT feeder, ODP→ODC distribusi) TIDAK diisi di sini — ditetapkan
  * dengan menarik kabel di peta agar fisik = logis dan sumber kebenarannya tunggal.
  * Koordinat diambil dari titik klik (ditampilkan, tak bisa diubah manual di sini).
@@ -4073,7 +4283,9 @@ function PlaceAssetForm({
   // dipakai untuk menyambung haspel di lapangan.
   const [trayCount, setTrayCount] = useState(2)
   const [capacity, setCapacity] = useState(kind === 'ODP' ? 8 : kind === 'JOINT_BOX' ? 24 : 64)
-  // OLT: site induk (wajib), identitas perangkat, dan kesiapan SNMP.
+  // ODF: 24 port = satu panel 1U penuh, ukuran rak POP kecil yang paling lazim.
+  const [portCount, setPortCount] = useState(24)
+  // OLT & ODF: site induk (wajib), lalu identitas perangkat & kesiapan SNMP (OLT saja).
   const [siteId, setSiteId] = useState('')
   const [sites, setSites] = useState<SiteView[]>([])
   const [vendor, setVendor] = useState('ZTE')
@@ -4082,9 +4294,10 @@ function PlaceAssetForm({
   const [snmpCommunity, setSnmpCommunity] = useState('')
   const [snmpPort, setSnmpPort] = useState('161')
 
-  // Daftar site untuk memilih tempat berdirinya OLT. Wajib dipilih sebelum simpan.
+  // Daftar site untuk memilih tempat berdirinya OLT/ODF. Wajib dipilih sebelum simpan:
+  // keduanya perangkat DALAM ruangan — mereka selalu berdiri di dalam sebuah POP.
   useEffect(() => {
-    if (kind !== 'OLT') return
+    if (kind !== 'OLT' && kind !== 'ODF') return
     let alive = true
     api
       .get<PageResponse<SiteView>>('/api/sites?size=100')
@@ -4114,6 +4327,14 @@ function PlaceAssetForm({
       onSave(base)
       return
     }
+    // Rak tak beralamat sendiri: ia berdiri di dalam POP, dan alamat POP itulah
+    // alamatnya. Yang menentukan ukurannya jumlah port — tiap port berkepala dua.
+    if (kind === 'ODF') {
+      base.siteId = siteId
+      base.portCount = portCount
+      onSave(base)
+      return
+    }
     if (address.trim()) base.address = address.trim()
     if (kind === 'SITE') {
       onSave(base)
@@ -4131,8 +4352,9 @@ function PlaceAssetForm({
     onSave(base)
   }
 
-  // OLT wajib pilih site; aset lain hanya butuh kode + nama.
-  const canSubmit = code.trim() !== '' && name.trim() !== '' && (kind !== 'OLT' || siteId !== '')
+  // OLT & ODF wajib pilih site; aset lain hanya butuh kode + nama.
+  const needsSite = kind === 'OLT' || kind === 'ODF'
+  const canSubmit = code.trim() !== '' && name.trim() !== '' && (!needsSite || siteId !== '')
 
   return (
     <aside className="map-panel blade">
@@ -4201,7 +4423,32 @@ function PlaceAssetForm({
             </div>
           </>
         )}
-        {kind !== 'SITE' && kind !== 'OLT' && (
+        {kind === 'ODF' && (
+          <>
+            <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+              Rak terminasi di dalam POP: tempat kabel luar BERHENTI. Seratnya dilas ke pigtail
+              di sisi belakang port, lalu patchcord dari sisi depannya yang mencolok ke port PON —
+              jadi kabel lapangan tak pernah menempel langsung ke badan OLT.
+            </p>
+            <SelectField label="POP induk" value={siteId} onChange={(_, data) => setSiteId(data.value)}>
+              <option value="">— pilih POP —</option>
+              {sites.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.code} — {s.name}
+                </option>
+              ))}
+            </SelectField>
+            <TextField
+              label="Jumlah port"
+              type="number"
+              min={1}
+              max={1152}
+              value={String(portCount)}
+              onChange={(_, data) => setPortCount(Number(data.value))}
+            />
+          </>
+        )}
+        {kind !== 'SITE' && kind !== 'OLT' && kind !== 'ODF' && (
           <TextField
             label={<>Alamat <span className="muted">(opsional)</span></>}
             value={address}
@@ -4397,6 +4644,7 @@ function Legend() {
   const items: Array<[string, string]> = [
     ['#b47cff', 'Site/POP'],
     [OLT_COLOR, 'OLT'],
+    [ODF_COLOR, 'ODF'],
     ['#22d3ee', 'ODC'],
     ['#fbbf24', 'ODP'],
     [JOINT_BOX_COLOR, 'Joint box'],

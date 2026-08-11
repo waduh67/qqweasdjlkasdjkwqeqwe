@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
-import type { AssetStatus, JointBoxView, OdcView, OdpView, OltView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
+import type { AssetStatus, JointBoxView, OdcView, OdfView, OdpView, OltView, SiteView, SnmpVersion, WebProtocol } from '../api/network'
 import { MapPin, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Checkbox } from '@fluentui/react-components'
 import { useCan } from '../auth/useCan'
-import { AccessNodeDetail, AssetDetailPanel, DataTable, type Column, type RowAction } from '@/components/organisms'
+import { AccessNodeDetail, AssetDetailPanel, DataTable, OdfDetail, type Column, type RowAction } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
 import { LocationPicker } from '@/components/organisms'
@@ -27,11 +27,14 @@ import { mapFocusState } from '@/map/mapFocus'
  * yang seragam dengan bilah pencarian & filter di atasnya.
  */
 
-type Tab = 'sites' | 'olts' | 'odcs' | 'odps' | 'joint_boxes'
+type Tab = 'sites' | 'olts' | 'odfs' | 'odcs' | 'odps' | 'joint_boxes'
 
 const TABS: Array<{ key: Tab; label: string; permission: string }> = [
   { key: 'sites', label: 'Site / POP', permission: 'network.site.view' },
   { key: 'olts', label: 'OLT', permission: 'network.olt.view' },
+  // Sesudah OLT, sebelum ODC: itu memang tempat rak dalam alur hulu→hilir — kabel
+  // distribusi berangkat dari ODF, bukan dari badan OLT.
+  { key: 'odfs', label: 'ODF', permission: 'network.odf.view' },
   { key: 'odcs', label: 'ODC', permission: 'network.odc.view' },
   { key: 'odps', label: 'ODP', permission: 'network.odp.view' },
   // Paling kanan karena joint box tak ikut urutan hulu-ke-hilir itu: ia bisa
@@ -91,11 +94,12 @@ export function InventoryPage() {
     <div className="stack" style={{ gap: '1rem' }}>
       <PageHeader
         title="Inventory Jaringan"
-        subtitle="Kelola site, OLT, ODC, ODP, dan joint box — dari POP sampai kotak terminasi."
+        subtitle="Kelola site, OLT, ODF, ODC, ODP, dan joint box — dari rak POP sampai kotak terminasi."
       />
       <Tabs tabs={visible} active={tab} onChange={setTab} />
       {tab === 'sites' && <SitesTab />}
       {tab === 'olts' && <OltsTab />}
+      {tab === 'odfs' && <OdfsTab />}
       {tab === 'odcs' && <OdcsTab />}
       {tab === 'odps' && <OdpsTab />}
       {tab === 'joint_boxes' && <JointBoxesTab />}
@@ -818,6 +822,201 @@ function OltsTab() {
           <EmptyState
             title={query || statusFilter ? 'Tidak ada OLT yang cocok' : 'Belum ada OLT'}
             hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Tambahkan OLT di atas sebuah site untuk mulai membangun.'}
+            icon={<IconInventory size={32} />}
+          />
+        }
+      />
+    </div>
+  )
+}
+
+/**
+ * Daftar ODF — rak terminasi di dalam POP, tempat kabel luar berhenti.
+ *
+ * Kolomnya sengaja tak menyalin tab ODC/ODP: rak tak beralamat sendiri (alamatnya
+ * alamat POP-nya), jadi yang menggantikan kolom Alamat adalah POP induknya. Dua kolom
+ * angkanya menjawab dua pertanyaan berbeda — "masih ada adapter kosong?" (port
+ * terpakai) dan "seberapa sibuk isinya?" (sambungan) — sebab satu port memuat dua
+ * sambungan, belakang & depan, jadi keduanya tak bisa saling menyimpulkan.
+ */
+function OdfsTab() {
+  const { can } = useCan()
+  const confirm = useConfirm()
+  const { items, loading, reload, run } = useList<OdfView>('/api/odfs')
+  const navigate = useNavigate()
+  const [openOdf, setOpenOdf] = useState<OdfView | null>(null)
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
+  const canDelete = can('network.odf.delete')
+  const canMap = can('gis.map.view')
+
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return items.filter(
+      (o) => matchesQuery([o.code, o.name, o.siteName], q) && (!statusFilter || o.status === statusFilter),
+    )
+  }, [items, query, statusFilter])
+
+  useEffect(() => {
+    if (!openOdf) return
+    setOpenOdf(items.find((it) => it.id === openOdf.id) ?? null)
+  }, [items, openOdf])
+
+  const removeOdf = (o: OdfView) =>
+    void (async () => {
+      if (
+        await confirm({
+          title: 'Hapus ODF',
+          message: `Hapus ODF ${o.code}?`,
+          confirmLabel: 'Hapus',
+          danger: true,
+        })
+      ) {
+        setOpenOdf(null)
+        void run(() => api.del(`/api/odfs/${o.id}`))
+      }
+    })()
+
+  const deleteSelected = async () => {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    if (
+      !(await confirm({
+        title: 'Hapus ODF',
+        message: `Hapus ${ids.length} ODF terpilih?`,
+        confirmLabel: 'Hapus',
+        danger: true,
+      }))
+    )
+      return
+    setDeleting(true)
+    await run(async () => {
+      await Promise.all(ids.map((id) => api.del(`/api/odfs/${id}`)))
+      setSelected(new Set())
+    })
+    setDeleting(false)
+  }
+
+  const columns: Column<OdfView>[] = [
+    {
+      key: 'code',
+      header: 'Kode',
+      sortValue: (o) => o.code,
+      cell: (o) => (
+        <div className="stack" style={{ gap: '0.15rem' }}>
+          <strong>{o.code}</strong>
+          <span className="muted" style={{ fontSize: '0.8rem' }}>{o.name}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'site',
+      header: 'POP',
+      sortValue: (o) => o.siteName ?? '',
+      cell: (o) => <span className="muted">{o.siteName ?? '—'}</span>,
+    },
+    {
+      key: 'port',
+      header: 'Port',
+      align: 'right',
+      // Diurut menurut SISA port kosong, bukan jumlah terpakai: yang dicari orang
+      // saat mengurut kolom ini adalah rak yang hampir penuh — itulah yang menentukan
+      // kabel berikutnya boleh mendarat di sini atau harus cari rak lain.
+      sortValue: (o) => o.portCount - o.usedPortCount,
+      cell: (o) => (
+        <span className="tnum">
+          {o.usedPortCount}/{o.portCount}
+        </span>
+      ),
+    },
+    {
+      key: 'splice',
+      header: 'Sambungan',
+      align: 'right',
+      sortValue: (o) => o.spliceCount,
+      cell: (o) => <span className="tnum">{o.spliceCount}</span>,
+    },
+    { key: 'status', header: 'Status', sortValue: (o) => o.status, cell: (o) => <StatusBadge status={o.status} /> },
+  ]
+
+  const rowActions = (o: OdfView): RowAction[] => [
+    { key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdf(o) },
+  ]
+
+  // Sama seperti aset titik lain: rak lahir dari titik di peta, jadi di sini cuma pintasan.
+  const primary: CommandAction | undefined = can('network.odf.create')
+    ? { key: 'map', label: 'Tambah di peta', icon: <MapPin size={16} />, onClick: () => navigate('/map') }
+    : undefined
+  const actions: CommandAction[] = []
+  if (canDelete)
+    actions.push({
+      key: 'delete',
+      label: 'Hapus',
+      icon: <Trash2 size={16} />,
+      onClick: () => void deleteSelected(),
+      disabled: selected.size === 0 || deleting,
+    })
+  actions.push({
+    key: 'refresh',
+    label: 'Segarkan',
+    icon: <RefreshCw size={16} />,
+    onClick: () => void reload(),
+    dividerBefore: canDelete,
+  })
+
+  return (
+    <div className="stack">
+      <CommandBar primary={primary} actions={actions} />
+
+      <Blade
+        open={openOdf != null}
+        size="full"
+        className="blade-detail"
+        title={openOdf?.code ?? ''}
+        subtitle={openOdf?.name}
+        onClose={() => setOpenOdf(null)}
+      >
+        {openOdf && (
+          <OdfDetail
+            odfId={openOdf.id}
+            onChanged={() => void reload()}
+            onDeleted={() => {
+              setOpenOdf(null)
+              void reload()
+            }}
+            onShowOnMap={canMap ? (focus) => navigate('/map', focus) : undefined}
+          />
+        )}
+      </Blade>
+
+      <Toolbar>
+        <SearchInput value={query} onChange={setQuery} placeholder="Cari kode, nama, atau POP…" />
+        <SelectField value={statusFilter} onChange={(_, data) => setStatusFilter(data.value as AssetStatus | '')}>
+          {ASSET_STATUS_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </SelectField>
+      </Toolbar>
+
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(o) => o.id}
+        onRowClick={(o) => setOpenOdf(o)}
+        loading={loading}
+        initialSort={{ key: 'code', dir: 'asc' }}
+        selection={canDelete ? { selected, onChange: setSelected } : undefined}
+        rowActions={canDelete ? rowActions : undefined}
+        empty={
+          <EmptyState
+            title={query || statusFilter ? 'Tidak ada ODF yang cocok' : 'Belum ada ODF'}
+            hint={
+              query || statusFilter
+                ? 'Coba ubah kata kunci atau filter.'
+                : 'Tambahkan ODF lewat Peta Jaringan — klik titik POP-nya, lalu pilih "ODF (rak POP)".'
+            }
             icon={<IconInventory size={32} />}
           />
         }

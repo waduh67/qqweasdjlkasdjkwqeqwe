@@ -19,7 +19,7 @@ import type {
  * jalur dan "siapa terdampak kalau putus" bergantung padanya.
  */
 
-export type NodeKind = 'SITE' | 'OLT' | 'ODC' | 'ODP' | 'JOINT_BOX' | 'CUSTOMER'
+export type NodeKind = 'SITE' | 'OLT' | 'ODF' | 'ODC' | 'ODP' | 'JOINT_BOX' | 'CUSTOMER'
 export type CableType = 'FEEDER' | 'DISTRIBUTION' | 'DROP'
 
 export interface SnappedDevice {
@@ -72,10 +72,11 @@ export interface CableTool {
 }
 
 /** Lapisan perangkat yang bisa jadi sasaran snap. Urutan = prioritas saat bertumpuk. */
-const DEVICE_LAYERS = ['customer', 'joint_box', 'odp', 'odc', 'olt', 'site']
+const DEVICE_LAYERS = ['customer', 'joint_box', 'odp', 'odc', 'odf', 'olt', 'site']
 const LAYER_KIND: Record<string, NodeKind> = {
   site: 'SITE',
   olt: 'OLT',
+  odf: 'ODF',
   odc: 'ODC',
   odp: 'ODP',
   joint_box: 'JOINT_BOX',
@@ -95,9 +96,13 @@ export function layerNodeKind(layer: string): NodeKind | null {
  * kelonggaran: kabel dijual per haspel, jadi setiap jalur yang lebih panjang dari satu
  * haspel PASTI terpotong dan disambung di tengahnya — potongan itu tetap kabel
  * feeder/distribusi/drop yang sama.
+ *
+ * ODF ada di kedua sisi FEEDER: di POP asal ia titik berangkat yang benar (kabel luar
+ * berhenti di rak, bukan di badan OLT), di POP tujuan ia titik berhentinya. Ujung
+ * SITE/OLT tetap diterima — rak memang opsional bagi ISP yang belum memasangnya.
  */
 const ENDPOINT_RULES: Array<{ type: CableType; from: NodeKind[]; to: NodeKind[] }> = [
-  { type: 'FEEDER', from: ['SITE', 'OLT', 'JOINT_BOX'], to: ['ODC', 'JOINT_BOX'] },
+  { type: 'FEEDER', from: ['SITE', 'OLT', 'ODF', 'JOINT_BOX'], to: ['ODC', 'ODF', 'JOINT_BOX'] },
   { type: 'DISTRIBUTION', from: ['ODC', 'ODP', 'JOINT_BOX'], to: ['ODP', 'JOINT_BOX'] },
   { type: 'DROP', from: ['ODP', 'JOINT_BOX'], to: ['CUSTOMER', 'JOINT_BOX'] },
 ]

@@ -57,6 +57,31 @@ export interface PonPortView {
   odcCount: number
 }
 
+/**
+ * Rak terminasi di dalam POP — tempat kabel luar BERHENTI.
+ *
+ * Serat dari lapangan tak pernah menempel langsung ke badan OLT: ia mati di rak,
+ * dilas ke pigtail di sisi BELAKANG sebuah port, lalu sehelai patchcord pendek dari
+ * sisi DEPAN port itu yang mencolok ke PON port. Karena itu satu port punya dua sisi,
+ * dan dua angka di bawah menjawab dua pertanyaan berbeda: [usedPortCount] "masih ada
+ * adapter kosong?", [spliceCount] "berapa banyak sambungan di dalamnya".
+ */
+export interface OdfView {
+  id: string
+  code: string
+  name: string
+  siteId: string
+  siteName: string | null
+  location: Coordinate
+  areaId: string | null
+  portCount: number
+  /** Port yang salah satu sisinya sudah tersentuh — satu port dihitung sekali. */
+  usedPortCount: number
+  /** Sambungan di dalam rak; sisi belakang & depan dihitung sendiri-sendiri. */
+  spliceCount: number
+  status: AssetStatus
+}
+
 export interface OdcView {
   id: string
   code: string
@@ -340,7 +365,7 @@ export interface SubscriberNeighbors {
 }
 
 export type CableType = 'FEEDER' | 'DISTRIBUTION' | 'DROP'
-export type NodeKind = 'SITE' | 'OLT' | 'ODC' | 'ODP' | 'JOINT_BOX' | 'CUSTOMER'
+export type NodeKind = 'SITE' | 'OLT' | 'ODF' | 'ODC' | 'ODP' | 'JOINT_BOX' | 'CUSTOMER'
 
 /**
  * Cara kabel terpasang di lapangan. Bukan hiasan data: ia yang menentukan siapa
