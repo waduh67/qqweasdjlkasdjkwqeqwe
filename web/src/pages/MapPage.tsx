@@ -49,7 +49,7 @@ import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { Checkbox, MessageBar, MessageBarBody } from '@fluentui/react-components'
 import { Button, Segmented, SelectField, StatusBadge, TextField } from '@/components/atoms'
-import { CommandBar, Ess, type CommandAction } from '@/components/molecules'
+import { BladeHead, CommandBar, Ess, type CommandAction } from '@/components/molecules'
 import {
   AccessNodeDetail,
   Blade,
@@ -59,6 +59,7 @@ import {
   ReleaseDropDialog,
   type AccessNodeKind,
 } from '@/components/organisms'
+import { cableAction, deleteAction, relocateAction } from '@/components/organisms/map'
 import { CustomerDetailBlade } from './CustomerDetailPage'
 import { OltDetail } from './OltDetailPage'
 import type { MapFocus } from '@/map/mapFocus'
@@ -128,7 +129,6 @@ import {
   IconPower,
   IconRoute,
   IconSettings,
-  IconTrash,
   IconWorkOrder,
 } from '@/components/atoms/icons'
 import { createCableTool, legalCableTypes, type CableTool, type ToolState } from '../map/cableTool'
@@ -2293,68 +2293,10 @@ function MapToolbar({ onLocate }: { onLocate: () => void }) {
   )
 }
 
-/**
- * Ujung awal kabel dari simpul yang panelnya terbuka — `null` = tombol "Tarik kabel"
- * tak usah muncul. Aturan "siapa boleh jadi awal" dipinjam dari alat kabelnya sendiri
- * supaya panel tak pernah menawarkan awalan yang nanti ditolak alatnya.
- */
 /* ---------- Primitif blade panel peta ----------
    Semua panel peta memakai kerangka yang sama — kepala lengket, command bar datar,
    badan berisi daftar properti "Essentials" — supaya klik ODP, OLT, ODC, site, atau
    pelanggan menghasilkan bentuk yang seragam, persis blade Azure Portal. */
-
-/**
- * Kepala blade: judul (kode aset), baris jenis sumber daya, dan tombol tutup.
- * Judul dipotong elipsis, bukan dibungkus, agar tinggi kepala tetap dan command
- * bar di bawahnya tak naik-turun mengikuti panjang nama.
- */
-function BladeHead({
-  title,
-  subtitle,
-  onClose,
-  closeLabel = 'Tutup',
-}: {
-  title: string
-  subtitle?: string
-  onClose: () => void
-  closeLabel?: string
-}) {
-  return (
-    <header className="blade-head">
-      <div className="spread">
-        <div style={{ minWidth: 0 }}>
-          <h3 className="blade-title">{title}</h3>
-          {subtitle && <span className="blade-sub">{subtitle}</span>}
-        </div>
-        <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label={closeLabel} />
-      </div>
-    </header>
-  )
-}
-
-
-/**
- * Aksi "pindahkan lokasi" — sama persis di setiap panel aset, jadi dirakit sekali.
- * Labelnya dipendekkan jadi "Pindahkan": blade cuma selebar 28rem dan konteks
- * "lokasi" sudah jelas dari petanya sendiri.
- */
-function relocateAction(onClick: () => void, dividerBefore = false): CommandAction {
-  return { key: 'relocate', label: 'Pindahkan', icon: <IconCrosshair size={15} />, onClick, dividerBefore }
-}
-
-/**
- * Aksi "Tarik kabel" di panel perangkat: ujung awalnya perangkat ini, tinggal klik
- * titik belok lalu perangkat tujuan. Ditaruh paling depan karena menarik kabel jauh
- * lebih sering dilakukan dari sebuah simpul ketimbang memindahkannya.
- */
-function cableAction(onClick: () => void): CommandAction {
-  return { key: 'cable', label: 'Tarik kabel', icon: <IconRoute size={15} />, onClick }
-}
-
-/** Aksi hapus aset. Datar seperti "Hapus" di command bar halaman tabel, bukan tombol merah. */
-function deleteAction(label: string, onClick: () => void, disabled = false): CommandAction {
-  return { key: 'delete', label, icon: <IconTrash size={15} />, onClick, disabled }
-}
 
 /**
  * Sepasang dropdown "fisik jalur", dipakai form kabel baru maupun panel kabel
