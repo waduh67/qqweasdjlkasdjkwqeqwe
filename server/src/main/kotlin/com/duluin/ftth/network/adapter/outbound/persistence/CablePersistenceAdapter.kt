@@ -28,6 +28,7 @@ class CablePersistenceAdapter(
 
     override fun save(cable: Cable): Cable {
         val entity = jpa.findById(cable.id).orElse(null)?.apply {
+            code = cable.code
             name = cable.name
             cableType = cable.cableType
             coreCount = cable.coreCount

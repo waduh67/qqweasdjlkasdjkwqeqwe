@@ -173,7 +173,7 @@ enum class CableOwnership(val label: String) {
 class Cable private constructor(
     val id: UUID,
     val tenantId: UUID,
-    val code: String,
+    code: String,
     name: String,
     cableType: CableType,
     coreCount: Int,
@@ -184,6 +184,15 @@ class Cable private constructor(
     installation: CableInstallation?,
     ownership: CableOwnership,
 ) {
+    /**
+     * Kode yang tertulis di label selubung. Boleh diganti belakangan: ruas yang terlanjur
+     * berkode buatan sistem harus bisa dirapikan ke penomoran perusahaan tanpa menggambar
+     * ulang jalurnya — dan sebaliknya, kabel yang diberi kode salah ketik tak perlu dihapus.
+     * Yang tak pernah berubah cuma [id]; kode itu label, bukan pengenal.
+     */
+    var code: String = code
+        private set
+
     var name: String = name
         private set
 
@@ -217,6 +226,7 @@ class Cable private constructor(
 
     @Suppress("LongParameterList")
     fun update(
+        code: String,
         name: String,
         cableType: CableType,
         coreCount: Int,
@@ -228,6 +238,7 @@ class Cable private constructor(
         ownership: CableOwnership,
     ) {
         cableType.assertEndpoints(from, to)
+        this.code = AssetNaming.code(code, "kabel")
         this.name = AssetNaming.name(name, "kabel")
         this.cableType = cableType
         this.coreCount = validateCoreCount(coreCount)

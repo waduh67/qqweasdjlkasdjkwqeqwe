@@ -155,7 +155,7 @@ data class JointBoxRequest(
 )
 
 data class CableRequest(
-    /** Opsional — kosong = backend auto-generate UUIDv7 (tak diisi dari frontend). */
+    /** Opsional — kosong = backend merakitnya dari kode kedua ujung (create) / kode lama dipertahankan (update). */
     @field:Size(max = 40) val code: String? = null,
     @field:NotBlank @field:Size(max = 150) val name: String,
     val cableType: CableType,

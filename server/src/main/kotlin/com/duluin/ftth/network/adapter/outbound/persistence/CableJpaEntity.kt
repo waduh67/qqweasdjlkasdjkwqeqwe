@@ -19,7 +19,13 @@ import java.util.UUID
 class CableJpaEntity(
     id: UUID,
 
-    @Column(nullable = false, length = 40, updatable = false)
+    /**
+     * Dulu `updatable = false` — kode dianggap pengenal seumur hidup. Itu tak bertahan
+     * di lapangan: ruas yang terlanjur berkode buatan sistem harus bisa dirapikan ke
+     * penomoran perusahaan, dan salah ketik pada label selubung tak semestinya menuntut
+     * kabelnya digambar ulang. Yang jadi pengenal tetap hanya `id`; kode itu label.
+     */
+    @Column(nullable = false, length = 40)
     var code: String,
 
     @Column(nullable = false, length = 150)

@@ -27,6 +27,7 @@ import com.duluin.ftth.network.application.port.outbound.PonPortRepository
 import com.duluin.ftth.network.application.port.outbound.SiteRepository
 import com.duluin.ftth.network.domain.model.Cable
 import com.duluin.ftth.network.domain.model.CableCore
+import com.duluin.ftth.network.domain.model.CableNaming
 import com.duluin.ftth.network.domain.model.CableType
 import com.duluin.ftth.network.domain.model.CoreStatus
 import com.duluin.ftth.network.domain.model.NetworkEndpoint
@@ -92,14 +93,15 @@ class CableService(
     }
 
     override fun create(command: SaveCableCommand): CableView {
-        // Kode kabel dibuat backend: UUIDv7 (terurut waktu) bila frontend tak mengirim
-        // kode. UUID praktis tak mungkin tabrakan; existsByCode tetap jadi pengaman.
-        val code = command.code?.trim()?.uppercase()?.takeIf { it.isNotBlank() }
-            ?: UuidV7.generate().toString().uppercase()
-        if (cableRepository.existsByCode(code)) throw ConflictException("Kode kabel '$code' sudah dipakai")
         val from = command.fromEndpoint()
         val to = command.toEndpoint()
         assertNodesExist(from.ref, to.ref)
+        // Kode yang dikirim operator dipakai apa adanya — termasuk bila ternyata bentrok,
+        // sebab menggeser diam-diam kode yang DIKETIK orang berarti label di selubung dan
+        // label di layar berbeda. Yang dibuat backend (kolomnya dikosongkan) boleh digeser.
+        val code = command.code?.trim()?.uppercase()?.takeIf { it.isNotBlank() }
+            ?.also { if (cableRepository.existsByCode(it)) throw ConflictException("Kode kabel '$it' sudah dipakai") }
+            ?: autoCode(command.cableType, from, to)
         validateSourcePort(from, excludeCableId = null)
         val cable = cableRepository.save(
             Cable.create(
@@ -133,8 +135,16 @@ class CableService(
         val to = command.toEndpoint()
         assertNodesExist(from.ref, to.ref)
         validateSourcePort(from, excludeCableId = id)
+        // Ganti kode saat menyunting = merapikan label, bukan memindahkan kabel. Kosong
+        // berarti "biarkan" — klien lama yang tak mengenal kolom ini tak boleh menghapus
+        // kode yang sudah tertulis di selubung hanya karena ia tak mengirimkannya.
+        val code = command.code?.trim()?.uppercase()?.takeIf { it.isNotBlank() } ?: cable.code
+        if (code != cable.code && cableRepository.existsByCode(code)) {
+            throw ConflictException("Kode kabel '$code' sudah dipakai")
+        }
         val previousCoreCount = cable.coreCount
         cable.update(
+            code = code,
             name = command.name,
             cableType = command.cableType,
             coreCount = command.coreCount,
@@ -413,6 +423,48 @@ class CableService(
         }
     }
 
+    /**
+     * Kode kabel bawaan, dirakit dari kode kedua ujungnya — lihat [CableNaming] untuk alasan
+     * bentuknya. Dulu di sini berdiri UUID mentah: unik, tapi mustahil diucapkan lewat radio
+     * dan tak dikenali siapa pun yang membuka meja sambung.
+     *
+     * Bentrok diselesaikan dengan akhiran angka, bukan ditolak: dua selubung antara sepasang
+     * kotak yang sama itu wajar (rute utara & rute selatan), dan menggagalkan penyimpanan
+     * kabel yang sudah tergambar cuma karena tabrakan nama buatan sistem itu tak masuk akal.
+     */
+    private fun autoCode(type: CableType, from: NetworkEndpoint, to: NetworkEndpoint): String {
+        val fromCode = nodeCode(from.ref)
+        val toCode = nodeCode(to.ref)
+        val base = when {
+            fromCode != null && toCode != null -> CableNaming.between(type, fromCode, toCode)
+            // Drop ke pelanggan: kode pelanggan milik module customer dan tak ditarik ke sini
+            // (lihat [assertNodesExist]). Slot ODP asalnya jadi pembeda yang justru lebih
+            // berguna di lapangan — "drop dari kotak itu, port tujuh".
+            fromCode != null -> CableNaming.anchored(type, fromCode, from.portNumber?.let { "P$it" } ?: tail())
+            toCode != null -> CableNaming.anchored(type, toCode, tail())
+            else -> CableNaming.anonymous(type, tail())
+        }
+        if (!cableRepository.existsByCode(base)) return base
+        (2..MAX_CODE_VARIANTS).forEach { n ->
+            val candidate = CableNaming.withSuffix(base, n)
+            if (!cableRepository.existsByCode(candidate)) return candidate
+        }
+        return CableNaming.anonymous(type, tail())
+    }
+
+    /** Potongan pengenal acak, cukup pendek untuk dieja tapi praktis tak berulang. */
+    private fun tail(): String = UuidV7.generate().toString().takeLast(6).uppercase()
+
+    private fun nodeCode(ref: NetworkNodeRef): String? = when (ref.kind) {
+        NetworkNodeKind.SITE -> siteRepository.findById(ref.id)?.code
+        NetworkNodeKind.OLT -> oltRepository.findById(ref.id)?.code
+        NetworkNodeKind.ODC -> odcRepository.findById(ref.id)?.code
+        NetworkNodeKind.ODP -> odpRepository.findById(ref.id)?.code
+        NetworkNodeKind.JOINT_BOX -> jointBoxRepository.findById(ref.id)?.code
+        NetworkNodeKind.ODF -> odfRepository.findById(ref.id)?.code
+        NetworkNodeKind.CUSTOMER -> null
+    }
+
     private fun requireCable(id: UUID): Cable =
         cableRepository.findById(id) ?: throw NotFoundException("Kabel $id tidak ditemukan")
 
@@ -452,6 +504,15 @@ class CableService(
             NetworkNodeKind.ODP -> "Slot $port"
             else -> "Port $port"
         }
+    }
+
+    private companion object {
+        /**
+         * Sebanyak apa akhiran angka dicoba sebelum menyerah ke pengenal acak. Sepuluh ruas
+         * antara sepasang kotak yang sama sudah jauh melewati apa pun yang masuk akal di
+         * lapangan; kalau sampai ke sana, penamaannya memang bukan lagi urusan sistem.
+         */
+        const val MAX_CODE_VARIANTS = 10
     }
 }
 

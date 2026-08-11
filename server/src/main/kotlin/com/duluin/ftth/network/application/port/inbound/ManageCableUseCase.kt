@@ -68,7 +68,11 @@ data class DropReleaseView(
 )
 
 data class SaveCableCommand(
-    /** Null/kosong = backend auto-generate UUIDv7 saat create. */
+    /**
+     * Kode di label selubung. Kosong saat create = backend merakitnya dari kode kedua ujung
+     * (mis. `DIST-ODC-JKT-001-JB-001`), lengkap dengan akhiran angka bila sudah ada yang
+     * memakainya. Kosong saat update = kode yang sekarang dipertahankan, bukan dihapus.
+     */
     val code: String?,
     val name: String,
     val cableType: CableType,
