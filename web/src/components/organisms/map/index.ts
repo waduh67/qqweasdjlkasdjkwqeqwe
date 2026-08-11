@@ -7,5 +7,10 @@
  * lain memakainya lalu menyeret MapLibre ke bundel yang tak membutuhkannya.
  */
 export { cableAction, deleteAction, relocateAction } from './mapActions'
+export { AffectedRow } from './AffectedRow'
+export { CableCauses } from './CableCauses'
+export { CableCutPanel } from './CableCutPanel'
+export { CablePanel } from './CablePanel'
 export { CablePhysicalFields } from './CablePhysicalFields'
+export { OtdrSection } from './OtdrSection'
 export { SaveCablePanel } from './SaveCablePanel'

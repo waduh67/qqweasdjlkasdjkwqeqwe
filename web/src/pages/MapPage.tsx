@@ -4,10 +4,8 @@ import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from 'maplibr
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { api, ApiError, tokenStore } from '../api/client'
 import type {
-  AffectedCustomer,
   BlastRadiusView,
   CableCutView,
-  CableEnd,
   CableInstallation,
   CableOwnership,
   CableType,
@@ -19,9 +17,6 @@ import type {
   OdfView,
   OdpInspection,
   OltView,
-  OtdrEventType,
-  OtdrLandmark,
-  OtdrPlacement,
   OtdrTest,
   RecordOtdrTest,
   SiteInspection,
@@ -45,14 +40,13 @@ import { BladeHead, CommandBar, Ess, type CommandAction } from '@/components/mol
 import {
   AccessNodeDetail,
   Blade,
-  CableChainNotice,
-  CableCoreManager,
   OdfDetail,
-  ReleaseDropDialog,
   type AccessNodeKind,
 } from '@/components/organisms'
 import {
-  CablePhysicalFields,
+  AffectedRow,
+  CableCutPanel,
+  CablePanel,
   SaveCablePanel,
   cableAction,
   deleteAction,
@@ -103,7 +97,6 @@ import {
   type AssetKind,
 } from '@/map/mapAssets'
 import {
-  CODE_MAX,
   TYPE_LABEL,
   cableOriginOf,
   cableRequestBody,
@@ -112,12 +105,9 @@ import {
 } from '@/map/cableFormat'
 import { useConfirm, useToast } from '@/system'
 import {
-  IconCheck,
   IconChevronDown,
-  IconClose,
   IconCrosshair,
   IconCustomers,
-  IconFlask,
   IconKey,
   IconMonitor,
   IconPlus,
@@ -135,17 +125,6 @@ import { createCableTool, type CableTool, type ToolState } from '../map/cableToo
  * yang tergambar tidak membebani browser — inilah yang membuat peta tetap ringan
  * di puluhan ribu titik. Klik sebuah ODP untuk melihat siapa yang tersambung.
  */
-
-/** Label peristiwa OTDR dalam bahasa Indonesia — dipakai daftar & dropdown form. */
-const OTDR_EVENT_LABEL: Record<OtdrEventType, string> = {
-  BREAK: 'Putus',
-  HIGH_LOSS: 'Redaman tinggi',
-  REFLECTION: 'Pantulan',
-  SPLICE: 'Sambungan',
-  END: 'Ujung serat',
-}
-
-const OTDR_EVENT_OPTIONS = Object.entries(OTDR_EVENT_LABEL) as [OtdrEventType, string][]
 
 
 export function MapPage() {
@@ -2293,535 +2272,6 @@ function MapToolbar({ onLocate }: { onLocate: () => void }) {
    badan berisi daftar properti "Essentials" — supaya klik ODP, OLT, ODC, site, atau
    pelanggan menghasilkan bentuk yang seragam, persis blade Azure Portal. */
 
-function CablePanel({
-  cable,
-  causes,
-  canEdit,
-  canDelete,
-  canSimulate,
-  canReleaseDrop,
-  canViewOtdr,
-  canRecordOtdr,
-  otdrTests,
-  onRecordOtdr,
-  onDeleteOtdr,
-  onFocusOtdr,
-  onEdit,
-  onDelete,
-  onSimulate,
-  onReleased,
-  onReuse,
-  onPhysicalChange,
-  onRename,
-  onClose,
-}: {
-  cable: CableView
-  causes: ImpactCause[]
-  canEdit: boolean
-  canDelete: boolean
-  canSimulate: boolean
-  canReleaseDrop: boolean
-  canViewOtdr: boolean
-  canRecordOtdr: boolean
-  otdrTests: OtdrTest[] | null
-  onRecordOtdr: (form: RecordOtdrTest) => void
-  onDeleteOtdr: (testId: string) => void
-  onFocusOtdr: (test: OtdrTest) => void
-  onEdit: () => void
-  onDelete: () => void
-  onSimulate: () => void
-  /** Pelanggan sudah dicabut — panel & peta perlu membaca ulang keadaannya. */
-  onReleased: () => void
-  /** Kabel yang tadinya ditinggal dinyatakan siap pakai lagi. */
-  onReuse: () => void
-  /** Simpan seketika; hanya bidang yang disebut yang berubah. */
-  onPhysicalChange: (patch: { installation?: CableInstallation | null; ownership?: CableOwnership }) => void
-  /** Ganti kode di label selubung — jalur perapian kabel lama yang kodenya UUID. */
-  onRename: (code: string) => void
-  onClose: () => void
-}) {
-  // Hanya drop yang punya tombol ini: ruas distribusi menyuapi banyak rumah, dan
-  // "lepas semua" di sana adalah pemadaman satu klaster dengan satu klik. Server
-  // menolaknya juga — tapi tombol yang tak pernah boleh ditekan lebih baik tak
-  // ditawarkan sejak awal.
-  const abandoned = cable.status === 'ABANDONED'
-  const releasable = canReleaseDrop && cable.cableType === 'DROP' && !abandoned
-  const [releasing, setReleasing] = useState(false)
-  // Null = tak sedang diganti. Kode disunting di tempat, bukan lewat "Edit jalur":
-  // merapikan label tak semestinya menyeret rute yang sudah benar ke dalam risiko
-  // tergeser satu titik.
-  const [renaming, setRenaming] = useState<string | null>(null)
-  // Kabel dari versi lama: kodenya UUID hasil generate, mustahil dieja lewat radio.
-  const legacyCode = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(cable.code)
-  // Membebaskan core mengubah isi "Kelola core" yang memuat dirinya sendiri;
-  // menaikkan angka ini memaksanya membaca ulang dari server.
-  const [coreEpoch, setCoreEpoch] = useState(0)
-
-  const primary: CommandAction | undefined = canEdit
-    ? { key: 'edit', label: 'Edit jalur', icon: <IconRoute size={15} />, onClick: onEdit }
-    : undefined
-  const actions: CommandAction[] = []
-  if (releasable)
-    actions.push({
-      key: 'release',
-      label: 'Cabut pelanggan',
-      icon: <IconPower size={15} />,
-      onClick: () => setReleasing(true),
-    })
-  if (abandoned && canEdit)
-    actions.push({ key: 'reuse', label: 'Pakai lagi', icon: <IconCheck size={15} />, onClick: onReuse })
-  if (canSimulate)
-    actions.push({ key: 'simulate', label: 'Simulasi putus', icon: <IconFlask size={15} />, onClick: onSimulate })
-  if (canDelete) actions.push(deleteAction('Hapus', onDelete))
-
-  return (
-    <aside className="map-panel blade">
-      {/* Nama yang memimpin, kode mengekor: nama ditulis sebagai kalimat ("Distribusi
-          ODC-01 → ODP-07"), sedangkan kode dipakai saat menyebut ruas ini ke orang
-          lain. Keduanya disebut di sini supaya panel yang terbuka dari peta langsung
-          cocok dengan kertas yang dipegang teknisi. */}
-      <BladeHead title={cable.name} subtitle={`Kabel ${TYPE_LABEL[cable.cableType]} · ${cable.code}`} onClose={onClose} />
-      {(primary || actions.length > 0) && <CommandBar primary={primary} actions={actions} />}
-
-      <div className="blade-body stack" style={{ gap: '0.9rem' }}>
-        {causes.length > 0 && <CableCauses causes={causes} />}
-
-        {/* Sebelum apa pun yang lain: ruas kotak-ke-kotak wajib menjelaskan
-            dirinya — splitter bertingkat atau selubung yang dipecah. Angka
-            panjang & core di bawahnya baru bisa dipercaya setelah itu terjawab. */}
-        <CableChainNotice cableId={cable.id} fromKind={cable.fromKind} toKind={cable.toKind} />
-
-        {/* Lencana "Ditinggal" saja tak cukup menjelaskan akibatnya: yang perlu
-            diketahui orang yang membuka ruas ini adalah kabelnya masih ada di
-            tiang, tapi tak boleh direncanakan untuk pelanggan baru. */}
-        {abandoned && (
-          <MessageBar intent="info">
-            <MessageBarBody>
-              Kabel ini ditandai ditinggal — seratnya masih tergantung di tiang, tapi tak dihitung sebagai kabel
-              siap pakai. {canEdit && 'Pakai “Pakai lagi” bila rumahnya berlangganan kembali.'}
-            </MessageBarBody>
-          </MessageBar>
-        )}
-
-
-        {/* Kabel warisan: kodenya UUID, dan itu bukan sekadar jelek dipandang —
-            tak ada yang sanggup mengejanya lewat radio ke teknisi di tiang. Yang
-            berhak menyunting ditawari merapikannya di tempat, tanpa menggambar
-            ulang ruasnya (yang berarti membuang meja sambung & riwayat OTDR-nya). */}
-        {legacyCode && canEdit && renaming == null && (
-          <MessageBar intent="warning">
-            <MessageBarBody>
-              Kode ruas ini masih bergaya UUID — tak bisa disebut lewat radio maupun ditulis di
-              label selubung. Ganti jadi sesuatu seperti DIST-ODC-01-ODP-07 lewat “Ubah” di baris
-              Kode; sambungan, core, dan riwayat ukurnya tetap utuh.
-            </MessageBarBody>
-          </MessageBar>
-        )}
-
-        {/* Penyuntingan kode dibentangkan penuh, di luar daftar ringkas: kode bisa
-            sepanjang 40 karakter dan kolom nilai di daftar itu cuma selebar dua
-            kata — mengetik di sana berarti mengetik yang tak terbaca. */}
-        {renaming != null && (
-          <div className="stack" style={{ gap: '0.4rem' }}>
-            <TextField
-              label="Kode kabel"
-              value={renaming}
-              maxLength={CODE_MAX}
-              hint="Yang tertulis di label selubung & disebut lewat radio. Sambungan, core, dan riwayat ukur tak ikut berubah."
-              onChange={(_, data) => setRenaming(data.value)}
-            />
-            <div className="row" style={{ gap: '0.4rem' }}>
-              <Button
-                variant="primary"
-                size="small"
-                onClick={() => {
-                  onRename(renaming)
-                  setRenaming(null)
-                }}
-              >
-                Simpan kode
-              </Button>
-              <Button variant="subtle" size="small" onClick={() => setRenaming(null)}>
-                Batal
-              </Button>
-            </div>
-          </div>
-        )}
-
-        <dl className="essentials">
-          <Ess label="Kode">
-            <span className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-              <span>{cable.code}</span>
-              {canEdit && renaming == null && (
-                <Button variant="subtle" size="small" onClick={() => setRenaming(cable.code)}>
-                  Ubah
-                </Button>
-              )}
-            </span>
-          </Ess>
-          <Ess label="Status">
-            <StatusBadge status={cable.status} />
-          </Ess>
-          <Ess label="Jenis">{TYPE_LABEL[cable.cableType]}</Ess>
-          <Ess label="Jumlah core">{cable.coreCount}</Ess>
-          <Ess label="Panjang">
-            <span className="tnum">{formatLength(cable.lengthMeters)}</span>
-          </Ess>
-          <Ess label="Dari">
-            {cable.fromKind}
-            {cable.fromPortLabel && <span className="muted"> · {cable.fromPortLabel}</span>}
-          </Ess>
-          <Ess label="Ke">
-            {cable.toKind}
-            {cable.toPortNumber != null && <span className="muted"> · port {cable.toPortNumber}</span>}
-          </Ess>
-          <Ess label="Titik jalur">{cable.route.points.length}</Ess>
-          {!canEdit && (
-            <>
-              <Ess label="Cara pasang">
-                {cable.installationLabel ?? <span className="muted">Belum disurvei</span>}
-              </Ess>
-              <Ess label="Kepemilikan">{cable.ownershipLabel}</Ess>
-            </>
-          )}
-        </dl>
-
-        {/* Yang berhak mengubah langsung dapat dropdown-nya — hasil survei sering
-            baru masuk berhari-hari setelah jalurnya digambar, dan tersimpan
-            begitu dipilih tanpa tombol simpan terpisah. */}
-        {canEdit && (
-          <CablePhysicalFields
-            installation={cable.installation ?? ''}
-            ownership={cable.ownership}
-            onInstallation={(installation) => onPhysicalChange({ installation })}
-            onOwnership={(ownership) => onPhysicalChange({ ownership })}
-          />
-        )}
-
-        {/* Core lebih dulu daripada OTDR: inilah yang dibuka orang tiap hari
-            ("core mana yang masih bebas buat pasangan besok"), sedangkan OTDR
-            cuma dibuka saat ada gangguan. */}
-        <div className="stack" style={{ gap: '0.5rem', borderTop: '1px solid var(--line)', paddingTop: '0.6rem' }}>
-          <div className="spread">
-            <strong style={{ fontSize: '0.85rem' }}>Core kabel</strong>
-            <span className="muted" style={{ fontSize: '0.75rem' }}>{cable.coreCount} core</span>
-          </div>
-          <CableCoreManager key={coreEpoch} cableId={cable.id} canEdit={canEdit} />
-        </div>
-
-        {canViewOtdr && (
-          <OtdrSection
-            cable={cable}
-            tests={otdrTests}
-            canRecord={canRecordOtdr}
-            onRecord={onRecordOtdr}
-            onDelete={onDeleteOtdr}
-            onFocus={onFocusOtdr}
-          />
-        )}
-      </div>
-
-      {releasing && (
-        <ReleaseDropDialog
-          cable={cable}
-          onClose={() => setReleasing(false)}
-          onDone={() => {
-            setCoreEpoch((n) => n + 1)
-            onReleased()
-          }}
-        />
-      )}
-    </aside>
-  )
-}
-
-/**
- * Bagian uji OTDR di dalam panel kabel: daftar hasil ukur (tiap baris terbang ke
- * titik perkiraannya di peta bila diklik) plus form catat jarak gangguan. Jarak
- * yang dimasukkan adalah panjang serat dari ujung ukur (hulu/hilir); server
- * memetakannya ke titik di jalur kabel — di sini cukup ditampilkan & diplot.
- */
-function OtdrSection({
-  cable,
-  tests,
-  canRecord,
-  onRecord,
-  onDelete,
-  onFocus,
-}: {
-  cable: CableView
-  tests: OtdrTest[] | null
-  canRecord: boolean
-  onRecord: (form: RecordOtdrTest) => void
-  onDelete: (testId: string) => void
-  onFocus: (test: OtdrTest) => void
-}) {
-  const [distance, setDistance] = useState('')
-  const [measuredFrom, setMeasuredFrom] = useState<CableEnd>('FROM')
-  const [eventType, setEventType] = useState<OtdrEventType>('BREAK')
-  const [lossDb, setLossDb] = useState('')
-  const [note, setNote] = useState('')
-
-  const distanceNum = Number(distance)
-  const canSubmit = distance.trim() !== '' && Number.isFinite(distanceNum) && distanceNum >= 0
-
-  const submit = () => {
-    if (!canSubmit) return
-    const loss = Number(lossDb)
-    onRecord({
-      distanceMeters: distanceNum,
-      measuredFrom,
-      eventType,
-      lossDb: lossDb.trim() !== '' && Number.isFinite(loss) ? loss : null,
-      note: note.trim() || null,
-    })
-    setDistance('')
-    setLossDb('')
-    setNote('')
-  }
-
-  const list = tests ?? []
-  // Patokan kabelnya sama untuk semua uji — ambil dari hasil mana pun yang ada.
-  const landmarks = list[0]?.placement?.landmarks ?? []
-
-  return (
-    <div className="stack" style={{ gap: '0.5rem', borderTop: '1px solid var(--line)', paddingTop: '0.6rem' }}>
-      <div className="spread">
-        <strong style={{ fontSize: '0.85rem' }}>Uji OTDR</strong>
-        <span className="muted" style={{ fontSize: '0.75rem' }}>{list.length} hasil</span>
-      </div>
-
-      {/* Penggarisnya lebih dulu: begitu orang tahu kotak apa saja yang berdiri di
-          sepanjang kabel ini, "di antara JB-03 dan ODP-05" di bawah bisa langsung
-          dicocokkan tanpa membuka layar lain. */}
-      {landmarks.length > 0 && <OtdrLandmarkRuler landmarks={landmarks} />}
-
-      {list.length > 0 && (
-        <div className="stack" style={{ gap: '0.35rem', maxHeight: 240, overflowY: 'auto' }}>
-          {list.map((t) => (
-            <div key={t.id} className="stack" style={{ gap: '0.1rem' }}>
-              <div className="spread" style={{ gap: '0.4rem', alignItems: 'center' }}>
-                <Button
-                  variant="subtle"
-                  style={{ justifyContent: 'flex-start', flex: 1, padding: '0.25rem 0.4rem', fontSize: '0.8rem' }}
-                  onClick={() => onFocus(t)}
-                  disabled={!t.estimatedPoint}
-                  title={t.estimatedPoint ? 'Fokuskan peta ke titik perkiraan' : 'Titik tak bisa dipetakan'}
-                >
-                  <span className="tnum" style={{ fontWeight: 600 }}>{formatLength(t.distanceMeters)}</span>
-                  <span className="badge" style={{ marginLeft: '0.4rem' }}>{OTDR_EVENT_LABEL[t.eventType]}</span>
-                  <span className="muted" style={{ marginLeft: '0.4rem' }}>
-                    dari {t.measuredFrom === 'FROM' ? cable.fromKind : cable.toKind}
-                  </span>
-                  {t.beyondCable && (
-                    <span className="badge" style={{ marginLeft: '0.4rem', color: WHATIF_COLOR, borderColor: WHATIF_COLOR }}>
-                      di luar
-                    </span>
-                  )}
-                </Button>
-                {canRecord && (
-                  <Button variant="subtle" icon={<IconClose size={14} />} onClick={() => onDelete(t.id)} aria-label="Hapus uji" />
-                )}
-              </div>
-              {t.placement && <OtdrPlacementLine placement={t.placement} />}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {tests === null && <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>Memuat…</p>}
-      {tests !== null && list.length === 0 && !canRecord && (
-        <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>Belum ada uji OTDR.</p>
-      )}
-
-      {canRecord && (
-        <div className="stack" style={{ gap: '0.4rem' }}>
-          <div className="row" style={{ gap: '0.4rem' }}>
-            <TextField
-              label="Jarak serat (m)"
-              type="number"
-              min={0}
-              step="0.1"
-              value={distance}
-              onChange={(_, data) => setDistance(data.value)}
-              placeholder="mis. 320"
-              style={{ flex: 1 }}
-            />
-            <SelectField
-              label="Diukur dari"
-              value={measuredFrom}
-              onChange={(_, data) => setMeasuredFrom(data.value as CableEnd)}
-              style={{ width: '8.5rem' }}
-            >
-              <option value="FROM">Hulu ({cable.fromKind})</option>
-              <option value="TO">Hilir ({cable.toKind})</option>
-            </SelectField>
-          </div>
-          <div className="row" style={{ gap: '0.4rem' }}>
-            <SelectField
-              label="Peristiwa"
-              value={eventType}
-              onChange={(_, data) => setEventType(data.value as OtdrEventType)}
-              style={{ flex: 1 }}
-            >
-              {OTDR_EVENT_OPTIONS.map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </SelectField>
-            <TextField
-              label="Redaman (dB)"
-              type="number"
-              min={0}
-              step="0.1"
-              value={lossDb}
-              onChange={(_, data) => setLossDb(data.value)}
-              placeholder="opsional"
-              style={{ width: '8.5rem' }}
-            />
-          </div>
-          <TextField
-            label="Catatan (opsional)"
-            value={note}
-            onChange={(_, data) => setNote(data.value)}
-            placeholder="mis. dekat tiang 12"
-          />
-          <Button variant="primary" disabled={!canSubmit} onClick={submit}>
-            Plot &amp; simpan
-          </Button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/**
- * Terjemahan angka OTDR jadi tempat: "jatuh di JB-03", "di antara JB-03 dan ODP-05".
- *
- * Ini baris yang sebenarnya dicari orang. Jarak dalam meter cuma bisa dipakai
- * setelah dicocokkan ke benda, dan pencocokan itu yang dulu dikerjakan di kepala
- * sambil menatap peta — sumber tebakan yang berujung menggali di ruas yang salah.
- * Saran tindakan ditampilkan hanya saat titiknya jatuh di kotak, sebab di situlah
- * ia mengubah keputusan: buka tutup closure, bukan panggil tim gali.
- */
-function OtdrPlacementLine({ placement }: { placement: OtdrPlacement }) {
-  return (
-    <div className="stack" style={{ gap: '0.1rem', padding: '0 0.4rem 0.1rem' }}>
-      <p className="muted" style={{ margin: 0, fontSize: '0.75rem', lineHeight: 1.35 }}>
-        {placement.atClosure && (
-          <span
-            className="badge"
-            style={{ marginRight: '0.3rem', color: 'var(--warning)', borderColor: 'var(--warning)' }}
-          >
-            di kotak
-          </span>
-        )}
-        {placement.summary}
-      </p>
-      {placement.advice && (
-        <p className="dim" style={{ margin: 0, fontSize: '0.72rem', lineHeight: 1.35 }}>
-          {placement.advice}
-        </p>
-      )}
-    </div>
-  )
-}
-
-/**
- * Penggaris kabel: kotak-kotak yang seratnya benar-benar dibuka di sepanjang
- * bentang, urut dari pangkal beserta jaraknya.
- *
- * Bukan daftar aset di sekitar jalur — yang dekat tapi disuapi kabel lain cuma
- * tetangga, dan menyebutnya sebagai patokan justru menyesatkan. Ditampilkan
- * sekali di atas daftar uji supaya tiap hasil bisa dicocokkan tanpa pindah layar.
- */
-function OtdrLandmarkRuler({ landmarks }: { landmarks: OtdrLandmark[] }) {
-  return (
-    <div className="row wrap" style={{ gap: '0.25rem', fontSize: '0.75rem' }}>
-      <span className="dim">Patokan:</span>
-      {landmarks.map((l, index) => (
-        <span key={l.closureId} className="row" style={{ gap: '0.25rem' }}>
-          {index > 0 && <span className="dim" aria-hidden>→</span>}
-          <span className="badge" title={`${l.name} · ${formatLength(l.distanceMeters)} dari pangkal`}>
-            {l.code}
-            {!l.endpoint && <span className="dim"> {formatLength(l.distanceMeters)}</span>}
-          </span>
-        </span>
-      ))}
-    </div>
-  )
-}
-
-const CUT_ROOT_LABEL: Record<string, string> = {
-  ODC: 'ODC + seluruh hilirnya',
-  ODP: 'ODP sasaran',
-  CUSTOMER: 'satu pelanggan',
-}
-
-/**
- * Panel simulasi "kalau kabel ini putus, siapa yang kena". Kabel drop menjatuhkan
- * satu pelanggan, distribusi satu ODP, feeder satu ODC beserta segenap subpohonnya
- * — dampaknya ditentukan simpul di ujung hilir kabel, yang ditandai di sini.
- *
- * Satu selubung sering dikupas di beberapa kotak sekaligus, dan kotak-kotak itu
- * cuma terbaca lewat catatan splicing. Karena itu panelnya ikut menyebut angkanya
- * datang dari mana: yang belum didata adalah taksiran gambar, dan itu dikatakan
- * apa adanya alih-alih dibiarkan tampak sama meyakinkan.
- */
-function CableCutPanel({ cut, onClose }: { cut: CableCutView; onClose: () => void }) {
-  const withPhone = cut.customers.filter((c) => c.phone).length
-  return (
-    <aside className="map-panel blade">
-      <BladeHead
-        title="Simulasi putus"
-        subtitle={`Kabel ${TYPE_LABEL[cut.cableType]} · ${CUT_ROOT_LABEL[cut.severedRootKind] ?? cut.severedRootKind}`}
-        onClose={onClose}
-      />
-
-      <div className="blade-body stack" style={{ gap: '0.9rem' }}>
-        <MessageBar intent="warning">
-          <MessageBarBody>Kalau ruas ini putus, {cut.customerCount} pelanggan kehilangan layanan.</MessageBarBody>
-        </MessageBar>
-
-        <dl className="essentials">
-          <Ess label="Dasar hitungan">
-            {cut.fromSplicing ? (
-              <span className="badge" style={{ color: 'var(--good-ink)', borderColor: 'var(--good-ink)' }}>
-                catatan splicing
-              </span>
-            ) : (
-              <span className="dim">gambar kabel</span>
-            )}
-          </Ess>
-          <Ess label="ODC terdampak">{cut.odcCount > 0 && cut.odcCount}</Ess>
-          <Ess label="ODP terdampak">{cut.odpCount > 0 && cut.odpCount}</Ess>
-          <Ess label="Pelanggan">{cut.customerCount}</Ess>
-          <Ess label="Sudah mati">
-            {cut.downCount > 0 && <span style={{ color: 'var(--critical-ink)', fontWeight: 600 }}>{cut.downCount}</span>}
-          </Ess>
-          <Ess label="Siap broadcast">{withPhone > 0 && `${withPhone} nomor`}</Ess>
-        </dl>
-
-        {cut.customers.length > 0 && (
-          <div className="stack" style={{ gap: '0.45rem' }}>
-            <p className="blade-section-title">Pelanggan terdampak ({cut.customers.length})</p>
-            <div className="stack" style={{ gap: '0.3rem', maxHeight: 280, overflowY: 'auto' }}>
-              {cut.customers.map((c) => (
-                <AffectedRow key={c.customerId} c={c} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {cut.warnings.map((w) => (
-          <p key={w} className="dim" style={{ margin: 0, fontSize: '0.72rem', lineHeight: 1.35 }}>
-            {w}
-          </p>
-        ))}
-      </div>
-    </aside>
-  )
-}
-
 /**
  * Panel cek kapasitas untuk survey.
  *
@@ -2932,58 +2382,6 @@ function SurveyPanel({
   )
 }
 
-const ALARM_LABEL: Record<string, string> = {
-  ONU_LOS: 'Sinyal hilang (LOS)',
-  ONU_OFFLINE: 'ONU offline',
-  ONU_LOW_RX: 'Redaman lemah',
-  OLT_UNREACHABLE: 'OLT tak terjangkau',
-  ODC_UNREACHABLE: 'ODC tak terjangkau',
-  COLLECTOR_SILENT: 'Collector membisu',
-  PPPOE_DOWN: 'PPPoE putus',
-}
-
-const CAUSE_DOT: Record<string, string> = { CRITICAL: '#ff3b5c', WARNING: '#fbbf24' }
-
-/** Bagian "kenapa merah": alarm hidup di hilir yang menyorot kabel ini. */
-function CableCauses({ causes }: { causes: ImpactCause[] }) {
-  return (
-    <div className="stack" style={{ gap: '0.5rem' }}>
-      <MessageBar intent="error">
-        <MessageBarBody>Kenapa merah — {causes.length} alarm hidup di hilir ruas ini.</MessageBarBody>
-      </MessageBar>
-      {causes.map((c, i) => (
-        <div key={`${c.kind}-${c.label}-${i}`} className="row" style={{ gap: '0.45rem', alignItems: 'center' }}>
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              flexShrink: 0,
-              background: CAUSE_DOT[c.severity] ?? 'var(--muted)',
-            }}
-          />
-          <span className="badge">{ALARM_LABEL[c.kind] ?? c.kind}</span>
-          <span
-            className="muted"
-            style={{ fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-          >
-            {c.label}
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/** Titik status ONU di daftar panel — dijaga seirama dengan [CUSTOMER_COLOR] di peta. */
-const ONU_DOT: Record<string, string> = {
-  ONLINE: '#34d399',
-  LOS: '#ff3b5c',
-  OFFLINE: '#ff5470',
-  PENDING: '#8b95a7',
-  DISMANTLED: '#8b95a7',
-}
-
 /** Panel "kalau ODC ini putus, siapa yang kena" — daftar pelanggan hilir + kesiapan broadcast. */
 function BlastRadiusPanel({
   blast,
@@ -3058,28 +2456,6 @@ function BlastRadiusPanel({
         )}
       </div>
     </aside>
-  )
-}
-
-function AffectedRow({ c }: { c: AffectedCustomer }) {
-  return (
-    <div className="spread" style={{ gap: '0.45rem', alignItems: 'center' }}>
-      <span className="row" style={{ gap: '0.45rem', alignItems: 'center', minWidth: 0 }}>
-        <span
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            flexShrink: 0,
-            background: ONU_DOT[c.onuStatus] ?? 'var(--muted)',
-          }}
-        />
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
-      </span>
-      <span className="muted tnum" style={{ fontSize: '0.78rem', flexShrink: 0 }}>
-        {c.odpCode}
-      </span>
-    </div>
   )
 }
 
