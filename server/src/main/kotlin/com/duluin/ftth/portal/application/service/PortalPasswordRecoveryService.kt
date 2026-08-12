@@ -92,7 +92,12 @@ class PortalPasswordRecoveryService(
         audit("portal.credential.recovered", reset.tenantId, reset.customerId, mapOf("via" to reset.channel.name))
     }
 
-    /** Kirim kode yang sudah terbit, lalu catat peristiwanya (tanpa isi pesan). */
+    /**
+     * Kirim kode yang sudah terbit, lalu catat peristiwanya (tanpa isi pesan).
+     *
+     * Subjek emailnya tak dirakit di sini: ia setelan admin platform, dan bawaannya
+     * ("Kode pemulihan akun {isp}") tetap menyebut nama ISP lewat token `{isp}`.
+     */
     private fun deliver(tenant: TenantRef, issued: IssuedResetCode) {
         val delivery = notifications.sendTransactional(
             TransactionalMessage(
@@ -100,7 +105,6 @@ class PortalPasswordRecoveryService(
                 channel = issued.channel.toTransactional(),
                 destination = issued.destination,
                 recipientName = issued.recipientName,
-                subject = "Kode pemulihan akun ${tenant.name}",
                 body = composeBody(tenant, issued),
             ),
         )

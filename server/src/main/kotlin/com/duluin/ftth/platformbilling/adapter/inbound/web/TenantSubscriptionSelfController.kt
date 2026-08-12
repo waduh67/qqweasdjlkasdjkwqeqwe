@@ -4,6 +4,7 @@ import com.duluin.ftth.billing.PaymentMethodCatalog
 import com.duluin.ftth.billing.PaymentMethodOption
 import com.duluin.ftth.billing.application.port.outbound.SimulatedChargeStatus
 import com.duluin.ftth.platformbilling.application.port.inbound.SubscriptionInvoiceView
+import com.duluin.ftth.platformbilling.application.port.inbound.SubscriptionLockView
 import com.duluin.ftth.platformbilling.application.port.inbound.TenantSelfSubscriptionUseCase
 import com.duluin.ftth.platformbilling.application.port.inbound.TenantSelfSubscriptionView
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
@@ -36,6 +37,17 @@ class TenantSubscriptionSelfController(
     @PreAuthorize("@authz.can('billing.subscription.view')")
     fun get(): ResponseEntity<TenantSelfSubscriptionView> =
         useCase.current()?.let { ResponseEntity.ok(it) } ?: ResponseEntity.noContent().build()
+
+    /**
+     * Keadaan kunci baca-saja. SENGAJA tanpa `@PreAuthorize` — cukup terautentikasi.
+     *
+     * Teknisi dan CS tak punya izin `billing.subscription.view`, tapi merekalah yang pertama
+     * menabrak konsol yang membeku. Menutup endpoint ini dari mereka berarti aplikasinya diam
+     * tanpa alasan; membukanya cuma membocorkan bahwa ISP tempat mereka bekerja sedang menunggak
+     * — yang memang perlu mereka tahu agar bisa memberi tahu atasannya.
+     */
+    @GetMapping("/lock")
+    fun lock(): SubscriptionLockView = useCase.lockState()
 
     /**
      * Terbitkan/ambil tagihan untuk dibayar; kembalikan tautan bayar gateway. [months] = jumlah

@@ -117,7 +117,10 @@ tak pernah menyentuh tabel module lain — batas ini ditegakkan `ModularityTests
   tiket menjadi work order perbaikan. Bedanya dengan `incident`: yang di sini
   lahir dari manusia, yang di sana lahir dari alarm.
 - **notification** — broadcast proaktif ke pelanggan terdampak, dua kanal nyata:
-  WhatsApp & email (SMTP). Template per-jenis-kejadian bisa disunting operator.
+  WhatsApp & email (SMTP). Template per-jenis-kejadian bisa disunting operator; SMTP,
+  identitas pengirim, logo/warna/footer, dan baris subjek per pemicu jadi setelan
+  platform yang bisa ditimpa tenant (lihat
+  [`docs/email-branding.md`](docs/email-branding.md)).
 - **cpe** — kelola router/ONT pelanggan lewat GenieACS (TR-069): WiFi, reboot,
   diagnostik ping/speedtest, firmware, factory-reset.
 - **bng** — BRAS/RADIUS: paket, registri BRAS, akun PPPoE. Bereaksi atas event
@@ -134,7 +137,8 @@ tak pernah menyentuh tabel module lain — batas ini ditegakkan `ModularityTests
   [`docs/payment-gateway.md`](docs/payment-gateway.md)).
 - **platformbilling** — penagihan **platform → tenant** (langganan SaaS): harga bulanan
   flat + override khusus saat onboarding, perpanjangan mandiri lewat gateway (masa aktif
-  bertambah saat **LUNAS**), auto-suspend/pulih tenant saat menunggak. Level platform
+  bertambah saat **LUNAS**), dan **kunci baca-saja** saat menunggak lewat masa tenggang
+  (login & portal pelanggan tetap jalan; yang mati hanya aksi tulis). Level platform
   (tanpa RLS); memakai ulang mesin gateway `billing` lewat named interface `gateway`
   (lihat [`docs/saas-subscription.md`](docs/saas-subscription.md)).
 - **portal** — portal pelanggan: identitas & sesi **terpisah** dari operator
@@ -614,8 +618,14 @@ sungguhan, bukan pada tampilan:
 - **Langganan SaaS** ✅ penagihan platform → tenant: harga bulanan flat + **override
   khusus** saat onboarding, halaman *Langganan Aplikasi* sisi tenant (masa aktif, riwayat
   tagihan, pemakaian kosmetik) + **perpanjangan mandiri** lewat gateway aktif (masa aktif
-  bertambah saat **LUNAS**, bukan saat terbit), scheduler auto-suspend/pulih (lihat
+  bertambah saat **LUNAS**, bukan saat terbit), **pendaftaran mandiri ISP** (kode ISP dirakit
+  server + email selamat datang), dan **kunci baca-saja** saat menunggak — konsol tetap
+  terbaca dan tenant tetap bisa masuk untuk membayar (lihat
   [`docs/saas-subscription.md`](docs/saas-subscription.md))
+- **Email berbadan HTML & bermerek** ✅ SMTP, identitas pengirim, logo/warna/footer, dan
+  baris subjek per pemicu jadi setelan yang bisa diubah admin platform tanpa restart, dan
+  ditimpa per tenant — pelanggan menerima tagihan dari nama & logo ISP-nya (lihat
+  [`docs/email-branding.md`](docs/email-branding.md))
 - **VPN** ✅ VPN-as-a-service untuk remote perangkat tanpa IP publik: hub OpenVPN
   platform (app jadi CA + installer satu-perintah + verifikasi via callback), tenant
   tinggal generate akun (auto-assign) → kredensial siap tempel di Mikrotik, IP overlay

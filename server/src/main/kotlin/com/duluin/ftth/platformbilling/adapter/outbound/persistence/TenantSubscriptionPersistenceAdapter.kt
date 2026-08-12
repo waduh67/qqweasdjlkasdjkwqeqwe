@@ -25,6 +25,9 @@ class TenantSubscriptionPersistenceAdapter(
             listOf(SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE),
         ).map { it.toDomain() }
 
+    override fun findSuspended(): List<TenantSubscription> =
+        jpa.findByStatus(SubscriptionStatus.SUSPENDED).map { it.toDomain() }
+
     override fun save(subscription: TenantSubscription): TenantSubscription {
         val entity = jpa.findById(subscription.id).orElse(null)?.apply {
             monthlyFee = subscription.monthlyFee

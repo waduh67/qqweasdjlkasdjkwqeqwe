@@ -1,8 +1,10 @@
 import { api } from './client'
 
-/** Payload pendaftaran mandiri ISP — cermin `SignupRequest` di server. */
+/**
+ * Payload pendaftaran mandiri ISP — cermin `SignupRequest` di server. Tanpa `slug`: kode ISP
+ * dipilih server dari nama dan dijamin unik, jadi pendaftar tak bisa (dan tak perlu) menebaknya.
+ */
 export interface SignupPayload {
-  slug: string
   name: string
   adminName: string
   adminEmail: string
@@ -11,6 +13,7 @@ export interface SignupPayload {
 
 /** Balasan sukses `POST /api/signup`. */
 export interface SignupResult {
+  /** Kode ISP yang di-assign server. Wajib ditampilkan — diminta setiap kali staf masuk. */
   slug: string
   name: string
   adminEmail: string

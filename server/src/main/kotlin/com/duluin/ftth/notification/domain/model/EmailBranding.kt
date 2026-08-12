@@ -146,7 +146,10 @@ class PlatformEmailSettings private constructor(
     var smtpStartTls: Boolean = smtpStartTls
         private set
 
-    /** Alamat pengirim bawaan; tenant boleh menimpanya dengan alamatnya sendiri. */
+    /**
+     * Alamat pengirim SELURUH surat, tenant mana pun — tak bisa ditimpa: relay-nya cuma
+     * menerima pengirim yang terverifikasi di sisi penyedia. Null = jatuh ke `ftth.mail.from`.
+     */
     var fromAddress: String? = fromAddress
         private set
 
@@ -315,23 +318,24 @@ class PlatformEmailSettings private constructor(
 /**
  * Timpaan setelan email milik satu TENANT. Semua field nullable: null = warisi platform.
  *
- * Yang boleh ditimpa tenant sengaja terbatas pada IDENTITAS ([fromAddress], [fromName])
- * dan TAMPILAN ([branding]) — bukan sambungan SMTP-nya, karena relay itu milik platform
- * dan reputasi pengirimannya ditanggung bersama semua tenant.
+ * Yang boleh ditimpa tenant: NAMA pengirim ([fromName]), alamat BALASAN ([replyToAddress]),
+ * dan TAMPILAN ([branding]). Yang tidak: alamat pengirim dan sambungan SMTP — keduanya
+ * milik platform, karena relay-nya satu untuk semua tenant.
  *
- * Catatan penting soal [fromAddress]: alamat ini dipakai apa adanya sebagai `From`, plus
- * `Reply-To`. Relay platform belum tentu berwenang atas domain tenant, jadi tanpa SPF/DKIM
- * yang mengizinkannya email berisiko masuk spam atau ditolak. Peringatan itu ditampilkan
- * di UI; keputusannya tetap di tangan tenant.
+ * Alamat pengirimnya dikunci bukan sekadar demi reputasi bersama: relay yang dipakai hanya
+ * menerima `From` yang sudah terverifikasi di sisi penyedia, jadi alamat milik domain tenant
+ * membuat suratnya DITOLAK sebelum berangkat — bukan sekadar berisiko masuk spam.
+ * [replyToAddress] bebas dari aturan itu (tak ada penyedia yang memverifikasi `Reply-To`),
+ * dan itulah yang membuat balasan pelanggan tetap mendarat di ISP-nya.
  */
 class TenantEmailSettings private constructor(
     val id: UUID,
     val tenantId: UUID,
-    fromAddress: String?,
+    replyToAddress: String?,
     fromName: String?,
     branding: EmailBranding,
 ) {
-    var fromAddress: String? = fromAddress
+    var replyToAddress: String? = replyToAddress
         private set
 
     var fromName: String? = fromName
@@ -340,8 +344,8 @@ class TenantEmailSettings private constructor(
     var branding: EmailBranding = branding
         private set
 
-    fun update(fromAddress: String?, fromName: String?, branding: EmailBranding) {
-        this.fromAddress = PlatformEmailSettings.validateEmail(fromAddress, "Alamat pengirim")
+    fun update(replyToAddress: String?, fromName: String?, branding: EmailBranding) {
+        this.replyToAddress = PlatformEmailSettings.validateEmail(replyToAddress, "Alamat balasan")
         this.fromName = PlatformEmailSettings.validateLength(fromName, MAX_FROM_NAME, "Nama pengirim")
         // Logo hanya berubah lewat attachLogo/clearLogo, tak ikut form teks.
         this.branding = branding.copy(
@@ -366,7 +370,7 @@ class TenantEmailSettings private constructor(
         fun defaultFor(tenantId: UUID): TenantEmailSettings = TenantEmailSettings(
             id = UuidV7.generate(),
             tenantId = tenantId,
-            fromAddress = null,
+            replyToAddress = null,
             fromName = null,
             branding = EmailBranding.EMPTY,
         )
@@ -374,9 +378,9 @@ class TenantEmailSettings private constructor(
         fun rehydrate(
             id: UUID,
             tenantId: UUID,
-            fromAddress: String?,
+            replyToAddress: String?,
             fromName: String?,
             branding: EmailBranding,
-        ): TenantEmailSettings = TenantEmailSettings(id, tenantId, fromAddress, fromName, branding)
+        ): TenantEmailSettings = TenantEmailSettings(id, tenantId, replyToAddress, fromName, branding)
     }
 }

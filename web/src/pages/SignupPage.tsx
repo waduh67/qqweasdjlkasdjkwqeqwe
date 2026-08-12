@@ -4,48 +4,48 @@ import { ApiError } from '../api/client'
 import { signupTenant, type SignupResult } from '../api/signup'
 import { BrandMark, Button, Spinner, TextField } from '@/components/atoms'
 
-/** Ubah nama ISP jadi kandidat slug: huruf kecil, spasi/simbol → strip. */
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 63)
-}
-
 /**
  * Pendaftaran mandiri ISP — layar publik terpisah dari login. Membuat tenant + admin awal
- * lewat `POST /api/signup`; sukses → arahkan ke halaman masuk. Slug (Kode ISP) otomatis
- * disarankan dari nama selama pengguna belum menyuntingnya sendiri.
+ * lewat `POST /api/signup`; sukses → arahkan ke halaman masuk.
+ *
+ * Kode ISP TIDAK lagi diketik pendaftar: server yang menurunkannya dari nama dan menjamin
+ * keunikannya. Dulu field ini ada di sini, dan bentroknya baru ketahuan setelah tombol
+ * "Daftar" ditekan — sekarang kode itu hanya ditampilkan setelah berhasil.
  */
 export function SignupPage() {
   const navigate = useNavigate()
   const [name, setName] = useState('')
-  const [slug, setSlug] = useState('')
-  const [slugTouched, setSlugTouched] = useState(false)
   const [adminName, setAdminName] = useState('')
   const [adminEmail, setAdminEmail] = useState('')
   const [adminPassword, setAdminPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<SignupResult | null>(null)
-
-  function onNameChange(value: string) {
-    setName(value)
-    if (!slugTouched) setSlug(slugify(value))
-  }
+  const [copied, setCopied] = useState(false)
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     setError(null)
     setBusy(true)
     try {
-      const result = await signupTenant({ name, slug, adminName, adminEmail, adminPassword })
+      const result = await signupTenant({ name, adminName, adminEmail, adminPassword })
       setDone(result)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Gagal mendaftar')
     } finally {
       setBusy(false)
+    }
+  }
+
+  /** Salin kode ISP ke papan klip; gagal (izin ditolak / konteks tak aman) dibiarkan diam —
+   *  kodenya tetap terbaca di layar dan sudah dikirim ke email. */
+  async function copySlug(slug: string) {
+    try {
+      await navigator.clipboard.writeText(slug)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      /* diabaikan sengaja */
     }
   }
 
@@ -55,8 +55,38 @@ export function SignupPage() {
         <div className="card login-card stack">
           <div>
             <h2 style={{ margin: 0, fontSize: '1.15rem' }}>Pendaftaran berhasil 🎉</h2>
-            <p className="muted" style={{ margin: '0.4rem 0 0', fontSize: '0.88rem' }}>{done.message}</p>
+            <p className="muted" style={{ margin: '0.4rem 0 0', fontSize: '0.88rem' }}>
+              ISP <strong>{done.name}</strong> sudah terdaftar. Simpan kode di bawah — ia diminta bersama
+              email dan password setiap kali Anda atau staf Anda masuk.
+            </p>
           </div>
+          {/* Kode ISP dipisah dari kalimat supaya mudah dibaca ulang & disalin: inilah satu-satunya
+              hal di layar ini yang akan dicari pendaftar lagi besok. */}
+          <div
+            className="row"
+            style={{
+              justifyContent: 'space-between',
+              gap: '0.6rem',
+              padding: '0.7rem 0.85rem',
+              borderRadius: 10,
+              border: '1px solid var(--border-strong)',
+              background: 'var(--surface-2)',
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <span className="muted" style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Kode ISP
+              </span>
+              <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: '1.05rem', fontWeight: 600 }}>
+                {done.slug}
+              </div>
+            </div>
+            <Button onClick={() => void copySlug(done.slug)}>{copied ? 'Tersalin' : 'Salin'}</Button>
+          </div>
+          <p className="muted" style={{ margin: 0, fontSize: '0.83rem' }}>
+            Kode ini juga kami kirim ke <strong>{done.adminEmail}</strong>. Tak menemukannya? Periksa folder
+            spam sebelum menghubungi kami.
+          </p>
           <Button
             variant="primary"
             style={{ width: '100%', padding: '0.6rem' }}
@@ -87,22 +117,11 @@ export function SignupPage() {
         <TextField
           label="Nama ISP"
           value={name}
-          onChange={(_, data) => onNameChange(data.value)}
+          onChange={(_, data) => setName(data.value)}
           required
           autoFocus
           placeholder="mis. Net Media"
-        />
-        <TextField
-          label="Kode ISP"
-          value={slug}
-          onChange={(_, data) => {
-            setSlugTouched(true)
-            setSlug(data.value)
-          }}
-          required
-          autoComplete="off"
-          placeholder="mis. netmedia"
-          hint="Huruf kecil, angka & strip; diawali huruf. Dipakai pelanggan & tim untuk masuk."
+          hint="Kode ISP untuk masuk kami buatkan otomatis dari nama ini."
         />
         <TextField
           label="Nama admin"

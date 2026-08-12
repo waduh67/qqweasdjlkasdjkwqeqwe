@@ -13,14 +13,13 @@ import {
   type EmailTrigger,
   type TenantEmailSettingsView,
 } from '@/api/emailSettings'
-import { Button, TextField } from '@/components/atoms'
+import { Badge, Button, TextField } from '@/components/atoms'
 import {
   EmailAppearanceFields,
   EmailLogoField,
   EmailPreviewPanel,
   EmailSubjectFields,
   DEFAULT_ACCENT,
-  SenderDomainWarning,
   isValidAccent,
 } from './EmailBrandingFields'
 import { useToast } from '@/system'
@@ -35,10 +34,16 @@ import { useToast } from '@/system'
  * Aturan yang dipegang seluruh kartu: **kosong berarti mewarisi platform**, bukan berarti
  * kosong. Karena itu tiap kolom memasang nilai warisan sebagai placeholder — operator selalu
  * bisa melihat apa yang akan terpakai bila ia tak mengisi apa-apa.
+ *
+ * Satu-satunya yang berdiri di luar aturan itu adalah alamat pengirim: ia dipajang
+ * ([LockedSenderAddress]) tapi tak punya kolom sama sekali, karena relay platform hanya
+ * menerima pengirim yang sudah terverifikasi di sisi penyedia. Yang tersisa untuk tenant
+ * adalah alamat BALASAN — tak diverifikasi siapa pun, dan itulah yang membuat balasan
+ * pelanggan tetap mendarat di ISP-nya.
  */
 
 interface TenantForm {
-  fromAddress: string
+  replyToAddress: string
   fromName: string
   accentColor: string
   footerText: string
@@ -48,7 +53,7 @@ interface TenantForm {
 
 function toForm(v: TenantEmailSettingsView): TenantForm {
   return {
-    fromAddress: v.fromAddress ?? '',
+    replyToAddress: v.replyToAddress ?? '',
     fromName: v.fromName ?? '',
     accentColor: v.accentColor ?? '',
     footerText: v.footerText ?? '',
@@ -89,7 +94,7 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
     setFreshness((n) => n + 1)
   }
 
-  const addressOk = !!form && (form.fromAddress.trim() === '' || EMAIL_RE.test(form.fromAddress.trim()))
+  const addressOk = !!form && (form.replyToAddress.trim() === '' || EMAIL_RE.test(form.replyToAddress.trim()))
   const accentOk = !!form && isValidAccent(form.accentColor)
 
   const save = async () => {
@@ -98,7 +103,7 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
     try {
       adopt(
         await updateTenantEmailSettings({
-          fromAddress: form.fromAddress.trim() || null,
+          replyToAddress: form.replyToAddress.trim() || null,
           fromName: form.fromName.trim() || null,
           accentColor: form.accentColor.trim() || null,
           footerText: form.footerText.trim() || null,
@@ -154,23 +159,14 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
     <div className="card stack">
       <SectionTitle>Identitas &amp; tampilan email</SectionTitle>
       <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-        Semua kolom di kartu ini <strong>opsional</strong>. Yang dibiarkan kosong mengikuti bawaan
-        platform — nilai warisannya ditampilkan sebagai teks samar di dalam kolomnya.
+        Semua kolom yang bisa disunting di kartu ini <strong>opsional</strong>. Yang dibiarkan
+        kosong mengikuti bawaan platform — nilai warisannya ditampilkan sebagai teks samar di
+        dalam kolomnya.
       </p>
 
+      <LockedSenderAddress address={saved.platformFromAddress} />
+
       <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-        <TextField
-          label="Alamat pengirim"
-          type="email"
-          value={form.fromAddress}
-          onChange={(_, d) => patch({ fromAddress: d.value })}
-          placeholder={saved.inheritedFromAddress ?? 'Ikut bawaan platform'}
-          disabled={!manage}
-          maxLength={254}
-          validationState={addressOk ? 'none' : 'error'}
-          validationMessage={addressOk ? undefined : 'Format alamat email tidak sah.'}
-          style={{ minWidth: 260 }}
-        />
         <TextField
           label="Nama pengirim"
           value={form.fromName}
@@ -181,9 +177,20 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
           hint="Nama yang tampil di kotak masuk pelanggan."
           style={{ minWidth: 220 }}
         />
+        <TextField
+          label="Alamat balasan"
+          type="email"
+          value={form.replyToAddress}
+          onChange={(_, d) => patch({ replyToAddress: d.value })}
+          placeholder="Kosongkan bila tak perlu dibalas"
+          disabled={!manage}
+          maxLength={254}
+          hint="Balasan pelanggan mendarat di sini, bukan di kotak masuk platform."
+          validationState={addressOk ? 'none' : 'error'}
+          validationMessage={addressOk ? undefined : 'Format alamat email tidak sah.'}
+          style={{ minWidth: 260 }}
+        />
       </div>
-
-      {form.fromAddress.trim() !== '' && <SenderDomainWarning address={form.fromAddress.trim()} />}
 
       <div className="hr" />
 
@@ -236,7 +243,7 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
       <EmailPreviewPanel
         reloadKey={freshness}
         canSendTest={manage}
-        defaultTo={saved.fromAddress}
+        defaultTo={saved.replyToAddress}
         loadPreview={previewTenantEmail}
         sendTest={sendTenantTestEmail}
       />
@@ -246,4 +253,30 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
 
 function SectionTitle({ children }: { children: ReactNode }) {
   return <h3 style={{ margin: '0.25rem 0 0', fontSize: '0.95rem', fontWeight: 600 }}>{children}</h3>
+}
+
+/**
+ * Alamat `From` yang berlaku, dipajang tapi tak bisa disunting.
+ *
+ * Ditampilkan sebagai teks, bukan input yang di-`disabled`: kolom mati mengundang operator
+ * mencari izin yang membukanya, padahal tak ada izin seperti itu — alamatnya milik relay
+ * platform yang hanya menerima pengirim terverifikasi. Menyembunyikannya sama sekali juga
+ * salah, karena inilah alamat yang dilihat pelanggan di kotak masuknya.
+ */
+function LockedSenderAddress({ address }: { address: string | null }) {
+  return (
+    <div className="stack" style={{ gap: '0.3rem' }}>
+      <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Dikirim dari</span>
+      <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <span style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+          {address ?? '— belum disetel platform'}
+        </span>
+        <Badge>Terkunci</Badge>
+      </div>
+      <span className="muted" style={{ fontSize: '0.8rem' }}>
+        Ditetapkan penyedia aplikasi dan sama untuk semua ISP: server emailnya hanya menerima
+        pengirim yang sudah terverifikasi. Nama pengirim & alamat balasan tetap milik Anda.
+      </span>
+    </div>
+  )
 }

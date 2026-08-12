@@ -155,13 +155,13 @@ internal fun platformEmailSettings(
 /** Timpaan tenant siap-pakai; semua kolomnya null berarti "warisi platform seluruhnya". */
 internal fun tenantEmailSettings(
     tenantId: UUID,
-    fromAddress: String? = null,
+    replyToAddress: String? = null,
     fromName: String? = null,
     branding: EmailBranding = EmailBranding.EMPTY,
 ): TenantEmailSettings = TenantEmailSettings.rehydrate(
     id = UuidV7.generate(),
     tenantId = tenantId,
-    fromAddress = fromAddress,
+    replyToAddress = replyToAddress,
     fromName = fromName,
     branding = branding,
 )

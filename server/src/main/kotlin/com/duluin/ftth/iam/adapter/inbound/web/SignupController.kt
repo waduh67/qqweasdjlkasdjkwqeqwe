@@ -38,7 +38,6 @@ class SignupController(
         return SignupResponse.from(
             signup.signup(
                 SelfSignupCommand(
-                    slug = request.slug,
                     name = request.name,
                     adminEmail = request.adminEmail,
                     adminName = request.adminName,
@@ -50,12 +49,11 @@ class SignupController(
 }
 
 /**
- * Slug sengaja hanya `@NotBlank` di web (bukan `@Pattern`) agar input seperti "MyISP"
- * bisa dinormalkan (trim + lowercase) di service; format akhir divalidasi domain
- * (`Tenant.create`) → 400 dengan pesan yang jelas bila tetap tak valid.
+ * Tanpa `slug`: kode ISP dirakit server dari [name] dan dijamin unik. Klien lama yang masih
+ * mengirimkannya tak ditolak — kolomnya sekadar diabaikan, dan kode yang berlaku selalu ada di
+ * [SignupResponse.slug].
  */
 data class SignupRequest(
-    @field:NotBlank val slug: String,
     @field:NotBlank val name: String,
     @field:Email @field:NotBlank val adminEmail: String,
     @field:NotBlank val adminName: String,
@@ -63,6 +61,7 @@ data class SignupRequest(
 )
 
 data class SignupResponse(
+    /** Kode ISP yang di-assign server. Dibutuhkan setiap kali staf masuk, jadi wajib ditampilkan. */
     val slug: String,
     val name: String,
     val adminEmail: String,
@@ -74,7 +73,8 @@ data class SignupResponse(
             slug = result.slug,
             name = result.name,
             adminEmail = result.adminEmail,
-            message = "ISP \"${result.name}\" berhasil didaftarkan. Silakan masuk memakai email ${result.adminEmail}.",
+            message = "ISP \"${result.name}\" berhasil didaftarkan. Kode ISP Anda: ${result.slug} — " +
+                "simpan, kode ini dibutuhkan setiap kali masuk bersama email ${result.adminEmail}.",
         )
     }
 }

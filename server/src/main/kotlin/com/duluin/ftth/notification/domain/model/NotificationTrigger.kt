@@ -34,4 +34,16 @@ enum class NotificationTrigger {
      * pengirimannya sekelas dengan pemicu lain.
      */
     PORTAL_PASSWORD_RESET,
+
+    /**
+     * Email selamat datang untuk ISP yang baru mendaftar — berisi kode ISP yang di-assign
+     * server, karena tanpa kode itu adminnya tak bisa masuk sama sekali.
+     *
+     * Sama seperti [PORTAL_PASSWORD_RESET] ia tak lewat `NotificationSender` dan tak menulis
+     * riwayat broadcast. Bedanya: pada detik ia dikirim, tenant penerimanya baru saja lahir
+     * dan belum punya setelan apa pun — jadi ia berangkat memakai merek PLATFORM, bukan merek
+     * ISP. Karena itu pula subjeknya tak bisa ditimpa tenant (lihat
+     * [com.duluin.ftth.notification.application.service.EmailSubjectResolver.PLATFORM_ONLY]).
+     */
+    TENANT_SIGNED_UP,
 }

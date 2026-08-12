@@ -13,7 +13,9 @@ import java.util.UUID
  *
  *  - ACTIVE    berjalan normal.
  *  - PAST_DUE  ada tagihan lewat jatuh tempo, masih dalam masa tenggang.
- *  - SUSPENDED lewat masa tenggang → tenant di-suspend (`Tenant.suspend()`).
+ *  - SUSPENDED lewat masa tenggang → konsol tenant jadi BACA-SAJA. Tenant-nya sendiri tetap
+ *    aktif dan stafnya tetap bisa masuk: kalau tidak, orang yang hendak membayar tunggakannya
+ *    justru terkunci di luar. Penegakannya di `AccessChecker` lewat `ReadOnlyLockGuard`.
  *  - CANCELLED dihentikan super-admin.
  */
 enum class SubscriptionStatus { ACTIVE, PAST_DUE, SUSPENDED, CANCELLED }
@@ -125,7 +127,7 @@ class TenantSubscription private constructor(
         status = SubscriptionStatus.PAST_DUE
     }
 
-    /** Lewat masa tenggang → langganan disuspend (pemanggil juga men-suspend tenant). */
+    /** Lewat masa tenggang → langganan disuspend, dan konsol tenant jadi baca-saja. */
     fun suspend() {
         if (status == SubscriptionStatus.CANCELLED) {
             throw ValidationException("Langganan yang dibatalkan tidak bisa disuspend")
@@ -133,7 +135,7 @@ class TenantSubscription private constructor(
         status = SubscriptionStatus.SUSPENDED
     }
 
-    /** Pulihkan ke ACTIVE saat tunggakan lunas (pemanggil juga mengaktifkan tenant). Idempoten. */
+    /** Pulihkan ke ACTIVE saat tunggakan lunas — kunci baca-saja ikut terbuka. Idempoten. */
     fun activate() {
         if (status == SubscriptionStatus.CANCELLED) {
             throw ValidationException("Langganan yang dibatalkan tidak bisa diaktifkan; buat langganan baru")

@@ -6,6 +6,7 @@ import com.duluin.ftth.bng.BngApi
 import com.duluin.ftth.bng.ProvisionAccessSpec
 import com.duluin.ftth.bng.ProvisionedAccessRef
 import com.duluin.ftth.bng.SubscriberSessionRef
+import com.duluin.ftth.common.FixedObjectProvider
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.geo.Coordinate
@@ -109,7 +110,8 @@ class Subscriber360ServiceTest {
         billingApi = FakeBillingApi(),
         cpeApi = FakeCpeApi(),
         workorderApi = FakeWorkorderApi(customerId),
-        authz = AccessChecker(FakeCurrentUser(permissions)),
+        // Tanpa penjaga kunci baca-saja: kelas ini menguji izin, bukan status langganan.
+        authz = AccessChecker(FakeCurrentUser(permissions), FixedObjectProvider(null)),
     )
 
     private inner class FakeCurrentUser(private val permissions: Set<String>) : CurrentUserProvider {

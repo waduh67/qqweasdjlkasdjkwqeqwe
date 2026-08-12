@@ -25,11 +25,12 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
 
 /**
- * Timpaan setelan email milik tenant: identitas pengirim, logo & tampilan, serta baris subjek
- * per pemicu. Kolom kosong berarti MEWARISI bawaan platform, bukan mengosongkan — karena itu
- * tiap respons juga membawa nilai warisannya untuk ditampilkan sebagai placeholder.
+ * Timpaan setelan email milik tenant: nama pengirim & alamat balasan, logo & tampilan, serta
+ * baris subjek per pemicu. Kolom kosong berarti MEWARISI bawaan platform, bukan mengosongkan —
+ * karena itu tiap respons juga membawa nilai warisannya untuk ditampilkan sebagai placeholder.
  *
- * Sambungan SMTP tak ada di sini: relay-nya milik platform. Dijaga izin setelan notifikasi
+ * Sambungan SMTP dan alamat PENGIRIM tak ada di sini: relay-nya milik platform dan hanya
+ * menerima pengirim yang sudah terverifikasi di sisi penyedia. Dijaga izin setelan notifikasi
  * yang sudah ada (`notification.settings.*`) — ini masih setelan notifikasi tenant, bukan
  * permukaan wewenang baru.
  */
@@ -88,9 +89,14 @@ class TenantEmailSettingsController(
 /**
  * Semua field opsional: null/kosong = hapus timpaan dan warisi platform lagi. Logo diunggah
  * terpisah lewat endpoint multipart.
+ *
+ * Tak ada `fromAddress` di sini sejak alamat pengirim dikunci ke platform. Klien lama yang
+ * masih mengirimkannya diabaikan diam-diam (Boot tak menggagalkan properti tak dikenal),
+ * bukan ditolak — pola yang sama dengan subjek khusus platform di `TenantEmailSettingsService`:
+ * yang perlu dijamin cuma alamat itu tak pernah tersimpan, bukan bahwa pengirimnya ditegur.
  */
 data class TenantEmailSettingsRequest(
-    @field:Size(max = 254) val fromAddress: String? = null,
+    @field:Size(max = 254) val replyToAddress: String? = null,
     @field:Size(max = 100) val fromName: String? = null,
     @field:Size(max = 9) val accentColor: String? = null,
     @field:Size(max = 500) val footerText: String? = null,
@@ -98,7 +104,7 @@ data class TenantEmailSettingsRequest(
     val subjects: Map<NotificationTrigger, String> = emptyMap(),
 ) {
     fun toCommand() = UpdateTenantEmailSettingsCommand(
-        fromAddress = fromAddress,
+        replyToAddress = replyToAddress,
         fromName = fromName,
         accentColor = accentColor,
         footerText = footerText,

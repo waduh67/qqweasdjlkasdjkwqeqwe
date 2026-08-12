@@ -225,12 +225,12 @@ class EmailBrandingIT {
 
         val saved = putJson(
             "/api/notifications/email-settings", tenant.token,
-            """{"fromAddress":"billing@sinarjaya.id","fromName":"Sinar Jaya Support","accentColor":"#ff8800",
+            """{"replyToAddress":"billing@sinarjaya.id","fromName":"Sinar Jaya Support","accentColor":"#ff8800",
                 "footerText":null,"signatureText":null,
                 "subjects":{"INVOICE_DUE_SOON":"Tagihan Sinar Jaya"}}""",
         )
 
-        assertThat(JsonPath.read<String>(saved, "$.fromAddress")).isEqualTo("billing@sinarjaya.id")
+        assertThat(JsonPath.read<String>(saved, "$.replyToAddress")).isEqualTo("billing@sinarjaya.id")
         assertThat(JsonPath.read<String>(saved, "$.accentColor")).isEqualTo("#ff8800")
         // Kolom yang dikosongkan tak menyimpan apa-apa; yang berlaku tetap milik platform.
         assertThat(JsonPath.read<String?>(saved, "$.footerText")).isNull()
@@ -239,7 +239,10 @@ class EmailBrandingIT {
         // Nama warisan = nama ISP-nya sendiri, bukan nama platform. Pelanggan yang menerima
         // tagihan internetnya harus melihat nama yang ia kenal, bukan nama penyedia aplikasi.
         assertThat(JsonPath.read<String>(saved, "$.inheritedFromName")).isEqualTo(tenant.name)
-        assertThat(JsonPath.read<String>(saved, "$.inheritedFromAddress")).isEqualTo("no-reply@duluin.net")
+        // Alamat pengirim BUKAN warisan yang bisa ditimpa: walau tenant baru saja mengirim
+        // alamatnya sendiri di atas, yang berlaku tetap alamat platform. Relay hanya menerima
+        // pengirim terverifikasi, jadi alamat tenant di header From = surat batal berangkat.
+        assertThat(JsonPath.read<String>(saved, "$.platformFromAddress")).isEqualTo("no-reply@duluin.net")
 
         val dueSoon = subjectRow(saved, "INVOICE_DUE_SOON")
         assertThat(dueSoon["subject"]).isEqualTo("Tagihan Sinar Jaya")
@@ -259,7 +262,7 @@ class EmailBrandingIT {
         val tenant = newTenant("mailtest")
         putJson(
             "/api/notifications/email-settings", tenant.token,
-            """{"fromAddress":null,"fromName":"Sinar Jaya Support","accentColor":"#ff8800",
+            """{"replyToAddress":null,"fromName":"Sinar Jaya Support","accentColor":"#ff8800",
                 "footerText":null,"signatureText":null,"subjects":{}}""",
         )
 

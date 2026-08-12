@@ -37,6 +37,28 @@ export interface TenantSelfSubscriptionView {
   invoices: SubscriptionInvoiceView[]
 }
 
+/**
+ * Keadaan kunci baca-saja. Sengaja terpisah dari `TenantSelfSubscriptionView` dan tanpa gate
+ * izin `billing.*`: teknisi & CS yang tak punya izin langganan pun perlu tahu kenapa tombol
+ * simpannya mendadak mati.
+ *
+ * `daysOverdue` = umur tunggakan TERTUA (0 bila belum lewat jatuh tempo), `invoiceId` =
+ * tagihan yang harus dilunasi lebih dulu.
+ */
+export interface SubscriptionLockView {
+  locked: boolean
+  daysOverdue: number
+  dueDate: string | null
+  amountDue: number
+  currency: string
+  invoiceId: string | null
+}
+
+/** Status kunci tenant yang sedang login. Aman dipanggil peran mana pun asal terautentikasi. */
+export function getSubscriptionLock(): Promise<SubscriptionLockView> {
+  return api.get('/api/subscription/lock')
+}
+
 /** Langganan tenant yang login; null bila belum berlangganan (server balas 204 → undefined). */
 export async function getMySubscription(): Promise<TenantSelfSubscriptionView | null> {
   const res = await api.get<TenantSelfSubscriptionView | undefined>('/api/subscription')

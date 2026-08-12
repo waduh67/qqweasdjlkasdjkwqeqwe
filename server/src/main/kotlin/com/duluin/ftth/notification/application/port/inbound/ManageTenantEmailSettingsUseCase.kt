@@ -4,13 +4,16 @@ import com.duluin.ftth.common.storage.StoredObject
 import com.duluin.ftth.notification.domain.model.NotificationTrigger
 
 /**
- * Sisi tenant atas email keluar: identitas pengirim ([TenantEmailSettingsView.fromAddress] /
- * [TenantEmailSettingsView.fromName]), bungkus merek, dan baris subjek per pemicu — semuanya
- * sebagai TIMPAAN atas setelan platform. Kosong berarti mewarisi, bukan mengosongkan.
+ * Sisi tenant atas email keluar: nama pengirim ([TenantEmailSettingsView.fromName]), alamat
+ * balasan ([TenantEmailSettingsView.replyToAddress]), bungkus merek, dan baris subjek per
+ * pemicu — semuanya sebagai TIMPAAN atas setelan platform. Kosong berarti mewarisi, bukan
+ * mengosongkan.
  *
- * Sambungan SMTP tak ada di sini dengan sengaja: relay-nya milik platform. Konsekuensi yang
- * harus disampaikan UI — alamat pengirim tenant dipakai apa adanya sebagai `From` lewat relay
- * platform, jadi tanpa SPF/DKIM yang mengizinkannya email berisiko masuk spam atau ditolak.
+ * Dua hal sengaja TAK ada di sini: sambungan SMTP dan alamat pengirim. Relay-nya milik
+ * platform, dan relay itu hanya menerima pengirim yang sudah terverifikasi di sisi penyedia —
+ * alamat berdomain tenant membuat suratnya ditolak sebelum berangkat. Alamat platform yang
+ * berlaku tetap dikirim ke UI lewat [TenantEmailSettingsView.platformFromAddress] supaya
+ * operator tahu apa yang dilihat pelanggannya, bukan supaya bisa diubah.
  */
 interface ManageTenantEmailSettingsUseCase {
     fun get(): TenantEmailSettingsView
@@ -38,7 +41,8 @@ interface ManageTenantEmailSettingsUseCase {
  */
 @Suppress("LongParameterList")
 data class TenantEmailSettingsView(
-    val fromAddress: String?,
+    /** Alamat balasan tenant; null = surat berangkat tanpa `Reply-To`. */
+    val replyToAddress: String?,
     val fromName: String?,
     /** Tenant punya logo sendiri atau tidak; false = memakai logo platform. */
     val logoSet: Boolean,
@@ -46,7 +50,12 @@ data class TenantEmailSettingsView(
     val footerText: String?,
     val signatureText: String?,
     // Nilai yang benar-benar berlaku setelah pewarisan diselesaikan (untuk placeholder).
-    val inheritedFromAddress: String?,
+    /**
+     * Alamat `From` yang berlaku — bukan "warisan" seperti tetangganya melainkan nilai
+     * TERKUNCI: tak ada kolom di sini yang bisa menimpanya. Namanya sengaja tak berawalan
+     * `inherited` supaya layar tak menjanjikan timpaan yang diam-diam diabaikan server.
+     */
+    val platformFromAddress: String?,
     val inheritedFromName: String,
     val effectiveLogoUrl: String?,
     val inheritedAccentColor: String?,
@@ -60,7 +69,7 @@ data class TenantEmailSettingsView(
  * platform lagi". Logo tak lewat sini: ia hanya berubah lewat unggah/hapus.
  */
 data class UpdateTenantEmailSettingsCommand(
-    val fromAddress: String?,
+    val replyToAddress: String?,
     val fromName: String?,
     val accentColor: String?,
     val footerText: String?,

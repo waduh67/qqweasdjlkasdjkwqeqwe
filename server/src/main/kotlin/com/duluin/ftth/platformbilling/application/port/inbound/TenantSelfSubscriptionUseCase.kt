@@ -38,7 +38,31 @@ interface TenantSelfSubscriptionUseCase {
      * yang dikembalikan BELUM tentu berubah status — klien memuat ulang/polling.
      */
     fun simulateInvoicePayment(invoiceId: UUID, status: SimulatedChargeStatus): SubscriptionInvoiceView
+
+    /**
+     * Keadaan kunci baca-saja tenant berjalan. Sengaja terpisah dari [current] dan TANPA izin
+     * `billing.*`: teknisi dan CS yang tak punya izin langganan pun perlu tahu kenapa tombol
+     * simpannya mendadak mati — layar yang membeku tanpa penjelasan menghasilkan tiket dukungan,
+     * bukan pembayaran.
+     */
+    fun lockState(): SubscriptionLockView
 }
+
+/**
+ * Ringkasan kunci baca-saja untuk klien: cukup untuk merangkai banner dan halaman langganan
+ * tanpa memanggil endpoint lain.
+ *
+ * @param daysOverdue umur tunggakan TERTUA dalam hari; 0 bila tak ada yang lewat jatuh tempo.
+ * @param invoiceId tagihan tertunggak tertua — yang harus dibayar lebih dulu; null bila tak ada.
+ */
+data class SubscriptionLockView(
+    val locked: Boolean,
+    val daysOverdue: Long,
+    val dueDate: LocalDate?,
+    val amountDue: BigDecimal,
+    val currency: String,
+    val invoiceId: UUID?,
+)
 
 /** Pandangan langganan sisi tenant + pemakaian kosmetik. */
 data class TenantSelfSubscriptionView(

@@ -12,6 +12,7 @@ const REFRESH_KEY = 'ftth.refreshToken'
 
 let accessToken: string | null = null
 let onSessionLost: (() => void) | null = null
+let onSubscriptionLocked: (() => void) | null = null
 
 /**
  * Rotasi refresh token yang sedang berjalan. Refresh token bersifat SEKALI-PAKAI —
@@ -49,6 +50,17 @@ export const tokenStore = {
   onSessionLost(handler: () => void) {
     onSessionLost = handler
   },
+  /**
+   * Dipanggil saat server menolak sebuah aksi tulis karena langganan aplikasi menunggak
+   * (402 `SUBSCRIPTION_LOCKED`). Ada dua sebab kenapa ini perlu kait sendiri, bukan sekadar
+   * ditangani halaman pemanggil: (1) status kunci bisa berubah di sisi server setelah klien
+   * memuat profilnya, jadi penolakan inilah kabar pertama yang sampai; (2) kuncinya berlaku
+   * global, jadi yang harus bereaksi adalah kerangka aplikasi (banner + tombol mati),
+   * bukan satu layar yang kebetulan sedang dibuka.
+   */
+  onSubscriptionLocked(handler: () => void) {
+    onSubscriptionLocked = handler
+  },
 }
 
 export class ApiError extends Error {
@@ -81,7 +93,11 @@ async function parseError(response: Response): Promise<ApiError> {
   } catch {
     /* respons tanpa body JSON */
   }
-  return new ApiError(response.status, detail, errors, code)
+  const error = new ApiError(response.status, detail, errors, code)
+  // Dibunyikan di sini, di satu-satunya tempat semua kegagalan lewat, lalu error-nya TETAP
+  // dilempar: halaman pemanggil tetap memunculkan toast-nya sendiri seperti biasa.
+  if (error.status === 402 && error.code === 'SUBSCRIPTION_LOCKED') onSubscriptionLocked?.()
+  return error
 }
 
 /**

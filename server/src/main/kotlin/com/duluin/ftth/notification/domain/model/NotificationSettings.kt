@@ -248,10 +248,14 @@ class NotificationSettings private constructor(
      * notifikasi pemasaran melainkan bagian dari mekanisme masuk. ISP yang mematikan
      * pemberitahuan langganan tak boleh diam-diam ikut mematikan satu-satunya jalan
      * pelanggannya kembali ke akunnya sendiri.
+     *
+     * `TENANT_SIGNED_UP` selalu boleh karena penerimanya bukan pelanggan tenant ini melainkan
+     * admin ISP-nya sendiri, dan saklar tenant belum ada saat email itu berangkat.
      */
     fun isTriggerEnabled(trigger: NotificationTrigger): Boolean = when (trigger) {
         NotificationTrigger.MANUAL,
         NotificationTrigger.PORTAL_PASSWORD_RESET,
+        NotificationTrigger.TENANT_SIGNED_UP,
         -> true
         NotificationTrigger.SUBSCRIPTION_ACTIVATED,
         NotificationTrigger.SUBSCRIPTION_ISOLATED,

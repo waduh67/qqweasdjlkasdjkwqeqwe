@@ -1,4 +1,5 @@
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
 import { useCan } from '@/auth/useCan'
 import { useAppShellNav } from '@/hooks/useAppShellNav'
@@ -101,12 +102,29 @@ const GROUPS: NavGroup[] = [
 const FLUSH_ROUTES = new Set(['/map'])
 
 export function Layout() {
-  const { user, logout } = useAuth()
+  const { user, logout, readOnly, subscriptionLock } = useAuth()
   const { can, isPlatformAdmin } = useCan()
   const location = useLocation()
+  const navigate = useNavigate()
   const { collapsed, navOpen, toggleNav, closeNav, shellClass } = useAppShellNav()
 
   const flush = FLUSH_ROUTES.has(location.pathname)
+
+  /**
+   * Dorong ke `/subscription` SEKALI saja saat kunci pertama kali terbaca. Sekali, bukan
+   * terus-menerus: keputusannya adalah konsol jadi baca-saja, bukan disandera — setelah
+   * melihat tagihannya, operator harus tetap bebas membuka data pelanggannya. Banner merah
+   * di bawah yang menjaga agar alasannya tak hilang dari pandangan.
+   */
+  const redirected = useRef(false)
+  useEffect(() => {
+    if (!readOnly || redirected.current) return
+    redirected.current = true
+    if (location.pathname !== '/subscription') navigate('/subscription')
+    // location.pathname sengaja dibaca tanpa jadi dependency: efek ini hanya boleh bereaksi
+    // pada perubahan status kunci, bukan pada tiap perpindahan halaman.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readOnly, navigate])
 
   const initials = (user?.name ?? '?')
     .split(' ')
@@ -198,6 +216,38 @@ export function Layout() {
       </aside>
 
       <div className="main">
+        {/* Banner menetap, bukan toast: kuncinya berlaku sampai dibayar, jadi alasannya harus
+            tetap terlihat di halaman mana pun operator berada — termasuk saat ia lupa. */}
+        {readOnly && (
+          <div
+            role="alert"
+            className="row"
+            style={{
+              justifyContent: 'space-between',
+              gap: '0.75rem',
+              flexWrap: 'wrap',
+              padding: '0.6rem 1rem',
+              background: 'color-mix(in srgb, var(--danger) 12%, var(--surface))',
+              borderBottom: '1px solid color-mix(in srgb, var(--danger) 45%, transparent)',
+              color: 'var(--danger)',
+            }}
+          >
+            <span className="row" style={{ gap: '0.5rem', fontSize: '0.85rem' }}>
+              <IconAlert size={16} />
+              <span>
+                <strong>Langganan aplikasi menunggak</strong>
+                {subscriptionLock && subscriptionLock.daysOverdue > 0
+                  ? ` ${subscriptionLock.daysOverdue} hari.`
+                  : '.'}{' '}
+                Konsol dalam mode baca-saja — data tetap terbaca, tapi perubahan ditolak sampai
+                tagihan dilunasi.
+              </span>
+            </span>
+            <Link to="/subscription" style={{ textDecoration: 'none' }}>
+              <Button variant="primary">Bayar sekarang</Button>
+            </Link>
+          </div>
+        )}
         <main className={flush ? 'content content-flush' : 'content'}>
           {!flush && (
             <div className="breadcrumb-bar">

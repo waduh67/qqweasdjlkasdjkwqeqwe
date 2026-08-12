@@ -372,9 +372,12 @@ function OperatorApp() {
             <Route
               path="subscription"
               element={
-                <RequirePermission permission="billing.subscription.view">
-                  <SubscriptionPage />
-                </RequirePermission>
+                // SENGAJA tanpa RequirePermission. Saat langganan menunggak, semua staf —
+                // termasuk teknisi & CS yang tak punya izin billing — dilempar ke sini oleh
+                // banner/redirect kunci baca-saja. "Akses ditolak" untuk mereka berarti konsol
+                // membeku tanpa alasan yang bisa dibaca; halamannya sendiri yang menyaring
+                // (lihat `canView` di SubscriptionPage) dan menampilkan arahan yang tepat.
+                <SubscriptionPage />
               }
             />
             <Route

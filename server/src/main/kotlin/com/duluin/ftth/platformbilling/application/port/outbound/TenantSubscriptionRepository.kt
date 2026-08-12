@@ -15,4 +15,10 @@ interface TenantSubscriptionRepository {
      * [onOrBefore]) dan masih menagih (ACTIVE/PAST_DUE). Dipakai scheduler penerbitan.
      */
     fun findDueForInvoice(onOrBefore: LocalDate): List<TenantSubscription>
+
+    /**
+     * Semua langganan SUSPENDED — yakni tenant yang konsolnya baca-saja. Dipakai backfill
+     * start-up untuk memulihkan tenant yang terlanjur di-suspend keras oleh aturan lama.
+     */
+    fun findSuspended(): List<TenantSubscription>
 }

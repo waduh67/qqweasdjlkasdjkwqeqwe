@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.error.AccessDeniedException
 import com.duluin.ftth.common.domain.error.AuthenticationException
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
+import com.duluin.ftth.common.domain.error.SubscriptionLockedException
 import com.duluin.ftth.common.domain.error.TooManyRequestsException
 import com.duluin.ftth.common.domain.error.TwoFactorRequiredException
 import com.duluin.ftth.common.domain.error.ValidationException
@@ -49,6 +50,15 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException::class)
     fun handleAccessDenied(ex: AccessDeniedException) = problem(HttpStatus.FORBIDDEN, ex.message)
+
+    /**
+     * 402 Payment Required — status yang praktis tak pernah terpakai di web modern, dan justru
+     * itu gunanya di sini: ia tak bisa tertukar dengan 403 milik "izinmu kurang". Penandanya
+     * mengikuti pola `TWO_FACTOR_REQUIRED`, dan sudah terbaca `ApiError.code` di klien.
+     */
+    @ExceptionHandler(SubscriptionLockedException::class)
+    fun handleSubscriptionLocked(ex: SubscriptionLockedException): ProblemDetail =
+        problem(HttpStatus.PAYMENT_REQUIRED, ex.message).apply { setProperty("code", "SUBSCRIPTION_LOCKED") }
 
     @ExceptionHandler(AuthorizationDeniedException::class, SpringAccessDeniedException::class)
     fun handleSpringDenied(ex: RuntimeException) =

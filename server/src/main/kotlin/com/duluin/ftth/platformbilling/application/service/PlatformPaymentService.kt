@@ -3,6 +3,7 @@ package com.duluin.ftth.platformbilling.application.service
 import com.duluin.ftth.billing.application.port.outbound.PaymentSettlement
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
+import com.duluin.ftth.common.security.ReadOnlyLockGuard
 import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionInvoiceRepository
 import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionPaymentRepository
 import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionRepository
@@ -10,7 +11,6 @@ import com.duluin.ftth.platformbilling.domain.model.SubscriptionStatus
 import com.duluin.ftth.platformbilling.domain.model.TenantSubscriptionInvoice
 import com.duluin.ftth.platformbilling.domain.model.TenantSubscriptionPayment
 import com.duluin.ftth.tenancy.TenantApi
-import com.duluin.ftth.tenancy.TenantStatus
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -33,6 +33,7 @@ class PlatformPaymentService(
     private val subscriptionRepository: TenantSubscriptionRepository,
     private val tenantApi: TenantApi,
     private val auditor: AuditRecorder,
+    private val lockGuard: ReadOnlyLockGuard,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -128,7 +129,14 @@ class PlatformPaymentService(
         return saved
     }
 
-    /** Bila tak ada lagi tagihan tertunggak, pulihkan langganan & tenant ke ACTIVE. */
+    /**
+     * Bila tak ada lagi tagihan tertunggak, pulihkan langganan ke ACTIVE — dan dengan itu kunci
+     * baca-saja konsol tenant terbuka.
+     *
+     * Tenant-nya sendiri sengaja TIDAK ikut diaktifkan. Tenant yang berstatus SUSPENDED hari ini
+     * hanya bisa sampai di sana lewat tangan platform admin (menunggak tak lagi men-suspend
+     * tenant), dan melunasi tagihan bukan alasan untuk membatalkan keputusan itu.
+     */
     private fun reactivateIfCleared(subscriptionId: UUID, tenantId: UUID) {
         if (invoiceRepository.findOutstandingBySubscriptionId(subscriptionId).isNotEmpty()) return
         val subscription = subscriptionRepository.findById(subscriptionId) ?: return
@@ -136,15 +144,14 @@ class PlatformPaymentService(
 
         subscription.activate()
         subscriptionRepository.save(subscription)
-        // Pulihkan tenant yang sempat disuspend karena menunggak.
-        if (tenantApi.findById(tenantId)?.status == TenantStatus.SUSPENDED) {
-            tenantApi.activate(tenantId)
-            auditor.record(
-                action = "platform.subscription.tenant.restored",
-                entityType = "Tenant",
-                entityId = tenantId,
-                tenantId = tenantApi.platformTenantId(),
-            )
-        }
+        // Tanpa ini, konsol baru terasa terbuka setelah cache penjaga kedaluwarsa sendiri —
+        // dan orang yang baru saja membayar mengira pembayarannya gagal.
+        lockGuard.invalidate(tenantId)
+        auditor.record(
+            action = "platform.subscription.tenant.unlocked",
+            entityType = "Tenant",
+            entityId = tenantId,
+            tenantId = tenantApi.platformTenantId(),
+        )
     }
 }

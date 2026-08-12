@@ -42,16 +42,19 @@ enum class TransactionalChannel { EMAIL, WHATSAPP }
 enum class TransactionalPurpose { PORTAL_PASSWORD_RESET }
 
 /**
+ * Baris subjek email sengaja TIDAK ada di sini: ia milik module notification, disetel admin
+ * platform per [TransactionalPurpose], dan diambil dari sana saat kirim. Pemanggil yang
+ * mengoper subjeknya sendiri hanya akan melihatnya diabaikan diam-diam — parameter begitu
+ * lebih buruk daripada tak ada sama sekali.
+ *
  * @param destination alamat email atau nomor WhatsApp, sesuai [channel].
  * @param recipientName nama penerima; hanya sebagian penyedia WhatsApp yang mewajibkannya.
- * @param subject baris subjek email. Diabaikan kanal WhatsApp (tak punya padanannya).
  */
 data class TransactionalMessage(
     val purpose: TransactionalPurpose,
     val channel: TransactionalChannel,
     val destination: String,
     val recipientName: String,
-    val subject: String,
     val body: String,
 )
 

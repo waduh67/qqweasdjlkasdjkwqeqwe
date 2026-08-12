@@ -6,6 +6,80 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-12 — Alamat pengirim email dikunci ke platform; alamat tenant jadi alamat balasan
+
+**Diubah**
+- **Alamat pengirim (`From`) email kini SELALU alamat platform**, tak bisa lagi ditimpa tenant.
+  Relay yang dipakai (Brevo) hanya menerima surat dari pengirim yang sudah terverifikasi di
+  sisi penyedia, jadi alamat berdomain ISP di header `From` bukan sekadar berisiko masuk spam —
+  **seluruh email ISP itu gagal berangkat**. Verifikasinya menuntut akses DNS per domain, yang
+  tak mungkin disediakan lewat layar setelan, jadi kolomnya ditiadakan alih-alih divalidasi.
+- **Kolom alamat milik tenant turun pangkat jadi "Alamat balasan" (`Reply-To`)** — peran yang
+  memang sudah dipegangnya sejak semula. `Reply-To` tak diverifikasi penyedia mana pun, jadi
+  balasan pelanggan tetap mendarat di kotak masuk ISP-nya, bukan di kotak masuk platform. Nilai
+  yang sudah tersimpan **ikut pindah sendiri** lewat migrasi `V100` (rename kolom, bukan hapus):
+  tak ada tenant yang kehilangan setelan.
+- **Kartu "Identitas & tampilan email" tenant** menampilkan alamat pengirim platform yang
+  berlaku sebagai baris **terkunci** (teks berlabel, bukan input mati — tak ada izin yang bisa
+  membukanya), lengkap dengan alasannya. Nama pengirim, logo, warna, footer, tanda tangan, dan
+  subjek **tak berubah sama sekali**: relay tak mempermasalahkan nama pengirim selama alamatnya
+  terverifikasi, jadi surat tetap terbaca sebagai surat dari ISP-nya.
+- **Peringatan sender-terverifikasi/SPF-DKIM pindah ke layar `/platform/email`**, di bawah kolom
+  alamat pengirim platform — di sanalah alamat yang harus terdaftar di relay itu benar-benar
+  disetel. Di kartu tenant peringatan itu sudah tak punya kolom yang diperingatkannya.
+
+### 2026-08-11 — Pendaftaran ISP tanpa ketik kode, email selamat datang, dan kunci baca-saja saat menunggak
+
+**Ditambahkan**
+- **Kode ISP dirakit server** saat pendaftaran mandiri (`/signup`): dari nama ISP
+  (`PT Net Media Jaya` → `pt-net-media-jaya`), bernomor bila bentrok (`…-2`, `…-3`). Kolom
+  "Kode ISP" hilang dari formulir — ia kunci teknis, bukan pilihan bisnis, dan bentrok kode
+  yang muncul sebagai 409 di tengah alur tak bisa diperbaiki pendaftar. Kodenya dikembalikan
+  di layar sukses dan **wajib** disimpan: layar masuk staf memintanya setiap kali.
+- **Email selamat datang** ke admin ISP baru, berisi kode ISP di barisnya sendiri, email
+  admin, dan tautan masuk. Berlaku untuk pendaftaran mandiri **maupun** onboarding dari
+  `/platform/tenants`, asalkan admin awalnya memang baru dibuat. Berangkat atas nama merek
+  **platform** — pada detik itu tenantnya belum punya logo, warna, atau alamat pengirim.
+- **Token `{isp}` di semua baris subjek email**, diganti nama ISP saat kirim: satu subjek
+  global tetap terbaca personal di kotak masuk pelanggan.
+- **Subjek khusus platform.** "Pemulihan password portal" & "Pendaftaran ISP baru" hanya bisa
+  disetel admin platform; timpaan tenant untuknya **diabaikan**, bukan sekadar disembunyikan
+  dari layar. Keduanya surat dari mekanisme aplikasi, bukan pemberitahuan ISP ke pelanggannya.
+- **`GET /api/subscription/lock`** — tanpa izin khusus (cukup terautentikasi) supaya teknisi
+  atau CS yang tak punya izin billing pun tahu kenapa aplikasinya membeku: nominal, jatuh
+  tempo, dan umur tunggakan.
+- **Dokumentasi baru [`docs/email-branding.md`](docs/email-branding.md)** — satu dokumen untuk
+  seluruh tumpukan email: tiga tingkat sumber SMTP, pewarisan platform → tenant, logo publik,
+  tabel siapa boleh menyetel subjek apa, dan email selamat datang beserta batas modulnya.
+
+**Diubah**
+- **Tenant yang menunggak langganan SaaS kini BACA-SAJA, bukan tak bisa login.** Aturan lama
+  men-suspend tenantnya, dan login tenant non-aktif ditolak — tunggakan jadi lubang tanpa jalan
+  keluar: ISP yang telat bayar tak bisa masuk sekalipun untuk membayar, dan datanya seolah
+  lenyap. Sekarang seluruh konsol tetap terbaca (semua izin `*.view`), aksi tulis ditolak
+  **402** ber-`code=SUBSCRIPTION_LOCKED`, tombolnya mati di UI, banner merah menetap, dan
+  pengguna diarahkan sekali ke `/subscription`. Membayar langganan tetap boleh — tanpa
+  pengecualian itu kuncinya menelan dirinya sendiri. **Portal pelanggan tetap jalan penuh**,
+  termasuk membayar tagihan: itu sumber uang yang melunasi langganannya. Pelunasan membuka
+  kunci **seketika**, tanpa login ulang. Suspend manual dari `/platform/tenants` tetap kunci
+  total dan tak berubah; tenant yang terlanjur tersuspend aturan lama dipulihkan sekali jalan
+  saat start-up.
+- **`POST /api/signup` tak lagi menerima `slug`.** Field itu dibuang dari payload (balasannya
+  tetap membawanya). Galat "Kode ISP sudah dipakai" ikut hilang; yang tersisa hanya bentrok
+  **email**, satu-satunya yang bisa diperbaiki pendaftar sendiri.
+- **`TransactionalMessage.subject` dihapus dari `NotificationApi`.** Subjeknya kini diturunkan
+  module notification dari pemicu pesannya. Sebelum ini baris subjek "Pemulihan password
+  portal" bisa disimpan tapi tak pernah terpakai, karena pemanggil selalu mengoper subjeknya
+  sendiri — parameter yang diabaikan diam-diam lebih buruk daripada dihapus.
+- **Bonus bulan gratis tak lagi menghidupkan tenant yang tersuspend.** Ia membuka kunci
+  baca-saja seperti biasa, tapi status SUSPENDED pada tenant kini hanya bisa dipasang tangan
+  admin platform — dan bonus bukan alasan untuk membatalkan keputusan itu.
+
+**Diperbaiki**
+- **Baris subjek email pemulihan password portal akhirnya benar-benar dipakai.** Sebelumnya
+  `"Kode pemulihan akun <nama ISP>"` dipaku di kode, jadi apa pun yang disetel di
+  `/platform/email` tak berpengaruh. Nama ISP tak hilang — ia kembali lewat token `{isp}`.
+
 ### 2026-08-11 — Bonus bulan langganan gratis untuk tenant
 
 **Ditambahkan**

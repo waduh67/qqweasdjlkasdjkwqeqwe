@@ -39,6 +39,7 @@ hanya kolom penunjuk pemilik langganan).
 tenant_subscription (satu baris per tenant)
 ├── monthly_fee            biaya bulanan efektif (override ?: default global saat dibuat)
 ├── status                 ACTIVE | PAST_DUE | SUSPENDED | CANCELLED
+│                          SUSPENDED = konsol tenant BACA-SAJA (bukan tenant dikunci)
 ├── billing_day / grace    null = ikut default global (platform_setting)
 ├── current_period_start   masa aktif — awal
 ├── current_period_end     masa aktif — akhir  ← "Active until"; HANYA bertambah saat LUNAS
@@ -46,8 +47,10 @@ tenant_subscription (satu baris per tenant)
 └── activated_at           kapan pertama kali aktif
 ```
 
-Perpindahan status memicu efek nyata (auto-suspend saat menunggak, auto-pulih saat lunas),
-jadi dijaga mesin keadaan eksplisit di domain — bukan setter bebas.
+Perpindahan status memicu efek nyata (kunci baca-saja saat menunggak, terbuka lagi saat lunas),
+jadi dijaga mesin keadaan eksplisit di domain — bukan setter bebas. `isLocked` (= `SUSPENDED`)
+adalah satu-satunya sumber kebenaran kunci itu; lihat
+[Menunggak = baca-saja, bukan terkunci](#menunggak--baca-saja-bukan-terkunci).
 
 ---
 
@@ -104,7 +107,7 @@ menerbitkan satu tagihan `biaya × N` berperiode N bulan; scheduler pun tak mena
 `next_invoice_at` dilompatkan melewati seluruh bulan prabayar.
 
 **Kenapa `seedInitialPeriod`?** Tanpa masa aktif awal, tenant baru langsung punya tagihan jatuh
-tempo dan `PlatformBillingScheduler` akan menyuspendnya di siklus berikutnya sebelum sempat
+tempo dan `PlatformBillingScheduler` akan mengunci konsolnya di siklus berikutnya sebelum sempat
 membayar. Memberi 1 bulan aktif di depan (tagihan pertama terbit menjelang habis) menutup lubang itu.
 
 ---
@@ -145,13 +148,14 @@ Bonus **tidak** memutasi masa aktif langsung: ia menempuh jalur LUNAS yang sama 
 sumber kebenaran kedua atas `current_period_end`.
 
 1. Tunggakan yang ada (ISSUED/OVERDUE) di-**VOID**. Wajib: tanpa ini `PlatformBillingRunner.enforce()`
-   akan men-suspend ulang tenant karena tagihan lama dan bonusnya percuma.
+   akan mengunci ulang konsolnya karena tagihan lama dan bonusnya percuma.
 2. Terbit tagihan **`FREE-<yyyymm>-<tenant8>` senilai Rp 0** berperiode N bulan, menyambung dari ujung
    masa aktif berjalan (atau mulai hari ini bila sudah lewat). Bentrok nomor diselesaikan sufiks `-R2`,
    `-R3`, … lewat `PlatformInvoiceGenerator.grantNumber`.
 3. `PlatformPaymentService.recordGrant` melunasinya dengan penyedia semu **`GRANT`** (nilai 0, `reason`
-   tersimpan sebagai `note`) → `extendOnPayment` menambah masa aktif → `reactivateIfCleared` memulihkan
-   langganan **dan** tenant yang sempat tersuspend.
+   tersimpan sebagai `note`) → `extendOnPayment` menambah masa aktif → `reactivateIfCleared` membuka
+   kunci baca-saja. Tenant yang berstatus SUSPENDED **tidak** ikut dihidupkan: status itu kini hanya
+   bisa dipasang tangan admin platform, dan bonus bulan gratis bukan alasan membatalkan keputusannya.
 4. `deferNextInvoiceToPeriodEnd()` menggeser `next_invoice_at` ke ujung masa aktif baru → tak ditagih
    selama masa bonus.
 
@@ -167,11 +171,94 @@ Level platform → **tidak** `TenantContext.runAs` (beda dari `BillingScheduler`
 langganan diproses dalam transaksi `REQUIRES_NEW` agar kegagalan satu tak menghentikan lainnya.
 
 - `issueInvoices()` — terbitkan tagihan untuk langganan yang `next_invoice_at` sudah due.
-- `enforceOverdue()` — tandai tagihan lewat jatuh tempo → OVERDUE; bila menunggak **melewati
-  masa tenggang**, suspend langganan **dan** tenant. Auto-suspend didorong oleh **tagihan
-  tertunggak**, bukan sekadar `current_period_end` lewat.
+- `enforceOverdue()` — tandai tagihan lewat jatuh tempo → OVERDUE (langganan → PAST_DUE); bila
+  menunggak **melewati masa tenggang** → langganan SUSPENDED, dan konsol tenant jadi **baca-saja**.
+  Penguncian didorong oleh **tagihan tertunggak**, bukan sekadar `current_period_end` lewat.
 
-Pelunasan seluruh tunggakan memulihkan langganan + tenant ke ACTIVE (`reactivateIfCleared`).
+Tenant-nya sendiri **tidak** ikut di-suspend, dan `lockGuard.invalidate(tenantId)` dipanggil di
+ujung `enforce` supaya kunci baru tak menunggu TTL cache habis. Audit: tagihan →
+`platform.subscription.invoice.overdue`, kunci → `platform.subscription.tenant.locked`.
+
+Pelunasan seluruh tunggakan mengembalikan langganan ke ACTIVE (`reactivateIfCleared`) dan membuka
+kuncinya seketika.
+
+---
+
+## Menunggak = baca-saja, bukan terkunci
+
+Aturan lama men-`suspend()` **tenant**-nya, dan `AuthenticationService` menolak login tenant
+non-ACTIVE. Hasilnya lubang tanpa jalan keluar: ISP yang telat bayar tak bisa masuk sama sekali —
+termasuk untuk membayar tagihan yang membuka kuncinya — dan datanya seolah lenyap. Sekarang
+tunggakan **mengunci konsol jadi baca-saja**, bukan mengunci orangnya di luar.
+
+| | Menunggak (langganan SUSPENDED) | Suspend manual platform admin |
+|---|---|---|
+| Dipasang oleh | scheduler, otomatis | tangan super-admin di `/platform/tenants` |
+| Login operator | ✅ berhasil | ❌ "Tenant tidak aktif" |
+| Baca (`*.view`) | ✅ semua | ❌ |
+| Tulis | ❌ **402** `SUBSCRIPTION_LOCKED` | ❌ |
+| Bayar langganan | ✅ tetap boleh | ❌ |
+| Portal pelanggan | ✅ penuh, termasuk membayar | ❌ |
+| Dibuka oleh | pelunasan tunggakan (seketika) | super-admin |
+
+### Siapa yang menegakkan
+
+Satu titik cekik: **`AccessChecker`** (`@authz.can(...)`) — gerbang yang dilewati hampir setiap
+operasi tulis di aplikasi ini, dengan konvensi penamaan izin yang konsisten (`*.view` membaca,
+sisanya menulis — lihat `PermissionCatalog`). Menyaring berdasarkan method HTTP salah menuduh
+endpoint POST yang sebenarnya cuma membaca (pencarian, pratinjau, ekspor) dan tak menyentuh jalur
+non-HTTP sama sekali.
+
+```
+common.AccessChecker.can("customer.create")
+   └─ punya izin? ──▶ izin tulis? ──▶ ReadOnlyLockGuard.isReadOnly() ──▶ SubscriptionLockedException
+                                          ▲ ObjectProvider (opsional)
+platformbilling.SubscriptionLockGuard ────┘  subscription.status == SUSPENDED, cache 60 detik
+```
+
+- **Antarmuka `ReadOnlyLockGuard` tinggal di `common`, implementasinya di `platformbilling`** —
+  inversi dependensi, karena `common → platformbilling` menutup siklus modul. Di-inject sebagai
+  `ObjectProvider` supaya konteks tanpa module platformbilling (test unit, potongan aplikasi)
+  tetap berjalan dengan perilaku lama: tak ada penjaga = tak ada yang terkunci.
+- **Melempar, bukan mengembalikan `false`.** Dua keadaan ini menuntut jawaban berbeda: "izinmu
+  kurang" (403) berarti hubungi admin, "langgananmu menunggak" (402) berarti bayar. `false` yang
+  sama untuk keduanya menyembunyikan bedanya. Exception dari dalam SpEL `@PreAuthorize` merambat
+  utuh ke `GlobalExceptionHandler` → `402 Payment Required` ber-`code: "SUBSCRIPTION_LOCKED"`
+  (pola yang sama dengan `TWO_FACTOR_REQUIRED`).
+- **Cache 60 detik** di `SubscriptionLockGuard`: pemanggilnya adalah cek izin di **setiap**
+  request yang menulis. `invalidate(tenantId)` yang membuat pelunasan terasa seketika; TTL cuma
+  jaring pengaman. Kegagalan baca (tabel belum termigrasi, koneksi putus) dijawab **"terbuka"** —
+  kunci ini menutup seluruh konsol, jadi ketidakpastian tak boleh menguncinya.
+
+### Apa yang tetap hidup
+
+| Tetap jalan | Alasan |
+|---|---|
+| Semua izin `*.view` | data tenant tak disandera; konsol tetap terbaca utuh |
+| `billing.subscription.renew` (`ALWAYS_ALLOWED`) | tanpa ini kuncinya menelan dirinya sendiri |
+| `/api/portal/**` | pelanggan tetap melihat & **membayar** — itu sumber uang yang melunasi langganan |
+| `/api/public/**`, `/api/auth/**`, `/api/me/2fa` | tak melewati `@authz.can` sama sekali |
+| Seluruh endpoint `platform.*` | platform admin selalu di tenant `platform`, yang tak pernah terkunci |
+
+### Sisi web
+
+- `GET /api/subscription/lock` → `{ locked, daysOverdue, dueDate, amountDue, currency, invoiceId }`.
+  **Tanpa `@PreAuthorize`** (cukup terautentikasi) supaya teknisi/CS yang tak punya izin billing
+  pun tahu kenapa aplikasinya membeku.
+- `client.ts` menyalakan handler `onSubscriptionLocked` saat 402 ber-`code=SUBSCRIPTION_LOCKED`,
+  lalu **tetap** melempar `ApiError` agar halaman pemanggil tetap menampilkan toast-nya.
+- `useCan` mencerminkan `AccessChecker`: saat terkunci, izin non-`*.view` (kecuali
+  `billing.subscription.renew`) mengembalikan `false` — satu perubahan itu mematikan ratusan
+  tombol aksi tanpa menyunting satu halaman pun. Tetap kosmetik; penegakan sungguhan di server.
+- Banner merah menetap di `Layout`, plus redirect **sekali** ke `/subscription` pada mount pertama
+  setelah login (disimpan di `ref`) — "baca-saja", bukan "redirect paksa total".
+- `/subscription` menampilkan panel penjelas (nominal, jatuh tempo, umur tunggakan). Bagi yang tak
+  punya `billing.subscription.renew`, panel yang sama muncul **tanpa tombol bayar** disertai arahan
+  menghubungi admin ISP — bukan halaman kosong tanpa penjelasan.
+
+**Tenant yang terlanjur tersuspend** aturan lama dipulihkan sekali jalan oleh
+`TenantSubscriptionBackfillRunner`: tenant SUSPENDED yang langganannya juga SUSPENDED (= alasannya
+memang menunggak) dikembalikan ke ACTIVE, karena kuncinya kini datang dari status langganan.
 
 ---
 
@@ -219,11 +306,21 @@ sub-package billing. `PlatformGatewayResolver` menyusun konteks charge dari
 Pivot belum dikonfigurasi/aktif, charge langganan menolak dengan pesan jelas (bukan diam-diam
 gagal).
 
-### 3. Suspend/aktifkan tenant → lewat `TenantApi`
+### 3. Aktifkan tenant → lewat `TenantApi`
 
-`platformbilling` men-suspend/memulihkan tenant saat menunggak/lunas. Method `suspend(id)`/
-`activate(id)` **dipromosikan** ke `TenantApi` (kontrak lintas-module ter-expose) alih-alih memakai
-`ManageTenantUseCase` (use case web internal tenancy) — menutup satu lagi akses tipe non-exposed.
+Method `suspend(id)`/`activate(id)` **dipromosikan** ke `TenantApi` (kontrak lintas-module
+ter-expose) alih-alih memakai `ManageTenantUseCase` (use case web internal tenancy) — menutup satu
+lagi akses tipe non-exposed. Sejak menunggak cuma mengunci konsol jadi baca-saja, `platformbilling`
+tak lagi memanggil `suspend()` sama sekali; `activate()` tersisa **hanya** di
+`TenantSubscriptionBackfillRunner` untuk memulihkan tenant yang terlanjur tersuspend aturan lama.
+
+### 4. Kunci baca-saja ditegakkan `common` → port dibalik
+
+Penjaga izin (`AccessChecker`) tinggal di `common`, tapi jawabannya ada di `platformbilling` —
+sementara `common → platformbilling` menutup siklus. Diselesaikan dengan **inversi**: antarmuka
+`ReadOnlyLockGuard` didefinisikan di `common`, `SubscriptionLockGuard` mengimplementasikannya di
+`platformbilling`, dan `AccessChecker` menerimanya sebagai `ObjectProvider` (opsional). Detailnya
+di [Menunggak = baca-saja, bukan terkunci](#menunggak--baca-saja-bukan-terkunci).
 
 ---
 
@@ -240,6 +337,7 @@ gagal).
 | Endpoint | Izin |
 |---|---|
 | `GET /api/subscription` · `POST /api/subscription/renew?months=N` | `billing.subscription.*` (tenant) |
+| `GET /api/subscription/lock` | **tanpa izin** (cukup terautentikasi) |
 | `GET/PUT /api/platform/billing/settings` | `platform.billing.*` |
 | `.../tenants/{id}/subscription` · `/invoices` · `/invoices/{id}/pay`·`/void` · `/grant` · `/cancel` | `platform.subscription.*` |
 | `POST /api/platform/billing/webhooks/{provider}` | publik (verifikasi tanda tangan gateway) |

@@ -6,17 +6,21 @@ import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.platformbilling.application.port.inbound.SubscriptionInvoiceView
+import com.duluin.ftth.platformbilling.application.port.inbound.SubscriptionLockView
 import com.duluin.ftth.platformbilling.application.port.inbound.TenantSelfSubscriptionUseCase
 import com.duluin.ftth.platformbilling.application.port.inbound.TenantSelfSubscriptionView
 import com.duluin.ftth.platformbilling.application.port.inbound.UsageMetricView
 import com.duluin.ftth.platformbilling.application.port.outbound.SubscriptionUsageProbe
 import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionInvoiceRepository
 import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionRepository
+import com.duluin.ftth.platformbilling.domain.model.SubscriptionStatus
 import com.duluin.ftth.platformbilling.domain.model.TenantSubscription
 import com.duluin.ftth.platformbilling.domain.model.TenantSubscriptionInvoice
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.math.BigDecimal
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /**
@@ -32,6 +36,7 @@ class TenantSelfSubscriptionService(
     private val invoiceGenerator: PlatformInvoiceGenerator,
     private val usageProbe: SubscriptionUsageProbe,
     private val masterConfig: PivotMasterConfigProvider,
+    private val resolver: PlatformGatewayResolver,
 ) : TenantSelfSubscriptionUseCase {
 
     override fun current(): TenantSelfSubscriptionView? {
@@ -89,6 +94,26 @@ class TenantSelfSubscriptionService(
         invoiceGenerator.simulatePayment(invoice, status)
         // Status belum berubah di sini — pelunasan menyusul lewat callback penyedia.
         return invoice.toView(sandboxMode())
+    }
+
+    override fun lockState(): SubscriptionLockView {
+        val subscription = subscriptionRepository.findByTenantId(TenantContext.tenantId())
+            ?: return SubscriptionLockView(false, 0, null, BigDecimal.ZERO, resolver.setting().currency, null)
+        val outstanding = invoiceRepository.findOutstandingBySubscriptionId(subscription.id)
+        // Tagihan tertua yang menentukan: itu yang paling lama menunggak, dan itu pula yang
+        // ditawarkan untuk dibayar lebih dulu.
+        val oldest = outstanding.minByOrNull { it.dueDate }
+        val today = LocalDate.now()
+        return SubscriptionLockView(
+            locked = subscription.status == SubscriptionStatus.SUSPENDED,
+            daysOverdue = oldest?.dueDate
+                ?.let { ChronoUnit.DAYS.between(it, today) }
+                ?.coerceAtLeast(0) ?: 0,
+            dueDate = oldest?.dueDate,
+            amountDue = outstanding.fold(BigDecimal.ZERO) { sum, invoice -> sum + invoice.amount },
+            currency = resolver.setting().currency,
+            invoiceId = oldest?.id,
+        )
     }
 
     /** Pivot master sedang mode sandbox? Penentu apakah simulasi pembayaran boleh ditawarkan. */

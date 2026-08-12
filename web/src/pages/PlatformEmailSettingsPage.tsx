@@ -25,6 +25,7 @@ import {
   EmailLogoField,
   EmailPreviewPanel,
   EmailSubjectFields,
+  SenderDomainWarning,
   isValidAccent,
 } from '@/components/organisms'
 import { useToast } from '@/system'
@@ -380,6 +381,9 @@ export function PlatformEmailSettingsPage() {
             style={{ minWidth: 220 }}
           />
         </div>
+
+        {form.fromAddress.trim() !== '' && fromOk && <SenderDomainWarning address={form.fromAddress.trim()} />}
+
         <TextField
           label="URL publik aplikasi"
           value={form.publicBaseUrl}

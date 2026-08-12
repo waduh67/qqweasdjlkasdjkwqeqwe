@@ -20,6 +20,7 @@ import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
+import com.duluin.ftth.common.security.ReadOnlyLockGuard
 import com.duluin.ftth.common.security.AuthenticatedUser
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.common.tenant.TenantContext
@@ -386,17 +387,20 @@ class PlatformInvoiceGeneratorRenewTest {
     }
 
     @Test
-    fun `bonus membatalkan tunggakan dan memulihkan tenant yang tersuspend`() {
+    fun `bonus membatalkan tunggakan dan membuka kunci tanpa menghidupkan tenant yang disuspend`() {
         subscriptions.save(suspendedSubscription())
         val overdue = invoiceFor(baseNumber, SubscriptionInvoiceStatus.OVERDUE).also { invoices.save(it) }
         val tenants = FakeTenantApi(TenantStatus.SUSPENDED)
 
         val view = subscriptionService(tenants).grantFreeMonths(tenantId, GrantFreeMonthsCommand(2, null))
 
-        // Tanpa pembebasan tunggakan, PlatformBillingRunner akan men-suspend ulang tenantnya.
+        // Tanpa pembebasan tunggakan, PlatformBillingRunner akan mengunci ulang konsolnya.
         assertThat(invoices.findById(overdue.id)!!.status).isEqualTo(SubscriptionInvoiceStatus.VOID)
         assertThat(view.status).isEqualTo(SubscriptionStatus.ACTIVE)
-        assertThat(tenants.activated).isTrue()
+        // Tenant-nya sendiri sengaja TIDAK ikut dihidupkan. Sejak menunggak cuma mengunci konsol
+        // jadi baca-saja, tenant berstatus SUSPENDED hanya bisa sampai di sana lewat tangan admin
+        // platform — dan bonus bulan gratis bukan alasan untuk membatalkan keputusan itu.
+        assertThat(tenants.activated).isFalse()
     }
 
     @Test
@@ -434,6 +438,7 @@ class PlatformInvoiceGeneratorRenewTest {
             subscriptionRepository = subscriptions,
             tenantApi = tenantApi,
             auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
+            lockGuard = NoopLockGuard,
         ),
         tenantApi = tenantApi,
         masterConfig = PivotMasterConfigProvider(FakePivotRepository()),
@@ -507,6 +512,8 @@ class PlatformInvoiceGeneratorRenewTest {
         override fun findById(id: UUID): TenantSubscription? = byId[id]
         override fun save(subscription: TenantSubscription): TenantSubscription = subscription.also { byId[it.id] = it }
         override fun findDueForInvoice(onOrBefore: LocalDate): List<TenantSubscription> = emptyList()
+        override fun findSuspended(): List<TenantSubscription> =
+            byId.values.filter { it.status == SubscriptionStatus.SUSPENDED }
     }
 
     private class FakeInvoiceRepository : TenantSubscriptionInvoiceRepository {
@@ -536,7 +543,17 @@ class PlatformInvoiceGeneratorRenewTest {
      */
     private fun selfService(gen: PlatformInvoiceGenerator) = TenantSelfSubscriptionService(
         subscriptions, invoices, gen, FakeUsageProbe(), PivotMasterConfigProvider(FakePivotRepository()),
+        PlatformGatewayResolver(FakePlatformSettingRepository(), PivotMasterConfigProvider(FakePivotRepository())),
     )
+
+    /**
+     * Kunci baca-saja tak diuji di kelas ini; penjaganya cuma perlu ada agar pelunasan bisa
+     * membatalkan cache-nya tanpa meledak.
+     */
+    private object NoopLockGuard : ReadOnlyLockGuard {
+        override fun isReadOnly(): Boolean = false
+        override fun invalidate(tenantId: UUID) = Unit
+    }
 
     private class FakePlatformSettingRepository : PlatformSettingRepository {
         override fun find(): PlatformSetting? = null
@@ -615,7 +632,7 @@ class PlatformInvoiceGeneratorRenewTest {
     private class FakeTenantApi(private var status: TenantStatus = TenantStatus.ACTIVE) : TenantApi {
         private val platformId = UuidV7.generate()
 
-        /** Tenant sempat diaktifkan kembali — bukti bonus memulihkan akses tenant yang tersuspend. */
+        /** Tenant sempat dihidupkan kembali — kini justru yang HARUS tak pernah terjadi otomatis. */
         var activated = false
             private set
 

@@ -13,9 +13,10 @@ import java.util.UUID
 
 /**
  * Pewarisan identitas & merek email. Yang diuji bukan sekadar "field tersalin", melainkan
- * empat janji yang dipegang layar setelan: timpaan tenant menang, kolom kosong benar-benar
+ * lima janji yang dipegang layar setelan: timpaan tenant menang, kolom kosong benar-benar
  * mewarisi platform (bukan mengosongkan), nama pengirim jatuh ke NAMA ISP sebelum ke nama
- * platform, dan jalur peringatan job tak pernah menyentuh baris tenant mana pun.
+ * platform, alamat pengirim TAK PERNAH ikut ditimpa (relay hanya menerima pengirim
+ * terverifikasi), dan jalur peringatan job tak pernah menyentuh baris tenant mana pun.
  */
 class EmailBrandingResolverTest {
 
@@ -40,7 +41,7 @@ class EmailBrandingResolverTest {
             ),
             tenant = tenantEmailSettings(
                 tenantId,
-                fromAddress = "billing@sinarjaya.id",
+                replyToAddress = "billing@sinarjaya.id",
                 fromName = "Sinar Jaya Support",
                 branding = EmailBranding(
                     logoStorageKey = "$tenantId/email/logo",
@@ -54,15 +55,33 @@ class EmailBrandingResolverTest {
 
         val identity = resolver.forTenant(tenantId)
 
-        assertThat(identity.fromAddress).isEqualTo("billing@sinarjaya.id")
+        // Alamat pengirim TIDAK ikut ditimpa — lihat test di bawah untuk alasannya.
+        assertThat(identity.fromAddress).isEqualTo("no-reply@duluin.net")
         assertThat(identity.fromName).isEqualTo("Sinar Jaya Support")
-        // Reply-To hanya lahir saat tenant benar-benar memakai alamatnya sendiri.
+        // Reply-To lahir saat tenant menyetel alamat balasannya sendiri.
         assertThat(identity.replyTo).isEqualTo("billing@sinarjaya.id")
         assertThat(identity.branding.accentColor).isEqualTo("#ff8800")
         assertThat(identity.branding.signatureText).isEqualTo("Salam, CS Sinar Jaya")
         // Footer tak diisi tenant ⇒ tetap footer platform, bukan hilang.
         assertThat(identity.branding.footerText).isEqualTo("Duluin.net · Jl. Merdeka 1")
         assertThat(identity.logoUrl).isEqualTo("https://app.duluin.net/api/public/email-logo/$tenantId")
+    }
+
+    @Test
+    fun `alamat tenant tak pernah jadi From, cuma jadi Reply-To`() {
+        // Penjaga regresi, bukan sekadar penegasan bentuk: relay platform hanya menerima
+        // pengirim yang sudah terverifikasi di sisi penyedia, jadi begitu alamat berdomain
+        // tenant bocor ke header From, SELURUH email ISP itu gagal berangkat — bukan sekadar
+        // mendarat di folder spam.
+        val resolver = resolver(
+            platform = platformEmailSettings(fromAddress = "no-reply@duluin.net"),
+            tenant = tenantEmailSettings(tenantId, replyToAddress = "billing@sinarjaya.id"),
+        )
+
+        val identity = resolver.forTenant(tenantId)
+
+        assertThat(identity.fromAddress).isEqualTo("no-reply@duluin.net")
+        assertThat(identity.replyTo).isEqualTo("billing@sinarjaya.id")
     }
 
     @Test

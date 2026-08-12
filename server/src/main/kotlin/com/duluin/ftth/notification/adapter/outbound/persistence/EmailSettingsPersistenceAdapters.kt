@@ -100,7 +100,7 @@ class TenantEmailSettingsPersistenceAdapter(
     override fun save(settings: TenantEmailSettings): TenantEmailSettings {
         val b = settings.branding
         val entity = jpa.findById(settings.id).orElse(null)?.apply {
-            fromAddress = settings.fromAddress
+            replyToAddress = settings.replyToAddress
             fromName = settings.fromName
             logoStorageKey = b.logoStorageKey
             logoContentType = b.logoContentType
@@ -109,7 +109,7 @@ class TenantEmailSettingsPersistenceAdapter(
             signatureText = b.signatureText
         } ?: TenantEmailSettingJpaEntity(
             id = settings.id,
-            fromAddress = settings.fromAddress,
+            replyToAddress = settings.replyToAddress,
             fromName = settings.fromName,
             logoStorageKey = b.logoStorageKey,
             logoContentType = b.logoContentType,
@@ -123,7 +123,7 @@ class TenantEmailSettingsPersistenceAdapter(
     private fun TenantEmailSettingJpaEntity.toDomain(): TenantEmailSettings = TenantEmailSettings.rehydrate(
         id = id,
         tenantId = tenantId ?: TenantContext.tenantId(),
-        fromAddress = fromAddress,
+        replyToAddress = replyToAddress,
         fromName = fromName,
         branding = EmailBranding(logoStorageKey, logoContentType, accentColor, footerText, signatureText),
     )

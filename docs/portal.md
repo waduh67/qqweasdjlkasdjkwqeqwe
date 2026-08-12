@@ -133,6 +133,16 @@ Empat keputusan yang membentuk alur ini:
    identitas tak cocok) — membedakannya memberi tahu penebak seberapa dekat ia, dan hanya
    itu yang ia butuhkan.
 
+**Subjek emailnya kini setelan platform, bukan string di kode.** Dulu `"Kode pemulihan akun
+${tenant.name}"` dipaku di `PortalPasswordRecoveryService`; sekarang ia diturunkan dari pemicu
+`PORTAL_PASSWORD_RESET` lewat `EmailSubjectResolver`, dengan bawaan `"Kode pemulihan akun {isp}"`
+— token `{isp}` diganti nama ISP saat kirim, jadi pelanggan yang punya akun di beberapa ISP tetap
+bisa membedakan dua email pemulihan di kotak masuknya. Yang boleh mengubahnya **hanya admin
+platform** (`/platform/email`): baris ini bagian dari jalan masuk pelanggan, dan ISP yang
+mengarang subjeknya sendiri bisa membuatnya tak lagi terbaca sebagai email keamanan — timpaan
+tenant untuknya diabaikan, bukan sekadar disembunyikan dari layar. Lihat
+[`email-branding.md`](email-branding.md#baris-subjek-tiga-tingkat--dua-pengecualian).
+
 Isi pesan menyebut **nama ISP** (pelanggan bisa punya beberapa akun) dan ditutup
 peringatan jangan membagikan kode — penipuan paling umum di jalur ini adalah menelepon
 pelanggan sambil mengaku petugas dan meminta kodenya dibacakan.

@@ -22,4 +22,6 @@ interface TenantSubscriptionJpaRepository : JpaRepository<TenantSubscriptionJpaE
         @Param("onOrBefore") onOrBefore: LocalDate,
         @Param("statuses") statuses: Collection<SubscriptionStatus>,
     ): List<TenantSubscriptionJpaEntity>
+
+    fun findByStatus(status: SubscriptionStatus): List<TenantSubscriptionJpaEntity>
 }

@@ -26,10 +26,12 @@ import java.util.UUID
  * Sisi tenant setelan email: timpaan identitas & tampilan di atas bawaan platform.
  *
  * Bentuknya cermin [PlatformEmailSettingsService] dengan dua perbedaan yang disengaja.
- * Pertama, TAK ADA setelan SMTP di sini — relay itu milik platform (alasannya di KDoc
- * `EmailDispatcher`). Kedua, tiap view membawa serta nilai WARISANNYA, karena di sisi tenant
- * kolom kosong bukan berarti "tak ada" melainkan "ikut platform", dan layar yang tak
- * menunjukkan apa yang diwarisi memaksa operator menebak isi email yang akan terkirim.
+ * Pertama, TAK ADA setelan SMTP maupun alamat pengirim di sini — relay itu milik platform
+ * dan hanya menerima pengirim terverifikasi (alasannya di KDoc `EmailDispatcher`); yang
+ * tersisa untuk tenant adalah alamat BALASAN. Kedua, tiap view membawa serta nilai WARISANNYA,
+ * karena di sisi tenant kolom kosong bukan berarti "tak ada" melainkan "ikut platform", dan
+ * layar yang tak menunjukkan apa yang diwarisi memaksa operator menebak isi email yang
+ * akan terkirim.
  */
 @Service
 @Transactional(readOnly = true)
@@ -51,15 +53,20 @@ class TenantEmailSettingsService(
     override fun update(command: UpdateTenantEmailSettingsCommand): TenantEmailSettingsView {
         val settings = settings()
         settings.update(
-            fromAddress = command.fromAddress,
+            replyToAddress = command.replyToAddress,
             fromName = command.fromName,
             branding = EmailBranding.of(command.accentColor, command.footerText, command.signatureText),
         )
         val saved = repository.save(settings)
-        subjectRepo.replaceTenant(PlatformEmailSettingsService.sanitizeSubjects(command.subjects))
-        // Alamat pengirim ikut dicatat: ia yang menentukan atas nama siapa surat berangkat, dan
-        // itulah satu-satunya setelan di layar ini yang bisa membuat email tenant ditolak relay.
-        audit("notification.email.settings.updated", saved, mapOf("fromAddress" to saved.fromAddress))
+        // Pemicu khusus platform dibuang di sini, bukan ditolak dengan galat: layar tenant memang
+        // tak menawarkannya, jadi satu-satunya cara ia sampai ke sini adalah klien yang mengarang
+        // permintaan sendiri — dan yang perlu dijamin cuma timpaan itu tak pernah tersimpan.
+        val subjects = PlatformEmailSettingsService.sanitizeSubjects(command.subjects)
+            .filterKeys { it !in EmailSubjectResolver.PLATFORM_ONLY }
+        subjectRepo.replaceTenant(subjects)
+        // Alamat balasan ikut dicatat: ia yang menentukan ke kotak masuk siapa pertanyaan
+        // pelanggan mendarat — perubahan diam-diam di situ bisa membuat balasan hilang berminggu.
+        audit("notification.email.settings.updated", saved, mapOf("replyToAddress" to saved.replyToAddress))
         return saved.toView()
     }
 
@@ -135,13 +142,15 @@ class TenantEmailSettingsService(
         val platformSubjects = subjectRepo.platformSubjects()
         val tenantSubjects = subjectRepo.tenantSubjects()
         return TenantEmailSettingsView(
-            fromAddress = fromAddress,
+            replyToAddress = replyToAddress,
             fromName = fromName,
             logoSet = branding.logoSet,
             accentColor = branding.accentColor,
             footerText = branding.footerText,
             signatureText = branding.signatureText,
-            inheritedFromAddress = platform.fromAddress,
+            // Bukan placeholder melainkan nilai terkunci: dikirim supaya layar bisa
+            // menunjukkan alamat apa yang dilihat pelanggan, tanpa menawarkan mengubahnya.
+            platformFromAddress = platform.fromAddress,
             // Rantai yang sama dengan EmailBrandingResolver, dikurangi timpaan tenant: yang
             // ingin ditunjukkan di sini justru "apa yang muncul kalau kolom ini dikosongkan".
             inheritedFromName = tenants.findById(tenantId)?.name ?: platform.fromName,
@@ -149,13 +158,17 @@ class TenantEmailSettingsService(
             inheritedAccentColor = platform.branding.accentColor,
             inheritedFooterText = platform.branding.footerText,
             inheritedSignatureText = platform.branding.signatureText,
-            subjects = EmailSubjectResolver.DEFAULT_SUBJECTS.map { (trigger, fallback) ->
-                EmailSubjectView(
-                    trigger = trigger,
-                    subject = tenantSubjects[trigger],
-                    inheritedSubject = platformSubjects[trigger] ?: fallback,
-                )
-            },
+            // Pemicu khusus platform tak ditawarkan sama sekali — menampilkan kolom yang isinya
+            // diabaikan saat kirim lebih menyesatkan daripada tak menampilkannya.
+            subjects = EmailSubjectResolver.DEFAULT_SUBJECTS
+                .filterKeys { it !in EmailSubjectResolver.PLATFORM_ONLY }
+                .map { (trigger, fallback) ->
+                    EmailSubjectView(
+                        trigger = trigger,
+                        subject = tenantSubjects[trigger],
+                        inheritedSubject = platformSubjects[trigger] ?: fallback,
+                    )
+                },
         )
     }
 

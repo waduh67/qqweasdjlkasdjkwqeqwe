@@ -1,6 +1,7 @@
 /**
  * Setelan email dua tingkat: bawaan PLATFORM (SMTP + identitas + tampilan + subjek) yang
- * bisa ditimpa tiap TENANT (identitas + tampilan + subjek, tanpa SMTP).
+ * bisa ditimpa tiap TENANT (nama pengirim + alamat balasan + tampilan + subjek — tanpa SMTP
+ * dan tanpa alamat pengirim, karena relay platform hanya menerima pengirim terverifikasi).
  *
  * Dua sisi dijadikan satu modul karena bentuknya cermin dan dipakai berpasangan di layar
  * tenant: kartu tenant menampilkan nilai warisan platform sebagai placeholder, jadi tipe
@@ -20,6 +21,14 @@ export type EmailTrigger =
   | 'WORK_ORDER_SCHEDULED'
   | 'INCIDENT_OPENED'
   | 'PORTAL_PASSWORD_RESET'
+  | 'TENANT_SIGNED_UP'
+
+/**
+ * Pemicu yang subjeknya milik platform: server mengabaikan timpaan tenant untuk keduanya dan
+ * memang tak pernah mengirim barisnya ke layar tenant. Didaftar di sini hanya agar layar
+ * platform bisa menerangkannya — bukan sebagai penyaring.
+ */
+export const PLATFORM_ONLY_TRIGGERS: readonly EmailTrigger[] = ['PORTAL_PASSWORD_RESET', 'TENANT_SIGNED_UP']
 
 /** Label operator untuk tiap pemicu — istilah yang dikenal, bukan nama konstanta. */
 export const EMAIL_TRIGGER_LABEL: Record<EmailTrigger, string> = {
@@ -32,6 +41,7 @@ export const EMAIL_TRIGGER_LABEL: Record<EmailTrigger, string> = {
   WORK_ORDER_SCHEDULED: 'Jadwal kunjungan teknisi',
   INCIDENT_OPENED: 'Gangguan layanan dibuka',
   PORTAL_PASSWORD_RESET: 'Pemulihan password portal',
+  TENANT_SIGNED_UP: 'Pendaftaran ISP baru',
 }
 
 /**
@@ -93,13 +103,14 @@ export interface UpdatePlatformEmailSettingsRequest {
 
 /** Timpaan tenant beserta nilai warisannya (untuk placeholder). */
 export interface TenantEmailSettingsView {
-  fromAddress: string | null
+  replyToAddress: string | null
   fromName: string | null
   logoSet: boolean
   accentColor: string | null
   footerText: string | null
   signatureText: string | null
-  inheritedFromAddress: string | null
+  /** Alamat `From` yang berlaku — TERKUNCI, bukan warisan yang bisa ditimpa. */
+  platformFromAddress: string | null
   inheritedFromName: string
   effectiveLogoUrl: string | null
   inheritedAccentColor: string | null
@@ -110,7 +121,7 @@ export interface TenantEmailSettingsView {
 
 /** Semua field opsional: null/kosong = hapus timpaan dan warisi platform lagi. */
 export interface UpdateTenantEmailSettingsRequest {
-  fromAddress: string | null
+  replyToAddress: string | null
   fromName: string | null
   accentColor: string | null
   footerText: string | null

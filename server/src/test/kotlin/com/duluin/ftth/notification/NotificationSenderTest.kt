@@ -362,7 +362,7 @@ class NotificationSenderTest {
         dispatcher = dispatcher,
         emailDispatcher = emails,
         branding = brandingResolver(tenants = FakeTenantApi(tenantId)),
-        subjects = EmailSubjectResolver(FakeEmailSubjectRepository()),
+        subjects = EmailSubjectResolver(FakeEmailSubjectRepository(), FakeTenantApi(tenantId)),
         renderer = EmailRenderer(),
     )
 

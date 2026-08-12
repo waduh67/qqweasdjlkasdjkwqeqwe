@@ -34,6 +34,7 @@ class NotificationApiService(
     private val emailDispatcher: EmailDispatcher,
     private val branding: EmailBrandingResolver,
     private val renderer: EmailRenderer,
+    private val subjects: EmailSubjectResolver,
 ) : NotificationApi {
 
     @Transactional(readOnly = true)
@@ -46,15 +47,15 @@ class NotificationApiService(
     }
 
     /**
-     * Subjeknya datang dari pemanggil (module portal), bukan dari [EmailSubjectResolver]:
-     * pesan di sini tak lahir dari pemicu yang punya baris subjek sendiri. Yang tetap
-     * dipinjam adalah BUNGKUSNYA, supaya email pemulihan password tak tampak asing di
-     * kotak masuk dibanding pemberitahuan lain dari ISP yang sama.
+     * Subjek diambil dari [EmailSubjectResolver] lewat pemicu yang sama dengan cabang
+     * WhatsApp — bukan dari pemanggil. Bungkusnya memakai merek tenant aktif, supaya email
+     * pemulihan password tak tampak asing di kotak masuk dibanding pemberitahuan lain dari
+     * ISP yang sama.
      */
     private fun sendEmail(message: TransactionalMessage) = emailDispatcher.send(
         renderer.render(
             to = message.destination,
-            subject = message.subject,
+            subject = subjects.forCurrentTenant(message.purpose.toTrigger()),
             body = message.body,
             identity = branding.forCurrentTenant(),
         ),

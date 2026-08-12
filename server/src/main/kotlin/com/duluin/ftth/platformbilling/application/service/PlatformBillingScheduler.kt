@@ -1,11 +1,12 @@
 package com.duluin.ftth.platformbilling.application.service
 
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
+import com.duluin.ftth.common.security.ReadOnlyLockGuard
 import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionInvoiceRepository
 import com.duluin.ftth.platformbilling.application.port.outbound.TenantSubscriptionRepository
 import com.duluin.ftth.platformbilling.domain.model.SubscriptionInvoiceStatus
+import com.duluin.ftth.platformbilling.domain.model.SubscriptionStatus
 import com.duluin.ftth.tenancy.TenantApi
-import com.duluin.ftth.tenancy.TenantStatus
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -16,7 +17,8 @@ import java.util.UUID
 
 /**
  * Menjalankan siklus penagihan langganan SaaS lintas tenant secara berkala: menerbitkan tagihan
- * periode berjalan dan menegakkan tunggakan (auto-suspend tenant setelah masa tenggang). Level
+ * periode berjalan dan menegakkan tunggakan (konsol tenant jadi baca-saja setelah masa
+ * tenggang; tenant-nya sendiri tetap bisa login — lihat [PlatformBillingRunner.enforce]). Level
  * PLATFORM (tabel tanpa RLS) → TIDAK memakai `TenantContext.runAs`, beda dari `BillingScheduler`
  * tenant. Kegagalan satu langganan tak menghentikan yang lain.
  */
@@ -59,6 +61,7 @@ class PlatformBillingRunner(
     private val resolver: PlatformGatewayResolver,
     private val tenantApi: TenantApi,
     private val auditor: AuditRecorder,
+    private val lockGuard: ReadOnlyLockGuard,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -94,24 +97,26 @@ class PlatformBillingRunner(
                 )
             }
 
-        // 2) Ada tagihan menunggak melewati masa tenggang → suspend tenant + langganan.
+        // 2) Ada tagihan menunggak melewati masa tenggang → langganan SUSPENDED, dan konsol
+        //    tenant jadi BACA-SAJA. Tenant-nya sendiri sengaja TIDAK di-suspend: suspend tenant
+        //    menutup login sama sekali, termasuk bagi orang yang ingin membayar tunggakannya.
+        //    Suspend tenant tetap ada, tapi kini murni tindakan manual platform admin.
         val pastGrace = invoiceRepository.findOutstandingBySubscriptionId(subscription.id)
             .any { it.dueDate.isBefore(today.minusDays(graceDays)) }
-        if (pastGrace && subscription.status != com.duluin.ftth.platformbilling.domain.model.SubscriptionStatus.SUSPENDED) {
+        if (pastGrace && subscription.status != SubscriptionStatus.SUSPENDED) {
             subscription.suspend()
-            if (tenantApi.findById(tenantId)?.status == TenantStatus.ACTIVE) {
-                tenantApi.suspend(tenantId)
-                auditor.record(
-                    action = "platform.subscription.tenant.suspended",
-                    entityType = "Tenant",
-                    entityId = tenantId,
-                    tenantId = tenantApi.platformTenantId(),
-                    detail = mapOf("reason" to "langganan menunggak melewati masa tenggang"),
-                )
-                log.info("Tenant {} disuspend karena langganan menunggak > {} hari", tenantId, graceDays)
-            }
+            auditor.record(
+                action = "platform.subscription.tenant.locked",
+                entityType = "Tenant",
+                entityId = tenantId,
+                tenantId = tenantApi.platformTenantId(),
+                detail = mapOf("reason" to "langganan menunggak melewati masa tenggang"),
+            )
+            log.info("Konsol tenant {} jadi baca-saja: langganan menunggak > {} hari", tenantId, graceDays)
         }
 
         subscriptionRepository.save(subscription)
+        // Penjaga menyimpan jawabannya sebentar; tanpa ini kunci baru terasa setelah TTL habis.
+        lockGuard.invalidate(tenantId)
     }
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { api, ApiError } from '@/api/client'
 import {
   EMAIL_TRIGGER_LABEL,
+  PLATFORM_ONLY_TRIGGERS,
   type EmailSubjectView,
   type EmailTestResult,
   type EmailTrigger,
@@ -164,6 +165,7 @@ export function EmailSubjectFields({
       <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
         Hanya baris SUBJEK yang disetel di sini — isi pesannya dirakit sistem sesuai peristiwa yang
         terjadi. Kosongkan sebuah baris untuk memakai subjek bawaan (tampil sebagai teks samar).
+        Tulis <code>{'{isp}'}</code> di mana pun untuk menyisipkan nama ISP penerima.
       </p>
       {rows.map((row) => (
         <TextField
@@ -174,6 +176,14 @@ export function EmailSubjectFields({
           placeholder={row.inheritedSubject}
           disabled={disabled}
           maxLength={200}
+          hint={
+            // Baris ini hanya pernah muncul di layar platform — server tak mengirimkannya ke
+            // tenant. Keterangannya tetap ditulis di sini supaya platform admin tahu bahwa
+            // yang ia ketik berlaku untuk SEMUA ISP dan takkan ditimpa siapa pun.
+            PLATFORM_ONLY_TRIGGERS.includes(row.trigger)
+              ? 'Berlaku untuk semua ISP — tenant tak bisa menimpanya.'
+              : undefined
+          }
         />
       ))}
     </div>
@@ -306,14 +316,22 @@ export function EmailPreviewPanel({
   )
 }
 
-/** Peringatan SPF/DKIM — hanya relevan di sisi tenant, tapi tinggal di sini bersama kontrolnya. */
+/**
+ * Peringatan sender terverifikasi — sekarang milik layar PLATFORM, bukan tenant.
+ *
+ * Dulu ia dipasang di kartu tenant karena tenant boleh mengisi alamat pengirimnya sendiri.
+ * Sejak alamat itu dikunci, satu-satunya alamat yang berangkat adalah alamat di layar ini —
+ * dan justru inilah yang harus terdaftar di relay. Nadanya juga naik: pada penyedia yang
+ * memverifikasi sender (mis. Brevo) alamat asing bukan "berisiko spam" melainkan ditolak,
+ * jadi salah isi di sini mematikan email SELURUH tenant sekaligus.
+ */
 export function SenderDomainWarning({ address }: { address: string }) {
   return (
     <Callout>
-      Alamat <strong>{address || 'ini'}</strong> dipakai sebagai pengirim, tetapi suratnya berangkat
-      lewat server SMTP platform. Pastikan domainnya mengizinkan server itu lewat{' '}
-      <strong>SPF/DKIM</strong> — kalau tidak, email berisiko masuk spam atau ditolak. Balasan
-      pelanggan tetap diarahkan ke alamat ini.
+      Alamat <strong>{address || 'ini'}</strong> berangkat lewat relay SMTP platform, dan seluruh
+      tenant memakainya. Pastikan ia terdaftar sebagai <strong>sender terverifikasi</strong> di
+      relay itu (mis. Brevo) dan domainnya mengizinkan lewat <strong>SPF/DKIM</strong> — kalau
+      tidak, email semua ISP gagal terkirim, bukan sekadar masuk spam.
     </Callout>
   )
 }

@@ -35,6 +35,19 @@ class TwoFactorRequiredException(message: String) : DomainException(message)
 class AccessDeniedException(message: String) : DomainException(message)
 
 /**
+ * Izinnya cukup, tapi langganan SaaS tenant ini menunggak melewati masa tenggang sehingga
+ * konsolnya baca-saja (→ 402 dengan penanda `SUBSCRIPTION_LOCKED`).
+ *
+ * SENGAJA bukan turunan [AccessDeniedException]: bagi pengguna, 403 berarti "minta izin ke
+ * admin" — jalan buntu yang salah alamat. Yang ini punya jalan keluar yang jelas dan bisa
+ * ditempuh sendiri: bayar tagihan langganannya. Web membedakannya lewat penanda itu untuk
+ * mengarahkan ke halaman langganan, bukan menampilkan "akses ditolak".
+ */
+class SubscriptionLockedException(
+    message: String = "Langganan aplikasi menunggak. Konsol dalam mode baca-saja sampai tagihan dilunasi.",
+) : DomainException(message)
+
+/**
  * Terlalu sering mencoba (→ 429). [retryAfter] diteruskan ke header `Retry-After` supaya
  * klien tahu harus menunggu berapa lama, bukan sekadar ditolak tanpa penjelasan.
  */

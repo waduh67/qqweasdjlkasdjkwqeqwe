@@ -83,8 +83,9 @@ class PlatformEmailSubjectJpaEntity(
 class TenantEmailSettingJpaEntity(
     id: UUID,
 
-    @Column(name = "from_address", length = 254)
-    var fromAddress: String?,
+    /** Alamat `Reply-To` saja — `From` milik platform, tak bisa ditimpa (V100). */
+    @Column(name = "reply_to_address", length = 254)
+    var replyToAddress: String?,
 
     @Column(name = "from_name", length = 100)
     var fromName: String?,

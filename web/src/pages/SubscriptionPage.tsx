@@ -12,6 +12,7 @@ import {
   renewMySubscription,
   simulateMyInvoicePayment,
   type SimulatedChargeStatus,
+  type SubscriptionLockView,
   type TenantSelfSubscriptionView,
   type UsageMetricView,
 } from '../api/subscription'
@@ -95,8 +96,9 @@ function periodElapsed(start: string | null, end: string | null): number | null 
 
 export function SubscriptionPage() {
   const { can } = useCan()
-  const { user } = useAuth()
+  const { user, readOnly, subscriptionLock, refreshSubscriptionLock } = useAuth()
   const toast = useToast()
+  const canView = can('billing.subscription.view')
   const canRenew = can('billing.subscription.renew')
   const canExport = can('tenancy.data.export')
 
@@ -106,16 +108,25 @@ export function SubscriptionPage() {
   const [months, setMonths] = useState(1)
   const [exporting, setExporting] = useState(false)
 
+  // Status kunci ikut dibaca ulang di setiap pemuatan: halaman inilah yang dibuka orang setelah
+  // membayar, dan banner merah yang masih tergantung di atasnya membuat pembayaran terasa gagal.
   const load = () =>
     getMySubscription()
-      .then(setSub)
+      .then((it) => {
+        setSub(it)
+        void refreshSubscriptionLock()
+      })
       .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Gagal memuat langganan'))
       .finally(() => setLoading(false))
 
   useEffect(() => {
+    if (!canView) {
+      setLoading(false)
+      return
+    }
     void load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [canView])
 
   // Perpanjang HANYA menerbitkan tagihan; pembayaran dilakukan lewat tombol "Bayar" per-tagihan di
   // Riwayat tagihan (tak lagi membuka tab bayar otomatis dari sini).
@@ -174,6 +185,25 @@ export function SubscriptionPage() {
     }
   }
 
+  // Staf tanpa izin billing hanya sampai di sini karena kunci baca-saja melemparnya. Yang ia
+  // butuhkan bukan angka langganan, melainkan tahu APA yang terjadi dan HARUS menghubungi siapa.
+  if (!canView) {
+    return (
+      <div className="stack" style={{ gap: '1.25rem' }}>
+        <Header />
+        {readOnly ? (
+          <LockedPanel lock={subscriptionLock} canRenew={false} />
+        ) : (
+          <EmptyState
+            title="Akses ditolak"
+            hint="Kamu tidak punya izin billing.subscription.view untuk melihat langganan aplikasi."
+            icon={<IconGauge size={30} />}
+          />
+        )}
+      </div>
+    )
+  }
+
   if (loading) return <p className="muted">Memuat langganan…</p>
 
   if (!sub) {
@@ -199,6 +229,9 @@ export function SubscriptionPage() {
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
       <Header />
+
+      {/* Paling atas, di atas hero: saat terkunci, inilah satu-satunya hal yang perlu dibaca. */}
+      {readOnly && <LockedPanel lock={subscriptionLock} canRenew={canRenew} />}
 
       {/* Hero: identitas paket + masa aktif + CTA */}
       <div
@@ -404,6 +437,62 @@ function Header() {
       title="Langganan Aplikasi"
       subtitle="Masa aktif, pemakaian, dan tagihan langganan Anda ke aplikasi."
     />
+  )
+}
+
+/**
+ * Penjelasan kunci baca-saja: berapa yang harus dibayar, sejak kapan menunggak, dan langkah
+ * berikutnya. [canRenew] menentukan langkah itu — yang boleh membayar diarahkan ke Riwayat
+ * tagihan di bawah, yang tidak diarahkan menghubungi admin ISP-nya. Sengaja tak ada tombol
+ * bayar di sini: satu-satunya jalur bayar tetap tombol per-tagihan, supaya tak ada dua pintu
+ * yang bisa berbeda perilaku.
+ */
+function LockedPanel({ lock, canRenew }: { lock: SubscriptionLockView | null; canRenew: boolean }) {
+  return (
+    <div
+      role="alert"
+      className="stack"
+      style={{
+        gap: '0.6rem',
+        padding: '1.1rem 1.25rem',
+        borderRadius: 'var(--radius-lg)',
+        border: '1px solid color-mix(in srgb, var(--danger) 45%, transparent)',
+        background: 'color-mix(in srgb, var(--danger) 8%, var(--surface))',
+      }}
+    >
+      <strong style={{ color: 'var(--danger)' }}>Konsol dalam mode baca-saja</strong>
+      <p className="muted" style={{ margin: 0, fontSize: '0.88rem' }}>
+        Langganan aplikasi belum dilunasi hingga melewati masa tenggang. Semua data tetap bisa
+        dibuka dan dibaca, tapi perubahan — menambah pelanggan, menutup work order, menerbitkan
+        tagihan — ditolak sampai pembayaran masuk. Portal pelanggan Anda tetap berjalan penuh.
+      </p>
+      {lock && (
+        <div className="row" style={{ gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.88rem' }}>
+          <Fact label="Total tertunggak" value={fmtIdr(lock.amountDue)} />
+          <Fact label="Jatuh tempo" value={fmtDate(lock.dueDate)} />
+          <Fact label="Menunggak" value={lock.daysOverdue > 0 ? `${lock.daysOverdue} hari` : '—'} />
+        </div>
+      )}
+      <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        {canRenew
+          ? 'Lunasi lewat tombol Bayar pada tagihan tertunggak di Riwayat tagihan bawah. Begitu ' +
+            'pembayaran masuk, konsol terbuka kembali tanpa perlu keluar-masuk aplikasi.'
+          : 'Akun Anda tak berwenang membayar langganan. Hubungi admin ISP Anda agar melunasi ' +
+            'tagihan ini — setelah lunas, konsol Anda otomatis terbuka lagi.'}
+      </p>
+    </div>
+  )
+}
+
+/** Sepasang label kecil + nilai tebal; dipakai baris ringkasan tunggakan. */
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="stack" style={{ gap: '0.15rem' }}>
+      <span className="muted" style={{ fontSize: '0.75rem' }}>
+        {label}
+      </span>
+      <strong>{value}</strong>
+    </span>
   )
 }
 
