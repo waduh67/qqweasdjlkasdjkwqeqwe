@@ -15,11 +15,14 @@ describe('peringatan kabel yang sama di meja sambung', () => {
     expect(pesan).toContain('Ganti salah satu sisi')
   })
 
-  // Bukan salah pilih: memang belum ada lawan mainnya, dan yang kurang ada di peta.
-  it('menyuruh menarik kabel lanjutan saat kotaknya baru dijangkau satu kabel', () => {
+  // Bukan salah pilih: memang belum ada lawan mainnya. Dua kemungkinan sebabnya
+  // disebut dua-duanya, sebab kabel lanjutan bisa saja sudah ada di dalam kotak
+  // dan cuma belum tercatat singgahannya.
+  it('menawarkan dua jalan keluar saat kotaknya baru disinggahi satu kabel', () => {
     const pesan = sameCableWarning('DIST-ODC-XX-001-JB-YY-001', true)
     expect(pesan).toContain('belum ada yang bisa disambung')
-    expect(pesan).toContain('tarik dulu kabel keluarnya di peta')
+    expect(pesan).toContain('catat singgahan kabel lanjutannya')
+    expect(pesan).toContain('tarik dulu kabelnya di peta')
     expect(pesan).not.toContain('Ganti salah satu sisi')
   })
 })

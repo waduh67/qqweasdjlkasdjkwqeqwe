@@ -2,12 +2,16 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { Zap } from 'lucide-react'
 import { api, ApiError } from '@/api/client'
 import type {
+  CableAttachmentRole,
+  CableView,
   ClosureKind,
   ConnectionPointRequest,
+  SpliceCableView,
   SpliceMethod,
   SpliceWorkbenchView,
 } from '@/api/network'
-import { SPLICE_METHOD_LABEL } from '@/api/network'
+import { CABLE_ATTACHMENT_ROLE_LABEL, SPLICE_METHOD_LABEL } from '@/api/network'
+import type { PageResponse } from '@/api/types'
 import { useCan } from '@/auth/useCan'
 import { Badge, Button, SelectField, TextField } from '@/components/atoms'
 import { Combobox } from '@/components/molecules'
@@ -101,15 +105,16 @@ function toGroups(data: SpliceWorkbenchView): Group[] {
     // hasil OTDR saat mencari letak sambungan di sepanjang rute.
     const where = cable.terminatesHere
       ? 'berujung di sini'
-      : `lewat · m-${Math.round(cable.tapDistanceMeters)}`
-    // Rute yang meleset jauh dari kotaknya bukan penghalang menyambung, tapi tanda
-    // survei kasar: garis di peta tak lagi mewakili jalur yang sesungguhnya, dan
-    // jarak tap di atas ikut meleset sebesar itu.
-    const stray = cable.offsetMeters > 25 ? ` · rute meleset ${Math.round(cable.offsetMeters)} m` : ''
+      : `${cable.spliceable ? 'dikupas' : 'cuma lewat'} · m-${Math.round(cable.tapDistanceMeters)}`
+    // Selubung utuh tak punya core yang terbuka: kabelnya ADA di dalam kotak,
+    // tapi tak sehelai pun boleh disentuh dari sini. Core-nya tetap ditampilkan
+    // (supaya terlihat kabel ini isinya apa) namun semuanya terkunci.
     return {
       key: `cable:${cable.cableId}`,
       option: `${cable.code} · ${cable.coreCount} core · ${where}`,
-      hint: `${cable.name} · ${Math.round(cable.lengthMeters)} m${stray}`,
+      hint: cable.spliceable
+        ? `${cable.name} · ${Math.round(cable.lengthMeters)} m`
+        : `${cable.name} · selubung utuh — tandai "dikupas di sini" dulu bila baru dibuka`,
       code: cable.code,
       isCable: true,
       slots: cable.cores.map((entry) => ({
@@ -118,15 +123,17 @@ function toGroups(data: SpliceWorkbenchView): Group[] {
         label: String(entry.core.coreNumber),
         title:
           `Core ${entry.core.coreNumber} · ${entry.core.color}` +
-          (entry.connectionId
-            ? ' · sudah tersambung di kotak ini'
-            : entry.connectedElsewhere
-              ? ' · dipakai sambungan di kotak lain'
-              : ' · bebas') +
+          (!cable.spliceable
+            ? ' · selubung kabel ini utuh di sini, tak ada core yang terbuka'
+            : entry.connectionId
+              ? ' · sudah tersambung di kotak ini'
+              : entry.connectedElsewhere
+                ? ' · dipakai sambungan di kotak lain'
+                : ' · bebas') +
           (entry.core.note ? ` · ${entry.core.note}` : ''),
         colorHex: entry.core.colorHex,
         connectionId: entry.connectionId,
-        blocked: entry.connectedElsewhere,
+        blocked: entry.connectedElsewhere || !cable.spliceable,
       })),
     }
   })
@@ -156,6 +163,178 @@ function toGroups(data: SpliceWorkbenchView): Group[] {
   }
 
   return [...cables, ...points]
+}
+
+/**
+ * Pencatat singgahan kabel — di tempat kejadiannya, saat kotaknya sedang terbuka.
+ *
+ * Server tak lagi menebak kabel mana yang boleh disambung di sebuah kotak dari
+ * jarak kotak ke garis rute; yang menentukan adalah catatan "selubung kabel ini
+ * dibuka di sini". Catatan itu cuma bisa dibuat orang yang melihat isi kotaknya,
+ * dan orang itu ada DI SINI, bukan di formulir kabel halaman peta. Karena itu
+ * kupasan didaftarkan dari meja sambung, sebaris di atas mejanya.
+ *
+ * Tiga tombol yang tersedia mencerminkan tiga kejadian nyata:
+ * - kabel orang yang ternyata dikupas juga di kotak ini → "Tandai dikupas";
+ * - salah catat, ternyata selubungnya utuh → "Ternyata cuma lewat";
+ * - keliru orang/kotak → "Bukan di kotak ini" (dicabut sama sekali).
+ *
+ * Ujung kabel tak diberi tombol apa pun: selubung yang HABIS di sebuah kotak
+ * adalah bentuk kabelnya, dan itu diubah lewat formulir kabel di peta — server
+ * pun menolaknya dari pintu ini.
+ */
+function CableAttachmentBar({
+  closureKind,
+  closureId,
+  cables,
+  onChanged,
+}: {
+  closureKind: ClosureKind
+  closureId: string
+  cables: SpliceCableView[]
+  onChanged: () => Promise<void>
+}) {
+  const toast = useToast()
+  const confirm = useConfirm()
+  const [pick, setPick] = useState('')
+  const [pickRole, setPickRole] = useState<CableAttachmentRole>('TAPPED')
+  const [busy, setBusy] = useState(false)
+
+  // Kabel yang sudah tercatat singgah di sini tak muncul lagi di pencarian:
+  // perannya diubah lewat tombol di barisan atas, bukan didaftarkan dua kali.
+  const fetchCables = useCallback(
+    async (term: string) => {
+      const page = await api.get<PageResponse<CableView>>(
+        `/api/cables?query=${encodeURIComponent(term)}&size=10`,
+      )
+      return page.content.filter((c) => !cables.some((x) => x.cableId === c.id))
+    },
+    [cables],
+  )
+
+  const attach = async (cableId: string, role: CableAttachmentRole, done: string) => {
+    setBusy(true)
+    try {
+      await api.post(`/api/cables/${cableId}/attachments`, { nodeKind: closureKind, nodeId: closureId, role })
+      toast.success(done)
+      setPick('')
+      await onChanged()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal mencatat singgahan kabel')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const detach = async (cableId: string, code: string) => {
+    if (
+      !(await confirm({
+        title: 'Cabut catatan singgahan',
+        message:
+          `Kabel ${code} dinyatakan tak pernah menyinggahi kotak ini. Sesudah ini core-nya ` +
+          'tak bisa disambung dari sini sampai singgahannya dicatat lagi.',
+        confirmLabel: 'Cabut',
+        danger: true,
+      }))
+    )
+      return
+    setBusy(true)
+    try {
+      await api.del(`/api/cables/${cableId}/attachments/${closureId}`)
+      toast.success(`${code} dicabut dari kotak ini`)
+      await onChanged()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal mencabut singgahan kabel')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="stack" style={{ gap: '0.4rem' }}>
+      {cables.length > 0 && (
+        <div className="row wrap" style={{ gap: '0.4rem', alignItems: 'center' }}>
+          {cables.map((cable) => (
+            <span key={cable.cableId} className="row" style={{ gap: '0.25rem', alignItems: 'center' }}>
+              <Badge tone={cable.spliceable ? 'accent' : 'neutral'}>
+                {cable.code} · {cable.roleLabel}
+              </Badge>
+              {!cable.terminatesHere && (
+                <>
+                  {cable.spliceable ? (
+                    <Button
+                      variant="subtle"
+                      disabled={busy}
+                      title="Ternyata selubungnya utuh di kotak ini — cuma numpang lewat."
+                      onClick={() =>
+                        void attach(cable.cableId, 'PASSING', `${cable.code} ditandai cuma lewat`)
+                      }
+                    >
+                      Cuma lewat
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="subtle"
+                      disabled={busy}
+                      title="Selubungnya baru dibuka di kotak ini — core-nya jadi bisa disambung."
+                      onClick={() =>
+                        void attach(cable.cableId, 'TAPPED', `${cable.code} ditandai dikupas di sini`)
+                      }
+                    >
+                      Tandai dikupas
+                    </Button>
+                  )}
+                  <Button
+                    variant="subtle"
+                    disabled={busy}
+                    title="Kabel ini sama sekali tak lewat kotak ini — salah catat."
+                    onClick={() => void detach(cable.cableId, cable.code)}
+                  >
+                    Bukan di sini
+                  </Button>
+                </>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
+        <label className="stack" style={{ flex: 2, minWidth: 220, gap: '0.25rem' }}>
+          <span style={{ fontSize: '0.82rem' }}>Ada kabel lain di dalam kotak?</span>
+          <Combobox
+            value={pick}
+            onChange={(id) => setPick(id)}
+            fetchOptions={fetchCables}
+            toId={(c) => c.id}
+            toLabel={(c) => `${c.code} · ${c.coreCount} core`}
+            toMeta={(c) => c.name}
+            placeholder="Cari kode atau nama kabel…"
+            emptyText="Tak ada kabel lain yang cocok"
+          />
+        </label>
+        <SelectField
+          label="Keadaannya"
+          value={pickRole}
+          onChange={(_, d) => setPickRole(d.value as CableAttachmentRole)}
+        >
+          <option value="TAPPED">{CABLE_ATTACHMENT_ROLE_LABEL.TAPPED}</option>
+          <option value="PASSING">{CABLE_ATTACHMENT_ROLE_LABEL.PASSING}</option>
+        </SelectField>
+        <Button
+          disabled={pick === '' || busy}
+          onClick={() => void attach(pick, pickRole, 'Singgahan kabel dicatat')}
+        >
+          Catat singgahan
+        </Button>
+      </div>
+      <span className="muted" style={{ fontSize: '0.72rem' }}>
+        Yang dicatat di sini adalah apa yang benar-benar ada di dalam kotak. Kabel yang cuma
+        melintas pun perlu tercatat — supaya orang berikutnya tak mengira itu kabel kotak ini
+        lalu memotongnya.
+      </span>
+    </div>
+  )
 }
 
 /** Satu panel: dropdown pemilih kelompok + kisi titiknya. */
@@ -452,8 +631,8 @@ export function SplicingManager({
   const warning = sameCableWarning(sameCable ? (leftGroup?.code ?? '') : null, groups.length === 1)
   const summary =
     data.spliceCapacity != null
-      ? `${data.spliceCount}/${data.spliceCapacity} sambungan · ${data.cables.length} kabel terjangkau`
-      : `${data.spliceCount} sambungan · ${data.cables.length} kabel terjangkau`
+      ? `${data.spliceCount}/${data.spliceCapacity} sambungan · ${data.cables.length} kabel singgah`
+      : `${data.spliceCount} sambungan · ${data.cables.length} kabel singgah`
 
   return (
     <div className="card stack">
@@ -463,10 +642,20 @@ export function SplicingManager({
       </div>
       <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>{summary}</p>
 
+      {canManage && (
+        <CableAttachmentBar
+          closureKind={closureKind}
+          closureId={closureId}
+          cables={data.cables}
+          onChanged={load}
+        />
+      )}
+
       {data.cables.length === 0 ? (
         <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-          Tak ada kabel yang berujung atau lewat di kotak ini. Tarik kabelnya dulu di peta —
-          bila menurutmu sudah ada, periksa rutenya: kotak ini terlalu jauh dari garisnya.
+          Belum ada kabel yang tercatat singgah di kotak ini. Kalau kotaknya sedang terbuka dan
+          kabelnya memang ada di dalam, catat dulu singgahannya di atas — sesudah itu core-nya
+          bisa disambung. Kalau kabelnya sendiri belum ada, tarik dulu di peta.
         </p>
       ) : (
         <>

@@ -505,6 +505,41 @@ export interface RoutePath {
   points: Coordinate[]
 }
 
+/**
+ * Peran sebuah kabel di dalam kotak yang disinggahinya. Ini keterangan
+ * terpenting di meja sambung, sebab ia yang menentukan apa yang boleh
+ * dikerjakan: selubung yang terbuka boleh disambung, yang utuh tidak.
+ */
+export type CableAttachmentRole = 'END' | 'TAPPED' | 'PASSING'
+
+/** Cermin label domain di server — dipakai saat klien menyusun kalimatnya sendiri. */
+export const CABLE_ATTACHMENT_ROLE_LABEL: Record<CableAttachmentRole, string> = {
+  END: 'Berhenti di sini',
+  TAPPED: 'Dikupas di sini',
+  PASSING: 'Cuma lewat (utuh)',
+}
+
+/**
+ * Satu simpul yang disinggahi kabel, urut dari pangkal. Ujung kabel pun sebuah
+ * singgahan (berperan END) — jadi daftar ini adalah kisah lengkap sebuah
+ * selubung: dari mana berangkat, dibuka di kotak mana saja, berhenti di mana.
+ */
+export interface CableAttachmentView {
+  id: string
+  /** Urutan sepanjang rute; 0 = pangkal. */
+  sequence: number
+  nodeKind: NodeKind
+  nodeId: string
+  nodeCode: string | null
+  nodeName: string | null
+  role: CableAttachmentRole
+  roleLabel: string
+  /** Selubungnya terbuka di sini, jadi core-nya bisa disambung. */
+  spliceable: boolean
+  /** Letak singgahan diukur dari pangkal kabel; null bila kotaknya tak diketahui letaknya. */
+  distanceMeters: number | null
+}
+
 export interface CableView {
   id: string
   code: string
@@ -513,6 +548,8 @@ export interface CableView {
   coreCount: number
   route: RoutePath
   lengthMeters: number
+  /** Kotak yang disinggahi kabel ini, urut dari pangkal — termasuk kedua ujungnya. */
+  attachments: CableAttachmentView[]
   fromKind: NodeKind
   fromId: string
   toKind: NodeKind
@@ -709,10 +746,14 @@ export interface SpliceCoreView {
 }
 
 /**
- * Kabel yang bisa dijangkau dari dalam kotak ini — termasuk yang cuma LEWAT di
- * depannya, bukan berujung di sini. Justru itu kejadian yang paling sering:
- * satu kabel distribusi 8 core melewati delapan ODP dan dikupas di tiap kotak
- * untuk mengambil satu core.
+ * Kabel yang TERCATAT menyinggahi kotak ini — termasuk yang cuma dikupas di
+ * tengah bentang, bukan berujung di sini. Justru itu kejadian yang paling
+ * sering: satu kabel distribusi 8 core melewati delapan ODP dan dikupas di tiap
+ * kotak untuk mengambil satu core.
+ *
+ * Yang selubungnya UTUH (`spliceable: false`) ikut tampil dan itu disengaja:
+ * teknisi yang membuka kotak menemukan selubung asing di dalamnya, dan daftar
+ * yang diam soal kabel itu membuatnya menebak — lalu salah potong.
  */
 export interface SpliceCableView {
   cableId: string
@@ -721,12 +762,14 @@ export interface SpliceCableView {
   cableType: CableType
   coreCount: number
   lengthMeters: number
-  /** Kotak ini adalah ujung kabel (bukan sekadar dilewati). */
+  role: CableAttachmentRole
+  roleLabel: string
+  /** Selubungnya terbuka di sini; hanya kabel begini yang core-nya bisa dilas. */
+  spliceable: boolean
+  /** Kotak ini adalah ujung kabel (bukan singgahan di tengah). */
   terminatesHere: boolean
   /** Jarak titik kupas dari pangkal kabel, diukur menyusuri rutenya. */
   tapDistanceMeters: number
-  /** Meleset berapa meter kotak ini dari garis rute — penanda survei kasar. */
-  offsetMeters: number
   cores: SpliceCoreView[]
 }
 
