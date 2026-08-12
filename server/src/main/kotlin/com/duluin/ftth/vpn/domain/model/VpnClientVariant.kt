@@ -14,5 +14,13 @@ package com.duluin.ftth.vpn.domain.model
  */
 enum class VpnClientVariant(val cipher: String, val routerOsCipher: String) {
     V7(cipher = "AES-256-GCM", routerOsCipher = "aes256-gcm"),
-    V6(cipher = "AES-256-CBC", routerOsCipher = "aes256-cbc"),
+
+    /**
+     * [routerOsCipher] SENGAJA `aes256`, bukan `aes256-cbc`. Ejaan bermode (`aes256-cbc`,
+     * `aes256-gcm`) baru lahir di RouterOS v7 ketika GCM ikut didukung; v6 yang cuma punya CBC
+     * menamainya `aes256` saja (di WinBox tertulis "aes 256"). Menempelkan ejaan v7 ke v6
+     * berbuah `syntax error` — perangkatnya menolak nilainya, bukan propertinya. Di berkas
+     * `.ovpn` tetap `AES-256-CBC`: itu nama versi OpenVPN, bukan nama versi RouterOS.
+     */
+    V6(cipher = "AES-256-CBC", routerOsCipher = "aes256"),
 }

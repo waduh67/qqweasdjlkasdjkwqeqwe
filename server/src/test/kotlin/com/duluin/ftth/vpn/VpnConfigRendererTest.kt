@@ -131,7 +131,10 @@ class VpnConfigRendererTest {
         assertThat(cmd).contains("port=443")
         assertThat(cmd).contains("user=\"bras-jakarta-1\"")
         assertThat(cmd).contains("password=\"secretpassword12345\"")
-        assertThat(cmd).contains("cipher=aes256-cbc")
+        // v6 menamai ciphernya `aes256` (CBC-only); ejaan bermode `aes256-cbc` milik v7 dan
+        // ditolak v6 sebagai syntax error — ini pernah kejadian di perangkat asli.
+        assertThat(cmd).contains("cipher=aes256 ")
+        assertThat(cmd).doesNotContain("aes256-cbc")
         // Tanpa sertifikat klien DAN tanpa verifikasi sertifikat hub — sepasang, tak bisa sebelah.
         assertThat(cmd).contains("certificate=none")
         assertThat(cmd).contains("verify-server-certificate=no")
