@@ -17,6 +17,12 @@ interface ProvisionVpnNodeUseCase {
     /** Baris `ifconfig-push` IP overlay tetap untuk peer (dipanggil `client-connect`). Null = tolak. */
     fun clientConnectLine(rawToken: String, username: String): String?
 
+    /**
+     * Tabel penerusan port seluruh hub untuk direkonsiliasi VPS (dipanggil timer `ftth-sync`).
+     * Null = token tak dikenal; VPS memperlakukannya sebagai "jangan sentuh iptables".
+     */
+    fun forwardTable(rawToken: String): String?
+
     /** Telemetri: hub melapor peer terhubung → tandai online + catat waktu. False bila token/peer tak dikenal. */
     fun reportConnected(rawToken: String, username: String): Boolean
 

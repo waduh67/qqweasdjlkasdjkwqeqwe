@@ -1,6 +1,7 @@
 package com.duluin.ftth.vpn.adapter.outbound.persistence
 
 import com.duluin.ftth.common.infrastructure.persistence.BaseJpaEntity
+import com.duluin.ftth.vpn.domain.model.VpnForwardProtocol
 import com.duluin.ftth.vpn.domain.model.VpnPeerStatus
 import com.duluin.ftth.vpn.domain.model.VpnProtocol
 import com.duluin.ftth.vpn.domain.model.VpnServerStatus
@@ -86,10 +87,6 @@ class VpnPeerJpaEntity(
     @Column(name = "overlay_ip", nullable = false, length = 45, updatable = false)
     var overlayIp: String,
 
-    // Port publik TCP di hub yang di-DNAT ke Winbox perangkat; identitas, tak berubah.
-    @Column(name = "remote_port", nullable = false, updatable = false)
-    var remotePort: Int,
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var status: VpnPeerStatus,
@@ -108,6 +105,37 @@ class VpnPeerJpaEntity(
 
     @Column(nullable = false, length = 512)
     var password: String,
+) : BaseJpaEntity(id)
+
+/**
+ * Satu penerusan port milik akun: `hub:public_port` → `overlay_ip:device_port`. Tabel terpisah
+ * (bukan kolom di [VpnPeerJpaEntity]) karena satu akun bisa punya beberapa layanan sekaligus.
+ * [serverId] sengaja didenormalisasi dari peer: port publik harus unik per HUB, dan UNIQUE
+ * tak bisa menyeberang tabel. [publicPort] identitas yang dipegang operator → `updatable = false`.
+ */
+@Entity
+@Table(name = "vpn_port_forward")
+class VpnPortForwardJpaEntity(
+    id: UUID,
+
+    @Column(name = "peer_id", nullable = false, updatable = false)
+    var peerId: UUID,
+
+    @Column(name = "server_id", nullable = false, updatable = false)
+    var serverId: UUID,
+
+    @Column(nullable = false, length = 40)
+    var label: String,
+
+    @Column(name = "public_port", nullable = false, updatable = false)
+    var publicPort: Int,
+
+    @Column(name = "device_port", nullable = false)
+    var devicePort: Int,
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 3)
+    var protocol: VpnForwardProtocol,
 ) : BaseJpaEntity(id)
 
 /**

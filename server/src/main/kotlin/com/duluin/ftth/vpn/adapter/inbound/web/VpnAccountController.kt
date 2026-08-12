@@ -3,7 +3,9 @@ package com.duluin.ftth.vpn.adapter.inbound.web
 import com.duluin.ftth.vpn.application.port.inbound.GenerateVpnAccountCommand
 import com.duluin.ftth.vpn.application.port.inbound.ManageVpnAccountUseCase
 import com.duluin.ftth.vpn.application.port.inbound.VpnAccountView
+import com.duluin.ftth.vpn.application.port.inbound.VpnPortForwardCommand
 import com.duluin.ftth.vpn.domain.model.VpnClientVariant
+import com.duluin.ftth.vpn.domain.model.VpnForwardProtocol
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -70,6 +73,27 @@ class VpnAccountController(
     @Operation(summary = "Hapus akun VPN")
     fun delete(@PathVariable id: UUID) = accounts.delete(id)
 
+    @PostMapping("/{id}/forwards")
+    @PreAuthorize("@authz.can('vpn.peer.manage')")
+    @Operation(summary = "Tambah penerusan port ke layanan lain di perangkat (port publik dialokasikan sistem)")
+    fun addForward(@PathVariable id: UUID, @RequestBody request: VpnPortForwardRequest): VpnAccountView =
+        accounts.addForward(id, request.toCommand())
+
+    @PutMapping("/{id}/forwards/{forwardId}")
+    @PreAuthorize("@authz.can('vpn.peer.manage')")
+    @Operation(summary = "Arahkan ulang penerusan port (dipakai saat port layanan di perangkat dipindah)")
+    fun retargetForward(
+        @PathVariable id: UUID,
+        @PathVariable forwardId: UUID,
+        @RequestBody request: VpnPortForwardRequest,
+    ): VpnAccountView = accounts.retargetForward(id, forwardId, request.toCommand())
+
+    @DeleteMapping("/{id}/forwards/{forwardId}")
+    @PreAuthorize("@authz.can('vpn.peer.manage')")
+    @Operation(summary = "Cabut penerusan port")
+    fun removeForward(@PathVariable id: UUID, @PathVariable forwardId: UUID): VpnAccountView =
+        accounts.removeForward(id, forwardId)
+
     @GetMapping("/{id}/ovpn", produces = ["text/plain"])
     @PreAuthorize("@authz.can('vpn.config.view')")
     @Operation(summary = "Unduh berkas .ovpn akun (berisi kredensial); variant V7 (GCM) / V6 (CBC)")
@@ -98,4 +122,17 @@ data class GenerateVpnAccountRequest(
     val username: String? = null,
 ) {
     fun toCommand() = GenerateVpnAccountCommand(label, deviceType, deviceId, username)
+}
+
+/**
+ * Sasaran satu penerusan port. Yang diminta hanyalah port DI PERANGKAT — port publiknya
+ * dialokasikan sistem supaya tak pernah bentrok antar tenant di hub yang sama. [label] kosong
+ * = diturunkan dari port yang umum dikenal (8291 → "Winbox", 22 → "SSH", …).
+ */
+data class VpnPortForwardRequest(
+    val devicePort: Int,
+    val label: String? = null,
+    val protocol: VpnForwardProtocol? = null,
+) {
+    fun toCommand() = VpnPortForwardCommand(label, devicePort, protocol)
 }

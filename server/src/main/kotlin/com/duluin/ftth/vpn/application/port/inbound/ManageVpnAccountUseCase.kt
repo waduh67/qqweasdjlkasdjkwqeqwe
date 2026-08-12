@@ -30,6 +30,21 @@ interface ManageVpnAccountUseCase {
 
     fun delete(id: UUID)
 
+    /**
+     * Buka satu pintu lagi ke perangkat (mis. SSH di samping Winbox): sistem mengalokasikan port
+     * publik berikutnya di hub, pemanggil cukup menyebut port layanan di perangkatnya.
+     */
+    fun addForward(id: UUID, command: VpnPortForwardCommand): VpnAccountView
+
+    /**
+     * Arahkan ulang satu penerusan — inilah jalan keluar ketika port Winbox/API di perangkat
+     * dipindah. Port publiknya sengaja TETAP supaya alamat yang sudah dipegang teknisi tak basi.
+     */
+    fun retargetForward(id: UUID, forwardId: UUID, command: VpnPortForwardCommand): VpnAccountView
+
+    /** Cabut satu penerusan; portnya kembali ke kolam hub. Akun tanpa penerusan tetap sah. */
+    fun removeForward(id: UUID, forwardId: UUID): VpnAccountView
+
     /** Berkas `.ovpn` klien generik (berisi kredensial); [variant] memilih cipher v7 (GCM)/v6 (CBC). */
     fun renderOvpn(id: UUID, variant: VpnClientVariant = VpnClientVariant.V7): String
 

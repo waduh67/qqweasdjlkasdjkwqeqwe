@@ -11,8 +11,10 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.util.UUID
 
@@ -71,6 +73,15 @@ class VpnIT {
     private fun statusOf(method: String, url: String, token: String, body: String = ""): Int =
         perform(method, url, token, body).andReturn().response.status
 
+    /** Varian [post] untuk verb selain POST (penerusan port memakai PUT/DELETE). */
+    private fun send(method: String, url: String, token: String, body: String = "", expected: Int = 200): String =
+        mockMvc.perform(
+            (if (method == "PUT") put(url) else delete(url))
+                .header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON).content(body),
+        ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
+            .andReturn().response.contentAsString
+
     private fun getText(url: String, token: String): String =
         mockMvc.perform(get(url).header("Authorization", "Bearer $token"))
             .andExpect(status().isOk).andReturn().response.contentAsString
@@ -111,6 +122,26 @@ class VpnIT {
     private fun clientConnect(rawToken: String, username: String): Pair<Int, String> {
         val res = mockMvc.perform(
             post("/api/vpn/provision/client-connect").param("token", rawToken).param("username", username),
+        ).andReturn().response
+        return res.status to res.contentAsString
+    }
+
+    /**
+     * Token node hub TEMPAT AKUN MENDARAT: auto-assign bebas memilih hub terlengang mana pun,
+     * jadi jangan berasumsi akun jatuh di hub yang baru dibuat — cari lewat namanya lalu rotasi
+     * tokennya (rotasi mengembalikan token mentah, satu-satunya cara membacanya lagi).
+     */
+    private fun nodeTokenOfHub(serverName: String): String {
+        val platform = platformToken()
+        val servers = getText("/api/vpn/servers", platform)
+        val serverId = JsonPath.read<List<String>>(servers, "$[?(@.name=='$serverName')].id").single()
+        val rotated = post("/api/vpn/servers/$serverId/regenerate-token", platform, "", expected = 200)
+        return JsonPath.read(rotated, "$.nodeToken")
+    }
+
+    private fun forwardTable(rawToken: String): Pair<Int, String> {
+        val res = mockMvc.perform(
+            post("/api/vpn/provision/forwards").param("token", rawToken),
         ).andReturn().response
         return res.status to res.contentAsString
     }
@@ -184,11 +215,64 @@ class VpnIT {
     }
 
     @Test
+    fun `penerusan port — bawaan Winbox, tambah layanan lain, pindah port perangkat, cabut`() {
+        newHub("Hub Forward", cidr = "10.30.0.0/24")
+        val tenant = newTenantAdmin("vpn-fwd")
+
+        val acc = generate(tenant, username = "mikrotik-fwd")
+        val accId = id(acc)
+        val overlayIp = JsonPath.read<String>(acc, "$.overlayIp")
+        val winboxPublic = JsonPath.read<Int>(acc, "$.remotePort")
+        val nodeToken = nodeTokenOfHub(JsonPath.read(acc, "$.serverName"))
+
+        // Bawaan satu pintu: Winbox 8291, beralamat siap tempel `host:portPublik`.
+        assertThat(JsonPath.read<List<Int>>(acc, "$.forwards[*].devicePort")).containsExactly(8291)
+        assertThat(JsonPath.read<List<String>>(acc, "$.forwards[*].label")).containsExactly("Winbox")
+        assertThat(JsonPath.read<List<String>>(acc, "$.forwards[*].address"))
+            .containsExactly("vpn.example.com:$winboxPublic")
+        val winboxId = JsonPath.read<String>(acc, "$.forwards[0].id")
+
+        // Perangkat melayani lebih dari satu hal: tambah API Mikrotik. Port publiknya dialokasikan
+        // sistem (tak boleh bentrok di hub), labelnya ditebak dari port yang umum dikenal.
+        val withApi = post("/api/vpn/accounts/$accId/forwards", tenant, """{"devicePort":8728}""")
+        assertThat(JsonPath.read<List<Int>>(withApi, "$.forwards[*].devicePort")).containsExactly(8291, 8728)
+        assertThat(JsonPath.read<List<String>>(withApi, "$.forwards[*].label")).containsExactly("Winbox", "API")
+        val apiPublic = JsonPath.read<List<Int>>(withApi, "$.forwards[*].publicPort").last()
+        assertThat(apiPublic).isNotEqualTo(winboxPublic).isBetween(20000, 40000)
+        // Port utama tetap yang terendah → alamat yang sudah dipegang teknisi tak bergeser.
+        assertThat(JsonPath.read<Int>(withApi, "$.remotePort")).isEqualTo(winboxPublic)
+
+        // Winbox di perangkat dipindah dari 8291 ke 9291: yang berubah HANYA sisi perangkat.
+        val moved = send("PUT", "/api/vpn/accounts/$accId/forwards/$winboxId", tenant, """{"devicePort":9291}""")
+        assertThat(JsonPath.read<List<Int>>(moved, "$.forwards[*].publicPort")).containsExactly(winboxPublic, apiPublic)
+        assertThat(JsonPath.read<List<Int>>(moved, "$.forwards[*].devicePort")).containsExactly(9291, 8728)
+        assertThat(JsonPath.read<Int>(moved, "$.remotePort")).isEqualTo(winboxPublic)
+
+        // Hub menarik tabelnya: penanda + satu baris per penerusan, tersasar ke IP overlay peer.
+        val (tblStatus, tbl) = forwardTable(nodeToken)
+        assertThat(tblStatus).isEqualTo(200)
+        assertThat(tbl.lines().first()).isEqualTo("#ftth-forwards")
+        assertThat(tbl.lines()).contains("$winboxPublic $overlayIp 9291 tcp", "$apiPublic $overlayIp 8728 tcp")
+
+        // Cabut satu penerusan → pintunya hilang dari tabel hub (penyelaras mencabut aturannya).
+        val cut = send("DELETE", "/api/vpn/accounts/$accId/forwards/$winboxId", tenant)
+        assertThat(JsonPath.read<List<Int>>(cut, "$.forwards[*].publicPort")).containsExactly(apiPublic)
+        assertThat(JsonPath.read<Int>(cut, "$.remotePort")).isEqualTo(apiPublic)
+        assertThat(forwardTable(nodeToken).second.lines()).doesNotContain("$winboxPublic $overlayIp 9291 tcp")
+
+        // Akun dinonaktifkan = SEMUA pintunya tertutup, tanpa mencabut penerusannya satu-satu.
+        post("/api/vpn/accounts/$accId/disable", tenant, "", expected = 200)
+        assertThat(forwardTable(nodeToken).second).doesNotContain(" $overlayIp ")
+    }
+
+    @Test
     fun `token invalid gagal-aman di semua endpoint provisioning`() {
         val bogus = "ftthv_tokentaklaku"
         installScript(bogus, expected = 404)
         assertThat(authenticate(bogus, "siapa", "apa")).isEqualTo(403)
         assertThat(clientConnect(bogus, "siapa").first).isEqualTo(403)
+        // Tabel penerusan ikut gagal-aman: VPS tanpa token sah tak boleh memetakan hub.
+        assertThat(forwardTable(bogus).first).isEqualTo(403)
     }
 
     @Test

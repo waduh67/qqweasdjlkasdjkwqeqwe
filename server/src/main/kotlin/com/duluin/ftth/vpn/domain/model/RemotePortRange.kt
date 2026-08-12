@@ -4,9 +4,10 @@ import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.ValidationException
 
 /**
- * Rentang port publik TCP pada hub yang dipetakan (DNAT) ke port manajemen perangkat overlay
- * (mis. Winbox 8291). Tiap akun VPN mendapat satu port unik per hub sehingga operator bisa
- * meremote perangkatnya lewat `IP_HUB:port` — tak perlu ikut men-dial tunnel.
+ * Rentang port publik pada hub yang dipetakan (DNAT) ke port layanan perangkat overlay (Winbox,
+ * API, SSH, …). Kolamnya per-HUB dan dihitung dari SEMUA penerusan ([VpnPortForward]), bukan satu
+ * per akun: satu perangkat boleh punya beberapa pintu, dan tiap pintu wajib berport publik unik
+ * agar operator bisa meremote lewat `IP_HUB:port` tanpa ikut men-dial tunnel.
  *
  * Murni & deterministik (tanpa framework), cermin pola alokasi [TunnelSubnet]: alamat/port
  * terendah yang belum terpakai dipilih lebih dulu.

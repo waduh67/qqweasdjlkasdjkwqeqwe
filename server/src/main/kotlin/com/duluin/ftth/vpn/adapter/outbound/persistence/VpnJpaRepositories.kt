@@ -18,10 +18,27 @@ interface VpnPeerJpaRepository : JpaRepository<VpnPeerJpaEntity, UUID> {
     fun findByServerIdAndUsername(serverId: UUID, username: String): VpnPeerJpaEntity?
     fun existsByServerIdAndUsername(serverId: UUID, username: String): Boolean
     fun countByServerId(serverId: UUID): Long
+}
 
-    /** Port remote terpakai pada sebuah hub (lintas-tenant) — dasar alokasi berikutnya, tanpa dekripsi. */
-    @Query("select p.remotePort from VpnPeerJpaEntity p where p.serverId = :serverId")
-    fun findRemotePortsByServerId(@Param("serverId") serverId: UUID): List<Int>
+interface VpnPortForwardJpaRepository : JpaRepository<VpnPortForwardJpaEntity, UUID> {
+    fun findByPeerIdOrderByPublicPortAsc(peerId: UUID): List<VpnPortForwardJpaEntity>
+
+    /** Muat sekaligus untuk sekumpulan akun — menahan N+1 saat menampilkan daftar akun. */
+    fun findByPeerIdInOrderByPublicPortAsc(peerIds: Collection<UUID>): List<VpnPortForwardJpaEntity>
+
+    fun findByServerIdOrderByPublicPortAsc(serverId: UUID): List<VpnPortForwardJpaEntity>
+
+    /** Port publik terpakai pada sebuah hub (lintas-tenant) — dasar alokasi berikutnya. */
+    @Query("select f.publicPort from VpnPortForwardJpaEntity f where f.serverId = :serverId")
+    fun findPublicPortsByServerId(@Param("serverId") serverId: UUID): List<Int>
+
+    /**
+     * Bulk delete (bukan derived load-then-remove): dijalankan SEKETIKA ke DB, jadi baris anak
+     * sudah hilang sebelum induknya dihapus — Hibernate tak menjamin urutan itu sendiri.
+     */
+    @Modifying
+    @Query("delete from VpnPortForwardJpaEntity f where f.peerId = :peerId")
+    fun deleteByPeerId(@Param("peerId") peerId: UUID)
 }
 
 interface VpnNodeTokenJpaRepository : JpaRepository<VpnNodeTokenJpaEntity, UUID> {

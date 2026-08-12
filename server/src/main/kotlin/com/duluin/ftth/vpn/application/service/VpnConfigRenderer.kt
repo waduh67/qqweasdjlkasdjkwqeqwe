@@ -241,7 +241,8 @@ class VpnConfigRenderer {
             .replace("{{APP_URL}}", baseUrl)
             .replace("{{NODE_TOKEN}}", rawNodeToken)
             .replace("{{TUNNEL_CIDR}}", TunnelSubnet.parse(server.tunnelCidr).cidr)
-            .replace("{{DEVICE_PORT}}", DEVICE_PORT.toString())
+            .replace("{{FORWARD_MARKER}}", VpnProvisioningReader.FORWARD_MARKER)
+            .replace("{{SYNC_INTERVAL}}", SYNC_INTERVAL)
             .replace("{{SERVER_CONF}}", renderNodeServerConf(server, proto))
             .replace("{{CA_CERT}}", caCert.trim())
             .replace("{{SERVER_CERT}}", serverCert.trim())
@@ -251,8 +252,8 @@ class VpnConfigRenderer {
     /**
      * `server.conf` untuk model callback-langsung: sertifikat/kunci dari berkas, autentikasi
      * user/pass dan `ifconfig-push` IP tetap didelegasikan ke skrip yang memanggil balik aplikasi
-     * (`auth-user-pass-verify` + `client-connect`). `client-disconnect` melepas DNAT port publik
-     * saat perangkat putus. `dh none` memakai ECDHE (kunci server RSA).
+     * (`auth-user-pass-verify` + `client-connect`); `client-disconnect` hanya melapor liveness.
+     * Penerusan port diurus timer `ftth-sync`, bukan skrip koneksi. `dh none` memakai ECDHE.
      */
     private fun renderNodeServerConf(server: VpnServer, proto: String): String {
         val subnet = TunnelSubnet.parse(server.tunnelCidr)
@@ -292,7 +293,11 @@ class VpnConfigRenderer {
     private companion object {
         const val INSTALL_TEMPLATE_PATH = "/vpn/install.sh.template"
 
-        /** Port Winbox default perangkat Mikrotik — tujuan DNAT dari port publik hub. */
-        const val DEVICE_PORT = 8291
+        /**
+         * Jeda timer `ftth-sync` di VPS (format systemd). Satu menit adalah kompromi: cukup cepat
+         * agar operator yang baru memindah port Winbox tak lama menunggu, cukup jarang agar hub
+         * tak membanjiri aplikasi (satu permintaan kecil per hub per menit).
+         */
+        const val SYNC_INTERVAL = "1min"
     }
 }

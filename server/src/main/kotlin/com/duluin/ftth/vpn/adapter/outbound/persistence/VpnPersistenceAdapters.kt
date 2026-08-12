@@ -7,6 +7,7 @@ import com.duluin.ftth.vpn.application.port.outbound.VpnPeerRepository
 import com.duluin.ftth.vpn.application.port.outbound.VpnServerRepository
 import com.duluin.ftth.vpn.domain.model.VpnNodeToken
 import com.duluin.ftth.vpn.domain.model.VpnPeer
+import com.duluin.ftth.vpn.domain.model.VpnPortForward
 import com.duluin.ftth.vpn.domain.model.VpnServer
 import com.duluin.ftth.vpn.domain.model.VpnServerStatus
 import org.slf4j.Logger
@@ -92,10 +93,14 @@ class VpnServerPersistenceAdapter(
  * Adapter peer sekaligus batas enkripsi password. Saat memperbarui, password hanya
  * ditulis ulang bila domain memegang nilai asli — sentinel kosong dari kegagalan dekripsi
  * tidak menimpa ciphertext yang ada, agar penyuntingan field lain tak merusak password.
+ *
+ * Penerusan port ikut disimpan di sini karena ia bagian dari agregat peer (tabel anak
+ * `vpn_port_forward`, disinkronkan per-id: yang hilang dihapus, yang ada disegarkan).
  */
 @Component
 class VpnPeerPersistenceAdapter(
     private val jpa: VpnPeerJpaRepository,
+    private val forwardJpa: VpnPortForwardJpaRepository,
     private val cipher: SecretCipher,
 ) : VpnPeerRepository {
 
@@ -119,7 +124,6 @@ class VpnPeerPersistenceAdapter(
             name = peer.name,
             username = peer.username,
             overlayIp = peer.overlayIp,
-            remotePort = peer.remotePort,
             status = peer.status,
             deviceType = peer.deviceType,
             deviceId = peer.deviceId,
@@ -127,40 +131,96 @@ class VpnPeerPersistenceAdapter(
             online = peer.online,
             password = encryptedPassword ?: error("Password peer VPN wajib diisi"),
         )
-        return jpa.save(entity).toDomain()
+        val saved = jpa.save(entity)
+        return saved.toDomain(syncForwards(peer))
     }
 
-    override fun findById(id: UUID): VpnPeer? = jpa.findById(id).orElse(null)?.toDomain()
+    override fun findById(id: UUID): VpnPeer? =
+        jpa.findById(id).orElse(null)?.let { it.toDomain(forwardJpa.findByPeerIdOrderByPublicPortAsc(it.id)) }
 
     override fun findByTenant(tenantId: UUID): List<VpnPeer> =
-        jpa.findByTenantIdOrderByNameAsc(tenantId).map { it.toDomain() }
+        jpa.findByTenantIdOrderByNameAsc(tenantId).toDomainAll()
 
     override fun findByServerId(serverId: UUID): List<VpnPeer> =
-        jpa.findByServerIdOrderByOverlayIpAsc(serverId).map { it.toDomain() }
+        jpa.findByServerIdOrderByOverlayIpAsc(serverId).toDomainAll()
 
     override fun findByServerIdAndUsername(serverId: UUID, username: String): VpnPeer? =
-        jpa.findByServerIdAndUsername(serverId, username)?.toDomain()
+        jpa.findByServerIdAndUsername(serverId, username)
+            ?.let { it.toDomain(forwardJpa.findByPeerIdOrderByPublicPortAsc(it.id)) }
 
     override fun usedOverlayIps(serverId: UUID): Set<String> =
         jpa.findByServerIdOrderByOverlayIpAsc(serverId).mapTo(HashSet()) { it.overlayIp }
 
-    override fun usedRemotePorts(serverId: UUID): Set<Int> = jpa.findRemotePortsByServerId(serverId).toHashSet()
+    override fun usedRemotePorts(serverId: UUID): Set<Int> =
+        forwardJpa.findPublicPortsByServerId(serverId).toHashSet()
 
     override fun existsByServerIdAndUsername(serverId: UUID, username: String): Boolean =
         jpa.existsByServerIdAndUsername(serverId, username)
 
     override fun countByServerId(serverId: UUID): Long = jpa.countByServerId(serverId)
 
-    override fun deleteById(id: UUID) = jpa.deleteById(id)
+    override fun deleteById(id: UUID) {
+        // Anak lebih dulu, seketika: FK di DB memang ON DELETE CASCADE, tapi menghapusnya
+        // eksplisit membuat urutannya tak bergantung pada penjadwalan flush Hibernate.
+        forwardJpa.deleteByPeerId(id)
+        jpa.deleteById(id)
+    }
 
-    private fun VpnPeerJpaEntity.toDomain(): VpnPeer = VpnPeer.rehydrate(
+    /**
+     * Selaraskan tabel anak dengan isi agregat: baris yang tak lagi ada di domain dihapus lebih
+     * dulu (di-flush, supaya port publiknya bebas sebelum INSERT apa pun menyentuh UNIQUE
+     * (server_id, public_port)), baru sisanya di-upsert.
+     */
+    private fun syncForwards(peer: VpnPeer): List<VpnPortForwardJpaEntity> {
+        val existing = forwardJpa.findByPeerIdOrderByPublicPortAsc(peer.id).associateBy { it.id }
+        val wanted = peer.forwards.associateBy { it.id }
+        val stale = existing.values.filter { it.id !in wanted.keys }
+        if (stale.isNotEmpty()) {
+            forwardJpa.deleteAll(stale)
+            forwardJpa.flush()
+        }
+        return peer.forwards.map { forward ->
+            val entity = existing[forward.id]?.apply {
+                // publicPort identitas, tak disentuh; yang berubah hanya sasaran & namanya.
+                label = forward.label
+                devicePort = forward.devicePort
+                protocol = forward.protocol
+            } ?: VpnPortForwardJpaEntity(
+                id = forward.id,
+                peerId = peer.id,
+                serverId = peer.serverId,
+                label = forward.label,
+                publicPort = forward.publicPort,
+                devicePort = forward.devicePort,
+                protocol = forward.protocol,
+            )
+            forwardJpa.save(entity)
+        }
+    }
+
+    /** Muat penerusan sekali untuk seluruh daftar (hindari N+1 saat dashboard menampilkan akun). */
+    private fun List<VpnPeerJpaEntity>.toDomainAll(): List<VpnPeer> {
+        if (isEmpty()) return emptyList()
+        val byPeer = forwardJpa.findByPeerIdInOrderByPublicPortAsc(map { it.id }).groupBy { it.peerId }
+        return map { it.toDomain(byPeer[it.id].orEmpty()) }
+    }
+
+    private fun VpnPeerJpaEntity.toDomain(forwards: List<VpnPortForwardJpaEntity>): VpnPeer = VpnPeer.rehydrate(
         id = id,
         tenantId = tenantId,
         serverId = serverId,
         name = name,
         username = username,
         overlayIp = overlayIp,
-        remotePort = remotePort,
+        forwards = forwards.map {
+            VpnPortForward.rehydrate(
+                id = it.id,
+                publicPort = it.publicPort,
+                label = it.label,
+                devicePort = it.devicePort,
+                protocol = it.protocol,
+            )
+        },
         status = status,
         deviceType = deviceType,
         deviceId = deviceId,

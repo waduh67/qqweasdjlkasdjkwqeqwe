@@ -1,6 +1,8 @@
 package com.duluin.ftth.vpn.domain.model
 
 import com.duluin.ftth.common.domain.UuidV7
+import com.duluin.ftth.common.domain.error.ConflictException
+import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
 import java.time.Instant
 import java.util.UUID
@@ -13,8 +15,8 @@ enum class VpnPeerStatus { ENABLED, DISABLED }
  *
  * [serverId] menaut ke [VpnServer] (referensi intra-module, FK diperbolehkan). [username]
  * unik per server (dipakai sebagai identitas login OpenVPN dan common-name). [overlayIp]
- * dialokasikan dari subnet server. [remotePort] adalah port publik TCP unik per hub yang
- * di-DNAT ke port manajemen perangkat (Winbox) → operator meremote lewat `IP_HUB:remotePort`.
+ * dialokasikan dari subnet server. [forwards] adalah daftar port hub yang di-DNAT ke layanan
+ * perangkat → operator meremote lewat `IP_HUB:publicPort` tanpa ikut men-dial tunnel.
  * [password] adalah rahasia: plaintext di domain, terenkripsi di batas persistence.
  * [deviceType]/[deviceId] hanya label bebas atas perangkat yang dijangkau (TANPA FK, boleh
  * null). Liveness ([online] + [lastHandshakeAt]) dilaporkan hub lewat callback OpenVPN
@@ -27,7 +29,7 @@ class VpnPeer private constructor(
     val name: String,
     val username: String,
     val overlayIp: String,
-    val remotePort: Int,
+    forwards: List<VpnPortForward>,
     status: VpnPeerStatus,
     val deviceType: String?,
     val deviceId: UUID?,
@@ -35,6 +37,19 @@ class VpnPeer private constructor(
     online: Boolean,
     password: String,
 ) {
+    private val mutableForwards: MutableList<VpnPortForward> =
+        forwards.sortedBy { it.publicPort }.toMutableList()
+
+    /** Penerusan port akun ini, urut port publik. Kosong = perangkat sengaja tak diekspos. */
+    val forwards: List<VpnPortForward> get() = mutableForwards.toList()
+
+    /**
+     * Port publik utama (yang terendah — biasanya Winbox, karena ia dialokasikan lebih dulu).
+     * Null bila semua penerusan dihapus: akunnya tetap sah, perangkatnya hanya tak punya pintu
+     * dari internet dan cuma terjangkau dari dalam tunnel.
+     */
+    val remotePort: Int? get() = mutableForwards.firstOrNull()?.publicPort
+
     var status: VpnPeerStatus = status
         private set
 
@@ -73,6 +88,43 @@ class VpnPeer private constructor(
         online = false
     }
 
+    /**
+     * Tambah penerusan ke satu layanan lagi di perangkat yang sama. [publicPort] sudah
+     * dialokasikan pemanggil dari rentang hub (unik lintas-tenant), jadi di sini cukup dijaga
+     * agar tak dobel di dalam akun ini.
+     */
+    fun addForward(
+        publicPort: Int,
+        label: String?,
+        devicePort: Int,
+        protocol: VpnForwardProtocol,
+    ): VpnPortForward {
+        if (mutableForwards.size >= VpnPortForward.MAX_PER_PEER) {
+            throw ValidationException("Satu akun VPN maksimal ${VpnPortForward.MAX_PER_PEER} penerusan port")
+        }
+        if (mutableForwards.any { it.publicPort == publicPort }) {
+            throw ConflictException("Port publik $publicPort sudah dipakai akun ini")
+        }
+        val forward = VpnPortForward.create(publicPort, label, devicePort, protocol)
+        mutableForwards += forward
+        mutableForwards.sortBy { it.publicPort }
+        return forward
+    }
+
+    /** Arahkan ulang satu penerusan (mis. port Winbox perangkat dipindah 8291 → 9291). */
+    fun retargetForward(forwardId: UUID, label: String?, devicePort: Int, protocol: VpnForwardProtocol) {
+        forward(forwardId).retarget(label, devicePort, protocol)
+    }
+
+    /** Cabut penerusan: portnya kembali ke kolam hub dan perangkat kehilangan pintu itu. */
+    fun removeForward(forwardId: UUID) {
+        mutableForwards.remove(forward(forwardId))
+    }
+
+    private fun forward(forwardId: UUID): VpnPortForward =
+        mutableForwards.firstOrNull { it.id == forwardId }
+            ?: throw NotFoundException("Penerusan port $forwardId tidak ditemukan pada akun ini")
+
     companion object {
         @Suppress("LongParameterList")
         fun create(
@@ -92,7 +144,8 @@ class VpnPeer private constructor(
             name = validateName(name),
             username = validateUsername(username),
             overlayIp = validateOverlayIp(overlayIp),
-            remotePort = validateRemotePort(remotePort),
+            // Akun baru lahir dengan satu pintu: Winbox. Operator boleh menambah/mengubahnya.
+            forwards = listOf(VpnPortForward.winbox(remotePort)),
             status = VpnPeerStatus.ENABLED,
             deviceType = deviceType?.trim()?.takeIf { it.isNotEmpty() },
             deviceId = deviceId,
@@ -109,7 +162,7 @@ class VpnPeer private constructor(
             name: String,
             username: String,
             overlayIp: String,
-            remotePort: Int,
+            forwards: List<VpnPortForward>,
             status: VpnPeerStatus,
             deviceType: String?,
             deviceId: UUID?,
@@ -117,7 +170,7 @@ class VpnPeer private constructor(
             online: Boolean,
             password: String,
         ): VpnPeer = VpnPeer(
-            id, tenantId, serverId, name, username, overlayIp, remotePort, status,
+            id, tenantId, serverId, name, username, overlayIp, forwards, status,
             deviceType, deviceId, lastHandshakeAt, online, password,
         )
 
@@ -144,11 +197,6 @@ class VpnPeer private constructor(
             val trimmed = overlayIp.trim()
             if (trimmed.isBlank()) throw ValidationException("IP overlay peer VPN wajib diisi")
             return trimmed
-        }
-
-        private fun validateRemotePort(remotePort: Int): Int {
-            if (remotePort !in 1..65535) throw ValidationException("Port remote peer VPN harus 1-65535")
-            return remotePort
         }
 
         private fun validatePassword(password: String): String {

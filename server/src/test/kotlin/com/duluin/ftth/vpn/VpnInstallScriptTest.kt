@@ -57,11 +57,19 @@ class VpnInstallScriptTest {
         // NCP: satu hub melayani v7 (GCM) & v6 (CBC fallback).
         assertThat(script).contains("data-ciphers AES-256-GCM:AES-256-CBC")
         assertThat(script).contains("data-ciphers-fallback AES-256-CBC")
-        // DNAT port publik -> Winbox: rute-balik MASQUERADE + FORWARD subnet tunnel, port device 8291.
+        // Rute-balik trafik remote: MASQUERADE + FORWARD subnet tunnel.
         assertThat(script).contains("TUN_CIDR=\"10.8.0.0/24\"")
         assertThat(script).contains("-j MASQUERADE")
-        assertThat(script).contains("--to-destination \"\$ip:8291\"")
         assertThat(script).contains("ftth-disconnect.sh")
+        // Penerusan port ditarik berkala dari aplikasi, TAK ADA port perangkat yang dipaku di skrip.
+        assertThat(script).contains("/api/vpn/provision/forwards")
+        assertThat(script).contains("ftth-vpn-sync.timer")
+        assertThat(script).contains("OnUnitActiveSec=1min")
+        assertThat(script).doesNotContain(":8291")
+        // Penanda balasan: aplikasi mati / balasan error => VPS berhenti tanpa menyapu iptables.
+        assertThat(script).contains("#ftth-forwards")
+        // Hanya aturan bertanda milik kami yang boleh dicabut penyelaras.
+        assertThat(script).contains("--comment \"ftth-vpn\"")
         // Dijalankan ulang = config baru HARUS terpakai. `enable --now` melewati service yang
         // sudah jalan, jadi daemonnya diam-diam memegang config lama (pernah kejadian: berkas
         // sudah `proto tcp`, `ss` masih menunjukkan udp).

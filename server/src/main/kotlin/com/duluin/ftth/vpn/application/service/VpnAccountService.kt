@@ -7,12 +7,15 @@ import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.vpn.application.port.inbound.GenerateVpnAccountCommand
 import com.duluin.ftth.vpn.application.port.inbound.ManageVpnAccountUseCase
 import com.duluin.ftth.vpn.application.port.inbound.VpnAccountView
+import com.duluin.ftth.vpn.application.port.inbound.VpnPortForwardCommand
+import com.duluin.ftth.vpn.application.port.inbound.VpnPortForwardView
 import com.duluin.ftth.vpn.application.port.outbound.VpnPeerRepository
 import com.duluin.ftth.vpn.application.port.outbound.VpnServerRepository
 import com.duluin.ftth.vpn.config.VpnProperties
 import com.duluin.ftth.vpn.domain.model.RemotePortRange
 import com.duluin.ftth.vpn.domain.model.TunnelSubnet
 import com.duluin.ftth.vpn.domain.model.VpnClientVariant
+import com.duluin.ftth.vpn.domain.model.VpnForwardProtocol
 import com.duluin.ftth.vpn.domain.model.VpnPeer
 import com.duluin.ftth.vpn.domain.model.VpnServer
 import org.springframework.stereotype.Service
@@ -114,6 +117,57 @@ class VpnAccountService(
         auditor.record("vpn.account.deleted", "VpnPeer", id, peer.tenantId, mapOf("username" to peer.username))
     }
 
+    override fun addForward(id: UUID, command: VpnPortForwardCommand): VpnAccountView {
+        val peer = ownedPeer(id)
+        val server = requireServer(peer.serverId)
+        // Port publik dialokasikan sistem dari kolam hub — SEMUA penerusan ikut dihitung,
+        // bukan satu per akun, sebab satu perangkat kini boleh punya beberapa pintu.
+        val publicPort = RemotePortRange(properties.remotePortMin, properties.remotePortMax)
+            .allocate(peerRepository.usedRemotePorts(server.id))
+        val forward = peer.addForward(
+            publicPort = publicPort,
+            label = command.label,
+            devicePort = command.devicePort,
+            protocol = command.protocol ?: VpnForwardProtocol.TCP,
+        )
+        val saved = peerRepository.save(peer)
+        auditor.record(
+            "vpn.account.forward-added", "VpnPeer", saved.id, saved.tenantId,
+            mapOf(
+                "username" to saved.username, "publicPort" to forward.publicPort,
+                "devicePort" to forward.devicePort, "protocol" to forward.protocol.name,
+            ),
+        )
+        return saved.toView(server)
+    }
+
+    override fun retargetForward(id: UUID, forwardId: UUID, command: VpnPortForwardCommand): VpnAccountView {
+        val peer = ownedPeer(id)
+        peer.retargetForward(
+            forwardId = forwardId,
+            label = command.label,
+            devicePort = command.devicePort,
+            protocol = command.protocol ?: VpnForwardProtocol.TCP,
+        )
+        val saved = peerRepository.save(peer)
+        auditor.record(
+            "vpn.account.forward-retargeted", "VpnPeer", saved.id, saved.tenantId,
+            mapOf("username" to saved.username, "forwardId" to forwardId, "devicePort" to command.devicePort),
+        )
+        return saved.toView(requireServer(saved.serverId))
+    }
+
+    override fun removeForward(id: UUID, forwardId: UUID): VpnAccountView {
+        val peer = ownedPeer(id)
+        peer.removeForward(forwardId)
+        val saved = peerRepository.save(peer)
+        auditor.record(
+            "vpn.account.forward-removed", "VpnPeer", saved.id, saved.tenantId,
+            mapOf("username" to saved.username, "forwardId" to forwardId),
+        )
+        return saved.toView(requireServer(saved.serverId))
+    }
+
     @Transactional(readOnly = true)
     override fun renderOvpn(id: UUID, variant: VpnClientVariant): String {
         val peer = ownedPeer(id)
@@ -180,7 +234,17 @@ class VpnAccountService(
             username = username,
             overlayIp = overlayIp,
             remotePort = remotePort,
-            winboxAddress = "${server.host}:$remotePort",
+            winboxAddress = remotePort?.let { "${server.host}:$it" },
+            forwards = forwards.map {
+                VpnPortForwardView(
+                    id = it.id,
+                    label = it.label,
+                    publicPort = it.publicPort,
+                    devicePort = it.devicePort,
+                    protocol = it.protocol.name,
+                    address = "${server.host}:${it.publicPort}",
+                )
+            },
             status = status.name,
             online = online,
             lastHandshakeAt = lastHandshakeAt,

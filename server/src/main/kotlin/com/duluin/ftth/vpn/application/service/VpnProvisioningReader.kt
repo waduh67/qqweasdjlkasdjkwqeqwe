@@ -40,9 +40,13 @@ class VpnProvisioningReader(
     }
 
     /**
-     * Data koneksi peer aktif: `{overlayIp} {netmask} {remotePort}` (dipisah spasi). Skrip
+     * Data koneksi peer aktif: `{overlayIp} {netmask} {portPublikUtama}` (dipisah spasi). Skrip
      * `client-connect` di VPS memakainya untuk menulis `ifconfig-push {overlayIp} {netmask}` ke
-     * berkas CCD SEKALIGUS memasang DNAT port publik → Winbox perangkat. Null bila tak ada/nonaktif.
+     * berkas CCD. Null bila tak ada/nonaktif.
+     *
+     * Bentuknya SATU BARIS dan tetap begitu: hub yang sudah terpasang di lapangan mem-parse-nya
+     * dengan `read -r ip mask port`, jadi menambah kolom/baris di sini akan menabrak mereka.
+     * Penerusan port dipisah ke [forwardTable] yang disinkronkan berkala.
      */
     @Transactional(readOnly = true)
     fun clientConnectLine(serverId: UUID, username: String): String? {
@@ -50,7 +54,31 @@ class VpnProvisioningReader(
         val server = serverRepository.findById(serverId)
             ?: throw ConflictException("Hub VPN $serverId hilang saat client-connect")
         val netmask = TunnelSubnet.parse(server.tunnelCidr).netmask()
-        return "${peer.overlayIp} $netmask ${peer.remotePort}"
+        return "${peer.overlayIp} $netmask ${peer.remotePort ?: ""}".trimEnd()
+    }
+
+    /**
+     * Tabel penerusan port SELURUH hub, dibaca berkala oleh `ftth-sync.sh` di VPS untuk
+     * merekonsiliasi aturan DNAT-nya: `{portPublik} {ipOverlay} {portPerangkat} {protokol}`,
+     * satu baris per penerusan, didahului penanda [FORWARD_MARKER].
+     *
+     * Kenapa disinkronkan berkala, bukan dipasang saat `client-connect`:
+     *  - operator memindah port Winbox perangkat pukul 10 pagi; kalau aturannya hanya dipasang
+     *    saat menyambung, perubahan itu baru berlaku ketika tunnelnya kebetulan putus-sambung.
+     *  - aturan iptables hilang saat VPS reboot; sinkronisasi berkala memulihkannya sendiri.
+     *  - hanya peer ENABLED yang masuk daftar → menonaktifkan akun ikut menutup pintunya.
+     *
+     * Penanda di baris pertama itu penting: bila aplikasi mati atau membalas halaman error,
+     * skrip di VPS harus BERHENTI tanpa menyentuh iptables, bukan menyapu semua aturannya.
+     */
+    @Transactional(readOnly = true)
+    fun forwardTable(serverId: UUID): String {
+        val rules = peerRepository.findByServerId(serverId)
+            .filter { it.status == VpnPeerStatus.ENABLED }
+            .flatMap { peer ->
+                peer.forwards.map { "${it.publicPort} ${peer.overlayIp} ${it.devicePort} ${it.protocol.name.lowercase()}" }
+            }
+        return (listOf(FORWARD_MARKER) + rules).joinToString("\n", postfix = "\n")
     }
 
     /**
@@ -81,4 +109,9 @@ class VpnProvisioningReader(
 
     private fun constantTimeEquals(a: String, b: String): Boolean =
         MessageDigest.isEqual(a.toByteArray(Charsets.UTF_8), b.toByteArray(Charsets.UTF_8))
+
+    companion object {
+        /** Penanda baris pertama [forwardTable] — kontrak dengan `ftth-sync.sh` di VPS. */
+        const val FORWARD_MARKER = "#ftth-forwards"
+    }
 }

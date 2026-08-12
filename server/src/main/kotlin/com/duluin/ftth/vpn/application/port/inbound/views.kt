@@ -1,5 +1,6 @@
 package com.duluin.ftth.vpn.application.port.inbound
 
+import com.duluin.ftth.vpn.domain.model.VpnForwardProtocol
 import com.duluin.ftth.vpn.domain.model.VpnProtocol
 import java.time.Instant
 import java.util.UUID
@@ -54,10 +55,18 @@ data class VpnAccountView(
     val username: String,
     /** IP overlay tetap yang di-push server — alamat perangkat di dalam tunnel. */
     val overlayIp: String,
-    /** Port publik TCP di hub yang di-DNAT ke Winbox perangkat. */
-    val remotePort: Int,
+    /**
+     * Port publik UTAMA (penerusan dengan port terendah — pada akun bawaan itu Winbox).
+     * Null bila semua penerusan dicabut: perangkat sengaja tak punya pintu dari internet.
+     */
+    val remotePort: Int?,
     /** Alamat siap-Winbox: `host:remotePort` — remote perangkat tanpa ikut nge-dial tunnel. */
-    val winboxAddress: String,
+    val winboxAddress: String?,
+    /**
+     * Semua penerusan port akun ini (Winbox/SSH/API/…), urut port publik. Inilah yang membuat
+     * perangkat ber-port tak-standar tetap terjangkau: sasarannya data, bukan konstanta program.
+     */
+    val forwards: List<VpnPortForwardView> = emptyList(),
     /** Status ADMINISTRATIF akun (ENABLED/DISABLED) — apakah boleh terhubung. */
     val status: String,
     /** Liveness NYATA: true selagi hub melapor perangkat terhubung (callback OpenVPN). */
@@ -81,6 +90,20 @@ data class VpnAccountView(
      * perangkat lama. Sekali tampil bersama [password] DAN hanya bila [supportsV6]; null selain itu.
      */
     val routerOsCommandV6: String? = null,
+)
+
+/**
+ * Satu penerusan port akun: hub mendengarkan [publicPort] dan meneruskannya ke [devicePort]
+ * pada perangkat. [address] sudah dirakit siap tempel di Winbox/PuTTY, [label] sekadar nama
+ * layanan untuk manusia.
+ */
+data class VpnPortForwardView(
+    val id: UUID,
+    val label: String,
+    val publicPort: Int,
+    val devicePort: Int,
+    val protocol: String,
+    val address: String,
 )
 
 /**
@@ -119,4 +142,16 @@ data class GenerateVpnAccountCommand(
     val deviceType: String?,
     val deviceId: UUID?,
     val username: String?,
+)
+
+/**
+ * Tambah/ubah penerusan port. [devicePort] adalah port layanan DI PERANGKAT (yang berubah
+ * ketika operator memindah port Winbox/API-nya); port publiknya dialokasikan sistem dan tak
+ * pernah ditentukan pemanggil. [label] kosong = diturunkan dari port yang umum dikenal.
+ * [protocol] null = TCP (nyaris semua layanan manajemen).
+ */
+data class VpnPortForwardCommand(
+    val label: String?,
+    val devicePort: Int,
+    val protocol: VpnForwardProtocol?,
 )
