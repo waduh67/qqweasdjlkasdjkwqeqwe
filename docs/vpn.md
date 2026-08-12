@@ -37,6 +37,13 @@ VpnNodeToken (kredensial installer/callback VPS, satu aktif per hub)
 ├── serverId  (menaut ke hub saja — bukan tenant)
 ├── tokenHash (SHA-256; token mentah `ftthv_…` sekali tampil)
 └── tokenHint (beberapa char terakhir untuk pengenalan)
+
+VpnPortForward (satu PINTU dari internet ke perangkat; banyak per akun, maks 10)
+├── peerId / serverId    (anak `vpn_peer`, ON DELETE CASCADE)
+├── publicPort           (unik per HUB, dialokasikan sistem, TAK bisa diubah)
+├── devicePort           (port layanan di perangkat — BISA diubah)
+├── protocol  TCP / UDP  (SNMP dsb. UDP)
+└── label                (ditebak dari port lazim: 8291 Winbox, 8728 API, 22 SSH, …)
 ```
 
 `TunnelSubnet` adalah value object CIDR IPv4 murni (matematika 32-bit):
@@ -71,6 +78,8 @@ di-allowlist di `SecurityConfig` (`/api/vpn/provision/**`):
   username/password akun (banding waktu-tetap), hanya akun **ENABLED** → 204/403.
 - `POST /api/vpn/provision/client-connect` — kunci IP overlay tetap akun
   (`ifconfig-push {overlayIp} {netmask}`).
+- `POST /api/vpn/provision/forwards` — **tabel penerusan port seluruh hub**, ditarik
+  berkala oleh timer `ftth-vpn-sync` di VPS (lihat bagian berikutnya).
 - `POST /api/vpn/provision/client-connected` / `…/client-disconnected` — **telemetri
   liveness**: hub melapor akun terhubung/putus → aplikasi menandai `online` + `lastHandshakeAt`.
 
@@ -105,6 +114,58 @@ di hub memanggil `client-connected` saat perangkat men-dial, dan `client-disconn
 memakai ulang `client-connect` untuk connect DAN disconnect, jadi endpoint terpisah menjamin hub
 lama sekadar tak melapor (`online=false`, `lastHandshakeAt=null` → "belum diketahui") alih-alih
 salah melapor online saat putus. Jalankan ulang installer di hub untuk mengaktifkan liveness.
+
+---
+
+## Port remote: banyak pintu per akun, sasarannya bisa dipindah
+
+Perangkat di lapangan jarang cuma butuh Winbox: teknisi juga menempel API (8728),
+SSH, WebFig, kadang SNMP — dan sering **memindah port bawaannya** demi keamanan
+(Winbox digeser ke 9291, API ditutup, dst.). Karena itu penerusan port adalah
+**data**, bukan konstanta program: tiap akun punya daftar `VpnPortForward`
+(maks 10) berbentuk `hub:publicPort → overlayIp:devicePort/protocol`.
+
+- **`publicPort` dialokasikan sistem dan permanen.** Diambil dari kolam per-hub
+  (`RemotePortRange`, `ftth.vpn.remote-port-min/max`, bawaan `20000–40000`) dan
+  unik lintas-tenant di hub itu. Alamat yang sudah tersebar ke teknisi tak boleh
+  bergeser hanya karena port di perangkat berubah.
+- **`devicePort`/`protocol`/`label` bisa diubah kapan saja** (`PUT …/forwards/{id}`)
+  — inilah tombol untuk "Winbox-nya sudah bukan 8291 lagi".
+- **Akun baru lahir dengan satu pintu Winbox (8291/TCP)** supaya alur satu-klik tak
+  berubah. `VpnAccountView.remotePort`/`winboxAddress` = pintu **berport publik
+  terendah** (turunan, bukan kolom) dan **boleh null** bila semua pintu dicabut:
+  perangkat sengaja hanya terjangkau dari dalam tunnel.
+- Label kosong ditebak dari port yang umum dikenal (8291 Winbox, 8728 API, 8729
+  API-SSL, 22 SSH, 23 Telnet, 80/443 WebFig, 161 SNMP, 2000 bandwidth test).
+
+**Rekonsiliasi, bukan hook.** DNAT tak lagi dipasang dari `client-connect`. VPS
+menjalankan `ftth-sync.sh` lewat **timer systemd `ftth-vpn-sync.timer` (tiap menit,
+plus 30 detik setelah boot)** yang menarik `POST /api/vpn/provision/forwards` lalu
+menyamakan iptables dengan tabel itu. Konsekuensinya di lapangan:
+
+- ubah/tambah/cabut pintu **berlaku tanpa perangkat perlu reconnect** (≤ ~1 menit);
+- aturan **pulih sendiri** setelah VPS reboot atau iptables tersapu;
+- **menonaktifkan akun menutup semua pintunya** (tabel hanya memuat peer `ENABLED`).
+
+Dua pengaman yang menentukan bentuk protokolnya:
+
+1. **Penanda `#ftth-forwards` wajib jadi baris pertama balasan.** Aplikasi mati,
+   502 dari proxy, atau balasan HTML error → VPS **berhenti tanpa menyentuh
+   iptables**. Gagal-aman: outage aplikasi tak boleh memutus remote yang sedang
+   dipakai.
+2. **Semua aturan kami bertanda `-m comment --comment "ftth-vpn"`**, dan penyelaras
+   hanya mencabut aturan bertanda itu — aturan operator/Docker di `PREROUTING` aman.
+
+Baris tabelnya sengaja sepolos mungkin (`publicPort overlayIp devicePort proto`)
+supaya bisa diproses `awk`/`read` tanpa parser JSON di VPS. Installer versi baru
+juga **menyapu sekali** aturan DNAT lama tanpa komentar yang menunjuk ke subnet
+tunnel — aturan lawas duduk lebih awal di `PREROUTING` dan akan mengalahkan yang
+baru. **Hub yang dipasang sebelum fitur ini harus dijalankan ulang installernya**
+supaya timer penyelaras ada.
+
+> **Firewall/NSG VPS**: rentang `20000–40000/TCP` (dan `/UDP` bila ada pintu UDP
+> seperti SNMP) harus terbuka — kalau tidak, pintunya ada di aplikasi tapi tak
+> terjangkau dari internet.
 
 ---
 
@@ -195,6 +256,7 @@ Artefak siap-unduh, dirender dari entitas yang rahasianya **sudah terdekripsi**:
 | `GET /api/vpn/accounts` · `/{id}` | `vpn.peer.view` |
 | `POST /api/vpn/accounts/generate` | `vpn.peer.manage` |
 | `POST /api/vpn/accounts/{id}/{enable,disable,rotate-password}` · `DELETE` | `vpn.peer.manage` |
+| `POST /api/vpn/accounts/{id}/forwards` · `PUT`/`DELETE` `…/forwards/{forwardId}` | `vpn.peer.manage` |
 | `GET /api/vpn/accounts/{id}/ovpn` · `/routeros` (`?variant=V7\|V6`) | `vpn.config.view` |
 
 **Provisioning (dari VPS, auth via token node — tanpa bearer, di-allowlist):**
@@ -204,6 +266,7 @@ Artefak siap-unduh, dirender dari entitas yang rahasianya **sudah terdekripsi**:
 | `GET /api/vpn/provision/install.sh?token=…` | token node |
 | `POST /api/vpn/provision/authenticate` | token node |
 | `POST /api/vpn/provision/client-connect` | token node |
+| `POST /api/vpn/provision/forwards` | token node |
 | `POST /api/vpn/provision/client-connected` · `/client-disconnected` | token node |
 
 Hapus hub ditolak selama masih menampung akun.

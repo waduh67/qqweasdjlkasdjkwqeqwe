@@ -49,7 +49,8 @@ Istilah singkat:
    - `22` (SSH), `80` (HTTP), `443` (HTTPS). Sisanya biarin ketutup.
    - **Mau pakai fitur VPN** (remote Mikrotik tanpa IP publik)? buka juga port hub
      OpenVPN — default `1194/TCP` (samakan dengan Port/Protokol saat bikin hub di
-     dashboard) **dan** rentang port remote Winbox `20000-40000/TCP`. Lihat Bagian I.
+     dashboard) **dan** rentang port remote `20000-40000/TCP` (Winbox/API/SSH tiap akun,
+     satu port publik per pintu). Lihat Bagian I.
      TCP, bukan UDP: klien OpenVPN RouterOS v6 tak mengenal UDP.
 4. Create. Setelah jadi, catat **Public IP** VM-nya (mis. `20.11.22.33`).
 5. Coba SSH dari laptop:
@@ -233,9 +234,10 @@ akun VPN" di dashboard → dapat `ip:port` + user/pass → tempel di Mikrotik. H
 dikelola HANYA oleh admin platform.
 
 1. **Buka port di NSG Azure** — tambah inbound rule `1194/TCP` (atau port/protokol
-   yang kamu pilih saat bikin hub) **plus** rentang `20000-40000/TCP` untuk remote Winbox
-   (tiap akun VPN dapat satu port unik di rentang ini; sesuaikan bila kamu ubah
-   `FTTH_VPN_REMOTE_PORT_MIN/MAX`).
+   yang kamu pilih saat bikin hub) **plus** rentang `20000-40000/TCP` untuk port remote
+   (tiap PINTU akun VPN — Winbox, API, SSH, … — dapat satu port unik di rentang ini;
+   sesuaikan bila kamu ubah `FTTH_VPN_REMOTE_PORT_MIN/MAX`). Tambah juga rentang yang
+   sama `/UDP` bila kamu memakai pintu UDP seperti SNMP.
 
    > **Kenapa TCP, bukan UDP?** Klien OpenVPN RouterOS **v6 hanya bisa TCP**, dan perangkat
    > v6 tak bisa di-upgrade (hAP lite/RB941 ber-CPU smips tak akan pernah dapat RouterOS 7).
@@ -278,13 +280,26 @@ dikelola HANYA oleh admin platform.
    ke hub, buka alamat itu di Winbox/browser untuk meremote perangkatnya langsung, tanpa
    ikut men-dial tunnel. Hub men-DNAT `IP_VPS:port` → `overlay:8291` otomatis.
 
-> **Sudah pernah pasang hub sebelum fitur remote-port ini?** Jalankan ulang perintah pasang
+6. **Port perangkatnya bukan bawaan? Butuh API/SSH juga?** Di menu **Akun VPN**, aksi
+   baris **Port remote** membuka daftar pintu akun itu: ubah "Port di perangkat" bila
+   Winbox digeser (mis. ke 9291), atau tambah pintu baru (API 8728, SSH 22, WebFig,
+   SNMP/UDP, …). Alamat publiknya sengaja **tak ikut berubah**. VPS menyelaraskan
+   iptables tiap menit lewat timer `ftth-vpn-sync`, jadi perubahan berlaku sendiri
+   tanpa perangkat perlu reconnect:
+   ```bash
+   sudo systemctl status ftth-vpn-sync.timer     # harus active (waiting)
+   sudo iptables -t nat -S PREROUTING | grep ftth-vpn
+   ```
+
+> **Sudah pernah pasang hub sebelum fitur port remote ini?** Jalankan ulang perintah pasang
 > hub dari dashboard (menu Server VPN → salin ulang perintah / rotasi token) agar skrip
-> `ftth-connect.sh`/`ftth-disconnect.sh` + aturan iptables baru ikut terpasang. Akun lama
-> otomatis dapat port remote lewat migrasi DB; Mikrotik-nya cukup reconnect ke hub.
+> `ftth-sync.sh` + timer `ftth-vpn-sync` ikut terpasang — tanpa itu, penerusan port yang
+> kamu ubah di dashboard tak pernah sampai ke iptables VPS. Installer sekaligus menyapu
+> aturan DNAT lama yang tak bertanda (aturan lawas duduk lebih awal di `PREROUTING` dan
+> akan mengalahkan yang baru). Akun lama otomatis dapat pintu Winbox lewat migrasi DB.
 
 > Domain di balik Cloudflare (orange-cloud) hanya mem-proxy HTTP/HTTPS, **bukan** port
-> 1194 maupun rentang TCP Winbox — makanya Host hub wajib IP publik VPS mentah. Callback
+> 1194 maupun rentang TCP port remote — makanya Host hub wajib IP publik VPS mentah. Callback
 > aplikasi (lewat HTTPS domain) tetap jalan normal.
 
 ---

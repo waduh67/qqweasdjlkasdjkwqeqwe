@@ -153,8 +153,8 @@ Kolom `nas.reachability` menandai jalurnya (migrasi V37, default `COLLECTOR`):
 - **Syarat jalur `VPN`:** container `server` harus **ter-rute ke subnet overlay** (server
   ko-lokasi hub). Auto-resolve overlay IP dari peer VPN tertaut (`VpnApi` + linkage
   peer↔nas) = enhancement lanjutan; kini operator mengisi overlay IP sebagai `nas.address`.
-- DNAT port-publik VPN (`RemotePortRange` 20000-40000 → `overlay:8291`) hanya untuk remote
-  Winbox, **bukan** jalur CoA.
+- DNAT port-publik VPN (`RemotePortRange` 20000-40000 → port layanan di perangkat) hanya
+  untuk remote manajemen (Winbox/API/SSH), **bukan** jalur CoA.
 
 ---
 
