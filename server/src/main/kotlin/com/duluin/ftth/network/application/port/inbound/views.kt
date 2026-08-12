@@ -420,13 +420,19 @@ data class SpliceCoreView(
 )
 
 /**
- * Satu kabel yang bisa disentuh dari dalam kotak yang sedang dibuka.
+ * Satu kabel yang tercatat menyinggahi kotak yang sedang dibuka.
  *
- * [terminatesHere] memisahkan dua kejadian yang tampak sama di layar tapi
- * berbeda di lapangan: kabel yang BERUJUNG di sini (seluruh core-nya keluar), dan
- * kabel yang cuma LEWAT lalu dikupas di tengah untuk diambil satu-dua core-nya
- * (mid-span tapping). [tapDistanceMeters] adalah letak kupasan itu diukur dari
- * ujung awal kabel — dihitung dari geometri, tak pernah diketik orang.
+ * [role] adalah keterangan terpenting di baris ini, sebab ia menentukan apa yang
+ * boleh dikerjakan: END berarti selubungnya habis di sini dan seluruh core
+ * terbuka; TAPPED berarti dikupas di tengah bentang, sebagian core diambil,
+ * sisanya jalan terus; PASSING berarti selubungnya UTUH — kabelnya ada di dalam
+ * kotak, terlihat, tapi tak satu pun core-nya boleh disambung.
+ *
+ * [terminatesHere] dipertahankan sebagai turunan `role == END` supaya layar yang
+ * cuma butuh "berujung di sini atau tidak" tak perlu ikut mengenal peran.
+ * [tapDistanceMeters] letak kotak ini diukur dari pangkal kabel — dihitung dari
+ * geometri untuk mengurutkan tampilan, bukan untuk menentukan boleh-tidaknya
+ * menyambung.
  */
 data class SpliceCableView(
     val cableId: UUID,
@@ -435,10 +441,12 @@ data class SpliceCableView(
     val cableType: CableType,
     val coreCount: Int,
     val lengthMeters: Double,
+    val role: CableAttachmentRole,
+    val roleLabel: String,
+    /** Selubungnya terbuka di sini — hanya kabel begini yang core-nya bisa dilas. */
+    val spliceable: Boolean,
     val terminatesHere: Boolean,
     val tapDistanceMeters: Double,
-    /** Meleset berapa meter kotak ini dari garis rute — penanda survei kasar. */
-    val offsetMeters: Double,
     val cores: List<SpliceCoreView>,
 )
 

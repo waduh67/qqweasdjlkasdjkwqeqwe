@@ -218,6 +218,14 @@ class OtdrTestIT {
         )
         fun core(cable: String, number: Int): String =
             JsonPath.read(getJson("/api/cables/$cable/cores", token), "$.cores[${number - 1}].id")
+        // Selubung kabel utama dikupas di JB — dicatat dulu, sebab itulah yang
+        // memberi hak menyambung di sana sekaligus yang menjadikan JB patokan
+        // OTDR. Kotak yang cuma kebetulan dekat rute bukan patokan apa-apa.
+        post(
+            "/api/cables/$utama/attachments", token,
+            """{"nodeKind":"JOINT_BOX","nodeId":"$jb","role":"TAPPED"}""",
+            expected = 200,
+        )
         post(
             "/api/fiber-connections", token,
             """{"closureKind":"JOINT_BOX","closureId":"$jb",

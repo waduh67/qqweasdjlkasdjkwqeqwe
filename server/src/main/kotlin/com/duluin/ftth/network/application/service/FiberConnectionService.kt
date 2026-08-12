@@ -3,7 +3,6 @@ package com.duluin.ftth.network.application.service
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
-import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.iam.IamApi
@@ -28,6 +27,7 @@ import com.duluin.ftth.network.application.port.outbound.OltRepository
 import com.duluin.ftth.network.application.port.outbound.PonPortRepository
 import com.duluin.ftth.network.application.port.outbound.SplitterRepository
 import com.duluin.ftth.network.domain.model.Cable
+import com.duluin.ftth.network.domain.model.CableAttachmentRole
 import com.duluin.ftth.network.domain.model.CableCore
 import com.duluin.ftth.network.domain.model.ClosureKind
 import com.duluin.ftth.network.domain.model.ConnectionPoint
@@ -40,7 +40,6 @@ import com.duluin.ftth.network.domain.model.Splitter
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
-import kotlin.math.roundToInt
 
 /**
  * Sambung & putus serat di dalam closure.
@@ -110,16 +109,18 @@ class FiberConnectionService(
     /**
      * Meja kerja splicing sebuah kotak, dirakit dalam sekali jalan.
      *
-     * Urutan kabelnya sengaja: yang BERUJUNG di sini duluan, lalu yang cuma lewat
-     * menurut letak kupasannya. Di depan kotak yang terbuka, kabel yang berakhir
-     * di situ adalah yang paling sering dicari — sisanya baru masuk hitungan saat
-     * mencari core cadangan.
+     * Isinya persis kabel yang TERCATAT menyinggahi kotak ini — tak lebih, tak
+     * kurang. Urutannya sengaja: yang BERUJUNG di sini duluan, lalu yang dikupas
+     * di tengah menurut letak kupasannya, dan paling bawah yang selubungnya utuh.
+     * Di depan kotak yang terbuka, kabel yang berakhir di situ adalah yang paling
+     * sering dicari; yang cuma lewat hampir tak pernah dikerjakan tapi tetap harus
+     * terlihat, supaya tak ada selubung asing yang tak dikenali di dalam kotak.
      */
     @Transactional(readOnly = true)
     override fun workbench(closureKind: ClosureKind, closureId: UUID): SpliceWorkbenchView {
         val closure = requireClosure(closureKind, closureId)
         val rows = connections.findByClosureId(closureId)
-        val cables = reachableCables(closure)
+        val cables = attachedCables(closure)
         return SpliceWorkbenchView(
             closureKind = closure.kind,
             closureId = closure.id,
@@ -394,7 +395,7 @@ class FiberConnectionService(
         if (core.status == CoreStatus.DAMAGED) {
             throw ConflictException("Core ${core.coreNumber} kabel ${cable.code} ditandai rusak — perbaiki dulu")
         }
-        assertCableReaches(cable, closure)
+        assertSheathOpenHere(cable, closure)
         connections.findByCoreInClosure(closure.id, coreId)?.let {
             throw ConflictException(
                 "Core ${core.coreNumber} kabel ${cable.code} sudah disambung di ${closure.code}",
@@ -404,35 +405,35 @@ class FiberConnectionService(
     }
 
     /**
-     * Kabel harus benar-benar lewat closure ini.
+     * Selubung kabel harus benar-benar TERBUKA di kotak ini.
      *
-     * Ujung from/to saja tidak cukup: ODP menempel di TENGAH kabel distribusi
-     * (mid-span tapping), jadi kabel ODC→ODP-8 sah disambung di ODP-3 yang
-     * dilewatinya. Karena itu keanggotaan diuji dari GEOMETRI rutenya.
+     * Dulu ini diuji dari geometri: rute yang lewat dalam radius tertentu dianggap
+     * "sampai". Ukuran itu salah asas — jarak bukan topologi. Kabel yang kebetulan
+     * melintas di depan kotak tetap lolos meski selubungnya tak pernah disentuh,
+     * sedangkan kabel yang benar-benar dikupas di sana bisa ditolak hanya karena
+     * rutenya digambar kasar. Yang menentukan boleh-tidaknya menyambung adalah
+     * PERBUATAN yang tercatat: singgahan END (ujung, seluruh core keluar) atau
+     * TAPPED (dikupas di tengah bentang).
      *
-     * Kelonggarannya sengaja lebar — ini penjaring salah-pilih-kabel yang kasar
-     * (kabel di kecamatan sebelah), bukan penilai ketelitian survei. Rute yang
-     * digambar kasar tetap lolos; yang ditolak adalah kabel yang memang tak ada
-     * di sana.
+     * PASSING ditolak dengan sengaja, dan pesannya menyebutkan jalan keluarnya:
+     * kabel yang selubungnya utuh memang ada di dalam kotak — kelihatan, boleh
+     * dipegang — tapi menyambungkan core-nya berarti kupasan yang belum pernah
+     * dikerjakan. Kalau memang baru saja dikupas, itu yang dicatat lebih dulu.
      */
-    private fun assertCableReaches(cable: Cable, closure: ClosureRef) {
-        if (reaches(cable, closure)) return
-        val distance = cable.route.distanceTo(closure.location)
-        throw ValidationException(
-            "Kabel ${cable.code} tak lewat ${closure.code} — jaraknya ${distance.roundToInt()} m dari rute. " +
-                "Perbaiki dulu rute kabelnya bila memang lewat sini.",
+    private fun assertSheathOpenHere(cable: Cable, closure: ClosureRef) {
+        val attachment = cable.attachmentAt(closure.id) ?: throw ValidationException(
+            "Kabel ${cable.code} tak tercatat menyinggahi ${closure.code}. " +
+                "Kalau selubungnya memang dibuka di sini, catat dulu singgahannya — " +
+                "sesudah itu core-nya bisa disambung.",
         )
+        if (!attachment.role.spliceable) {
+            throw ValidationException(
+                "Kabel ${cable.code} tercatat cuma lewat ${closure.code} dengan selubung utuh — " +
+                    "tak ada core yang terbuka di sana. Kalau selubungnya baru saja dibuka, " +
+                    "ubah dulu singgahannya jadi \"${CableAttachmentRole.TAPPED.label}\".",
+            )
+        }
     }
-
-    /**
-     * Aturan yang sama dipakai dua arah: menolak sambungan yang mustahil, DAN
-     * menyusun daftar kabel yang boleh dipilih di meja kerja. Satu sumber supaya
-     * layar tak pernah menawarkan kabel yang akan ditolak sedetik kemudian.
-     */
-    private fun reaches(cable: Cable, closure: ClosureRef): Boolean =
-        cable.from.id == closure.id ||
-            cable.to.id == closure.id ||
-            cable.route.distanceTo(closure.location) <= MID_SPAN_TOLERANCE_METERS
 
     /**
      * Pasangan yang benar-benar punya bentuk fisik di dalam rak.
@@ -597,17 +598,16 @@ class FiberConnectionService(
     // ------------------------------------------------------------------
 
     /**
-     * Kabel yang boleh disentuh dari dalam kotak ini. Dua sumber digabung karena
-     * keduanya sah dan tak saling menggantikan: yang BERUJUNG di sini (diambil
-     * dari pasangan from/to) dan yang cuma LEWAT (diambil dari geometri rutenya).
-     * Radius query dipakai sebagai penyaring kasar berindeks; putusan akhirnya
-     * tetap [reaches], supaya daftar dan penolakan tak pernah berbeda pendapat.
+     * Kabel yang ada di dalam kotak ini — SEMUA yang tercatat menyinggahinya,
+     * termasuk yang selubungnya utuh.
+     *
+     * Yang cuma lewat sengaja ikut ditampilkan meski core-nya tak bisa disambung.
+     * Justru itu gunanya: teknisi yang membuka kotak menemukan selubung asing di
+     * dalamnya, dan daftar yang diam soal kabel itu membuatnya menebak — tebakan
+     * yang berakhir dengan kabel orang lain terpotong. Yang menahan tangannya
+     * bukan penyembunyian, melainkan baris yang jujur berkata "ini cuma lewat".
      */
-    private fun reachableCables(closure: ClosureRef): List<Cable> =
-        (cableRepository.findByEndpointNodeIds(setOf(closure.id)) +
-            cableRepository.findPassing(closure.location, MID_SPAN_TOLERANCE_METERS))
-            .distinctBy { it.id }
-            .filter { reaches(it, closure) }
+    private fun attachedCables(closure: ClosureRef): List<Cable> = cableRepository.findAttachedTo(closure.id)
 
     private fun List<Cable>.toCableViews(closure: ClosureRef): List<SpliceCableView> {
         if (isEmpty()) return emptyList()
@@ -622,8 +622,10 @@ class FiberConnectionService(
                 if (connection.closureId == closure.id) here[coreId] = connection.id else elsewhere += coreId
             }
         }
-        return map { cable ->
-            val terminates = cable.from.id == closure.id || cable.to.id == closure.id
+        return mapNotNull { cable ->
+            // Kabel tanpa singgahan di sini tak mungkin muncul lewat findAttachedTo;
+            // penjagaan ini cuma menutup kemungkinan pemanggil lain menyodorkannya.
+            val role = cable.attachmentAt(closure.id)?.role ?: return@mapNotNull null
             SpliceCableView(
                 cableId = cable.id,
                 code = cable.code,
@@ -631,9 +633,11 @@ class FiberConnectionService(
                 cableType = cable.cableType,
                 coreCount = cable.coreCount,
                 lengthMeters = cable.lengthMeters,
-                terminatesHere = terminates,
+                role = role,
+                roleLabel = role.label,
+                spliceable = role.spliceable,
+                terminatesHere = role == CableAttachmentRole.END,
                 tapDistanceMeters = cable.route.distanceAlongTo(closure.location),
-                offsetMeters = cable.route.distanceTo(closure.location),
                 cores = coresByCable[cable.id].orEmpty().map { core ->
                     SpliceCoreView(
                         core = core.toView(),
@@ -642,7 +646,14 @@ class FiberConnectionService(
                     )
                 },
             )
-        }.sortedWith(compareByDescending<SpliceCableView> { it.terminatesHere }.thenBy { it.tapDistanceMeters })
+        }.sortedWith(
+            // Yang bisa dikerjakan lebih dulu, baru yang cuma lewat: di depan kotak
+            // yang terbuka, kabel berujung di sinilah yang paling sering dicari,
+            // dan selubung utuh justru paling jarang disentuh.
+            compareByDescending<SpliceCableView> { it.terminatesHere }
+                .thenByDescending { it.spliceable }
+                .thenBy { it.tapDistanceMeters },
+        )
     }
 
     /**
@@ -864,14 +875,6 @@ class FiberConnectionService(
             portNumber = portNumber,
             portSide = portSide,
         )
-    }
-
-    private companion object {
-        /**
-         * Sejauh mana sebuah simpul boleh meleset dari garis rute dan masih
-         * dianggap dilewati kabel itu.
-         */
-        const val MID_SPAN_TOLERANCE_METERS = 500.0
     }
 }
 

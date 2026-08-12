@@ -100,6 +100,20 @@ class FiberConnectionIT {
         ),
     )
 
+    /**
+     * "Selubung kabel ini saya kupas di kotak itu" — dicatat lebih dulu, sebelum
+     * core-nya boleh disentuh. Inilah yang membuat kotak di TENGAH bentang berhak
+     * atas serat kabel yang lewat: perbuatan yang tercatat, bukan kedekatan
+     * rutenya. [role] PASSING dipakai untuk kabel yang cuma numpang lewat dengan
+     * selubung utuh.
+     */
+    private fun tap(token: String, cable: String, nodeKind: String, nodeId: String, role: String = "TAPPED"): String =
+        post(
+            "/api/cables/$cable/attachments", token,
+            """{"nodeKind":"$nodeKind","nodeId":"$nodeId","role":"$role"}""",
+            expected = 200,
+        )
+
     /** Id core bernomor [number] pada kabel. */
     private fun coreId(token: String, cable: String, number: Int): String =
         JsonPath.read(getJson("/api/cables/$cable/cores", token), "$.cores[${number - 1}].id")
@@ -175,8 +189,11 @@ class FiberConnectionIT {
         val odp3 = newOdp(token, 107.005, -6.24)
         val cable = newDistribution(token, odc, odp3, endLon = 107.005)
 
-        // ODP-1 dan ODP-2 bukan ujung kabel — mereka dilewati di tengah jalur.
-        // Dulu ini butuh kabel palsu sendiri-sendiri; sekarang cukup satu serat.
+        // ODP-1 dan ODP-2 bukan ujung kabel — selubungnya dikupas di tengah jalur.
+        // Dulu ini butuh kabel palsu sendiri-sendiri; sekarang cukup satu serat,
+        // dan kupasannya dicatat sekali sebagai singgahan.
+        tap(token, cable, "ODP", odp1)
+        tap(token, cable, "ODP", odp2)
         post(token = token, url = "/api/fiber-connections", body = connectBody("ODP", odp1, core(coreId(token, cable, 1)), splitterIn(splitterOf(token, "ODP", odp1))))
         post(token = token, url = "/api/fiber-connections", body = connectBody("ODP", odp2, core(coreId(token, cable, 2)), splitterIn(splitterOf(token, "ODP", odp2))))
 
@@ -219,21 +236,65 @@ class FiberConnectionIT {
         post("/api/fiber-connections", token, connectBody("ODP", odp, core(core2), splitterIn(spl)), expected = 409)
     }
 
+    /**
+     * Yang menentukan sebuah kabel boleh disambung di sebuah kotak adalah CATATAN
+     * bahwa selubungnya dibuka di situ — bukan jarak kotak itu ke garis rute.
+     *
+     * Karena itu kotak yang PERSIS di atas rute pun ditolak selama singgahannya
+     * belum dicatat: rute yang digambar lewat depan pintu tak berarti ada yang
+     * pernah memanjat, membuka selubung, dan mengupasnya. Begitu perbuatan itu
+     * dicatat, sambungan yang sama langsung diterima.
+     */
     @Test
-    fun `serat yang tak lewat closure ditolak, lengkap dengan jaraknya`() {
+    fun `serat kabel yang singgahannya belum dicatat ditolak, sekalipun rutenya persis lewat`() {
         val token = newTenantAdmin("jauh")
         val odc = newOdc(token, 106.99, -6.24)
         val odp = newOdp(token, 107.005, -6.24)
         val cable = newDistribution(token, odc, odp, endLon = 107.005)
-        // ODP di kecamatan sebelah — kabelnya jelas tak lewat sini.
-        val nyasar = newOdp(token, 107.10, -6.31)
+        // Tepat di atas garis rute, di tengah bentang — dan tetap belum berhak.
+        val dilewati = newOdp(token, 107.000, -6.24)
+        val spl = splitterOf(token, "ODP", dilewati)
+        val core1 = coreId(token, cable, 1)
 
         val error = post(
             "/api/fiber-connections", token,
-            connectBody("ODP", nyasar, core(coreId(token, cable, 1)), splitterIn(splitterOf(token, "ODP", nyasar))),
+            connectBody("ODP", dilewati, core(core1), splitterIn(spl)),
             expected = 400,
         )
-        assertThat(error).contains("tak lewat")
+        assertThat(error).contains("tak tercatat menyinggahi")
+
+        tap(token, cable, "ODP", dilewati)
+        post("/api/fiber-connections", token, connectBody("ODP", dilewati, core(core1), splitterIn(spl)))
+    }
+
+    /**
+     * Kabel yang cuma numpang lewat dengan selubung UTUH: ia terlihat di meja
+     * kerja — supaya teknisi yang membuka kotak tahu selubung asing itu milik
+     * siapa dan tak memotongnya — tapi tak satu pun core-nya boleh disambung,
+     * sebab tak ada core yang terbuka di sana.
+     */
+    @Test
+    fun `kabel yang cuma lewat terlihat di meja kerja tapi core-nya tak bisa disambung`() {
+        val token = newTenantAdmin("utuh")
+        val odc = newOdc(token, 106.99, -6.24)
+        val odp = newOdp(token, 107.005, -6.24)
+        val cable = newDistribution(token, odc, odp, endLon = 107.005)
+        val digulung = newOdp(token, 107.000, -6.24)
+        val spl = splitterOf(token, "ODP", digulung)
+
+        tap(token, cable, "ODP", digulung, role = "PASSING")
+
+        val meja = getJson("/api/fiber-connections/workbench?closureKind=ODP&closureId=$digulung", token)
+        assertThat(JsonPath.read<List<*>>(meja, "$.cables")).hasSize(1)
+        assertThat(JsonPath.read<String>(meja, "$.cables[0].role")).isEqualTo("PASSING")
+        assertThat(JsonPath.read<Boolean>(meja, "$.cables[0].spliceable")).isFalse()
+
+        val error = post(
+            "/api/fiber-connections", token,
+            connectBody("ODP", digulung, core(coreId(token, cable, 1)), splitterIn(spl)),
+            expected = 400,
+        )
+        assertThat(error).contains("selubung utuh")
     }
 
     /**
@@ -432,21 +493,23 @@ class FiberConnectionIT {
     }
 
     /**
-     * Meja kerja splicing sebuah kotak yang cuma DILEWATI kabel.
+     * Meja kerja splicing sebuah kotak yang DIKUPAS di tengah bentang.
      *
      * Yang diuji bukan sekadar "daftarnya keluar", melainkan bahwa kotak di tengah
-     * bentang tahu kabel apa yang lewat depan pintunya — tanpa ada satu pun baris
-     * kabel yang menyebut kotak itu sebagai ujung. Jarak tapnya pun dihitung dari
-     * geometri, bukan diketik siapa pun.
+     * bentang tahu kabel apa yang selubungnya dibuka di dalamnya — tanpa ada satu
+     * pun baris kabel yang menyebut kotak itu sebagai ujung. Jarak tapnya dihitung
+     * dari geometri: ia keterangan untuk mata teknisi dan pengurut daftar, bukan
+     * penentu boleh-tidaknya menyambung.
      */
     @Test
-    fun `meja kerja mengenali kabel yang cuma lewat, lengkap dengan jarak tapnya`() {
+    fun `meja kerja mengenali kabel yang dikupas di tengah, lengkap dengan jarak tapnya`() {
         val token = newTenantAdmin("meja")
         val odc = newOdc(token, 106.99, -6.24)
         val tengah = newOdp(token, 107.000, -6.24)
         val ujung = newOdp(token, 107.005, -6.24)
         val cable = newDistribution(token, odc, ujung, endLon = 107.005)
         val spl = splitterOf(token, "ODP", tengah)
+        tap(token, cable, "ODP", tengah)
         post("/api/fiber-connections", token, connectBody("ODP", tengah, core(coreId(token, cable, 3)), splitterIn(spl)))
 
         val meja = getJson("/api/fiber-connections/workbench?closureKind=ODP&closureId=$tengah", token)
@@ -455,9 +518,11 @@ class FiberConnectionIT {
         assertThat(JsonPath.read<String>(meja, "$.cables[0].cableId")).isEqualTo(cable)
         // Kotak ini bukan ujung kabel — ia dikupas di tengah bentang.
         assertThat(JsonPath.read<Boolean>(meja, "$.cables[0].terminatesHere")).isFalse()
+        assertThat(JsonPath.read<String>(meja, "$.cables[0].role")).isEqualTo("TAPPED")
+        assertThat(JsonPath.read<String>(meja, "$.cables[0].roleLabel")).isEqualTo("Dikupas di sini")
+        assertThat(JsonPath.read<Boolean>(meja, "$.cables[0].spliceable")).isTrue()
         // ±1,1 km dari ODC di ujung barat; angkanya datang dari rute, bukan dari isian.
         assertThat(JsonPath.read<Double>(meja, "$.cables[0].tapDistanceMeters")).isBetween(1_000.0, 1_200.0)
-        assertThat(JsonPath.read<Double>(meja, "$.cables[0].offsetMeters")).isLessThan(50.0)
         assertThat(JsonPath.read<List<*>>(meja, "$.cables[0].cores")).hasSize(8)
 
         // Core 3 sudah dilas DI SINI; core 1 belum tersentuh di mana pun.

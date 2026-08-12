@@ -228,6 +228,14 @@ class Cable private constructor(
     /** Singgahan di antara kedua ujung — yang dikupas di tengah, dan yang cuma lewat. */
     val waypoints: List<CableAttachment> get() = attachments.subList(1, attachments.size - 1)
 
+    /**
+     * Singgahan kabel ini di [nodeId], atau null bila kabelnya memang tak tercatat
+     * menyentuh simpul itu. Inilah jawaban atas "boleh tidak kabel ini disambung
+     * di kotak yang sedang saya buka" — dijawab dari catatan perbuatan orang,
+     * bukan dari jarak kotak ke garis rute.
+     */
+    fun attachmentAt(nodeId: UUID): CableAttachment? = attachments.firstOrNull { it.node.id == nodeId }
+
     var status: AssetStatus = status
         private set
 

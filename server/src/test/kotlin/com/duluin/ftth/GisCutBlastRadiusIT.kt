@@ -225,13 +225,18 @@ class GisCutBlastRadiusIT {
                     "fromKind":"ODF","fromId":"$odf","toKind":"ODC","toId":"$odc"}""",
             ),
         )
-        // SATU kabel untuk tiga kotak — ujung gambarnya cuma menyentuh ODP terakhir.
+        // SATU kabel untuk tiga kotak — ujung gambarnya cuma menyentuh ODP terakhir,
+        // dua kotak lainnya disinggahi di tengah bentang dan disebut apa adanya
+        // di daftar singgahan. Tanpa itu tak ada yang tahu selubungnya dibuka di
+        // sana, dan kotak yang ikut mati saat kabel putus akan luput dihitung.
         val selubung = id(
             post(
                 "/api/cables", token,
                 """{"code":"DST-$s","name":"Distribusi $s","cableType":"DISTRIBUTION","coreCount":8,
                     "route":[{"longitude":107.00,"latitude":$lat},{"longitude":107.03,"latitude":$lat}],
-                    "fromKind":"ODC","fromId":"$odc","toKind":"ODP","toId":"${odps[2]}"}""",
+                    "fromKind":"ODC","fromId":"$odc","toKind":"ODP","toId":"${odps[2]}",
+                    "waypoints":[{"nodeKind":"ODP","nodeId":"${odps[0]}","role":"TAPPED"},
+                                 {"nodeKind":"ODP","nodeId":"${odps[1]}","role":"TAPPED"}]}""",
             ),
         )
 
