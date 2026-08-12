@@ -329,7 +329,7 @@ satu core ditarik keluar dan dipotong, sisanya lewat terus tanpa disentuh.</p>
   <text x="80" y="418" font-size="12.5" fill="#0f172a">Yang "habis" per ODP cuma <tspan font-weight="700">satu core</tspan> — bukan satu kabel. Kabel 8 core = jatah 8 ODP di sepanjang jalur itu.</text>
   <text x="80" y="442" font-size="12.5" fill="#0f172a">Di data: kabelnya <tspan font-weight="700">satu baris</tspan>, corenya <tspan font-weight="700">delapan baris</tspan>, dan tiap core punya ujung A dan ujung B-nya sendiri.</text>
 </svg>
-<div class="cap">Gambar 4 — mid-span tapping. Urutan &amp; jarak titik tap bisa dihitung otomatis dari geometri (PostGIS <code>ST_LineLocatePoint</code>), tidak perlu diinput.</div>
+<div class="cap">Gambar 4 — mid-span tapping. Kotak mana saja yang disinggahi selubung ini DICATAT orang (tabel <code>cable_attachment</code>); geometri cuma mengurutkan &amp; mengukur jaraknya.</div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════ -->
@@ -698,11 +698,21 @@ Ada enam jenis titik sambung:</p>
 <div class="cap">Gambar 10 — model data. Empat tabel baru (<code>splitter</code> menyusul di §13-E), satu tabel diubah, sisanya tetap.</div>
 </div>
 
-<h3>Titik tap dihitung, bukan diinput</h3>
-<p>Kabel distribusi lewat depan ODP-1, ODP-2, ODP-3 — tapi <code>from</code>/<code>to</code>-nya cuma dua.
-Urutan &amp; jarak tap tidak perlu diketik: proyeksikan lokasi ODP ke garis kabel dengan
-<code>ST_LineLocatePoint(route, odp.location) × length</code>. Dapat "ODP-2 ada di meter 640 dari ODC" —
-gratis, dan langsung berguna buat mencocokkan hasil OTDR dengan titik gangguan.</p>
+<h3>Titik tap dicatat, jaraknya dihitung</h3>
+<p>Kabel distribusi lewat depan ODP-1, ODP-2, ODP-3 — dan singgahannya <strong>dicatat</strong> di
+<code>cable_attachment</code>: satu baris per kotak, dengan peran <code>END</code> (selubung habis di sini),
+<code>TAPPED</code> (dikupas, core-nya boleh disambung), atau <code>PASSING</code> (numpang lewat, selubung utuh).
+Barisnya dibuat saat kabelnya digambar di peta — klik kotak berikutnya, gambarnya menerus — atau
+belakangan dari meja sambung, oleh teknisi yang sedang berdiri di depan kotak yang terbuka.</p>
+<p>Jaraknya yang dihitung: proyeksikan lokasi kotak ke garis kabel dengan
+<code>ST_LineLocatePoint(route, odp.location) × length</code>, dapat "ODP-2 ada di meter 640 dari ODC" —
+gratis, dan langsung berguna buat mencocokkan hasil OTDR dengan titik gangguan. Angka itu juga yang
+mengurutkan singgahan sepanjang bentang.</p>
+<p><strong>Kenapa keanggotaannya tidak ikut ditebak dari jarak?</strong> Karena "dekat garis" bukan
+"selubungnya dibuka di sini". Kotak yang berdiri 3 meter dari kabel orang lain akan mengaku boleh
+menyambungnya, sedangkan kotak yang rutenya digambar kasar — dan di lapangan rute memang digambar
+kasar — kehilangan hak menyambung kabelnya sendiri. Yang tahu selubung itu dikupas atau tidak cuma
+orang yang membukanya, jadi geometri mengurutkan &amp; mengukur, manusia yang memutuskan.</p>
 
 <!-- ══════════════════════════════════════════════════════════════ -->
 <h2>10. Layar Splicing &amp; Patching Manager</h2>
