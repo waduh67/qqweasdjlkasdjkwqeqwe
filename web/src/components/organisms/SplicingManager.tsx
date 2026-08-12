@@ -13,6 +13,7 @@ import { Badge, Button, SelectField, TextField } from '@/components/atoms'
 import { Combobox } from '@/components/molecules'
 import { useOpenWorkOrders } from '@/hooks/useOpenWorkOrders'
 import { useConfirm, useToast } from '@/system'
+import { sameCableWarning } from '@/utils/spliceGuard'
 import { timeAgo } from '@/utils/timeAgo'
 
 /**
@@ -66,6 +67,8 @@ interface Group {
   option: string
   /** Keterangan di bawah dropdown; kosong bila nama kelompoknya sudah cukup. */
   hint: string
+  /** Kode kabel/nama kelompok apa adanya — untuk kalimat, bukan untuk dropdown. */
+  code: string
   isCable: boolean
   slots: Slot[]
 }
@@ -107,6 +110,7 @@ function toGroups(data: SpliceWorkbenchView): Group[] {
       key: `cable:${cable.cableId}`,
       option: `${cable.code} · ${cable.coreCount} core · ${where}`,
       hint: `${cable.name} · ${Math.round(cable.lengthMeters)} m${stray}`,
+      code: cable.code,
       isCable: true,
       slots: cable.cores.map((entry) => ({
         key: `core:${entry.core.id}`,
@@ -132,7 +136,7 @@ function toGroups(data: SpliceWorkbenchView): Group[] {
     const key = `point:${point.group}`
     let group = points.find((g) => g.key === key)
     if (!group) {
-      group = { key, option: point.group, hint: '', isCable: false, slots: [] }
+      group = { key, option: point.group, hint: '', code: point.group, isCable: false, slots: [] }
       points.push(group)
     }
     group.slots.push({
@@ -440,6 +444,12 @@ export function SplicingManager({
   if (!canView || loading || !data) return null
 
   const capacityFull = data.spliceCapacity != null && data.spliceCount >= data.spliceCapacity
+  // Kedua dropdown menunjuk kabel yang sama — pasangan yang pasti ditolak server.
+  // Dikenali dari KELOMPOKNYA, bukan dari core yang sudah terlanjur diklik, supaya
+  // peringatannya muncul saat kabelnya dipilih, bukan setelah orangnya salah jalan.
+  const leftGroup = groups.find((g) => g.key === leftKey)
+  const sameCable = leftKey !== '' && leftKey === rightKey && (leftGroup?.isCable ?? false)
+  const warning = sameCableWarning(sameCable ? (leftGroup?.code ?? '') : null, groups.length === 1)
   const summary =
     data.spliceCapacity != null
       ? `${data.spliceCount}/${data.spliceCapacity} sambungan · ${data.cables.length} kabel terjangkau`
@@ -508,6 +518,12 @@ export function SplicingManager({
             />
           </div>
 
+          {warning && (
+            <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
+              {warning}
+            </p>
+          )}
+
           {canManage && (
             <div className="splice-actions">
               <SelectField
@@ -530,8 +546,9 @@ export function SplicingManager({
               />
               <Button
                 variant="primary"
-                disabled={!leftPick || !rightPick || busy}
+                disabled={!leftPick || !rightPick || sameCable || busy}
                 onClick={() => void connect()}
+                title={sameCable ? (warning ?? undefined) : undefined}
               >
                 {leftPick && rightPick ? `Sambung ${leftPick.label} ↔ ${rightPick.label}` : 'Sambung'}
               </Button>
