@@ -6,7 +6,6 @@ import com.duluin.ftth.vpn.domain.model.TunnelSubnet
 import com.duluin.ftth.vpn.domain.model.VpnClientVariant
 import com.duluin.ftth.vpn.domain.model.VpnPeer
 import com.duluin.ftth.vpn.domain.model.VpnPeerStatus
-import com.duluin.ftth.vpn.domain.model.VpnProtocol
 import com.duluin.ftth.vpn.domain.model.VpnServer
 import org.springframework.stereotype.Component
 import java.nio.charset.StandardCharsets
@@ -159,12 +158,16 @@ class VpnConfigRenderer {
         ) { (key, value) -> "$key=$value" }
     }
 
-    /** v6 (TCP-only) tak bisa dial hub UDP: tolak dengan pesan jelas alih-alih merender config yang mustahil connect. */
+    /**
+     * v6 (TCP-only) tak bisa dial hub UDP: tolak dengan pesan yang menyebutkan JALAN KELUARNYA,
+     * bukan cuma menyebut kesalahannya — perangkat v6 di lapangan tak bisa "di-upgrade ke v7".
+     */
     private fun requireVariantSupported(server: VpnServer, variant: VpnClientVariant) {
-        if (variant == VpnClientVariant.V6 && server.protocol != VpnProtocol.TCP) {
+        if (variant == VpnClientVariant.V6 && !server.servesRouterOsV6) {
             throw ConflictException(
-                "RouterOS v6 butuh hub TCP; hub '${server.name}' memakai ${server.protocol.name}. " +
-                    "Pakai varian v7 atau buat hub TCP.",
+                "RouterOS v6 hanya bisa men-dial hub TCP; hub '${server.name}' memakai " +
+                    "${server.protocol.name}. Ubah protokol hub ke TCP di halaman Server VPN, " +
+                    "jalankan ulang perintah pasang di VPS, lalu buka port ${server.port}/tcp di firewall.",
             )
         }
     }

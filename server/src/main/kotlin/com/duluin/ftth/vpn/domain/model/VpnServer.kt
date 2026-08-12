@@ -4,7 +4,18 @@ import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
 import java.util.UUID
 
-/** Protokol transport OpenVPN yang dipakai hub. */
+/**
+ * Protokol transport OpenVPN yang dipakai hub.
+ *
+ * [TCP] adalah bawaan yang disarankan: klien OpenVPN RouterOS **v6 hanya bisa TCP**, dan v6
+ * masih memenuhi lapangan (hAP lite/RB941 ber-CPU smips tak akan pernah kebagian RouterOS 7,
+ * jadi perangkat itu v6 selamanya). TCP juga lebih lolos dari firewall kantor/hotspot yang
+ * cuma mengizinkan TCP keluar. Trafik overlay ini memang trafik MANAJEMEN — Winbox, API,
+ * SNMP, CoA — bervolume kecil, jadi ongkos TCP-di-dalam-TCP tak terasa.
+ *
+ * [UDP] sedikit lebih efisien dan pantas dipilih bila SELURUH armada dipastikan RouterOS v7;
+ * konsekuensinya hub itu tak bisa melayani satu pun perangkat v6.
+ */
 enum class VpnProtocol { UDP, TCP }
 
 /** Status hub VPN: ACTIVE menerima dial-in peer, DISABLED tidak. */
@@ -79,6 +90,14 @@ class VpnServer private constructor(
     /** True bila CA + sertifikat server lengkap → siap membuat installer & config klien. */
     val pkiReady: Boolean
         get() = caCertPem != null && caKeyPem != null && serverCertPem != null && serverKeyPem != null
+
+    /**
+     * True bila hub ini bisa dimasuki perangkat RouterOS **v6**. Aturannya tunggal dan keras:
+     * klien OpenVPN v6 tak mengenal UDP sama sekali, jadi hub UDP mustahil dilayani v6 —
+     * bukan soal cipher (`server.conf` sudah menyajikan GCM+CBC untuk keduanya).
+     */
+    val servesRouterOsV6: Boolean
+        get() = protocol == VpnProtocol.TCP
 
     fun enable() {
         status = VpnServerStatus.ACTIVE

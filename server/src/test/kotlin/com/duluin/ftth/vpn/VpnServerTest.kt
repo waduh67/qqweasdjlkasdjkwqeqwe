@@ -1,6 +1,7 @@
 package com.duluin.ftth.vpn
 
 import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.vpn.config.VpnProperties
 import com.duluin.ftth.vpn.domain.model.VpnProtocol
 import com.duluin.ftth.vpn.domain.model.VpnServer
 import com.duluin.ftth.vpn.domain.model.VpnServerStatus
@@ -60,6 +61,33 @@ class VpnServerTest {
 
         assertThat(server.caCertPem).isNull()
         assertThat(server.tlsAuthKey).isNull()
+    }
+
+    /**
+     * Perangkat v6 di lapangan (hAP lite/RB941 smips) tak akan pernah bisa di-upgrade ke v7,
+     * jadi protokol hub-lah yang menentukan mereka kebagian atau tidak — bukan sebaliknya.
+     */
+    @Test
+    fun `hanya hub TCP yang bisa di-dial RouterOS v6`() {
+        assertThat(newServer().servesRouterOsV6).isFalse()
+
+        val tcp = VpnServer.create(
+            name = "Hub TCP",
+            host = "vpn.example.com",
+            port = 1194,
+            protocol = VpnProtocol.TCP,
+            tunnelCidr = "10.8.0.0/24",
+        )
+        assertThat(tcp.servesRouterOsV6).isTrue()
+    }
+
+    /**
+     * Bawaan pembuatan hub dipatok TCP: hub yang lahir UDP diam-diam menutup pintu bagi seluruh
+     * armada v6, dan kesalahannya baru ketahuan saat teknisi sudah di depan perangkat.
+     */
+    @Test
+    fun `bawaan protokol hub adalah TCP`() {
+        assertThat(VpnProperties().defaultProtocol).isEqualTo(VpnProtocol.TCP.name)
     }
 
     @Test

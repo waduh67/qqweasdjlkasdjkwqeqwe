@@ -184,7 +184,9 @@ ftth:
   vpn:
     # Bawaan hub OpenVPN manajemen (dipakai saat pembuatan tanpa nilai eksplisit).
     default-port: 1194
-    default-protocol: UDP
+    # TCP: satu-satunya protokol yang bisa di-dial klien OpenVPN RouterOS v6 (perangkat smips
+    # seperti hAP lite tak akan pernah dapat v7). Buka port ini TCP di firewall/NSG VPS.
+    default-protocol: TCP
     default-tunnel-cidr: 10.8.0.0/24
     # URL publik aplikasi yang di-embed ke installer (dipakai VPS untuk callback verify/connect).
     # Kosong = diturunkan dari request unduh installer. WAJIB diisi di prod bila di belakang proxy.

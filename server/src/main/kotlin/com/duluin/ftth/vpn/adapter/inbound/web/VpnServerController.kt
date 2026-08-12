@@ -98,7 +98,8 @@ data class UpdateVpnServerRequest(
     @field:NotBlank val name: String,
     @field:NotBlank val host: String,
     val port: Int = 1194,
-    val protocol: VpnProtocol = VpnProtocol.UDP,
+    /** Bawaan TCP: itu satu-satunya protokol yang dimengerti klien OpenVPN RouterOS v6. */
+    val protocol: VpnProtocol = VpnProtocol.TCP,
 ) {
     fun toCommand() = UpdateVpnServerCommand(name, host, port, protocol)
 }

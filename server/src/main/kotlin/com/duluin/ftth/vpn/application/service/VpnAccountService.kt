@@ -14,7 +14,6 @@ import com.duluin.ftth.vpn.domain.model.RemotePortRange
 import com.duluin.ftth.vpn.domain.model.TunnelSubnet
 import com.duluin.ftth.vpn.domain.model.VpnClientVariant
 import com.duluin.ftth.vpn.domain.model.VpnPeer
-import com.duluin.ftth.vpn.domain.model.VpnProtocol
 import com.duluin.ftth.vpn.domain.model.VpnServer
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -167,8 +166,8 @@ class VpnAccountService(
 
     private fun VpnPeer.toView(server: VpnServer, revealPassword: Boolean = false): VpnAccountView {
         val protocol = server.protocol.name
-        // Hub TCP menyajikan GCM+CBC (NCP) → juga melayani RouterOS v6.
-        val supportsV6 = server.protocol == VpnProtocol.TCP
+        // Aturannya milik domain (hub TCP-lah yang bisa di-dial v6), bukan diulang di sini.
+        val supportsV6 = server.servesRouterOsV6
         return VpnAccountView(
             id = id,
             label = name,

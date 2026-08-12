@@ -9,7 +9,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 @ConfigurationProperties(prefix = "ftth.vpn")
 data class VpnProperties(
     val defaultPort: Int = 1194,
-    val defaultProtocol: String = "UDP",
+    /**
+     * TCP, bukan UDP: klien OpenVPN RouterOS v6 TCP-only, dan hub yang lahir UDP diam-diam
+     * menutup pintu bagi seluruh perangkat v6 di lapangan. Lihat `VpnProtocol`.
+     */
+    val defaultProtocol: String = "TCP",
     val defaultTunnelCidr: String = "10.8.0.0/24",
     /**
      * URL publik aplikasi yang di-embed ke installer (dipakai VPS untuk callback verify/connect)
