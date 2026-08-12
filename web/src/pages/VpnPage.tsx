@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Download, KeyRound, Power, PowerOff, Trash2 } from 'lucide-react'
+import { Download, DoorOpen, KeyRound, Power, PowerOff, Trash2 } from 'lucide-react'
 import { ApiError } from '../api/client'
 import {
+  addAccountForward,
   deleteAccount,
   disableAccount,
   downloadAccountOvpn,
@@ -9,13 +10,17 @@ import {
   enableAccount,
   generateAccount,
   listAccounts,
+  removeAccountForward,
+  retargetAccountForward,
   rotateAccountPassword,
   type VpnAccountView,
+  type VpnForwardProtocol,
+  type VpnPortForwardView,
 } from '../api/vpn'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
-import { SearchInput } from '@/components/molecules'
+import { Modal, SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
 import { IconAlert, IconPlus } from '@/components/atoms/icons'
@@ -86,6 +91,26 @@ function fmtWhen(iso: string | null): string {
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })
 }
 
+/**
+ * Layanan yang lazim di-remote pada perangkat pelanggan. Dipakai untuk MENGISI-OTOMATIS port +
+ * protokol (dan menebak label) — kolomnya tetap boleh diketik manual, karena banyak teknisi
+ * memindah port bawaan demi keamanan. Cermin daftar `WELL_KNOWN` di sisi server.
+ */
+const SERVICE_PRESETS: { label: string; devicePort: number; protocol: VpnForwardProtocol }[] = [
+  { label: 'Winbox', devicePort: 8291, protocol: 'TCP' },
+  { label: 'API', devicePort: 8728, protocol: 'TCP' },
+  { label: 'API-SSL', devicePort: 8729, protocol: 'TCP' },
+  { label: 'SSH', devicePort: 22, protocol: 'TCP' },
+  { label: 'Telnet', devicePort: 23, protocol: 'TCP' },
+  { label: 'WebFig', devicePort: 80, protocol: 'TCP' },
+  { label: 'WebFig HTTPS', devicePort: 443, protocol: 'TCP' },
+  { label: 'SNMP', devicePort: 161, protocol: 'UDP' },
+  { label: 'Bandwidth test', devicePort: 2000, protocol: 'TCP' },
+]
+
+/** Batas pintu per akun — sama dengan `VpnPortForward.MAX_PER_PEER` di server. */
+const MAX_FORWARDS = 10
+
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: 'Semua status' },
   { value: 'ENABLED', label: 'Aktif' },
@@ -98,7 +123,7 @@ export function VpnPage() {
   const canConfig = can('vpn.config.view')
   const toast = useToast()
   const confirm = useConfirm()
-  const { items: accounts, loading, run } = useResource(listAccounts)
+  const { items: accounts, loading, reload, run } = useResource(listAccounts)
 
   const [label, setLabel] = useState('')
   const [busy, setBusy] = useState(false)
@@ -106,6 +131,8 @@ export function VpnPage() {
   const [fresh, setFresh] = useState<VpnAccountView | null>(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  // Akun yang sedang dibuka panel port remote-nya.
+  const [forwardsOf, setForwardsOf] = useState<VpnAccountView | null>(null)
 
   const generate = () => {
     setBusy(true)
@@ -201,9 +228,20 @@ export function VpnPage() {
     },
     {
       key: 'winbox',
-      header: 'Winbox (remote)',
-      sortValue: (a) => a.winboxAddress,
-      cell: (a) => <span className="tnum">{a.winboxAddress}</span>,
+      header: 'Port remote',
+      sortValue: (a) => a.winboxAddress ?? '',
+      cell: (a) => (
+        <div className="stack" style={{ gap: '0.15rem' }}>
+          <span className="tnum">{a.winboxAddress ?? '—'}</span>
+          <span className="muted" style={{ fontSize: '0.76rem' }}>
+            {a.forwards.length === 0
+              ? 'tanpa pintu — hanya dari dalam tunnel'
+              : a.forwards.length === 1
+                ? a.forwards[0].label
+                : `${a.forwards[0].label} +${a.forwards.length - 1} pintu lain`}
+          </span>
+        </div>
+      ),
     },
     {
       key: 'status',
@@ -242,6 +280,12 @@ export function VpnPage() {
       })
     }
     if (canManage) {
+      list.push({
+        key: 'forwards',
+        label: 'Port remote',
+        icon: <DoorOpen size={16} />,
+        onClick: () => setForwardsOf(a),
+      })
       list.push({
         key: 'toggle',
         label: a.status === 'ENABLED' ? 'Nonaktifkan' : 'Aktifkan',
@@ -320,7 +364,266 @@ export function VpnPage() {
           />
         }
       />
+
+      {forwardsOf && (
+        <PortForwardModal
+          account={forwardsOf}
+          onClose={() => {
+            setForwardsOf(null)
+            void reload()
+          }}
+        />
+      )}
     </div>
+  )
+}
+
+/* ---------- Panel port remote: pintu-pintu dari internet ke perangkat ---------- */
+
+/**
+ * Satu akun boleh punya beberapa pintu: `hub:portPublik` → `perangkat:portPerangkat`. Port
+ * publik dipilih sistem dan PERMANEN (alamat yang sudah dipegang teknisi tak boleh bergeser);
+ * yang bisa diubah cuma sasarannya di perangkat — inilah yang menyelamatkan perangkat dengan
+ * Winbox/API yang portnya sudah dipindah dari bawaan.
+ */
+function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClose: () => void }) {
+  const toast = useToast()
+  const confirm = useConfirm()
+  const [acct, setAcct] = useState(account)
+  const [busy, setBusy] = useState(false)
+  const [addDraft, setAddDraft] = useState({ devicePort: '8291', protocol: 'TCP' as VpnForwardProtocol, label: '' })
+  const [editing, setEditing] = useState<{ id: string; devicePort: string; protocol: VpnForwardProtocol; label: string } | null>(
+    null,
+  )
+
+  const apply = (action: () => Promise<VpnAccountView>, ok: string, after?: () => void) => {
+    setBusy(true)
+    action()
+      .then((updated) => {
+        setAcct(updated)
+        after?.()
+        toast.success(ok)
+      })
+      .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Operasi gagal'))
+      .finally(() => setBusy(false))
+  }
+
+  const parsePort = (raw: string): number | null => {
+    const port = Number(raw)
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      toast.error('Port perangkat harus angka 1–65535')
+      return null
+    }
+    return port
+  }
+
+  const add = () => {
+    const port = parsePort(addDraft.devicePort)
+    if (port === null) return
+    apply(
+      () =>
+        addAccountForward(acct.id, {
+          devicePort: port,
+          protocol: addDraft.protocol,
+          label: addDraft.label.trim() || null,
+        }),
+      'Pintu ditambahkan',
+      () => setAddDraft({ devicePort: '8291', protocol: 'TCP', label: '' }),
+    )
+  }
+
+  const saveEdit = () => {
+    if (!editing) return
+    const port = parsePort(editing.devicePort)
+    if (port === null) return
+    apply(
+      () =>
+        retargetAccountForward(acct.id, editing.id, {
+          devicePort: port,
+          protocol: editing.protocol,
+          label: editing.label.trim() || null,
+        }),
+      'Pintu diarahkan ulang',
+      () => setEditing(null),
+    )
+  }
+
+  const remove = (f: VpnPortForwardView) => {
+    void (async () => {
+      if (
+        !(await confirm({
+          title: 'Cabut pintu',
+          message: `Cabut ${f.label} (${f.address})? Alamat itu langsung tak bisa dipakai lagi dan port publiknya bisa dipakai akun lain.`,
+          confirmLabel: 'Cabut',
+          danger: true,
+        }))
+      )
+        return
+      apply(() => removeAccountForward(acct.id, f.id), 'Pintu dicabut')
+    })()
+  }
+
+  const copy = (value: string) => void navigator.clipboard?.writeText(value).then(() => toast.success('Alamat disalin'))
+
+  /** Preset mengisi port + protokol; label dibiarkan kosong supaya server yang menebaknya. */
+  const applyPreset = (value: string) => {
+    const preset = SERVICE_PRESETS.find((p) => String(p.devicePort) === value)
+    if (preset) setAddDraft({ devicePort: String(preset.devicePort), protocol: preset.protocol, label: '' })
+  }
+
+  const full = acct.forwards.length >= MAX_FORWARDS
+
+  return (
+    <Modal title={`Port remote “${acct.label}”`} onClose={onClose} wide>
+      <p className="muted" style={{ margin: '0 0 0.75rem', fontSize: '0.83rem' }}>
+        Tiap baris adalah satu pintu dari internet ke perangkat: <code>{acct.host}:portPublik</code> diteruskan ke{' '}
+        <code>{acct.overlayIp}:portPerangkat</code>. Port publik dipilih sistem dan <strong>tak berubah</strong> —
+        kalau port layanan di perangkat dipindah (mis. Winbox ke 9291), cukup ubah kolom “Port di perangkat”.
+        Perubahan menyusul di hub paling lama ~1 menit.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Layanan</th>
+            <th>Alamat publik</th>
+            <th>Port di perangkat</th>
+            <th style={{ width: '9rem' }} />
+          </tr>
+        </thead>
+        <tbody>
+          {acct.forwards.length === 0 && (
+            <tr>
+              <td colSpan={4} className="muted">
+                Belum ada pintu — perangkat hanya terjangkau dari dalam tunnel.
+              </td>
+            </tr>
+          )}
+          {acct.forwards.map((f) =>
+            editing?.id === f.id ? (
+              <tr key={f.id}>
+                <td>
+                  <TextField
+                    value={editing.label}
+                    onChange={(_, data) => setEditing({ ...editing, label: data.value })}
+                    placeholder="otomatis"
+                  />
+                </td>
+                <td className="tnum muted">{f.address}</td>
+                <td>
+                  <div className="row" style={{ gap: '0.35rem' }}>
+                    <TextField
+                      value={editing.devicePort}
+                      onChange={(_, data) => setEditing({ ...editing, devicePort: data.value })}
+                      style={{ width: '6rem' }}
+                    />
+                    <SelectField
+                      value={editing.protocol}
+                      onChange={(_, data) => setEditing({ ...editing, protocol: data.value as VpnForwardProtocol })}
+                    >
+                      <option value="TCP">TCP</option>
+                      <option value="UDP">UDP</option>
+                    </SelectField>
+                  </div>
+                </td>
+                <td>
+                  <div className="row" style={{ gap: '0.35rem' }}>
+                    <Button variant="primary" size="small" onClick={saveEdit} disabled={busy}>
+                      Simpan
+                    </Button>
+                    <Button variant="subtle" size="small" onClick={() => setEditing(null)} disabled={busy}>
+                      Batal
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              <tr key={f.id}>
+                <td>
+                  <strong>{f.label}</strong>
+                </td>
+                <td>
+                  <span className="tnum">{f.address}</span>{' '}
+                  <Button variant="subtle" size="small" onClick={() => copy(f.address)}>
+                    Salin
+                  </Button>
+                </td>
+                <td className="tnum">
+                  {f.devicePort} <span className="muted">{f.protocol}</span>
+                </td>
+                <td>
+                  <div className="row" style={{ gap: '0.35rem' }}>
+                    <Button
+                      variant="subtle"
+                      size="small"
+                      disabled={busy}
+                      onClick={() =>
+                        setEditing({
+                          id: f.id,
+                          devicePort: String(f.devicePort),
+                          protocol: f.protocol,
+                          label: f.label,
+                        })
+                      }
+                    >
+                      Ubah
+                    </Button>
+                    <Button variant="subtle" size="small" disabled={busy} onClick={() => remove(f)}>
+                      Cabut
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ),
+          )}
+        </tbody>
+      </table>
+
+      <div className="stack" style={{ gap: '0.4rem', marginTop: '1rem' }}>
+        <strong style={{ fontSize: '0.86rem' }}>Tambah pintu</strong>
+        <div className="row" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <SelectField label="Layanan" value={addDraft.devicePort} onChange={(_, data) => applyPreset(data.value)}>
+            {!SERVICE_PRESETS.some((p) => String(p.devicePort) === addDraft.devicePort) && (
+              <option value={addDraft.devicePort}>Lainnya</option>
+            )}
+            {SERVICE_PRESETS.map((p) => (
+              <option key={p.devicePort} value={p.devicePort}>
+                {p.label} ({p.devicePort})
+              </option>
+            ))}
+          </SelectField>
+          <TextField
+            label="Port di perangkat"
+            value={addDraft.devicePort}
+            onChange={(_, data) => setAddDraft({ ...addDraft, devicePort: data.value })}
+            style={{ width: '9rem' }}
+          />
+          <SelectField
+            label="Protokol"
+            value={addDraft.protocol}
+            onChange={(_, data) => setAddDraft({ ...addDraft, protocol: data.value as VpnForwardProtocol })}
+          >
+            <option value="TCP">TCP</option>
+            <option value="UDP">UDP</option>
+          </SelectField>
+          <TextField
+            label="Nama (opsional)"
+            value={addDraft.label}
+            onChange={(_, data) => setAddDraft({ ...addDraft, label: data.value })}
+            placeholder="otomatis dari port"
+            style={{ flex: 1, minWidth: '10rem' }}
+          />
+          <Button variant="primary" onClick={add} disabled={busy || full}>
+            <IconPlus size={15} /> Tambah
+          </Button>
+        </div>
+        <span className="muted" style={{ fontSize: '0.78rem' }}>
+          {full
+            ? `Sudah ${MAX_FORWARDS} pintu — cabut salah satu dulu.`
+            : 'Port publiknya dipilih sistem supaya tak bentrok dengan akun lain di hub yang sama.'}
+        </span>
+      </div>
+    </Modal>
   )
 }
 
@@ -339,7 +642,7 @@ function CredentialCard({ account, onDismiss }: { account: VpnAccountView; onDis
     { label: 'Username', value: account.username, copy: true },
     { label: 'Password', value: account.password ?? '—', copy: !!account.password },
     { label: 'IP overlay', value: account.overlayIp },
-    { label: 'Winbox (remote)', value: account.winboxAddress, copy: true },
+    { label: 'Winbox (remote)', value: account.winboxAddress ?? '—', copy: !!account.winboxAddress },
   ]
 
   return (

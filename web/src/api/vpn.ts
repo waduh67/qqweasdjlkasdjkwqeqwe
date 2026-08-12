@@ -79,6 +79,32 @@ export const deleteServer = (id: string) => api.del<void>(`/api/vpn/servers/${id
 
 // ============================ AKUN (tenant) ============================
 
+/** Protokol satu penerusan port. SNMP & sejenisnya UDP, selebihnya umumnya TCP. */
+export type VpnForwardProtocol = 'TCP' | 'UDP'
+
+/**
+ * Satu PINTU dari internet ke perangkat di balik tunnel: `hub:publicPort` → `perangkat:devicePort`.
+ * [publicPort] dialokasikan sistem dan permanen (alamat yang sudah dipegang teknisi tak boleh
+ * bergeser); yang boleh diubah cuma sisi perangkat — [devicePort]/[protocol]/[label] — supaya
+ * perangkat ber-port tak-standar (Winbox dipindah ke 9291, dsb.) tetap terjangkau.
+ */
+export interface VpnPortForwardView {
+  id: string
+  label: string
+  publicPort: number
+  devicePort: number
+  protocol: VpnForwardProtocol
+  /** Alamat siap tempel `host:publicPort`. */
+  address: string
+}
+
+/** Sasaran satu penerusan. Port publik TIDAK diminta — sistem yang mengalokasikan. */
+export interface VpnPortForwardRequest {
+  devicePort: number
+  label?: string | null
+  protocol?: VpnForwardProtocol | null
+}
+
 /**
  * Proyeksi satu AKUN VPN milik tenant — semua yang perlu ditempel ke Mikrotik. Endpoint
  * ([host]:[port]/[protocol]) + [securityType] berasal dari hub yang di-auto-assign.
@@ -96,10 +122,15 @@ export interface VpnAccountView {
   securityType: string
   username: string
   overlayIp: string
-  /** Port publik TCP di hub yang di-DNAT ke Winbox (8291) perangkat. */
-  remotePort: number
+  /**
+   * Port publik UTAMA (penerusan berport publik terendah — pada akun bawaan itu Winbox).
+   * Null bila semua penerusan dicabut: perangkat sengaja tak punya pintu dari internet.
+   */
+  remotePort: number | null
   /** Alamat siap-Winbox `host:remotePort` — remote perangkat tanpa ikut men-dial tunnel. */
-  winboxAddress: string
+  winboxAddress: string | null
+  /** Semua pintu akun ini (Winbox/API/SSH/…), urut port publik. */
+  forwards: VpnPortForwardView[]
   /** Status ADMINISTRATIF (ENABLED/DISABLED) — apakah akun boleh terhubung. */
   status: string
   /** Liveness NYATA: true selagi hub melapor perangkat terhubung. */
@@ -148,6 +179,20 @@ export const rotateAccountPassword = (id: string) =>
 
 /** Hapus akun. */
 export const deleteAccount = (id: string) => api.del<void>(`/api/vpn/accounts/${id}`)
+
+// ---- Penerusan port akun (izin vpn.peer.manage) ----
+
+/** Tambah pintu baru ke layanan lain di perangkat; port publiknya dipilih sistem. */
+export const addAccountForward = (id: string, body: VpnPortForwardRequest) =>
+  api.post<VpnAccountView>(`/api/vpn/accounts/${id}/forwards`, body)
+
+/** Arahkan ulang satu pintu (port layanan di perangkat pindah); port publiknya tetap. */
+export const retargetAccountForward = (id: string, forwardId: string, body: VpnPortForwardRequest) =>
+  api.put<VpnAccountView>(`/api/vpn/accounts/${id}/forwards/${forwardId}`, body)
+
+/** Cabut satu pintu. */
+export const removeAccountForward = (id: string, forwardId: string) =>
+  api.del<VpnAccountView>(`/api/vpn/accounts/${id}/forwards/${forwardId}`)
 
 // ---- Unduh config akun (berisi kredensial; izin vpn.config.view) ----
 
