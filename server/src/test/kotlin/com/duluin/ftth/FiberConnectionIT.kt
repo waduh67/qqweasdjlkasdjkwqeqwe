@@ -303,6 +303,44 @@ class FiberConnectionIT {
     }
 
     /**
+     * "OLT terkait" sebuah rak bukan isian, melainkan bacaan dari patchcord yang
+     * benar-benar tercolok. Satu POP lazim berisi lebih dari satu OLT, dan
+     * jawaban tunggal akan berbohong tepat pada hari OLT kedua masuk — tanpa
+     * seorang pun sadar, sebab kolomnya tetap terisi.
+     */
+    @Test
+    fun `OLT terkait rak dibaca dari patchcord, bukan diketik`() {
+        val token = newTenantAdmin("uplink")
+        val site = newSite(token)
+        val oltA = newOlt(token, site)
+        val oltB = newOlt(token, site)
+        val odf = newOdf(token, site, portCount = 12)
+
+        // Rak yang belum dicolok apa pun mengaku belum tahu, bukan menebak OLT
+        // satu-satunya di POP ini.
+        assertThat(JsonPath.read<List<*>>(getJson("/api/odfs/$odf", token), "$.olts")).isEmpty()
+
+        // OLT A memakai dua port rak, OLT B satu — persis situasi yang tak muat
+        // di satu kolom "OLT terkait".
+        post("/api/fiber-connections", token, connectBody("ODF", odf, odfPort(odf, 1, "FRONT"), ponPort(newPonPort(token, oltA, "1/1/1"))))
+        post("/api/fiber-connections", token, connectBody("ODF", odf, odfPort(odf, 2, "FRONT"), ponPort(newPonPort(token, oltA, "1/1/2"))))
+        post("/api/fiber-connections", token, connectBody("ODF", odf, odfPort(odf, 3, "FRONT"), ponPort(newPonPort(token, oltB, "1/1/1"))))
+
+        val rak = getJson("/api/odfs/$odf", token)
+        assertThat(JsonPath.read<List<*>>(rak, "$.olts")).hasSize(2)
+        // Yang memakai paling banyak port disebut duluan.
+        assertThat(JsonPath.read<String>(rak, "$.olts[0].oltId")).isEqualTo(oltA)
+        assertThat(JsonPath.read<Int>(rak, "$.olts[0].portCount")).isEqualTo(2)
+        assertThat(JsonPath.read<String>(rak, "$.olts[1].oltId")).isEqualTo(oltB)
+        assertThat(JsonPath.read<Int>(rak, "$.olts[1].portCount")).isEqualTo(1)
+
+        // Daftar rak menjawab sama seperti detailnya — di sinilah pertanyaannya
+        // paling sering muncul, jadi ia tak boleh cuma terisi di halaman detail.
+        val daftar = getJson("/api/odfs?query=${JsonPath.read<String>(rak, "$.code")}", token)
+        assertThat(JsonPath.read<List<*>>(daftar, "$.content[0].olts")).hasSize(2)
+    }
+
+    /**
      * Sisi bukan label yang boleh ditukar-tukar: kabel outdoor tak berkonektor,
      * jadi ia tak pernah nyantol di sisi depan; dan PON port tak pernah dilas ke
      * core, ia selalu lewat patchcord.

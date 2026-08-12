@@ -9,11 +9,14 @@ import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.common.security.areaScope
 import com.duluin.ftth.network.application.port.inbound.ManageOdfUseCase
+import com.duluin.ftth.network.application.port.inbound.OdfUplinkView
 import com.duluin.ftth.network.application.port.inbound.OdfView
 import com.duluin.ftth.network.application.port.inbound.SaveOdfCommand
 import com.duluin.ftth.network.application.port.outbound.CableRepository
 import com.duluin.ftth.network.application.port.outbound.FiberConnectionRepository
 import com.duluin.ftth.network.application.port.outbound.OdfRepository
+import com.duluin.ftth.network.application.port.outbound.OltRepository
+import com.duluin.ftth.network.application.port.outbound.PonPortRepository
 import com.duluin.ftth.network.application.port.outbound.SiteRepository
 import com.duluin.ftth.network.domain.model.ConnectionPointKind
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
@@ -30,6 +33,8 @@ class OdfService(
     private val siteRepository: SiteRepository,
     private val connections: FiberConnectionRepository,
     private val cableRepository: CableRepository,
+    private val ponPortRepository: PonPortRepository,
+    private val oltRepository: OltRepository,
     private val cableAttachment: CableAttachmentService,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
@@ -44,11 +49,13 @@ class OdfService(
         val siteNames = page.content.mapTo(HashSet()) { it.siteId }
             .mapNotNull { siteRepository.findById(it) }
             .associate { it.id to it.name }
+        val uplinks = uplinksOf(ids)
         return page.map {
             it.toView(
                 spliceCount = splices[it.id] ?: 0L,
                 usedPortCount = usedPorts[it.id] ?: 0L,
                 siteName = siteNames[it.siteId],
+                olts = uplinks[it.id].orEmpty(),
             )
         }
     }
@@ -147,6 +154,45 @@ class OdfService(
         }
     }
 
+    /**
+     * OLT mana yang tercolok ke tiap rak — dibaca dari patchcord yang tercatat,
+     * bukan dari isian yang diketik orang. Lihat [OdfUplinkView] soal kenapa
+     * jawabannya daftar dan bukan satu nama.
+     *
+     * Dihitung memakai tiga query untuk seluruh halaman, bukan per rak: daftar
+     * ODF dibuka jauh lebih sering daripada isinya berubah, dan N+1 di sini
+     * langsung terasa di layar yang paling sering dipakai.
+     */
+    private fun uplinksOf(odfIds: Set<UUID>): Map<UUID, List<OdfUplinkView>> {
+        if (odfIds.isEmpty()) return emptyMap()
+        // Satu port yang kedua sisinya tercatat tetap satu port: yang dihitung
+        // adalah adapternya, sama seperti usedPortCount.
+        val patches = connections.findByNodeIds(ConnectionPointKind.ODF_PORT, odfIds)
+            .mapNotNull { connection ->
+                val ends = listOf(connection.a, connection.b)
+                val rack = ends.firstOrNull { it.kind == ConnectionPointKind.ODF_PORT && it.nodeId in odfIds }
+                val pon = ends.firstOrNull { it.kind == ConnectionPointKind.PON_PORT }
+                if (rack?.nodeId == null || pon?.nodeId == null) null
+                else Triple(rack.nodeId, rack.portNumber, pon.nodeId)
+            }
+            .distinct()
+        if (patches.isEmpty()) return emptyMap()
+        val oltIdOfPonPort = ponPortRepository.findAllByIds(patches.mapTo(HashSet()) { it.third })
+            .associate { it.id to it.oltId }
+        val olts = oltRepository.findAllByIds(oltIdOfPonPort.values.toSet()).associateBy { it.id }
+        return patches.groupBy { it.first }.mapValues { (_, rows) ->
+            rows.mapNotNull { oltIdOfPonPort[it.third] }
+                .groupingBy { it }
+                .eachCount()
+                .mapNotNull { (oltId, ports) ->
+                    olts[oltId]?.let { OdfUplinkView(it.id, it.code, it.name, ports) }
+                }
+                // Yang memakai paling banyak port disebut duluan — itu yang
+                // dimaksud orang saat bertanya "rak ini punya OLT mana".
+                .sortedWith(compareByDescending<OdfUplinkView> { it.portCount }.thenBy { it.oltCode })
+        }
+    }
+
     private fun requireSite(siteId: UUID) {
         siteRepository.findById(siteId) ?: throw NotFoundException("Site $siteId tidak ditemukan")
     }
@@ -158,6 +204,7 @@ class OdfService(
         spliceCount: Long = connections.countByClosureId(id),
         usedPortCount: Long = connections.countUsedPortsOfNode(ConnectionPointKind.ODF_PORT, id),
         siteName: String? = siteRepository.findById(siteId)?.name,
+        olts: List<OdfUplinkView> = uplinksOf(setOf(id))[id].orEmpty(),
     ) = OdfView(
         id = id,
         code = code,
@@ -170,5 +217,6 @@ class OdfService(
         usedPortCount = usedPortCount,
         spliceCount = spliceCount,
         status = status,
+        olts = olts,
     )
 }

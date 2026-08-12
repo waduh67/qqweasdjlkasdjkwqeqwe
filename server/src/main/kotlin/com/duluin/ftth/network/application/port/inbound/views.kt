@@ -201,6 +201,26 @@ data class OdfView(
     val usedPortCount: Long,
     val spliceCount: Long,
     val status: AssetStatus,
+    /** Lihat [OdfUplinkView]. Kosong = belum ada patchcord yang tercatat. */
+    val olts: List<OdfUplinkView>,
+)
+
+/**
+ * OLT yang patchcord-nya benar-benar mendarat di sebuah rak, beserta berapa port
+ * rak yang dipakainya.
+ *
+ * Turunan — tak ada yang pernah mengetiknya, dan itu disengaja. "OLT terkait"
+ * sebagai isian tunggal mulai berbohong tepat pada hari OLT kedua masuk POP, dan
+ * bohongnya tak kelihatan karena kolomnya tetap terisi rapi. Satu rak lazim
+ * melayani beberapa OLT sekaligus, dan satu OLT memakai banyak port di rak yang
+ * sama; yang benar cuma bisa dibaca dari patchcord yang sudah tercatat.
+ */
+data class OdfUplinkView(
+    val oltId: UUID,
+    val oltCode: String,
+    val oltName: String,
+    /** Berapa port rak ini yang dipakai OLT tersebut. */
+    val portCount: Int,
 )
 
 /**
