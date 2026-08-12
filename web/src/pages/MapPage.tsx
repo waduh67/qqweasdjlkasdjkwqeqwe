@@ -1671,7 +1671,17 @@ export function MapPage() {
             <span className="tnum" style={{ marginLeft: 'auto', fontWeight: 600 }}>
               {formatLength(toolState.lengthMeters)}
             </span>
-            {toolState.bendCount > 0 && !toolState.complete && (
+            {/* Selubung menerus lewat belokan dulu: tanpa tombol ini, jalur sesudah
+                kotak tujuan cuma bisa lurus ke kotak berikutnya, padahal kabel di
+                lapangan menyusuri gang. Sengaja jadi gerakan yang DISENGAJA —
+                dulu klik meleset di peta diam-diam membuka lagi kabel yang sudah
+                sampai tujuan. */}
+            {toolState.canContinue && (
+              <Button variant="subtle" size="small" onClick={() => tool.current?.continueSheath()}>
+                Teruskan selubung
+              </Button>
+            )}
+            {(toolState.bendCount > 0 || toolState.waypoints.length > 0) && !toolState.complete && (
               <Button variant="subtle" size="small" onClick={() => tool.current?.removeLastBend()}>
                 Urungkan titik
               </Button>

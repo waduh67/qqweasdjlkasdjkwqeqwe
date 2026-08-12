@@ -54,6 +54,12 @@ export interface ToolState {
   valid: boolean
   /** Draw: kedua ujung sudah ditentukan → siap disimpan. */
   complete: boolean
+  /**
+   * Ujungnya kotak yang bisa dibuka orang, jadi selubungnya MASIH boleh diteruskan
+   * melewatinya. Alat yang memutuskan, bukan panel — supaya aturan "kotak apa yang
+   * bisa disinggahi" cuma ditulis sekali.
+   */
+  canContinue: boolean
 }
 
 /** Kabel yang sedang diedit — rutenya penuh termasuk kedua ujung terkunci. */
@@ -75,6 +81,13 @@ export interface CableTool {
    */
   startDraw(origin?: SnappedDevice): void
   startEdit(cable: EditableCable): void
+  /**
+   * Turunkan kotak tujuan jadi singgahan supaya selubungnya boleh diteruskan lewat
+   * belokan dulu — "dari ODP ini kabelnya masih lanjut, tapi memutar dulu ikut gang".
+   * Tanpa ini jalur setelah tujuan cuma bisa lurus ke kotak berikutnya. Kebalikannya
+   * [removeLastBend], jadi salah pencet tak menghukum siapa pun.
+   */
+  continueSheath(): void
   removeLastBend(): void
   /**
    * Buang satu singgahan dari gambar — "ternyata selubungnya tak lewat kotak itu".
@@ -457,18 +470,24 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
       cableType: type ?? null,
       valid: mode === 'edit' ? true : from != null && to != null && inferType(from.kind, to.kind) != null,
       complete: mode === 'draw' && from != null && to != null,
+      canContinue: mode === 'draw' && to != null && canTapAt(to.kind),
     })
   }
 
   // ---------- render menurut state ----------
 
   function renderDraw() {
-    const tail: [number, number] | null = snap ? [snap.lng, snap.lat] : cursor
+    // Karet gambar cuma ditarik selagi jalurnya masih memanjang. Sebelum ujung
+    // ditentukan ia mengikuti kursor; SESUDAH kabel sampai tujuan ia padam —
+    // kecuali kursor sedang menyorot kotak berikutnya yang sah, dan itu pun cuma
+    // pratayang "kalau diklik, selubungnya nyambung ke sini". Tanpa aturan ini
+    // garisnya terus menempel di kursor sesudah kabel didrop, jadi di layar
+    // kabelnya seolah tak pernah putus padahal datanya sudah lengkap.
+    const tail: [number, number] | null = snap ? [snap.lng, snap.lat] : to ? null : cursor
     const coords: Array<[number, number]> = []
     if (from) coords.push([from.lng, from.lat])
     coords.push(...via.map((v) => v.coord))
     if (to) coords.push([to.lng, to.lat])
-    // Karet gambar cuma ditarik dari ujung terakhir selagi jalurnya masih memanjang.
     if (tail) coords.push(tail)
     setLine(coords)
 
@@ -508,7 +527,9 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
     } else {
       snap = extendable(candidate) ? candidate : null
     }
-    map.getCanvas().style.cursor = snap ? 'pointer' : 'crosshair'
+    // Sesudah kabel sampai tujuan kursornya balik biasa: tanda silang berarti
+    // "klik menambah titik", dan itu tak lagi benar — gambarnya sudah selesai.
+    map.getCanvas().style.cursor = snap ? 'pointer' : to ? '' : 'crosshair'
     renderDraw()
     emit()
   }
@@ -541,15 +562,15 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
       emit()
       return
     }
-    // Selain itu: tambah titik belok di posisi klik. Belokan yang diklik SESUDAH
-    // ujung ditentukan berarti jalurnya diteruskan melewati kotak itu — kotaknya
-    // turun jadi singgahan dan ujungnya kembali dicari, sebab belokan yang
-    // dipaksa masuk sebelum ujung akan menggambar jalur berbentuk zigzag yang
-    // tak pernah dimaksudkan siapa pun.
-    if (to && canTapAt(to.kind)) {
-      via.push({ coord: [to.lng, to.lat], device: to })
-      to = null
-    }
+    // Ujung sudah ada dan yang diklik bukan kotak sah berikutnya → DIAMKAN.
+    // Kabel yang sudah sampai tujuan tak boleh terbuka lagi diam-diam: klik
+    // meleset di peta, atau klik kedua di kotak tujuan itu sendiri (refleks
+    // "dobel klik untuk mengakhiri"), dulu menurunkan tujuannya jadi singgahan
+    // dan menambah belokan — di layar kabelnya jadi tampak tak pernah putus.
+    // Meneruskan selubung tetap bisa, tapi lewat gestur yang disengaja:
+    // klik kotak berikutnya, atau tombol "Teruskan selubung" ([continueSheath]).
+    if (to) return
+    // Selain itu: tambah titik belok di posisi klik, mengikuti jalur galian.
     via.push({ coord: [e.lngLat.lng, e.lngLat.lat], device: null })
     renderDraw()
     emit()
@@ -749,6 +770,14 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
       }
       attachEdit()
       renderEdit()
+      emit()
+    },
+
+    continueSheath() {
+      if (mode !== 'draw' || !to || !canTapAt(to.kind)) return
+      via.push({ coord: [to.lng, to.lat], device: to })
+      to = null
+      renderDraw()
       emit()
     },
 

@@ -20,6 +20,7 @@ const state = (over: Partial<ToolState>): ToolState => ({
   cableType: null,
   valid: false,
   complete: false,
+  canContinue: false,
   ...over,
 })
 
@@ -69,10 +70,26 @@ describe('petunjuk saat menggambar kabel', () => {
         to: device('c', 'ODP-09'),
         waypoints: [device('b', 'ODP-08')],
         complete: true,
+        canContinue: true,
       }),
     )
     expect(hint).toContain('Sampai ODP-09')
     expect(hint).toContain('mampir di ODP-08')
     expect(hint).toContain('Klik kotak berikutnya')
+  })
+
+  // Kabel drop berhenti di ONU pelanggan — menawarkan "klik kotak berikutnya" di
+  // situ cuma bikin operator mengklik-klik peta menunggu sesuatu terjadi.
+  it('mengatakan kabelnya berhenti bila ujungnya tak bisa disinggahi', () => {
+    const hint = drawHint(
+      state({
+        from: device('a', 'ODP-09'),
+        to: device('c', 'CUST-12', 'CUSTOMER'),
+        complete: true,
+        canContinue: false,
+      }),
+    )
+    expect(hint).toContain('berhenti di sini')
+    expect(hint).not.toContain('kotak berikutnya')
   })
 })

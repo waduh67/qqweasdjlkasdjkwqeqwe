@@ -97,12 +97,16 @@ export function formatLength(meters: number): string {
 export function drawHint(state: ToolState): string {
   if (!state.from) return 'Klik perangkat sumber (POP, ODC, atau ODP)'
   if (!state.to) return `Dari ${state.from.code} — klik titik belok, lalu klik perangkat tujuan`
+  const singgah = state.waypoints.length
+  const mampir = singgah > 0 ? ` · mampir di ${state.waypoints.map((w) => w.code).join(', ')}` : ''
+  // Ujung yang tak bisa dibuka orang (rumah pelanggan, POP, badan OLT) memang
+  // akhir bentang: dikatakan terang-terangan supaya operator tak menunggu-nunggu
+  // gambarnya bisa diteruskan.
+  if (!state.canContinue) return `Sampai ${state.to.code} — kabelnya berhenti di sini${mampir}. Isi detail kabelnya.`
   // Kalimat ketiga menyebut cara menerus, sebab di situlah nilai terbesarnya:
   // satu selubung yang mampir di banyak kotak jauh lebih jujur daripada rantai
   // kabel pendek, tapi tak ada yang menebak gerakannya kalau tak diberi tahu.
-  const singgah = state.waypoints.length
-  const mampir = singgah > 0 ? ` · mampir di ${state.waypoints.map((w) => w.code).join(', ')}` : ''
-  return `Sampai ${state.to.code} — isi detail kabelnya${mampir}. Selubungnya menerus? Klik kotak berikutnya.`
+  return `Sampai ${state.to.code} — isi detail kabelnya${mampir}. Selubungnya menerus? Klik kotak berikutnya atau tekan "Teruskan selubung".`
 }
 
 /**
