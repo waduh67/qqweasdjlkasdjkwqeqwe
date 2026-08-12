@@ -169,6 +169,12 @@ enum class CableOwnership(val label: String) {
  * Panjang selalu diturunkan dari geometri (termasuk cadangan slack), tidak pernah
  * diinput manual — supaya total kebutuhan material yang dilaporkan tidak pernah
  * berbeda dari jalur yang benar-benar tergambar.
+ *
+ * Simpul yang disentuhnya adalah BARISAN, bukan sepasang ujung: satu selubung
+ * distribusi berangkat dari ODC lalu dikupas di belasan ODP sepanjang jalan.
+ * [from] dan [to] tetap ada dan tetap berarti persis seperti dulu — keduanya
+ * kini DITURUNKAN dari ujung-ujung barisan itu, jadi tak mungkin lagi bertengkar
+ * dengan daftar singgahannya. Lihat [CableAttachmentRole].
  */
 class Cable private constructor(
     val id: UUID,
@@ -178,8 +184,7 @@ class Cable private constructor(
     cableType: CableType,
     coreCount: Int,
     route: RoutePath,
-    from: NetworkEndpoint,
-    to: NetworkEndpoint,
+    attachments: List<CableAttachment>,
     status: AssetStatus,
     installation: CableInstallation?,
     ownership: CableOwnership,
@@ -205,11 +210,23 @@ class Cable private constructor(
     var route: RoutePath = route
         private set
 
-    var from: NetworkEndpoint = from
+    /**
+     * Simpul yang disinggahi kabel, TERURUT mengikuti arah gambar rute: elemen
+     * pertama pangkal, terakhir ujung, sisanya singgahan di tengah bentang.
+     * Urutan daftar inilah nomor urutnya — tak ada bidang `sequence` yang bisa
+     * basi diam-diam saat ada singgahan disisipkan.
+     */
+    var attachments: List<CableAttachment> = attachments
         private set
 
-    var to: NetworkEndpoint = to
-        private set
+    /** Pangkal kabel: singgahan pertama, selalu berperan [CableAttachmentRole.END]. */
+    val from: NetworkEndpoint get() = attachments.first().node
+
+    /** Ujung kabel: singgahan terakhir, selalu berperan [CableAttachmentRole.END]. */
+    val to: NetworkEndpoint get() = attachments.last().node
+
+    /** Singgahan di antara kedua ujung — yang dikupas di tengah, dan yang cuma lewat. */
+    val waypoints: List<CableAttachment> get() = attachments.subList(1, attachments.size - 1)
 
     var status: AssetStatus = status
         private set
@@ -224,6 +241,15 @@ class Cable private constructor(
     /** Panjang material termasuk slack, dalam meter. */
     val lengthMeters: Double get() = route.withSlack()
 
+    /**
+     * [waypoints] null = JANGAN diubah, bukan "kosongkan".
+     *
+     * Formulir kabel di peta cuma menanyakan kedua ujung; kalau daftar kosong
+     * dari sana diperlakukan sebagai kehendak, sekali orang merapikan nama kabel
+     * seluruh catatan "dikupas di ODP-3 sampai ODP-11" ikut terhapus tanpa ada
+     * yang meminta. Pemanggil yang memang mengelola singgahan mengirim daftarnya
+     * secara sadar — termasuk daftar kosong.
+     */
     @Suppress("LongParameterList")
     fun update(
         code: String,
@@ -233,22 +259,23 @@ class Cable private constructor(
         route: RoutePath,
         from: NetworkEndpoint,
         to: NetworkEndpoint,
+        waypoints: List<CableWaypoint>? = null,
         status: AssetStatus,
         installation: CableInstallation?,
         ownership: CableOwnership,
     ) {
-        cableType.assertEndpoints(from, to)
+        this.attachments = buildAttachments(cableType, from, to, waypoints ?: currentWaypoints(), attachments)
         this.code = AssetNaming.code(code, "kabel")
         this.name = AssetNaming.name(name, "kabel")
         this.cableType = cableType
         this.coreCount = validateCoreCount(coreCount)
         this.route = route
-        this.from = from
-        this.to = to
         this.status = status
         this.installation = installation
         this.ownership = ownership
     }
+
+    private fun currentWaypoints(): List<CableWaypoint> = waypoints.map { CableWaypoint(it.node.ref, it.role) }
 
     /**
      * Menandai kabel yang fisiknya masih terpasang tapi sudah tak dipakai —
@@ -303,26 +330,23 @@ class Cable private constructor(
             route: RoutePath,
             from: NetworkEndpoint,
             to: NetworkEndpoint,
+            waypoints: List<CableWaypoint> = emptyList(),
             status: AssetStatus = AssetStatus.ACTIVE,
             installation: CableInstallation? = null,
             ownership: CableOwnership = CableOwnership.OWNED,
-        ): Cable {
-            cableType.assertEndpoints(from, to)
-            return Cable(
-                id = UuidV7.generate(),
-                tenantId = tenantId,
-                code = AssetNaming.code(code, "kabel"),
-                name = AssetNaming.name(name, "kabel"),
-                cableType = cableType,
-                coreCount = validateCoreCount(coreCount),
-                route = route,
-                from = from,
-                to = to,
-                status = status,
-                installation = installation,
-                ownership = ownership,
-            )
-        }
+        ): Cable = Cable(
+            id = UuidV7.generate(),
+            tenantId = tenantId,
+            code = AssetNaming.code(code, "kabel"),
+            name = AssetNaming.name(name, "kabel"),
+            cableType = cableType,
+            coreCount = validateCoreCount(coreCount),
+            route = route,
+            attachments = buildAttachments(cableType, from, to, waypoints, emptyList()),
+            status = status,
+            installation = installation,
+            ownership = ownership,
+        )
 
         @Suppress("LongParameterList")
         fun rehydrate(
@@ -333,13 +357,56 @@ class Cable private constructor(
             cableType: CableType,
             coreCount: Int,
             route: RoutePath,
-            from: NetworkEndpoint,
-            to: NetworkEndpoint,
+            attachments: List<CableAttachment>,
             status: AssetStatus,
             installation: CableInstallation?,
             ownership: CableOwnership,
         ): Cable = Cable(
-            id, tenantId, code, name, cableType, coreCount, route, from, to, status, installation, ownership,
+            id, tenantId, code, name, cableType, coreCount, route, attachments, status, installation, ownership,
+        )
+
+        /**
+         * Merakit barisan singgahan dari kedua ujung + singgahan tengah, sekaligus
+         * menegakkan bentuknya: ujung selalu di kepala & ekor daftar, dan satu
+         * simpul cuma boleh muncul sekali.
+         *
+         * Identitas singgahan lama dipertahankan lewat [existing] supaya menyunting
+         * kabel tidak menghapus-lalu-membuat-ulang baris yang sebenarnya tak
+         * berubah — id yang berganti-ganti membuat riwayat & rujukan ke singgahan
+         * jadi tak bisa dipercaya.
+         */
+        private fun buildAttachments(
+            cableType: CableType,
+            from: NetworkEndpoint,
+            to: NetworkEndpoint,
+            waypoints: List<CableWaypoint>,
+            existing: List<CableAttachment>,
+        ): List<CableAttachment> {
+            cableType.assertEndpoints(from, to)
+            val keptIds = existing.associate { it.node.id to it.id }
+            val result = buildList {
+                add(attachmentOf(from, CableAttachmentRole.END, keptIds))
+                waypoints.forEach { add(attachmentOf(NetworkEndpoint.of(it.node), it.role, keptIds)) }
+                add(attachmentOf(to, CableAttachmentRole.END, keptIds))
+            }
+            val duplicated = result.groupingBy { it.node.id }.eachCount().filterValues { it > 1 }
+            if (duplicated.isNotEmpty()) {
+                throw ValidationException(
+                    "Satu simpul tak boleh muncul dua kali pada kabel yang sama — " +
+                        "kabel yang masuk lalu keluar dari kotak yang sama tetap satu singgahan.",
+                )
+            }
+            return result
+        }
+
+        private fun attachmentOf(
+            node: NetworkEndpoint,
+            role: CableAttachmentRole,
+            keptIds: Map<UUID, UUID>,
+        ): CableAttachment = CableAttachment(
+            id = keptIds[node.id] ?: UuidV7.generate(),
+            node = node,
+            role = role,
         )
 
         private fun validateCoreCount(coreCount: Int): Int {

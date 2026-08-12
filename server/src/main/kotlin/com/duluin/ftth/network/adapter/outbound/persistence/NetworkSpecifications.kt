@@ -1,5 +1,10 @@
 package com.duluin.ftth.network.adapter.outbound.persistence
 
+import com.duluin.ftth.network.domain.model.CableAttachmentRole
+import jakarta.persistence.criteria.CriteriaBuilder
+import jakarta.persistence.criteria.CriteriaQuery
+import jakarta.persistence.criteria.Predicate
+import jakarta.persistence.criteria.Root
 import org.springframework.data.jpa.domain.Specification
 import java.util.UUID
 
@@ -51,16 +56,45 @@ internal object NetworkSpecifications {
         if (value == null) cb.conjunction() else cb.equal(root.get<Any>(attribute), value)
     }
 
-    /** Kabel menyentuh sebuah simpul bila simpul itu ada di ujung mana pun. */
-    fun endpointIs(kind: Any, id: UUID): Specification<CableJpaEntity> = Specification { root, _, cb ->
-        cb.or(
-            cb.and(cb.equal(root.get<Any>("fromKind"), kind), cb.equal(root.get<UUID>("fromId"), id)),
-            cb.and(cb.equal(root.get<Any>("toKind"), kind), cb.equal(root.get<UUID>("toId"), id)),
-        )
+    /**
+     * Kabel BERUJUNG di sebuah simpul — bukan sekadar menyinggahinya.
+     *
+     * Peran END sengaja ikut disaring: sejak V99 sebuah kabel juga mencatat
+     * simpul yang cuma dikupas atau dilewatinya di tengah bentang, dan yang
+     * bertanya di sini (okupansi port, penelusuran hulu-hilir, penempatan OTDR)
+     * menanyakan ujung dalam arti harfiah. Tanpa saringan itu ODP ke-3 pada
+     * selubung yang lewat akan mengaku sebagai ujung kabel.
+     */
+    fun endpointIs(kind: Any, id: UUID): Specification<CableJpaEntity> = Specification { root, query, cb ->
+        endsAt(root, query, cb) { att ->
+            cb.and(cb.equal(att.get<Any>("nodeKind"), kind), cb.equal(att.get<UUID>("nodeId"), id))
+        }
     }
 
-    /** Kabel yang salah satu ujung id-nya ada di kumpulan simpul. */
-    fun endpointInNodes(nodeIds: Set<UUID>): Specification<CableJpaEntity> = Specification { root, _, cb ->
-        cb.or(root.get<UUID>("fromId").`in`(nodeIds), root.get<UUID>("toId").`in`(nodeIds))
+    /** Versi banyak-simpul: kabel yang salah satu UJUNG-nya ada di kumpulan simpul. */
+    fun endpointInNodes(nodeIds: Set<UUID>): Specification<CableJpaEntity> = Specification { root, query, cb ->
+        endsAt(root, query, cb) { att -> att.get<UUID>("nodeId").`in`(nodeIds) }
+    }
+
+    /**
+     * `exists (select 1 from cable_attachment ...)`, bukan join: sebuah kabel
+     * punya banyak singgahan, dan join akan menggandakan barisnya sehingga
+     * halaman pencarian melaporkan kabel yang sama berkali-kali.
+     */
+    private fun endsAt(
+        root: Root<CableJpaEntity>,
+        query: CriteriaQuery<*>?,
+        cb: CriteriaBuilder,
+        node: (Root<CableAttachmentJpaEntity>) -> Predicate,
+    ): Predicate {
+        val sub = requireNotNull(query) { "endpoint filter butuh CriteriaQuery" }.subquery(UUID::class.java)
+        val att = sub.from(CableAttachmentJpaEntity::class.java)
+        sub.select(att.get("cableId"))
+        sub.where(
+            cb.equal(att.get<UUID>("cableId"), root.get<UUID>("id")),
+            cb.equal(att.get<Any>("role"), CableAttachmentRole.END),
+            node(att),
+        )
+        return cb.exists(sub)
     }
 }

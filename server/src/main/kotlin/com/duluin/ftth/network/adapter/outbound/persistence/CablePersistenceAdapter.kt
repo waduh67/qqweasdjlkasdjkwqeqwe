@@ -10,6 +10,7 @@ import com.duluin.ftth.common.infrastructure.persistence.toPageable
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.network.application.port.outbound.CableRepository
 import com.duluin.ftth.network.domain.model.Cable
+import com.duluin.ftth.network.domain.model.CableAttachment
 import com.duluin.ftth.network.domain.model.CableType
 import com.duluin.ftth.network.domain.model.NetworkEndpoint
 import com.duluin.ftth.network.domain.model.NetworkNodeRef
@@ -21,6 +22,7 @@ import java.util.UUID
 @Component
 class CablePersistenceAdapter(
     private val jpa: CableJpaRepository,
+    private val attachmentJpa: CableAttachmentJpaRepository,
 ) : CableRepository {
 
     @PersistenceContext
@@ -34,13 +36,6 @@ class CablePersistenceAdapter(
             coreCount = cable.coreCount
             route = Geometries.lineString(cable.route)
             lengthMeters = cable.lengthMeters
-            fromKind = cable.from.kind
-            fromId = cable.from.id
-            toKind = cable.to.kind
-            toId = cable.to.id
-            fromPonPortId = cable.from.ponPortId
-            fromPortNumber = cable.from.portNumber
-            toPortNumber = cable.to.portNumber
             status = cable.status
             installationMethod = cable.installation
             ownership = cable.ownership
@@ -52,37 +47,80 @@ class CablePersistenceAdapter(
             coreCount = cable.coreCount,
             route = Geometries.lineString(cable.route),
             lengthMeters = cable.lengthMeters,
-            fromKind = cable.from.kind,
-            fromId = cable.from.id,
-            toKind = cable.to.kind,
-            toId = cable.to.id,
-            fromPonPortId = cable.from.ponPortId,
-            fromPortNumber = cable.from.portNumber,
-            toPortNumber = cable.to.portNumber,
             status = cable.status,
             installationMethod = cable.installation,
             ownership = cable.ownership,
         )
-        return jpa.save(entity).toDomain()
+        val saved = jpa.save(entity)
+        saveAttachments(cable)
+        return saved.toDomain(cable.attachments)
     }
 
-    override fun findById(id: UUID): Cable? = jpa.findById(id).orElse(null)?.toDomain()
+    /**
+     * Nomor urut ditulis dari POSISI di daftar, bukan dari bidang yang dibawa
+     * domain — daftar terurut adalah satu-satunya sumber kebenaran urutan, dan
+     * menyalinnya di sini menjaga keduanya tak pernah berbeda pendapat.
+     */
+    private fun saveAttachments(cable: Cable) {
+        attachmentJpa.deleteRemoved(cable.id, cable.attachments.map { it.id })
+        val existing = attachmentJpa.findByCableIdInOrderByCableIdAscSequenceAsc(listOf(cable.id))
+            .associateBy { it.id }
+        val entities = cable.attachments.mapIndexed { index, attachment ->
+            existing[attachment.id]?.apply {
+                sequence = index
+                nodeKind = attachment.node.kind
+                nodeId = attachment.node.id
+                role = attachment.role
+                ponPortId = attachment.node.ponPortId
+                portNumber = attachment.node.portNumber
+            } ?: CableAttachmentJpaEntity(
+                id = attachment.id,
+                cableId = cable.id,
+                sequence = index,
+                nodeKind = attachment.node.kind,
+                nodeId = attachment.node.id,
+                role = attachment.role,
+                ponPortId = attachment.node.ponPortId,
+                portNumber = attachment.node.portNumber,
+            )
+        }
+        attachmentJpa.saveAll(entities)
+    }
+
+    override fun findById(id: UUID): Cable? = jpa.findById(id).orElse(null)?.let { hydrate(listOf(it)).first() }
 
     override fun findByIds(ids: Collection<UUID>): List<Cable> =
-        if (ids.isEmpty()) emptyList() else jpa.findAllById(ids).map { it.toDomain() }
+        if (ids.isEmpty()) emptyList() else hydrate(jpa.findAllById(ids))
 
     override fun search(query: String, cableType: CableType?, pageRequest: PageRequest): Page<Cable> {
         val spec = NetworkSpecifications.textMatches<CableJpaEntity>(query)
             .and(NetworkSpecifications.equals("cableType", cableType))
-        return jpa.findAll(spec, pageRequest.toPageable()).toDomainPage().map { it.toDomain() }
+        val page = jpa.findAll(spec, pageRequest.toPageable()).toDomainPage()
+        val hydrated = hydrate(page.content).associateBy { it.id }
+        return page.map { hydrated.getValue(it.id) }
     }
 
     override fun findByEndpoint(node: NetworkNodeRef): List<Cable> =
-        jpa.findAll(NetworkSpecifications.endpointIs(node.kind, node.id)).map { it.toDomain() }
+        hydrate(jpa.findAll(NetworkSpecifications.endpointIs(node.kind, node.id)))
 
     override fun findByEndpointNodeIds(nodeIds: Set<UUID>): List<Cable> =
         if (nodeIds.isEmpty()) emptyList()
-        else jpa.findAll(NetworkSpecifications.endpointInNodes(nodeIds)).map { it.toDomain() }
+        else hydrate(jpa.findAll(NetworkSpecifications.endpointInNodes(nodeIds)))
+
+    override fun findAttachedTo(nodeId: UUID): List<Cable> =
+        findByIds(attachmentJpa.findCableIdsByNodeId(nodeId).distinct())
+
+    /**
+     * Memuat singgahan seluruh kabel dalam SATU query, bukan satu query per
+     * kabel: daftar kabel sebuah ODC gampang berisi puluhan baris, dan pola
+     * N+1 di sini terasa langsung di layar peta.
+     */
+    private fun hydrate(entities: List<CableJpaEntity>): List<Cable> {
+        if (entities.isEmpty()) return emptyList()
+        val byCable = attachmentJpa.findByCableIdInOrderByCableIdAscSequenceAsc(entities.map { it.id })
+            .groupBy { it.cableId }
+        return entities.map { entity -> entity.toDomain(byCable[entity.id].orEmpty().map { it.toDomain() }) }
+    }
 
     /**
      * PENTING — dijalankan lewat [EntityManager], BUKAN `JdbcTemplate`. GUC
@@ -91,8 +129,8 @@ class CablePersistenceAdapter(
      * dan hasilnya kosong tanpa penjelasan.
      *
      * Jarak diukur pada `geography` supaya satuannya meter sejati, bukan derajat —
-     * di lintang Indonesia satu derajat bujur ±111 km, dan toleransi mid-span
-     * yang salah satuan akan menyapu setengah kota.
+     * di lintang Indonesia satu derajat bujur ±111 km, dan radius yang salah
+     * satuan akan menyapu setengah kota.
      */
     override fun findPassing(location: Coordinate, radiusMeters: Double): List<Cable> {
         val ids = entityManager.createNativeQuery(
@@ -118,7 +156,7 @@ class CablePersistenceAdapter(
     override fun deleteById(id: UUID) = jpa.deleteById(id)
 }
 
-internal fun CableJpaEntity.toDomain(): Cable = Cable.rehydrate(
+internal fun CableJpaEntity.toDomain(attachments: List<CableAttachment>): Cable = Cable.rehydrate(
     id = id,
     tenantId = tenantId ?: TenantContext.tenantId(),
     code = code,
@@ -126,9 +164,14 @@ internal fun CableJpaEntity.toDomain(): Cable = Cable.rehydrate(
     cableType = cableType,
     coreCount = coreCount,
     route = route.toRoutePath(),
-    from = NetworkEndpoint(fromKind, fromId, ponPortId = fromPonPortId, portNumber = fromPortNumber),
-    to = NetworkEndpoint(toKind, toId, portNumber = toPortNumber),
+    attachments = attachments,
     status = status,
     installation = installationMethod,
     ownership = ownership,
+)
+
+internal fun CableAttachmentJpaEntity.toDomain(): CableAttachment = CableAttachment(
+    id = id,
+    node = NetworkEndpoint(nodeKind, nodeId, ponPortId = ponPortId, portNumber = portNumber),
+    role = role,
 )

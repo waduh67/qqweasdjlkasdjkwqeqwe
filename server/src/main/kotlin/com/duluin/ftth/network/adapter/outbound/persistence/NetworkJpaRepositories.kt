@@ -3,6 +3,7 @@ package com.duluin.ftth.network.adapter.outbound.persistence
 import com.duluin.ftth.network.domain.model.ConnectionPointKind
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.util.UUID
@@ -116,6 +117,28 @@ interface JointBoxJpaRepository :
 
 interface CableJpaRepository : JpaRepository<CableJpaEntity, UUID>, JpaSpecificationExecutor<CableJpaEntity> {
     fun existsByCode(code: String): Boolean
+}
+
+interface CableAttachmentJpaRepository : JpaRepository<CableAttachmentJpaEntity, UUID> {
+    fun findByCableIdInOrderByCableIdAscSequenceAsc(cableIds: Collection<UUID>): List<CableAttachmentJpaEntity>
+
+    /**
+     * Singgahan yang dicabut saat kabel disunting. Sengaja bulk-delete, bukan
+     * `deleteBy...` turunan: Hibernate menjadwalkan penghapusan entity PALING
+     * AKHIR saat flush, sehingga baris yang mestinya pergi masih menempati
+     * urutannya ketika baris penggantinya ditulis.
+     */
+    @Modifying
+    @Query("delete from CableAttachmentJpaEntity a where a.cableId = :cableId and a.id not in :keptIds")
+    fun deleteRemoved(@Param("cableId") cableId: UUID, @Param("keptIds") keptIds: Collection<UUID>)
+
+    /**
+     * Kabel apa saja yang MENYENTUH simpul ini — berujung di sana maupun cuma
+     * dikupas/melintas. Inilah pengganti pencarian "kabel yang rutenya dekat":
+     * keanggotaan ditentukan catatan singgahan, bukan jarak.
+     */
+    @Query("select a.cableId from CableAttachmentJpaEntity a where a.nodeId = :nodeId")
+    fun findCableIdsByNodeId(@Param("nodeId") nodeId: UUID): List<UUID>
 }
 
 interface CableCoreJpaRepository : JpaRepository<CableCoreJpaEntity, UUID> {

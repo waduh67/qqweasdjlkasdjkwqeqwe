@@ -18,20 +18,30 @@ interface CableRepository {
 
     fun search(query: String, cableType: CableType?, pageRequest: PageRequest): Page<Cable>
 
-    /** Kabel yang menyentuh simpul tertentu di salah satu ujungnya. */
+    /** Kabel yang BERUJUNG di simpul tertentu — bukan yang sekadar menyinggahinya. */
     fun findByEndpoint(node: NetworkNodeRef): List<Cable>
 
-    /** Kabel yang salah satu ujung id-nya ada di [nodeIds] (abai jenis simpul). */
+    /** Kabel yang salah satu UJUNG id-nya ada di [nodeIds] (abai jenis simpul). */
     fun findByEndpointNodeIds(nodeIds: Set<UUID>): List<Cable>
 
     /**
-     * Kabel yang RUTENYA lewat maksimal [radiusMeters] dari [location] — termasuk
-     * yang cuma dilewati, bukan berujung, di sana.
+     * Kabel yang MENYENTUH sebuah simpul dalam peran apa pun: berujung di sana,
+     * dikupas di sana, atau cuma melintas di dalam kotaknya.
      *
-     * Ada karena keanggotaan sebuah simpul pada sebuah kabel tak bisa disimpulkan
-     * dari pasangan from/to-nya: ODP menempel di TENGAH bentang (mid-span
-     * tapping). Dikerjakan di database supaya indeks GiST yang menyaring, bukan
-     * seluruh kabel tenant dimuat ke memori lalu diukur satu per satu.
+     * Inilah pertanyaan yang dipakai meja sambung tiap kali sebuah closure
+     * dibuka, dan jawabannya dibaca dari catatan singgahan — perbuatan manusia
+     * atas selubung — bukan ditebak dari jarak rute ke kotaknya. Lihat V99.
+     */
+    fun findAttachedTo(nodeId: UUID): List<Cable>
+
+    /**
+     * Kabel yang RUTENYA lewat maksimal [radiusMeters] dari [location].
+     *
+     * BUKAN untuk menentukan kabel mana yang bisa disambung di sebuah kotak —
+     * itu ditentukan [findAttachedTo]. Ini pertanyaan survei: "kalau saya mau
+     * pasang kotak di titik ini, kabel apa yang kira-kira lewat dekat sini?",
+     * di mana jarak memang jawabannya. Dikerjakan di database supaya indeks
+     * GiST yang menyaring, bukan seluruh kabel tenant dimuat ke memori.
      */
     fun findPassing(location: Coordinate, radiusMeters: Double): List<Cable>
 
