@@ -107,11 +107,15 @@ class VpnConfigRenderer {
 
     /**
      * Parameter `ovpn-client` RouterOS **v6** URUT. v6 memakai sintaks menu lama
-     * (`/interface ovpn-client add`, spasi bukan slash), **TCP-only** (tanpa properti `protocol`),
-     * cipher `aes256-cbc` (tanpa GCM/NCP), dan **tanpa** `verify-server-certificate` (properti itu
-     * tak ada di v6). `certificate=none` → dial tanpa sertifikat klien (hub memakai
-     * `verify-client-cert none`). Properti yang tak pasti ada di v6 (mis. `use-peer-dns`) sengaja
-     * DIHILANGKAN agar perintah tak gagal total karena satu properti asing.
+     * (`/interface ovpn-client add`, spasi bukan slash) dan **TCP-only** — di v6 memang tak ada
+     * properti `protocol`, sebab pilihannya cuma satu. Ciphernya `aes256-cbc` (v6 tak punya
+     * GCM/NCP; di GUI tertulis "aes 256"). `certificate=none` + `verify-server-certificate=no`
+     * berpasangan: perangkat men-dial tanpa sertifikat klien (hub memakai `verify-client-cert
+     * none`) dan tak bisa memverifikasi sertifikat hub karena tak ada CA yang diimpor ke sana.
+     *
+     * Semua properti di sini ADA di menu v6 — daftarnya sengaja dibuat cermin persis kolom yang
+     * kelihatan di GUI v6, supaya hasil tempel = hasil isi manual dan tak ada kolom yang
+     * tertinggal memakai bawaan rilis yang berbeda-beda.
      */
     private fun routerOsV6Params(server: VpnServer, peer: VpnPeer): List<Pair<String, String>> = listOf(
         "name" to "\"ovpn-${peer.username}\"",
@@ -121,23 +125,24 @@ class VpnConfigRenderer {
         "password" to "\"${peer.password}\"",
         "mode" to "ip",
         "certificate" to "none",
+        "verify-server-certificate" to "no",
         "auth" to "sha1",
         "cipher" to VpnClientVariant.V6.routerOsCipher,
         "add-default-route" to "no",
+        "use-peer-dns" to "no",
         "disabled" to "no",
     )
 
     /**
-     * Skrip RouterOS **v6** (multi-baris, `.rsc`) untuk perangkat lama. Best-effort: sintaks/cipher
-     * v6 bervariasi antar-rilis dan hanya bisa dipastikan di perangkat asli — komentar kepala
-     * mengingatkan itu. Melempar [ConflictException] bila hub bukan TCP (v6 mustahil dial UDP).
+     * Skrip RouterOS **v6** (multi-baris, `.rsc`) untuk perangkat lama. Melempar
+     * [ConflictException] bila hub bukan TCP (v6 mustahil dial UDP).
      */
     fun renderRouterOsV6(server: VpnServer, peer: VpnPeer): String {
         requireVariantSupported(server, VpnClientVariant.V6)
         return buildString {
             appendLine("# OpenVPN management client (RouterOS v6) -> ${server.name} (${server.host}:${server.port})")
             appendLine("# v6: TCP + AES-256-CBC. Overlay IP (di-push server): ${peer.overlayIp}")
-            appendLine("# Best-effort — bila v6 menolak properti tertentu, sesuaikan dengan rilis RouterOS Anda.")
+            appendLine("# Pastikan port ${server.port}/TCP hub terbuka di firewall/NSG VPS.")
             appendLine("/interface ovpn-client add \\")
             val params = routerOsV6Params(server, peer)
             params.forEachIndexed { i, (key, value) ->

@@ -132,11 +132,13 @@ class VpnConfigRendererTest {
         assertThat(cmd).contains("user=\"bras-jakarta-1\"")
         assertThat(cmd).contains("password=\"secretpassword12345\"")
         assertThat(cmd).contains("cipher=aes256-cbc")
+        // Tanpa sertifikat klien DAN tanpa verifikasi sertifikat hub — sepasang, tak bisa sebelah.
         assertThat(cmd).contains("certificate=none")
+        assertThat(cmd).contains("verify-server-certificate=no")
         assertThat(cmd).contains("auth=sha1")
-        // v6 tak punya properti-properti v7 ini — jangan sampai bocor & bikin perintah gagal.
+        assertThat(cmd).contains("use-peer-dns=no")
+        // v6 tak punya properti ini (pilihan protokolnya cuma TCP) — jangan sampai bocor.
         assertThat(cmd).doesNotContain("aes256-gcm")
-        assertThat(cmd).doesNotContain("verify-server-certificate")
         assertThat(cmd).doesNotContain("protocol=")
     }
 
