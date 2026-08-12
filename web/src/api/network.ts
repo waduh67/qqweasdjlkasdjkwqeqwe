@@ -95,6 +95,21 @@ export interface OdfView {
   /** Sambungan di dalam rak; sisi belakang & depan dihitung sendiri-sendiri. */
   spliceCount: number
   status: AssetStatus
+  /** Turunan dari patchcord yang tercatat; kosong = belum ada yang dicolok. */
+  olts: OdfUplinkView[]
+}
+
+/**
+ * OLT yang patchcord-nya mendarat di sebuah rak. Daftar, bukan satu nama: satu
+ * POP lazim berisi beberapa OLT, dan satu OLT memakai banyak port di rak yang
+ * sama.
+ */
+export interface OdfUplinkView {
+  oltId: string
+  oltCode: string
+  oltName: string
+  /** Berapa port rak ini yang dipakai OLT tersebut. */
+  portCount: number
 }
 
 /**

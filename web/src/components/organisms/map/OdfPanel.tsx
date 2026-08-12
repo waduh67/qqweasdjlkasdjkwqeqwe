@@ -3,6 +3,7 @@ import { StatusBadge } from '@/components/atoms'
 import { IconMonitor } from '@/components/atoms/icons'
 import { BladeHead, CommandBar, Ess, type CommandAction } from '@/components/molecules'
 import { ODF_COLOR } from '@/map/mapStyle'
+import { uplinkLabel } from '@/utils/odfUplinks'
 import { cableAction, deleteAction, relocateAction } from './mapActions'
 
 /**
@@ -57,6 +58,20 @@ export function OdfPanel({
             <StatusBadge status={odf.status} />
           </Ess>
           <Ess label="POP">{odf.siteName}</Ess>
+          {/* Dibaca dari patchcord, bukan diketik — makanya boleh lebih dari satu
+              dan boleh kosong. Rak yang belum dicolok apa pun mengaku belum tahu
+              ketimbang menebak OLT satu-satunya di POP ini. */}
+          <Ess label="OLT terkait">
+            {odf.olts.length === 0 ? (
+              <span className="muted">belum ada patchcord tercatat</span>
+            ) : (
+              <span className="stack" style={{ gap: '0.1rem' }}>
+                {odf.olts.map((o) => (
+                  <span key={o.oltId}>{uplinkLabel(o)}</span>
+                ))}
+              </span>
+            )}
+          </Ess>
           <Ess label="Port terpakai">
             <span className="tnum">
               {odf.usedPortCount}/{odf.portCount}

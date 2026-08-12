@@ -7,6 +7,7 @@ import { Badge, Button, EmptyState, SelectField, Spinner, StatusBadge, TextField
 import { IconInventory } from '@/components/atoms/icons'
 import { useConfirm, useToast } from '@/system'
 import { mapFocusState, type MapFocusState } from '@/map/mapFocus'
+import { uplinkLabel } from '@/utils/odfUplinks'
 import { AssetDetailPanel } from './AccessNodeDetail'
 import { Blade } from './Blade'
 import { LocationPicker } from './LocationPicker'
@@ -209,6 +210,12 @@ export function OdfDetail({
         fields={[
           { label: 'Nama', value: odf.name },
           { label: 'POP', value: odf.siteName ?? '—' },
+          // Bukan isian: dibaca dari patchcord yang benar-benar tercolok, jadi
+          // boleh lebih dari satu OLT dan boleh belum ada sama sekali.
+          {
+            label: 'OLT terkait',
+            value: odf.olts.length === 0 ? 'belum ada patchcord tercatat' : odf.olts.map(uplinkLabel).join(', '),
+          },
           { label: 'Jumlah port', value: String(odf.portCount) },
           { label: 'Port terpakai', value: `${odf.usedPortCount}` },
           // Dua angka, bukan satu yang dibagi dua: satu port dipakai DUA sambungan

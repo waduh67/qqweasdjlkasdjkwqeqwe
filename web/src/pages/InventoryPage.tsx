@@ -17,6 +17,7 @@ import { SearchInput, Tabs } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { IconInventory } from '@/components/atoms/icons'
 import { mapFocusState } from '@/map/mapFocus'
+import { summarizeOdfUplinks, uplinkLabel } from '@/utils/odfUplinks'
 
 /**
  * Inventory jaringan dalam satu halaman bertab.
@@ -941,6 +942,18 @@ function OdfsTab() {
       align: 'right',
       sortValue: (o) => o.spliceCount,
       cell: (o) => <span className="tnum">{o.spliceCount}</span>,
+    },
+    {
+      key: 'olt',
+      header: 'OLT',
+      // Diurut menurut nama OLT terbesarnya supaya rak milik satu OLT berkumpul —
+      // itulah cara orang membaca daftar ini saat menyiapkan kerja di satu POP.
+      sortValue: (o) => o.olts[0]?.oltCode ?? '',
+      cell: (o) => (
+        <span className="muted" title={o.olts.map(uplinkLabel).join(', ')}>
+          {summarizeOdfUplinks(o.olts)}
+        </span>
+      ),
     },
     { key: 'status', header: 'Status', sortValue: (o) => o.status, cell: (o) => <StatusBadge status={o.status} /> },
   ]
