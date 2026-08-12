@@ -389,7 +389,9 @@ function CredentialCard({ account, onDismiss }: { account: VpnAccountView; onDis
           hint={
             account.supportsV6
               ? 'RouterOS v7 (UDP/TCP + AES-256-GCM). Perangkat v6? Pakai perintah di bawah.'
-              : 'RouterOS v7 (AES-256-GCM). Perangkat v6 butuh hub TCP — hub akun ini bukan TCP.'
+              : `RouterOS v7 (AES-256-GCM). Perangkat v6 tak bisa memakai hub ini: klien OpenVPN v6 ` +
+                `tak mengenal ${account.protocol}. Minta admin platform mengubah hub "${account.serverName}" ` +
+                `ke TCP, menjalankan ulang perintah pasang di VPS, lalu membuka port ${account.port}/tcp.`
           }
         />
       )}
@@ -403,7 +405,11 @@ function CredentialCard({ account, onDismiss }: { account: VpnAccountView; onDis
           command={account.routerOsCommandV6}
           copyLabel="Salin perintah v6"
           onCopy={() => copy(account.routerOsCommandV6!, 'Perintah RouterOS v6')}
-          hint="Best-effort untuk v6 — bila ada properti yang ditolak, sesuaikan dengan rilis RouterOS Anda."
+          hint={
+            `Isinya persis kolom yang ada di menu ovpn-client v6. Kalau interfacenya berhenti di ` +
+            `"connecting...", yang paling sering: port ${account.port}/tcp hub belum terbuka di ` +
+            `firewall/NSG VPS.`
+          }
         />
       )}
       <div className="row" style={{ flexWrap: 'wrap' }}>

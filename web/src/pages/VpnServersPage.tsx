@@ -72,7 +72,9 @@ type ServerDraft = {
   tunnelCidr: string
 }
 
-const EMPTY_SERVER: ServerDraft = { id: null, name: '', host: '', port: '1194', protocol: 'UDP', tunnelCidr: '10.8.0.0/24' }
+// Bawaan TCP, bukan UDP: klien OpenVPN RouterOS v6 tak mengenal UDP, dan perangkat v6
+// (hAP lite/RB941 smips) tak akan pernah bisa di-upgrade — hub UDP menutup pintu buat mereka.
+const EMPTY_SERVER: ServerDraft = { id: null, name: '', host: '', port: '1194', protocol: 'TCP', tunnelCidr: '10.8.0.0/24' }
 
 /** Label status hub dalam bahasa Indonesia; nilai tak dikenal ditampilkan apa adanya. */
 const STATUS_LABELS: Record<string, string> = { ACTIVE: 'Aktif', INACTIVE: 'Nonaktif' }
@@ -196,7 +198,11 @@ export function VpnServersPage() {
           <span>
             {s.host}:{s.port}
           </span>
-          <span className="muted" style={{ fontSize: '0.8rem' }}>{s.protocol}</span>
+          {/* Protokol saja tak berarti apa-apa bagi operator; yang dia perlu tahu adalah
+              perangkat mana yang bisa masuk lewat hub ini. */}
+          <span className="muted" style={{ fontSize: '0.8rem' }}>
+            {s.protocol === 'TCP' ? 'TCP · RouterOS v6 & v7' : 'UDP · RouterOS v7 saja'}
+          </span>
         </div>
       ),
     },
@@ -323,10 +329,27 @@ function ServerForm({
           onChange={(_, data) => setDraft({ ...draft, protocol: data.value as VpnProtocol })}
           style={{ flex: 1 }}
         >
-          <option value="UDP">UDP</option>
-          <option value="TCP">TCP</option>
+          <option value="TCP">TCP — semua RouterOS</option>
+          <option value="UDP">UDP — v7 saja</option>
         </SelectField>
       </div>
+
+      {/* Pilihan protokol tak bisa dibalik tanpa mengganggu perangkat: yang sudah men-dial harus
+          menempel ulang confignya. Sebutkan konsekuensinya di tempat pilihannya diambil. */}
+      <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        {draft.protocol === 'TCP' ? (
+          <>
+            Perangkat <strong>RouterOS v6 maupun v7</strong> bisa masuk. Buka port{' '}
+            <code>{draft.port || '1194'}/tcp</code> di firewall/NSG VPS.
+          </>
+        ) : (
+          <>
+            Hanya <strong>RouterOS v7</strong> yang bisa masuk — klien OpenVPN v6 tak mengenal UDP,
+            dan perangkat lama (hAP lite, RB941) tak bisa di-upgrade ke v7. Pilih UDP hanya bila
+            seluruh armada dipastikan v7.
+          </>
+        )}
+      </p>
 
       {draft.id === null ? (
         <TextField
