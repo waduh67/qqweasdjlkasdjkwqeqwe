@@ -211,6 +211,36 @@ export function CablePanel({
           )}
         </dl>
 
+        {/* Kisah lengkap sebuah selubung: berangkat dari mana, dibuka di kotak
+            mana saja, berhenti di mana. Cuma muncul untuk kabel yang memang
+            mampir di tengah jalan — buat kabel dua ujung, "Dari"/"Ke" di atas
+            sudah menceritakan semuanya.
+
+            Sengaja tak bisa disunting dari sini: yang berhak bilang "selubung
+            ini saya buka" adalah orang yang berdiri di depan kotaknya, dan ia
+            mencatatnya di meja sambung kotak itu — bukan dari panel kabel yang
+            bisa dibuka siapa saja dari balik meja kantor. */}
+        {cable.attachments.length > 2 && (
+          <div className="stack" style={{ gap: '0.3rem' }}>
+            <strong style={{ fontSize: '0.85rem' }}>Perjalanan selubung</strong>
+            <ol className="stack" style={{ gap: '0.2rem', margin: 0, paddingLeft: '1.1rem' }}>
+              {cable.attachments.map((stop) => (
+                <li key={stop.id} style={{ fontSize: '0.8rem' }}>
+                  <span>{stop.nodeCode ?? stop.nodeKind}</span>
+                  <span className="muted"> · {stop.roleLabel}</span>
+                  {stop.distanceMeters != null && stop.distanceMeters > 0 && (
+                    <span className="muted tnum"> · m-{Math.round(stop.distanceMeters)}</span>
+                  )}
+                </li>
+              ))}
+            </ol>
+            <span className="muted" style={{ fontSize: '0.72rem' }}>
+              Angka meter dihitung menyusuri rute dari pangkal — itu yang dicocokkan dengan hasil
+              OTDR saat mencari letak gangguan. Perannya diubah dari meja sambung kotaknya.
+            </span>
+          </div>
+        )}
+
         {/* Yang berhak mengubah langsung dapat dropdown-nya — hasil survei sering
             baru masuk berhari-hari setelah jalurnya digambar, dan tersimpan
             begitu dipilih tanpa tombol simpan terpisah. */}
