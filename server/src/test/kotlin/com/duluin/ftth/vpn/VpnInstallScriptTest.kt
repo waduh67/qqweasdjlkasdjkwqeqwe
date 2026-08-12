@@ -62,6 +62,11 @@ class VpnInstallScriptTest {
         assertThat(script).contains("-j MASQUERADE")
         assertThat(script).contains("--to-destination \"\$ip:8291\"")
         assertThat(script).contains("ftth-disconnect.sh")
+        // Dijalankan ulang = config baru HARUS terpakai. `enable --now` melewati service yang
+        // sudah jalan, jadi daemonnya diam-diam memegang config lama (pernah kejadian: berkas
+        // sudah `proto tcp`, `ss` masih menunjukkan udp).
+        assertThat(script).contains("systemctl restart openvpn-server@server")
+        assertThat(script).doesNotContain("systemctl enable --now")
     }
 
     @Test

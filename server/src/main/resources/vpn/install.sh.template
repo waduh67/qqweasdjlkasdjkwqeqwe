@@ -152,7 +152,12 @@ if command -v iptables >/dev/null 2>&1; then
     || iptables -I FORWARD 1 -s "$TUN_CIDR" -j ACCEPT 2>/dev/null || true
 fi
 
-systemctl enable --now openvpn-server@server
+# RESTART, bukan sekadar `enable --now`: skrip ini memang dirancang untuk dijalankan ulang
+# (mis. sesudah protokol hub diubah UDP -> TCP), dan `--now` tak menyentuh service yang sudah
+# jalan — daemonnya akan terus memegang config lama sampai kiamat, padahal berkasnya sudah
+# berganti. Gejalanya menyesatkan: `server.conf` bilang tcp, `ss` bilang masih udp.
+systemctl enable openvpn-server@server
+systemctl restart openvpn-server@server
 sleep 1
 systemctl --no-pager --full status openvpn-server@server 2>/dev/null | head -n 5 || true
 
