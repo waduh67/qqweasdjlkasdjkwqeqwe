@@ -11,6 +11,9 @@ interface OdfRepository {
 
     fun findById(id: UUID): Odf?
 
+    /** Sekumpulan rak dalam satu query — penawar N+1 di layar yang menyebut banyak kotak. */
+    fun findAllByIds(ids: Set<UUID>): List<Odf>
+
     /**
      * @param areaIds `null` berarti tanpa pembatasan area; set kosong berarti
      *        pengguna tidak punya area sama sekali sehingga hasilnya kosong.

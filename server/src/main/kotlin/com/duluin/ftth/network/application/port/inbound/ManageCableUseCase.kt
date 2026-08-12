@@ -4,6 +4,7 @@ import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.network.domain.model.AssetStatus
+import com.duluin.ftth.network.domain.model.CableAttachmentRole
 import com.duluin.ftth.network.domain.model.CableInstallation
 import com.duluin.ftth.network.domain.model.CableOwnership
 import com.duluin.ftth.network.domain.model.CableType
@@ -26,6 +27,31 @@ interface ManageCableUseCase {
     fun create(command: SaveCableCommand): CableView
 
     fun update(id: UUID, command: SaveCableCommand): CableView
+
+    /**
+     * "Selubung kabel ini saya buka di kotak ini" — dicatat dari meja sambung,
+     * di saat perbuatannya terjadi.
+     *
+     * Terpisah dari [update] karena bentuk pekerjaannya memang lain. [update]
+     * adalah formulir kabel: sembilan bidang, dibuka orang yang sedang menggambar
+     * jalur. Ini satu tindakan, dilakukan orang yang sedang berdiri di depan
+     * kotak terbuka — dan kalau ia harus menyunting seluruh kabel dulu, catatan
+     * itu tak akan pernah dibuat, lalu tinggallah tebak-tebakan jarak yang
+     * selama ini bikin salah potong.
+     *
+     * Idempoten: kotak yang sudah tercatat cukup diperbarui perannya.
+     */
+    fun attach(id: UUID, command: AttachCableCommand): CableView
+
+    /**
+     * Kebalikan [attach]: "ternyata kabel ini tak pernah dibuka di kotak itu".
+     *
+     * Idempoten — mencabut yang memang tak tercatat bukan kesalahan, cuma tak
+     * mengubah apa-apa. Ditolak bila masih ada serat kabel ini yang tersambung
+     * di dalam kotaknya: sambungan yang menggantung pada selubung yang mengaku
+     * utuh persis jenis kebohongan yang mau dihabisi skema singgahan.
+     */
+    fun detach(id: UUID, nodeId: UUID): CableView
 
     /**
      * "Pelanggannya cabut" dalam satu langkah: sambungan drop ini dilepas, core-nya
@@ -92,8 +118,43 @@ data class SaveCableCommand(
     val fromPortNumber: Int? = null,
     /** Input tujuan (opsional, umumnya tunggal). */
     val toPortNumber: Int? = null,
+    /**
+     * Kotak yang disinggahi di TENGAH bentang, urut dari pangkal ke ujung.
+     *
+     * `null` = jangan disentuh, dan itu bukan sekadar kehati-hatian: formulir
+     * kabel di peta boleh saja cuma menanyakan kedua ujung, dan bila daftar
+     * kosong dari sana dianggap kehendak, sekali orang merapikan nama kabel
+     * seluruh catatan "dikupas di ODP-3 sampai ODP-11" ikut lenyap tanpa ada
+     * yang memintanya. Daftar kosong yang dikirim SADAR tetap berarti "tak ada
+     * singgahan".
+     */
+    val waypoints: List<CableWaypointCommand>? = null,
     val status: AssetStatus,
     /** Null = belum disurvei; disimpan apa adanya, tidak ditebak jadi AERIAL. */
     val installation: CableInstallation? = null,
     val ownership: CableOwnership = CableOwnership.OWNED,
+)
+
+/**
+ * Satu singgahan di tengah bentang, sebagaimana dikirim klien.
+ *
+ * Tanpa nomor urut: urutan sepanjang kabel bukan sesuatu yang diketik orang,
+ * melainkan akibat dari letak kotaknya di peta — server yang menyusunnya. Tanpa
+ * port pula, sebab yang bertemu di tengah bentang adalah core dengan core.
+ */
+data class CableWaypointCommand(
+    val nodeKind: NetworkNodeKind,
+    val nodeId: UUID,
+    /**
+     * Bawaannya "dikupas": kotak yang sengaja didaftarkan orang hampir selalu
+     * kotak yang memang dibuka. Yang cuma numpang lewat ditandai sadar.
+     */
+    val role: CableAttachmentRole = CableAttachmentRole.TAPPED,
+)
+
+/** Satu singgahan yang ditambahkan/diperbarui dari meja sambung — lihat [ManageCableUseCase.attach]. */
+data class AttachCableCommand(
+    val nodeKind: NetworkNodeKind,
+    val nodeId: UUID,
+    val role: CableAttachmentRole = CableAttachmentRole.TAPPED,
 )

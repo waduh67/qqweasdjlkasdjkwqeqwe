@@ -5,7 +5,6 @@ import com.duluin.ftth.network.application.port.inbound.OtdrPlacementView
 import com.duluin.ftth.network.application.port.outbound.FiberConnectionRepository
 import com.duluin.ftth.network.domain.model.Cable
 import com.duluin.ftth.network.domain.model.ClosureKind
-import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import org.springframework.stereotype.Component
 import java.util.Locale
 import kotlin.math.abs
@@ -159,7 +158,7 @@ class OtdrPlacementResolver(
     private fun endpointLandmarks(cable: Cable, scale: Double, existing: List<OtdrLandmarkView>): List<OtdrLandmarkView> =
         listOf(cable.from, cable.to).mapNotNull { endpoint ->
             if (existing.any { it.closureId == endpoint.id }) return@mapNotNull null
-            val kind = endpoint.kind.asClosureKind() ?: return@mapNotNull null
+            val kind = ClosureKind.of(endpoint.kind) ?: return@mapNotNull null
             closures.find(kind, endpoint.id)?.let { ref ->
                 OtdrLandmarkView(
                     closureKind = ref.kind,
@@ -171,16 +170,6 @@ class OtdrPlacementResolver(
                 )
             }
         }
-
-    private fun NetworkNodeKind.asClosureKind(): ClosureKind? = when (this) {
-        NetworkNodeKind.ODC -> ClosureKind.ODC
-        NetworkNodeKind.ODP -> ClosureKind.ODP
-        NetworkNodeKind.JOINT_BOX -> ClosureKind.JOINT_BOX
-        NetworkNodeKind.ODF -> ClosureKind.ODF
-        // Site, OLT, dan rumah pelanggan bukan kotak yang bisa dibuka teknisi
-        // serat; menyebutnya sebagai patokan galian cuma menyesatkan.
-        NetworkNodeKind.SITE, NetworkNodeKind.OLT, NetworkNodeKind.CUSTOMER -> null
-    }
 
     /** Meter bulat: ketelitian di bawah itu tak dimiliki alat maupun taksiran slack-nya. */
     private fun meters(value: Double): String = "${value.roundToInt()} m"

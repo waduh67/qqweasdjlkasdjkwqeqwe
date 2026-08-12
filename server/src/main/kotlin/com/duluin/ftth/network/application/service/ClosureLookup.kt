@@ -7,6 +7,11 @@ import com.duluin.ftth.network.application.port.outbound.OdcRepository
 import com.duluin.ftth.network.application.port.outbound.OdfRepository
 import com.duluin.ftth.network.application.port.outbound.OdpRepository
 import com.duluin.ftth.network.domain.model.ClosureKind
+import com.duluin.ftth.network.domain.model.JointBox
+import com.duluin.ftth.network.domain.model.NetworkNodeRef
+import com.duluin.ftth.network.domain.model.Odc
+import com.duluin.ftth.network.domain.model.Odf
+import com.duluin.ftth.network.domain.model.Odp
 import org.springframework.stereotype.Component
 import java.util.UUID
 
@@ -54,27 +59,52 @@ class ClosureLookup(
     private val odfRepository: OdfRepository,
 ) {
     fun find(kind: ClosureKind, id: UUID): ClosureRef? = when (kind) {
-        ClosureKind.ODC -> odcRepository.findById(id)?.let {
-            ClosureRef(kind, it.id, it.code, it.name, it.location)
-        }
-        ClosureKind.ODP -> odpRepository.findById(id)?.let {
-            ClosureRef(kind, it.id, it.code, it.name, it.location)
-        }
-        ClosureKind.JOINT_BOX -> jointBoxRepository.findById(id)?.let {
-            ClosureRef(kind, it.id, it.code, it.name, it.location, spliceCapacity = it.capacity)
-        }
-        // Batas rak dihitung dari SISI, bukan port: tiap adapter memang menampung
-        // dua sambungan, belakang dan depan.
-        ClosureKind.ODF -> odfRepository.findById(id)?.let {
-            ClosureRef(
-                kind, it.id, it.code, it.name, it.location,
-                spliceCapacity = it.portCount * 2,
-                portCount = it.portCount,
-                siteId = it.siteId,
-            )
-        }
+        ClosureKind.ODC -> odcRepository.findById(id)?.toRef()
+        ClosureKind.ODP -> odpRepository.findById(id)?.toRef()
+        ClosureKind.JOINT_BOX -> jointBoxRepository.findById(id)?.toRef()
+        ClosureKind.ODF -> odfRepository.findById(id)?.toRef()
     }
 
     fun require(kind: ClosureKind, id: UUID): ClosureRef =
         find(kind, id) ?: throw NotFoundException("${kind.label} $id tidak ditemukan")
+
+    /**
+     * Kotak untuk sekumpulan rujukan simpul sekaligus, terkunci per id.
+     *
+     * Ada supaya layar yang menyebut BANYAK kotak — daftar kabel beserta barisan
+     * singgahan masing-masing, misalnya — tidak menembakkan satu query per kotak.
+     * Simpul yang memang bukan kotak (POP, OLT, rumah pelanggan) tak muncul di
+     * hasil, begitu pula kotak yang sudah terhapus; pemanggil memperlakukan
+     * keduanya sama: tak ada label untuk ditampilkan.
+     */
+    fun findAll(refs: Collection<NetworkNodeRef>): Map<UUID, ClosureRef> = refs
+        .mapNotNull { ref -> ClosureKind.of(ref.kind)?.let { it to ref.id } }
+        .groupBy({ it.first }, { it.second })
+        .flatMap { (kind, ids) -> findAll(kind, ids.toSet()) }
+        .associateBy { it.id }
+
+    private fun findAll(kind: ClosureKind, ids: Set<UUID>): List<ClosureRef> = when (kind) {
+        ClosureKind.ODC -> odcRepository.findAllByIds(ids).map { it.toRef() }
+        ClosureKind.ODP -> odpRepository.findAllByIds(ids).map { it.toRef() }
+        ClosureKind.JOINT_BOX -> jointBoxRepository.findAllByIds(ids).map { it.toRef() }
+        ClosureKind.ODF -> odfRepository.findAllByIds(ids).map { it.toRef() }
+    }
+
+    private fun Odc.toRef() = ClosureRef(ClosureKind.ODC, id, code, name, location)
+
+    private fun Odp.toRef() = ClosureRef(ClosureKind.ODP, id, code, name, location)
+
+    private fun JointBox.toRef() =
+        ClosureRef(ClosureKind.JOINT_BOX, id, code, name, location, spliceCapacity = capacity)
+
+    /**
+     * Batas rak dihitung dari SISI, bukan port: tiap adapter memang menampung dua
+     * sambungan, belakang dan depan.
+     */
+    private fun Odf.toRef() = ClosureRef(
+        ClosureKind.ODF, id, code, name, location,
+        spliceCapacity = portCount * 2,
+        portCount = portCount,
+        siteId = siteId,
+    )
 }

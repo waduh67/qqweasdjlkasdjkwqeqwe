@@ -2,6 +2,7 @@ package com.duluin.ftth.network.adapter.inbound.web
 
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.network.domain.model.AssetStatus
+import com.duluin.ftth.network.domain.model.CableAttachmentRole
 import com.duluin.ftth.network.domain.model.CableEnd
 import com.duluin.ftth.network.domain.model.CableInstallation
 import com.duluin.ftth.network.domain.model.CableOwnership
@@ -188,10 +189,38 @@ data class CableRequest(
     @field:Min(1) val fromPortNumber: Int? = null,
     /** Input tujuan (opsional). */
     @field:Min(1) val toPortNumber: Int? = null,
+    /**
+     * Kotak yang disinggahi di tengah bentang, urut dari pangkal. Tak dikirim =
+     * singgahan yang sudah tercatat dibiarkan apa adanya; klien lama yang belum
+     * mengenal kolom ini tak boleh menghapus catatan lapangan orang lain hanya
+     * karena ia diam.
+     */
+    @field:Size(max = 200) @field:Valid val waypoints: List<CableWaypointRequest>? = null,
     val status: AssetStatus = AssetStatus.ACTIVE,
     /** Cara pasang; boleh kosong = belum disurvei. */
     val installation: CableInstallation? = null,
     val ownership: CableOwnership = CableOwnership.OWNED,
+)
+
+/**
+ * Satu singgahan di tengah bentang. Tanpa nomor urut — urutan sepanjang kabel
+ * disusun server dari letak kotaknya, bukan diketik orang.
+ */
+data class CableWaypointRequest(
+    val nodeKind: NetworkNodeKind,
+    val nodeId: UUID,
+    val role: CableAttachmentRole = CableAttachmentRole.TAPPED,
+)
+
+/**
+ * "Kabel ini saya kupas di kotak ini" dari meja sambung. Peran boleh dikosongkan
+ * — bawaannya dikupas, sebab kotak yang sengaja didaftarkan orang hampir selalu
+ * kotak yang memang dibuka.
+ */
+data class CableAttachmentRequest(
+    val nodeKind: NetworkNodeKind,
+    val nodeId: UUID,
+    val role: CableAttachmentRole = CableAttachmentRole.TAPPED,
 )
 
 /**

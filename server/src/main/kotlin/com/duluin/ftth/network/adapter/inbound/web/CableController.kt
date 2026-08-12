@@ -2,10 +2,12 @@ package com.duluin.ftth.network.adapter.inbound.web
 
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.infrastructure.web.PageResponse
+import com.duluin.ftth.network.application.port.inbound.AttachCableCommand
 import com.duluin.ftth.network.application.port.inbound.CableChainView
 import com.duluin.ftth.network.application.port.inbound.CableCoreListView
 import com.duluin.ftth.network.application.port.inbound.CablePortOption
 import com.duluin.ftth.network.application.port.inbound.CableView
+import com.duluin.ftth.network.application.port.inbound.CableWaypointCommand
 import com.duluin.ftth.network.application.port.inbound.CheckCableChainUseCase
 import com.duluin.ftth.network.application.port.inbound.DropReleaseView
 import com.duluin.ftth.network.application.port.inbound.ManageCableCoreUseCase
@@ -85,6 +87,26 @@ class CableController(
         manageCable.update(id, request.toCommand())
 
     /**
+     * "Selubung kabel ini saya buka di kotak ini" — dicatat dari meja sambung.
+     *
+     * Izinnya `atau`, bukan `dan`, dan itu disengaja. Yang mengupas selubung
+     * adalah tukang sambung, di depan kotak yang sedang terbuka; memaksanya
+     * minta tolong orang lain menyunting kabel dulu berarti catatan itu tak
+     * pernah dibuat — dan kita kembali ke tebak-tebakan jarak yang selama ini
+     * bikin orang salah potong. Yang menggambar kabel di peta juga berhak,
+     * sebab baginya ini bagian dari bentuk kabelnya.
+     */
+    @PostMapping("/{id}/attachments")
+    @PreAuthorize("@authz.can('network.splice.manage') or @authz.can('network.cable.update')")
+    fun attach(@PathVariable id: UUID, @Valid @RequestBody request: CableAttachmentRequest): CableView =
+        manageCable.attach(id, AttachCableCommand(request.nodeKind, request.nodeId, request.role))
+
+    /** Kebalikan [attach]: "ternyata kabel ini tak pernah dibuka di kotak itu". */
+    @DeleteMapping("/{id}/attachments/{nodeId}")
+    @PreAuthorize("@authz.can('network.splice.manage') or @authz.can('network.cable.update')")
+    fun detach(@PathVariable id: UUID, @PathVariable nodeId: UUID): CableView = manageCable.detach(id, nodeId)
+
+    /**
      * "Pelanggannya cabut" — sambungan drop dilepas, core kembali bebas, kabelnya
      * boleh ditandai ditinggal.
      *
@@ -135,6 +157,7 @@ private fun CableRequest.toCommand() = SaveCableCommand(
     fromPonPortId = fromPonPortId,
     fromPortNumber = fromPortNumber,
     toPortNumber = toPortNumber,
+    waypoints = waypoints?.map { CableWaypointCommand(it.nodeKind, it.nodeId, it.role) },
     status = status,
     installation = installation,
     ownership = ownership,

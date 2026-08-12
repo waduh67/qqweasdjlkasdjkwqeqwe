@@ -11,6 +11,9 @@ interface JointBoxRepository {
 
     fun findById(id: UUID): JointBox?
 
+    /** Sekumpulan kotak dalam satu query — penawar N+1 di layar yang menyebut banyak kotak. */
+    fun findAllByIds(ids: Set<UUID>): List<JointBox>
+
     /**
      * @param areaIds `null` berarti tanpa pembatasan area; set kosong berarti
      *        pengguna tidak punya area sama sekali sehingga hasilnya kosong.

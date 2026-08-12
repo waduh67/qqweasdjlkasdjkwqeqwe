@@ -6,11 +6,15 @@ import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.domain.geo.RoutePath
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
+import com.duluin.ftth.network.application.port.inbound.AttachCableCommand
+import com.duluin.ftth.network.application.port.inbound.CableAttachmentView
 import com.duluin.ftth.network.application.port.inbound.CablePortOption
 import com.duluin.ftth.network.application.port.inbound.CableView
+import com.duluin.ftth.network.application.port.inbound.CableWaypointCommand
 import com.duluin.ftth.network.application.port.inbound.DropReleaseView
 import com.duluin.ftth.network.application.port.inbound.ManageCableUseCase
 import com.duluin.ftth.network.application.port.inbound.ManageFiberConnectionUseCase
@@ -18,6 +22,7 @@ import com.duluin.ftth.network.application.port.inbound.ReleaseDropCommand
 import com.duluin.ftth.network.application.port.inbound.SaveCableCommand
 import com.duluin.ftth.network.application.port.outbound.CableCoreRepository
 import com.duluin.ftth.network.application.port.outbound.CableRepository
+import com.duluin.ftth.network.application.port.outbound.FiberConnectionRepository
 import com.duluin.ftth.network.application.port.outbound.JointBoxRepository
 import com.duluin.ftth.network.application.port.outbound.OdcRepository
 import com.duluin.ftth.network.application.port.outbound.OdfRepository
@@ -26,9 +31,13 @@ import com.duluin.ftth.network.application.port.outbound.OltRepository
 import com.duluin.ftth.network.application.port.outbound.PonPortRepository
 import com.duluin.ftth.network.application.port.outbound.SiteRepository
 import com.duluin.ftth.network.domain.model.Cable
+import com.duluin.ftth.network.domain.model.CableAttachment
+import com.duluin.ftth.network.domain.model.CableAttachmentRole
 import com.duluin.ftth.network.domain.model.CableCore
 import com.duluin.ftth.network.domain.model.CableNaming
 import com.duluin.ftth.network.domain.model.CableType
+import com.duluin.ftth.network.domain.model.CableWaypoint
+import com.duluin.ftth.network.domain.model.ClosureKind
 import com.duluin.ftth.network.domain.model.CoreStatus
 import com.duluin.ftth.network.domain.model.NetworkEndpoint
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
@@ -49,14 +58,19 @@ class CableService(
     private val jointBoxRepository: JointBoxRepository,
     private val odfRepository: OdfRepository,
     private val ponPortRepository: PonPortRepository,
+    private val fiberConnectionRepository: FiberConnectionRepository,
+    private val closures: ClosureLookup,
     private val manageFiberConnection: ManageFiberConnectionUseCase,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
 ) : ManageCableUseCase {
 
     @Transactional(readOnly = true)
-    override fun search(query: String, cableType: CableType?, pageRequest: PageRequest): Page<CableView> =
-        cableRepository.search(query, cableType, pageRequest).map { it.toView() }
+    override fun search(query: String, cableType: CableType?, pageRequest: PageRequest): Page<CableView> {
+        val page = cableRepository.search(query, cableType, pageRequest)
+        val labels = labelsFor(page.content)
+        return page.map { it.toView(labels) }
+    }
 
     @Transactional(readOnly = true)
     override fun get(id: UUID): CableView = requireCable(id).toView()
@@ -95,7 +109,9 @@ class CableService(
     override fun create(command: SaveCableCommand): CableView {
         val from = command.fromEndpoint()
         val to = command.toEndpoint()
-        assertNodesExist(from.ref, to.ref)
+        val route = RoutePath(command.route)
+        val waypoints = command.waypoints.orEmpty().map { it.toWaypoint() }
+        assertNodesExist(from.ref, to.ref, *waypoints.map { it.node }.toTypedArray())
         // Kode yang dikirim operator dipakai apa adanya — termasuk bila ternyata bentrok,
         // sebab menggeser diam-diam kode yang DIKETIK orang berarti label di selubung dan
         // label di layar berbeda. Yang dibuat backend (kolomnya dikosongkan) boleh digeser.
@@ -110,9 +126,10 @@ class CableService(
                 name = command.name,
                 cableType = command.cableType,
                 coreCount = command.coreCount,
-                route = RoutePath(command.route),
+                route = route,
                 from = from,
                 to = to,
+                waypoints = sortAlong(route, waypoints),
                 status = command.status,
                 installation = command.installation,
                 ownership = command.ownership,
@@ -133,7 +150,9 @@ class CableService(
         val cable = requireCable(id)
         val from = command.fromEndpoint()
         val to = command.toEndpoint()
-        assertNodesExist(from.ref, to.ref)
+        val route = RoutePath(command.route)
+        val waypoints = command.waypoints?.map { it.toWaypoint() }
+        assertNodesExist(from.ref, to.ref, *waypoints.orEmpty().map { it.node }.toTypedArray())
         validateSourcePort(from, excludeCableId = id)
         // Ganti kode saat menyunting = merapikan label, bukan memindahkan kabel. Kosong
         // berarti "biarkan" — klien lama yang tak mengenal kolom ini tak boleh menghapus
@@ -148,9 +167,10 @@ class CableService(
             name = command.name,
             cableType = command.cableType,
             coreCount = command.coreCount,
-            route = RoutePath(command.route),
+            route = route,
             from = from,
             to = to,
+            waypoints = waypoints?.let { sortAlong(route, it) },
             status = command.status,
             installation = command.installation,
             ownership = command.ownership,
@@ -160,6 +180,72 @@ class CableService(
         applyUplink(saved)
         auditor.record("cable.updated", "Cable", saved.id, saved.tenantId, mapOf("code" to saved.code))
         return saved.toView()
+    }
+
+    override fun attach(id: UUID, command: AttachCableCommand): CableView {
+        val cable = requireCable(id)
+        val node = NetworkNodeRef(command.nodeKind, command.nodeId)
+        val closure = closures.require(assertClosureKind(command.nodeKind), command.nodeId)
+        // "Cuma lewat" pada kotak yang seratnya sudah tersambung adalah dua
+        // pernyataan yang saling meniadakan; salah satunya pasti keliru, dan
+        // yang punya bukti adalah sambungan yang tercatat.
+        val spliced = splicesAt(cable.id, command.nodeId)
+        if (command.role == CableAttachmentRole.PASSING && spliced > 0) {
+            throw ConflictException(
+                "Kabel ${cable.code} punya $spliced sambungan di ${closure.code} — selubungnya jelas " +
+                    "sudah dibuka di sana. Lepas dulu sambungannya di meja sambung kalau memang " +
+                    "kabel ini cuma melintas.",
+            )
+        }
+        cable.attach(node, command.role, insertionIndex(cable, closure.location))
+        val saved = cableRepository.save(cable)
+        auditor.record(
+            "cable.attached", "Cable", saved.id, saved.tenantId,
+            mapOf("code" to saved.code, "node" to closure.code, "role" to command.role.name),
+        )
+        return saved.toView()
+    }
+
+    override fun detach(id: UUID, nodeId: UUID): CableView {
+        val cable = requireCable(id)
+        val spliced = splicesAt(cable.id, nodeId)
+        if (spliced > 0) {
+            throw ConflictException(
+                "Masih ada $spliced sambungan serat kabel ${cable.code} di dalam kotak itu. " +
+                    "Selubung yang mengaku utuh padahal core-nya tersambung persis kebohongan " +
+                    "yang bikin orang salah potong — lepas dulu sambungannya di meja sambung.",
+            )
+        }
+        if (!cable.detach(nodeId)) return cable.toView()
+        val saved = cableRepository.save(cable)
+        auditor.record(
+            "cable.detached", "Cable", saved.id, saved.tenantId,
+            mapOf("code" to saved.code, "nodeId" to nodeId.toString()),
+        )
+        return saved.toView()
+    }
+
+    /** Berapa serat kabel ini yang tersambung DI DALAM kotak tersebut. */
+    private fun splicesAt(cableId: UUID, nodeId: UUID): Int =
+        fiberConnectionRepository.findByCableId(cableId).count { it.closureId == nodeId }
+
+    /**
+     * Di posisi mana singgahan baru masuk ke barisan.
+     *
+     * Diukur dari letak kotaknya menyusuri rute: yang berdiri di meter ke-820
+     * duduk sesudah kotak di meter ke-300 dan sebelum yang di meter ke-1.200.
+     * Inilah satu-satunya tempat geometri masih ikut bicara soal singgahan, dan
+     * yang ditentukannya cuma URUTAN — keanggotaannya sudah diputuskan orang yang
+     * membuka kotak itu. Kotak yang letaknya tak lagi diketahui dianggap ada di
+     * depan, supaya barisan yang sudah benar tak tergeser oleh yang tak diketahui.
+     */
+    private fun insertionIndex(cable: Cable, location: Coordinate): Int {
+        val along = cable.route.distanceAlongTo(location)
+        val known = closures.findAll(cable.waypoints.map { it.node.ref })
+        return cable.waypoints.count { existing ->
+            val point = known[existing.node.id]?.location ?: return@count true
+            cable.route.distanceAlongTo(point) <= along
+        }
     }
 
     /**
@@ -468,7 +554,53 @@ class CableService(
     private fun requireCable(id: UUID): Cable =
         cableRepository.findById(id) ?: throw NotFoundException("Kabel $id tidak ditemukan")
 
-    private fun Cable.toView() = CableView(
+    /**
+     * Kabel cuma bisa singgah di kotak yang bisa DIBUKA teknisi serat. POP, badan
+     * OLT, dan rumah pelanggan memang tempat kabel berhenti — tapi berhenti itu
+     * peran ujung, bukan singgahan, dan bedanya bukan soal istilah: di ujung
+     * seluruh core terbuka, di singgahan cuma sebagian yang diambil.
+     */
+    private fun assertClosureKind(kind: NetworkNodeKind): ClosureKind = ClosureKind.of(kind)
+        ?: throw ValidationException(
+            "Kabel cuma bisa singgah di kotak yang bisa dibuka teknisi (ODC, ODP, joint box, ODF). " +
+                "$kind bukan salah satunya — kalau kabelnya memang berhenti di sana, jadikan ia ujung kabel.",
+        )
+
+    private fun CableWaypointCommand.toWaypoint(): CableWaypoint {
+        assertClosureKind(nodeKind)
+        return CableWaypoint(NetworkNodeRef(nodeKind, nodeId), role)
+    }
+
+    /**
+     * Menyusun singgahan mengikuti letak kotaknya sepanjang rute.
+     *
+     * Urutan tak pernah dipercayakan kepada klien: yang menggambar kabel boleh
+     * saja mendaftarkan ODP-7 lebih dulu lalu teringat ODP-3, dan barisan yang
+     * salah urut membuat "kotak berikutnya sesudah sini" — pertanyaan yang
+     * dipakai teknisi saat menyusuri kabel — menjawab ngawur. Sekali lagi:
+     * geometri cuma MENGURUTKAN, keanggotaannya tetap keputusan orang. Kotak
+     * yang letaknya tak diketahui ditaruh di belakang tanpa mengubah urutan
+     * relatifnya.
+     */
+    private fun sortAlong(route: RoutePath, waypoints: List<CableWaypoint>): List<CableWaypoint> {
+        if (waypoints.size < 2) return waypoints
+        val known = closures.findAll(waypoints.map { it.node })
+        return waypoints.sortedBy { waypoint ->
+            known[waypoint.node.id]?.let { route.distanceAlongTo(it.location) } ?: Double.MAX_VALUE
+        }
+    }
+
+    /**
+     * Sekali lookup untuk SELURUH kabel yang mau ditampilkan, bukan sekali per
+     * singgahan: satu halaman daftar kabel gampang menyebut ratusan kotak, dan
+     * pola N+1 di sini terasa langsung di layar.
+     */
+    private fun labelsFor(cables: Collection<Cable>): Map<UUID, ClosureRef> =
+        closures.findAll(cables.flatMap { cable -> cable.attachments.map { it.node.ref } })
+
+    private fun Cable.toView(): CableView = toView(labelsFor(listOf(this)))
+
+    private fun Cable.toView(labels: Map<UUID, ClosureRef>) = CableView(
         id = id,
         code = code,
         name = name,
@@ -484,11 +616,39 @@ class CableService(
         fromPortNumber = from.portNumber,
         toPortNumber = to.portNumber,
         fromPortLabel = resolveFromPortLabel(),
+        attachments = attachments.mapIndexed { index, attachment ->
+            attachment.toView(index, this, labels[attachment.node.id])
+        },
         status = status,
         installation = installation,
         installationLabel = installation?.label,
         ownership = ownership,
         ownershipLabel = ownership.label,
+    )
+
+    /**
+     * Satu singgahan siap tampil.
+     *
+     * Jarak kedua UJUNG tak diambil dari letak simpulnya melainkan dari panjang
+     * rutenya sendiri — nol dan panjang penuh. Di sanalah selubung habis menurut
+     * definisi, sedangkan pin OLT di peta sering berdiri di dalam gedung, puluhan
+     * meter dari titik kabelnya digambar.
+     */
+    private fun CableAttachment.toView(sequence: Int, cable: Cable, closure: ClosureRef?) = CableAttachmentView(
+        id = id,
+        sequence = sequence,
+        nodeKind = node.kind,
+        nodeId = node.id,
+        nodeCode = closure?.code,
+        nodeName = closure?.name,
+        role = role,
+        roleLabel = role.label,
+        spliceable = role.spliceable,
+        distanceMeters = when (sequence) {
+            0 -> 0.0
+            cable.attachments.lastIndex -> cable.route.lengthMeters()
+            else -> closure?.let { cable.route.distanceAlongTo(it.location) }
+        },
     )
 
     /**

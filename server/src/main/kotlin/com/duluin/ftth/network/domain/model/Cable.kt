@@ -278,6 +278,56 @@ class Cable private constructor(
     private fun currentWaypoints(): List<CableWaypoint> = waypoints.map { CableWaypoint(it.node.ref, it.role) }
 
     /**
+     * Mencatat singgahan di TENGAH bentang: kotak [node] disinggahi dengan peran
+     * [role], masuk pada urutan [index] di antara singgahan tengah lainnya.
+     *
+     * [index] datang dari pemanggil karena urutan sepanjang bentang cuma bisa
+     * disimpulkan dari LETAK kotaknya di peta, dan domain tak mengenal koordinat
+     * simpul. Perhatikan bedanya, sebab di sinilah skema lama tersesat: letak
+     * dipakai untuk MENGURUTKAN anggota yang keanggotaannya sudah diputuskan
+     * manusia — bukan untuk menebak siapa anggotanya.
+     *
+     * Simpul yang sudah tercatat cukup diperbarui perannya di tempat. Kotak yang
+     * tadinya cuma dilewati lalu benar-benar dikupas tetap kotak yang sama, dan
+     * memindahkannya ke urutan baru justru merusak barisan yang sudah benar.
+     */
+    fun attach(node: NetworkNodeRef, role: CableAttachmentRole, index: Int): CableAttachment {
+        val waypoint = CableWaypoint(node, role)
+        if (from.ref == node || to.ref == node) {
+            throw ValidationException(
+                "Simpul itu ujung kabel $code — selubungnya memang habis di sana, " +
+                    "seluruh core-nya terbuka. Ujung kabel diubah lewat formulir kabel.",
+            )
+        }
+        val next = currentWaypoints().toMutableList()
+        val at = next.indexOfFirst { it.node == node }
+        if (at >= 0) next[at] = waypoint else next.add(index.coerceIn(0, next.size), waypoint)
+        attachments = buildAttachments(cableType, from, to, next, attachments)
+        return attachments.first { it.node.ref == node }
+    }
+
+    /**
+     * Mencabut catatan singgahan di [nodeId] — "ternyata kabel ini tak pernah
+     * dibuka di kotak itu".
+     *
+     * `false` berarti memang tak pernah tercatat, jadi tak ada yang berubah dan
+     * pemanggil boleh melewatkan penyimpanan. Ujung kabel tak bisa dicabut lewat
+     * sini: kabel tanpa ujung bukan kabel.
+     */
+    fun detach(nodeId: UUID): Boolean {
+        if (from.id == nodeId || to.id == nodeId) {
+            throw ValidationException(
+                "Simpul itu ujung kabel $code, bukan singgahan di tengah. " +
+                    "Memindahkan ujung kabel dikerjakan lewat formulir kabel.",
+            )
+        }
+        val next = currentWaypoints().filterNot { it.node.id == nodeId }
+        if (next.size == waypoints.size) return false
+        attachments = buildAttachments(cableType, from, to, next, attachments)
+        return true
+    }
+
+    /**
      * Menandai kabel yang fisiknya masih terpasang tapi sudah tak dipakai —
      * lihat [AssetStatus.ABANDONED].
      *

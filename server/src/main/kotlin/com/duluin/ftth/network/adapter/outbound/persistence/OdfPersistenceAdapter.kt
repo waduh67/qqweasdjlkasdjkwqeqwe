@@ -40,6 +40,9 @@ class OdfPersistenceAdapter(
 
     override fun findById(id: UUID): Odf? = jpa.findById(id).orElse(null)?.toDomain()
 
+    override fun findAllByIds(ids: Set<UUID>): List<Odf> =
+        if (ids.isEmpty()) emptyList() else jpa.findAllById(ids).map { it.toDomain() }
+
     override fun search(query: String, areaIds: Set<UUID>?, pageRequest: PageRequest): Page<Odf> {
         val spec = NetworkSpecifications.textMatches<OdfJpaEntity>(query)
             .and(NetworkSpecifications.withinAreas(areaIds))

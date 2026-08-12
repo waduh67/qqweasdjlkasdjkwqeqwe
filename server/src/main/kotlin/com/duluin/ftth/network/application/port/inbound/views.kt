@@ -3,6 +3,7 @@ package com.duluin.ftth.network.application.port.inbound
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.domain.geo.RoutePath
 import com.duluin.ftth.network.domain.model.AssetStatus
+import com.duluin.ftth.network.domain.model.CableAttachmentRole
 import com.duluin.ftth.network.domain.model.CableInstallation
 import com.duluin.ftth.network.domain.model.CableOwnership
 import com.duluin.ftth.network.domain.model.CableType
@@ -262,12 +263,47 @@ data class CableView(
     val toPortNumber: Int?,
     /** Label siap-tampil port keluaran sumber, mis. "PON 1/1/1" / "Kaki 3" / "Slot 5". */
     val fromPortLabel: String?,
+    /**
+     * Seluruh simpul yang disinggahi kabel ini, urut dari pangkal ke ujung —
+     * termasuk kedua ujungnya sendiri.
+     *
+     * [fromKind]/[toKind] dan kawan-kawan tetap dikirim dan tetap berarti sama;
+     * keduanya kini cuma ringkasan dari elemen pertama & terakhir daftar ini.
+     * Yang tak bisa dikatakan sepasang ujung adalah belasan kotak di tengah
+     * bentang yang selubungnya dibuka satu per satu — dan itulah yang ada di sini.
+     */
+    val attachments: List<CableAttachmentView>,
     val status: AssetStatus,
     /** Cara pasang; null = belum disurvei (bukan "tak terpasang"). */
     val installation: CableInstallation?,
     val installationLabel: String?,
     val ownership: CableOwnership,
     val ownershipLabel: String,
+)
+
+/**
+ * Satu singgahan kabel siap tampil.
+ *
+ * [distanceMeters] sengaja disebut TAMPILAN, bukan penentu: ia menjawab "di meter
+ * ke berapa kotak ini dari pangkal" supaya teknisi tahu urutan berjalannya, dan
+ * dihitung dari letak kotak di peta. Yang menentukan kabel ini boleh disambung di
+ * sana tetap [role] — perbuatan orang atas selubungnya.
+ */
+data class CableAttachmentView(
+    val id: UUID,
+    /** Urutan menyusuri kabel dari pangkal; 0 = pangkal, terbesar = ujung. */
+    val sequence: Int,
+    val nodeKind: NetworkNodeKind,
+    val nodeId: UUID,
+    /** Kode & nama kotaknya; null bila simpulnya bukan kotak (POP/OLT/rumah) atau sudah terhapus. */
+    val nodeCode: String?,
+    val nodeName: String?,
+    val role: CableAttachmentRole,
+    val roleLabel: String,
+    /** Selubung sudah terbuka di sini, jadi core-nya bisa disambung. */
+    val spliceable: Boolean,
+    /** Jarak dari pangkal kabel menyusuri rute, meter; null bila letak simpulnya tak diketahui. */
+    val distanceMeters: Double?,
 )
 
 /**

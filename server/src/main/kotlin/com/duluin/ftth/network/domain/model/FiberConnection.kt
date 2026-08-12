@@ -30,6 +30,25 @@ enum class ClosureKind(val label: String) {
      * kapasitas nol yang kebetulan tak muat.
      */
     val hasSplitter: Boolean get() = this == ODC || this == ODP
+
+    companion object {
+        /**
+         * Padanan kotak sambung untuk sebuah simpul jaringan; null bila simpul
+         * itu memang bukan kotak yang bisa dibuka teknisi serat.
+         *
+         * POP, badan OLT, dan rumah pelanggan sengaja tak punya padanan: kabel
+         * memang berhenti di sana, tapi tak ada selubung yang dikupas di
+         * dalamnya. Jawaban null itulah yang menolak permintaan seperti "kupas
+         * kabel ini di rumah pelanggan" tanpa perlu daftar larangan terpisah.
+         */
+        fun of(kind: NetworkNodeKind): ClosureKind? = when (kind) {
+            NetworkNodeKind.ODC -> ODC
+            NetworkNodeKind.ODP -> ODP
+            NetworkNodeKind.JOINT_BOX -> JOINT_BOX
+            NetworkNodeKind.ODF -> ODF
+            NetworkNodeKind.SITE, NetworkNodeKind.OLT, NetworkNodeKind.CUSTOMER -> null
+        }
+    }
 }
 
 /**
