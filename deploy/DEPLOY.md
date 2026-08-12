@@ -48,8 +48,9 @@ Istilah singkat:
 3. **Networking / NSG (firewall Azure)** — buka **inbound port**:
    - `22` (SSH), `80` (HTTP), `443` (HTTPS). Sisanya biarin ketutup.
    - **Mau pakai fitur VPN** (remote Mikrotik tanpa IP publik)? buka juga port hub
-     OpenVPN — default `1194/UDP` (samakan dengan Port/Protokol saat bikin hub di
+     OpenVPN — default `1194/TCP` (samakan dengan Port/Protokol saat bikin hub di
      dashboard) **dan** rentang port remote Winbox `20000-40000/TCP`. Lihat Bagian I.
+     TCP, bukan UDP: klien OpenVPN RouterOS v6 tak mengenal UDP.
 4. Create. Setelah jadi, catat **Public IP** VM-nya (mis. `20.11.22.33`).
 5. Coba SSH dari laptop:
    ```bash
@@ -231,10 +232,19 @@ Fitur ini menjadikan **VPS ini sekaligus hub OpenVPN**. Tenant tinggal klik "Gen
 akun VPN" di dashboard → dapat `ip:port` + user/pass → tempel di Mikrotik. Hub-nya
 dikelola HANYA oleh admin platform.
 
-1. **Buka port di NSG Azure** — tambah inbound rule `1194/UDP` (atau port/protokol
+1. **Buka port di NSG Azure** — tambah inbound rule `1194/TCP` (atau port/protokol
    yang kamu pilih saat bikin hub) **plus** rentang `20000-40000/TCP` untuk remote Winbox
    (tiap akun VPN dapat satu port unik di rentang ini; sesuaikan bila kamu ubah
    `FTTH_VPN_REMOTE_PORT_MIN/MAX`).
+
+   > **Kenapa TCP, bukan UDP?** Klien OpenVPN RouterOS **v6 hanya bisa TCP**, dan perangkat
+   > v6 tak bisa di-upgrade (hAP lite/RB941 ber-CPU smips tak akan pernah dapat RouterOS 7).
+   > Hub UDP menutup pintu buat seluruh armada itu — interfacenya diam di "connecting..."
+   > tanpa pesan apa pun. Isi terowongan ini trafik manajemen bervolume kecil, jadi ongkos
+   > TCP tak terasa. Pilih UDP hanya bila SEMUA perangkat dipastikan v7.
+   >
+   > Lewat Azure CLI: `az network nsg rule create -g <rg> --nsg-name <nsg> -n ovpn-tcp \
+   > --priority 1100 --access Allow --protocol Tcp --destination-port-ranges 1194`
 
 2. **Kasih tahu aplikasi URL publiknya** — di `/opt/ftth/.env`, tambah baris:
    ```bash
@@ -252,7 +262,7 @@ dikelola HANYA oleh admin platform.
 
 3. **Bikin hub di dashboard** — login sebagai admin platform → menu **Server VPN** →
    isi Host = **IP publik VPS (mentah, bukan domain di balik Cloudflare)**, Port `1194`,
-   Protokol UDP, Subnet overlay mis. `10.8.0.0/24` → simpan. Aplikasi menerbitkan CA +
+   Protokol TCP, Subnet overlay mis. `10.8.0.0/24` → simpan. Aplikasi menerbitkan CA +
    sertifikat server otomatis dan menampilkan **perintah pasang satu-baris (sekali tampil)**.
 
 4. **Jalankan perintah pasang itu di VPS** (bukan di laptop). Installer memasang OpenVPN
@@ -273,7 +283,7 @@ dikelola HANYA oleh admin platform.
 > `ftth-connect.sh`/`ftth-disconnect.sh` + aturan iptables baru ikut terpasang. Akun lama
 > otomatis dapat port remote lewat migrasi DB; Mikrotik-nya cukup reconnect ke hub.
 
-> Domain di balik Cloudflare (orange-cloud) hanya mem-proxy HTTP/HTTPS, **bukan** UDP
+> Domain di balik Cloudflare (orange-cloud) hanya mem-proxy HTTP/HTTPS, **bukan** port
 > 1194 maupun rentang TCP Winbox — makanya Host hub wajib IP publik VPS mentah. Callback
 > aplikasi (lewat HTTPS domain) tetap jalan normal.
 

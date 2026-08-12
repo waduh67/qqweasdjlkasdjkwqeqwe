@@ -81,13 +81,21 @@ Model OpenVPN-nya: `verify-client-cert none` + `username-as-common-name` +
 v6 (CBC)** sekaligus. Jadi VPS tak menyimpan daftar user — semua verifikasi
 memanggil balik aplikasi.
 
-**Dukungan RouterOS v6.** Klien OVPN v6 itu **TCP-only** + **CBC-only** (tanpa NCP)
-dan tanpa properti `verify-server-certificate`. Maka: (a) hub yang melayani v6 harus
-berprotokol **TCP** (v6 mustahil dial UDP) — `VpnAccountView.supportsV6` = true hanya
+**Dukungan RouterOS v6.** Klien OVPN v6 itu **TCP-only** + **CBC-only** (tanpa NCP).
+Maka: (a) hub yang melayani v6 harus berprotokol **TCP** — `VpnServer.servesRouterOsV6`
+(dipakai `VpnAccountView.supportsV6` maupun penolakan render) mengembalikan true hanya
 untuk hub TCP; (b) config v6 dirender terpisah lewat `VpnClientVariant.V6` (menu lama
-`/interface ovpn-client add`, `cipher=aes256-cbc`, `certificate=none`). Perangkat v7
-tak terpengaruh (tetap nego GCM). Render v6 **best-effort** — properti CLI v6 bervariasi
-antar-rilis; minta akun varian v6 pada hub non-TCP ditolak `ConflictException`.
+`/interface ovpn-client add`, `cipher=aes256-cbc`, `certificate=none` +
+`verify-server-certificate=no`). Perangkat v7 tak terpengaruh (tetap nego GCM); minta
+akun varian v6 pada hub non-TCP ditolak `ConflictException` dengan langkah perbaikannya.
+
+> **Kenapa bawaan hub = TCP.** Perangkat v6 di lapangan tak bisa "dinaikkan" ke v7 —
+> hAP lite/RB941 ber-CPU smips tak akan pernah kebagian RouterOS 7. Hub yang lahir UDP
+> jadi menutup pintu buat armada itu, dan kegagalannya bisu: interface v6 berhenti di
+> `connecting...` tanpa pesan. Isi terowongan ini trafik manajemen bervolume kecil
+> (Winbox, API, SNMP, CoA), jadi ongkos TCP-di-dalam-TCP tak terasa. UDP tetap boleh
+> dipilih untuk armada yang seluruhnya v7. **Port hub wajib dibuka `tcp` di firewall/NSG
+> VPS** — port tertutup adalah penyebab paling sering v6 mandek di `connecting...`.
 
 **Liveness peer (online nyata).** Selain status administratif (ENABLED/DISABLED), tiap akun
 punya `online` + `lastHandshakeAt` yang **mencerminkan koneksi nyata**. Skrip `client-connect`
@@ -162,7 +170,7 @@ Artefak siap-unduh, dirender dari entitas yang rahasianya **sudah terdekripsi**:
 | Properti | Bawaan | Guna |
 |---|---|---|
 | `default-port` | `1194` | Bawaan saat hub dibuat tanpa nilai eksplisit |
-| `default-protocol` | `UDP` | idem |
+| `default-protocol` | `TCP` | idem — TCP supaya perangkat RouterOS v6 ikut kebagian |
 | `default-tunnel-cidr` | `10.8.0.0/24` | idem |
 | `public-base-url` | `""` | URL publik aplikasi untuk perintah pasang; kosong → placeholder |
 
