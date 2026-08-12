@@ -35,7 +35,18 @@ export interface ToolState {
   mode: 'idle' | 'draw' | 'edit'
   from: SnappedDevice | null
   to: SnappedDevice | null
-  /** Jumlah titik belok (tidak termasuk kedua ujung). */
+  /**
+   * Kotak yang disinggahi di TENGAH bentang, urut dari pangkal — hasil menerus
+   * gambar melewati kotak yang sudah terlanjur jadi ujung sementara.
+   *
+   * Inilah bentuk asli kabel distribusi: satu selubung menyusuri gang, dikupas di
+   * tiap ODP untuk mengambil satu-dua core, lalu jalan terus. Menggambarnya
+   * sebagai delapan kabel ODP→ODP membuat panjang materialnya terhitung dobel dan
+   * simulasi putusnya bohong — makanya singgahan direkam saat digambar, bukan
+   * ditebak belakangan dari jarak kotak ke garis.
+   */
+  waypoints: SnappedDevice[]
+  /** Jumlah titik belok bebas (bukan kotak, bukan ujung). */
   bendCount: number
   lengthMeters: number
   cableType: CableType | null
@@ -65,6 +76,11 @@ export interface CableTool {
   startDraw(origin?: SnappedDevice): void
   startEdit(cable: EditableCable): void
   removeLastBend(): void
+  /**
+   * Buang satu singgahan dari gambar — "ternyata selubungnya tak lewat kotak itu".
+   * Titik rutenya ikut hilang, sebab yang dihapus memang tempat kabelnya mampir.
+   */
+  removeWaypoint(nodeId: string): void
   cancel(): void
   destroy(): void
   /** Koordinat rute lengkap [lng,lat] termasuk kedua ujung — untuk disimpan. */
@@ -147,6 +163,19 @@ export function canStartCableFrom(kind: NodeKind): boolean {
   return kind !== 'CUSTOMER'
 }
 
+/**
+ * Simpul yang selubung kabel bisa DISINGGAHI di tengah bentang — yaitu kotak
+ * yang bisa dibuka orang: kabinet, kotak terminal, kotak sambung, rak.
+ *
+ * Rumah pelanggan tak masuk, dan bukan karena aturan administratif: kabel yang
+ * "lewat" rumah pelanggan tak pernah dikupas di sana — ia berhenti di ONU. Begitu
+ * pula POP dan badan OLT. Membiarkannya jadi singgahan berarti menggambar kabel
+ * yang mustahil dirawat, dan server memang menolaknya.
+ */
+export function canTapAt(kind: NodeKind): boolean {
+  return kind === 'ODC' || kind === 'ODP' || kind === 'JOINT_BOX' || kind === 'ODF'
+}
+
 const EARTH_RADIUS_M = 6_371_008.8
 
 function haversine(a: [number, number], b: [number, number]): number {
@@ -175,7 +204,13 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
   // --- state gambar ---
   let from: SnappedDevice | null = null
   let to: SnappedDevice | null = null
-  let bends: Array<[number, number]> = [] // titik belok antara from dan to
+  /**
+   * Segalanya yang ada di antara kedua ujung, URUT sebagaimana digambar: titik
+   * belok bebas (`device` null) bercampur kotak yang disinggahi. Satu daftar,
+   * bukan dua, karena urutannya sepanjang bentang tak bisa disusun ulang dari dua
+   * daftar terpisah — dan urutan itulah yang jadi urutan singgahan kabelnya.
+   */
+  let via: Array<{ coord: [number, number]; device: SnappedDevice | null }> = []
   let cursor: [number, number] | null = null
   let snap: SnappedDevice | null = null
 
@@ -365,9 +400,39 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
     if (mode === 'edit') return editCoords
     const coords: Array<[number, number]> = []
     if (from) coords.push([from.lng, from.lat])
-    coords.push(...bends)
+    coords.push(...via.map((v) => v.coord))
     if (to) coords.push([to.lng, to.lat])
     return coords
+  }
+
+  /**
+   * Simpul yang sudah dipakai kabel ini. Satu kotak cuma boleh disinggahi SEKALI —
+   * selubung yang masuk lalu keluar dari kotak yang sama tetap satu singgahan, dan
+   * server menolak yang dobel. Menahannya di sini berarti operator tak pernah
+   * sampai ke penolakan itu.
+   */
+  function usedNodeIds(): Set<string> {
+    const ids = new Set<string>()
+    if (from) ids.add(from.id)
+    if (to) ids.add(to.id)
+    for (const v of via) if (v.device) ids.add(v.device.id)
+    return ids
+  }
+
+  /**
+   * Perangkat yang sah dijadikan ujung berikutnya: membentuk jenis kabel yang
+   * benar dari pangkal, belum terpakai, dan — bila ujung sekarang sudah ada —
+   * ujung itu memang kotak yang bisa disinggahi. Kabel drop tak diteruskan
+   * melewati rumah pelanggan.
+   */
+  function extendable(candidate: SnappedDevice | null): boolean {
+    return (
+      candidate != null &&
+      from != null &&
+      (to == null || canTapAt(to.kind)) &&
+      !usedNodeIds().has(candidate.id) &&
+      inferType(from.kind, candidate.kind) != null
+    )
   }
 
   function emit() {
@@ -381,7 +446,13 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
       mode,
       from: mode === 'edit' ? editEndpoints?.from ?? null : from,
       to: mode === 'edit' ? editEndpoints?.to ?? null : to,
-      bendCount: mode === 'edit' ? Math.max(0, editCoords.length - 2) : bends.length,
+      // Mode edit cuma menggeser geometri: singgahan kabel yang sudah tersimpan
+      // diurus lewat panel kabel & meja sambung, bukan dari alat gambar ini.
+      waypoints: mode === 'edit' ? [] : via.flatMap((v) => (v.device ? [v.device] : [])),
+      bendCount:
+        mode === 'edit'
+          ? Math.max(0, editCoords.length - 2)
+          : via.filter((v) => v.device == null).length,
       lengthMeters: lineLength(currentRoute()),
       cableType: type ?? null,
       valid: mode === 'edit' ? true : from != null && to != null && inferType(from.kind, to.kind) != null,
@@ -395,14 +466,17 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
     const tail: [number, number] | null = snap ? [snap.lng, snap.lat] : cursor
     const coords: Array<[number, number]> = []
     if (from) coords.push([from.lng, from.lat])
-    coords.push(...bends)
-    if (!to && tail) coords.push(tail)
+    coords.push(...via.map((v) => v.coord))
     if (to) coords.push([to.lng, to.lat])
+    // Karet gambar cuma ditarik dari ujung terakhir selagi jalurnya masih memanjang.
+    if (tail) coords.push(tail)
     setLine(coords)
 
+    // Titik yang menempel perangkat digambar seperti ujung (bulat penuh): dari
+    // seberang meja pun kelihatan mana yang cuma belokan dan mana yang kotak.
     const verts: Array<{ coord: [number, number]; locked: boolean }> = []
     if (from) verts.push({ coord: [from.lng, from.lat], locked: true })
-    bends.forEach((b) => verts.push({ coord: b, locked: false }))
+    via.forEach((v) => verts.push({ coord: v.coord, locked: v.device != null }))
     if (to) verts.push({ coord: [to.lng, to.lat], locked: true })
     setVerts(verts)
 
@@ -426,12 +500,13 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
     cursor = [e.lngLat.lng, e.lngLat.lat]
     const candidate = deviceAt(e.point)
     // Saat mencari ujung awal, hanya perangkat yang boleh jadi awal yang disorot.
-    // Saat mencari ujung akhir, hanya perangkat yang membentuk tipe kabel sah.
+    // Sesudah itu, yang disorot perangkat yang sah jadi ujung BERIKUTNYA — termasuk
+    // saat ujung sudah ada, sebab menyorotnya itulah yang memberi tahu bahwa
+    // gambarnya masih boleh diteruskan melewati kotak ini.
     if (!from) {
       snap = candidate && canStartCableFrom(candidate.kind) ? candidate : null
     } else {
-      snap =
-        candidate && candidate.id !== from.id && inferType(from.kind, candidate.kind) != null ? candidate : null
+      snap = extendable(candidate) ? candidate : null
     }
     map.getCanvas().style.cursor = snap ? 'pointer' : 'crosshair'
     renderDraw()
@@ -450,8 +525,15 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
       emit()
       return
     }
-    // Ujung sudah ada: klik perangkat sasaran yang sah = selesai.
-    if (candidate && candidate.id !== from.id && inferType(from.kind, candidate.kind) != null) {
+    // Pangkal sudah ada: klik perangkat sasaran yang sah = ujungnya sampai di situ.
+    //
+    // Kalau ujungnya SUDAH ada, kotak lama tidak diganti melainkan turun pangkat
+    // jadi singgahan, dan gambarnya menerus. Begitulah kabel distribusi ditarik di
+    // lapangan: satu haspel menyusuri gang, mampir di ODP demi ODP, berhenti di
+    // yang terakhir. Operator cukup mengklik kotaknya berurutan — tak perlu tahu
+    // istilah "waypoint", dan tak tergoda menggambar delapan kabel pendek.
+    if (extendable(candidate) && candidate) {
+      if (to) via.push({ coord: [to.lng, to.lat], device: to })
       to = candidate
       snap = null
       map.getCanvas().style.cursor = ''
@@ -459,8 +541,16 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
       emit()
       return
     }
-    // Selain itu: tambah titik belok di posisi klik.
-    bends.push([e.lngLat.lng, e.lngLat.lat])
+    // Selain itu: tambah titik belok di posisi klik. Belokan yang diklik SESUDAH
+    // ujung ditentukan berarti jalurnya diteruskan melewati kotak itu — kotaknya
+    // turun jadi singgahan dan ujungnya kembali dicari, sebab belokan yang
+    // dipaksa masuk sebelum ujung akan menggambar jalur berbentuk zigzag yang
+    // tak pernah dimaksudkan siapa pun.
+    if (to && canTapAt(to.kind)) {
+      via.push({ coord: [to.lng, to.lat], device: to })
+      to = null
+    }
+    via.push({ coord: [e.lngLat.lng, e.lngLat.lat], device: null })
     renderDraw()
     emit()
   }
@@ -615,7 +705,7 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
   function reset() {
     from = null
     to = null
-    bends = []
+    via = []
     cursor = null
     snap = null
     editEndpoints = null
@@ -662,12 +752,33 @@ export function createCableTool(map: MapLibreMap, onChange: (state: ToolState) =
       emit()
     },
 
+    /**
+     * Membatalkan PERSIS satu klik terakhir, apa pun bentuknya. Kotak yang tadi
+     * turun pangkat jadi singgahan naik lagi jadi ujung — kalau tidak, salah
+     * klik sekali memaksa menggambar ulang dari nol.
+     */
     removeLastBend() {
-      if (mode === 'draw' && !to && bends.length > 0) {
-        bends.pop()
-        renderDraw()
-        emit()
+      if (mode !== 'draw') return
+      const last = via[via.length - 1]
+      if (last) {
+        via.pop()
+        if (last.device) to = last.device
+      } else if (to) {
+        to = null
+      } else {
+        return
       }
+      renderDraw()
+      emit()
+    },
+
+    removeWaypoint(nodeId: string) {
+      if (mode !== 'draw') return
+      const next = via.filter((v) => v.device?.id !== nodeId)
+      if (next.length === via.length) return
+      via = next
+      renderDraw()
+      emit()
     },
 
     cancel() {

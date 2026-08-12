@@ -5,6 +5,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { api, ApiError, tokenStore } from '../api/client'
 import type {
   BlastRadiusView,
+  CableAttachmentRole,
   CableCutView,
   CableInstallation,
   CableOwnership,
@@ -14,6 +15,7 @@ import type {
   ImpactCause,
   ImpactedOverlay,
   JointBoxView,
+  NodeKind,
   OdfView,
   OdpInspection,
   OltView,
@@ -1345,6 +1347,8 @@ export function MapPage() {
     // Fisik jalur; installation null = belum disurvei (bukan ditebak "udara").
     installation: CableInstallation | null
     ownership: CableOwnership
+    // Kotak yang disinggahi di tengah bentang + perannya, urut dari pangkal.
+    waypoints: Array<{ nodeKind: NodeKind; nodeId: string; role: CableAttachmentRole }>
   }) => {
     const route = tool.current?.route() ?? []
     const state = toolState
@@ -1363,6 +1367,10 @@ export function MapPage() {
         toId: state.to.id,
         fromPonPortId: form.fromPonPortId,
         fromPortNumber: form.fromPortNumber,
+        // Dikirim sejak awal, bukan ditambahkan belakangan lewat panggilan kedua:
+        // kabel yang sempat tersimpan tanpa singgahannya adalah kabel yang core-nya
+        // tak bisa disambung di kotak yang jelas-jelas baru saja diklik operator.
+        waypoints: form.waypoints,
         status: 'ACTIVE',
         installation: form.installation,
         ownership: form.ownership,
@@ -1694,6 +1702,10 @@ export function MapPage() {
         {/* Panel simpan kabel baru (kedua ujung sudah ditentukan) */}
         {toolState?.complete && toolState.from && toolState.to && toolState.cableType && (
           <SaveCablePanel
+            // Ujung berubah = kabel yang lain: nama, kode, dan port yang sudah
+            // terisi mengacu ke tujuan lama, dan membiarkannya berarti orang
+            // menyimpan kabel ke ODP-8 dengan kode bertuliskan ODP-1.
+            key={toolState.to.id}
             from={toolState.from.code}
             to={toolState.to.code}
             fromKind={toolState.from.kind}
@@ -1702,6 +1714,8 @@ export function MapPage() {
             toId={toolState.to.id}
             cableType={toolState.cableType}
             lengthMeters={toolState.lengthMeters}
+            waypoints={toolState.waypoints}
+            onRemoveWaypoint={(nodeId) => tool.current?.removeWaypoint(nodeId)}
             canAssignPort={can('customer.onu.assign')}
             onCancel={cancelTool}
             onSave={saveNewCable}

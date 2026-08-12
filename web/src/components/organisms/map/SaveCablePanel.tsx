@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { MessageBar, MessageBarBody } from '@fluentui/react-components'
 import { api } from '@/api/client'
 import type {
+  CableAttachmentRole,
   CableInstallation,
   CableOwnership,
   CablePortOption,
@@ -10,10 +11,19 @@ import type {
   OdpInspection,
   OnuView,
 } from '@/api/network'
+import { CABLE_ATTACHMENT_ROLE_LABEL } from '@/api/network'
 import { Button, SelectField, TextField } from '@/components/atoms'
 import { BladeHead } from '@/components/molecules'
-import { CODE_MAX, DEFAULT_CORES, TYPE_LABEL, autoCableCode, formatLength, type SourcePort } from '@/map/cableFormat'
-import { legalCableTypes } from '@/map/cableTool'
+import {
+  CODE_MAX,
+  DEFAULT_CORES,
+  TYPE_LABEL,
+  autoCableCode,
+  formatLength,
+  waypointCommands,
+  type SourcePort,
+} from '@/map/cableFormat'
+import { legalCableTypes, type SnappedDevice } from '@/map/cableTool'
 import { CablePhysicalFields } from './CablePhysicalFields'
 
 export function SaveCablePanel({
@@ -25,6 +35,8 @@ export function SaveCablePanel({
   toId,
   cableType,
   lengthMeters,
+  waypoints,
+  onRemoveWaypoint,
   canAssignPort,
   onCancel,
   onSave,
@@ -41,6 +53,10 @@ export function SaveCablePanel({
   toId: string
   cableType: CableType
   lengthMeters: number
+  /** Kotak yang disinggahi di tengah bentang, urut dari pangkal — hasil gambar. */
+  waypoints: SnappedDevice[]
+  /** Buang satu singgahan dari gambar (titik rutenya ikut hilang). */
+  onRemoveWaypoint: (nodeId: string) => void
   canAssignPort: boolean
   onCancel: () => void
   onSave: (form: {
@@ -55,6 +71,8 @@ export function SaveCablePanel({
     onuId?: string
     installation: CableInstallation | null
     ownership: CableOwnership
+    /** Singgahan di tengah bentang + perannya, urut dari pangkal. */
+    waypoints: Array<{ nodeKind: NodeKind; nodeId: string; role: CableAttachmentRole }>
   }) => void
 }) {
   // Jenis kabel hampir selalu tersirat dari sepasang ujungnya, jadi ia datang sebagai
@@ -77,6 +95,8 @@ export function SaveCablePanel({
   // teknisi yang datang bertangga ke gangguan di dalam duct.
   const [installation, setInstallation] = useState<CableInstallation | ''>('')
   const [ownership, setOwnership] = useState<CableOwnership>('OWNED')
+  // Peran tiap singgahan; yang tak disebut berarti masih bawaan (dikupas).
+  const [roles, setRoles] = useState<Record<string, CableAttachmentRole>>({})
 
   /**
    * Drop yang benar-benar berujung di ONU pelanggan lewat slot ODP — hanya di situ
@@ -212,6 +232,7 @@ export function SaveCablePanel({
       onuId: customerDrop && onu && selectedPort != null ? onu.id : undefined,
       installation: installation === '' ? null : installation,
       ownership,
+      waypoints: waypointCommands(waypoints, roles),
     })
 
   return (
@@ -253,6 +274,42 @@ export function SaveCablePanel({
               putusnya jadi jujur.
             </MessageBarBody>
           </MessageBar>
+        )}
+        {/* Bentuk asli kabel distribusi: satu selubung menyusuri gang, mampir di
+            beberapa kotak, berhenti di yang terakhir. Yang tercatat di sini
+            menentukan di kotak mana core-nya boleh disambung nanti — jadi peran
+            tiap singgahan bisa dibetulkan sekarang, selagi orangnya masih ingat. */}
+        {waypoints.length > 0 && (
+          <div className="stack" style={{ gap: '0.35rem' }}>
+            <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+              Mampir di {waypoints.length} kotak
+            </span>
+            {waypoints.map((w, i) => (
+              <div key={w.id} className="row" style={{ gap: '0.4rem', alignItems: 'flex-end' }}>
+                <span className="tnum muted" style={{ fontSize: '0.78rem', paddingBottom: '0.4rem' }}>
+                  {i + 1}.
+                </span>
+                <span style={{ flex: 1, fontSize: '0.85rem', paddingBottom: '0.4rem' }}>{w.code}</span>
+                <SelectField
+                  aria-label={`Keadaan selubung di ${w.code}`}
+                  value={roles[w.id] ?? 'TAPPED'}
+                  onChange={(_, data) =>
+                    setRoles((prev) => ({ ...prev, [w.id]: data.value as CableAttachmentRole }))
+                  }
+                >
+                  <option value="TAPPED">{CABLE_ATTACHMENT_ROLE_LABEL.TAPPED}</option>
+                  <option value="PASSING">{CABLE_ATTACHMENT_ROLE_LABEL.PASSING}</option>
+                </SelectField>
+                <Button variant="subtle" onClick={() => onRemoveWaypoint(w.id)}>
+                  Buang
+                </Button>
+              </div>
+            ))}
+            <span className="muted" style={{ fontSize: '0.78rem' }}>
+              Panjang materialnya dihitung sekali untuk seluruh bentang, dan kalau selubung ini
+              putus, semua kotak di atas ikut padam — persis seperti di lapangan.
+            </span>
+          </div>
         )}
         {/* Kode di atas nama: inilah yang disebut lewat radio dan ditulis di label
             selubung, sedangkan nama cuma dibaca di layar. Terisi sendiri supaya tak

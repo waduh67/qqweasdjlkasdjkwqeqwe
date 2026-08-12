@@ -1,5 +1,5 @@
-import type { CableType, CableView } from '@/api/network'
-import { canStartCableFrom, layerNodeKind, type SnappedDevice, type ToolState } from './cableTool'
+import type { CableAttachmentRole, CableType, CableView } from '@/api/network'
+import { canStartCableFrom, layerNodeKind, type NodeKind, type SnappedDevice, type ToolState } from './cableTool'
 
 /**
  * Cara sebuah kabel DISEBUT: kode, nama jenis, panjang, dan badan permintaan yang
@@ -97,7 +97,25 @@ export function formatLength(meters: number): string {
 export function drawHint(state: ToolState): string {
   if (!state.from) return 'Klik perangkat sumber (POP, ODC, atau ODP)'
   if (!state.to) return `Dari ${state.from.code} — klik titik belok, lalu klik perangkat tujuan`
-  return 'Selesai — isi detail kabel'
+  // Kalimat ketiga menyebut cara menerus, sebab di situlah nilai terbesarnya:
+  // satu selubung yang mampir di banyak kotak jauh lebih jujur daripada rantai
+  // kabel pendek, tapi tak ada yang menebak gerakannya kalau tak diberi tahu.
+  const singgah = state.waypoints.length
+  const mampir = singgah > 0 ? ` · mampir di ${state.waypoints.map((w) => w.code).join(', ')}` : ''
+  return `Sampai ${state.to.code} — isi detail kabelnya${mampir}. Selubungnya menerus? Klik kotak berikutnya.`
+}
+
+/**
+ * Singgahan hasil gambar dalam bentuk yang dikirim server. Peran bawaannya
+ * DIKUPAS, sebab kotak yang sengaja diklik operator saat menarik kabel hampir
+ * selalu kotak yang memang dibuka untuk mengambil core — yang cuma dilewati
+ * biasanya baru ketahuan belakangan, saat kotaknya dibuka teknisi lain.
+ */
+export function waypointCommands(
+  waypoints: SnappedDevice[],
+  roles: Record<string, CableAttachmentRole>,
+): Array<{ nodeKind: NodeKind; nodeId: string; role: CableAttachmentRole }> {
+  return waypoints.map((w) => ({ nodeKind: w.kind, nodeId: w.id, role: roles[w.id] ?? 'TAPPED' }))
 }
 
 /** Port keluaran sumber yang dipilih: PON port OLT (ponPortId) atau kaki/slot (portNumber). */
