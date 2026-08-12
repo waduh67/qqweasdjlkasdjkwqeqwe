@@ -139,6 +139,7 @@ class FiberConnectionService(
         val b = command.b.toPoint()
         assertPairMakesSense(a, b)
         val cores = listOf(a, b).mapNotNull { point -> validate(point, closure) }
+        assertNotSameCable(cores)
         assertRoomLeft(closure)
 
         val actor = currentUser.current()
@@ -480,6 +481,40 @@ class FiberConnectionService(
                 else -> Unit
             }
         }
+    }
+
+    /**
+     * Dua core sehelai kabel yang sama tak boleh dikawinkan.
+     *
+     * Secara fisik alat las tak keberatan — makanya dulu lolos — tapi hasilnya
+     * serat yang berbalik arah: cahaya berangkat dari ODC lewat core 1, menempuh
+     * sekian ratus meter sampai kotak ini, lalu pulang ke ODC lagi lewat core 2.
+     * Dua core habis, tak ada satu pun pelanggan yang terlayani, dan penelusuran
+     * jalur berputar-putar di tempat yang sama.
+     *
+     * Yang dikerjakan joint box justru kebalikannya: menyatukan core kabel yang
+     * DATANG dengan core kabel LANJUTAN. Kalau kabel lanjutannya belum ditarik,
+     * memang belum ada yang bisa disambung di sini — bukan kabelnya yang
+     * disambung ke dirinya sendiri.
+     *
+     * Loop sungguhan memang ada di lapangan (mengukur sepasang serat dari satu
+     * ujung dengan OTDR), tapi itu pekerjaan sementara yang dibongkar lagi begitu
+     * selesai — bukan bentuk jaringan yang layak dicatat sebagai terpasang.
+     *
+     * Ukuran daftar sudah cukup jadi penanda: [validate] hanya mengembalikan core
+     * untuk titik ber-serat, jadi dua isi berarti kedua ujungnya memang core.
+     */
+    private fun assertNotSameCable(cores: List<CableCore>) {
+        if (cores.size < 2) return
+        val (from, to) = cores
+        if (from.cableId != to.cableId) return
+        val cable = cableRepository.findById(from.cableId)
+        throw ValidationException(
+            "Core ${from.coreNumber} dan core ${to.coreNumber} sehelai di kabel yang sama " +
+                "(${cable?.code ?: "?"}) — menyambungnya membuat cahaya berbalik ke tempat asalnya " +
+                "dan menghabiskan dua core tanpa melayani siapa pun. Sambungkan core kabel yang datang " +
+                "ke core kabel lanjutan; bila kabel lanjutannya belum ada, tarik dulu kabelnya dari kotak ini.",
+        )
     }
 
     /** Port ODF & PON port cuma ada artinya di dalam rak; di kotak lain tak ada raknya. */

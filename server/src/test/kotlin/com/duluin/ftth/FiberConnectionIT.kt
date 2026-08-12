@@ -236,6 +236,38 @@ class FiberConnectionIT {
         assertThat(error).contains("tak lewat")
     }
 
+    /**
+     * Kotak yang baru dijangkau SATU kabel tak punya apa pun untuk disambung, dan
+     * jawaban yang paling menggoda saat itu — mengawinkan core 1 dengan core 2
+     * kabel yang sama — justru yang paling keliru: seratnya berbalik pulang ke
+     * tempat asalnya, dua core habis, tak ada yang terlayani.
+     */
+    @Test
+    fun `dua core sehelai kabel yang sama tak boleh dikawinkan`() {
+        val token = newTenantAdmin("balik")
+        val odc = newOdc(token, 106.99, -6.24)
+        val odp = newOdp(token, 107.005, -6.24)
+        val cable = newDistribution(token, odc, odp, endLon = 107.005)
+
+        val error = post(
+            "/api/fiber-connections", token,
+            connectBody("ODP", odp, core(coreId(token, cable, 1)), core(coreId(token, cable, 2))),
+            expected = 400,
+        )
+        assertThat(error).contains("kabel yang sama")
+
+        // Tak cuma ditolak — tak boleh menyisakan jejak. Core-nya tetap BEBAS,
+        // sebab yang menandai core terpakai adalah sambungan yang jadi.
+        assertThat(coreStatus(token, cable, 1)).isEqualTo("FREE")
+        assertThat(coreStatus(token, cable, 2)).isEqualTo("FREE")
+
+        // Yang benar tetap boleh: core kabel ini bertemu kaki splitter kotaknya.
+        post(
+            "/api/fiber-connections", token,
+            connectBody("ODP", odp, core(coreId(token, cable, 1)), splitterIn(splitterOf(token, "ODP", odp))),
+        )
+    }
+
     @Test
     fun `bentuk titik yang mustahil ditolak sebelum menyentuh basis data`() {
         val token = newTenantAdmin("bentuk")
