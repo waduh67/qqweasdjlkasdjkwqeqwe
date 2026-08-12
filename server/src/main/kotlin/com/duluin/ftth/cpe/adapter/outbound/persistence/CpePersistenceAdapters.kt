@@ -4,6 +4,7 @@ import com.duluin.ftth.cpe.application.port.outbound.CpeActionLogRepository
 import com.duluin.ftth.cpe.application.port.outbound.CpeDeviceRepository
 import com.duluin.ftth.cpe.domain.model.CpeActionLog
 import com.duluin.ftth.cpe.domain.model.CpeDevice
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import java.util.UUID
 
@@ -22,6 +23,8 @@ class CpeDevicePersistenceAdapter(
             softwareVersion = device.softwareVersion
             ipAddress = device.ipAddress
             lastInformAt = device.lastInformAt
+            ssid = device.ssid
+            temperatureC = device.temperatureC
             customerId = device.customerId
             onuId = device.onuId
         } ?: CpeDeviceJpaEntity(
@@ -35,6 +38,8 @@ class CpeDevicePersistenceAdapter(
             softwareVersion = device.softwareVersion,
             ipAddress = device.ipAddress,
             lastInformAt = device.lastInformAt,
+            ssid = device.ssid,
+            temperatureC = device.temperatureC,
             customerId = device.customerId,
             onuId = device.onuId,
         )
@@ -51,6 +56,9 @@ class CpeDevicePersistenceAdapter(
 
     override fun findAllForCurrentTenant(): List<CpeDevice> =
         jpa.findAll().map { it.toDomain() }
+
+    override fun findByIds(ids: Collection<UUID>): List<CpeDevice> =
+        if (ids.isEmpty()) emptyList() else jpa.findAllById(ids).map { it.toDomain() }
 
     override fun deleteByIds(ids: Collection<UUID>) {
         jpa.deleteAllById(ids)
@@ -78,6 +86,9 @@ class CpeActionLogPersistenceAdapter(
 
     override fun findByDeviceId(deviceId: UUID): List<CpeActionLog> =
         jpa.findByDeviceIdOrderByRequestedAtDesc(deviceId).map { it.toDomain() }
+
+    override fun findRecentForCurrentTenant(limit: Int): List<CpeActionLog> =
+        jpa.findAllByOrderByRequestedAtDesc(PageRequest.of(0, limit)).map { it.toDomain() }
 }
 
 private fun CpeDeviceJpaEntity.toDomain(): CpeDevice = CpeDevice.rehydrate(
@@ -91,6 +102,8 @@ private fun CpeDeviceJpaEntity.toDomain(): CpeDevice = CpeDevice.rehydrate(
     softwareVersion = softwareVersion,
     ipAddress = ipAddress,
     lastInformAt = lastInformAt,
+    ssid = ssid,
+    temperatureC = temperatureC,
     customerId = customerId,
     onuId = onuId,
 )

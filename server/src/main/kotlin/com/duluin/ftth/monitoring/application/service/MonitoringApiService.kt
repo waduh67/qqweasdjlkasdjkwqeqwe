@@ -47,6 +47,7 @@ class MonitoringApiService(
                 onuId = onuId,
                 status = point.status,
                 rxPowerDbm = point.rxPowerDbm,
+                txPowerDbm = point.txPowerDbm,
                 distanceMeters = point.distanceMeters,
                 downCause = point.downCause,
                 lastOffAt = point.lastOffAt,

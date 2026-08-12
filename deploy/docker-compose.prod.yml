@@ -222,6 +222,19 @@ services:
       FTTH_CPE_GENIEACS_BASE_URL: http://genieacs-nbi:7557
       FTTH_CPE_SYNC_INTERVAL: ${FTTH_CPE_SYNC_INTERVAL:-PT5M}
       FTTH_CPE_ONLINE_STALE_AFTER: ${FTTH_CPE_ONLINE_STALE_AFTER:-PT15M}
+      # Alamat CWMP yang DIKETIK KE ONT, dirakit aplikasi jadi `http://<host>:<port>/`.
+      # Dua var ini juga dipakai container genieacs di atas, tapi HARUS diteruskan ke
+      # sini juga: tanpa keduanya kartu "Setelan ONT" di konsol merender "belum
+      # dikonfigurasi" walau ACS-nya sendiri jalan normal.
+      FTTH_CPE_PUBLIC_HOST: ${FTTH_CPE_PUBLIC_HOST:-}
+      FTTH_CPE_CWMP_PORT: ${FTTH_CPE_CWMP_PORT:-7547}
+      # Kredensial yang diketik ke ONT. Kosong = kolomnya ditandai "kosongkan" di konsol.
+      FTTH_CPE_ONT_ACS_USERNAME: ${FTTH_CPE_ONT_ACS_USERNAME:-}
+      FTTH_CPE_ONT_ACS_PASSWORD: ${FTTH_CPE_ONT_ACS_PASSWORD:-}
+      FTTH_CPE_ONT_CR_USERNAME: ${FTTH_CPE_ONT_CR_USERNAME:-}
+      FTTH_CPE_ONT_CR_PASSWORD: ${FTTH_CPE_ONT_CR_PASSWORD:-}
+      # Path parameter suhu vendor (dipisah koma); kosong = kolom TEMP tetap "—".
+      FTTH_CPE_TEMPERATURE_PARAMS: ${FTTH_CPE_TEMPERATURE_PARAMS:-}
       # Berkas uji "Uji Kecepatan" (TR-143). Yang mengunduh PERANGKAT pelanggan,
       # bukan server — alamatnya harus terjangkau dari sisi pelanggan. Nilai bawaan
       # di bawah cuma cermin default aplikasi; speedtest.tele2.net SUDAH DIMATIKAN

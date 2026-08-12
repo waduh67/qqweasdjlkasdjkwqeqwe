@@ -7,6 +7,7 @@ import com.duluin.ftth.bng.PppSecretRef
 import com.duluin.ftth.bng.ProvisionAccessSpec
 import com.duluin.ftth.bng.ProvisionedAccessRef
 import com.duluin.ftth.bng.SubscriberPppoeLiveness
+import com.duluin.ftth.bng.SubscriberPppoeRef
 import com.duluin.ftth.bng.SubscriberSessionRef
 import com.duluin.ftth.bng.application.port.inbound.ManageSubscriberAccessUseCase
 import com.duluin.ftth.bng.application.port.inbound.ProvisionAccessCommand
@@ -18,6 +19,8 @@ import com.duluin.ftth.bng.application.port.outbound.RadiusSessionRepository
 import com.duluin.ftth.bng.application.port.outbound.RouterOsPort
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.domain.model.AuthType
+import com.duluin.ftth.bng.domain.model.RadiusSession
+import com.duluin.ftth.bng.domain.model.SubscriberAccess
 import com.duluin.ftth.catalog.CatalogApi
 import com.duluin.ftth.common.domain.error.ValidationException
 import org.springframework.beans.factory.annotation.Value
@@ -121,15 +124,24 @@ class BngApiService(
             }
         } ?: AuthType.PPPOE
 
+    /**
+     * Satu pelanggan bisa punya beberapa akun (mis. unit kedua) — yang mewakilinya adalah akun
+     * yang sesinya sedang online; kalau tak ada, yang pertama (repositori mengurutkan username,
+     * jadi deterministik). Diekstrak agar jalur satu-pelanggan dan jalur batch tak melenceng
+     * memilih akun berbeda untuk pelanggan yang sama. [accounts] tak boleh kosong.
+     */
+    private fun chooseAccount(
+        accounts: List<SubscriberAccess>,
+        sessionOf: (UUID) -> RadiusSession?,
+    ): SubscriberAccess = accounts.firstOrNull { sessionOf(it.id)?.online == true } ?: accounts.first()
+
     override fun findSubscriberSession(customerId: UUID): SubscriberSessionRef? {
         val accounts = subscriberAccessRepository.findByCustomerId(customerId)
         if (accounts.isEmpty()) return null
 
-        // Satu pelanggan bisa punya beberapa akun (mis. unit kedua). Untuk telusur jalur,
-        // yang dipilih adalah akun yang sesinya sedang online; kalau tak ada, yang pertama.
-        val sessions = accounts.associateWith { radiusSessionRepository.findBySubscriberAccessId(it.id) }
-        val chosen = accounts.firstOrNull { sessions[it]?.online == true } ?: accounts.first()
-        val session = sessions[chosen]
+        val sessions = accounts.associate { it.id to radiusSessionRepository.findBySubscriberAccessId(it.id) }
+        val chosen = chooseAccount(accounts) { sessions[it] }
+        val session = sessions[chosen.id]
         // Sumber NAS: dari sesi terkini bila ada (yang benar-benar dipakai login),
         // kalau belum pernah terpantau jatuh ke NAS yang ditugaskan pada akun.
         val nasId = session?.nasId ?: chosen.nasId
@@ -148,6 +160,28 @@ class BngApiService(
             startedAt = session?.startedAt,
             lastSeenAt = session?.lastSeenAt,
         )
+    }
+
+    override fun findPppoeByCustomerIds(customerIds: Set<UUID>): Map<UUID, SubscriberPppoeRef> {
+        if (customerIds.isEmpty()) return emptyMap()
+        val accounts = subscriberAccessRepository.findByCustomerIds(customerIds)
+        if (accounts.isEmpty()) return emptyMap()
+        // Dua query untuk berapa pun pelanggan: akun sekali, sesinya sekali.
+        val sessions = radiusSessionRepository.findBySubscriberAccessIds(accounts.map { it.id })
+        val cutoff = Instant.now().minus(sessionStaleAfter)
+
+        return accounts.groupBy { it.customerId }.mapValues { (customerId, owned) ->
+            val chosen = chooseAccount(owned) { sessions[it] }
+            val session = sessions[chosen.id]
+            SubscriberPppoeRef(
+                customerId = customerId,
+                username = chosen.username,
+                // Sama seperti [activeSubscriberLiveness]: sesi yang berakhir MENGHILANG dari
+                // radacct tanpa ditandai offline, jadi baris online yang tak segar = putus.
+                online = session != null && session.online && !session.lastSeenAt.isBefore(cutoff),
+                framedIp = session?.framedIp,
+            )
+        }
     }
 
     override fun exportAccesses(): List<AccessExportRef> {

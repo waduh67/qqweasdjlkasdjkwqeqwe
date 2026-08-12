@@ -22,6 +22,19 @@ interface BngApi {
     fun findSubscriberSession(customerId: UUID): SubscriberSessionRef?
 
     /**
+     * Versi BATCH & RAMPING dari [findSubscriberSession] — identitas PPPoE seluruh pelanggan
+     * dalam himpunan, dua query saja. Dipakai konsol ACS untuk mengisi kolom PPPoE tabel
+     * armada tanpa satu query per baris.
+     *
+     * Sengaja BUKAN `Map<UUID, SubscriberSessionRef>`: mengisi `rateProfileName` berarti satu
+     * `catalogApi.findPlanNetwork()` per akun — N+1 yang tersembunyi di dalam bng, persis yang
+     * hendak dihindari. Aturan pemilihan akun sama dengan jalur satu-pelanggan (yang sesinya
+     * online didahulukan, lalu yang pertama menurut username); pelanggan tanpa akun tak muncul
+     * di peta. RLS-scoped.
+     */
+    fun findPppoeByCustomerIds(customerIds: Set<UUID>): Map<UUID, SubscriberPppoeRef>
+
+    /**
      * Onboarding: provisikan identitas jaringan (akun PPPoE) untuk sebuah langganan lewat
      * kontrak publik. Aturan module bng tetap ditegakkan (paket melayani tipe, satu langganan
      * satu akun, kredensial di-generate bila dikosongkan). Bila langganan masih PENDING akun
@@ -105,6 +118,19 @@ data class AccessExportRef(
     val customerId: UUID,
     val nasName: String?,
     val framedIp: String? = null,
+)
+
+/**
+ * Identitas PPPoE ringkas seorang pelanggan untuk tabel armada lintas-module. Sengaja tipis
+ * (username + hidup/mati + IP) — cukup untuk satu kolom tabel, tanpa memicu resolusi paket
+ * atau BRAS. Tanpa rahasia apa pun. [online] sudah memperhitungkan ambang basi sesi, sama
+ * dengan [SubscriberPppoeLiveness.online].
+ */
+data class SubscriberPppoeRef(
+    val customerId: UUID,
+    val username: String,
+    val online: Boolean,
+    val framedIp: String?,
 )
 
 /**

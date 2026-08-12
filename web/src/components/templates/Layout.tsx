@@ -29,6 +29,7 @@ import {
   IconShield,
   IconSidebar,
   IconUsers,
+  IconWifi,
   IconWorkOrder,
 } from '@/components/atoms/icons'
 /**
@@ -52,6 +53,7 @@ const GROUPS: NavGroup[] = [
       { to: '/map', label: 'Peta Jaringan', permission: 'gis.map.view', icon: IconMap },
       { to: '/inventory', label: 'Inventory', permission: 'network.odp.view', icon: IconInventory },
       { to: '/bras', label: 'BRAS & RADIUS', permission: 'bng.nas.view', icon: IconGauge },
+      { to: '/acs', label: 'ACS / TR-069', permission: 'cpe.acs.view', icon: IconWifi },
       { to: '/vpn', label: 'Akun VPN', permission: 'vpn.peer.view', icon: IconRoute },
       { to: '/monitoring', label: 'Monitoring', permission: 'monitoring.dashboard.view', icon: IconMonitor },
       { to: '/provisioning', label: 'Provisioning', permission: 'monitoring.provisioning.view', icon: IconInbox },

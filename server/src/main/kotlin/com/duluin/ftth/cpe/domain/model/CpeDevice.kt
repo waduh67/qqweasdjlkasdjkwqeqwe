@@ -32,6 +32,8 @@ class CpeDevice private constructor(
     softwareVersion: String?,
     ipAddress: String?,
     lastInformAt: Instant?,
+    ssid: String?,
+    temperatureC: Double?,
     customerId: UUID?,
     onuId: UUID?,
 ) {
@@ -49,6 +51,24 @@ class CpeDevice private constructor(
         private set
     var lastInformAt: Instant? = lastInformAt
         private set
+
+    /**
+     * SSID jaringan WiFi PERTAMA, ikut terbawa siklus sinkron. Pengecualian sadar dari
+     * aturan "yang cepat basi tidak disimpan": tabel armada se-tenant tak boleh memicu
+     * satu panggilan NBI per baris. Panel per-pelanggan tetap membaca daftar WiFi
+     * lengkap secara live — di sana keakuratan yang menang, di sini jumlah round-trip.
+     */
+    var ssid: String? = ssid
+        private set
+
+    /**
+     * Suhu perangkat (°C) dari parameter VENDOR (`X_*`) yang dikonfigurasi operator;
+     * TR-069 tak membakukannya. `null` bila tak dikonfigurasi atau perangkat tak
+     * melaporkannya — yang realistisnya berlaku untuk sebagian besar armada.
+     */
+    var temperatureC: Double? = temperatureC
+        private set
+
     var customerId: UUID? = customerId
         private set
     var onuId: UUID? = onuId
@@ -66,6 +86,8 @@ class CpeDevice private constructor(
         softwareVersion: String?,
         ipAddress: String?,
         lastInformAt: Instant?,
+        ssid: String?,
+        temperatureC: Double?,
     ) {
         this.oui = oui
         this.productClass = productClass
@@ -74,6 +96,8 @@ class CpeDevice private constructor(
         this.softwareVersion = softwareVersion
         this.ipAddress = ipAddress
         this.lastInformAt = lastInformAt
+        this.ssid = ssid
+        this.temperatureC = temperatureC
     }
 
     /** Tautkan ke pelanggan & ONU-nya, hasil pencocokan serial saat sinkronisasi. */
@@ -105,6 +129,8 @@ class CpeDevice private constructor(
             softwareVersion: String?,
             ipAddress: String?,
             lastInformAt: Instant?,
+            ssid: String?,
+            temperatureC: Double?,
             customerId: UUID,
             onuId: UUID?,
         ): CpeDevice = CpeDevice(
@@ -118,6 +144,8 @@ class CpeDevice private constructor(
             softwareVersion = softwareVersion,
             ipAddress = ipAddress,
             lastInformAt = lastInformAt,
+            ssid = ssid,
+            temperatureC = temperatureC,
             customerId = customerId,
             onuId = onuId,
         )
@@ -134,11 +162,13 @@ class CpeDevice private constructor(
             softwareVersion: String?,
             ipAddress: String?,
             lastInformAt: Instant?,
+            ssid: String?,
+            temperatureC: Double?,
             customerId: UUID?,
             onuId: UUID?,
         ): CpeDevice = CpeDevice(
             id, genieacsId, serialNumber, oui, productClass, manufacturer,
-            model, softwareVersion, ipAddress, lastInformAt, customerId, onuId,
+            model, softwareVersion, ipAddress, lastInformAt, ssid, temperatureC, customerId, onuId,
         )
     }
 }

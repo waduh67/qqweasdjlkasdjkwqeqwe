@@ -194,6 +194,9 @@ class ImportPppoeServiceTest {
     private class FakeBngApi(
         private val onNas: List<PppSecretRef> = emptyList(),
     ) : BngApi {
+        override fun findPppoeByCustomerIds(customerIds: Set<UUID>): Map<UUID, com.duluin.ftth.bng.SubscriberPppoeRef> =
+            throw UnsupportedOperationException()
+
         val provisioned = mutableListOf<ProvisionAccessSpec>()
 
         override fun fetchPppSecretsFromNas(nasId: UUID): List<PppSecretRef> = onNas

@@ -117,6 +117,10 @@ class AdminProvisioner(
             "workorder.evidence.view",
             "customer.customer.view",
             "customer.subscription.view",
+            // Teknisi mengetik setelan TR-069 ke ONT di rumah pelanggan; tanpa ini ia
+            // harus menanyakan URL CWMP & interval inform lewat chat tiap pemasangan.
+            // Hanya info server (nilai env global), bukan daftar perangkat tenant.
+            "cpe.acs.view",
         )
     }
 }

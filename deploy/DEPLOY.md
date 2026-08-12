@@ -590,9 +590,23 @@ Di sisi ONT/router (atau lewat template konfigurasi OLT/vendor), set alamat ACS:
 | Parameter TR-069 | Isi |
 |---|---|
 | ACS URL | `http://<IP-VPS>:7547/` |
-| ACS Username / Password | kosongkan (belum dipakai) |
-| Periodic Inform | aktif, interval mis. `300` detik |
-| Connection Request Username / Password | bebas, asal konsisten dengan yang di perangkat |
+| ACS Username / Password | `FTTH_CPE_ONT_ACS_USERNAME` / `..._PASSWORD` (kosongkan kalau tak diisi) |
+| Periodic Inform | aktif, interval `300` detik |
+| Connection Request Username / Password | `FTTH_CPE_ONT_CR_USERNAME` / `..._PASSWORD` |
+
+**Nilai persisnya tak perlu dihafal atau dikirim lewat chat**: aplikasi memajangnya di
+menu **ACS / TR-069** (kartu "Setelan ONT") dan di tab **Ringkasan** detail pelanggan,
+lengkap dengan tombol "Salin semua". Yang dipajang di sana adalah env di atas apa adanya,
+jadi isi `.env` dulu baru suruh teknisi menyalin — kalau `FTTH_CPE_PUBLIC_HOST` kosong,
+kartunya menandai "belum dikonfigurasi" alih-alih memajang URL yang salah.
+
+Interval `300` bukan angka bebas: bawaan pabrik kebanyakan ONT adalah `3600`, dan dengan
+itu perangkat akan tampak "offline" di konsol selama berjam-jam meski jaringannya sehat
+(ambang basi bawaan `FTTH_CPE_ONLINE_STALE_AFTER` = 15 menit).
+
+> Kredensial ONT di atas terlihat oleh **setiap** pengguna yang punya izin `cpe.acs.view`
+> — termasuk role Teknisi. Itu disengaja (nilainya global, bukan rahasia per-pelanggan),
+> tapi jangan pakai password yang sama dengan apa pun yang lain.
 
 Setelah Inform pertama masuk, perangkat muncul di GenieACS. **Penautan ke pelanggan
 memakai kecocokan serial**: `CpeSyncScheduler` mencocokkan `Device.DeviceInfo.SerialNumber`

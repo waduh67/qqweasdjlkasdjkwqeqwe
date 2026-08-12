@@ -122,7 +122,10 @@ tak pernah menyentuh tabel module lain — batas ini ditegakkan `ModularityTests
   platform yang bisa ditimpa tenant (lihat
   [`docs/email-branding.md`](docs/email-branding.md)).
 - **cpe** — kelola router/ONT pelanggan lewat GenieACS (TR-069): WiFi, reboot,
-  diagnostik ping/speedtest, firmware, factory-reset.
+  diagnostik ping/speedtest, firmware, factory-reset. Plus konsol ACS se-armada
+  (menu **ACS / TR-069**): statistik online/offline/sinyal, tabel perangkat +
+  ekspor CSV, health check, sapuan refresh berplafon, dan kartu setelan TR-069
+  siap-salin yang juga terbuka untuk teknisi (`cpe.acs.view`).
 - **bng** — BRAS/RADIUS: paket, registri BRAS, akun PPPoE. Bereaksi atas event
   langganan `customer` untuk memutus/memulihkan sesi PPPoE (adapter Mikrotik REST
   v7 + FreeRADIUS).

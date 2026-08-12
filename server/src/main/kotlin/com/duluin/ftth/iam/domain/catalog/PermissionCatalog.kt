@@ -144,6 +144,10 @@ object PermissionCatalog {
         perm("cpe.wifi.manage", "Ubah SSID/password WiFi")
         perm("cpe.diagnostic.run", "Jalankan diagnostik CPE (ping & uji kecepatan)")
         perm("cpe.firmware.manage", "Lihat & pasang firmware CPE")
+        // Sengaja berakhiran `.view`: AccessChecker menganggap segala kode non-`.view`
+        // sebagai tulis dan menolaknya 402 saat langganan tenant terkunci — padahal ini
+        // cuma membaca alamat CWMP dari env. Diberikan juga ke role Teknisi.
+        perm("cpe.acs.view", "Lihat informasi server ACS (URL CWMP & status)")
 
         // Catalog (paket internet: sumber tunggal harga + kecepatan + QoS + FUP)
         perm("catalog.plan.view", "Lihat paket internet")

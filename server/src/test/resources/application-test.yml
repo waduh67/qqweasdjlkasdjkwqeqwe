@@ -15,6 +15,21 @@ spring:
     password: ftth
 
 ftth:
+  cpe:
+    # Memoisasi probe kesehatan DIMATIKAN di tes: satu context dipakai bersama semua
+    # kelas tes, jadi tes yang mematikan ACS akan menerima jawaban "ONLINE" yang
+    # ditinggalkan tes sebelumnya. Perilaku memoisasinya sendiri diuji terpisah di
+    # `CpeBulkRefreshCapIT`, yang memang punya context sendiri.
+    health-probe-ttl: PT0S
+    # Nilai setelan ONT yang dipajang konsol — diisi supaya tes bisa membuktikan
+    # kredensial memang sampai ke pemegang `cpe.acs.view` dan TAK PERNAH ke CSV.
+    ont:
+      public-host: acs.uji.local
+      cwmp-port: 7547
+      acs-username: onu-fs
+      acs-password: rahasia-acs-uji
+      connection-request-username: incognito
+      connection-request-password: rahasia-cr-uji
   monitoring:
     # Tes berjalan dengan @EnableScheduling aktif, jadi poller OLT server-side ikut
     # menyala. Dimatikan di sini agar tes tak menembak SNMP nyata ke host OLT seed

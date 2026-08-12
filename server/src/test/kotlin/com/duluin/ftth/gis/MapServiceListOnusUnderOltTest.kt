@@ -236,6 +236,9 @@ class MapServiceListOnusUnderOltTest {
     }
 
     private class ThrowingBngApi : BngApi {
+        override fun findPppoeByCustomerIds(customerIds: Set<UUID>): Map<UUID, com.duluin.ftth.bng.SubscriberPppoeRef> =
+            throw UnsupportedOperationException()
+
         override fun findSubscriberSession(customerId: UUID) = throw UnsupportedOperationException()
         override fun provisionAccess(command: com.duluin.ftth.bng.ProvisionAccessSpec) =
             throw UnsupportedOperationException()

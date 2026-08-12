@@ -19,6 +19,7 @@ const LABELS: Record<string, string> = {
   inventory: 'Inventory',
   olts: 'OLT',
   bras: 'BRAS & RADIUS',
+  acs: 'ACS / TR-069',
   vpn: 'Akun VPN',
   'vpn-servers': 'Server VPN',
   monitoring: 'Monitoring',

@@ -136,10 +136,38 @@ ftth:
       base-url: ${FTTH_CPE_GENIEACS_BASE_URL:http://localhost:7557}
       username: ${FTTH_CPE_GENIEACS_USERNAME:}
       password: ${FTTH_CPE_GENIEACS_PASSWORD:}
+      # Batas baca khusus probe kesehatan — pendek, supaya kartu Health Check tak
+      # menggantung halaman selama read-timeout biasa saat ACS mati.
+      health-timeout: ${FTTH_CPE_GENIEACS_HEALTH_TIMEOUT:PT3S}
+    # Setelan yang DIKETIK OPERATOR ke halaman ACS di ONT pelanggan — alamat CWMP publik
+    # (yang dihubungi PERANGKAT), bukan NBI di atas. public-host kosong = konsol menandai
+    # "belum dikonfigurasi" alih-alih memajang URL palsu.
+    ont:
+      public-host: ${FTTH_CPE_PUBLIC_HOST:}
+      cwmp-port: ${FTTH_CPE_CWMP_PORT:7547}
+      acs-username: ${FTTH_CPE_ONT_ACS_USERNAME:}
+      acs-password: ${FTTH_CPE_ONT_ACS_PASSWORD:}
+      connection-request-username: ${FTTH_CPE_ONT_CR_USERNAME:}
+      connection-request-password: ${FTTH_CPE_ONT_CR_PASSWORD:}
+      # Bawaan pabrik ONT umumnya 3600 detik — terlalu lama; 300 yang dipakai di sini.
+      periodic-inform-interval: ${FTTH_CPE_ONT_INFORM_INTERVAL:PT300S}
     # Seberapa sering proyeksi CPE disinkronkan dari ACS.
     sync-interval: ${FTTH_CPE_SYNC_INTERVAL:PT5M}
     # ONU dianggap online bila inform terakhirnya dalam ambang ini.
     online-stale-after: ${FTTH_CPE_ONLINE_STALE_AFTER:PT15M}
+    # Path parameter SUHU vendor (dipisah koma), mis.
+    # InternetGatewayDevice.DeviceInfo.X_HW_Temperature. TR-069 tak membakukan suhu, jadi
+    # KOSONG secara bawaan: kolom TEMP di konsol ACS akan "—" sampai path vendor diisi.
+    temperature-params: ${FTTH_CPE_TEMPERATURE_PARAMS:}
+    # "Segarkan Batch" itu SAPUAN BERPLAFON, bukan "semua". Tanpa infrastruktur async,
+    # tiap klik menahan satu thread servlet + satu koneksi Hikari; plafon & anggaran waktu
+    # inilah yang menjaga agar armada 3.000 ONT tak membekukan konsol belasan menit.
+    bulk-refresh-max: ${FTTH_CPE_BULK_REFRESH_MAX:50}
+    bulk-refresh-budget: ${FTTH_CPE_BULK_REFRESH_BUDGET:PT20S}
+    # Berapa lama hasil probe kesehatan dipakai ulang. Teknisi memegang izin ini dan
+    # halamannya menyegarkan diri sendiri; tanpa memoisasi, satu ruang kerja berisi
+    # sepuluh tab menghujani NBI dengan probe yang jawabannya sudah pasti sama.
+    health-probe-ttl: ${FTTH_CPE_HEALTH_PROBE_TTL:PT10S}
     diagnostics:
       # Berkas yang ditarik saat "Uji Kecepatan" (TR-143 DownloadDiagnostics).
       # Yang mengunduh PERANGKAT pelanggan, bukan server — jadi alamatnya harus

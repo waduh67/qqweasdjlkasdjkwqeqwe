@@ -405,6 +405,9 @@ class PortalSelfServiceTest {
     }
 
     private class FakeBngApi(private val session: SubscriberSessionRef?) : BngApi {
+        override fun findPppoeByCustomerIds(customerIds: Set<UUID>): Map<UUID, com.duluin.ftth.bng.SubscriberPppoeRef> =
+            throw UnsupportedOperationException()
+
         override fun findSubscriberSession(customerId: UUID): SubscriberSessionRef? = session
         override fun provisionAccess(command: ProvisionAccessSpec) = throw UnsupportedOperationException()
         override fun resolveNasForArea(areaId: UUID): UUID? = throw UnsupportedOperationException()

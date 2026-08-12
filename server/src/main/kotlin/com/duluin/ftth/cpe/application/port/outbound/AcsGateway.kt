@@ -88,7 +88,32 @@ interface AcsGateway {
      * NBI-nya sendiri menolak, bukan sekadar perangkat tak menjawab.
      */
     fun requestConnection(genieacsId: String): Boolean
+
+    /**
+     * Menyapa NBI dengan permintaan TERMURAH yang ada, sekadar untuk tahu ACS-nya hidup —
+     * bahan kartu "Health Check" di konsol ACS. TIDAK melempar: kegagalan justru jawabannya,
+     * dikembalikan sebagai [AcsProbe] ber-`reachable=false`.
+     *
+     * Dua hal yang wajib dipenuhi implementasi:
+     * - **Timeout tersendiri, jauh lebih pendek** dari `readTimeout` biasa. Probe kesehatan
+     *   yang mewarisi 15 detik akan menggantung halaman selama itu, tiap kali ACS mati.
+     * - **[AcsProbe.error] tak boleh memuat base URL NBI.** Exception `RestClient` menyisipkan
+     *   URI penuh, dan alamat internal itu akan mendarat di browser operator tenant.
+     *
+     * TIDAK mengembalikan jumlah device: hitungan NBI mencakup SEMUA tenant.
+     */
+    fun probe(): AcsProbe
 }
+
+/**
+ * Hasil satu sapaan kesehatan ke NBI. [latencyMs] terisi hanya bila terjangkau; [error]
+ * adalah kalimat yang boleh dilihat operator — sudah dibersihkan dari alamat internal.
+ */
+data class AcsProbe(
+    val reachable: Boolean,
+    val latencyMs: Long?,
+    val error: String?,
+)
 
 /**
  * Snapshot mentah satu device dari ACS. Semua atribut nullable kecuali identitas:
@@ -104,6 +129,10 @@ data class AcsDevice(
     val softwareVersion: String?,
     val ipAddress: String?,
     val lastInformAt: Instant?,
+    /** SSID jaringan WiFi pertama; null bila perangkat belum melaporkannya. */
+    val ssid: String? = null,
+    /** Suhu (°C) dari parameter vendor yang dikonfigurasi; null bila tak ada/tak dikonfigurasi. */
+    val temperatureC: Double? = null,
 )
 
 /** Perubahan satu jaringan WiFi. Field null berarti "biarkan apa adanya". */

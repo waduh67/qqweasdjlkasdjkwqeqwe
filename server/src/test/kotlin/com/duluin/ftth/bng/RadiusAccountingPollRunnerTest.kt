@@ -182,6 +182,9 @@ class RadiusAccountingPollRunnerTest {
 
         // Selalu sesi baru (tak ada yang tersimpan sebelumnya) → jalur RadiusSession.start.
         override fun findBySubscriberAccessId(subscriberAccessId: UUID): RadiusSession? = null
+        override fun findBySubscriberAccessIds(subscriberAccessIds: Collection<UUID>): Map<UUID, RadiusSession> =
+            emptyMap()
+
 
         override fun findAllForActiveAccounts(): List<RadiusSession> = saved
     }
@@ -208,6 +211,9 @@ class RadiusAccountingPollRunnerTest {
         override fun save(access: SubscriberAccess): SubscriberAccess = notUsed()
         override fun findById(id: UUID): SubscriberAccess? = notUsed()
         override fun findByCustomerId(customerId: UUID): List<SubscriberAccess> = notUsed()
+        override fun findByCustomerIds(customerIds: Collection<UUID>): List<SubscriberAccess> =
+            notUsed()
+
         override fun findBySubscriptionId(subscriptionId: UUID): List<SubscriberAccess> = notUsed()
         override fun findByNasId(nasId: UUID): List<SubscriberAccess> = notUsed()
         override fun findByPlanId(planId: UUID): List<SubscriberAccess> = notUsed()

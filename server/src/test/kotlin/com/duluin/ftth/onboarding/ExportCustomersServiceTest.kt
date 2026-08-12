@@ -147,6 +147,9 @@ class ExportCustomersServiceTest {
     // ---- Fake ----
 
     private class FakeBngApi(private val accesses: List<AccessExportRef>) : BngApi {
+        override fun findPppoeByCustomerIds(customerIds: Set<UUID>): Map<UUID, com.duluin.ftth.bng.SubscriberPppoeRef> =
+            throw UnsupportedOperationException()
+
         override fun exportAccesses(): List<AccessExportRef> = accesses
 
         override fun findSubscriberSession(customerId: UUID) = throw UnsupportedOperationException()

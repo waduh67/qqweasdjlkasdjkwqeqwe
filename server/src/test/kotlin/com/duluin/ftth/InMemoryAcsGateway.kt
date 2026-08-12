@@ -2,6 +2,7 @@ package com.duluin.ftth
 
 import com.duluin.ftth.cpe.application.port.outbound.AcsDevice
 import com.duluin.ftth.cpe.application.port.outbound.AcsGateway
+import com.duluin.ftth.cpe.application.port.outbound.AcsProbe
 import com.duluin.ftth.cpe.application.port.outbound.WifiChange
 import com.duluin.ftth.cpe.domain.model.ConnectedHost
 import com.duluin.ftth.cpe.domain.model.FirmwareFile
@@ -158,4 +159,13 @@ class InMemoryAcsGateway : AcsGateway {
         connectionRequests += genieacsId
         return connectionReachable
     }
+
+    /**
+     * Cermin kontrak: TIDAK melempar walau [failing] — kegagalan justru jawabannya.
+     * Pesannya nama kelas exception saja, sama seperti adapter asli, agar uji bisa
+     * membuktikan base URL NBI tak pernah ikut keluar.
+     */
+    override fun probe(): AcsProbe =
+        if (failing) AcsProbe(reachable = false, latencyMs = null, error = "IllegalStateException")
+        else AcsProbe(reachable = true, latencyMs = 4, error = null)
 }

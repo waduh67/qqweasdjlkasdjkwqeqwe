@@ -167,6 +167,9 @@ class Subscriber360ServiceTest {
     }
 
     private inner class FakeBngApi : BngApi {
+        override fun findPppoeByCustomerIds(customerIds: Set<UUID>): Map<UUID, com.duluin.ftth.bng.SubscriberPppoeRef> =
+            throw UnsupportedOperationException()
+
         override fun findSubscriberSession(customerId: UUID): SubscriberSessionRef = SubscriberSessionRef(
             subscriberAccessId = UuidV7.generate(), username = "budi", accessStatus = "ACTIVE",
             rateProfileName = "Home 100", online = true, framedIp = "100.64.0.5",

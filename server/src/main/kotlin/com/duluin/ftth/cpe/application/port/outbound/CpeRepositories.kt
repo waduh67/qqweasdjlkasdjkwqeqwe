@@ -22,6 +22,12 @@ interface CpeDeviceRepository {
     /** Seluruh proyeksi milik tenant aktif — dipakai sinkronisasi untuk memangkas. */
     fun findAllForCurrentTenant(): List<CpeDevice>
 
+    /**
+     * Sekumpulan device sekaligus — dipakai konsol ACS untuk memberi nama serial pada
+     * baris log aktivitas tanpa satu query per baris.
+     */
+    fun findByIds(ids: Collection<UUID>): List<CpeDevice>
+
     fun deleteByIds(ids: Collection<UUID>)
 }
 
@@ -31,4 +37,11 @@ interface CpeActionLogRepository {
 
     /** Riwayat aksi satu device, terbaru dulu. */
     fun findByDeviceId(deviceId: UUID): List<CpeActionLog>
+
+    /**
+     * Aksi terbaru LINTAS device milik tenant aktif, terbaru dulu — jendela "View Logs"
+     * di konsol ACS. Ter-scope RLS seperti pencarian lain di port ini, jadi log tenant
+     * lain tak mungkin ikut walau tabelnya satu.
+     */
+    fun findRecentForCurrentTenant(limit: Int): List<CpeActionLog>
 }

@@ -26,6 +26,7 @@ interface NasAreaJpaRepository : JpaRepository<NasAreaJpaEntity, UUID> {
 interface SubscriberAccessJpaRepository : JpaRepository<SubscriberAccessJpaEntity, UUID> {
     fun findAllByOrderByUsernameAsc(): List<SubscriberAccessJpaEntity>
     fun findByCustomerIdOrderByUsernameAsc(customerId: UUID): List<SubscriberAccessJpaEntity>
+    fun findByCustomerIdInOrderByUsernameAsc(customerIds: Collection<UUID>): List<SubscriberAccessJpaEntity>
     fun findBySubscriptionId(subscriptionId: UUID): List<SubscriberAccessJpaEntity>
     fun findByUsername(username: String): SubscriberAccessJpaEntity?
     fun findByNasIdOrderByUsernameAsc(nasId: UUID): List<SubscriberAccessJpaEntity>
@@ -48,6 +49,8 @@ interface SubscriberAccessJpaRepository : JpaRepository<SubscriberAccessJpaEntit
 
 interface RadiusSessionJpaRepository : JpaRepository<RadiusSessionJpaEntity, UUID> {
     fun findBySubscriberAccessId(subscriberAccessId: UUID): RadiusSessionJpaEntity?
+
+    fun findBySubscriberAccessIdIn(subscriberAccessIds: Collection<UUID>): List<RadiusSessionJpaEntity>
 
     /**
      * Sesi milik akun berstatus [status], disaring lewat subquery ke subscriber_access

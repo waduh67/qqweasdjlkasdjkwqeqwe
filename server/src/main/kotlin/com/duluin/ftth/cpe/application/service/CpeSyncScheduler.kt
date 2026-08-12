@@ -12,6 +12,7 @@ import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -34,12 +35,47 @@ class CpeSyncScheduler(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
+    /**
+     * Kapan ronde sinkron terakhir SELESAI dan apakah daftar device berhasil ditarik —
+     * bahan tile "Last Sync" di konsol ACS.
+     *
+     * Sengaja di memori, BUKAN diturunkan dari `max(cpe_device.updated_at)`: [CpeSyncService.sync]
+     * memanggil `save()` tanpa syarat, tapi dirty-checking Hibernate membuat baris yang tak
+     * berubah tak menerbitkan UPDATE sama sekali. Pada armada yang tenang `updated_at` akan
+     * membeku dan "Last Sync" jadi berbohong — melaporkan sinkron macet padahal ia berjalan
+     * mulus tiap 5 menit.
+     *
+     * Konsekuensinya: per-JVM dan hilang saat restart. Sebelum ronde pertama nilainya null →
+     * UI menampilkan "—", bukan "tak pernah sinkron".
+     */
+    @Volatile
+    private var lastRunAtValue: Instant? = null
+
+    @Volatile
+    private var lastRunOkValue: Boolean? = null
+
+    /** Kapan ronde terakhir selesai; `null` sebelum ronde pertama (UI menampilkan "—"). */
+    fun lastRunAt(): Instant? = lastRunAtValue
+
+    /** Apakah ronde terakhir berhasil menarik daftar dari ACS; `null` bila belum pernah jalan. */
+    fun lastRunOk(): Boolean? = lastRunOkValue
+
     @Scheduled(fixedDelayString = "\${ftth.cpe.sync-interval:PT5M}")
     fun syncAll() {
         val snapshots = runCatching { acsGateway.listDevices() }
             .onFailure { log.warn("Tak bisa menarik daftar device dari ACS: {}", it.message) }
-            .getOrNull() ?: return
-        if (snapshots.isEmpty()) return
+            .getOrNull()
+        if (snapshots == null) {
+            lastRunAtValue = Instant.now()
+            lastRunOkValue = false
+            return
+        }
+        if (snapshots.isEmpty()) {
+            // ACS menjawab, cuma belum punya device — itu ronde yang SUKSES, bukan gagal.
+            lastRunAtValue = Instant.now()
+            lastRunOkValue = true
+            return
+        }
 
         tenantApi.findActiveTenantIds().forEach { tenantId ->
             runCatching {
@@ -48,6 +84,8 @@ class CpeSyncScheduler(
                 log.warn("Sinkronisasi CPE tenant {} gagal: {}", tenantId, it.message)
             }
         }
+        lastRunAtValue = Instant.now()
+        lastRunOkValue = true
     }
 }
 
@@ -91,6 +129,8 @@ class CpeSyncService(
                     softwareVersion = snapshot.softwareVersion,
                     ipAddress = snapshot.ipAddress,
                     lastInformAt = snapshot.lastInformAt,
+                    ssid = snapshot.ssid,
+                    temperatureC = snapshot.temperatureC,
                 )
                 row.linkTo(onu.customerId, onu.id)
                 deviceRepository.save(row)
@@ -106,6 +146,8 @@ class CpeSyncService(
                         softwareVersion = snapshot.softwareVersion,
                         ipAddress = snapshot.ipAddress,
                         lastInformAt = snapshot.lastInformAt,
+                        ssid = snapshot.ssid,
+                        temperatureC = snapshot.temperatureC,
                         customerId = onu.customerId,
                         onuId = onu.id,
                     ),
