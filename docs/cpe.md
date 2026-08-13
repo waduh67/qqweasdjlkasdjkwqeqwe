@@ -43,7 +43,7 @@ satu `sync-interval`. Panel satu-pelanggan tetap membaca nilai hidup dari `/live
 tabel ini basi dalam hitungan menit. Kolom PPPoE di konsol dirakit saat query.
 
 Migrasi: `V14__cpe.sql` (device + action log), `V18` diagnostik, `V19` firmware,
-`V20` aksi manage, `V101` ssid + suhu.
+`V20` aksi manage, `V102` ssid + suhu.
 
 ---
 

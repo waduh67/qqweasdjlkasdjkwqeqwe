@@ -25,7 +25,7 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
   server ACS + health check, tak cukup untuk melihat armada tenant. Teknisi lapangan bisa membuka
   setelan ONT dari HP-nya tanpa dapat menengok daftar pelanggan. Halaman menyesuaikan diri —
   tanpa `cpe.device.view` strip tabnya tak dirender dan endpoint armada tak dipanggil sama sekali.
-- **Kolom SSID & suhu** ikut ditarik saat sinkronisasi ACS (`V101`). Suhu adalah parameter vendor
+- **Kolom SSID & suhu** ikut ditarik saat sinkronisasi ACS (`V102`). Suhu adalah parameter vendor
   (`X_*`) yang tak dibakukan TR-069, jadi **mati secara bawaan**: isi
   `FTTH_CPE_TEMPERATURE_PARAMS` dengan path vendormu, atau biarkan kolomnya `—`.
 
