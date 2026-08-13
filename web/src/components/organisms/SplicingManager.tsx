@@ -6,6 +6,7 @@ import type {
   CableView,
   ClosureKind,
   ConnectionPointRequest,
+  FiberConnectionPointView,
   SpliceCableView,
   SpliceMethod,
   SpliceWorkbenchView,
@@ -17,7 +18,8 @@ import { Badge, Button, SelectField, TextField } from '@/components/atoms'
 import { Combobox } from '@/components/molecules'
 import { useOpenWorkOrders } from '@/hooks/useOpenWorkOrders'
 import { useConfirm, useToast } from '@/system'
-import { sameCableWarning } from '@/utils/spliceGuard'
+import type { SpliceEnd, WiredPair } from '@/utils/spliceGuard'
+import { impossibleSpliceWarning, sameCableWarning } from '@/utils/spliceGuard'
 import { timeAgo } from '@/utils/timeAgo'
 
 /**
@@ -59,6 +61,13 @@ interface Slot {
   title: string
   /** Warna selubung serat (TIA-598) untuk core; null untuk port/kaki. */
   colorHex: string | null
+  /**
+   * Kabel pemilik core ini; null untuk kaki/input/port. Ikut dibawa karena
+   * aturan splitter berbicara tentang KABEL, bukan core: kaki tak boleh berbalik
+   * ke selubung yang sedang menyuapi input modulnya.
+   */
+  cableId: string | null
+  cableCode: string | null
   /** Sambungan yang memakainya DI KOTAK INI — harus dilepas dulu sebelum dipakai lagi. */
   connectionId: string | null
   /** Core ini sudah tersambung di kotak LAIN; dari sini tak bisa diapa-apakan. */
@@ -80,6 +89,24 @@ interface Group {
 const METHODS: SpliceMethod[] = ['FUSION', 'MECHANICAL', 'CONNECTOR']
 
 const free = (slot: Slot) => slot.connectionId == null && !slot.blocked
+
+/** Titik yang sedang dipilih, dalam bentuk yang dimengerti penjaga aturan splitter. */
+const toEnd = (slot: Slot): SpliceEnd => ({
+  kind: slot.point.kind,
+  nodeId: slot.point.nodeId ?? null,
+  portNumber: slot.point.portNumber ?? null,
+  cableId: slot.cableId,
+  cableCode: slot.cableCode,
+})
+
+/** Idem, untuk ujung sambungan yang sudah tercatat di kotak ini. */
+const wiredEnd = (point: FiberConnectionPointView): SpliceEnd => ({
+  kind: point.kind,
+  nodeId: point.nodeId,
+  portNumber: point.portNumber,
+  cableId: point.cableId,
+  cableCode: point.cableCode,
+})
 
 /** Tanggal singkat pada opsi tiket — saat memilih tugas, jamnya belum penting. */
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
@@ -132,6 +159,8 @@ function toGroups(data: SpliceWorkbenchView): Group[] {
                 : ' · bebas') +
           (entry.core.note ? ` · ${entry.core.note}` : ''),
         colorHex: entry.core.colorHex,
+        cableId: cable.cableId,
+        cableCode: cable.code,
         connectionId: entry.connectionId,
         blocked: entry.connectedElsewhere || !cable.spliceable,
       })),
@@ -157,6 +186,8 @@ function toGroups(data: SpliceWorkbenchView): Group[] {
       label: point.label,
       title: `${point.label} · ${point.connectionId ? 'sudah tersambung' : 'bebas'}`,
       colorHex: null,
+      cableId: null,
+      cableCode: null,
       connectionId: point.connectionId,
       blocked: false,
     })
@@ -508,14 +539,39 @@ export function SplicingManager({
     setRightPick((prev) => (alive(prev) ? prev : null))
   }, [groups])
 
-  /** Pasangan yang akan dibuat "sambung 1:1": urutan bebas lawan urutan bebas. */
-  const autoPairs = useMemo(() => {
-    if (leftKey === '' || leftKey === rightKey) return []
+  /** Sambungan yang sudah ada di kotak ini — bahan penilai arah cahaya. */
+  const wired = useMemo<WiredPair[]>(
+    () => (data?.connections ?? []).map((row) => ({ a: wiredEnd(row.a), b: wiredEnd(row.b) })),
+    [data],
+  )
+
+  /**
+   * Pasangan yang akan dibuat "sambung 1:1": urutan bebas lawan urutan bebas —
+   * dikurangi yang mustahil secara fisik.
+   *
+   * Penyaringnya ikut menghitung pasangan yang BARU saja diterima dalam borongan
+   * yang sama, sebab di ODP justru urutan itu yang menjebak: core 1 ke input
+   * splitter benar, lalu core 2 ke kaki 1 salah — dan salahnya baru kelihatan
+   * setelah pasangan pertama dianggap jadi.
+   */
+  const { autoPairs, autoSkipped } = useMemo(() => {
+    if (leftKey === '' || leftKey === rightKey) return { autoPairs: [] as Array<{ a: Slot; b: Slot }>, autoSkipped: 0 }
     const a = groups.find((g) => g.key === leftKey)?.slots.filter(free) ?? []
     const b = groups.find((g) => g.key === rightKey)?.slots.filter(free) ?? []
-    const n = Math.min(a.length, b.length)
-    return Array.from({ length: n }, (_, i) => ({ a: a[i], b: b[i] }))
-  }, [groups, leftKey, rightKey])
+    const sofar = [...wired]
+    const pairs: Array<{ a: Slot; b: Slot }> = []
+    let skipped = 0
+    for (let i = 0; i < Math.min(a.length, b.length); i += 1) {
+      const ends = { a: toEnd(a[i]), b: toEnd(b[i]) }
+      if (impossibleSpliceWarning(ends.a, ends.b, sofar) != null) {
+        skipped += 1
+        continue
+      }
+      pairs.push({ a: a[i], b: b[i] })
+      sofar.push(ends)
+    }
+    return { autoPairs: pairs, autoSkipped: skipped }
+  }, [groups, leftKey, rightKey, wired])
 
   // Tiket sengaja TIDAK ikut dibersihkan: satu kali kotak dibuka biasanya menghasilkan
   // beberapa sambungan berturut-turut, semuanya milik tugas yang sama.
@@ -558,7 +614,13 @@ export function SplicingManager({
         title: 'Sambung 1:1 otomatis',
         message:
           `Buat ${autoPairs.length} sambungan sekaligus antara ${left?.option} dan ${right?.option}, ` +
-          'dipasangkan berurutan dari yang paling kecil. Semua masuk atau tak ada yang masuk.',
+          'dipasangkan berurutan dari yang paling kecil. Semua masuk atau tak ada yang masuk.' +
+          // Yang dilewati disebutkan apa adanya: daftar yang diam-diam menyusut
+          // membuat orang mengira sisanya gagal lalu mengulang borongannya.
+          (autoSkipped > 0
+            ? ` ${autoSkipped} pasangan dilewati karena mustahil secara fisik — kaki splitter ` +
+              'tak boleh berbalik ke kabel yang menyuapi inputnya sendiri.'
+            : ''),
         confirmLabel: `Sambung ${autoPairs.length} pasang`,
       }))
     )
@@ -628,7 +690,16 @@ export function SplicingManager({
   // peringatannya muncul saat kabelnya dipilih, bukan setelah orangnya salah jalan.
   const leftGroup = groups.find((g) => g.key === leftKey)
   const sameCable = leftKey !== '' && leftKey === rightKey && (leftGroup?.isCable ?? false)
-  const warning = sameCableWarning(sameCable ? (leftGroup?.code ?? '') : null, groups.length === 1)
+  // Aturan splitter baru bisa dinilai setelah kedua titiknya dipilih — yang
+  // menentukan bukan kelompoknya melainkan kaki/input yang mana, dan kabel apa
+  // yang sedang menyuapi modul itu.
+  const pairWarning = impossibleSpliceWarning(
+    leftPick ? toEnd(leftPick) : null,
+    rightPick ? toEnd(rightPick) : null,
+    wired,
+  )
+  const warning =
+    sameCableWarning(sameCable ? (leftGroup?.code ?? '') : null, groups.length === 1) ?? pairWarning
   const summary =
     data.spliceCapacity != null
       ? `${data.spliceCount}/${data.spliceCapacity} sambungan · ${data.cables.length} kabel singgah`
@@ -735,9 +806,9 @@ export function SplicingManager({
               />
               <Button
                 variant="primary"
-                disabled={!leftPick || !rightPick || sameCable || busy}
+                disabled={!leftPick || !rightPick || sameCable || pairWarning != null || busy}
                 onClick={() => void connect()}
-                title={sameCable ? (warning ?? undefined) : undefined}
+                title={sameCable || pairWarning != null ? (warning ?? undefined) : undefined}
               >
                 {leftPick && rightPick ? `Sambung ${leftPick.label} ↔ ${rightPick.label}` : 'Sambung'}
               </Button>
