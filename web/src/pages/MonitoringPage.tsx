@@ -10,13 +10,13 @@ import type {
   OnuHistoryView,
 } from '../api/monitoring'
 import { useCan } from '../auth/useCan'
-import { DataTable, type Column, type RowAction } from '@/components/organisms'
+import { AlarmThresholdPanel, DataTable, type Column, type RowAction } from '@/components/organisms'
 import { Button, EmptyState, Segmented, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { Drawer, SearchInput } from '@/components/molecules'
 import { useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
 import { OpticalChart } from '@/components/atoms'
-import { IconAlert, IconPlus } from '@/components/atoms/icons'
+import { IconAlert, IconPlus, IconSettings } from '@/components/atoms/icons'
 
 /** Peringkat keparahan untuk pengurutan — makin tinggi makin genting (kritis di atas saat desc). */
 const SEVERITY_RANK: Record<string, number> = { CRITICAL: 3, WARNING: 2, INFO: 1 }
@@ -42,6 +42,7 @@ export function MonitoringPage() {
   const [newKey, setNewKey] = useState<CollectorCreated | null>(null)
   const [draftName, setDraftName] = useState('')
   const [trace, setTrace] = useState<{ label: string; history: OnuHistoryView } | null>(null)
+  const [thresholds, setThresholds] = useState(false)
 
   const reload = useCallback(async () => {
     try {
@@ -328,6 +329,16 @@ export function MonitoringPage() {
               { value: 'ALL', label: 'Semua' },
             ]}
           />
+          {/* Ambang alarm sengaja duduk di sebelah daftarnya: pertanyaan "kenapa ini
+              muncul / kenapa yang itu tidak" lahir saat menatap daftar ini. */}
+          <Button
+            variant="subtle"
+            size="small"
+            onClick={() => setThresholds(true)}
+            title="Setel di angka berapa sistem mulai memunculkan alarm"
+          >
+            <IconSettings size={15} /> Ambang alarm
+          </Button>
         </Toolbar>
         <DataTable
           columns={alarmColumns}
@@ -345,6 +356,20 @@ export function MonitoringPage() {
           }
         />
       </section>
+
+      {thresholds && (
+        <Drawer title="Ambang alarm" onClose={() => setThresholds(false)}>
+          <div className="stack">
+            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+              Di angka berapa sistem mulai berteriak. Perubahan langsung berlaku pada alarm yang sudah terbuka —
+              yang dimatikan ikut ditutup, yang dilonggarkan turun kelas saat itu juga.
+            </p>
+            {/* Daftar alarm dimuat ulang tiap setelan berubah supaya keparahan di
+                tabel belakang panel tak sempat berbohong. */}
+            <AlarmThresholdPanel onChanged={() => void reload()} />
+          </div>
+        </Drawer>
+      )}
 
       {trace && (
         <Drawer title={`Tren redaman — ${trace.label}`} onClose={() => setTrace(null)}>

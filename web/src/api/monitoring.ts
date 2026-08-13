@@ -110,6 +110,36 @@ export interface OnuHistoryView {
 }
 
 /**
+ * Ke arah mana angka memburuk. Redaman punya dua sisi yang sama-sama gawat dan
+ * diukur satuan yang sama, jadi tanda minus saja tak cukup memberi tahu operator
+ * kapan alarmnya berbunyi. `null` untuk jenis biner (LOS, OLT tak terjangkau).
+ */
+export type AlarmThresholdDirection = 'LOWER_IS_WORSE' | 'HIGHER_IS_WORSE'
+
+/**
+ * Setelan satu jenis alarm untuk tenant ini. Daftarnya selalu memuat semua jenis:
+ * yang belum pernah disetel tampil dengan nilai bawaan dan `customised: false` —
+ * pemantauannya sudah jalan, cuma belum pernah disentuh operator.
+ */
+export interface AlarmRuleView {
+  kind: string
+  description: string
+  entityType: string
+  enabled: boolean
+  warningThreshold: number | null
+  criticalThreshold: number | null
+  defaultWarningThreshold: number | null
+  defaultCriticalThreshold: number | null
+  defaultSeverity: AlarmSeverity
+  direction: AlarmThresholdDirection | null
+  unit: string | null
+  customised: boolean
+  /** Batas fisik perangkat yang perlu diketahui sebelum menggeser ambangnya. */
+  guidance: string
+  openAlarmCount: number
+}
+
+/**
  * Setelan auto-provisioning zero-touch tenant. Bila `enabled`, ONU liar
  * berkeyakinan HIGH ditautkan otomatis oleh pemindai terjadwal tanpa menunggu
  * operator menekan "Terima".
