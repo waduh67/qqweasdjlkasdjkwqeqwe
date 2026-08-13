@@ -198,12 +198,12 @@ class MapService(
     /**
      * Menyusun kabel-kabel yang hilirnya bermasalah dari alarm hidup.
      *
-     * Alur komposisinya: alarm (monitoring) → entitas terdampak. Untuk alarm ONU,
-     * dipetakan ke pelanggan & ODP-nya (customer) — sebab kabel drop berujung di
-     * pelanggan dan kabel distribusi di ODP. Simpul terdampak lalu dicocokkan ke
-     * kabel yang menyentuhnya (network). Keparahan tiap kabel diambil dari ujung
-     * terdampak yang paling parah. Tidak ada module yang menyentuh tabel milik
-     * module lain — semuanya lewat kontrak publik.
+     * Alur komposisinya: alarm (monitoring) → entitas terdampak. Alarm ONU dipetakan
+     * ke pelanggannya (customer) — kabel drop berujung di pelanggan — dan menular ke
+     * ODP hanya bila beberapa penghuni kotak yang sama sama-sama mengeluh. Simpul
+     * terdampak lalu dicocokkan ke kabel yang menyentuhnya (network). Keparahan tiap
+     * kabel diambil dari ujung terdampak yang paling parah. Tidak ada module yang
+     * menyentuh tabel milik module lain — semuanya lewat kontrak publik.
      */
     override fun impactedCables(): ImpactedOverlay {
         val impacts = monitoringApi.activeImpacts()
@@ -219,14 +219,34 @@ class MapService(
             nodeCauses.getOrPut(id) { mutableListOf() }.add(cause)
         }
 
-        // Alarm ONU → pelanggan + ODP-nya membawa keparahan & penyebabnya.
+        // Alarm ONU → pelanggannya SELALU; ODP-nya HANYA bila keluhannya ditanggung bersama.
+        //
+        // Satu ONU beralarm bukan kabar tentang kotaknya. Redaman terlalu kuat di satu
+        // rumah itu soal kaki/atenuator rumah itu; drop yang putus cuma memutus satu
+        // orang. Padahal mewarnai ODP-nya membuat kabel distribusi yang menyuapinya DAN
+        // drop tetangga yang sehat ikut merah — peta memberitakan gangguan sekotak
+        // padahal yang terganggu satu pelanggan, dan teknisi diberangkatkan ke kotak
+        // yang tak apa-apa. Lebih buruk lagi: kalau satu pelanggan saja sudah membuat
+        // ODP merah, gangguan sungguhan nanti tampil persis sama, dan merah berhenti
+        // berarti apa-apa.
+        //
+        // Ambang "≥2 di bawah satu induk" sengaja sama dengan yang dipakai mesin
+        // korelasi insiden sebelum menuduh ODC — dua layar tak boleh bercerita lain
+        // tentang alarm yang sama. Kotaknya baru merah saat lebih dari satu penghuninya
+        // mengeluh, sebab itulah pola yang benar-benar menunjuk serat/splitter bersama.
         val onuImpacts = impacts.filter { it.entityType == "ONU" }.associateBy { it.entityId }
         if (onuImpacts.isNotEmpty()) {
-            customerApi.placementsForOnus(onuImpacts.keys).forEach { placement ->
+            val placements = customerApi.placementsForOnus(onuImpacts.keys)
+            placements.forEach { placement ->
                 val impact = onuImpacts[placement.onuId] ?: return@forEach
-                val cause = impact.toCause()
-                bump(placement.customerId, impact.severity, cause)
-                placement.odpId?.let { bump(it, impact.severity, cause) }
+                bump(placement.customerId, impact.severity, impact.toCause())
+            }
+            placements.groupBy { it.odpId }.forEach { (odpId, sharing) ->
+                if (odpId == null || sharing.size < MIN_ONUS_FOR_SHARED_FAULT) return@forEach
+                sharing.forEach { placement ->
+                    val impact = onuImpacts[placement.onuId] ?: return@forEach
+                    bump(odpId, impact.severity, impact.toCause())
+                }
             }
         }
         // Alarm ber-id-langsung: perangkat (ODP/ODC/OLT) membawa id perangkatnya, dan alarm
@@ -641,5 +661,12 @@ class MapService(
 
     private companion object {
         const val FIBER_LOSS_DB_PER_KM = 0.35
+
+        /**
+         * Berapa penghuni sebuah ODP harus mengeluh sebelum kotaknya sendiri ikut merah.
+         * Angkanya kembar dengan aturan korelasi insiden: satu pelanggan bermasalah itu
+         * urusan drop/ONU-nya, dua atau lebih baru menunjuk yang mereka pakai bersama.
+         */
+        const val MIN_ONUS_FOR_SHARED_FAULT = 2
     }
 }

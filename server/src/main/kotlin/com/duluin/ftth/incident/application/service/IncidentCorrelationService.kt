@@ -149,10 +149,18 @@ class IncidentCorrelationService(
         return "$n $unit terdampak di bawah ${b.root.label}"
     }
 
+    /**
+     * Judul insiden dibaca orang yang sedang panik, bukan mesin: tiap jenis alarm
+     * wajib punya sebutan Indonesia di sini. Yang belum tertulis jatuh ke kode
+     * mentahnya (`ONU_HIGH_RX`) — bukan galat, tapi layar jadi berbicara bahasa enum.
+     * Tambahkan barisnya setiap kali `AlarmKind` bertambah.
+     */
     private fun humanKind(kind: String): String = when (kind) {
         "ONU_LOS" -> "sinyal hilang (LOS)"
         "ONU_OFFLINE" -> "ONU offline"
         "ONU_LOW_RX" -> "redaman lemah"
+        "ONU_HIGH_RX" -> "redaman terlalu kuat"
+        "PPPOE_DOWN" -> "sesi PPPoE putus"
         "OLT_UNREACHABLE" -> "OLT tidak terjangkau"
         "COLLECTOR_SILENT" -> "collector berhenti melapor"
         else -> kind

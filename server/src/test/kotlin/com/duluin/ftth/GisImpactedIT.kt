@@ -163,4 +163,120 @@ class GisImpactedIT {
             .andReturn().response.contentAsString
         assertThat(JsonPath.read<List<String>>(recovered, "$.nodes[*].id")).isEmpty()
     }
+
+    /**
+     * Satu pelanggan bermasalah BUKAN gangguan kotak.
+     *
+     * Dulu satu alarm ONU langsung memerahkan ODP-nya, dan karena kabel mewarisi
+     * warna ujungnya, kabel distribusi yang menyuapi kotak itu ikut merah bersama
+     * drop tetangga yang sehat-sehat saja: peta memberitakan satu kotak tumbang
+     * padahal yang terganggu satu rumah. Sekarang kotaknya baru merah kalau lebih
+     * dari satu penghuninya mengeluh — pola yang benar-benar menunjuk serat atau
+     * splitter yang mereka pakai bersama, dan yang memang pantas didatangi.
+     */
+    @Test
+    fun `alarm satu pelanggan tak memerahkan ODP-nya, dua penghuni yang mengeluh baru memerahkan`() {
+        val slug = "share${uniq()}"
+        val admin = "admin@$slug.test"
+        onboarding.onboard(OnboardTenantCommand(slug, "Share Co", admin, "Admin", pass))
+        val token = login(slug, admin)
+        val s = uniq().uppercase()
+
+        val site = id(
+            post("/api/sites", token, """{"code":"POP-$s","name":"POP $s","location":{"longitude":106.98,"latitude":-6.23}}"""),
+        )
+        val olt = id(
+            post(
+                "/api/olts", token,
+                """{"siteId":"$site","code":"OLT-$s","name":"OLT $s","vendor":"ZTE",
+                    "managementIp":"10.0.0.1","snmpCommunity":"rahasia"}""",
+            ),
+        )
+        val pon = id(post("/api/olts/$olt/pon-ports", token, """{"label":"1/1/1"}"""))
+        val odc = id(
+            post(
+                "/api/odcs", token,
+                """{"code":"ODC-$s","name":"ODC $s","location":{"longitude":106.99,"latitude":-6.24},
+                    "ponPortId":"$pon","splitterRatio":"1:8","capacity":64}""",
+            ),
+        )
+        val odp = id(
+            post(
+                "/api/odps", token,
+                """{"code":"ODP-$s","name":"ODP $s","location":{"longitude":106.995,"latitude":-6.245},
+                    "odcId":"$odc","splitterRatio":"1:8","capacity":8}""",
+            ),
+        )
+        post(
+            "/api/cables", token,
+            """{"code":"DST-$s","name":"Distribusi $s","cableType":"DISTRIBUTION","coreCount":12,
+                "route":[{"longitude":106.99,"latitude":-6.24},{"longitude":106.995,"latitude":-6.245}],
+                "fromKind":"ODC","fromId":"$odc","toKind":"ODP","toId":"$odp"}""",
+        )
+
+        // Dua penghuni kotak yang sama, masing-masing dengan kabel drop-nya sendiri.
+        fun tenant(port: Int): Pair<String, String> {
+            val customer = id(
+                post(
+                    "/api/customers", token,
+                    """{"code":"C$port-$s","name":"Pelanggan $port $s","address":"Jl. Uji",
+                        "location":{"longitude":106.996,"latitude":-6.246}}""",
+                ),
+            )
+            val onu = id(post("/api/customers/$customer/onus", token, """{"serialNumber":"SN$port-$s"}"""))
+            post(
+                "/api/customers/onus/$onu/attach", token,
+                """{"odpId":"$odp","portNumber":$port,"installRxPowerDbm":-22.0}""", expected = 200,
+            )
+            post(
+                "/api/cables", token,
+                """{"code":"DRP$port-$s","name":"Drop $port $s","cableType":"DROP","coreCount":1,
+                    "route":[{"longitude":106.995,"latitude":-6.245},{"longitude":106.996,"latitude":-6.246}],
+                    "fromKind":"ODP","fromId":"$odp","toKind":"CUSTOMER","toId":"$customer"}""",
+            )
+            return customer to "SN$port-$s"
+        }
+        val (customer1, serial1) = tenant(1)
+        val (customer2, serial2) = tenant(2)
+
+        val apiKey = JsonPath.read<String>(
+            post("/api/monitoring/collectors", token, """{"name":"C-$s","pollIntervalSeconds":60}"""),
+            "$.apiKey",
+        )
+        fun reportLos(vararg serials: String) {
+            val readings = serials.joinToString(",") {
+                """{"serialNumber":"$it","oltCode":"OLT-$s","ponPortLabel":"1/1/1","status":"LOS",
+                    "rxPowerDbm":null,"txPowerDbm":null,"uptimeSeconds":null,"distanceMeters":null,
+                    "observedAt":"${java.time.Instant.now()}"}"""
+            }
+            mockMvc.perform(
+                post("/api/collector/metrics").header(CollectorProtocol.API_KEY_HEADER, apiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """{"batchId":"${uniq()}","collectedAt":"${java.time.Instant.now()}","readings":[$readings]}""",
+                    ),
+            ).andExpect(status().isOk)
+        }
+        fun overlay(): String =
+            mockMvc.perform(get("/api/gis/impacted").header("Authorization", "Bearer $token"))
+                .andExpect(status().isOk).andReturn().response.contentAsString
+
+        // Satu penghuni putus: rumahnya merah, kotaknya tidak — dan yang tersorot
+        // cuma kabel drop miliknya, bukan distribusi yang dipakai bersama.
+        reportLos(serial1)
+        val alone = overlay()
+        val aloneNodes: List<String> = JsonPath.read(alone, "$.nodes[*].id")
+        assertThat(aloneNodes).contains(customer1).doesNotContain(odp, customer2)
+        assertThat(JsonPath.read<List<String>>(alone, "$.cables[*].cableType"))
+            .containsExactly("DROP")
+
+        // Tetangganya menyusul putus: sekarang yang mereka pakai bersama-lah
+        // tersangkanya, jadi kotak & kabel distribusinya ikut merah.
+        reportLos(serial1, serial2)
+        val shared = overlay()
+        assertThat(JsonPath.read<List<String>>(shared, "$.nodes[*].id"))
+            .contains(customer1, customer2, odp)
+        assertThat(JsonPath.read<List<String>>(shared, "$.cables[*].cableType"))
+            .contains("DISTRIBUTION", "DROP")
+    }
 }
