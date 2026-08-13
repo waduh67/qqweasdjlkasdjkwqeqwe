@@ -116,37 +116,27 @@ enum class AlarmKind(
         get() = thresholdDirection?.let { "dBm" }
 
     /**
-     * Yang perlu diketahui SEBELUM menggeser ambangnya — pengetahuan lapangan, bukan
-     * basa-basi bantuan. Angka-angka ini menentukan kapan orang diberangkatkan dan
-     * kapan pelanggan dibiarkan; menggesernya tanpa tahu batas fisik perangkat sama
-     * saja mematikan alarmnya diam-diam.
+     * Batas fisik perangkat yang menentukan ambangnya — dipajang di layar setelan.
+     *
+     * Sengaja satu-dua kalimat fakta, bukan paragraf penjelasan: yang membacanya
+     * sedang menyetel angka, bukan sedang belajar GPON. Yang wajib ada cuma angka
+     * batas perangkat dan tindakan yang benar; sisanya mengganggu.
      */
     val guidance: String
         get() = when (this) {
-            ONU_LOS ->
-                "OLT tak melihat cahaya sama sekali dari ONU: serat putus, konektor lepas, atau " +
-                    "perangkatnya mati total. Biner — tak ada ambang yang bisa disetel."
-            ONU_OFFLINE ->
-                "ONU tak menjawab. Mati listrik di rumah pelanggan terlihat persis sama dengan " +
-                    "gangguan jaringan, dan sebagian besar pulih sendiri."
+            ONU_LOS -> "Tak ada cahaya sama sekali: serat putus, konektor lepas, atau ONU mati."
+            ONU_OFFLINE -> "ONU tak menjawab. Mati listrik pelanggan terlihat sama dengan gangguan jaringan."
             ONU_LOW_RX ->
-                "Cahaya yang sampai terlalu redup. Penerima GPON B+/C+ menyerah di sekitar −27…−28 dBm; " +
-                    "−25 dBm masih jalan tapi tak menyisakan cadangan untuk hujan, sambungan baru, atau " +
-                    "serat yang menua. Melonggarkan ambang ini menunda ketahuan, bukan memperbaiki."
+                "Penerima B+/C+ menyerah di −27…−28 dBm. Di −25 dBm tak ada cadangan untuk hujan " +
+                    "atau sambungan baru."
             ONU_HIGH_RX ->
-                "Cahaya yang sampai terlalu KUAT — makin mendekati nol makin terang, jadi −3 dBm itu " +
-                    "buruk, bukan bagus. Penerima B+/C+ mulai jenuh di atas −8 dBm: paket hilang walau " +
-                    "ONU terlihat online, dan lama-lama penerimanya rusak. Biasanya splitter kurang " +
-                    "tingkat atau ONU diuji terlalu dekat OLT; obatnya atenuator, bukan menggeser ambang."
-            OLT_UNREACHABLE ->
-                "Collector tak bisa menghubungi OLT. Seluruh pelanggan di bawahnya ikut gelap di layar " +
-                    "walau boleh jadi jaringannya sehat — periksa juga jalur manajemen, bukan cuma serat."
-            COLLECTOR_SILENT ->
-                "Collector berhenti melapor. Wajib terlihat: tanpa ini pemantauan yang buta tampak " +
-                    "seperti jaringan yang tenang."
+                "Penerima B+/C+ jenuh di atas −8 dBm: paket hilang walau ONU online. Obatnya " +
+                    "atenuator, bukan menggeser ambang."
+            OLT_UNREACHABLE -> "Collector tak bisa menghubungi OLT. Periksa jalur manajemen, bukan cuma serat."
+            COLLECTOR_SILENT -> "Collector berhenti melapor — pemantauan buta tampak seperti jaringan tenang."
             PPPOE_DOWN ->
-                "Sesi PPPoE pelanggan putus di BRAS walau ONU-nya boleh jadi masih menyala — salah " +
-                    "kredensial, di-suspend, atau sesi ngadat."
+                "Sesi putus di BRAS walau ONU boleh jadi menyala: salah kredensial, suspend, atau " +
+                    "sesi ngadat."
         }
 }
 
