@@ -225,11 +225,14 @@ class SpliceWorkOrderIT {
         ).andExpect(status().isConflict)
 
         // Tiket yang tak ada ditolak sebelum seratnya tercatat tersambung.
+        // Pasangannya sengaja diambil di ujung ODC: core kabel yang sama bertemu
+        // kaki splitter ODP-nya sendiri sudah punya penolak lain (kaki tak boleh
+        // berbalik ke kabel penyuap input), dan yang mau diuji di sini tiketnya.
         post(
             "/api/fiber-connections", token,
             connectBody(
-                "ODP", odp, core(coreId(token, cable, 2)),
-                splitterOut(splitterOf(token, "ODP", odp), 1),
+                "ODC", odc, core(coreId(token, cable, 2)),
+                splitterOut(splitterOf(token, "ODC", odc), 1),
                 ""","workOrderId":"${UUID.randomUUID()}"""",
             ),
             expected = 404,

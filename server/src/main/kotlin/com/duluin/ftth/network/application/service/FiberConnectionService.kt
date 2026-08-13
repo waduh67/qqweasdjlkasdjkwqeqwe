@@ -141,6 +141,7 @@ class FiberConnectionService(
         assertPairMakesSense(a, b)
         val cores = listOf(a, b).mapNotNull { point -> validate(point, closure) }
         assertNotSameCable(cores)
+        assertLightFlowsForward(a, b, cores)
         assertRoomLeft(closure)
 
         val actor = currentUser.current()
@@ -448,10 +449,43 @@ class FiberConnectionService(
      * Ini bukan kelonggaran yang belum sempat ditulis — menyambung core langsung
      * ke sisi depan berarti mengaku ada konektor di ujung kabel luar, dan jalur
      * yang ditelusuri dari data itu tak akan pernah cocok dengan raknya.
+     *
+     * Splitter ikut dijaga di sini karena alasan yang sama, cuma bentuknya lain:
+     * ia punya SATU input dan sekian kaki keluaran, dan cahaya cuma lewat satu
+     * arah — masuk lewat input, keluar terbagi di kaki. Mengawinkan dua kaki,
+     * dua input, atau kaki dengan input modul yang sama tak punya wujud fisik
+     * yang masuk akal; yang benar-benar dikerjakan orang di kabinet bertingkat
+     * adalah kaki modul atas → INPUT modul bawah.
      */
     private fun assertPairMakesSense(a: ConnectionPoint, b: ConnectionPoint) {
         listOf(a to b, b to a).forEach { (point, other) ->
             when (point.kind) {
+                ConnectionPointKind.SPLITTER_OUT ->
+                    if (other.kind == ConnectionPointKind.SPLITTER_OUT) {
+                        throw ValidationException(
+                            "Dua kaki splitter tak bisa dikawinkan — keduanya KELUARAN, " +
+                                "tak ada satu pun yang menyuapi yang lain. Kaki splitter disambung ke core " +
+                                "kabel drop menuju rumah pelanggan, atau ke INPUT splitter lain bila " +
+                                "splitternya memang dipasang bertingkat.",
+                        )
+                    }
+
+                ConnectionPointKind.SPLITTER_IN -> when (other.kind) {
+                    ConnectionPointKind.SPLITTER_IN -> throw ValidationException(
+                        "Dua input splitter tak bisa dikawinkan — keduanya menunggu disuapi, " +
+                            "tak ada yang menyuapi. Input splitter disambung ke core kabel yang datang " +
+                            "dari ODC/OLT, atau ke kaki splitter di tingkat atasnya.",
+                    )
+                    ConnectionPointKind.SPLITTER_OUT -> if (other.nodeId == point.nodeId) {
+                        throw ValidationException(
+                            "Input dan kaki splitter yang SAMA disambung — cahayanya berputar di dalam " +
+                                "modulnya sendiri dan tak pernah sampai ke mana pun. Splitter bertingkat " +
+                                "memakai input modul LAIN.",
+                        )
+                    }
+                    else -> Unit
+                }
+
                 ConnectionPointKind.ODF_PORT -> when (point.portSide) {
                     OdfPortSide.BACK -> if (other.kind != ConnectionPointKind.CORE) {
                         throw ValidationException(
@@ -516,6 +550,67 @@ class FiberConnectionService(
                 "dan menghabiskan dua core tanpa melayani siapa pun. Sambungkan core kabel yang datang " +
                 "ke core kabel lanjutan; bila kabel lanjutannya belum ada, tarik dulu kabelnya dari kotak ini.",
         )
+    }
+
+    /**
+     * Serat splitter tak boleh berbalik ke kabel yang menyuapinya.
+     *
+     * Kasus lapangannya begini: satu kabel distribusi masuk ODP, core 1 dilas ke
+     * input splitter — sampai sini benar. Lalu core 2 kabel YANG SAMA dilas ke
+     * kaki 7. Alat las tak protes, layarnya pun hijau, tapi cahaya yang sudah
+     * dibagi delapan itu langsung pulang lewat serat tetangganya di selubung yang
+     * sama, kembali ke ODC. Satu kaki mati, satu core habis, dan pelanggan yang
+     * mestinya dilayani port itu tak dapat apa-apa. Yang menunggu di ujung kaki
+     * adalah kabel DROP ke rumah pelanggan — kabel lain, selubung lain.
+     *
+     * Dijaga dari dua arah, sebab urutan kerja di lapangan tak selalu rapi:
+     * kaki disambung ke kabel penyuapnya, maupun input disuapi kabel yang
+     * seratnya sudah dipakai kaki modul itu sendiri.
+     *
+     * Berbeda dengan [assertNotSameCable], di sini kedua ujungnya BUKAN core —
+     * yang sekabel adalah core baru dengan core di seberang sambungan lama, jadi
+     * kesamaannya cuma kelihatan kalau isi splitternya ikut dibaca.
+     */
+    private fun assertLightFlowsForward(a: ConnectionPoint, b: ConnectionPoint, cores: List<CableCore>) {
+        val splitterPoint = listOf(a, b).firstOrNull {
+            it.kind == ConnectionPointKind.SPLITTER_IN || it.kind == ConnectionPointKind.SPLITTER_OUT
+        } ?: return
+        // Satu-satunya core pada pasangan ini: ujung seberangnya titik splitter,
+        // jadi kalau ada core, ia pasti tunggal.
+        val core = cores.singleOrNull() ?: return
+        val splitterId = requireNotNull(splitterPoint.nodeId)
+        val clashesWith = when (splitterPoint.kind) {
+            ConnectionPointKind.SPLITTER_OUT -> ConnectionPointKind.SPLITTER_IN
+            else -> ConnectionPointKind.SPLITTER_OUT
+        }
+        if (core.cableId !in cablesWiredTo(clashesWith, splitterId)) return
+
+        val splitter = splitters.findById(splitterId)?.code ?: "splitter ini"
+        val cable = cableRepository.findById(core.cableId)?.code ?: "kabel yang sama"
+        throw ValidationException(
+            if (splitterPoint.kind == ConnectionPointKind.SPLITTER_OUT) {
+                "Kaki ${splitterPoint.portNumber} splitter $splitter diarahkan balik ke kabel $cable — " +
+                    "kabel itu justru yang MENYUAPI input splitter tersebut. Cahaya yang sudah dibagi akan " +
+                    "pulang lewat serat tetangganya di selubung yang sama dan tak ada pelanggan yang terlayani. " +
+                    "Kaki splitter disambung ke core kabel DROP menuju rumah pelanggan " +
+                    "(atau ke input splitter lain bila splitternya bertingkat)."
+            } else {
+                "Input splitter $splitter disuapi kabel $cable, padahal serat kabel itu sudah dipakai " +
+                    "kaki splitter yang sama — keluarannya akan pulang ke masukannya sendiri. Input splitter " +
+                    "disambung ke core kabel yang DATANG dari arah ODC/OLT; kalau kabel $cable memang kabel " +
+                    "penyuapnya, lepas dulu sambungan kaki yang salah itu."
+            },
+        )
+    }
+
+    /** Kabel yang seratnya sudah dilas ke titik [kind] milik splitter ini. */
+    private fun cablesWiredTo(kind: ConnectionPointKind, splitterId: UUID): Set<UUID> {
+        val farCoreIds = connections.findByNodeIds(kind, setOf(splitterId)).mapNotNull { row ->
+            val here = listOf(row.a, row.b).firstOrNull { it.kind == kind && it.nodeId == splitterId }
+            here?.let { row.opposite(it) }?.coreId
+        }
+        if (farCoreIds.isEmpty()) return emptySet()
+        return cableCoreRepository.findByIds(farCoreIds).map { it.cableId }.toSet()
     }
 
     /** Port ODF & PON port cuma ada artinya di dalam rak; di kotak lain tak ada raknya. */

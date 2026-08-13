@@ -329,6 +329,109 @@ class FiberConnectionIT {
         )
     }
 
+    /**
+     * Kekeliruan paling sering di meja sambung ODP: kabel distribusi yang masuk
+     * dilas ke input splitter — benar — lalu core TETANGGANYA di selubung yang
+     * sama dilas ke salah satu kaki. Alat las tak protes, layarnya hijau, tapi
+     * cahaya yang sudah dibagi delapan langsung pulang ke ODC lewat serat
+     * sebelahnya. Kaki itu mati, satu core habis, dan pelanggannya tak dapat apa
+     * pun. Yang menunggu di ujung kaki adalah kabel DROP ke rumah — kabel lain.
+     */
+    @Test
+    fun `kaki splitter tak boleh diarahkan balik ke kabel yang menyuapi inputnya`() {
+        val token = newTenantAdmin("mundur")
+        val odc = newOdc(token, 106.99, -6.24)
+        val odp = newOdp(token, 107.005, -6.24)
+        val hulu = newDistribution(token, odc, odp, endLon = 107.005)
+        val spl = splitterOf(token, "ODP", odp)
+
+        post("/api/fiber-connections", token, connectBody("ODP", odp, core(coreId(token, hulu, 1)), splitterIn(spl)))
+
+        val error = post(
+            "/api/fiber-connections", token,
+            connectBody("ODP", odp, core(coreId(token, hulu, 2)), splitterOut(spl, 7)),
+            expected = 400,
+        )
+        assertThat(error).contains("MENYUAPI", "kabel DROP")
+        assertThat(coreStatus(token, hulu, 2)).isEqualTo("FREE")
+
+        // Yang benar tetap lolos: kaki yang sama bertemu core kabel LANJUTAN —
+        // selubung lain, arah lain, cahayanya menjauh dari ODC.
+        val lanjut = idOf(
+            post(
+                "/api/cables", token,
+                """{"name":"Kaskade ke ODP bawah","cableType":"DISTRIBUTION","coreCount":4,
+                    "route":[{"longitude":107.005,"latitude":-6.24},{"longitude":107.01,"latitude":-6.24}],
+                    "fromKind":"ODP","fromId":"$odp","toKind":"ODP","toId":"${newOdp(token, 107.01, -6.24)}"}""",
+            ),
+        )
+        post(
+            "/api/fiber-connections", token,
+            connectBody("ODP", odp, core(coreId(token, lanjut, 1)), splitterOut(spl, 7)),
+        )
+    }
+
+    /**
+     * Urutan kerja di lapangan tak selalu rapi — kaki bisa lebih dulu dilas
+     * daripada inputnya. Saat kaki disambung, core kabel distribusi itu belum
+     * bisa disalahkan: bisa saja ia kabel kaskade menuju ODP berikutnya. Yang
+     * membongkarnya adalah langkah berikutnya, ketika kabel yang sama dipakai
+     * menyuapi input modul itu juga.
+     */
+    @Test
+    fun `input splitter tak boleh disuapi kabel yang seratnya sudah dipakai kakinya sendiri`() {
+        val token = newTenantAdmin("terbalik")
+        val odc = newOdc(token, 106.99, -6.24)
+        val odp = newOdp(token, 107.005, -6.24)
+        val cable = newDistribution(token, odc, odp, endLon = 107.005)
+        val spl = splitterOf(token, "ODP", odp)
+
+        post("/api/fiber-connections", token, connectBody("ODP", odp, core(coreId(token, cable, 2)), splitterOut(spl, 3)))
+
+        val error = post(
+            "/api/fiber-connections", token,
+            connectBody("ODP", odp, core(coreId(token, cable, 1)), splitterIn(spl)),
+            expected = 400,
+        )
+        assertThat(error).contains("pulang ke masukannya sendiri")
+        assertThat(coreStatus(token, cable, 1)).isEqualTo("FREE")
+    }
+
+    /**
+     * Bentuk-bentuk yang tak punya wujud fisik sama sekali, jadi tak perlu
+     * menengok isi kotak untuk menolaknya. Satu-satunya perkawinan antar-splitter
+     * yang benar-benar dikerjakan orang adalah kaki modul atas → INPUT modul
+     * bawah; itu yang harus tetap lolos, sebab kabinet bertingkat memang lazim.
+     */
+    @Test
+    fun `perkawinan antar-titik splitter yang mustahil ditolak`() {
+        val token = newTenantAdmin("kawin")
+        val odc = newOdc(token, 106.99, -6.24)
+        val atas = splitterOf(token, "ODC", odc)
+        val bawah = idOf(
+            post(
+                "/api/splitters", token,
+                """{"ownerKind":"ODC","ownerId":"$odc","code":"SPL-2","ratio":"1:4"}""",
+            ),
+        )
+
+        // Dua keluaran: tak ada yang menyuapi yang lain.
+        assertThat(
+            post("/api/fiber-connections", token, connectBody("ODC", odc, splitterOut(atas, 1), splitterOut(bawah, 1)), expected = 400),
+        ).contains("Dua kaki splitter")
+        // Dua masukan: dua-duanya menunggu disuapi.
+        assertThat(
+            post("/api/fiber-connections", token, connectBody("ODC", odc, splitterIn(atas), splitterIn(bawah)), expected = 400),
+        ).contains("Dua input splitter")
+        // Modul yang sama digigit ekornya sendiri.
+        assertThat(
+            post("/api/fiber-connections", token, connectBody("ODC", odc, splitterIn(atas), splitterOut(atas, 1)), expected = 400),
+        ).contains("modulnya sendiri")
+
+        // Kabinet bertingkat: 1:8 memberi makan 1:4 di bawahnya.
+        post("/api/fiber-connections", token, connectBody("ODC", odc, splitterOut(atas, 1), splitterIn(bawah)))
+    }
+
     @Test
     fun `bentuk titik yang mustahil ditolak sebelum menyentuh basis data`() {
         val token = newTenantAdmin("bentuk")
