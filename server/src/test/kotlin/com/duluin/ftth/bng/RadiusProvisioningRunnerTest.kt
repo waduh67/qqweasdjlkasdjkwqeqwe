@@ -254,6 +254,9 @@ private class FakeAccessRepo(private val accesses: List<SubscriberAccess>) : Sub
     override fun findById(id: UUID): SubscriberAccess? = accesses.firstOrNull { it.id == id }
     override fun save(access: SubscriberAccess): SubscriberAccess = notUsed()
     override fun findByCustomerId(customerId: UUID): List<SubscriberAccess> = notUsed()
+    override fun findByCustomerIds(customerIds: Collection<UUID>): List<SubscriberAccess> =
+        notUsed()
+
     override fun findBySubscriptionId(subscriptionId: UUID): List<SubscriberAccess> = notUsed()
     override fun findByUsername(username: String): SubscriberAccess? = notUsed()
     override fun findByNasId(nasId: UUID): List<SubscriberAccess> = notUsed()

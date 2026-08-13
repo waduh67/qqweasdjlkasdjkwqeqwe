@@ -56,6 +56,8 @@ class CpeApiServiceTest {
         softwareVersion = "V1.0",
         ipAddress = "10.0.0.1",
         lastInformAt = lastInformAt,
+        ssid = null,
+        temperatureC = null,
         customerId = customerId,
         onuId = null,
     )
@@ -67,6 +69,7 @@ class CpeApiServiceTest {
         override fun findById(id: UUID) = throw UnsupportedOperationException()
         override fun findByGenieacsId(genieacsId: String) = throw UnsupportedOperationException()
         override fun findAllForCurrentTenant() = throw UnsupportedOperationException()
+        override fun findByIds(ids: Collection<UUID>) = throw UnsupportedOperationException()
         override fun deleteByIds(ids: Collection<UUID>) = throw UnsupportedOperationException()
     }
 }

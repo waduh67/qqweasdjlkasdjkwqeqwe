@@ -88,7 +88,7 @@ import { payLink } from '../api/publicPayment'
 import { listIncidentsForCustomer, type IncidentView } from '../api/incident'
 import { listWorkOrdersForCustomer, type WorkOrderStatus, type WorkOrderView } from '../api/workorder'
 import { getSubscriber360, type Sub360BillingSummary, type Subscriber360View } from '../api/subscriber360'
-import { PortalCredentialCard } from '@/components/organisms'
+import { OntAcsSettingsCard, PortalCredentialCard } from '@/components/organisms'
 import { Blade } from '@/components/organisms'
 
 /**
@@ -298,7 +298,7 @@ export function CustomerDetailPage({
     { key: 'metrik', label: 'Metrik' },
     ...(canAccess ? [{ key: 'akses' as Tab, label: 'Akses' }] : []),
     ...(canTraffic ? [{ key: 'trafik' as Tab, label: 'Trafik' }] : []),
-    ...(canCpe ? [{ key: 'cpe' as Tab, label: 'CPE' }] : []),
+    ...(canCpe ? [{ key: 'cpe' as Tab, label: 'GenieACS' }] : []),
     ...(canBilling ? [{ key: 'tagihan' as Tab, label: 'Tagihan' }] : []),
     ...(canIncident || canWorkorder ? [{ key: 'tiket' as Tab, label: 'Tiket & WO' }] : []),
     ...(canBilling || canIncident || canWorkorder ? [{ key: 'timeline' as Tab, label: 'Timeline' }] : []),
@@ -557,6 +557,10 @@ function RingkasanTab({
       <SubscriptionManager customer={customer} run={run} />
 
       <OnuManager customer={customer} odps={odps} run={run} />
+
+      {/* Momen operator baru mengetik serial ONU adalah momen ia menyetel ONT-nya; kartu
+          setelan TR-069 muncul tepat di situ. Pada pelanggan tanpa ONU ia derau murni. */}
+      {customer.onus.length > 0 && <OntAcsSettingsCard />}
 
       <PortalCredentialCard customerId={customer.id} />
     </div>

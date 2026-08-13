@@ -19,4 +19,10 @@ data class GenieAcsProperties(
     val password: String = "",
     val connectTimeout: Duration = Duration.ofSeconds(5),
     val readTimeout: Duration = Duration.ofSeconds(15),
+    /**
+     * Batas baca khusus probe kesehatan — sengaja jauh lebih pendek dari [readTimeout].
+     * Probe hanya menanyakan "ACS-nya hidup?"; jawaban "tidak" yang datang setelah 15 detik
+     * sama tak bergunanya dengan tak ada jawaban, dan halamannya terlanjur menggantung.
+     */
+    val healthTimeout: Duration = Duration.ofSeconds(3),
 )

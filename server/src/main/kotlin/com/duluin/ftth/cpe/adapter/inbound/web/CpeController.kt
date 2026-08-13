@@ -1,6 +1,16 @@
 package com.duluin.ftth.cpe.adapter.inbound.web
 
+import com.duluin.ftth.cpe.application.port.inbound.AcsActivityView
+import com.duluin.ftth.cpe.application.port.inbound.AcsBulkRefreshView
+import com.duluin.ftth.cpe.application.port.inbound.AcsConsoleQuery
+import com.duluin.ftth.cpe.application.port.inbound.AcsDeviceFilter
+import com.duluin.ftth.cpe.application.port.inbound.AcsDeviceRowView
+import com.duluin.ftth.cpe.application.port.inbound.AcsHealthView
 import com.duluin.ftth.cpe.application.port.inbound.AcsRefreshView
+import com.duluin.ftth.cpe.application.port.inbound.AcsServerInfoView
+import com.duluin.ftth.cpe.application.port.inbound.AcsSignalFilter
+import com.duluin.ftth.cpe.application.port.inbound.AcsStatsView
+import com.duluin.ftth.cpe.application.port.inbound.AcsStatusFilter
 import com.duluin.ftth.cpe.application.port.inbound.CpeActionView
 import com.duluin.ftth.cpe.application.port.inbound.CpeDeviceDetail
 import com.duluin.ftth.cpe.application.port.inbound.CpeDeviceView
@@ -10,6 +20,7 @@ import com.duluin.ftth.cpe.application.port.inbound.FirmwareFileView
 import com.duluin.ftth.cpe.application.port.inbound.ManageCpeUseCase
 import com.duluin.ftth.cpe.application.port.inbound.PingCommand
 import com.duluin.ftth.cpe.application.port.inbound.PingDiagnosticView
+import com.duluin.ftth.cpe.application.port.inbound.RefreshAcsFleetUseCase
 import com.duluin.ftth.cpe.application.port.inbound.SetWifiCommand
 import com.duluin.ftth.cpe.application.port.inbound.SpeedTestDiagnosticView
 import com.duluin.ftth.cpe.application.port.inbound.UpgradeFirmwareCommand
@@ -19,6 +30,9 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -43,7 +57,14 @@ import java.util.UUID
 class CpeController(
     private val query: CpeQuery,
     private val manage: ManageCpeUseCase,
+    private val console: AcsConsoleQuery,
+    private val fleet: RefreshAcsFleetUseCase,
 ) {
+    /**
+     * SENGAJA tetap mewajibkan `customerId`. Melonggarkannya jadi opsional akan diam-diam
+     * mengubah pembacaan per-pelanggan menjadi se-tenant di balik izin yang sama —
+     * pandangan se-armada punya pintunya sendiri di `/acs/devices`.
+     */
     @GetMapping("/devices")
     @PreAuthorize("@authz.can('cpe.device.view')")
     @Operation(summary = "CPE milik satu pelanggan")
@@ -111,6 +132,123 @@ class CpeController(
     @PreAuthorize("@authz.can('cpe.device.manage')")
     @Operation(summary = "Paksa perangkat membuka sesi ke ACS sekarang; kembalikan status ACS Connect")
     fun refreshAcs(@PathVariable id: UUID): AcsRefreshView = manage.refreshAcs(id)
+
+    // ---------------------------------------------------------------------------------
+    // Konsol ACS se-armada (halaman /acs).
+    //
+    // Dua izin yang berbeda dengan sengaja: `cpe.acs.view` hanya membuka INFO SERVER —
+    // nilai env global tanpa sebutir pun data tenant — dan itulah yang dipegang teknisi
+    // agar bisa menyetel ONT di rumah pelanggan. Segala yang menyentuh armada tenant
+    // tetap di balik `cpe.device.view`.
+    // ---------------------------------------------------------------------------------
+
+    @GetMapping("/acs/server")
+    @PreAuthorize("@authz.can('cpe.acs.view')")
+    @Operation(summary = "Setelan TR-069 yang harus diketik ke ONT pelanggan (nilai global dari env)")
+    fun acsServer(): AcsServerInfoView = console.serverInfo()
+
+    @GetMapping("/acs/health")
+    @PreAuthorize("@authz.can('cpe.acs.view')")
+    @Operation(summary = "Probe kesehatan server ACS; hasilnya dimemoisasi sepuluh detik")
+    fun acsHealth(): AcsHealthView = console.health()
+
+    @GetMapping("/acs/stats")
+    @PreAuthorize("@authz.can('cpe.device.view')")
+    @Operation(summary = "Ringkasan armada tenant: online, offline, rata-rata RX, sinkron terakhir")
+    fun acsStats(
+        @RequestParam(required = false) q: String?,
+        @RequestParam(defaultValue = "ALL") status: AcsStatusFilter,
+        @RequestParam(defaultValue = "ALL") signal: AcsSignalFilter,
+        @RequestParam(required = false) brand: String?,
+    ): AcsStatsView = console.stats(AcsDeviceFilter(q, status, signal, brand))
+
+    @GetMapping("/acs/devices")
+    @PreAuthorize("@authz.can('cpe.device.view')")
+    @Operation(summary = "Tabel seluruh CPE tenant: identitas, SSID, PPPoE, RX/TX, suhu")
+    fun acsDevices(
+        @RequestParam(required = false) q: String?,
+        @RequestParam(defaultValue = "ALL") status: AcsStatusFilter,
+        @RequestParam(defaultValue = "ALL") signal: AcsSignalFilter,
+        @RequestParam(required = false) brand: String?,
+    ): List<AcsDeviceRowView> = console.devices(AcsDeviceFilter(q, status, signal, brand))
+
+    @GetMapping("/acs/devices.csv", produces = ["text/csv"])
+    @PreAuthorize("@authz.can('cpe.device.view')")
+    @Operation(summary = "Ekspor tabel CPE sebagai CSV (tanpa kredensial apa pun)")
+    fun acsDevicesCsv(
+        @RequestParam(required = false) q: String?,
+        @RequestParam(defaultValue = "ALL") status: AcsStatusFilter,
+        @RequestParam(defaultValue = "ALL") signal: AcsSignalFilter,
+        @RequestParam(required = false) brand: String?,
+    ): ResponseEntity<ByteArray> {
+        val csv = AcsDeviceCsv.render(console.devices(AcsDeviceFilter(q, status, signal, brand)))
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"perangkat-acs.csv\"")
+            .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+            .body(csv.toByteArray(Charsets.UTF_8))
+    }
+
+    @GetMapping("/acs/logs")
+    @PreAuthorize("@authz.can('cpe.device.view')")
+    @Operation(summary = "Jejak aksi ACS terbaru lintas perangkat tenant")
+    fun acsLogs(
+        @RequestParam(defaultValue = "100") limit: Int,
+        @RequestParam(required = false) deviceId: UUID?,
+    ): List<AcsActivityView> = console.activity(limit, deviceId)
+
+    @PostMapping("/acs/refresh-all")
+    @PreAuthorize("@authz.can('cpe.device.manage')")
+    @Operation(summary = "Sapuan connection request berplafon ke perangkat online (bukan 'semua')")
+    fun acsRefreshAll(): AcsBulkRefreshView = fleet.refreshAll()
+}
+
+/**
+ * Penulis CSV tabel perangkat ACS — satu-satunya tempat urutan & escaping kolomnya hidup.
+ *
+ * TIDAK ADA kolom kredensial di sini, dan tak boleh ada: berkas ini beredar lewat email
+ * dan grup WhatsApp, jauh dari kendali izin aplikasi.
+ */
+internal object AcsDeviceCsv {
+
+    private val HEADER = listOf(
+        "serial_number", "customer_name", "manufacturer", "model", "software_version",
+        "status", "last_inform", "ip_address", "ssid", "pppoe_username", "pppoe_status",
+        "rx_power_dbm", "tx_power_dbm", "temperature_c",
+    )
+
+    fun render(rows: List<AcsDeviceRowView>): String {
+        val sb = StringBuilder()
+        sb.append(HEADER.joinToString(",") { escape(it) }).append("\r\n")
+        for (row in rows) {
+            sb.append(
+                listOf(
+                    row.serialNumber,
+                    row.customerName.orEmpty(),
+                    row.manufacturer.orEmpty(),
+                    row.model.orEmpty(),
+                    row.softwareVersion.orEmpty(),
+                    if (row.online) "ONLINE" else "OFFLINE",
+                    row.lastInformAt?.toString().orEmpty(),
+                    row.ipAddress.orEmpty(),
+                    row.ssid.orEmpty(),
+                    row.pppoeUsername.orEmpty(),
+                    row.pppoeOnline?.let { if (it) "ONLINE" else "OFFLINE" }.orEmpty(),
+                    row.rxPowerDbm?.toString().orEmpty(),
+                    row.txPowerDbm?.toString().orEmpty(),
+                    row.temperatureC?.toString().orEmpty(),
+                ).joinToString(",") { escape(it) },
+            ).append("\r\n")
+        }
+        return sb.toString()
+    }
+
+    /** Escaping RFC-4180: bungkus kutip bila ada koma/kutip/baris-baru; kutip digandakan. */
+    private fun escape(value: String): String =
+        if (value.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) {
+            "\"" + value.replace("\"", "\"\"") + "\""
+        } else {
+            value
+        }
 }
 
 /** Berkas firmware sasaran, dari `FirmwareFileView.name`. */

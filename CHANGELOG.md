@@ -6,6 +6,55 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-08-12 — Konsol ACS / TR-069: armada ONT punya halamannya sendiri
+
+**Ditambahkan**
+- **Menu `ACS / TR-069`** (di bawah BRAS & RADIUS) dengan dua tab. *Dashboard*: jumlah perangkat
+  online/total/offline, rata-rata sinyal RX, aksi cepat (sapuan refresh, ekspor CSV, log
+  aktivitas, health check), dan blok informasi server ACS. *Devices*: tabel se-armada dengan
+  pencarian serial/SSID/PPPoE/nama pelanggan, saringan status/sinyal/merek, dan ekspor CSV.
+  Sampai kini satu-satunya pintu masuk ke fitur ACS adalah tab di dalam detail satu pelanggan —
+  ISP tak punya cara melihat armadanya sendiri.
+- **Kartu "Setelan ONT (TR-069)"** — daftar nilai yang harus diketik ke halaman ACS di ONT
+  (ACS URL, kredensial, connection request, Periodic Inform Interval `300`), tiap baris bisa
+  disalin dan ada tombol **"Salin semua"** untuk ditempel ke grup lapangan. Muncul di halaman
+  ACS **dan** di tab Ringkasan detail pelanggan, tepat setelah operator mendaftarkan serial ONU —
+  momen ketika nilai-nilai itu benar-benar dibutuhkan. Selama ini alamatnya cuma hidup di `.env`
+  dan ditanyakan lewat chat; interval `300` (bawaan pabrik ONT `3600`) yang paling sering salah.
+- **Izin `cpe.acs.view`**, otomatis diberikan ke role **Teknisi**: cukup untuk melihat informasi
+  server ACS + health check, tak cukup untuk melihat armada tenant. Teknisi lapangan bisa membuka
+  setelan ONT dari HP-nya tanpa dapat menengok daftar pelanggan. Halaman menyesuaikan diri —
+  tanpa `cpe.device.view` strip tabnya tak dirender dan endpoint armada tak dipanggil sama sekali.
+- **Kolom SSID & suhu** ikut ditarik saat sinkronisasi ACS (`V101`). Suhu adalah parameter vendor
+  (`X_*`) yang tak dibakukan TR-069, jadi **mati secara bawaan**: isi
+  `FTTH_CPE_TEMPERATURE_PARAMS` dengan path vendormu, atau biarkan kolomnya `—`.
+
+**Diubah**
+- **Tab "CPE" di detail pelanggan kini berlabel "GenieACS"** — nama yang sama dengan yang
+  dipakai operator saat bicara soal fiturnya.
+- `docker-compose.prod.yml` kini meneruskan `FTTH_CPE_PUBLIC_HOST` dan `FTTH_CPE_CWMP_PORT` ke
+  service `server`. Sebelumnya keduanya hanya sampai ke container genieacs, jadi kartu setelan
+  ONT akan merender "belum dikonfigurasi" di produksi meski ACS-nya jalan normal.
+
+**Diperbaiki**
+- **Penyalinan teks yang gagal diam-diam di `http://` polos.** `navigator.clipboard` hanya ada di
+  secure context; pola `navigator.clipboard?.writeText(x).then(...)` yang dipakai halaman BRAS
+  memutus seluruh rantai di sana — tombolnya diklik, tak ada yang tersalin, dan tak ada toast
+  sukses maupun error. Helper baru jatuh ke `document.execCommand('copy')` dan melaporkan
+  kegagalan dengan jujur.
+
+**Catatan keamanan**
+- Password ACS & connection-request **dikirim ke browser siapa pun yang punya `cpe.acs.view`**,
+  termasuk setiap teknisi. Itu disengaja — nilainya global, diketik ke semua ONT, bukan rahasia
+  per-pelanggan — tapi jangan pakai password yang sama dengan apa pun yang lain. Keduanya
+  dikecualikan dari ekspor CSV dan dari semua baris log.
+- Health check tak pernah membocorkan alamat NBI internal ke browser tenant (pesan error
+  dibersihkan jadi kalimat tetap; aslinya hanya ke log server) dan tak pernah mengembalikan
+  jumlah device se-ACS — semua angka berasal dari tabel ber-RLS milik tenant.
+- "Segarkan Batch" adalah sapuan **berplafon** (`FTTH_CPE_BULK_REFRESH_MAX`, bawaan 50) dengan
+  anggaran waktu, bukan "refresh semua": tanpa infrastruktur async, tiap klik menahan satu thread
+  servlet + satu koneksi Hikari. Jumlah yang tak sempat disapu dilaporkan apa adanya.
+
 ### 2026-08-12 — Alamat pengirim email dikunci ke platform; alamat tenant jadi alamat balasan
 
 **Diubah**

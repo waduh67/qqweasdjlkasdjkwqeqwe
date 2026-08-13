@@ -61,6 +61,10 @@ class RadiusSessionPersistenceAdapter(
     override fun findBySubscriberAccessId(subscriberAccessId: UUID): RadiusSession? =
         jpa.findBySubscriberAccessId(subscriberAccessId)?.toDomain()
 
+    override fun findBySubscriberAccessIds(subscriberAccessIds: Collection<UUID>): Map<UUID, RadiusSession> =
+        if (subscriberAccessIds.isEmpty()) emptyMap()
+        else jpa.findBySubscriberAccessIdIn(subscriberAccessIds).associate { it.subscriberAccessId to it.toDomain() }
+
     override fun findAllForActiveAccounts(): List<RadiusSession> =
         jpa.findAllByAccountStatus(AccessStatus.ACTIVE).map { it.toDomain() }
 

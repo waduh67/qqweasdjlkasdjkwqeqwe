@@ -174,6 +174,10 @@ class SubscriberAccessPersistenceAdapter(
     override fun findByCustomerId(customerId: UUID): List<SubscriberAccess> =
         jpa.findByCustomerIdOrderByUsernameAsc(customerId).map { it.toDomain() }
 
+    override fun findByCustomerIds(customerIds: Collection<UUID>): List<SubscriberAccess> =
+        if (customerIds.isEmpty()) emptyList()
+        else jpa.findByCustomerIdInOrderByUsernameAsc(customerIds).map { it.toDomain() }
+
     override fun findBySubscriptionId(subscriptionId: UUID): List<SubscriberAccess> =
         jpa.findBySubscriptionId(subscriptionId).map { it.toDomain() }
 

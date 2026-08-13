@@ -28,11 +28,15 @@ import java.time.Instant
  */
 class GenieAcsGatewayTest {
 
-    private fun fixture(): Pair<GenieAcsGateway, MockRestServiceServer> {
+    private fun fixture(temperatureParams: String = ""): Pair<GenieAcsGateway, MockRestServiceServer> {
         val builder = RestClient.builder().baseUrl("http://acs.test:7557")
         val server = MockRestServiceServer.bindTo(builder).build()
         val gateway = GenieAcsGateway(
             restClient = builder.build(),
+            // Probe kesehatan memakai klien bertimeout pendek sendiri; di test ia menempel
+            // ke MockRestServiceServer yang sama supaya request-nya bisa diperiksa.
+            healthClient = builder.build(),
+            temperatureParams = temperatureParams,
             downloadUrl = "http://speed.test/10MB.zip",
             uploadUrl = "http://speed.test/upload",
             uploadBytes = 10_485_760,
@@ -63,6 +67,71 @@ class GenieAcsGatewayTest {
         assertThat(d.softwareVersion).isEqualTo("V1.0.10")
         assertThat(d.ipAddress).isEqualTo("100.64.0.5")
         assertThat(d.lastInformAt).isEqualTo(Instant.parse("2026-07-25T10:00:00Z"))
+        server.verify()
+    }
+
+    @Test
+    fun `listDevices mengisi SSID dan suhu vendor saat path suhunya dikonfigurasi`() {
+        val (gateway, server) = fixture(temperatureParams = " InternetGatewayDevice.DeviceInfo.X_HW_Temperature ")
+        server.expect(requestTo(containsString("/devices/")))
+            // Projection wajib memuat path SSID baru — tanpa itu NBI tak mengirim field-nya
+            // sama sekali dan kolom WIFI/SSID di konsol diam-diam kosong selamanya.
+            .andExpect(requestTo(containsString("LANDevice.1.WLANConfiguration.1.SSID")))
+            .andExpect(requestTo(containsString("Device.WiFi.SSID.1.SSID")))
+            // Path vendor terkonfigurasi ikut melebarkan projection, spasinya sudah dipangkas.
+            .andExpect(requestTo(containsString("X_HW_Temperature")))
+            .andRespond(withSuccess("[$TR098_DEVICE_LENGKAP]", MediaType.APPLICATION_JSON))
+
+        val d = gateway.listDevices().single()
+
+        assertThat(d.ssid).isEqualTo("RumahAndi")
+        assertThat(d.temperatureC).isEqualTo(48.5)
+        server.verify()
+    }
+
+    @Test
+    fun `listDevices membiarkan SSID dan suhu null saat pohonnya tak memuatnya`() {
+        // Tanpa path suhu terkonfigurasi (bawaan) — inilah keadaan hampir semua armada.
+        val (gateway, server) = fixture()
+        server.expect(requestTo(containsString("/devices/")))
+            .andRespond(withSuccess("[$TR098_DEVICE]", MediaType.APPLICATION_JSON))
+
+        val d = gateway.listDevices().single()
+
+        assertThat(d.ssid).isNull()
+        assertThat(d.temperatureC).isNull()
+        server.verify()
+    }
+
+    @Test
+    fun `probe melaporkan terjangkau lewat permintaan termurah ke NBI`() {
+        val (gateway, server) = fixture()
+        server.expect(requestTo(containsString("/devices/")))
+            .andExpect(requestTo(containsString("projection=_id")))
+            .andExpect(requestTo(containsString("limit=1")))
+            .andExpect(method(HttpMethod.GET))
+            .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON))
+
+        val probe = gateway.probe()
+
+        assertThat(probe.reachable).isTrue()
+        assertThat(probe.latencyMs).isNotNull()
+        assertThat(probe.error).isNull()
+        server.verify()
+    }
+
+    @Test
+    fun `probe gagal hanya menyebut nama exception, tak pernah URI NBI`() {
+        val (gateway, server) = fixture()
+        server.expect(requestTo(containsString("/devices/")))
+            .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR))
+
+        val probe = gateway.probe()
+
+        assertThat(probe.reachable).isFalse()
+        // Pesan asli exception RestClient memuat "http://acs.test:7557/devices/..." — itulah
+        // yang tak boleh diteruskan ke browser operator tenant.
+        assertThat(probe.error).isNotNull().doesNotContain("acs.test").doesNotContain("7557")
         server.verify()
     }
 
@@ -293,6 +362,26 @@ class GenieAcsGatewayTest {
                 "WANDevice": {"1": {"WANConnectionDevice": {"1": {"WANIPConnection": {"1": {
                   "ExternalIPAddress": {"_value": "100.64.0.5"}
                 }}}}}}
+              }
+            }
+        """.trimIndent()
+
+        /** Sama seperti [TR098_DEVICE] tapi lengkap dengan SSID dan suhu vendor Huawei. */
+        private val TR098_DEVICE_LENGKAP = """
+            {
+              "_id": "ACS-001",
+              "_lastInform": "2026-07-25T10:00:00.000Z",
+              "_deviceId": {
+                "_Manufacturer": "ZTE", "_OUI": "00AABB",
+                "_ProductClass": "F670L", "_SerialNumber": "ZTEGD1234567"
+              },
+              "InternetGatewayDevice": {
+                "DeviceInfo": {
+                  "ModelName": {"_value": "F670L", "_type": "xsd:string"},
+                  "SoftwareVersion": {"_value": "V1.0.10", "_type": "xsd:string"},
+                  "X_HW_Temperature": {"_value": "48.5", "_type": "xsd:string"}
+                },
+                "LANDevice": {"1": {"WLANConfiguration": {"1": {"SSID": {"_value": "RumahAndi"}}}}}
               }
             }
         """.trimIndent()

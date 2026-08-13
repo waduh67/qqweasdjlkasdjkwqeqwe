@@ -30,6 +30,8 @@ data class OnuLiveMetric(
     /** ONLINE, OFFLINE, atau LOS. */
     val status: String,
     val rxPowerDbm: Double?,
+    /** Daya pancar ONU (dBm) dari bacaan yang sama; `null` bila OLT tak melaporkannya. */
+    val txPowerDbm: Double?,
     val distanceMeters: Int?,
     /** Sebab putus terakhir dari register OLT (mis. DYING_GASP, LOS); `null` bila tak dilaporkan. */
     val downCause: String?,

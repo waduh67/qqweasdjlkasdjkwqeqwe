@@ -102,6 +102,9 @@ class BngMonitoringQueryServiceTest {
         override fun save(access: SubscriberAccess): SubscriberAccess = notUsed()
         override fun findAll(): List<SubscriberAccess> = notUsed()
         override fun findByCustomerId(customerId: UUID): List<SubscriberAccess> = notUsed()
+        override fun findByCustomerIds(customerIds: Collection<UUID>): List<SubscriberAccess> =
+            notUsed()
+
         override fun findBySubscriptionId(subscriptionId: UUID): List<SubscriberAccess> = notUsed()
         override fun findByUsername(username: String): SubscriberAccess? = notUsed()
         override fun findByNasId(nasId: UUID): List<SubscriberAccess> = notUsed()
@@ -126,6 +129,9 @@ class BngMonitoringQueryServiceTest {
     private class FakeSessionRepo : RadiusSessionRepository {
         override fun save(session: RadiusSession): RadiusSession = notUsed()
         override fun findBySubscriberAccessId(subscriberAccessId: UUID): RadiusSession? = notUsed()
+        override fun findBySubscriberAccessIds(subscriberAccessIds: Collection<UUID>): Map<UUID, RadiusSession> =
+            notUsed()
+
         override fun findAllForActiveAccounts(): List<RadiusSession> = notUsed()
     }
 

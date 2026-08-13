@@ -24,16 +24,26 @@ daftar perangkat bisa dirender tanpa memanggil NBI tiap kali.
 CpeDevice (agregat)
 ├── identitas   genieacsId (_id di ACS, kunci tiap perintah) · serialNumber
 ├── perangkat   oui · productClass · manufacturer · model · softwareVersion
-├── keadaan     ipAddress · lastInformAt
+├── keadaan     ipAddress · lastInformAt · ssid? · temperatureC?
 └── tautan      customerId? · onuId?        (uuid polos, tanpa FK — lintas modul)
 ```
 
-Yang **cepat basi tidak disimpan**: daftar SSID, host yang tersambung, sinyal.
-Itu dibaca **langsung dari ACS** saat panel dibuka (`GET /devices/{id}/live`),
-sebab menyimpannya cuma menyajikan salinan usang yang meyakinkan.
+Yang **cepat basi tidak disimpan**: daftar SSID lengkap beserta passphrase, host
+yang tersambung, hasil diagnostik. Itu dibaca **langsung dari ACS** saat panel dibuka
+(`GET /devices/{id}/live`), sebab menyimpannya cuma menyajikan salinan usang yang
+meyakinkan.
+
+`ssid` (SSID jaringan pertama saja) dan `temperatureC` adalah pengecualian sadar: tabel
+armada di konsol ACS menampilkan ratusan baris sekaligus, dan memanggil `/live` per baris
+berarti ratusan round-trip NBI tiap kali halaman dibuka. Keduanya ikut menumpang ronde
+sinkron yang memang sudah berjalan, dengan konsekuensi yang diterima: umurnya sampai
+satu `sync-interval`. Panel satu-pelanggan tetap membaca nilai hidup dari `/live`.
+
+**PPPoE sengaja tak disalin ke sini** — modul `bng` sumber kebenarannya, dan salinan di
+tabel ini basi dalam hitungan menit. Kolom PPPoE di konsol dirakit saat query.
 
 Migrasi: `V14__cpe.sql` (device + action log), `V18` diagnostik, `V19` firmware,
-`V20` aksi manage.
+`V20` aksi manage, `V101` ssid + suhu.
 
 ---
 
@@ -85,9 +95,47 @@ fitur lain tak terganggu.
 | `POST /api/cpe/devices/{id}/factory-reset` | `cpe.device.manage` |
 | `POST /api/cpe/devices/{id}/refresh` | `cpe.device.manage` |
 
+Konsol ACS se-armada (halaman `/acs`) memakai sub-path `/acs` di controller yang sama:
+
+| Endpoint | Izin |
+|---|---|
+| `GET /api/cpe/acs/server` | `cpe.acs.view` |
+| `GET /api/cpe/acs/health` | `cpe.acs.view` |
+| `GET /api/cpe/acs/stats` | `cpe.device.view` |
+| `GET /api/cpe/acs/devices` | `cpe.device.view` |
+| `GET /api/cpe/acs/devices.csv` | `cpe.device.view` |
+| `GET /api/cpe/acs/logs` | `cpe.device.view` |
+| `POST /api/cpe/acs/refresh-all` | `cpe.device.manage` |
+
 Tiap aksi dicatat ke `cpe_action_log`. `refresh` memaksa connection request ke
 perangkat lalu melaporkan "ACS Connect / Not Connect" — cara paling cepat tahu
 perangkat masih menyahut atau tidak.
+
+**`cpe.acs.view` sengaja dipisah dari `cpe.device.view`** dan diberikan juga ke role
+Teknisi: muatan dua endpoint pertama murni nilai env global (alamat CWMP + kredensial
+yang diketik ke ONT), nol data tenant. Teknisi lapangan butuh itu saat mendaftarkan ONT
+di rumah pelanggan, tapi tak boleh melihat armada tenant. Di web, halaman `/acs`
+menyembunyikan strip tab dan tak memanggil endpoint armada sama sekali saat pengguna
+hanya punya izin pertama.
+
+Namanya **wajib** berakhiran `.view`: `AccessChecker.isWrite()` = `!code.endsWith(".view")`,
+jadi nama lain (mis. `cpe.acs.health`) akan membuat probe kesehatan dianggap operasi
+tulis dan melempar 402 saat langganan tenant terkunci.
+
+Tiga hal yang sengaja **tidak** dilakukan konsol:
+
+- **Tak pernah mengembalikan jumlah device se-ACS.** Hitungan NBI mencakup semua tenant;
+  semua angka tile datang dari tabel `cpe_device` yang ber-RLS.
+- **Pesan error probe dibersihkan.** Exception `RestClient` menyisipkan URI penuh, jadi
+  `http://genieacs-nbi:7557` akan muncul di browser operator tenant. Yang dikirim cuma
+  kalimat tetap + nama kelas exception; pesan aslinya hanya ke log server.
+- **Password ACS/connection-request tak pernah masuk CSV maupun baris log.**
+
+"Segarkan Batch" (`refresh-all`) adalah sapuan **berplafon**, bukan "semua": hanya
+perangkat online, diurut dari yang paling lama tak inform, dibatasi
+`ftth.cpe.bulk-refresh-max` dan anggaran waktu `ftth.cpe.bulk-refresh-budget`. Tanpa
+infrastruktur async di aplikasi ini, tiap klik menahan satu thread servlet + satu
+koneksi Hikari; jumlah yang tak sempat disapu dikembalikan jujur sebagai `skipped`.
 
 `CpeApi` mengekspos `CpeDeviceStatusRef` ke modul lain (dipakai
 `subscriber360`): status online **dihitung di server** dari `lastInformAt`
@@ -138,11 +186,46 @@ mengambil mana pun yang tersedia alih-alih memaksa satu nama.
 | `ftth.cpe.genieacs.base-url` | `FTTH_CPE_GENIEACS_BASE_URL` | `http://localhost:7557` |
 | `ftth.cpe.genieacs.username` | `FTTH_CPE_GENIEACS_USERNAME` | *(kosong)* |
 | `ftth.cpe.genieacs.password` | `FTTH_CPE_GENIEACS_PASSWORD` | *(kosong)* |
+| `ftth.cpe.genieacs.health-timeout` | `FTTH_CPE_GENIEACS_HEALTH_TIMEOUT` | `PT3S` |
 | `ftth.cpe.sync-interval` | `FTTH_CPE_SYNC_INTERVAL` | `PT5M` |
 | `ftth.cpe.online-stale-after` | `FTTH_CPE_ONLINE_STALE_AFTER` | `PT15M` |
 | `ftth.cpe.diagnostics.download-url` | `FTTH_CPE_DIAGNOSTICS_DOWNLOAD_URL` | *(tele2, sudah mati)* |
+| `ftth.cpe.ont.public-host` | `FTTH_CPE_PUBLIC_HOST` | *(kosong)* |
+| `ftth.cpe.ont.cwmp-port` | `FTTH_CPE_CWMP_PORT` | `7547` |
+| `ftth.cpe.ont.acs-username` | `FTTH_CPE_ONT_ACS_USERNAME` | *(kosong)* |
+| `ftth.cpe.ont.acs-password` | `FTTH_CPE_ONT_ACS_PASSWORD` | *(kosong)* |
+| `ftth.cpe.ont.connection-request-username` | `FTTH_CPE_ONT_CR_USERNAME` | *(kosong)* |
+| `ftth.cpe.ont.connection-request-password` | `FTTH_CPE_ONT_CR_PASSWORD` | *(kosong)* |
+| `ftth.cpe.ont.periodic-inform-interval` | `FTTH_CPE_ONT_INFORM_INTERVAL` | `PT300S` |
+| `ftth.cpe.temperature-params` | `FTTH_CPE_TEMPERATURE_PARAMS` | *(kosong)* |
+| `ftth.cpe.bulk-refresh-max` | `FTTH_CPE_BULK_REFRESH_MAX` | `50` |
+| `ftth.cpe.bulk-refresh-budget` | `FTTH_CPE_BULK_REFRESH_BUDGET` | `PT20S` |
 
-Kredensial NBI global (bukan per-tenant) sebab ACS-nya memang satu untuk semua.
+Kredensial NBI global (bukan per-tenant) sebab ACS-nya memang satu untuk semua. Blok
+`ftth.cpe.ont.*` beda urusan: itu yang **diketik ke perangkat**, dan aplikasi hanya
+memajangnya — `public-host` kosong membuat konsol menandai "belum dikonfigurasi" alih-alih
+memajang URL palsu. `FTTH_CPE_PUBLIC_HOST` dan `FTTH_CPE_CWMP_PORT` dipakai container
+genieacs **dan** service `server`; keduanya harus diteruskan ke dua-duanya.
+
+### Suhu perangkat: parameter vendor, mati secara bawaan
+
+TR-069 tak membakukan suhu — tiap vendor menaruhnya di cabang `X_*` sendiri
+(mis. `InternetGatewayDevice.DeviceInfo.X_HW_Temperature`). Karenanya
+`ftth.cpe.temperature-params` kosong secara bawaan: projection NBI tak dilebarkan sama
+sekali dan kolom TEMP di tabel perangkat tetap `—`.
+
+Mengisinya pun **belum tentu** memunculkan angka: parameter vendor baru ada di pohon
+GenieACS kalau skrip provisioning pernah me-refresh objek itu. Anggap kolom TEMP kosong
+sebagai keadaan normal, bukan kerusakan.
+
+### Batas skala yang sudah ada sebelumnya
+
+`listDevices()` adalah panggilan NBI **tanpa paging**: seluruh dokumen device ditahan di
+memori, lalu dipindai ulang sekali per tenant aktif (`CpeSyncScheduler.syncAll()`) —
+O(device × tenant) tiap `sync-interval`. Melebarkan projection (SSID/suhu) hanya menambah
+byte per dokumen, bukan jumlah dokumen atau round-trip, jadi tak mengubah bentuk masalah
+ini. Kalau armada platform tumbuh sampai puluhan ribu perangkat, yang perlu diperbaiki
+adalah paging + indeks serial di sisi ACS, bukan projection-nya.
 
 ---
 

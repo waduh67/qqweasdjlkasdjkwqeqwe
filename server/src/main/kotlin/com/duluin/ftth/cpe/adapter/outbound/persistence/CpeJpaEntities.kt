@@ -48,6 +48,12 @@ class CpeDeviceJpaEntity(
     @Column(name = "last_inform_at")
     var lastInformAt: Instant?,
 
+    @Column(length = 64)
+    var ssid: String?,
+
+    @Column(name = "temperature_c")
+    var temperatureC: Double?,
+
     @Column(name = "customer_id")
     var customerId: UUID?,
 

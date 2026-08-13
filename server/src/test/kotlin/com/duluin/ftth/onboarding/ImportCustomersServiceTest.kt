@@ -380,6 +380,9 @@ class ImportCustomersServiceTest {
         private val accounts: Map<String, ImportedAccessRef> = emptyMap(),
         private val routers: Map<String, UUID> = emptyMap(),
     ) : BngApi {
+        override fun findPppoeByCustomerIds(customerIds: Set<UUID>): Map<UUID, com.duluin.ftth.bng.SubscriberPppoeRef> =
+            throw UnsupportedOperationException()
+
         val provisioned = mutableListOf<ProvisionAccessSpec>()
         val accessUpdates = mutableListOf<AccessUpdate>()
 

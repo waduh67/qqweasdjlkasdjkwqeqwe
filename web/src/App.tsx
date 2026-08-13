@@ -29,6 +29,7 @@ import { WorkOrdersPage } from './pages/WorkOrdersPage'
 import { MyWorkOrdersPage } from './pages/MyWorkOrdersPage'
 import { WorkOrderDetailPage } from './pages/WorkOrderDetailPage'
 import { CatalogPage } from './pages/CatalogPage'
+import { AcsPage } from './pages/AcsPage'
 import { BngPage } from './pages/BngPage'
 import { VpnPage } from './pages/VpnPage'
 import { VpnServersPage } from './pages/VpnServersPage'
@@ -236,6 +237,16 @@ function OperatorApp() {
             />
             {/* Kompat: URL lama /bng dialihkan ke /bras (label & slug kini selaras). */}
             <Route path="bng" element={<Navigate to="/bras" replace />} />
+            {/* Konsol ACS: dijangkar `cpe.acs.view` supaya teknisi (yang hanya boleh
+                melihat info server) tetap bisa membuka halamannya. */}
+            <Route
+              path="acs"
+              element={
+                <RequirePermission permission="cpe.acs.view">
+                  <AcsPage />
+                </RequirePermission>
+              }
+            />
             <Route
               path="vpn"
               element={

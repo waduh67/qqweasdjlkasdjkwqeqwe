@@ -66,6 +66,13 @@ interface SubscriberAccessRepository {
 
     fun findByCustomerId(customerId: UUID): List<SubscriberAccess>
 
+    /**
+     * Versi batch [findByCustomerId] — akun seluruh pelanggan dalam himpunan, satu query.
+     * Dipakai jalur lintas-module yang menyusun tabel armada (konsol ACS): tanpa ini tiap
+     * baris memicu satu query. Terurut username agar pemilihan akun deterministik.
+     */
+    fun findByCustomerIds(customerIds: Collection<UUID>): List<SubscriberAccess>
+
     fun findBySubscriptionId(subscriptionId: UUID): List<SubscriberAccess>
 
     fun findByUsername(username: String): SubscriberAccess?
@@ -108,6 +115,12 @@ interface RadiusSessionRepository {
     fun save(session: RadiusSession): RadiusSession
 
     fun findBySubscriberAccessId(subscriberAccessId: UUID): RadiusSession?
+
+    /**
+     * Versi batch [findBySubscriberAccessId], sudah dipetakan `accessId → sesi`. Akun yang
+     * belum pernah terpantau tak muncul di peta (dianggap "belum diketahui", bukan "putus").
+     */
+    fun findBySubscriberAccessIds(subscriberAccessIds: Collection<UUID>): Map<UUID, RadiusSession>
 
     /**
      * Sesi terkini seluruh akun ACTIVE — dasar penilaian alarm PPPoE putus oleh monitoring.

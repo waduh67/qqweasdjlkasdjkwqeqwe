@@ -9,6 +9,8 @@ import com.duluin.ftth.cpe.domain.model.PingDiagnostic
 import com.duluin.ftth.cpe.domain.model.SpeedDirection
 import com.duluin.ftth.cpe.domain.model.SpeedTestDiagnostic
 import com.duluin.ftth.cpe.domain.model.WifiNetwork
+import com.duluin.ftth.cpe.application.port.outbound.AcsProbe
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Profile
 import org.springframework.http.MediaType
@@ -34,7 +36,16 @@ import java.time.Instant
 @Component
 @Profile("!test")
 class GenieAcsGateway(
-    private val restClient: RestClient,
+    @Qualifier("genieAcsRestClient") private val restClient: RestClient,
+    @Qualifier("genieAcsHealthRestClient") private val healthClient: RestClient,
+    /**
+     * Path parameter SUHU, dipisah koma. TR-069 tak membakukan suhu; tiap vendor memakai
+     * `X_*` sendiri (mis. `InternetGatewayDevice.DeviceInfo.X_HW_Temperature`). Kosong =
+     * projection tak dilebarkan sama sekali dan kolomnya tetap null — itu bawaannya, sebab
+     * menebak path vendor cuma menambah byte per dokumen tanpa pernah menghasilkan nilai.
+     */
+    @Value("\${ftth.cpe.temperature-params:}")
+    private val temperatureParams: String,
     @Value("\${ftth.cpe.diagnostics.download-url:http://speedtest.tele2.net/10MB.zip}")
     private val downloadUrl: String,
     @Value("\${ftth.cpe.diagnostics.upload-url:http://speedtest.tele2.net/upload.php}")
@@ -47,9 +58,20 @@ class GenieAcsGateway(
     private val pollInterval: Duration,
 ) : AcsGateway {
 
+    /** Path suhu terkonfigurasi, sudah dipangkas & dibuang yang kosong. */
+    private val temperaturePaths: List<String> =
+        temperatureParams.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+
+    /**
+     * Projection daftar = yang baku + path suhu vendor (bila dikonfigurasi). Melebarkan
+     * projection mengubah BYTE PER DOKUMEN, bukan jumlah dokumen atau round-trip, jadi
+     * aman di skala besar.
+     */
+    private val listProjection: String = (LIST_PROJECTION + temperaturePaths).joinToString(",")
+
     override fun listDevices(): List<AcsDevice> {
         val array = restClient.get()
-            .uri { it.path("/devices/").queryParam("projection", LIST_PROJECTION).build() }
+            .uri { it.path("/devices/").queryParam("projection", listProjection).build() }
             .retrieve()
             .body(JsonNode::class.java)
             ?: return emptyList()
@@ -57,7 +79,25 @@ class GenieAcsGateway(
     }
 
     override fun findDevice(genieacsId: String): AcsDevice? =
-        fetchDevice(genieacsId, LIST_PROJECTION)?.toAcsDevice()
+        fetchDevice(genieacsId, listProjection)?.toAcsDevice()
+
+    override fun probe(): AcsProbe {
+        // Permintaan termurah yang dijawab NBI: satu dokumen, satu field.
+        val startedAt = System.nanoTime()
+        return runCatching {
+            healthClient.get()
+                .uri { it.path("/devices/").queryParam("projection", "_id").queryParam("limit", 1).build() }
+                .retrieve()
+                .toBodilessEntity()
+            AcsProbe(reachable = true, latencyMs = (System.nanoTime() - startedAt) / 1_000_000, error = null)
+        }.getOrElse { failure ->
+            // SENGAJA tanpa `failure.message`: exception RestClient menyisipkan URI penuh, dan
+            // base URL NBI internal (mis. http://genieacs-nbi:7557) akan mendarat di browser
+            // operator tenant. Nama kelas exception cukup untuk membedakan timeout dari DNS
+            // gagal; pesan aslinya dicatat pemanggil ke log server.
+            AcsProbe(reachable = false, latencyMs = null, error = failure.javaClass.simpleName)
+        }
+    }
 
     override fun wifiNetworks(genieacsId: String): List<WifiNetwork> {
         val device = fetchDevice(genieacsId, WIFI_PROJECTION) ?: return emptyList()
@@ -257,8 +297,22 @@ class GenieAcsGateway(
             softwareVersion = root?.let { param("$it.DeviceInfo.SoftwareVersion") },
             ipAddress = root?.let { externalIp(it) },
             lastInformAt = plain("_lastInform")?.let { runCatching { Instant.parse(it) }.getOrNull() },
+            ssid = firstSsid(),
+            temperatureC = firstTemperature(),
         )
     }
+
+    /**
+     * SSID jaringan pertama, dicoba berurutan lintas model data. Path ketiga adalah letak
+     * TR-181 yang SEBENARNYA (`Device.WiFi.SSID.1.SSID`) — perangkat TR-181 tak menaruh WiFi
+     * di bawah `LANDevice`. Dicoba juga path kedua sebab sebagian firmware hibrida memakainya.
+     */
+    private fun JsonNode.firstSsid(): String? =
+        SSID_PATHS.firstNotNullOfOrNull { param(it) }
+
+    /** Nilai suhu pertama yang bisa dibaca sebagai angka dari path vendor terkonfigurasi. */
+    private fun JsonNode.firstTemperature(): Double? =
+        temperaturePaths.firstNotNullOfOrNull { param(it)?.toDoubleOrNull() }
 
     /** Petakan satu dokumen fs.files GenieACS ke [FirmwareFile]; null bila tanpa nama. */
     private fun JsonNode.toFirmwareFile(): FirmwareFile? {
@@ -288,7 +342,7 @@ class GenieAcsGateway(
 
     /** Akar model data device SEKARANG (perlu fetch — dipakai untuk menyusun path diagnostik). */
     private fun currentRoot(genieacsId: String): String? =
-        fetchDevice(genieacsId, LIST_PROJECTION)?.detectRoot()
+        fetchDevice(genieacsId, listProjection)?.detectRoot()
 
     /**
      * Path objek IPPing diagnostics: TR-181 menaruhnya di bawah `IP.Diagnostics.IPPing`,
@@ -350,6 +404,17 @@ class GenieAcsGateway(
         private const val XSD_STRING = "xsd:string"
         private const val XSD_UNSIGNED_INT = "xsd:unsignedInt"
 
+        /**
+         * Letak SSID pertama, diurut sesuai kemungkinan. Ketiga path ini juga masuk
+         * projection daftar — hanya DAUN `.1.SSID`, bukan seluruh subpohon WLAN
+         * (itu tugas [WIFI_PROJECTION] saat panel per-pelanggan dibuka).
+         */
+        private val SSID_PATHS = listOf(
+            "$ROOT_TR098.LANDevice.1.WLANConfiguration.1.SSID",
+            "$ROOT_TR181.LANDevice.1.WLANConfiguration.1.SSID",
+            "$ROOT_TR181.WiFi.SSID.1.SSID",
+        )
+
         // Proyeksi membatasi field yang ditarik NBI agar sinkronisasi ringan di skala besar.
         private val LIST_PROJECTION = listOf(
             "_id", "_lastInform", "_deviceId",
@@ -357,7 +422,7 @@ class GenieAcsGateway(
             "$ROOT_TR098.WANDevice.1.WANConnectionDevice.1.WANIPConnection.1.ExternalIPAddress",
             "$ROOT_TR098.WANDevice.1.WANConnectionDevice.1.WANPPPConnection.1.ExternalIPAddress",
             "$ROOT_TR181.DeviceInfo.ModelName", "$ROOT_TR181.DeviceInfo.SoftwareVersion",
-        ).joinToString(",")
+        ) + SSID_PATHS
         private val WIFI_PROJECTION = "$ROOT_TR098.LANDevice.1.WLANConfiguration,$ROOT_TR181.LANDevice.1.WLANConfiguration"
         private val HOSTS_PROJECTION = "$ROOT_TR098.LANDevice.1.Hosts.Host,$ROOT_TR181.LANDevice.1.Hosts.Host"
     }
