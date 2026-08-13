@@ -3,8 +3,10 @@ package com.duluin.ftth.network.adapter.inbound.web
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.infrastructure.web.PageResponse
 import com.duluin.ftth.network.application.port.inbound.ManageOdpUseCase
+import com.duluin.ftth.network.application.port.inbound.OdpPortBoardView
 import com.duluin.ftth.network.application.port.inbound.OdpView
 import com.duluin.ftth.network.application.port.inbound.SaveOdpCommand
+import com.duluin.ftth.network.application.port.inbound.ViewOdpPortsUseCase
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -28,6 +30,7 @@ import java.util.UUID
 @SecurityRequirement(name = "bearer-jwt")
 class OdpController(
     private val manageOdp: ManageOdpUseCase,
+    private val viewPorts: ViewOdpPortsUseCase,
 ) {
     @GetMapping
     @PreAuthorize("@authz.can('network.odp.view')")
@@ -42,6 +45,17 @@ class OdpController(
     @GetMapping("/{id}")
     @PreAuthorize("@authz.can('network.odp.view')")
     fun get(@PathVariable id: UUID): OdpView = manageOdp.get(id)
+
+    /**
+     * Papan port: penghuni tiap lubang menurut catatan pemasangan, disandingkan
+     * dengan kaki splitter yang seratnya benar-benar tersambung ke sana.
+     *
+     * Berizin `network.odp.view` sama seperti detail kotaknya — isinya memang
+     * jawaban atas "ada apa di dalam ODP ini", cuma lebih terperinci.
+     */
+    @GetMapping("/{id}/ports")
+    @PreAuthorize("@authz.can('network.odp.view')")
+    fun ports(@PathVariable id: UUID): OdpPortBoardView = viewPorts.ports(id)
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

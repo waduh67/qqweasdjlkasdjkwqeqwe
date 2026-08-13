@@ -44,6 +44,44 @@ interface OdpUsageProbe {
      */
     fun occupiedPortsOn(odpId: UUID): Set<Int>
 
+    /**
+     * SIAPA yang menempati tiap port, bukan sekadar port mana yang terisi.
+     *
+     * Yang bertanya adalah meja sambung: teknisi yang membuka ODP perlu tahu kaki
+     * mana melayani rumah siapa, dan itu tak bisa dijawab module network sendirian
+     * — nama pelanggan dan serial ONU ada di module customer. Sekaligus bahan
+     * pembanding untuk mencari beda antara catatan dan serat yang sesungguhnya
+     * terpasang.
+     *
+     * Bernilai bawaan kosong, tak seperti [occupiedPortsOn]: probe yang diam di
+     * sini cuma membuat kolom penghuninya kosong — tak ada keputusan merusak yang
+     * diambil dari jawabannya.
+     */
+    fun occupantsOf(odpId: UUID): List<OdpPortOccupant> = emptyList()
+
     /** Sebutan untuk pesan galat, mis. "ONU pelanggan". */
     fun describeUsage(): String
 }
+
+/**
+ * Penghuni sebuah port ODP menurut CATATAN — pemasangan ONU yang dibukukan
+ * orang, bukan serat yang tertelusur.
+ *
+ * Bedanya dengan serat itulah yang penting: catatan bisa mendahului pekerjaan
+ * (ONU didaftarkan di port 1, kaki 1 belum dilas), bisa juga ketinggalan (drop
+ * dipindah ke kaki lain, catatannya tetap). Karena itu kedua sisi disimpan
+ * terpisah dan dibandingkan, bukan salah satunya dianggap benar.
+ *
+ * @param portNumber null = ONU tercatat di ODP ini tapi belum ditempelkan ke port
+ *   mana pun — barang sudah di lokasi, pemasangannya belum tuntas.
+ */
+data class OdpPortOccupant(
+    val portNumber: Int?,
+    val customerId: UUID,
+    val customerName: String,
+    val onuSerialNumber: String,
+    /** Nama enum apa adanya (mis. "ONLINE"); pelabelan urusan lapisan tampilan. */
+    val onuStatus: String,
+    val opticalHealth: String,
+    val rxPowerDbm: Double?,
+)

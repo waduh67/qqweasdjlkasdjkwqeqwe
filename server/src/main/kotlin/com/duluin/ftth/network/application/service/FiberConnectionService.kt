@@ -59,6 +59,7 @@ class FiberConnectionService(
     private val oltRepository: OltRepository,
     private val ponPortRepository: PonPortRepository,
     private val splitters: SplitterRepository,
+    private val legTracer: SplitterLegTracer,
     private val currentUser: CurrentUserProvider,
     private val auditor: AuditRecorder,
     private val workOrders: SpliceWorkOrderPort,
@@ -583,7 +584,7 @@ class FiberConnectionService(
             ConnectionPointKind.SPLITTER_OUT -> ConnectionPointKind.SPLITTER_IN
             else -> ConnectionPointKind.SPLITTER_OUT
         }
-        if (core.cableId !in cablesWiredTo(clashesWith, splitterId)) return
+        if (core.cableId !in legTracer.cablesWiredTo(clashesWith, setOf(splitterId))[splitterId].orEmpty()) return
 
         val splitter = splitters.findById(splitterId)?.code ?: "splitter ini"
         val cable = cableRepository.findById(core.cableId)?.code ?: "kabel yang sama"
@@ -601,16 +602,6 @@ class FiberConnectionService(
                     "penyuapnya, lepas dulu sambungan kaki yang salah itu."
             },
         )
-    }
-
-    /** Kabel yang seratnya sudah dilas ke titik [kind] milik splitter ini. */
-    private fun cablesWiredTo(kind: ConnectionPointKind, splitterId: UUID): Set<UUID> {
-        val farCoreIds = connections.findByNodeIds(kind, setOf(splitterId)).mapNotNull { row ->
-            val here = listOf(row.a, row.b).firstOrNull { it.kind == kind && it.nodeId == splitterId }
-            here?.let { row.opposite(it) }?.coreId
-        }
-        if (farCoreIds.isEmpty()) return emptySet()
-        return cableCoreRepository.findByIds(farCoreIds).map { it.cableId }.toSet()
     }
 
     /** Port ODF & PON port cuma ada artinya di dalam rak; di kotak lain tak ada raknya. */
@@ -769,6 +760,7 @@ class FiberConnectionService(
         val ids = modules.mapTo(HashSet()) { it.id }
         val inputs = occupancyOf(ConnectionPointKind.SPLITTER_IN, ids)
         val legs = occupancyOf(ConnectionPointKind.SPLITTER_OUT, ids)
+        val loads = legTracer.trace(closure.id, modules)
         return modules.flatMap { module ->
             val group = "${module.code} · ${module.ratio.label}"
             // Input lebih dulu: modul tanpa masukan tak menyalurkan apa pun, jadi
@@ -792,6 +784,7 @@ class FiberConnectionService(
                     label = "${module.code} kaki $leg",
                     group = group,
                     connectionId = legs[PointKey(module.id, leg, null)],
+                    serves = loads[LegKey(module.id, leg)]?.describe(),
                 )
             }
         }

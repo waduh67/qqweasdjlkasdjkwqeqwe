@@ -15,6 +15,7 @@ import com.duluin.ftth.network.domain.model.FiberTraceEnd
 import com.duluin.ftth.network.domain.model.MountingType
 import com.duluin.ftth.network.domain.model.NetworkNodeKind
 import com.duluin.ftth.network.domain.model.OdfPortSide
+import com.duluin.ftth.network.domain.model.OdpPortIssue
 import com.duluin.ftth.network.domain.model.OltVendor
 import com.duluin.ftth.network.domain.model.SnmpVersion
 import com.duluin.ftth.network.domain.model.SpliceMethod
@@ -468,6 +469,16 @@ data class SplicePointView(
     val group: String,
     /** Sambungan yang memakainya, di kotak mana pun; null = titik masih bebas. */
     val connectionId: UUID?,
+    /**
+     * Jalur di ujung titik ini menurut SERAT, siap tampil: "DROP-ODP-XXX-01-P1 ·
+     * Budi Santoso", "menyuapi SPL-2", "DIST-… → ODP-XXX-02". Null = belum
+     * tersambung, atau jenis titik yang memang tak ditelusuri.
+     *
+     * Ada supaya "kaki 3" berhenti jadi nomor tanpa arti. Teknisi yang membuka
+     * kotak mencari kaki milik pelanggan yang mengeluh, dan tanpa keterangan ini
+     * satu-satunya cara adalah mencabut kaki satu per satu sampai ada yang mati.
+     */
+    val serves: String? = null,
 )
 
 /**
@@ -490,6 +501,59 @@ data class SpliceWorkbenchView(
     val cables: List<SpliceCableView>,
     val points: List<SplicePointView>,
     val connections: List<FiberConnectionView>,
+)
+
+/**
+ * Satu lubang di faceplate ODP, dengan KEDUA catatannya bersanding: pemasangan
+ * ONU yang dibukukan orang layanan, dan serat yang dilas teknisi.
+ *
+ * Sengaja satu baris memuat dua sumber, bukan dua daftar terpisah. Yang ingin
+ * diketahui di depan kotak bukan "siapa saja pelanggan di sini" atau "kaki mana
+ * saja yang terpakai" sendiri-sendiri — melainkan apakah keduanya bercerita hal
+ * yang sama tentang lubang yang sedang ditunjuk jari.
+ */
+data class OdpPortRowView(
+    /** null = ONU tercatat di kotak ini tanpa nomor port; barisnya di paling bawah. */
+    val portNumber: Int?,
+    /** Kaki yang secara fisik dipigtail ke lubang ini, mis. "SPL-1 kaki 3". */
+    val legLabel: String?,
+    val legConnected: Boolean,
+    /** Jalur di ujung kaki menurut SERAT; lihat [SplicePointView.serves]. */
+    val servedBy: String?,
+    val customerId: UUID?,
+    val customerName: String?,
+    val onuSerialNumber: String?,
+    val onuStatus: String?,
+    val opticalHealth: String?,
+    val rxPowerDbm: Double?,
+    val issue: OdpPortIssue?,
+    /**
+     * Sebutan pendek [issue] untuk lencana, mis. "Catatan & serat beda orang".
+     * Ikut dikirim bersama [issueDetail] supaya kata-kata satu keadaan tak
+     * terpecah dua tempat — layar cukup menampilkan, tak ikut menamai.
+     */
+    val issueLabel: String?,
+    /** Kalimat penjelas [issue] siap tampil; null bila portnya memang beres. */
+    val issueDetail: String?,
+)
+
+/**
+ * Papan port sebuah ODP: seluruh lubangnya, penghuninya, dan selisih antara
+ * catatan dan serat.
+ *
+ * Dikirim sebagai satu bongkah dengan alasan yang sama seperti meja sambung —
+ * kotak dibuka sekali, dan yang berdiri di depannya butuh semuanya berbarengan.
+ */
+data class OdpPortBoardView(
+    val odpId: UUID,
+    val odpCode: String,
+    val capacity: Int,
+    /** Modul yang kakinya dipetakan ke port, urut kode; kosong = kotak tanpa splitter. */
+    val splitterCodes: List<String>,
+    val ports: List<OdpPortRowView>,
+    val occupiedCount: Int,
+    /** Berapa baris yang catatannya berselisih dengan seratnya. */
+    val issueCount: Int,
 )
 
 /**
