@@ -70,6 +70,11 @@ interface Slot {
   cableCode: string | null
   /** Sambungan yang memakainya DI KOTAK INI — harus dilepas dulu sebelum dipakai lagi. */
   connectionId: string | null
+  /**
+   * Ke mana titik ini bermuara menurut serat, mis. "DROP-… · Budi Santoso".
+   * Hanya kaki splitter yang punya; core & port ODF null.
+   */
+  serves: string | null
   /** Core ini sudah tersambung di kotak LAIN; dari sini tak bisa diapa-apakan. */
   blocked: boolean
 }
@@ -162,6 +167,7 @@ function toGroups(data: SpliceWorkbenchView): Group[] {
         cableId: cable.cableId,
         cableCode: cable.code,
         connectionId: entry.connectionId,
+        serves: null,
         blocked: entry.connectedElsewhere || !cable.spliceable,
       })),
     }
@@ -184,11 +190,17 @@ function toGroups(data: SpliceWorkbenchView): Group[] {
         portSide: point.portSide,
       },
       label: point.label,
-      title: `${point.label} · ${point.connectionId ? 'sudah tersambung' : 'bebas'}`,
+      // Muara kaki masuk ke tooltip-nya juga, bukan cuma ke baris kecil di bawah
+      // labelnya: pil selebar 120px memotong "DROP-ODP-01-P3 · Budi Santoso"
+      // hampir selalu, dan nama yang terpotong setengah menyesatkan.
+      title:
+        `${point.label} · ${point.connectionId ? 'sudah tersambung' : 'bebas'}` +
+        (point.serves ? ` · ${point.serves}` : ''),
       colorHex: null,
       cableId: null,
       cableCode: null,
       connectionId: point.connectionId,
+      serves: point.serves,
       blocked: false,
     })
   }
@@ -431,14 +443,26 @@ function SidePanel({
                 className={
                   (group.isCable ? 'core-chip' : 'splice-slot') +
                   (on ? ' is-selected' : '') +
-                  (taken ? ' is-used' : '')
+                  (taken ? ' is-used' : '') +
+                  (slot.serves ? ' has-serves' : '')
                 }
                 style={style}
                 title={slot.title}
                 disabled={disabled || taken}
                 onClick={() => onPick(slot)}
               >
-                {slot.label}
+                {/* Kaki yang sudah berisi memakai dua baris: nomornya, lalu jalur
+                    yang dilayaninya — pertanyaan pertama orang yang membuka kotak
+                    bukan "kaki berapa yang kosong" melainkan "kaki mana punya
+                    Budi". Core tetap sekeping angka; warnanya yang bicara. */}
+                {slot.serves ? (
+                  <>
+                    <span className="splice-slot-label">{slot.label}</span>
+                    <span className="splice-slot-serves">{slot.serves}</span>
+                  </>
+                ) : (
+                  slot.label
+                )}
               </button>
             )
           })}

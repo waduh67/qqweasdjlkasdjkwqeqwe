@@ -3014,7 +3014,7 @@ tbody tr.row-selected:hover {
    bentuknya pil selebar isinya — bukan chip persegi seperti core. */
 .splice-slots {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
   gap: 0.2rem;
 }
 .splice-slot {
@@ -3035,11 +3035,30 @@ tbody tr.row-selected:hover {
 .splice-slot:not(:disabled):hover {
   background: var(--surface-hover);
 }
+/* Kaki yang sudah berisi bercerita dua baris: nomornya, lalu muaranya. Keduanya
+   dipangkas sendiri-sendiri supaya nama panjang tak mendorong lebar kisi. */
+.splice-slot-label,
+.splice-slot-serves {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.splice-slot-serves {
+  margin-top: 0.1rem;
+  font-size: 0.64rem;
+  color: var(--text-2);
+}
 /* Sudah tersambung = diredupkan dan tak bisa diklik; yang MASIH BEBAS-lah yang
    harus menonjol, sebab itu pertanyaan yang dibawa orang ke layar ini. */
 .splice-slot.is-used {
   opacity: 0.45;
   cursor: default;
+}
+/* Kecuali kaki yang menyebut muaranya: justru itu yang dicari orang di depan
+   kotak ("kaki mana punya Budi?"), jadi ia tetap terbaca meski tak bisa diklik.
+   Yang diredupkan seharusnya pilihan yang tak tersedia, bukan keterangan. */
+.splice-slot.is-used.has-serves {
+  opacity: 0.8;
 }
 .splice-slot.is-selected {
   outline: 2px solid var(--accent);

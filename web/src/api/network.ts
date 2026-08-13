@@ -172,6 +172,59 @@ export interface OdpView extends ClosureFieldData {
 }
 
 /**
+ * Bentuk selisih antara CATATAN pemasangan dan SERAT yang benar-benar dilas pada
+ * sebuah port ODP. Sebutan & penjelasannya ikut dikirim server (`issueLabel`,
+ * `issueDetail`), jadi layar cukup menampilkan — tak ikut menamai keadaan yang
+ * penamaannya sudah ada di satu tempat.
+ */
+export type OdpPortIssue =
+  | 'PORT_WITHOUT_FIBER'
+  | 'FIBER_WITHOUT_PORT'
+  | 'PORT_MISMATCH'
+  | 'LEG_BACKWARD'
+  | 'PORT_UNRECORDED'
+
+/** Satu lubang faceplate: penghuninya menurut catatan, kakinya menurut serat. */
+export interface OdpPortRowView {
+  /** null = ONU tercatat di kotak ini tanpa nomor port; barisnya di paling bawah. */
+  portNumber: number | null
+  /** Kaki yang secara fisik dipigtail ke lubang ini, mis. "SPL-1 kaki 3". */
+  legLabel: string | null
+  legConnected: boolean
+  /** Muara kaki itu menurut serat; lihat [SplicePointView.serves]. */
+  servedBy: string | null
+  customerId: string | null
+  customerName: string | null
+  onuSerialNumber: string | null
+  onuStatus: OnuStatus | null
+  opticalHealth: OpticalHealth | null
+  rxPowerDbm: number | null
+  issue: OdpPortIssue | null
+  issueLabel: string | null
+  issueDetail: string | null
+}
+
+/**
+ * Papan port sebuah ODP — seisi faceplate-nya dalam satu panggilan.
+ *
+ * Dua catatan yang selama ini hidup terpisah (pemasangan ONU vs sambungan serat)
+ * disandingkan di sini, sebab yang berdiri di depan kotak butuh keduanya
+ * berbarengan: bukan cuma "port 3 punya siapa", tapi "benarkah kaki 3 yang
+ * menyalurkannya".
+ */
+export interface OdpPortBoardView {
+  odpId: string
+  odpCode: string
+  capacity: number
+  /** Modul yang kakinya dipetakan ke port; kosong = kotak tanpa splitter. */
+  splitterCodes: string[]
+  ports: OdpPortRowView[]
+  occupiedCount: number
+  /** Berapa baris yang catatannya berselisih dengan seratnya. */
+  issueCount: number
+}
+
+/**
  * Kotak sambung di tengah jalur — tempat dua haspel kabel bertemu, jalur bercabang
  * di persimpangan, atau kabel putus disambung darurat.
  *
@@ -788,6 +841,16 @@ export interface SplicePointView {
   group: string
   /** Sambungan yang memakainya; null = titik masih bebas. */
   connectionId: string | null
+  /**
+   * Ke mana titik ini bermuara menurut SERAT, siap tampil: "DROP-ODP-01-P1 ·
+   * Budi Santoso", "menyuapi SPL-2". Null = belum tersambung, atau jenis titik
+   * yang memang tak ditelusuri.
+   *
+   * Inilah yang membedakan "kaki 3" dari "kaki 3 punya Budi": tanpa keterangan
+   * ini teknisi mencabut kaki satu per satu untuk tahu milik siapa, dan yang
+   * ikut mati adalah tetangga yang tak salah apa-apa.
+   */
+  serves: string | null
 }
 
 /** Seisi meja kerja splicing sebuah kotak — satu panggilan untuk satu layar. */

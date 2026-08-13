@@ -22,6 +22,7 @@ import {
 import { Blade } from './Blade'
 import { LocationPicker } from './LocationPicker'
 import { FiberTracePanel } from './FiberTracePanel'
+import { OdpPortBoard } from './OdpPortBoard'
 import { SplicingManager } from './SplicingManager'
 import { SplitterPanel } from './SplitterPanel'
 
@@ -535,6 +536,12 @@ export function AccessNodeDetail({
           closureId={nodeId}
           reloadKey={spliceVersion}
         />
+
+        {/* Hanya ODP yang punya faceplate berlubang: di ODC serat berpindah ke
+            kabel lain, di joint box ia cuma bertemu serat. Papan ini mendahului
+            meja sambung karena urutan orangnya begitu — lihat dulu isinya, baru
+            memutuskan mau menyambung apa. */}
+        {odp && <OdpPortBoard odpId={nodeId} reloadKey={spliceVersion} />}
 
         {/* Splicing datang SETELAH splitter: modulnya harus sudah ada sebelum
             kakinya bisa ditunjuk sebagai tujuan sambungan. */}
