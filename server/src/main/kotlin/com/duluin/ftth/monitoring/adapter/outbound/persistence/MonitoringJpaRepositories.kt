@@ -39,6 +39,9 @@ interface AlarmJpaRepository : JpaRepository<AlarmJpaEntity, UUID>, JpaSpecifica
 
 interface AlarmRuleJpaRepository : JpaRepository<AlarmRuleJpaEntity, UUID> {
     fun findByKind(kind: AlarmKind): AlarmRuleJpaEntity?
+
+    /** RLS + `@TenantId` membatasi hapusnya ke tenant aktif. */
+    fun deleteByKind(kind: AlarmKind)
 }
 
 /**

@@ -112,6 +112,13 @@ interface AlarmRuleRepository {
     fun findByKind(kind: AlarmKind): AlarmRule?
 
     fun findAll(): List<AlarmRule>
+
+    /**
+     * Membuang setelan tenant untuk satu jenis, sehingga jenis itu kembali memakai
+     * nilai bawaan. Menghapus barisnya — bukan menyalinkan angka bawaan ke dalamnya —
+     * supaya tenant ikut terbawa bila suatu saat bawaannya kami perbaiki.
+     */
+    fun deleteByKind(kind: AlarmKind)
 }
 
 interface AutoProvisionPolicyRepository {

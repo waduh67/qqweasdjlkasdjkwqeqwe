@@ -91,6 +91,76 @@ enum class AlarmKind(
      * perlu jeda tahan tambahan di sini.
      */
     PPPOE_DOWN(AlarmEntityType.CUSTOMER, AlarmSeverity.WARNING, null, null, 0, "Sesi PPPoE pelanggan putus"),
+    ;
+
+    /**
+     * Ke arah mana angka memburuk — dan `null` untuk jenis yang tak berambang sama
+     * sekali (terjadi atau tidak, seperti LOS).
+     *
+     * Ini SATU-SATUNYA tempat arah itu ditetapkan: `AlarmRule.evaluate` memakainya
+     * untuk membandingkan, pemeriksa setelan memakainya untuk menolak ambang yang
+     * terbalik, dan layar setelan memakainya untuk menulis "alarm saat ≥ ambang".
+     * Dulu ketiganya menyimpan pengetahuan yang sama sendiri-sendiri — cukup satu
+     * yang lupa diperbarui untuk membuat layar menjanjikan hal yang tak dikerjakan
+     * mesinnya.
+     */
+    val thresholdDirection: AlarmThresholdDirection?
+        get() = when (this) {
+            ONU_LOW_RX -> AlarmThresholdDirection.LOWER_IS_WORSE
+            ONU_HIGH_RX -> AlarmThresholdDirection.HIGHER_IS_WORSE
+            else -> null
+        }
+
+    /** Satuan angka ambangnya, untuk ditempel di sebelah kolom isian. */
+    val thresholdUnit: String?
+        get() = thresholdDirection?.let { "dBm" }
+
+    /**
+     * Yang perlu diketahui SEBELUM menggeser ambangnya — pengetahuan lapangan, bukan
+     * basa-basi bantuan. Angka-angka ini menentukan kapan orang diberangkatkan dan
+     * kapan pelanggan dibiarkan; menggesernya tanpa tahu batas fisik perangkat sama
+     * saja mematikan alarmnya diam-diam.
+     */
+    val guidance: String
+        get() = when (this) {
+            ONU_LOS ->
+                "OLT tak melihat cahaya sama sekali dari ONU: serat putus, konektor lepas, atau " +
+                    "perangkatnya mati total. Biner — tak ada ambang yang bisa disetel."
+            ONU_OFFLINE ->
+                "ONU tak menjawab. Mati listrik di rumah pelanggan terlihat persis sama dengan " +
+                    "gangguan jaringan, dan sebagian besar pulih sendiri."
+            ONU_LOW_RX ->
+                "Cahaya yang sampai terlalu redup. Penerima GPON B+/C+ menyerah di sekitar −27…−28 dBm; " +
+                    "−25 dBm masih jalan tapi tak menyisakan cadangan untuk hujan, sambungan baru, atau " +
+                    "serat yang menua. Melonggarkan ambang ini menunda ketahuan, bukan memperbaiki."
+            ONU_HIGH_RX ->
+                "Cahaya yang sampai terlalu KUAT — makin mendekati nol makin terang, jadi −3 dBm itu " +
+                    "buruk, bukan bagus. Penerima B+/C+ mulai jenuh di atas −8 dBm: paket hilang walau " +
+                    "ONU terlihat online, dan lama-lama penerimanya rusak. Biasanya splitter kurang " +
+                    "tingkat atau ONU diuji terlalu dekat OLT; obatnya atenuator, bukan menggeser ambang."
+            OLT_UNREACHABLE ->
+                "Collector tak bisa menghubungi OLT. Seluruh pelanggan di bawahnya ikut gelap di layar " +
+                    "walau boleh jadi jaringannya sehat — periksa juga jalur manajemen, bukan cuma serat."
+            COLLECTOR_SILENT ->
+                "Collector berhenti melapor. Wajib terlihat: tanpa ini pemantauan yang buta tampak " +
+                    "seperti jaringan yang tenang."
+            PPPOE_DOWN ->
+                "Sesi PPPoE pelanggan putus di BRAS walau ONU-nya boleh jadi masih menyala — salah " +
+                    "kredensial, di-suspend, atau sesi ngadat."
+        }
+}
+
+/**
+ * Arah keburukan sebuah ambang. Redaman punya dua sisi yang sama-sama gawat, dan
+ * keduanya diukur dengan satuan yang sama; tanpa penanda arah, "−27" dan "−5"
+ * tampak seperti soal yang sama padahal berlawanan.
+ */
+enum class AlarmThresholdDirection {
+    /** Makin KECIL makin buruk (redaman lemah): alarm saat nilai ≤ ambang. */
+    LOWER_IS_WORSE,
+
+    /** Makin BESAR makin buruk (redaman terlalu kuat): alarm saat nilai ≥ ambang. */
+    HIGHER_IS_WORSE,
 }
 
 /**
@@ -165,6 +235,21 @@ class Alarm private constructor(
         this.measuredValue = measuredValue
         this.lastSeenAt = at
         this.occurrenceCount += 1
+    }
+
+    /**
+     * Menilai ulang keparahan karena **aturannya** yang berubah, bukan kondisinya.
+     *
+     * Satu-satunya jalan keparahan boleh TURUN selagi alarm terbuka. [reassert]
+     * sengaja menolak menurunkan supaya nilai yang bergoyang di sekitar ambang tak
+     * membuat gangguan tampak membaik; tapi kalau operator sendiri yang menggeser
+     * ambangnya, alarm lama yang tetap CRITICAL menurut ukuran yang sudah dibuang
+     * akan membuat layar & peta berbohong sampai ada bacaan baru. Umur alarm
+     * ([raisedAt]) tak disentuh: masalahnya memang sudah selama itu.
+     */
+    fun reassess(severity: AlarmSeverity) {
+        if (status == AlarmStatus.CLEARED) return
+        this.severity = severity
     }
 
     /** Operator mengakui alarm: tetap terbuka, tapi berhenti menuntut perhatian. */

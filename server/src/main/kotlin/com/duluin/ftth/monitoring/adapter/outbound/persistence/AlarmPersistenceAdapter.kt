@@ -102,6 +102,8 @@ class AlarmRulePersistenceAdapter(
     override fun findByKind(kind: AlarmKind): AlarmRule? = jpa.findByKind(kind)?.toDomain()
 
     override fun findAll(): List<AlarmRule> = jpa.findAll().map { it.toDomain() }
+
+    override fun deleteByKind(kind: AlarmKind) = jpa.deleteByKind(kind)
 }
 
 private fun AlarmJpaEntity.toDomain(): Alarm = Alarm.rehydrate(

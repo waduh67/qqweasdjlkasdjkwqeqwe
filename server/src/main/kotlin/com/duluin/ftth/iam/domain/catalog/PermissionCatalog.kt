@@ -106,6 +106,7 @@ object PermissionCatalog {
         perm("monitoring.metric.view", "Lihat metrik optik/ONU")
         perm("monitoring.alarm.view", "Lihat alarm")
         perm("monitoring.alarm.ack", "Acknowledge alarm")
+        perm("monitoring.threshold.manage", "Setel ambang alarm")
         perm("monitoring.collector.view", "Lihat collector agent")
         perm("monitoring.collector.manage", "Kelola collector & polling")
         perm("monitoring.provisioning.view", "Lihat kotak masuk ONU terdeteksi")

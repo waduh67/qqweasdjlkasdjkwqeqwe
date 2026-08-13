@@ -33,8 +33,15 @@ class AlarmRule private constructor(
     var sustainSeconds: Int = sustainSeconds
         private set
 
+    /** Apakah setelan ini sudah menyimpang dari bawaan jenisnya — untuk ditandai di layar. */
+    val customised: Boolean
+        get() = !enabled ||
+            warningThreshold != kind.defaultWarningThreshold ||
+            criticalThreshold != kind.defaultCriticalThreshold ||
+            sustainSeconds != kind.defaultSustainSeconds
+
     fun update(enabled: Boolean, warningThreshold: Double?, criticalThreshold: Double?, sustainSeconds: Int) {
-        validate(kind, warningThreshold, criticalThreshold, sustainSeconds)
+        validate(kind, enabled, warningThreshold, criticalThreshold, sustainSeconds)
         this.enabled = enabled
         this.warningThreshold = warningThreshold
         this.criticalThreshold = criticalThreshold
@@ -44,26 +51,21 @@ class AlarmRule private constructor(
     /**
      * Menentukan tingkat keparahan dari nilai terukur.
      *
-     * Arah perbandingannya bergantung jenis alarm: untuk redaman lemah, makin
-     * KECIL makin buruk; untuk redaman terlalu kuat, makin BESAR makin buruk.
-     * `null` berarti kondisinya normal.
+     * Arah perbandingannya diambil dari [AlarmKind.thresholdDirection] — untuk
+     * redaman lemah makin KECIL makin buruk, untuk redaman terlalu kuat makin BESAR
+     * makin buruk. `null` berarti kondisinya normal.
      */
     fun evaluate(value: Double): AlarmSeverity? {
-        val warning = warningThreshold
-        val critical = criticalThreshold
-        return when (kind) {
-            AlarmKind.ONU_LOW_RX -> when {
-                critical != null && value <= critical -> AlarmSeverity.CRITICAL
-                warning != null && value <= warning -> AlarmSeverity.WARNING
-                else -> null
-            }
-            AlarmKind.ONU_HIGH_RX -> when {
-                critical != null && value >= critical -> AlarmSeverity.CRITICAL
-                warning != null && value >= warning -> AlarmSeverity.WARNING
-                else -> null
-            }
-            // Jenis lain bersifat biner (terjadi / tidak), bukan berambang.
-            else -> kind.defaultSeverity
+        // Jenis tak berambang bersifat biner (terjadi / tidak), tak ada yang dibandingkan.
+        val direction = kind.thresholdDirection ?: return kind.defaultSeverity
+        fun breached(threshold: Double?) = threshold != null && when (direction) {
+            AlarmThresholdDirection.LOWER_IS_WORSE -> value <= threshold
+            AlarmThresholdDirection.HIGHER_IS_WORSE -> value >= threshold
+        }
+        return when {
+            breached(criticalThreshold) -> AlarmSeverity.CRITICAL
+            breached(warningThreshold) -> AlarmSeverity.WARNING
+            else -> null
         }
     }
 
@@ -76,7 +78,7 @@ class AlarmRule private constructor(
             criticalThreshold: Double? = kind.defaultCriticalThreshold,
             sustainSeconds: Int = kind.defaultSustainSeconds,
         ): AlarmRule {
-            validate(kind, warningThreshold, criticalThreshold, sustainSeconds)
+            validate(kind, enabled, warningThreshold, criticalThreshold, sustainSeconds)
             return AlarmRule(UuidV7.generate(), tenantId, kind, enabled, warningThreshold, criticalThreshold, sustainSeconds)
         }
 
@@ -102,19 +104,33 @@ class AlarmRule private constructor(
         )
 
         /**
-         * Ambang kritis yang lebih longgar daripada ambang peringatan berarti
-         * alarm kritis tidak akan pernah terpicu — kesalahan setelan yang senyap,
-         * jadi ditolak di sini.
+         * Menolak setelan yang mematikan alarm tanpa terlihat mematikannya.
+         *
+         * Dua jebakan yang sama-sama senyap: (1) ambang kritis yang lebih longgar
+         * daripada ambang peringatan — kritisnya tak akan pernah terpicu; (2) jenis
+         * berambang yang dinyalakan tapi kedua ambangnya dikosongkan — mesin tak
+         * punya apa pun untuk dibandingkan, jadi layarnya bilang "aktif" sementara
+         * kenyataannya buta. Keduanya baru ketahuan saat gangguan sungguhan lewat
+         * tanpa alarm, maka dijegal di sini.
          */
-        private fun validate(kind: AlarmKind, warning: Double?, critical: Double?, sustainSeconds: Int) {
+        private fun validate(
+            kind: AlarmKind,
+            enabled: Boolean,
+            warning: Double?,
+            critical: Double?,
+            sustainSeconds: Int,
+        ) {
             if (sustainSeconds !in 0..86_400) {
                 throw ValidationException("Durasi tahan harus 0-86400 detik")
             }
+            val direction = kind.thresholdDirection ?: return
+            if (enabled && warning == null && critical == null) {
+                throw ValidationException("$kind butuh minimal satu ambang; kosongkan lewat tombol nonaktif")
+            }
             if (warning == null || critical == null) return
-            val inconsistent = when (kind) {
-                AlarmKind.ONU_LOW_RX -> critical > warning
-                AlarmKind.ONU_HIGH_RX -> critical < warning
-                else -> false
+            val inconsistent = when (direction) {
+                AlarmThresholdDirection.LOWER_IS_WORSE -> critical > warning
+                AlarmThresholdDirection.HIGHER_IS_WORSE -> critical < warning
             }
             if (inconsistent) {
                 throw ValidationException(
