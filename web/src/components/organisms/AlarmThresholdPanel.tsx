@@ -86,7 +86,7 @@ export function AlarmThresholdPanel({ onChanged }: { onChanged?: () => void }) {
     <div className="stack">
       {!manage && (
         <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-          Anda bisa melihat ambang yang berlaku, tapi tidak mengubahnya (butuh izin “Setel ambang alarm”).
+          Hanya bisa dilihat — butuh izin “Setel ambang alarm”.
         </p>
       )}
       {rules.map((rule) => (
@@ -180,8 +180,7 @@ function RuleCard({
         </div>
       ) : (
         <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-          Jenis ini biner — terjadi atau tidak — jadi tak ada ambang untuk digeser. Yang bisa disetel hanya
-          nyala/matinya.
+          Tak berambang — hanya bisa dinyalakan atau dimatikan.
         </p>
       )}
 
@@ -201,11 +200,7 @@ function RuleCard({
           size="small"
           disabled={!manage || busy}
           onClick={() => onDraft({ ...draft, enabled: !draft.enabled })}
-          title={
-            draft.enabled
-              ? 'Matikan untuk berhenti memunculkan alarm jenis ini — alarmnya yang masih terbuka ikut ditutup'
-              : 'Nyalakan agar jenis ini dipantau lagi'
-          }
+          title={draft.enabled ? 'Matikan — alarm yang terbuka ikut ditutup' : 'Nyalakan pemantauan jenis ini'}
         >
           {draft.enabled ? 'Aktif' : 'Nonaktif'}
         </Button>
@@ -262,15 +257,13 @@ function validate(rule: AlarmRuleView, draft: Draft): string | null {
   const critical = parse(draft.critical)
   if (draft.warning.trim() && warning == null) return 'Ambang peringatan bukan angka.'
   if (draft.critical.trim() && critical == null) return 'Ambang kritis bukan angka.'
-  if (warning == null && critical == null) {
-    return 'Isi minimal satu ambang — kalau tak ada ukurannya, jenis ini sebaiknya dimatikan saja.'
-  }
+  if (warning == null && critical == null) return 'Isi minimal satu ambang, atau matikan jenis ini.'
   if (warning == null || critical == null) return null
   if (rule.direction === 'LOWER_IS_WORSE' && critical > warning) {
-    return 'Makin kecil makin buruk: ambang kritis harus lebih rendah dari peringatan, kalau tidak kritisnya tak akan pernah terpicu.'
+    return 'Kritis harus lebih rendah dari peringatan — kalau tidak, tak akan pernah terpicu.'
   }
   if (rule.direction === 'HIGHER_IS_WORSE' && critical < warning) {
-    return 'Makin besar makin buruk: ambang kritis harus lebih tinggi dari peringatan, kalau tidak kritisnya tak akan pernah terpicu.'
+    return 'Kritis harus lebih tinggi dari peringatan — kalau tidak, tak akan pernah terpicu.'
   }
   return null
 }

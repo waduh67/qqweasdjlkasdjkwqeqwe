@@ -335,7 +335,7 @@ export function MonitoringPage() {
             variant="subtle"
             size="small"
             onClick={() => setThresholds(true)}
-            title="Setel di angka berapa sistem mulai memunculkan alarm"
+            title="Setel ambang munculnya alarm"
           >
             <IconSettings size={15} /> Ambang alarm
           </Button>
@@ -361,8 +361,7 @@ export function MonitoringPage() {
         <Drawer title="Ambang alarm" onClose={() => setThresholds(false)}>
           <div className="stack">
             <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-              Di angka berapa sistem mulai berteriak. Perubahan langsung berlaku pada alarm yang sudah terbuka —
-              yang dimatikan ikut ditutup, yang dilonggarkan turun kelas saat itu juga.
+              Berlaku seketika, termasuk pada alarm yang sudah terbuka.
             </p>
             {/* Daftar alarm dimuat ulang tiap setelan berubah supaya keparahan di
                 tabel belakang panel tak sempat berbohong. */}
