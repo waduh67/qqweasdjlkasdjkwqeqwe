@@ -55,6 +55,29 @@ data class RadiusEndpointView(
     val acctPort: Int,
     val coaPort: Int,
     val configured: Boolean,
+    /**
+     * Alamat RADIUS versi overlay, satu per blok tunnel VPN. Kosong bila platform tak
+     * memakai VPN.
+     */
+    val vpnHosts: List<RadiusVpnHostView> = emptyList(),
+)
+
+/**
+ * Untuk BRAS yang masuk lewat overlay VPN, [host] inilah yang ditulis di `/radius
+ * address=` — BUKAN [RadiusEndpointView.host] yang publik.
+ *
+ * Sebabnya bukan selera: FreeRADIUS mengenali klien dari ALAMAT ASAL paketnya. Router
+ * yang sudah ber-tunnel tapi diarahkan ke IP publik akan keluar lewat internet biasa,
+ * jadi paketnya datang dari IP publik lokasi pelanggan — bukan alamat overlay yang
+ * terdaftar — dan permintaan dari klien tak dikenal DIABAIKAN tanpa balasan. Di router
+ * gejalanya cuma "timeout", tanpa satu pun petunjuk bahwa alamatnya yang keliru.
+ *
+ * [tunnelCidr] dipakai UI untuk mencocokkan: alamat BRAS yang jatuh di dalam blok ini
+ * berarti BRAS-nya lewat tunnel, jadi skrip yang disodorkan memakai [host] ini.
+ */
+data class RadiusVpnHostView(
+    val tunnelCidr: String,
+    val host: String,
 )
 
 /**

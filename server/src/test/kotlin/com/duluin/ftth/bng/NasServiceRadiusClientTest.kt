@@ -20,6 +20,8 @@ import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.tenancy.TenantApi
 import com.duluin.ftth.tenancy.TenantRef
 import com.duluin.ftth.tenancy.TenantStatus
+import com.duluin.ftth.vpn.VpnApi
+import com.duluin.ftth.vpn.VpnTunnelRef
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -166,11 +168,28 @@ class NasServiceRadiusClientTest {
         assertThat(coverage.findAreaIdsByNasId(created.id)).isEmpty()
     }
 
+    @Test
+    fun `endpoint RADIUS menyertakan alamat hub tiap overlay VPN`() {
+        val svc = service(
+            FakeClientRegistry(configured = true),
+            vpn = FakeVpnApi(listOf(VpnTunnelRef(tunnelCidr = "10.8.0.0/24", serverAddress = "10.8.0.1"))),
+        )
+
+        // Router yang masuk lewat tunnel melihat kami sebagai 10.8.0.1, bukan IP publik —
+        // diarahkan ke IP publik, paketnya datang dari IP publik lokasi pelanggan dan
+        // FreeRADIUS mengabaikannya diam-diam sebagai klien tak dikenal.
+        val endpoint = svc.radiusEndpoint()
+
+        assertThat(endpoint.vpnHosts).singleElement()
+            .satisfies({ assertThat(it.tunnelCidr).isEqualTo("10.8.0.0/24") }, { assertThat(it.host).isEqualTo("10.8.0.1") })
+    }
+
     // ---- Fixture & fake ----
 
     private fun service(
         registry: FakeClientRegistry,
         coverage: FakeCoverageRepo = FakeCoverageRepo(),
+        vpn: VpnApi = FakeVpnApi(),
     ): NasService {
         val currentUser = object : CurrentUserProvider {
             override fun currentOrNull() = AuthenticatedUser(
@@ -181,8 +200,13 @@ class NasServiceRadiusClientTest {
         val auditor = AuditRecorder(ApplicationEventPublisher { }, currentUser)
         return NasService(
             FakeNasRepo(), FakeNoSubscriberRepo(), currentUser, auditor, registry, FakeTenantApi(),
-            RadiusProperties(), coverage, FakeRouterOs(),
+            RadiusProperties(), coverage, FakeRouterOs(), vpn,
         )
+    }
+
+    /** Bawaan: platform tanpa overlay VPN sama sekali. */
+    private class FakeVpnApi(private val tunnels: List<VpnTunnelRef> = emptyList()) : VpnApi {
+        override fun overlayTunnels(): List<VpnTunnelRef> = tunnels
     }
 
     private fun command(

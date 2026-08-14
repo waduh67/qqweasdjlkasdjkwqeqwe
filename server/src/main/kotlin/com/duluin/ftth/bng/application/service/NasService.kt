@@ -4,6 +4,7 @@ import com.duluin.ftth.bng.application.port.inbound.ManageNasUseCase
 import com.duluin.ftth.bng.application.port.inbound.NasView
 import com.duluin.ftth.bng.application.port.inbound.PppSecretView
 import com.duluin.ftth.bng.application.port.inbound.RadiusEndpointView
+import com.duluin.ftth.bng.application.port.inbound.RadiusVpnHostView
 import com.duluin.ftth.bng.application.port.inbound.SaveNasCommand
 import com.duluin.ftth.bng.application.port.outbound.NasAreaCoverageRepository
 import com.duluin.ftth.bng.application.port.outbound.NasRepository
@@ -17,6 +18,7 @@ import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.tenancy.TenantApi
+import com.duluin.ftth.vpn.VpnApi
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -33,6 +35,7 @@ class NasService(
     private val radiusProperties: RadiusProperties,
     private val coverageRepository: NasAreaCoverageRepository,
     private val routerOs: RouterOsPort,
+    private val vpnApi: VpnApi,
 ) : ManageNasUseCase {
 
     @Transactional(readOnly = true)
@@ -51,6 +54,9 @@ class NasService(
             acctPort = radiusProperties.acctPort,
             coaPort = radiusProperties.coaPort,
             configured = host != null,
+            // Alamat overlay ikut disebut supaya BRAS yang masuk lewat VPN diarahkan ke
+            // alamat hub, bukan ke IP publik — lihat [RadiusVpnHostView].
+            vpnHosts = vpnApi.overlayTunnels().map { RadiusVpnHostView(it.tunnelCidr, it.serverAddress) },
         )
     }
 
