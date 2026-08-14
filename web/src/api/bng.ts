@@ -83,6 +83,19 @@ export interface RadiusEndpointView {
   acctPort: number
   coaPort: number
   configured: boolean
+  /** Alamat RADIUS versi overlay, satu per blok tunnel VPN; kosong bila VPN tak dipakai. */
+  vpnHosts: RadiusVpnHostView[]
+}
+
+/**
+ * Alamat RADIUS untuk BRAS yang masuk lewat overlay VPN — bukan [RadiusEndpointView.host]
+ * yang publik. FreeRADIUS mengenali klien dari alamat ASAL paketnya: router ber-tunnel yang
+ * diarahkan ke IP publik akan keluar lewat internet biasa, jadi paketnya datang dari IP
+ * publik lokasi pelanggan dan diabaikan diam-diam sebagai klien tak dikenal.
+ */
+export interface RadiusVpnHostView {
+  tunnelCidr: string
+  host: string
 }
 
 /**

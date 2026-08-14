@@ -24,6 +24,7 @@ import { SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
 import { IconGauge, IconPlus } from '@/components/atoms/icons'
+import { radiusTargetFor, selfAddressWarning } from '@/utils/radiusTarget'
 
 /**
  * Registri BRAS/RADIUS tenant.
@@ -67,11 +68,15 @@ export function BngPage() {
 
 /**
  * Rakit skrip RouterOS v7 untuk mengarahkan Mikrotik ke FreeRADIUS pusat. [secret] kosong →
- * placeholder `<SECRET-BRAS>`; host kosong (platform belum set) → `<IP-RADIUS>`. Urutan sama
- * dengan panduan deploy: /radius add (auth+acct) · incoming (CoA) · ppp aaa use-radius.
+ * placeholder `<SECRET-BRAS>`; [radiusHost] kosong (platform belum set) → `<IP-RADIUS>`. Urutan
+ * sama dengan panduan deploy: /radius add (auth+acct) · incoming (CoA) · ppp aaa use-radius.
+ *
+ * [radiusHost] datang dari `radiusTargetFor` dan BUKAN selalu `endpoint.host`: BRAS yang masuk
+ * lewat overlay VPN harus menembak alamat hub, sebab FreeRADIUS mengenali klien dari alamat asal
+ * paketnya.
  */
-function mikrotikScript(endpoint: RadiusEndpointView, secret: string): string {
-  const host = endpoint.host ?? '<IP-RADIUS>'
+function mikrotikScript(endpoint: RadiusEndpointView, secret: string, radiusHost: string | null): string {
+  const host = radiusHost ?? '<IP-RADIUS>'
   const sec = secret || '<SECRET-BRAS>'
   return [
     `/radius add service=ppp address=${host} secret=${sec} \\`,
@@ -278,6 +283,19 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
     )
   }
 
+  /**
+   * Alamat RADIUS yang benar untuk BRAS yang sedang disunting — ikut alamat yang barusan
+   * diketik, sebab jalur masuk router (tunnel VPN vs internet biasa) yang menentukannya.
+   * Dihitung hidup-hidup supaya skrip yang disodorkan berubah begitu alamatnya diketik,
+   * bukan setelah gagal di lapangan.
+   */
+  const draftAddress = draft?.address ?? ''
+  const radiusTarget = useMemo(
+    () => (endpoint ? radiusTargetFor(endpoint, draftAddress) : null),
+    [endpoint, draftAddress],
+  )
+  const addressWarning = selfAddressWarning(endpoint, draftAddress)
+
   /** Peta id→nama area untuk menampilkan cakupan tiap BRAS tanpa memanggil balik. */
   const areaNames = useMemo(() => new Map(areas.map((a) => [a.id, a.name])), [areas])
 
@@ -424,10 +442,13 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
           </div>
           <div className="row">
             <TextField
-              label="Alamat manajemen"
+              label="Alamat BRAS"
               value={draft.address}
               onChange={(_, data) => setDraft({ ...draft, address: data.value })}
-              placeholder="IP publik / overlay VPN, mis. 10.20.0.1"
+              placeholder="mis. 10.8.0.3 atau 103.10.20.30"
+              hint="Alamat router ini sendiri: alamat asal paket RADIUS-nya, sekaligus sasaran balik CoA/Disconnect dan REST API. Router yang masuk lewat VPN kita — pakai alamat tunnel-nya. Bukan alamat server RADIUS."
+              validationState={addressWarning ? 'warning' : undefined}
+              validationMessage={addressWarning ?? undefined}
               style={{ flex: 1 }}
             />
             <TextField
@@ -559,12 +580,21 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
             pernah ditampilkan kembali — salin dulu hasil Generate sebelum menyimpan.
           </p>
 
-          {endpoint?.configured && (
+          {endpoint && radiusTarget?.host && (
             <div className="stack" style={{ gap: '0.35rem' }}>
               <span className="muted" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
                 Config Mikrotik untuk BRAS ini
               </span>
-              <MikrotikSnippet script={mikrotikScript(endpoint, draft.coaSecret)} />
+              <MikrotikSnippet script={mikrotikScript(endpoint, draft.coaSecret, radiusTarget.host)} />
+              {radiusTarget.viaVpn && (
+                <span className="muted" style={{ fontSize: '0.78rem' }}>
+                  Alamat BRAS ini ada di dalam blok VPN kita, jadi skrip menembak alamat hub{' '}
+                  <strong>{radiusTarget.host}</strong> — bukan IP publik. Router yang sudah ber-tunnel
+                  tapi diarahkan ke IP publik keluar lewat internet biasa, jadi paketnya tiba dengan
+                  alamat asal yang tak terdaftar; RADIUS mengabaikan klien tak dikenal tanpa membalas
+                  apa pun, dan di router cuma terlihat sebagai timeout.
+                </span>
+              )}
               {!draft.coaSecret && (
                 <span className="muted" style={{ fontSize: '0.78rem' }}>
                   Isi / Generate shared secret di atas agar tersalin utuh ke skrip.
