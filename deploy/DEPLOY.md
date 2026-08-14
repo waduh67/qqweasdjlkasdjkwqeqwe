@@ -511,7 +511,24 @@ dengan `sql_user_name`. Dial akun itu dari klien PPPoE → log `freeradius` mena
 > `{kodeTenant}:{username}` (mis. `acme:test@isp.net`), sedangkan CPE tetap mengetik
 > `test@isp.net` saja. Tanpa prefiks yang benar, auth NAK.
 
-### K.5 Catatan arah koneksi (penting)
+### K.5 Skema radius-db yang sudah terlanjur jalan (grafik trafik kosong / poller error)
+
+`radius/initdb/01-schema.sql` hanya dijalankan Postgres saat **volume masih kosong**.
+Stack yang sudah berjalan sejak sebelum sebuah kolom ada tak pernah mendapatnya — dan
+gejalanya bukan error di layar melainkan `RadiusAccountingPoller` gagal tiap 30 detik di
+log server (`column "acctinputgigawords" does not exist`), grafik trafik pelanggan mati,
+FUP tak pernah menghitung. Berkas skema ditulis idempoten, jadi cukup jalankan ulang:
+
+```bash
+cd /opt/ftth
+docker compose -f docker-compose.prod.yml exec -T radius-db \
+  psql -U radius -d radius < radius/initdb/01-schema.sql
+```
+
+Aman diulang: semua `CREATE ... IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS`. Lakukan tiap
+kali menarik versi baru yang menyentuh berkas itu.
+
+### K.6 Catatan arah koneksi (penting)
 
 - **Auth/acct**: Mikrotik → VPS (1812/1813). Selama Mikrotik bisa keluar ke internet, jalan
   tanpa VPN — walau Mikrotik di belakang NAT penuh.

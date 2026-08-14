@@ -23,8 +23,13 @@ CREATE TABLE IF NOT EXISTS radacct (
     acctauthentic       text,
     connectinfo_start   text,
     connectinfo_stop    text,
+    -- Pencacah octet FreeRADIUS 32-bit: yang melewati 4 GiB berputar balik ke nol dan
+    -- kelebihannya dihitung di kolom *gigawords (jumlah putaran). Tanpa keduanya,
+    -- pelanggan yang paling banyak memakai justru terlihat paling sedikit.
     acctinputoctets     bigint,
+    acctinputgigawords  bigint,
     acctoutputoctets    bigint,
+    acctoutputgigawords bigint,
     calledstationid     text,
     callingstationid    text,
     acctterminatecause  text,
@@ -37,6 +42,14 @@ CREATE TABLE IF NOT EXISTS radacct (
     delegatedipv6prefix inet,
     class               text
 );
+
+-- Kolom yang lahir belakangan, untuk volume radius-db yang sudah terlanjur dibuat:
+-- berkas ini hanya dijalankan otomatis saat data-dir MASIH KOSONG, jadi deployment
+-- lama tak pernah mendapatnya dari CREATE TABLE di atas. Ditulis idempoten supaya
+-- aman dijalankan tangan (lihat DEPLOY.md K.5) maupun ikut init volume baru.
+ALTER TABLE radacct
+    ADD COLUMN IF NOT EXISTS acctinputgigawords  bigint,
+    ADD COLUMN IF NOT EXISTS acctoutputgigawords bigint;
 
 -- Sesi hidup = acctstoptime IS NULL; indeks parsial mempercepat query itu, yang
 -- persis dipakai adapter collector tiap denyut.
@@ -99,8 +112,9 @@ CREATE TABLE IF NOT EXISTS radpostauth (
     class     text
 );
 
--- Daftar BRAS klien; dibaca FreeRADIUS bila read_clients=yes pada modul sql. Di
--- setup ini klien didefinisikan di clients.conf (dari .env), jadi tabel ini boleh kosong.
+-- Daftar BRAS klien; dibaca FreeRADIUS saat start (read_clients=yes pada modul sql).
+-- Inilah sumber klien di setup ini — server aplikasi yang mengisinya saat tenant
+-- mendaftarkan BRAS di UI; clients.conf cuma menyisakan localhost.
 CREATE TABLE IF NOT EXISTS nas (
     id          serial PRIMARY KEY,
     nasname     text NOT NULL,
