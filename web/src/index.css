@@ -2848,9 +2848,21 @@ tbody tr.row-selected:hover {
   transform: scale(1.12);
 }
 /* Core terpakai diredupkan supaya yang MASIH BEBAS-lah yang menonjol — itu
-   pertanyaan yang dibawa orang ke layar ini. */
+   pertanyaan yang dibawa orang ke layar ini. Redup saja tak cukup: warna asli
+   serat sudah termasuk putih dan krem yang pucat sejak awal, jadi terpakai
+   ditandai pula dengan sudut terlipat. Bentuk masih terbaca di layar ponsel
+   yang kena matahari, kepekatan tidak. */
 .core-chip.is-used {
   opacity: 0.5;
+}
+.core-chip.is-used::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  border-top: 0.4rem solid currentColor;
+  border-left: 0.4rem solid transparent;
+  opacity: 0.6;
 }
 .core-chip.is-selected {
   outline: 2px solid var(--accent);
@@ -2990,7 +3002,8 @@ tbody tr.row-selected:hover {
 
 /* Dua panel bersisian karena begitulah pekerjaannya: satu kotak dibuka, dua
    ujung ditaruh di hadapan teknisi, lalu disambung sehelai demi sehelai. Di
-   layar sempit keduanya menumpuk — urutan atas-bawah tetap masuk-lalu-tujuan. */
+   layar sempit keduanya menumpuk — Ujung A di atas, Ujung B di bawah; keduanya
+   memajang isi kotak yang sama, jadi urutannya cuma soal ruang, bukan arah. */
 .splice-bench {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -3003,12 +3016,72 @@ tbody tr.row-selected:hover {
   background: var(--surface-2);
   min-width: 0;
 }
-/* Rak ODF 144 port tak boleh mendorong tabel sambungan ke bawah horizon: isinya
-   digulung di dalam panelnya sendiri. */
-.splice-side .core-grid,
-.splice-side .splice-slots {
-  max-height: 260px;
+/* Seisi kotak terpajang sekaligus, jadi yang digulung adalah DAFTARNYA, bukan
+   tiap kisi sendiri-sendiri: satu batang gulung di tepi panel, bukan tujuh yang
+   bersarang. Rak ODF 144 port tetap tak mendorong tabel sambungan ke bawah
+   horizon karena batas tingginya ada di sini. */
+.splice-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 420px;
   overflow-y: auto;
+}
+.splice-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+/* Kepala lipatan selebar panel: nama kelompok di kiri, sisa titik bebas di
+   kanan — angka itu yang dicari orang sebelum memutuskan membukanya. */
+.splice-group-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0.2rem 0.3rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.splice-group-head:hover {
+  background: var(--surface-hover);
+}
+.splice-group-head:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+.splice-group-head .chev {
+  display: inline-flex;
+  flex: none;
+  color: var(--muted);
+  transform: rotate(-90deg);
+  transition: transform 0.15s ease;
+}
+.splice-group-head[aria-expanded='true'] .chev {
+  transform: none;
+}
+.splice-group-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.splice-group-count {
+  flex: none;
+  font-size: 0.7rem;
+  font-weight: 400;
+}
+.splice-group-hint {
+  margin: 0 0 0 1.15rem;
+  font-size: 0.68rem;
 }
 /* Titik non-core (port ODF, kaki splitter, PON) berlabel kata, bukan angka, jadi
    bentuknya pil selebar isinya — bukan chip persegi seperti core. */

@@ -7,6 +7,7 @@ import type {
   ClosureKind,
   ConnectionPointRequest,
   FiberConnectionPointView,
+  FiberConnectionView,
   SpliceCableView,
   SpliceMethod,
   SpliceWorkbenchView,
@@ -15,6 +16,7 @@ import { CABLE_ATTACHMENT_ROLE_LABEL, SPLICE_METHOD_LABEL } from '@/api/network'
 import type { PageResponse } from '@/api/types'
 import { useCan } from '@/auth/useCan'
 import { Badge, Button, SelectField, TextField } from '@/components/atoms'
+import { IconChevronDown } from '@/components/atoms/icons'
 import { Combobox } from '@/components/molecules'
 import { useOpenWorkOrders } from '@/hooks/useOpenWorkOrders'
 import { useConfirm, useToast } from '@/system'
@@ -31,21 +33,28 @@ import { timeAgo } from '@/utils/timeAgo'
  * ini juga dua panel bersisian dengan tombol sambung di antaranya, bukan sebuah
  * formulir "pilih A, pilih B" yang menyembunyikan apa saja yang tersedia.
  *
- * Tiga hal yang membedakannya dari daftar sambungan biasa:
+ * Lima hal yang membedakannya dari daftar sambungan biasa:
  *
  * 1. **Kabel yang cuma LEWAT ikut tampil.** Kabel distribusi 8 core yang
  *    melewati delapan ODP dikupas di tiap kotak untuk mengambil satu core —
  *    kotaknya bukan ujung kabel, tapi core-nya tetap harus bisa disambung dari
  *    sini. Setiap kabel diberi keterangan "berujung di sini" atau jarak titik
  *    kupasnya dari pangkal, angka yang dipakai teknisi mencocokkan hasil OTDR.
- * 2. **Titik tujuan menyesuaikan jenis kotaknya**: di ODF muncul port (belakang
- *    & depan) dan PON port OLT, di ODC/ODP muncul kaki tiap modul splitter, di
- *    joint box tak ada — di sana serat memang cuma bertemu serat.
- * 3. **Sambung 1:1 otomatis.** Kabel 8 core masuk, 8 core keluar: memasangkan
+ * 2. **Kedua sisi memajang isi kotak yang SAMA, dan namanya Ujung A / Ujung B.**
+ *    Arah cahaya melekat pada CORE, bukan pada selubungnya: satu kabel antar-ODC
+ *    lazim membawa core turun dan core naik sekaligus, jadi selubung yang sama
+ *    sah menjadi ujung mana pun. Menamainya "masuk" dan "keluar" akan
+ *    menjanjikan aturan yang tak dikerjakan mesinnya — dan menutup sambung lurus
+ *    dua kabel sejenis di joint box, yang justru pekerjaan sehari-hari.
+ * 3. **Seisi kotak terbuka sekaligus.** Yang membuka tutup ODP melihat semua
+ *    kabel di dalamnya sekali lihat, tanpa membuka laci satu-satu. Kotak ramai
+ *    (di atas empat kelompok: ODC bersplitter banyak, rak ODF) melipat sendiri
+ *    kelompoknya supaya panelnya tak jadi gulungan tak berujung.
+ * 4. **Sambung 1:1 otomatis.** Kabel 8 core masuk, 8 core keluar: memasangkan
  *    core 1↔1 … 8↔8 satu per satu adalah 8 klik yang hasilnya sudah bisa
  *    ditebak. Satu tombol mengerjakannya sekaligus, dan server menerapkannya
  *    sebagai satu transaksi — semua masuk, atau tak ada yang masuk.
- * 4. **Tiap sambungan membawa tiket & nama teknisinya.** Kotak tak pernah dibuka
+ * 5. **Tiap sambungan membawa tiket & nama teknisinya.** Kotak tak pernah dibuka
  *    tanpa alasan: ada work order yang menyuruhnya. Pilih tiketnya sekali di
  *    atas, lalu semua sambungan pada sesi itu ikut terbukukan ke sana — dan
  *    balasannya masuk ke linimasa tiket, jadi penyelia melihat kerja seratnya
@@ -75,11 +84,18 @@ interface Slot {
    * Hanya kaki splitter yang punya; core & port ODF null.
    */
   serves: string | null
+  /**
+   * Ujung seberangnya DI KOTAK INI bila sudah tersambung, sesingkat mungkin
+   * ("DIST-02 c5", "SPL-01 kaki 3"). Titik terpakai yang cuma diredupkan
+   * memaksa orang turun ke tabel di bawah untuk pertanyaan yang paling sering
+   * ditanya sambil memegang seratnya: "yang ini nyambung ke mana?".
+   */
+  partner: string | null
   /** Core ini sudah tersambung di kotak LAIN; dari sini tak bisa diapa-apakan. */
   blocked: boolean
 }
 
-/** Sekelompok titik yang dipilih bersama lewat satu dropdown: satu kabel, satu modul, satu rak. */
+/** Sekelompok titik yang tampil bersama dalam satu lipatan: satu kabel, satu modul, satu rak. */
 interface Group {
   key: string
   option: string
@@ -130,8 +146,35 @@ function inkOn(hex: string): string {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#0f172a' : '#ffffff'
 }
 
-/** Susun kabel & titik simpul jadi kelompok yang bisa dipilih di dropdown panel. */
+/** Kunci sebuah titik — dipakai menyamakan ujung sambungan dengan slot di panel. */
+const pointKey = (p: { kind: string; nodeId: string | null; portNumber: number | null; portSide: string | null }) =>
+  `point:${p.kind}:${p.nodeId}:${p.portNumber ?? ''}:${p.portSide ?? ''}`
+
+/** Sebutan sesingkat mungkin untuk seberang sebuah sambungan; muat di satu baris kecil. */
+function shortEnd(p: FiberConnectionPointView): string {
+  return p.coreNumber != null ? `${p.cableCode ?? 'kabel'} c${p.coreNumber}` : p.label
+}
+
+/**
+ * Peta "titik ini bersambung ke apa", dari sambungan yang sudah ada di kotak ini.
+ *
+ * Dibangun dari kedua arah sekaligus: sebuah sambungan tak punya sisi depan dan
+ * sisi belakang, jadi core mana pun harus bisa menyebut seberangnya tanpa peduli
+ * ia tercatat sebagai ujung `a` atau `b`.
+ */
+function partnersByKey(connections: FiberConnectionView[]): Map<string, string> {
+  const keyOf = (p: FiberConnectionPointView) => (p.coreId ? `core:${p.coreId}` : pointKey(p))
+  const map = new Map<string, string>()
+  for (const row of connections) {
+    map.set(keyOf(row.a), shortEnd(row.b))
+    map.set(keyOf(row.b), shortEnd(row.a))
+  }
+  return map
+}
+
+/** Susun kabel & titik simpul jadi kelompok yang dipajang berlipat di tiap panel. */
 function toGroups(data: SpliceWorkbenchView): Group[] {
+  const partners = partnersByKey(data.connections)
   const cables: Group[] = data.cables.map((cable) => {
     // Jarak tap adalah angka lapangan, bukan hiasan: itu yang dicocokkan dengan
     // hasil OTDR saat mencari letak sambungan di sepanjang rute.
@@ -149,27 +192,31 @@ function toGroups(data: SpliceWorkbenchView): Group[] {
         : `${cable.name} · selubung utuh — tandai "dikupas di sini" dulu bila baru dibuka`,
       code: cable.code,
       isCable: true,
-      slots: cable.cores.map((entry) => ({
-        key: `core:${entry.core.id}`,
-        point: { kind: 'CORE', coreId: entry.core.id },
-        label: String(entry.core.coreNumber),
-        title:
-          `Core ${entry.core.coreNumber} · ${entry.core.color}` +
-          (!cable.spliceable
-            ? ' · selubung kabel ini utuh di sini, tak ada core yang terbuka'
-            : entry.connectionId
-              ? ' · sudah tersambung di kotak ini'
-              : entry.connectedElsewhere
-                ? ' · dipakai sambungan di kotak lain'
-                : ' · bebas') +
-          (entry.core.note ? ` · ${entry.core.note}` : ''),
-        colorHex: entry.core.colorHex,
-        cableId: cable.cableId,
-        cableCode: cable.code,
-        connectionId: entry.connectionId,
-        serves: null,
-        blocked: entry.connectedElsewhere || !cable.spliceable,
-      })),
+      slots: cable.cores.map((entry) => {
+        const partner = entry.connectionId ? (partners.get(`core:${entry.core.id}`) ?? null) : null
+        return {
+          key: `core:${entry.core.id}`,
+          point: { kind: 'CORE', coreId: entry.core.id },
+          label: String(entry.core.coreNumber),
+          title:
+            `Core ${entry.core.coreNumber} · ${entry.core.color}` +
+            (!cable.spliceable
+              ? ' · selubung kabel ini utuh di sini, tak ada core yang terbuka'
+              : entry.connectionId
+                ? ` · tersambung ke ${partner ?? 'titik lain di kotak ini'}`
+                : entry.connectedElsewhere
+                  ? ' · dipakai sambungan di kotak lain'
+                  : ' · bebas') +
+            (entry.core.note ? ` · ${entry.core.note}` : ''),
+          colorHex: entry.core.colorHex,
+          cableId: cable.cableId,
+          cableCode: cable.code,
+          connectionId: entry.connectionId,
+          serves: null,
+          partner,
+          blocked: entry.connectedElsewhere || !cable.spliceable,
+        }
+      }),
     }
   })
 
@@ -181,8 +228,9 @@ function toGroups(data: SpliceWorkbenchView): Group[] {
       group = { key, option: point.group, hint: '', code: point.group, isCable: false, slots: [] }
       points.push(group)
     }
+    const partner = point.connectionId ? (partners.get(pointKey(point)) ?? null) : null
     group.slots.push({
-      key: `point:${point.kind}:${point.nodeId}:${point.portNumber ?? ''}:${point.portSide ?? ''}`,
+      key: pointKey(point),
       point: {
         kind: point.kind,
         nodeId: point.nodeId,
@@ -194,13 +242,14 @@ function toGroups(data: SpliceWorkbenchView): Group[] {
       // labelnya: pil selebar 120px memotong "DROP-ODP-01-P3 · Budi Santoso"
       // hampir selalu, dan nama yang terpotong setengah menyesatkan.
       title:
-        `${point.label} · ${point.connectionId ? 'sudah tersambung' : 'bebas'}` +
+        `${point.label} · ${point.connectionId ? `tersambung ke ${partner ?? 'titik lain'}` : 'bebas'}` +
         (point.serves ? ` · ${point.serves}` : ''),
       colorHex: null,
       cableId: null,
       cableCode: null,
       connectionId: point.connectionId,
       serves: point.serves,
+      partner,
       blocked: false,
     })
   }
@@ -380,98 +429,141 @@ function CableAttachmentBar({
   )
 }
 
-/** Satu panel: dropdown pemilih kelompok + kisi titiknya. */
+/**
+ * Di atas berapa kelompok sebuah kotak dianggap ramai dan isinya mulai terlipat.
+ *
+ * Empat karena itu batas kotak lapangan yang lazim: ODP berisi kabel distribusi,
+ * satu-dua drop, dan sebuah splitter masih muat dipandang sekaligus. Yang di
+ * atasnya adalah ODC bersplitter banyak dan rak ODF — di sana daftar yang
+ * terbuka semua justru menyembunyikan, karena tak ada yang terbaca tanpa
+ * menggulung.
+ */
+const CROWDED = 4
+
+/** Kisi titik satu kelompok: kotak core berwarna, atau pil untuk kaki/port. */
+function SlotGrid({
+  group,
+  picked,
+  onPick,
+  disabled,
+}: {
+  group: Group
+  picked: string | null
+  onPick: (slot: Slot) => void
+  disabled: boolean
+}) {
+  return (
+    <div className={group.isCable ? 'core-grid' : 'splice-slots'}>
+      {group.slots.map((slot) => {
+        const taken = !free(slot)
+        const on = picked === slot.key
+        const style = slot.colorHex ? { background: slot.colorHex, color: inkOn(slot.colorHex) } : undefined
+        // Muara ("punya Budi") menang atas seberang ("SPL-01 kaki 3") saat
+        // keduanya ada: yang berdiri di depan kotak mencari pelanggannya, bukan
+        // topologinya. Seberangnya tetap terbaca di tooltip.
+        const caption = slot.serves ?? (slot.partner ? `↔ ${slot.partner}` : null)
+        return (
+          <button
+            key={slot.key}
+            type="button"
+            className={
+              (group.isCable ? 'core-chip' : 'splice-slot') +
+              (on ? ' is-selected' : '') +
+              (taken ? ' is-used' : '') +
+              (!group.isCable && caption ? ' has-serves' : '')
+            }
+            style={style}
+            title={slot.title}
+            disabled={disabled || taken}
+            onClick={() => onPick(slot)}
+          >
+            {/* Kaki yang sudah berisi memakai dua baris: nomornya, lalu jalur
+                yang dilayaninya — pertanyaan pertama orang yang membuka kotak
+                bukan "kaki berapa yang kosong" melainkan "kaki mana punya
+                Budi". Core tetap sekeping angka; warnanya yang bicara, dan
+                seberangnya lewat tooltip — kotak 24 piksel tak muat kalimat. */}
+            {!group.isCable && caption ? (
+              <>
+                <span className="splice-slot-label">{slot.label}</span>
+                <span className="splice-slot-serves">{caption}</span>
+              </>
+            ) : (
+              slot.label
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/**
+ * Satu sisi meja: seisi kotak, terpajang sekaligus.
+ *
+ * Tak ada dropdown — yang membuka tutup ODP melihat semua kabel di dalamnya
+ * tanpa membuka laci satu per satu, dan layar yang menyembunyikannya membuat
+ * orang menebak isi kotak yang sedang ada di tangannya. Yang dilipat hanyalah
+ * kotak ramai, dan lipatannya bisa dibuka sendiri-sendiri.
+ */
 function SidePanel({
   title,
-  hint,
   groups,
-  groupKey,
-  onGroup,
   picked,
   onPick,
   disabled,
 }: {
   title: string
-  hint: string
   groups: Group[]
-  groupKey: string
-  onGroup: (key: string) => void
   picked: string | null
   onPick: (slot: Slot) => void
   disabled: boolean
 }) {
-  const group = groups.find((g) => g.key === groupKey)
-  const available = group ? group.slots.filter(free).length : 0
+  // Hanya lipatan yang DIUBAH orangnya yang dicatat; sisanya ikut bawaan, jadi
+  // kotak yang berubah isinya (kabel baru dicatat) tak mewarisi keadaan basi.
+  const [toggled, setToggled] = useState<Record<string, boolean>>({})
+  const crowded = groups.length > CROWDED
+  const opened = (g: Group) => toggled[g.key] ?? (!crowded || g.slots.some((s) => s.key === picked))
+  const available = groups.reduce((n, g) => n + g.slots.filter(free).length, 0)
+  const capacity = groups.reduce((n, g) => n + g.slots.length, 0)
 
   return (
     <div className="splice-side stack" style={{ gap: '0.45rem' }}>
       <div className="spread" style={{ alignItems: 'baseline', gap: '0.4rem' }}>
         <strong style={{ fontSize: '0.82rem' }}>{title}</strong>
-        {group && (
-          <span className="muted tnum" style={{ fontSize: '0.72rem' }}>
-            {available}/{group.slots.length} bebas
-          </span>
-        )}
+        <span className="muted tnum" style={{ fontSize: '0.72rem' }}>
+          {available}/{capacity} bebas
+        </span>
       </div>
 
-      <SelectField
-        aria-label={title}
-        hint={group?.hint || undefined}
-        value={groupKey}
-        onChange={(_, d) => onGroup(d.value)}
-      >
-        <option value="">— pilih {hint} —</option>
-        {groups.map((g) => (
-          <option key={g.key} value={g.key}>
-            {g.option}
-          </option>
-        ))}
-      </SelectField>
-
-      {group ? (
-        <div className={group.isCable ? 'core-grid' : 'splice-slots'}>
-          {group.slots.map((slot) => {
-            const taken = !free(slot)
-            const on = picked === slot.key
-            const style = slot.colorHex
-              ? { background: slot.colorHex, color: inkOn(slot.colorHex) }
-              : undefined
-            return (
+      <div className="splice-groups">
+        {groups.map((group) => {
+          const open = opened(group)
+          return (
+            <div key={group.key} className="splice-group">
               <button
-                key={slot.key}
                 type="button"
-                className={
-                  (group.isCable ? 'core-chip' : 'splice-slot') +
-                  (on ? ' is-selected' : '') +
-                  (taken ? ' is-used' : '') +
-                  (slot.serves ? ' has-serves' : '')
-                }
-                style={style}
-                title={slot.title}
-                disabled={disabled || taken}
-                onClick={() => onPick(slot)}
+                className="splice-group-head"
+                aria-expanded={open}
+                onClick={() => setToggled((prev) => ({ ...prev, [group.key]: !open }))}
               >
-                {/* Kaki yang sudah berisi memakai dua baris: nomornya, lalu jalur
-                    yang dilayaninya — pertanyaan pertama orang yang membuka kotak
-                    bukan "kaki berapa yang kosong" melainkan "kaki mana punya
-                    Budi". Core tetap sekeping angka; warnanya yang bicara. */}
-                {slot.serves ? (
-                  <>
-                    <span className="splice-slot-label">{slot.label}</span>
-                    <span className="splice-slot-serves">{slot.serves}</span>
-                  </>
-                ) : (
-                  slot.label
-                )}
+                <span className="chev" aria-hidden>
+                  <IconChevronDown size={13} />
+                </span>
+                <span className="splice-group-name">{group.option}</span>
+                <span className="muted tnum splice-group-count">
+                  {group.slots.filter(free).length}/{group.slots.length}
+                </span>
               </button>
-            )
-          })}
-        </div>
-      ) : (
-        <p className="muted" style={{ margin: 0, fontSize: '0.76rem' }}>
-          Belum ada yang dipilih.
-        </p>
-      )}
+              {open && (
+                <>
+                  {group.hint && <p className="splice-group-hint muted">{group.hint}</p>}
+                  <SlotGrid group={group} picked={picked} onPick={onPick} disabled={disabled} />
+                </>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -499,8 +591,6 @@ export function SplicingManager({
 
   const [data, setData] = useState<SpliceWorkbenchView | null>(null)
   const [loading, setLoading] = useState(true)
-  const [leftKey, setLeftKey] = useState('')
-  const [rightKey, setRightKey] = useState('')
   const [leftPick, setLeftPick] = useState<Slot | null>(null)
   const [rightPick, setRightPick] = useState<Slot | null>(null)
   const [method, setMethod] = useState<SpliceMethod>('FUSION')
@@ -542,18 +632,14 @@ export function SplicingManager({
 
   const groups = useMemo(() => (data ? toGroups(data) : []), [data])
 
-  // Tebakan awal yang benar untuk kasus paling umum: kabel pertama (yang sudah
-  // diurut server — yang berujung di sini duluan) lawan tujuan alaminya, yaitu
-  // kaki splitter / port ODF bila ada, atau kabel berikutnya di joint box.
-  useEffect(() => {
-    if (groups.length === 0) return
-    setLeftKey((prev) => (groups.some((g) => g.key === prev) ? prev : (groups[0]?.key ?? '')))
-    setRightKey((prev) => {
-      if (groups.some((g) => g.key === prev)) return prev
-      const target = groups.find((g) => !g.isCable) ?? groups[1]
-      return target?.key ?? ''
-    })
-  }, [groups])
+  // Kelompok yang "sedang aktif" di tiap sisi mengikuti titik yang dipilih.
+  // Sejak kedua panel memajang seluruh isi kotak, tak ada lagi arti lain untuk
+  // frasa itu — dan sebuah dropdown yang harus disetel terpisah dari core yang
+  // diklik cuma dua tempat untuk menyatakan hal yang sama, yang bisa berselisih.
+  const groupKeyOf = (slot: Slot | null) =>
+    slot == null ? '' : (groups.find((g) => g.slots.some((s) => s.key === slot.key))?.key ?? '')
+  const leftKey = groupKeyOf(leftPick)
+  const rightKey = groupKeyOf(rightPick)
 
   // Pilihan yang sudah tak ada lagi (habis disambung/dilepas) tak boleh menggantung.
   useEffect(() => {
@@ -774,28 +860,18 @@ export function SplicingManager({
           )}
 
           <div className="splice-bench">
+            {/* A dan B, bukan masuk dan keluar: sambungan las tak punya arah, dan
+                kabel yang sama sah jadi ujung mana pun. */}
             <SidePanel
-              title="Titik masuk"
-              hint="kabel"
+              title="Ujung A"
               groups={groups}
-              groupKey={leftKey}
-              onGroup={(key) => {
-                setLeftKey(key)
-                setLeftPick(null)
-              }}
               picked={leftPick?.key ?? null}
               onPick={setLeftPick}
               disabled={!canManage || busy}
             />
             <SidePanel
-              title="Titik tujuan"
-              hint="tujuan"
+              title="Ujung B"
               groups={groups}
-              groupKey={rightKey}
-              onGroup={(key) => {
-                setRightKey(key)
-                setRightPick(null)
-              }}
               picked={rightPick?.key ?? null}
               onPick={setRightPick}
               disabled={!canManage || busy}
@@ -842,7 +918,7 @@ export function SplicingManager({
                 onClick={() => void connectAll()}
                 title={
                   autoPairs.length === 0
-                    ? 'Pilih dua kelompok berbeda yang sama-sama masih punya titik bebas'
+                    ? 'Pilih satu titik di tiap sisi, dari dua kelompok berbeda yang masih punya titik bebas'
                     : undefined
                 }
               >
@@ -858,8 +934,11 @@ export function SplicingManager({
           <table>
             <thead>
               <tr>
-                <th>Titik masuk</th>
-                <th>Titik tujuan</th>
+                {/* Kolomnya bukan "masuk vs tujuan" — yang tersimpan cuma ujung
+                    mana yang kebetulan diklik duluan. Menamainya begitu membuat
+                    dua sambungan yang fisiknya sama tampak berlawanan arah. */}
+                <th>Ujung A</th>
+                <th>Ujung B</th>
                 <th>Metode</th>
                 <th>Rugi</th>
                 <th>Dikerjakan</th>
