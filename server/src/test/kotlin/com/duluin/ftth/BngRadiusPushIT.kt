@@ -17,6 +17,7 @@ import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import java.util.UUID
@@ -97,6 +98,36 @@ class BngRadiusPushIT {
         assertThat(provisioningActions(tenantId)).isEmpty()
     }
 
+    @Test
+    fun `pindah BRAS tak mencabut akun dari RADIUS, lepas dari BRAS mencabutnya`() {
+        val slug = "bngm${uniq()}"
+        val token = onboard(slug)
+        val tenantId = tenantApi.findBySlug(slug)!!.id
+
+        val planId = createPlan(token)
+        val nasLama = id(post("/api/bng/nas", token, """{"name":"BRAS-Lama-${uniq()}","vendor":"MIKROTIK"}"""))
+        val nasBaru = id(post("/api/bng/nas", token, """{"name":"BRAS-Baru-${uniq()}","vendor":"MIKROTIK"}"""))
+        val sub = activeSubscription(token, planId, code = "C-MOVE")
+
+        val username = "pppoe${uniq()}"
+        val accessId = id(
+            post(
+                "/api/bng/access", token,
+                """{"subscriptionId":"$sub","username":"$username","secret":"rahasia123","planId":"$planId","nasId":"$nasLama"}""",
+            ),
+        )
+
+        // Pindah BRAS: kredensial ditulis ulang, TAK ada pencabutan. Otorisasi RADIUS tak
+        // per-BRAS — mencabut "di BRAS lama" akan menghapus akun yang baru saja ditulis.
+        put("/api/bng/access/$accessId", token, """{"planId":"$planId","nasId":"$nasBaru"}""")
+        assertThat(provisionsFor(tenantId, username)).hasSize(2)
+        assertThat(deprovisionsFor(tenantId, username)).isEmpty()
+
+        // Dilepas dari BRAS (tak dilayani BRAS mana pun) → barulah dicabut dari RADIUS.
+        put("/api/bng/access/$accessId", token, """{"planId":"$planId","nasId":null}""")
+        assertThat(deprovisionsFor(tenantId, username)).hasSize(1)
+    }
+
     // --- Perkakas HTTP ---
 
     private fun onboard(slug: String): String {
@@ -142,11 +173,24 @@ class BngRadiusPushIT {
         }
 
     private fun provisionsFor(tenantId: UUID, username: String): List<BngAction> =
-        provisioningActions(tenantId).filter { it.action == BngActionType.PROVISION && it.username == username }
+        actionsFor(tenantId, username, BngActionType.PROVISION)
+
+    private fun deprovisionsFor(tenantId: UUID, username: String): List<BngAction> =
+        actionsFor(tenantId, username, BngActionType.DEPROVISION)
+
+    private fun actionsFor(tenantId: UUID, username: String, type: BngActionType): List<BngAction> =
+        provisioningActions(tenantId).filter { it.action == type && it.username == username }
 
     private fun post(url: String, token: String, body: String, expected: Int = 201): String =
         mockMvc.perform(
             post(url).header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON).content(body),
+        ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
+            .andReturn().response.contentAsString
+
+    private fun put(url: String, token: String, body: String, expected: Int = 200): String =
+        mockMvc.perform(
+            put(url).header("Authorization", "Bearer $token")
                 .contentType(MediaType.APPLICATION_JSON).content(body),
         ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
             .andReturn().response.contentAsString

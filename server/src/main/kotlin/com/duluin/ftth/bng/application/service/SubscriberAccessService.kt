@@ -131,12 +131,27 @@ class SubscriberAccessService(
             bngActions.enqueueSyncGroup(nasId, saved.tenantId, plan, user.userId, user.email)
             bngActions.enqueueProvision(saved, user.userId, user.email)
         }
-        // Pindah BRAS → cabut otorisasi di BRAS lama agar tak menggantung di sana.
-        if (previousNasId != null && previousNasId != saved.nasId) {
+        // Dilepas dari BRAS (tak ditugaskan ke mana pun) → cabut otorisasinya dari RADIUS.
+        //
+        // HANYA untuk kasus itu. PINDAH BRAS sengaja TIDAK mencabut apa pun: sejak
+        // RADIUS-as-a-service, otorisasi tak tersimpan per-BRAS — satu baris radcheck
+        // `{kode-tenant}:{username}` melayani seluruh BRAS tenant. Mencabut "di BRAS lama"
+        // berarti menghapus baris yang PROVISION di atas baru saja tulis, dan akun lenyap
+        // dari RADIUS: pelanggan yang cuma dipindah pembukuannya jadi tak bisa login sama
+        // sekali — dengan layar yang bilang sukses. Tak ada yang menggantung di BRAS lama
+        // karena tak pernah ada apa pun yang dititipkan ke sana.
+        //
+        // Sesi yang masih hidup di BRAS lama juga sengaja dibiarkan: BRAS mana yang benar-
+        // benar melayani pelanggan ditentukan topologi fisik, bukan catatan kita. Memutus
+        // sesi karena catatan dibetulkan artinya membuat gangguan dari pekerjaan
+        // administratif. Sesi berikutnya mendarat di BRAS yang memang mengangkutnya.
+        if (previousNasId != null && saved.nasId == null) {
             bngActions.enqueueDeprovisionAt(
                 previousNasId, saved.tenantId, saved.username, saved.authType, user.userId, user.email,
             )
-        } else if (previousPlanId != plan.planId && saved.status == AccessStatus.ACTIVE) {
+        } else if (previousNasId == saved.nasId && previousPlanId != plan.planId &&
+            saved.status == AccessStatus.ACTIVE
+        ) {
             // Paket berubah pada BRAS yang sama & akun aktif → CoA agar sesi hidup langsung
             // memakai kecepatan baru tanpa memutusnya.
             bngActions.enqueueCoa(saved, plan.downMbps, plan.upMbps, user.userId, user.email)
