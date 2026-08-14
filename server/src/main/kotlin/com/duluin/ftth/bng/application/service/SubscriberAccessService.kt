@@ -152,6 +152,20 @@ class SubscriberAccessService(
         val access = require(id)
         access.resetSecret(command.secret)
         val saved = subscriberAccessRepository.save(access)
+        val user = currentUser.current()
+        // Password baru WAJIB didorong ke RADIUS, bukan cuma disimpan di sini. Yang
+        // diperiksa saat pelanggan dial adalah baris radcheck; tanpa dorongan ini layar
+        // mengabarkan "password sudah diganti" sementara BRAS masih memeriksa yang lama —
+        // dan orang yang mengganti password justru sedang menolong pelanggan yang tak
+        // bisa masuk, jadi kegagalan diamnya persis di saat paling menyesatkan.
+        //
+        // Kecuali akun PENDING: instalasinya belum selesai, jadi ia memang belum ada di
+        // RADIUS dan tak boleh diadakan lewat pintu belakang ganti password. Ia ditulis
+        // saat WO PSB ditutup (SubscriberAccessLifecycle.onActivated), dengan password
+        // terbaru — yang barusan disimpan ini.
+        if (saved.status != AccessStatus.PENDING) {
+            bngActions.enqueueProvision(saved, user.userId, user.email)
+        }
         // Detail sengaja tanpa nilai password — jejak audit tak boleh menyimpan rahasia.
         auditor.record(
             "bng.access.secret_reset", "SubscriberAccess", saved.id, saved.tenantId,
