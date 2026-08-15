@@ -72,7 +72,14 @@ export function BngPage() {
 /**
  * Rakit skrip RouterOS v7 untuk mengarahkan Mikrotik ke FreeRADIUS pusat. [secret] kosong →
  * placeholder `<SECRET-BRAS>`; [radiusHost] kosong (platform belum set) → `<IP-RADIUS>`. Urutan
- * sama dengan panduan deploy: /radius add (auth+acct) · incoming (CoA) · ppp aaa use-radius.
+ * sama dengan panduan deploy: pool alamat pelanggan · /radius add (auth+acct) · incoming (CoA) ·
+ * ppp aaa use-radius.
+ *
+ * Dua baris pool/profil ikut disertakan justru karena RADIUS TIDAK memberi alamat: yang kami
+ * kirim adalah izin login dan kecepatan paket. Router yang profil PPP-nya belum punya
+ * `remote-address` meloloskan login lalu langsung memutusnya lagi — di log terbaca
+ * `logged in, 0.0.0.0` disusul `no network protocols running`, dan sepintas mirip masalah
+ * RADIUS padahal autentikasinya justru sudah berhasil.
  *
  * [radiusHost] datang dari `radiusTargetFor` dan BUKAN selalu `endpoint.host`: BRAS yang masuk
  * lewat overlay VPN harus menembak alamat hub, sebab FreeRADIUS mengenali klien dari alamat asal
@@ -82,6 +89,8 @@ function mikrotikScript(endpoint: RadiusEndpointView, secret: string, radiusHost
   const host = radiusHost ?? '<IP-RADIUS>'
   const sec = secret || '<SECRET-BRAS>'
   return [
+    `/ip pool add name=pool-pppoe ranges=10.20.0.2-10.20.255.254`,
+    `/ppp profile set [find name=default] local-address=10.20.0.1 remote-address=pool-pppoe`,
     `/radius add service=ppp address=${host} secret=${sec} \\`,
     `    authentication-port=${endpoint.authPort} accounting-port=${endpoint.acctPort}`,
     `/radius incoming set accept=yes port=${endpoint.coaPort}`,
@@ -633,6 +642,14 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
                 Config Mikrotik untuk BRAS ini
               </span>
               <MikrotikSnippet script={mikrotikScript(endpoint, draft.coaSecret, radiusTarget.host)} />
+              <span className="muted" style={{ fontSize: '0.78rem' }}>
+                Dua baris pertama yang memberi <strong>alamat</strong> ke pelanggan — RADIUS kami
+                mengirim izin login dan kecepatan paket, bukan IP. Profil PPP tanpa{' '}
+                <code>remote-address</code> membuat pelanggan lolos login lalu putus lagi seketika:
+                di log router terbaca <code>logged in, 0.0.0.0</code> disusul{' '}
+                <code>no network protocols running</code>. Ganti rentangnya dengan blok milikmu, dan
+                bila server PPPoE-mu memakai profil selain <code>default</code>, setel profil itu.
+              </span>
               {radiusTarget.viaVpn && (
                 <span className="muted" style={{ fontSize: '0.78rem' }}>
                   Alamat BRAS ini ada di dalam blok VPN kita, jadi skrip menembak alamat hub{' '}

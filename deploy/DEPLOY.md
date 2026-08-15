@@ -487,12 +487,21 @@ kalau tidak, FreeRADIUS menolak request dari IP yang tak dikenalnya.
 Secret di bawah = **shared secret** yang kamu isi di UI untuk BRAS ini (identik dua sisi).
 
 ```rsc
+# Alamat untuk pelanggan: RADIUS mengirim izin login + kecepatan, BUKAN IP.
+/ip pool add name=pool-pppoe ranges=10.20.0.2-10.20.255.254
+/ppp profile set [find name=default] local-address=10.20.0.1 remote-address=pool-pppoe
 # <IP-VPS> = IP publik VPS; <SECRET-BRAS> = shared secret dari form UI
 /radius add service=ppp address=<IP-VPS> secret=<SECRET-BRAS> \
     authentication-port=1812 accounting-port=1813
 /radius incoming set accept=yes port=3799
 /ppp aaa set use-radius=yes accounting=yes interim-update=5m
 ```
+
+> **Router yang masuk lewat VPN kita** tak boleh diarahkan ke `<IP-VPS>`: paketnya keluar
+> lewat internet biasa dan tiba dengan alamat asal lokasi pelanggan, yang tak terdaftar
+> sebagai klien — FreeRADIUS mengabaikannya tanpa membalas, dan di router hanya terlihat
+> sebagai timeout. Pakai alamat hub overlay (mis. `10.8.0.1`); UI sudah menyodorkannya
+> sendiri begitu alamat BRAS-nya jatuh di dalam blok tunnel.
 
 > **Muncul otomatis di UI tenant.** Set `FTTH_RADIUS_PUBLIC_HOST` di `.env` (= IP publik
 > VPS ini) → halaman **BRAS & RADIUS** menampilkan kartu "Arahkan router ke RADIUS ini"

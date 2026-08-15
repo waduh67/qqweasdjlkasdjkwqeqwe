@@ -82,16 +82,26 @@ Kartu **"Arahkan router ke RADIUS ini"** menampilkan host + port server pusat da
 RouterOS siap-tempel. Bentuknya (ganti `<IP-RADIUS>` & `<SECRET-BRAS>` sesuai punyamu):
 
 ```rsc
+/ip pool add name=pool-pppoe ranges=10.20.0.2-10.20.255.254
+/ppp profile set [find name=default] local-address=10.20.0.1 remote-address=pool-pppoe
 /radius add service=ppp address=<IP-RADIUS> secret=<SECRET-BRAS> \
     authentication-port=1812 accounting-port=1813
 /radius incoming set accept=yes port=3799
 /ppp aaa set use-radius=yes accounting=yes interim-update=5m
 ```
 
-- Baris 1–2: daftarkan server RADIUS pusat + shared secret (yang kamu Generate di form).
-- Baris 3: buka penerimaan **incoming DAE (CoA/Disconnect) di 3799** — wajib kalau mau
+- Baris 1–2: **alamat untuk pelanggan.** RADIUS pusat mengirim izin login + kecepatan
+  paket, **bukan IP** — pool-nya milik router. Ganti rentang dengan blok milikmu; kalau
+  server PPPoE-mu memakai profil selain `default`, setel profil itu.
+- Baris 3–4: daftarkan server RADIUS pusat + shared secret (yang kamu Generate di form).
+- Baris 5: buka penerimaan **incoming DAE (CoA/Disconnect) di 3799** — wajib kalau mau
   server bisa memutus/mengubah sesi dari jauh.
-- Baris 4: nyalakan RADIUS untuk AAA PPPoE + accounting (interim tiap 5 menit).
+- Baris 6: nyalakan RADIUS untuk AAA PPPoE + accounting (interim tiap 5 menit).
+
+> **`logged in, 0.0.0.0` lalu `no network protocols running`?** Autentikasinya justru
+> sudah berhasil — yang kurang alamat. Profil PPP tanpa `remote-address` menutup sesi
+> begitu IPCP gagal, dan di `radacct` terlihat sebagai sesi beruntun ber-`framedipaddress`
+> `0.0.0.0` yang start dan stop di detik yang sama. Betulkan baris 1–2 di atas.
 
 > **"Host server RADIUS belum dikonfigurasi platform"?** Itu berarti env
 > **`FTTH_RADIUS_PUBLIC_HOST`** belum terisi/terbaca di container `server`. Auth tetap
