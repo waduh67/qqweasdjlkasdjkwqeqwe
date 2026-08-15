@@ -29,6 +29,36 @@ export const NAS_VENDOR_LABEL: Record<NasVendor, string> = {
 export const NAS_VENDORS: NasVendor[] = ['MIKROTIK', 'CISCO', 'JUNIPER', 'OTHER']
 
 /**
+ * Bagaimana server menjangkau BRAS ini untuk memutus/menurunkan sesi hidup (isolir & Reset
+ * Login). Auth & accounting tak butuh ini — router yang menembak keluar ke RADIUS; hanya
+ * jalur-balik yang perlu tahu rutenya. Disimpulkan server dari alamat & collector BRAS,
+ * bukan diisi operator.
+ */
+export type NasReachability = 'DIRECT' | 'VPN' | 'COLLECTOR' | 'NONE'
+
+/** Label pendek rute kendali sesi untuk badge tabel. */
+export const NAS_REACHABILITY_LABEL: Record<NasReachability, string> = {
+  DIRECT: 'langsung',
+  VPN: 'lewat VPN',
+  COLLECTOR: 'lewat collector',
+  NONE: 'belum beralamat',
+}
+
+/** Keterangan satu kalimat: apa akibatnya bagi isolir & Reset Login. */
+export const NAS_REACHABILITY_HINT: Record<NasReachability, string> = {
+  DIRECT: 'Isolir & Reset Login ditembak langsung ke alamat BRAS.',
+  VPN: 'Isolir & Reset Login ditembak lewat tunnel VPN ke alamat overlay BRAS.',
+  COLLECTOR:
+    'Alamatnya privat/di balik NAT — atau BRAS ini memang ditugaskan ke collector. Isolir & Reset Login ' +
+    'dititipkan ke collector on-prem yang sekamar dengan BRAS; perintahnya menunggu di antrean sampai ' +
+    'collector itu menjemputnya. Belum ada collector yang jalan? Beri BRAS ini alamat VPN kita supaya ' +
+    'server bisa menembak sendiri.',
+  NONE:
+    'Isolir & Reset Login TAK BISA dikirim selama BRAS belum beralamat — perubahan baru berlaku saat ' +
+    'pelanggan login ulang. Isi alamat BRAS: IP publiknya, atau alamat VPN kita bila ia masuk lewat tunnel.',
+}
+
+/**
  * Proyeksi satu BRAS. [hasCoaSecret]/[hasApiSecret] menandai rahasianya terisi tanpa
  * membocorkannya. Kredensial kontrol non-rahasia
  * ([apiUsername]/[apiPort]/[apiUseTls]) dibalikkan apa adanya untuk memuat ulang form
@@ -49,6 +79,8 @@ export interface NasView {
   apiUseTls: boolean
   /** Area yang dinaungi BRAS ini — dasar auto-pilih BRAS dari area pelanggan saat PSB. */
   areaIds: string[]
+  /** Rute kendali sesi yang server simpulkan dari [address]+[collectorId] — akibat, bukan isian. */
+  reachability: NasReachability
 }
 
 /**

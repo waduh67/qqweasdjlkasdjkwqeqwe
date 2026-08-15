@@ -1,4 +1,4 @@
-import type { RadiusEndpointView } from '@/api/bng'
+import type { NasReachability, RadiusEndpointView } from '@/api/bng'
 
 /**
  * Alamat mana yang harus diketik di `/radius address=` sebuah BRAS.
@@ -60,6 +60,50 @@ export function radiusTargetFor(endpoint: RadiusEndpointView, brasAddress: strin
     if (tunnel) return { host: tunnel.host, viaVpn: true }
   }
   return { host: endpoint.host, viaVpn: false }
+}
+
+/**
+ * Blok yang paket dari internet tak akan pernah capai, jadi server tak bisa menembak isolir
+ * ke sana sendiri: RFC1918 privat, CGNAT (ISP di atas ISP — router di baliknya tak punya IP
+ * sendiri), loopback, link-local, lalu 0/8 dan 224/3 yang bukan alamat host sama sekali.
+ * Yang begini dilayani agent on-prem yang sekamar dengan BRAS.
+ */
+const UNROUTABLE_BLOCKS = [
+  '10.0.0.0/8',
+  '172.16.0.0/12',
+  '192.168.0.0/16',
+  '100.64.0.0/10',
+  '127.0.0.0/8',
+  '169.254.0.0/16',
+  '0.0.0.0/8',
+  '224.0.0.0/3',
+]
+
+/** Berbentuk IPv4 dotted-quad (bukan nama host / isian setengah jadi). */
+function isIpv4(address: string): boolean {
+  return ipInCidr(address, '0.0.0.0/0')
+}
+
+/**
+ * Pratinjau rute isolir & Reset Login untuk BRAS ber-alamat [brasAddress].
+ *
+ * Server yang memutuskan (`NasReachability.resolve`); ini cerminnya, supaya akibat sebuah
+ * alamat kelihatan SEBELUM disimpan. Tanpa itu satu-satunya kabar bahwa rutenya buntu
+ * datang dari pelanggan yang mestinya terputus tapi tetap online — layar isolirnya sendiri
+ * bilang sukses, sebab perintahnya memang tersimpan, cuma tak pernah terkirim.
+ */
+export function sessionControlRoute(
+  endpoint: RadiusEndpointView | null,
+  brasAddress: string,
+  hasCollector: boolean,
+): NasReachability {
+  if (hasCollector) return 'COLLECTOR'
+  const address = brasAddress.trim()
+  if (!address) return 'NONE'
+  if (endpoint?.vpnHosts?.some((it) => ipInCidr(address, it.tunnelCidr))) return 'VPN'
+  // Nama host dianggap bisa dirute: kalau ia ditulis, ia dimaksudkan bisa diresolusi.
+  if (!isIpv4(address)) return 'DIRECT'
+  return UNROUTABLE_BLOCKS.some((block) => ipInCidr(address, block)) ? 'COLLECTOR' : 'DIRECT'
 }
 
 /**

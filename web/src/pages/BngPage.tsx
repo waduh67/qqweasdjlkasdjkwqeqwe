@@ -6,9 +6,12 @@ import {
   deleteNas,
   getRadiusEndpoint,
   listNas,
+  NAS_REACHABILITY_HINT,
+  NAS_REACHABILITY_LABEL,
   NAS_VENDOR_LABEL,
   NAS_VENDORS,
   updateNas,
+  type NasReachability,
   type NasVendor,
   type NasView,
   type RadiusEndpointView,
@@ -24,7 +27,7 @@ import { SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
 import { IconGauge, IconPlus } from '@/components/atoms/icons'
-import { radiusTargetFor, selfAddressWarning } from '@/utils/radiusTarget'
+import { radiusTargetFor, selfAddressWarning, sessionControlRoute } from '@/utils/radiusTarget'
 
 /**
  * Registri BRAS/RADIUS tenant.
@@ -187,6 +190,13 @@ type NasDraft = {
   hasApiSecret: boolean
   /** Area yang dinaungi BRAS ini — dasar auto-pilih BRAS dari area pelanggan saat PSB. */
   areaIds: string[]
+  /**
+   * Collector on-prem yang menjangkau BRAS ini. Tak ada kontrolnya di form ini (penugasan
+   * collector dilakukan di tempat lain), tapi TETAP dibawa dalam draft: simpan yang tak
+   * menyertakannya akan melepas tautan collector-nya diam-diam — dan sejak rute kendali
+   * sesi disimpulkan dari sini, ikut membelokkan jalur isolir & Reset Login BRAS itu.
+   */
+  collectorId: string | null
 }
 
 const EMPTY_NAS: NasDraft = {
@@ -204,6 +214,7 @@ const EMPTY_NAS: NasDraft = {
   apiUseTls: true,
   hasApiSecret: false,
   areaIds: [],
+  collectorId: null,
 }
 
 function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
@@ -257,6 +268,7 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
       apiUseTls: nas.apiUseTls,
       hasApiSecret: nas.hasApiSecret,
       areaIds: nas.areaIds,
+      collectorId: nas.collectorId,
     })
 
   const save = () => {
@@ -273,6 +285,7 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
       apiPort: draft.apiPort ? Number(draft.apiPort) : null,
       apiUseTls: draft.apiUseTls,
       areaIds: draft.areaIds,
+      collectorId: draft.collectorId,
     }
     void run(
       async () => {
@@ -295,6 +308,14 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
     [endpoint, draftAddress],
   )
   const addressWarning = selfAddressWarning(endpoint, draftAddress)
+  /**
+   * Rute isolir & Reset Login yang akan berlaku bila draft ini disimpan. Server yang
+   * memutuskannya; ini pratinjaunya, supaya "tak terjangkau" ketahuan di sini — bukan
+   * nanti, dari pelanggan yang mestinya terputus tapi masih online.
+   */
+  const draftRoute: NasReachability | null = draft
+    ? sessionControlRoute(endpoint, draftAddress, draft.collectorId != null)
+    : null
 
   /** Peta id→nama area untuk menampilkan cakupan tiap BRAS tanpa memanggil balik. */
   const areaNames = useMemo(() => new Map(areas.map((a) => [a.id, a.name])), [areas])
@@ -356,6 +377,18 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
           </div>
         )
       },
+    },
+    {
+      key: 'reachability',
+      header: 'Kendali sesi',
+      sortValue: (nas) => NAS_REACHABILITY_LABEL[nas.reachability],
+      cell: (nas) => (
+        <span title={NAS_REACHABILITY_HINT[nas.reachability]}>
+          <Badge tone={nas.reachability === 'NONE' ? 'serious' : 'good'}>
+            {NAS_REACHABILITY_LABEL[nas.reachability]}
+          </Badge>
+        </span>
+      ),
     },
     {
       key: 'secret',
@@ -459,6 +492,20 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
               style={{ flex: 1 }}
             />
           </div>
+          {draftRoute && (
+            <div className="row" style={{ gap: '0.45rem', alignItems: 'baseline', flexWrap: 'wrap' }}>
+              <span className="muted" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                Kendali sesi:
+              </span>
+              <Badge tone={draftRoute === 'NONE' ? 'serious' : 'good'}>
+                {NAS_REACHABILITY_LABEL[draftRoute]}
+              </Badge>
+              <span className="muted" style={{ fontSize: '0.78rem', flex: '1 1 16rem' }}>
+                {NAS_REACHABILITY_HINT[draftRoute]}
+              </span>
+            </div>
+          )}
+
           <div className="row" style={{ alignItems: 'flex-end' }}>
             <TextField
               label="Shared Secret RADIUS"
