@@ -129,6 +129,13 @@ interface RadiusSessionRepository {
      * sesi) tak muncul di sini — dianggap "belum diketahui", bukan "putus".
      */
     fun findAllForActiveAccounts(): List<RadiusSession>
+
+    /**
+     * Seluruh sesi yang masih tercatat online — bahan sapuan "sesi yang menghilang dari
+     * `radacct` berarti berakhir". Tak disaring status akun: akun yang baru diisolir atau
+     * diberhentikan justru yang paling perlu ketahuan sudah benar-benar turun.
+     */
+    fun findOnline(): List<RadiusSession>
 }
 
 /**

@@ -88,6 +88,25 @@ class RadiusSession private constructor(
         this.lastSeenAt = observedAt
     }
 
+    /**
+     * Sesi ini berakhir — BRAS tak lagi melaporkannya hidup.
+     *
+     * [lastSeenAt] SENGAJA tak digeser: nilainya berarti "terakhir terpantau hidup", dan
+     * dari situlah layar menghitung "putus sejak kapan". Digeser tiap poll, sesi yang sudah
+     * mati semalaman akan terus berbunyi "terakhir 30 detik lalu".
+     *
+     * Yang dikosongkan hanyalah milik sesi yang berjalan ([framedIp]/[uptimeSeconds]/
+     * [startedAt]) — alamat IP sesi yang sudah tutup bukan lagi alamat pelanggan, dan
+     * memajangnya di samping badge "Offline" hanya memancing salah baca. Jejak sesi
+     * terakhir ([sessionId]/[nasIp]/[callingStationId]) tetap disimpan sebagai petunjuk.
+     */
+    fun markOffline() {
+        online = false
+        framedIp = null
+        uptimeSeconds = null
+        startedAt = null
+    }
+
     companion object {
         @Suppress("LongParameterList")
         fun start(

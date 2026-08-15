@@ -68,6 +68,8 @@ class RadiusSessionPersistenceAdapter(
     override fun findAllForActiveAccounts(): List<RadiusSession> =
         jpa.findAllByAccountStatus(AccessStatus.ACTIVE).map { it.toDomain() }
 
+    override fun findOnline(): List<RadiusSession> = jpa.findByOnlineTrue().map { it.toDomain() }
+
     private fun RadiusSessionJpaEntity.toDomain(): RadiusSession = RadiusSession.rehydrate(
         id = id,
         tenantId = tenantId ?: TenantContext.tenantId(),

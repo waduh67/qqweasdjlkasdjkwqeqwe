@@ -66,6 +66,9 @@ interface RadiusSessionJpaRepository : JpaRepository<RadiusSessionJpaEntity, UUI
         """,
     )
     fun findAllByAccountStatus(@Param("status") status: AccessStatus): List<RadiusSessionJpaEntity>
+
+    /** Baris ber-`online = true` milik tenant aktif (RLS yang menyaring tenantnya). */
+    fun findByOnlineTrue(): List<RadiusSessionJpaEntity>
 }
 
 interface BngActionJpaRepository : JpaRepository<BngActionJpaEntity, UUID> {

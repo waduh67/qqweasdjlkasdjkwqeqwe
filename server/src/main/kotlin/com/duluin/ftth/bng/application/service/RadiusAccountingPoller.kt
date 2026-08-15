@@ -66,6 +66,12 @@ class RadiusAccountingPollRunner(
      * (DHCP/Static) disertakan agar sesinya — yang ditulis polos tanpa prefiks — ikut terbaca.
      * NAS asal = null: baca `radacct` global cuma menyimpan `nasipaddress` string, bukan UUID
      * NAS kita (tetap terekam via `nasIp`).
+     *
+     * Hasil bacaan diserap sebagai POTRET UTUH tenant, bukan tambahan: apa yang tak ada di
+     * `radacct` berarti sesinya sudah berakhir. Karena itu daftar kosong pun tetap diserap —
+     * "semua pelanggan turun" justru keadaan yang paling perlu terbaca. Bacaan yang GAGAL
+     * melempar exception (ditangkap [RadiusAccountingPoller]), jadi radius-db yang sesaat mati
+     * tak pernah tersalahartikan sebagai "semua pelanggan putus".
      */
     fun execute(tenantId: UUID, now: Instant) {
         val slug = tenantApi.findById(tenantId)?.slug ?: run {
@@ -74,7 +80,6 @@ class RadiusAccountingPollRunner(
         }
         val macUsernames = subscriberAccessRepository.findActiveMacUsernames()
         val observations = radacct.activeSessions(tenantId, slug, macUsernames)
-        if (observations.isEmpty()) return
-        ingest.ingest(tenantId, now, nasId = null, observations = observations)
+        ingest.ingestTenantSnapshot(tenantId, now, observations)
     }
 }

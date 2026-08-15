@@ -49,11 +49,46 @@ class BngSessionIngestService(
      * ada, bukan UUID NAS kita); [SessionObservation.nasIp] tetap terekam sebagai jejaknya.
      */
     fun ingest(tenantId: UUID, collectedAt: Instant, nasId: UUID?, observations: List<SessionObservation>) {
+        ingestObservations(tenantId, collectedAt, nasId, observations)
+    }
+
+    /**
+     * Serap potret sesi hidup SELURUH tenant pada [collectedAt] — jalur poller server-side.
+     *
+     * Bedanya dengan [ingest] biasa ada pada apa yang boleh disimpulkan dari sesi yang TIDAK
+     * ada di daftar. `radacct` hanya memuat sesi hidup: sesi yang berakhir lenyap dari sana,
+     * bukan berubah jadi baris "offline". Tanpa sapuan ini tak ada satu pun yang pernah
+     * menulis `online = false` — pelanggan yang kabelnya dicabut tetap hijau "Online" di peta
+     * sampai kapan pun, dan justru layar itulah yang dipakai teknisi untuk memutuskan apakah
+     * gangguan ada di rumah pelanggan atau di jaringan.
+     *
+     * Daftar kosong TIDAK dilewati: "semua pelanggan turun" adalah keadaan yang paling perlu
+     * terbaca, bukan yang paling boleh diabaikan.
+     *
+     * Jalur collector ([ingest]) sengaja tak menyapu: laporannya per-NAS, jadi sesi di BRAS
+     * lain yang tak ikut disebut bukan berarti berakhir.
+     */
+    fun ingestTenantSnapshot(tenantId: UUID, collectedAt: Instant, observations: List<SessionObservation>) {
+        val live = ingestObservations(tenantId, collectedAt, nasId = null, observations = observations)
+        val ended = radiusSessionRepository.findOnline().filterNot { it.subscriberAccessId in live }
+        ended.forEach { radiusSessionRepository.save(it.apply { markOffline() }) }
+        if (ended.isNotEmpty()) log.debug("Sesi berakhir ditandai offline: {} akun", ended.size)
+    }
+
+    /** Inti serap; mengembalikan id akun yang terpantau ONLINE pada putaran ini. */
+    private fun ingestObservations(
+        tenantId: UUID,
+        collectedAt: Instant,
+        nasId: UUID?,
+        observations: List<SessionObservation>,
+    ): Set<UUID> {
         val points = mutableListOf<AccountingRecordPoint>()
+        val live = mutableSetOf<UUID>()
         var matched = 0
         for (observed in observations) {
             val access = subscriberAccessRepository.findByUsername(observed.username) ?: continue
             matched++
+            if (observed.online) live += access.id
             upsertSession(access, tenantId, collectedAt, nasId, observed)
             // Hanya sesi online yang membawa penghitung akunting; yang offline tak
             // punya trafik untuk direkam, cukup keadaannya yang dimutakhirkan.
@@ -71,6 +106,7 @@ class BngSessionIngestService(
         }
         accountingRecordRepository.saveAll(points)
         log.debug("Ingest sesi BRAS (nas {}): {}/{} sesi cocok akun", nasId, matched, observations.size)
+        return live
     }
 
     private fun upsertSession(

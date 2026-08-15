@@ -133,6 +133,8 @@ class BngMonitoringQueryServiceTest {
             notUsed()
 
         override fun findAllForActiveAccounts(): List<RadiusSession> = notUsed()
+
+        override fun findOnline(): List<RadiusSession> = notUsed()
     }
 
     private class FakeNasRepo : NasRepository {

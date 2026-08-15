@@ -109,6 +109,53 @@ class RadiusAccountingPollRunnerTest {
         assertThat(fixture.accounting.saved).isEmpty()
     }
 
+    // Inti bug lapangan: kabel dicabut, sesi hilang dari radacct — dan dulu tak ada satu pun
+    // yang menulis online=false, jadi peta memajang "Online" berjam-jam sesudahnya.
+    @Test
+    fun `sesi yang lenyap dari radacct ditandai putus`() {
+        val budi = access("budi")
+        val sejakTadi = now.minusSeconds(3600)
+        val fixture = fixture(
+            accesses = listOf(budi),
+            observations = emptyList(),
+            existingSessions = listOf(onlineSession(budi, observedAt = sejakTadi)),
+        )
+
+        fixture.runner.execute(tenantId, now)
+
+        val putus = fixture.sessions.saved.single()
+        assertThat(putus.online).isFalse()
+        // Milik sesi yang berjalan ikut dikosongkan — IP sesi yang sudah tutup bukan lagi
+        // alamat pelanggan.
+        assertThat(putus.framedIp).isNull()
+        assertThat(putus.uptimeSeconds).isNull()
+        assertThat(putus.startedAt).isNull()
+        // lastSeenAt TIDAK digeser: itu bahan "putus sejak kapan" di layar.
+        assertThat(putus.lastSeenAt).isEqualTo(sejakTadi)
+        // Sesi mati tak punya trafik untuk dicatat.
+        assertThat(fixture.accounting.saved).isEmpty()
+    }
+
+    @Test
+    fun `sesi yang masih hidup tak ikut tersapu`() {
+        val budi = access("budi")
+        val siti = access("siti")
+        val fixture = fixture(
+            accesses = listOf(budi, siti),
+            observations = listOf(observation("budi", nasIp = "10.0.0.1", up = 1, down = 2)),
+            existingSessions = listOf(
+                onlineSession(budi, observedAt = now.minusSeconds(3600)),
+                onlineSession(siti, observedAt = now.minusSeconds(3600)),
+            ),
+        )
+
+        fixture.runner.execute(tenantId, now)
+
+        val perAkun = fixture.sessions.saved.associateBy { it.subscriberAccessId }
+        assertThat(perAkun[budi.id]?.online).isTrue()
+        assertThat(perAkun[siti.id]?.online).isFalse()
+    }
+
     // ---- Fixture & fake ----
 
     private class Fixture(
@@ -123,9 +170,10 @@ class RadiusAccountingPollRunnerTest {
         observations: List<SessionObservation>,
         slug: String? = this.slug,
         macUsernames: List<String> = emptyList(),
+        existingSessions: List<RadiusSession> = emptyList(),
     ): Fixture {
         val read = FakeReadPort(observations)
-        val sessions = FakeSessionRepo()
+        val sessions = FakeSessionRepo(existingSessions)
         val accounting = FakeAccountingRepo()
         // Satu repo dipakai bersama: ingest me-resolusi akun per username, runner menariknya
         // untuk daftar MAC akun aktif yang diteruskan ke pembaca.
@@ -144,6 +192,23 @@ class RadiusAccountingPollRunnerTest {
         planId = UuidV7.generate(),
         nasId = UuidV7.generate(),
         status = AccessStatus.ACTIVE,
+    )
+
+    /** Sesi yang sudah tercatat online sejak [observedAt] — keadaan sebelum putaran poll. */
+    private fun onlineSession(access: SubscriberAccess, observedAt: Instant) = RadiusSession.start(
+        tenantId = tenantId,
+        subscriberAccessId = access.id,
+        subscriptionId = access.subscriptionId,
+        customerId = access.customerId,
+        username = access.username,
+        online = true,
+        nasId = null,
+        nasIp = "10.0.0.1",
+        framedIp = "100.64.0.1",
+        sessionId = "s-${access.username}",
+        callingStationId = null,
+        uptimeSeconds = 3600,
+        observedAt = observedAt,
     )
 
     private fun observation(username: String, nasIp: String?, up: Long?, down: Long?) = SessionObservation(
@@ -173,20 +238,25 @@ class RadiusAccountingPollRunnerTest {
         }
     }
 
-    private class FakeSessionRepo : RadiusSessionRepository {
+    /** [existing] = sesi yang sudah tersimpan sebelum putaran ini (bahan uji sapuan). */
+    private class FakeSessionRepo(existing: List<RadiusSession> = emptyList()) : RadiusSessionRepository {
         val saved = mutableListOf<RadiusSession>()
+        private val byAccess = existing.associateBy { it.subscriberAccessId }.toMutableMap()
+
         override fun save(session: RadiusSession): RadiusSession {
             saved += session
+            byAccess[session.subscriberAccessId] = session
             return session
         }
 
-        // Selalu sesi baru (tak ada yang tersimpan sebelumnya) → jalur RadiusSession.start.
-        override fun findBySubscriberAccessId(subscriberAccessId: UUID): RadiusSession? = null
+        // Kosong = sesi baru → jalur RadiusSession.start; terisi = jalur observe/upsert.
+        override fun findBySubscriberAccessId(subscriberAccessId: UUID): RadiusSession? = byAccess[subscriberAccessId]
         override fun findBySubscriberAccessIds(subscriberAccessIds: Collection<UUID>): Map<UUID, RadiusSession> =
             emptyMap()
 
+        override fun findAllForActiveAccounts(): List<RadiusSession> = byAccess.values.toList()
 
-        override fun findAllForActiveAccounts(): List<RadiusSession> = saved
+        override fun findOnline(): List<RadiusSession> = byAccess.values.filter { it.online }
     }
 
     private class FakeAccountingRepo : AccountingRecordRepository {
