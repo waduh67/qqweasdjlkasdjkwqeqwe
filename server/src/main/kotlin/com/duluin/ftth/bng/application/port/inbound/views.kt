@@ -67,6 +67,14 @@ data class RadiusEndpointView(
      * memakai VPN.
      */
     val vpnHosts: List<RadiusVpnHostView> = emptyList(),
+    /**
+     * Nama address-list yang RADIUS kirimkan (VSA `Mikrotik-Address-List`) untuk pelanggan
+     * terisolir. Disodorkan ke UI karena router HARUS memakai nama yang sama persis di aturan
+     * firewall-nya: salah satu huruf saja, address-list-nya terisi tapi tak ada aturan yang
+     * membacanya — pelanggan "terisolir" yang internetnya justru lancar tanpa jejak kesalahan
+     * di mana pun.
+     */
+    val isolirAddressList: String = "isolir",
 )
 
 /**

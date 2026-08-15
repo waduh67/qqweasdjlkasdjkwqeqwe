@@ -58,6 +58,7 @@ class NasService(
             // Alamat overlay ikut disebut supaya BRAS yang masuk lewat VPN diarahkan ke
             // alamat hub, bukan ke IP publik — lihat [RadiusVpnHostView].
             vpnHosts = vpnApi.overlayTunnels().map { RadiusVpnHostView(it.tunnelCidr, it.serverAddress) },
+            isolirAddressList = radiusProperties.isolirAddressList,
         )
     }
 
