@@ -55,6 +55,60 @@ class BngActionService(
     }
 
     /**
+     * Antre pemotongan ISOLIR: pindahkan keanggotaan akun ke grup [RadiusGroups.ISOLIR]
+     * (lewat PROVISION ulang — penulis RADIUS menghapus keanggotaan lama lalu menulis grup
+     * isolir, jadi swap-nya atomik) LALU putus sesi yang masih hidup.
+     *
+     * Kredensial di `radcheck` sengaja DIBIARKAN: pelanggan terisolir harus tetap bisa dial
+     * PPPoE, justru supaya ia mendarat di halaman tagihan alih-alih menatap "PPPoE gagal"
+     * lalu menelepon. Yang berubah cuma grup yang menyambutnya — sisa kecepatan seadanya dan
+     * keanggotaan address-list yang dipakai router melempar semua tujuan ke halaman itu.
+     *
+     * Urutan provision-dulu-baru-putus penting: sesi berikutnya harus lahir sudah terisolir.
+     * Penegakannya bukan di sini melainkan di worker kontrol sesi, yang menahan DISCONNECT
+     * selama akun yang sama masih punya provisioning tertunda.
+     */
+    fun enqueueIsolir(access: SubscriberAccess, requestedBy: UUID?, requestedByEmail: String?): Boolean {
+        val nasId = access.nasId ?: return skipNoNas(access, "ISOLIR")
+        saveProvision(access, nasId, RadiusGroups.ISOLIR, requestedBy, requestedByEmail)
+        enqueueDisconnect(access, requestedBy, requestedByEmail)
+        return true
+    }
+
+    /**
+     * Antre pemulihan dari isolir: pastikan grup paket ada & selaras katalog, kembalikan
+     * keanggotaan akun ke grup itu, lalu putus sesi agar CPE dial ulang dengan kecepatan penuh.
+     *
+     * [plan] disinkronkan ulang, tidak dianggap "pasti sudah ada", karena pelanggan bisa
+     * kembali setelah berbulan-bulan — paketnya mungkin sudah diubah kecepatannya, atau akunnya
+     * malah belum pernah sekali pun dituliskan ke RADIUS (diisolir sebelum instalasi rampung).
+     * Melewatkannya berarti pelanggan pulih ke grup yang tak punya rate-limit sama sekali:
+     * bukan gagal online, melainkan online TANPA BATAS — bocor yang tak terlihat di UI.
+     *
+     * DISCONNECT di sini bukan basa-basi. Keanggotaan address-list yang dipasang saat isolir
+     * menempel pada SESI, bukan pada akun — selama sesi isolirnya belum mati, router tetap
+     * melempar pelanggan ke halaman tagihan betapapun grup RADIUS-nya sudah dipulihkan. Satu
+     * kedipan beberapa detik adalah harga yang jauh lebih murah daripada pelanggan yang sudah
+     * membayar tapi tetap terkurung.
+     *
+     * Akun yang kuotanya sedang habis dikembalikan ke grup NORMAL, bukan grup FUP: pemulihan
+     * ini soal tagihan, dan [FupScheduler] yang akan menurunkannya lagi pada putaran berikutnya
+     * bila kuotanya memang masih terlampaui.
+     */
+    fun enqueueRestore(
+        access: SubscriberAccess,
+        plan: PlanNetworkRef?,
+        requestedBy: UUID?,
+        requestedByEmail: String?,
+    ): Boolean {
+        val nasId = access.nasId ?: return skipNoNas(access, "PULIHKAN")
+        plan?.let { enqueueSyncGroup(nasId, access.tenantId, it, requestedBy, requestedByEmail) }
+        saveProvision(access, nasId, RadiusGroups.normal(access.planId), requestedBy, requestedByEmail)
+        enqueueDisconnect(access, requestedBy, requestedByEmail)
+        return true
+    }
+
+    /**
      * Antre CoA untuk mengganti kecepatan sesi hidup tanpa memutusnya. No-op bila akun
      * belum di BRAS. Mengembalikan true bila benar-benar mengantre.
      */

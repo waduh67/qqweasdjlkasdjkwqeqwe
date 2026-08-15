@@ -98,9 +98,13 @@ class RadiusSessionControlRunner(
         val pending = bngActionRepository.findServerSessionControlPending(serverNas.keys, props.batchSize)
         if (pending.isEmpty()) return
 
+        val waiting = waitingForProvisioning(pending)
+        val ready = pending.filterNot { it.subscriberAccessId in waiting }
+        if (ready.isEmpty()) return
+
         // Sesi dibutuhkan jalur DAE langsung DIRECT/VPN (untuk Acct-Session-Id/NAS-IP & cek sesi hidup).
         val sessions: Map<String, SessionObservation> =
-            if (pending.any { serverNas[it.nasId]?.reachability.firesDae() }) {
+            if (ready.any { serverNas[it.nasId]?.reachability.firesDae() }) {
                 val slug = tenantApi.findById(tenantId)?.slug ?: run {
                     log.warn("Tenant {} tak punya slug — kontrol sesi RADIUS dilewati", tenantId)
                     return
@@ -110,11 +114,26 @@ class RadiusSessionControlRunner(
                 emptyMap()
             }
 
-        pending.forEach { action ->
+        ready.forEach { action ->
             val nas = serverNas[action.nasId] ?: return@forEach
             executeOne(action, nas, sessions, now)
         }
     }
+
+    /**
+     * Akun (dari [pending]) yang otorisasi barunya belum sampai ke radius-db — perintah sesinya
+     * DITAHAN, dibiarkan PENDING agar diambil putaran berikutnya.
+     *
+     * Isolir, pemulihan, dan FUP semuanya mengantre sepasang perintah: ganti grup dulu, baru
+     * putus/CoA. Tapi yang mengerjakannya dua worker berbeda pada selang yang sama, jadi tanpa
+     * penahan ini pemutusan bisa mendahului pergantian grup: pelanggan terputus, CPE-nya dial
+     * ulang dalam hitungan detik, dan RADIUS masih menyambutnya dengan grup LAMA — pelanggan
+     * yang baru diisolir kembali online dengan kecepatan penuh, atau yang baru membayar tetap
+     * terkurung di halaman tagihan. Menunda satu putaran (10 detik) jauh lebih murah daripada
+     * salah menaruh pelanggan.
+     */
+    private fun waitingForProvisioning(pending: List<BngAction>): Set<UUID> =
+        bngActionRepository.findAccessIdsWithPendingProvisioning(pending.mapNotNull { it.subscriberAccessId })
 
     private fun executeOne(action: BngAction, nas: Nas, sessions: Map<String, SessionObservation>, now: Instant) {
         try {

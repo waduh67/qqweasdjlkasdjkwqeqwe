@@ -200,6 +200,42 @@ class RadiusSessionControlRunnerTest {
         assertThat(action.detail).contains("BRAS bisu")
     }
 
+    @Test
+    fun `DISCONNECT ditahan selama akun masih punya PROVISION tertunda (penjaga urutan isolir)`() {
+        val nas = nas(NasReachability.DIRECT)
+        val action = disconnect(nas.id, "budi")
+        val fx = fixture(
+            nas = listOf(nas), pending = listOf(action), sessions = listOf(session("budi")),
+            waitingForProvisioning = setOf(action.subscriberAccessId!!),
+        )
+
+        fx.runner.execute(tenantId, now)
+
+        // Memutus sekarang berarti pelanggan dial ulang dan disambut grup LAMA — kebalikan
+        // dari yang diminta. Aksi dibiarkan PENDING, diambil putaran berikutnya.
+        assertThat(fx.control.disconnects).isEmpty()
+        assertThat(action.status).isEqualTo(BngActionStatus.PENDING)
+        assertThat(fx.radacct.calls).isEmpty() // tak ada yang siap → sesi tak perlu dibaca
+    }
+
+    @Test
+    fun `aksi akun lain tetap jalan walau satu akun sedang ditahan`() {
+        val nas = nas(NasReachability.DIRECT)
+        val ditahan = disconnect(nas.id, "budi")
+        val jalan = disconnect(nas.id, "siti")
+        val fx = fixture(
+            nas = listOf(nas), pending = listOf(ditahan, jalan),
+            sessions = listOf(session("budi"), session("siti")),
+            waitingForProvisioning = setOf(ditahan.subscriberAccessId!!),
+        )
+
+        fx.runner.execute(tenantId, now)
+
+        assertThat(fx.control.disconnects.map { it.username }).containsExactly("siti")
+        assertThat(ditahan.status).isEqualTo(BngActionStatus.PENDING)
+        assertThat(jalan.status).isEqualTo(BngActionStatus.COMPLETED)
+    }
+
     // ---- Fixture & fake ----
 
     private class Fixture(
@@ -215,8 +251,9 @@ class RadiusSessionControlRunnerTest {
         sessions: List<SessionObservation>,
         controlFailure: Exception? = null,
         slug: String? = this.slug,
+        waitingForProvisioning: Set<UUID> = emptySet(),
     ): Fixture {
-        val actions = FakeScActionRepo(pending)
+        val actions = FakeScActionRepo(pending, waitingForProvisioning)
         val control = FakeSessionControl(controlFailure)
         val radacct = FakeReadPort(sessions)
         val runner = RadiusSessionControlRunner(
@@ -288,7 +325,11 @@ private class FakeNasRepo(private val all: List<Nas>) : NasRepository {
     private fun notUsed(): Nothing = throw UnsupportedOperationException("tak dipakai di uji ini")
 }
 
-private class FakeScActionRepo(private val pending: List<BngAction>) : BngActionRepository {
+private class FakeScActionRepo(
+    private val pending: List<BngAction>,
+    /** Akun yang berpura-pura masih punya PROVISION tertunda — bahan uji penjaga urutan. */
+    private val waitingForProvisioning: Set<UUID> = emptySet(),
+) : BngActionRepository {
     val saved = mutableListOf<BngAction>()
     var sessionControlNasIds: Collection<UUID>? = null
 
@@ -304,6 +345,9 @@ private class FakeScActionRepo(private val pending: List<BngAction>) : BngAction
         sessionControlNasIds = nasIds
         return pending.filter { it.nasId in nasIds }.take(limit)
     }
+
+    override fun findAccessIdsWithPendingProvisioning(subscriberAccessIds: Collection<UUID>): Set<UUID> =
+        waitingForProvisioning.intersect(subscriberAccessIds.toSet())
 }
 
 private class FakeReadPort(private val sessions: List<SessionObservation>) : RadiusAccountingReadPort {

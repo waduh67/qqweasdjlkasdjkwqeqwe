@@ -207,12 +207,20 @@ class SubscriberAccessService(
 
     override fun isolate(id: UUID): SubscriberAccessView {
         val access = require(id)
+        // Akun PENDING belum pernah dituliskan ke RADIUS (dibuat saat WO PSB belum rampung).
+        // Mengisolirnya tak perlu menyentuh RADIUS sama sekali: statusnya saja sudah cukup,
+        // dan menuliskannya sekarang justru memberi login pada pelanggan yang kabelnya bahkan
+        // belum terpasang. Pemulihannya kelak tetap utuh — jalur pulih menyinkronkan grup
+        // paket lebih dulu, jadi ia tak bergantung pada tulisan yang dilewati di sini.
+        val wasPending = access.status == AccessStatus.PENDING
         access.isolate()
         val saved = subscriberAccessRepository.save(access)
         val user = currentUser.current()
-        // Isolir "beneran motong": status ISOLATED mengeluarkannya dari sesi yang
-        // diharapkan online, DISCONNECT memutus sesi yang masih hidup sekarang.
-        bngActions.enqueueDisconnect(saved, user.userId, user.email)
+        // Isolir "beneran motong", tapi TIDAK dengan mencabut loginnya: akun dipindah ke grup
+        // isolir lalu sesinya diputus, sehingga dial berikutnya tetap berhasil dan mendarat di
+        // halaman tagihan. Pelanggan yang menatap "PPPoE gagal" hanya akan menelepon CS;
+        // pelanggan yang melihat tagihannya sendiri bisa langsung membayar.
+        if (!wasPending) bngActions.enqueueIsolir(saved, user.userId, user.email)
         auditor.record(
             "bng.access.isolated", "SubscriberAccess", saved.id, saved.tenantId,
             mapOf("username" to saved.username),
@@ -224,8 +232,12 @@ class SubscriberAccessService(
         val access = require(id)
         access.activate()
         val saved = subscriberAccessRepository.save(access)
-        // Tak perlu perintah: begitu ACTIVE, akun kembali masuk daftar sesi yang
-        // diharapkan online dan sesi berikutnya re-auth mengambil profil aktif.
+        val user = currentUser.current()
+        // Mengembalikan status saja tidak cukup: selama sesi isolirnya belum mati, router masih
+        // memegang keanggotaan address-list yang melempar pelanggan ke halaman tagihan. Jadi
+        // grup dipulihkan LALU sesi diputus — kedipan beberapa detik, tapi pelanggan yang sudah
+        // membayar langsung benar-benar online lagi tanpa menunggu ia menyalakan ulang routernya.
+        bngActions.enqueueRestore(saved, catalogApi.findPlanNetwork(saved.planId), user.userId, user.email)
         auditor.record(
             "bng.access.restored", "SubscriberAccess", saved.id, saved.tenantId,
             mapOf("username" to saved.username),

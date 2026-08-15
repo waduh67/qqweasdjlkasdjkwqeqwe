@@ -22,9 +22,10 @@ import java.util.UUID
  * sudah selesai — tanpa transaksi baru, tulisan di sini takkan pernah ter-commit.
  *
  * Efek jaringan ikut digerakkan di sini: aktivasi memprovisikan akun yang baru pertama
- * kali online ke RADIUS, isolir "beneran motong" (antre DISCONNECT), terminasi mencabut
- * otorisasi (antre DEPROVISION) — semuanya lewat [BngActionService] dengan pelaku null
- * (dipicu sistem, bukan operator), sama seperti tombol padanannya di UI.
+ * kali online ke RADIUS (atau memulihkan yang tadinya terisolir), isolir memindahkannya ke
+ * grup isolir lalu memutus sesinya, terminasi mencabut otorisasi (antre DEPROVISION) —
+ * semuanya lewat [BngActionService] dengan pelaku null (dipicu sistem, bukan operator),
+ * sama seperti tombol padanannya di UI.
  */
 @Service
 @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -34,25 +35,45 @@ class SubscriberAccessLifecycle(
     private val bngActions: BngActionService,
 ) {
     /**
-     * Langganan aktif → akun disinkronkan ke ACTIVE. Akun yang tadinya PENDING belum pernah
-     * ditulis ke RADIUS (dibuat saat langganan masih menunggu instalasi); aktivasi (WO PSB
-     * selesai) = saat pelanggan resmi online, jadi grup paket dipastikan ada lalu kredensial +
-     * keanggotaan ditulis. Akun yang tadinya ISOLATED (pulih billing) sudah punya baris RADIUS →
-     * cukup sinkron status; sesi berikutnya re-auth mengambil profil aktif (sama seperti tombol Pulihkan).
+     * Langganan aktif → akun disinkronkan ke ACTIVE, dengan dua jalan berbeda menuju online:
+     *  - tadinya PENDING: belum pernah ditulis ke RADIUS (akun dibuat saat langganan masih
+     *    menunggu instalasi). Aktivasi (WO PSB selesai) = saat pelanggan resmi online, jadi grup
+     *    paket dipastikan ada lalu kredensial + keanggotaan ditulis.
+     *  - tadinya ISOLATED (pembayaran masuk): baris RADIUS-nya sudah ada tapi menunjuk grup
+     *    isolir. Harus dipulihkan seperti tombol Pulihkan ditekan — grup dikembalikan ke paketnya
+     *    lalu sesi diputus, sebab keanggotaan address-list yang mengurungnya menempel pada SESI.
+     *    Membiarkannya berarti pelanggan yang sudah membayar tetap melihat halaman tagihan sampai
+     *    ia sendiri menyalakan ulang router — keluhan yang paling mahal di CS.
      */
     fun onActivated(subscriptionId: UUID) =
         subscriberAccessRepository.findBySubscriptionId(subscriptionId)
             .filter { it.status != AccessStatus.TERMINATED }
             .forEach { access ->
-                val wasPending = access.status == AccessStatus.PENDING
+                val previous = access.status
                 access.activate()
                 subscriberAccessRepository.save(access)
-                if (wasPending) enqueueProvisioning(access)
+                when (previous) {
+                    AccessStatus.PENDING -> enqueueProvisioning(access)
+                    AccessStatus.ISOLATED -> bngActions.enqueueRestore(
+                        access, catalogApi.findPlanNetwork(access.planId),
+                        requestedBy = null, requestedByEmail = null,
+                    )
+                    else -> Unit
+                }
             }
 
+    /**
+     * Langganan terisolir (mis. nunggak lewat tenggat) → akun dipindah ke grup isolir lalu
+     * sesinya diputus. Sama persis dengan tombol Isolir, hanya pelakunya sistem: login TETAP
+     * diterima, yang berubah cuma ke mana routernya melempar pelanggan.
+     *
+     * Akun yang masih PENDING dilewati jalur jaringannya: belum pernah ada di RADIUS, dan
+     * pelanggan yang instalasinya belum rampung tak perlu diberi login hanya untuk diisolir.
+     */
     fun onIsolated(subscriptionId: UUID) = forEachLive(subscriptionId) {
+        val wasPending = it.status == AccessStatus.PENDING
         it.isolate()
-        bngActions.enqueueDisconnect(it, requestedBy = null, requestedByEmail = null)
+        if (!wasPending) bngActions.enqueueIsolir(it, requestedBy = null, requestedByEmail = null)
     }
 
     fun onTerminated(subscriptionId: UUID) =

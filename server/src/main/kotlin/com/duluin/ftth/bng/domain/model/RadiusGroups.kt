@@ -12,6 +12,18 @@ import java.util.UUID
  * mana pun tanpa menyimpan pemetaan terpisah.
  */
 object RadiusGroups {
+    /**
+     * Grup pelanggan terisolir — SATU untuk seluruh platform, bukan per paket maupun per
+     * tenant. Isinya cuma sisa kecepatan untuk membuka halaman tagihan dan nama address-list
+     * yang dipakai router melempar ke halaman itu; dua-duanya setelan platform yang sama
+     * bagi semua orang, jadi tak ada apa pun milik tenant yang bisa bocor lewat grup ini.
+     *
+     * Namanya sengaja BUKAN turunan UUID seperti grup paket: operator perlu bisa mengetiknya
+     * di router (`src-address-list=isolir`) dan mengenalinya lagi saat membaca konfigurasi
+     * sebulan kemudian.
+     */
+    const val ISOLIR: String = "isolir"
+
     /** Grup normal paket — kecepatan penuh. */
     fun normal(planId: UUID): String = "plan:$planId"
 

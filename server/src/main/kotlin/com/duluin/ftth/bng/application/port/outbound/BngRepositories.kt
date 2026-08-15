@@ -206,4 +206,17 @@ interface BngActionRepository {
      * mengeksekusi sinkron lalu menuntaskan sendiri). Dibatasi [limit], terurut waktu minta.
      */
     fun findServerSessionControlPending(nasIds: Collection<UUID>, limit: Int): List<BngAction>
+
+    /**
+     * Dari [subscriberAccessIds], mana yang masih punya aksi jalur-DATA
+     * ([BngActionType.PROVISIONING]) berstatus PENDING — yakni akun yang otorisasi barunya
+     * belum sampai ke radius-db.
+     *
+     * Dipakai worker kontrol sesi sebagai penjaga urutan. Provisioning dan kontrol sesi
+     * dikerjakan dua worker berbeda yang berlomba pada selang yang sama, jadi tanpa penjaga
+     * ini DISCONNECT bisa mendahului PROVISION yang mengiringinya: pelanggan diputus, dial
+     * ulang dalam hitungan detik, dan disambut grup LAMA — persis kebalikan dari yang diminta.
+     * Paling terasa pada isolir (pelanggan kembali dengan kecepatan penuh) dan pada FUP.
+     */
+    fun findAccessIdsWithPendingProvisioning(subscriberAccessIds: Collection<UUID>): Set<UUID>
 }

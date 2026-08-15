@@ -48,4 +48,16 @@ interface RadiusProvisioningPort {
         fupGroupname: String?,
         fupRateLimit: String?,
     )
+
+    /**
+     * Pastikan grup pelanggan terisolir ([com.duluin.ftth.bng.domain.model.RadiusGroups.ISOLIR])
+     * ada dan berisi dua atribut yang menghidupkan halaman isolir: sisa kecepatan
+     * ([rateLimit]) dan keanggotaan address-list router ([addressList] → VSA
+     * `Mikrotik-Address-List`).
+     *
+     * Terpisah dari [syncGroup] karena bukan grup paket: ia milik PLATFORM, sama untuk semua
+     * tenant, dan tak pernah lahir dari katalog siapa pun — tak ada `planId` yang bisa
+     * menurunkannya. Idempoten (hapus-lalu-tulis), jadi aman dipanggil berulang.
+     */
+    fun ensureIsolirGroup(tenantId: UUID, rateLimit: String, addressList: String)
 }

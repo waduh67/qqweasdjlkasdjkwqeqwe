@@ -9,6 +9,7 @@ import com.duluin.ftth.bng.domain.model.AccessStatus
 import com.duluin.ftth.bng.domain.model.AuthType
 import com.duluin.ftth.bng.domain.model.BngAction
 import com.duluin.ftth.bng.domain.model.BngActionStatus
+import com.duluin.ftth.bng.domain.model.RadiusGroups
 import com.duluin.ftth.bng.domain.model.SubscriberAccess
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.tenancy.TenantApi
@@ -193,6 +194,42 @@ class RadiusProvisioningRunnerTest {
         val radius: FakeRadiusPort,
     )
 
+    @Test
+    fun `PROVISION ke grup isolir memastikan grupnya ada lebih dulu (rate + address-list platform)`() {
+        val access = access(username = "budi", secret = "rahasia123")
+        val action = BngAction.provision(
+            tenantId, access.id, nasId, username = "budi", groupname = RadiusGroups.ISOLIR,
+            requestedBy = null, requestedByEmail = null, at = now,
+        )
+        val fixture = fixture(pending = listOf(action), accesses = listOf(access))
+
+        fixture.runner.execute(tenantId, now)
+
+        // Grup isolir milik platform, tak pernah lahir dari SYNC_GROUP katalog — harus
+        // dipastikan ada tepat sebelum akun diikutkan, kalau tidak pelanggan terisolir masuk
+        // grup kosong: tanpa rate DAN tanpa address-list, alias internet penuh gratis.
+        val isolir = fixture.radius.isolirGroups.single()
+        assertThat(isolir.tenantId).isEqualTo(tenantId)
+        assertThat(isolir.rateLimit).isEqualTo(RadiusProperties().isolirRateLimit)
+        assertThat(isolir.addressList).isEqualTo(RadiusProperties().isolirAddressList)
+        assertThat(fixture.radius.provisions.single().groupname).isEqualTo(RadiusGroups.ISOLIR)
+        assertThat(action.status).isEqualTo(BngActionStatus.COMPLETED)
+    }
+
+    @Test
+    fun `PROVISION ke grup paket biasa tak menyentuh grup isolir`() {
+        val access = access(username = "budi", secret = "rahasia123")
+        val action = BngAction.provision(
+            tenantId, access.id, nasId, username = "budi", groupname = "plan:${access.planId}",
+            requestedBy = null, requestedByEmail = null, at = now,
+        )
+        val fixture = fixture(pending = listOf(action), accesses = listOf(access))
+
+        fixture.runner.execute(tenantId, now)
+
+        assertThat(fixture.radius.isolirGroups).isEmpty()
+    }
+
     private fun fixture(
         pending: List<BngAction>,
         accesses: List<SubscriberAccess> = emptyList(),
@@ -248,6 +285,7 @@ private class FakeActionRepo(private val pending: List<BngAction>) : BngActionRe
     override fun findDispatchableByNasIds(nasIds: Collection<UUID>): List<BngAction> = emptyList()
     override fun findServerProvisioningPending(limit: Int): List<BngAction> = pending.take(limit)
     override fun findServerSessionControlPending(nasIds: Collection<UUID>, limit: Int): List<BngAction> = emptyList()
+    override fun findAccessIdsWithPendingProvisioning(subscriberAccessIds: Collection<UUID>): Set<UUID> = emptySet()
 }
 
 private class FakeAccessRepo(private val accesses: List<SubscriberAccess>) : SubscriberAccessRepository {
@@ -287,11 +325,19 @@ private class FakeRadiusPort(private val failWith: Exception?) : RadiusProvision
         val fupRateLimit: String?,
     )
 
+    data class IsolirCall(val tenantId: UUID, val rateLimit: String, val addressList: String)
+
     val provisions = mutableListOf<ProvisionCall>()
     val deprovisions = mutableListOf<String>()
     val syncs = mutableListOf<SyncCall>()
+    val isolirGroups = mutableListOf<IsolirCall>()
 
     override fun isConfigured(): Boolean = true
+
+    override fun ensureIsolirGroup(tenantId: UUID, rateLimit: String, addressList: String) {
+        failWith?.let { throw it }
+        isolirGroups += IsolirCall(tenantId, rateLimit, addressList)
+    }
 
     override fun provision(tenantId: UUID, scopedUsername: String, password: String, groupname: String, framedIp: String?) {
         failWith?.let { throw it }

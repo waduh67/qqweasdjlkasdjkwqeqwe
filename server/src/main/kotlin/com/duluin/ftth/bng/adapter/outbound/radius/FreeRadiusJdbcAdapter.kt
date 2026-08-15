@@ -1,6 +1,7 @@
 package com.duluin.ftth.bng.adapter.outbound.radius
 
 import com.duluin.ftth.bng.application.port.outbound.RadiusProvisioningPort
+import com.duluin.ftth.bng.domain.model.RadiusGroups
 import org.springframework.stereotype.Component
 import java.sql.Connection
 import java.util.UUID
@@ -82,6 +83,21 @@ class FreeRadiusJdbcAdapter(
             )
         }
     }
+
+    override fun ensureIsolirGroup(tenantId: UUID, rateLimit: String, addressList: String) =
+        inTransaction(tenantId) { conn ->
+            conn.replace(
+                "DELETE FROM radgroupreply WHERE groupname = ? AND attribute IN ('Mikrotik-Rate-Limit', 'Mikrotik-Address-List')"
+                    to listOf(RadiusGroups.ISOLIR),
+                "INSERT INTO radgroupreply (groupname, attribute, op, value) VALUES (?, 'Mikrotik-Rate-Limit', ':=', ?)"
+                    to listOf(RadiusGroups.ISOLIR, rateLimit),
+                // Inilah yang membuat halaman isolir mungkin: router memasukkan IP sesi ke
+                // address-list bernama ini, lalu aturan firewall-nya sendiri yang melempar
+                // pelanggan ke halaman tagihan. Tanpa baris ini isolir cuma jadi "internet lemot".
+                "INSERT INTO radgroupreply (groupname, attribute, op, value) VALUES (?, 'Mikrotik-Address-List', ':=', ?)"
+                    to listOf(RadiusGroups.ISOLIR, addressList),
+            )
+        }
 
     private inline fun inTransaction(tenantId: UUID, body: (Connection) -> Unit) {
         connections.connectionFor(tenantId).use { conn ->

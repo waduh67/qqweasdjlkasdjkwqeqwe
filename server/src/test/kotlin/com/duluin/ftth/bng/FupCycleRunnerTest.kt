@@ -249,4 +249,5 @@ private class FakeBngActionRepo : BngActionRepository {
     override fun findDispatchableByNasIds(nasIds: Collection<UUID>): List<BngAction> = emptyList()
     override fun findServerProvisioningPending(limit: Int): List<BngAction> = emptyList()
     override fun findServerSessionControlPending(nasIds: Collection<UUID>, limit: Int): List<BngAction> = emptyList()
+    override fun findAccessIdsWithPendingProvisioning(subscriberAccessIds: Collection<UUID>): Set<UUID> = emptySet()
 }

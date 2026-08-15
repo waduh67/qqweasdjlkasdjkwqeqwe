@@ -240,6 +240,12 @@ ftth:
     auth-port: ${FTTH_RADIUS_AUTH_PORT:1812}
     acct-port: ${FTTH_RADIUS_ACCT_PORT:1813}
     coa-port: ${FTTH_RADIUS_COA_PORT:3799}
+    # Isolir = "halaman tagihan", bukan kabel dicabut. Pelanggan nunggak tetap boleh login,
+    # cuma dipindah ke grup isolir: sisa kecepatan seadanya (harus cukup memuat halaman bayar,
+    # jangan 0) + masuk address-list yang dipakai router melempar semua tujuan ke halaman itu.
+    # Nama address-list WAJIB sama dengan yang ada di aturan firewall router tenant.
+    isolir-rate-limit: ${FTTH_RADIUS_ISOLIR_RATE_LIMIT:1M/1M}
+    isolir-address-list: ${FTTH_RADIUS_ISOLIR_ADDRESS_LIST:isolir}
     # Selang worker mengklaim aksi provisioning tertunda.
     dispatch-interval: ${FTTH_RADIUS_DISPATCH_INTERVAL:PT10S}
     # Selang poller membaca sesi hidup radacct platform per tenant (jalur-baca server-side).

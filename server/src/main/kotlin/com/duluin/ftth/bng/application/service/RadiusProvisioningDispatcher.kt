@@ -6,6 +6,7 @@ import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.config.RadiusProperties
 import com.duluin.ftth.bng.domain.model.BngAction
 import com.duluin.ftth.bng.domain.model.BngActionType
+import com.duluin.ftth.bng.domain.model.RadiusGroups
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.tenancy.TenantApi
 import org.slf4j.LoggerFactory
@@ -94,10 +95,21 @@ class RadiusProvisioningRunner(
     private fun executeOne(tenantId: UUID, slug: String, action: BngAction, now: Instant) {
         try {
             when (action.action) {
-                BngActionType.PROVISION -> radius.provision(
-                    tenantId, identity(slug, action), resolvePassword(action), requireGroup(action),
-                    resolveFramedIp(action),
-                )
+                BngActionType.PROVISION -> {
+                    // Grup isolir milik PLATFORM — tak pernah lahir dari katalog siapa pun, jadi
+                    // tak ada SYNC_GROUP yang mendahuluinya seperti pada grup paket. Dipastikan
+                    // ada tepat sebelum akun diikutkan ke dalamnya, bukan sekali saat boot:
+                    // begitu kelak radius-db di-shard per tenant, grup ini harus ada di shard
+                    // yang sedang ditulis — dan sebuah shard yang sesaat mati tak boleh
+                    // meninggalkan platform tanpa grup isolir selamanya.
+                    if (requireGroup(action) == RadiusGroups.ISOLIR) {
+                        radius.ensureIsolirGroup(tenantId, props.isolirRateLimit, props.isolirAddressList)
+                    }
+                    radius.provision(
+                        tenantId, identity(slug, action), resolvePassword(action), requireGroup(action),
+                        resolveFramedIp(action),
+                    )
+                }
                 BngActionType.DEPROVISION -> radius.deprovision(tenantId, identity(slug, action))
                 BngActionType.SYNC_GROUP -> radius.syncGroup(
                     tenantId,

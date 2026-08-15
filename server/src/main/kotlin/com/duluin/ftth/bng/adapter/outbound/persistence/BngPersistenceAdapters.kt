@@ -290,6 +290,15 @@ class BngActionPersistenceAdapter(
         ).map { it.toDomain() }
     }
 
+    override fun findAccessIdsWithPendingProvisioning(subscriberAccessIds: Collection<UUID>): Set<UUID> {
+        if (subscriberAccessIds.isEmpty()) return emptySet()
+        return jpa.findAccessIdsByActionInAndStatus(
+            subscriberAccessIds,
+            BngActionType.PROVISIONING,
+            BngActionStatus.PENDING,
+        ).toSet()
+    }
+
     private fun BngActionJpaEntity.toDomain(): BngAction = BngAction.rehydrate(
         id = id,
         tenantId = tenantId ?: TenantContext.tenantId(),

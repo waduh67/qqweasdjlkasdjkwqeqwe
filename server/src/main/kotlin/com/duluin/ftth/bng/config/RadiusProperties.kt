@@ -33,6 +33,21 @@ data class RadiusProperties(
     val acctPort: Int = 1813,
     /** Port DAE/CoA (RFC 5176) yang SERVER tembak balik ke BRAS. */
     val coaPort: Int = 3799,
+    /**
+     * Sisa kecepatan pelanggan TERISOLIR (format Mikrotik-Rate-Limit `up/down`). Sengaja
+     * bukan nol: isolir di sini "halaman tagihan", bukan kabel dicabut — pelanggan harus
+     * masih sanggup memuat halaman itu dan menekan tombol bayar. Terlalu kecil (mis. 64k)
+     * membuat halaman gagal termuat dan pelanggan menelepon; terlalu besar membuat isolir
+     * terasa seperti internet yang cuma lemot.
+     */
+    val isolirRateLimit: String = "1M/1M",
+    /**
+     * Nama address-list Mikrotik yang IP pelanggan terisolir dimasukkan ke dalamnya (VSA
+     * `Mikrotik-Address-List`). Router memakai daftar ini sebagai satu-satunya pegangan untuk
+     * melempar mereka ke halaman tagihan dan memblokir sisanya — nilai di sini WAJIB sama
+     * dengan yang tertulis di aturan firewall router (lihat kartu panduan isolir di UI).
+     */
+    val isolirAddressList: String = "isolir",
     /** Ukuran pool koneksi radius-db (provisioning jarang, kecil sudah cukup). */
     val maxPoolSize: Int = 5,
     /** Selang worker mengklaim aksi provisioning tertunda dari antrean. */

@@ -90,4 +90,18 @@ interface BngActionJpaRepository : JpaRepository<BngActionJpaEntity, UUID> {
         statuses: Collection<BngActionStatus>,
         pageable: Pageable,
     ): List<BngActionJpaEntity>
+
+    /**
+     * Hanya kolom id akun yang dibaca (bukan seluruh entitas): pemanggilnya cuma perlu tahu
+     * akun MANA yang masih menunggu provisioning, dan ini dijalankan tiap putaran worker.
+     */
+    @Query(
+        "SELECT DISTINCT a.subscriberAccessId FROM BngActionJpaEntity a " +
+            "WHERE a.subscriberAccessId IN :accessIds AND a.action IN :actions AND a.status = :status",
+    )
+    fun findAccessIdsByActionInAndStatus(
+        @Param("accessIds") accessIds: Collection<UUID>,
+        @Param("actions") actions: Collection<BngActionType>,
+        @Param("status") status: BngActionStatus,
+    ): List<UUID>
 }
