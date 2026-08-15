@@ -244,6 +244,11 @@ ftth:
     dispatch-interval: ${FTTH_RADIUS_DISPATCH_INTERVAL:PT10S}
     # Selang poller membaca sesi hidup radacct platform per tenant (jalur-baca server-side).
     session-poll-interval: ${FTTH_RADIUS_SESSION_POLL_INTERVAL:PT30S}
+    # Umur maksimal `acctupdatetime` sebelum baris radacct yang masih menganga dianggap bangkai
+    # (BRAS kehilangan jalur ke RADIUS → Acct-Stop tak pernah terkirim). Hanya berlaku untuk
+    # baris yang memang pernah di-interim-update; WAJIB lebih longgar dari `interim-update`
+    # router (kami menganjurkan 5m) — salah-offline lebih mahal daripada telat-offline.
+    acct-interim-stale-after: ${FTTH_RADIUS_ACCT_INTERIM_STALE_AFTER:PT1H}
   bng:
     # Umur maksimal baris sesi sebelum dianggap putus. Sesi yang berakhir LENYAP dari radacct
     # (bukan jadi baris "offline"); poller menandainya putus tiap putaran, dan ambang ini

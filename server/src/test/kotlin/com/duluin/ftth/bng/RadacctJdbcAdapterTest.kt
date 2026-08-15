@@ -11,20 +11,24 @@ import java.lang.reflect.Proxy
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 
 /**
  * Menguji pembaca `radacct` server-side ([RadacctJdbcAdapter]) lewat koneksi PEREKAM
  * berbasis proxy (tanpa DB nyata). Yang ditegaskan: query menyaring per kode tenant
- * (`username LIKE 'acme:%'`, `acctstoptime IS NULL`), prefiks tenant DIKUPAS kembali ke
- * username bare, `nasipaddress`/`framedipaddress` bertopeng `/32` dibersihkan, baris basi
- * per akun (username sama) di-dedup, dan koneksi ditutup.
+ * (`username LIKE 'acme:%'`, `acctstoptime IS NULL`) sekaligus membuang baris bangkai yang
+ * interim-update-nya berhenti, prefiks tenant DIKUPAS kembali ke username bare,
+ * `nasipaddress`/`framedipaddress` bertopeng `/32` dibersihkan, baris basi per akun
+ * (username sama) di-dedup, dan koneksi ditutup.
  */
 class RadacctJdbcAdapterTest {
 
     private val tenantId: UUID = UuidV7.generate()
 
-    private fun adapter(conn: Connection) = RadacctJdbcAdapter(RecordingConnections(conn))
+    private fun adapter(conn: Connection) =
+        RadacctJdbcAdapter(RecordingConnections(conn), INTERIM_STALE_AFTER)
 
     @Test
     fun `menyaring per kode tenant, mengupas prefiks, membersihkan topeng, dan dedup`() {
@@ -39,16 +43,27 @@ class RadacctJdbcAdapterTest {
 
         val out = adapter(db.connection()).activeSessions(tenantId, "acme")
 
-        // Satu statement, disaring per prefiks tenant + daftar MAC (di sini kosong).
+        // Satu statement, disaring per prefiks tenant + daftar MAC (di sini kosong) + buang
+        // bangkai (baris yang interim-update-nya sudah berhenti).
         assertThat(db.sql).isEqualTo(
             "SELECT username, framedipaddress, nasipaddress, acctsessionid, callingstationid, " +
                 "acctsessiontime, acctinputoctets, acctoutputoctets, acctinputgigawords, acctoutputgigawords " +
                 "FROM radacct WHERE acctstoptime IS NULL " +
-                "AND (username LIKE ? OR username = ANY(?)) ORDER BY acctstarttime DESC",
+                "AND (username LIKE ? OR username = ANY(?)) " +
+                "AND (acctupdatetime IS NULL OR acctupdatetime <= acctstarttime OR acctupdatetime >= ?) " +
+                "ORDER BY acctstarttime DESC",
         )
         assertThat(db.params).containsExactly("acme:%")
         assertThat(db.arrayElements).isEmpty()
         assertThat(db.closed).isTrue()
+
+        // Ambang bangkai diikat sebagai "sekarang − interimStaleAfter"; router yang tak
+        // memasang interim-update tak ikut kena (cabang acctupdatetime <= acctstarttime).
+        val cutoff = db.timestamps.single().toInstant()
+        assertThat(cutoff).isBetween(
+            Instant.now().minus(INTERIM_STALE_AFTER).minusSeconds(60),
+            Instant.now().minus(INTERIM_STALE_AFTER).plusSeconds(60),
+        )
 
         // budi menang (baris pertama), andi ikut; kedua username sudah BARE.
         assertThat(out.map { it.username }).containsExactly("budi", "andi")
@@ -136,6 +151,7 @@ class RadacctJdbcAdapterTest {
     private class RecordingDb(private val rows: List<Map<String, Any?>> = emptyList()) {
         var sql: String? = null
         val params = mutableListOf<String?>()
+        val timestamps = mutableListOf<java.sql.Timestamp>()
         var arrayElements: List<Any?> = emptyList()
         var closed = false
 
@@ -180,6 +196,7 @@ class RadacctJdbcAdapterTest {
                 InvocationHandler { proxy, method, args ->
                     when (method.name) {
                         "setString" -> { params += args!![1] as String?; null }
+                        "setTimestamp" -> { timestamps += args!![1] as java.sql.Timestamp; null }
                         // Array MAC sudah ditangkap saat createArrayOf; setArray cukup diabaikan.
                         "setArray" -> null
                         "executeQuery" -> resultSet()
@@ -225,5 +242,10 @@ class RadacctJdbcAdapterTest {
             java.lang.Long.TYPE -> 0L
             else -> null
         }
+    }
+
+    private companion object {
+        /** Sama dengan bawaan `ftth.radius.acct-interim-stale-after`. */
+        val INTERIM_STALE_AFTER: Duration = Duration.ofHours(1)
     }
 }

@@ -2,8 +2,12 @@ package com.duluin.ftth.bng.adapter.outbound.radius
 
 import com.duluin.ftth.bng.application.port.outbound.RadiusAccountingReadPort
 import com.duluin.ftth.bng.domain.model.SessionObservation
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.sql.ResultSet
+import java.sql.Timestamp
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -16,6 +20,11 @@ import java.util.UUID
 @Component
 class RadacctJdbcAdapter(
     private val connections: RadiusConnectionResolver,
+    /**
+     * Umur maksimal `acctupdatetime` sebelum baris radacct yang masih menganga dianggap
+     * bangkai. Longgar (1 jam) dengan sengaja — lihat [ACTIVE_SESSIONS_SQL].
+     */
+    @Value("\${ftth.radius.acct-interim-stale-after:PT1H}") private val interimStaleAfter: Duration,
 ) : RadiusAccountingReadPort {
 
     override fun isConfigured(): Boolean = connections.configured
@@ -34,6 +43,7 @@ class RadacctJdbcAdapter(
                 // Akun berbasis MAC (DHCP/Static) ditulis POLOS tanpa prefiks → tak tertangkap
                 // LIKE; saring balik lewat daftar eksplisit. Kosong → ANY('{}') selalu false.
                 st.setArray(2, conn.createArrayOf("text", macUsernames.toTypedArray()))
+                st.setTimestamp(3, Timestamp.from(Instant.now().minus(interimStaleAfter)))
                 st.executeQuery().use { rs ->
                     val seen = HashSet<String>()
                     val out = ArrayList<SessionObservation>()
@@ -68,9 +78,27 @@ class RadacctJdbcAdapter(
             "username, framedipaddress, nasipaddress, acctsessionid, callingstationid, " +
                 "acctsessiontime, acctinputoctets, acctoutputoctets, acctinputgigawords, acctoutputgigawords"
 
+        /**
+         * Sesi hidup tenant. Selain `acctstoptime IS NULL`, baris yang interim-update-nya
+         * BERHENTI ikut dibuang — itu bangkai, bukan sesi.
+         *
+         * Kejadiannya di lapangan: BRAS kehilangan jalur ke RADIUS (uplink ISP putus, router
+         * dimatikan paksa) sehingga Acct-Stop tak pernah terkirim; barisnya menganga selamanya
+         * dan pelanggan yang sudah lama mati tetap terbaca "Online". (Reboot router yang normal
+         * TIDAK termasuk: FreeRADIUS menutup sesinya sendiri saat menerima Accounting-On.)
+         *
+         * Syarat `acctupdatetime > acctstarttime` menjaga agar router yang TAK memasang
+         * `interim-update` tak ikut kena: di sana `acctupdatetime` memang membeku sama dengan
+         * waktu mulai, jadi tak ada yang bisa disimpulkan dari kebasiannya. Ambangnya longgar
+         * (bawaan 1 jam) supaya interim yang jarang (mis. 30 menit) tak pernah salah dinyatakan
+         * putus — salah-offline jauh lebih mahal daripada telat-offline: yang satu mengirim
+         * teknisi ke pelanggan yang baik-baik saja.
+         */
         private const val ACTIVE_SESSIONS_SQL =
             "SELECT $COLUMNS FROM radacct WHERE acctstoptime IS NULL " +
-                "AND (username LIKE ? OR username = ANY(?)) ORDER BY acctstarttime DESC"
+                "AND (username LIKE ? OR username = ANY(?)) " +
+                "AND (acctupdatetime IS NULL OR acctupdatetime <= acctstarttime OR acctupdatetime >= ?) " +
+                "ORDER BY acctstarttime DESC"
 
         /** Batas wrap penghitung octet 32-bit RADIUS; tiap kelipatan dicatat di kolom gigawords. */
         private const val OCTETS_PER_GIGAWORD = 1L shl 32

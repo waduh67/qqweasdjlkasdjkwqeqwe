@@ -96,7 +96,12 @@ RouterOS siap-tempel. Bentuknya (ganti `<IP-RADIUS>` & `<SECRET-BRAS>` sesuai pu
 - Baris 3–4: daftarkan server RADIUS pusat + shared secret (yang kamu Generate di form).
 - Baris 5: buka penerimaan **incoming DAE (CoA/Disconnect) di 3799** — wajib kalau mau
   server bisa memutus/mengubah sesi dari jauh.
-- Baris 6: nyalakan RADIUS untuk AAA PPPoE + accounting (interim tiap 5 menit).
+- Baris 6: nyalakan RADIUS untuk AAA PPPoE + accounting (interim tiap 5 menit). **Jangan
+  hilangkan `interim-update`**: itu denyut nadi sesi. Tanpa denyut, sesi yang berakhir
+  tanpa Acct-Stop (BRAS kehilangan jalur ke RADIUS, router dimatikan paksa) menganga di
+  `radacct` dan pelanggannya terbaca "Online" selamanya. Server membuang baris yang
+  denyutnya berhenti lebih lama dari `ftth.radius.acct-interim-stale-after` (bawaan 1 jam
+  — selalu setel lebih longgar dari interim router).
 
 > **`logged in, 0.0.0.0` lalu `no network protocols running`?** Autentikasinya justru
 > sudah berhasil — yang kurang alamat. Profil PPP tanpa `remote-address` menutup sesi
@@ -163,6 +168,28 @@ Di form akun, isi **MAC** (dinormalkan server → jadi identitas + password RADI
 - Cara server menjangkau router untuk CoA ditandai kolom internal `reachability`
   (`DIRECT`/`VPN`/`COLLECTOR`/`NONE`); rincinya di
   [`radius-as-a-service.md`](radius-as-a-service.md#reachability-coa-per-nas-3-jalur).
+
+---
+
+## Bagaimana "Online/Offline" pelanggan ditentukan
+
+Yang membuat pelanggan berubah jadi Offline di peta & B-ras Check **bukan** ping, melainkan
+hilangnya sesi dari accounting RADIUS. Tiga lapis, dari yang paling cepat:
+
+1. **Sesi lenyap dari `radacct`** — router mengirim Acct-Stop saat PPPoE putus, barisnya
+   tertutup, dan poll berikutnya (tiap 30 detik) menandai akun itu putus. Ini jalur normal:
+   cabut kabel → Offline dalam **±30–60 detik**.
+2. **Denyut interim berhenti** — Acct-Stop tak selalu terkirim (BRAS kehilangan jalur ke
+   RADIUS, router dimatikan paksa). Baris yang `interim-update`-nya membeku lebih lama dari
+   `ftth.radius.acct-interim-stale-after` (bawaan 1 jam) dibuang sebagai bangkai. Karena itu
+   `interim-update=5m` di skrip di atas **wajib** ada.
+3. **Poll aplikasi sendiri berhenti** — server mati atau radius-db tak terjangkau. Baris sesi
+   yang tak diperbarui melebihi `ftth.bng.session-stale-after` (bawaan 3 menit) disajikan
+   sebagai putus, supaya layar tidak membeku hijau sementara tak ada yang mengabari.
+
+Semuanya sengaja dibuat "telat-offline daripada salah-offline": satu poll yang terlewat tak
+boleh memerahkan pelanggan yang baik-baik saja, tapi pelanggan yang benar-benar mati harus
+ketahuan tanpa perlu ada yang menekan Refresh.
 
 ---
 
