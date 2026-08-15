@@ -126,38 +126,48 @@ class BngApiService(
 
     /**
      * Satu pelanggan bisa punya beberapa akun (mis. unit kedua) — yang mewakilinya adalah akun
-     * yang sesinya sedang online; kalau tak ada, yang pertama (repositori mengurutkan username,
-     * jadi deterministik). Diekstrak agar jalur satu-pelanggan dan jalur batch tak melenceng
-     * memilih akun berbeda untuk pelanggan yang sama. [accounts] tak boleh kosong.
+     * yang sesinya benar-benar hidup; kalau tak ada, yang pertama (repositori mengurutkan
+     * username, jadi deterministik). Diekstrak agar jalur satu-pelanggan dan jalur batch tak
+     * melenceng memilih akun berbeda untuk pelanggan yang sama. [accounts] tak boleh kosong.
+     *
+     * Kesegaran ikut dinilai di sini: kalau tidak, sesi basi milik unit kedua bisa "menang"
+     * atas sesi unit pertama yang sungguh online.
      */
     private fun chooseAccount(
         accounts: List<SubscriberAccess>,
+        now: Instant,
         sessionOf: (UUID) -> RadiusSession?,
-    ): SubscriberAccess = accounts.firstOrNull { sessionOf(it.id)?.online == true } ?: accounts.first()
+    ): SubscriberAccess =
+        accounts.firstOrNull { sessionOf(it.id)?.isLiveAt(now, sessionStaleAfter) == true } ?: accounts.first()
 
     override fun findSubscriberSession(customerId: UUID): SubscriberSessionRef? {
         val accounts = subscriberAccessRepository.findByCustomerId(customerId)
         if (accounts.isEmpty()) return null
 
+        val now = Instant.now()
         val sessions = accounts.associate { it.id to radiusSessionRepository.findBySubscriberAccessId(it.id) }
-        val chosen = chooseAccount(accounts) { sessions[it] }
+        val chosen = chooseAccount(accounts, now) { sessions[it] }
         val session = sessions[chosen.id]
         // Sumber NAS: dari sesi terkini bila ada (yang benar-benar dipakai login),
         // kalau belum pernah terpantau jatuh ke NAS yang ditugaskan pada akun.
         val nasId = session?.nasId ?: chosen.nasId
+        // Sama seperti [activeSubscriberLiveness]: baris online yang tak segar lagi = putus.
+        val live = session?.isLiveAt(now, sessionStaleAfter) == true
 
         return SubscriberSessionRef(
             subscriberAccessId = chosen.id,
             username = chosen.username,
             accessStatus = chosen.status.name,
             rateProfileName = catalogApi.findPlanNetwork(chosen.planId)?.name,
-            online = session?.online ?: false,
-            framedIp = session?.framedIp,
+            online = live,
+            // Milik sesi berjalan hanya bermakna selama sesinya hidup — IP & uptime sesi yang
+            // sudah tutup dipajang bersebelahan dengan badge "Offline" cuma memancing salah baca.
+            framedIp = session?.framedIp?.takeIf { live },
             nasId = nasId,
             nasName = nasId?.let { nasRepository.findById(it)?.name },
             nasIp = session?.nasIp,
-            uptimeSeconds = session?.uptimeSeconds,
-            startedAt = session?.startedAt,
+            uptimeSeconds = session?.uptimeSeconds?.takeIf { live },
+            startedAt = session?.startedAt?.takeIf { live },
             lastSeenAt = session?.lastSeenAt,
         )
     }
@@ -168,18 +178,19 @@ class BngApiService(
         if (accounts.isEmpty()) return emptyMap()
         // Dua query untuk berapa pun pelanggan: akun sekali, sesinya sekali.
         val sessions = radiusSessionRepository.findBySubscriberAccessIds(accounts.map { it.id })
-        val cutoff = Instant.now().minus(sessionStaleAfter)
+        // Satu jam untuk seluruh peta: dua pelanggan bertetangga tak boleh dinilai pada
+        // ambang basi yang berbeda hanya karena barisnya diproses berselang milidetik.
+        val now = Instant.now()
 
         return accounts.groupBy { it.customerId }.mapValues { (customerId, owned) ->
-            val chosen = chooseAccount(owned) { sessions[it] }
+            val chosen = chooseAccount(owned, now) { sessions[it] }
             val session = sessions[chosen.id]
+            val live = session?.isLiveAt(now, sessionStaleAfter) == true
             SubscriberPppoeRef(
                 customerId = customerId,
                 username = chosen.username,
-                // Sama seperti [activeSubscriberLiveness]: sesi yang berakhir MENGHILANG dari
-                // radacct tanpa ditandai offline, jadi baris online yang tak segar = putus.
-                online = session != null && session.online && !session.lastSeenAt.isBefore(cutoff),
-                framedIp = session?.framedIp,
+                online = live,
+                framedIp = session?.framedIp?.takeIf { live },
             )
         }
     }
@@ -206,15 +217,14 @@ class BngApiService(
         // waktu yang sama. Jam nyata dipakai di sini (bukan disuntik): pengujian membuat
         // sesi "sangat basi" (lastSeenAt jauh di masa lalu) atau "segar" agar putusannya
         // deterministik tanpa perlu mengendalikan waktu.
-        val cutoff = Instant.now().minus(sessionStaleAfter)
+        val now = Instant.now()
         return radiusSessionRepository.findAllForActiveAccounts().map { session ->
             SubscriberPppoeLiveness(
                 customerId = session.customerId,
                 username = session.username,
-                // Poll BRAS hanya melaporkan sesi hidup; sesi yang berakhir menghilang dari
-                // radacct tanpa ditandai offline. Maka baris ber-online=true yang tak segar
-                // lagi diperlakukan sebagai putus — inilah dasar deteksi "hilang, bukan mati".
-                online = session.online && !session.lastSeenAt.isBefore(cutoff),
+                // Baris ber-online=true yang tak segar lagi diperlakukan sebagai putus —
+                // inilah dasar deteksi "hilang, bukan mati".
+                online = session.isLiveAt(now, sessionStaleAfter),
                 lastSeenAt = session.lastSeenAt,
             )
         }

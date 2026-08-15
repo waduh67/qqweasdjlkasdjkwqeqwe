@@ -244,3 +244,10 @@ ftth:
     dispatch-interval: ${FTTH_RADIUS_DISPATCH_INTERVAL:PT10S}
     # Selang poller membaca sesi hidup radacct platform per tenant (jalur-baca server-side).
     session-poll-interval: ${FTTH_RADIUS_SESSION_POLL_INTERVAL:PT30S}
+  bng:
+    # Umur maksimal baris sesi sebelum dianggap putus. Sesi yang berakhir LENYAP dari radacct
+    # (bukan jadi baris "offline"); poller menandainya putus tiap putaran, dan ambang ini
+    # jaring pengaman bila poller-nya sendiri yang mati — tanpa itu seluruh pelanggan membeku
+    # "Online". Beri kelonggaran beberapa kali `session-poll-interval` supaya satu poll yang
+    # terlewat tak langsung memerahkan pelanggan; naikkan bila BRAS-nya lambat melapor.
+    session-stale-after: ${FTTH_BNG_SESSION_STALE_AFTER:PT3M}

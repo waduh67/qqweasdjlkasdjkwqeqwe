@@ -12,6 +12,7 @@ import com.duluin.ftth.bng.domain.model.RadiusSession
 import com.duluin.ftth.bng.domain.model.SubscriberAccess
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
@@ -32,12 +33,17 @@ class BngMonitoringQueryService(
     private val radiusSessionRepository: RadiusSessionRepository,
     private val accountingRecordRepository: AccountingRecordRepository,
     private val nasRepository: NasRepository,
+    /**
+     * Ambang basi sesi — kunci yang sama dengan [BngApiService] supaya "B-ras Check" dan
+     * badge online di peta/daftar tak pernah saling bertentangan untuk pelanggan yang sama.
+     */
+    @Value("\${ftth.bng.session-stale-after:PT3M}") private val sessionStaleAfter: Duration,
 ) : ViewBngSessionUseCase {
 
     override fun session(subscriberAccessId: UUID): BrasSessionView {
         val access = requireAccess(subscriberAccessId)
         val session = radiusSessionRepository.findBySubscriberAccessId(subscriberAccessId)
-        return session?.toView() ?: offlineView(access)
+        return session?.toView(Instant.now()) ?: offlineView(access)
     }
 
     override fun traffic(subscriberAccessId: UUID, hours: Int): TrafficHistoryView {
@@ -79,19 +85,29 @@ class BngMonitoringQueryService(
     /** Nama BRAS diresolusi per-panggilan (satu akun, satu lookup) — bukan jalur panas. */
     private fun nasNameOf(nasId: UUID?): String? = nasId?.let { nasRepository.findById(it)?.name }
 
-    private fun RadiusSession.toView() = BrasSessionView(
-        subscriberAccessId = subscriberAccessId,
-        username = username,
-        online = online,
-        framedIp = framedIp,
-        nasId = nasId,
-        nasName = nasNameOf(nasId),
-        nasIp = nasIp,
-        callingStationId = callingStationId,
-        uptimeSeconds = uptimeSeconds,
-        startedAt = startedAt,
-        lastSeenAt = lastSeenAt,
-    )
+    /**
+     * Baris sesi → view pada [now]. Sesi yang tak segar lagi disajikan sebagai putus lengkap
+     * dengan milik sesi berjalan yang dikosongkan — layar ini yang dipakai teknisi memutuskan
+     * apakah gangguan ada di rumah pelanggan atau di jaringan, jadi "Online" dengan IP yang
+     * sudah tak berlaku adalah kebohongan yang mahal. [lastSeenAt] tetap dipajang: dari sanalah
+     * "terakhir terpantau" dibaca.
+     */
+    private fun RadiusSession.toView(now: Instant): BrasSessionView {
+        val live = isLiveAt(now, sessionStaleAfter)
+        return BrasSessionView(
+            subscriberAccessId = subscriberAccessId,
+            username = username,
+            online = live,
+            framedIp = framedIp?.takeIf { live },
+            nasId = nasId,
+            nasName = nasNameOf(nasId),
+            nasIp = nasIp,
+            callingStationId = callingStationId,
+            uptimeSeconds = uptimeSeconds?.takeIf { live },
+            startedAt = startedAt?.takeIf { live },
+            lastSeenAt = lastSeenAt,
+        )
+    }
 
     private fun offlineView(access: SubscriberAccess) = BrasSessionView(
         subscriberAccessId = access.id,

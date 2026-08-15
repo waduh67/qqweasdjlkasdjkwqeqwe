@@ -1,6 +1,7 @@
 package com.duluin.ftth.bng.domain.model
 
 import com.duluin.ftth.common.domain.UuidV7
+import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 
@@ -106,6 +107,19 @@ class RadiusSession private constructor(
         uptimeSeconds = null
         startedAt = null
     }
+
+    /**
+     * Sesi ini benar-benar hidup pada [now]? Bukan sekadar [online] mentah.
+     *
+     * Penandaan putus dikerjakan [markOffline] saat poll berjalan — tapi bila poller-nya
+     * sendiri yang berhenti (server mati, radius-db tak terjangkau, tenant kehilangan slug)
+     * tak ada yang menandai apa pun dan seluruh pelanggan membeku "Online". Karena itu baris
+     * yang tak diperbarui melewati [staleAfter] diperlakukan sebagai putus: mengaku "sudah
+     * lama tak terdengar kabarnya" jauh lebih jujur daripada hijau palsu, dan hijau palsu
+     * itulah yang membuat teknisi mencari gangguan di tempat yang salah.
+     */
+    fun isLiveAt(now: Instant, staleAfter: Duration): Boolean =
+        online && !lastSeenAt.isBefore(now.minus(staleAfter))
 
     companion object {
         @Suppress("LongParameterList")

@@ -17,15 +17,19 @@ import com.duluin.ftth.common.domain.error.ValidationException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 
 /**
- * Menguji jalur baca tren trafik ([BngMonitoringQueryService.traffic]) di atas fake repo
- * (tanpa Spring/DB). Fokus pada logika lipatan view: throughput "sekarang" mengambil titik
- * TERAKHIR yang masih terhitung (melewati ekor null saat akun offline), total pemakaian
- * diambil dari `usageSince`, dan rentang di luar batas ditolak. Perhitungan Mbps & bucketing
- * SQL diuji terpisah di IT.
+ * Menguji jalur baca BNG untuk UI di atas fake repo (tanpa Spring/DB):
+ *  - tren trafik ([BngMonitoringQueryService.traffic]) — throughput "sekarang" mengambil titik
+ *    TERAKHIR yang masih terhitung (melewati ekor null saat akun offline), total pemakaian
+ *    diambil dari `usageSince`, dan rentang di luar batas ditolak; dan
+ *  - keadaan sesi ([BngMonitoringQueryService.session]) — baris yang tak segar lagi disajikan
+ *    sebagai putus, bukan "Online" abadi.
+ *
+ * Perhitungan Mbps & bucketing SQL diuji terpisah di IT.
  */
 class BngMonitoringQueryServiceTest {
 
@@ -36,11 +40,13 @@ class BngMonitoringQueryServiceTest {
         samples: List<TrafficSample> = emptyList(),
         usage: Map<UUID, Long> = emptyMap(),
         access: SubscriberAccess? = access(),
+        session: RadiusSession? = null,
     ) = BngMonitoringQueryService(
         FakeAccessRepo(access),
-        FakeSessionRepo(),
+        FakeSessionRepo(session),
         FakeAccountingRepo(samples, usage),
         FakeNasRepo(),
+        STALE_AFTER,
     )
 
     @Test
@@ -84,6 +90,49 @@ class BngMonitoringQueryServiceTest {
             .isInstanceOf(NotFoundException::class.java)
     }
 
+    // Inti bug lapangan: kabel dicabut, sesi lenyap dari radacct, dan bila poller ikut mati
+    // tak ada yang menandainya putus — layar "B-ras Check" tak boleh ikut membeku "Online".
+    @Test
+    fun `sesi yang tak segar lagi disajikan putus tanpa sisa IP`() {
+        val basi = session(lastSeenAt = Instant.now().minus(STALE_AFTER).minusSeconds(60))
+
+        val view = service(session = basi).session(accessId)
+
+        assertThat(view.online).isFalse()
+        assertThat(view.framedIp).isNull()
+        assertThat(view.uptimeSeconds).isNull()
+        assertThat(view.startedAt).isNull()
+        // "Terakhir terpantau" justru yang dicari teknisi — tetap dipajang.
+        assertThat(view.lastSeenAt).isEqualTo(basi.lastSeenAt)
+    }
+
+    @Test
+    fun `sesi yang masih segar tetap online lengkap`() {
+        val segar = session(lastSeenAt = Instant.now().minusSeconds(30))
+
+        val view = service(session = segar).session(accessId)
+
+        assertThat(view.online).isTrue()
+        assertThat(view.framedIp).isEqualTo("100.64.0.7")
+        assertThat(view.uptimeSeconds).isEqualTo(3600)
+    }
+
+    private fun session(lastSeenAt: Instant) = RadiusSession.start(
+        tenantId = UuidV7.generate(),
+        subscriberAccessId = accessId,
+        subscriptionId = UuidV7.generate(),
+        customerId = UuidV7.generate(),
+        username = "budi",
+        online = true,
+        nasId = null,
+        nasIp = "10.0.0.1",
+        framedIp = "100.64.0.7",
+        sessionId = "s-budi",
+        callingStationId = null,
+        uptimeSeconds = 3600,
+        observedAt = lastSeenAt,
+    )
+
     private fun access() = SubscriberAccess.create(
         tenantId = UuidV7.generate(),
         subscriptionId = UuidV7.generate(),
@@ -126,9 +175,9 @@ class BngMonitoringQueryServiceTest {
         override fun saveAll(points: List<AccountingRecordPoint>): Unit = notUsed()
     }
 
-    private class FakeSessionRepo : RadiusSessionRepository {
+    private class FakeSessionRepo(private val session: RadiusSession?) : RadiusSessionRepository {
         override fun save(session: RadiusSession): RadiusSession = notUsed()
-        override fun findBySubscriberAccessId(subscriberAccessId: UUID): RadiusSession? = notUsed()
+        override fun findBySubscriberAccessId(subscriberAccessId: UUID): RadiusSession? = session
         override fun findBySubscriberAccessIds(subscriberAccessIds: Collection<UUID>): Map<UUID, RadiusSession> =
             notUsed()
 
@@ -144,6 +193,11 @@ class BngMonitoringQueryServiceTest {
         override fun existsByName(name: String): Boolean = notUsed()
         override fun findByNameIgnoreCase(name: String): Nas? = notUsed()
         override fun deleteById(id: UUID): Unit = notUsed()
+    }
+
+    private companion object {
+        /** Sama dengan bawaan `ftth.bng.session-stale-after`. */
+        val STALE_AFTER: Duration = Duration.ofMinutes(3)
     }
 }
 
