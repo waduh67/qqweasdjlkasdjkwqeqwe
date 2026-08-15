@@ -9,6 +9,7 @@ const ENDPOINT: RadiusEndpointView = {
   coaPort: 3799,
   configured: true,
   vpnHosts: [{ tunnelCidr: '10.8.0.0/24', host: '10.8.0.1' }],
+  isolirAddressList: 'isolir',
 }
 
 describe('alamat di dalam blok tunnel', () => {

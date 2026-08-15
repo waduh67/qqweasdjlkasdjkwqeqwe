@@ -28,6 +28,7 @@ import { useConfirm, useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
 import { IconGauge, IconPlus } from '@/components/atoms/icons'
 import { radiusTargetFor, selfAddressWarning, sessionControlRoute } from '@/utils/radiusTarget'
+import { defaultIsolirUrl, isolirScript, parseIsolirTarget } from '@/utils/isolirScript'
 
 /**
  * Registri BRAS/RADIUS tenant.
@@ -99,7 +100,15 @@ function mikrotikScript(endpoint: RadiusEndpointView, secret: string, radiusHost
 }
 
 /** Blok skrip RouterOS siap-salin (monospace multi-baris + tombol Salin). */
-function MikrotikSnippet({ script }: { script: string }) {
+function MikrotikSnippet({
+  script,
+  label = 'Salin config Mikrotik',
+  copied = 'Config Mikrotik disalin',
+}: {
+  script: string
+  label?: string
+  copied?: string
+}) {
   const toast = useToast()
   return (
     <div className="stack" style={{ gap: '0.4rem' }}>
@@ -119,11 +128,9 @@ function MikrotikSnippet({ script }: { script: string }) {
         <Button
           type="button"
           size="small"
-          onClick={() =>
-            void navigator.clipboard?.writeText(script).then(() => toast.success('Config Mikrotik disalin'))
-          }
+          onClick={() => void navigator.clipboard?.writeText(script).then(() => toast.success(copied))}
         >
-          Salin config Mikrotik
+          {label}
         </Button>
       </div>
     </div>
@@ -317,6 +324,13 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
     [endpoint, draftAddress],
   )
   const addressWarning = selfAddressWarning(endpoint, draftAddress)
+  /**
+   * Alamat halaman tagihan untuk aturan walled-garden. Terisi sendiri dengan portal
+   * pelanggan pada deployment yang sedang dibuka — hampir selalu benar — tapi tetap boleh
+   * diganti: sebagian ISP memasang portalnya di domain sendiri.
+   */
+  const [isolirUrl, setIsolirUrl] = useState(() => defaultIsolirUrl(window.location.origin))
+  const isolirTarget = useMemo(() => parseIsolirTarget(isolirUrl), [isolirUrl])
   /**
    * Rute isolir & Reset Login yang akan berlaku bila draft ini disimpan. Server yang
    * memutuskannya; ini pratinjaunya, supaya "tak terjangkau" ketahuan di sini — bukan
@@ -662,6 +676,51 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
               {!draft.coaSecret && (
                 <span className="muted" style={{ fontSize: '0.78rem' }}>
                   Isi / Generate shared secret di atas agar tersalin utuh ke skrip.
+                </span>
+              )}
+            </div>
+          )}
+
+          {endpoint && (
+            <div className="stack" style={{ gap: '0.35rem' }}>
+              <span className="muted" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                Halaman isolir (walled garden)
+              </span>
+              <TextField
+                label="Alamat halaman tagihan"
+                value={isolirUrl}
+                onChange={(_, data) => setIsolirUrl(data.value)}
+                placeholder="https://portal.isp-kamu.id/portal"
+              />
+              <MikrotikSnippet
+                script={isolirScript(endpoint.isolirAddressList, isolirTarget)}
+                label="Salin aturan isolir"
+                copied="Aturan isolir disalin"
+              />
+              <span className="muted" style={{ fontSize: '0.78rem' }}>
+                Saat pelanggan diisolir, RADIUS cuma memasukkan IP sesinya ke address-list{' '}
+                <code>{endpoint.isolirAddressList}</code> dan menurunkan kecepatannya —{' '}
+                <strong>router yang menentukan apa arti daftar itu</strong>. Tanpa aturan di atas,
+                daftarnya terisi rapi tapi tak ada yang membacanya: pelanggan "terisolir" tetap
+                browsing seperti biasa dan tak ada satu pun log yang menunjukkan ada yang keliru.
+                Pasang sekali per BRAS.
+              </span>
+              <span className="muted" style={{ fontSize: '0.78rem' }}>
+                Loginnya sengaja tetap diterima. Pelanggan yang disambut "PPPoE gagal" hanya akan
+                menelepon CS; pelanggan yang melihat tagihannya sendiri bisa langsung membayar.
+              </span>
+              <span className="muted" style={{ fontSize: '0.78rem' }}>
+                HTTPS tak dilempar melainkan ditolak cepat: mengalihkan port 443 ke server lain
+                memunculkan peringatan sertifikat, dan pelanggan justru mengira jaringannya dibajak.
+                Yang benar-benar membuka halaman tagihan adalah deteksi captive portal ponsel —
+                ia memakai HTTP polos, jadi notifikasi "Masuk ke jaringan" muncul sendiri.
+              </span>
+              {isolirTarget && !isolirTarget.ip && (
+                <span className="muted" style={{ fontSize: '0.78rem' }}>
+                  Alamatnya nama host, sedangkan <code>dst-nat</code> RouterOS hanya menerima IP.
+                  Ganti <code>&lt;IP-HALAMAN-TAGIHAN&gt;</code> di baris NAT dengan IP server{' '}
+                  <strong>{isolirTarget.host}</strong>; baris address-list boleh tetap memakai
+                  namanya (router meresolusinya berkala).
                 </span>
               )}
             </div>

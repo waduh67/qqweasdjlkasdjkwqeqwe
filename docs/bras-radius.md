@@ -193,6 +193,84 @@ ketahuan tanpa perlu ada yang menekan Refresh.
 
 ---
 
+## Isolir: halaman tagihan, bukan kabel dicabut
+
+Menekan **Isolir** (atau langganan yang jatuh tempo lewat penagihan) **tidak** mencabut
+login pelanggan. Yang terjadi: akunnya dipindah ke grup RADIUS `isolir`, lalu sesinya
+diputus. Dial berikutnya tetap **berhasil** — hanya saja RADIUS menyambutnya dengan sisa
+kecepatan seadanya + keanggotaan address-list `isolir`, dan routermu yang melempar semua
+tujuan ke halaman tagihan.
+
+Ini disengaja. Pelanggan yang disambut "PPPoE gagal" hanya akan menelepon CS dan menuduh
+jaringanmu rusak; pelanggan yang melihat tagihannya sendiri bisa langsung membayar.
+
+**RADIUS cuma mengisi daftarnya — router yang menentukan artinya.** Tanpa aturan di bawah,
+address-list-nya terisi rapi tapi tak ada yang membacanya: pelanggan "terisolir" tetap
+browsing seperti biasa, dan tak ada satu pun log yang menunjukkan ada yang keliru. Kartu
+**"Halaman isolir (walled garden)"** di form BRAS merakit aturannya siap-salin (alamat
+halaman tagihan terisi sendiri, boleh diganti). Bentuknya:
+
+```rsc
+/ip firewall address-list add list=isolir-tujuan address=<ALAMAT-HALAMAN-TAGIHAN> comment="halaman tagihan"
+/ip firewall filter add chain=forward src-address-list=isolir protocol=udp dst-port=53 \
+    action=accept comment="isolir: DNS boleh"
+/ip firewall filter add chain=forward src-address-list=isolir protocol=tcp dst-port=53 \
+    action=accept comment="isolir: DNS boleh"
+/ip firewall filter add chain=forward src-address-list=isolir dst-address-list=isolir-tujuan \
+    action=accept comment="isolir: halaman tagihan boleh"
+/ip firewall nat add chain=dstnat src-address-list=isolir protocol=tcp dst-port=80 \
+    action=dst-nat to-addresses=<IP-HALAMAN-TAGIHAN> to-ports=80 comment="isolir: http dilempar ke halaman tagihan"
+/ip firewall filter add chain=forward src-address-list=isolir protocol=tcp dst-port=443 \
+    action=reject reject-with=tcp-reset comment="isolir: https ditolak cepat (tak bisa dilempar)"
+/ip firewall filter add chain=forward src-address-list=isolir \
+    action=reject reject-with=icmp-network-unreachable comment="isolir: sisanya ditutup"
+```
+
+- **DNS dibuka duluan.** Tanpa itu browser tak pernah sampai membuka koneksi, jadi tak ada
+  apa pun untuk dilempar dan pelanggan cuma melihat "server tak ditemukan".
+- **HTTPS ditolak, bukan dilempar.** Mengalihkan port 443 ke server lain memunculkan
+  peringatan sertifikat — pelanggan malah yakin jaringannya dibajak. Yang benar-benar
+  membuka halaman tagihan adalah **deteksi captive portal ponsel**: ia memakai HTTP polos,
+  jadi notifikasi "Masuk ke jaringan" muncul sendiri.
+- **Sisanya `reject`, bukan `drop`.** Reject bikin aplikasi gagal seketika; drop bikin ia
+  menggantung sampai timeout dan pelanggan menyimpulkan "internet mati" lalu menelepon.
+- Nama address-list-nya diatur platform (`FTTH_RADIUS_ISOLIR_ADDRESS_LIST`, bawaan
+  `isolir`) dan **wajib sama persis** dengan yang kamu tulis di aturan firewall.
+- Sisa kecepatannya `FTTH_RADIUS_ISOLIR_RATE_LIMIT` (bawaan `1M/1M`). Sengaja bukan nol:
+  halaman tagihan harus tetap bisa dimuat.
+
+### Memulihkan
+
+Tekan **Pulihkan** (atau pembayaran masuk lewat penagihan) → grup paketnya disinkronkan
+ulang, akun dikembalikan ke sana, lalu **sesinya diputus sekali lagi**. Pemutusan itu bukan
+basa-basi: keanggotaan address-list menempel pada **sesi**, bukan pada akun, jadi selama
+sesi isolirnya belum mati routermu tetap melempar pelanggan ke halaman tagihan betapapun
+grup RADIUS-nya sudah benar. Satu kedipan beberapa detik jauh lebih murah daripada
+pelanggan yang sudah membayar tapi tetap terkurung.
+
+### Menguji tanpa menunggu tagihan
+
+1. Pastikan aturan di atas terpasang di router, dan BRAS-nya **terjangkau server**
+   (kolom rute di form bukan "Tak terjangkau" — lihat [jebakan NAT](#jebakan-nat--jaringan-sering-bikin-gagal)).
+2. Detail pelanggan → tab **Akses** → **Isolir**.
+3. Dalam ±20 detik sesi PPPoE-nya putus (dua worker: grup dulu, baru pemutusan). CPE dial
+   ulang sendiri dan **berhasil** — cek di router `/ip firewall address-list print` :
+   IP-nya sudah masuk daftar `isolir`.
+4. Dari perangkat pelanggan, buka situs apa pun **berawalan `http://`** → mendarat di
+   halaman tagihan. Situs HTTPS gagal seketika (itu memang yang diharapkan).
+5. Tekan **Pulihkan** → sesi putus sekali lagi, dial ulang, IP-nya hilang dari daftar
+   `isolir`, internet normal.
+
+> **Diisolir tapi internetnya lancar?** Urutan curiga: (a) nama address-list di router beda
+> dengan yang dikirim RADIUS; (b) aturan `isolir` kalah urutan dari aturan `accept` yang
+> lebih atas di chain `forward` — pindahkan ke atas; (c) sesinya belum benar-benar putus,
+> jadi masih memakai otorisasi lama.
+
+> **Diisolir tapi malah tak bisa apa-apa (bahkan halaman tagihan)?** Hampir selalu DNS:
+> pastikan dua baris port 53 ada dan berada **di atas** baris `reject` penutup.
+
+---
+
 ## Setelah daftar: bikin akun jaringan pelanggan
 
 Mendaftarkan BRAS hanya sekali per router. Akun per-pelanggan dibuat di **detail
@@ -212,5 +290,7 @@ menyentuh SQL apa pun.
 - Arahkan ke **IP publik VPS mentah** (bukan domain Cloudflare); buka **1812/1813 udp**
   (+ **3799** di router untuk CoA).
 - Router di-NAT → **join VPN**, isi overlay IP; kalau tidak, CoA baru jalan saat login ulang.
+- **Isolir tak memutus login** — pelanggan tetap masuk tapi mendarat di halaman tagihan;
+  aturan walled-garden-nya harus dipasang di routermu, salin dari kartu di form BRAS.
 </content>
 </invoke>

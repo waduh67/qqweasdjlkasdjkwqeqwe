@@ -117,6 +117,12 @@ export interface RadiusEndpointView {
   configured: boolean
   /** Alamat RADIUS versi overlay, satu per blok tunnel VPN; kosong bila VPN tak dipakai. */
   vpnHosts: RadiusVpnHostView[]
+  /**
+   * Nama address-list yang RADIUS kirimkan untuk pelanggan terisolir. Router WAJIB memakai
+   * nama yang sama persis di aturan firewall-nya: salah satu huruf saja, daftarnya terisi
+   * tapi tak ada aturan yang membacanya — pelanggan "terisolir" yang internetnya lancar.
+   */
+  isolirAddressList: string
 }
 
 /**
