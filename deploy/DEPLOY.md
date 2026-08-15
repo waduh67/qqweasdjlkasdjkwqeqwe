@@ -198,6 +198,24 @@ git push origin main
 Buka GitHub → tab **Actions** → lihat workflow **deploy** jalan (test → build → deploy).
 Sekitar 5–10 menit pertama (build image dari nol). Kalau semua hijau, selesai.
 
+> **CI cuma mengirim IMAGE, bukan `docker-compose.prod.yml` dan bukan `.env`.** Langkah
+> deploy-nya harfiah `docker compose pull && up -d` di `/opt/ftth` — berkas compose &
+> `.env` di VPS tetap seperti terakhir kali kamu menyalinnya. Jadi tiap kali sebuah rilis
+> menambah variabel lingkungan baru (mis. `FTTH_CPE_PUBLIC_HOST` untuk kartu Setelan ONT),
+> fitur itu akan diam-diam mati di prod: aplikasinya baru, tapi compose lamanya tak pernah
+> meneruskan var itu ke container. Gejalanya menipu — fiturnya bilang "belum dikonfigurasi"
+> padahal `.env`-nya terisi. Setelah rilis yang menyentuh `deploy/`, salin ulang:
+>
+> ```bash
+> scp deploy/docker-compose.prod.yml <user>@<vps>:/opt/ftth/     # dari laptop, root repo
+> ssh <user>@<vps> 'cd /opt/ftth && diff <(docker compose config) /dev/null >/dev/null && \
+>   docker compose -f docker-compose.prod.yml up -d'
+> ```
+>
+> Cara cepat memastikan sebuah var benar-benar sampai:
+> `docker exec ftth-server-1 env | grep NAMA_VAR` — kalau tak muncul, yang salah compose
+> di VPS, bukan `.env`.
+
 **Mau nyalain manual dulu tanpa push?** Bisa juga langsung di VPS setelah image ke-build
 minimal sekali (push dulu biar image ada di GHCR), lalu di VPS:
 
