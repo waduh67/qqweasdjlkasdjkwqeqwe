@@ -31,4 +31,25 @@ class VpnApiService(
                 }
             }
             .distinctBy { it.tunnelCidr }
+
+    /**
+     * Alamat yang tak berbentuk IPv4 (nama host, isian setengah jadi) bukan kesalahan yang
+     * perlu diteriakkan — ia cuma bukan penghuni tunnel. `contains` melempar untuk masukan
+     * begitu, jadi lemparannya diserap di sini dan dijawab "bukan".
+     */
+    override fun tunnelContaining(address: String): VpnTunnelRef? {
+        val candidate = address.trim().ifBlank { return null }
+        return serverRepository.findAll()
+            .filter { it.status == VpnServerStatus.ACTIVE }
+            .firstNotNullOfOrNull { server ->
+                val subnet = runCatching { TunnelSubnet.parse(server.tunnelCidr) }.getOrNull()
+                    ?: return@firstNotNullOfOrNull null
+                val inside = runCatching { subnet.contains(candidate) }.getOrDefault(false)
+                if (inside) {
+                    VpnTunnelRef(tunnelCidr = server.tunnelCidr, serverAddress = subnet.serverAddress())
+                } else {
+                    null
+                }
+            }
+    }
 }

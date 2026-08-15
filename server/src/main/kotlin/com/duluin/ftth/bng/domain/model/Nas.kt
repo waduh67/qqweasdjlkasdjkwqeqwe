@@ -16,7 +16,70 @@ enum class NasVendor { MIKROTIK, CISCO, JUNIPER, OTHER }
  *  - [COLLECTOR] NAS di-NAT tanpa VPN: titipkan ke agent on-prem yang sekamar dengan NAS.
  *  - [NONE]      tak terjangkau apa pun: degradasi anggun — perubahan berlaku saat login ulang.
  */
-enum class NasReachability { DIRECT, VPN, COLLECTOR, NONE }
+enum class NasReachability {
+    DIRECT, VPN, COLLECTOR, NONE,
+    ;
+
+    companion object {
+        /**
+         * Simpulkan rute kontrol dari keadaan BRAS yang SUDAH diisi operator — bukan dari
+         * pilihan terpisah yang harus ia tebak sendiri.
+         *
+         * Alasannya keras: rute yang salah tak pernah bersuara. Isolir dan Reset Login cuma
+         * mengantre lalu diam, pelanggan yang mestinya terputus tetap online, dan tak ada
+         * satu pun layar yang keberatan. Sementara semua bahan jawabannya sudah ada — ada
+         * tidaknya collector, dan alamat BRAS-nya jatuh di mana — jadi menyodorkan pilihan
+         * itu ke operator hanya memindahkan kesempatan salah, bukan menghilangkannya.
+         *
+         * Urutannya menirukan urutan di lapangan:
+         *  - Punya collector → COLLECTOR. Agent on-prem sekamar dengan BRAS memang jalur
+         *    yang sengaja dipilih operator; ia menang bahkan atas alamat publik.
+         *  - Tanpa alamat → NONE. Tak ada yang bisa ditembak, dan berpura-pura punya rute
+         *    hanya menunda kabar buruknya.
+         *  - Alamat di dalam blok tunnel ([insideVpnOverlay]) → VPN.
+         *  - Alamat yang benar-benar bisa dirute dari luar → DIRECT. Nama host ikut ke sini:
+         *    kalau ia ditulis, ia dimaksudkan bisa diresolusi.
+         *  - Sisanya — privat/CGNAT di balik NAT tanpa tunnel — → COLLECTOR. Paket DAE dari
+         *    server memang tak akan sampai ke sana, tapi justru itulah yang dikerjakan agent
+         *    on-prem yang sekamar dengan BRAS, dan BRAS yang belum ditugaskan ke collector
+         *    mana pun dilayani collector tenant yang ada (bawaan ISP satu collector).
+         */
+        fun resolve(address: String?, collectorId: UUID?, insideVpnOverlay: Boolean): NasReachability {
+            if (collectorId != null) return COLLECTOR
+            val host = address?.trim()?.takeIf { it.isNotEmpty() } ?: return NONE
+            if (insideVpnOverlay) return VPN
+            val octets = ipv4Octets(host) ?: return DIRECT
+            return if (isPubliclyRoutable(octets)) DIRECT else COLLECTOR
+        }
+
+        /** Empat oktet [ip], atau null bila bukan IPv4 dotted-quad (mis. nama host / IPv6). */
+        private fun ipv4Octets(ip: String): List<Int>? {
+            val parts = ip.split(".")
+            if (parts.size != 4) return null
+            val octets = parts.map { it.toIntOrNull() ?: return null }
+            return octets.takeIf { all -> all.all { it in 0..255 } }
+        }
+
+        /**
+         * Alamat yang paket dari internet bisa mencapainya. Yang dikecualikan adalah blok
+         * yang pasti tak bisa: RFC1918 privat, CGNAT (100.64/10 — dipakai ISP di atas ISP,
+         * dan router di baliknya tak punya IP sendiri), loopback, link-local, serta 0/8 dan
+         * ≥224 (multicast/reserved) yang bukan alamat host sama sekali.
+         */
+        @Suppress("MagicNumber")
+        private fun isPubliclyRoutable(octets: List<Int>): Boolean {
+            val (a, b) = octets
+            return when {
+                a == 10 || a == 127 || a == 0 || a >= 224 -> false
+                a == 172 && b in 16..31 -> false
+                a == 192 && b == 168 -> false
+                a == 169 && b == 254 -> false
+                a == 100 && b in 64..127 -> false
+                else -> true
+            }
+        }
+    }
+}
 
 /**
  * Satu BRAS/BNG (Network Access Server) milik tenant — router master yang menutup
@@ -87,9 +150,11 @@ class Nas private constructor(
         private set
 
     /**
-     * Rute kontrol sesi (DAE) ke NAS ini. Ditetapkan saat pembuatan dan dijaga lintas
-     * [update] (bukan field form biasa; S3 yang menyambungkannya ke form self-service),
-     * agar sunting field lain tak diam-diam mereset rute jadi COLLECTOR.
+     * Rute kontrol sesi (DAE) ke NAS ini — bukan isian form, melainkan simpulan dari
+     * [address]/[collectorId] lewat [NasReachability.resolve]. Ikut dihitung ulang tiap
+     * [update] justru karena bahannya bisa berubah: BRAS yang tadinya dititipkan ke
+     * collector lalu dipasangi tunnel harus segera dilayani lewat tunnel itu, tanpa
+     * menunggu seseorang ingat menggeser sebuah pilihan.
      */
     var reachability: NasReachability = reachability
         private set
@@ -107,6 +172,7 @@ class Nas private constructor(
         apiSecret: String?,
         apiPort: Int?,
         apiUseTls: Boolean,
+        reachability: NasReachability,
     ) {
         this.name = validateName(name)
         this.vendor = vendor
@@ -122,6 +188,7 @@ class Nas private constructor(
         apiSecret?.trim()?.takeIf { it.isNotEmpty() }?.let { this.apiSecret = validateSecret(it, "Password kontrol BRAS") }
         this.apiPort = validateApiPort(apiPort)
         this.apiUseTls = apiUseTls
+        this.reachability = reachability
     }
 
     companion object {
@@ -138,7 +205,9 @@ class Nas private constructor(
             apiSecret: String? = null,
             apiPort: Int? = null,
             apiUseTls: Boolean = true,
-            reachability: NasReachability = NasReachability.COLLECTOR,
+            // Sengaja tanpa nilai bawaan: rute yang salah tak bersuara (isolir cuma mengantre
+            // lalu diam), jadi pemanggil harus menyimpulkannya lewat [NasReachability.resolve].
+            reachability: NasReachability,
         ): Nas = Nas(
             id = UuidV7.generate(),
             tenantId = tenantId,
@@ -172,7 +241,7 @@ class Nas private constructor(
             apiSecret: String? = null,
             apiPort: Int? = null,
             apiUseTls: Boolean = true,
-            reachability: NasReachability = NasReachability.COLLECTOR,
+            reachability: NasReachability,
         ): Nas = Nas(
             id, tenantId, name, vendor, address, nasIdentifier, coaSecret, collectorId, enabled,
             apiUsername, apiSecret, apiPort, apiUseTls, reachability,

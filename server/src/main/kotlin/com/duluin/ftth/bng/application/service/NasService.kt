@@ -13,6 +13,7 @@ import com.duluin.ftth.bng.application.port.outbound.RouterOsPort
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.config.RadiusProperties
 import com.duluin.ftth.bng.domain.model.Nas
+import com.duluin.ftth.bng.domain.model.NasReachability
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
@@ -79,6 +80,7 @@ class NasService(
                 apiSecret = command.apiSecret,
                 apiPort = command.apiPort,
                 apiUseTls = command.apiUseTls,
+                reachability = resolveReachability(command),
             ),
         )
         syncRadiusClient(nas)
@@ -107,6 +109,7 @@ class NasService(
             apiSecret = command.apiSecret,
             apiPort = command.apiPort,
             apiUseTls = command.apiUseTls,
+            reachability = resolveReachability(command),
         )
         val saved = nasRepository.save(nas)
         syncRadiusClient(saved, previousAddress)
@@ -142,6 +145,22 @@ class NasService(
 
     private fun require(id: UUID): Nas =
         nasRepository.findById(id) ?: throw NotFoundException("BRAS $id tidak ditemukan")
+
+    /**
+     * Simpulkan rute kontrol sesi BRAS ini. Modul `vpn` yang menjawab "alamat ini penghuni
+     * tunnel yang mana" — aritmetika blok tunnel miliknya, bukan urusan `bng`; sisanya aturan
+     * domain di [NasReachability.resolve].
+     *
+     * Dihitung ulang tiap simpan supaya rute mengikuti alamat, bukan sebaliknya: begitu
+     * operator mengganti alamat BRAS dari IP publik ke alamat tunnel (atau melepas
+     * collector-nya), jalur isolir/Reset Login ikut pindah pada simpan yang sama.
+     */
+    private fun resolveReachability(command: SaveNasCommand): NasReachability =
+        NasReachability.resolve(
+            address = command.address,
+            collectorId = command.collectorId,
+            insideVpnOverlay = command.address?.let { vpnApi.tunnelContaining(it) } != null,
+        )
 
     /**
      * Ganti total cakupan area sebuah BRAS. Menolak area yang sudah dinaungi BRAS LAIN agar
@@ -203,4 +222,5 @@ private fun Nas.toView(areaIds: List<UUID>) = NasView(
     apiPort = apiPort,
     apiUseTls = apiUseTls,
     areaIds = areaIds,
+    reachability = reachability.name,
 )

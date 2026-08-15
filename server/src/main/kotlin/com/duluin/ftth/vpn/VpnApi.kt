@@ -21,6 +21,16 @@ interface VpnApi {
      * VPN belum dipakai sama sekali.
      */
     fun overlayTunnels(): List<VpnTunnelRef>
+
+    /**
+     * Blok overlay yang memuat [address], atau null bila alamat itu bukan penghuni tunnel
+     * mana pun — IP publik, alamat privat di balik NAT, nama host, atau isian yang belum
+     * berbentuk alamat.
+     *
+     * Dipakai modul lain untuk menjawab "perangkat ini bisa kami hubungi balik atau tidak?"
+     * tanpa ikut menghitung sendiri aritmetika CIDR-nya.
+     */
+    fun tunnelContaining(address: String): VpnTunnelRef?
 }
 
 /**

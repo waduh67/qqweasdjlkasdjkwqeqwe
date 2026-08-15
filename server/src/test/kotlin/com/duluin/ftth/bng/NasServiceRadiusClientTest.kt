@@ -22,6 +22,7 @@ import com.duluin.ftth.tenancy.TenantRef
 import com.duluin.ftth.tenancy.TenantStatus
 import com.duluin.ftth.vpn.VpnApi
 import com.duluin.ftth.vpn.VpnTunnelRef
+import com.duluin.ftth.vpn.domain.model.TunnelSubnet
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -184,6 +185,52 @@ class NasServiceRadiusClientTest {
             .satisfies({ assertThat(it.tunnelCidr).isEqualTo("10.8.0.0/24") }, { assertThat(it.host).isEqualTo("10.8.0.1") })
     }
 
+    @Test
+    fun `rute kontrol sesi tersimpul dari alamat dan collector, tanpa isian terpisah`() {
+        val svc = service(
+            FakeClientRegistry(configured = false),
+            vpn = FakeVpnApi(listOf(VpnTunnelRef(tunnelCidr = "10.8.0.0/24", serverAddress = "10.8.0.1"))),
+        )
+        val collectorId = UuidV7.generate()
+
+        // Penghuni blok tunnel → server menembak DAE lewat overlay.
+        assertThat(svc.create(command(name = "Rumah", address = "10.8.0.3", coaSecret = "s")).reachability)
+            .isEqualTo("VPN")
+        // IP publik → tembak langsung.
+        assertThat(svc.create(command(name = "Pusat", address = "103.10.20.30", coaSecret = "s")).reachability)
+            .isEqualTo("DIRECT")
+        // Privat di balik NAT tanpa tunnel: paket DAE dari server tak akan sampai, tapi itu
+        // memang wilayah agent on-prem — bukan jalan buntu.
+        assertThat(svc.create(command(name = "Cabang", address = "192.168.88.1", coaSecret = "s")).reachability)
+            .isEqualTo("COLLECTOR")
+        // Belum beralamat sama sekali.
+        assertThat(svc.create(command(name = "Baru", address = null, coaSecret = null)).reachability)
+            .isEqualTo("NONE")
+        // Agent on-prem sekamar dengan BRAS menang bahkan atas alamat publik — ia yang sengaja dipasang.
+        assertThat(
+            svc.create(
+                command(name = "Titipan", address = "103.10.20.31", coaSecret = "s", collectorId = collectorId),
+            ).reachability,
+        ).isEqualTo("COLLECTOR")
+    }
+
+    // Inti bug yang diperbaiki: rute tak boleh membeku di nilai saat pendaftaran. BRAS yang
+    // baru dipasangi tunnel harus langsung dilayani lewat tunnel itu — kalau tidak, isolir
+    // dan Reset Login mengantre selamanya tanpa satu pun layar yang keberatan.
+    @Test
+    fun `ganti alamat BRAS ikut memindahkan rute kontrol sesinya`() {
+        val svc = service(
+            FakeClientRegistry(configured = false),
+            vpn = FakeVpnApi(listOf(VpnTunnelRef(tunnelCidr = "10.8.0.0/24", serverAddress = "10.8.0.1"))),
+        )
+        val created = svc.create(command(address = "192.168.88.1", coaSecret = "s"))
+        assertThat(created.reachability).isEqualTo("COLLECTOR")
+
+        val moved = svc.update(created.id, command(address = "10.8.0.3", coaSecret = null))
+
+        assertThat(moved.reachability).isEqualTo("VPN")
+    }
+
     // ---- Fixture & fake ----
 
     private fun service(
@@ -204,9 +251,17 @@ class NasServiceRadiusClientTest {
         )
     }
 
-    /** Bawaan: platform tanpa overlay VPN sama sekali. */
+    /**
+     * Bawaan: platform tanpa overlay VPN sama sekali. Pencocokan blok memakai [TunnelSubnet]
+     * yang sama dengan implementasi aslinya — fake yang mengarang aritmetika CIDR sendiri
+     * bisa saja hijau untuk aturan yang salah.
+     */
     private class FakeVpnApi(private val tunnels: List<VpnTunnelRef> = emptyList()) : VpnApi {
         override fun overlayTunnels(): List<VpnTunnelRef> = tunnels
+
+        override fun tunnelContaining(address: String): VpnTunnelRef? = tunnels.firstOrNull {
+            runCatching { TunnelSubnet.parse(it.tunnelCidr).contains(address.trim()) }.getOrDefault(false)
+        }
     }
 
     private fun command(
@@ -214,13 +269,15 @@ class NasServiceRadiusClientTest {
         coaSecret: String?,
         enabled: Boolean = true,
         areaIds: List<UUID> = emptyList(),
+        name: String = "BRAS Utama",
+        collectorId: UUID? = null,
     ) = SaveNasCommand(
-        name = "BRAS Utama",
+        name = name,
         vendor = NasVendor.MIKROTIK,
         address = address,
         nasIdentifier = null,
         coaSecret = coaSecret,
-        collectorId = null,
+        collectorId = collectorId,
         enabled = enabled,
         areaIds = areaIds,
     )

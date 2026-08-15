@@ -24,6 +24,13 @@ data class NasView(
     val apiUseTls: Boolean,
     /** Area yang dinaungi BRAS ini — dipakai PSB untuk auto-pilih BRAS dari area pelanggan. */
     val areaIds: List<UUID>,
+    /**
+     * Rute kontrol sesi yang tersimpul dari alamat & collector BRAS ini (DIRECT/VPN/
+     * COLLECTOR/NONE) — bukan isian, melainkan akibat. Ditampilkan supaya operator melihat
+     * lebih dulu bahwa isolir & Reset Login ke BRAS ini takkan sampai (NONE), alih-alih
+     * menemukannya dari pelanggan yang mestinya terputus tapi tetap online.
+     */
+    val reachability: String,
 )
 
 /**
