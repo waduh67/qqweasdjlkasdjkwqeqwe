@@ -143,6 +143,30 @@ dibanding `ftth.cpe.online-stale-after` (default `PT15M`), bukan disimpan.
 
 ---
 
+## Jalan balik ke perangkat: "ACS Connect" vs "Not Connect"
+
+TR-069 punya dua arah yang gampang tertukar. **Inform** datang dari perangkat ke ACS —
+selalu jalan, karena ONT yang men-dial keluar. **Connection request** berangkat dari ACS
+ke perangkat, dan itu perlu jalan balik ke alamat ONT yang tak punya IP publik. Semua
+aksi seketika (reboot, ganti SSID/password, tarik parameter, speedtest, download firmware)
+menempuh arah kedua.
+
+Karena itu tiap aksi melaporkan hasilnya apa adanya:
+
+- **ACS Connect** (200) — perangkat menyahut saat itu juga; perintah sudah dijalankan.
+- **Not Connect** (202) — task **diantre** di GenieACS dan baru jalan pada Periodic Inform
+  berikutnya (bawaan lapangan ~5 menit). Bukan gagal, cuma tertunda.
+
+Yang membuat bedanya bukan setelan di modul ini melainkan **rute** dari VPS ke kolam
+alamat pelanggan. Bila BRAS-nya sudah masuk tunnel VPN kami, daftarkan kolam PPPoE-nya
+sebagai **blok di belakang akun VPN** (lihat [`vpn.md`](vpn.md)) — sesudah itu 202 yang
+tadinya jadi kebiasaan berubah jadi 200. Sisanya di sisi perangkat: chain `forward` di
+router pelanggan harus mengizinkan `tcp/7547` dari arah tunnel, dan alamat
+connection-request yang dilaporkan ONT (`ConnectionRequestURL`) harus alamat yang
+memang bisa dituju dari VPS — ONT di belakang NAT ganda tetap tak terjangkau.
+
+---
+
 ## Firmware: aplikasi memerintah, GenieACS menyimpan
 
 Berkas firmware tinggal di **GridFS** milik GenieACS, bukan di MinIO kita.

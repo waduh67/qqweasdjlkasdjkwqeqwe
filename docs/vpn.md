@@ -44,6 +44,12 @@ VpnPortForward (satu PINTU dari internet ke perangkat; banyak per akun, maks 10)
 ├── devicePort           (port layanan di perangkat — BISA diubah)
 ├── protocol  TCP / UDP  (SNMP dsb. UDP)
 └── label                (ditebak dari port lazim: 8291 Winbox, 8728 API, 22 SSH, …)
+
+VpnPeerRoute (satu BLOK yang hidup DI BELAKANG perangkat; maks 8 per akun)
+├── peerId / serverId    (anak `vpn_peer`, ON DELETE CASCADE)
+├── cidr                 (kolam pelanggan, mis. 10.20.0.0/16 — tak boleh beririsan
+│                         dengan blok akun lain di HUB yang sama)
+└── label                (bebas; kosong → dinamai dari bloknya)
 ```
 
 `TunnelSubnet` adalah value object CIDR IPv4 murni (matematika 32-bit):
@@ -77,9 +83,12 @@ di-allowlist di `SecurityConfig` (`/api/vpn/provision/**`):
 - `POST /api/vpn/provision/authenticate` — dipanggil `auth-user-pass-verify`; cocokkan
   username/password akun (banding waktu-tetap), hanya akun **ENABLED** → 204/403.
 - `POST /api/vpn/provision/client-connect` — kunci IP overlay tetap akun
-  (`ifconfig-push {overlayIp} {netmask}`).
+  (`ifconfig-push {overlayIp} {netmask}`), plus satu baris `iroute` per blok di
+  belakang akun itu.
 - `POST /api/vpn/provision/forwards` — **tabel penerusan port seluruh hub**, ditarik
   berkala oleh timer `ftth-vpn-sync` di VPS (lihat bagian berikutnya).
+- `POST /api/vpn/provision/routes` — **tabel blok pelanggan seluruh hub**, ditarik
+  timer yang sama untuk menyamakan rute kernel + NAT.
 - `POST /api/vpn/provision/client-connected` / `…/client-disconnected` — **telemetri
   liveness**: hub melapor akun terhubung/putus → aplikasi menandai `online` + `lastHandshakeAt`.
 
@@ -169,6 +178,54 @@ supaya timer penyelaras ada.
 
 ---
 
+## Blok di belakang peer: menjangkau pelanggan, bukan cuma perangkatnya
+
+Penerusan port membuka jalan ke **perangkatnya**. Yang sering dibutuhkan justru
+jalan ke semua yang hidup **di belakangnya** — kolam PPPoE pelanggan. Tanpa itu,
+server hanya bisa menunggu: connection request TR-069 ke ONT tak terkirim, jadi
+reboot/ganti SSID/tarik status baru berangkat saat ONT menyapa sendiri (Periodic
+Inform, lazimnya tiap 5 menit). Dengan bloknya terdaftar, perintah yang sama
+berangkat dalam hitungan detik.
+
+Bloknya **didaftarkan, bukan ditebak**: hub perlu tahu blok mana milik peer yang
+mana. Dua ISP bisa sama-sama memakai `10.20.0.0/16`, dan salah tebak berarti
+trafik satu tenant dikirim ke router tenant lain — karena itu `VpnPeerRoute`
+menolak blok yang **beririsan dengan blok akun lain di hub yang sama** (pengecekan
+lintas-tenant, cermin keunikan username/overlay).
+
+Satu blok butuh **empat** artefak di hub, dan hilangnya salah satu adalah lubang
+hitam yang **tak meninggalkan baris log di mana pun**:
+
+1. `iroute` — tabel internal OpenVPN: "blok ini di balik peer yang mana".
+2. **rute kernel** (`ip route … dev tun0`) — supaya paketnya masuk ke tun sama sekali.
+3. **MASQUERADE** `-d {blok}` — supaya ONT membalas ke `10.8.0.1` (alamat hub di
+   overlay) alih-alih ke alamat container yang tak terjangkau darinya.
+4. **FORWARD ACCEPT dua arah** — Docker menyetel kebijakan `FORWARD` ke DROP di
+   VPS yang menjalankan container (GenieACS di stack kami salah satunya).
+
+Yang nomor 1 datang lewat `client-connect` (berlaku saat perangkat men-dial);
+2–4 lewat penyelaras `ftth-sync.sh` yang menarik `POST …/provision/routes`
+(berlaku ≤ ~1 menit, pulih sendiri setelah reboot). Sama seperti penerusan port:
+**penanda `#ftth-routes` wajib jadi baris pertama** (gagal-aman saat aplikasi
+mati), dan hanya artefak bertanda kami yang boleh dicabut — rute ditandai
+`proto 210`, aturan iptables ditandai `--comment "ftth-blok"`. Rute yang dibuat
+operator sendiri di tun yang sama tak akan tersapu.
+
+> **Kompatibilitas hub lama.** Balasan `client-connect` tumbuh ke **bawah** (baris
+> `iroute` menyusul baris `ifconfig-push`), tak melebar ke kanan: hub yang sudah
+> terpasang mem-parse-nya dengan `read -r ip mask port` dan sekadar mengabaikan
+> sisanya. **Jalankan ulang installer** di hub untuk mengaktifkan rutenya.
+
+Mendaftarkan blok di aplikasi belum cukup bila **chain `forward` di Mikrotik-nya**
+masih menutup jalan itu — kegagalan yang juga bisu di kedua sisi. Panel “Blok
+pelanggan” di web merakit aturannya siap-salin (`in-interface=ovpn-{username}`
+dua arah, `place-before=0` supaya tak keburu tertangkap aturan drop bawaan).
+
+Menonaktifkan akun ikut mencabut rute ke blok di belakangnya — tanpa itu,
+"menonaktifkan" cuma menutup pintu depan sementara pintu belakang tetap terbuka.
+
+---
+
 ## Non-RLS lintas-tenant (cermin `collector`)
 
 Satu hub platform dibagi banyak tenant, jadi username/overlay harus unik **per hub
@@ -201,9 +258,10 @@ Artefak siap-unduh, dirender dari entitas yang rahasianya **sudah terdekripsi**:
    (`/interface ovpn-client add cipher=aes256-cbc certificate=none`) untuk perangkat lama —
    hanya pada hub TCP.
 3. **`server.conf` + client-config-dir** (`GET /servers/{id}/config`, admin platform)
-   — isi `server.conf` plus map `username → ifconfig-push {overlayIp} {netmask}` untuk
-   tiap akun **ENABLED**. (Umumnya tak perlu disentuh manual: installer sudah
-   menuliskannya dan callback yang mengunci IP.)
+   — isi `server.conf` (termasuk `route` tiap blok terdaftar) plus map
+   `username → ifconfig-push {overlayIp} {netmask}` + `iroute` bloknya untuk tiap akun
+   **ENABLED**. (Umumnya tak perlu disentuh manual: installer sudah menuliskannya dan
+   callback yang mengunci IP.)
 
 ---
 
@@ -257,6 +315,7 @@ Artefak siap-unduh, dirender dari entitas yang rahasianya **sudah terdekripsi**:
 | `POST /api/vpn/accounts/generate` | `vpn.peer.manage` |
 | `POST /api/vpn/accounts/{id}/{enable,disable,rotate-password}` · `DELETE` | `vpn.peer.manage` |
 | `POST /api/vpn/accounts/{id}/forwards` · `PUT`/`DELETE` `…/forwards/{forwardId}` | `vpn.peer.manage` |
+| `POST /api/vpn/accounts/{id}/routes` · `PUT`/`DELETE` `…/routes/{routeId}` | `vpn.peer.manage` |
 | `GET /api/vpn/accounts/{id}/ovpn` · `/routeros` (`?variant=V7\|V6`) | `vpn.config.view` |
 
 **Provisioning (dari VPS, auth via token node — tanpa bearer, di-allowlist):**
@@ -267,6 +326,7 @@ Artefak siap-unduh, dirender dari entitas yang rahasianya **sudah terdekripsi**:
 | `POST /api/vpn/provision/authenticate` | token node |
 | `POST /api/vpn/provision/client-connect` | token node |
 | `POST /api/vpn/provision/forwards` | token node |
+| `POST /api/vpn/provision/routes` | token node |
 | `POST /api/vpn/provision/client-connected` · `/client-disconnected` | token node |
 
 Hapus hub ditolak selama masih menampung akun.
