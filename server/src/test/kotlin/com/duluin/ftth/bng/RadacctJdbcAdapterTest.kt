@@ -34,7 +34,7 @@ class RadacctJdbcAdapterTest {
     fun `menyaring per kode tenant, mengupas prefiks, membersihkan topeng, dan dedup`() {
         val db = RecordingDb(
             rows = listOf(
-                row("acme:budi", nasIp = "10.0.0.1/32", framedIp = "100.64.0.5/32", sessionId = "s-budi", uptime = 3600, up = 111, down = 222),
+                row("acme:budi", nasIp = "10.0.0.1/32", framedIp = "100.64.0.5/32", sessionId = "s-budi", uptime = 3600, up = 111, down = 222, updatedAt = INTERIM_AT),
                 row("acme:andi", nasIp = "10.0.0.1", framedIp = null, sessionId = "s-andi", uptime = null, up = null, down = null),
                 // Baris basi untuk budi (acctstarttime lebih lama) → dibuang oleh dedup.
                 row("acme:budi", nasIp = "10.0.0.9/32", framedIp = "100.64.0.99/32", sessionId = "s-budi-old", uptime = 10, up = 1, down = 2),
@@ -47,7 +47,8 @@ class RadacctJdbcAdapterTest {
         // bangkai (baris yang interim-update-nya sudah berhenti).
         assertThat(db.sql).isEqualTo(
             "SELECT username, framedipaddress, nasipaddress, acctsessionid, callingstationid, " +
-                "acctsessiontime, acctinputoctets, acctoutputoctets, acctinputgigawords, acctoutputgigawords " +
+                "acctsessiontime, acctinputoctets, acctoutputoctets, acctinputgigawords, acctoutputgigawords, " +
+                "acctupdatetime " +
                 "FROM radacct WHERE acctstoptime IS NULL " +
                 "AND (username LIKE ? OR username = ANY(?)) " +
                 "AND (acctupdatetime IS NULL OR acctupdatetime <= acctstarttime OR acctupdatetime >= ?) " +
@@ -76,6 +77,9 @@ class RadacctJdbcAdapterTest {
         assertThat(budi.uptimeSeconds).isEqualTo(3600)
         assertThat(budi.inOctets).isEqualTo(111)
         assertThat(budi.outOctets).isEqualTo(222)
+        // Penghitung dicap waktu NAS (acctupdatetime), bukan waktu baca — dasar laju Mbps
+        // yang benar walau interim-update jauh lebih jarang daripada periode poll.
+        assertThat(budi.countersAt).isEqualTo(INTERIM_AT)
 
         // Kolom NULL → null (bukan 0/kosong).
         val andi = out.first { it.username == "andi" }
@@ -83,6 +87,8 @@ class RadacctJdbcAdapterTest {
         assertThat(andi.uptimeSeconds).isNull()
         assertThat(andi.inOctets).isNull()
         assertThat(andi.outOctets).isNull()
+        // Router tanpa interim-update tak punya waktu penghitung → penyerap jatuh ke waktu baca.
+        assertThat(andi.countersAt).isNull()
     }
 
     @Test
@@ -123,6 +129,7 @@ class RadacctJdbcAdapterTest {
         down: Long? = null,
         upGig: Long? = null,
         downGig: Long? = null,
+        updatedAt: Instant? = null,
     ): Map<String, Any?> = mapOf(
         "username" to username,
         "nasipaddress" to nasIp,
@@ -134,6 +141,7 @@ class RadacctJdbcAdapterTest {
         "acctoutputoctets" to down,
         "acctinputgigawords" to upGig,
         "acctoutputgigawords" to downGig,
+        "acctupdatetime" to updatedAt,
     )
 
     /** Resolver koneksi tiruan (lihat catatan di [FreeRadiusJdbcAdapterTest]). */
@@ -220,6 +228,9 @@ class RadacctJdbcAdapterTest {
                     when (method.name) {
                         "next" -> { idx++; idx < rows.size }
                         "getString" -> rows[idx][args!![0] as String].also { lastWasNull = it == null }
+                        "getTimestamp" -> (rows[idx][args!![0] as String] as? Instant)
+                            ?.let { java.sql.Timestamp.from(it) }
+                            .also { lastWasNull = it == null }
                         "getLong" -> {
                             val v = rows[idx][args!![0] as String]
                             lastWasNull = v == null
@@ -247,5 +258,8 @@ class RadacctJdbcAdapterTest {
     private companion object {
         /** Sama dengan bawaan `ftth.radius.acct-interim-stale-after`. */
         val INTERIM_STALE_AFTER: Duration = Duration.ofHours(1)
+
+        /** Waktu Interim-Update terakhir menurut NAS — dibulatkan ke detik seperti `timestamptz`. */
+        val INTERIM_AT: Instant = Instant.parse("2026-08-16T16:05:00Z")
     }
 }

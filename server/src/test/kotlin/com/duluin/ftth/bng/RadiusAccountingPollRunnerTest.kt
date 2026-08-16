@@ -72,6 +72,27 @@ class RadiusAccountingPollRunnerTest {
     }
 
     @Test
+    fun `titik akunting dicap waktu NAS, bukan waktu poll`() {
+        val budi = access("budi")
+        // NAS terakhir memperbarui penghitung 4 menit lalu (Interim-Update jarang, mis. 5 menit),
+        // sedangkan poller membacanya SEKARANG. Memakai waktu poll akan memampatkan pertambahan
+        // 5 menit ke jarak 30 detik → laju Mbps melar berlipat, diselingi titik berlaju nol saat
+        // interim belum bergerak. Waktu NAS membuat cuplikan kembar runtuh jadi satu baris.
+        val interimAt = now.minusSeconds(240)
+        val fixture = fixture(
+            accesses = listOf(budi),
+            observations = listOf(observation("budi", nasIp = "10.0.0.1", up = 111, down = 222, countersAt = interimAt)),
+        )
+
+        fixture.runner.execute(tenantId, now)
+
+        assertThat(fixture.accounting.saved.single().time).isEqualTo(interimAt)
+        // Keadaan sesi tetap dicap waktu baca: "kapan terakhir kita melihatnya hidup" memang
+        // pertanyaan tentang jam kita, bukan jam NAS.
+        assertThat(fixture.sessions.saved.single().lastSeenAt).isEqualTo(now)
+    }
+
+    @Test
     fun `tenant tanpa slug dilewati tanpa menyentuh pembaca radacct`() {
         val fixture = fixture(accesses = emptyList(), observations = emptyList(), slug = null)
 
@@ -211,7 +232,13 @@ class RadiusAccountingPollRunnerTest {
         observedAt = observedAt,
     )
 
-    private fun observation(username: String, nasIp: String?, up: Long?, down: Long?) = SessionObservation(
+    private fun observation(
+        username: String,
+        nasIp: String?,
+        up: Long?,
+        down: Long?,
+        countersAt: Instant? = null,
+    ) = SessionObservation(
         username = username,
         online = true,
         nasIp = nasIp,
@@ -221,6 +248,7 @@ class RadiusAccountingPollRunnerTest {
         uptimeSeconds = 3600,
         inOctets = up,
         outOctets = down,
+        countersAt = countersAt,
     )
 
     private class FakeReadPort(private val observations: List<SessionObservation>) : RadiusAccountingReadPort {

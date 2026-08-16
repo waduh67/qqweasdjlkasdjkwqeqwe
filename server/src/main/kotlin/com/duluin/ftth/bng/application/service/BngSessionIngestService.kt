@@ -94,7 +94,12 @@ class BngSessionIngestService(
             // punya trafik untuk direkam, cukup keadaannya yang dimutakhirkan.
             if (observed.online) {
                 points += AccountingRecordPoint(
-                    time = collectedAt,
+                    // Waktu penghitung menurut NAS bila ada, bukan waktu baca — kalau tidak,
+                    // laju Mbps dibagi periode poll padahal pertambahannya membentang satu
+                    // interim-update. Cuplikan kembar (interim belum bergerak) memakai waktu
+                    // yang sama persis, jadi runtuh sendiri di index unik accounting_record
+                    // ketimbang menumpuk jadi deretan titik berlaju nol.
+                    time = observed.countersAt ?: collectedAt,
                     tenantId = tenantId,
                     subscriberAccessId = access.id,
                     nasId = nasId,

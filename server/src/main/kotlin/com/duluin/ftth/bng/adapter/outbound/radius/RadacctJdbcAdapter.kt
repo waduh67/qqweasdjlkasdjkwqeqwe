@@ -71,12 +71,17 @@ class RadacctJdbcAdapter(
         uptimeSeconds = rs.getLong("acctsessiontime").takeUnless { rs.wasNull() },
         inOctets = octets(rs, "acctinputoctets", "acctinputgigawords"),
         outOctets = octets(rs, "acctoutputoctets", "acctoutputgigawords"),
+        // Jam NAS, bukan jam kita: penghitung di baris ini terakhir benar saat Interim-Update
+        // terakhir tiba, yang jaraknya bisa jauh lebih lebar dari periode poll. Lihat
+        // [SessionObservation.countersAt].
+        countersAt = rs.getTimestamp("acctupdatetime")?.toInstant(),
     )
 
     companion object {
         private const val COLUMNS =
             "username, framedipaddress, nasipaddress, acctsessionid, callingstationid, " +
-                "acctsessiontime, acctinputoctets, acctoutputoctets, acctinputgigawords, acctoutputgigawords"
+                "acctsessiontime, acctinputoctets, acctoutputoctets, acctinputgigawords, acctoutputgigawords, " +
+                "acctupdatetime"
 
         /**
          * Sesi hidup tenant. Selain `acctstoptime IS NULL`, baris yang interim-update-nya
