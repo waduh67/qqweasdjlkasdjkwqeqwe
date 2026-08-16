@@ -70,6 +70,15 @@ class VpnInstallScriptTest {
         assertThat(script).contains("#ftth-forwards")
         // Hanya aturan bertanda milik kami yang boleh dicabut penyelaras.
         assertThat(script).contains("--comment \"ftth-vpn\"")
+        // Blok pelanggan di belakang peer: ditarik berkala, dipasang sebagai rute kernel + NAT.
+        assertThat(script).contains("/api/vpn/provision/routes")
+        assertThat(script).contains("#ftth-routes")
+        assertThat(script).contains("ip route replace")
+        assertThat(script).contains("--comment \"ftth-blok\"")
+        // Rute buatan operator tak boleh ikut tersapu — punya kami bertanda proto sendiri.
+        assertThat(script).contains("ROUTE_PROTO=")
+        // Baris iroute dari aplikasi disaring ketat sebelum masuk berkas config OpenVPN.
+        assertThat(script).contains("'^iroute ")
         // Dijalankan ulang = config baru HARUS terpakai. `enable --now` melewati service yang
         // sudah jalan, jadi daemonnya diam-diam memegang config lama (pernah kejadian: berkas
         // sudah `proto tcp`, `ss` masih menunjukkan udp).

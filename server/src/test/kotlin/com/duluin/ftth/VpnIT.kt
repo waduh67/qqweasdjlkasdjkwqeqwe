@@ -152,6 +152,13 @@ class VpnIT {
         return res.status to res.contentAsString
     }
 
+    private fun routeTable(rawToken: String): Pair<Int, String> {
+        val res = mockMvc.perform(
+            post("/api/vpn/provision/routes").param("token", rawToken),
+        ).andReturn().response
+        return res.status to res.contentAsString
+    }
+
     @Test
     fun `hub adalah platform-only — tenant tak bisa mengelolanya`() {
         val tenant = newTenantAdmin("vpn-noserver")
@@ -291,6 +298,22 @@ class VpnIT {
         assertThat(JsonPath.read<List<String>>(added, "$.routes[*].label")).containsExactly("Kolam PPPoE")
         val routeId = JsonPath.read<String>(added, "$.routes[0].id")
 
+        // Blok yang didaftarkan harus SAMPAI ke VPS lewat dua jalur sekaligus, karena keduanya
+        // menjawab pertanyaan berbeda: `iroute` = "blok ini di balik peer mana" (dalam OpenVPN),
+        // tabel rute = "paket ke blok ini lewat mana" (kernel hub). Kurang satu = paket hilang.
+        val nodeToken = nodeTokenOfHub(JsonPath.read(acc, "$.serverName"))
+        val (tblStatus, tbl) = routeTable(nodeToken)
+        assertThat(tblStatus).isEqualTo(200)
+        assertThat(tbl.lines().first()).isEqualTo("#ftth-routes")
+        assertThat(tbl.lines()).contains("10.41.0.0/16")
+
+        val (ccStatus, ccBody) = clientConnect(nodeToken, JsonPath.read(acc, "$.username"))
+        assertThat(ccStatus).isEqualTo(200)
+        // Baris pertama tetap `ip mask port` — hub lama di lapangan mem-parse-nya dengan
+        // `read -r ip mask port` dan cuma mengabaikan baris tambahan, tak sampai patah.
+        assertThat(ccBody.lines().first().split(" ")).hasSize(3)
+        assertThat(ccBody.lines()).contains("iroute 10.41.0.0 255.255.0.0")
+
         // Blok yang beririsan dengan yang sudah ada → 409; kalau lolos, hub diam-diam memilih
         // salah satu pemiliknya dan separuh perangkat jadi tak terjangkau tanpa satu log pun.
         assertThat(statusOf("POST", "/api/vpn/accounts/$accId/routes", tenant, """{"cidr":"10.41.5.0/24"}"""))
@@ -315,6 +338,9 @@ class VpnIT {
         // Dicabut → blok (atau irisannya) bebas didaftarkan lagi.
         val cut = send("DELETE", "/api/vpn/accounts/$accId/routes/$routeId", tenant)
         assertThat(JsonPath.read<List<String>>(cut, "$.routes[*].cidr")).isEmpty()
+        // Dicabut dari dashboard = hilang juga dari tabel rute VPS, supaya rute kernelnya
+        // benar-benar ikut tercabut di tik penyelaras berikutnya.
+        assertThat(routeTable(nodeToken).second.lines()).doesNotContain("10.41.0.0/16")
         val reused = post("/api/vpn/accounts/$accId/routes", tenant, """{"cidr":"10.41.5.0/24"}""")
         assertThat(JsonPath.read<List<String>>(reused, "$.routes[*].cidr")).containsExactly("10.41.5.0/24")
         // Nama default supaya daftar tak pernah berisi CIDR telanjang tanpa keterangan.
@@ -327,8 +353,9 @@ class VpnIT {
         installScript(bogus, expected = 404)
         assertThat(authenticate(bogus, "siapa", "apa")).isEqualTo(403)
         assertThat(clientConnect(bogus, "siapa").first).isEqualTo(403)
-        // Tabel penerusan ikut gagal-aman: VPS tanpa token sah tak boleh memetakan hub.
+        // Tabel penerusan & blok ikut gagal-aman: VPS tanpa token sah tak boleh memetakan hub.
         assertThat(forwardTable(bogus).first).isEqualTo(403)
+        assertThat(routeTable(bogus).first).isEqualTo(403)
     }
 
     @Test

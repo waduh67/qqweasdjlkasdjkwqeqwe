@@ -205,6 +205,37 @@ class VpnConfigRendererTest {
     }
 
     @Test
+    fun `blok di belakang peer muncul sebagai iroute di ccd dan route di server conf`() {
+        val server = newServer().apply { setCredentials(dummyCa, null) }
+        val peer = newPeer(server.id).apply { addRoute("10.20.0.0/16", "Kolam PPPoE") }
+
+        val config = renderer.renderServerConfig(server, listOf(peer))
+
+        // Keduanya wajib: `iroute` memberi tahu OpenVPN pemilik bloknya, `route` menyuruh kernel
+        // hub melempar paketnya ke perangkat tun. Kurang satu = paket hilang tanpa jejak.
+        assertThat(config.ccd).containsEntry(
+            "bras-jakarta-1",
+            "ifconfig-push 10.8.0.2 255.255.255.0\niroute 10.20.0.0 255.255.0.0",
+        )
+        assertThat(config.serverConf).contains("route 10.20.0.0 255.255.0.0")
+    }
+
+    @Test
+    fun `blok milik peer nonaktif tak ikut dirutekan`() {
+        val server = newServer().apply { setCredentials(dummyCa, null) }
+        val disabled = newPeer(server.id).apply {
+            addRoute("10.20.0.0/16", "Kolam PPPoE")
+            disable()
+        }
+
+        val config = renderer.renderServerConfig(server, listOf(disabled))
+
+        // Menonaktifkan akun harus ikut menutup jalan ke blok di belakangnya.
+        assertThat(config.serverConf).doesNotContain("route 10.20.0.0")
+        assertThat(config.ccd).isEmpty()
+    }
+
+    @Test
     fun `ccd hanya memuat peer ENABLED`() {
         val server = newServer().apply { setCredentials(dummyCa, null) }
         val enabled = newPeer(server.id)

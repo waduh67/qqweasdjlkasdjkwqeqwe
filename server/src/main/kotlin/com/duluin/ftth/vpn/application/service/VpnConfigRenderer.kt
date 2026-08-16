@@ -181,16 +181,26 @@ class VpnConfigRenderer {
      * `server.conf` + berkas client-config-dir (CCD) per peer AKTIF (ENABLED). Tiap CCD
      * berisi `ifconfig-push {overlayIp} {netmask}` agar peer selalu mendapat IP tetap. Bila
      * CA belum di-set, blok `<ca>` diganti komentar penanda (server tetap bisa dirender).
+     *
+     * Blok di belakang peer muncul DUA KALI dan memang harus: `iroute` di CCD peer pemiliknya
+     * (tabel internal OpenVPN: "blok ini di balik peer itu") dan `route` di `server.conf` (rute
+     * kernel: "paket ke blok ini masuk ke perangkat tun"). Yang satu tanpa yang lain = lubang
+     * hitam yang diam. Hub yang dipasang lewat installer tak memakai berkas ini — di sana
+     * keduanya disinkronkan dari aplikasi, lihat `VpnProvisioningReader.routeTable`.
      */
     fun renderServerConfig(server: VpnServer, peers: List<VpnPeer>): ServerConfigView {
         val subnet = TunnelSubnet.parse(server.tunnelCidr)
         val netmask = subnet.netmask()
+        val enabled = peers.filter { it.status == VpnPeerStatus.ENABLED }
         val serverConf = buildString {
             appendLine("port ${server.port}")
             appendLine("proto ${server.protocol.name.lowercase()}")
             appendLine("dev tun")
             appendLine("topology subnet")
             appendLine("server ${subnet.networkAddress()} $netmask")
+            enabled.flatMap { it.routes }.forEach {
+                appendLine("route ${it.subnet.networkAddress()} ${it.subnet.netmask()}")
+            }
             appendLine("client-config-dir ccd")
             appendLine("username-as-common-name")
             appendLine("verify-client-cert none")
@@ -211,9 +221,11 @@ class VpnConfigRenderer {
                 appendLine("</ca>")
             }
         }
-        val ccd = peers
-            .filter { it.status == VpnPeerStatus.ENABLED }
-            .associate { it.username to "ifconfig-push ${it.overlayIp} $netmask" }
+        val ccd = enabled.associate { peer ->
+            val lines = listOf("ifconfig-push ${peer.overlayIp} $netmask") +
+                peer.routes.map { "iroute ${it.subnet.networkAddress()} ${it.subnet.netmask()}" }
+            peer.username to lines.joinToString("\n")
+        }
         return ServerConfigView(serverConf = serverConf, ccd = ccd)
     }
 
@@ -242,6 +254,7 @@ class VpnConfigRenderer {
             .replace("{{NODE_TOKEN}}", rawNodeToken)
             .replace("{{TUNNEL_CIDR}}", TunnelSubnet.parse(server.tunnelCidr).cidr)
             .replace("{{FORWARD_MARKER}}", VpnProvisioningReader.FORWARD_MARKER)
+            .replace("{{ROUTE_MARKER}}", VpnProvisioningReader.ROUTE_MARKER)
             .replace("{{SYNC_INTERVAL}}", SYNC_INTERVAL)
             .replace("{{SERVER_CONF}}", renderNodeServerConf(server, proto))
             .replace("{{CA_CERT}}", caCert.trim())

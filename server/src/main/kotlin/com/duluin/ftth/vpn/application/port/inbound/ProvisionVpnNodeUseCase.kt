@@ -14,7 +14,10 @@ interface ProvisionVpnNodeUseCase {
     /** Verifikasi username/password satu peer (dipanggil `auth-user-pass-verify`). False bila tak valid. */
     fun authenticate(rawToken: String, username: String, password: String): Boolean
 
-    /** Baris `ifconfig-push` IP overlay tetap untuk peer (dipanggil `client-connect`). Null = tolak. */
+    /**
+     * Config sesi peer (dipanggil `client-connect`): baris pertama `ifconfig-push` IP overlay
+     * tetap, disusul baris `iroute` per blok di belakang peer. Null = tolak.
+     */
     fun clientConnectLine(rawToken: String, username: String): String?
 
     /**
@@ -22,6 +25,12 @@ interface ProvisionVpnNodeUseCase {
      * Null = token tak dikenal; VPS memperlakukannya sebagai "jangan sentuh iptables".
      */
     fun forwardTable(rawToken: String): String?
+
+    /**
+     * Daftar blok di belakang peer seluruh hub untuk direkonsiliasi VPS (timer `ftth-sync`):
+     * rute kernel + NAT/FORWARD-nya. Null = token tak dikenal → VPS tak menyentuh apa pun.
+     */
+    fun routeTable(rawToken: String): String?
 
     /** Telemetri: hub melapor peer terhubung → tandai online + catat waktu. False bila token/peer tak dikenal. */
     fun reportConnected(rawToken: String, username: String): Boolean

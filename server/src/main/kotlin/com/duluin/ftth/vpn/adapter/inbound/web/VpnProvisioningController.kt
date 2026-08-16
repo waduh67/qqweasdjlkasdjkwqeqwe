@@ -19,8 +19,9 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder
  * karena itu ada di allowlist `SecurityConfig`. Perannya:
  *  - `GET  install.sh`         → installer satu-perintah (dipipe ke `sudo bash`).
  *  - `POST authenticate`       → `auth-user-pass-verify` OpenVPN; 204 = lolos, 403 = tolak.
- *  - `POST client-connect`     → `client-connect` OpenVPN; body = baris `ifconfig-push` IP tetap.
+ *  - `POST client-connect`     → `client-connect` OpenVPN; body = `ifconfig-push` + `iroute` blok.
  *  - `POST forwards`           → tabel penerusan port hub; direkonsiliasi timer `ftth-sync` di VPS.
+ *  - `POST routes`             → blok di belakang peer (rute kernel); direkonsiliasi timer yang sama.
  *  - `POST client-connected`   → telemetri liveness: hub melapor peer terhubung (204/403).
  *  - `POST client-disconnected`→ telemetri liveness: hub melapor peer putus (204/403).
  *
@@ -71,6 +72,13 @@ class VpnProvisioningController(
     @Operation(summary = "Tabel penerusan port hub untuk direkonsiliasi VPS (timer ftth-sync)")
     fun forwards(@RequestParam token: String): ResponseEntity<String> =
         provisioning.forwardTable(token)
+            ?.let { ResponseEntity.ok(it) }
+            ?: ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+
+    @PostMapping("/routes", produces = [MediaType.TEXT_PLAIN_VALUE])
+    @Operation(summary = "Daftar blok di belakang peer untuk direkonsiliasi VPS (timer ftth-sync)")
+    fun routes(@RequestParam token: String): ResponseEntity<String> =
+        provisioning.routeTable(token)
             ?.let { ResponseEntity.ok(it) }
             ?: ResponseEntity.status(HttpStatus.FORBIDDEN).build()
 

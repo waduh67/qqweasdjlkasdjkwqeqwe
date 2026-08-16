@@ -73,21 +73,28 @@ code=$(curl -sS -o /dev/null -w '%{http_code}' -m 10 \
 FTTH_VERIFY
 chmod 755 "$DIR/ftth-verify.sh"
 
-# Kunci IP overlay tetap. Aplikasi mengembalikan "ip mask port"; yang dipakai di sini hanya
-# ip & mask untuk ifconfig-push. Penerusan port TIDAK lagi diurus di sini — lihat ftth-sync.sh.
+# Kunci IP overlay tetap + daftarkan blok di belakang perangkat. Baris pertama balasan aplikasi
+# adalah "ip mask port" (yang dipakai cuma ip & mask), baris berikutnya `iroute` per blok.
+# Penerusan port TIDAK diurus di sini — lihat ftth-sync.sh.
 cat > "$DIR/ftth-connect.sh" <<'FTTH_CONNECT'
 #!/usr/bin/env bash
 set -euo pipefail
 source /etc/openvpn/server/ftth-node.env
 config="$1"
-line=$(curl -sS -m 10 \
+body=$(curl -sS -m 10 \
   --data-urlencode "token=$NODE_TOKEN" \
   --data-urlencode "username=$common_name" \
   "$APP_URL/api/vpn/provision/client-connect" || true)
-[ -n "$line" ] || exit 1
-read -r ip mask port <<< "$line"
+[ -n "$body" ] || exit 1
+read -r ip mask port <<< "$body"
 [ -n "$ip" ] && [ -n "$mask" ] || exit 1
 printf 'ifconfig-push %s %s\n' "$ip" "$mask" > "$config"
+
+# Blok pelanggan di balik perangkat ini (mis. kolam PPPoE 10.20.0.0/16), supaya OpenVPN tahu
+# ke peer mana paketnya diarahkan. Disaring ketat ke bentuk `iroute A.B.C.D A.B.C.D`: berkas ini
+# dibaca OpenVPN sebagai config, jadi balasan yang tak terduga tak boleh menyelinap jadi direktif.
+printf '%s\n' "$body" | tail -n +2 \
+  | grep -E '^iroute ([0-9]{1,3}\.){3}[0-9]{1,3} ([0-9]{1,3}\.){3}[0-9]{1,3}$' >> "$config" || true
 
 # Telemetri liveness (best-effort, tak menggerbang tunnel): laporkan peer terhubung ke aplikasi.
 curl -sS -m 10 -o /dev/null \
@@ -117,7 +124,9 @@ FTTH_DISCONNECT
 chmod 755 "$DIR/ftth-disconnect.sh"
 
 # ------------------------------------------------------------
-# Penyelaras penerusan port: aplikasi pemegang kebenaran, iptables cerminannya.
+# Penyelaras hub: aplikasi pemegang kebenaran, iptables & tabel rute cerminannya.
+#
+# Dua hal diselaraskan tiap tik: (1) blok alamat di belakang peer, (2) penerusan port.
 #
 # Dulu DNAT dipasang saat client-connect ke port Winbox yang dipaku 8291. Tiga hal patah:
 #   1. Perangkat yang port Winbox-nya dipindah jadi tak terjangkau, tanpa jalan keluar.
@@ -126,15 +135,66 @@ chmod 755 "$DIR/ftth-disconnect.sh"
 # Sekarang daftar penerusan ditarik berkala dan direkonsiliasi: yang kurang dipasang, yang
 # tak lagi ada dicabut. Efek sampingnya menyenangkan: aturan pulih sendiri sesudah VPS reboot.
 #
-# Hanya aturan bertanda komentar "ftth-vpn" yang boleh disentuh — aturan iptables milik
-# operator (atau Docker) tak pernah ikut tersapu.
+# Hanya aturan bertanda komentar "ftth-vpn"/"ftth-blok" dan rute ber-proto penanda yang boleh
+# disentuh — aturan iptables & rute milik operator (atau Docker) tak pernah ikut tersapu.
 # ------------------------------------------------------------
 cat > "$DIR/ftth-sync.sh" <<'FTTH_SYNC'
 #!/usr/bin/env bash
 set -uo pipefail
 source /etc/openvpn/server/ftth-node.env
 command -v iptables >/dev/null 2>&1 || exit 0
+TUN_CIDR="{{TUNNEL_CIDR}}"
+# Penanda kepemilikan rute (setara komentar "ftth-blok" di iptables): nomor protokol rute yang
+# tak dipakai daemon routing mana pun, supaya rute buatan operator tak pernah ikut tercabut.
+ROUTE_PROTO=210
 
+# ---------- 1. Blok alamat di belakang peer ----------
+# Tanpa ini paket dari VPS ke perangkat pelanggan (mis. GenieACS -> ONT port 7547) lari ke
+# gateway bawaan dan hilang, walau tunnel ke router pemiliknya sudah terpasang rapi.
+# Tiga hal dipasang per blok, dan ketiganya wajib:
+#   - rute kernel ke perangkat tun  -> paketnya masuk tunnel, bukan ke internet.
+#   - MASQUERADE                    -> perangkat pelanggan membalas ke hub (yang ia kenal),
+#                                      bukan ke alamat privat container/aplikasi di VPS.
+#   - FORWARD ACCEPT dua arah       -> host ber-Docker memasang kebijakan FORWARD DROP.
+blocks=$(curl -sS -m 15 \
+  --data-urlencode "token=$NODE_TOKEN" \
+  "$APP_URL/api/vpn/provision/routes" || true)
+if [ "$(printf '%s\n' "$blocks" | head -n1)" = "{{ROUTE_MARKER}}" ]; then
+  want=$(printf '%s\n' "$blocks" | tail -n +2 | awk 'NF==1')
+  # Nama perangkat tun diturunkan dari rute subnet tunnel; kosong = OpenVPN belum jalan, jadi
+  # rutenya ditunda ke tik berikutnya (pencabutan tetap jalan — daftarnya sudah sah).
+  tundev=$(ip -4 route show "$TUN_CIDR" 2>/dev/null | sed -n 's/.* dev \([^ ]*\).*/\1/p' | head -n1)
+  while read -r cidr; do
+    [ -n "${cidr:-}" ] || continue
+    [ -n "${tundev:-}" ] && ip route replace "$cidr" dev "$tundev" proto "$ROUTE_PROTO" 2>/dev/null
+    iptables -t nat -C POSTROUTING -d "$cidr" -m comment --comment "ftth-blok" -j MASQUERADE 2>/dev/null \
+      || iptables -t nat -A POSTROUTING -d "$cidr" -m comment --comment "ftth-blok" -j MASQUERADE 2>/dev/null || true
+    iptables -C FORWARD -d "$cidr" -m comment --comment "ftth-blok" -j ACCEPT 2>/dev/null \
+      || iptables -I FORWARD 1 -d "$cidr" -m comment --comment "ftth-blok" -j ACCEPT 2>/dev/null || true
+    iptables -C FORWARD -s "$cidr" -m comment --comment "ftth-blok" -j ACCEPT 2>/dev/null \
+      || iptables -I FORWARD 1 -s "$cidr" -m comment --comment "ftth-blok" -j ACCEPT 2>/dev/null || true
+  done <<< "$want"
+
+  # Cabut yang tak lagi terdaftar (blok dihapus operator, atau akunnya dinonaktifkan).
+  if [ -n "${tundev:-}" ]; then
+    ip -4 route show dev "$tundev" proto "$ROUTE_PROTO" 2>/dev/null | awk '{print $1}' | while read -r cidr; do
+      # `ip route show` menanggalkan /32 pada rute host — kembalikan supaya bisa dibanding.
+      case "$cidr" in */*) ;; *) cidr="$cidr/32" ;; esac
+      printf '%s\n' "$want" | grep -qxF "$cidr" && continue
+      ip route del "$cidr" dev "$tundev" proto "$ROUTE_PROTO" 2>/dev/null || true
+    done
+  fi
+  for spec in "nat POSTROUTING" "filter FORWARD"; do
+    iptables -t "${spec% *}" -S "${spec#* }" 2>/dev/null | grep -- '--comment ftth-blok' | while read -r rule; do
+      cidr=$(printf '%s' "$rule" | sed -n 's/.* -[ds] \([0-9./]*\) .*/\1/p')
+      [ -n "$cidr" ] || continue
+      printf '%s\n' "$want" | grep -qxF "$cidr" && continue
+      iptables -t "${spec% *}" ${rule/#-A/-D} 2>/dev/null || true
+    done
+  done
+fi
+
+# ---------- 2. Penerusan port ----------
 body=$(curl -sS -m 15 \
   --data-urlencode "token=$NODE_TOKEN" \
   "$APP_URL/api/vpn/provision/forwards" || true)
@@ -143,7 +203,7 @@ body=$(curl -sS -m 15 \
 [ "$(printf '%s\n' "$body" | head -n1)" = "{{FORWARD_MARKER}}" ] || exit 0
 desired=$(printf '%s\n' "$body" | tail -n +2 | awk 'NF==4')
 
-# 1. Pasang yang belum ada (-C dulu supaya idempoten).
+# 2a. Pasang yang belum ada (-C dulu supaya idempoten).
 while read -r pub ip dev proto; do
   [ -n "${pub:-}" ] || continue
   iptables -t nat -C PREROUTING -p "$proto" --dport "$pub" \
@@ -152,7 +212,7 @@ while read -r pub ip dev proto; do
       -m comment --comment "ftth-vpn" -j DNAT --to-destination "$ip:$dev" 2>/dev/null || true
 done <<< "$desired"
 
-# 2. Cabut aturan kami yang tak lagi diinginkan (port dihapus, sasaran diubah, akun dinonaktifkan).
+# 2b. Cabut aturan kami yang tak lagi diinginkan (port dihapus, sasaran diubah, akun dinonaktifkan).
 iptables -t nat -S PREROUTING 2>/dev/null | grep -- '--comment ftth-vpn' | while read -r rule; do
   pub=$(printf '%s' "$rule" | sed -n 's/.*--dport \([0-9]*\).*/\1/p')
   dest=$(printf '%s' "$rule" | sed -n 's/.*--to-destination \([^ ]*\).*/\1/p')
@@ -168,7 +228,7 @@ chmod 755 "$DIR/ftth-sync.sh"
 # Timer systemd: menit-menitan, cukup cepat untuk operator yang baru memindah port perangkatnya.
 cat > /etc/systemd/system/ftth-vpn-sync.service <<'FTTH_SYNC_UNIT'
 [Unit]
-Description=Selaraskan penerusan port FTTH VPN dengan aplikasi
+Description=Selaraskan penerusan port & blok pelanggan FTTH VPN dengan aplikasi
 After=network-online.target
 
 [Service]
@@ -178,7 +238,7 @@ FTTH_SYNC_UNIT
 
 cat > /etc/systemd/system/ftth-vpn-sync.timer <<'FTTH_SYNC_TIMER'
 [Unit]
-Description=Jalankan penyelaras penerusan port FTTH VPN secara berkala
+Description=Jalankan penyelaras FTTH VPN (penerusan port & blok pelanggan) secara berkala
 
 [Timer]
 OnBootSec=30s
@@ -217,8 +277,6 @@ fi
 systemctl daemon-reload
 systemctl enable ftth-vpn-sync.timer
 systemctl restart ftth-vpn-sync.timer
-# Jangan menunggu tik pertama: pasang penerusan port sekarang juga.
-"$DIR/ftth-sync.sh" || true
 
 # RESTART, bukan sekadar `enable --now`: skrip ini memang dirancang untuk dijalankan ulang
 # (mis. sesudah protokol hub diubah UDP -> TCP), dan `--now` tak menyentuh service yang sudah
@@ -226,9 +284,13 @@ systemctl restart ftth-vpn-sync.timer
 # berganti. Gejalanya menyesatkan: `server.conf` bilang tcp, `ss` bilang masih udp.
 systemctl enable openvpn-server@server
 systemctl restart openvpn-server@server
-sleep 1
+sleep 2
 systemctl --no-pager --full status openvpn-server@server 2>/dev/null | head -n 5 || true
+
+# Jangan menunggu tik pertama: selaraskan sekarang juga. Sengaja SESUDAH OpenVPN dinyalakan —
+# perangkat tun baru lahir bersama daemonnya, dan rute blok pelanggan menempel di perangkat itu.
+"$DIR/ftth-sync.sh" || true
 
 echo "[ftth] Selesai. Hub '{{SERVER_NAME}}' mendengarkan di {{HOST}}:{{PORT}}/{{PROTO}}."
 echo "[ftth] Tambah perangkat dari dashboard, lalu tempel skrip RouterOS di Mikrotik-nya."
-echo "[ftth] Penerusan port diselaraskan tiap {{SYNC_INTERVAL}} (systemctl status ftth-vpn-sync.timer)."
+echo "[ftth] Penerusan port & blok pelanggan diselaraskan tiap {{SYNC_INTERVAL}} (systemctl status ftth-vpn-sync.timer)."

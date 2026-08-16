@@ -37,6 +37,11 @@ class VpnProvisioningService(
         return reader.forwardTable(ref.serverId)
     }
 
+    override fun routeTable(rawToken: String): String? {
+        val ref = authenticator.resolve(rawToken) ?: return null
+        return reader.routeTable(ref.serverId)
+    }
+
     override fun reportConnected(rawToken: String, username: String): Boolean {
         val ref = authenticator.resolve(rawToken) ?: return false
         return reader.recordConnect(ref.serverId, username)

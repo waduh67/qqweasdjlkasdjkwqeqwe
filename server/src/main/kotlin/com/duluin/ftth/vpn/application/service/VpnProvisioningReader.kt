@@ -40,13 +40,19 @@ class VpnProvisioningReader(
     }
 
     /**
-     * Data koneksi peer aktif: `{overlayIp} {netmask} {portPublikUtama}` (dipisah spasi). Skrip
-     * `client-connect` di VPS memakainya untuk menulis `ifconfig-push {overlayIp} {netmask}` ke
-     * berkas CCD. Null bila tak ada/nonaktif.
+     * Data koneksi peer aktif. BARIS PERTAMA: `{overlayIp} {netmask} {portPublikUtama}` (dipisah
+     * spasi) — dipakai skrip `client-connect` di VPS untuk menulis `ifconfig-push` ke berkas
+     * config sesi. BARIS BERIKUTNYA: satu `iroute {network} {netmask}` per blok di belakang peer,
+     * yang memberi tahu OpenVPN bahwa alamat-alamat itu tinggal di balik tunnel peer ini.
+     * Null bila peernya tak ada/nonaktif.
      *
-     * Bentuknya SATU BARIS dan tetap begitu: hub yang sudah terpasang di lapangan mem-parse-nya
-     * dengan `read -r ip mask port`, jadi menambah kolom/baris di sini akan menabrak mereka.
-     * Penerusan port dipisah ke [forwardTable] yang disinkronkan berkala.
+     * Kolomnya TAK BOLEH bertambah: hub yang sudah terpasang di lapangan mem-parse balasan ini
+     * dengan `read -r ip mask port`, yang menyerap kolom lebih dari tiga ke variabel terakhir.
+     * Menambah BARIS aman — `read` hanya membaca baris pertama, jadi hub lama sekadar mengabaikan
+     * blok (perilaku lamanya) sampai installernya dijalankan ulang.
+     *
+     * `iroute` saja belum cukup: ia hanya tabel internal OpenVPN. Rute kernel yang menyeret
+     * paketnya ke perangkat tun dipasang penyelaras berkala — lihat [routeTable].
      */
     @Transactional(readOnly = true)
     fun clientConnectLine(serverId: UUID, username: String): String? {
@@ -54,7 +60,31 @@ class VpnProvisioningReader(
         val server = serverRepository.findById(serverId)
             ?: throw ConflictException("Hub VPN $serverId hilang saat client-connect")
         val netmask = TunnelSubnet.parse(server.tunnelCidr).netmask()
-        return "${peer.overlayIp} $netmask ${peer.remotePort ?: ""}".trimEnd()
+        val head = "${peer.overlayIp} $netmask ${peer.remotePort ?: ""}".trimEnd()
+        val iroutes = peer.routes.map { "iroute ${it.subnet.networkAddress()} ${it.subnet.netmask()}" }
+        return (listOf(head) + iroutes).joinToString("\n")
+    }
+
+    /**
+     * Blok alamat SELURUH hub yang harus punya rute kernel ke perangkat tun, satu CIDR per baris,
+     * didahului penanda [ROUTE_MARKER]. Ditarik berkala oleh `ftth-sync.sh` bersama [forwardTable].
+     *
+     * Kenapa dipisah dari `iroute` di [clientConnectLine]: keduanya menjawab pertanyaan berbeda.
+     * `iroute` menjawab "peer mana pemilik blok ini" (di dalam OpenVPN), rute kernel menjawab
+     * "paket ke blok ini harus lewat mana" (di luar OpenVPN, tempat GenieACS/aplikasi di VPS
+     * mengirim paketnya). Hilang salah satu = lubang hitam tanpa satu baris log pun.
+     *
+     * Ditarik berkala, bukan dipasang saat connect, dengan alasan yang sama seperti [forwardTable]:
+     * operator mendaftarkan blok pukul 10 pagi tanpa memutus tunnel, dan rute kernel ikut lenyap
+     * saat VPS reboot. Hanya peer ENABLED yang masuk → menonaktifkan akun ikut menutup jalannya.
+     */
+    @Transactional(readOnly = true)
+    fun routeTable(serverId: UUID): String {
+        val cidrs = peerRepository.findByServerId(serverId)
+            .filter { it.status == VpnPeerStatus.ENABLED }
+            .flatMap { peer -> peer.routes.map { it.cidr } }
+            .sorted()
+        return (listOf(ROUTE_MARKER) + cidrs).joinToString("\n", postfix = "\n")
     }
 
     /**
@@ -113,5 +143,8 @@ class VpnProvisioningReader(
     companion object {
         /** Penanda baris pertama [forwardTable] — kontrak dengan `ftth-sync.sh` di VPS. */
         const val FORWARD_MARKER = "#ftth-forwards"
+
+        /** Penanda baris pertama [routeTable] — kontrak dengan `ftth-sync.sh` di VPS. */
+        const val ROUTE_MARKER = "#ftth-routes"
     }
 }
