@@ -41,6 +41,28 @@ interface VpnPortForwardJpaRepository : JpaRepository<VpnPortForwardJpaEntity, U
     fun deleteByPeerId(@Param("peerId") peerId: UUID)
 }
 
+interface VpnPeerRouteJpaRepository : JpaRepository<VpnPeerRouteJpaEntity, UUID> {
+    fun findByPeerIdOrderByCidrAsc(peerId: UUID): List<VpnPeerRouteJpaEntity>
+
+    /** Muat sekaligus untuk sekumpulan akun — menahan N+1 saat menampilkan daftar akun. */
+    fun findByPeerIdInOrderByCidrAsc(peerIds: Collection<UUID>): List<VpnPeerRouteJpaEntity>
+
+    /**
+     * Seluruh blok pada sebuah hub (lintas-tenant). Dipakai dua hal: menyusun tabel rute yang
+     * ditarik hub, dan menjaga agar dua akun tak mengklaim blok beririsan — irisan yang tak
+     * persis sama lolos dari UNIQUE, jadi harus dibandingkan sebagai rentang di aplikasi.
+     */
+    fun findByServerIdOrderByCidrAsc(serverId: UUID): List<VpnPeerRouteJpaEntity>
+
+    /**
+     * Bulk delete (bukan derived load-then-remove): dijalankan SEKETIKA ke DB, jadi baris anak
+     * sudah hilang sebelum induknya dihapus — Hibernate tak menjamin urutan itu sendiri.
+     */
+    @Modifying
+    @Query("delete from VpnPeerRouteJpaEntity r where r.peerId = :peerId")
+    fun deleteByPeerId(@Param("peerId") peerId: UUID)
+}
+
 interface VpnNodeTokenJpaRepository : JpaRepository<VpnNodeTokenJpaEntity, UUID> {
     fun findByTokenHash(tokenHash: String): VpnNodeTokenJpaEntity?
 

@@ -55,6 +55,16 @@ interface VpnPeerRepository {
      */
     fun usedRemotePorts(serverId: UUID): Set<Int>
 
+    /**
+     * Blok yang sudah diklaim akun LAIN pada hub yang sama (lintas-tenant), bentuk CIDR.
+     *
+     * Lintas-tenant memang disengaja: satu hub punya satu tabel rute, jadi dua tenant yang
+     * kebetulan sama-sama memakai `10.20.0.0/16` akan saling menelan trafik. OpenVPN tak
+     * mengeluh untuk itu — ia diam-diam memilih salah satu pemilik, dan gejalanya muncul
+     * sebagai "sebagian ONT tak bisa dihubungi" berbulan-bulan kemudian.
+     */
+    fun routedCidrsByServerIdExcluding(serverId: UUID, peerId: UUID): List<String>
+
     /** Keunikan username per hub, LINTAS-TENANT. */
     fun existsByServerIdAndUsername(serverId: UUID, username: String): Boolean
 

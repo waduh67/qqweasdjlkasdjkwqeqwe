@@ -139,6 +139,34 @@ class VpnPortForwardJpaEntity(
 ) : BaseJpaEntity(id)
 
 /**
+ * Satu blok alamat yang diakui berada DI BELAKANG akun: lawan arah dari [VpnPortForwardJpaEntity].
+ * Penerusan port membuka perangkat ke internet; baris ini membuat jaringan di belakang perangkat
+ * (kolam PPPoE pelanggan, misalnya) bisa dituju dari dalam tunnel — itulah yang membuat server
+ * sanggup menghubungi ONT alih-alih menunggu ONT menelepon balik.
+ *
+ * [serverId] didenormalisasi dari peer dengan alasan yang sama seperti penerusan port: blok wajib
+ * unik per HUB, dan UNIQUE tak bisa menyeberang tabel. [cidr] identitas yang dipegang operator →
+ * `updatable = false`; mengubah blok berarti mencabut lalu mendaftarkan yang baru.
+ */
+@Entity
+@Table(name = "vpn_peer_route")
+class VpnPeerRouteJpaEntity(
+    id: UUID,
+
+    @Column(name = "peer_id", nullable = false, updatable = false)
+    var peerId: UUID,
+
+    @Column(name = "server_id", nullable = false, updatable = false)
+    var serverId: UUID,
+
+    @Column(nullable = false, length = 40)
+    var label: String,
+
+    @Column(nullable = false, length = 43, updatable = false)
+    var cidr: String,
+) : BaseJpaEntity(id)
+
+/**
  * Token node per hub. [BaseJpaEntity] dan tabelnya TANPA RLS — persis pola [CollectorJpaEntity]:
  * barisnya dicari lewat hash token untuk mengenali hub yang memanggil balik. Menaut ke hub
  * saja (hub adalah infrastruktur platform tanpa tenant); peer di-resolve dari username.

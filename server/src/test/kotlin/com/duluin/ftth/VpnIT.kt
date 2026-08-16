@@ -126,6 +126,12 @@ class VpnIT {
         return res.status to res.contentAsString
     }
 
+    /** Subnet tunnel hub tempat akun mendarat — hanya admin platform yang boleh membacanya. */
+    private fun tunnelCidrOfHub(serverName: String): String {
+        val servers = getText("/api/vpn/servers", platformToken())
+        return JsonPath.read<List<String>>(servers, "$[?(@.name=='$serverName')].tunnelCidr").single()
+    }
+
     /**
      * Token node hub TEMPAT AKUN MENDARAT: auto-assign bebas memilih hub terlengang mana pun,
      * jadi jangan berasumsi akun jatuh di hub yang baru dibuat — cari lewat namanya lalu rotasi
@@ -263,6 +269,56 @@ class VpnIT {
         // Akun dinonaktifkan = SEMUA pintunya tertutup, tanpa mencabut penerusannya satu-satu.
         post("/api/vpn/accounts/$accId/disable", tenant, "", expected = 200)
         assertThat(forwardTable(nodeToken).second).doesNotContain(" $overlayIp ")
+    }
+
+    @Test
+    fun `blok di belakang peer — daftarkan kolam pelanggan, tolak yang berbahaya, cabut`() {
+        newHub("Hub Route", cidr = "10.40.0.0/24")
+        val tenant = newTenantAdmin("vpn-route")
+
+        val acc = generate(tenant, username = "bras-route")
+        val accId = id(acc)
+        // Akun baru cuma menjangkau perangkatnya sendiri — tak ada tebakan kolam pelanggan.
+        assertThat(JsonPath.read<List<String>>(acc, "$.routes[*].cidr")).isEmpty()
+
+        // Operator biasanya memegang alamat SATU pelanggan (dari sesi PPPoE), bukan blok kolamnya:
+        // yang ditempel dinormalisasi jadi bloknya.
+        val added = post(
+            "/api/vpn/accounts/$accId/routes", tenant,
+            """{"cidr":"10.41.255.254/16","label":"Kolam PPPoE"}""",
+        )
+        assertThat(JsonPath.read<List<String>>(added, "$.routes[*].cidr")).containsExactly("10.41.0.0/16")
+        assertThat(JsonPath.read<List<String>>(added, "$.routes[*].label")).containsExactly("Kolam PPPoE")
+        val routeId = JsonPath.read<String>(added, "$.routes[0].id")
+
+        // Blok yang beririsan dengan yang sudah ada → 409; kalau lolos, hub diam-diam memilih
+        // salah satu pemiliknya dan separuh perangkat jadi tak terjangkau tanpa satu log pun.
+        assertThat(statusOf("POST", "/api/vpn/accounts/$accId/routes", tenant, """{"cidr":"10.41.5.0/24"}"""))
+            .isEqualTo(409)
+
+        // Blok yang menelan subnet tunnel hub → ditolak: rutenya akan menimpa jalan pulang
+        // tunnel itu sendiri dan memutus SEMUA peer di hub sekaligus.
+        val hubCidr = tunnelCidrOfHub(JsonPath.read(acc, "$.serverName"))
+        assertThat(statusOf("POST", "/api/vpn/accounts/$accId/routes", tenant, """{"cidr":"$hubCidr"}"""))
+            .isEqualTo(409)
+
+        // Blok selebar internet ditolak sebagai validasi, bukan konflik: ia akan menelan trafik
+        // VPS-nya sendiri, termasuk SSH operator yang sedang memasangnya.
+        assertThat(statusOf("POST", "/api/vpn/accounts/$accId/routes", tenant, """{"cidr":"0.0.0.0/0"}"""))
+            .isEqualTo(400)
+
+        // Ganti nama saja; bloknya sengaja tak ikut berubah.
+        val renamed = send("PUT", "/api/vpn/accounts/$accId/routes/$routeId", tenant, """{"label":"Kolam Cianjur"}""")
+        assertThat(JsonPath.read<List<String>>(renamed, "$.routes[*].label")).containsExactly("Kolam Cianjur")
+        assertThat(JsonPath.read<List<String>>(renamed, "$.routes[*].cidr")).containsExactly("10.41.0.0/16")
+
+        // Dicabut → blok (atau irisannya) bebas didaftarkan lagi.
+        val cut = send("DELETE", "/api/vpn/accounts/$accId/routes/$routeId", tenant)
+        assertThat(JsonPath.read<List<String>>(cut, "$.routes[*].cidr")).isEmpty()
+        val reused = post("/api/vpn/accounts/$accId/routes", tenant, """{"cidr":"10.41.5.0/24"}""")
+        assertThat(JsonPath.read<List<String>>(reused, "$.routes[*].cidr")).containsExactly("10.41.5.0/24")
+        // Nama default supaya daftar tak pernah berisi CIDR telanjang tanpa keterangan.
+        assertThat(JsonPath.read<List<String>>(reused, "$.routes[*].label")).containsExactly("Blok pelanggan")
     }
 
     @Test

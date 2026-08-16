@@ -1,10 +1,12 @@
 package com.duluin.ftth.vpn
 
 import com.duluin.ftth.common.domain.UuidV7
+import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.vpn.domain.model.VpnForwardProtocol
 import com.duluin.ftth.vpn.domain.model.VpnPeer
+import com.duluin.ftth.vpn.domain.model.VpnPeerRoute
 import com.duluin.ftth.vpn.domain.model.VpnPeerStatus
 import com.duluin.ftth.vpn.domain.model.VpnPortForward
 import org.assertj.core.api.Assertions.assertThat
@@ -178,5 +180,82 @@ class VpnPeerTest {
         assertThatThrownBy {
             peer.retargetForward(UuidV7.generate(), null, 22, VpnForwardProtocol.TCP)
         }.isInstanceOf(NotFoundException::class.java)
+    }
+
+    @Test
+    fun `akun baru lahir tanpa blok di belakangnya`() {
+        // Menebak kolam pelanggan saat generate berarti memasang rute yang salah pada mayoritas
+        // akun — yang cuma dipakai remote Winbox.
+        assertThat(newPeer().routes).isEmpty()
+    }
+
+    @Test
+    fun `addRoute menormalisasi alamat pelanggan dan memberi nama default`() {
+        val peer = newPeer()
+
+        val route = peer.addRoute("10.20.255.254/16", label = null)
+
+        assertThat(route.cidr).isEqualTo("10.20.0.0/16")
+        assertThat(route.label).isEqualTo("Blok pelanggan")
+        assertThat(peer.routes).containsExactly(route)
+    }
+
+    @Test
+    fun `blok tersusun urut CIDR`() {
+        val peer = newPeer()
+        peer.addRoute("10.30.0.0/16", "Hotspot")
+        peer.addRoute("10.20.0.0/16", "PPPoE pelanggan")
+
+        assertThat(peer.routes.map { it.cidr }).containsExactly("10.20.0.0/16", "10.30.0.0/16")
+    }
+
+    @Test
+    fun `menambah blok yang beririsan di akun yang sama ditolak`() {
+        val peer = newPeer()
+        peer.addRoute("10.20.0.0/16", "PPPoE pelanggan")
+
+        // OpenVPN tak mengeluh atas dua pemilik blok yang sama — ia diam-diam memilih salah satu.
+        assertThatThrownBy { peer.addRoute("10.20.5.0/24", "Sebagian") }
+            .isInstanceOf(ConflictException::class.java)
+    }
+
+    @Test
+    fun `menambah blok melebihi batas ditolak`() {
+        val peer = newPeer()
+        repeat(VpnPeerRoute.MAX_PER_PEER) { peer.addRoute("10.${20 + it}.0.0/16", null) }
+
+        assertThatThrownBy { peer.addRoute("10.99.0.0/16", null) }
+            .isInstanceOf(ValidationException::class.java)
+    }
+
+    @Test
+    fun `renameRoute mengganti nama tanpa menyentuh bloknya`() {
+        val peer = newPeer()
+        val route = peer.addRoute("10.20.0.0/16", "PPPoE pelanggan")
+
+        peer.renameRoute(route.id, "Kolam Cianjur")
+
+        assertThat(peer.routes.single().label).isEqualTo("Kolam Cianjur")
+        assertThat(peer.routes.single().cidr).isEqualTo("10.20.0.0/16")
+    }
+
+    @Test
+    fun `removeRoute membebaskan bloknya untuk didaftarkan ulang`() {
+        val peer = newPeer()
+        val route = peer.addRoute("10.20.0.0/16", null)
+
+        peer.removeRoute(route.id)
+
+        assertThat(peer.routes).isEmpty()
+        // Setelah dicabut, blok yang sama (atau irisannya) boleh masuk lagi.
+        assertThat(peer.addRoute("10.20.5.0/24", null).cidr).isEqualTo("10.20.5.0/24")
+    }
+
+    @Test
+    fun `mengubah blok yang bukan miliknya ditolak`() {
+        val peer = newPeer()
+
+        assertThatThrownBy { peer.renameRoute(UuidV7.generate(), "apa saja") }
+            .isInstanceOf(NotFoundException::class.java)
     }
 }

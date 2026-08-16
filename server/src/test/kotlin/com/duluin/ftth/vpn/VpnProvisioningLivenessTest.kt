@@ -88,6 +88,8 @@ class VpnProvisioningLivenessTest {
         override fun findByServerId(serverId: UUID): List<VpnPeer> = throw NotImplementedError()
         override fun usedOverlayIps(serverId: UUID): Set<String> = throw NotImplementedError()
         override fun usedRemotePorts(serverId: UUID): Set<Int> = throw NotImplementedError()
+        override fun routedCidrsByServerIdExcluding(serverId: UUID, peerId: UUID): List<String> =
+            throw NotImplementedError()
         override fun existsByServerIdAndUsername(serverId: UUID, username: String): Boolean = throw NotImplementedError()
         override fun countByServerId(serverId: UUID): Long = throw NotImplementedError()
         override fun deleteById(id: UUID) = throw NotImplementedError()

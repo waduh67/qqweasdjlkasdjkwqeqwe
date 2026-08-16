@@ -67,6 +67,12 @@ data class VpnAccountView(
      * perangkat ber-port tak-standar tetap terjangkau: sasarannya data, bukan konstanta program.
      */
     val forwards: List<VpnPortForwardView> = emptyList(),
+    /**
+     * Blok alamat di belakang perangkat yang boleh dituju dari dalam tunnel — kebalikan arah
+     * dari [forwards]. Kosong artinya cuma perangkatnya sendiri yang terjangkau; mengisinya
+     * itulah yang membuat server sanggup menghubungi ONT pelanggan tanpa menunggu ONT menyapa.
+     */
+    val routes: List<VpnRoutedSubnetView> = emptyList(),
     /** Status ADMINISTRATIF akun (ENABLED/DISABLED) — apakah boleh terhubung. */
     val status: String,
     /** Liveness NYATA: true selagi hub melapor perangkat terhubung (callback OpenVPN). */
@@ -104,6 +110,17 @@ data class VpnPortForwardView(
     val devicePort: Int,
     val protocol: String,
     val address: String,
+)
+
+/**
+ * Satu blok alamat di belakang akun. [cidr] sudah dinormalisasi ke alamat network, jadi operator
+ * yang menempel alamat pelanggan (`10.20.255.254/16`) tetap melihat blok yang benar setelah
+ * disimpan. [label] sekadar nama untuk manusia — satu BRAS lazim membawa beberapa kolam.
+ */
+data class VpnRoutedSubnetView(
+    val id: UUID,
+    val label: String,
+    val cidr: String,
 )
 
 /**
@@ -154,4 +171,23 @@ data class VpnPortForwardCommand(
     val label: String?,
     val devicePort: Int,
     val protocol: VpnForwardProtocol?,
+)
+
+/**
+ * Daftarkan/ubah blok di belakang akun. [cidr] boleh berisi alamat host apa pun di dalam blok —
+ * dinormalisasi ke alamat network, sebab yang paling sering ada di tangan operator adalah alamat
+ * satu pelanggan, bukan blok kolamnya. [label] kosong = diberi nama default.
+ */
+data class VpnRouteCommand(
+    val label: String?,
+    val cidr: String,
+)
+
+/**
+ * Ganti nama satu blok. Bloknya sendiri sengaja tak bisa diubah: mengubahnya sama saja mencabut
+ * rute lama dan memasang yang baru, dan memisahkannya membuat operator sadar bahwa jalur lama
+ * benar-benar hilang — bukan diam-diam berpindah.
+ */
+data class VpnRouteLabelCommand(
+    val label: String?,
 )

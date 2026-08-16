@@ -7,6 +7,7 @@ import com.duluin.ftth.vpn.application.port.outbound.VpnPeerRepository
 import com.duluin.ftth.vpn.application.port.outbound.VpnServerRepository
 import com.duluin.ftth.vpn.domain.model.VpnNodeToken
 import com.duluin.ftth.vpn.domain.model.VpnPeer
+import com.duluin.ftth.vpn.domain.model.VpnPeerRoute
 import com.duluin.ftth.vpn.domain.model.VpnPortForward
 import com.duluin.ftth.vpn.domain.model.VpnServer
 import com.duluin.ftth.vpn.domain.model.VpnServerStatus
@@ -94,13 +95,15 @@ class VpnServerPersistenceAdapter(
  * ditulis ulang bila domain memegang nilai asli — sentinel kosong dari kegagalan dekripsi
  * tidak menimpa ciphertext yang ada, agar penyuntingan field lain tak merusak password.
  *
- * Penerusan port ikut disimpan di sini karena ia bagian dari agregat peer (tabel anak
- * `vpn_port_forward`, disinkronkan per-id: yang hilang dihapus, yang ada disegarkan).
+ * Penerusan port dan blok di belakang perangkat ikut disimpan di sini karena keduanya bagian
+ * dari agregat peer (tabel anak `vpn_port_forward` & `vpn_peer_route`, disinkronkan per-id:
+ * yang hilang dihapus, yang ada disegarkan).
  */
 @Component
 class VpnPeerPersistenceAdapter(
     private val jpa: VpnPeerJpaRepository,
     private val forwardJpa: VpnPortForwardJpaRepository,
+    private val routeJpa: VpnPeerRouteJpaRepository,
     private val cipher: SecretCipher,
 ) : VpnPeerRepository {
 
@@ -132,11 +135,16 @@ class VpnPeerPersistenceAdapter(
             password = encryptedPassword ?: error("Password peer VPN wajib diisi"),
         )
         val saved = jpa.save(entity)
-        return saved.toDomain(syncForwards(peer))
+        return saved.toDomain(syncForwards(peer), syncRoutes(peer))
     }
 
     override fun findById(id: UUID): VpnPeer? =
-        jpa.findById(id).orElse(null)?.let { it.toDomain(forwardJpa.findByPeerIdOrderByPublicPortAsc(it.id)) }
+        jpa.findById(id).orElse(null)?.let {
+            it.toDomain(
+                forwardJpa.findByPeerIdOrderByPublicPortAsc(it.id),
+                routeJpa.findByPeerIdOrderByCidrAsc(it.id),
+            )
+        }
 
     override fun findByTenant(tenantId: UUID): List<VpnPeer> =
         jpa.findByTenantIdOrderByNameAsc(tenantId).toDomainAll()
@@ -145,14 +153,21 @@ class VpnPeerPersistenceAdapter(
         jpa.findByServerIdOrderByOverlayIpAsc(serverId).toDomainAll()
 
     override fun findByServerIdAndUsername(serverId: UUID, username: String): VpnPeer? =
-        jpa.findByServerIdAndUsername(serverId, username)
-            ?.let { it.toDomain(forwardJpa.findByPeerIdOrderByPublicPortAsc(it.id)) }
+        jpa.findByServerIdAndUsername(serverId, username)?.let {
+            it.toDomain(
+                forwardJpa.findByPeerIdOrderByPublicPortAsc(it.id),
+                routeJpa.findByPeerIdOrderByCidrAsc(it.id),
+            )
+        }
 
     override fun usedOverlayIps(serverId: UUID): Set<String> =
         jpa.findByServerIdOrderByOverlayIpAsc(serverId).mapTo(HashSet()) { it.overlayIp }
 
     override fun usedRemotePorts(serverId: UUID): Set<Int> =
         forwardJpa.findPublicPortsByServerId(serverId).toHashSet()
+
+    override fun routedCidrsByServerIdExcluding(serverId: UUID, peerId: UUID): List<String> =
+        routeJpa.findByServerIdOrderByCidrAsc(serverId).filter { it.peerId != peerId }.map { it.cidr }
 
     override fun existsByServerIdAndUsername(serverId: UUID, username: String): Boolean =
         jpa.existsByServerIdAndUsername(serverId, username)
@@ -163,6 +178,7 @@ class VpnPeerPersistenceAdapter(
         // Anak lebih dulu, seketika: FK di DB memang ON DELETE CASCADE, tapi menghapusnya
         // eksplisit membuat urutannya tak bergantung pada penjadwalan flush Hibernate.
         forwardJpa.deleteByPeerId(id)
+        routeJpa.deleteByPeerId(id)
         jpa.deleteById(id)
     }
 
@@ -198,14 +214,47 @@ class VpnPeerPersistenceAdapter(
         }
     }
 
-    /** Muat penerusan sekali untuk seluruh daftar (hindari N+1 saat dashboard menampilkan akun). */
-    private fun List<VpnPeerJpaEntity>.toDomainAll(): List<VpnPeer> {
-        if (isEmpty()) return emptyList()
-        val byPeer = forwardJpa.findByPeerIdInOrderByPublicPortAsc(map { it.id }).groupBy { it.peerId }
-        return map { it.toDomain(byPeer[it.id].orEmpty()) }
+    /**
+     * Selaraskan blok di belakang perangkat, pola sama dengan [syncForwards] dan dengan alasan
+     * yang sama: yang dicabut harus benar-benar hilang dari DB sebelum INSERT apa pun menyentuh
+     * UNIQUE (server_id, cidr) — kalau tidak, memindahkan satu blok dari akun A ke akun B dalam
+     * satu transaksi akan ditolak oleh constraint padahal maksudnya sah.
+     */
+    private fun syncRoutes(peer: VpnPeer): List<VpnPeerRouteJpaEntity> {
+        val existing = routeJpa.findByPeerIdOrderByCidrAsc(peer.id).associateBy { it.id }
+        val wanted = peer.routes.associateBy { it.id }
+        val stale = existing.values.filter { it.id !in wanted.keys }
+        if (stale.isNotEmpty()) {
+            routeJpa.deleteAll(stale)
+            routeJpa.flush()
+        }
+        return peer.routes.map { route ->
+            // cidr identitas, tak disentuh; yang bisa berubah cuma namanya.
+            val entity = existing[route.id]?.apply { label = route.label }
+                ?: VpnPeerRouteJpaEntity(
+                    id = route.id,
+                    peerId = peer.id,
+                    serverId = peer.serverId,
+                    label = route.label,
+                    cidr = route.cidr,
+                )
+            routeJpa.save(entity)
+        }
     }
 
-    private fun VpnPeerJpaEntity.toDomain(forwards: List<VpnPortForwardJpaEntity>): VpnPeer = VpnPeer.rehydrate(
+    /** Muat anak sekali untuk seluruh daftar (hindari N+1 saat dashboard menampilkan akun). */
+    private fun List<VpnPeerJpaEntity>.toDomainAll(): List<VpnPeer> {
+        if (isEmpty()) return emptyList()
+        val ids = map { it.id }
+        val forwardsByPeer = forwardJpa.findByPeerIdInOrderByPublicPortAsc(ids).groupBy { it.peerId }
+        val routesByPeer = routeJpa.findByPeerIdInOrderByCidrAsc(ids).groupBy { it.peerId }
+        return map { it.toDomain(forwardsByPeer[it.id].orEmpty(), routesByPeer[it.id].orEmpty()) }
+    }
+
+    private fun VpnPeerJpaEntity.toDomain(
+        forwards: List<VpnPortForwardJpaEntity>,
+        routes: List<VpnPeerRouteJpaEntity>,
+    ): VpnPeer = VpnPeer.rehydrate(
         id = id,
         tenantId = tenantId,
         serverId = serverId,
@@ -221,6 +270,7 @@ class VpnPeerPersistenceAdapter(
                 protocol = it.protocol,
             )
         },
+        routes = routes.map { VpnPeerRoute.rehydrate(id = it.id, cidr = it.cidr, label = it.label) },
         status = status,
         deviceType = deviceType,
         deviceId = deviceId,

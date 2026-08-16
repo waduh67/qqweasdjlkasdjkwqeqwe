@@ -4,6 +4,8 @@ import com.duluin.ftth.vpn.application.port.inbound.GenerateVpnAccountCommand
 import com.duluin.ftth.vpn.application.port.inbound.ManageVpnAccountUseCase
 import com.duluin.ftth.vpn.application.port.inbound.VpnAccountView
 import com.duluin.ftth.vpn.application.port.inbound.VpnPortForwardCommand
+import com.duluin.ftth.vpn.application.port.inbound.VpnRouteCommand
+import com.duluin.ftth.vpn.application.port.inbound.VpnRouteLabelCommand
 import com.duluin.ftth.vpn.domain.model.VpnClientVariant
 import com.duluin.ftth.vpn.domain.model.VpnForwardProtocol
 import io.swagger.v3.oas.annotations.Operation
@@ -94,6 +96,27 @@ class VpnAccountController(
     fun removeForward(@PathVariable id: UUID, @PathVariable forwardId: UUID): VpnAccountView =
         accounts.removeForward(id, forwardId)
 
+    @PostMapping("/{id}/routes")
+    @PreAuthorize("@authz.can('vpn.peer.manage')")
+    @Operation(summary = "Daftarkan blok alamat di belakang perangkat (mis. kolam PPPoE pelanggan)")
+    fun addRoute(@PathVariable id: UUID, @RequestBody request: VpnRouteRequest): VpnAccountView =
+        accounts.addRoute(id, request.toCommand())
+
+    @PutMapping("/{id}/routes/{routeId}")
+    @PreAuthorize("@authz.can('vpn.peer.manage')")
+    @Operation(summary = "Ganti nama blok (bloknya sendiri tak bisa diubah — cabut lalu daftarkan yang baru)")
+    fun renameRoute(
+        @PathVariable id: UUID,
+        @PathVariable routeId: UUID,
+        @RequestBody request: VpnRouteLabelRequest,
+    ): VpnAccountView = accounts.renameRoute(id, routeId, request.toCommand())
+
+    @DeleteMapping("/{id}/routes/{routeId}")
+    @PreAuthorize("@authz.can('vpn.peer.manage')")
+    @Operation(summary = "Cabut blok; server berhenti bisa menghubungi isinya")
+    fun removeRoute(@PathVariable id: UUID, @PathVariable routeId: UUID): VpnAccountView =
+        accounts.removeRoute(id, routeId)
+
     @GetMapping("/{id}/ovpn", produces = ["text/plain"])
     @PreAuthorize("@authz.can('vpn.config.view')")
     @Operation(summary = "Unduh berkas .ovpn akun (berisi kredensial); variant V7 (GCM) / V6 (CBC)")
@@ -135,4 +158,23 @@ data class VpnPortForwardRequest(
     val protocol: VpnForwardProtocol? = null,
 ) {
     fun toCommand() = VpnPortForwardCommand(label, devicePort, protocol)
+}
+
+/**
+ * Blok yang hidup di belakang perangkat. [cidr] boleh diisi alamat host mana pun di dalam blok
+ * (`10.20.255.254/16`) — dinormalisasi ke alamat network, sebab yang paling sering ada di tangan
+ * operator adalah alamat satu pelanggan, bukan blok kolamnya. [label] kosong = nama default.
+ */
+data class VpnRouteRequest(
+    val cidr: String,
+    val label: String? = null,
+) {
+    fun toCommand() = VpnRouteCommand(label, cidr)
+}
+
+/** Hanya nama; bloknya sengaja tak bisa diubah (lihat [VpnRouteRequest]). */
+data class VpnRouteLabelRequest(
+    val label: String? = null,
+) {
+    fun toCommand() = VpnRouteLabelCommand(label)
 }

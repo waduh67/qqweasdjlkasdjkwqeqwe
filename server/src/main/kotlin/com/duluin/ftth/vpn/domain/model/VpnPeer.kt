@@ -17,6 +17,9 @@ enum class VpnPeerStatus { ENABLED, DISABLED }
  * unik per server (dipakai sebagai identitas login OpenVPN dan common-name). [overlayIp]
  * dialokasikan dari subnet server. [forwards] adalah daftar port hub yang di-DNAT ke layanan
  * perangkat → operator meremote lewat `IP_HUB:publicPort` tanpa ikut men-dial tunnel.
+ * [routes] adalah kebalikan arahnya: blok alamat DI BELAKANG perangkat yang boleh dituju dari
+ * dalam tunnel — itulah yang membuat ONT pelanggan (yang tak pernah punya IP publik) bisa
+ * dihubungi server, bukan cuma menunggu ia menelepon balik.
  * [password] adalah rahasia: plaintext di domain, terenkripsi di batas persistence.
  * [deviceType]/[deviceId] hanya label bebas atas perangkat yang dijangkau (TANPA FK, boleh
  * null). Liveness ([online] + [lastHandshakeAt]) dilaporkan hub lewat callback OpenVPN
@@ -30,6 +33,7 @@ class VpnPeer private constructor(
     val username: String,
     val overlayIp: String,
     forwards: List<VpnPortForward>,
+    routes: List<VpnPeerRoute>,
     status: VpnPeerStatus,
     val deviceType: String?,
     val deviceId: UUID?,
@@ -40,8 +44,18 @@ class VpnPeer private constructor(
     private val mutableForwards: MutableList<VpnPortForward> =
         forwards.sortedBy { it.publicPort }.toMutableList()
 
+    private val mutableRoutes: MutableList<VpnPeerRoute> =
+        routes.sortedBy { it.cidr }.toMutableList()
+
     /** Penerusan port akun ini, urut port publik. Kosong = perangkat sengaja tak diekspos. */
     val forwards: List<VpnPortForward> get() = mutableForwards.toList()
+
+    /**
+     * Blok alamat di belakang perangkat ini, urut CIDR. Kosong = perangkatnya sendiri yang
+     * terjangkau, bukan jaringan di belakangnya — dan itu keadaan bawaan yang benar untuk
+     * mayoritas akun (yang cuma dipakai remote Winbox).
+     */
+    val routes: List<VpnPeerRoute> get() = mutableRoutes.toList()
 
     /**
      * Port publik utama (yang terendah — biasanya Winbox, karena ia dialokasikan lebih dulu).
@@ -121,9 +135,47 @@ class VpnPeer private constructor(
         mutableForwards.remove(forward(forwardId))
     }
 
+    /**
+     * Akui satu blok lagi sebagai penghuni belakang perangkat ini.
+     *
+     * Irisan DI DALAM akun ini ditolak di sini; irisan ANTAR-akun pada hub yang sama dijaga
+     * pemanggil, yang punya akses ke seluruh peer hub. Keduanya perlu: OpenVPN memilih diam-diam
+     * salah satu pemilik blok yang beririsan, jadi kekeliruannya tak pernah muncul sebagai galat
+     * — hanya sebagai sebagian perangkat yang tiba-tiba tak terjangkau.
+     */
+    fun addRoute(cidr: String, label: String?): VpnPeerRoute {
+        if (mutableRoutes.size >= VpnPeerRoute.MAX_PER_PEER) {
+            throw ValidationException("Satu akun VPN maksimal ${VpnPeerRoute.MAX_PER_PEER} blok")
+        }
+        val route = VpnPeerRoute.create(cidr, label)
+        mutableRoutes.firstOrNull { it.subnet.overlaps(route.subnet) }?.let {
+            throw ConflictException("Blok ${route.cidr} beririsan dengan ${it.cidr} yang sudah terdaftar di akun ini")
+        }
+        mutableRoutes += route
+        mutableRoutes.sortBy { it.cidr }
+        return route
+    }
+
+    /** Ganti nama satu blok; bloknya sendiri tak bisa diubah — cabut lalu daftarkan yang baru. */
+    fun renameRoute(routeId: UUID, label: String?) {
+        route(routeId).rename(label)
+    }
+
+    /**
+     * Cabut satu blok: hub berhenti merutekannya dan perangkat di dalamnya kembali cuma
+     * terjangkau dari sisi router pelanggan.
+     */
+    fun removeRoute(routeId: UUID) {
+        mutableRoutes.remove(route(routeId))
+    }
+
     private fun forward(forwardId: UUID): VpnPortForward =
         mutableForwards.firstOrNull { it.id == forwardId }
             ?: throw NotFoundException("Penerusan port $forwardId tidak ditemukan pada akun ini")
+
+    private fun route(routeId: UUID): VpnPeerRoute =
+        mutableRoutes.firstOrNull { it.id == routeId }
+            ?: throw NotFoundException("Blok $routeId tidak ditemukan pada akun ini")
 
     companion object {
         @Suppress("LongParameterList")
@@ -146,6 +198,9 @@ class VpnPeer private constructor(
             overlayIp = validateOverlayIp(overlayIp),
             // Akun baru lahir dengan satu pintu: Winbox. Operator boleh menambah/mengubahnya.
             forwards = listOf(VpnPortForward.winbox(remotePort)),
+            // Tanpa blok: akun bawaan cuma menjangkau perangkatnya sendiri. Menebak kolam
+            // pelanggan di sini berarti memasang rute yang salah pada mayoritas akun.
+            routes = emptyList(),
             status = VpnPeerStatus.ENABLED,
             deviceType = deviceType?.trim()?.takeIf { it.isNotEmpty() },
             deviceId = deviceId,
@@ -163,6 +218,7 @@ class VpnPeer private constructor(
             username: String,
             overlayIp: String,
             forwards: List<VpnPortForward>,
+            routes: List<VpnPeerRoute>,
             status: VpnPeerStatus,
             deviceType: String?,
             deviceId: UUID?,
@@ -170,7 +226,7 @@ class VpnPeer private constructor(
             online: Boolean,
             password: String,
         ): VpnPeer = VpnPeer(
-            id, tenantId, serverId, name, username, overlayIp, forwards, status,
+            id, tenantId, serverId, name, username, overlayIp, forwards, routes, status,
             deviceType, deviceId, lastHandshakeAt, online, password,
         )
 

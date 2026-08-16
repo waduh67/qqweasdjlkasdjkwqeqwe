@@ -9,10 +9,14 @@ import com.duluin.ftth.vpn.application.port.inbound.ManageVpnAccountUseCase
 import com.duluin.ftth.vpn.application.port.inbound.VpnAccountView
 import com.duluin.ftth.vpn.application.port.inbound.VpnPortForwardCommand
 import com.duluin.ftth.vpn.application.port.inbound.VpnPortForwardView
+import com.duluin.ftth.vpn.application.port.inbound.VpnRouteCommand
+import com.duluin.ftth.vpn.application.port.inbound.VpnRouteLabelCommand
+import com.duluin.ftth.vpn.application.port.inbound.VpnRoutedSubnetView
 import com.duluin.ftth.vpn.application.port.outbound.VpnPeerRepository
 import com.duluin.ftth.vpn.application.port.outbound.VpnServerRepository
 import com.duluin.ftth.vpn.config.VpnProperties
 import com.duluin.ftth.vpn.domain.model.RemotePortRange
+import com.duluin.ftth.vpn.domain.model.RoutedSubnet
 import com.duluin.ftth.vpn.domain.model.TunnelSubnet
 import com.duluin.ftth.vpn.domain.model.VpnClientVariant
 import com.duluin.ftth.vpn.domain.model.VpnForwardProtocol
@@ -168,6 +172,70 @@ class VpnAccountService(
         return saved.toView(requireServer(saved.serverId))
     }
 
+    override fun addRoute(id: UUID, command: VpnRouteCommand): VpnAccountView {
+        val peer = ownedPeer(id)
+        val server = requireServer(peer.serverId)
+        val subnet = RoutedSubnet.parse(command.cidr)
+        guardTunnelCidr(server, subnet)
+        guardOtherPeers(server.id, peer.id, subnet)
+        // Irisan DI DALAM akun ini dijaga agregatnya sendiri.
+        val route = peer.addRoute(subnet.cidr, command.label)
+        val saved = peerRepository.save(peer)
+        auditor.record(
+            "vpn.account.route-added", "VpnPeer", saved.id, saved.tenantId,
+            mapOf("username" to saved.username, "cidr" to route.cidr, "serverId" to server.id),
+        )
+        return saved.toView(server)
+    }
+
+    override fun renameRoute(id: UUID, routeId: UUID, command: VpnRouteLabelCommand): VpnAccountView {
+        val peer = ownedPeer(id)
+        peer.renameRoute(routeId, command.label)
+        val saved = peerRepository.save(peer)
+        auditor.record(
+            "vpn.account.route-renamed", "VpnPeer", saved.id, saved.tenantId,
+            mapOf("username" to saved.username, "routeId" to routeId),
+        )
+        return saved.toView(requireServer(saved.serverId))
+    }
+
+    override fun removeRoute(id: UUID, routeId: UUID): VpnAccountView {
+        val peer = ownedPeer(id)
+        val cidr = peer.routes.firstOrNull { it.id == routeId }?.cidr
+        peer.removeRoute(routeId)
+        val saved = peerRepository.save(peer)
+        auditor.record(
+            "vpn.account.route-removed", "VpnPeer", saved.id, saved.tenantId,
+            mapOf("username" to saved.username, "routeId" to routeId, "cidr" to cidr),
+        )
+        return saved.toView(requireServer(saved.serverId))
+    }
+
+    /**
+     * Blok pelanggan tak boleh menyentuh subnet tunnel hub. Bila dibiarkan, rute yang dipasang
+     * akan menimpa jalan pulang tunnel itu sendiri — seluruh peer di hub putus sekaligus, dan
+     * gejalanya tak menunjuk ke blok yang baru saja didaftarkan.
+     */
+    private fun guardTunnelCidr(server: VpnServer, subnet: RoutedSubnet) {
+        val tunnel = RoutedSubnet.parse(TunnelSubnet.parse(server.tunnelCidr).cidr)
+        if (subnet.overlaps(tunnel)) {
+            throw ConflictException("Blok ${subnet.cidr} beririsan dengan alamat tunnel VPN (${tunnel.cidr})")
+        }
+    }
+
+    /**
+     * Blok yang beririsan dengan milik akun LAIN di hub yang sama ditolak — termasuk akun tenant
+     * lain. Satu hub punya satu tabel rute; OpenVPN tak mengeluh atas dua pemilik blok yang sama,
+     * ia hanya diam-diam memilih salah satu. Pesan galat sengaja tak menyebut akun/tenant
+     * pemiliknya: cukup fakta bahwa bloknya sudah dipakai.
+     */
+    private fun guardOtherPeers(serverId: UUID, peerId: UUID, subnet: RoutedSubnet) {
+        peerRepository.routedCidrsByServerIdExcluding(serverId, peerId)
+            .map(RoutedSubnet::parse)
+            .firstOrNull { it.overlaps(subnet) }
+            ?.let { throw ConflictException("Blok ${subnet.cidr} beririsan dengan ${it.cidr} yang sudah dipakai akun lain di server VPN ini") }
+    }
+
     @Transactional(readOnly = true)
     override fun renderOvpn(id: UUID, variant: VpnClientVariant): String {
         val peer = ownedPeer(id)
@@ -245,6 +313,7 @@ class VpnAccountService(
                     address = "${server.host}:${it.publicPort}",
                 )
             },
+            routes = routes.map { VpnRoutedSubnetView(id = it.id, label = it.label, cidr = it.cidr) },
             status = status.name,
             online = online,
             lastHandshakeAt = lastHandshakeAt,

@@ -45,6 +45,19 @@ interface ManageVpnAccountUseCase {
     /** Cabut satu penerusan; portnya kembali ke kolam hub. Akun tanpa penerusan tetap sah. */
     fun removeForward(id: UUID, forwardId: UUID): VpnAccountView
 
+    /**
+     * Akui satu blok alamat sebagai penghuni belakang perangkat ini (mis. kolam PPPoE pelanggan).
+     * Sejak itu server bisa MENGHUBUNGI isi blok tersebut — yang membuat perintah TR-069 ke ONT
+     * jalan seketika alih-alih mengantre sampai perangkatnya kebetulan menyapa.
+     */
+    fun addRoute(id: UUID, command: VpnRouteCommand): VpnAccountView
+
+    /** Ganti nama satu blok; bloknya sendiri tak bisa diubah (cabut lalu daftarkan yang baru). */
+    fun renameRoute(id: UUID, routeId: UUID, command: VpnRouteLabelCommand): VpnAccountView
+
+    /** Cabut satu blok: hub berhenti merutekannya. Perangkat di dalamnya kembali tak terjangkau. */
+    fun removeRoute(id: UUID, routeId: UUID): VpnAccountView
+
     /** Berkas `.ovpn` klien generik (berisi kredensial); [variant] memilih cipher v7 (GCM)/v6 (CBC). */
     fun renderOvpn(id: UUID, variant: VpnClientVariant = VpnClientVariant.V7): String
 
