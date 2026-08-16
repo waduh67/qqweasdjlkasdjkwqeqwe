@@ -19,3 +19,21 @@
 		reverse_proxy web:80
 	}
 }
+
+# Penjaga walled-garden: pintu yang dituju `dst-nat` router saat pelanggan TERISOLIR membuka
+# situs apa pun lewat HTTP polos (aturan routernya disodorkan di halaman BRAS).
+#
+# Kenapa port sendiri, bukan menumpang :80 — permintaan yang dilempar router tiba membawa Host
+# situs yang ASLI dibuka pelanggan ("neverssl.com", "connectivitycheck.gstatic.com"), bukan
+# alamat kita. Blok utama di atas hanya mengenali Host miliknya sendiri: permintaan berhost asing
+# berakhir 404, atau justru dilempar balik ke `https://neverssl.com` oleh pengalihan HTTPS
+# otomatis Caddy — pelanggan melihat halaman error dan menyimpulkan internetnya rusak, bukan
+# bahwa ia menunggak. Blok ini sengaja tak peduli Host maupun jalur: apa pun yang masuk dijawab
+# lemparan ke halaman tagihan.
+#
+# 302, bukan 301: pelanggan ini akan membayar lalu dipulihkan, sedangkan 301 mengendap di cache
+# browser — ia akan terus dilempar ke halaman tagihan berhari-hari setelah layanannya normal,
+# dan tak ada yang bisa kita lakukan dari sisi server untuk mencabutnya.
+:8880 {
+	redir {$FTTH_ISOLIR_PORTAL_URL} 302
+}

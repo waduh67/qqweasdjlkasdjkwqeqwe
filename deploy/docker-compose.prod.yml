@@ -322,9 +322,16 @@ services:
       - web
     environment:
       FTTH_SITE_ADDRESS: ${FTTH_SITE_ADDRESS}
+      # Sasaran lemparan penjaga walled-garden. Bawaannya menebak dari domain di atas — benar
+      # untuk deployment berdomain. Mode tanpa domain (FTTH_SITE_ADDRESS=:80) HARUS mengisinya
+      # sendiri, mis. http://203.0.113.10/portal: ":80" bukan alamat yang bisa dibuka browser.
+      FTTH_ISOLIR_PORTAL_URL: ${FTTH_ISOLIR_PORTAL_URL:-https://${FTTH_SITE_ADDRESS}/portal}
     ports:
       - "80:80"
       - "443:443"
+      # Penjaga walled-garden (lihat Caddyfile). Cuma melempar ke halaman tagihan — tak ada
+      # data di baliknya — tapi wajib terjangkau pelanggan terisolir, jadi ikut terbuka.
+      - "8880:8880"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

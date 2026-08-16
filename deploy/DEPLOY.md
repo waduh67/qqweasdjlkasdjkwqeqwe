@@ -47,6 +47,10 @@ Istilah singkat:
    - **Username**: `azureuser` (default; catat ini).
 3. **Networking / NSG (firewall Azure)** — buka **inbound port**:
    - `22` (SSH), `80` (HTTP), `443` (HTTPS). Sisanya biarin ketutup.
+   - **Mau pakai isolir (walled garden)?** buka juga `8880/TCP` — pintu tempat router
+     melempar pelanggan yang diisolir supaya halaman tagihannya muncul. Isinya cuma
+     lemparan ke halaman tagihan (tak ada data di baliknya), tapi harus terjangkau dari
+     jaringan pelanggan. Lihat Bagian K.
    - **Mau pakai fitur VPN** (remote Mikrotik tanpa IP publik)? buka juga port hub
      OpenVPN — default `1194/TCP` (samakan dengan Port/Protokol saat bikin hub di
      dashboard) **dan** rentang port remote `20000-40000/TCP` (Winbox/API/SSH tiap akun,
@@ -565,6 +569,36 @@ kali menarik versi baru yang menyentuh berkas itu.
   → lewat overlay; tak terjangkau → degradasi anggun (perubahan berlaku saat login ulang).
 - **Server → radius-db**: internal compose (`radius-db:5432`), otomatis lewat `FTTH_RADIUS_DB_*`.
   Tak ada port DB yang perlu dibuka ke luar.
+
+### K.7 Isolir: halaman tagihan yang benar-benar muncul (walled garden)
+
+Saat pelanggan diisolir, RADIUS **tidak** menolak loginnya — ia cuma menempelkan IP sesinya ke
+address-list `isolir` dan menurunkan kecepatannya. Pelanggan yang disambut "PPPoE gagal" hanya
+akan menelepon CS; pelanggan yang melihat tagihannya sendiri bisa langsung membayar.
+
+Yang mengubah label itu jadi halaman tagihan sungguhan ada di dua sisi:
+
+1. **Router** — salin aturan firewall dari halaman **BRAS → BRAS yang bersangkutan → Halaman
+   isolir (walled garden)**. Isinya membuka DNS, mengizinkan halaman tagihan, lalu melempar
+   semua HTTP polos ke penjaga di **port 8880** VPS ini. Pasang sekali per BRAS.
+2. **VPS** — port `8880` harus terbuka di NSG/firewall (Bagian A). Penjaganya bagian dari Caddy,
+   ikut naik sendiri; sasaran lemparannya diatur `FTTH_ISOLIR_PORTAL_URL` di `.env`.
+
+`FTTH_ISOLIR_PORTAL_URL` boleh dikosongkan **kalau `FTTH_SITE_ADDRESS` berupa domain** — otomatis
+jadi `https://<domain>/portal`. Mode tanpa domain (`FTTH_SITE_ADDRESS=:80`) **wajib** mengisinya
+sendiri, mis. `FTTH_ISOLIR_PORTAL_URL=http://20.11.22.33/portal`; `:80` bukan alamat yang bisa
+dibuka browser pelanggan.
+
+Kenapa port sendiri, bukan port 80 biasa: permintaan yang dilempar router tiba membawa nama situs
+yang tadinya dibuka pelanggan (`neverssl.com`, `connectivitycheck.gstatic.com`), bukan nama kita.
+Port 80 hanya mengenali nama miliknya sendiri, jadi permintaan itu berakhir 404 atau dilempar
+balik ke situs asalnya — pelanggan melihat halaman error dan menyimpulkan internetnya rusak.
+
+Cek cepat dari mana pun (harus menjawab `302` ke halaman tagihan, apa pun Host-nya):
+
+```bash
+curl -sI -H 'Host: neverssl.com' http://<IP-VPS>:8880/ | head -2
+```
 
 ---
 
