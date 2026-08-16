@@ -28,7 +28,7 @@ import { useConfirm, useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
 import { IconGauge, IconPlus } from '@/components/atoms/icons'
 import { radiusTargetFor, selfAddressWarning, sessionControlRoute } from '@/utils/radiusTarget'
-import { defaultIsolirUrl, isolirScript, parseIsolirTarget } from '@/utils/isolirScript'
+import { WALLED_GARDEN_PORT, defaultIsolirUrl, isolirScript, parseIsolirTarget } from '@/utils/isolirScript'
 
 /**
  * Registri BRAS/RADIUS tenant.
@@ -714,6 +714,14 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
                 memunculkan peringatan sertifikat, dan pelanggan justru mengira jaringannya dibajak.
                 Yang benar-benar membuka halaman tagihan adalah deteksi captive portal ponsel —
                 ia memakai HTTP polos, jadi notifikasi "Masuk ke jaringan" muncul sendiri.
+              </span>
+              <span className="muted" style={{ fontSize: '0.78rem' }}>
+                Baris NAT menembak port <code>{WALLED_GARDEN_PORT}</code>, bukan port halaman
+                tagihan. Permintaan yang dilempar router tiba membawa nama situs yang tadinya
+                dibuka pelanggan, bukan nama kita — port biasa akan menjawabnya 404 atau
+                melemparnya balik ke situs itu. Port <code>{WALLED_GARDEN_PORT}</code> tak peduli
+                nama maupun jalur: apa pun yang masuk dijawab lemparan ke halaman tagihan.
+                Pastikan port itu terbuka di server konsol ini.
               </span>
               {isolirTarget && !isolirTarget.ip && (
                 <span className="muted" style={{ fontSize: '0.78rem' }}>

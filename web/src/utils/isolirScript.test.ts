@@ -1,16 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { defaultIsolirUrl, isolirScript, parseIsolirTarget } from './isolirScript'
+import { WALLED_GARDEN_PORT, defaultIsolirUrl, isolirScript, parseIsolirTarget } from './isolirScript'
 
 describe('mengurai alamat halaman tagihan', () => {
   it('menerima alamat tanpa skema — operator mengetik alamat, bukan URL', () => {
-    expect(parseIsolirTarget('portal.isp.id')).toMatchObject({ host: 'portal.isp.id', ip: null, port: 80 })
+    expect(parseIsolirTarget('portal.isp.id')).toMatchObject({ host: 'portal.isp.id', ip: null })
   })
 
   it('mengambil host dari URL berskema dan berjalur', () => {
     expect(parseIsolirTarget('https://portal.isp.id/portal/tagihan')).toMatchObject({
       host: 'portal.isp.id',
-      port: 443,
     })
+  })
+
+  // Melempar HTTP polos ke port 443 membuat server TLS menjawab "400 Client sent an HTTP
+  // request to an HTTPS server" — pelanggan melihat halaman error, bukan tagihannya.
+  it('tak pernah melempar ke port skema, sekalipun alamatnya https', () => {
+    expect(parseIsolirTarget('https://portal.isp.id')?.natPort).toBe(WALLED_GARDEN_PORT)
+    expect(parseIsolirTarget('portal.isp.id')?.natPort).toBe(WALLED_GARDEN_PORT)
   })
 
   it('mengenali IP sebagai sasaran dst-nat yang sah', () => {
@@ -22,8 +28,9 @@ describe('mengurai alamat halaman tagihan', () => {
     expect(parseIsolirTarget('portal.isp.id')?.ip).toBeNull()
   })
 
+  // Port yang DIKETIK sendiri operator (portal di server sendiri) dihormati apa adanya.
   it('menghormati port tak baku', () => {
-    expect(parseIsolirTarget('http://10.0.0.5:8080')).toMatchObject({ ip: '10.0.0.5', port: 8080 })
+    expect(parseIsolirTarget('http://10.0.0.5:8080')).toMatchObject({ ip: '10.0.0.5', natPort: 8080 })
   })
 
   it('mengembalikan null untuk isian kosong atau tak terurai', () => {
@@ -59,8 +66,21 @@ describe('aturan walled-garden RouterOS', () => {
     expect(script).toContain('protocol=tcp dst-port=53')
   })
 
-  it('melempar HTTP ke halaman tagihan', () => {
-    expect(isolirScript('isolir', target)).toContain('action=dst-nat to-addresses=20.6.72.13 to-ports=80')
+  it('melempar HTTP ke penjaga walled-garden, bukan ke port halaman tagihan', () => {
+    expect(isolirScript('isolir', target)).toContain(
+      `action=dst-nat to-addresses=20.6.72.13 to-ports=${WALLED_GARDEN_PORT}`,
+    )
+  })
+
+  // Halaman tagihan di belakang CDN: address-list terisi IP hasil resolusi nama sedangkan
+  // to-addresses menyebut IP origin. Tanpa baris ini, paket yang barusan dilempar router
+  // dibunuh baris penutup skrip ini sendiri dan halaman tagihan tak pernah termuat.
+  it('mengizinkan apa yang sudah dilempar router, sebelum baris-baris reject', () => {
+    const lines = isolirScript('isolir', target).split('\n')
+    const dstnat = lines.findIndex((l) => l.includes('connection-nat-state=dstnat'))
+    const rejects = lines.findIndex((l) => l.includes('action=reject'))
+    expect(dstnat).toBeGreaterThanOrEqual(0)
+    expect(dstnat).toBeLessThan(rejects)
   })
 
   // Melempar 443 menghasilkan peringatan sertifikat: pelanggan mengira jaringannya dibajak,
