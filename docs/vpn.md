@@ -224,7 +224,10 @@ dibuat lewat Winbox lahir sebagai `ovpn-out1`), diapit `remove [find comment~…
 di depan dan `move …destination=0` di belakang. **Bukan `place-before=0`**: itu
 menunjuk aturan yang harus sudah ada, jadi di router yang chain `forward`-nya
 masih kosong seluruh tempelan gagal dengan `no such item` — dan router seperti
-itulah yang paling mungkin dipakai orang saat pertama menyiapkan BRAS.
+itulah yang paling mungkin dipakai orang saat pertama menyiapkan BRAS. `move`-nya
+sendiri dibungkus `:do … on-error={}`, sebab ia menolak dengan `destination item
+in source list` justru ketika aturannya **sudah** teratas: hasil yang benar, tapi
+tampil sebagai baris merah penutup dan bikin operator mengira semuanya gagal.
 
 Menonaktifkan akun ikut mencabut rute ke blok di belakangnya — tanpa itu,
 "menonaktifkan" cuma menutup pintu depan sementara pintu belakang tetap terbuka.

@@ -37,7 +37,16 @@ describe('blokFirewallScript', () => {
     const script = blokFirewallScript('ovpn-x', ['10.20.0.0/16'])
 
     expect(script).not.toContain('place-before')
-    expect(script.trimEnd().endsWith('destination=0')).toBe(true)
+    expect(script.trimEnd().endsWith('on-error={}')).toBe(true)
+  })
+
+  it('tak berakhir dengan baris merah saat aturannya sudah di urutan teratas', () => {
+    // `move` menolak dengan "destination item in source list" bila sumber = tujuan;
+    // benar hasilnya, tapi tanpa penjaga ini operator mengira tempelannya gagal.
+    const script = blokFirewallScript('ovpn-x', ['10.20.0.0/16'])
+
+    expect(script).toContain(':do {')
+    expect(script).toContain('on-error={}')
   })
 
   it('boleh ditempel berulang tanpa menumpuk aturan kembar', () => {

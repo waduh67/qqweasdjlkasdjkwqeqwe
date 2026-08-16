@@ -45,6 +45,10 @@ const RULE_MARK = 'ftth-blok'
  * yang paling mungkin dipakai orang saat pertama menyiapkan BRAS. `move` atas daftar
  * kosong tak melakukan apa-apa, jadi aman di kedua keadaan.
  *
+ * `move`-nya dibungkus `:do … on-error={}` karena ia justru menolak ("destination item in
+ * source list") ketika aturannya SUDAH di urutan teratas — hasil yang benar, tapi tampil
+ * sebagai baris merah di akhir tempelan dan bikin operator mengira semuanya gagal.
+ *
  * Diawali `remove` agar tempelan yang sama boleh dijalankan berulang: operator yang
  * menambah blok kedua tinggal menyalin ulang seluruhnya tanpa menumpuk aturan kembar.
  *
@@ -61,6 +65,6 @@ export function blokFirewallScript(interfaceName: string, cidrs: string[]): stri
       `    src-address=${cidr} comment="${RULE_MARK}: balasan ${cidr} boleh kembali"`,
     )
   })
-  lines.push(`/ip firewall filter move [find comment~"^${RULE_MARK}"] destination=0`)
+  lines.push(`:do { /ip firewall filter move [find comment~"^${RULE_MARK}"] destination=0 } on-error={}`)
   return lines.join('\n')
 }
