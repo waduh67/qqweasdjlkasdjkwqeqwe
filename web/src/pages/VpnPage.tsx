@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Download, DoorOpen, KeyRound, Power, PowerOff, Trash2 } from 'lucide-react'
+import { Download, DoorOpen, KeyRound, Network, Power, PowerOff, Trash2 } from 'lucide-react'
 import { ApiError } from '../api/client'
 import {
   addAccountForward,
+  addAccountRoute,
   deleteAccount,
   disableAccount,
   downloadAccountOvpn,
@@ -11,11 +12,14 @@ import {
   generateAccount,
   listAccounts,
   removeAccountForward,
+  removeAccountRoute,
+  renameAccountRoute,
   retargetAccountForward,
   rotateAccountPassword,
   type VpnAccountView,
   type VpnForwardProtocol,
   type VpnPortForwardView,
+  type VpnRoutedSubnetView,
 } from '../api/vpn'
 import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
@@ -24,6 +28,7 @@ import { Modal, SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
 import { IconAlert, IconPlus } from '@/components/atoms/icons'
+import { blokFirewallScript, isCidrLike, ovpnInterfaceName } from '@/utils/blokPelanggan'
 
 /**
  * Akun VPN (tenant). Alur unggulan satu klik: tekan Generate → sistem meng-AUTO-ASSIGN akun
@@ -133,6 +138,8 @@ export function VpnPage() {
   const [statusFilter, setStatusFilter] = useState('')
   // Akun yang sedang dibuka panel port remote-nya.
   const [forwardsOf, setForwardsOf] = useState<VpnAccountView | null>(null)
+  // Akun yang sedang dibuka panel blok pelanggan di belakangnya.
+  const [routesOf, setRoutesOf] = useState<VpnAccountView | null>(null)
 
   const generate = () => {
     setBusy(true)
@@ -185,9 +192,17 @@ export function VpnPage() {
     return accounts.filter((a) => {
       if (statusFilter && a.status !== statusFilter) return false
       if (!q) return true
-      return [a.label, a.serverName, a.host, a.username, a.overlayIp, a.winboxAddress].some((v) =>
-        v?.toLowerCase().includes(q),
-      )
+      // Blok ikut dicari: saat menelusuri IP pelanggan yang bermasalah, yang diketahui operator
+      // justru alamat kolamnya — bukan label akun VPN yang menaunginya.
+      return [
+        a.label,
+        a.serverName,
+        a.host,
+        a.username,
+        a.overlayIp,
+        a.winboxAddress,
+        ...a.routes.map((r) => r.cidr),
+      ].some((v) => v?.toLowerCase().includes(q))
     })
   }, [accounts, query, statusFilter])
 
@@ -224,7 +239,17 @@ export function VpnPage() {
       key: 'overlayIp',
       header: 'IP overlay',
       sortValue: (a) => a.overlayIp,
-      cell: (a) => <span className="tnum">{a.overlayIp}</span>,
+      cell: (a) => (
+        <div className="stack" style={{ gap: '0.15rem' }}>
+          <span className="tnum">{a.overlayIp}</span>
+          {a.routes.length > 0 && (
+            <span className="muted tnum" style={{ fontSize: '0.76rem' }}>
+              + {a.routes[0].cidr}
+              {a.routes.length > 1 ? ` +${a.routes.length - 1} blok` : ''}
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       key: 'winbox',
@@ -285,6 +310,12 @@ export function VpnPage() {
         label: 'Port remote',
         icon: <DoorOpen size={16} />,
         onClick: () => setForwardsOf(a),
+      })
+      list.push({
+        key: 'routes',
+        label: 'Blok pelanggan',
+        icon: <Network size={16} />,
+        onClick: () => setRoutesOf(a),
       })
       list.push({
         key: 'toggle',
@@ -370,6 +401,16 @@ export function VpnPage() {
           account={forwardsOf}
           onClose={() => {
             setForwardsOf(null)
+            void reload()
+          }}
+        />
+      )}
+
+      {routesOf && (
+        <RoutedSubnetModal
+          account={routesOf}
+          onClose={() => {
+            setRoutesOf(null)
             void reload()
           }}
         />
@@ -623,6 +664,206 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
             : 'Port publiknya dipilih sistem supaya tak bentrok dengan akun lain di hub yang sama.'}
         </span>
       </div>
+    </Modal>
+  )
+}
+
+/* ---------- Panel blok pelanggan: jalan dari server ke perangkat DI BELAKANG tunnel ---------- */
+
+/** Batas blok per akun — sama dengan `VpnPeerRoute.MAX_PER_PEER` di server. */
+const MAX_ROUTES = 8
+
+/**
+ * Penerusan port membuka jalan ke PERANGKATNYA; blok membuka jalan ke semua yang hidup DI
+ * BELAKANGNYA — kolam PPPoE pelanggan. Ini yang membuat perintah ke ONT (reboot, ganti SSID,
+ * ambil status) berangkat saat itu juga alih-alih menunggu ONT menyapa sendiri tiap 5 menit,
+ * karena server akhirnya punya rute balik ke alamat pelanggan.
+ *
+ * Bloknya harus didaftarkan, bukan ditebak: hub perlu tahu blok mana milik peer yang mana
+ * (dua ISP bisa sama-sama memakai 10.20.0.0/16), dan salah tebak berarti trafik satu tenant
+ * dikirim ke router tenant lain.
+ */
+function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onClose: () => void }) {
+  const toast = useToast()
+  const confirm = useConfirm()
+  const [acct, setAcct] = useState(account)
+  const [busy, setBusy] = useState(false)
+  const [draft, setDraft] = useState({ cidr: '', label: '' })
+  const [editing, setEditing] = useState<{ id: string; label: string } | null>(null)
+
+  const apply = (action: () => Promise<VpnAccountView>, ok: string, after?: () => void) => {
+    setBusy(true)
+    action()
+      .then((updated) => {
+        setAcct(updated)
+        after?.()
+        toast.success(ok)
+      })
+      .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Operasi gagal'))
+      .finally(() => setBusy(false))
+  }
+
+  const add = () =>
+    apply(
+      () => addAccountRoute(acct.id, { cidr: draft.cidr.trim(), label: draft.label.trim() || null }),
+      'Blok didaftarkan — hub memasang rutenya paling lama ~1 menit',
+      () => setDraft({ cidr: '', label: '' }),
+    )
+
+  const saveEdit = () => {
+    if (!editing) return
+    apply(() => renameAccountRoute(acct.id, editing.id, editing.label.trim()), 'Nama blok diubah', () =>
+      setEditing(null),
+    )
+  }
+
+  const remove = (r: VpnRoutedSubnetView) => {
+    void (async () => {
+      if (
+        !(await confirm({
+          title: 'Cabut blok',
+          message:
+            `Cabut ${r.cidr} dari “${acct.label}”? Server berhenti bisa menghubungi perangkat di blok itu — ` +
+            `perintah ke ONT kembali menunggu laporan berkala (bisa sampai 5 menit).`,
+          confirmLabel: 'Cabut',
+          danger: true,
+        }))
+      )
+        return
+      apply(() => removeAccountRoute(acct.id, r.id), 'Blok dicabut')
+    })()
+  }
+
+  const iface = ovpnInterfaceName(acct.username)
+  const script = blokFirewallScript(
+    iface,
+    acct.routes.map((r) => r.cidr),
+  )
+  const copyScript = () =>
+    void navigator.clipboard?.writeText(script).then(() => toast.success('Aturan firewall disalin'))
+
+  const full = acct.routes.length >= MAX_ROUTES
+
+  return (
+    <Modal title={`Blok pelanggan “${acct.label}”`} onClose={onClose} wide>
+      <p className="muted" style={{ margin: '0 0 0.75rem', fontSize: '0.83rem' }}>
+        Daftarkan kolam alamat yang dibagikan perangkat ini ke pelanggan (mis. pool PPPoE di{' '}
+        <code>/ip pool print</code>). Setelahnya server bisa <strong>menghubungi ONT langsung</strong> — reboot,
+        ganti SSID, atau tarik status jadi seketika, tak lagi menunggu ONT melapor sendiri tiap ~5 menit. Blok
+        hanya boleh dipegang satu akun per hub; kalau ditolak “beririsan”, blok itu sudah didaftarkan akun lain.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Nama</th>
+            <th>Blok</th>
+            <th style={{ width: '9rem' }} />
+          </tr>
+        </thead>
+        <tbody>
+          {acct.routes.length === 0 && (
+            <tr>
+              <td colSpan={3} className="muted">
+                Belum ada blok — server hanya bisa menghubungi perangkatnya, bukan pelanggan di belakangnya.
+              </td>
+            </tr>
+          )}
+          {acct.routes.map((r) =>
+            editing?.id === r.id ? (
+              <tr key={r.id}>
+                <td>
+                  <TextField
+                    value={editing.label}
+                    onChange={(_, data) => setEditing({ ...editing, label: data.value })}
+                    placeholder="mis. Kolam PPPoE"
+                  />
+                </td>
+                <td className="tnum muted">{r.cidr}</td>
+                <td>
+                  <div className="row" style={{ gap: '0.35rem' }}>
+                    <Button variant="primary" size="small" onClick={saveEdit} disabled={busy || !editing.label.trim()}>
+                      Simpan
+                    </Button>
+                    <Button variant="subtle" size="small" onClick={() => setEditing(null)} disabled={busy}>
+                      Batal
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              <tr key={r.id}>
+                <td>
+                  <strong>{r.label}</strong>
+                </td>
+                <td className="tnum">{r.cidr}</td>
+                <td>
+                  <div className="row" style={{ gap: '0.35rem' }}>
+                    <Button
+                      variant="subtle"
+                      size="small"
+                      disabled={busy}
+                      onClick={() => setEditing({ id: r.id, label: r.label })}
+                    >
+                      Ubah nama
+                    </Button>
+                    <Button variant="subtle" size="small" disabled={busy} onClick={() => remove(r)}>
+                      Cabut
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ),
+          )}
+        </tbody>
+      </table>
+
+      <div className="stack" style={{ gap: '0.4rem', margin: '1rem 0' }}>
+        <strong style={{ fontSize: '0.86rem' }}>Tambah blok</strong>
+        <div className="row" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <TextField
+            label="Blok (CIDR)"
+            value={draft.cidr}
+            onChange={(_, data) => setDraft({ ...draft, cidr: data.value })}
+            onKeyDown={(e) => e.key === 'Enter' && !busy && !full && isCidrLike(draft.cidr) && add()}
+            placeholder="10.20.0.0/16"
+            style={{ width: '12rem' }}
+          />
+          <TextField
+            label="Nama (opsional)"
+            value={draft.label}
+            onChange={(_, data) => setDraft({ ...draft, label: data.value })}
+            placeholder="otomatis dari blok"
+            style={{ flex: 1, minWidth: '10rem' }}
+          />
+          <Button variant="primary" onClick={add} disabled={busy || full || !isCidrLike(draft.cidr)}>
+            <IconPlus size={15} /> Tambah
+          </Button>
+        </div>
+        <span className="muted" style={{ fontSize: '0.78rem' }}>
+          {full
+            ? `Sudah ${MAX_ROUTES} blok — cabut salah satu dulu.`
+            : 'Alamat host otomatis dirapikan jadi alamat bloknya (10.20.1.5/16 → 10.20.0.0/16).'}
+        </span>
+      </div>
+
+      {script && (
+        <CommandBlock
+          title={
+            <>
+              Terakhir, izinkan di <strong>Mikrotik</strong> — tanpa ini paketnya mati diam di chain forward:
+            </>
+          }
+          command={script}
+          copyLabel="Salin aturan"
+          onCopy={copyScript}
+          hint={
+            `Tempel di terminal RouterOS perangkat ini. Nama interface diasumsikan “${iface}” (bawaan perintah ` +
+            `pasang akun) — samakan bila Anda menamainya lain. Aturan sengaja ditaruh paling atas supaya tak ` +
+            `keburu tertangkap aturan drop bawaan konfigurasi Anda.`
+          }
+        />
+      )}
     </Modal>
   )
 }

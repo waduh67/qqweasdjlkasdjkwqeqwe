@@ -106,6 +106,24 @@ export interface VpnPortForwardRequest {
 }
 
 /**
+ * Satu BLOK alamat yang hidup DI BELAKANG perangkat ini — mis. kolam PPPoE `10.20.0.0/16`
+ * milik BRAS. Bedanya dengan penerusan port: penerusan membuka pintu dari internet ke
+ * PERANGKATNYA, blok membuat server kita bisa menghubungi PELANGGAN di belakangnya (mis.
+ * connection request TR-069 ke ONT) tanpa menunggu perangkat menyapa duluan.
+ */
+export interface VpnRoutedSubnetView {
+  id: string
+  label: string
+  cidr: string
+}
+
+/** Daftarkan blok baru; [label] boleh kosong (server memberi nama default). */
+export interface VpnRouteRequest {
+  cidr: string
+  label?: string | null
+}
+
+/**
  * Proyeksi satu AKUN VPN milik tenant — semua yang perlu ditempel ke Mikrotik. Endpoint
  * ([host]:[port]/[protocol]) + [securityType] berasal dari hub yang di-auto-assign.
  * [password] SENGAJA hanya terisi sekali saat generate/rotasi (sekali tampil); pada list/get
@@ -131,6 +149,8 @@ export interface VpnAccountView {
   winboxAddress: string | null
   /** Semua pintu akun ini (Winbox/API/SSH/…), urut port publik. */
   forwards: VpnPortForwardView[]
+  /** Blok alamat di belakang perangkat ini (kolam PPPoE/hotspot), urut CIDR. */
+  routes: VpnRoutedSubnetView[]
   /** Status ADMINISTRATIF (ENABLED/DISABLED) — apakah akun boleh terhubung. */
   status: string
   /** Liveness NYATA: true selagi hub melapor perangkat terhubung. */
@@ -193,6 +213,20 @@ export const retargetAccountForward = (id: string, forwardId: string, body: VpnP
 /** Cabut satu pintu. */
 export const removeAccountForward = (id: string, forwardId: string) =>
   api.del<VpnAccountView>(`/api/vpn/accounts/${id}/forwards/${forwardId}`)
+
+// ---- Blok di belakang perangkat (izin vpn.peer.manage) ----
+
+/** Daftarkan blok pelanggan di belakang perangkat ini. Alamat host dinormalisasi jadi bloknya. */
+export const addAccountRoute = (id: string, body: VpnRouteRequest) =>
+  api.post<VpnAccountView>(`/api/vpn/accounts/${id}/routes`, body)
+
+/** Ganti nama satu blok; bloknya sendiri tak ikut berubah. */
+export const renameAccountRoute = (id: string, routeId: string, label: string) =>
+  api.put<VpnAccountView>(`/api/vpn/accounts/${id}/routes/${routeId}`, { label })
+
+/** Cabut satu blok (rute di hub ikut tercabut pada tik penyelaras berikutnya). */
+export const removeAccountRoute = (id: string, routeId: string) =>
+  api.del<VpnAccountView>(`/api/vpn/accounts/${id}/routes/${routeId}`)
 
 // ---- Unduh config akun (berisi kredensial; izin vpn.config.view) ----
 
