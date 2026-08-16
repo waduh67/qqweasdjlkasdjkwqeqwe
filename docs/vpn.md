@@ -218,8 +218,13 @@ operator sendiri di tun yang sama tak akan tersapu.
 
 Mendaftarkan blok di aplikasi belum cukup bila **chain `forward` di Mikrotik-nya**
 masih menutup jalan itu — kegagalan yang juga bisu di kedua sisi. Panel “Blok
-pelanggan” di web merakit aturannya siap-salin (`in-interface=ovpn-{username}`
-dua arah, `place-before=0` supaya tak keburu tertangkap aturan drop bawaan).
+pelanggan” di web merakit aturannya siap-salin: `accept` dua arah pada interface
+tunnel (namanya terisi `ovpn-{username}` tapi boleh diketik — ovpn-client yang
+dibuat lewat Winbox lahir sebagai `ovpn-out1`), diapit `remove [find comment~…]`
+di depan dan `move …destination=0` di belakang. **Bukan `place-before=0`**: itu
+menunjuk aturan yang harus sudah ada, jadi di router yang chain `forward`-nya
+masih kosong seluruh tempelan gagal dengan `no such item` — dan router seperti
+itulah yang paling mungkin dipakai orang saat pertama menyiapkan BRAS.
 
 Menonaktifkan akun ikut mencabut rute ke blok di belakangnya — tanpa itu,
 "menonaktifkan" cuma menutup pintu depan sementara pintu belakang tetap terbuka.

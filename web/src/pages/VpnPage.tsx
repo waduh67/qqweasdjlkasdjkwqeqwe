@@ -734,9 +734,11 @@ function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onCl
     })()
   }
 
-  const iface = ovpnInterfaceName(acct.username)
+  // Terisi dari nama bawaan perintah pasang akun, tapi tetap boleh diketik: teknisi yang
+  // membuat ovpn-client-nya lewat Winbox biasanya kebagian nama bawaan `ovpn-out1`.
+  const [iface, setIface] = useState(ovpnInterfaceName(account.username))
   const script = blokFirewallScript(
-    iface,
+    iface.trim() || ovpnInterfaceName(acct.username),
     acct.routes.map((r) => r.cidr),
   )
   const copyScript = () =>
@@ -848,21 +850,35 @@ function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onCl
       </div>
 
       {script && (
-        <CommandBlock
-          title={
-            <>
-              Terakhir, izinkan di <strong>Mikrotik</strong> — tanpa ini paketnya mati diam di chain forward:
-            </>
-          }
-          command={script}
-          copyLabel="Salin aturan"
-          onCopy={copyScript}
-          hint={
-            `Tempel di terminal RouterOS perangkat ini. Nama interface diasumsikan “${iface}” (bawaan perintah ` +
-            `pasang akun) — samakan bila Anda menamainya lain. Aturan sengaja ditaruh paling atas supaya tak ` +
-            `keburu tertangkap aturan drop bawaan konfigurasi Anda.`
-          }
-        />
+        <>
+          <div className="row" style={{ alignItems: 'flex-end', marginBottom: '0.5rem' }}>
+            <TextField
+              label="Nama interface OVPN di perangkat"
+              value={iface}
+              onChange={(_, data) => setIface(data.value)}
+              placeholder={ovpnInterfaceName(acct.username)}
+              style={{ width: '18rem' }}
+            />
+            <span className="muted" style={{ fontSize: '0.78rem', paddingBottom: '0.45rem' }}>
+              Cek dengan <code>/interface print where name~"ovpn"</code> bila ragu.
+            </span>
+          </div>
+          <CommandBlock
+            title={
+              <>
+                Terakhir, izinkan di <strong>Mikrotik</strong> — tanpa ini paketnya mati diam di chain forward:
+              </>
+            }
+            command={script}
+            copyLabel="Salin aturan"
+            onCopy={copyScript}
+            hint={
+              `Tempel di terminal RouterOS perangkat ini; boleh diulang kapan saja — barisnya menyapu aturan ` +
+              `“ftth-blok” lama dulu, lalu menaruh yang baru di urutan teratas supaya tak keburu tertangkap ` +
+              `aturan drop bawaan konfigurasi Anda.`
+            }
+          />
+        </>
       )}
     </Modal>
   )

@@ -25,23 +25,34 @@ describe('blokFirewallScript', () => {
   it('membuka dua arah untuk tiap blok', () => {
     const script = blokFirewallScript(ovpnInterfaceName('bras-rumah'), ['10.20.0.0/16'])
 
-    expect(script).toContain('in-interface=ovpn-bras-rumah dst-address=10.20.0.0/16')
-    expect(script).toContain('out-interface=ovpn-bras-rumah src-address=10.20.0.0/16')
-    expect(script.split('\n')).toHaveLength(4)
+    expect(script).toContain('in-interface=ovpn-bras-rumah')
+    expect(script).toContain('out-interface=ovpn-bras-rumah')
+    expect(script).toContain('dst-address=10.20.0.0/16')
+    expect(script).toContain('src-address=10.20.0.0/16')
   })
 
-  it('menaruh aturan di paling atas, bukan di ekor chain', () => {
-    // Aturan drop bawaan konfigurasi ISP duduk di atas; tanpa place-before aturan ini tak terbaca.
+  it('menaruh aturan di paling atas lewat move, bukan place-before', () => {
+    // place-before menunjuk aturan yang harus sudah ada: di chain forward yang masih
+    // kosong RouterOS menjawab "no such item" dan seluruh tempelan gagal.
     const script = blokFirewallScript('ovpn-x', ['10.20.0.0/16'])
 
-    expect(script.match(/place-before=0/g)).toHaveLength(2)
+    expect(script).not.toContain('place-before')
+    expect(script.trimEnd().endsWith('destination=0')).toBe(true)
+  })
+
+  it('boleh ditempel berulang tanpa menumpuk aturan kembar', () => {
+    const script = blokFirewallScript('ovpn-x', ['10.20.0.0/16'])
+
+    expect(script.split('\n')[0]).toContain('remove [find comment~"^ftth-blok"]')
   })
 
   it('merangkai semua blok dalam satu tempelan', () => {
-    const script = blokFirewallScript('ovpn-x', ['10.20.0.0/16', '10.30.0.0/16'])
+    const satu = blokFirewallScript('ovpn-x', ['10.20.0.0/16'])
+    const dua = blokFirewallScript('ovpn-x', ['10.20.0.0/16', '10.30.0.0/16'])
 
-    expect(script.split('\n')).toHaveLength(8)
-    expect(script).toContain('10.30.0.0/16')
+    // Tiap blok menambah tepat empat baris; remove/move-nya tetap sekali.
+    expect(dua.split('\n')).toHaveLength(satu.split('\n').length + 4)
+    expect(dua).toContain('10.30.0.0/16')
   })
 
   it('tak menghasilkan apa-apa bila belum ada blok terdaftar', () => {
