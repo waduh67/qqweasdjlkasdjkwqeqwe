@@ -1,6 +1,7 @@
 package com.duluin.ftth.customer.application.service
 
 import com.duluin.ftth.catalog.CatalogApi
+import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
@@ -15,6 +16,7 @@ import com.duluin.ftth.customer.application.port.outbound.CustomerRepository
 import com.duluin.ftth.customer.application.port.outbound.SubscriptionRepository
 import com.duluin.ftth.customer.domain.model.PlanSnapshot
 import com.duluin.ftth.customer.domain.model.Subscription
+import com.duluin.ftth.customer.domain.model.SubscriptionStatus
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -35,9 +37,35 @@ class SubscriptionService(
     override fun listForCustomer(customerId: UUID): List<SubscriptionView> =
         subscriptionRepository.findByCustomerId(customerId).map { it.toView() }
 
+    /**
+     * Membuka langganan untuk pelanggan — MAKSIMAL SATU YANG HIDUP.
+     *
+     * Aturannya bukan selera: sisi fisik sistem ini menempel pada PELANGGAN, bukan pada
+     * langganan (ONU, koordinat peta, perangkat CPE, badge "menunggu instalasi"). Langganan
+     * kedua karena itu tak akan pernah punya ONU sendiri, tak muncul di trace peta, dan
+     * sesinya dipilih lewat tebakan. Yang paling mahal: operator yang meng-upgrade paket
+     * dengan cara "tambah langganan baru" meninggalkan langganan lama tetap hidup, dan
+     * pelanggannya tertagih dua kali sampai ada yang sadar.
+     *
+     * Jalur yang benar dijelaskan langsung di pesan galat, karena di situlah operator
+     * membacanya: ganti paket lewat sunting, akhiri dulu yang lama, atau — untuk layanan
+     * kedua di lokasi lain — daftarkan sebagai pelanggan tersendiri. Langganan TERMINATED
+     * tak menghalangi apa pun; riwayat memang harus boleh menumpuk. Ditegakkan berlapis:
+     * indeks unik parsial di basis data (V106) menjaga balapan dua permintaan serentak.
+     */
     override fun create(customerId: UUID, command: SaveSubscriptionCommand): SubscriptionView {
         val customer = customerRepository.findById(customerId)
             ?: throw NotFoundException("Pelanggan $customerId tidak ditemukan")
+        subscriptionRepository.findByCustomerId(customerId)
+            .firstOrNull { it.status != SubscriptionStatus.TERMINATED }
+            ?.let { hidup ->
+                throw ConflictException(
+                    "Pelanggan ${customer.code} sudah punya langganan ${hidup.packageName} " +
+                        "(${sebutStatus(hidup.status)}). Satu pelanggan satu langganan: ganti paket lewat " +
+                        "sunting langganan, atau akhiri dulu langganan lama. Untuk layanan kedua di lokasi " +
+                        "lain, daftarkan sebagai pelanggan baru.",
+                )
+            }
         val subscription = subscriptionRepository.save(
             Subscription.create(customer.tenantId, customerId, resolveSnapshot(command)),
         )
@@ -141,4 +169,12 @@ class SubscriptionService(
 
     private fun require(id: UUID): Subscription =
         subscriptionRepository.findById(id) ?: throw NotFoundException("Langganan $id tidak ditemukan")
+
+    /** Status dalam bahasa yang dipakai operator, bukan nama konstanta. */
+    private fun sebutStatus(status: SubscriptionStatus): String = when (status) {
+        SubscriptionStatus.PENDING -> "menunggu instalasi"
+        SubscriptionStatus.ACTIVE -> "aktif"
+        SubscriptionStatus.ISOLATED -> "terisolir"
+        SubscriptionStatus.TERMINATED -> "berakhir"
+    }
 }
