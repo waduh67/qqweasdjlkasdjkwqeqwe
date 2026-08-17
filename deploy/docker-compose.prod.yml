@@ -110,6 +110,15 @@ services:
       # yang tak berarti apa-apa bagi ONT pelanggan → wajib IP/host publik VPS.
       GENIEACS_FS_HOSTNAME: ${FTTH_CPE_PUBLIC_HOST:-}
       GENIEACS_FS_PORT: ${FTTH_CPE_FS_PORT:-7567}
+      # Kunci port 7547 (lihat docker/genieacs/acs-bootstrap.js). Bawaan `off` = menerima
+      # Inform siapa pun, termasuk pemindai internet yang mendaftarkan perangkat hantu.
+      # JANGAN `enforce` sebelum seluruh ONT diberi kredensial di bawah — ONT yang belum
+      # punya akan lepas dari ACS tanpa gejala apa pun di sisi pelanggan.
+      FTTH_CPE_CWMP_AUTH_MODE: ${FTTH_CPE_CWMP_AUTH_MODE:-off}
+      # Kredensial yang sama persis dengan yang konsol suruh ketikkan teknisi ke ONT
+      # (kartu "Setelan ONT"), supaya yang tertulis di layar = yang diperiksa ACS.
+      FTTH_CPE_ONT_ACS_USERNAME: ${FTTH_CPE_ONT_ACS_USERNAME:-}
+      FTTH_CPE_ONT_ACS_PASSWORD: ${FTTH_CPE_ONT_ACS_PASSWORD:-}
     depends_on:
       genieacs-mongo:
         condition: service_healthy

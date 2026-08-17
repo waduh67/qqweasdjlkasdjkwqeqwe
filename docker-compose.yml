@@ -56,6 +56,12 @@ services:
     command: genieacs-cwmp
     environment:
       GENIEACS_MONGODB_CONNECTION_URL: mongodb://genieacs-mongo:27017/genieacs
+      # Sama seperti produksi (lihat deploy/docker-compose.prod.yml); di dev biarkan `off`
+      # agar simulator ONT bisa Inform tanpa kredensial. Setel `enforce` + kredensial ONT
+      # lewat shell untuk menguji jalur terkuncinya.
+      FTTH_CPE_CWMP_AUTH_MODE: ${FTTH_CPE_CWMP_AUTH_MODE:-off}
+      FTTH_CPE_ONT_ACS_USERNAME: ${FTTH_CPE_ONT_ACS_USERNAME:-}
+      FTTH_CPE_ONT_ACS_PASSWORD: ${FTTH_CPE_ONT_ACS_PASSWORD:-}
     depends_on:
       genieacs-mongo:
         condition: service_healthy

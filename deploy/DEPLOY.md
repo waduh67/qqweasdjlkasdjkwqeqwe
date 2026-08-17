@@ -630,6 +630,9 @@ proses GenieACS dari satu image — `genieacs-cwmp`, `genieacs-nbi`, `genieacs-f
 > **Batasi 7547/7567 kalau bisa.** Idealnya rentang IP jaringan akses pelangganmu saja,
 > bukan `0.0.0.0/0`. CWMP polos memang lazim di ISP, tapi makin sempit makin baik.
 
+Lihat juga **L.4** — bawaannya port 7547 menerima Inform **tanpa kredensial**, dan itu
+bukan celah teoretis: pemindai internet rutin mendaftarkan perangkat hantu ke ACS terbuka.
+
 ### L.2 Langkah pasang
 
 1. **Buka port di NSG Azure** — inbound `7547/TCP` dan (kalau mau fitur upgrade firmware)
@@ -692,7 +695,59 @@ dengan `serialNumber` ONU pelanggan di aplikasi. Kalau serialnya beda, perangkat
 tercatat di ACS tapi tak nempel ke pelanggan mana pun. Sinkron jalan tiap
 `FTTH_CPE_SYNC_INTERVAL` (default 5 menit), jadi tunggu sebentar.
 
-### L.4 Unggah firmware (buat fitur upgrade)
+### L.4 Kunci port 7547 (tolak Inform tanpa kredensial)
+
+Bawaan GenieACS **menerima Inform siapa pun**. Konsekuensinya nyata: pemindai internet
+memindai 7547 dan mendaftarkan perangkat ke ACS-mu — di ACS produksi ini pernah muncul
+device yang Manufacturer, OUI, dan ProductClass-nya semua harfiah `DISCOVERYSERVICE`.
+Perangkat sampah menggelembungkan Mongo dan, lebih buruk, melatih operator mengabaikan
+baris yang tak dikenalnya di daftar armada.
+
+Penutupnya satu env di `/opt/ftth/.env`:
+
+```bash
+FTTH_CPE_CWMP_AUTH_MODE=enforce
+```
+
+Kredensial yang diperiksa adalah `FTTH_CPE_ONT_ACS_USERNAME` / `FTTH_CPE_ONT_ACS_PASSWORD`
+— **pasangan yang sama** dengan yang konsol suruh ketikkan teknisi ke ONT (L.3). Sengaja
+begitu: satu nilai, satu tempat, jadi mustahil layar memberi tahu teknisi satu password
+sementara ACS memeriksa yang lain.
+
+Di HTTP polos GenieACS menantang dengan **Digest**, jadi password tak melintas apa adanya
+meski 7547 tanpa TLS.
+
+**Urutannya jangan dibalik:**
+
+1. Isi `FTTH_CPE_ONT_ACS_USERNAME` + `_PASSWORD`, biarkan mode `off`, deploy.
+2. Pastikan **semua** ONT sudah memakai kredensial itu — ONT baru diketik teknisi saat
+   instalasi, ONT lama lewat template config OLT atau push TR-069 selagi auth masih `off`.
+3. Baru setel `enforce`, salin ulang compose, `up -d`.
+
+Menyalakan `enforce` lebih dulu melepaskan setiap ONT yang belum punya kredensial dari ACS
+**tanpa gejala apa pun di sisi pelanggan** — internetnya tetap jalan (TR-069 tak menyentuh
+jalur data), jadi tak ada yang menelepon. Kehilangannya baru terasa saat kamu butuh
+mengubah WiFi atau reboot perangkat dari jauh, dan saat itu perangkatnya sudah tak bisa
+dihubungi untuk dibetulkan.
+
+Verifikasi setelah naik:
+
+```bash
+# 1. bootstrap-nya jalan & melaporkan mode yang kamu pilih
+docker compose -f docker-compose.prod.yml logs genieacs-cwmp | grep acs-bootstrap
+
+# 2. Inform tanpa kredensial harus DITOLAK (401), dari mana pun
+curl -s -o /dev/null -w '%{http_code}\n' -X POST -H 'Content-Type: text/xml' \
+  --data '<x/>' http://<IP-VPS>:7547/
+```
+
+`200` berarti auth **belum** berlaku (cek ejaan mode dan apakah container cwmp sudah
+dinaikkan ulang); `401` berarti sudah terkunci.
+
+Mau mematikannya lagi: kembalikan `FTTH_CPE_CWMP_AUTH_MODE=off` lalu `up -d`. Setelan
+tersimpan di Mongo, tapi `off` **menghapusnya** — tak ada sisa yang menyandera armada.
+
+### L.5 Unggah firmware (buat fitur upgrade)
 
 Aplikasi hanya **membaca** daftar firmware dari ACS lalu memerintahkan Download RPC —
 berkasnya sendiri diunggah ke GenieACS. GenieACS UI sengaja **tidak** dipasang (satu
@@ -718,7 +773,7 @@ docker compose -f docker-compose.prod.yml exec genieacs-nbi \
 - Cek hasilnya: `curl 'http://localhost:7557/files/?query=%7B%7D'` dari dalam container
   yang sama. Hapus: `curl -X DELETE http://localhost:7557/files/<nama-berkas>`.
 
-### L.5 Uji Kecepatan (TR-143)
+### L.6 Uji Kecepatan (TR-143)
 
 Tombol "Uji Kecepatan" menyuruh **perangkat** mengunduh sebuah berkas uji, bukan server.
 Default bawaannya `http://speedtest.tele2.net/10MB.zip` — layanan itu **sudah dimatikan

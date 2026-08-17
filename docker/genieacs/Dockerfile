@@ -11,5 +11,14 @@ RUN npm install -g genieacs@1.2.16 \
 RUN mkdir -p /tmp/genieacs-ext
 ENV GENIEACS_EXT_DIR=/tmp/genieacs-ext
 
+# Menyelaraskan auth CWMP (`cwmp.auth`) dari environment saat proses cwmp naik. GenieACS
+# menyimpan setelan itu di Mongo dan biasanya diisi lewat UI-nya — yang tak kita jalankan —
+# jadi tanpa ini satu-satunya cara mengunci port 7547 adalah menyunting Mongo dengan tangan.
+COPY acs-bootstrap.js /usr/local/bin/acs-bootstrap.js
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
 # cwmp / nbi / fs / ui
 EXPOSE 7547 7557 7567 3000
