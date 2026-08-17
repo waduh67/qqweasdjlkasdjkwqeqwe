@@ -571,6 +571,13 @@ function RingkasanTab({
  * Kelola langganan pelanggan: pilih paket dari katalog (bukan lagi ketik bebas), harga
  * & kecepatan ikut paket dengan opsi harga negosiasi per-pelanggan, plus kendali daur
  * hidup. Sisi komersial di-snapshot server saat simpan; sisi jaringan dibaca live.
+ *
+ * SATU PELANGGAN SATU LANGGANAN HIDUP. Selama masih ada langganan yang belum berakhir,
+ * formulir di bawah berganti peran: dari "buka langganan" menjadi "ganti paket" atas
+ * langganan itu. Dulu satu-satunya jalan mengubah paket lewat layar ini adalah menambah
+ * langganan baru — langganan lama ikut hidup, dan pelanggannya tertagih dua kali. Sisi
+ * fisiknya pun menempel pada pelanggan (ONU, koordinat, CPE), jadi langganan kedua tak
+ * pernah punya perangkat sendiri. Layanan kedua di lokasi lain = pelanggan baru.
  */
 function SubscriptionManager({
   customer,
@@ -580,11 +587,16 @@ function SubscriptionManager({
   run: (action: () => Promise<unknown>, okMessage?: string) => Promise<void>
 }) {
   const { can } = useCan()
+  const confirm = useConfirm()
   const canManage = can('customer.subscription.update')
   const [plans, setPlans] = useState<PlanView[]>([])
   const [planId, setPlanId] = useState('')
   const [priceOverride, setPriceOverride] = useState('')
   const [saving, setSaving] = useState(false)
+
+  // Langganan yang masih berjalan — apa pun statusnya selain berakhir. Terisolir & menunggu
+  // instalasi tetap terhitung: kontraknya belum selesai, jadi belum boleh ada yang kedua.
+  const live = customer.subscriptions.find((s) => s.status !== 'TERMINATED') ?? null
 
   useEffect(() => {
     if (!canManage) return
@@ -593,22 +605,48 @@ function SubscriptionManager({
       .catch(() => setPlans([]))
   }, [canManage])
 
+  // Mengganti paket berangkat dari paket yang SEDANG berjalan, bukan dari daftar kosong:
+  // operator tinggal memindahkannya, dan pilihan "tak sengaja jatuh ke paket pertama"
+  // tak mungkin terjadi. Paket yang sudah dinonaktifkan dari katalog tak ada di daftar →
+  // kotak tetap kosong dan operator memilih penggantinya secara sadar.
+  useEffect(() => {
+    setPlanId(live?.planId ?? '')
+    setPriceOverride('')
+  }, [live?.id, live?.planId])
+
   const selected = plans.find((p) => p.id === planId) ?? null
+  const override = priceOverride.trim()
+  // Tak ada yang berubah → tombol mati, biar tak ada perintah kosong yang mengantre
+  // pekerjaan RADIUS untuk paket yang sama.
+  const unchanged = live != null && planId === live.planId && override === ''
 
   const submit = async () => {
-    if (!planId) return
-    setSaving(true)
-    const override = priceOverride.trim()
-    await run(
-      () =>
-        api.post(`/api/customers/${customer.id}/subscriptions`, {
-          planId,
-          monthlyFeeOverride: override === '' ? null : Number(override),
-        }),
-      'Langganan ditambahkan',
-    )
+    if (!planId || unchanged) return
+    const body = { planId, monthlyFeeOverride: override === '' ? null : Number(override) }
+    if (live) {
+      const ok = await confirm({
+        title: 'Ganti paket langganan',
+        message: (
+          <>
+            {live.packageName} ({live.bandwidthMbps} Mbps) → {selected?.name ?? '—'} (
+            {selected ? `${selected.downMbps} Mbps` : '—'})
+            {override !== '' && ` · harga negosiasi Rp ${override}`}
+            <br />
+            Kecepatan di jaringan ikut berpindah otomatis, dan tagihan periode berikutnya memakai
+            harga paket baru.
+          </>
+        ),
+        confirmLabel: 'Ganti paket',
+      })
+      if (!ok) return
+      setSaving(true)
+      await run(() => api.put(`/api/customers/subscriptions/${live.id}`, body), 'Paket langganan diganti')
+    } else {
+      setSaving(true)
+      await run(() => api.post(`/api/customers/${customer.id}/subscriptions`, body), 'Langganan dibuka')
+      setPlanId('')
+    }
     setSaving(false)
-    setPlanId('')
     setPriceOverride('')
   }
 
@@ -642,7 +680,7 @@ function SubscriptionManager({
             <>
               <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
                 <SelectField
-                  label="Paket"
+                  label={live ? 'Pindahkan ke paket' : 'Paket'}
                   value={planId}
                   onChange={(_, data) => setPlanId(data.value)}
                   style={{ flex: '2 1 200px' }}
@@ -663,14 +701,20 @@ function SubscriptionManager({
                   placeholder={selected ? String(selected.price) : 'ikut paket'}
                   style={{ flex: '1 1 140px' }}
                 />
-                <Button variant="primary" disabled={!planId || saving} onClick={() => void submit()}>
-                  Tambah
+                <Button variant="primary" disabled={!planId || unchanged || saving} onClick={() => void submit()}>
+                  {live ? 'Ganti paket' : 'Buka langganan'}
                 </Button>
               </div>
               {selected && (
                 <p className="muted tnum" style={{ margin: 0, fontSize: '0.82rem' }}>
                   {selected.downMbps}/{selected.upMbps} Mbps · {fmtRupiah(selected.price)}/bln
                   {selected.fupEnabled ? ' · FUP' : ''} — kecepatan &amp; QoS mengikuti paket secara live.
+                </p>
+              )}
+              {live && (
+                <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+                  Satu pelanggan satu langganan — paketnya diganti di tempat, bukan ditambah. Untuk
+                  layanan kedua di lokasi lain, daftarkan sebagai pelanggan baru.
                 </p>
               )}
             </>
