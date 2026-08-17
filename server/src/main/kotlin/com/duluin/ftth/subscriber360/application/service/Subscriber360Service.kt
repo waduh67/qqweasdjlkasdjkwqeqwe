@@ -36,7 +36,7 @@ class Subscriber360Service(
         val customer = customerApi.findCustomer(customerId)
             ?: throw NotFoundException("Pelanggan $customerId tidak ditemukan")
 
-        val canSubscriptions = authz.can("customer.subscription.view")
+        val canSubscription = authz.can("customer.subscription.view")
         val canPlacement = authz.can("customer.onu.view")
         val canSession = authz.can("bng.session.view")
         val canBilling = authz.can("billing.invoice.view")
@@ -45,7 +45,7 @@ class Subscriber360Service(
 
         return Subscriber360View(
             customer = customer,
-            subscriptions = if (canSubscriptions) customerApi.findSubscriptionsByCustomer(customerId) else emptyList(),
+            subscription = if (canSubscription) customerApi.findSubscriptionByCustomer(customerId) else null,
             placement = if (canPlacement) customerApi.findPlacementOf(customerId) else null,
             session = if (canSession) bngApi.findSubscriberSession(customerId) else null,
             billing = if (canBilling) billingApi.findAccountSummary(customerId) else null,
@@ -54,7 +54,7 @@ class Subscriber360Service(
             // set WO pasang terbuka biasanya kecil, jadi masih murah untuk pandangan satu ini.
             openWorkOrder = if (canWorkOrder) workorderApi.openPsbByCustomer()[customerId] else null,
             access = Subscriber360Access(
-                subscriptions = canSubscriptions,
+                subscription = canSubscription,
                 placement = canPlacement,
                 session = canSession,
                 billing = canBilling,

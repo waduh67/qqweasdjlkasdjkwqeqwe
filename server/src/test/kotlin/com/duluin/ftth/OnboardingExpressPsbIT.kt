@@ -114,7 +114,7 @@ class OnboardingExpressPsbIT {
         val token = onboard(slug)
         val code = "C-ROLL${uniq()}"
 
-        // planId acak (tak ada) → openSubscription gagal → rollback total.
+        // planId acak (tak ada) → penetapan paket gagal → rollback total.
         mockMvc.perform(
             post("/api/onboarding/psb").header("Authorization", "Bearer $token")
                 .contentType(MediaType.APPLICATION_JSON)

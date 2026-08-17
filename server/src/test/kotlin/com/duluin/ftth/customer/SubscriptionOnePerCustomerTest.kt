@@ -5,7 +5,6 @@ import com.duluin.ftth.catalog.PlanCommercialRef
 import com.duluin.ftth.common.domain.Page
 import com.duluin.ftth.common.domain.PageRequest
 import com.duluin.ftth.common.domain.UuidV7
-import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.AuthenticatedUser
@@ -20,7 +19,6 @@ import com.duluin.ftth.customer.domain.model.PlanSnapshot
 import com.duluin.ftth.customer.domain.model.Subscription
 import com.duluin.ftth.customer.domain.model.SubscriptionStatus
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
 import java.math.BigDecimal
@@ -28,7 +26,7 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * Satu pelanggan hanya boleh punya SATU langganan hidup.
+ * Satu pelanggan memegang TEPAT SATU langganan, seumur hidupnya.
  *
  * Sisi fisik sistem ini menempel pada pelanggan, bukan pada langganan: ONU, koordinat peta,
  * perangkat CPE, dan badge "menunggu instalasi" semuanya dibaca per-pelanggan. Langganan kedua
@@ -36,8 +34,9 @@ import java.util.UUID
  * operator yang meng-upgrade paket dengan cara membuka langganan BARU meninggalkan yang lama
  * tetap hidup — pelanggan tertagih dua kali tanpa gejala apa pun di layar.
  *
- * Riwayat tetap boleh menumpuk: langganan yang sudah berakhir tak menghalangi pelanggan yang
- * kembali berlangganan (invoice lamanya masih menunjuk ke sana).
+ * Karena itu tak ada lagi operasi "tambah langganan": [SubscriptionService.setPlan] adalah
+ * satu-satunya pintu, dan pelanggan yang kembali setelah berhenti menghidupkan ulang BARIS YANG
+ * SAMA — bukan baris kedua. Uji di bawah menjaga ketiga cabangnya beserta akibat sampingannya.
  */
 class SubscriptionOnePerCustomerTest {
 
@@ -45,61 +44,71 @@ class SubscriptionOnePerCustomerTest {
     private val paketBaru: UUID = UuidV7.generate()
 
     @Test
-    fun `pelanggan yang belum punya langganan boleh dibukakan langganan`() {
+    fun `pelanggan yang belum berpaket dibukakan langganan pertamanya`() {
         val f = fixture()
 
-        val view = f.service.create(f.customerId, SaveSubscriptionCommand(paketBaru, null))
+        val view = f.service.setPlan(f.customerId, SaveSubscriptionCommand(paketBaru, null))
 
         assertThat(view.packageName).isEqualTo("Home 100 Mbps")
         assertThat(view.status).isEqualTo(SubscriptionStatus.PENDING)
-    }
-
-    @Test
-    fun `langganan kedua ditolak selama yang lama masih aktif`() {
-        val f = fixture(langgananLama = SubscriptionStatus.ACTIVE)
-
-        assertThatThrownBy { f.service.create(f.customerId, SaveSubscriptionCommand(paketBaru, null)) }
-            .isInstanceOf(ConflictException::class.java)
-            // Pesannya harus menyebut jalan keluarnya — di sinilah operator membacanya.
-            .hasMessageContaining("PLG-001")
-            .hasMessageContaining("Home 50 Mbps")
-            .hasMessageContaining("aktif")
-            .hasMessageContaining("ganti paket lewat sunting langganan")
-
-        // Tak ada yang tersimpan diam-diam sebelum penolakan.
         assertThat(f.subscriptions.tersimpan).hasSize(1)
     }
 
     @Test
-    fun `langganan yang sedang terisolir tetap menghalangi — kontraknya belum berakhir`() {
+    fun `ganti paket menimpa langganan yang sama, bukan menumpuk yang kedua`() {
+        val f = fixture(langgananLama = SubscriptionStatus.ACTIVE)
+        val idLama = f.subscriptions.tersimpan.single().id
+
+        val view = f.service.setPlan(f.customerId, SaveSubscriptionCommand(paketBaru, null))
+
+        assertThat(f.subscriptions.tersimpan).hasSize(1)
+        assertThat(view.id).isEqualTo(idLama)
+        assertThat(view.packageName).isEqualTo("Home 100 Mbps")
+        // Layanan tak boleh putus hanya karena paketnya naik — statusnya tetap seperti semula.
+        assertThat(view.status).isEqualTo(SubscriptionStatus.ACTIVE)
+        // Sisi jaringan harus tahu paketnya berpindah, supaya profil RADIUS ikut diselaraskan.
+        assertThat(f.events.terbit.filterIsInstance<SubscriptionPlanChanged>()).singleElement()
+            .extracting("planId").isEqualTo(paketBaru)
+    }
+
+    @Test
+    fun `pelanggan menunggak yang naik paket tetap terisolir sampai tagihannya lunas`() {
         val f = fixture(langgananLama = SubscriptionStatus.ISOLATED)
 
-        assertThatThrownBy { f.service.create(f.customerId, SaveSubscriptionCommand(paketBaru, null)) }
-            .isInstanceOf(ConflictException::class.java)
-            .hasMessageContaining("terisolir")
+        val view = f.service.setPlan(f.customerId, SaveSubscriptionCommand(paketBaru, null))
+
+        assertThat(view.status).isEqualTo(SubscriptionStatus.ISOLATED)
     }
 
     @Test
-    fun `langganan yang baru dijual dan belum dipasang pun menghalangi`() {
-        val f = fixture(langgananLama = SubscriptionStatus.PENDING)
+    fun `menyimpan paket yang sama tak mengantre pekerjaan RADIUS`() {
+        val f = fixture(langgananLama = SubscriptionStatus.ACTIVE, paketLama = paketBaru)
 
-        assertThatThrownBy { f.service.create(f.customerId, SaveSubscriptionCommand(paketBaru, null)) }
-            .isInstanceOf(ConflictException::class.java)
-            .hasMessageContaining("menunggu instalasi")
+        f.service.setPlan(f.customerId, SaveSubscriptionCommand(paketBaru, null))
+
+        assertThat(f.events.terbit).isEmpty()
     }
 
     @Test
-    fun `langganan yang sudah berakhir tak menghalangi pelanggan berlangganan lagi`() {
+    fun `pelanggan yang kembali berlangganan menghidupkan baris yang sama`() {
         val f = fixture(langgananLama = SubscriptionStatus.TERMINATED)
+        val idLama = f.subscriptions.tersimpan.single().id
 
-        val view = f.service.create(f.customerId, SaveSubscriptionCommand(paketBaru, null))
+        val view = f.service.setPlan(f.customerId, SaveSubscriptionCommand(paketBaru, null))
 
-        assertThat(view.packageName).isEqualTo("Home 100 Mbps")
-        // Riwayatnya tetap ada di sampingnya, bukan tergantikan.
-        assertThat(f.subscriptions.tersimpan).hasSize(2)
+        // Baris yang sama dihidupkan: akun PPPoE & riwayat tagihannya ikut terpakai lagi.
+        assertThat(f.subscriptions.tersimpan).hasSize(1)
+        assertThat(view.id).isEqualTo(idLama)
+        assertThat(view.status).isEqualTo(SubscriptionStatus.PENDING)
+        assertThat(view.terminatedAt).isNull()
+        // Prorata dihitung dari pemasangan yang baru, bukan dari aktivasi bertahun lalu.
+        assertThat(view.activatedAt).isNull()
     }
 
-    private fun fixture(langgananLama: SubscriptionStatus? = null): Fixture {
+    private fun fixture(
+        langgananLama: SubscriptionStatus? = null,
+        paketLama: UUID = UuidV7.generate(),
+    ): Fixture {
         val customer = Customer.create(
             tenantId = tenantId,
             code = "PLG-001",
@@ -113,8 +122,9 @@ class SubscriptionOnePerCustomerTest {
         )
         val subscriptions = SatuLanggananFakeSubRepo()
         if (langgananLama != null) {
-            subscriptions.save(subscriptionLama(customer.id, langgananLama))
+            subscriptions.save(subscriptionLama(customer.id, langgananLama, paketLama))
         }
+        val events = SatuLanggananFakeEvents()
         val service = SubscriptionService(
             subscriptionRepository = subscriptions,
             customerRepository = SatuLanggananFakeCustomerRepo(customer),
@@ -133,17 +143,17 @@ class SubscriptionOnePerCustomerTest {
                 ),
             ),
             auditor = AuditRecorder(ApplicationEventPublisher {}, SatuLanggananFakeCurrentUser(tenantId)),
-            events = ApplicationEventPublisher {},
+            events = events,
         )
-        return Fixture(customer.id, subscriptions, service)
+        return Fixture(customer.id, subscriptions, events, service)
     }
 
     /** Langganan yang sudah dipegang pelanggan, dibawa ke status yang diuji. */
-    private fun subscriptionLama(customerId: UUID, status: SubscriptionStatus): Subscription {
+    private fun subscriptionLama(customerId: UUID, status: SubscriptionStatus, planId: UUID): Subscription {
         val lama = Subscription.create(
             tenantId, customerId,
             PlanSnapshot(
-                planId = UuidV7.generate(),
+                planId = planId,
                 packageName = "Home 50 Mbps",
                 bandwidthMbps = 50,
                 monthlyFee = BigDecimal("175000"),
@@ -165,6 +175,7 @@ class SubscriptionOnePerCustomerTest {
     private class Fixture(
         val customerId: UUID,
         val subscriptions: SatuLanggananFakeSubRepo,
+        val events: SatuLanggananFakeEvents,
         val service: SubscriptionService,
     )
 }
@@ -179,8 +190,8 @@ private class SatuLanggananFakeSubRepo : SubscriptionRepository {
     }
 
     override fun findById(id: UUID): Subscription? = tersimpan.firstOrNull { it.id == id }
-    override fun findByCustomerId(customerId: UUID): List<Subscription> =
-        tersimpan.filter { it.customerId == customerId }
+    override fun findByCustomerId(customerId: UUID): Subscription? =
+        tersimpan.firstOrNull { it.customerId == customerId }
 
     override fun findByCustomerIds(customerIds: Set<UUID>): List<Subscription> = notUsed()
     override fun findByIds(ids: Set<UUID>): List<Subscription> = notUsed()
@@ -218,6 +229,14 @@ private class SatuLanggananFakeCatalog(private val plan: PlanCommercialRef) : Ca
     override fun findPlanByName(name: String) = throw UnsupportedOperationException()
     override fun findPlanNetwork(planId: UUID) = throw UnsupportedOperationException()
     override fun findActivePlans() = throw UnsupportedOperationException()
+}
+
+/** Menangkap kejadian domain — yang diuji di sini: kapan RADIUS BOLEH disuruh bekerja. */
+private class SatuLanggananFakeEvents : ApplicationEventPublisher {
+    val terbit = mutableListOf<Any>()
+    override fun publishEvent(event: Any) {
+        terbit += event
+    }
 }
 
 private class SatuLanggananFakeCurrentUser(private val tenantId: UUID) : CurrentUserProvider {

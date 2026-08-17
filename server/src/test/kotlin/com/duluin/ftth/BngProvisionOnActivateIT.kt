@@ -54,8 +54,7 @@ class BngProvisionOnActivateIT {
         val tenantId = tenantApi.findBySlug(slug)!!.id
 
         val planId = createPlan(token)
-        val customerId = createCustomer(token, code = "C-ONBOARD")
-        val sub = id(post("/api/customers/$customerId/subscriptions", token, """{"planId":"$planId"}"""))
+        val sub = createCustomerWithPlan(token, code = "C-ONBOARD", planId = planId)
         val nasId = id(post("/api/bng/nas", token, """{"name":"BRAS-${uniq()}","vendor":"MIKROTIK"}"""))
 
         // Buat akun saat langganan masih PENDING → akun PENDING, RADIUS belum disentuh.
@@ -82,8 +81,7 @@ class BngProvisionOnActivateIT {
         val token = onboard(slug)
 
         val planId = createPlan(token)
-        val customerId = createCustomer(token, code = "C-AUTO")
-        val sub = id(post("/api/customers/$customerId/subscriptions", token, """{"planId":"$planId"}"""))
+        val sub = createCustomerWithPlan(token, code = "C-AUTO", planId = planId)
 
         // username + secret dikosongkan → di-generate; username turun dari kode pelanggan.
         val access = post("/api/bng/access", token, """{"subscriptionId":"$sub","planId":"$planId","nasId":null}""")
@@ -110,12 +108,15 @@ class BngProvisionOnActivateIT {
             ),
         )
 
-    private fun createCustomer(token: String, code: String): String =
-        id(
+    /** Pelanggan + langganan PENDING sekali daftar; kembalikan id langganannya. */
+    private fun createCustomerWithPlan(token: String, code: String, planId: String): String =
+        JsonPath.read(
             post(
                 "/api/customers", token,
-                """{"code":"$code","name":"Pelanggan ${uniq()}","address":"Jl. Uji","location":{"longitude":106.99,"latitude":-6.24}}""",
+                """{"code":"$code","name":"Pelanggan ${uniq()}","address":"Jl. Uji",
+                    "location":{"longitude":106.99,"latitude":-6.24},"planId":"$planId"}""",
             ),
+            "$.subscription.id",
         )
 
     /** Aksi jalur-data RADIUS (PROVISION/DEPROVISION/SYNC_GROUP) yang tertunda untuk tenant. */

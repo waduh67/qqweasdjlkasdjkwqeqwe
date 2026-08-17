@@ -13,6 +13,7 @@ import com.duluin.ftth.customer.OnuPlacementRef
 import com.duluin.ftth.customer.OnuRef
 import com.duluin.ftth.customer.ProvisionOnuCommand
 import com.duluin.ftth.customer.RegisterCustomerCommand
+import com.duluin.ftth.customer.RegisteredCustomer
 import com.duluin.ftth.customer.SubscriberStats
 import com.duluin.ftth.customer.SubscriptionDimension
 import com.duluin.ftth.customer.SubscriptionRef
@@ -64,8 +65,8 @@ class CustomerApiService(
     override fun findSubscription(id: UUID): SubscriptionRef? =
         subscriptionRepository.findById(id)?.toRef()
 
-    override fun findSubscriptionsByCustomer(customerId: UUID): List<SubscriptionRef> =
-        subscriptionRepository.findByCustomerIds(setOf(customerId)).map { it.toRef() }
+    override fun findSubscriptionByCustomer(customerId: UUID): SubscriptionRef? =
+        subscriptionRepository.findByCustomerId(customerId)?.toRef()
 
     override fun findAwaitingInstallation(areaIds: Set<UUID>?): List<CustomerRef> =
         customerRepository.findAwaitingInstallation(areaIds).map { it.toRef() }
@@ -109,13 +110,10 @@ class CustomerApiService(
 
         val customerIds = onus.mapTo(HashSet()) { it.customerId }
         val customers = customerRepository.findAllByIds(customerIds).associateBy { it.id }
+        // Satu langganan per pelanggan (V107): tak ada lagi pemilihan "yang mana" — dulu
+        // pilihannya ACTIVE-dulu-baru-asal, dan pilihan itulah yang bisa salah.
         val activeSubscription = subscriptionRepository.findByCustomerIds(customerIds)
-            .groupBy { it.customerId }
-            // Yang ditampilkan adalah langganan yang paling menggambarkan kondisi
-            // sekarang: yang aktif dulu, baru yang lain.
-            .mapValues { (_, subs) ->
-                subs.firstOrNull { it.status == SubscriptionStatus.ACTIVE } ?: subs.firstOrNull()
-            }
+            .associateBy { it.customerId }
 
         return onus.mapNotNull { onu ->
             val customer = customers[onu.customerId] ?: return@mapNotNull null
@@ -284,8 +282,8 @@ class CustomerApiService(
      * jadi validasi kode unik, audit, dan event ikut berjalan — orkestrasi tak menembus internal.
      */
     @Transactional
-    override fun registerCustomer(command: RegisterCustomerCommand): UUID =
-        manageCustomer.create(
+    override fun registerCustomer(command: RegisterCustomerCommand): RegisteredCustomer {
+        val customer = manageCustomer.create(
             SaveCustomerCommand(
                 code = command.code,
                 name = command.name,
@@ -296,11 +294,14 @@ class CustomerApiService(
                 areaId = command.areaId,
                 idCardNumber = command.idCardNumber,
             ),
-        ).id
-
-    @Transactional
-    override fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: java.math.BigDecimal?): UUID =
-        manageSubscription.create(customerId, SaveSubscriptionCommand(planId, monthlyFeeOverride)).id
+            SaveSubscriptionCommand(command.planId, command.monthlyFeeOverride),
+        )
+        // Baru saja dibuat di baris di atas — null di sini berarti kontraknya yang bohong.
+        val subscription = checkNotNull(customer.subscription) {
+            "Pelanggan ${customer.code} terdaftar tanpa langganan"
+        }
+        return RegisteredCustomer(customer.id, subscription.id)
+    }
 
     /**
      * Merge parsial: baca kondisi terkini lalu timpa hanya field yang dibawa CSV (non-null),

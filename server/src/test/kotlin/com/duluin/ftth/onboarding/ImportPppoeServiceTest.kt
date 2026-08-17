@@ -9,6 +9,7 @@ import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.RegisterCustomerCommand
+import com.duluin.ftth.customer.RegisteredCustomer
 import com.duluin.ftth.onboarding.application.port.inbound.ImportPppoeCommand
 import com.duluin.ftth.onboarding.application.port.inbound.ImportRow
 import com.duluin.ftth.onboarding.application.port.inbound.ImportRowStatus
@@ -225,14 +226,11 @@ class ImportPppoeServiceTest {
         val registered = mutableListOf<RegisterCustomerCommand>()
         var activatedCount = 0
 
-        override fun registerCustomer(command: RegisterCustomerCommand): UUID {
+        override fun registerCustomer(command: RegisterCustomerCommand): RegisteredCustomer {
             if (command.code in existingCodes) throw ConflictException("Pelanggan '${command.code}' sudah ada")
             registered += command
-            return UuidV7.generate()
+            return RegisteredCustomer(UuidV7.generate(), UuidV7.generate())
         }
-
-        override fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: BigDecimal?): UUID =
-            UuidV7.generate()
 
         override fun activateForInstallation(subscriptionId: UUID) {
             activatedCount++
@@ -243,7 +241,7 @@ class ImportPppoeServiceTest {
         override fun findCustomer(id: UUID) = throw UnsupportedOperationException()
         override fun findCustomersByIds(ids: Set<UUID>) = throw UnsupportedOperationException()
         override fun findSubscription(id: UUID) = throw UnsupportedOperationException()
-        override fun findSubscriptionsByCustomer(customerId: UUID) = throw UnsupportedOperationException()
+        override fun findSubscriptionByCustomer(customerId: UUID) = throw UnsupportedOperationException()
         override fun findOccupantsOfOdp(odpId: UUID) = throw UnsupportedOperationException()
         override fun findAwaitingInstallation(areaIds: Set<UUID>?) = throw UnsupportedOperationException()
         override fun findPlacementOf(customerId: UUID) = throw UnsupportedOperationException()

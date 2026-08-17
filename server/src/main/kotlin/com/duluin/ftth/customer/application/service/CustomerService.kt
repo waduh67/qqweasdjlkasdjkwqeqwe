@@ -10,7 +10,9 @@ import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.common.security.areaScope
 import com.duluin.ftth.customer.application.port.inbound.CustomerView
 import com.duluin.ftth.customer.application.port.inbound.ManageCustomerUseCase
+import com.duluin.ftth.customer.application.port.inbound.ManageSubscriptionUseCase
 import com.duluin.ftth.customer.application.port.inbound.SaveCustomerCommand
+import com.duluin.ftth.customer.application.port.inbound.SaveSubscriptionCommand
 import com.duluin.ftth.customer.application.port.inbound.UnmappedCustomerView
 import com.duluin.ftth.customer.application.port.outbound.CustomerRepository
 import com.duluin.ftth.customer.application.port.outbound.OnuRepository
@@ -30,6 +32,7 @@ import java.util.UUID
 class CustomerService(
     private val customerRepository: CustomerRepository,
     private val subscriptionRepository: SubscriptionRepository,
+    private val manageSubscription: ManageSubscriptionUseCase,
     private val onuRepository: OnuRepository,
     private val assembler: CustomerAssembler,
     private val networkApi: NetworkApi,
@@ -58,7 +61,12 @@ class CustomerService(
     @Transactional(readOnly = true)
     override fun get(id: UUID): CustomerView = assemble(requireCustomer(id))
 
-    override fun create(command: SaveCustomerCommand): CustomerView {
+    /**
+     * Pelanggan + langganannya lahir bersama. Urutannya penting: langganan dibuka SETELAH
+     * pelanggan tersimpan (butuh id-nya), tapi masih di transaksi yang sama — paket yang
+     * salah membatalkan pendaftaran seutuhnya, bukan meninggalkan pelanggan tanpa paket.
+     */
+    override fun create(command: SaveCustomerCommand, plan: SaveSubscriptionCommand?): CustomerView {
         val manualCode = command.code?.trim()?.takeIf { it.isNotEmpty() }?.uppercase()
         if (manualCode != null && customerRepository.existsByCode(manualCode)) {
             throw ConflictException("Kode pelanggan '$manualCode' sudah dipakai")
@@ -82,6 +90,7 @@ class CustomerService(
             mapOf("code" to customer.code, "name" to customer.name),
         )
         events.publishEvent(customer.contactChanged())
+        if (plan != null) manageSubscription.setPlan(customer.id, plan)
         return assemble(customer)
     }
 
@@ -152,7 +161,7 @@ class CustomerService(
 
     private fun assemble(customer: Customer): CustomerView = assembler.toViews(
         customers = listOf(customer),
-        subscriptions = subscriptionRepository.findByCustomerId(customer.id),
+        subscriptions = listOfNotNull(subscriptionRepository.findByCustomerId(customer.id)),
         onus = onuRepository.findByCustomerId(customer.id),
     ).single()
 

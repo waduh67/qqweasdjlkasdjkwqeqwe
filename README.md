@@ -529,7 +529,7 @@ sungguhan, bukan pada tampilan:
 | `GET/POST/PUT/DELETE /api/odps` · `PUT /{id}/uplink` | `network.odp.*` |
 | `GET/POST/PUT/DELETE /api/cables` | `network.cable.*` |
 | `GET/POST/PUT/DELETE /api/customers` | `customer.customer.*` |
-| `POST /api/customers/{id}/subscriptions` · `/activate` · `/isolate` | `customer.subscription.update` |
+| `PUT /api/customers/{id}/subscription` · `/activate` · `/isolate` | `customer.subscription.update` |
 | `POST /api/customers/{id}/onus` · `/onus/{id}/attach` · `/detach` | `customer.onu.assign` |
 | `GET /api/gis/tiles/{z}/{x}/{y}.mvt` | `gis.map.view` |
 | `GET /api/gis/odps/{id}` | `gis.map.view` + `network.odp.view` |

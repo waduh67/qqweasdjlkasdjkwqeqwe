@@ -4,13 +4,28 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 
+/**
+ * Langganan seorang pelanggan — TUNGGAL. Tak ada operasi "tambah langganan" di kontrak ini:
+ * satu pelanggan memegang satu langganan seumur hidupnya (V107), yang statusnya berpindah dan
+ * paketnya bisa diganti di tempat.
+ */
 interface ManageSubscriptionUseCase {
 
-    fun listForCustomer(customerId: UUID): List<SubscriptionView>
+    /** null bila pelanggan warisan yang belum pernah dipasangi paket. */
+    fun findForCustomer(customerId: UUID): SubscriptionView?
 
-    fun create(customerId: UUID, command: SaveSubscriptionCommand): SubscriptionView
-
-    fun update(id: UUID, command: SaveSubscriptionCommand): SubscriptionView
+    /**
+     * Menetapkan paket pelanggan — SATU pintu untuk tiga kejadian yang di mata operator memang
+     * satu gerakan ("paket orang ini sekarang X"):
+     *  1. belum punya langganan (pelanggan warisan) → langganannya dibuka;
+     *  2. langganannya sudah berakhir → baris yang sama dihidupkan lagi, bukan ditambah baris
+     *     kedua (username PPPoE & riwayat tagihannya ikut lestari — lihat `Subscription.resubscribe`);
+     *  3. langganannya berjalan → paketnya diganti di tempat, dan bila paketnya benar-benar
+     *     berpindah, sisi jaringan diberi tahu supaya kecepatannya ikut pindah.
+     *
+     * Idempoten: memanggil ulang dengan paket yang sama tak mengantre pekerjaan RADIUS apa pun.
+     */
+    fun setPlan(customerId: UUID, command: SaveSubscriptionCommand): SubscriptionView
 
     fun activate(id: UUID): SubscriptionView
 
@@ -36,9 +51,9 @@ interface ManageSubscriptionUseCase {
 }
 
 /**
- * Buat/ubah langganan dengan MERUJUK paket katalog (bukan lagi teks bebas). Sisi
- * komersial paket di-snapshot ke langganan; [monthlyFeeOverride] mengizinkan harga
- * negosiasi per-pelanggan (null = pakai harga paket).
+ * Menetapkan paket dengan MERUJUK katalog (bukan teks bebas). Sisi komersial paket
+ * di-snapshot ke langganan; [monthlyFeeOverride] mengizinkan harga negosiasi
+ * per-pelanggan (null = pakai harga paket).
  */
 data class SaveSubscriptionCommand(
     val planId: UUID,

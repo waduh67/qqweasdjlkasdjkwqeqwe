@@ -39,11 +39,13 @@ data class PlanSnapshot(
 )
 
 /**
- * Langganan layanan milik seorang pelanggan.
+ * Langganan layanan milik seorang pelanggan — SATU-SATUNYA miliknya, seumur hidup pelanggan itu
+ * (dikunci `uq_subscription_customer`, lihat V107).
  *
  * Perpindahan status dijaga sebagai mesin keadaan eksplisit: langganan yang sudah
  * diakhiri tidak boleh "hidup lagi" diam-diam lewat update biasa, karena tanggal
- * aktivasi dan terminasi dipakai untuk penagihan. Detail paket disimpan sebagai
+ * aktivasi dan terminasi dipakai untuk penagihan. Menghidupkannya kembali punya pintu
+ * tersendiri ([resubscribe]) yang menyatakan niatnya. Detail paket disimpan sebagai
  * [PlanSnapshot] beku, bukan referensi hidup.
  */
 class Subscription private constructor(
@@ -99,15 +101,7 @@ class Subscription private constructor(
     /** Salin ulang snapshot paket (mis. ganti paket atau harga negosiasi). */
     fun updatePackage(snapshot: PlanSnapshot) {
         assertNotTerminated()
-        val s = validate(snapshot)
-        planId = s.planId
-        packageName = s.packageName
-        bandwidthMbps = s.bandwidthMbps
-        monthlyFee = s.monthlyFee
-        prorateOnActivation = s.prorateOnActivation
-        billingDayOfMonth = s.billingDayOfMonth
-        graceDays = s.graceDays
-        autoIsolir = s.autoIsolir
+        applySnapshot(validate(snapshot))
     }
 
     /**
@@ -141,6 +135,41 @@ class Subscription private constructor(
         if (status == SubscriptionStatus.TERMINATED) return
         status = SubscriptionStatus.TERMINATED
         terminatedAt = at
+    }
+
+    /**
+     * Pelanggan lama berlangganan lagi: baris yang sama dihidupkan ulang dengan paket baru,
+     * BUKAN diganti baris kedua.
+     *
+     * Alasannya menempel di data, bukan di selera. Akun jaringan (`subscriber_access`) unik
+     * per-langganan, jadi baris baru berarti username PPPoE baru untuk orang yang sama —
+     * padahal di lapangan pelanggan yang kembali memang memakai login lamanya. Tagihan pun
+     * unik per (langganan, periode), sehingga baris baru membuka celah tertagih dua kali untuk
+     * bulan yang sudah dibayar sebelum dia berhenti.
+     *
+     * [activatedAt] dikosongkan supaya prorata dihitung dari pemasangan yang BARU — memakai
+     * tanggal aktivasi bertahun lalu akan menagihkan sebulan penuh atas layanan yang belum
+     * menyala. Kembali ke PENDING karena statusnya memang "sudah dijual, menunggu instalasi".
+     */
+    fun resubscribe(snapshot: PlanSnapshot) {
+        if (status != SubscriptionStatus.TERMINATED) {
+            throw ConflictException("Langganan masih berjalan (status sekarang: $status), tak perlu dibuka ulang")
+        }
+        status = SubscriptionStatus.PENDING
+        activatedAt = null
+        terminatedAt = null
+        applySnapshot(validate(snapshot))
+    }
+
+    private fun applySnapshot(s: PlanSnapshot) {
+        planId = s.planId
+        packageName = s.packageName
+        bandwidthMbps = s.bandwidthMbps
+        monthlyFee = s.monthlyFee
+        prorateOnActivation = s.prorateOnActivation
+        billingDayOfMonth = s.billingDayOfMonth
+        graceDays = s.graceDays
+        autoIsolir = s.autoIsolir
     }
 
     private fun assertNotTerminated() {

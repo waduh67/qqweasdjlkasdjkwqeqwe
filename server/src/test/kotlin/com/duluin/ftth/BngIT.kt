@@ -125,22 +125,16 @@ class BngIT {
     /** Pelanggan + langganan aktif merujuk paket katalog; kembalikan (customerId, subscriptionId). */
     private fun activeSubscription(token: String): Pair<String, String> {
         val s = uniq().uppercase()
-        val customer = id(
-            post(
-                "/api/customers", token,
-                """{"code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji",
-                    "location":{"longitude":106.996,"latitude":-6.246}}""",
-            ),
-        )
         val planId = catalogPlan(token, "Paket $s")
-        val sub = id(
-            post(
-                "/api/customers/$customer/subscriptions", token,
-                """{"planId":"$planId"}""",
-            ),
+        // Pelanggan lahir bersama langganannya — satu POST, tak ada langkah "buka langganan".
+        val customer = post(
+            "/api/customers", token,
+            """{"code":"C-$s","name":"Pelanggan $s","address":"Jl. Uji",
+                "location":{"longitude":106.996,"latitude":-6.246},"planId":"$planId"}""",
         )
+        val sub = JsonPath.read<String>(customer, "$.subscription.id")
         post("/api/customers/subscriptions/$sub/activate", token, "", expected = 200)
-        return customer to sub
+        return id(customer) to sub
     }
 
     @Test

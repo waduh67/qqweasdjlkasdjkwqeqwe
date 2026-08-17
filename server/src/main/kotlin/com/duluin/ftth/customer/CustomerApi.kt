@@ -24,10 +24,10 @@ interface CustomerApi {
     fun findSubscription(id: UUID): SubscriptionRef?
 
     /**
-     * Semua langganan seorang pelanggan — untuk agregator Subscriber-360 yang menyusun
-     * pandangan 360° dari satu pelanggan. Kosong bila pelanggan belum punya langganan.
+     * Langganan seorang pelanggan — tunggal (satu pelanggan satu langganan). null bila
+     * pelanggan warisan yang belum pernah dipasangi paket.
      */
-    fun findSubscriptionsByCustomer(customerId: UUID): List<SubscriptionRef>
+    fun findSubscriptionByCustomer(customerId: UUID): SubscriptionRef?
 
     /** Semua pelanggan yang tersambung pada sebuah ODP, terurut menurut nomor port. */
     fun findOccupantsOfOdp(odpId: UUID): List<OdpOccupant>
@@ -145,18 +145,13 @@ interface CustomerApi {
     fun terminateForDismantle(subscriptionId: UUID)
 
     /**
-     * Onboarding: daftarkan pelanggan baru lewat kontrak publik (kode unik & aturan module
-     * customer tetap ditegakkan), kembalikan id-nya. Dipakai orkestrasi PSB ekspres yang
-     * merangkai pendaftaran + langganan + akun + WO dalam satu transaksi.
+     * Onboarding: daftarkan pelanggan baru BESERTA langganannya lewat kontrak publik (kode unik
+     * & aturan module customer tetap ditegakkan). Keduanya lahir bersama karena satu pelanggan
+     * memegang tepat satu langganan — tak ada langkah "buka langganan" menyusul yang bisa
+     * gagal di tengah dan meninggalkan pelanggan tanpa paket. Langganannya lahir PENDING
+     * (menunggu instalasi), sehingga akun jaringannya pun PENDING sampai WO PSB selesai.
      */
-    fun registerCustomer(command: RegisterCustomerCommand): UUID
-
-    /**
-     * Onboarding: buka langganan merujuk paket katalog; lahir berstatus PENDING (menunggu
-     * instalasi), sehingga akun jaringannya pun PENDING sampai WO PSB selesai. Kembalikan id
-     * langganan. [monthlyFeeOverride] null = pakai harga paket.
-     */
-    fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: java.math.BigDecimal?): UUID
+    fun registerCustomer(command: RegisterCustomerCommand): RegisteredCustomer
 
     /**
      * Impor CSV: perbarui biodata pelanggan secara PARSIAL — hanya field non-null yang ditimpa,
@@ -291,6 +286,16 @@ data class RegisterCustomerCommand(
     val areaId: UUID?,
     /** Nomor identitas (NIK/KTP/paspor); opsional. */
     val idCardNumber: String? = null,
+    /** Paket yang dibeli — wajib: pelanggan dan langganannya lahir bersama. */
+    val planId: UUID,
+    /** Harga negosiasi; null = pakai harga paket. */
+    val monthlyFeeOverride: java.math.BigDecimal? = null,
+)
+
+/** Pelanggan baru dan langganan yang lahir bersamanya. */
+data class RegisteredCustomer(
+    val customerId: UUID,
+    val subscriptionId: UUID,
 )
 
 /**

@@ -188,23 +188,23 @@ class NoOperatorCurrentUserProvider(private val user: AuthenticatedUser? = null)
 /** CustomerApi stub: resolusi pelanggan + langganan; sisanya tak dipakai uji portal. */
 class StubCustomerApi(vararg seed: CustomerRef) : CustomerApi {
     private val byId = LinkedHashMap<UUID, CustomerRef>().apply { seed.forEach { put(it.id, it) } }
-    private val subscriptions = LinkedHashMap<UUID, List<SubscriptionRef>>()
+    private val subscriptions = LinkedHashMap<UUID, SubscriptionRef>()
 
     fun add(ref: CustomerRef) {
         byId[ref.id] = ref
     }
 
-    fun seedSubscriptions(customerId: UUID, subs: List<SubscriptionRef>) {
-        subscriptions[customerId] = subs
+    /** Satu pelanggan satu langganan — stub pun tak menyediakan cara menaruh yang kedua. */
+    fun seedSubscription(customerId: UUID, sub: SubscriptionRef) {
+        subscriptions[customerId] = sub
     }
 
     override fun findCustomer(id: UUID): CustomerRef? = byId[id]
 
     override fun findCustomersByIds(ids: Set<UUID>) = ids.mapNotNull { byId[it] }
     override fun findSubscription(id: UUID): SubscriptionRef? =
-        subscriptions.values.flatten().firstOrNull { it.id == id }
-    override fun findSubscriptionsByCustomer(customerId: UUID): List<SubscriptionRef> =
-        subscriptions[customerId].orEmpty()
+        subscriptions.values.firstOrNull { it.id == id }
+    override fun findSubscriptionByCustomer(customerId: UUID): SubscriptionRef? = subscriptions[customerId]
     override fun findOccupantsOfOdp(odpId: UUID) = throw UnsupportedOperationException()
     override fun findAwaitingInstallation(areaIds: Set<UUID>?) = throw UnsupportedOperationException()
     override fun findPlacementOf(customerId: UUID) = throw UnsupportedOperationException()
@@ -222,7 +222,6 @@ class StubCustomerApi(vararg seed: CustomerRef) : CustomerApi {
     override fun activateForInstallation(subscriptionId: UUID) = throw UnsupportedOperationException()
     override fun terminateForDismantle(subscriptionId: UUID) = throw UnsupportedOperationException()
     override fun registerCustomer(command: RegisterCustomerCommand) = throw UnsupportedOperationException()
-    override fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: BigDecimal?) = throw UnsupportedOperationException()
     override fun subscriberStats() = throw UnsupportedOperationException()
     override fun updateCustomerBiodata(command: com.duluin.ftth.customer.UpdateCustomerBiodataCommand) = throw UnsupportedOperationException()
     override fun activateImportedSubscription(subscriptionId: UUID, activatedAt: java.time.Instant?, billingDayOfMonth: Int?) = throw UnsupportedOperationException()

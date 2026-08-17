@@ -18,7 +18,18 @@ interface ManageCustomerUseCase {
 
     fun get(id: UUID): CustomerView
 
-    fun create(command: SaveCustomerCommand): CustomerView
+    /**
+     * Mendaftarkan pelanggan BESERTA langganannya — keduanya lahir bersama, dalam satu
+     * transaksi. Pelanggan tanpa paket bukan keadaan yang berguna bagi siapa pun: dia tak
+     * tertagih, tak punya akun jaringan, dan tak muncul di antrean pasang. Karena itu jalur
+     * normal (layar pendaftaran, PSB ekspres, impor) selalu membawa [plan] — dan tak ada
+     * operasi "tambah langganan" menyusul; yang ada hanya menetapkan paket.
+     *
+     * [plan] null hanya untuk pencatatan calon pelanggan yang paketnya memang belum
+     * diputuskan (survei). Paketnya dipasang belakangan lewat
+     * [ManageSubscriptionUseCase.setPlan], pintu yang sama dengan ganti paket.
+     */
+    fun create(command: SaveCustomerCommand, plan: SaveSubscriptionCommand?): CustomerView
 
     fun update(id: UUID, command: SaveCustomerCommand): CustomerView
 

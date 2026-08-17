@@ -54,7 +54,7 @@ class Subscriber360ServiceTest {
         val view = service.assemble(customerId)
 
         assertThat(view.customer.id).isEqualTo(customerId)
-        assertThat(view.subscriptions).hasSize(1)
+        assertThat(view.subscription).isNotNull()
         assertThat(view.placement).isNotNull()
         assertThat(view.session).isNotNull()
         assertThat(view.billing).isNotNull()
@@ -62,7 +62,7 @@ class Subscriber360ServiceTest {
         assertThat(view.openWorkOrder).isNotNull()
         assertThat(view.access).isEqualTo(
             com.duluin.ftth.subscriber360.application.port.inbound.Subscriber360Access(
-                subscriptions = true, placement = true, session = true,
+                subscription = true, placement = true, session = true,
                 billing = true, cpe = true, workOrder = true,
             ),
         )
@@ -80,13 +80,13 @@ class Subscriber360ServiceTest {
         // Facet inti tetap ada.
         assertThat(view.customer.id).isEqualTo(customerId)
         // Facet digating → null/kosong.
-        assertThat(view.subscriptions).isEmpty()
+        assertThat(view.subscription).isNull()
         assertThat(view.placement).isNull()
         assertThat(view.session).isNull()
         assertThat(view.billing).isNull()
         assertThat(view.cpeDevices).isNull() // null (ditolak), bukan list kosong
         assertThat(view.openWorkOrder).isNull()
-        assertThat(view.access.subscriptions).isFalse()
+        assertThat(view.access.subscription).isFalse()
         assertThat(view.access.billing).isFalse()
         assertThat(view.access.cpe).isFalse()
     }
@@ -130,8 +130,8 @@ class Subscriber360ServiceTest {
         override fun findCustomer(id: UUID): CustomerRef? =
             if (present) CustomerRef(id, "C-001", "Budi", "0812", null, Coordinate(106.8, -6.2), "ACTIVE") else null
 
-        override fun findSubscriptionsByCustomer(customerId: UUID): List<SubscriptionRef> =
-            listOf(SubscriptionRef(UuidV7.generate(), customerId, UuidV7.generate(), "Home 100", 100, "ACTIVE"))
+        override fun findSubscriptionByCustomer(customerId: UUID): SubscriptionRef =
+            SubscriptionRef(UuidV7.generate(), customerId, UuidV7.generate(), "Home 100", 100, "ACTIVE")
 
         override fun findPlacementOf(customerId: UUID): CustomerPlacement =
             CustomerPlacement(UuidV7.generate(), UuidV7.generate(), 3, "SN-1", "ONLINE", "GOOD", -22.0)
@@ -154,9 +154,6 @@ class Subscriber360ServiceTest {
         override fun activateForInstallation(subscriptionId: UUID) = throw UnsupportedOperationException()
         override fun terminateForDismantle(subscriptionId: UUID) = throw UnsupportedOperationException()
         override fun registerCustomer(command: RegisterCustomerCommand) = throw UnsupportedOperationException()
-        override fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: BigDecimal?) =
-            throw UnsupportedOperationException()
-
         override fun subscriberStats() = throw UnsupportedOperationException()
         override fun updateCustomerBiodata(command: com.duluin.ftth.customer.UpdateCustomerBiodataCommand) = throw UnsupportedOperationException()
         override fun activateImportedSubscription(subscriptionId: UUID, activatedAt: java.time.Instant?, billingDayOfMonth: Int?) = throw UnsupportedOperationException()

@@ -115,7 +115,7 @@ class CustomerRowImporter(
         val plan = catalogApi.findPlanByName(row.packageName.orEmpty())
             ?: throw ValidationException("Paket '${row.packageName ?: "-"}' tidak ditemukan")
         val nasId = resolveNas(row.routerName)
-        val customerId = customerApi.registerCustomer(
+        val registered = customerApi.registerCustomer(
             RegisterCustomerCommand(
                 code = null,
                 name = row.name?.trim().orEmpty(),
@@ -125,9 +125,10 @@ class CustomerRowImporter(
                 location = coordinateOf(row) ?: PLACEHOLDER_LOCATION,
                 areaId = null,
                 idCardNumber = row.idCardNumber?.trim()?.takeIf { it.isNotEmpty() },
+                planId = plan.planId,
             ),
         )
-        val subscriptionId = customerApi.openSubscription(customerId, plan.planId, null)
+        val subscriptionId = registered.subscriptionId
         customerApi.activateImportedSubscription(
             subscriptionId,
             row.installationDate?.atStartOfDay(ZoneOffset.UTC)?.toInstant(),

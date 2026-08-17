@@ -100,17 +100,13 @@ class WorkOrderIT {
     private fun pendingSubscription(token: String): Pair<String, String> {
         val (customerId, _) = newCustomer(token)
         val planId = catalogPlan(token, "Paket ${uniq()}")
-        val sub = id(post("/api/customers/$customerId/subscriptions", token, """{"planId":"$planId"}"""))
+        val sub = id(put("/api/customers/$customerId/subscription", token, """{"planId":"$planId"}"""))
         return customerId to sub
     }
 
-    /** Status satu langganan lewat daftar langganan pelanggan (enum sebagai string). */
-    private fun subscriptionStatus(token: String, customerId: String, subscriptionId: String): String {
-        val list = get("/api/customers/$customerId/subscriptions", token)
-        val ids = JsonPath.read<List<String>>(list, "$[*].id")
-        val statuses = JsonPath.read<List<String>>(list, "$[*].status")
-        return statuses[ids.indexOf(subscriptionId)]
-    }
+    /** Status langganan pelanggan (enum sebagai string) — dia hanya punya satu. */
+    private fun subscriptionStatus(token: String, customerId: String): String =
+        JsonPath.read(get("/api/customers/$customerId/subscription", token), "$.status")
 
     @Test
     fun `siklus hidup work order ditegakkan dan nama teknisi diresolusi`() {
@@ -390,7 +386,7 @@ class WorkOrderIT {
     fun `PSB selesai mengaktifkan langganan, ditolak lalu selesai ulang tetap aktif`() {
         val token = newTenantAdmin("wo")
         val (customerId, sub) = pendingSubscription(token)
-        assertThat(subscriptionStatus(token, customerId, sub)).isEqualTo("PENDING")
+        assertThat(subscriptionStatus(token, customerId)).isEqualTo("PENDING")
 
         val woId = id(
             createWorkOrder(
@@ -404,19 +400,19 @@ class WorkOrderIT {
         post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
         post("/api/work-orders/$woId/start", token, "", 200)
         // Langganan masih PENDING sampai WO benar-benar selesai.
-        assertThat(subscriptionStatus(token, customerId, sub)).isEqualTo("PENDING")
+        assertThat(subscriptionStatus(token, customerId)).isEqualTo("PENDING")
 
         // Selesai → layanan resmi hidup.
         post("/api/work-orders/$woId/complete", token, """{"resolutionNote":"Terpasang"}""", 200)
-        assertThat(subscriptionStatus(token, customerId, sub)).isEqualTo("ACTIVE")
+        assertThat(subscriptionStatus(token, customerId)).isEqualTo("ACTIVE")
 
         // Penyelia menolak → WO dibuka lagi; aktivasi TIDAK dibatalkan (layanan sudah jalan).
         post("/api/work-orders/$woId/reject", token, """{"reason":"Rapikan kabel"}""", 200)
-        assertThat(subscriptionStatus(token, customerId, sub)).isEqualTo("ACTIVE")
+        assertThat(subscriptionStatus(token, customerId)).isEqualTo("ACTIVE")
 
         // Selesai ulang: idempoten (activate no-op karena bukan PENDING), tetap ACTIVE tanpa error.
         post("/api/work-orders/$woId/complete", token, """{"resolutionNote":"Sudah rapi"}""", 200)
-        assertThat(subscriptionStatus(token, customerId, sub)).isEqualTo("ACTIVE")
+        assertThat(subscriptionStatus(token, customerId)).isEqualTo("ACTIVE")
     }
 
     @Test
@@ -424,7 +420,7 @@ class WorkOrderIT {
         val token = newTenantAdmin("wo")
         val (customerId, sub) = pendingSubscription(token)
         post("/api/customers/subscriptions/$sub/activate", token, "", 200)
-        assertThat(subscriptionStatus(token, customerId, sub)).isEqualTo("ACTIVE")
+        assertThat(subscriptionStatus(token, customerId)).isEqualTo("ACTIVE")
 
         val woId = id(
             createWorkOrder(
@@ -437,7 +433,7 @@ class WorkOrderIT {
         post("/api/work-orders/$woId/start", token, "", 200)
         post("/api/work-orders/$woId/complete", token, "", 200)
 
-        assertThat(subscriptionStatus(token, customerId, sub)).isEqualTo("TERMINATED")
+        assertThat(subscriptionStatus(token, customerId)).isEqualTo("TERMINATED")
     }
 
     @Test
@@ -457,7 +453,7 @@ class WorkOrderIT {
         post("/api/work-orders/$woId/complete", token, "", 200)
 
         // REPAIR bukan pemasangan/pembongkaran → langganan tetap PENDING.
-        assertThat(subscriptionStatus(token, customerId, sub)).isEqualTo("PENDING")
+        assertThat(subscriptionStatus(token, customerId)).isEqualTo("PENDING")
     }
 
     @Test

@@ -8,6 +8,7 @@ import com.duluin.ftth.catalog.CatalogApi
 import com.duluin.ftth.catalog.PlanCommercialRef
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.customer.RegisterCustomerCommand
+import com.duluin.ftth.customer.RegisteredCustomer
 import com.duluin.ftth.customer.UpdateCustomerBiodataCommand
 import com.duluin.ftth.onboarding.application.port.inbound.CustomerImportRow
 import com.duluin.ftth.onboarding.application.port.inbound.CustomerImportStatus
@@ -416,13 +417,10 @@ class ImportCustomersServiceTest {
         val activatedImported = mutableListOf<ActivatedImported>()
         val billingOverrides = mutableListOf<Pair<UUID, Int?>>()
 
-        override fun registerCustomer(command: RegisterCustomerCommand): UUID {
+        override fun registerCustomer(command: RegisterCustomerCommand): RegisteredCustomer {
             registered += command
-            return UuidV7.generate()
+            return RegisteredCustomer(UuidV7.generate(), UuidV7.generate())
         }
-
-        override fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: BigDecimal?): UUID =
-            UuidV7.generate()
 
         override fun activateImportedSubscription(subscriptionId: UUID, activatedAt: Instant?, billingDayOfMonth: Int?) {
             activatedImported += ActivatedImported(subscriptionId, activatedAt, billingDayOfMonth)
@@ -441,7 +439,7 @@ class ImportCustomersServiceTest {
         override fun findCustomer(id: UUID) = throw UnsupportedOperationException()
         override fun findCustomersByIds(ids: Set<UUID>) = throw UnsupportedOperationException()
         override fun findSubscription(id: UUID) = throw UnsupportedOperationException()
-        override fun findSubscriptionsByCustomer(customerId: UUID) = throw UnsupportedOperationException()
+        override fun findSubscriptionByCustomer(customerId: UUID) = throw UnsupportedOperationException()
         override fun findOccupantsOfOdp(odpId: UUID) = throw UnsupportedOperationException()
         override fun findAwaitingInstallation(areaIds: Set<UUID>?) = throw UnsupportedOperationException()
         override fun findPlacementOf(customerId: UUID) = throw UnsupportedOperationException()

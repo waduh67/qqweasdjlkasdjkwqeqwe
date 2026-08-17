@@ -59,7 +59,7 @@ interface CustomerJpaRepository :
 }
 
 interface SubscriptionJpaRepository : JpaRepository<SubscriptionJpaEntity, UUID> {
-    fun findByCustomerIdOrderByCreatedAtDesc(customerId: UUID): List<SubscriptionJpaEntity>
+    fun findByCustomerId(customerId: UUID): SubscriptionJpaEntity?
     fun findByCustomerIdIn(customerIds: Collection<UUID>): List<SubscriptionJpaEntity>
     fun findByStatusIn(statuses: Collection<SubscriptionStatus>): List<SubscriptionJpaEntity>
 

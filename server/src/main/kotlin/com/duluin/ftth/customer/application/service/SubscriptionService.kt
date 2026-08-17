@@ -1,7 +1,6 @@
 package com.duluin.ftth.customer.application.service
 
 import com.duluin.ftth.catalog.CatalogApi
-import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
@@ -34,66 +33,49 @@ class SubscriptionService(
 ) : ManageSubscriptionUseCase {
 
     @Transactional(readOnly = true)
-    override fun listForCustomer(customerId: UUID): List<SubscriptionView> =
-        subscriptionRepository.findByCustomerId(customerId).map { it.toView() }
+    override fun findForCustomer(customerId: UUID): SubscriptionView? =
+        subscriptionRepository.findByCustomerId(customerId)?.toView()
 
     /**
-     * Membuka langganan untuk pelanggan — MAKSIMAL SATU YANG HIDUP.
+     * Menetapkan paket pelanggan: buka bila belum ada, hidupkan lagi bila sudah berakhir,
+     * ganti di tempat bila sedang berjalan.
      *
-     * Aturannya bukan selera: sisi fisik sistem ini menempel pada PELANGGAN, bukan pada
-     * langganan (ONU, koordinat peta, perangkat CPE, badge "menunggu instalasi"). Langganan
-     * kedua karena itu tak akan pernah punya ONU sendiri, tak muncul di trace peta, dan
-     * sesinya dipilih lewat tebakan. Yang paling mahal: operator yang meng-upgrade paket
-     * dengan cara "tambah langganan baru" meninggalkan langganan lama tetap hidup, dan
-     * pelanggannya tertagih dua kali sampai ada yang sadar.
+     * Tiga cabang, satu gerakan operator. Yang dulu terpisah jadi "tambah langganan" dan
+     * "sunting langganan" adalah sumber kerusakan yang mahal: operator meng-upgrade paket
+     * dengan menambah langganan baru, yang lama tetap hidup, dan pelanggan tertagih dua kali
+     * sampai ada yang sadar — sementara sisi jaringan tak pernah tahu paketnya berpindah
+     * karena yang terbit hanya "langganan baru", bukan "paket berubah". Sekarang tak ada
+     * pintu untuk membuat yang kedua; kuncinya di V107.
      *
-     * Jalur yang benar dijelaskan langsung di pesan galat, karena di situlah operator
-     * membacanya: ganti paket lewat sunting, akhiri dulu yang lama, atau — untuk layanan
-     * kedua di lokasi lain — daftarkan sebagai pelanggan tersendiri. Langganan TERMINATED
-     * tak menghalangi apa pun; riwayat memang harus boleh menumpuk. Ditegakkan berlapis:
-     * indeks unik parsial di basis data (V106) menjaga balapan dua permintaan serentak.
+     * [SubscriptionPlanChanged] hanya terbit bila paketnya BENAR-BENAR berpindah — menekan
+     * simpan dengan pilihan yang sama tak boleh mengantre pekerjaan RADIUS.
      */
-    override fun create(customerId: UUID, command: SaveSubscriptionCommand): SubscriptionView {
+    override fun setPlan(customerId: UUID, command: SaveSubscriptionCommand): SubscriptionView {
         val customer = customerRepository.findById(customerId)
             ?: throw NotFoundException("Pelanggan $customerId tidak ditemukan")
-        subscriptionRepository.findByCustomerId(customerId)
-            .firstOrNull { it.status != SubscriptionStatus.TERMINATED }
-            ?.let { hidup ->
-                throw ConflictException(
-                    "Pelanggan ${customer.code} sudah punya langganan ${hidup.packageName} " +
-                        "(${sebutStatus(hidup.status)}). Satu pelanggan satu langganan: ganti paket lewat " +
-                        "sunting langganan, atau akhiri dulu langganan lama. Untuk layanan kedua di lokasi " +
-                        "lain, daftarkan sebagai pelanggan baru.",
-                )
-            }
-        val subscription = subscriptionRepository.save(
-            Subscription.create(customer.tenantId, customerId, resolveSnapshot(command)),
-        )
-        auditor.record(
-            "subscription.created", "Subscription", subscription.id, subscription.tenantId,
-            mapOf("customer" to customer.code, "package" to subscription.packageName),
-        )
-        return subscription.toView()
-    }
+        val snapshot = resolveSnapshot(command)
+        val existing = subscriptionRepository.findByCustomerId(customerId)
+        if (existing == null) {
+            val opened = subscriptionRepository.save(Subscription.create(customer.tenantId, customerId, snapshot))
+            auditor.record(
+                "subscription.created", "Subscription", opened.id, opened.tenantId,
+                mapOf("customer" to customer.code, "package" to opened.packageName),
+            )
+            return opened.toView()
+        }
 
-    /**
-     * Menyunting langganan, termasuk MENGGANTI paketnya (upgrade/downgrade).
-     *
-     * Perpindahan paket diumumkan lewat [SubscriptionPlanChanged] agar sisi jaringan ikut
-     * berpindah. Dibandingkan sebelum-sesudah, bukan sekadar "update dipanggil": operator
-     * sering menyunting harga atau hari tagih tanpa mengubah paket, dan itu tak boleh
-     * mengantre pekerjaan RADIUS untuk seluruh akun langganan.
-     */
-    override fun update(id: UUID, command: SaveSubscriptionCommand): SubscriptionView {
-        val subscription = require(id)
-        val previousPlanId = subscription.planId
-        subscription.updatePackage(resolveSnapshot(command))
-        val view = saveAndAudit(subscription, "subscription.updated")
-        if (subscription.planId != previousPlanId) {
+        val previousPlanId = existing.planId
+        val action = if (existing.status == SubscriptionStatus.TERMINATED) {
+            existing.resubscribe(snapshot)
+            "subscription.resubscribed"
+        } else {
+            existing.updatePackage(snapshot)
+            "subscription.updated"
+        }
+        val view = saveAndAudit(existing, action)
+        if (existing.planId != previousPlanId) {
             events.publishEvent(
-                SubscriptionPlanChanged(
-                    subscription.tenantId, subscription.id, subscription.customerId, subscription.planId,
-                ),
+                SubscriptionPlanChanged(existing.tenantId, existing.id, existing.customerId, existing.planId),
             )
         }
         return view
@@ -169,12 +151,4 @@ class SubscriptionService(
 
     private fun require(id: UUID): Subscription =
         subscriptionRepository.findById(id) ?: throw NotFoundException("Langganan $id tidak ditemukan")
-
-    /** Status dalam bahasa yang dipakai operator, bukan nama konstanta. */
-    private fun sebutStatus(status: SubscriptionStatus): String = when (status) {
-        SubscriptionStatus.PENDING -> "menunggu instalasi"
-        SubscriptionStatus.ACTIVE -> "aktif"
-        SubscriptionStatus.ISOLATED -> "terisolir"
-        SubscriptionStatus.TERMINATED -> "berakhir"
-    }
 }

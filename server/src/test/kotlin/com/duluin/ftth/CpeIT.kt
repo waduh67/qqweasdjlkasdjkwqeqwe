@@ -20,6 +20,7 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.Instant
 import java.util.UUID
@@ -69,6 +70,13 @@ class CpeIT {
     private fun post(url: String, token: String, body: String, expected: Int = 201): String =
         mockMvc.perform(
             post(url).header("Authorization", "Bearer $token")
+                .contentType(MediaType.APPLICATION_JSON).content(body),
+        ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
+            .andReturn().response.contentAsString
+
+    private fun put(url: String, token: String, body: String, expected: Int = 200): String =
+        mockMvc.perform(
+            put(url).header("Authorization", "Bearer $token")
                 .contentType(MediaType.APPLICATION_JSON).content(body),
         ).andExpect { assertThat(it.response.status).isEqualTo(expected) }
             .andReturn().response.contentAsString
@@ -534,7 +542,7 @@ class CpeIT {
                     "upMbps":10,"serviceTypes":["PPPOE"]}""",
             ),
         )
-        val sub = id(post("/api/customers/$customer/subscriptions", token, """{"planId":"$plan"}"""))
+        val sub = id(put("/api/customers/$customer/subscription", token, """{"planId":"$plan"}"""))
         post("/api/customers/subscriptions/$sub/activate", token, "", expected = 200)
         val username = "pppoe$s"
         post(

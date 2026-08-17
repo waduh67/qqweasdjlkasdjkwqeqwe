@@ -53,7 +53,7 @@ class PortalSelfServiceTest {
     fun `profile memperkaya langganan dengan detail paket dari katalog`() {
         val service = service(
             customer = StubCustomerApi(customerRef()).apply {
-                seedSubscriptions(customerId, listOf(subscription(planId = planId)))
+                seedSubscription(customerId, subscription(planId = planId))
             },
             catalog = FakeCatalogApi(
                 commercial = mapOf(planId to commercial(planId, fee = "150000")),
@@ -65,8 +65,7 @@ class PortalSelfServiceTest {
 
         assertThat(view.customerId).isEqualTo(customerId)
         assertThat(view.code).isEqualTo("C-001")
-        assertThat(view.subscriptions).hasSize(1)
-        val sub = view.subscriptions.first()
+        val sub = checkNotNull(view.subscription)
         assertThat(sub.monthlyFee).isEqualByComparingTo("150000")
         assertThat(sub.downMbps).isEqualTo(100)
         assertThat(sub.upMbps).isEqualTo(50)
@@ -78,12 +77,12 @@ class PortalSelfServiceTest {
     fun `profile langganan tanpa paket tetap tampil tanpa detail harga`() {
         val service = service(
             customer = StubCustomerApi(customerRef()).apply {
-                seedSubscriptions(customerId, listOf(subscription(planId = null)))
+                seedSubscription(customerId, subscription(planId = null))
             },
             catalog = FakeCatalogApi(),
         )
 
-        val sub = service.profile(customerId).subscriptions.single()
+        val sub = checkNotNull(service.profile(customerId).subscription)
 
         assertThat(sub.packageName).isEqualTo("Home 100")
         assertThat(sub.monthlyFee).isNull()
@@ -183,7 +182,7 @@ class PortalSelfServiceTest {
         val inv = invoice(status = "PAID", payUrl = null)
         val sub = subscription(planId = planId)
         val service = service(
-            customer = StubCustomerApi(customerRef()).apply { seedSubscriptions(customerId, listOf(sub)) },
+            customer = StubCustomerApi(customerRef()).apply { seedSubscription(customerId, sub) },
             billing = FakeBillingApi(
                 summary = summary(),
                 detail = detail(inv, sub.id, base = "90090", tax = "9910", rate = "0.1100"),
@@ -218,7 +217,7 @@ class PortalSelfServiceTest {
         val pensiunId = UuidV7.generate()
         val service = service(
             customer = StubCustomerApi(customerRef()).apply {
-                seedSubscriptions(customerId, listOf(subscription(planId = planId)))
+                seedSubscription(customerId, subscription(planId = planId))
             },
             catalog = FakeCatalogApi(
                 commercial = mapOf(
@@ -245,7 +244,7 @@ class PortalSelfServiceTest {
         val sub = subscription(planId = planId)
         val helpdesk = RecordingHelpdeskApi()
         val service = service(
-            customer = StubCustomerApi(customerRef()).apply { seedSubscriptions(customerId, listOf(sub)) },
+            customer = StubCustomerApi(customerRef()).apply { seedSubscription(customerId, sub) },
             catalog = FakeCatalogApi(
                 commercial = mapOf(
                     planId to commercial(planId, fee = "150000"),
@@ -277,7 +276,7 @@ class PortalSelfServiceTest {
         val pensiunId = UuidV7.generate()
         val sub = subscription(planId = planId)
         val service = service(
-            customer = StubCustomerApi(customerRef()).apply { seedSubscriptions(customerId, listOf(sub)) },
+            customer = StubCustomerApi(customerRef()).apply { seedSubscription(customerId, sub) },
             catalog = FakeCatalogApi(
                 commercial = mapOf(
                     planId to commercial(planId, fee = "150000"),

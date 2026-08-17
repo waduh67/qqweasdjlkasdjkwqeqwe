@@ -12,8 +12,10 @@ interface SubscriptionRepository {
 
     fun findById(id: UUID): Subscription?
 
-    fun findByCustomerId(customerId: UUID): List<Subscription>
+    /** Langganan milik seorang pelanggan — paling banyak satu (`uq_subscription_customer`). */
+    fun findByCustomerId(customerId: UUID): Subscription?
 
+    /** Versi batch dari [findByCustomerId]: satu baris per pelanggan yang punya langganan. */
     fun findByCustomerIds(customerIds: Set<UUID>): List<Subscription>
 
     /** Resolusi sekumpulan langganan sekaligus (ekspor CSV); id yang tak ada diabaikan. */

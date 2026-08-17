@@ -91,7 +91,7 @@ class PppoeRowImporter(
 
     @Transactional
     fun importRow(command: ImportPppoeCommand, row: ImportRow, planId: UUID) {
-        val customerId = customerApi.registerCustomer(
+        val subscriptionId = customerApi.registerCustomer(
             RegisterCustomerCommand(
                 code = row.name,
                 name = row.comment?.trim()?.takeIf { it.isNotEmpty() } ?: row.name,
@@ -100,9 +100,9 @@ class PppoeRowImporter(
                 address = command.defaultAddress?.trim()?.takeIf { it.isNotEmpty() } ?: PLACEHOLDER_ADDRESS,
                 location = command.defaultLocation ?: Coordinate(0.0, 0.0),
                 areaId = command.areaId,
+                planId = planId,
             ),
-        )
-        val subscriptionId = customerApi.openSubscription(customerId, planId, null)
+        ).subscriptionId
         // Pelanggan impor sudah terpasang di lapangan → langsung aktif (tanpa WO PSB). Aktivasi
         // memprorata tagihan dari kini — konsekuensi yang direlay ke operator di UI/panduan.
         customerApi.activateForInstallation(subscriptionId)

@@ -28,11 +28,12 @@ class CustomerAssembler(
         onus: List<Onu>,
     ): List<CustomerView> {
         val odpCodes = odpCodesOf(onus)
-        val subsByCustomer = subscriptions.groupBy { it.customerId }
+        // Satu langganan per pelanggan (V107) — associateBy, bukan groupBy.
+        val subByCustomer = subscriptions.associateBy { it.customerId }
         val onusByCustomer = onus.groupBy { it.customerId }
         return customers.map { customer ->
             customer.toView(
-                subscriptions = subsByCustomer[customer.id].orEmpty().map { it.toView() },
+                subscription = subByCustomer[customer.id]?.toView(),
                 onus = onusByCustomer[customer.id].orEmpty().map { it.toView(odpCodes[it.odpId]) },
             )
         }
@@ -47,7 +48,7 @@ class CustomerAssembler(
         networkApi.findOdpsByIds(onus.mapNotNullTo(HashSet()) { it.odpId }).associate { it.id to it.code }
 }
 
-internal fun Customer.toView(subscriptions: List<SubscriptionView>, onus: List<OnuView>) = CustomerView(
+internal fun Customer.toView(subscription: SubscriptionView?, onus: List<OnuView>) = CustomerView(
     id = id,
     code = code,
     name = name,
@@ -58,7 +59,7 @@ internal fun Customer.toView(subscriptions: List<SubscriptionView>, onus: List<O
     areaId = areaId,
     idCardNumber = idCardNumber,
     status = status,
-    subscriptions = subscriptions,
+    subscription = subscription,
     onus = onus,
 )
 

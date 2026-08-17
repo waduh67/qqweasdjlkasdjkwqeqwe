@@ -80,9 +80,8 @@ class BngRadiusPushIT {
 
         val planId = createPlan(token)
         val nasId = id(post("/api/bng/nas", token, """{"name":"BRAS-${uniq()}","vendor":"MIKROTIK"}"""))
-        val customerId = createCustomer(token, code = "C-PENDING")
         // Langganan belum diaktifkan (WO PSB belum ditutup) → akun berdiri PENDING.
-        val sub = id(post("/api/customers/$customerId/subscriptions", token, """{"planId":"$planId"}"""))
+        val sub = createCustomerWithPlan(token, code = "C-PENDING", planId = planId)
 
         val username = "pppoe${uniq()}"
         val accessId = id(
@@ -148,18 +147,20 @@ class BngRadiusPushIT {
             ),
         )
 
-    private fun createCustomer(token: String, code: String): String =
-        id(
+    /** Pelanggan + langganan PENDING sekali daftar; kembalikan id langganannya. */
+    private fun createCustomerWithPlan(token: String, code: String, planId: String): String =
+        JsonPath.read(
             post(
                 "/api/customers", token,
-                """{"code":"$code","name":"Pelanggan ${uniq()}","address":"Jl. Uji","location":{"longitude":106.99,"latitude":-6.24}}""",
+                """{"code":"$code","name":"Pelanggan ${uniq()}","address":"Jl. Uji",
+                    "location":{"longitude":106.99,"latitude":-6.24},"planId":"$planId"}""",
             ),
+            "$.subscription.id",
         )
 
     /** Pelanggan + langganan yang sudah diaktifkan (WO PSB dianggap selesai). */
     private fun activeSubscription(token: String, planId: String, code: String): String {
-        val customerId = createCustomer(token, code)
-        val sub = id(post("/api/customers/$customerId/subscriptions", token, """{"planId":"$planId"}"""))
+        val sub = createCustomerWithPlan(token, code, planId)
         post("/api/customers/subscriptions/$sub/activate", token, "", expected = 200)
         return sub
     }

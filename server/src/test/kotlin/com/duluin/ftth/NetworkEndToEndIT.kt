@@ -180,12 +180,7 @@ class NetworkEndToEndIT {
                 """{"name":"Home 20 ${uniq()}","description":null,"price":150000,"downMbps":20,"upMbps":10,"serviceTypes":["PPPOE"]}""",
             ),
         )
-        val sub = idOf(
-            post(
-                "/api/customers/$customerId/subscriptions", token,
-                """{"planId":"$planId"}""",
-            ),
-        )
+        val sub = idOf(put("/api/customers/$customerId/subscription", token, """{"planId":"$planId"}"""))
         post("/api/customers/subscriptions/$sub/activate", token, "", expected = 200)
         return sub
     }

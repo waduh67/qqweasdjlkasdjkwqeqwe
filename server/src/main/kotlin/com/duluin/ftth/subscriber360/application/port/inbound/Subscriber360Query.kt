@@ -36,8 +36,8 @@ interface Subscriber360Query {
  */
 data class Subscriber360View(
     val customer: CustomerRef,
-    /** Langganan pelanggan; kosong bila tak punya ATAU izin `customer.subscription.view` tak ada. */
-    val subscriptions: List<SubscriptionRef>,
+    /** Langganan pelanggan (tunggal); null bila tak punya ATAU izin `customer.subscription.view` tak ada. */
+    val subscription: SubscriptionRef?,
     /** Penempatan ONU; null bila belum terpasang ATAU izin `customer.onu.view` tak ada. */
     val placement: CustomerPlacement?,
     /** Sesi PPPoE terkini; null bila belum diprovisi ATAU izin `bng.session.view` tak ada. */
@@ -56,7 +56,7 @@ data class Subscriber360View(
  * null "memang kosong" pada [Subscriber360View] — UI menampilkan kartu terkunci vs kosong.
  */
 data class Subscriber360Access(
-    val subscriptions: Boolean,
+    val subscription: Boolean,
     val placement: Boolean,
     val session: Boolean,
     val billing: Boolean,

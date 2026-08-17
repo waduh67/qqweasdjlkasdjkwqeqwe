@@ -60,7 +60,8 @@ data class PortalAccountView(
     val name: String,
     val phone: String?,
     val status: String,
-    val subscriptions: List<PortalSubscriptionView>,
+    /** Langganannya — tunggal; null hanya untuk pelanggan warisan yang belum berpaket. */
+    val subscription: PortalSubscriptionView?,
 )
 
 data class PortalSubscriptionView(

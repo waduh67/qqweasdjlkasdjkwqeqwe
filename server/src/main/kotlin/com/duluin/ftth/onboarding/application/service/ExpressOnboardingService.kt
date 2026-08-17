@@ -17,8 +17,10 @@ import org.springframework.transaction.annotation.Transactional
  * workorder (tak menyentuh internal module mana pun, jadi tak ada siklus module). Satu
  * `@Transactional` di sini + method Api hilir yang REQUIRED = satu transaksi fisik: pelanggan +
  * langganan + akun + WO terbentuk semua, atau tak satu pun (mis. planId salah → rollback total,
- * pelanggan pun tak tercipta). Langganan lahir PENDING → akun lahir PENDING dan BELUM ditulis ke
- * RADIUS; tak ada efek-samping jaringan AFTER_COMMIT yang menyala di tengah onboarding.
+ * pelanggan pun tak tercipta). Pendaftaran sudah membawa paketnya sekali jalan, jadi tak ada
+ * celah "pelanggan terlanjur masuk tapi paketnya gagal". Langganan lahir PENDING → akun lahir
+ * PENDING dan BELUM ditulis ke RADIUS; tak ada efek-samping jaringan AFTER_COMMIT yang menyala
+ * di tengah onboarding.
  */
 @Service
 class ExpressOnboardingService(
@@ -29,7 +31,7 @@ class ExpressOnboardingService(
 
     @Transactional
     override fun onboardPsb(command: ExpressPsbCommand): ExpressPsbResult {
-        val customerId = customerApi.registerCustomer(
+        val registered = customerApi.registerCustomer(
             RegisterCustomerCommand(
                 code = command.code,
                 name = command.name,
@@ -38,10 +40,12 @@ class ExpressOnboardingService(
                 address = command.address,
                 location = command.location,
                 areaId = command.areaId,
+                planId = command.planId,
+                monthlyFeeOverride = command.monthlyFeeOverride,
             ),
         )
-
-        val subscriptionId = customerApi.openSubscription(customerId, command.planId, command.monthlyFeeOverride)
+        val customerId = registered.customerId
+        val subscriptionId = registered.subscriptionId
 
         // BRAS: pakai pilihan manual bila ada; kalau kosong, auto-pilih dari cakupan area pelanggan
         // (deterministik — tiap area dinaungi paling banyak satu BRAS). Tetap boleh null (akun lahir

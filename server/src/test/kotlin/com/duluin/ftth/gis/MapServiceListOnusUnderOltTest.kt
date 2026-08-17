@@ -190,7 +190,7 @@ class MapServiceListOnusUnderOltTest {
         override fun findCustomer(id: UUID) = throw UnsupportedOperationException()
         override fun findCustomersByIds(ids: Set<UUID>) = throw UnsupportedOperationException()
         override fun findSubscription(id: UUID) = throw UnsupportedOperationException()
-        override fun findSubscriptionsByCustomer(customerId: UUID) = throw UnsupportedOperationException()
+        override fun findSubscriptionByCustomer(customerId: UUID) = throw UnsupportedOperationException()
         override fun findAwaitingInstallation(areaIds: Set<UUID>?) = throw UnsupportedOperationException()
         override fun findPlacementOf(customerId: UUID) = throw UnsupportedOperationException()
         override fun occupiedPortsOn(odpId: UUID) = throw UnsupportedOperationException()
@@ -209,9 +209,6 @@ class MapServiceListOnusUnderOltTest {
         override fun activateForInstallation(subscriptionId: UUID) = throw UnsupportedOperationException()
         override fun terminateForDismantle(subscriptionId: UUID) = throw UnsupportedOperationException()
         override fun registerCustomer(command: com.duluin.ftth.customer.RegisterCustomerCommand) =
-            throw UnsupportedOperationException()
-
-        override fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: java.math.BigDecimal?) =
             throw UnsupportedOperationException()
 
         override fun subscriberStats() = throw UnsupportedOperationException()

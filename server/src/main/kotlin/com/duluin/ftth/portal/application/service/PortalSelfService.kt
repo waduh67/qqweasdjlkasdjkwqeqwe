@@ -58,7 +58,7 @@ class PortalSelfService(
     override fun profile(customerId: UUID): PortalAccountView {
         val customer = customerApi.findCustomer(customerId)
             ?: throw NotFoundException("Pelanggan tidak ditemukan")
-        val subscriptions = customerApi.findSubscriptionsByCustomer(customerId).map { sub ->
+        val subscription = customerApi.findSubscriptionByCustomer(customerId)?.let { sub ->
             // Detail paket best-effort: paket mungkin sudah dinonaktifkan/terhapus (planId null).
             val commercial = sub.planId?.let { catalogApi.findPlanCommercial(it) }
             val network = sub.planId?.let { catalogApi.findPlanNetwork(it) }
@@ -80,7 +80,7 @@ class PortalSelfService(
             name = customer.name,
             phone = customer.phone,
             status = customer.status,
-            subscriptions = subscriptions,
+            subscription = subscription,
         )
     }
 
@@ -174,7 +174,7 @@ class PortalSelfService(
     }
 
     override fun planOptions(customerId: UUID): List<PortalPlanOptionView> {
-        val currentPlanIds = customerApi.findSubscriptionsByCustomer(customerId).mapNotNull { it.planId }.toSet()
+        val currentPlanId = customerApi.findSubscriptionByCustomer(customerId)?.planId
         return catalogApi.findActivePlans().map { plan ->
             val network = catalogApi.findPlanNetwork(plan.planId)
             PortalPlanOptionView(
@@ -186,7 +186,7 @@ class PortalSelfService(
                 upMbps = network?.upMbps,
                 fupEnabled = network?.fupEnabled ?: false,
                 fupQuotaMb = network?.fupQuotaMb,
-                current = plan.planId in currentPlanIds,
+                current = plan.planId == currentPlanId,
             )
         }
     }
@@ -197,8 +197,8 @@ class PortalSelfService(
         command: PortalPlanChangeCommand,
     ): PortalPlanChangeReceiptView {
         // Langganan wajib milik pelanggan yang login — bukan sekadar "ada di tenant ini".
-        val subscription = customerApi.findSubscriptionsByCustomer(customerId)
-            .firstOrNull { it.id == command.subscriptionId }
+        val subscription = customerApi.findSubscriptionByCustomer(customerId)
+            ?.takeIf { it.id == command.subscriptionId }
             ?: throw NotFoundException("Langganan tidak ditemukan")
         val target = catalogApi.findPlanCommercial(command.targetPlanId)?.takeIf { it.active }
             ?: throw ValidationException("Paket yang dipilih tidak tersedia")

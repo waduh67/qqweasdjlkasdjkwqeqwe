@@ -553,7 +553,7 @@ class BillingCycleTest {
 
         override fun findCustomer(id: UUID): CustomerRef? = customers[id]
         override fun findSubscription(id: UUID) = throw UnsupportedOperationException()
-        override fun findSubscriptionsByCustomer(customerId: UUID) = throw UnsupportedOperationException()
+        override fun findSubscriptionByCustomer(customerId: UUID) = throw UnsupportedOperationException()
         override fun findOccupantsOfOdp(odpId: UUID) = throw UnsupportedOperationException()
         override fun findAwaitingInstallation(areaIds: Set<UUID>?) = throw UnsupportedOperationException()
         override fun findPlacementOf(customerId: UUID) = throw UnsupportedOperationException()
@@ -568,9 +568,6 @@ class BillingCycleTest {
         override fun activateForInstallation(subscriptionId: UUID) = throw UnsupportedOperationException()
         override fun terminateForDismantle(subscriptionId: UUID) = throw UnsupportedOperationException()
         override fun registerCustomer(command: RegisterCustomerCommand) = throw UnsupportedOperationException()
-        override fun openSubscription(customerId: UUID, planId: UUID, monthlyFeeOverride: BigDecimal?) =
-            throw UnsupportedOperationException()
-
         override fun subscriberStats() = throw UnsupportedOperationException()
         override fun updateCustomerBiodata(command: com.duluin.ftth.customer.UpdateCustomerBiodataCommand) = throw UnsupportedOperationException()
         override fun activateImportedSubscription(subscriptionId: UUID, activatedAt: java.time.Instant?, billingDayOfMonth: Int?) = throw UnsupportedOperationException()

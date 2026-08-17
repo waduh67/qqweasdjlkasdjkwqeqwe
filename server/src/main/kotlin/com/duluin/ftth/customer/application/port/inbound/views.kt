@@ -20,7 +20,11 @@ data class CustomerView(
     val areaId: UUID?,
     val idCardNumber: String?,
     val status: CustomerStatus,
-    val subscriptions: List<SubscriptionView>,
+    /**
+     * Langganannya — satu, bukan daftar (V107). Tetap nullable demi pelanggan warisan yang
+     * terlanjur terdaftar tanpa paket; pendaftaran baru selalu membawa paketnya.
+     */
+    val subscription: SubscriptionView?,
     val onus: List<OnuView>,
 ) {
     /** Ditandai di UI: pelanggan aktif yang ONU-nya belum terpasang ke ODP mana pun. */

@@ -25,6 +25,7 @@ import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -80,11 +81,12 @@ class CustomerController(
     @PreAuthorize("@authz.can('customer.customer.view')")
     fun get(@PathVariable id: UUID): CustomerView = manageCustomer.get(id)
 
+    /** Mendaftarkan pelanggan beserta paketnya — sekali jalan, satu transaksi. */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("@authz.can('customer.customer.create')")
-    fun create(@Valid @RequestBody request: CustomerRequest): CustomerView =
-        manageCustomer.create(request.toCommand())
+    fun create(@Valid @RequestBody request: RegisterCustomerRequest): CustomerView =
+        manageCustomer.create(request.toCustomerCommand(), request.toPlanCommand())
 
     @PutMapping("/{id}")
     @PreAuthorize("@authz.can('customer.customer.update')")
@@ -109,24 +111,27 @@ class CustomerController(
 
     // ---- Langganan ----
 
-    @GetMapping("/{id}/subscriptions")
+    /**
+     * Langganan pelanggan — tunggal, jadi sub-resource-nya pun tunggal. 204 bila pelanggan
+     * warisan yang belum pernah dipasangi paket (bukan galat: dia memang ada, paketnya belum).
+     */
+    @GetMapping("/{id}/subscription")
     @PreAuthorize("@authz.can('customer.subscription.view')")
-    fun listSubscriptions(@PathVariable id: UUID): List<SubscriptionView> = manageSubscription.listForCustomer(id)
+    fun getSubscription(@PathVariable id: UUID): ResponseEntity<SubscriptionView> =
+        manageSubscription.findForCustomer(id)?.let { ResponseEntity.ok(it) } ?: ResponseEntity.noContent().build()
 
-    @PostMapping("/{id}/subscriptions")
-    @ResponseStatus(HttpStatus.CREATED)
+    /**
+     * Menetapkan paket pelanggan: membuka bila belum ada, menghidupkan lagi bila sudah
+     * berakhir, mengganti di tempat bila sedang berjalan. PUT (bukan POST) karena hasilnya
+     * satu keadaan yang sama berapa kali pun dikirim — dan karena tak ada langganan kedua
+     * untuk di-POST.
+     */
+    @PutMapping("/{id}/subscription")
     @PreAuthorize("@authz.can('customer.subscription.update')")
-    fun createSubscription(
+    fun setSubscriptionPlan(
         @PathVariable id: UUID,
         @Valid @RequestBody request: SubscriptionRequest,
-    ): SubscriptionView = manageSubscription.create(id, request.toCommand())
-
-    @PutMapping("/subscriptions/{subscriptionId}")
-    @PreAuthorize("@authz.can('customer.subscription.update')")
-    fun updateSubscription(
-        @PathVariable subscriptionId: UUID,
-        @Valid @RequestBody request: SubscriptionRequest,
-    ): SubscriptionView = manageSubscription.update(subscriptionId, request.toCommand())
+    ): SubscriptionView = manageSubscription.setPlan(id, request.toCommand())
 
     @PostMapping("/subscriptions/{subscriptionId}/activate")
     @PreAuthorize("@authz.can('customer.subscription.update')")
@@ -192,6 +197,33 @@ data class CustomerRequest(
     @field:Size(max = 32) val idCardNumber: String? = null,
 )
 
+/**
+ * Badan pendaftaran: biodata + paket yang dibeli. Paketnya ikut sekali jalan, bukan lewat
+ * panggilan kedua, supaya pelanggan dan langganannya lahir bersama — tak ada lagi langkah
+ * "buka langganan" menyusul yang bisa tertinggal dan meninggalkan pelanggan tanpa paket.
+ *
+ * Sengaja bidang tersendiri, bukan menumpang [CustomerRequest]: paket BUKAN atribut biodata
+ * yang boleh ikut berubah lewat `PUT /{id}`. Perpindahannya punya pintu sendiri
+ * (`PUT /{id}/subscription`) karena berdampak ke tagihan dan profil RADIUS.
+ *
+ * [planId] boleh kosong hanya untuk jalur yang paketnya memang menyusul — survei yang baru
+ * mencatat calon pelanggan, atau impor yang belum memetakan paketnya. Layar pendaftaran
+ * operator selalu mengirimnya.
+ */
+data class RegisterCustomerRequest(
+    @field:Size(max = 40) val code: String? = null,
+    @field:NotBlank @field:Size(max = 150) val name: String,
+    @field:Size(max = 30) val phone: String? = null,
+    @field:Size(max = 255) val email: String? = null,
+    @field:NotBlank @field:Size(max = 500) val address: String,
+    @field:Valid val location: CustomerLocationRequest,
+    val areaId: UUID? = null,
+    @field:Size(max = 32) val idCardNumber: String? = null,
+    val planId: UUID? = null,
+    /** Harga negosiasi opsional; kosong = pakai harga paket. */
+    @field:DecimalMin("0.0") val monthlyFeeOverride: BigDecimal? = null,
+)
+
 data class CustomerStatusRequest(val status: CustomerStatus)
 
 data class SubscriptionRequest(
@@ -228,3 +260,17 @@ private fun SubscriptionRequest.toCommand() = SaveSubscriptionCommand(
     planId = planId,
     monthlyFeeOverride = monthlyFeeOverride,
 )
+
+private fun RegisterCustomerRequest.toCustomerCommand() = SaveCustomerCommand(
+    code = code,
+    name = name,
+    phone = phone,
+    email = email,
+    address = address,
+    location = Coordinate(location.longitude, location.latitude),
+    areaId = areaId,
+    idCardNumber = idCardNumber,
+)
+
+private fun RegisterCustomerRequest.toPlanCommand(): SaveSubscriptionCommand? =
+    planId?.let { SaveSubscriptionCommand(planId = it, monthlyFeeOverride = monthlyFeeOverride) }
