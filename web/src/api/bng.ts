@@ -165,6 +165,11 @@ export interface SubscriberAccessView {
   fupThrottled: boolean
   /** Pemakaian akun sejak awal siklus (MB); null bila tak dihitung. */
   periodUsageMb: number | null
+  /**
+   * Nama paket LANGGANAN, hanya terisi bila berbeda dari paket akun — artinya pelanggan
+   * ditagih paket ini tapi jaringan menjalankan paket lain. null = selaras.
+   */
+  subscriptionPlanName?: string | null
 }
 
 /**

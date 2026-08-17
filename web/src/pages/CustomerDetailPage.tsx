@@ -1358,6 +1358,25 @@ function PlanField({
   )
 }
 
+/**
+ * Penanda selisih paket-akun vs paket-tagihan. Server hanya mengisi `subscriptionPlanName`
+ * bila keduanya berbeda, jadi badge ini muncul persis saat ada yang salah: pelanggan ditagih
+ * satu paket sementara BRAS menjalankan paket lain. Sengaja hanya ditandai, tidak diperbaiki
+ * otomatis — menyelaraskan diam-diam berarti mengubah kecepatan pelanggan tanpa ada yang
+ * memutuskan. Operator yang menilai mana yang benar, lalu membetulkannya lewat dropdown Paket.
+ */
+function PlanMismatchBadge({ account }: { account: SubscriberAccessView }) {
+  if (!account.subscriptionPlanName) return null
+  return (
+    <span
+      className="badge serious"
+      title={`Langganan ditagih paket "${account.subscriptionPlanName}", tapi akun jaringan berjalan di paket "${account.planName ?? 'tak dikenal'}". Betulkan salah satunya.`}
+    >
+      ≠ tagihan: {account.subscriptionPlanName}
+    </span>
+  )
+}
+
 /** Dropdown BRAS — opsional; "tanpa BRAS" berarti belum ditautkan. */
 function NasField({
   nasList,
@@ -1434,9 +1453,15 @@ function SubscriptionAccessCard({
     setSecret('')
     setFramedIp('')
     setShowSecret(false)
-    const first = plans[0]
-    setPlanId(first?.id ?? '')
-    setAuthType(first?.serviceTypes[0] ?? 'PPPOE')
+    // Paket akun DIAWALI dari paket langganan — itu yang ditagih, jadi itu pula yang harus
+    // dieksekusi jaringan. Sebelumnya dropdown ini selalu jatuh ke paket PERTAMA katalog:
+    // operator yang tak menyentuhnya membuat akun di paket yang salah sejak hari pertama, dan
+    // selisihnya tak muncul di layar mana pun. Tetap boleh diganti (akses cadangan/kesepakatan
+    // khusus), tapi harus disengaja. Paket langganan yang sudah dinonaktifkan dari katalog tak
+    // ada di daftar → mundur ke paket pertama seperti dulu.
+    const preselected = plans.find((p) => p.id === sub.planId) ?? plans[0]
+    setPlanId(preselected?.id ?? '')
+    setAuthType(preselected?.serviceTypes[0] ?? 'PPPOE')
     setNasId('')
     setForm('provision')
   }
@@ -1550,6 +1575,7 @@ function SubscriptionAccessCard({
             <span className="badge neutral tnum">{account.username}</span>
             <span className="badge">{SERVICE_TYPE_LABEL[account.authType]}</span>
             <span className="badge accent">{account.planName ?? 'paket tak dikenal'}</span>
+            <PlanMismatchBadge account={account} />
             <span className="badge neutral">{account.nasName ?? 'tanpa BRAS'}</span>
             {account.framedIp && <span className="badge neutral tnum">IP {account.framedIp}</span>}
             <StatusBadge status={account.status} />
@@ -1827,6 +1853,7 @@ function TrafikTab({ customerId }: { customerId: string }) {
             <span className="badge neutral tnum">{account.username}</span>
             <span className="badge">{SERVICE_TYPE_LABEL[account.authType]}</span>
             <span className="badge accent">{account.planName ?? 'paket tak dikenal'}</span>
+            <PlanMismatchBadge account={account} />
             <span className="badge neutral">{account.nasName ?? 'tanpa BRAS'}</span>
             <StatusBadge status={account.status} />
           </div>
