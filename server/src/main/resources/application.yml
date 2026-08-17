@@ -250,6 +250,10 @@ ftth:
     dispatch-interval: ${FTTH_RADIUS_DISPATCH_INTERVAL:PT10S}
     # Selang poller membaca sesi hidup radacct platform per tenant (jalur-baca server-side).
     session-poll-interval: ${FTTH_RADIUS_SESSION_POLL_INTERVAL:PT30S}
+    # Selang penyelaras isolir: membandingkan grup RADIUS tiap akun dengan status yang dicatat
+    # aplikasi lalu memperbaiki yang menyimpang (akun terisolir yang lolos, dan — lebih mahal —
+    # pelanggan yang sudah membayar tapi masih terkurung halaman tagihan).
+    isolir-reconcile-interval: ${FTTH_RADIUS_ISOLIR_RECONCILE_INTERVAL:PT15M}
     # Umur maksimal `acctupdatetime` sebelum baris radacct yang masih menganga dianggap bangkai
     # (BRAS kehilangan jalur ke RADIUS → Acct-Stop tak pernah terkirim). Hanya berlaku untuk
     # baris yang memang pernah di-interim-update; WAJIB lebih longgar dari `interim-update`

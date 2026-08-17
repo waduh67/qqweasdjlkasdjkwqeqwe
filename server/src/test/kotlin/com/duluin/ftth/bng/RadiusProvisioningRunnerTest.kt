@@ -300,6 +300,7 @@ private class FakeAccessRepo(private val accesses: List<SubscriberAccess>) : Sub
     override fun findByNasId(nasId: UUID): List<SubscriberAccess> = notUsed()
     override fun findByPlanId(planId: UUID): List<SubscriberAccess> = notUsed()
     override fun findActiveOnNas(): List<SubscriberAccess> = notUsed()
+    override fun findIsolatedOnNas(): List<SubscriberAccess> = notUsed()
     override fun findActiveMacUsernames(): List<String> = notUsed()
     override fun existsBySubscriptionId(subscriptionId: UUID): Boolean = notUsed()
     override fun countByNasId(nasId: UUID): Long = notUsed()
@@ -333,6 +334,9 @@ private class FakeRadiusPort(private val failWith: Exception?) : RadiusProvision
     val isolirGroups = mutableListOf<IsolirCall>()
 
     override fun isConfigured(): Boolean = true
+
+    override fun groupsOf(tenantId: UUID, scopedUsernames: Collection<String>): Map<String, String> =
+        throw UnsupportedOperationException("tak dipakai di uji ini")
 
     override fun ensureIsolirGroup(tenantId: UUID, rateLimit: String, addressList: String) {
         failWith?.let { throw it }

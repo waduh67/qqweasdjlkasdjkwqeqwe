@@ -91,6 +91,12 @@ interface SubscriberAccessRepository {
     fun findActiveOnNas(): List<SubscriberAccess>
 
     /**
+     * Akun ISOLATED yang sudah ditugaskan ke BRAS — kandidat rekonsiliasi isolir. Yang
+     * belum ber-BRAS tak punya otorisasi RADIUS untuk dibandingkan dengan apa pun.
+     */
+    fun findIsolatedOnNas(): List<SubscriberAccess>
+
+    /**
      * Username (MAC) akun ACTIVE berbasis MAC (DHCP/Static) — dipakai jalur-baca `radacct`
      * untuk menyaring balik baris mereka yang ditulis POLOS tanpa prefiks tenant. Hanya
      * username yang dikembalikan (bukan agregat penuh) sebab pemanggil hanya butuh itu.

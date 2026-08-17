@@ -159,6 +159,7 @@ class BngMonitoringQueryServiceTest {
         override fun findByNasId(nasId: UUID): List<SubscriberAccess> = notUsed()
         override fun findByPlanId(planId: UUID): List<SubscriberAccess> = notUsed()
         override fun findActiveOnNas(): List<SubscriberAccess> = notUsed()
+        override fun findIsolatedOnNas(): List<SubscriberAccess> = notUsed()
         override fun findActiveMacUsernames(): List<String> = notUsed()
         override fun existsBySubscriptionId(subscriptionId: UUID): Boolean = notUsed()
         override fun countByNasId(nasId: UUID): Long = notUsed()

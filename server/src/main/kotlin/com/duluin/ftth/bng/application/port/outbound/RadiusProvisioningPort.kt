@@ -60,4 +60,17 @@ interface RadiusProvisioningPort {
      * menurunkannya. Idempoten (hapus-lalu-tulis), jadi aman dipanggil berulang.
      */
     fun ensureIsolirGroup(tenantId: UUID, rateLimit: String, addressList: String)
+
+    /**
+     * Grup yang KINI tercatat di `radusergroup` untuk tiap identitas di [scopedUsernames]
+     * — satu-satunya jalan mengetahui apa yang sungguh berlaku di RADIUS, bukan apa yang
+     * kita kira sudah kita tulis. Dipakai [com.duluin.ftth.bng.application.service.IsolirReconciler].
+     *
+     * Identitas yang TAK punya baris sengaja tak muncul di peta alih-alih dipetakan ke null:
+     * "belum pernah diprovisikan" adalah keadaan yang sah (akun yang instalasinya belum
+     * rampung), bukan penyimpangan yang perlu diperbaiki. Jalur-BACA di port jalur-tulis
+     * karena tabelnya sama dan koneksinya sama; memisahkannya ke port sendiri hanya akan
+     * menggandakan resolver koneksi tanpa menambah batas apa pun.
+     */
+    fun groupsOf(tenantId: UUID, scopedUsernames: Collection<String>): Map<String, String>
 }

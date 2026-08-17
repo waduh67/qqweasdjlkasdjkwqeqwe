@@ -54,6 +54,14 @@ data class RadiusProperties(
     val dispatchInterval: Duration = Duration.ofSeconds(10),
     /** Selang poller membaca sesi hidup `radacct` platform per tenant (jalur-baca server-side). */
     val sessionPollInterval: Duration = Duration.ofSeconds(30),
+    /**
+     * Selang penyelaras isolir: membandingkan grup RADIUS tiap akun dengan status yang
+     * dicatat aplikasi lalu memperbaiki yang menyimpang. Bukan jalur utama (perpindahan grup
+     * digerakkan peristiwa) melainkan jaring pengaman, jadi tak perlu rapat — tapi juga tak
+     * boleh terlalu jarang: yang ditunggunya adalah pelanggan yang sudah membayar tapi masih
+     * terkurung halaman tagihan.
+     */
+    val isolirReconcileInterval: Duration = Duration.ofMinutes(15),
     /** Berapa aksi diklaim per putaran per-tenant — batas agar satu tenant tak memonopoli. */
     val batchSize: Int = 100,
     /**

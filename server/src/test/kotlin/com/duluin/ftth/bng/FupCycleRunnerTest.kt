@@ -205,6 +205,7 @@ private class FakeSubscriberAccessRepo(private val active: List<SubscriberAccess
     }
 
     override fun findActiveOnNas(): List<SubscriberAccess> = active
+    override fun findIsolatedOnNas(): List<SubscriberAccess> = emptyList()
     override fun findActiveMacUsernames(): List<String> = notUsed()
     override fun findById(id: UUID): SubscriberAccess? = active.firstOrNull { it.id == id }
     override fun findByCustomerId(customerId: UUID): List<SubscriberAccess> = notUsed()

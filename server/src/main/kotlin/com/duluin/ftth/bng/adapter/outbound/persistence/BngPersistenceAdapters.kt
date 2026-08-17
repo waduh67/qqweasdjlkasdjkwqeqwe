@@ -193,6 +193,9 @@ class SubscriberAccessPersistenceAdapter(
     override fun findActiveOnNas(): List<SubscriberAccess> =
         jpa.findByStatusAndNasIdIsNotNull(AccessStatus.ACTIVE).map { it.toDomain() }
 
+    override fun findIsolatedOnNas(): List<SubscriberAccess> =
+        jpa.findByStatusAndNasIdIsNotNull(AccessStatus.ISOLATED).map { it.toDomain() }
+
     override fun findActiveMacUsernames(): List<String> =
         jpa.findUsernamesByStatusAndAuthTypeIn(AccessStatus.ACTIVE, listOf(AuthType.DHCP, AuthType.STATIC))
 

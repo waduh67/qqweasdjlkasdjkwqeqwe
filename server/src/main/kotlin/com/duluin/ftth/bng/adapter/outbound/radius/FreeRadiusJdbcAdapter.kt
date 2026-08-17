@@ -99,6 +99,25 @@ class FreeRadiusJdbcAdapter(
             )
         }
 
+    override fun groupsOf(tenantId: UUID, scopedUsernames: Collection<String>): Map<String, String> {
+        if (scopedUsernames.isEmpty()) return emptyMap()
+        return connections.connectionFor(tenantId).use { conn ->
+            conn.prepareStatement(GROUPS_SQL).use { st ->
+                // `= ANY(?)` alih-alih IN (?,?,…) yang dirakit: satu SQL tetap, berapa pun
+                // jumlah akun tenant — tanpa merakit string, tanpa batas parameter.
+                st.setArray(1, conn.createArrayOf("text", scopedUsernames.toTypedArray()))
+                st.executeQuery().use { rs ->
+                    val out = HashMap<String, String>()
+                    // priority ASC: bila sebuah akun sempat punya lebih dari satu baris grup,
+                    // yang dipakai FreeRADIUS adalah prioritas terkecil — dan itu pula yang
+                    // harus dibandingkan, bukan baris mana pun yang kebetulan terbaca terakhir.
+                    while (rs.next()) out.putIfAbsent(rs.getString("username"), rs.getString("groupname"))
+                    out
+                }
+            }
+        }
+    }
+
     private inline fun inTransaction(tenantId: UUID, body: (Connection) -> Unit) {
         connections.connectionFor(tenantId).use { conn ->
             val previousAutoCommit = conn.autoCommit
@@ -113,6 +132,11 @@ class FreeRadiusJdbcAdapter(
                 runCatching { conn.autoCommit = previousAutoCommit }
             }
         }
+    }
+
+    private companion object {
+        private const val GROUPS_SQL =
+            "SELECT username, groupname FROM radusergroup WHERE username = ANY(?) ORDER BY priority"
     }
 
     /** Menjalankan sederet (SQL, params) berurutan dalam transaksi berjalan. */

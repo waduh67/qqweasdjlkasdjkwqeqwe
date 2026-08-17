@@ -348,6 +348,7 @@ class NasServiceRadiusClientTest {
         override fun countByNasId(nasId: UUID): Long = 0
         override fun save(access: SubscriberAccess): SubscriberAccess = throw UnsupportedOperationException()
         override fun findActiveOnNas(): List<SubscriberAccess> = throw UnsupportedOperationException()
+        override fun findIsolatedOnNas(): List<SubscriberAccess> = throw UnsupportedOperationException()
         override fun findActiveMacUsernames(): List<String> = throw UnsupportedOperationException()
         override fun findById(id: UUID): SubscriberAccess? = throw UnsupportedOperationException()
         override fun findByCustomerId(customerId: UUID): List<SubscriberAccess> = throw UnsupportedOperationException()
