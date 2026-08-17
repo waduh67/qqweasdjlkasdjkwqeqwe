@@ -42,28 +42,30 @@ export function PortalProfilPage() {
 
       <div className="card stack" style={{ gap: '0.6rem' }}>
         <strong style={{ fontSize: '0.95rem' }}>Paket berlangganan</strong>
-        {profile.subscriptions.length === 0 ? (
+        {profile.subscription == null ? (
           <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada langganan.</p>
         ) : (
-          profile.subscriptions.map((sub) => (
-            <div key={sub.subscriptionId} className="spread" style={{ alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <div className="stack" style={{ gap: 2 }}>
-                <span style={{ fontWeight: 600 }}>{sub.packageName}</span>
-                <span className="muted" style={{ fontSize: '0.8rem' }}>
-                  {sub.downMbps && sub.upMbps ? `${sub.downMbps}/${sub.upMbps} Mbps` : `${sub.bandwidthMbps} Mbps`}
-                  {sub.fupEnabled ? ' · FUP' : ''}
-                </span>
-              </div>
-              <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
-                {sub.monthlyFee && <span className="tnum" style={{ fontWeight: 600 }}>{rupiah(sub.monthlyFee)}/bln</span>}
-                <StatusBadge status={sub.status} />
-              </div>
+          <div className="spread" style={{ alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <div className="stack" style={{ gap: 2 }}>
+              <span style={{ fontWeight: 600 }}>{profile.subscription.packageName}</span>
+              <span className="muted" style={{ fontSize: '0.8rem' }}>
+                {profile.subscription.downMbps && profile.subscription.upMbps
+                  ? `${profile.subscription.downMbps}/${profile.subscription.upMbps} Mbps`
+                  : `${profile.subscription.bandwidthMbps} Mbps`}
+                {profile.subscription.fupEnabled ? ' · FUP' : ''}
+              </span>
             </div>
-          ))
+            <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
+              {profile.subscription.monthlyFee && (
+                <span className="tnum" style={{ fontWeight: 600 }}>{rupiah(profile.subscription.monthlyFee)}/bln</span>
+              )}
+              <StatusBadge status={profile.subscription.status} />
+            </div>
+          </div>
         )}
       </div>
 
-      {profile.subscriptions.length > 0 && <RequestPlanChange subscriptions={profile.subscriptions} />}
+      {profile.subscription && <RequestPlanChange subscription={profile.subscription} />}
 
       <ChangePassword />
     </div>
@@ -77,9 +79,8 @@ export function PortalProfilPage() {
  * Bantuan seperti laporan lain. Harga yang dikutip ke operator diambil server dari katalog,
  * bukan dari angka yang tampil di layar ini.
  */
-function RequestPlanChange({ subscriptions }: { subscriptions: PortalSubscription[] }) {
+function RequestPlanChange({ subscription }: { subscription: PortalSubscription }) {
   const [options, setOptions] = useState<PortalPlanOption[] | null>(null)
-  const [subscriptionId, setSubscriptionId] = useState(subscriptions[0]?.subscriptionId ?? '')
   const [planId, setPlanId] = useState('')
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -104,7 +105,7 @@ function RequestPlanChange({ subscriptions }: { subscriptions: PortalSubscriptio
     setError(null)
     setBusy(true)
     try {
-      setReceipt(await requestPortalPlanChange(subscriptionId, planId, note))
+      setReceipt(await requestPortalPlanChange(subscription.subscriptionId, planId, note))
     } catch (err) {
       setError(err instanceof PortalApiError ? err.message : 'Ajuan gagal dikirim')
     } finally {
@@ -133,17 +134,6 @@ function RequestPlanChange({ subscriptions }: { subscriptions: PortalSubscriptio
       <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
         Paket tidak langsung berubah: ajuanmu ditinjau dulu oleh tim, termasuk biaya dan jadwalnya.
       </p>
-      {subscriptions.length > 1 && (
-        <SelectField
-          label="Langganan yang mau diganti"
-          value={subscriptionId}
-          onChange={(_, data) => setSubscriptionId(data.value)}
-        >
-          {subscriptions.map((s) => (
-            <option key={s.subscriptionId} value={s.subscriptionId}>{s.packageName}</option>
-          ))}
-        </SelectField>
-      )}
       <SelectField label="Paket yang diinginkan" value={planId} onChange={(_, data) => setPlanId(data.value)} required>
         <option value="">— pilih paket —</option>
         {choices.map((p) => (

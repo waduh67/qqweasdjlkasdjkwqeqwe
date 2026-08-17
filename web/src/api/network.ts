@@ -358,7 +358,8 @@ export interface CustomerView {
   areaId: string | null
   idCardNumber: string | null
   status: CustomerStatus
-  subscriptions: SubscriptionView[]
+  /** Satu pelanggan satu langganan; null hanya untuk pelanggan warisan yang belum berpaket. */
+  subscription: SubscriptionView | null
   onus: OnuView[]
   awaitingInstallation: boolean
 }

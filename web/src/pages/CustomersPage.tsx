@@ -12,6 +12,7 @@ import { Field } from '@/components/molecules'
 import { Blade } from '@/components/organisms'
 import { LocationPicker } from '@/components/organisms'
 import { exportCustomersCsv } from '../api/onboarding'
+import { listPlans as listCatalogPlans, type PlanView } from '../api/catalog'
 import { Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
@@ -23,6 +24,10 @@ import { CustomerDetailBlade } from './CustomerDetailPage'
  * Draft form pelanggan, dipakai bersama untuk tambah & sunting. `id` null = tambah baru;
  * terisi = menyunting pelanggan itu (PUT). `areaId` dibawa apa adanya (form ini tak punya
  * pemilih area) agar sunting field lain tak diam-diam menghapus penempatan area pelanggan.
+ *
+ * `planId` hanya berlaku saat MENAMBAH: pelanggan lahir bersama paketnya, sekali kirim.
+ * Saat menyunting biodata, paket sengaja tak ikut — pindah paket berdampak ke tagihan &
+ * profil RADIUS, jadi pintunya tersendiri di detail pelanggan, bukan menumpang form ini.
  */
 type CustomerDraft = {
   id: string | null
@@ -35,6 +40,7 @@ type CustomerDraft = {
   longitude: string
   latitude: string
   areaId: string | null
+  planId: string
 }
 
 const EMPTY_CUSTOMER: CustomerDraft = {
@@ -48,6 +54,7 @@ const EMPTY_CUSTOMER: CustomerDraft = {
   longitude: '',
   latitude: '',
   areaId: null,
+  planId: '',
 }
 
 const STATUS_OPTIONS: { value: CustomerStatus | ''; label: string }[] = [
@@ -84,7 +91,8 @@ export function CustomersPage() {
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState<CustomerDraft | null>(null)
   const [initialDraft, setInitialDraft] = useState<CustomerDraft | null>(null)
-  const [errors, setErrors] = useState<{ name?: string; address?: string }>({})
+  const [errors, setErrors] = useState<{ name?: string; address?: string; planId?: string }>({})
+  const [plans, setPlans] = useState<PlanView[]>([])
   const [saving, setSaving] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -112,6 +120,17 @@ export function CustomersPage() {
     setErrors({})
   }
   const dirty = draft != null && JSON.stringify(draft) !== JSON.stringify(initialDraft)
+
+  // Paket aktif untuk pemilih di form tambah — ditarik saat bladenya dibuka, bukan saat
+  // halaman termuat: daftar pelanggan tak perlu menyeret katalog yang cuma dipakai di sini.
+  const adding = draft != null && draft.id == null
+  const canPlanView = can('catalog.plan.view')
+  useEffect(() => {
+    if (!adding || !canPlanView) return
+    void listCatalogPlans()
+      .then((all) => setPlans(all.filter((p) => p.active)))
+      .catch(() => setPlans([]))
+  }, [adding, canPlanView])
 
   // Ekspor butuh izin BACA union (pelanggan+langganan+akun) — cocok gating server; disable, bukan sembunyi.
   const canExport =
@@ -166,6 +185,7 @@ export function CustomersPage() {
       longitude: String(c.location.longitude),
       latitude: String(c.location.latitude),
       areaId: c.areaId,
+      planId: '',
     })
 
   // Satu jalur simpan untuk tambah (POST) & sunting (PUT) — badan permintaan sama;
@@ -173,11 +193,14 @@ export function CustomersPage() {
   const save = async () => {
     if (!draft) return
     // Validasi klien: nama & alamat wajib. Tampilkan galat inline (Field) + toast, tak menembak API.
-    const nextErrors: { name?: string; address?: string } = {}
+    // Paket wajib saat menambah — SELAMA katalognya memang punya paket aktif; kalau kosong,
+    // pendaftaran tetap boleh jalan (paketnya ditetapkan menyusul) daripada operator terkunci.
+    const nextErrors: { name?: string; address?: string; planId?: string } = {}
     if (!draft.name.trim()) nextErrors.name = 'Nama pelanggan wajib diisi.'
     if (!draft.address.trim()) nextErrors.address = 'Alamat wajib diisi.'
+    if (!draft.id && plans.length > 0 && !draft.planId) nextErrors.planId = 'Pilih paket langganannya.'
     setErrors(nextErrors)
-    if (nextErrors.name || nextErrors.address) {
+    if (nextErrors.name || nextErrors.address || nextErrors.planId) {
       toast.error('Lengkapi dulu isian yang wajib.')
       return
     }
@@ -196,7 +219,9 @@ export function CustomersPage() {
       if (draft.id) {
         await api.put(`/api/customers/${draft.id}`, body)
       } else {
-        await api.post('/api/customers', body)
+        // Pelanggan + langganannya lahir bersama, satu transaksi: paket salah → pendaftaran
+        // batal seutuhnya, bukan meninggalkan pelanggan tanpa paket yang lolos dari tagihan.
+        await api.post('/api/customers', { ...body, planId: draft.planId || null })
       }
       closeDraft()
       await reload()
@@ -456,6 +481,34 @@ export function CustomersPage() {
                 onAddress={(address) => setDraft(draft.address.trim() ? draft : { ...draft, address })}
               />
             </Field>
+            {draft.id == null && (
+              <SelectField
+                label="Paket langganan"
+                required={plans.length > 0}
+                value={draft.planId}
+                disabled={!canPlanView || plans.length === 0}
+                validationState={errors.planId ? 'error' : 'none'}
+                validationMessage={errors.planId}
+                hint={
+                  !canPlanView
+                    ? 'Butuh izin lihat paket untuk memilihnya di sini — paketnya bisa ditetapkan menyusul di detail pelanggan.'
+                    : plans.length === 0
+                      ? 'Belum ada paket aktif — buat dulu di menu Paket Internet, lalu tetapkan paketnya di detail pelanggan.'
+                      : 'Satu pelanggan satu langganan: paketnya ikut lahir di sini, dan nanti diganti di tempat — tak pernah ditambah.'
+                }
+                onChange={(_, data) => {
+                  setDraft({ ...draft, planId: data.value })
+                  if (errors.planId) setErrors((p) => ({ ...p, planId: undefined }))
+                }}
+              >
+                <option value="">— pilih paket —</option>
+                {plans.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} · {p.downMbps}/{p.upMbps} Mbps · Rp {Number(p.price).toLocaleString('id-ID')}
+                  </option>
+                ))}
+              </SelectField>
+            )}
           </div>
         )}
       </Blade>

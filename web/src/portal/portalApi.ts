@@ -46,7 +46,8 @@ export interface PortalAccount {
   name: string
   phone: string | null
   status: string
-  subscriptions: PortalSubscription[]
+  /** Satu pelanggan satu langganan; null bila paketnya belum ditetapkan. */
+  subscription: PortalSubscription | null
 }
 
 export interface PortalInvoice {

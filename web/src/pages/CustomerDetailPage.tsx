@@ -348,7 +348,7 @@ export function CustomerDetailPage({
       {tab === 'jalur' && <JalurTab trace={trace} connected={connected} />}
       {tab === 'tetangga' && <TetanggaTab neighbors={neighbors} connected={connected} odpCount={odpCount} ponCount={ponCount} />}
       {tab === 'metrik' && <MetrikTab customer={customer} metrics={metrics} />}
-      {tab === 'akses' && <NetworkAccessTab customerId={id} subscriptions={customer.subscriptions} />}
+      {tab === 'akses' && <NetworkAccessTab customerId={id} subscription={customer.subscription} />}
       {tab === 'trafik' && <TrafikTab customerId={id} />}
       {tab === 'cpe' && <CpeTab customerId={id} />}
       {tab === 'tagihan' && <TagihanTab customerId={id} billing={sub360?.billing ?? null} />}
@@ -415,7 +415,8 @@ function EssentialsBlock({
   const access = sub360?.access ?? null
   const arrears = billing ? Number(billing.outstandingAmount) : 0
   const cpeOnline = cpeDevices?.filter((d) => d.online).length ?? 0
-  const active = customer.subscriptions.filter((s) => s.status !== 'TERMINATED')
+  // Langganan yang masih berjalan; yang sudah berakhir tak pantas dipamerkan sebagai "paket".
+  const live = customer.subscription?.status === 'TERMINATED' ? null : customer.subscription
   const attachedOnu = customer.onus.find((o) => o.odpId) ?? customer.onus[0] ?? null
 
   // Facet yang belum diizinkan ditulis sekali di sini supaya keempat baris layanan
@@ -455,10 +456,10 @@ function EssentialsBlock({
 
           <dl className="essentials wide">
             <Ess label="Paket">
-              {active.length === 0 ? (
+              {live == null ? (
                 <span className="muted">belum berlangganan</span>
               ) : (
-                active.map((s) => `${s.packageName} · ${s.bandwidthMbps} Mbps`).join(', ')
+                `${live.packageName} · ${live.bandwidthMbps} Mbps`
               )}
             </Ess>
             <Ess label="Tunggakan">
@@ -572,12 +573,13 @@ function RingkasanTab({
  * & kecepatan ikut paket dengan opsi harga negosiasi per-pelanggan, plus kendali daur
  * hidup. Sisi komersial di-snapshot server saat simpan; sisi jaringan dibaca live.
  *
- * SATU PELANGGAN SATU LANGGANAN HIDUP. Selama masih ada langganan yang belum berakhir,
- * formulir di bawah berganti peran: dari "buka langganan" menjadi "ganti paket" atas
- * langganan itu. Dulu satu-satunya jalan mengubah paket lewat layar ini adalah menambah
- * langganan baru — langganan lama ikut hidup, dan pelanggannya tertagih dua kali. Sisi
- * fisiknya pun menempel pada pelanggan (ONU, koordinat, CPE), jadi langganan kedua tak
- * pernah punya perangkat sendiri. Layanan kedua di lokasi lain = pelanggan baru.
+ * SATU PELANGGAN SATU LANGGANAN — selamanya, bukan sekadar "satu yang hidup". Formulir
+ * di bawah hanya menetapkan paket: mengisi bila belum berpaket, memindahkan bila sedang
+ * berjalan, menghidupkan lagi baris yang sama bila pernah berhenti. Tak ada tombol tambah.
+ *
+ * Sisi fisik menempel pada pelanggan (ONU, koordinat rumah, CPE) dan akun PPPoE-nya ikut
+ * langganan itu, jadi langganan kedua tak pernah punya perangkat maupun identitas sendiri —
+ * yang ada hanya tagihan dobel. Layanan kedua di lokasi lain = daftarkan pelanggan baru.
  */
 function SubscriptionManager({
   customer,
@@ -594,9 +596,12 @@ function SubscriptionManager({
   const [priceOverride, setPriceOverride] = useState('')
   const [saving, setSaving] = useState(false)
 
-  // Langganan yang masih berjalan — apa pun statusnya selain berakhir. Terisolir & menunggu
-  // instalasi tetap terhitung: kontraknya belum selesai, jadi belum boleh ada yang kedua.
-  const live = customer.subscriptions.find((s) => s.status !== 'TERMINATED') ?? null
+  // Langganannya cuma satu — yang membedakan hanya apa dia sedang berjalan atau sudah
+  // berakhir. Yang berakhir bukan "tak ada": barisnya tetap dipakai bila pelanggan kembali,
+  // supaya username PPPoE & riwayat tagihannya tak pecah jadi dua identitas.
+  const sub = customer.subscription
+  const live = sub != null && sub.status !== 'TERMINATED' ? sub : null
+  const ended = sub != null && sub.status === 'TERMINATED'
 
   useEffect(() => {
     if (!canManage) return
@@ -620,6 +625,11 @@ function SubscriptionManager({
   // pekerjaan RADIUS untuk paket yang sama.
   const unchanged = live != null && planId === live.planId && override === ''
 
+  // Satu tombol, satu pintu (PUT), tiga kalimat berbeda — operator perlu tahu mana yang
+  // sedang terjadi, sebab "berlangganan lagi" menghidupkan langganan yang dulu berhenti
+  // (tagihan jalan lagi), bukan sekadar menyunting paket.
+  const actionLabel = live ? 'Ganti paket' : ended ? 'Berlangganan lagi' : 'Tetapkan paket'
+
   const submit = async () => {
     if (!planId || unchanged) return
     const body = { planId, monthlyFeeOverride: override === '' ? null : Number(override) }
@@ -639,13 +649,27 @@ function SubscriptionManager({
         confirmLabel: 'Ganti paket',
       })
       if (!ok) return
-      setSaving(true)
-      await run(() => api.put(`/api/customers/subscriptions/${live.id}`, body), 'Paket langganan diganti')
-    } else {
-      setSaving(true)
-      await run(() => api.post(`/api/customers/${customer.id}/subscriptions`, body), 'Langganan dibuka')
-      setPlanId('')
+    } else if (ended) {
+      const ok = await confirm({
+        title: 'Berlangganan lagi',
+        message: (
+          <>
+            Langganan {customer.name} dihidupkan kembali dengan paket {selected?.name ?? '—'}
+            {override !== '' && ` · harga negosiasi Rp ${override}`}.
+            <br />
+            Statusnya kembali menunggu instalasi, akun PPPoE lamanya dipakai lagi, dan penagihan
+            berjalan lagi mulai periode berikutnya.
+          </>
+        ),
+        confirmLabel: 'Berlangganan lagi',
+      })
+      if (!ok) return
     }
+    setSaving(true)
+    await run(
+      () => api.put(`/api/customers/${customer.id}/subscription`, body),
+      live ? 'Paket langganan diganti' : ended ? 'Langganan dihidupkan kembali' : 'Paket ditetapkan',
+    )
     setSaving(false)
     setPriceOverride('')
   }
@@ -654,20 +678,18 @@ function SubscriptionManager({
     <div className="card stack" style={{ gap: '0.75rem' }}>
       <SectionHead icon={<IconPackage size={16} />} title="Langganan" />
 
-      {customer.subscriptions.length === 0 ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada langganan.</p>
+      {sub == null ? (
+        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum berpaket.</p>
       ) : (
-        customer.subscriptions.map((sub) => (
-          <div key={sub.id} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '0.88rem' }}>
-              {sub.packageName} · {sub.bandwidthMbps} Mbps · Rp {sub.monthlyFee}
-            </span>
-            <div className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-              <StatusBadge status={sub.status} />
-              {canManage && sub.status !== 'TERMINATED' && <SubscriptionActions sub={sub} run={run} />}
-            </div>
+        <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ fontSize: '0.88rem' }}>
+            {sub.packageName} · {sub.bandwidthMbps} Mbps · Rp {sub.monthlyFee}
+          </span>
+          <div className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
+            <StatusBadge status={sub.status} />
+            {canManage && sub.status !== 'TERMINATED' && <SubscriptionActions sub={sub} run={run} />}
           </div>
-        ))
+        </div>
       )}
 
       {canManage && (
@@ -680,7 +702,7 @@ function SubscriptionManager({
             <>
               <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
                 <SelectField
-                  label={live ? 'Pindahkan ke paket' : 'Paket'}
+                  label={live ? 'Pindahkan ke paket' : ended ? 'Berlangganan lagi dengan paket' : 'Paket'}
                   value={planId}
                   onChange={(_, data) => setPlanId(data.value)}
                   style={{ flex: '2 1 200px' }}
@@ -702,7 +724,7 @@ function SubscriptionManager({
                   style={{ flex: '1 1 140px' }}
                 />
                 <Button variant="primary" disabled={!planId || unchanged || saving} onClick={() => void submit()}>
-                  {live ? 'Ganti paket' : 'Buka langganan'}
+                  {actionLabel}
                 </Button>
               </div>
               {selected && (
@@ -711,12 +733,11 @@ function SubscriptionManager({
                   {selected.fupEnabled ? ' · FUP' : ''} — kecepatan &amp; QoS mengikuti paket secara live.
                 </p>
               )}
-              {live && (
-                <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-                  Satu pelanggan satu langganan — paketnya diganti di tempat, bukan ditambah. Untuk
-                  layanan kedua di lokasi lain, daftarkan sebagai pelanggan baru.
-                </p>
-              )}
+              <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+                {ended
+                  ? 'Langganan lamanya dihidupkan kembali — username PPPoE & riwayat tagihannya tetap yang itu.'
+                  : 'Satu pelanggan satu langganan — paketnya ditetapkan di tempat, tak pernah ditambah. Untuk layanan kedua di lokasi lain, daftarkan sebagai pelanggan baru.'}
+              </p>
             </>
           )}
         </div>
@@ -1279,17 +1300,18 @@ function MiniStat({ label, value, unit, warn }: { label: string; value: string; 
 /* ---------- Tab: Akses (identitas jaringan / akun PPPoE) ---------- */
 
 /**
- * Kelola akun PPPoE (identitas jaringan) tiap langganan pelanggan — satu langganan
- * paling banyak satu akun. Paket & BRAS ditarik hanya untuk mengisi dropdown, dan
- * hanya bila operator boleh mengelola akun sekaligus melihat keduanya. Password
- * (secret) tak pernah dibaca balik: cuma bisa diisi saat provisi atau di-reset.
+ * Kelola akun PPPoE (identitas jaringan) langganan pelanggan — satu pelanggan satu
+ * langganan, satu langganan paling banyak satu akun. Paket & BRAS ditarik hanya untuk
+ * mengisi dropdown, dan hanya bila operator boleh mengelola akun sekaligus melihat
+ * keduanya. Password (secret) tak pernah dibaca balik: cuma bisa diisi saat provisi
+ * atau di-reset.
  */
 function NetworkAccessTab({
   customerId,
-  subscriptions,
+  subscription,
 }: {
   customerId: string
-  subscriptions: SubscriptionView[]
+  subscription: SubscriptionView | null
 }) {
   const { can } = useCan()
   const toast = useToast()
@@ -1346,11 +1368,11 @@ function NetworkAccessTab({
     )
   }
 
-  if (subscriptions.length === 0) {
+  if (subscription == null) {
     return (
       <div className="card">
         <p className="muted" style={{ margin: 0 }}>
-          Pelanggan belum punya langganan — buat langganan dulu sebelum memberi akun PPPoE.
+          Pelanggan belum berpaket — tetapkan paketnya dulu sebelum memberi akun PPPoE.
         </p>
       </div>
     )
@@ -1358,20 +1380,17 @@ function NetworkAccessTab({
 
   return (
     <div className="stack" style={{ gap: '0.75rem' }}>
-      {subscriptions.map((sub) => (
-        <SubscriptionAccessCard
-          key={sub.id}
-          sub={sub}
-          account={accounts.find((a) => a.subscriptionId === sub.id) ?? null}
-          plans={plans}
-          nasList={nasList}
-          canManage={canManage}
-          canSession={canSession}
-          canIsolate={canIsolate}
-          canReset={canReset}
-          run={run}
-        />
-      ))}
+      <SubscriptionAccessCard
+        sub={subscription}
+        account={accounts.find((a) => a.subscriptionId === subscription.id) ?? null}
+        plans={plans}
+        nasList={nasList}
+        canManage={canManage}
+        canSession={canSession}
+        canIsolate={canIsolate}
+        canReset={canReset}
+        run={run}
+      />
     </div>
   )
 }
@@ -2972,10 +2991,11 @@ function TimelineTab({
     if (at) entries.push({ at, label, tone })
   }
 
-  customer.subscriptions.forEach((sub) => {
+  const sub = customer.subscription
+  if (sub) {
     push(sub.activatedAt, `Langganan ${sub.packageName} diaktifkan`, 'good')
     push(sub.terminatedAt, `Langganan ${sub.packageName} dihentikan`, 'critical')
-  })
+  }
   customer.onus.forEach((onu) => push(onu.installedAt, `ONU ${onu.serialNumber} dipasang`, 'accent'))
   invoices.forEach((inv) => {
     push(inv.issuedAt, `Tagihan ${inv.number} terbit`, 'warning')

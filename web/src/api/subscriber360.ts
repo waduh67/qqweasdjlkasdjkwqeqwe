@@ -108,7 +108,7 @@ export interface Sub360WorkOrder {
  * null "kosong" pada [Subscriber360View].
  */
 export interface Subscriber360Access {
-  subscriptions: boolean
+  subscription: boolean
   placement: boolean
   session: boolean
   billing: boolean
@@ -123,7 +123,7 @@ export interface Subscriber360Access {
  */
 export interface Subscriber360View {
   customer: Sub360Customer
-  subscriptions: Sub360Subscription[]
+  subscription: Sub360Subscription | null
   placement: Sub360Placement | null
   session: Sub360Session | null
   billing: Sub360BillingSummary | null

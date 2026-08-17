@@ -23,8 +23,8 @@ export function PortalRingkasanPage() {
   const unpaidCount = billing?.unpaidCount ?? 0
   const session = connection?.session ?? null
   const online = session?.online ?? false
-  // Langganan yang berlaku; bila pelanggan punya beberapa, yang aktif yang diwakilkan.
-  const sub = profile?.subscriptions.find((s) => s.status === 'ACTIVE') ?? profile?.subscriptions[0] ?? null
+  // Satu pelanggan satu langganan — tak ada yang perlu dipilih atau diwakilkan.
+  const sub = profile?.subscription ?? null
   const speed = sub ? (sub.downMbps && sub.upMbps ? `${sub.downMbps}/${sub.upMbps} Mbps` : `${sub.bandwidthMbps} Mbps`) : '—'
   const open = (billing?.invoices ?? []).filter((i) => i.payable)
   const openTotal = open.reduce((sum, i) => sum + Number(i.amount), 0)
