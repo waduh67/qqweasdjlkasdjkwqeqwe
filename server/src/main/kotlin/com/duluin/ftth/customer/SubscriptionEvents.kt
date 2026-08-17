@@ -20,3 +20,22 @@ data class SubscriptionIsolated(val tenantId: UUID, val subscriptionId: UUID, va
 
 /** Langganan diakhiri — identitas jaringannya harus dihentikan. */
 data class SubscriptionTerminated(val tenantId: UUID, val subscriptionId: UUID, val customerId: UUID)
+
+/**
+ * Paket langganan berganti (upgrade/downgrade) — kecepatan yang dieksekusi jaringan harus
+ * ikut pindah.
+ *
+ * Terbit HANYA bila [planId] benar-benar berbeda dari sebelumnya; menyunting harga atau nama
+ * paket tanpa mengganti paketnya bukan peristiwa jaringan. Tanpa event ini sisi komersial dan
+ * sisi jaringan berjalan sendiri-sendiri: pelanggan ditagih paket baru sementara BRAS terus
+ * memberi kecepatan paket lama, dan tak ada satu pun layar yang menunjukkan keduanya berbeda.
+ *
+ * [planId] nullable karena langganan boleh lepas dari katalog (paket ad-hoc); null berarti tak
+ * ada paket katalog yang bisa diturunkan ke RADIUS, jadi konsumen mengabaikannya.
+ */
+data class SubscriptionPlanChanged(
+    val tenantId: UUID,
+    val subscriptionId: UUID,
+    val customerId: UUID,
+    val planId: UUID?,
+)

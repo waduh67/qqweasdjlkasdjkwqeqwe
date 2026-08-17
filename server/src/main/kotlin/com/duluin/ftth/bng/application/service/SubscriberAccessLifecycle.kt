@@ -86,6 +86,42 @@ class SubscriberAccessLifecycle(
         }
 
     /**
+     * Paket langganan berpindah → paket akun jaringan ikut pindah, lalu kecepatannya ditegakkan.
+     *
+     * Ini menutup celah yang paling mahal: tanpa jalur ini pelanggan yang upgrade ditagih paket
+     * baru tapi BRAS terus memberi kecepatan lama (dan sebaliknya untuk downgrade, ISP memberi
+     * lebih dari yang dibayar) — selisih yang tak pernah muncul di layar mana pun karena
+     * `subscriber_access.plan_id` disalin sekali saat akun dibuat lalu tak pernah ditengok lagi.
+     *
+     * Perlakuan per status sengaja berbeda, dan bedanya penting:
+     *  - ACTIVE   : keanggotaan grup ditulis ulang + CoA, supaya sesi yang sedang hidup langsung
+     *               memakai kecepatan baru tanpa perlu diputus.
+     *  - ISOLATED : **hanya** paketnya yang dicatat. Menulis keanggotaan grup paket di sini akan
+     *               MEMBEBASKAN penunggak dari walled garden hanya karena paketnya disunting.
+     *               Grup yang benar dipasang nanti oleh jalur Pulihkan.
+     *  - PENDING  : belum pernah ada di RADIUS (instalasi belum rampung); cukup dicatat, aktivasi
+     *               WO PSB yang akan menuliskannya.
+     *
+     * `enqueueSyncGroup` dipanggil untuk semua status ber-BRAS karena ia hanya memastikan definisi
+     * grup paket ADA di RADIUS — tak menyentuh keanggotaan akun mana pun.
+     */
+    fun onPlanChanged(subscriptionId: UUID, planId: UUID) {
+        val plan = catalogApi.findPlanNetwork(planId) ?: return
+        subscriberAccessRepository.findBySubscriptionId(subscriptionId)
+            .filter { it.status != AccessStatus.TERMINATED && it.planId != planId }
+            .forEach { access ->
+                access.assignPlan(planId)
+                val saved = subscriberAccessRepository.save(access)
+                val nasId = saved.nasId ?: return@forEach
+                bngActions.enqueueSyncGroup(nasId, saved.tenantId, plan, requestedBy = null, requestedByEmail = null)
+                if (saved.status == AccessStatus.ACTIVE) {
+                    bngActions.enqueueProvision(saved, requestedBy = null, requestedByEmail = null)
+                    bngActions.enqueueCoa(saved, plan.downMbps, plan.upMbps, requestedBy = null, requestedByEmail = null)
+                }
+            }
+    }
+
+    /**
      * Provisikan akun yang baru pertama kali online (PENDING→ACTIVE): pastikan grup paket ada di
      * BRAS lalu tulis kredensial + keanggotaan. Nilai jaringan (rate-limit) dibaca live dari katalog.
      * No-op bila akun belum ditugaskan ke BRAS atau paketnya tak ditemukan.

@@ -6,6 +6,7 @@ import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.customer.SubscriptionActivated
 import com.duluin.ftth.customer.SubscriptionIsolated
+import com.duluin.ftth.customer.SubscriptionPlanChanged
 import com.duluin.ftth.customer.SubscriptionTerminated
 import com.duluin.ftth.customer.application.port.inbound.ManageSubscriptionUseCase
 import com.duluin.ftth.customer.application.port.inbound.SaveSubscriptionCommand
@@ -47,10 +48,27 @@ class SubscriptionService(
         return subscription.toView()
     }
 
+    /**
+     * Menyunting langganan, termasuk MENGGANTI paketnya (upgrade/downgrade).
+     *
+     * Perpindahan paket diumumkan lewat [SubscriptionPlanChanged] agar sisi jaringan ikut
+     * berpindah. Dibandingkan sebelum-sesudah, bukan sekadar "update dipanggil": operator
+     * sering menyunting harga atau hari tagih tanpa mengubah paket, dan itu tak boleh
+     * mengantre pekerjaan RADIUS untuk seluruh akun langganan.
+     */
     override fun update(id: UUID, command: SaveSubscriptionCommand): SubscriptionView {
         val subscription = require(id)
+        val previousPlanId = subscription.planId
         subscription.updatePackage(resolveSnapshot(command))
-        return saveAndAudit(subscription, "subscription.updated")
+        val view = saveAndAudit(subscription, "subscription.updated")
+        if (subscription.planId != previousPlanId) {
+            events.publishEvent(
+                SubscriptionPlanChanged(
+                    subscription.tenantId, subscription.id, subscription.customerId, subscription.planId,
+                ),
+            )
+        }
+        return view
     }
 
     /**
