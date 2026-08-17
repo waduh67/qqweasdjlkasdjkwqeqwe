@@ -20,6 +20,7 @@ import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.customer.CustomerApi
+import com.duluin.ftth.customer.SubscriptionRef
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -69,7 +70,15 @@ class SubscriberAccessService(
         if (subscriberAccessRepository.existsBySubscriptionId(subscription.id)) {
             throw ConflictException("Langganan ini sudah punya akun jaringan")
         }
-        val plan = requirePlan(command.planId)
+        // Paket akun default MENGIKUTI paket langganan — itu yang ditagih, jadi itu pula yang
+        // harus dieksekusi jaringan. Sebelumnya planId selalu datang dari klien dan tak pernah
+        // dibandingkan dengan langganan, jadi akun bisa lahir di paket lain tanpa satu pun
+        // peringatan; yang tertagih 100 Mbps bisa diprovisikan 10 Mbps sejak hari pertama.
+        val plan = requirePlan(
+            command.planId
+                ?: subscription.planId
+                ?: throw ValidationException("Langganan ini tak punya paket katalog — pilih paket akun secara eksplisit"),
+        )
         // Paket harus melayani tipe autentikasi yang diminta (Ketersediaan `serviceTypes`
         // paket) — mencegah membuat akun DHCP/Hotspot pada paket yang cuma untuk PPPoE.
         if (command.authType.name !in plan.serviceTypes) {
@@ -113,7 +122,10 @@ class SubscriberAccessService(
             "bng.access.provisioned", "SubscriberAccess", access.id, access.tenantId,
             mapOf("username" to access.username, "subscription" to access.subscriptionId.toString()),
         )
-        return access.toView(plan, nas?.name, periodUsageMb = null)
+        return access.toView(
+            plan, nas?.name, periodUsageMb = null,
+            subscriptionPlanName = subscription.mismatchedPlanName(access.planId),
+        )
     }
 
     override fun updateAssignment(id: UUID, command: UpdateAccessCommand): SubscriberAccessView {
@@ -160,7 +172,11 @@ class SubscriberAccessService(
             "bng.access.updated", "SubscriberAccess", saved.id, saved.tenantId,
             mapOf("username" to saved.username, "plan" to plan.name),
         )
-        return saved.toView(plan, nas?.name, periodUsageMb = null)
+        return saved.toView(
+            plan, nas?.name, periodUsageMb = null,
+            subscriptionPlanName = customerApi.findSubscription(saved.subscriptionId)
+                .mismatchedPlanName(saved.planId),
+        )
     }
 
     override fun resetSecret(id: UUID, command: ResetSecretCommand): SubscriberAccessView {
@@ -327,14 +343,22 @@ class SubscriberAccessService(
      * satu query (himpunan kecil per tenant), paket dimemo per planId unik lewat katalog
      * (akun umumnya berbagi sedikit paket), dan pemakaian FUP periode berjalan seluruh akun
      * ditarik sekali (satu query batch reset-aware) untuk indikator kuota.
+     *
+     * Paket langganan ikut diresolusi (dimemo per langganan unik) semata untuk MENANDAI selisih
+     * paket-akun vs paket-tagihan; nama paketnya sudah ada di ref langganan, jadi tak ada
+     * lookup katalog tambahan.
      */
     private fun List<SubscriberAccess>.toViews(): List<SubscriberAccessView> {
         if (isEmpty()) return emptyList()
         val plans = map { it.planId }.distinct().associateWith { catalogApi.findPlanNetwork(it) }
         val nasNames = nasRepository.findAll().associate { it.id to it.name }
         val usage = accountingRecordRepository.usageSince(map { it.id }, currentPeriodStart())
+        val subscriptions = map { it.subscriptionId }.distinct().associateWith { customerApi.findSubscription(it) }
         return map { access ->
-            access.toView(plans[access.planId], access.nasId?.let(nasNames::get), usage[access.id]?.toMb())
+            access.toView(
+                plans[access.planId], access.nasId?.let(nasNames::get), usage[access.id]?.toMb(),
+                subscriptionPlanName = subscriptions[access.subscriptionId].mismatchedPlanName(access.planId),
+            )
         }
     }
 
@@ -349,7 +373,19 @@ private const val SECRET_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstu
 /** Byte → MB desimal (1 MB = 1e6 byte), selaras kuota FUP & Mbps di seluruh sistem. */
 private fun Long.toMb(): Long = this / 1_000_000L
 
-private fun SubscriberAccess.toView(plan: PlanNetworkRef?, nasName: String?, periodUsageMb: Long?) =
+/**
+ * Nama paket langganan bila BERBEDA dari paket akun, selain itu null. Langganan tanpa paket
+ * katalog (paket ad-hoc) tak bisa dibandingkan — bukan selisih, jadi tak ditandai.
+ */
+private fun SubscriptionRef?.mismatchedPlanName(accessPlanId: UUID): String? =
+    this?.takeIf { it.planId != null && it.planId != accessPlanId }?.packageName
+
+private fun SubscriberAccess.toView(
+    plan: PlanNetworkRef?,
+    nasName: String?,
+    periodUsageMb: Long?,
+    subscriptionPlanName: String? = null,
+) =
     SubscriberAccessView(
         id = id,
         subscriptionId = subscriptionId,
@@ -366,4 +402,5 @@ private fun SubscriberAccess.toView(plan: PlanNetworkRef?, nasName: String?, per
         fupQuotaMb = plan?.fupQuotaMb,
         fupThrottled = fupThrottled,
         periodUsageMb = periodUsageMb,
+        subscriptionPlanName = subscriptionPlanName,
     )

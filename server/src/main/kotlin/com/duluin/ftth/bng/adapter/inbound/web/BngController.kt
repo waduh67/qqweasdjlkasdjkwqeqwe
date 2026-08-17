@@ -197,13 +197,14 @@ data class SaveNasRequest(
  * atau MAC untuk DHCP/Static (wajib diisi, dinormalkan di domain). [secret] password PPPoE/Hotspot
  * (kosong → di-generate acak), diabaikan untuk tipe berbasis MAC (MAC jadi password); validasinya
  * di domain per-tipe, bukan bean-validation. [authType] default PPPOE agar klien lama tetap jalan;
- * [framedIp] hanya untuk DHCP/Static (wajib STATIC).
+ * [framedIp] hanya untuk DHCP/Static (wajib STATIC). [planId] boleh dikosongkan → diwarisi dari
+ * paket langganan.
  */
 data class ProvisionAccessRequest(
     val subscriptionId: UUID,
     val username: String? = null,
     val secret: String? = null,
-    val planId: UUID,
+    val planId: UUID? = null,
     val nasId: UUID?,
     val authType: String? = "PPPOE",
     val framedIp: String? = null,

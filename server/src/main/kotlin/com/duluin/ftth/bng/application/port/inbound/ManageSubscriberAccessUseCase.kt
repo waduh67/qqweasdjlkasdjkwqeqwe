@@ -35,12 +35,17 @@ interface ManageSubscriberAccessUseCase {
  * kode pelanggan), atau MAC untuk DHCP/Static (WAJIB diisi, dinormalkan di domain). [secret]
  * password PPPoE/Hotspot (null/kosong → di-generate acak); diabaikan untuk tipe berbasis MAC
  * (MAC jadi password). [framedIp] hanya dipakai DHCP/Static (reservasi Framed-IP-Address; wajib STATIC).
+ *
+ * [planId] null → diwarisi dari paket langganan. Inilah yang benar hampir selalu: paket langganan
+ * adalah yang ditagih, jadi itu pula yang harus dieksekusi jaringan. Tetap boleh diisi berbeda
+ * (mis. akses cadangan atau kesepakatan khusus), tapi harus disengaja — bukan konsekuensi
+ * dropdown yang lupa diubah.
  */
 data class ProvisionAccessCommand(
     val subscriptionId: UUID,
     val username: String?,
     val secret: String?,
-    val planId: UUID,
+    val planId: UUID?,
     val nasId: UUID?,
     val authType: AuthType = AuthType.PPPOE,
     val framedIp: String? = null,

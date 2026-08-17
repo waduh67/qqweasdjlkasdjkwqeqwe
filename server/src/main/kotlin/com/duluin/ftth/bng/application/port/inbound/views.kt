@@ -105,6 +105,13 @@ data class RadiusVpnHostView(
  * [fupQuotaMb] kuota periodenya, [fupThrottled] apakah akun kini sedang di-throttle,
  * dan [periodUsageMb] pemakaian akun sejak awal siklus (null bila tak dihitung, mis.
  * pada balikan aksi tunggal).
+ *
+ * [subscriptionPlanName] HANYA terisi bila paket akun berbeda dari paket langganan — nama paket
+ * yang sebenarnya ditagih. Ini penanda selisih tagih-vs-kecepatan, bukan data tampilan biasa:
+ * selama ini akun bisa lahir atau berpindah ke paket lain tanpa satu pun layar menunjukkannya,
+ * jadi pelanggan yang dibayar 100 Mbps bisa berjalan di 10 Mbps bertahun-tahun tanpa ketahuan.
+ * Sengaja hanya ditandai, tidak diperbaiki otomatis: menyelaraskan diam-diam akan mengubah
+ * kecepatan pelanggan tanpa ada yang memutuskan.
  */
 data class SubscriberAccessView(
     val id: UUID,
@@ -123,6 +130,7 @@ data class SubscriberAccessView(
     val fupQuotaMb: Long?,
     val fupThrottled: Boolean,
     val periodUsageMb: Long?,
+    val subscriptionPlanName: String? = null,
 )
 
 /**
