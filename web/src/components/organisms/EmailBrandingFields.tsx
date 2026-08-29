@@ -268,6 +268,10 @@ export function EmailPreviewPanel({
         />
       )}
 
+      <Text as="p" size={200} className="muted" style={{ margin: 0 }}>
+        Pratinjau dan email uji memakai setelan tersimpan.
+      </Text>
+
       <div className="hr" />
 
       <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>

@@ -578,7 +578,7 @@ export function CatalogPage() {
             ))}
           </div>
           <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-            Paket tersedia untuk tipe yang dipilih; semua tipe diterapkan ke RADIUS.
+            Tipe layanan menentukan ketersediaan paket; layanan yang dipilih diprovisikan ke RADIUS.
           </Text>
 
           {/* ---- Siklus Billing (override) ---- */}
