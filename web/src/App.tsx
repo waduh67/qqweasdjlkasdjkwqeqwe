@@ -54,7 +54,10 @@ import { PlatformEmailSettingsPage } from './pages/PlatformEmailSettingsPage'
 import { PaymentSimulationPage } from './pages/PaymentSimulationPage'
 import { SubscriptionPage } from './pages/SubscriptionPage'
 import { ReportsPage } from './pages/ReportsPage'
+import { HotspotPage } from './pages/HotspotPage'
+import { canViewHotspot, HOTSPOT_VIEW_PERMISSIONS } from './api/hotspot'
 import { PortalApp } from './portal/PortalApp'
+import { HotspotPortalPage } from './pages/HotspotPortalPage'
 
 /** Menahan rute sampai sesi dipulihkan, lalu mengarahkan ke login bila belum masuk. */
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -67,17 +70,31 @@ function RequireAuth({ children }: { children: ReactNode }) {
 /** Guard berbasis izin — server tetap penegak sebenarnya, ini demi UX. */
 function RequirePermission({ permission, children }: { permission: string; children: ReactNode }) {
   const { can } = useCan()
-  if (!can(permission)) {
-    return (
-      <div className="card">
-        <h3 style={{ marginTop: 0 }}>Akses ditolak</h3>
-        <p className="muted">
-          Kamu tidak punya izin <span className="badge">{permission}</span>.
-        </p>
-      </div>
-    )
-  }
+  if (!can(permission)) return <ForbiddenPermission permission={permission} />
   return <>{children}</>
+}
+
+function RequireAnyPermission({
+  permissions,
+  children,
+}: {
+  permissions: readonly string[]
+  children: ReactNode
+}) {
+  const { can } = useCan()
+  if (!canViewHotspot(can)) return <ForbiddenPermission permission={permissions.join(' atau ')} />
+  return <>{children}</>
+}
+
+function ForbiddenPermission({ permission }: { permission: string }) {
+  return (
+    <div className="card">
+      <h3 style={{ marginTop: 0 }}>Akses ditolak</h3>
+      <p className="muted">
+        Kamu tidak punya izin <span className="badge">{permission}</span>.
+      </p>
+    </div>
+  )
 }
 
 /**
@@ -115,6 +132,7 @@ export default function App() {
                 klien HTTP, dan token store sendiri (lihat PortalApp). Dua sesi tak bersinggungan. */}
             <Routes>
               <Route path="/portal/*" element={<PortalApp />} />
+              <Route path="/hotspot-portal/:portalId" element={<HotspotPortalPage />} />
               {/* Halaman bayar publik — sejajar (bukan di dalam) konsol operator supaya lolos dari
                   `AuthProvider` sekaligus catch-all `Navigate to="/"`. Kapabilitasnya UUID tagihan
                   di URL, jadi tautannya bisa dikirim ke pelanggan lewat WhatsApp. */}
@@ -217,6 +235,14 @@ function OperatorApp() {
                 <RequirePermission permission="catalog.plan.view">
                   <CatalogPage />
                 </RequirePermission>
+              }
+            />
+            <Route
+              path="hotspot"
+              element={
+                <RequireAnyPermission permissions={HOTSPOT_VIEW_PERMISSIONS}>
+                  <HotspotPage />
+                </RequireAnyPermission>
               }
             />
             <Route

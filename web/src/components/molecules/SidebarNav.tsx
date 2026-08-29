@@ -19,7 +19,7 @@ import type { IconProps } from '@/components/atoms/icons'
 export type NavItem = {
   to: string
   label: string
-  permission: string | null
+  permission: string | readonly string[] | null
   icon: ComponentType<IconProps>
   end?: boolean
 }
@@ -65,7 +65,13 @@ export function SidebarNav({
   return (
     <>
       {groups.map((group, i) => {
-        const visible = group.items.filter((item) => item.permission === null || can(item.permission))
+        const visible = group.items.filter(
+          (item) =>
+            item.permission === null ||
+            (typeof item.permission === 'string'
+              ? can(item.permission)
+              : item.permission.some(can)),
+        )
         if (visible.length === 0) return null
 
         // Grup tanpa label (Dashboard dkk) tak bisa diciutkan — selalu tampil.

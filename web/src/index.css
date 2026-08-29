@@ -1387,6 +1387,12 @@ td.dg-actions {
 .stat.crit-bar .stat-note::before {
   background: var(--critical);
 }
+
+@media print {
+  .voucher-credential-sheet .card {
+    box-shadow: none;
+  }
+}
 .stat.warn-bar .stat-note::before {
   background: var(--warning);
 }
@@ -2022,6 +2028,29 @@ td.dg-actions {
 .login-card {
   width: 100%;
   max-width: 400px;
+}
+.hosted-portal-card {
+  gap: 1rem;
+}
+.hosted-portal-brand {
+  align-items: center;
+}
+.hosted-portal-logo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  flex: none;
+}
+.hosted-portal-title,
+.hosted-portal-subtitle {
+  margin: 0;
+}
+.hosted-portal-notice {
+  padding: 0.75rem;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: var(--fontSizeBase200);
 }
 
 /* ---------- Portal pelanggan ---------- */

@@ -33,6 +33,7 @@ import {
   IconWifi,
   IconWorkOrder,
 } from '@/components/atoms/icons'
+import { HOTSPOT_VIEW_PERMISSIONS } from '@/api/hotspot'
 /**
  * Navigasi dikelompokkan menurut alur kerja (operasi jaringan vs administrasi),
  * bukan sekadar daftar datar — pada belasan menu, pengelompokan membuat operator
@@ -71,7 +72,9 @@ const GROUPS: NavGroup[] = [
       // Insiden: yang di sini lahir dari manusia, yang di Lapangan lahir dari alarm.
       { to: '/helpdesk', label: 'Meja Bantuan', permission: 'helpdesk.ticket.view', icon: IconChat },
       { to: '/invoices', label: 'Tagihan', permission: 'billing.invoice.view', icon: IconReceipt },
-      { to: '/catalog', label: 'Paket Internet', permission: 'catalog.plan.view', icon: IconPackage },
+       { to: '/catalog', label: 'Paket Internet', permission: 'catalog.plan.view', icon: IconPackage },
+       { to: '/hotspot', label: 'Hotspot & Voucher', permission: HOTSPOT_VIEW_PERMISSIONS, icon: IconWifi },
+
     ],
   },
   {
