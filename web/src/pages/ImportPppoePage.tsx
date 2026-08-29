@@ -170,7 +170,7 @@ export function ImportPppoePage() {
   const loadFromPaste = () => {
     const parsed = parsePaste(paste)
     if (parsed.length === 0) {
-      toast.error('Tak ada baris terbaca. Tempel hasil `/ppp/secret export` atau CSV name,password,profile,comment.')
+      toast.error('Tidak ada baris yang terbaca. Tempel export `/ppp/secret` atau CSV `name,password,profile,comment`.')
       return
     }
     applyRows(parsed)
@@ -252,7 +252,7 @@ export function ImportPppoePage() {
       <div className="card">
         <EmptyState
           title="Tak berizin"
-          hint="Butuh izin membuat pelanggan dan mengelola BRAS untuk impor PPPoE."
+          hint="Anda memerlukan izin untuk membuat pelanggan dan mengelola BRAS."
           icon={<IconInbox size={32} />}
         />
       </div>
@@ -265,8 +265,7 @@ export function ImportPppoePage() {
         title="Impor PPPoE"
         subtitle={
           <>
-            Migrasi akun PPPoE dari RouterOS ke sistem: tiap akun jadi pelanggan + langganan + akun jaringan
-            yang langsung aktif dan diprovisi ke RADIUS pusat. Tanpa Work Order — pelanggan sudah terpasang.
+            Impor akun PPPoE dari RouterOS. Setiap akun membuat pelanggan, langganan, dan akun jaringan aktif.
           </>
         }
       />
@@ -277,7 +276,7 @@ export function ImportPppoePage() {
         <div className="card">
           <EmptyState
             title="Belum ada paket aktif"
-            hint="Buat paket dulu di menu Paket Internet sebelum mengimpor akun."
+            hint="Buat paket Internet aktif sebelum mengimpor akun."
             icon={<IconPackage size={32} />}
           />
         </div>
@@ -312,8 +311,8 @@ export function ImportPppoePage() {
                     resetPreview()
                   }}
                 >
-                  <option value="NAS">Tarik langsung dari BRAS (RouterOS REST)</option>
-                  <option value="INLINE">Tempel / upload hasil export</option>
+                  <option value="NAS">Tarik dari BRAS (RouterOS REST)</option>
+                  <option value="INLINE">Tempel atau unggah export</option>
                 </SelectField>
               </div>
             </div>
@@ -324,8 +323,7 @@ export function ImportPppoePage() {
                   {fetching ? 'Menarik…' : 'Ambil daftar dari BRAS'}
                 </Button>
                 <Text as="span" className="muted" size={200} style={{ alignSelf: 'center' }}>
-                  Hanya MikroTik (RouterOS) dengan alamat &amp; kredensial kontrol REST terisi. Password
-                  ditarik server saat commit — tak melewati browser.
+                  BRAS MikroTik memerlukan alamat dan kredensial REST. server mengambil password saat impor.
                 </Text>
               </div>
             ) : (
@@ -335,7 +333,7 @@ export function ImportPppoePage() {
                   value={paste}
                   onChange={(_, data) => setPaste(data.value)}
                   placeholder={
-                    '/ppp secret\nadd name="budi" password="rahasia" profile="vip" comment="Budi"\n…\n\n' +
+                    '/ppp/secret export\nadd name="budi" password="rahasia" profile="vip"\n…\n\n' +
                     'atau CSV: name,password,profile,comment'
                   }
                   style={{ font: monospaceFont }}
@@ -353,7 +351,7 @@ export function ImportPppoePage() {
                     }}
                   />
                   <label htmlFor="pppoe-upload" style={{ ...typographyStyles.body1, display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', padding: '0.4rem 0.7rem', borderRadius: 6, border: '1px solid var(--border)' }}>
-                    Upload file
+                    Unggah berkas
                   </label>
                   <Button onClick={loadFromPaste} disabled={!paste.trim()}>
                     Baca daftar
@@ -429,7 +427,7 @@ export function ImportPppoePage() {
               </div>
               {unresolved > 0 && (
                 <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-                  {unresolved} akun terpilih belum ketemu paketnya — akan dilewati. Petakan profilnya atau pilih paket default.
+                  {unresolved} akun terpilih belum memiliki paket dan akan dilewati. Petakan profil atau pilih paket default.
                  </Text>
               )}
             </div>
@@ -438,10 +436,9 @@ export function ImportPppoePage() {
           {/* 4. Placeholder data pelanggan */}
           {rows.length > 0 && (
             <div className="card stack" style={{ gap: '0.6rem' }}>
-              <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>4. Data pelanggan (placeholder)</Text>
+              <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>4. Data pelanggan</Text>
               <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-                `/ppp/secret` tak memuat alamat/koordinat. Isi placeholder untuk seluruh batch; lengkapi
-                alamat &amp; lokasi asli tiap pelanggan belakangan.
+                `/ppp/secret` tidak memuat alamat atau koordinat. Nilai di bawah diterapkan ke seluruh akun.
               </Text>
               <div className="row wrap" style={{ gap: '0.6rem', alignItems: 'flex-end' }}>
                 {areas.length > 0 && (
@@ -458,10 +455,10 @@ export function ImportPppoePage() {
                 )}
                 <div style={{ flex: 2, minWidth: 200 }}>
                   <TextField
-                    label="Alamat placeholder"
+                    label="Alamat default"
                     value={defaultAddress}
                     onChange={(_, data) => setDefaultAddress(data.value)}
-                    placeholder="(impor PPPoE — lengkapi alamat)"
+                    placeholder="Lengkapi alamat pelanggan"
                   />
                 </div>
                 <div style={{ flex: 1, minWidth: 120 }}>
@@ -481,7 +478,7 @@ export function ImportPppoePage() {
                 <IconInbox size={15} /> {saving ? 'Mengimpor…' : `Impor ${selectedRows.length} akun`}
               </Button>
               <Text as="span" className="muted" size={200} style={{ alignSelf: 'center' }}>
-                Tiap akun langsung aktif &amp; ditulis ke RADIUS. Aktivasi memprorata tagihan dari sekarang.
+                Akun langsung aktif dan dikirim ke RADIUS.
               </Text>
             </div>
           )}

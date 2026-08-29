@@ -267,7 +267,7 @@ export function ImportCustomersPage() {
       <div className="card">
         <EmptyState
           title="Tak berizin"
-          hint="Butuh izin membuat & mengubah pelanggan, mengubah langganan, dan mengelola akun jaringan untuk impor CSV."
+          hint="Anda memerlukan izin untuk membuat dan mengubah pelanggan, langganan, serta akun jaringan."
           icon={<IconInbox size={32} />}
         />
       </div>
@@ -280,9 +280,8 @@ export function ImportCustomersPage() {
         title="Impor CSV pelanggan"
         subtitle={
           <>
-            Unggah CSV berisi biodata + paket + akun jaringan. Baris di-UPSERT menurut{' '}
-            <code>mikrotik_username</code>: belum ada → dibuat &amp; langsung aktif; sudah ada → diperbarui
-            (kolom kosong dipertahankan). Password kosong = pertahankan yang lama.
+            Unggah CSV pelanggan. <code>mikrotik_username</code> menjadi kunci: data baru dibuat, data
+            yang ada diperbarui, dan kolom kosong tetap menggunakan nilai sebelumnya.
           </>
         }
         actions={
@@ -325,19 +324,16 @@ export function ImportCustomersPage() {
           )}
         </div>
         <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-          Kolom dicocokkan lewat nama header (urutan bebas): {CUSTOMER_CSV_COLUMNS.join(', ')}. Hasil{' '}
-          <strong>Ekspor CSV</strong> dari halaman Pelanggan bisa langsung diunggah kembali.
+          Header wajib: {CUSTOMER_CSV_COLUMNS.join(', ')}. Urutan kolom bebas; CSV ekspor dari halaman
+          Pelanggan dapat diunggah kembali.
         </Text>
         <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-          <code>connection_type</code>: <code>pppoe</code> / <code>hotspot</code> / <code>dhcp</code> /{' '}
-          <code>static</code> (kosong = pppoe; tak dikenal = baris gagal). Untuk <code>dhcp</code>/
-          <code>static</code>, isi <code>mikrotik_username</code> dengan <strong>MAC</strong> (mis.{' '}
-          <code>AA:BB:CC:DD:EE:FF</code>) — <code>mikrotik_password</code> diabaikan. <code>framed_ip</code>{' '}
-          = reservasi IP: <strong>wajib</strong> untuk <code>static</code>, opsional untuk <code>dhcp</code>.
+          <code>connection_type</code>: <code>pppoe</code>, <code>hotspot</code>, <code>dhcp</code>, atau{' '}
+          <code>static</code> (kosong = <code>pppoe</code>). Untuk <code>dhcp</code>/<code>static</code>, isi{' '}
+          <code>mikrotik_username</code> dengan MAC; <code>framed_ip</code> wajib untuk <code>static</code>.
           <br />
-          <code>installation_date</code>: <code>YYYY-MM-DD</code> (juga menerima <code>DD/MM/YYYY</code>).{' '}
-          <code>next_billing</code>: tanggal tagih 1–28. <code>mikrotik_password</code> kosong = pertahankan
-          yang lama.
+          <code>installation_date</code>: <code>YYYY-MM-DD</code> atau <code>DD/MM/YYYY</code>.{' '}
+          <code>next_billing</code>: 1–28. <code>mikrotik_password</code> kosong mempertahankan password lama.
         </Text>
       </div>
 
@@ -380,8 +376,8 @@ export function ImportCustomersPage() {
           </div>
           {issueCount > 0 && (
             <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-              {issueCount} baris diprediksi bermasalah (username kosong → dilewati; tipe tak dikenal atau
-              Static tanpa <code>framed_ip</code> → gagal). Baris lain tetap dikirim; server memberi rekap final.
+              {issueCount} baris perlu perhatian: Username kosong dilewati; tipe tidak dikenal atau
+              <code>static</code> tanpa <code>framed_ip</code> gagal. Rekap server menjadi hasil akhir.
             </Text>
           )}
         </div>
@@ -394,7 +390,7 @@ export function ImportCustomersPage() {
             <IconInbox size={15} /> {saving ? 'Mengimpor…' : `Impor ${readyCount} baris`}
           </Button>
           <Text as="span" className="muted" size={200} style={{ alignSelf: 'center' }}>
-            Baris baru langsung aktif &amp; ditulis ke RADIUS. Aktivasi memprorata tagihan dari tanggal pasang.
+            Data baru langsung aktif dan dikirim ke RADIUS.
           </Text>
         </div>
       )}
