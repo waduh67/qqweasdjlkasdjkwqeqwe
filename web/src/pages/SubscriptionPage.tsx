@@ -137,7 +137,7 @@ export function SubscriptionPage() {
     try {
       const invoice = await renewMySubscription(months)
       await load()
-      toast.success(`Tagihan ${invoice.number} terbit — bayar lewat tombol Bayar di Riwayat tagihan.`)
+      toast.success(`Tagihan ${invoice.number} terbit.`)
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal memperpanjang langganan')
     } finally {
@@ -377,28 +377,11 @@ export function SubscriptionPage() {
             </div>
           )}
 
-          <div className="card stack" style={{ gap: '0.8rem' }}>
-            <Text as="h2" size={400} weight="semibold" style={{ margin: 0 }}>Cara perpanjangan</Text>
-            <Step n={1} title="Pilih durasi">
-              Pilih <strong>1 / 3 / 6 / 12 bulan</strong> lalu klik <strong>Perpanjang</strong> — tagihan sejumlah itu terbit.
-            </Step>
-            <Step n={2} title="Bayar">
-              Klik <strong>Bayar ↗</strong> pada tagihan di <strong>Riwayat tagihan</strong> — halaman bayar
-              tagihan itu terbuka di tab baru (bisa juga disalin lewat <strong>Salin link</strong>).
-            </Step>
-            <Step n={3} title="Masa aktif bertambah">
-              Setelah pembayaran <strong>LUNAS</strong>, masa aktif memanjang sesuai jumlah bulan — menumpuk bila belum habis.
-            </Step>
-            <p className="muted" style={{ margin: 0,  }}>
-              Tak perlu ditunggu: tagihan bulanan terbit otomatis menjelang masa aktif habis. Perpanjang di sini
-              hanya bila ingin membayar lebih awal / beberapa bulan sekaligus.
-            </p>
-            {sub.status === 'CANCELLED' && (
-              <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-                Langganan dibatalkan. Hubungi admin platform untuk mengaktifkan kembali.
-              </Text>
-            )}
-          </div>
+          {sub.status === 'CANCELLED' && (
+            <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
+              Langganan dibatalkan. Hubungi admin platform untuk mengaktifkan kembali.
+            </Text>
+          )}
 
           {/* Portabilitas data bertetangga dengan langganan bukan karena kemiripan teknis,
               melainkan karena di sinilah orang berada saat mempertimbangkan berhenti. */}
@@ -428,12 +411,7 @@ export function SubscriptionPage() {
 }
 
 function Header() {
-  return (
-    <PageHeader
-      title="Langganan Aplikasi"
-      subtitle="Masa aktif, pemakaian, dan tagihan langganan Anda ke aplikasi."
-    />
-  )
+  return <PageHeader title="Langganan" subtitle="Masa aktif, pemakaian, dan tagihan." />
 }
 
 /**
@@ -529,31 +507,6 @@ function UsageCard({ metric }: { metric: UsageMetricView }) {
             background: unlimited ? 'var(--accent-soft)' : 'var(--accent)',
           }}
         />
-      </div>
-    </div>
-  )
-}
-
-function Step({ n, title, children }: { n: number; title: string; children: ReactNode }) {
-  return (
-    <div className="row" style={{ gap: '0.7rem', alignItems: 'flex-start' }}>
-      <span
-        style={{
-          display: 'grid',
-          placeItems: 'center',
-          width: 24,
-          height: 24,
-          borderRadius: 999,
-          background: 'var(--accent)',
-          color: 'var(--accent-ink)',
-          flexShrink: 0,
-        }}
-      >
-        {n}
-      </span>
-      <div className="stack" style={{ gap: '0.1rem' }}>
-        <Text as="strong" size={300}  >{title}</Text>
-        <Text as="span" size={300} className="muted" >{children}</Text>
       </div>
     </div>
   )
