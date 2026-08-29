@@ -148,16 +148,16 @@ export function VpnServersPage() {
         setSecret(await createServer(body))
       }
       setDraft(null)
-    }, draft.id ? 'Hub diperbarui' : 'Hub dibuat — jalankan perintah pasang di VPS')
+    }, draft.id ? 'Server diperbarui' : 'Server dibuat — jalankan perintah pasang di VPS')
   }
 
   const regenerate = (server: VpnServerView) => {
     void (async () => {
       if (
         !(await confirm({
-          title: 'Rotasi token pasang',
-          message: `Rotasi token pasang untuk “${server.name}”? Perintah/token lama langsung tak berlaku dan VPS perlu dipasang ulang dengan yang baru.`,
-          confirmLabel: 'Rotasi',
+          title: `Rotasi token server “${server.name}”`,
+          message: `Token dan perintah pasang lama untuk server “${server.name}” langsung tidak berlaku. Jalankan ulang perintah baru di VPS.`,
+          confirmLabel: 'Rotasi token',
         }))
       )
         return
@@ -171,9 +171,9 @@ export function VpnServersPage() {
     void (async () => {
       if (
         !(await confirm({
-          title: 'Hapus hub',
-          message: `Hapus hub “${server.name}”? Ditolak bila masih menampung akun.`,
-          confirmLabel: 'Hapus',
+          title: `Hapus server “${server.name}”`,
+          message: `Hapus server “${server.name}”? Server tidak dapat dihapus selama masih memiliki peer.`,
+          confirmLabel: 'Hapus server',
           danger: true,
         }))
       )
@@ -234,10 +234,7 @@ export function VpnServersPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <PageHeader
-        title="Server VPN"
-        subtitle="Hub OpenVPN platform — jalan di VPS kita dengan IP publik kita. Buat hub, jalankan perintah pasang sekali di VPS, lalu hub siap dipakai. Tenant tinggal generate akun VPN yang di-auto-assign ke hub yang tersedia."
-      />
+      <PageHeader title="Server VPN" />
 
       <div className="spread">
         <span className="muted">{servers.length} hub</span>
@@ -275,7 +272,7 @@ export function VpnServersPage() {
             hint={
               query || statusFilter
                 ? 'Coba ubah kata kunci atau filter.'
-                : 'Buat hub, lalu jalankan perintah pasang sekali di VPS.'
+                : undefined
             }
             icon={<IconRoute size={32} />}
           />
@@ -328,25 +325,20 @@ function ServerForm({
           onChange={(_, data) => setDraft({ ...draft, protocol: data.value as VpnProtocol })}
           style={{ flex: 1 }}
         >
-          <option value="TCP">TCP — semua RouterOS</option>
-          <option value="UDP">UDP — v7 saja</option>
+            <option value="TCP">TCP — RouterOS v6 dan v7</option>
+            <option value="UDP">UDP — RouterOS v7</option>
         </SelectField>
       </div>
 
       {/* Pilihan protokol tak bisa dibalik tanpa mengganggu perangkat: yang sudah men-dial harus
           menempel ulang confignya. Sebutkan konsekuensinya di tempat pilihannya diambil. */}
-      <Text as="p" className="muted" size={300} style={{ margin: 0 }}>{draft.protocol === 'TCP' ? (
-        <>
-          Perangkat <strong>RouterOS v6 maupun v7</strong> bisa masuk. Buka port{' '}
-          <code>{draft.port || '1194'}/tcp</code> di firewall/NSG VPS.
-        </>
-      ) : (
-        <>
-          Hanya <strong>RouterOS v7</strong> yang bisa masuk — klien OpenVPN v6 tak mengenal UDP,
-          dan perangkat lama (hAP lite, RB941) tak bisa di-upgrade ke v7. Pilih UDP hanya bila
-          seluruh armada dipastikan v7.
-        </>
-      )}</Text>
+      <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
+        {draft.protocol === 'TCP' ? (
+          <>Kompatibel dengan RouterOS v6 dan v7. Buka port <code>{draft.port || '1194'}/tcp</code> di firewall atau NSG VPS.</>
+        ) : (
+          <>Hanya RouterOS v7 yang kompatibel. Gunakan UDP hanya jika semua peer memakai v7.</>
+        )}
+      </Text>
 
       {draft.id === null ? (
         <TextField
@@ -357,14 +349,10 @@ function ServerForm({
         />
       ) : (
         <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-          Subnet overlay <code>{draft.tunnelCidr}</code> tetap setelah hub dibuat (IP akun sudah teralokasi darinya).
+          CIDR tunnel tidak dapat diubah setelah server dibuat karena IP peer telah dialokasikan.
         </Text>
       )}
 
-      <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-        Aplikasi menerbitkan CA + sertifikat server otomatis saat hub dibuat — tak perlu easy-rsa manual. Perintah pasang
-        satu-baris muncul sekali setelah simpan.
-      </Text>
       <div className="row">
         <Button variant="primary" onClick={onSave}>
           Simpan
@@ -393,15 +381,13 @@ function InstallSecretCard({ server, onDismiss }: { server: VpnServerView; onDis
         <strong>Perintah pasang untuk hub “{server.name}”</strong>
       </div>
       <p className="muted" style={{ margin: '0 0 0.5rem',  }}>
-        Jalankan sekali di VPS sebagai root. Installer memasang OpenVPN + PKI aplikasi dan menyambungkan callback
-        verifikasi — tak ada langkah teknis manual setelahnya. Perintah &amp; token ini hanya ditampilkan sekali.
+        Jalankan sekali sebagai root di VPS. Perintah dan token ini hanya ditampilkan sekali.
       </p>
       <code style={{ display: 'block', wordBreak: 'break-all', padding: '0.5rem', marginBottom: '0.5rem' }}>{command}</code>
       {needsBaseUrl && (
-        <p className="muted" style={{ margin: '0 0 0.5rem',  }}>
-          Ganti <code>&lt;URL-APLIKASI-ANDA&gt;</code> dengan URL publik aplikasi ini, atau set{' '}
-          <code>FTTH_VPN_PUBLIC_BASE_URL</code> di server agar terisi otomatis.
-        </p>
+          <p className="muted" style={{ margin: '0 0 0.5rem',  }}>
+            Ganti <code>&lt;URL-APLIKASI-ANDA&gt;</code> dengan URL publik aplikasi ini.
+          </p>
       )}
       <p className="muted" style={{ margin: '0 0 0.6rem',  }}>
         Token node: <code>{token}</code>

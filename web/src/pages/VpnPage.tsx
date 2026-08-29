@@ -161,9 +161,9 @@ export function VpnPage() {
     void (async () => {
       if (
         !(await confirm({
-          title: 'Rotasi password',
-          message: `Rotasi password “${a.label}”? Password lama langsung tak berlaku — perbarui di Mikrotik.`,
-          confirmLabel: 'Rotasi',
+          title: `Rotasi password akun “${a.label}”`,
+          message: `Password lama untuk akun “${a.label}” langsung tidak berlaku. Perbarui konfigurasi RouterOS.`,
+          confirmLabel: 'Rotasi password',
         }))
       )
         return
@@ -177,9 +177,9 @@ export function VpnPage() {
     void (async () => {
       if (
         !(await confirm({
-          title: 'Hapus akun',
-          message: `Hapus akun “${a.label}”? Koneksi Mikrotik dengan akun ini akan putus.`,
-          confirmLabel: 'Hapus',
+          title: `Hapus akun “${a.label}”`,
+          message: `Hapus akun “${a.label}”? Koneksi RouterOS dengan akun ini akan terputus.`,
+          confirmLabel: 'Hapus akun',
           danger: true,
         }))
       )
@@ -335,15 +335,7 @@ export function VpnPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <PageHeader
-        title="Akun VPN"
-        subtitle={
-          <>
-            Butuh remote Mikrotik tanpa IP publik? Cukup <strong>Generate akun</strong> — sistem memilih server VPN
-            otomatis dan memberi Anda host, port, tipe keamanan, username &amp; password siap tempel di Mikrotik.
-          </>
-        }
-      />
+      <PageHeader title="Akun VPN" />
 
       {canManage && (
         <div className="card stack" style={{ gap: '0.75rem' }}>
@@ -360,9 +352,6 @@ export function VpnPage() {
               <IconPlus size={15} /> {busy ? 'Membuat…' : 'Generate akun'}
             </Button>
           </div>
-          <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-            Server dipilih otomatis. Password hanya tampil sekali setelah dibuat — salin atau unduh config-nya.
-          </Text>
         </div>
       )}
 
@@ -391,9 +380,7 @@ export function VpnPage() {
             hint={
               query || statusFilter
                 ? 'Coba ubah kata kunci atau filter.'
-                : canManage
-                  ? 'Tekan “Generate akun” untuk membuat yang pertama.'
-                  : 'Belum ada akun untuk ditampilkan.'
+                : undefined
             }
           />
         }
@@ -496,9 +483,9 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
     void (async () => {
       if (
         !(await confirm({
-          title: 'Cabut pintu',
-          message: `Cabut ${f.label} (${f.address})? Alamat itu langsung tak bisa dipakai lagi dan port publiknya bisa dipakai akun lain.`,
-          confirmLabel: 'Cabut',
+          title: `Cabut penerusan “${f.label}”`,
+          message: `Cabut penerusan “${f.label}” (${f.address})? Endpoint ini langsung tidak dapat digunakan dan port publiknya dapat dialokasikan ke akun lain.`,
+          confirmLabel: 'Cabut penerusan',
           danger: true,
         }))
       )
@@ -519,13 +506,6 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
 
   return (
     <Modal title={`Port remote “${acct.label}”`} onClose={onClose} wide>
-      <p className="muted" style={{ margin: '0 0 0.75rem',  }}>
-        Tiap baris adalah satu pintu dari internet ke perangkat: <code>{acct.host}:portPublik</code> diteruskan ke{' '}
-        <code>{acct.overlayIp}:portPerangkat</code>. Port publik dipilih sistem dan <strong>tak berubah</strong> —
-        kalau port layanan di perangkat dipindah (mis. Winbox ke 9291), cukup ubah kolom “Port di perangkat”.
-        Perubahan menyusul di hub paling lama ~1 menit.
-      </p>
-
       <Table ><TableHeader><TableRow ><TableHeaderCell >Layanan</TableHeaderCell>
       <TableHeaderCell >Alamat publik</TableHeaderCell>
       <TableHeaderCell >Port di perangkat</TableHeaderCell>
@@ -633,9 +613,11 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
             <IconPlus size={15} /> Tambah
           </Button>
         </div>
-        <Text as="span" size={300} className="muted" >{full
-          ? `Sudah ${MAX_FORWARDS} pintu — cabut salah satu dulu.`
-          : 'Port publiknya dipilih sistem supaya tak bentrok dengan akun lain di hub yang sama.'}</Text>
+        {full && (
+          <Text as="span" size={300} className="muted">
+            Sudah {MAX_FORWARDS} pintu — cabut salah satu dulu.
+          </Text>
+        )}
       </div>
     </Modal>
   )
@@ -694,11 +676,9 @@ function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onCl
     void (async () => {
       if (
         !(await confirm({
-          title: 'Cabut blok',
-          message:
-            `Cabut ${r.cidr} dari “${acct.label}”? Server berhenti bisa menghubungi perangkat di blok itu — ` +
-            `perintah ke ONT kembali menunggu laporan berkala (bisa sampai 5 menit).`,
-          confirmLabel: 'Cabut',
+          title: `Cabut CIDR “${r.cidr}”`,
+          message: `Cabut CIDR “${r.cidr}” dari akun “${acct.label}”? Server tidak lagi dapat menghubungi perangkat di CIDR ini.`,
+          confirmLabel: 'Cabut CIDR',
           danger: true,
         }))
       )
@@ -722,10 +702,8 @@ function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onCl
   return (
     <Modal title={`Blok pelanggan “${acct.label}”`} onClose={onClose} wide>
       <p className="muted" style={{ margin: '0 0 0.75rem',  }}>
-        Daftarkan kolam alamat yang dibagikan perangkat ini ke pelanggan (mis. pool PPPoE di{' '}
-        <code>/ip pool print</code>). Setelahnya server bisa <strong>menghubungi ONT langsung</strong> — reboot,
-        ganti SSID, atau tarik status jadi seketika, tak lagi menunggu ONT melapor sendiri tiap ~5 menit. Blok
-        hanya boleh dipegang satu akun per hub; kalau ditolak “beririsan”, blok itu sudah didaftarkan akun lain.
+        Daftarkan CIDR pelanggan agar server dapat menghubungi perangkat di belakang peer. Satu CIDR hanya boleh
+        terdaftar pada satu akun per server.
       </p>
 
       <Table ><TableHeader><TableRow ><TableHeaderCell >Nama</TableHeaderCell>
@@ -793,9 +771,11 @@ function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onCl
             <IconPlus size={15} /> Tambah
           </Button>
         </div>
-        <Text as="span" size={300} className="muted" >{full
-          ? `Sudah ${MAX_ROUTES} blok — cabut salah satu dulu.`
-          : 'Alamat host otomatis dirapikan jadi alamat bloknya (10.20.1.5/16 → 10.20.0.0/16).'}</Text>
+        {full && (
+          <Text as="span" size={300} className="muted">
+            Sudah {MAX_ROUTES} blok — cabut salah satu dulu.
+          </Text>
+        )}
       </div>
 
       {script && (
@@ -808,24 +788,17 @@ function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onCl
               placeholder={ovpnInterfaceName(acct.username)}
               style={{ width: '18rem' }}
             />
-            <Text as="span" size={300} className="muted" style={{ paddingBottom: '0.45rem' }} >
-              Cek dengan <code>/interface print where name~"ovpn"</code> bila ragu.
-            </Text>
           </div>
           <CommandBlock
             title={
               <>
-                Terakhir, izinkan di <strong>Mikrotik</strong> — tanpa ini paketnya mati diam di chain forward:
+                Izinkan di <strong>RouterOS</strong>:
               </>
             }
             command={script}
             copyLabel="Salin aturan"
             onCopy={copyScript}
-            hint={
-              `Tempel di terminal RouterOS perangkat ini; boleh diulang kapan saja — barisnya menyapu aturan ` +
-              `“ftth-blok” lama dulu, lalu menaruh yang baru di urutan teratas supaya tak keburu tertangkap ` +
-              `aturan drop bawaan konfigurasi Anda.`
-            }
+            hint="Tempel di terminal RouterOS. Aman diulang; aturan lama “ftth-blok” diganti dan ditempatkan sebelum aturan drop."
           />
         </>
       )}
@@ -861,8 +834,7 @@ function CredentialCard({ account, onDismiss }: { account: VpnAccountView; onDis
         <strong>Kredensial akun “{account.label}”</strong>
       </div>
       <p className="muted" style={{ margin: '0 0 0.6rem',  }}>
-        Tempel data ini ke OVPN client Mikrotik Anda. <strong>Password hanya ditampilkan sekali</strong> — bila
-        terlewat, rotasi ulang atau unduh config.
+        <strong>Password hanya ditampilkan sekali.</strong> Simpan sekarang atau unduh konfigurasi.
       </p>
       <Table style={{ marginBottom: '0.6rem' }}><TableBody>{rows.map((r) => (
         <TableRow key={r.label}><TableCell className="muted" style={{ width: '9rem' }}>{r.label}</TableCell>
@@ -875,38 +847,32 @@ function CredentialCard({ account, onDismiss }: { account: VpnAccountView; onDis
       ))}</TableBody></Table>
       {account.routerOsCommand && (
         <CommandBlock
-          title={
-            <>
-              Atau tinggal tempel di terminal RouterOS <strong>v7</strong> (langsung jadi):
-            </>
-          }
+            title={
+              <>
+                RouterOS <strong>v7</strong>
+              </>
+            }
           command={account.routerOsCommand}
           copyLabel="Salin perintah"
           onCopy={() => copy(account.routerOsCommand!, 'Perintah RouterOS v7')}
           hint={
             account.supportsV6
-              ? 'RouterOS v7 (UDP/TCP + AES-256-GCM). Perangkat v6? Pakai perintah di bawah.'
-              : `RouterOS v7 (AES-256-GCM). Perangkat v6 tak bisa memakai hub ini: klien OpenVPN v6 ` +
-                `tak mengenal ${account.protocol}. Minta admin platform mengubah hub "${account.serverName}" ` +
-                `ke TCP, menjalankan ulang perintah pasang di VPS, lalu membuka port ${account.port}/tcp.`
+              ? 'RouterOS v7 (UDP/TCP, AES-256-GCM).'
+              : `RouterOS v6 tidak kompatibel dengan ${account.protocol}. Gunakan server TCP untuk perangkat v6.`
           }
         />
       )}
       {account.supportsV6 && account.routerOsCommandV6 && (
         <CommandBlock
-          title={
-            <>
-              Perangkat lama? Tempel di terminal RouterOS <strong>v6</strong> (TCP + AES-256-CBC):
-            </>
-          }
+            title={
+              <>
+                RouterOS <strong>v6</strong>
+              </>
+            }
           command={account.routerOsCommandV6}
           copyLabel="Salin perintah v6"
           onCopy={() => copy(account.routerOsCommandV6!, 'Perintah RouterOS v6')}
-          hint={
-            `Isinya persis kolom yang ada di menu ovpn-client v6. Kalau interfacenya berhenti di ` +
-            `"connecting...", yang paling sering: port ${account.port}/tcp hub belum terbuka di ` +
-            `firewall/NSG VPS.`
-          }
+            hint={`TCP, AES-256-CBC. Jika status berhenti di "connecting...", buka port ${account.port}/tcp di firewall atau NSG VPS.`}
         />
       )}
       <div className="row" style={{ flexWrap: 'wrap' }}>
