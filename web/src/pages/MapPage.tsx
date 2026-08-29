@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Button as FluentButton, Text as FluentText } from '@fluentui/react-components'
 import { useLocation, useNavigate } from 'react-router-dom'
 import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -1559,7 +1560,7 @@ export function MapPage() {
   if (!can('gis.map.view')) {
     return (
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Akses ditolak</h3>
+        <FluentText as="h3" weight="semibold" style={{ marginTop: 0 }}>Akses ditolak</FluentText>
         <p className="muted">
           Kamu tidak punya izin <span className="badge">gis.map.view</span>.
         </p>
@@ -1601,18 +1602,17 @@ export function MapPage() {
             terbuka: keduanya menghuni sisi kanan, dan yang ditunggu operator saat itu
             jelas panelnya — bukan tombol yang akan menimpanya. */}
         {!settingsOpen && !rightSideBusy && (
-          <button
-            type="button"
+          <FluentButton
+            appearance="subtle"
             className="map-settings-btn"
             title="Setelan peta"
             aria-label="Setelan peta"
+            icon={<IconSettings size={18} />}
             onClick={() => {
               setAddMenu(null)
               setSettingsOpen(true)
             }}
-          >
-            <IconSettings size={18} />
-          </button>
+          />
         )}
         {settingsOpen && (
           <MapSettingsDrawer
@@ -1668,7 +1668,7 @@ export function MapPage() {
           <div className="map-hint">
             <IconRoute size={16} />
             <span>{drawHint(toolState)}</span>
-            <span className="tnum" style={{ marginLeft: 'auto', fontWeight: 600 }}>
+            <span className="tnum" style={{ marginLeft: 'auto',  }}>
               {formatLength(toolState.lengthMeters)}
             </span>
             {/* Selubung menerus lewat belokan dulu: tanpa tombol ini, jalur sesudah
@@ -1697,7 +1697,7 @@ export function MapPage() {
           <div className="map-hint">
             <IconRoute size={16} />
             <span>Seret titik tengah (yang samar) untuk membelokkan · seret titik untuk menggeser · klik-ganda untuk hapus</span>
-            <span className="tnum" style={{ marginLeft: 'auto', fontWeight: 600 }}>
+            <span className="tnum" style={{ marginLeft: 'auto',  }}>
               {formatLength(toolState?.lengthMeters ?? 0)}
             </span>
             <Button variant="primary" size="small" onClick={() => void saveEdit()}>

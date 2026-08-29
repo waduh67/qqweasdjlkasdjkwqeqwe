@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Text, typographyStyles } from '@fluentui/react-components'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import type { User } from '../api/types'
@@ -193,19 +194,21 @@ export function HelpdeskPage() {
       key: 'code',
       header: 'Tiket',
       sortValue: (t) => t.code,
-      cell: (t) => (
-        <div className="stack" style={{ gap: '0.2rem' }}>
-          <strong>{t.subject}</strong>
-          <span className="muted tnum" style={{ fontSize: '0.78rem' }}>
-            {t.code}
-            {t.priority !== 'NORMAL' && (
-              <span style={{ color: PRIORITY_TONE[t.priority], marginLeft: '0.4rem' }}>
-                · {TICKET_PRIORITY_LABEL[t.priority]}
-              </span>
-            )}
-          </span>
-        </div>
-      ),
+      cell: (t) => t.code,
+      onCellClick: (t) => void openDetail(t.id),
+    },
+    {
+      key: 'subject',
+      header: 'Subjek',
+      sortValue: (t) => t.subject,
+      cell: (t) => t.subject,
+    },
+    {
+      key: 'priority',
+      header: 'Prioritas',
+      sortValue: (t) => t.priority,
+      cell: (t) =>
+        t.priority === 'NORMAL' ? <span className="muted">Normal</span> : TICKET_PRIORITY_LABEL[t.priority],
     },
     {
       key: 'customer',
@@ -241,7 +244,7 @@ export function HelpdeskPage() {
       sortValue: (t) => t.responseDueAt ?? t.resolutionDueAt,
       cell: (t) => {
         const sla = slaInfo(t)
-        return <span style={{ color: sla.tone, fontSize: '0.82rem' }}>{sla.label}</span>
+        return <Text as="span" size={300} style={{ color: sla.tone }}>{sla.label}</Text>
       },
     },
     {
@@ -343,7 +346,6 @@ export function HelpdeskPage() {
         columns={columns}
         rows={rows}
         rowKey={(t) => t.id}
-        onRowClick={(t) => void openDetail(t.id)}
         loading={loading}
         initialSort={{ key: 'activity', dir: 'desc' }}
         empty={
@@ -407,8 +409,8 @@ function SummaryCard({
   return (
     <div className="card stat">
       <div className="stat-label">{label}</div>
-      <div className="tnum" style={{ fontSize: '1.4rem', fontWeight: 600, color: tone }}>{value}</div>
-      <div className="muted" style={{ fontSize: '0.82rem' }}>{hint}</div>
+      <div className="tnum" style={{ ...typographyStyles.subtitle1, color: tone }}>{value}</div>
+      <div className="muted" style={typographyStyles.body2}>{hint}</div>
     </div>
   )
 }
@@ -457,10 +459,10 @@ function TicketDetailBody({
 
       <div className="stack" style={{ gap: '0.15rem' }}>
         <Link to={`/customers/${t.customerId}`}>{t.customerName}</Link>
-        <span className="muted" style={{ fontSize: '0.78rem' }}>
+        <Text as="span" className="muted" size={200}>
           Dilaporkan {new Date(t.openedAt).toLocaleString('id-ID')} · {t.assigneeName ?? 'belum ditugaskan'}
-        </span>
-        {open && <span style={{ fontSize: '0.78rem', color: sla.tone ?? 'var(--text-2)' }}>{sla.label}</span>}
+        </Text>
+        {open && <Text as="span" size={200} style={{ color: sla.tone ?? 'var(--text-2)' }}>{sla.label}</Text>}
       </div>
 
       {canManage && open && (
@@ -476,7 +478,7 @@ function TicketDetailBody({
       {canManage && open && <ManageActions ticket={t} onStatus={onStatus} onEscalate={onEscalate} />}
 
       <section className="stack" style={{ gap: '0.5rem' }}>
-        <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Percakapan</h3>
+        <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>Percakapan</Text>
         <Message
           author="CUSTOMER"
           authorName={t.customerName}
@@ -490,9 +492,9 @@ function TicketDetailBody({
 
       {canReply && open && <ReplyBox onSend={onReply} />}
       {!open && (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
           Tiket sudah ditutup — utasnya tak lagi menerima balasan.
-        </p>
+        </Text>
       )}
     </div>
   )
@@ -622,10 +624,10 @@ function ManageActions({
 
       {escalating && !ticket.workOrderId && (
         <section className="stack" style={{ gap: '0.5rem' }}>
-          <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+          <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
             Menerbitkan work order perbaikan untuk pelanggan ini. Keluhannya ikut sebagai deskripsi
             tugas, dan satu tiket hanya bisa dieskalasi sekali.
-          </p>
+          </Text>
           <SelectField
             label="Prioritas"
             value={priority}
@@ -719,9 +721,9 @@ function Message({
   const mine = author === 'OPERATOR'
   if (author === 'SYSTEM') {
     return (
-      <p className="muted" style={{ margin: 0, fontSize: '0.8rem', textAlign: 'center' }}>
+      <Text as="p" className="muted" size={300} style={{ margin: 0, textAlign: 'center' }}>
         {body} · {new Date(at).toLocaleString('id-ID')}
-      </p>
+      </Text>
     )
   }
   return (
@@ -734,9 +736,9 @@ function Message({
         background: mine ? 'var(--accent-soft)' : undefined,
       }}
     >
-      <span className="muted" style={{ fontSize: '0.75rem' }}>
+      <Text as="span" className="muted" size={200}>
         {AUTHOR_LABEL[author]} · {authorName} · {new Date(at).toLocaleString('id-ID')}
-      </span>
+      </Text>
       <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{body}</span>
     </div>
   )

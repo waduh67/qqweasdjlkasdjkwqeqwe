@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
@@ -6,7 +7,7 @@ import type { AssetStatus, JointBoxView, OdcView, OdfView, OdpView, OltView, Sit
 import { MapPin, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Checkbox } from '@fluentui/react-components'
 import { useCan } from '../auth/useCan'
-import { AccessNodeDetail, AssetDetailPanel, DataTable, OdfDetail, type Column, type RowAction } from '@/components/organisms'
+import { AccessNodeDetail, AssetDetailPanel, DataTable, OdfDetail, type Column } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
 import { LocationPicker } from '@/components/organisms'
@@ -89,7 +90,7 @@ export function InventoryPage() {
   if (visible.length === 0) {
     return (
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Akses ditolak</h3>
+        <Text as="h3" weight="semibold" style={{ marginTop: 0 }}>Akses ditolak</Text>
         <p className="muted">Kamu tidak punya izin melihat inventory jaringan.</p>
       </div>
     )
@@ -210,26 +211,24 @@ function SitesTab() {
   }
 
   const columns: Column<SiteView>[] = [
-    { key: 'code', header: 'Kode', sortValue: (s) => s.code, cell: (s) => s.code },
     {
       key: 'name',
       header: 'Nama',
       sortValue: (s) => s.name,
-      cell: (s) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
-          <strong>{s.name}</strong>
-          <span className="muted" style={{ fontSize: '0.8rem' }}>{s.address ?? '—'}</span>
-        </div>
-      ),
+      cell: (s) => s.name,
+      onCellClick: (s) => setOpenSite(s),
+      inlineActions: canDelete
+        ? (s) => [{ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeSite(s) }]
+        : undefined,
     },
+    { key: 'code', header: 'Kode', sortValue: (s) => s.code, cell: (s) => s.code },
+    { key: 'address', header: 'Alamat', sortValue: (s) => s.address ?? '', cell: (s) => <span className="muted">{s.address ?? '—'}</span> },
     { key: 'olt', header: 'OLT', align: 'right', sortValue: (s) => s.oltCount, cell: (s) => s.oltCount },
     {
       key: 'coord',
       header: 'Koordinat',
       cell: (s) => (
-        <span className="muted" style={{ fontSize: '0.8rem' }}>
-          {s.location.latitude.toFixed(5)}, {s.location.longitude.toFixed(5)}
-        </span>
+        <Text as="span" className="muted" size={200}>{s.location.latitude.toFixed(5)}, {s.location.longitude.toFixed(5)}</Text>
       ),
     },
   ]
@@ -242,9 +241,6 @@ function SitesTab() {
       }
     })()
 
-  const rowActions = (s: SiteView): RowAction[] => [
-    { key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeSite(s) },
-  ]
 
   const primary: CommandAction | undefined = can('network.site.create')
     ? { key: 'create', label: 'Tambah site', icon: <Plus size={16} />, onClick: () => openDraft({ ...empty }) }
@@ -368,11 +364,9 @@ function SitesTab() {
         columns={columns}
         rows={rows}
         rowKey={(s) => s.id}
-        onRowClick={(s) => setOpenSite(s)}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
-        rowActions={canDelete ? rowActions : undefined}
         empty={
           <EmptyState
             title={query ? 'Tidak ada site yang cocok' : 'Belum ada site'}
@@ -456,28 +450,26 @@ function OltsTab() {
 
   const columns: Column<OltView>[] = [
     {
-      key: 'code',
-      header: 'Kode',
-      sortValue: (o) => o.code,
-      cell: (o) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
-          <strong>{o.code}</strong>
-          <span className="muted" style={{ fontSize: '0.8rem' }}>{o.name}</span>
-        </div>
-      ),
+      key: 'name',
+      header: 'Nama',
+      sortValue: (o) => o.name,
+      cell: (o) => o.name,
+      onCellClick: (o) => setOpenOlt(o),
+      inlineActions: canDelete
+        ? (o) => [{
+            key: 'delete',
+            label: 'Hapus',
+            icon: <Trash2 size={16} />,
+            onClick: () => void (async () => {
+              if (await confirm({ title: 'Hapus OLT', message: `Hapus OLT ${o.code}?`, confirmLabel: 'Hapus', danger: true })) void run(() => api.del(`/api/olts/${o.id}`))
+            })(),
+          }]
+        : undefined,
     },
-    { key: 'site', header: 'Site', sortValue: (o) => o.siteName, cell: (o) => <span className="muted">{o.siteName ?? '—'}</span> },
-    {
-      key: 'vendor',
-      header: 'Vendor',
-      sortValue: (o) => o.vendor,
-      cell: (o) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
-          <span>{o.vendor}</span>
-          <span className="muted" style={{ fontSize: '0.8rem' }}>{o.managementIp ?? '—'}</span>
-        </div>
-      ),
-    },
+    { key: 'code', header: 'Kode', sortValue: (o) => o.code, cell: (o) => o.code },
+    { key: 'site', header: 'Site', sortValue: (o) => o.siteName, cell: (o) => o.siteName ?? '—' },
+    { key: 'vendor', header: 'Vendor', sortValue: (o) => o.vendor, cell: (o) => o.vendor },
+    { key: 'managementIp', header: 'IP manajemen', sortValue: (o) => o.managementIp, cell: (o) => o.managementIp ?? '—' },
     { key: 'status', header: 'Status', sortValue: (o) => o.status, cell: (o) => <StatusBadge status={o.status} /> },
     {
       key: 'monitoring',
@@ -485,21 +477,7 @@ function OltsTab() {
       sortValue: (o) => (o.pollable ? 1 : 0),
       cell: (o) => <span className="badge">{o.pollable ? 'siap dipolling' : 'belum lengkap'}</span>,
     },
-    // Hanya jumlah port (angka rata-kanan ala grid Azure). Menambah/menghapus PON port
-    // dilakukan di tab "PON Port" halaman detail OLT — klik baris untuk membukanya —
-    // supaya baris grid tetap satu-tinggi & rapat, bukan menyisipkan mini-form per baris.
     { key: 'ponPorts', header: 'PON port', align: 'right', sortValue: (o) => o.ponPortCount, cell: (o) => o.ponPortCount },
-  ]
-
-  const rowActions = (o: OltView): RowAction[] => [
-    {
-      key: 'delete',
-      label: 'Hapus',
-      icon: <Trash2 size={16} />,
-      onClick: () => void (async () => {
-        if (await confirm({ title: 'Hapus OLT', message: `Hapus OLT ${o.code}?`, confirmLabel: 'Hapus', danger: true })) void run(() => api.del(`/api/olts/${o.id}`))
-      })(),
-    },
   ]
 
   const primary: CommandAction | undefined = can('network.olt.create')
@@ -649,7 +627,7 @@ function OltsTab() {
           {/* Kanal SNMP — utama untuk ZTE/Huawei/dst.; HSGQ EPON pun dipolling lewat SNMP, jadi tampil untuk semua vendor */}
           <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
             <Checkbox
-              label={<span style={{ fontWeight: 600 }}>Aktifkan SNMP untuk OLT ini</span>}
+              label={<Text as="span" weight="semibold">Aktifkan SNMP untuk OLT ini</Text>}
               checked={draft.snmpEnabled}
               onChange={(e) => setDraft({ ...draft, snmpEnabled: e.target.checked })}
             />
@@ -690,31 +668,30 @@ function OltsTab() {
                 </div>
               </div>
             )}
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
               Community string disimpan terenkripsi dan tidak pernah ditampilkan kembali.
-            </p>
+            </Text>
           </div>
 
           {/* Kanal Web UI — HSGQ pakai ini sebagai manajemen langsung; lainnya untuk metrik suhu/optik */}
           <div className="stack" style={{ gap: '0.6rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
             {isWebManaged(draft.vendor) ? (
               <div className="stack" style={{ gap: '0.25rem' }}>
-                <span style={{ fontWeight: 600 }}>Web UI API (HTTP Management)</span>
-                <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+                <Text as="span" weight="semibold">Web UI API (HTTP Management)</Text>
+                <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
                   OLT HSGQ terhubung langsung lewat HTTP Web UI API — mengandalkan Port Web, Web Username, & Web Password di
-                  bawah.
-                </p>
+                  bawah.</Text>
               </div>
             ) : (
               <>
                 <Checkbox
-                  label={<span style={{ fontWeight: 600 }}>Aktifkan Web Management (metrik)</span>}
+                  label={<Text as="span" weight="semibold">Aktifkan Web Management (metrik)</Text>}
                   checked={draft.webEnabled}
                   onChange={(e) => setDraft({ ...draft, webEnabled: e.target.checked })}
                 />
-                <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+                <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
                   Digunakan untuk mengambil data suhu (temperature) &amp; daya optik (optical power) lewat Web UI.
-                </p>
+                </Text>
               </>
             )}
             {(isWebManaged(draft.vendor) || draft.webEnabled) && (
@@ -760,9 +737,9 @@ function OltsTab() {
               </div>
             )}
             {(isWebManaged(draft.vendor) || draft.webEnabled) && (
-              <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+              <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
                 Password Web disimpan terenkripsi dan tidak pernah ditampilkan kembali.
-              </p>
+              </Text>
             )}
           </div>
 
@@ -771,9 +748,9 @@ function OltsTab() {
             latitude={draft.latitude}
             onChange={(longitude, latitude) => setDraft({ ...draft, longitude, latitude })}
           />
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
             Kosongkan lokasi untuk mengikuti koordinat site. Isi bila ingin OLT tampil di titiknya sendiri di peta.
-          </p>
+          </Text>
           </div>
         )}
       </Blade>
@@ -818,11 +795,9 @@ function OltsTab() {
         columns={columns}
         rows={rows}
         rowKey={(o) => o.id}
-        onRowClick={(o) => setOpenOlt(o)}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
-        rowActions={canDelete ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada OLT yang cocok' : 'Belum ada OLT'}
@@ -906,16 +881,16 @@ function OdfsTab() {
 
   const columns: Column<OdfView>[] = [
     {
-      key: 'code',
-      header: 'Kode',
-      sortValue: (o) => o.code,
-      cell: (o) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
-          <strong>{o.code}</strong>
-          <span className="muted" style={{ fontSize: '0.8rem' }}>{o.name}</span>
-        </div>
-      ),
+      key: 'name',
+      header: 'Nama',
+      sortValue: (o) => o.name,
+      cell: (o) => o.name,
+      onCellClick: (o) => setOpenOdf(o),
+      inlineActions: canDelete
+        ? (o) => [{ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdf(o) }]
+        : undefined,
     },
+    { key: 'code', header: 'Kode', sortValue: (o) => o.code, cell: (o) => o.code },
     {
       key: 'site',
       header: 'POP',
@@ -958,9 +933,6 @@ function OdfsTab() {
     { key: 'status', header: 'Status', sortValue: (o) => o.status, cell: (o) => <StatusBadge status={o.status} /> },
   ]
 
-  const rowActions = (o: OdfView): RowAction[] => [
-    { key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdf(o) },
-  ]
 
   // Sama seperti aset titik lain: rak lahir dari titik di peta, jadi di sini cuma pintasan.
   const primary: CommandAction | undefined = can('network.odf.create')
@@ -1021,11 +993,9 @@ function OdfsTab() {
         columns={columns}
         rows={rows}
         rowKey={(o) => o.id}
-        onRowClick={(o) => setOpenOdf(o)}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
-        rowActions={canDelete ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada ODF yang cocok' : 'Belum ada ODF'}
@@ -1109,26 +1079,18 @@ function OdcsTab() {
 
   const columns: Column<OdcView>[] = [
     {
-      key: 'code',
-      header: 'Kode',
-      sortValue: (o) => o.code,
-      cell: (o) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
-          <strong>{o.code}</strong>
-          <span className="muted" style={{ fontSize: '0.8rem' }}>{o.name}</span>
-        </div>
-      ),
+      key: 'name',
+      header: 'Nama',
+      sortValue: (o) => o.name,
+      cell: (o) => o.name,
+      onCellClick: (o) => setOpenOdc(o),
+      inlineActions: canDelete
+        ? (o) => [{ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdc(o) }]
+        : undefined,
     },
-    {
-      key: 'upstream',
-      header: 'Hulu',
-      sortValue: (o) => o.oltName,
-      cell: (o) => (
-        <span className="muted" style={{ fontSize: '0.85rem' }}>
-          {o.oltName ? `${o.oltName} · ${o.ponPortLabel}` : 'belum di-uplink'}
-        </span>
-      ),
-    },
+    { key: 'code', header: 'Kode', sortValue: (o) => o.code, cell: (o) => o.code },
+    { key: 'olt', header: 'OLT hulu', sortValue: (o) => o.oltName ?? '', cell: (o) => <span className="muted">{o.oltName ?? '—'}</span> },
+    { key: 'pon', header: 'Port PON', sortValue: (o) => o.ponPortLabel ?? '', cell: (o) => <span className="muted">{o.ponPortLabel ?? 'belum di-uplink'}</span> },
     { key: 'splitter', header: 'Splitter', sortValue: (o) => o.splitterLegs, cell: splitterCell },
     { key: 'odp', header: 'ODP', align: 'right', sortValue: (o) => o.odpCount, cell: (o) => o.odpCount },
     {
@@ -1139,9 +1101,6 @@ function OdcsTab() {
     },
   ]
 
-  const rowActions = (o: OdcView): RowAction[] => [
-    { key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdc(o) },
-  ]
 
   // ODC dibuat di peta (butuh titik koordinat) — di sini cuma pintasan ke peta.
   const primary: CommandAction | undefined = can('network.odc.create')
@@ -1205,11 +1164,9 @@ function OdcsTab() {
         columns={columns}
         rows={rows}
         rowKey={(o) => o.id}
-        onRowClick={(o) => setOpenOdc(o)}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
-        rowActions={canDelete ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada ODC yang cocok' : 'Belum ada ODC'}
@@ -1273,25 +1230,22 @@ function OdpsTab() {
 
   const columns: Column<OdpView>[] = [
     {
-      key: 'code',
-      header: 'Kode',
-      sortValue: (o) => o.code,
-      cell: (o) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
-          <strong>{o.code}</strong>
-          <span className="muted" style={{ fontSize: '0.8rem' }}>{o.name}</span>
-        </div>
-      ),
+      key: 'name',
+      header: 'Nama',
+      sortValue: (o) => o.name,
+      cell: (o) => o.name,
+      onCellClick: (o) => setOpenOdp(o),
+      inlineActions: canDelete
+        ? (o) => [{ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdp(o) }]
+        : undefined,
     },
+    { key: 'code', header: 'Kode', sortValue: (o) => o.code, cell: (o) => o.code },
     { key: 'odc', header: 'ODC induk', sortValue: (o) => o.odcName, cell: (o) => <span className="muted">{o.odcName ?? '—'}</span> },
     { key: 'splitter', header: 'Splitter', sortValue: (o) => o.splitterLegs, cell: splitterCell },
     { key: 'port', header: 'Port', align: 'right', sortValue: (o) => o.capacity, cell: (o) => o.capacity },
     { key: 'status', header: 'Status', sortValue: (o) => o.status, cell: (o) => <StatusBadge status={o.status} /> },
   ]
 
-  const rowActions = (o: OdpView): RowAction[] => [
-    { key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdp(o) },
-  ]
 
   // ODP dibuat di peta (butuh titik koordinat) — di sini cuma pintasan ke peta.
   const primary: CommandAction | undefined = can('network.odp.create')
@@ -1355,11 +1309,9 @@ function OdpsTab() {
         columns={columns}
         rows={rows}
         rowKey={(o) => o.id}
-        onRowClick={(o) => setOpenOdp(o)}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
-        rowActions={canDelete ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada ODP yang cocok' : 'Belum ada ODP'}
@@ -1442,16 +1394,16 @@ function JointBoxesTab() {
 
   const columns: Column<JointBoxView>[] = [
     {
-      key: 'code',
-      header: 'Kode',
-      sortValue: (b) => b.code,
-      cell: (b) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
-          <strong>{b.code}</strong>
-          <span className="muted" style={{ fontSize: '0.8rem' }}>{b.name}</span>
-        </div>
-      ),
+      key: 'name',
+      header: 'Nama',
+      sortValue: (b) => b.name,
+      cell: (b) => b.name,
+      onCellClick: (b) => setOpenBox(b),
+      inlineActions: canDelete
+        ? (b) => [{ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeBox(b) }]
+        : undefined,
     },
+    { key: 'code', header: 'Kode', sortValue: (b) => b.code, cell: (b) => b.code },
     {
       key: 'address',
       header: 'Alamat',
@@ -1475,9 +1427,6 @@ function JointBoxesTab() {
     { key: 'status', header: 'Status', sortValue: (b) => b.status, cell: (b) => <StatusBadge status={b.status} /> },
   ]
 
-  const rowActions = (b: JointBoxView): RowAction[] => [
-    { key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeBox(b) },
-  ]
 
   // Sama seperti ODC/ODP: joint box lahir dari titik di peta, jadi di sini cuma pintasan.
   const primary: CommandAction | undefined = can('network.jointbox.create')
@@ -1539,11 +1488,9 @@ function JointBoxesTab() {
         columns={columns}
         rows={rows}
         rowKey={(b) => b.id}
-        onRowClick={(b) => setOpenBox(b)}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
-        rowActions={canDelete ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada joint box yang cocok' : 'Belum ada joint box'}

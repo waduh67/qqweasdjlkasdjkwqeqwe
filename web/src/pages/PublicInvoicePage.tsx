@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { useParams } from 'react-router-dom'
 import { ApiError } from '@/api/client'
 import {
@@ -106,7 +107,7 @@ export function PublicInvoicePage() {
       <div className="login-shell">
         <div className="card login-card stack" style={{ alignItems: 'center', gap: '0.8rem' }}>
           <Spinner />
-          <span className="muted" style={{ fontSize: '0.85rem' }}>Memuat tagihan…</span>
+          <Text as="span" className="muted" size={300}>Memuat tagihan…</Text>
         </div>
       </div>
     )
@@ -116,8 +117,8 @@ export function PublicInvoicePage() {
     return (
       <div className="login-shell">
         <div className="card login-card stack" style={{ gap: '0.6rem', textAlign: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Tagihan tidak tersedia</h2>
-          <p className="muted" style={{ margin: 0, fontSize: '0.88rem', lineHeight: 1.5 }}>{error}</p>
+          <Text as="h2" size={400} weight="semibold" style={{ margin: 0 }}>Tagihan tidak tersedia</Text>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>{error}</Text>
         </div>
       </div>
     )
@@ -131,23 +132,23 @@ export function PublicInvoicePage() {
     <div className="login-shell">
       <div className="card login-card stack" style={{ gap: '1rem', maxWidth: 480 }}>
         <div className="stack" style={{ gap: '0.25rem' }}>
-          <span className="muted" style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <Text as="span" className="muted" size={200} weight="semibold" style={{ textTransform: 'uppercase' }}>
             {invoice.tenantName}
-          </span>
+          </Text>
           <div className="spread" style={{ alignItems: 'center' }}>
-            <strong style={{ fontFamily: 'monospace' }}>{invoice.number}</strong>
+            <Text as="strong" weight="semibold" font="monospace">{invoice.number}</Text>
             <StatusBadge status={invoice.status} label={STATUS_LABEL[invoice.status] ?? invoice.status} />
           </div>
         </div>
 
         <div className="stack" style={{ gap: '0.3rem' }}>
-          <span style={{ fontSize: '1.6rem', fontWeight: 700 }}>{rupiah(invoice.amount)}</span>
-          <span className="muted" style={{ fontSize: '0.82rem' }}>
+          <Text as="strong" size={600} weight="bold">{rupiah(invoice.amount)}</Text>
+          <Text as="span" className="muted" size={200}>
             {invoice.payerName} · periode {fmtDate(invoice.periodStart)} – {fmtDate(invoice.periodEnd)}
-          </span>
-          <span className="muted" style={{ fontSize: '0.82rem' }}>
+          </Text>
+          <Text as="span" className="muted" size={200}>
             {paid ? `Lunas ${fmtDate(invoice.paidAt)}` : `Jatuh tempo ${fmtDate(invoice.dueDate)}`}
-          </span>
+          </Text>
         </div>
 
         {paid && <Banner tone="var(--good)" ink="var(--good-ink)" title="Pembayaran diterima ✓" body="Tagihan ini sudah lunas. Terima kasih." />}
@@ -201,9 +202,9 @@ export function PublicInvoicePage() {
           />
         )}
 
-        <span className="muted" style={{ fontSize: '0.75rem', textAlign: 'center' }}>
+        <Text as="span" className="muted" size={200} align="center">
           Halaman ini memperbarui sendiri saat pembayaran diterima.
-        </span>
+        </Text>
       </div>
     </div>
   )
@@ -231,7 +232,7 @@ function Banner({ tone, ink, title, body }: { tone: string; ink: string; title: 
       }}
     >
       <strong style={{ color: ink }}>{title}</strong>
-      <span className="muted" style={{ fontSize: '0.82rem' }}>{body}</span>
+      <Text as="span" className="muted" size={300}>{body}</Text>
     </div>
   )
 }
@@ -261,28 +262,28 @@ function ManualInstructions({
   }
   return (
     <div className="stack" style={{ gap: '0.7rem', paddingTop: '0.4rem', borderTop: '1px solid var(--border)' }}>
-      <strong style={{ fontSize: '0.95rem' }}>Cara pembayaran</strong>
+      <Text as="strong" size={400} weight="semibold">Cara pembayaran</Text>
       {manual.transferEnabled && (
         <div className="stack" style={{ gap: '0.2rem' }}>
-          <span className="muted" style={{ fontSize: '0.8rem' }}>Transfer bank</span>
+          <Text as="span" className="muted" size={200}>Transfer bank</Text>
           <strong>{manual.bankName ?? '—'}</strong>
-          <strong style={{ fontFamily: 'monospace', fontSize: '1.15rem' }}>{manual.accountNumber ?? '—'}</strong>
+          <Text as="strong" size={500} weight="semibold" font="monospace">{manual.accountNumber ?? '—'}</Text>
           {manual.accountHolder && (
-            <span className="muted" style={{ fontSize: '0.8rem' }}>a.n. {manual.accountHolder}</span>
+            <Text as="span" className="muted" size={200}>a.n. {manual.accountHolder}</Text>
           )}
         </div>
       )}
       {manual.qrisEnabled && manual.qrisImageAvailable && (
         <div className="stack" style={{ gap: '0.4rem', alignItems: 'center' }}>
-          <span className="muted" style={{ fontSize: '0.8rem', alignSelf: 'flex-start' }}>
+          <Text as="span" className="muted" size={300} style={{ alignSelf: 'flex-start' }}>
             Atau pindai QRIS berikut
-          </span>
+          </Text>
           <img src={qrisUrl} alt="Kode QRIS pembayaran" style={{ maxWidth: 240, width: '100%', borderRadius: 8 }} />
         </div>
       )}
-      <span className="muted" style={{ fontSize: '0.78rem' }}>
+      <Text as="span" className="muted" size={200}>
         Setelah membayar, kirim bukti transfer ke penyedia layanan Anda agar tagihan segera ditandai lunas.
-      </span>
+      </Text>
     </div>
   )
 }

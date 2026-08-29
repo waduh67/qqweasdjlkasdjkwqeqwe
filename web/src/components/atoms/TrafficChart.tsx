@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import type { TrafficPoint } from '@/api/bng'
 
 /**
@@ -29,9 +30,9 @@ export function TrafficChart({ points }: Props) {
   const drawable = points.filter((p) => p.downMbps != null || p.upMbps != null)
   if (drawable.length < 2) {
     return (
-      <p className="muted" style={{ padding: '1rem 0', textAlign: 'center' }}>
+      <Text as="p" block className="muted" size={300} style={{ padding: '1rem 0', textAlign: 'center' }}>
         Belum cukup data untuk menggambar tren (perlu ≥ 2 pembacaan trafik).
-      </p>
+      </Text>
     )
   }
 
@@ -59,7 +60,7 @@ export function TrafficChart({ points }: Props) {
   return (
     <div className="stack" style={{ gap: '0.5rem' }}>
       {/* Legenda: warna garis satu-satunya pembeda arah, jadi wajib dilabeli. */}
-      <div className="row" style={{ gap: '1rem', justifyContent: 'flex-end', fontSize: '0.8rem' }}>
+      <div className="row" style={{ gap: '1rem', justifyContent: 'flex-end' }}>
         <LegendKey color={DOWN_COLOR} label="Unduh (Down)" />
         <LegendKey color={UP_COLOR} label="Unggah (Up)" />
       </div>
@@ -124,15 +125,15 @@ export function TrafficChart({ points }: Props) {
       </svg>
 
       {active && (active.downMbps != null || active.upMbps != null) ? (
-        <div className="row" style={{ justifyContent: 'center', gap: '1rem', fontSize: '0.85rem' }}>
-          <span className="muted">{new Date(active.time).toLocaleString('id-ID')}</span>
-          <strong style={{ color: DOWN_COLOR }}>↓ {fmtMbps(active.downMbps)}</strong>
-          <strong style={{ color: UP_COLOR }}>↑ {fmtMbps(active.upMbps)}</strong>
+        <div className="row" style={{ justifyContent: 'center', gap: '1rem' }}>
+          <Text as="span" className="muted" size={200}>{new Date(active.time).toLocaleString('id-ID')}</Text>
+          <Text as="strong" size={200} weight="semibold" style={{ color: DOWN_COLOR }}>↓ {fmtMbps(active.downMbps)}</Text>
+          <Text as="strong" size={200} weight="semibold" style={{ color: UP_COLOR }}>↑ {fmtMbps(active.upMbps)}</Text>
         </div>
       ) : (
-        <p className="muted" style={{ textAlign: 'center', fontSize: '0.82rem', margin: 0 }}>
+        <Text as="p" block className="muted" size={200} style={{ textAlign: 'center', margin: 0 }}>
           Arahkan kursor ke grafik untuk melihat laju per waktu.
-        </p>
+        </Text>
       )}
     </div>
   )
@@ -142,7 +143,7 @@ function LegendKey({ color, label }: { color: string; label: string }) {
   return (
     <span className="row" style={{ gap: '0.35rem', alignItems: 'center' }}>
       <span style={{ width: 14, height: 3, borderRadius: 2, background: color, display: 'inline-block' }} />
-      <span className="muted">{label}</span>
+      <Text as="span" className="muted" size={200}>{label}</Text>
     </span>
   )
 }

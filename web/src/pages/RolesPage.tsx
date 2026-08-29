@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { Eye, Pencil, Trash2 } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PermissionCatalog, Role } from '../api/types'
@@ -65,7 +66,7 @@ export function RolesPage() {
       sortValue: (r) => r.name,
       cell: (r) => (
         <div className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-          <strong>{r.name}</strong>
+          <Text as="strong" weight="semibold" >{r.name}</Text>
           {r.systemRole && <Badge>sistem</Badge>}
         </div>
       ),
@@ -74,7 +75,7 @@ export function RolesPage() {
       key: 'description',
       header: 'Deskripsi',
       sortValue: (r) => r.description,
-      cell: (r) => <span className="muted">{r.description ?? '–'}</span>,
+      cell: (r) => <Text as="span" className="muted">{r.description ?? '–'}</Text>,
     },
     {
       key: 'permissions',
@@ -156,7 +157,7 @@ export function RolesPage() {
       <PageHeader title="Role & Izin" subtitle="Kelompokkan izin ke dalam peran untuk mengatur akses pengguna." />
       <CommandBar primary={primary} />
 
-      {error && <p className="error">{error}</p>}
+      {error && <Text as="p" className="error">{error}</Text>}
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama atau deskripsi role…" />
@@ -180,7 +181,7 @@ export function RolesPage() {
 
       {draft && catalog && (
         <div className="card stack">
-          <h3 style={{ margin: 0 }}>{draft.id ? 'Ubah role' : 'Role baru'}</h3>
+          <Text as="h3" size={400} weight="semibold" style={{ margin: 0 }}>{draft.id ? 'Ubah role' : 'Role baru'}</Text>
           <div className="row" style={{ alignItems: 'flex-start' }}>
             <div style={{ flex: 1 }}>
               <TextField
@@ -203,8 +204,8 @@ export function RolesPage() {
 
           <div>
             <div className="spread">
-              <strong>Izin</strong>
-              <span className="muted">{draft.permissionIds.size} dipilih</span>
+              <Text as="strong" weight="semibold" >Izin</Text>
+              <Text as="span" className="muted">{draft.permissionIds.size} dipilih</Text>
             </div>
             <PermissionMatrix
               catalog={catalog}

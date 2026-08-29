@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { Text, typographyStyles } from '@fluentui/react-components'
 import { Pencil, Trash2 } from 'lucide-react'
 import { api, ApiError } from '@/api/client'
 import type { AssetStatus, Coordinate, JointBoxView, OdcView, OdpView } from '@/api/network'
@@ -40,8 +41,8 @@ const STATUS_OPTIONS: { value: AssetStatus; label: string }[] = [
 function DetailField({ label, value }: { label: string; value: string }) {
   return (
     <div className="stat">
-      <div className="stat-label">{label}</div>
-      <div style={{ fontSize: '0.9rem', color: 'var(--text-2)', wordBreak: 'break-word' }}>{value}</div>
+      <Text block className="stat-label">{label}</Text>
+      <Text block style={{ ...typographyStyles.body1, color: 'var(--text-2)', wordBreak: 'break-word' }}>{value}</Text>
     </div>
   )
 }
@@ -113,7 +114,7 @@ export function AssetDetailPanel({
       {commands.length > 0 && <CommandBar actions={commands} />}
 
       <div className="card stack">
-        <h3 style={{ margin: 0 }}>Informasi</h3>
+        <Text as="h3" style={{ ...typographyStyles.title3, margin: 0 }}>Informasi</Text>
         <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
           {fields.map((f) => (
             <DetailField key={f.label} label={f.label} value={f.value} />
@@ -126,13 +127,13 @@ export function AssetDetailPanel({
       {children}
 
       <div className="card stack">
-        <h3 style={{ margin: 0 }}>Lokasi</h3>
-        <p className="muted tnum" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <Text as="h3" style={{ ...typographyStyles.title3, margin: 0 }}>Lokasi</Text>
+        <Text as="p" style={{ ...typographyStyles.caption1, margin: 0 }} className="muted tnum">
           {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
-        </p>
-        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        </Text>
+        <Text as="p" style={{ ...typographyStyles.caption1, margin: 0 }} className="muted">
           {onEdit ? 'Ubah identitas & lokasi lewat tombol Edit.' : 'Lihat penempatannya lewat tombol Lihat di peta.'}
-        </p>
+        </Text>
       </div>
     </div>
   )

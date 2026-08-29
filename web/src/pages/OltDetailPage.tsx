@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Text, typographyStyles } from '@fluentui/react-components'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type {
@@ -184,7 +185,7 @@ export function OltDetail({
     <div className="stack" style={{ gap: '1.25rem' }}>
       <div className="stack" style={{ gap: '0.35rem' }}>
         <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'center' }}>
-          {!compact && <h1 className="page-title" style={{ margin: 0 }}>{olt.code}</h1>}
+          {!compact && <Text as="h1" className="page-title" size={700} weight="semibold" style={{ margin: 0 }}>{olt.code}</Text>}
           <StatusBadge status={olt.status} />
           <Badge>{olt.vendor}</Badge>
           {olt.pollable ? <Badge tone="good">SNMP siap</Badge> : <Badge tone="neutral">SNMP belum lengkap</Badge>}
@@ -332,7 +333,7 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
       <div className="card stack">
-        <h3 style={{ margin: 0 }}>Informasi perangkat</h3>
+        <Text as="h3" weight="semibold" style={{ margin: 0 }}>Informasi perangkat</Text>
         <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
           <Field label="Site" value={olt.siteName ?? '—'} />
           <Field label="Vendor (hardware type)" value={olt.vendor} />
@@ -344,7 +345,7 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
       </div>
 
       <div className="card stack">
-        <h3 style={{ margin: 0 }}>Monitoring SNMP</h3>
+        <Text as="h3" weight="semibold" style={{ margin: 0 }}>Monitoring SNMP</Text>
         <div className="row wrap" style={{ gap: '0.5rem' }}>
           {olt.snmpEnabled ? <Badge tone="accent">SNMP aktif</Badge> : <Badge tone="neutral">SNMP nonaktif</Badge>}
           {olt.pollable ? <Badge tone="good">Siap dipolling</Badge> : <Badge tone="neutral">Belum lengkap</Badge>}
@@ -352,17 +353,15 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
           <Badge>{olt.snmpVersion.toLowerCase()}</Badge>
           <Badge>Port {olt.snmpPort}</Badge>
         </div>
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-          {!olt.snmpEnabled
-            ? 'Kanal SNMP dimatikan — OLT ini dikelola lewat Web UI (mis. HSGQ). Tak ada polling SNMP yang dilakukan.'
-            : olt.pollable
-              ? 'Server memolling OLT ini via SNMP untuk menaik-turunkan alarm jangkauan & membaca telemetri ONU di hilirnya.'
-              : 'Lengkapi vendor yang didukung, IP manajemen, dan SNMP community lewat tombol Edit agar OLT bisa dipolling.'}
-        </p>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>{!olt.snmpEnabled
+          ? 'Kanal SNMP dimatikan — OLT ini dikelola lewat Web UI (mis. HSGQ). Tak ada polling SNMP yang dilakukan.'
+          : olt.pollable
+            ? 'Server memolling OLT ini via SNMP untuk menaik-turunkan alarm jangkauan & membaca telemetri ONU di hilirnya.'
+            : 'Lengkapi vendor yang didukung, IP manajemen, dan SNMP community lewat tombol Edit agar OLT bisa dipolling.'}</Text>
       </div>
 
       <div className="card stack">
-        <h3 style={{ margin: 0 }}>Web UI / HTTP</h3>
+        <Text as="h3" weight="semibold" style={{ margin: 0 }}>Web UI / HTTP</Text>
         <div className="row wrap" style={{ gap: '0.5rem' }}>
           {olt.webEnabled ? <Badge tone="accent">Web aktif</Badge> : <Badge tone="neutral">Web nonaktif</Badge>}
           <Badge>{olt.webProtocol}</Badge>
@@ -370,18 +369,16 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
           {olt.webUsername && <Badge>User {olt.webUsername}</Badge>}
           {olt.webPasswordConfigured ? <Badge tone="accent">Password tersimpan</Badge> : <Badge tone="neutral">Password belum diset</Badge>}
         </div>
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-          {olt.webEnabled
-            ? 'Kanal Web UI dipakai untuk mengambil metrik suhu & daya optik, atau (mis. HSGQ) sebagai manajemen langsung lewat HTTP.'
-            : 'Kanal Web UI dimatikan. Aktifkan lewat tombol Edit bila ingin menarik metrik suhu/optik atau mengelola OLT via HTTP.'}
-        </p>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>{olt.webEnabled
+          ? 'Kanal Web UI dipakai untuk mengambil metrik suhu & daya optik, atau (mis. HSGQ) sebagai manajemen langsung lewat HTTP.'
+          : 'Kanal Web UI dimatikan. Aktifkan lewat tombol Edit bila ingin menarik metrik suhu/optik atau mengelola OLT via HTTP.'}</Text>
       </div>
 
       <div className="card stack">
-        <h3 style={{ margin: 0 }}>Lokasi</h3>
-        <p className="muted tnum" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <Text as="h3" weight="semibold" style={{ margin: 0 }}>Lokasi</Text>
+        <Text as="p" className="muted tnum" size={300} style={{ margin: 0 }}>
           {olt.location.latitude.toFixed(6)}, {olt.location.longitude.toFixed(6)}
-        </p>
+        </Text>
         {canUpdate ? (
           <>
             <LocationPicker
@@ -410,14 +407,14 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
                 </Button>
               </div>
             )}
-            <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+            <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
               Klik peta atau seret pin untuk memindahkan OLT, lalu simpan. Kosong = mengikuti koordinat site saat dibuat.
-            </p>
+            </Text>
           </>
         ) : (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
             Kamu tak punya izin memindahkan OLT ini.
-          </p>
+          </Text>
         )}
       </div>
     </div>
@@ -484,7 +481,7 @@ function PonPortTab({
   return (
     <div className="card stack">
       <div className="spread" style={{ gap: '0.75rem', alignItems: 'center' }}>
-        <h3 style={{ margin: 0 }}>PON Port</h3>
+        <Text as="h3" weight="semibold" style={{ margin: 0 }}>PON Port</Text>
         {canUpdate && (
           <div className="row" style={{ gap: '0.35rem' }}>
             <TextField
@@ -520,12 +517,13 @@ function PonPortTab({
             return (
               <div key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
                 <div className="spread" style={{ gap: '0.5rem', alignItems: 'center', padding: '0.55rem 0' }}>
-                  <button
-                    type="button"
-                    onClick={() => drillable && setExpanded(isOpen ? null : p.id)}
-                    disabled={!drillable}
-                    title={drillable ? 'Lihat muatan, ODC & ODP di bawah port ini' : undefined}
-                    style={{
+                    <Button
+                      variant="subtle"
+                      onClick={() => drillable && setExpanded(isOpen ? null : p.id)}
+                      disabled={!drillable}
+                      aria-expanded={isOpen}
+                      title={drillable ? 'Lihat muatan, ODC & ODP di bawah port ini' : undefined}
+                      style={{
                       flex: 1,
                       minWidth: 0,
                       display: 'flex',
@@ -546,11 +544,11 @@ function PonPortTab({
                     <strong className="tnum">{p.label}</strong>
                     <StatusBadge status={p.status} />
                     {p.description && (
-                      <span className="muted" style={{ fontSize: '0.85rem' }}>
+                      <Text as="span" className="muted" size={300}>
                         {p.description}
-                      </span>
+                      </Text>
                     )}
-                  </button>
+                    </Button>
                   <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
                     <span className="badge">{p.odcCount} ODC</span>
                     {canUpdate && (
@@ -621,12 +619,12 @@ function PonDrilldown({ ponPortId, canDrillOdp }: { ponPortId: string; canDrillO
           dalam daftar ODC di bawahnya. */}
       <PonPortLoadPanel ponPortId={ponPortId} />
       {data.odcs.length === 0 ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
           Belum ada ODC di bawah port ini.
-        </p>
+        </Text>
       ) : (
         <>
-          <div className="muted tnum" style={{ fontSize: '0.82rem' }}>
+          <div className="muted tnum" style={typographyStyles.body2}>
             {data.odcCount} ODC · {data.odpCount} ODP · {data.used}/{data.capacity} port terpakai (
             {data.utilizationPercent}%)
           </div>
@@ -647,19 +645,19 @@ function OdcBranchCard({ odc, canDrillOdp }: { odc: PonOdcBranch; canDrillOdp: b
         <div className="row" style={{ gap: '0.5rem', alignItems: 'center', minWidth: 0 }}>
           <strong>{odc.code}</strong>
           {odc.energized ? <Badge tone="good">Berenergi</Badge> : <Badge tone="neutral">Tanpa uplink</Badge>}
-          <span className="muted tnum" style={{ fontSize: '0.8rem' }}>
+          <Text as="span" className="muted tnum" size={300}>
             {odc.odpCount}/{odc.legCapacity} kaki
-          </span>
+          </Text>
         </div>
-        <span className="tnum" style={{ fontSize: '0.85rem', flexShrink: 0 }}>
+        <Text as="span" className="tnum" size={300} style={{ flexShrink: 0 }}>
           {odc.used}/{odc.capacity} port
-        </span>
+        </Text>
       </div>
       <UtilBar percent={odc.utilizationPercent} />
       {odc.odps.length === 0 ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
           Belum ada ODP di ODC ini.
-        </p>
+        </Text>
       ) : (
         <div className="stack" style={{ gap: 0 }}>
           {odc.odps.map((odp) => (
@@ -676,10 +674,11 @@ function OdpRow({ odp, canDrillOdp }: { odp: OdpUtilization; canDrillOdp: boolea
   const [open, setOpen] = useState(false)
   return (
     <div style={{ borderTop: '1px solid var(--border)' }}>
-      <button
-        type="button"
+      <Button
+        variant="subtle"
         onClick={() => canDrillOdp && setOpen(!open)}
         disabled={!canDrillOdp}
+        aria-expanded={open}
         title={canDrillOdp ? 'Lihat pelanggan di ODP ini' : undefined}
         style={{
           width: '100%',
@@ -699,18 +698,18 @@ function OdpRow({ odp, canDrillOdp }: { odp: OdpUtilization; canDrillOdp: boolea
           <span aria-hidden style={{ width: '0.9rem', color: 'var(--text-3)' }}>
             {canDrillOdp ? (open ? '▾' : '▸') : ''}
           </span>
-          <strong style={{ fontSize: '0.88rem' }}>{odp.code}</strong>
-          <span className="muted" style={{ fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <Text as="strong" size={300} weight="semibold">{odp.code}</Text>
+          <Text as="span" className="muted" size={300} style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {odp.name}
-          </span>
+          </Text>
         </span>
         <span className="row" style={{ gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
-          <span className="tnum" style={{ fontSize: '0.82rem' }}>
+          <Text as="span" className="tnum" size={300}>
             {odp.used}/{odp.capacity}
-          </span>
+          </Text>
           <Badge tone={utilTone(odp.utilizationPercent)}>{odp.utilizationPercent}%</Badge>
         </span>
-      </button>
+      </Button>
       {open && <OdpOccupants odpId={odp.odpId} />}
     </div>
   )
@@ -750,9 +749,9 @@ function OdpOccupants({ odpId }: { odpId: string }) {
 
   if (data.occupants.length === 0) {
     return (
-      <p className="muted" style={{ margin: 0, padding: '0 0 0.6rem 1.3rem', fontSize: '0.82rem' }}>
-        Belum ada pelanggan terpasang.
-      </p>
+<Text as="p" className="muted" size={300} style={{ margin: 0, padding: '0 0 0.6rem 1.3rem' }}>
+          Belum ada pelanggan pada ODP ini.
+        </Text>
     )
   }
 
@@ -762,7 +761,7 @@ function OdpOccupants({ odpId }: { odpId: string }) {
         <div
           key={o.onuId}
           className="spread"
-          style={{ gap: '0.5rem', alignItems: 'center', padding: '0.3rem 0', fontSize: '0.84rem' }}
+          style={{ ...typographyStyles.body2, gap: '0.5rem', alignItems: 'center', padding: '0.3rem 0' }}
         >
           <span className="row" style={{ gap: '0.45rem', alignItems: 'center', minWidth: 0 }}>
             <span className="badge">Port {o.portNumber}</span>
@@ -1076,10 +1075,10 @@ function EditOltModal({ olt, onClose, onSaved }: { olt: OltView; onClose: () => 
           )}
         </div>
 
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
           Community string &amp; password Web disimpan terenkripsi dan tak pernah ditampilkan. Kosongkan untuk
           mempertahankan yang tersimpan. Kode OLT tak bisa diubah.
-        </p>
+        </Text>
       </div>
     </Blade>
   )
@@ -1089,7 +1088,7 @@ function Field({ label, value }: { label: string; value: string }) {
   return (
     <div className="stat">
       <div className="stat-label">{label}</div>
-      <div style={{ fontSize: '0.9rem', color: 'var(--text-2)', wordBreak: 'break-word' }}>{value}</div>
+      <div style={{ ...typographyStyles.body2, color: 'var(--text-2)', wordBreak: 'break-word' }}>{value}</div>
     </div>
   )
 }

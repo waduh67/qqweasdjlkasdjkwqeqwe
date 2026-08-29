@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text, typographyStyles } from '@fluentui/react-components'
 import {
   getOperationsReport,
   getReportOverview,
@@ -318,17 +319,17 @@ function ReportBody({ overview }: { overview: ReportOverview }) {
         {/* Tren pendapatan bulanan. */}
         <div className="card grow" style={{ minWidth: 340 }}>
           <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0 }}>Tren pendapatan bulanan</h3>
-            <span className="muted" style={{ fontSize: '0.8rem' }}>{overview.monthlyRevenue.length} bulan</span>
+            <Text as="h3" weight="semibold" style={{ margin: 0 }}>Tren pendapatan bulanan</Text>
+            <Text as="span" className="muted" size={200}>{overview.monthlyRevenue.length} bulan</Text>
           </div>
           <RevenueChart overview={overview} />
         </div>
 
         {/* Distribusi status langganan & tagihan. */}
         <div className="card grow" style={{ minWidth: 260 }}>
-          <h3 style={{ marginTop: 0 }}>Sebaran langganan</h3>
+          <Text as="h3" weight="semibold" style={{ marginTop: 0 }}>Sebaran langganan</Text>
           <Distribution counts={subscribers.subscriptionsByStatus} labels={SUBSCRIPTION_STATUS_LABEL} empty="Belum ada langganan." />
-          <h3 style={{ marginBottom: '0.5rem', marginTop: '1.25rem' }}>Sebaran tagihan</h3>
+          <Text as="h3" weight="semibold" style={{ marginBottom: '0.5rem', marginTop: '1.25rem' }}>Sebaran tagihan</Text>
           <Distribution counts={finance.statusCounts} labels={INVOICE_STATUS_LABEL} empty="Belum ada tagihan." />
         </div>
       </div>
@@ -338,11 +339,11 @@ function ReportBody({ overview }: { overview: ReportOverview }) {
           <AgingTable aging={overview.aging} />
         </div>
         <div className="card grow" style={{ minWidth: 260 }}>
-          <h3 style={{ marginTop: 0 }}>Pendapatan per paket</h3>
+          <Text as="h3" weight="semibold" style={{ marginTop: 0 }}>Pendapatan per paket</Text>
           <SliceTable slices={overview.revenueByPackage} empty="Belum ada tagihan lunas pada rentang." />
         </div>
         <div className="card grow" style={{ minWidth: 260 }}>
-          <h3 style={{ marginTop: 0 }}>Pendapatan per wilayah</h3>
+          <Text as="h3" weight="semibold" style={{ marginTop: 0 }}>Pendapatan per wilayah</Text>
           <SliceTable slices={overview.revenueByArea} empty="Belum ada tagihan lunas pada rentang." />
         </div>
       </div>
@@ -360,12 +361,12 @@ function AgingTable({ aging }: { aging: ReceivableAging }) {
   return (
     <div className="stack" style={{ gap: '0.75rem' }}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <h3 style={{ margin: 0 }}>Umur piutang</h3>
-        <span className="muted" style={{ fontSize: '0.8rem' }}>per {aging.asOf}</span>
+        <Text as="h3" weight="semibold" style={{ margin: 0 }}>Umur piutang</Text>
+        <Text as="span" className="muted" size={200}>per {aging.asOf}</Text>
       </div>
       <div>
-        <div style={{ fontSize: '1.4rem', fontWeight: 600 }}>{fmtRupiah(aging.totalAmount)}</div>
-        <div className="muted" style={{ fontSize: '0.8rem' }}>
+        <div style={typographyStyles.subtitle1}>{fmtRupiah(aging.totalAmount)}</div>
+        <div className="muted" style={typographyStyles.body2}>
           {aging.totalInvoiceCount.toLocaleString('id-ID')} tagihan belum lunas
         </div>
       </div>
@@ -375,14 +376,12 @@ function AgingTable({ aging }: { aging: ReceivableAging }) {
           const bad = b.bucket === 'D61_90' || b.bucket === 'D90_PLUS'
           return (
             <div key={b.bucket} className="stack" style={{ gap: '0.2rem' }}>
-              <div className="row" style={{ justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                <span style={{ color: bad ? 'var(--critical-ink)' : late ? 'var(--warning-ink)' : undefined }}>
+              <div className="row" style={{ justifyContent: 'space-between' }}>
+                <Text as="span" size={300} style={{ color: bad ? 'var(--critical-ink)' : late ? 'var(--warning-ink)' : undefined }}>
                   {AGING_BUCKET_LABEL[b.bucket] ?? b.bucket}
-                </span>
-                <span style={{ fontWeight: 600 }}>
-                  {fmtRupiah(b.amount)}{' '}
-                  <span className="muted" style={{ fontWeight: 400 }}>({b.invoiceCount})</span>
-                </span>
+                </Text>
+                <Text as="span" size={300} weight="semibold">{fmtRupiah(b.amount)}{' '}
+                <Text as="span" className="muted" size={300} weight="regular">({b.invoiceCount})</Text></Text>
               </div>
               <div style={{ height: 6, background: 'var(--line)', borderRadius: 3, overflow: 'hidden' }}>
                 <div
@@ -403,20 +402,20 @@ function AgingTable({ aging }: { aging: ReceivableAging }) {
 
 /** Tabel keratan pendapatan (paket/wilayah) dengan bilah proporsi terhadap keratan terbesar. */
 function SliceTable({ slices, empty }: { slices: RevenueSlice[]; empty: string }) {
-  if (slices.length === 0) return <div className="muted" style={{ fontSize: '0.85rem' }}>{empty}</div>
+  if (slices.length === 0) return <div className="muted" style={typographyStyles.body2}>{empty}</div>
   const max = Math.max(1, ...slices.map((s) => Number(s.amount)))
   return (
     <div className="stack" style={{ gap: '0.55rem' }}>
       {slices.map((s) => (
         <div key={s.label} className="stack" style={{ gap: '0.2rem' }}>
-          <div className="row" style={{ justifyContent: 'space-between', fontSize: '0.85rem', gap: '0.5rem' }}>
-            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div className="row" style={{ justifyContent: 'space-between', gap: '0.5rem' }}>
+            <Text as="span" size={300} style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {s.label}
-            </span>
-            <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+            </Text>
+            <Text as="span" size={300} weight="semibold" style={{ whiteSpace: 'nowrap' }}>
               {fmtRupiah(s.amount)}{' '}
-              <span className="muted" style={{ fontWeight: 400 }}>({s.subscriptionCount})</span>
-            </span>
+              <Text as="span" className="muted" size={300} weight="regular">({s.subscriptionCount})</Text>
+            </Text>
           </div>
           <div style={{ height: 6, background: 'var(--line)', borderRadius: 3, overflow: 'hidden' }}>
             <div style={{ width: `${(Number(s.amount) / max) * 100}%`, height: '100%', background: 'var(--accent)' }} />
@@ -483,35 +482,25 @@ function OperationsBody({ report }: { report: OperationsReport }) {
         {/* Produktivitas teknisi. */}
         <div className="card grow" style={{ minWidth: 340 }}>
           <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <h3 style={{ margin: 0 }}>Produktivitas teknisi</h3>
-            <span className="muted" style={{ fontSize: '0.8rem' }}>work order selesai</span>
+            <Text as="h3" weight="semibold" style={{ margin: 0 }}>Produktivitas teknisi</Text>
+            <Text as="span" className="muted" size={200}>work order selesai</Text>
           </div>
           {fieldOps.technicians.length === 0 ? (
-            <div className="muted" style={{ fontSize: '0.85rem', marginTop: '0.75rem' }}>
+            <div className="muted" style={{ ...typographyStyles.body2, marginTop: '0.75rem' }}>
               Belum ada work order selesai pada rentang ini.
             </div>
           ) : (
             <>
-              <table className="table" style={{ marginTop: '0.75rem' }}>
-                <thead>
-                  <tr>
-                    <th>Teknisi</th>
-                    <th style={{ textAlign: 'right' }}>Selesai</th>
-                    <th style={{ textAlign: 'right' }}>Rata-rata</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {fieldOps.technicians.map((t) => (
-                    <tr key={t.technicianId}>
-                      <td>{t.technicianName}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{t.completedCount.toLocaleString('id-ID')}</td>
-                      <td style={{ textAlign: 'right' }}>{fmtHours(t.avgResolutionHours)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <Table className="table" style={{ marginTop: '0.75rem' }}><TableHeader><TableRow ><TableHeaderCell >Teknisi</TableHeaderCell>
+              <TableHeaderCell style={{ textAlign: 'right' }}>Selesai</TableHeaderCell>
+              <TableHeaderCell style={{ textAlign: 'right' }}>Rata-rata</TableHeaderCell></TableRow></TableHeader>
+              <TableBody>{fieldOps.technicians.map((t) => (
+                <TableRow key={t.technicianId}><TableCell >{t.technicianName}</TableCell>
+                <TableCell style={{ textAlign: 'right' }}><Text as="span" weight="semibold">{t.completedCount.toLocaleString('id-ID')}</Text></TableCell>
+                <TableCell style={{ textAlign: 'right' }}>{fmtHours(t.avgResolutionHours)}</TableCell></TableRow>
+              ))}</TableBody></Table>
               {/* Wajib dibaca sebelum menjumlah kolomnya. */}
-              <div className="muted" style={{ fontSize: '0.78rem', marginTop: '0.5rem' }}>
+              <div className="muted" style={{ ...typographyStyles.caption1, marginTop: '0.5rem' }}>
                 Work order yang dikerjakan beberapa teknisi dihitung untuk masing-masing, jadi jumlah kolom
                 ini bisa melebihi {fieldOps.completedCount.toLocaleString('id-ID')} work order.
               </div>
@@ -521,9 +510,9 @@ function OperationsBody({ report }: { report: OperationsReport }) {
 
         {/* Sebaran jenis pekerjaan & kategori keluhan. */}
         <div className="card grow" style={{ minWidth: 260 }}>
-          <h3 style={{ marginTop: 0 }}>Jenis work order</h3>
+          <Text as="h3" weight="semibold" style={{ marginTop: 0 }}>Jenis work order</Text>
           <Distribution counts={fieldOps.completedByType} labels={TYPE_LABEL} empty="Belum ada work order selesai." />
-          <h3 style={{ marginBottom: '0.5rem', marginTop: '1.25rem' }}>Kategori keluhan</h3>
+          <Text as="h3" weight="semibold" style={{ marginBottom: '0.5rem', marginTop: '1.25rem' }}>Kategori keluhan</Text>
           <Distribution counts={support.openedByCategory} labels={TICKET_CATEGORY_LABEL} empty="Belum ada tiket masuk." />
         </div>
       </div>
@@ -546,7 +535,7 @@ function RevenueChart({ overview }: { overview: ReportOverview }) {
         const heightPct = (Number(p.revenue) / max) * 100
         return (
           <div key={p.month} className="stack grow" style={{ gap: '0.3rem', alignItems: 'center', minWidth: 0 }}>
-            <div className="muted" style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+            <div className="muted" style={{ ...typographyStyles.caption2, whiteSpace: 'nowrap' }}>
               {Number(p.revenue) >= 1_000_000
                 ? `${(Number(p.revenue) / 1_000_000).toLocaleString('id-ID', { maximumFractionDigits: 1 })}jt`
                 : Math.round(Number(p.revenue) / 1000).toLocaleString('id-ID') + 'rb'}
@@ -584,7 +573,7 @@ function RevenueChart({ overview }: { overview: ReportOverview }) {
                 />
               )}
             </div>
-            <div className="muted" style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+            <div className="muted" style={{ ...typographyStyles.caption2, whiteSpace: 'nowrap' }}>
               {MONTH_SHORT[Number(p.month.split('-')[1]) - 1] ?? p.month}
             </div>
           </div>
@@ -605,13 +594,13 @@ function Distribution({
   empty: string
 }) {
   const entries = Object.entries(counts).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1])
-  if (entries.length === 0) return <div className="muted" style={{ fontSize: '0.85rem' }}>{empty}</div>
+  if (entries.length === 0) return <div className="muted" style={typographyStyles.body2}>{empty}</div>
   return (
     <div className="stack" style={{ gap: '0.4rem' }}>
       {entries.map(([status, n]) => (
-        <div key={status} className="row" style={{ justifyContent: 'space-between', fontSize: '0.88rem' }}>
-          <span>{labels[status] ?? status}</span>
-          <span style={{ fontWeight: 600 }}>{n.toLocaleString('id-ID')}</span>
+        <div key={status} className="row" style={{ justifyContent: 'space-between' }}>
+          <Text as="span" size={300}>{labels[status] ?? status}</Text>
+          <Text as="span" size={300} weight="semibold">{n.toLocaleString('id-ID')}</Text>
         </div>
       ))}
     </div>
@@ -632,7 +621,7 @@ function Stat({
   return (
     <div className={`stat ${accent === 'crit' ? 'crit-bar' : accent === 'warn' ? 'warn-bar' : 'accent-bar'}`}>
       <div className="stat-label">{label}</div>
-      <div className="stat-value" style={{ fontSize: '1.5rem' }}>{value}</div>
+      <div className="stat-value" style={typographyStyles.subtitle1}>{value}</div>
       {note && <div className="stat-note">{note}</div>}
     </div>
   )

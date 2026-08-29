@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { PageResponse } from '../api/types'
@@ -77,42 +78,49 @@ export function DashboardPage() {
         {monitoring && (
           <div className="card pad-0 grow" style={{ minWidth: 320 }}>
             <div className="card-head">
-              <h3>Alarm terbaru</h3>
-              <Link to="/monitoring" style={{ fontSize: '0.85rem' }}>
-                Lihat semua →
+              <Text as="h3" weight="semibold">Alarm terbaru</Text>
+              <Link to="/monitoring">
+                <Text size={200}>Lihat semua →</Text>
               </Link>
             </div>
             {monitoring.recentAlarms.length === 0 ? (
               <div className="card-body muted">Tidak ada alarm. Jaringan tenang.</div>
             ) : (
-              <table>
-                <tbody>
+              <Table aria-label="Alarm terbaru">
+                <TableHeader>
+                  <TableRow>
+                    <TableHeaderCell aria-label="Tingkat alarm" />
+                    <TableHeaderCell>Alarm</TableHeaderCell>
+                    <TableHeaderCell style={{ textAlign: 'right' }}>Durasi</TableHeaderCell>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {monitoring.recentAlarms.slice(0, 6).map((alarm: AlarmView) => (
-                    <tr key={alarm.id}>
-                      <td style={{ width: '1%' }}>
-                        <StatusBadge status={alarm.severity} />
-                      </td>
-                      <td>
-                        <div style={{ fontSize: '0.88rem' }}>{alarm.entityLabel}</div>
-                        <div className="muted" style={{ fontSize: '0.8rem' }}>
+                    <TableRow key={alarm.id}>
+                      <TableCell style={{ width: '1%' }}><StatusBadge status={alarm.severity} /></TableCell>
+                      <TableCell>
+                        <Text as="span" size={300} style={{ display: 'block' }}>{alarm.entityLabel}</Text>
+                        <Text as="span" className="muted" size={200} style={{ display: 'block' }}>
                           {alarm.kindDescription}
-                        </div>
-                      </td>
-                      <td className="muted" style={{ textAlign: 'right', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                        {alarm.openMinutes < 60
-                          ? `${alarm.openMinutes} mnt`
-                          : `${Math.floor(alarm.openMinutes / 60)} jam`}
-                      </td>
-                    </tr>
+                        </Text>
+                      </TableCell>
+                      <TableCell className="muted" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <Text size={200}>
+                          {alarm.openMinutes < 60
+                            ? `${alarm.openMinutes} mnt`
+                            : `${Math.floor(alarm.openMinutes / 60)} jam`}
+                        </Text>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             )}
           </div>
         )}
 
         <div className="card grow" style={{ minWidth: 260 }}>
-          <h3 style={{ marginTop: 0 }}>Pintasan</h3>
+          <Text as="h3" weight="semibold" style={{ marginTop: 0 }}>Pintasan</Text>
           <div className="stack" style={{ gap: '0.5rem' }}>
             <QuickLink to="/map" icon={IconMap} label="Peta jaringan" hint="Lihat ODP & pelanggan di peta" show={can('gis.map.view')} />
             <QuickLink to="/inventory" icon={IconInventory} label="Inventory" hint="Kelola OLT, ODC, ODP, kabel" show={can('network.odp.view')} />
@@ -169,10 +177,10 @@ function QuickLink({
         <Icon size={17} />
       </span>
       <span>
-        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{label}</div>
-        <div className="muted" style={{ fontSize: '0.78rem' }}>
+        <Text as="span" weight="semibold" size={300} style={{ display: 'block' }}>{label}</Text>
+        <Text as="span" className="muted" size={200} style={{ display: 'block' }}>
           {hint}
-        </div>
+        </Text>
       </span>
     </Link>
   )

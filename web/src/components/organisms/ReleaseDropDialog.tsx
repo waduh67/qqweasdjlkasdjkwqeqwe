@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Checkbox, MessageBar, MessageBarBody } from '@fluentui/react-components'
+import { Checkbox, MessageBar, MessageBarBody, typographyStyles } from '@fluentui/react-components'
 import { api, ApiError } from '@/api/client'
 import type { CableView, DropReleaseView } from '@/api/network'
 import { Button, TextField } from '@/components/atoms'
@@ -87,7 +87,7 @@ export function ReleaseDropDialog({
           onChange={(_, data) => setAbandon(!!data.checked)}
           disabled={busy}
         />
-        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        <p className="muted" style={{ margin: 0, ...typographyStyles.caption1 }}>
           {abandon
             ? 'Kabel ditinggal tak lagi terhitung sebagai kabel siap pakai saat merencanakan pelanggan baru.'
             : 'Biarkan tak tercentang bila rumah ini kemungkinan berlangganan lagi — drop-nya siap dipakai penghuni berikutnya.'}

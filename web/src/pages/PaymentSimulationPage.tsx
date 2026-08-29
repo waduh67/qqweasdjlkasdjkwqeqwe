@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Text, typographyStyles } from '@fluentui/react-components'
 import { FlaskConical } from 'lucide-react'
 import { ApiError } from '../api/client'
 import {
@@ -58,7 +59,7 @@ export function PaymentSimulationPage() {
       .finally(() => setLoading(false))
   }, [toast])
 
-  if (loading) return <p className="muted">Memeriksa ketersediaan simulasi…</p>
+  if (loading) return <Text as="p" className="muted">Memeriksa ketersediaan simulasi…</Text>
   if (!availability) {
     return (
       <EmptyState
@@ -104,22 +105,21 @@ export function PaymentSimulationPage() {
       <div className="card stack" style={{ gap: '0.85rem' }}>
         <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
           <FlaskConical size={16} />
-          <strong style={{ fontSize: '0.95rem' }}>Kirim simulasi</strong>
+          <Text as="strong" size={400} weight="semibold">Kirim simulasi</Text>
           <Badge tone={availability.available ? 'good' : 'warning'}>
             {availability.available ? 'Sandbox' : 'Tidak tersedia'}
           </Badge>
         </div>
 
         {!availability.available && (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-            {availability.reason ?? 'Simulasi tidak tersedia saat ini.'} Ubah di{' '}
-            <strong>Billing Langganan Platform → Akun master Pivot</strong>.
-          </p>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>{availability.reason ?? 'Simulasi tidak tersedia saat ini.'} Ubah di{' '}
+          <Text as="strong" weight="semibold" >Billing Langganan Platform → Akun master Pivot</Text>.
+                    </Text>
         )}
         {availability.available && !manage && (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
             Anda tak punya izin <code>platform.billing.manage</code> untuk mengirim simulasi.
-          </p>
+          </Text>
         )}
 
         <TextField
@@ -129,10 +129,10 @@ export function PaymentSimulationPage() {
           disabled={!enabled}
           placeholder="mis. ps_01HZX…"
         />
-        <span className="muted" style={{ fontSize: '0.82rem', marginTop: '-0.5rem' }}>
+        <Text as="span" className="muted" size={200} style={{ marginTop: '-0.5rem' }}>
           ID sesi bayar dari Pivot (<code>data.id</code> saat charge dibuat) — nilai yang sama tersimpan
           sebagai referensi gateway pada tagihan.
-        </span>
+        </Text>
 
         <TextField
           label="Sub-merchant ID (opsional)"
@@ -141,13 +141,13 @@ export function PaymentSimulationPage() {
           disabled={!enabled}
           placeholder="kosongkan untuk sesi langganan SaaS"
         />
-        <span className="muted" style={{ fontSize: '0.82rem', marginTop: '-0.5rem' }}>
+        <Text as="span" className="muted" size={200} style={{ marginTop: '-0.5rem' }}>
           Isi hanya bila sesi dibuat atas nama sub-account tenant (tagihan pelanggan). Sesi langganan
           aplikasi dibuat langsung di akun master, jadi biarkan kosong.
-        </span>
+        </Text>
 
         <div className="stack" style={{ gap: '0.35rem' }}>
-          <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Status akhir</span>
+          <Text as="span" size={300} weight="semibold">Status akhir</Text>
           <Segmented
             options={STATUS_OPTIONS}
             value={status}
@@ -164,25 +164,25 @@ export function PaymentSimulationPage() {
           </Button>
         </div>
 
-        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-          Hasilnya <strong>tidak seketika</strong>: Pivot memproses simulasi lalu memanggil webhook kita —
+        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
+          Hasilnya <Text as="strong" weight="semibold" >tidak seketika</Text>: Pivot memproses simulasi lalu memanggil webhook kita —
           tagihan baru berubah status setelah callback itu diterima. Pastikan URL callback bisa dijangkau
           Pivot sandbox (perlu tunnel bila menjalankan di lokal).
-        </p>
+        </Text>
       </div>
 
       {sent.length > 0 && (
         <div className="card stack" style={{ gap: '0.5rem' }}>
-          <strong style={{ fontSize: '0.95rem' }}>Terkirim di sesi ini</strong>
+          <Text as="strong" size={400} weight="semibold">Terkirim di sesi ini</Text>
           {sent.map((e, i) => (
             <div
               key={`${e.sessionId}-${i}`}
               className="row"
-              style={{ gap: '0.6rem', alignItems: 'center', fontSize: '0.82rem', flexWrap: 'wrap' }}
+              style={{ ...typographyStyles.caption1, gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}
             >
-              <span className="muted">{e.at}</span>
+              <Text as="span" className="muted">{e.at}</Text>
               <Badge tone={e.status === 'SUCCESS' ? 'good' : 'neutral'}>{e.status}</Badge>
-              <span style={{ fontFamily: 'monospace' }}>{e.sessionId}</span>
+              <Text as="span" font="monospace">{e.sessionId}</Text>
             </div>
           ))}
         </div>

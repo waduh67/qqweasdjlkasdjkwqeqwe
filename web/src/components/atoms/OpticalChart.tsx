@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import type { HistoryPoint } from '@/api/monitoring'
 
 /**
@@ -28,9 +29,9 @@ export function OpticalChart({ points }: Props) {
   const measured = points.filter((p) => p.rxPowerDbm != null)
   if (measured.length < 2) {
     return (
-      <p className="muted" style={{ padding: '1rem 0', textAlign: 'center' }}>
+      <Text as="p" block className="muted" size={300} style={{ padding: '1rem 0', textAlign: 'center' }}>
         Belum cukup data untuk menggambar tren (perlu ≥ 2 pengukuran).
-      </p>
+      </Text>
     )
   }
 
@@ -146,15 +147,15 @@ export function OpticalChart({ points }: Props) {
       </svg>
 
       {active?.rxPowerDbm != null ? (
-        <div className="row" style={{ justifyContent: 'center', gap: '1rem', fontSize: '0.85rem' }}>
-          <span className="muted">{new Date(active.time).toLocaleString('id-ID')}</span>
-          <strong style={{ color: zoneColor(active.rxPowerDbm) }}>{active.rxPowerDbm} dBm</strong>
+        <div className="row" style={{ justifyContent: 'center', gap: '1rem' }}>
+          <Text as="span" className="muted" size={200}>{new Date(active.time).toLocaleString('id-ID')}</Text>
+          <Text as="strong" size={200} weight="semibold" style={{ color: zoneColor(active.rxPowerDbm) }}>{active.rxPowerDbm} dBm</Text>
           <span className="badge">{active.status}</span>
         </div>
       ) : (
-        <p className="muted" style={{ textAlign: 'center', fontSize: '0.82rem', margin: 0 }}>
+        <Text as="p" block className="muted" size={200} style={{ textAlign: 'center', margin: 0 }}>
           Arahkan kursor ke grafik untuk melihat nilai per waktu.
-        </p>
+        </Text>
       )}
     </div>
   )

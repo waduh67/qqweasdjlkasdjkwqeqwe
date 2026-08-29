@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { MessageBar, MessageBarBody } from '@fluentui/react-components'
+import { MessageBar, MessageBarBody, Text, ToggleButton } from '@fluentui/react-components'
 import { api } from '@/api/client'
 import type {
   CableAttachmentRole,
@@ -255,10 +255,10 @@ export function SaveCablePanel({
                 <option key={t} value={t}>{TYPE_LABEL[t]}</option>
               ))}
             </SelectField>
-            <span className="muted" style={{ fontSize: '0.78rem' }}>
+            <Text as="span" className="muted" size={100}>
               Ruas yang berakhir di joint box tak menunjukkan jenisnya sendiri — pilih jenis
               kabel HULUNYA, sebab kotak sambung cuma menerus apa yang masuk.
-            </span>
+            </Text>
           </div>
         )}
         {/* Ruas kotak-ke-kotak: satu-satunya bentuk yang gampang salah gambar.
@@ -281,15 +281,15 @@ export function SaveCablePanel({
             tiap singgahan bisa dibetulkan sekarang, selagi orangnya masih ingat. */}
         {waypoints.length > 0 && (
           <div className="stack" style={{ gap: '0.35rem' }}>
-            <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+            <Text as="span" size={300} weight="semibold">
               Mampir di {waypoints.length} kotak
-            </span>
+            </Text>
             {waypoints.map((w, i) => (
               <div key={w.id} className="row" style={{ gap: '0.4rem', alignItems: 'flex-end' }}>
-                <span className="tnum muted" style={{ fontSize: '0.78rem', paddingBottom: '0.4rem' }}>
+                <Text as="span" className="tnum muted" size={100} style={{ paddingBottom: '0.4rem' }}>
                   {i + 1}.
-                </span>
-                <span style={{ flex: 1, fontSize: '0.85rem', paddingBottom: '0.4rem' }}>{w.code}</span>
+                </Text>
+                <Text as="span" size={200} style={{ flex: 1, paddingBottom: '0.4rem' }}>{w.code}</Text>
                 <SelectField
                   aria-label={`Keadaan selubung di ${w.code}`}
                   value={roles[w.id] ?? 'TAPPED'}
@@ -305,10 +305,10 @@ export function SaveCablePanel({
                 </Button>
               </div>
             ))}
-            <span className="muted" style={{ fontSize: '0.78rem' }}>
+            <Text as="span" className="muted" size={100}>
               Panjang materialnya dihitung sekali untuk seluruh bentang, dan kalau selubung ini
               putus, semua kotak di atas ikut padam — persis seperti di lapangan.
-            </span>
+            </Text>
           </div>
         )}
         {/* Kode di atas nama: inilah yang disebut lewat radio dan ditulis di label
@@ -347,33 +347,33 @@ export function SaveCablePanel({
 
         {!customerDrop && (
           <div className="stack" style={{ gap: '0.4rem' }}>
-            <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Port sumber {from}</span>
+            <Text as="span" size={300} weight="semibold">Port sumber {from}</Text>
             {srcOptions == null ? (
-              <span className="muted" style={{ fontSize: '0.82rem' }}>
+              <Text as="span" className="muted" size={200}>
                 Memuat port…
-              </span>
+              </Text>
             ) : srcOptions.length === 0 ? (
-              <span className="muted" style={{ fontSize: '0.78rem' }}>
-                {fromKind === 'SITE'
-                  ? 'Feeder dari POP tak melalui PON port — langsung tersambung.'
-                  : fromKind === 'JOINT_BOX'
-                    ? 'Joint box tak punya port — serat masuk disambung langsung ke serat keluar, jadi pasangan core-nya diatur di sambungan kotak ini, bukan di sini.'
-                    : fromKind === 'ODF'
-                      ? 'Port ODF memang bernomor, tapi yang dicolok di sana patchcord — bukan ujung kabel luar. Kabel ini menempel lewat sambungan di sisi belakang portnya, diatur di layar sambungan rak.'
-                      : fromKind === 'ODC' || fromKind === 'ODP'
-                        ? 'Kabel ini berangkat lewat SERATNYA, bukan lewat satu kaki splitter: tiap core disambung ke kaki yang berbeda. Pasangannya diatur di meja sambung kotak ini setelah kabelnya tergambar.'
-                        : fromKind === 'OLT'
-                          ? 'OLT ini belum punya PON port. Tambahkan dulu di detail OLT (tab PON Port) sebelum menarik feeder.'
-                          : 'Tak ada port keluaran di simpul ini — tak bisa menarik kabel dari sini.'}
-              </span>
+            <Text as="span" className="muted" size={100}>
+              {fromKind === 'SITE'
+                ? 'Feeder dari POP tak melalui PON port — langsung tersambung.'
+                : fromKind === 'JOINT_BOX'
+                  ? 'Joint box tak punya port — serat masuk disambung langsung ke serat keluar, jadi pasangan core-nya diatur di sambungan kotak ini, bukan di sini.'
+                  : fromKind === 'ODF'
+                    ? 'Port ODF memang bernomor, tapi yang dicolok di sana patchcord — bukan ujung kabel luar. Kabel ini menempel lewat sambungan di sisi belakang portnya, diatur di layar sambungan rak.'
+                    : fromKind === 'ODC' || fromKind === 'ODP'
+                      ? 'Kabel ini berangkat lewat SERATNYA, bukan lewat satu kaki splitter: tiap core disambung ke kaki yang berbeda. Pasangannya diatur di meja sambung kotak ini setelah kabelnya tergambar.'
+                      : fromKind === 'OLT'
+                        ? 'OLT ini belum punya PON port. Tambahkan dulu di detail OLT (tab PON Port) sebelum menarik feeder.'
+                        : 'Tak ada port keluaran di simpul ini — tak bisa menarik kabel dari sini.'}
+            </Text>
             ) : (
               <>
                 <SourcePortGrid options={srcOptions} selected={srcPort} onPick={setSrcPort} />
-                <span className="muted" style={{ fontSize: '0.78rem' }}>
+                <Text as="span" className="muted" size={100}>
                   {srcPort == null
                     ? 'Pilih port keluaran dulu — kabel tak bisa ditarik tanpa port.'
                     : `Menarik kabel ini otomatis menyetel uplink ${to}.`}
-                </span>
+                </Text>
               </>
             )}
           </div>
@@ -382,17 +382,17 @@ export function SaveCablePanel({
         {customerDrop && (
           <div className="stack" style={{ gap: '0.4rem' }}>
             <div className="spread">
-              <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Port ODP {odp?.code ?? from}</span>
+              <Text as="span" size={300} weight="semibold">Port ODP {odp?.code ?? from}</Text>
               {odp && (
-                <span className="muted" style={{ fontSize: '0.8rem' }}>
+                <Text as="span" className="muted" size={200}>
                   {odp.usedPorts}/{odp.capacity} terpakai
-                </span>
+                </Text>
               )}
             </div>
             {loadingPorts ? (
-              <span className="muted" style={{ fontSize: '0.82rem' }}>
+              <Text as="span" className="muted" size={200}>
                 Memuat port…
-              </span>
+              </Text>
             ) : odp ? (
               <>
                 <PortGrid
@@ -402,27 +402,27 @@ export function SaveCablePanel({
                   onPick={canAssignPort && onu ? setSelectedPort : undefined}
                 />
                 {!onu ? (
-                  <span className="muted" style={{ fontSize: '0.78rem' }}>
+                  <Text as="span" className="muted" size={100}>
                     Pelanggan belum punya ONU terpasang — kabel drop tak bisa ditarik ke sini.
-                  </span>
+                  </Text>
                 ) : !canAssignPort ? (
-                  <span className="muted" style={{ fontSize: '0.78rem' }}>
-                    Butuh izin <span className="tnum">customer.onu.assign</span> untuk menautkan port.
-                  </span>
+                  <Text as="span" className="muted" size={100}>
+                    Butuh izin <Text as="span" className="tnum">customer.onu.assign</Text> untuk menautkan port.
+                  </Text>
                 ) : selectedPort == null ? (
-                  <span className="muted" style={{ fontSize: '0.78rem' }}>
+                  <Text as="span" className="muted" size={100}>
                     Pilih slot kosong untuk menautkan ONU pelanggan.
-                  </span>
+                  </Text>
                 ) : (
-                  <span className="muted" style={{ fontSize: '0.78rem' }}>
+                  <Text as="span" className="muted" size={100}>
                     ONU {onu.serialNumber} → slot {selectedPort}
-                  </span>
+                  </Text>
                 )}
               </>
             ) : (
-              <span className="muted" style={{ fontSize: '0.82rem' }}>
+              <Text as="span" className="muted" size={200}>
                 Gagal memuat port ODP.
-              </span>
+              </Text>
             )}
           </div>
         )}
@@ -466,11 +466,10 @@ function SourcePortGrid({
         const bg = isSelected ? 'var(--accent-soft)' : o.occupied ? 'var(--surface-2, rgba(148,163,184,0.15))' : 'transparent'
         const border = isSelected ? 'var(--accent)' : o.occupied ? 'var(--border)' : 'var(--good-ink)'
         return (
-          // Tombol native (bukan Fluent Button) supaya inline-style dihormati apa adanya
-          // dan tak terkena min-width 96px Fluent yang membuat sel grid meluber & tumpang tindih.
-          <button
+          <ToggleButton
             key={key}
-            type="button"
+            size="small"
+            checked={isSelected}
             disabled={!selectable}
             onClick={selectable ? () => onPick({ ponPortId: o.ponPortId, portNumber: o.portNumber }) : undefined}
             title={o.occupied ? `${o.label} · dipakai kabel ${o.occupiedByCable}` : `${o.label} · kosong`}
@@ -484,9 +483,6 @@ function SourcePortGrid({
               background: bg,
               color: o.occupied ? 'var(--muted)' : 'var(--text)',
               cursor: selectable ? 'pointer' : 'default',
-              fontFamily: 'inherit',
-              fontSize: '0.7rem',
-              lineHeight: 1.2,
               textAlign: 'center',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -494,7 +490,7 @@ function SourcePortGrid({
             }}
           >
             {o.label}
-          </button>
+          </ToggleButton>
         )
       })}
     </div>
@@ -537,11 +533,10 @@ function PortGrid({
               : 'transparent'
         const border = isSelected ? 'var(--accent)' : free.has(n) ? 'var(--good-ink)' : 'var(--border)'
         return (
-          // Tombol native (bukan Fluent Button) supaya inline-style dihormati apa adanya
-          // dan tak terkena min-width 96px Fluent yang membuat sel grid meluber & tumpang tindih.
-          <button
+          <ToggleButton
             key={n}
-            type="button"
+            size="small"
+            checked={isSelected}
             disabled={!selectable}
             onClick={selectable ? () => onPick?.(n) : undefined}
             title={occ ? `Port ${n} · ${occ.customerCode} ${occ.customerName}` : `Port ${n} · kosong`}
@@ -555,19 +550,16 @@ function PortGrid({
               background: bg,
               color: occ && !isOwn ? 'var(--muted)' : 'var(--text)',
               cursor: selectable ? 'pointer' : 'default',
-              fontFamily: 'inherit',
-              fontSize: '0.72rem',
-              lineHeight: 1.2,
               textAlign: 'center',
             }}
           >
-            <div className="tnum" style={{ fontWeight: 600 }}>
+            <Text as="span" block className="tnum" weight="semibold">
               {n}
-            </div>
-            <div style={{ fontSize: '0.6rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            </Text>
+            <Text as="span" block size={100} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {occ ? occ.customerCode : '·'}
-            </div>
-          </button>
+            </Text>
+          </ToggleButton>
         )
       })}
     </div>

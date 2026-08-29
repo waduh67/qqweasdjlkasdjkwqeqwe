@@ -25,6 +25,9 @@ import {
 export type ButtonVariant = 'default' | 'primary' | 'subtle' | 'danger'
 
 const useStyles = makeStyles({
+  regularLabel: {
+    fontWeight: tokens.fontWeightRegular,
+  },
   danger: {
     color: tokens.colorPaletteRedForeground1,
     ':hover': {
@@ -57,7 +60,7 @@ export const Button: ForwardRefComponent<AppButtonProps> = forwardRef(
     const fluentProps = {
       ...rest,
       appearance: VARIANT_APPEARANCE[variant],
-      className: variant === 'danger' ? mergeClasses(styles.danger, className) : className,
+      className: mergeClasses(styles.regularLabel, variant === 'danger' && styles.danger, className),
     } as ButtonProps
     return <FluentButton ref={ref} {...fluentProps} />
   },

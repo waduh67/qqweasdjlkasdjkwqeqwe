@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components'
 import { Download, DoorOpen, KeyRound, Network, Power, PowerOff, Trash2 } from 'lucide-react'
 import { ApiError } from '../api/client'
 import {
@@ -206,88 +207,6 @@ export function VpnPage() {
     })
   }, [accounts, query, statusFilter])
 
-  const columns: Column<VpnAccountView>[] = [
-    { key: 'label', header: 'Label', sortValue: (a) => a.label, cell: (a) => <strong>{a.label}</strong> },
-    {
-      key: 'server',
-      header: 'Server',
-      sortValue: (a) => a.serverName,
-      cell: (a) => <span className="muted">{a.serverName}</span>,
-    },
-    {
-      key: 'dial',
-      header: 'Titik dial',
-      sortValue: (a) => a.host,
-      cell: (a) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
-          <span className="tnum">
-            {a.host}:{a.port}
-          </span>
-          <span className="muted" style={{ fontSize: '0.8rem' }}>
-            {a.protocol}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: 'username',
-      header: 'Username',
-      sortValue: (a) => a.username,
-      cell: (a) => <span className="muted">{a.username}</span>,
-    },
-    {
-      key: 'overlayIp',
-      header: 'IP overlay',
-      sortValue: (a) => a.overlayIp,
-      cell: (a) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
-          <span className="tnum">{a.overlayIp}</span>
-          {a.routes.length > 0 && (
-            <span className="muted tnum" style={{ fontSize: '0.76rem' }}>
-              + {a.routes[0].cidr}
-              {a.routes.length > 1 ? ` +${a.routes.length - 1} blok` : ''}
-            </span>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: 'winbox',
-      header: 'Port remote',
-      sortValue: (a) => a.winboxAddress ?? '',
-      cell: (a) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
-          <span className="tnum">{a.winboxAddress ?? '—'}</span>
-          <span className="muted" style={{ fontSize: '0.76rem' }}>
-            {a.forwards.length === 0
-              ? 'tanpa pintu — hanya dari dalam tunnel'
-              : a.forwards.length === 1
-                ? a.forwards[0].label
-                : `${a.forwards[0].label} +${a.forwards.length - 1} pintu lain`}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      sortValue: (a) => a.status,
-      cell: (a) => (
-        <StatusBadge
-          status={a.status === 'ENABLED' ? 'ACTIVE' : 'DISABLED'}
-          label={a.status === 'ENABLED' ? 'aktif' : 'nonaktif'}
-        />
-      ),
-    },
-    {
-      key: 'connection',
-      header: 'Koneksi',
-      sortValue: (a) => (a.online ? 1 : 0),
-      cell: (a) => <LiveIndicator online={a.online} lastHandshakeAt={a.lastHandshakeAt} />,
-    },
-  ]
-
-  // Aksi per-baris di menu `…` ala Azure DataGrid (seragam dengan Pelanggan), bukan deretan tombol inline.
   const rowActions = (a: VpnAccountView): RowAction[] => {
     const list: RowAction[] = []
     if (canConfig) {
@@ -329,6 +248,91 @@ export function VpnPage() {
     return list
   }
 
+  const columns: Column<VpnAccountView>[] = [
+    {
+      key: 'label',
+      header: 'Nama',
+      sortValue: (a) => a.label,
+      cell: (a) => a.label,
+      inlineActions: canConfig || canManage ? rowActions : undefined,
+    },
+    {
+      key: 'server',
+      header: 'Server',
+      sortValue: (a) => a.serverName,
+      cell: (a) => a.serverName,
+    },
+    {
+      key: 'host',
+      header: 'Host',
+      sortValue: (a) => a.host,
+      cell: (a) => <span className="tnum">{a.host}</span>,
+    },
+    {
+      key: 'port',
+      header: 'Port',
+      sortValue: (a) => a.port,
+      cell: (a) => <span className="tnum">{a.port}</span>,
+    },
+    {
+      key: 'protocol',
+      header: 'Protokol',
+      sortValue: (a) => a.protocol,
+      cell: (a) => a.protocol,
+    },
+    {
+      key: 'username',
+      header: 'Username',
+      sortValue: (a) => a.username,
+      cell: (a) => a.username,
+    },
+    {
+      key: 'overlayIp',
+      header: 'IP overlay',
+      sortValue: (a) => a.overlayIp,
+      cell: (a) => <span className="tnum">{a.overlayIp}</span>,
+    },
+    {
+      key: 'blocks',
+      header: 'Blok pelanggan',
+      sortValue: (a) => a.routes.length,
+      cell: (a) => a.routes.length === 0
+        ? '—'
+        : `${a.routes[0].cidr}${a.routes.length > 1 ? ` +${a.routes.length - 1}` : ''}`,
+    },
+    {
+      key: 'remoteAddress',
+      header: 'Alamat remote',
+      sortValue: (a) => a.winboxAddress ?? '',
+      cell: (a) => <span className="tnum">{a.winboxAddress ?? '—'}</span>,
+    },
+    {
+      key: 'forwards',
+      header: 'Pintu remote',
+      sortValue: (a) => a.forwards.length,
+      cell: (a) => a.forwards.length === 0
+        ? '—'
+        : `${a.forwards[0].label}${a.forwards.length > 1 ? ` +${a.forwards.length - 1}` : ''}`,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortValue: (a) => a.status,
+      cell: (a) => (
+        <StatusBadge
+          status={a.status === 'ENABLED' ? 'ACTIVE' : 'DISABLED'}
+          label={a.status === 'ENABLED' ? 'aktif' : 'nonaktif'}
+        />
+      ),
+    },
+    {
+      key: 'connection',
+      header: 'Koneksi',
+      sortValue: (a) => (a.online ? 1 : 0),
+      cell: (a) => <LiveIndicator online={a.online} lastHandshakeAt={a.lastHandshakeAt} />,
+    },
+  ]
+
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
       <PageHeader
@@ -356,9 +360,9 @@ export function VpnPage() {
               <IconPlus size={15} /> {busy ? 'Membuat…' : 'Generate akun'}
             </Button>
           </div>
-          <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+          <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
             Server dipilih otomatis. Password hanya tampil sekali setelah dibuat — salin atau unduh config-nya.
-          </p>
+          </Text>
         </div>
       )}
 
@@ -381,7 +385,6 @@ export function VpnPage() {
         rowKey={(a) => a.id}
         loading={loading}
         initialSort={{ key: 'label', dir: 'asc' }}
-        rowActions={canConfig || canManage ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada akun yang cocok' : 'Belum ada akun VPN'}
@@ -516,112 +519,84 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
 
   return (
     <Modal title={`Port remote “${acct.label}”`} onClose={onClose} wide>
-      <p className="muted" style={{ margin: '0 0 0.75rem', fontSize: '0.83rem' }}>
+      <p className="muted" style={{ margin: '0 0 0.75rem',  }}>
         Tiap baris adalah satu pintu dari internet ke perangkat: <code>{acct.host}:portPublik</code> diteruskan ke{' '}
         <code>{acct.overlayIp}:portPerangkat</code>. Port publik dipilih sistem dan <strong>tak berubah</strong> —
         kalau port layanan di perangkat dipindah (mis. Winbox ke 9291), cukup ubah kolom “Port di perangkat”.
         Perubahan menyusul di hub paling lama ~1 menit.
       </p>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Layanan</th>
-            <th>Alamat publik</th>
-            <th>Port di perangkat</th>
-            <th style={{ width: '9rem' }} />
-          </tr>
-        </thead>
-        <tbody>
-          {acct.forwards.length === 0 && (
-            <tr>
-              <td colSpan={4} className="muted">
-                Belum ada pintu — perangkat hanya terjangkau dari dalam tunnel.
-              </td>
-            </tr>
-          )}
-          {acct.forwards.map((f) =>
-            editing?.id === f.id ? (
-              <tr key={f.id}>
-                <td>
-                  <TextField
-                    value={editing.label}
-                    onChange={(_, data) => setEditing({ ...editing, label: data.value })}
-                    placeholder="otomatis"
-                  />
-                </td>
-                <td className="tnum muted">{f.address}</td>
-                <td>
-                  <div className="row" style={{ gap: '0.35rem' }}>
-                    <TextField
-                      value={editing.devicePort}
-                      onChange={(_, data) => setEditing({ ...editing, devicePort: data.value })}
-                      style={{ width: '6rem' }}
-                    />
-                    <SelectField
-                      value={editing.protocol}
-                      onChange={(_, data) => setEditing({ ...editing, protocol: data.value as VpnForwardProtocol })}
-                    >
-                      <option value="TCP">TCP</option>
-                      <option value="UDP">UDP</option>
-                    </SelectField>
-                  </div>
-                </td>
-                <td>
-                  <div className="row" style={{ gap: '0.35rem' }}>
-                    <Button variant="primary" size="small" onClick={saveEdit} disabled={busy}>
-                      Simpan
-                    </Button>
-                    <Button variant="subtle" size="small" onClick={() => setEditing(null)} disabled={busy}>
-                      Batal
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              <tr key={f.id}>
-                <td>
-                  <strong>{f.label}</strong>
-                </td>
-                <td>
-                  <span className="tnum">{f.address}</span>{' '}
-                  <Button variant="subtle" size="small" onClick={() => copy(f.address)}>
-                    Salin
-                  </Button>
-                </td>
-                <td className="tnum">
-                  {f.devicePort} <span className="muted">{f.protocol}</span>
-                </td>
-                <td>
-                  <div className="row" style={{ gap: '0.35rem' }}>
-                    <Button
-                      variant="subtle"
-                      size="small"
-                      disabled={busy}
-                      onClick={() =>
-                        setEditing({
-                          id: f.id,
-                          devicePort: String(f.devicePort),
-                          protocol: f.protocol,
-                          label: f.label,
-                        })
-                      }
-                    >
-                      Ubah
-                    </Button>
-                    <Button variant="subtle" size="small" disabled={busy} onClick={() => remove(f)}>
-                      Cabut
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ),
-          )}
-        </tbody>
-      </table>
+      <Table ><TableHeader><TableRow ><TableHeaderCell >Layanan</TableHeaderCell>
+      <TableHeaderCell >Alamat publik</TableHeaderCell>
+      <TableHeaderCell >Port di perangkat</TableHeaderCell>
+      <TableHeaderCell style={{ width: '9rem' }} /></TableRow></TableHeader>
+      <TableBody>{acct.forwards.length === 0 && (
+        <TableRow ><TableCell colSpan={4} className="muted">
+          Belum ada pintu — perangkat hanya terjangkau dari dalam tunnel.
+        </TableCell></TableRow>
+      )}
+      {acct.forwards.map((f) =>
+        editing?.id === f.id ? (
+          <TableRow key={f.id}><TableCell ><TextField
+            value={editing.label}
+            onChange={(_, data) => setEditing({ ...editing, label: data.value })}
+            placeholder="otomatis"
+          /></TableCell>
+          <TableCell className="tnum muted">{f.address}</TableCell>
+          <TableCell ><div className="row" style={{ gap: '0.35rem' }}>
+            <TextField
+              value={editing.devicePort}
+              onChange={(_, data) => setEditing({ ...editing, devicePort: data.value })}
+              style={{ width: '6rem' }}
+            />
+            <SelectField
+              value={editing.protocol}
+              onChange={(_, data) => setEditing({ ...editing, protocol: data.value as VpnForwardProtocol })}
+            >
+              <option value="TCP">TCP</option>
+              <option value="UDP">UDP</option>
+            </SelectField>
+          </div></TableCell>
+          <TableCell ><div className="row" style={{ gap: '0.35rem' }}>
+            <Button variant="primary" size="small" onClick={saveEdit} disabled={busy}>
+              Simpan
+            </Button>
+            <Button variant="subtle" size="small" onClick={() => setEditing(null)} disabled={busy}>
+              Batal
+            </Button>
+          </div></TableCell></TableRow>
+        ) : (
+          <TableRow key={f.id}><TableCell ><strong>{f.label}</strong></TableCell>
+          <TableCell ><span className="tnum">{f.address}</span>{' '}
+          <Button variant="subtle" size="small" onClick={() => copy(f.address)}>
+            Salin
+          </Button></TableCell>
+          <TableCell className="tnum">{f.devicePort} <span className="muted">{f.protocol}</span></TableCell>
+          <TableCell ><div className="row" style={{ gap: '0.35rem' }}>
+            <Button
+              variant="subtle"
+              size="small"
+              disabled={busy}
+              onClick={() =>
+                setEditing({
+                  id: f.id,
+                  devicePort: String(f.devicePort),
+                  protocol: f.protocol,
+                  label: f.label,
+                })
+              }
+            >
+              Ubah
+            </Button>
+            <Button variant="subtle" size="small" disabled={busy} onClick={() => remove(f)}>
+              Cabut
+            </Button>
+          </div></TableCell></TableRow>
+        ),
+      )}</TableBody></Table>
 
       <div className="stack" style={{ gap: '0.4rem', marginTop: '1rem' }}>
-        <strong style={{ fontSize: '0.86rem' }}>Tambah pintu</strong>
+        <Text as="strong" size={300}  >Tambah pintu</Text>
         <div className="row" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <SelectField label="Layanan" value={addDraft.devicePort} onChange={(_, data) => applyPreset(data.value)}>
             {!SERVICE_PRESETS.some((p) => String(p.devicePort) === addDraft.devicePort) && (
@@ -658,11 +633,9 @@ function PortForwardModal({ account, onClose }: { account: VpnAccountView; onClo
             <IconPlus size={15} /> Tambah
           </Button>
         </div>
-        <span className="muted" style={{ fontSize: '0.78rem' }}>
-          {full
-            ? `Sudah ${MAX_FORWARDS} pintu — cabut salah satu dulu.`
-            : 'Port publiknya dipilih sistem supaya tak bentrok dengan akun lain di hub yang sama.'}
-        </span>
+        <Text as="span" size={300} className="muted" >{full
+          ? `Sudah ${MAX_FORWARDS} pintu — cabut salah satu dulu.`
+          : 'Port publiknya dipilih sistem supaya tak bentrok dengan akun lain di hub yang sama.'}</Text>
       </div>
     </Modal>
   )
@@ -748,80 +721,58 @@ function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onCl
 
   return (
     <Modal title={`Blok pelanggan “${acct.label}”`} onClose={onClose} wide>
-      <p className="muted" style={{ margin: '0 0 0.75rem', fontSize: '0.83rem' }}>
+      <p className="muted" style={{ margin: '0 0 0.75rem',  }}>
         Daftarkan kolam alamat yang dibagikan perangkat ini ke pelanggan (mis. pool PPPoE di{' '}
         <code>/ip pool print</code>). Setelahnya server bisa <strong>menghubungi ONT langsung</strong> — reboot,
         ganti SSID, atau tarik status jadi seketika, tak lagi menunggu ONT melapor sendiri tiap ~5 menit. Blok
         hanya boleh dipegang satu akun per hub; kalau ditolak “beririsan”, blok itu sudah didaftarkan akun lain.
       </p>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Nama</th>
-            <th>Blok</th>
-            <th style={{ width: '9rem' }} />
-          </tr>
-        </thead>
-        <tbody>
-          {acct.routes.length === 0 && (
-            <tr>
-              <td colSpan={3} className="muted">
-                Belum ada blok — server hanya bisa menghubungi perangkatnya, bukan pelanggan di belakangnya.
-              </td>
-            </tr>
-          )}
-          {acct.routes.map((r) =>
-            editing?.id === r.id ? (
-              <tr key={r.id}>
-                <td>
-                  <TextField
-                    value={editing.label}
-                    onChange={(_, data) => setEditing({ ...editing, label: data.value })}
-                    placeholder="mis. Kolam PPPoE"
-                  />
-                </td>
-                <td className="tnum muted">{r.cidr}</td>
-                <td>
-                  <div className="row" style={{ gap: '0.35rem' }}>
-                    <Button variant="primary" size="small" onClick={saveEdit} disabled={busy || !editing.label.trim()}>
-                      Simpan
-                    </Button>
-                    <Button variant="subtle" size="small" onClick={() => setEditing(null)} disabled={busy}>
-                      Batal
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              <tr key={r.id}>
-                <td>
-                  <strong>{r.label}</strong>
-                </td>
-                <td className="tnum">{r.cidr}</td>
-                <td>
-                  <div className="row" style={{ gap: '0.35rem' }}>
-                    <Button
-                      variant="subtle"
-                      size="small"
-                      disabled={busy}
-                      onClick={() => setEditing({ id: r.id, label: r.label })}
-                    >
-                      Ubah nama
-                    </Button>
-                    <Button variant="subtle" size="small" disabled={busy} onClick={() => remove(r)}>
-                      Cabut
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ),
-          )}
-        </tbody>
-      </table>
+      <Table ><TableHeader><TableRow ><TableHeaderCell >Nama</TableHeaderCell>
+      <TableHeaderCell >Blok</TableHeaderCell>
+      <TableHeaderCell style={{ width: '9rem' }} /></TableRow></TableHeader>
+      <TableBody>{acct.routes.length === 0 && (
+        <TableRow ><TableCell colSpan={3} className="muted">
+          Belum ada blok — server hanya bisa menghubungi perangkatnya, bukan pelanggan di belakangnya.
+        </TableCell></TableRow>
+      )}
+      {acct.routes.map((r) =>
+        editing?.id === r.id ? (
+          <TableRow key={r.id}><TableCell ><TextField
+            value={editing.label}
+            onChange={(_, data) => setEditing({ ...editing, label: data.value })}
+            placeholder="mis. Kolam PPPoE"
+          /></TableCell>
+          <TableCell className="tnum muted">{r.cidr}</TableCell>
+          <TableCell ><div className="row" style={{ gap: '0.35rem' }}>
+            <Button variant="primary" size="small" onClick={saveEdit} disabled={busy || !editing.label.trim()}>
+              Simpan
+            </Button>
+            <Button variant="subtle" size="small" onClick={() => setEditing(null)} disabled={busy}>
+              Batal
+            </Button>
+          </div></TableCell></TableRow>
+        ) : (
+          <TableRow key={r.id}><TableCell ><strong>{r.label}</strong></TableCell>
+          <TableCell className="tnum">{r.cidr}</TableCell>
+          <TableCell ><div className="row" style={{ gap: '0.35rem' }}>
+            <Button
+              variant="subtle"
+              size="small"
+              disabled={busy}
+              onClick={() => setEditing({ id: r.id, label: r.label })}
+            >
+              Ubah nama
+            </Button>
+            <Button variant="subtle" size="small" disabled={busy} onClick={() => remove(r)}>
+              Cabut
+            </Button>
+          </div></TableCell></TableRow>
+        ),
+      )}</TableBody></Table>
 
       <div className="stack" style={{ gap: '0.4rem', margin: '1rem 0' }}>
-        <strong style={{ fontSize: '0.86rem' }}>Tambah blok</strong>
+        <Text as="strong" size={300}  >Tambah blok</Text>
         <div className="row" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <TextField
             label="Blok (CIDR)"
@@ -842,11 +793,9 @@ function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onCl
             <IconPlus size={15} /> Tambah
           </Button>
         </div>
-        <span className="muted" style={{ fontSize: '0.78rem' }}>
-          {full
-            ? `Sudah ${MAX_ROUTES} blok — cabut salah satu dulu.`
-            : 'Alamat host otomatis dirapikan jadi alamat bloknya (10.20.1.5/16 → 10.20.0.0/16).'}
-        </span>
+        <Text as="span" size={300} className="muted" >{full
+          ? `Sudah ${MAX_ROUTES} blok — cabut salah satu dulu.`
+          : 'Alamat host otomatis dirapikan jadi alamat bloknya (10.20.1.5/16 → 10.20.0.0/16).'}</Text>
       </div>
 
       {script && (
@@ -859,9 +808,9 @@ function RoutedSubnetModal({ account, onClose }: { account: VpnAccountView; onCl
               placeholder={ovpnInterfaceName(acct.username)}
               style={{ width: '18rem' }}
             />
-            <span className="muted" style={{ fontSize: '0.78rem', paddingBottom: '0.45rem' }}>
+            <Text as="span" size={300} className="muted" style={{ paddingBottom: '0.45rem' }} >
               Cek dengan <code>/interface print where name~"ovpn"</code> bila ragu.
-            </span>
+            </Text>
           </div>
           <CommandBlock
             title={
@@ -911,31 +860,19 @@ function CredentialCard({ account, onDismiss }: { account: VpnAccountView; onDis
         <IconAlert size={17} style={{ color: 'var(--warning-ink)' }} />
         <strong>Kredensial akun “{account.label}”</strong>
       </div>
-      <p className="muted" style={{ margin: '0 0 0.6rem', fontSize: '0.83rem' }}>
+      <p className="muted" style={{ margin: '0 0 0.6rem',  }}>
         Tempel data ini ke OVPN client Mikrotik Anda. <strong>Password hanya ditampilkan sekali</strong> — bila
         terlewat, rotasi ulang atau unduh config.
       </p>
-      <table style={{ marginBottom: '0.6rem' }}>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.label}>
-              <td className="muted" style={{ width: '9rem' }}>
-                {r.label}
-              </td>
-              <td>
-                <code style={{ wordBreak: 'break-all' }}>{r.value}</code>
-              </td>
-              <td style={{ width: '4rem' }}>
-                {r.copy && (
-                  <Button variant="subtle" size="small" onClick={() => copy(r.value, r.label)}>
-                    Salin
-                  </Button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <Table style={{ marginBottom: '0.6rem' }}><TableBody>{rows.map((r) => (
+        <TableRow key={r.label}><TableCell className="muted" style={{ width: '9rem' }}>{r.label}</TableCell>
+        <TableCell ><code style={{ wordBreak: 'break-all' }}>{r.value}</code></TableCell>
+        <TableCell style={{ width: '4rem' }}>{r.copy && (
+          <Button variant="subtle" size="small" onClick={() => copy(r.value, r.label)}>
+            Salin
+          </Button>
+        )}</TableCell></TableRow>
+      ))}</TableBody></Table>
       {account.routerOsCommand && (
         <CommandBlock
           title={
@@ -1037,9 +974,7 @@ function CommandBlock({
   return (
     <div className="stack" style={{ gap: '0.35rem', marginBottom: '0.7rem' }}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-        <span className="muted" style={{ fontSize: '0.82rem' }}>
-          {title}
-        </span>
+        <Text as="span" size={300} className="muted" >{title}</Text>
         <Button variant="subtle" size="small" onClick={onCopy}>
           {copyLabel}
         </Button>
@@ -1052,15 +987,12 @@ function CommandBlock({
           border: '1px solid var(--border)',
           borderRadius: '6px',
           overflowX: 'auto',
-          fontSize: '0.76rem',
-          lineHeight: 1.5,
+          
         }}
       >
         <code>{command}</code>
       </pre>
-      <span className="muted" style={{ fontSize: '0.76rem' }}>
-        {hint}
-      </span>
+      <Text as="span" size={300} className="muted" >{hint}</Text>
     </div>
   )
 }
@@ -1077,13 +1009,11 @@ function LiveIndicator({ online, lastHandshakeAt }: { online: boolean; lastHands
     <div className="stack" style={{ gap: '0.15rem' }}>
       <span
         className="badge"
-        style={{ color: online ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
+        style={{ color: online ? 'var(--good-ink)' : 'var(--muted)',  }}
       >
         {online ? '● online' : '○ offline'}
       </span>
-      <span className="muted" style={{ fontSize: '0.76rem' }}>
-        {sub}
-      </span>
+      <Text as="span" size={300} className="muted" >{sub}</Text>
     </div>
   )
 }

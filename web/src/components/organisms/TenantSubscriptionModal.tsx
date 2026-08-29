@@ -1,3 +1,4 @@
+import { Text, typographyStyles } from '@fluentui/react-components'
 import { useEffect, useState } from 'react'
 import { ApiError } from '@/api/client'
 import {
@@ -232,10 +233,10 @@ export function TenantSubscriptionModal({
           {sub && (
             <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
               <Badge tone={STATUS_TONE[sub.status]}>{SUBSCRIPTION_STATUS_LABEL[sub.status]}</Badge>
-              <span className="muted" style={{ fontSize: '0.85rem' }}>
+              <Text as="span" size={200} className="muted">
                 {fmtIdr(sub.monthlyFee)}/bln · aktif s/d {fmtDate(sub.currentPeriodEnd)} · tagih berikutnya{' '}
                 {fmtDate(sub.nextInvoiceAt)}
-              </span>
+              </Text>
             </div>
           )}
 
@@ -276,11 +277,11 @@ export function TenantSubscriptionModal({
                 style={{ flex: 1, minWidth: 110 }}
               />
             </div>
-            <span className="muted" style={{ fontSize: '0.82rem' }}>
+            <Text as="span" size={200} className="muted">
               Tanggal tagih &amp; masa tenggang kosong = pakai default global. Menyimpan tenant baru langsung
               menjadwalkan tagihan pertama. Mengubah biaya juga memperbarui tagihan yang belum lunas &amp; belum
               dibayar.
-            </span>
+            </Text>
             {/* Simpan/Aktifkan kini di footer Blade; sisakan aksi hentikan langganan di sini. */}
             {manage && sub && sub.status !== 'CANCELLED' && (
               <div className="row">
@@ -327,10 +328,10 @@ export function TenantSubscriptionModal({
                   style={{ flex: 2, minWidth: 180 }}
                 />
               </div>
-              <span className="muted" style={{ fontSize: '0.82rem' }}>
+              <Text as="span" size={200} className="muted">
                 Masa aktif bertambah dari ujungnya (bukan ditimpa), tagihan yang belum lunas dibatalkan, dan
                 tenant yang tersuspend dipulihkan. Selama masa bonus tenant tidak ditagih.
-              </span>
+              </Text>
               <div className="row">
                 <Button onClick={giveFreeMonths} disabled={busy}>
                   Beri gratis
@@ -407,23 +408,23 @@ function InvoiceRow({
     >
       <div className="stack" style={{ gap: '0.15rem', flex: 1, minWidth: 180 }}>
         <span className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-          <strong style={{ fontSize: '0.85rem', fontFamily: 'monospace' }}>{inv.number}</strong>
+          <Text as="strong" size={200} font="monospace">{inv.number}</Text>
           <Badge tone={INVOICE_TONE[inv.status]}>{INVOICE_STATUS_LABEL[inv.status]}</Badge>
           {inv.grant && <Badge tone="accent">Bonus</Badge>}
         </span>
-        <span className="muted" style={{ fontSize: '0.78rem' }}>
+        <Text as="span" size={100} className="muted">
           {fmtDate(inv.periodStart)}–{fmtDate(inv.periodEnd)} · jatuh tempo {fmtDate(inv.dueDate)}
           {inv.paidAt && ` · lunas ${fmtDate(inv.paidAt)}`}
-        </span>
+        </Text>
       </div>
-      <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{fmtIdr(inv.amount)}</span>
+      <Text as="span" size={200} weight="semibold">{fmtIdr(inv.amount)}</Text>
       <div className="row" style={{ gap: '0.35rem', justifyContent: 'flex-end' }}>
         {inv.payUrl && outstanding && (
           <a
             href={inv.payUrl}
             target="_blank"
             rel="noreferrer"
-            style={{ fontSize: '0.82rem', fontWeight: 600, alignSelf: 'center', whiteSpace: 'nowrap' }}
+            style={{ ...typographyStyles.body1Strong, alignSelf: 'center', whiteSpace: 'nowrap' }}
           >
             Tautan bayar ↗
           </a>

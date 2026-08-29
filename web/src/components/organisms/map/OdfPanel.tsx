@@ -1,3 +1,4 @@
+import { Text } from '@fluentui/react-components'
 import type { OdfView } from '@/api/network'
 import { StatusBadge } from '@/components/atoms'
 import { IconMonitor } from '@/components/atoms/icons'
@@ -95,22 +96,22 @@ export function OdfPanel({
           >
             <div style={{ width: `${used}%`, height: '100%', background: ODF_COLOR }} />
           </div>
-          <span className="muted" style={{ fontSize: '0.78rem' }}>
+          <Text as="span" className="muted" size={100}>
             {free === 0
               ? 'Rak penuh — kabel berikutnya butuh rak atau panel tambahan.'
               : `Sisa ${free} port kosong.`}
-          </span>
+          </Text>
         </div>
 
-        <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
+        <Text as="p" className="muted" size={100} block style={{ margin: 0 }}>
           Kabel luar berhenti di sini: seratnya dilas ke pigtail di sisi BELAKANG port, lalu
           patchcord dari sisi DEPAN-nya yang mencolok ke port PON. Patchcord itu sambungan,
           bukan kabel bergeometri — ia tak digambar di peta.
-        </p>
+        </Text>
         {odf.spliceCount > 0 && canDelete && (
-          <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
+          <Text as="p" className="muted" size={100} block style={{ margin: 0 }}>
             Tak bisa dihapus selama masih ada sambungan di dalamnya — lepas dulu isinya.
-          </p>
+          </Text>
         )}
       </div>
     </aside>

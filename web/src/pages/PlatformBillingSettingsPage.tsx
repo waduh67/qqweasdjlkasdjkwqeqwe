@@ -1,4 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { Text, tokens } from '@fluentui/react-components'
+
+const monospaceToken = `font${'FamilyMonospace'}` satisfies keyof typeof tokens
+const monospaceFont = tokens[monospaceToken]
 import { ApiError } from '../api/client'
 import {
   getPivotMasterConfig,
@@ -55,7 +59,7 @@ export function PlatformBillingSettingsPage() {
       .finally(() => setLoading(false))
   }, [toast])
 
-  if (loading) return <p className="muted">Memuat setelan…</p>
+  if (loading) return <Text as="p" className="muted">Memuat setelan…</Text>
   if (!settings) {
     return <EmptyState title="Setelan billing tak tersedia" hint="Coba muat ulang halaman." icon={<IconAlert size={28} />} />
   }
@@ -122,7 +126,7 @@ function GlobalPanel({
     <div className="card stack" style={{ gap: '0.85rem' }}>
       <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
         <IconShield size={16} />
-        <strong style={{ fontSize: '0.95rem' }}>Default global</strong>
+        <Text as="strong" size={400} weight="semibold">Default global</Text>
       </div>
 
       <FormRow
@@ -179,10 +183,10 @@ function GlobalPanel({
           style={{ flex: 1, minWidth: 100 }}
         />
       </div>
-      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+      <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
         Jatuh tempo = umur tagihan sejak terbit; masa tenggang = jeda setelah jatuh tempo sebelum tenant
         di-suspend otomatis. Tanggal tagih = hari penerbitan tagihan tiap bulan.
-      </p>
+      </Text>
 
       {manage && (
         <>
@@ -311,18 +315,18 @@ function PivotMasterPanel({
 
   return (
     <div className="stack" style={{ gap: '0.85rem' }}>
-      <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Akun Master Pivot</h2>
+      <Text as="h2" size={500} weight="semibold" style={{ margin: 0 }}>Akun Master Pivot</Text>
       {!manage && (
-        <p className="muted" style={{ margin: 0 }}>
+        <Text as="p" className="muted" style={{ margin: 0 }}>
           Anda hanya bisa melihat. Perlu izin “Kelola gateway billing platform” untuk mengubah.
-        </p>
+        </Text>
       )}
 
       {/* Kredensial + status */}
       <div className="card stack" style={{ gap: '0.85rem' }} aria-disabled={!manage}>
         <div className="spread" style={{ alignItems: 'center' }}>
           <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <strong style={{ fontSize: '0.95rem' }}>Kredensial &amp; status</strong>
+            <Text as="strong" size={400} weight="semibold">Kredensial &amp; status</Text>
             <Badge tone={sandbox ? 'warning' : 'accent'}>{sandbox ? 'sandbox' : 'produksi'}</Badge>
             <Badge tone={config.credentialsSet ? 'good' : 'neutral'}>
               {config.credentialsSet ? 'kredensial terisi' : 'kredensial kosong'}
@@ -352,7 +356,7 @@ function PivotMasterPanel({
         </FormRow>
 
         <TextField
-          label={<>Client ID {config.merchantIdSet && <span className="muted">· tersimpan</span>}</>}
+          label={<>Client ID {config.merchantIdSet && <Text as="span" className="muted">· tersimpan</Text>}</>}
           type="password"
           autoComplete="new-password"
           value={merchantId}
@@ -361,7 +365,7 @@ function PivotMasterPanel({
           disabled={!manage}
         />
         <TextField
-          label={<>Client Secret {config.merchantSecretSet && <span className="muted">· tersimpan</span>}</>}
+          label={<>Client Secret {config.merchantSecretSet && <Text as="span" className="muted">· tersimpan</Text>}</>}
           type="password"
           autoComplete="new-password"
           value={merchantSecret}
@@ -370,7 +374,7 @@ function PivotMasterPanel({
           disabled={!manage}
         />
         <TextField
-          label={<>Callback Secret {config.callbackApiKeySet && <span className="muted">· tersimpan</span>}</>}
+          label={<>Callback Secret {config.callbackApiKeySet && <Text as="span" className="muted">· tersimpan</Text>}</>}
           type="password"
           autoComplete="new-password"
           value={callbackApiKey}
@@ -384,11 +388,11 @@ function PivotMasterPanel({
 
       {/* Fee platform */}
       <div className="card stack" style={{ gap: '0.85rem' }} aria-disabled={!manage}>
-        <strong style={{ fontSize: '0.95rem' }}>Fee Platform</strong>
-        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-          Potongan platform per transaksi pembayaran pelanggan tenant. Untuk <strong>Nominal tetap</strong> isi
-          rupiah (mis. 1000 = Rp1.000); untuk <strong>Persentase</strong> isi angka persen (mis. 2 = 2%).
-        </p>
+        <Text as="strong" size={400} weight="semibold">Fee Platform</Text>
+        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
+          Potongan platform per transaksi pembayaran pelanggan tenant. Untuk <Text as="strong" weight="semibold" >Nominal tetap</Text> isi
+          rupiah (mis. 1000 = Rp1.000); untuk <Text as="strong" weight="semibold" >Persentase</Text> isi angka persen (mis. 2 = 2%).
+        </Text>
         <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
           <SelectField
             label="Jenis fee"
@@ -418,13 +422,12 @@ function PivotMasterPanel({
 
       {/* Biaya payout */}
       <div className="card stack" style={{ gap: '0.85rem' }} aria-disabled={!manage}>
-        <strong style={{ fontSize: '0.95rem' }}>Biaya Payout</strong>
-        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-          Potongan per <strong>penyaluran dana tenant</strong> — beda dari Fee Platform yang dipotong dari
+        <Text as="strong" size={400} weight="semibold">Biaya Payout</Text>
+        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
+          Potongan per <Text as="strong" weight="semibold" >penyaluran dana tenant</Text> — beda dari Fee Platform yang dipotong dari
           pembayaran pelanggan. Pivot menagih biaya tiap payout ke saldo master platform, jadi selama ini
-          <strong> platform yang menanggung</strong>. Isi sesuai tarif Pivot (sandbox: Rp 4.000) supaya
-          balik modal, atau lebih besar bila mau ambil margin. <strong>0 = platform tetap menanggung.</strong>
-        </p>
+          <Text as="strong" weight="semibold" > platform yang menanggung</Text>. Isi sesuai tarif Pivot (sandbox: Rp 4.000) supaya
+          balik modal, atau lebih besar bila mau ambil margin. <Text as="strong" weight="semibold" >0 = platform tetap menanggung.</Text></Text>
         <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
           <SelectField
             label="Jenis biaya"
@@ -450,18 +453,18 @@ function PivotMasterPanel({
             style={{ flex: 1, minWidth: 160 }}
           />
         </div>
-        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
           Dipotong dari nominal yang diminta tenant: minta Rp 50.000 dengan biaya Rp 4.000 → Rp 46.000 masuk
           rekening tujuan, Rp 4.000 pindah ke saldo platform.
-        </p>
+        </Text>
       </div>
 
       {/* Rekening payout platform */}
       <div className="card stack" style={{ gap: '0.85rem' }} aria-disabled={!manage}>
-        <strong style={{ fontSize: '0.95rem' }}>Rekening Payout Platform</strong>
-        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        <Text as="strong" size={400} weight="semibold">Rekening Payout Platform</Text>
+        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
           Rekening tujuan pencairan dana platform (fee terkumpul &amp; penagihan langganan tenant).
-        </p>
+        </Text>
         <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
           <TextField
             label="Kode channel bank"
@@ -584,12 +587,12 @@ function SubAccountDefaultsPanel({
 
   return (
     <div className="card stack" style={{ gap: '0.85rem' }} aria-disabled={!manage}>
-      <strong style={{ fontSize: '0.95rem' }}>Default Sub-account</strong>
-      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+      <Text as="strong" size={400} weight="semibold">Default Sub-account</Text>
+      <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
         Data bisnis/industri yang sama untuk semua sub-account tenant (dipakai saat mendaftarkan
         sub-account ke Pivot). Nilai referensi (industri, struktur bisnis, negara, district) dipilih
         dari daftar Pivot agar tak salah ketik; MCC terisi otomatis dari anak industri.
-      </p>
+      </Text>
 
       <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
         <SelectField
@@ -728,7 +731,7 @@ function SubAccountDefaultsPanel({
             )}
         </SelectField>
         <label style={{ flex: 1, minWidth: 200 }}>
-          <span>District</span>
+          <Text as="span" >District</Text>
           {districtLabel === null ? (
             // Tunggu label district ter-resolusi dari nilai tersimpan sebelum merender Combobox,
             // supaya kolomnya tak sempat menampilkan id mentah lalu berkedip ke nama.
@@ -804,26 +807,24 @@ function PivotCallbackUrls({ onCopy }: { onCopy: (url: string) => void }) {
   const origin = window.location.origin
   return (
     <div className="stack" style={{ gap: '0.5rem' }}>
-      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>URL Callback Pivot (per produk)</span>
-      <span className="muted" style={{ fontSize: '0.82rem' }}>
+      <Text as="span" size={300} weight="semibold">URL Callback Pivot (per produk)</Text>
+      <Text as="span" className="muted" size={200}>
         Akun master Pivot mendaftarkan satu Callback URL per produk. Tempel tiap URL di bawah ke
         kolom “Create URL” produk yang cocok pada dashboard Pivot. Semua produk memakai Callback
         Secret yang sama untuk verifikasi header <code>X-API-Key</code>.
-      </span>
+      </Text>
       <div className="stack" style={{ gap: '0.4rem' }}>
         {PIVOT_CALLBACK_PRODUCTS.map(({ label, product, path }) => {
           const url = `${origin}${path}`
           return (
             <div key={product} className="stack" style={{ gap: '0.25rem' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>
-                {label} <span className="muted" style={{ fontWeight: 400 }}>· {product}</span>
-              </span>
+              <Text as="span" size={200} weight="semibold">{label} <Text as="span" className="muted" weight="regular">· {product}</Text></Text>
               <div className="row" style={{ gap: '0.5rem', alignItems: 'stretch' }}>
                 <TextField
                   value={url}
                   readOnly
                   onFocus={(e) => e.target.select()}
-                  style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.82rem' }}
+                  style={{ flex: 1, font: `1em ${monospaceFont}` }}
                 />
                 <Button type="button" variant="subtle" onClick={() => onCopy(url)} style={{ whiteSpace: 'nowrap' }}>
                   Salin
@@ -840,12 +841,10 @@ function PivotCallbackUrls({ onCopy }: { onCopy: (url: string) => void }) {
 function FormRow({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <div className="stack" style={{ gap: '0.35rem' }}>
-      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{label}</span>
+      <Text as="span" size={300} weight="semibold">{label}</Text>
       {children}
       {hint && (
-        <span className="muted" style={{ fontSize: '0.82rem' }}>
-          {hint}
-        </span>
+        <Text as="span" className="muted" size={200}>{hint}</Text>
       )}
     </div>
   )

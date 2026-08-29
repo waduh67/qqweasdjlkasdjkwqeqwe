@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
+import { typographyStyles } from '@fluentui/react-components'
 import { Button } from '@/components/atoms'
 import { IconClose } from '@/components/atoms/icons'
 
@@ -23,7 +24,7 @@ export function Drawer({
       <div className="scrim" onClick={onClose} />
       <aside className="drawer" role="dialog" aria-modal="true">
         <div className="drawer-head">
-          <h3 style={{ margin: 0 }}>{title}</h3>
+          <h3 style={{ ...typographyStyles.subtitle1, margin: 0 }}>{title}</h3>
           <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label="Tutup" />
         </div>
         <div className="drawer-body">{children}</div>

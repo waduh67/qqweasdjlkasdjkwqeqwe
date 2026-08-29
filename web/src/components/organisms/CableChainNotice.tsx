@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MessageBar, MessageBarBody } from '@fluentui/react-components'
+import { MessageBar, MessageBarBody, typographyStyles } from '@fluentui/react-components'
 import { api } from '@/api/client'
 import type { CableChainView } from '@/api/network'
 import { useCan } from '@/auth/useCan'
@@ -68,7 +68,7 @@ export function CableChainNotice({
 
   if (chain.verdict === 'CASCADE') {
     return (
-      <div className="row wrap" style={{ gap: '0.4rem', fontSize: '0.82rem' }}>
+      <div className="row wrap" style={{ gap: '0.4rem', ...typographyStyles.caption1 }}>
         <Badge tone="good">Splitter bertingkat</Badge>
         <span className="muted">{chain.evidence[0]}</span>
       </div>
@@ -81,12 +81,12 @@ export function CableChainNotice({
         <div className="stack" style={{ gap: '0.35rem' }}>
           <strong>{chain.headline}</strong>
           {chain.evidence.map((e) => (
-            <span key={e} style={{ fontSize: '0.82rem' }}>
+            <span key={e} style={{ ...typographyStyles.caption1 }}>
               {e}
             </span>
           ))}
           {chain.suggestion && (
-            <span className="muted" style={{ fontSize: '0.82rem' }}>
+            <span className="muted" style={{ ...typographyStyles.caption1 }}>
               {chain.suggestion}
             </span>
           )}

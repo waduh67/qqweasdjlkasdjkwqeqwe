@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { TabList, Tab, type SelectTabData } from '@fluentui/react-components'
+import { TabList, Tab, Text, type SelectTabData } from '@fluentui/react-components'
 
 /**
  * Strip tab untuk memecah panel padat (mis. detail work order) jadi bagian yang
@@ -26,7 +26,7 @@ export function Tabs<T extends string>({
       {tabs.map((t) => (
         <Tab key={t.key} value={t.key}>
           {t.label}
-          {t.badge != null && <span className="tab-badge">{t.badge}</span>}
+          {t.badge != null && <Text as="span" className="tab-badge" size={100} weight="semibold">{t.badge}</Text>}
         </Tab>
       ))}
     </TabList>

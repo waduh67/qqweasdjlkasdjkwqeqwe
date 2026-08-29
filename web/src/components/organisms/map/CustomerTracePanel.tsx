@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { MessageBar, MessageBarBody } from '@fluentui/react-components'
+import { MessageBar, MessageBarBody, Text } from '@fluentui/react-components'
 import { ApiError } from '@/api/client'
 import { resetAccessLogin } from '@/api/bng'
 import { rebootCpe, runCpePing } from '@/api/cpe'
 import { onuStatusLabel, type CustomerTrace, type TraceHop } from '@/api/network'
-import { StatusBadge } from '@/components/atoms'
+import { Button, StatusBadge } from '@/components/atoms'
 import {
   IconChevronDown,
   IconCustomers,
@@ -227,9 +227,9 @@ export function CustomerTracePanel({
           <Ess label="Redaman Rx">
             {rxLive != null ? (
               <>
-                <span className="tnum" style={{ color: VERDICT_COLOR[rxTone], fontWeight: 600 }}>
+                <Text as="span" className="tnum" weight="semibold" style={{ color: VERDICT_COLOR[rxTone] }}>
                   {rxLive.toFixed(1)} dBm
-                </span>
+                </Text>
                 <span className="muted">
                   {' '}
                   {RX_WORD[rxTone]}
@@ -276,8 +276,8 @@ export function CustomerTracePanel({
 
         {trace.hops.length > 0 && (
           <div className="stack" style={{ gap: '0.5rem' }}>
-            <button
-              type="button"
+            <Button
+              variant="subtle"
               className="blade-disclosure"
               onClick={() => setHopsOpen((v) => !v)}
               aria-expanded={hopsOpen}
@@ -286,13 +286,13 @@ export function CustomerTracePanel({
                 <IconChevronDown size={14} />
               </span>
               Telusur jalur ({trace.hops.length} hop)
-            </button>
+            </Button>
             {!hopsOpen && (
-              <p className="muted" style={{ margin: 0, fontSize: '0.78rem', lineHeight: 1.6 }}>
+              <Text as="p" className="muted" size={100} block style={{ margin: 0 }}>
                 {/* Hop pelanggan tak ber-kode (cuma "Rumah pelanggan") — pakai namanya
                     agar remah-remah jalur tak diawali panah menggantung. */}
                 {trace.hops.map((h) => h.code || h.name).join(' → ')}
-              </p>
+              </Text>
             )}
             {hopsOpen && (
               <ol className="timeline">
@@ -307,16 +307,16 @@ export function CustomerTracePanel({
                         style={hopColor ? { background: hopColor } : undefined}
                       />
                       <div className="stack" style={{ gap: '0.1rem' }}>
-                        <strong style={{ fontSize: '0.82rem', color: hopColor }}>
+                        <Text as="strong" size={200} weight="semibold" style={{ color: hopColor }}>
                           {[HOP_LABEL[hop.kind] ?? hop.kind, hop.code].filter(Boolean).join(' ')}
-                        </strong>
-                        <span className="muted" style={{ fontSize: '0.78rem' }}>
+                        </Text>
+                        <Text as="span" className="muted" size={100}>
                           {hop.name}
-                        </span>
+                        </Text>
                         {hop.detail && (
-                          <span className="muted tnum" style={{ fontSize: '0.76rem' }}>
+                          <Text as="span" className="muted tnum" size={100}>
                             {hop.detail}
-                          </span>
+                          </Text>
                         )}
                       </div>
                     </li>

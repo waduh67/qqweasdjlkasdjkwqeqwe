@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { Text } from '@fluentui/react-components'
 import { Button, TextField, TextareaField } from '@/components/atoms'
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog'
 import { Modal } from '@/components/molecules/Modal'
@@ -99,7 +100,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
           }
         >
           <div className="stack" style={{ gap: '0.6rem' }}>
-            {pending.opts.message && <p style={{ margin: 0 }}>{pending.opts.message}</p>}
+            {pending.opts.message && <Text as="p" block size={300} style={{ margin: 0 }}>{pending.opts.message}</Text>}
             {pending.opts.multiline ? (
               <TextareaField
                 label={pending.opts.label as string | undefined}

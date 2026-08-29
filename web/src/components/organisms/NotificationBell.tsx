@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ComponentType } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Popover, PopoverSurface, PopoverTrigger } from '@fluentui/react-components'
+import { Popover, PopoverSurface, PopoverTrigger, Text } from '@fluentui/react-components'
 import {
   getInboxFeed,
   getInboxUnreadCount,
@@ -126,7 +126,7 @@ export function NotificationBell() {
       <PopoverSurface>
         <div className="inbox-panel">
           <div className="spread" style={{ paddingBottom: '0.5rem' }}>
-            <strong style={{ fontSize: '0.9rem' }}>Pemberitahuan</strong>
+            <Text as="strong" size={300} weight="semibold">Pemberitahuan</Text>
             {unread > 0 && (
               <Button variant="subtle" size="small" onClick={readAll}>
                 Tandai semua terbaca
@@ -147,8 +147,9 @@ export function NotificationBell() {
               const Icon = KIND_ICON[n.kind]
               return (
                 <li key={n.id}>
-                  <button
+                  <Button
                     type="button"
+                    variant="subtle"
                     className={n.readAt ? 'inbox-item' : 'inbox-item unread'}
                     onClick={() => openItem(n)}
                   >
@@ -158,12 +159,12 @@ export function NotificationBell() {
                     <span className="inbox-item-text">
                       <span className="inbox-item-title">{n.title}</span>
                       <span className="muted">{n.body}</span>
-                      <span className="muted" style={{ fontSize: '0.72rem' }}>
+                      <Text as="span" className="muted" size={100}>
                         {timeAgo(n.createdAt)}
-                      </span>
+                      </Text>
                     </span>
                     {!n.readAt && <span className="inbox-item-dot" aria-label="Belum dibaca" />}
-                  </button>
+                  </Button>
                 </li>
               )
             })}

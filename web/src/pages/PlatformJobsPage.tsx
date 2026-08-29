@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { listJobHealth, type JobHealthView } from '../api/ops'
 import { Badge, EmptyState, SelectField, Toolbar } from '@/components/atoms'
 import { IconMonitor } from '@/components/atoms/icons'
@@ -60,8 +61,8 @@ export function PlatformJobsPage() {
       sortValue: (j) => j.name,
       cell: (j) => (
         <div className="stack" style={{ gap: '0.15rem' }}>
-          <strong>{j.name}</strong>
-          <span className="muted" style={{ fontSize: '0.8rem' }}>modul {j.module}</span>
+          <Text as="strong" weight="semibold" >{j.name}</Text>
+          <Text as="span" className="muted" size={300}>modul {j.module}</Text>
         </div>
       ),
     },
@@ -85,7 +86,7 @@ export function PlatformJobsPage() {
       key: 'interval',
       header: 'Jadwal',
       sortValue: (j) => j.intervalSeconds ?? Number.MAX_SAFE_INTEGER,
-      cell: (j) => (j.intervalSeconds == null ? <span className="muted">tak tetap</span> : `tiap ${humanize(j.intervalSeconds)}`),
+      cell: (j) => (j.intervalSeconds == null ? <Text as="span" className="muted">tak tetap</Text> : `tiap ${humanize(j.intervalSeconds)}`),
     },
     {
       key: 'lastSuccess',
@@ -93,11 +94,10 @@ export function PlatformJobsPage() {
       sortValue: (j) => j.sinceSuccessSeconds,
       cell: (j) => (
         <div className="stack" style={{ gap: '0.15rem' }}>
-          <span>{j.lastSuccessAt == null ? 'belum pernah' : `${humanize(j.sinceSuccessSeconds)} lalu`}</span>
+          <Text as="span" >{j.lastSuccessAt == null ? 'belum pernah' : `${humanize(j.sinceSuccessSeconds)} lalu`}</Text>
           {j.stallAfterSeconds != null && (
-            <span className="muted" style={{ fontSize: '0.8rem' }}>
-              ambang macet {humanize(j.stallAfterSeconds)}
-            </span>
+            <Text as="span" className="muted" size={300}>
+              ambang macet {humanize(j.stallAfterSeconds)}</Text>
           )}
         </div>
       ),
@@ -109,9 +109,9 @@ export function PlatformJobsPage() {
       sortValue: (j) => j.runs,
       cell: (j) => (
         <div className="stack" style={{ gap: '0.15rem' }}>
-          <span>{j.runs.toLocaleString('id-ID')}</span>
+          <Text as="span" >{j.runs.toLocaleString('id-ID')}</Text>
           {j.failures > 0 && (
-            <span className="muted" style={{ fontSize: '0.8rem' }}>{j.failures.toLocaleString('id-ID')} gagal</span>
+            <Text as="span" className="muted" size={300}>{j.failures.toLocaleString('id-ID')} gagal</Text>
           )}
         </div>
       ),
@@ -121,7 +121,7 @@ export function PlatformJobsPage() {
       header: 'Durasi terakhir',
       align: 'right',
       sortValue: (j) => j.lastDurationSeconds ?? -1,
-      cell: (j) => (j.lastDurationSeconds == null ? <span className="muted">—</span> : formatDuration(j.lastDurationSeconds)),
+      cell: (j) => (j.lastDurationSeconds == null ? <Text as="span" className="muted">—</Text> : formatDuration(j.lastDurationSeconds)),
     },
     {
       key: 'error',
@@ -129,11 +129,9 @@ export function PlatformJobsPage() {
       sortValue: (j) => j.lastError ?? '',
       cell: (j) =>
         j.lastError == null ? (
-          <span className="muted">—</span>
+          <Text as="span" className="muted">—</Text>
         ) : (
-          <span title={j.lastError} style={{ fontSize: '0.8rem' }}>
-            {j.lastError.length > 70 ? `${j.lastError.slice(0, 70)}…` : j.lastError}
-          </span>
+          <Text as="span" title={j.lastError} size={300}>{j.lastError.length > 70 ? `${j.lastError.slice(0, 70)}…` : j.lastError}</Text>
         ),
     },
   ]

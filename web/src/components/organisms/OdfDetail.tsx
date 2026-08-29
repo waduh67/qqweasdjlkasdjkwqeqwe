@@ -1,3 +1,4 @@
+import { Text } from '@fluentui/react-components'
 import { useCallback, useEffect, useState } from 'react'
 import { api, ApiError } from '@/api/client'
 import type { AssetStatus, OdfView, SiteView } from '@/api/network'
@@ -324,10 +325,10 @@ export function OdfDetail({
                 </SelectField>
               </div>
             </div>
-            <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+            <Text as="p" size={200} className="muted" style={{ margin: 0 }}>
               Jumlah port tak bisa dikurangi di bawah port tertinggi yang sudah tersambung —
               server menolaknya agar sambungan yang ada tak jadi yatim.
-            </p>
+            </Text>
             <label>
               <span>Lokasi</span>
               <LocationPicker

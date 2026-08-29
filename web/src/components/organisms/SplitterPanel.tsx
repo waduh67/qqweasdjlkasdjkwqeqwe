@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
+import { typographyStyles } from '@fluentui/react-components'
 import { api, ApiError } from '@/api/client'
 import type { ClosureKind, ClosureSplitterView, SplitterView } from '@/api/network'
 import { SPLITTER_RATIOS } from '@/api/network'
@@ -163,9 +164,9 @@ export function SplitterPanel({
       </div>
 
       {splitters.length > 0 ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>{summarize(splitters)}</p>
+        <p className="muted" style={{ margin: 0, ...typographyStyles.caption1 }}>{summarize(splitters)}</p>
       ) : (
-        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        <p className="muted" style={{ margin: 0, ...typographyStyles.caption1 }}>
           Belum ada modul splitter di sini. Kabinet tanpa splitter itu sah — isinya cuma
           sambungan lewat (cross-connect); tambahkan modul bila kabinet ini memang memecah sinyal.
         </p>
@@ -175,9 +176,9 @@ export function SplitterPanel({
         <div key={s.id} className="splitter-module stack" style={{ gap: '0.45rem' }}>
           <div className="spread wrap" style={{ alignItems: 'center', gap: '0.4rem' }}>
             <div className="row wrap" style={{ alignItems: 'center', gap: '0.4rem' }}>
-              <strong style={{ fontSize: '0.85rem' }}>{s.code}</strong>
+              <strong style={{ ...typographyStyles.body1 }}>{s.code}</strong>
               <Badge>{s.ratio}</Badge>
-              <span className="muted tnum" style={{ fontSize: '0.75rem' }}>
+              <span className="muted tnum" style={{ ...typographyStyles.caption2 }}>
                 {s.usedLegs.length}/{s.legCount} kaki · −{s.insertionLossDb.toFixed(1)} dB
               </span>
               {/* Modul tanpa masukan tak menyalurkan apa-apa — pelanggan yang dicolok
@@ -203,7 +204,7 @@ export function SplitterPanel({
           </div>
 
           <LegGrid splitter={s} />
-          {s.note && <p className="muted" style={{ margin: 0, fontSize: '0.75rem' }}>{s.note}</p>}
+          {s.note && <p className="muted" style={{ margin: 0, ...typographyStyles.caption2 }}>{s.note}</p>}
 
           {editing === s.id && (
             <div className="core-editor stack" style={{ gap: '0.5rem' }}>
@@ -221,7 +222,7 @@ export function SplitterPanel({
               />
               {/* Menurunkan rasio ditolak server bila ada kaki terpakai di luar rasio
                   baru — disebutkan di sini supaya penolakannya tak terasa sewenang-wenang. */}
-              <p className="muted" style={{ margin: 0, fontSize: '0.72rem' }}>
+              <p className="muted" style={{ margin: 0, ...typographyStyles.caption2 }}>
                 Rasio hanya bisa diperkecil selama kaki yang terpakai masih muat di dalamnya.
               </p>
               <div className="row" style={{ gap: '0.4rem' }}>
@@ -239,7 +240,7 @@ export function SplitterPanel({
 
       {editing === 'new' && (
         <div className="core-editor stack" style={{ gap: '0.5rem' }}>
-          <strong style={{ fontSize: '0.82rem' }}>Modul baru</strong>
+          <strong style={{ ...typographyStyles.caption1 }}>Modul baru</strong>
           <SelectField label="Rasio" value={ratio} onChange={(_, d) => setRatio(d.value)}>
             {SPLITTER_RATIOS.map((r) => (
               <option key={r}>{r}</option>

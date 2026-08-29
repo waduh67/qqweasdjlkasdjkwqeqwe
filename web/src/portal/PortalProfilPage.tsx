@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Text } from '@fluentui/react-components'
 import { usePortalAuth } from './PortalAuthContext'
 import { usePortalData } from './PortalLayout'
 import { PortalApiError } from './portalClient'
@@ -22,16 +23,16 @@ export function PortalProfilPage() {
   return (
     <div className="stack" style={{ gap: '1rem' }}>
       <div className="stack" style={{ gap: '0.15rem' }}>
-        <h1 className="page-title" style={{ margin: 0 }}>Profil</h1>
-        <p className="page-sub" style={{ margin: 0 }}>Data akun dan paket yang kamu langgan.</p>
+        <Text as="h1" className="page-title" size={700} weight="semibold" style={{ margin: 0 }}>Profil</Text>
+        <Text as="p" className="page-sub" size={400} style={{ margin: 0 }}>Data akun dan paket yang kamu langgan.</Text>
       </div>
 
       <div className="card stack" style={{ gap: '0.6rem' }}>
-        <strong style={{ fontSize: '0.95rem' }}>Data pelanggan</strong>
+        <Text as="h2" size={400} weight="semibold">Data pelanggan</Text>
         <dl className="essentials wide">
           <Ess label="Nama">{profile.name}</Ess>
           <Ess label="Kode pelanggan">
-            <span className="tnum">{profile.code}</span>
+            <Text as="span" className="tnum">{profile.code}</Text>
           </Ess>
           <Ess label="Telepon">{profile.phone ?? '—'}</Ess>
           <Ess label="Status">
@@ -41,23 +42,21 @@ export function PortalProfilPage() {
       </div>
 
       <div className="card stack" style={{ gap: '0.6rem' }}>
-        <strong style={{ fontSize: '0.95rem' }}>Paket berlangganan</strong>
+        <Text as="h2" size={400} weight="semibold">Paket berlangganan</Text>
         {profile.subscription == null ? (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada langganan.</p>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada langganan.</Text>
         ) : (
           <div className="spread" style={{ alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             <div className="stack" style={{ gap: 2 }}>
-              <span style={{ fontWeight: 600 }}>{profile.subscription.packageName}</span>
-              <span className="muted" style={{ fontSize: '0.8rem' }}>
-                {profile.subscription.downMbps && profile.subscription.upMbps
-                  ? `${profile.subscription.downMbps}/${profile.subscription.upMbps} Mbps`
-                  : `${profile.subscription.bandwidthMbps} Mbps`}
-                {profile.subscription.fupEnabled ? ' · FUP' : ''}
-              </span>
+              <Text as="span" weight="semibold">{profile.subscription.packageName}</Text>
+              <Text as="span" className="muted" size={200}>{profile.subscription.downMbps && profile.subscription.upMbps
+                ? `${profile.subscription.downMbps}/${profile.subscription.upMbps} Mbps`
+                : `${profile.subscription.bandwidthMbps} Mbps`}
+              {profile.subscription.fupEnabled ? ' · FUP' : ''}</Text>
             </div>
             <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
               {profile.subscription.monthlyFee && (
-                <span className="tnum" style={{ fontWeight: 600 }}>{rupiah(profile.subscription.monthlyFee)}/bln</span>
+                <Text as="span" className="tnum" weight="semibold">{rupiah(profile.subscription.monthlyFee)}/bln</Text>
               )}
               <StatusBadge status={profile.subscription.status} />
             </div>
@@ -119,21 +118,21 @@ function RequestPlanChange({ subscription }: { subscription: PortalSubscription 
   if (receipt) {
     return (
       <div className="card stack" style={{ gap: '0.4rem' }}>
-        <strong style={{ fontSize: '0.95rem' }}>Ajuan ganti paket terkirim</strong>
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-          Nomor ajuan <strong className="tnum">{receipt.ticketCode}</strong>. Tim kami akan menghubungimu untuk
-          memastikan jadwal dan biayanya — perkembangannya bisa kamu ikuti di menu <strong>Bantuan</strong>.
-        </p>
+        <Text as="h2" size={400} weight="semibold">Ajuan ganti paket terkirim</Text>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
+          Nomor ajuan <Text as="strong" weight="semibold" className="tnum">{receipt.ticketCode}</Text>. Tim kami akan menghubungimu untuk
+          memastikan jadwal dan biayanya — perkembangannya bisa kamu ikuti di menu <Text as="strong" weight="semibold" >Bantuan</Text>.
+        </Text>
       </div>
     )
   }
 
   return (
     <form className="card stack" style={{ gap: '0.6rem' }} onSubmit={onSubmit}>
-      <strong style={{ fontSize: '0.95rem' }}>Ajukan ganti paket</strong>
-      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+      <Text as="h2" size={400} weight="semibold">Ajukan ganti paket</Text>
+      <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
         Paket tidak langsung berubah: ajuanmu ditinjau dulu oleh tim, termasuk biaya dan jadwalnya.
-      </p>
+      </Text>
       <SelectField label="Paket yang diinginkan" value={planId} onChange={(_, data) => setPlanId(data.value)} required>
         <option value="">— pilih paket —</option>
         {choices.map((p) => (
@@ -150,7 +149,7 @@ function RequestPlanChange({ subscription }: { subscription: PortalSubscription 
         maxLength={1000}
         placeholder="Mis. mulai bulan depan saja"
       />
-      {error && <p className="error" style={{ margin: 0, fontSize: '0.85rem' }}>{error}</p>}
+      {error && <Text as="p" className="error" size={300} style={{ margin: 0 }}>{error}</Text>}
       <Button variant="primary" type="submit" disabled={busy || !planId} style={{ alignSelf: 'flex-start' }}>
         {busy ? 'Mengirim…' : 'Kirim ajuan'}
       </Button>
@@ -185,11 +184,11 @@ function ChangePassword() {
 
   return (
     <form className="card stack" style={{ gap: '0.6rem' }} onSubmit={onSubmit}>
-      <strong style={{ fontSize: '0.95rem' }}>Ganti password</strong>
+      <Text as="h2" size={400} weight="semibold">Ganti password</Text>
       {done ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
           Password diganti — kamu akan diminta masuk ulang.
-        </p>
+        </Text>
       ) : (
         <>
           <TextField
@@ -209,7 +208,7 @@ function ChangePassword() {
             minLength={8}
             autoComplete="new-password"
           />
-          {error && <p className="error" style={{ margin: 0, fontSize: '0.85rem' }}>{error}</p>}
+          {error && <Text as="p" className="error" size={300} style={{ margin: 0 }}>{error}</Text>}
           <Button variant="primary" type="submit" disabled={busy} style={{ alignSelf: 'flex-start' }}>
             {busy ? 'Menyimpan…' : 'Simpan'}
           </Button>

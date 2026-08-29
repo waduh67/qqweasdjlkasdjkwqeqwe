@@ -1,3 +1,4 @@
+import { Text, typographyStyles } from '@fluentui/react-components'
 import { Button } from '@/components/atoms'
 import { IconClose } from '@/components/atoms/icons'
 
@@ -21,8 +22,8 @@ export function BladeHead({
     <header className="blade-head">
       <div className="spread">
         <div style={{ minWidth: 0 }}>
-          <h3 className="blade-title">{title}</h3>
-          {subtitle && <span className="blade-sub">{subtitle}</span>}
+          <h3 className="blade-title" style={typographyStyles.subtitle1}>{title}</h3>
+          {subtitle && <Text as="span" className="blade-sub" size={200}>{subtitle}</Text>}
         </div>
         <Button variant="subtle" icon={<IconClose size={18} />} onClick={onClose} aria-label={closeLabel} />
       </div>

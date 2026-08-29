@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text, typographyStyles } from '@fluentui/react-components'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import {
@@ -294,7 +295,7 @@ export function ImportCustomersPage() {
       {/* 1. Unggah berkas */}
       <div className="card stack" style={{ gap: '0.8rem' }}>
         <div className="spread" style={{ alignItems: 'center' }}>
-          <h3 style={{ margin: 0, fontSize: '0.95rem' }}>1. Unggah berkas CSV</h3>
+          <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>1. Unggah berkas CSV</Text>
           <Button variant="subtle" size="small" onClick={downloadTemplate}>
             <IconDownload size={14} /> Unduh template
           </Button>
@@ -318,16 +319,16 @@ export function ImportCustomersPage() {
             <IconUpload size={14} /> Pilih berkas…
           </label>
           {fileName && (
-            <span className="muted" style={{ fontSize: '0.85rem' }}>
+            <Text as="span" className="muted" size={300}>
               <code>{fileName}</code> — {rows.length} baris
-            </span>
+            </Text>
           )}
         </div>
-        <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
           Kolom dicocokkan lewat nama header (urutan bebas): {CUSTOMER_CSV_COLUMNS.join(', ')}. Hasil{' '}
           <strong>Ekspor CSV</strong> dari halaman Pelanggan bisa langsung diunggah kembali.
-        </p>
-        <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+        </Text>
+        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
           <code>connection_type</code>: <code>pppoe</code> / <code>hotspot</code> / <code>dhcp</code> /{' '}
           <code>static</code> (kosong = pppoe; tak dikenal = baris gagal). Untuk <code>dhcp</code>/
           <code>static</code>, isi <code>mikrotik_username</code> dengan <strong>MAC</strong> (mis.{' '}
@@ -337,63 +338,51 @@ export function ImportCustomersPage() {
           <code>installation_date</code>: <code>YYYY-MM-DD</code> (juga menerima <code>DD/MM/YYYY</code>).{' '}
           <code>next_billing</code>: tanggal tagih 1–28. <code>mikrotik_password</code> kosong = pertahankan
           yang lama.
-        </p>
+        </Text>
       </div>
 
       {/* 2. Pratinjau */}
       {rows.length > 0 && (
         <div className="card stack" style={{ gap: '0.6rem' }}>
           <div className="spread" style={{ alignItems: 'center' }}>
-            <h3 style={{ margin: 0, fontSize: '0.95rem' }}>
+            <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>
               2. Pratinjau{' '}
-              <span className="muted">
+              <Text as="span" className="muted" size={200}>
                 ({readyCount} siap{issueCount > 0 ? `, ${issueCount} bermasalah` : ''})
-              </span>
-            </h3>
+              </Text>
+            </Text>
           </div>
           <div style={{ maxHeight: 360, overflow: 'auto' }}>
-            <table className="table" style={{ fontSize: '0.85rem' }}>
-              <thead>
-                <tr>
-                  <th>Username / MAC</th>
-                  <th>Nama</th>
-                  <th>Paket</th>
-                  <th>Koneksi</th>
-                  <th>Framed-IP</th>
-                  <th>Tgl pasang</th>
-                  <th>Tagih</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r, i) => (
-                  <tr key={i}>
-                    <td>{r.mikrotikUsername ? <code>{r.mikrotikUsername}</code> : <span className="muted">—</span>}</td>
-                    <td>{r.name ?? <span className="muted">—</span>}</td>
-                    <td>{r.packageName ?? <span className="muted">—</span>}</td>
-                    <td>{r.connectionType ?? <span className="muted">pppoe</span>}</td>
-                    <td>{r.framedIp ? <code>{r.framedIp}</code> : <span className="muted">—</span>}</td>
-                    <td>{r.installationDate ?? <span className="muted">—</span>}</td>
-                    <td>{r.nextBillingDay ?? <span className="muted">—</span>}</td>
-                    <td>
-                      {r.issue ? (
-                        <Badge tone={r.issue.kind === 'fail' ? 'critical' : 'neutral'}>
-                          {r.issue.kind === 'fail' ? 'gagal' : 'dilewati'} · {r.issue.reason}
-                        </Badge>
-                      ) : (
-                        <Badge tone="good">siap</Badge>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <Table className="table" style={typographyStyles.body1}><TableHeader><TableRow ><TableHeaderCell >Username / MAC</TableHeaderCell>
+            <TableHeaderCell >Nama</TableHeaderCell>
+            <TableHeaderCell >Paket</TableHeaderCell>
+            <TableHeaderCell >Koneksi</TableHeaderCell>
+            <TableHeaderCell >Framed-IP</TableHeaderCell>
+            <TableHeaderCell >Tgl pasang</TableHeaderCell>
+            <TableHeaderCell >Tagih</TableHeaderCell>
+            <TableHeaderCell >Status</TableHeaderCell></TableRow></TableHeader>
+            <TableBody>{rows.map((r, i) => (
+              <TableRow key={i}><TableCell >{r.mikrotikUsername ? <code>{r.mikrotikUsername}</code> : <span className="muted">—</span>}</TableCell>
+              <TableCell >{r.name ?? <span className="muted">—</span>}</TableCell>
+              <TableCell >{r.packageName ?? <span className="muted">—</span>}</TableCell>
+              <TableCell >{r.connectionType ?? <span className="muted">pppoe</span>}</TableCell>
+              <TableCell >{r.framedIp ? <code>{r.framedIp}</code> : <span className="muted">—</span>}</TableCell>
+              <TableCell >{r.installationDate ?? <span className="muted">—</span>}</TableCell>
+              <TableCell >{r.nextBillingDay ?? <span className="muted">—</span>}</TableCell>
+              <TableCell >{r.issue ? (
+                <Badge tone={r.issue.kind === 'fail' ? 'critical' : 'neutral'}>
+                  {r.issue.kind === 'fail' ? 'gagal' : 'dilewati'} · {r.issue.reason}
+                </Badge>
+              ) : (
+                <Badge tone="good">siap</Badge>
+              )}</TableCell></TableRow>
+            ))}</TableBody></Table>
           </div>
           {issueCount > 0 && (
-            <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+            <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
               {issueCount} baris diprediksi bermasalah (username kosong → dilewati; tipe tak dikenal atau
               Static tanpa <code>framed_ip</code> → gagal). Baris lain tetap dikirim; server memberi rekap final.
-            </p>
+            </Text>
           )}
         </div>
       )}
@@ -404,9 +393,9 @@ export function ImportCustomersPage() {
           <Button variant="primary" onClick={() => void submit()} disabled={saving || readyCount === 0}>
             <IconInbox size={15} /> {saving ? 'Mengimpor…' : `Impor ${readyCount} baris`}
           </Button>
-          <span className="muted" style={{ fontSize: '0.8rem', alignSelf: 'center' }}>
+          <Text as="span" className="muted" size={200} style={{ alignSelf: 'center' }}>
             Baris baru langsung aktif &amp; ditulis ke RADIUS. Aktivasi memprorata tagihan dari tanggal pasang.
-          </span>
+          </Text>
         </div>
       )}
 
@@ -427,37 +416,25 @@ function ResultCard({ result, onDismiss }: { result: ImportCustomersResult; onDi
   return (
     <div className="card stack" style={{ gap: '0.6rem', borderLeft: '3px solid var(--good)' }}>
       <div className="spread" style={{ alignItems: 'center' }}>
-        <h3 style={{ margin: 0, fontSize: '0.95rem' }}>
+        <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>
           Hasil impor — <Badge tone="good">{result.created} dibuat</Badge>{' '}
           <Badge tone="accent">{result.updated} diperbarui</Badge>{' '}
           <Badge tone="neutral">{result.skipped} dilewati</Badge>{' '}
           {result.failed > 0 && <Badge tone="critical">{result.failed} gagal</Badge>}
-        </h3>
+        </Text>
         <Button variant="subtle" onClick={onDismiss}>
           Tutup
         </Button>
       </div>
       <div style={{ maxHeight: 360, overflow: 'auto' }}>
-        <table className="table" style={{ fontSize: '0.85rem' }}>
-          <thead>
-            <tr>
-              <th>Username</th>
-              <th>Status</th>
-              <th>Keterangan</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.rows.map((r, i) => (
-              <tr key={i}>
-                <td>{r.username ? <code>{r.username}</code> : <span className="muted">—</span>}</td>
-                <td>
-                  <Badge tone={STATUS_TONE[r.status]}>{r.status}</Badge>
-                </td>
-                <td>{r.message ?? <span className="muted">—</span>}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Table className="table" style={typographyStyles.body1}><TableHeader><TableRow ><TableHeaderCell >Username</TableHeaderCell>
+        <TableHeaderCell >Status</TableHeaderCell>
+        <TableHeaderCell >Keterangan</TableHeaderCell></TableRow></TableHeader>
+        <TableBody>{result.rows.map((r, i) => (
+          <TableRow key={i}><TableCell >{r.username ? <code>{r.username}</code> : <span className="muted">—</span>}</TableCell>
+          <TableCell ><Badge tone={STATUS_TONE[r.status]}>{r.status}</Badge></TableCell>
+          <TableCell >{r.message ?? <span className="muted">—</span>}</TableCell></TableRow>
+        ))}</TableBody></Table>
       </div>
     </div>
   )

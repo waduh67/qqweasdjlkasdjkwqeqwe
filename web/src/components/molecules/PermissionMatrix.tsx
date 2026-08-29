@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Checkbox } from '@fluentui/react-components'
+import { Checkbox, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text, typographyStyles } from '@fluentui/react-components'
 import type { PermissionCatalog } from '@/api/types'
 
 interface Props {
@@ -52,44 +52,32 @@ export function PermissionMatrix({ catalog, selected, onChange, disabled }: Prop
                 onChange={(_, data) => toggle(allIds, data.checked === true)}
                 aria-label={`Pilih semua izin ${module.name}`}
               />
-              <h4>{module.name}</h4>
+              <h4 style={typographyStyles.subtitle2}>{module.name}</h4>
             </div>
 
-            <table className="matrix">
-              <thead>
-                <tr>
-                  <th style={{ width: '30%' }}>Resource</th>
-                  {module.actions.map((action) => (
-                    <th key={action}>{action}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {module.resources.map((resource) => (
-                  <tr key={resource}>
-                    <td className="resource">{resource}</td>
-                    {module.actions.map((action) => {
-                      const permission = module.byKey.get(`${resource}.${action}`)
-                      return (
-                        <td key={action}>
-                          {permission ? (
-                            <Checkbox
-                              checked={selected.has(permission.id)}
-                              disabled={disabled}
-                              onChange={(_, data) => toggle([permission.id], data.checked === true)}
-                              title={permission.description ?? permission.code}
-                              aria-label={permission.code}
-                            />
-                          ) : (
-                            <span className="muted">–</span>
-                          )}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <Table className="matrix"><TableHeader><TableRow ><TableHeaderCell style={{ width: '30%' }}>Resource</TableHeaderCell>
+            {module.actions.map((action) => (
+              <TableHeaderCell key={action}>{action}</TableHeaderCell>
+            ))}</TableRow></TableHeader>
+            <TableBody>{module.resources.map((resource) => (
+              <TableRow key={resource}><TableCell className="resource">{resource}</TableCell>
+              {module.actions.map((action) => {
+                const permission = module.byKey.get(`${resource}.${action}`)
+                return (
+                  <TableCell key={action}>{permission ? (
+                    <Checkbox
+                      checked={selected.has(permission.id)}
+                      disabled={disabled}
+                      onChange={(_, data) => toggle([permission.id], data.checked === true)}
+                      title={permission.description ?? permission.code}
+                      aria-label={permission.code}
+                    />
+                  ) : (
+                    <Text as="span" className="muted" size={200}>–</Text>
+                  )}</TableCell>
+                )
+              })}</TableRow>
+            ))}</TableBody></Table>
           </section>
         )
       })}

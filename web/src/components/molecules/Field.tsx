@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Text, typographyStyles } from '@fluentui/react-components'
 
 /**
  * Seksi form berjudul di dalam [Blade] — memisah kelompok field yang panjang
@@ -16,8 +17,8 @@ export function FormSection({
 }) {
   return (
     <section className="form-section">
-      {title && <h3 className="form-section-title">{title}</h3>}
-      {description && <p className="form-section-desc">{description}</p>}
+      {title && <h3 className="form-section-title" style={typographyStyles.subtitle1}>{title}</h3>}
+      {description && <Text as="p" className="form-section-desc" size={200}>{description}</Text>}
       <div className="stack" style={{ gap: '0.75rem' }}>
         {children}
       </div>

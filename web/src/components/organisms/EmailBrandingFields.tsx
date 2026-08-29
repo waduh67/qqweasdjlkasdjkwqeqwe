@@ -1,3 +1,4 @@
+import { Text } from '@fluentui/react-components'
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { api, ApiError } from '@/api/client'
 import {
@@ -61,15 +62,15 @@ export function EmailLogoField({
         <AuthedImage path={logoPath} version={version} alt="Logo email" />
       ) : (
         <div style={{ ...logoBox, display: 'grid', placeItems: 'center' }} className="muted">
-          <span style={{ fontSize: '0.72rem' }}>tanpa logo</span>
+          <Text as="span" size={100}>tanpa logo</Text>
         </div>
       )}
       <div className="stack" style={{ gap: '0.4rem' }}>
-        <span className="muted" style={{ fontSize: '0.82rem', maxWidth: 380 }}>
+        <Text as="span" size={200} className="muted" style={{ maxWidth: 380 }}>
           {logoSet
             ? 'Logo tersimpan. Klien email yang memblokir gambar tetap membaca isi surat utuh — logo hanya hiasan.'
             : emptyHint}
-        </span>
+        </Text>
         {!disabled && (
           <div className="row" style={{ gap: '0.5rem' }}>
             <FilePickButton label={logoSet ? 'Ganti logo' : 'Pilih logo'} disabled={busy} onPick={onPick} />
@@ -162,11 +163,11 @@ export function EmailSubjectFields({
 }) {
   return (
     <div className="stack" style={{ gap: '0.7rem' }}>
-      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+      <Text as="p" size={200} className="muted" style={{ margin: 0 }}>
         Hanya baris SUBJEK yang disetel di sini — isi pesannya dirakit sistem sesuai peristiwa yang
         terjadi. Kosongkan sebuah baris untuk memakai subjek bawaan (tampil sebagai teks samar).
         Tulis <code>{'{isp}'}</code> di mana pun untuk menyisipkan nama ISP penerima.
-      </p>
+      </Text>
       {rows.map((row) => (
         <TextField
           key={row.trigger}
@@ -250,13 +251,13 @@ export function EmailPreviewPanel({
   return (
     <div className="stack" style={{ gap: '0.9rem' }}>
       {failed ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <Text as="p" size={200} className="muted" style={{ margin: 0 }}>
           Pratinjau gagal dimuat.
-        </p>
+        </Text>
       ) : html === null ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <Text as="p" size={200} className="muted" style={{ margin: 0 }}>
           Memuat pratinjau…
-        </p>
+        </Text>
       ) : (
         <iframe
           title="Pratinjau email"
@@ -274,10 +275,10 @@ export function EmailPreviewPanel({
 
       <div className="hr" />
 
-      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+      <Text as="p" size={200} className="muted" style={{ margin: 0 }}>
         Pratinjau &amp; email uji memakai setelan yang <strong>sudah tersimpan</strong>. Simpan dulu
         bila Anda baru saja mengubah sesuatu.
-      </p>
+      </Text>
       <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <TextField
           label="Kirim email uji ke"
@@ -301,15 +302,14 @@ export function EmailPreviewPanel({
             alignItems: 'flex-start',
             padding: '0.6rem 0.75rem',
             borderRadius: 'var(--radius-sm)',
-            fontSize: '0.85rem',
             background: `color-mix(in srgb, var(${result.delivered ? '--good' : '--critical'}) 12%, var(--surface))`,
             border: `1px solid color-mix(in srgb, var(${result.delivered ? '--good' : '--critical'}) 32%, transparent)`,
           }}
         >
           <IconAlert size={16} />
-          <span>
+          <Text as="span" size={200}>
             {result.delivered ? 'Terkirim.' : 'Gagal.'} {result.detail}
-          </span>
+          </Text>
         </div>
       )}
     </div>
@@ -347,11 +347,10 @@ function Callout({ children }: { children: ReactNode }) {
         borderRadius: 'var(--radius-sm)',
         background: 'color-mix(in srgb, var(--warning) 12%, var(--surface))',
         border: '1px solid color-mix(in srgb, var(--warning) 32%, transparent)',
-        fontSize: '0.85rem',
       }}
     >
       <IconAlert size={16} />
-      <span>{children}</span>
+      <Text as="span" size={200}>{children}</Text>
     </div>
   )
 }
@@ -429,8 +428,8 @@ function AuthedImage({ path, version, alt }: { path: string; version: number; al
 
   if (failed) {
     return (
-      <div style={{ ...logoBox, display: 'grid', placeItems: 'center', fontSize: '0.7rem' }} className="muted">
-        gagal
+      <div style={{ ...logoBox, display: 'grid', placeItems: 'center' }} className="muted">
+        <Text as="span" size={100}>gagal</Text>
       </div>
     )
   }

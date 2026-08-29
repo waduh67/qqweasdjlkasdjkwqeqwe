@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Text } from '@fluentui/react-components'
 import { PortalApiError } from './portalClient'
 import {
   closePortalTicket,
@@ -98,53 +99,46 @@ export function BantuanTab() {
   return (
     <div className="stack" style={{ gap: '1rem' }}>
       <div className="card stack" style={{ gap: '0.6rem' }}>
-        <strong style={{ fontSize: '0.95rem' }}>Ada gangguan?</strong>
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <Text as="h2" size={400} weight="semibold">Ada gangguan?</Text>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
           Laporkan di sini, dan pantau penanganannya langsung dari halaman ini — tanpa perlu
           menelepon berulang kali.
-        </p>
+        </Text>
         <Button variant="primary" style={{ alignSelf: 'flex-start' }} onClick={() => setComposing(true)}>
           Buat laporan
         </Button>
       </div>
 
       <div className="card stack" style={{ gap: '0.6rem' }}>
-        <strong style={{ fontSize: '0.95rem' }}>Laporan saya</strong>
+        <Text as="h2" size={400} weight="semibold">Laporan saya</Text>
         {tickets === null ? (
-          <span className="muted" style={{ fontSize: '0.85rem' }}>Memuat…</span>
+          <Text as="span" className="muted" size={300}>Memuat…</Text>
         ) : tickets.length === 0 ? (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada laporan.</p>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada laporan.</Text>
         ) : (
           tickets.map((t) => (
-            <button
+            <Button
               key={t.id}
               type="button"
+              variant="subtle"
               className="spread"
               onClick={() => setOpenId(t.id)}
               style={{
-                background: 'none',
-                border: 'none',
                 borderTop: '1px solid var(--border)',
                 padding: '0.6rem 0 0',
                 textAlign: 'left',
-                cursor: 'pointer',
                 alignItems: 'center',
                 gap: '0.5rem',
                 flexWrap: 'wrap',
-                color: 'inherit',
               }}
             >
               <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-                <span style={{ fontWeight: 600 }}>{t.subject}</span>
-                <span className="muted" style={{ fontSize: '0.8rem' }}>
-                  {CATEGORY_LABEL[t.category] ?? t.category} · {fmtWhen(t.lastActivityAt)}
-                  {t.workOrderCode ? ' · teknisi dijadwalkan' : ''}
-                </span>
+                <Text as="span" weight="semibold">{t.subject}</Text>
+                <Text as="span" className="muted" size={200}>{CATEGORY_LABEL[t.category] ?? t.category} · {fmtWhen(t.lastActivityAt)}
+                {t.workOrderCode ? ' · teknisi dijadwalkan' : ''}</Text>
               </div>
-              <span className="badge" style={{ color: STATUS_TONE[t.status] }}>
-                {STATUS_LABEL[t.status] ?? t.status}
-              </span>
-            </button>
+              <Text as="span" className="badge" style={{ color: STATUS_TONE[t.status] }}>{STATUS_LABEL[t.status] ?? t.status}</Text>
+            </Button>
           ))
         )}
       </div>
@@ -181,7 +175,7 @@ function NewTicketForm({
 
   return (
     <form className="card stack" style={{ gap: '0.6rem' }} onSubmit={onSubmit}>
-      <strong style={{ fontSize: '0.95rem' }}>Laporan baru</strong>
+      <Text as="h2" size={400} weight="semibold">Laporan baru</Text>
       <SelectField label="Jenis gangguan" value={category} onChange={(_, data) => setCategory(data.value)}>
         {Object.entries(REPORTABLE_CATEGORY).map(([value, label]) => (
           <option key={value} value={value}>{label}</option>
@@ -204,7 +198,7 @@ function NewTicketForm({
         required
         placeholder="Sejak kapan, lampu modem warna apa, sudah dicoba restart atau belum…"
       />
-      {error && <p className="error" style={{ margin: 0, fontSize: '0.85rem' }}>{error}</p>}
+      {error && <Text as="p" className="error" size={300} style={{ margin: 0 }}>{error}</Text>}
       <div className="row" style={{ gap: '0.5rem' }}>
         <Button variant="primary" type="submit" disabled={busy}>
           {busy ? 'Mengirim…' : 'Kirim laporan'}
@@ -250,7 +244,7 @@ function TicketThread({ ticketId, onBack }: { ticketId: string; onBack: () => vo
   if (!detail) {
     return (
       <div className="card" style={{ display: 'grid', placeItems: 'center', minHeight: 120 }}>
-        <span className="muted">Memuat…</span>
+        <Text as="span" className="muted" size={300}>Memuat…</Text>
       </div>
     )
   }
@@ -267,26 +261,22 @@ function TicketThread({ ticketId, onBack }: { ticketId: string; onBack: () => vo
       <div className="card stack" style={{ gap: '0.6rem' }}>
         <div className="spread" style={{ alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
           <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-            <strong style={{ fontSize: '0.95rem' }}>{t.subject}</strong>
-            <span className="muted tnum" style={{ fontSize: '0.78rem' }}>
-              {t.code} · dilaporkan {fmtWhen(t.openedAt)}
-            </span>
+            <Text as="h2" size={400} weight="semibold">{t.subject}</Text>
+            <Text as="span" className="muted tnum" size={200}>{t.code} · dilaporkan {fmtWhen(t.openedAt)}</Text>
           </div>
-          <span className="badge" style={{ color: STATUS_TONE[t.status] }}>
-            {STATUS_LABEL[t.status] ?? t.status}
-          </span>
+          <Text as="span" className="badge" style={{ color: STATUS_TONE[t.status] }}>{STATUS_LABEL[t.status] ?? t.status}</Text>
         </div>
 
         {t.workOrderCode && (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
             Teknisi sudah dijadwalkan untuk keluhan ini (nomor tugas {t.workOrderCode}).
-          </p>
+          </Text>
         )}
         {t.status === 'RESOLVED' && (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
             Tim menyatakan gangguan sudah beres. Kalau masih bermasalah, cukup balas di bawah —
             laporan ini terbuka lagi otomatis.
-          </p>
+          </Text>
         )}
 
         <div className="stack" style={{ gap: '0.55rem' }}>
@@ -306,7 +296,7 @@ function TicketThread({ ticketId, onBack }: { ticketId: string; onBack: () => vo
             value={body}
             onChange={(_, data) => setBody(data.value)}
           />
-          {error && <p className="error" style={{ margin: 0, fontSize: '0.85rem' }}>{error}</p>}
+          {error && <Text as="p" className="error" size={300} style={{ margin: 0 }}>{error}</Text>}
           <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
             <Button
               variant="primary"
@@ -321,9 +311,9 @@ function TicketThread({ ticketId, onBack }: { ticketId: string; onBack: () => vo
           </div>
         </div>
       ) : (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
           Laporan ini sudah ditutup. Kalau gangguannya muncul lagi, buat laporan baru.
-        </p>
+        </Text>
       )}
     </div>
   )
@@ -343,9 +333,9 @@ function Bubble({
 }) {
   if (author === 'SYSTEM') {
     return (
-      <p className="muted" style={{ margin: 0, fontSize: '0.78rem', textAlign: 'center' }}>
+      <Text as="p" className="muted" size={200} style={{ margin: 0, textAlign: 'center' }}>
         {body} · {fmtWhen(at)}
-      </p>
+      </Text>
     )
   }
   const mine = author === 'CUSTOMER'
@@ -361,8 +351,8 @@ function Bubble({
         background: mine ? 'var(--accent-soft)' : 'var(--surface-2)',
       }}
     >
-      <span className="muted" style={{ fontSize: '0.74rem' }}>{authorName} · {fmtWhen(at)}</span>
-      <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{body}</span>
+      <Text as="span" className="muted" size={100}>{authorName} · {fmtWhen(at)}</Text>
+      <Text as="span" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{body}</Text>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { Pencil, RefreshCw, Trash2 } from 'lucide-react'
 import { ApiError } from '../api/client'
 import {
@@ -200,9 +201,7 @@ export function VpnServersPage() {
           </span>
           {/* Protokol saja tak berarti apa-apa bagi operator; yang dia perlu tahu adalah
               perangkat mana yang bisa masuk lewat hub ini. */}
-          <span className="muted" style={{ fontSize: '0.8rem' }}>
-            {s.protocol === 'TCP' ? 'TCP · RouterOS v6 & v7' : 'UDP · RouterOS v7 saja'}
-          </span>
+          <Text as="span" className="muted" size={200}>{s.protocol === 'TCP' ? 'TCP · RouterOS v6 & v7' : 'UDP · RouterOS v7 saja'}</Text>
         </div>
       ),
     },
@@ -213,7 +212,7 @@ export function VpnServersPage() {
       cell: (s) => (
         <div className="stack" style={{ gap: '0.15rem' }}>
           <span>{s.tunnelCidr}</span>
-          <span className="muted" style={{ fontSize: '0.8rem' }}>server {s.serverAddress}</span>
+          <Text as="span" className="muted" size={200}>server {s.serverAddress}</Text>
         </div>
       ),
     },
@@ -336,20 +335,18 @@ function ServerForm({
 
       {/* Pilihan protokol tak bisa dibalik tanpa mengganggu perangkat: yang sudah men-dial harus
           menempel ulang confignya. Sebutkan konsekuensinya di tempat pilihannya diambil. */}
-      <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-        {draft.protocol === 'TCP' ? (
-          <>
-            Perangkat <strong>RouterOS v6 maupun v7</strong> bisa masuk. Buka port{' '}
-            <code>{draft.port || '1194'}/tcp</code> di firewall/NSG VPS.
-          </>
-        ) : (
-          <>
-            Hanya <strong>RouterOS v7</strong> yang bisa masuk — klien OpenVPN v6 tak mengenal UDP,
-            dan perangkat lama (hAP lite, RB941) tak bisa di-upgrade ke v7. Pilih UDP hanya bila
-            seluruh armada dipastikan v7.
-          </>
-        )}
-      </p>
+      <Text as="p" className="muted" size={300} style={{ margin: 0 }}>{draft.protocol === 'TCP' ? (
+        <>
+          Perangkat <strong>RouterOS v6 maupun v7</strong> bisa masuk. Buka port{' '}
+          <code>{draft.port || '1194'}/tcp</code> di firewall/NSG VPS.
+        </>
+      ) : (
+        <>
+          Hanya <strong>RouterOS v7</strong> yang bisa masuk — klien OpenVPN v6 tak mengenal UDP,
+          dan perangkat lama (hAP lite, RB941) tak bisa di-upgrade ke v7. Pilih UDP hanya bila
+          seluruh armada dipastikan v7.
+        </>
+      )}</Text>
 
       {draft.id === null ? (
         <TextField
@@ -359,15 +356,15 @@ function ServerForm({
           placeholder="10.8.0.0/24"
         />
       ) : (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
           Subnet overlay <code>{draft.tunnelCidr}</code> tetap setelah hub dibuat (IP akun sudah teralokasi darinya).
-        </p>
+        </Text>
       )}
 
-      <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+      <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
         Aplikasi menerbitkan CA + sertifikat server otomatis saat hub dibuat — tak perlu easy-rsa manual. Perintah pasang
         satu-baris muncul sekali setelah simpan.
-      </p>
+      </Text>
       <div className="row">
         <Button variant="primary" onClick={onSave}>
           Simpan
@@ -395,18 +392,18 @@ function InstallSecretCard({ server, onDismiss }: { server: VpnServerView; onDis
         <IconAlert size={17} style={{ color: 'var(--warning-ink)' }} />
         <strong>Perintah pasang untuk hub “{server.name}”</strong>
       </div>
-      <p className="muted" style={{ margin: '0 0 0.5rem', fontSize: '0.83rem' }}>
+      <p className="muted" style={{ margin: '0 0 0.5rem',  }}>
         Jalankan sekali di VPS sebagai root. Installer memasang OpenVPN + PKI aplikasi dan menyambungkan callback
         verifikasi — tak ada langkah teknis manual setelahnya. Perintah &amp; token ini hanya ditampilkan sekali.
       </p>
       <code style={{ display: 'block', wordBreak: 'break-all', padding: '0.5rem', marginBottom: '0.5rem' }}>{command}</code>
       {needsBaseUrl && (
-        <p className="muted" style={{ margin: '0 0 0.5rem', fontSize: '0.8rem' }}>
+        <p className="muted" style={{ margin: '0 0 0.5rem',  }}>
           Ganti <code>&lt;URL-APLIKASI-ANDA&gt;</code> dengan URL publik aplikasi ini, atau set{' '}
           <code>FTTH_VPN_PUBLIC_BASE_URL</code> di server agar terisi otomatis.
         </p>
       )}
-      <p className="muted" style={{ margin: '0 0 0.6rem', fontSize: '0.8rem' }}>
+      <p className="muted" style={{ margin: '0 0 0.6rem',  }}>
         Token node: <code>{token}</code>
       </p>
       <div className="row">

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { Text } from '@fluentui/react-components'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
 import { useCan } from '@/auth/useCan'
@@ -150,8 +151,8 @@ export function Layout() {
             title={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
             aria-expanded={navOpen}
           />
-          <span className="badge accent">{user?.tenantSlug}</span>
-          {user?.platformAdmin && <span className="badge">platform admin</span>}
+          <Text as="span" className="badge accent" size={200} weight="semibold">{user?.tenantSlug}</Text>
+          {user?.platformAdmin && <Text as="span" className="badge" size={200} weight="semibold">platform admin</Text>}
         </div>
         <div className="row" style={{ gap: '0.75rem' }}>
           {/* Lonceng sebelum kendali lain: inilah satu-satunya kontrol di header yang
@@ -169,11 +170,9 @@ export function Layout() {
             <span className="avatar" aria-hidden>
               {initials}
             </span>
-            <div style={{ lineHeight: 1.2 }}>
-              <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{user?.name}</div>
-              <div className="muted" style={{ fontSize: '0.75rem' }}>
-                {user?.email}
-              </div>
+            <div>
+              <Text as="span" block size={200} weight="semibold">{user?.name}</Text>
+              <Text as="span" block className="muted" size={100}>{user?.email}</Text>
             </div>
             {user && !user.twoFactorEnabled && (
               <span
@@ -234,17 +233,17 @@ export function Layout() {
               color: 'var(--danger)',
             }}
           >
-            <span className="row" style={{ gap: '0.5rem', fontSize: '0.85rem' }}>
+            <div className="row" style={{ gap: '0.5rem' }}>
               <IconAlert size={16} />
-              <span>
-                <strong>Langganan aplikasi menunggak</strong>
+              <Text as="span" size={200}>
+                <Text as="strong" size={200} weight="semibold">Langganan aplikasi menunggak</Text>
                 {subscriptionLock && subscriptionLock.daysOverdue > 0
                   ? ` ${subscriptionLock.daysOverdue} hari.`
                   : '.'}{' '}
                 Konsol dalam mode baca-saja — data tetap terbaca, tapi perubahan ditolak sampai
                 tagihan dilunasi.
-              </span>
-            </span>
+              </Text>
+            </div>
             <Link to="/subscription" style={{ textDecoration: 'none' }}>
               <Button variant="primary">Bayar sekarang</Button>
             </Link>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { Copy } from 'lucide-react'
 import { ApiError } from '@/api/client'
 import {
@@ -57,8 +58,8 @@ export function AcsPage() {
   if (!canView) {
     return (
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Akses ditolak</h3>
-        <p className="muted">Kamu tidak punya izin melihat konsol ACS.</p>
+        <Text as="h3" size={400} weight="semibold" style={{ marginTop: 0 }}>Akses ditolak</Text>
+        <Text as="p" className="muted" size={300}>Kamu tidak punya izin melihat konsol ACS.</Text>
       </div>
     )
   }
@@ -180,11 +181,11 @@ function DashboardTab({ canDevices, canManage }: { canDevices: boolean; canManag
           </Button>
         </div>
         {canManage && (
-          <span className="muted" style={{ fontSize: '0.78rem' }}>
+          <Text as="span" size={300} className="muted" >
             "Segarkan Batch" menyapu sejumlah terbatas perangkat yang sedang online tiap klik —
             yang paling lama tak melapor didahulukan. Perangkat sisanya menyusul di klik
             berikutnya atau saat inform berkalanya jatuh tempo.
-          </span>
+          </Text>
         )}
       </div>
 
@@ -221,24 +222,22 @@ function StatTiles({ stats }: { stats: AcsStatsView | null }) {
     <div className="stat-grid">
       <div className="stat accent-bar">
         <div className="stat-label">Perangkat online</div>
-        <div className="stat-value" style={{ fontSize: '1.5rem' }}>{stats.onlineDevices.toLocaleString('id-ID')}</div>
+        <div className="stat-value">{stats.onlineDevices.toLocaleString('id-ID')}</div>
         <div className="stat-note">melapor ke ACS baru-baru ini (bukan status ONU di OLT)</div>
       </div>
       <div className="stat accent-bar">
         <div className="stat-label">Total perangkat</div>
-        <div className="stat-value" style={{ fontSize: '1.5rem' }}>{stats.totalDevices.toLocaleString('id-ID')}</div>
+        <div className="stat-value">{stats.totalDevices.toLocaleString('id-ID')}</div>
         <div className="stat-note">ONT milik tenant ini yang sudah dikenali ACS</div>
       </div>
       <div className={`stat ${stats.offlineDevices > 0 ? 'warn-bar' : 'accent-bar'}`}>
         <div className="stat-label">Perangkat offline</div>
-        <div className="stat-value" style={{ fontSize: '1.5rem' }}>{stats.offlineDevices.toLocaleString('id-ID')}</div>
+        <div className="stat-value">{stats.offlineDevices.toLocaleString('id-ID')}</div>
         <div className="stat-note">belum melapor melewati ambang basi</div>
       </div>
       <div className={`stat ${signalTone(stats.avgRxPowerDbm)}`}>
         <div className="stat-label">Rata-rata sinyal</div>
-        <div className="stat-value" style={{ fontSize: '1.5rem' }}>
-          {stats.avgRxPowerDbm != null ? `${stats.avgRxPowerDbm.toLocaleString('id-ID')} dBm` : '—'}
-        </div>
+        <div className="stat-value">{stats.avgRxPowerDbm != null ? `${stats.avgRxPowerDbm.toLocaleString('id-ID')} dBm` : '—'}</div>
         <div className="stat-note">{signalNote}</div>
       </div>
     </div>
@@ -282,38 +281,36 @@ function ServerInfoCard({
       <InfoLine label="CWMP URL (diketik ke ONT)" value={info?.cwmpUrl ?? null} onCopy={copy} />
 
       <div className="stack" style={{ gap: '0.2rem' }}>
-        <span className="muted" style={{ fontSize: '0.76rem', fontWeight: 600 }}>Status</span>
+        <Text as="span" size={300} className="muted" style={{  }} >Status</Text>
         {health ? (
           <div className="row" style={{ gap: '0.45rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <StatusBadge status={health.status} />
-            <span className="muted" style={{ fontSize: '0.8rem' }}>
-              {health.message}
-              {health.latencyMs != null && ` · ${health.latencyMs} ms`}
-            </span>
+            <Text as="span" className="muted" size={200}>{health.message}
+            {health.latencyMs != null && ` · ${health.latencyMs} ms`}</Text>
           </div>
         ) : (
-          <span className="muted" style={{ fontSize: '0.82rem' }}>—</span>
+          <Text as="span" size={300} className="muted" >—</Text>
         )}
       </div>
 
       <div className="stack" style={{ gap: '0.2rem' }}>
-        <span className="muted" style={{ fontSize: '0.76rem', fontWeight: 600 }}>Sinkronisasi terakhir</span>
+        <Text as="span" size={300} className="muted" style={{  }} >Sinkronisasi terakhir</Text>
         {lastSyncAt ? (
           <div className="row" style={{ gap: '0.45rem', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.85rem' }}>{timeAgo(lastSyncAt)}</span>
+            <Text as="span" size={300}  >{timeAgo(lastSyncAt)}</Text>
             {lastSyncOk === false && <Badge tone="warning">gagal</Badge>}
           </div>
         ) : (
-          <span className="muted" style={{ fontSize: '0.82rem' }}>
+          <Text as="span" size={300} className="muted" >
             belum ada ronde sinkronisasi sejak server terakhir dinyalakan
-          </span>
+          </Text>
         )}
       </div>
 
       {info && (
-        <span className="muted" style={{ fontSize: '0.76rem' }}>
+        <Text as="span" size={300} className="muted" >
           Aplikasi menarik daftar perangkat dari ACS tiap {Math.round(info.syncIntervalSeconds / 60) || 1} menit.
-        </span>
+        </Text>
       )}
     </div>
   )
@@ -331,11 +328,11 @@ function InfoLine({
 }) {
   return (
     <div className="stack" style={{ gap: '0.2rem' }}>
-      <span className="muted" style={{ fontSize: '0.76rem', fontWeight: 600 }}>{label}</span>
+      <Text as="span" size={300} className="muted" style={{  }} >{label}</Text>
       <div className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
         {value ? (
           <>
-            <code style={{ flex: 1, overflowX: 'auto', padding: '0.3rem 0.5rem', fontSize: '0.82rem' }}>{value}</code>
+            <code style={{ flex: 1, overflowX: 'auto', padding: '0.3rem 0.5rem',  }}>{value}</code>
             <Button
               type="button"
               size="small"
@@ -347,7 +344,7 @@ function InfoLine({
             />
           </>
         ) : (
-          <span className="muted" style={{ fontSize: '0.82rem', fontStyle: 'italic' }}>belum dikonfigurasi</span>
+          <Text as="span" size={300} className="muted" style={{ fontStyle: 'italic' }} >belum dikonfigurasi</Text>
         )}
       </div>
     </div>
@@ -378,19 +375,13 @@ function ActivityLog() {
         <div key={row.id} className="stack" style={{ gap: '0.15rem' }}>
           <div className="row" style={{ gap: '0.45rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <StatusBadge status={row.status === 'SUCCESS' ? 'GOOD' : 'CRITICAL'} label={row.status === 'SUCCESS' ? 'Sukses' : 'Gagal'} />
-            <strong style={{ fontSize: '0.85rem' }}>
-              {CPE_ACTION_LABEL[row.action as CpeAction] ?? row.action}
-            </strong>
-            <span className="muted" style={{ fontSize: '0.8rem' }}>
-              {row.serialNumber ?? '—'}
-              {row.customerName && ` · ${row.customerName}`}
-            </span>
+            <Text as="strong" size={300}  >{CPE_ACTION_LABEL[row.action as CpeAction] ?? row.action}</Text>
+            <Text as="span" className="muted" size={200}>{row.serialNumber ?? '—'}
+            {row.customerName && ` · ${row.customerName}`}</Text>
           </div>
-          <span className="muted" style={{ fontSize: '0.76rem' }}>
-            {timeAgo(row.requestedAt)}
-            {row.requestedByEmail && ` · ${row.requestedByEmail}`}
-            {row.detail && ` · ${row.detail}`}
-          </span>
+          <Text as="span" size={300} className="muted" >{timeAgo(row.requestedAt)}
+          {row.requestedByEmail && ` · ${row.requestedByEmail}`}
+          {row.detail && ` · ${row.detail}`}</Text>
         </div>
       ))}
     </div>
@@ -462,9 +453,7 @@ function DevicesTab({ canCustomer }: { canCustomer: boolean }) {
         cell: (d) => (
           <div className="stack" style={{ gap: '0.15rem' }}>
             <strong>{d.serialNumber}</strong>
-            <span className="muted" style={{ fontSize: '0.78rem' }}>
-              {[d.customerName, [d.manufacturer, d.model].filter(Boolean).join(' ')].filter(Boolean).join(' · ') || '—'}
-            </span>
+            <Text as="span" size={300} className="muted" >{[d.customerName, [d.manufacturer, d.model].filter(Boolean).join(' ')].filter(Boolean).join(' · ') || '—'}</Text>
           </div>
         ),
       },
@@ -495,9 +484,7 @@ function DevicesTab({ canCustomer }: { canCustomer: boolean }) {
             <div className="stack" style={{ gap: '0.15rem' }}>
               <span>{d.pppoeUsername}</span>
               {d.pppoeOnline != null && (
-                <span className="muted" style={{ fontSize: '0.76rem' }}>
-                  {d.pppoeOnline ? 'sesi aktif' : 'tak ada sesi'}
-                </span>
+                <Text as="span" size={300} className="muted" >{d.pppoeOnline ? 'sesi aktif' : 'tak ada sesi'}</Text>
               )}
             </div>
           ) : (
@@ -557,9 +544,9 @@ function DevicesTab({ canCustomer }: { canCustomer: boolean }) {
       <div className="spread">
         <span className="muted">{rows.length} perangkat</span>
         {canCustomer && (
-          <span className="muted" style={{ fontSize: '0.8rem' }}>
+          <Text as="span" className="muted" size={200}>
             Klik baris untuk membuka detail pelanggan (tab GenieACS) — reboot, WiFi, dan diagnostik ada di sana.
-          </span>
+          </Text>
         )}
       </div>
 
@@ -591,10 +578,10 @@ function SignalCell({ rx, tx }: { rx: number | null; tx: number | null }) {
   const color = rx == null ? undefined : rx < -27 ? 'var(--critical)' : rx < -25 ? 'var(--warning)' : undefined
   return (
     <div className="stack" style={{ gap: '0.1rem', alignItems: 'flex-end' }}>
-      <span style={{ color, fontWeight: rx != null && rx < -25 ? 600 : 400 }}>
+      <span style={{ color,  }}>
         {rx != null ? `${rx} dBm` : '—'}
       </span>
-      <span className="muted" style={{ fontSize: '0.76rem' }}>TX {tx != null ? `${tx} dBm` : '—'}</span>
+      <Text as="span" size={300} className="muted" >TX {tx != null ? `${tx} dBm` : '—'}</Text>
     </div>
   )
 }

@@ -31,17 +31,16 @@ const azureBrand: BrandVariants = {
 
 /**
  * Penyetelan yang berlaku di kedua mode: sudut membulat kecil (Azure Portal pakai
- * radius ~2px, bukan 4px default Fluent Teams) dan tumpukan font Segoe yang sama
- * dengan token index.css. Dengan ini komponen Fluent (Button/Tab/Input/Toolbar)
- * langsung berpenampilan Azure lewat TEMA — bukan lagi CSS per-elemen.
+ * radius ~2px, bukan 4px default Fluent Teams). Tipografi sengaja dibiarkan pada
+ * token web Fluent v9 kanonis agar komponen dan CSS global membaca sumber yang sama.
+ * Dengan ini komponen Fluent (Button/Tab/Input/Toolbar) langsung berpenampilan Azure
+ * lewat TEMA — bukan lagi CSS per-elemen.
  */
 const azureShared: Partial<Theme> = {
   borderRadiusSmall: '2px',
   borderRadiusMedium: '2px',
   borderRadiusLarge: '4px',
   borderRadiusXLarge: '6px',
-  fontFamilyBase:
-    "'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', 'Segoe UI Web (West European)', -apple-system, BlinkMacSystemFont, system-ui, 'Helvetica Neue', Arial, sans-serif",
 }
 
 /** Tema terang Azure — dasar konsol operator/platform. */

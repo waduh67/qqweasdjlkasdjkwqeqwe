@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Text } from '@fluentui/react-components'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { portalForgotPassword, portalResetPassword } from './portalApi'
 import { PortalApiError } from './portalClient'
@@ -77,12 +78,10 @@ export function PortalForgotPasswordPage() {
     <div className="login-shell">
       <form className="card login-card stack" onSubmit={step === 'identifier' ? onRequest : onReset}>
         <div>
-          <h2 style={{ margin: 0, fontSize: '1.15rem' }}>Lupa password</h2>
-          <p className="muted" style={{ margin: '0.2rem 0 0', fontSize: '0.83rem' }}>
-            {step === 'identifier'
-              ? 'Masukkan identitas akunmu, kami kirimkan kode pemulihan'
-              : 'Masukkan kode yang kamu terima beserta password barumu'}
-          </p>
+          <Text as="h1" size={500} weight="semibold" style={{ margin: 0 }}>Lupa password</Text>
+          <Text as="p" className="muted" size={200} style={{ margin: '0.2rem 0 0' }}>{step === 'identifier'
+            ? 'Masukkan identitas akunmu, kami kirimkan kode pemulihan'
+            : 'Masukkan kode yang kamu terima beserta password barumu'}</Text>
         </div>
 
         {step === 'identifier' ? (
@@ -97,9 +96,7 @@ export function PortalForgotPasswordPage() {
               placeholder="budi@email.com"
             />
             {error && (
-              <p className="error" style={{ margin: 0, fontSize: '0.85rem' }}>
-                {error}
-              </p>
+              <Text as="p" className="error" size={300} style={{ margin: 0 }}>{error}</Text>
             )}
             <Button type="submit" variant="primary" disabled={busy} style={{ width: '100%', padding: '0.6rem' }}>
               {busy ? 'Mengirim…' : 'Kirim kode'}
@@ -107,11 +104,11 @@ export function PortalForgotPasswordPage() {
           </>
         ) : (
           <>
-            <p className="muted" style={{ margin: 0, fontSize: '0.83rem' }}>
-              Kalau <strong>{identifier.trim()}</strong> terdaftar, kode 6 angka sudah dikirim ke email atau
+            <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
+              Kalau <Text as="strong" weight="semibold" >{identifier.trim()}</Text> terdaftar, kode 6 angka sudah dikirim ke email atau
               WhatsApp yang tercatat di ISP-mu. Kode berlaku 15 menit dan hanya bisa dipakai sekali — jangan
               berikan ke siapa pun, termasuk yang mengaku petugas.
-            </p>
+            </Text>
 
             <TextField
               label="Kode pemulihan"
@@ -142,9 +139,7 @@ export function PortalForgotPasswordPage() {
             />
 
             {error && (
-              <p className="error" style={{ margin: 0, fontSize: '0.85rem' }}>
-                {error}
-              </p>
+              <Text as="p" className="error" size={300} style={{ margin: 0 }}>{error}</Text>
             )}
 
             <Button type="submit" variant="primary" disabled={busy} style={{ width: '100%', padding: '0.6rem' }}>
@@ -162,7 +157,7 @@ export function PortalForgotPasswordPage() {
           </>
         )}
 
-        <Link to={loginHref} className="muted" style={{ fontSize: '0.83rem', textAlign: 'center' }}>
+        <Link to={loginHref} className="muted" style={{ display: 'block', textAlign: 'center' }}>
           Kembali ke halaman masuk
         </Link>
       </form>

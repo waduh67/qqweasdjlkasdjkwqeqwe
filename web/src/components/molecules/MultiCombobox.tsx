@@ -1,17 +1,11 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react'
-import { IconClose, IconSearch } from '@/components/atoms/icons'
-import { Button, Spinner } from '@/components/atoms'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { Combobox, Option, Spinner, Text, type OptionOnSelectData } from '@fluentui/react-components'
 
 /**
- * Pemilih JAMAK yang bisa dicari — saudara [Combobox] untuk kasus "banyak nilai"
- * (mis. roster teknisi tim datar pada satu work order). Nilai terpilih tampil sebagai
- * chip di atas kolom; mengetik menyaring opsi, memilih menambah chip (dropdown tetap
- * terbuka agar bisa menambah lagi), dan yang sudah terpilih disembunyikan dari daftar.
- *
- * Terkendali lewat [values] (daftar id). Karena opsi datang async, label chip dipegang
- * internal: di-set saat memilih dan bisa di-seed lewat [initialLabels] untuk nilai yang
- * sudah terisi sejak awal (roster tersimpan). Backspace di kolom kosong melepas chip
- * terakhir. Navigasi keyboard (↑/↓/Enter/Esc) dan klik-di-luar untuk menutup.
+ * Pemilih JAMAK yang bisa dicari untuk kasus banyak nilai, misalnya roster
+ * teknisi pada satu work order. Nilai tetap dikendalikan oleh pemanggil lewat
+ * [values], sementara label disimpan lokal agar nilai yang belum kembali dari
+ * pencarian server tetap dapat dikenali oleh Combobox.
  */
 export interface MultiComboboxProps<T> {
   values: string[]
@@ -19,11 +13,11 @@ export interface MultiComboboxProps<T> {
   /** Ambil opsi untuk sebuah kata kunci — server-search ATAU filter lokal, terserah pemanggil. */
   fetchOptions: (term: string) => Promise<T[]>
   toId: (item: T) => string
-  /** Label utama opsi + teks chip. */
+  /** Label utama opsi. */
   toLabel: (item: T) => string
   /** Baris kedua opsi (kode/telepon/dll) — opsional. */
   toMeta?: (item: T) => string | undefined
-  /** Label chip awal untuk [values] yang itemnya belum di tangan (mis. roster tersimpan). */
+  /** Label awal untuk [values] yang itemnya belum di tangan (mis. roster tersimpan). */
   initialLabels?: Record<string, string>
   placeholder?: string
   disabled?: boolean
@@ -49,178 +43,103 @@ export function MultiCombobox<T>({
   const [term, setTerm] = useState('')
   const [options, setOptions] = useState<T[]>([])
   const [loading, setLoading] = useState(false)
-  const [active, setActive] = useState(-1)
-  // Label chip terkumpul: di-seed dari initialLabels, ditambah saat memilih / opsi termuat.
   const [labels, setLabels] = useState<Record<string, string>>(initialLabels ?? {})
+  const requestId = useRef(0)
 
-  const fetchRef = useRef(fetchOptions)
-  fetchRef.current = fetchOptions
-  const rootRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const activeRef = useRef<HTMLLIElement>(null)
+  useEffect(() => {
+    if (initialLabels) setLabels((current) => ({ ...current, ...initialLabels }))
+  }, [initialLabels])
 
-  // Yang sudah terpilih disembunyikan dari daftar (tak bisa dipilih dua kali).
-  const visible = options.filter((o) => !values.includes(toId(o)))
-
-  // Ambil opsi saat terbuka / kata kunci berubah; didebounce, permintaan lama dibatalkan.
+  // Setiap pencarian diberi urutan agar respons server yang lambat tidak menimpa hasil terbaru.
   useEffect(() => {
     if (!open) return
-    let cancelled = false
-    setLoading(true)
-    const run = async () => {
+
+    const currentRequest = ++requestId.current
+    const timer = window.setTimeout(async () => {
+      setLoading(true)
       try {
-        const opts = await fetchRef.current(term.trim())
-        if (cancelled) return
-        setOptions(opts)
-        setActive(opts.length ? 0 : -1)
-        // Rekam label agar chip nilai yang termuat lewat pencarian tetap bernama.
-        setLabels((prev) => {
-          const next = { ...prev }
-          for (const o of opts) next[toId(o)] = toLabel(o)
+        const fetched = await fetchOptions(term.trim())
+        if (requestId.current !== currentRequest) return
+
+        setOptions(fetched)
+        setLabels((current) => {
+          const next = { ...current }
+          for (const item of fetched) next[toId(item)] = toLabel(item)
           return next
         })
       } catch {
-        if (!cancelled) {
-          setOptions([])
-          setActive(-1)
-        }
+        if (requestId.current === currentRequest) setOptions([])
       } finally {
-        if (!cancelled) setLoading(false)
+        if (requestId.current === currentRequest) setLoading(false)
       }
-    }
-    const t = window.setTimeout(run, debounceMs)
+    }, debounceMs)
+
     return () => {
-      cancelled = true
-      window.clearTimeout(t)
+      window.clearTimeout(timer)
     }
-  }, [open, term, debounceMs, toId, toLabel])
+  }, [debounceMs, fetchOptions, open, term, toId, toLabel])
 
-  // Klik di luar menutup dropdown.
-  useEffect(() => {
-    if (!open) return
-    const onDocClick = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
+  const handleOptionSelect = (_: unknown, data: OptionOnSelectData) => {
+    const selectedOptions = data.selectedOptions
+    const item = options.find((option) => toId(option) === data.optionValue)
+    if (item) {
+      const id = toId(item)
+      setLabels((current) => ({ ...current, [id]: toLabel(item) }))
     }
-    document.addEventListener('mousedown', onDocClick)
-    return () => document.removeEventListener('mousedown', onDocClick)
-  }, [open])
-
-  // Jaga opsi aktif tetap terlihat saat navigasi keyboard.
-  useEffect(() => {
-    activeRef.current?.scrollIntoView({ block: 'nearest' })
-  }, [active])
-
-  const add = (item: T) => {
-    const id = toId(item)
-    setLabels((prev) => ({ ...prev, [id]: toLabel(item) }))
-    if (!values.includes(id)) onChange([...values, id])
+    onChange(selectedOptions)
     setTerm('')
-    inputRef.current?.focus()
   }
 
-  const remove = (id: string) => {
-    onChange(values.filter((v) => v !== id))
-    inputRef.current?.focus()
-  }
-
-  const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      if (!open) setOpen(true)
-      else setActive((i) => Math.min(i + 1, visible.length - 1))
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setActive((i) => Math.max(i - 1, 0))
-    } else if (e.key === 'Enter') {
-      if (open && active >= 0 && visible[active]) {
-        e.preventDefault()
-        add(visible[active])
-      }
-    } else if (e.key === 'Escape') {
-      if (open) {
-        e.preventDefault()
-        setOpen(false)
-      }
-    } else if (e.key === 'Backspace' && !term && values.length > 0) {
-      // Kolom kosong + Backspace = lepas chip terakhir (kebiasaan tag-input).
-      remove(values[values.length - 1])
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Backspace' && !term && values.length > 0) {
+      // Fluent menangani navigasi dan penghapusan pilihan melalui listbox; ini
+      // mempertahankan kebiasaan tag-input untuk melepas pilihan terakhir.
+      onChange(values.slice(0, -1))
     }
   }
+
+  const optionIds = new Set(options.map(toId))
 
   return (
-    <div className={`combobox${disabled ? ' is-disabled' : ''}`} ref={rootRef}>
-      {values.length > 0 && (
-        <div className="row wrap" style={{ gap: '0.35rem', marginBottom: '0.35rem' }}>
-          {values.map((id) => (
-            <span
-              key={id}
-              className="badge accent"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
-            >
-              {labels[id] ?? id}
-              {!disabled && (
-                <Button
-                  variant="subtle"
-                  size="small"
-                  icon={<IconClose size={12} />}
-                  onMouseDown={(e: ReactMouseEvent) => e.preventDefault()}
-                  onClick={() => remove(id)}
-                  aria-label="Lepas teknisi"
-                />
-              )}
-            </span>
-          ))}
-        </div>
+    <Combobox
+      multiselect
+      disabled={disabled}
+      open={open}
+      selectedOptions={values}
+      value={term}
+      placeholder={placeholder}
+      onOpenChange={(_, data) => setOpen(data.open)}
+      onChange={(event) => setTerm(event.target.value)}
+      onOptionSelect={handleOptionSelect}
+      onKeyDown={handleKeyDown}
+      aria-label={placeholder ?? 'Pilih beberapa opsi'}
+      expandIcon={loading ? <Spinner size="tiny" /> : undefined}
+    >
+      {loading && options.length === 0 ? (
+        <Option disabled value="__loading__" text="Memuat">
+          <Text size={300}>Memuat…</Text>
+        </Option>
+      ) : options.length === 0 ? (
+        <Option disabled value="__empty__" text={emptyText}>
+          <Text size={300}>{emptyText}</Text>
+        </Option>
+      ) : (
+        options.map((item) => {
+          const id = toId(item)
+          const meta = toMeta?.(item)
+          return (
+            <Option key={id} value={id} text={toLabel(item)}>
+              <Text as="span" size={300}>{toLabel(item)}</Text>
+              {meta && <Text as="span" size={200}>{meta}</Text>}
+            </Option>
+          )
+        })
       )}
 
-      <div className="cb-field">
-        <IconSearch size={16} />
-        <input
-          ref={inputRef}
-          type="text"
-          role="combobox"
-          aria-expanded={open}
-          autoComplete="off"
-          disabled={disabled}
-          value={term}
-          placeholder={placeholder}
-          onChange={(e) => {
-            setTerm(e.target.value)
-            if (!open) setOpen(true)
-          }}
-          onFocus={() => setOpen(true)}
-          onKeyDown={onKeyDown}
-        />
-        {loading && <Spinner />}
-      </div>
-
-      {open && (
-        // preventDefault pada mousedown menu → klik opsi tak mem-blur input duluan.
-        <ul className="cb-menu" onMouseDown={(e) => e.preventDefault()}>
-          {loading && visible.length === 0 ? (
-            <li className="cb-note">Memuat…</li>
-          ) : visible.length === 0 ? (
-            <li className="cb-note">{emptyText}</li>
-          ) : (
-            visible.map((item, i) => {
-              const id = toId(item)
-              const meta = toMeta?.(item)
-              return (
-                <li
-                  key={id}
-                  ref={i === active ? activeRef : undefined}
-                  className={`cb-option${i === active ? ' active' : ''}`}
-                  onMouseEnter={() => setActive(i)}
-                  onClick={() => add(item)}
-                >
-                  <span className="cb-label">{toLabel(item)}</span>
-                  {meta && <span className="cb-meta">{meta}</span>}
-                </li>
-              )
-            })
-          )}
-        </ul>
-      )}
-    </div>
+      {/* Opsi terseleksi yang tidak ada pada respons saat ini tetap terdaftar agar label dan state Fluent konsisten. */}
+      {values.filter((id) => !optionIds.has(id)).map((id) => (
+        <Option key={id} value={id} text={labels[id] ?? id} style={{ display: 'none' }} />
+      ))}
+    </Combobox>
   )
 }

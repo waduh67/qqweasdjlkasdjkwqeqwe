@@ -53,7 +53,8 @@ export function MyWorkOrdersPage() {
       key: 'code',
       header: 'Kode',
       sortValue: (wo) => wo.code,
-      cell: (wo) => <span className="badge accent">{wo.code}</span>,
+      cell: (wo) => wo.code,
+      onCellClick: (wo) => navigate(`/my-work-orders/${wo.id}`),
     },
     {
       key: 'type',
@@ -65,12 +66,13 @@ export function MyWorkOrdersPage() {
       key: 'title',
       header: 'Judul',
       sortValue: (wo) => wo.title,
-      cell: (wo) => (
-        <div className="row" style={{ gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <strong>{wo.title}</strong>
-          {wo.priority !== 'NORMAL' && <Badge tone={priorityTone(wo.priority)}>{PRIORITY_LABEL[wo.priority]}</Badge>}
-        </div>
-      ),
+      cell: (wo) => wo.title,
+    },
+    {
+      key: 'priority',
+      header: 'Prioritas',
+      sortValue: (wo) => wo.priority,
+      cell: (wo) => (wo.priority !== 'NORMAL' ? <Badge tone={priorityTone(wo.priority)}>{PRIORITY_LABEL[wo.priority]}</Badge> : 'Normal'),
     },
     {
       key: 'customer',
@@ -120,7 +122,6 @@ export function MyWorkOrdersPage() {
         columns={columns}
         rows={orders}
         rowKey={(wo) => wo.id}
-        onRowClick={(wo) => navigate(`/my-work-orders/${wo.id}`)}
         loading={loading}
         initialSort={{ key: 'scheduledAt', dir: 'desc' }}
         empty={

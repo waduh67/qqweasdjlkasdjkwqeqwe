@@ -1,4 +1,4 @@
-import { MessageBar, MessageBarBody } from '@fluentui/react-components'
+import { MessageBar, MessageBarBody, Text } from '@fluentui/react-components'
 import type { SiteInspection, SiteOlt } from '@/api/network'
 import { BladeHead, CommandBar, Ess, type CommandAction } from '@/components/molecules'
 import { cableAction, deleteAction, relocateAction } from './mapActions'
@@ -53,9 +53,9 @@ export function SitePanel({
           <Ess label="ODP">{site.odpCount}</Ess>
           <Ess label="Pelanggan">{site.customerCount}</Ess>
         </dl>
-        <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
+        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
           Seluruh perangkat &amp; pelanggan yang bergantung pada site ini.
-        </p>
+        </Text>
 
         {site.olts.length > 0 && (
           <div className="stack" style={{ gap: '0.45rem' }}>
@@ -85,9 +85,9 @@ function SiteOltRow({ olt }: { olt: SiteOlt }) {
         />
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{olt.name}</span>
       </span>
-      <span className="muted tnum" style={{ fontSize: '0.78rem', flexShrink: 0 }}>
+      <Text as="span" className="muted tnum" size={200} style={{ flexShrink: 0 }}>
         {olt.code} · {olt.vendor}
-      </span>
+      </Text>
     </div>
   )
 }

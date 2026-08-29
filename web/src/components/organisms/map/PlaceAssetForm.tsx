@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { api } from '@/api/client'
 import { SPLITTER_RATIOS, type SiteView } from '@/api/network'
 import type { PageResponse } from '@/api/types'
@@ -223,11 +224,11 @@ export function PlaceAssetForm({
         )}
         {kind === 'ODF' && (
           <>
-            <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+            <Text as="p" className="muted" size={200} block style={{ margin: 0 }}>
               Rak terminasi di dalam POP: tempat kabel luar BERHENTI. Seratnya dilas ke pigtail
               di sisi belakang port, lalu patchcord dari sisi depannya yang mencolok ke port PON —
               jadi kabel lapangan tak pernah menempel langsung ke badan OLT.
-            </p>
+            </Text>
             <SelectField label="POP induk" value={siteId} onChange={(_, data) => setSiteId(data.value)}>
               <option value="">— pilih POP —</option>
               {sites.map((s) => (
@@ -257,19 +258,19 @@ export function PlaceAssetForm({
           <TextField label="Alamat" value={address} onChange={(_, data) => setAddress(data.value)} />
         )}
         {kind === 'ODP' && (
-          <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+          <Text as="p" className="muted" size={200} block style={{ margin: 0 }}>
             ODC induk ditetapkan dengan menarik kabel distribusi dari ODC ke ODP ini di peta —
             bukan di sini — supaya jalur fisik & data uplink selalu sinkron.
-          </p>
+          </Text>
         )}
         {kind === 'JOINT_BOX' && (
           <>
-            <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+            <Text as="p" className="muted" size={200} block style={{ margin: 0 }}>
               Kotak sambung: tempat dua haspel kabel bertemu, jalur bercabang di persimpangan,
               atau kabel putus disambung darurat. Tak ada splitter di dalamnya — serat masuk
               disambung langsung ke serat keluar. Satu tray memuat 12 sambungan (satu tube
               berisi 12 serat), jadi ukurannya cukup dipilih.
-            </p>
+            </Text>
             <SelectField label="Ukuran kotak" value={size} onChange={(_, data) => applySize(data.value)}>
               {JOINT_BOX_SIZES.map((s) => (
                 <option key={s.value} value={s.value}>

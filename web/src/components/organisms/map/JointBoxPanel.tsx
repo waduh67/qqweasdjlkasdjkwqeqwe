@@ -1,3 +1,4 @@
+import { Text } from '@fluentui/react-components'
 import type { JointBoxView } from '@/api/network'
 import { StatusBadge } from '@/components/atoms'
 import { IconMonitor } from '@/components/atoms/icons'
@@ -77,21 +78,21 @@ export function JointBoxPanel({
           >
             <div style={{ width: `${used}%`, height: '100%', background: JOINT_BOX_COLOR }} />
           </div>
-          <span className="muted" style={{ fontSize: '0.78rem' }}>
+          <Text as="span" className="muted" size={200}>
             {jointBox.spliceCount >= jointBox.capacity
               ? 'Kotak penuh — sambungan baru harus pindah ke kotak lain.'
               : `Sisa ${jointBox.capacity - jointBox.spliceCount} tempat sambungan.`}
-          </span>
+          </Text>
         </div>
 
-        <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
+        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
           Di dalam joint box tak ada splitter — serat masuk disambung langsung ke serat keluar,
           jadi ia tak menambah redaman pembagian, hanya redaman sambungan.
-        </p>
+        </Text>
         {jointBox.spliceCount > 0 && canDelete && (
-          <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
+          <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
             Tak bisa dihapus selama masih berisi sambungan — lepas dulu isinya.
-          </p>
+          </Text>
         )}
       </div>
     </aside>

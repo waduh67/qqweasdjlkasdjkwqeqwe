@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Text, typographyStyles } from '@fluentui/react-components'
 import { ApiError } from '../api/client'
 import {
   buildFupRateLimit,
@@ -268,16 +269,17 @@ export function CatalogPage() {
   const columns: Column<PlanView>[] = [
     {
       key: 'name',
-      header: 'Nama paket',
+      header: 'Nama',
       sortValue: (p) => p.name,
-      cell: (p) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
-          <strong>{p.name}</strong>
-          {p.description && (
-            <span className="muted" style={{ fontSize: '0.8rem' }}>{p.description}</span>
-          )}
-        </div>
-      ),
+      cell: (p) => p.name,
+      onCellClick: canManage ? edit : undefined,
+      inlineActions: canManage ? inlineActions : undefined,
+    },
+    {
+      key: 'description',
+      header: 'Deskripsi',
+      sortValue: (p) => p.description,
+      cell: (p) => p.description || <span className="muted">—</span>,
     },
     {
       key: 'price',
@@ -287,11 +289,18 @@ export function CatalogPage() {
       cell: (p) => fmtRupiah(p.price),
     },
     {
-      key: 'speed',
-      header: 'Kecepatan',
+      key: 'downloadSpeed',
+      header: 'Unduh',
       align: 'right',
       sortValue: (p) => p.downMbps,
-      cell: (p) => `${p.downMbps} / ${p.upMbps} Mbps`,
+      cell: (p) => `${p.downMbps} Mbps`,
+    },
+    {
+      key: 'uploadSpeed',
+      header: 'Unggah',
+      align: 'right',
+      sortValue: (p) => p.upMbps,
+      cell: (p) => `${p.upMbps} Mbps`,
     },
     {
       key: 'fup',
@@ -327,10 +336,9 @@ export function CatalogPage() {
     },
   ]
 
-  // Aksi per-baris di menu `…` — paket tak dihapus keras (dinonaktifkan via form), jadi hanya "Ubah".
-  const rowActions = (p: PlanView): RowAction[] => [
-    { key: 'edit', label: 'Ubah', icon: <Pencil size={16} />, onClick: () => edit(p) },
-  ]
+  function inlineActions(p: PlanView): RowAction[] {
+    return [{ key: 'edit', label: 'Ubah', icon: <Pencil size={16} />, onClick: () => edit(p) }]
+  }
 
   const primary: CommandAction | undefined = canManage
     ? {
@@ -383,12 +391,12 @@ export function CatalogPage() {
               background: 'var(--surface-2, rgba(127,127,127,0.08))',
             }}
           >
-            <span className="muted" style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <Text as="span" className="muted" size={200} style={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Preview atribut RADIUS (Mikrotik-Rate-Limit)
-            </span>
-            <code style={{ fontSize: '0.95rem', fontWeight: 600 }}>{preview || '— isi kecepatan dulu —'}</code>
+            </Text>
+            <code style={{ ...typographyStyles.body1Strong }}>{preview || '— isi kecepatan dulu —'}</code>
             {fupPreview && (
-              <code className="muted" style={{ fontSize: '0.85rem' }}>
+              <code className="muted" style={{ ...typographyStyles.body2 }}>
                 FUP → {fupPreview}
               </code>
             )}
@@ -457,10 +465,10 @@ export function CatalogPage() {
 
           {/* ---- Burst & Limit-at ---- */}
           <SectionTitle>Burst &amp; jaminan minimum (lanjutan)</SectionTitle>
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
             Burst mengizinkan lonjakan sesaat di atas rate. Isi berpasangan (unduh &amp; unggah);
             threshold &amp; waktu hanya berlaku bila burst diisi.
-          </p>
+          </Text>
           <div className="row">
             <div style={{ flex: 1 }}>
               <TextField
@@ -570,9 +578,9 @@ export function CatalogPage() {
               />
             ))}
           </div>
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
             Baru PPPoE yang benar-benar diprovisi ke RADIUS; tipe lain masih metadata.
-          </p>
+          </Text>
 
           {/* ---- Siklus Billing (override) ---- */}
           <SectionTitle>Siklus billing (override — kosong = ikut kebijakan global)</SectionTitle>
@@ -654,8 +662,6 @@ export function CatalogPage() {
         columns={columns}
         rows={rows}
         rowKey={(p) => p.id}
-        onRowClick={canManage ? edit : undefined}
-        rowActions={canManage ? rowActions : undefined}
         loading={loading}
         initialSort={{ key: 'name', dir: 'asc' }}
         empty={
@@ -680,9 +686,8 @@ function SectionTitle({ children }: { children: ReactNode }) {
   return (
     <div
       style={{
+        ...typographyStyles.body1Strong,
         marginTop: '0.5rem',
-        fontWeight: 600,
-        fontSize: '0.9rem',
         borderBottom: '1px solid var(--border, rgba(127,127,127,0.2))',
         paddingBottom: '0.35rem',
       }}

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Text } from '@fluentui/react-components'
 
 /**
  * Lencana status — dipusatkan agar status (aset/alarm/ONU) ditampilkan dengan warna
@@ -50,15 +51,15 @@ const STATUS_LABEL: Record<string, string> = {
 export function StatusBadge({ status, label }: { status: string; label?: string }) {
   const tone = STATUS_TONE[status] ?? 'neutral'
   return (
-    <span className={`badge ${tone}`}>
+    <Text as="span" className={`badge ${tone}`} size={200} weight="semibold">
       <span className="dot" />
       {label ?? STATUS_LABEL[status] ?? prettify(status)}
-    </span>
+    </Text>
   )
 }
 
 export function Badge({ children, tone = 'neutral' }: { children: ReactNode; tone?: Tone }) {
-  return <span className={`badge ${tone}`}>{children}</span>
+  return <Text as="span" className={`badge ${tone}`} size={200} weight="semibold">{children}</Text>
 }
 
 /** Ubah `ONU_LOW_RX` / `ACTIVE` menjadi teks yang enak dibaca. */

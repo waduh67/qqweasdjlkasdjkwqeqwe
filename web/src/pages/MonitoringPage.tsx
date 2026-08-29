@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { Activity, Check, Trash2, X } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
@@ -98,19 +99,34 @@ export function MonitoringPage() {
     )
   }, [collectors, collectorQuery])
 
+  const collectorActions = (c: CollectorView): RowAction[] => [
+    {
+      key: 'delete',
+      label: 'Hapus',
+      icon: <Trash2 size={16} />,
+      onClick: () => void run(() => api.del(`/api/monitoring/collectors/${c.id}`), 'Collector dihapus'),
+    },
+  ]
+
   const collectorColumns: Column<CollectorView>[] = [
     {
       key: 'name',
       header: 'Nama',
       sortValue: (c) => c.name,
-      cell: (c) => (
-        <div>
-          <div style={{ fontWeight: 600 }}>{c.name}</div>
-          <div className="muted" style={{ fontSize: '0.78rem' }}>
-            {c.apiKeyHint}… · tiap {c.pollIntervalSeconds}s
-          </div>
-        </div>
-      ),
+      cell: (c) => c.name,
+      inlineActions: canManageCollector ? collectorActions : undefined,
+    },
+    {
+      key: 'apiKey',
+      header: 'Petunjuk API key',
+      sortValue: (c) => c.apiKeyHint,
+      cell: (c) => `${c.apiKeyHint}…`,
+    },
+    {
+      key: 'interval',
+      header: 'Interval',
+      sortValue: (c) => c.pollIntervalSeconds,
+      cell: (c) => <span className="tnum">{c.pollIntervalSeconds} dtk</span>,
     },
     {
       key: 'status',
@@ -123,35 +139,17 @@ export function MonitoringPage() {
         </div>
       ),
     },
-    { key: 'agent', header: 'Agent', sortValue: (c) => c.agentVersion, cell: (c) => <span className="muted">{c.agentVersion ?? '—'}</span> },
+    { key: 'agent', header: 'Agent', sortValue: (c) => c.agentVersion, cell: (c) => c.agentVersion ?? '—' },
     {
       key: 'lastSeen',
       header: 'Terakhir melapor',
       sortValue: (c) => c.lastSeenAt,
-      cell: (c) => (
-        <span className="muted" style={{ fontSize: '0.83rem' }}>
-          {c.lastSeenAt ? new Date(c.lastSeenAt).toLocaleString('id-ID') : 'belum pernah'}
-        </span>
-      ),
+      cell: (c) => c.lastSeenAt ? new Date(c.lastSeenAt).toLocaleString('id-ID') : 'belum pernah',
     },
     {
       key: 'cycle',
       header: 'Siklus terakhir',
-      cell: (c) => (
-        <span className="muted" style={{ fontSize: '0.8rem', display: 'inline-block', maxWidth: 220 }}>
-          {c.lastCycleSummary ?? '—'}
-        </span>
-      ),
-    },
-  ]
-
-  // Aksi per-baris di menu `…` ala Azure DataGrid (seragam dengan Pelanggan), bukan tombol inline.
-  const collectorActions = (c: CollectorView): RowAction[] => [
-    {
-      key: 'delete',
-      label: 'Hapus',
-      icon: <Trash2 size={16} />,
-      onClick: () => void run(() => api.del(`/api/monitoring/collectors/${c.id}`), 'Collector dihapus'),
+      cell: (c) => c.lastCycleSummary ?? '—',
     },
   ]
 
@@ -163,53 +161,6 @@ export function MonitoringPage() {
     )
   }, [alarms, alarmQuery])
 
-  const alarmColumns: Column<AlarmView>[] = [
-    {
-      key: 'severity',
-      header: 'Keparahan',
-      sortValue: (a) => SEVERITY_RANK[a.severity] ?? 0,
-      cell: (a) => <StatusBadge status={a.severity} />,
-    },
-    {
-      key: 'entity',
-      header: 'Entitas',
-      sortValue: (a) => a.entityLabel,
-      cell: (a) => (
-        <div>
-          <div style={{ fontSize: '0.88rem' }}>{a.entityLabel}</div>
-          <div className="row" style={{ gap: '0.35rem', marginTop: '0.15rem' }}>
-            <span className="badge">{a.kind}</span>
-            {a.occurrenceCount > 1 && <span className="muted" style={{ fontSize: '0.75rem' }}>×{a.occurrenceCount}</span>}
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'message',
-      header: 'Pesan',
-      sortValue: (a) => a.message,
-      cell: (a) => (
-        <span className="muted" style={{ fontSize: '0.85rem', display: 'inline-block', maxWidth: 320 }}>
-          {a.message}
-        </span>
-      ),
-    },
-    {
-      key: 'open',
-      header: 'Terbuka',
-      sortValue: (a) => a.openMinutes,
-      cell: (a) => (
-        <span className="muted" style={{ fontSize: '0.83rem', whiteSpace: 'nowrap' }}>
-          {formatDuration(a.openMinutes)}
-          <div>
-            <StatusBadge status={a.status} />
-          </div>
-        </span>
-      ),
-    },
-  ]
-
-  // Aksi per-baris di menu `…` ala Azure DataGrid (seragam dengan Pelanggan), bukan tombol inline.
   const canMetric = can('monitoring.metric.view')
   const canAck = can('monitoring.alarm.ack')
   const alarmActions = (a: AlarmView): RowAction[] => {
@@ -222,6 +173,53 @@ export function MonitoringPage() {
       list.push({ key: 'clear', label: 'Tutup', icon: <X size={16} />, onClick: () => void run(() => api.post(`/api/monitoring/alarms/${a.id}/clear`), 'Alarm ditutup') })
     return list
   }
+
+  const alarmColumns: Column<AlarmView>[] = [
+    {
+      key: 'entity',
+      header: 'Nama',
+      sortValue: (a) => a.entityLabel,
+      cell: (a) => a.entityLabel,
+      inlineActions: alarmActions,
+    },
+    {
+      key: 'severity',
+      header: 'Keparahan',
+      sortValue: (a) => SEVERITY_RANK[a.severity] ?? 0,
+      cell: (a) => <StatusBadge status={a.severity} />,
+    },
+    {
+      key: 'kind',
+      header: 'Jenis',
+      sortValue: (a) => a.kind,
+      cell: (a) => a.kind,
+    },
+    {
+      key: 'occurrences',
+      header: 'Kemunculan',
+      align: 'right',
+      sortValue: (a) => a.occurrenceCount,
+      cell: (a) => <span className="tnum">×{a.occurrenceCount}</span>,
+    },
+    {
+      key: 'message',
+      header: 'Pesan',
+      sortValue: (a) => a.message,
+      cell: (a) => a.message,
+    },
+    {
+      key: 'open',
+      header: 'Terbuka',
+      sortValue: (a) => a.openMinutes,
+      cell: (a) => formatDuration(a.openMinutes),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      sortValue: (a) => a.status,
+      cell: (a) => <StatusBadge status={a.status} />,
+    },
+  ]
 
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
@@ -240,7 +238,7 @@ export function MonitoringPage() {
       {can('monitoring.collector.view') && (
         <section className="stack" style={{ gap: '0.85rem' }}>
           <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-end', gap: '0.75rem' }}>
-            <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Collector</h2>
+            <Text as="h2" weight="semibold" style={{ margin: 0 }}>Collector</Text>
             {canManageCollector && (
               <div className="row">
                 <TextField
@@ -279,7 +277,7 @@ export function MonitoringPage() {
               <code style={{ display: 'block', wordBreak: 'break-all', padding: '0.5rem', marginBottom: '0.5rem' }}>
                 {newKey.apiKey}
               </code>
-              <p className="muted" style={{ margin: '0 0 0.6rem', fontSize: '0.83rem' }}>
+              <p className="muted" style={{ margin: '0 0 0.6rem',  }}>
                 Salin sekarang — kunci ini hanya ditampilkan sekali. Pasang di collector sebagai{' '}
                 <code>FTTH_COLLECTOR_KEY</code>.
               </p>
@@ -305,7 +303,6 @@ export function MonitoringPage() {
             rowKey={(c) => c.id}
             loading={loading}
             initialSort={{ key: 'name', dir: 'asc' }}
-            rowActions={canManageCollector ? collectorActions : undefined}
             empty={
               <EmptyState
                 title={collectorQuery ? 'Tidak ada collector yang cocok' : 'Belum ada collector'}
@@ -317,7 +314,7 @@ export function MonitoringPage() {
       )}
 
       <section className="stack" style={{ gap: '0.85rem' }}>
-        <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Alarm</h2>
+              <Text as="h2" weight="semibold" style={{ margin: 0 }}>Alarm</Text>
         <Toolbar>
           <SearchInput value={alarmQuery} onChange={setAlarmQuery} placeholder="Cari entitas, jenis, atau pesan…" />
           <Segmented
@@ -346,7 +343,6 @@ export function MonitoringPage() {
           rowKey={(a) => a.id}
           loading={loading}
           initialSort={{ key: 'severity', dir: 'desc' }}
-          rowActions={canMetric || canAck ? alarmActions : undefined}
           empty={
             <EmptyState
               title={alarmQuery ? 'Tidak ada alarm yang cocok' : statusFilter === 'ACTIVE' ? 'Tidak ada alarm aktif' : 'Belum ada alarm'}
@@ -360,9 +356,9 @@ export function MonitoringPage() {
       {thresholds && (
         <Drawer title="Ambang alarm" onClose={() => setThresholds(false)}>
           <div className="stack">
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
               Berlaku seketika, termasuk pada alarm yang sudah terbuka.
-            </p>
+            </Text>
             {/* Daftar alarm dimuat ulang tiap setelan berubah supaya keparahan di
                 tabel belakang panel tak sempat berbohong. */}
             <AlarmThresholdPanel onChanged={() => void reload()} />
@@ -385,9 +381,9 @@ export function MonitoringPage() {
               />
             </div>
             {trace.history.degrading && (
-              <div className="row" style={{ gap: '0.5rem', color: 'var(--warning-ink)', fontSize: '0.85rem' }}>
+              <div className="row" style={{ gap: '0.5rem', color: 'var(--warning-ink)' }}>
                 <IconAlert size={16} />
-                Redaman memburuk cukup cepat — kandidat pemeliharaan preventif.
+                <Text as="span" size={300}>Redaman memburuk cukup cepat — kandidat pemeliharaan preventif.</Text>
               </div>
             )}
             <OpticalChart points={trace.history.points} />
@@ -412,10 +408,8 @@ function MiniStat({ label, value, unit, warn }: { label: string; value: string; 
   return (
     <div className="stat">
       <div className="stat-label">{label}</div>
-      <div className="stat-value" style={{ fontSize: '1.3rem', color: warn ? 'var(--warning-ink)' : undefined }}>
-        {value}
-        <span className="muted" style={{ fontSize: '0.7rem', fontWeight: 500 }}> {unit}</span>
-      </div>
+      <div className="stat-value" style={{ color: warn ? 'var(--warning-ink)' : undefined }}>{value}
+      <Text as="span" className="muted" size={100} weight="medium"> {unit}</Text></div>
     </div>
   )
 }

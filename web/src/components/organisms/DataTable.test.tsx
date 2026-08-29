@@ -33,14 +33,15 @@ describe('DataTable', () => {
 
   it('menuliskan judul kolom sebagai data-label tiap sel — bahan mode kartu di ponsel', () => {
     const { container } = renderTable()
-    const cells = container.querySelectorAll('tbody tr:first-child td')
-    expect(Array.from(cells).map((td) => td.getAttribute('data-label'))).toEqual(['Nama', 'Tagihan'])
+    const cells = container.querySelectorAll('[role="row"]:nth-child(2) [role="gridcell"]')
+    expect(Array.from(cells).map((cell) => cell.getAttribute('data-label'))).toEqual(['Nama', 'Tagihan'])
   })
 
   it('mengurutkan naik lalu turun lalu kembali ke urutan asli saat judul diklik', async () => {
     const user = userEvent.setup()
     const { container } = renderTable()
-    const firstName = () => container.querySelector('tbody tr td')?.textContent
+    const firstName = () =>
+      Array.from(container.querySelectorAll('[role="row"]'))[1]?.querySelector('[role="gridcell"]')?.textContent
 
     expect(firstName()).toBe('Siti') // urutan bawaan = urutan data
     await user.click(screen.getByRole('button', { name: /Nama/ }))
@@ -64,6 +65,63 @@ describe('DataTable', () => {
     await user.click(screen.getByText('Budi'))
 
     expect(onRowClick).toHaveBeenCalledWith(ROWS[1])
+  })
+
+  it('menjalankan detail hanya dari sel kolom yang dikonfigurasi', async () => {
+    const user = userEvent.setup()
+    const onCellClick = vi.fn()
+    const onRowClick = vi.fn()
+    const columns: Column<Row>[] = [
+      { ...COLUMNS[0], onCellClick },
+      COLUMNS[1],
+    ]
+    render(<DataTable columns={columns} rows={ROWS} rowKey={(row) => row.id} onRowClick={onRowClick} />)
+
+    await user.click(screen.getByRole('button', { name: 'Siti' }))
+    await user.click(screen.getByText('400.000'))
+
+    expect(onCellClick).toHaveBeenCalledWith(ROWS[0])
+    expect(onRowClick).toHaveBeenCalledWith(ROWS[0])
+  })
+
+  it('menampilkan aksi inline di sel tanpa menambah header Aksi dan tanpa memicu klik baris', async () => {
+    const user = userEvent.setup()
+    const onCellClick = vi.fn()
+    const onInlineAction = vi.fn()
+    const onRowClick = vi.fn()
+    const columns: Column<Row>[] = [
+      {
+        ...COLUMNS[0],
+        onCellClick,
+        inlineActions: () => [{ key: 'ubah', label: 'Ubah', onClick: onInlineAction }],
+      },
+      COLUMNS[1],
+    ]
+    render(<DataTable columns={columns} rows={ROWS} rowKey={(row) => row.id} onRowClick={onRowClick} />)
+
+    expect(screen.queryByRole('columnheader', { name: 'Aksi' })).toBeNull()
+    await user.click(screen.getAllByLabelText('Aksi sel')[0])
+    await user.click(screen.getByRole('menuitem', { name: 'Ubah' }))
+
+    expect(onInlineAction).toHaveBeenCalledTimes(1)
+    expect(onRowClick).not.toHaveBeenCalled()
+  })
+
+  it('mempertahankan menu aksi legacy dan mencegahnya memicu klik baris', async () => {
+    const user = userEvent.setup()
+    const onLegacyAction = vi.fn()
+    const onRowClick = vi.fn()
+    renderTable({
+      onRowClick,
+      rowActions: () => [{ key: 'hapus', label: 'Hapus', onClick: onLegacyAction }],
+    })
+
+    expect(screen.getByRole('columnheader', { name: 'Aksi' })).toBeDefined()
+    await user.click(screen.getAllByLabelText('Aksi baris')[0])
+    await user.click(screen.getByRole('menuitem', { name: 'Hapus' }))
+
+    expect(onLegacyAction).toHaveBeenCalledTimes(1)
+    expect(onRowClick).not.toHaveBeenCalled()
   })
 
   it('menampilkan keadaan kosong, bukan tabel tanpa isi', () => {

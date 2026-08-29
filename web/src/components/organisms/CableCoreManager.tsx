@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Checkbox, MessageBar, MessageBarBody } from '@fluentui/react-components'
+import { Checkbox, MessageBar, MessageBarBody, ToggleButton, typographyStyles } from '@fluentui/react-components'
 import { api } from '@/api/client'
 import type { CableCoreList, CableCoreView, CoreMoveView, CoreStatus } from '@/api/network'
 import { CORE_STATUS_LABEL } from '@/api/network'
@@ -202,8 +202,8 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
     }
   }
 
-  if (error && !data) return <p className="muted" style={{ fontSize: '0.8rem' }}>{error}</p>
-  if (!data) return <p className="muted" style={{ fontSize: '0.8rem' }}>Memuat core…</p>
+  if (error && !data) return <p className="muted" style={typographyStyles.caption1}>{error}</p>
+  if (!data) return <p className="muted" style={typographyStyles.caption1}>Memuat core…</p>
 
   const counts: Record<CoreStatus, number> = {
     FREE: data.free,
@@ -223,9 +223,8 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
       {/* Ringkasan sekaligus alat pilih-cepat: angkanya bisa diklik. */}
       <div className="core-summary">
         {STATUS_ORDER.map((s) => (
-          <button
+          <Button
             key={s}
-            type="button"
             className="core-count"
             onClick={() => selectByStatus(s)}
             disabled={!canEdit || counts[s] === 0}
@@ -234,7 +233,7 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
             <span className="core-count-dot" style={{ background: STATUS_RING[s] }} />
             <strong className="tnum">{counts[s]}</strong>
             <span>{CORE_STATUS_LABEL[s]}</span>
-          </button>
+                </Button>
         ))}
       </div>
 
@@ -250,10 +249,10 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
             {cores.map((core) => {
               const on = selected.includes(core.coreNumber)
               return (
-                <button
+                <ToggleButton
                   key={core.id}
-                  type="button"
                   className={`core-chip${on ? ' is-selected' : ''}${core.status === 'USED' ? ' is-used' : ''}`}
+                  checked={on}
                   style={{
                     background: core.colorHex,
                     color: inkOn(core.colorHex),
@@ -268,7 +267,7 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
                   {core.coreNumber}
                   {core.status === 'DAMAGED' && <span className="core-slash" />}
                   {core.note && <span className="core-note-dot" />}
-                </button>
+          </ToggleButton>
               )
             })}
           </div>
@@ -278,10 +277,10 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
       {canEdit && selected.length > 0 && !moveFrom && (
         <div className="core-editor stack" style={{ gap: '0.5rem' }}>
           <div className="spread" style={{ alignItems: 'center' }}>
-            <strong style={{ fontSize: '0.82rem' }}>
+            <strong style={{ ...typographyStyles.caption1 }}>
               {selected.length === 1 ? `Core ${selected[0]}` : `${selected.length} core terpilih`}
             </strong>
-            <span className="muted" style={{ fontSize: '0.72rem' }}>Shift+klik untuk rentang</span>
+            <span className="muted" style={{ ...typographyStyles.caption2 }}>Shift+klik untuk rentang</span>
           </div>
           <SelectField
             label="Status"
@@ -331,8 +330,8 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
       {moveFrom && (
         <div className="core-editor stack" style={{ gap: '0.5rem' }}>
           <div className="spread" style={{ alignItems: 'center', gap: '0.4rem' }}>
-            <strong style={{ fontSize: '0.82rem' }}>Pindah core {moveFrom.coreNumber} ke helai cadangan</strong>
-            <span className="muted" style={{ fontSize: '0.72rem' }}>{moveFrom.color}</span>
+            <strong style={{ ...typographyStyles.caption1 }}>Pindah core {moveFrom.coreNumber} ke helai cadangan</strong>
+            <span className="muted" style={{ ...typographyStyles.caption2 }}>{moveFrom.color}</span>
           </div>
           {/* Yang paling sering disalahpahami disebut lebih dulu: pindahnya SATU
               SERAT UTUH, jadi menyentuh semua kotak yang dilewatinya. */}
@@ -359,7 +358,7 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
           />
           {canPickWorkOrder && (
             <label className="stack" style={{ gap: '0.25rem' }}>
-              <span style={{ fontSize: '0.82rem' }}>Work order (opsional)</span>
+              <span style={{ ...typographyStyles.caption1 }}>Work order (opsional)</span>
               <Combobox
                 value={moveWorkOrder}
                 onChange={(id) => setMoveWorkOrder(id)}
@@ -379,7 +378,7 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
             disabled={busy}
           />
           {!markDamaged && (
-            <p className="muted" style={{ margin: 0, fontSize: '0.72rem' }}>
+            <p className="muted" style={{ margin: 0, ...typographyStyles.caption2 }}>
               Tanpa tanda rusak, core {moveFrom.coreNumber} kembali bebas dan bisa dipakai pelanggan
               berikutnya. Pilih ini hanya untuk penataan, bukan untuk serat yang bermasalah.
             </p>
@@ -395,7 +394,7 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
         </div>
       )}
 
-      {error && <p style={{ fontSize: '0.78rem', color: 'var(--critical-ink)', margin: 0 }}>{error}</p>}
+      {error && <p style={{ ...typographyStyles.caption1, color: 'var(--critical-ink)', margin: 0 }}>{error}</p>}
     </div>
   )
 }

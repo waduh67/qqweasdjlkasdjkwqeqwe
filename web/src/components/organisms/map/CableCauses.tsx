@@ -1,4 +1,4 @@
-import { MessageBar, MessageBarBody } from '@fluentui/react-components'
+import { MessageBar, MessageBarBody, Text } from '@fluentui/react-components'
 import type { ImpactCause } from '@/api/network'
 
 const ALARM_LABEL: Record<string, string> = {
@@ -32,12 +32,14 @@ export function CableCauses({ causes }: { causes: ImpactCause[] }) {
             }}
           />
           <span className="badge">{ALARM_LABEL[c.kind] ?? c.kind}</span>
-          <span
+          <Text
+            as="span"
             className="muted"
-            style={{ fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            size={200}
+            style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
             {c.label}
-          </span>
+          </Text>
         </div>
       ))}
     </div>

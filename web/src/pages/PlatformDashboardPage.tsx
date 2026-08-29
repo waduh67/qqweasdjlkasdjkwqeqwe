@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Table, TableBody, TableCell, TableRow, Text, typographyStyles } from '@fluentui/react-components'
 import { Link } from 'react-router-dom'
 import { listTenants, type Tenant } from '../api/platform'
 import {
@@ -75,8 +76,8 @@ export function PlatformDashboardPage() {
         {can('platform.tenant.view') && (
           <div className="card pad-0 grow" style={{ minWidth: 320 }}>
             <div className="card-head">
-              <h3>Tenant</h3>
-              <Link to="/platform/tenants" style={{ fontSize: '0.85rem' }}>
+              <Text as="h3" size={400} weight="semibold" >Tenant</Text>
+              <Link to="/platform/tenants" style={typographyStyles.body1}>
                 Kelola →
               </Link>
             </div>
@@ -85,29 +86,19 @@ export function PlatformDashboardPage() {
             ) : customers.length === 0 ? (
               <div className="card-body muted">Belum ada tenant. Onboarding tenant pertama untuk mulai.</div>
             ) : (
-              <table>
-                <tbody>
-                  {customers.slice(0, 8).map((t) => (
-                    <tr key={t.id}>
-                      <td>
-                        <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>{t.name}</div>
-                        <div className="muted" style={{ fontSize: '0.8rem' }}>
-                          {t.slug}
-                        </div>
-                      </td>
-                      <td style={{ textAlign: 'right', width: '1%' }}>
-                        <StatusBadge status={t.status} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <Table><TableBody>{customers.slice(0, 8).map((t) => (
+                <TableRow key={t.id}><TableCell ><div style={typographyStyles.body1Strong}>{t.name}</div>
+                <div className="muted" style={typographyStyles.caption1}>
+                  {t.slug}
+                </div></TableCell>
+                <TableCell style={{ textAlign: 'right', width: '1%' }}><StatusBadge status={t.status} /></TableCell></TableRow>
+              ))}</TableBody></Table>
             )}
           </div>
         )}
 
         <div className="card grow" style={{ minWidth: 260 }}>
-          <h3 style={{ marginTop: 0 }}>Pintasan</h3>
+          <Text as="h3" size={400} weight="semibold" style={{ marginTop: 0 }}>Pintasan</Text>
           <div className="stack" style={{ gap: '0.5rem' }}>
             <QuickLink to="/platform/tenants" icon={IconBuilding} label="Kelola tenant" hint="Onboarding & status tenant" show={can('platform.tenant.view')} />
             <QuickLink to="/platform/billing" icon={IconGauge} label="Billing langganan" hint="Gateway & harga default" show={can('platform.billing.view')} />
@@ -134,7 +125,7 @@ function StatText({ label, value }: { label: string; value: string }) {
   return (
     <div className="stat accent-bar">
       <div className="stat-label">{label}</div>
-      <div className="stat-value" style={{ fontSize: '1.35rem' }}>
+      <div className="stat-value" style={typographyStyles.subtitle1}>
         {value}
       </div>
     </div>
@@ -161,14 +152,10 @@ function QuickLink({
       className="row"
       style={{ gap: '0.7rem', padding: '0.55rem 0.6rem', borderRadius: 'var(--radius-sm)', color: 'var(--text)' }}
     >
-      <span className="avatar" aria-hidden style={{ borderRadius: 8 }}>
-        <Icon size={17} />
-      </span>
+      <Text as="span" className="avatar" aria-hidden style={{ borderRadius: 8 }}><Icon size={17} /></Text>
       <span>
-        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{label}</div>
-        <div className="muted" style={{ fontSize: '0.78rem' }}>
-          {hint}
-        </div>
+        <div style={typographyStyles.body1Strong}>{label}</div>
+        <div className="muted" style={typographyStyles.caption1}>{hint}</div>
       </span>
     </Link>
   )

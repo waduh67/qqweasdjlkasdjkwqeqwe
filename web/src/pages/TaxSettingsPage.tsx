@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Text } from '@fluentui/react-components'
 import { ApiError } from '../api/client'
 import {
   getTaxSettings,
@@ -148,7 +149,7 @@ export function TaxSettingsPage() {
     }
   }
 
-  if (loading) return <p className="muted">Memuat setelan…</p>
+  if (loading) return <Text as="p" className="muted">Memuat setelan…</Text>
   if (!form || !saved) {
     return <EmptyState title="Setelan pajak tak tersedia" hint="Coba muat ulang halaman." icon={<IconAlert size={28} />} />
   }
@@ -163,9 +164,9 @@ export function TaxSettingsPage() {
       <StatusPanel saved={saved} />
 
       {!manage && (
-        <p className="muted" style={{ margin: 0 }}>
+        <Text as="p" className="muted" style={{ margin: 0 }}>
           Anda hanya bisa melihat setelan ini. Perlu izin “Kelola PPN &amp; kontribusi BHP/USO” untuk mengubahnya.
-        </p>
+        </Text>
       )}
 
       <div className="card stack" aria-disabled={!manage}>
@@ -197,11 +198,11 @@ export function TaxSettingsPage() {
         <div className="hr" />
 
         <SectionTitle>BHP &amp; USO (kewajiban laporan)</SectionTitle>
-        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
           BHP Telekomunikasi &amp; Kontribusi USO adalah PNBP yang dibayar tenant dari peredaran bruto —{' '}
-          <strong>tidak ditagihkan ke pelanggan</strong>. Menyalakan ini hanya menampilkan KPI &amp; kewajiban di
+          <Text as="strong" weight="semibold" >tidak ditagihkan ke pelanggan</Text>. Menyalakan ini hanya menampilkan KPI &amp; kewajiban di
           halaman Tagihan (dihitung server dari tagihan lunas).
-        </p>
+        </Text>
         <FormRow label="Pelaporan BHP/USO">
           <Segmented
             value={form.regulatoryEnabled ? 'on' : 'off'}
@@ -236,9 +237,7 @@ export function TaxSettingsPage() {
           <>
             <div className="hr" />
             <div className="spread" style={{ alignItems: 'center' }}>
-              <span className="muted" style={{ fontSize: '0.85rem' }}>
-                {dirty ? `${changes.length} perubahan belum disimpan` : 'Tak ada perubahan'}
-              </span>
+              <Text as="span" className="muted" size={300}>{dirty ? `${changes.length} perubahan belum disimpan` : 'Tak ada perubahan'}</Text>
               <div className="row" style={{ gap: '0.5rem' }}>
                 <Button variant="subtle" onClick={discard} disabled={!dirty || saving}>
                   Batalkan
@@ -268,24 +267,22 @@ export function TaxSettingsPage() {
           }
         >
           <div className="stack" style={{ gap: '0.85rem' }}>
-            <p style={{ margin: 0, fontSize: '0.9rem' }}>Tinjau perubahan berikut sebelum berlaku untuk tenant ini:</p>
+            <Text as="p" size={300} style={{ margin: 0 }}>Tinjau perubahan berikut sebelum berlaku untuk tenant ini:</Text>
             <div className="stack" style={{ gap: '0.4rem' }}>
               {changes.map((c) => (
-                <div key={c.label} className="spread" style={{ gap: '0.75rem', fontSize: '0.88rem' }}>
-                  <span className="muted">{c.label}</span>
-                  <span style={{ textAlign: 'right' }}>
-                    <span className="muted" style={{ textDecoration: 'line-through' }}>
-                      {c.from}
-                    </span>{' '}
-                    → <strong>{c.to}</strong>
-                  </span>
+                <div key={c.label} className="spread" style={{ gap: '0.75rem' }}>
+                  <Text as="span" className="muted">{c.label}</Text>
+                  <Text as="span" style={{ textAlign: 'right' }}><Text as="span" className="muted" strikethrough>
+                    {c.from}
+                  </Text>{' '}
+                  → <Text as="strong" weight="semibold">{c.to}</Text></Text>
                 </div>
               ))}
             </div>
             {enablingPpn && (
               <Callout>
-                PPN akan <strong>AKTIF</strong> — tagihan berikutnya otomatis menambahkan PPN{' '}
-                <strong>{form.ppnPct}%</strong> ke total. Tagihan yang sudah terbit tidak berubah.
+                PPN akan <Text as="strong" weight="semibold" >AKTIF</Text> — tagihan berikutnya otomatis menambahkan PPN{' '}
+                <Text as="strong" weight="semibold" >{form.ppnPct}%</Text> ke total. Tagihan yang sudah terbit tidak berubah.
               </Callout>
             )}
           </div>
@@ -301,15 +298,15 @@ function StatusPanel({ saved }: { saved: TaxSettingsView }) {
     <div className="card stack" style={{ gap: '0.75rem' }}>
       <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
         <IconShield size={16} />
-        <strong style={{ fontSize: '0.95rem' }}>Berlaku sekarang</strong>
+        <Text as="strong" size={400} weight="semibold">Berlaku sekarang</Text>
       </div>
       <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <span className="muted" style={{ fontSize: '0.82rem' }}>PPN:</span>
+        <Text as="span" className="muted" size={200}>PPN:</Text>
         <Badge tone={saved.ppnEnabled ? 'good' : 'neutral'}>{saved.ppnEnabled ? 'Aktif' : 'Nonaktif'}</Badge>
         {saved.ppnEnabled && <Badge tone="accent">{pctFromFraction(saved.ppnRate)}%</Badge>}
       </div>
       <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <span className="muted" style={{ fontSize: '0.82rem' }}>BHP/USO:</span>
+        <Text as="span" className="muted" size={200}>BHP/USO:</Text>
         <Badge tone={saved.regulatoryEnabled ? 'good' : 'neutral'}>{saved.regulatoryEnabled ? 'Aktif' : 'Nonaktif'}</Badge>
         {saved.regulatoryEnabled && (
           <>
@@ -349,7 +346,7 @@ function PercentField({
         value={value}
         onChange={(_, data) => onChange(data.value)}
         disabled={disabled}
-        contentAfter={<span className="muted">%</span>}
+        contentAfter={<Text as="span" className="muted">%</Text>}
         validationState={invalid ? 'error' : 'none'}
         validationMessage={invalid ? 'Isi angka 0–99.99.' : undefined}
         hint={invalid ? undefined : hint}
@@ -362,12 +359,10 @@ function PercentField({
 function FormRow({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <div className="stack" style={{ gap: '0.35rem' }}>
-      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{label}</span>
+      <Text as="span" size={300} weight="semibold">{label}</Text>
       {children}
       {hint && (
-        <span className="muted" style={{ fontSize: '0.82rem' }}>
-          {hint}
-        </span>
+        <Text as="span" className="muted" size={200}>{hint}</Text>
       )}
     </div>
   )
@@ -384,7 +379,6 @@ function Callout({ children }: { children: ReactNode }) {
         borderRadius: 'var(--radius-sm)',
         background: 'color-mix(in srgb, var(--warning) 12%, var(--surface))',
         border: '1px solid color-mix(in srgb, var(--warning) 32%, transparent)',
-        fontSize: '0.85rem',
       }}
     >
       <IconAlert size={16} />
@@ -394,5 +388,5 @@ function Callout({ children }: { children: ReactNode }) {
 }
 
 function SectionTitle({ children }: { children: ReactNode }) {
-  return <h3 style={{ margin: '0.25rem 0 0', fontSize: '0.95rem', fontWeight: 600 }}>{children}</h3>
+  return <Text as="h3" size={400} weight="semibold" style={{ margin: '0.25rem 0 0' }}>{children}</Text>
 }

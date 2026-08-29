@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { ApiError } from '../api/client'
 import { api } from '../api/client'
 import type { Area, PageResponse, Role, User } from '../api/types'
@@ -223,7 +224,7 @@ export function ExpressPsbPage() {
         <div className="card stack" style={{ gap: '1rem' }}>
           {/* Pelanggan */}
           <section className="stack" style={{ gap: '0.5rem' }}>
-            <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Pelanggan</h3>
+            <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>Pelanggan</Text>
             <div className="row wrap" style={{ gap: '0.6rem' }}>
               <div style={{ flex: 1, minWidth: 140 }}>
                 <TextField label="Kode" value={draft.code} onChange={(_, data) => set({ code: data.value })} placeholder="Otomatis: CUST-000001" />
@@ -270,7 +271,7 @@ export function ExpressPsbPage() {
 
           {/* Paket & akun jaringan */}
           <section className="stack" style={{ gap: '0.5rem' }}>
-            <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Paket &amp; akun jaringan</h3>
+            <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>Paket &amp; akun jaringan</Text>
             <div className="row wrap" style={{ gap: '0.6rem', alignItems: 'flex-end' }}>
               <div style={{ flex: 2, minWidth: 180 }}>
                 <SelectField label="Paket *" value={planId} onChange={(_, data) => changePlan(data.value)}>
@@ -336,22 +337,22 @@ export function ExpressPsbPage() {
                 </SelectField>
               </div>
               {draft.areaId !== '' && !nasByArea.has(draft.areaId) && (
-                <span className="muted" style={{ fontSize: '0.8rem', alignSelf: 'center' }}>
+                <Text as="span" className="muted" size={200} style={{ alignSelf: 'center' }}>
                   Area ini belum dipetakan ke BRAS — pilih manual bila perlu.
-                </span>
+                </Text>
               )}
             </div>
-            <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+            <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
               {macBased
                 ? 'DHCP/Static memakai MAC sebagai identitas (konvensi use-radius). Static butuh IP yang direservasi.'
                 : 'Password tak pernah dibalikkan server — salin dari sini. Username kosong = di-generate dari kode pelanggan.'}
               {' '}Akun lahir PENDING dan belum ditulis ke RADIUS sampai WO PSB selesai.
-            </p>
+            </Text>
           </section>
 
           {/* Work order pemasangan */}
           <section className="stack" style={{ gap: '0.5rem' }}>
-            <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Pemasangan (Work Order PSB)</h3>
+            <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>Pemasangan (Work Order PSB)</Text>
             <div className="row wrap" style={{ gap: '0.6rem', alignItems: 'flex-end' }}>
               <div style={{ flex: 2, minWidth: 200 }}>
                 <TextField label="Judul WO (opsional)" value={draft.title} onChange={(_, data) => set({ title: data.value })} placeholder={`PSB ${draft.name.trim() || 'pelanggan'}`} />
@@ -402,12 +403,12 @@ function ResultCard({ result, onDismiss }: { result: ExpressPsbResult & { secret
   return (
     <div className="card stack" style={{ gap: '0.6rem', borderLeft: '3px solid var(--good, #34c759)' }}>
       <div className="spread" style={{ alignItems: 'center' }}>
-        <h3 style={{ margin: 0, fontSize: '0.95rem' }}>
+        <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>
           <Badge tone="good">PSB dibuat</Badge> {result.workOrderCode}
-        </h3>
+        </Text>
         <Button variant="subtle" onClick={onDismiss}>Tutup</Button>
       </div>
-      <dl className="kv" style={{ margin: 0, display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.3rem 0.8rem', fontSize: '0.85rem' }}>
+      <dl className="kv" style={{ margin: 0, display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.3rem 0.8rem' }}>
         <dt className="muted">Username</dt>
         <dd style={{ margin: 0 }}><code>{result.username}</code></dd>
         <dt className="muted">Password</dt>
@@ -415,9 +416,9 @@ function ResultCard({ result, onDismiss }: { result: ExpressPsbResult & { secret
         <dt className="muted">Work Order</dt>
         <dd style={{ margin: 0 }}>{result.workOrderCode} · menunggu instalasi</dd>
       </dl>
-      <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+      <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
         Langganan &amp; akun berstatus PENDING. Pelanggan online setelah teknisi menuntaskan WO PSB.
-      </p>
+      </Text>
     </div>
   )
 }

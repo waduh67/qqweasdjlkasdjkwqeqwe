@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components'
 import { useNavigate } from 'react-router-dom'
 import { RefreshCw } from 'lucide-react'
 import { api, ApiError } from '../api/client'
@@ -427,12 +428,12 @@ function EssentialsBlock({
 
   return (
     <section className="stack" style={{ gap: '0.6rem' }}>
-      <button type="button" className="blade-disclosure" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+      <Button variant="subtle" className="blade-disclosure" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
         <span className="chev" aria-hidden>
           <IconChevronDown size={14} />
         </span>
         Essentials
-      </button>
+      </Button>
 
       {open && (
         <div className="ess-cols">
@@ -468,11 +469,11 @@ function EssentialsBlock({
               ) : (
                 <span
                   className="tnum"
-                  style={{ fontWeight: 600, color: arrears > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
+                  style={{ color: arrears > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
                 >
                   {fmtRupiah(arrears)}
                   {billing && billing.outstandingCount > 0 && (
-                    <span className="muted" style={{ fontWeight: 400 }}> · {billing.outstandingCount} jatuh tempo</span>
+                    <Text as="span" weight="semibold" className="muted" > · {billing.outstandingCount} jatuh tempo</Text>
                   )}
                 </span>
               )}
@@ -679,12 +680,10 @@ function SubscriptionManager({
       <SectionHead icon={<IconPackage size={16} />} title="Langganan" />
 
       {sub == null ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum berpaket.</p>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum berpaket.</Text>
       ) : (
         <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.88rem' }}>
-            {sub.packageName} · {sub.bandwidthMbps} Mbps · Rp {sub.monthlyFee}
-          </span>
+          <Text as="span" size={300}  >{sub.packageName} · {sub.bandwidthMbps} Mbps · Rp {sub.monthlyFee}</Text>
           <div className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
             <StatusBadge status={sub.status} />
             {canManage && sub.status !== 'TERMINATED' && <SubscriptionActions sub={sub} run={run} />}
@@ -695,9 +694,9 @@ function SubscriptionManager({
       {canManage && (
         <div className="stack" style={{ gap: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
           {plans.length === 0 ? (
-            <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+            <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
               Belum ada paket aktif — buat dulu di menu Paket Internet.
-            </p>
+            </Text>
           ) : (
             <>
               <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -728,16 +727,14 @@ function SubscriptionManager({
                 </Button>
               </div>
               {selected && (
-                <p className="muted tnum" style={{ margin: 0, fontSize: '0.82rem' }}>
+                <p className="muted tnum" style={{ margin: 0,  }}>
                   {selected.downMbps}/{selected.upMbps} Mbps · {fmtRupiah(selected.price)}/bln
                   {selected.fupEnabled ? ' · FUP' : ''} — kecepatan &amp; QoS mengikuti paket secara live.
                 </p>
               )}
-              <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-                {ended
-                  ? 'Langganan lamanya dihidupkan kembali — username PPPoE & riwayat tagihannya tetap yang itu.'
-                  : 'Satu pelanggan satu langganan — paketnya ditetapkan di tempat, tak pernah ditambah. Untuk layanan kedua di lokasi lain, daftarkan sebagai pelanggan baru.'}
-              </p>
+              <Text as="p" className="muted" size={200} style={{ margin: 0 }}>{ended
+                ? 'Langganan lamanya dihidupkan kembali — username PPPoE & riwayat tagihannya tetap yang itu.'
+                : 'Satu pelanggan satu langganan — paketnya ditetapkan di tempat, tak pernah ditambah. Untuk layanan kedua di lokasi lain, daftarkan sebagai pelanggan baru.'}</Text>
             </>
           )}
         </div>
@@ -794,23 +791,21 @@ function OnuManager({
     <div className="card stack" style={{ gap: '0.5rem' }}>
       <SectionHead icon={<IconInventory size={16} />} title="Perangkat ONU" />
       {customer.onus.length === 0 && (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada ONU terdaftar.</p>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada ONU terdaftar.</Text>
       )}
       {customer.onus.map((onu: OnuView) => (
         <div key={onu.id} className="spread" style={{ alignItems: 'center' }}>
-          <span style={{ fontSize: '0.85rem' }}>
-            {onu.serialNumber}{' '}
-            {onu.odpCode ? (
-              <span className="badge accent">
-                {onu.odpCode} port {onu.odpPortNumber}
-              </span>
-            ) : (
-              <span className="badge">belum terpasang</span>
-            )}{' '}
-            <span style={{ color: HEALTH_COLOR[onu.opticalHealth], fontWeight: 600 }}>
-              {onu.installRxPowerDbm != null ? `${onu.installRxPowerDbm} dBm` : onu.opticalHealth}
+          <Text as="span" size={300}  >{onu.serialNumber}{' '}
+          {onu.odpCode ? (
+            <span className="badge accent">
+              {onu.odpCode} port {onu.odpPortNumber}
             </span>
-          </span>
+          ) : (
+            <span className="badge">belum terpasang</span>
+          )}{' '}
+          <span style={{ color: HEALTH_COLOR[onu.opticalHealth],  }}>
+            {onu.installRxPowerDbm != null ? `${onu.installRxPowerDbm} dBm` : onu.opticalHealth}
+          </span></Text>
           {can('customer.onu.assign') && (
             <div className="row">
               {onu.odpId ? (
@@ -973,7 +968,7 @@ function JalurTab({ trace, connected }: { trace: CustomerTrace | null; connected
                     {hop.code && ` ${hop.code}`}
                   </span>
                   {hop.detail && (
-                    <span style={{ fontSize: '0.68rem', opacity: 0.8, fontWeight: 400 }}>{hop.detail}</span>
+                    <Text as="span" size={200}  style={{ opacity: 0.8,  }} >{hop.detail}</Text>
                   )}
                 </span>
                 {index < trace.hops.length - 1 && <span className="muted">→</span>}
@@ -1081,11 +1076,9 @@ function TetanggaTab({
           />
         }
       />
-      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-        {scope === 'odp'
-          ? 'Penghuni ODP yang sama — berbagi kabel drop & splitter ODP.'
-          : 'Seluruh ODP di bawah PON port yang sama — berbagi port OLT (superset se-ODP).'}
-      </p>
+      <Text as="p" className="muted" size={200} style={{ margin: 0 }}>{scope === 'odp'
+        ? 'Penghuni ODP yang sama — berbagi kabel drop & splitter ODP.'
+        : 'Seluruh ODP di bawah PON port yang sama — berbagi port OLT (superset se-ODP).'}</Text>
       <NeighborList items={scope === 'odp' ? neighbors?.sameOdp ?? null : neighbors?.samePonPort ?? null} showOdp={scope === 'pon'} />
     </div>
   )
@@ -1121,21 +1114,17 @@ function NeighborList({ items, showOdp }: { items: NeighborView[] | null; showOd
         >
           <span className="badge neutral tnum" title="Nomor port ODP">#{n.portNumber}</span>
           <div className="stack" style={{ gap: 2, flex: 1, minWidth: 0 }}>
-            <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {n.customerName}
-              {n.self && <span className="muted" style={{ fontWeight: 400 }}> · pelanggan ini</span>}
+              {n.self && <Text as="span" weight="semibold" className="muted" > · pelanggan ini</Text>}
             </span>
-            <span className="muted" style={{ fontSize: '0.78rem' }}>
-              {showOdp && `${n.odpCode} · `}
-              {n.onuSerialNumber}
-            </span>
+            <Text as="span" size={300} className="muted" >{showOdp && `${n.odpCode} · `}
+            {n.onuSerialNumber}</Text>
           </div>
           <div className="stack" style={{ gap: 3, alignItems: 'flex-end' }}>
             <StatusBadge status={n.liveStatus ?? n.onuStatus} label={onuStatusLabel(n.liveStatus ?? n.onuStatus)} />
-            <span className="tnum muted" style={{ fontSize: '0.78rem' }}>
-              {fmtDbm(n.liveRxPowerDbm ?? n.installRxPowerDbm)}
-              {n.distanceMeters != null && ` · ${n.distanceMeters} m`}
-            </span>
+            <Text as="span" size={300} className="tnum muted" >{fmtDbm(n.liveRxPowerDbm ?? n.installRxPowerDbm)}
+            {n.distanceMeters != null && ` · ${n.distanceMeters} m`}</Text>
           </div>
         </div>
       ))}
@@ -1240,18 +1229,18 @@ function MetrikTab({ customer, metrics }: { customer: CustomerView; metrics: Onu
                 <span
                   className="badge"
                   title={`Sebab putus terakhir: ${live.downCause}`}
-                  style={{ color: 'var(--warning-ink)', fontWeight: 600 }}
+                  style={{ color: 'var(--warning-ink)',  }}
                 >
                   Ldc: {DOWN_CAUSE_LABEL[live.downCause]}
                 </span>
               )}
             </div>
             {(live.lastOffAt || live.lastOnAt) && (
-              <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>{describeOutage(live)}</p>
+              <Text as="p" className="muted" size={300} style={{ margin: 0 }}>{describeOutage(live)}</Text>
             )}
           </>
         ) : (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada bacaan hidup dari monitoring.</p>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada bacaan hidup dari monitoring.</Text>
         )}
       </div>
 
@@ -1266,7 +1255,7 @@ function MetrikTab({ customer, metrics }: { customer: CustomerView; metrics: Onu
               <MiniStat label="Tren" value={fmt(history.trendDbPerDay)} unit="dB/hari" warn={history.degrading} />
             </div>
             {history.degrading && (
-              <div className="row" style={{ gap: '0.5rem', color: 'var(--warning-ink)', fontSize: '0.85rem' }}>
+              <div className="row" style={{ gap: '0.5rem', color: 'var(--warning-ink)',  }}>
                 <IconAlert size={16} />
                 Redaman memburuk cukup cepat — kandidat pemeliharaan preventif.
               </div>
@@ -1274,7 +1263,7 @@ function MetrikTab({ customer, metrics }: { customer: CustomerView; metrics: Onu
             <OpticalChart points={history.points} />
           </>
         ) : (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Memuat tren…</p>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Memuat tren…</Text>
         )}
       </div>
     </div>
@@ -1289,10 +1278,8 @@ function MiniStat({ label, value, unit, warn }: { label: string; value: string; 
   return (
     <div className="stat">
       <div className="stat-label">{label}</div>
-      <div className="stat-value" style={{ fontSize: '1.3rem', color: warn ? 'var(--warning-ink)' : undefined }}>
-        {value}
-        <span className="muted" style={{ fontSize: '0.7rem', fontWeight: 500 }}> {unit}</span>
-      </div>
+      <div className="stat-value" style={{ color: warn ? 'var(--warning-ink)' : undefined }}>{value}
+      <Text as="span" weight="semibold" size={200} className="muted"> {unit}</Text></div>
     </div>
   )
 }
@@ -1626,9 +1613,7 @@ function SubscriptionAccessCard({
   return (
     <div className="card stack" style={{ gap: '0.6rem' }}>
       <div className="spread" style={{ alignItems: 'center' }}>
-        <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>
-          {sub.packageName} · {sub.bandwidthMbps} Mbps · Rp {sub.monthlyFee}
-        </span>
+        <Text as="span" weight="semibold" size={200} >{sub.packageName} · {sub.bandwidthMbps} Mbps · Rp {sub.monthlyFee}</Text>
         <StatusBadge status={sub.status} />
       </div>
 
@@ -1712,15 +1697,15 @@ function SubscriptionAccessCard({
           {canSession && <BrasSessionPanel accessId={account.id} />}
         </div>
       ) : sub.status === 'TERMINATED' ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
           Langganan sudah dihentikan — tak bisa diberi akun jaringan.
-        </p>
+        </Text>
       ) : !canManage ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada akun jaringan untuk langganan ini.</p>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada akun jaringan untuk langganan ini.</Text>
       ) : plans.length === 0 ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
           Belum ada akun jaringan. Buat paket dulu di menu <strong>Paket Internet</strong> sebelum memprovisi akun.
-        </p>
+        </Text>
       ) : form === 'provision' ? (
         <div className="stack" style={{ gap: '0.5rem' }}>
           <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -1784,15 +1769,13 @@ function SubscriptionAccessCard({
             </Button>
             <Button onClick={close}>Batal</Button>
           </div>
-          <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-            {macBased
-              ? 'DHCP/Static memakai MAC sebagai identitas sekaligus password (konvensi use-radius). Static butuh IP yang direservasi.'
-              : 'Password disimpan terenkripsi dan tidak pernah ditampilkan kembali — hanya bisa di-reset.'}
-          </p>
+          <Text as="p" className="muted" size={200} style={{ margin: 0 }}>{macBased
+            ? 'DHCP/Static memakai MAC sebagai identitas sekaligus password (konvensi use-radius). Static butuh IP yang direservasi.'
+            : 'Password disimpan terenkripsi dan tidak pernah ditampilkan kembali — hanya bisa di-reset.'}</Text>
         </div>
       ) : (
         <div className="spread" style={{ alignItems: 'center' }}>
-          <span className="muted" style={{ fontSize: '0.85rem' }}>Belum ada akun jaringan untuk langganan ini.</span>
+          <Text as="span" size={300} className="muted" >Belum ada akun jaringan untuk langganan ini.</Text>
           <Button variant="primary" onClick={openProvision}>
             Provisi akun
           </Button>
@@ -1823,7 +1806,7 @@ function BrasSessionPanel({ accessId }: { accessId: string }) {
   }, [accessId])
 
   if (!session) {
-    return <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>Memuat sesi…</p>
+    return <Text as="p" className="muted" size={200} style={{ margin: 0 }}>Memuat sesi…</Text>
   }
 
   const neverSeen = session.lastSeenAt == null
@@ -1833,7 +1816,7 @@ function BrasSessionPanel({ accessId }: { accessId: string }) {
         <span
           className="badge"
           title={session.online ? 'BRAS melaporkan sesi aktif' : 'BRAS tak melaporkan sesi aktif'}
-          style={{ color: session.online ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
+          style={{ color: session.online ? 'var(--good-ink)' : 'var(--muted)',  }}
         >
           {session.online ? '● online' : '○ offline'}
         </span>
@@ -1853,11 +1836,11 @@ function BrasSessionPanel({ accessId }: { accessId: string }) {
       </div>
 
       {neverSeen ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
           Akun ini belum pernah terpantau BRAS — pastikan BRAS-nya terhubung ke collector.
-        </p>
+        </Text>
       ) : (
-        <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+        <p className="muted" style={{ margin: 0,  }}>
           {session.callingStationId && `MAC ${session.callingStationId} · `}
           {session.nasIp && `NAS ${session.nasIp} · `}
           terpantau terakhir {fmtInstant(session.lastSeenAt)}
@@ -2068,17 +2051,15 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
               <span
                 className="badge"
                 title={d.online ? 'Inform terakhir masih baru' : 'Tak ada inform terbaru dari ACS'}
-                style={{ color: d.online ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
+                style={{ color: d.online ? 'var(--good-ink)' : 'var(--muted)',  }}
               >
                 {d.online ? 'online' : 'offline'}
               </span>
               {d.manufacturer && <span className="badge neutral">{d.manufacturer}</span>}
             </div>
-            <span className="muted" style={{ fontSize: '0.82rem' }}>
-              {d.serialNumber}
-              {d.softwareVersion && ` · fw ${d.softwareVersion}`}
-              {d.ipAddress && ` · ${d.ipAddress}`}
-            </span>
+            <Text as="span" size={300} className="muted" >{d.serialNumber}
+            {d.softwareVersion && ` · fw ${d.softwareVersion}`}
+            {d.ipAddress && ` · ${d.ipAddress}`}</Text>
           </div>
           {canReboot && (
             <Button variant="danger" onClick={() => void reboot()} disabled={rebooting}>
@@ -2100,9 +2081,9 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
         <div className="card stack" style={{ gap: '0.75rem' }}>
           <SectionHead icon={<IconWifi size={16} />} title="WiFi" />
           {live == null ? (
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Memuat dari ACS…</p>
+            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Memuat dari ACS…</Text>
           ) : live.wifi.length === 0 ? (
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Tak ada jaringan WiFi terbaca.</p>
+            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Tak ada jaringan WiFi terbaca.</Text>
           ) : (
             live.wifi.map((w) => (
               <WifiCard
@@ -2120,23 +2101,21 @@ function CpeDevicePanel({ deviceId }: { deviceId: string }) {
         <div className="card stack" style={{ gap: '0.6rem' }}>
           <SectionHead icon={<IconMonitor size={16} />} title="Perangkat tersambung" />
           {live == null ? (
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Memuat…</p>
+            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Memuat…</Text>
           ) : live.hosts.length === 0 ? (
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Tak ada host aktif.</p>
+            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Tak ada host aktif.</Text>
           ) : (
             <div className="stack" style={{ gap: '0.35rem' }}>
               {live.hosts.map((h, i) => (
                 <div key={`${h.macAddress ?? i}`} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
                   <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{h.hostName ?? '(tanpa nama)'}</span>
-                    <span className="muted tnum" style={{ fontSize: '0.78rem' }}>
-                      {h.ipAddress ?? '—'}
-                      {h.macAddress && ` · ${h.macAddress}`}
-                    </span>
+                    <Text as="span" weight="semibold" size={200} >{h.hostName ?? '(tanpa nama)'}</Text>
+                    <Text as="span" size={300} className="muted tnum" >{h.ipAddress ?? '—'}
+                    {h.macAddress && ` · ${h.macAddress}`}</Text>
                   </div>
                   <span
                     className="badge"
-                    style={{ color: h.active ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
+                    style={{ color: h.active ? 'var(--good-ink)' : 'var(--muted)',  }}
                   >
                     {h.active ? 'aktif' : 'idle'}
                   </span>
@@ -2214,7 +2193,7 @@ function DiagnosticsCard({
     <div className="card stack" style={{ gap: '0.75rem' }}>
       <SectionHead icon={<IconFlask size={16} />} title="Diagnostik" />
       {!online && (
-        <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+        <p className="muted" style={{ margin: 0,  }}>
           Perangkat sedang offline — diagnostik bisa gagal atau menunggu lama.
         </p>
       )}
@@ -2248,22 +2227,20 @@ function DiagPingResult({ ping }: { ping: PingDiagnosticView }) {
   return (
     <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
       <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-        <span style={{ fontSize: '0.85rem' }}>
-          <span style={{ fontWeight: 600 }}>Ping {ping.host}</span>
-          {ping.ok && total > 0 && (
-            <span className="muted">
-              {' '}· {ping.successCount ?? 0}/{total} sukses
-              {ping.averageResponseMs != null && ` · avg ${ping.averageResponseMs} ms`}
-            </span>
-          )}
-        </span>
+        <Text as="span" size={300}  ><Text as="span" weight="semibold">Ping {ping.host}</Text>
+        {ping.ok && total > 0 && (
+          <span className="muted">
+            {' '}· {ping.successCount ?? 0}/{total} sukses
+            {ping.averageResponseMs != null && ` · avg ${ping.averageResponseMs} ms`}
+          </span>
+        )}</Text>
         {!ping.ok && (
-          <span className="muted" style={{ fontSize: '0.78rem' }}>{ping.message}</span>
+          <Text as="span" size={300} className="muted" >{ping.message}</Text>
         )}
       </div>
       <span
         className="badge"
-        style={{ color: ping.ok ? 'var(--good-ink)' : 'var(--critical-ink)', fontWeight: 600 }}
+        style={{ color: ping.ok ? 'var(--good-ink)' : 'var(--critical-ink)',  }}
       >
         {ping.ok ? 'tuntas' : 'gagal'}
       </span>
@@ -2277,18 +2254,16 @@ function DiagSpeedResult({ speed }: { speed: SpeedTestDiagnosticView }) {
   return (
     <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
       <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-        <span style={{ fontSize: '0.85rem' }}>
-          <span style={{ fontWeight: 600 }}>{label}</span>
-          {speed.ok && speed.throughputMbps != null ? (
-            <span className="muted"> · {speed.throughputMbps.toFixed(1)} Mbps</span>
-          ) : (
-            <span className="muted"> · {speed.message}</span>
-          )}
-        </span>
+        <Text as="span" size={300}  ><Text as="span" weight="semibold">{label}</Text>
+        {speed.ok && speed.throughputMbps != null ? (
+          <span className="muted"> · {speed.throughputMbps.toFixed(1)} Mbps</span>
+        ) : (
+          <span className="muted"> · {speed.message}</span>
+        )}</Text>
       </div>
       <span
         className="badge"
-        style={{ color: speed.ok ? 'var(--good-ink)' : 'var(--critical-ink)', fontWeight: 600 }}
+        style={{ color: speed.ok ? 'var(--good-ink)' : 'var(--critical-ink)',  }}
       >
         {speed.ok ? 'tuntas' : 'gagal'}
       </span>
@@ -2357,27 +2332,24 @@ function FirmwareCard({
         icon={<IconUpload size={16} />}
         title="Firmware"
         aside={
-          <span className="muted" style={{ fontSize: '0.82rem' }}>
-            terpasang: {currentVersion ?? '—'}
-          </span>
+          <Text as="span" size={300} className="muted" >
+            terpasang: {currentVersion ?? '—'}</Text>
         }
       />
       {files == null ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Memuat dari ACS…</p>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Memuat dari ACS…</Text>
       ) : files.length === 0 ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
           Tak ada firmware tersedia untuk model ini.
-        </p>
+        </Text>
       ) : (
         <div className="stack" style={{ gap: '0.35rem' }}>
           {files.map((f) => (
             <div key={f.name} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
               <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{f.version ?? f.name}</span>
-                <span className="muted" style={{ fontSize: '0.78rem' }}>
-                  {f.name}
-                  {f.sizeBytes != null && ` · ${fmtBytes(f.sizeBytes)}`}
-                </span>
+                <Text as="span" weight="semibold" size={200} >{f.version ?? f.name}</Text>
+                <Text as="span" size={300} className="muted" >{f.name}
+                {f.sizeBytes != null && ` · ${fmtBytes(f.sizeBytes)}`}</Text>
               </div>
               <Button onClick={() => void upgrade(f)} disabled={busy}>
                 {pushing === f.name ? 'Mengirim…' : 'Pasang'}
@@ -2456,16 +2428,16 @@ function AcsCard({ deviceId, onRan }: { deviceId: string; onRan: () => void }) {
             <span
               className="badge"
               title={acs.message}
-              style={{ color: acs.connected ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}
+              style={{ color: acs.connected ? 'var(--good-ink)' : 'var(--muted)',  }}
             >
               {acs.connected ? 'ACS Connect' : 'Not Connect'}
             </span>
           )
         }
       />
-      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+      <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
         Refresh memaksa perangkat menghubungi ACS sekarang; reset pabrik mengembalikan setelan ke bawaan.
-      </p>
+      </Text>
       <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
         <Button onClick={() => void refresh()} disabled={busy}>
           {refreshing ? 'Menghubungi…' : 'Refresh ACS'}
@@ -2521,7 +2493,7 @@ function WifiCard({
     >
       <div className="row" style={{ gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
         {wifi.band && <span className="badge neutral">{wifi.band}</span>}
-        <span className="badge" style={{ color: wifi.enabled ? 'var(--good-ink)' : 'var(--muted)', fontWeight: 600 }}>
+        <span className="badge" style={{ color: wifi.enabled ? 'var(--good-ink)' : 'var(--muted)',  }}>
           {wifi.enabled ? 'aktif' : 'nonaktif'}
         </span>
       </div>
@@ -2566,20 +2538,15 @@ function CpeActionLog({ actions }: { actions: CpeActionView[] }) {
         {actions.map((a) => (
           <div key={a.id} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
             <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-              <span style={{ fontSize: '0.85rem' }}>
-                <span style={{ fontWeight: 600 }}>{CPE_ACTION_LABEL[a.action]}</span>
-                {a.detail && <span className="muted"> · {a.detail}</span>}
-              </span>
-              <span className="muted" style={{ fontSize: '0.78rem' }}>
-                {fmtInstant(a.requestedAt)}
-                {a.requestedByEmail && ` · ${a.requestedByEmail}`}
-              </span>
+              <Text as="span" size={300}  ><Text as="span" weight="semibold">{CPE_ACTION_LABEL[a.action]}</Text>
+              {a.detail && <span className="muted"> · {a.detail}</span>}</Text>
+              <Text as="span" size={300} className="muted" >{fmtInstant(a.requestedAt)}
+              {a.requestedByEmail && ` · ${a.requestedByEmail}`}</Text>
             </div>
             <span
               className="badge"
               style={{
                 color: a.status === 'SUCCESS' ? 'var(--good-ink)' : 'var(--critical-ink)',
-                fontWeight: 600,
               }}
             >
               {a.status === 'SUCCESS' ? 'berhasil' : 'gagal'}
@@ -2701,89 +2668,72 @@ function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub3
           aside={
             <span
               className="tnum"
-              style={{ fontWeight: 600, color: tunggakan > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
+              style={{ color: tunggakan > 0 ? 'var(--critical-ink)' : 'var(--good-ink)' }}
             >
               {fmtRupiah(tunggakan)}
             </span>
           }
         />
-        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
           Jumlah tagihan jatuh tempo yang belum dibayar.
-        </p>
+        </Text>
       </div>
 
       <div className="card">
-        <table>
-          <thead>
-            <tr>
-              <th>Nomor</th>
-              <th>Periode</th>
-              <th>Jatuh tempo</th>
-              <th style={{ textAlign: 'right' }}>Jumlah</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((inv) => (
-              <tr key={inv.id}>
-                <td className="tnum">{inv.number}</td>
-                <td className="muted">
-                  {fmtDate(inv.periodStart)} – {fmtDate(inv.periodEnd)}
-                </td>
-                <td className="muted">{fmtDate(inv.dueDate)}</td>
-                <td className="tnum" style={{ textAlign: 'right' }}>
-                  {fmtRupiah(Number(inv.amount))}
-                  {inv.prorated && (
-                    <span
-                      className="badge neutral"
-                      style={{ marginLeft: '0.4rem' }}
-                      title={
-                        inv.proratedDays != null
-                          ? `Diprorata ${inv.proratedDays} hari (aktivasi tengah periode)`
-                          : 'Diprorata (aktivasi tengah periode)'
-                      }
-                    >
-                      prorata{inv.proratedDays != null ? ` ${inv.proratedDays}h` : ''}
-                    </span>
-                  )}
-                  {Number(inv.taxAmount) > 0 && (
-                    <div className="muted" style={{ fontSize: '0.72rem' }}>
-                      termasuk PPN {fmtRupiah(Number(inv.taxAmount))}
-                    </div>
-                  )}
-                </td>
-                <td>
-                  <Badge tone={INVOICE_TONE[inv.status]}>{INVOICE_LABEL[inv.status]}</Badge>
-                  {/* Halaman bayar publik melayani KEDUA mode gateway (VA/QRIS Pivot maupun
-                      instruksi transfer manual), jadi tak perlu lagi dibedakan di sini. */}
-                  {canManage && (inv.status === 'ISSUED' || inv.status === 'OVERDUE') && (
-                    <>
-                      <Button
-                        type="button"
-                        variant="subtle"
-                        onClick={() => window.open(shareLink(inv), '_blank', 'noopener')}
-                        style={{ marginLeft: '0.5rem', fontSize: '0.8rem' }}
-                      >
-                        bayar ↗
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="subtle"
-                        onClick={() => void copyLink(inv)}
-                        style={{ marginLeft: '0.3rem', fontSize: '0.8rem' }}
-                      >
-                        salin link
-                      </Button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Table ><TableHeader><TableRow ><TableHeaderCell >Nomor</TableHeaderCell>
+        <TableHeaderCell >Periode</TableHeaderCell>
+        <TableHeaderCell >Jatuh tempo</TableHeaderCell>
+        <TableHeaderCell style={{ textAlign: 'right' }}>Jumlah</TableHeaderCell>
+        <TableHeaderCell >Status</TableHeaderCell></TableRow></TableHeader>
+        <TableBody>{invoices.map((inv) => (
+          <TableRow key={inv.id}><TableCell className="tnum">{inv.number}</TableCell>
+          <TableCell className="muted">{fmtDate(inv.periodStart)} – {fmtDate(inv.periodEnd)}</TableCell>
+          <TableCell className="muted">{fmtDate(inv.dueDate)}</TableCell>
+          <TableCell className="tnum" style={{ textAlign: 'right' }}>{fmtRupiah(Number(inv.amount))}
+          {inv.prorated && (
+            <span
+              className="badge neutral"
+              style={{ marginLeft: '0.4rem' }}
+              title={
+                inv.proratedDays != null
+                  ? `Diprorata ${inv.proratedDays} hari (aktivasi tengah periode)`
+                  : 'Diprorata (aktivasi tengah periode)'
+              }
+            >
+              prorata{inv.proratedDays != null ? ` ${inv.proratedDays}h` : ''}
+            </span>
+          )}
+          {Number(inv.taxAmount) > 0 && (
+            <div className="muted">
+              termasuk PPN {fmtRupiah(Number(inv.taxAmount))}</div>
+          )}</TableCell>
+          <TableCell ><Badge tone={INVOICE_TONE[inv.status]}>{INVOICE_LABEL[inv.status]}</Badge>
+          {/* Halaman bayar publik melayani KEDUA mode gateway (VA/QRIS Pivot maupun
+              instruksi transfer manual), jadi tak perlu lagi dibedakan di sini. */}
+          {canManage && (inv.status === 'ISSUED' || inv.status === 'OVERDUE') && (
+            <>
+              <Button
+                type="button"
+                variant="subtle"
+                onClick={() => window.open(shareLink(inv), '_blank', 'noopener')}
+                style={{ marginLeft: '0.5rem',  }}
+              >
+                bayar ↗
+              </Button>
+              <Button
+                type="button"
+                variant="subtle"
+                onClick={() => void copyLink(inv)}
+                style={{ marginLeft: '0.3rem',  }}
+              >
+                salin link
+              </Button>
+            </>
+          )}</TableCell></TableRow>
+        ))}</TableBody></Table>
       </div>
 
-      <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+      <p className="muted" style={{ margin: 0,  }}>
         "Bayar ↗" membuka halaman bayar publik tagihan itu — tautan yang sama bisa disalin dan
         dikirim ke pelanggan lewat WhatsApp, lengkap dengan instruksi VA/QRIS atau transfer manual.
       </p>
@@ -2856,20 +2806,18 @@ function TiketWoTab({
           <SectionHead
             icon={<IconAlert size={16} />}
             title="Insiden aktif"
-            aside={<span className="muted" style={{ fontSize: '0.8rem' }}>gangguan yang sedang berdampak</span>}
+            aside={<Text as="span" className="muted" size={200}>gangguan yang sedang berdampak</Text>}
           />
           {incidents == null ? (
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Memuat insiden…</p>
+            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Memuat insiden…</Text>
           ) : incidents.length === 0 ? (
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Tak ada insiden aktif yang berdampak.</p>
+            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Tak ada insiden aktif yang berdampak.</Text>
           ) : (
             incidents.map((inc) => (
               <div key={inc.id} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
                 <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-                  <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{inc.title}</span>
-                  <span className="muted" style={{ fontSize: '0.78rem' }}>
-                    {inc.rootLabel} · dibuka {fmtInstant(inc.openedAt)}
-                  </span>
+                  <Text as="span" weight="semibold" size={200} >{inc.title}</Text>
+                  <Text as="span" size={300} className="muted" >{inc.rootLabel} · dibuka {fmtInstant(inc.openedAt)}</Text>
                 </div>
                 <div className="row" style={{ gap: '0.35rem' }}>
                   <StatusBadge status={inc.severity} />
@@ -2886,27 +2834,23 @@ function TiketWoTab({
           <SectionHead
             icon={<IconWorkOrder size={16} />}
             title="Riwayat work order"
-            aside={<span className="muted" style={{ fontSize: '0.8rem' }}>semua status</span>}
+            aside={<Text as="span" className="muted" size={200}>semua status</Text>}
           />
           {orders == null ? (
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Memuat work order…</p>
+            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Memuat work order…</Text>
           ) : orders.length === 0 ? (
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada work order untuk pelanggan ini.</p>
+            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada work order untuk pelanggan ini.</Text>
           ) : (
             orders.map((wo) => (
               <div key={wo.id} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
                 <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-                  <span style={{ fontSize: '0.88rem' }}>
-                    <span className="tnum" style={{ fontWeight: 600 }}>{wo.code}</span> · {wo.title}
-                    {wo.incidentId && (
-                      <span className="badge accent" style={{ marginLeft: '0.4rem' }}>dari insiden</span>
-                    )}
-                  </span>
-                  <span className="muted" style={{ fontSize: '0.78rem' }}>
-                    {wo.type} · dibuat {fmtInstant(wo.createdAt)}
-                    {wo.assignees.length > 0 &&
-                      ` · ${wo.assignees.map((a) => a.name ?? '—').join(', ')}`}
-                  </span>
+                  <Text as="span" size={300}  ><Text as="span" weight="semibold" className="tnum" >{wo.code}</Text> · {wo.title}
+                  {wo.incidentId && (
+                    <span className="badge accent" style={{ marginLeft: '0.4rem' }}>dari insiden</span>
+                  )}</Text>
+                  <Text as="span" size={300} className="muted" >{wo.type} · dibuat {fmtInstant(wo.createdAt)}
+                  {wo.assignees.length > 0 &&
+                    ` · ${wo.assignees.map((a) => a.name ?? '—').join(', ')}`}</Text>
                 </div>
                 <Badge tone={WO_STATUS_TONE[wo.status]}>{WO_STATUS_LABEL[wo.status]}</Badge>
               </div>
@@ -3024,14 +2968,12 @@ function TimelineTab({
       <div className="stack" style={{ gap: '0.4rem' }}>
         {entries.map((e, i) => (
           <div key={`${e.at}-${i}`} className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
-            <span className="muted tnum" style={{ fontSize: '0.78rem', minWidth: 92 }}>
-              {fmtInstant(e.at)}
-            </span>
+            <Text as="span" size={200} className="muted tnum" style={{ minWidth: 92 }} >{fmtInstant(e.at)}</Text>
             <span
               aria-hidden
               style={{ width: 8, height: 8, borderRadius: '50%', background: TONE_INK[e.tone], flexShrink: 0 }}
             />
-            <span style={{ fontSize: '0.85rem' }}>{e.label}</span>
+            <Text as="span" size={300}  >{e.label}</Text>
           </div>
         ))}
       </div>

@@ -21,7 +21,6 @@ const useStyles = makeStyles({
   btn: {
     minWidth: 'auto',
     border: 'none',
-    fontWeight: tokens.fontWeightRegular,
   },
   // Pilihan aktif: latar putih + bayangan tipis (efek "terangkat") ala segmented Azure.
   checked: {

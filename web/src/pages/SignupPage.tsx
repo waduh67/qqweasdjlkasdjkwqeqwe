@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Text } from '@fluentui/react-components'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { signupTenant, type SignupResult } from '../api/signup'
@@ -54,11 +55,11 @@ export function SignupPage() {
       <div className="login-shell">
         <div className="card login-card stack">
           <div>
-            <h2 style={{ margin: 0, fontSize: '1.15rem' }}>Pendaftaran berhasil 🎉</h2>
-            <p className="muted" style={{ margin: '0.4rem 0 0', fontSize: '0.88rem' }}>
-              ISP <strong>{done.name}</strong> sudah terdaftar. Simpan kode di bawah — ia diminta bersama
+            <Text as="h2" size={400} weight="semibold" style={{ margin: 0 }}>Pendaftaran berhasil</Text>
+            <Text as="p" className="muted" size={300} style={{ margin: '0.4rem 0 0' }}>
+              ISP <Text as="strong" weight="semibold">{done.name}</Text> sudah terdaftar. Simpan kode di bawah — ia diminta bersama
               email dan password setiap kali Anda atau staf Anda masuk.
-            </p>
+            </Text>
           </div>
           {/* Kode ISP dipisah dari kalimat supaya mudah dibaca ulang & disalin: inilah satu-satunya
               hal di layar ini yang akan dicari pendaftar lagi besok. */}
@@ -74,19 +75,19 @@ export function SignupPage() {
             }}
           >
             <div style={{ minWidth: 0 }}>
-              <span className="muted" style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <Text as="span" className="muted" size={100} weight="semibold" style={{ textTransform: 'uppercase' }}>
                 Kode ISP
-              </span>
-              <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: '1.05rem', fontWeight: 600 }}>
+              </Text>
+              <Text as="span" size={400} weight="semibold" style={{ display: 'block' }}>
                 {done.slug}
-              </div>
+              </Text>
             </div>
             <Button onClick={() => void copySlug(done.slug)}>{copied ? 'Tersalin' : 'Salin'}</Button>
           </div>
-          <p className="muted" style={{ margin: 0, fontSize: '0.83rem' }}>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
             Kode ini juga kami kirim ke <strong>{done.adminEmail}</strong>. Tak menemukannya? Periksa folder
             spam sebelum menghubungi kami.
-          </p>
+          </Text>
           <Button
             variant="primary"
             style={{ width: '100%', padding: '0.6rem' }}
@@ -107,10 +108,10 @@ export function SignupPage() {
             <BrandMark size={26} />
           </span>
           <div>
-            <h2 style={{ margin: 0, fontSize: '1.15rem' }}>Daftar ISP baru</h2>
-            <p className="muted" style={{ margin: 0, fontSize: '0.83rem' }}>
+            <Text as="h2" size={400} weight="semibold" style={{ margin: 0 }}>Daftar ISP baru</Text>
+            <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
               Buat ruang kerja NetOps untuk jaringan FTTH-mu
-            </p>
+            </Text>
           </div>
         </div>
 
@@ -149,17 +150,17 @@ export function SignupPage() {
         />
 
         {error && (
-          <p className="error" style={{ margin: 0, fontSize: '0.85rem' }}>
+          <Text as="p" className="error" size={300} style={{ margin: 0 }}>
             {error}
-          </p>
+          </Text>
         )}
 
         <Button variant="primary" type="submit" disabled={busy} style={{ width: '100%', padding: '0.6rem' }}>
           {busy ? <Spinner /> : 'Daftar'}
         </Button>
-        <p className="muted" style={{ margin: 0, fontSize: '0.83rem', textAlign: 'center' }}>
+        <Text as="p" className="muted" size={300} style={{ margin: 0, textAlign: 'center' }}>
           Sudah punya akun? <Link to="/login">Masuk</Link>
-        </p>
+        </Text>
       </form>
     </div>
   )

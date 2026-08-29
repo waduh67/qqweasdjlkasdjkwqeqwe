@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MessageBar, MessageBarBody } from '@fluentui/react-components'
+import { MessageBar, MessageBarBody, Text } from '@fluentui/react-components'
 import type {
   CableInstallation,
   CableOwnership,
@@ -222,11 +222,11 @@ export function CablePanel({
             bisa dibuka siapa saja dari balik meja kantor. */}
         {cable.attachments.length > 2 && (
           <div className="stack" style={{ gap: '0.3rem' }}>
-            <strong style={{ fontSize: '0.85rem' }}>Perjalanan selubung</strong>
+            <Text as="strong" size={300} weight="semibold">Perjalanan selubung</Text>
             <ol className="stack" style={{ gap: '0.2rem', margin: 0, paddingLeft: '1.1rem' }}>
               {cable.attachments.map((stop) => (
-                <li key={stop.id} style={{ fontSize: '0.8rem' }}>
-                  <span>{stop.nodeCode ?? stop.nodeKind}</span>
+                <li key={stop.id}>
+                  <Text as="span" size={200}>{stop.nodeCode ?? stop.nodeKind}</Text>
                   <span className="muted"> · {stop.roleLabel}</span>
                   {stop.distanceMeters != null && stop.distanceMeters > 0 && (
                     <span className="muted tnum"> · m-{Math.round(stop.distanceMeters)}</span>
@@ -234,10 +234,10 @@ export function CablePanel({
                 </li>
               ))}
             </ol>
-            <span className="muted" style={{ fontSize: '0.72rem' }}>
+            <Text as="span" className="muted" size={100}>
               Angka meter dihitung menyusuri rute dari pangkal — itu yang dicocokkan dengan hasil
               OTDR saat mencari letak gangguan. Perannya diubah dari meja sambung kotaknya.
-            </span>
+            </Text>
           </div>
         )}
 
@@ -258,8 +258,8 @@ export function CablePanel({
             cuma dibuka saat ada gangguan. */}
         <div className="stack" style={{ gap: '0.5rem', borderTop: '1px solid var(--line)', paddingTop: '0.6rem' }}>
           <div className="spread">
-            <strong style={{ fontSize: '0.85rem' }}>Core kabel</strong>
-            <span className="muted" style={{ fontSize: '0.75rem' }}>{cable.coreCount} core</span>
+            <Text as="strong" size={300} weight="semibold">Core kabel</Text>
+            <Text as="span" className="muted" size={100}>{cable.coreCount} core</Text>
           </div>
           <CableCoreManager key={coreEpoch} cableId={cable.id} canEdit={canEdit} />
         </div>

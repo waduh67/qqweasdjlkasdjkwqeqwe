@@ -78,26 +78,41 @@ function fmtTaxRate(rate: string | number | null | undefined): string | null {
 }
 
 const STYLES = `
+  :root {
+    --fontFamilyBase: 'Segoe UI', 'Segoe UI Web (West European)', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif;
+    --fontFamilyMonospace: Consolas, 'Courier New', monospace;
+    --fontSizeBase200: 12px;
+    --fontSizeBase300: 14px;
+    --fontSizeBase400: 16px;
+    --fontSizeBase500: 20px;
+    --fontSizeBase600: 24px;
+    --fontWeightRegular: 400;
+    --fontWeightSemibold: 600;
+    --fontWeightBold: 700;
+    --lineHeightBase300: 20px;
+  }
   * { box-sizing: border-box; }
-  body { font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #1a1a1a; margin: 0; padding: 32px; font-size: 13px; }
+  body { font-family: var(--fontFamilyBase); color: #1a1a1a; margin: 0; padding: 32px; font-size: var(--fontSizeBase300); }
   .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1a1a1a; padding-bottom: 12px; margin-bottom: 20px; }
-  h1 { font-size: 22px; margin: 0; letter-spacing: 0.5px; }
-  .issuer { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px; }
-  .num { font-family: monospace; font-size: 14px; margin-top: 4px; color: #555; }
-  .meta { text-align: right; font-size: 12px; color: #555; line-height: 1.6; }
+  h1 { font-size: var(--fontSizeBase600); margin: 0; }
+  .issuer { font-size: var(--fontSizeBase300); font-weight: var(--fontWeightSemibold); color: #555; margin-bottom: 6px; }
+  .num { font-family: var(--fontFamilyMonospace); font-size: var(--fontSizeBase300); margin-top: 4px; color: #555; }
+  .meta { text-align: right; font-size: var(--fontSizeBase200); color: #555; line-height: var(--lineHeightBase300); }
   .party { margin-bottom: 20px; }
-  .party .h { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: #888; margin-bottom: 3px; }
-  .party .n { font-size: 15px; font-weight: 600; }
+  .party .h { font-size: var(--fontSizeBase200); text-transform: uppercase; color: #888; margin-bottom: 3px; }
+  .party .n { font-size: var(--fontSizeBase400); font-weight: var(--fontWeightSemibold); }
   table { width: 100%; border-collapse: collapse; }
   .amt { margin-top: 8px; }
   .amt td { padding: 7px 0; border-bottom: 1px solid #eee; }
   .amt td.lbl { color: #555; }
   .amt td.val { text-align: right; font-variant-numeric: tabular-nums; }
-  .amt tr.total td { border-top: 2px solid #1a1a1a; border-bottom: none; font-size: 16px; padding-top: 12px; }
+  .amt tr.total td { border-top: 2px solid #1a1a1a; border-bottom: none; font-size: var(--fontSizeBase400); padding-top: 12px; }
   .pay { margin-top: 24px; }
-  .pay .h { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: #888; margin-bottom: 6px; }
-  .foot { margin-top: 28px; font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
-  .status { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; border: 1px solid #ccc; }
+  .pay .h { font-size: var(--fontSizeBase200); text-transform: uppercase; color: #888; margin-bottom: 6px; }
+  .foot { margin-top: 28px; font-size: var(--fontSizeBase200); color: #999; border-top: 1px solid #eee; padding-top: 10px; }
+  .status { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: var(--fontSizeBase200); font-weight: var(--fontWeightSemibold); border: 1px solid #ccc; }
+  .type-semibold { font-weight: var(--fontWeightSemibold); }
+  .type-bold { font-weight: var(--fontWeightBold); }
 `
 
 /**
@@ -140,7 +155,7 @@ export function buildInvoiceSheetHtml(data: InvoiceSheetData): string {
   <table class="amt"><tbody>
     ${row('Dasar pengenaan (DPP)', rupiah(data.baseAmount))}
     ${tax > 0 ? row(`PPN${taxPct ? ` (${taxPct})` : ''}`, rupiah(tax)) : ''}
-    <tr class="total"><td class="lbl">Total tagihan</td><td class="val" style="font-weight:700">${rupiah(data.totalAmount)}</td></tr>
+    <tr class="total"><td class="lbl">Total tagihan</td><td class="val type-bold">${rupiah(data.totalAmount)}</td></tr>
   </tbody></table>
   ${
     payments.length > 0
@@ -149,7 +164,7 @@ export function buildInvoiceSheetHtml(data: InvoiceSheetData): string {
           .join('')}</tbody></table></div>`
       : ''
   }
-  ${data.paidAt ? `<p style="margin-top:16px;color:#128a3a;font-weight:600">Lunas pada ${fmtDate(data.paidAt)}</p>` : ''}
+  ${data.paidAt ? `<p class="type-semibold" style="margin-top:16px;color:#128a3a">Lunas pada ${fmtDate(data.paidAt)}</p>` : ''}
   <div class="foot">
     Dokumen ini dibuat otomatis oleh sistem dan sah tanpa tanda tangan. Bukan faktur pajak.
     Nomor tagihan: ${escapeHtml(data.number)}.

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { Outlet, useOutletContext } from 'react-router-dom'
 import { usePortalAuth } from './PortalAuthContext'
 import {
@@ -120,15 +121,15 @@ export function PortalLayout() {
           />
           {/* Chip ISP: pelanggan bisa berlangganan di lebih dari satu tempat, dan portalnya
               satu pintu — jadi "sedang melihat punya siapa" harus selalu terbaca. */}
-          <span className="badge accent">{customer?.tenantSlug}</span>
+          <Text as="span" className="badge accent" size={200} weight="semibold">{customer?.tenantSlug}</Text>
         </div>
         <div className="row" style={{ gap: '0.75rem' }}>
           <ThemeToggle />
           <span className="user-chip">
             <span className="avatar" aria-hidden>{initials}</span>
-            <div className="portal-user-name" style={{ lineHeight: 1.2 }}>
-              <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{customer?.name}</div>
-              <div className="muted tnum" style={{ fontSize: '0.75rem' }}>{customer?.code}</div>
+            <div className="portal-user-name">
+              <Text as="span" size={300} weight="semibold">{customer?.name}</Text>
+              <Text as="span" className="muted tnum" size={100}>{customer?.code}</Text>
             </div>
           </span>
           <Button
@@ -148,7 +149,7 @@ export function PortalLayout() {
           <span className="logo" aria-hidden>
             <BrandMark size={22} />
           </span>
-          <span className="brand-text">Portal</span>
+          <Text as="span" className="brand-text" weight="semibold">Portal</Text>
         </div>
 
         <SidebarNav groups={PORTAL_NAV} can={() => true} storageKey="ftth.navGroups.portal" />

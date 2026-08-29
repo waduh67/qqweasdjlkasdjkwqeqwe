@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Ban, Check, Pencil, Plus, Trash2 } from 'lucide-react'
-import { Field, Input } from '@fluentui/react-components'
+import { Field, Input, typographyStyles } from '@fluentui/react-components'
 import { api, ApiError } from '@/api/client'
 import type { PageResponse } from '@/api/types'
 import type {
@@ -169,70 +169,7 @@ export function DiscoveredOnuInbox({
     )
   }, [items, query])
 
-  const columns: Column<DiscoveredOnuView>[] = [
-    {
-      key: 'serial',
-      header: 'Serial',
-      sortValue: (o) => o.serialNumber,
-      cell: (o) => <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{o.serialNumber}</span>,
-    },
-  ]
-  // Disaring per-OLT: OLT-nya sudah pasti, jadi cukup tunjukkan PON port-nya.
-  if (oltId) {
-    columns.push({
-      key: 'pon',
-      header: 'PON',
-      sortValue: (o) => o.ponPortLabel ?? '',
-      cell: (o) => <span className="muted" style={{ fontSize: '0.85rem' }}>{o.ponPortLabel ?? '—'}</span>,
-    })
-  } else {
-    columns.push({
-      key: 'olt',
-      header: 'OLT / PON',
-      sortValue: (o) => o.oltCode,
-      cell: (o) => (
-        <div>
-          <div style={{ fontSize: '0.88rem' }}>
-            {o.oltCode}
-            {o.oltId ? '' : ' · tak dikenal'}
-          </div>
-          <div className="muted" style={{ fontSize: '0.78rem' }}>{o.ponPortLabel ?? '—'}</div>
-        </div>
-      ),
-    })
-  }
-  columns.push(
-    { key: 'status', header: 'Status', sortValue: (o) => o.lastStatus, cell: (o) => <StatusBadge status={o.lastStatus} /> },
-    {
-      key: 'rx',
-      header: 'Redaman',
-      align: 'right',
-      sortValue: (o) => o.lastRxPowerDbm,
-      cell: (o) => <span className="muted">{o.lastRxPowerDbm != null ? `${o.lastRxPowerDbm} dBm` : '—'}</span>,
-    },
-    {
-      key: 'seen',
-      header: 'Terlihat',
-      sortValue: (o) => o.lastSeenAt,
-      cell: (o) => (
-        <span className="muted" style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-          ×{o.seenCount}
-          <div>{new Date(o.lastSeenAt).toLocaleString('id-ID')}</div>
-        </span>
-      ),
-    },
-  )
-  if (showSuggestion) {
-    columns.push({
-      key: 'suggestion',
-      header: 'Saran auto-link',
-      sortValue: (o) => o.suggestion?.confidence,
-      cell: (o) => <SuggestionCell suggestion={o.suggestion} />,
-    })
-  }
-
-  // Aksi per-baris di menu `…` ala Azure DataGrid (seragam dengan Pelanggan), bukan deretan tombol inline.
-  const rowActions = (onu: DiscoveredOnuView): RowAction[] => {
+  const inlineActions = (onu: DiscoveredOnuView): RowAction[] => {
     const list: RowAction[] = []
     if (state === 'DISCOVERED') {
       if (hasCustomer(onu.suggestion)) {
@@ -251,6 +188,86 @@ export function DiscoveredOnuInbox({
     list.push({ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => void remove(onu) })
     return list
   }
+
+  const columns: Column<DiscoveredOnuView>[] = [
+    {
+      key: 'serial',
+      header: 'Serial',
+      sortValue: (o) => o.serialNumber,
+      cell: (o) => o.serialNumber,
+      inlineActions: showActions ? inlineActions : undefined,
+    },
+  ]
+  // Disaring per-OLT: OLT-nya sudah pasti, jadi cukup tunjukkan PON port-nya.
+  if (oltId) {
+    columns.push({
+      key: 'pon',
+      header: 'PON',
+      sortValue: (o) => o.ponPortLabel ?? '',
+      cell: (o) => o.ponPortLabel ?? '—',
+    })
+  } else {
+    columns.push(
+      {
+        key: 'olt',
+        header: 'OLT',
+        sortValue: (o) => o.oltCode,
+        cell: (o) => `${o.oltCode}${o.oltId ? '' : ' · tak dikenal'}`,
+      },
+      {
+        key: 'pon',
+        header: 'PON',
+        sortValue: (o) => o.ponPortLabel ?? '',
+        cell: (o) => o.ponPortLabel ?? '—',
+      },
+    )
+  }
+  columns.push(
+    { key: 'status', header: 'Status', sortValue: (o) => o.lastStatus, cell: (o) => <StatusBadge status={o.lastStatus} /> },
+    {
+      key: 'rx',
+      header: 'Redaman',
+      align: 'right',
+      sortValue: (o) => o.lastRxPowerDbm,
+      cell: (o) => o.lastRxPowerDbm != null ? `${o.lastRxPowerDbm} dBm` : '—',
+    },
+    {
+      key: 'seenCount',
+      header: 'Dilihat',
+      align: 'right',
+      sortValue: (o) => o.seenCount,
+      cell: (o) => `×${o.seenCount}`,
+    },
+    {
+      key: 'lastSeenAt',
+      header: 'Terakhir terlihat',
+      sortValue: (o) => o.lastSeenAt,
+      cell: (o) => new Date(o.lastSeenAt).toLocaleString('id-ID'),
+    },
+  )
+  if (showSuggestion) {
+    columns.push(
+      {
+        key: 'confidence',
+        header: 'Kecocokan',
+        sortValue: (o) => o.suggestion?.confidence,
+        cell: (o) => o.suggestion ? <Badge tone={CONFIDENCE[o.suggestion.confidence].tone}>{CONFIDENCE[o.suggestion.confidence].label}</Badge> : '—',
+      },
+      {
+        key: 'customer',
+        header: 'Pelanggan tertebak',
+        sortValue: (o) => o.suggestion?.customerName ?? '',
+        cell: (o) => o.suggestion?.customerName ?? '—',
+      },
+      {
+        key: 'reason',
+        header: 'Dasar saran',
+        sortValue: (o) => o.suggestion?.reason ?? '',
+        cell: (o) => o.suggestion?.reason ?? '—',
+      },
+    )
+  }
+
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
@@ -279,8 +296,7 @@ export function DiscoveredOnuInbox({
         rows={rows}
         rowKey={(o) => o.id}
         loading={loading}
-        initialSort={{ key: 'seen', dir: 'desc' }}
-        rowActions={showActions ? rowActions : undefined}
+        initialSort={{ key: 'lastSeenAt', dir: 'desc' }}
         empty={
           <EmptyState
             title={query ? 'Tidak ada yang cocok' : state === 'DISCOVERED' ? 'Tidak ada ONU menunggu' : 'Kosong'}
@@ -300,23 +316,6 @@ export function DiscoveredOnuInbox({
           }}
         />
       )}
-    </div>
-  )
-}
-
-/** Ringkas saran di satu sel: nada keyakinan + target tertebak + alasannya. */
-function SuggestionCell({ suggestion }: { suggestion: ProvisioningSuggestion | null }) {
-  if (!suggestion) return <span className="muted">—</span>
-  const conf = CONFIDENCE[suggestion.confidence]
-  return (
-    <div className="stack" style={{ gap: '0.25rem' }}>
-      <div className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-        <Badge tone={conf.tone}>{conf.label}</Badge>
-        {suggestion.customerName && (
-          <span style={{ fontSize: '0.84rem' }}>{suggestion.customerName}</span>
-        )}
-      </div>
-      <span className="muted" style={{ fontSize: '0.76rem' }}>{suggestion.reason}</span>
     </div>
   )
 }
@@ -393,7 +392,7 @@ function ProvisionDrawer({
   return (
     <Drawer title={`Provisi ${discovered.serialNumber}`} onClose={onClose}>
       <div className="stack" style={{ gap: '1rem' }}>
-        <div className="muted" style={{ fontSize: '0.85rem' }}>
+        <div className="muted" style={{ ...typographyStyles.body1 }}>
           Terlihat di {discovered.oltCode}
           {discovered.ponPortLabel ? ` · ${discovered.ponPortLabel}` : ''} · ×{discovered.seenCount}
         </div>
@@ -401,7 +400,7 @@ function ProvisionDrawer({
         {suggestion && suggestion.confidence !== 'NONE' && (
           <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-start' }}>
             <Badge tone={CONFIDENCE[suggestion.confidence].tone}>{CONFIDENCE[suggestion.confidence].label}</Badge>
-            <span className="muted" style={{ fontSize: '0.82rem' }}>{suggestion.reason}</span>
+            <span className="muted" style={{ ...typographyStyles.caption1 }}>{suggestion.reason}</span>
           </div>
         )}
 
@@ -444,7 +443,7 @@ function ProvisionDrawer({
           </div>
         )}
 
-        <span className="muted" style={{ fontSize: '0.78rem' }}>
+        <span className="muted" style={{ ...typographyStyles.caption1 }}>
           ONU cukup ditautkan ke pelanggan. Penempelan ke ODP dikerjakan nanti di peta
           jaringan saat menarik kabel.
         </span>

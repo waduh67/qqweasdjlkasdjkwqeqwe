@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { typographyStyles } from '@fluentui/react-components'
 import { getBrasTraffic, type TrafficHistoryView } from '@/api/bng'
 import { Segmented, TrafficChart } from '@/components/atoms'
 
@@ -52,7 +53,7 @@ export function SubscriberTrafficPanel({ accessId }: { accessId: string }) {
           <span className="badge neutral tnum" title="Throughput unggah terakhir terhitung">
             ↑ {fmtMbps(traffic?.currentUpMbps ?? null)}
           </span>
-          <span className="muted" style={{ fontSize: '0.82rem' }}>
+          <span className="muted" style={{ ...typographyStyles.caption1 }}>
             Pemakaian {activeLabel}: <strong className="tnum">{fmtDataUsage(traffic?.totalBytes ?? null)}</strong>
           </span>
         </div>
@@ -67,11 +68,11 @@ export function SubscriberTrafficPanel({ accessId }: { accessId: string }) {
       </div>
 
       {loading && !traffic ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>Memuat tren…</p>
+        <p className="muted" style={{ margin: 0, ...typographyStyles.caption1 }}>Memuat tren…</p>
       ) : traffic ? (
         <TrafficChart points={traffic.points} />
       ) : (
-        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>Tren trafik tak tersedia.</p>
+        <p className="muted" style={{ margin: 0, ...typographyStyles.caption1 }}>Tren trafik tak tersedia.</p>
       )}
     </div>
   )

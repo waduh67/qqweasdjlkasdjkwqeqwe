@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
+import { typographyStyles } from '@fluentui/react-components'
 import { ApiError } from '@/api/client'
 import {
   createTemplate,
@@ -167,7 +168,7 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
         <div className="stack" style={{ gap: '0.15rem' }}>
           <code>{t.name}</code>
           {t.bodyText && (
-            <span className="muted" style={{ fontSize: '0.78rem' }}>
+            <span className="muted" style={{ ...typographyStyles.caption1 }}>
               {t.bodyText.length > 90 ? `${t.bodyText.slice(0, 90)}…` : t.bodyText}
             </span>
           )}
@@ -252,7 +253,7 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
         {catalog && <Badge tone={unlocked ? 'good' : 'neutral'}>{templates.length} template</Badge>}
       </div>
 
-      <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+      <p className="muted" style={{ margin: 0, ...typographyStyles.body1 }}>
         Daftar ini adalah cermin template di {provider}: menambah berarti benar-benar mengajukan template ke sana dan
         menunggu persetujuan. Setelah disetujui, tentukan template mana dipakai tiap pemicu otomatis — satu pemicu
         satu template.
@@ -297,7 +298,7 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
 
       {/* ---- Pemakaian per pemicu ---- */}
       <SectionTitle>Pemakaian per pemicu</SectionTitle>
-      <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+      <p className="muted" style={{ margin: 0, ...typographyStyles.body1 }}>
         {templateOnly ? (
           <>
             {provider} <strong>hanya bisa mengirim template</strong> — pemicu tanpa template akan dilewati, pesannya
@@ -336,18 +337,18 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
               ))}
             </SelectField>
             {!selected && templateOnly && (
-              <span style={{ fontSize: '0.8rem', color: 'var(--critical)' }}>
+              <span style={{ ...typographyStyles.caption1, color: 'var(--critical)' }}>
                 Belum dipetakan — pemicu ini tak akan mengirim apa pun lewat {provider}.
               </span>
             )}
             {selected && selected.status !== 'APPROVED' && (
-              <span className="muted" style={{ fontSize: '0.8rem' }}>
+              <span className="muted" style={{ ...typographyStyles.caption1 }}>
                 Status template ini {TEMPLATE_STATUS_LABEL[selected.status].toLowerCase()} — {provider} bisa menolak
                 pengiriman sampai disetujui.
               </span>
             )}
             {selected && selected.status === 'APPROVED' && selected.bodyParamCount !== 1 && (
-              <span className="muted" style={{ fontSize: '0.8rem' }}>
+              <span className="muted" style={{ ...typographyStyles.caption1 }}>
                 Template ini punya {selected.bodyParamCount} parameter, sedangkan sistem selalu mengirim tepat satu
                 ({'{{1}}'} = seluruh isi pesan).
               </span>
@@ -430,7 +431,7 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
               validationMessage={draft.bodyText.trim() ? (bodyProblem(draft.bodyText) ?? undefined) : undefined}
               hint={`Wajib memuat tepat satu variabel {{1}} — variabel itulah yang diisi seluruh isi notifikasi saat pesan dikirim. Maks ${MAX_BODY} karakter.`}
             />
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+            <p className="muted" style={{ margin: 0, ...typographyStyles.body1 }}>
               {draft.id
                 ? `Suntingan dikirim ke ${provider} dan template kembali masuk antrean peninjauan.`
                 : `Template dikirim ke ${provider} untuk ditinjau. Sampai disetujui, statusnya “menunggu tinjauan” dan belum bisa dipakai mengirim.`}
@@ -529,7 +530,7 @@ function Callout({ children }: { children: ReactNode }) {
         borderRadius: 'var(--radius-sm)',
         background: 'color-mix(in srgb, var(--warning) 12%, var(--surface))',
         border: '1px solid color-mix(in srgb, var(--warning) 32%, transparent)',
-        fontSize: '0.85rem',
+        ...typographyStyles.body1,
       }}
     >
       <IconAlert size={16} />
@@ -539,5 +540,5 @@ function Callout({ children }: { children: ReactNode }) {
 }
 
 function SectionTitle({ children }: { children: ReactNode }) {
-  return <h3 style={{ margin: '0.25rem 0 0', fontSize: '0.95rem', fontWeight: 600 }}>{children}</h3>
+  return <h3 style={{ margin: '0.25rem 0 0', ...typographyStyles.subtitle2 }}>{children}</h3>
 }

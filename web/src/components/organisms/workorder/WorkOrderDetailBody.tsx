@@ -7,6 +7,7 @@
  * `@authz.canAny(...)` di controller server.
  */
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { Text } from '@fluentui/react-components'
 import { api, ApiError } from '@/api/client'
 import type { User } from '@/api/types'
 import type {
@@ -120,7 +121,7 @@ export function WorkOrderDetailBody({
         {/* Penugasan — selagi work order belum selesai/batal. */}
         {canAssign && !terminal && (
           <section className="stack" style={{ gap: '0.4rem' }}>
-            <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Penugasan</h3>
+            <Text as="h3" size={300} weight="semibold" style={{ margin: 0 }}>Penugasan</Text>
             <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
               <label className="stack" style={{ flex: 1, gap: '0.25rem' }}>
                 <span>Teknisi (bisa lebih dari satu)</span>
@@ -188,7 +189,7 @@ export function WorkOrderDetailBody({
         {/* Persetujuan hasil kerja — hanya untuk WO selesai yang menunggu dikurasi. */}
         {canApprove && awaitingApproval && (
           <section className="stack" style={{ gap: '0.5rem' }}>
-            <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Persetujuan hasil kerja</h3>
+            <Text as="h3" size={300} weight="semibold" style={{ margin: 0 }}>Persetujuan hasil kerja</Text>
             <TextareaField
               label="Catatan (opsional untuk setuju, wajib bila menolak)"
               rows={2}
@@ -248,15 +249,15 @@ export function WorkOrderDetailBody({
       <WorkOrderFiberWork workOrderId={id} />
 
       <div className="card stack" style={{ gap: '0.5rem' }}>
-        <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Riwayat</h3>
+        <Text as="h3" size={300} weight="semibold" style={{ margin: 0 }}>Riwayat</Text>
         <ol className="timeline">
           {detail.timeline.map((ev, i) => (
             <li key={i}>
               <span className="tl-dot" aria-hidden="true" />
               <div className="stack" style={{ gap: '0.15rem' }}>
-                <strong style={{ fontSize: '0.85rem' }}>{EVENT_LABEL[ev.type] ?? ev.type}</strong>
-                <span className="muted" style={{ fontSize: '0.82rem' }}>{ev.message}</span>
-                <span className="muted" style={{ fontSize: '0.75rem' }}>{fmt(ev.at)}</span>
+                <Text as="strong" size={200} weight="semibold">{EVENT_LABEL[ev.type] ?? ev.type}</Text>
+                <Text as="span" className="muted" size={200}>{ev.message}</Text>
+                <Text as="span" className="muted" size={100}>{fmt(ev.at)}</Text>
               </div>
             </li>
           ))}
@@ -271,7 +272,7 @@ function RxStat({ label, value }: { label: string; value: number | null }) {
   const health = value != null ? rxHealth(value) : null
   return (
     <div className="stack" style={{ gap: '0.15rem' }}>
-      <span className="muted" style={{ fontSize: '0.78rem' }}>{label}</span>
+      <Text as="span" className="muted" size={100}>{label}</Text>
       <span className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
         <strong>{fmtDbm(value)}</strong>
         {health && <Badge tone={health.tone}>{health.label}</Badge>}
@@ -319,7 +320,7 @@ function OpticalSection({ wo, canEdit, onAct }: { wo: WorkOrderView; canEdit: bo
   return (
     <section className="stack" style={{ gap: '0.5rem' }}>
       <div className="spread" style={{ alignItems: 'center' }}>
-        <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Redaman optik</h3>
+        <Text as="h3" size={300} weight="semibold" style={{ margin: 0 }}>Redaman optik</Text>
         {canEdit && !editing && (
           <Button variant="subtle" size="small" onClick={() => setEditing(true)}>
             {hasReading ? 'Ubah' : 'Catat'}
@@ -360,7 +361,7 @@ function OpticalSection({ wo, canEdit, onAct }: { wo: WorkOrderView; canEdit: bo
             <Button variant="primary" onClick={save}>Simpan</Button>
             <Button onClick={cancelEdit}>Batal</Button>
           </div>
-          <p className="muted" style={{ margin: 0, fontSize: '0.75rem' }}>GPON selalu negatif; rentang wajar −40..0 dBm. Kosongkan bila belum diukur.</p>
+          <Text as="p" className="muted" size={100} style={{ margin: 0 }}>GPON selalu negatif; rentang wajar −40..0 dBm. Kosongkan bila belum diukur.</Text>
         </div>
       ) : hasReading ? (
         <div className="row wrap" style={{ gap: '1.2rem', alignItems: 'flex-start' }}>
@@ -368,7 +369,7 @@ function OpticalSection({ wo, canEdit, onAct }: { wo: WorkOrderView; canEdit: bo
           <RxStat label="Sesudah" value={wo.rxAfterDbm} />
           {delta != null && (
             <div className="stack" style={{ gap: '0.15rem' }}>
-              <span className="muted" style={{ fontSize: '0.78rem' }}>Selisih</span>
+              <Text as="span" className="muted" size={100}>Selisih</Text>
               <Badge tone={delta >= 0 ? 'good' : 'warning'}>
                 {delta >= 0 ? '▲ membaik' : '▼ menurun'} {Math.abs(delta).toFixed(2)} dB
               </Badge>
@@ -376,7 +377,7 @@ function OpticalSection({ wo, canEdit, onAct }: { wo: WorkOrderView; canEdit: bo
           )}
         </div>
       ) : (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada pengukuran.</p>
+          <Text as="p" className="muted" size={200} style={{ margin: 0 }}>Belum ada pengukuran.</Text>
       )}
     </section>
   )
@@ -424,7 +425,7 @@ function AuthedImage({ path, alt, size }: { path: string; alt: string; size: num
     background: 'var(--surface-2, #1e2530)',
     border: '1px solid var(--border, #2a3340)',
   }
-  if (failed) return <div style={{ ...box, display: 'grid', placeItems: 'center', fontSize: '0.7rem' }} className="muted">gagal</div>
+  if (failed) return <div style={{ ...box, display: 'grid', placeItems: 'center' }} className="muted">gagal</div>
   if (!url) return <div style={box} aria-busy="true" />
   return (
     <a href={url} target="_blank" rel="noreferrer" title={alt}>
@@ -520,14 +521,14 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
 
   return (
     <section className="stack" style={{ gap: '0.6rem' }}>
-      <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Bukti pengerjaan</h3>
+      <Text as="h3" size={300} weight="semibold" style={{ margin: 0 }}>Bukti pengerjaan</Text>
 
       {loading ? (
         <SkeletonRows rows={1} />
       ) : (
         <>
           {photos.length === 0 && !signature ? (
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada bukti diunggah.</p>
+            <Text as="p" className="muted" size={200} style={{ margin: 0 }}>Belum ada bukti diunggah.</Text>
           ) : (
             <div className="stack" style={{ gap: '0.6rem' }}>
               {photos.length > 0 && (
@@ -535,9 +536,9 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
                   {photos.map((ph) => (
                     <div key={ph.id} className="stack" style={{ gap: '0.25rem', minWidth: 0 }}>
                       <AuthedImage path={`/api/work-orders/${workOrderId}/evidence/${ph.id}/content`} alt={ph.caption ?? KIND_LABEL[ph.kind]} size="fill" />
-                      <span className="badge" style={{ fontSize: '0.7rem' }}>{KIND_LABEL[ph.kind]}</span>
-                      {ph.caption && <span className="muted" style={{ fontSize: '0.72rem' }}>{ph.caption}</span>}
-                      {ph.uploadedByName && <span className="muted" style={{ fontSize: '0.68rem' }}>oleh {ph.uploadedByName}</span>}
+                      <Text as="span" className="badge" size={100}>{KIND_LABEL[ph.kind]}</Text>
+                      {ph.caption && <Text as="span" className="muted" size={100}>{ph.caption}</Text>}
+                      {ph.uploadedByName && <Text as="span" className="muted" size={100}>oleh {ph.uploadedByName}</Text>}
                       {canManage && (
                         <Button variant="danger" size="small" onClick={() => void removePhoto(ph.id)}>
                           Hapus
@@ -550,9 +551,9 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
 
               {signature && (
                 <div className="stack" style={{ gap: '0.25rem', alignItems: 'flex-start' }}>
-                  <span className="muted" style={{ fontSize: '0.82rem' }}>Tanda tangan · {signature.signerName}</span>
+                  <Text as="span" className="muted" size={200}>Tanda tangan · {signature.signerName}</Text>
                   <AuthedImage path={`/api/work-orders/${workOrderId}/signature/content`} alt={`Tanda tangan ${signature.signerName}`} size={140} />
-                  <span className="muted" style={{ fontSize: '0.72rem' }}>{fmt(signature.signedAt)}</span>
+                  <Text as="span" className="muted" size={100}>{fmt(signature.signedAt)}</Text>
                   {canManage && (
                     <Button variant="danger" size="small" onClick={() => void removeSignature()}>
                       Hapus tanda tangan

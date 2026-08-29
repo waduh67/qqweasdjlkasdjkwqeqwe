@@ -1,5 +1,6 @@
-import { MessageBar, MessageBarBody } from '@fluentui/react-components'
+import { MessageBar, MessageBarBody, Text } from '@fluentui/react-components'
 import type { SurveyCapacityView, SurveyOdp } from '@/api/network'
+import { Button } from '@/components/atoms'
 import { BladeHead } from '@/components/molecules'
 import { TYPE_LABEL, formatLength } from '@/map/cableFormat'
 
@@ -38,15 +39,15 @@ export function SurveyPanel({
           <div className="stack" style={{ gap: '0.45rem' }}>
             <p className="blade-section-title">Kotak dalam jangkauan ({survey.odps.length})</p>
             {survey.odps.map((o) => (
-              <button
+              <Button
                 key={o.odpId}
-                type="button"
+                variant="subtle"
                 className="card clickable"
                 style={{ textAlign: 'left', width: '100%', padding: '0.55rem 0.7rem' }}
                 onClick={() => onOpenOdp(o)}
               >
                 <div className="spread" style={{ gap: '0.5rem' }}>
-                  <span style={{ fontWeight: 600 }}>{o.code}</span>
+                  <Text as="span" weight="semibold">{o.code}</Text>
                   <span className="tnum muted">{formatLength(o.distanceMeters)}</span>
                 </div>
                 <div className="row wrap" style={{ gap: '0.35rem', marginTop: '0.3rem' }}>
@@ -69,11 +70,11 @@ export function SurveyPanel({
                   )}
                 </div>
                 {o.note && (
-                  <p className="dim" style={{ margin: '0.3rem 0 0', fontSize: '0.72rem', lineHeight: 1.35 }}>
+                  <Text as="p" className="dim" size={100} block style={{ margin: '0.3rem 0 0' }}>
                     {o.note}
-                  </p>
+                  </Text>
                 )}
-              </button>
+              </Button>
             ))}
           </div>
         )}
@@ -84,7 +85,7 @@ export function SurveyPanel({
             {survey.cables.map((c) => (
               <div key={c.cableId} className="card" style={{ padding: '0.55rem 0.7rem' }}>
                 <div className="spread" style={{ gap: '0.5rem' }}>
-                  <span style={{ fontWeight: 600 }}>{c.code}</span>
+                  <Text as="span" weight="semibold">{c.code}</Text>
                   <span className="tnum muted">{formatLength(c.distanceMeters)}</span>
                 </div>
                 <div className="row wrap" style={{ gap: '0.35rem', marginTop: '0.3rem' }}>
@@ -93,20 +94,20 @@ export function SurveyPanel({
                     {c.freeCores}/{c.coreCount} core menganggur
                   </span>
                 </div>
-                <p className="dim" style={{ margin: '0.3rem 0 0', fontSize: '0.72rem', lineHeight: 1.35 }}>
+                <Text as="p" className="dim" size={100} block style={{ margin: '0.3rem 0 0' }}>
                   Kupas di {formatLength(c.tapDistanceMeters)} dari ujung awal kabel · core kosong{' '}
                   {c.freeCoreNumbers.join(', ')}
                   {c.freeCores > c.freeCoreNumbers.length && ', …'}
-                </p>
+                </Text>
               </div>
             ))}
           </div>
         )}
 
         {survey.warnings.map((w) => (
-          <p key={w} className="dim" style={{ margin: 0, fontSize: '0.72rem', lineHeight: 1.35 }}>
+          <Text as="p" key={w} className="dim" size={100} block style={{ margin: 0 }}>
             {w}
-          </p>
+          </Text>
         ))}
       </div>
     </aside>

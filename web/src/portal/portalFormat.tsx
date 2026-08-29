@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Text } from '@fluentui/react-components'
 import { EmptyState, Spinner, type Tone } from '@/components/atoms'
 
 /**
@@ -87,7 +88,7 @@ export function Loading() {
     <div className="card" style={{ display: 'grid', placeItems: 'center', minHeight: 160 }}>
       <div className="stack" style={{ alignItems: 'center', gap: '0.6rem' }}>
         <Spinner />
-        <span className="muted" style={{ fontSize: '0.85rem' }}>Memuat…</span>
+        <Text as="span" className="muted" size={300}>Memuat…</Text>
       </div>
     </div>
   )

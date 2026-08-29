@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { Trash2 } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { Area } from '../api/types'
@@ -56,15 +57,15 @@ export function AreasPage() {
   }, [areas, query])
 
   const columns: Column<Area>[] = [
-    { key: 'code', header: 'Kode', sortValue: (a) => a.code, cell: (a) => <span className="badge">{a.code}</span> },
-    { key: 'name', header: 'Nama', sortValue: (a) => a.name, cell: (a) => <strong>{a.name}</strong> },
+    { key: 'code', header: 'Kode', sortValue: (a) => a.code, cell: (a) => <Text as="span" className="badge">{a.code}</Text> },
+    { key: 'name', header: 'Nama', sortValue: (a) => a.name, cell: (a) => <Text as="strong" weight="semibold" >{a.name}</Text> },
     {
       key: 'parent',
       header: 'Induk',
       sortValue: (a) => parentName(a),
       cell: (a) => {
         const p = parentName(a)
-        return p ? <span className="muted">{p}</span> : <span className="muted">—</span>
+        return p ? <Text as="span" className="muted">{p}</Text> : <Text as="span" className="muted">—</Text>
       },
     },
   ]
@@ -86,7 +87,7 @@ export function AreasPage() {
         title="Area / Wilayah"
         subtitle={
           <>
-            Area adalah dimensi <em>scope</em> pada RBAC: pengguna yang dibatasi ke area tertentu hanya melihat aset dan
+            Area adalah dimensi <Text as="em" italic>scope</Text> pada RBAC: pengguna yang dibatasi ke area tertentu hanya melihat aset dan
             tiket di area itu.
           </>
         }

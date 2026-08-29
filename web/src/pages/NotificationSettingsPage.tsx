@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { Text } from '@fluentui/react-components'
 import { ApiError } from '../api/client'
 import {
   getNotificationSettings,
@@ -136,7 +137,7 @@ export function NotificationSettingsPage() {
     }
   }
 
-  if (loading) return <p className="muted">Memuat setelan…</p>
+  if (loading) return <Text as="p" className="muted">Memuat setelan…</Text>
   if (!form) {
     return (
       <EmptyState
@@ -151,10 +152,10 @@ export function NotificationSettingsPage() {
     <div className="stack">
       <div className="spread">
         <div>
-          <h2 style={{ margin: 0 }}>Pengaturan Notifikasi</h2>
-          <p className="muted" style={{ margin: '0.25rem 0 0' }}>
+          <Text as="h2" size={500} weight="semibold" style={{ margin: 0 }}>Pengaturan Notifikasi</Text>
+          <Text as="p" className="muted" style={{ margin: '0.25rem 0 0' }}>
             Kanal pengiriman (WhatsApp &amp; email) dan saklar pemicu pesan otomatis ke pelanggan.
-          </p>
+          </Text>
         </div>
         {manage && (
           <Button variant="primary" onClick={() => void save()} disabled={saving}>
@@ -164,9 +165,9 @@ export function NotificationSettingsPage() {
       </div>
 
       {!manage && (
-        <p className="muted" style={{ margin: 0 }}>
+        <Text as="p" className="muted" style={{ margin: 0 }}>
           Anda hanya bisa melihat setelan ini. Perlu izin “Kelola gateway WA &amp; pemicu” untuk mengubahnya.
-        </p>
+        </Text>
       )}
 
       {/* ---- Gateway WhatsApp ---- */}
@@ -179,9 +180,9 @@ export function NotificationSettingsPage() {
           onChange={(_, data) => patch({ gatewayEnabled: !!data.checked })}
           disabled={!manage}
         />
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-          Saat mati, pesan pemicu tetap dicatat di riwayat sebagai <em>SKIPPED</em> — tak ada yang benar-benar terkirim.
-        </p>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
+          Saat mati, pesan pemicu tetap dicatat di riwayat sebagai <Text as="em" italic>SKIPPED</Text> — tak ada yang benar-benar terkirim.
+        </Text>
 
         <SelectField
           label="Penyedia"
@@ -197,10 +198,10 @@ export function NotificationSettingsPage() {
         </SelectField>
 
         {form.provider === 'LOG' && (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
             Mode uji: pesan hanya dicatat ke log server, tak dikirim ke mana pun. Cocok untuk mencoba pemicu tanpa
             biaya WhatsApp.
-          </p>
+          </Text>
         )}
 
         {form.provider === 'HTTP_GENERIC' && (
@@ -213,7 +214,7 @@ export function NotificationSettingsPage() {
               disabled={!manage}
             />
             <TextField
-              label={<>Token / API key {form.httpTokenSet && <span className="muted">(tersimpan)</span>}</>}
+              label={<>Token / API key {form.httpTokenSet && <Text as="span" className="muted">(tersimpan)</Text>}</>}
               type="password"
               value={httpToken}
               onChange={(_, data) => setHttpToken(data.value)}
@@ -238,10 +239,10 @@ export function NotificationSettingsPage() {
                 style={{ flex: 1 }}
               />
             </div>
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
               Server mengirim POST <code>form-urlencoded</code> dengan kedua field di atas. Sesuaikan namanya dengan
               dokumentasi penyedia Anda.
-            </p>
+            </Text>
           </>
         )}
 
@@ -255,7 +256,7 @@ export function NotificationSettingsPage() {
               disabled={!manage}
             />
             <TextField
-              label={<>Access token {form.metaAccessTokenSet && <span className="muted">(tersimpan)</span>}</>}
+              label={<>Access token {form.metaAccessTokenSet && <Text as="span" className="muted">(tersimpan)</Text>}</>}
               type="password"
               value={metaToken}
               onChange={(_, data) => setMetaToken(data.value)}
@@ -270,17 +271,17 @@ export function NotificationSettingsPage() {
               disabled={!manage}
               hint="Terlihat di Meta Business Manager → WhatsApp Accounts; dipakai untuk menarik daftar template."
             />
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-              Template yang dipakai tiap pemicu diatur di kartu <strong>Template pesan WhatsApp</strong> di bawah.
+            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
+              Template yang dipakai tiap pemicu diatur di kartu <Text as="strong" weight="semibold" >Template pesan WhatsApp</Text> di bawah.
               Pemicu tanpa template dikirim sebagai teks biasa (hanya dalam jendela 24 jam).
-            </p>
+            </Text>
           </>
         )}
 
         {form.provider === 'QONTAK' && (
           <>
             <TextField
-              label={<>Access token {form.qontakAccessTokenSet && <span className="muted">(tersimpan)</span>}</>}
+              label={<>Access token {form.qontakAccessTokenSet && <Text as="span" className="muted">(tersimpan)</Text>}</>}
               type="password"
               value={qontakToken}
               onChange={(_, data) => setQontakToken(data.value)}
@@ -318,15 +319,15 @@ export function NotificationSettingsPage() {
                 </Button>
               )}
             </div>
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-              Daftar channel ditarik memakai token yang <strong>sudah disimpan</strong> — tempel token lalu klik
+            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
+              Daftar channel ditarik memakai token yang <Text as="strong" weight="semibold" >sudah disimpan</Text> — tempel token lalu klik
               Simpan dulu, baru “Muat daftar channel”.
-            </p>
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-              Qontak <strong>hanya bisa mengirim template</strong>; tak ada jalur teks biasa. Setiap pemicu yang
+            </Text>
+            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
+              Qontak <Text as="strong" weight="semibold" >hanya bisa mengirim template</Text>; tak ada jalur teks biasa. Setiap pemicu yang
               ingin dipakai wajib dipetakan ke satu template di kartu{' '}
-              <strong>Template pesan WhatsApp</strong> di bawah, kalau tidak pesannya dilewati.
-            </p>
+              <Text as="strong" weight="semibold" >Template pesan WhatsApp</Text> di bawah, kalau tidak pesannya dilewati.
+            </Text>
           </>
         )}
       </div>
@@ -341,15 +342,15 @@ export function NotificationSettingsPage() {
           onChange={(_, data) => patch({ emailEnabled: !!data.checked })}
           disabled={!manage}
         />
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
           Berdiri sendiri dari gateway WhatsApp: boleh keduanya hidup (pelanggan menerima dua-duanya, tercatat
           sebagai dua siaran terpisah), atau email saja bila Anda belum punya gateway WA.
-        </p>
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        </Text>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
           Server email disediakan platform — tak ada SMTP yang perlu Anda setel. Surat berangkat atas{' '}
-          <strong>nama perusahaan Anda</strong>, jadi pelanggan tetap mengenali pengirimnya. Pelanggan tanpa
+          <Text as="strong" weight="semibold" >nama perusahaan Anda</Text>, jadi pelanggan tetap mengenali pengirimnya. Pelanggan tanpa
           alamat email dilewati dan tercatat di riwayat.
-        </p>
+        </Text>
       </div>
 
       {/* ---- Identitas & tampilan email (timpaan atas bawaan platform) ---- */}
@@ -361,26 +362,24 @@ export function NotificationSettingsPage() {
       {/* ---- Pemicu otomatis ---- */}
       <div className="card stack">
         <SectionTitle>Pemicu otomatis</SectionTitle>
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
           Nyalakan jenis pesan yang ingin dikirim otomatis. Tiap pesan berangkat lewat semua kanal yang hidup di
-          atas; tanpa satu pun kanal hidup, pesannya hanya tercatat sebagai <em>SKIPPED</em>.
-        </p>
+          atas; tanpa satu pun kanal hidup, pesannya hanya tercatat sebagai <Text as="em" italic>SKIPPED</Text>.
+        </Text>
         {(form.provider === 'META_CLOUD' || form.provider === 'QONTAK') && (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-            Template yang dipakai tiap pemicu diatur di kartu <strong>Template pesan WhatsApp</strong> di atas.
-          </p>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
+            Template yang dipakai tiap pemicu diatur di kartu <Text as="strong" weight="semibold" >Template pesan WhatsApp</Text> di atas.
+          </Text>
         )}
         {TRIGGERS.map((t) => (
           <Checkbox
             key={t.key}
             label={
-              <span>
-                {t.label}
-                <br />
-                <span className="muted" style={{ fontSize: '0.85rem' }}>
-                  {t.hint}
-                </span>
-              </span>
+              <Text as="span">{t.label}
+              <br />
+              <Text as="span" className="muted" size={200}>
+                {t.hint}
+              </Text></Text>
             }
             checked={form[t.key] as boolean}
             onChange={(_, data) => patch({ [t.key]: !!data.checked } as Partial<NotificationSettingsView>)}
@@ -394,6 +393,6 @@ export function NotificationSettingsPage() {
 
 function SectionTitle({ children }: { children: ReactNode }) {
   return (
-    <h3 style={{ margin: '0.25rem 0 0', fontSize: '0.95rem', fontWeight: 600 }}>{children}</h3>
+    <Text as="h3" size={400} weight="semibold" style={{ margin: '0.25rem 0 0' }}>{children}</Text>
   )
 }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { typographyStyles } from '@fluentui/react-components'
 import { api, ApiError } from '@/api/client'
 import type { OltOnuList, OltOnuRow } from '@/api/network'
 import { onuStatusLabel } from '@/api/network'
@@ -62,7 +63,7 @@ export function OltRegisteredOnus({
       key: 'serial',
       header: 'Serial',
       sortValue: (o) => o.serialNumber,
-      cell: (o) => <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{o.serialNumber}</span>,
+      cell: (o) => <span style={{ ...typographyStyles.subtitle2, whiteSpace: 'nowrap' }}>{o.serialNumber}</span>,
     },
     {
       key: 'customer',
@@ -70,8 +71,8 @@ export function OltRegisteredOnus({
       sortValue: (o) => o.customerName,
       cell: (o) => (
         <div>
-          <div style={{ fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.customerName}</div>
-          <div className="muted tnum" style={{ fontSize: '0.78rem' }}>{o.customerCode}</div>
+          <div style={{ ...typographyStyles.body1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.customerName}</div>
+          <div className="muted tnum" style={{ ...typographyStyles.caption1 }}>{o.customerCode}</div>
         </div>
       ),
     },
@@ -81,7 +82,7 @@ export function OltRegisteredOnus({
       sortValue: (o) => o.odpCode,
       cell: (o) => (
         <span className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-          <strong style={{ fontSize: '0.85rem' }}>{o.odpCode}</strong>
+          <strong style={{ ...typographyStyles.body1 }}>{o.odpCode}</strong>
           <span className="badge">Port {o.portNumber}</span>
         </span>
       ),
@@ -90,7 +91,7 @@ export function OltRegisteredOnus({
       key: 'package',
       header: 'Paket',
       sortValue: (o) => o.subscriptionPackage ?? '',
-      cell: (o) => <span style={{ fontSize: '0.85rem' }}>{o.subscriptionPackage ?? <span className="muted">—</span>}</span>,
+      cell: (o) => <span style={{ ...typographyStyles.body1 }}>{o.subscriptionPackage ?? <span className="muted">—</span>}</span>,
     },
     {
       key: 'status',

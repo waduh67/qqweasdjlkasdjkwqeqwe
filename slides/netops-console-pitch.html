@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetOps Console — Pitch Deck</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+/* ==========================================================================
+   Design tokens — mirrored from web/src/index.css (dark theme) and docs/brand.md.
+   Brand accent Azure Blue #0078D4; tile gradient 135deg #2899F5 -> #0078D4.
+   Status colours are NEVER used as decoration — only where they mean
+   system state (the outage flow on slide 5). See docs/brand.md.
+   ========================================================================== */
+:root {
+  --plane: #1b1a19;
+  --surface: #201f1e;
+  --surface-2: #292827;
+  --border: #3b3a39;
+  --text: #ffffff;
+  --text-2: #d2d0ce;
+  --muted: #a19f9d;
+  --accent: #2899f5;
+  --accent-deep: #0078d4;
+  --accent-soft: rgba(40, 153, 245, 0.16);
+  --grad: linear-gradient(135deg, #2899f5, #0078d4);
+
+  --good: #34d399;
+  --warning: #fbbf24;
+  --critical: #f87171;
+
+  --radius: 4px;
+  --radius-lg: 6px;
+
+  --font: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI',
+    -apple-system, BlinkMacSystemFont, system-ui, 'Helvetica Neue', Arial, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--plane);
+  color: var(--text);
+  font-family: var(--font);
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+/* ---- 16:9 stage, letterboxed ---- */
+.slide-deck { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+@media (min-width: 769px) {
+  .slide-deck {
+    max-width: calc(100vh * 16 / 9);
+    max-height: calc(100vw * 9 / 16);
+    margin: auto;
+    position: absolute;
+    inset: 0;
+  }
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 5.5% 6.5%;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .4s ease;
+  background: var(--plane);
+  overflow: hidden;
+}
+.slide.active { opacity: 1; visibility: visible; }
+
+/* Ambient brand glow — subtle, never competes with content */
+.slide::before {
+  content: '';
+  position: absolute;
+  top: -30%; right: -15%;
+  width: 60%; height: 90%;
+  background: radial-gradient(circle, rgba(40,153,245,.10), transparent 65%);
+  pointer-events: none;
+}
+
+.slide-content { position: relative; width: 100%; display: flex; flex-direction: column; gap: clamp(10px, 1.6vh, 22px); }
+
+/* ---- Typography scale ---- */
+.eyebrow {
+  font-size: clamp(9px, 1.05vw, 13px);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+}
+h1 {
+  font-size: clamp(30px, 4.6vw, 66px);
+  line-height: 1.06;
+  letter-spacing: -.025em;
+  font-weight: 650;
+}
+h2 {
+  font-size: clamp(22px, 3.1vw, 44px);
+  line-height: 1.12;
+  letter-spacing: -.02em;
+  font-weight: 650;
+}
+.grad {
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.lede { font-size: clamp(13px, 1.5vw, 21px); line-height: 1.5; color: var(--text-2); max-width: 62ch; }
+.sub  { font-size: clamp(11px, 1.15vw, 16px); line-height: 1.5; color: var(--muted); }
+.note { font-size: clamp(9px, .85vw, 12px); color: var(--muted); font-style: italic; }
+
+/* ---- Cards ---- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: clamp(12px, 1.7vw, 24px);
+  text-align: left;
+}
+.card h3 { font-size: clamp(12px, 1.25vw, 18px); font-weight: 650; margin-bottom: .45em; letter-spacing: -.01em; }
+.card p  { font-size: clamp(10px, 1.02vw, 14px); line-height: 1.5; color: var(--muted); }
+.card-accent { border-left: 3px solid var(--accent-deep); }
+
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(10px, 1.3vw, 20px); }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(10px, 1.3vw, 20px); }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(8px, 1vw, 16px); }
+.split  { display: grid; grid-template-columns: 1.05fr .95fr; gap: clamp(20px, 3vw, 52px); align-items: center; }
+
+/* ---- Metric tiles ---- */
+.metric { text-align: left; }
+.metric .num {
+  font-size: clamp(26px, 3.7vw, 56px);
+  font-weight: 680;
+  letter-spacing: -.03em;
+  line-height: 1;
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.metric .label { font-size: clamp(9px, .95vw, 13px); color: var(--muted); margin-top: .5em; line-height: 1.35; }
+
+/* ---- Module chips (product tour) ---- */
+.chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: clamp(9px, 1.15vw, 16px);
+  text-align: left;
+}
+.chip .k { font-size: clamp(10px, 1.05vw, 15px); font-weight: 650; margin-bottom: .35em; }
+.chip .v { font-size: clamp(8.5px, .88vw, 12px); color: var(--muted); line-height: 1.45; }
+.chip .mod {
+  font-size: clamp(7.5px, .72vw, 10px);
+  color: var(--accent);
+  font-family: ui-monospace, 'Cascadia Code', Menlo, monospace;
+  letter-spacing: .04em;
+}
+
+/* ---- Flow diagram (slide 5) ---- */
+.flow { display: flex; align-items: stretch; gap: clamp(5px, .7vw, 10px); }
+.flow .step {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: clamp(8px, 1.1vw, 15px);
+  display: flex; flex-direction: column; justify-content: center;
+  font-size: clamp(8.5px, .9vw, 12.5px);
+  line-height: 1.4;
+}
+.flow .step b { display: block; font-weight: 650; margin-bottom: .3em; font-size: clamp(9px, .95vw, 13px); }
+.flow .arrow { display: flex; align-items: center; color: var(--accent); font-size: clamp(11px, 1.2vw, 17px); }
+.flow-label {
+  font-size: clamp(9px, .95vw, 13px);
+  font-weight: 650;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: .7em;
+}
+/* Status colour used here because it genuinely denotes system state */
+.state-critical { border-top: 2px solid var(--critical); }
+.state-warning  { border-top: 2px solid var(--warning); }
+.state-good     { border-top: 2px solid var(--good); }
+
+/* ---- Comparison table (slide 6) ---- */
+.cmp { width: 100%; border-collapse: collapse; font-size: clamp(9px, .98vw, 14px); }
+.cmp th, .cmp td { padding: clamp(6px, .95vh, 13px) clamp(5px, .7vw, 12px); text-align: center; border-bottom: 1px solid var(--border); }
+.cmp th { font-size: clamp(8.5px, .88vw, 12px); color: var(--muted); font-weight: 600; letter-spacing: .03em; }
+.cmp td:first-child, .cmp th:first-child { text-align: left; color: var(--text-2); font-weight: 500; }
+.cmp .own { background: var(--accent-soft); }
+.cmp th.own { color: var(--accent); font-weight: 700; border-radius: var(--radius) var(--radius) 0 0; }
+.yes { color: var(--accent); font-weight: 700; }
+.no  { color: #6b6968; }
+
+/* ---- Pricing / value stack ---- */
+.price-hero {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent-deep);
+  border-radius: var(--radius-lg);
+  padding: clamp(14px, 2vw, 30px);
+}
+.price-hero .amt { font-size: clamp(24px, 3.2vw, 46px); font-weight: 680; letter-spacing: -.03em; }
+.price-hero .per { font-size: clamp(10px, 1vw, 14px); color: var(--muted); font-weight: 400; }
+ul.ticks { list-style: none; display: flex; flex-direction: column; gap: clamp(5px, .85vh, 11px); }
+ul.ticks li { font-size: clamp(10px, 1.05vw, 15px); color: var(--text-2); line-height: 1.45; padding-left: 1.5em; position: relative; }
+ul.ticks li::before { content: '—'; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+
+/* ---- Steps (CTA) ---- */
+.step-n {
+  width: clamp(24px, 2.5vw, 36px); height: clamp(24px, 2.5vw, 36px);
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: clamp(10px, 1.1vw, 15px);
+  margin-bottom: .7em;
+}
+
+/* ---- Brand mark: feeder -> splitter -> 3 drops (docs/brand.md geometry) ---- */
+.brandmark { display: flex; align-items: center; gap: 10px; }
+.brandmark svg { width: clamp(24px, 2.6vw, 38px); height: auto; flex-shrink: 0; }
+.brandmark .wordmark { font-size: clamp(11px, 1.15vw, 16px); font-weight: 650; letter-spacing: -.01em; }
+.brandmark .wordmark span { color: var(--muted); font-weight: 400; }
+
+.chart-wrap { position: relative; width: 100%; height: clamp(150px, 34vh, 300px); }
+
+/* ---- Animation ---- */
+.slide.active .anim > * { opacity: 0; animation: fadeUp .5s ease-out forwards; }
+.slide.active .anim > *:nth-child(1) { animation-delay: .05s; }
+.slide.active .anim > *:nth-child(2) { animation-delay: .13s; }
+.slide.active .anim > *:nth-child(3) { animation-delay: .21s; }
+.slide.active .anim > *:nth-child(4) { animation-delay: .29s; }
+.slide.active .anim > *:nth-child(5) { animation-delay: .37s; }
+.slide.active .anim > *:nth-child(6) { animation-delay: .45s; }
+.slide.active .anim > *:nth-child(7) { animation-delay: .53s; }
+.slide.active .anim > *:nth-child(8) { animation-delay: .61s; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .slide.active .anim > * { animation: none; opacity: 1; }
+  .slide { transition: none; }
+}
+
+/* ---- Chrome ---- */
+.progress-bar { position: fixed; top: 0; left: 0; height: 2px; background: var(--accent-deep); transition: width .3s ease; z-index: 100; }
+.nav-controls { position: fixed; bottom: 18px; right: 22px; display: flex; align-items: center; gap: 12px; z-index: 100; }
+.nav-btn {
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2);
+  width: 30px; height: 30px; border-radius: var(--radius); cursor: pointer; font-size: 13px; line-height: 1;
+}
+.nav-btn:hover { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-deep); }
+.nav-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.slide-counter { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+  .slide { padding: 30px 22px; }
+  .grid-3, .grid-4, .split { grid-template-columns: repeat(2, 1fr); }
+  .flow { flex-direction: column; }
+  .flow .arrow { transform: rotate(90deg); justify-content: center; }
+}
+@media (max-width: 480px) {
+  .grid-2, .grid-3, .grid-4, .split { grid-template-columns: 1fr; }
+  .cmp { font-size: 9px; }
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+<div class="slide-deck">
+
+<!-- ═══ 1 · HOOK ═══════════════════════════════════════════════════ -->
+<div class="slide active">
+  <div class="slide-content anim" style="gap:clamp(14px,2.4vh,30px)">
+    <div class="brandmark">
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <rect width="32" height="32" rx="7" fill="url(#g)"/>
+        <g stroke="#fff" stroke-width="2.4" stroke-linecap="round" fill="none">
+          <circle cx="8" cy="16" r="2.6"/>
+          <path d="M10.6 16h4.4"/>
+          <path d="M15 16c3 0 3-6 6-6M15 16h6M15 16c3 0 3 6 6 6"/>
+        </g>
+        <g fill="#fff"><circle cx="23" cy="10" r="2.1"/><circle cx="23" cy="16" r="2.1"/><circle cx="23" cy="22" r="2.1"/></g>
+        <defs><linearGradient id="g" x1="0" y1="0" x2="32" y2="32">
+          <stop stop-color="#2899F5"/><stop offset="1" stop-color="#0078D4"/>
+        </linearGradient></defs>
+      </svg>
+      <div class="wordmark">NetOps <span>Console</span></div>
+    </div>
+
+    <h1>Your network is running.<br><span class="grad">Your spreadsheet isn't.</span></h1>
+
+    <p class="lede">
+      The operations console for FTTH providers. Fiber plant, live OLT monitoring,
+      subscriber lifecycle, and billing — one system, one source of truth.
+    </p>
+
+    <div style="display:flex;gap:clamp(18px,2.6vw,44px);flex-wrap:wrap;padding-top:clamp(4px,1vh,12px)">
+      <div class="metric"><div class="num">24</div><div class="label">production modules</div></div>
+      <div class="metric"><div class="num">8</div><div class="label">phases shipped</div></div>
+      <div class="metric"><div class="num">1</div><div class="label">console to run the ISP</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 2 · PROBLEM ════════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-content anim">
+    <div class="eyebrow">The problem</div>
+    <h2>Past 500 subscribers,<br>the manual way starts costing you.</h2>
+    <p class="sub" style="max-width:64ch">Four questions every growing ISP struggles to answer quickly — and each one has a price.</p>
+
+    <div class="grid-4" style="margin-top:clamp(4px,1.2vh,14px)">
+      <div class="card card-accent">
+        <h3>"Which port is free?"</h3>
+        <p>Splitter capacity lives in a spreadsheet someone forgot to update. Nobody knows an ODP is full until the technician is already up the pole.</p>
+      </div>
+      <div class="card card-accent">
+        <h3>"Who is affected?"</h3>
+        <p>One OLT goes dark and thirty alarms flood in. You learn the root cause from angry phone calls, not from your tools.</p>
+      </div>
+      <div class="card card-accent">
+        <h3>"Did they pay?"</h3>
+        <p>Invoices in one app, PPPoE accounts in the router, suspension done by hand at midnight — and restored by hand the next morning.</p>
+      </div>
+      <div class="card card-accent">
+        <h3>"What happened last time?"</h3>
+        <p>Customer history is scattered across WhatsApp threads, a paper ledger, and whatever a technician still remembers.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 3 · COST OF INACTION ═══════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-content">
+    <div class="split">
+      <div class="anim" style="display:flex;flex-direction:column;gap:clamp(10px,1.7vh,22px)">
+        <div class="eyebrow">Cost of inaction</div>
+        <h2>Every manual step is a<br>subscriber you <span class="grad">can't add</span>.</h2>
+        <p class="sub">
+          Manual operations don't scale linearly — they compound. Provisioning delays
+          stretch installation backlogs, blind outages burn support hours, and hand-run
+          isolation leaks revenue every single billing cycle.
+        </p>
+        <div style="display:flex;gap:clamp(16px,2.4vw,38px);flex-wrap:wrap">
+          <div class="metric"><div class="num">~70%</div><div class="label">of routine ops hours are<br>automatable with one system</div></div>
+          <div class="metric"><div class="num">0</div><div class="label">manual midnight<br>isolation runs</div></div>
+        </div>
+      </div>
+      <div class="anim" style="display:flex;flex-direction:column;gap:8px">
+        <div class="chart-wrap"><canvas id="chartOps"></canvas></div>
+        <p class="note">Illustrative model — routine operator hours per month at a 2,000-subscriber ISP. Actual savings depend on current workflow.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 4 · SOLUTION ═══════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-content anim">
+    <div class="eyebrow">The solution</div>
+    <h2>One console.<br><span class="grad">From the fiber to the invoice.</span></h2>
+    <p class="lede">
+      NetOps Console models the whole chain an ISP actually operates —
+      OLT → ODC → ODP → subscriber — then layers monitoring, field work, customer
+      self-service, and money on top of that single map.
+    </p>
+
+    <div class="grid-3" style="margin-top:clamp(4px,1.4vh,16px)">
+      <div class="card">
+        <h3>Know the plant</h3>
+        <p>Every OLT, splitter, cable run, and drop as real geometry on a vector-tile map — with optical loss budget along the path.</p>
+      </div>
+      <div class="card">
+        <h3>See it live</h3>
+        <p>The server polls OLTs over SNMP directly. Time-series metrics in TimescaleDB, alarms correlated into incidents instead of noise.</p>
+      </div>
+      <div class="card">
+        <h3>Run the business</h3>
+        <p>Packages, invoices, payment gateways, PPPoE sessions, and a branded customer portal — driven by the same subscriber record.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 5 · THE LOOP (differentiating mechanic) ════════════════════ -->
+<div class="slide">
+  <div class="slide-content anim">
+    <div class="eyebrow">Why it's different</div>
+    <h2>The parts talk to each other.<br>That <span class="grad">is</span> the product.</h2>
+
+    <div style="margin-top:clamp(2px,1vh,10px)">
+      <div class="flow-label" style="color:var(--critical)">Outage — hands off</div>
+      <div class="flow">
+        <div class="step state-critical"><b>OLT goes dark</b>30 ONUs drop at once</div>
+        <div class="arrow">→</div>
+        <div class="step state-warning"><b>Alarms correlated</b>One incident with a root cause, not 30 tickets</div>
+        <div class="arrow">→</div>
+        <div class="step state-warning"><b>Blast radius</b>Downstream cable and affected subscribers highlighted on the map</div>
+        <div class="arrow">→</div>
+        <div class="step state-good"><b>Customers told first</b>WhatsApp + email broadcast before the phone rings</div>
+      </div>
+    </div>
+
+    <div style="margin-top:clamp(6px,1.6vh,18px)">
+      <div class="flow-label" style="color:var(--accent)">Money — hands off</div>
+      <div class="flow">
+        <div class="step"><b>Invoice overdue</b>Grace period expires</div>
+        <div class="arrow">→</div>
+        <div class="step"><b>Subscription suspended</b>Billing drives the customer record</div>
+        <div class="arrow">→</div>
+        <div class="step"><b>PPPoE session cut</b>RADIUS CoA reaches the BRAS automatically</div>
+        <div class="arrow">→</div>
+        <div class="step state-good"><b>Paid → restored</b>Gateway webhook reopens the session in seconds</div>
+      </div>
+    </div>
+
+    <p class="sub" style="margin-top:clamp(4px,1.2vh,14px)">
+      No integrations to buy. No glue scripts to maintain. Module boundaries are
+      enforced in the build, so these flows can't quietly rot.
+    </p>
+  </div>
+</div>
+
+<!-- ═══ 6 · PRODUCT TOUR ═══════════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-content anim">
+    <div class="eyebrow">Product tour</div>
+    <h2>Twenty-four modules.<br>One platform, <span class="grad">no add-ons to buy.</span></h2>
+
+    <div class="grid-4" style="gap:clamp(7px,.85vw,13px)">
+      <div class="chip"><div class="k">Inventory &amp; GIS</div><div class="v">OLT → ODC → ODP → subscriber, cable geometry, loss budget, blast radius</div><div class="mod">network · gis</div></div>
+      <div class="chip"><div class="k">Monitoring</div><div class="v">Server-side SNMP polling, TimescaleDB metrics, flood-proof alarm engine</div><div class="mod">monitoring</div></div>
+      <div class="chip"><div class="k">Incidents</div><div class="v">Alarm correlation into root-caused incidents + proactive broadcast</div><div class="mod">incident</div></div>
+      <div class="chip"><div class="k">Work orders</div><div class="v">Install, repair, migrate, dismantle — photo evidence &amp; signature to S3</div><div class="mod">workorder</div></div>
+      <div class="chip"><div class="k">CPE / TR-069</div><div class="v">WiFi config, reboot, ping &amp; speedtest, firmware, factory reset via GenieACS</div><div class="mod">cpe</div></div>
+      <div class="chip"><div class="k">BRAS / RADIUS</div><div class="v">PPPoE accounts &amp; sessions, Mikrotik REST v7 + FreeRADIUS-as-a-service</div><div class="mod">bng</div></div>
+      <div class="chip"><div class="k">Billing</div><div class="v">Invoicing, auto-isolate/restore, per-tenant gateways, manual transfer &amp; QRIS</div><div class="mod">billing · catalog</div></div>
+      <div class="chip"><div class="k">Portal &amp; helpdesk</div><div class="v">Customers pay, print receipts, report faults, request plan changes — under your brand</div><div class="mod">portal · helpdesk</div></div>
+      <div class="chip"><div class="k">Subscriber-360</div><div class="v">One screen: subscription, invoices, tickets, sessions, full history</div><div class="mod">subscriber360</div></div>
+      <div class="chip"><div class="k">Onboarding</div><div class="v">Express new-install flow and bulk import of existing PPPoE subscribers</div><div class="mod">onboarding</div></div>
+      <div class="chip"><div class="k">Remote access</div><div class="v">OpenVPN back-haul reaches routers with no public IP — one-command installer</div><div class="mod">vpn</div></div>
+      <div class="chip"><div class="k">Governance</div><div class="v">Multi-tenant isolation, dynamic RBAC, full audit trail, 2FA, scheduled backups</div><div class="mod">tenancy · iam · audit</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 7 · COMPARISON ═════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-content anim">
+    <div class="eyebrow">Alternatives</div>
+    <h2>What ISPs use today —<br>and where it <span class="grad">runs out</span>.</h2>
+
+    <table class="cmp">
+      <thead>
+        <tr>
+          <th style="width:26%"></th>
+          <th>Spreadsheet<br>+ Mikrotik</th>
+          <th>Generic<br>billing app</th>
+          <th>Build it<br>in-house</th>
+          <th class="own">NetOps<br>Console</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Fiber plant on a real map</td><td class="no">✕</td><td class="no">✕</td><td class="no">months</td><td class="own yes">✓</td></tr>
+        <tr><td>Live OLT / ONU monitoring</td><td class="no">✕</td><td class="no">✕</td><td class="no">months</td><td class="own yes">✓</td></tr>
+        <tr><td>Alarms correlated to one incident</td><td class="no">✕</td><td class="no">✕</td><td class="no">rarely</td><td class="own yes">✓</td></tr>
+        <tr><td>Billing drives PPPoE isolation</td><td class="no">manual</td><td class="no">partial</td><td class="no">fragile</td><td class="own yes">✓</td></tr>
+        <tr><td>Remote CPE control (TR-069)</td><td class="no">✕</td><td class="no">✕</td><td class="no">✕</td><td class="own yes">✓</td></tr>
+        <tr><td>Branded customer portal</td><td class="no">✕</td><td class="no">generic</td><td class="no">months</td><td class="own yes">✓</td></tr>
+        <tr><td>Time until it's running</td><td class="no">—</td><td class="no">weeks</td><td class="no">1–2 years</td><td class="own yes">days</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ 8 · PROOF ══════════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-content anim">
+    <div class="eyebrow">Proof</div>
+    <h2>Not a prototype.<br>A system that's <span class="grad">already running.</span></h2>
+
+    <div class="grid-4" style="margin-top:clamp(4px,1.2vh,14px)">
+      <div class="card metric"><div class="num">24</div><div class="label">Spring Modulith modules, each in strict hexagonal layering</div></div>
+      <div class="card metric"><div class="num">980</div><div class="label">automated tests, including enforced module-boundary checks</div></div>
+      <div class="card metric"><div class="num">132k</div><div class="label">lines of Kotlin and TypeScript across server and console</div></div>
+      <div class="card metric"><div class="num">98</div><div class="label">versioned database migrations — schema history, not guesswork</div></div>
+    </div>
+
+    <div class="grid-3" style="margin-top:clamp(4px,1.4vh,16px)">
+      <div class="card">
+        <h3>Validated on real hardware</h3>
+        <p>The EPON monitoring path is proven end-to-end against a physical HSGQ-E04I OLT — poll to inbox, not just against a simulator.</p>
+      </div>
+      <div class="card">
+        <h3>Deployed, not demoed</h3>
+        <p>Phases 0–7 plus billing, SaaS subscriptions, VPN back-haul, and the customer portal all run in production today.</p>
+      </div>
+      <div class="card">
+        <h3>Built to be handed over</h3>
+        <p>Domain logic knows nothing of Spring, JPA, or HTTP. Swapping a vendor adapter never touches business rules.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 9 · PRICING ════════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-content">
+    <div class="split">
+      <div class="anim" style="display:flex;flex-direction:column;gap:clamp(10px,1.7vh,22px)">
+        <div class="eyebrow">Commercials</div>
+        <h2>One price.<br><span class="grad">Every module.</span></h2>
+        <p class="sub">
+          No per-module upsell, no metered surprises. A flat monthly subscription per
+          ISP, agreed once at onboarding — every module on this deck is included from
+          day one.
+        </p>
+        <div class="price-hero">
+          <div class="amt">Flat monthly <span class="per">/ per ISP</span></div>
+          <p class="sub" style="margin-top:.7em">
+            Rate set at onboarding and fixed for your tenant. Renew yourself through
+            the console; the term extends when payment clears, not when the invoice is issued.
+          </p>
+        </div>
+      </div>
+      <div class="anim" style="display:flex;flex-direction:column;gap:clamp(8px,1.4vh,18px)">
+        <div class="card" style="border-top:3px solid var(--accent-deep)">
+          <h3 style="margin-bottom:.9em">What's included</h3>
+          <ul class="ticks">
+            <li>All 24 modules — inventory, monitoring, billing, CPE, RADIUS, portal</li>
+            <li>Central RADIUS and OpenVPN back-haul as a service, no extra boxes</li>
+            <li>Your own payment gateway, or ours — customers pay under your brand</li>
+            <li>Unlimited operators with dynamic role-based access and audit trail</li>
+            <li>Scheduled backups and background job monitoring included</li>
+          </ul>
+        </div>
+        <p class="sub" style="font-size:clamp(9px,.95vw,13px)">
+          <strong style="color:var(--text-2)">Fall behind on payment and you don't get locked out.</strong>
+          The console goes read-only after the grace period — you can still log in, and
+          your customers' portal keeps working.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 10 · CTA ═══════════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-content anim" style="gap:clamp(14px,2.4vh,30px)">
+    <div class="eyebrow">Next step</div>
+    <h1>See it on <span class="grad">your own network.</span></h1>
+    <p class="lede">
+      Not a canned demo. We stand up a tenant, point it at one of your real OLTs, and
+      you watch your own subscribers appear on the map.
+    </p>
+
+    <div class="grid-3" style="margin-top:clamp(2px,1vh,10px)">
+      <div class="card">
+        <div class="step-n">1</div>
+        <h3>Walkthrough — 30 min</h3>
+        <p>We go through the console against live data and answer the awkward questions about your vendor mix.</p>
+      </div>
+      <div class="card">
+        <div class="step-n">2</div>
+        <h3>Pilot on real hardware</h3>
+        <p>One OLT, one BRAS, your own tenant. SNMP diagnostics confirm the adapter fits your firmware before you commit.</p>
+      </div>
+      <div class="card">
+        <div class="step-n">3</div>
+        <h3>Bulk import and go</h3>
+        <p>Existing PPPoE subscribers import in bulk. Billing and the customer portal switch on when you're ready.</p>
+      </div>
+    </div>
+
+    <div class="brandmark" style="margin-top:clamp(4px,1.6vh,18px)">
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <rect width="32" height="32" rx="7" fill="url(#g2)"/>
+        <g stroke="#fff" stroke-width="2.4" stroke-linecap="round" fill="none">
+          <circle cx="8" cy="16" r="2.6"/>
+          <path d="M10.6 16h4.4"/>
+          <path d="M15 16c3 0 3-6 6-6M15 16h6M15 16c3 0 3 6 6 6"/>
+        </g>
+        <g fill="#fff"><circle cx="23" cy="10" r="2.1"/><circle cx="23" cy="16" r="2.1"/><circle cx="23" cy="22" r="2.1"/></g>
+        <defs><linearGradient id="g2" x1="0" y1="0" x2="32" y2="32">
+          <stop stop-color="#2899F5"/><stop offset="1" stop-color="#0078D4"/>
+        </linearGradient></defs>
+      </svg>
+      <div class="wordmark">NetOps <span>Console</span></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /.slide-deck -->
+
+<div class="nav-controls">
+  <button class="nav-btn" onclick="prevSlide()" aria-label="Previous slide">←</button>
+  <span class="slide-counter"><span id="current">1</span> / <span id="total">10</span></span>
+  <button class="nav-btn" onclick="nextSlide()" aria-label="Next slide">→</button>
+</div>
+
+<script>
+/* ---------- Deck navigation ---------- */
+let current = 1;
+const slides = document.querySelectorAll('.slide');
+const total = slides.length;
+document.getElementById('total').textContent = total;
+
+function showSlide(n) {
+  current = Math.min(Math.max(n, 1), total);
+  slides.forEach((s, i) => s.classList.toggle('active', i === current - 1));
+  document.getElementById('current').textContent = current;
+  document.getElementById('progressBar').style.width = (current / total * 100) + '%';
+}
+function nextSlide() { showSlide(current + 1); }
+function prevSlide() { showSlide(current - 1); }
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); nextSlide(); }
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prevSlide(); }
+  if (e.key === 'Home') { e.preventDefault(); showSlide(1); }
+  if (e.key === 'End')  { e.preventDefault(); showSlide(total); }
+});
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.nav-controls')) nextSlide();
+});
+
+/* ---------- Slide 3 chart ---------- */
+/* Series colours follow the validated data-viz palette: brand blue for the
+   "with NetOps" series, neutral grey for the manual baseline. Status colours
+   are deliberately not used here — they mean system state, not categories. */
+Chart.defaults.font.family = getComputedStyle(document.documentElement)
+  .getPropertyValue('--font').trim() || 'sans-serif';
+
+new Chart(document.getElementById('chartOps'), {
+  type: 'bar',
+  data: {
+    labels: ['Provisioning', 'Outage triage', 'Billing & isolation', 'Field dispatch', 'Reporting'],
+    datasets: [
+      { label: 'Manual today', data: [48, 62, 40, 34, 20], backgroundColor: '#5a5857', borderRadius: 3, barPercentage: .72 },
+      { label: 'With NetOps Console', data: [12, 14, 4, 11, 3], backgroundColor: '#2899F5', borderRadius: 3, barPercentage: .72 }
+    ]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 700 },
+    plugins: {
+      legend: {
+        position: 'top', align: 'start',
+        labels: { color: '#d2d0ce', boxWidth: 10, boxHeight: 10, font: { size: 11 }, padding: 12 }
+      },
+      tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.parsed.x} hrs/month` } }
+    },
+    scales: {
+      x: {
+        title: { display: true, text: 'Operator hours per month', color: '#a19f9d', font: { size: 10 } },
+        grid: { color: 'rgba(255,255,255,.06)' },
+        ticks: { color: '#a19f9d', font: { size: 10 } }
+      },
+      y: { grid: { display: false }, ticks: { color: '#d2d0ce', font: { size: 11 } } }
+    }
+  }
+});
+
+showSlide(1);
+</script>
+</body>
+</html>

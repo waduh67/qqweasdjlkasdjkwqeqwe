@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { api, ApiError } from '../api/client'
 import type { AuditEntry, PageResponse } from '../api/types'
 import { DataTable, type Column } from '@/components/organisms'
@@ -64,7 +65,7 @@ export function AuditPage() {
       key: 'occurredAt',
       header: 'Waktu',
       sortValue: (e) => e.occurredAt,
-      cell: (e) => <span className="muted">{new Date(e.occurredAt).toLocaleString('id-ID')}</span>,
+      cell: (e) => <Text as="span" className="muted">{new Date(e.occurredAt).toLocaleString('id-ID')}</Text>,
     },
     {
       key: 'action',
@@ -76,18 +77,18 @@ export function AuditPage() {
       key: 'actor',
       header: 'Pelaku',
       sortValue: (e) => e.actorEmail,
-      cell: (e) => <span className="muted">{e.actorEmail ?? 'sistem'}</span>,
+      cell: (e) => <Text as="span" className="muted">{e.actorEmail ?? 'sistem'}</Text>,
     },
     {
       key: 'entity',
       header: 'Objek',
       sortValue: (e) => e.entityType,
-      cell: (e) => <span className="muted">{e.entityType ?? '–'}</span>,
+      cell: (e) => <Text as="span" className="muted">{e.entityType ?? '–'}</Text>,
     },
     {
       key: 'detail',
       header: 'Detail',
-      cell: (e) => <span className="muted">{flattenDetail(e.detail) || '–'}</span>,
+      cell: (e) => <Text as="span" className="muted">{flattenDetail(e.detail) || '–'}</Text>,
     },
   ]
 

@@ -1,3 +1,4 @@
+import { Text } from '@fluentui/react-components'
 import { SelectField } from '@/components/atoms'
 import { CABLE_INSTALLATION_LABEL, CABLE_OWNERSHIP_LABEL } from '@/api/network'
 import type { CableInstallation, CableOwnership } from '@/api/network'
@@ -48,9 +49,9 @@ export function CablePhysicalFields({
           ))}
         </SelectField>
       </div>
-      <span className="muted" style={{ fontSize: '0.78rem' }}>
+      <Text as="span" className="muted" size={200}>
         Penentu siapa yang berangkat saat putus: tim tangga untuk jalur udara, tim galian untuk jalur tanam.
-      </span>
+      </Text>
     </div>
   )
 }

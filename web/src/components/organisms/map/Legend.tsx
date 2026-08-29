@@ -1,3 +1,4 @@
+import { Text } from '@fluentui/react-components'
 import { JOINT_BOX_COLOR, ODF_COLOR, OLT_COLOR } from '@/map/mapStyle'
 
 /**
@@ -26,9 +27,9 @@ export function Legend({ hidden }: { hidden: Set<string> }) {
       {items.map(([color, label]) => (
         <span key={label} className="row" style={{ gap: '0.35rem', alignItems: 'center' }}>
           <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, display: 'inline-block' }} />
-          <span className="muted" style={{ fontSize: '0.85rem' }}>
+          <Text as="span" className="muted" size={200}>
             {label}
-          </span>
+          </Text>
         </span>
       ))}
     </div>
@@ -39,12 +40,12 @@ export function Legend({ hidden }: { hidden: Set<string> }) {
 export function HeatmapLegend() {
   return (
     <span className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-      <span className="muted" style={{ fontSize: '0.85rem' }}>
+      <Text as="span" className="muted" size={200}>
         Utilisasi port
-      </span>
-      <span className="muted" style={{ fontSize: '0.75rem' }}>
+      </Text>
+      <Text as="span" className="muted" size={100}>
         0%
-      </span>
+      </Text>
       <span
         style={{
           width: 96,
@@ -54,9 +55,9 @@ export function HeatmapLegend() {
           background: 'linear-gradient(90deg,#22c55e,#eab308,#f97316,#ef4444)',
         }}
       />
-      <span className="muted" style={{ fontSize: '0.75rem' }}>
+      <Text as="span" className="muted" size={100}>
         100%
-      </span>
+      </Text>
     </span>
   )
 }

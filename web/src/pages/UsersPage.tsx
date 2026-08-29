@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { KeyRound, Plus, Power, RefreshCw, ShieldOff, Trash2 } from 'lucide-react'
-import { Checkbox } from '@fluentui/react-components'
+import { Checkbox, Text } from '@fluentui/react-components'
 import { api, ApiError } from '../api/client'
 import { resetTwoFactorFor } from '../api/account'
 import type { Area, PageResponse, Role, User } from '../api/types'
@@ -105,7 +105,7 @@ export function UsersPage() {
       header: '2FA',
       sortValue: (u) => (u.twoFactorEnabled ? 1 : 0),
       cell: (u) =>
-        u.twoFactorEnabled ? <Badge tone="good">Aktif</Badge> : <span className="muted">–</span>,
+        u.twoFactorEnabled ? <Badge tone="good">Aktif</Badge> : <Text as="span" className="muted">–</Text>,
     },
     {
       key: 'role',
@@ -214,7 +214,7 @@ export function UsersPage() {
 
       <CommandBar primary={primary} actions={actions} />
 
-      {error && <p className="error">{error}</p>}
+      {error && <Text as="p" className="error">{error}</Text>}
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama atau email…" />
@@ -339,7 +339,7 @@ function RoleAreaPicker({
   return (
     <div className="row" style={{ alignItems: 'flex-start', gap: '2rem' }}>
       <div>
-        <strong>Role</strong>
+        <Text as="strong" weight="semibold" >Role</Text>
         {roles.map((role) => (
           <div key={role.id} style={{ marginTop: '0.2rem' }}>
             <Checkbox
@@ -351,8 +351,8 @@ function RoleAreaPicker({
         ))}
       </div>
       <div>
-        <strong>Area (kosong = semua area)</strong>
-        {areas.length === 0 && <p className="muted">Belum ada area.</p>}
+        <Text as="strong" weight="semibold" >Area (kosong = semua area)</Text>
+        {areas.length === 0 && <Text as="p" className="muted">Belum ada area.</Text>}
         {areas.map((area) => (
           <div key={area.id} style={{ marginTop: '0.2rem' }}>
             <Checkbox

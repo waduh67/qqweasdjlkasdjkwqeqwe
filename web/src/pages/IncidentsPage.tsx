@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { api, ApiError } from '../api/client'
 import type { IncidentAlarm, IncidentDetail, IncidentEventView, IncidentView } from '../api/incident'
 import type { BroadcastView, NotificationChannel } from '../api/notification'
@@ -111,25 +112,30 @@ export function IncidentsPage() {
 
   const columns: Column<IncidentView>[] = [
     {
+      key: 'title',
+      header: 'Nama',
+      sortValue: (i) => i.title,
+      cell: (i) => i.title,
+      onCellClick: (i) => void openDetail(i.id),
+    },
+    {
       key: 'severity',
       header: 'Keparahan',
       sortValue: (i) => SEV_RANK[i.severity] ?? 0,
       cell: (i) => <StatusBadge status={i.severity} />,
     },
     {
-      key: 'title',
-      header: 'Insiden',
-      sortValue: (i) => i.title,
-      cell: (i) => (
-        <div className="stack" style={{ gap: '0.2rem' }}>
-          <strong>{i.title}</strong>
-          {i.suspectedCause && CAUSE_LABEL[i.suspectedCause] && (
-            <span className={`badge cause-${i.suspectedCause.toLowerCase()}`}>
-              {CAUSE_LABEL[i.suspectedCause]}
-            </span>
-          )}
-        </div>
-      ),
+      key: 'cause',
+      header: 'Dugaan sebab',
+      sortValue: (i) => i.suspectedCause ?? '',
+      cell: (i) =>
+        i.suspectedCause && CAUSE_LABEL[i.suspectedCause] ? (
+          <span className={`badge cause-${i.suspectedCause.toLowerCase()}`}>
+            {CAUSE_LABEL[i.suspectedCause]}
+          </span>
+        ) : (
+          <span className="muted">—</span>
+        ),
     },
     {
       key: 'root',
@@ -178,7 +184,6 @@ export function IncidentsPage() {
         columns={columns}
         rows={rows}
         rowKey={(i) => i.id}
-        onRowClick={(i) => void openDetail(i.id)}
         loading={loading}
         initialSort={{ key: 'severity', dir: 'desc' }}
         empty={
@@ -265,9 +270,9 @@ function IncidentDetailBody({
       )}
 
       <section className="stack" style={{ gap: '0.5rem' }}>
-        <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Alarm anggota ({detail.members.length})</h3>
+          <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>Alarm anggota ({detail.members.length})</Text>
         {detail.members.length === 0 ? (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Tidak ada alarm hidup (insiden sudah selesai).</p>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Tidak ada alarm hidup (insiden sudah selesai).</Text>
         ) : (
           detail.members.map((m: IncidentAlarm) => (
             <div key={m.entityId + m.kind} className="row spread" style={{ gap: '0.5rem', alignItems: 'center' }}>
@@ -277,7 +282,7 @@ function IncidentDetailBody({
               </span>
               <span className="row" style={{ gap: '0.35rem', alignItems: 'center' }}>
                 {m.downCause && DOWN_CAUSE_LABEL[m.downCause] && (
-                  <span className="muted" style={{ fontSize: '0.78rem' }}>{DOWN_CAUSE_LABEL[m.downCause]}</span>
+                  <Text as="span" className="muted" size={200}>{DOWN_CAUSE_LABEL[m.downCause]}</Text>
                 )}
                 <span className="badge">{m.kind}</span>
               </span>
@@ -287,15 +292,15 @@ function IncidentDetailBody({
       </section>
 
       <section className="stack" style={{ gap: '0.5rem' }}>
-        <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Timeline</h3>
+          <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>Timeline</Text>
         <ol className="timeline">
           {detail.timeline.map((ev: IncidentEventView, i: number) => (
             <li key={i}>
               <span className="tl-dot" aria-hidden="true" />
               <div className="stack" style={{ gap: '0.15rem' }}>
-                <strong style={{ fontSize: '0.85rem' }}>{EVENT_LABEL[ev.type] ?? ev.type}</strong>
-                <span className="muted" style={{ fontSize: '0.82rem' }}>{ev.message}</span>
-                <span className="muted" style={{ fontSize: '0.75rem' }}>{new Date(ev.at).toLocaleString('id-ID')}</span>
+              <Text as="strong" weight="semibold" size={200}>{EVENT_LABEL[ev.type] ?? ev.type}</Text>
+              <Text as="span" className="muted" size={200}>{ev.message}</Text>
+              <Text as="span" className="muted" size={100}>{new Date(ev.at).toLocaleString('id-ID')}</Text>
               </div>
             </li>
           ))}
@@ -364,11 +369,11 @@ function BroadcastComposer({
 
   return (
     <section className="stack" style={{ gap: '0.55rem' }}>
-      <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Broadcast pemberitahuan</h3>
-      <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+          <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>Broadcast pemberitahuan</Text>
+      <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
         Menyasar {affectedCount} pelanggan terdampak. Yang tak punya alamat di kanal terpilih akan
         dilewati otomatis.
-      </p>
+      </Text>
       <SelectField
         label="Kanal"
         value={channel}

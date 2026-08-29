@@ -1,4 +1,14 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
+  Text,
+  ToggleButton,
+} from '@fluentui/react-components'
 import { Zap } from 'lucide-react'
 import { api, ApiError } from '@/api/client'
 import type {
@@ -393,7 +403,7 @@ function CableAttachmentBar({
 
       <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
         <label className="stack" style={{ flex: 2, minWidth: 220, gap: '0.25rem' }}>
-          <span style={{ fontSize: '0.82rem' }}>Ada kabel lain di dalam kotak?</span>
+          <Text as="span" size={200}>Ada kabel lain di dalam kotak?</Text>
           <Combobox
             value={pick}
             onChange={(id) => setPick(id)}
@@ -420,11 +430,11 @@ function CableAttachmentBar({
           Catat singgahan
         </Button>
       </div>
-      <span className="muted" style={{ fontSize: '0.72rem' }}>
+      <Text as="span" size={100} className="muted">
         Yang dicatat di sini adalah apa yang benar-benar ada di dalam kotak. Kabel yang cuma
         melintas pun perlu tercatat — supaya orang berikutnya tak mengira itu kabel kotak ini
         lalu memotongnya.
-      </span>
+      </Text>
     </div>
   )
 }
@@ -463,15 +473,15 @@ function SlotGrid({
         // topologinya. Seberangnya tetap terbaca di tooltip.
         const caption = slot.serves ?? (slot.partner ? `↔ ${slot.partner}` : null)
         return (
-          <button
+          <ToggleButton
             key={slot.key}
-            type="button"
             className={
               (group.isCable ? 'core-chip' : 'splice-slot') +
               (on ? ' is-selected' : '') +
               (taken ? ' is-used' : '') +
               (!group.isCable && caption ? ' has-serves' : '')
             }
+            checked={on}
             style={style}
             title={slot.title}
             disabled={disabled || taken}
@@ -490,7 +500,7 @@ function SlotGrid({
             ) : (
               slot.label
             )}
-          </button>
+              </ToggleButton>
         )
       })}
     </div>
@@ -529,10 +539,10 @@ function SidePanel({
   return (
     <div className="splice-side stack" style={{ gap: '0.45rem' }}>
       <div className="spread" style={{ alignItems: 'baseline', gap: '0.4rem' }}>
-        <strong style={{ fontSize: '0.82rem' }}>{title}</strong>
-        <span className="muted tnum" style={{ fontSize: '0.72rem' }}>
+        <Text as="strong" size={200} weight="semibold">{title}</Text>
+        <Text as="span" size={100} className="muted tnum">
           {available}/{capacity} bebas
-        </span>
+        </Text>
       </div>
 
       <div className="splice-groups">
@@ -540,9 +550,9 @@ function SidePanel({
           const open = opened(group)
           return (
             <div key={group.key} className="splice-group">
-              <button
-                type="button"
+              <ToggleButton
                 className="splice-group-head"
+                checked={open}
                 aria-expanded={open}
                 onClick={() => setToggled((prev) => ({ ...prev, [group.key]: !open }))}
               >
@@ -553,7 +563,7 @@ function SidePanel({
                 <span className="muted tnum splice-group-count">
                   {group.slots.filter(free).length}/{group.slots.length}
                 </span>
-              </button>
+          </ToggleButton>
               {open && (
                 <>
                   {group.hint && <p className="splice-group-hint muted">{group.hint}</p>}
@@ -821,7 +831,7 @@ export function SplicingManager({
         <h3 style={{ margin: 0 }}>Sambungan serat</h3>
         {capacityFull && <Badge tone="warning">tray penuh</Badge>}
       </div>
-      <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>{summary}</p>
+      <Text as="p" size={200} className="muted" style={{ margin: 0 }}>{summary}</Text>
 
       {canManage && (
         <CableAttachmentBar
@@ -833,16 +843,16 @@ export function SplicingManager({
       )}
 
       {data.cables.length === 0 ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        <Text as="p" size={200} className="muted" style={{ margin: 0 }}>
           Belum ada kabel yang tercatat singgah di kotak ini. Kalau kotaknya sedang terbuka dan
           kabelnya memang ada di dalam, catat dulu singgahannya di atas — sesudah itu core-nya
           bisa disambung. Kalau kabelnya sendiri belum ada, tarik dulu di peta.
-        </p>
+        </Text>
       ) : (
         <>
           {canManage && canPickWorkOrder && (
             <label className="stack" style={{ gap: '0.25rem' }}>
-              <span style={{ fontSize: '0.82rem' }}>Work order (opsional)</span>
+              <Text as="span" size={200}>Work order (opsional)</Text>
               <Combobox
                 value={workOrderId}
                 onChange={(id) => setWorkOrderId(id)}
@@ -853,9 +863,9 @@ export function SplicingManager({
                 placeholder={canSeeAllWorkOrders ? 'Cari kode atau judul tiket…' : 'Pilih dari tugas saya…'}
                 emptyText="Tak ada work order terbuka"
               />
-              <span className="muted" style={{ fontSize: '0.72rem' }}>
+              <Text as="span" size={100} className="muted">
                 Sambungan yang dibuat setelah ini dibukukan ke tiket tersebut, dan tercatat di linimasanya.
-              </span>
+              </Text>
             </label>
           )}
 
@@ -879,9 +889,9 @@ export function SplicingManager({
           </div>
 
           {warning && (
-            <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
+            <Text as="p" size={100} className="muted" style={{ margin: 0 }}>
               {warning}
-            </p>
+            </Text>
           )}
 
           {canManage && (
@@ -931,156 +941,140 @@ export function SplicingManager({
 
       {data.connections.length > 0 && (
         <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
+          <Table>
+            <TableHeader>
+              <TableRow>
                 {/* Kolomnya bukan "masuk vs tujuan" — yang tersimpan cuma ujung
                     mana yang kebetulan diklik duluan. Menamainya begitu membuat
                     dua sambungan yang fisiknya sama tampak berlawanan arah. */}
-                <th>Ujung A</th>
-                <th>Ujung B</th>
-                <th>Metode</th>
-                <th>Rugi</th>
-                <th>Dikerjakan</th>
-                {canManage && <th />}
-              </tr>
-            </thead>
-            <tbody>
-              {data.connections.map((row) => {
-                const label = `${row.a.label} ↔ ${row.b.label}`
-                return (
-                  <Fragment key={row.id}>
-                    <tr>
-                      <td>
-                        <span className="splice-end">
-                          {row.a.colorHex && (
-                            <span className="splice-dot" style={{ background: row.a.colorHex }} />
-                          )}
-                          {row.a.label}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="splice-end">
-                          {row.b.colorHex && (
-                            <span className="splice-dot" style={{ background: row.b.colorHex }} />
-                          )}
-                          {row.b.label}
-                        </span>
-                      </td>
-                      <td>{row.methodLabel}</td>
-                      {/* Kosong berarti BELUM DIUKUR, bukan nol — jangan ditulis "0 dB". */}
-                      <td className="tnum">{row.lossDb == null ? '—' : `${row.lossDb.toFixed(2)} dB`}</td>
-                      {/* Jejak pekerjaannya: tiket yang menyuruh kotak ini dibuka, tangan yang
-                          mengerjakannya, dan kapan. Sambungan lama (dibuat sebelum ini dicatat)
-                          tak punya pelaksana — waktunya pun ikut disembunyikan, sebab yang
-                          tersimpan cuma saat kolomnya ditambahkan, bukan saat serat dilas. */}
-                      <td>
-                        <span className="stack" style={{ gap: '0.15rem' }}>
-                          {row.workOrderCode ? (
-                            <Badge tone="accent">{row.workOrderCode}</Badge>
-                          ) : (
-                            <span className="muted" style={{ fontSize: '0.78rem' }}>tanpa tiket</span>
-                          )}
-                          {row.splicedById ? (
-                            <span
-                              className="muted"
-                              style={{ fontSize: '0.72rem' }}
-                              title={new Date(row.splicedAt).toLocaleString('id-ID')}
-                            >
-                              {row.splicedByName ?? 'pengguna terhapus'} · {timeAgo(row.splicedAt)}
-                            </span>
-                          ) : (
-                            <span className="muted" style={{ fontSize: '0.72rem' }}>pelaksana tak tercatat</span>
-                          )}
-                        </span>
-                      </td>
-                      {canManage && (
-                        <td>
-                          <div className="row" style={{ gap: '0.3rem', justifyContent: 'flex-end' }}>
-                            <Button
-                              variant="subtle"
-                              onClick={() => {
-                                setEditing(row.id)
-                                setEditMethod(row.method)
-                                setEditLoss(row.lossDb == null ? '' : String(row.lossDb))
-                                setEditNote(row.note ?? '')
-                                setEditWorkOrder('')
-                              }}
-                              disabled={editing === row.id}
-                            >
-                              Ubah
-                            </Button>
-                            <Button variant="danger" onClick={() => void disconnect(row.id, label)}>
-                              Lepas
-                            </Button>
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                    {editing === row.id && (
-                      <tr>
-                        <td colSpan={canManage ? 6 : 5}>
-                          <div className="splice-actions">
-                            <SelectField
-                              label="Metode"
-                              value={editMethod}
-                              onChange={(_, d) => setEditMethod(d.value as SpliceMethod)}
-                            >
-                              {METHODS.map((m) => (
-                                <option key={m} value={m}>
-                                  {SPLICE_METHOD_LABEL[m]}
-                                </option>
-                              ))}
-                            </SelectField>
-                            <TextField
-                              label="Rugi (dB)"
-                              value={editLoss}
-                              onChange={(_, d) => setEditLoss(d.value)}
-                              placeholder="hasil ukur OTDR/splicer"
-                              inputMode="decimal"
-                            />
-                            <TextField
-                              label="Catatan"
-                              value={editNote}
-                              onChange={(_, d) => setEditNote(d.value)}
-                              maxLength={200}
-                            />
-                            {/* Tiket boleh menyusul (hasil ukur kerap baru masuk keesokan harinya),
-                                tapi yang sudah punya tiket tak ditawari pindah — server pun menolak. */}
-                            {canPickWorkOrder && !row.workOrderId && (
-                              <label className="stack" style={{ flex: 1, minWidth: 200, gap: '0.25rem' }}>
-                                <span style={{ fontSize: '0.82rem' }}>Bukukan ke work order</span>
-                                <Combobox
-                                  value={editWorkOrder}
-                                  onChange={(id) => setEditWorkOrder(id)}
-                                  fetchOptions={fetchWorkOrders}
-                                  toId={(wo) => wo.id}
-                                  toLabel={(wo) => `${wo.code} · ${wo.title}`}
-                                  toMeta={(wo) => wo.customerName ?? undefined}
-                                  placeholder="Biarkan kosong bila tak perlu"
-                                  emptyText="Tak ada work order terbuka"
-                                />
-                              </label>
-                            )}
-                            <Button
-                              variant="primary"
-                              disabled={busy}
-                              onClick={() => void saveDetail(row.id)}
-                            >
-                              Simpan
-                            </Button>
-                            <Button variant="subtle" onClick={() => setEditing(null)}>
-                              Batal
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
+                <TableHeaderCell>Ujung A</TableHeaderCell>
+                <TableHeaderCell>Ujung B</TableHeaderCell>
+                <TableHeaderCell>Metode</TableHeaderCell>
+                <TableHeaderCell>Rugi</TableHeaderCell>
+                <TableHeaderCell>Dikerjakan</TableHeaderCell>
+                {canManage && <TableHeaderCell />}
+              </TableRow>
+            </TableHeader>
+          <TableBody>{data.connections.map((row) => {
+            const label = `${row.a.label} ↔ ${row.b.label}`
+            return (
+              <Fragment key={row.id}>
+                <TableRow><TableCell ><span className="splice-end">
+                  {row.a.colorHex && (
+                    <span className="splice-dot" style={{ background: row.a.colorHex }} />
+                  )}
+                  {row.a.label}
+                </span></TableCell>
+                <TableCell ><span className="splice-end">
+                  {row.b.colorHex && (
+                    <span className="splice-dot" style={{ background: row.b.colorHex }} />
+                  )}
+                  {row.b.label}
+                </span></TableCell>
+                <TableCell >{row.methodLabel}</TableCell>
+                {/* Kosong berarti BELUM DIUKUR, bukan nol — jangan ditulis "0 dB". */}
+                <TableCell className="tnum">{row.lossDb == null ? '—' : `${row.lossDb.toFixed(2)} dB`}</TableCell>
+                {/* Jejak pekerjaannya: tiket yang menyuruh kotak ini dibuka, tangan yang
+                    mengerjakannya, dan kapan. Sambungan lama (dibuat sebelum ini dicatat)
+                    tak punya pelaksana — waktunya pun ikut disembunyikan, sebab yang
+                    tersimpan cuma saat kolomnya ditambahkan, bukan saat serat dilas. */}
+                <TableCell ><span className="stack" style={{ gap: '0.15rem' }}>
+                  {row.workOrderCode ? (
+                    <Badge tone="accent">{row.workOrderCode}</Badge>
+                  ) : (
+                    <Text as="span" size={100} className="muted">tanpa tiket</Text>
+                  )}
+                  {row.splicedById ? (
+                    <Text
+                      as="span"
+                      size={100}
+                      className="muted"
+                      title={new Date(row.splicedAt).toLocaleString('id-ID')}
+                    >
+                      {row.splicedByName ?? 'pengguna terhapus'} · {timeAgo(row.splicedAt)}
+                    </Text>
+                  ) : (
+                    <Text as="span" size={100} className="muted">pelaksana tak tercatat</Text>
+                  )}
+                </span></TableCell>
+                {canManage && (
+                  <TableCell ><div className="row" style={{ gap: '0.3rem', justifyContent: 'flex-end' }}>
+                    <Button
+                      variant="subtle"
+                      onClick={() => {
+                        setEditing(row.id)
+                        setEditMethod(row.method)
+                        setEditLoss(row.lossDb == null ? '' : String(row.lossDb))
+                        setEditNote(row.note ?? '')
+                        setEditWorkOrder('')
+                      }}
+                      disabled={editing === row.id}
+                    >
+                      Ubah
+                    </Button>
+                    <Button variant="danger" onClick={() => void disconnect(row.id, label)}>
+                      Lepas
+                    </Button>
+                  </div></TableCell>
+                )}</TableRow>
+                {editing === row.id && (
+                  <TableRow><TableCell colSpan={canManage ? 6 : 5}><div className="splice-actions">
+                    <SelectField
+                      label="Metode"
+                      value={editMethod}
+                      onChange={(_, d) => setEditMethod(d.value as SpliceMethod)}
+                    >
+                      {METHODS.map((m) => (
+                        <option key={m} value={m}>
+                          {SPLICE_METHOD_LABEL[m]}
+                        </option>
+                      ))}
+                    </SelectField>
+                    <TextField
+                      label="Rugi (dB)"
+                      value={editLoss}
+                      onChange={(_, d) => setEditLoss(d.value)}
+                      placeholder="hasil ukur OTDR/splicer"
+                      inputMode="decimal"
+                    />
+                    <TextField
+                      label="Catatan"
+                      value={editNote}
+                      onChange={(_, d) => setEditNote(d.value)}
+                      maxLength={200}
+                    />
+                    {/* Tiket boleh menyusul (hasil ukur kerap baru masuk keesokan harinya),
+                        tapi yang sudah punya tiket tak ditawari pindah — server pun menolak. */}
+                    {canPickWorkOrder && !row.workOrderId && (
+                      <label className="stack" style={{ flex: 1, minWidth: 200, gap: '0.25rem' }}>
+                        <Text as="span" size={200}>Bukukan ke work order</Text>
+                        <Combobox
+                          value={editWorkOrder}
+                          onChange={(id) => setEditWorkOrder(id)}
+                          fetchOptions={fetchWorkOrders}
+                          toId={(wo) => wo.id}
+                          toLabel={(wo) => `${wo.code} · ${wo.title}`}
+                          toMeta={(wo) => wo.customerName ?? undefined}
+                          placeholder="Biarkan kosong bila tak perlu"
+                          emptyText="Tak ada work order terbuka"
+                        />
+                      </label>
                     )}
-                  </Fragment>
-                )
-              })}
-            </tbody>
-          </table>
+                    <Button
+                      variant="primary"
+                      disabled={busy}
+                      onClick={() => void saveDetail(row.id)}
+                    >
+                      Simpan
+                    </Button>
+                    <Button variant="subtle" onClick={() => setEditing(null)}>
+                      Batal
+                    </Button>
+                  </div></TableCell></TableRow>
+                )}
+              </Fragment>
+            )
+          })}</TableBody></Table>
         </div>
       )}
     </div>

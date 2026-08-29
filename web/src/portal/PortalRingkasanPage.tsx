@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { Text } from '@fluentui/react-components'
 import { usePortalData } from './PortalLayout'
 import { INVOICE_STATUS_LABEL, INVOICE_TONE, Loading, Stat, fmtDate, fmtUptime, rupiah } from './portalFormat'
 import { payLink } from '@/api/publicPayment'
@@ -36,10 +37,10 @@ export function PortalRingkasanPage() {
       <section className="card portal-hero stack" style={{ gap: '0.9rem' }}>
         <div className="spread" style={{ alignItems: 'flex-start', gap: '0.75rem', flexWrap: 'wrap' }}>
           <div className="stack" style={{ gap: '0.15rem' }}>
-            <h1 className="page-title" style={{ margin: 0 }}>Halo, {customerName}</h1>
-            <p className="page-sub" style={{ margin: 0 }}>
+            <Text as="h1" className="page-title" size={700} weight="semibold" style={{ margin: 0 }}>Halo, {customerName}</Text>
+            <Text as="p" className="page-sub" size={400} style={{ margin: 0 }}>
               {sub ? `${sub.packageName} · ${speed}` : 'Belum ada paket aktif di akun ini'}
-            </p>
+            </Text>
           </div>
           {sub && <StatusBadge status={sub.status} />}
         </div>
@@ -102,9 +103,9 @@ export function PortalRingkasanPage() {
 
       <section className="card stack" style={{ gap: '0.7rem' }}>
         <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
-          <strong style={{ fontSize: '0.95rem' }}>Tagihan berjalan</strong>
-          <Button variant="subtle" onClick={() => void navigate('/portal/tagihan')} style={{ fontSize: '0.8rem' }}>
-            Semua tagihan
+          <Text as="h2" size={400} weight="semibold">Tagihan berjalan</Text>
+          <Button variant="subtle" onClick={() => void navigate('/portal/tagihan')}>
+            <Text as="span" size={200}>Semua tagihan</Text>
           </Button>
         </div>
         {!due ? (
@@ -116,13 +117,11 @@ export function PortalRingkasanPage() {
         ) : (
           <div className="spread" style={{ alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
             <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-              <span style={{ fontWeight: 600 }}>{due.number}</span>
-              <span className="muted" style={{ fontSize: '0.8rem' }}>
-                {fmtDate(due.periodStart)}–{fmtDate(due.periodEnd)} · jatuh tempo {fmtDate(due.dueDate)}
-              </span>
+              <Text as="span" weight="semibold">{due.number}</Text>
+              <Text as="span" className="muted" size={200}>{fmtDate(due.periodStart)}–{fmtDate(due.periodEnd)} · jatuh tempo {fmtDate(due.dueDate)}</Text>
             </div>
             <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
-              <span className="tnum" style={{ fontWeight: 600, fontSize: '1.05rem' }}>{rupiah(due.amount)}</span>
+              <Text as="span" className="tnum" size={500} weight="semibold">{rupiah(due.amount)}</Text>
               <Badge tone={INVOICE_TONE[due.status] ?? 'neutral'}>
                 {INVOICE_STATUS_LABEL[due.status] ?? due.status}
               </Badge>
@@ -139,9 +138,9 @@ export function PortalRingkasanPage() {
 
       <section className="card stack" style={{ gap: '0.7rem' }}>
         <div className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
-          <strong style={{ fontSize: '0.95rem' }}>Sambungan</strong>
-          <Button variant="subtle" onClick={() => void navigate('/portal/koneksi')} style={{ fontSize: '0.8rem' }}>
-            Detail koneksi
+          <Text as="h2" size={400} weight="semibold">Sambungan</Text>
+          <Button variant="subtle" onClick={() => void navigate('/portal/koneksi')}>
+            <Text as="span" size={200}>Detail koneksi</Text>
           </Button>
         </div>
         {!session ? (
@@ -154,7 +153,7 @@ export function PortalRingkasanPage() {
           <dl className="essentials wide">
             <Ess label="Menyala selama">{fmtUptime(session.uptimeSeconds)}</Ess>
             <Ess label="Alamat IP">
-              <span className="tnum">{session.framedIp ?? '—'}</span>
+              <Text as="span" className="tnum">{session.framedIp ?? '—'}</Text>
             </Ess>
             <Ess label="Perangkat">
               {connection?.devices.length ? `${connection.devices.length} terpantau` : 'belum terpantau'}

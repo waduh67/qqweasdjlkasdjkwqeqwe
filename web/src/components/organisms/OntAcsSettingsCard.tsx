@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Text, typographyStyles } from '@fluentui/react-components'
 import { Copy } from 'lucide-react'
 import { getAcsServerInfo, type AcsServerInfoView } from '@/api/acs'
 import { useCan } from '@/auth/useCan'
@@ -82,9 +83,9 @@ export function OntAcsSettingsCard() {
       <div className="spread" style={{ alignItems: 'flex-start', gap: '0.75rem' }}>
         <div className="stack" style={{ gap: '0.2rem' }}>
           <h3 style={{ margin: 0 }}>Setelan ONT (TR-069)</h3>
-          <span className="muted" style={{ fontSize: '0.82rem' }}>
+          <Text as="span" size={200} className="muted">
             Ketik nilai ini di halaman ACS pada ONT pelanggan. Sama untuk semua perangkat.
-          </span>
+          </Text>
         </div>
         <Button
           type="button"
@@ -97,14 +98,17 @@ export function OntAcsSettingsCard() {
       </div>
 
       {!info.configured && (
-        <p
+        <Text
+          as="p"
+          size={200}
+          weight="semibold"
           className="muted"
-          style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: 'var(--warning)' }}
+          style={{ margin: 0, color: 'var(--warning)' }}
         >
           Alamat CWMP belum dikonfigurasi platform (FTTH_CPE_PUBLIC_HOST kosong). Hubungi
           admin platform sebelum menyetel ONT — tanpa alamat itu perangkat tak bisa
           menemukan server ACS.
-        </p>
+        </Text>
       )}
 
       <div className="stack" style={{ gap: '0.55rem' }}>
@@ -153,16 +157,16 @@ function SettingRow({
 }) {
   return (
     <div className="stack" style={{ gap: '0.2rem' }}>
-      <span className="muted" style={{ fontSize: '0.76rem', fontWeight: 600 }}>{row.label}</span>
+      <Text as="span" size={100} weight="semibold" className="muted">{row.label}</Text>
       <div className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
         {row.value ? (
-          <code style={{ flex: 1, overflowX: 'auto', padding: '0.3rem 0.5rem', fontSize: '0.82rem' }}>
+          <Text as="span" font="monospace" style={{ ...typographyStyles.body1, flex: 1, overflowX: 'auto', padding: '0.3rem 0.5rem' }}>
             {row.value}
-          </code>
-        ) : (
-          <span className="muted" style={{ flex: 1, fontSize: '0.82rem', fontStyle: 'italic' }}>
+</Text>
+          ) : (
+          <Text as="span" size={200} italic className="muted" style={{ flex: 1 }}>
             kosongkan
-          </span>
+          </Text>
         )}
         {row.value && (
           <Button
@@ -177,7 +181,7 @@ function SettingRow({
         )}
       </div>
       {row.note && (
-        <span className="muted" style={{ fontSize: '0.74rem' }}>{row.note}</span>
+        <Text as="span" size={100} className="muted">{row.note}</Text>
       )}
     </div>
   )

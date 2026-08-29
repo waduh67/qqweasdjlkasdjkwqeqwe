@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { WorkOrderDetail } from '../api/workorder'
@@ -93,7 +94,7 @@ export function WorkOrderDetailPage({ backTo, backLabel }: { backTo: string; bac
       <BackLink label={backLabel} onClick={() => navigate(backTo)} />
 
       <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'center' }}>
-        <h1 className="page-title" style={{ margin: 0 }}>{wo.title}</h1>
+        <Text as="h1" className="page-title" size={700} weight="semibold" style={{ margin: 0 }}>{wo.title}</Text>
         <span className="badge accent">{wo.code}</span>
         <WoStatusBadge status={wo.status} />
         {wo.approvalStatus && <Badge tone={APPROVAL_TONE[wo.approvalStatus]}>{APPROVAL_LABEL[wo.approvalStatus]}</Badge>}

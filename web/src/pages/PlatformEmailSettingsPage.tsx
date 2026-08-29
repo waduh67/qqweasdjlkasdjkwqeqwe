@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Text } from '@fluentui/react-components'
 import { ApiError } from '../api/client'
 import {
   deletePlatformEmailLogo,
@@ -227,7 +228,7 @@ export function PlatformEmailSettingsPage() {
     }
   }
 
-  if (loading) return <p className="muted">Memuat setelan…</p>
+  if (loading) return <Text as="p" className="muted">Memuat setelan…</Text>
   if (!form || !saved) {
     return (
       <EmptyState
@@ -247,42 +248,42 @@ export function PlatformEmailSettingsPage() {
 
       <div className="card stack" style={{ gap: '0.75rem' }}>
         <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <span className="muted" style={{ fontSize: '0.82rem' }}>
+          <Text as="span" size={300} className="muted" >
             Sumber SMTP:
-          </span>
+          </Text>
           <Badge tone={saved.smtpConfigured ? 'good' : 'neutral'}>
             {saved.smtpConfigured ? 'Setelan di halaman ini' : 'Variabel lingkungan (env)'}
           </Badge>
-          <span className="muted" style={{ fontSize: '0.82rem' }}>
+          <Text as="span" size={300} className="muted" >
             Logo:
-          </span>
+          </Text>
           <Badge tone={saved.logoSet ? 'good' : 'neutral'}>{saved.logoSet ? 'Terpasang' : 'Belum ada'}</Badge>
-          <span className="muted" style={{ fontSize: '0.82rem' }}>
+          <Text as="span" size={300} className="muted" >
             URL publik:
-          </span>
+          </Text>
           <Badge tone={saved.logoUrl ? 'good' : 'warning'}>{saved.logoUrl ? 'Siap' : 'Belum disetel'}</Badge>
         </div>
         {!saved.logoUrl && (
-          <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+          <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
             Tanpa URL publik aplikasi, logo tak bisa dirangkai ke badan email — surat tetap terkirim,
             hanya tampil tanpa gambar.
-          </p>
+          </Text>
         )}
       </div>
 
       {!manage && (
-        <p className="muted" style={{ margin: 0 }}>
+        <Text as="p" className="muted" style={{ margin: 0 }}>
           Anda hanya bisa melihat setelan ini. Perlu izin “Kelola SMTP, logo &amp; template email
           platform” untuk mengubahnya.
-        </p>
+        </Text>
       )}
 
       <div className="card stack" aria-disabled={!manage}>
         <SectionTitle>Server SMTP</SectionTitle>
-        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
-          Kosongkan <strong>host</strong> untuk memakai kredensial dari variabel lingkungan seperti
+        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
+          Kosongkan <Text as="strong" weight="semibold" >host</Text> untuk memakai kredensial dari variabel lingkungan seperti
           sebelumnya. Begitu host diisi, baris inilah yang dipakai — tanpa perlu restart container.
-        </p>
+        </Text>
         <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
           <TextField
             label="Host"
@@ -430,9 +431,7 @@ export function PlatformEmailSettingsPage() {
 
       {manage && (
         <div className="card spread" style={{ alignItems: 'center' }}>
-          <span className="muted" style={{ fontSize: '0.85rem' }}>
-            {dirty ? `${changes.length} perubahan belum disimpan` : 'Tak ada perubahan'}
-          </span>
+          <Text as="span" size={300} className="muted" >{dirty ? `${changes.length} perubahan belum disimpan` : 'Tak ada perubahan'}</Text>
           <div className="row" style={{ gap: '0.5rem' }}>
             <Button variant="subtle" onClick={discard} disabled={!dirty || saving}>
               Batalkan
@@ -470,19 +469,17 @@ export function PlatformEmailSettingsPage() {
           }
         >
           <div className="stack" style={{ gap: '0.85rem' }}>
-            <p style={{ margin: 0, fontSize: '0.9rem' }}>
-              Tinjau perubahan berikut sebelum berlaku untuk <strong>seluruh tenant</strong>:
-            </p>
+            <Text as="p" size={300} style={{ margin: 0 }}>
+              Tinjau perubahan berikut sebelum berlaku untuk <Text as="strong" weight="semibold" >seluruh tenant</Text>:
+            </Text>
             <div className="stack" style={{ gap: '0.4rem' }}>
               {changes.map((c) => (
-                <div key={c.label} className="spread" style={{ gap: '0.75rem', fontSize: '0.88rem' }}>
-                  <span className="muted">{c.label}</span>
-                  <span style={{ textAlign: 'right' }}>
-                    <span className="muted" style={{ textDecoration: 'line-through' }}>
-                      {c.from}
-                    </span>{' '}
-                    → <strong>{c.to}</strong>
-                  </span>
+                <div key={c.label} className="spread" style={{ gap: '0.75rem',  }}>
+                  <Text as="span" className="muted">{c.label}</Text>
+                  <Text as="span" style={{ textAlign: 'right' }}><Text as="span" className="muted" strikethrough>
+                    {c.from}
+                  </Text>{' '}
+                  → <Text as="strong" weight="semibold">{c.to}</Text></Text>
                 </div>
               ))}
             </div>
@@ -490,13 +487,13 @@ export function PlatformEmailSettingsPage() {
               <Callout>
                 {form.smtpHost.trim() ? (
                   <>
-                    Mulai sekarang email dikirim lewat <strong>{form.smtpHost.trim()}</strong>, bukan
+                    Mulai sekarang email dikirim lewat <Text as="strong" weight="semibold" >{form.smtpHost.trim()}</Text>, bukan
                     lagi lewat setelan dari variabel lingkungan. Kirim email uji setelah menyimpan.
                   </>
                 ) : (
                   <>
                     Host dikosongkan — pengiriman kembali memakai kredensial{' '}
-                    <strong>variabel lingkungan</strong>. Bila env juga kosong, email hanya tercatat
+                    <Text as="strong" weight="semibold" >variabel lingkungan</Text>. Bila env juga kosong, email hanya tercatat
                     di log server dan tak pernah sampai ke pelanggan.
                   </>
                 )}
@@ -510,18 +507,16 @@ export function PlatformEmailSettingsPage() {
 }
 
 function SectionTitle({ children }: { children: ReactNode }) {
-  return <strong style={{ fontSize: '0.95rem' }}>{children}</strong>
+  return <Text as="strong" size={300} weight="semibold">{children}</Text>
 }
 
 function FormRow({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <div className="stack" style={{ gap: '0.3rem' }}>
-      <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{label}</span>
+      <Text as="span" size={300} weight="semibold">{label}</Text>
       {children}
       {hint && (
-        <span className="muted" style={{ fontSize: '0.78rem' }}>
-          {hint}
-        </span>
+        <Text as="span" size={300} className="muted" >{hint}</Text>
       )}
     </div>
   )
@@ -538,11 +533,10 @@ function Callout({ children }: { children: ReactNode }) {
         borderRadius: 'var(--radius-sm)',
         background: 'color-mix(in srgb, var(--warning) 12%, var(--surface))',
         border: '1px solid color-mix(in srgb, var(--warning) 32%, transparent)',
-        fontSize: '0.85rem',
       }}
     >
       <IconAlert size={16} />
-      <span>{children}</span>
+      <Text as="span" >{children}</Text>
     </div>
   )
 }

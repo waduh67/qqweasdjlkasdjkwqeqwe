@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Text } from '@fluentui/react-components'
 import { Link, useSearchParams } from 'react-router-dom'
 import { usePortalAuth } from './PortalAuthContext'
 import { PortalApiError } from './portalClient'
@@ -51,10 +52,10 @@ export function PortalLoginPage() {
       <div className="login-shell">
         <div className="card login-card stack">
           <div>
-            <h2 style={{ margin: 0, fontSize: '1.15rem' }}>Pilih penyedia</h2>
-            <p className="muted" style={{ margin: '0.2rem 0 0', fontSize: '0.83rem' }}>
+            <Text as="h1" size={500} weight="semibold" style={{ margin: 0 }}>Pilih penyedia</Text>
+            <Text as="p" className="muted" size={200} style={{ margin: '0.2rem 0 0' }}>
               Akun dengan identitas ini terdaftar di beberapa ISP. Mana yang ingin dibuka?
-            </p>
+            </Text>
           </div>
 
           {choices.map((choice) => (
@@ -69,9 +70,7 @@ export function PortalLoginPage() {
           ))}
 
           {error && (
-            <p className="error" style={{ margin: 0, fontSize: '0.85rem' }}>
-              {error}
-            </p>
+            <Text as="p" className="error" size={300} style={{ margin: 0 }}>{error}</Text>
           )}
 
           <Button
@@ -94,10 +93,10 @@ export function PortalLoginPage() {
     <div className="login-shell">
       <form className="card login-card stack" onSubmit={onSubmit}>
         <div>
-          <h2 style={{ margin: 0, fontSize: '1.15rem' }}>Portal Pelanggan</h2>
-          <p className="muted" style={{ margin: '0.2rem 0 0', fontSize: '0.83rem' }}>
+          <Text as="h1" size={500} weight="semibold" style={{ margin: 0 }}>Portal Pelanggan</Text>
+          <Text as="p" className="muted" size={200} style={{ margin: '0.2rem 0 0' }}>
             Masuk untuk melihat tagihan &amp; status layananmu
-          </p>
+          </Text>
         </div>
 
         <TextField
@@ -119,9 +118,7 @@ export function PortalLoginPage() {
         />
 
         {error && (
-          <p className="error" style={{ margin: 0, fontSize: '0.85rem' }}>
-            {error}
-          </p>
+          <Text as="p" className="error" size={300} style={{ margin: 0 }}>{error}</Text>
         )}
 
         <Button type="submit" variant="primary" disabled={busy} style={{ width: '100%', padding: '0.6rem' }}>
@@ -131,7 +128,7 @@ export function PortalLoginPage() {
         <Link
           to={linkedTenant ? `/portal/lupa-password?tenant=${encodeURIComponent(linkedTenant)}` : '/portal/lupa-password'}
           className="muted"
-          style={{ fontSize: '0.83rem', textAlign: 'center' }}
+          style={{ display: 'block', textAlign: 'center' }}
         >
           Lupa password?
         </Link>

@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react'
 import { api } from '@/api/client'
 import type { ClosureKind, ClosureSpliceView } from '@/api/network'
 import { useCan } from '@/auth/useCan'
+import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components'
 import { Badge } from '@/components/atoms'
 
 const CLOSURE_LABEL: Record<ClosureKind, string> = {
@@ -60,50 +61,38 @@ export function WorkOrderFiberWork({ workOrderId }: { workOrderId: string }) {
   return (
     <div className="card stack" style={{ gap: '0.75rem' }}>
       <div className="spread" style={{ alignItems: 'baseline', gap: '0.5rem' }}>
-        <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Pekerjaan serat</h3>
-        <span className="muted" style={{ fontSize: '0.8rem' }}>
+        <Text as="h3" size={300} weight="semibold" style={{ margin: 0 }}>Pekerjaan serat</Text>
+        <Text as="span" className="muted" size={200}>
           {total} sambungan di {groups.length} kotak
-        </span>
+        </Text>
       </div>
 
       {groups.map((group) => (
         <section key={`${group.closureKind}:${group.closureId}`} className="stack" style={{ gap: '0.35rem' }}>
           <div className="row wrap" style={{ gap: '0.4rem', alignItems: 'baseline' }}>
             <Badge tone="accent">{group.closureCode}</Badge>
-            <span style={{ fontSize: '0.85rem' }}>{group.closureName}</span>
-            <span className="muted" style={{ fontSize: '0.75rem' }}>{CLOSURE_LABEL[group.closureKind]}</span>
+            <Text as="span" size={200}>{group.closureName}</Text>
+            <Text as="span" className="muted" size={100}>{CLOSURE_LABEL[group.closureKind]}</Text>
           </div>
           <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Sambungan</th>
-                  <th>Metode</th>
-                  <th>Rugi</th>
-                  <th>Oleh</th>
-                </tr>
-              </thead>
-              <tbody>
-                {group.connections.map((row) => (
-                  <tr key={row.id}>
-                    <td>
-                      <span className="splice-end">
-                        {row.a.colorHex && <span className="splice-dot" style={{ background: row.a.colorHex }} />}
-                        {row.a.label}
-                        <span aria-hidden> ↔ </span>
-                        {row.b.colorHex && <span className="splice-dot" style={{ background: row.b.colorHex }} />}
-                        {row.b.label}
-                      </span>
-                      {row.note && <div className="muted" style={{ fontSize: '0.75rem' }}>{row.note}</div>}
-                    </td>
-                    <td>{row.methodLabel}</td>
-                    {/* Kosong berarti BELUM DIUKUR, bukan nol — jangan ditulis "0 dB". */}
-                    <td className="tnum">{row.lossDb == null ? '—' : `${row.lossDb.toFixed(2)} dB`}</td>
-                    <td className="muted" style={{ fontSize: '0.8rem' }}>{row.splicedByName ?? '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <Table><TableHeader><TableRow ><TableHeaderCell >Sambungan</TableHeaderCell>
+            <TableHeaderCell >Metode</TableHeaderCell>
+            <TableHeaderCell >Rugi</TableHeaderCell>
+            <TableHeaderCell >Oleh</TableHeaderCell></TableRow></TableHeader>
+            <TableBody>{group.connections.map((row) => (
+              <TableRow key={row.id}><TableCell ><span className="splice-end">
+                {row.a.colorHex && <span className="splice-dot" style={{ background: row.a.colorHex }} />}
+                {row.a.label}
+                <span aria-hidden> ↔ </span>
+                {row.b.colorHex && <span className="splice-dot" style={{ background: row.b.colorHex }} />}
+                {row.b.label}
+              </span>
+              {row.note && <div className="muted">{row.note}</div>}</TableCell>
+              <TableCell >{row.methodLabel}</TableCell>
+              {/* Kosong berarti BELUM DIUKUR, bukan nol — jangan ditulis "0 dB". */}
+              <TableCell className="tnum">{row.lossDb == null ? '—' : `${row.lossDb.toFixed(2)} dB`}</TableCell>
+              <TableCell className="muted"><Text as="span" size={200}>{row.splicedByName ?? '—'}</Text></TableCell></TableRow>
+            ))}</TableBody></Table>
           </div>
         </section>
       ))}

@@ -8,6 +8,8 @@ build/
 *.iml
 .vscode/
 .kotlin/
+.playwright-mcp/
+.sisyphus/
 
 # Node
 node_modules/

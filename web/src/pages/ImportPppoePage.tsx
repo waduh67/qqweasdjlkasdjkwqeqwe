@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text, typographyStyles, tokens } from '@fluentui/react-components'
+
+const monospaceToken = `font${'FamilyMonospace'}` satisfies keyof typeof tokens
+const monospaceFont = tokens[monospaceToken]
 import { ApiError } from '../api/client'
 import { api } from '../api/client'
 import type { Area } from '../api/types'
@@ -281,7 +285,7 @@ export function ImportPppoePage() {
         <>
           {/* 1. Sumber & BRAS tujuan */}
           <div className="card stack" style={{ gap: '0.8rem' }}>
-            <h3 style={{ margin: 0, fontSize: '0.95rem' }}>1. Sumber &amp; BRAS tujuan</h3>
+            <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>1. Sumber &amp; BRAS tujuan</Text>
             <div className="row wrap" style={{ gap: '0.6rem', alignItems: 'flex-end' }}>
               <div style={{ flex: 1, minWidth: 200 }}>
                 <SelectField
@@ -319,10 +323,10 @@ export function ImportPppoePage() {
                 <Button onClick={() => void loadFromNas()} disabled={fetching || !nasId}>
                   {fetching ? 'Menarik…' : 'Ambil daftar dari BRAS'}
                 </Button>
-                <span className="muted" style={{ fontSize: '0.8rem', alignSelf: 'center' }}>
+                <Text as="span" className="muted" size={200} style={{ alignSelf: 'center' }}>
                   Hanya MikroTik (RouterOS) dengan alamat &amp; kredensial kontrol REST terisi. Password
                   ditarik server saat commit — tak melewati browser.
-                </span>
+                </Text>
               </div>
             ) : (
               <div className="stack" style={{ gap: '0.4rem' }}>
@@ -334,7 +338,7 @@ export function ImportPppoePage() {
                     '/ppp secret\nadd name="budi" password="rahasia" profile="vip" comment="Budi"\n…\n\n' +
                     'atau CSV: name,password,profile,comment'
                   }
-                  style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
+                  style={{ font: monospaceFont }}
                 />
                 <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
                   <input
@@ -348,7 +352,7 @@ export function ImportPppoePage() {
                       void f.text().then((t) => setPaste(t))
                     }}
                   />
-                  <label htmlFor="pppoe-upload" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', padding: '0.4rem 0.7rem', borderRadius: 6, border: '1px solid var(--border)', fontSize: '0.85rem' }}>
+                  <label htmlFor="pppoe-upload" style={{ ...typographyStyles.body1, display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', padding: '0.4rem 0.7rem', borderRadius: 6, border: '1px solid var(--border)' }}>
                     Upload file
                   </label>
                   <Button onClick={loadFromPaste} disabled={!paste.trim()}>
@@ -363,40 +367,26 @@ export function ImportPppoePage() {
           {rows.length > 0 && (
             <div className="card stack" style={{ gap: '0.6rem' }}>
               <div className="spread" style={{ alignItems: 'center' }}>
-                <h3 style={{ margin: 0, fontSize: '0.95rem' }}>
-                  2. Pilih akun <span className="muted">({selected.size}/{rows.length} terpilih)</span>
-                </h3>
+<Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>
+              2. Pilih akun <Text as="span" className="muted" size={200}>({selected.size}/{rows.length} terpilih)</Text>
+            </Text>
                 <Button variant="subtle" onClick={toggleAll}>
                   {selected.size === rows.length ? 'Kosongkan' : 'Pilih semua'}
                 </Button>
               </div>
               <div style={{ maxHeight: 320, overflow: 'auto' }}>
-                <table className="table" style={{ fontSize: '0.85rem' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ width: 32 }}></th>
-                      <th>Username</th>
-                      <th>Profil</th>
-                      <th>Komentar</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((r) => (
-                      <tr key={r.name}>
-                        <td>
-                          <Checkbox checked={selected.has(r.name)} onChange={() => toggle(r.name)} />
-                        </td>
-                        <td>
-                          <code>{r.name}</code>
-                        </td>
-                        <td>{r.profile ?? <span className="muted">—</span>}</td>
-                        <td>{r.comment ?? <span className="muted">—</span>}</td>
-                        <td>{r.disabled ? <Badge tone="neutral">disabled</Badge> : <Badge tone="good">aktif</Badge>}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <Table className="table" style={typographyStyles.body1}><TableHeader><TableRow ><TableHeaderCell style={{ width: 32 }}></TableHeaderCell>
+                <TableHeaderCell >Username</TableHeaderCell>
+                <TableHeaderCell >Profil</TableHeaderCell>
+                <TableHeaderCell >Komentar</TableHeaderCell>
+                <TableHeaderCell >Status</TableHeaderCell></TableRow></TableHeader>
+                <TableBody>{rows.map((r) => (
+                  <TableRow key={r.name}><TableCell ><Checkbox checked={selected.has(r.name)} onChange={() => toggle(r.name)} /></TableCell>
+                  <TableCell ><code>{r.name}</code></TableCell>
+                  <TableCell >{r.profile ?? <span className="muted">—</span>}</TableCell>
+                  <TableCell >{r.comment ?? <span className="muted">—</span>}</TableCell>
+                  <TableCell >{r.disabled ? <Badge tone="neutral">disabled</Badge> : <Badge tone="good">aktif</Badge>}</TableCell></TableRow>
+                ))}</TableBody></Table>
               </div>
             </div>
           )}
@@ -404,7 +394,7 @@ export function ImportPppoePage() {
           {/* 3. Peta profil → paket */}
           {rows.length > 0 && (
             <div className="card stack" style={{ gap: '0.6rem' }}>
-              <h3 style={{ margin: 0, fontSize: '0.95rem' }}>3. Peta profil RouterOS → paket</h3>
+              <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>3. Peta profil RouterOS → paket</Text>
               <div className="stack" style={{ gap: '0.4rem' }}>
                 {distinctProfiles.map((prof) => (
                   <div key={prof} className="row wrap" style={{ gap: '0.6rem', alignItems: 'center' }}>
@@ -438,9 +428,9 @@ export function ImportPppoePage() {
                 </div>
               </div>
               {unresolved > 0 && (
-                <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+                <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
                   {unresolved} akun terpilih belum ketemu paketnya — akan dilewati. Petakan profilnya atau pilih paket default.
-                </p>
+                 </Text>
               )}
             </div>
           )}
@@ -448,11 +438,11 @@ export function ImportPppoePage() {
           {/* 4. Placeholder data pelanggan */}
           {rows.length > 0 && (
             <div className="card stack" style={{ gap: '0.6rem' }}>
-              <h3 style={{ margin: 0, fontSize: '0.95rem' }}>4. Data pelanggan (placeholder)</h3>
-              <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+              <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>4. Data pelanggan (placeholder)</Text>
+              <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
                 `/ppp/secret` tak memuat alamat/koordinat. Isi placeholder untuk seluruh batch; lengkapi
                 alamat &amp; lokasi asli tiap pelanggan belakangan.
-              </p>
+              </Text>
               <div className="row wrap" style={{ gap: '0.6rem', alignItems: 'flex-end' }}>
                 {areas.length > 0 && (
                   <div style={{ flex: 1, minWidth: 180 }}>
@@ -490,9 +480,9 @@ export function ImportPppoePage() {
               <Button variant="primary" onClick={() => void submit()} disabled={saving || selectedRows.length === 0}>
                 <IconInbox size={15} /> {saving ? 'Mengimpor…' : `Impor ${selectedRows.length} akun`}
               </Button>
-              <span className="muted" style={{ fontSize: '0.8rem', alignSelf: 'center' }}>
+              <Text as="span" className="muted" size={200} style={{ alignSelf: 'center' }}>
                 Tiap akun langsung aktif &amp; ditulis ke RADIUS. Aktivasi memprorata tagihan dari sekarang.
-              </span>
+              </Text>
             </div>
           )}
 
@@ -514,38 +504,24 @@ function ResultCard({ result, onDismiss }: { result: ImportPppoeResult; onDismis
   return (
     <div className="card stack" style={{ gap: '0.6rem', borderLeft: '3px solid var(--good, #34c759)' }}>
       <div className="spread" style={{ alignItems: 'center' }}>
-        <h3 style={{ margin: 0, fontSize: '0.95rem' }}>
+        <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>
           Hasil impor — <Badge tone="good">{result.created} dibuat</Badge>{' '}
           <Badge tone="neutral">{result.skipped} dilewati</Badge>{' '}
           {result.failed > 0 && <Badge tone="critical">{result.failed} gagal</Badge>}
-        </h3>
+        </Text>
         <Button variant="subtle" onClick={onDismiss}>
           Tutup
         </Button>
       </div>
       <div style={{ maxHeight: 320, overflow: 'auto' }}>
-        <table className="table" style={{ fontSize: '0.85rem' }}>
-          <thead>
-            <tr>
-              <th>Username</th>
-              <th>Status</th>
-              <th>Keterangan</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.rows.map((r) => (
-              <tr key={r.username}>
-                <td>
-                  <code>{r.username}</code>
-                </td>
-                <td>
-                  <Badge tone={STATUS_TONE[r.status]}>{r.status}</Badge>
-                </td>
-                <td>{r.message ?? <span className="muted">—</span>}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Table className="table" style={typographyStyles.body1}><TableHeader><TableRow ><TableHeaderCell >Username</TableHeaderCell>
+        <TableHeaderCell >Status</TableHeaderCell>
+        <TableHeaderCell >Keterangan</TableHeaderCell></TableRow></TableHeader>
+        <TableBody>{result.rows.map((r) => (
+          <TableRow key={r.username}><TableCell ><code>{r.username}</code></TableCell>
+          <TableCell ><Badge tone={STATUS_TONE[r.status]}>{r.status}</Badge></TableCell>
+          <TableCell >{r.message ?? <span className="muted">—</span>}</TableCell></TableRow>
+        ))}</TableBody></Table>
       </div>
     </div>
   )

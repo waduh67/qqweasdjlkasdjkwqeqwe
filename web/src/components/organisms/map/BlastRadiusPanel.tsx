@@ -1,4 +1,4 @@
-import { MessageBar, MessageBarBody } from '@fluentui/react-components'
+import { MessageBar, MessageBarBody, Text } from '@fluentui/react-components'
 import type { BlastRadiusView } from '@/api/network'
 import { StatusBadge } from '@/components/atoms'
 import { IconMonitor } from '@/components/atoms/icons'
@@ -63,7 +63,7 @@ export function BlastRadiusPanel({
           <Ess label="ODP di hilir">{blast.odpCount}</Ess>
           <Ess label="Pelanggan">{blast.customerCount}</Ess>
           <Ess label="Sudah mati">
-            {blast.downCount > 0 && <span style={{ color: 'var(--critical-ink)', fontWeight: 600 }}>{blast.downCount}</span>}
+            {blast.downCount > 0 && <Text as="span" weight="semibold" style={{ color: 'var(--critical-ink)' }}>{blast.downCount}</Text>}
           </Ess>
           <Ess label="Siap broadcast">{withPhone > 0 && `${withPhone} nomor`}</Ess>
         </dl>

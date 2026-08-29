@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { CreditCard, Pause, Play, Trash2 } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
@@ -93,8 +94,8 @@ export function TenantsPage() {
   }, [tenants, query, statusFilter])
 
   const columns: Column<Tenant>[] = [
-    { key: 'name', header: 'Nama', sortValue: (t) => t.name, cell: (t) => <strong>{t.name}</strong> },
-    { key: 'slug', header: 'Slug', sortValue: (t) => t.slug, cell: (t) => <span className="badge">{t.slug}</span> },
+    { key: 'name', header: 'Nama', sortValue: (t) => t.name, cell: (t) => <Text as="strong" weight="semibold" >{t.name}</Text> },
+    { key: 'slug', header: 'Slug', sortValue: (t) => t.slug, cell: (t) => <Text as="span" className="badge">{t.slug}</Text> },
     {
       key: 'status',
       header: 'Status',
@@ -139,8 +140,8 @@ export function TenantsPage() {
         }
       />
 
-      {error && <p className="error">{error}</p>}
-      {notice && <p className="muted">{notice}</p>}
+      {error && <Text as="p" className="error">{error}</Text>}
+      {notice && <Text as="p" className="muted">{notice}</Text>}
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari nama atau slug…" />
@@ -270,11 +271,11 @@ export function TenantsPage() {
             setConfirmDelete(null)
           }}
           message={
-            <p style={{ margin: 0 }}>
-              Hapus tenant <strong>{confirmDelete.name}</strong> (<code>{confirmDelete.slug}</code>) beserta
-              <strong> SELURUH datanya</strong> secara permanen? Tindakan ini{' '}
-              <strong>tidak bisa dibatalkan</strong>.
-            </p>
+            <Text as="p" style={{ margin: 0 }}>
+              Hapus tenant <Text as="strong" weight="semibold" >{confirmDelete.name}</Text> (<code>{confirmDelete.slug}</code>) beserta
+              <Text as="strong" weight="semibold" > SELURUH datanya</Text> secara permanen? Tindakan ini{' '}
+              <Text as="strong" weight="semibold" >tidak bisa dibatalkan</Text>.
+            </Text>
           }
         />
       )}

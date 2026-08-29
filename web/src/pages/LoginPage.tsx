@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type SyntheticEvent } from 'react'
+import { Text } from '@fluentui/react-components'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { ApiError } from '../api/client'
@@ -26,7 +27,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  async function onSubmit(event: FormEvent) {
+  async function onSubmit(event: SyntheticEvent) {
     event.preventDefault()
     setError(null)
     setBusy(true)
@@ -59,19 +60,19 @@ export function LoginPage() {
             {otpRequired ? <IconShield size={20} /> : <BrandMark size={26} />}
           </span>
           <div>
-            <h2 style={{ margin: 0, fontSize: '1.15rem' }}>NetOps Console</h2>
-            <p className="muted" style={{ margin: 0, fontSize: '0.83rem' }}>
+            <Text as="h2" size={400} weight="semibold" style={{ margin: 0 }}>NetOps Console</Text>
+            <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
               {otpRequired ? 'Verifikasi dua langkah' : 'Masuk ke konsol operasi jaringan'}
-            </p>
+            </Text>
           </div>
         </div>
 
         {otpRequired ? (
           <>
-            <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-              Buka aplikasi autentikator untuk <strong>{email}</strong>, lalu masukkan kode 6 digit yang
+            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
+              Buka aplikasi autentikator untuk <Text as="strong" weight="semibold">{email}</Text>, lalu masukkan kode 6 digit yang
               sedang tampil. Kehilangan ponsel? Pakai salah satu kode pemulihan.
-            </p>
+            </Text>
             <TextField
               label="Kode verifikasi"
               value={otpCode}
@@ -107,9 +108,9 @@ export function LoginPage() {
         )}
 
         {error && (
-          <p className="error" style={{ margin: 0, fontSize: '0.85rem' }}>
+          <Text as="p" className="error" size={300} style={{ margin: 0 }}>
             {error}
-          </p>
+          </Text>
         )}
 
         <Button variant="primary" type="submit" disabled={busy} style={{ width: '100%', padding: '0.6rem' }}>
@@ -117,15 +118,15 @@ export function LoginPage() {
         </Button>
 
         {otpRequired ? (
-          <p className="muted" style={{ margin: 0, fontSize: '0.83rem', textAlign: 'center' }}>
+          <Text as="p" className="muted" size={300} style={{ margin: 0, textAlign: 'center' }}>
             <Button variant="subtle" onClick={backToCredentials} type="button">
               Masuk sebagai akun lain
             </Button>
-          </p>
+          </Text>
         ) : (
-          <p className="muted" style={{ margin: 0, fontSize: '0.83rem', textAlign: 'center' }}>
+          <Text as="p" className="muted" size={300} style={{ margin: 0, textAlign: 'center' }}>
             Punya jaringan FTTH sendiri? <Link to="/signup">Daftar ISP baru</Link>
-          </p>
+          </Text>
         )}
       </form>
     </div>

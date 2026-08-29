@@ -65,13 +65,6 @@ const STATUS_OPTIONS: { value: CustomerStatus | ''; label: string }[] = [
   { value: 'TERMINATED', label: 'Berhenti' },
 ]
 
-/** Ringkas kepemilikan ONU pelanggan untuk satu sel tabel. */
-function onuSummary(customer: CustomerView): string {
-  if (customer.onus.length === 0) return 'Belum ada ONU'
-  const attached = customer.onus.find((o) => o.odpCode)
-  return `${customer.onus.length} ONU${attached ? ` · ${attached.odpCode} port ${attached.odpPortNumber}` : ''}`
-}
-
 /**
  * Daftar pelanggan — tabel padat bisa-urut dengan pencarian & filter status di atasnya.
  * Klik satu baris membuka halaman detail (`/customers/:id`), tempat semua data & aksi
@@ -271,38 +264,9 @@ export function CustomersPage() {
     }
   }
 
-  const columns: Column<CustomerView>[] = [
-    {
-      key: 'name',
-      header: 'Nama',
-      sortValue: (c) => c.name,
-      cell: (c) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
-          <strong>{c.name}</strong>
-          <span className="muted" style={{ fontSize: '0.8rem' }}>{c.phone ?? 'tanpa nomor'}</span>
-        </div>
-      ),
-    },
-    { key: 'code', header: 'Kode', sortValue: (c) => c.code, cell: (c) => <span className="badge">{c.code}</span> },
-    {
-      key: 'status',
-      header: 'Status',
-      sortValue: (c) => c.status,
-      cell: (c) => (
-        <div className="row" style={{ gap: '0.3rem', flexWrap: 'wrap' }}>
-          <StatusBadge status={c.status} />
-          {c.awaitingInstallation && <StatusBadge status="PENDING" label="menunggu instalasi" />}
-        </div>
-      ),
-    },
-    { key: 'address', header: 'Alamat', sortValue: (c) => c.address, cell: (c) => c.address },
-    { key: 'onu', header: 'ONU', sortValue: (c) => c.onus.length, cell: (c) => onuSummary(c) },
-  ]
-
-  // Aksi per-baris kini di menu `…` ala Azure DataGrid (kiri baris), bukan tombol inline.
   const canUpdate = can('customer.customer.update')
   const hasRowActions = canUpdate || canDelete
-  const rowActions = (c: CustomerView): RowAction[] => {
+  const inlineActions = (c: CustomerView): RowAction[] => {
     const list: RowAction[] = []
     if (canUpdate)
       list.push({ key: 'edit', label: 'Edit', icon: <Pencil size={16} />, onClick: () => startEdit(c) })
@@ -315,6 +279,41 @@ export function CustomersPage() {
       })
     return list
   }
+
+  const columns: Column<CustomerView>[] = [
+    {
+      key: 'name',
+      header: 'Nama',
+      sortValue: (c) => c.name,
+      cell: (c) => c.name,
+      onCellClick: (c) => setDetailId(c.id),
+      inlineActions: hasRowActions ? inlineActions : undefined,
+    },
+    { key: 'code', header: 'Kode', sortValue: (c) => c.code, cell: (c) => c.code },
+    { key: 'phone', header: 'Telepon', sortValue: (c) => c.phone ?? '', cell: (c) => c.phone ?? <span className="muted">—</span> },
+    {
+      key: 'status',
+      header: 'Status',
+      sortValue: (c) => c.status,
+      cell: (c) => (
+        <div className="row" style={{ gap: '0.3rem', flexWrap: 'wrap' }}>
+          <StatusBadge status={c.status} />
+          {c.awaitingInstallation && <StatusBadge status="PENDING" label="menunggu instalasi" />}
+        </div>
+      ),
+    },
+    { key: 'address', header: 'Alamat', sortValue: (c) => c.address, cell: (c) => c.address },
+    { key: 'onuCount', header: 'ONU', align: 'right', sortValue: (c) => c.onus.length, cell: (c) => c.onus.length },
+    {
+      key: 'onuLocation',
+      header: 'Lokasi ONU',
+      sortValue: (c) => c.onus.find((o) => o.odpCode)?.odpCode ?? '',
+      cell: (c) => {
+        const attached = c.onus.find((o) => o.odpCode)
+        return attached ? `${attached.odpCode} port ${attached.odpPortNumber}` : <span className="muted">—</span>
+      },
+    },
+  ]
 
   // CommandBar: primary `+ Tambah` dipatok kiri; sekunder berjajar berkelompok
   // (hapus | ekspor/impor | segarkan). Pemisah disisipkan di awal tiap kelompok non-kosong.
@@ -401,11 +400,9 @@ export function CustomersPage() {
         columns={columns}
         rows={rows}
         rowKey={(c) => c.id}
-        onRowClick={(c) => setDetailId(c.id)}
         loading={loading}
         initialSort={{ key: 'name', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
-        rowActions={hasRowActions ? rowActions : undefined}
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada pelanggan yang cocok' : 'Belum ada pelanggan'}

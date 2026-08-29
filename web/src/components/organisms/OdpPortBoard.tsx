@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { MessageBar, MessageBarBody } from '@fluentui/react-components'
+import { MessageBar, MessageBarBody, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components'
 import { api } from '@/api/client'
 import type { OdpPortBoardView, OdpPortIssue, OdpPortRowView } from '@/api/network'
 import { onuStatusLabel } from '@/api/network'
@@ -92,23 +92,23 @@ export function OdpPortBoard({ odpId, reloadKey }: { odpId: string; reloadKey?: 
         <h3 style={{ margin: 0 }}>Penghuni port</h3>
         {board.issueCount > 0 && <Badge tone="warning">{board.issueCount} selisih</Badge>}
       </div>
-      <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+      <Text as="p" size={200} className="muted" style={{ margin: 0 }}>
         {board.occupiedCount}/{board.capacity} port terisi ·{' '}
         {board.splitterCodes.length > 0
           ? `kaki ${board.splitterCodes.join(', ')} dipetakan berurutan ke lubangnya`
           : 'kotak tanpa splitter — kaki tak dipetakan ke lubang'}
-      </p>
+      </Text>
 
       {/* Port bebas disebut satu per satu, bukan cuma dihitung: yang membuka panel
           ini sering sedang menjawab "besok pasang di lubang mana". */}
-      <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+      <Text as="p" size={200} className="muted" style={{ margin: 0 }}>
         Port bebas:{' '}
         {free.length > 0 ? (
           <span className="tnum">{free.join(', ')}</span>
         ) : (
           'penuh — tak ada lubang yang catatan & seratnya sama-sama kosong'
         )}
-      </p>
+      </Text>
 
       {board.issueCount > 0 && (
         <MessageBar intent="warning">
@@ -121,78 +121,63 @@ export function OdpPortBoard({ odpId, reloadKey }: { odpId: string; reloadKey?: 
       )}
 
       <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Port</th>
-              <th>Kaki &amp; serat</th>
-              <th>Pelanggan</th>
-              <th>ONU</th>
-              <th>Optik</th>
-              <th>Selisih</th>
-            </tr>
-          </thead>
-          <tbody>
-            {board.ports.map((row) => (
-              <tr key={row.portNumber ?? `stray:${row.customerId}`}>
-                {/* ONU tanpa nomor port tak dikarang letaknya: ia muncul apa adanya
-                    di bawah, dengan tanda tanya sebagai nomornya. */}
-                <td className="tnum">{row.portNumber ?? '?'}</td>
-                <td>
-                  {row.legLabel ? (
-                    <>
-                      {row.legLabel}
-                      <br />
-                      <span className="muted" style={{ fontSize: '0.78rem' }}>
-                        {row.servedBy ?? 'belum dilas'}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="muted">—</span>
-                  )}
-                </td>
-                <td>{row.customerName ?? <span className="muted">kosong</span>}</td>
-                <td>
-                  {row.onuSerialNumber ? (
-                    <>
-                      <span className="muted tnum" style={{ fontSize: '0.78rem' }}>
-                        {row.onuSerialNumber}
-                      </span>
-                      <br />
-                      {row.onuStatus && (
-                        <StatusBadge status={row.onuStatus} label={onuStatusLabel(row.onuStatus)} />
-                      )}
-                    </>
-                  ) : (
-                    <span className="muted">—</span>
-                  )}
-                </td>
-                <td>
-                  {row.opticalHealth ? (
-                    <span
-                      className="tnum"
-                      style={{ color: HEALTH_COLOR[row.opticalHealth], fontWeight: 600 }}
-                    >
-                      {/* Kosong berarti BELUM DIUKUR saat pasang, bukan 0 dBm. */}
-                      {row.rxPowerDbm != null ? `${row.rxPowerDbm} dBm` : row.opticalHealth}
-                    </span>
-                  ) : (
-                    <span className="muted">—</span>
-                  )}
-                </td>
-                <td>
-                  {row.issue ? (
-                    <span title={row.issueDetail ?? undefined}>
-                      <Badge tone={ISSUE_TONE[row.issue]}>{row.issueLabel ?? row.issue}</Badge>
-                    </span>
-                  ) : (
-                    <span className="muted">—</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Table><TableHeader><TableRow ><TableHeaderCell >Port</TableHeaderCell>
+        <TableHeaderCell >Kaki &amp; serat</TableHeaderCell>
+        <TableHeaderCell >Pelanggan</TableHeaderCell>
+        <TableHeaderCell >ONU</TableHeaderCell>
+        <TableHeaderCell >Optik</TableHeaderCell>
+        <TableHeaderCell >Selisih</TableHeaderCell></TableRow></TableHeader>
+        <TableBody>{board.ports.map((row) => (
+          <TableRow key={row.portNumber ?? `stray:${row.customerId}`}>{/* ONU tanpa nomor port tak dikarang letaknya: ia muncul apa adanya
+              di bawah, dengan tanda tanya sebagai nomornya. */}
+          <TableCell className="tnum">{row.portNumber ?? '?'}</TableCell>
+          <TableCell >{row.legLabel ? (
+            <>
+              {row.legLabel}
+              <br />
+              <Text as="span" size={100} className="muted">
+                {row.servedBy ?? 'belum dilas'}
+              </Text>
+            </>
+          ) : (
+            <span className="muted">—</span>
+          )}</TableCell>
+          <TableCell >{row.customerName ?? <span className="muted">kosong</span>}</TableCell>
+          <TableCell >{row.onuSerialNumber ? (
+            <>
+              <Text as="span" size={100} className="muted tnum">
+                {row.onuSerialNumber}
+              </Text>
+              <br />
+              {row.onuStatus && (
+                <StatusBadge status={row.onuStatus} label={onuStatusLabel(row.onuStatus)} />
+              )}
+            </>
+          ) : (
+            <span className="muted">—</span>
+          )}</TableCell>
+          <TableCell >{row.opticalHealth ? (
+            <Text
+              as="span"
+              size={200}
+              weight="semibold"
+              className="tnum"
+              style={{ color: HEALTH_COLOR[row.opticalHealth] }}
+            >
+              {/* Kosong berarti BELUM DIUKUR saat pasang, bukan 0 dBm. */}
+              {row.rxPowerDbm != null ? `${row.rxPowerDbm} dBm` : row.opticalHealth}
+            </Text>
+          ) : (
+            <span className="muted">—</span>
+          )}</TableCell>
+          <TableCell >{row.issue ? (
+            <span title={row.issueDetail ?? undefined}>
+              <Badge tone={ISSUE_TONE[row.issue]}>{row.issueLabel ?? row.issue}</Badge>
+            </span>
+          ) : (
+            <span className="muted">—</span>
+          )}</TableCell></TableRow>
+        ))}</TableBody></Table>
       </div>
     </div>
   )

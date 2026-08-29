@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { Ban, Copy, ExternalLink, FlaskConical, Link2, Printer, Undo2, Wallet } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import type { PageResponse } from '../api/types'
@@ -179,8 +180,8 @@ async function fetchCustomerNames(): Promise<Map<string, CustomerLite>> {
 function DetailLine({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
     <div className="spread">
-      <span className="muted" style={{ fontSize: '0.85rem' }}>{label}</span>
-      <span className={muted ? 'muted' : 'tnum'} style={{ fontSize: '0.85rem' }}>{value}</span>
+      <Text as="span" className="muted" size={200}>{label}</Text>
+      <Text as="span" className={muted ? 'muted' : 'tnum'} size={200}>{value}</Text>
     </div>
   )
 }
@@ -190,8 +191,8 @@ function SummaryCard({ label, value, tone }: { label: string; value: string; ton
   const color = tone === 'critical' ? 'var(--critical-ink)' : tone === 'good' ? 'var(--good-ink)' : undefined
   return (
     <div className="card stack" style={{ gap: '0.2rem', flex: 1, minWidth: 160 }}>
-      <span className="muted" style={{ fontSize: '0.8rem' }}>{label}</span>
-      <strong className="tnum" style={{ fontSize: '1.35rem', lineHeight: 1.1, color }}>{value}</strong>
+      <Text as="span" className="muted" size={200}>{label}</Text>
+      <Text as="strong" className="tnum" size={500} weight="semibold" style={{ color }}>{value}</Text>
     </div>
   )
 }
@@ -466,51 +467,38 @@ export function InvoicesPage() {
       key: 'number',
       header: 'Nomor',
       sortValue: (i) => i.number,
-      cell: (i) => <span className="badge">{i.number}</span>,
+      cell: (i) => i.number,
+      onCellClick: openDetail,
+      inlineActions: rowActions,
     },
     {
       key: 'customer',
       header: 'Pelanggan',
       sortValue: (i) => names.get(i.customerId)?.name ?? '',
-      cell: (i) => {
-        const c = names.get(i.customerId)
-        return (
-          <div className="stack" style={{ gap: '0.15rem' }}>
-            <strong>{c?.name ?? 'Pelanggan'}</strong>
-            {c?.code && <span className="muted" style={{ fontSize: '0.8rem' }}>{c.code}</span>}
-          </div>
-        )
-      },
+      cell: (i) => names.get(i.customerId)?.name ?? 'Pelanggan',
     },
     {
-      key: 'period',
-      header: 'Periode',
-      sortValue: (i) => i.periodStart,
-      cell: (i) => (
-        <span className="muted" style={{ fontSize: '0.85rem' }}>
-          {fmtDate(i.periodStart)} – {fmtDate(i.periodEnd)}
-        </span>
-      ),
+      key: 'customerCode',
+      header: 'Kode pelanggan',
+      sortValue: (i) => names.get(i.customerId)?.code ?? '',
+      cell: (i) => names.get(i.customerId)?.code ?? <span className="muted">—</span>,
     },
+    { key: 'periodStart', header: 'Mulai periode', sortValue: (i) => i.periodStart, cell: (i) => fmtDate(i.periodStart) },
+    { key: 'periodEnd', header: 'Akhir periode', sortValue: (i) => i.periodEnd, cell: (i) => fmtDate(i.periodEnd) },
     { key: 'due', header: 'Jatuh tempo', sortValue: (i) => i.dueDate, cell: (i) => fmtDate(i.dueDate) },
     {
       key: 'amount',
       header: 'Jumlah',
       align: 'right',
       sortValue: (i) => Number(i.amount),
-      cell: (i) => {
-        const tax = Number(i.taxAmount)
-        return (
-          <div className="stack" style={{ gap: '0.1rem', alignItems: 'flex-end' }}>
-            <span>{fmtRupiah(Number(i.amount))}</span>
-            {tax > 0 && (
-              <span className="muted" style={{ fontSize: '0.75rem' }}>
-                termasuk PPN {fmtRupiah(tax)}
-              </span>
-            )}
-          </div>
-        )
-      },
+      cell: (i) => fmtRupiah(Number(i.amount)),
+    },
+    {
+      key: 'tax',
+      header: 'PPN',
+      align: 'right',
+      sortValue: (i) => Number(i.taxAmount),
+      cell: (i) => Number(i.taxAmount) > 0 ? fmtRupiah(Number(i.taxAmount)) : <span className="muted">—</span>,
     },
     {
       key: 'status',
@@ -527,7 +515,7 @@ export function InvoicesPage() {
 
   // Aksi per-baris di menu `…` ala Azure DataGrid (seragam dengan Pelanggan), bukan tombol inline.
   // Cetak/Unduh PDF selalu ada; Catat bayar & Batalkan hanya untuk tagihan yang masih tertagih.
-  const rowActions = (i: InvoiceView): RowAction[] => {
+  function rowActions(i: InvoiceView): RowAction[] {
     const payable = i.status === 'ISSUED' || i.status === 'OVERDUE'
     const list: RowAction[] = [
       {
@@ -654,8 +642,6 @@ export function InvoicesPage() {
         columns={columns}
         rows={rows}
         rowKey={(i) => i.id}
-        onRowClick={openDetail}
-        rowActions={rowActions}
         loading={loading}
         initialSort={{ key: 'due', dir: 'desc' }}
         empty={
@@ -728,10 +714,10 @@ export function InvoicesPage() {
                 <>
                   <DetailLine label="Sudah dikembalikan" value={`− ${fmtRupiah(Number(detail.refundedAmount))}`} />
                   <div className="spread">
-                    <span className="muted" style={{ fontSize: '0.85rem' }}>Sisa yang bisa dikembalikan</span>
-                    <span className="tnum" style={{ fontSize: '0.85rem' }}>
+                    <Text as="span" className="muted" size={300}>Sisa yang bisa dikembalikan</Text>
+                    <Text as="span" className="tnum" size={300}>
                       {fmtRupiah(Number(detail.refundableAmount ?? 0))}
-                    </span>
+                    </Text>
                   </div>
                 </>
               )}
@@ -745,24 +731,24 @@ export function InvoicesPage() {
             </div>
 
             <div className="stack" style={{ gap: '0.4rem' }}>
-              <strong style={{ fontSize: '0.9rem' }}>Riwayat pembayaran</strong>
+              <Text as="strong" size={300} weight="semibold">Riwayat pembayaran</Text>
               {loadingPayments ? (
-                <span className="muted" style={{ fontSize: '0.85rem' }}>Memuat…</span>
+                <Text as="span" className="muted" size={300}>Memuat…</Text>
               ) : payments.length === 0 ? (
-                <span className="muted" style={{ fontSize: '0.85rem' }}>Belum ada pembayaran tercatat.</span>
+                <Text as="span" className="muted" size={300}>Belum ada pembayaran tercatat.</Text>
               ) : (
                 payments.map((p) => (
                   <div key={p.id} className="card spread" style={{ gap: '0.5rem', padding: '0.5rem 0.65rem' }}>
                     <div className="stack" style={{ gap: '0.1rem' }}>
                       <span className="tnum">{fmtRupiah(Number(p.amount))}</span>
-                      <span className="muted" style={{ fontSize: '0.78rem' }}>
+                      <Text as="span" className="muted" size={200}>
                         {p.provider}
                         {p.note ? ` · ${p.note}` : ''}
-                      </span>
+                      </Text>
                     </div>
-                    <span className="muted" style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
+                    <Text as="span" className="muted" size={200} style={{ whiteSpace: 'nowrap' }}>
                       {fmtDate(p.paidAt.slice(0, 10))}
-                    </span>
+                    </Text>
                   </div>
                 ))
               )}
@@ -770,26 +756,26 @@ export function InvoicesPage() {
 
             {refunds.length > 0 && (
               <div className="stack" style={{ gap: '0.4rem' }}>
-                <strong style={{ fontSize: '0.9rem' }}>Pengembalian dana</strong>
+                <Text as="strong" size={300} weight="semibold">Pengembalian dana</Text>
                 {refunds.map((r) => (
                   <div key={r.id} className="card stack" style={{ gap: '0.3rem', padding: '0.5rem 0.65rem' }}>
                     <div className="spread" style={{ gap: '0.5rem' }}>
                       <div className="stack" style={{ gap: '0.1rem' }}>
                         <span className="tnum">− {fmtRupiah(Number(r.amount))}</span>
-                        <span className="muted" style={{ fontSize: '0.78rem' }}>
+                        <Text as="span" className="muted" size={200}>
                           {REFUND_REASON_LABEL[r.reason]} · {r.provider}
                           {r.note ? ` · ${r.note}` : ''}
-                        </span>
+                        </Text>
                       </div>
                       <div className="stack" style={{ gap: '0.2rem', alignItems: 'flex-end' }}>
                         <Badge tone={REFUND_TONE[r.status]}>{REFUND_LABEL[r.status]}</Badge>
-                        <span className="muted" style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
+                        <Text as="span" className="muted" size={200} style={{ whiteSpace: 'nowrap' }}>
                           {fmtDate((r.completedAt ?? r.requestedAt).slice(0, 10))}
-                        </span>
+                        </Text>
                       </div>
                     </div>
                     {r.failureReason && (
-                      <span style={{ fontSize: '0.78rem', color: 'var(--critical-ink)' }}>{r.failureReason}</span>
+                      <Text as="span" size={200} style={{ color: 'var(--critical-ink)' }}>{r.failureReason}</Text>
                     )}
                     {/* Hanya baris MANUAL yang ditutup tangan — yang berpenyedia menunggu callback. */}
                     {canRefund && r.provider === 'MANUAL' && (r.status === 'PENDING' || r.status === 'PROCESSING') && (
@@ -859,9 +845,9 @@ export function InvoicesPage() {
               lunas via pembayaran manual (mis. transfer/QRIS di luar gateway).
             </p>
             {Number(payTarget.taxAmount) > 0 && (
-              <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+              <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
                 Dasar {fmtRupiah(Number(payTarget.baseAmount))} + PPN {fmtRupiah(Number(payTarget.taxAmount))}.
-              </p>
+              </Text>
             )}
             <TextField
               label="Catatan (opsional)"
@@ -931,10 +917,10 @@ export function InvoicesPage() {
               onChange={(_, data) => setRefundNote(data.value)}
               placeholder="Mis. salah tagih periode Juli"
             />
-            <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+            <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
               Tagihan yang dibayar lewat gateway dikembalikan otomatis oleh penyedia — statusnya menyusul
               lewat callback. Pembayaran manual harus ditransfer sendiri, lalu ditutup dari pratinjau tagihan.
-            </p>
+            </Text>
           </div>
         </Modal>
       )}

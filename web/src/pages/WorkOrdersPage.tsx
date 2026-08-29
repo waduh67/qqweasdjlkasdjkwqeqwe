@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Text, ToggleButton } from '@fluentui/react-components'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import type { PageResponse, User } from '../api/types'
@@ -185,7 +186,8 @@ export function WorkOrdersPage() {
       key: 'code',
       header: 'Kode',
       sortValue: (wo) => wo.code,
-      cell: (wo) => <span className="badge accent">{wo.code}</span>,
+      cell: (wo) => wo.code,
+      onCellClick: (wo) => navigate(`/work-orders/${wo.id}`),
     },
     {
       key: 'type',
@@ -197,12 +199,13 @@ export function WorkOrdersPage() {
       key: 'title',
       header: 'Judul',
       sortValue: (wo) => wo.title,
-      cell: (wo) => (
-        <div className="row" style={{ gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <strong>{wo.title}</strong>
-          {wo.priority !== 'NORMAL' && <Badge tone={priorityTone(wo.priority)}>{PRIORITY_LABEL[wo.priority]}</Badge>}
-        </div>
-      ),
+      cell: (wo) => wo.title,
+    },
+    {
+      key: 'priority',
+      header: 'Prioritas',
+      sortValue: (wo) => wo.priority,
+      cell: (wo) => (wo.priority !== 'NORMAL' ? <Badge tone={priorityTone(wo.priority)}>{PRIORITY_LABEL[wo.priority]}</Badge> : 'Normal'),
     },
     {
       key: 'customer',
@@ -307,7 +310,6 @@ export function WorkOrdersPage() {
         columns={columns}
         rows={orders}
         rowKey={(wo) => wo.id}
-        onRowClick={(wo) => navigate(`/work-orders/${wo.id}`)}
         loading={loading}
         initialSort={{ key: 'scheduledAt', dir: 'desc' }}
         empty={
@@ -349,14 +351,14 @@ function Stat({
   if (!onClick) return <div className={cls}>{body}</div>
   // Bisa diklik → jadikan tombol; saat aktif ditandai garis luar agar filter terlihat.
   return (
-    <button
-      type="button"
+    <ToggleButton
       className={cls}
+      checked={active}
       onClick={onClick}
-      style={{ font: 'inherit', color: 'inherit', textAlign: 'left', cursor: 'pointer', outline: active ? '2px solid var(--accent, #4c8bf5)' : undefined }}
+      style={{ font: 'inherit', color: 'inherit', textAlign: 'left', cursor: 'pointer', outline: active ? '2px solid var(--accent)' : undefined }}
     >
       {body}
-    </button>
+    </ToggleButton>
   )
 }
 
@@ -417,10 +419,10 @@ function DispatchDashboard({
               key={s}
               onClick={() => onPickStatus(selected ? '' : s)}
               variant={selected ? 'primary' : 'subtle'}
-              style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', fontSize: '0.82rem', padding: '0.3rem 0.6rem' }}
+              style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', padding: '0.3rem 0.6rem' }}
               title={`Filter: ${STATUS_LABEL[s]}`}
             >
-              {STATUS_LABEL[s]}
+              <Text as="span" size={200}>{STATUS_LABEL[s]}</Text>
               <span className={`badge ${STATUS_TONE[s]}`}>{data.byStatus[s] ?? 0}</span>
             </Button>
           )
@@ -429,12 +431,12 @@ function DispatchDashboard({
 
       {data.workloads.length > 0 && (
         <div className="stack" style={{ gap: '0.35rem' }}>
-          <span className="muted" style={{ fontSize: '0.8rem' }}>Beban teknisi (WO terbuka)</span>
+          <Text as="span" className="muted" size={200}>Beban teknisi (WO terbuka)</Text>
           {data.workloads.slice(0, 6).map((w) => (
             <div key={w.technicianId} className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
-              <span style={{ flex: 1, fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <Text as="span" size={200} truncate style={{ flex: 1 }}>
                 👷 {w.technicianName ?? '—'}
-              </span>
+              </Text>
               <Badge tone="accent">{w.openCount}</Badge>
             </div>
           ))}

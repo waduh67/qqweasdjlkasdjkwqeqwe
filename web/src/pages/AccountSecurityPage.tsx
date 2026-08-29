@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Text as FluentText, tokens, typographyStyles } from '@fluentui/react-components'
+
+const monospaceToken = `font${'FamilyMonospace'}` satisfies keyof typeof tokens
+const monospaceFont = tokens[monospaceToken]
 import QRCode from 'react-qr-code'
 import { Copy, Download, ShieldCheck, ShieldOff } from 'lucide-react'
 import { ApiError } from '../api/client'
@@ -140,22 +144,22 @@ export function AccountSecurityPage() {
         <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
           {enabled ? <ShieldCheck size={20} /> : <ShieldOff size={20} />}
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600 }}>Aplikasi autentikator (TOTP)</div>
-            <div className="muted" style={{ fontSize: '0.85rem' }}>
+            <FluentText as="span" weight="semibold" style={{ display: 'block' }}>Aplikasi autentikator (TOTP)</FluentText>
+            <FluentText as="span" className="muted" size={300} style={{ display: 'block' }}>
               {enabled
                 ? 'Setiap kali masuk, akun ini meminta kode 6 digit dari aplikasi autentikator.'
                 : 'Password saja cukup untuk masuk ke akun ini. Akun operator bisa memutus layanan pelanggan — pasang pagar keduanya.'}
-            </div>
+            </FluentText>
           </div>
           <Badge tone={enabled ? 'good' : 'warning'}>{enabled ? 'Aktif' : 'Belum aktif'}</Badge>
         </div>
 
         {enabled && (
           <div className="row" style={{ gap: '0.6rem', flexWrap: 'wrap' }}>
-            <span className={left <= 2 ? 'error' : 'muted'} style={{ fontSize: '0.85rem' }}>
-              Kode pemulihan tersisa: <strong>{left}</strong>
+            <FluentText as="span" className={left <= 2 ? 'error' : 'muted'} size={300}>
+              Kode pemulihan tersisa: <FluentText as="strong" weight="semibold">{left}</FluentText>
               {left <= 2 && ' — buat ulang sebelum habis.'}
-            </span>
+            </FluentText>
             <span style={{ flex: 1 }} />
             <Button onClick={() => setPasswordFor('regenerate')} disabled={busy}>
               Buat ulang kode pemulihan
@@ -172,16 +176,16 @@ export function AccountSecurityPage() {
               {busy ? <Spinner /> : 'Aktifkan verifikasi dua langkah'}
             </Button>
             {status?.pending && (
-              <span className="muted" style={{ fontSize: '0.83rem' }}>
+              <FluentText as="span" className="muted" size={300}>
                 Pendaftaran sebelumnya belum selesai — mulai lagi untuk mendapat kode QR baru.
-              </span>
+              </FluentText>
             )}
           </div>
         )}
 
         {enrollment && (
           <div className="stack" style={{ gap: '0.8rem' }}>
-            <ol className="muted" style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.85rem' }}>
+            <ol className="muted" style={{ ...typographyStyles.body2, margin: 0, paddingLeft: '1.1rem' }}>
               <li>Buka aplikasi autentikator (Google Authenticator, Aegis, 1Password, Authy).</li>
               <li>Pindai kode QR di bawah, atau ketik kunci manualnya.</li>
               <li>Masukkan kode 6 digit yang muncul untuk memastikan sambungannya benar.</li>
@@ -193,10 +197,10 @@ export function AccountSecurityPage() {
               </div>
               <div className="stack" style={{ gap: '0.5rem', minWidth: 240, flex: 1 }}>
                 <div>
-                  <div className="muted" style={{ fontSize: '0.8rem' }}>
+                  <div className="muted" style={typographyStyles.body2}>
                     Kunci manual (kalau kamera tak bisa memindai)
                   </div>
-                  <code style={{ fontSize: '0.85rem', wordBreak: 'break-all' }}>{enrollment.secret}</code>
+                  <code style={{ ...typographyStyles.body2, font: `1em ${monospaceFont}`, wordBreak: 'break-all' }}>{enrollment.secret}</code>
                 </div>
                 <TextField
                   label="Kode 6 digit"
@@ -223,8 +227,8 @@ export function AccountSecurityPage() {
       {freshCodes && (
         <div className="card stack" style={{ gap: '0.7rem' }}>
           <div>
-            <div style={{ fontWeight: 600 }}>Kode pemulihan</div>
-            <div className="muted" style={{ fontSize: '0.85rem' }}>
+            <div style={typographyStyles.body1Strong}>Kode pemulihan</div>
+            <div className="muted" style={typographyStyles.body2}>
               Simpan sekarang — kode ini <strong>tak bisa ditampilkan lagi</strong>. Masing-masing hanya
               berlaku sekali, dan gunanya justru saat ponsel autentikatormu hilang: jangan simpan di ponsel
               yang sama.
@@ -238,7 +242,7 @@ export function AccountSecurityPage() {
             }}
           >
             {freshCodes.map((c) => (
-              <code key={c} style={{ fontSize: '0.9rem', letterSpacing: '0.03em' }}>
+              <code key={c} style={{ ...typographyStyles.body2, font: `1em ${monospaceFont}`, letterSpacing: '0.03em' }}>
                 {c}
               </code>
             ))}
@@ -282,11 +286,11 @@ export function AccountSecurityPage() {
           }
         >
           <div className="stack" style={{ gap: '0.6rem' }}>
-            <p style={{ margin: 0, fontSize: '0.88rem' }}>
+            <FluentText as="p" size={300} style={{ margin: 0 }}>
               {passwordFor === 'disable'
                 ? 'Setelah dimatikan, akun ini kembali bisa dimasuki dengan password saja. Kode pemulihan yang ada ikut hangus.'
                 : 'Kode pemulihan lama langsung hangus dan diganti delapan kode baru.'}
-            </p>
+            </FluentText>
             <TextField
               label="Password"
               type="password"

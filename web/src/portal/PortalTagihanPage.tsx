@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { usePortalData } from './PortalLayout'
 import { getPortalInvoicePrint } from './portalApi'
 import { INVOICE_STATUS_LABEL, INVOICE_TONE, Loading, Unavailable, fmtDate, rupiah } from './portalFormat'
@@ -18,31 +19,29 @@ export function PortalTagihanPage() {
   return (
     <div className="stack" style={{ gap: '1rem' }}>
       <div className="stack" style={{ gap: '0.15rem' }}>
-        <h1 className="page-title" style={{ margin: 0 }}>Tagihan</h1>
-        <p className="page-sub" style={{ margin: 0 }}>Tagihan berjalan dan riwayat pembayaranmu.</p>
+        <Text as="h1" className="page-title" size={700} weight="semibold" style={{ margin: 0 }}>Tagihan</Text>
+        <Text as="p" className="page-sub" size={400} style={{ margin: 0 }}>Tagihan berjalan dan riwayat pembayaranmu.</Text>
       </div>
 
       <div className="card stack" style={{ gap: '0.6rem' }}>
         <div className="spread" style={{ alignItems: 'center' }}>
-          <strong style={{ fontSize: '0.95rem' }}>Tagihan</strong>
+          <Text as="h2" size={400} weight="semibold">Tagihan</Text>
           {/* Pembayaran selesai di tab peramban lain, jadi status di sini perlu bisa ditarik ulang manual. */}
-          <Button variant="subtle" onClick={() => void reloadBilling()} style={{ fontSize: '0.8rem' }}>
-            Perbarui status
+          <Button variant="subtle" onClick={() => void reloadBilling()}>
+            <Text as="span" size={200}>Perbarui status</Text>
           </Button>
         </div>
         {billing.invoices.length === 0 ? (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada tagihan.</p>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada tagihan.</Text>
         ) : (
           billing.invoices.map((inv) => (
             <div key={inv.id} className="spread" style={{ alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-                <span style={{ fontWeight: 600 }}>{inv.number}</span>
-                <span className="muted" style={{ fontSize: '0.8rem' }}>
-                  {fmtDate(inv.periodStart)}–{fmtDate(inv.periodEnd)} · jatuh tempo {fmtDate(inv.dueDate)}
-                </span>
+                <Text as="span" weight="semibold">{inv.number}</Text>
+                <Text as="span" className="muted" size={200}>{fmtDate(inv.periodStart)}–{fmtDate(inv.periodEnd)} · jatuh tempo {fmtDate(inv.dueDate)}</Text>
               </div>
               <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
-                <span className="tnum" style={{ fontWeight: 600 }}>{rupiah(inv.amount)}</span>
+                <Text as="span" className="tnum" weight="semibold">{rupiah(inv.amount)}</Text>
                 <Badge tone={INVOICE_TONE[inv.status] ?? 'neutral'}>
                   {INVOICE_STATUS_LABEL[inv.status] ?? inv.status}
                 </Badge>
@@ -62,19 +61,19 @@ export function PortalTagihanPage() {
       </div>
 
       <div className="card stack" style={{ gap: '0.6rem' }}>
-        <strong style={{ fontSize: '0.95rem' }}>Riwayat pembayaran</strong>
+        <Text as="h2" size={400} weight="semibold">Riwayat pembayaran</Text>
         {billing.payments.length === 0 ? (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada pembayaran.</p>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada pembayaran.</Text>
         ) : (
           billing.payments.map((pay) => (
             <div key={pay.id} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
               <div className="stack" style={{ gap: 2, minWidth: 0 }}>
                 {/* Nomor tagihan ikut ditulis: "Rp150.000 · xendit" saja tak menjawab
                     pertanyaan yang sebenarnya, yaitu tagihan bulan mana yang lunas. */}
-                <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{pay.invoiceNumber ?? 'Pembayaran'}</span>
-                <span className="muted" style={{ fontSize: '0.8rem' }}>{fmtDate(pay.paidAt)} · {pay.provider}</span>
+                <Text as="span" size={300} weight="semibold">{pay.invoiceNumber ?? 'Pembayaran'}</Text>
+                <Text as="span" className="muted" size={200}>{fmtDate(pay.paidAt)} · {pay.provider}</Text>
               </div>
-              <span className="tnum" style={{ fontWeight: 600, color: 'var(--good-ink)' }}>{rupiah(pay.amount)}</span>
+              <Text as="span" className="tnum" weight="semibold" style={{ color: 'var(--good-ink)' }}>{rupiah(pay.amount)}</Text>
             </div>
           ))
         )}
@@ -123,8 +122,8 @@ function PrintInvoiceButton({ invoiceId }: { invoiceId: string }) {
   }
 
   return (
-    <Button variant="subtle" onClick={() => void onPrint()} disabled={busy} style={{ fontSize: '0.8rem' }}>
-      {busy ? 'Menyiapkan…' : 'Cetak'}
+    <Button variant="subtle" onClick={() => void onPrint()} disabled={busy}>
+      <Text as="span" size={200}>{busy ? 'Menyiapkan…' : 'Cetak'}</Text>
     </Button>
   )
 }

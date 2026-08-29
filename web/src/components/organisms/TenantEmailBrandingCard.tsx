@@ -1,3 +1,4 @@
+import { Text } from '@fluentui/react-components'
 import { useEffect, useState, type ReactNode } from 'react'
 import { ApiError } from '@/api/client'
 import {
@@ -158,11 +159,11 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
   return (
     <div className="card stack">
       <SectionTitle>Identitas &amp; tampilan email</SectionTitle>
-      <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+      <Text as="p" size={200} className="muted" style={{ margin: 0 }}>
         Semua kolom yang bisa disunting di kartu ini <strong>opsional</strong>. Yang dibiarkan
         kosong mengikuti bawaan platform — nilai warisannya ditampilkan sebagai teks samar di
         dalam kolomnya.
-      </p>
+      </Text>
 
       <LockedSenderAddress address={saved.platformFromAddress} />
 
@@ -228,9 +229,9 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
 
       {manage && (
         <div className="spread" style={{ alignItems: 'center' }}>
-          <span className="muted" style={{ fontSize: '0.85rem' }}>
+          <Text as="span" size={200} className="muted">
             Logo tersimpan seketika; kolom lain menunggu tombol di samping.
-          </span>
+          </Text>
           <Button variant="primary" onClick={() => void save()} disabled={saving || !addressOk || !accentOk}>
             {saving ? 'Menyimpan…' : 'Simpan identitas email'}
           </Button>
@@ -252,7 +253,7 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
 }
 
 function SectionTitle({ children }: { children: ReactNode }) {
-  return <h3 style={{ margin: '0.25rem 0 0', fontSize: '0.95rem', fontWeight: 600 }}>{children}</h3>
+  return <Text as="h3" size={300} weight="semibold" style={{ margin: '0.25rem 0 0' }}>{children}</Text>
 }
 
 /**
@@ -266,17 +267,17 @@ function SectionTitle({ children }: { children: ReactNode }) {
 function LockedSenderAddress({ address }: { address: string | null }) {
   return (
     <div className="stack" style={{ gap: '0.3rem' }}>
-      <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Dikirim dari</span>
+      <Text as="span" size={200} weight="semibold">Dikirim dari</Text>
       <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <span style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+        <Text as="span" font="monospace">
           {address ?? '— belum disetel platform'}
-        </span>
+        </Text>
         <Badge>Terkunci</Badge>
       </div>
-      <span className="muted" style={{ fontSize: '0.8rem' }}>
+      <Text as="span" size={200} className="muted">
         Ditetapkan penyedia aplikasi dan sama untuk semua ISP: server emailnya hanya menerima
         pengirim yang sudah terverifikasi. Nama pengirim & alamat balasan tetap milik Anda.
-      </span>
+      </Text>
     </div>
   )
 }

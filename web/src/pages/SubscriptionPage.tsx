@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { Text } from '@fluentui/react-components'
 import { Copy, FlaskConical } from 'lucide-react'
 import { ApiError } from '../api/client'
 import {
@@ -248,12 +249,12 @@ export function SubscriptionPage() {
         }}
       >
         <div className="stack" style={{ gap: '0.5rem' }}>
-          <span className="muted" style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <Text as="span" className="muted" size={200} weight="semibold" style={{ textTransform: 'uppercase' }}>
             Paket aktif
-          </span>
+          </Text>
           <div className="row" style={{ gap: '0.5rem', alignItems: 'baseline', flexWrap: 'wrap' }}>
-            <strong style={{ fontSize: '1.9rem', lineHeight: 1 }}>{fmtIdr(sub.monthlyFee)}</strong>
-            <span className="muted" style={{ fontSize: '0.9rem' }}>/ bulan</span>
+            <Text as="strong" size={700} weight="bold">{fmtIdr(sub.monthlyFee)}</Text>
+            <Text as="span" className="muted" size={300}>/ bulan</Text>
           </div>
           <div>
             <Badge tone={STATUS_TONE[sub.status]}>{SUBSCRIPTION_STATUS_LABEL[sub.status]}</Badge>
@@ -262,8 +263,8 @@ export function SubscriptionPage() {
 
         <div className="stack" style={{ gap: '0.5rem' }}>
           <div className="spread" style={{ alignItems: 'baseline', gap: '0.5rem' }}>
-            <span className="muted" style={{ fontSize: '0.82rem' }}>Masa aktif s/d</span>
-            <strong style={{ fontSize: '0.95rem' }}>{fmtDate(sub.activeUntil)}</strong>
+            <Text as="span" className="muted" size={200}>Masa aktif s/d</Text>
+            <Text as="strong" size={300} weight="semibold">{fmtDate(sub.activeUntil)}</Text>
           </div>
           {elapsed != null && (
             <div style={{ height: 8, borderRadius: 999, background: 'var(--surface-2)', overflow: 'hidden' }}>
@@ -278,9 +279,7 @@ export function SubscriptionPage() {
             </div>
           )}
           {remaining != null && (
-            <span style={{ fontSize: '0.85rem', color: expiringSoon ? 'var(--warning-ink)' : 'var(--muted)' }}>
-              {remaining === 0 ? 'Habis hari ini' : <><strong style={{ color: 'var(--text)' }}>{remaining}</strong> hari lagi</>}
-            </span>
+            <Text as="span" size={300}  style={{ color: expiringSoon ? 'var(--warning-ink)' : 'var(--muted)' }} >{remaining === 0 ? 'Habis hari ini' : <><strong style={{ color: 'var(--text)' }}>{remaining}</strong> hari lagi</>}</Text>
           )}
         </div>
 
@@ -293,7 +292,7 @@ export function SubscriptionPage() {
                   variant={m === months ? 'primary' : 'subtle'}
                   onClick={() => setMonths(m)}
                   disabled={busy}
-                  style={{ padding: '0.28rem 0.5rem', fontSize: '0.76rem', minWidth: 44 }}
+                  style={{ padding: '0.28rem 0.5rem', minWidth: 44 }}
                 >
                   {m} bln
                 </Button>
@@ -305,13 +304,11 @@ export function SubscriptionPage() {
               {renewLabel}
             </Button>
           )}
-          <span className="muted" style={{ fontSize: '0.75rem', textAlign: 'center' }}>
-            {canPrepay ? (
-              <>Total <strong style={{ color: 'var(--text)' }}>{fmtIdr(sub.monthlyFee * months)}</strong> · masa aktif +{months} bln</>
-            ) : (
-              <>Tagihan berikutnya {fmtDate(sub.nextInvoiceAt)}</>
-            )}
-          </span>
+          <Text as="span" size={300} className="muted" style={{ textAlign: 'center' }} >{canPrepay ? (
+            <>Total <strong style={{ color: 'var(--text)' }}>{fmtIdr(sub.monthlyFee * months)}</strong> · masa aktif +{months} bln</>
+          ) : (
+            <>Tagihan berikutnya {fmtDate(sub.nextInvoiceAt)}</>
+          )}</Text>
         </div>
       </div>
 
@@ -341,8 +338,8 @@ export function SubscriptionPage() {
       >
         <div className="card stack" style={{ gap: '0.7rem', gridColumn: 'span 1' }}>
           <div className="spread" style={{ alignItems: 'baseline' }}>
-            <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Riwayat tagihan</h2>
-            <span className="muted" style={{ fontSize: '0.8rem' }}>{sub.invoices.length} tagihan</span>
+            <Text as="h2" size={400} weight="semibold" style={{ margin: 0 }}>Riwayat tagihan</Text>
+            <Text as="span" className="muted" size={200}>{sub.invoices.length} tagihan</Text>
           </div>
           {sub.invoices.length === 0 ? (
             <p className="muted" style={{ margin: 0 }}>Belum ada tagihan.</p>
@@ -373,16 +370,15 @@ export function SubscriptionPage() {
                 background: 'color-mix(in srgb, var(--warning) 10%, var(--surface))',
               }}
             >
-              <strong style={{ fontSize: '0.9rem' }}>Ada tagihan menunggu pembayaran</strong>
-              <span className="muted" style={{ fontSize: '0.83rem' }}>
-                {outstanding.number} · {fmtIdr(outstanding.amount)}. Klik tombol <strong>Bayar</strong> di Riwayat
-                tagihan. Masa aktif bertambah setelah pembayaran <strong>LUNAS</strong>.
-              </span>
+              <Text as="strong" size={300}  >Ada tagihan menunggu pembayaran</Text>
+              <Text as="span" size={300} className="muted" >{outstanding.number} · {fmtIdr(outstanding.amount)}. Klik tombol <strong>Bayar</strong> di Riwayat
+              tagihan. Masa aktif bertambah setelah pembayaran <strong>LUNAS</strong>.
+                            </Text>
             </div>
           )}
 
           <div className="card stack" style={{ gap: '0.8rem' }}>
-            <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Cara perpanjangan</h2>
+            <Text as="h2" size={400} weight="semibold" style={{ margin: 0 }}>Cara perpanjangan</Text>
             <Step n={1} title="Pilih durasi">
               Pilih <strong>1 / 3 / 6 / 12 bulan</strong> lalu klik <strong>Perpanjang</strong> — tagihan sejumlah itu terbit.
             </Step>
@@ -393,14 +389,14 @@ export function SubscriptionPage() {
             <Step n={3} title="Masa aktif bertambah">
               Setelah pembayaran <strong>LUNAS</strong>, masa aktif memanjang sesuai jumlah bulan — menumpuk bila belum habis.
             </Step>
-            <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+            <p className="muted" style={{ margin: 0,  }}>
               Tak perlu ditunggu: tagihan bulanan terbit otomatis menjelang masa aktif habis. Perpanjang di sini
               hanya bila ingin membayar lebih awal / beberapa bulan sekaligus.
             </p>
             {sub.status === 'CANCELLED' && (
-              <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+              <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
                 Langganan dibatalkan. Hubungi admin platform untuk mengaktifkan kembali.
-              </p>
+              </Text>
             )}
           </div>
 
@@ -408,18 +404,18 @@ export function SubscriptionPage() {
               melainkan karena di sinilah orang berada saat mempertimbangkan berhenti. */}
           {canExport && (
             <div className="card stack" style={{ gap: '0.6rem' }}>
-              <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Data Anda tetap milik Anda</h2>
-              <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+              <Text as="h2" size={400} weight="semibold" style={{ margin: 0 }}>Data Anda tetap milik Anda</Text>
+              <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
                 Unduh seluruh data tenant ini — pelanggan, langganan, tagihan, perangkat jaringan,
                 tiket, work order — sebagai satu arsip ZIP berisi berkas CSV yang bisa dibuka di
                 Excel atau diimpor ke sistem lain. Kata sandi dan kunci tidak ikut serta.
-              </p>
+              </Text>
               <div>
                 <Button onClick={() => void exportData()} disabled={exporting}>
                   {exporting ? 'Menyiapkan arsip…' : 'Unduh arsip data (ZIP)'}
                 </Button>
               </div>
-              <p className="muted" style={{ margin: 0, fontSize: '0.78rem' }}>
+              <p className="muted" style={{ margin: 0,  }}>
                 Arsip berukuran besar bisa perlu waktu. Setiap pengunduhan tercatat di Jejak Audit.
               </p>
             </div>
@@ -461,25 +457,23 @@ function LockedPanel({ lock, canRenew }: { lock: SubscriptionLockView | null; ca
       }}
     >
       <strong style={{ color: 'var(--danger)' }}>Konsol dalam mode baca-saja</strong>
-      <p className="muted" style={{ margin: 0, fontSize: '0.88rem' }}>
+      <p className="muted" style={{ margin: 0,  }}>
         Langganan aplikasi belum dilunasi hingga melewati masa tenggang. Semua data tetap bisa
         dibuka dan dibaca, tapi perubahan — menambah pelanggan, menutup work order, menerbitkan
         tagihan — ditolak sampai pembayaran masuk. Portal pelanggan Anda tetap berjalan penuh.
       </p>
       {lock && (
-        <div className="row" style={{ gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.88rem' }}>
+        <div className="row" style={{ gap: '1.5rem', flexWrap: 'wrap',  }}>
           <Fact label="Total tertunggak" value={fmtIdr(lock.amountDue)} />
           <Fact label="Jatuh tempo" value={fmtDate(lock.dueDate)} />
           <Fact label="Menunggak" value={lock.daysOverdue > 0 ? `${lock.daysOverdue} hari` : '—'} />
         </div>
       )}
-      <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-        {canRenew
-          ? 'Lunasi lewat tombol Bayar pada tagihan tertunggak di Riwayat tagihan bawah. Begitu ' +
-            'pembayaran masuk, konsol terbuka kembali tanpa perlu keluar-masuk aplikasi.'
-          : 'Akun Anda tak berwenang membayar langganan. Hubungi admin ISP Anda agar melunasi ' +
-            'tagihan ini — setelah lunas, konsol Anda otomatis terbuka lagi.'}
-      </p>
+      <Text as="p" className="muted" size={300} style={{ margin: 0 }}>{canRenew
+        ? 'Lunasi lewat tombol Bayar pada tagihan tertunggak di Riwayat tagihan bawah. Begitu ' +
+          'pembayaran masuk, konsol terbuka kembali tanpa perlu keluar-masuk aplikasi.'
+        : 'Akun Anda tak berwenang membayar langganan. Hubungi admin ISP Anda agar melunasi ' +
+          'tagihan ini — setelah lunas, konsol Anda otomatis terbuka lagi.'}</Text>
     </div>
   )
 }
@@ -488,9 +482,7 @@ function LockedPanel({ lock, canRenew }: { lock: SubscriptionLockView | null; ca
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <span className="stack" style={{ gap: '0.15rem' }}>
-      <span className="muted" style={{ fontSize: '0.75rem' }}>
-        {label}
-      </span>
+      <Text as="span" size={300} className="muted" >{label}</Text>
       <strong>{value}</strong>
     </span>
   )
@@ -522,11 +514,11 @@ function UsageCard({ metric }: { metric: UsageMetricView }) {
         >
           <Icon size={18} />
         </span>
-        <span className="muted" style={{ fontSize: '0.85rem' }}>{metric.label}</span>
+        <Text as="span" size={300} className="muted" >{metric.label}</Text>
       </div>
       <div className="row" style={{ gap: '0.35rem', alignItems: 'baseline' }}>
-        <strong style={{ fontSize: '1.5rem', lineHeight: 1 }}>{metric.used.toLocaleString('id-ID')}</strong>
-        <span className="muted" style={{ fontSize: '0.82rem' }}>/ {cap}</span>
+        <Text as="strong" size={300}  style={{  }} >{metric.used.toLocaleString('id-ID')}</Text>
+        <Text as="span" size={300} className="muted" >/ {cap}</Text>
       </div>
       <div style={{ height: 6, borderRadius: 999, background: 'var(--surface-2)', overflow: 'hidden' }}>
         <div
@@ -554,16 +546,14 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
           borderRadius: 999,
           background: 'var(--accent)',
           color: 'var(--accent-ink)',
-          fontSize: '0.78rem',
-          fontWeight: 600,
           flexShrink: 0,
         }}
       >
         {n}
       </span>
       <div className="stack" style={{ gap: '0.1rem' }}>
-        <strong style={{ fontSize: '0.85rem' }}>{title}</strong>
-        <span className="muted" style={{ fontSize: '0.82rem' }}>{children}</span>
+        <Text as="strong" size={300}  >{title}</Text>
+        <Text as="span" size={300} className="muted" >{children}</Text>
       </div>
     </div>
   )
@@ -613,18 +603,16 @@ function InvoiceRow({
     >
       <div className="stack" style={{ gap: '0.15rem', flex: 1, minWidth: 180 }}>
         <span className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-          <strong style={{ fontSize: '0.85rem', fontFamily: 'monospace' }}>{inv.number}</strong>
+          <Text as="strong" size={300}  style={{  }} >{inv.number}</Text>
           <Badge tone={INVOICE_TONE[inv.status]}>{INVOICE_STATUS_LABEL[inv.status]}</Badge>
           {inv.grant && <Badge tone="accent">Bonus</Badge>}
         </span>
-        <span className="muted" style={{ fontSize: '0.78rem' }}>
-          {fmtDate(inv.periodStart)}–{fmtDate(inv.periodEnd)} · jatuh tempo {fmtDate(inv.dueDate)}
-          {inv.paidAt && ` · lunas ${fmtDate(inv.paidAt)}`}
-        </span>
+        <Text as="span" size={300} className="muted" >{fmtDate(inv.periodStart)}–{fmtDate(inv.periodEnd)} · jatuh tempo {fmtDate(inv.dueDate)}
+        {inv.paidAt && ` · lunas ${fmtDate(inv.paidAt)}`}</Text>
         {inv.paymentSessionId && (
-          <span className="row muted" style={{ gap: '0.3rem', alignItems: 'center', fontSize: '0.72rem' }}>
+          <span className="row muted" style={{ gap: '0.3rem', alignItems: 'center',  }}>
             <span>Session:</span>
-            <code style={{ fontFamily: 'monospace' }}>{inv.paymentSessionId}</code>
+            <code style={{  }}>{inv.paymentSessionId}</code>
             <Button
               variant="subtle"
               icon={<Copy size={12} />}
@@ -636,7 +624,7 @@ function InvoiceRow({
           </span>
         )}
       </div>
-      <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{fmtIdr(inv.amount)}</span>
+      <Text as="span" size={300}  style={{  }} >{fmtIdr(inv.amount)}</Text>
       {inv.simulatable && onSimulate && (
         <div className="row" style={{ gap: '0.25rem' }}>
           <Button
@@ -645,7 +633,7 @@ function InvoiceRow({
             onClick={() => onSimulate(inv, 'SUCCESS')}
             disabled={busy}
             title="Sandbox: paksa sesi bayar jadi berhasil"
-            style={{ fontSize: '0.75rem', padding: '0.3rem 0.5rem', whiteSpace: 'nowrap' }}
+            style={{ padding: '0.3rem 0.5rem', whiteSpace: 'nowrap' }}
           >
             Sim. lunas
           </Button>
@@ -655,7 +643,7 @@ function InvoiceRow({
             onClick={() => onSimulate(inv, 'EXPIRED')}
             disabled={busy}
             title="Sandbox: paksa sesi bayar jadi kedaluwarsa"
-            style={{ fontSize: '0.75rem', padding: '0.3rem 0.5rem', whiteSpace: 'nowrap' }}
+            style={{ padding: '0.3rem 0.5rem', whiteSpace: 'nowrap' }}
           >
             Sim. kedaluwarsa
           </Button>
@@ -668,7 +656,7 @@ function InvoiceRow({
             icon={<Copy size={14} />}
             onClick={() => void copyPayLink()}
             title="Salin tautan halaman bayar tagihan ini"
-            style={{ fontSize: '0.75rem', padding: '0.3rem 0.5rem', whiteSpace: 'nowrap' }}
+            style={{ padding: '0.3rem 0.5rem', whiteSpace: 'nowrap' }}
           >
             Salin link
           </Button>
@@ -676,7 +664,7 @@ function InvoiceRow({
             variant="primary"
             onClick={() => window.open(payUrl, '_blank', 'noopener')}
             disabled={busy}
-            style={{ fontSize: '0.8rem', fontWeight: 600, padding: '0.35rem 0.7rem', whiteSpace: 'nowrap' }}
+            style={{ padding: '0.35rem 0.7rem', whiteSpace: 'nowrap' }}
           >
             Bayar ↗
           </Button>

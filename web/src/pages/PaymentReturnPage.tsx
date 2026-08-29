@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react'
+import { Text } from '@fluentui/react-components'
 import { Link, useSearchParams } from 'react-router-dom'
 
 /**
@@ -93,17 +94,14 @@ function PaymentReturnPage({ variant }: { variant: Variant }) {
         </span>
 
         <div className="stack" style={{ gap: '0.4rem' }}>
-          <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{copy.title}</h2>
-          <p className="muted" style={{ margin: 0, fontSize: '0.88rem', lineHeight: 1.5 }}>{copy.body}</p>
+          <Text as="h2" size={400} weight="semibold" style={{ margin: 0 }}>{copy.title}</Text>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>{copy.body}</Text>
         </div>
 
         {ref && (
-          <span
-            className="muted"
-            style={{ fontSize: '0.78rem' }}
-          >
-            Ref: <strong style={{ fontFamily: 'monospace', color: 'var(--text)' }}>{ref}</strong>
-          </span>
+          <Text as="span" className="muted" size={200}>
+            Ref: <Text as="strong" weight="semibold" font="monospace" style={{ color: 'var(--text)' }}>{ref}</Text>
+          </Text>
         )}
 
         <Link
@@ -114,7 +112,6 @@ function PaymentReturnPage({ variant }: { variant: Variant }) {
             padding: '0.6rem',
             textAlign: 'center',
             textDecoration: 'none',
-            fontWeight: 600,
             color: 'var(--accent-ink)',
             background: 'var(--accent)',
             borderRadius: 'var(--radius)',

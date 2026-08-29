@@ -1,3 +1,4 @@
+import { Text } from '@fluentui/react-components'
 import { Outlet } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
 import { useCan } from '@/auth/useCan'
@@ -94,7 +95,7 @@ export function PlatformLayout() {
             title={collapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'}
             aria-expanded={navOpen}
           />
-          <span className="badge accent">platform admin</span>
+          <Text as="span" className="badge accent" size={200} weight="semibold">platform admin</Text>
         </div>
         <div className="row" style={{ gap: '0.75rem' }}>
           <ThemeToggle />
@@ -102,11 +103,9 @@ export function PlatformLayout() {
             <span className="avatar" aria-hidden>
               {initials}
             </span>
-            <div style={{ lineHeight: 1.2 }}>
-              <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{user?.name}</div>
-              <div className="muted" style={{ fontSize: '0.75rem' }}>
-                {user?.email}
-              </div>
+            <div>
+              <Text as="span" block size={200} weight="semibold">{user?.name}</Text>
+              <Text as="span" block className="muted" size={100}>{user?.email}</Text>
             </div>
           </div>
           <Button

@@ -1,19 +1,7 @@
 import type { ReactElement } from 'react'
+import { Toolbar, ToolbarDivider } from '@fluentui/react-components'
+import { Button } from '@/components/atoms'
 
-/**
- * CommandBar ala Azure Portal — bilah aksi DATAR di atas area tabel/konten.
- *
- * Tiap aksi = tombol datar ikon+teks: ikon beraksen (biru Azure), teks netral
- * bobot normal, tanpa isian/kotak; hover memunculkan abu tipis — persis command
- * bar Azure. Dibangun dari tombol native (bukan Fluent `Toolbar`) agar gaya &
- * warna hover-nya SERAGAM dengan tombol lain di aplikasi yang sudah ala Azure,
- * alih-alih mengikuti token tema Fluent yang membuat hover memutih.
- *
- * Aturan tata letak (mengikuti Azure): aksi `primary` (mis. `+ Tambah`) dipatok
- * paling KIRI; aksi sekunder (Hapus/Segarkan/Ekspor) berjajar ke kanannya, tiap
- * tombol berikon. Logika disabled diserahkan pemanggil (mis. `Hapus` nonaktif bila
- * belum ada baris terpilih).
- */
 export type CommandAction = {
   key: string
   label: string
@@ -32,36 +20,35 @@ export function CommandBar({
   actions?: CommandAction[]
 }) {
   return (
-    <div className="azure-commandbar" role="toolbar" aria-label="Aksi">
+    <Toolbar className="azure-commandbar" aria-label="Aksi">
       {primary && <CommandButton action={primary} primary />}
-      {primary && actions.length > 0 && <span className="cmd-divider" aria-hidden />}
-      {actions.map((a) => (
-        <span key={a.key} style={{ display: 'contents' }}>
-          {a.dividerBefore && <span className="cmd-divider" aria-hidden />}
-          <CommandButton action={a} />
-        </span>
+      {primary && actions.length > 0 && <ToolbarDivider className="cmd-divider" />}
+      {actions.map((action) => (
+        <CommandActionItem key={action.key} action={action} />
       ))}
-    </div>
+    </Toolbar>
   )
 }
 
-/**
- * Satu tombol perintah. Aksi sekunder = datar (ikon beraksen + label normal);
- * aksi `primary` = terisi biru menonjol sebagai CTA (mis. `+ Tambah`).
- */
+function CommandActionItem({ action }: { action: CommandAction }) {
+  return (
+    <>
+      {action.dividerBefore && <ToolbarDivider className="cmd-divider" />}
+      <CommandButton action={action} />
+    </>
+  )
+}
+
 function CommandButton({ action, primary }: { action: CommandAction; primary?: boolean }) {
   return (
-    <button
+    <Button
+      variant={primary ? 'primary' : 'subtle'}
       className={primary ? 'cmd-btn cmd-primary' : 'cmd-btn'}
+      icon={action.icon}
       onClick={action.onClick}
       disabled={action.disabled}
     >
-      {action.icon && (
-        <span className="cmd-icon" aria-hidden>
-          {action.icon}
-        </span>
-      )}
       {action.label}
-    </button>
+    </Button>
   )
 }

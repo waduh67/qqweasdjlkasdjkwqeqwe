@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { typographyStyles } from '@fluentui/react-components'
 import { api } from '@/api/client'
 import type { PonClosureLoadView, PonPortLoadView } from '@/api/network'
 import { useCan } from '@/auth/useCan'
@@ -87,7 +88,7 @@ export function PonPortLoadPanel({ ponPortId }: { ponPortId: string }) {
   if (!canView) return null
   if (loading) {
     return (
-      <p className="muted row" style={{ margin: 0, fontSize: '0.85rem' }}>
+      <p className="muted row" style={{ margin: 0, ...typographyStyles.body1 }}>
         <Spinner /> Menghitung muatan port…
       </p>
     )
@@ -103,7 +104,7 @@ export function PonPortLoadPanel({ ponPortId }: { ponPortId: string }) {
         <Badge tone={tone}>
           {load.onuCount}/{load.onuLimit} ONU
         </Badge>
-        <span className="muted tnum" style={{ fontSize: '0.82rem' }}>
+        <span className="muted tnum" style={{ ...typographyStyles.caption1 }}>
           {load.usedLegs}/{load.splitterLegs} kaki splitter terpakai · {load.closures.length} kotak di hilir
         </span>
         {!load.fromSplicing && <Badge tone="neutral">dari tautan lama</Badge>}
@@ -119,7 +120,7 @@ export function PonPortLoadPanel({ ponPortId }: { ponPortId: string }) {
       </div>
 
       {chain.length > 0 && (
-        <div className="row wrap" style={{ gap: '0.3rem', fontSize: '0.82rem' }}>
+        <div className="row wrap" style={{ gap: '0.3rem', ...typographyStyles.caption1 }}>
           {chain.map((group, index) => (
             <span key={group[0].closureId} className="row wrap" style={{ gap: '0.3rem' }}>
               {index > 0 && (
@@ -148,7 +149,7 @@ export function PonPortLoadPanel({ ponPortId }: { ponPortId: string }) {
         <p
           key={w}
           className={w.startsWith('Port ini sudah') ? 'error' : 'muted'}
-          style={{ margin: 0, fontSize: '0.82rem' }}
+          style={{ margin: 0, ...typographyStyles.caption1 }}
         >
           {w}
         </p>

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Checkbox } from '@fluentui/react-components'
+import { Checkbox, Text, typographyStyles } from '@fluentui/react-components'
 import { Button, Segmented } from '@/components/atoms'
 import { BladeHead } from '@/components/molecules'
 import { BASEMAPS, BASEMAP_HINTS, BASEMAP_ORDER, MAP_LAYER_GROUPS, type BasemapMode } from '@/map/mapStyle'
@@ -67,15 +67,15 @@ export function MapSettingsDrawer({
       <BladeHead title="Setelan peta" onClose={onClose} />
       <div className="blade-body stack" style={{ gap: '1.1rem' }}>
         <section className="stack" style={{ gap: '0.4rem' }}>
-          <h4 className="map-settings-title">Tema peta</h4>
+          <h4 className="map-settings-title" style={typographyStyles.subtitle2}>Tema peta</h4>
           <BasemapSwitcher value={basemap} onChange={onBasemap} />
-          <p className="muted" style={{ margin: 0, fontSize: '0.75rem' }}>
+          <Text as="p" className="muted" size={100} block style={{ margin: 0 }}>
             {BASEMAP_HINTS[basemap]}
-          </p>
+          </Text>
         </section>
 
         <section className="stack" style={{ gap: '0.4rem' }}>
-          <h4 className="map-settings-title">Tampilan</h4>
+          <h4 className="map-settings-title" style={typographyStyles.subtitle2}>Tampilan</h4>
           {canHeatmap && (
             <>
               <Checkbox
@@ -83,9 +83,9 @@ export function MapSettingsDrawer({
                 checked={heatmap}
                 onChange={(_, data) => onHeatmap(!!data.checked)}
               />
-              <p className="muted" style={{ margin: 0, fontSize: '0.75rem' }}>
+              <Text as="p" className="muted" size={100} block style={{ margin: 0 }}>
                 Mewarnai ODP menurut pemakaian port — untuk melihat di mana kapasitas hampir habis.
-              </p>
+              </Text>
             </>
           )}
           <Checkbox
@@ -100,7 +100,7 @@ export function MapSettingsDrawer({
         {groups.length > 0 && (
           <section className="stack" style={{ gap: '0.4rem' }}>
             <div className="spread">
-              <h4 className="map-settings-title" style={{ margin: 0 }}>Lapisan</h4>
+              <h4 className="map-settings-title" style={{ ...typographyStyles.subtitle2, margin: 0 }}>Lapisan</h4>
               {anyHidden && (
                 <Button variant="subtle" size="small" onClick={onShowAllLayers}>
                   Tampilkan semua
@@ -129,22 +129,22 @@ export function MapSettingsDrawer({
                 }
               />
             ))}
-            <p className="muted" style={{ margin: 0, fontSize: '0.75rem' }}>
+            <Text as="p" className="muted" size={100} block style={{ margin: 0 }}>
               Lapisan yang dimatikan tak bisa diklik maupun dijadikan ujung kabel — berguna saat
               titik-titik di satu POP saling menutupi.
-            </p>
+            </Text>
           </section>
         )}
 
         <section className="stack" style={{ gap: '0.4rem' }}>
-          <h4 className="map-settings-title">Petunjuk</h4>
-          <p className="muted" style={{ margin: 0, fontSize: '0.78rem', lineHeight: 1.45 }}>
-            <strong>Klik kanan</strong> (atau tahan di layar sentuh) pada peta untuk menambah site, OLT, ODF,
+          <h4 className="map-settings-title" style={typographyStyles.subtitle2}>Petunjuk</h4>
+          <Text as="p" className="muted" size={100} block style={{ ...typographyStyles.caption1, margin: 0 }}>
+            <Text as="strong" weight="semibold">Klik kanan</Text> (atau tahan di layar sentuh) pada peta untuk menambah site, OLT, ODF,
             ODC, ODP, joint box, atau menaruh pelanggan yang belum berkoordinat.
             <br />
-            <strong>Tarik kabel</strong> dimulai dari panel perangkatnya: klik perangkatnya dulu, lalu tekan
+            <Text as="strong" weight="semibold">Tarik kabel</Text> dimulai dari panel perangkatnya: klik perangkatnya dulu, lalu tekan
             &quot;Tarik kabel&quot;.
-          </p>
+          </Text>
         </section>
       </div>
     </aside>

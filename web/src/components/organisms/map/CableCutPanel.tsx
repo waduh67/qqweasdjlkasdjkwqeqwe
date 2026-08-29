@@ -1,4 +1,4 @@
-import { MessageBar, MessageBarBody } from '@fluentui/react-components'
+import { MessageBar, MessageBarBody, Text, typographyStyles } from '@fluentui/react-components'
 import type { CableCutView } from '@/api/network'
 import { BladeHead, Ess } from '@/components/molecules'
 import { TYPE_LABEL } from '@/map/cableFormat'
@@ -49,7 +49,7 @@ export function CableCutPanel({ cut, onClose }: { cut: CableCutView; onClose: ()
           <Ess label="ODP terdampak">{cut.odpCount > 0 && cut.odpCount}</Ess>
           <Ess label="Pelanggan">{cut.customerCount}</Ess>
           <Ess label="Sudah mati">
-            {cut.downCount > 0 && <span style={{ color: 'var(--critical-ink)', fontWeight: 600 }}>{cut.downCount}</span>}
+            {cut.downCount > 0 && <Text as="span" weight="semibold" style={{ color: 'var(--critical-ink)' }}>{cut.downCount}</Text>}
           </Ess>
           <Ess label="Siap broadcast">{withPhone > 0 && `${withPhone} nomor`}</Ess>
         </dl>
@@ -66,9 +66,9 @@ export function CableCutPanel({ cut, onClose }: { cut: CableCutView; onClose: ()
         )}
 
         {cut.warnings.map((w) => (
-          <p key={w} className="dim" style={{ margin: 0, fontSize: '0.72rem', lineHeight: 1.35 }}>
+          <Text as="p" key={w} className="dim" size={100} style={{ ...typographyStyles.caption2, margin: 0 }}>
             {w}
-          </p>
+          </Text>
         ))}
       </div>
     </aside>

@@ -1,4 +1,4 @@
-import { MessageBar, MessageBarBody } from '@fluentui/react-components'
+import { MessageBar, MessageBarBody, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components'
 import { onuStatusLabel, type OdpInspection } from '@/api/network'
 import { StatusBadge } from '@/components/atoms'
 import { IconMonitor } from '@/components/atoms/icons'
@@ -61,12 +61,12 @@ export function OdpPanel({
 
         <div className="stack" style={{ gap: '0.35rem' }}>
           <div className="spread">
-            <span style={{ fontSize: '0.82rem' }}>
+            <Text as="span" size={200}>
               {inspection.usedPorts}/{inspection.capacity} port terpakai
-            </span>
-            <span className="tnum" style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+            </Text>
+            <Text as="span" className="tnum" size={200} weight="semibold">
               {inspection.utilizationPercent}%
-            </span>
+            </Text>
           </div>
           <div className="meter">
             <div
@@ -98,46 +98,30 @@ export function OdpPanel({
         <div className="stack" style={{ gap: '0.45rem' }}>
           <p className="blade-section-title">Pelanggan ({inspection.occupants.length})</p>
           {inspection.occupants.length === 0 ? (
-            <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+            <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
               Belum ada pelanggan tersambung.
-            </p>
+            </Text>
           ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Port</th>
-                  <th>Pelanggan</th>
-                  <th>ONU</th>
-                  <th>Optik</th>
-                </tr>
-              </thead>
-              <tbody>
-                {inspection.occupants.map((occupant) => (
-                  <tr key={occupant.portNumber}>
-                    <td className="tnum">{occupant.portNumber}</td>
-                    <td>
-                      {occupant.customerName}
-                      <br />
-                      <span className="muted" style={{ fontSize: '0.8rem' }}>
-                        {occupant.phone ?? occupant.customerCode}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="muted tnum" style={{ fontSize: '0.8rem' }}>
-                        {occupant.onuSerialNumber}
-                      </span>
-                      <br />
-                      <StatusBadge status={occupant.onuStatus} label={onuStatusLabel(occupant.onuStatus)} />
-                    </td>
-                    <td>
-                      <span className="tnum" style={{ color: HEALTH_COLOR[occupant.opticalHealth], fontWeight: 600 }}>
-                        {occupant.installRxPowerDbm != null ? `${occupant.installRxPowerDbm} dBm` : occupant.opticalHealth}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <Table><TableHeader><TableRow ><TableHeaderCell >Port</TableHeaderCell>
+            <TableHeaderCell >Pelanggan</TableHeaderCell>
+            <TableHeaderCell >ONU</TableHeaderCell>
+            <TableHeaderCell >Optik</TableHeaderCell></TableRow></TableHeader>
+            <TableBody>{inspection.occupants.map((occupant) => (
+              <TableRow key={occupant.portNumber}><TableCell className="tnum">{occupant.portNumber}</TableCell>
+              <TableCell >{occupant.customerName}
+              <br />
+              <Text as="span" className="muted" size={200}>
+                {occupant.phone ?? occupant.customerCode}
+              </Text></TableCell>
+              <TableCell ><Text as="span" className="muted tnum" size={200}>
+                {occupant.onuSerialNumber}
+              </Text>
+              <br />
+              <StatusBadge status={occupant.onuStatus} label={onuStatusLabel(occupant.onuStatus)} /></TableCell>
+              <TableCell ><Text as="span" className="tnum" weight="semibold" style={{ color: HEALTH_COLOR[occupant.opticalHealth] }}>
+                {occupant.installRxPowerDbm != null ? `${occupant.installRxPowerDbm} dBm` : occupant.opticalHealth}
+              </Text></TableCell></TableRow>
+            ))}</TableBody></Table>
           )}
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Text } from '@fluentui/react-components'
 import { api, ApiError } from '@/api/client'
 import type { AlarmRuleView } from '@/api/monitoring'
 import { useCan } from '@/auth/useCan'
@@ -85,9 +86,9 @@ export function AlarmThresholdPanel({ onChanged }: { onChanged?: () => void }) {
   return (
     <div className="stack">
       {!manage && (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <Text as="p" className="muted" size={300} block>
           Hanya bisa dilihat — butuh izin “Setel ambang alarm”.
-        </p>
+        </Text>
       )}
       {rules.map((rule) => (
         <RuleCard
@@ -139,7 +140,7 @@ function RuleCard({
     <div className="card stack" style={{ gap: '0.7rem' }}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.6rem' }}>
         <div>
-          <div style={{ fontWeight: 600 }}>{rule.description}</div>
+          <Text as="strong" weight="semibold">{rule.description}</Text>
           <div className="row" style={{ gap: '0.35rem', marginTop: '0.2rem' }}>
             <span className="badge">{rule.kind}</span>
             <StatusBadge status={rule.defaultSeverity} />
@@ -179,19 +180,19 @@ function RuleCard({
           />
         </div>
       ) : (
-        <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+        <Text as="p" className="muted" size={200} block>
           Tak berambang — hanya bisa dinyalakan atau dimatikan.
-        </p>
+        </Text>
       )}
 
-      <p className="muted" style={{ margin: 0, fontSize: '0.82rem', lineHeight: 1.5 }}>
+      <Text as="p" className="muted" size={200} block>
         {rule.guidance}
-      </p>
+      </Text>
 
       {error && (
-        <p className="error" style={{ margin: 0, fontSize: '0.82rem' }} role="alert">
+        <Text as="p" className="error" size={200} block role="alert">
           {error}
-        </p>
+        </Text>
       )}
 
       <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>

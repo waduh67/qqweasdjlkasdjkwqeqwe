@@ -1,4 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  Accordion,
+  AccordionHeader,
+  AccordionItem,
+  AccordionPanel,
+  Checkbox,
+  MessageBar,
+  MessageBarBody,
+  Text,
+} from '@fluentui/react-components'
 import { Pencil, Trash2 } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import {
@@ -20,9 +30,8 @@ import {
 import type { Area } from '../api/types'
 import { useCan } from '../auth/useCan'
 import { Blade } from '@/components/organisms'
-import { DataTable, type Column, type RowAction } from '@/components/organisms'
+import { DataTable, type Column } from '@/components/organisms'
 import { Badge, Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
-import { Checkbox } from '@fluentui/react-components'
 import { SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
@@ -53,8 +62,8 @@ export function BngPage() {
   if (!allowed) {
     return (
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Akses ditolak</h3>
-        <p className="muted">Kamu tidak punya izin melihat registri BRAS.</p>
+        <Text as="h3" size={400} weight="semibold" style={{ marginTop: 0 }}>Akses ditolak</Text>
+        <Text as="p" className="muted" size={300}>Kamu tidak punya izin melihat registri BRAS.</Text>
       </div>
     )
   }
@@ -63,7 +72,7 @@ export function BngPage() {
     <div className="stack" style={{ gap: '1.25rem' }}>
       <PageHeader
         title="BRAS & RADIUS"
-        subtitle="Daftarkan router master (BRAS) sebagai klien RADIUS — alamat + shared secret. FreeRADIUS pusat memuatnya otomatis; tak perlu setup server RADIUS sendiri. Config Mikrotik siap-salin muncul di form tiap BRAS."
+        subtitle={'Kelola router BRAS sebagai klien RADIUS, termasuk alamat manajemen dan shared secret.'}
       />
       <NasTab endpoint={endpoint} />
     </div>
@@ -118,8 +127,7 @@ function MikrotikSnippet({
           whiteSpace: 'pre',
           overflowX: 'auto',
           padding: '0.6rem 0.75rem',
-          fontSize: '0.8rem',
-          lineHeight: 1.5,
+          
         }}
       >
         {script}
@@ -340,9 +348,6 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
     ? sessionControlRoute(endpoint, draftAddress, draft.collectorId != null)
     : null
 
-  /** Peta id→nama area untuk menampilkan cakupan tiap BRAS tanpa memanggil balik. */
-  const areaNames = useMemo(() => new Map(areas.map((a) => [a.id, a.name])), [areas])
-
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
     return items.filter((nas) => {
@@ -356,21 +361,32 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
     })
   }, [items, query, vendorFilter, statusFilter])
 
+  const remove = (nas: NasView) => {
+    void (async () => {
+      if (await confirm({ title: 'Hapus BRAS', message: `Hapus BRAS ${nas.name}?`, confirmLabel: 'Hapus', danger: true })) {
+        void run(() => deleteNas(nas.id), 'BRAS dihapus')
+      }
+    })()
+  }
   const columns: Column<NasView>[] = [
     {
       key: 'name',
-      header: 'Nama',
-      sortValue: (nas) => nas.name,
-      cell: (nas) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
-          <strong>{nas.name}</strong>
-          {nas.nasIdentifier && (
-            <span className="muted" style={{ fontSize: '0.8rem' }}>
-              {nas.nasIdentifier}
-            </span>
-          )}
-        </div>
-      ),
+       header: 'Nama',
+       sortValue: (nas) => nas.name,
+       cell: (nas) => nas.name,
+       onCellClick: edit,
+       inlineActions: canManage
+        ? (nas) => [
+            { key: 'edit', label: 'Ubah', icon: <Pencil size={16} />, onClick: () => edit(nas) },
+            { key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => remove(nas) },
+          ]
+        : undefined,
+    },
+    {
+      key: 'identifier',
+      header: 'NAS-Identifier',
+      sortValue: (nas) => nas.nasIdentifier ?? '',
+      cell: (nas) => nas.nasIdentifier ?? <span className="muted">—</span>,
     },
     {
       key: 'vendor',
@@ -380,26 +396,9 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
     },
     {
       key: 'address',
-      header: 'Alamat',
+      header: 'Alamat manajemen',
       sortValue: (nas) => nas.address ?? '',
       cell: (nas) => nas.address ?? <span className="muted">—</span>,
-    },
-    {
-      key: 'areas',
-      header: 'Cakupan area',
-      sortValue: (nas) => nas.areaIds.length,
-      cell: (nas) => {
-        if (nas.areaIds.length === 0) return <span className="muted">—</span>
-        const names = nas.areaIds.map((id) => areaNames.get(id)).filter((n): n is string => !!n)
-        if (names.length === 0) return <Badge>{nas.areaIds.length} area</Badge>
-        return (
-          <div className="row" style={{ gap: '0.3rem', flexWrap: 'wrap' }}>
-            {names.map((n) => (
-              <Badge key={n}>{n}</Badge>
-            ))}
-          </div>
-        )
-      },
     },
     {
       key: 'reachability',
@@ -433,34 +432,21 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
     },
   ]
 
-  // Aksi per-baris di menu `…` ala Azure DataGrid (seragam dengan Pelanggan), bukan tombol inline.
-  const remove = (nas: NasView) => {
-    void (async () => {
-      if (await confirm({ title: 'Hapus BRAS', message: `Hapus BRAS ${nas.name}?`, confirmLabel: 'Hapus', danger: true })) {
-        void run(() => deleteNas(nas.id), 'BRAS dihapus')
-      }
-    })()
-  }
-  const rowActions = (nas: NasView): RowAction[] => [
-    { key: 'edit', label: 'Ubah', icon: <Pencil size={16} />, onClick: () => edit(nas) },
-    { key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => remove(nas) },
-  ]
-
   return (
     <div className="stack">
       <div className="spread">
         <span className="muted">{items.length} BRAS</span>
         {canManage && (
           <Button variant="primary" onClick={() => openDraft({ ...EMPTY_NAS })}>
-            <IconPlus size={15} /> Tambah BRAS
+            <IconPlus size={15} /> Daftarkan router
           </Button>
         )}
       </div>
 
       <Blade
         open={draft != null}
-        title={draft?.id ? 'Ubah BRAS' : 'Tambah BRAS'}
-        subtitle="Kredensial RADIUS/REST API BRAS & cakupan area PSB Ekspres."
+        title={draft?.id ? 'Ubah router BRAS' : 'Daftarkan router BRAS'}
+        subtitle="Identitas dan akses RADIUS router."
         size="lg"
         dirty={dirty}
         onClose={closeDraft}
@@ -475,265 +461,170 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
       >
         {draft && (
           <div className="stack">
-          <div className="row">
-            <TextField
-              label="Nama"
-              value={draft.name}
-              onChange={(_, data) => setDraft({ ...draft, name: data.value })}
-              placeholder="BRAS-BKS-01"
-              style={{ flex: 2 }}
-            />
-            <SelectField
-              label="Vendor"
-              value={draft.vendor}
-              onChange={(_, data) => setDraft({ ...draft, vendor: data.value as NasView['vendor'] })}
-              style={{ flex: 1 }}
-            >
-              {NAS_VENDORS.map((vendor) => (
-                <option key={vendor} value={vendor}>
-                  {NAS_VENDOR_LABEL[vendor]}
-                </option>
-              ))}
-            </SelectField>
-          </div>
-          <div className="row">
-            <TextField
-              label="Alamat BRAS"
-              value={draft.address}
-              onChange={(_, data) => setDraft({ ...draft, address: data.value })}
-              placeholder="mis. 10.8.0.3 atau 103.10.20.30"
-              hint="Alamat router ini sendiri: alamat asal paket RADIUS-nya, sekaligus sasaran balik CoA/Disconnect dan REST API. Router yang masuk lewat VPN kita — pakai alamat tunnel-nya. Bukan alamat server RADIUS."
-              validationState={addressWarning ? 'warning' : undefined}
-              validationMessage={addressWarning ?? undefined}
-              style={{ flex: 1 }}
-            />
-            <TextField
-              label="NAS-Identifier"
-              value={draft.nasIdentifier}
-              onChange={(_, data) => setDraft({ ...draft, nasIdentifier: data.value })}
-              placeholder="opsional"
-              style={{ flex: 1 }}
-            />
-          </div>
-          {draftRoute && (
-            <div className="row" style={{ gap: '0.45rem', alignItems: 'baseline', flexWrap: 'wrap' }}>
-              <span className="muted" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                Kendali sesi:
-              </span>
-              <Badge tone={draftRoute === 'NONE' ? 'serious' : 'good'}>
-                {NAS_REACHABILITY_LABEL[draftRoute]}
-              </Badge>
-              <span className="muted" style={{ fontSize: '0.78rem', flex: '1 1 16rem' }}>
-                {NAS_REACHABILITY_HINT[draftRoute]}
-              </span>
-            </div>
-          )}
-
-          <div className="row" style={{ alignItems: 'flex-end' }}>
-            <TextField
-              label="Shared Secret RADIUS"
-              type={revealSecret ? 'text' : 'password'}
-              value={draft.coaSecret}
-              onChange={(_, data) => setDraft({ ...draft, coaSecret: data.value })}
-              placeholder={draft.hasCoaSecret ? 'terisi — isi untuk mengganti' : 'ketik atau Generate'}
-              style={{ flex: 2 }}
-            />
-            <Button
-              type="button"
-              onClick={() => {
-                setDraft({ ...draft, coaSecret: randomSecret() })
-                setRevealSecret(true)
-              }}
-            >
-              Generate
-            </Button>
-            <Button type="button" onClick={() => setRevealSecret((v) => !v)}>
-              {revealSecret ? 'Sembunyikan' : 'Lihat'}
-            </Button>
-          </div>
-
-          {draft.vendor === 'MIKROTIK' && (
-            <>
-              <p className="muted" style={{ margin: '0.25rem 0 0', fontWeight: 600 }}>
-                Kredensial REST API (RouterOS v7)
-              </p>
-              <div className="row">
-                <TextField
-                  label="User API"
-                  value={draft.apiUsername}
-                  onChange={(_, data) => setDraft({ ...draft, apiUsername: data.value })}
-                  placeholder="mis. ftth-api"
-                  style={{ flex: 1 }}
-                />
-                <TextField
-                  label="Password API"
-                  type="password"
-                  value={draft.apiSecret}
-                  onChange={(_, data) => setDraft({ ...draft, apiSecret: data.value })}
-                  placeholder={draft.hasApiSecret ? 'terisi — isi untuk mengganti' : 'password user API'}
-                  style={{ flex: 1 }}
-                />
-                <TextField
-                  label="Port"
-                  value={draft.apiPort}
-                  onChange={(_, data) => setDraft({ ...draft, apiPort: data.value })}
-                  placeholder={draft.apiUseTls ? '443' : '80'}
-                  style={{ flex: 1 }}
-                />
-              </div>
-              <Checkbox
-                label="Pakai HTTPS (www-ssl)"
-                checked={draft.apiUseTls}
-                onChange={(_, data) => setDraft({ ...draft, apiUseTls: !!data.checked })}
+            <div className="row wrap">
+              <TextField
+                label="Nama BRAS"
+                value={draft.name}
+                onChange={(_, data) => setDraft({ ...draft, name: data.value })}
+                placeholder="BRAS-BKS-01"
+                style={{ flex: 2 }}
               />
-            </>
-          )}
-
-          <Checkbox
-            label="Aktif"
-            checked={draft.enabled}
-            onChange={(_, data) => setDraft({ ...draft, enabled: !!data.checked })}
-          />
-
-          <div className="stack" style={{ gap: '0.35rem' }}>
-            <span className="muted" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-              Area yang dinaungi BRAS ini
-            </span>
-            {!canViewAreas ? (
-              <span className="muted" style={{ fontSize: '0.82rem' }}>
-                Butuh izin lihat area (iam.area.view) untuk menyetel cakupan.
-              </span>
-            ) : areas.length === 0 ? (
-              <span className="muted" style={{ fontSize: '0.82rem' }}>
-                Belum ada area. Buat dulu di menu Area.
-              </span>
-            ) : (
-              <div
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '0.4rem 1rem',
-                  maxHeight: 160,
-                  overflowY: 'auto',
-                  border: '1px solid var(--line)',
-                  borderRadius: 6,
-                  padding: '0.5rem 0.65rem',
-                }}
+              <SelectField
+                label="Vendor"
+                value={draft.vendor}
+                onChange={(_, data) => setDraft({ ...draft, vendor: data.value as NasView['vendor'] })}
+                style={{ flex: 1 }}
               >
-                {areas.map((area) => (
-                  <Checkbox
-                    key={area.id}
-                    label={area.name}
-                    checked={draft.areaIds.includes(area.id)}
-                    onChange={(_, data) =>
-                      setDraft({
-                        ...draft,
-                        areaIds: data.checked
-                          ? [...draft.areaIds, area.id]
-                          : draft.areaIds.filter((id) => id !== area.id),
-                      })
-                    }
-                  />
+                {NAS_VENDORS.map((vendor) => (
+                  <option key={vendor} value={vendor}>{NAS_VENDOR_LABEL[vendor]}</option>
                 ))}
+              </SelectField>
+            </div>
+
+            <div className="row wrap">
+              <TextField
+                label="Alamat manajemen"
+                value={draft.address}
+                onChange={(_, data) => setDraft({ ...draft, address: data.value })}
+                placeholder="Contoh: 10.8.0.3 atau 103.10.20.30"
+                hint="Gunakan alamat tunnel untuk router melalui VPN."
+                validationState={addressWarning ? 'warning' : undefined}
+                validationMessage={addressWarning ?? undefined}
+                style={{ flex: 1 }}
+              />
+              <TextField
+                label="NAS-Identifier"
+                value={draft.nasIdentifier}
+                onChange={(_, data) => setDraft({ ...draft, nasIdentifier: data.value })}
+                placeholder="Opsional"
+                style={{ flex: 1 }}
+              />
+            </div>
+
+            {draftRoute && (
+              <div className="row wrap">
+                <Text as="span" size={300} className="muted">Kendali sesi:</Text>
+                <Badge tone={draftRoute === 'NONE' ? 'serious' : 'good'}>
+                  {NAS_REACHABILITY_LABEL[draftRoute]}
+                </Badge>
+                <Text as="span" size={300} className="muted">{NAS_REACHABILITY_HINT[draftRoute]}</Text>
               </div>
             )}
-            <span className="muted" style={{ fontSize: '0.78rem' }}>
-              PSB Ekspres memakai peta ini untuk otomatis memilih BRAS dari area pelanggan. Tiap area
-              cuma boleh dinaungi satu BRAS.
-            </span>
-          </div>
 
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-            Shared secret ini dipakai dua arah: Mikrotik memakainya untuk autentikasi ke FreeRADIUS
-            pusat, dan server memakainya untuk CoA/Disconnect (RFC 5176) ke BRAS. Isi nilai yang
-            <strong> sama persis</strong> di konfigurasi RADIUS Mikrotik. Disimpan terenkripsi dan tak
-            pernah ditampilkan kembali — salin dulu hasil Generate sebelum menyimpan.
-          </p>
-
-          {endpoint && radiusTarget?.host && (
-            <div className="stack" style={{ gap: '0.35rem' }}>
-              <span className="muted" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                Config Mikrotik untuk BRAS ini
-              </span>
-              <MikrotikSnippet script={mikrotikScript(endpoint, draft.coaSecret, radiusTarget.host)} />
-              <span className="muted" style={{ fontSize: '0.78rem' }}>
-                Dua baris pertama yang memberi <strong>alamat</strong> ke pelanggan — RADIUS kami
-                mengirim izin login dan kecepatan paket, bukan IP. Profil PPP tanpa{' '}
-                <code>remote-address</code> membuat pelanggan lolos login lalu putus lagi seketika:
-                di log router terbaca <code>logged in, 0.0.0.0</code> disusul{' '}
-                <code>no network protocols running</code>. Ganti rentangnya dengan blok milikmu, dan
-                bila server PPPoE-mu memakai profil selain <code>default</code>, setel profil itu.
-              </span>
-              {radiusTarget.viaVpn && (
-                <span className="muted" style={{ fontSize: '0.78rem' }}>
-                  Alamat BRAS ini ada di dalam blok VPN kita, jadi skrip menembak alamat hub{' '}
-                  <strong>{radiusTarget.host}</strong> — bukan IP publik. Router yang sudah ber-tunnel
-                  tapi diarahkan ke IP publik keluar lewat internet biasa, jadi paketnya tiba dengan
-                  alamat asal yang tak terdaftar; RADIUS mengabaikan klien tak dikenal tanpa membalas
-                  apa pun, dan di router cuma terlihat sebagai timeout.
-                </span>
-              )}
-              {!draft.coaSecret && (
-                <span className="muted" style={{ fontSize: '0.78rem' }}>
-                  Isi / Generate shared secret di atas agar tersalin utuh ke skrip.
-                </span>
-              )}
-            </div>
-          )}
-
-          {endpoint && (
-            <div className="stack" style={{ gap: '0.35rem' }}>
-              <span className="muted" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                Halaman isolir (walled garden)
-              </span>
+            <div className="row wrap" style={{ alignItems: 'flex-end' }}>
               <TextField
-                label="Alamat halaman tagihan"
-                value={isolirUrl}
-                onChange={(_, data) => setIsolirUrl(data.value)}
-                placeholder="https://portal.isp-kamu.id/portal"
+                label="Shared secret RADIUS"
+                type={revealSecret ? 'text' : 'password'}
+                value={draft.coaSecret}
+                onChange={(_, data) => setDraft({ ...draft, coaSecret: data.value })}
+                placeholder={draft.hasCoaSecret ? 'terisi — isi untuk mengganti' : 'ketik atau Generate'}
+                style={{ flex: 2 }}
               />
-              <MikrotikSnippet
-                script={isolirScript(endpoint.isolirAddressList, isolirTarget)}
-                label="Salin aturan isolir"
-                copied="Aturan isolir disalin"
-              />
-              <span className="muted" style={{ fontSize: '0.78rem' }}>
-                Saat pelanggan diisolir, RADIUS cuma memasukkan IP sesinya ke address-list{' '}
-                <code>{endpoint.isolirAddressList}</code> dan menurunkan kecepatannya —{' '}
-                <strong>router yang menentukan apa arti daftar itu</strong>. Tanpa aturan di atas,
-                daftarnya terisi rapi tapi tak ada yang membacanya: pelanggan "terisolir" tetap
-                browsing seperti biasa dan tak ada satu pun log yang menunjukkan ada yang keliru.
-                Pasang sekali per BRAS.
-              </span>
-              <span className="muted" style={{ fontSize: '0.78rem' }}>
-                Loginnya sengaja tetap diterima. Pelanggan yang disambut "PPPoE gagal" hanya akan
-                menelepon CS; pelanggan yang melihat tagihannya sendiri bisa langsung membayar.
-              </span>
-              <span className="muted" style={{ fontSize: '0.78rem' }}>
-                HTTPS tak dilempar melainkan ditolak cepat: mengalihkan port 443 ke server lain
-                memunculkan peringatan sertifikat, dan pelanggan justru mengira jaringannya dibajak.
-                Yang benar-benar membuka halaman tagihan adalah deteksi captive portal ponsel —
-                ia memakai HTTP polos, jadi notifikasi "Masuk ke jaringan" muncul sendiri.
-              </span>
-              <span className="muted" style={{ fontSize: '0.78rem' }}>
-                Baris NAT menembak port <code>{WALLED_GARDEN_PORT}</code>, bukan port halaman
-                tagihan. Permintaan yang dilempar router tiba membawa nama situs yang tadinya
-                dibuka pelanggan, bukan nama kita — port biasa akan menjawabnya 404 atau
-                melemparnya balik ke situs itu. Port <code>{WALLED_GARDEN_PORT}</code> tak peduli
-                nama maupun jalur: apa pun yang masuk dijawab lemparan ke halaman tagihan.
-                Pastikan port itu terbuka di server konsol ini.
-              </span>
-              {isolirTarget && !isolirTarget.ip && (
-                <span className="muted" style={{ fontSize: '0.78rem' }}>
-                  Alamatnya nama host, sedangkan <code>dst-nat</code> RouterOS hanya menerima IP.
-                  Ganti <code>&lt;IP-HALAMAN-TAGIHAN&gt;</code> di baris NAT dengan IP server{' '}
-                  <strong>{isolirTarget.host}</strong>; baris address-list boleh tetap memakai
-                  namanya (router meresolusinya berkala).
-                </span>
-              )}
+              <Button type="button" onClick={() => {
+                setDraft({ ...draft, coaSecret: randomSecret() })
+                setRevealSecret(true)
+              }}>
+                Generate
+              </Button>
+              <Button type="button" onClick={() => setRevealSecret((value) => !value)}>
+                {revealSecret ? 'Sembunyikan' : 'Lihat'}
+              </Button>
             </div>
-          )}
+            <MessageBar intent="warning">
+              <MessageBarBody>Secret disimpan terenkripsi dan tidak dapat dibaca kembali.</MessageBarBody>
+            </MessageBar>
 
+            <Checkbox
+              label="Aktif"
+              checked={draft.enabled}
+              onChange={(_, data) => setDraft({ ...draft, enabled: !!data.checked })}
+            />
+
+            <div className="stack" style={{ gap: '0.35rem' }}>
+              <Text as="span" size={300} className="muted">Cakupan area</Text>
+              {!canViewAreas ? (
+                <Text as="span" size={300} className="muted">Anda memerlukan izin melihat area untuk mengatur cakupan.</Text>
+              ) : areas.length === 0 ? (
+                <Text as="span" size={300} className="muted">Belum ada area untuk ditetapkan.</Text>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem 1rem', maxHeight: 160, overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 6, padding: '0.5rem 0.65rem' }}>
+                  {areas.map((area) => (
+                    <Checkbox
+                      key={area.id}
+                      label={area.name}
+                      checked={draft.areaIds.includes(area.id)}
+                      onChange={(_, data) => setDraft({
+                        ...draft,
+                        areaIds: data.checked ? [...draft.areaIds, area.id] : draft.areaIds.filter((id) => id !== area.id),
+                      })}
+                    />
+                  ))}
+                </div>
+              )}
+              <Text as="span" size={300} className="muted">Setiap area hanya dapat ditetapkan ke satu router.</Text>
+            </div>
+
+            <Accordion collapsible>
+              {draft.vendor === 'MIKROTIK' && (
+                <AccordionItem value="api-routeros">
+                  <AccordionHeader>Akses API RouterOS</AccordionHeader>
+                  <AccordionPanel>
+                    <div className="stack">
+                      <div className="row wrap">
+                        <TextField label="Pengguna REST API" value={draft.apiUsername} onChange={(_, data) => setDraft({ ...draft, apiUsername: data.value })} placeholder="mis. ftth-api" style={{ flex: 1 }} />
+                        <TextField label="Kata sandi REST API" type="password" value={draft.apiSecret} onChange={(_, data) => setDraft({ ...draft, apiSecret: data.value })} placeholder={draft.hasApiSecret ? 'terisi — isi untuk mengganti' : 'password user API'} style={{ flex: 1 }} />
+                        <TextField label="Port" value={draft.apiPort} onChange={(_, data) => setDraft({ ...draft, apiPort: data.value })} placeholder={draft.apiUseTls ? '443' : '80'} style={{ flex: 1 }} />
+                      </div>
+                      <Checkbox label="Pakai HTTPS (www-ssl)" checked={draft.apiUseTls} onChange={(_, data) => setDraft({ ...draft, apiUseTls: !!data.checked })} />
+                    </div>
+                  </AccordionPanel>
+                </AccordionItem>
+              )}
+
+              <AccordionItem value="panduan-konfigurasi">
+                <AccordionHeader>Panduan konfigurasi</AccordionHeader>
+                <AccordionPanel>
+                  <div className="stack">
+                    {endpoint && radiusTarget?.host && (
+                      <>
+                        <Text as="span" size={300} className="muted">Konfigurasi MikroTik</Text>
+                        <MikrotikSnippet script={mikrotikScript(endpoint, draft.coaSecret, radiusTarget.host)} />
+                        <Text as="span" size={300} className="muted">
+                          Dua baris pertama memberi <strong>alamat</strong> ke pelanggan — RADIUS mengirim izin login dan kecepatan, bukan IP. Profil PPP tanpa <code>remote-address</code> membuat pelanggan lolos login lalu putus lagi seketika: di log router terbaca <code>logged in, 0.0.0.0</code> disusul <code>no network protocols running</code>. Ganti rentangnya dengan blok milikmu, dan bila server PPPoE memakai profil selain <code>default</code>, setel profil itu.
+                        </Text>
+                        {radiusTarget.viaVpn && (
+                          <Text as="span" size={300} className="muted">
+                            Alamat BRAS ini ada di blok VPN, jadi skrip menembak alamat hub <strong>{radiusTarget.host}</strong> — bukan IP publik. Router yang sudah ber-tunnel tetapi diarahkan ke IP publik akan mengirim paket dengan alamat asal yang tak terdaftar; RADIUS mengabaikan klien tak dikenal dan router hanya melihat timeout.
+                          </Text>
+                        )}
+                        {!draft.coaSecret && (
+                          <Text as="span" size={300} className="muted">Isi atau generate shared secret agar tersalin utuh ke skrip.</Text>
+                        )}
+                      </>
+                    )}
+                    {endpoint && (
+                      <>
+                        <Text as="span" size={300} className="muted">Halaman isolir (walled garden)</Text>
+                        <TextField label="Alamat halaman tagihan" value={isolirUrl} onChange={(_, data) => setIsolirUrl(data.value)} placeholder="https://portal.isp-kamu.id/portal" />
+                        <MikrotikSnippet script={isolirScript(endpoint.isolirAddressList, isolirTarget)} label="Salin aturan isolir" copied="Aturan isolir disalin" />
+                        <Text as="span" size={300} className="muted">
+                          Saat pelanggan diisolir, RADIUS memasukkan IP sesinya ke address-list <code>{endpoint.isolirAddressList}</code> dan menurunkan kecepatannya — <strong>router yang menentukan arti daftar itu</strong>. Tanpa aturan ini, pelanggan tetap dapat browsing. Pasang sekali per BRAS.
+                        </Text>
+                        <Text as="span" size={300} className="muted">
+                          Login tetap diterima agar pelanggan dapat membuka tagihan. HTTPS ditolak cepat untuk menghindari peringatan sertifikat; captive portal memakai HTTP.
+                        </Text>
+                        <Text as="span" size={300} className="muted">
+                          Baris NAT menembak port <code>{WALLED_GARDEN_PORT}</code>, bukan port halaman tagihan. Pastikan port ini terbuka di server konsol.
+                        </Text>
+                        {isolirTarget && !isolirTarget.ip && (
+                          <MessageBar intent="warning"><MessageBarBody>Alamat memakai nama host. Ganti <code>&lt;IP-HALAMAN-TAGIHAN&gt;</code> dengan IP server {isolirTarget.host} pada aturan NAT.</MessageBarBody></MessageBar>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </AccordionPanel>
+              </AccordionItem>
+            </Accordion>
           </div>
         )}
       </Blade>
@@ -768,15 +659,14 @@ function NasTab({ endpoint }: { endpoint: RadiusEndpointView | null }) {
         rowKey={(nas) => nas.id}
         loading={loading}
         initialSort={{ key: 'name', dir: 'asc' }}
-        rowActions={canManage ? rowActions : undefined}
         empty={
           <EmptyState
-            title={query || vendorFilter || statusFilter ? 'Tidak ada BRAS yang cocok' : 'Belum ada BRAS'}
-            hint={
-              query || vendorFilter || statusFilter
-                ? 'Coba ubah kata kunci atau filter.'
-                : 'Daftarkan router master pertama sebagai klien RADIUS.'
-            }
+               title={query || vendorFilter || statusFilter ? 'Router BRAS tidak ditemukan' : 'Belum ada router BRAS'}
+             hint={
+               query || vendorFilter || statusFilter
+                 ? 'Ubah kata kunci atau filter.'
+                 : 'Daftarkan router BRAS pertama sebagai klien RADIUS.'
+             }
             icon={<IconGauge size={32} />}
           />
         }

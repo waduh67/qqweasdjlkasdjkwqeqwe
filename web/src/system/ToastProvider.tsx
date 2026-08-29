@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { Text } from '@fluentui/react-components'
 import { IconAlert } from '@/components/atoms/icons'
 
 // ---------- Toast ----------
@@ -52,7 +53,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div key={toast.id} className={`toast ${toast.kind}`}>
             <span className="bar" />
             {toast.kind === 'error' && <IconAlert size={17} style={{ color: 'var(--critical)', flex: 'none' }} />}
-            <span>{toast.message}</span>
+            <Text as="span" size={300}>{toast.message}</Text>
           </div>
         ))}
       </div>

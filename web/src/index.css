@@ -63,16 +63,20 @@
   /* Tinggi header Azure (bar biru full-width) — dipakai grid shell & offset sticky. */
   --topbar-h: 48px;
 
-  color-scheme: light;
-  /* Persis tumpukan font Azure Portal: 'Segoe UI Variable Text' (muka Win11 yang
-     dipakai portal terbaru) di depan, lalu 'Segoe UI' klasik, baru fallback lintas-OS. */
-  font-family: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI',
-    'Segoe UI Web (West European)', -apple-system, BlinkMacSystemFont, system-ui,
-    'Helvetica Neue', Arial, sans-serif;
-  font-synthesis: none;
+   color-scheme: light;
+   font-synthesis: none;
+
   font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Semua akar Button Fluent (termasuk MenuButton dan ToolbarButton) memakai kelas
+   `.fui-Button`. Griffel dapat menyisipkan kelas runtime setelah stylesheet ini,
+   maka `!important` diperlukan agar label selalu regular tanpa mengubah state atau
+   tampilan tombol lainnya. Tombol ikon tetap tidak terpengaruh karena tanpa label. */
+.fui-Button {
+  font-weight: var(--fontWeightRegular, 400) !important;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -175,20 +179,27 @@ html,
 body {
   margin: 0;
   min-height: 100%;
+  font-family:
+    'Segoe UI',
+    'Segoe UI Web (West European)',
+    -apple-system,
+    BlinkMacSystemFont,
+    Roboto,
+    'Helvetica Neue',
+    sans-serif;
 }
 
-/* Root 14px = fontSizeBase300 (body1) Fluent 2 / Azure. Komponen Fluent memakai px
-   tetap 14px, jadi menyamakan root ke 14px membuat seluruh teks rem-based kustom
-   (judul, nav, badge, tabel) sejajar dengan komponen Fluent — bukan 1px lebih kecil. */
 html {
   font-size: 14px;
+  font-weight: 400;
 }
 
 body {
   background: var(--plane);
   color: var(--text);
-  font-size: 1rem;
-  line-height: 1.45;
+  font-size: 100%;
+  font-weight: inherit;
+  line-height: 20px;
 }
 
 /* ---------- Scrollbar kustom (Firefox + WebKit) ---------- */
@@ -235,13 +246,40 @@ h1,
 h2,
 h3,
 h4 {
-  line-height: 1.25;
-  /* Azure hemat bold: judul cukup semibold (600), bukan lebih tebal. */
+  font-family: inherit;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 
-a {
+h1 {
+  font-size: 28px;
+  line-height: 36px;
+}
+
+h2 {
+  font-size: 20px;
+  line-height: 28px;
+}
+
+h3 {
+  font-size: 16px;
+  line-height: 22px;
+}
+
+h4 {
+  font-size: 16px;
+  line-height: 22px;
+}
+
+@media print {
+  html,
+  body {
+    font-size: 14px;
+    line-height: 20px;
+  }
+}
+
+ a {
   color: var(--accent);
   text-decoration: none;
 }
@@ -249,12 +287,19 @@ a:hover {
   text-decoration: underline;
 }
 
-/* Numerik yang harus rata (tabel, tick, metrik) memakai figur tabular */
 .tnum,
 td,
 th,
 .stat-value {
+  font-family: var(--fontFamilyNumeric);
   font-variant-numeric: tabular-nums;
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--fontFamilyMonospace);
 }
 
 /* ---------- Kontrol form native yang tersisa ----------
@@ -336,7 +381,8 @@ textarea[aria-invalid='true']:not([class*='fui-']):focus {
 label:not([class*='fui-']) {
   display: block;
   color: var(--text-2);
-  font-size: 0.82rem;
+  font-size: 14px;
+  line-height: 20px;
   /* Label boleh semibold — salah satu dari sedikit tempat Azure memakai bobot tebal. */
   font-weight: 600;
 }
@@ -346,8 +392,8 @@ label:not([class*='fui-']) > span {
 }
 
 code {
-  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
-  font-size: 0.85em;
+  font-family: var(--fontFamilyMonospace);
+  font-size: var(--fontSizeBase200);
   background: var(--surface-2);
   padding: 0.1rem 0.35rem;
   border-radius: 4px;
@@ -355,45 +401,72 @@ code {
 
 /* ---------- Tabel ---------- */
 
-table {
+table,
+.fui-DataGrid {
   width: 100%;
   border-collapse: collapse;
-  /* Densitas grid Azure: 13px, bukan 14px badan. Baris jadi rapat & "tidak kegedean". */
-  font-size: 0.8125rem;
-  line-height: 1.35;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
 }
 th,
-td {
+td,
+.fui-DataGridCell {
   text-align: left;
+  font-size: 13px;
+  font-weight: 400;
   /* 7px×12px → tinggi baris ~34px (satu baris) ala grid padat Azure, jauh lebih rapat
      dari 0.8rem lama yang membuat baris tinggi/longgar. */
   padding: 0.4375rem 0.75rem;
   border-bottom: 1px solid var(--border);
+  background: transparent;
   vertical-align: middle;
 }
-thead th {
-  /* Header tabel ala Azure grid: sentence-case (BUKAN UPPERCASE), semibold, tinta
-     gelap-samar di atas latar putih, dibatasi garis bawah — bukan blok abu-abu. */
+thead th,
+.fui-DataGridHeaderCell {
   color: var(--text-2);
   font-weight: 600;
-  font-size: 0.8125rem;
+  font-size: 13px;
+  text-align: left;
+  justify-content: flex-start;
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
   white-space: nowrap;
-  border-bottom-color: var(--border-strong);
+  border-bottom-color: var(--border);
   position: sticky;
   top: 0;
   background: var(--surface);
   z-index: 1;
 }
-tbody tr {
+tbody tr,
+.fui-DataGridRow {
+  background: transparent;
   transition: background 0.1s ease;
 }
-tbody tr:hover {
+tbody tr:hover,
+.fui-DataGridRow:hover {
   background: var(--surface-2);
+}
+.fui-DataGridRow:focus-visible {
+  outline: 2px solid var(--border-strong);
+  outline-offset: -2px;
 }
 tbody tr:last-child td {
   border-bottom: none;
+}
+
+.data-table-grid .fui-DataGridHeaderCell__button,
+.data-table-grid .fui-DataGridHeaderCell > .fui-Button {
+  justify-content: flex-start;
+  text-align: left;
+  font-size: 13px;
+  font-weight: var(--fontWeightSemibold, 600) !important;
+}
+
+.data-table-grid .fui-TableCellActions {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 /* Bungkus tabel: geser horizontal di layar sempit tanpa mendorong tata letak. */
@@ -472,15 +545,6 @@ td.dg-check,
 td.dg-actions {
   vertical-align: middle;
 }
-/* Baris terpilih: latar biru-tipis + rusuk kiri aksen, khas seleksi Azure. */
-tbody tr.row-selected {
-  background: var(--accent-soft);
-  box-shadow: inset 3px 0 0 var(--accent);
-}
-tbody tr.row-selected:hover {
-  background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface-2));
-}
-
 /* ---------- Bilah filter (toolbar tabel) ---------- */
 
 .toolbar {
@@ -568,7 +632,7 @@ tbody tr.row-selected:hover {
   border: none;
   background: none;
   border-radius: var(--radius-sm);
-  font-size: 0.85rem;
+  font-size: var(--fontSizeBase200);
   color: var(--text);
   cursor: pointer;
 }
@@ -588,11 +652,13 @@ tbody tr.row-selected:hover {
 }
 .lp-hint {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: var(--fontSizeBase200);
 }
-/* Basemap terang butuh teks kontrol MapLibre yang gelap agar terbaca. */
+/* MapLibre tidak berada di bawah FluentProvider; gunakan token setara untuk kontrolnya. */
 .lp-map .maplibregl-ctrl-attrib {
-  font-size: 0.68rem;
+  font-family: var(--fontFamilyBase);
+  font-size: var(--fontSizeBase100);
+  line-height: var(--lineHeightBase100);
 }
 
 /* ── Combobox (pemilih tunggal yang bisa dicari) ───────────────────────────── */
@@ -666,14 +732,14 @@ tbody tr.row-selected:hover {
 }
 .cb-option.selected .cb-label {
   color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--fontWeightSemibold);
 }
 .cb-label {
-  font-size: 0.85rem;
+  font-size: var(--fontSizeBase200);
   color: var(--text);
 }
 .cb-meta {
-  font-size: 0.75rem;
+  font-size: var(--fontSizeBase200);
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -681,15 +747,15 @@ tbody tr.row-selected:hover {
 }
 .cb-note {
   padding: 0.5rem 0.55rem;
-  font-size: 0.82rem;
+  font-size: var(--fontSizeBase200);
   color: var(--muted);
 }
 .cb-group {
   position: sticky;
   top: 0;
   padding: 0.35rem 0.55rem 0.2rem;
-  font-size: 0.68rem;
-  font-weight: 600;
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightSemibold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
@@ -699,7 +765,7 @@ tbody tr.row-selected:hover {
 /* ── Ringkasan work order — grid definisi rapi (ganti dl inline) ────────────── */
 .wo-desc {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--fontSizeBase200);
   color: var(--text-2);
 }
 .wo-grid {
@@ -707,7 +773,7 @@ tbody tr.row-selected:hover {
   grid-template-columns: max-content 1fr;
   gap: 0.4rem 1rem;
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--fontSizeBase200);
   align-items: baseline;
 }
 .wo-grid dt {
@@ -787,7 +853,7 @@ tbody tr.row-selected:hover {
 }
 .modal-head h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--fontSizeBase300);
 }
 .modal-body {
   padding: 1.25rem;
@@ -811,7 +877,8 @@ tbody tr.row-selected:hover {
 .azure-blade-sub {
   margin: 0.25rem 0 0;
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 12px;
+  line-height: 16px;
 }
 /* Body scroll dengan ruang napas; footer sticky menutup bawah panel. */
 .azure-blade-body {
@@ -865,13 +932,15 @@ tbody tr.row-selected:hover {
 }
 .form-section-title {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 16px;
   font-weight: 600;
+  line-height: 22px;
 }
 .form-section-desc {
   margin: 0;
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 12px;
+  line-height: 16px;
 }
 .field {
   display: flex;
@@ -879,15 +948,16 @@ tbody tr.row-selected:hover {
   gap: 0.3rem;
 }
 .field-label {
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
   color: var(--text-2);
 }
 .field-req {
   color: var(--danger, #d13438);
 }
 .field-msg {
-  font-size: 0.78rem;
+  font-size: var(--fontSizeBase200);
   color: var(--muted);
 }
 .field-msg-error {
@@ -910,7 +980,7 @@ tbody tr.row-selected:hover {
   background: none;
   padding: 0.5rem 0.85rem;
   margin-bottom: -1px;
-  font-size: 0.88rem;
+  font-size: var(--fontSizeBase200);
   color: var(--muted);
   border-bottom: 2px solid transparent;
   border-radius: 0;
@@ -925,12 +995,12 @@ tbody tr.row-selected:hover {
 }
 .tab.active {
   color: var(--text);
-  font-weight: 600;
+  font-weight: var(--fontWeightSemibold);
   border-bottom-color: var(--accent);
 }
 .tab-badge {
-  font-size: 0.72rem;
-  line-height: 1;
+  font-size: var(--fontSizeBase200);
+  line-height: var(--lineHeightBase100);
   padding: 0.15rem 0.4rem;
   border-radius: 999px;
   background: var(--surface-2);
@@ -1008,7 +1078,7 @@ tbody tr.row-selected:hover {
 }
 .card-head h3 {
   margin: 0;
-  font-size: 0.98rem;
+  font-size: var(--fontSizeBase200);
 }
 .card-body {
   padding: 1.15rem 1.25rem;
@@ -1048,14 +1118,16 @@ tbody tr.row-selected:hover {
 
 .page-title {
   margin: 0;
-  font-size: 1.6rem;
+  font-size: 28px;
   font-weight: 600;
+  line-height: 36px;
   letter-spacing: -0.02em;
 }
 .page-sub {
   margin: 0.25rem 0 0;
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: 14px;
+  line-height: 20px;
 }
 
 /* ---------- Breadcrumb global (Azure) ---------- */
@@ -1105,7 +1177,7 @@ tbody tr.row-selected:hover {
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-weight: 400;
+  font-weight: var(--fontWeightRegular);
   white-space: nowrap;
   cursor: pointer;
 }
@@ -1125,7 +1197,7 @@ tbody tr.row-selected:hover {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-ink);
-  font-weight: 600;
+  font-weight: var(--fontWeightSemibold);
 }
 .azure-commandbar .cmd-btn.cmd-primary:hover:not(:disabled) {
   background: var(--accent-hover);
@@ -1172,8 +1244,8 @@ tbody tr.row-selected:hover {
   border-radius: var(--radius-sm);
   background: var(--surface-2);
   border: none;
-  font-size: 0.75rem;
-  font-weight: 400;
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightRegular);
   color: var(--text-2);
   white-space: nowrap;
 }
@@ -1192,8 +1264,8 @@ tbody tr.row-selected:hover {
   gap: 0.4rem;
   background: none;
   border-radius: 0;
-  font-size: 0.8rem;
-  font-weight: 400;
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightRegular);
   color: var(--text);
 }
 
@@ -1275,7 +1347,8 @@ tbody tr.row-selected:hover {
 }
 .stat-label {
   color: var(--muted);
-  font-size: 0.74rem;
+  font-size: 12px;
+  line-height: 16px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1284,15 +1357,16 @@ tbody tr.row-selected:hover {
   gap: 0.35rem;
 }
 .stat-value {
-  font-size: 1.95rem;
+  font-size: 28px;
   /* Angka metrik cukup semibold — Azure tak memakai bobot ekstra-tebal. */
   font-weight: 600;
   letter-spacing: -0.02em;
-  line-height: 1.1;
+  line-height: 36px;
 }
 .stat-note {
   color: var(--text-2);
-  font-size: 0.76rem;
+  font-size: 12px;
+  line-height: 16px;
   font-weight: 400;
   display: flex;
   align-items: center;
@@ -1392,7 +1466,7 @@ tbody tr.row-selected:hover {
   border: 1px solid var(--border-strong);
   box-shadow: var(--shadow-lg);
   animation: toast-in 0.18s ease;
-  font-size: 0.88rem;
+  font-size: var(--fontSizeBase200);
 }
 .toast .bar {
   width: 3px;
@@ -1465,8 +1539,8 @@ tbody tr.row-selected:hover {
   align-items: center;
   gap: 0.6rem;
   padding: 0.4rem 0.5rem 0.9rem;
-  font-weight: 600;
-  font-size: 1.05rem;
+  font-weight: var(--fontWeightSemibold);
+  font-size: var(--fontSizeBase200);
   letter-spacing: -0.02em;
   color: var(--sidebar-text);
 }
@@ -1483,8 +1557,8 @@ tbody tr.row-selected:hover {
 .nav-label {
   padding: 0.6rem 0.55rem 0.3rem;
   color: var(--sidebar-text);
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightSemibold);
 }
 /* Header seksi = baris pohon left-nav Azure: chevron di KIRI lalu label (sentence
    case, bukan kapital), rata kiri seperti item. Chevron berputar -90° (⌄ → ›) saat
@@ -1504,7 +1578,7 @@ tbody tr.row-selected:hover {
   background: none;
   color: var(--sidebar-text);
   font-family: inherit;
-  font-size: 0.82rem;
+  font-size: var(--fontSizeBase200);
   text-align: left;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -1541,8 +1615,8 @@ tbody tr.row-selected:hover {
   padding: 0.55rem 0.7rem;
   border-radius: var(--radius-sm);
   color: var(--sidebar-text);
-  font-weight: 400;
-  font-size: 0.9rem;
+  font-weight: var(--fontWeightRegular);
+  font-size: var(--fontSizeBase200);
   transition: background 0.12s ease, color 0.12s ease;
 }
 .sidebar nav a svg {
@@ -1560,7 +1634,7 @@ tbody tr.row-selected:hover {
 .sidebar nav a.active {
   background: var(--sidebar-active-bg);
   color: var(--sidebar-active-text);
-  font-weight: 600;
+  font-weight: var(--fontWeightSemibold);
 }
 /* Rusuk aksen violet di kiri item aktif — penanda posisi ala referensi. */
 .sidebar nav a.active::before {
@@ -1601,8 +1675,8 @@ tbody tr.row-selected:hover {
   border: 1px solid var(--sidebar-border);
   color: var(--sidebar-text);
   font-family: inherit;
-  font-weight: 400;
-  font-size: 0.9rem;
+  font-weight: var(--fontWeightRegular);
+  font-size: var(--fontSizeBase200);
   cursor: pointer;
 }
 .env-switch-btn:hover:not(:disabled) {
@@ -1621,18 +1695,18 @@ tbody tr.row-selected:hover {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  line-height: 1.15;
+  line-height: var(--lineHeightBase200);
   text-align: left;
 }
 .env-switch-name {
-  font-weight: 600;
+  font-weight: var(--fontWeightSemibold);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .env-switch-cap {
-  font-size: 0.68rem;
-  font-weight: 500;
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightMedium);
   color: var(--sidebar-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1678,8 +1752,8 @@ tbody tr.row-selected:hover {
   border-radius: 6px;
   color: var(--sidebar-text);
   font-family: inherit;
-  font-size: 0.88rem;
-  font-weight: 400;
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightRegular);
   text-align: left;
   cursor: pointer;
 }
@@ -1689,7 +1763,7 @@ tbody tr.row-selected:hover {
 }
 .env-menu button.current {
   color: var(--sidebar-active-text);
-  font-weight: 600;
+  font-weight: var(--fontWeightSemibold);
 }
 .env-menu .env-check {
   margin-left: auto;
@@ -1805,8 +1879,8 @@ tbody tr.row-selected:hover {
   color: var(--accent);
   display: grid;
   place-items: center;
-  font-weight: 600;
-  font-size: 0.8rem;
+  font-weight: var(--fontWeightSemibold);
+  font-size: var(--fontSizeBase200);
   flex: none;
 }
 
@@ -1829,9 +1903,9 @@ tbody tr.row-selected:hover {
   border-radius: 9px;
   background: var(--critical-ink);
   color: #fff;
-  font-size: 0.65rem;
-  font-weight: 700;
-  line-height: 17px;
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightBold);
+  line-height: var(--lineHeightBase200);
   text-align: center;
   pointer-events: none;
 }
@@ -1880,11 +1954,11 @@ tbody tr.row-selected:hover {
   flex: 1;
 }
 .inbox-item-title {
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightSemibold);
 }
 .inbox-item-text .muted {
-  font-size: 0.78rem;
+  font-size: var(--fontSizeBase200);
 }
 .inbox-item-dot {
   flex: none;
@@ -1964,7 +2038,7 @@ tbody tr.row-selected:hover {
 /* Angka metrik portal lebih kecil dari konsol: nominal rupiah utuh tak muat di kartu
    selebar layar ponsel pada ukuran aslinya. */
 .portal-page .stat-value {
-  font-size: 1.5rem;
+  font-size: var(--fontSizeBase200);
 }
 /* Kartu sambutan diberi semburat aksen tipis — penanda "ini akunmu" di puncak halaman,
    tanpa menambah warna baru di luar token. */
@@ -1975,7 +2049,7 @@ tbody tr.row-selected:hover {
   /* Dua kartu metrik per baris di ponsel: angka dikecilkan lagi agar tanggal & nominal
      tak pecah jadi dua baris di kolom sesempit itu. */
   .portal-page .stat-value {
-    font-size: 1.3rem;
+    font-size: var(--fontSizeBase200);
   }
   /* Di layar sempit avatar sudah cukup mewakili identitas; nama & kode mengalah pada
      tombol keluar dan peralih tema. */
@@ -1994,7 +2068,7 @@ tbody tr.row-selected:hover {
   text-transform: capitalize;
 }
 .matrix {
-  font-size: 0.85rem;
+  font-size: var(--fontSizeBase200);
 }
 .matrix td,
 .matrix th {
@@ -2101,15 +2175,16 @@ tbody tr.row-selected:hover {
    dan pembungkusan baris akan menggeser command bar naik-turun. */
 .blade-title {
   margin: 0;
-  font-size: 1rem;
+  font-size: 20px;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 28px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .blade-sub {
-  font-size: 0.76rem;
+  font-size: 12px;
+  line-height: 16px;
   color: var(--muted);
 }
 /* Command bar di dalam blade cukup diberi padding sisi; garis bawahnya sudah
@@ -2127,8 +2202,9 @@ tbody tr.row-selected:hover {
    dikerjakan jarak, seperti Azure. */
 .blade-section-title {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 16px;
   font-weight: 600;
+  line-height: 22px;
   color: var(--text-2);
 }
 
@@ -2141,8 +2217,8 @@ tbody tr.row-selected:hover {
   column-gap: 0.9rem;
   row-gap: 0.45rem;
   margin: 0;
-  font-size: 0.82rem;
-  line-height: 1.5;
+  font-size: var(--fontSizeBase200);
+  line-height: var(--lineHeightBase400);
 }
 .essentials dt {
   color: var(--muted);
@@ -2170,8 +2246,8 @@ tbody tr.row-selected:hover {
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightSemibold);
   cursor: pointer;
 }
 .blade-disclosure:hover {
@@ -2237,9 +2313,9 @@ tbody tr.row-selected:hover {
 }
 .section-title {
   margin: 0;
-  font-size: 0.92rem;
-  font-weight: 600;
-  line-height: 1.3;
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightSemibold);
+  line-height: var(--lineHeightBase400);
 }
 
 /* Blok "Essentials": dua kolom pasangan label:nilai berdampingan seperti ringkasan
@@ -2257,11 +2333,14 @@ tbody tr.row-selected:hover {
   grid-template-columns: minmax(6.5rem, 9.5rem) 1fr;
 }
 
+/* MapLibre menggunakan token Fluent yang setara karena kontrolnya berada di luar pohon React. */
 .maplibregl-ctrl-attrib,
 .maplibregl-ctrl-scale {
   background: color-mix(in srgb, var(--surface) 82%, transparent) !important;
   color: var(--muted) !important;
-  font-size: 0.7rem;
+  font-family: var(--fontFamilyBase);
+  font-size: var(--fontSizeBase100);
+  line-height: var(--lineHeightBase100);
 }
 .maplibregl-ctrl-attrib a {
   color: var(--muted);
@@ -2317,7 +2396,7 @@ tbody tr.row-selected:hover {
   background: none;
   color: var(--muted);
   font: inherit;
-  font-size: 0.72rem;
+  font-size: var(--fontSizeBase200);
   text-align: left;
   cursor: pointer;
 }
@@ -2335,7 +2414,7 @@ tbody tr.row-selected:hover {
   background: none;
   color: var(--text);
   font: inherit;
-  font-size: 0.85rem;
+  font-size: var(--fontSizeBase200);
   text-align: left;
   cursor: pointer;
 }
@@ -2367,7 +2446,7 @@ tbody tr.row-selected:hover {
   background: none;
   color: var(--text);
   font: inherit;
-  font-size: 0.82rem;
+  font-size: var(--fontSizeBase200);
   text-align: left;
   cursor: pointer;
 }
@@ -2379,7 +2458,7 @@ tbody tr.row-selected:hover {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 .pick-title {
-  font-weight: 600;
+  font-weight: var(--fontWeightSemibold);
 }
 
 /* Bilah petunjuk saat menggambar/mengedit kabel */
@@ -2399,7 +2478,7 @@ tbody tr.row-selected:hover {
   backdrop-filter: blur(8px);
   border: 1px solid var(--border-strong);
   box-shadow: var(--shadow-md);
-  font-size: 0.85rem;
+  font-size: var(--fontSizeBase200);
   white-space: nowrap;
 }
 
@@ -2453,8 +2532,8 @@ tbody tr.row-selected:hover {
    panel di tempat yang sama alih-alih menjadi lapisan baru yang harus dihindari. */
 .map-settings-title {
   margin: 0;
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightSemibold);
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--muted);
@@ -2679,7 +2758,7 @@ tbody tr.row-selected:hover {
     content: attr(data-label);
     flex: none;
     color: var(--muted);
-    font-size: 0.75rem;
+    font-size: var(--fontSizeBase200);
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
@@ -2835,8 +2914,8 @@ tbody tr.row-selected:hover {
   border-radius: var(--radius-sm);
   padding: 0;
   font: inherit;
-  font-size: 0.66rem;
-  font-weight: 700;
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightBold);
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   transition: transform 0.1s ease;
@@ -2903,7 +2982,7 @@ tbody tr.row-selected:hover {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.72rem;
+  font-size: var(--fontSizeBase200);
   color: var(--muted);
 }
 .core-tube-dot {
@@ -2929,7 +3008,7 @@ tbody tr.row-selected:hover {
   background: var(--surface);
   color: var(--text);
   font: inherit;
-  font-size: 0.74rem;
+  font-size: var(--fontSizeBase200);
   cursor: pointer;
 }
 .core-count:not(:disabled):hover {
@@ -2962,7 +3041,7 @@ tbody tr.row-selected:hover {
   background: var(--surface-2);
 }
 /* Kaki digambar satu per satu karena "1:8" tak menjawab pertanyaan yang dibawa
-   orang ke layar ini — "masih ada slot?" — sedangkan delapan kotak dengan tiga
+   orang ke layar ini — "masih ada slot?" — sedangkanan tiga
    di antaranya padam menjawabnya tanpa perlu dibaca. Lebar minimum dipatok agar
    modul 1:64 tetap muat dalam beberapa baris rapat. */
 .splitter-legs {
@@ -2979,8 +3058,8 @@ tbody tr.row-selected:hover {
   border: 1px solid var(--border-strong);
   background: var(--surface);
   color: var(--muted);
-  font-size: 0.62rem;
-  font-weight: 700;
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightBold);
   font-variant-numeric: tabular-nums;
 }
 /* Terpakai = terisi penuh; yang bebas sengaja dibiarkan pucat supaya sisa
@@ -2991,7 +3070,7 @@ tbody tr.row-selected:hover {
   color: var(--accent-ink);
 }
 .splitter-warn {
-  font-size: 0.7rem;
+  font-size: var(--fontSizeBase200);
   padding: 0.05rem 0.45rem;
   border-radius: 999px;
   color: var(--warning-ink);
@@ -3045,8 +3124,8 @@ tbody tr.row-selected:hover {
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: 0.74rem;
-  font-weight: 600;
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightSemibold);
   text-align: left;
   cursor: pointer;
 }
@@ -3076,12 +3155,12 @@ tbody tr.row-selected:hover {
 }
 .splice-group-count {
   flex: none;
-  font-size: 0.7rem;
-  font-weight: 400;
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightRegular);
 }
 .splice-group-hint {
   margin: 0 0 0 1.15rem;
-  font-size: 0.68rem;
+  font-size: var(--fontSizeBase200);
 }
 /* Titik non-core (port ODF, kaki splitter, PON) berlabel kata, bukan angka, jadi
    bentuknya pil selebar isinya — bukan chip persegi seperti core. */
@@ -3097,7 +3176,7 @@ tbody tr.row-selected:hover {
   background: var(--surface);
   color: var(--text);
   font: inherit;
-  font-size: 0.7rem;
+  font-size: var(--fontSizeBase200);
   font-variant-numeric: tabular-nums;
   text-align: left;
   white-space: nowrap;
@@ -3118,7 +3197,7 @@ tbody tr.row-selected:hover {
 }
 .splice-slot-serves {
   margin-top: 0.1rem;
-  font-size: 0.64rem;
+  font-size: var(--fontSizeBase200);
   color: var(--text-2);
 }
 /* Sudah tersambung = diredupkan dan tak bisa diklik; yang MASIH BEBAS-lah yang

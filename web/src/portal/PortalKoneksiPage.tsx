@@ -1,5 +1,6 @@
 import { usePortalData } from './PortalLayout'
 import { Loading, Unavailable, fmtUptime } from './portalFormat'
+import { Text } from '@fluentui/react-components'
 import { StatusBadge } from '@/components/atoms'
 import { Ess } from '@/components/molecules'
 
@@ -12,25 +13,25 @@ export function PortalKoneksiPage() {
   return (
     <div className="stack" style={{ gap: '1rem' }}>
       <div className="stack" style={{ gap: '0.15rem' }}>
-        <h1 className="page-title" style={{ margin: 0 }}>Koneksi</h1>
-        <p className="page-sub" style={{ margin: 0 }}>Keadaan sambungan internet dan perangkat di rumahmu.</p>
+        <Text as="h1" className="page-title" size={700} weight="semibold" style={{ margin: 0 }}>Koneksi</Text>
+        <Text as="p" className="page-sub" size={400} style={{ margin: 0 }}>Keadaan sambungan internet dan perangkat di rumahmu.</Text>
       </div>
 
       <div className="card stack" style={{ gap: '0.6rem' }}>
-        <strong style={{ fontSize: '0.95rem' }}>Sesi internet</strong>
+        <Text as="h2" size={400} weight="semibold">Sesi internet</Text>
         {!s ? (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Belum ada sesi PPPoE.</p>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada sesi PPPoE.</Text>
         ) : (
           <dl className="essentials wide">
             <Ess label="Status">
               <StatusBadge status={s.online ? 'ONLINE' : 'OFFLINE'} />
             </Ess>
             <Ess label="Username">
-              <span className="tnum">{s.username}</span>
+              <Text as="span" className="tnum">{s.username}</Text>
             </Ess>
             <Ess label="Menyala selama">{fmtUptime(s.uptimeSeconds)}</Ess>
             <Ess label="Alamat IP">
-              <span className="tnum">{s.framedIp ?? '—'}</span>
+              <Text as="span" className="tnum">{s.framedIp ?? '—'}</Text>
             </Ess>
             <Ess label="Paket">{s.planName ?? '—'}</Ess>
           </dl>
@@ -38,17 +39,15 @@ export function PortalKoneksiPage() {
       </div>
 
       <div className="card stack" style={{ gap: '0.6rem' }}>
-        <strong style={{ fontSize: '0.95rem' }}>Perangkat</strong>
+        <Text as="h2" size={400} weight="semibold">Perangkat</Text>
         {connection.devices.length === 0 ? (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>Tak ada perangkat terpantau.</p>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Tak ada perangkat terpantau.</Text>
         ) : (
           connection.devices.map((d) => (
             <div key={d.deviceId} className="spread" style={{ alignItems: 'center' }}>
               <div className="stack" style={{ gap: 2 }}>
-                <span style={{ fontWeight: 600 }}>
-                  {[d.manufacturer, d.model].filter(Boolean).join(' ') || d.serialNumber}
-                </span>
-                <span className="muted tnum" style={{ fontSize: '0.8rem' }}>{d.serialNumber}</span>
+                <Text as="span" weight="semibold">{[d.manufacturer, d.model].filter(Boolean).join(' ') || d.serialNumber}</Text>
+                <Text as="span" className="muted tnum" size={200}>{d.serialNumber}</Text>
               </div>
               <StatusBadge status={d.online ? 'ONLINE' : 'OFFLINE'} />
             </div>

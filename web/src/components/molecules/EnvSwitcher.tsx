@@ -1,4 +1,12 @@
-import { useState } from 'react'
+import {
+  Menu,
+  MenuButton,
+  MenuItemRadio,
+  MenuList,
+  MenuPopover,
+  MenuTrigger,
+  Text,
+} from '@fluentui/react-components'
 import { useNavigate } from 'react-router-dom'
 import { IconChevronsUpDown, IconCheck } from '@/components/atoms/icons'
 
@@ -18,59 +26,57 @@ const OPTIONS: { key: 'platform' | 'tenant'; to: string; name: string; desc: str
 ]
 
 export function EnvSwitcher({ current }: { current: 'platform' | 'tenant' }) {
-  const [open, setOpen] = useState(false)
   const navigate = useNavigate()
   const active = OPTIONS.find((o) => o.key === current) ?? OPTIONS[0]
 
   const choose = (to: string, key: 'platform' | 'tenant') => {
-    setOpen(false)
     // Sudah di konteks ini → tak perlu navigasi (hindari reload rute yang sama).
     if (key !== current) navigate(to)
   }
 
   return (
     <div className="env-switch">
-      <button
-        type="button"
-        className="env-switch-btn"
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        title={`Konteks: ${active.name}`}
+      <Menu
+        checkedValues={{ 'env-switcher': [current] }}
+        onCheckedValueChange={(_, data) => {
+          const selected = OPTIONS.find((option) => option.key === data.checkedItems[0])
+          if (selected) choose(selected.to, selected.key)
+        }}
       >
-        <span className={`env-dot ${current}`} aria-hidden />
-        <span className="env-switch-info">
-          <span className="env-switch-name">{active.name}</span>
-          <span className="env-switch-cap">Ganti konteks</span>
-        </span>
-        <IconChevronsUpDown size={15} />
-      </button>
-
-      {open && (
-        <>
-          <div className="env-scrim" onClick={() => setOpen(false)} />
-          <ul className="env-menu" role="menu">
+        <MenuTrigger disableButtonEnhancement>
+          <MenuButton
+            className="env-switch-btn"
+            title={`Konteks: ${active.name}`}
+            icon={null}
+          >
+            <span className={`env-dot ${current}`} aria-hidden />
+            <span className="env-switch-info">
+              <Text as="span" className="env-switch-name" size={300}>{active.name}</Text>
+              <Text as="span" className="env-switch-cap" size={100}>Ganti konteks</Text>
+            </span>
+            <IconChevronsUpDown size={15} />
+          </MenuButton>
+        </MenuTrigger>
+        <MenuPopover className="env-menu">
+          <MenuList>
             {OPTIONS.map((o) => (
-              <li key={o.key}>
-                <button
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={o.key === current}
-                  className={o.key === current ? 'current' : undefined}
-                  onClick={() => choose(o.to, o.key)}
-                >
-                  <span className={`env-dot ${o.key}`} aria-hidden />
-                  <span className="env-switch-info">
-                    <span className="env-switch-name">{o.name}</span>
-                    <span className="env-switch-cap">{o.desc}</span>
-                  </span>
-                  {o.key === current && <IconCheck size={15} className="env-check" />}
-                </button>
-              </li>
+              <MenuItemRadio
+                key={o.key}
+                className={o.key === current ? 'current' : undefined}
+                name="env-switcher"
+                value={o.key}
+              >
+                <span className={`env-dot ${o.key}`} aria-hidden />
+                <span className="env-switch-info">
+                  <Text as="span" className="env-switch-name" size={300}>{o.name}</Text>
+                  <Text as="span" className="env-switch-cap" size={100}>{o.desc}</Text>
+                </span>
+                {o.key === current && <IconCheck size={15} className="env-check" />}
+              </MenuItemRadio>
             ))}
-          </ul>
-        </>
-      )}
+          </MenuList>
+        </MenuPopover>
+      </Menu>
     </div>
   )
 }

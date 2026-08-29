@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { Text, typographyStyles } from '@fluentui/react-components'
 import { Copy } from 'lucide-react'
 import { api, ApiError } from '../api/client'
 import {
@@ -207,7 +208,7 @@ export function PaymentGatewaySettingsPage() {
     }
   }
 
-  if (loading) return <p className="muted">Memuat setelan…</p>
+  if (loading) return <Text as="p" className="muted">Memuat setelan…</Text>
   if (!form || !saved) {
     return <EmptyState title="Setelan gateway tak tersedia" hint="Coba muat ulang halaman." icon={<IconAlert size={28} />} />
   }
@@ -220,7 +221,7 @@ export function PaymentGatewaySettingsPage() {
         title="Payment Gateway"
         subtitle={
           <>
-            Cara pelanggan Anda membayar: otomatis lewat <strong>Pivot</strong> atau manual (transfer/QRIS).
+            Cara pelanggan Anda membayar: otomatis lewat <Text as="strong" weight="semibold" >Pivot</Text> atau manual (transfer/QRIS).
             Perubahan minta konfirmasi sebelum berlaku.
           </>
         }
@@ -230,9 +231,9 @@ export function PaymentGatewaySettingsPage() {
       <StatusPanel saved={saved} />
 
       {!manage && (
-        <p className="muted" style={{ margin: 0 }}>
+        <Text as="p" className="muted" style={{ margin: 0 }}>
           Anda hanya bisa melihat setelan ini. Perlu izin “Kelola payment gateway” untuk mengubahnya.
-        </p>
+        </Text>
       )}
 
       {/* ---- Form suntingan ---- */}
@@ -252,10 +253,10 @@ export function PaymentGatewaySettingsPage() {
         </FormRow>
 
         {form.provider === 'PIVOT' && (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
             Penagihan otomatis via Pivot memakai sub-account tenant Anda. Pastikan sub-account sudah
-            diprovisi &amp; rekening payout tersetel di kartu <strong>Sub-account Pivot</strong> di bawah.
-          </p>
+            diprovisi &amp; rekening payout tersetel di kartu <Text as="strong" weight="semibold" >Sub-account Pivot</Text> di bawah.
+          </Text>
         )}
 
         {showManual && (
@@ -278,9 +279,7 @@ export function PaymentGatewaySettingsPage() {
           <>
             <div className="hr" />
             <div className="spread" style={{ alignItems: 'center' }}>
-              <span className="muted" style={{ fontSize: '0.85rem' }}>
-                {dirty ? `${changes.length} perubahan belum disimpan` : 'Tak ada perubahan'}
-              </span>
+              <Text as="span" className="muted" size={300}>{dirty ? `${changes.length} perubahan belum disimpan` : 'Tak ada perubahan'}</Text>
               <div className="row" style={{ gap: '0.5rem' }}>
                 <Button variant="subtle" onClick={discard} disabled={!dirty || saving}>
                   Batalkan
@@ -313,33 +312,31 @@ export function PaymentGatewaySettingsPage() {
           }
         >
           <div className="stack" style={{ gap: '0.85rem' }}>
-            <p style={{ margin: 0, fontSize: '0.9rem' }}>
+            <Text as="p" size={300} style={{ margin: 0 }}>
               Tinjau perubahan berikut sebelum berlaku untuk penagihan tenant ini:
-            </p>
+            </Text>
 
             <div className="stack" style={{ gap: '0.4rem' }}>
               {changes.map((c) => (
-                <div key={c.label} className="spread" style={{ gap: '0.75rem', fontSize: '0.88rem' }}>
-                  <span className="muted">{c.label}</span>
-                  <span style={{ textAlign: 'right' }}>
-                    <span className="muted" style={{ textDecoration: 'line-through' }}>
-                      {c.from}
-                    </span>{' '}
-                    → <strong>{c.to}</strong>
-                  </span>
+                <div key={c.label} className="spread" style={{ ...typographyStyles.body1, gap: '0.75rem' }}>
+                  <Text as="span" className="muted">{c.label}</Text>
+                  <Text as="span" style={{ textAlign: 'right' }}><Text as="span" className="muted" strikethrough>
+                    {c.from}
+                  </Text>{' '}
+                  → <Text as="strong" weight="semibold">{c.to}</Text></Text>
                 </div>
               ))}
             </div>
 
             {enabling && (
               <Callout>
-                Metode akan beralih ke <strong>Pivot</strong> — tagihan berikutnya otomatis dibuatkan tautan bayar.
+                Metode akan beralih ke <Text as="strong" weight="semibold" >Pivot</Text> — tagihan berikutnya otomatis dibuatkan tautan bayar.
                 Pastikan sub-account Pivot sudah aktif &amp; rekening payout tersetel.
               </Callout>
             )}
             {saved.provider === 'PIVOT' && form.provider === 'MANUAL' && (
               <Callout>
-                Metode akan beralih ke <strong>Manual</strong> — tagihan tetap terbit tapi tanpa tautan bayar; pelunasan
+                Metode akan beralih ke <Text as="strong" weight="semibold" >Manual</Text> — tagihan tetap terbit tapi tanpa tautan bayar; pelunasan
                 harus dicatat manual.
               </Callout>
             )}
@@ -358,7 +355,7 @@ function StatusPanel({ saved }: { saved: PaymentGatewaySettingsView }) {
       <div className="spread" style={{ alignItems: 'center' }}>
         <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
           <IconShield size={16} />
-          <strong style={{ fontSize: '0.95rem' }}>Berlaku sekarang</strong>
+          <Text as="strong" size={400} weight="semibold">Berlaku sekarang</Text>
         </div>
         <Badge tone={auto ? 'good' : 'neutral'}>{auto ? 'Otomatis' : 'Manual'}</Badge>
       </div>
@@ -378,10 +375,10 @@ function ManualSummary({ saved }: { saved: PaymentGatewaySettingsView }) {
   if (saved.manualTransferEnabled) active.push('Transfer')
   if (saved.manualQrisEnabled) active.push('QRIS')
   return (
-    <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center', fontSize: '0.82rem' }}>
-      <span className="muted">Pembayaran manual:</span>
+    <div className="row" style={{ ...typographyStyles.caption1, gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+      <Text as="span" className="muted">Pembayaran manual:</Text>
       {active.length === 0 ? (
-        <span className="muted">belum ada metode aktif</span>
+        <Text as="span" className="muted">belum ada metode aktif</Text>
       ) : (
         active.map((m) => <Badge key={m}>{m}</Badge>)
       )}
@@ -538,7 +535,7 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
       <div className="spread" style={{ alignItems: 'center' }}>
         <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
           <IconShield size={16} />
-          <strong style={{ fontSize: '0.95rem' }}>Sub-account Pivot</strong>
+          <Text as="strong" size={400} weight="semibold">Sub-account Pivot</Text>
         </div>
         {account && (
           <Badge tone={account.provisioned ? 'good' : 'neutral'}>
@@ -548,9 +545,9 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
       </div>
 
       {loading ? (
-        <p className="muted" style={{ margin: 0 }}>Memuat sub-account…</p>
+        <Text as="p" className="muted" style={{ margin: 0 }}>Memuat sub-account…</Text>
       ) : !account ? (
-        <p className="muted" style={{ margin: 0 }}>Data sub-account tak tersedia.</p>
+        <Text as="p" className="muted" style={{ margin: 0 }}>Data sub-account tak tersedia.</Text>
       ) : (
         <>
           {!account.masterActive && (
@@ -572,29 +569,26 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
           </div>
 
           {account.shortName && (
-            <span className="muted" style={{ fontSize: '0.82rem' }}>
-              Nama singkat: <strong>{account.shortName}</strong>
-            </span>
+            <Text as="span" className="muted" size={200}>
+              Nama singkat: <Text as="strong" weight="semibold" >{account.shortName}</Text></Text>
           )}
 
           {/* Sub-merchant ID dipakai saat rekonsiliasi & panel Simulasi Pembayaran platform. */}
           {account.subMerchantUuid && (
-            <span className="row muted" style={{ gap: '0.35rem', alignItems: 'center', fontSize: '0.82rem' }}>
-              <span>Sub-merchant ID:</span>
-              <code style={{ fontFamily: 'monospace' }}>{account.subMerchantUuid}</code>
-              <Button
-                variant="subtle"
-                icon={<Copy size={13} />}
-                onClick={() =>
-                  void navigator.clipboard
-                    ?.writeText(account.subMerchantUuid ?? '')
-                    .then(() => toast.success('Sub-merchant ID disalin'))
-                }
-                title="Salin sub-merchant ID"
-                aria-label="Salin sub-merchant ID"
-                style={{ minWidth: 'auto', padding: '0.1rem 0.25rem' }}
-              />
-            </span>
+            <Text as="span" className="row muted" size={200} style={{ gap: '0.35rem', alignItems: 'center' }}><Text as="span">Sub-merchant ID:</Text>
+            <Text as="span" font="monospace">{account.subMerchantUuid}</Text>
+            <Button
+              variant="subtle"
+              icon={<Copy size={13} />}
+              onClick={() =>
+                void navigator.clipboard
+                  ?.writeText(account.subMerchantUuid ?? '')
+                  .then(() => toast.success('Sub-merchant ID disalin'))
+              }
+              title="Salin sub-merchant ID"
+              aria-label="Salin sub-merchant ID"
+              style={{ minWidth: 'auto', padding: '0.1rem 0.25rem' }}
+            /></Text>
           )}
 
           {/* Profil bisnis sub-account — wajib diisi lengkap sebelum bisa diprovisi ke Pivot. */}
@@ -602,10 +596,10 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
             <>
               <div className="hr" />
               <SectionTitle>Profil sub-account</SectionTitle>
-              <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+              <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
                 Data bisnis yang didaftarkan ke Pivot. Semua kolom (kecuali nama legal) wajib diisi
                 sebelum sub-account bisa diprovisi.
-              </p>
+              </Text>
               <div className="stack" style={{ gap: '0.6rem' }}>
                 <TextField
                   label="Nama legal bisnis (opsional)"
@@ -677,7 +671,7 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
                 {/* Rekening payout — bagian profil karena Pivot mewajibkan bankAccount saat create. */}
                 <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
                   <label style={{ flex: 1, minWidth: 140 }}>
-                    <span>Kode channel bank</span>
+                    <Text as="span" >Kode channel bank</Text>
                     <ChannelCodeField
                       value={profile.channelCode ?? ''}
                       onChange={(code) => setProfile((p) => ({ ...p, channelCode: code }))}
@@ -703,11 +697,11 @@ function PivotAccountCard({ manage }: { manage: boolean }) {
                     style={{ flex: 1, minWidth: 180 }}
                   />
                 </div>
-                <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+                <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
                   Rekening tujuan pencairan dana pelanggan. Nama pemilik harus persis seperti catatan
                   bank — dicocokkan otomatis setelah sub-account terdaftar. Menekan “Daftarkan
                   sub-account” otomatis menyimpan profil.
-                </p>
+                </Text>
                 {manage && (
                   <div className="row" style={{ gap: '0.5rem', justifyContent: 'flex-end' }}>
                     <Button
@@ -833,9 +827,9 @@ function PivotUsersSection({ manage }: { manage: boolean }) {
       <div className="spread" style={{ gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
         <div className="stack" style={{ gap: '0.15rem' }}>
           <SectionTitle>Pengguna sub-account</SectionTitle>
-          <span className="muted" style={{ fontSize: '0.82rem' }}>
+          <Text as="span" className="muted" size={200}>
             Undang admin ke sub-account Pivot Anda — Pivot mengirim email undangannya.
-          </span>
+          </Text>
         </div>
         {manage && (
           <Button variant="subtle" onClick={() => setOpen(true)}>
@@ -884,9 +878,9 @@ function PivotUsersSection({ manage }: { manage: boolean }) {
               maxLength={255}
             />
             <div className="spread" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span className="muted" style={{ fontSize: '0.8rem' }}>
+              <Text as="span" className="muted" size={200}>
                 Sudah pernah diundang tapi emailnya tak sampai?
-              </span>
+              </Text>
               {/* Kirim ulang cuma butuh email — nama diabaikan, jadi tombolnya hidup lebih awal. */}
               <Button
                 variant="subtle"
@@ -1060,12 +1054,12 @@ function PivotPayoutSection({
       <div className="hr" />
       <SectionTitle>Saldo &amp; Payout</SectionTitle>
       {loading ? (
-        <p className="muted" style={{ margin: 0 }}>Memuat saldo…</p>
+        <Text as="p" className="muted" style={{ margin: 0 }}>Memuat saldo…</Text>
       ) : (
         <>
           <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <span className="muted" style={{ fontSize: '0.82rem' }}>Saldo pembayaran:</span>
-            <strong>{balance ? formatRupiah(balance.availableMinor) : '—'}</strong>
+            <Text as="span" className="muted" size={200}>Saldo pembayaran:</Text>
+            <Text as="strong" weight="semibold" >{balance ? formatRupiah(balance.availableMinor) : '—'}</Text>
             <Button variant="subtle" disabled={busy} onClick={() => void refresh()}>
               Segarkan saldo
             </Button>
@@ -1074,20 +1068,20 @@ function PivotPayoutSection({
           {editorOpen ? (
             <>
               <div className="spread" style={{ gap: '0.75rem', alignItems: 'center' }}>
-                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Rekening tujuan payout</span>
+                <Text as="span" size={300} weight="semibold">Rekening tujuan payout</Text>
                 {hasDestination && account.payoutReady && (
                   <Button variant="subtle" disabled={busy} onClick={cancelEditor}>
                     Batal
                   </Button>
                 )}
               </div>
-              <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+              <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
                 Diisi sekali saja. Nama pemilik harus persis seperti catatan bank — dicocokkan ke
                 bank sebelum disimpan, dan ditolak kalau berbeda.
-              </p>
+              </Text>
               <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
                 <label style={{ flex: 1, minWidth: 140 }}>
-                  <span>Bank tujuan</span>
+                  <Text as="span" >Bank tujuan</Text>
                   <ChannelCodeField value={channelCode} onChange={setChannelCode} disabled={!manage} />
                 </label>
                 <TextField
@@ -1127,13 +1121,10 @@ function PivotPayoutSection({
               style={{ gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}
             >
               <div className="stack" style={{ gap: '0.15rem' }}>
-                <span className="muted" style={{ fontSize: '0.78rem' }}>Rekening tujuan payout</span>
-                <strong style={{ fontSize: '0.9rem' }}>
-                  {channelNameByCode(savedChannel) ?? savedChannel} · {savedNumber}
-                </strong>
-                <span className="muted" style={{ fontSize: '0.78rem' }}>
-                  a.n. {savedName} <Badge tone="good">Tervalidasi</Badge>
-                </span>
+                <Text as="span" className="muted" size={100}>Rekening tujuan payout</Text>
+                <Text as="strong" size={300} weight="semibold">{channelNameByCode(savedChannel) ?? savedChannel} · {savedNumber}</Text>
+                <Text as="span" className="muted" size={100}>
+                  a.n. {savedName} <Badge tone="good">Tervalidasi</Badge></Text>
               </div>
               {manage && (
                 <Button variant="subtle" disabled={busy} onClick={openEditor}>
@@ -1170,27 +1161,23 @@ function PivotPayoutSection({
             )}
           </div>
           {!editorOpen && account.payoutFeeMinor > 0 && amountValid && (
-            <p style={{ margin: 0, fontSize: '0.82rem', color: coversFee ? undefined : 'var(--critical)' }}>
-              {coversFee ? (
-                <>
-                  Biaya payout <strong>{formatRupiah(feePreview)}</strong> dipotong dari nominal —{' '}
-                  <strong>{formatRupiah(amountMinor - feePreview)}</strong> masuk ke rekening tujuan.
-                </>
-              ) : (
-                <>Nominal harus lebih besar dari biaya payout {formatRupiah(feePreview)}.</>
-              )}
-            </p>
+            <Text as="p" size={200} style={{ margin: 0, color: coversFee ? undefined : 'var(--critical)' }}>{coversFee ? (
+              <>
+                Biaya payout <Text as="strong" weight="semibold" >{formatRupiah(feePreview)}</Text> dipotong dari nominal —{' '}
+                <Text as="strong" weight="semibold" >{formatRupiah(amountMinor - feePreview)}</Text> masuk ke rekening tujuan.
+              </>
+            ) : (
+              <>Nominal harus lebih besar dari biaya payout {formatRupiah(feePreview)}.</>
+            )}</Text>
           )}
-          <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
-            {editorOpen
-              ? 'Simpan rekening tujuan dulu — payout selalu dikirim ke rekening tersimpan itu.'
-              : 'Payout ditarik dari saldo payout (dompet terpisah dari saldo pembayaran di atas); bila kurang, kekurangannya dipindahkan otomatis dari saldo pembayaran.'}
-          </p>
+          <Text as="p" className="muted" size={200} style={{ margin: 0 }}>{editorOpen
+            ? 'Simpan rekening tujuan dulu — payout selalu dikirim ke rekening tersimpan itu.'
+            : 'Payout ditarik dari saldo payout (dompet terpisah dari saldo pembayaran di atas); bila kurang, kekurangannya dipindahkan otomatis dari saldo pembayaran.'}</Text>
 
           <div className="hr" />
           <SectionTitle>Riwayat payout</SectionTitle>
           {payouts.length === 0 ? (
-            <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>Belum ada penyaluran dana.</p>
+            <Text as="p" className="muted" size={200} style={{ margin: 0 }}>Belum ada penyaluran dana.</Text>
           ) : (
             <div className="stack" style={{ gap: '0.4rem' }}>
               {payouts.map((p) => {
@@ -1200,18 +1187,17 @@ function PivotPayoutSection({
                   <div
                     key={p.id}
                     className="spread"
-                    style={{ gap: '0.75rem', fontSize: '0.85rem', alignItems: 'center' }}
+                    style={{ ...typographyStyles.caption1, gap: '0.75rem', alignItems: 'center' }}
                   >
                     <div className="stack" style={{ gap: '0.15rem' }}>
-                      <strong>{formatRupiah(p.amountMinor)}</strong>
+                      <Text as="strong" weight="semibold" >{formatRupiah(p.amountMinor)}</Text>
                       {p.feeMinor > 0 && (
-                        <span className="muted" style={{ fontSize: '0.78rem' }}>
-                          biaya {formatRupiah(p.feeMinor)} · diterima {formatRupiah(p.netAmountMinor)}
-                        </span>
+                        <Text as="span" className="muted" size={100}>
+                          biaya {formatRupiah(p.feeMinor)} · diterima {formatRupiah(p.netAmountMinor)}</Text>
                       )}
-                      <span className="muted" style={{ fontSize: '0.78rem' }}>{desc || '—'}</span>
+                      <Text as="span" className="muted" size={100}>{desc || '—'}</Text>
                       {p.failureReason && (
-                        <span style={{ fontSize: '0.78rem', color: 'var(--critical)' }}>{p.failureReason}</span>
+                        <Text as="span" size={100} style={{ color: 'var(--critical)' }}>{p.failureReason}</Text>
                       )}
                     </div>
                     <Badge tone={PAYOUT_STATUS_TONE[p.status]}>{PAYOUT_STATUS_LABEL[p.status]}</Badge>
@@ -1255,10 +1241,10 @@ function ManualPaymentSection({
     <div className="stack" style={{ gap: '0.85rem' }}>
       <div>
         <SectionTitle>Pembayaran manual</SectionTitle>
-        <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.82rem' }}>
+        <Text as="p" className="muted" size={200} style={{ margin: '0.25rem 0 0' }}>
           Cara pelanggan membayar saat metode manual dipilih. Nyalakan metode yang Anda terima —
           hanya yang menyala ditampilkan di tagihan pelanggan.
-        </p>
+        </Text>
       </div>
 
       {/* Transfer — saklar + field rekening */}
@@ -1321,7 +1307,7 @@ function ManualPaymentSection({
             <div className="row" style={{ gap: '0.75rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
               <LocalImage file={qrisFile} alt="Gambar QRIS baru" size={140} />
               <div className="stack" style={{ gap: '0.4rem' }}>
-                <span className="muted" style={{ fontSize: '0.82rem' }}>Gambar baru — akan diunggah saat menyimpan.</span>
+                <Text as="span" className="muted" size={200}>Gambar baru — akan diunggah saat menyimpan.</Text>
                 {!disabled && (
                   <div className="row" style={{ gap: '0.5rem' }}>
                     <QrisUploadButton label="Ganti gambar" onPick={onPickQris} />
@@ -1336,7 +1322,7 @@ function ManualPaymentSection({
             <div className="row" style={{ gap: '0.75rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
               <AuthedImage path={QRIS_IMAGE_PATH} version={qrisVersion} alt="Gambar QRIS" size={140} />
               <div className="stack" style={{ gap: '0.4rem' }}>
-                <span className="muted" style={{ fontSize: '0.82rem' }}>Gambar QRIS tersimpan.</span>
+                <Text as="span" className="muted" size={200}>Gambar QRIS tersimpan.</Text>
                 {!disabled && (
                   <div className="row" style={{ gap: '0.5rem' }}>
                     <QrisUploadButton label="Ganti gambar" onPick={onPickQris} />
@@ -1349,11 +1335,9 @@ function ManualPaymentSection({
             </div>
           ) : (
             <div className="stack" style={{ gap: '0.4rem' }}>
-              <span className="muted" style={{ fontSize: '0.82rem' }}>
-                {qrisRemoved
-                  ? 'Gambar QRIS akan dihapus saat menyimpan.'
-                  : 'Belum ada gambar QRIS. Pilih gambar QRIS statis Anda (PNG/JPG, maks 5 MB).'}
-              </span>
+              <Text as="span" className="muted" size={200}>{qrisRemoved
+                ? 'Gambar QRIS akan dihapus saat menyimpan.'
+                : 'Belum ada gambar QRIS. Pilih gambar QRIS statis Anda (PNG/JPG, maks 5 MB).'}</Text>
               {!disabled && <QrisUploadButton label={qrisRemoved ? 'Pilih gambar lain' : 'Pilih gambar QRIS'} onPick={onPickQris} />}
             </div>
           )}
@@ -1366,7 +1350,7 @@ function ManualPaymentSection({
 /** Tombol pemicu `<input type=file>` tersembunyi untuk memilih gambar QRIS (unggah saat menyimpan). */
 function QrisUploadButton({ label, onPick }: { label: string; onPick: (file: File) => void }) {
   return (
-    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', padding: '0.4rem 0.7rem', borderRadius: 6, border: '1px solid var(--border)', fontSize: '0.85rem' }}>
+    <label style={{ ...typographyStyles.caption1, display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', padding: '0.4rem 0.7rem', borderRadius: 6, border: '1px solid var(--border)' }}>
       {label}
       <input
         type="file"
@@ -1438,7 +1422,7 @@ function AuthedImage({ path, version, alt, size }: { path: string; version: numb
     background: 'var(--surface-2, #1e2530)',
     border: '1px solid var(--border, #2a3340)',
   }
-  if (failed) return <div style={{ ...box, display: 'grid', placeItems: 'center', fontSize: '0.7rem' }} className="muted">gagal</div>
+  if (failed) return <div style={{ ...box, display: 'grid', placeItems: 'center' }} className="muted"><Text as="span" size={100}>gagal</Text></div>
   if (!url) return <div style={box} aria-busy="true" />
   return (
     <a href={url} target="_blank" rel="noreferrer" title={alt}>
@@ -1450,12 +1434,10 @@ function AuthedImage({ path, version, alt, size }: { path: string; version: numb
 function FormRow({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <div className="stack" style={{ gap: '0.35rem' }}>
-      <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{label}</span>
+      <Text as="span" size={300} weight="semibold">{label}</Text>
       {children}
       {hint && (
-        <span className="muted" style={{ fontSize: '0.82rem' }}>
-          {hint}
-        </span>
+        <Text as="span" className="muted" size={200}>{hint}</Text>
       )}
     </div>
   )
@@ -1473,15 +1455,14 @@ function Callout({ children }: { children: ReactNode }) {
         borderRadius: 'var(--radius-sm)',
         background: 'color-mix(in srgb, var(--warning) 12%, var(--surface))',
         border: '1px solid color-mix(in srgb, var(--warning) 32%, transparent)',
-        fontSize: '0.85rem',
       }}
     >
       <IconAlert size={16} />
-      <span>{children}</span>
+      <Text as="span" >{children}</Text>
     </div>
   )
 }
 
 function SectionTitle({ children }: { children: ReactNode }) {
-  return <h3 style={{ margin: '0.25rem 0 0', fontSize: '0.95rem', fontWeight: 600 }}>{children}</h3>
+  return <Text as="h3" size={400} weight="semibold" style={{ margin: '0.25rem 0 0' }}>{children}</Text>
 }

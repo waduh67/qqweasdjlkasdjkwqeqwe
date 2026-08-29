@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import QRCode from 'react-qr-code'
+import { typographyStyles } from '@fluentui/react-components'
 import { Button, SelectField } from '@/components/atoms'
 
 /**
@@ -155,11 +156,11 @@ export function GatewayPayPanel({
     <div className="stack" style={{ gap: '0.9rem' }}>
       <div className="spread" style={{ alignItems: 'flex-start' }}>
         <div className="stack" style={{ gap: '0.2rem' }}>
-          <strong style={{ fontSize: '1rem' }}>{title}</strong>
-          {subtitle && <span className="muted" style={{ fontSize: '0.82rem' }}>{subtitle}</span>}
+          <strong style={{ ...typographyStyles.subtitle1 }}>{title}</strong>
+          {subtitle && <span className="muted" style={{ ...typographyStyles.caption1 }}>{subtitle}</span>}
         </div>
         {dismissible && (
-          <Button type="button" variant="subtle" onClick={onClose} style={{ fontSize: '0.8rem' }}>
+          <Button type="button" variant="subtle" onClick={onClose} style={{ ...typographyStyles.caption1 }}>
             Tutup
           </Button>
         )}
@@ -178,13 +179,13 @@ export function GatewayPayPanel({
           }}
         >
           <strong style={{ color: 'var(--good-ink)' }}>Pembayaran diterima ✓</strong>
-          <span className="muted" style={{ fontSize: '0.82rem' }}>Tagihan sudah lunas.</span>
+          <span className="muted" style={{ ...typographyStyles.caption1 }}>Tagihan sudah lunas.</span>
         </div>
       ) : (
         <>
           {/* Pilih metode */}
           <div className="stack" style={{ gap: '0.4rem' }}>
-            <span className="muted" style={{ fontSize: '0.8rem' }}>Metode pembayaran</span>
+            <span className="muted" style={{ ...typographyStyles.caption1 }}>Metode pembayaran</span>
             <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap' }}>
               {methods.map((m) => (
                 <Button
@@ -198,7 +199,7 @@ export function GatewayPayPanel({
                     setError(null)
                   }}
                   disabled={busy}
-                  style={{ fontSize: '0.82rem' }}
+                  style={{ ...typographyStyles.caption1 }}
                 >
                   {m.label}
                 </Button>
@@ -209,7 +210,7 @@ export function GatewayPayPanel({
           {/* Pilih bank untuk Virtual Account */}
           {needsChannel && (
             <div className="stack" style={{ gap: '0.4rem' }}>
-              <span className="muted" style={{ fontSize: '0.8rem' }}>Bank Virtual Account</span>
+              <span className="muted" style={{ ...typographyStyles.caption1 }}>Bank Virtual Account</span>
               <SelectField
                 value={channel}
                 onChange={(_, data) => {
@@ -237,7 +238,7 @@ export function GatewayPayPanel({
                 borderRadius: 'var(--radius-sm)',
                 border: '1px solid var(--critical, #d1242f)',
                 background: 'color-mix(in srgb, var(--critical, #d1242f) 10%, var(--surface))',
-                fontSize: '0.82rem',
+                ...typographyStyles.caption1,
                 color: 'var(--critical-ink)',
               }}
             >
@@ -248,22 +249,22 @@ export function GatewayPayPanel({
           {/* Instruksi VA */}
           {instruction?.vaNumber && (
             <div className="stack" style={{ gap: '0.4rem', paddingTop: '0.4rem', borderTop: '1px solid var(--border)' }}>
-              <span className="muted" style={{ fontSize: '0.8rem' }}>
+              <span className="muted" style={{ ...typographyStyles.caption1 }}>
                 Nomor Virtual Account{instruction.vaChannel ? ` · ${instruction.vaChannel}` : ''}
               </span>
               <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                <strong style={{ fontFamily: 'monospace', fontSize: '1.25rem', letterSpacing: '0.03em' }}>
+                <strong className="tnum" style={typographyStyles.title2}>
                   {instruction.vaNumber}
                 </strong>
-                <Button type="button" variant="subtle" onClick={() => void copyVa()} style={{ fontSize: '0.8rem' }}>
+                <Button type="button" variant="subtle" onClick={() => void copyVa()} style={{ ...typographyStyles.caption1 }}>
                   {copied ? 'Tersalin ✓' : 'Salin'}
                 </Button>
               </div>
               {instruction.vaName && (
-                <span className="muted" style={{ fontSize: '0.8rem' }}>a.n. {instruction.vaName}</span>
+                <span className="muted" style={{ ...typographyStyles.caption1 }}>a.n. {instruction.vaName}</span>
               )}
               {fmtExpiry(instruction.vaExpiresAt) && (
-                <span className="muted" style={{ fontSize: '0.78rem' }}>
+                <span className="muted" style={{ ...typographyStyles.caption1 }}>
                   Berlaku s/d {fmtExpiry(instruction.vaExpiresAt)}
                 </span>
               )}
@@ -276,14 +277,14 @@ export function GatewayPayPanel({
               className="stack"
               style={{ gap: '0.4rem', alignItems: 'center', paddingTop: '0.4rem', borderTop: '1px solid var(--border)' }}
             >
-              <span className="muted" style={{ fontSize: '0.8rem', alignSelf: 'flex-start' }}>
+              <span className="muted" style={{ ...typographyStyles.caption1, alignSelf: 'flex-start' }}>
                 Pindai QRIS dengan aplikasi pembayaran Anda
               </span>
               <div style={{ background: '#fff', padding: '0.75rem', borderRadius: 8 }}>
                 <QRCode value={instruction.qrContent} size={196} />
               </div>
               {fmtExpiry(instruction.qrExpiresAt) && (
-                <span className="muted" style={{ fontSize: '0.78rem' }}>
+                <span className="muted" style={{ ...typographyStyles.caption1 }}>
                   Berlaku s/d {fmtExpiry(instruction.qrExpiresAt)}
                 </span>
               )}
@@ -291,7 +292,7 @@ export function GatewayPayPanel({
           )}
 
           {instruction && pollStatus && (
-            <span className="muted" style={{ fontSize: '0.78rem', textAlign: 'center' }}>
+            <span className="muted" style={{ ...typographyStyles.caption1, textAlign: 'center' }}>
               Menunggu pembayaran… halaman ini memperbarui otomatis saat lunas.
             </span>
           )}

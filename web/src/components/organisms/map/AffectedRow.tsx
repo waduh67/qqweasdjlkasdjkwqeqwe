@@ -1,3 +1,4 @@
+import { Text } from '@fluentui/react-components'
 import type { AffectedCustomer } from '@/api/network'
 
 /** Titik status ONU di daftar panel — dijaga seirama dengan [CUSTOMER_COLOR] di peta. */
@@ -24,9 +25,9 @@ export function AffectedRow({ c }: { c: AffectedCustomer }) {
         />
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
       </span>
-      <span className="muted tnum" style={{ fontSize: '0.78rem', flexShrink: 0 }}>
+      <Text as="span" className="muted tnum" size={200} style={{ flexShrink: 0 }}>
         {c.odpCode}
-      </span>
+      </Text>
     </div>
   )
 }

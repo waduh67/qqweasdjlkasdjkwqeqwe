@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { ChevronDown } from 'lucide-react'
+import { Text } from '@fluentui/react-components'
+import { Button } from '@/components/atoms'
 import type { ComponentType } from 'react'
 import type { IconProps } from '@/components/atoms/icons'
 
@@ -74,7 +76,7 @@ export function SidebarNav({
                 {visible.map((item) => (
                   <NavLink key={item.to} to={item.to} end={item.end ?? false} title={item.label}>
                     <item.icon size={18} />
-                    <span className="nav-text">{item.label}</span>
+                    <Text as="span" className="nav-text" size={200}>{item.label}</Text>
                   </NavLink>
                 ))}
               </nav>
@@ -85,22 +87,22 @@ export function SidebarNav({
         const isCollapsed = !expanded.has(group.label)
         return (
           <div key={group.label} className={`nav-group nav-group--labeled${isCollapsed ? ' collapsed' : ''}`}>
-            <button
-              type="button"
+            <Button
+              variant="subtle"
               className="nav-label nav-group-toggle"
               onClick={() => toggle(group.label as string)}
               aria-expanded={!isCollapsed}
             >
               {/* Chevron di KIRI label — pola pohon left-nav Azure (⌄ terbuka / › tertutup). */}
               <ChevronDown size={16} className="nav-group-chevron" aria-hidden />
-              <span>{group.label}</span>
-            </button>
+              <Text as="span" size={100} weight="semibold">{group.label}</Text>
+            </Button>
             {!isCollapsed && (
               <nav>
                 {visible.map((item) => (
                   <NavLink key={item.to} to={item.to} end={item.end ?? false} title={item.label}>
                     <item.icon size={18} />
-                    <span className="nav-text">{item.label}</span>
+                    <Text as="span" className="nav-text" size={200}>{item.label}</Text>
                   </NavLink>
                 ))}
               </nav>

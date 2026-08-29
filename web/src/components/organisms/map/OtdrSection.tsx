@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Text, typographyStyles } from '@fluentui/react-components'
 import type {
   CableEnd,
   CableView,
@@ -76,8 +77,8 @@ export function OtdrSection({
   return (
     <div className="stack" style={{ gap: '0.5rem', borderTop: '1px solid var(--line)', paddingTop: '0.6rem' }}>
       <div className="spread">
-        <strong style={{ fontSize: '0.85rem' }}>Uji OTDR</strong>
-        <span className="muted" style={{ fontSize: '0.75rem' }}>{list.length} hasil</span>
+        <Text as="strong" size={300} weight="semibold">Uji OTDR</Text>
+        <Text as="span" className="muted" size={100}>{list.length} hasil</Text>
       </div>
 
       {/* Penggarisnya lebih dulu: begitu orang tahu kotak apa saja yang berdiri di
@@ -92,12 +93,12 @@ export function OtdrSection({
               <div className="spread" style={{ gap: '0.4rem', alignItems: 'center' }}>
                 <Button
                   variant="subtle"
-                  style={{ justifyContent: 'flex-start', flex: 1, padding: '0.25rem 0.4rem', fontSize: '0.8rem' }}
+                  style={{ ...typographyStyles.body1, justifyContent: 'flex-start', flex: 1, padding: '0.25rem 0.4rem' }}
                   onClick={() => onFocus(t)}
                   disabled={!t.estimatedPoint}
                   title={t.estimatedPoint ? 'Fokuskan peta ke titik perkiraan' : 'Titik tak bisa dipetakan'}
                 >
-                  <span className="tnum" style={{ fontWeight: 600 }}>{formatLength(t.distanceMeters)}</span>
+                  <Text as="span" className="tnum" weight="semibold">{formatLength(t.distanceMeters)}</Text>
                   <span className="badge" style={{ marginLeft: '0.4rem' }}>{OTDR_EVENT_LABEL[t.eventType]}</span>
                   <span className="muted" style={{ marginLeft: '0.4rem' }}>
                     dari {t.measuredFrom === 'FROM' ? cable.fromKind : cable.toKind}
@@ -118,9 +119,9 @@ export function OtdrSection({
         </div>
       )}
 
-      {tests === null && <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>Memuat…</p>}
+      {tests === null && <Text as="p" className="muted" size={200} style={{ margin: 0 }}>Memuat…</Text>}
       {tests !== null && list.length === 0 && !canRecord && (
-        <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>Belum ada uji OTDR.</p>
+        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>Belum ada uji OTDR.</Text>
       )}
 
       {canRecord && (
@@ -195,7 +196,7 @@ export function OtdrSection({
 function OtdrPlacementLine({ placement }: { placement: OtdrPlacement }) {
   return (
     <div className="stack" style={{ gap: '0.1rem', padding: '0 0.4rem 0.1rem' }}>
-      <p className="muted" style={{ margin: 0, fontSize: '0.75rem', lineHeight: 1.35 }}>
+      <Text as="p" className="muted" size={100} style={{ ...typographyStyles.caption1, margin: 0 }}>
         {placement.atClosure && (
           <span
             className="badge"
@@ -205,11 +206,11 @@ function OtdrPlacementLine({ placement }: { placement: OtdrPlacement }) {
           </span>
         )}
         {placement.summary}
-      </p>
+      </Text>
       {placement.advice && (
-        <p className="dim" style={{ margin: 0, fontSize: '0.72rem', lineHeight: 1.35 }}>
+        <Text as="p" className="dim" size={100} style={{ ...typographyStyles.caption2, margin: 0 }}>
           {placement.advice}
-        </p>
+        </Text>
       )}
     </div>
   )
@@ -225,15 +226,15 @@ function OtdrPlacementLine({ placement }: { placement: OtdrPlacement }) {
  */
 function OtdrLandmarkRuler({ landmarks }: { landmarks: OtdrLandmark[] }) {
   return (
-    <div className="row wrap" style={{ gap: '0.25rem', fontSize: '0.75rem' }}>
-      <span className="dim">Patokan:</span>
+    <div className="row wrap" style={{ gap: '0.25rem' }}>
+      <Text as="span" className="dim" size={100}>Patokan:</Text>
       {landmarks.map((l, index) => (
         <span key={l.closureId} className="row" style={{ gap: '0.25rem' }}>
-          {index > 0 && <span className="dim" aria-hidden>→</span>}
-          <span className="badge" title={`${l.name} · ${formatLength(l.distanceMeters)} dari pangkal`}>
+          {index > 0 && <Text as="span" className="dim" size={100} aria-hidden>→</Text>}
+          <Text as="span" className="badge" size={100} title={`${l.name} · ${formatLength(l.distanceMeters)} dari pangkal`}>
             {l.code}
             {!l.endpoint && <span className="dim"> {formatLength(l.distanceMeters)}</span>}
-          </span>
+          </Text>
         </span>
       ))}
     </div>

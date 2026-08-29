@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MessageBar, MessageBarBody } from '@fluentui/react-components'
+import { Combobox, MessageBar, MessageBarBody, Option } from '@fluentui/react-components'
 import { api } from '@/api/client'
 import type { UnmappedCustomer } from '@/api/network'
 import { Button, TextField } from '@/components/atoms'
@@ -82,24 +82,26 @@ export function PlaceCustomerForm({
           </MessageBar>
         )}
         {rows != null && rows.length > 0 && (
-          <ul className="pick-list" role="listbox" aria-label="Pelanggan belum berkoordinat">
-            {rows.map((c) => (
-              <li key={c.id}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={picked?.id === c.id}
-                  className={`pick-item${picked?.id === c.id ? ' is-picked' : ''}`}
-                  onClick={() => setPicked(c)}
-                >
-                  <span className="pick-title">
-                    {c.code} — {c.name}
-                  </span>
-                  <span className="muted">{[c.address, c.phone].filter(Boolean).join(' · ')}</span>
-                </button>
-              </li>
+          <Combobox
+            aria-label="Pelanggan belum berkoordinat"
+            placeholder="Pilih pelanggan"
+            selectedOptions={picked ? [picked.id] : []}
+            value={picked ? `${picked.code} — ${picked.name}` : ''}
+            onOptionSelect={(_, data) => setPicked(rows.find((customer) => customer.id === data.optionValue) ?? null)}
+          >
+            {rows.map((customer) => (
+              <Option
+                key={customer.id}
+                value={customer.id}
+                text={`${customer.code} — ${customer.name}`}
+              >
+                <span className="pick-title">
+                  {customer.code} — {customer.name}
+                </span>
+                <span className="muted">{[customer.address, customer.phone].filter(Boolean).join(' · ')}</span>
+              </Option>
             ))}
-          </ul>
+          </Combobox>
         )}
 
         <div className="row">

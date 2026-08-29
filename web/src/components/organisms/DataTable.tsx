@@ -1,15 +1,27 @@
-import { useMemo, useState, type KeyboardEvent, type ReactElement, type ReactNode } from 'react'
+import { useMemo, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from 'react'
 import {
-  Checkbox,
+  Button,
+  DataGrid,
+  DataGridBody,
+  DataGridCell,
+  DataGridHeader,
+  DataGridHeaderCell,
+  DataGridRow,
+  Link,
   Menu,
-  MenuTrigger,
-  MenuPopover,
-  MenuList,
-  MenuItem,
   MenuButton,
+  MenuItem,
+  MenuList,
+  MenuPopover,
+  MenuTrigger,
+  TableCellActions,
+  createTableColumn,
+  makeStyles,
+  mergeClasses,
+  tokens,
+  type TableColumnDefinition,
 } from '@fluentui/react-components'
 import { MoreHorizontal } from 'lucide-react'
-import { IconChevronDown, IconChevronsUpDown } from '@/components/atoms/icons'
 import { EmptyState, SkeletonRows } from '@/components/atoms'
 
 /**
@@ -21,7 +33,7 @@ import { EmptyState, SkeletonRows } from '@/components/atoms'
  *
  * Ekstensi ala Azure DataGrid: kolom **checkbox** multi-select (`selection`) di
  * paling kiri, dan kolom **menu aksi** (`rowActions`, tombol `…`) tepat setelahnya —
- * dua-duanya opsional agar 16 pemakai lama tak wajib berubah.
+ * dua-duanya opsional agar pemakai lama tak wajib berubah.
  */
 export type Column<T> = {
   /** Kunci unik kolom — dipakai sebagai React key dan penanda state urut. */
@@ -39,8 +51,12 @@ export type Column<T> = {
   align?: 'left' | 'right' | 'center'
   /** Lebar kolom eksplisit (mis. `'1%'` untuk kolom aksi yang menyusut). */
   width?: string
-  /** Kelas tambahan pada `<td>`. */
+  /** Kelas tambahan pada sel grid. */
   className?: string
+  /** Membuka detail dari kontrol tautan pada sel kolom ini. */
+  onCellClick?: (row: T) => void
+  /** Aksi yang tampil di samping isi sel kolom ini. */
+  inlineActions?: (row: T) => RowAction[]
 }
 
 /** Satu operasi baris di menu aksi kiri (`…`). */
@@ -59,6 +75,61 @@ export type Selection = {
 }
 
 type SortState = { key: string; dir: 'asc' | 'desc' } | null
+
+const ACTIONS_COLUMN_ID = '__data_table_actions__'
+
+const useStyles = makeStyles({
+  grid: {
+    minWidth: 'max-content',
+  },
+  headerCell: {
+    minWidth: '0',
+    justifyContent: 'flex-start',
+    fontWeight: tokens.fontWeightSemibold,
+    textAlign: 'left',
+  },
+  headerSortButton: {
+    justifyContent: 'flex-start',
+    textAlign: 'left',
+  },
+  dataCell: {
+    fontWeight: tokens.fontWeightRegular,
+    textAlign: 'left',
+  },
+  numeric: {
+    fontVariantNumeric: 'tabular-nums',
+  },
+  clickableRow: {
+    cursor: 'pointer',
+  },
+  actionCell: {
+    width: '1%',
+  },
+  cellLink: {
+    color: tokens.colorBrandForegroundLink,
+    fontWeight: tokens.fontWeightRegular,
+    ':hover': {
+      color: tokens.colorBrandForegroundLinkHover,
+      textDecorationLine: 'underline',
+    },
+    ':focus-visible': {
+      color: tokens.colorBrandForegroundLinkHover,
+      textDecorationLine: 'underline',
+    },
+  },
+})
+
+function compareValues<T>(column: Column<T>, a: T, b: T): number {
+  const av = column.sortValue!(a)
+  const bv = column.sortValue!(b)
+  const an = av == null || av === ''
+  const bn = bv == null || bv === ''
+  if (an && bn) return 0
+  if (an) return 1
+  if (bn) return -1
+  if (typeof av === 'number' && typeof bv === 'number') return av - bv
+  return String(av).localeCompare(String(bv), 'id', { numeric: true })
+}
 
 export function DataTable<T>({
   columns,
@@ -81,59 +152,144 @@ export function DataTable<T>({
   selection?: Selection
   rowActions?: (row: T) => RowAction[]
 }) {
+  const styles = useStyles()
   const [sort, setSort] = useState<SortState>(initialSort ?? null)
+  const clickable = !!onRowClick
 
   const sorted = useMemo(() => {
     if (!sort) return rows
-    const col = columns.find((c) => c.key === sort.key)
-    if (!col?.sortValue) return rows
-    const getv = col.sortValue
+    const column = columns.find((candidate) => candidate.key === sort.key)
+    if (!column?.sortValue) return rows
     const factor = sort.dir === 'asc' ? 1 : -1
     // Salin dulu agar prop tak termutasi; nulls-last, sadar-angka untuk "id".
     return [...rows].sort((a, b) => {
-      const av = getv(a)
-      const bv = getv(b)
-      const an = av == null || av === ''
-      const bn = bv == null || bv === ''
-      if (an && bn) return 0
-      if (an) return 1
-      if (bn) return -1
-      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * factor
-      return String(av).localeCompare(String(bv), 'id', { numeric: true }) * factor
+      const comparison = compareValues(column, a, b)
+      const aEmpty = column.sortValue!(a) == null || column.sortValue!(a) === ''
+      const bEmpty = column.sortValue!(b) == null || column.sortValue!(b) === ''
+      return aEmpty || bEmpty ? comparison : comparison * factor
     })
-  }, [rows, sort, columns])
+  }, [columns, rows, sort])
 
-  // Tri-state: klik pertama asc → desc → bersih.
-  const toggleSort = (col: Column<T>) => {
-    if (!col.sortValue) return
-    setSort((prev) => {
-      if (!prev || prev.key !== col.key) return { key: col.key, dir: 'asc' }
-      if (prev.dir === 'asc') return { key: col.key, dir: 'desc' }
+  const dataGridColumns = useMemo<TableColumnDefinition<T>[]>(() => {
+    const contentColumns = columns.map((column) =>
+      createTableColumn<T>({
+        columnId: column.key,
+        renderHeaderCell: () => column.header,
+        renderCell: (row) => {
+          const actions = column.inlineActions?.(row) ?? []
+          const hasInlineControls = !!column.onCellClick || actions.length > 0
+          return (
+            <>
+              {column.onCellClick ? (
+                <Link
+                  as="button"
+                  appearance="subtle"
+                  className={styles.cellLink}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    column.onCellClick?.(row)
+                  }}
+                >
+                  {column.cell(row)}
+                </Link>
+              ) : (
+                column.cell(row)
+              )}
+              {actions.length > 0 && (
+                <TableCellActions visible={hasInlineControls}>
+                  <Menu positioning="below-end">
+                    <MenuTrigger disableButtonEnhancement>
+                      <MenuButton
+                        appearance="transparent"
+                        icon={<MoreHorizontal size={16} />}
+                        aria-label="Aksi sel"
+                        size="small"
+                        onClick={(event) => event.stopPropagation()}
+                      />
+                    </MenuTrigger>
+                    <MenuPopover>
+                      <MenuList>
+                        {actions.map((action) => (
+                          <MenuItem
+                            key={action.key}
+                            icon={action.icon}
+                            disabled={action.disabled}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              action.onClick()
+                            }}
+                          >
+                            {action.label}
+                          </MenuItem>
+                        ))}
+                      </MenuList>
+                    </MenuPopover>
+                  </Menu>
+                </TableCellActions>
+              )}
+            </>
+          )
+        },
+      }),
+    )
+
+    if (!rowActions) return contentColumns
+
+    return [
+      createTableColumn<T>({
+        columnId: ACTIONS_COLUMN_ID,
+        renderHeaderCell: () => 'Aksi',
+        renderCell: (row) => {
+          const actions = rowActions(row)
+          if (actions.length === 0) return null
+          return (
+            <Menu positioning="below-start">
+              <MenuTrigger disableButtonEnhancement>
+                <MenuButton
+                  appearance="transparent"
+                  icon={<MoreHorizontal size={16} />}
+                  aria-label="Aksi baris"
+                  size="small"
+                />
+              </MenuTrigger>
+              <MenuPopover>
+                <MenuList>
+                  {actions.map((action) => (
+                    <MenuItem
+                      key={action.key}
+                      icon={action.icon}
+                      disabled={action.disabled}
+                      onClick={action.onClick}
+                    >
+                      {action.label}
+                    </MenuItem>
+                  ))}
+                </MenuList>
+              </MenuPopover>
+            </Menu>
+          )
+        },
+      }),
+      ...contentColumns,
+    ]
+  }, [columns, rowActions, styles.cellLink])
+
+  const toggleSort = (column: Column<T>) => {
+    setSort((previous) => {
+      if (!previous || previous.key !== column.key) return { key: column.key, dir: 'asc' }
+      if (previous.dir === 'asc') return { key: column.key, dir: 'desc' }
       return null
     })
   }
 
-  const clickable = !!onRowClick
-
-  // Seleksi: hitung keadaan header (kosong/penuh/campuran) atas baris yang tampak.
-  const allKeys = sorted.map(rowKey)
-  const selCount = selection ? allKeys.filter((k) => selection.selected.has(k)).length : 0
-  const headerChecked: boolean | 'mixed' =
-    selCount === 0 ? false : selCount === allKeys.length ? true : 'mixed'
-
-  const toggleAll = () => {
+  const handleSelectionChange = (
+    _event: React.MouseEvent | React.KeyboardEvent,
+    data: { selectedItems: Set<string | number> },
+  ) => {
     if (!selection) return
-    const next = new Set(selection.selected)
-    if (selCount === allKeys.length) allKeys.forEach((k) => next.delete(k))
-    else allKeys.forEach((k) => next.add(k))
-    selection.onChange(next)
-  }
-
-  const toggleOne = (key: string) => {
-    if (!selection) return
-    const next = new Set(selection.selected)
-    if (next.has(key)) next.delete(key)
-    else next.add(key)
+    const visibleKeys = new Set(rows.map(rowKey))
+    const next = new Set([...selection.selected].filter((key) => !visibleKeys.has(key)))
+    data.selectedItems.forEach((key) => next.add(String(key)))
     selection.onChange(next)
   }
 
@@ -141,140 +297,110 @@ export function DataTable<T>({
 
   return (
     <div className="card table-card">
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              {selection && (
-                <th className="dg-check" style={{ width: '1%' }}>
-                  <Checkbox
-                    checked={headerChecked}
-                    onChange={toggleAll}
-                    aria-label="Pilih semua baris"
-                  />
-                </th>
-              )}
-              {rowActions && <th className="dg-actions" style={{ width: '1%' }} aria-label="Aksi" />}
-              {columns.map((col) => {
-                const active = sort?.key === col.key
-                const ariaSort = active
-                  ? sort!.dir === 'asc'
-                    ? 'ascending'
-                    : 'descending'
-                  : undefined
-                return (
-                  <th
-                    key={col.key}
-                    className={col.align === 'right' ? 'num' : undefined}
-                    style={{ width: col.width, textAlign: col.align }}
-                    aria-sort={ariaSort}
-                  >
-                    {col.sortValue ? (
-                      <button className="th-sort" onClick={() => toggleSort(col)}>
-                        {col.header}
-                        {active ? (
-                          <IconChevronDown
-                            size={14}
-                            className={sort!.dir === 'asc' ? 'flip' : undefined}
-                          />
-                        ) : (
-                          <IconChevronsUpDown size={13} className="th-sort-idle" />
-                        )}
-                      </button>
-                    ) : (
-                      col.header
-                    )}
-                  </th>
-                )
-              })}
-            </tr>
-          </thead>
-          {!loading && (
-            <tbody>
-              {sorted.map((row) => {
-                const key = rowKey(row)
-                const onKey = (e: KeyboardEvent<HTMLTableRowElement>) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    onRowClick!(row)
+      {!loading && (
+        <div className="table-wrap">
+          <DataGrid
+            className={mergeClasses('data-table-grid', styles.grid)}
+            aria-label="Tabel data"
+            items={sorted}
+            columns={dataGridColumns}
+            getRowId={(row) => rowKey(row)}
+            selectionMode={selection ? 'multiselect' : undefined}
+            selectedItems={selection?.selected}
+            onSelectionChange={selection ? handleSelectionChange : undefined}
+            focusMode={clickable ? 'row_unstable' : 'cell'}
+            selectionAppearance="neutral"
+          >
+            <DataGridHeader>
+              <DataGridRow
+                selectionCell={
+                  selection
+                    ? { checkboxIndicator: { 'aria-label': 'Pilih semua baris' } }
+                    : undefined
+                }
+              >
+                {({ renderHeaderCell, columnId }) => {
+                  const column = columns.find((candidate) => candidate.key === columnId)
+                  return (
+                    <DataGridHeaderCell
+                      className={mergeClasses(styles.headerCell, column?.align === 'right' && styles.numeric)}
+                      style={{ width: columnId === ACTIONS_COLUMN_ID ? '1%' : column?.width, textAlign: column?.align }}
+                    >
+                      {column?.sortValue ? (
+                        <Button
+                          appearance="transparent"
+                          className={styles.headerSortButton}
+                          onClick={() => toggleSort(column)}
+                        >
+                          {renderHeaderCell()}
+                        </Button>
+                      ) : (
+                        renderHeaderCell()
+                      )}
+                    </DataGridHeaderCell>
+                  )
+                }}
+              </DataGridRow>
+            </DataGridHeader>
+            <DataGridBody<T>>
+              {({ item, rowId }) => {
+                const activateRow = () => onRowClick?.(item)
+                const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    activateRow()
                   }
                 }
-                const selected = selection?.selected.has(key) ?? false
-                const actions = rowActions?.(row) ?? []
+
                 return (
-                  <tr
-                    key={key}
-                    className={
-                      [clickable ? 'row-click' : '', selected ? 'row-selected' : '']
-                        .filter(Boolean)
-                        .join(' ') || undefined
+                  <DataGridRow
+                    key={rowId}
+                    className={mergeClasses(clickable && styles.clickableRow)}
+                    onClick={
+                      clickable
+                        ? (event: MouseEvent<HTMLDivElement>) => {
+                            if (event.target instanceof HTMLElement && event.target.closest('input[type="checkbox"]')) return
+                            activateRow()
+                          }
+                        : undefined
                     }
-                    onClick={clickable ? () => onRowClick!(row) : undefined}
-                    onKeyDown={clickable ? onKey : undefined}
-                    tabIndex={clickable ? 0 : undefined}
+                    onKeyDown={clickable ? onKeyDown : undefined}
+                    selectionCell={
+                      selection ? { checkboxIndicator: { 'aria-label': 'Pilih baris' } } : undefined
+                    }
                   >
-                    {selection && (
-                      <td className="dg-check" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selected}
-                          onChange={() => toggleOne(key)}
-                          aria-label="Pilih baris"
-                        />
-                      </td>
-                    )}
-                    {rowActions && (
-                      <td className="dg-actions" onClick={(e) => e.stopPropagation()}>
-                        {actions.length > 0 && (
-                          <Menu positioning="below-start">
-                            <MenuTrigger disableButtonEnhancement>
-                              <MenuButton
-                                appearance="transparent"
-                                icon={<MoreHorizontal size={16} />}
-                                aria-label="Aksi baris"
-                                size="small"
-                              />
-                            </MenuTrigger>
-                            <MenuPopover>
-                              <MenuList>
-                                {actions.map((a) => (
-                                  <MenuItem
-                                    key={a.key}
-                                    icon={a.icon}
-                                    disabled={a.disabled}
-                                    onClick={a.onClick}
-                                  >
-                                    {a.label}
-                                  </MenuItem>
-                                ))}
-                              </MenuList>
-                            </MenuPopover>
-                          </Menu>
-                        )}
-                      </td>
-                    )}
-                    {columns.map((col) => (
-                      <td
-                        key={col.key}
-                        // Di ponsel kepala tabel disembunyikan dan tiap baris ditumpuk jadi
-                        // kartu; `data-label` inilah yang dicetak CSS sebagai label sel,
-                        // jadi nilai tak melayang tanpa keterangan. Judul non-teks (ikon,
-                        // elemen) dilewati — tak ada yang bisa dijadikan teks label.
-                        data-label={typeof col.header === 'string' ? col.header : undefined}
-                        className={[col.align === 'right' ? 'num' : '', col.className ?? '']
-                          .filter(Boolean)
-                          .join(' ') || undefined}
-                        style={{ textAlign: col.align }}
-                      >
-                        {col.cell(row)}
-                      </td>
-                    ))}
-                  </tr>
+                    {({ renderCell, columnId }) => {
+                       const column = columns.find((candidate) => candidate.key === columnId)
+                       const isActionCell = columnId === ACTIONS_COLUMN_ID
+                       const hasInlineControls = !!column?.onCellClick || (column?.inlineActions?.(item).length ?? 0) > 0
+                       return (
+                        <DataGridCell
+                          className={mergeClasses(
+                            styles.dataCell,
+                            column?.align === 'right' && styles.numeric,
+                            column?.className,
+                            isActionCell && styles.actionCell,
+                          )}
+                          data-label={typeof column?.header === 'string' ? column.header : undefined}
+                          focusMode={isActionCell || hasInlineControls ? 'group' : 'none'}
+                          onClick={
+                            isActionCell || hasInlineControls
+                              ? (event) => event.stopPropagation()
+                              : undefined
+                          }
+                          style={{ textAlign: column?.align }}
+                        >
+                          {renderCell(item)}
+                        </DataGridCell>
+                      )
+                    }}
+                  </DataGridRow>
                 )
-              })}
-            </tbody>
-          )}
-        </table>
-      </div>
+              }}
+            </DataGridBody>
+          </DataGrid>
+        </div>
+      )}
       {loading && (
         <div style={{ padding: '1rem' }}>
           <SkeletonRows rows={5} cols={columns.length + leadCols} />

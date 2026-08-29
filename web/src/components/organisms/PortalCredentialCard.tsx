@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { typographyStyles } from '@fluentui/react-components'
 import { ApiError } from '@/api/client'
 import {
   disablePortalCredential,
@@ -109,7 +110,7 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
           <Spinner />
         </div>
       ) : !status?.provisioned ? (
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <p className="muted" style={{ margin: 0, ...typographyStyles.body1 }}>
           Pelanggan belum punya login portal self-service.
         </p>
       ) : (
@@ -126,9 +127,9 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
           className="stack"
           style={{ gap: '0.35rem', padding: '0.6rem 0.7rem', borderRadius: 8, background: 'var(--accent-soft)', border: '1px solid var(--border-strong)' }}
         >
-          <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>Password sementara (salin sekarang):</span>
+          <span style={{ ...typographyStyles.subtitle2 }}>Password sementara (salin sekarang):</span>
           <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <code className="tnum" style={{ fontSize: '0.95rem', userSelect: 'all' }}>{reveal.temporaryPassword}</code>
+            <code className="tnum" style={{ ...typographyStyles.subtitle1, userSelect: 'all' }}>{reveal.temporaryPassword}</code>
             <Button
               variant="subtle"
               onClick={() => {
@@ -140,7 +141,7 @@ export function PortalCredentialCard({ customerId }: { customerId: string }) {
             </Button>
             <Button variant="subtle" onClick={() => setReveal(null)}>Tutup</Button>
           </div>
-          <span className="muted" style={{ fontSize: '0.78rem' }}>
+          <span className="muted" style={{ ...typographyStyles.caption1 }}>
             Login <span className="tnum">{reveal.login}</span> · tak bisa dilihat lagi setelah ditutup.
           </span>
         </div>

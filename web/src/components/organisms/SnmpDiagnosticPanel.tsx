@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { typographyStyles } from '@fluentui/react-components'
 import { api, ApiError } from '@/api/client'
 import type { OidCheck, OidVerdict, OltSnmpCheck, OltSnmpWalk } from '@/api/monitoring'
 import { Badge, Button, EmptyState, Spinner, TextField, type Tone } from '@/components/atoms'
@@ -53,7 +54,7 @@ export function SnmpDiagnosticPanel({ oltId }: { oltId: string }) {
             {running ? 'Menanyai perangkat…' : check ? 'Uji ulang' : 'Jalankan uji'}
           </Button>
         </div>
-        <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        <p className="muted" style={{ margin: 0, ...typographyStyles.body1 }}>
           Server menanyai OLT ini memakai OID yang persis dipakai polling, lalu menunjukkan mana yang
           menjawab. Jalankan saat OLT baru dipasang, setelah firmware naik, atau ketika OLT tampak sehat
           tapi tak punya ONU satu pun.
@@ -79,12 +80,12 @@ export function SnmpDiagnosticPanel({ oltId }: { oltId: string }) {
             </div>
 
             {check.systemDescription && (
-              <p className="muted" style={{ margin: 0, fontSize: '0.82rem', wordBreak: 'break-word' }}>
+              <p className="muted" style={{ margin: 0, ...typographyStyles.body1, wordBreak: 'break-word' }}>
                 <strong>sysDescr:</strong> {check.systemDescription}
               </p>
             )}
             {check.failureReason && (
-              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--critical-ink)' }}>{check.failureReason}</p>
+              <p style={{ margin: 0, ...typographyStyles.body1, color: 'var(--critical-ink)' }}>{check.failureReason}</p>
             )}
 
             {check.oids.length > 0 && (
@@ -118,12 +119,12 @@ function OidRow({ check }: { check: OidCheck }) {
     <div className="stack" style={{ gap: '0.3rem', padding: '0.6rem 0', borderTop: '1px solid var(--border)' }}>
       <div className="spread" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
         <span className="row" style={{ gap: '0.45rem', alignItems: 'center', minWidth: 0 }}>
-          <strong style={{ fontSize: '0.9rem' }}>{check.label}</strong>
+          <strong style={{ ...typographyStyles.subtitle2 }}>{check.label}</strong>
           {check.essential && <Badge tone="neutral">wajib</Badge>}
         </span>
         <span className="row" style={{ gap: '0.4rem', alignItems: 'center', flexShrink: 0 }}>
           {check.sampleCount > 0 && (
-            <span className="muted tnum" style={{ fontSize: '0.8rem' }}>
+            <span className="muted tnum" style={{ ...typographyStyles.caption1 }}>
               {check.sampleCount} nilai
             </span>
           )}
@@ -131,14 +132,14 @@ function OidRow({ check }: { check: OidCheck }) {
         </span>
       </div>
 
-      <code className="tnum" style={{ fontSize: '0.78rem', color: 'var(--text-3)', wordBreak: 'break-all' }}>
+      <code className="tnum" style={{ ...typographyStyles.caption1, color: 'var(--text-3)', wordBreak: 'break-all' }}>
         {check.oid ?? '— belum ada OID —'}
       </code>
 
       {check.samples.length > 0 && (
         <div className="stack" style={{ gap: '0.15rem' }}>
           {check.samples.map((s) => (
-            <div key={s.index} className="row tnum" style={{ gap: '0.4rem', fontSize: '0.78rem', flexWrap: 'wrap' }}>
+            <div key={s.index} className="row tnum" style={{ gap: '0.4rem', ...typographyStyles.caption1, flexWrap: 'wrap' }}>
               <span className="muted">.{s.index}</span>
               <span style={{ wordBreak: 'break-all' }}>{s.raw}</span>
               <span aria-hidden className="muted">
@@ -153,7 +154,7 @@ function OidRow({ check }: { check: OidCheck }) {
       )}
 
       {check.hint && (
-        <p className="muted" style={{ margin: 0, fontSize: '0.8rem' }}>
+        <p className="muted" style={{ margin: 0, ...typographyStyles.caption1 }}>
           {check.hint}
         </p>
       )}
@@ -192,7 +193,7 @@ function ManualWalkCard({ oltId }: { oltId: string }) {
   return (
     <div className="card stack">
       <h3 style={{ margin: 0 }}>Walk OID manual</h3>
-      <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+      <p className="muted" style={{ margin: 0, ...typographyStyles.body1 }}>
         Telusuri sub-tree OID di OLT ini untuk menemukan OID yang benar saat profil vendor meleset.
         Sebutkan OID yang cukup spesifik (mis. <code>1.3.6.1.4.1.50224.3.3.2.1.7</code>) — walk dari akar
         bisa berjalan belasan menit dan membebani perangkat produksi.
@@ -218,7 +219,7 @@ function ManualWalkCard({ oltId }: { oltId: string }) {
             {result.truncated && <Badge tone="warning">dipotong {result.rows.length} teratas</Badge>}
           </div>
           {result.rows.length === 0 ? (
-            <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+            <p className="muted" style={{ margin: 0, ...typographyStyles.body1 }}>
               Sub-tree ini kosong di perangkat tersebut. Kalau OID-nya kamu ketik lengkap dengan indeks
               (mis. berakhiran <code>.0</code>), coba tanpa indeksnya — walk menelusuri ANAK sebuah OID,
               bukan nilai OID itu sendiri.
@@ -231,7 +232,7 @@ function ManualWalkCard({ oltId }: { oltId: string }) {
                   className="row tnum"
                   style={{
                     gap: '0.5rem',
-                    fontSize: '0.78rem',
+                    ...typographyStyles.caption1,
                     padding: '0.25rem 0',
                     borderTop: '1px solid var(--border)',
                     flexWrap: 'wrap',
