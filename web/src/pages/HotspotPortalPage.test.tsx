@@ -36,7 +36,7 @@ describe('HotspotPortalPage', () => {
     renderPortal('/hotspot-portal/portal-1?state=signed-state')
 
     expect(await screen.findByRole('heading', { name: 'Wi-Fi Lobi' })).toBeDefined()
-    expect(screen.getByRole('textbox', { name: 'Username atau kode voucher' })).toBeDefined()
+    expect(screen.getByRole('textbox', { name: 'Username atau voucher' })).toBeDefined()
     expect(screen.getByLabelText('Kata sandi')).toBeDefined()
     expect(screen.getByRole('button', { name: 'Masuk ke Wi-Fi' }).hasAttribute('disabled')).toBe(true)
     expect(getPublicHotspotPortalContext).toHaveBeenCalledWith('signed-state')
@@ -46,7 +46,7 @@ describe('HotspotPortalPage', () => {
     renderPortal('/hotspot-portal/portal-1')
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Tautan portal tidak dapat digunakan' })).toBeDefined()
+      expect(screen.getByRole('heading', { name: 'Portal tidak tersedia' })).toBeDefined()
     })
     expect(screen.queryByText('Wi-Fi Lobi')).toBeNull()
   })

@@ -73,15 +73,15 @@ export function HotspotPortalPage() {
               {context.displayName}
             </Text>
             <Text as="p" className="muted" size={200} style={{ margin: '0.3rem 0 0' }}>
-              Masuk untuk menggunakan jaringan Wi-Fi ini.
+              Masuk ke jaringan Wi-Fi.
             </Text>
           </div>
         </div>
 
         <form className="stack" onSubmit={(event) => event.preventDefault()}>
           <TextField
-            label="Username atau kode voucher"
-            aria-label="Username atau kode voucher"
+            label="Username atau voucher"
+            aria-label="Username atau voucher"
             name="username"
             autoComplete="username"
             required
@@ -94,15 +94,12 @@ export function HotspotPortalPage() {
             autoComplete="current-password"
             required
           />
-          <Text className="muted" size={200}>
-            Masuk belum tersedia. Penghubung aman ke NAS/RADIUS sedang disiapkan; jangan masukkan kredensial Anda.
+          <Text id="hotspot-login-unavailable" className="muted" size={200}>
+            Layanan masuk belum tersedia.
           </Text>
           <Button type="submit" variant="primary" disabled aria-describedby="hotspot-login-unavailable">
             Masuk ke Wi-Fi
           </Button>
-          <Text id="hotspot-login-unavailable" className="dim" size={100}>
-            Formulir ini belum dapat mengautentikasi atau mengaktifkan voucher.
-          </Text>
         </form>
       </section>
     </main>
@@ -115,10 +112,10 @@ function InvalidPortalState() {
       <section className="card login-card stack" aria-labelledby="hotspot-invalid-title">
         <div>
           <Text as="h1" id="hotspot-invalid-title" size={600} weight="semibold" style={{ margin: 0 }}>
-            Tautan portal tidak dapat digunakan
+            Portal tidak tersedia
           </Text>
           <Text as="p" className="muted" size={200} style={{ margin: '0.3rem 0 0' }}>
-            Tautan ini tidak valid atau sudah kedaluwarsa. Hubungkan kembali ke jaringan Wi-Fi untuk mendapatkan tautan baru.
+            Tautan tidak valid atau kedaluwarsa. Hubungkan kembali ke Wi-Fi.
           </Text>
         </div>
       </section>

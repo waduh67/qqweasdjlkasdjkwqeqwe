@@ -9,7 +9,7 @@ type ViewState =
   | { kind: 'ready'; context: PublicPortalContext }
   | { kind: 'invalid' }
 
-const INVALID_CONTEXT_MESSAGE = 'Tautan portal tidak valid atau sudah kedaluwarsa. Silakan buka ulang jaringan Wi-Fi ini.'
+const INVALID_CONTEXT_MESSAGE = 'Tautan tidak valid atau kedaluwarsa. Hubungkan kembali ke Wi-Fi.'
 
 function Brand({ context }: { context: PublicPortalContext }) {
   return (
@@ -89,7 +89,7 @@ export function HostedPortalPage() {
             required
           />
           <TextField
-            label="Password"
+            label="Kata sandi"
             name="password"
             type="password"
             autoComplete="current-password"
@@ -99,7 +99,7 @@ export function HostedPortalPage() {
           />
         </div>
         <div className="hosted-portal-notice" role="status">
-          Layanan masuk sedang belum tersedia. Hubungi pengelola jaringan bila Anda memerlukan akses.
+          Layanan masuk belum tersedia.
         </div>
         <Button variant="primary" type="submit" disabled>
           Masuk ke internet
