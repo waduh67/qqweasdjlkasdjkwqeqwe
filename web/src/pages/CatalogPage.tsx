@@ -283,7 +283,7 @@ export function CatalogPage() {
     },
     {
       key: 'price',
-      header: 'Harga / bln',
+        header: 'Harga/bln',
       align: 'right',
       sortValue: (p) => p.price,
       cell: (p) => fmtRupiah(p.price),
@@ -358,7 +358,7 @@ export function CatalogPage() {
     <div className="stack" style={{ gap: '1rem' }}>
       <PageHeader
         title="Paket Internet"
-        subtitle="Sumber tunggal harga, kecepatan, QoS & FUP. Kecepatan dirakit jadi atribut RADIUS otomatis — tak perlu ketik profil manual."
+        subtitle="Atur harga, kecepatan, QoS, FUP, dan billing paket. Atribut RADIUS dibuat otomatis."
       />
 
       <CommandBar primary={primary} actions={actions} />
@@ -366,7 +366,7 @@ export function CatalogPage() {
       <Blade
         open={draft != null}
         title={draft?.id ? 'Edit paket' : 'Tambah paket'}
-        subtitle="Harga, kecepatan, QoS & FUP — dirakit jadi atribut RADIUS otomatis."
+        subtitle="Atur kebijakan paket. Atribut RADIUS dibuat otomatis."
         size="lg"
         dirty={dirty}
         onClose={closeDraft}
@@ -394,7 +394,7 @@ export function CatalogPage() {
             <Text as="span" className="muted" size={200} style={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Preview atribut RADIUS (Mikrotik-Rate-Limit)
             </Text>
-            <code style={{ ...typographyStyles.body1Strong }}>{preview || '— isi kecepatan dulu —'}</code>
+            <code style={{ ...typographyStyles.body1Strong }}>{preview || '— isi kecepatan —'}</code>
             {fupPreview && (
               <code className="muted" style={{ ...typographyStyles.body2 }}>
                 FUP → {fupPreview}
@@ -415,7 +415,7 @@ export function CatalogPage() {
             </div>
             <div style={{ flex: 1 }}>
               <TextField
-                label="Harga / bulan (Rp)"
+                label="Harga bulanan (Rp)"
                 value={draft.price}
                 onChange={(_, data) => setDraft({ ...draft, price: data.value })}
                 placeholder="150000"
@@ -447,7 +447,7 @@ export function CatalogPage() {
             </div>
             <div style={{ flex: 1 }}>
               <TextField
-                label="Prioritas (1=tinggi … 8)"
+                label="Prioritas (1 tertinggi, 8 terendah)"
                 value={draft.priority}
                 onChange={(_, data) => setDraft({ ...draft, priority: data.value })}
                 placeholder="8"
@@ -455,19 +455,18 @@ export function CatalogPage() {
             </div>
             <div style={{ flex: 1 }}>
               <TextField
-                label="Batas koneksi"
+                label="Batas koneksi per pelanggan"
                 value={draft.connectionLimit}
                 onChange={(_, data) => setDraft({ ...draft, connectionLimit: data.value })}
-                placeholder="opsional"
+                placeholder="Opsional"
               />
             </div>
           </div>
 
           {/* ---- Burst & Limit-at ---- */}
-          <SectionTitle>Burst &amp; jaminan minimum (lanjutan)</SectionTitle>
+          <SectionTitle>Burst &amp; limit-at</SectionTitle>
           <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-            Burst mengizinkan lonjakan sesaat di atas rate. Isi berpasangan (unduh &amp; unggah);
-            threshold &amp; waktu hanya berlaku bila burst diisi.
+            Isi unduh dan unggah berpasangan. Threshold dan waktu berlaku saat burst diisi.
           </Text>
           <div className="row">
             <div style={{ flex: 1 }}>
@@ -488,7 +487,7 @@ export function CatalogPage() {
             </div>
             <div style={{ flex: 1 }}>
               <TextField
-                label="Threshold unduh"
+                label="Threshold unduh (Mbps)"
                 value={draft.downThresholdMbps}
                 onChange={(_, data) => setDraft({ ...draft, downThresholdMbps: data.value })}
                 placeholder="75"
@@ -496,7 +495,7 @@ export function CatalogPage() {
             </div>
             <div style={{ flex: 1 }}>
               <TextField
-                label="Threshold unggah"
+                label="Threshold unggah (Mbps)"
                 value={draft.upThresholdMbps}
                 onChange={(_, data) => setDraft({ ...draft, upThresholdMbps: data.value })}
                 placeholder="35"
@@ -517,7 +516,7 @@ export function CatalogPage() {
                 label="Limit-at unduh (Mbps)"
                 value={draft.downMinMbps}
                 onChange={(_, data) => setDraft({ ...draft, downMinMbps: data.value })}
-                placeholder="opsional"
+                placeholder="Opsional"
               />
             </div>
             <div style={{ flex: 1 }}>
@@ -525,15 +524,15 @@ export function CatalogPage() {
                 label="Limit-at unggah (Mbps)"
                 value={draft.upMinMbps}
                 onChange={(_, data) => setDraft({ ...draft, upMinMbps: data.value })}
-                placeholder="opsional"
+                placeholder="Opsional"
               />
             </div>
           </div>
 
           {/* ---- FUP ---- */}
-          <SectionTitle>Fair Usage Policy (FUP)</SectionTitle>
+          <SectionTitle>FUP</SectionTitle>
           <Checkbox
-            label="Aktifkan FUP (turunkan kecepatan setelah kuota terlampaui)"
+            label="Aktifkan FUP; kecepatan turun setelah kuota terlampaui"
             checked={draft.fupEnabled}
             onChange={(e) => setDraft({ ...draft, fupEnabled: e.target.checked })}
           />
@@ -549,7 +548,7 @@ export function CatalogPage() {
               </div>
               <div style={{ flex: 1 }}>
                 <TextField
-                  label="Throttle unduh (Mbps)"
+                  label="Kecepatan FUP unduh (Mbps)"
                   value={draft.fupDownMbps}
                   onChange={(_, data) => setDraft({ ...draft, fupDownMbps: data.value })}
                   placeholder="10"
@@ -557,7 +556,7 @@ export function CatalogPage() {
               </div>
               <div style={{ flex: 1 }}>
                 <TextField
-                  label="Throttle unggah (Mbps)"
+                  label="Kecepatan FUP unggah (Mbps)"
                   value={draft.fupUpMbps}
                   onChange={(_, data) => setDraft({ ...draft, fupUpMbps: data.value })}
                   placeholder="4"
@@ -567,7 +566,7 @@ export function CatalogPage() {
           )}
 
           {/* ---- Ketersediaan ---- */}
-          <SectionTitle>Ketersediaan</SectionTitle>
+          <SectionTitle>Tipe layanan</SectionTitle>
           <div className="row" style={{ gap: '1rem', flexWrap: 'wrap' }}>
             {SERVICE_TYPES.map((svc) => (
               <Checkbox
@@ -579,15 +578,18 @@ export function CatalogPage() {
             ))}
           </div>
           <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-            Baru PPPoE yang benar-benar diprovisi ke RADIUS; tipe lain masih metadata.
+            Paket tersedia untuk tipe yang dipilih; semua tipe diterapkan ke RADIUS.
           </Text>
 
           {/* ---- Siklus Billing (override) ---- */}
-          <SectionTitle>Siklus billing (override — kosong = ikut kebijakan global)</SectionTitle>
+          <SectionTitle>Billing paket</SectionTitle>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
+            Kosongkan untuk mengikuti kebijakan billing global.
+          </Text>
           <div className="row">
             <div style={{ flex: 1 }}>
               <SelectField
-                label="Prorate saat aktivasi"
+                label="Prorata saat aktivasi"
                 value={draft.prorateOnActivation}
                 onChange={(_, data) => setDraft({ ...draft, prorateOnActivation: data.value as TriState })}
               >
@@ -601,7 +603,7 @@ export function CatalogPage() {
                 label="Tanggal tagih (1–31)"
                 value={draft.billingDayOfMonth}
                 onChange={(_, data) => setDraft({ ...draft, billingDayOfMonth: data.value })}
-                placeholder="global"
+                placeholder="Ikut global"
               />
             </div>
             <div style={{ flex: 1 }}>
@@ -609,20 +611,20 @@ export function CatalogPage() {
                 label="Jatuh tempo (hari)"
                 value={draft.dueDays}
                 onChange={(_, data) => setDraft({ ...draft, dueDays: data.value })}
-                placeholder="global"
+                placeholder="Ikut global"
               />
             </div>
             <div style={{ flex: 1 }}>
               <TextField
-                label="Grace (hari)"
+                label="Masa tenggang (hari)"
                 value={draft.graceDays}
                 onChange={(_, data) => setDraft({ ...draft, graceDays: data.value })}
-                placeholder="global"
+                placeholder="Ikut global"
               />
             </div>
             <div style={{ flex: 1 }}>
               <SelectField
-                label="Auto-isolir"
+                label="Isolir otomatis"
                 value={draft.autoIsolir}
                 onChange={(_, data) => setDraft({ ...draft, autoIsolir: data.value as TriState })}
               >
@@ -635,7 +637,7 @@ export function CatalogPage() {
 
           {/* ---- Status ---- */}
           <Checkbox
-            label="Status aktif (paket nonaktif tak bisa dipilih untuk langganan baru)"
+            label="Aktifkan paket; paket nonaktif tidak tersedia untuk langganan baru"
             checked={draft.active}
             onChange={(e) => setDraft({ ...draft, active: e.target.checked })}
           />
@@ -669,9 +671,9 @@ export function CatalogPage() {
             title={query || serviceFilter ? 'Tidak ada paket yang cocok' : 'Belum ada paket'}
             hint={
               query || serviceFilter
-                ? 'Coba ubah kata kunci atau filter.'
+                ? 'Ubah kata kunci atau filter.'
                 : canManage
-                  ? 'Klik “Tambah paket” untuk membuat paket pertama.'
+                  ? 'Tambahkan paket pertama.'
                   : undefined
             }
             icon={<IconPackage size={32} />}
