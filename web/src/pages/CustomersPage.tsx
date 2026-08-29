@@ -191,10 +191,10 @@ export function CustomersPage() {
     const nextErrors: { name?: string; address?: string; planId?: string } = {}
     if (!draft.name.trim()) nextErrors.name = 'Nama pelanggan wajib diisi.'
     if (!draft.address.trim()) nextErrors.address = 'Alamat wajib diisi.'
-    if (!draft.id && plans.length > 0 && !draft.planId) nextErrors.planId = 'Pilih paket langganannya.'
+    if (!draft.id && plans.length > 0 && !draft.planId) nextErrors.planId = 'Pilih paket langganan.'
     setErrors(nextErrors)
     if (nextErrors.name || nextErrors.address || nextErrors.planId) {
-      toast.error('Lengkapi dulu isian yang wajib.')
+      toast.error('Lengkapi isian wajib.')
       return
     }
     setSaving(true)
@@ -230,7 +230,7 @@ export function CustomersPage() {
   // Hapus satu pelanggan lewat menu aksi baris (`…`) — konfirmasi dulu (aksi destruktif),
   // lalu bersihkan dari seleksi bila kebetulan tercentang agar CommandBar tak salah hitung.
   const deleteOne = async (c: CustomerView) => {
-    if (!(await confirm({ title: 'Hapus pelanggan', message: `Hapus pelanggan "${c.name}"? Tindakan ini tidak dapat dibatalkan.`, confirmLabel: 'Hapus', danger: true }))) return
+    if (!(await confirm({ title: `Hapus pelanggan ${c.name}?`, message: 'Pelanggan akan dihapus permanen.', confirmLabel: 'Hapus', danger: true }))) return
     try {
       await api.del(`/api/customers/${c.id}`)
       setSelected((prev) => {
@@ -249,7 +249,7 @@ export function CustomersPage() {
   const deleteSelected = async () => {
     const ids = [...selected]
     if (ids.length === 0) return
-    if (!(await confirm({ title: 'Hapus pelanggan', message: `Hapus ${ids.length} pelanggan terpilih? Tindakan ini tidak dapat dibatalkan.`, confirmLabel: 'Hapus', danger: true })))
+    if (!(await confirm({ title: `Hapus ${ids.length} pelanggan?`, message: 'Pelanggan terpilih akan dihapus permanen.', confirmLabel: 'Hapus', danger: true })))
       return
     setDeleting(true)
     try {
@@ -415,7 +415,7 @@ export function CustomersPage() {
       <Blade
         open={draft != null}
         title={draft?.id ? 'Edit pelanggan' : 'Tambah pelanggan'}
-        subtitle={draft?.id ? draft.code : 'Data pokok pelanggan & lokasi ONU'}
+        subtitle={draft?.id ? draft.code : 'Data pelanggan dan lokasi ONU'}
         size="sm"
         dirty={dirty}
         onClose={closeDraft}

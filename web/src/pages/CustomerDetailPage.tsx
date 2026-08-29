@@ -282,7 +282,7 @@ export function CustomerDetailPage({
     return (
       <div className="stack" style={{ gap: '1rem' }}>
         <div className="card">
-          <EmptyState title="Pelanggan tidak ditemukan" hint="Mungkin sudah dihapus." icon={<IconCustomers size={32} />} />
+          <EmptyState title="Pelanggan tidak ditemukan" hint="Pelanggan mungkin telah dihapus." icon={<IconCustomers size={32} />} />
         </div>
       </div>
     )
@@ -643,8 +643,7 @@ function SubscriptionManager({
             {selected ? `${selected.downMbps} Mbps` : '—'})
             {override !== '' && ` · harga negosiasi Rp ${override}`}
             <br />
-            Kecepatan di jaringan ikut berpindah otomatis, dan tagihan periode berikutnya memakai
-            harga paket baru.
+            Kecepatan jaringan dan tagihan periode berikutnya mengikuti paket baru.
           </>
         ),
         confirmLabel: 'Ganti paket',
@@ -695,7 +694,7 @@ function SubscriptionManager({
         <div className="stack" style={{ gap: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
           {plans.length === 0 ? (
             <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-              Belum ada paket aktif — buat dulu di menu Paket Internet.
+              Tidak ada paket aktif.
             </Text>
           ) : (
             <>
@@ -728,13 +727,13 @@ function SubscriptionManager({
               </div>
               {selected && (
                 <p className="muted tnum" style={{ margin: 0,  }}>
-                  {selected.downMbps}/{selected.upMbps} Mbps · {fmtRupiah(selected.price)}/bln
-                  {selected.fupEnabled ? ' · FUP' : ''} — kecepatan &amp; QoS mengikuti paket secara live.
+              {selected.downMbps}/{selected.upMbps} Mbps · {fmtRupiah(selected.price)}/bln
+              {selected.fupEnabled ? ' · FUP' : ''}
                 </p>
               )}
               <Text as="p" className="muted" size={200} style={{ margin: 0 }}>{ended
-                ? 'Langganan lamanya dihidupkan kembali — username PPPoE & riwayat tagihannya tetap yang itu.'
-                : 'Satu pelanggan satu langganan — paketnya ditetapkan di tempat, tak pernah ditambah. Untuk layanan kedua di lokasi lain, daftarkan sebagai pelanggan baru.'}</Text>
+                ? 'Mengaktifkan kembali langganan mempertahankan Username PPPoE dan riwayat tagihan.'
+                : 'Satu pelanggan memiliki satu langganan. Layanan kedua memerlukan pelanggan baru.'}</Text>
             </>
           )}
         </div>
@@ -791,7 +790,7 @@ function OnuManager({
     <div className="card stack" style={{ gap: '0.5rem' }}>
       <SectionHead icon={<IconInventory size={16} />} title="Perangkat ONU" />
       {customer.onus.length === 0 && (
-        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada ONU terdaftar.</Text>
+        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Tidak ada ONU terdaftar.</Text>
       )}
       {customer.onus.map((onu: OnuView) => (
         <div key={onu.id} className="spread" style={{ alignItems: 'center' }}>
@@ -1076,9 +1075,9 @@ function TetanggaTab({
           />
         }
       />
-      <Text as="p" className="muted" size={200} style={{ margin: 0 }}>{scope === 'odp'
-        ? 'Penghuni ODP yang sama — berbagi kabel drop & splitter ODP.'
-        : 'Seluruh ODP di bawah PON port yang sama — berbagi port OLT (superset se-ODP).'}</Text>
+        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>{scope === 'odp'
+          ? 'Pelanggan pada ODP yang sama.'
+          : 'Pelanggan pada port PON yang sama.'}</Text>
       <NeighborList items={scope === 'odp' ? neighbors?.sameOdp ?? null : neighbors?.samePonPort ?? null} showOdp={scope === 'pon'} />
     </div>
   )
@@ -1202,7 +1201,7 @@ function MetrikTab({ customer, metrics }: { customer: CustomerView; metrics: Onu
   if (!onu) {
     return (
       <div className="card">
-        <p className="muted" style={{ margin: 0 }}>Belum ada ONU untuk dipantau.</p>
+        <p className="muted" style={{ margin: 0 }}>Tidak ada ONU untuk dipantau.</p>
       </div>
     )
   }
@@ -1240,7 +1239,7 @@ function MetrikTab({ customer, metrics }: { customer: CustomerView; metrics: Onu
             )}
           </>
         ) : (
-          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada bacaan hidup dari monitoring.</Text>
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Belum ada bacaan live dari monitoring.</Text>
         )}
       </div>
 
@@ -1579,7 +1578,7 @@ function SubscriptionAccessCard({
   const remove = () =>
     void (async () => {
       if (!account) return
-      if (await confirm({ title: 'Hapus akun', message: `Hapus akun jaringan ${account.username}?`, confirmLabel: 'Hapus', danger: true })) {
+      if (await confirm({ title: `Hapus akun ${account.username}?`, message: 'Akun jaringan akan dihapus permanen.', confirmLabel: 'Hapus', danger: true })) {
         void run(() => deleteAccess(account.id), 'Akun dihapus')
       }
     })()
@@ -1589,7 +1588,7 @@ function SubscriptionAccessCard({
   const isolate = () =>
     void (async () => {
       if (!account) return
-      if (await confirm({ title: 'Isolir akun', message: `Isolir akun ${account.username}? Sesi PPPoE-nya akan diputus sekarang.`, confirmLabel: 'Isolir', danger: true })) {
+      if (await confirm({ title: `Isolir akun ${account.username}?`, message: 'Sesi PPPoE aktif akan diputus.', confirmLabel: 'Isolir', danger: true })) {
         void run(() => isolateAccess(account.id), 'Akun diisolir')
       }
     })()
@@ -1597,7 +1596,7 @@ function SubscriptionAccessCard({
   const restore = () =>
     void (async () => {
       if (!account) return
-      if (await confirm({ title: 'Pulihkan akun', message: `Pulihkan akun ${account.username} dari isolir?`, confirmLabel: 'Pulihkan' })) {
+      if (await confirm({ title: `Pulihkan akun ${account.username}?`, message: 'Akses jaringan akan dipulihkan.', confirmLabel: 'Pulihkan' })) {
         void run(() => restoreAccess(account.id), 'Akun dipulihkan')
       }
     })()
@@ -1605,7 +1604,7 @@ function SubscriptionAccessCard({
   const resetLogin = () =>
     void (async () => {
       if (!account) return
-      if (await confirm({ title: 'Reset Login', message: `Reset Login ${account.username}? Sesi diputus agar perangkat login ulang.`, confirmLabel: 'Reset Login' })) {
+      if (await confirm({ title: `Reset Login ${account.username}?`, message: 'Sesi aktif akan diputus.', confirmLabel: 'Reset Login' })) {
         void run(() => resetAccessLogin(account.id), 'Perintah Reset Login dikirim')
       }
     })()
@@ -1770,8 +1769,8 @@ function SubscriptionAccessCard({
             <Button onClick={close}>Batal</Button>
           </div>
           <Text as="p" className="muted" size={200} style={{ margin: 0 }}>{macBased
-            ? 'DHCP/Static memakai MAC sebagai identitas sekaligus password (konvensi use-radius). Static butuh IP yang direservasi.'
-            : 'Password disimpan terenkripsi dan tidak pernah ditampilkan kembali — hanya bisa di-reset.'}</Text>
+            ? 'DHCP/Static memakai MAC sebagai identitas. Static memerlukan IP reservasi.'
+            : 'Kata sandi disimpan terenkripsi dan hanya dapat di-reset.'}</Text>
         </div>
       ) : (
         <div className="spread" style={{ alignItems: 'center' }}>
@@ -1837,7 +1836,7 @@ function BrasSessionPanel({ accessId }: { accessId: string }) {
 
       {neverSeen ? (
         <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-          Akun ini belum pernah terpantau BRAS — pastikan BRAS-nya terhubung ke collector.
+          Belum ada sesi dari BRAS.
         </Text>
       ) : (
         <p className="muted" style={{ margin: 0,  }}>
@@ -2194,14 +2193,14 @@ function DiagnosticsCard({
       <SectionHead icon={<IconFlask size={16} />} title="Diagnostik" />
       {!online && (
         <p className="muted" style={{ margin: 0,  }}>
-          Perangkat sedang offline — diagnostik bisa gagal atau menunggu lama.
+          Perangkat offline; diagnostik mungkin gagal.
         </p>
       )}
       <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <TextField
           label="Sasaran ping"
           value={host}
-          placeholder="kosong = bawaan (mis. 8.8.8.8)"
+          placeholder="Bawaan server, mis. 8.8.8.8"
           onChange={(_, data) => setHost(data.value)}
           style={{ flex: 2, minWidth: 160 }}
         />
@@ -2309,7 +2308,7 @@ function FirmwareCard({
 
   const upgrade = async (file: FirmwareFileView) => {
     const versi = file.version ? ` (${file.version})` : ''
-    if (!(await confirm({ title: 'Pasang firmware', message: `Pasang firmware ${file.name}${versi}? Perangkat akan reboot saat memasang.`, confirmLabel: 'Pasang' }))) {
+    if (!(await confirm({ title: `Pasang firmware ${file.name}${versi}?`, message: 'Perangkat akan reboot saat pemasangan.', confirmLabel: 'Pasang' }))) {
       return
     }
     setPushing(file.name)
@@ -2395,9 +2394,9 @@ function AcsCard({ deviceId, onRan }: { deviceId: string; onRan: () => void }) {
   const factoryReset = async () => {
     if (
       !(await confirm({
-        title: 'Reset pabrik',
+        title: 'Reset pabrik perangkat?',
         message:
-          'Reset pabrik mengembalikan SEMUA setelan perangkat (WiFi, dll) ke bawaan dan memutus koneksi pelanggan. Lanjutkan?',
+          'Semua setelan perangkat kembali ke bawaan dan koneksi pelanggan terputus.',
         confirmLabel: 'Reset pabrik',
         danger: true,
       }))
@@ -2436,7 +2435,7 @@ function AcsCard({ deviceId, onRan }: { deviceId: string; onRan: () => void }) {
         }
       />
       <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-        Refresh memaksa perangkat menghubungi ACS sekarang; reset pabrik mengembalikan setelan ke bawaan.
+        Refresh menghubungkan perangkat ke ACS; reset pabrik memulihkan setelan bawaan.
       </Text>
       <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
         <Button onClick={() => void refresh()} disabled={busy}>
@@ -2509,7 +2508,7 @@ function WifiCard({
             label="Password"
             type={showPass ? 'text' : 'password'}
             value={passphrase}
-            placeholder={wifi.passphrase == null ? 'tersembunyi — isi untuk mengganti' : ''}
+            placeholder={wifi.passphrase == null ? 'Masukkan kata sandi baru' : ''}
             onChange={(_, data) => setPassphrase(data.value)}
             style={{ flex: 2, minWidth: 160 }}
           />
@@ -2734,8 +2733,7 @@ function TagihanTab({ customerId, billing }: { customerId: string; billing: Sub3
       </div>
 
       <p className="muted" style={{ margin: 0,  }}>
-        "Bayar ↗" membuka halaman bayar publik tagihan itu — tautan yang sama bisa disalin dan
-        dikirim ke pelanggan lewat WhatsApp, lengkap dengan instruksi VA/QRIS atau transfer manual.
+        Bagikan tautan pembayaran ke pelanggan melalui WhatsApp.
       </p>
     </div>
   )
@@ -2806,12 +2804,12 @@ function TiketWoTab({
           <SectionHead
             icon={<IconAlert size={16} />}
             title="Insiden aktif"
-            aside={<Text as="span" className="muted" size={200}>gangguan yang sedang berdampak</Text>}
+            aside={<Text as="span" className="muted" size={200}>Gangguan aktif</Text>}
           />
           {incidents == null ? (
             <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Memuat insiden…</Text>
           ) : incidents.length === 0 ? (
-            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Tak ada insiden aktif yang berdampak.</Text>
+            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>Tidak ada insiden aktif.</Text>
           ) : (
             incidents.map((inc) => (
               <div key={inc.id} className="spread" style={{ alignItems: 'center', gap: '0.5rem' }}>
