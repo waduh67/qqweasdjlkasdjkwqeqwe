@@ -12,15 +12,7 @@ import { PageHeader } from '@/components/molecules'
 export function ProvisioningPage() {
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
-      <PageHeader
-        title="Provisioning ONU"
-        subtitle={
-          <>
-            Perangkat yang dilaporkan OLT tapi belum terdaftar. Sistem menebak pelanggan, ODP, dan port
-            dari topologi — tinggal periksa lalu tuntaskan.
-          </>
-        }
-      />
+      <PageHeader title="Provisioning ONU" />
       <DiscoveredOnuInbox showAutoProvision />
     </div>
   )

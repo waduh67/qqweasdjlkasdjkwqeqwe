@@ -245,7 +245,7 @@ export function WorkOrdersPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <PageHeader title="Work Order" subtitle="Tugas lapangan — penjadwalan, penugasan teknisi, dan lifecycle-nya." />
+      <PageHeader title="Work Order" />
       <CommandBar primary={primary} />
 
       {can('workorder.dashboard.view') && (
@@ -315,11 +315,6 @@ export function WorkOrdersPage() {
         empty={
           <EmptyState
             title={query || status || type || approval || assignedTo ? 'Tidak ada work order yang cocok' : 'Belum ada work order'}
-            hint={
-              query || status || type || approval || assignedTo
-                ? 'Coba ubah filter atau kata kunci.'
-                : 'Buat work order pertama untuk menjadwalkan pekerjaan lapangan.'
-            }
             icon={<IconWorkOrder size={32} />}
           />
         }
@@ -473,7 +468,6 @@ function WorkOrderForm({
     <Blade
       open={open}
       title="Buat work order"
-      subtitle="Tugas lapangan baru — jadwalkan dan tugaskan ke teknisi."
       size="lg"
       dirty={dirty}
       onClose={onCancel}

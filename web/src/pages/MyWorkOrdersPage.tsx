@@ -102,10 +102,7 @@ export function MyWorkOrdersPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <PageHeader
-        title="Tugas Saya"
-        subtitle="Work order yang ditugaskan ke kamu — kerjakan, catat redaman, unggah bukti, lalu selesaikan."
-      />
+      <PageHeader title="Tugas Saya" />
 
       <Toolbar>
         <SelectField value={status} onChange={(_, data) => setStatus(data.value as WorkOrderStatus | '')}>
@@ -127,7 +124,6 @@ export function MyWorkOrdersPage() {
         empty={
           <EmptyState
             title={status ? 'Tidak ada tugas dengan status itu' : 'Belum ada tugas untukmu'}
-            hint={status ? 'Coba ubah filter status.' : 'Tugas yang ditugaskan operator akan muncul di sini.'}
             icon={<IconWorkOrder size={32} />}
           />
         }

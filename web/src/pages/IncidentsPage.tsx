@@ -166,10 +166,7 @@ export function IncidentsPage() {
 
   return (
     <div className="stack" style={{ gap: '1.2rem' }}>
-      <PageHeader
-        title="Insiden"
-        subtitle={<>Banjir alarm dikelompokkan menurut akar masalah — {incidents.length} insiden aktif.</>}
-      />
+      <PageHeader title="Insiden" />
 
       <Toolbar>
         <SearchInput value={query} onChange={setQuery} placeholder="Cari judul atau akar masalah…" />
@@ -189,11 +186,6 @@ export function IncidentsPage() {
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada insiden yang cocok' : 'Tidak ada insiden aktif'}
-            hint={
-              query || statusFilter
-                ? 'Coba ubah kata kunci atau filter.'
-                : 'Jaringan tenang. Insiden muncul di sini saat alarm terkorelasi jadi gangguan.'
-            }
             icon={<IconAlert size={34} />}
           />
         }
@@ -371,8 +363,7 @@ function BroadcastComposer({
     <section className="stack" style={{ gap: '0.55rem' }}>
           <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>Broadcast pemberitahuan</Text>
       <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-        Menyasar {affectedCount} pelanggan terdampak. Yang tak punya alamat di kanal terpilih akan
-        dilewati otomatis.
+        {affectedCount} pelanggan terdampak; tanpa alamat di kanal terpilih akan dilewati.
       </Text>
       <SelectField
         label="Kanal"

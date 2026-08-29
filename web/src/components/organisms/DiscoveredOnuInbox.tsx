@@ -300,7 +300,6 @@ export function DiscoveredOnuInbox({
         empty={
           <EmptyState
             title={query ? 'Tidak ada yang cocok' : state === 'DISCOVERED' ? 'Tidak ada ONU menunggu' : 'Kosong'}
-            hint={query ? 'Coba ubah kata kunci.' : 'Serial tak dikenal yang dilaporkan collector muncul di sini otomatis.'}
             icon={<IconInbox size={32} />}
           />
         }
@@ -442,11 +441,6 @@ function ProvisionDrawer({
             ))}
           </div>
         )}
-
-        <span className="muted" style={{ ...typographyStyles.caption1 }}>
-          ONU cukup ditautkan ke pelanggan. Penempelan ke ODP dikerjakan nanti di peta
-          jaringan saat menarik kabel.
-        </span>
 
         <TextField
           label="Redaman instalasi (dBm)"
