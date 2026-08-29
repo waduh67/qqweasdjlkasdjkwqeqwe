@@ -53,10 +53,6 @@ export function SitePanel({
           <Ess label="ODP">{site.odpCount}</Ess>
           <Ess label="Pelanggan">{site.customerCount}</Ess>
         </dl>
-        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-          Seluruh perangkat &amp; pelanggan yang bergantung pada site ini.
-        </Text>
-
         {site.olts.length > 0 && (
           <div className="stack" style={{ gap: '0.45rem' }}>
             <p className="blade-section-title">OLT di site ini ({site.olts.length})</p>

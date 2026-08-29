@@ -85,10 +85,6 @@ export function JointBoxPanel({
           </Text>
         </div>
 
-        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-          Di dalam joint box tak ada splitter — serat masuk disambung langsung ke serat keluar,
-          jadi ia tak menambah redaman pembagian, hanya redaman sambungan.
-        </Text>
         {jointBox.spliceCount > 0 && canDelete && (
           <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
             Tak bisa dihapus selama masih berisi sambungan — lepas dulu isinya.

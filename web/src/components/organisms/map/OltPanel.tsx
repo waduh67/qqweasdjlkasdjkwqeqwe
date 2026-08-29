@@ -1,4 +1,4 @@
-import { MessageBar, MessageBarBody, Text } from '@fluentui/react-components'
+import { MessageBar, MessageBarBody } from '@fluentui/react-components'
 import type { OltView } from '@/api/network'
 import { StatusBadge } from '@/components/atoms'
 import { IconMonitor } from '@/components/atoms/icons'
@@ -71,9 +71,6 @@ export function OltPanel({
             )}
           </Ess>
         </dl>
-        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-          Perangkat inti: kalau OLT ini modar, seluruh jalur di hilirnya ikut mati.
-        </Text>
       </div>
     </aside>
   )

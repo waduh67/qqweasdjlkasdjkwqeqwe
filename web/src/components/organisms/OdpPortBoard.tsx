@@ -112,11 +112,7 @@ export function OdpPortBoard({ odpId, reloadKey }: { odpId: string; reloadKey?: 
 
       {board.issueCount > 0 && (
         <MessageBar intent="warning">
-          <MessageBarBody>
-            {board.issueCount} port catatannya berselisih dengan seratnya. Selisih begini tak pernah
-            mengumumkan diri — peta tetap rapi dan tagihan tetap terbit — sampai ada yang berdiri di
-            depan kotak. Arahkan kursor ke lencananya untuk tahu apa yang harus dibereskan.
-          </MessageBarBody>
+          <MessageBarBody>{board.issueCount} port catatannya berselisih dengan seratnya.</MessageBarBody>
         </MessageBar>
       )}
 

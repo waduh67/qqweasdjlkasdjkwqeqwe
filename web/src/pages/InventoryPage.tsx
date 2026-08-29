@@ -100,7 +100,6 @@ export function InventoryPage() {
     <div className="stack" style={{ gap: '1rem' }}>
       <PageHeader
         title="Inventory Jaringan"
-        subtitle="Kelola site, OLT, ODF, ODC, ODP, dan joint box — dari rak POP sampai kotak terminasi."
       />
       <Tabs tabs={visible} active={tab} onChange={setTab} />
       {tab === 'sites' && <SitesTab />}
@@ -269,7 +268,6 @@ function SitesTab() {
       <Blade
         open={draft != null}
         title="Tambah site"
-        subtitle="Daftarkan site/POP baru."
         size="sm"
         dirty={dirty}
         onClose={closeDraft}
@@ -370,7 +368,6 @@ function SitesTab() {
         empty={
           <EmptyState
             title={query ? 'Tidak ada site yang cocok' : 'Belum ada site'}
-            hint={query ? 'Coba ubah kata kunci.' : 'Tambahkan site/POP pertama untuk mulai memasang OLT.'}
             icon={<IconInventory size={32} />}
           />
         }
@@ -512,7 +509,6 @@ function OltsTab() {
       <Blade
         open={draft != null}
         title="Tambah OLT"
-        subtitle="Pasang OLT di atas sebuah site."
         size="lg"
         dirty={dirty}
         onClose={closeDraft}
@@ -801,7 +797,6 @@ function OltsTab() {
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada OLT yang cocok' : 'Belum ada OLT'}
-            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Tambahkan OLT di atas sebuah site untuk mulai membangun.'}
             icon={<IconInventory size={32} />}
           />
         }
@@ -999,11 +994,6 @@ function OdfsTab() {
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada ODF yang cocok' : 'Belum ada ODF'}
-            hint={
-              query || statusFilter
-                ? 'Coba ubah kata kunci atau filter.'
-                : 'Tambahkan ODF lewat Peta Jaringan — klik titik POP-nya, lalu pilih "ODF (rak POP)".'
-            }
             icon={<IconInventory size={32} />}
           />
         }
@@ -1170,7 +1160,6 @@ function OdcsTab() {
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada ODC yang cocok' : 'Belum ada ODC'}
-            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Tambahkan ODC lewat Peta Jaringan — klik titik lokasinya di peta.'}
             icon={<IconInventory size={32} />}
           />
         }
@@ -1315,7 +1304,6 @@ function OdpsTab() {
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada ODP yang cocok' : 'Belum ada ODP'}
-            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Tambahkan ODP lewat Peta Jaringan — klik titik lokasinya di peta.'}
             icon={<IconInventory size={32} />}
           />
         }
@@ -1494,11 +1482,6 @@ function JointBoxesTab() {
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada joint box yang cocok' : 'Belum ada joint box'}
-            hint={
-              query || statusFilter
-                ? 'Coba ubah kata kunci atau filter.'
-                : 'Tambahkan joint box lewat Peta Jaringan — klik titik sambungnya di peta.'
-            }
             icon={<IconInventory size={32} />}
           />
         }

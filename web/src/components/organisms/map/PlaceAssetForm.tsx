@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Text } from '@fluentui/react-components'
 import { api } from '@/api/client'
 import { SPLITTER_RATIOS, type SiteView } from '@/api/network'
 import type { PageResponse } from '@/api/types'
@@ -159,7 +158,7 @@ export function PlaceAssetForm({
     <aside className="map-panel blade">
       <BladeHead
         title={`${meta.label} baru`}
-        subtitle={`${lat.toFixed(6)}, ${lng.toFixed(6)} · seret pin untuk menggeser`}
+        subtitle={`${lat.toFixed(6)}, ${lng.toFixed(6)}`}
         onClose={onCancel}
         closeLabel="Batal"
       />
@@ -224,11 +223,6 @@ export function PlaceAssetForm({
         )}
         {kind === 'ODF' && (
           <>
-            <Text as="p" className="muted" size={200} block style={{ margin: 0 }}>
-              Rak terminasi di dalam POP: tempat kabel luar BERHENTI. Seratnya dilas ke pigtail
-              di sisi belakang port, lalu patchcord dari sisi depannya yang mencolok ke port PON —
-              jadi kabel lapangan tak pernah menempel langsung ke badan OLT.
-            </Text>
             <SelectField label="POP induk" value={siteId} onChange={(_, data) => setSiteId(data.value)}>
               <option value="">— pilih POP —</option>
               {sites.map((s) => (
@@ -257,20 +251,8 @@ export function PlaceAssetForm({
         {kind === 'SITE' && (
           <TextField label="Alamat" value={address} onChange={(_, data) => setAddress(data.value)} />
         )}
-        {kind === 'ODP' && (
-          <Text as="p" className="muted" size={200} block style={{ margin: 0 }}>
-            ODC induk ditetapkan dengan menarik kabel distribusi dari ODC ke ODP ini di peta —
-            bukan di sini — supaya jalur fisik & data uplink selalu sinkron.
-          </Text>
-        )}
         {kind === 'JOINT_BOX' && (
           <>
-            <Text as="p" className="muted" size={200} block style={{ margin: 0 }}>
-              Kotak sambung: tempat dua haspel kabel bertemu, jalur bercabang di persimpangan,
-              atau kabel putus disambung darurat. Tak ada splitter di dalamnya — serat masuk
-              disambung langsung ke serat keluar. Satu tray memuat 12 sambungan (satu tube
-              berisi 12 serat), jadi ukurannya cukup dipilih.
-            </Text>
             <SelectField label="Ukuran kotak" value={size} onChange={(_, data) => applySize(data.value)}>
               {JOINT_BOX_SIZES.map((s) => (
                 <option key={s.value} value={s.value}>
@@ -308,11 +290,6 @@ export function PlaceAssetForm({
               label="Ukuran kotak"
               value={size}
               onChange={(_, data) => applySize(data.value)}
-              hint={
-                kind === 'ODP'
-                  ? 'Splitter di dalam kotak dan jumlah lubang drop-nya sepaket — persis seperti memesan "ODP 8 port". Modul tambahan menyusul lewat panel "Isi kabinet".'
-                  : 'Kapasitas kabinet dihitung dalam CABANG ke ODP, bukan pelanggan: pemecahan besar dikerjakan splitter di ODP, dekat rumah, supaya redaman tak habis di tengah jalan. Modul kedua dst. ditambah lewat panel "Isi kabinet".'
-              }
             >
               {closureSizes.map((s) => (
                 <option key={s.value} value={s.value}>
@@ -385,7 +362,6 @@ export function PlaceAssetForm({
               rows={2}
               maxLength={1000}
               placeholder="Kunci dititip di pos satpam; tiang miring, jangan dipanjat sendirian…"
-              hint="Pesan untuk teknisi berikutnya — yang biasanya cuma beredar di grup WhatsApp lalu hilang."
             />
           </>
         )}

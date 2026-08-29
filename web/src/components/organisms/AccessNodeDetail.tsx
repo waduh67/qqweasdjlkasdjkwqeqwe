@@ -131,9 +131,6 @@ export function AssetDetailPanel({
         <Text as="p" style={{ ...typographyStyles.caption1, margin: 0 }} className="muted tnum">
           {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
         </Text>
-        <Text as="p" style={{ ...typographyStyles.caption1, margin: 0 }} className="muted">
-          {onEdit ? 'Ubah identitas & lokasi lewat tombol Edit.' : 'Lihat penempatannya lewat tombol Lihat di peta.'}
-        </Text>
       </div>
     </div>
   )

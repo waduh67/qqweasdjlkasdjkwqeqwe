@@ -353,11 +353,11 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
           <Badge>{olt.snmpVersion.toLowerCase()}</Badge>
           <Badge>Port {olt.snmpPort}</Badge>
         </div>
-        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>{!olt.snmpEnabled
-          ? 'SNMP nonaktif; OLT dikelola lewat Web UI.'
-          : olt.pollable
-            ? 'Polling SNMP membaca telemetri ONU dan alarm jangkauan.'
-            : 'Polling memerlukan vendor yang didukung, IP manajemen, dan SNMP community.'}</Text>
+        {!olt.pollable && (
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
+            Polling memerlukan vendor yang didukung, IP manajemen, dan SNMP community.
+          </Text>
+        )}
       </div>
 
       <div className="card stack">
@@ -369,9 +369,6 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
           {olt.webUsername && <Badge>User {olt.webUsername}</Badge>}
           {olt.webPasswordConfigured ? <Badge tone="accent">Password tersimpan</Badge> : <Badge tone="neutral">Password belum diset</Badge>}
         </div>
-        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>{olt.webEnabled
-          ? 'Dipakai untuk metrik suhu dan daya optik, atau manajemen HTTP pada HSGQ.'
-          : 'Web UI nonaktif; metrik suhu dan daya optik tidak diambil lewat HTTP.'}</Text>
       </div>
 
       <div className="card stack">
