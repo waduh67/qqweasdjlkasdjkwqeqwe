@@ -333,7 +333,7 @@ export function ExpressPsbPage() {
             <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
               {macBased
                 ? 'DHCP dan Static memakai MAC Address sebagai identitas. Static memerlukan Reserved IP.'
-                : 'Password hanya ditampilkan sekali setelah PSB dibuat.'}
+                : 'Password dapat diubah sebelum PSB dibuat dan hanya ditampilkan sekali setelahnya.'}
             </Text>
           </section>
 

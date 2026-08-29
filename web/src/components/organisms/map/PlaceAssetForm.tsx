@@ -158,7 +158,7 @@ export function PlaceAssetForm({
     <aside className="map-panel blade">
       <BladeHead
         title={`${meta.label} baru`}
-        subtitle={`${lat.toFixed(6)}, ${lng.toFixed(6)}`}
+        subtitle={`${lat.toFixed(6)}, ${lng.toFixed(6)} · seret pin untuk menggeser`}
         onClose={onCancel}
         closeLabel="Batal"
       />

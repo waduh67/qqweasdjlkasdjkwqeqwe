@@ -137,7 +137,7 @@ export function SubscriptionPage() {
     try {
       const invoice = await renewMySubscription(months)
       await load()
-      toast.success(`Tagihan ${invoice.number} terbit.`)
+      toast.success(`Tagihan ${invoice.number} terbit — bayar lewat tombol Bayar di Riwayat tagihan.`)
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal memperpanjang langganan')
     } finally {
@@ -371,8 +371,7 @@ export function SubscriptionPage() {
               }}
             >
               <Text as="strong" size={300}  >Ada tagihan menunggu pembayaran</Text>
-              <Text as="span" size={300} className="muted" >{outstanding.number} · {fmtIdr(outstanding.amount)}. Klik tombol <strong>Bayar</strong> di Riwayat
-              tagihan. Masa aktif bertambah setelah pembayaran <strong>LUNAS</strong>.
+              <Text as="span" size={300} className="muted" >{outstanding.number} · {fmtIdr(outstanding.amount)}. Masa aktif bertambah setelah pembayaran <strong>LUNAS</strong>.
                             </Text>
             </div>
           )}

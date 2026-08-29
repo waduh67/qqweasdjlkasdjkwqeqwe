@@ -361,7 +361,7 @@ function OpticalSection({ wo, canEdit, onAct }: { wo: WorkOrderView; canEdit: bo
             <Button variant="primary" onClick={save}>Simpan</Button>
             <Button onClick={cancelEdit}>Batal</Button>
           </div>
-          <Text as="p" className="muted" size={100} style={{ margin: 0 }}>Rentang GPON: −40..0 dBm.</Text>
+          <Text as="p" className="muted" size={100} style={{ margin: 0 }}>GPON selalu negatif; rentang wajar −40..0 dBm. Kosongkan bila belum diukur.</Text>
         </div>
       ) : hasReading ? (
         <div className="row wrap" style={{ gap: '1.2rem', alignItems: 'flex-start' }}>

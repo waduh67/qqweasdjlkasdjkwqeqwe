@@ -353,11 +353,15 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
           <Badge>{olt.snmpVersion.toLowerCase()}</Badge>
           <Badge>Port {olt.snmpPort}</Badge>
         </div>
-        {!olt.pollable && (
+        {!olt.snmpEnabled ? (
+          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
+            OLT dikelola melalui Web UI.
+          </Text>
+        ) : !olt.pollable ? (
           <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
             Polling memerlukan vendor yang didukung, IP manajemen, dan SNMP community.
           </Text>
-        )}
+        ) : null}
       </div>
 
       <div className="card stack">
