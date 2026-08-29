@@ -253,11 +253,6 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
         {catalog && <Badge tone={unlocked ? 'good' : 'neutral'}>{templates.length} template</Badge>}
       </div>
 
-      <p className="muted" style={{ margin: 0, ...typographyStyles.body1 }}>
-        Daftar ini adalah cermin template di {provider}: menambah berarti benar-benar mengajukan template ke sana dan
-        menunggu persetujuan. Setelah disetujui, tentukan template mana dipakai tiap pemicu otomatis — satu pemicu
-        satu template.
-      </p>
 
       {!unlocked && lockReason && <Callout>{lockReason}</Callout>}
 
@@ -283,34 +278,17 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
         loading={loading}
         initialSort={{ key: 'name', dir: 'asc' }}
         rowActions={editable ? rowActions : undefined}
-        empty={
-          <EmptyState
-            title="Belum ada template"
-            hint={
-              unlocked
-                ? `Tarik dari ${provider} untuk memuat template utility yang sudah disetujui, atau ajukan yang baru.`
-                : 'Lengkapi prasyarat di atas untuk mulai mengelola template.'
-            }
-            icon={<IconAlert size={28} />}
-          />
-        }
+        empty={<EmptyState title="Belum ada template" icon={<IconAlert size={28} />} />}
       />
 
       {/* ---- Pemakaian per pemicu ---- */}
       <SectionTitle>Pemakaian per pemicu</SectionTitle>
-      <p className="muted" style={{ margin: 0, ...typographyStyles.body1 }}>
-        {templateOnly ? (
-          <>
-            {provider} <strong>hanya bisa mengirim template</strong> — pemicu tanpa template akan dilewati, pesannya
-            tak sampai sama sekali. Satu template boleh dipakai beberapa pemicu.
-          </>
-        ) : (
-          <>
-            Pemicu tanpa template dikirim sebagai pesan teks biasa — hanya sampai bila pelanggan membalas dalam 24 jam
-            terakhir. Satu template boleh dipakai beberapa pemicu.
-          </>
-        )}
-      </p>
+      {templateOnly && (
+        <p className="muted" style={{ margin: 0, ...typographyStyles.body1 }}>
+          {provider} <strong>hanya bisa mengirim template</strong> — pemicu tanpa template akan dilewati, pesannya tak sampai sama sekali.
+        </p>
+      )}
+
 
       {TRIGGERS.map((trigger) => {
         const selected = assignments[trigger] ? byId.get(assignments[trigger] as string) : undefined

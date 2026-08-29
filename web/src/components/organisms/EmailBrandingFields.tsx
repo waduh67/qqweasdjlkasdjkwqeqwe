@@ -67,9 +67,7 @@ export function EmailLogoField({
       )}
       <div className="stack" style={{ gap: '0.4rem' }}>
         <Text as="span" size={200} className="muted" style={{ maxWidth: 380 }}>
-          {logoSet
-            ? 'Logo tersimpan. Klien email yang memblokir gambar tetap membaca isi surat utuh — logo hanya hiasan.'
-            : emptyHint}
+          {logoSet ? 'Logo tersimpan.' : emptyHint}
         </Text>
         {!disabled && (
           <div className="row" style={{ gap: '0.5rem' }}>
@@ -115,7 +113,6 @@ export function EmailAppearanceFields({
           maxLength={9}
           validationState={accentInvalid ? 'error' : 'none'}
           validationMessage={accentInvalid ? 'Isi kode warna #RRGGBB.' : undefined}
-          hint={accentInvalid ? undefined : 'Garis kepala surat & warna tautan di badan pesan.'}
           style={{ width: 160 }}
         />
         <input
@@ -135,7 +132,6 @@ export function EmailAppearanceFields({
         disabled={disabled}
         maxLength={200}
         resize="vertical"
-        hint="Penutup di atas footer, mis. “Salam, Tim Dukungan”."
       />
       <TextareaField
         label="Footer"
@@ -145,7 +141,6 @@ export function EmailAppearanceFields({
         disabled={disabled}
         maxLength={500}
         resize="vertical"
-        hint="Baris kecil paling bawah: alamat kantor, catatan “email otomatis, mohon tak dibalas”."
       />
     </div>
   )
@@ -275,10 +270,6 @@ export function EmailPreviewPanel({
 
       <div className="hr" />
 
-      <Text as="p" size={200} className="muted" style={{ margin: 0 }}>
-        Pratinjau &amp; email uji memakai setelan yang <strong>sudah tersimpan</strong>. Simpan dulu
-        bila Anda baru saja mengubah sesuatu.
-      </Text>
       <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <TextField
           label="Kirim email uji ke"

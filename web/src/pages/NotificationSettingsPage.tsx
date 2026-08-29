@@ -33,27 +33,11 @@ import { IconAlert } from '@/components/atoms/icons'
 
 const PROVIDERS: WhatsAppProvider[] = ['LOG', 'HTTP_GENERIC', 'META_CLOUD', 'QONTAK']
 
-const TRIGGERS: { key: keyof NotificationSettingsView; label: string; hint: string }[] = [
-  {
-    key: 'notifyOnSubscriptionLifecycle',
-    label: 'Perubahan langganan',
-    hint: 'Kirim saat langganan pelanggan aktif, diisolir, atau dihentikan.',
-  },
-  {
-    key: 'notifyOnInvoiceReminder',
-    label: 'Pengingat tagihan',
-    hint: 'Ingatkan pelanggan menjelang jatuh tempo dan saat tagihan menunggak.',
-  },
-  {
-    key: 'notifyOnWorkOrderSchedule',
-    label: 'Jadwal kunjungan teknisi',
-    hint: 'Beri tahu pelanggan saat work order dengan jadwal ditugaskan.',
-  },
-  {
-    key: 'notifyOnIncidentOpen',
-    label: 'Broadcast gangguan',
-    hint: 'Siarkan otomatis ke seluruh pelanggan terdampak saat insiden terbuka.',
-  },
+const TRIGGERS: { key: keyof NotificationSettingsView; label: string }[] = [
+  { key: 'notifyOnSubscriptionLifecycle', label: 'Perubahan langganan' },
+  { key: 'notifyOnInvoiceReminder', label: 'Pengingat tagihan' },
+  { key: 'notifyOnWorkOrderSchedule', label: 'Jadwal kunjungan teknisi' },
+  { key: 'notifyOnIncidentOpen', label: 'Broadcast gangguan' },
 ]
 
 const nullify = (s: string | null): string | null => {
@@ -142,7 +126,6 @@ export function NotificationSettingsPage() {
     return (
       <EmptyState
         title="Setelan notifikasi tak tersedia"
-        hint="Coba muat ulang halaman."
         icon={<IconAlert size={28} />}
       />
     )
@@ -153,9 +136,6 @@ export function NotificationSettingsPage() {
       <div className="spread">
         <div>
           <Text as="h2" size={500} weight="semibold" style={{ margin: 0 }}>Pengaturan Notifikasi</Text>
-          <Text as="p" className="muted" style={{ margin: '0.25rem 0 0' }}>
-            Kanal pengiriman (WhatsApp &amp; email) dan saklar pemicu pesan otomatis ke pelanggan.
-          </Text>
         </div>
         {manage && (
           <Button variant="primary" onClick={() => void save()} disabled={saving}>
@@ -163,12 +143,6 @@ export function NotificationSettingsPage() {
           </Button>
         )}
       </div>
-
-      {!manage && (
-        <Text as="p" className="muted" style={{ margin: 0 }}>
-          Anda hanya bisa melihat setelan ini. Perlu izin “Kelola gateway WA &amp; pemicu” untuk mengubahnya.
-        </Text>
-      )}
 
       {/* ---- Gateway WhatsApp ---- */}
       <div className="card stack">
@@ -180,10 +154,6 @@ export function NotificationSettingsPage() {
           onChange={(_, data) => patch({ gatewayEnabled: !!data.checked })}
           disabled={!manage}
         />
-        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-          Saat mati, pesan pemicu tetap dicatat di riwayat sebagai <Text as="em" italic>SKIPPED</Text> — tak ada yang benar-benar terkirim.
-        </Text>
-
         <SelectField
           label="Penyedia"
           value={form.provider}
@@ -196,13 +166,6 @@ export function NotificationSettingsPage() {
             </option>
           ))}
         </SelectField>
-
-        {form.provider === 'LOG' && (
-          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-            Mode uji: pesan hanya dicatat ke log server, tak dikirim ke mana pun. Cocok untuk mencoba pemicu tanpa
-            biaya WhatsApp.
-          </Text>
-        )}
 
         {form.provider === 'HTTP_GENERIC' && (
           <>
@@ -218,7 +181,7 @@ export function NotificationSettingsPage() {
               type="password"
               value={httpToken}
               onChange={(_, data) => setHttpToken(data.value)}
-              placeholder={form.httpTokenSet ? 'Biarkan kosong untuk mempertahankan' : 'Token dikirim sebagai header Authorization'}
+               placeholder={form.httpTokenSet ? 'Kosongkan untuk mempertahankan token' : 'Token dikirim sebagai header Authorization'}
               disabled={!manage}
             />
             <div className="row">
@@ -239,10 +202,6 @@ export function NotificationSettingsPage() {
                 style={{ flex: 1 }}
               />
             </div>
-            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-              Server mengirim POST <code>form-urlencoded</code> dengan kedua field di atas. Sesuaikan namanya dengan
-              dokumentasi penyedia Anda.
-            </Text>
           </>
         )}
 
@@ -260,7 +219,7 @@ export function NotificationSettingsPage() {
               type="password"
               value={metaToken}
               onChange={(_, data) => setMetaToken(data.value)}
-              placeholder={form.metaAccessTokenSet ? 'Biarkan kosong untuk mempertahankan' : 'Token permanen dari Meta'}
+               placeholder={form.metaAccessTokenSet ? 'Kosongkan untuk mempertahankan token' : 'Token permanen dari Meta'}
               disabled={!manage}
             />
             <TextField
@@ -269,12 +228,9 @@ export function NotificationSettingsPage() {
               onChange={(_, data) => patch({ metaWabaId: data.value })}
               placeholder="102290129340398"
               disabled={!manage}
-              hint="Terlihat di Meta Business Manager → WhatsApp Accounts; dipakai untuk menarik daftar template."
+
             />
-            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-              Template yang dipakai tiap pemicu diatur di kartu <Text as="strong" weight="semibold" >Template pesan WhatsApp</Text> di bawah.
-              Pemicu tanpa template dikirim sebagai teks biasa (hanya dalam jendela 24 jam).
-            </Text>
+
           </>
         )}
 
@@ -286,10 +242,10 @@ export function NotificationSettingsPage() {
               value={qontakToken}
               onChange={(_, data) => setQontakToken(data.value)}
               placeholder={
-                form.qontakAccessTokenSet ? 'Biarkan kosong untuk mempertahankan' : 'Access token dari dasbor Qontak'
+                 form.qontakAccessTokenSet ? 'Kosongkan untuk mempertahankan token' : 'Access token dari dasbor Qontak'
               }
               disabled={!manage}
-              hint="Dasbor Qontak → Integration → API. Token ini juga dipakai untuk mengelola template."
+
             />
             <div className="row" style={{ alignItems: 'flex-end' }}>
               <SelectField
@@ -319,10 +275,8 @@ export function NotificationSettingsPage() {
                 </Button>
               )}
             </div>
-            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-              Daftar channel ditarik memakai token yang <Text as="strong" weight="semibold" >sudah disimpan</Text> — tempel token lalu klik
-              Simpan dulu, baru “Muat daftar channel”.
-            </Text>
+
+
             <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
               Qontak <Text as="strong" weight="semibold" >hanya bisa mengirim template</Text>; tak ada jalur teks biasa. Setiap pemicu yang
               ingin dipakai wajib dipetakan ke satu template di kartu{' '}
@@ -342,15 +296,8 @@ export function NotificationSettingsPage() {
           onChange={(_, data) => patch({ emailEnabled: !!data.checked })}
           disabled={!manage}
         />
-        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-          Berdiri sendiri dari gateway WhatsApp: boleh keduanya hidup (pelanggan menerima dua-duanya, tercatat
-          sebagai dua siaran terpisah), atau email saja bila Anda belum punya gateway WA.
-        </Text>
-        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-          Server email disediakan platform — tak ada SMTP yang perlu Anda setel. Surat berangkat atas{' '}
-          <Text as="strong" weight="semibold" >nama perusahaan Anda</Text>, jadi pelanggan tetap mengenali pengirimnya. Pelanggan tanpa
-          alamat email dilewati dan tercatat di riwayat.
-        </Text>
+
+
       </div>
 
       {/* ---- Identitas & tampilan email (timpaan atas bawaan platform) ---- */}
@@ -362,25 +309,10 @@ export function NotificationSettingsPage() {
       {/* ---- Pemicu otomatis ---- */}
       <div className="card stack">
         <SectionTitle>Pemicu otomatis</SectionTitle>
-        <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-          Nyalakan jenis pesan yang ingin dikirim otomatis. Tiap pesan berangkat lewat semua kanal yang hidup di
-          atas; tanpa satu pun kanal hidup, pesannya hanya tercatat sebagai <Text as="em" italic>SKIPPED</Text>.
-        </Text>
-        {(form.provider === 'META_CLOUD' || form.provider === 'QONTAK') && (
-          <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-            Template yang dipakai tiap pemicu diatur di kartu <Text as="strong" weight="semibold" >Template pesan WhatsApp</Text> di atas.
-          </Text>
-        )}
         {TRIGGERS.map((t) => (
           <Checkbox
             key={t.key}
-            label={
-              <Text as="span">{t.label}
-              <br />
-              <Text as="span" className="muted" size={200}>
-                {t.hint}
-              </Text></Text>
-            }
+            label={t.label}
             checked={form[t.key] as boolean}
             onChange={(_, data) => patch({ [t.key]: !!data.checked } as Partial<NotificationSettingsView>)}
             disabled={!manage}

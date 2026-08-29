@@ -159,11 +159,6 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
   return (
     <div className="card stack">
       <SectionTitle>Identitas &amp; tampilan email</SectionTitle>
-      <Text as="p" size={200} className="muted" style={{ margin: 0 }}>
-        Semua kolom yang bisa disunting di kartu ini <strong>opsional</strong>. Yang dibiarkan
-        kosong mengikuti bawaan platform — nilai warisannya ditampilkan sebagai teks samar di
-        dalam kolomnya.
-      </Text>
 
       <LockedSenderAddress address={saved.platformFromAddress} />
 
@@ -175,7 +170,6 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
           placeholder={saved.inheritedFromName}
           disabled={!manage}
           maxLength={100}
-          hint="Nama yang tampil di kotak masuk pelanggan."
           style={{ minWidth: 220 }}
         />
         <TextField
@@ -183,10 +177,8 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
           type="email"
           value={form.replyToAddress}
           onChange={(_, d) => patch({ replyToAddress: d.value })}
-          placeholder="Kosongkan bila tak perlu dibalas"
           disabled={!manage}
           maxLength={254}
-          hint="Balasan pelanggan mendarat di sini, bukan di kotak masuk platform."
           validationState={addressOk ? 'none' : 'error'}
           validationMessage={addressOk ? undefined : 'Format alamat email tidak sah.'}
           style={{ minWidth: 260 }}
@@ -229,9 +221,7 @@ export function TenantEmailBrandingCard({ manage }: { manage: boolean }) {
 
       {manage && (
         <div className="spread" style={{ alignItems: 'center' }}>
-          <Text as="span" size={200} className="muted">
-            Logo tersimpan seketika; kolom lain menunggu tombol di samping.
-          </Text>
+          <span />
           <Button variant="primary" onClick={() => void save()} disabled={saving || !addressOk || !accentOk}>
             {saving ? 'Menyimpan…' : 'Simpan identitas email'}
           </Button>
