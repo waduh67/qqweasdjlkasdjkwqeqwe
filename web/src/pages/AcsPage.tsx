@@ -177,11 +177,6 @@ function DashboardTab({ canDevices, canManage }: { canDevices: boolean; canManag
             Health Check
           </Button>
         </div>
-        {canManage && (
-          <Text as="span" size={300} className="muted" >
-            Setiap klik menyegarkan sejumlah perangkat online; perangkat yang paling lama tak melapor didahulukan.
-          </Text>
-        )}
       </div>
 
       <ServerInfoCard info={info} health={health} lastSyncAt={stats?.lastSyncAt ?? null} lastSyncOk={stats?.lastSyncOk ?? null} />

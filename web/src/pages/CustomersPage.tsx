@@ -406,7 +406,7 @@ export function CustomersPage() {
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada pelanggan yang cocok' : 'Belum ada pelanggan'}
-            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Tambahkan pelanggan pertama untuk mulai memasang ONU.'}
+            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : undefined}
             icon={<IconCustomers size={32} />}
           />
         }
@@ -415,7 +415,7 @@ export function CustomersPage() {
       <Blade
         open={draft != null}
         title={draft?.id ? 'Edit pelanggan' : 'Tambah pelanggan'}
-        subtitle={draft?.id ? draft.code : 'Data pelanggan dan lokasi ONU'}
+        subtitle={draft?.id ? draft.code : undefined}
         size="sm"
         dirty={dirty}
         onClose={closeDraft}
