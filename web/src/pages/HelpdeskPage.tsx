@@ -278,36 +278,18 @@ export function HelpdeskPage() {
 
   return (
     <div className="stack" style={{ gap: '1.2rem' }}>
-      <PageHeader
-        title="Meja Bantuan"
-        subtitle={
-          <>
-            Keluhan yang dilaporkan pelanggan sendiri dari portal — {belumTerjawab} menunggu jawaban
-            pertama.
-          </>
-        }
-      />
+      <PageHeader title="Helpdesk" subtitle={`${belumTerjawab} menunggu jawaban pertama`} />
 
       {summary && (
         <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          <SummaryCard label="Baru" value={summary.open} tone="var(--warning-ink)" hint="belum dibalas" />
-          <SummaryCard label="Ditangani" value={summary.inProgress} hint="sudah dibalas tim" />
-          <SummaryCard
-            label="Menunggu konfirmasi"
-            value={summary.resolved}
-            tone="var(--good-ink)"
-            hint="pelanggan bisa membuka lagi"
-          />
-          <SummaryCard
-            label="Belum ditugaskan"
-            value={summary.unassigned}
-            hint="milik semua sekaligus tak seorang pun"
-          />
+          <SummaryCard label="Baru" value={summary.open} tone="var(--warning-ink)" />
+          <SummaryCard label="Ditangani" value={summary.inProgress} />
+          <SummaryCard label="Menunggu konfirmasi" value={summary.resolved} tone="var(--good-ink)" />
+          <SummaryCard label="Belum ditugaskan" value={summary.unassigned} />
           <SummaryCard
             label="Lewat SLA"
             value={summary.overdue}
             tone={summary.overdue > 0 ? 'var(--critical-ink)' : undefined}
-            hint="janji waktu terlewat"
           />
         </div>
       )}
@@ -351,11 +333,6 @@ export function HelpdeskPage() {
         empty={
           <EmptyState
             title={query || statusFilter || categoryFilter ? 'Tidak ada tiket yang cocok' : 'Belum ada keluhan masuk'}
-            hint={
-              query || statusFilter || categoryFilter
-                ? 'Coba ubah kata kunci atau filter.'
-                : 'Laporan yang dikirim pelanggan dari menu Bantuan di portal muncul di sini.'
-            }
             icon={<IconChat size={34} />}
           />
         }
@@ -398,19 +375,16 @@ export function HelpdeskPage() {
 function SummaryCard({
   label,
   value,
-  hint,
   tone,
 }: {
   label: string
   value: number
-  hint: string
   tone?: string
 }) {
   return (
     <div className="card stat">
       <div className="stat-label">{label}</div>
       <div className="tnum" style={{ ...typographyStyles.subtitle1, color: tone }}>{value}</div>
-      <div className="muted" style={typographyStyles.body2}>{hint}</div>
     </div>
   )
 }
@@ -624,10 +598,6 @@ function ManageActions({
 
       {escalating && !ticket.workOrderId && (
         <section className="stack" style={{ gap: '0.5rem' }}>
-          <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-            Menerbitkan work order perbaikan untuk pelanggan ini. Keluhannya ikut sebagai deskripsi
-            tugas, dan satu tiket hanya bisa dieskalasi sekali.
-          </Text>
           <SelectField
             label="Prioritas"
             value={priority}
