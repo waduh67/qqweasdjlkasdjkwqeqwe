@@ -193,7 +193,7 @@ export function ExpressPsbPage() {
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
       <PageHeader
-        title="PSB Ekspres"
+        title="PSB Express"
         subtitle="Layanan aktif setelah teknisi menuntaskan Work Order PSB."
       />
 
