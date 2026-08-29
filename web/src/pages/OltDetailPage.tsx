@@ -354,10 +354,10 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
           <Badge>Port {olt.snmpPort}</Badge>
         </div>
         <Text as="p" className="muted" size={300} style={{ margin: 0 }}>{!olt.snmpEnabled
-          ? 'Kanal SNMP dimatikan — OLT ini dikelola lewat Web UI (mis. HSGQ). Tak ada polling SNMP yang dilakukan.'
+          ? 'SNMP nonaktif; OLT dikelola lewat Web UI.'
           : olt.pollable
-            ? 'Server memolling OLT ini via SNMP untuk menaik-turunkan alarm jangkauan & membaca telemetri ONU di hilirnya.'
-            : 'Lengkapi vendor yang didukung, IP manajemen, dan SNMP community lewat tombol Edit agar OLT bisa dipolling.'}</Text>
+            ? 'Polling SNMP membaca telemetri ONU dan alarm jangkauan.'
+            : 'Polling memerlukan vendor yang didukung, IP manajemen, dan SNMP community.'}</Text>
       </div>
 
       <div className="card stack">
@@ -370,8 +370,8 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
           {olt.webPasswordConfigured ? <Badge tone="accent">Password tersimpan</Badge> : <Badge tone="neutral">Password belum diset</Badge>}
         </div>
         <Text as="p" className="muted" size={300} style={{ margin: 0 }}>{olt.webEnabled
-          ? 'Kanal Web UI dipakai untuk mengambil metrik suhu & daya optik, atau (mis. HSGQ) sebagai manajemen langsung lewat HTTP.'
-          : 'Kanal Web UI dimatikan. Aktifkan lewat tombol Edit bila ingin menarik metrik suhu/optik atau mengelola OLT via HTTP.'}</Text>
+          ? 'Dipakai untuk metrik suhu dan daya optik, atau manajemen HTTP pada HSGQ.'
+          : 'Web UI nonaktif; metrik suhu dan daya optik tidak diambil lewat HTTP.'}</Text>
       </div>
 
       <div className="card stack">
@@ -407,9 +407,7 @@ function RingkasanTab({ olt, canUpdate, onSaved }: { olt: OltView; canUpdate: bo
                 </Button>
               </div>
             )}
-            <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-              Klik peta atau seret pin untuk memindahkan OLT, lalu simpan. Kosong = mengikuti koordinat site saat dibuat.
-            </Text>
+
           </>
         ) : (
           <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
@@ -501,11 +499,7 @@ function PonPortTab({
           <Spinner />
         </div>
       ) : ports.length === 0 ? (
-        <EmptyState
-          title="Belum ada PON port"
-          hint="Tambahkan port slot/kartu OLT untuk mulai menautkan ODC di hilir."
-          icon={<IconInventory size={30} />}
-        />
+        <EmptyState title="Belum ada PON port" icon={<IconInventory size={30} />} />
       ) : (
         <div className="stack" style={{ gap: 0 }}>
           {ports.map((p) => {
@@ -522,7 +516,6 @@ function PonPortTab({
                       onClick={() => drillable && setExpanded(isOpen ? null : p.id)}
                       disabled={!drillable}
                       aria-expanded={isOpen}
-                      title={drillable ? 'Lihat muatan, ODC & ODP di bawah port ini' : undefined}
                       style={{
                       flex: 1,
                       minWidth: 0,
@@ -679,7 +672,7 @@ function OdpRow({ odp, canDrillOdp }: { odp: OdpUtilization; canDrillOdp: boolea
         onClick={() => canDrillOdp && setOpen(!open)}
         disabled={!canDrillOdp}
         aria-expanded={open}
-        title={canDrillOdp ? 'Lihat pelanggan di ODP ini' : undefined}
+
         style={{
           width: '100%',
           display: 'flex',
@@ -893,7 +886,6 @@ function EditOltModal({ olt, onClose, onSaved }: { olt: OltView; onClose: () => 
     <Blade
       open
       title={`Edit ${olt.code}`}
-      subtitle="Identitas, SNMP & akses Web UI OLT. Kode & lokasi diubah di tab Ringkasan."
       size="full"
       className="blade-edit"
       dirty={dirty}

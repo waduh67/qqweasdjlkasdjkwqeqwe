@@ -66,10 +66,7 @@ export function AcsPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <PageHeader
-        title="ACS / TR-069"
-        subtitle="Pusat kendali ONT pelanggan lewat GenieACS: pantau perangkat yang melapor, salin setelan yang harus diketik di ONT, dan sapu perintah refresh ke armada."
-      />
+      <PageHeader title="ACS / TR-069" />
 
       {canDevices && (
         <Tabs
@@ -182,9 +179,7 @@ function DashboardTab({ canDevices, canManage }: { canDevices: boolean; canManag
         </div>
         {canManage && (
           <Text as="span" size={300} className="muted" >
-            "Segarkan Batch" menyapu sejumlah terbatas perangkat yang sedang online tiap klik —
-            yang paling lama tak melapor didahulukan. Perangkat sisanya menyusul di klik
-            berikutnya atau saat inform berkalanya jatuh tempo.
+            Setiap klik menyegarkan sejumlah perangkat online; perangkat yang paling lama tak melapor didahulukan.
           </Text>
         )}
       </div>
@@ -228,7 +223,6 @@ function StatTiles({ stats }: { stats: AcsStatsView | null }) {
       <div className="stat accent-bar">
         <div className="stat-label">Total perangkat</div>
         <div className="stat-value">{stats.totalDevices.toLocaleString('id-ID')}</div>
-        <div className="stat-note">ONT milik tenant ini yang sudah dikenali ACS</div>
       </div>
       <div className={`stat ${stats.offlineDevices > 0 ? 'warn-bar' : 'accent-bar'}`}>
         <div className="stat-label">Perangkat offline</div>
@@ -307,11 +301,6 @@ function ServerInfoCard({
         )}
       </div>
 
-      {info && (
-        <Text as="span" size={300} className="muted" >
-          Aplikasi menarik daftar perangkat dari ACS tiap {Math.round(info.syncIntervalSeconds / 60) || 1} menit.
-        </Text>
-      )}
     </div>
   )
 }
@@ -541,14 +530,7 @@ function DevicesTab({ canCustomer }: { canCustomer: boolean }) {
         </Button>
       </Toolbar>
 
-      <div className="spread">
-        <span className="muted">{rows.length} perangkat</span>
-        {canCustomer && (
-          <Text as="span" className="muted" size={200}>
-            Klik baris untuk membuka detail pelanggan (tab GenieACS) — reboot, WiFi, dan diagnostik ada di sana.
-          </Text>
-        )}
-      </div>
+      <span className="muted">{rows.length} perangkat</span>
 
       <DataTable
         columns={columns}

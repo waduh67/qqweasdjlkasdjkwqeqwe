@@ -223,7 +223,7 @@ export function MonitoringPage() {
 
   return (
     <div className="stack" style={{ gap: '1.5rem' }}>
-      <PageHeader title="Monitoring" subtitle="Kesehatan collector, alarm jaringan, dan tren redaman optik." />
+      <PageHeader title="Monitoring" />
 
       {dashboard && (
         <div className="stat-grid">
@@ -304,10 +304,7 @@ export function MonitoringPage() {
             loading={loading}
             initialSort={{ key: 'name', dir: 'asc' }}
             empty={
-              <EmptyState
-                title={collectorQuery ? 'Tidak ada collector yang cocok' : 'Belum ada collector'}
-                hint={collectorQuery ? 'Coba ubah kata kunci.' : 'Buat satu, lalu jalankan agent dengan API key-nya di jaringan ISP.'}
-              />
+              <EmptyState title={collectorQuery ? 'Tidak ada collector yang cocok' : 'Belum ada collector'} />
             }
           />
         </section>
@@ -346,7 +343,6 @@ export function MonitoringPage() {
           empty={
             <EmptyState
               title={alarmQuery ? 'Tidak ada alarm yang cocok' : statusFilter === 'ACTIVE' ? 'Tidak ada alarm aktif' : 'Belum ada alarm'}
-              hint={alarmQuery ? 'Coba ubah kata kunci.' : 'Jaringan tenang. Alarm baru muncul otomatis saat collector melaporkan gangguan.'}
               icon={<IconAlert size={32} />}
             />
           }
