@@ -48,17 +48,6 @@ type Draft = typeof EMPTY
 
 const toInstant = (local: string): string | null => (local ? new Date(local).toISOString() : null)
 
-/**
- * PSB Ekspres — onboarding pelanggan baru dalam satu formulir: data pelanggan + paket +
- * akun jaringan + jadwal pemasangan sekaligus. Server merangkainya dalam SATU transaksi
- * (all-or-nothing) lalu membuka Work Order PSB sebagai tulang punggung akuntabilitas.
- * Langganan & akun lahir PENDING — pelanggan baru benar-benar online saat teknisi
- * menuntaskan WO PSB (yang mengaktifkan langganan lalu memprovisi akun ke RADIUS).
- *
- * Alur cepat untuk ISP menengah ke atas: alih-alih membuat pelanggan → langganan → akun →
- * WO di empat layar terpisah, semuanya di sini. Kredensial di-generate otomatis (operator
- * bisa menimpanya); password tak pernah dibalikkan server, jadi disalin dari sini.
- */
 export function ExpressPsbPage() {
   const { can } = useCan()
   const toast = useToast()
@@ -196,7 +185,7 @@ export function ExpressPsbPage() {
   if (!canManage) {
     return (
       <div className="card">
-        <EmptyState title="Tak berizin" hint="Butuh izin membuat pelanggan untuk PSB ekspres." icon={<IconPlus size={32} />} />
+        <EmptyState title="Tak berizin" hint="Anda tidak memiliki izin membuat pelanggan." icon={<IconPlus size={32} />} />
       </div>
     )
   }
@@ -205,7 +194,7 @@ export function ExpressPsbPage() {
     <div className="stack" style={{ gap: '1.25rem' }}>
       <PageHeader
         title="PSB Ekspres"
-        subtitle="Onboarding pelanggan baru sekali jalan: data pelanggan + paket + akun jaringan + jadwal pemasangan. Semua dibuat dalam satu transaksi; layanan aktif saat Work Order PSB dituntaskan teknisi."
+        subtitle="Layanan aktif setelah teknisi menuntaskan Work Order PSB."
       />
 
       {result && <ResultCard result={result} onDismiss={() => setResult(null)} />}
@@ -216,7 +205,6 @@ export function ExpressPsbPage() {
         <div className="card">
           <EmptyState
             title="Belum ada paket aktif"
-            hint="Buat paket dulu di menu Paket Internet sebelum melakukan PSB ekspres."
             icon={<IconPackage size={32} />}
           />
         </div>
@@ -253,7 +241,7 @@ export function ExpressPsbPage() {
               <div className="row wrap" style={{ gap: '0.6rem' }}>
                 <div style={{ flex: 1, minWidth: 200 }}>
                   <SelectField
-                    label={<>Area {nasByArea.has(draft.areaId) && <span className="muted">· BRAS otomatis terpilih</span>}</>}
+                    label={<>Area {nasByArea.has(draft.areaId) && <span className="muted">· BRAS otomatis</span>}</>}
                     value={draft.areaId}
                     onChange={(_, data) => changeArea(data.value)}
                   >
@@ -344,9 +332,8 @@ export function ExpressPsbPage() {
             </div>
             <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
               {macBased
-                ? 'DHCP/Static memakai MAC sebagai identitas (konvensi use-radius). Static butuh IP yang direservasi.'
-                : 'Password tak pernah dibalikkan server — salin dari sini. Username kosong = di-generate dari kode pelanggan.'}
-              {' '}Akun lahir PENDING dan belum ditulis ke RADIUS sampai WO PSB selesai.
+                ? 'DHCP dan Static memakai MAC Address sebagai identitas. Static memerlukan Reserved IP.'
+                : 'Password hanya ditampilkan sekali setelah PSB dibuat.'}
             </Text>
           </section>
 
@@ -398,7 +385,6 @@ export function ExpressPsbPage() {
   )
 }
 
-/** Ringkasan hasil onboarding — kode WO + kredensial untuk disalin (password hanya tampil sekali). */
 function ResultCard({ result, onDismiss }: { result: ExpressPsbResult & { secretUsed: string }; onDismiss: () => void }) {
   return (
     <div className="card stack" style={{ gap: '0.6rem', borderLeft: '3px solid var(--good, #34c759)' }}>
@@ -412,12 +398,12 @@ function ResultCard({ result, onDismiss }: { result: ExpressPsbResult & { secret
         <dt className="muted">Username</dt>
         <dd style={{ margin: 0 }}><code>{result.username}</code></dd>
         <dt className="muted">Password</dt>
-        <dd style={{ margin: 0 }}><code>{result.secretUsed}</code> <span className="muted">(catat sekarang — tak bisa dilihat lagi)</span></dd>
+        <dd style={{ margin: 0 }}><code>{result.secretUsed}</code> <span className="muted">(hanya tampil sekali)</span></dd>
         <dt className="muted">Work Order</dt>
-        <dd style={{ margin: 0 }}>{result.workOrderCode} · menunggu instalasi</dd>
+        <dd style={{ margin: 0 }}>{result.workOrderCode}</dd>
       </dl>
       <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-        Langganan &amp; akun berstatus PENDING. Pelanggan online setelah teknisi menuntaskan WO PSB.
+        Layanan aktif setelah teknisi menuntaskan Work Order PSB.
       </Text>
     </div>
   )
