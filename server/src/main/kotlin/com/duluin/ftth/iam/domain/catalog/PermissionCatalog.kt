@@ -163,6 +163,12 @@ object PermissionCatalog {
         perm("bng.session.view", "Lihat sesi PPPoE & tren trafik pelanggan")
         perm("bng.session.reset", "Reset Login (putus sesi PPPoE) pelanggan")
 
+        perm("hotspot.site.view", "Lihat hotspot site")
+        perm("hotspot.site.manage", "Kelola hotspot site")
+        perm("hotspot.voucher.view", "Lihat voucher hotspot")
+        perm("hotspot.voucher.manage", "Kelola voucher hotspot")
+        perm("hotspot.session.view", "Lihat sesi hotspot")
+
         // Billing (tagihan, pembayaran, auto-isolir/auto-pulih)
         perm("billing.invoice.view", "Lihat tagihan & pembayaran")
         perm("billing.invoice.manage", "Terbitkan/batalkan tagihan")

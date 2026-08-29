@@ -29,6 +29,11 @@ class CatalogApiService(
     override fun findPlanNetwork(planId: UUID): PlanNetworkRef? =
         planRepository.findById(planId)?.toNetworkRef()
 
+    override fun findActiveHotspotPlan(planId: UUID): PlanNetworkRef? =
+        planRepository.findById(planId)
+            ?.takeIf { it.attributes.active && it.attributes.serviceTypes.any { type -> type.name == "HOTSPOT" } }
+            ?.toNetworkRef()
+
     override fun findActivePlans(): List<PlanCommercialRef> =
         planRepository.findAll().filter { it.attributes.active }.map { it.toCommercialRef() }
 

@@ -38,6 +38,20 @@ class AttemptThrottleTest {
         runCatching { guardLogin(scope, ip, identity) { throw AuthenticationException("Email atau password salah") } }
 
     @Test
+    fun `portal-context requests are rate limited per source IP`() {
+        val throttle = AttemptThrottle(
+            ThrottleProperties(hotspotPortalContextPerIp = Quota(2, Duration.ofMinutes(15))),
+        )
+
+        repeat(2) { throttle.spendHotspotPortalContext("198.51.100.10") }
+
+        assertThatThrownBy { throttle.spendHotspotPortalContext("198.51.100.10") }
+            .isInstanceOf(TooManyRequestsException::class.java)
+            .hasMessageContaining("Terlalu banyak permintaan portal")
+        assertThatCode { throttle.spendHotspotPortalContext("198.51.100.11") }.doesNotThrowAnyException()
+    }
+
+    @Test
     fun `percobaan gagal beruntun akhirnya ditolak dengan 429 dan lama tunggu`() {
         val throttle = throttle(perIdentity = 3)
         repeat(3) { throttle.failLogin("budi@isp.com") }
@@ -123,6 +137,21 @@ class AttemptThrottleTest {
 
         assertThat(throttle.failLogin("budi@isp.com").exceptionOrNull())
             .isInstanceOf(AuthenticationException::class.java)
+    }
+
+    @Test
+    fun `permintaan konteks hotspot dibatasi per IP`() {
+        val throttle = AttemptThrottle(
+            ThrottleProperties(hotspotPortalContextPerIp = Quota(2, Duration.ofHours(1))),
+        )
+
+        throttle.spendHotspotPortalContext("192.0.2.10")
+        throttle.spendHotspotPortalContext("192.0.2.10")
+
+        assertThatThrownBy { throttle.spendHotspotPortalContext("192.0.2.10") }
+            .isInstanceOf(TooManyRequestsException::class.java)
+            .hasMessageContaining("permintaan portal")
+        assertThatCode { throttle.spendHotspotPortalContext("192.0.2.11") }.doesNotThrowAnyException()
     }
 
     @Test

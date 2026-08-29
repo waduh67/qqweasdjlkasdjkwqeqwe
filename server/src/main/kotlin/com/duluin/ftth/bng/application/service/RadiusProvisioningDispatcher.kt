@@ -4,6 +4,7 @@ import com.duluin.ftth.bng.application.port.outbound.BngActionRepository
 import com.duluin.ftth.bng.application.port.outbound.RadiusProvisioningPort
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.config.RadiusProperties
+import com.duluin.ftth.common.security.SecretCipher
 import com.duluin.ftth.bng.domain.model.BngAction
 import com.duluin.ftth.bng.domain.model.BngActionType
 import com.duluin.ftth.bng.domain.model.RadiusGroups
@@ -71,6 +72,7 @@ class RadiusProvisioningRunner(
     private val bngActionRepository: BngActionRepository,
     private val subscriberAccessRepository: SubscriberAccessRepository,
     private val radius: RadiusProvisioningPort,
+    private val secretCipher: SecretCipher? = null,
     private val props: RadiusProperties,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -147,8 +149,9 @@ class RadiusProvisioningRunner(
     }
 
     private fun resolvePassword(action: BngAction): String =
-        action.subscriberAccessId?.let { subscriberAccessRepository.findById(it)?.secret }?.takeIf { it.isNotBlank() }
-            ?: throw IllegalStateException("PROVISION ${action.username}: password akun tak terbaca")
+        action.credentialCiphertext?.let { secretCipher?.decrypt(it) ?: error("Cipher voucher tidak tersedia") }
+            ?: action.subscriberAccessId?.let { subscriberAccessRepository.findById(it)?.secret }?.takeIf { it.isNotBlank() }
+            ?: throw IllegalStateException("PROVISION ${action.username}: password akun atau credential voucher tak terbaca")
 
     /** Reservasi Framed-IP-Address (DHCP/Static) dibaca live dari akun; null utk PPPoE/Hotspot. */
     private fun resolveFramedIp(action: BngAction): String? =

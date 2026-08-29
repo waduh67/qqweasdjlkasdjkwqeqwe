@@ -10,6 +10,7 @@ import com.duluin.ftth.bng.domain.model.SubscriberAccess
 import com.duluin.ftth.catalog.PlanNetworkRef
 import com.duluin.ftth.common.integration.AcknowledgedBngAction
 import com.duluin.ftth.common.integration.BngActionDispatch
+import com.duluin.ftth.common.security.SecretCipher
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
@@ -31,6 +32,7 @@ import java.util.UUID
 class BngActionService(
     private val bngActionRepository: BngActionRepository,
     private val subscriberAccessRepository: SubscriberAccessRepository,
+    private val secretCipher: SecretCipher? = null,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -304,7 +306,8 @@ class BngActionService(
         // mengembalikan secret terdekripsi), TAK PERNAH disimpan di bng_action. Diangkut
         // ke collector lewat kanal TLS — tak ada cleartext at-rest baru.
         val password = if (action == BngActionType.PROVISION) {
-            subscriberAccessId?.let { subscriberAccessRepository.findById(it)?.secret }
+            credentialCiphertext?.let { secretCipher?.decrypt(it) ?: error("Cipher voucher tidak tersedia") }
+                ?: subscriberAccessId?.let { subscriberAccessRepository.findById(it)?.secret }
         } else {
             null
         }

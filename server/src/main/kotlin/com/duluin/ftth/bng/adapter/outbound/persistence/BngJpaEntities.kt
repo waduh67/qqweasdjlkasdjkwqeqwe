@@ -230,6 +230,12 @@ class BngActionJpaEntity(
     @Column(name = "fup_rate_limit", length = 200, updatable = false)
     var fupRateLimit: String?,
 
+    @Column(name = "credential_ciphertext", length = 512, updatable = false)
+    var credentialCiphertext: String?,
+
+    @Column(name = "external_id", length = 128, updatable = false)
+    var externalId: String?,
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var status: BngActionStatus,

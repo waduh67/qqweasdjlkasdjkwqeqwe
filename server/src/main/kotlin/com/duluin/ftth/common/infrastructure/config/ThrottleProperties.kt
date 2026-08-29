@@ -29,6 +29,8 @@ data class ThrottleProperties(
     val recoveryRedeemPerIp: Quota = Quota(30, Duration.ofHours(1)),
     /** Pendaftaran mandiri tenant baru per IP. */
     val signupPerIp: Quota = Quota(5, Duration.ofHours(6)),
+    /** Penerbitan atau resolusi konteks captive portal publik per IP. */
+    val hotspotPortalContextPerIp: Quota = Quota(60, Duration.ofMinutes(15)),
 ) {
     data class Quota(val limit: Int, val window: Duration) {
         init {

@@ -29,6 +29,16 @@ interface CatalogApi {
     fun findPlanNetwork(planId: UUID): PlanNetworkRef?
 
     /**
+     * Sisi jaringan paket yang boleh menerbitkan voucher hotspot sementara. `null` menyatakan
+     * paket tidak ada, tidak aktif, atau tidak melayani `HOTSPOT`; [PlanNetworkRef] yang
+     * dikembalikan adalah policy RADIUS live yang sama dengan yang dikonsumsi `bng`.
+     *
+     * Default fail-closed menjaga implementasi kontrak lama tetap kompatibel tanpa menerbitkan
+     * voucher dari [PlanNetworkRef] yang tidak membawa status aktif.
+     */
+    fun findActiveHotspotPlan(planId: UUID): PlanNetworkRef? = null
+
+    /**
      * Paket yang MASIH DIJUAL (aktif), terurut nama — daftar pilihan saat pelanggan portal
      * mengajukan ganti paket. Paket nonaktif sengaja tak ikut: ia masih dipakai langganan
      * lama, tapi menawarkannya ke orang baru berarti menjual sesuatu yang sudah ditarik.

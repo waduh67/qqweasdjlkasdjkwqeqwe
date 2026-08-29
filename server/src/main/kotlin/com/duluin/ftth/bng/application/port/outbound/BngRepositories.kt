@@ -184,6 +184,9 @@ interface BngActionRepository {
 
     fun findById(id: UUID): BngAction?
 
+    /** Aksi voucher (non-subscriber) terurut waktu terbaru untuk opaque external identity. */
+    fun findVoucherActions(externalId: String): List<BngAction> = emptyList()
+
     /**
      * Perintah KONTROL SESI ([BngActionType.SESSION_CONTROL]: DISCONNECT/COA) yang belum
      * tuntas (PENDING atau DISPATCHED) untuk sekumpulan BRAS — dasar dispatch ke collector.

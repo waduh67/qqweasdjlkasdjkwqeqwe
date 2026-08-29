@@ -254,6 +254,8 @@ class BngActionPersistenceAdapter(
             simultaneousUse = action.simultaneousUse,
             fupGroupname = action.fupGroupname,
             fupRateLimit = action.fupRateLimit,
+            credentialCiphertext = action.credentialCiphertext,
+            externalId = action.externalId,
             status = action.status,
             detail = action.detail,
             requestedBy = action.requestedBy,
@@ -266,6 +268,9 @@ class BngActionPersistenceAdapter(
     }
 
     override fun findById(id: UUID): BngAction? = jpa.findById(id).orElse(null)?.toDomain()
+
+    override fun findVoucherActions(externalId: String): List<BngAction> =
+        jpa.findByExternalIdOrderByRequestedAtDesc(externalId).map { it.toDomain() }
 
     override fun findDispatchableByNasIds(nasIds: Collection<UUID>): List<BngAction> {
         if (nasIds.isEmpty()) return emptyList()
@@ -317,6 +322,8 @@ class BngActionPersistenceAdapter(
         simultaneousUse = simultaneousUse,
         fupGroupname = fupGroupname,
         fupRateLimit = fupRateLimit,
+        credentialCiphertext = credentialCiphertext,
+        externalId = externalId,
         status = status,
         detail = detail,
         requestedBy = requestedBy,

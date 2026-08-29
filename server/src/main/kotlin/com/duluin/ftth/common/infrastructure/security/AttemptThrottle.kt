@@ -91,6 +91,11 @@ class AttemptThrottle(private val props: ThrottleProperties) {
         "Terlalu banyak pendaftaran dari jaringan ini",
     )
 
+    fun spendHotspotPortalContext(ip: String?) = spend(
+        "hotspot-portal-context", ip, props.hotspotPortalContextPerIp,
+        "Terlalu banyak permintaan portal dari jaringan ini",
+    )
+
     /** Buang seluruh hitungan — hanya untuk uji. */
     internal fun clear() = windows.clear()
 

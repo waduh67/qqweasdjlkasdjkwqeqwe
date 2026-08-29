@@ -12,6 +12,7 @@ import com.duluin.ftth.bng.domain.model.BngActionStatus
 import com.duluin.ftth.bng.domain.model.RadiusGroups
 import com.duluin.ftth.bng.domain.model.SubscriberAccess
 import com.duluin.ftth.common.domain.UuidV7
+import com.duluin.ftth.common.security.SecretCipher
 import com.duluin.ftth.tenancy.TenantApi
 import com.duluin.ftth.tenancy.TenantRef
 import com.duluin.ftth.tenancy.TenantStatus
@@ -195,6 +196,21 @@ class RadiusProvisioningRunnerTest {
     )
 
     @Test
+    fun `PROVISION voucher memakai credential action tanpa SubscriberAccess`() {
+        val action = BngAction.voucherProvision(
+            tenantId = tenantId, nasId = nasId, username = "voucher-01", externalId = "voucher:opaque-01",
+            credentialCiphertext = "voucher-secret", groupname = "plan:${UuidV7.generate()}", at = now,
+        )
+        val fixture = fixture(pending = listOf(action))
+
+        fixture.runner.execute(tenantId, now)
+
+        assertThat(fixture.radius.provisions.single().scopedUsername).isEqualTo("acme:voucher-01")
+        assertThat(fixture.radius.provisions.single().password).isEqualTo("voucher-secret")
+        assertThat(action.status).isEqualTo(BngActionStatus.COMPLETED)
+    }
+
+    @Test
     fun `PROVISION ke grup isolir memastikan grupnya ada lebih dulu (rate + address-list platform)`() {
         val access = access(username = "budi", secret = "rahasia123")
         val action = BngAction.provision(
@@ -243,6 +259,7 @@ class RadiusProvisioningRunnerTest {
             actions,
             FakeAccessRepo(accesses),
             radius,
+            PlaintextSecretCipher,
             RadiusProperties(),
         )
         return Fixture(runner, actions, radius)
@@ -258,6 +275,11 @@ class RadiusProvisioningRunnerTest {
         nasId = nasId,
         status = AccessStatus.ACTIVE,
     )
+}
+
+private object PlaintextSecretCipher : SecretCipher {
+    override fun encrypt(plaintext: String): String = plaintext
+    override fun decrypt(ciphertext: String): String = ciphertext
 }
 
 private class FakeTenantApi(private val id: UUID, private val slug: String?) : TenantApi {
@@ -282,6 +304,7 @@ private class FakeActionRepo(private val pending: List<BngAction>) : BngActionRe
     }
 
     override fun findById(id: UUID): BngAction? = pending.firstOrNull { it.id == id }
+    override fun findVoucherActions(externalId: String): List<BngAction> = pending.filter { it.externalId == externalId }
     override fun findDispatchableByNasIds(nasIds: Collection<UUID>): List<BngAction> = emptyList()
     override fun findServerProvisioningPending(limit: Int): List<BngAction> = pending.take(limit)
     override fun findServerSessionControlPending(nasIds: Collection<UUID>, limit: Int): List<BngAction> = emptyList()

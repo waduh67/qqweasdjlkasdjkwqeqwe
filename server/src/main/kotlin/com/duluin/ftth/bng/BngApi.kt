@@ -44,6 +44,28 @@ interface BngApi {
     fun provisionAccess(command: ProvisionAccessSpec): ProvisionedAccessRef
 
     /**
+     * Provisikan kredensial voucher yang dimiliki caller eksternal sebagai identitas RADIUS
+     * sementara. [VoucherCredentialSpec.credential] adalah input tulis-saja dan tak pernah
+     * muncul dalam ref hasil maupun query berikutnya. Identitas [externalId] opaque; ini bukan
+     * customer, subscription, ataupun [SubscriberAccess].
+     */
+    fun provisionVoucherCredential(command: VoucherCredentialSpec): VoucherCredentialRef = unsupportedVoucherCredential()
+
+    /** Nonaktifkan otorisasi voucher. Aman dipanggil ulang untuk external identity yang sama. */
+    fun revokeVoucherCredential(externalId: String): VoucherCredentialRef? = unsupportedVoucherCredential()
+
+    /** Antre pemutusan sesi voucher bila NAS tersedia; no-op yang aman bila tidak ada sesi/NAS. */
+    fun disconnectVoucherCredential(externalId: String): VoucherActionRef? = unsupportedVoucherCredential()
+
+    /** Status provisioning/revoke tanpa credential atau detail RADIUS mentah. */
+    fun findVoucherCredential(externalId: String): VoucherCredentialRef? = unsupportedVoucherCredential()
+
+    /** Observasi sesi/accounting voucher yang aman untuk caller lintas-module. */
+    fun findVoucherSession(externalId: String): VoucherSessionRef? = unsupportedVoucherCredential()
+
+    private fun <T> unsupportedVoucherCredential(): T = throw UnsupportedOperationException("Voucher credential API tidak didukung")
+
+    /**
      * BRAS yang menaungi sebuah area (cakupan area→BRAS), atau `null` bila area itu belum
      * dipetakan ke BRAS mana pun. Dipakai onboarding PSB untuk memilih BRAS otomatis dari
      * area pelanggan bila operator tak memilih BRAS manual. Deterministik: tiap area dinaungi
@@ -57,6 +79,9 @@ interface BngApi {
      * tenant aktif (RLS).
      */
     fun resolveNasByName(name: String): UUID?
+
+    /** Keberadaan NAS dalam tenant aktif; caller lintas-module tidak boleh mengakses persistence BNG. */
+    fun hasNas(nasId: UUID): Boolean = false
 
     /**
      * Cari akun jaringan menurut username (kunci upsert impor CSV pelanggan: `mikrotik_username`).
@@ -197,6 +222,45 @@ data class ProvisionedAccessRef(
     val username: String,
     /** Status akun: PENDING/ACTIVE/ISOLATED/TERMINATED. */
     val status: String,
+)
+
+/** Credential voucher write-only; [externalId] is owned by the caller and must be opaque. */
+data class VoucherCredentialSpec(
+    val externalId: String,
+    val username: String,
+    val credential: String,
+    val planId: UUID,
+    val nasId: UUID,
+)
+
+data class VoucherCredentialRef(
+    val externalId: String,
+    val username: String,
+    val state: String,
+    val provisioningAction: VoucherActionRef?,
+    val revokeAction: VoucherActionRef?,
+)
+
+data class VoucherActionRef(
+    val actionId: UUID,
+    val state: String,
+    val detail: String?,
+    val requestedAt: Instant,
+    val completedAt: Instant?,
+)
+
+data class VoucherSessionRef(
+    val externalId: String,
+    val online: Boolean,
+    val nasId: UUID?,
+    val framedIp: String?,
+    val sessionId: String?,
+    val callingStationId: String?,
+    val startedAt: Instant?,
+    val lastSeenAt: Instant?,
+    /** Cumulative RADIUS octets, when the NAS reports them. */
+    val inputBytes: Long? = null,
+    val outputBytes: Long? = null,
 )
 
 /**

@@ -118,6 +118,7 @@ class SecurityConfig {
                     // Halaman bayar publik: tautan `/bayar/<slug>/<uuid>` dikirim ke pelanggan
                     // lewat WhatsApp, jadi kapabilitasnya UUID tagihan di path — bukan bearer.
                     "/api/public/**",
+                    "/api/hotspot/public/**",
                     "/actuator/health/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",

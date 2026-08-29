@@ -72,6 +72,7 @@ interface RadiusSessionJpaRepository : JpaRepository<RadiusSessionJpaEntity, UUI
 }
 
 interface BngActionJpaRepository : JpaRepository<BngActionJpaEntity, UUID> {
+    fun findByExternalIdOrderByRequestedAtDesc(externalId: String): List<BngActionJpaEntity>
     fun findByNasIdInAndActionInAndStatusInOrderByRequestedAtAsc(
         nasIds: Collection<UUID>,
         actions: Collection<BngActionType>,

@@ -95,6 +95,10 @@ class BngAction private constructor(
     val fupGroupname: String?,
     /** Atribut rate-limit grup FUP — [BngActionType.SYNC_GROUP] bila FUP aktif. */
     val fupRateLimit: String?,
+    /** Credential terenkripsi hanya untuk PROVISION voucher non-subscriber; tidak pernah keluar dari BNG. */
+    val credentialCiphertext: String?,
+    /** Opaque identity caller untuk voucher non-subscriber; tak pernah dipetakan ke customer/subscription. */
+    val externalId: String?,
     status: BngActionStatus,
     detail: String?,
     val requestedBy: UUID?,
@@ -239,6 +243,67 @@ class BngAction private constructor(
             requestedBy = requestedBy, requestedByEmail = requestedByEmail, at = at,
         )
 
+        fun voucherProvision(
+            tenantId: UUID,
+            nasId: UUID,
+            username: String,
+            externalId: String,
+            credentialCiphertext: String,
+            groupname: String,
+            at: Instant = Instant.now(),
+        ): BngAction = create(
+            tenantId = tenantId,
+            subscriberAccessId = null,
+            nasId = nasId,
+            username = username,
+            action = BngActionType.PROVISION,
+            groupname = groupname,
+            credentialCiphertext = credentialCiphertext,
+            externalId = externalId,
+            authType = AuthType.HOTSPOT,
+            requestedBy = null,
+            requestedByEmail = null,
+            at = at,
+        )
+
+        fun voucherDeprovision(
+            tenantId: UUID,
+            nasId: UUID,
+            username: String,
+            externalId: String,
+            at: Instant = Instant.now(),
+        ): BngAction = create(
+            tenantId = tenantId,
+            subscriberAccessId = null,
+            nasId = nasId,
+            username = username,
+            action = BngActionType.DEPROVISION,
+            externalId = externalId,
+            authType = AuthType.HOTSPOT,
+            requestedBy = null,
+            requestedByEmail = null,
+            at = at,
+        )
+
+        fun voucherDisconnect(
+            tenantId: UUID,
+            nasId: UUID,
+            username: String,
+            externalId: String,
+            at: Instant = Instant.now(),
+        ): BngAction = create(
+            tenantId = tenantId,
+            subscriberAccessId = null,
+            nasId = nasId,
+            username = username,
+            action = BngActionType.DISCONNECT,
+            externalId = externalId,
+            authType = AuthType.HOTSPOT,
+            requestedBy = null,
+            requestedByEmail = null,
+            at = at,
+        )
+
         /**
          * Sinkronkan atribut grup paket di RADIUS. Tingkat-grup, bukan per-akun → tanpa
          * [subscriberAccessId], username kosong (adapter mengabaikannya untuk SYNC_GROUP).
@@ -276,6 +341,8 @@ class BngAction private constructor(
             simultaneousUse: Int? = null,
             fupGroupname: String? = null,
             fupRateLimit: String? = null,
+            credentialCiphertext: String? = null,
+            externalId: String? = null,
             authType: AuthType = AuthType.PPPOE,
             requestedBy: UUID?,
             requestedByEmail: String?,
@@ -295,6 +362,8 @@ class BngAction private constructor(
             simultaneousUse = simultaneousUse,
             fupGroupname = fupGroupname,
             fupRateLimit = fupRateLimit,
+            credentialCiphertext = credentialCiphertext,
+            externalId = externalId,
             status = BngActionStatus.PENDING,
             detail = null,
             requestedBy = requestedBy,
@@ -320,6 +389,8 @@ class BngAction private constructor(
             simultaneousUse: Int?,
             fupGroupname: String?,
             fupRateLimit: String?,
+            credentialCiphertext: String?,
+            externalId: String?,
             status: BngActionStatus,
             detail: String?,
             requestedBy: UUID?,
@@ -329,7 +400,7 @@ class BngAction private constructor(
             completedAt: Instant?,
         ): BngAction = BngAction(
             id, tenantId, subscriberAccessId, nasId, username, action, authType, downMbps, upMbps,
-            groupname, rateLimit, simultaneousUse, fupGroupname, fupRateLimit,
+            groupname, rateLimit, simultaneousUse, fupGroupname, fupRateLimit, credentialCiphertext, externalId,
             status, detail, requestedBy, requestedByEmail, requestedAt, dispatchedAt, completedAt,
         )
     }
