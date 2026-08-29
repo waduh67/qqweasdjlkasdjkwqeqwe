@@ -230,7 +230,7 @@ export function CustomersPage() {
   // Hapus satu pelanggan lewat menu aksi baris (`…`) — konfirmasi dulu (aksi destruktif),
   // lalu bersihkan dari seleksi bila kebetulan tercentang agar CommandBar tak salah hitung.
   const deleteOne = async (c: CustomerView) => {
-    if (!(await confirm({ title: `Hapus pelanggan ${c.name}?`, message: 'Pelanggan akan dihapus permanen.', confirmLabel: 'Hapus', danger: true }))) return
+    if (!(await confirm({ title: `Hapus pelanggan ${c.name}?`, message: `Pelanggan ${c.name} akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.`, confirmLabel: 'Hapus', danger: true }))) return
     try {
       await api.del(`/api/customers/${c.id}`)
       setSelected((prev) => {
@@ -249,7 +249,7 @@ export function CustomersPage() {
   const deleteSelected = async () => {
     const ids = [...selected]
     if (ids.length === 0) return
-    if (!(await confirm({ title: `Hapus ${ids.length} pelanggan?`, message: 'Pelanggan terpilih akan dihapus permanen.', confirmLabel: 'Hapus', danger: true })))
+    if (!(await confirm({ title: `Hapus ${ids.length} pelanggan terpilih?`, message: 'Pelanggan terpilih akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.', confirmLabel: 'Hapus', danger: true })))
       return
     setDeleting(true)
     try {

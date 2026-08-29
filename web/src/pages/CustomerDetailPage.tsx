@@ -643,7 +643,7 @@ function SubscriptionManager({
             {selected ? `${selected.downMbps} Mbps` : '—'})
             {override !== '' && ` · harga negosiasi Rp ${override}`}
             <br />
-            Kecepatan jaringan dan tagihan periode berikutnya mengikuti paket baru.
+            Kecepatan, QoS, dan tagihan periode berikutnya mengikuti paket baru.
           </>
         ),
         confirmLabel: 'Ganti paket',
@@ -733,7 +733,7 @@ function SubscriptionManager({
               )}
               <Text as="p" className="muted" size={200} style={{ margin: 0 }}>{ended
                 ? 'Mengaktifkan kembali langganan mempertahankan Username PPPoE dan riwayat tagihan.'
-                : 'Satu pelanggan memiliki satu langganan. Layanan kedua memerlukan pelanggan baru.'}</Text>
+                : 'Satu pelanggan memiliki satu langganan; ganti paket tidak menambah langganan. Layanan kedua di lokasi lain memerlukan pelanggan baru.'}</Text>
             </>
           )}
         </div>
