@@ -210,7 +210,7 @@ export function UsersPage() {
 
   return (
     <div className="stack" style={{ gap: '1rem' }}>
-      <PageHeader title="Pengguna" subtitle="Akun operator, role, dan cakupan area akses." />
+      <PageHeader title="Pengguna" />
 
       <CommandBar primary={primary} actions={actions} />
 
@@ -231,7 +231,6 @@ export function UsersPage() {
         empty={
           <EmptyState
             title={query ? 'Tidak ada pengguna yang cocok' : 'Belum ada pengguna'}
-            hint={query ? 'Coba ubah kata kunci pencarian.' : 'Tambahkan pengguna pertama untuk memberi akses ke sistem.'}
             icon={<IconUsers size={32} />}
           />
         }
@@ -240,7 +239,6 @@ export function UsersPage() {
       <Blade
         open={draft != null}
         title="Pengguna baru"
-        subtitle="Buat akun operator lalu tetapkan role & cakupan area."
         size="sm"
         dirty={
           draft != null &&

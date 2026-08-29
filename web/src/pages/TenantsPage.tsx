@@ -130,7 +130,6 @@ export function TenantsPage() {
     <div className="stack" style={{ gap: '1.25rem' }}>
       <PageHeader
         title="Tenant"
-        subtitle="Onboarding ISP baru dan kelola status tenant di platform."
         actions={
           can('platform.tenant.create') && (
             <Button variant="primary" onClick={() => openDraft({ ...EMPTY })}>
@@ -162,7 +161,6 @@ export function TenantsPage() {
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada tenant yang cocok' : 'Belum ada tenant'}
-            hint={query || statusFilter ? 'Coba ubah kata kunci atau filter.' : 'Onboarding tenant pertama untuk mulai.'}
             icon={<IconBuilding size={32} />}
           />
         }
@@ -171,7 +169,6 @@ export function TenantsPage() {
       <Blade
         open={draft != null}
         title="Onboarding tenant baru"
-        subtitle='Membuat tenant, role "Tenant Admin" berisi seluruh izin non-platform, dan user admin pertamanya.'
         size="sm"
         dirty={dirty}
         onClose={closeDraft}
@@ -240,7 +237,6 @@ export function TenantsPage() {
                   placeholder={
                     defaultFee != null ? `Default Rp ${defaultFee.toLocaleString('id-ID')}` : 'Kosongkan = harga default'
                   }
-                  hint="Kosongkan untuk memakai harga default global. Isi untuk harga khusus tenant ini."
                 />
               </div>
               <div style={{ flex: 1 }} />

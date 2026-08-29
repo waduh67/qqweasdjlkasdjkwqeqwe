@@ -149,7 +149,7 @@ export function NotificationSettingsPage() {
         <SectionTitle>Gateway WhatsApp</SectionTitle>
 
         <Checkbox
-          label="Aktifkan pengiriman (gateway hidup)"
+              label="Aktifkan pengiriman"
           checked={form.gatewayEnabled}
           onChange={(_, data) => patch({ gatewayEnabled: !!data.checked })}
           disabled={!manage}

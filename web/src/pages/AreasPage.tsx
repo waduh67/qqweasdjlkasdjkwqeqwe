@@ -83,15 +83,7 @@ export function AreasPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <PageHeader
-        title="Area / Wilayah"
-        subtitle={
-          <>
-            Area adalah dimensi <Text as="em" italic>scope</Text> pada RBAC: pengguna yang dibatasi ke area tertentu hanya melihat aset dan
-            tiket di area itu.
-          </>
-        }
-      />
+      <PageHeader title="Area / Wilayah" />
 
       {can('iam.area.create') && (
         <div className="card row" style={{ alignItems: 'flex-end' }}>
@@ -131,7 +123,6 @@ export function AreasPage() {
         empty={
           <EmptyState
             title={query ? 'Tidak ada area yang cocok' : 'Belum ada area'}
-            hint={query ? 'Coba ubah kata kunci.' : 'Tambahkan area pertama untuk mulai membatasi scope RBAC.'}
             icon={<IconArea size={32} />}
           />
         }

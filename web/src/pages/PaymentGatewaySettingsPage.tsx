@@ -217,15 +217,7 @@ export function PaymentGatewaySettingsPage() {
 
   return (
     <div className="stack settings-page">
-      <PageHeader
-        title="Payment Gateway"
-        subtitle={
-          <>
-            Cara pelanggan Anda membayar: otomatis lewat <Text as="strong" weight="semibold" >Pivot</Text> atau manual (transfer/QRIS).
-            Perubahan minta konfirmasi sebelum berlaku.
-          </>
-        }
-      />
+      <PageHeader title="Payment Gateway" />
 
       {/* ---- Status yang berlaku sekarang (dari server, bukan suntingan) ---- */}
       <StatusPanel saved={saved} />
@@ -254,8 +246,7 @@ export function PaymentGatewaySettingsPage() {
 
         {form.provider === 'PIVOT' && (
           <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
-            Penagihan otomatis via Pivot memakai sub-account tenant Anda. Pastikan sub-account sudah
-            diprovisi &amp; rekening payout tersetel di kartu <Text as="strong" weight="semibold" >Sub-account Pivot</Text> di bawah.
+            Pastikan sub-account dan rekening payout Pivot sudah disetel.
           </Text>
         )}
 

@@ -66,10 +66,7 @@ export function PlatformBillingSettingsPage() {
 
   return (
     <div className="stack settings-page" style={{ gap: '1.5rem' }}>
-      <PageHeader
-        title="Billing Langganan Platform"
-        subtitle="Harga langganan default & akun master Pivot untuk menagih tenant memakai aplikasi ini. Setelan berlaku global untuk seluruh platform."
-      />
+      <PageHeader title="Billing Langganan Platform" />
 
       <GlobalPanel settings={settings} manage={manage} onSaved={setSettings} />
 
@@ -131,7 +128,6 @@ function GlobalPanel({
 
       <FormRow
         label="Harga bulanan default (Rp)"
-        hint="Biaya langganan bulanan yang sama untuk semua tenant. Saat onboarding tenant baru, super-admin bisa menimpanya jadi harga khusus."
       >
         <TextField
           type="number"

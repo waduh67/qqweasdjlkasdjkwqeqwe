@@ -154,7 +154,7 @@ export function RolesPage() {
 
   return (
     <div className="stack">
-      <PageHeader title="Role & Izin" subtitle="Kelompokkan izin ke dalam peran untuk mengatur akses pengguna." />
+      <PageHeader title="Role & Izin" />
       <CommandBar primary={primary} />
 
       {error && <Text as="p" className="error">{error}</Text>}
@@ -173,7 +173,6 @@ export function RolesPage() {
         empty={
           <EmptyState
             title={query ? 'Tidak ada role yang cocok' : 'Belum ada role'}
-            hint={query ? 'Coba ubah kata kunci.' : 'Buat role pertama untuk mengatur izin.'}
             icon={<IconShield size={32} />}
           />
         }

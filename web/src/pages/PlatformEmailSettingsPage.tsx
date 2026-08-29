@@ -241,10 +241,7 @@ export function PlatformEmailSettingsPage() {
 
   return (
     <div className="stack settings-page">
-      <PageHeader
-        title="Setelan Email"
-        subtitle="Relay SMTP, identitas pengirim, dan tampilan bawaan email untuk seluruh tenant. Tenant boleh menimpa identitas, logo, warna, dan subjeknya sendiri."
-      />
+      <PageHeader title="Setelan Email" />
 
       <div className="card stack" style={{ gap: '0.75rem' }}>
         <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
