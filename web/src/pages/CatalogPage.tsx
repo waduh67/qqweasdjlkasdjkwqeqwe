@@ -21,7 +21,7 @@ import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { Blade } from '@/components/organisms'
 import { PageHeader } from '@/components/molecules'
-import { Badge, Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
+import { Button, EmptyState, SelectField, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useToast } from '@/system'
 import { IconPackage } from '@/components/atoms/icons'
@@ -306,33 +306,19 @@ export function CatalogPage() {
       key: 'fup',
       header: 'FUP',
       sortValue: (p) => (p.fupEnabled ? 1 : 0),
-      cell: (p) =>
-        p.fupEnabled ? <Badge tone="accent">FUP</Badge> : <span className="muted">—</span>,
+      cell: (p) => (p.fupEnabled ? 'FUP' : '—'),
     },
     {
       key: 'services',
       header: 'Layanan',
       sortValue: (p) => p.serviceTypes.map((s) => SERVICE_TYPE_LABEL[s]).join(', '),
-      cell: (p) => (
-        <div className="row" style={{ gap: '0.3rem', flexWrap: 'wrap' }}>
-          {p.serviceTypes.length === 0 ? (
-            <span className="muted">—</span>
-          ) : (
-            p.serviceTypes.map((s) => <Badge key={s}>{SERVICE_TYPE_LABEL[s]}</Badge>)
-          )}
-        </div>
-      ),
+      cell: (p) => p.serviceTypes.map((s) => SERVICE_TYPE_LABEL[s]).join(', ') || '—',
     },
     {
       key: 'status',
       header: 'Status',
       sortValue: (p) => (p.active ? 1 : 0),
-      cell: (p) =>
-        p.active ? (
-          <StatusBadge status="ACTIVE" label="Aktif" />
-        ) : (
-          <StatusBadge status="INACTIVE" label="Nonaktif" />
-        ),
+      cell: (p) => (p.active ? 'Aktif' : 'Nonaktif'),
     },
   ]
 
@@ -666,6 +652,7 @@ export function CatalogPage() {
         rowKey={(p) => p.id}
         loading={loading}
         initialSort={{ key: 'name', dir: 'asc' }}
+        presentation="resource"
         empty={
           <EmptyState
             title={query || serviceFilter ? 'Tidak ada paket yang cocok' : 'Belum ada paket'}
