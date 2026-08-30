@@ -22,7 +22,7 @@ export function CommandBar({
   return (
     <Toolbar className="azure-commandbar" aria-label="Aksi">
       {primary && <CommandButton action={primary} primary />}
-      {primary && actions.length > 0 && <ToolbarDivider className="cmd-divider" />}
+      {primary && actions.length > 0 && <CommandDivider />}
       {actions.map((action) => (
         <CommandActionItem key={action.key} action={action} />
       ))}
@@ -33,10 +33,14 @@ export function CommandBar({
 function CommandActionItem({ action }: { action: CommandAction }) {
   return (
     <>
-      {action.dividerBefore && <ToolbarDivider className="cmd-divider" />}
+      {action.dividerBefore && <CommandDivider />}
       <CommandButton action={action} />
     </>
   )
+}
+
+function CommandDivider() {
+  return <ToolbarDivider className="cmd-divider" role="separator" aria-orientation="vertical" />
 }
 
 function CommandButton({ action, primary }: { action: CommandAction; primary?: boolean }) {
