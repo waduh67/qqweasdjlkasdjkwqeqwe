@@ -95,7 +95,7 @@ export function TenantsPage() {
 
   const columns: Column<Tenant>[] = [
     { key: 'name', header: 'Nama', sortValue: (t) => t.name, cell: (t) => <Text as="strong" weight="semibold" >{t.name}</Text> },
-    { key: 'slug', header: 'Slug', sortValue: (t) => t.slug, cell: (t) => <Text as="span" className="badge">{t.slug}</Text> },
+    { key: 'slug', header: 'Slug', sortValue: (t) => t.slug, cell: (t) => t.slug },
     {
       key: 'status',
       header: 'Status',
@@ -157,6 +157,7 @@ export function TenantsPage() {
         rowKey={(t) => t.id}
         loading={loading}
         initialSort={{ key: 'name', dir: 'asc' }}
+        presentation="resource"
         rowActions={canSubscription || canManageTenant || canDeleteTenant ? rowActions : undefined}
         empty={
           <EmptyState
