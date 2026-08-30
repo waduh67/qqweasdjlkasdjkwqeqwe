@@ -57,8 +57,8 @@ export function AreasPage() {
   }, [areas, query])
 
   const columns: Column<Area>[] = [
-    { key: 'code', header: 'Kode', sortValue: (a) => a.code, cell: (a) => <Text as="span" className="badge">{a.code}</Text> },
-    { key: 'name', header: 'Nama', sortValue: (a) => a.name, cell: (a) => <Text as="strong" weight="semibold" >{a.name}</Text> },
+    { key: 'code', header: 'Kode', sortValue: (a) => a.code, cell: (a) => <Text as="span">{a.code}</Text> },
+    { key: 'name', header: 'Nama', sortValue: (a) => a.name, cell: (a) => <Text as="span">{a.name}</Text> },
     {
       key: 'parent',
       header: 'Induk',
@@ -118,6 +118,7 @@ export function AreasPage() {
         rows={rows}
         rowKey={(a) => a.id}
         loading={loading}
+        presentation="resource"
         initialSort={{ key: 'code', dir: 'asc' }}
         rowActions={canDelete ? rowActions : undefined}
         empty={
