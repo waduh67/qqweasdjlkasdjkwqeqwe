@@ -33,7 +33,6 @@ import { timeAgo } from '@/utils/timeAgo'
 import { useToast } from '@/system'
 import { IconChat } from '@/components/atoms/icons'
 
-/** Nada lencana status; tak lewat `StatusBadge` karena istilahnya khas helpdesk. */
 const STATUS_TONE: Record<TicketStatus, string> = {
   OPEN: 'warning',
   IN_PROGRESS: 'accent',
@@ -224,7 +223,7 @@ export function HelpdeskPage() {
       key: 'category',
       header: 'Kategori',
       sortValue: (t) => t.category,
-      cell: (t) => <span className="badge">{TICKET_CATEGORY_LABEL[t.category] ?? t.category}</span>,
+      cell: (t) => TICKET_CATEGORY_LABEL[t.category] ?? t.category,
     },
     {
       key: 'assignee',
@@ -270,7 +269,7 @@ export function HelpdeskPage() {
       key: 'status',
       header: 'Status',
       sortValue: (t) => t.status,
-      cell: (t) => <span className={`badge ${STATUS_TONE[t.status]}`}>{TICKET_STATUS_LABEL[t.status]}</span>,
+      cell: (t) => TICKET_STATUS_LABEL[t.status],
     },
   ]
 
@@ -330,6 +329,7 @@ export function HelpdeskPage() {
         rowKey={(t) => t.id}
         loading={loading}
         initialSort={{ key: 'activity', dir: 'desc' }}
+        presentation="resource"
         empty={
           <EmptyState
             title={query || statusFilter || categoryFilter ? 'Tidak ada tiket yang cocok' : 'Belum ada keluhan masuk'}

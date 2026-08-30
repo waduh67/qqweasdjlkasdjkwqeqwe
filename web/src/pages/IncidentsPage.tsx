@@ -122,20 +122,13 @@ export function IncidentsPage() {
       key: 'severity',
       header: 'Keparahan',
       sortValue: (i) => SEV_RANK[i.severity] ?? 0,
-      cell: (i) => <StatusBadge status={i.severity} />,
+      cell: (i) => i.severity,
     },
     {
       key: 'cause',
       header: 'Dugaan sebab',
       sortValue: (i) => i.suspectedCause ?? '',
-      cell: (i) =>
-        i.suspectedCause && CAUSE_LABEL[i.suspectedCause] ? (
-          <span className={`badge cause-${i.suspectedCause.toLowerCase()}`}>
-            {CAUSE_LABEL[i.suspectedCause]}
-          </span>
-        ) : (
-          <span className="muted">—</span>
-        ),
+      cell: (i) => (i.suspectedCause ? CAUSE_LABEL[i.suspectedCause] : undefined) ?? '—',
     },
     {
       key: 'root',
@@ -156,11 +149,7 @@ export function IncidentsPage() {
       key: 'status',
       header: 'Status',
       sortValue: (i) => i.status,
-      cell: (i) => (
-        <span className={`badge ${i.status === 'ACKNOWLEDGED' ? 'warning' : ''}`}>
-          {i.status === 'ACKNOWLEDGED' ? 'Diakui' : 'Terbuka'}
-        </span>
-      ),
+      cell: (i) => (i.status === 'ACKNOWLEDGED' ? 'Diakui' : 'Terbuka'),
     },
   ]
 
@@ -183,6 +172,7 @@ export function IncidentsPage() {
         rowKey={(i) => i.id}
         loading={loading}
         initialSort={{ key: 'severity', dir: 'desc' }}
+        presentation="resource"
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada insiden yang cocok' : 'Tidak ada insiden aktif'}
