@@ -469,6 +469,26 @@ tbody tr:last-child td {
   box-shadow: none;
 }
 
+.olt-data-table-grid .fui-DataGridHeaderCell,
+.olt-data-table-grid .fui-DataGridHeaderCell__button,
+.olt-data-table-grid .fui-DataGridHeaderCell > .fui-Button {
+  justify-content: flex-start;
+  text-align: left;
+  font-weight: var(--fontWeightSemibold, 600) !important;
+}
+.olt-data-table-grid .fui-DataGridCell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.olt-data-table-grid .fui-DataGridCell > * {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Bungkus tabel: geser horizontal di layar sempit tanpa mendorong tata letak. */
 .table-wrap {
   width: 100%;
@@ -1223,12 +1243,16 @@ td.dg-actions {
   color: var(--muted);
 }
 
-/* Pemisah vertikal tipis antar-kelompok aksi. */
 .azure-commandbar .cmd-divider {
-  width: 1px;
+  width: 0;
+  min-width: 0;
   align-self: stretch;
   margin: 0.25rem 0.3rem;
-  background: var(--border-strong);
+  padding: 0;
+  border: 0;
+  border-inline-start: 1px solid var(--border-strong);
+  background: transparent;
+  pointer-events: none;
 }
 
 /* ---------- Badge & pil status ---------- */
@@ -2694,9 +2718,46 @@ td.dg-actions {
   animation: toast-in 0.15s ease;
 }
 
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.pager-summary {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--fontSizeBase200);
+  font-variant-numeric: tabular-nums;
+}
+.pager-controls,
+.pager-pages {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.pager-controls {
+  flex-wrap: wrap;
+}
+.pager-ellipsis {
+  min-width: 2rem;
+  color: var(--muted);
+  text-align: center;
+}
+.pager > .fui-Field {
+  min-width: 10rem;
+  margin-left: auto;
+}
+
 /* ---------- Responsif: ponsel ---------- */
 
 @media (max-width: 720px) {
+  .pager > .fui-Field {
+    width: 100%;
+    margin-left: 0;
+  }
   /* Blade ala Azure lahir untuk layar lebar; di ponsel ia harus jadi lembar penuh.
      Kelas digandakan (spesifisitas 0,2,0) agar menang atas kelas lebar bawaan Fluent —
      trik yang sama dipakai varian `.blade-half`/`.blade-detail` di atas. */
@@ -2736,45 +2797,83 @@ td.dg-actions {
 
   /* Filter tabel: tiap kontrol selebar layar — dropdown selebar 8,5rem berjejer
      menyisakan potongan sempit yang sulit disentuh. */
-  .toolbar select,
-  .toolbar .btn-auto,
-  .toolbar .fui-Field {
-    width: 100%;
-    min-width: 0;
-  }
+.toolbar select,
+.toolbar .btn-auto,
+.toolbar .fui-Field {
+  width: 100%;
+  min-width: 0;
+}
+
 
   /* TABEL JADI KARTU. Menggulung mendatar berarti pengguna harus menggeser bolak-balik
      untuk membaca SATU baris; sebagai gantinya tiap baris ditumpuk jadi kartu "label:
      nilai". Label diambil dari `data-label` yang diisi DataTable dari judul kolomnya. */
-  .table-card .table-wrap {
-    overflow-x: visible;
+  .table-card:not(.olt-table-card) .table-wrap {
+      overflow-x: visible;
+    }
+
+  /* OLT adalah grid data lebar: pada ponsel tetap tampil sebagai tabel yang dapat digeser,
+     bukan deretan kartu. Guard ini menargetkan markup Fluent sebenarnya agar aturan mode
+     kartu untuk tabel native tidak dapat menyembunyikan kepala atau mengubah baris grid. */
+  .olt-table-card .olt-table-wrap {
+    overflow-x: auto;
+  }
+  .olt-table-card .olt-data-table-grid {
+    display: grid;
+    width: max-content;
+    min-width: 100%;
+  }
+  .olt-table-card .olt-data-table-grid .fui-DataGridHeader {
+    display: contents;
+  }
+  .olt-table-card .olt-data-table-grid .fui-DataGridRow {
+    display: grid;
+    width: max-content;
+    min-width: 100%;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+  }
+  .olt-table-card .olt-data-table-grid .fui-DataGridHeaderCell,
+  .olt-table-card .olt-data-table-grid .fui-DataGridCell {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .olt-table-card .olt-data-table-grid .fui-DataGridHeaderCell {
+    display: flex;
+  }
+  .olt-table-card .olt-data-table-grid .fui-DataGridCell {
+    display: block;
   }
   /* Bingkai luar grid dilepas: yang membingkai kini tiap kartu baris, dan dua bingkai
      bertumpuk membuat daftar terlihat seperti kotak di dalam kotak. */
-  .card.table-card {
+  .card.table-card:not(.olt-table-card) {
     border: none;
     background: transparent;
   }
-  .table-card table,
-  .table-card tbody,
-  .table-card tbody tr,
-  .table-card tbody td {
+  .table-card:not(.olt-table-card) table,
+  .table-card:not(.olt-table-card) tbody,
+  .table-card:not(.olt-table-card) tbody tr,
+  .table-card:not(.olt-table-card) tbody td {
     display: block;
     width: 100%;
   }
-  .table-card thead {
+  .table-card:not(.olt-table-card) thead {
     display: none;
   }
-  .table-card tbody tr {
+  .table-card:not(.olt-table-card) tbody tr {
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 0.55rem 0.7rem;
     margin-bottom: 0.55rem;
   }
-  .table-card tbody tr:last-child {
+  .table-card:not(.olt-table-card) tbody tr:last-child {
     margin-bottom: 0;
   }
-  .table-card tbody td {
+  .table-card:not(.olt-table-card) tbody td {
     border-bottom: none;
     padding: 0.3rem 0;
     display: flex;
@@ -2783,7 +2882,7 @@ td.dg-actions {
     gap: 0.9rem;
     text-align: left;
   }
-  .table-card tbody td::before {
+  .table-card:not(.olt-table-card) tbody td::before {
     content: attr(data-label);
     flex: none;
     color: var(--muted);
@@ -2792,12 +2891,12 @@ td.dg-actions {
     letter-spacing: 0.03em;
   }
   /* Sel tanpa label (checkbox & menu aksi) tetap sebaris di puncak kartu. */
-  .table-card tbody td:not([data-label])::before,
-  .table-card tbody td[data-label='']::before {
+  .table-card:not(.olt-table-card) tbody td:not([data-label])::before,
+  .table-card:not(.olt-table-card) tbody td[data-label='']::before {
     content: none;
   }
-  .table-card tbody td.dg-check,
-  .table-card tbody td.dg-actions {
+  .table-card:not(.olt-table-card) tbody td.dg-check,
+  .table-card:not(.olt-table-card) tbody td.dg-actions {
     display: inline-flex;
     width: auto;
     justify-content: flex-start;

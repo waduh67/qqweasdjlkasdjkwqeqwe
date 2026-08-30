@@ -47,6 +47,7 @@ export type Column<T> = {
    * `null`/kosong selalu ditaruh di bawah, apa pun arah urutnya.
    */
   sortValue?: (row: T) => string | number | null | undefined
+  sortHint?: string
   /** Perataan sel (default kiri). `right` juga memakai angka tabular. */
   align?: 'left' | 'right' | 'center'
   /** Lebar kolom eksplisit (mis. `'1%'` untuk kolom aksi yang menyusut). */
@@ -73,6 +74,8 @@ export type Selection = {
   selected: Set<string>
   onChange: (next: Set<string>) => void
 }
+
+export type DataTablePresentation = 'default' | 'olt'
 
 type SortState = { key: string; dir: 'asc' | 'desc' } | null
 
@@ -141,6 +144,8 @@ export function DataTable<T>({
   initialSort,
   selection,
   rowActions,
+  presentation = 'default',
+  onSortChange,
 }: {
   columns: Column<T>[]
   rows: T[]
@@ -151,6 +156,8 @@ export function DataTable<T>({
   initialSort?: { key: string; dir: 'asc' | 'desc' }
   selection?: Selection
   rowActions?: (row: T) => RowAction[]
+  presentation?: DataTablePresentation
+  onSortChange?: () => void
 }) {
   const styles = useStyles()
   const [sort, setSort] = useState<SortState>(initialSort ?? null)
@@ -275,6 +282,7 @@ export function DataTable<T>({
   }, [columns, rowActions, styles.cellLink])
 
   const toggleSort = (column: Column<T>) => {
+    onSortChange?.()
     setSort((previous) => {
       if (!previous || previous.key !== column.key) return { key: column.key, dir: 'asc' }
       if (previous.dir === 'asc') return { key: column.key, dir: 'desc' }
@@ -296,11 +304,11 @@ export function DataTable<T>({
   const leadCols = (selection ? 1 : 0) + (rowActions ? 1 : 0)
 
   return (
-    <div className="card table-card">
+    <div className={mergeClasses('card', 'table-card', presentation === 'olt' && 'olt-table-card')}>
       {!loading && (
-        <div className="table-wrap">
+        <div className={mergeClasses('table-wrap', presentation === 'olt' && 'olt-table-wrap')}>
           <DataGrid
-            className={mergeClasses('data-table-grid', styles.grid)}
+            className={mergeClasses('data-table-grid', presentation === 'olt' && 'olt-data-table-grid', styles.grid)}
             aria-label="Tabel data"
             items={sorted}
             columns={dataGridColumns}
@@ -330,6 +338,7 @@ export function DataTable<T>({
                         <Button
                           appearance="transparent"
                           className={styles.headerSortButton}
+                          title={column.sortHint}
                           onClick={() => toggleSort(column)}
                         >
                           {renderHeaderCell()}

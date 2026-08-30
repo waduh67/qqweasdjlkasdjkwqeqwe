@@ -23,19 +23,63 @@ const COLUMNS: Column<Row>[] = [
 const renderTable = (props: Partial<Parameters<typeof DataTable<Row>>[0]> = {}) =>
   render(<DataTable columns={COLUMNS} rows={ROWS} rowKey={(r) => r.id} {...props} />)
 
+async function mobileCssContract() {
+  const { readFile } = await vi.importActual<{ readFile: (path: string, encoding: string) => Promise<string> }>('node:fs/promises')
+  const { resolve } = await vi.importActual<{ resolve: (...paths: string[]) => string }>('node:path')
+  const css = await readFile(resolve('src/index.css'), 'utf8')
+  const mobileStart = css.indexOf('@media (max-width: 720px)')
+  expect(mobileStart).toBeGreaterThanOrEqual(0)
+  return css.slice(mobileStart)
+}
+
 describe('DataTable', () => {
-  it('menggambar tiap baris beserta judul kolomnya', () => {
-    renderTable()
-    expect(screen.getByText('Budi')).toBeDefined()
-    expect(screen.getByText('Siti')).toBeDefined()
-    expect(screen.getAllByRole('row')).toHaveLength(3) // 1 kepala + 2 isi
+  it('mempertahankan struktur grid OLT untuk CSS ponsel', () => {
+    const { container } = renderTable({ presentation: 'olt' })
+
+    expect(container.querySelector('.olt-table-card .olt-table-wrap')).not.toBeNull()
+    expect(container.querySelector('.olt-table-wrap .olt-data-table-grid[role="grid"]')).not.toBeNull()
+    expect(container.querySelector('.olt-data-table-grid [role="columnheader"]')).not.toBeNull()
+    expect(container.querySelectorAll('.olt-data-table-grid [role="row"]')).toHaveLength(3)
   })
+
+  it('mengunci kontrak CSS OLT pada viewport sempit', async () => {
+    const mobileCss = await mobileCssContract()
+
+    expect(mobileCss).toContain('.table-card:not(.olt-table-card) .table-wrap')
+    expect(mobileCss).toMatch(/\.olt-table-card \.olt-table-wrap\s*\{\s*overflow-x:\s*auto;/)
+    expect(mobileCss).toMatch(/\.olt-table-card \.olt-data-table-grid\s*\{\s*display:\s*grid;\s*width:\s*max-content;\s*min-width:\s*100%;/)
+    expect(mobileCss).toMatch(/\.olt-table-card \.olt-data-table-grid \.fui-DataGridHeader\s*\{\s*display:\s*contents;/)
+    expect(mobileCss).toMatch(/\.olt-table-card \.olt-data-table-grid \.fui-DataGridRow\s*\{\s*display:\s*grid;\s*width:\s*max-content;\s*min-width:\s*100%;/)
+    expect(mobileCss).toMatch(/\.fui-DataGridHeaderCell,\s*\.olt-table-card \.olt-data-table-grid \.fui-DataGridCell\s*\{\s*min-width:\s*0;\s*overflow:\s*hidden;\s*text-overflow:\s*ellipsis;\s*white-space:\s*nowrap;/)
+    expect(mobileCss).toMatch(/\.table-card:not\(\.olt-table-card\) table,[\s\S]*display:\s*block;/)
+  })
+
+
+    it('menggambar tiap baris beserta judul kolomnya', () => {
+        renderTable()
+        expect(screen.getByText('Budi')).toBeDefined()
+        expect(screen.getByText('Siti')).toBeDefined()
+        expect(screen.getAllByRole('row')).toHaveLength(3)
+      })
 
   it('menuliskan judul kolom sebagai data-label tiap sel — bahan mode kartu di ponsel', () => {
     const { container } = renderTable()
     const cells = container.querySelectorAll('[role="row"]:nth-child(2) [role="gridcell"]')
     expect(Array.from(cells).map((cell) => cell.getAttribute('data-label'))).toEqual(['Nama', 'Tagihan'])
   })
+
+  it('menambahkan hook OLT tanpa mengubah kelas tabel bawaan', () => {
+      const { container, rerender } = renderTable()
+      expect(container.querySelector('.olt-table-card')).toBeNull()
+      expect(container.querySelector('.olt-data-table-grid')).toBeNull()
+
+      rerender(<DataTable columns={COLUMNS} rows={ROWS} rowKey={(row) => row.id} presentation="olt" />)
+      expect(container.querySelector('.olt-table-card')).not.toBeNull()
+      expect(container.querySelector('.olt-table-wrap')).not.toBeNull()
+      expect(container.querySelector('.olt-data-table-grid')).not.toBeNull()
+      expect(container.querySelector('.olt-data-table-grid [role="columnheader"]')).not.toBeNull()
+      expect(container.querySelector('.olt-data-table-grid [role="row"]')).not.toBeNull()
+    })
 
   it('mengurutkan naik lalu turun lalu kembali ke urutan asli saat judul diklik', async () => {
     const user = userEvent.setup()
