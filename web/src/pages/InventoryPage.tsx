@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Text } from '@fluentui/react-components'
 import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
@@ -46,6 +46,82 @@ const TABS: Array<{ key: Tab; label: string; permission: string }> = [
 
 const VENDORS = ['ZTE', 'HUAWEI', 'FIBERHOME', 'NOKIA', 'HSGQ', 'OTHER']
 
+type PagerItem = number | 'start-ellipsis' | 'end-ellipsis'
+
+export function compactPageWindow(totalPages: number, currentPage: number): PagerItem[] {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, page) => page)
+
+  const pages = new Set([0, totalPages - 1, currentPage - 1, currentPage, currentPage + 1])
+  const ordered = [...pages].filter((page) => page >= 0 && page < totalPages).sort((a, b) => a - b)
+
+  return ordered.flatMap((page, index) => {
+    const previous = ordered[index - 1]
+    const gap = index > 0 && page - previous > 1
+    return gap ? [page - previous === 2 ? previous + 1 : previous === 0 ? 'start-ellipsis' : 'end-ellipsis', page] : [page]
+  })
+}
+
+type OltPagerProps = {
+  page: number
+  size: 25 | 50 | 100
+  totalElements: number
+  totalPages: number
+  disabled: boolean
+  statusFiltered: boolean
+  onPageChange: (page: number) => void
+  onSizeChange: (size: 25 | 50 | 100) => void
+}
+
+export function OltPager({ page, size, totalElements, totalPages, disabled, statusFiltered, onPageChange, onSizeChange }: OltPagerProps) {
+  const lastPage = Math.max(totalPages - 1, 0)
+  const rangeStart = totalElements === 0 ? 0 : page * size + 1
+  const rangeEnd = totalElements === 0 ? 0 : Math.min((page + 1) * size, totalElements)
+
+  return (
+    <div className="pager">
+      <p className="pager-summary" aria-live="polite">
+        {rangeStart}–{rangeEnd} dari {totalElements} OLT{statusFiltered ? ' total; status difilter pada halaman ini' : ''}
+      </p>
+      <nav className="pager-controls" aria-label="Navigasi halaman OLT">
+        <Button variant="subtle" size="small" disabled={disabled || page === 0} onClick={() => onPageChange(page - 1)}>
+          Previous
+        </Button>
+        <div className="pager-pages" aria-label="Nomor halaman">
+          {compactPageWindow(totalPages, page).map((item, index) =>
+            typeof item === 'number' ? (
+              <Button
+                key={item}
+                variant={item === page ? 'primary' : 'subtle'}
+                size="small"
+                aria-current={item === page ? 'page' : undefined}
+                aria-label={`Halaman ${item + 1}`}
+                disabled={disabled}
+                onClick={() => onPageChange(item)}
+              >
+                {item + 1}
+              </Button>
+            ) : (
+              <span key={`${item}-${index}`} className="pager-ellipsis" aria-hidden="true">…</span>
+            ),
+          )}
+        </div>
+        <Button variant="subtle" size="small" disabled={disabled || page >= lastPage} onClick={() => onPageChange(page + 1)}>
+          Next
+        </Button>
+      </nav>
+      <SelectField
+        label="Hasil per halaman"
+        size="small"
+        value={String(size)}
+        disabled={disabled}
+        onChange={(_, data) => onSizeChange(Number(data.value) as 25 | 50 | 100)}
+      >
+        {[25, 50, 100].map((option) => <option key={option} value={option}>{option}</option>)}
+      </SelectField>
+    </div>
+  )
+}
+
 const SNMP_VERSIONS: { value: SnmpVersion; label: string }[] = [
   { value: 'V1', label: 'v1' },
   { value: 'V2C', label: 'v2c' },
@@ -75,6 +151,23 @@ const ASSET_STATUS_OPTIONS: { value: AssetStatus | ''; label: string }[] = [
   // laporan aset bisa menjawab "berapa barang saya yang sebetulnya mati".
   { value: 'ABANDONED', label: 'Ditinggal' },
 ]
+
+function OltCellText({ value }: { value: string | number }) {
+  const text = String(value)
+  return (
+    <span
+      title={text}
+      aria-label={text}
+      style={{ display: 'block', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+    >
+      {text}
+    </span>
+  )
+}
+
+function assetStatusLabel(status: AssetStatus) {
+  return ASSET_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
+}
 
 /** Apakah salah satu kolom teks memuat kata kunci (kata kunci sudah huruf kecil). */
 function matchesQuery(fields: Array<string | null | undefined>, q: string): boolean {
@@ -382,7 +475,17 @@ function OltsTab() {
   // Baris OLT membuka DETAIL di blade non-modal (bukan pindah halaman) — pola
   // dua-blade Azure. Simpan baris terpilih; ganti baris = tukar isi blade.
   const [openOlt, setOpenOlt] = useState<OltView | null>(null)
-  const { items, loading, reload, run } = useList<OltView>('/api/olts')
+  const [oltPage, setOltPage] = useState<PageResponse<OltView>>({
+    content: [],
+    page: 0,
+    size: 25,
+    totalElements: 0,
+    totalPages: 0,
+  })
+  const [loading, setLoading] = useState(true)
+  const [pagination, setPagination] = useState({ page: 0, size: 25 as 25 | 50 | 100, siteId: '' })
+  const [reloadVersion, setReloadVersion] = useState(0)
+  const requestGeneration = useRef(0)
   const { items: sites } = useList<SiteView>('/api/sites')
   const empty = {
     siteId: '',
@@ -423,15 +526,76 @@ function OltsTab() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState(false)
   const canDelete = can('network.olt.delete')
+  const toast = useToast()
 
-  const rows = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return items.filter(
-      (o) =>
-        matchesQuery([o.code, o.name, o.siteName, o.vendor, o.managementIp], q) &&
-        (!statusFilter || o.status === statusFilter),
-    )
-  }, [items, query, statusFilter])
+  const reload = useCallback(() => {
+    setReloadVersion((version) => version + 1)
+  }, [])
+
+  const movePage = useCallback((nextPage: number) => {
+    setSelected(new Set())
+    setPagination((current) => ({ ...current, page: nextPage }))
+  }, [])
+
+  const changePageSize = useCallback((size: 25 | 50 | 100) => {
+    setSelected(new Set())
+    setPagination((current) => ({ ...current, page: 0, size }))
+  }, [])
+
+  useEffect(() => {
+    setSelected(new Set())
+    setPagination((current) => (current.page === 0 ? current : { ...current, page: 0 }))
+  }, [query, pagination.siteId, pagination.size, statusFilter])
+
+  useEffect(() => {
+    const currentRequest = ++requestGeneration.current
+    const params = new URLSearchParams({ page: String(pagination.page), size: String(pagination.size) })
+    const trimmedQuery = query.trim()
+    if (trimmedQuery) params.set('query', trimmedQuery)
+    if (pagination.siteId) params.set('siteId', pagination.siteId)
+
+    setLoading(true)
+    void api.get<PageResponse<OltView>>(`/api/olts?${params}`).then(
+      (response) => {
+        if (requestGeneration.current !== currentRequest) return
+
+        const lastPage = Math.max(response.totalPages - 1, 0)
+        if (response.content.length === 0 && response.totalElements > 0 && pagination.page > lastPage) {
+          movePage(lastPage)
+          return
+        }
+
+        setOltPage(response)
+      },
+      (err) => {
+        if (requestGeneration.current === currentRequest)
+          toast.error(err instanceof ApiError ? err.message : 'Gagal memuat data')
+      },
+    ).finally(() => {
+      if (requestGeneration.current === currentRequest) setLoading(false)
+    })
+
+    return () => {
+      if (requestGeneration.current === currentRequest) requestGeneration.current += 1
+    }
+  }, [movePage, pagination, query, reloadVersion, toast])
+
+  const run = async (action: () => Promise<unknown>, okMessage?: string) => {
+    try {
+      await action()
+      reload()
+      if (okMessage) toast.success(okMessage)
+      return true
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Operasi gagal')
+      return false
+    }
+  }
+
+  const rows = useMemo(
+    () => oltPage.content.filter((o) => !statusFilter || o.status === statusFilter),
+    [oltPage.content, statusFilter],
+  )
 
   const deleteSelected = async () => {
     const ids = [...selected]
@@ -445,36 +609,36 @@ function OltsTab() {
     setDeleting(false)
   }
 
+  const localSortHint = 'Urutkan halaman ini; urutan antarhalaman tetap dari server'
   const columns: Column<OltView>[] = [
     {
       key: 'name',
+      sortHint: localSortHint,
       header: 'Nama',
+      cell: (o) => <OltCellText value={o.name} />,
       sortValue: (o) => o.name,
-      cell: (o) => o.name,
       onCellClick: (o) => setOpenOlt(o),
-      inlineActions: canDelete
-        ? (o) => [{
-            key: 'delete',
-            label: 'Hapus',
-            icon: <Trash2 size={16} />,
-            onClick: () => void (async () => {
-              if (await confirm({ title: 'Hapus OLT', message: `Hapus OLT ${o.code}?`, confirmLabel: 'Hapus', danger: true })) void run(() => api.del(`/api/olts/${o.id}`))
-            })(),
-          }]
-        : undefined,
     },
-    { key: 'code', header: 'Kode', sortValue: (o) => o.code, cell: (o) => o.code },
-    { key: 'site', header: 'Site', sortValue: (o) => o.siteName, cell: (o) => o.siteName ?? '—' },
-    { key: 'vendor', header: 'Vendor', sortValue: (o) => o.vendor, cell: (o) => o.vendor },
-    { key: 'managementIp', header: 'IP manajemen', sortValue: (o) => o.managementIp, cell: (o) => o.managementIp ?? '—' },
-    { key: 'status', header: 'Status', sortValue: (o) => o.status, cell: (o) => <StatusBadge status={o.status} /> },
+    { key: 'code', header: 'Kode', cell: (o) => <OltCellText value={o.code} />, sortValue: (o) => o.code, sortHint: localSortHint },
+    { key: 'site', header: 'Site', cell: (o) => <OltCellText value={o.siteName ?? '—'} />, sortValue: (o) => o.siteName, sortHint: localSortHint },
+    { key: 'vendor', header: 'Vendor', cell: (o) => <OltCellText value={o.vendor} />, sortValue: (o) => o.vendor, sortHint: localSortHint },
+    { key: 'model', header: 'Model', cell: (o) => <OltCellText value={o.model ?? '—'} />, sortValue: (o) => o.model, sortHint: localSortHint },
+    {
+      key: 'managementIp',
+      header: 'IP manajemen',
+      cell: (o) => <OltCellText value={o.managementIp ?? '—'} />,
+      sortValue: (o) => o.managementIp,
+      sortHint: localSortHint,
+    },
+    { key: 'status', header: 'Status', cell: (o) => <OltCellText value={assetStatusLabel(o.status)} />, sortValue: (o) => o.status, sortHint: localSortHint },
     {
       key: 'monitoring',
       header: 'Monitoring',
-      sortValue: (o) => (o.pollable ? 1 : 0),
-      cell: (o) => <span className="badge">{o.pollable ? 'siap dipolling' : 'belum lengkap'}</span>,
+      cell: (o) => <OltCellText value={o.pollable ? 'Siap dipolling' : 'Belum lengkap'} />,
+      sortValue: (o) => o.pollable ? 'Siap dipolling' : 'Belum lengkap',
+      sortHint: localSortHint,
     },
-    { key: 'ponPorts', header: 'PON port', align: 'right', sortValue: (o) => o.ponPortCount, cell: (o) => o.ponPortCount },
+    { key: 'ponPorts', header: 'PON port', cell: (o) => <OltCellText value={o.ponPortCount} />, sortValue: (o) => o.ponPortCount, sortHint: localSortHint },
   ]
 
   const primary: CommandAction | undefined = can('network.olt.create')
@@ -792,7 +956,8 @@ function OltsTab() {
         rows={rows}
         rowKey={(o) => o.id}
         loading={loading}
-        initialSort={{ key: 'code', dir: 'asc' }}
+        presentation="olt"
+        onSortChange={() => movePage(0)}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
         empty={
           <EmptyState
@@ -800,6 +965,16 @@ function OltsTab() {
             icon={<IconInventory size={32} />}
           />
         }
+      />
+      <OltPager
+        page={pagination.page}
+        size={pagination.size}
+         totalElements={oltPage.totalElements}
+         totalPages={oltPage.totalPages}
+         disabled={loading}
+         statusFiltered={statusFilter !== ''}
+         onPageChange={movePage}
+        onSizeChange={changePageSize}
       />
     </div>
   )
