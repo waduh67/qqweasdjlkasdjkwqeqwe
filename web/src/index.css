@@ -469,12 +469,16 @@ tbody tr:last-child td {
   box-shadow: none;
 }
 
+/* Fluent merender setiap header di dalam pembungkus `__button`, bahkan saat kolom
+   tidak dapat diurut. Tombol urut aplikasi lalu menjadi anaknya; keduanya harus
+   eksplisit mulai dari kiri agar sejajar dengan sel isi. */
 .olt-data-table-grid .fui-DataGridHeaderCell,
 .olt-data-table-grid .fui-DataGridHeaderCell__button,
+.olt-data-table-grid .fui-DataGridHeaderCell__button > .fui-Button,
 .olt-data-table-grid .fui-DataGridHeaderCell > .fui-Button {
   justify-content: flex-start;
   text-align: left;
-  font-weight: var(--fontWeightSemibold, 600) !important;
+  font-weight: 700 !important;
 }
 .olt-data-table-grid .fui-DataGridCell {
   min-width: 0;

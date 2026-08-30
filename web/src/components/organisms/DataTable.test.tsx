@@ -23,10 +23,14 @@ const COLUMNS: Column<Row>[] = [
 const renderTable = (props: Partial<Parameters<typeof DataTable<Row>>[0]> = {}) =>
   render(<DataTable columns={COLUMNS} rows={ROWS} rowKey={(r) => r.id} {...props} />)
 
-async function mobileCssContract() {
+async function dataTableCssContract() {
   const { readFile } = await vi.importActual<{ readFile: (path: string, encoding: string) => Promise<string> }>('node:fs/promises')
   const { resolve } = await vi.importActual<{ resolve: (...paths: string[]) => string }>('node:path')
-  const css = await readFile(resolve('src/index.css'), 'utf8')
+  return readFile(resolve('src/index.css'), 'utf8')
+}
+
+async function mobileCssContract() {
+  const css = await dataTableCssContract()
   const mobileStart = css.indexOf('@media (max-width: 720px)')
   expect(mobileStart).toBeGreaterThanOrEqual(0)
   return css.slice(mobileStart)
@@ -40,6 +44,12 @@ describe('DataTable', () => {
     expect(container.querySelector('.olt-table-wrap .olt-data-table-grid[role="grid"]')).not.toBeNull()
     expect(container.querySelector('.olt-data-table-grid [role="columnheader"]')).not.toBeNull()
     expect(container.querySelectorAll('.olt-data-table-grid [role="row"]')).toHaveLength(3)
+  })
+
+  it('mengunci wrapper header Fluent OLT agar tebal dan rata kiri', async () => {
+    const css = await dataTableCssContract()
+
+    expect(css).toMatch(/\.olt-data-table-grid \.fui-DataGridHeaderCell,\s*\.olt-data-table-grid \.fui-DataGridHeaderCell__button,\s*\.olt-data-table-grid \.fui-DataGridHeaderCell__button > \.fui-Button,\s*\.olt-data-table-grid \.fui-DataGridHeaderCell > \.fui-Button\s*\{\s*justify-content:\s*flex-start;\s*text-align:\s*left;\s*font-weight:\s*700 !important;/)
   })
 
   it('mengunci kontrak CSS OLT pada viewport sempit', async () => {
