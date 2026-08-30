@@ -34,9 +34,8 @@ import {
   TYPES,
   assigneeLabel,
   fmt,
-  priorityTone,
 } from '@/utils/woLabels'
-import { AssigneeChips, WoStatusBadge } from '@/components/organisms/workorder/views'
+import { WoStatusBadge } from '@/components/organisms/workorder/views'
 import { useTechnicians } from '@/hooks/useTechnicians'
 
 type Draft = {
@@ -193,7 +192,7 @@ export function WorkOrdersPage() {
       key: 'type',
       header: 'Tipe',
       sortValue: (wo) => TYPE_LABEL[wo.type],
-      cell: (wo) => <span className="badge">{TYPE_LABEL[wo.type]}</span>,
+      cell: (wo) => TYPE_LABEL[wo.type],
     },
     {
       key: 'title',
@@ -205,7 +204,7 @@ export function WorkOrdersPage() {
       key: 'priority',
       header: 'Prioritas',
       sortValue: (wo) => wo.priority,
-      cell: (wo) => (wo.priority !== 'NORMAL' ? <Badge tone={priorityTone(wo.priority)}>{PRIORITY_LABEL[wo.priority]}</Badge> : 'Normal'),
+      cell: (wo) => PRIORITY_LABEL[wo.priority],
     },
     {
       key: 'customer',
@@ -217,7 +216,7 @@ export function WorkOrdersPage() {
       key: 'assignee',
       header: 'Teknisi',
       sortValue: (wo) => assigneeLabel(wo),
-      cell: (wo) => <AssigneeChips wo={wo} />,
+      cell: (wo) => assigneeLabel(wo),
     },
     {
       key: 'scheduledAt',
@@ -312,6 +311,7 @@ export function WorkOrdersPage() {
         rowKey={(wo) => wo.id}
         loading={loading}
         initialSort={{ key: 'scheduledAt', dir: 'desc' }}
+        presentation="resource"
         empty={
           <EmptyState
             title={query || status || type || approval || assignedTo ? 'Tidak ada work order yang cocok' : 'Belum ada work order'}
