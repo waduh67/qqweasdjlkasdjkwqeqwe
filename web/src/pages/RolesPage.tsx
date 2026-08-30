@@ -8,7 +8,7 @@ import { useCan } from '../auth/useCan'
 import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
-import { Badge, Button, EmptyState, TextField, Toolbar } from '@/components/atoms'
+import { Button, EmptyState, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useConfirm } from '@/system'
 import { IconPlus, IconShield } from '@/components/atoms/icons'
@@ -64,12 +64,7 @@ export function RolesPage() {
       key: 'name',
       header: 'Nama',
       sortValue: (r) => r.name,
-      cell: (r) => (
-        <div className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
-          <Text as="strong" weight="semibold" >{r.name}</Text>
-          {r.systemRole && <Badge>sistem</Badge>}
-        </div>
-      ),
+      cell: (r) => r.systemRole ? `${r.name} (sistem)` : r.name,
     },
     {
       key: 'description',
@@ -170,6 +165,7 @@ export function RolesPage() {
         loading={loading}
         initialSort={{ key: 'name', dir: 'asc' }}
         rowActions={rowActions}
+        presentation="resource"
         empty={
           <EmptyState
             title={query ? 'Tidak ada role yang cocok' : 'Belum ada role'}

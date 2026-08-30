@@ -9,7 +9,7 @@ import { DataTable, type Column, type RowAction } from '@/components/organisms'
 import { CommandBar, type CommandAction } from '@/components/molecules'
 import { PageHeader } from '@/components/molecules'
 import { Blade } from '@/components/organisms'
-import { Badge, Button, EmptyState, StatusBadge, TextField, Toolbar } from '@/components/atoms'
+import { Button, EmptyState, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useConfirm } from '@/system'
 import { IconUsers } from '@/components/atoms/icons'
@@ -98,14 +98,13 @@ export function UsersPage() {
       key: 'status',
       header: 'Status',
       sortValue: (u) => u.status,
-      cell: (u) => <StatusBadge status={u.status} />,
+      cell: (u) => (u.status === 'ACTIVE' ? 'Aktif' : 'Tidak aktif'),
     },
     {
       key: 'twoFactor',
       header: '2FA',
       sortValue: (u) => (u.twoFactorEnabled ? 1 : 0),
-      cell: (u) =>
-        u.twoFactorEnabled ? <Badge tone="good">Aktif</Badge> : <Text as="span" className="muted">–</Text>,
+      cell: (u) => (u.twoFactorEnabled ? 'Aktif' : '–'),
     },
     {
       key: 'role',
@@ -228,6 +227,7 @@ export function UsersPage() {
         initialSort={{ key: 'name', dir: 'asc' }}
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
         rowActions={hasRowActions ? rowActions : undefined}
+        presentation="resource"
         empty={
           <EmptyState
             title={query ? 'Tidak ada pengguna yang cocok' : 'Belum ada pengguna'}
