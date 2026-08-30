@@ -12,7 +12,7 @@ import type {
 } from '../api/monitoring'
 import { useCan } from '../auth/useCan'
 import { AlarmThresholdPanel, DataTable, type Column, type RowAction } from '@/components/organisms'
-import { Button, EmptyState, Segmented, StatusBadge, TextField, Toolbar } from '@/components/atoms'
+import { Button, EmptyState, Segmented, TextField, Toolbar } from '@/components/atoms'
 import { Drawer, SearchInput } from '@/components/molecules'
 import { useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
@@ -21,6 +21,13 @@ import { IconAlert, IconPlus, IconSettings } from '@/components/atoms/icons'
 
 /** Peringkat keparahan untuk pengurutan — makin tinggi makin genting (kritis di atas saat desc). */
 const SEVERITY_RANK: Record<string, number> = { CRITICAL: 3, WARNING: 2, INFO: 1 }
+
+function statusLabel(status: string): string {
+  return status
+    .toLowerCase()
+    .replace(/_/g, ' ')
+    .replace(/^\w/, (letter) => letter.toUpperCase())
+}
 
 /**
  * Dashboard monitoring: kesehatan collector, alarm aktif, pengelolaan agent, dan
@@ -132,12 +139,7 @@ export function MonitoringPage() {
       key: 'status',
       header: 'Status',
       sortValue: (c) => c.status,
-      cell: (c) => (
-        <div className="row" style={{ gap: '0.35rem' }}>
-          <StatusBadge status={c.status} />
-          {c.silent && <StatusBadge status="CRITICAL" label="membisu" />}
-        </div>
-      ),
+      cell: (c) => `${statusLabel(c.status)}${c.silent ? ' · Membisu' : ''}`,
     },
     { key: 'agent', header: 'Agent', sortValue: (c) => c.agentVersion, cell: (c) => c.agentVersion ?? '—' },
     {
@@ -186,7 +188,7 @@ export function MonitoringPage() {
       key: 'severity',
       header: 'Keparahan',
       sortValue: (a) => SEVERITY_RANK[a.severity] ?? 0,
-      cell: (a) => <StatusBadge status={a.severity} />,
+      cell: (a) => statusLabel(a.severity),
     },
     {
       key: 'kind',
@@ -217,7 +219,7 @@ export function MonitoringPage() {
       key: 'status',
       header: 'Status',
       sortValue: (a) => a.status,
-      cell: (a) => <StatusBadge status={a.status} />,
+      cell: (a) => statusLabel(a.status),
     },
   ]
 
@@ -303,6 +305,7 @@ export function MonitoringPage() {
             rowKey={(c) => c.id}
             loading={loading}
             initialSort={{ key: 'name', dir: 'asc' }}
+            presentation="resource"
             empty={
               <EmptyState title={collectorQuery ? 'Tidak ada collector yang cocok' : 'Belum ada collector'} />
             }
@@ -340,6 +343,7 @@ export function MonitoringPage() {
           rowKey={(a) => a.id}
           loading={loading}
           initialSort={{ key: 'severity', dir: 'desc' }}
+          presentation="resource"
           empty={
             <EmptyState
               title={alarmQuery ? 'Tidak ada alarm yang cocok' : statusFilter === 'ACTIVE' ? 'Tidak ada alarm aktif' : 'Belum ada alarm'}
