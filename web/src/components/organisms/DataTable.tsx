@@ -75,7 +75,11 @@ export type Selection = {
   onChange: (next: Set<string>) => void
 }
 
-export type DataTablePresentation = 'default' | 'olt'
+/**
+ * Variasi penyajian daftar. `olt` adalah alias migrasi usang untuk `resource`;
+ * pertahankan hingga pemanggil OLT dimigrasikan ke nama semantik.
+ */
+export type DataTablePresentation = 'default' | 'resource' | 'olt'
 
 type SortState = { key: string; dir: 'asc' | 'desc' } | null
 
@@ -162,6 +166,7 @@ export function DataTable<T>({
   const styles = useStyles()
   const [sort, setSort] = useState<SortState>(initialSort ?? null)
   const clickable = !!onRowClick
+  const resourcePresentation = presentation === 'resource' || presentation === 'olt'
 
   const sorted = useMemo(() => {
     if (!sort) return rows
@@ -304,11 +309,11 @@ export function DataTable<T>({
   const leadCols = (selection ? 1 : 0) + (rowActions ? 1 : 0)
 
   return (
-    <div className={mergeClasses('card', 'table-card', presentation === 'olt' && 'olt-table-card')}>
+    <div className={mergeClasses('card', 'table-card', resourcePresentation && 'resource-data-table-card')}>
       {!loading && (
-        <div className={mergeClasses('table-wrap', presentation === 'olt' && 'olt-table-wrap')}>
+        <div className={mergeClasses('table-wrap', resourcePresentation && 'resource-data-table-wrap')}>
           <DataGrid
-            className={mergeClasses('data-table-grid', presentation === 'olt' && 'olt-data-table-grid', styles.grid)}
+            className={mergeClasses('data-table-grid', resourcePresentation && 'resource-data-table-grid', styles.grid)}
             aria-label="Tabel data"
             items={sorted}
             columns={dataGridColumns}

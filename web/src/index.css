@@ -472,21 +472,21 @@ tbody tr:last-child td {
 /* Fluent merender setiap header di dalam pembungkus `__button`, bahkan saat kolom
    tidak dapat diurut. Tombol urut aplikasi lalu menjadi anaknya; keduanya harus
    eksplisit mulai dari kiri agar sejajar dengan sel isi. */
-.olt-data-table-grid .fui-DataGridHeaderCell,
-.olt-data-table-grid .fui-DataGridHeaderCell__button,
-.olt-data-table-grid .fui-DataGridHeaderCell__button > .fui-Button,
-.olt-data-table-grid .fui-DataGridHeaderCell > .fui-Button {
+.resource-data-table-grid .fui-DataGridHeaderCell,
+.resource-data-table-grid .fui-DataGridHeaderCell__button,
+.resource-data-table-grid .fui-DataGridHeaderCell__button > .fui-Button,
+.resource-data-table-grid .fui-DataGridHeaderCell > .fui-Button {
   justify-content: flex-start;
   text-align: left;
   font-weight: 700 !important;
 }
-.olt-data-table-grid .fui-DataGridCell {
+.resource-data-table-grid .fui-DataGridCell {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.olt-data-table-grid .fui-DataGridCell > * {
+.resource-data-table-grid .fui-DataGridCell > * {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2801,36 +2801,36 @@ td.dg-actions {
 
   /* Filter tabel: tiap kontrol selebar layar — dropdown selebar 8,5rem berjejer
      menyisakan potongan sempit yang sulit disentuh. */
-.toolbar select,
-.toolbar .btn-auto,
-.toolbar .fui-Field {
-  width: 100%;
-  min-width: 0;
-}
-
+  .toolbar select,
+  .toolbar .btn-auto,
+  .toolbar .fui-Field {
+    width: 100%;
+    min-width: 0;
+  }
 
   /* TABEL JADI KARTU. Menggulung mendatar berarti pengguna harus menggeser bolak-balik
+
      untuk membaca SATU baris; sebagai gantinya tiap baris ditumpuk jadi kartu "label:
      nilai". Label diambil dari `data-label` yang diisi DataTable dari judul kolomnya. */
-  .table-card:not(.olt-table-card) .table-wrap {
+  .table-card:not(.resource-data-table-card) .table-wrap {
       overflow-x: visible;
     }
 
-  /* OLT adalah grid data lebar: pada ponsel tetap tampil sebagai tabel yang dapat digeser,
-     bukan deretan kartu. Guard ini menargetkan markup Fluent sebenarnya agar aturan mode
-     kartu untuk tabel native tidak dapat menyembunyikan kepala atau mengubah baris grid. */
-  .olt-table-card .olt-table-wrap {
+  /* Daftar resource tetap menjadi grid data yang dapat digeser di ponsel, bukan kartu.
+     Guard ini menargetkan markup Fluent sebenarnya agar aturan tabel native tidak dapat
+     menyembunyikan kepala atau mengubah baris grid. */
+  .resource-data-table-card .resource-data-table-wrap {
     overflow-x: auto;
   }
-  .olt-table-card .olt-data-table-grid {
+  .resource-data-table-card .resource-data-table-grid {
     display: grid;
     width: max-content;
     min-width: 100%;
   }
-  .olt-table-card .olt-data-table-grid .fui-DataGridHeader {
+  .resource-data-table-card .resource-data-table-grid .fui-DataGridHeader {
     display: contents;
   }
-  .olt-table-card .olt-data-table-grid .fui-DataGridRow {
+  .resource-data-table-card .resource-data-table-grid .fui-DataGridRow {
     display: grid;
     width: max-content;
     min-width: 100%;
@@ -2839,45 +2839,45 @@ td.dg-actions {
     padding: 0;
     margin: 0;
   }
-  .olt-table-card .olt-data-table-grid .fui-DataGridHeaderCell,
-  .olt-table-card .olt-data-table-grid .fui-DataGridCell {
+  .resource-data-table-card .resource-data-table-grid .fui-DataGridHeaderCell,
+  .resource-data-table-card .resource-data-table-grid .fui-DataGridCell {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .olt-table-card .olt-data-table-grid .fui-DataGridHeaderCell {
+  .resource-data-table-card .resource-data-table-grid .fui-DataGridHeaderCell {
     display: flex;
   }
-  .olt-table-card .olt-data-table-grid .fui-DataGridCell {
+  .resource-data-table-card .resource-data-table-grid .fui-DataGridCell {
     display: block;
   }
   /* Bingkai luar grid dilepas: yang membingkai kini tiap kartu baris, dan dua bingkai
      bertumpuk membuat daftar terlihat seperti kotak di dalam kotak. */
-  .card.table-card:not(.olt-table-card) {
+  .card.table-card:not(.resource-data-table-card) {
     border: none;
     background: transparent;
   }
-  .table-card:not(.olt-table-card) table,
-  .table-card:not(.olt-table-card) tbody,
-  .table-card:not(.olt-table-card) tbody tr,
-  .table-card:not(.olt-table-card) tbody td {
+  .table-card:not(.resource-data-table-card) table,
+  .table-card:not(.resource-data-table-card) tbody,
+  .table-card:not(.resource-data-table-card) tbody tr,
+  .table-card:not(.resource-data-table-card) tbody td {
     display: block;
     width: 100%;
   }
-  .table-card:not(.olt-table-card) thead {
+  .table-card:not(.resource-data-table-card) thead {
     display: none;
   }
-  .table-card:not(.olt-table-card) tbody tr {
+  .table-card:not(.resource-data-table-card) tbody tr {
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 0.55rem 0.7rem;
     margin-bottom: 0.55rem;
   }
-  .table-card:not(.olt-table-card) tbody tr:last-child {
+  .table-card:not(.resource-data-table-card) tbody tr:last-child {
     margin-bottom: 0;
   }
-  .table-card:not(.olt-table-card) tbody td {
+  .table-card:not(.resource-data-table-card) tbody td {
     border-bottom: none;
     padding: 0.3rem 0;
     display: flex;
@@ -2886,7 +2886,7 @@ td.dg-actions {
     gap: 0.9rem;
     text-align: left;
   }
-  .table-card:not(.olt-table-card) tbody td::before {
+  .table-card:not(.resource-data-table-card) tbody td::before {
     content: attr(data-label);
     flex: none;
     color: var(--muted);
@@ -2895,12 +2895,12 @@ td.dg-actions {
     letter-spacing: 0.03em;
   }
   /* Sel tanpa label (checkbox & menu aksi) tetap sebaris di puncak kartu. */
-  .table-card:not(.olt-table-card) tbody td:not([data-label])::before,
-  .table-card:not(.olt-table-card) tbody td[data-label='']::before {
+  .table-card:not(.resource-data-table-card) tbody td:not([data-label])::before,
+  .table-card:not(.resource-data-table-card) tbody td[data-label='']::before {
     content: none;
   }
-  .table-card:not(.olt-table-card) tbody td.dg-check,
-  .table-card:not(.olt-table-card) tbody td.dg-actions {
+  .table-card:not(.resource-data-table-card) tbody td.dg-check,
+  .table-card:not(.resource-data-table-card) tbody td.dg-actions {
     display: inline-flex;
     width: auto;
     justify-content: flex-start;

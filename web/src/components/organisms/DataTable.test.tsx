@@ -37,31 +37,38 @@ async function mobileCssContract() {
 }
 
 describe('DataTable', () => {
-  it('mempertahankan struktur grid OLT untuk CSS ponsel', () => {
+  it('mempertahankan struktur grid resource untuk CSS ponsel', () => {
+    const { container } = renderTable({ presentation: 'resource' })
+
+    expect(container.querySelector('.resource-data-table-card .resource-data-table-wrap')).not.toBeNull()
+    expect(container.querySelector('.resource-data-table-wrap .resource-data-table-grid[role="grid"]')).not.toBeNull()
+    expect(container.querySelector('.resource-data-table-grid [role="columnheader"]')).not.toBeNull()
+    expect(container.querySelectorAll('.resource-data-table-grid [role="row"]')).toHaveLength(3)
+  })
+
+  it('menerapkan hook resource yang sama pada alias OLT sementara', () => {
     const { container } = renderTable({ presentation: 'olt' })
 
-    expect(container.querySelector('.olt-table-card .olt-table-wrap')).not.toBeNull()
-    expect(container.querySelector('.olt-table-wrap .olt-data-table-grid[role="grid"]')).not.toBeNull()
-    expect(container.querySelector('.olt-data-table-grid [role="columnheader"]')).not.toBeNull()
-    expect(container.querySelectorAll('.olt-data-table-grid [role="row"]')).toHaveLength(3)
+    expect(container.querySelector('.resource-data-table-card .resource-data-table-wrap')).not.toBeNull()
+    expect(container.querySelector('.resource-data-table-wrap .resource-data-table-grid[role="grid"]')).not.toBeNull()
   })
 
-  it('mengunci wrapper header Fluent OLT agar tebal dan rata kiri', async () => {
+  it('mengunci wrapper header Fluent resource agar tebal dan rata kiri', async () => {
     const css = await dataTableCssContract()
 
-    expect(css).toMatch(/\.olt-data-table-grid \.fui-DataGridHeaderCell,\s*\.olt-data-table-grid \.fui-DataGridHeaderCell__button,\s*\.olt-data-table-grid \.fui-DataGridHeaderCell__button > \.fui-Button,\s*\.olt-data-table-grid \.fui-DataGridHeaderCell > \.fui-Button\s*\{\s*justify-content:\s*flex-start;\s*text-align:\s*left;\s*font-weight:\s*700 !important;/)
+    expect(css).toMatch(/\.resource-data-table-grid \.fui-DataGridHeaderCell,\s*\.resource-data-table-grid \.fui-DataGridHeaderCell__button,\s*\.resource-data-table-grid \.fui-DataGridHeaderCell__button > \.fui-Button,\s*\.resource-data-table-grid \.fui-DataGridHeaderCell > \.fui-Button\s*\{\s*justify-content:\s*flex-start;\s*text-align:\s*left;\s*font-weight:\s*700 !important;/)
   })
 
-  it('mengunci kontrak CSS OLT pada viewport sempit', async () => {
+  it('mengunci kontrak CSS resource pada viewport sempit', async () => {
     const mobileCss = await mobileCssContract()
 
-    expect(mobileCss).toContain('.table-card:not(.olt-table-card) .table-wrap')
-    expect(mobileCss).toMatch(/\.olt-table-card \.olt-table-wrap\s*\{\s*overflow-x:\s*auto;/)
-    expect(mobileCss).toMatch(/\.olt-table-card \.olt-data-table-grid\s*\{\s*display:\s*grid;\s*width:\s*max-content;\s*min-width:\s*100%;/)
-    expect(mobileCss).toMatch(/\.olt-table-card \.olt-data-table-grid \.fui-DataGridHeader\s*\{\s*display:\s*contents;/)
-    expect(mobileCss).toMatch(/\.olt-table-card \.olt-data-table-grid \.fui-DataGridRow\s*\{\s*display:\s*grid;\s*width:\s*max-content;\s*min-width:\s*100%;/)
-    expect(mobileCss).toMatch(/\.fui-DataGridHeaderCell,\s*\.olt-table-card \.olt-data-table-grid \.fui-DataGridCell\s*\{\s*min-width:\s*0;\s*overflow:\s*hidden;\s*text-overflow:\s*ellipsis;\s*white-space:\s*nowrap;/)
-    expect(mobileCss).toMatch(/\.table-card:not\(\.olt-table-card\) table,[\s\S]*display:\s*block;/)
+    expect(mobileCss).toContain('.table-card:not(.resource-data-table-card) .table-wrap')
+    expect(mobileCss).toMatch(/\.resource-data-table-card \.resource-data-table-wrap\s*\{\s*overflow-x:\s*auto;/)
+    expect(mobileCss).toMatch(/\.resource-data-table-card \.resource-data-table-grid\s*\{\s*display:\s*grid;\s*width:\s*max-content;\s*min-width:\s*100%;/)
+    expect(mobileCss).toMatch(/\.resource-data-table-card \.resource-data-table-grid \.fui-DataGridHeader\s*\{\s*display:\s*contents;/)
+    expect(mobileCss).toMatch(/\.resource-data-table-card \.resource-data-table-grid \.fui-DataGridRow\s*\{\s*display:\s*grid;\s*width:\s*max-content;\s*min-width:\s*100%;/)
+    expect(mobileCss).toMatch(/\.fui-DataGridHeaderCell,\s*\.resource-data-table-card \.resource-data-table-grid \.fui-DataGridCell\s*\{\s*min-width:\s*0;\s*overflow:\s*hidden;\s*text-overflow:\s*ellipsis;\s*white-space:\s*nowrap;/)
+    expect(mobileCss).toMatch(/\.table-card:not\(\.resource-data-table-card\) table,[\s\S]*display:\s*block;/)
   })
 
 
@@ -78,17 +85,17 @@ describe('DataTable', () => {
     expect(Array.from(cells).map((cell) => cell.getAttribute('data-label'))).toEqual(['Nama', 'Tagihan'])
   })
 
-  it('menambahkan hook OLT tanpa mengubah kelas tabel bawaan', () => {
+  it('menambahkan hook resource tanpa mengubah kelas tabel bawaan', () => {
       const { container, rerender } = renderTable()
-      expect(container.querySelector('.olt-table-card')).toBeNull()
-      expect(container.querySelector('.olt-data-table-grid')).toBeNull()
+      expect(container.querySelector('.resource-data-table-card')).toBeNull()
+      expect(container.querySelector('.resource-data-table-grid')).toBeNull()
 
-      rerender(<DataTable columns={COLUMNS} rows={ROWS} rowKey={(row) => row.id} presentation="olt" />)
-      expect(container.querySelector('.olt-table-card')).not.toBeNull()
-      expect(container.querySelector('.olt-table-wrap')).not.toBeNull()
-      expect(container.querySelector('.olt-data-table-grid')).not.toBeNull()
-      expect(container.querySelector('.olt-data-table-grid [role="columnheader"]')).not.toBeNull()
-      expect(container.querySelector('.olt-data-table-grid [role="row"]')).not.toBeNull()
+      rerender(<DataTable columns={COLUMNS} rows={ROWS} rowKey={(row) => row.id} presentation="resource" />)
+      expect(container.querySelector('.resource-data-table-card')).not.toBeNull()
+      expect(container.querySelector('.resource-data-table-wrap')).not.toBeNull()
+      expect(container.querySelector('.resource-data-table-grid')).not.toBeNull()
+      expect(container.querySelector('.resource-data-table-grid [role="columnheader"]')).not.toBeNull()
+      expect(container.querySelector('.resource-data-table-grid [role="row"]')).not.toBeNull()
     })
 
   it('mengurutkan naik lalu turun lalu kembali ke urutan asli saat judul diklik', async () => {
