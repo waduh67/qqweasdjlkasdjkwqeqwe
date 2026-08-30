@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Text } from '@fluentui/react-components'
 import { listJobHealth, type JobHealthView } from '../api/ops'
-import { Badge, EmptyState, SelectField, Toolbar } from '@/components/atoms'
+import { EmptyState, SelectField, Toolbar } from '@/components/atoms'
 import { IconMonitor } from '@/components/atoms/icons'
 import { PageHeader, SearchInput } from '@/components/molecules'
 import { DataTable, type Column } from '@/components/organisms'
@@ -59,12 +58,7 @@ export function PlatformJobsPage() {
       key: 'name',
       header: 'Pekerjaan',
       sortValue: (j) => j.name,
-      cell: (j) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
-          <Text as="strong" weight="semibold" >{j.name}</Text>
-          <Text as="span" className="muted" size={300}>modul {j.module}</Text>
-        </div>
-      ),
+      cell: (j) => j.name,
     },
     {
       key: 'status',
@@ -72,67 +66,51 @@ export function PlatformJobsPage() {
       // Urut menaruh yang paling gawat di atas: macet → pernah gagal → sehat.
       sortValue: (j) => (j.stalled ? 0 : j.lastError != null ? 1 : 2),
       cell: (j) =>
-        j.stalled ? (
-          <Badge tone="critical">Macet</Badge>
-        ) : j.running ? (
-          <Badge tone="accent">Berjalan</Badge>
-        ) : j.lastError != null ? (
-          <Badge tone="warning">Ronde terakhir gagal</Badge>
-        ) : (
-          <Badge tone="good">Sehat</Badge>
-        ),
+        j.stalled
+          ? 'Macet'
+          : j.running
+            ? 'Berjalan'
+            : j.lastError != null
+              ? 'Ronde terakhir gagal'
+              : 'Sehat',
     },
     {
       key: 'interval',
       header: 'Jadwal',
       sortValue: (j) => j.intervalSeconds ?? Number.MAX_SAFE_INTEGER,
-      cell: (j) => (j.intervalSeconds == null ? <Text as="span" className="muted">tak tetap</Text> : `tiap ${humanize(j.intervalSeconds)}`),
+      cell: (j) => (j.intervalSeconds == null ? 'tak tetap' : `tiap ${humanize(j.intervalSeconds)}`),
     },
     {
       key: 'lastSuccess',
       header: 'Sukses terakhir',
       sortValue: (j) => j.sinceSuccessSeconds,
-      cell: (j) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
-          <Text as="span" >{j.lastSuccessAt == null ? 'belum pernah' : `${humanize(j.sinceSuccessSeconds)} lalu`}</Text>
-          {j.stallAfterSeconds != null && (
-            <Text as="span" className="muted" size={300}>
-              ambang macet {humanize(j.stallAfterSeconds)}</Text>
-          )}
-        </div>
-      ),
+      cell: (j) => {
+        const success = j.lastSuccessAt == null ? 'belum pernah' : `${humanize(j.sinceSuccessSeconds)} lalu`
+        return j.stallAfterSeconds == null ? success : `${success}; ambang macet ${humanize(j.stallAfterSeconds)}`
+      },
     },
     {
       key: 'runs',
       header: 'Ronde',
       align: 'right',
       sortValue: (j) => j.runs,
-      cell: (j) => (
-        <div className="stack" style={{ gap: '0.15rem' }}>
-          <Text as="span" >{j.runs.toLocaleString('id-ID')}</Text>
-          {j.failures > 0 && (
-            <Text as="span" className="muted" size={300}>{j.failures.toLocaleString('id-ID')} gagal</Text>
-          )}
-        </div>
-      ),
+      cell: (j) =>
+        j.failures > 0
+          ? `${j.runs.toLocaleString('id-ID')}; ${j.failures.toLocaleString('id-ID')} gagal`
+          : j.runs.toLocaleString('id-ID'),
     },
     {
       key: 'duration',
       header: 'Durasi terakhir',
       align: 'right',
       sortValue: (j) => j.lastDurationSeconds ?? -1,
-      cell: (j) => (j.lastDurationSeconds == null ? <Text as="span" className="muted">—</Text> : formatDuration(j.lastDurationSeconds)),
+      cell: (j) => (j.lastDurationSeconds == null ? '—' : formatDuration(j.lastDurationSeconds)),
     },
     {
       key: 'error',
       header: 'Galat terakhir',
       sortValue: (j) => j.lastError ?? '',
-      cell: (j) =>
-        j.lastError == null ? (
-          <Text as="span" className="muted">—</Text>
-        ) : (
-          <Text as="span" title={j.lastError} size={300}>{j.lastError.length > 70 ? `${j.lastError.slice(0, 70)}…` : j.lastError}</Text>
-        ),
+      cell: (j) => j.lastError == null ? '—' : j.lastError,
     },
   ]
 
@@ -165,6 +143,7 @@ export function PlatformJobsPage() {
         rowKey={(j) => j.name}
         loading={jobs == null}
         initialSort={{ key: 'status', dir: 'asc' }}
+        presentation="resource"
         empty={
           <EmptyState
             title={query || moduleFilter ? 'Tidak ada pekerjaan yang cocok' : 'Belum ada pekerjaan terpantau'}
