@@ -504,12 +504,7 @@ export function InvoicesPage() {
       key: 'status',
       header: 'Status',
       sortValue: (i) => i.status,
-      cell: (i) => (
-        <div className="row" style={{ gap: '0.3rem', flexWrap: 'wrap' }}>
-          <Badge tone={INVOICE_TONE[i.status]}>{INVOICE_LABEL[i.status]}</Badge>
-          {i.prorated && <Badge tone="accent">prorata</Badge>}
-        </div>
-      ),
+      cell: (i) => `${INVOICE_LABEL[i.status]}${i.prorated ? ' · Prorata' : ''}`,
     },
   ]
 
@@ -644,6 +639,7 @@ export function InvoicesPage() {
         rowKey={(i) => i.id}
         loading={loading}
         initialSort={{ key: 'due', dir: 'desc' }}
+        presentation="resource"
         empty={
           <EmptyState
             title={query || statusFilter ? 'Tidak ada tagihan yang cocok' : 'Belum ada tagihan'}
