@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { listMyWorkOrders, type WorkOrderStatus, type WorkOrderView } from '../api/workorder'
 import { DataTable, type Column } from '@/components/organisms'
-import { Badge, EmptyState, SelectField, Toolbar } from '@/components/atoms'
+import { EmptyState, SelectField, Toolbar } from '@/components/atoms'
 import { useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
 import { IconWorkOrder } from '@/components/atoms/icons'
@@ -14,9 +14,8 @@ import {
   TYPE_LABEL,
   assigneeLabel,
   fmt,
-  priorityTone,
 } from '@/utils/woLabels'
-import { AssigneeChips, WoStatusBadge } from '@/components/organisms/workorder/views'
+import { WoStatusBadge } from '@/components/organisms/workorder/views'
 
 /**
  * "Tugas Saya" — papan tugas milik teknisi yang sedang login. Beda dari papan dispatch
@@ -60,7 +59,7 @@ export function MyWorkOrdersPage() {
       key: 'type',
       header: 'Tipe',
       sortValue: (wo) => TYPE_LABEL[wo.type],
-      cell: (wo) => <span className="badge">{TYPE_LABEL[wo.type]}</span>,
+      cell: (wo) => TYPE_LABEL[wo.type],
     },
     {
       key: 'title',
@@ -72,7 +71,7 @@ export function MyWorkOrdersPage() {
       key: 'priority',
       header: 'Prioritas',
       sortValue: (wo) => wo.priority,
-      cell: (wo) => (wo.priority !== 'NORMAL' ? <Badge tone={priorityTone(wo.priority)}>{PRIORITY_LABEL[wo.priority]}</Badge> : 'Normal'),
+      cell: (wo) => PRIORITY_LABEL[wo.priority],
     },
     {
       key: 'customer',
@@ -84,7 +83,7 @@ export function MyWorkOrdersPage() {
       key: 'team',
       header: 'Tim',
       sortValue: (wo) => assigneeLabel(wo),
-      cell: (wo) => <AssigneeChips wo={wo} />,
+      cell: (wo) => assigneeLabel(wo),
     },
     {
       key: 'scheduledAt',
@@ -121,6 +120,7 @@ export function MyWorkOrdersPage() {
         rowKey={(wo) => wo.id}
         loading={loading}
         initialSort={{ key: 'scheduledAt', dir: 'desc' }}
+        presentation="resource"
         empty={
           <EmptyState
             title={status ? 'Tidak ada tugas dengan status itu' : 'Belum ada tugas untukmu'}
