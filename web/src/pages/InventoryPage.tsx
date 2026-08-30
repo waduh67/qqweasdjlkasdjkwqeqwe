@@ -13,12 +13,12 @@ import { PageHeader } from '@/components/molecules'
 import { LocationPicker } from '@/components/organisms'
 import { Blade } from '@/components/organisms'
 import { OltDetail } from './OltDetailPage'
-import { Badge, Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
+import { Badge, Button, EmptyState, SelectField, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput, Tabs } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { IconInventory } from '@/components/atoms/icons'
 import { mapFocusState } from '@/map/mapFocus'
-import { summarizeOdfUplinks, uplinkLabel } from '@/utils/odfUplinks'
+import { summarizeOdfUplinks } from '@/utils/odfUplinks'
 
 /**
  * Inventory jaringan dalam satu halaman bertab.
@@ -309,19 +309,14 @@ function SitesTab() {
       sortValue: (s) => s.name,
       cell: (s) => s.name,
       onCellClick: (s) => setOpenSite(s),
-      inlineActions: canDelete
-        ? (s) => [{ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeSite(s) }]
-        : undefined,
     },
     { key: 'code', header: 'Kode', sortValue: (s) => s.code, cell: (s) => s.code },
-    { key: 'address', header: 'Alamat', sortValue: (s) => s.address ?? '', cell: (s) => <span className="muted">{s.address ?? '—'}</span> },
+    { key: 'address', header: 'Alamat', sortValue: (s) => s.address ?? '', cell: (s) => s.address ?? '—' },
     { key: 'olt', header: 'OLT', align: 'right', sortValue: (s) => s.oltCount, cell: (s) => s.oltCount },
     {
       key: 'coord',
       header: 'Koordinat',
-      cell: (s) => (
-        <Text as="span" className="muted" size={200}>{s.location.latitude.toFixed(5)}, {s.location.longitude.toFixed(5)}</Text>
-      ),
+      cell: (s) => `${s.location.latitude.toFixed(5)}, ${s.location.longitude.toFixed(5)}`,
     },
   ]
 
@@ -457,6 +452,7 @@ function SitesTab() {
         rowKey={(s) => s.id}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
+        presentation="resource"
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
         empty={
           <EmptyState
@@ -1014,21 +1010,6 @@ function OdfsTab() {
     setOpenOdf(items.find((it) => it.id === openOdf.id) ?? null)
   }, [items, openOdf])
 
-  const removeOdf = (o: OdfView) =>
-    void (async () => {
-      if (
-        await confirm({
-          title: 'Hapus ODF',
-          message: `Hapus ODF ${o.code}?`,
-          confirmLabel: 'Hapus',
-          danger: true,
-        })
-      ) {
-        setOpenOdf(null)
-        void run(() => api.del(`/api/odfs/${o.id}`))
-      }
-    })()
-
   const deleteSelected = async () => {
     const ids = [...selected]
     if (ids.length === 0) return
@@ -1056,16 +1037,13 @@ function OdfsTab() {
       sortValue: (o) => o.name,
       cell: (o) => o.name,
       onCellClick: (o) => setOpenOdf(o),
-      inlineActions: canDelete
-        ? (o) => [{ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdf(o) }]
-        : undefined,
     },
     { key: 'code', header: 'Kode', sortValue: (o) => o.code, cell: (o) => o.code },
     {
       key: 'site',
       header: 'POP',
       sortValue: (o) => o.siteName ?? '',
-      cell: (o) => <span className="muted">{o.siteName ?? '—'}</span>,
+      cell: (o) => o.siteName ?? '—',
     },
     {
       key: 'port',
@@ -1075,18 +1053,14 @@ function OdfsTab() {
       // saat mengurut kolom ini adalah rak yang hampir penuh — itulah yang menentukan
       // kabel berikutnya boleh mendarat di sini atau harus cari rak lain.
       sortValue: (o) => o.portCount - o.usedPortCount,
-      cell: (o) => (
-        <span className="tnum">
-          {o.usedPortCount}/{o.portCount}
-        </span>
-      ),
+      cell: (o) => `${o.usedPortCount}/${o.portCount}`,
     },
     {
       key: 'splice',
       header: 'Sambungan',
       align: 'right',
       sortValue: (o) => o.spliceCount,
-      cell: (o) => <span className="tnum">{o.spliceCount}</span>,
+      cell: (o) => o.spliceCount,
     },
     {
       key: 'olt',
@@ -1094,13 +1068,9 @@ function OdfsTab() {
       // Diurut menurut nama OLT terbesarnya supaya rak milik satu OLT berkumpul —
       // itulah cara orang membaca daftar ini saat menyiapkan kerja di satu POP.
       sortValue: (o) => o.olts[0]?.oltCode ?? '',
-      cell: (o) => (
-        <span className="muted" title={o.olts.map(uplinkLabel).join(', ')}>
-          {summarizeOdfUplinks(o.olts)}
-        </span>
-      ),
+      cell: (o) => summarizeOdfUplinks(o.olts),
     },
-    { key: 'status', header: 'Status', sortValue: (o) => o.status, cell: (o) => <StatusBadge status={o.status} /> },
+    { key: 'status', header: 'Status', sortValue: (o) => o.status, cell: (o) => o.status },
   ]
 
 
@@ -1165,6 +1135,7 @@ function OdfsTab() {
         rowKey={(o) => o.id}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
+        presentation="resource"
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
         empty={
           <EmptyState
@@ -1183,12 +1154,8 @@ function OdfsTab() {
  * KAPASITAS CABANG-nya, dan itu jumlah kaki — bukan angka di belakang titik dua.
  */
 function splitterCell(node: { splitterRatio: string; splitterCount: number; splitterLegs: number }) {
-  if (node.splitterCount === 0) return <span className="muted">tanpa splitter</span>
-  return (
-    <span>
-      {node.splitterRatio} <span className="muted">· {node.splitterLegs} kaki</span>
-    </span>
-  )
+  if (node.splitterCount === 0) return 'tanpa splitter'
+  return `${node.splitterRatio} · ${node.splitterLegs} kaki`
 }
 
 function OdcsTab() {
@@ -1222,14 +1189,6 @@ function OdcsTab() {
     setOpenOdc(items.find((it) => it.id === openOdc.id) ?? null)
   }, [items, openOdc])
 
-  const removeOdc = (o: OdcView) =>
-    void (async () => {
-      if (await confirm({ title: 'Hapus ODC', message: `Hapus ODC ${o.code}?`, confirmLabel: 'Hapus', danger: true })) {
-        setOpenOdc(null)
-        void run(() => api.del(`/api/odcs/${o.id}`))
-      }
-    })()
-
   const deleteSelected = async () => {
     const ids = [...selected]
     if (ids.length === 0) return
@@ -1249,20 +1208,17 @@ function OdcsTab() {
       sortValue: (o) => o.name,
       cell: (o) => o.name,
       onCellClick: (o) => setOpenOdc(o),
-      inlineActions: canDelete
-        ? (o) => [{ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdc(o) }]
-        : undefined,
     },
     { key: 'code', header: 'Kode', sortValue: (o) => o.code, cell: (o) => o.code },
-    { key: 'olt', header: 'OLT hulu', sortValue: (o) => o.oltName ?? '', cell: (o) => <span className="muted">{o.oltName ?? '—'}</span> },
-    { key: 'pon', header: 'Port PON', sortValue: (o) => o.ponPortLabel ?? '', cell: (o) => <span className="muted">{o.ponPortLabel ?? 'belum di-uplink'}</span> },
+    { key: 'olt', header: 'OLT hulu', sortValue: (o) => o.oltName ?? '', cell: (o) => o.oltName ?? '—' },
+    { key: 'pon', header: 'Port PON', sortValue: (o) => o.ponPortLabel ?? '', cell: (o) => o.ponPortLabel ?? 'belum di-uplink' },
     { key: 'splitter', header: 'Splitter', sortValue: (o) => o.splitterLegs, cell: splitterCell },
     { key: 'odp', header: 'ODP', align: 'right', sortValue: (o) => o.odpCount, cell: (o) => o.odpCount },
     {
       key: 'status',
       header: 'Status',
       sortValue: (o) => (o.energized ? 'ACTIVE' : o.status),
-      cell: (o) => (o.energized ? <StatusBadge status="ACTIVE" label="teraliri" /> : <StatusBadge status={o.status} />),
+      cell: (o) => (o.energized ? 'Teraliri' : o.status),
     },
   ]
 
@@ -1331,6 +1287,7 @@ function OdcsTab() {
         rowKey={(o) => o.id}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
+        presentation="resource"
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
         empty={
           <EmptyState
@@ -1372,14 +1329,6 @@ function OdpsTab() {
     setOpenOdp(items.find((it) => it.id === openOdp.id) ?? null)
   }, [items, openOdp])
 
-  const removeOdp = (o: OdpView) =>
-    void (async () => {
-      if (await confirm({ title: 'Hapus ODP', message: `Hapus ODP ${o.code}?`, confirmLabel: 'Hapus', danger: true })) {
-        setOpenOdp(null)
-        void run(() => api.del(`/api/odps/${o.id}`))
-      }
-    })()
-
   const deleteSelected = async () => {
     const ids = [...selected]
     if (ids.length === 0) return
@@ -1399,15 +1348,12 @@ function OdpsTab() {
       sortValue: (o) => o.name,
       cell: (o) => o.name,
       onCellClick: (o) => setOpenOdp(o),
-      inlineActions: canDelete
-        ? (o) => [{ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeOdp(o) }]
-        : undefined,
     },
     { key: 'code', header: 'Kode', sortValue: (o) => o.code, cell: (o) => o.code },
-    { key: 'odc', header: 'ODC induk', sortValue: (o) => o.odcName, cell: (o) => <span className="muted">{o.odcName ?? '—'}</span> },
+    { key: 'odc', header: 'ODC induk', sortValue: (o) => o.odcName, cell: (o) => o.odcName ?? '—' },
     { key: 'splitter', header: 'Splitter', sortValue: (o) => o.splitterLegs, cell: splitterCell },
     { key: 'port', header: 'Port', align: 'right', sortValue: (o) => o.capacity, cell: (o) => o.capacity },
-    { key: 'status', header: 'Status', sortValue: (o) => o.status, cell: (o) => <StatusBadge status={o.status} /> },
+    { key: 'status', header: 'Status', sortValue: (o) => o.status, cell: (o) => o.status },
   ]
 
 
@@ -1475,6 +1421,7 @@ function OdpsTab() {
         rowKey={(o) => o.id}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
+        presentation="resource"
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
         empty={
           <EmptyState
@@ -1520,21 +1467,6 @@ function JointBoxesTab() {
     setOpenBox(items.find((it) => it.id === openBox.id) ?? null)
   }, [items, openBox])
 
-  const removeBox = (b: JointBoxView) =>
-    void (async () => {
-      if (
-        await confirm({
-          title: 'Hapus joint box',
-          message: `Hapus joint box ${b.code}?`,
-          confirmLabel: 'Hapus',
-          danger: true,
-        })
-      ) {
-        setOpenBox(null)
-        void run(() => api.del(`/api/joint-boxes/${b.id}`))
-      }
-    })()
-
   const deleteSelected = async () => {
     const ids = [...selected]
     if (ids.length === 0) return
@@ -1562,16 +1494,13 @@ function JointBoxesTab() {
       sortValue: (b) => b.name,
       cell: (b) => b.name,
       onCellClick: (b) => setOpenBox(b),
-      inlineActions: canDelete
-        ? (b) => [{ key: 'delete', label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => removeBox(b) }]
-        : undefined,
     },
     { key: 'code', header: 'Kode', sortValue: (b) => b.code, cell: (b) => b.code },
     {
       key: 'address',
       header: 'Alamat',
       sortValue: (b) => b.address,
-      cell: (b) => <span className="muted">{b.address ?? '—'}</span>,
+      cell: (b) => b.address ?? '—',
     },
     { key: 'tray', header: 'Tray', align: 'right', sortValue: (b) => b.trayCount, cell: (b) => b.trayCount },
     {
@@ -1581,13 +1510,9 @@ function JointBoxesTab() {
       // Diurut berdasarkan JUMLAH sambungan, bukan persen: yang dicari operator saat
       // mengurut kolom ini adalah kotak tergemuk, bukan yang rasionya paling ketat.
       sortValue: (b) => b.spliceCount,
-      cell: (b) => (
-        <span className="tnum">
-          {b.spliceCount}/{b.capacity}
-        </span>
-      ),
+      cell: (b) => `${b.spliceCount}/${b.capacity}`,
     },
-    { key: 'status', header: 'Status', sortValue: (b) => b.status, cell: (b) => <StatusBadge status={b.status} /> },
+    { key: 'status', header: 'Status', sortValue: (b) => b.status, cell: (b) => b.status },
   ]
 
 
@@ -1653,6 +1578,7 @@ function JointBoxesTab() {
         rowKey={(b) => b.id}
         loading={loading}
         initialSort={{ key: 'code', dir: 'asc' }}
+        presentation="resource"
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
         empty={
           <EmptyState

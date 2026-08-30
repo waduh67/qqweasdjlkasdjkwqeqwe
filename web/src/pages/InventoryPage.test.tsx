@@ -134,6 +134,18 @@ describe('OltPager', () => {
   })
 })
 
+describe('kontrak presentasi tabel Inventory', () => {
+  it('mengaktifkan presentasi resource tepat untuk lima daftar non-OLT dan mempertahankan alias OLT', async () => {
+    const { readFile } = await vi.importActual<{ readFile: (path: string, encoding: string) => Promise<string> }>('node:fs/promises')
+    const { resolve } = await vi.importActual<{ resolve: (...paths: string[]) => string }>('node:path')
+    const source = await readFile(resolve('src/pages/InventoryPage.tsx'), 'utf8')
+
+    expect((source.match(/presentation="resource"/g) ?? [])).toHaveLength(5)
+    expect((source.match(/presentation="olt"/g) ?? [])).toHaveLength(1)
+    expect(source).not.toMatch(/inlineActions:/)
+  })
+})
+
 describe('tab OLT — kontrak tampilan dan aksi', () => {
   it('menampilkan tepat sembilan kolom teks biasa dan nama satu-baris yang membuka Blade', async () => {
     mockOltPages()
