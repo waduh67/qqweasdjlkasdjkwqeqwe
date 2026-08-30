@@ -13,7 +13,7 @@ import { Blade } from '@/components/organisms'
 import { LocationPicker } from '@/components/organisms'
 import { exportCustomersCsv } from '../api/onboarding'
 import { listPlans as listCatalogPlans, type PlanView } from '../api/catalog'
-import { Button, EmptyState, SelectField, StatusBadge, TextField, Toolbar } from '@/components/atoms'
+import { Button, EmptyState, SelectField, TextField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useConfirm, useToast } from '@/system'
 import { IconCustomers } from '@/components/atoms/icons'
@@ -64,6 +64,10 @@ const STATUS_OPTIONS: { value: CustomerStatus | ''; label: string }[] = [
   { value: 'SUSPENDED', label: 'Ditangguhkan' },
   { value: 'TERMINATED', label: 'Berhenti' },
 ]
+
+function customerStatusLabel(status: CustomerStatus): string {
+  return STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status
+}
 
 /**
  * Daftar pelanggan — tabel padat bisa-urut dengan pencarian & filter status di atasnya.
@@ -295,12 +299,7 @@ export function CustomersPage() {
       key: 'status',
       header: 'Status',
       sortValue: (c) => c.status,
-      cell: (c) => (
-        <div className="row" style={{ gap: '0.3rem', flexWrap: 'wrap' }}>
-          <StatusBadge status={c.status} />
-          {c.awaitingInstallation && <StatusBadge status="PENDING" label="menunggu instalasi" />}
-        </div>
-      ),
+      cell: (c) => `${customerStatusLabel(c.status)}${c.awaitingInstallation ? ' · Menunggu instalasi' : ''}`,
     },
     { key: 'address', header: 'Alamat', sortValue: (c) => c.address, cell: (c) => c.address },
     { key: 'onuCount', header: 'ONU', align: 'right', sortValue: (c) => c.onus.length, cell: (c) => c.onus.length },
@@ -402,6 +401,7 @@ export function CustomersPage() {
         rowKey={(c) => c.id}
         loading={loading}
         initialSort={{ key: 'name', dir: 'asc' }}
+        presentation="resource"
         selection={canDelete ? { selected, onChange: setSelected } : undefined}
         empty={
           <EmptyState
