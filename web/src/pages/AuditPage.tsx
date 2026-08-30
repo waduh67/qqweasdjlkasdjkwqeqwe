@@ -3,7 +3,7 @@ import { Text } from '@fluentui/react-components'
 import { api, ApiError } from '../api/client'
 import type { AuditEntry, PageResponse } from '../api/types'
 import { DataTable, type Column } from '@/components/organisms'
-import { Badge, EmptyState, SelectField, Toolbar } from '@/components/atoms'
+import { EmptyState, SelectField, Toolbar } from '@/components/atoms'
 import { SearchInput } from '@/components/molecules'
 import { useToast } from '@/system'
 import { PageHeader } from '@/components/molecules'
@@ -71,7 +71,7 @@ export function AuditPage() {
       key: 'action',
       header: 'Aksi',
       sortValue: (e) => e.action,
-      cell: (e) => <Badge>{e.action}</Badge>,
+      cell: (e) => e.action,
     },
     {
       key: 'actor',
@@ -114,6 +114,7 @@ export function AuditPage() {
         rowKey={(e) => e.id}
         loading={loading}
         initialSort={{ key: 'occurredAt', dir: 'desc' }}
+        presentation="resource"
         empty={
           <EmptyState
             title={query || action ? 'Tidak ada aktivitas yang cocok' : 'Belum ada aktivitas'}
