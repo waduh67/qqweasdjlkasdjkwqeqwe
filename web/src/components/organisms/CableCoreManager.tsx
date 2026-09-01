@@ -357,7 +357,7 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
             maxLength={200}
           />
           {canPickWorkOrder && (
-            <label className="stack" style={{ gap: '0.25rem' }}>
+            <div className="stack" style={{ gap: '0.25rem' }}>
               <span style={{ ...typographyStyles.caption1 }}>Work order (opsional)</span>
               <Combobox
                 value={moveWorkOrder}
@@ -369,7 +369,7 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
                 placeholder={searchesAll ? 'Cari kode atau judul tiket…' : 'Pilih dari tugas saya…'}
                 emptyText="Tak ada work order terbuka"
               />
-            </label>
+            </div>
           )}
           <Checkbox
             label={`Tandai core ${moveFrom.coreNumber} rusak — jangan dipakai lagi`}

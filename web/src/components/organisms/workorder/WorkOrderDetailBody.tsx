@@ -123,7 +123,7 @@ export function WorkOrderDetailBody({
           <section className="stack" style={{ gap: '0.4rem' }}>
             <Text as="h3" size={300} weight="semibold" style={{ margin: 0 }}>Penugasan</Text>
             <div className="row" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
-              <label className="stack" style={{ flex: 1, gap: '0.25rem' }}>
+              <div className="stack" style={{ flex: 1, gap: '0.25rem' }}>
                 <span>Teknisi (bisa lebih dari satu)</span>
                 <MultiCombobox
                   values={assignees}
@@ -138,7 +138,7 @@ export function WorkOrderDetailBody({
                   placeholder="Cari teknisi…"
                   emptyText="Tak ada teknisi"
                 />
-              </label>
+              </div>
               <Button
                 variant="primary"
                 disabled={assignees.length === 0 || sameRoster(assignees, wo.assignees)}

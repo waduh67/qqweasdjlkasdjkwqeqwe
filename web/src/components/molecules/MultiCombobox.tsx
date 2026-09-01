@@ -54,7 +54,7 @@ export function MultiCombobox<T>({
   useEffect(() => {
     if (!open) return
 
-    const handlePointerDown = (event: Event) => {
+    const handleOutside = (event: Event) => {
       const target = event.target as HTMLElement | null
       if (!target) return
 
@@ -64,12 +64,14 @@ export function MultiCombobox<T>({
       setOpen(false)
     }
 
-    document.addEventListener('pointerdown', handlePointerDown, true)
-    document.addEventListener('touchstart', handlePointerDown, true)
+    window.addEventListener('pointerdown', handleOutside, true)
+    window.addEventListener('mousedown', handleOutside, true)
+    window.addEventListener('touchstart', handleOutside, true)
 
     return () => {
-      document.removeEventListener('pointerdown', handlePointerDown, true)
-      document.removeEventListener('touchstart', handlePointerDown, true)
+      window.removeEventListener('pointerdown', handleOutside, true)
+      window.removeEventListener('mousedown', handleOutside, true)
+      window.removeEventListener('touchstart', handleOutside, true)
     }
   }, [open])
 

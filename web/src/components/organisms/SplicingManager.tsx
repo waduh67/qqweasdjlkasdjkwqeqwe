@@ -402,7 +402,7 @@ function CableAttachmentBar({
       )}
 
       <div className="row wrap" style={{ gap: '0.5rem', alignItems: 'flex-end' }}>
-        <label className="stack" style={{ flex: 2, minWidth: 220, gap: '0.25rem' }}>
+        <div className="stack" style={{ flex: 2, minWidth: 220, gap: '0.25rem' }}>
           <Text as="span" size={200}>Ada kabel lain di dalam kotak?</Text>
           <Combobox
             value={pick}
@@ -414,7 +414,7 @@ function CableAttachmentBar({
             placeholder="Cari kode atau nama kabel…"
             emptyText="Tak ada kabel lain yang cocok"
           />
-        </label>
+        </div>
         <SelectField
           label="Keadaannya"
           value={pickRole}
@@ -851,7 +851,7 @@ export function SplicingManager({
       ) : (
         <>
           {canManage && canPickWorkOrder && (
-            <label className="stack" style={{ gap: '0.25rem' }}>
+            <div className="stack" style={{ gap: '0.25rem' }}>
               <Text as="span" size={200}>Work order (opsional)</Text>
               <Combobox
                 value={workOrderId}
@@ -866,7 +866,7 @@ export function SplicingManager({
               <Text as="span" size={100} className="muted">
                 Sambungan yang dibuat setelah ini dibukukan ke tiket tersebut, dan tercatat di linimasanya.
               </Text>
-            </label>
+            </div>
           )}
 
           <div className="splice-bench">
@@ -1046,7 +1046,7 @@ export function SplicingManager({
                     {/* Tiket boleh menyusul (hasil ukur kerap baru masuk keesokan harinya),
                         tapi yang sudah punya tiket tak ditawari pindah — server pun menolak. */}
                     {canPickWorkOrder && !row.workOrderId && (
-                      <label className="stack" style={{ flex: 1, minWidth: 200, gap: '0.25rem' }}>
+                      <div className="stack" style={{ flex: 1, minWidth: 200, gap: '0.25rem' }}>
                         <Text as="span" size={200}>Bukukan ke work order</Text>
                         <Combobox
                           value={editWorkOrder}
@@ -1058,7 +1058,7 @@ export function SplicingManager({
                           placeholder="Biarkan kosong bila tak perlu"
                           emptyText="Tak ada work order terbuka"
                         />
-                      </label>
+                      </div>
                     )}
                     <Button
                       variant="primary"

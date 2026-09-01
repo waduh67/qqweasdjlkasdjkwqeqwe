@@ -520,7 +520,7 @@ function WorkOrderForm({
             value={draft.description}
             onChange={(_, data) => onChange({ ...draft, description: data.value })}
           />
-          <label className="stack" style={{ gap: '0.25rem' }}>
+          <div className="stack" style={{ gap: '0.25rem' }}>
             <span>Pelanggan (opsional)</span>
             <Combobox
               value={draft.customerId}
@@ -533,9 +533,9 @@ function WorkOrderForm({
               placeholder="Cari nama, kode, telepon, atau alamat pelanggan…"
               emptyText="Pelanggan tak ditemukan"
             />
-          </label>
+          </div>
           <div className="row wrap">
-            <label className="stack" style={{ flex: 1, minWidth: 200, gap: '0.25rem' }}>
+            <div className="stack" style={{ flex: 1, minWidth: 200, gap: '0.25rem' }}>
               <span>Teknisi (opsional, bisa lebih dari satu)</span>
               <MultiCombobox
                 values={draft.assignees}
@@ -547,7 +547,7 @@ function WorkOrderForm({
                 placeholder="Cari teknisi…"
                 emptyText="Tak ada teknisi"
               />
-            </label>
+            </div>
             <TextField
               label="Jadwal (opsional)"
               type="datetime-local"
