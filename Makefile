@@ -72,7 +72,7 @@ lab-up:
 
 ## lab-seed: daftarkan OLT + BRAS + CPE ke simulator lewat API (idempoten)
 lab-seed:
-	BASE=$(BASE) bash docker/lab/seed-lab.sh
+	BASE=$(BASE) COMPOSE="$(COMPOSE)" python3 docker/lab/seed-lab.py
 
 ## lab-network: gambar topologi POP Tebet (3 ODC, 10 ODP, 50 pelanggan, kabel ikut jalan) — idempoten.
 ## Dipisah dari lab-seed karena tak menyentuh simulator sama sekali: murni menggambar peta lewat API,

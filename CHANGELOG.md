@@ -6,6 +6,17 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### 2026-09-01 — Perbaikan build Docker paralel, isolasi cache Gradle, port fleksibel, dan skrip seed tanpa jq
+
+**Diubah**
+- **Port HTTP Caddy di lingkungan Lab**: Diubah default-nya ke port `8000` (via `${PORT:-8000}:80`) pada `docker-compose.lab.yml` dan `Makefile`, sehingga tidak bentrok dengan web server host (seperti Apache/Nginx pada port 80/8080). Variabel `BASE` dan setelan CORS server diselaraskan ke `http://localhost:8000`.
+- **Port HTTP/HTTPS Caddy di lingkungan Produksi**: Di-parameterisasi menjadi `${FTTH_HTTP_PORT:-80}:80` dan `${FTTH_HTTPS_PORT:-443}:443` pada `deploy/docker-compose.prod.yml` agar fleksibel saat pengujian lokal namun tetap terikat ke port 80/443 secara baku di VPS/CI-CD.
+- **Skrip Seeding Lab (`seed-lab.py`)**: Diimplementasikan ulang menggunakan Python 3 tanpa dependensi paket pihak ketiga (`jq`), sehingga `make lab-seed` dapat dijalankan secara mandiri dan andal di berbagai distribusi OS.
+
+**Diperbaiki**
+- **Docker BuildKit Crash (`frontend grpc server closed unexpectedly`)**: Menghapus direktif eksternal `# syntax=docker/dockerfile:1` dari `web/Dockerfile`, `server/Dockerfile`, `simulator/Dockerfile`, dan `collector/Dockerfile` untuk mencegah crash pada gRPC frontend worker saat build paralel.
+- **Gradle Build Cache Lock Contention**: Menambahkan cache ID terisolasi (`id=gradle-server`, `id=gradle-simulator`, `id=gradle-collector`) pada cache mount `--mount=type=cache` di masing-masing Dockerfile, mencegah perebutan lock file journal cache (`/root/.gradle/caches/journal-1.lock`) saat proses build berjalan bersamaan.
+
 ### 2026-08-12 — Konsol ACS / TR-069: armada ONT punya halamannya sendiri
 
 **Ditambahkan**

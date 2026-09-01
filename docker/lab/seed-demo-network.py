@@ -243,9 +243,9 @@ def main():
         stat["baru"] += 1 if created else 0
         state = cust.get("state")
 
-        subs = api.ok("GET", f"/api/customers/{cid}/subscriptions")
-        sub = subs[0]["id"] if subs else api.ok(
-            "POST", f"/api/customers/{cid}/subscriptions",
+        sub_status, sub_view = api.call("GET", f"/api/customers/{cid}/subscription")
+        sub = sub_view["id"] if (sub_status == 200 and isinstance(sub_view, dict)) else api.ok(
+            "PUT", f"/api/customers/{cid}/subscription",
             {"planId": plans[cust["plan"]]}, f"langganan {code}")["id"]
 
         if state == "PSB":
