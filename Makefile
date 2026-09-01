@@ -10,7 +10,7 @@
 # ditutup dengan menggambar satu jaringan berukuran nyata (POP Tebet: 3 ODC, 10 ODP,
 # 50 pelanggan, kabel menyusuri jalan) supaya peta & laporan tak kosong melompong.
 #
-#   make lab         # bangun + nyalakan + seed (buka http://localhost:8080)
+#   make lab         # bangun + nyalakan + seed (buka http://localhost:8000)
 #   make lab-seed    # ulangi seeding simulator saja (stack sudah jalan) — idempoten
 #   make lab-network # ulangi seeding topologi POP Tebet saja — idempoten
 #   make lab-logs    # ikuti log semua service
@@ -26,8 +26,12 @@
 # HANYA untuk lab/dev. JANGAN dipakai di produksi (simulator tak pernah di-deploy).
 # ============================================================================
 
+PORT    ?= 8000
+BASE    ?= http://localhost:$(PORT)
+export PORT
+export BASE
+
 COMPOSE := docker compose -f docker-compose.lab.yml
-BASE    ?= http://localhost:8080
 
 .PHONY: lab lab-up lab-seed lab-network lab-logs lab-down lab-ps lab-update lab-restart lab-stop
 

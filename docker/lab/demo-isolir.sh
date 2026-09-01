@@ -3,7 +3,7 @@
 # tidak menjatuhkan sesi (action -> FAILED), tapi state-machine access berubah nyata.
 # Jalankan SETELAH docker/lab/wire-lab.sh (butuh /tmp/lab_access_id).
 set -euo pipefail
-BASE=${BASE:-http://localhost:8080}
+BASE=${BASE:-http://localhost:8000}
 ACC=$(cat /tmp/lab_access_id)
 
 TOKEN=$(curl -sS -X POST "$BASE/api/auth/login" -H 'Content-Type: application/json' \

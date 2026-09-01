@@ -9,7 +9,7 @@
 # pelanggan — supaya halaman peta, heatmap kapasitas, telusur pelanggan, dan
 # blast radius punya bahan yang bentuknya seperti jaringan ISP betulan.
 #
-#   BASE=http://localhost:8080 python3 docker/lab/seed-demo-network.py
+#   BASE=http://localhost:8000 python3 docker/lab/seed-demo-network.py
 #
 # Idempoten: yang sudah ada dipakai ulang (kode aset jadi kunci alami), jadi aman
 # diulang setelah `make lab-update`. HANYA untuk lab/dev — tak pernah ke produksi.
@@ -27,7 +27,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-BASE = os.environ.get("BASE", "http://localhost:8080").rstrip("/")
+BASE = os.environ.get("BASE", "http://localhost:8000").rstrip("/")
 DATA = Path(__file__).with_name("demo-network.json")
 
 TENANT = "demo"

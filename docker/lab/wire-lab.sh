@@ -7,7 +7,7 @@
 #
 # Menyimpan apiKey & accessId ke /tmp/lab_* untuk dipakai start collector + demo isolir.
 set -euo pipefail
-BASE=${BASE:-http://localhost:8080}
+BASE=${BASE:-http://localhost:8000}
 
 say() { printf '\n\033[1m▶ %s\033[0m\n' "$1"; }
 api() {

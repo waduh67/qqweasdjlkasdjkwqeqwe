@@ -69,7 +69,7 @@ services:
       FTTH_S3_ENDPOINT: http://minio:9000
       FTTH_S3_ACCESS_KEY: ftth
       FTTH_S3_SECRET_KEY: ftthminio
-      FTTH_CORS_ORIGINS: http://localhost:8080
+      FTTH_CORS_ORIGINS: http://localhost:8000,http://localhost:8080,http://localhost:5173
       # Seed tenant demo → login tenant admin: admin@demo.ftth / admin12345.
       # Platform admin (lintas tenant): root@ftth.local / rootadmin123.
       FTTH_SEED_DEMO: "true"
@@ -97,7 +97,7 @@ services:
     image: ftth-web:lab
     restart: unless-stopped
 
-  # --- Reverse proxy: satu pintu di http://localhost:8080 (/api → server, sisanya → web) ---
+  # --- Reverse proxy: satu pintu di http://localhost:8000 (/api → server, sisanya → web) ---
   caddy:
     image: caddy:2
     restart: unless-stopped
@@ -108,7 +108,7 @@ services:
       # ":80" = HTTP saja (tanpa TLS) — cocok untuk lab lokal.
       FTTH_SITE_ADDRESS: ":80"
     ports:
-      - "8080:80"
+      - "${PORT:-8000}:80"
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

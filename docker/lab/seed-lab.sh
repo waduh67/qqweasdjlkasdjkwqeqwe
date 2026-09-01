@@ -9,14 +9,14 @@
 #   • ONU serial C0FD84050205 → ONLINE di OLT sekaligus tertaut ke CPE/ONT genieacs-sim
 #
 # Dijalankan oleh `make lab` (setelah stack sehat) atau manual:
-#   BASE=http://localhost:8080 bash docker/lab/seed-lab.sh
+#   BASE=http://localhost:8000 bash docker/lab/seed-lab.sh
 #
 # Idempoten: aman diulang — resource yang sudah ada dipakai ulang, bukan digandakan.
 # HANYA untuk lab. Simulator & seed ini TAK PERNAH di-deploy ke produksi.
 # ============================================================================
 set -euo pipefail
 
-BASE=${BASE:-http://localhost:8080}
+BASE=${BASE:-http://localhost:8000}
 # Perintah compose untuk satu langkah yang tak bisa lewat API (lihat set_reachability).
 COMPOSE=${COMPOSE:-docker compose -f docker-compose.lab.yml}
 
