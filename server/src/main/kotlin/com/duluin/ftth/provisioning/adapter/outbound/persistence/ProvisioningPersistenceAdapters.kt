@@ -102,8 +102,15 @@ class VlanPoolPersistenceAdapter(
                     allocation.active,
                 )
             allocations.save(entity)
-            references.deleteByAllocationId(allocation.id)
-            references.saveAll(allocation.references.map {
+            val existingReferences = references.findByAllocationId(allocation.id)
+            val desiredReferences = allocation.references.map { it.kind to it.referenceId }.toSet()
+            val staleReferences = existingReferences.filter { it.referenceKind to it.referenceId !in desiredReferences }
+            if (staleReferences.isNotEmpty()) {
+                references.deleteAll(staleReferences)
+                references.flush()
+            }
+            val existingKeys = existingReferences.map { it.referenceKind to it.referenceId }.toSet()
+            references.saveAll(allocation.references.filter { it.kind to it.referenceId !in existingKeys }.map {
                 VlanAllocationReferenceJpaEntity(UuidV7.generate(), allocation.id, it.kind, it.referenceId)
             })
         }
@@ -136,6 +143,12 @@ class VlanPoolPersistenceAdapter(
             ranges,
             domainAllocations,
         )
+    }
+
+    @Transactional
+    override fun findByIdForUpdate(id: UUID): VlanPool? {
+        pools.findLockedById(id) ?: return null
+        return findById(id)
     }
 }
 
