@@ -12,7 +12,11 @@ import com.duluin.ftth.provisioning.domain.model.VlanPool
 import java.util.UUID
 
 interface SegmentProfileRepository { fun save(value: SegmentProfile): SegmentProfile; fun findById(id: UUID): SegmentProfile? }
-interface VlanPoolRepository { fun save(value: VlanPool): VlanPool; fun findById(id: UUID): VlanPool? }
+interface VlanPoolRepository {
+    fun save(value: VlanPool): VlanPool
+    fun findById(id: UUID): VlanPool?
+    fun findByIdForUpdate(id: UUID): VlanPool?
+}
 interface ServiceIntentRepository { fun save(value: ServiceIntent): ServiceIntent; fun findById(id: UUID): ServiceIntent? }
 interface ProvisionPlanRepository { fun save(value: ProvisionPlan): ProvisionPlan; fun findById(id: UUID): ProvisionPlan? }
 interface ProvisionExecutionRepository {
