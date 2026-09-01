@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 
 # ============================================================================
 # ftth-simulator — peniru protokol (OLT/SNMP + BRAS/RADIUS DAE) untuk LAB.
@@ -15,7 +14,7 @@ WORKDIR /workspace
 COPY . .
 # Cache direktori Gradle antar-build (butuh BuildKit). Test dilewati; dijalankan
 # terpisah oleh CI. installDist menghasilkan skrip start + semua jar di build/install.
-RUN --mount=type=cache,target=/root/.gradle \
+RUN --mount=type=cache,id=gradle-simulator,target=/root/.gradle \
     chmod +x ./gradlew && ./gradlew :simulator:installDist -x test --no-daemon
 
 # ---- Tahap runtime: JRE ramping, non-root ----

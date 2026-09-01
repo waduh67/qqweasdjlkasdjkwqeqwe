@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 
 # ============================================================================
 # ftth-web — SPA React di-bundel Vite, disajikan Nginx.

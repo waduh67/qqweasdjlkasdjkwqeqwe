@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 
 # ============================================================================
 # ftth-server — image produksi (Spring Boot bootJar).
@@ -12,7 +11,7 @@ WORKDIR /workspace
 COPY . .
 # Cache direktori Gradle antar-build (butuh BuildKit; aktif di GitHub Actions &
 # Docker modern). Test dilewati di sini — dijalankan terpisah oleh pipeline CI.
-RUN --mount=type=cache,target=/root/.gradle \
+RUN --mount=type=cache,id=gradle-server,target=/root/.gradle \
     chmod +x ./gradlew && \
     attempt=1; max_attempts=3; \
     while [ "$attempt" -le "$max_attempts" ]; do \
