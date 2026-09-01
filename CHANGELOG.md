@@ -6,7 +6,7 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
-### 2026-09-01 — Perbaikan build Docker paralel, isolasi cache Gradle, port fleksibel, dan skrip seed tanpa jq
+### 2026-09-01 — Perbaikan build Docker paralel, isolasi cache Gradle, port fleksibel, dan interaksi peta
 
 **Diubah**
 - **Port HTTP Caddy di lingkungan Lab**: Diubah default-nya ke port `8000` (via `${PORT:-8000}:80`) pada `docker-compose.lab.yml` dan `Makefile`, sehingga tidak bentrok dengan web server host (seperti Apache/Nginx pada port 80/8080). Variabel `BASE` dan setelan CORS server diselaraskan ke `http://localhost:8000`.
@@ -14,6 +14,8 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 - **Skrip Seeding Lab (`seed-lab.py`)**: Diimplementasikan ulang menggunakan Python 3 tanpa dependensi paket pihak ketiga (`jq`), sehingga `make lab-seed` dapat dijalankan secara mandiri dan andal di berbagai distribusi OS.
 
 **Diperbaiki**
+- **Posisi Menu Klik Kanan Peta (`AddHereMenu`)**: Mengganti pembungkus Fluent UI `Menu`/`MenuPopover` pada menu "tambah di sini" menjadi elemen absolut langsung (`map-menu`). Menghilangkan *glitch* posisi di mana menu pertama kali muncul di pojok kiri atas (0, 0) karena jeda kalkulasi Floating UI.
+- **Dropdown / Combobox Auto-Close pada Klik Pertama**: Menghapus `onFocus` yang memicu toggle ganda internal pada komponen `Combobox` (dipakai pada Meja Kerja Splicing di panel Joint Box, ODF, ODP, ODC), serta membungkus status loading dan opsi kosong dalam elemen `<Option disabled>` yang valid.
 - **Docker BuildKit Crash (`frontend grpc server closed unexpectedly`)**: Menghapus direktif eksternal `# syntax=docker/dockerfile:1` dari `web/Dockerfile`, `server/Dockerfile`, `simulator/Dockerfile`, dan `collector/Dockerfile` untuk mencegah crash pada gRPC frontend worker saat build paralel.
 - **Gradle Build Cache Lock Contention**: Menambahkan cache ID terisolasi (`id=gradle-server`, `id=gradle-simulator`, `id=gradle-collector`) pada cache mount `--mount=type=cache` di masing-masing Dockerfile, mencegah perebutan lock file journal cache (`/root/.gradle/caches/journal-1.lock`) saat proses build berjalan bersamaan.
 

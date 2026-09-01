@@ -1,6 +1,4 @@
-import { useEffect } from 'react'
-import { Menu, MenuItem, MenuList, MenuPopover, MenuTrigger } from '@fluentui/react-components'
-import { Button } from '@/components/atoms'
+import { useEffect, useRef } from 'react'
 import { IconCrosshair, IconCustomers, IconPlus } from '@/components/atoms/icons'
 import { ASSET_META, type AssetKind } from '@/map/mapAssets'
 import { useToast } from '@/system'
@@ -26,12 +24,23 @@ export function AddHereMenu({
   onSurvey: () => void
   onClose: () => void
 }) {
+  const menuRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
+    const onDocClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose()
+      }
+    }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener('mousedown', onDocClick)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('mousedown', onDocClick)
+    }
   }, [onClose])
 
   const toast = useToast()
@@ -46,49 +55,56 @@ export function AddHereMenu({
   if (assets.length === 0 && !canPlaceCustomer && !canSurvey) return null
 
   return (
-    <Menu open positioning={{ position: 'below', align: 'start' }}>
-      <MenuTrigger disableButtonEnhancement>
-        <Button
-          className="map-menu-head tnum"
-          title="Klik untuk menyalin koordinat"
-          style={{ left: at.x, top: at.y }}
-          onClick={() => {
-            const text = `${at.lat.toFixed(6)}, ${at.lng.toFixed(6)}`
-            void navigator.clipboard?.writeText(text).then(() => toast.success('Koordinat disalin'))
-          }}
+    <div
+      ref={menuRef}
+      className="map-menu"
+      style={{ left: at.x, top: at.y }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        type="button"
+        className="map-menu-head tnum"
+        title="Klik untuk menyalin koordinat"
+        onClick={() => {
+          const text = `${at.lat.toFixed(6)}, ${at.lng.toFixed(6)}`
+          void navigator.clipboard?.writeText(text).then(() => toast.success('Koordinat disalin'))
+        }}
+      >
+        {at.lat.toFixed(6)}, {at.lng.toFixed(6)}
+      </button>
+      {assets.map((k) => (
+        <button
+          key={k}
+          type="button"
+          className="map-menu-item"
+          onClick={() => onPick(k)}
         >
-          {at.lat.toFixed(6)}, {at.lng.toFixed(6)}
-        </Button>
-      </MenuTrigger>
-      <MenuPopover className="map-menu" style={{ left: at.x, top: at.y }}>
-        <MenuList>
-          {assets.map((k) => (
-            <MenuItem key={k} className="map-menu-item" icon={<IconPlus size={15} />} onClick={() => onPick(k)}>
-              {ASSET_META[k].label}
-            </MenuItem>
-          ))}
-          {canPlaceCustomer && (
-            <MenuItem
-              className="map-menu-item"
-              icon={<IconCustomers size={15} />}
-              title="Pelanggan hasil impor yang belum punya titik di peta"
-              onClick={() => onPick('CUSTOMER')}
-            >
-              Pelanggan belum berkoordinat
-            </MenuItem>
-          )}
-          {canSurvey && (
-            <MenuItem
-              className="map-menu-item"
-              icon={<IconCrosshair size={15} />}
-              title="Kotak siap pakai & core menganggur di sekitar titik ini"
-              onClick={onSurvey}
-            >
-              Cek kapasitas di sini
-            </MenuItem>
-          )}
-        </MenuList>
-      </MenuPopover>
-    </Menu>
+          <IconPlus size={15} />
+          {ASSET_META[k].label}
+        </button>
+      ))}
+      {canPlaceCustomer && (
+        <button
+          type="button"
+          className="map-menu-item"
+          title="Pelanggan hasil impor yang belum punya titik di peta"
+          onClick={() => onPick('CUSTOMER')}
+        >
+          <IconCustomers size={15} />
+          Pelanggan belum berkoordinat
+        </button>
+      )}
+      {canSurvey && (
+        <button
+          type="button"
+          className="map-menu-item"
+          title="Kotak siap pakai & core menganggur di sekitar titik ini"
+          onClick={onSurvey}
+        >
+          <IconCrosshair size={15} />
+          Cek kapasitas di sini
+        </button>
+      )}
+    </div>
   )
 }

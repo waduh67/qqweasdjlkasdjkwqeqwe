@@ -75,6 +75,7 @@ export function Combobox<T>({
     if (!open) return
 
     const request = ++requestRef.current
+    const delay = term.trim() ? debounceMs : 0
     setLoading(true)
     const timeout = window.setTimeout(async () => {
       try {
@@ -85,7 +86,7 @@ export function Combobox<T>({
       } finally {
         if (request === requestRef.current) setLoading(false)
       }
-    }, debounceMs)
+    }, delay)
 
     return () => {
       window.clearTimeout(timeout)
@@ -132,7 +133,6 @@ export function Combobox<T>({
         placeholder={label || placeholder}
         disabled={disabled}
         autoComplete="off"
-        onFocus={() => setOpen(true)}
         onOpenChange={(_, data) => setOpen(data.open)}
         onChange={(event: ChangeEvent<HTMLInputElement>) => {
           setTerm(event.target.value)
@@ -142,13 +142,18 @@ export function Combobox<T>({
           const item = options.find((candidate) => toId(candidate) === data.optionValue)
           if (item) choose(item)
         }}
+        expandIcon={loading ? <Spinner size="tiny" /> : undefined}
       >
         {loading && options.length === 0 ? (
-          <span className="cb-note">
-            <Spinner size="tiny" /> Memuat…
-          </span>
+          <Option disabled value="__loading__" text="Memuat">
+            <span className="cb-note">
+              <Spinner size="tiny" /> Memuat…
+            </span>
+          </Option>
         ) : options.length === 0 ? (
-          <Text as="span" className="cb-note">{emptyText}</Text>
+          <Option disabled value="__empty__" text={emptyText}>
+            <Text as="span" className="cb-note">{emptyText}</Text>
+          </Option>
         ) : groupOf ? (
           groupedOptions.map((group, groupIndex) => (
             <OptionGroup key={`${group.label}-${groupIndex}`} label={group.label}>
