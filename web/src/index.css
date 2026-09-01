@@ -686,8 +686,14 @@ td.dg-actions {
 }
 
 /* ── Combobox (pemilih tunggal yang bisa dicari) ───────────────────────────── */
-.combobox {
+.combobox,
+.multi-combobox {
   position: relative;
+  width: 100%;
+}
+.combobox .fui-Combobox,
+.multi-combobox .fui-Combobox {
+  width: 100%;
 }
 .cb-field {
   display: flex;

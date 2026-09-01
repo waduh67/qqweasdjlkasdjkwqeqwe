@@ -58,7 +58,8 @@ export function MultiCombobox<T>({
       const target = event.target as HTMLElement | null
       if (!target) return
 
-      if (containerRef.current?.contains(target)) return
+      const trigger = containerRef.current?.querySelector('.fui-Combobox') ?? containerRef.current
+      if (trigger && trigger.contains(target)) return
       if (target.closest?.('[role="listbox"]')) return
 
       setOpen(false)
