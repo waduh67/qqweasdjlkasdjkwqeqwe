@@ -44,11 +44,34 @@ export function MultiCombobox<T>({
   const [options, setOptions] = useState<T[]>([])
   const [loading, setLoading] = useState(false)
   const [labels, setLabels] = useState<Record<string, string>>(initialLabels ?? {})
+  const containerRef = useRef<HTMLDivElement>(null)
   const requestId = useRef(0)
 
   useEffect(() => {
     if (initialLabels) setLabels((current) => ({ ...current, ...initialLabels }))
   }, [initialLabels])
+
+  useEffect(() => {
+    if (!open) return
+
+    const handlePointerDown = (event: Event) => {
+      const target = event.target as HTMLElement | null
+      if (!target) return
+
+      if (containerRef.current?.contains(target)) return
+      if (target.closest?.('[role="listbox"]')) return
+
+      setOpen(false)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown, true)
+    document.addEventListener('touchstart', handlePointerDown, true)
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true)
+      document.removeEventListener('touchstart', handlePointerDown, true)
+    }
+  }, [open])
 
   // Setiap pencarian diberi urutan agar respons server yang lambat tidak menimpa hasil terbaru.
   useEffect(() => {
@@ -101,45 +124,47 @@ export function MultiCombobox<T>({
   const optionIds = new Set(options.map(toId))
 
   return (
-    <Combobox
-      multiselect
-      disabled={disabled}
-      open={open}
-      selectedOptions={values}
-      value={term}
-      placeholder={placeholder}
-      onOpenChange={(_, data) => setOpen(data.open)}
-      onChange={(event) => setTerm(event.target.value)}
-      onOptionSelect={handleOptionSelect}
-      onKeyDown={handleKeyDown}
-      aria-label={placeholder ?? 'Pilih beberapa opsi'}
-      expandIcon={loading ? <Spinner size="tiny" /> : undefined}
-    >
-      {loading && options.length === 0 ? (
-        <Option disabled value="__loading__" text="Memuat">
-          <Text size={300}>Memuat…</Text>
-        </Option>
-      ) : options.length === 0 ? (
-        <Option disabled value="__empty__" text={emptyText}>
-          <Text size={300}>{emptyText}</Text>
-        </Option>
-      ) : (
-        options.map((item) => {
-          const id = toId(item)
-          const meta = toMeta?.(item)
-          return (
-            <Option key={id} value={id} text={toLabel(item)}>
-              <Text as="span" size={300}>{toLabel(item)}</Text>
-              {meta && <Text as="span" size={200}>{meta}</Text>}
-            </Option>
-          )
-        })
-      )}
+    <div ref={containerRef} className="multi-combobox">
+      <Combobox
+        multiselect
+        disabled={disabled}
+        open={open}
+        selectedOptions={values}
+        value={term}
+        placeholder={placeholder}
+        onOpenChange={(_, data) => setOpen(data.open)}
+        onChange={(event) => setTerm(event.target.value)}
+        onOptionSelect={handleOptionSelect}
+        onKeyDown={handleKeyDown}
+        aria-label={placeholder ?? 'Pilih beberapa opsi'}
+        expandIcon={loading ? <Spinner size="tiny" /> : undefined}
+      >
+        {loading && options.length === 0 ? (
+          <Option disabled value="__loading__" text="Memuat">
+            <Text size={300}>Memuat…</Text>
+          </Option>
+        ) : options.length === 0 ? (
+          <Option disabled value="__empty__" text={emptyText}>
+            <Text size={300}>{emptyText}</Text>
+          </Option>
+        ) : (
+          options.map((item) => {
+            const id = toId(item)
+            const meta = toMeta?.(item)
+            return (
+              <Option key={id} value={id} text={toLabel(item)}>
+                <Text as="span" size={300}>{toLabel(item)}</Text>
+                {meta && <Text as="span" size={200}>{meta}</Text>}
+              </Option>
+            )
+          })
+        )}
 
-      {/* Opsi terseleksi yang tidak ada pada respons saat ini tetap terdaftar agar label dan state Fluent konsisten. */}
-      {values.filter((id) => !optionIds.has(id)).map((id) => (
-        <Option key={id} value={id} text={labels[id] ?? id} style={{ display: 'none' }} />
-      ))}
-    </Combobox>
+        {/* Opsi terseleksi yang tidak ada pada respons saat ini tetap terdaftar agar label dan state Fluent konsisten. */}
+        {values.filter((id) => !optionIds.has(id)).map((id) => (
+          <Option key={id} value={id} text={labels[id] ?? id} style={{ display: 'none' }} />
+        ))}
+      </Combobox>
+    </div>
   )
 }

@@ -58,6 +58,7 @@ export function Combobox<T>({
   const [options, setOptions] = useState<T[]>([])
   const [loading, setLoading] = useState(false)
   const [label, setLabel] = useState(initialLabel)
+  const containerRef = useRef<HTMLDivElement>(null)
   const fetchRef = useRef(fetchOptions)
   const requestRef = useRef(0)
 
@@ -70,6 +71,28 @@ export function Combobox<T>({
   useEffect(() => {
     if (initialLabel) setLabel(initialLabel)
   }, [initialLabel])
+
+  useEffect(() => {
+    if (!open) return
+
+    const handlePointerDown = (event: Event) => {
+      const target = event.target as HTMLElement | null
+      if (!target) return
+
+      if (containerRef.current?.contains(target)) return
+      if (target.closest?.('[role="listbox"]')) return
+
+      setOpen(false)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown, true)
+    document.addEventListener('touchstart', handlePointerDown, true)
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true)
+      document.removeEventListener('touchstart', handlePointerDown, true)
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -124,7 +147,7 @@ export function Combobox<T>({
   }
 
   return (
-    <div className={`combobox${disabled ? ' is-disabled' : ''}`}>
+    <div ref={containerRef} className={`combobox${disabled ? ' is-disabled' : ''}`}>
       <FluentCombobox
         className="cb-field"
         open={open}
