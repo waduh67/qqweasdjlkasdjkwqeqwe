@@ -83,15 +83,34 @@ class ProvisioningDomainTest {
     }
 
     @Test
-    fun `validated plan content cannot mutate and content hash is deterministic`() {
-        val plan = plan()
+    fun `plan content is immutable from construction and content hash is deterministic`() {
+        val sourceSteps = mutableListOf(step(1))
+        val plan = ProvisionPlan.generate(tenantId, UuidV7.generate(), 1, sourceSteps)
         val originalHash = plan.contentHash
-        plan.validate()
 
-        assertThatThrownBy { plan.replaceSteps(listOf(step(2))) }
-            .isInstanceOf(ConflictException::class.java)
-            .hasMessageContaining("PLAN_IMMUTABLE")
+        sourceSteps += step(2)
+
+        assertThat(plan.steps).hasSize(1)
         assertThat(plan.contentHash).isEqualTo(originalHash)
+        assertThat(ProvisionPlan::class.java.methods.map { it.name }).doesNotContain("replaceSteps")
+    }
+
+    @Test
+    fun `rehydrated plan rejects content that does not match immutable hash`() {
+        val plan = plan()
+
+        assertThatThrownBy {
+            ProvisionPlan.rehydrate(
+                plan.id,
+                plan.tenantId,
+                plan.intentId,
+                plan.revision,
+                listOf(step(2)),
+                plan.status,
+                plan.contentHash,
+            )
+        }.isInstanceOf(ValidationException::class.java)
+            .hasMessageContaining("PLAN_CONTENT_HASH_MISMATCH")
     }
 
     @Test

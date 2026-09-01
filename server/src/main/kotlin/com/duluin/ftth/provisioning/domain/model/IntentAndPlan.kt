@@ -66,8 +66,10 @@ class ProvisionStep private constructor(
     val order: Int,
     val device: DeviceReference,
     val operation: ProvisionOperation,
-    val attributes: Map<String, String>,
+    attributes: Map<String, String>,
 ) : ProvisioningAggregate {
+    val attributes: Map<String, String> = attributes.toMap()
+
     init {
         if (order < 1) throw ValidationException("PROVISION_STEP_ORDER_INVALID")
         NormalizedDeviceState.of(attributes)
@@ -105,24 +107,16 @@ class ProvisionPlan private constructor(
     status: PlanStatus,
     contentHash: String,
 ) : ProvisioningAggregate {
-    private var mutableSteps = steps.toList()
-    val steps: List<ProvisionStep> get() = mutableSteps
+    val steps: List<ProvisionStep> = steps.toList()
     var status: PlanStatus = status
         private set
-    var contentHash: String = contentHash
-        private set
+    val contentHash: String = contentHash
 
     init {
         if (revision < 1) throw ValidationException("PLAN_REVISION_INVALID")
         requireValidSteps(steps)
         if (!contentHash.matches(Regex("^[a-f0-9]{64}$"))) throw ValidationException("PLAN_CONTENT_HASH_INVALID")
-    }
-
-    fun replaceSteps(steps: List<ProvisionStep>) {
-        if (status != PlanStatus.GENERATED) throw ConflictException("PLAN_IMMUTABLE")
-        requireValidSteps(steps)
-        mutableSteps = steps.toList()
-        contentHash = hash(steps)
+        if (contentHash != hash(steps)) throw ValidationException("PLAN_CONTENT_HASH_MISMATCH")
     }
 
     fun validate() = transitionTo(PlanStatus.VALIDATED, setOf(PlanStatus.GENERATED))

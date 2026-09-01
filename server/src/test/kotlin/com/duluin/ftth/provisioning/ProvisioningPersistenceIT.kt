@@ -2,6 +2,13 @@ package com.duluin.ftth.provisioning
 
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.tenant.TenantContext
+import com.duluin.ftth.provisioning.application.port.outbound.ProvisionPlanRepository
+import com.duluin.ftth.provisioning.domain.model.DeviceKind
+import com.duluin.ftth.provisioning.domain.model.DeviceReference
+import com.duluin.ftth.provisioning.domain.model.PlanStatus
+import com.duluin.ftth.provisioning.domain.model.ProvisionOperation
+import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
+import com.duluin.ftth.provisioning.domain.model.ProvisionStep
 import com.duluin.ftth.tenancy.TenantApi
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
@@ -21,6 +28,7 @@ import java.util.UUID
 class ProvisioningPersistenceIT {
     @Autowired private lateinit var tenantApi: TenantApi
     @Autowired private lateinit var txManager: PlatformTransactionManager
+    @Autowired private lateinit var provisionPlans: ProvisionPlanRepository
     @PersistenceContext private lateinit var em: EntityManager
 
     @Test
@@ -115,6 +123,45 @@ class ProvisioningPersistenceIT {
         asTenant(tenantId) { insertExecution(tenantId, planId, "same-key") }
         assertThatThrownBy { asTenant(tenantId) { insertExecution(tenantId, planId, "same-key") } }
             .isInstanceOf(ConstraintViolationException::class.java)
+    }
+
+    @Test
+    fun `saving an existing generated plan cannot replace its persisted payload`() {
+        val tenantId = tenant("provision-repeat")
+        val intentId = asTenant(tenantId) { insertIntent(tenantId, insertPool(tenantId)) }
+        val originalStep = ProvisionStep.create(
+            1,
+            DeviceReference(DeviceKind.ROUTER, FIXED_DEVICE),
+            ProvisionOperation.ENSURE_TAGGED_VLAN,
+            mapOf("vlanId" to "110"),
+        )
+        val original = ProvisionPlan.generate(tenantId, intentId, 1, listOf(originalStep))
+        asTenant(tenantId) { provisionPlans.save(original) }
+
+        val alternativeStep = ProvisionStep.create(
+            1,
+            DeviceReference(DeviceKind.ROUTER, FIXED_DEVICE),
+            ProvisionOperation.VERIFY_STATE,
+            mapOf("vlanId" to "120"),
+        )
+        val alternativeHash = ProvisionPlan.generate(tenantId, intentId, 1, listOf(alternativeStep)).contentHash
+        val sameIdentityAlternative = ProvisionPlan.rehydrate(
+            original.id,
+            tenantId,
+            intentId,
+            1,
+            listOf(alternativeStep),
+            PlanStatus.GENERATED,
+            alternativeHash,
+        )
+
+        asTenant(tenantId) { provisionPlans.save(sameIdentityAlternative) }
+        val stored = asTenant(tenantId) { provisionPlans.findById(original.id)!! }
+
+        assertThat(stored.contentHash).isEqualTo(original.contentHash)
+        assertThat(stored.steps).hasSize(1)
+        assertThat(stored.steps.single().operation).isEqualTo(ProvisionOperation.ENSURE_TAGGED_VLAN)
+        assertThat(stored.steps.single().attributes).containsEntry("vlanId", "110")
     }
 
     private fun insertPoolAndAllocation(tenantId: UUID, allocationId: UUID) {

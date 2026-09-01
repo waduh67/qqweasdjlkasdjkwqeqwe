@@ -148,14 +148,11 @@ class ProvisionPlanPersistenceAdapter(
     @Transactional
     override fun save(value: ProvisionPlan): ProvisionPlan {
         val existing = plans.findById(value.id).orElse(null)
-        val entity = existing?.apply { status = value.status } ?: ProvisionPlanJpaEntity(
-            value.id, value.intentId, value.revision, value.status, value.contentHash,
-        )
-        plans.save(entity)
-        if (value.status == com.duluin.ftth.provisioning.domain.model.PlanStatus.GENERATED) {
-            val previousSteps = steps.findByPlanIdOrderByStepOrder(value.id)
-            if (previousSteps.isNotEmpty()) attributes.deleteByStepIdIn(previousSteps.map { it.id })
-            steps.deleteByPlanId(value.id)
+        if (existing != null) {
+            existing.status = value.status
+            plans.save(existing)
+        } else {
+            plans.save(ProvisionPlanJpaEntity(value.id, value.intentId, value.revision, value.status, value.contentHash))
             steps.saveAll(value.steps.map {
                 ProvisionStepJpaEntity(it.id, value.id, it.order, it.device.kind, it.device.id, it.operation)
             })
