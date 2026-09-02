@@ -82,7 +82,12 @@ class ProvisioningSafetyEvidencePersistenceAdapter(
                       available_oob_routes, observed_at, valid_until, complete, source_type,
                       topology_source_id, device_observation_source_id
                FROM provisioning_management_safety_evidence
-               WHERE tenant_id = :tenant AND device_kind = :kind AND device_id = :device""",
+               WHERE tenant_id = :tenant AND device_kind = :kind AND device_id = :device
+                 AND complete = true
+                 AND provisioning_management_source_matches(
+                     source_type, tenant_id, device_kind, device_id,
+                     topology_source_id, device_observation_source_id
+                 )""",
         ).setParameter("tenant", tenantId).setParameter("kind", device.kind.name).setParameter("device", device.id)
             .resultList.singleOrNull() as? Array<*> ?: return null
         return ManagementSafetyEvidence(
