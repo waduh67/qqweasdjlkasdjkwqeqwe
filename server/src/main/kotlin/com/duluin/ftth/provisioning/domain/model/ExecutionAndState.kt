@@ -9,6 +9,7 @@ import java.util.UUID
 class ProvisionExecution private constructor(
     override val id: UUID,
     val tenantId: UUID,
+    val intentId: UUID,
     val planId: UUID,
     val idempotencyKey: String,
     status: ExecutionStatus,
@@ -40,7 +41,7 @@ class ProvisionExecution private constructor(
     )
     fun requireManualReconciliation(detail: String) = transitionWithDetail(
         ExecutionStatus.MANUAL_RECONCILIATION,
-        setOf(ExecutionStatus.VERIFYING, ExecutionStatus.ROLLING_BACK, ExecutionStatus.FAILED),
+        setOf(ExecutionStatus.RUNNING, ExecutionStatus.VERIFYING, ExecutionStatus.ROLLING_BACK, ExecutionStatus.FAILED),
         detail,
     )
 
@@ -56,9 +57,22 @@ class ProvisionExecution private constructor(
     }
 
     companion object {
-        fun queue(tenantId: UUID, planId: UUID, idempotencyKey: String) = ProvisionExecution(
-            UuidV7.generate(), tenantId, planId, idempotencyKey.trim(), ExecutionStatus.QUEUED, null,
+        fun queue(tenantId: UUID, planId: UUID, idempotencyKey: String) =
+            queue(tenantId, planId, planId, idempotencyKey)
+
+        fun queue(tenantId: UUID, intentId: UUID, planId: UUID, idempotencyKey: String) = ProvisionExecution(
+            UuidV7.generate(), tenantId, intentId, planId, idempotencyKey.trim(), ExecutionStatus.QUEUED, null,
         )
+
+        fun rehydrate(
+            id: UUID,
+            tenantId: UUID,
+            intentId: UUID,
+            planId: UUID,
+            idempotencyKey: String,
+            status: ExecutionStatus,
+            detail: String?,
+        ) = ProvisionExecution(id, tenantId, intentId, planId, idempotencyKey, status, detail)
 
         fun rehydrate(
             id: UUID,
@@ -67,7 +81,7 @@ class ProvisionExecution private constructor(
             idempotencyKey: String,
             status: ExecutionStatus,
             detail: String?,
-        ) = ProvisionExecution(id, tenantId, planId, idempotencyKey, status, detail)
+        ) = rehydrate(id, tenantId, planId, planId, idempotencyKey, status, detail)
     }
 }
 
