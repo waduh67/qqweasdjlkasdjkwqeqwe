@@ -163,6 +163,16 @@ object PermissionCatalog {
         perm("bng.session.view", "Lihat sesi PPPoE & tren trafik pelanggan")
         perm("bng.session.reset", "Reset Login (putus sesi PPPoE) pelanggan")
 
+        // Provisioning InterVLAN — sertifikasi adapter berdampak lintas-tenant dan hanya dikelola platform.
+        perm("provisioning.segment.view", "Lihat profil segmen VLAN")
+        perm("provisioning.segment.manage", "Kelola profil segmen VLAN")
+        perm("provisioning.plan.view", "Lihat rencana provisioning")
+        perm("provisioning.execution.apply", "Terapkan rencana provisioning")
+        perm("provisioning.execution.cancel", "Batalkan eksekusi provisioning")
+        perm("provisioning.drift.view", "Lihat drift perangkat")
+        perm("provisioning.drift.adopt", "Adopsi drift perangkat")
+        platform("provisioning.certification.manage", "Kelola sertifikasi adapter perangkat")
+
         perm("hotspot.site.view", "Lihat hotspot site")
         perm("hotspot.site.manage", "Kelola hotspot site")
         perm("hotspot.voucher.view", "Lihat voucher hotspot")
