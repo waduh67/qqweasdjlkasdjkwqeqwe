@@ -34,10 +34,17 @@ data class PlanTopologyNode(
 
 data class PlanCapability(
     val device: DeviceReference,
-    val fingerprint: String,
+    val vendor: String,
+    val model: String,
+    val firmware: String,
+    val transport: String,
     val capabilities: Set<String>,
     val observedAt: Instant,
-)
+) {
+    init {
+        require(listOf(vendor, model, firmware, transport).none(String::isBlank)) { "PLAN_FINGERPRINT_INCOMPLETE" }
+    }
+}
 
 data class PlanObservation(
     val device: DeviceReference,
@@ -61,6 +68,7 @@ class CanonicalProvisioningPlanner {
         validate(request)
         val sourceHash = sha256(canonicalRequest(request))
         val observations = request.observations.associateBy { it.device }
+        val capabilities = request.capabilities.associateBy { it.device }
         val specifications = when (request.change) {
             PlanChange.CREATE -> createSteps(request.topology)
             PlanChange.DELETE -> deleteSteps(request.topology, request.brasReferenceCount)
@@ -73,6 +81,10 @@ class CanonicalProvisioningPlanner {
                 "vlanId" to request.vlanId.toString(),
                 ProvisionStep.PRECONDITION_HASH_ATTRIBUTE to preconditionHash,
                 ProvisionPlan.PLAN_PRECONDITION_HASH_ATTRIBUTE to sourceHash,
+                SafetyPlanAttributes.VENDOR to capabilities.getValue(device).vendor,
+                SafetyPlanAttributes.MODEL to capabilities.getValue(device).model,
+                SafetyPlanAttributes.FIRMWARE to capabilities.getValue(device).firmware,
+                SafetyPlanAttributes.TRANSPORT to capabilities.getValue(device).transport,
             )
             val identity = listOf(request.intent.id, revision, order, device.kind, device.id, operation, attributes)
                 .joinToString("|")
@@ -154,7 +166,10 @@ class CanonicalProvisioningPlanner {
             mapOf(
                 "deviceKind" to it.device.kind.name,
                 "deviceId" to it.device.id.toString(),
-                "fingerprint" to it.fingerprint,
+                "vendor" to it.vendor,
+                "model" to it.model,
+                "firmware" to it.firmware,
+                "transport" to it.transport,
                 "capabilities" to it.capabilities,
                 "observedAt" to it.observedAt.toString(),
             )
@@ -201,17 +216,25 @@ class CanonicalProvisioningPlanner {
 class ImmutableProvisioningPlanService(
     private val planner: CanonicalProvisioningPlanner,
     private val plans: ProvisionPlanRepository,
+    private val safetyGate: ProvisioningSafetyGate,
 ) {
     @Transactional
     fun plan(request: PlanCompilationRequest): ProvisionPlan {
         val current = plans.findLatestByIntentId(request.intent.id)
-        val revision = current?.revision ?: 1
-        val candidate = planner.compile(request, revision)
-        if (current != null && current.preconditionHash == candidate.preconditionHash) return current
+        val comparison = planner.compile(request, current?.revision ?: 1)
+        if (current != null && current.preconditionHash == comparison.preconditionHash) {
+            safetyGate.requireAllowed(current, com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY)
+            if (current.status == PlanStatus.GENERATED) current.validate()
+            return plans.save(current)
+        }
+
+        val candidate = planner.compile(request, (current?.revision ?: 0) + 1)
+        safetyGate.requireAllowed(candidate, com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY)
+        candidate.validate()
 
         if (current?.status == PlanStatus.GENERATED) current.reject()
         if (current?.status == PlanStatus.VALIDATED) current.supersede()
         if (current != null) plans.save(current)
-        return plans.save(planner.compile(request, (current?.revision ?: 0) + 1))
+        return plans.save(candidate)
     }
 }

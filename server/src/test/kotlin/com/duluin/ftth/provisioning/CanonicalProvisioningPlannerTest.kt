@@ -8,6 +8,7 @@ import com.duluin.ftth.provisioning.application.service.PlanChange
 import com.duluin.ftth.provisioning.application.service.PlanCompilationRequest
 import com.duluin.ftth.provisioning.application.service.PlanObservation
 import com.duluin.ftth.provisioning.application.service.PlanTopologyNode
+import com.duluin.ftth.provisioning.application.service.ProvisioningSafetyGate
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisionPlanRepository
 import com.duluin.ftth.provisioning.domain.model.AdministrativeStatus
 import com.duluin.ftth.provisioning.domain.model.DeviceKind
@@ -20,6 +21,9 @@ import com.duluin.ftth.provisioning.domain.model.PlanStatus
 import com.duluin.ftth.provisioning.domain.model.ProvisionOperation
 import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
 import com.duluin.ftth.provisioning.domain.model.ServiceIntent
+import com.duluin.ftth.provisioning.domain.policy.ExecutionMode
+import com.duluin.ftth.provisioning.domain.policy.PolicyCode
+import com.duluin.ftth.provisioning.domain.policy.PolicyDecision
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -80,10 +84,8 @@ class CanonicalProvisioningPlannerTest {
     @Test
     fun `changed source creates a new revision and supersedes without mutating old payload`() {
         val repository = InMemoryPlanRepository()
-        val service = ImmutableProvisioningPlanService(planner, repository)
+        val service = ImmutableProvisioningPlanService(planner, repository, allowingGate())
         val original = service.plan(request())
-        original.validate()
-        repository.save(original)
         val originalPayload = original.canonicalPayload()
 
         val unchanged = service.plan(request())
@@ -98,6 +100,20 @@ class CanonicalProvisioningPlannerTest {
         assertThat(replacement.preconditionHash).isNotEqualTo(original.preconditionHash)
     }
 
+    @Test
+    fun `production safety rejection creates no validated or persisted plan`() {
+        val repository = InMemoryPlanRepository()
+        val rejectingGate = object : ProvisioningSafetyGate {
+            override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode) =
+                PolicyDecision(false, PolicyCode.PROTECTED_MANAGEMENT_RESOURCE)
+        }
+        val service = ImmutableProvisioningPlanService(planner, repository, rejectingGate)
+
+        org.assertj.core.api.Assertions.assertThatThrownBy { service.plan(request()) }
+            .hasMessage(PolicyCode.PROTECTED_MANAGEMENT_RESOURCE.name)
+        assertThat(repository.savedCount).isZero()
+    }
+
     private fun request(
         change: PlanChange = PlanChange.CREATE,
         brasReferenceCount: Int = 0,
@@ -110,9 +126,9 @@ class CanonicalProvisioningPlannerTest {
             PlanTopologyNode(bras, ManagedNodeRole.BRAS, AdministrativeStatus.ENABLED, observedAt, "ae0"),
         )
         val capabilities = listOf(
-            PlanCapability(olt, "zte|c320|1.2|ssh", setOf("access-vlan"), observedAt),
-            PlanCapability(transit, "junos|ex|22|netconf", setOf("tagged-vlan", "verify"), observedAt),
-            PlanCapability(bras, "mikrotik|ccr|7|rest", setOf("pppoe", "firewall"), observedAt),
+            PlanCapability(olt, "ZTE", "C320", "1.2", "SSH", setOf("access-vlan"), observedAt),
+            PlanCapability(transit, "JUNIPER", "EX", "22", "NETCONF", setOf("tagged-vlan", "verify"), observedAt),
+            PlanCapability(bras, "MIKROTIK", "CCR", "7", "REST", setOf("pppoe", "firewall"), observedAt),
         )
         val observations = listOf(
             PlanObservation(
@@ -153,10 +169,16 @@ class CanonicalProvisioningPlannerTest {
 
     private class InMemoryPlanRepository : ProvisionPlanRepository {
         private val values = linkedMapOf<UUID, ProvisionPlan>()
+        val savedCount: Int get() = values.size
 
         override fun save(value: ProvisionPlan): ProvisionPlan = value.also { values[it.id] = it }
         override fun findById(id: UUID): ProvisionPlan? = values[id]
         override fun findLatestByIntentId(intentId: UUID): ProvisionPlan? =
             values.values.filter { it.intentId == intentId }.maxByOrNull { it.revision }
+    }
+
+    private fun allowingGate() = object : ProvisioningSafetyGate {
+        override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode) =
+            PolicyDecision(true, PolicyCode.AUTO_APPLY_ALLOWED)
     }
 }
