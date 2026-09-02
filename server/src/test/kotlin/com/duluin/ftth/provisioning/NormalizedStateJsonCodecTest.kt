@@ -38,8 +38,31 @@ class NormalizedStateJsonCodecTest {
         assertThat(legacy.legacyPayload).isEqualTo("{\"legacyFlag\":true}")
 
         listOf(
-            "{\"name\":null}",
             "{\"name\":{\"name\":\"/interface vlan add\"}}",
+        ).forEach { json ->
+            assertThatThrownBy { codec.decode(json) }
+                .isInstanceOf(ValidationException::class.java)
+        }
+    }
+
+    @Test
+    fun `strict decode falls back losslessly for known fields with legacy shapes`() {
+        listOf(
+            "{\"configured\":\"yes\"}",
+            "{\"interfaces\":[{\"name\":\"ether1\",\"legacyFlag\":true}]}",
+        ).forEach { json ->
+            val legacy = codec.decode(json)
+
+            assertThat(legacy.legacyPayload).isNotNull()
+            assertThat(objectMapper.readTree(codec.encode(legacy))).isEqualTo(objectMapper.readTree(json))
+        }
+    }
+
+    @Test
+    fun `legacy fallback never accepts sensitive text after strict decode fails`() {
+        listOf(
+            "{\"configured\":\"-----begin\"}",
+            "{\"interfaces\":[{\"name\":\"-----begin\"}]}",
         ).forEach { json ->
             assertThatThrownBy { codec.decode(json) }
                 .isInstanceOf(ValidationException::class.java)

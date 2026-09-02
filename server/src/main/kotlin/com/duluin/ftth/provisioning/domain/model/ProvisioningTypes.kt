@@ -65,7 +65,9 @@ sealed interface NormalizedValue {
     value class Identifier private constructor(val value: String) : NormalizedValue {
         companion object {
             private val safeIdentifier = Regex("^[A-Za-z0-9._:/-]{1,160}$")
-            private val forbiddenFragments = setOf("password", "secret", "credential", "token", "privatekey")
+            private val forbiddenFragments = setOf(
+                "password", "secret", "credential", "token", "privatekey", "rawcli", "command", "script", "-----begin",
+            )
 
             fun of(value: String): Identifier {
                 if (!safeIdentifier.matches(value) || forbiddenFragments.any(value.lowercase()::contains)) {
