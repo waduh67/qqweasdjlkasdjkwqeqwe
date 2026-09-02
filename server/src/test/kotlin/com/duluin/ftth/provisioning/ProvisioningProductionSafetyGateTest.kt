@@ -6,6 +6,7 @@ import com.duluin.ftth.provisioning.application.port.outbound.ProvisioningSafety
 import com.duluin.ftth.provisioning.application.service.EvidenceBackedProvisioningSafetyGate
 import com.duluin.ftth.provisioning.application.service.ProvisioningSafetyGate
 import com.duluin.ftth.provisioning.application.service.SafetyPlanAttributes
+import com.duluin.ftth.provisioning.application.service.SafetyGateScope
 import com.duluin.ftth.provisioning.domain.model.DeviceKind
 import com.duluin.ftth.provisioning.domain.model.DeviceReference
 import com.duluin.ftth.provisioning.domain.model.ProvisionOperation
@@ -33,6 +34,7 @@ class ProvisioningProductionSafetyGateTest {
     private val tenantId = UuidV7.generate()
     private val device = DeviceReference(DeviceKind.BRAS, UuidV7.generate())
     private val now = Instant.parse("2026-09-02T12:00:00Z")
+    private val managementSourceId = UuidV7.generate()
     private val fingerprint = DeviceFingerprint(
         device,
         "MIKROTIK",
@@ -97,7 +99,7 @@ class ProvisioningProductionSafetyGateTest {
 
         mutations.forEach { mutation ->
             val evidence = EvidenceFixture(fingerprint, resources = protected, mutation = mutation)
-            assertRejected(gate(evidence), PolicyCode.PROTECTED_MANAGEMENT_RESOURCE)
+            assertRejected(gate(evidence), PolicyCode.PROTECTED_MANAGEMENT_RESOURCE, mutation)
         }
     }
 
@@ -112,32 +114,96 @@ class ProvisioningProductionSafetyGateTest {
         cases.forEach { (evidence, code) -> assertRejected(gate(evidence), code) }
     }
 
+    @Test
+    fun `production gate rejects present management row with silently omitted mutation dimensions`() {
+        val incomplete = EvidenceFixture(
+            fingerprint,
+            resources = ProtectedManagementResources(managementInterfaceRoles = emptySet()),
+            mutation = ManagementMutation(),
+            managementComplete = false,
+        )
+
+        assertRejected(gate(incomplete), PolicyCode.MISSING_MANAGEMENT_EVIDENCE)
+    }
+
+    @Test
+    fun `rollback ignores revoked forward certification but keeps management protection mandatory`() {
+        val revoked = EvidenceFixture(fingerprint, revoked = true)
+        val safe = gate(revoked).evaluate(plan(), ExecutionMode.PRODUCTION_AUTO_APPLY, SafetyGateScope.ROLLBACK)
+        val protectedMutation = ManagementMutation(
+            vlanIds = setOf(99),
+            interfaceRoles = setOf("CUSTOMER"),
+            availableOutOfBandRoutes = setOf("oob/site-a"),
+        )
+        val protected = EvidenceFixture(
+            fingerprint,
+            revoked = true,
+            resources = ProtectedManagementResources(
+                vlanRanges = listOf(VlanRange(99, 99)),
+                requiredOutOfBandRoutes = setOf("oob/site-a"),
+            ),
+            mutation = protectedMutation,
+        )
+        val denied = gate(protected).evaluate(
+            plan(protectedMutation),
+            ExecutionMode.PRODUCTION_AUTO_APPLY,
+            SafetyGateScope.ROLLBACK,
+        )
+
+        assertThat(safe.allowed).isTrue()
+        assertThat(safe.code).isEqualTo(PolicyCode.ROLLBACK_ALLOWED)
+        assertThat(denied.allowed).isFalse()
+        assertThat(denied.code).isEqualTo(PolicyCode.PROTECTED_MANAGEMENT_RESOURCE)
+    }
+
     private fun gate(evidence: EvidenceFixture): ProvisioningSafetyGate = EvidenceBackedProvisioningSafetyGate(
         evidence,
         Clock.fixed(now, ZoneOffset.UTC),
     )
 
-    private fun assertRejected(gate: ProvisioningSafetyGate, expected: PolicyCode) {
-        assertThatThrownBy { gate.requireAllowed(plan(), ExecutionMode.PRODUCTION_AUTO_APPLY) }
+    private fun assertRejected(
+        gate: ProvisioningSafetyGate,
+        expected: PolicyCode,
+        mutation: ManagementMutation = safeMutation(),
+    ) {
+        assertThatThrownBy { gate.requireAllowed(plan(mutation), ExecutionMode.PRODUCTION_AUTO_APPLY) }
             .isInstanceOf(ValidationException::class.java)
             .hasMessage(expected.name)
     }
 
-    private fun plan(): ProvisionPlan {
+    private fun plan(mutation: ManagementMutation = safeMutation()): ProvisionPlan {
         val step = ProvisionStep.create(
             1,
             device,
             ProvisionOperation.ENSURE_PPPOE_TERMINATION,
             mapOf(
-                "vlanId" to "320",
+                "vlanId" to (mutation.vlanIds.singleOrNull() ?: 320).toString(),
                 SafetyPlanAttributes.VENDOR to fingerprint.vendor,
                 SafetyPlanAttributes.MODEL to fingerprint.model,
                 SafetyPlanAttributes.FIRMWARE to fingerprint.firmware,
                 SafetyPlanAttributes.TRANSPORT to fingerprint.transport,
+                SafetyPlanAttributes.MANAGEMENT_COMPLETE to "true",
+                SafetyPlanAttributes.MANAGEMENT_SOURCE_ID to managementSourceId.toString(),
+                SafetyPlanAttributes.MANAGEMENT_SOURCE_TYPE to "TOPOLOGY_OBSERVATION",
+                SafetyPlanAttributes.INTERFACE_ROLES to mutation.interfaceRoles.joinToString(","),
+                SafetyPlanAttributes.IP_ADDRESSES to mutation.ipAddresses.joinToString(","),
+                SafetyPlanAttributes.VRFS to mutation.vrfOrRoutingInstances.joinToString(","),
+                SafetyPlanAttributes.COLLECTOR_PATHS to mutation.collectorSourcePaths.joinToString(","),
+                SafetyPlanAttributes.REQUIRED_OOB_ROUTES to mutation.requiredOutOfBandRoutes.joinToString(","),
+                SafetyPlanAttributes.CHANGED_OOB_ROUTES to mutation.changedOutOfBandRoutes.joinToString(","),
+                SafetyPlanAttributes.AVAILABLE_OOB_ROUTES to mutation.availableOutOfBandRoutes.joinToString(","),
             ),
         )
         return ProvisionPlan.generate(tenantId, UuidV7.generate(), 1, listOf(step))
     }
+
+    private fun safeMutation() = ManagementMutation(
+        vlanIds = setOf(320),
+        interfaceRoles = setOf("CUSTOMER"),
+        collectorSourcePaths = setOf("collector/site-a/customer-uplink"),
+        requiredOutOfBandRoutes = setOf("oob/site-a"),
+        availableOutOfBandRoutes = setOf("oob/site-a"),
+    )
 
     private inner class EvidenceFixture(
         requested: DeviceFingerprint,
@@ -157,6 +223,7 @@ class ProvisioningProductionSafetyGateTest {
             interfaceRoles = setOf("CUSTOMER"),
             availableOutOfBandRoutes = setOf("oob/site-a"),
         ),
+        managementComplete: Boolean = true,
     ) : ProvisioningSafetyEvidenceRepository {
         val capability = CapabilityEvidence(
             UuidV7.generate(), tenantId, returnedFingerprint, supported, now.minusSeconds(30), capabilityExpiresAt,
@@ -165,7 +232,11 @@ class ProvisioningProductionSafetyGateTest {
             UuidV7.generate(), tenantId, returnedFingerprint, status, certificationExpiresAt, revoked,
         )
         val management = ManagementSafetyEvidence(
-            UuidV7.generate(), managementTenantId, device, resources, mutation, now.minusSeconds(30), managementValidUntil,
+            UuidV7.generate(), managementTenantId, device, resources, mutation.availableOutOfBandRoutes,
+            now.minusSeconds(30), managementValidUntil,
+            complete = managementComplete,
+            sourceType = com.duluin.ftth.provisioning.domain.policy.ManagementEvidenceSourceType.TOPOLOGY_OBSERVATION,
+            sourceEvidenceId = managementSourceId,
         )
 
         override fun findCapabilityEvidence(tenantId: UUID, fingerprint: DeviceFingerprint) =

@@ -101,11 +101,17 @@ class ProvisioningSafetyGateIT {
         val tenantId = tenantApi.ensureTenant("gate-${UUID.randomUUID()}", "gate").id
         val device = DeviceReference(DeviceKind.BRAS, UuidV7.generate())
         val now = Instant.now()
+        val managementEvidenceId = UuidV7.generate()
         asTenant(tenantId) {
             val collectorId = insertCollector(tenantId)
-            if (case.capability) insertCapability(tenantId, collectorId, device, case, now)
-            if (case.capability) insertCertification(tenantId, device, case, now)
-            insertManagement(tenantId, device, case.resources, case.mutation, now)
+            val capabilityEvidenceId = if (case.capability) {
+                insertCapability(tenantId, collectorId, device, case, now)
+            } else {
+                null
+            }
+            if (capabilityEvidenceId != null) insertCertification(tenantId, device, capabilityEvidenceId, case, now)
+            insertTopologySource(tenantId, device, managementEvidenceId, now)
+            insertManagement(tenantId, device, managementEvidenceId, case.resources, case.mutation, now)
         }
         val step = ProvisionStep.create(
             1,
@@ -117,13 +123,30 @@ class ProvisioningSafetyGateIT {
                 SafetyPlanAttributes.MODEL to "CCR2004",
                 SafetyPlanAttributes.FIRMWARE to "7.20.2",
                 SafetyPlanAttributes.TRANSPORT to "HTTPS_REST",
+                SafetyPlanAttributes.MANAGEMENT_COMPLETE to "true",
+                SafetyPlanAttributes.MANAGEMENT_SOURCE_ID to managementEvidenceId.toString(),
+                SafetyPlanAttributes.MANAGEMENT_SOURCE_TYPE to "TOPOLOGY_OBSERVATION",
+                SafetyPlanAttributes.INTERFACE_ROLES to case.mutation.interfaceRoles.joinToString(","),
+                SafetyPlanAttributes.IP_ADDRESSES to case.mutation.ipAddresses.joinToString(","),
+                SafetyPlanAttributes.VRFS to case.mutation.vrfOrRoutingInstances.joinToString(","),
+                SafetyPlanAttributes.COLLECTOR_PATHS to case.mutation.collectorSourcePaths.joinToString(","),
+                SafetyPlanAttributes.REQUIRED_OOB_ROUTES to case.mutation.requiredOutOfBandRoutes.joinToString(","),
+                SafetyPlanAttributes.CHANGED_OOB_ROUTES to case.mutation.changedOutOfBandRoutes.joinToString(","),
+                SafetyPlanAttributes.AVAILABLE_OOB_ROUTES to case.mutation.availableOutOfBandRoutes.joinToString(","),
             ),
         )
         return Fixture(tenantId, ProvisionPlan.generate(tenantId, UuidV7.generate(), 1, listOf(step)))
     }
 
-    private fun insertCapability(tenantId: UUID, collectorId: UUID, device: DeviceReference, case: EvidenceCase, now: Instant) {
+    private fun insertCapability(
+        tenantId: UUID,
+        collectorId: UUID,
+        device: DeviceReference,
+        case: EvidenceCase,
+        now: Instant,
+    ): UUID {
         val reportId = UuidV7.generate()
+        val evidenceId = UuidV7.generate()
         val observedAt = if (case.stale) now.minusSeconds(600) else now.minusSeconds(10)
         val expiresAt = if (case.stale) now.minusSeconds(300) else now.plusSeconds(300)
         em.createNativeQuery(
@@ -142,28 +165,37 @@ class ProvisioningSafetyGateIT {
                 transport, operation_class, supported, observed_at, expires_at)
                VALUES (:id, :tenant, :collector, :report, 'BRAS', :device, :vendor, 'CCR2004', '7.20.2',
                 'HTTPS_REST', 'ENSURE_PPPOE_TERMINATION', true, :observed, :expires)""",
-        ).setParameter("id", UuidV7.generate()).setParameter("tenant", tenantId).setParameter("collector", collectorId)
+        ).setParameter("id", evidenceId).setParameter("tenant", tenantId).setParameter("collector", collectorId)
             .setParameter("report", reportId).setParameter("device", device.id).setParameter("vendor", case.vendor)
             .setParameter("observed", observedAt).setParameter("expires", expiresAt).executeUpdate()
+        return evidenceId
     }
 
-    private fun insertCertification(tenantId: UUID, device: DeviceReference, case: EvidenceCase, now: Instant) {
+    private fun insertCertification(
+        tenantId: UUID,
+        device: DeviceReference,
+        evidenceId: UUID,
+        case: EvidenceCase,
+        now: Instant,
+    ) {
         val validUntil = if (case.stale) now.minusSeconds(1) else now.plusSeconds(300)
         em.createNativeQuery(
             """INSERT INTO provisioning_adapter_certification
                (id, tenant_id, device_kind, device_id, vendor, model, firmware, transport, operation_class,
                 status, valid_until, evidence_id, certified_by, certified_at)
-               VALUES (:id, :tenant, 'BRAS', :device, 'MIKROTIK', 'CCR2004', '7.20.2', 'HTTPS_REST',
+               VALUES (:id, :tenant, 'BRAS', :device, :vendor, 'CCR2004', '7.20.2', 'HTTPS_REST',
                 'ENSURE_PPPOE_TERMINATION', :status, :valid, :evidence, :actor, :certified)""",
         ).setParameter("id", UuidV7.generate()).setParameter("tenant", tenantId).setParameter("device", device.id)
+            .setParameter("vendor", case.vendor)
             .setParameter("status", case.status.name).setParameter("valid", validUntil)
-            .setParameter("evidence", UuidV7.generate()).setParameter("actor", UuidV7.generate())
+            .setParameter("evidence", evidenceId).setParameter("actor", UuidV7.generate())
             .setParameter("certified", now.minusSeconds(20)).executeUpdate()
     }
 
     private fun insertManagement(
         tenantId: UUID,
         device: DeviceReference,
+        evidenceId: UUID,
         resources: ProtectedManagementResources,
         mutation: ManagementMutation,
         now: Instant,
@@ -172,26 +204,30 @@ class ProvisioningSafetyGateIT {
             """INSERT INTO provisioning_management_safety_evidence
                (id, tenant_id, device_kind, device_id, protected_vlan_ranges, protected_ip_prefixes,
                 protected_vrfs, protected_interface_roles, protected_collector_paths, protected_oob_routes,
-                mutation_interface_roles, mutation_ip_addresses, mutation_vrfs, mutation_collector_paths,
-                mutation_required_oob_routes, mutation_changed_oob_routes, available_oob_routes, observed_at, valid_until)
+                available_oob_routes, observed_at, valid_until, complete, source_type,
+                topology_source_id, device_observation_source_id)
                VALUES (:id, :tenant, 'BRAS', :device, :vlans, :ips, :vrfs, :roles, :paths, :oob,
-                :mutationRoles, :mutationIps, :mutationVrfs, :mutationPaths, :requiredOob, :changedOob,
-                :availableOob, :observed, :valid)""",
-        ).setParameter("id", UuidV7.generate()).setParameter("tenant", tenantId).setParameter("device", device.id)
+                :availableOob, :observed, :valid, true, 'TOPOLOGY_OBSERVATION', :source, NULL)""",
+        ).setParameter("id", evidenceId).setParameter("tenant", tenantId).setParameter("device", device.id)
             .setParameter("vlans", resources.vlanRanges.joinToString("\n") { "${it.start}-${it.endInclusive}" })
             .setParameter("ips", resources.managementIpPrefixes.joinToString("\n"))
             .setParameter("vrfs", resources.vrfs.joinToString("\n"))
             .setParameter("roles", resources.managementInterfaceRoles.joinToString("\n"))
             .setParameter("paths", resources.collectorSourcePaths.joinToString("\n"))
             .setParameter("oob", resources.requiredOutOfBandRoutes.joinToString("\n"))
-            .setParameter("mutationRoles", mutation.interfaceRoles.joinToString("\n"))
-            .setParameter("mutationIps", mutation.ipAddresses.joinToString("\n"))
-            .setParameter("mutationVrfs", mutation.vrfOrRoutingInstances.joinToString("\n"))
-            .setParameter("mutationPaths", mutation.collectorSourcePaths.joinToString("\n"))
-            .setParameter("requiredOob", mutation.requiredOutOfBandRoutes.joinToString("\n"))
-            .setParameter("changedOob", mutation.changedOutOfBandRoutes.joinToString("\n"))
             .setParameter("availableOob", mutation.availableOutOfBandRoutes.joinToString("\n"))
-            .setParameter("observed", now.minusSeconds(10)).setParameter("valid", now.plusSeconds(300)).executeUpdate()
+            .setParameter("observed", now.minusSeconds(10)).setParameter("valid", now.plusSeconds(300))
+            .setParameter("source", evidenceId).executeUpdate()
+    }
+
+    private fun insertTopologySource(tenantId: UUID, device: DeviceReference, sourceId: UUID, now: Instant) {
+        em.createNativeQuery(
+            """INSERT INTO provisioning_managed_node
+               (id, tenant_id, name, role, reference_kind, reference_id, administrative_status, observed_at)
+               VALUES (:id, :tenant, :name, 'BRAS', 'NAS', :device, 'ENABLED', :observed)""",
+        ).setParameter("id", sourceId).setParameter("tenant", tenantId)
+            .setParameter("name", "node-${UUID.randomUUID()}").setParameter("device", device.id)
+            .setParameter("observed", now.minusSeconds(10)).executeUpdate()
     }
 
     private fun insertCollector(tenantId: UUID): UUID = UuidV7.generate().also { id ->
