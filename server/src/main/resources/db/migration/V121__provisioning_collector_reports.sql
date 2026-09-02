@@ -1,6 +1,9 @@
 ALTER TABLE provisioning_step_attempt
     ADD COLUMN collector_id uuid REFERENCES collector (id) ON DELETE SET NULL;
 
+ALTER TABLE provisioning_step_attempt
+    ADD CONSTRAINT uq_provisioning_attempt_id_tenant UNIQUE (id, tenant_id);
+
 CREATE INDEX ix_provisioning_attempt_collector
     ON provisioning_step_attempt (tenant_id, collector_id, status, deadline);
 
@@ -55,6 +58,8 @@ CREATE TABLE provisioning_collector_result_receipt (
     rollback_state_hash varchar(64),
     rollback_error_code varchar(80),
     created_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT fk_provisioning_collector_result_attempt FOREIGN KEY (attempt_id, tenant_id)
+        REFERENCES provisioning_step_attempt (id, tenant_id),
     CONSTRAINT uq_provisioning_collector_result UNIQUE (tenant_id, attempt_id),
     CONSTRAINT ck_provisioning_collector_result_phase CHECK (phase IN ('PREFLIGHT', 'APPLY', 'VERIFY', 'ROLLBACK')),
     CONSTRAINT ck_provisioning_collector_result_hashes CHECK (
