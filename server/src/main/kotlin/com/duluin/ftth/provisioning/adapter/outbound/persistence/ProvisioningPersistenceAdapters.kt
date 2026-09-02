@@ -1,6 +1,8 @@
 package com.duluin.ftth.provisioning.adapter.outbound.persistence
 
 import com.duluin.ftth.common.domain.UuidV7
+import com.duluin.ftth.common.domain.error.ConflictException
+import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.provisioning.application.port.outbound.AdapterCertificationRepository
 import com.duluin.ftth.provisioning.application.port.outbound.DeviceObservationRepository
@@ -12,6 +14,7 @@ import com.duluin.ftth.provisioning.application.port.outbound.SegmentProfileRepo
 import com.duluin.ftth.provisioning.application.port.outbound.ServiceIntentRepository
 import com.duluin.ftth.provisioning.application.port.outbound.VlanPoolRepository
 import com.duluin.ftth.provisioning.domain.model.AdapterCertification
+import com.duluin.ftth.provisioning.domain.model.ActiveVlanAllocationPolicy
 import com.duluin.ftth.provisioning.domain.model.AllocationReference
 import com.duluin.ftth.provisioning.domain.model.DeviceObservation
 import com.duluin.ftth.provisioning.domain.model.DeviceReference
@@ -28,13 +31,21 @@ import com.duluin.ftth.provisioning.domain.model.VlanPool
 import com.duluin.ftth.provisioning.domain.model.VlanRange
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
+import jakarta.persistence.EntityManager
 import java.util.UUID
 
 private fun tenant(entityTenantId: UUID?): UUID = entityTenantId ?: TenantContext.tenantId()
 
+private fun requireActiveTenant(entityTenantId: UUID) {
+    if (TenantContext.tenantId() != entityTenantId) {
+        throw ValidationException("TENANT_OWNERSHIP_MISMATCH")
+    }
+}
+
 @Component
 class SegmentProfilePersistenceAdapter(private val jpa: SegmentProfileJpaRepository) : SegmentProfileRepository {
     override fun save(value: SegmentProfile): SegmentProfile {
+        requireActiveTenant(value.tenantId)
         val entity = jpa.findById(value.id).orElse(null)?.apply {
             name = value.name
             poolId = value.poolId
@@ -50,6 +61,7 @@ class SegmentProfilePersistenceAdapter(private val jpa: SegmentProfileJpaReposit
 @Component
 class ServiceIntentPersistenceAdapter(private val jpa: ServiceIntentJpaRepository) : ServiceIntentRepository {
     override fun save(value: ServiceIntent): ServiceIntent {
+        requireActiveTenant(value.tenantId)
         val entity = jpa.findById(value.id).orElse(null)?.apply {
             segmentProfileId = value.segmentProfileId
             status = value.status
@@ -80,6 +92,7 @@ class VlanPoolPersistenceAdapter(
 ) : VlanPoolRepository {
     @Transactional
     override fun save(value: VlanPool): VlanPool {
+        requireActiveTenant(value.tenantId)
         val pool = pools.findById(value.id).orElse(null)?.apply {
             name = value.name
             vlanStart = value.range.start
@@ -91,7 +104,30 @@ class VlanPoolPersistenceAdapter(
             VlanReservedRangeJpaEntity(UuidV7.generate(), value.id, it.start, it.endInclusive)
         })
         value.allocations.forEach { allocation ->
-            val entity = allocations.findById(allocation.id).orElse(null)?.apply { active = allocation.active }
+            val existingAllocation = allocations.findById(allocation.id).orElse(null)
+            val existingReferences = if (existingAllocation == null) emptyList() else references.findByAllocationId(allocation.id)
+            val desiredReferences = allocation.references.map { it.kind to it.referenceId }.toSet()
+            val staleReferences = existingReferences.filter { it.referenceKind to it.referenceId !in desiredReferences }
+            if (staleReferences.isNotEmpty()) {
+                references.deleteAll(staleReferences)
+                references.flush()
+            }
+            if (existingAllocation == null && allocation.active) {
+                val occupied = allocations.existsByDeviceKindAndDeviceIdAndVlanIdAndActiveTrue(
+                    allocation.device.kind,
+                    allocation.device.id,
+                    allocation.vlanId,
+                )
+                if (occupied) {
+                    ActiveVlanAllocationPolicy.requireAvailable(
+                        value.tenantId,
+                        allocation.device,
+                        allocation.vlanId,
+                        listOf(allocation),
+                    )
+                }
+            }
+            val entity = existingAllocation?.apply { active = allocation.active }
                 ?: VlanAllocationJpaEntity(
                     allocation.id,
                     value.id,
@@ -102,13 +138,6 @@ class VlanPoolPersistenceAdapter(
                     allocation.active,
                 )
             allocations.save(entity)
-            val existingReferences = references.findByAllocationId(allocation.id)
-            val desiredReferences = allocation.references.map { it.kind to it.referenceId }.toSet()
-            val staleReferences = existingReferences.filter { it.referenceKind to it.referenceId !in desiredReferences }
-            if (staleReferences.isNotEmpty()) {
-                references.deleteAll(staleReferences)
-                references.flush()
-            }
             val existingKeys = existingReferences.map { it.referenceKind to it.referenceId }.toSet()
             references.saveAll(allocation.references.filter { it.kind to it.referenceId !in existingKeys }.map {
                 VlanAllocationReferenceJpaEntity(UuidV7.generate(), allocation.id, it.kind, it.referenceId)
@@ -160,6 +189,7 @@ class ProvisionPlanPersistenceAdapter(
 ) : ProvisionPlanRepository {
     @Transactional
     override fun save(value: ProvisionPlan): ProvisionPlan {
+        requireActiveTenant(value.tenantId)
         val existing = plans.findById(value.id).orElse(null)
         if (existing != null) {
             existing.status = value.status
@@ -203,13 +233,40 @@ class ProvisionPlanPersistenceAdapter(
 }
 
 @Component
-class ProvisionExecutionPersistenceAdapter(private val jpa: ProvisionExecutionJpaRepository) : ProvisionExecutionRepository {
+class ProvisionExecutionPersistenceAdapter(
+    private val jpa: ProvisionExecutionJpaRepository,
+    private val entityManager: EntityManager,
+) : ProvisionExecutionRepository {
+    @Transactional
     override fun save(value: ProvisionExecution): ProvisionExecution {
-        val entity = jpa.findById(value.id).orElse(null)?.apply {
-            status = value.status
-            detail = value.detail
-        } ?: ProvisionExecutionJpaEntity(value.id, value.intentId, value.planId, value.idempotencyKey, value.status, value.detail)
-        return jpa.save(entity).toDomain()
+        requireActiveTenant(value.tenantId)
+        val existingById = jpa.findById(value.id).orElse(null)
+        if (existingById != null) {
+            val entity = existingById.apply {
+                status = value.status
+                detail = value.detail
+            }
+            return jpa.save(entity).toDomain()
+        }
+        entityManager.createNativeQuery(
+            """INSERT INTO provisioning_execution
+               (id, tenant_id, intent_id, plan_id, idempotency_key, status, detail)
+               VALUES (:id, :tenant, :intent, :plan, :key, :status, :detail)
+               ON CONFLICT (tenant_id, idempotency_key) DO NOTHING""",
+        ).setParameter("id", value.id)
+            .setParameter("tenant", value.tenantId)
+            .setParameter("intent", value.intentId)
+            .setParameter("plan", value.planId)
+            .setParameter("key", value.idempotencyKey)
+            .setParameter("status", value.status.name)
+            .setParameter("detail", value.detail)
+            .executeUpdate()
+        val persisted = jpa.findByIdempotencyKey(value.idempotencyKey)
+            ?: throw IllegalStateException("EXECUTION_IDEMPOTENCY_WRITE_LOST")
+        if (persisted.intentId != value.intentId || persisted.planId != value.planId) {
+            throw ConflictException("EXECUTION_IDEMPOTENCY_KEY_REUSED")
+        }
+        return persisted.toDomain()
     }
 
     override fun findById(id: UUID): ProvisionExecution? = jpa.findById(id).orElse(null)?.toDomain()
@@ -221,30 +278,45 @@ class ProvisionExecutionPersistenceAdapter(private val jpa: ProvisionExecutionJp
 }
 
 @Component
-class DeviceSnapshotPersistenceAdapter(private val jpa: DeviceSnapshotJpaRepository) : DeviceSnapshotRepository {
-    override fun save(value: DeviceSnapshot): DeviceSnapshot = jpa.save(value.toEntity()).toDomain()
+class DeviceSnapshotPersistenceAdapter(
+    private val jpa: DeviceSnapshotJpaRepository,
+    private val codec: NormalizedStateJsonCodec,
+) : DeviceSnapshotRepository {
+    override fun save(value: DeviceSnapshot): DeviceSnapshot {
+        requireActiveTenant(value.tenantId)
+        return jpa.save(value.toEntity()).toDomain()
+    }
     override fun findById(id: UUID): DeviceSnapshot? = jpa.findById(id).orElse(null)?.toDomain()
     private fun DeviceSnapshot.toEntity() = DeviceSnapshotJpaEntity(
-        id, device.kind, device.id, planId, state.values, capturedAt,
+        id, device.kind, device.id, planId, codec.encode(state), capturedAt,
     )
     private fun DeviceSnapshotJpaEntity.toDomain() = DeviceSnapshot.rehydrate(
-        id, tenant(tenantId), DeviceReference(deviceKind, deviceId), planId, NormalizedDeviceState.of(normalizedState), capturedAt,
+        id, tenant(tenantId), DeviceReference(deviceKind, deviceId), planId, codec.decode(normalizedState), capturedAt,
     )
 }
 
 @Component
-class DeviceObservationPersistenceAdapter(private val jpa: DeviceObservationJpaRepository) : DeviceObservationRepository {
-    override fun save(value: DeviceObservation): DeviceObservation = jpa.save(value.toEntity()).toDomain()
+class DeviceObservationPersistenceAdapter(
+    private val jpa: DeviceObservationJpaRepository,
+    private val codec: NormalizedStateJsonCodec,
+) : DeviceObservationRepository {
+    override fun save(value: DeviceObservation): DeviceObservation {
+        requireActiveTenant(value.tenantId)
+        return jpa.save(value.toEntity()).toDomain()
+    }
     override fun findById(id: UUID): DeviceObservation? = jpa.findById(id).orElse(null)?.toDomain()
-    private fun DeviceObservation.toEntity() = DeviceObservationJpaEntity(id, device.kind, device.id, state.values, observedAt)
+    private fun DeviceObservation.toEntity() = DeviceObservationJpaEntity(id, device.kind, device.id, codec.encode(state), observedAt)
     private fun DeviceObservationJpaEntity.toDomain() = DeviceObservation.rehydrate(
-        id, tenant(tenantId), DeviceReference(deviceKind, deviceId), NormalizedDeviceState.of(normalizedState), observedAt,
+        id, tenant(tenantId), DeviceReference(deviceKind, deviceId), codec.decode(normalizedState), observedAt,
     )
 }
 
 @Component
 class DriftRecordPersistenceAdapter(private val jpa: DriftRecordJpaRepository) : DriftRecordRepository {
-    override fun save(value: DriftRecord): DriftRecord = jpa.save(value.toEntity()).toDomain()
+    override fun save(value: DriftRecord): DriftRecord {
+        requireActiveTenant(value.tenantId)
+        return jpa.save(value.toEntity()).toDomain()
+    }
     override fun findById(id: UUID): DriftRecord? = jpa.findById(id).orElse(null)?.toDomain()
     private fun DriftRecord.toEntity() = DriftRecordJpaEntity(
         id, device.kind, device.id, snapshotId, observationId, status, recordedAt,
@@ -259,6 +331,7 @@ class AdapterCertificationPersistenceAdapter(
     private val jpa: AdapterCertificationJpaRepository,
 ) : AdapterCertificationRepository {
     override fun save(value: AdapterCertification): AdapterCertification {
+        requireActiveTenant(value.tenantId)
         val entity = jpa.findById(value.id).orElse(null)?.apply { revokedAt = value.revokedAt }
             ?: AdapterCertificationJpaEntity(
                 value.id,

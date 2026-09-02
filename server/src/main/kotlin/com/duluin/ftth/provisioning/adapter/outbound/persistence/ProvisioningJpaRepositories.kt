@@ -23,6 +23,11 @@ interface SegmentProfileJpaRepository : JpaRepository<SegmentProfileJpaEntity, U
 interface ServiceIntentJpaRepository : JpaRepository<ServiceIntentJpaEntity, UUID>
 interface VlanAllocationJpaRepository : JpaRepository<VlanAllocationJpaEntity, UUID> {
     fun findByPoolId(poolId: UUID): List<VlanAllocationJpaEntity>
+    fun existsByDeviceKindAndDeviceIdAndVlanIdAndActiveTrue(
+        deviceKind: com.duluin.ftth.provisioning.domain.model.DeviceKind,
+        deviceId: UUID,
+        vlanId: Int,
+    ): Boolean
 }
 interface VlanAllocationReferenceJpaRepository : JpaRepository<VlanAllocationReferenceJpaEntity, UUID> {
     fun findByAllocationId(allocationId: UUID): List<VlanAllocationReferenceJpaEntity>
