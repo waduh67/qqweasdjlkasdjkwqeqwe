@@ -126,11 +126,6 @@ class ProvisioningExecutionEngine(
         if (execution.status.isTerminal()) return execution
         val plan = plans.findById(execution.planId) ?: throw ValidationException("PLAN_NOT_FOUND")
         if (execution.status == ExecutionStatus.ROLLING_BACK) {
-            safetyGate.requireAllowed(
-                plan,
-                com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY,
-                SafetyGateScope.ROLLBACK,
-            )
             val states = ensureExecutionSteps(execution, plan)
             compensate(execution, plan, states, ownerId, null)
             return executions.findById(execution.id)!!
@@ -447,11 +442,21 @@ class ProvisioningExecutionEngine(
     ): IoResult<T> {
         var attemptNumber = attempts.findByExecutionStepId(state.id).count { it.phase == phase } + 1
         while (attemptNumber <= policy.maxAttempts) {
-            safetyGate.requireAllowed(
-                plan,
-                com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY,
-                phase.safetyScope(),
-            )
+            val scope = phase.safetyScope()
+            if (scope == SafetyGateScope.ROLLBACK) {
+                safetyGate.requireStepAllowed(
+                    plan,
+                    planStep.id,
+                    com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY,
+                    scope,
+                )
+            } else {
+                safetyGate.requireAllowed(
+                    plan,
+                    com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY,
+                    scope,
+                )
+            }
             val activeLease = leases.validateAndRenew(
                 execution.tenantId,
                 planStep.device,
@@ -771,6 +776,7 @@ class ProvisioningExecutionEngine(
         ExecutionStatus.ROLLED_BACK,
         ExecutionStatus.FAILED,
         ExecutionStatus.MANUAL_RECONCILIATION,
+        ExecutionStatus.CANCELLED,
     )
 
     private fun ExecutionPhase.safetyScope(): SafetyGateScope = when (this) {
