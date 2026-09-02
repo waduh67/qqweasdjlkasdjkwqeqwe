@@ -2,6 +2,9 @@ package com.duluin.ftth.provisioning
 
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.common.domain.error.AccessDeniedException
+import com.duluin.ftth.common.security.AuthenticatedUser
+import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisioningManagementEvidenceRepository
 import com.duluin.ftth.provisioning.application.service.ProvisioningManagementEvidenceService
 import com.duluin.ftth.provisioning.application.service.RecordManagementEvidenceCommand
@@ -14,6 +17,7 @@ import com.duluin.ftth.provisioning.domain.policy.ProtectedManagementResources
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 import java.time.Instant
 import java.util.UUID
 
@@ -26,7 +30,7 @@ class ProvisioningManagementEvidenceServiceTest {
     @Test
     fun `server records complete protection evidence only from an owned source`() {
         val repository = RecordingRepository(sourceOwned = true)
-        val service = ProvisioningManagementEvidenceService(repository)
+        val service = service(repository)
 
         val evidence = service.record(command())
 
@@ -40,9 +44,39 @@ class ProvisioningManagementEvidenceServiceTest {
     fun `server rejects management evidence whose source is absent or foreign`() {
         val repository = RecordingRepository(sourceOwned = false)
 
-        assertThatThrownBy { ProvisioningManagementEvidenceService(repository).record(command()) }
+        assertThatThrownBy { service(repository).record(command()) }
             .isInstanceOf(ValidationException::class.java)
             .hasMessage("MANAGEMENT_EVIDENCE_SOURCE_INVALID")
+        assertThat(repository.saved).isEmpty()
+    }
+
+    private fun service(repository: RecordingRepository): ProvisioningManagementEvidenceService {
+        val actor = AuthenticatedUser(
+            UuidV7.generate(), tenantId, "platform@example.test", "Platform", true, emptySet(), emptySet(),
+        )
+        return ProvisioningManagementEvidenceService(
+            repository,
+            object : CurrentUserProvider { override fun currentOrNull() = actor },
+            ApplicationEventPublisher { },
+        )
+    }
+
+    @Test
+    fun `tenant permission cannot configure protected management resources`() {
+        val repository = RecordingRepository(sourceOwned = true)
+        val tenantActor = AuthenticatedUser(
+            UuidV7.generate(), tenantId, "tenant@example.test", "Tenant", false,
+            setOf("provisioning.segment.manage"), emptySet(),
+        )
+        val service = ProvisioningManagementEvidenceService(
+            repository,
+            object : CurrentUserProvider { override fun currentOrNull() = tenantActor },
+            ApplicationEventPublisher { },
+        )
+
+        assertThatThrownBy { service.record(command()) }
+            .isInstanceOf(AccessDeniedException::class.java)
+            .hasMessage("PLATFORM_ADMIN_REQUIRED")
         assertThat(repository.saved).isEmpty()
     }
 
