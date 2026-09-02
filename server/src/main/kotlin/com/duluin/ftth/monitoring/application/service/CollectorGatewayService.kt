@@ -16,6 +16,7 @@ import com.duluin.ftth.contract.CollectorConfig
 import com.duluin.ftth.contract.CollectorHeartbeat
 import com.duluin.ftth.contract.NasTarget
 import com.duluin.ftth.contract.OltTarget
+import com.duluin.ftth.contract.ProvisioningTarget
 import com.duluin.ftth.contract.RadiusSessionReading
 import com.duluin.ftth.monitoring.application.port.outbound.CollectorRepository
 import com.duluin.ftth.monitoring.domain.model.AlarmKind
@@ -45,6 +46,7 @@ class CollectorGatewayService(
     private val networkApi: NetworkApi,
     private val alarmEngine: AlarmEngine,
     private val events: ApplicationEventPublisher,
+    private val provisioningExchange: CollectorProvisioningExchange,
     /**
      * Module lain (mis. bng) yang menitipkan target polling non-OLT lewat seam shared
      * kernel — monitoring memanggilnya tanpa mengimpor module itu, menghindari siklus.
@@ -64,7 +66,17 @@ class CollectorGatewayService(
         // ACK perintah BRAS yang dibawa denyut ini → module bng menuntaskannya (AFTER_COMMIT).
         publishBngActionAcks(collector.id, collector.tenantId, heartbeat)
 
-        val config = buildConfig(collector)
+        val baseConfig = buildConfig(collector)
+        val provisioning = provisioningExchange.exchange(
+            collector.id,
+            collector.tenantId,
+            heartbeat,
+            baseConfig.provisioningTargets(),
+        )
+        val config = baseConfig.copy(
+            provisioningCommands = provisioning.commands,
+            provisioningAcknowledgement = provisioning.acknowledgement,
+        )
         evaluateOltReachability(collector.tenantId, config, heartbeat)
         // Reachability OLT mungkin berubah → picu korelasi ulang insiden.
         events.publishEvent(AlarmsChangedEvent(collector.tenantId))
@@ -205,6 +217,19 @@ class CollectorGatewayService(
         fupGroupname = fupGroupname,
         fupRateLimit = fupRateLimit,
     )
+
+    private fun CollectorConfig.provisioningTargets(): List<ProvisioningTarget> =
+        targets.map { ProvisioningTarget(it.oltId, "OLT", it.host, "SNMP") } +
+            nasTargets.mapNotNull { target ->
+                target.host?.let {
+                    ProvisioningTarget(
+                        target.nasId,
+                        "BRAS",
+                        it,
+                        if (target.apiUseTls) "HTTPS_REST" else "REST",
+                    )
+                }
+            }
 
     /**
      * Menerima batch sesi PPPoE dari collector dan menerbitkannya sebagai event shared
