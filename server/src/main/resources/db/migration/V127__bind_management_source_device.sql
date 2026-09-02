@@ -7,7 +7,7 @@ ALTER TABLE provisioning_management_safety_evidence
         device_observation_source_id, tenant_id, device_kind, device_id
     ) REFERENCES provisioning_device_observation (
         id, tenant_id, device_kind, device_id
-    );
+    ) NOT VALID;
 
 CREATE FUNCTION provisioning_management_source_matches(
     source_type_value varchar,
@@ -62,6 +62,9 @@ BEGIN
     END LOOP;
     PERFORM set_config('app.tenant_id', '', true);
 END $$;
+
+ALTER TABLE provisioning_management_safety_evidence
+    VALIDATE CONSTRAINT fk_provisioning_management_observation_source;
 
 CREATE FUNCTION provisioning_enforce_management_source_identity()
 RETURNS trigger LANGUAGE plpgsql AS $$

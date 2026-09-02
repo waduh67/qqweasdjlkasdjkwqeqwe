@@ -27,6 +27,69 @@ class ProvisioningMigrationCompatibilityIT {
     @Autowired private lateinit var normalizedStateCodec: NormalizedStateJsonCodec
 
     @Test
+    fun `v127 downgrades legacy management evidence bound to another device`() {
+        val schema = "task4_source_upgrade_${UuidV7.generate().toString().replace("-", "")}"
+        dataSource.connection.use { connection -> connection.createStatement().use { it.execute("CREATE SCHEMA $schema") } }
+        try {
+            flyway(schema, "126").migrate()
+            val tenantId = UuidV7.generate()
+            val evidenceId = UuidV7.generate()
+            val evidenceDeviceId = UuidV7.generate()
+            val observedDeviceId = UuidV7.generate()
+            val observationId = UuidV7.generate()
+            dataSource.connection.use { connection ->
+                connection.createStatement().use { statement ->
+                    statement.execute("SET search_path TO $schema, public")
+                    statement.execute("INSERT INTO tenant (id, slug, name) VALUES ('$tenantId', 'task4-source-upgrade', 'Task 4 Source Upgrade')")
+                    statement.execute("SET app.tenant_id = '$tenantId'")
+                    statement.execute(
+                        """INSERT INTO provisioning_device_observation
+                           (id, tenant_id, device_kind, device_id, normalized_state, observed_at)
+                           VALUES ('$observationId', '$tenantId', 'BRAS', '$observedDeviceId', '{}', now())""",
+                    )
+                    statement.execute(
+                        """INSERT INTO provisioning_management_safety_evidence
+                           (id, tenant_id, device_kind, device_id, protected_vlan_ranges, protected_ip_prefixes,
+                            protected_vrfs, protected_interface_roles, protected_collector_paths, protected_oob_routes,
+                            available_oob_routes, observed_at, valid_until, complete, source_type,
+                            device_observation_source_id)
+                           VALUES ('$evidenceId', '$tenantId', 'BRAS', '$evidenceDeviceId', '', '', '', '', '', '', '',
+                            now(), now() + interval '1 hour', true, 'DEVICE_OBSERVATION', '$observationId')""",
+                    )
+                }
+            }
+
+            flyway(schema).migrate()
+
+            dataSource.connection.use { connection ->
+                connection.createStatement().use { statement ->
+                    statement.execute("SET search_path TO $schema, public")
+                    statement.execute("SET app.tenant_id = '$tenantId'")
+                    statement.executeQuery(
+                        "SELECT complete, source_type, topology_source_id, device_observation_source_id FROM provisioning_management_safety_evidence WHERE id = '$evidenceId'",
+                    ).use { result ->
+                        assertThat(result.next()).isTrue()
+                        assertThat(result.getBoolean(1)).isFalse()
+                        assertThat(result.getString(2)).isNull()
+                        assertThat(result.getObject(3)).isNull()
+                        assertThat(result.getObject(4)).isNull()
+                    }
+                    statement.executeQuery(
+                        """SELECT convalidated FROM pg_constraint
+                           WHERE conname = 'fk_provisioning_management_observation_source'
+                             AND conrelid = '$schema.provisioning_management_safety_evidence'::regclass""",
+                    ).use { result ->
+                        assertThat(result.next()).isTrue()
+                        assertThat(result.getBoolean(1)).isTrue()
+                    }
+                }
+            }
+        } finally {
+            dataSource.connection.use { connection -> connection.createStatement().use { it.execute("DROP SCHEMA $schema CASCADE") } }
+        }
+    }
+
+    @Test
     fun `v125 downgrades unbound legacy certification to fail closed provisional evidence`() {
         val schema = "task4_upgrade_${UuidV7.generate().toString().replace("-", "")}"
         dataSource.connection.use { connection -> connection.createStatement().use { it.execute("CREATE SCHEMA $schema") } }
