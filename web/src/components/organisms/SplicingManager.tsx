@@ -473,7 +473,8 @@ function SlotGrid({
         // topologinya. Seberangnya tetap terbaca di tooltip.
         const caption = slot.serves ?? (slot.partner ? `↔ ${slot.partner}` : null)
         return (
-          <ToggleButton
+          <button
+            type="button"
             key={slot.key}
             className={
               (group.isCable ? 'core-chip' : 'splice-slot') +
@@ -481,7 +482,7 @@ function SlotGrid({
               (taken ? ' is-used' : '') +
               (!group.isCable && caption ? ' has-serves' : '')
             }
-            checked={on}
+            aria-pressed={on}
             style={style}
             title={slot.title}
             disabled={disabled || taken}
@@ -500,7 +501,7 @@ function SlotGrid({
             ) : (
               slot.label
             )}
-              </ToggleButton>
+          </button>
         )
       })}
     </div>

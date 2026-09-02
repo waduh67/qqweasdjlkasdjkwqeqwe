@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Checkbox, MessageBar, MessageBarBody, ToggleButton, typographyStyles } from '@fluentui/react-components'
+import { Checkbox, MessageBar, MessageBarBody, typographyStyles } from '@fluentui/react-components'
 import { api } from '@/api/client'
 import type { CableCoreList, CableCoreView, CoreMoveView, CoreStatus } from '@/api/network'
 import { CORE_STATUS_LABEL } from '@/api/network'
@@ -249,14 +249,14 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
             {cores.map((core) => {
               const on = selected.includes(core.coreNumber)
               return (
-                <ToggleButton
+                <button
+                  type="button"
                   key={core.id}
                   className={`core-chip${on ? ' is-selected' : ''}${core.status === 'USED' ? ' is-used' : ''}`}
-                  checked={on}
+                  aria-pressed={on}
                   style={{
                     background: core.colorHex,
                     color: inkOn(core.colorHex),
-                    boxShadow: `inset 0 0 0 2.5px ${STATUS_RING[core.status]}`,
                   }}
                   onClick={(e) => toggle(core, e.shiftKey)}
                   disabled={!canEdit}
@@ -267,7 +267,7 @@ export function CableCoreManager({ cableId, canEdit }: { cableId: string; canEdi
                   {core.coreNumber}
                   {core.status === 'DAMAGED' && <span className="core-slash" />}
                   {core.note && <span className="core-note-dot" />}
-          </ToggleButton>
+                </button>
               )
             })}
           </div>
