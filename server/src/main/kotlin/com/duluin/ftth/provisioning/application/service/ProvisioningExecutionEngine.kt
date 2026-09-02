@@ -111,7 +111,11 @@ class ProvisioningExecutionEngine(
 ) {
     fun enqueue(plan: ProvisionPlan, keySuffix: String): ProvisionExecution {
         if (plan.status != PlanStatus.VALIDATED) throw ValidationException("PLAN_NOT_VALIDATED")
-        safetyGate.requireAllowed(plan, com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY)
+        safetyGate.requireAllowed(
+            plan,
+            com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY,
+            SafetyGateScope.FORWARD,
+        )
         val key = "${plan.intentId}:${plan.revision}:$keySuffix"
         executions.findByIdempotencyKey(key)?.let { return it }
         return executions.save(ProvisionExecution.queue(plan.tenantId, plan.intentId, plan.id, key))
@@ -121,13 +125,34 @@ class ProvisioningExecutionEngine(
         val execution = executions.findById(executionId) ?: throw ValidationException("EXECUTION_NOT_FOUND")
         if (execution.status.isTerminal()) return execution
         val plan = plans.findById(execution.planId) ?: throw ValidationException("PLAN_NOT_FOUND")
-        safetyGate.requireAllowed(plan, com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY)
-        val states = ensureExecutionSteps(execution, plan)
         if (execution.status == ExecutionStatus.ROLLING_BACK) {
+            safetyGate.requireAllowed(
+                plan,
+                com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY,
+                SafetyGateScope.ROLLBACK,
+            )
+            val states = ensureExecutionSteps(execution, plan)
             compensate(execution, plan, states, ownerId, null)
             return executions.findById(execution.id)!!
         }
         if (plan.status != PlanStatus.VALIDATED) throw ValidationException("PLAN_NOT_VALIDATED")
+        val persistedStates = executionSteps.findByExecutionId(execution.id).associateBy { it.planStepId }
+        try {
+            safetyGate.requireAllowed(
+                plan,
+                com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY,
+                SafetyGateScope.FORWARD,
+            )
+        } catch (denied: ValidationException) {
+            if (persistedStates.values.any { it.status == ExecutionStepStatus.VERIFIED }) {
+                execution.beginRollback()
+                executions.save(execution)
+                compensate(execution, plan, persistedStates, ownerId, null)
+                return executions.findById(execution.id)!!
+            }
+            throw denied
+        }
+        val states = ensureExecutionSteps(execution, plan)
         if (execution.status == ExecutionStatus.QUEUED) {
             execution.start()
             executions.save(execution)
@@ -178,8 +203,12 @@ class ProvisioningExecutionEngine(
             val failure = try {
                 processStep(execution, plan, planStep, state, lease)
             } catch (denied: ValidationException) {
+                val safetyFailure = StepFailure(denied.message ?: "SAFETY_POLICY_REJECTED", false, false, true)
+                state.fail(safetyFailure.code)
+                executionSteps.save(state)
                 leases.release(planStep.device, execution.id, ownerId, lease.fencingToken, clock.instant())
-                throw denied
+                finishFailure(execution, plan, states, ownerId, safetyFailure)
+                return executions.findById(execution.id)!!
             }
             if (failure == null) {
                 leases.release(planStep.device, execution.id, ownerId, lease.fencingToken, clock.instant())
@@ -418,7 +447,11 @@ class ProvisioningExecutionEngine(
     ): IoResult<T> {
         var attemptNumber = attempts.findByExecutionStepId(state.id).count { it.phase == phase } + 1
         while (attemptNumber <= policy.maxAttempts) {
-            safetyGate.requireAllowed(plan, com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY)
+            safetyGate.requireAllowed(
+                plan,
+                com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY,
+                phase.safetyScope(),
+            )
             val activeLease = leases.validateAndRenew(
                 execution.tenantId,
                 planStep.device,
@@ -739,6 +772,11 @@ class ProvisioningExecutionEngine(
         ExecutionStatus.FAILED,
         ExecutionStatus.MANUAL_RECONCILIATION,
     )
+
+    private fun ExecutionPhase.safetyScope(): SafetyGateScope = when (this) {
+        ExecutionPhase.PREFLIGHT, ExecutionPhase.APPLY, ExecutionPhase.VERIFY -> SafetyGateScope.FORWARD
+        ExecutionPhase.ROLLBACK_CHECK, ExecutionPhase.COMPENSATE, ExecutionPhase.ROLLBACK_VERIFY -> SafetyGateScope.ROLLBACK
+    }
 
     private data class StepFailure(
         val code: String,

@@ -20,6 +20,7 @@ import com.duluin.ftth.provisioning.application.service.ProvisioningDeviceGatewa
 import com.duluin.ftth.provisioning.application.service.ProvisioningExecutionEngine
 import com.duluin.ftth.provisioning.application.service.ProvisioningSafetyGate
 import com.duluin.ftth.provisioning.application.service.RetrySleeper
+import com.duluin.ftth.provisioning.application.service.SafetyGateScope
 import com.duluin.ftth.provisioning.application.service.SimulatedProcessCrash
 import com.duluin.ftth.provisioning.domain.model.AttemptStatus
 import com.duluin.ftth.provisioning.domain.model.DeviceCircuitBreaker
@@ -90,10 +91,9 @@ class ProvisioningExecutionEngineTest {
         fixture.safety.rejectAtEvaluation = 3
         val execution = fixture.engine.enqueue(fixture.plan, "deny-before-command")
 
-        assertThatThrownBy { fixture.engine.run(execution.id, "worker-a") }
-            .isInstanceOf(ValidationException::class.java)
-            .hasMessage(PolicyCode.STALE_CAPABILITY_EVIDENCE.name)
+        val rejected = fixture.engine.run(execution.id, "worker-a")
 
+        assertThat(rejected.status).isEqualTo(ExecutionStatus.FAILED)
         assertThat(fixture.attempts.values).isEmpty()
         assertThat(fixture.gateway.applyCount).isEmpty()
         assertThat(
@@ -106,6 +106,19 @@ class ProvisioningExecutionEngineTest {
                 Duration.ofSeconds(30),
             ),
         ).isNotNull
+    }
+
+    @Test
+    fun `forward certification expiry after a verified step triggers management safe rollback`() {
+        val fixture = Fixture()
+        fixture.safety.rejectAtEvaluation = 6
+        val execution = fixture.engine.enqueue(fixture.plan, "expire-after-first-step")
+
+        fixture.engine.run(execution.id, "worker-a")
+
+        assertThat(fixture.executions.findById(execution.id)!!.status).isEqualTo(ExecutionStatus.ROLLED_BACK)
+        assertThat(fixture.gateway.compensated).containsExactly(fixture.bras)
+        assertThat(fixture.gateway.applyCount[fixture.olt]).isNull()
     }
 
     @Test
@@ -199,6 +212,7 @@ class ProvisioningExecutionEngineTest {
         fixture.plan.supersede()
         fixture.plans.save(fixture.plan)
         fixture.clock.advance(Duration.ofMinutes(1))
+        fixture.safety.decision = PolicyDecision(false, PolicyCode.STALE_CERTIFICATION_EVIDENCE)
         fixture.engine().run(execution.id, "worker-b")
 
         assertThat(fixture.executions.findById(execution.id)!!.status).isEqualTo(ExecutionStatus.ROLLED_BACK)
@@ -504,6 +518,13 @@ class ProvisioningExecutionEngineTest {
                 decision
             }
         }
+
+        override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode, scope: SafetyGateScope): PolicyDecision =
+            if (scope == SafetyGateScope.ROLLBACK) {
+                PolicyDecision(true, PolicyCode.ROLLBACK_ALLOWED)
+            } else {
+                evaluate(plan, mode)
+            }
     }
 
     private class FakeGateway(
