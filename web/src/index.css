@@ -3047,22 +3047,23 @@ td.dg-actions {
 
 /* Core digambar sebagai chip berwarna ASLI seratnya (TIA-598) dan dipecah per
    tube, bukan sebagai baris tabel: susunannya jadi cerminan langsung dari yang
-   dilihat teknisi ketika tube dibuka. Ditata 8 kolom per baris agar pas dan kompak
-   tanpa perlu scroll ke kanan. */
+   dilihat teknisi ketika tube dibuka. Ditata rapat 8 kolom per baris agar pas dan kompak
+   tanpa ruang kosong yang renggang. */
 .core-grid {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 36px));
-  gap: 0.25rem;
+  grid-template-columns: repeat(8, 32px);
+  gap: 0.3rem;
+  width: fit-content;
 }
 .splice-core-grid {
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  min-inline-size: 0;
+  display: grid;
+  grid-template-columns: repeat(8, 32px);
+  gap: 0.3rem;
+  width: fit-content;
 }
 .splice-core-grid > .core-chip {
-  inline-size: 100%;
-  min-inline-size: 0;
-  min-block-size: 24px;
-  max-inline-size: 38px;
+  width: 32px;
+  height: 32px;
   aspect-ratio: 1;
 }
 .splice-core-grid > .core-chip:not(:disabled):hover {
@@ -3074,11 +3075,9 @@ td.dg-actions {
 }
 .core-chip {
   position: relative;
+  width: 32px;
+  height: 32px;
   aspect-ratio: 1;
-  min-width: 0;
-  max-width: 36px;
-  min-height: 22px;
-  max-height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3270,7 +3269,7 @@ td.dg-actions {
 }
 @container (max-width: 18rem) {
   .splice-core-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(4, 32px);
   }
 }
 /* Seisi kotak terpajang sekaligus, jadi yang digulung adalah DAFTARNYA, bukan

@@ -10,8 +10,8 @@ import type {
 } from '@/api/network'
 import { Button, StatusBadge, TextField } from '@/components/atoms'
 import { IconCheck, IconFlask, IconPower, IconRoute } from '@/components/atoms/icons'
-import { BladeHead, CommandBar, Ess, type CommandAction } from '@/components/molecules'
-import { CableChainNotice, CableCoreManager, ReleaseDropDialog } from '@/components/organisms'
+import { CommandBar, Ess, type CommandAction } from '@/components/molecules'
+import { Blade, CableChainNotice, CableCoreManager, ReleaseDropDialog } from '@/components/organisms'
 import { CODE_MAX, TYPE_LABEL, formatLength } from '@/map/cableFormat'
 import { CableCauses } from './CableCauses'
 import { CablePhysicalFields } from './CablePhysicalFields'
@@ -100,15 +100,16 @@ export function CablePanel({
   if (canDelete) actions.push(deleteAction('Hapus', onDelete))
 
   return (
-    <aside className="map-panel blade blade-detail">
-      {/* Nama yang memimpin, kode mengekor: nama ditulis sebagai kalimat ("Distribusi
-          ODC-01 → ODP-07"), sedangkan kode dipakai saat menyebut ruas ini ke orang
-          lain. Keduanya disebut di sini supaya panel yang terbuka dari peta langsung
-          cocok dengan kertas yang dipegang teknisi. */}
-      <BladeHead title={cable.name} subtitle={`Kabel ${TYPE_LABEL[cable.cableType]} · ${cable.code}`} onClose={onClose} />
+    <Blade
+      open={true}
+      title={cable.name}
+      subtitle={`Kabel ${TYPE_LABEL[cable.cableType]} · ${cable.code}`}
+      size="full"
+      className="blade-detail"
+      onClose={onClose}
+    >
       {(primary || actions.length > 0) && <CommandBar primary={primary} actions={actions} />}
-
-      <div className="blade-body stack" style={{ gap: '0.9rem' }}>
+      <div className="stack" style={{ gap: '0.9rem' }}>
         {causes.length > 0 && <CableCauses causes={causes} />}
 
         {/* Sebelum apa pun yang lain: ruas kotak-ke-kotak wajib menjelaskan
@@ -286,6 +287,6 @@ export function CablePanel({
           }}
         />
       )}
-    </aside>
+    </Blade>
   )
 }
