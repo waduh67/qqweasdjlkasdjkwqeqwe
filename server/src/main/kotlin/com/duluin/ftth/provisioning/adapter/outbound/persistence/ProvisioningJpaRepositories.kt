@@ -62,6 +62,15 @@ interface ExecutionStepJpaRepository : JpaRepository<ExecutionStepJpaEntity, UUI
 }
 interface StepAttemptJpaRepository : JpaRepository<StepAttemptJpaEntity, UUID> {
     fun findByExecutionStepIdOrderByAttemptNumber(executionStepId: UUID): List<StepAttemptJpaEntity>
+    fun findByStatusOrderByStartedAt(status: AttemptStatus): List<StepAttemptJpaEntity>
+    fun findByIdempotencyKey(idempotencyKey: String): List<StepAttemptJpaEntity>
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """update StepAttemptJpaEntity attempt set attempt.collectorId = :collectorId
+           where attempt.id = :id and (attempt.collectorId is null or attempt.collectorId = :collectorId)""",
+    )
+    fun claimCollector(@Param("id") id: UUID, @Param("collectorId") collectorId: UUID): Int
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(

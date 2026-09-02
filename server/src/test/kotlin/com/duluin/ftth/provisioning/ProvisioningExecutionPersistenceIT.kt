@@ -3,6 +3,13 @@ package com.duluin.ftth.provisioning
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.tenant.TenantContext
+import com.duluin.ftth.contract.DeviceCapabilityReport
+import com.duluin.ftth.contract.DeviceFingerprint
+import com.duluin.ftth.contract.CollectorHeartbeat
+import com.duluin.ftth.contract.ProvisioningErrorCode
+import com.duluin.ftth.contract.ProvisioningStepResult
+import com.duluin.ftth.contract.ProvisioningTarget
+import com.duluin.ftth.monitoring.application.service.CollectorProvisioningExchange
 import com.duluin.ftth.provisioning.application.port.outbound.DeviceCircuitBreakerRepository
 import com.duluin.ftth.provisioning.application.port.outbound.DeviceLeaseRepository
 import com.duluin.ftth.provisioning.application.port.outbound.ExecutionStepRepository
@@ -50,6 +57,7 @@ class ProvisioningExecutionPersistenceIT {
     @Autowired private lateinit var attempts: StepAttemptRepository
     @Autowired private lateinit var snapshots: StepSnapshotRepository
     @Autowired private lateinit var circuits: DeviceCircuitBreakerRepository
+    @Autowired private lateinit var collectorExchange: CollectorProvisioningExchange
     @PersistenceContext private lateinit var em: EntityManager
 
     @Test
@@ -161,6 +169,192 @@ class ProvisioningExecutionPersistenceIT {
                 )
             }.single(),
         ).isNull()
+    }
+
+    @Test
+    fun `collector channel emits persisted attempt and acknowledges result and report durably`() {
+        val fixture = fixture("collector-channel")
+        val execution = ProvisionExecution.queue(fixture.tenantId, fixture.intentId, fixture.firstPlanId, "collector-channel")
+        val device = DeviceReference(DeviceKind.BRAS, UuidV7.generate())
+        val collectorId = UuidV7.generate()
+        val deadline = Instant.parse("2026-09-02T12:05:00Z")
+        val attempt = asTenant(fixture.tenantId) {
+            em.createNativeQuery(
+                """INSERT INTO collector
+                   (id, tenant_id, name, api_key_hash, api_key_hint, status, poll_interval_seconds)
+                   VALUES (:id, :tenant, :name, :hash, 'test', 'ACTIVE', 60)""",
+            ).setParameter("id", collectorId).setParameter("tenant", fixture.tenantId)
+                .setParameter("name", "collector-${UUID.randomUUID()}")
+                .setParameter("hash", UUID.randomUUID().toString().replace("-", "").repeat(2))
+                .executeUpdate()
+            executions.save(execution)
+            val step = executionSteps.save(
+                ExecutionStep.pending(fixture.tenantId, execution.id, fixture.firstStepId, 1, device),
+            )
+            attempts.save(
+                StepAttempt.dispatch(
+                    fixture.tenantId,
+                    step.id,
+                    ExecutionPhase.APPLY,
+                    1,
+                    "collector-channel-attempt",
+                    7,
+                    deadline,
+                    deadline.minusSeconds(30),
+                ),
+            )
+        }
+        val result = ProvisioningStepResult(
+            planId = fixture.firstPlanId.toString(),
+            revision = 1,
+            stepId = fixture.firstStepId.toString(),
+            attemptId = attempt.id.toString(),
+            targetId = device.id.toString(),
+            operationClass = "ENSURE_PPPOE_TERMINATION",
+            idempotencyKey = attempt.idempotencyKey,
+            fencingEpoch = attempt.fencingToken,
+            success = false,
+            completedAt = deadline.minusSeconds(10),
+            errorCode = ProvisioningErrorCode.STALE_PRECONDITION,
+        )
+        val report = DeviceCapabilityReport(
+            targetId = device.id.toString(),
+            fingerprint = DeviceFingerprint("MIKROTIK", "CCR", "7.20", "HTTPS_REST"),
+            capabilities = setOf("SINGLE_TAG_802_1Q"),
+            reportedAt = deadline.minusSeconds(20),
+        )
+
+        val target = ProvisioningTarget(device.id.toString(), device.kind.name, "router.invalid", "HTTPS_REST")
+        val pending = asTenant(fixture.tenantId) {
+            collectorExchange.exchange(collectorId, fixture.tenantId, CollectorHeartbeat("test"), listOf(target))
+        }
+        val otherCollectorId = UuidV7.generate()
+        asTenant(fixture.tenantId) {
+            em.createNativeQuery(
+                """INSERT INTO collector
+                   (id, tenant_id, name, api_key_hash, api_key_hint, status, poll_interval_seconds)
+                   VALUES (:id, :tenant, :name, :hash, 'other', 'ACTIVE', 60)""",
+            ).setParameter("id", otherCollectorId).setParameter("tenant", fixture.tenantId)
+                .setParameter("name", "collector-${UUID.randomUUID()}")
+                .setParameter("hash", UUID.randomUUID().toString().replace("-", "").repeat(2))
+                .executeUpdate()
+        }
+        val otherCollectorCommands = asTenant(fixture.tenantId) {
+            collectorExchange.exchange(otherCollectorId, fixture.tenantId, CollectorHeartbeat("test"), listOf(target)).commands
+        }
+        val wrongFenceAcknowledgement = asTenant(fixture.tenantId) {
+            collectorExchange.exchange(
+                collectorId,
+                fixture.tenantId,
+                CollectorHeartbeat("test", provisioningResults = listOf(result.copy(fencingEpoch = 6))),
+                listOf(target),
+            ).acknowledgement
+        }
+        val wrongPhaseAcknowledgement = asTenant(fixture.tenantId) {
+            collectorExchange.exchange(
+                collectorId,
+                fixture.tenantId,
+                CollectorHeartbeat(
+                    "test",
+                    provisioningResults = listOf(result.copy(phase = com.duluin.ftth.contract.ProvisioningCommandPhase.VERIFY)),
+                ),
+                listOf(target),
+            ).acknowledgement
+        }
+        val acknowledgement = asTenant(fixture.tenantId) {
+            collectorExchange.exchange(
+                collectorId,
+                fixture.tenantId,
+                CollectorHeartbeat("test", deviceReports = listOf(report), provisioningResults = listOf(result)),
+                listOf(target),
+            ).acknowledgement
+        }
+        val duplicateAcknowledgement = asTenant(fixture.tenantId) {
+            collectorExchange.exchange(
+                collectorId,
+                fixture.tenantId,
+                CollectorHeartbeat("test", deviceReports = listOf(report), provisioningResults = listOf(result)),
+                listOf(target),
+            ).acknowledgement
+        }
+        val staleAcknowledgement = asTenant(fixture.tenantId) {
+            collectorExchange.exchange(
+                collectorId,
+                fixture.tenantId,
+                CollectorHeartbeat("test", provisioningResults = listOf(result.copy(idempotencyKey = "stale-result"))),
+                listOf(target),
+            ).acknowledgement
+        }
+        val retryAttempt = asTenant(fixture.tenantId) {
+            attempts.save(
+                StepAttempt.dispatch(
+                    fixture.tenantId,
+                    attempt.executionStepId,
+                    ExecutionPhase.APPLY,
+                    2,
+                    attempt.idempotencyKey,
+                    8,
+                    deadline.plusSeconds(60),
+                    deadline,
+                ),
+            )
+        }
+        val retryPending = asTenant(fixture.tenantId) {
+            collectorExchange.exchange(collectorId, fixture.tenantId, CollectorHeartbeat("test"), listOf(target))
+        }
+        val retryAcknowledgement = asTenant(fixture.tenantId) {
+            collectorExchange.exchange(
+                collectorId,
+                fixture.tenantId,
+                CollectorHeartbeat(
+                    "test",
+                    provisioningResults = listOf(
+                        result.copy(
+                            attemptId = retryAttempt.id.toString(),
+                            fencingEpoch = retryAttempt.fencingToken,
+                            completedAt = deadline.plusSeconds(10),
+                        ),
+                    ),
+                ),
+                listOf(target),
+            ).acknowledgement
+        }
+
+        assertThat(pending.commands.map { it.idempotencyKey }).contains(attempt.idempotencyKey)
+        assertThat(pending.commands.single().planId).isEqualTo(fixture.firstPlanId.toString())
+        assertThat(pending.commands.single().revision).isEqualTo(1)
+        assertThat(pending.commands.single().stepId).isEqualTo(fixture.firstStepId.toString())
+        assertThat(pending.commands.single().fencingEpoch).isEqualTo(7)
+        assertThat(pending.commands.single().attemptId).isEqualTo(attempt.id.toString())
+        assertThat(otherCollectorCommands).isEmpty()
+        assertThat(wrongFenceAcknowledgement).isEqualTo(com.duluin.ftth.contract.ProvisioningAcknowledgement())
+        assertThat(wrongPhaseAcknowledgement).isEqualTo(com.duluin.ftth.contract.ProvisioningAcknowledgement())
+        assertThat(acknowledgement.resultAttemptIds).containsExactly(attempt.id.toString())
+        assertThat(
+            asTenant(fixture.tenantId) {
+                collectorExchange.exchange(collectorId, fixture.tenantId, CollectorHeartbeat("test"), listOf(target)).commands
+            },
+        ).isEmpty()
+        assertThat(acknowledgement.deviceReportKeys).containsExactly("${report.targetId}@${report.reportedAt}")
+        assertThat(duplicateAcknowledgement).isEqualTo(acknowledgement)
+        assertThat(staleAcknowledgement).isEqualTo(com.duluin.ftth.contract.ProvisioningAcknowledgement())
+        assertThat(retryPending.commands.single().attemptId).isEqualTo(retryAttempt.id.toString())
+        assertThat(retryAcknowledgement.resultAttemptIds).containsExactly(retryAttempt.id.toString())
+        assertThat(asTenant(fixture.tenantId) { attempts.findById(attempt.id)!!.status })
+            .isEqualTo(AttemptStatus.PERMANENT_FAILURE)
+        assertThat(asTenant(fixture.tenantId) {
+            (em.createNativeQuery("SELECT count(*) FROM provisioning_collector_device_report WHERE target_id = :target")
+                .setParameter("target", report.targetId).singleResult as Number).toLong()
+        }).isEqualTo(1)
+        assertThat(asTenant(fixture.tenantId) {
+            (em.createNativeQuery("SELECT count(*) FROM provisioning_collector_result_receipt WHERE idempotency_key = :key")
+                .setParameter("key", result.idempotencyKey).singleResult as Number).toLong()
+        }).isEqualTo(2)
+        val otherTenantId = tenantApi.ensureTenant("collector-channel-other-${UUID.randomUUID()}", "collector-channel-other").id
+        assertThat(asTenant(otherTenantId) {
+            (em.createNativeQuery("SELECT count(*) FROM provisioning_collector_result_receipt WHERE idempotency_key = :key")
+                .setParameter("key", result.idempotencyKey).singleResult as Number).toLong()
+        }).isZero()
     }
 
     @Test

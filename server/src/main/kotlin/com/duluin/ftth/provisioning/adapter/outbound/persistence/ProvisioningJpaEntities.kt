@@ -166,6 +166,7 @@ class StepAttemptJpaEntity(
     @Column(name = "error_code", length = 80) var errorCode: String?,
     @Column(name = "started_at", nullable = false, updatable = false) val startedAt: Instant,
     @Column(name = "completed_at") var completedAt: Instant?,
+    @Column(name = "collector_id") var collectorId: UUID? = null,
 ) : TenantAwareJpaEntity(id)
 
 @Entity
