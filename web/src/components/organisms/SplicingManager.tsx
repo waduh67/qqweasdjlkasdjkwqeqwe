@@ -463,7 +463,7 @@ function SlotGrid({
   disabled: boolean
 }) {
   return (
-    <div className={group.isCable ? 'core-grid' : 'splice-slots'}>
+    <div className={group.isCable ? 'core-grid splice-core-grid' : 'splice-slots'}>
       {group.slots.map((slot) => {
         const taken = !free(slot)
         const on = picked === slot.key

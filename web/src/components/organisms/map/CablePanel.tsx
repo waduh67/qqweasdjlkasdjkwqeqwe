@@ -100,7 +100,7 @@ export function CablePanel({
   if (canDelete) actions.push(deleteAction('Hapus', onDelete))
 
   return (
-    <aside className="map-panel blade">
+    <aside className="map-panel blade blade-detail">
       {/* Nama yang memimpin, kode mengekor: nama ditulis sebagai kalimat ("Distribusi
           ODC-01 → ODP-07"), sedangkan kode dipakai saat menyebut ruas ini ke orang
           lain. Keduanya disebut di sini supaya panel yang terbuka dari peta langsung

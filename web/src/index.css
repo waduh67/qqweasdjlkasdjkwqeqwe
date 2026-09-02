@@ -2218,6 +2218,20 @@ td.dg-actions {
 .map-panel.blade {
   padding: 0;
 }
+.map-panel.blade.blade-detail {
+  width: 64vw;
+  max-width: 64vw;
+  min-width: min(760px, calc(100% - 1.5rem));
+}
+@media (max-width: 800px) {
+  .map-panel.blade.blade-detail {
+    left: 0.75rem;
+    right: 0.75rem;
+    width: auto;
+    max-width: calc(100% - 1.5rem);
+    min-width: 0;
+  }
+}
 .blade-head {
   position: sticky;
   top: 0;
@@ -3033,18 +3047,38 @@ td.dg-actions {
 
 /* Core digambar sebagai chip berwarna ASLI seratnya (TIA-598) dan dipecah per
    tube, bukan sebagai baris tabel: susunannya jadi cerminan langsung dari yang
-   dilihat teknisi ketika tube dibuka, dan kabel 24 core muat sekali pandang.
-   Dua belas kolom bukan angka estetis — itu isi satu tube, jadi satu baris kisi
-   selalu berarti satu tube penuh. */
+   dilihat teknisi ketika tube dibuka. Ditata 8 kolom per baris agar pas dan kompak
+   tanpa perlu scroll ke kanan. */
 .core-grid {
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 0.2rem;
+  grid-template-columns: repeat(8, minmax(0, 36px));
+  gap: 0.25rem;
+}
+.splice-core-grid {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  min-inline-size: 0;
+}
+.splice-core-grid > .core-chip {
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 24px;
+  max-inline-size: 38px;
+  aspect-ratio: 1;
+}
+.splice-core-grid > .core-chip:not(:disabled):hover {
+  transform: none;
+  filter: brightness(1.12);
+}
+.splice-core-grid > .core-chip.is-selected {
+  transform: none;
 }
 .core-chip {
   position: relative;
   aspect-ratio: 1;
   min-width: 0;
+  max-width: 36px;
+  min-height: 22px;
+  max-height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3052,7 +3086,7 @@ td.dg-actions {
   border-radius: var(--radius-sm);
   padding: 0;
   font: inherit;
-  font-size: var(--fontSizeBase200);
+  font-size: var(--fontSizeBase100);
   font-weight: var(--fontWeightBold);
   font-variant-numeric: tabular-nums;
   cursor: pointer;
@@ -3223,7 +3257,7 @@ td.dg-actions {
    memajang isi kotak yang sama, jadi urutannya cuma soal ruang, bukan arah. */
 .splice-bench {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(25rem, 100%), 1fr));
   gap: 0.6rem;
 }
 .splice-side {
@@ -3232,6 +3266,12 @@ td.dg-actions {
   border-radius: var(--radius-sm);
   background: var(--surface-2);
   min-width: 0;
+  container-type: inline-size;
+}
+@container (max-width: 18rem) {
+  .splice-core-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 /* Seisi kotak terpajang sekaligus, jadi yang digulung adalah DAFTARNYA, bukan
    tiap kisi sendiri-sendiri: satu batang gulung di tepi panel, bukan tujuh yang

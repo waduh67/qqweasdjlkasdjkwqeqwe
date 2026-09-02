@@ -9,6 +9,8 @@ versi rilis (trunk-based di `main`), jadi entri dikelompokkan per tanggal.
 ### 2026-09-01 — Perbaikan build Docker paralel, isolasi cache Gradle, port fleksibel, dan interaksi peta
 
 **Diubah**
+- **Grid Core Kabel & Meja Splicing 8 Kolom per Baris**: Menata ulang kisi core kabel (`.core-grid` pada `CableCoreManager`) dan meja sambungan (`.splice-core-grid` pada `SplicingManager`) menjadi 8 kotak per baris (sebelumnya 12). Ukuran chip core diperkecil dan dibatasi maksimum 36px dengan font kompak agar muat rapi tanpa memicu scroll horizontal.
+- **Lebar Flyout Detail Kabel di Peta (`CablePanel`)**: Menggunakan kelas `.blade-detail` (`width: 64vw; min-width: 760px`) sehingga serasi dan seluas panel detail Joint Box, ODC, dan ODF.
 - **Port HTTP Caddy di lingkungan Lab**: Diubah default-nya ke port `8000` (via `${PORT:-8000}:80`) pada `docker-compose.lab.yml` dan `Makefile`, sehingga tidak bentrok dengan web server host (seperti Apache/Nginx pada port 80/8080). Variabel `BASE` dan setelan CORS server diselaraskan ke `http://localhost:8000`.
 - **Port HTTP/HTTPS Caddy di lingkungan Produksi**: Di-parameterisasi menjadi `${FTTH_HTTP_PORT:-80}:80` dan `${FTTH_HTTPS_PORT:-443}:443` pada `deploy/docker-compose.prod.yml` agar fleksibel saat pengujian lokal namun tetap terikat ke port 80/443 secara baku di VPS/CI-CD.
 - **Skrip Seeding Lab (`seed-lab.py`)**: Diimplementasikan ulang menggunakan Python 3 tanpa dependensi paket pihak ketiga (`jq`), sehingga `make lab-seed` dapat dijalankan secara mandiri dan andal di berbagai distribusi OS.
