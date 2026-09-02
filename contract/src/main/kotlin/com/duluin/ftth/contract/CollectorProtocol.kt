@@ -1,7 +1,6 @@
 package com.duluin.ftth.contract
 
 import java.time.Instant
-import java.util.Collections
 
 /**
  * Protokol collector ↔ server.
@@ -193,6 +192,14 @@ data class CollectorConfig(
     val bngActions: List<BngActionCommand> = emptyList(),
     /** Perintah provisioning tersendiri; tidak mengubah semantik [bngActions]. */
     val provisioningCommands: List<ProvisioningPlanStepCommand> = emptyList(),
+    /** Bukti eksplisit bahwa server sudah mempersisten hasil/report pada heartbeat ini. */
+    val provisioningAcknowledgement: ProvisioningAcknowledgement = ProvisioningAcknowledgement(),
+)
+
+data class ProvisioningAcknowledgement(
+    val resultIdempotencyKeys: Set<String> = emptySet(),
+    val resultAttemptIds: Set<String> = emptySet(),
+    val deviceReportKeys: Set<String> = emptySet(),
 )
 
 /** Target perangkat yang dinormalisasi dan tidak membawa kredensial transport. */
@@ -219,6 +226,8 @@ data class DeviceCapabilityReport(
     val reportedAt: Instant,
 )
 
+fun DeviceCapabilityReport.acknowledgementKey(): String = "$targetId@$reportedAt"
+
 /** Tahap eksplisit menjaga apply, verifikasi, dan rollback aman terhadap version skew. */
 enum class ProvisioningCommandPhase {
     PREFLIGHT,
@@ -241,51 +250,124 @@ enum class ProvisioningErrorCode {
     INSECURE_TRANSPORT,
 }
 
-/**
- * Payload vendor-netral yang menolak nama field sensitif dan menyalin map secara
- * defensif. Nilai dibatasi ke string agar bentuk JSON stabil lintas versi.
- */
-class ProvisioningPayload(values: Map<String, String> = emptyMap()) {
-    val values: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(values))
+/** Closed, vendor-neutral desired state. No credential or arbitrary extension field exists. */
+class ProvisioningPayloadValues(
+    tenantId: String? = null,
+    intentId: String? = null,
+    bridge: String? = null,
+    vlanId: String? = null,
+    tagging: String? = null,
+    trunkPorts: String? = null,
+    accessPorts: String? = null,
+    vlanInterface: String? = null,
+    vlanParent: String? = null,
+    pppoeInterface: String? = null,
+    pppoeServiceName: String? = null,
+    pppoeVlanRange: String? = null,
+    poolName: String? = null,
+    poolRanges: String? = null,
+    interfaceList: String? = null,
+    firewallChain: String? = null,
+    managementPathProven: String? = null,
+    protectedInterfaces: String? = null,
+    protectedVlanIds: String? = null,
+) {
+    val tenantId = tenantId
+    val intentId = intentId
+    val bridge = bridge
+    val vlanId = vlanId
+    val tagging = tagging
+    val trunkPorts = trunkPorts
+    val accessPorts = accessPorts
+    val vlanInterface = vlanInterface
+    val vlanParent = vlanParent
+    val pppoeInterface = pppoeInterface
+    val pppoeServiceName = pppoeServiceName
+    val pppoeVlanRange = pppoeVlanRange
+    val poolName = poolName
+    val poolRanges = poolRanges
+    val interfaceList = interfaceList
+    val firewallChain = firewallChain
+    val managementPathProven = managementPathProven
+    val protectedInterfaces = protectedInterfaces
+    val protectedVlanIds = protectedVlanIds
 
-    init {
-        this.values.keys.forEach { key ->
-            val normalized = key.lowercase().filter(Char::isLetterOrDigit)
-            require(FORBIDDEN_KEY_FRAGMENTS.none(normalized::contains)) {
-                "Provisioning payload contains forbidden sensitive key '$key'"
-            }
-        }
-        this.values.values.forEach { value ->
-            require(FORBIDDEN_VALUE_PATTERNS.none { it.containsMatchIn(value) }) {
-                "Provisioning payload contains an obvious reusable secret"
-            }
-        }
+    constructor(values: Map<String, String>) : this(
+        tenantId = values.optional("tenantId"),
+        intentId = values.optional("intentId"),
+        bridge = values.optional("bridge"),
+        vlanId = values.optional("vlanId"),
+        tagging = values.optional("tagging"),
+        trunkPorts = values.optional("trunkPorts"),
+        accessPorts = values.optional("accessPorts"),
+        vlanInterface = values.optional("vlanInterface") ?: values.optional("interface"),
+        vlanParent = values.optional("vlanParent"),
+        pppoeInterface = values.optional("pppoeInterface"),
+        pppoeServiceName = values.optional("pppoeServiceName"),
+        pppoeVlanRange = values.optional("pppoeVlanRange"),
+        poolName = values.optional("poolName"),
+        poolRanges = values.optional("poolRanges"),
+        interfaceList = values.optional("interfaceList"),
+        firewallChain = values.optional("firewallChain"),
+        managementPathProven = values.optional("managementPathProven"),
+        protectedInterfaces = values.optional("protectedInterfaces"),
+        protectedVlanIds = values.optional("protectedVlanIds"),
+    ) {
+        require(values.keys.all(ALLOWED_LEGACY_KEYS::contains)) { "Provisioning payload field is not supported" }
     }
 
-    override fun equals(other: Any?): Boolean = other is ProvisioningPayload && values == other.values
+    override fun equals(other: Any?): Boolean = other is ProvisioningPayloadValues && fields() == other.fields()
 
-    override fun hashCode(): Int = values.hashCode()
+    override fun hashCode(): Int = fields().hashCode()
 
-    override fun toString(): String = "ProvisioningPayload(keys=${values.keys})"
+    override fun toString(): String = "ProvisioningPayloadValues(fields=${fieldNames()})"
+
+    private fun fields(): List<Any?> = listOf(
+        tenantId, intentId, bridge, vlanId, tagging, trunkPorts, accessPorts, vlanInterface, vlanParent,
+        pppoeInterface, pppoeServiceName, pppoeVlanRange, poolName, poolRanges, interfaceList,
+        firewallChain, managementPathProven, protectedInterfaces, protectedVlanIds,
+    )
+
+    private fun fieldNames(): List<String> = PROPERTY_NAMES.filterIndexed { index, _ ->
+        val value = fields()[index]
+        value != null
+    }
 
     private companion object {
-        val FORBIDDEN_KEY_FRAGMENTS = setOf(
-            "password",
-            "secret",
-            "credential",
-            "token",
-            "rawcli",
-            "community",
-            "privatekey",
-            "passphrase",
-            "apikey",
-            "authkey",
+        val ALLOWED_LEGACY_KEYS = setOf(
+            "tenantId", "intentId", "bridge", "vlanId", "tagging", "trunkPorts", "accessPorts", "vlanInterface", "interface",
+            "vlanParent", "pppoeInterface", "pppoeServiceName", "pppoeVlanRange", "poolName", "poolRanges",
+            "interfaceList", "firewallChain", "managementPathProven", "protectedInterfaces", "protectedVlanIds",
         )
-        val FORBIDDEN_VALUE_PATTERNS = listOf(
-            Regex("(?i)\\b(?:password|secret|credential|token|community|passphrase)\\s*[:=]"),
-            Regex("(?i)-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+        val PROPERTY_NAMES = listOf(
+            "tenantId", "intentId", "bridge", "vlanId", "tagging", "trunkPorts", "accessPorts", "vlanInterface", "vlanParent",
+            "pppoeInterface", "pppoeServiceName", "pppoeVlanRange", "poolName", "poolRanges", "interfaceList",
+            "firewallChain", "managementPathProven", "protectedInterfaces", "protectedVlanIds",
         )
     }
+}
+
+data class ProvisioningPayload(
+    val values: ProvisioningPayloadValues = ProvisioningPayloadValues(),
+) {
+    constructor(values: Map<String, String>) : this(ProvisioningPayloadValues(values))
+}
+
+private fun Map<String, String>.optional(key: String): String? = get(key)?.takeIf(String::isNotBlank)
+
+/** Closed result projection; reusable credentials and arbitrary fields are unrepresentable. */
+class ProvisioningResultState(
+    val managedResourceCount: Int = 0,
+) {
+    init {
+        require(managedResourceCount >= 0) { "Managed resource count cannot be negative" }
+    }
+
+    override fun equals(other: Any?): Boolean = other is ProvisioningResultState && managedResourceCount == other.managedResourceCount
+
+    override fun hashCode(): Int = managedResourceCount
+
+    override fun toString(): String = "ProvisioningResultState(managedResourceCount=$managedResourceCount)"
 }
 
 /** Immutable instruction for exactly one plan step and one execution phase. */
@@ -293,7 +375,8 @@ data class ProvisioningPlanStepCommand(
     val planId: String,
     val revision: Int,
     val stepId: String,
-    val phase: ProvisioningCommandPhase,
+    val attemptId: String? = null,
+    val phase: ProvisioningCommandPhase = ProvisioningCommandPhase.APPLY,
     val operationClass: String,
     val idempotencyKey: String,
     /** Monotonic device-lease token; lower tokens are rejected by the collector adapter. */
@@ -302,26 +385,42 @@ data class ProvisioningPlanStepCommand(
     val deadline: Instant,
     val target: ProvisioningTarget,
     val payload: ProvisioningPayload = ProvisioningPayload(),
-)
+) {
+    init {
+        expectedPreconditionHash?.requireSha256()
+    }
+}
 
 data class ProvisioningPreflightSnapshot(
     val capturedAt: Instant,
     val preconditionHash: String,
-    val state: ProvisioningPayload = ProvisioningPayload(),
-)
+    val state: ProvisioningResultState = ProvisioningResultState(),
+) {
+    init {
+        preconditionHash.requireSha256()
+    }
+}
 
 data class ProvisioningApplyResult(
     val appliedAt: Instant,
     val changed: Boolean,
     val resultingStateHash: String? = null,
-)
+) {
+    init {
+        resultingStateHash?.requireSha256()
+    }
+}
 
 data class ProvisioningVerificationObservation(
     val observedAt: Instant,
     val matchesExpected: Boolean,
     val stateHash: String,
-    val state: ProvisioningPayload = ProvisioningPayload(),
-)
+    val state: ProvisioningResultState = ProvisioningResultState(),
+) {
+    init {
+        stateHash.requireSha256()
+    }
+}
 
 data class ProvisioningRollbackResult(
     val completedAt: Instant,
@@ -330,6 +429,7 @@ data class ProvisioningRollbackResult(
     val errorCode: ProvisioningErrorCode? = null,
 ) {
     init {
+        resultingStateHash?.requireSha256()
         require(success == (errorCode == null)) {
             "Rollback success and error code must be consistent"
         }
@@ -341,8 +441,11 @@ data class ProvisioningStepResult(
     val planId: String,
     val revision: Int,
     val stepId: String,
+    val attemptId: String? = null,
+    val targetId: String? = null,
     val operationClass: String,
     val idempotencyKey: String,
+    val fencingEpoch: Long = 0,
     /** Additive phase marker; legacy results deserialize as APPLY. */
     val phase: ProvisioningCommandPhase = ProvisioningCommandPhase.APPLY,
     val success: Boolean,
@@ -371,6 +474,14 @@ data class ProvisioningStepResult(
         }
         require(success || errorCode != null) { "Failed provisioning result requires an error code" }
     }
+}
+
+fun ProvisioningPlanStepCommand.deliveryKey(): String = attemptId ?: idempotencyKey
+
+fun ProvisioningStepResult.deliveryKey(): String = attemptId ?: idempotencyKey
+
+private fun String.requireSha256() {
+    require(matches(Regex("^[a-f0-9]{64}$"))) { "Provisioning state hash must be lowercase SHA-256" }
 }
 
 /**

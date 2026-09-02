@@ -10,8 +10,10 @@ import com.duluin.ftth.contract.ProvisioningPayload
 import com.duluin.ftth.contract.ProvisioningPlanStepCommand
 import com.duluin.ftth.contract.ProvisioningPreflightSnapshot
 import com.duluin.ftth.contract.ProvisioningRollbackResult
+import com.duluin.ftth.contract.ProvisioningResultState
 import com.duluin.ftth.contract.ProvisioningStepResult
 import com.duluin.ftth.contract.ProvisioningVerificationObservation
+import com.duluin.ftth.contract.deliveryKey
 import tools.jackson.core.type.TypeReference
 import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.json.JsonMapper
@@ -206,7 +208,8 @@ class RouterOsProvisioningAdapter(
     }
 
     override fun execute(target: NasTarget, command: ProvisioningPlanStepCommand): ProvisioningStepResult {
-        stateStore.result(command.idempotencyKey)?.let { return it }
+        val deliveryKey = command.deliveryKey()
+        stateStore.result(deliveryKey)?.let { return it }
         val result = try {
             requireCommandTarget(target, command)
             checkDeadline(command)
@@ -233,8 +236,8 @@ class RouterOsProvisioningAdapter(
         } catch (_: Exception) {
             failed(command, ProvisioningErrorCode.MANUAL_RECONCILIATION)
         }
-        stateStore.saveResult(command.idempotencyKey, result)
-        return stateStore.result(command.idempotencyKey) ?: result
+        stateStore.saveResult(deliveryKey, result)
+        return stateStore.result(deliveryKey) ?: result
     }
 
     private fun preflight(target: NasTarget, command: ProvisioningPlanStepCommand): ProvisioningStepResult {
@@ -863,29 +866,29 @@ class RouterOsProvisioningAdapter(
         if (command.operationClass !in SUPPORTED_OPERATIONS) {
             throw RouterOsCommandException(ProvisioningErrorCode.UNSUPPORTED_CAPABILITY)
         }
-        val value = command.payload.values
-        fun required(key: String) = value[key]?.takeIf(String::isNotBlank)
+        val payload = command.payload.values
+        fun required(value: String?) = value?.takeIf(String::isNotBlank)
             ?: throw RouterOsCommandException(ProvisioningErrorCode.VALIDATION_FAILED)
         return RouterOsDesiredState(
-            tenant = required("tenantId"),
-            intent = required("intentId"),
-            bridge = required("bridge"),
-            vlanId = required("vlanId").toIntOrNull()
+            tenant = required(payload.tenantId),
+            intent = required(payload.intentId),
+            bridge = required(payload.bridge),
+            vlanId = required(payload.vlanId).toIntOrNull()
                 ?: throw RouterOsCommandException(ProvisioningErrorCode.VALIDATION_FAILED),
-            trunkPorts = csv(required("trunkPorts")),
-            accessPorts = csv(required("accessPorts")),
-            vlanInterface = required("vlanInterface"),
-            vlanParent = required("vlanParent"),
-            pppoeInterface = required("pppoeInterface"),
-            pppoeServiceName = required("pppoeServiceName"),
-            pppoeVlanRange = parseVlanSet(value["pppoeVlanRange"]),
-            poolName = required("poolName"),
-            poolRanges = required("poolRanges"),
-            interfaceList = required("interfaceList"),
-            firewallChain = required("firewallChain"),
-            managementPathProven = value["managementPathProven"].toBoolean(),
-            protectedInterfaces = csv(value["protectedInterfaces"]),
-            protectedVlanIds = parseVlanSet(value["protectedVlanIds"]),
+            trunkPorts = csv(payload.trunkPorts),
+            accessPorts = csv(payload.accessPorts),
+            vlanInterface = required(payload.vlanInterface),
+            vlanParent = required(payload.vlanParent),
+            pppoeInterface = required(payload.pppoeInterface),
+            pppoeServiceName = required(payload.pppoeServiceName),
+            pppoeVlanRange = parseVlanSet(payload.pppoeVlanRange),
+            poolName = required(payload.poolName),
+            poolRanges = required(payload.poolRanges),
+            interfaceList = required(payload.interfaceList),
+            firewallChain = required(payload.firewallChain),
+            managementPathProven = payload.managementPathProven.toBoolean(),
+            protectedInterfaces = csv(payload.protectedInterfaces),
+            protectedVlanIds = parseVlanSet(payload.protectedVlanIds),
         )
     }
 
@@ -956,11 +959,8 @@ class RouterOsProvisioningAdapter(
             .joinToString("") { "%02x".format(it) }
     }
 
-    private fun statePayload(state: RouterOsNormalizedState) = ProvisioningPayload(
-        mapOf(
-            "stateHash" to stateHash(state),
-            "ownedResourceIds" to ownedIds(state).sorted().joinToString(","),
-        ),
+    private fun statePayload(state: RouterOsNormalizedState) = ProvisioningResultState(
+        managedResourceCount = ownedIds(state).size,
     )
 
     private fun ownedIds(state: RouterOsNormalizedState): List<String> = buildList {
@@ -992,8 +992,11 @@ class RouterOsProvisioningAdapter(
         planId = command.planId,
         revision = command.revision,
         stepId = command.stepId,
+        attemptId = command.attemptId,
+        targetId = command.target.deviceId,
         operationClass = command.operationClass,
         idempotencyKey = command.idempotencyKey,
+        fencingEpoch = command.fencingEpoch,
         phase = command.phase,
         success = true,
         completedAt = clock.instant(),
@@ -1009,8 +1012,11 @@ class RouterOsProvisioningAdapter(
             planId = command.planId,
             revision = command.revision,
             stepId = command.stepId,
+            attemptId = command.attemptId,
+            targetId = command.target.deviceId,
             operationClass = command.operationClass,
             idempotencyKey = command.idempotencyKey,
+            fencingEpoch = command.fencingEpoch,
             phase = command.phase,
             success = true,
             completedAt = clock.instant(),
@@ -1020,14 +1026,17 @@ class RouterOsProvisioningAdapter(
     }
 
     private fun discoverForRollbackResult(command: ProvisioningPlanStepCommand, hash: String) =
-        ProvisioningPayload(mapOf("stateHash" to hash, "step" to stepKey(command)))
+        ProvisioningResultState()
 
     private fun failed(command: ProvisioningPlanStepCommand, code: ProvisioningErrorCode) = ProvisioningStepResult(
         planId = command.planId,
         revision = command.revision,
         stepId = command.stepId,
+        attemptId = command.attemptId,
+        targetId = command.target.deviceId,
         operationClass = command.operationClass,
         idempotencyKey = command.idempotencyKey,
+        fencingEpoch = command.fencingEpoch,
         phase = command.phase,
         success = false,
         completedAt = clock.instant(),

@@ -10,6 +10,7 @@ import com.duluin.ftth.contract.ProvisioningErrorCode
 import com.duluin.ftth.contract.ProvisioningPayload
 import com.duluin.ftth.contract.ProvisioningPlanStepCommand
 import com.duluin.ftth.contract.ProvisioningRollbackResult
+import com.duluin.ftth.contract.ProvisioningResultState
 import com.duluin.ftth.contract.ProvisioningStepResult
 import com.duluin.ftth.contract.ProvisioningTarget
 import com.duluin.ftth.contract.ProvisioningVerificationObservation
@@ -45,7 +46,7 @@ class CollectorProtocolSerializationTest {
             phase = ProvisioningCommandPhase.APPLY,
             operationClass = "ENSURE_TAGGED_VLAN",
             idempotencyKey = "plan-1:3:step-2:apply",
-            expectedPreconditionHash = "before-sha256",
+            expectedPreconditionHash = "b".repeat(64),
             deadline = Instant.parse("2026-09-02T12:30:00Z"),
             target = ProvisioningTarget(
                 deviceId = "switch-1",
@@ -117,12 +118,12 @@ class CollectorProtocolSerializationTest {
             idempotencyKey = "plan-1:3:step-2:apply",
             success = true,
             completedAt = observedAt,
-            apply = ProvisioningApplyResult(appliedAt = observedAt, changed = true, resultingStateHash = "after-sha256"),
+            apply = ProvisioningApplyResult(appliedAt = observedAt, changed = true, resultingStateHash = "a".repeat(64)),
             verification = ProvisioningVerificationObservation(
                 observedAt = observedAt,
                 matchesExpected = true,
-                stateHash = "after-sha256",
-                state = ProvisioningPayload(mapOf("vlanId" to "110")),
+                stateHash = "a".repeat(64),
+                state = ProvisioningResultState(managedResourceCount = 1),
             ),
         )
         val heartbeat = CollectorHeartbeat(
@@ -169,8 +170,8 @@ class CollectorProtocolSerializationTest {
             phase = ProvisioningCommandPhase.PREFLIGHT,
             success = true,
             completedAt = at,
-            preflight = com.duluin.ftth.contract.ProvisioningPreflightSnapshot(at, "before"),
-            verification = ProvisioningVerificationObservation(at, false, "before"),
+            preflight = com.duluin.ftth.contract.ProvisioningPreflightSnapshot(at, "b".repeat(64)),
+            verification = ProvisioningVerificationObservation(at, false, "b".repeat(64)),
         )
 
         assertFalse(preflight.verification!!.matchesExpected)
@@ -178,7 +179,7 @@ class CollectorProtocolSerializationTest {
             preflight.copy(
                 phase = ProvisioningCommandPhase.APPLY,
                 preflight = null,
-                apply = ProvisioningApplyResult(at, changed = false, resultingStateHash = "before"),
+                apply = ProvisioningApplyResult(at, changed = false, resultingStateHash = "b".repeat(64)),
             )
         }
     }
@@ -240,12 +241,12 @@ class CollectorProtocolSerializationTest {
                 apply = ProvisioningApplyResult(
                     appliedAt = Instant.parse("2026-09-02T12:30:00Z"),
                     changed = true,
-                    resultingStateHash = "after-sha256",
+                    resultingStateHash = "a".repeat(64),
                 ),
                 verification = ProvisioningVerificationObservation(
                     observedAt = Instant.parse("2026-09-02T12:31:00Z"),
                     matchesExpected = true,
-                    stateHash = "after-sha256",
+                    stateHash = "a".repeat(64),
                 ),
             )
         }
@@ -262,11 +263,17 @@ class CollectorProtocolSerializationTest {
                 success = false,
             )
         }
+        assertFailsWith<IllegalArgumentException> {
+            ProvisioningVerificationObservation(
+                observedAt = Instant.parse("2026-09-02T12:31:00Z"),
+                matchesExpected = true,
+                stateHash = "not-a-sha256-digest",
+            )
+        }
 
-        val source = mutableMapOf("vlanId" to "110")
+        val source = mutableMapOf("trunkPorts" to "ether1")
         val payload = ProvisioningPayload(source)
-        source["vlanId"] = "999"
-        assertEquals("110", payload.values.getValue("vlanId"))
-        assertFalse(payload.toString().contains("110"))
+        source["trunkPorts"] = "ether2"
+        assertEquals("ether1", payload.values.trunkPorts)
     }
 }
