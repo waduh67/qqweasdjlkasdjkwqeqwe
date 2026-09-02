@@ -21,12 +21,14 @@ import com.duluin.ftth.contract.ProvisioningCommandPhase
 import com.duluin.ftth.contract.ProvisioningErrorCode
 import com.duluin.ftth.contract.ProvisioningPayload
 import com.duluin.ftth.contract.ProvisioningPlanStepCommand
+import com.duluin.ftth.contract.ProvisioningAcknowledgement
 import com.duluin.ftth.contract.ProvisioningStepResult
 import com.duluin.ftth.contract.ProvisioningTarget
 import com.duluin.ftth.contract.ProvisioningVerificationObservation
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
@@ -90,7 +92,6 @@ class CollectorAgentTest {
 
     @Test
     fun `recorded provisioning results ride the next successful heartbeat once`() {
-        val (agent, client) = agentWith(ArrayDeque())
         val result = ProvisioningStepResult(
             planId = "plan-1",
             revision = 1,
@@ -101,6 +102,12 @@ class CollectorAgentTest {
             completedAt = Instant.parse("2026-07-26T00:00:00Z"),
             errorCode = ProvisioningErrorCode.UNSUPPORTED_CAPABILITY,
         )
+        val acknowledged = FakeServerClient.IDLE.copy(
+            provisioningAcknowledgement = ProvisioningAcknowledgement(
+                resultIdempotencyKeys = setOf(result.idempotencyKey),
+            ),
+        )
+        val (agent, client) = agentWith(ArrayDeque(listOf(acknowledged)))
 
         agent.recordProvisioningResult(result)
         agent.runOnce()
@@ -108,6 +115,19 @@ class CollectorAgentTest {
 
         assertEquals(listOf(result), client.heartbeats[0].provisioningResults)
         assertTrue(client.heartbeats[1].provisioningResults.isEmpty())
+    }
+
+    @Test
+    fun `generic successful heartbeat does not discard unacknowledged provisioning result`() {
+        val result = failedProvisioningResult("step-unacknowledged")
+        val (agent, client) = agentWith(ArrayDeque(listOf(FakeServerClient.IDLE, FakeServerClient.IDLE)))
+        agent.recordProvisioningResult(result)
+
+        agent.runOnce()
+        agent.runOnce()
+
+        assertEquals(listOf(result), client.heartbeats[0].provisioningResults)
+        assertEquals(listOf(result), client.heartbeats[1].provisioningResults)
     }
 
     @Test
@@ -134,9 +154,15 @@ class CollectorAgentTest {
 
     @Test
     fun `result recorded during heartbeat is retained for the following heartbeat`() {
-        val (agent, client) = agentWith(ArrayDeque())
         val first = failedProvisioningResult("step-1")
         val late = failedProvisioningResult("step-2")
+        val acknowledgeFirst = FakeServerClient.IDLE.copy(
+            provisioningAcknowledgement = ProvisioningAcknowledgement(setOf(first.idempotencyKey)),
+        )
+        val acknowledgeLate = FakeServerClient.IDLE.copy(
+            provisioningAcknowledgement = ProvisioningAcknowledgement(setOf(late.idempotencyKey)),
+        )
+        val (agent, client) = agentWith(ArrayDeque(listOf(acknowledgeFirst, acknowledgeLate)))
         agent.recordProvisioningResult(first)
         client.onHeartbeat = {
             client.onHeartbeat = null
@@ -182,7 +208,14 @@ class CollectorAgentTest {
             nasTargets = listOf(target),
             provisioningCommands = listOf(command),
         )
-        val client = FakeServerClient(ArrayDeque(listOf(config, FakeServerClient.IDLE)))
+        val reportKey = "switch-1@2026-07-26T00:00:00Z"
+        val acknowledgement = ProvisioningAcknowledgement(
+            resultIdempotencyKeys = setOf(command.idempotencyKey),
+            deviceReportKeys = setOf(reportKey),
+        )
+        val client = FakeServerClient(
+            ArrayDeque(listOf(config, FakeServerClient.IDLE.copy(provisioningAcknowledgement = acknowledgement))),
+        )
         val adapter = RecordingProvisioningAdapter()
         val agent = CollectorAgent(
             client = client,
@@ -195,13 +228,116 @@ class CollectorAgentTest {
 
         agent.runOnce()
         agent.runOnce()
-        agent.runOnce()
 
         assertEquals(listOf(command), adapter.commands)
         assertEquals("step-router", client.heartbeats[1].provisioningResults.single().stepId)
         assertEquals("switch-1", client.heartbeats[1].deviceReports.single().targetId)
         assertTrue(client.heartbeats[2].provisioningResults.isEmpty())
         assertTrue(client.heartbeats[2].deviceReports.isEmpty())
+    }
+
+    @Test
+    fun `one shot execution flushes provisioning result and report before returning`() {
+        val command = provisioningCommand("step-one-shot")
+        val target = NasTarget("switch-1", "router", "MIKROTIK", "router.invalid", "ROUTER_OS")
+        val first = FakeServerClient.IDLE.copy(nasTargets = listOf(target), provisioningCommands = listOf(command))
+        val client = FakeServerClient(ArrayDeque(listOf(first, FakeServerClient.IDLE)))
+        val agent = CollectorAgent(
+            client = client,
+            registry = AdapterRegistry(emptyList()),
+            agentVersion = "test-1.0",
+            sleeper = {},
+            clock = { Instant.parse("2026-07-26T00:00:00Z") },
+            provisioningRegistry = ProvisioningAdapterRegistry(listOf(RecordingProvisioningAdapter())),
+        )
+
+        agent.runOnce()
+
+        assertEquals(2, client.heartbeats.size)
+        assertEquals(command.idempotencyKey, client.heartbeats[1].provisioningResults.single().idempotencyKey)
+        assertEquals("switch-1", client.heartbeats[1].deviceReports.single().targetId)
+    }
+
+    @Test
+    fun `interrupted one shot flush retains result for the next invocation`() {
+        val command = provisioningCommand("step-interrupted")
+        val target = NasTarget("switch-1", "router", "MIKROTIK", "router.invalid", "ROUTER_OS")
+        val first = FakeServerClient.IDLE.copy(nasTargets = listOf(target), provisioningCommands = listOf(command))
+        val client = FakeServerClient(ArrayDeque(listOf(first, FakeServerClient.IDLE, FakeServerClient.IDLE)))
+        val agent = CollectorAgent(
+            client = client,
+            registry = AdapterRegistry(emptyList()),
+            agentVersion = "test-1.0",
+            sleeper = {},
+            clock = { Instant.parse("2026-07-26T00:00:00Z") },
+            provisioningRegistry = ProvisioningAdapterRegistry(listOf(RecordingProvisioningAdapter())),
+        )
+        client.onHeartbeat = {
+            if (client.heartbeats.size == 2) throw IllegalStateException("interrupted")
+        }
+
+        assertFailsWith<IllegalStateException> { agent.runOnce() }
+        client.onHeartbeat = null
+        agent.runOnce()
+
+        assertEquals(command.idempotencyKey, client.heartbeats[2].provisioningResults.single().idempotencyKey)
+    }
+
+    @Test
+    fun `repeated unacknowledged command does not execute or queue twice`() {
+        val command = provisioningCommand("step-repeated")
+        val target = NasTarget("switch-1", "router", "MIKROTIK", "router.invalid", "ROUTER_OS")
+        val config = FakeServerClient.IDLE.copy(nasTargets = listOf(target), provisioningCommands = listOf(command))
+        val client = FakeServerClient(ArrayDeque())
+        val adapter = RecordingProvisioningAdapter()
+        val agent = CollectorAgent(
+            client = client,
+            registry = AdapterRegistry(emptyList()),
+            agentVersion = "test-1.0",
+            sleeper = {},
+            clock = { Instant.parse("2026-07-26T00:00:00Z") },
+            provisioningRegistry = ProvisioningAdapterRegistry(listOf(adapter)),
+        )
+
+        agent.runCycle(config)
+        agent.runCycle(config)
+        agent.runOnce()
+
+        assertEquals(listOf(command), adapter.commands)
+        assertTrue(client.heartbeats.all { heartbeat ->
+            heartbeat.provisioningResults.map { it.idempotencyKey } == listOf(command.idempotencyKey)
+        })
+    }
+
+    @Test
+    fun `retry attempts sharing an idempotency key remain independently deliverable`() {
+        val first = provisioningCommand("step-retry").copy(
+            attemptId = "attempt-1",
+            idempotencyKey = "shared-operation-key",
+            fencingEpoch = 1,
+        )
+        val second = first.copy(attemptId = "attempt-2", fencingEpoch = 2)
+        val target = NasTarget("switch-1", "router", "MIKROTIK", "router.invalid", "ROUTER_OS")
+        val client = FakeServerClient(ArrayDeque())
+        val adapter = RecordingProvisioningAdapter()
+        val agent = CollectorAgent(
+            client = client,
+            registry = AdapterRegistry(emptyList()),
+            agentVersion = "test-1.0",
+            sleeper = {},
+            clock = { Instant.parse("2026-07-26T00:00:00Z") },
+            provisioningRegistry = ProvisioningAdapterRegistry(listOf(adapter)),
+        )
+
+        agent.runCycle(FakeServerClient.IDLE.copy(nasTargets = listOf(target), provisioningCommands = listOf(first)))
+        agent.runCycle(FakeServerClient.IDLE.copy(nasTargets = listOf(target), provisioningCommands = listOf(second)))
+        agent.runOnce()
+
+        assertEquals(listOf("attempt-1", "attempt-2"), adapter.commands.map { it.attemptId })
+        assertEquals(
+            listOf("attempt-1", "attempt-2"),
+            client.heartbeats.single().provisioningResults.map { it.attemptId },
+        )
     }
 
     private fun failedProvisioningResult(stepId: String) = ProvisioningStepResult(
@@ -291,16 +427,19 @@ class CollectorAgentTest {
                 planId = command.planId,
                 revision = command.revision,
                 stepId = command.stepId,
+                attemptId = command.attemptId,
+                targetId = command.target.deviceId,
                 operationClass = command.operationClass,
                 idempotencyKey = command.idempotencyKey,
+                fencingEpoch = command.fencingEpoch,
                 phase = command.phase,
                 success = true,
                 completedAt = at,
-                preflight = com.duluin.ftth.contract.ProvisioningPreflightSnapshot(at, "hash"),
+                preflight = com.duluin.ftth.contract.ProvisioningPreflightSnapshot(at, "a".repeat(64)),
                 verification = ProvisioningVerificationObservation(
                     observedAt = at,
                     matchesExpected = true,
-                    stateHash = "hash",
+                    stateHash = "a".repeat(64),
                 ),
             )
         }

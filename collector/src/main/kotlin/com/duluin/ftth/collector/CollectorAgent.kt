@@ -21,6 +21,8 @@ import com.duluin.ftth.contract.ProvisioningErrorCode
 import com.duluin.ftth.contract.ProvisioningStepResult
 import com.duluin.ftth.contract.RadiusSessionReading
 import com.duluin.ftth.contract.TargetFailure
+import com.duluin.ftth.contract.acknowledgementKey
+import com.duluin.ftth.contract.deliveryKey
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.util.UUID
@@ -71,7 +73,8 @@ class CollectorAgent(
     /** Records an adapter-produced result for delivery; adapters are added later. */
     fun recordProvisioningResult(result: ProvisioningStepResult) {
         synchronized(provisioningLock) {
-            pendingProvisioningResults = pendingProvisioningResults + result
+            pendingProvisioningResults = (pendingProvisioningResults + result)
+                .distinctBy(ProvisioningStepResult::deliveryKey)
         }
     }
 
@@ -94,7 +97,10 @@ class CollectorAgent(
             log.info("Collector '{}' sedang dijeda server", config.collectorName)
             return null
         }
-        return runCycle(config)
+        val pendingBeforeCycle = pendingProvisioningKeys()
+        val report = runCycle(config)
+        if (pendingProvisioningKeys() != pendingBeforeCycle) sendHeartbeat(report)
+        return report
     }
 
     /**
@@ -116,10 +122,24 @@ class CollectorAgent(
         )
         pendingActionResults = emptyList()
         synchronized(provisioningLock) {
-            pendingProvisioningResults = pendingProvisioningResults.drop(provisioningResults.size)
-            pendingDeviceReports = pendingDeviceReports.drop(deviceReports.size)
+            val acknowledgement = config.provisioningAcknowledgement
+            pendingProvisioningResults = pendingProvisioningResults.filterNot {
+                if (it.attemptId == null) {
+                    it.idempotencyKey in acknowledgement.resultIdempotencyKeys
+                } else {
+                    it.attemptId in acknowledgement.resultAttemptIds
+                }
+            }
+            pendingDeviceReports = pendingDeviceReports.filterNot {
+                it.acknowledgementKey() in acknowledgement.deviceReportKeys
+            }
         }
         return config
+    }
+
+    private fun pendingProvisioningKeys(): Pair<Set<String>, Set<String>> = synchronized(provisioningLock) {
+        pendingProvisioningResults.mapTo(linkedSetOf(), ProvisioningStepResult::deliveryKey) to
+            pendingDeviceReports.mapTo(linkedSetOf(), DeviceCapabilityReport::acknowledgementKey)
     }
 
     fun run() {
@@ -203,11 +223,16 @@ class CollectorAgent(
         if (provisioningRegistry == null) {
             synchronized(provisioningLock) {
                 pendingProvisioningCommands = (pendingProvisioningCommands + config.provisioningCommands)
-                    .distinctBy(ProvisioningPlanStepCommand::idempotencyKey)
+                    .distinctBy(ProvisioningPlanStepCommand::deliveryKey)
             }
             return
         }
-        config.provisioningCommands.distinctBy(ProvisioningPlanStepCommand::idempotencyKey).forEach { command ->
+        config.provisioningCommands.distinctBy(ProvisioningPlanStepCommand::deliveryKey)
+            .filterNot { command ->
+                synchronized(provisioningLock) {
+                    pendingProvisioningResults.any { it.deliveryKey() == command.deliveryKey() }
+                }
+            }.forEach { command ->
             val target = config.nasTargets.singleOrNull { it.nasId == command.target.deviceId }
             val adapter = target?.let { provisioningRegistry.forVendor(it.vendor) }
             val result = if (target == null || adapter == null) {
@@ -216,7 +241,8 @@ class CollectorAgent(
                 adapter.execute(target, command)
             }
             synchronized(provisioningLock) {
-                pendingProvisioningResults = pendingProvisioningResults + result
+                pendingProvisioningResults = (pendingProvisioningResults + result)
+                    .distinctBy(ProvisioningStepResult::deliveryKey)
                 if (target != null && adapter != null && pendingDeviceReports.none { it.targetId == target.nasId }) {
                     pendingDeviceReports = pendingDeviceReports + adapter.capabilityReport(target)
                 }
@@ -228,8 +254,11 @@ class CollectorAgent(
         planId = command.planId,
         revision = command.revision,
         stepId = command.stepId,
+        attemptId = command.attemptId,
+        targetId = command.target.deviceId,
         operationClass = command.operationClass,
         idempotencyKey = command.idempotencyKey,
+        fencingEpoch = command.fencingEpoch,
         phase = command.phase,
         success = false,
         completedAt = clock(),
