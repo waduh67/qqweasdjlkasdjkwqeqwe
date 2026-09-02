@@ -6,6 +6,7 @@ import com.duluin.ftth.provisioning.application.port.outbound.SegmentProfileRepo
 import com.duluin.ftth.provisioning.application.port.outbound.ServiceIntentRepository
 import com.duluin.ftth.provisioning.application.port.outbound.VlanAllocationScopeRepository
 import com.duluin.ftth.provisioning.application.port.outbound.VlanPoolRepository
+import com.duluin.ftth.provisioning.application.service.DedicatedVlanAllocationCommand
 import com.duluin.ftth.provisioning.application.service.DeterministicVlanAllocationService
 import com.duluin.ftth.provisioning.application.service.SharedVlanAllocationCommand
 import com.duluin.ftth.provisioning.domain.model.SegmentProfile
@@ -24,6 +25,9 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -119,6 +123,49 @@ class VlanAllocatorPersistenceIT {
 
         assertThat(first.vlanId).isEqualTo(210)
         assertThat(second.vlanId).isEqualTo(211)
+    }
+
+    @Test
+    fun `concurrent dedicated allocations through overlapping pools serialize per device`() {
+        val tenantId = tenantApi.ensureTenant("allocator-race-${UUID.randomUUID().toString().take(8)}", "allocator").id
+        val oltId = UuidV7.generate()
+        val fixture = overlappingPools(tenantId)
+        val commands = listOf(
+            DedicatedVlanAllocationCommand(
+                tenantId,
+                fixture.firstPool.id,
+                oltId,
+                fixture.firstIntent.id,
+                fixture.firstIntent.id,
+            ),
+            DedicatedVlanAllocationCommand(
+                tenantId,
+                fixture.secondPool.id,
+                oltId,
+                fixture.secondIntent.id,
+                fixture.secondIntent.id,
+            ),
+        )
+        val ready = CountDownLatch(commands.size)
+        val start = CountDownLatch(1)
+        val workers = Executors.newFixedThreadPool(commands.size)
+
+        try {
+            val results = commands.map { command ->
+                workers.submit<Int> {
+                    ready.countDown()
+                    start.await()
+                    asTenant(tenantId) { allocator.allocateDedicated(command).vlanId }
+                }
+            }
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue()
+            start.countDown()
+
+            assertThat(results.map { it.get(30, TimeUnit.SECONDS) })
+                .containsExactlyInAnyOrder(210, 211)
+        } finally {
+            workers.shutdownNow()
+        }
     }
 
     private fun overlappingPools(tenantId: UUID): OverlappingPoolFixture = asTenant(tenantId) {
