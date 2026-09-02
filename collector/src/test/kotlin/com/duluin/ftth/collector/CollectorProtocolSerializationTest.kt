@@ -148,9 +148,39 @@ class CollectorProtocolSerializationTest {
                 "TIMEOUT",
                 "ROLLBACK_CONFLICT",
                 "MANUAL_RECONCILIATION",
+                "VALIDATION_FAILED",
+                "MANAGEMENT_PATH_UNPROVEN",
+                "PROTECTED_RESOURCE",
+                "INSECURE_TRANSPORT",
             ),
             ProvisioningErrorCode.entries.map { it.name },
         )
+    }
+
+    @Test
+    fun `successful preflight may report desired mismatch while apply stays strict`() {
+        val at = Instant.parse("2026-09-02T12:31:00Z")
+        val preflight = ProvisioningStepResult(
+            planId = "plan-1",
+            revision = 1,
+            stepId = "step-1",
+            operationClass = "ENSURE_TAGGED_VLAN",
+            idempotencyKey = "preflight",
+            phase = ProvisioningCommandPhase.PREFLIGHT,
+            success = true,
+            completedAt = at,
+            preflight = com.duluin.ftth.contract.ProvisioningPreflightSnapshot(at, "before"),
+            verification = ProvisioningVerificationObservation(at, false, "before"),
+        )
+
+        assertFalse(preflight.verification!!.matchesExpected)
+        assertFailsWith<IllegalArgumentException> {
+            preflight.copy(
+                phase = ProvisioningCommandPhase.APPLY,
+                preflight = null,
+                apply = ProvisioningApplyResult(at, changed = false, resultingStateHash = "before"),
+            )
+        }
     }
 
     @Test

@@ -235,6 +235,10 @@ enum class ProvisioningErrorCode {
     TIMEOUT,
     ROLLBACK_CONFLICT,
     MANUAL_RECONCILIATION,
+    VALIDATION_FAILED,
+    MANAGEMENT_PATH_UNPROVEN,
+    PROTECTED_RESOURCE,
+    INSECURE_TRANSPORT,
 }
 
 /**
@@ -292,6 +296,8 @@ data class ProvisioningPlanStepCommand(
     val phase: ProvisioningCommandPhase,
     val operationClass: String,
     val idempotencyKey: String,
+    /** Monotonic device-lease token; lower tokens are rejected by the collector adapter. */
+    val fencingEpoch: Long = 0,
     val expectedPreconditionHash: String? = null,
     val deadline: Instant,
     val target: ProvisioningTarget,
@@ -337,6 +343,8 @@ data class ProvisioningStepResult(
     val stepId: String,
     val operationClass: String,
     val idempotencyKey: String,
+    /** Additive phase marker; legacy results deserialize as APPLY. */
+    val phase: ProvisioningCommandPhase = ProvisioningCommandPhase.APPLY,
     val success: Boolean,
     val completedAt: Instant,
     val errorCode: ProvisioningErrorCode? = null,
@@ -346,8 +354,20 @@ data class ProvisioningStepResult(
     val rollback: ProvisioningRollbackResult? = null,
 ) {
     init {
-        require(!success || (apply != null && verification?.matchesExpected == true && errorCode == null && rollback == null)) {
-            "Successful provisioning result requires a matching verification observation"
+        require(!success || errorCode == null) { "Successful provisioning result cannot carry an error code" }
+        if (success) when (phase) {
+            ProvisioningCommandPhase.PREFLIGHT -> require(preflight != null && apply == null && verification != null && rollback == null) {
+                "Successful preflight requires snapshot and observation evidence"
+            }
+            ProvisioningCommandPhase.APPLY -> require(apply != null && verification?.matchesExpected == true && rollback == null) {
+                "Successful apply requires matching verification evidence"
+            }
+            ProvisioningCommandPhase.VERIFY -> require(apply == null && verification?.matchesExpected == true && rollback == null) {
+                "Successful verification requires matching observation evidence"
+            }
+            ProvisioningCommandPhase.ROLLBACK -> require(apply == null && verification?.matchesExpected == true && rollback?.success == true) {
+                "Successful rollback requires matching rollback evidence"
+            }
         }
         require(success || errorCode != null) { "Failed provisioning result requires an error code" }
     }
