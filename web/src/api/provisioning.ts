@@ -1,0 +1,145 @@
+import { api } from './client'
+
+export type ProvisioningDeviceKind = 'OLT' | 'SWITCH' | 'ROUTER' | 'BRAS'
+export type ProvisioningMode = 'PRODUCTION_AUTO_APPLY' | 'DRY_RUN' | 'SIMULATOR'
+export type CertificationStatus = 'CERTIFIED' | 'PROVISIONAL' | 'UNSUPPORTED' | 'REQUIRES_MANUAL'
+
+export interface RevisionedResource<T> {
+  revision: number
+  value: T
+}
+
+export interface ProvisioningTopology {
+  nodes: Array<{ id: string; name: string; role: string; administrativeStatus: string }>
+  interfaces: Array<{ id: string; nodeId: string; name: string; role: string; administrativeStatus: string }>
+  links: Array<{ id: string; interfaceAId: string; interfaceZId: string; administrativeStatus: string }>
+}
+
+export interface VlanRangeInput { start: number; endInclusive: number }
+export interface TopologyNodeInput { revision?: number; name: string; role: string; referenceKind?: string | null; referenceId?: string | null; status: string }
+export interface TopologyInterfaceInput { revision?: number; nodeId: string; name: string; role: string; referenceKind?: string | null; referenceId?: string | null; status: string }
+export interface TopologyLinkInput { revision?: number; interfaceAId: string; interfaceZId: string; status: string }
+export interface VlanPoolInput { revision?: number; name: string; vlanStart: number; vlanEnd: number; reserved?: VlanRangeInput[] }
+export interface SegmentProfileInput { revision?: number; name: string; poolId: string }
+export interface ServiceIntentInput { revision?: number; subscriptionId: string; segmentProfileId: string; dedicatedVlanId?: number | null; status?: string }
+
+export interface VlanPoolView {
+  id: string
+  name: string
+  range: VlanRangeInput
+  reservedRanges: VlanRangeInput[]
+}
+
+export interface SegmentProfileView {
+  id: string
+  name: string
+  poolId: string
+}
+
+export interface ServiceIntentView {
+  id: string
+  subscriptionId: string
+  segmentProfileId: string
+  status: string
+}
+
+export interface PlanPreview {
+  planId: string
+  revision: number
+  status: string
+  decision: { allowed: boolean; code: string; warnings: string[]; evidenceIds: string[] }
+}
+
+export interface ExecutionView {
+  id: string
+  planId: string
+  status: string
+  detail: string | null
+}
+
+export interface CapabilityEvidenceView {
+  id: string
+  deviceKind: ProvisioningDeviceKind
+  deviceId: string
+  vendor: string
+  model: string
+  firmware: string
+  transport: string
+  operationClass: string
+  supported: boolean
+  observedAt: string
+  expiresAt: string
+}
+
+export interface ManagementProtectionView {
+  id: string
+  deviceKind: ProvisioningDeviceKind
+  deviceId: string
+  complete: boolean
+  sourceType: 'TOPOLOGY_OBSERVATION' | 'DEVICE_OBSERVATION' | null
+  sourceEvidenceId: string | null
+  validUntil: string
+}
+
+export interface DriftView {
+  id: string
+  deviceKind: ProvisioningDeviceKind
+  deviceId: string
+  status: 'NONE' | 'BENIGN' | 'CONFLICTING' | 'UNKNOWN'
+  recordedAt: string
+}
+
+export interface AdapterCertificationView {
+  id: string
+  tenantId: string
+  deviceKind: ProvisioningDeviceKind
+  deviceId: string
+  vendor: string
+  model: string
+  firmware: string
+  transport: string
+  operationClass: string
+  status: CertificationStatus
+  validUntil: string
+  evidenceId: string | null
+  revokedAt: string | null
+}
+
+export const getTopology = () => api.get<ProvisioningTopology>('/api/provisioning/topology')
+export const createTopologyNode = (body: TopologyNodeInput) => api.post<RevisionedResource<ProvisioningTopology['nodes'][number]>>('/api/provisioning/topology/nodes', body)
+export const updateTopologyNode = (id: string, body: TopologyNodeInput) => api.put<RevisionedResource<ProvisioningTopology['nodes'][number]>>(`/api/provisioning/topology/nodes/${id}`, body)
+export const createTopologyInterface = (body: TopologyInterfaceInput) => api.post<RevisionedResource<ProvisioningTopology['interfaces'][number]>>('/api/provisioning/topology/interfaces', body)
+export const updateTopologyInterface = (id: string, body: TopologyInterfaceInput) => api.put<RevisionedResource<ProvisioningTopology['interfaces'][number]>>(`/api/provisioning/topology/interfaces/${id}`, body)
+export const createTopologyLink = (body: TopologyLinkInput) => api.post<RevisionedResource<ProvisioningTopology['links'][number]>>('/api/provisioning/topology/links', body)
+export const updateTopologyLink = (id: string, body: TopologyLinkInput) => api.put<RevisionedResource<ProvisioningTopology['links'][number]>>(`/api/provisioning/topology/links/${id}`, body)
+export const deleteTopologyResource = (type: 'TOPOLOGY_NODE' | 'TOPOLOGY_INTERFACE' | 'TOPOLOGY_LINK', id: string, revision: number) =>
+  api.del<void>(`/api/provisioning/topology/${type}/${id}?revision=${revision}`)
+export const listVlanPools = () => api.get<Array<RevisionedResource<VlanPoolView>>>('/api/provisioning/vlan-pools')
+export const createVlanPool = (body: VlanPoolInput) => api.post<RevisionedResource<VlanPoolView>>('/api/provisioning/vlan-pools', body)
+export const updateVlanPool = (id: string, body: VlanPoolInput) => api.put<RevisionedResource<VlanPoolView>>(`/api/provisioning/vlan-pools/${id}`, body)
+export const deleteVlanPool = (id: string, revision: number) => api.del<void>(`/api/provisioning/vlan-pools/${id}?revision=${revision}`)
+export const listSegmentProfiles = () => api.get<Array<RevisionedResource<SegmentProfileView>>>('/api/provisioning/segment-profiles')
+export const createSegmentProfile = (body: SegmentProfileInput) => api.post<RevisionedResource<SegmentProfileView>>('/api/provisioning/segment-profiles', body)
+export const updateSegmentProfile = (id: string, body: SegmentProfileInput) => api.put<RevisionedResource<SegmentProfileView>>(`/api/provisioning/segment-profiles/${id}`, body)
+export const deleteSegmentProfile = (id: string, revision: number) => api.del<void>(`/api/provisioning/segment-profiles/${id}?revision=${revision}`)
+export const listServiceIntents = () => api.get<Array<RevisionedResource<ServiceIntentView>>>('/api/provisioning/intents')
+export const createServiceIntent = (body: ServiceIntentInput) => api.post<RevisionedResource<ServiceIntentView>>('/api/provisioning/intents', body)
+export const updateServiceIntent = (id: string, body: ServiceIntentInput) => api.put<RevisionedResource<ServiceIntentView>>(`/api/provisioning/intents/${id}`, body)
+export const previewProvisioning = (planId: string, mode: Exclude<ProvisioningMode, 'PRODUCTION_AUTO_APPLY'>) =>
+  api.post<PlanPreview>(`/api/provisioning/plans/${planId}/preview?mode=${mode}`)
+export const applyProvisioningPlan = (planId: string, revision: number, idempotencyKey: string) =>
+  api.post<ExecutionView>(`/api/provisioning/plans/${planId}/apply`, { revision, idempotencyKey })
+export const cancelProvisioningExecution = (executionId: string) =>
+  api.post<ExecutionView>(`/api/provisioning/executions/${executionId}/cancel`)
+export const getProvisioningExecution = (executionId: string) =>
+  api.get<ExecutionView>(`/api/provisioning/executions/${executionId}`)
+export const listProvisioningCapabilities = () => api.get<CapabilityEvidenceView[]>('/api/provisioning/capabilities')
+export const listManagementProtections = () => api.get<ManagementProtectionView[]>('/api/provisioning/management-protections')
+export const listProvisioningDrift = () => api.get<DriftView[]>('/api/provisioning/drift')
+export const adoptProvisioningDrift = (id: string) => api.post<DriftView>(`/api/provisioning/drift/${id}/adopt`)
+export const listAdapterCertifications = (tenantId: string) =>
+  api.get<AdapterCertificationView[]>(`/api/platform/tenants/${tenantId}/provisioning/certifications`)
+export const certifyAdapter = (tenantId: string, body: Omit<AdapterCertificationView, 'id' | 'tenantId' | 'status' | 'evidenceId' | 'revokedAt'>) =>
+  api.post<AdapterCertificationView>(`/api/platform/tenants/${tenantId}/provisioning/certifications`, body)
+export const revokeAdapterCertification = (tenantId: string, certificationId: string) =>
+  api.post<AdapterCertificationView>(`/api/platform/tenants/${tenantId}/provisioning/certifications/${certificationId}/revoke`)
