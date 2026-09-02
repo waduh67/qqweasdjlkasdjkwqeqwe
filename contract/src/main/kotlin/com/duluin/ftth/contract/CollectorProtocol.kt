@@ -1,6 +1,7 @@
 package com.duluin.ftth.contract
 
 import java.time.Instant
+import java.util.Collections
 
 /**
  * Protokol collector ↔ server.
@@ -46,6 +47,10 @@ data class CollectorHeartbeat(
      * untuk menuntaskan status perintah di antrean.
      */
     val actionResults: List<BngActionResult> = emptyList(),
+    /** Fingerprint dan kemampuan adapter/perangkat yang terlihat collector. */
+    val deviceReports: List<DeviceCapabilityReport> = emptyList(),
+    /** Hasil provisioning yang sudah selesai dan menunggu diterima server. */
+    val provisioningResults: List<ProvisioningStepResult> = emptyList(),
 )
 
 data class CycleReport(
@@ -186,7 +191,167 @@ data class CollectorConfig(
      * Collector menjalankannya lalu meng-ACK lewat [CollectorHeartbeat.actionResults].
      */
     val bngActions: List<BngActionCommand> = emptyList(),
+    /** Perintah provisioning tersendiri; tidak mengubah semantik [bngActions]. */
+    val provisioningCommands: List<ProvisioningPlanStepCommand> = emptyList(),
 )
+
+/** Target perangkat yang dinormalisasi dan tidak membawa kredensial transport. */
+data class ProvisioningTarget(
+    val deviceId: String,
+    val deviceKind: String,
+    val managementAddress: String,
+    val transport: String,
+)
+
+/** Identitas perangkat yang dipakai server untuk mencocokkan sertifikasi adapter. */
+data class DeviceFingerprint(
+    val vendor: String,
+    val model: String,
+    val firmware: String,
+    val transport: String,
+)
+
+/** Laporan kemampuan aktual dari collector untuk satu target. */
+data class DeviceCapabilityReport(
+    val targetId: String,
+    val fingerprint: DeviceFingerprint,
+    val capabilities: Set<String> = emptySet(),
+    val reportedAt: Instant,
+)
+
+/** Tahap eksplisit menjaga apply, verifikasi, dan rollback aman terhadap version skew. */
+enum class ProvisioningCommandPhase {
+    PREFLIGHT,
+    APPLY,
+    VERIFY,
+    ROLLBACK,
+}
+
+/** Kode kegagalan stabil untuk otomasi server dan rekonsiliasi operator. */
+enum class ProvisioningErrorCode {
+    UNSUPPORTED_CAPABILITY,
+    STALE_PRECONDITION,
+    VERIFICATION_MISMATCH,
+    TIMEOUT,
+    ROLLBACK_CONFLICT,
+    MANUAL_RECONCILIATION,
+}
+
+/**
+ * Payload vendor-netral yang menolak nama field sensitif dan menyalin map secara
+ * defensif. Nilai dibatasi ke string agar bentuk JSON stabil lintas versi.
+ */
+class ProvisioningPayload(values: Map<String, String> = emptyMap()) {
+    val values: Map<String, String> = Collections.unmodifiableMap(LinkedHashMap(values))
+
+    init {
+        this.values.keys.forEach { key ->
+            val normalized = key.lowercase().filter(Char::isLetterOrDigit)
+            require(FORBIDDEN_KEY_FRAGMENTS.none(normalized::contains)) {
+                "Provisioning payload contains forbidden sensitive key '$key'"
+            }
+        }
+        this.values.values.forEach { value ->
+            require(FORBIDDEN_VALUE_PATTERNS.none { it.containsMatchIn(value) }) {
+                "Provisioning payload contains an obvious reusable secret"
+            }
+        }
+    }
+
+    override fun equals(other: Any?): Boolean = other is ProvisioningPayload && values == other.values
+
+    override fun hashCode(): Int = values.hashCode()
+
+    override fun toString(): String = "ProvisioningPayload(keys=${values.keys})"
+
+    private companion object {
+        val FORBIDDEN_KEY_FRAGMENTS = setOf(
+            "password",
+            "secret",
+            "credential",
+            "token",
+            "rawcli",
+            "community",
+            "privatekey",
+            "passphrase",
+            "apikey",
+            "authkey",
+        )
+        val FORBIDDEN_VALUE_PATTERNS = listOf(
+            Regex("(?i)\\b(?:password|secret|credential|token|community|passphrase)\\s*[:=]"),
+            Regex("(?i)-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+        )
+    }
+}
+
+/** Immutable instruction for exactly one plan step and one execution phase. */
+data class ProvisioningPlanStepCommand(
+    val planId: String,
+    val revision: Int,
+    val stepId: String,
+    val phase: ProvisioningCommandPhase,
+    val operationClass: String,
+    val idempotencyKey: String,
+    val expectedPreconditionHash: String? = null,
+    val deadline: Instant,
+    val target: ProvisioningTarget,
+    val payload: ProvisioningPayload = ProvisioningPayload(),
+)
+
+data class ProvisioningPreflightSnapshot(
+    val capturedAt: Instant,
+    val preconditionHash: String,
+    val state: ProvisioningPayload = ProvisioningPayload(),
+)
+
+data class ProvisioningApplyResult(
+    val appliedAt: Instant,
+    val changed: Boolean,
+    val resultingStateHash: String? = null,
+)
+
+data class ProvisioningVerificationObservation(
+    val observedAt: Instant,
+    val matchesExpected: Boolean,
+    val stateHash: String,
+    val state: ProvisioningPayload = ProvisioningPayload(),
+)
+
+data class ProvisioningRollbackResult(
+    val completedAt: Instant,
+    val success: Boolean,
+    val resultingStateHash: String? = null,
+    val errorCode: ProvisioningErrorCode? = null,
+) {
+    init {
+        require(success == (errorCode == null)) {
+            "Rollback success and error code must be consistent"
+        }
+    }
+}
+
+/** Complete, secret-free outcome returned through the next heartbeat. */
+data class ProvisioningStepResult(
+    val planId: String,
+    val revision: Int,
+    val stepId: String,
+    val operationClass: String,
+    val idempotencyKey: String,
+    val success: Boolean,
+    val completedAt: Instant,
+    val errorCode: ProvisioningErrorCode? = null,
+    val preflight: ProvisioningPreflightSnapshot? = null,
+    val apply: ProvisioningApplyResult? = null,
+    val verification: ProvisioningVerificationObservation? = null,
+    val rollback: ProvisioningRollbackResult? = null,
+) {
+    init {
+        require(!success || (apply != null && verification?.matchesExpected == true && errorCode == null && rollback == null)) {
+            "Successful provisioning result requires a matching verification observation"
+        }
+        require(success || errorCode != null) { "Failed provisioning result requires an error code" }
+    }
+}
 
 /**
  * Satu OLT yang harus di-polling.
