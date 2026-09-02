@@ -12,6 +12,12 @@ import com.duluin.ftth.contract.CollectorHeartbeat
 import com.duluin.ftth.contract.IngestResult
 import com.duluin.ftth.contract.MetricBatch
 import com.duluin.ftth.contract.NasTarget
+import com.duluin.ftth.contract.ProvisioningCommandPhase
+import com.duluin.ftth.contract.ProvisioningErrorCode
+import com.duluin.ftth.contract.ProvisioningPayload
+import com.duluin.ftth.contract.ProvisioningPlanStepCommand
+import com.duluin.ftth.contract.ProvisioningStepResult
+import com.duluin.ftth.contract.ProvisioningTarget
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -33,9 +39,11 @@ class CollectorAgentTest {
     /** ServerClient tiruan: memutar konfigurasi terprogram dan merekam tiap denyut. */
     private class FakeServerClient(private val configs: ArrayDeque<CollectorConfig>) : ServerClient {
         val heartbeats = mutableListOf<CollectorHeartbeat>()
+        var onHeartbeat: (() -> Unit)? = null
 
         override fun heartbeat(heartbeat: CollectorHeartbeat): CollectorConfig {
             heartbeats += heartbeat
+            onHeartbeat?.invoke()
             return configs.removeFirstOrNull() ?: IDLE
         }
 
@@ -73,6 +81,108 @@ class CollectorAgentTest {
         )
         return agent to client
     }
+
+    @Test
+    fun `recorded provisioning results ride the next successful heartbeat once`() {
+        val (agent, client) = agentWith(ArrayDeque())
+        val result = ProvisioningStepResult(
+            planId = "plan-1",
+            revision = 1,
+            stepId = "step-1",
+            operationClass = "ENSURE_TAGGED_VLAN",
+            idempotencyKey = "plan-1:1:step-1",
+            success = false,
+            completedAt = Instant.parse("2026-07-26T00:00:00Z"),
+            errorCode = ProvisioningErrorCode.UNSUPPORTED_CAPABILITY,
+        )
+
+        agent.recordProvisioningResult(result)
+        agent.runOnce()
+        agent.runOnce()
+
+        assertEquals(listOf(result), client.heartbeats[0].provisioningResults)
+        assertTrue(client.heartbeats[1].provisioningResults.isEmpty())
+    }
+
+    @Test
+    fun `provisioning commands are stored for a future adapter without execution`() {
+        val command = ProvisioningPlanStepCommand(
+            planId = "plan-1",
+            revision = 1,
+            stepId = "step-1",
+            phase = ProvisioningCommandPhase.PREFLIGHT,
+            operationClass = "ENSURE_TAGGED_VLAN",
+            idempotencyKey = "plan-1:1:step-1:preflight",
+            deadline = Instant.parse("2026-07-26T00:05:00Z"),
+            target = ProvisioningTarget("switch-1", "SWITCH", "10.0.0.2", "SSH"),
+            payload = ProvisioningPayload(mapOf("vlanId" to "110")),
+        )
+        val config = FakeServerClient.IDLE.copy(provisioningCommands = listOf(command))
+        val (agent, _) = agentWith(ArrayDeque(listOf(config)))
+
+        agent.runOnce()
+
+        assertEquals(listOf(command), agent.takeProvisioningCommands())
+        assertTrue(agent.takeProvisioningCommands().isEmpty(), "commands are claimed once")
+    }
+
+    @Test
+    fun `result recorded during heartbeat is retained for the following heartbeat`() {
+        val (agent, client) = agentWith(ArrayDeque())
+        val first = failedProvisioningResult("step-1")
+        val late = failedProvisioningResult("step-2")
+        agent.recordProvisioningResult(first)
+        client.onHeartbeat = {
+            client.onHeartbeat = null
+            agent.recordProvisioningResult(late)
+        }
+
+        agent.runOnce()
+        agent.runOnce()
+
+        assertEquals(listOf(first), client.heartbeats[0].provisioningResults)
+        assertEquals(listOf(late), client.heartbeats[1].provisioningResults)
+    }
+
+    @Test
+    fun `unclaimed provisioning commands survive later config batches`() {
+        val first = provisioningCommand("step-1")
+        val second = provisioningCommand("step-2")
+        val configs = ArrayDeque(
+            listOf(
+                FakeServerClient.IDLE.copy(provisioningCommands = listOf(first)),
+                FakeServerClient.IDLE.copy(provisioningCommands = listOf(second)),
+            ),
+        )
+        val (agent, _) = agentWith(configs)
+
+        agent.runOnce()
+        agent.runOnce()
+
+        assertEquals(listOf(first, second), agent.takeProvisioningCommands())
+    }
+
+    private fun failedProvisioningResult(stepId: String) = ProvisioningStepResult(
+        planId = "plan-1",
+        revision = 1,
+        stepId = stepId,
+        operationClass = "ENSURE_TAGGED_VLAN",
+        idempotencyKey = "plan-1:1:$stepId",
+        success = false,
+        completedAt = Instant.parse("2026-07-26T00:00:00Z"),
+        errorCode = ProvisioningErrorCode.UNSUPPORTED_CAPABILITY,
+    )
+
+    private fun provisioningCommand(stepId: String) = ProvisioningPlanStepCommand(
+        planId = "plan-1",
+        revision = 1,
+        stepId = stepId,
+        phase = ProvisioningCommandPhase.PREFLIGHT,
+        operationClass = "ENSURE_TAGGED_VLAN",
+        idempotencyKey = "plan-1:1:$stepId:preflight",
+        deadline = Instant.parse("2026-07-26T00:05:00Z"),
+        target = ProvisioningTarget("switch-1", "SWITCH", "10.0.0.2", "SSH"),
+    )
 
     @Test
     fun `perintah dieksekusi lalu hasilnya menumpang denyut berikutnya sekali`() {

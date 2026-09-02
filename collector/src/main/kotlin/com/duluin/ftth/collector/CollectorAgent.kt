@@ -14,6 +14,8 @@ import com.duluin.ftth.contract.MetricBatch
 import com.duluin.ftth.contract.NasTarget
 import com.duluin.ftth.contract.OltTarget
 import com.duluin.ftth.contract.OnuReading
+import com.duluin.ftth.contract.ProvisioningPlanStepCommand
+import com.duluin.ftth.contract.ProvisioningStepResult
 import com.duluin.ftth.contract.RadiusSessionReading
 import com.duluin.ftth.contract.TargetFailure
 import org.slf4j.LoggerFactory
@@ -57,6 +59,21 @@ class CollectorAgent(
      * ACK yang gagal terkirim tidak hilang (server mengirim ulang perintahnya toh).
      */
     private var pendingActionResults: List<BngActionResult> = emptyList()
+    private val provisioningLock = Any()
+    private var pendingProvisioningResults: List<ProvisioningStepResult> = emptyList()
+    private var pendingProvisioningCommands: List<ProvisioningPlanStepCommand> = emptyList()
+
+    /** Records an adapter-produced result for delivery; adapters are added later. */
+    fun recordProvisioningResult(result: ProvisioningStepResult) {
+        synchronized(provisioningLock) {
+            pendingProvisioningResults = pendingProvisioningResults + result
+        }
+    }
+
+    /** Claims commands without executing them, preserving the adapter boundary. */
+    fun takeProvisioningCommands(): List<ProvisioningPlanStepCommand> = synchronized(provisioningLock) {
+        pendingProvisioningCommands.also { pendingProvisioningCommands = emptyList() }
+    }
 
     fun stop() = running.set(false)
 
@@ -81,10 +98,19 @@ class CollectorAgent(
      * tetap utuh untuk denyut berikutnya).
      */
     private fun sendHeartbeat(lastCycle: CycleReport?): CollectorConfig {
+        val provisioningResults = synchronized(provisioningLock) { pendingProvisioningResults.toList() }
         val config = client.heartbeat(
-            CollectorHeartbeat(agentVersion = agentVersion, lastCycle = lastCycle, actionResults = pendingActionResults),
+            CollectorHeartbeat(
+                agentVersion = agentVersion,
+                lastCycle = lastCycle,
+                actionResults = pendingActionResults,
+                provisioningResults = provisioningResults,
+            ),
         )
         pendingActionResults = emptyList()
+        synchronized(provisioningLock) {
+            pendingProvisioningResults = pendingProvisioningResults.drop(provisioningResults.size)
+        }
         return config
     }
 
@@ -122,6 +148,10 @@ class CollectorAgent(
 
     /** Menjalankan satu putaran polling untuk seluruh OLT. */
     internal fun runCycle(config: CollectorConfig): CycleReport {
+        synchronized(provisioningLock) {
+            pendingProvisioningCommands = (pendingProvisioningCommands + config.provisioningCommands)
+                .distinctBy(ProvisioningPlanStepCommand::idempotencyKey)
+        }
         val startedAt = clock()
         val failures = mutableListOf<TargetFailure>()
         val readings = mutableListOf<OnuReading>()
