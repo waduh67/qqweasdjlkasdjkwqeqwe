@@ -33,13 +33,15 @@ class NormalizedStateJsonCodecTest {
     }
 
     @Test
-    fun `decoder rejects unknown fields mutable shaped values and unsafe text`() {
+    fun `decoder preserves safe legacy fields but rejects mutable shaped values and unsafe text`() {
+        val legacy = codec.decode("{\"legacyFlag\":true}")
+        assertThat(legacy.legacyPayload).isEqualTo("{\"legacyFlag\":true}")
+
         listOf(
-            "{\"unknown\":true}",
             "{\"name\":null}",
             "{\"name\":{\"name\":\"/interface vlan add\"}}",
         ).forEach { json ->
-            assertThatThrownBy { codec.decode(objectMapper.readTree(json)) }
+            assertThatThrownBy { codec.decode(json) }
                 .isInstanceOf(ValidationException::class.java)
         }
     }

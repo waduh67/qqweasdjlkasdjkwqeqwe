@@ -19,7 +19,6 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.Table
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
-import tools.jackson.databind.JsonNode
 import java.time.Instant
 import java.util.UUID
 
@@ -178,7 +177,7 @@ class StepSnapshotJpaEntity(
     val snapshotKind: StepSnapshotKind,
     @Column(name = "state_hash", nullable = false, updatable = false, length = 64) val stateHash: String,
     @JdbcTypeCode(SqlTypes.JSON) @Column(name = "normalized_state", nullable = false, updatable = false, columnDefinition = "jsonb")
-    val normalizedState: JsonNode,
+    val normalizedState: String,
     @Column(name = "captured_at", nullable = false, updatable = false) val capturedAt: Instant,
 ) : TenantAwareJpaEntity(id)
 
@@ -201,7 +200,7 @@ class DeviceSnapshotJpaEntity(
     @Column(name = "device_id", nullable = false) val deviceId: UUID,
     @Column(name = "plan_id", nullable = false) val planId: UUID,
     @JdbcTypeCode(SqlTypes.JSON) @Column(name = "normalized_state", nullable = false, columnDefinition = "jsonb")
-    val normalizedState: JsonNode,
+    val normalizedState: String,
     @Column(name = "captured_at", nullable = false) val capturedAt: Instant,
 ) : TenantAwareJpaEntity(id)
 
@@ -212,7 +211,7 @@ class DeviceObservationJpaEntity(
     @Enumerated(EnumType.STRING) @Column(name = "device_kind", nullable = false, length = 20) val deviceKind: DeviceKind,
     @Column(name = "device_id", nullable = false) val deviceId: UUID,
     @JdbcTypeCode(SqlTypes.JSON) @Column(name = "normalized_state", nullable = false, columnDefinition = "jsonb")
-    val normalizedState: JsonNode,
+    val normalizedState: String,
     @Column(name = "observed_at", nullable = false) val observedAt: Instant,
 ) : TenantAwareJpaEntity(id)
 

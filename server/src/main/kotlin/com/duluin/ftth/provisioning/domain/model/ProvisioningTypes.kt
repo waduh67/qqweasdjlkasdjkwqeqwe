@@ -54,7 +54,8 @@ enum class NormalizedField(val wireName: String) {
     EXTERNAL("external");
 
     companion object {
-        fun fromWireName(value: String): NormalizedField = entries.firstOrNull { it.wireName == value }
+        fun fromWireNameOrNull(value: String): NormalizedField? = entries.firstOrNull { it.wireName == value }
+        fun fromWireName(value: String): NormalizedField = fromWireNameOrNull(value)
             ?: throw ValidationException("NORMALIZED_FIELD_UNSUPPORTED: $value")
     }
 }
@@ -106,24 +107,32 @@ sealed interface NormalizedValue {
 
 class NormalizedDeviceState private constructor(
     val values: Map<NormalizedField, NormalizedValue>,
+    val legacyPayload: String?,
 ) {
     init {
-        validateFields(values)
+        if (legacyPayload == null) validateFields(values)
+        if (legacyPayload != null && values.isNotEmpty()) throw ValidationException("NORMALIZED_STATE_MIXED_FORMAT")
     }
 
-    override fun equals(other: Any?): Boolean = other is NormalizedDeviceState && values == other.values
-    override fun hashCode(): Int = values.hashCode()
+    override fun equals(other: Any?): Boolean =
+        other is NormalizedDeviceState && values == other.values && legacyPayload == other.legacyPayload
+    override fun hashCode(): Int = 31 * values.hashCode() + (legacyPayload?.hashCode() ?: 0)
 
-    fun canonicalForm(): String = NormalizedStateHash.canonical(values)
+    fun canonicalForm(): String = legacyPayload?.let {
+        "legacy${it.toByteArray(StandardCharsets.UTF_8).size}:$it"
+    } ?: NormalizedStateHash.canonical(values)
 
     companion object {
         fun of(vararg values: Pair<NormalizedField, NormalizedValue>): NormalizedDeviceState =
-            NormalizedDeviceState(mapOf(*values))
+            NormalizedDeviceState(mapOf(*values), null)
 
         fun from(values: Map<NormalizedField, NormalizedValue>): NormalizedDeviceState =
-            NormalizedDeviceState(values.toMap())
+            NormalizedDeviceState(values.toMap(), null)
 
-        fun empty(): NormalizedDeviceState = NormalizedDeviceState(emptyMap())
+        internal fun rehydrateLegacy(payload: String): NormalizedDeviceState =
+            NormalizedDeviceState(emptyMap(), payload)
+
+        fun empty(): NormalizedDeviceState = NormalizedDeviceState(emptyMap(), null)
 
         private fun validateFields(values: Map<NormalizedField, NormalizedValue>) {
             values.forEach { (field, value) ->

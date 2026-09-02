@@ -12,16 +12,43 @@ import tools.jackson.databind.node.ObjectNode
 
 @Component
 class NormalizedStateJsonCodec(private val objectMapper: ObjectMapper) {
-    fun encode(state: NormalizedDeviceState): JsonNode = objectMapper.createObjectNode().also { root ->
+    fun encode(state: NormalizedDeviceState): String = objectMapper.createObjectNode().also { root ->
         state.values.forEach { (field, value) -> root.set(field.wireName, encodeValue(value)) }
-    }
+    }.toString()
 
-    fun decode(node: JsonNode): NormalizedDeviceState {
+    fun decode(json: String): NormalizedDeviceState {
+        val node = objectMapper.readTree(json)
         if (!node.isObject) throw ValidationException("NORMALIZED_STATE_OBJECT_REQUIRED")
+        if (node.propertyNames().any { NormalizedField.fromWireNameOrNull(it) == null }) {
+            validateLegacy(node)
+            return NormalizedDeviceState.rehydrateLegacy(node.toString())
+        }
         val values = node.properties().associate { (key, value) ->
             NormalizedField.fromWireName(key) to decodeValue(value)
         }
         return NormalizedDeviceState.from(values)
+    }
+
+    private fun validateLegacy(node: JsonNode) {
+        when {
+            node.isString -> {
+                val value = node.stringValue()
+                val forbidden = setOf(
+                    "password", "secret", "credential", "token", "privatekey", "rawcli",
+                    "/interface ", "configure terminal",
+                )
+                if (value.any(Char::isISOControl) || forbidden.any(value.lowercase()::contains)) {
+                    throw ValidationException("LEGACY_NORMALIZED_STATE_UNSAFE")
+                }
+            }
+            node.isArray -> node.forEach(::validateLegacy)
+            node.isObject -> node.properties().forEach { (key, child) ->
+                val normalizedKey = key.lowercase().filter(Char::isLetterOrDigit)
+                val forbidden = setOf("password", "secret", "credential", "token", "privatekey", "rawcli", "command", "script")
+                if (forbidden.any(normalizedKey::contains)) throw ValidationException("LEGACY_NORMALIZED_STATE_UNSAFE")
+                validateLegacy(child)
+            }
+        }
     }
 
     private fun encodeValue(value: NormalizedValue): JsonNode = when (value) {
