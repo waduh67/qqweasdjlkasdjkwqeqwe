@@ -269,7 +269,7 @@ class ProvisioningPersistenceIT {
         val tenantId = tenant("provision-reference-guard")
         val allocationId = UuidV7.generate()
         val secondAllocationId = UuidV7.generate()
-        asTenant(tenantId) {
+        val (poolId, intentId) = asTenant(tenantId) {
             val poolId = insertPool(tenantId)
             val intentId = insertIntent(tenantId, poolId)
             insertAllocation(tenantId, allocationId, poolId, intentId, 110)
@@ -280,15 +280,37 @@ class ProvisioningPersistenceIT {
                    VALUES (:id, :tenant, :allocation, 'SERVICE_INTENT', :reference)""",
             ).setParameter("id", UuidV7.generate()).setParameter("tenant", tenantId)
                 .setParameter("allocation", allocationId).setParameter("reference", UuidV7.generate()).executeUpdate()
+            poolId to intentId
         }
 
         listOf(
             "UPDATE provisioning_vlan_allocation SET active = false WHERE id = :id",
             "DELETE FROM provisioning_vlan_allocation WHERE id = :id",
             "UPDATE provisioning_vlan_allocation_reference SET allocation_id = '$secondAllocationId' WHERE allocation_id = :id",
+            "UPDATE provisioning_vlan_allocation_reference SET id = '${UuidV7.generate()}' WHERE allocation_id = :id",
         ).forEach { sql ->
             assertThatThrownBy { asTenant(tenantId) { em.createNativeQuery(sql).setParameter("id", allocationId).executeUpdate() } }
                 .isInstanceOf(ConstraintViolationException::class.java)
+        }
+        assertThatThrownBy {
+            asTenant(tenantId) {
+                em.createNativeQuery("UPDATE provisioning_vlan_allocation SET id = :replacement WHERE id = :id")
+                    .setParameter("replacement", UuidV7.generate()).setParameter("id", secondAllocationId).executeUpdate()
+            }
+        }.isInstanceOf(ConstraintViolationException::class.java)
+        listOf(false to 0, true to 1).forEach { (active, references) ->
+            assertThatThrownBy {
+                asTenant(tenantId) {
+                    em.createNativeQuery(
+                        """INSERT INTO provisioning_vlan_allocation
+                           (id, tenant_id, pool_id, device_kind, device_id, vlan_id, intent_id, active, reference_count)
+                           VALUES (:id, :tenant, :pool, 'ROUTER', :device, :vlan, :intent, :active, :references)""",
+                    ).setParameter("id", UuidV7.generate()).setParameter("tenant", tenantId).setParameter("pool", poolId)
+                        .setParameter("device", UuidV7.generate()).setParameter("vlan", 112 + references)
+                        .setParameter("intent", intentId).setParameter("active", active)
+                        .setParameter("references", references).executeUpdate()
+                }
+            }.isInstanceOf(ConstraintViolationException::class.java)
         }
     }
 
@@ -366,6 +388,146 @@ class ProvisioningPersistenceIT {
         }.isInstanceOf(ConstraintViolationException::class.java)
     }
 
+    @Test
+    fun `database enforces the service intent lifecycle and immutable identity`() {
+        val tenantId = tenant("provision-intent-lifecycle")
+        val poolId = asTenant(tenantId) { insertPool(tenantId) }
+        val profileId = asTenant(tenantId) { insertProfile(tenantId, poolId) }
+        val intentId = UuidV7.generate()
+
+        assertThatThrownBy {
+            asTenant(tenantId) {
+                insertIntentRow(tenantId, intentId, profileId, "ACTIVE")
+            }
+        }.isInstanceOf(ConstraintViolationException::class.java)
+
+        asTenant(tenantId) {
+            insertIntentRow(tenantId, intentId, profileId, "DRAFT")
+            updateIntentStatus(intentId, "ACTIVE")
+            updateIntentStatus(intentId, "SUSPENDED")
+            updateIntentStatus(intentId, "ACTIVE")
+            updateIntentStatus(intentId, "DECOMMISSIONED")
+        }
+
+        assertThatThrownBy {
+            asTenant(tenantId) { updateIntentStatus(intentId, "ACTIVE") }
+        }.isInstanceOf(ConstraintViolationException::class.java)
+        assertThatThrownBy {
+            asTenant(tenantId) {
+                em.createNativeQuery("UPDATE provisioning_service_intent SET subscription_id = :subscription WHERE id = :id")
+                    .setParameter("subscription", UuidV7.generate()).setParameter("id", intentId).executeUpdate()
+            }
+        }.isInstanceOf(ConstraintViolationException::class.java)
+        assertThatThrownBy {
+            asTenant(tenantId) {
+                em.createNativeQuery("UPDATE provisioning_service_intent SET id = :replacement WHERE id = :id")
+                    .setParameter("replacement", UuidV7.generate()).setParameter("id", intentId).executeUpdate()
+            }
+        }.isInstanceOf(ConstraintViolationException::class.java)
+
+        listOf(
+            "DRAFT" to "SUSPENDED",
+            "ACTIVE" to "DRAFT",
+            "SUSPENDED" to "DRAFT",
+        ).forEach { (source, target) ->
+            val candidateId = UuidV7.generate()
+            asTenant(tenantId) {
+                insertIntentRow(tenantId, candidateId, profileId, "DRAFT")
+                if (source == "ACTIVE" || source == "SUSPENDED") updateIntentStatus(candidateId, "ACTIVE")
+                if (source == "SUSPENDED") updateIntentStatus(candidateId, "SUSPENDED")
+            }
+            assertThatThrownBy { asTenant(tenantId) { updateIntentStatus(candidateId, target) } }
+                .isInstanceOf(ConstraintViolationException::class.java)
+        }
+    }
+
+    @Test
+    fun `database plan attributes match domain normalized value rules`() {
+        val tenantId = tenant("provision-attribute-parity")
+        val planId = asTenant(tenantId) {
+            val intentId = insertIntent(tenantId, insertPool(tenantId))
+            insertPlan(tenantId, intentId)
+        }
+        val stepId = asTenant(tenantId) {
+            UuidV7.generate().also { id ->
+                em.createNativeQuery(
+                    """INSERT INTO provisioning_step
+                       (id, tenant_id, plan_id, step_order, device_kind, device_id, operation)
+                       VALUES (:id, :tenant, :plan, 1, 'ROUTER', :device, 'ENSURE_TAGGED_VLAN')""",
+                ).setParameter("id", id).setParameter("tenant", tenantId).setParameter("plan", planId)
+                    .setParameter("device", FIXED_DEVICE).executeUpdate()
+            }
+        }
+
+        listOf(
+            "payload" to "normalized-value",
+            "interface" to "secret-label",
+            "interface" to "/interface vlan add name=vlan110",
+        ).forEach { (key, value) ->
+            assertThatThrownBy {
+                asTenant(tenantId) {
+                    em.createNativeQuery(
+                        """INSERT INTO provisioning_step_attribute
+                           (id, tenant_id, step_id, attribute_key, attribute_value)
+                           VALUES (:id, :tenant, :step, :key, :value)""",
+                    ).setParameter("id", UuidV7.generate()).setParameter("tenant", tenantId)
+                        .setParameter("step", stepId).setParameter("key", key).setParameter("value", value).executeUpdate()
+                }
+            }.isInstanceOf(ConstraintViolationException::class.java)
+        }
+    }
+
+    @Test
+    fun `database rejects illegal direct plan and execution transitions`() {
+        val tenantId = tenant("provision-transition-guards")
+        val (intentId, planId) = asTenant(tenantId) {
+            val intentId = insertIntent(tenantId, insertPool(tenantId))
+            intentId to insertPlan(tenantId, intentId)
+        }
+
+        assertThatThrownBy {
+            asTenant(tenantId) {
+                em.createNativeQuery("UPDATE provisioning_plan SET status = 'SUPERSEDED' WHERE id = :id")
+                    .setParameter("id", planId).executeUpdate()
+            }
+        }.isInstanceOf(ConstraintViolationException::class.java)
+        assertThatThrownBy {
+            asTenant(tenantId) {
+                em.createNativeQuery("UPDATE provisioning_plan SET id = :replacement WHERE id = :id")
+                    .setParameter("replacement", UuidV7.generate()).setParameter("id", planId).executeUpdate()
+            }
+        }.isInstanceOf(ConstraintViolationException::class.java)
+
+        val executionId = asTenant(tenantId) {
+            UuidV7.generate().also { id ->
+                em.createNativeQuery(
+                    """INSERT INTO provisioning_execution
+                       (id, tenant_id, intent_id, plan_id, idempotency_key, status)
+                       VALUES (:id, :tenant, :intent, :plan, :key, 'QUEUED')""",
+                ).setParameter("id", id).setParameter("tenant", tenantId).setParameter("intent", intentId)
+                    .setParameter("plan", planId).setParameter("key", "illegal-transition").executeUpdate()
+            }
+        }
+        assertThatThrownBy {
+            asTenant(tenantId) {
+                em.createNativeQuery("UPDATE provisioning_execution SET status = 'SUCCEEDED' WHERE id = :id")
+                    .setParameter("id", executionId).executeUpdate()
+            }
+        }.isInstanceOf(ConstraintViolationException::class.java)
+        assertThatThrownBy {
+            asTenant(tenantId) {
+                em.createNativeQuery("UPDATE provisioning_execution SET detail = 'out-of-band edit' WHERE id = :id")
+                    .setParameter("id", executionId).executeUpdate()
+            }
+        }.isInstanceOf(ConstraintViolationException::class.java)
+        assertThatThrownBy {
+            asTenant(tenantId) {
+                em.createNativeQuery("UPDATE provisioning_execution SET id = :replacement WHERE id = :id")
+                    .setParameter("replacement", UuidV7.generate()).setParameter("id", executionId).executeUpdate()
+            }
+        }.isInstanceOf(ConstraintViolationException::class.java)
+    }
+
     private fun insertPoolAndAllocation(tenantId: UUID, allocationId: UUID) {
         val poolId = insertPool(tenantId)
         val intentId = insertIntent(tenantId, poolId)
@@ -383,20 +545,36 @@ class ProvisioningPersistenceIT {
     }
 
     private fun insertIntent(tenantId: UUID, poolId: UUID): UUID {
+        val profileId = insertProfile(tenantId, poolId)
+        val intentId = UuidV7.generate()
+        insertIntentRow(tenantId, intentId, profileId, "DRAFT")
+        updateIntentStatus(intentId, "ACTIVE")
+        return intentId
+    }
+
+    private fun insertProfile(tenantId: UUID, poolId: UUID): UUID {
         val profileId = UuidV7.generate()
         em.createNativeQuery(
             """INSERT INTO provisioning_segment_profile (id, tenant_id, name, pool_id)
                VALUES (:id, :tenant, :name, :pool)""",
         ).setParameter("id", profileId).setParameter("tenant", tenantId)
             .setParameter("name", "Profile-${UUID.randomUUID()}").setParameter("pool", poolId).executeUpdate()
-        val intentId = UuidV7.generate()
+        return profileId
+    }
+
+    private fun insertIntentRow(tenantId: UUID, intentId: UUID, profileId: UUID, status: String) {
         em.createNativeQuery(
             """INSERT INTO provisioning_service_intent
                (id, tenant_id, subscription_id, segment_profile_id, encapsulation, status)
-               VALUES (:id, :tenant, :subscription, :profile, 'SINGLE_TAG', 'ACTIVE')""",
+               VALUES (:id, :tenant, :subscription, :profile, 'SINGLE_TAG', :status)""",
         ).setParameter("id", intentId).setParameter("tenant", tenantId)
-            .setParameter("subscription", UuidV7.generate()).setParameter("profile", profileId).executeUpdate()
-        return intentId
+            .setParameter("subscription", UuidV7.generate()).setParameter("profile", profileId)
+            .setParameter("status", status).executeUpdate()
+    }
+
+    private fun updateIntentStatus(intentId: UUID, status: String) {
+        em.createNativeQuery("UPDATE provisioning_service_intent SET status = :status WHERE id = :id")
+            .setParameter("status", status).setParameter("id", intentId).executeUpdate()
     }
 
     private fun insertAllocation(tenantId: UUID, id: UUID, poolId: UUID, intentId: UUID, vlanId: Int) {

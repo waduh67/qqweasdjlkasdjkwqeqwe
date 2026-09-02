@@ -79,9 +79,11 @@ class ProvisioningPermissionIT {
             em.createNativeQuery(
                 """INSERT INTO provisioning_service_intent
                    (id, tenant_id, subscription_id, segment_profile_id, encapsulation, status)
-                   VALUES (:id, :tenant, :subscription, :profile, 'SINGLE_TAG', 'ACTIVE')""",
+                   VALUES (:id, :tenant, :subscription, :profile, 'SINGLE_TAG', 'DRAFT')""",
             ).setParameter("id", intentId).setParameter("tenant", tenantId)
                 .setParameter("subscription", UuidV7.generate()).setParameter("profile", profileId).executeUpdate()
+            em.createNativeQuery("UPDATE provisioning_service_intent SET status = 'ACTIVE' WHERE id = :id")
+                .setParameter("id", intentId).executeUpdate()
         }
     }
 
