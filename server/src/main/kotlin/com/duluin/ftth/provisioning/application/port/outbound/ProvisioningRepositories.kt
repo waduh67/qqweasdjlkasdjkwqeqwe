@@ -24,6 +24,7 @@ interface VlanPoolRepository {
     fun save(value: VlanPool): VlanPool
     fun findById(id: UUID): VlanPool?
     fun findByIdForUpdate(id: UUID): VlanPool?
+    fun lockDeviceAndFindActiveVlans(tenantId: UUID, device: DeviceReference): Set<Int>
 }
 interface ServiceIntentRepository { fun save(value: ServiceIntent): ServiceIntent; fun findById(id: UUID): ServiceIntent? }
 interface ProvisionPlanRepository {

@@ -90,6 +90,7 @@ class VlanPoolPersistenceAdapter(
     private val reservedRanges: VlanReservedRangeJpaRepository,
     private val allocations: VlanAllocationJpaRepository,
     private val references: VlanAllocationReferenceJpaRepository,
+    private val entityManager: EntityManager,
 ) : VlanPoolRepository {
     @Transactional
     override fun save(value: VlanPool): VlanPool {
@@ -179,6 +180,30 @@ class VlanPoolPersistenceAdapter(
     override fun findByIdForUpdate(id: UUID): VlanPool? {
         pools.findLockedById(id) ?: return null
         return findById(id)
+    }
+
+    @Transactional
+    override fun lockDeviceAndFindActiveVlans(tenantId: UUID, device: DeviceReference): Set<Int> {
+        requireActiveTenant(tenantId)
+        val scopeKey = "$tenantId:${device.kind.name}:${device.id}"
+        entityManager.createNativeQuery(
+            "SELECT pg_advisory_xact_lock(hashtextextended(CAST(:scopeKey AS text), 0))",
+        ).setParameter("scopeKey", scopeKey)
+            .singleResult
+        return entityManager.createNativeQuery(
+            """SELECT vlan_id
+               FROM provisioning_vlan_allocation
+               WHERE tenant_id = :tenantId
+                 AND device_kind = :deviceKind
+                 AND device_id = :deviceId
+                 AND active = true
+               ORDER BY vlan_id""",
+        ).setParameter("tenantId", tenantId)
+            .setParameter("deviceKind", device.kind.name)
+            .setParameter("deviceId", device.id)
+            .resultList
+            .map { (it as Number).toInt() }
+            .toSet()
     }
 }
 

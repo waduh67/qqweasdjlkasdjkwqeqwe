@@ -7,6 +7,7 @@ import com.duluin.ftth.provisioning.application.port.outbound.VlanPoolRepository
 import com.duluin.ftth.provisioning.application.service.DedicatedVlanAllocationCommand
 import com.duluin.ftth.provisioning.application.service.DeterministicVlanAllocationService
 import com.duluin.ftth.provisioning.application.service.SharedVlanAllocationCommand
+import com.duluin.ftth.provisioning.domain.model.DeviceReference
 import com.duluin.ftth.provisioning.domain.model.SharedAllocationKey
 import com.duluin.ftth.provisioning.domain.model.VlanAllocationScope
 import com.duluin.ftth.provisioning.domain.model.VlanPool
@@ -178,6 +179,11 @@ class DeterministicVlanAllocationServiceTest {
         override fun save(value: VlanPool): VlanPool = value.also { values[it.id] = it }
         override fun findById(id: UUID): VlanPool? = values[id]
         override fun findByIdForUpdate(id: UUID): VlanPool? = values[id].also { lockCount++ }
+        override fun lockDeviceAndFindActiveVlans(tenantId: UUID, device: DeviceReference): Set<Int> =
+            values.values.flatMap(VlanPool::allocations)
+                .filter { it.tenantId == tenantId && it.device == device && it.active }
+                .map { it.vlanId }
+                .toSet()
     }
 
     private class InMemoryVlanAllocationScopeRepository : VlanAllocationScopeRepository {
