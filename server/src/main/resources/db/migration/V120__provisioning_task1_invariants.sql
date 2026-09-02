@@ -58,7 +58,7 @@ DECLARE item jsonb;
 BEGIN
     CASE jsonb_typeof(value)
         WHEN 'string' THEN
-            RETURN lower(value #>> '{}') ~ '(password|secret|credential|token|privatekey|rawcli|/interface |configure terminal)'
+            RETURN lower(value #>> '{}') ~ '(password|secret|credential|token|privatekey|rawcli|-----begin|/interface |configure terminal)'
                 OR (value #>> '{}') ~ E'[\n\r]';
         WHEN 'array' THEN
             FOR item IN SELECT element FROM jsonb_array_elements(value) AS entry(element) LOOP
@@ -94,7 +94,7 @@ BEGIN
         END IF;
         IF EXISTS (
             SELECT 1 FROM provisioning_step_attribute
-            WHERE lower(attribute_value) ~ '(password|secret|credential|token|privatekey|rawcli|/interface |configure terminal)'
+            WHERE lower(attribute_value) ~ '(password|secret|credential|token|privatekey|rawcli|-----begin|/interface |configure terminal)'
                OR attribute_value ~ E'[\n\r]'
         ) THEN
             RAISE EXCEPTION 'LEGACY_PLAN_ATTRIBUTE_UNSAFE for tenant %', tenant_record.id USING ERRCODE = '23514';
@@ -124,7 +124,7 @@ LANGUAGE sql IMMUTABLE AS $$
         WHEN 'expectedPreconditionHash' THEN attribute_value ~ '^[a-f0-9]{64}$'
         WHEN 'planPreconditionHash' THEN attribute_value ~ '^[a-f0-9]{64}$'
         WHEN 'interface' THEN attribute_value ~ '^[A-Za-z0-9._:/-]{1,160}$'
-            AND lower(attribute_value) !~ '(password|secret|credential|token|privatekey|rawcli|command|script)'
+            AND lower(attribute_value) !~ '(password|secret|credential|token|privatekey|rawcli|command|script|-----begin)'
         ELSE false
     END
 $$;

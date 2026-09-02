@@ -17,12 +17,14 @@ import com.duluin.ftth.provisioning.domain.model.PlanStatus
 import com.duluin.ftth.provisioning.domain.model.ProvisionOperation
 import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
 import com.duluin.ftth.provisioning.domain.model.ProvisionStep
+import com.duluin.ftth.provisioning.adapter.outbound.persistence.NormalizedStateJsonCodec
 import javax.sql.DataSource
 
 @SpringBootTest
 @ActiveProfiles("test")
 class ProvisioningMigrationCompatibilityIT {
     @Autowired private lateinit var dataSource: DataSource
+    @Autowired private lateinit var normalizedStateCodec: NormalizedStateJsonCodec
 
     @Test
     fun `v120 upgrades legacy plan hashes and preserves valid legacy normalized rows`() {
@@ -37,6 +39,8 @@ class ProvisioningMigrationCompatibilityIT {
             val planId = UuidV7.generate()
             val stepId = UuidV7.generate()
             val observationId = UuidV7.generate()
+            val knownLegacyObservationId = UuidV7.generate()
+            val nestedLegacyObservationId = UuidV7.generate()
             val executionId = UuidV7.generate()
             val deviceId = UuidV7.generate()
             val legacyAttributes = mapOf("legacyFlag" to "enabled", "\uE000" to "bmp", "\uD800\uDC00" to "supplementary")
@@ -57,6 +61,8 @@ class ProvisioningMigrationCompatibilityIT {
                     statement.execute("INSERT INTO provisioning_step_attribute (id, tenant_id, step_id, attribute_key, attribute_value) VALUES ('${UuidV7.generate()}', '$tenantId', '$stepId', '${"\uD800\uDC00"}', 'supplementary')")
                     statement.execute("UPDATE provisioning_plan SET status = 'VALIDATED' WHERE id = '$planId'")
                     statement.execute("INSERT INTO provisioning_device_observation (id, tenant_id, device_kind, device_id, normalized_state, observed_at) VALUES ('$observationId', '$tenantId', 'ROUTER', '$deviceId', '{\"legacyFlag\":true}', now())")
+                    statement.execute("INSERT INTO provisioning_device_observation (id, tenant_id, device_kind, device_id, normalized_state, observed_at) VALUES ('$knownLegacyObservationId', '$tenantId', 'ROUTER', '$deviceId', '{\"configured\":\"yes\"}', now())")
+                    statement.execute("INSERT INTO provisioning_device_observation (id, tenant_id, device_kind, device_id, normalized_state, observed_at) VALUES ('$nestedLegacyObservationId', '$tenantId', 'ROUTER', '$deviceId', '{\"interfaces\":[{\"name\":\"ether1\",\"legacyFlag\":true}]}', now())")
                     statement.execute("INSERT INTO provisioning_execution (id, tenant_id, plan_id, idempotency_key, status) VALUES ('$executionId', '$tenantId', '$planId', 'legacy-execution', 'QUEUED')")
                 }
             }
@@ -89,6 +95,19 @@ class ProvisioningMigrationCompatibilityIT {
                     statement.executeQuery("SELECT normalized_state = '{\"legacyFlag\":true}'::jsonb FROM provisioning_device_observation WHERE id = '$observationId'").use {
                         assertThat(it.next()).isTrue()
                         assertThat(it.getBoolean(1)).isTrue()
+                    }
+                    listOf(knownLegacyObservationId, nestedLegacyObservationId).forEach { legacyId ->
+                        val persistedJson = statement.executeQuery(
+                            "SELECT normalized_state::text FROM provisioning_device_observation WHERE id = '$legacyId'",
+                        ).use {
+                            assertThat(it.next()).isTrue()
+                            it.getString(1)
+                        }
+                        val decoded = normalizedStateCodec.decode(persistedJson)
+                        assertThat(decoded.legacyPayload).isNotNull()
+                        assertThat(
+                            tools.jackson.databind.ObjectMapper().readTree(normalizedStateCodec.encode(decoded)),
+                        ).isEqualTo(tools.jackson.databind.ObjectMapper().readTree(persistedJson))
                     }
                     statement.executeQuery("SELECT intent_id = '$intentId'::uuid FROM provisioning_execution WHERE id = '$executionId'").use {
                         assertThat(it.next()).isTrue()

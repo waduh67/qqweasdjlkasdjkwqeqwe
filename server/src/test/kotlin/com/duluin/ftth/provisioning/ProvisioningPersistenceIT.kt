@@ -463,6 +463,7 @@ class ProvisioningPersistenceIT {
             "payload" to "normalized-value",
             "interface" to "secret-label",
             "interface" to "/interface vlan add name=vlan110",
+            "interface" to "-----begin",
         ).forEach { (key, value) ->
             assertThatThrownBy {
                 asTenant(tenantId) {
