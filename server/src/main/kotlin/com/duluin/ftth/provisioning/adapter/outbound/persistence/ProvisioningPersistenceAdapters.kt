@@ -371,17 +371,26 @@ class AdapterCertificationPersistenceAdapter(
 ) : AdapterCertificationRepository {
     override fun save(value: AdapterCertification): AdapterCertification {
         requireActiveTenant(value.tenantId)
-        val entity = jpa.findById(value.id).orElse(null)?.apply { revokedAt = value.revokedAt }
+        val entity = jpa.findById(value.id).orElse(null)?.apply {
+            revokedAt = value.revokedAt
+            revokedBy = value.revokedBy
+        }
             ?: AdapterCertificationJpaEntity(
                 value.id,
                 value.device.kind,
                 value.device.id,
+                value.vendor,
                 value.model,
                 value.firmware,
                 value.transport,
                 value.operationClass,
+                value.status,
+                value.validUntil,
+                value.evidenceId,
+                value.certifiedBy,
                 value.certifiedAt,
                 value.revokedAt,
+                value.revokedBy,
             )
         return jpa.save(entity).toDomain()
     }
@@ -392,11 +401,17 @@ class AdapterCertificationPersistenceAdapter(
         id,
         tenant(tenantId),
         DeviceReference(deviceKind, deviceId),
+        vendor,
         model,
         firmware,
         transport,
         operationClass,
+        status,
+        validUntil,
+        evidenceId,
+        certifiedBy,
         certifiedAt,
         revokedAt,
+        revokedBy,
     )
 }

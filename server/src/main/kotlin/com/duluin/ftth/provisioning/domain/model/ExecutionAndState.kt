@@ -3,6 +3,7 @@ package com.duluin.ftth.provisioning.domain.model
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.provisioning.domain.policy.CertificationStatus
 import java.time.Instant
 import java.util.UUID
 
@@ -163,23 +164,57 @@ class AdapterCertification private constructor(
     override val id: UUID,
     val tenantId: UUID,
     val device: DeviceReference,
+    val vendor: String,
     val model: String,
     val firmware: String,
     val transport: String,
     val operationClass: String,
+    val status: CertificationStatus,
+    val validUntil: Instant,
+    val evidenceId: UUID,
+    val certifiedBy: UUID,
     val certifiedAt: Instant,
     revokedAt: Instant?,
+    revokedBy: UUID?,
 ) : ProvisioningAggregate {
     var revokedAt: Instant? = revokedAt
         private set
+    var revokedBy: UUID? = revokedBy
+        private set
     val active: Boolean get() = revokedAt == null
 
-    fun revoke() {
+    fun revoke(actorId: UUID, at: Instant = Instant.now()) {
         if (revokedAt != null) throw ConflictException("CERTIFICATION_ALREADY_REVOKED")
-        revokedAt = Instant.now()
+        revokedAt = at
+        revokedBy = actorId
     }
 
     companion object {
+        fun certify(
+            tenantId: UUID,
+            device: DeviceReference,
+            vendor: String,
+            model: String,
+            firmware: String,
+            transport: String,
+            operationClass: String,
+            status: CertificationStatus,
+            validUntil: Instant,
+            evidenceId: UUID,
+            certifiedBy: UUID,
+            certifiedAt: Instant = Instant.now(),
+        ): AdapterCertification {
+            val fingerprint = listOf(vendor, model, firmware, transport, operationClass)
+            if (fingerprint.any { it.isBlank() || it.length > 120 }) {
+                throw ValidationException("CERTIFICATION_FINGERPRINT_INVALID")
+            }
+            if (!validUntil.isAfter(certifiedAt)) throw ValidationException("CERTIFICATION_VALIDITY_INVALID")
+            return AdapterCertification(
+                UuidV7.generate(), tenantId, device, vendor, model, firmware, transport, operationClass,
+                status, validUntil, evidenceId, certifiedBy, certifiedAt, null, null,
+            )
+        }
+
         fun certify(
             tenantId: UUID,
             device: DeviceReference,
@@ -188,12 +223,11 @@ class AdapterCertification private constructor(
             transport: String,
             operationClass: String,
         ): AdapterCertification {
-            val fingerprint = listOf(model, firmware, transport, operationClass)
-            if (fingerprint.any { it.isBlank() || it.length > 120 }) {
-                throw ValidationException("CERTIFICATION_FINGERPRINT_INVALID")
-            }
+            val now = Instant.now()
+            val id = UuidV7.generate()
             return AdapterCertification(
-                UuidV7.generate(), tenantId, device, model, firmware, transport, operationClass, Instant.now(), null,
+                id, tenantId, device, "UNKNOWN", model, firmware, transport, operationClass,
+                CertificationStatus.PROVISIONAL, now.plusNanos(1), id, id, now, null, null,
             )
         }
 
@@ -201,14 +235,21 @@ class AdapterCertification private constructor(
             id: UUID,
             tenantId: UUID,
             device: DeviceReference,
+            vendor: String,
             model: String,
             firmware: String,
             transport: String,
             operationClass: String,
+            status: CertificationStatus,
+            validUntil: Instant,
+            evidenceId: UUID,
+            certifiedBy: UUID,
             certifiedAt: Instant,
             revokedAt: Instant?,
+            revokedBy: UUID?,
         ) = AdapterCertification(
-            id, tenantId, device, model, firmware, transport, operationClass, certifiedAt, revokedAt,
+            id, tenantId, device, vendor, model, firmware, transport, operationClass, status, validUntil,
+            evidenceId, certifiedBy, certifiedAt, revokedAt, revokedBy,
         )
     }
 }
