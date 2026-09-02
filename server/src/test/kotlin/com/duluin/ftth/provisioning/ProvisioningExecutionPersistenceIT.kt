@@ -40,6 +40,7 @@ import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.hibernate.exception.ConstraintViolationException
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.beans.factory.annotation.Autowired
@@ -574,6 +575,71 @@ class ProvisioningExecutionPersistenceIT {
         assertThatThrownBy {
             asTenant(owner.tenantId) {
                 insertResultReceipt(owner.tenantId, ownerCollectorId, attempt.id, "invalid-hash")
+            }
+        }
+    }
+
+    @Test
+    fun `v121 rejects cross tenant collector links for attempts reports and receipts`() {
+        val owner = fixture("collector-fk-owner")
+        val otherTenantId = tenantApi.ensureTenant("collector-fk-other-${UUID.randomUUID()}", "collector-fk-other").id
+        val foreignCollectorId = UuidV7.generate()
+        val execution = ProvisionExecution.queue(owner.tenantId, owner.intentId, owner.firstPlanId, "collector-fk-owner")
+        val deviceId = UuidV7.generate()
+        val attempt = asTenant(owner.tenantId) {
+            executions.save(execution)
+            val step = executionSteps.save(
+                ExecutionStep.pending(
+                    owner.tenantId,
+                    execution.id,
+                    owner.firstStepId,
+                    1,
+                    DeviceReference(DeviceKind.BRAS, deviceId),
+                ),
+            )
+            attempts.save(
+                StepAttempt.dispatch(
+                    owner.tenantId,
+                    step.id,
+                    ExecutionPhase.APPLY,
+                    1,
+                    "collector-cross-tenant",
+                    1,
+                    Instant.parse("2026-09-02T12:05:00Z"),
+                ),
+            )
+        }
+        asTenant(otherTenantId) {
+            em.createNativeQuery(
+                """INSERT INTO collector
+                   (id, tenant_id, name, api_key_hash, api_key_hint, status, poll_interval_seconds)
+                   VALUES (:id, :tenant, :name, :hash, 'cross', 'ACTIVE', 60)""",
+            ).setParameter("id", foreignCollectorId).setParameter("tenant", otherTenantId)
+                .setParameter("name", "collector-${UUID.randomUUID()}")
+                .setParameter("hash", UUID.randomUUID().toString().replace("-", "").repeat(2))
+                .executeUpdate()
+        }
+
+        assertThatThrownBy {
+            asTenant(owner.tenantId) {
+                em.createNativeQuery(
+                    "UPDATE provisioning_step_attempt SET collector_id = :collector WHERE id = :attempt",
+                ).setParameter("collector", foreignCollectorId).setParameter("attempt", attempt.id).executeUpdate()
+            }
+        }
+        assertThatThrownBy {
+            asTenant(owner.tenantId) {
+                em.createNativeQuery(
+                    """INSERT INTO provisioning_collector_device_report
+                       (id, tenant_id, collector_id, report_key, target_id, vendor, model, firmware, transport, capabilities, reported_at)
+                       VALUES (:id, :tenant, :collector, 'cross-report', :target, 'MIKROTIK', 'CCR', '7.20', 'HTTPS_REST', '', now())""",
+                ).setParameter("id", UuidV7.generate()).setParameter("tenant", owner.tenantId)
+                    .setParameter("collector", foreignCollectorId).setParameter("target", deviceId.toString()).executeUpdate()
+            }
+        }
+        assertThatThrownBy {
+            asTenant(owner.tenantId) {
+                insertResultReceipt(owner.tenantId, foreignCollectorId, attempt.id, "a".repeat(64))
             }
         }
     }

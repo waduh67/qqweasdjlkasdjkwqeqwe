@@ -1,8 +1,15 @@
+ALTER TABLE collector
+    ADD CONSTRAINT uq_collector_id_tenant UNIQUE (id, tenant_id);
+
 ALTER TABLE provisioning_step_attempt
-    ADD COLUMN collector_id uuid REFERENCES collector (id) ON DELETE SET NULL;
+    ADD COLUMN collector_id uuid;
 
 ALTER TABLE provisioning_step_attempt
     ADD CONSTRAINT uq_provisioning_attempt_id_tenant UNIQUE (id, tenant_id);
+
+ALTER TABLE provisioning_step_attempt
+    ADD CONSTRAINT fk_provisioning_attempt_collector FOREIGN KEY (collector_id, tenant_id)
+        REFERENCES collector (id, tenant_id) ON DELETE SET NULL (collector_id);
 
 CREATE INDEX ix_provisioning_attempt_collector
     ON provisioning_step_attempt (tenant_id, collector_id, status, deadline);
@@ -10,7 +17,7 @@ CREATE INDEX ix_provisioning_attempt_collector
 CREATE TABLE provisioning_collector_device_report (
     id uuid PRIMARY KEY,
     tenant_id uuid NOT NULL REFERENCES tenant (id),
-    collector_id uuid NOT NULL REFERENCES collector (id) ON DELETE CASCADE,
+    collector_id uuid NOT NULL,
     report_key varchar(300) NOT NULL,
     target_id varchar(120) NOT NULL,
     vendor varchar(120) NOT NULL,
@@ -20,6 +27,8 @@ CREATE TABLE provisioning_collector_device_report (
     capabilities text NOT NULL,
     reported_at timestamptz NOT NULL,
     created_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT fk_provisioning_collector_report_collector FOREIGN KEY (collector_id, tenant_id)
+        REFERENCES collector (id, tenant_id) ON DELETE CASCADE,
     CONSTRAINT uq_provisioning_collector_report UNIQUE (tenant_id, collector_id, report_key)
 );
 
@@ -35,7 +44,7 @@ CREATE POLICY tenant_isolation ON provisioning_collector_device_report
 CREATE TABLE provisioning_collector_result_receipt (
     id uuid PRIMARY KEY,
     tenant_id uuid NOT NULL REFERENCES tenant (id),
-    collector_id uuid NOT NULL REFERENCES collector (id) ON DELETE CASCADE,
+    collector_id uuid NOT NULL,
     idempotency_key varchar(200) NOT NULL,
     plan_id varchar(120) NOT NULL,
     revision integer NOT NULL,
@@ -60,6 +69,8 @@ CREATE TABLE provisioning_collector_result_receipt (
     created_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT fk_provisioning_collector_result_attempt FOREIGN KEY (attempt_id, tenant_id)
         REFERENCES provisioning_step_attempt (id, tenant_id),
+    CONSTRAINT fk_provisioning_collector_result_collector FOREIGN KEY (collector_id, tenant_id)
+        REFERENCES collector (id, tenant_id) ON DELETE CASCADE,
     CONSTRAINT uq_provisioning_collector_result UNIQUE (tenant_id, attempt_id),
     CONSTRAINT ck_provisioning_collector_result_phase CHECK (phase IN ('PREFLIGHT', 'APPLY', 'VERIFY', 'ROLLBACK')),
     CONSTRAINT ck_provisioning_collector_result_hashes CHECK (
