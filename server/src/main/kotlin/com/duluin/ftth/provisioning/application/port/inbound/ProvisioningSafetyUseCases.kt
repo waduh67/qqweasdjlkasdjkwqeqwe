@@ -24,6 +24,7 @@ interface ProvisioningExecutionAdmissionUseCase {
 }
 
 interface ProvisioningCertificationUseCase {
+    fun list(targetTenantId: UUID): List<AdapterCertification>
     fun certify(command: CertifyAdapterCommand): AdapterCertification
     fun revoke(targetTenantId: UUID, certificationId: UUID): AdapterCertification
 }
