@@ -2,11 +2,15 @@ package com.duluin.ftth.provisioning.adapter.outbound.persistence
 
 import com.duluin.ftth.common.infrastructure.persistence.TenantAwareJpaEntity
 import com.duluin.ftth.provisioning.domain.model.DeviceKind
+import com.duluin.ftth.provisioning.domain.model.AttemptStatus
 import com.duluin.ftth.provisioning.domain.model.DriftStatus
+import com.duluin.ftth.provisioning.domain.model.ExecutionPhase
+import com.duluin.ftth.provisioning.domain.model.ExecutionStepStatus
 import com.duluin.ftth.provisioning.domain.model.ExecutionStatus
 import com.duluin.ftth.provisioning.domain.model.IntentStatus
 import com.duluin.ftth.provisioning.domain.model.PlanStatus
 import com.duluin.ftth.provisioning.domain.model.ProvisionOperation
+import com.duluin.ftth.provisioning.domain.model.StepSnapshotKind
 import com.duluin.ftth.provisioning.domain.model.VlanEncapsulation
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -112,10 +116,80 @@ class ProvisionStepAttributeJpaEntity(
 @Table(name = "provisioning_execution")
 class ProvisionExecutionJpaEntity(
     id: UUID,
+    @Column(name = "intent_id", nullable = false, updatable = false) val intentId: UUID,
     @Column(name = "plan_id", nullable = false, updatable = false) val planId: UUID,
     @Column(name = "idempotency_key", nullable = false, updatable = false, length = 160) val idempotencyKey: String,
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 30) var status: ExecutionStatus,
     @Column(length = 1000) var detail: String?,
+) : TenantAwareJpaEntity(id)
+
+@Entity
+@Table(name = "provisioning_device_lease")
+class DeviceLeaseJpaEntity(
+    id: UUID,
+    @Enumerated(EnumType.STRING) @Column(name = "device_kind", nullable = false, updatable = false, length = 20)
+    val deviceKind: DeviceKind,
+    @Column(name = "device_id", nullable = false, updatable = false) val deviceId: UUID,
+    @Column(name = "execution_id", nullable = false) var executionId: UUID,
+    @Column(name = "owner_id", nullable = false, length = 120) var ownerId: String,
+    @Column(name = "fencing_token", nullable = false) var fencingToken: Long,
+    @Column(name = "expires_at", nullable = false) var expiresAt: Instant,
+) : TenantAwareJpaEntity(id)
+
+@Entity
+@Table(name = "provisioning_execution_step")
+class ExecutionStepJpaEntity(
+    id: UUID,
+    @Column(name = "execution_id", nullable = false, updatable = false) val executionId: UUID,
+    @Column(name = "plan_step_id", nullable = false, updatable = false) val planStepId: UUID,
+    @Column(name = "step_order", nullable = false, updatable = false) val stepOrder: Int,
+    @Enumerated(EnumType.STRING) @Column(name = "device_kind", nullable = false, updatable = false, length = 20)
+    val deviceKind: DeviceKind,
+    @Column(name = "device_id", nullable = false, updatable = false) val deviceId: UUID,
+    @Enumerated(EnumType.STRING) @Column(nullable = false, length = 30) var status: ExecutionStepStatus,
+    @Column(name = "before_hash", length = 64) var beforeHash: String?,
+    @Column(name = "after_hash", length = 64) var afterHash: String?,
+    @Column(name = "last_error", length = 120) var lastError: String?,
+) : TenantAwareJpaEntity(id)
+
+@Entity
+@Table(name = "provisioning_step_attempt")
+class StepAttemptJpaEntity(
+    id: UUID,
+    @Column(name = "execution_step_id", nullable = false, updatable = false) val executionStepId: UUID,
+    @Enumerated(EnumType.STRING) @Column(nullable = false, updatable = false, length = 20) val phase: ExecutionPhase,
+    @Column(name = "attempt_number", nullable = false, updatable = false) val attemptNumber: Int,
+    @Column(name = "idempotency_key", nullable = false, updatable = false, length = 200) val idempotencyKey: String,
+    @Column(name = "fencing_token", nullable = false, updatable = false) val fencingToken: Long,
+    @Column(nullable = false, updatable = false) val deadline: Instant,
+    @Enumerated(EnumType.STRING) @Column(nullable = false, length = 30) var status: AttemptStatus,
+    @Column(name = "error_code", length = 80) var errorCode: String?,
+    @Column(name = "started_at", nullable = false, updatable = false) val startedAt: Instant,
+    @Column(name = "completed_at") var completedAt: Instant?,
+) : TenantAwareJpaEntity(id)
+
+@Entity
+@Table(name = "provisioning_step_snapshot")
+class StepSnapshotJpaEntity(
+    id: UUID,
+    @Column(name = "execution_step_id", nullable = false, updatable = false) val executionStepId: UUID,
+    @Enumerated(EnumType.STRING) @Column(name = "snapshot_kind", nullable = false, updatable = false, length = 30)
+    val snapshotKind: StepSnapshotKind,
+    @Column(name = "state_hash", nullable = false, updatable = false, length = 64) val stateHash: String,
+    @JdbcTypeCode(SqlTypes.JSON) @Column(name = "normalized_state", nullable = false, updatable = false, columnDefinition = "jsonb")
+    val normalizedState: Map<String, Any?>,
+    @Column(name = "captured_at", nullable = false, updatable = false) val capturedAt: Instant,
+) : TenantAwareJpaEntity(id)
+
+@Entity
+@Table(name = "provisioning_device_circuit")
+class DeviceCircuitBreakerJpaEntity(
+    id: UUID,
+    @Enumerated(EnumType.STRING) @Column(name = "device_kind", nullable = false, updatable = false, length = 20)
+    val deviceKind: DeviceKind,
+    @Column(name = "device_id", nullable = false, updatable = false) val deviceId: UUID,
+    @Column(name = "failure_count", nullable = false) var failureCount: Int,
+    @Column(name = "open_until") var openUntil: Instant?,
 ) : TenantAwareJpaEntity(id)
 
 @Entity
