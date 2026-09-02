@@ -83,6 +83,10 @@ class TransportTopologyPersistenceAdapter(
         links = links.findAll().map { it.toDomain() }.sortedBy { it.id.toString() },
     )
 
+    override fun deleteNode(id: UUID) = nodes.deleteById(id)
+    override fun deleteInterface(id: UUID) = interfaces.deleteById(id)
+    override fun deleteLink(id: UUID) = links.deleteById(id)
+
     private fun ManagedNodeJpaEntity.toDomain() = ManagedNode.rehydrate(
         id,
         entityTenant(tenantId),

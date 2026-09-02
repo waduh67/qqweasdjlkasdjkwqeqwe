@@ -55,6 +55,8 @@ class SegmentProfilePersistenceAdapter(private val jpa: SegmentProfileJpaReposit
     }
 
     override fun findById(id: UUID): SegmentProfile? = jpa.findById(id).orElse(null)?.toDomain()
+    override fun findAll(): List<SegmentProfile> = jpa.findAll().map { it.toDomain() }
+    override fun deleteById(id: UUID) = jpa.deleteById(id)
 
     private fun SegmentProfileJpaEntity.toDomain() = SegmentProfile.rehydrate(id, tenant(tenantId), name, poolId)
 }
@@ -78,6 +80,7 @@ class ServiceIntentPersistenceAdapter(private val jpa: ServiceIntentJpaRepositor
     }
 
     override fun findById(id: UUID): ServiceIntent? = jpa.findById(id).orElse(null)?.toDomain()
+    override fun findAll(): List<ServiceIntent> = jpa.findAll().map { it.toDomain() }
 
     private fun ServiceIntentJpaEntity.toDomain() = ServiceIntent.rehydrate(
         id, tenant(tenantId), subscriptionId, segmentProfileId, encapsulation, dedicatedVlanId, status,
@@ -181,6 +184,10 @@ class VlanPoolPersistenceAdapter(
         pools.findLockedById(id) ?: return null
         return findById(id)
     }
+
+    override fun findAll(): List<VlanPool> = pools.findAll().mapNotNull { findById(it.id) }
+
+    override fun deleteById(id: UUID) = pools.deleteById(id)
 
     @Transactional
     override fun lockDeviceAndFindActiveVlans(tenantId: UUID, device: DeviceReference): Set<Int> {
@@ -396,6 +403,7 @@ class AdapterCertificationPersistenceAdapter(
     }
 
     override fun findById(id: UUID): AdapterCertification? = jpa.findById(id).orElse(null)?.toDomain()
+    override fun findAll(): List<AdapterCertification> = jpa.findAll().map { it.toDomain() }
 
     private fun AdapterCertificationJpaEntity.toDomain() = AdapterCertification.rehydrate(
         id,

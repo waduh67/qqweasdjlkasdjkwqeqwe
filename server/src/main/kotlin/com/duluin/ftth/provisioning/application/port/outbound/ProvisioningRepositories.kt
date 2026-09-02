@@ -19,14 +19,25 @@ import java.time.Instant
 import com.duluin.ftth.provisioning.domain.model.VlanPool
 import java.util.UUID
 
-interface SegmentProfileRepository { fun save(value: SegmentProfile): SegmentProfile; fun findById(id: UUID): SegmentProfile? }
+interface SegmentProfileRepository {
+    fun save(value: SegmentProfile): SegmentProfile
+    fun findById(id: UUID): SegmentProfile?
+    fun findAll(): List<SegmentProfile> = emptyList()
+    fun deleteById(id: UUID): Unit = error("SEGMENT_PROFILE_DELETE_UNSUPPORTED")
+}
 interface VlanPoolRepository {
     fun save(value: VlanPool): VlanPool
     fun findById(id: UUID): VlanPool?
     fun findByIdForUpdate(id: UUID): VlanPool?
+    fun findAll(): List<VlanPool> = emptyList()
+    fun deleteById(id: UUID): Unit = error("VLAN_POOL_DELETE_UNSUPPORTED")
     fun lockDeviceAndFindActiveVlans(tenantId: UUID, device: DeviceReference): Set<Int>
 }
-interface ServiceIntentRepository { fun save(value: ServiceIntent): ServiceIntent; fun findById(id: UUID): ServiceIntent? }
+interface ServiceIntentRepository {
+    fun save(value: ServiceIntent): ServiceIntent
+    fun findById(id: UUID): ServiceIntent?
+    fun findAll(): List<ServiceIntent> = emptyList()
+}
 interface ProvisionPlanRepository {
     fun save(value: ProvisionPlan): ProvisionPlan
     fun findById(id: UUID): ProvisionPlan?
@@ -93,4 +104,5 @@ interface DriftRecordRepository { fun save(value: DriftRecord): DriftRecord; fun
 interface AdapterCertificationRepository {
     fun save(value: AdapterCertification): AdapterCertification
     fun findById(id: UUID): AdapterCertification?
+    fun findAll(): List<AdapterCertification>
 }
