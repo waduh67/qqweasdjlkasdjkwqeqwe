@@ -35,6 +35,11 @@ data class PlanManagementSource(
     val interfaceRole: InterfaceRole,
     val sourceType: ManagementEvidenceSourceType,
     val sourceEvidenceId: UUID,
+    val ipAddresses: Set<String>,
+    val vrfs: Set<String>,
+    val collectorSourcePaths: Set<String>,
+    val requiredOutOfBandRoutes: Set<String>,
+    val changedOutOfBandRoutes: Set<String>,
     val availableOutOfBandRoutes: Set<String>,
 )
 
@@ -96,11 +101,11 @@ class CanonicalProvisioningPlanner {
                 SafetyPlanAttributes.MANAGEMENT_SOURCE_TYPE to topology.getValue(device).management.sourceType.name,
                 SafetyPlanAttributes.MANAGEMENT_SOURCE_ID to topology.getValue(device).management.sourceEvidenceId.toString(),
                 SafetyPlanAttributes.INTERFACE_ROLES to topology.getValue(device).management.interfaceRole.name,
-                SafetyPlanAttributes.IP_ADDRESSES to "",
-                SafetyPlanAttributes.VRFS to "",
-                SafetyPlanAttributes.COLLECTOR_PATHS to "",
-                SafetyPlanAttributes.REQUIRED_OOB_ROUTES to "",
-                SafetyPlanAttributes.CHANGED_OOB_ROUTES to "",
+                SafetyPlanAttributes.IP_ADDRESSES to encoded(topology.getValue(device).management.ipAddresses),
+                SafetyPlanAttributes.VRFS to encoded(topology.getValue(device).management.vrfs),
+                SafetyPlanAttributes.COLLECTOR_PATHS to encoded(topology.getValue(device).management.collectorSourcePaths),
+                SafetyPlanAttributes.REQUIRED_OOB_ROUTES to encoded(topology.getValue(device).management.requiredOutOfBandRoutes),
+                SafetyPlanAttributes.CHANGED_OOB_ROUTES to encoded(topology.getValue(device).management.changedOutOfBandRoutes),
                 SafetyPlanAttributes.AVAILABLE_OOB_ROUTES to encoded(topology.getValue(device).management.availableOutOfBandRoutes),
                 "interface" to topology.getValue(device).management.interfaceName,
             )
@@ -181,6 +186,11 @@ class CanonicalProvisioningPlanner {
                 "interfaceRole" to it.management.interfaceRole.name,
                 "managementSourceType" to it.management.sourceType.name,
                 "managementSourceEvidenceId" to it.management.sourceEvidenceId.toString(),
+                "ipAddresses" to it.management.ipAddresses,
+                "vrfs" to it.management.vrfs,
+                "collectorSourcePaths" to it.management.collectorSourcePaths,
+                "requiredOutOfBandRoutes" to it.management.requiredOutOfBandRoutes,
+                "changedOutOfBandRoutes" to it.management.changedOutOfBandRoutes,
                 "availableOutOfBandRoutes" to it.management.availableOutOfBandRoutes,
             )
         }))

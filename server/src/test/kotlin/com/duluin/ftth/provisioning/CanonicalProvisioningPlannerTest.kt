@@ -207,6 +207,11 @@ class CanonicalProvisioningPlannerTest {
         ManagementEvidenceSourceType.TOPOLOGY_OBSERVATION,
         sourceId,
         emptySet(),
+        emptySet(),
+        emptySet(),
+        emptySet(),
+        emptySet(),
+        emptySet(),
     )
 
     private class InMemoryPlanRepository : ProvisionPlanRepository {
