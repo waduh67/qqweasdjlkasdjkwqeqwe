@@ -2,6 +2,9 @@ package com.duluin.ftth.collector
 
 import com.duluin.ftth.collector.adapter.BngAdapterRegistry
 import com.duluin.ftth.collector.adapter.MikrotikRouterOsAdapter
+import com.duluin.ftth.collector.adapter.ProvisioningAdapterRegistry
+import com.duluin.ftth.collector.adapter.FileRouterOsProvisioningStateStore
+import com.duluin.ftth.collector.adapter.RouterOsProvisioningAdapter
 import com.duluin.ftth.collector.adapter.SimulatorBngAdapter
 import com.duluin.ftth.collector.adapter.SimulatorOltAdapter
 import com.duluin.ftth.snmp.AdapterRegistry
@@ -9,12 +12,13 @@ import com.duluin.ftth.snmp.GponSnmpAdapter
 import com.duluin.ftth.snmp.HsgqEponSnmpAdapter
 import com.duluin.ftth.snmp.MibProfiles
 import org.slf4j.LoggerFactory
+import java.nio.file.Path
 
 /**
  * Titik masuk agent.
  *
- * Konfigurasinya sengaja hanya tiga variabel lingkungan: alamat server, API key,
- * dan (opsional) apakah simulator diaktifkan. Sisanya — OLT mana yang di-polling,
+ * Konfigurasinya memakai alamat server, API key, mode simulator, dan direktori state
+ * provisioning lokal. Sisanya — OLT mana yang di-polling,
  * seberapa sering — datang dari server, karena itulah yang diatur operator lewat
  * UI dan tidak boleh perlu masuk ke mesin collector untuk mengubahnya.
  */
@@ -57,6 +61,25 @@ fun main() {
     } else {
         BngAdapterRegistry(listOf(MikrotikRouterOsAdapter()))
     }
+    val provisioningStateDirectory = Path.of(
+        env(
+            "FTTH_COLLECTOR_STATE_DIR",
+            Path.of(System.getProperty("user.home"), ".local", "state", "ftth-collector").toString(),
+        ),
+    )
+    val provisioningRegistry = ProvisioningAdapterRegistry(
+        if (simulatorEnabled) {
+            emptyList()
+        } else {
+            listOf(
+                RouterOsProvisioningAdapter(
+                    stateStore = FileRouterOsProvisioningStateStore(
+                        provisioningStateDirectory.resolve("routeros-provisioning-state.json"),
+                    ),
+                ),
+            )
+        },
+    )
 
     log.info("ftth-collector {} → {}", AGENT_VERSION, serverUrl)
     if (simulatorEnabled) log.warn("MODE SIMULATOR aktif — data yang dikirim adalah tiruan, bukan dari perangkat")
@@ -68,6 +91,7 @@ fun main() {
         registry = registry,
         agentVersion = AGENT_VERSION,
         bngRegistry = bngRegistry,
+        provisioningRegistry = provisioningRegistry,
     )
 
     if (env("FTTH_COLLECTOR_ONCE", "false").toBoolean()) {

@@ -1,6 +1,8 @@
 package com.duluin.ftth.collector
 
 import com.duluin.ftth.collector.adapter.BngAdapterRegistry
+import com.duluin.ftth.collector.adapter.ProvisioningAdapter
+import com.duluin.ftth.collector.adapter.ProvisioningAdapterRegistry
 import com.duluin.ftth.collector.adapter.SimulatorBngAdapter
 import com.duluin.ftth.snmp.AdapterRegistry
 import com.duluin.ftth.contract.BngActionCommand
@@ -9,15 +11,19 @@ import com.duluin.ftth.contract.BngIngestResult
 import com.duluin.ftth.contract.BngSessionBatch
 import com.duluin.ftth.contract.CollectorConfig
 import com.duluin.ftth.contract.CollectorHeartbeat
+import com.duluin.ftth.contract.DeviceCapabilityReport
+import com.duluin.ftth.contract.DeviceFingerprint
 import com.duluin.ftth.contract.IngestResult
 import com.duluin.ftth.contract.MetricBatch
 import com.duluin.ftth.contract.NasTarget
+import com.duluin.ftth.contract.ProvisioningApplyResult
 import com.duluin.ftth.contract.ProvisioningCommandPhase
 import com.duluin.ftth.contract.ProvisioningErrorCode
 import com.duluin.ftth.contract.ProvisioningPayload
 import com.duluin.ftth.contract.ProvisioningPlanStepCommand
 import com.duluin.ftth.contract.ProvisioningStepResult
 import com.duluin.ftth.contract.ProvisioningTarget
+import com.duluin.ftth.contract.ProvisioningVerificationObservation
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -162,6 +168,42 @@ class CollectorAgentTest {
         assertEquals(listOf(first, second), agent.takeProvisioningCommands())
     }
 
+    @Test
+    fun `registered provisioning adapter executes and reports on next heartbeat`() {
+        val command = provisioningCommand("step-router")
+        val target = NasTarget(
+            nasId = "switch-1",
+            name = "router",
+            vendor = "MIKROTIK",
+            host = "router.example",
+            adapterType = "ROUTER_OS",
+        )
+        val config = FakeServerClient.IDLE.copy(
+            nasTargets = listOf(target),
+            provisioningCommands = listOf(command),
+        )
+        val client = FakeServerClient(ArrayDeque(listOf(config, FakeServerClient.IDLE)))
+        val adapter = RecordingProvisioningAdapter()
+        val agent = CollectorAgent(
+            client = client,
+            registry = AdapterRegistry(emptyList()),
+            agentVersion = "test-1.0",
+            sleeper = {},
+            clock = { Instant.parse("2026-07-26T00:00:00Z") },
+            provisioningRegistry = ProvisioningAdapterRegistry(listOf(adapter)),
+        )
+
+        agent.runOnce()
+        agent.runOnce()
+        agent.runOnce()
+
+        assertEquals(listOf(command), adapter.commands)
+        assertEquals("step-router", client.heartbeats[1].provisioningResults.single().stepId)
+        assertEquals("switch-1", client.heartbeats[1].deviceReports.single().targetId)
+        assertTrue(client.heartbeats[2].provisioningResults.isEmpty())
+        assertTrue(client.heartbeats[2].deviceReports.isEmpty())
+    }
+
     private fun failedProvisioningResult(stepId: String) = ProvisioningStepResult(
         planId = "plan-1",
         revision = 1,
@@ -236,5 +278,38 @@ class CollectorAgentTest {
         assertEquals("z9", ack.actionId)
         assertTrue(!ack.success, "perintah tanpa BRAS yang cocok harus ACK gagal")
         assertTrue(ack.detail?.contains("nas-hantu") == true, "detail harus menerangkan BRAS yang hilang")
+    }
+
+    private class RecordingProvisioningAdapter : ProvisioningAdapter {
+        override val vendor = "MIKROTIK"
+        val commands = mutableListOf<ProvisioningPlanStepCommand>()
+
+        override fun execute(target: NasTarget, command: ProvisioningPlanStepCommand): ProvisioningStepResult {
+            commands += command
+            val at = Instant.parse("2026-07-26T00:00:00Z")
+            return ProvisioningStepResult(
+                planId = command.planId,
+                revision = command.revision,
+                stepId = command.stepId,
+                operationClass = command.operationClass,
+                idempotencyKey = command.idempotencyKey,
+                phase = command.phase,
+                success = true,
+                completedAt = at,
+                preflight = com.duluin.ftth.contract.ProvisioningPreflightSnapshot(at, "hash"),
+                verification = ProvisioningVerificationObservation(
+                    observedAt = at,
+                    matchesExpected = true,
+                    stateHash = "hash",
+                ),
+            )
+        }
+
+        override fun capabilityReport(target: NasTarget) = DeviceCapabilityReport(
+            targetId = target.nasId,
+            fingerprint = DeviceFingerprint("MikroTik", "test", "7.20", "HTTPS_REST"),
+            capabilities = setOf("CERTIFICATION_PROVISIONAL"),
+            reportedAt = Instant.parse("2026-07-26T00:00:00Z"),
+        )
     }
 }
