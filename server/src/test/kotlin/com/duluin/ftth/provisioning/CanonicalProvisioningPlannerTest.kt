@@ -8,12 +8,14 @@ import com.duluin.ftth.provisioning.application.service.PlanChange
 import com.duluin.ftth.provisioning.application.service.PlanCompilationRequest
 import com.duluin.ftth.provisioning.application.service.PlanObservation
 import com.duluin.ftth.provisioning.application.service.PlanTopologyNode
+import com.duluin.ftth.provisioning.application.service.PlanManagementSource
 import com.duluin.ftth.provisioning.application.service.ProvisioningSafetyGate
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisionPlanRepository
 import com.duluin.ftth.provisioning.domain.model.AdministrativeStatus
 import com.duluin.ftth.provisioning.domain.model.DeviceKind
 import com.duluin.ftth.provisioning.domain.model.DeviceReference
 import com.duluin.ftth.provisioning.domain.model.ManagedNodeRole
+import com.duluin.ftth.provisioning.domain.model.InterfaceRole
 import com.duluin.ftth.provisioning.domain.model.NormalizedDeviceState
 import com.duluin.ftth.provisioning.domain.model.NormalizedField
 import com.duluin.ftth.provisioning.domain.model.NormalizedValue
@@ -24,6 +26,7 @@ import com.duluin.ftth.provisioning.domain.model.ServiceIntent
 import com.duluin.ftth.provisioning.domain.policy.ExecutionMode
 import com.duluin.ftth.provisioning.domain.policy.PolicyCode
 import com.duluin.ftth.provisioning.domain.policy.PolicyDecision
+import com.duluin.ftth.provisioning.domain.policy.ManagementEvidenceSourceType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -114,6 +117,37 @@ class CanonicalProvisioningPlannerTest {
         assertThat(repository.savedCount).isZero()
     }
 
+    @Test
+    fun `dry run and simulator previews are callable return warnings and never persist executable plans`() {
+        val repository = InMemoryPlanRepository()
+        val evaluatedModes = mutableListOf<ExecutionMode>()
+        val gate = object : ProvisioningSafetyGate {
+            override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode): PolicyDecision {
+                evaluatedModes += mode
+                return PolicyDecision(
+                    true,
+                    if (mode == ExecutionMode.DRY_RUN) {
+                        PolicyCode.DRY_RUN_ALLOWED_WITH_WARNINGS
+                    } else {
+                        PolicyCode.SIMULATION_ALLOWED_WITH_WARNINGS
+                    },
+                    warnings = listOf("PROVISIONAL_CERTIFICATION:BRAS:${bras.id}"),
+                )
+            }
+        }
+        val service = ImmutableProvisioningPlanService(planner, repository, gate)
+
+        val dryRun = service.preview(request(), ExecutionMode.DRY_RUN)
+        val simulator = service.preview(request(), ExecutionMode.SIMULATOR)
+
+        assertThat(dryRun.plan.status).isEqualTo(PlanStatus.GENERATED)
+        assertThat(simulator.plan.status).isEqualTo(PlanStatus.GENERATED)
+        assertThat(dryRun.decision.warnings).isNotEmpty()
+        assertThat(simulator.decision.warnings).isNotEmpty()
+        assertThat(evaluatedModes).containsExactly(ExecutionMode.DRY_RUN, ExecutionMode.SIMULATOR)
+        assertThat(repository.savedCount).isZero()
+    }
+
     private fun request(
         change: PlanChange = PlanChange.CREATE,
         brasReferenceCount: Int = 0,
@@ -121,9 +155,9 @@ class CanonicalProvisioningPlannerTest {
         reverseInputOrder: Boolean = false,
     ): PlanCompilationRequest {
         val topology = listOf(
-            PlanTopologyNode(olt, ManagedNodeRole.OLT, AdministrativeStatus.ENABLED, observedAt, "pon-1"),
-            PlanTopologyNode(transit, ManagedNodeRole.ACCESS_SWITCH, AdministrativeStatus.ENABLED, observedAt, "xe-0/0/1"),
-            PlanTopologyNode(bras, ManagedNodeRole.BRAS, AdministrativeStatus.ENABLED, observedAt, "ae0"),
+            PlanTopologyNode(olt, ManagedNodeRole.OLT, AdministrativeStatus.ENABLED, observedAt, management("pon-1", InterfaceRole.ACCESS, olt.id)),
+            PlanTopologyNode(transit, ManagedNodeRole.ACCESS_SWITCH, AdministrativeStatus.ENABLED, observedAt, management("xe-0/0/1", InterfaceRole.TRUNK, transit.id)),
+            PlanTopologyNode(bras, ManagedNodeRole.BRAS, AdministrativeStatus.ENABLED, observedAt, management("ae0", InterfaceRole.TRUNK, bras.id)),
         )
         val capabilities = listOf(
             PlanCapability(olt, "ZTE", "C320", "1.2", "SSH", setOf("access-vlan"), observedAt),
@@ -166,6 +200,14 @@ class CanonicalProvisioningPlannerTest {
             brasReferenceCount = brasReferenceCount,
         )
     }
+
+    private fun management(interfaceName: String, role: InterfaceRole, sourceId: UUID) = PlanManagementSource(
+        interfaceName,
+        role,
+        ManagementEvidenceSourceType.TOPOLOGY_OBSERVATION,
+        sourceId,
+        emptySet(),
+    )
 
     private class InMemoryPlanRepository : ProvisionPlanRepository {
         private val values = linkedMapOf<UUID, ProvisionPlan>()

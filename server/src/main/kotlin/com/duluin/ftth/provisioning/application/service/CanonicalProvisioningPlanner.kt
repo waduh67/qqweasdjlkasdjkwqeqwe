@@ -1,21 +1,19 @@
 package com.duluin.ftth.provisioning.application.service
 
 import com.duluin.ftth.common.domain.error.ValidationException
-import com.duluin.ftth.provisioning.application.port.outbound.ProvisionPlanRepository
 import com.duluin.ftth.provisioning.domain.model.AdministrativeStatus
 import com.duluin.ftth.provisioning.domain.model.DeviceKind
 import com.duluin.ftth.provisioning.domain.model.DeviceReference
 import com.duluin.ftth.provisioning.domain.model.ManagedNodeRole
+import com.duluin.ftth.provisioning.domain.model.InterfaceRole
 import com.duluin.ftth.provisioning.domain.model.NormalizedDeviceState
 import com.duluin.ftth.provisioning.domain.model.NormalizedStateHash
-import com.duluin.ftth.provisioning.domain.model.PlanStatus
 import com.duluin.ftth.provisioning.domain.model.ProvisionOperation
 import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
 import com.duluin.ftth.provisioning.domain.model.ProvisionStep
 import com.duluin.ftth.provisioning.domain.model.ServiceIntent
+import com.duluin.ftth.provisioning.domain.policy.ManagementEvidenceSourceType
 import org.springframework.stereotype.Component
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
@@ -29,7 +27,15 @@ data class PlanTopologyNode(
     val role: ManagedNodeRole,
     val administrativeStatus: AdministrativeStatus,
     val observedAt: Instant,
+    val management: PlanManagementSource,
+)
+
+data class PlanManagementSource(
     val interfaceName: String,
+    val interfaceRole: InterfaceRole,
+    val sourceType: ManagementEvidenceSourceType,
+    val sourceEvidenceId: UUID,
+    val availableOutOfBandRoutes: Set<String>,
 )
 
 data class PlanCapability(
@@ -69,6 +75,7 @@ class CanonicalProvisioningPlanner {
         val sourceHash = sha256(canonicalRequest(request))
         val observations = request.observations.associateBy { it.device }
         val capabilities = request.capabilities.associateBy { it.device }
+        val topology = request.topology.associateBy { it.device }
         val specifications = when (request.change) {
             PlanChange.CREATE -> createSteps(request.topology)
             PlanChange.DELETE -> deleteSteps(request.topology, request.brasReferenceCount)
@@ -85,6 +92,17 @@ class CanonicalProvisioningPlanner {
                 SafetyPlanAttributes.MODEL to capabilities.getValue(device).model,
                 SafetyPlanAttributes.FIRMWARE to capabilities.getValue(device).firmware,
                 SafetyPlanAttributes.TRANSPORT to capabilities.getValue(device).transport,
+                SafetyPlanAttributes.MANAGEMENT_COMPLETE to "true",
+                SafetyPlanAttributes.MANAGEMENT_SOURCE_TYPE to topology.getValue(device).management.sourceType.name,
+                SafetyPlanAttributes.MANAGEMENT_SOURCE_ID to topology.getValue(device).management.sourceEvidenceId.toString(),
+                SafetyPlanAttributes.INTERFACE_ROLES to topology.getValue(device).management.interfaceRole.name,
+                SafetyPlanAttributes.IP_ADDRESSES to "",
+                SafetyPlanAttributes.VRFS to "",
+                SafetyPlanAttributes.COLLECTOR_PATHS to "",
+                SafetyPlanAttributes.REQUIRED_OOB_ROUTES to "",
+                SafetyPlanAttributes.CHANGED_OOB_ROUTES to "",
+                SafetyPlanAttributes.AVAILABLE_OOB_ROUTES to encoded(topology.getValue(device).management.availableOutOfBandRoutes),
+                "interface" to topology.getValue(device).management.interfaceName,
             )
             val identity = listOf(request.intent.id, revision, order, device.kind, device.id, operation, attributes)
                 .joinToString("|")
@@ -159,7 +177,11 @@ class CanonicalProvisioningPlanner {
                 "role" to it.role.name,
                 "status" to it.administrativeStatus.name,
                 "observedAt" to it.observedAt.toString(),
-                "interface" to it.interfaceName,
+                "interface" to it.management.interfaceName,
+                "interfaceRole" to it.management.interfaceRole.name,
+                "managementSourceType" to it.management.sourceType.name,
+                "managementSourceEvidenceId" to it.management.sourceEvidenceId.toString(),
+                "availableOutOfBandRoutes" to it.management.availableOutOfBandRoutes,
             )
         }))
         append("|capabilities=").append(canonicalValue(request.capabilities.map {
@@ -199,6 +221,8 @@ class CanonicalProvisioningPlanner {
 
     private fun canonicalString(value: String): String = "${value.toByteArray(StandardCharsets.UTF_8).size}:$value"
 
+    private fun encoded(values: Set<String>): String = values.sorted().joinToString(",")
+
     private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")
         .digest(value.toByteArray(StandardCharsets.UTF_8))
         .joinToString("") { "%02x".format(it) }
@@ -209,32 +233,5 @@ class CanonicalProvisioningPlanner {
         bytes[8] = (bytes[8].toInt() and 0x3f or 0x80).toByte()
         val buffer = ByteBuffer.wrap(bytes)
         return UUID(buffer.long, buffer.long)
-    }
-}
-
-@Service
-class ImmutableProvisioningPlanService(
-    private val planner: CanonicalProvisioningPlanner,
-    private val plans: ProvisionPlanRepository,
-    private val safetyGate: ProvisioningSafetyGate,
-) {
-    @Transactional
-    fun plan(request: PlanCompilationRequest): ProvisionPlan {
-        val current = plans.findLatestByIntentId(request.intent.id)
-        val comparison = planner.compile(request, current?.revision ?: 1)
-        if (current != null && current.preconditionHash == comparison.preconditionHash) {
-            safetyGate.requireAllowed(current, com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY)
-            if (current.status == PlanStatus.GENERATED) current.validate()
-            return plans.save(current)
-        }
-
-        val candidate = planner.compile(request, (current?.revision ?: 0) + 1)
-        safetyGate.requireAllowed(candidate, com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY)
-        candidate.validate()
-
-        if (current?.status == PlanStatus.GENERATED) current.reject()
-        if (current?.status == PlanStatus.VALIDATED) current.supersede()
-        if (current != null) plans.save(current)
-        return plans.save(candidate)
     }
 }
