@@ -222,6 +222,10 @@ private object PlanAttributePolicy {
         ProvisionStep.PRECONDITION_HASH_ATTRIBUTE,
         ProvisionPlan.PLAN_PRECONDITION_HASH_ATTRIBUTE,
         "interface",
+        "safety.vendor",
+        "safety.model",
+        "safety.firmware",
+        "safety.transport",
     )
     private val forbiddenValueFragments = setOf(
         "password", "secret", "credential", "token", "privatekey", "rawcli", "command", "script",
@@ -241,7 +245,8 @@ private object PlanAttributePolicy {
                 "intentId" -> canonicalUuid.matches(value)
                 "vlanId" -> value.matches(Regex("^[0-9]{1,4}$")) && value.toInt() in 2..4094
                 ProvisionStep.PRECONDITION_HASH_ATTRIBUTE, ProvisionPlan.PLAN_PRECONDITION_HASH_ATTRIBUTE -> hash.matches(value)
-                "interface" -> interfaceName.matches(value)
+                "interface", "safety.vendor", "safety.model", "safety.firmware", "safety.transport" ->
+                    interfaceName.matches(value)
                 else -> false
             }
             if (!valid) throw ValidationException("PLAN_ATTRIBUTE_VALUE_INVALID: $key")
