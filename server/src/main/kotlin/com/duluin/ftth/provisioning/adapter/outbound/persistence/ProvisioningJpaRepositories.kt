@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param
 import java.util.UUID
 import java.time.Instant
 import com.duluin.ftth.provisioning.domain.model.AttemptStatus
+import com.duluin.ftth.provisioning.domain.model.ExecutionStatus
 
 interface VlanPoolJpaRepository : JpaRepository<VlanPoolJpaEntity, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -46,6 +47,7 @@ interface ProvisionStepAttributeJpaRepository : JpaRepository<ProvisionStepAttri
 }
 interface ProvisionExecutionJpaRepository : JpaRepository<ProvisionExecutionJpaEntity, UUID> {
     fun findByIdempotencyKey(idempotencyKey: String): ProvisionExecutionJpaEntity?
+    fun findByIntentIdAndStatusIn(intentId: UUID, statuses: Collection<ExecutionStatus>): List<ProvisionExecutionJpaEntity>
 }
 interface DeviceLeaseJpaRepository : JpaRepository<DeviceLeaseJpaEntity, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)

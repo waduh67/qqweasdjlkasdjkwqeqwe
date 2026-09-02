@@ -1,6 +1,7 @@
 package com.duluin.ftth.provisioning
 
 import com.duluin.ftth.common.domain.UuidV7
+import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.provisioning.application.port.outbound.DeviceCircuitBreakerRepository
 import com.duluin.ftth.provisioning.application.port.outbound.DeviceLeaseRepository
@@ -29,7 +30,6 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
@@ -63,7 +63,39 @@ class ProvisioningExecutionPersistenceIT {
             asTenant(fixture.tenantId) {
                 executions.save(ProvisionExecution.queue(fixture.tenantId, fixture.intentId, fixture.secondPlanId, "second"))
             }
-        }.isInstanceOf(DataIntegrityViolationException::class.java)
+        }.isInstanceOf(ConflictException::class.java)
+            .hasMessage("ACTIVE_EXECUTION_EXISTS")
+    }
+
+    @Test
+    fun `concurrent active execution creation returns one stable domain conflict`() {
+        val fixture = fixture("execution-concurrent-active")
+        val ready = CountDownLatch(2)
+        val start = CountDownLatch(1)
+        val workers = Executors.newFixedThreadPool(2)
+        try {
+            val outcomes = listOf(fixture.firstPlanId, fixture.secondPlanId).mapIndexed { index, planId ->
+                workers.submit<String> {
+                    ready.countDown()
+                    start.await()
+                    try {
+                        asTenant(fixture.tenantId) {
+                            executions.save(
+                                ProvisionExecution.queue(fixture.tenantId, fixture.intentId, planId, "active-$index"),
+                            )
+                        }
+                        "CREATED"
+                    } catch (error: ConflictException) {
+                        error.message.orEmpty()
+                    }
+                }
+            }
+            ready.await()
+            start.countDown()
+            assertThat(outcomes.map { it.get() }).containsExactlyInAnyOrder("CREATED", "ACTIVE_EXECUTION_EXISTS")
+        } finally {
+            workers.shutdownNow()
+        }
     }
 
     @Test
@@ -251,9 +283,11 @@ class ProvisioningExecutionPersistenceIT {
             em.createNativeQuery(
                 """INSERT INTO provisioning_service_intent
                    (id, tenant_id, subscription_id, segment_profile_id, encapsulation, status)
-                   VALUES (:id, :tenant, :subscription, :profile, 'SINGLE_TAG', 'ACTIVE')""",
+                   VALUES (:id, :tenant, :subscription, :profile, 'SINGLE_TAG', 'DRAFT')""",
             ).setParameter("id", intentId).setParameter("tenant", tenantId).setParameter("subscription", UuidV7.generate())
                 .setParameter("profile", profileId).executeUpdate()
+            em.createNativeQuery("UPDATE provisioning_service_intent SET status = 'ACTIVE' WHERE id = :id")
+                .setParameter("id", intentId).executeUpdate()
             val firstPlanId = insertPlan(tenantId, intentId, 1)
             val firstStepId = insertStep(tenantId, firstPlanId)
             val secondPlanId = insertPlan(tenantId, intentId, 2)

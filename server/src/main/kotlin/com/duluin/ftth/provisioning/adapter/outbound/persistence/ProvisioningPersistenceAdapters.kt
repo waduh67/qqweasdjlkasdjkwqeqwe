@@ -20,6 +20,7 @@ import com.duluin.ftth.provisioning.domain.model.DeviceObservation
 import com.duluin.ftth.provisioning.domain.model.DeviceReference
 import com.duluin.ftth.provisioning.domain.model.DeviceSnapshot
 import com.duluin.ftth.provisioning.domain.model.DriftRecord
+import com.duluin.ftth.provisioning.domain.model.ExecutionStatus
 import com.duluin.ftth.provisioning.domain.model.NormalizedDeviceState
 import com.duluin.ftth.provisioning.domain.model.ProvisionExecution
 import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
@@ -252,7 +253,7 @@ class ProvisionExecutionPersistenceAdapter(
             """INSERT INTO provisioning_execution
                (id, tenant_id, intent_id, plan_id, idempotency_key, status, detail)
                VALUES (:id, :tenant, :intent, :plan, :key, :status, :detail)
-               ON CONFLICT (tenant_id, idempotency_key) DO NOTHING""",
+               ON CONFLICT DO NOTHING""",
         ).setParameter("id", value.id)
             .setParameter("tenant", value.tenantId)
             .setParameter("intent", value.intentId)
@@ -261,12 +262,16 @@ class ProvisionExecutionPersistenceAdapter(
             .setParameter("status", value.status.name)
             .setParameter("detail", value.detail)
             .executeUpdate()
-        val persisted = jpa.findByIdempotencyKey(value.idempotencyKey)
-            ?: throw IllegalStateException("EXECUTION_IDEMPOTENCY_WRITE_LOST")
-        if (persisted.intentId != value.intentId || persisted.planId != value.planId) {
-            throw ConflictException("EXECUTION_IDEMPOTENCY_KEY_REUSED")
+        jpa.findByIdempotencyKey(value.idempotencyKey)?.let { persisted ->
+            if (persisted.intentId != value.intentId || persisted.planId != value.planId) {
+                throw ConflictException("EXECUTION_IDEMPOTENCY_KEY_REUSED")
+            }
+            return persisted.toDomain()
         }
-        return persisted.toDomain()
+        if (jpa.findByIntentIdAndStatusIn(value.intentId, ACTIVE_EXECUTION_STATUSES).isNotEmpty()) {
+            throw ConflictException("ACTIVE_EXECUTION_EXISTS")
+        }
+        throw IllegalStateException("EXECUTION_IDEMPOTENCY_WRITE_LOST")
     }
 
     override fun findById(id: UUID): ProvisionExecution? = jpa.findById(id).orElse(null)?.toDomain()
@@ -275,6 +280,15 @@ class ProvisionExecutionPersistenceAdapter(
     private fun ProvisionExecutionJpaEntity.toDomain() = ProvisionExecution.rehydrate(
         id, tenant(tenantId), intentId, planId, idempotencyKey, status, detail,
     )
+
+    companion object {
+        private val ACTIVE_EXECUTION_STATUSES = setOf(
+            ExecutionStatus.QUEUED,
+            ExecutionStatus.RUNNING,
+            ExecutionStatus.VERIFYING,
+            ExecutionStatus.ROLLING_BACK,
+        )
+    }
 }
 
 @Component
