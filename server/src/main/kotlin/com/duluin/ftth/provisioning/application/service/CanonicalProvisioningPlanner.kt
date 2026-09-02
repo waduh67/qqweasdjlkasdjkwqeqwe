@@ -7,6 +7,7 @@ import com.duluin.ftth.provisioning.domain.model.DeviceKind
 import com.duluin.ftth.provisioning.domain.model.DeviceReference
 import com.duluin.ftth.provisioning.domain.model.ManagedNodeRole
 import com.duluin.ftth.provisioning.domain.model.NormalizedDeviceState
+import com.duluin.ftth.provisioning.domain.model.NormalizedStateHash
 import com.duluin.ftth.provisioning.domain.model.PlanStatus
 import com.duluin.ftth.provisioning.domain.model.ProvisionOperation
 import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
@@ -66,7 +67,7 @@ class CanonicalProvisioningPlanner {
         }
         val steps = specifications.mapIndexed { index, (device, operation) ->
             val order = index + 1
-            val preconditionHash = sha256(canonicalValue(observations.getValue(device).state.values))
+            val preconditionHash = NormalizedStateHash.sha256(observations.getValue(device).state)
             val attributes = sortedMapOf(
                 "intentId" to request.intent.id.toString(),
                 "vlanId" to request.vlanId.toString(),
@@ -162,7 +163,7 @@ class CanonicalProvisioningPlanner {
             mapOf(
                 "deviceKind" to it.device.kind.name,
                 "deviceId" to it.device.id.toString(),
-                "state" to it.state.values,
+                "state" to it.state.canonicalForm(),
                 "observedAt" to it.observedAt.toString(),
             )
         }.sortedBy { it["deviceId"].toString() }))

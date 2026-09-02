@@ -48,13 +48,17 @@ class VlanPool private constructor(
         if (reservedRanges.any { it.start !in range || it.endInclusive !in range }) {
             throw ValidationException("RESERVED_RANGE_OUTSIDE_POOL")
         }
+        if (allocations.any { it.tenantId != tenantId || it.poolId != id }) {
+            throw ValidationException("TENANT_OWNERSHIP_MISMATCH: allocation does not belong to pool")
+        }
+        if (allocations.filter(VlanAllocation::active).groupBy { it.device to it.vlanId }.any { it.value.size > 1 }) {
+            throw ConflictException("VLAN_ALREADY_ALLOCATED")
+        }
     }
 
     fun allocate(device: DeviceReference, vlanId: Int, intentId: UUID): VlanAllocation {
         validateVlan(vlanId)
-        if (mutableAllocations.any { it.active && it.device == device && it.vlanId == vlanId }) {
-            throw ConflictException("VLAN_ALREADY_ALLOCATED")
-        }
+        ActiveVlanAllocationPolicy.requireAvailable(tenantId, device, vlanId, mutableAllocations)
         return VlanAllocation.create(tenantId, id, device, vlanId, intentId).also(mutableAllocations::add)
     }
 
@@ -135,5 +139,18 @@ class VlanAllocation private constructor(
 data class AllocationReference(val kind: String, val referenceId: UUID) {
     init {
         if (kind.isBlank() || kind.length > 40) throw ValidationException("ALLOCATION_REFERENCE_KIND_INVALID")
+    }
+}
+
+object ActiveVlanAllocationPolicy {
+    fun requireAvailable(
+        tenantId: UUID,
+        device: DeviceReference,
+        vlanId: Int,
+        existing: Collection<VlanAllocation>,
+    ) {
+        if (existing.any { it.tenantId == tenantId && it.active && it.device == device && it.vlanId == vlanId }) {
+            throw ConflictException("VLAN_ALREADY_ALLOCATED")
+        }
     }
 }

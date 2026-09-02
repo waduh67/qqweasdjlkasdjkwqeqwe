@@ -74,12 +74,16 @@ class ProvisionStep private constructor(
 
     init {
         if (order < 1) throw ValidationException("PROVISION_STEP_ORDER_INVALID")
-        NormalizedDeviceState.of(attributes)
+        PlanAttributePolicy.validate(attributes)
     }
 
     internal fun canonical(): String = buildString {
-        append(order).append('|').append(device.kind).append('|').append(device.id).append('|').append(operation)
-        attributes.toSortedMap().forEach { (key, value) -> append('|').append(key).append('=').append(value) }
+        listOf(id.toString(), order.toString(), device.kind.name, device.id.toString(), operation.name)
+            .forEach { append(LengthPrefixedCanonical.encode(it)) }
+        attributes.toSortedMap().forEach { (key, value) ->
+            append(LengthPrefixedCanonical.encode(key))
+            append(LengthPrefixedCanonical.encode(value))
+        }
     }
 
     companion object {
@@ -143,9 +147,10 @@ class ProvisionPlan private constructor(
     fun supersede() = transitionTo(PlanStatus.SUPERSEDED, setOf(PlanStatus.VALIDATED))
 
     fun canonicalPayload(): String = buildString {
-        append(id).append('|').append(tenantId).append('|').append(intentId).append('|').append(revision)
-        append('|').append(preconditionHash).append('|').append(contentHash).append('\n')
-        steps.sortedBy { it.order }.forEach { append(it.id).append('|').append(it.canonical()).append('\n') }
+        append(LengthPrefixedCanonical.encode(
+            listOf(id.toString(), tenantId.toString(), intentId.toString(), revision.toString(), preconditionHash, contentHash),
+        ))
+        steps.sortedBy { it.order }.forEach { append(LengthPrefixedCanonical.encode(it.canonical())) }
     }
 
     private fun transitionTo(next: PlanStatus, allowed: Set<PlanStatus>) {
@@ -183,10 +188,49 @@ class ProvisionPlan private constructor(
         }
 
         private fun hash(steps: List<ProvisionStep>): String {
-            val canonical = steps.sortedBy { it.order }.joinToString("\n", transform = ProvisionStep::canonical)
+            val canonical = steps.sortedBy { it.order }
+                .joinToString(separator = "") { LengthPrefixedCanonical.encode(it.canonical()) }
             return MessageDigest.getInstance("SHA-256")
                 .digest(canonical.toByteArray(StandardCharsets.UTF_8))
                 .joinToString("") { "%02x".format(it) }
+        }
+    }
+}
+
+internal object LengthPrefixedCanonical {
+    fun encode(value: String): String = "${value.toByteArray(StandardCharsets.UTF_8).size}:$value"
+    fun encode(values: List<String>): String = values.joinToString(separator = "", transform = ::encode)
+}
+
+private object PlanAttributePolicy {
+    private val allowedKeys = setOf(
+        "intentId",
+        "vlanId",
+        ProvisionStep.PRECONDITION_HASH_ATTRIBUTE,
+        ProvisionPlan.PLAN_PRECONDITION_HASH_ATTRIBUTE,
+        "interface",
+    )
+    private val forbiddenValueFragments = setOf("password=", "secret=", "token=", "-----begin", "/interface ", "configure terminal")
+    private val hash = Regex("^[a-f0-9]{64}$")
+    private val interfaceName = Regex("^[A-Za-z0-9._:/-]{1,160}$")
+
+    fun validate(attributes: Map<String, String>) {
+        attributes.forEach { (key, value) ->
+            if (key !in allowedKeys) {
+                throw ValidationException("PLAN_ATTRIBUTE_UNSUPPORTED: $key")
+            }
+            val normalizedValue = value.lowercase()
+            if (value.length > 500 || value.any(Char::isISOControl) || forbiddenValueFragments.any(normalizedValue::contains)) {
+                throw ValidationException("SENSITIVE_VALUE: plan attribute value is not normalized")
+            }
+            val valid = when (key) {
+                "intentId" -> runCatching { UUID.fromString(value).toString() == value.lowercase() }.getOrDefault(false)
+                "vlanId" -> value.toIntOrNull() in 2..4094
+                ProvisionStep.PRECONDITION_HASH_ATTRIBUTE, ProvisionPlan.PLAN_PRECONDITION_HASH_ATTRIBUTE -> hash.matches(value)
+                "interface" -> interfaceName.matches(value)
+                else -> false
+            }
+            if (!valid) throw ValidationException("PLAN_ATTRIBUTE_VALUE_INVALID: $key")
         }
     }
 }

@@ -43,35 +43,105 @@ enum class ProvisionOperation {
     REMOVE_PPPOE_TERMINATION,
 }
 
+enum class NormalizedField(val wireName: String) {
+    INTERFACES("interfaces"),
+    NAME("name"),
+    CONFIGURED("configured"),
+    VLAN_ID("vlanId"),
+    VLANS("vlans"),
+    PORT("port"),
+    ENABLED("enabled"),
+    EXTERNAL("external");
+
+    companion object {
+        fun fromWireName(value: String): NormalizedField = entries.firstOrNull { it.wireName == value }
+            ?: throw ValidationException("NORMALIZED_FIELD_UNSUPPORTED: $value")
+    }
+}
+
+sealed interface NormalizedValue {
+    @JvmInline
+    value class Identifier private constructor(val value: String) : NormalizedValue {
+        companion object {
+            private val safeIdentifier = Regex("^[A-Za-z0-9._:/-]{1,160}$")
+            private val forbiddenFragments = setOf("password", "secret", "credential", "token", "privatekey")
+
+            fun of(value: String): Identifier {
+                if (!safeIdentifier.matches(value) || forbiddenFragments.any(value.lowercase()::contains)) {
+                    throw ValidationException("NORMALIZED_TEXT_INVALID")
+                }
+                return Identifier(value)
+            }
+        }
+    }
+
+    data class Number(val value: Long) : NormalizedValue
+    data class Flag(val value: Boolean) : NormalizedValue
+    class Sequence private constructor(val values: List<NormalizedValue>) : NormalizedValue {
+        override fun equals(other: Any?): Boolean = other is Sequence && values == other.values
+        override fun hashCode(): Int = values.hashCode()
+
+        companion object {
+            fun of(values: Collection<NormalizedValue>) = Sequence(values.toList())
+        }
+    }
+    class ObjectValue private constructor(val fields: Map<NormalizedField, NormalizedValue>) : NormalizedValue {
+        override fun equals(other: Any?): Boolean = other is ObjectValue && fields == other.fields
+        override fun hashCode(): Int = fields.hashCode()
+
+        companion object {
+            fun of(fields: Map<NormalizedField, NormalizedValue>) = ObjectValue(fields.toMap())
+        }
+    }
+
+    companion object {
+        fun identifier(value: String): NormalizedValue = Identifier.of(value)
+        fun number(value: Int): NormalizedValue = Number(value.toLong())
+        fun number(value: Long): NormalizedValue = Number(value)
+        fun flag(value: Boolean): NormalizedValue = Flag(value)
+        fun sequence(vararg values: NormalizedValue): NormalizedValue = Sequence.of(values.toList())
+        fun obj(vararg fields: Pair<NormalizedField, NormalizedValue>): NormalizedValue = ObjectValue.of(mapOf(*fields))
+    }
+}
+
 class NormalizedDeviceState private constructor(
-    val values: Map<String, Any?>,
+    val values: Map<NormalizedField, NormalizedValue>,
 ) {
     init {
-        validate(values)
+        validateFields(values)
     }
 
     override fun equals(other: Any?): Boolean = other is NormalizedDeviceState && values == other.values
-
     override fun hashCode(): Int = values.hashCode()
 
-    companion object {
-        private val forbiddenFragments = setOf("password", "secret", "credential", "token", "rawcli", "command", "script")
+    fun canonicalForm(): String = NormalizedStateHash.canonical(values)
 
-        fun of(values: Map<String, Any?>): NormalizedDeviceState = NormalizedDeviceState(values.toMap())
+    companion object {
+        fun of(vararg values: Pair<NormalizedField, NormalizedValue>): NormalizedDeviceState =
+            NormalizedDeviceState(mapOf(*values))
+
+        fun from(values: Map<NormalizedField, NormalizedValue>): NormalizedDeviceState =
+            NormalizedDeviceState(values.toMap())
 
         fun empty(): NormalizedDeviceState = NormalizedDeviceState(emptyMap())
 
-        private fun validate(value: Any?) {
-            when (value) {
-                is Map<*, *> -> value.forEach { (key, child) ->
-                    val normalizedKey = key.toString().lowercase().filter(Char::isLetterOrDigit)
-                    if (forbiddenFragments.any(normalizedKey::contains)) {
-                        throw ValidationException("SENSITIVE_FIELD: normalized state cannot contain '$key'")
+        private fun validateFields(values: Map<NormalizedField, NormalizedValue>) {
+            values.forEach { (field, value) ->
+                val valid = when (field) {
+                    NormalizedField.INTERFACES -> value is NormalizedValue.Sequence &&
+                        value.values.all { it is NormalizedValue.ObjectValue }
+                    NormalizedField.NAME, NormalizedField.PORT -> value is NormalizedValue.Identifier
+                    NormalizedField.CONFIGURED, NormalizedField.ENABLED, NormalizedField.EXTERNAL -> value is NormalizedValue.Flag
+                    NormalizedField.VLAN_ID -> value is NormalizedValue.Number && value.value in 2..4094
+                    NormalizedField.VLANS -> value is NormalizedValue.Sequence && value.values.all {
+                        it is NormalizedValue.Number && it.value in 2..4094
                     }
-                    validate(child)
                 }
-                is Iterable<*> -> value.forEach(::validate)
-                is Array<*> -> value.forEach(::validate)
+                if (!valid) throw ValidationException("NORMALIZED_FIELD_TYPE_INVALID: ${field.wireName}")
+                if (value is NormalizedValue.ObjectValue) validateFields(value.fields)
+                if (value is NormalizedValue.Sequence) {
+                    value.values.filterIsInstance<NormalizedValue.ObjectValue>().forEach { validateFields(it.fields) }
+                }
             }
         }
     }
@@ -79,18 +149,19 @@ class NormalizedDeviceState private constructor(
 
 object NormalizedStateHash {
     fun sha256(state: NormalizedDeviceState): String = MessageDigest.getInstance("SHA-256")
-        .digest(canonical(state.values).toByteArray(StandardCharsets.UTF_8))
+        .digest(state.canonicalForm().toByteArray(StandardCharsets.UTF_8))
         .joinToString("") { "%02x".format(it) }
 
-    private fun canonical(value: Any?): String = when (value) {
-        null -> "null"
-        is Map<*, *> -> value.entries.sortedBy { it.key.toString() }
-            .joinToString(prefix = "{", postfix = "}") { string(it.key.toString()) + ":" + canonical(it.value) }
-        is Set<*> -> value.map(::canonical).sorted().joinToString(prefix = "[", postfix = "]")
-        is Iterable<*> -> value.joinToString(prefix = "[", postfix = "]", transform = ::canonical)
-        is Array<*> -> value.joinToString(prefix = "[", postfix = "]", transform = ::canonical)
-        is Boolean, is Number -> value.toString()
-        else -> string(value.toString())
+    internal fun canonical(values: Map<NormalizedField, NormalizedValue>): String = values.entries
+        .sortedBy { it.key.wireName }
+        .joinToString(prefix = "{", postfix = "}") { string(it.key.wireName) + canonical(it.value) }
+
+    private fun canonical(value: NormalizedValue): String = when (value) {
+        is NormalizedValue.Identifier -> "s${string(value.value)}"
+        is NormalizedValue.Number -> "n${value.value}"
+        is NormalizedValue.Flag -> if (value.value) "b1" else "b0"
+        is NormalizedValue.Sequence -> value.values.joinToString(prefix = "[", postfix = "]") { canonical(it) }
+        is NormalizedValue.ObjectValue -> canonical(value.fields)
     }
 
     private fun string(value: String): String = "${value.toByteArray(StandardCharsets.UTF_8).size}:$value"

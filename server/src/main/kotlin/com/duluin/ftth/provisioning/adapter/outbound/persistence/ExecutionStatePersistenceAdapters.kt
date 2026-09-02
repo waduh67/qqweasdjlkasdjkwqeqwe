@@ -1,6 +1,7 @@
 package com.duluin.ftth.provisioning.adapter.outbound.persistence
 
 import com.duluin.ftth.common.domain.UuidV7
+import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.provisioning.application.port.outbound.DeviceCircuitBreakerRepository
 import com.duluin.ftth.provisioning.application.port.outbound.DeviceLeaseRepository
@@ -22,6 +23,9 @@ import java.time.Instant
 import java.util.UUID
 
 private fun requiredTenant(entityTenantId: UUID?): UUID = entityTenantId ?: TenantContext.tenantId()
+private fun requireExecutionTenant(tenantId: UUID) {
+    if (tenantId != TenantContext.tenantId()) throw ValidationException("TENANT_OWNERSHIP_MISMATCH")
+}
 
 @Component
 class FencedExecutionPersistenceAdapter(
@@ -61,6 +65,7 @@ class DeviceLeasePersistenceAdapter(
         now: Instant,
         duration: Duration,
     ): DeviceLease? {
+        requireExecutionTenant(tenantId)
         require(ownerId.isNotBlank()) { "LEASE_OWNER_REQUIRED" }
         require(!duration.isZero && !duration.isNegative) { "LEASE_DURATION_INVALID" }
         val current = leases.findLockedByDevice(device.kind, device.id)
@@ -130,6 +135,7 @@ class ExecutionStepPersistenceAdapter(
     private val steps: ExecutionStepJpaRepository,
 ) : ExecutionStepRepository {
     override fun save(value: ExecutionStep): ExecutionStep {
+        requireExecutionTenant(value.tenantId)
         val entity = steps.findById(value.id).orElse(null)?.apply {
             status = value.status
             beforeHash = value.beforeHash
@@ -172,6 +178,7 @@ class StepAttemptPersistenceAdapter(
     private val attempts: StepAttemptJpaRepository,
 ) : StepAttemptRepository {
     override fun save(value: StepAttempt): StepAttempt {
+        requireExecutionTenant(value.tenantId)
         val entity = attempts.findById(value.id).orElse(null)?.apply {
             status = value.status
             errorCode = value.errorCode
@@ -229,17 +236,19 @@ class StepAttemptPersistenceAdapter(
 @Component
 class StepSnapshotPersistenceAdapter(
     private val snapshots: StepSnapshotJpaRepository,
+    private val codec: NormalizedStateJsonCodec,
 ) : StepSnapshotRepository {
-    override fun save(value: StepSnapshot): StepSnapshot = snapshots.save(
-        StepSnapshotJpaEntity(
+    override fun save(value: StepSnapshot): StepSnapshot {
+        requireExecutionTenant(value.tenantId)
+        return snapshots.save(StepSnapshotJpaEntity(
             value.id,
             value.executionStepId,
             value.kind,
             value.stateHash,
-            value.state.values,
+            codec.encode(value.state),
             value.capturedAt,
-        ),
-    ).toDomain()
+        )).toDomain()
+    }
 
     override fun findByExecutionStepId(executionStepId: UUID): List<StepSnapshot> =
         snapshots.findByExecutionStepIdOrderByCapturedAt(executionStepId).map { it.toDomain() }
@@ -250,7 +259,7 @@ class StepSnapshotPersistenceAdapter(
         executionStepId,
         snapshotKind,
         stateHash,
-        NormalizedDeviceState.of(normalizedState),
+        codec.decode(normalizedState),
         capturedAt,
     )
 }
@@ -260,6 +269,7 @@ class DeviceCircuitBreakerPersistenceAdapter(
     private val circuits: DeviceCircuitBreakerJpaRepository,
 ) : DeviceCircuitBreakerRepository {
     override fun save(value: DeviceCircuitBreaker): DeviceCircuitBreaker {
+        requireExecutionTenant(value.tenantId)
         val entity = circuits.findByDeviceKindAndDeviceId(value.device.kind, value.device.id)?.apply {
             failureCount = value.failureCount
             openUntil = value.openUntil
