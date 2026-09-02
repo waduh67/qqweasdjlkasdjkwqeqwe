@@ -4,13 +4,17 @@ import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.provisioning.domain.model.AdapterCertification
+import com.duluin.ftth.provisioning.domain.model.ActiveVlanAllocationPolicy
 import com.duluin.ftth.provisioning.domain.model.DeviceKind
 import com.duluin.ftth.provisioning.domain.model.DeviceObservation
 import com.duluin.ftth.provisioning.domain.model.DeviceReference
 import com.duluin.ftth.provisioning.domain.model.DeviceSnapshot
 import com.duluin.ftth.provisioning.domain.model.DriftStatus
 import com.duluin.ftth.provisioning.domain.model.IntentStatus
+import com.duluin.ftth.provisioning.domain.model.LengthPrefixedCanonical
 import com.duluin.ftth.provisioning.domain.model.NormalizedDeviceState
+import com.duluin.ftth.provisioning.domain.model.NormalizedField
+import com.duluin.ftth.provisioning.domain.model.NormalizedValue
 import com.duluin.ftth.provisioning.domain.model.PlanStatus
 import com.duluin.ftth.provisioning.domain.model.ProvisionExecution
 import com.duluin.ftth.provisioning.domain.model.ProvisionOperation
@@ -126,19 +130,146 @@ class ProvisioningDomainTest {
             .isInstanceOf(ConflictException::class.java)
         allocation.removeReference("SUBSCRIPTION", subscriberId)
         assertThat(allocation.referenceCount).isEqualTo(1)
+        assertThatThrownBy { allocation.release() }
+            .isInstanceOf(ConflictException::class.java)
+            .hasMessageContaining("ALLOCATION_STILL_REFERENCED")
+    }
+
+    @Test
+    fun `active allocation policy rejects a duplicate from another pool`() {
+        val existing = VlanPool.create(tenantId, "POP-A", VlanRange(100, 199))
+            .allocate(device, 110, UuidV7.generate())
+
+        assertThatThrownBy {
+            ActiveVlanAllocationPolicy.requireAvailable(tenantId, device, 110, listOf(existing))
+        }.isInstanceOf(ConflictException::class.java)
+            .hasMessageContaining("VLAN_ALREADY_ALLOCATED")
     }
 
     @Test
     fun `normalized plan snapshot and observation reject secret or raw cli fields`() {
         listOf("password", "apiSecret", "credential", "rawCli", "command").forEach { forbidden ->
-            assertThatThrownBy { NormalizedDeviceState.of(mapOf(forbidden to "must-not-persist")) }
+            assertThatThrownBy { NormalizedField.fromWireName(forbidden) }
                 .isInstanceOf(ValidationException::class.java)
-                .hasMessageContaining("SENSITIVE_FIELD")
+                .hasMessageContaining("NORMALIZED_FIELD_UNSUPPORTED")
         }
 
-        val state = NormalizedDeviceState.of(mapOf("interfaces" to listOf(mapOf("name" to "ether1"))))
+        val state = NormalizedDeviceState.of(
+            NormalizedField.INTERFACES to NormalizedValue.sequence(
+                NormalizedValue.obj(NormalizedField.NAME to NormalizedValue.identifier("ether1")),
+            ),
+        )
         assertThat(DeviceSnapshot.capture(tenantId, device, UuidV7.generate(), state).state).isEqualTo(state)
         assertThat(DeviceObservation.record(tenantId, device, state).state).isEqualTo(state)
+    }
+
+    @Test
+    fun `normalized state cannot be mutated through nested source values`() {
+        val source = mutableListOf(NormalizedValue.obj(NormalizedField.NAME to NormalizedValue.identifier("ether1")))
+        val state = NormalizedDeviceState.of(
+            NormalizedField.INTERFACES to NormalizedValue.Sequence.of(source),
+        )
+
+        source += NormalizedValue.obj(NormalizedField.NAME to NormalizedValue.identifier("ether2"))
+
+        val interfaces = state.values.getValue(NormalizedField.INTERFACES) as NormalizedValue.Sequence
+        assertThat(interfaces.values).hasSize(1)
+    }
+
+    @Test
+    fun `normalized state rejects raw device instructions hidden under an innocuous key`() {
+        listOf("/interface vlan add name=vlan110", "token-redacted").forEach { unsafeValue ->
+            assertThatThrownBy { NormalizedValue.identifier(unsafeValue) }
+                .isInstanceOf(ValidationException::class.java)
+                .hasMessageContaining("NORMALIZED_TEXT_INVALID")
+        }
+    }
+
+    @Test
+    fun `plan hash distinguishes delimiter shaped attribute values`() {
+        val oneValueContainingOldDelimiters = LengthPrefixedCanonical.encode(listOf("a", "x|b=y"))
+        val twoFieldsInTheOldShape = LengthPrefixedCanonical.encode(listOf("a", "x", "b", "y"))
+
+        assertThat(oneValueContainingOldDelimiters).isNotEqualTo(twoFieldsInTheOldShape)
+    }
+
+    @Test
+    fun `plan attributes reject unsupported fields and raw device instructions`() {
+        listOf(
+            mapOf("payload" to "normalized-value"),
+            mapOf("interface" to "/interface vlan add name=vlan110"),
+        ).forEach { attributes ->
+            assertThatThrownBy {
+                ProvisionStep.create(1, device, ProvisionOperation.ENSURE_TAGGED_VLAN, attributes)
+            }.isInstanceOf(ValidationException::class.java)
+        }
+    }
+
+    @Test
+    fun `rehydrated pool rejects allocations owned by another tenant or pool`() {
+        val poolId = UuidV7.generate()
+        val allocation = com.duluin.ftth.provisioning.domain.model.VlanAllocation.rehydrate(
+            UuidV7.generate(),
+            UuidV7.generate(),
+            poolId,
+            device,
+            110,
+            UuidV7.generate(),
+            true,
+            emptyList(),
+        )
+
+        assertThatThrownBy {
+            VlanPool.rehydrate(poolId, tenantId, "POP-A", VlanRange(100, 199), emptyList(), listOf(allocation))
+        }.isInstanceOf(ValidationException::class.java)
+            .hasMessageContaining("TENANT_OWNERSHIP_MISMATCH")
+    }
+
+    @Test
+    fun `every lifecycle action rejects unsupported terminal states`() {
+        IntentStatus.entries.forEach { status ->
+            val intent = ServiceIntent.rehydrate(
+                UuidV7.generate(), tenantId, UuidV7.generate(), UuidV7.generate(),
+                VlanEncapsulation.SINGLE_TAG, null, status,
+            )
+            if (status !in setOf(IntentStatus.DRAFT, IntentStatus.SUSPENDED)) {
+                assertThatThrownBy { intent.activate() }.isInstanceOf(ConflictException::class.java)
+            }
+        }
+
+        PlanStatus.entries.filterNot { it == PlanStatus.GENERATED }.forEach { status ->
+            val generated = plan()
+            val candidate = ProvisionPlan.rehydrate(
+                generated.id, generated.tenantId, generated.intentId, generated.revision,
+                generated.steps, status, generated.contentHash,
+            )
+            assertThatThrownBy { candidate.validate() }.isInstanceOf(ConflictException::class.java)
+            assertThatThrownBy { candidate.reject() }.isInstanceOf(ConflictException::class.java)
+        }
+        val rejected = plan()
+        rejected.reject()
+        assertThat(rejected.status).isEqualTo(PlanStatus.REJECTED)
+        assertThatThrownBy { rejected.supersede() }.isInstanceOf(ConflictException::class.java)
+
+        val rollback = ProvisionExecution.queue(tenantId, UuidV7.generate(), "rollback-matrix")
+        rollback.start()
+        rollback.beginRollback()
+        rollback.completeRollback()
+        assertThatThrownBy { rollback.start() }.isInstanceOf(ConflictException::class.java)
+
+        val failed = ProvisionExecution.queue(tenantId, UuidV7.generate(), "failed-matrix")
+        failed.fail("redacted failure")
+        failed.requireManualReconciliation("operator review required")
+        listOf<(ProvisionExecution) -> Unit>(
+            { it.start() },
+            { it.verify() },
+            { it.succeed() },
+            { it.beginRollback() },
+            { it.completeRollback() },
+            { it.fail("late failure") },
+        ).forEach { action ->
+            assertThatThrownBy { action(failed) }.isInstanceOf(ConflictException::class.java)
+        }
     }
 
     @Test
