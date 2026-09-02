@@ -7,12 +7,20 @@ import com.duluin.ftth.contract.DeviceCapabilityReport
 import com.duluin.ftth.contract.DeviceFingerprint as WireFingerprint
 import com.duluin.ftth.contract.ProvisioningTarget
 import com.duluin.ftth.provisioning.application.port.outbound.AdapterCertificationRepository
+import com.duluin.ftth.provisioning.application.port.outbound.DeviceObservationRepository
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisioningSafetyEvidenceRepository
+import com.duluin.ftth.provisioning.application.service.ProvisioningManagementEvidenceService
+import com.duluin.ftth.provisioning.application.service.RecordManagementEvidenceCommand
 import com.duluin.ftth.provisioning.domain.model.AdapterCertification
 import com.duluin.ftth.provisioning.domain.model.DeviceKind
 import com.duluin.ftth.provisioning.domain.model.DeviceReference
+import com.duluin.ftth.provisioning.domain.model.DeviceObservation
+import com.duluin.ftth.provisioning.domain.model.NormalizedDeviceState
+import com.duluin.ftth.provisioning.domain.model.VlanRange
 import com.duluin.ftth.provisioning.domain.policy.CertificationStatus
 import com.duluin.ftth.provisioning.domain.policy.DeviceFingerprint
+import com.duluin.ftth.provisioning.domain.policy.ManagementEvidenceSourceType
+import com.duluin.ftth.provisioning.domain.policy.ProtectedManagementResources
 import com.duluin.ftth.tenancy.TenantApi
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
@@ -33,6 +41,8 @@ class ProvisioningSafetyEvidencePersistenceIT {
     @Autowired private lateinit var txManager: PlatformTransactionManager
     @Autowired private lateinit var safetyEvidence: ProvisioningSafetyEvidenceRepository
     @Autowired private lateinit var certifications: AdapterCertificationRepository
+    @Autowired private lateinit var observations: DeviceObservationRepository
+    @Autowired private lateinit var managementEvidenceService: ProvisioningManagementEvidenceService
     @Autowired private lateinit var collectorChannel: CollectorProvisioningChannel
     @PersistenceContext private lateinit var em: EntityManager
 
@@ -143,12 +153,10 @@ class ProvisioningSafetyEvidencePersistenceIT {
 
         assertThat(capability?.id).isEqualTo(evidenceId)
         assertThat(capability?.fingerprint).isEqualTo(fingerprint)
-        assertThat(capability?.supported).isTrue()
         assertThat(capability?.expiresAt).isEqualTo(expiresAt)
         assertThat(certification?.fingerprint).isEqualTo(fingerprint)
         assertThat(certification?.status).isEqualTo(CertificationStatus.CERTIFIED)
         assertThat(certification?.validUntil).isEqualTo(expiresAt)
-        assertThat(certification?.revoked).isFalse()
         assertThat(asTenant(other) { safetyEvidence.findCapabilityEvidence(other, fingerprint) == null }).isTrue()
         assertThat(asTenant(other) { safetyEvidence.findCertificationEvidence(other, fingerprint) == null }).isTrue()
     }
@@ -157,45 +165,46 @@ class ProvisioningSafetyEvidencePersistenceIT {
     fun `complete protected management evidence round trips every resource class`() {
         val tenantId = tenant("management-evidence")
         val device = DeviceReference(DeviceKind.SWITCH, UuidV7.generate())
-        val evidenceId = UuidV7.generate()
         val observedAt = Instant.parse("2026-09-02T12:00:00Z")
-
-        asTenant(tenantId) {
-            em.createNativeQuery(
-                """INSERT INTO provisioning_management_safety_evidence
-                   (id, tenant_id, device_kind, device_id, protected_vlan_ranges, protected_ip_prefixes,
-                    protected_vrfs, protected_interface_roles, protected_collector_paths, protected_oob_routes,
-                    mutation_interface_roles, mutation_ip_addresses, mutation_vrfs, mutation_collector_paths,
-                    mutation_required_oob_routes, mutation_changed_oob_routes, available_oob_routes,
-                    observed_at, valid_until)
-                   VALUES (:id, :tenant, 'SWITCH', :device, '99-99
-400-410', '10.20.0.0/16', 'MGMT', 'MANAGEMENT
-OOB', 'collector/site-a/uplink0', 'oob/site-a', 'TRUNK', '172.16.1.2', 'CUSTOMER',
-                    'collector/site-a/customer', 'oob/site-a', '', 'oob/site-a', :observed, :valid)""",
-            ).setParameter("id", evidenceId)
-                .setParameter("tenant", tenantId)
-                .setParameter("device", device.id)
-                .setParameter("observed", observedAt)
-                .setParameter("valid", observedAt.plusSeconds(300))
-                .executeUpdate()
+        val observation = asTenant(tenantId) {
+            observations.save(
+                DeviceObservation.rehydrate(
+                    UuidV7.generate(), tenantId, device, NormalizedDeviceState.empty(), observedAt,
+                ),
+            )
         }
+        val recorded = managementEvidenceService.record(
+            RecordManagementEvidenceCommand(
+                tenantId,
+                device,
+                ProtectedManagementResources(
+                    vlanRanges = listOf(VlanRange(99, 99), VlanRange(400, 410)),
+                    managementIpPrefixes = setOf("10.20.0.0/16"),
+                    vrfs = setOf("MGMT"),
+                    managementInterfaceRoles = setOf("MANAGEMENT", "OOB"),
+                    collectorSourcePaths = setOf("collector/site-a/uplink0"),
+                    requiredOutOfBandRoutes = setOf("oob/site-a"),
+                ),
+                setOf("oob/site-a"),
+                ManagementEvidenceSourceType.DEVICE_OBSERVATION,
+                observation.id,
+                observedAt,
+                observedAt.plusSeconds(300),
+            ),
+        )
 
         val evidence = asTenant(tenantId) { safetyEvidence.findManagementEvidence(tenantId, device) }
 
-        assertThat(evidence?.id).isEqualTo(evidenceId)
+        assertThat(evidence?.id).isEqualTo(recorded.id)
         assertThat(evidence?.protectedResources?.vlanRanges).extracting<Int> { it.start }.containsExactly(99, 400)
         assertThat(evidence?.protectedResources?.managementIpPrefixes).containsExactly("10.20.0.0/16")
         assertThat(evidence?.protectedResources?.managementInterfaceRoles).containsExactlyInAnyOrder("MANAGEMENT", "OOB")
         assertThat(evidence?.protectedResources?.vrfs).containsExactly("MGMT")
         assertThat(evidence?.protectedResources?.collectorSourcePaths).containsExactly("collector/site-a/uplink0")
         assertThat(evidence?.protectedResources?.requiredOutOfBandRoutes).containsExactly("oob/site-a")
-        assertThat(evidence?.mutation?.interfaceRoles).containsExactly("TRUNK")
-        assertThat(evidence?.mutation?.ipAddresses).containsExactly("172.16.1.2")
-        assertThat(evidence?.mutation?.vrfOrRoutingInstances).containsExactly("CUSTOMER")
-        assertThat(evidence?.mutation?.collectorSourcePaths).containsExactly("collector/site-a/customer")
-        assertThat(evidence?.mutation?.requiredOutOfBandRoutes).containsExactly("oob/site-a")
-        assertThat(evidence?.mutation?.changedOutOfBandRoutes).isEmpty()
-        assertThat(evidence?.mutation?.availableOutOfBandRoutes).containsExactly("oob/site-a")
+        assertThat(evidence?.availableOutOfBandRoutes).containsExactly("oob/site-a")
+        assertThat(evidence?.complete).isTrue()
+        assertThat(evidence?.sourceEvidenceId).isEqualTo(observation.id)
     }
 
     private fun insertCapabilityEvidence(

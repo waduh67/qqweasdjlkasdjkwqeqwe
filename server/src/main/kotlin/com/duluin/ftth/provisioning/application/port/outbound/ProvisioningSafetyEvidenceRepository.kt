@@ -5,6 +5,7 @@ import com.duluin.ftth.provisioning.domain.model.DeviceReference
 import com.duluin.ftth.provisioning.domain.policy.CapabilityEvidence
 import com.duluin.ftth.provisioning.domain.policy.CertificationEvidence
 import com.duluin.ftth.provisioning.domain.policy.DeviceFingerprint
+import com.duluin.ftth.provisioning.domain.policy.ManagementEvidenceSourceType
 import java.util.UUID
 
 interface ProvisioningSafetyEvidenceRepository {
@@ -15,4 +16,15 @@ interface ProvisioningSafetyEvidenceRepository {
 
 fun interface ProvisioningDeviceOwnershipRepository {
     fun owns(tenantId: UUID, device: DeviceReference): Boolean
+}
+
+interface ProvisioningManagementEvidenceRepository {
+    fun sourceExists(
+        tenantId: UUID,
+        device: DeviceReference,
+        sourceType: ManagementEvidenceSourceType,
+        sourceEvidenceId: UUID,
+    ): Boolean
+
+    fun save(value: ManagementSafetyEvidence): ManagementSafetyEvidence
 }
