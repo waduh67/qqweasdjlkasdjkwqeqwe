@@ -86,6 +86,62 @@ class VlanAllocatorPersistenceIT {
         }
     }
 
+    @Test
+    fun `overlapping pools skip VLANs active on the same device`() {
+        val tenantId = tenantApi.ensureTenant("allocator-overlap-${UUID.randomUUID().toString().take(8)}", "allocator").id
+        val oltId = UuidV7.generate()
+        val fixture = overlappingPools(tenantId)
+        val firstIntent = fixture.firstIntent
+        val secondIntent = fixture.secondIntent
+        val commonKey = SharedAllocationKey(
+            tenantId,
+            UuidV7.generate(),
+            oltId,
+            UuidV7.generate(),
+            UuidV7.generate(),
+        )
+
+        val first = asTenant(tenantId) {
+            allocator.allocateShared(
+                SharedVlanAllocationCommand(fixture.firstPool.id, firstIntent.id, commonKey, firstIntent.id),
+            )
+        }
+        val second = asTenant(tenantId) {
+            allocator.allocateShared(
+                SharedVlanAllocationCommand(
+                    fixture.secondPool.id,
+                    secondIntent.id,
+                    commonKey.copy(serviceClassId = UuidV7.generate()),
+                    secondIntent.id,
+                ),
+            )
+        }
+
+        assertThat(first.vlanId).isEqualTo(210)
+        assertThat(second.vlanId).isEqualTo(211)
+    }
+
+    private fun overlappingPools(tenantId: UUID): OverlappingPoolFixture = asTenant(tenantId) {
+        val firstPool = pools.save(
+            VlanPool.create(tenantId, "overlap-a-${UUID.randomUUID()}", VlanRange(210, 212)),
+        )
+        val secondPool = pools.save(
+            VlanPool.create(tenantId, "overlap-b-${UUID.randomUUID()}", VlanRange(210, 212)),
+        )
+        val firstProfile = profiles.save(
+            SegmentProfile.create(tenantId, "overlap-a-${UUID.randomUUID()}", firstPool.id),
+        )
+        val secondProfile = profiles.save(
+            SegmentProfile.create(tenantId, "overlap-b-${UUID.randomUUID()}", secondPool.id),
+        )
+        OverlappingPoolFixture(
+            firstPool,
+            secondPool,
+            intents.save(ServiceIntent.create(tenantId, UuidV7.generate(), firstProfile.id)),
+            intents.save(ServiceIntent.create(tenantId, UuidV7.generate(), secondProfile.id)),
+        )
+    }
+
     private fun referenceCount(allocationId: UUID): Long =
         (em.createNativeQuery("SELECT reference_count FROM provisioning_vlan_allocation WHERE id = :id")
             .setParameter("id", allocationId)
@@ -94,4 +150,11 @@ class VlanAllocatorPersistenceIT {
     private fun <T> asTenant(tenantId: UUID, block: () -> T): T = TenantContext.runAs(tenantId) {
         TransactionTemplate(txManager).execute { block() }!!
     }
+
+    private data class OverlappingPoolFixture(
+        val firstPool: VlanPool,
+        val secondPool: VlanPool,
+        val firstIntent: ServiceIntent,
+        val secondIntent: ServiceIntent,
+    )
 }

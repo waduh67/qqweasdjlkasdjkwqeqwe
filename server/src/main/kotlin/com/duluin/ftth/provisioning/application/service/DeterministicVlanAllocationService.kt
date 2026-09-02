@@ -49,7 +49,8 @@ class DeterministicVlanAllocationService(
         }
 
         val device = DeviceReference(DeviceKind.OLT, command.key.oltId)
-        val vlanId = lowestFree(pool, device)
+        val activeVlans = pools.lockDeviceAndFindActiveVlans(command.key.tenantId, device)
+        val vlanId = lowestFree(pool, activeVlans)
         val allocation = pool.allocate(device, vlanId, command.intentId)
         allocation.addReference(REFERENCE_KIND, command.referenceId)
         val saved = savedAllocation(pool, allocation.id)
@@ -71,7 +72,9 @@ class DeterministicVlanAllocationService(
         }
 
         val device = DeviceReference(DeviceKind.OLT, command.oltId)
-        val vlanId = command.requestedVlanId ?: lowestFree(pool, device)
+        val activeVlans = pools.lockDeviceAndFindActiveVlans(command.tenantId, device)
+        val vlanId = command.requestedVlanId ?: lowestFree(pool, activeVlans)
+        if (vlanId in activeVlans) throw ConflictException("VLAN_ALREADY_ALLOCATED")
         val allocation = pool.allocate(device, vlanId, command.intentId)
         allocation.addReference(REFERENCE_KIND, command.referenceId)
         val saved = savedAllocation(pool, allocation.id)
@@ -85,6 +88,7 @@ class DeterministicVlanAllocationService(
         if (scope.tenantId != tenantId) throw ValidationException("ALLOCATION_TENANT_MISMATCH")
         val pool = lockedPool(scope.poolId, tenantId)
         val allocation = activeAllocation(pool, allocationId)
+        pools.lockDeviceAndFindActiveVlans(tenantId, allocation.device)
         allocation.removeReference(REFERENCE_KIND, referenceId)
         if (allocation.referenceCount == 0) allocation.release()
         val saved = savedAllocation(pool, allocation.id)
@@ -98,10 +102,10 @@ class DeterministicVlanAllocationService(
         return pool
     }
 
-    private fun lowestFree(pool: VlanPool, device: DeviceReference): Int =
+    private fun lowestFree(pool: VlanPool, activeVlans: Set<Int>): Int =
         (pool.range.start..pool.range.endInclusive).firstOrNull { vlanId ->
             pool.reservedRanges.none { vlanId in it } &&
-                pool.allocations.none { it.active && it.device == device && it.vlanId == vlanId }
+                vlanId !in activeVlans
         } ?: throw ConflictException("VLAN_POOL_EXHAUSTED")
 
     private fun activeAllocation(pool: VlanPool, allocationId: UUID): VlanAllocation =
