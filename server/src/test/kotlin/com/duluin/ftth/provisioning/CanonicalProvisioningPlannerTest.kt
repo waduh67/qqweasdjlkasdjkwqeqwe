@@ -26,19 +26,19 @@ import java.time.Instant
 import java.util.UUID
 
 class CanonicalProvisioningPlannerTest {
-    private val tenantId = UUID.fromString("00000000-0000-0000-0000-000000000001")
+    private val tenantId = UUID.fromString("00000000-0000-7000-8000-000000000001")
     private val intent = ServiceIntent.rehydrate(
-        UUID.fromString("00000000-0000-0000-0000-000000000002"),
+        UUID.fromString("00000000-0000-7000-8000-000000000002"),
         tenantId,
-        UUID.fromString("00000000-0000-0000-0000-000000000003"),
-        UUID.fromString("00000000-0000-0000-0000-000000000004"),
+        UUID.fromString("00000000-0000-7000-8000-000000000003"),
+        UUID.fromString("00000000-0000-7000-8000-000000000004"),
         com.duluin.ftth.provisioning.domain.model.VlanEncapsulation.SINGLE_TAG,
         null,
         com.duluin.ftth.provisioning.domain.model.IntentStatus.ACTIVE,
     )
-    private val olt = DeviceReference(DeviceKind.OLT, UUID.fromString("00000000-0000-0000-0000-000000000010"))
-    private val transit = DeviceReference(DeviceKind.SWITCH, UUID.fromString("00000000-0000-0000-0000-000000000011"))
-    private val bras = DeviceReference(DeviceKind.BRAS, UUID.fromString("00000000-0000-0000-0000-000000000012"))
+    private val olt = DeviceReference(DeviceKind.OLT, UUID.fromString("00000000-0000-7000-8000-000000000010"))
+    private val transit = DeviceReference(DeviceKind.SWITCH, UUID.fromString("00000000-0000-7000-8000-000000000011"))
+    private val bras = DeviceReference(DeviceKind.BRAS, UUID.fromString("00000000-0000-7000-8000-000000000012"))
     private val observedAt = Instant.parse("2026-01-02T03:04:05Z")
     private val planner = CanonicalProvisioningPlanner()
 

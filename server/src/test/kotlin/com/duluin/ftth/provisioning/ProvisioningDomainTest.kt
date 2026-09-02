@@ -198,6 +198,8 @@ class ProvisioningDomainTest {
         listOf(
             mapOf("payload" to "normalized-value"),
             mapOf("interface" to "/interface vlan add name=vlan110"),
+            mapOf("interface" to "secret-label"),
+            mapOf("intentId" to UuidV7.generate().toString().uppercase()),
         ).forEach { attributes ->
             assertThatThrownBy {
                 ProvisionStep.create(1, device, ProvisionOperation.ENSURE_TAGGED_VLAN, attributes)

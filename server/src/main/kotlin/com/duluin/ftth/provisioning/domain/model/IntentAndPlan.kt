@@ -67,6 +67,7 @@ class ProvisionStep private constructor(
     val device: DeviceReference,
     val operation: ProvisionOperation,
     attributes: Map<String, String>,
+    strictAttributes: Boolean,
 ) : ProvisioningAggregate {
     val attributes: Map<String, String> = attributes.toMap()
     val preconditionHash: String
@@ -74,13 +75,13 @@ class ProvisionStep private constructor(
 
     init {
         if (order < 1) throw ValidationException("PROVISION_STEP_ORDER_INVALID")
-        PlanAttributePolicy.validate(attributes)
+        if (strictAttributes) PlanAttributePolicy.validate(attributes) else PlanAttributePolicy.validateLegacy(attributes)
     }
 
     internal fun canonical(): String = buildString {
         listOf(id.toString(), order.toString(), device.kind.name, device.id.toString(), operation.name)
             .forEach { append(LengthPrefixedCanonical.encode(it)) }
-        attributes.toSortedMap().forEach { (key, value) ->
+        attributes.entries.sortedWith { left, right -> Utf8ByteComparator.compare(left.key, right.key) }.forEach { (key, value) ->
             append(LengthPrefixedCanonical.encode(key))
             append(LengthPrefixedCanonical.encode(value))
         }
@@ -95,7 +96,7 @@ class ProvisionStep private constructor(
             device: DeviceReference,
             operation: ProvisionOperation,
             attributes: Map<String, String>,
-        ) = ProvisionStep(UuidV7.generate(), order, device, operation, attributes.toMap())
+        ) = ProvisionStep(UuidV7.generate(), order, device, operation, attributes.toMap(), true)
 
         fun rehydrate(
             id: UUID,
@@ -103,7 +104,7 @@ class ProvisionStep private constructor(
             device: DeviceReference,
             operation: ProvisionOperation,
             attributes: Map<String, String>,
-        ) = ProvisionStep(id, order, device, operation, attributes)
+        ) = ProvisionStep(id, order, device, operation, attributes, false)
 
         fun compile(
             id: UUID,
@@ -111,7 +112,7 @@ class ProvisionStep private constructor(
             device: DeviceReference,
             operation: ProvisionOperation,
             attributes: Map<String, String>,
-        ) = ProvisionStep(id, order, device, operation, attributes)
+        ) = ProvisionStep(id, order, device, operation, attributes, true)
 
         private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")
             .digest(value.toByteArray(StandardCharsets.UTF_8))
@@ -202,6 +203,18 @@ internal object LengthPrefixedCanonical {
     fun encode(values: List<String>): String = values.joinToString(separator = "", transform = ::encode)
 }
 
+internal object Utf8ByteComparator {
+    fun compare(left: String, right: String): Int {
+        val leftBytes = left.toByteArray(StandardCharsets.UTF_8)
+        val rightBytes = right.toByteArray(StandardCharsets.UTF_8)
+        for (index in 0 until minOf(leftBytes.size, rightBytes.size)) {
+            val comparison = (leftBytes[index].toInt() and 0xff).compareTo(rightBytes[index].toInt() and 0xff)
+            if (comparison != 0) return comparison
+        }
+        return leftBytes.size.compareTo(rightBytes.size)
+    }
+}
+
 private object PlanAttributePolicy {
     private val allowedKeys = setOf(
         "intentId",
@@ -210,27 +223,47 @@ private object PlanAttributePolicy {
         ProvisionPlan.PLAN_PRECONDITION_HASH_ATTRIBUTE,
         "interface",
     )
-    private val forbiddenValueFragments = setOf("password=", "secret=", "token=", "-----begin", "/interface ", "configure terminal")
+    private val forbiddenValueFragments = setOf(
+        "password", "secret", "credential", "token", "privatekey", "rawcli", "command", "script",
+        "-----begin", "/interface ", "configure terminal",
+    )
+    private val canonicalUuid = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
     private val hash = Regex("^[a-f0-9]{64}$")
     private val interfaceName = Regex("^[A-Za-z0-9._:/-]{1,160}$")
 
     fun validate(attributes: Map<String, String>) {
+        validateSafeContent(attributes)
         attributes.forEach { (key, value) ->
             if (key !in allowedKeys) {
                 throw ValidationException("PLAN_ATTRIBUTE_UNSUPPORTED: $key")
             }
-            val normalizedValue = value.lowercase()
-            if (value.length > 500 || value.any(Char::isISOControl) || forbiddenValueFragments.any(normalizedValue::contains)) {
-                throw ValidationException("SENSITIVE_VALUE: plan attribute value is not normalized")
-            }
             val valid = when (key) {
-                "intentId" -> runCatching { UUID.fromString(value).toString() == value.lowercase() }.getOrDefault(false)
-                "vlanId" -> value.toIntOrNull() in 2..4094
+                "intentId" -> canonicalUuid.matches(value)
+                "vlanId" -> value.matches(Regex("^[0-9]{1,4}$")) && value.toInt() in 2..4094
                 ProvisionStep.PRECONDITION_HASH_ATTRIBUTE, ProvisionPlan.PLAN_PRECONDITION_HASH_ATTRIBUTE -> hash.matches(value)
                 "interface" -> interfaceName.matches(value)
                 else -> false
             }
             if (!valid) throw ValidationException("PLAN_ATTRIBUTE_VALUE_INVALID: $key")
+        }
+    }
+
+    fun validateLegacy(attributes: Map<String, String>) {
+        validateSafeContent(attributes)
+        attributes.keys.forEach { key ->
+            val normalizedKey = key.lowercase().filter(Char::isLetterOrDigit)
+            if (key.isBlank() || key.length > 80 || forbiddenValueFragments.any(normalizedKey::contains)) {
+                throw ValidationException("SENSITIVE_FIELD: legacy plan attribute is not safe")
+            }
+        }
+    }
+
+    private fun validateSafeContent(attributes: Map<String, String>) {
+        attributes.values.forEach { value ->
+            val normalizedValue = value.lowercase()
+            if (value.length > 500 || value.any(Char::isISOControl) || forbiddenValueFragments.any(normalizedValue::contains)) {
+                throw ValidationException("SENSITIVE_VALUE: plan attribute value is not normalized")
+            }
         }
     }
 }
