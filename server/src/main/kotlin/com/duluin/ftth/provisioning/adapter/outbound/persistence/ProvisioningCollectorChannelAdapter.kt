@@ -69,7 +69,7 @@ class ProvisioningCollectorChannelAdapter(
         val executionStep = executionSteps.findById(attempt.executionStepId).orElse(null) ?: return null
         if (executionStep.deviceId.toString() !in availableTargetIds) return null
         if (attempt.collectorId != null && attempt.collectorId != collectorId) return null
-        if (attempt.collectorId == null && attempts.claimCollector(attempt.id, collectorId, executionStep.deviceId) != 1) return null
+        if (attempts.claimCollector(attempt.id, collectorId, executionStep.deviceId) != 1) return null
         val execution = executions.findById(executionStep.executionId).orElse(null) ?: return null
         val plan = plans.findById(execution.planId).orElse(null) ?: return null
         val planStep = planSteps.findById(executionStep.planStepId).orElse(null) ?: return null
