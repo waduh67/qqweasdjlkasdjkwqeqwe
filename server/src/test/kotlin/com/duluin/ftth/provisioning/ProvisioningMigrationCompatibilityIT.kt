@@ -27,6 +27,52 @@ class ProvisioningMigrationCompatibilityIT {
     @Autowired private lateinit var normalizedStateCodec: NormalizedStateJsonCodec
 
     @Test
+    fun `v125 downgrades unbound legacy certification to fail closed provisional evidence`() {
+        val schema = "task4_upgrade_${UuidV7.generate().toString().replace("-", "")}"
+        dataSource.connection.use { connection -> connection.createStatement().use { it.execute("CREATE SCHEMA $schema") } }
+        try {
+            flyway(schema, "124").migrate()
+            val tenantId = UuidV7.generate()
+            val certificationId = UuidV7.generate()
+            val certifiedAt = java.time.Instant.parse("2026-09-02T12:00:00Z")
+            dataSource.connection.use { connection ->
+                connection.createStatement().use { statement ->
+                    statement.execute("SET search_path TO $schema, public")
+                    statement.execute("INSERT INTO tenant (id, slug, name) VALUES ('$tenantId', 'task4-upgrade', 'Task 4 Upgrade')")
+                    statement.execute("SET app.tenant_id = '$tenantId'")
+                    statement.execute(
+                        """INSERT INTO provisioning_adapter_certification
+                           (id, tenant_id, device_kind, device_id, vendor, model, firmware, transport,
+                            operation_class, status, valid_until, evidence_id, certified_by, certified_at)
+                           VALUES ('$certificationId', '$tenantId', 'BRAS', '${UuidV7.generate()}', 'MIKROTIK',
+                            'CCR2004', '7.20.2', 'HTTPS_REST', 'ENSURE_PPPOE_TERMINATION', 'CERTIFIED',
+                            '${certifiedAt.plusSeconds(3600)}', '${UuidV7.generate()}', '${UuidV7.generate()}', '$certifiedAt')""",
+                    )
+                }
+            }
+
+            flyway(schema).migrate()
+
+            dataSource.connection.use { connection ->
+                connection.createStatement().use { statement ->
+                    statement.execute("SET search_path TO $schema, public")
+                    statement.execute("SET app.tenant_id = '$tenantId'")
+                    statement.executeQuery(
+                        "SELECT status, evidence_id IS NULL, valid_until = certified_at FROM provisioning_adapter_certification WHERE id = '$certificationId'",
+                    ).use { result ->
+                        assertThat(result.next()).isTrue()
+                        assertThat(result.getString(1)).isEqualTo("PROVISIONAL")
+                        assertThat(result.getBoolean(2)).isTrue()
+                        assertThat(result.getBoolean(3)).isTrue()
+                    }
+                }
+            }
+        } finally {
+            dataSource.connection.use { connection -> connection.createStatement().use { it.execute("DROP SCHEMA $schema CASCADE") } }
+        }
+    }
+
+    @Test
     fun `v120 upgrades legacy plan hashes and preserves valid legacy normalized rows`() {
         val schema = "task1_upgrade_${UuidV7.generate().toString().replace("-", "")}"
         dataSource.connection.use { connection -> connection.createStatement().use { it.execute("CREATE SCHEMA $schema") } }

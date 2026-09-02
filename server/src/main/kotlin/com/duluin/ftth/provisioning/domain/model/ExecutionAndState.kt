@@ -171,7 +171,7 @@ class AdapterCertification private constructor(
     val operationClass: String,
     val status: CertificationStatus,
     val validUntil: Instant,
-    val evidenceId: UUID,
+    val evidenceId: UUID?,
     val certifiedBy: UUID,
     val certifiedAt: Instant,
     revokedAt: Instant?,
@@ -227,7 +227,7 @@ class AdapterCertification private constructor(
             val id = UuidV7.generate()
             return AdapterCertification(
                 id, tenantId, device, "UNKNOWN", model, firmware, transport, operationClass,
-                CertificationStatus.PROVISIONAL, now.plusNanos(1), id, id, now, null, null,
+                CertificationStatus.PROVISIONAL, now.plusNanos(1), null, id, now, null, null,
             )
         }
 
@@ -242,7 +242,7 @@ class AdapterCertification private constructor(
             operationClass: String,
             status: CertificationStatus,
             validUntil: Instant,
-            evidenceId: UUID,
+            evidenceId: UUID?,
             certifiedBy: UUID,
             certifiedAt: Instant,
             revokedAt: Instant?,

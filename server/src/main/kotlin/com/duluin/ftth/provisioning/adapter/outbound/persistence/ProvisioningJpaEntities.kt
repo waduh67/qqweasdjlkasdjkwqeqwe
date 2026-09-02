@@ -241,7 +241,7 @@ class AdapterCertificationJpaEntity(
     @Column(name = "operation_class", nullable = false, length = 120) val operationClass: String,
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 30) val status: com.duluin.ftth.provisioning.domain.policy.CertificationStatus,
     @Column(name = "valid_until", nullable = false) val validUntil: Instant,
-    @Column(name = "evidence_id", nullable = false) val evidenceId: UUID,
+    @Column(name = "evidence_id") val evidenceId: UUID?,
     @Column(name = "certified_by", nullable = false) val certifiedBy: UUID,
     @Column(name = "certified_at", nullable = false) val certifiedAt: Instant,
     @Column(name = "revoked_at") var revokedAt: Instant?,
