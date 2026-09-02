@@ -2,17 +2,22 @@ package com.duluin.ftth.provisioning
 
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.AccessDeniedException
+import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.security.AuthenticatedUser
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.provisioning.application.port.outbound.AdapterCertificationRepository
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisioningDeviceOwnershipRepository
+import com.duluin.ftth.provisioning.application.port.outbound.ProvisioningSafetyEvidenceRepository
 import com.duluin.ftth.provisioning.application.service.CertifyAdapterCommand
 import com.duluin.ftth.provisioning.application.service.ProvisioningCertificationService
 import com.duluin.ftth.provisioning.domain.model.AdapterCertification
 import com.duluin.ftth.provisioning.domain.model.DeviceKind
 import com.duluin.ftth.provisioning.domain.model.DeviceReference
 import com.duluin.ftth.provisioning.domain.policy.CertificationStatus
+import com.duluin.ftth.provisioning.domain.policy.CapabilityEvidence
+import com.duluin.ftth.provisioning.domain.policy.DeviceFingerprint
+import com.duluin.ftth.provisioning.domain.policy.ManagementSafetyEvidence
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -64,6 +69,13 @@ class ProvisioningCertificationServiceTest {
     }
 
     @Test
+    fun `certification evidence identity is resolved from exact current capability`() {
+        val certification = service(user(platformAdmin = true, tenantId = platformTenantId)).certify(command(targetTenantId))
+
+        assertThat(certification.evidenceId).isEqualTo(EVIDENCE_ID)
+    }
+
+    @Test
     fun `platform actor cannot certify a target not owned by the selected tenant`() {
         val actor = user(platformAdmin = true, tenantId = platformTenantId)
 
@@ -96,12 +108,40 @@ class ProvisioningCertificationServiceTest {
         assertThat(repository.savedTenantContext).isEqualTo(targetTenantId)
     }
 
-    private fun service(actor: AuthenticatedUser, ownsTarget: Boolean = true) = ProvisioningCertificationService(
+    @Test
+    fun `certification resolves and rejects stale unsupported or mismatched capability evidence`() {
+        val actor = user(platformAdmin = true, tenantId = platformTenantId)
+        val cases = listOf(
+            Triple(now, true, fingerprint()) to "STALE_CAPABILITY_EVIDENCE",
+            Triple(now.plusSeconds(300), false, fingerprint()) to "UNSUPPORTED_CAPABILITY",
+            Triple(now.plusSeconds(300), true, fingerprint().copy(firmware = "7.21")) to "FINGERPRINT_MISMATCH",
+        )
+
+        cases.forEach { (evidenceCase, expected) ->
+            assertThatThrownBy {
+                service(
+                    actor,
+                    capabilityExpiresAt = evidenceCase.first,
+                    capabilitySupported = evidenceCase.second,
+                    returnedFingerprint = evidenceCase.third,
+                ).certify(command(targetTenantId))
+            }.isInstanceOf(ValidationException::class.java).hasMessage(expected)
+        }
+    }
+
+    private fun service(
+        actor: AuthenticatedUser,
+        ownsTarget: Boolean = true,
+        capabilityExpiresAt: Instant = now.plusSeconds(300),
+        capabilitySupported: Boolean = true,
+        returnedFingerprint: DeviceFingerprint = fingerprint(),
+    ) = ProvisioningCertificationService(
         object : CurrentUserProvider {
             override fun currentOrNull() = actor
         },
         repository,
         ProvisioningDeviceOwnershipRepository { _, _ -> ownsTarget },
+        evidenceRepository(capabilityExpiresAt, capabilitySupported, returnedFingerprint),
         Clock.fixed(now, ZoneOffset.UTC),
     )
 
@@ -123,9 +163,34 @@ class ProvisioningCertificationServiceTest {
         firmware = "7.20.2",
         transport = "HTTPS_REST",
         operationClass = "ENSURE_PPPOE_TERMINATION",
-        status = CertificationStatus.CERTIFIED,
         validUntil = now.plusSeconds(3600),
-        evidenceId = EVIDENCE_ID,
+    )
+
+    private fun evidenceRepository(
+        expiresAt: Instant,
+        supported: Boolean,
+        returnedFingerprint: DeviceFingerprint,
+    ) = object : ProvisioningSafetyEvidenceRepository {
+        override fun findCapabilityEvidence(tenantId: UUID, fingerprint: DeviceFingerprint) = CapabilityEvidence(
+            EVIDENCE_ID,
+            tenantId,
+            returnedFingerprint,
+            supported,
+            now.minusSeconds(30),
+            expiresAt,
+        )
+
+        override fun findCertificationEvidence(tenantId: UUID, fingerprint: DeviceFingerprint) = null
+        override fun findManagementEvidence(tenantId: UUID, device: DeviceReference): ManagementSafetyEvidence? = null
+    }
+
+    private fun fingerprint() = DeviceFingerprint(
+        device,
+        "MIKROTIK",
+        "CCR2004",
+        "7.20.2",
+        "HTTPS_REST",
+        "ENSURE_PPPOE_TERMINATION",
     )
 
     private class RecordingCertificationRepository : AdapterCertificationRepository {
