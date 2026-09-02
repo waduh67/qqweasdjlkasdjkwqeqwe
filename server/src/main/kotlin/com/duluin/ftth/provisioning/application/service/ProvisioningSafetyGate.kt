@@ -40,11 +40,27 @@ interface ProvisioningSafetyGate {
 
     fun evaluate(plan: ProvisionPlan, mode: ExecutionMode, scope: SafetyGateScope): PolicyDecision = evaluate(plan, mode)
 
+    fun evaluateStep(
+        plan: ProvisionPlan,
+        stepId: UUID,
+        mode: ExecutionMode,
+        scope: SafetyGateScope,
+    ): PolicyDecision = evaluate(plan, mode, scope)
+
     fun requireAllowed(
         plan: ProvisionPlan,
         mode: ExecutionMode,
         scope: SafetyGateScope = SafetyGateScope.FORWARD,
     ): PolicyDecision = evaluate(plan, mode, scope).also { decision ->
+        if (!decision.allowed) throw ValidationException(decision.code.name)
+    }
+
+    fun requireStepAllowed(
+        plan: ProvisionPlan,
+        stepId: UUID,
+        mode: ExecutionMode,
+        scope: SafetyGateScope,
+    ): PolicyDecision = evaluateStep(plan, stepId, mode, scope).also { decision ->
         if (!decision.allowed) throw ValidationException(decision.code.name)
     }
 }
@@ -59,9 +75,27 @@ class EvidenceBackedProvisioningSafetyGate(
     override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode): PolicyDecision =
         evaluate(plan, mode, SafetyGateScope.FORWARD)
 
-    override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode, scope: SafetyGateScope): PolicyDecision {
+    override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode, scope: SafetyGateScope): PolicyDecision =
+        evaluateSteps(plan, plan.steps, mode, scope)
+
+    override fun evaluateStep(
+        plan: ProvisionPlan,
+        stepId: UUID,
+        mode: ExecutionMode,
+        scope: SafetyGateScope,
+    ): PolicyDecision {
+        val step = plan.steps.singleOrNull { it.id == stepId } ?: return denied(PolicyCode.FINGERPRINT_MISMATCH)
+        return evaluateSteps(plan, listOf(step), mode, scope)
+    }
+
+    private fun evaluateSteps(
+        plan: ProvisionPlan,
+        steps: List<ProvisionStep>,
+        mode: ExecutionMode,
+        scope: SafetyGateScope,
+    ): PolicyDecision {
         val capabilityDecision = if (scope == SafetyGateScope.FORWARD) {
-            val fingerprints = plan.steps.map { step -> fingerprint(step) ?: return denied(PolicyCode.FINGERPRINT_MISMATCH) }
+            val fingerprints = steps.map { step -> fingerprint(step) ?: return denied(PolicyCode.FINGERPRINT_MISMATCH) }
             val capabilityRequests = fingerprints.map { fingerprint ->
                 StepCapabilityRequest(
                     plan.tenantId,
@@ -77,7 +111,7 @@ class EvidenceBackedProvisioningSafetyGate(
         if (!capabilityDecision.allowed) return capabilityDecision
 
         val managementEvidenceIds = linkedSetOf<UUID>()
-        for (step in plan.steps) {
+        for (step in steps) {
             val current = evidence.findManagementEvidence(plan.tenantId, step.device)
                 ?: return denied(PolicyCode.MISSING_MANAGEMENT_EVIDENCE)
             val mutation = deriveManagementMutation(step, current)
