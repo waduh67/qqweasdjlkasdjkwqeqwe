@@ -104,23 +104,24 @@ class ProvisioningExecutionEngine(
     private val snapshots: StepSnapshotRepository,
     private val circuits: DeviceCircuitBreakerRepository,
     private val gateway: ProvisioningDeviceGateway,
+    private val safetyGate: ProvisioningSafetyGate,
     private val clock: Clock,
     private val sleeper: RetrySleeper,
     private val policy: ExecutionPolicy = ExecutionPolicy(),
 ) {
     fun enqueue(plan: ProvisionPlan, keySuffix: String): ProvisionExecution {
         if (plan.status != PlanStatus.VALIDATED) throw ValidationException("PLAN_NOT_VALIDATED")
+        safetyGate.requireAllowed(plan, com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY)
         val key = "${plan.intentId}:${plan.revision}:$keySuffix"
         executions.findByIdempotencyKey(key)?.let { return it }
-        val execution = executions.save(ProvisionExecution.queue(plan.tenantId, plan.intentId, plan.id, key))
-        ensureExecutionSteps(execution, plan)
-        return execution
+        return executions.save(ProvisionExecution.queue(plan.tenantId, plan.intentId, plan.id, key))
     }
 
     fun run(executionId: UUID, ownerId: String): ProvisionExecution {
         val execution = executions.findById(executionId) ?: throw ValidationException("EXECUTION_NOT_FOUND")
         if (execution.status.isTerminal()) return execution
         val plan = plans.findById(execution.planId) ?: throw ValidationException("PLAN_NOT_FOUND")
+        safetyGate.requireAllowed(plan, com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY)
         val states = ensureExecutionSteps(execution, plan)
         if (execution.status == ExecutionStatus.ROLLING_BACK) {
             compensate(execution, plan, states, ownerId, null)
@@ -174,7 +175,12 @@ class ProvisioningExecutionEngine(
                 clock.instant(),
                 policy.leaseDuration,
             ) ?: return execution
-            val failure = processStep(execution, plan, planStep, state, lease)
+            val failure = try {
+                processStep(execution, plan, planStep, state, lease)
+            } catch (denied: ValidationException) {
+                leases.release(planStep.device, execution.id, ownerId, lease.fencingToken, clock.instant())
+                throw denied
+            }
             if (failure == null) {
                 leases.release(planStep.device, execution.id, ownerId, lease.fencingToken, clock.instant())
                 continue
@@ -412,6 +418,7 @@ class ProvisioningExecutionEngine(
     ): IoResult<T> {
         var attemptNumber = attempts.findByExecutionStepId(state.id).count { it.phase == phase } + 1
         while (attemptNumber <= policy.maxAttempts) {
+            safetyGate.requireAllowed(plan, com.duluin.ftth.provisioning.domain.policy.ExecutionMode.PRODUCTION_AUTO_APPLY)
             val activeLease = leases.validateAndRenew(
                 execution.tenantId,
                 planStep.device,

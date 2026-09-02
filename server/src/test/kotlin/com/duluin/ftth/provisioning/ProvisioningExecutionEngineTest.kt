@@ -18,6 +18,7 @@ import com.duluin.ftth.provisioning.application.service.DispatchableProvisioning
 import com.duluin.ftth.provisioning.application.service.ExecutionPolicy
 import com.duluin.ftth.provisioning.application.service.ProvisioningDeviceGateway
 import com.duluin.ftth.provisioning.application.service.ProvisioningExecutionEngine
+import com.duluin.ftth.provisioning.application.service.ProvisioningSafetyGate
 import com.duluin.ftth.provisioning.application.service.RetrySleeper
 import com.duluin.ftth.provisioning.application.service.SimulatedProcessCrash
 import com.duluin.ftth.provisioning.domain.model.AttemptStatus
@@ -40,6 +41,9 @@ import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
 import com.duluin.ftth.provisioning.domain.model.ProvisionStep
 import com.duluin.ftth.provisioning.domain.model.StepAttempt
 import com.duluin.ftth.provisioning.domain.model.StepSnapshot
+import com.duluin.ftth.provisioning.domain.policy.ExecutionMode
+import com.duluin.ftth.provisioning.domain.policy.PolicyCode
+import com.duluin.ftth.provisioning.domain.policy.PolicyDecision
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -51,6 +55,59 @@ import java.time.ZoneOffset
 import java.util.UUID
 
 class ProvisioningExecutionEngineTest {
+    @Test
+    fun `enqueue safety denial writes zero execution step attempt or command state`() {
+        val fixture = Fixture()
+        fixture.safety.decision = PolicyDecision(false, PolicyCode.UNCERTIFIED_CAPABILITY)
+
+        assertThatThrownBy { fixture.engine.enqueue(fixture.plan, "denied") }
+            .isInstanceOf(ValidationException::class.java)
+            .hasMessage(PolicyCode.UNCERTIFIED_CAPABILITY.name)
+
+        assertThat(fixture.executions.values).isEmpty()
+        assertThat(fixture.attempts.values).isEmpty()
+        assertThat(fixture.gateway.applyCount).isEmpty()
+    }
+
+    @Test
+    fun `run rereads safety before creating execution steps attempts or commands`() {
+        val fixture = Fixture()
+        val execution = fixture.engine.enqueue(fixture.plan, "revoked-after-enqueue")
+        fixture.safety.decision = PolicyDecision(false, PolicyCode.UNCERTIFIED_CAPABILITY)
+
+        assertThatThrownBy { fixture.engine.run(execution.id, "worker-a") }
+            .isInstanceOf(ValidationException::class.java)
+            .hasMessage(PolicyCode.UNCERTIFIED_CAPABILITY.name)
+
+        assertThat(fixture.steps.values).isEmpty()
+        assertThat(fixture.attempts.values).isEmpty()
+        assertThat(fixture.gateway.applyCount).isEmpty()
+    }
+
+    @Test
+    fun `per command safety denial creates no attempt and releases acquired lease`() {
+        val fixture = Fixture()
+        fixture.safety.rejectAtEvaluation = 3
+        val execution = fixture.engine.enqueue(fixture.plan, "deny-before-command")
+
+        assertThatThrownBy { fixture.engine.run(execution.id, "worker-a") }
+            .isInstanceOf(ValidationException::class.java)
+            .hasMessage(PolicyCode.STALE_CAPABILITY_EVIDENCE.name)
+
+        assertThat(fixture.attempts.values).isEmpty()
+        assertThat(fixture.gateway.applyCount).isEmpty()
+        assertThat(
+            fixture.leases.acquire(
+                fixture.tenantId,
+                fixture.bras,
+                execution.id,
+                "worker-b",
+                fixture.clock.instant(),
+                Duration.ofSeconds(30),
+            ),
+        ).isNotNull
+    }
+
     @Test
     fun `expired worker result is fenced after another worker takes over`() {
         val fixture = Fixture(policy = ExecutionPolicy(leaseDuration = Duration.ofSeconds(5)))
@@ -153,7 +210,10 @@ class ProvisioningExecutionEngineTest {
     fun `persisted failed step resumes to failure with zero gateway mutation`() {
         val fixture = Fixture()
         val execution = fixture.engine.enqueue(fixture.plan, "failed-resume")
-        fixture.steps.findByExecutionId(execution.id).first().fail("PERMANENT_REJECTION")
+        val planStep = fixture.plan.steps.first()
+        fixture.steps.save(
+            ExecutionStep.pending(fixture.tenantId, execution.id, planStep.id, planStep.order, planStep.device),
+        ).fail("PERMANENT_REJECTION")
 
         fixture.engine().run(execution.id, "worker")
 
@@ -401,6 +461,7 @@ class ProvisioningExecutionEngineTest {
             ),
         ).also { it.validate(); plans.save(it) }
         val gateway = FakeGateway(initialStates, desiredStates)
+        val safety = MutableSafetyGate()
         val engine = engine()
 
         fun engine() = ProvisioningExecutionEngine(
@@ -413,6 +474,7 @@ class ProvisioningExecutionEngineTest {
             snapshots,
             circuits,
             gateway,
+            safety,
             clock,
             sleeper,
             policy,
@@ -427,6 +489,21 @@ class ProvisioningExecutionEngineTest {
                 ProvisionStep.PRECONDITION_HASH_ATTRIBUTE to NormalizedStateHash.sha256(initialStates.getValue(device)),
             ),
         )
+    }
+
+    private class MutableSafetyGate : ProvisioningSafetyGate {
+        var decision = PolicyDecision(true, PolicyCode.AUTO_APPLY_ALLOWED)
+        var rejectAtEvaluation: Int? = null
+        private var evaluations = 0
+
+        override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode): PolicyDecision {
+            evaluations += 1
+            return if (evaluations == rejectAtEvaluation) {
+                PolicyDecision(false, PolicyCode.STALE_CAPABILITY_EVIDENCE)
+            } else {
+                decision
+            }
+        }
     }
 
     private class FakeGateway(
