@@ -7,9 +7,15 @@ import com.duluin.ftth.contract.DeviceCapabilityReport
 import com.duluin.ftth.contract.DeviceFingerprint
 import com.duluin.ftth.contract.CollectorHeartbeat
 import com.duluin.ftth.contract.ProvisioningErrorCode
+import com.duluin.ftth.contract.ProvisioningApplyResult
 import com.duluin.ftth.contract.ProvisioningStepResult
 import com.duluin.ftth.contract.ProvisioningTarget
+import com.duluin.ftth.contract.ProvisioningVerificationObservation
+import com.duluin.ftth.provisioning.adapter.outbound.persistence.StepAttemptJpaRepository
 import com.duluin.ftth.monitoring.application.service.CollectorProvisioningExchange
+import com.duluin.ftth.monitoring.AlarmsChangedEvent
+import com.duluin.ftth.monitoring.application.port.outbound.CollectorRepository
+import com.duluin.ftth.monitoring.domain.model.Collector
 import com.duluin.ftth.provisioning.application.port.outbound.DeviceCircuitBreakerRepository
 import com.duluin.ftth.provisioning.application.port.outbound.DeviceLeaseRepository
 import com.duluin.ftth.provisioning.application.port.outbound.ExecutionStepRepository
@@ -35,11 +41,21 @@ import jakarta.persistence.PersistenceContext
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Import
+import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.event.TransactionPhase
+import org.springframework.transaction.event.TransactionalEventListener
 import org.springframework.transaction.support.TransactionTemplate
+import tools.jackson.databind.ObjectMapper
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -47,7 +63,9 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 
 @SpringBootTest
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(ProvisioningExecutionPersistenceIT.HeartbeatCommitFailureConfig::class)
 class ProvisioningExecutionPersistenceIT {
     @Autowired private lateinit var tenantApi: TenantApi
     @Autowired private lateinit var txManager: PlatformTransactionManager
@@ -58,6 +76,11 @@ class ProvisioningExecutionPersistenceIT {
     @Autowired private lateinit var snapshots: StepSnapshotRepository
     @Autowired private lateinit var circuits: DeviceCircuitBreakerRepository
     @Autowired private lateinit var collectorExchange: CollectorProvisioningExchange
+    @Autowired private lateinit var collectorRepository: CollectorRepository
+    @Autowired private lateinit var mockMvc: MockMvc
+    @Autowired private lateinit var objectMapper: ObjectMapper
+    @Autowired private lateinit var heartbeatCommitFailure: HeartbeatCommitFailure
+    @Autowired private lateinit var attemptJpa: StepAttemptJpaRepository
     @PersistenceContext private lateinit var em: EntityManager
 
     @Test
@@ -223,6 +246,7 @@ class ProvisioningExecutionPersistenceIT {
             capabilities = setOf("SINGLE_TAG_802_1Q"),
             reportedAt = deadline.minusSeconds(20),
         )
+        val unownedReport = report.copy(targetId = UuidV7.generate().toString())
 
         val target = ProvisioningTarget(device.id.toString(), device.kind.name, "router.invalid", "HTTPS_REST")
         val pending = asTenant(fixture.tenantId) {
@@ -241,6 +265,14 @@ class ProvisioningExecutionPersistenceIT {
         }
         val otherCollectorCommands = asTenant(fixture.tenantId) {
             collectorExchange.exchange(otherCollectorId, fixture.tenantId, CollectorHeartbeat("test"), listOf(target)).commands
+        }
+        val wrongCollectorAcknowledgement = asTenant(fixture.tenantId) {
+            collectorExchange.exchange(
+                otherCollectorId,
+                fixture.tenantId,
+                CollectorHeartbeat("test", provisioningResults = listOf(result)),
+                listOf(target),
+            ).acknowledgement
         }
         val wrongFenceAcknowledgement = asTenant(fixture.tenantId) {
             collectorExchange.exchange(
@@ -265,7 +297,7 @@ class ProvisioningExecutionPersistenceIT {
             collectorExchange.exchange(
                 collectorId,
                 fixture.tenantId,
-                CollectorHeartbeat("test", deviceReports = listOf(report), provisioningResults = listOf(result)),
+                CollectorHeartbeat("test", deviceReports = listOf(report, unownedReport), provisioningResults = listOf(result)),
                 listOf(target),
             ).acknowledgement
         }
@@ -319,6 +351,54 @@ class ProvisioningExecutionPersistenceIT {
                 listOf(target),
             ).acknowledgement
         }
+        val lateAttempt = asTenant(fixture.tenantId) {
+            attempts.save(
+                StepAttempt.dispatch(
+                    fixture.tenantId,
+                    attempt.executionStepId,
+                    ExecutionPhase.APPLY,
+                    3,
+                    attempt.idempotencyKey,
+                    9,
+                    deadline.plusSeconds(120),
+                    deadline.plusSeconds(60),
+                ),
+            )
+        }
+        asTenant(fixture.tenantId) {
+            collectorExchange.exchange(collectorId, fixture.tenantId, CollectorHeartbeat("test"), listOf(target))
+        }
+        val lateHash = "c".repeat(64)
+        val lateAcknowledgement = asTenant(fixture.tenantId) {
+            collectorExchange.exchange(
+                collectorId,
+                fixture.tenantId,
+                CollectorHeartbeat(
+                    "test",
+                    provisioningResults = listOf(
+                        ProvisioningStepResult(
+                            planId = fixture.firstPlanId.toString(),
+                            revision = 1,
+                            stepId = fixture.firstStepId.toString(),
+                            attemptId = lateAttempt.id.toString(),
+                            targetId = device.id.toString(),
+                            operationClass = "ENSURE_PPPOE_TERMINATION",
+                            idempotencyKey = lateAttempt.idempotencyKey,
+                            fencingEpoch = lateAttempt.fencingToken,
+                            success = true,
+                            completedAt = lateAttempt.deadline,
+                            apply = ProvisioningApplyResult(lateAttempt.deadline.minusSeconds(1), true, lateHash),
+                            verification = ProvisioningVerificationObservation(
+                                lateAttempt.deadline,
+                                true,
+                                lateHash,
+                            ),
+                        ),
+                    ),
+                ),
+                listOf(target),
+            ).acknowledgement
+        }
 
         assertThat(pending.commands.map { it.idempotencyKey }).contains(attempt.idempotencyKey)
         assertThat(pending.commands.single().planId).isEqualTo(fixture.firstPlanId.toString())
@@ -327,6 +407,7 @@ class ProvisioningExecutionPersistenceIT {
         assertThat(pending.commands.single().fencingEpoch).isEqualTo(7)
         assertThat(pending.commands.single().attemptId).isEqualTo(attempt.id.toString())
         assertThat(otherCollectorCommands).isEmpty()
+        assertThat(wrongCollectorAcknowledgement).isEqualTo(com.duluin.ftth.contract.ProvisioningAcknowledgement())
         assertThat(wrongFenceAcknowledgement).isEqualTo(com.duluin.ftth.contract.ProvisioningAcknowledgement())
         assertThat(wrongPhaseAcknowledgement).isEqualTo(com.duluin.ftth.contract.ProvisioningAcknowledgement())
         assertThat(acknowledgement.resultAttemptIds).containsExactly(attempt.id.toString())
@@ -340,6 +421,11 @@ class ProvisioningExecutionPersistenceIT {
         assertThat(staleAcknowledgement).isEqualTo(com.duluin.ftth.contract.ProvisioningAcknowledgement())
         assertThat(retryPending.commands.single().attemptId).isEqualTo(retryAttempt.id.toString())
         assertThat(retryAcknowledgement.resultAttemptIds).containsExactly(retryAttempt.id.toString())
+        assertThat(lateAcknowledgement.resultAttemptIds).containsExactly(lateAttempt.id.toString())
+        assertThat(asTenant(fixture.tenantId) { attempts.findById(lateAttempt.id)!!.status })
+            .isEqualTo(AttemptStatus.TRANSIENT_FAILURE)
+        assertThat(asTenant(fixture.tenantId) { attempts.findById(lateAttempt.id)!!.errorCode })
+            .isEqualTo("DEADLINE_EXCEEDED")
         assertThat(asTenant(fixture.tenantId) { attempts.findById(attempt.id)!!.status })
             .isEqualTo(AttemptStatus.PERMANENT_FAILURE)
         assertThat(asTenant(fixture.tenantId) {
@@ -347,13 +433,211 @@ class ProvisioningExecutionPersistenceIT {
                 .setParameter("target", report.targetId).singleResult as Number).toLong()
         }).isEqualTo(1)
         assertThat(asTenant(fixture.tenantId) {
+            (em.createNativeQuery("SELECT count(*) FROM provisioning_collector_device_report WHERE target_id = :target")
+                .setParameter("target", unownedReport.targetId).singleResult as Number).toLong()
+        }).isZero()
+        assertThat(asTenant(fixture.tenantId) {
             (em.createNativeQuery("SELECT count(*) FROM provisioning_collector_result_receipt WHERE idempotency_key = :key")
                 .setParameter("key", result.idempotencyKey).singleResult as Number).toLong()
-        }).isEqualTo(2)
+        }).isEqualTo(3)
         val otherTenantId = tenantApi.ensureTenant("collector-channel-other-${UUID.randomUUID()}", "collector-channel-other").id
         assertThat(asTenant(otherTenantId) {
             (em.createNativeQuery("SELECT count(*) FROM provisioning_collector_result_receipt WHERE idempotency_key = :key")
                 .setParameter("key", result.idempotencyKey).singleResult as Number).toLong()
+        }).isZero()
+    }
+
+    @Test
+    fun `collector claim atomically rejects terminal attempt and wrong device`() {
+        val fixture = fixture("collector-claim-guard")
+        val execution = ProvisionExecution.queue(fixture.tenantId, fixture.intentId, fixture.firstPlanId, "collector-claim-guard")
+        val device = DeviceReference(DeviceKind.BRAS, UuidV7.generate())
+        val collectorId = UuidV7.generate()
+        val now = Instant.parse("2026-09-02T12:00:00Z")
+        val (terminal, dispatched) = asTenant(fixture.tenantId) {
+            em.createNativeQuery(
+                """INSERT INTO collector
+                   (id, tenant_id, name, api_key_hash, api_key_hint, status, poll_interval_seconds)
+                   VALUES (:id, :tenant, :name, :hash, 'claim', 'ACTIVE', 60)""",
+            ).setParameter("id", collectorId).setParameter("tenant", fixture.tenantId)
+                .setParameter("name", "collector-${UUID.randomUUID()}")
+                .setParameter("hash", UUID.randomUUID().toString().replace("-", "").repeat(2))
+                .executeUpdate()
+            executions.save(execution)
+            val step = executionSteps.save(
+                ExecutionStep.pending(fixture.tenantId, execution.id, fixture.firstStepId, 1, device),
+            )
+            val terminalAttempt = attempts.save(
+                StepAttempt.dispatch(
+                    fixture.tenantId,
+                    step.id,
+                    ExecutionPhase.APPLY,
+                    1,
+                    "terminal-claim",
+                    1,
+                    now.plusSeconds(30),
+                    now,
+                ).complete(AttemptStatus.SUCCEEDED, null, now.plusSeconds(1)),
+            )
+            val dispatchedAttempt = attempts.save(
+                StepAttempt.dispatch(
+                    fixture.tenantId,
+                    step.id,
+                    ExecutionPhase.APPLY,
+                    2,
+                    "eligible-claim",
+                    2,
+                    now.plusSeconds(60),
+                    now.plusSeconds(2),
+                ),
+            )
+            terminalAttempt to dispatchedAttempt
+        }
+
+        val terminalClaimed = asTenant(fixture.tenantId) {
+            attemptJpa.claimCollector(terminal.id, collectorId, device.id)
+        }
+        val wrongDeviceClaimed = asTenant(fixture.tenantId) {
+            attemptJpa.claimCollector(dispatched.id, collectorId, UuidV7.generate())
+        }
+        val eligibleClaimed = asTenant(fixture.tenantId) {
+            attemptJpa.claimCollector(dispatched.id, collectorId, device.id)
+        }
+
+        assertThat(terminalClaimed).isZero()
+        assertThat(wrongDeviceClaimed).isZero()
+        assertThat(eligibleClaimed).isEqualTo(1)
+        assertThat(asTenant(fixture.tenantId) {
+            (em.createNativeQuery(
+                "SELECT count(*) FROM provisioning_step_attempt WHERE id = :id AND collector_id IS NOT NULL",
+            ).setParameter("id", terminal.id).singleResult as Number).toLong()
+        }).isZero()
+    }
+
+    @Test
+    fun `v121 rejects cross tenant attempt receipt and invalid state hash`() {
+        val owner = fixture("collector-receipt-owner")
+        val otherTenantId = tenantApi.ensureTenant("collector-receipt-other-${UUID.randomUUID()}", "collector-receipt-other").id
+        val collectorId = UuidV7.generate()
+        val execution = ProvisionExecution.queue(owner.tenantId, owner.intentId, owner.firstPlanId, "collector-receipt-owner")
+        val attempt = asTenant(owner.tenantId) {
+            executions.save(execution)
+            val step = executionSteps.save(
+                ExecutionStep.pending(
+                    owner.tenantId,
+                    execution.id,
+                    owner.firstStepId,
+                    1,
+                    DeviceReference(DeviceKind.BRAS, UuidV7.generate()),
+                ),
+            )
+            attempts.save(
+                StepAttempt.dispatch(
+                    owner.tenantId,
+                    step.id,
+                    ExecutionPhase.APPLY,
+                    1,
+                    "receipt-fk-attempt",
+                    1,
+                    Instant.parse("2026-09-02T12:05:00Z"),
+                ),
+            )
+        }
+        asTenant(otherTenantId) {
+            em.createNativeQuery(
+                """INSERT INTO collector
+                   (id, tenant_id, name, api_key_hash, api_key_hint, status, poll_interval_seconds)
+                   VALUES (:id, :tenant, :name, :hash, 'fk', 'ACTIVE', 60)""",
+            ).setParameter("id", collectorId).setParameter("tenant", otherTenantId)
+                .setParameter("name", "collector-${UUID.randomUUID()}")
+                .setParameter("hash", UUID.randomUUID().toString().replace("-", "").repeat(2))
+                .executeUpdate()
+        }
+
+        assertThatThrownBy {
+            asTenant(otherTenantId) {
+                insertResultReceipt(otherTenantId, collectorId, attempt.id, "a".repeat(64))
+            }
+        }
+
+        val ownerCollectorId = UuidV7.generate()
+        asTenant(owner.tenantId) {
+            em.createNativeQuery(
+                """INSERT INTO collector
+                   (id, tenant_id, name, api_key_hash, api_key_hint, status, poll_interval_seconds)
+                   VALUES (:id, :tenant, :name, :hash, 'hash', 'ACTIVE', 60)""",
+            ).setParameter("id", ownerCollectorId).setParameter("tenant", owner.tenantId)
+                .setParameter("name", "collector-${UUID.randomUUID()}")
+                .setParameter("hash", UUID.randomUUID().toString().replace("-", "").repeat(2))
+                .executeUpdate()
+        }
+        assertThatThrownBy {
+            asTenant(owner.tenantId) {
+                insertResultReceipt(owner.tenantId, ownerCollectorId, attempt.id, "invalid-hash")
+            }
+        }
+    }
+
+    @Test
+    fun `heartbeat does not expose ACK when before commit persistence fails`() {
+        val fixture = fixture("collector-commit-boundary")
+        val apiKey = "ftthc_commit_boundary_${UUID.randomUUID()}"
+        val collector = asTenant(fixture.tenantId) {
+            val created = Collector.create(fixture.tenantId, "collector-commit-boundary", 60) { apiKey }
+            collectorRepository.save(created.collector)
+        }
+        val execution = ProvisionExecution.queue(fixture.tenantId, fixture.intentId, fixture.firstPlanId, "commit-boundary")
+        val device = DeviceReference(DeviceKind.BRAS, UuidV7.generate())
+        val deadline = Instant.parse("2026-09-02T12:05:00Z")
+        val attempt = asTenant(fixture.tenantId) {
+            executions.save(execution)
+            val step = executionSteps.save(
+                ExecutionStep.pending(fixture.tenantId, execution.id, fixture.firstStepId, 1, device),
+            )
+            attempts.save(
+                StepAttempt.dispatch(
+                    fixture.tenantId,
+                    step.id,
+                    ExecutionPhase.APPLY,
+                    1,
+                    "commit-boundary-attempt",
+                    1,
+                    deadline,
+                    deadline.minusSeconds(30),
+                ),
+            )
+        }
+        asTenant(fixture.tenantId) {
+            assertThat(attemptJpa.claimCollector(attempt.id, collector.id, device.id)).isEqualTo(1)
+        }
+        val result = ProvisioningStepResult(
+            planId = fixture.firstPlanId.toString(),
+            revision = 1,
+            stepId = fixture.firstStepId.toString(),
+            attemptId = attempt.id.toString(),
+            targetId = device.id.toString(),
+            operationClass = "ENSURE_PPPOE_TERMINATION",
+            idempotencyKey = attempt.idempotencyKey,
+            fencingEpoch = attempt.fencingToken,
+            success = false,
+            completedAt = deadline.minusSeconds(10),
+            errorCode = ProvisioningErrorCode.STALE_PRECONDITION,
+        )
+        heartbeatCommitFailure.arm()
+
+        assertThatThrownBy {
+            mockMvc.perform(
+                post("/api/collector/heartbeat")
+                    .header(com.duluin.ftth.contract.CollectorProtocol.API_KEY_HEADER, apiKey)
+                    .header(com.duluin.ftth.contract.CollectorProtocol.PROTOCOL_VERSION_HEADER, "1")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(CollectorHeartbeat("test", provisioningResults = listOf(result)))),
+            ).andReturn()
+        }.hasRootCauseMessage("forced heartbeat commit failure")
+        assertThat(asTenant(fixture.tenantId) { attempts.findById(attempt.id)!!.status }).isEqualTo(AttemptStatus.DISPATCHED)
+        assertThat(asTenant(fixture.tenantId) {
+            (em.createNativeQuery("SELECT count(*) FROM provisioning_collector_result_receipt WHERE attempt_id = :attempt")
+                .setParameter("attempt", attempt.id).singleResult as Number).toLong()
         }).isZero()
     }
 
@@ -507,6 +791,24 @@ class ProvisioningExecutionPersistenceIT {
             .setParameter("device", UuidV7.generate()).executeUpdate()
     }
 
+    private fun insertResultReceipt(tenantId: UUID, collectorId: UUID, attemptId: UUID, verificationHash: String) {
+        em.createNativeQuery(
+            """INSERT INTO provisioning_collector_result_receipt
+               (id, tenant_id, collector_id, idempotency_key, plan_id, revision, step_id, attempt_id, target_id,
+                operation_class, fencing_epoch, phase, success, completed_at, error_code, verification_state_hash)
+               VALUES (:id, :tenant, :collector, 'receipt-key', :plan, 1, :step, :attempt, :target,
+                'ENSURE_TAGGED_VLAN', 1, 'APPLY', false, now(), 'STALE_PRECONDITION', :hash)""",
+        ).setParameter("id", UuidV7.generate())
+            .setParameter("tenant", tenantId)
+            .setParameter("collector", collectorId)
+            .setParameter("plan", UuidV7.generate().toString())
+            .setParameter("step", UuidV7.generate().toString())
+            .setParameter("attempt", attemptId)
+            .setParameter("target", UuidV7.generate().toString())
+            .setParameter("hash", verificationHash)
+            .executeUpdate()
+    }
+
     private fun <T> asTenant(tenantId: UUID, block: () -> T): T = TenantContext.runAs(tenantId) {
         TransactionTemplate(txManager).execute { block() }!!
     }
@@ -518,4 +820,25 @@ class ProvisioningExecutionPersistenceIT {
         val firstStepId: UUID,
         val secondPlanId: UUID,
     )
+
+    @TestConfiguration(proxyBeanMethods = false)
+    class HeartbeatCommitFailureConfig {
+        @Bean
+        fun heartbeatCommitFailure() = HeartbeatCommitFailure()
+    }
+
+    class HeartbeatCommitFailure {
+        private var armed = false
+
+        fun arm() {
+            armed = true
+        }
+
+        @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+        fun failBeforeCommit(event: AlarmsChangedEvent) {
+            if (!armed) return
+            armed = false
+            throw IllegalStateException("forced heartbeat commit failure")
+        }
+    }
 }
