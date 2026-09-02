@@ -1,6 +1,7 @@
 package com.duluin.ftth.provisioning.application.service
 
 import com.duluin.ftth.common.domain.error.AccessDeniedException
+import com.duluin.ftth.common.audit.AuditTrailEvent
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.security.AuthenticatedUser
@@ -18,6 +19,7 @@ import com.duluin.ftth.provisioning.domain.policy.ExecutionMode
 import com.duluin.ftth.provisioning.domain.policy.ProvisioningCapabilityPolicy
 import com.duluin.ftth.provisioning.domain.policy.StepCapabilityRequest
 import org.springframework.stereotype.Service
+import org.springframework.context.ApplicationEventPublisher
 import java.time.Clock
 import java.time.Instant
 import java.util.UUID
@@ -40,10 +42,16 @@ class ProvisioningCertificationService(
     private val ownership: ProvisioningDeviceOwnershipRepository,
     private val safetyEvidence: ProvisioningSafetyEvidenceRepository,
     private val clock: Clock,
+    private val events: ApplicationEventPublisher,
 ) : ProvisioningCertificationUseCase {
+    override fun list(targetTenantId: UUID): List<AdapterCertification> {
+        platformActor()
+        return TenantContext.runAs(targetTenantId) { certifications.findAll() }
+    }
+
     override fun certify(command: CertifyAdapterCommand): AdapterCertification {
         val actor = platformActor()
-        return TenantContext.runAs(command.targetTenantId) {
+        val saved = TenantContext.runAs(command.targetTenantId) {
             if (!ownership.owns(command.targetTenantId, command.device)) {
                 throw AccessDeniedException("CERTIFICATION_TARGET_NOT_OWNED")
             }
@@ -86,11 +94,19 @@ class ProvisioningCertificationService(
                 ),
             )
         }
+        events.publishEvent(
+            AuditTrailEvent(
+                command.targetTenantId, actor.userId, actor.email, "provisioning.certification.created",
+                "AdapterCertification", saved.id.toString(),
+                mapOf("deviceKind" to command.device.kind.name, "deviceId" to command.device.id.toString()),
+            ),
+        )
+        return saved
     }
 
     override fun revoke(targetTenantId: UUID, certificationId: UUID): AdapterCertification {
         val actor = platformActor()
-        return TenantContext.runAs(targetTenantId) {
+        val revoked = TenantContext.runAs(targetTenantId) {
             val certification = certifications.findById(certificationId)
                 ?: throw NotFoundException("CERTIFICATION_NOT_FOUND")
             if (certification.tenantId != targetTenantId || !ownership.owns(targetTenantId, certification.device)) {
@@ -99,6 +115,13 @@ class ProvisioningCertificationService(
             certification.revoke(actor.userId, clock.instant())
             certifications.save(certification)
         }
+        events.publishEvent(
+            AuditTrailEvent(
+                targetTenantId, actor.userId, actor.email, "provisioning.certification.revoked",
+                "AdapterCertification", revoked.id.toString(), emptyMap(),
+            ),
+        )
+        return revoked
     }
 
     private fun platformActor(): AuthenticatedUser = currentUser.currentOrNull()

@@ -143,6 +143,7 @@ class ProvisioningCertificationServiceTest {
         ProvisioningDeviceOwnershipRepository { _, _ -> ownsTarget },
         evidenceRepository(capabilityExpiresAt, capabilitySupported, returnedFingerprint),
         Clock.fixed(now, ZoneOffset.UTC),
+        org.springframework.context.ApplicationEventPublisher { },
     )
 
     private fun user(platformAdmin: Boolean, tenantId: UUID) = AuthenticatedUser(
@@ -203,6 +204,7 @@ class ProvisioningCertificationServiceTest {
         }
 
         override fun findById(id: UUID): AdapterCertification? = saved.firstOrNull { it.id == id }
+        override fun findAll(): List<AdapterCertification> = saved.toList()
     }
 
     private companion object {
