@@ -224,6 +224,7 @@ data class DeviceCapabilityReport(
     val fingerprint: DeviceFingerprint,
     val capabilities: Set<String> = emptySet(),
     val reportedAt: Instant,
+    val operationClasses: Set<String> = emptySet(),
 )
 
 fun DeviceCapabilityReport.acknowledgementKey(): String = "$targetId@$reportedAt"

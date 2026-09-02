@@ -204,6 +204,7 @@ class RouterOsProvisioningAdapter(
             ),
             capabilities = SUPPORTED_CAPABILITIES + "CERTIFICATION_PROVISIONAL",
             reportedAt = clock.instant(),
+            operationClasses = SUPPORTED_OPERATIONS,
         )
     }
 
