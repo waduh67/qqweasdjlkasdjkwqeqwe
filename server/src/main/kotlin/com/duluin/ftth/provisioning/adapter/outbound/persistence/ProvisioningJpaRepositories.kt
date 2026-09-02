@@ -68,9 +68,17 @@ interface StepAttemptJpaRepository : JpaRepository<StepAttemptJpaEntity, UUID> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(
         """update StepAttemptJpaEntity attempt set attempt.collectorId = :collectorId
-           where attempt.id = :id and (attempt.collectorId is null or attempt.collectorId = :collectorId)""",
+           where attempt.id = :id
+             and attempt.status = com.duluin.ftth.provisioning.domain.model.AttemptStatus.DISPATCHED
+             and (attempt.collectorId is null or attempt.collectorId = :collectorId)
+             and exists (select step.id from ExecutionStepJpaEntity step
+                         where step.id = attempt.executionStepId and step.deviceId = :deviceId)""",
     )
-    fun claimCollector(@Param("id") id: UUID, @Param("collectorId") collectorId: UUID): Int
+    fun claimCollector(
+        @Param("id") id: UUID,
+        @Param("collectorId") collectorId: UUID,
+        @Param("deviceId") deviceId: UUID,
+    ): Int
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(

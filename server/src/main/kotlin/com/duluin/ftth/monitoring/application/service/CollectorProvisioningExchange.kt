@@ -24,10 +24,16 @@ class CollectorProvisioningExchange(
         heartbeat: CollectorHeartbeat,
         availableTargets: List<ProvisioningTarget>,
     ): ProvisioningExchangeResult {
-        val acknowledgements = channels.map { channel ->
-            channel.accept(collectorId, tenantId, heartbeat.provisioningResults, heartbeat.deviceReports)
-        }
         val targetsById = availableTargets.associateBy(ProvisioningTarget::deviceId)
+        val acknowledgements = channels.map { channel ->
+            channel.accept(
+                collectorId,
+                tenantId,
+                targetsById.keys,
+                heartbeat.provisioningResults,
+                heartbeat.deviceReports,
+            )
+        }
         val commands = channels.flatMap { it.pendingFor(collectorId, tenantId, targetsById.keys) }.mapNotNull { dispatch ->
             val target = targetsById[dispatch.deviceId]?.copy(deviceKind = dispatch.deviceKind) ?: return@mapNotNull null
             ProvisioningPlanStepCommand(

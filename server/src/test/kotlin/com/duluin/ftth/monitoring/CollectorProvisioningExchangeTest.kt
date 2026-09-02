@@ -33,13 +33,18 @@ class CollectorProvisioningExchangeTest {
             capabilities = setOf("SINGLE_TAG_802_1Q"),
             reportedAt = reportedAt,
         )
+        val unownedReport = report.copy(targetId = "device-unowned")
         val channel = RecordingChannel(result.idempotencyKey, "device-1@$reportedAt")
         val exchange = CollectorProvisioningExchange(listOf(channel))
 
         val response = exchange.exchange(
             collectorId,
             tenantId,
-            CollectorHeartbeat("collector-1", deviceReports = listOf(report), provisioningResults = listOf(result, stale)),
+            CollectorHeartbeat(
+                "collector-1",
+                deviceReports = listOf(report, unownedReport),
+                provisioningResults = listOf(result, stale),
+            ),
             listOf(ProvisioningTarget("device-1", "BRAS", "router.invalid", "HTTPS_REST")),
         )
 
@@ -93,11 +98,12 @@ class CollectorProvisioningExchangeTest {
         override fun accept(
             collectorId: UUID,
             tenantId: UUID,
+            availableTargetIds: Set<String>,
             results: List<ProvisioningStepResult>,
             reports: List<DeviceCapabilityReport>,
         ): ProvisioningAcknowledgement {
             receivedResults += results
-            receivedReports += reports
+            receivedReports += reports.filter { it.targetId in availableTargetIds }
             return ProvisioningAcknowledgement(
                 resultIdempotencyKeys = setOf(acceptedResult),
                 deviceReportKeys = setOf(acceptedReport),

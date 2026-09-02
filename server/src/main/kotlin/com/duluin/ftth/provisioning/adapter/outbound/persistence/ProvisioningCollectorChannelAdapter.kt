@@ -45,12 +45,15 @@ class ProvisioningCollectorChannelAdapter(
     override fun accept(
         collectorId: UUID,
         tenantId: UUID,
+        availableTargetIds: Set<String>,
         results: List<ProvisioningStepResult>,
         reports: List<DeviceCapabilityReport>,
     ): ProvisioningAcknowledgement {
         requireTenant(tenantId)
         val accepted = results.mapNotNull { result -> acknowledgeResult(collectorId, tenantId, result) }
-        val reportKeys = reports.map { report -> persistReport(collectorId, tenantId, report) }.toSet()
+        val reportKeys = reports.filter { it.targetId in availableTargetIds }
+            .map { report -> persistReport(collectorId, tenantId, report) }
+            .toSet()
         return ProvisioningAcknowledgement(
             resultIdempotencyKeys = accepted.filter { it.attemptId == null }.mapTo(linkedSetOf()) { it.idempotencyKey },
             resultAttemptIds = accepted.mapNotNullTo(linkedSetOf()) { it.attemptId },
@@ -66,7 +69,7 @@ class ProvisioningCollectorChannelAdapter(
         val executionStep = executionSteps.findById(attempt.executionStepId).orElse(null) ?: return null
         if (executionStep.deviceId.toString() !in availableTargetIds) return null
         if (attempt.collectorId != null && attempt.collectorId != collectorId) return null
-        if (attempt.collectorId == null && attempts.claimCollector(attempt.id, collectorId) != 1) return null
+        if (attempt.collectorId == null && attempts.claimCollector(attempt.id, collectorId, executionStep.deviceId) != 1) return null
         val execution = executions.findById(executionStep.executionId).orElse(null) ?: return null
         val plan = plans.findById(execution.planId).orElse(null) ?: return null
         val planStep = planSteps.findById(executionStep.planStepId).orElse(null) ?: return null

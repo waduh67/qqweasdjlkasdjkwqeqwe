@@ -14,6 +14,7 @@ interface CollectorProvisioningChannel {
     fun accept(
         collectorId: UUID,
         tenantId: UUID,
+        availableTargetIds: Set<String>,
         results: List<ProvisioningStepResult>,
         reports: List<DeviceCapabilityReport>,
     ): ProvisioningAcknowledgement
