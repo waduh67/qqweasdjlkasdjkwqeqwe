@@ -29,7 +29,7 @@ class CollectorProvisioningExchange(
             channel.accept(
                 collectorId,
                 tenantId,
-                targetsById.keys,
+                targetsById,
                 heartbeat.provisioningResults,
                 heartbeat.deviceReports,
             )

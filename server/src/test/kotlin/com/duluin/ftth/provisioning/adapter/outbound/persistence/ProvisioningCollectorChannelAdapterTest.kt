@@ -61,6 +61,7 @@ class ProvisioningCollectorChannelAdapterTest {
             mock(ProvisionStepJpaRepository::class.java),
             mock(ProvisionStepAttributeJpaRepository::class.java),
             mock(EntityManager::class.java),
+            mock(CollectorCapabilityEvidenceWriter::class.java),
         )
 
         val pending = TenantContext.runAs(tenantId) {

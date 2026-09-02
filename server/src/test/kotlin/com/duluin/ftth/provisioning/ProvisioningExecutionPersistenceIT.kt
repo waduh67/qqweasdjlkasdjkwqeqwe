@@ -245,7 +245,8 @@ class ProvisioningExecutionPersistenceIT {
             targetId = device.id.toString(),
             fingerprint = DeviceFingerprint("MIKROTIK", "CCR", "7.20", "HTTPS_REST"),
             capabilities = setOf("SINGLE_TAG_802_1Q"),
-            reportedAt = deadline.minusSeconds(20),
+            reportedAt = Instant.now().minusSeconds(20),
+            operationClasses = setOf("ENSURE_PPPOE_TERMINATION"),
         )
         val unownedReport = report.copy(targetId = UuidV7.generate().toString())
 

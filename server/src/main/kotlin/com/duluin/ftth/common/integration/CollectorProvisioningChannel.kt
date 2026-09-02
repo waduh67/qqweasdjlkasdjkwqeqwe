@@ -5,6 +5,7 @@ import com.duluin.ftth.contract.ProvisioningAcknowledgement
 import com.duluin.ftth.contract.ProvisioningCommandPhase
 import com.duluin.ftth.contract.ProvisioningPayload
 import com.duluin.ftth.contract.ProvisioningStepResult
+import com.duluin.ftth.contract.ProvisioningTarget
 import java.time.Instant
 import java.util.UUID
 
@@ -14,7 +15,7 @@ interface CollectorProvisioningChannel {
     fun accept(
         collectorId: UUID,
         tenantId: UUID,
-        availableTargetIds: Set<String>,
+        availableTargets: Map<String, ProvisioningTarget>,
         results: List<ProvisioningStepResult>,
         reports: List<DeviceCapabilityReport>,
     ): ProvisioningAcknowledgement

@@ -32,6 +32,7 @@ class CollectorProvisioningExchangeTest {
             fingerprint = DeviceFingerprint("MIKROTIK", "CCR", "7.20", "HTTPS_REST"),
             capabilities = setOf("SINGLE_TAG_802_1Q"),
             reportedAt = reportedAt,
+            operationClasses = setOf("ENSURE_TAGGED_VLAN"),
         )
         val unownedReport = report.copy(targetId = "device-unowned")
         val channel = RecordingChannel(result.idempotencyKey, "device-1@$reportedAt")
@@ -53,6 +54,7 @@ class CollectorProvisioningExchangeTest {
         assertThat(response.acknowledgement.deviceReportKeys).containsExactly("device-1@$reportedAt")
         assertThat(channel.receivedResults).containsExactly(result, stale)
         assertThat(channel.receivedReports).containsExactly(report)
+        assertThat(channel.receivedReports.single().operationClasses).containsExactly("ENSURE_TAGGED_VLAN")
     }
 
     private fun failedResult(key: String) = ProvisioningStepResult(
@@ -98,12 +100,12 @@ class CollectorProvisioningExchangeTest {
         override fun accept(
             collectorId: UUID,
             tenantId: UUID,
-            availableTargetIds: Set<String>,
+            availableTargets: Map<String, ProvisioningTarget>,
             results: List<ProvisioningStepResult>,
             reports: List<DeviceCapabilityReport>,
         ): ProvisioningAcknowledgement {
             receivedResults += results
-            receivedReports += reports.filter { it.targetId in availableTargetIds }
+            receivedReports += reports.filter { it.targetId in availableTargets }
             return ProvisioningAcknowledgement(
                 resultIdempotencyKeys = setOf(acceptedResult),
                 deviceReportKeys = setOf(acceptedReport),

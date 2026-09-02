@@ -9,6 +9,7 @@ import com.duluin.ftth.contract.ProvisioningCommandPhase
 import com.duluin.ftth.contract.ProvisioningErrorCode
 import com.duluin.ftth.contract.ProvisioningPayload
 import com.duluin.ftth.contract.ProvisioningStepResult
+import com.duluin.ftth.contract.ProvisioningTarget
 import com.duluin.ftth.contract.acknowledgementKey
 import com.duluin.ftth.provisioning.domain.model.AttemptStatus
 import com.duluin.ftth.provisioning.domain.model.ExecutionPhase
@@ -28,6 +29,7 @@ class ProvisioningCollectorChannelAdapter(
     private val planSteps: ProvisionStepJpaRepository,
     private val attributes: ProvisionStepAttributeJpaRepository,
     private val entityManager: EntityManager,
+    private val capabilityEvidenceWriter: CollectorCapabilityEvidenceWriter,
 ) : CollectorProvisioningChannel {
     @Transactional
     override fun pendingFor(
@@ -45,14 +47,17 @@ class ProvisioningCollectorChannelAdapter(
     override fun accept(
         collectorId: UUID,
         tenantId: UUID,
-        availableTargetIds: Set<String>,
+        availableTargets: Map<String, ProvisioningTarget>,
         results: List<ProvisioningStepResult>,
         reports: List<DeviceCapabilityReport>,
     ): ProvisioningAcknowledgement {
         requireTenant(tenantId)
         val accepted = results.mapNotNull { result -> acknowledgeResult(collectorId, tenantId, result) }
-        val reportKeys = reports.filter { it.targetId in availableTargetIds }
-            .map { report -> persistReport(collectorId, tenantId, report) }
+        val reportKeys = reports.mapNotNull { report ->
+            availableTargets[report.targetId]?.let { target ->
+                capabilityEvidenceWriter.persist(OwnedCapabilityReport(collectorId, tenantId, target, report))
+            }
+        }
             .toSet()
         return ProvisioningAcknowledgement(
             resultIdempotencyKeys = accepted.filter { it.attemptId == null }.mapTo(linkedSetOf()) { it.idempotencyKey },
@@ -171,28 +176,6 @@ class ProvisioningCollectorChannelAdapter(
         val plan = plans.findById(execution.planId).orElse(null) ?: return null
         val planStep = planSteps.findById(executionStep.planStepId).orElse(null) ?: return null
         return AttemptContext(attempt, executionStep, plan, planStep)
-    }
-
-    private fun persistReport(collectorId: UUID, tenantId: UUID, report: DeviceCapabilityReport): String {
-        val key = report.acknowledgementKey()
-        entityManager.createNativeQuery(
-            """INSERT INTO provisioning_collector_device_report
-               (id, tenant_id, collector_id, report_key, target_id, vendor, model, firmware, transport, capabilities, reported_at)
-               VALUES (:id, :tenant, :collector, :key, :target, :vendor, :model, :firmware, :transport, :capabilities, :reportedAt)
-               ON CONFLICT (tenant_id, collector_id, report_key) DO NOTHING""",
-        ).setParameter("id", UUID.randomUUID())
-            .setParameter("tenant", tenantId)
-            .setParameter("collector", collectorId)
-            .setParameter("key", key)
-            .setParameter("target", report.targetId)
-            .setParameter("vendor", report.fingerprint.vendor)
-            .setParameter("model", report.fingerprint.model)
-            .setParameter("firmware", report.fingerprint.firmware)
-            .setParameter("transport", report.fingerprint.transport)
-            .setParameter("capabilities", report.capabilities.sorted().joinToString("\n"))
-            .setParameter("reportedAt", report.reportedAt)
-            .executeUpdate()
-        return key
     }
 
     private fun requireTenant(tenantId: UUID) {
