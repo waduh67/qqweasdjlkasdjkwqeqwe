@@ -15,6 +15,8 @@ import com.duluin.ftth.provisioning.domain.model.DeviceReference
 import com.duluin.ftth.provisioning.domain.model.ExecutionPhase
 import com.duluin.ftth.provisioning.domain.model.ExecutionStep
 import com.duluin.ftth.provisioning.domain.model.NormalizedDeviceState
+import com.duluin.ftth.provisioning.domain.model.NormalizedField
+import com.duluin.ftth.provisioning.domain.model.NormalizedValue
 import com.duluin.ftth.provisioning.domain.model.ProvisionExecution
 import com.duluin.ftth.provisioning.domain.model.StepAttempt
 import com.duluin.ftth.provisioning.domain.model.StepSnapshot
@@ -212,7 +214,7 @@ class ProvisioningExecutionPersistenceIT {
                     step.id,
                     StepSnapshotKind.BEFORE,
                     "a".repeat(64),
-                    NormalizedDeviceState.of(mapOf("vlanId" to 320)),
+                    NormalizedDeviceState.of(NormalizedField.VLAN_ID to NormalizedValue.number(320)),
                     deadline.minusSeconds(40),
                 ),
             )
@@ -227,7 +229,7 @@ class ProvisioningExecutionPersistenceIT {
             assertThat(attempts.findByExecutionStepId(executionSteps.findByExecutionId(execution.id).single().id).single().fencingToken)
                 .isEqualTo(7)
             assertThat(snapshots.findByExecutionStepId(executionSteps.findByExecutionId(execution.id).single().id).single().state.values)
-                .containsEntry("vlanId", 320)
+                .containsEntry(NormalizedField.VLAN_ID, NormalizedValue.number(320))
             assertThat(circuits.findByDevice(device)!!.openUntil).isEqualTo(deadline.plusSeconds(60))
         }
     }

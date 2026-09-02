@@ -14,6 +14,8 @@ import com.duluin.ftth.provisioning.domain.model.DeviceKind
 import com.duluin.ftth.provisioning.domain.model.DeviceReference
 import com.duluin.ftth.provisioning.domain.model.ManagedNodeRole
 import com.duluin.ftth.provisioning.domain.model.NormalizedDeviceState
+import com.duluin.ftth.provisioning.domain.model.NormalizedField
+import com.duluin.ftth.provisioning.domain.model.NormalizedValue
 import com.duluin.ftth.provisioning.domain.model.PlanStatus
 import com.duluin.ftth.provisioning.domain.model.ProvisionOperation
 import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
@@ -113,9 +115,30 @@ class CanonicalProvisioningPlannerTest {
             PlanCapability(bras, "mikrotik|ccr|7|rest", setOf("pppoe", "firewall"), observedAt),
         )
         val observations = listOf(
-            PlanObservation(olt, NormalizedDeviceState.of(linkedMapOf("port" to "pon-1", "vlans" to listOf(99, 100))), observedAt),
-            PlanObservation(transit, NormalizedDeviceState.of(linkedMapOf("vlans" to listOf(100, 99), "port" to "xe-0/0/1")), observedAt),
-            PlanObservation(bras, NormalizedDeviceState.of(linkedMapOf("enabled" to true, "vlans" to listOf(100))), observedAt),
+            PlanObservation(
+                olt,
+                NormalizedDeviceState.of(
+                    NormalizedField.PORT to NormalizedValue.identifier("pon-1"),
+                    NormalizedField.VLANS to NormalizedValue.sequence(NormalizedValue.number(99), NormalizedValue.number(100)),
+                ),
+                observedAt,
+            ),
+            PlanObservation(
+                transit,
+                NormalizedDeviceState.of(
+                    NormalizedField.VLANS to NormalizedValue.sequence(NormalizedValue.number(100), NormalizedValue.number(99)),
+                    NormalizedField.PORT to NormalizedValue.identifier("xe-0/0/1"),
+                ),
+                observedAt,
+            ),
+            PlanObservation(
+                bras,
+                NormalizedDeviceState.of(
+                    NormalizedField.ENABLED to NormalizedValue.flag(true),
+                    NormalizedField.VLANS to NormalizedValue.sequence(NormalizedValue.number(100)),
+                ),
+                observedAt,
+            ),
         )
         return PlanCompilationRequest(
             intent = intent,

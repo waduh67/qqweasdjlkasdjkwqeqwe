@@ -30,6 +30,8 @@ import com.duluin.ftth.provisioning.domain.model.ExecutionStatus
 import com.duluin.ftth.provisioning.domain.model.ExecutionStep
 import com.duluin.ftth.provisioning.domain.model.ExecutionStepStatus
 import com.duluin.ftth.provisioning.domain.model.NormalizedDeviceState
+import com.duluin.ftth.provisioning.domain.model.NormalizedField
+import com.duluin.ftth.provisioning.domain.model.NormalizedValue
 import com.duluin.ftth.provisioning.domain.model.NormalizedStateHash
 import com.duluin.ftth.provisioning.domain.model.PlanStatus
 import com.duluin.ftth.provisioning.domain.model.ProvisionExecution
@@ -376,12 +378,18 @@ class ProvisioningExecutionEngineTest {
         val snapshots = MemorySnapshotRepository()
         val circuits = MemoryCircuitRepository()
         val initialStates = mapOf(
-            bras to NormalizedDeviceState.of(mapOf("configured" to false)),
-            olt to NormalizedDeviceState.of(mapOf("configured" to false)),
+            bras to NormalizedDeviceState.of(NormalizedField.CONFIGURED to NormalizedValue.flag(false)),
+            olt to NormalizedDeviceState.of(NormalizedField.CONFIGURED to NormalizedValue.flag(false)),
         )
         val desiredStates = mapOf(
-            bras to NormalizedDeviceState.of(mapOf("configured" to true, "vlanId" to 320)),
-            olt to NormalizedDeviceState.of(mapOf("configured" to true, "vlanId" to 320)),
+            bras to NormalizedDeviceState.of(
+                NormalizedField.CONFIGURED to NormalizedValue.flag(true),
+                NormalizedField.VLAN_ID to NormalizedValue.number(320),
+            ),
+            olt to NormalizedDeviceState.of(
+                NormalizedField.CONFIGURED to NormalizedValue.flag(true),
+                NormalizedField.VLAN_ID to NormalizedValue.number(320),
+            ),
         )
         val plan: ProvisionPlan = ProvisionPlan.generate(
             tenantId,
@@ -438,7 +446,7 @@ class ProvisioningExecutionEngineTest {
 
         override fun observe(work: DispatchableProvisioningWork): DeviceStateObservation {
             if (work.phase == ExecutionPhase.ROLLBACK_CHECK && work.device in driftBeforeCompensation) {
-                current[work.device] = NormalizedDeviceState.of(mapOf("external" to true))
+                current[work.device] = NormalizedDeviceState.of(NormalizedField.EXTERNAL to NormalizedValue.flag(true))
                 driftBeforeCompensation -= work.device
             }
             val state = current.getValue(work.device)
@@ -466,7 +474,7 @@ class ProvisioningExecutionEngineTest {
         }
 
         fun drift(device: DeviceReference) {
-            current[device] = NormalizedDeviceState.of(mapOf("external" to true))
+            current[device] = NormalizedDeviceState.of(NormalizedField.EXTERNAL to NormalizedValue.flag(true))
         }
     }
 
