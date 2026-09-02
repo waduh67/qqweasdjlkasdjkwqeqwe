@@ -1,6 +1,9 @@
 package com.duluin.ftth.provisioning.domain.policy
 
 import com.duluin.ftth.provisioning.domain.model.VlanRange
+import com.duluin.ftth.provisioning.domain.model.DeviceReference
+import java.time.Instant
+import java.util.UUID
 
 data class PolicyActor(
     val platformAdmin: Boolean,
@@ -25,6 +28,16 @@ data class ManagementMutation(
     val requiredOutOfBandRoutes: Set<String> = emptySet(),
     val changedOutOfBandRoutes: Set<String> = emptySet(),
     val availableOutOfBandRoutes: Set<String> = emptySet(),
+)
+
+data class ManagementSafetyEvidence(
+    val id: UUID,
+    val tenantId: UUID,
+    val device: DeviceReference,
+    val protectedResources: ProtectedManagementResources,
+    val mutation: ManagementMutation,
+    val observedAt: Instant,
+    val validUntil: Instant,
 )
 
 class ProtectedManagementPolicy(resources: ProtectedManagementResources) {
