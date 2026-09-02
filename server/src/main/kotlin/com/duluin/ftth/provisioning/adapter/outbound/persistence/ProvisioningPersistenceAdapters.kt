@@ -196,6 +196,10 @@ class ProvisionPlanPersistenceAdapter(
             plan.id, tenant(plan.tenantId), plan.intentId, plan.revision, domainSteps, plan.status, plan.contentHash,
         )
     }
+
+    @Transactional(readOnly = true)
+    override fun findLatestByIntentId(intentId: UUID): ProvisionPlan? =
+        plans.findByIntentIdOrderByRevisionDesc(intentId).firstOrNull()?.let { findById(it.id) }
 }
 
 @Component
@@ -204,7 +208,7 @@ class ProvisionExecutionPersistenceAdapter(private val jpa: ProvisionExecutionJp
         val entity = jpa.findById(value.id).orElse(null)?.apply {
             status = value.status
             detail = value.detail
-        } ?: ProvisionExecutionJpaEntity(value.id, value.planId, value.idempotencyKey, value.status, value.detail)
+        } ?: ProvisionExecutionJpaEntity(value.id, value.intentId, value.planId, value.idempotencyKey, value.status, value.detail)
         return jpa.save(entity).toDomain()
     }
 
@@ -212,7 +216,7 @@ class ProvisionExecutionPersistenceAdapter(private val jpa: ProvisionExecutionJp
     override fun findByIdempotencyKey(key: String): ProvisionExecution? = jpa.findByIdempotencyKey(key)?.toDomain()
 
     private fun ProvisionExecutionJpaEntity.toDomain() = ProvisionExecution.rehydrate(
-        id, tenant(tenantId), planId, idempotencyKey, status, detail,
+        id, tenant(tenantId), intentId, planId, idempotencyKey, status, detail,
     )
 }
 
