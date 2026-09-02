@@ -28,6 +28,7 @@ enum class ExecutionStatus {
     ROLLED_BACK,
     FAILED,
     MANUAL_RECONCILIATION,
+    CANCELLED,
 }
 
 enum class DriftStatus { NONE, BENIGN, CONFLICTING, UNKNOWN }

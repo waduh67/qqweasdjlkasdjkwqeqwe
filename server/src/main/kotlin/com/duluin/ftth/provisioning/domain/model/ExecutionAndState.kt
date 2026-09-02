@@ -30,6 +30,7 @@ class ProvisionExecution private constructor(
     fun start() = transitionTo(ExecutionStatus.RUNNING, setOf(ExecutionStatus.QUEUED))
     fun verify() = transitionTo(ExecutionStatus.VERIFYING, setOf(ExecutionStatus.RUNNING))
     fun succeed() = transitionTo(ExecutionStatus.SUCCEEDED, setOf(ExecutionStatus.VERIFYING))
+    fun cancel() = transitionTo(ExecutionStatus.CANCELLED, setOf(ExecutionStatus.QUEUED))
     fun beginRollback() = transitionTo(
         ExecutionStatus.ROLLING_BACK,
         setOf(ExecutionStatus.RUNNING, ExecutionStatus.VERIFYING),
