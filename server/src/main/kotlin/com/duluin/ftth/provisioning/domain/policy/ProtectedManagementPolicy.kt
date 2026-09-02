@@ -35,10 +35,15 @@ data class ManagementSafetyEvidence(
     val tenantId: UUID,
     val device: DeviceReference,
     val protectedResources: ProtectedManagementResources,
-    val mutation: ManagementMutation,
+    val availableOutOfBandRoutes: Set<String>,
     val observedAt: Instant,
     val validUntil: Instant,
+    val complete: Boolean = false,
+    val sourceType: ManagementEvidenceSourceType? = null,
+    val sourceEvidenceId: UUID? = null,
 )
+
+enum class ManagementEvidenceSourceType { TOPOLOGY_OBSERVATION, DEVICE_OBSERVATION }
 
 class ProtectedManagementPolicy(resources: ProtectedManagementResources) {
     private val vlanRanges = resources.vlanRanges.toList()
