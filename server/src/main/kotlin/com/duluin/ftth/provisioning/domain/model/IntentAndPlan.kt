@@ -69,6 +69,8 @@ class ProvisionStep private constructor(
     attributes: Map<String, String>,
 ) : ProvisioningAggregate {
     val attributes: Map<String, String> = attributes.toMap()
+    val preconditionHash: String
+        get() = attributes[PRECONDITION_HASH_ATTRIBUTE] ?: EMPTY_PRECONDITION_HASH
 
     init {
         if (order < 1) throw ValidationException("PROVISION_STEP_ORDER_INVALID")
@@ -81,6 +83,9 @@ class ProvisionStep private constructor(
     }
 
     companion object {
+        const val PRECONDITION_HASH_ATTRIBUTE = "expectedPreconditionHash"
+        private val EMPTY_PRECONDITION_HASH = sha256("")
+
         fun create(
             order: Int,
             device: DeviceReference,
@@ -95,6 +100,18 @@ class ProvisionStep private constructor(
             operation: ProvisionOperation,
             attributes: Map<String, String>,
         ) = ProvisionStep(id, order, device, operation, attributes)
+
+        fun compile(
+            id: UUID,
+            order: Int,
+            device: DeviceReference,
+            operation: ProvisionOperation,
+            attributes: Map<String, String>,
+        ) = ProvisionStep(id, order, device, operation, attributes)
+
+        private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")
+            .digest(value.toByteArray(StandardCharsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
     }
 }
 
@@ -111,6 +128,8 @@ class ProvisionPlan private constructor(
     var status: PlanStatus = status
         private set
     val contentHash: String = contentHash
+    val preconditionHash: String
+        get() = steps.firstNotNullOfOrNull { it.attributes[PLAN_PRECONDITION_HASH_ATTRIBUTE] } ?: contentHash
 
     init {
         if (revision < 1) throw ValidationException("PLAN_REVISION_INVALID")
@@ -123,12 +142,20 @@ class ProvisionPlan private constructor(
     fun reject() = transitionTo(PlanStatus.REJECTED, setOf(PlanStatus.GENERATED))
     fun supersede() = transitionTo(PlanStatus.SUPERSEDED, setOf(PlanStatus.VALIDATED))
 
+    fun canonicalPayload(): String = buildString {
+        append(id).append('|').append(tenantId).append('|').append(intentId).append('|').append(revision)
+        append('|').append(preconditionHash).append('|').append(contentHash).append('\n')
+        steps.sortedBy { it.order }.forEach { append(it.id).append('|').append(it.canonical()).append('\n') }
+    }
+
     private fun transitionTo(next: PlanStatus, allowed: Set<PlanStatus>) {
         if (status !in allowed) throw ConflictException("ILLEGAL_PLAN_TRANSITION: $status -> $next")
         status = next
     }
 
     companion object {
+        const val PLAN_PRECONDITION_HASH_ATTRIBUTE = "planPreconditionHash"
+
         fun generate(tenantId: UUID, intentId: UUID, revision: Int, steps: List<ProvisionStep>) =
             ProvisionPlan(UuidV7.generate(), tenantId, intentId, revision, steps, PlanStatus.GENERATED, hash(steps))
 
@@ -141,6 +168,14 @@ class ProvisionPlan private constructor(
             status: PlanStatus,
             contentHash: String,
         ) = ProvisionPlan(id, tenantId, intentId, revision, steps, status, contentHash)
+
+        fun compile(
+            id: UUID,
+            tenantId: UUID,
+            intentId: UUID,
+            revision: Int,
+            steps: List<ProvisionStep>,
+        ) = ProvisionPlan(id, tenantId, intentId, revision, steps, PlanStatus.GENERATED, hash(steps))
 
         private fun requireValidSteps(steps: List<ProvisionStep>) {
             if (steps.isEmpty()) throw ValidationException("PLAN_STEPS_EMPTY")
