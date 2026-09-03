@@ -22,8 +22,10 @@ describe('izin provisioning', () => {
     expect(permissions).toEqual({
       view: true,
       manage: false,
+      plan: false,
       apply: true,
       cancel: false,
+      drift: false,
       adopt: true,
       certification: false,
     })
