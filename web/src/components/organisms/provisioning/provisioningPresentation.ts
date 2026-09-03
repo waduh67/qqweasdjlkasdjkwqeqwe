@@ -66,7 +66,8 @@ export function productionReadiness(
   )
   const capabilityReady = preview.plan.steps.every((step) => currentCapabilities(step).length > 0)
   const protectionReady = preview.plan.steps.every((step) => protections.some((protection) =>
-    protection.deviceKind === step.device.kind && protection.deviceId === step.device.id && protection.complete,
+    protection.deviceKind === step.device.kind && protection.deviceId === step.device.id && protection.complete &&
+    Date.parse(protection.validUntil) > now.getTime(),
   ))
   const certificationReady = certifications === null
     ? preview.decision.allowed

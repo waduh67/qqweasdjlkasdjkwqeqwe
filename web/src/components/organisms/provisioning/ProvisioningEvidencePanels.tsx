@@ -63,7 +63,8 @@ export function CertificationPanel(props: CertificationPanelProps) {
               candidate.deviceKind === capability.deviceKind && candidate.deviceId === capability.deviceId &&
               candidate.vendor === capability.vendor && candidate.model === capability.model &&
               candidate.firmware === capability.firmware && candidate.transport === capability.transport &&
-              candidate.operationClass === capability.operationClass && candidate.revokedAt === null &&
+              candidate.operationClass === capability.operationClass && candidate.status === 'CERTIFIED' &&
+              candidate.revokedAt === null &&
               Date.parse(candidate.validUntil) > Date.now(),
             )
             return (

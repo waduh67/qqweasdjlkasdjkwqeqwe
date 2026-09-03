@@ -34,4 +34,17 @@ describe('productionReadiness', () => {
     expect(readiness.certificationReady).toBe(false)
     expect(readiness.ready).toBe(false)
   })
+
+  it('rejects expired management protection evidence', () => {
+    const readiness = productionReadiness(
+      preview,
+      [{ ...capability, expiresAt: '2029-01-01T00:00:00Z' }],
+      [protection],
+      [{ ...certification, validUntil: '2029-01-01T00:00:00Z' }],
+      new Date('2028-01-01T00:00:00Z'),
+    )
+
+    expect(readiness.protectionReady).toBe(false)
+    expect(readiness.ready).toBe(false)
+  })
 })
