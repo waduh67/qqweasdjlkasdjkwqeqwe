@@ -4,27 +4,23 @@ import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.provisioning.application.port.outbound.DeviceObservationRepository
 import com.duluin.ftth.provisioning.application.port.outbound.DriftRecordRepository
+import com.duluin.ftth.provisioning.application.port.outbound.ProvisioningObservationPort
+import com.duluin.ftth.provisioning.application.port.outbound.ProvisioningObservationException
 import com.duluin.ftth.provisioning.domain.model.DeviceObservation
-import com.duluin.ftth.provisioning.domain.model.DeviceReference
 import com.duluin.ftth.provisioning.domain.model.DeviceSnapshot
 import com.duluin.ftth.provisioning.domain.model.DriftRecord
-import com.duluin.ftth.provisioning.domain.model.NormalizedDeviceState
 import com.duluin.ftth.tenancy.TenantApi
-import org.springframework.beans.factory.ObjectProvider
+import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.time.Clock
 import java.time.Duration
 import java.util.UUID
 
-fun interface ProvisioningObservationPort {
-    fun observe(device: DeviceReference): NormalizedDeviceState
-}
-
 @Component
 class ProvisioningDriftScanner(
     private val tenants: TenantApi,
-    private val observationPort: ObjectProvider<ProvisioningObservationPort>,
+    private val observationPort: ProvisioningObservationPort,
     private val baselines: ProvisioningDriftBaselineReader,
     private val observations: DeviceObservationRepository,
     private val driftRecords: DriftRecordRepository,
@@ -32,16 +28,34 @@ class ProvisioningDriftScanner(
     private val metrics: ProvisioningMetrics,
     private val clock: Clock,
 ) {
-    @Scheduled(fixedDelayString = "\${ftth.provisioning.drift-scan-interval:PT15M}")
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    @Scheduled(fixedDelayString = $$"${ftth.provisioning.drift-scan-interval:PT15M}")
     fun scan() {
-        val observer = observationPort.ifAvailable ?: return
         tenants.findActiveTenantIds().forEach { tenantId ->
-            TenantContext.runAs(tenantId) { scanTenant(tenantId, observer) }
+            try {
+                TenantContext.runAs(tenantId) { scanTenant(tenantId, observationPort) }
+            } catch (failure: Exception) {
+                log.warn("Provisioning drift tenant scan failed: tenantId={}, reason={}", tenantId, reason(failure))
+            }
         }
     }
 
     fun scanTenant(tenantId: UUID, observer: ProvisioningObservationPort): List<DriftRecord> =
-        baselines.latestPerDevice().map { baseline -> scanDevice(tenantId, baseline, observer) }
+        baselines.latestPerDevice().mapNotNull { baseline ->
+            try {
+                scanDevice(tenantId, baseline, observer)
+            } catch (failure: Exception) {
+                metrics.verificationFailure()
+                log.warn(
+                    "Provisioning drift device observation failed: deviceKind={}, deviceId={}, reason={}",
+                    baseline.device.kind,
+                    baseline.device.id,
+                    reason(failure),
+                )
+                null
+            }
+        }
 
     private fun scanDevice(
         tenantId: UUID,
@@ -63,4 +77,7 @@ class ProvisioningDriftScanner(
         metrics.driftAge(Duration.between(drift.recordedAt, clock.instant()))
         return drift
     }
+
+    private fun reason(failure: Throwable): String =
+        (failure as? ProvisioningObservationException)?.reason?.name ?: "OBSERVATION_FAILED"
 }
