@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Text } from '@fluentui/react-components'
 import { ApiError } from '@/api/client'
 import {
@@ -6,6 +6,7 @@ import {
   cancelProvisioningExecution,
   certifyAdapter,
   getProvisioningTimeline,
+  generateProvisioningPlan,
   getTopology,
   listAdapterCertifications,
   listManagementProtections,
@@ -15,6 +16,9 @@ import {
   listServiceIntents,
   listVlanPools,
   revokeAdapterCertification,
+  suspendProvisioningIntent,
+  restoreProvisioningIntent,
+  deprovisionIntent,
   type AdapterCertificationView,
   type CapabilityEvidenceView,
   type DriftView,
@@ -70,6 +74,10 @@ export function NetworkProvisioningPage() {
   const [drift, setDrift] = useState<readonly DriftView[]>([])
   const [certifications, setCertifications] = useState<readonly AdapterCertificationView[]>([])
   const [timeline, setTimeline] = useState<readonly ExecutionTimelineEntry[]>([])
+  const [selectedIntentId, setSelectedIntentId] = useState('')
+  const [generating, setGenerating] = useState(false)
+  const generationRevision = useRef(0)
+  const generationController = useRef<AbortController | null>(null)
   const [rollout, setRollout] = useState<ProvisioningRolloutView>(SAFE_ROLLOUT)
   const [adoptingId, setAdoptingId] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
@@ -129,6 +137,41 @@ export function NetworkProvisioningPage() {
     catch (cause) { toast.error(messageOf(cause, 'Gagal membatalkan eksekusi')) }
     finally { setCancelling(false) }
   }
+  const generatePreview = async () => {
+    if (selectedIntentId === '') return
+    const intentId = selectedIntentId
+    const revision = ++generationRevision.current
+    generationController.current?.abort()
+    const controller = new AbortController()
+    generationController.current = controller
+    setGenerating(true)
+    try {
+      const plan = await generateProvisioningPlan(intentId, 'CREATE', controller.signal)
+      if (revision !== generationRevision.current) return
+      draft.setDraft({ planId: plan.id })
+      await draft.previewPlan(plan.id, 'DRY_RUN')
+    } catch (cause) {
+      if (!(cause instanceof DOMException && cause.name === 'AbortError') && revision === generationRevision.current) {
+        toast.error(messageOf(cause, 'Plan tidak dapat dibuat'))
+      }
+    }
+    finally { if (revision === generationRevision.current) setGenerating(false) }
+  }
+  const changeIntentState = async (intentId: string, action: 'suspend' | 'restore') => {
+    try {
+      if (action === 'suspend') await suspendProvisioningIntent(intentId)
+      else await restoreProvisioningIntent(intentId)
+      await load()
+    } catch (cause) { toast.error(messageOf(cause, 'Status intent tidak dapat diubah')) }
+  }
+  const deprovision = async (intentId: string) => {
+    try {
+      const next = await deprovisionIntent(intentId, crypto.randomUUID())
+      apply.track(next)
+      setTab('executions')
+      await load()
+    } catch (cause) { toast.error(messageOf(cause, 'Deprovision ditolak')) }
+  }
   const adopt = async (item: DriftView) => {
     setAdoptingId(item.id)
     try {
@@ -149,16 +192,18 @@ export function NetworkProvisioningPage() {
       <section className="workspace-summary" aria-label="Ringkasan workspace">
         <Summary label="Node topologi" value={topology.nodes.length} /><Summary label="Profil segmen" value={profiles.length} /><Summary label="Intent aktif" value={intents.filter((item) => item.value.status === 'ACTIVE').length} /><Summary label="Drift terbuka" value={drift.filter((item) => item.status !== 'NONE').length} />
       </section>
-      <div className="workspace-tabs"><Tabs tabs={WORKSPACE_TABS} active={tab} onChange={setTab} /></div>
+      <div className="workspace-tabs"><Tabs tabs={WORKSPACE_TABS} active={tab} onChange={setTab} idPrefix="network-provisioning" /></div>
+      <div role="tabpanel" id={`network-provisioning-panel-${tab}`} aria-labelledby={`network-provisioning-tab-${tab}`}>
       {permissions.manage && (tab === 'topology' || tab === 'profiles' || tab === 'intents') && (
         <div className="azure-commandbar"><button type="button" className="cmd-btn cmd-primary" onClick={() => setEditor(tab)}>+ {tab === 'topology' ? 'Tambah node' : tab === 'profiles' ? 'Tambah profil' : 'Buat intent'}</button></div>
       )}
       {tab === 'topology' && <TopologyPanel topology={topology} />}
       {tab === 'profiles' && <ProfilesPanel pools={pools} profiles={profiles} />}
-      {tab === 'intents' && <div className="stack"><IntentsPanel intents={intents} profiles={profiles} /><ProvisioningPreviewPanel planId={draft.draft.planId} preview={draft.preview} capabilities={capabilities} readiness={readiness} loading={false} applying={apply.applying} canPreview={permissions.plan && rollout.plannerEnabled} canApply={permissions.apply && permissions.plan && rollout.autoApplyEnabled} autoApplyEnabled={rollout.autoApplyEnabled} onPlanIdChange={(planId) => draft.setDraft({ planId })} onPreview={() => void draft.previewPlan(draft.draft.planId, 'DRY_RUN')} onApply={() => { if (draft.preview) void apply.apply(draft.preview.plan.id, draft.preview.plan.revision) }} /></div>}
+      {tab === 'intents' && <div className="stack"><IntentsPanel intents={intents} profiles={profiles} canOperate={permissions.apply} onSuspend={(item) => void changeIntentState(item.value.id, 'suspend')} onRestore={(item) => void changeIntentState(item.value.id, 'restore')} onDeprovision={(item) => void deprovision(item.value.id)} /><ProvisioningPreviewPanel intentId={selectedIntentId} intentOptions={intents.map((item) => ({ id: item.value.id, label: `${item.value.allocationMode === 'DEDICATED' ? 'Enterprise dedicated' : 'Residential shared'} · ${item.value.subscriptionId ?? item.value.hotspotSiteId ?? item.value.id}` }))} preview={draft.preview} capabilities={capabilities} readiness={readiness} loading={generating || draft.previewing} applying={apply.applying} canPreview={permissions.plan && rollout.plannerEnabled} canApply={permissions.apply && permissions.plan && rollout.autoApplyEnabled} autoApplyEnabled={rollout.autoApplyEnabled} onIntentIdChange={(intentId) => { generationRevision.current += 1; generationController.current?.abort(); setGenerating(false); setSelectedIntentId(intentId); draft.setDraft({ planId: '' }) }} onGeneratePreview={() => void generatePreview()} onApply={() => { if (draft.preview) void apply.apply(draft.preview.plan.id, draft.preview.plan.revision) }} /></div>}
       {tab === 'executions' && <ProvisioningExecutionPanel execution={execution} timeline={timeline} canCancel={permissions.cancel} cancelling={cancelling} onCancel={() => void cancel()} />}
       {tab === 'drift' && <DriftPanel drift={drift} canAdopt={permissions.adopt} adoptingId={adoptingId} onAdopt={(item) => void adopt(item)} />}
       {tab === 'certification' && <CertificationPanel tenantId={draft.preview?.plan.tenantId ?? null} capabilities={capabilities} certifications={certifications} canCertify={permissions.certification} onCertify={async (tenantId, capability, validUntil) => { const created = await certifyAdapter(tenantId, { deviceKind: capability.deviceKind, deviceId: capability.deviceId, vendor: capability.vendor, model: capability.model, firmware: capability.firmware, transport: capability.transport, operationClass: capability.operationClass, validUntil }); setCertifications((current) => [...current, created]); toast.success('Adapter tersertifikasi') }} onRevoke={async (certification) => { const revoked = await revokeAdapterCertification(certification.tenantId, certification.id, certification.revision); setCertifications((current) => current.map((item) => item.id === revoked.id ? revoked : item)); toast.success('Sertifikasi dicabut') }} onError={(cause) => toast.error(messageOf(cause, 'Sertifikasi adapter ditolak'))} />}
+      </div>
       <ProvisioningEditorModal editor={editor} profiles={profiles} defaultPoolId={pools[0]?.value.id ?? ''} onClose={() => setEditor(null)} onCreated={load} onError={(cause) => toast.error(messageOf(cause, 'Perubahan provisioning ditolak'))} />
     </div>
   )

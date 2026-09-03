@@ -1,10 +1,11 @@
 import { Text } from '@fluentui/react-components'
 import type { CapabilityEvidenceView, PlanPreview } from '@/api/provisioning'
-import { Badge, Button, StatusBadge, TextField } from '@/components/atoms'
+import { Badge, Button, SelectField, StatusBadge } from '@/components/atoms'
 import { DEVICE_LABEL, stableCodeLabel, type ProductionReadiness } from './provisioningPresentation'
 
 type PreviewPanelProps = {
-  readonly planId: string
+  readonly intentId: string
+  readonly intentOptions: readonly { readonly id: string; readonly label: string }[]
   readonly preview: PlanPreview | null
   readonly capabilities: readonly CapabilityEvidenceView[]
   readonly readiness: ProductionReadiness
@@ -13,8 +14,8 @@ type PreviewPanelProps = {
   readonly canPreview: boolean
   readonly canApply: boolean
   readonly autoApplyEnabled: boolean
-  readonly onPlanIdChange: (value: string) => void
-  readonly onPreview: () => void
+  readonly onIntentIdChange: (value: string) => void
+  readonly onGeneratePreview: () => void
   readonly onApply: () => void
 }
 
@@ -27,8 +28,8 @@ export function ProvisioningPreviewPanel(props: PreviewPanelProps) {
       <div className="card stack">
         <Text as="h2" size={400} weight="semibold">Pratinjau plan</Text>
         <div className="workspace-actions">
-          <TextField label="ID plan aktif" hint="Salin ID plan yang dibuat server untuk intent terpilih." value={props.planId} onChange={(_, data) => props.onPlanIdChange(data.value)} />
-          <Button variant="default" disabled={!props.canPreview || props.planId.trim() === '' || props.loading} onClick={props.onPreview}>Pratinjau dry-run</Button>
+          <SelectField label="Intent layanan" value={props.intentId} disabled={props.loading} onChange={(event) => props.onIntentIdChange(event.target.value)}><option value="">Pilih intent</option>{props.intentOptions.map((intent) => <option key={intent.id} value={intent.id}>{intent.label}</option>)}</SelectField>
+          <Button variant="default" disabled={!props.canPreview || props.intentId === '' || props.loading} onClick={props.onGeneratePreview}>{props.loading ? 'Menyiapkan…' : 'Buat dan pratinjau plan'}</Button>
           <Button variant="primary" disabled={!props.canApply || !readiness.ready || props.applying} onClick={props.onApply}>{props.applying ? 'Menerapkan…' : 'Terapkan ke produksi'}</Button>
         </div>
         <Text as="p" className="muted" size={200} style={{ margin: 0 }}>Dry-run tetap tersedia untuk adapter provisional. Produksi mengikuti validasi server dan tidak pernah melewati gerbang keselamatan.</Text>
