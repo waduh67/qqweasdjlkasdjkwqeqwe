@@ -54,37 +54,35 @@ export function productionReadiness(
   capabilities: readonly CapabilityEvidenceView[],
   protections: readonly ManagementProtectionView[],
   certifications: readonly AdapterCertificationView[] | null,
+  now: Date = new Date(),
 ): ProductionReadiness {
   if (!preview) {
     return { ready: false, capabilityReady: false, protectionReady: false, certificationReady: false, reasons: ['Pratinjau tervalidasi belum tersedia.'] }
   }
 
-  const capabilityReady = preview.plan.steps.every((step) => capabilities.some((capability) =>
+  const currentCapabilities = (step: PlanPreview['plan']['steps'][number]) => capabilities.filter((capability) =>
     capability.deviceKind === step.device.kind && capability.deviceId === step.device.id &&
-    capability.operationClass === step.operation && capability.supported,
-  ))
+    capability.operationClass === step.operation && capability.supported && Date.parse(capability.expiresAt) > now.getTime(),
+  )
+  const capabilityReady = preview.plan.steps.every((step) => currentCapabilities(step).length > 0)
   const protectionReady = preview.plan.steps.every((step) => protections.some((protection) =>
     protection.deviceKind === step.device.kind && protection.deviceId === step.device.id && protection.complete,
   ))
   const certificationReady = certifications === null
     ? preview.decision.allowed
-    : preview.plan.steps.every((step) => {
-        const capability = capabilities.find((candidate) =>
-          candidate.deviceKind === step.device.kind && candidate.deviceId === step.device.id &&
-          candidate.operationClass === step.operation && candidate.supported,
-        )
-        return capability !== undefined && certifications.some((certification) =>
+    : preview.plan.steps.every((step) => currentCapabilities(step).some((capability) =>
+        certifications.some((certification) =>
           certification.deviceKind === capability.deviceKind && certification.deviceId === capability.deviceId &&
           certification.vendor === capability.vendor && certification.model === capability.model &&
           certification.firmware === capability.firmware && certification.transport === capability.transport &&
           certification.operationClass === capability.operationClass && certification.status === 'CERTIFIED' &&
-          certification.revokedAt === null,
+          certification.revokedAt === null && Date.parse(certification.validUntil) > now.getTime(),
         )
-      })
+      ))
 
   const reasons = [
     ...(!preview.decision.allowed ? [`Server menolak produksi: ${preview.decision.code}.`] : []),
-    ...(!capabilityReady ? ['Satu atau lebih adapter belum tersertifikasi untuk operasi ini.'] : []),
+    ...(!capabilityReady ? ['Satu atau lebih adapter tidak mendukung operasi ini.'] : []),
     ...(!protectionReady ? ['Proteksi manajemen belum lengkap pada seluruh perangkat.'] : []),
     ...(!certificationReady ? ['Sertifikasi adapter eksak belum lengkap atau sudah dicabut.'] : []),
   ]
@@ -103,6 +101,7 @@ export function stableCodeLabel(code: string): string {
     UNCERTIFIED_FINGERPRINT: 'Fingerprint adapter belum tersertifikasi',
     MANAGEMENT_PROTECTION_REQUIRED: 'Proteksi jalur manajemen belum lengkap',
     PROVISIONAL_ADAPTER: 'Adapter masih provisional',
+    PROTECTED_MANAGEMENT_RESOURCE: 'Perubahan menyentuh resource manajemen yang dilindungi',
     ROLLBACK_POLICY_DENIED: 'Kebijakan proteksi menolak rollback otomatis',
     STALE_PLAN: 'Revisi plan sudah berubah',
   }

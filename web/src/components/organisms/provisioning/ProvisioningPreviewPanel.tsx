@@ -12,6 +12,7 @@ type PreviewPanelProps = {
   readonly applying: boolean
   readonly canPreview: boolean
   readonly canApply: boolean
+  readonly autoApplyEnabled: boolean
   readonly onPlanIdChange: (value: string) => void
   readonly onPreview: () => void
   readonly onApply: () => void
@@ -31,6 +32,7 @@ export function ProvisioningPreviewPanel(props: PreviewPanelProps) {
           <Button variant="primary" disabled={!props.canApply || !readiness.ready || props.applying} onClick={props.onApply}>{props.applying ? 'Menerapkan…' : 'Terapkan ke produksi'}</Button>
         </div>
         <Text as="p" className="muted" size={200} style={{ margin: 0 }}>Dry-run tetap tersedia untuk adapter provisional. Produksi mengikuti validasi server dan tidak pernah melewati gerbang keselamatan.</Text>
+        {!props.autoApplyEnabled && <div role="status" className="workspace-callout warning">Auto-apply produksi dinonaktifkan oleh konfigurasi rollout. Dry-run tetap tersedia.</div>}
       </div>
 
       {preview && (
@@ -56,7 +58,8 @@ export function ProvisioningPreviewPanel(props: PreviewPanelProps) {
                   <li key={step.id}>
                     <span className="workspace-step-index" aria-hidden>{step.order}</span>
                     <div className="stack grow min-w-0 workspace-step-content">
-                      <div className="spread wrap"><div><Text as="strong" block weight="semibold">{DEVICE_LABEL[step.device.kind]}</Text><Text as="span" className="muted" size={200}>{step.operation}</Text></div><StatusBadge status={capability?.supported ? 'ACTIVE' : 'WARNING'} label={capability?.supported ? 'Kapabel' : 'Provisional'} /></div>
+                      <div className="spread wrap"><div><Text as="strong" block weight="semibold">{DEVICE_LABEL[step.device.kind]}</Text><Text as="span" block className="muted workspace-code" size={200}>{step.device.id}</Text><Text as="span" className="muted" size={200}>{step.operation}</Text></div><StatusBadge status={capability?.supported ? 'ACTIVE' : 'WARNING'} label={capability?.supported ? 'Kapabel' : 'Provisional'} /></div>
+                      {capability && <Text as="span" className="muted workspace-code" size={200}>{capability.vendor} / {capability.model} / {capability.firmware} / {capability.transport}</Text>}
                       <Text as="span" className="muted" size={200}>Diff ternormalisasi</Text>
                       <div className="workspace-diff" aria-label={`Diff ternormalisasi langkah ${step.order}`}>
                         {Object.entries(step.attributes).filter(([key]) => visibleAttribute(key)).map(([key, value]) => <div className="workspace-kv" key={key}><span>{attributeLabel(key)}</span><strong>{value}</strong></div>)}

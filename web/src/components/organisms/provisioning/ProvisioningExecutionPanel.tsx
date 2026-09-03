@@ -1,7 +1,7 @@
 import { Text } from '@fluentui/react-components'
 import type { ExecutionTimelineEntry, ExecutionView } from '@/api/provisioning'
 import { Badge, Button, EmptyState, StatusBadge } from '@/components/atoms'
-import { EXECUTION_LABEL, executionTone } from './provisioningPresentation'
+import { DEVICE_LABEL, EXECUTION_LABEL, executionTone } from './provisioningPresentation'
 
 type ExecutionPanelProps = {
   readonly execution: ExecutionView | null
@@ -13,7 +13,9 @@ type ExecutionPanelProps = {
 
 export function ProvisioningExecutionPanel({ execution, timeline, canCancel, cancelling, onCancel }: ExecutionPanelProps) {
   if (!execution) return <EmptyState title="Belum ada eksekusi" hint="Tinjau plan dan jalankan apply produksi untuk melihat progres per perangkat." />
-  const cancellable = execution.status === 'QUEUED' || execution.status === 'RUNNING' || execution.status === 'VERIFYING'
+  const cancellable = execution.status === 'QUEUED'
+  const verificationMismatch = timeline.some((entry) => entry.errorCode === 'VERIFICATION_MISMATCH')
+  const rollbackDenied = timeline.some((entry) => entry.errorCode === 'ROLLBACK_POLICY_DENIED')
   return (
     <div className="stack">
       <section className="card stack" aria-live="polite">
@@ -22,17 +24,19 @@ export function ProvisioningExecutionPanel({ execution, timeline, canCancel, can
           <StatusBadge status={execution.status} tone={executionTone(execution.status)} label={EXECUTION_LABEL[execution.status]} />
         </div>
         {execution.status === 'MANUAL_RECONCILIATION' && <div role="alert" className="workspace-callout critical">Rollback otomatis tidak dapat diselesaikan. Bekukan perubahan lanjutan dan rekonsiliasi perangkat terhadap snapshot terakhir yang terverifikasi.</div>}
-        {canCancel && <div><Button variant="danger" disabled={!cancellable || cancelling} onClick={onCancel}>{cancelling ? 'Membatalkan…' : 'Batalkan eksekusi'}</Button></div>}
+        {execution.status === 'MANUAL_RECONCILIATION' && verificationMismatch && rollbackDenied && <div role="alert" className="workspace-callout warning">Verifikasi gagal (`VERIFICATION_MISMATCH`), lalu rollback ditolak (`ROLLBACK_POLICY_DENIED`), sehingga eksekusi memerlukan rekonsiliasi manual.</div>}
+        {canCancel && cancellable && <div><Button variant="danger" disabled={cancelling} onClick={onCancel}>{cancelling ? 'Membatalkan…' : 'Batalkan eksekusi'}</Button></div>}
       </section>
       <section className="card stack">
         <div className="spread wrap"><Text as="h2" size={400} weight="semibold">Urutan per perangkat</Text><Badge>{timeline.length} status</Badge></div>
-        {timeline.length === 0 ? <Text as="p" className="muted">Menunggu langkah pertama dari server…</Text> : (
+        {timeline.length === 0 ? <Text as="p" className="muted">{execution.status === 'CANCELLED' ? 'Eksekusi dibatalkan sebelum langkah perangkat dimulai.' : 'Menunggu langkah pertama dari server…'}</Text> : (
           <ol className="workspace-path" aria-label="Urutan eksekusi perangkat">
             {[...timeline].sort((left, right) => left.stepOrder - right.stepOrder || left.attemptNumber - right.attemptNumber).map((entry) => (
               <li key={`${entry.stepOrder}-${entry.attemptNumber}-${entry.phase}`}>
                 <span className="workspace-step-index" aria-hidden>{entry.stepOrder}</span>
                 <div className="grow min-w-0">
-                  <div className="spread wrap"><Text as="strong" weight="semibold">Langkah {entry.stepOrder} · {phaseLabel(entry.phase)}</Text><StatusBadge status={entry.status} tone={attemptTone(entry.status)} label={attemptLabel(entry.status)} /></div>
+                  <div className="spread wrap"><Text as="strong" weight="semibold">Langkah {entry.stepOrder} · {DEVICE_LABEL[entry.deviceKind]} · {phaseLabel(entry.phase)}</Text><StatusBadge status={entry.status} tone={attemptTone(entry.status)} label={attemptLabel(entry.status)} /></div>
+                  <Text as="span" block className="muted workspace-code" size={200}>{entry.deviceId}</Text>
                   <Text as="span" className="muted" size={200}>Percobaan {entry.attemptNumber} · {new Date(entry.startedAt).toLocaleString('id-ID')}</Text>
                   {entry.errorCode && <div className="row wrap workspace-error-code"><Badge tone="critical">{entry.errorCode}</Badge><Text as="span" size={200}>Kode stabil dari server, bukan kegagalan generik.</Text></div>}
                 </div>

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as provisioningApi from '@/api/provisioning'
+import * as provisioningRolloutApi from '@/api/provisioningRollout'
 import type { PlanPreview } from '@/api/provisioning'
 import { useProvisioningPermissions } from '@/hooks/useProvisioningPermissions'
 import { ProvisioningEditorModal } from '@/components/organisms/provisioning/ProvisioningEditors'
@@ -52,6 +53,7 @@ beforeEach(() => {
   HTMLDialogElement.prototype.close = function close() { this.removeAttribute('open') }
   mockedPermissions.mockReturnValue({ view: true, manage: true, plan: true, apply: true, cancel: true, drift: true, adopt: true, certification: false })
   vi.spyOn(provisioningApi, 'getTopology').mockResolvedValue(topology)
+  vi.spyOn(provisioningRolloutApi, 'getProvisioningRollout').mockResolvedValue({ plannerEnabled: true, uiEnabled: true, autoApplyEnabled: true, maxAffectedSubscribers: 1, circuitFailureThreshold: 1, bulkExpansionEnabled: false })
   vi.spyOn(provisioningApi, 'listVlanPools').mockResolvedValue([{ revision: 1, value: { id: 'pool-1', name: 'Enterprise', range: { start: 3000, endInclusive: 3999 }, reservedRanges: [] } }])
   vi.spyOn(provisioningApi, 'listSegmentProfiles').mockResolvedValue([
     { revision: 1, value: { id: 'profile-shared', name: 'Residential shared', poolId: 'pool-1' } },
@@ -78,8 +80,8 @@ beforeEach(() => {
   vi.spyOn(provisioningApi, 'applyProvisioningPlan').mockResolvedValue({ id: 'exec-1', planId: 'plan-1', revision: 1, status: 'QUEUED' })
   vi.spyOn(provisioningApi, 'getProvisioningExecution').mockResolvedValue({ id: 'exec-1', planId: 'plan-1', revision: 2, status: 'MANUAL_RECONCILIATION' })
   vi.spyOn(provisioningApi, 'getProvisioningTimeline').mockResolvedValue([
-    { stepOrder: 1, attemptNumber: 1, phase: 'APPLY', status: 'SUCCEEDED', errorCode: null, startedAt: '2026-09-03T00:00:00Z', completedAt: '2026-09-03T00:00:01Z' },
-    { stepOrder: 2, attemptNumber: 1, phase: 'ROLLBACK', status: 'FAILED', errorCode: 'ROLLBACK_POLICY_DENIED', startedAt: '2026-09-03T00:00:02Z', completedAt: '2026-09-03T00:00:03Z' },
+    { stepOrder: 1, deviceKind: 'BRAS', deviceId: 'bras-1', attemptNumber: 1, phase: 'APPLY', status: 'SUCCEEDED', errorCode: null, startedAt: '2026-09-03T00:00:00Z', completedAt: '2026-09-03T00:00:01Z' },
+    { stepOrder: 2, deviceKind: 'SWITCH', deviceId: 'switch-1', attemptNumber: 1, phase: 'ROLLBACK', status: 'FAILED', errorCode: 'ROLLBACK_POLICY_DENIED', startedAt: '2026-09-03T00:00:02Z', completedAt: '2026-09-03T00:00:03Z' },
   ])
 })
 
@@ -120,8 +122,31 @@ describe('NetworkProvisioningPage', () => {
     expect(screen.getByText('1 pelanggan')).toBeTruthy()
     expect(screen.getByText('ALLOWED')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Terapkan ke produksi' }).hasAttribute('disabled')).toBe(true)
-    expect(screen.getByText(/adapter belum tersertifikasi/i)).toBeTruthy()
+    expect(screen.getByText(/adapter tidak mendukung/i)).toBeTruthy()
     expect(screen.getByText(/proteksi manajemen belum lengkap/i)).toBeTruthy()
+  })
+
+  it('menjaga dry-run tersedia tetapi memblokir apply pada konfigurasi produksi baru', async () => {
+    vi.mocked(provisioningRolloutApi.getProvisioningRollout).mockResolvedValueOnce({
+      plannerEnabled: true,
+      uiEnabled: true,
+      autoApplyEnabled: false,
+      maxAffectedSubscribers: 1,
+      circuitFailureThreshold: 1,
+      bulkExpansionEnabled: false,
+    })
+    render(<NetworkProvisioningPage />)
+
+    fireEvent.click(await screen.findByRole('tab', { name: /Intent/ }))
+    fireEvent.change(screen.getByLabelText('ID plan aktif'), { target: { value: 'plan-1' } })
+    const dryRun = screen.getByRole('button', { name: 'Pratinjau dry-run' })
+    expect(dryRun.hasAttribute('disabled')).toBe(false)
+    fireEvent.click(dryRun)
+
+    expect(await screen.findByText('ALLOWED')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Terapkan ke produksi' }).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByRole('status').textContent).toContain('Auto-apply produksi dinonaktifkan')
+    expect(provisioningApi.applyProvisioningPlan).not.toHaveBeenCalled()
   })
 
   it('mengaktifkan apply hanya setelah preview, kapabilitas, dan proteksi lulus', async () => {
@@ -195,7 +220,11 @@ describe('NetworkProvisioningPage', () => {
     const executionView = render(<ProvisioningExecutionPanel execution={execution} timeline={[]} canCancel={false} cancelling={false} onCancel={vi.fn()} />)
     expect(screen.queryByRole('button', { name: 'Batalkan eksekusi' })).toBeNull()
     executionView.rerender(<ProvisioningExecutionPanel execution={execution} timeline={[]} canCancel cancelling={false} onCancel={vi.fn()} />)
+    expect(screen.queryByRole('button', { name: 'Batalkan eksekusi' })).toBeNull()
+    executionView.rerender(<ProvisioningExecutionPanel execution={{ ...execution, status: 'QUEUED' }} timeline={[]} canCancel cancelling={false} onCancel={vi.fn()} />)
     expect(screen.getByRole('button', { name: 'Batalkan eksekusi' })).toBeTruthy()
+    executionView.rerender(<ProvisioningExecutionPanel execution={{ ...execution, status: 'SUCCEEDED' }} timeline={[]} canCancel cancelling={false} onCancel={vi.fn()} />)
+    expect(screen.queryByRole('button', { name: 'Batalkan eksekusi' })).toBeNull()
     executionView.unmount()
 
     render(<DriftPanel drift={[{ id: 'drift-2', deviceKind: 'OLT', deviceId: 'olt-1', revision: 1, status: 'BENIGN', recordedAt: '2026-09-03T00:00:00Z' }]} canAdopt={false} adoptingId={null} onAdopt={vi.fn()} />)

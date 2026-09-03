@@ -83,6 +83,8 @@ export interface ExecutionView {
 
 export interface ExecutionTimelineEntry {
   stepOrder: number
+  deviceKind: ProvisioningDeviceKind
+  deviceId: string
   attemptNumber: number
   phase: string
   status: string

@@ -26,6 +26,7 @@ import {
   type ServiceIntentView,
   type VlanPoolView,
 } from '@/api/provisioning'
+import { getProvisioningRollout, type ProvisioningRolloutView } from '@/api/provisioningRollout'
 import { EmptyState } from '@/components/atoms'
 import { PageHeader, Tabs } from '@/components/molecules'
 import { ProvisioningExecutionPanel } from '@/components/organisms/provisioning/ProvisioningExecutionPanel'
@@ -42,6 +43,14 @@ import { useToast } from '@/system'
 type WorkspaceTab = 'topology' | 'profiles' | 'intents' | 'executions' | 'drift' | 'certification'
 
 const EMPTY_TOPOLOGY: ProvisioningTopology = { nodes: [], interfaces: [], links: [] }
+const SAFE_ROLLOUT: ProvisioningRolloutView = {
+  plannerEnabled: true,
+  uiEnabled: true,
+  autoApplyEnabled: false,
+  maxAffectedSubscribers: 1,
+  circuitFailureThreshold: 1,
+  bulkExpansionEnabled: false,
+}
 const WORKSPACE_TABS = [
   { key: 'topology', label: 'Topologi' }, { key: 'profiles', label: 'Profil' },
   { key: 'intents', label: 'Intent' }, { key: 'executions', label: 'Eksekusi' },
@@ -62,6 +71,7 @@ export function NetworkProvisioningPage() {
   const [drift, setDrift] = useState<readonly DriftView[]>([])
   const [certifications, setCertifications] = useState<readonly AdapterCertificationView[]>([])
   const [timeline, setTimeline] = useState<readonly ExecutionTimelineEntry[]>([])
+  const [rollout, setRollout] = useState<ProvisioningRolloutView>(SAFE_ROLLOUT)
   const [adoptingId, setAdoptingId] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
   const [editor, setEditor] = useState<ProvisioningEditor>(null)
@@ -74,13 +84,15 @@ export function NetworkProvisioningPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [nextTopology, nextPools, nextProfiles, nextIntents, nextCapabilities, nextProtections, nextDrift] = await Promise.all([
+      const [nextTopology, nextPools, nextProfiles, nextIntents, nextCapabilities, nextProtections, nextDrift, nextRollout] = await Promise.all([
         getTopology(), listVlanPools(), listSegmentProfiles(), listServiceIntents(),
         permissions.plan ? listProvisioningCapabilities() : Promise.resolve([]),
         listManagementProtections(), permissions.drift ? listProvisioningDrift() : Promise.resolve([]),
+        permissions.plan ? getProvisioningRollout() : Promise.resolve(SAFE_ROLLOUT),
       ])
       setTopology(nextTopology); setPools(nextPools); setProfiles(nextProfiles); setIntents(nextIntents)
       setCapabilities(nextCapabilities); setProtections(nextProtections); setDrift(nextDrift)
+      setRollout(nextRollout)
     } catch (cause) {
       toast.error(messageOf(cause, 'Gagal memuat workspace provisioning'))
     } finally {
@@ -130,6 +142,7 @@ export function NetworkProvisioningPage() {
 
   if (loading) return <Text as="p" className="muted">Memuat workspace provisioning…</Text>
   if (!permissions.view) return <EmptyState title="Akses provisioning ditolak" hint="Minta izin melihat segmen jaringan kepada administrator." />
+  if (!rollout.uiEnabled) return <EmptyState title="Workspace provisioning dinonaktifkan" hint="Planner dan layanan yang sudah aktif tidak diubah." />
 
   return (
     <div className="stack network-provisioning-page">
@@ -137,13 +150,13 @@ export function NetworkProvisioningPage() {
       <section className="workspace-summary" aria-label="Ringkasan workspace">
         <Summary label="Node topologi" value={topology.nodes.length} /><Summary label="Profil segmen" value={profiles.length} /><Summary label="Intent aktif" value={intents.filter((item) => item.value.status === 'ACTIVE').length} /><Summary label="Drift terbuka" value={drift.filter((item) => item.status !== 'NONE').length} />
       </section>
-      <Tabs tabs={WORKSPACE_TABS} active={tab} onChange={setTab} />
+      <div className="workspace-tabs"><Tabs tabs={WORKSPACE_TABS} active={tab} onChange={setTab} /></div>
       {permissions.manage && (tab === 'topology' || tab === 'profiles' || tab === 'intents') && (
         <div className="azure-commandbar"><button type="button" className="cmd-btn cmd-primary" onClick={() => setEditor(tab)}>+ {tab === 'topology' ? 'Tambah node' : tab === 'profiles' ? 'Tambah profil' : 'Buat intent'}</button></div>
       )}
       {tab === 'topology' && <TopologyPanel topology={topology} />}
       {tab === 'profiles' && <ProfilesPanel pools={pools} profiles={profiles} />}
-      {tab === 'intents' && <div className="stack"><IntentsPanel intents={intents} profiles={profiles} /><ProvisioningPreviewPanel planId={draft.draft.planId} preview={draft.preview} capabilities={capabilities} readiness={readiness} loading={false} applying={apply.applying} canPreview={permissions.plan} canApply={permissions.apply && permissions.plan} onPlanIdChange={(planId) => draft.setDraft({ planId })} onPreview={() => void draft.previewPlan(draft.draft.planId, 'DRY_RUN')} onApply={() => { if (draft.preview) void apply.apply(draft.preview.plan.id, draft.preview.plan.revision) }} /></div>}
+      {tab === 'intents' && <div className="stack"><IntentsPanel intents={intents} profiles={profiles} /><ProvisioningPreviewPanel planId={draft.draft.planId} preview={draft.preview} capabilities={capabilities} readiness={readiness} loading={false} applying={apply.applying} canPreview={permissions.plan && rollout.plannerEnabled} canApply={permissions.apply && permissions.plan && rollout.autoApplyEnabled} autoApplyEnabled={rollout.autoApplyEnabled} onPlanIdChange={(planId) => draft.setDraft({ planId })} onPreview={() => void draft.previewPlan(draft.draft.planId, 'DRY_RUN')} onApply={() => { if (draft.preview) void apply.apply(draft.preview.plan.id, draft.preview.plan.revision) }} /></div>}
       {tab === 'executions' && <ProvisioningExecutionPanel execution={execution} timeline={timeline} canCancel={permissions.cancel} cancelling={cancelling} onCancel={() => void cancel()} />}
       {tab === 'drift' && <DriftPanel drift={drift} canAdopt={permissions.adopt} adoptingId={adoptingId} onAdopt={(item) => void adopt(item)} />}
       {tab === 'certification' && <CertificationPanel tenantId={draft.preview?.plan.tenantId ?? null} capabilities={capabilities} certifications={certifications} canCertify={permissions.certification} onCertify={async (tenantId, capability, validUntil) => { const created = await certifyAdapter(tenantId, { deviceKind: capability.deviceKind, deviceId: capability.deviceId, vendor: capability.vendor, model: capability.model, firmware: capability.firmware, transport: capability.transport, operationClass: capability.operationClass, validUntil }); setCertifications((current) => [...current, created]); toast.success('Adapter tersertifikasi') }} onRevoke={async (certification) => { const revoked = await revokeAdapterCertification(certification.tenantId, certification.id, certification.revision); setCertifications((current) => current.map((item) => item.id === revoked.id ? revoked : item)); toast.success('Sertifikasi dicabut') }} onError={(cause) => toast.error(messageOf(cause, 'Sertifikasi adapter ditolak'))} />}
