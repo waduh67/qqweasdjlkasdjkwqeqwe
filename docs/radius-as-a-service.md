@@ -217,6 +217,17 @@ radius-db: service_started` (ordering saja, bukan healthy — jaga resilience bo
 
 ## Alur (ringkas)
 
+Provisioning InterVLAN memisahkan dua batas: server memiliki data-plane RADIUS
+(`radcheck`, `radusergroup`, `radreply`, dan `radacct`), sedangkan collector hanya mengantar
+perintah perangkat ternormalisasi. Plan tidak membawa password, shared secret, atau konfigurasi
+mentah; collector menyelesaikan referensi kredensial secara lokal.
+
+Aktivasi RADIUS baru dilakukan setelah jalur OLT/transit lolos verifikasi. Suspend mengubah
+otorisasi tanpa membongkar transport. Decommission memblokir login baru, meminta bukti nol
+sesi aktif setelah DAE, lalu membongkar resource dari hilir ke hulu. Gagal verifikasi membuka
+circuit dan menghentikan langkah berikutnya. Kegagalan kompensasi berakhir di
+`MANUAL_RECONCILIATION`, bukan dianggap sukses. Kredensial DB RADIUS tetap rahasia platform.
+
 **Tenant (sekali per router):**
 
 1. (opsional) Generate akun VPN, tempel di Mikrotik → dapat overlay IP tetap (kalau NAT).

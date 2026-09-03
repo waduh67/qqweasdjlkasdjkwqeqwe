@@ -16,6 +16,13 @@ FreeRADIUS pusat **mau menerima** permintaan auth dari router itu.
 Dalam istilah RADIUS: **router-mu = RADIUS _client_**, **FreeRADIUS pusat = RADIUS
 _server_**. Client menembak ke server, bukan sebaliknya.
 
+Pada provisioning InterVLAN, transport OLT/transit harus terverifikasi sebelum binding BRAS
+dan aktivasi RADIUS. Suspend mempertahankan VLAN transport dan memindahkan akun ke isolir.
+Penghapusan memblokir sesi baru, menunggu `radacct` otoritatif menjadi nol, lalu membongkar
+OLT, transit, dan resource BRAS yang reference-count-nya nol. Kegagalan verifikasi atau
+rollback tidak boleh mencabut layanan PPPoE yang masih bekerja; statusnya masuk rekonsiliasi
+manual.
+
 ```
 [ Router BRAS-mu (client) ]  ── auth/accounting (UDP keluar) ──▶  [ FreeRADIUS pusat (server, punya platform) ]
         ▲                                                                    │
