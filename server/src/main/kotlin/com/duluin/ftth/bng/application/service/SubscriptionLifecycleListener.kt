@@ -1,15 +1,11 @@
 package com.duluin.ftth.bng.application.service
 
-import com.duluin.ftth.common.tenant.TenantContext
-import com.duluin.ftth.customer.SubscriptionActivated
-import com.duluin.ftth.customer.SubscriptionIsolated
 import com.duluin.ftth.customer.SubscriptionPlanChanged
-import com.duluin.ftth.customer.SubscriptionTerminated
+import com.duluin.ftth.common.tenant.TenantContext
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
-import java.util.UUID
 
 /**
  * Menautkan daur hidup langganan (module customer) ke identitas jaringan (module bng).
@@ -25,19 +21,6 @@ class SubscriptionLifecycleListener(
     private val lifecycle: SubscriberAccessLifecycle,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
-
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    fun on(event: SubscriptionActivated) =
-        sync(event.tenantId, "aktivasi") { lifecycle.onActivated(event.subscriptionId) }
-
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    fun on(event: SubscriptionIsolated) =
-        sync(event.tenantId, "isolir") { lifecycle.onIsolated(event.subscriptionId) }
-
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    fun on(event: SubscriptionTerminated) =
-        sync(event.tenantId, "terminasi") { lifecycle.onTerminated(event.subscriptionId) }
-
     /**
      * Langganan tanpa paket katalog (paket ad-hoc) dilewati: tak ada nilai jaringan yang bisa
      * diturunkan ke RADIUS, dan menebak-nebak lebih buruk daripada membiarkan apa adanya.
@@ -45,14 +28,10 @@ class SubscriptionLifecycleListener(
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     fun on(event: SubscriptionPlanChanged) {
         val planId = event.planId ?: return
-        sync(event.tenantId, "ganti paket") { lifecycle.onPlanChanged(event.subscriptionId, planId) }
-    }
-
-    private fun sync(tenantId: UUID, what: String, block: () -> Unit) {
         try {
-            TenantContext.runAs(tenantId) { block() }
-        } catch (ex: Exception) {
-            log.warn("Sinkronisasi akun jaringan gagal saat {} untuk tenant {}", what, tenantId, ex)
+            TenantContext.runAs(event.tenantId) { lifecycle.onPlanChanged(event.subscriptionId, planId) }
+        } catch (exception: Exception) {
+            log.warn("Sinkronisasi paket akun jaringan gagal untuk tenant {}", event.tenantId, exception)
         }
     }
 }
