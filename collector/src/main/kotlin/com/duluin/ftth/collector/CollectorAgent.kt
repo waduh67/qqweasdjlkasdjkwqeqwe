@@ -3,6 +3,7 @@ package com.duluin.ftth.collector
 import com.duluin.ftth.collector.adapter.BngAdapter
 import com.duluin.ftth.collector.adapter.BngAdapterRegistry
 import com.duluin.ftth.collector.adapter.ProvisioningAdapterRegistry
+import com.duluin.ftth.collector.adapter.OltProvisioningAdapterRegistry
 import com.duluin.ftth.snmp.AdapterRegistry
 import com.duluin.ftth.snmp.ProbeResult
 import com.duluin.ftth.contract.BngActionCommand
@@ -54,6 +55,7 @@ class CollectorAgent(
      */
     private val bngRegistry: BngAdapterRegistry? = null,
     private val provisioningRegistry: ProvisioningAdapterRegistry? = null,
+    private val oltProvisioningRegistry: OltProvisioningAdapterRegistry? = null,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val running = AtomicBoolean(true)
@@ -223,7 +225,7 @@ class CollectorAgent(
     }
 
     private fun processProvisioning(config: CollectorConfig) {
-        if (provisioningRegistry == null) {
+        if (provisioningRegistry == null && oltProvisioningRegistry == null) {
             synchronized(provisioningLock) {
                 pendingProvisioningCommands = (pendingProvisioningCommands + config.provisioningCommands)
                     .distinctBy(ProvisioningPlanStepCommand::deliveryKey)
@@ -235,20 +237,29 @@ class CollectorAgent(
             val pending = synchronized(provisioningLock) { pendingProvisioningCommandsByKey[command.deliveryKey()] }
             val collision = deliveries.any { it != command } || (pending != null && pending != command)
             if (pending == command && !collision) return@forEach
-            val target = config.nasTargets.singleOrNull { it.nasId == command.target.deviceId }
-            val adapter = target?.let { provisioningRegistry.forVendor(it.vendor) }
+            val nasTarget = config.nasTargets.singleOrNull { it.nasId == command.target.deviceId }
+            val oltTarget = config.targets.singleOrNull { it.oltId == command.target.deviceId }
+            val nasAdapter = nasTarget?.let { provisioningRegistry?.forVendor(it.vendor) }
+            val oltAdapter = oltTarget?.let { oltProvisioningRegistry?.forVendor(it.vendor) }
             val result = if (collision) {
                 failedProvisioning(command, ProvisioningErrorCode.STALE_PRECONDITION)
-            } else if (target == null || adapter == null) {
-                unsupportedProvisioning(command)
+            } else if (nasTarget != null && nasAdapter != null) {
+                nasAdapter.execute(nasTarget, command)
+            } else if (oltTarget != null && oltAdapter != null) {
+                oltAdapter.execute(oltTarget, command)
             } else {
-                adapter.execute(target, command)
+                unsupportedProvisioning(command)
             }
             synchronized(provisioningLock) {
                 pendingProvisioningResults = pendingProvisioningResults.filterNot { it.deliveryKey() == result.deliveryKey() } + result
                 pendingProvisioningCommandsByKey = pendingProvisioningCommandsByKey + (command.deliveryKey() to command)
-                if (target != null && adapter != null && pendingDeviceReports.none { it.targetId == target.nasId }) {
-                    pendingDeviceReports = pendingDeviceReports + adapter.capabilityReport(target)
+                val report = when {
+                    nasTarget != null && nasAdapter != null -> nasAdapter.capabilityReport(nasTarget)
+                    oltTarget != null && oltAdapter != null -> oltAdapter.capabilityReport(oltTarget)
+                    else -> null
+                }
+                if (report != null && pendingDeviceReports.none { it.targetId == report.targetId }) {
+                    pendingDeviceReports = pendingDeviceReports + report
                 }
             }
         }

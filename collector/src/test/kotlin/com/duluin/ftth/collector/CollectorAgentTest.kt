@@ -3,7 +3,9 @@ package com.duluin.ftth.collector
 import com.duluin.ftth.collector.adapter.BngAdapterRegistry
 import com.duluin.ftth.collector.adapter.ProvisioningAdapter
 import com.duluin.ftth.collector.adapter.ProvisioningAdapterRegistry
+import com.duluin.ftth.collector.adapter.OltProvisioningAdapterRegistry
 import com.duluin.ftth.collector.adapter.SimulatorBngAdapter
+import com.duluin.ftth.collector.adapter.hsgq.ProvisionalHsgqProvisioningAdapter
 import com.duluin.ftth.snmp.AdapterRegistry
 import com.duluin.ftth.contract.BngActionCommand
 import com.duluin.ftth.contract.BngActionKind
@@ -16,6 +18,8 @@ import com.duluin.ftth.contract.DeviceFingerprint
 import com.duluin.ftth.contract.IngestResult
 import com.duluin.ftth.contract.MetricBatch
 import com.duluin.ftth.contract.NasTarget
+import com.duluin.ftth.contract.OltManagementTransport
+import com.duluin.ftth.contract.OltTarget
 import com.duluin.ftth.contract.ProvisioningApplyResult
 import com.duluin.ftth.contract.ProvisioningCommandPhase
 import com.duluin.ftth.contract.ProvisioningErrorCode
@@ -25,7 +29,9 @@ import com.duluin.ftth.contract.ProvisioningAcknowledgement
 import com.duluin.ftth.contract.ProvisioningStepResult
 import com.duluin.ftth.contract.ProvisioningTarget
 import com.duluin.ftth.contract.ProvisioningVerificationObservation
+import java.time.Clock
 import java.time.Instant
+import java.time.ZoneOffset
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -259,6 +265,44 @@ class CollectorAgentTest {
     }
 
     @Test
+    fun `HSGQ OLT dispatch is registered provisional and fails closed`() {
+        val command = provisioningCommand("step-hsgq").copy(
+            operationClass = "ENSURE_ACCESS_PORT",
+            target = ProvisioningTarget("olt-1", "OLT", "10.0.0.10", "SSH"),
+        )
+        val target = OltTarget(
+            oltId = "olt-1",
+            oltCode = "OLT-HSGQ",
+            vendor = "HSGQ",
+            host = "10.0.0.10",
+            snmpCommunity = null,
+            model = "HSGQ-E04I",
+            firmware = "V1.0.0",
+            managementTransport = OltManagementTransport.SSH,
+        )
+        val config = FakeServerClient.IDLE.copy(targets = listOf(target), provisioningCommands = listOf(command))
+        val client = FakeServerClient(ArrayDeque(listOf(config, FakeServerClient.IDLE)))
+        val agent = CollectorAgent(
+            client = client,
+            registry = AdapterRegistry(emptyList()),
+            agentVersion = "test-1.0",
+            sleeper = {},
+            clock = { Instant.parse("2026-07-26T00:00:00Z") },
+            oltProvisioningRegistry = OltProvisioningAdapterRegistry(
+                listOf(ProvisionalHsgqProvisioningAdapter(Clock.fixed(Instant.parse("2026-07-26T00:00:00Z"), ZoneOffset.UTC))),
+            ),
+        )
+
+        agent.runOnce()
+
+        val result = client.heartbeats[1].provisioningResults.single()
+        assertEquals(ProvisioningErrorCode.UNCERTIFIED_FINGERPRINT, result.errorCode)
+        val report = client.heartbeats[1].deviceReports.single()
+        assertEquals(setOf("CERTIFICATION_PROVISIONAL"), report.capabilities)
+        assertTrue(report.operationClasses.isEmpty())
+    }
+
+    @Test
     fun `interrupted one shot flush retains result for the next invocation`() {
         val command = provisioningCommand("step-interrupted")
         val target = NasTarget("switch-1", "router", "MIKROTIK", "router.invalid", "ROUTER_OS")
@@ -440,7 +484,7 @@ class CollectorAgentTest {
         val ack = client.heartbeats[1].actionResults.single()
         assertEquals("z9", ack.actionId)
         assertTrue(!ack.success, "perintah tanpa BRAS yang cocok harus ACK gagal")
-        assertTrue(ack.detail?.contains("nas-hantu") == true, "detail harus menerangkan BRAS yang hilang")
+        assertEquals(true, ack.detail?.contains("nas-hantu"), "detail harus menerangkan BRAS yang hilang")
     }
 
     private class RecordingProvisioningAdapter : ProvisioningAdapter {
