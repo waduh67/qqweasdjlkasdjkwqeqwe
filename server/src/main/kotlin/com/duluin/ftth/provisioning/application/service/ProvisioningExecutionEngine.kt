@@ -19,6 +19,7 @@ import com.duluin.ftth.provisioning.domain.model.ExecutionStatus
 import com.duluin.ftth.provisioning.domain.model.ExecutionStep
 import com.duluin.ftth.provisioning.domain.model.ExecutionStepStatus
 import com.duluin.ftth.provisioning.domain.model.NormalizedDeviceState
+import com.duluin.ftth.provisioning.domain.model.NormalizedStateHash
 import com.duluin.ftth.provisioning.domain.model.PlanStatus
 import com.duluin.ftth.provisioning.domain.model.ProvisionExecution
 import com.duluin.ftth.provisioning.domain.model.ProvisionOperation
@@ -104,6 +105,7 @@ class ProvisioningExecutionEngine(
     private val snapshots: StepSnapshotRepository,
     private val circuits: DeviceCircuitBreakerRepository,
     private val gateway: ProvisioningDeviceGateway,
+    private val deviceIoExecutor: DeviceIoExecutor,
     private val safetyGate: ProvisioningSafetyGate,
     private val clock: Clock,
     private val sleeper: RetrySleeper,
@@ -232,14 +234,15 @@ class ProvisioningExecutionEngine(
         val attempt = attempts.findById(attemptId) ?: return false
         val completedAt = clock.instant()
         if (status == AttemptStatus.SUCCEEDED && !attempt.deadline.isAfter(completedAt)) {
-            return attempts.completeIfDispatched(
+            return attempts.completeAcknowledgementIfCurrentLease(
                 attemptId,
                 AttemptStatus.TRANSIENT_FAILURE,
                 "DEADLINE_EXCEEDED",
                 completedAt,
+                completedAt,
             )
         }
-        return attempts.completeIfDispatched(attemptId, status, errorCode, completedAt)
+        return attempts.completeAcknowledgementIfCurrentLease(attemptId, status, errorCode, completedAt, completedAt)
     }
 
     private fun ensureExecutionSteps(execution: ProvisionExecution, plan: ProvisionPlan): Map<UUID, ExecutionStep> {
@@ -268,7 +271,7 @@ class ProvisioningExecutionEngine(
                 state,
                 lease,
                 ExecutionPhase.PREFLIGHT,
-                operation = { gateway.observe(it) },
+                operation = { gateway.observe(it).verifiedHash() },
                 onSuccess = { observation ->
                 snapshots.save(
                     StepSnapshot.capture(
@@ -311,7 +314,7 @@ class ProvisioningExecutionEngine(
                 state,
                 lease,
                 ExecutionPhase.PREFLIGHT,
-                operation = { gateway.observe(it) },
+                operation = { gateway.observe(it).verifiedHash() },
                 onSuccess = { observation ->
                 if (observation.matchesDesired) {
                     attempts.findByExecutionStepId(state.id).lastOrNull {
@@ -355,7 +358,7 @@ class ProvisioningExecutionEngine(
                 state,
                 lease,
                 ExecutionPhase.APPLY,
-                operation = { gateway.apply(it) },
+                operation = { gateway.apply(it).verifiedHash() },
                 onSuccess = { applied ->
                     state.recordApplied(applied.stateHash)
                     executionSteps.save(state)
@@ -377,7 +380,7 @@ class ProvisioningExecutionEngine(
                 state,
                 lease,
                 ExecutionPhase.VERIFY,
-                operation = { gateway.observe(it) },
+                operation = { gateway.observe(it).verifiedHash() },
                 onSuccess = { observation ->
                 snapshots.save(
                     StepSnapshot.capture(
@@ -429,7 +432,7 @@ class ProvisioningExecutionEngine(
         executionSteps.save(state)
     }
 
-    private fun <T> executeIo(
+    private fun <T : Any> executeIo(
         execution: ProvisionExecution,
         plan: ProvisionPlan,
         planStep: ProvisionStep,
@@ -511,7 +514,21 @@ class ProvisioningExecutionEngine(
                 planStep.attributes,
             )
             try {
-                val result = operation(work)
+                val result = deviceIoExecutor.execute(
+                    deadline,
+                    renewalInterval = policy.leaseDuration.dividedBy(3),
+                    renewLease = {
+                        leases.validateAndRenew(
+                            execution.tenantId,
+                            planStep.device,
+                            execution.id,
+                            activeLease.ownerId,
+                            activeLease.fencingToken,
+                            clock.instant(),
+                            policy.leaseDuration,
+                        ) != null
+                    },
+                ) { operation(work) }
                 val returnedAt = clock.instant()
                 val late = !deadline.isAfter(returnedAt)
                 val failure = StepFailure("DEADLINE_EXCEEDED", true, true, true)
@@ -549,6 +566,31 @@ class ProvisioningExecutionEngine(
                 if (!committed) return IoResult.failure(StepFailure("LEASE_LOST_OR_ACK_COMPLETED", false, false, false))
                 if (late) return IoResult.failure(failure)
                 return IoResult.success(result)
+            } catch (_: DeviceIoLeaseLostException) {
+                return IoResult.failure(StepFailure("LEASE_LOST", false, false, false))
+            } catch (_: DeviceIoDeadlineExceededException) {
+                val returnedAt = clock.instant()
+                val deadlineFailure = StepFailure("DEADLINE_EXCEEDED", true, true, true)
+                val committed = fencedWrites.commitIfLeaseValid(
+                    execution.tenantId,
+                    planStep.device,
+                    execution.id,
+                    activeLease.ownerId,
+                    activeLease.fencingToken,
+                    returnedAt,
+                    policy.leaseDuration,
+                ) {
+                    if (!attempts.completeIfDispatched(
+                            attempt.id, AttemptStatus.TRANSIENT_FAILURE, "DEADLINE_EXCEEDED", returnedAt,
+                        )
+                    ) return@commitIfLeaseValid false
+                    recordCircuitFailure(planStep.device, execution.tenantId)
+                    onTerminalFailure(deadlineFailure)
+                    true
+                }
+                return IoResult.failure(
+                    if (committed) deadlineFailure else StepFailure("LEASE_LOST_OR_ACK_COMPLETED", false, false, false),
+                )
             } catch (failure: DeviceOperationException) {
                 val returnedAt = clock.instant()
                 val late = !deadline.isAfter(returnedAt)
@@ -645,7 +687,7 @@ class ProvisioningExecutionEngine(
                     state,
                     lease,
                     ExecutionPhase.ROLLBACK_CHECK,
-                    operation = { gateway.observe(it) },
+                    operation = { gateway.observe(it).verifiedHash() },
                     onSuccess = { current ->
                         snapshots.save(
                             StepSnapshot.capture(
@@ -695,7 +737,7 @@ class ProvisioningExecutionEngine(
                     state,
                     lease,
                     ExecutionPhase.COMPENSATE,
-                    operation = { gateway.compensate(it, before.state) },
+                    operation = { gateway.compensate(it, before.state).verifiedHash() },
                 )
                 compensation.failure?.let {
                     if (!it.persistState) return
@@ -710,7 +752,7 @@ class ProvisioningExecutionEngine(
                     state,
                     lease,
                     ExecutionPhase.ROLLBACK_VERIFY,
-                    operation = { gateway.observe(it) },
+                    operation = { gateway.observe(it).verifiedHash() },
                     onSuccess = { verification ->
                         snapshots.save(
                             StepSnapshot.capture(
@@ -735,6 +777,8 @@ class ProvisioningExecutionEngine(
                     return manual(execution, it.code)
                 }
                 if (rollbackMismatch) return manual(execution, "ROLLBACK_VERIFICATION_MISMATCH")
+            } catch (denied: ValidationException) {
+                return manual(execution, denied.message ?: "ROLLBACK_SAFETY_POLICY_REJECTED")
             } catch (crash: SimulatedProcessCrash) {
                 intentionalCrash = true
                 throw crash
@@ -770,6 +814,20 @@ class ProvisioningExecutionEngine(
 
     private fun idempotencyKey(executionId: UUID, stepId: UUID, phase: ExecutionPhase): String =
         "$executionId:$stepId:$phase"
+
+    private fun DeviceStateObservation.verifiedHash(): DeviceStateObservation {
+        if (stateHash != NormalizedStateHash.sha256(state)) {
+            throw DeviceOperationException("STATE_HASH_MISMATCH", DeviceFailureKind.VERIFICATION_MISMATCH)
+        }
+        return this
+    }
+
+    private fun DeviceApplyResult.verifiedHash(): DeviceApplyResult {
+        if (stateHash != NormalizedStateHash.sha256(state)) {
+            throw DeviceOperationException("STATE_HASH_MISMATCH", DeviceFailureKind.VERIFICATION_MISMATCH)
+        }
+        return this
+    }
 
     private fun ExecutionStatus.isTerminal(): Boolean = this in setOf(
         ExecutionStatus.SUCCEEDED,

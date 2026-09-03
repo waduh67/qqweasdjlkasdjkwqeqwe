@@ -13,6 +13,7 @@ import com.duluin.ftth.provisioning.application.port.outbound.StepSnapshotReposi
 import com.duluin.ftth.provisioning.application.service.DeviceApplyResult
 import com.duluin.ftth.provisioning.application.service.DeviceFailureKind
 import com.duluin.ftth.provisioning.application.service.DeviceOperationException
+import com.duluin.ftth.provisioning.application.service.DeviceIoExecutor
 import com.duluin.ftth.provisioning.application.service.DeviceStateObservation
 import com.duluin.ftth.provisioning.application.service.DispatchableProvisioningWork
 import com.duluin.ftth.provisioning.application.service.ExecutionPolicy
@@ -42,6 +43,7 @@ import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
 import com.duluin.ftth.provisioning.domain.model.ProvisionStep
 import com.duluin.ftth.provisioning.domain.model.StepAttempt
 import com.duluin.ftth.provisioning.domain.model.StepSnapshot
+import com.duluin.ftth.provisioning.domain.model.StepSnapshotKind
 import com.duluin.ftth.provisioning.domain.policy.ExecutionMode
 import com.duluin.ftth.provisioning.domain.policy.PolicyCode
 import com.duluin.ftth.provisioning.domain.policy.PolicyDecision
@@ -154,9 +156,26 @@ class ProvisioningExecutionEngineTest {
         ).isEqualTo(AttemptStatus.DISPATCHED)
 
         fixture.gateway.afterApply = null
-        fixture.engine().run(execution.id, "worker-b")
+        fixture.clock.advance(Duration.ofSeconds(31))
+        fixture.engine().run(execution.id, "worker-c")
         assertThat(fixture.executions.findById(execution.id)!!.status).isEqualTo(ExecutionStatus.SUCCEEDED)
         assertThat(fixture.gateway.applyCount.getValue(fixture.bras)).isEqualTo(1)
+    }
+
+    @Test
+    fun `same execution and owner cannot reenter an active device lease`() {
+        val fixture = Fixture()
+        val execution = fixture.engine.enqueue(fixture.plan, "same-owner")
+        val first = fixture.leases.acquire(
+            fixture.tenantId, fixture.bras, execution.id, "worker-a", fixture.clock.instant(), Duration.ofSeconds(30),
+        )
+
+        val reentered = fixture.leases.acquire(
+            fixture.tenantId, fixture.bras, execution.id, "worker-a", fixture.clock.instant(), Duration.ofSeconds(30),
+        )
+
+        assertThat(first).isNotNull
+        assertThat(reentered).isNull()
     }
 
     @Test
@@ -279,6 +298,14 @@ class ProvisioningExecutionEngineTest {
     fun `crash before dispatch resumes to success and duplicate acknowledgement is ignored`() {
         val fixture = Fixture()
         val execution = fixture.engine.enqueue(fixture.plan, "create")
+        fixture.plan.steps.forEach { planStep ->
+            fixture.steps.save(
+                ExecutionStep.pending(
+                    fixture.tenantId, execution.id, planStep.id, planStep.order, planStep.device,
+                ),
+            )
+        }
+        assertThat(fixture.attempts.values).isEmpty()
 
         val restarted = fixture.engine()
         restarted.run(execution.id, "worker-a")
@@ -334,6 +361,24 @@ class ProvisioningExecutionEngineTest {
     }
 
     @Test
+    fun `acknowledgement from an expired fencing token is rejected after takeover`() {
+        val fixture = Fixture()
+        val execution = fixture.engine.enqueue(fixture.plan, "stale-ack")
+        fixture.gateway.crashAfterApplyFor += fixture.bras
+        assertThatThrownBy { fixture.engine.run(execution.id, "worker-a") }
+            .isInstanceOf(SimulatedProcessCrash::class.java)
+        val step = fixture.steps.findByExecutionId(execution.id).first()
+        val staleAttempt = fixture.attempts.findByExecutionStepId(step.id).first { it.phase == ExecutionPhase.APPLY }
+        fixture.clock.advance(Duration.ofMinutes(1))
+        val takeover = fixture.leases.acquire(
+            fixture.tenantId, fixture.bras, execution.id, "worker-b", fixture.clock.instant(), Duration.ofSeconds(30),
+        )
+
+        assertThat(takeover!!.fencingToken).isGreaterThan(staleAttempt.fencingToken)
+        assertThat(fixture.engine.ingestAcknowledgement(staleAttempt.id, AttemptStatus.SUCCEEDED, null)).isFalse()
+    }
+
+    @Test
     fun `stale precondition never dispatches a blind write`() {
         val fixture = Fixture()
         fixture.gateway.drift(fixture.bras)
@@ -363,6 +408,47 @@ class ProvisioningExecutionEngineTest {
                 .count { it.phase == ExecutionPhase.APPLY },
         )
             .isEqualTo(1)
+    }
+
+    @Test
+    fun `gateway hash that does not match normalized apply state is rejected before verification`() {
+        val fixture = Fixture()
+        fixture.gateway.corruptApplyHashFor += fixture.bras
+        val execution = fixture.engine.enqueue(fixture.plan, "corrupt-hash")
+
+        fixture.engine.run(execution.id, "worker")
+
+        assertThat(fixture.executions.findById(execution.id)!!.status)
+            .isEqualTo(ExecutionStatus.MANUAL_RECONCILIATION)
+        assertThat(fixture.executions.findById(execution.id)!!.detail).isEqualTo("STATE_HASH_MISMATCH")
+    }
+
+    @Test
+    fun `validation exception from gateway is terminal and is never retried`() {
+        val fixture = Fixture()
+        fixture.gateway.validationFailureFor += fixture.bras
+        val execution = fixture.engine.enqueue(fixture.plan, "validation-error")
+
+        fixture.engine.run(execution.id, "worker")
+
+        assertThat(fixture.executions.findById(execution.id)!!.status).isEqualTo(ExecutionStatus.FAILED)
+        assertThat(fixture.gateway.applyCount.getValue(fixture.bras)).isEqualTo(1)
+    }
+
+    @Test
+    fun `successful execution persists normalized before and after snapshots with recomputed hashes`() {
+        val fixture = Fixture()
+        val execution = fixture.engine.enqueue(fixture.plan, "snapshots")
+
+        fixture.engine.run(execution.id, "worker")
+
+        fixture.steps.findByExecutionId(execution.id).forEach { step ->
+            val stored = fixture.snapshots.findByExecutionStepId(step.id)
+            assertThat(stored.map { it.kind }).contains(StepSnapshotKind.BEFORE, StepSnapshotKind.AFTER)
+            assertThat(stored).allSatisfy { snapshot ->
+                assertThat(snapshot.stateHash).isEqualTo(NormalizedStateHash.sha256(snapshot.state))
+            }
+        }
     }
 
     @Test
@@ -405,17 +491,64 @@ class ProvisioningExecutionEngineTest {
     }
 
     @Test
+    fun `transient failures open circuit at threshold and successful probe resets it`() {
+        val failing = Fixture(policy = ExecutionPolicy(maxAttempts = 3, circuitFailureThreshold = 2))
+        failing.gateway.applyFailures[failing.bras] = ArrayDeque(
+            List(2) { DeviceOperationException("TIMEOUT", DeviceFailureKind.TRANSIENT) },
+        )
+        val failedExecution = failing.engine.enqueue(failing.plan, "open-at-threshold")
+
+        failing.engine.run(failedExecution.id, "worker")
+
+        assertThat(failing.gateway.applyCount.getValue(failing.bras)).isEqualTo(2)
+        assertThat(failing.circuits.findByDevice(failing.bras)!!.isOpen(failing.clock.instant())).isTrue()
+
+        val successful = Fixture(policy = ExecutionPolicy(circuitFailureThreshold = 3))
+        successful.circuits.save(
+            DeviceCircuitBreaker.closed(successful.tenantId, successful.bras)
+                .recordTransientFailure(successful.clock.instant(), 3, Duration.ofMinutes(1)),
+        )
+        val successfulExecution = successful.engine.enqueue(successful.plan, "reset-circuit")
+        successful.engine.run(successfulExecution.id, "worker")
+
+        assertThat(successful.circuits.findByDevice(successful.bras)!!.failureCount).isZero()
+    }
+
+    @Test
+    fun `exponential retry backoff is capped by policy maximum`() {
+        val fixture = Fixture(
+            policy = ExecutionPolicy(
+                maxAttempts = 4,
+                initialBackoff = Duration.ofSeconds(2),
+                maximumBackoff = Duration.ofSeconds(3),
+                circuitFailureThreshold = 10,
+            ),
+        )
+        fixture.gateway.applyFailures[fixture.bras] = ArrayDeque(
+            List(4) { DeviceOperationException("TIMEOUT", DeviceFailureKind.TRANSIENT) },
+        )
+        val execution = fixture.engine.enqueue(fixture.plan, "capped-backoff")
+
+        fixture.engine.run(execution.id, "worker")
+
+        assertThat(fixture.sleeper.delays).containsExactly(
+            Duration.ofSeconds(2), Duration.ofSeconds(3), Duration.ofSeconds(3),
+        )
+    }
+
+    @Test
     fun `completed verified steps compensate in reverse and finish rolled back`() {
         val fixture = Fixture()
+        val plan = fixture.multiStepPlan()
         fixture.gateway.applyFailures[fixture.olt] = ArrayDeque(
             listOf(DeviceOperationException("REJECTED", DeviceFailureKind.PERMANENT)),
         )
-        val execution = fixture.engine.enqueue(fixture.plan, "rollback")
+        val execution = fixture.engine.enqueue(plan, "rollback")
 
         fixture.engine.run(execution.id, "worker")
 
         assertThat(fixture.executions.findById(execution.id)!!.status).isEqualTo(ExecutionStatus.ROLLED_BACK)
-        assertThat(fixture.gateway.compensated).containsExactly(fixture.bras)
+        assertThat(fixture.gateway.compensated).containsExactly(fixture.transitB, fixture.transitA, fixture.bras)
         assertThat(fixture.steps.findByExecutionId(execution.id).first().status).isEqualTo(ExecutionStepStatus.COMPENSATED)
     }
 
@@ -436,10 +569,29 @@ class ProvisioningExecutionEngineTest {
         assertThat(fixture.gateway.compensated).isEmpty()
     }
 
+    @Test
+    fun `rollback safety denial terminates in manual reconciliation`() {
+        val fixture = Fixture()
+        fixture.gateway.applyFailures[fixture.olt] = ArrayDeque(
+            listOf(DeviceOperationException("REJECTED", DeviceFailureKind.PERMANENT)),
+        )
+        fixture.safety.rollbackDecision = PolicyDecision(false, PolicyCode.PROTECTED_MANAGEMENT_RESOURCE)
+        val execution = fixture.engine.enqueue(fixture.plan, "rollback-safety-denied")
+
+        fixture.engine.run(execution.id, "worker")
+
+        assertThat(fixture.executions.findById(execution.id)!!.status)
+            .isEqualTo(ExecutionStatus.MANUAL_RECONCILIATION)
+        assertThat(fixture.executions.findById(execution.id)!!.detail)
+            .isEqualTo(PolicyCode.PROTECTED_MANAGEMENT_RESOURCE.name)
+    }
+
     private class Fixture(val policy: ExecutionPolicy = ExecutionPolicy()) {
         val tenantId: UUID = UuidV7.generate()
         val intentId: UUID = UuidV7.generate()
         val bras = DeviceReference(DeviceKind.BRAS, UuidV7.generate())
+        val transitA = DeviceReference(DeviceKind.SWITCH, UuidV7.generate())
+        val transitB = DeviceReference(DeviceKind.SWITCH, UuidV7.generate())
         val olt = DeviceReference(DeviceKind.OLT, UuidV7.generate())
         val clock = MutableClock(Instant.parse("2026-01-02T03:04:05Z"))
         val sleeper = AdvancingSleeper(clock)
@@ -448,15 +600,28 @@ class ProvisioningExecutionEngineTest {
         val leases = MemoryLeaseRepository()
         val fencedWrites = MemoryFencedExecutionRepository(leases)
         val steps = MemoryStepRepository()
-        val attempts = MemoryAttemptRepository()
+        val attempts = MemoryAttemptRepository { attempt ->
+            val step = steps.values.values.firstOrNull { it.id == attempt.executionStepId }
+            step != null && leases.isCurrent(step.device, step.executionId, attempt.fencingToken, clock.instant())
+        }
         val snapshots = MemorySnapshotRepository()
         val circuits = MemoryCircuitRepository()
         val initialStates = mapOf(
             bras to NormalizedDeviceState.of(NormalizedField.CONFIGURED to NormalizedValue.flag(false)),
+            transitA to NormalizedDeviceState.of(NormalizedField.CONFIGURED to NormalizedValue.flag(false)),
+            transitB to NormalizedDeviceState.of(NormalizedField.CONFIGURED to NormalizedValue.flag(false)),
             olt to NormalizedDeviceState.of(NormalizedField.CONFIGURED to NormalizedValue.flag(false)),
         )
         val desiredStates = mapOf(
             bras to NormalizedDeviceState.of(
+                NormalizedField.CONFIGURED to NormalizedValue.flag(true),
+                NormalizedField.VLAN_ID to NormalizedValue.number(320),
+            ),
+            transitA to NormalizedDeviceState.of(
+                NormalizedField.CONFIGURED to NormalizedValue.flag(true),
+                NormalizedField.VLAN_ID to NormalizedValue.number(320),
+            ),
+            transitB to NormalizedDeviceState.of(
                 NormalizedField.CONFIGURED to NormalizedValue.flag(true),
                 NormalizedField.VLAN_ID to NormalizedValue.number(320),
             ),
@@ -478,6 +643,18 @@ class ProvisioningExecutionEngineTest {
         val safety = MutableSafetyGate()
         val engine = engine()
 
+        fun multiStepPlan(): ProvisionPlan = ProvisionPlan.generate(
+            tenantId,
+            intentId,
+            2,
+            listOf(
+                step(1, bras, ProvisionOperation.ENSURE_PPPOE_TERMINATION),
+                step(2, transitA, ProvisionOperation.ENSURE_TAGGED_VLAN),
+                step(3, transitB, ProvisionOperation.ENSURE_TAGGED_VLAN),
+                step(4, olt, ProvisionOperation.ENSURE_ACCESS_PORT),
+            ),
+        ).also { it.validate(); plans.save(it) }
+
         fun engine() = ProvisioningExecutionEngine(
             plans,
             executions,
@@ -488,6 +665,7 @@ class ProvisioningExecutionEngineTest {
             snapshots,
             circuits,
             gateway,
+            ImmediateDeviceIoExecutor,
             safety,
             clock,
             sleeper,
@@ -507,6 +685,7 @@ class ProvisioningExecutionEngineTest {
 
     private class MutableSafetyGate : ProvisioningSafetyGate {
         var decision = PolicyDecision(true, PolicyCode.AUTO_APPLY_ALLOWED)
+        var rollbackDecision = PolicyDecision(true, PolicyCode.ROLLBACK_ALLOWED)
         var rejectAtEvaluation: Int? = null
         private var evaluations = 0
 
@@ -521,10 +700,19 @@ class ProvisioningExecutionEngineTest {
 
         override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode, scope: SafetyGateScope): PolicyDecision =
             if (scope == SafetyGateScope.ROLLBACK) {
-                PolicyDecision(true, PolicyCode.ROLLBACK_ALLOWED)
+                rollbackDecision
             } else {
                 evaluate(plan, mode)
             }
+    }
+
+    private object ImmediateDeviceIoExecutor : DeviceIoExecutor {
+        override fun <T : Any> execute(
+            deadline: Instant,
+            renewalInterval: Duration,
+            renewLease: () -> Boolean,
+            operation: () -> T,
+        ): T = operation()
     }
 
     private class FakeGateway(
@@ -537,6 +725,8 @@ class ProvisioningExecutionEngineTest {
         val crashAfterApplyFor = mutableSetOf<DeviceReference>()
         val crashAfterCompensateFor = mutableSetOf<DeviceReference>()
         val verificationMismatchFor = mutableSetOf<DeviceReference>()
+        val corruptApplyHashFor = mutableSetOf<DeviceReference>()
+        val validationFailureFor = mutableSetOf<DeviceReference>()
         val driftBeforeCompensation = mutableSetOf<DeviceReference>()
         val compensated = mutableListOf<DeviceReference>()
         val compensateFailures = mutableMapOf<DeviceReference, ArrayDeque<DeviceOperationException>>()
@@ -555,12 +745,14 @@ class ProvisioningExecutionEngineTest {
 
         override fun apply(work: DispatchableProvisioningWork): DeviceApplyResult {
             applyCount[work.device] = applyCount.getOrDefault(work.device, 0) + 1
+            if (validationFailureFor.remove(work.device)) throw ValidationException("DEVICE_VALIDATION_REJECTED")
             applyFailures[work.device]?.removeFirstOrNull()?.let { throw it }
             val state = desired.getValue(work.device)
             current[work.device] = state
             if (crashAfterApplyFor.remove(work.device)) throw SimulatedProcessCrash()
             afterApply?.invoke(work)
-            return DeviceApplyResult(NormalizedStateHash.sha256(state), state)
+            val stateHash = if (corruptApplyHashFor.remove(work.device)) "f".repeat(64) else NormalizedStateHash.sha256(state)
+            return DeviceApplyResult(stateHash, state)
         }
 
         override fun compensate(work: DispatchableProvisioningWork, before: NormalizedDeviceState): DeviceApplyResult {
@@ -608,7 +800,9 @@ class ProvisioningExecutionEngineTest {
         override fun findByExecutionId(executionId: UUID) = values.values.filter { it.executionId == executionId }.sortedBy { it.order }
     }
 
-    private class MemoryAttemptRepository : StepAttemptRepository {
+    private class MemoryAttemptRepository(
+        private val acknowledgementAllowed: (StepAttempt) -> Boolean,
+    ) : StepAttemptRepository {
         val values = linkedMapOf<UUID, StepAttempt>()
         override fun save(value: StepAttempt) = value.also { values[it.id] = it }
         override fun findByExecutionStepId(executionStepId: UUID) =
@@ -620,6 +814,17 @@ class ProvisioningExecutionEngineTest {
             if (attempt.status != AttemptStatus.DISPATCHED) return false
             attempt.complete(status, errorCode, completedAt)
             return true
+        }
+        override fun completeAcknowledgementIfCurrentLease(
+            id: UUID,
+            status: AttemptStatus,
+            errorCode: String?,
+            completedAt: Instant,
+            acceptedAt: Instant,
+        ): Boolean {
+            val attempt = values[id] ?: return false
+            if (!acknowledgementAllowed(attempt)) return false
+            return completeIfDispatched(id, status, errorCode, completedAt)
         }
     }
 
@@ -646,14 +851,8 @@ class ProvisioningExecutionEngineTest {
             duration: Duration,
         ): DeviceLease? {
             val current = values[device]
-            if (current != null && current.expiresAt.isAfter(now) &&
-                (current.executionId != executionId || current.ownerId != ownerId)
-            ) return null
-            val token = if (current == null) 1 else if (current.executionId == executionId && current.ownerId == ownerId && current.expiresAt.isAfter(now)) {
-                current.fencingToken
-            } else {
-                current.fencingToken + 1
-            }
+            if (current != null && current.expiresAt.isAfter(now)) return null
+            val token = if (current == null) 1 else current.fencingToken + 1
             return DeviceLease(UuidV7.generate(), tenantId, device, executionId, ownerId, token, now.plus(duration))
                 .also { values[device] = it }
         }
@@ -685,6 +884,11 @@ class ProvisioningExecutionEngineTest {
                 current.fencingToken != fencingToken || !current.expiresAt.isAfter(now)
             ) return null
             return current.copy(expiresAt = now.plus(duration)).also { values[device] = it }
+        }
+
+        fun isCurrent(device: DeviceReference, executionId: UUID, fencingToken: Long, now: Instant): Boolean {
+            val current = values[device] ?: return false
+            return current.executionId == executionId && current.fencingToken == fencingToken && current.expiresAt.isAfter(now)
         }
     }
 

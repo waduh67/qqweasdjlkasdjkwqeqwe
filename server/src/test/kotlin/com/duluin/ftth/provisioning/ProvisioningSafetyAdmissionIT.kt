@@ -12,6 +12,7 @@ import com.duluin.ftth.provisioning.application.port.outbound.ProvisionPlanRepos
 import com.duluin.ftth.provisioning.application.port.outbound.StepAttemptRepository
 import com.duluin.ftth.provisioning.application.port.outbound.StepSnapshotRepository
 import com.duluin.ftth.provisioning.application.service.DeviceApplyResult
+import com.duluin.ftth.provisioning.application.service.DeviceIoExecutor
 import com.duluin.ftth.provisioning.application.service.DeviceStateObservation
 import com.duluin.ftth.provisioning.application.service.DispatchableProvisioningWork
 import com.duluin.ftth.provisioning.application.service.ProvisioningDeviceGateway
@@ -88,6 +89,7 @@ class ProvisioningSafetyAdmissionIT {
             snapshots,
             circuits,
             RejectingDeviceGateway,
+            ImmediateDeviceIoExecutor,
             safetyGate,
             Clock.systemUTC(),
             { },
@@ -127,5 +129,14 @@ class ProvisioningSafetyAdmissionIT {
         override fun apply(work: DispatchableProvisioningWork): DeviceApplyResult = error("DEVICE_COMMAND_NOT_ALLOWED")
         override fun compensate(work: DispatchableProvisioningWork, before: NormalizedDeviceState): DeviceApplyResult =
             error("DEVICE_COMMAND_NOT_ALLOWED")
+    }
+
+    private object ImmediateDeviceIoExecutor : DeviceIoExecutor {
+        override fun <T : Any> execute(
+            deadline: java.time.Instant,
+            renewalInterval: java.time.Duration,
+            renewLease: () -> Boolean,
+            operation: () -> T,
+        ): T = operation()
     }
 }
