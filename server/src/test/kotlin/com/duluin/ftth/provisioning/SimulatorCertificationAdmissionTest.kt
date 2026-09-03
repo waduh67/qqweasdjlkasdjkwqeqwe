@@ -23,10 +23,12 @@ class SimulatorCertificationAdmissionTest {
     fun `simulator matrix evidence never certifies the equivalent hardware path`() {
         val matrix = AdapterCertificationMatrixEntry(
             profileId = "routeros-simulator",
+            implementation = "RouterOsProvisioningAdapter",
             fingerprint = com.duluin.ftth.contract.DeviceFingerprint("MIKROTIK", "CCR2004", "7.20.2", "HTTPS_REST"),
             origin = CertificationEvidenceOrigin.SIMULATOR_FIXTURE,
             capabilities = setOf("REST_RESOURCE_IDS"),
             operationClasses = setOf("ENSURE_PPPOE_TERMINATION"),
+            unsupportedOperations = emptyMap(),
             verdict = CertificationVerdict.CERTIFIED_BY_TEST,
             phases = CertificationPhase.entries.map { CertificationPhaseResult(it, true, "PASS") },
             evidenceIdentity = "a".repeat(64),
