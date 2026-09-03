@@ -1,13 +1,17 @@
 package com.duluin.ftth.notification.application.service
 
+import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.notification.application.port.inbound.ManageNotificationSettingsUseCase
+import com.duluin.ftth.notification.application.port.inbound.FonnteTestResultView
 import com.duluin.ftth.notification.application.port.inbound.NotificationSettingsView
 import com.duluin.ftth.notification.application.port.inbound.QontakChannelView
 import com.duluin.ftth.notification.application.port.inbound.UpdateNotificationSettingsCommand
 import com.duluin.ftth.notification.application.port.outbound.NotificationSettingsRepository
 import com.duluin.ftth.notification.application.port.outbound.QontakChannelDirectory
+import com.duluin.ftth.notification.application.port.outbound.MessageDispatcher
+import com.duluin.ftth.notification.domain.model.DeliveryStatus
 import com.duluin.ftth.notification.domain.model.NotificationSettings
 import com.duluin.ftth.notification.domain.model.WhatsAppProvider
 import org.springframework.stereotype.Service
@@ -23,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional
 class NotificationSettingsService(
     private val repository: NotificationSettingsRepository,
     private val qontakChannels: QontakChannelDirectory,
+    private val dispatcher: MessageDispatcher,
     private val auditor: AuditRecorder,
 ) : ManageNotificationSettingsUseCase {
 
@@ -72,6 +77,32 @@ class NotificationSettingsService(
         return qontakChannels.list(token).map { QontakChannelView(it.id, it.name) }
     }
 
+    @Transactional
+    override fun sendFonnteTest(destination: String): FonnteTestResultView {
+        val settings = repository.find()
+            ?: throw ConflictException("Pengujian Fonnte membutuhkan penyedia Fonnte dan token yang sudah tersimpan.")
+        val gateway = settings.resolveFonnteGatewayForTest()
+            ?: throw ConflictException("Pengujian Fonnte membutuhkan penyedia Fonnte dan token yang sudah tersimpan.")
+        val outcome = dispatcher.send(
+            gateway = gateway,
+            phone = destination,
+            recipientName = "Uji Fonnte",
+            message = FONNTE_TEST_MESSAGE,
+        )
+        val accepted = outcome.status == DeliveryStatus.SENT
+        auditor.record(
+            action = "notification.settings.fonnte.tested",
+            entityType = "NotificationSettings",
+            entityId = settings.id,
+            tenantId = settings.tenantId,
+            detail = mapOf("accepted" to accepted.toString()),
+        )
+        return FonnteTestResultView(
+            delivered = accepted,
+            detail = outcome.detail ?: "Fonnte tidak mengembalikan keterangan.",
+        )
+    }
+
     private fun NotificationSettings.toView() = NotificationSettingsView(
         provider = provider.name,
         gatewayEnabled = gatewayEnabled,
@@ -92,4 +123,8 @@ class NotificationSettingsService(
         notifyOnWorkOrderSchedule = notifyOnWorkOrderSchedule,
         notifyOnIncidentOpen = notifyOnIncidentOpen,
     )
+
+    private companion object {
+        const val FONNTE_TEST_MESSAGE = "Pesan uji konfigurasi Fonnte dari aplikasi FTTH."
+    }
 }

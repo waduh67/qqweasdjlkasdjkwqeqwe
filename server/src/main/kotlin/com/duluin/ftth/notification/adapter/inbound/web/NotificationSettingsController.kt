@@ -1,6 +1,7 @@
 package com.duluin.ftth.notification.adapter.inbound.web
 
 import com.duluin.ftth.notification.application.port.inbound.ManageNotificationSettingsUseCase
+import com.duluin.ftth.notification.application.port.inbound.FonnteTestResultView
 import com.duluin.ftth.notification.application.port.inbound.NotificationSettingsView
 import com.duluin.ftth.notification.application.port.inbound.QontakChannelView
 import com.duluin.ftth.notification.application.port.inbound.UpdateNotificationSettingsCommand
@@ -10,9 +11,11 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -49,7 +52,18 @@ class NotificationSettingsController(
     @PreAuthorize("@authz.can('notification.settings.manage')")
     @Operation(summary = "Daftar kanal WhatsApp di akun Mekari Qontak (pakai token tersimpan)")
     fun qontakChannels(): List<QontakChannelView> = useCase.qontakChannels()
+
+    @PostMapping("/fonnte/test")
+    @PreAuthorize("@authz.can('notification.settings.manage')")
+    @Operation(summary = "Kirim pesan uji Fonnte memakai token tersimpan")
+    fun sendFonnteTest(@Valid @RequestBody request: FonnteTestRequest): FonnteTestResultView =
+        useCase.sendFonnteTest(request.destination)
 }
+
+data class FonnteTestRequest(
+    @field:Pattern(regexp = "^\\+?[1-9][0-9]{7,14}$", message = "Nomor tujuan harus berupa nomor internasional, misalnya 628123456789")
+    val destination: String,
+)
 
 /**
  * Token ([httpToken]/[metaAccessToken]/[qontakAccessToken]) opsional: kosong/absen = biarkan

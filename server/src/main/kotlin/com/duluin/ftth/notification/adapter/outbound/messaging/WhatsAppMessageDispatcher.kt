@@ -1,5 +1,6 @@
 package com.duluin.ftth.notification.adapter.outbound.messaging
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.duluin.ftth.notification.application.port.outbound.DeliveryOutcome
 import com.duluin.ftth.notification.application.port.outbound.MessageDispatcher
 import com.duluin.ftth.notification.domain.model.DeliveryStatus
@@ -17,9 +18,9 @@ import java.net.URI
  * [WhatsAppGateway] yang sudah teresolusi tenant.
  *
  *  - [WhatsAppGateway.Log]        cukup catat ke log, dianggap terkirim (dev/uji).
- *  - [WhatsAppGateway.HttpGeneric] satu POST form ke endpoint tenant (Fonnte/Wablas/dsb);
- *                                  token dikirim di header `Authorization` (konvensi kedua
- *                                  gateway itu), nama field nomor & pesan mengikut setelan.
+ *  - [WhatsAppGateway.HttpGeneric] satu POST form ke endpoint tenant; token dan nama field
+ *                                  mengikut setelan tenant.
+ *  - [WhatsAppGateway.Fonnte]      POST multipart tetap ke endpoint Fonnte dengan kontrak baku.
  *  - [WhatsAppGateway.MetaCloud]  POST JSON ke Graph API `/{phoneNumberId}/messages` dengan
  *                                  bearer token; template (bila diset) atau teks bebas.
  *  - [WhatsAppGateway.Qontak]     POST JSON ke `/v1/broadcasts/whatsapp/direct`; HANYA template
@@ -53,6 +54,7 @@ class WhatsAppMessageDispatcher internal constructor(
                 DeliveryOutcome(DeliveryStatus.SENT, "dicatat ke log (dev)")
             }
             is WhatsAppGateway.HttpGeneric -> sendHttpGeneric(gateway, phone, message)
+            is WhatsAppGateway.Fonnte -> sendFonnte(gateway, phone, message)
             is WhatsAppGateway.MetaCloud -> sendMetaCloud(gateway, phone, message)
             is WhatsAppGateway.Qontak -> sendQontak(gateway, phone, recipientName, message)
         }
@@ -72,6 +74,39 @@ class WhatsAppMessageDispatcher internal constructor(
             onSuccess = { DeliveryOutcome(DeliveryStatus.SENT, "Terkirim via gateway HTTP (${it.statusCode.value()})") },
             onFailure = { DeliveryOutcome(DeliveryStatus.FAILED, transportError("Gateway HTTP", it)) },
         )
+    }
+
+    private fun sendFonnte(gateway: WhatsAppGateway.Fonnte, phone: String, message: String): DeliveryOutcome {
+        val form = LinkedMultiValueMap<String, String>().apply {
+            add("target", phone)
+            add("message", message)
+        }
+        return runCatching {
+            restClient.post()
+                .uri(URI.create("https://api.fonnte.com/send"))
+                .header(HttpHeaders.AUTHORIZATION, gateway.token)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(form)
+                .retrieve()
+                .toEntity(String::class.java)
+        }.fold(
+            onSuccess = { response -> fonnteOutcome(response.statusCode.value(), response.body) },
+            onFailure = { DeliveryOutcome(DeliveryStatus.FAILED, transportError("Fonnte", it)) },
+        )
+    }
+
+    private fun fonnteOutcome(statusCode: Int, responseBody: String?): DeliveryOutcome {
+        val body = runCatching { responseBody?.let { ObjectMapper().readTree(it) } }.getOrNull()
+            ?: return DeliveryOutcome(DeliveryStatus.FAILED, "Respons Fonnte tidak valid")
+        val accepted = sequenceOf("status", "Status")
+            .map { body.path(it) }
+            .firstOrNull { it.isBoolean }
+            ?.asBoolean()
+            ?: return DeliveryOutcome(DeliveryStatus.FAILED, "Respons Fonnte tidak valid")
+        if (accepted) return DeliveryOutcome(DeliveryStatus.SENT, "Fonnte menerima permintaan ($statusCode)")
+        val reason = body.path("reason").takeIf { it.isTextual }?.asText()?.trim().orEmpty()
+        val detail = reason.ifEmpty { "tanpa alasan dari penyedia" }
+        return DeliveryOutcome(DeliveryStatus.FAILED, "Fonnte menolak permintaan: $detail")
     }
 
     private fun sendMetaCloud(gateway: WhatsAppGateway.MetaCloud, phone: String, message: String): DeliveryOutcome {

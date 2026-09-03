@@ -5,6 +5,7 @@ import {
   getNotificationSettings,
   getQontakChannels,
   PROVIDER_LABEL,
+  sendFonnteTest,
   updateNotificationSettings,
   type NotificationSettingsView,
   type QontakChannelView,
@@ -22,7 +23,7 @@ import { IconAlert } from '@/components/atoms/icons'
  * Pengaturan Notifikasi tenant.
  *
  * Tiga bagian: (1) GATEWAY WhatsApp bawa-sendiri — tiap tenant memakai pengirimnya
- * sendiri (LOG mode uji / HTTP generik ala Fonnte-Wablas / Meta Cloud API / Mekari
+ * sendiri (LOG mode uji / HTTP generik / Fonnte / Meta Cloud API / Mekari
  * Qontak) supaya identitas pengirim, biaya, dan risiko blokir terpisah antar-tenant;
  * (2) KANAL EMAIL — cuma satu saklar, karena server SMTP-nya milik platform, bukan
  * milik tenant; (3) SAKLAR pemicu otomatis — nyalakan/matikan tiap jenis pesan
@@ -31,7 +32,7 @@ import { IconAlert } from '@/components/atoms/icons'
  * menyimpan, tak pernah ditarik kembali — server hanya menandai sudah terisi atau belum.
  */
 
-const PROVIDERS: WhatsAppProvider[] = ['LOG', 'HTTP_GENERIC', 'META_CLOUD', 'QONTAK']
+const PROVIDERS: WhatsAppProvider[] = ['LOG', 'HTTP_GENERIC', 'FONNTE', 'META_CLOUD', 'QONTAK']
 
 const TRIGGERS: { key: keyof NotificationSettingsView; label: string }[] = [
   { key: 'notifyOnSubscriptionLifecycle', label: 'Perubahan langganan' },
@@ -57,6 +58,8 @@ export function NotificationSettingsPage() {
   const [httpToken, setHttpToken] = useState('')
   const [metaToken, setMetaToken] = useState('')
   const [qontakToken, setQontakToken] = useState('')
+  const [fonnteDestination, setFonnteDestination] = useState('')
+  const [testingFonnte, setTestingFonnte] = useState(false)
   // Daftar kanal Qontak ditarik atas permintaan, bukan saat memuat halaman: panggilannya
   // menembak API Qontak dan hanya relevan bagi tenant yang memakai penyedia itu.
   const [channels, setChannels] = useState<QontakChannelView[] | null>(null)
@@ -121,6 +124,23 @@ export function NotificationSettingsPage() {
     }
   }
 
+  const testFonnte = async () => {
+    if (!fonnteDestination.trim()) return
+    setTestingFonnte(true)
+    try {
+      const result = await sendFonnteTest(fonnteDestination.trim())
+      if (result.delivered) {
+        toast.success('Fonnte menerima permintaan uji. Pesan masih dapat menunggu di antrean penyedia.')
+      } else {
+        toast.error(`Fonnte tidak menerima permintaan uji: ${result.detail}`)
+      }
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Pengujian Fonnte gagal')
+    } finally {
+      setTestingFonnte(false)
+    }
+  }
+
   if (loading) return <Text as="p" className="muted">Memuat setelan…</Text>
   if (!form) {
     return (
@@ -138,7 +158,7 @@ export function NotificationSettingsPage() {
           <Text as="h2" size={500} weight="semibold" style={{ margin: 0 }}>Pengaturan Notifikasi</Text>
         </div>
         {manage && (
-          <Button variant="primary" onClick={() => void save()} disabled={saving}>
+          <Button variant="primary" onClick={() => void save()} disabled={saving || testingFonnte}>
             {saving ? 'Menyimpan…' : 'Simpan'}
           </Button>
         )}
@@ -173,7 +193,7 @@ export function NotificationSettingsPage() {
               label="URL endpoint"
               value={form.httpEndpointUrl ?? ''}
               onChange={(_, data) => patch({ httpEndpointUrl: data.value })}
-              placeholder="https://api.fonnte.com/send"
+              placeholder="https://gateway.example/api/send"
               disabled={!manage}
             />
             <TextField
@@ -202,6 +222,40 @@ export function NotificationSettingsPage() {
                 style={{ flex: 1 }}
               />
             </div>
+          </>
+        )}
+
+        {form.provider === 'FONNTE' && (
+          <>
+            <TextField
+              label={<>Token Fonnte {form.httpTokenSet && <Text as="span" className="muted">(tersimpan)</Text>}</>}
+              type="password"
+              value={httpToken}
+              onChange={(_, data) => setHttpToken(data.value)}
+              placeholder={form.httpTokenSet ? 'Kosongkan untuk mempertahankan token' : 'Token dari dasbor Fonnte'}
+              disabled={!manage || testingFonnte}
+            />
+            <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
+              Endpoint dan format Fonnte sudah tetap: aplikasi mengirim field <code>target</code> dan <code>message</code>.
+            </Text>
+            {form.httpTokenSet && (
+              <div className="row" style={{ alignItems: 'flex-end' }}>
+                <TextField
+                  label="Nomor tujuan uji"
+                  value={fonnteDestination}
+                  onChange={(_, data) => setFonnteDestination(data.value)}
+                  placeholder="+628123456789"
+                  disabled={!manage || saving || testingFonnte}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  onClick={() => void testFonnte()}
+                  disabled={testingFonnte || saving || !manage || !fonnteDestination.trim() || !form.httpTokenSet}
+                >
+                  {testingFonnte ? 'Mengirim uji…' : 'Kirim pesan test'}
+                </Button>
+              </div>
+            )}
           </>
         )}
 

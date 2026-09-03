@@ -10,6 +10,7 @@ import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.test.web.client.MockRestServiceServer
+import org.springframework.test.web.client.match.MockRestRequestMatchers.content
 import org.springframework.test.web.client.match.MockRestRequestMatchers.header
 import org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath
 import org.springframework.test.web.client.match.MockRestRequestMatchers.method
@@ -38,6 +39,67 @@ class WhatsAppMessageDispatcherTest {
         templateId = templateId,
         templateLang = "id",
     )
+
+    @Test
+    fun `Fonnte rejection in successful HTTP response is reported as failed`() {
+        val (dispatcher, server) = fixture()
+        server.expect(requestTo("https://api.fonnte.com/send"))
+            .andExpect(method(HttpMethod.POST))
+            .andExpect(header("Authorization", "fonnte-token"))
+            .andExpect(header("Content-Type", containsString("multipart/form-data")))
+            .andExpect(content().string(containsString("name=\"target\"")))
+            .andExpect(content().string(containsString("628111")))
+            .andExpect(content().string(containsString("name=\"message\"")))
+            .andExpect(content().string(containsString("pesan uji")))
+            .andRespond(withSuccess("""{"status":false,"reason":"device offline"}""", MediaType.APPLICATION_JSON))
+
+        val outcome = dispatcher.send(WhatsAppGateway.Fonnte("fonnte-token"), "628111", "Budi", "pesan uji")
+
+        assertThat(outcome.status).isEqualTo(DeliveryStatus.FAILED)
+        assertThat(outcome.detail).contains("Fonnte")
+        assertThat(outcome.detail).contains("device offline")
+        server.verify()
+    }
+
+    @Test
+    fun `Fonnte rejection with legacy capital status is reported as failed`() {
+        val (dispatcher, server) = fixture()
+        server.expect(requestTo("https://api.fonnte.com/send"))
+            .andRespond(withSuccess("""{"Status":false,"reason":"token invalid"}""", MediaType.APPLICATION_JSON))
+
+        val outcome = dispatcher.send(WhatsAppGateway.Fonnte("fonnte-token"), "628111", "Budi", "pesan uji")
+
+        assertThat(outcome.status).isEqualTo(DeliveryStatus.FAILED)
+        assertThat(outcome.detail).contains("Fonnte menolak permintaan")
+        assertThat(outcome.detail).contains("token invalid")
+        server.verify()
+    }
+
+    @Test
+    fun `Fonnte acceptance in successful HTTP response is reported as sent`() {
+        val (dispatcher, server) = fixture()
+        server.expect(requestTo("https://api.fonnte.com/send"))
+            .andRespond(withSuccess("""{"status":true}""", MediaType.APPLICATION_JSON))
+
+        val outcome = dispatcher.send(WhatsAppGateway.Fonnte("fonnte-token"), "628111", "Budi", "pesan uji")
+
+        assertThat(outcome.status).isEqualTo(DeliveryStatus.SENT)
+        assertThat(outcome.detail).contains("Fonnte")
+        server.verify()
+    }
+
+    @Test
+    fun `Fonnte response without boolean status is reported as failed`() {
+        val (dispatcher, server) = fixture()
+        server.expect(requestTo("https://api.fonnte.com/send"))
+            .andRespond(withSuccess("""{"detail":"unknown"}""", MediaType.APPLICATION_JSON))
+
+        val outcome = dispatcher.send(WhatsAppGateway.Fonnte("fonnte-token"), "628111", "Budi", "pesan uji")
+
+        assertThat(outcome.status).isEqualTo(DeliveryStatus.FAILED)
+        assertThat(outcome.detail).contains("Respons Fonnte tidak valid")
+        server.verify()
+    }
 
     @Test
     fun `Qontak tanpa template dilewati tanpa memanggil API`() {

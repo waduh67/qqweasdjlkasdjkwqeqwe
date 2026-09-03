@@ -142,10 +142,13 @@ class NotificationTemplateService(
 
     @Transactional
     override fun replaceAssignments(command: ReplaceAssignmentsCommand): TemplateCatalogView {
-        requireSettings()
+        val settings = requireSettings()
         val known = templateRepository.findAll().associateBy { it.id }
         command.assignments.forEach { (trigger, templateId) ->
-            known[templateId] ?: throw NotFoundException("Template untuk pemicu $trigger tidak ditemukan")
+            val template = known[templateId] ?: throw NotFoundException("Template untuk pemicu $trigger tidak ditemukan")
+            TemplateAssignmentEligibility.blockedReason(settings.provider, template)?.let { reason ->
+                throw ConflictException("Template untuk pemicu $trigger tidak dapat dipakai: $reason")
+            }
         }
         templateRepository.replaceAssignments(command.assignments)
         auditor.record(
@@ -253,7 +256,7 @@ class NotificationTemplateService(
         // Balik peta sekali: pemicu-pemicu yang memakai tiap template.
         val usedBy = assignments.entries.groupBy({ it.value }, { it.key.name })
         return TemplateCatalogView(
-            templates = templateRepository.findAll().map { it.toView(usedBy[it.id].orEmpty()) },
+            templates = templateRepository.findAll().map { it.toView(usedBy[it.id].orEmpty(), settings.provider) },
             assignments = assignments.entries.associate { (trigger, id) -> trigger.name to id },
             manageable = reason == null && catalog != null,
             syncable = reason == null && catalog != null,
@@ -274,7 +277,9 @@ class NotificationTemplateService(
         detail = mapOf("name" to template.name, "language" to template.language),
     )
 
-    private fun NotificationMessageTemplate.toView(usedBy: List<String>) = NotificationTemplateView(
+    private fun NotificationMessageTemplate.toView(usedBy: List<String>, provider: WhatsAppProvider): NotificationTemplateView {
+        val assignmentBlockedReason = TemplateAssignmentEligibility.blockedReason(provider, this)
+        return NotificationTemplateView(
         id = id,
         name = name,
         language = language,
@@ -283,7 +288,10 @@ class NotificationTemplateService(
         source = source.name,
         bodyText = bodyText,
         bodyParamCount = bodyParamCount,
+        assignmentEligible = assignmentBlockedReason == null,
+        assignmentBlockedReason = assignmentBlockedReason,
         syncedAt = syncedAt,
         usedBy = usedBy,
     )
+    }
 }

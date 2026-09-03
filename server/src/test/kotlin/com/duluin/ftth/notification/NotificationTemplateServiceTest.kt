@@ -184,6 +184,7 @@ class NotificationTemplateServiceTest {
 
     @Test
     fun `delete di Meta membuang baris lokal dan template di penyedia`() {
+        meta.createStatus = TemplateStatus.APPROVED
         val id = service.create(command("tagihan")).templates.single().id
         service.replaceAssignments(ReplaceAssignmentsCommand(mapOf(NotificationTrigger.INVOICE_DUE_SOON to id)))
 
@@ -230,6 +231,7 @@ class NotificationTemplateServiceTest {
 
     @Test
     fun `memindahkan pemicu antar template menyisakan tepat satu pemetaan`() {
+        meta.createStatus = TemplateStatus.APPROVED
         val a = service.create(command("tagihan_a")).templates.single().id
         val b = service.create(command("tagihan_b")).templates.first { it.name == "tagihan_b" }.id
 
@@ -246,6 +248,7 @@ class NotificationTemplateServiceTest {
 
     @Test
     fun `satu template boleh melayani beberapa pemicu`() {
+        meta.createStatus = TemplateStatus.APPROVED
         val id = service.create(command("tagihan")).templates.single().id
 
         val view = service.replaceAssignments(
@@ -259,6 +262,44 @@ class NotificationTemplateServiceTest {
 
         assertThat(view.assignments).hasSize(2)
         assertThat(view.templates.single().usedBy).hasSize(2)
+    }
+
+    @Test
+    fun `pemetaan menolak template yang belum disetujui`() {
+        val id = service.create(command("menunggu_tinjauan")).templates.single().id
+
+        assertThatThrownBy {
+            service.replaceAssignments(ReplaceAssignmentsCommand(mapOf(NotificationTrigger.INVOICE_DUE_SOON to id)))
+        }
+            .isInstanceOf(ConflictException::class.java)
+            .hasMessageContaining("belum disetujui")
+
+        assertThat(templates.assignments()).isEmpty()
+    }
+
+    @Test
+    fun `pemetaan Qontak menolak template disetujui tanpa id penyedia`() {
+        settings.row = qontakSettings()
+        val template = NotificationMessageTemplate.rehydrate(
+            id = UuidV7.generate(),
+            tenantId = tenantId,
+            name = "tagihan_lama",
+            language = "id",
+            category = TemplateCategory.UTILITY,
+            status = TemplateStatus.APPROVED,
+            source = TemplateSource.MANUAL,
+            remoteId = null,
+            bodyText = "Tagihan {{1}}",
+            bodyParamCount = 1,
+            syncedAt = null,
+        )
+        templates.save(template)
+
+        assertThatThrownBy {
+            service.replaceAssignments(ReplaceAssignmentsCommand(mapOf(NotificationTrigger.INVOICE_DUE_SOON to template.id)))
+        }
+            .isInstanceOf(ConflictException::class.java)
+            .hasMessageContaining("ID template")
     }
 
     // --- sync ---
@@ -288,6 +329,7 @@ class NotificationTemplateServiceTest {
 
     @Test
     fun `baris yang lenyap di penyedia dinonaktifkan bukan dihapus`() {
+        meta.createStatus = TemplateStatus.APPROVED
         val id = service.create(command("tagihan")).templates.single().id
         service.replaceAssignments(ReplaceAssignmentsCommand(mapOf(NotificationTrigger.INVOICE_DUE_SOON to id)))
         meta.rows = emptyList() // template dihapus lewat dasbor Meta, di luar aplikasi
@@ -350,6 +392,7 @@ class NotificationTemplateServiceTest {
     ) : WhatsAppTemplateCatalog {
         var rows: List<RemoteTemplate> = emptyList()
         var failCreate: String? = null
+        var createStatus: TemplateStatus = TemplateStatus.PENDING
         val created = mutableListOf<TemplateDraft>()
         val edited = mutableListOf<Pair<String, TemplateDraft>>()
         val deleted = mutableListOf<String>()
@@ -364,7 +407,7 @@ class NotificationTemplateServiceTest {
                 name = draft.name,
                 language = draft.language,
                 category = draft.category,
-                status = TemplateStatus.PENDING,
+                status = createStatus,
                 bodyText = draft.bodyText,
             )
         }

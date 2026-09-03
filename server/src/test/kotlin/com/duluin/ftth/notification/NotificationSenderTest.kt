@@ -141,7 +141,7 @@ class NotificationSenderTest {
     fun `pemicu terpetakan memakai template yang ditunjuk`() {
         val dispatcher = RecordingDispatcher()
         val broadcasts = CapturingBroadcastRepo()
-        val template = template("tagihan_jatuh_tempo", "en_US")
+        val template = template("tagihan_jatuh_tempo", "en_US", remoteId = "meta-template-1")
         val templates = FakeTemplateRepo(mapOf(NotificationTrigger.INVOICE_DUE_SOON to template))
         val sender = sender(metaSettings(), broadcasts, dispatcher, templates)
 

@@ -41,11 +41,12 @@ export interface BroadcastDetail {
  *  Setelan notifikasi tenant: gateway WA bawa-sendiri + saklar pemicu.
  *  ------------------------------------------------------------------ */
 
-export type WhatsAppProvider = 'LOG' | 'HTTP_GENERIC' | 'META_CLOUD' | 'QONTAK'
+export type WhatsAppProvider = 'LOG' | 'HTTP_GENERIC' | 'FONNTE' | 'META_CLOUD' | 'QONTAK'
 
 export const PROVIDER_LABEL: Record<WhatsAppProvider, string> = {
   LOG: 'Catat ke log (mode uji)',
-  HTTP_GENERIC: 'HTTP generik (Fonnte, Wablas, WAHA, dsb.)',
+  HTTP_GENERIC: 'HTTP generik (gateway pihak ketiga)',
+  FONNTE: 'Fonnte',
   META_CLOUD: 'Meta WhatsApp Cloud API',
   QONTAK: 'Mekari Qontak (WhatsApp Business API)',
 }
@@ -123,6 +124,15 @@ export function getQontakChannels(): Promise<QontakChannelView[]> {
   return api.get('/api/notifications/settings/qontak/channels')
 }
 
+export interface FonnteTestResultView {
+  readonly delivered: boolean
+  readonly detail: string
+}
+
+export function sendFonnteTest(destination: string): Promise<FonnteTestResultView> {
+  return api.post('/api/notifications/settings/fonnte/test', { destination })
+}
+
 /** ------------------------------------------------------------------
  *  Template pesan WhatsApp (Meta Cloud / Mekari Qontak) + pemetaan
  *  pemicu → template. Katalog lokal adalah CERMIN dari penyedia:
@@ -196,6 +206,8 @@ export interface NotificationTemplateView {
   bodyText: string | null
   /** Jumlah `{{n}}` unik di body; server selalu mengirim tepat satu parameter. */
   bodyParamCount: number
+  readonly assignmentEligible: boolean
+  readonly assignmentBlockedReason: string | null
   syncedAt: string | null
   usedBy: NotificationTrigger[]
 }

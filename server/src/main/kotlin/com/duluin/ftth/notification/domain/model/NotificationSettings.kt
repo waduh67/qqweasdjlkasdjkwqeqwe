@@ -9,8 +9,9 @@ import java.util.UUID
  *
  *  - [LOG]          bawaan dev: pesan hanya dicatat ke log, tak pernah keluar. Aman
  *                   untuk mencoba tanpa mengirim WA sungguhan.
- *  - [HTTP_GENERIC] gateway HTTP pihak-ketiga (Fonnte/Wablas/dsb): satu POST form ke
+ *  - [HTTP_GENERIC] gateway HTTP pihak-ketiga yang dapat disetel tenant: satu POST form ke
  *                   endpoint tenant, nama field nomor & pesan dapat disetel.
+ *  - [FONNTE]       Fonnte: endpoint dan format request baku dari API Fonnte.
  *  - [META_CLOUD]   WhatsApp Business Cloud API resmi Meta: kirim template ke Graph API.
  *  - [QONTAK]       Mekari Qontak, BSP resmi WhatsApp: kirim template lewat Open API-nya.
  *
@@ -20,6 +21,7 @@ import java.util.UUID
 enum class WhatsAppProvider {
     LOG,
     HTTP_GENERIC,
+    FONNTE,
     META_CLOUD,
     QONTAK,
     ;
@@ -61,6 +63,9 @@ sealed interface WhatsAppGateway {
         val phoneField: String,
         val messageField: String,
     ) : WhatsAppGateway
+
+    /** Fonnte: `POST https://api.fonnte.com/send` multipart dengan token Authorization mentah. */
+    data class Fonnte(val token: String) : WhatsAppGateway
 
     /** WhatsApp Business Cloud API: kirim ke `/{phoneNumberId}/messages` dengan bearer [accessToken]. */
     data class MetaCloud(
@@ -296,6 +301,10 @@ class NotificationSettings private constructor(
                 val url = httpEndpointUrl?.trim()?.takeIf { it.isNotEmpty() } ?: return null
                 WhatsAppGateway.HttpGeneric(url, httpToken, httpPhoneField, httpMessageField)
             }
+            WhatsAppProvider.FONNTE -> {
+                val token = httpToken?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+                WhatsAppGateway.Fonnte(token)
+            }
             WhatsAppProvider.META_CLOUD -> {
                 val phoneId = metaPhoneNumberId?.trim()?.takeIf { it.isNotEmpty() } ?: return null
                 val token = metaAccessToken?.trim()?.takeIf { it.isNotEmpty() } ?: return null
@@ -310,6 +319,17 @@ class NotificationSettings private constructor(
                 WhatsAppGateway.Qontak(token, channel, templateId = null, templateLang = DEFAULT_TEMPLATE_LANG)
             }
         }
+    }
+
+    /**
+     * Gateway Fonnte untuk uji konfigurasi yang memakai token TERSIMPAN. Sengaja tidak
+     * memeriksa [gatewayEnabled] atau saklar pemicu agar operator dapat menguji kredensial
+     * sebelum mengaktifkan pengiriman otomatis.
+     */
+    fun resolveFonnteGatewayForTest(): WhatsAppGateway.Fonnte? {
+        if (provider != WhatsAppProvider.FONNTE) return null
+        val token = httpToken?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        return WhatsAppGateway.Fonnte(token)
     }
 
     /**

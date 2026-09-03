@@ -1839,6 +1839,7 @@ td.dg-actions {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  min-width: 0;
   gap: 1rem;
   height: var(--topbar-h);
   padding: 0 1.25rem;
@@ -1847,6 +1848,9 @@ td.dg-actions {
   position: sticky;
   top: 0;
   z-index: 20;
+}
+.topbar > .row {
+  min-width: 0;
 }
 /* Kontrol & teks di header dibuat putih agar kontras di atas bar biru. */
 .topbar .muted {
@@ -2109,6 +2113,10 @@ td.dg-actions {
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, var(--surface)), var(--surface));
 }
 @media (max-width: 560px) {
+  .topbar .user-chip > div {
+    display: none;
+  }
+
   /* Dua kartu metrik per baris di ponsel: angka dikecilkan lagi agar tanggal & nominal
      tak pecah jadi dua baris di kolom sesempit itu. */
   .portal-page .stat-value {

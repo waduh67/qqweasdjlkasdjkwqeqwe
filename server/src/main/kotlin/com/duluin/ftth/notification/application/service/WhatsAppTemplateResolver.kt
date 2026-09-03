@@ -3,6 +3,7 @@ package com.duluin.ftth.notification.application.service
 import com.duluin.ftth.notification.application.port.outbound.NotificationTemplateRepository
 import com.duluin.ftth.notification.domain.model.NotificationTrigger
 import com.duluin.ftth.notification.domain.model.WhatsAppGateway
+import com.duluin.ftth.notification.domain.model.WhatsAppProvider
 import org.springframework.stereotype.Component
 
 /**
@@ -32,10 +33,20 @@ class WhatsAppTemplateResolver(
         if (gateway !is WhatsAppGateway.MetaCloud && gateway !is WhatsAppGateway.Qontak) return gateway
         val template = templateRepo.findForTrigger(trigger) ?: return gateway
         return when (gateway) {
-            is WhatsAppGateway.MetaCloud ->
+            is WhatsAppGateway.MetaCloud -> if (
+                TemplateAssignmentEligibility.blockedReason(WhatsAppProvider.META_CLOUD, template) == null
+            ) {
                 gateway.copy(templateName = template.name, templateLang = template.language)
-            is WhatsAppGateway.Qontak ->
-                template.remoteId?.let { gateway.copy(templateId = it, templateLang = template.language) } ?: gateway
+            } else {
+                gateway
+            }
+            is WhatsAppGateway.Qontak -> if (
+                TemplateAssignmentEligibility.blockedReason(WhatsAppProvider.QONTAK, template) == null
+            ) {
+                gateway.copy(templateId = template.remoteId, templateLang = template.language)
+            } else {
+                gateway
+            }
             else -> gateway
         }
     }

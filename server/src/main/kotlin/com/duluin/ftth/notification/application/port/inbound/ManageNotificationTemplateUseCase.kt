@@ -69,6 +69,10 @@ data class NotificationTemplateView(
     /** Teks komponen BODY — yang diajukan ke penyedia, bukan sekadar cuplikan. */
     val bodyText: String?,
     val bodyParamCount: Int,
+    /** Template boleh dipetakan ke pemicu untuk penyedia aktif. */
+    val assignmentEligible: Boolean,
+    /** Alasan siap tampil bila [assignmentEligible] false. */
+    val assignmentBlockedReason: String?,
     val syncedAt: Instant?,
     /** Pemicu yang memakai template ini — memudahkan UI menampilkan "dipakai untuk". */
     val usedBy: List<String>,

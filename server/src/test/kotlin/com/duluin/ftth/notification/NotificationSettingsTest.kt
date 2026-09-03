@@ -158,6 +158,26 @@ class NotificationSettingsTest {
     }
 
     @Test
+    fun `Fonnte menggunakan token tersimpan dan test resolver mengabaikan saklar gateway`() {
+        val settings = defaultSettings().apply {
+            update(
+                provider = WhatsAppProvider.FONNTE, gatewayEnabled = false, emailEnabled = false,
+                httpEndpointUrl = null, httpToken = "fonnte-token", httpPhoneField = null, httpMessageField = null,
+                metaPhoneNumberId = null, metaAccessToken = null, metaWabaId = null,
+                qontakAccessToken = null, qontakChannelIntegrationId = null,
+                notifyOnSubscriptionLifecycle = false, notifyOnInvoiceReminder = false,
+                notifyOnWorkOrderSchedule = false, notifyOnIncidentOpen = false,
+            )
+        }
+
+        assertThat(settings.resolveGateway()).isNull()
+        val fonnte = settings.resolveFonnteGatewayForTest()
+
+        assertThat(fonnte).isEqualTo(WhatsAppGateway.Fonnte("fonnte-token"))
+        assertThat(WhatsAppProvider.FONNTE.official).isFalse()
+    }
+
+    @Test
     fun `Meta Cloud lengkap meresolusi dengan phone-id dan token tanpa template`() {
         val settings = defaultSettings().apply {
             update(

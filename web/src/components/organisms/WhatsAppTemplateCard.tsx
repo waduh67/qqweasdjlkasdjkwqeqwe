@@ -245,6 +245,10 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
 
   const assignmentsDirty =
     JSON.stringify(normalize(assignments)) !== JSON.stringify(normalize(catalog?.assignments ?? {}))
+  const hasInvalidSelectedAssignment = Object.values(assignments).some((id) => {
+    if (!id) return false
+    return !byId.get(id)?.assignmentEligible
+  })
 
   return (
     <div className="card stack" aria-disabled={!unlocked}>
@@ -291,7 +295,9 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
 
 
       {TRIGGERS.map((trigger) => {
-        const selected = assignments[trigger] ? byId.get(assignments[trigger] as string) : undefined
+        const selectedId = assignments[trigger]
+        const selected = selectedId ? byId.get(selectedId) : undefined
+        const assignmentOptions = templates.filter((template) => template.assignmentEligible || template.id === selectedId)
         return (
           <div key={trigger} className="stack" style={{ gap: '0.2rem' }}>
             <SelectField
@@ -308,9 +314,9 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
               disabled={!editable || busy}
             >
               <option value="">{templateOnly ? '— tidak dikirim —' : '— teks biasa —'}</option>
-              {templates.map((t) => (
+              {assignmentOptions.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.name} ({t.language})
+                  {t.name} ({t.language}){t.assignmentEligible ? '' : ' — tidak dapat dipakai'}
                 </option>
               ))}
             </SelectField>
@@ -319,16 +325,9 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
                 Belum dipetakan — pemicu ini tak akan mengirim apa pun lewat {provider}.
               </span>
             )}
-            {selected && selected.status !== 'APPROVED' && (
-              <span className="muted" style={{ ...typographyStyles.caption1 }}>
-                Status template ini {TEMPLATE_STATUS_LABEL[selected.status].toLowerCase()} — {provider} bisa menolak
-                pengiriman sampai disetujui.
-              </span>
-            )}
-            {selected && selected.status === 'APPROVED' && selected.bodyParamCount !== 1 && (
-              <span className="muted" style={{ ...typographyStyles.caption1 }}>
-                Template ini punya {selected.bodyParamCount} parameter, sedangkan sistem selalu mengirim tepat satu
-                ({'{{1}}'} = seluruh isi pesan).
+            {selected && !selected.assignmentEligible && (
+              <span style={{ ...typographyStyles.caption1, color: 'var(--critical)' }}>
+                {selected.assignmentBlockedReason ?? 'Template ini tidak dapat dipakai untuk pemicu otomatis.'}
               </span>
             )}
           </div>
@@ -337,7 +336,11 @@ export function WhatsAppTemplateCard({ templateReady }: { templateReady: boolean
 
       {editable && (
         <div className="row" style={{ gap: '0.5rem' }}>
-          <Button variant="primary" disabled={busy || !assignmentsDirty} onClick={() => void run(() => saveTemplateAssignments(assignments), 'Pemakaian template disimpan')}>
+          <Button
+            variant="primary"
+            disabled={busy || !assignmentsDirty || hasInvalidSelectedAssignment}
+            onClick={() => void run(() => saveTemplateAssignments(assignments), 'Pemakaian template disimpan')}
+          >
             Simpan pemakaian
           </Button>
           {assignmentsDirty && (
