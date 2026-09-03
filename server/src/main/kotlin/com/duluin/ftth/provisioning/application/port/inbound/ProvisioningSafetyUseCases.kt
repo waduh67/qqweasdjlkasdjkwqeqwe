@@ -10,6 +10,7 @@ import com.duluin.ftth.provisioning.domain.policy.PolicyDecision
 import java.util.UUID
 
 interface ProvisioningPlanningUseCase {
+    fun generate(request: PlanCompilationRequest): ProvisionPlan
     fun validateProduction(request: PlanCompilationRequest): ProvisionPlan
     fun preview(request: PlanCompilationRequest, mode: ExecutionMode): ProvisioningPlanEvaluation
 }
@@ -20,7 +21,7 @@ data class ProvisioningPlanEvaluation(
 )
 
 interface ProvisioningExecutionAdmissionUseCase {
-    fun admit(planId: UUID, keySuffix: String, affectedSubscriberCount: Int = 1): ProvisionExecution
+    fun admit(planId: UUID, keySuffix: String, affectedSubscriberCount: Int): ProvisionExecution
 }
 
 fun interface ProvisioningExecutionRunner {

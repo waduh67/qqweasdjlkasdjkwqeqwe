@@ -17,6 +17,18 @@ class ImmutableProvisioningPlanService(
     private val safetyGate: ProvisioningSafetyGate,
 ) : ProvisioningPlanningUseCase {
     @Transactional
+    override fun generate(request: PlanCompilationRequest): ProvisionPlan {
+        plans.lockIntent(request.intent.id)
+        val current = plans.findLatestByIntentId(request.intent.id)
+        val candidate = planner.compile(request, (current?.revision ?: 0) + 1)
+        if (current != null && current.preconditionHash == candidate.preconditionHash) return current
+        if (current?.status == PlanStatus.GENERATED) current.reject()
+        if (current?.status == PlanStatus.VALIDATED) current.supersede()
+        if (current != null) plans.save(current)
+        return plans.save(candidate)
+    }
+
+    @Transactional
     fun plan(request: PlanCompilationRequest): ProvisionPlan = validateProduction(request)
 
     @Transactional
