@@ -51,6 +51,7 @@ interface ProvisionExecutionRepository {
     fun findById(id: UUID): ProvisionExecution?
     fun findByIdempotencyKey(key: String): ProvisionExecution?
     fun findLatestByIntentId(intentId: UUID): ProvisionExecution? = null
+    fun findRunnable(limit: Int): List<ProvisionExecution> = emptyList()
 }
 interface DeviceLeaseRepository {
     fun acquire(
@@ -110,7 +111,11 @@ interface FencedExecutionRepository {
     ): Boolean
 }
 interface DeviceSnapshotRepository { fun save(value: DeviceSnapshot): DeviceSnapshot; fun findById(id: UUID): DeviceSnapshot? }
-interface DeviceObservationRepository { fun save(value: DeviceObservation): DeviceObservation; fun findById(id: UUID): DeviceObservation? }
+interface DeviceObservationRepository {
+    fun save(value: DeviceObservation): DeviceObservation
+    fun findById(id: UUID): DeviceObservation?
+    fun findLatestByDevice(device: DeviceReference): DeviceObservation? = null
+}
 interface DriftRecordRepository { fun save(value: DriftRecord): DriftRecord; fun findById(id: UUID): DriftRecord? }
 interface AdapterCertificationRepository {
     fun save(value: AdapterCertification): AdapterCertification

@@ -145,6 +145,11 @@ interface DeviceCircuitBreakerJpaRepository : JpaRepository<DeviceCircuitBreaker
     ): DeviceCircuitBreakerJpaEntity?
 }
 interface DeviceSnapshotJpaRepository : JpaRepository<DeviceSnapshotJpaEntity, UUID>
-interface DeviceObservationJpaRepository : JpaRepository<DeviceObservationJpaEntity, UUID>
+interface DeviceObservationJpaRepository : JpaRepository<DeviceObservationJpaEntity, UUID> {
+    fun findFirstByDeviceKindAndDeviceIdOrderByObservedAtDesc(
+        deviceKind: com.duluin.ftth.provisioning.domain.model.DeviceKind,
+        deviceId: UUID,
+    ): DeviceObservationJpaEntity?
+}
 interface DriftRecordJpaRepository : JpaRepository<DriftRecordJpaEntity, UUID>
 interface AdapterCertificationJpaRepository : JpaRepository<AdapterCertificationJpaEntity, UUID>

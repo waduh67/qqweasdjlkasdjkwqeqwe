@@ -75,6 +75,7 @@ class ServiceIntentPersistenceAdapter(private val jpa: ServiceIntentJpaRepositor
             value.segmentProfileId,
             value.encapsulation,
             value.dedicatedVlanId,
+            value.allocationMode,
             value.status,
         )
         return jpa.save(entity).toDomain()
@@ -85,6 +86,7 @@ class ServiceIntentPersistenceAdapter(private val jpa: ServiceIntentJpaRepositor
 
     private fun ServiceIntentJpaEntity.toDomain() = ServiceIntent.rehydrate(
         id, tenant(tenantId), subscriptionId, hotspotSiteId, segmentProfileId, encapsulation, dedicatedVlanId, status,
+        allocationMode,
     )
 
     override fun findBySubscriptionId(subscriptionId: UUID): ServiceIntent? =
@@ -324,6 +326,11 @@ class ProvisionExecutionPersistenceAdapter(
     override fun findByIdempotencyKey(key: String): ProvisionExecution? = jpa.findByIdempotencyKey(key)?.toDomain()
     override fun findLatestByIntentId(intentId: UUID): ProvisionExecution? =
         jpa.findByIntentIdOrderByIdDesc(intentId).firstOrNull()?.toDomain()
+    @Transactional(readOnly = true)
+    override fun findRunnable(limit: Int): List<ProvisionExecution> = entityManager.createNativeQuery(
+        """SELECT id FROM provisioning_execution
+           WHERE status IN ('QUEUED','RUNNING','VERIFYING','ROLLING_BACK') ORDER BY id LIMIT :limit""",
+    ).setParameter("limit", limit).resultList.mapNotNull { id -> jpa.findById(id as UUID).orElse(null)?.toDomain() }
 
     private fun ProvisionExecutionJpaEntity.toDomain() = ProvisionExecution.rehydrate(
         id, tenant(tenantId), intentId, planId, idempotencyKey, status, detail,
@@ -367,6 +374,8 @@ class DeviceObservationPersistenceAdapter(
         return jpa.save(value.toEntity()).toDomain()
     }
     override fun findById(id: UUID): DeviceObservation? = jpa.findById(id).orElse(null)?.toDomain()
+    override fun findLatestByDevice(device: DeviceReference): DeviceObservation? =
+        jpa.findFirstByDeviceKindAndDeviceIdOrderByObservedAtDesc(device.kind, device.id)?.toDomain()
     private fun DeviceObservation.toEntity() = DeviceObservationJpaEntity(id, device.kind, device.id, codec.encode(state), observedAt)
     private fun DeviceObservationJpaEntity.toDomain() = DeviceObservation.rehydrate(
         id, tenant(tenantId), DeviceReference(deviceKind, deviceId), codec.decode(normalizedState), observedAt,
