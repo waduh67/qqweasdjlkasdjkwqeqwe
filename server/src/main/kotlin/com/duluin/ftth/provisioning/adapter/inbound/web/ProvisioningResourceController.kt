@@ -3,6 +3,8 @@ package com.duluin.ftth.provisioning.adapter.inbound.web
 import com.duluin.ftth.provisioning.application.service.ProvisioningResourceService
 import com.duluin.ftth.provisioning.application.service.ProvisioningManagementEvidenceService
 import com.duluin.ftth.provisioning.application.service.RecordManagementEvidenceCommand
+import com.duluin.ftth.provisioning.application.service.AuthoritativePlanCompilationService
+import com.duluin.ftth.provisioning.application.service.RevisionedResource
 import com.duluin.ftth.provisioning.domain.model.AdministrativeStatus
 import com.duluin.ftth.provisioning.domain.model.DeviceKind
 import com.duluin.ftth.provisioning.domain.model.DeviceReference
@@ -33,6 +35,7 @@ import java.util.UUID
 class ProvisioningResourceController(
     private val resources: ProvisioningResourceService,
     private val managementEvidence: ProvisioningManagementEvidenceService,
+    private val planCompilation: AuthoritativePlanCompilationService,
 ) {
     @GetMapping("/topology")
     @PreAuthorize("@authz.can('provisioning.segment.view')")
@@ -122,18 +125,27 @@ class ProvisioningResourceController(
 
     @GetMapping("/intents")
     @PreAuthorize("@authz.can('provisioning.segment.view')")
-    fun intents() = resources.intents()
+    fun intents() = resources.intents().map { RevisionedResource(it.revision, it.value.toView()) }
 
     @PostMapping("/intents")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("@authz.can('provisioning.segment.manage')")
     fun createIntent(@RequestBody request: IntentRequest) =
-        resources.createIntent(request.subscriptionId, request.segmentProfileId, request.dedicatedVlanId)
+        resources.createIntent(request.subscriptionId, request.segmentProfileId, request.allocationMode, request.dedicatedVlanId)
+            .let { RevisionedResource(it.revision, it.value.toView()) }
 
     @PutMapping("/intents/{id}")
     @PreAuthorize("@authz.can('provisioning.segment.manage')")
     fun updateIntent(@PathVariable id: UUID, @RequestBody request: IntentRequest) =
         resources.updateIntent(id, request.requiredRevision(), request.segmentProfileId, request.status)
+            .let { RevisionedResource(it.revision, it.value.toView()) }
+
+    @PostMapping("/intents/{id}/plans")
+    @PreAuthorize("@authz.can('provisioning.plan.view')")
+    fun generatePlan(@PathVariable id: UUID, @RequestBody request: PlanGenerationRequest) =
+        planCompilation.generate(id, request.change).let {
+            ProvisioningPlanView(it.id, it.intentId, it.revision, it.status.name, it.contentHash)
+        }
 
     @PutMapping("/management-protections/{deviceKind}/{deviceId}")
     @PreAuthorize("@authz.isPlatformAdmin()")
@@ -192,14 +204,6 @@ data class VlanRangeRequest(val start: Int, val endInclusive: Int)
 data class ProfileRequest(val revision: Int? = null, val name: String, val poolId: UUID) {
     fun requiredRevision() = revision ?: throw ValidationException("REVISION_REQUIRED")
 }
-
-data class IntentRequest(
-    val revision: Int? = null,
-    val subscriptionId: UUID,
-    val segmentProfileId: UUID,
-    val dedicatedVlanId: Int?,
-    val status: String = "DRAFT",
-) { fun requiredRevision() = revision ?: throw ValidationException("REVISION_REQUIRED") }
 
 data class ManagementProtectionRequest(
     val revision: Int? = null,

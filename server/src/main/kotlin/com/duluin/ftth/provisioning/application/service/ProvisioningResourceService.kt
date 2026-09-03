@@ -18,6 +18,7 @@ import com.duluin.ftth.provisioning.domain.model.InterfaceRole
 import com.duluin.ftth.provisioning.domain.model.VlanEncapsulation
 import com.duluin.ftth.provisioning.domain.model.VlanPool
 import com.duluin.ftth.provisioning.domain.model.VlanRange
+import com.duluin.ftth.provisioning.domain.model.VlanAllocationMode
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -172,9 +173,21 @@ class ProvisioningResourceService(
     }
 
     @Transactional
-    fun createIntent(subscriptionId: UUID, profileId: UUID, dedicatedVlanId: Int?): RevisionedResource<ServiceIntent> {
+    fun createIntent(
+        subscriptionId: UUID,
+        profileId: UUID,
+        allocationMode: VlanAllocationMode,
+        dedicatedVlanId: Int?,
+    ): RevisionedResource<ServiceIntent> {
         profiles.findById(profileId) ?: throw NotFoundException("SEGMENT_PROFILE_NOT_FOUND")
-        return saveNew(INTENT, intents.save(ServiceIntent.create(tenantId(), subscriptionId, profileId, VlanEncapsulation.SINGLE_TAG, dedicatedVlanId)))
+        return saveNew(
+            INTENT,
+            intents.save(
+                ServiceIntent.create(
+                    tenantId(), subscriptionId, profileId, VlanEncapsulation.SINGLE_TAG, dedicatedVlanId, allocationMode,
+                ),
+            ),
+        )
     }
 
     @Transactional
@@ -183,7 +196,7 @@ class ProvisioningResourceService(
         val next = revisions.advance(INTENT, id, revision)
         val updated = ServiceIntent.rehydrate(
             current.id, tenantId(), current.subscriptionId, current.hotspotSiteId, profileId, current.encapsulation,
-            current.dedicatedVlanId, com.duluin.ftth.provisioning.domain.model.IntentStatus.valueOf(status),
+            current.dedicatedVlanId, com.duluin.ftth.provisioning.domain.model.IntentStatus.valueOf(status), current.allocationMode,
         )
         val saved = intents.save(updated)
         audit("provisioning.intent.updated", id)
