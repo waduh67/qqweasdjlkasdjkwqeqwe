@@ -92,6 +92,9 @@ class HuaweiServicePlan private constructor(
             ) {
                 throw HuaweiAdapterException(HuaweiFailureCode.AMBIGUOUS_GPON_INDEX, "Invalid explicit Huawei service parameters")
             }
+            if (vlanId != userVlanId) {
+                throw HuaweiAdapterException(HuaweiFailureCode.UNSUPPORTED_CAPABILITY, "Release one does not support VLAN translation")
+            }
             return HuaweiServicePlan(
                 operationKey,
                 vlanId,

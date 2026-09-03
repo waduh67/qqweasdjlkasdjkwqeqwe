@@ -45,7 +45,7 @@ class HuaweiProvisioningAdapterTest {
 
         val dryRun = adapter.apply(target(), servicePlan(), HuaweiExecutionMode.DRY_RUN)
         assertTrue(dryRun.changed)
-        assertTrue(dryRun.commands.contains("service-port 1 vlan 110 gpon 0/1/1 ont 1 gemport 1 multi-service user-vlan 110 tag-transform translate"))
+        assertTrue(dryRun.commands.contains("service-port 1 vlan 110 gpon 0/1/1 ont 1 gemport 1 multi-service user-vlan 110 tag-transform transparent"))
         assertTrue(fixture.mutations.isEmpty())
 
         val callsBeforeProduction = fixture.commands.size
@@ -153,7 +153,7 @@ internal class HuaweiMa5800Fixture(
             "tcont 1 dba-profile-id 20" -> tcont = true
             "gem add 1 eth tcont 1" -> gem = true
             "gem mapping 1 0 vlan 110" -> mapping = true
-            "service-port 1 vlan 110 gpon 0/1/1 ont 1 gemport 1 multi-service user-vlan 110 tag-transform translate" -> service = true
+            "service-port 1 vlan 110 gpon 0/1/1 ont 1 gemport 1 multi-service user-vlan 110 tag-transform transparent" -> service = true
             "undo service-port 1" -> service = false
             "undo gem mapping 1 0" -> mapping = false
             "undo gem add 1" -> gem = false

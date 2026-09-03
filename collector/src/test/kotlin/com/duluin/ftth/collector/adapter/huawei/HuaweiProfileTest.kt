@@ -22,7 +22,7 @@ class HuaweiProfileTest {
                 "gem mapping 1 0 vlan 110",
                 "commit",
                 "quit",
-                "service-port 1 vlan 110 gpon 0/1/1 ont 1 gemport 1 multi-service user-vlan 110 tag-transform translate",
+                "service-port 1 vlan 110 gpon 0/1/1 ont 1 gemport 1 multi-service user-vlan 110 tag-transform transparent",
                 "save",
             ),
             profile.applyCommands(servicePlan(), HuaweiMutationSet.all()),
@@ -64,6 +64,28 @@ class HuaweiProfileTest {
                 assertFailsWith<HuaweiAdapterException> { HuaweiGponPort.parse(notation) }.code,
             )
         }
+    }
+
+    @Test
+    fun `release one rejects service and user vlan translation`() {
+        assertEquals(
+            HuaweiFailureCode.UNSUPPORTED_CAPABILITY,
+            assertFailsWith<HuaweiAdapterException> {
+                HuaweiServicePlan.create(
+                    operationKey = "translation",
+                    vlanId = 110,
+                    uplinkNotation = "0/19/0",
+                    gponNotation = "0/1/1",
+                    ontId = 1,
+                    lineProfileId = 10,
+                    tcontId = 1,
+                    dbaProfileId = 20,
+                    gemPortId = 1,
+                    servicePortId = 1,
+                    userVlanId = 120,
+                )
+            }.code,
+        )
     }
 }
 

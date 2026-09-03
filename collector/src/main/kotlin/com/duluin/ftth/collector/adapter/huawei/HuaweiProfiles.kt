@@ -63,7 +63,7 @@ private class HuaweiMa5800R019Profile(family: String) : HuaweiCliProfile {
             add(
                 "service-port ${plan.servicePortId} vlan ${plan.vlanId} gpon ${plan.gpon.notation} " +
                     "ont ${plan.ontId} gemport ${plan.gemPortId} multi-service user-vlan ${plan.userVlanId} " +
-                    "tag-transform translate",
+                    "tag-transform transparent",
             )
         }
         add("save")
