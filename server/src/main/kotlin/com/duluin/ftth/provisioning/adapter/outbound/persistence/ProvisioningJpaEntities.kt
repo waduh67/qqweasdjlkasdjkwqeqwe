@@ -57,6 +57,8 @@ class ServiceIntentJpaEntity(
     @Column(name = "segment_profile_id", nullable = false) var segmentProfileId: UUID,
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) val encapsulation: VlanEncapsulation,
     @Column(name = "dedicated_vlan_id") val dedicatedVlanId: Int?,
+    @Enumerated(EnumType.STRING) @Column(name = "allocation_mode", nullable = false, length = 20)
+    val allocationMode: com.duluin.ftth.provisioning.domain.model.VlanAllocationMode,
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 30) var status: IntentStatus,
 ) : TenantAwareJpaEntity(id)
 
