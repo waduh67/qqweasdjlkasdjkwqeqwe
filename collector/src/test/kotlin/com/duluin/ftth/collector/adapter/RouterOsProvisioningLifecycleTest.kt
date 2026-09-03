@@ -1204,7 +1204,7 @@ class RouterOsProvisioningLifecycleTest {
     private class SimulatedCollectorCrash : Error("simulated collector crash")
 
 
-    private class StatefulRouterOsFixture : AutoCloseable {
+    internal class StatefulRouterOsFixture : AutoCloseable {
         private val mapper = JsonMapper.builder().build()
         private val ids = AtomicInteger(16)
         private val resources = linkedMapOf<String, MutableList<MutableMap<String, String>>>()
