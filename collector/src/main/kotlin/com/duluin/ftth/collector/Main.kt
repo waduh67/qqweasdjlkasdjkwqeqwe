@@ -3,10 +3,12 @@ package com.duluin.ftth.collector
 import com.duluin.ftth.collector.adapter.BngAdapterRegistry
 import com.duluin.ftth.collector.adapter.MikrotikRouterOsAdapter
 import com.duluin.ftth.collector.adapter.ProvisioningAdapterRegistry
+import com.duluin.ftth.collector.adapter.OltProvisioningAdapterRegistry
 import com.duluin.ftth.collector.adapter.FileRouterOsProvisioningStateStore
 import com.duluin.ftth.collector.adapter.RouterOsProvisioningAdapter
 import com.duluin.ftth.collector.adapter.SimulatorBngAdapter
 import com.duluin.ftth.collector.adapter.SimulatorOltAdapter
+import com.duluin.ftth.collector.adapter.hsgq.ProvisionalHsgqProvisioningAdapter
 import com.duluin.ftth.snmp.AdapterRegistry
 import com.duluin.ftth.snmp.GponSnmpAdapter
 import com.duluin.ftth.snmp.HsgqEponSnmpAdapter
@@ -80,6 +82,9 @@ fun main() {
             )
         },
     )
+    val oltProvisioningRegistry = OltProvisioningAdapterRegistry(
+        listOf(ProvisionalHsgqProvisioningAdapter()),
+    )
 
     log.info("ftth-collector {} → {}", AGENT_VERSION, serverUrl)
     if (simulatorEnabled) log.warn("MODE SIMULATOR aktif — data yang dikirim adalah tiruan, bukan dari perangkat")
@@ -92,6 +97,7 @@ fun main() {
         agentVersion = AGENT_VERSION,
         bngRegistry = bngRegistry,
         provisioningRegistry = provisioningRegistry,
+        oltProvisioningRegistry = oltProvisioningRegistry,
     )
 
     if (env("FTTH_COLLECTOR_ONCE", "false").toBoolean()) {
