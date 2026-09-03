@@ -92,6 +92,44 @@ interface StepAttemptJpaRepository : JpaRepository<StepAttemptJpaEntity, UUID> {
         @Param("errorCode") errorCode: String?,
         @Param("completedAt") completedAt: Instant,
     ): Int
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        value = """UPDATE provisioning_step_attempt attempt
+            SET status = :status, error_code = :errorCode, completed_at = :completedAt
+            FROM provisioning_execution_step step, provisioning_device_lease lease
+            WHERE attempt.id = :id AND attempt.status = 'DISPATCHED'
+              AND step.id = attempt.execution_step_id AND step.tenant_id = attempt.tenant_id
+              AND lease.tenant_id = attempt.tenant_id
+              AND lease.device_kind = step.device_kind AND lease.device_id = step.device_id
+              AND lease.execution_id = step.execution_id
+              AND lease.fencing_token = attempt.fencing_token
+              AND lease.expires_at > :acceptedAt""",
+        nativeQuery = true,
+    )
+    fun completeAcknowledgementIfCurrentLease(
+        @Param("id") id: UUID,
+        @Param("status") status: String,
+        @Param("errorCode") errorCode: String?,
+        @Param("completedAt") completedAt: Instant,
+        @Param("acceptedAt") acceptedAt: Instant,
+    ): Int
+
+    @Query(
+        value = """SELECT EXISTS (
+            SELECT 1 FROM provisioning_step_attempt attempt
+            JOIN provisioning_execution_step step
+              ON step.id = attempt.execution_step_id AND step.tenant_id = attempt.tenant_id
+            JOIN provisioning_device_lease lease
+              ON lease.tenant_id = attempt.tenant_id
+             AND lease.device_kind = step.device_kind AND lease.device_id = step.device_id
+             AND lease.execution_id = step.execution_id
+             AND lease.fencing_token = attempt.fencing_token
+            WHERE attempt.id = :id AND lease.expires_at > :acceptedAt
+        )""",
+        nativeQuery = true,
+    )
+    fun acknowledgementHasCurrentLease(@Param("id") id: UUID, @Param("acceptedAt") acceptedAt: Instant): Boolean
 }
 interface StepSnapshotJpaRepository : JpaRepository<StepSnapshotJpaEntity, UUID> {
     fun findByExecutionStepIdOrderByCapturedAt(executionStepId: UUID): List<StepSnapshotJpaEntity>

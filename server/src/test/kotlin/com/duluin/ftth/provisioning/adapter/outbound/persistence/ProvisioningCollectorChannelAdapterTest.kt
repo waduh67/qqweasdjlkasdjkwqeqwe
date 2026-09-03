@@ -12,6 +12,8 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import java.time.Instant
+import java.time.Clock
+import java.time.ZoneOffset
 import java.util.Optional
 import java.util.UUID
 
@@ -62,6 +64,7 @@ class ProvisioningCollectorChannelAdapterTest {
             mock(ProvisionStepAttributeJpaRepository::class.java),
             mock(EntityManager::class.java),
             mock(CollectorCapabilityEvidenceWriter::class.java),
+            Clock.fixed(Instant.parse("2026-09-02T12:00:00Z"), ZoneOffset.UTC),
         )
 
         val pending = TenantContext.runAs(tenantId) {

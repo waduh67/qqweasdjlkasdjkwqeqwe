@@ -19,6 +19,7 @@ import jakarta.persistence.EntityManager
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
+import java.time.Clock
 
 @Component
 class ProvisioningCollectorChannelAdapter(
@@ -30,6 +31,7 @@ class ProvisioningCollectorChannelAdapter(
     private val attributes: ProvisionStepAttributeJpaRepository,
     private val entityManager: EntityManager,
     private val capabilityEvidenceWriter: CollectorCapabilityEvidenceWriter,
+    private val clock: Clock,
 ) : CollectorProvisioningChannel {
     @Transactional
     override fun pendingFor(
@@ -108,15 +110,20 @@ class ProvisioningCollectorChannelAdapter(
             .singleOrNull { it.matches(collectorId, result) }
             ?: return null
         val outcome = result.toAttemptOutcome(context.attempt.deadline)
-        val updated = attempts.completeIfDispatched(
+        val acceptedAt = clock.instant()
+        val updated = attempts.completeAcknowledgementIfCurrentLease(
             context.attempt.id,
-            outcome.status,
+            outcome.status.name,
             outcome.errorCode,
             result.completedAt,
+            acceptedAt,
         )
-        val accepted = updated == 1 || attempts.findById(context.attempt.id).orElse(null)?.let { stored ->
-            stored.status == outcome.status && stored.errorCode == outcome.errorCode
-        } == true
+        val accepted = updated == 1 || (
+            attempts.acknowledgementHasCurrentLease(context.attempt.id, acceptedAt) &&
+                attempts.findById(context.attempt.id).orElse(null)?.let { stored ->
+                    stored.status == outcome.status && stored.errorCode == outcome.errorCode
+                } == true
+            )
         if (!accepted) return null
         persistResult(collectorId, tenantId, context, result)
         return AcceptedResult(result.idempotencyKey, result.attemptId)
