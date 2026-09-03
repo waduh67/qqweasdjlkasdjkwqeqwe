@@ -5,6 +5,7 @@ import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.provisioning.application.port.outbound.DeviceObservationRepository
 import com.duluin.ftth.provisioning.application.port.outbound.DriftRecordRepository
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisioningObservationPort
+import com.duluin.ftth.provisioning.application.port.outbound.ProvisioningObservationOutcome
 import com.duluin.ftth.provisioning.application.service.ProvisioningDriftClassifier
 import com.duluin.ftth.provisioning.application.service.ProvisioningDriftScanner
 import com.duluin.ftth.provisioning.application.service.ProvisioningDriftBaselineReader
@@ -40,7 +41,10 @@ class ProvisioningDriftScannerTest {
         val observations = Observations()
         val drift = Drifts()
         var observationCalls = 0
-        val observer: ProvisioningObservationPort = { observationCalls += 1; NormalizedDeviceState.empty() }
+        val observer: ProvisioningObservationPort = {
+            observationCalls += 1
+            ProvisioningObservationOutcome.Available(NormalizedDeviceState.empty(), NOW)
+        }
         val baselines: ProvisioningDriftBaselineReader = { listOf(baseline) }
         val scanner = ProvisioningDriftScanner(
             Tenants(), observer, baselines, observations, drift, ProvisioningDriftClassifier(),
@@ -63,10 +67,10 @@ class ProvisioningDriftScannerTest {
         val drift = Drifts()
         val meters = SimpleMeterRegistry()
         val attempted = mutableListOf<DeviceReference>()
-        val observer: ProvisioningObservationPort = { device ->
-            attempted += device
-            if (device == first.device) error("transport-secret-canary")
-            NormalizedDeviceState.empty()
+        val observer: ProvisioningObservationPort = { snapshot ->
+            attempted += snapshot.device
+            if (snapshot.device == first.device) error("transport-secret-canary")
+            ProvisioningObservationOutcome.Available(NormalizedDeviceState.empty(), NOW)
         }
         val baselines: ProvisioningDriftBaselineReader = { listOf(first, second) }
         val scanner = ProvisioningDriftScanner(
@@ -95,7 +99,7 @@ class ProvisioningDriftScannerTest {
         }
         val scanner = ProvisioningDriftScanner(
             Tenants(listOf(firstTenant, secondTenant)),
-            { NormalizedDeviceState.empty() },
+            { ProvisioningObservationOutcome.Available(NormalizedDeviceState.empty(), NOW) },
             baselines,
             observations,
             drift,
