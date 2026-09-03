@@ -23,6 +23,7 @@ import { ImportPppoePage } from './pages/ImportPppoePage'
 import { ImportCustomersPage } from './pages/ImportCustomersPage'
 import { MonitoringPage } from './pages/MonitoringPage'
 import { ProvisioningPage } from './pages/ProvisioningPage'
+import { NetworkProvisioningPage } from './pages/NetworkProvisioningPage'
 import { IncidentsPage } from './pages/IncidentsPage'
 import { HelpdeskPage } from './pages/HelpdeskPage'
 import { WorkOrdersPage } from './pages/WorkOrdersPage'
@@ -299,7 +300,7 @@ function OperatorApp() {
               path={NETWORK_PROVISIONING_ROUTE}
               element={
                 <RequirePermission permission={NETWORK_PROVISIONING_VIEW_PERMISSION}>
-                  <ProvisioningPage />
+                  <NetworkProvisioningPage />
                 </RequirePermission>
               }
             />

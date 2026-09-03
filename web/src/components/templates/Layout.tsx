@@ -58,6 +58,7 @@ const GROUPS: NavGroup[] = [
       { to: '/acs', label: 'ACS / TR-069', permission: 'cpe.acs.view', icon: IconWifi },
       { to: '/vpn', label: 'Akun VPN', permission: 'vpn.peer.view', icon: IconRoute },
       { to: '/monitoring', label: 'Monitoring', permission: 'monitoring.dashboard.view', icon: IconMonitor },
+      { to: '/network-provisioning', label: 'Provisioning Jaringan', permission: 'provisioning.segment.view', icon: IconRoute },
       { to: '/provisioning', label: 'Provisioning', permission: 'monitoring.provisioning.view', icon: IconInbox },
     ],
   },
