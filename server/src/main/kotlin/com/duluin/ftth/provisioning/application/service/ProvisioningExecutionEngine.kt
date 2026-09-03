@@ -38,7 +38,7 @@ data class ExecutionPolicy(
     val attemptTimeout: Duration = Duration.ofSeconds(30),
     val initialBackoff: Duration = Duration.ofSeconds(1),
     val maximumBackoff: Duration = Duration.ofSeconds(30),
-    val circuitFailureThreshold: Int = 3,
+    val circuitFailureThreshold: Int = 1,
     val circuitOpenDuration: Duration = Duration.ofMinutes(1),
     val leaseDuration: Duration = Duration.ofSeconds(30),
 ) {
@@ -393,6 +393,7 @@ class ProvisioningExecutionEngine(
                     ),
                 )
                 if (!observation.matchesDesired) {
+                    recordCircuitFailure(planStep.device, execution.tenantId)
                     semanticFailure = StepFailure("VERIFICATION_MISMATCH", false, true, true)
                     state.fail("VERIFICATION_MISMATCH")
                     executionSteps.save(state)
@@ -620,6 +621,7 @@ class ProvisioningExecutionEngine(
                 val returnedAt = clock.instant()
                 val late = !deadline.isAfter(returnedAt)
                 val retryable = failure.kind == DeviceFailureKind.TRANSIENT
+                val opensCircuit = retryable || failure.kind == DeviceFailureKind.VERIFICATION_MISMATCH
                 val willOpen = (circuit?.failureCount ?: 0) + 1 >= policy.circuitFailureThreshold
                 val terminalFailure = when {
                     late -> StepFailure("DEADLINE_EXCEEDED", true, true, true)
@@ -646,7 +648,7 @@ class ProvisioningExecutionEngine(
                     if (!attempts.completeIfDispatched(attempt.id, attemptStatus, errorCode, returnedAt)) {
                         return@commitIfLeaseValid false
                     }
-                    if (late || retryable) recordCircuitFailure(planStep.device, execution.tenantId)
+                    if (late || opensCircuit) recordCircuitFailure(planStep.device, execution.tenantId)
                     terminalFailure?.let(onTerminalFailure)
                     true
                 }

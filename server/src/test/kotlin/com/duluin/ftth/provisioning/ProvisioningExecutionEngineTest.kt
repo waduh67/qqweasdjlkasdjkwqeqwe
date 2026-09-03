@@ -418,7 +418,7 @@ class ProvisioningExecutionEngineTest {
 
     @Test
     fun `verification mismatch is never retried and requires manual reconciliation`() {
-        val fixture = Fixture()
+        val fixture = Fixture(policy = ExecutionPolicy(circuitFailureThreshold = 1))
         val execution = fixture.engine.enqueue(fixture.plan, "verify-mismatch")
         fixture.gateway.verificationMismatchFor += fixture.olt
 
@@ -432,6 +432,7 @@ class ProvisioningExecutionEngineTest {
                 .count { it.phase == ExecutionPhase.APPLY },
         )
             .isEqualTo(1)
+        assertThat(fixture.circuits.findByDevice(fixture.olt)!!.isOpen(fixture.clock.instant())).isTrue()
     }
 
     @Test
