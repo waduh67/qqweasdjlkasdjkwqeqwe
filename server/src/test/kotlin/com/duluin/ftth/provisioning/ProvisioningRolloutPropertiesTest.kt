@@ -19,11 +19,10 @@ class ProvisioningRolloutPropertiesTest {
     }
 
     @Test
-    fun `default rollout limits canary to one and opens circuit on first failure`() {
+    fun `default rollout limits canary to one`() {
         val rollout = ProvisioningRolloutProperties(autoApplyEnabled = true)
 
         assertThat(rollout.maxAffectedSubscribers).isEqualTo(1)
-        assertThat(rollout.circuitFailureThreshold).isEqualTo(1)
         assertThatThrownBy { rollout.requireAutoApplyAllowed(2) }
             .isInstanceOf(ConflictException::class.java)
             .hasMessage("BULK_EXPANSION_DISABLED")

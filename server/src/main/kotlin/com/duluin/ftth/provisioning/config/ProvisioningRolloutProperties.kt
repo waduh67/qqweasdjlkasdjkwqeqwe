@@ -9,12 +9,10 @@ data class ProvisioningRolloutProperties(
     val uiEnabled: Boolean = true,
     val autoApplyEnabled: Boolean = false,
     val maxAffectedSubscribers: Int = 1,
-    val circuitFailureThreshold: Int = 1,
     val bulkExpansionEnabled: Boolean = false,
 ) {
     init {
         require(maxAffectedSubscribers > 0) { "PROVISIONING_CANARY_LIMIT_INVALID" }
-        require(circuitFailureThreshold > 0) { "PROVISIONING_CIRCUIT_THRESHOLD_INVALID" }
         require(bulkExpansionEnabled || maxAffectedSubscribers == 1) { "PROVISIONING_BULK_EXPANSION_NOT_ENABLED" }
     }
 

@@ -32,7 +32,6 @@ class ProvisioningLifecycleController(
         rollout.uiEnabled,
         rollout.autoApplyEnabled,
         rollout.maxAffectedSubscribers,
-        rollout.circuitFailureThreshold,
         rollout.bulkExpansionEnabled,
     )
 
@@ -94,7 +93,6 @@ data class ProvisioningRolloutView(
     val uiEnabled: Boolean,
     val autoApplyEnabled: Boolean,
     val maxAffectedSubscribers: Int,
-    val circuitFailureThreshold: Int,
     val bulkExpansionEnabled: Boolean,
 )
 
