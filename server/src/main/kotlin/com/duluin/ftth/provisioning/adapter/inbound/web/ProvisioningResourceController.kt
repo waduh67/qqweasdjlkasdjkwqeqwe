@@ -11,6 +11,7 @@ import com.duluin.ftth.provisioning.domain.model.ManagedNodeRole
 import com.duluin.ftth.provisioning.domain.model.TopologyReference
 import com.duluin.ftth.provisioning.domain.model.TopologyReferenceKind
 import com.duluin.ftth.provisioning.domain.model.VlanRange
+import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.provisioning.domain.policy.ManagementEvidenceSourceType
 import com.duluin.ftth.provisioning.domain.policy.ProtectedManagementResources
 import org.springframework.http.HttpStatus
@@ -47,7 +48,7 @@ class ProvisioningResourceController(
     @PutMapping("/topology/nodes/{id}")
     @PreAuthorize("@authz.can('provisioning.segment.manage')")
     fun updateNode(@PathVariable id: UUID, @RequestBody request: NodeRequest) = resources.updateNode(
-        id, request.revision, request.name, request.role, request.reference(), request.status,
+        id, request.requiredRevision(), request.name, request.role, request.reference(), request.status,
     )
 
     @PostMapping("/topology/interfaces")
@@ -60,7 +61,7 @@ class ProvisioningResourceController(
     @PutMapping("/topology/interfaces/{id}")
     @PreAuthorize("@authz.can('provisioning.segment.manage')")
     fun updateInterface(@PathVariable id: UUID, @RequestBody request: InterfaceRequest) = resources.updateInterface(
-        id, request.revision, request.nodeId, request.name, request.role, request.reference(), request.status,
+        id, request.requiredRevision(), request.nodeId, request.name, request.role, request.reference(), request.status,
     )
 
     @PostMapping("/topology/links")
@@ -72,7 +73,7 @@ class ProvisioningResourceController(
     @PutMapping("/topology/links/{id}")
     @PreAuthorize("@authz.can('provisioning.segment.manage')")
     fun updateLink(@PathVariable id: UUID, @RequestBody request: LinkRequest) =
-        resources.updateLink(id, request.revision, request.status)
+        resources.updateLink(id, request.requiredRevision(), request.status)
 
     @DeleteMapping("/topology/{type}/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -93,7 +94,7 @@ class ProvisioningResourceController(
     @PutMapping("/vlan-pools/{id}")
     @PreAuthorize("@authz.can('provisioning.segment.manage')")
     fun updatePool(@PathVariable id: UUID, @RequestBody request: PoolRequest) =
-        resources.updatePool(id, request.revision, request.name, request.vlanStart, request.vlanEnd, request.reservedRanges())
+        resources.updatePool(id, request.requiredRevision(), request.name, request.vlanStart, request.vlanEnd, request.reservedRanges())
 
     @DeleteMapping("/vlan-pools/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -112,7 +113,7 @@ class ProvisioningResourceController(
     @PutMapping("/segment-profiles/{id}")
     @PreAuthorize("@authz.can('provisioning.segment.manage')")
     fun updateProfile(@PathVariable id: UUID, @RequestBody request: ProfileRequest) =
-        resources.updateProfile(id, request.revision, request.name, request.poolId)
+        resources.updateProfile(id, request.requiredRevision(), request.name, request.poolId)
 
     @DeleteMapping("/segment-profiles/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -132,7 +133,7 @@ class ProvisioningResourceController(
     @PutMapping("/intents/{id}")
     @PreAuthorize("@authz.can('provisioning.segment.manage')")
     fun updateIntent(@PathVariable id: UUID, @RequestBody request: IntentRequest) =
-        resources.updateIntent(id, request.revision, request.segmentProfileId, request.status)
+        resources.updateIntent(id, request.requiredRevision(), request.segmentProfileId, request.status)
 
     @PutMapping("/management-protections/{deviceKind}/{deviceId}")
     @PreAuthorize("@authz.isPlatformAdmin()")
@@ -140,11 +141,11 @@ class ProvisioningResourceController(
         @PathVariable deviceKind: DeviceKind,
         @PathVariable deviceId: UUID,
         @RequestBody request: ManagementProtectionRequest,
-    ) = managementEvidence.record(request.toCommand(deviceKind, deviceId))
+    ) = managementEvidence.record(request.toCommand(deviceKind, deviceId), request.requiredRevision())
 }
 
 data class NodeRequest(
-    val revision: Int = 1,
+    val revision: Int? = null,
     val name: String,
     val role: ManagedNodeRole,
     val referenceKind: TopologyReferenceKind?,
@@ -152,10 +153,11 @@ data class NodeRequest(
     val status: AdministrativeStatus,
 ) {
     fun reference() = if (referenceKind == null || referenceId == null) null else TopologyReference(referenceKind, referenceId)
+    fun requiredRevision() = revision ?: throw ValidationException("REVISION_REQUIRED")
 }
 
 data class InterfaceRequest(
-    val revision: Int = 1,
+    val revision: Int? = null,
     val nodeId: UUID,
     val name: String,
     val role: InterfaceRole,
@@ -164,38 +166,43 @@ data class InterfaceRequest(
     val status: AdministrativeStatus,
 ) {
     fun reference() = if (referenceKind == null || referenceId == null) null else TopologyReference(referenceKind, referenceId)
+    fun requiredRevision() = revision ?: throw ValidationException("REVISION_REQUIRED")
 }
 
 data class LinkRequest(
-    val revision: Int = 1,
+    val revision: Int? = null,
     val interfaceAId: UUID,
     val interfaceZId: UUID,
     val status: AdministrativeStatus,
-)
+) { fun requiredRevision() = revision ?: throw ValidationException("REVISION_REQUIRED") }
 
 data class PoolRequest(
-    val revision: Int = 1,
+    val revision: Int? = null,
     val name: String,
     val vlanStart: Int,
     val vlanEnd: Int,
     val reserved: List<VlanRangeRequest> = emptyList(),
 ) {
     fun reservedRanges() = reserved.map { VlanRange(it.start, it.endInclusive) }
+    fun requiredRevision() = revision ?: throw ValidationException("REVISION_REQUIRED")
 }
 
 data class VlanRangeRequest(val start: Int, val endInclusive: Int)
 
-data class ProfileRequest(val revision: Int = 1, val name: String, val poolId: UUID)
+data class ProfileRequest(val revision: Int? = null, val name: String, val poolId: UUID) {
+    fun requiredRevision() = revision ?: throw ValidationException("REVISION_REQUIRED")
+}
 
 data class IntentRequest(
-    val revision: Int = 1,
+    val revision: Int? = null,
     val subscriptionId: UUID,
     val segmentProfileId: UUID,
     val dedicatedVlanId: Int?,
     val status: String = "DRAFT",
-)
+) { fun requiredRevision() = revision ?: throw ValidationException("REVISION_REQUIRED") }
 
 data class ManagementProtectionRequest(
+    val revision: Int? = null,
     val tenantId: UUID,
     val vlanRanges: List<VlanRangeRequest>,
     val managementIpPrefixes: Set<String>,
@@ -209,6 +216,7 @@ data class ManagementProtectionRequest(
     val observedAt: java.time.Instant,
     val validUntil: java.time.Instant,
 ) {
+    fun requiredRevision() = revision ?: throw ValidationException("REVISION_REQUIRED")
     fun toCommand(kind: DeviceKind, id: UUID) = RecordManagementEvidenceCommand(
         tenantId,
         DeviceReference(kind, id),

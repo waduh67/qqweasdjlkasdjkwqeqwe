@@ -1,6 +1,5 @@
 package com.duluin.ftth.provisioning.application.service
 
-import com.duluin.ftth.common.audit.AuditTrailEvent
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.provisioning.application.port.outbound.SegmentProfileRepository
@@ -19,7 +18,6 @@ import com.duluin.ftth.provisioning.domain.model.InterfaceRole
 import com.duluin.ftth.provisioning.domain.model.VlanEncapsulation
 import com.duluin.ftth.provisioning.domain.model.VlanPool
 import com.duluin.ftth.provisioning.domain.model.VlanRange
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -36,7 +34,7 @@ class ProvisioningResourceService(
     private val intents: ServiceIntentRepository,
     private val revisions: ProvisioningResourceRevisionStore,
     private val currentUser: CurrentUserProvider,
-    private val events: ApplicationEventPublisher,
+    private val audit: ProvisioningAuditPublisher,
 ) {
     fun topology() = topology.snapshot()
     fun pools() = pools.findAll().map { RevisionedResource(revisions.current(POOL, it.id), it) }
@@ -204,7 +202,7 @@ class ProvisioningResourceService(
     private fun tenantId() = currentUser.current().tenantId
     private fun audit(action: String, id: UUID) {
         val actor = currentUser.current()
-        events.publishEvent(AuditTrailEvent(actor.tenantId, actor.userId, actor.email, action, "ProvisioningResource", id.toString()))
+        audit.publish(ProvisioningAuditRecord(actor.tenantId, action, "ProvisioningResource", id))
     }
 
     private companion object {
