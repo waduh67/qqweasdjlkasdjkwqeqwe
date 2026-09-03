@@ -6,6 +6,7 @@ import type { PlanPreview } from '@/api/provisioning'
 import { useProvisioningPermissions } from '@/hooks/useProvisioningPermissions'
 import { ProvisioningEditorModal } from '@/components/organisms/provisioning/ProvisioningEditors'
 import { ProvisioningExecutionPanel } from '@/components/organisms/provisioning/ProvisioningExecutionPanel'
+import { IntentsPanel } from '@/components/organisms/provisioning/ProvisioningResourcePanels'
 import { DriftPanel } from '@/components/organisms/provisioning/ProvisioningEvidencePanels'
 import { NetworkProvisioningPage } from './NetworkProvisioningPage'
 
@@ -17,12 +18,12 @@ const mockedPermissions = vi.mocked(useProvisioningPermissions)
 
 const topology = {
   nodes: [
-    { id: 'olt-1', name: 'OLT Bekasi', role: 'ACCESS_OLT', administrativeStatus: 'ACTIVE' },
-    { id: 'switch-1', name: 'Transit Bekasi', role: 'AGGREGATION_SWITCH', administrativeStatus: 'ACTIVE' },
-    { id: 'bras-1', name: 'BRAS Utama', role: 'BRAS', administrativeStatus: 'ACTIVE' },
+    { id: 'olt-1', name: 'OLT Bekasi', role: 'OLT' as const, administrativeStatus: 'ENABLED' as const },
+    { id: 'switch-1', name: 'Transit Bekasi', role: 'AGGREGATION_SWITCH' as const, administrativeStatus: 'ENABLED' as const },
+    { id: 'bras-1', name: 'BRAS Utama', role: 'BRAS' as const, administrativeStatus: 'ENABLED' as const },
   ],
-  interfaces: [{ id: 'if-1', nodeId: 'olt-1', name: 'PON 0/1', role: 'SUBSCRIBER', administrativeStatus: 'ACTIVE' }],
-  links: [{ id: 'link-1', interfaceAId: 'if-1', interfaceZId: 'if-2', administrativeStatus: 'ACTIVE' }],
+  interfaces: [{ id: 'if-1', nodeId: 'olt-1', name: 'PON 0/1', role: 'ACCESS' as const, administrativeStatus: 'ENABLED' as const }],
+  links: [{ id: 'link-1', interfaceAId: 'if-1', interfaceZId: 'if-2', administrativeStatus: 'ENABLED' as const }],
 }
 
 const preview: PlanPreview = {
@@ -60,8 +61,8 @@ beforeEach(() => {
     { revision: 1, value: { id: 'profile-dedicated', name: 'Enterprise dedicated', poolId: 'pool-1' } },
   ])
   vi.spyOn(provisioningApi, 'listServiceIntents').mockResolvedValue([
-    { revision: 2, value: { id: 'intent-home', subscriptionId: 'sub-home', segmentProfileId: 'profile-shared', status: 'ACTIVE' } },
-    { revision: 4, value: { id: 'intent-enterprise', subscriptionId: 'sub-enterprise', segmentProfileId: 'profile-dedicated', status: 'ACTIVE' } },
+    { revision: 2, value: { id: 'intent-home', subscriptionId: 'sub-home', hotspotSiteId: null, segmentProfileId: 'profile-shared', allocationMode: 'SHARED', dedicatedVlanId: null, status: 'ACTIVE' } },
+    { revision: 4, value: { id: 'intent-enterprise', subscriptionId: 'sub-enterprise', hotspotSiteId: null, segmentProfileId: 'profile-dedicated', allocationMode: 'DEDICATED', dedicatedVlanId: 3101, status: 'ACTIVE' } },
   ])
   vi.spyOn(provisioningApi, 'listProvisioningCapabilities').mockResolvedValue([
     { id: 'cap-1', deviceKind: 'OLT', deviceId: 'olt-1', vendor: 'HUAWEI', model: 'MA5800-X7', firmware: 'R019', transport: 'SSH', operationClass: 'ENSURE_SUBSCRIBER_VLAN', supported: true, observedAt: '2026-09-03T00:00:00Z', expiresAt: '2099-09-03T00:00:00Z' },
@@ -75,7 +76,9 @@ beforeEach(() => {
     { id: 'drift-1', deviceKind: 'OLT', deviceId: 'olt-1', revision: 2, status: 'BENIGN', recordedAt: '2026-09-03T00:00:00Z' },
   ])
   vi.spyOn(provisioningApi, 'listAdapterCertifications').mockResolvedValue([])
-  vi.spyOn(provisioningApi, 'createServiceIntent').mockResolvedValue({ revision: 1, value: { id: 'intent-new', subscriptionId: 'sub-new', segmentProfileId: 'profile-shared', status: 'PLANNED' } })
+  vi.spyOn(provisioningApi, 'createServiceIntent').mockResolvedValue({ revision: 1, value: { id: 'intent-new', subscriptionId: 'sub-new', hotspotSiteId: null, segmentProfileId: 'profile-shared', allocationMode: 'SHARED', dedicatedVlanId: null, status: 'DRAFT' } })
+  vi.spyOn(provisioningApi, 'createTopologyNode').mockResolvedValue({ revision: 1, value: topology.nodes[0] })
+  vi.spyOn(provisioningApi, 'generateProvisioningPlan').mockResolvedValue({ id: 'plan-1', intentId: 'intent-home', revision: 3, status: 'GENERATED', contentHash: 'content-hash' })
   vi.spyOn(provisioningApi, 'previewProvisioning').mockResolvedValue(preview)
   vi.spyOn(provisioningApi, 'applyProvisioningPlan').mockResolvedValue({ id: 'exec-1', planId: 'plan-1', revision: 1, status: 'QUEUED' })
   vi.spyOn(provisioningApi, 'getProvisioningExecution').mockResolvedValue({ id: 'exec-1', planId: 'plan-1', revision: 2, status: 'MANUAL_RECONCILIATION' })
@@ -109,8 +112,8 @@ describe('NetworkProvisioningPage', () => {
     render(<NetworkProvisioningPage />)
 
     fireEvent.click(await screen.findByRole('tab', { name: /Intent/ }))
-    fireEvent.change(screen.getByLabelText('ID plan aktif'), { target: { value: 'plan-1' } })
-    const dryRun = screen.getByRole('button', { name: 'Pratinjau dry-run' })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Intent layanan' }), { target: { value: 'intent-home' } })
+    const dryRun = screen.getByRole('button', { name: 'Buat dan pratinjau plan' })
     expect(dryRun.hasAttribute('disabled')).toBe(false)
     fireEvent.click(dryRun)
 
@@ -137,8 +140,8 @@ describe('NetworkProvisioningPage', () => {
     render(<NetworkProvisioningPage />)
 
     fireEvent.click(await screen.findByRole('tab', { name: /Intent/ }))
-    fireEvent.change(screen.getByLabelText('ID plan aktif'), { target: { value: 'plan-1' } })
-    const dryRun = screen.getByRole('button', { name: 'Pratinjau dry-run' })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Intent layanan' }), { target: { value: 'intent-home' } })
+    const dryRun = screen.getByRole('button', { name: 'Buat dan pratinjau plan' })
     expect(dryRun.hasAttribute('disabled')).toBe(false)
     fireEvent.click(dryRun)
 
@@ -151,21 +154,23 @@ describe('NetworkProvisioningPage', () => {
   it('mengaktifkan apply hanya setelah preview, kapabilitas, dan proteksi lulus', async () => {
     render(<NetworkProvisioningPage />)
     fireEvent.click(await screen.findByRole('tab', { name: /Intent/ }))
-    fireEvent.change(screen.getByLabelText('ID plan aktif'), { target: { value: 'plan-1' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Pratinjau dry-run' }))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Intent layanan' }), { target: { value: 'intent-home' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Buat dan pratinjau plan' }))
 
     const apply = await screen.findByRole('button', { name: 'Terapkan ke produksi' })
     await waitFor(() => expect(apply.hasAttribute('disabled')).toBe(false))
     fireEvent.click(apply)
 
+    expect(provisioningApi.generateProvisioningPlan).toHaveBeenCalledWith('intent-home', 'CREATE', expect.any(AbortSignal))
+    expect(screen.queryByLabelText('ID plan aktif')).toBeNull()
     await waitFor(() => expect(provisioningApi.applyProvisioningPlan).toHaveBeenCalledWith('plan-1', 3, expect.any(String)))
   })
 
   it('menampilkan urutan per perangkat, rollback, kode stabil, dan rekonsiliasi manual', async () => {
     render(<NetworkProvisioningPage />)
     fireEvent.click(await screen.findByRole('tab', { name: /Intent/ }))
-    fireEvent.change(screen.getByLabelText('ID plan aktif'), { target: { value: 'plan-1' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Pratinjau dry-run' }))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Intent layanan' }), { target: { value: 'intent-home' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Buat dan pratinjau plan' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Terapkan ke produksi' }))
     fireEvent.click(screen.getByRole('tab', { name: /Eksekusi/ }))
 
@@ -211,7 +216,34 @@ describe('NetworkProvisioningPage', () => {
     fireEvent.change(profile, { target: { value: 'profile-shared' } })
     fireEvent.click(screen.getByRole('button', { name: 'Simpan', hidden: true }))
 
-    await waitFor(() => expect(provisioningApi.createServiceIntent).toHaveBeenCalledWith({ subscriptionId: 'sub-new', segmentProfileId: 'profile-shared', dedicatedVlanId: null }))
+    await waitFor(() => expect(provisioningApi.createServiceIntent).toHaveBeenCalledWith({ subscriptionId: 'sub-new', segmentProfileId: 'profile-shared', allocationMode: 'SHARED', dedicatedVlanId: null }))
+  })
+
+  it('mengirim enum topologi persis seperti kontrak server', async () => {
+    render(<ProvisioningEditorModal editor="topology" profiles={[]} defaultPoolId="" onClose={vi.fn()} onCreated={async () => {}} onError={vi.fn()} />)
+    await screen.findByText('Tambah node topologi')
+    const input = document.querySelector<HTMLInputElement>('.modal input')
+    const role = document.querySelector<HTMLSelectElement>('.modal select')
+    expect(input).not.toBeNull()
+    expect(role).not.toBeNull()
+    if (!input || !role) return
+    fireEvent.change(input, { target: { value: 'OLT Baru' } })
+    fireEvent.change(role, { target: { value: 'OLT' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan', hidden: true }))
+
+    await waitFor(() => expect(provisioningApi.createTopologyNode).toHaveBeenCalledWith({
+      name: 'OLT Baru', role: 'OLT', status: 'ENABLED',
+    }))
+  })
+
+  it('merender mode alokasi dan VLAN dari intent bukan nama profil', () => {
+    render(<IntentsPanel
+      intents={[{ revision: 1, value: { id: 'intent-1', subscriptionId: 'sub-1', hotspotSiteId: null, segmentProfileId: 'profile-1', allocationMode: 'DEDICATED', dedicatedVlanId: 3101, status: 'ACTIVE' } }]}
+      profiles={[{ revision: 1, value: { id: 'profile-1', name: 'Paket Bisnis', poolId: 'pool-1' } }]}
+    />)
+
+    expect(screen.getByText('Enterprise dedicated')).toBeTruthy()
+    expect(screen.getByText('3101')).toBeTruthy()
   })
 
   it('memisahkan izin cancel dan adopt dari izin melihat', () => {
@@ -239,6 +271,6 @@ describe('NetworkProvisioningPage', () => {
     expect(provisioningApi.listProvisioningCapabilities).not.toHaveBeenCalled()
     expect(provisioningApi.listProvisioningDrift).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('tab', { name: /Intent/ }))
-    expect(screen.getByRole('button', { name: 'Pratinjau dry-run' }).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByRole('button', { name: 'Buat dan pratinjau plan' }).hasAttribute('disabled')).toBe(true)
   })
 })

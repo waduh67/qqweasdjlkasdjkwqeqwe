@@ -58,7 +58,7 @@ export function ProfilesPanel({ pools, profiles }: Pick<ResourceProps, 'pools' |
             <div className="spread wrap"><Text as="h2" size={400} weight="semibold">{value.name}</Text><Badge>Revisi {revision}</Badge></div>
             <div className="workspace-kv"><span>Pool VLAN</span><strong>{pool?.name ?? value.poolId}</strong></div>
             {pool && <div className="workspace-kv"><span>Rentang</span><strong>{pool.range.start}–{pool.range.endInclusive}</strong></div>}
-            <Text as="span" className="muted" size={200}>{value.name.toLowerCase().includes('enterprise') ? 'Untuk VLAN dedicated per layanan.' : 'Untuk VLAN shared pelanggan residential.'}</Text>
+            <Text as="span" className="muted" size={200}>Profil menggunakan pool VLAN tervalidasi server.</Text>
           </article>
         )
       })}
@@ -66,13 +66,18 @@ export function ProfilesPanel({ pools, profiles }: Pick<ResourceProps, 'pools' |
   )
 }
 
-export function IntentsPanel({ intents, profiles }: Pick<ResourceProps, 'intents' | 'profiles'>) {
+export function IntentsPanel({ intents, profiles, canOperate = false, onSuspend, onRestore, onDeprovision }: Pick<ResourceProps, 'intents' | 'profiles'> & {
+  readonly canOperate?: boolean
+  readonly onSuspend?: (intent: RevisionedResource<ServiceIntentView>) => void
+  readonly onRestore?: (intent: RevisionedResource<ServiceIntentView>) => void
+  readonly onDeprovision?: (intent: RevisionedResource<ServiceIntentView>) => void
+}) {
   const profileById = new Map(profiles.map((profile) => [profile.value.id, profile.value]))
   return (
     <section className="workspace-grid" aria-label="Intent layanan">
       {intents.map(({ revision, value }) => {
         const profileName = profileById.get(value.segmentProfileId)?.name ?? 'Profil tidak dikenal'
-        const dedicated = profileName.toLowerCase().includes('enterprise')
+        const dedicated = value.allocationMode === 'DEDICATED'
         return (
           <article className="card stack" key={value.id}>
             <div className="spread wrap">
@@ -80,6 +85,12 @@ export function IntentsPanel({ intents, profiles }: Pick<ResourceProps, 'intents
               <StatusBadge status={value.status} label={statusLabel(value.status)} />
             </div>
             <div className="row wrap"><Badge tone={dedicated ? 'accent' : 'neutral'}>{dedicated ? 'Enterprise dedicated' : 'Residential shared'}</Badge><Badge>Revisi {revision}</Badge></div>
+            {dedicated && <div className="workspace-kv"><span>VLAN dedicated</span><strong>{value.dedicatedVlanId ?? 'Dipilih server'}</strong></div>}
+            {canOperate && <div className="row wrap">
+              {value.status === 'ACTIVE' && <button type="button" className="ghost small" onClick={() => onSuspend?.({ revision, value })}>Tangguhkan</button>}
+              {value.status === 'SUSPENDED' && <button type="button" className="ghost small" onClick={() => onRestore?.({ revision, value })}>Pulihkan</button>}
+              {value.status !== 'DECOMMISSIONED' && <button type="button" className="danger small" onClick={() => onDeprovision?.({ revision, value })}>Deprovision</button>}
+            </div>}
           </article>
         )
       })}
@@ -88,6 +99,6 @@ export function IntentsPanel({ intents, profiles }: Pick<ResourceProps, 'intents
 }
 
 function statusLabel(status: string): string {
-  const labels: Record<string, string> = { ACTIVE: 'Aktif', PLANNED: 'Direncanakan', INACTIVE: 'Nonaktif', SUSPENDED: 'Ditangguhkan' }
+  const labels: Record<string, string> = { ENABLED: 'Aktif', DISABLED: 'Nonaktif', EXCLUDED: 'Dikecualikan', DRAFT: 'Draf', ACTIVE: 'Aktif', SUSPENDED: 'Ditangguhkan', DECOMMISSIONED: 'Dihentikan' }
   return labels[status] ?? status
 }
