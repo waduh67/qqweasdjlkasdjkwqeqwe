@@ -44,6 +44,22 @@ class CollectorBackedProvisioningDeviceGatewayTest {
     }
 
     @Test
+    fun `gateway rejects collector hash that differs from reconstructed state`() {
+        val work = work(ExecutionPhase.APPLY, "hash-mismatch")
+        val malformed = receipt(work, true, listOf(320)).copy(reportedStateHash = "a".repeat(64))
+
+        assertFailure("COLLECTOR_RECEIPT_STATE_HASH_MISMATCH") { gateway(work, malformed).apply(work) }
+    }
+
+    @Test
+    fun `gateway rejects missing collector managed resource count`() {
+        val work = work(ExecutionPhase.APPLY, "count-missing")
+        val malformed = receipt(work, true, listOf(320)).copy(managedResourceCount = null)
+
+        assertFailure("COLLECTOR_RECEIPT_RESOURCE_COUNT_MISSING") { gateway(work, malformed).apply(work) }
+    }
+
+    @Test
     fun `apply rejects missing normalized state instead of using desired attributes`() {
         val work = work(ExecutionPhase.APPLY, "missing-apply-state")
         val gateway = gateway(work, receipt(work, true, null))
@@ -58,7 +74,8 @@ class CollectorBackedProvisioningDeviceGatewayTest {
 
         val applied = gateway.apply(work)
 
-        assertThat(applied.state.values).isEmpty()
+        assertThat(applied.state.values[NormalizedField.VLANS]).isEqualTo(NormalizedValue.sequence())
+        assertThat(applied.state.values[NormalizedField.MANAGED_RESOURCE_COUNT]).isEqualTo(NormalizedValue.number(0))
     }
 
     @Test
@@ -136,7 +153,16 @@ class CollectorBackedProvisioningDeviceGatewayTest {
         null,
         verificationMatches,
         vlanIds,
+        vlanIds?.size,
+        vlanIds?.let { ids -> collectorHash(ids.size, ids) },
     )
+
+    private fun collectorHash(count: Int, vlanIds: List<Int>): String {
+        val canonical = "managedResourceCount=$count;vlanIds=${vlanIds.distinct().sorted().joinToString(",")}"
+        return java.security.MessageDigest.getInstance("SHA-256")
+            .digest(canonical.toByteArray(java.nio.charset.StandardCharsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+    }
 
     private fun wirePhase(phase: ExecutionPhase): String = when (phase) {
         ExecutionPhase.PREFLIGHT, ExecutionPhase.ROLLBACK_CHECK -> "PREFLIGHT"
@@ -146,6 +172,7 @@ class CollectorBackedProvisioningDeviceGatewayTest {
     }
 
     private fun state(vlanId: Int) = NormalizedDeviceState.of(
+        NormalizedField.MANAGED_RESOURCE_COUNT to NormalizedValue.number(1),
         NormalizedField.VLANS to NormalizedValue.sequence(NormalizedValue.number(vlanId)),
     )
 

@@ -155,5 +155,12 @@ class ProvisioningRuntimeWiringTest {
         null,
         verificationMatches,
         vlanIds,
+        vlanIds?.size,
+        vlanIds?.let { ids ->
+            val canonical = "managedResourceCount=${ids.size};vlanIds=${ids.distinct().sorted().joinToString(",")}"
+            java.security.MessageDigest.getInstance("SHA-256")
+                .digest(canonical.toByteArray(java.nio.charset.StandardCharsets.UTF_8))
+                .joinToString("") { "%02x".format(it) }
+        },
     )
 }

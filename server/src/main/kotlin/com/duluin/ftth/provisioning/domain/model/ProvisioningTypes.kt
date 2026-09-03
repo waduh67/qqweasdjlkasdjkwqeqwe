@@ -50,6 +50,7 @@ enum class NormalizedField(val wireName: String) {
     CONFIGURED("configured"),
     VLAN_ID("vlanId"),
     VLANS("vlans"),
+    MANAGED_RESOURCE_COUNT("managedResourceCount"),
     PORT("port"),
     ENABLED("enabled"),
     EXTERNAL("external");
@@ -148,6 +149,7 @@ class NormalizedDeviceState private constructor(
                     NormalizedField.VLANS -> value is NormalizedValue.Sequence && value.values.all {
                         it is NormalizedValue.Number && it.value in 2..4094
                     }
+                    NormalizedField.MANAGED_RESOURCE_COUNT -> value is NormalizedValue.Number && value.value >= 0
                 }
                 if (!valid) throw ValidationException("NORMALIZED_FIELD_TYPE_INVALID: ${field.wireName}")
                 if (value is NormalizedValue.ObjectValue) validateFields(value.fields)

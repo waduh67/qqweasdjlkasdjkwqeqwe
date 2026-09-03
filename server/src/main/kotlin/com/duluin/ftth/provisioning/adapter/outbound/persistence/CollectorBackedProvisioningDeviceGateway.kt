@@ -27,6 +27,7 @@ class CollectorBackedProvisioningDeviceGateway(
     override fun observe(work: DispatchableProvisioningWork): DeviceStateObservation {
         val receipt = await(work)
         val state = receipt.requiredState()
+        receipt.requireIntegrity(state)
         val matches = receipt.verificationMatches ?: fail("COLLECTOR_RECEIPT_VERIFICATION_MISSING")
         if (work.phase in setOf(ExecutionPhase.VERIFY, ExecutionPhase.ROLLBACK_VERIFY) && !matches) {
             throw DeviceOperationException("VERIFICATION_MISMATCH", DeviceFailureKind.VERIFICATION_MISMATCH)
@@ -38,6 +39,7 @@ class CollectorBackedProvisioningDeviceGateway(
         val receipt = await(work)
         receipt.requireVerified()
         val state = receipt.requiredState()
+        receipt.requireIntegrity(state)
         return DeviceApplyResult(NormalizedStateHash.sha256(state), state)
     }
 
@@ -45,6 +47,7 @@ class CollectorBackedProvisioningDeviceGateway(
         val receipt = await(work)
         receipt.requireVerified()
         val state = receipt.requiredState()
+        receipt.requireIntegrity(state)
         if (state != before) throw DeviceOperationException("ROLLBACK_VERIFICATION_MISMATCH", DeviceFailureKind.VERIFICATION_MISMATCH)
         return DeviceApplyResult(NormalizedStateHash.sha256(state), state)
     }
@@ -94,10 +97,31 @@ data class CollectorResultReceipt(
     val errorCode: String?,
     val verificationMatches: Boolean?,
     val vlanIds: List<Int>?,
+    val managedResourceCount: Int?,
+    val reportedStateHash: String?,
 ) {
-    fun requiredState(): NormalizedDeviceState = vlanIds?.let { ids -> if (ids.isEmpty()) NormalizedDeviceState.empty() else NormalizedDeviceState.of(
-        NormalizedField.VLANS to NormalizedValue.Sequence.of(ids.map(NormalizedValue::number)),
-    ) } ?: throw DeviceOperationException("COLLECTOR_RECEIPT_STATE_MISSING", DeviceFailureKind.PERMANENT)
+    fun requiredState(): NormalizedDeviceState {
+        val ids = vlanIds ?: throw DeviceOperationException("COLLECTOR_RECEIPT_STATE_MISSING", DeviceFailureKind.PERMANENT)
+        val count = managedResourceCount
+            ?: throw DeviceOperationException("COLLECTOR_RECEIPT_RESOURCE_COUNT_MISSING", DeviceFailureKind.PERMANENT)
+        return NormalizedDeviceState.of(
+            NormalizedField.MANAGED_RESOURCE_COUNT to NormalizedValue.number(count),
+            NormalizedField.VLANS to NormalizedValue.Sequence.of(ids.map(NormalizedValue::number)),
+        )
+    }
+
+    fun requireIntegrity(state: NormalizedDeviceState) {
+        val hash = reportedStateHash
+            ?: throw DeviceOperationException("COLLECTOR_RECEIPT_STATE_HASH_MISSING", DeviceFailureKind.PERMANENT)
+        val count = (state.values[NormalizedField.MANAGED_RESOURCE_COUNT] as NormalizedValue.Number).value.toInt()
+        val ids = (state.values[NormalizedField.VLANS] as NormalizedValue.Sequence).values
+            .map { (it as NormalizedValue.Number).value.toInt() }
+        val canonical = "managedResourceCount=$count;vlanIds=${ids.joinToString(",")}"
+        val computed = java.security.MessageDigest.getInstance("SHA-256")
+            .digest(canonical.toByteArray(java.nio.charset.StandardCharsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+        if (computed != hash) throw DeviceOperationException("COLLECTOR_RECEIPT_STATE_HASH_MISMATCH", DeviceFailureKind.PERMANENT)
+    }
 }
 
 @Component
@@ -106,7 +130,8 @@ class CollectorResultReceiptReader(private val entityManager: EntityManager) {
     fun find(idempotencyKey: String, phase: ExecutionPhase, fencingToken: Long): CollectorResultReceipt? {
         val wirePhase = phase.wireName()
         val row = entityManager.createNativeQuery(
-            """SELECT idempotency_key, phase, fencing_epoch, success, error_code, verification_matches, state_vlan_ids
+            """SELECT idempotency_key, phase, fencing_epoch, success, error_code, verification_matches, state_vlan_ids,
+                      managed_resource_count, preflight_hash, apply_state_hash, verification_state_hash, rollback_state_hash
                FROM provisioning_collector_result_receipt
                WHERE idempotency_key = :key AND phase = :phase AND fencing_epoch = :fence
                ORDER BY completed_at DESC LIMIT 1""",
@@ -121,6 +146,14 @@ class CollectorResultReceiptReader(private val entityManager: EntityManager) {
             row[4] as String?,
             row[5] as Boolean?,
             parseReceiptVlanIds(row[6] as String?),
+            (row[7] as Number?)?.toInt(),
+            when (row[1] as String) {
+                "PREFLIGHT" -> row[8] as String?
+                "APPLY" -> row[9] as String?
+                "VERIFY" -> row[10] as String?
+                "ROLLBACK" -> row[11] as String?
+                else -> null
+            },
         )
     }
 }
