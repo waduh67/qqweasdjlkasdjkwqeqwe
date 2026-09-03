@@ -71,6 +71,14 @@ springdoc:
     path: /swagger-ui
 
 ftth:
+  provisioning:
+    rollout:
+      planner-enabled: ${FTTH_PROVISIONING_PLANNER_ENABLED:true}
+      ui-enabled: ${FTTH_PROVISIONING_UI_ENABLED:true}
+      auto-apply-enabled: ${FTTH_PROVISIONING_AUTO_APPLY_ENABLED:false}
+      max-affected-subscribers: ${FTTH_PROVISIONING_MAX_AFFECTED_SUBSCRIBERS:1}
+      circuit-failure-threshold: ${FTTH_PROVISIONING_CIRCUIT_FAILURE_THRESHOLD:1}
+      bulk-expansion-enabled: ${FTTH_PROVISIONING_BULK_EXPANSION_ENABLED:false}
   security:
     # DEV ONLY — wajib dioverride via env di production (min. 32 byte)
     jwt-secret: ${FTTH_JWT_SECRET:dev-only-secret-ftth-oss-change-me-in-production!}
