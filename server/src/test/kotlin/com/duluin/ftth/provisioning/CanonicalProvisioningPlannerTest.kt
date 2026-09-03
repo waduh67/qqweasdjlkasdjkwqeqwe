@@ -28,6 +28,7 @@ import com.duluin.ftth.provisioning.domain.policy.PolicyCode
 import com.duluin.ftth.provisioning.domain.policy.PolicyDecision
 import com.duluin.ftth.provisioning.domain.policy.ManagementEvidenceSourceType
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.util.UUID
@@ -60,6 +61,53 @@ class CanonicalProvisioningPlannerTest {
         assertThat(first.contentHash).matches("^[a-f0-9]{64}$")
         assertThat(first.preconditionHash).matches("^[a-f0-9]{64}$")
         assertThat(first.steps.map { it.preconditionHash }).allMatch { it.matches(Regex("^[a-f0-9]{64}$")) }
+    }
+
+    @Test
+    fun `duplicate capability or observation evidence is rejected before canonicalization`() {
+        val source = request()
+
+        assertThatThrownBy {
+            planner.compile(source.copy(capabilities = source.capabilities + source.capabilities.first()), revision = 1)
+        }.isInstanceOf(com.duluin.ftth.common.domain.error.ValidationException::class.java)
+            .hasMessage("PLANNING_CAPABILITIES_DUPLICATE")
+        assertThatThrownBy {
+            planner.compile(source.copy(observations = source.observations + source.observations.first()), revision = 1)
+        }.isInstanceOf(com.duluin.ftth.common.domain.error.ValidationException::class.java)
+            .hasMessage("PLANNING_OBSERVATIONS_DUPLICATE")
+    }
+
+    @Test
+    fun `canonical evidence ordering uses device kind and id when ids tie`() {
+        val sharedId = UUID.fromString("00000000-0000-7000-8000-000000000099")
+        val switchWithSharedId = DeviceReference(DeviceKind.SWITCH, sharedId)
+        val brasWithSharedId = DeviceReference(DeviceKind.BRAS, sharedId)
+        val source = request().copy(
+            topology = listOf(
+                PlanTopologyNode(olt, ManagedNodeRole.OLT, AdministrativeStatus.ENABLED, observedAt, management("pon-1", InterfaceRole.ACCESS, olt.id)),
+                PlanTopologyNode(switchWithSharedId, ManagedNodeRole.ACCESS_SWITCH, AdministrativeStatus.ENABLED, observedAt, management("xe-0/0/1", InterfaceRole.TRUNK, sharedId)),
+                PlanTopologyNode(brasWithSharedId, ManagedNodeRole.BRAS, AdministrativeStatus.ENABLED, observedAt, management("ae0", InterfaceRole.TRUNK, sharedId)),
+            ),
+            capabilities = listOf(
+                PlanCapability(olt, "ZTE", "C320", "1.2", "SSH", setOf("access-vlan"), observedAt),
+                PlanCapability(switchWithSharedId, "JUNIPER", "EX", "22", "NETCONF", setOf("tagged-vlan"), observedAt),
+                PlanCapability(brasWithSharedId, "MIKROTIK", "CCR", "7", "REST", setOf("pppoe"), observedAt),
+            ),
+            observations = listOf(
+                PlanObservation(olt, NormalizedDeviceState.of(NormalizedField.ENABLED to NormalizedValue.flag(true)), observedAt),
+                PlanObservation(switchWithSharedId, NormalizedDeviceState.of(NormalizedField.ENABLED to NormalizedValue.flag(true)), observedAt),
+                PlanObservation(brasWithSharedId, NormalizedDeviceState.of(NormalizedField.ENABLED to NormalizedValue.flag(true)), observedAt),
+            ),
+        )
+
+        val forward = planner.compile(source, revision = 1)
+        val reversed = planner.compile(
+            source.copy(capabilities = source.capabilities.reversed(), observations = source.observations.reversed()),
+            revision = 1,
+        )
+
+        assertThat(forward.canonicalPayload()).isEqualTo(reversed.canonicalPayload())
+        assertThat(forward.preconditionHash).isEqualTo(reversed.preconditionHash)
     }
 
     @Test

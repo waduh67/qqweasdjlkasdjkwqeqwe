@@ -136,8 +136,14 @@ class CanonicalProvisioningPlanner {
         }
         val devices = request.topology.map { it.device }
         if (devices.toSet().size != devices.size) throw ValidationException("PLANNING_PATH_CYCLIC")
+        if (request.capabilities.map { it.device }.toSet().size != request.capabilities.size) {
+            throw ValidationException("PLANNING_CAPABILITIES_DUPLICATE")
+        }
         if (request.capabilities.map { it.device }.toSet() != devices.toSet()) {
             throw ValidationException("PLANNING_CAPABILITIES_INCOMPLETE")
+        }
+        if (request.observations.map { it.device }.toSet().size != request.observations.size) {
+            throw ValidationException("PLANNING_OBSERVATIONS_DUPLICATE")
         }
         if (request.observations.map { it.device }.toSet() != devices.toSet()) {
             throw ValidationException("PLANNING_OBSERVATIONS_INCOMPLETE")
@@ -205,7 +211,7 @@ class CanonicalProvisioningPlanner {
                 "capabilities" to it.capabilities,
                 "observedAt" to it.observedAt.toString(),
             )
-        }.sortedBy { it["deviceId"].toString() }))
+        }.sortedWith(compareBy({ it["deviceKind"].toString() }, { it["deviceId"].toString() }))))
         append("|observations=").append(canonicalValue(request.observations.map {
             mapOf(
                 "deviceKind" to it.device.kind.name,
@@ -213,7 +219,7 @@ class CanonicalProvisioningPlanner {
                 "state" to it.state.canonicalForm(),
                 "observedAt" to it.observedAt.toString(),
             )
-        }.sortedBy { it["deviceId"].toString() }))
+        }.sortedWith(compareBy({ it["deviceKind"].toString() }, { it["deviceId"].toString() }))))
     }
 
     private fun PlanCompilationRequest.tenantId(): UUID = intent.tenantId
