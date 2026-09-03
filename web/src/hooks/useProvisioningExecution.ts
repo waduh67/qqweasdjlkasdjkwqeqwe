@@ -30,6 +30,9 @@ export function useProvisioningExecution(executionId: string | null) {
   const [error, setError] = useState<unknown>(null)
 
   useEffect(() => {
+    setExecution(null)
+    setHistory([])
+    setError(null)
     if (!executionId) return
     const controller = new AbortController()
     let timer: ReturnType<typeof setTimeout> | undefined
@@ -49,6 +52,8 @@ export function useProvisioningExecution(executionId: string | null) {
       } catch (cause) {
         if (cause instanceof DOMException && cause.name === 'AbortError') return
         setError(cause)
+        timer = setTimeout(() => void poll(), delay)
+        delay = Math.min(delay * 2, MAX_DELAY_MS)
       }
     }
 

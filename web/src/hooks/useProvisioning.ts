@@ -21,11 +21,13 @@ export function useProvisioningDraft<T>(initialDraft: T) {
   const [draft, setDraft] = useState(initialDraft)
   const [preview, setPreview] = useState<PlanPreview | null>(null)
   const [error, setError] = useState<unknown>(null)
+  const [previewing, setPreviewing] = useState(false)
   const controller = useRef<AbortController | null>(null)
 
   useEffect(() => () => controller.current?.abort(), [])
 
   const updateDraft = useCallback((nextDraft: T) => {
+    controller.current?.abort()
     setDraft(nextDraft)
     setPreview(null)
     setError(null)
@@ -39,12 +41,15 @@ export function useProvisioningDraft<T>(initialDraft: T) {
     const nextController = new AbortController()
     controller.current = nextController
     setError(null)
+    setPreviewing(true)
     try {
       const nextPreview = await previewProvisioning(planId, mode, nextController.signal)
       if (!nextController.signal.aborted) setPreview(nextPreview)
     } catch (cause) {
       if (cause instanceof DOMException && cause.name === 'AbortError') return
       setError(cause)
+    } finally {
+      if (!nextController.signal.aborted) setPreviewing(false)
     }
   }, [])
 
@@ -54,6 +59,7 @@ export function useProvisioningDraft<T>(initialDraft: T) {
     preview,
     serverPlanRevision: preview?.plan.revision ?? null,
     error,
+    previewing,
     previewPlan,
   }
 }
@@ -88,7 +94,7 @@ export function useProvisioningApply() {
     await run(attempt.current)
   }, [canRetry, run])
 
-  return { execution, error, applying, canRetry, apply, retry }
+  return { execution, error, applying, canRetry, apply, retry, track: setExecution }
 }
 
 export function useProvisioningIntents() {

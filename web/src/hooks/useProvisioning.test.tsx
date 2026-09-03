@@ -54,6 +54,20 @@ describe('useProvisioningDraft', () => {
     expect(result.current.preview).toBeNull()
     expect(result.current.serverPlanRevision).toBeNull()
   })
+
+  it('membatalkan preview aktif saat intent berubah', () => {
+    let signal: AbortSignal | undefined
+    vi.spyOn(provisioningApi, 'previewProvisioning').mockImplementation((_id, _mode, requestSignal) => {
+      signal = requestSignal
+      return new Promise(() => {})
+    })
+    const { result } = renderHook(() => useProvisioningDraft({ planId: 'plan-1' }))
+
+    act(() => { void result.current.previewPlan('plan-1', 'DRY_RUN') })
+    act(() => result.current.setDraft({ planId: '' }))
+
+    expect(signal?.aborted).toBe(true)
+  })
 })
 
 describe('useProvisioningApply', () => {
