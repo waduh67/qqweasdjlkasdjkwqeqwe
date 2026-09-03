@@ -82,6 +82,7 @@ class RadiusSessionControlRunner(
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Synchronized
     fun run(tenantId: UUID) = execute(tenantId, Instant.now())
 
     /**
