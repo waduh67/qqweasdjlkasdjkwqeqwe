@@ -97,12 +97,12 @@ sudo chown $USER:$USER /opt/ftth
 cd /opt/ftth
 ```
 
-Salin 3 hal dari repo ke folder ini: `docker-compose.prod.yml`, `Caddyfile`, folder
-`postgres-init/`. Cara paling gampang — dari **laptop** (bukan VPS), di root repo:
+Salin file Compose/Caddy dan folder `postgres-init/`, `radius/`, serta `backup/` dari repo.
+Cara paling gampang — dari **laptop** (bukan VPS), di root repo:
 
 ```bash
 scp deploy/docker-compose.prod.yml deploy/Caddyfile azureuser@20.11.22.33:/opt/ftth/
-scp -r deploy/postgres-init deploy/radius azureuser@20.11.22.33:/opt/ftth/
+scp -r deploy/postgres-init deploy/radius deploy/backup azureuser@20.11.22.33:/opt/ftth/
 ```
 
 > Folder `radius/` berisi skema DB FreeRADIUS + config server RADIUS yang
@@ -114,6 +114,9 @@ scp -r deploy/postgres-init deploy/radius azureuser@20.11.22.33:/opt/ftth/
 ---
 
 ## Bagian D — Isi file `.env` di VPS (tempat semua secret)
+
+Untuk rollout InterVLAN/PPPoE, pertahankan default fail-closed dari template dan ikuti
+[`../docs/intervlan-pppoe.md`](../docs/intervlan-pppoe.md) sebelum mengaktifkan auto-apply.
 
 Di VPS, di `/opt/ftth`, bikin `.env` dari contoh:
 
