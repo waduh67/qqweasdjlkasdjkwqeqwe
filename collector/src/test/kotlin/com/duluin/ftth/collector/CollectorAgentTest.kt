@@ -340,6 +340,33 @@ class CollectorAgentTest {
         )
     }
 
+    @Test
+    fun `same delivery key with different commands is rejected before adapter execution`() {
+        val first = provisioningCommand("step-collision")
+        val collision = first.copy(operationClass = "VERIFY_STATE")
+        val target = NasTarget("switch-1", "router", "MIKROTIK", "router.invalid", "ROUTER_OS")
+        val config = FakeServerClient.IDLE.copy(
+            nasTargets = listOf(target),
+            provisioningCommands = listOf(first, collision),
+        )
+        val client = FakeServerClient(ArrayDeque(listOf(config, FakeServerClient.IDLE)))
+        val adapter = RecordingProvisioningAdapter()
+        val agent = CollectorAgent(
+            client = client,
+            registry = AdapterRegistry(emptyList()),
+            agentVersion = "test-1.0",
+            sleeper = {},
+            clock = { Instant.parse("2026-07-26T00:00:00Z") },
+            provisioningRegistry = ProvisioningAdapterRegistry(listOf(adapter)),
+        )
+
+        agent.runOnce()
+        agent.runOnce()
+
+        assertTrue(adapter.commands.isEmpty())
+        assertEquals(ProvisioningErrorCode.STALE_PRECONDITION, client.heartbeats[1].provisioningResults.single().errorCode)
+    }
+
     private fun failedProvisioningResult(stepId: String) = ProvisioningStepResult(
         planId = "plan-1",
         revision = 1,

@@ -67,6 +67,7 @@ class CollectorAgent(
     private var pendingActionResults: List<BngActionResult> = emptyList()
     private val provisioningLock = Any()
     private var pendingProvisioningResults: List<ProvisioningStepResult> = emptyList()
+    private var pendingProvisioningCommandsByKey: Map<String, ProvisioningPlanStepCommand> = emptyMap()
     private var pendingProvisioningCommands: List<ProvisioningPlanStepCommand> = emptyList()
     private var pendingDeviceReports: List<DeviceCapabilityReport> = emptyList()
 
@@ -130,6 +131,8 @@ class CollectorAgent(
                     it.attemptId in acknowledgement.resultAttemptIds
                 }
             }
+            val pendingKeys = pendingProvisioningResults.mapTo(hashSetOf(), ProvisioningStepResult::deliveryKey)
+            pendingProvisioningCommandsByKey = pendingProvisioningCommandsByKey.filterKeys(pendingKeys::contains)
             pendingDeviceReports = pendingDeviceReports.filterNot {
                 it.acknowledgementKey() in acknowledgement.deviceReportKeys
             }
@@ -227,22 +230,23 @@ class CollectorAgent(
             }
             return
         }
-        config.provisioningCommands.distinctBy(ProvisioningPlanStepCommand::deliveryKey)
-            .filterNot { command ->
-                synchronized(provisioningLock) {
-                    pendingProvisioningResults.any { it.deliveryKey() == command.deliveryKey() }
-                }
-            }.forEach { command ->
+        config.provisioningCommands.groupBy(ProvisioningPlanStepCommand::deliveryKey).forEach { (_, deliveries) ->
+            val command = deliveries.first()
+            val pending = synchronized(provisioningLock) { pendingProvisioningCommandsByKey[command.deliveryKey()] }
+            val collision = deliveries.any { it != command } || (pending != null && pending != command)
+            if (pending == command && !collision) return@forEach
             val target = config.nasTargets.singleOrNull { it.nasId == command.target.deviceId }
             val adapter = target?.let { provisioningRegistry.forVendor(it.vendor) }
-            val result = if (target == null || adapter == null) {
+            val result = if (collision) {
+                failedProvisioning(command, ProvisioningErrorCode.STALE_PRECONDITION)
+            } else if (target == null || adapter == null) {
                 unsupportedProvisioning(command)
             } else {
                 adapter.execute(target, command)
             }
             synchronized(provisioningLock) {
-                pendingProvisioningResults = (pendingProvisioningResults + result)
-                    .distinctBy(ProvisioningStepResult::deliveryKey)
+                pendingProvisioningResults = pendingProvisioningResults.filterNot { it.deliveryKey() == result.deliveryKey() } + result
+                pendingProvisioningCommandsByKey = pendingProvisioningCommandsByKey + (command.deliveryKey() to command)
                 if (target != null && adapter != null && pendingDeviceReports.none { it.targetId == target.nasId }) {
                     pendingDeviceReports = pendingDeviceReports + adapter.capabilityReport(target)
                 }
@@ -263,6 +267,21 @@ class CollectorAgent(
         success = false,
         completedAt = clock(),
         errorCode = ProvisioningErrorCode.UNSUPPORTED_CAPABILITY,
+    )
+
+    private fun failedProvisioning(command: ProvisioningPlanStepCommand, error: ProvisioningErrorCode) = ProvisioningStepResult(
+        planId = command.planId,
+        revision = command.revision,
+        stepId = command.stepId,
+        attemptId = command.attemptId,
+        targetId = command.target.deviceId,
+        operationClass = command.operationClass,
+        idempotencyKey = command.idempotencyKey,
+        fencingEpoch = command.fencingEpoch,
+        phase = command.phase,
+        success = false,
+        completedAt = clock(),
+        errorCode = error,
     )
 
     private fun pollTarget(target: OltTarget): List<OnuReading> {
