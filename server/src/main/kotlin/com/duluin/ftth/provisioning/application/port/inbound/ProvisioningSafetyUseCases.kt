@@ -23,6 +23,10 @@ interface ProvisioningExecutionAdmissionUseCase {
     fun admit(planId: UUID, keySuffix: String): ProvisionExecution
 }
 
+fun interface ProvisioningExecutionRunner {
+    fun run(executionId: UUID, ownerId: String): ProvisionExecution
+}
+
 interface ProvisioningCertificationUseCase {
     fun list(targetTenantId: UUID): List<AdapterCertification>
     fun certify(command: CertifyAdapterCommand): AdapterCertification
