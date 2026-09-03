@@ -249,6 +249,10 @@ enum class ProvisioningErrorCode {
     MANAGEMENT_PATH_UNPROVEN,
     PROTECTED_RESOURCE,
     INSECURE_TRANSPORT,
+    AUTHENTICATION_FAILED,
+    UNCERTIFIED_FINGERPRINT,
+    PERSISTENCE_FAILED,
+    REQUIRES_MANUAL,
 }
 
 /** Closed, vendor-neutral desired state. No credential or arbitrary extension field exists. */
@@ -494,11 +498,13 @@ private fun String.requireSha256() {
 }
 
 /**
- * Satu OLT yang harus di-polling.
+ * Satu OLT yang harus di-polling atau diprovisioning.
  *
  * [snmpCommunity] dikirim polos di dalam badan respons — aman karena kanalnya
  * TLS dan hanya collector terautentikasi yang bisa memintanya. Di database
- * server nilainya tetap tersimpan terenkripsi.
+ * server nilainya tetap tersimpan terenkripsi. [managementCredentialRef] adalah
+ * referensi opak ke secret resolver collector, bukan username, password, cookie,
+ * atau ciphertext yang boleh diteruskan ke log dan hasil provisioning.
  */
 data class OltTarget(
     val oltId: String,
@@ -507,7 +513,18 @@ data class OltTarget(
     val host: String,
     val snmpPort: Int = 161,
     val snmpCommunity: String?,
+    val model: String? = null,
+    val firmware: String? = null,
+    val managementTransport: OltManagementTransport? = null,
+    val managementPort: Int? = null,
+    val managementCredentialRef: String? = null,
 )
+
+enum class OltManagementTransport {
+    HTTPS_API,
+    SSH,
+    TELNET,
+}
 
 /**
  * Satu BRAS/NAS yang harus di-polling collector untuk sesi PPPoE.

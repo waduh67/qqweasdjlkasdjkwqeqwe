@@ -153,6 +153,10 @@ class CollectorProtocolSerializationTest {
                 "MANAGEMENT_PATH_UNPROVEN",
                 "PROTECTED_RESOURCE",
                 "INSECURE_TRANSPORT",
+                "AUTHENTICATION_FAILED",
+                "UNCERTIFIED_FINGERPRINT",
+                "PERSISTENCE_FAILED",
+                "REQUIRES_MANUAL",
             ),
             ProvisioningErrorCode.entries.map { it.name },
         )
