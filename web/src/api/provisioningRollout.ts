@@ -5,7 +5,6 @@ export type ProvisioningRolloutView = {
   readonly uiEnabled: boolean
   readonly autoApplyEnabled: boolean
   readonly maxAffectedSubscribers: number
-  readonly circuitFailureThreshold: number
   readonly bulkExpansionEnabled: boolean
 }
 

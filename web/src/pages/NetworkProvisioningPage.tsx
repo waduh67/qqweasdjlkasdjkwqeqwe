@@ -48,7 +48,6 @@ const SAFE_ROLLOUT: ProvisioningRolloutView = {
   uiEnabled: true,
   autoApplyEnabled: false,
   maxAffectedSubscribers: 1,
-  circuitFailureThreshold: 1,
   bulkExpansionEnabled: false,
 }
 const WORKSPACE_TABS = [

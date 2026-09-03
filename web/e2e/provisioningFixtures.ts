@@ -56,7 +56,7 @@ export async function installProvisioningRoutes(page: Page, scenario: RolloutSce
     if (path === '/api/subscription/lock') return json(route, { locked: false })
     if (path === '/api/provisioning/rollout') return json(route, {
       plannerEnabled: true, uiEnabled: true, autoApplyEnabled: scenario.autoApplyEnabled,
-      maxAffectedSubscribers: 1, circuitFailureThreshold: 1, bulkExpansionEnabled: false,
+      maxAffectedSubscribers: 1, bulkExpansionEnabled: false,
     })
     if (path === '/api/provisioning/topology') return json(route, {
       nodes: [

@@ -53,7 +53,7 @@ beforeEach(() => {
   HTMLDialogElement.prototype.close = function close() { this.removeAttribute('open') }
   mockedPermissions.mockReturnValue({ view: true, manage: true, plan: true, apply: true, cancel: true, drift: true, adopt: true, certification: false })
   vi.spyOn(provisioningApi, 'getTopology').mockResolvedValue(topology)
-  vi.spyOn(provisioningRolloutApi, 'getProvisioningRollout').mockResolvedValue({ plannerEnabled: true, uiEnabled: true, autoApplyEnabled: true, maxAffectedSubscribers: 1, circuitFailureThreshold: 1, bulkExpansionEnabled: false })
+  vi.spyOn(provisioningRolloutApi, 'getProvisioningRollout').mockResolvedValue({ plannerEnabled: true, uiEnabled: true, autoApplyEnabled: true, maxAffectedSubscribers: 1, bulkExpansionEnabled: false })
   vi.spyOn(provisioningApi, 'listVlanPools').mockResolvedValue([{ revision: 1, value: { id: 'pool-1', name: 'Enterprise', range: { start: 3000, endInclusive: 3999 }, reservedRanges: [] } }])
   vi.spyOn(provisioningApi, 'listSegmentProfiles').mockResolvedValue([
     { revision: 1, value: { id: 'profile-shared', name: 'Residential shared', poolId: 'pool-1' } },
@@ -132,7 +132,6 @@ describe('NetworkProvisioningPage', () => {
       uiEnabled: true,
       autoApplyEnabled: false,
       maxAffectedSubscribers: 1,
-      circuitFailureThreshold: 1,
       bulkExpansionEnabled: false,
     })
     render(<NetworkProvisioningPage />)
