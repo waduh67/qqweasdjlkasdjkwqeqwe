@@ -71,6 +71,7 @@ class ServiceIntentPersistenceAdapter(private val jpa: ServiceIntentJpaRepositor
         } ?: ServiceIntentJpaEntity(
             value.id,
             value.subscriptionId,
+            value.hotspotSiteId,
             value.segmentProfileId,
             value.encapsulation,
             value.dedicatedVlanId,
@@ -83,8 +84,13 @@ class ServiceIntentPersistenceAdapter(private val jpa: ServiceIntentJpaRepositor
     override fun findAll(): List<ServiceIntent> = jpa.findAll().map { it.toDomain() }
 
     private fun ServiceIntentJpaEntity.toDomain() = ServiceIntent.rehydrate(
-        id, tenant(tenantId), subscriptionId, segmentProfileId, encapsulation, dedicatedVlanId, status,
+        id, tenant(tenantId), subscriptionId, hotspotSiteId, segmentProfileId, encapsulation, dedicatedVlanId, status,
     )
+
+    override fun findBySubscriptionId(subscriptionId: UUID): ServiceIntent? =
+        jpa.findBySubscriptionId(subscriptionId)?.toDomain()
+
+    override fun findByHotspotSiteId(siteId: UUID): ServiceIntent? = jpa.findByHotspotSiteId(siteId)?.toDomain()
 }
 
 @Component
@@ -316,6 +322,8 @@ class ProvisionExecutionPersistenceAdapter(
 
     override fun findById(id: UUID): ProvisionExecution? = jpa.findById(id).orElse(null)?.toDomain()
     override fun findByIdempotencyKey(key: String): ProvisionExecution? = jpa.findByIdempotencyKey(key)?.toDomain()
+    override fun findLatestByIntentId(intentId: UUID): ProvisionExecution? =
+        jpa.findByIntentIdOrderByIdDesc(intentId).firstOrNull()?.toDomain()
 
     private fun ProvisionExecutionJpaEntity.toDomain() = ProvisionExecution.rehydrate(
         id, tenant(tenantId), intentId, planId, idempotencyKey, status, detail,

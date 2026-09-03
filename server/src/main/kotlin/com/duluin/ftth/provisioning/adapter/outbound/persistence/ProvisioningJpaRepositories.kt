@@ -21,7 +21,10 @@ interface VlanReservedRangeJpaRepository : JpaRepository<VlanReservedRangeJpaEnt
     fun deleteByPoolId(poolId: UUID)
 }
 interface SegmentProfileJpaRepository : JpaRepository<SegmentProfileJpaEntity, UUID>
-interface ServiceIntentJpaRepository : JpaRepository<ServiceIntentJpaEntity, UUID>
+interface ServiceIntentJpaRepository : JpaRepository<ServiceIntentJpaEntity, UUID> {
+    fun findBySubscriptionId(subscriptionId: UUID): ServiceIntentJpaEntity?
+    fun findByHotspotSiteId(hotspotSiteId: UUID): ServiceIntentJpaEntity?
+}
 interface VlanAllocationJpaRepository : JpaRepository<VlanAllocationJpaEntity, UUID> {
     fun findByPoolId(poolId: UUID): List<VlanAllocationJpaEntity>
     fun existsByDeviceKindAndDeviceIdAndVlanIdAndActiveTrue(
@@ -48,6 +51,7 @@ interface ProvisionStepAttributeJpaRepository : JpaRepository<ProvisionStepAttri
 interface ProvisionExecutionJpaRepository : JpaRepository<ProvisionExecutionJpaEntity, UUID> {
     fun findByIdempotencyKey(idempotencyKey: String): ProvisionExecutionJpaEntity?
     fun findByIntentIdAndStatusIn(intentId: UUID, statuses: Collection<ExecutionStatus>): List<ProvisionExecutionJpaEntity>
+    fun findByIntentIdOrderByIdDesc(intentId: UUID): List<ProvisionExecutionJpaEntity>
 }
 interface DeviceLeaseJpaRepository : JpaRepository<DeviceLeaseJpaEntity, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)

@@ -37,6 +37,8 @@ interface ServiceIntentRepository {
     fun save(value: ServiceIntent): ServiceIntent
     fun findById(id: UUID): ServiceIntent?
     fun findAll(): List<ServiceIntent> = emptyList()
+    fun findBySubscriptionId(subscriptionId: UUID): ServiceIntent? = findAll().firstOrNull { it.subscriptionId == subscriptionId }
+    fun findByHotspotSiteId(siteId: UUID): ServiceIntent? = findAll().firstOrNull { it.hotspotSiteId == siteId }
 }
 interface ProvisionPlanRepository {
     fun save(value: ProvisionPlan): ProvisionPlan
@@ -48,6 +50,7 @@ interface ProvisionExecutionRepository {
     fun save(value: ProvisionExecution): ProvisionExecution
     fun findById(id: UUID): ProvisionExecution?
     fun findByIdempotencyKey(key: String): ProvisionExecution?
+    fun findLatestByIntentId(intentId: UUID): ProvisionExecution? = null
 }
 interface DeviceLeaseRepository {
     fun acquire(
