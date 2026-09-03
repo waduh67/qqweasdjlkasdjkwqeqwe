@@ -6,6 +6,7 @@ import com.duluin.ftth.provisioning.application.port.inbound.ProvisioningExecuti
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisionExecutionRepository
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisionPlanRepository
 import com.duluin.ftth.provisioning.application.service.ProvisioningLifecycleService
+import com.duluin.ftth.provisioning.config.ProvisioningRolloutProperties
 import com.duluin.ftth.provisioning.domain.model.DeviceKind
 import com.duluin.ftth.provisioning.domain.model.DeviceReference
 import com.duluin.ftth.provisioning.domain.model.ExecutionStatus
@@ -29,7 +30,9 @@ class ProvisioningLifecycleServiceTest {
         val plans = Plans(plan)
         val executions = Executions()
         val admission = Admission(plan, executions)
-        val service = ProvisioningLifecycleService(plans, executions, admission, allowedGate())
+        val service = ProvisioningLifecycleService(
+            plans, executions, admission, allowedGate(), ProvisioningRolloutProperties(autoApplyEnabled = true),
+        )
 
         assertThatThrownBy { service.apply(plan.id, 2, "request-1") }
             .isInstanceOf(ConflictException::class.java).hasMessage("STALE_PLAN")
@@ -44,7 +47,10 @@ class ProvisioningLifecycleServiceTest {
     fun `cancel transitions only queued execution`() {
         val executions = Executions()
         val queued = executions.save(ProvisionExecution.queue(plan.tenantId, plan.intentId, plan.id, "cancel-key"))
-        val service = ProvisioningLifecycleService(Plans(plan), executions, Admission(plan, executions), allowedGate())
+        val service = ProvisioningLifecycleService(
+            Plans(plan), executions, Admission(plan, executions), allowedGate(),
+            ProvisioningRolloutProperties(autoApplyEnabled = true),
+        )
 
         assertThat(service.cancel(queued.id, 1).status).isEqualTo(ExecutionStatus.CANCELLED)
         assertThatThrownBy { service.cancel(queued.id, 1) }.isInstanceOf(ConflictException::class.java)

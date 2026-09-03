@@ -9,6 +9,7 @@ import com.duluin.ftth.provisioning.domain.model.ProvisionExecution
 import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
 import com.duluin.ftth.provisioning.application.port.inbound.ProvisioningPlanEvaluation
 import com.duluin.ftth.provisioning.domain.policy.ExecutionMode
+import com.duluin.ftth.provisioning.config.ProvisioningRolloutProperties
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -19,6 +20,7 @@ class ProvisioningLifecycleService(
     private val executions: ProvisionExecutionRepository,
     private val admission: ProvisioningExecutionAdmissionUseCase,
     private val safetyGate: ProvisioningSafetyGate,
+    private val rollout: ProvisioningRolloutProperties,
     private val audit: ProvisioningAuditPublisher? = null,
     private val metrics: ProvisioningMetrics? = null,
     private val revisions: ProvisioningResourceRevisionStore? = null,
@@ -27,6 +29,7 @@ class ProvisioningLifecycleService(
     fun plan(id: UUID): ProvisionPlan = plans.findById(id) ?: throw NotFoundException("PLAN_NOT_FOUND")
 
     fun preview(id: UUID, mode: ExecutionMode): ProvisioningPlanEvaluation {
+        rollout.requirePlannerEnabled()
         if (mode == ExecutionMode.PRODUCTION_AUTO_APPLY) throw ConflictException("PREVIEW_MODE_INVALID")
         val plan = plan(id)
         return ProvisioningPlanEvaluation(plan, safetyGate.requireAllowed(plan, mode))

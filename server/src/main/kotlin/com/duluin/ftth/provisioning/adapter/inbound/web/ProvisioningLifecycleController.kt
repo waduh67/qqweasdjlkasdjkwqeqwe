@@ -5,6 +5,7 @@ import com.duluin.ftth.provisioning.application.service.ProvisioningEvidenceQuer
 import com.duluin.ftth.provisioning.domain.model.ProvisionExecution
 import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
 import com.duluin.ftth.provisioning.domain.policy.ExecutionMode
+import com.duluin.ftth.provisioning.config.ProvisioningRolloutProperties
 import com.duluin.ftth.common.domain.error.ValidationException
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
@@ -22,7 +23,19 @@ import java.util.UUID
 class ProvisioningLifecycleController(
     private val lifecycle: ProvisioningLifecycleService,
     private val evidence: ProvisioningEvidenceQueryService,
+    private val rollout: ProvisioningRolloutProperties,
 ) {
+    @GetMapping("/rollout")
+    @PreAuthorize("@authz.can('provisioning.plan.view')")
+    fun rollout() = ProvisioningRolloutView(
+        rollout.plannerEnabled,
+        rollout.uiEnabled,
+        rollout.autoApplyEnabled,
+        rollout.maxAffectedSubscribers,
+        rollout.circuitFailureThreshold,
+        rollout.bulkExpansionEnabled,
+    )
+
     @GetMapping("/plans/{id}")
     @PreAuthorize("@authz.can('provisioning.plan.view')")
     fun plan(@PathVariable id: UUID) = lifecycle.plan(id).toView()
@@ -76,6 +89,14 @@ class ProvisioningLifecycleController(
 
 data class ProvisioningPlanView(val id: UUID, val intentId: UUID, val revision: Int, val status: String, val contentHash: String)
 data class ProvisioningExecutionView(val id: UUID, val planId: UUID, val revision: Int, val status: String)
+data class ProvisioningRolloutView(
+    val plannerEnabled: Boolean,
+    val uiEnabled: Boolean,
+    val autoApplyEnabled: Boolean,
+    val maxAffectedSubscribers: Int,
+    val circuitFailureThreshold: Int,
+    val bulkExpansionEnabled: Boolean,
+)
 
 private fun ProvisionPlan.toView() = ProvisioningPlanView(id, intentId, revision, status.name, contentHash)
 private fun ProvisionExecution.toView(revision: Int) = ProvisioningExecutionView(id, planId, revision, status.name)
