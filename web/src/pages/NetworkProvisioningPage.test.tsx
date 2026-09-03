@@ -18,11 +18,11 @@ const mockedPermissions = vi.mocked(useProvisioningPermissions)
 
 const topology = {
   nodes: [
-    { id: 'olt-1', name: 'OLT Bekasi', role: 'OLT' as const, administrativeStatus: 'ENABLED' as const },
+    { id: 'olt-1', name: 'OLT Bekasi', role: 'OLT' as const, reference: { kind: 'OLT' as const, id: 'olt-device-1' }, administrativeStatus: 'ENABLED' as const },
     { id: 'switch-1', name: 'Transit Bekasi', role: 'AGGREGATION_SWITCH' as const, administrativeStatus: 'ENABLED' as const },
     { id: 'bras-1', name: 'BRAS Utama', role: 'BRAS' as const, administrativeStatus: 'ENABLED' as const },
   ],
-  interfaces: [{ id: 'if-1', nodeId: 'olt-1', name: 'PON 0/1', role: 'ACCESS' as const, administrativeStatus: 'ENABLED' as const }],
+  interfaces: [{ id: 'if-1', nodeId: 'olt-1', name: 'PON 0/1', role: 'ACCESS' as const, reference: { kind: 'PON' as const, id: 'pon-port-1' }, administrativeStatus: 'ENABLED' as const }],
   links: [{ id: 'link-1', interfaceAId: 'if-1', interfaceZId: 'if-2', administrativeStatus: 'ENABLED' as const }],
 }
 
@@ -61,8 +61,8 @@ beforeEach(() => {
     { revision: 1, value: { id: 'profile-dedicated', name: 'Enterprise dedicated', poolId: 'pool-1' } },
   ])
   vi.spyOn(provisioningApi, 'listServiceIntents').mockResolvedValue([
-    { revision: 2, value: { id: 'intent-home', subscriptionId: 'sub-home', hotspotSiteId: null, segmentProfileId: 'profile-shared', allocationMode: 'SHARED', dedicatedVlanId: null, status: 'ACTIVE' } },
-    { revision: 4, value: { id: 'intent-enterprise', subscriptionId: 'sub-enterprise', hotspotSiteId: null, segmentProfileId: 'profile-dedicated', allocationMode: 'DEDICATED', dedicatedVlanId: 3101, status: 'ACTIVE' } },
+    { revision: 2, value: { id: 'intent-home', subscriptionId: 'sub-home', hotspotSiteId: null, segmentProfileId: 'profile-shared', allocationMode: 'SHARED', dedicatedVlanId: null, accessOltId: 'olt-1', accessPonPortId: 'pon-1', accessOnuId: 'onu-1', status: 'ACTIVE' } },
+    { revision: 4, value: { id: 'intent-enterprise', subscriptionId: 'sub-enterprise', hotspotSiteId: null, segmentProfileId: 'profile-dedicated', allocationMode: 'DEDICATED', dedicatedVlanId: 3101, accessOltId: 'olt-1', accessPonPortId: 'pon-1', accessOnuId: 'onu-2', status: 'ACTIVE' } },
   ])
   vi.spyOn(provisioningApi, 'listProvisioningCapabilities').mockResolvedValue([
     { id: 'cap-1', deviceKind: 'OLT', deviceId: 'olt-1', vendor: 'HUAWEI', model: 'MA5800-X7', firmware: 'R019', transport: 'SSH', operationClass: 'ENSURE_SUBSCRIBER_VLAN', supported: true, observedAt: '2026-09-03T00:00:00Z', expiresAt: '2099-09-03T00:00:00Z' },
@@ -76,7 +76,7 @@ beforeEach(() => {
     { id: 'drift-1', deviceKind: 'OLT', deviceId: 'olt-1', revision: 2, status: 'BENIGN', recordedAt: '2026-09-03T00:00:00Z' },
   ])
   vi.spyOn(provisioningApi, 'listAdapterCertifications').mockResolvedValue([])
-  vi.spyOn(provisioningApi, 'createServiceIntent').mockResolvedValue({ revision: 1, value: { id: 'intent-new', subscriptionId: 'sub-new', hotspotSiteId: null, segmentProfileId: 'profile-shared', allocationMode: 'SHARED', dedicatedVlanId: null, status: 'DRAFT' } })
+  vi.spyOn(provisioningApi, 'createServiceIntent').mockResolvedValue({ revision: 1, value: { id: 'intent-new', subscriptionId: 'sub-new', hotspotSiteId: null, segmentProfileId: 'profile-shared', allocationMode: 'SHARED', dedicatedVlanId: null, accessOltId: 'olt-1', accessPonPortId: 'pon-1', accessOnuId: 'onu-1', status: 'DRAFT' } })
   vi.spyOn(provisioningApi, 'createTopologyNode').mockResolvedValue({ revision: 1, value: topology.nodes[0] })
   vi.spyOn(provisioningApi, 'generateProvisioningPlan').mockResolvedValue({ id: 'plan-1', intentId: 'intent-home', revision: 3, status: 'GENERATED', contentHash: 'content-hash' })
   vi.spyOn(provisioningApi, 'previewProvisioning').mockResolvedValue(preview)
@@ -205,18 +205,16 @@ describe('NetworkProvisioningPage', () => {
     expect(screen.getByRole('button', { name: /Buat intent/ })).toBeTruthy()
     managed.unmount()
 
-    render(<ProvisioningEditorModal editor="intents" profiles={[{ revision: 1, value: { id: 'profile-shared', name: 'Residential shared', poolId: 'pool-1' } }]} defaultPoolId="pool-1" onClose={vi.fn()} onCreated={async () => {}} onError={vi.fn()} />)
+    render(<ProvisioningEditorModal editor="intents" profiles={[{ revision: 1, value: { id: 'profile-shared', name: 'Residential shared', poolId: 'pool-1' } }]} topology={{ nodes: [{ id: 'olt-1', name: 'OLT Utama', role: 'OLT', reference: { kind: 'OLT', id: 'olt-device-1' }, administrativeStatus: 'ENABLED' }], interfaces: [{ id: 'pon-1', nodeId: 'olt-1', name: 'PON 1', role: 'ACCESS', reference: { kind: 'PON', id: 'pon-port-1' }, administrativeStatus: 'ENABLED' }], links: [] }} defaultPoolId="pool-1" onClose={vi.fn()} onCreated={async () => {}} onError={vi.fn()} />)
     await screen.findByText('Buat intent layanan')
-    const input = document.querySelector<HTMLInputElement>('.modal input')
-    const profile = document.querySelector<HTMLSelectElement>('.modal select')
-    expect(input).not.toBeNull()
-    expect(profile).not.toBeNull()
-    if (!input || !profile) return
-    fireEvent.change(input, { target: { value: 'sub-new' } })
-    fireEvent.change(profile, { target: { value: 'profile-shared' } })
+    fireEvent.change(screen.getByLabelText(/ID langganan/), { target: { value: 'sub-new' } })
+    fireEvent.change(screen.getByLabelText(/OLT akses/), { target: { value: 'olt-1' } })
+    fireEvent.change(screen.getByLabelText(/Port PON/), { target: { value: 'pon-1' } })
+    fireEvent.change(screen.getByLabelText(/ID ONU/), { target: { value: 'onu-1' } })
+    fireEvent.change(screen.getByLabelText(/Profil segmen/), { target: { value: 'profile-shared' } })
     fireEvent.click(screen.getByRole('button', { name: 'Simpan', hidden: true }))
 
-    await waitFor(() => expect(provisioningApi.createServiceIntent).toHaveBeenCalledWith({ subscriptionId: 'sub-new', segmentProfileId: 'profile-shared', allocationMode: 'SHARED', dedicatedVlanId: null }))
+    await waitFor(() => expect(provisioningApi.createServiceIntent).toHaveBeenCalledWith({ subscriptionId: 'sub-new', segmentProfileId: 'profile-shared', allocationMode: 'SHARED', dedicatedVlanId: null, accessOltId: 'olt-device-1', accessPonPortId: 'pon-port-1', accessOnuId: 'onu-1' }))
   })
 
   it('mengirim enum topologi persis seperti kontrak server', async () => {
@@ -238,7 +236,7 @@ describe('NetworkProvisioningPage', () => {
 
   it('merender mode alokasi dan VLAN dari intent bukan nama profil', () => {
     render(<IntentsPanel
-      intents={[{ revision: 1, value: { id: 'intent-1', subscriptionId: 'sub-1', hotspotSiteId: null, segmentProfileId: 'profile-1', allocationMode: 'DEDICATED', dedicatedVlanId: 3101, status: 'ACTIVE' } }]}
+      intents={[{ revision: 1, value: { id: 'intent-1', subscriptionId: 'sub-1', hotspotSiteId: null, segmentProfileId: 'profile-1', allocationMode: 'DEDICATED', dedicatedVlanId: 3101, accessOltId: 'olt-1', accessPonPortId: 'pon-1', accessOnuId: 'onu-1', status: 'ACTIVE' } }]}
       profiles={[{ revision: 1, value: { id: 'profile-1', name: 'Paket Bisnis', poolId: 'pool-1' } }]}
     />)
 

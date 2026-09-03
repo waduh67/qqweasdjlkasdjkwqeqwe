@@ -23,8 +23,8 @@ export interface RevisionedResource<T> {
 }
 
 export interface ProvisioningTopology {
-  nodes: Array<{ id: string; name: string; role: ManagedNodeRole; administrativeStatus: AdministrativeStatus }>
-  interfaces: Array<{ id: string; nodeId: string; name: string; role: 'ACCESS' | 'TRUNK' | 'UPLINK' | 'MANAGEMENT'; administrativeStatus: AdministrativeStatus }>
+  nodes: Array<{ id: string; name: string; role: ManagedNodeRole; reference?: { kind: 'OLT' | 'PON' | 'ONU' | 'NAS'; id: string } | null; administrativeStatus: AdministrativeStatus }>
+  interfaces: Array<{ id: string; nodeId: string; name: string; role: 'ACCESS' | 'TRUNK' | 'UPLINK' | 'MANAGEMENT'; reference?: { kind: 'OLT' | 'PON' | 'ONU' | 'NAS'; id: string } | null; administrativeStatus: AdministrativeStatus }>
   links: Array<{ id: string; interfaceAId: string; interfaceZId: string; administrativeStatus: AdministrativeStatus }>
 }
 
@@ -34,7 +34,7 @@ export interface TopologyInterfaceInput { revision?: number; nodeId: string; nam
 export interface TopologyLinkInput { revision?: number; interfaceAId: string; interfaceZId: string; status: string }
 export interface VlanPoolInput { revision?: number; name: string; vlanStart: number; vlanEnd: number; reserved?: VlanRangeInput[] }
 export interface SegmentProfileInput { revision?: number; name: string; poolId: string }
-export interface ServiceIntentInput { revision?: number; subscriptionId: string; segmentProfileId: string; allocationMode: VlanAllocationMode; dedicatedVlanId?: number | null; status?: string }
+export interface ServiceIntentInput { revision?: number; subscriptionId: string; segmentProfileId: string; allocationMode: VlanAllocationMode; dedicatedVlanId?: number | null; accessOltId: string; accessPonPortId: string; accessOnuId: string; status?: string }
 
 export interface VlanPoolView {
   id: string
@@ -56,6 +56,9 @@ export interface ServiceIntentView {
   segmentProfileId: string
   allocationMode: VlanAllocationMode
   dedicatedVlanId: number | null
+  accessOltId: string | null
+  accessPonPortId: string | null
+  accessOnuId: string | null
   status: string
 }
 

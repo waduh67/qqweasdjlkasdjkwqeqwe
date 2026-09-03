@@ -7,6 +7,7 @@ import {
   type RevisionedResource,
   type SegmentProfileView,
   type ManagedNodeRole,
+  type ProvisioningTopology,
   type VlanAllocationMode,
 } from '@/api/provisioning'
 import { Button, SelectField, TextField } from '@/components/atoms'
@@ -18,6 +19,7 @@ type EditorProps = {
   readonly editor: ProvisioningEditor
   readonly profiles: readonly RevisionedResource<SegmentProfileView>[]
   readonly defaultPoolId: string
+  readonly topology?: ProvisioningTopology | null
   readonly onClose: () => void
   readonly onCreated: () => Promise<void>
   readonly onError: (cause: unknown) => void
@@ -71,22 +73,33 @@ function ProfileEditor({ defaultPoolId, onClose, onCreated, onError }: EditorPro
   </EditorShell>
 }
 
-function IntentEditor({ profiles, onClose, onCreated, onError }: EditorProps) {
+function IntentEditor({ profiles, topology, onClose, onCreated, onError }: EditorProps) {
   const [subscriptionId, setSubscriptionId] = useState('')
   const [profileId, setProfileId] = useState('')
   const [mode, setMode] = useState<VlanAllocationMode>('SHARED')
   const [vlan, setVlan] = useState('')
+  const [oltNodeId, setOltNodeId] = useState('')
+  const [ponInterfaceId, setPonInterfaceId] = useState('')
+  const [onuId, setOnuId] = useState('')
   const [saving, setSaving] = useState(false)
   const dedicatedVlanId = Number(vlan)
   const validVlan = vlan === '' || (Number.isInteger(dedicatedVlanId) && dedicatedVlanId >= 2 && dedicatedVlanId <= 4094)
-  const valid = subscriptionId.trim() !== '' && profileId !== '' && (mode === 'SHARED' || validVlan)
+  const oltNodes = topology?.nodes.filter((node) => node.role === 'OLT' && node.reference?.kind === 'OLT' && node.administrativeStatus === 'ENABLED') ?? []
+  const ponPorts = topology?.interfaces.filter((networkInterface) => networkInterface.nodeId === oltNodeId && networkInterface.role === 'ACCESS' && networkInterface.reference?.kind === 'PON' && networkInterface.administrativeStatus === 'ENABLED') ?? []
+  const selectedOlt = oltNodes.find((node) => node.id === oltNodeId)
+  const selectedPon = ponPorts.find((networkInterface) => networkInterface.id === ponInterfaceId)
+  const valid = subscriptionId.trim() !== '' && profileId !== '' && selectedOlt?.reference?.id != null && selectedPon?.reference?.id != null && onuId.trim() !== '' && (mode === 'SHARED' || validVlan)
   return <EditorShell title="Buat intent layanan" saving={saving} valid={valid} onClose={onClose} onSubmit={async () => {
     setSaving(true)
-    try { await createServiceIntent({ subscriptionId: subscriptionId.trim(), segmentProfileId: profileId, allocationMode: mode, dedicatedVlanId: mode === 'DEDICATED' && vlan !== '' ? dedicatedVlanId : null }); await onCreated(); onClose() }
+    if (!selectedOlt?.reference || !selectedPon?.reference) return
+    try { await createServiceIntent({ subscriptionId: subscriptionId.trim(), segmentProfileId: profileId, allocationMode: mode, dedicatedVlanId: mode === 'DEDICATED' && vlan !== '' ? dedicatedVlanId : null, accessOltId: selectedOlt.reference.id, accessPonPortId: selectedPon.reference.id, accessOnuId: onuId.trim() }); await onCreated(); onClose() }
     catch (cause) { onError(cause) }
     finally { setSaving(false) }
   }}>
     <TextField label="ID langganan" value={subscriptionId} onChange={(_, data) => setSubscriptionId(data.value)} required />
+    <SelectField label="OLT akses" value={oltNodeId} onChange={(event) => { setOltNodeId(event.target.value); setPonInterfaceId('') }} required><option value="">Pilih OLT</option>{oltNodes.map((node) => <option key={node.id} value={node.id}>{node.name}</option>)}</SelectField>
+    <SelectField label="Port PON" value={ponInterfaceId} onChange={(event) => setPonInterfaceId(event.target.value)} required><option value="">Pilih port PON</option>{ponPorts.map((networkInterface) => <option key={networkInterface.id} value={networkInterface.id}>{networkInterface.name}</option>)}</SelectField>
+    <TextField label="ID ONU" value={onuId} onChange={(_, data) => setOnuId(data.value)} required />
     <SelectField label="Profil segmen" value={profileId} onChange={(event) => setProfileId(event.target.value)} required><option value="">Pilih profil</option>{profiles.map((profile) => <option key={profile.value.id} value={profile.value.id}>{profile.value.name}</option>)}</SelectField>
     <SelectField label="Mode intent" value={mode} onChange={(event) => setMode(event.target.value === 'DEDICATED' ? 'DEDICATED' : 'SHARED')}><option value="SHARED">Residential shared</option><option value="DEDICATED">Enterprise dedicated</option></SelectField>
     {mode === 'DEDICATED' && <TextField type="number" min={2} max={4094} label="Override VLAN dedicated (opsional)" value={vlan} onChange={(_, data) => setVlan(data.value)} />}
