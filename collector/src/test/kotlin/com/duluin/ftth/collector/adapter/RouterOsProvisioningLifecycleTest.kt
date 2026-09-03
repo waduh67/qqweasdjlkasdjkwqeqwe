@@ -5,6 +5,7 @@ import com.duluin.ftth.contract.ProvisioningCommandPhase
 import com.duluin.ftth.contract.ProvisioningErrorCode
 import com.duluin.ftth.contract.ProvisioningPayload
 import com.duluin.ftth.contract.ProvisioningPlanStepCommand
+import com.duluin.ftth.contract.ProvisioningStepResult
 import com.duluin.ftth.contract.ProvisioningTarget
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
@@ -18,6 +19,9 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.io.path.createTempDirectory
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -71,7 +75,7 @@ class RouterOsProvisioningLifecycleTest {
         assertTrue(assertNotNull(applied.apply).changed)
         assertTrue(assertNotNull(applied.verification).matchesExpected)
         val mutations = fixture.requests.filterNot { it.startsWith("GET ") }
-        assertEquals("PATCH /rest/interface/bridge/*1", mutations.last())
+        assertTrue(mutations.last().startsWith("PATCH /rest/interface/pppoe-server/server/"))
         assertTrue(fixture.rows("/interface/bridge/vlan").single()["comment"]!!.startsWith("ftth:t1:i1:"))
         assertEquals("ether1,br-service", fixture.rows("/interface/bridge/vlan").single()["current-tagged"])
         assertEquals("ether2", fixture.rows("/interface/bridge/vlan").single()["current-untagged"])
@@ -96,7 +100,7 @@ class RouterOsProvisioningLifecycleTest {
                 fencingEpoch = 2,
             ),
         )
-        assertTrue(rollback.success)
+        assertTrue(rollback.success, "$rollback\n${fixture.requests.joinToString("\n")}")
         assertTrue(assertNotNull(rollback.rollback).success)
         assertFalse(fixture.rows("/interface/bridge").single()["vlan-filtering"].toBoolean())
         assertTrue(fixture.allRows().none { it["comment"]?.startsWith("ftth:t1:i1:") == true && it[".id"] != "*1" })
@@ -135,6 +139,28 @@ class RouterOsProvisioningLifecycleTest {
         )
         assertTrue(applied.success)
         assertTrue(applied.apply!!.changed)
+        val requestsAfterApply = fixture.requests.size
+        assertEquals(applied, adapter.execute(
+            fixture.target(),
+            command(
+                ProvisioningCommandPhase.APPLY,
+                expectedHash = preflight.preflight!!.preconditionHash,
+                key = "empty-device-apply",
+            ),
+        ))
+        assertEquals(requestsAfterApply, fixture.requests.size)
+
+        val rollback = adapter.execute(
+            fixture.target(),
+            command(
+                ProvisioningCommandPhase.ROLLBACK,
+                expectedHash = applied.verification!!.stateHash,
+                key = "empty-device-rollback",
+                fencingEpoch = 2,
+            ),
+        )
+        assertTrue(rollback.success, rollback.toString())
+        assertTrue(fixture.allRows().isEmpty())
     }
 
     @Test
@@ -164,7 +190,7 @@ class RouterOsProvisioningLifecycleTest {
                 ),
             )
 
-            assertTrue(rollback.success)
+            assertTrue(rollback.success, rollback.toString())
             assertTrue(fixture.allRows().none { it["comment"]?.startsWith("ftth:t1:i1:") == true && it[".id"] != "*1" })
         }
     }
@@ -209,6 +235,207 @@ class RouterOsProvisioningLifecycleTest {
                     Files.getPosixFilePermissions(stateFile.parent),
                 )
             }
+        }
+    }
+
+    @Test
+    fun `cached delivery key rejects changed command and stale fence before replay`() {
+        fixture.add("/interface/bridge", ownedBridge(filtering = true))
+        val original = command(ProvisioningCommandPhase.PREFLIGHT, key = "bound-key", fencingEpoch = 9)
+        val first = adapter.execute(fixture.target(), original)
+        val requestsAfterFirst = fixture.requests.size
+
+        val collision = adapter.execute(
+            fixture.target(),
+            command(
+                ProvisioningCommandPhase.PREFLIGHT,
+                key = "bound-key",
+                fencingEpoch = 20,
+                payloadOverrides = mapOf("vlanId" to "111"),
+            ),
+        )
+        val stale = adapter.execute(fixture.target(), original.copy(fencingEpoch = 8))
+        val legitimate = adapter.execute(
+            fixture.target(),
+            command(ProvisioningCommandPhase.PREFLIGHT, key = "legitimate-epoch-10", fencingEpoch = 10),
+        )
+
+        assertTrue(first.success)
+        assertEquals(ProvisioningErrorCode.STALE_PRECONDITION, collision.errorCode)
+        assertEquals(ProvisioningErrorCode.STALE_PRECONDITION, stale.errorCode)
+        assertTrue(legitimate.success)
+        assertTrue(fixture.requests.size > requestsAfterFirst)
+
+        val changedIntent = adapter.execute(
+            fixture.target(),
+            command(
+                ProvisioningCommandPhase.PREFLIGHT,
+                key = "changed-intent-new-delivery",
+                fencingEpoch = 11,
+                payloadOverrides = mapOf("vlanId" to "111"),
+            ),
+        )
+        assertEquals(ProvisioningErrorCode.STALE_PRECONDITION, changedIntent.errorCode)
+    }
+
+    @Test
+    fun `concurrent duplicate apply executes one mutation sequence`() {
+        fixture.add("/interface/bridge", ownedBridge(filtering = true))
+        val preflight = adapter.execute(fixture.target(), command(ProvisioningCommandPhase.PREFLIGHT))
+        val apply = command(ProvisioningCommandPhase.APPLY, preflight.preflight!!.preconditionHash, "concurrent-apply")
+        val ready = CountDownLatch(2)
+        val start = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(2)
+        try {
+            val futures = List(2) {
+                executor.submit<ProvisioningStepResult> {
+                    ready.countDown()
+                    start.await(5, TimeUnit.SECONDS)
+                    adapter.execute(fixture.target(), apply)
+                }
+            }
+            ready.await(5, TimeUnit.SECONDS)
+            start.countDown()
+            val results = futures.map { it.get(15, TimeUnit.SECONDS) }
+
+            assertTrue(results.all { it.success })
+            assertEquals(results.first(), results.last())
+            assertEquals(1, fixture.rows("/interface/vlan").size)
+            assertEquals(1, fixture.rows("/interface/pppoe-server/server").size)
+        } finally {
+            executor.shutdownNow()
+        }
+    }
+
+    @Test
+    fun `ambiguous create timeout reconciles planned journal on duplicate delivery`() {
+        fixture.add("/interface/bridge", ownedBridge(filtering = true))
+        val preflight = adapter.execute(fixture.target(), command(ProvisioningCommandPhase.PREFLIGHT))
+        fixture.timeoutAfterApplying("PUT", "/interface/bridge/port")
+        val apply = command(ProvisioningCommandPhase.APPLY, preflight.preflight!!.preconditionHash, "ambiguous-apply")
+
+        val timedOut = adapter.execute(fixture.target(), apply)
+        val resumed = adapter.execute(fixture.target(), apply)
+
+        assertEquals(ProvisioningErrorCode.TIMEOUT, timedOut.errorCode)
+        assertTrue(resumed.success)
+        assertEquals(2, fixture.rows("/interface/bridge/port").size)
+    }
+
+    @Test
+    fun `dropped response after mutation reconciles instead of poisoning retry`() {
+        fixture.add("/interface/bridge", ownedBridge(filtering = true))
+        val preflight = adapter.execute(fixture.target(), command(ProvisioningCommandPhase.PREFLIGHT))
+        fixture.dropResponseAfterApplying("PUT", "/interface/bridge/port")
+        val apply = command(ProvisioningCommandPhase.APPLY, preflight.preflight!!.preconditionHash, "dropped-response-apply")
+
+        val timedOut = adapter.execute(fixture.target(), apply)
+        val resumed = adapter.execute(fixture.target(), apply)
+
+        assertEquals(ProvisioningErrorCode.TIMEOUT, timedOut.errorCode)
+        assertTrue(resumed.success)
+        assertEquals(2, fixture.rows("/interface/bridge/port").size)
+    }
+
+    @Test
+    fun `late preflight preserves applied snapshot for rollback`() {
+        fixture.add("/interface/bridge", ownedBridge(filtering = true))
+        withTempStore { stateFile ->
+            val first = adapterWith(FileRouterOsProvisioningStateStore(stateFile))
+            val firstPreflight = first.execute(fixture.target(), command(ProvisioningCommandPhase.PREFLIGHT))
+            val applied = first.execute(
+                fixture.target(),
+                command(ProvisioningCommandPhase.APPLY, firstPreflight.preflight!!.preconditionHash, "late-preflight-apply"),
+            )
+            val reconstructed = adapterWith(FileRouterOsProvisioningStateStore(stateFile))
+            val late = reconstructed.execute(
+                fixture.target(),
+                command(ProvisioningCommandPhase.PREFLIGHT, key = "late-preflight", fencingEpoch = 2),
+            )
+            val rolledBack = reconstructed.execute(
+                fixture.target(),
+                command(ProvisioningCommandPhase.ROLLBACK, applied.verification!!.stateHash, "late-preflight-rollback", 3),
+            )
+
+            assertEquals(firstPreflight.preflight!!.preconditionHash, late.preflight!!.preconditionHash)
+            assertTrue(rolledBack.success, rolledBack.toString())
+        }
+    }
+
+    @Test
+    fun `crash during compensation resumes from durable inverse progress`() {
+        fixture.add("/interface/bridge", ownedBridge(filtering = true))
+        withTempStore { stateFile ->
+            val store = FileRouterOsProvisioningStateStore(stateFile)
+            val first = adapterWith(store)
+            val preflight = first.execute(fixture.target(), command(ProvisioningCommandPhase.PREFLIGHT, fencingEpoch = 40))
+            val applied = first.execute(
+                fixture.target(),
+                command(ProvisioningCommandPhase.APPLY, preflight.preflight!!.preconditionHash, "comp-crash-apply", 40),
+            )
+            var crashed = false
+            val crashing = adapterWith(FileRouterOsProvisioningStateStore(stateFile), afterCompensationHttpSuccess = {
+                if (!crashed && it.kind == "CREATED") {
+                    crashed = true
+                    throw SimulatedCollectorCrash()
+                }
+            })
+            val rollback = command(
+                ProvisioningCommandPhase.ROLLBACK,
+                applied.verification!!.stateHash,
+                "comp-crash-rollback",
+                41,
+            )
+
+            assertFailsWith<SimulatedCollectorCrash> { crashing.execute(fixture.target(), rollback) }
+            val resumed = adapterWith(FileRouterOsProvisioningStateStore(stateFile)).execute(fixture.target(), rollback)
+
+            assertTrue(resumed.success)
+            assertTrue(fixture.allRows().none { it["comment"]?.startsWith("ftth:t1:i1:") == true && it[".id"] != "*1" })
+        }
+    }
+
+    @Test
+    fun `crash after compensation patch resumes without overwriting drift`() {
+        fixture.add("/interface/bridge", ownedBridge(filtering = true))
+        fixture.add(
+            "/interface/bridge/port",
+            mapOf(
+                ".id" to "*A",
+                "bridge" to "br-service",
+                "interface" to "ether2",
+                "pvid" to "1",
+                "ingress-filtering" to "no",
+                "frame-types" to "admit-all",
+                "comment" to "ftth:t1:i1:port:ether2",
+            ),
+        )
+        withTempStore { stateFile ->
+            val first = adapterWith(FileRouterOsProvisioningStateStore(stateFile))
+            val preflight = first.execute(fixture.target(), command(ProvisioningCommandPhase.PREFLIGHT, fencingEpoch = 50))
+            val applied = first.execute(
+                fixture.target(),
+                command(ProvisioningCommandPhase.APPLY, preflight.preflight!!.preconditionHash, "patch-crash-apply", 50),
+            )
+            var crashed = false
+            val crashing = adapterWith(FileRouterOsProvisioningStateStore(stateFile), afterCompensationHttpSuccess = {
+                if (!crashed && it.kind == "UPDATED" && it.endpoint == "/interface/bridge/port" && it.id == "*A") {
+                    crashed = true
+                    throw SimulatedCollectorCrash()
+                }
+            })
+            val rollback = command(
+                ProvisioningCommandPhase.ROLLBACK,
+                applied.verification!!.stateHash,
+                "patch-crash-rollback",
+                51,
+            )
+
+            assertFailsWith<SimulatedCollectorCrash> { crashing.execute(fixture.target(), rollback) }
+            val resumed = adapterWith(FileRouterOsProvisioningStateStore(stateFile)).execute(fixture.target(), rollback)
+
+            assertTrue(resumed.success, resumed.toString())
+            assertEquals("1", fixture.rows("/interface/bridge/port").single { it[".id"] == "*A" }["pvid"])
         }
     }
 
@@ -338,8 +565,14 @@ class RouterOsProvisioningLifecycleTest {
             )
 
             assertFailsWith<SimulatedCollectorCrash> { first.execute(fixture.target(), apply) }
+            assertEquals("yes", fixture.rows("/interface/pppoe-server/server").single()["disabled"])
             val resumed = adapterWith(FileRouterOsProvisioningStateStore(stateFile)).execute(fixture.target(), apply)
             assertTrue(resumed.success)
+            assertEquals("no", fixture.rows("/interface/pppoe-server/server").single()["disabled"])
+            assertEquals(
+                "PATCH /rest/interface/pppoe-server/server/${fixture.rows("/interface/pppoe-server/server").single().getValue(".id")}",
+                fixture.requests.filterNot { it.startsWith("GET ") }.last(),
+            )
             val rollback = adapterWith(FileRouterOsProvisioningStateStore(stateFile)).execute(
                 fixture.target(),
                 command(
@@ -355,12 +588,12 @@ class RouterOsProvisioningLifecycleTest {
     }
 
     @Test
-    fun `new bridge rejects boolean management proof without protected model`() {
+    fun `new bridge rejects boolean management proof without source evidence`() {
         val result = adapter.execute(
             fixture.target(),
             command(
                 ProvisioningCommandPhase.PREFLIGHT,
-                payloadOverrides = mapOf("protectedInterfaces" to "", "protectedVlanIds" to ""),
+                payloadOverrides = mapOf("managementSourceId" to "", "managementSourceType" to ""),
             ),
         )
 
@@ -399,6 +632,100 @@ class RouterOsProvisioningLifecycleTest {
         val vlanAllowance = mutations.indexOfFirst { it == "PUT /rest/interface/bridge/vlan" }
         val restrictivePort = mutations.indexOfFirst { it == "PATCH /rest/interface/bridge/port/*A" }
         assertTrue(vlanAllowance in 0 until restrictivePort, mutations.joinToString())
+    }
+
+    @Test
+    fun `updates every mutable resource replays once and compensates exact ids`() {
+        fixture.add("/interface/bridge", ownedBridge(filtering = false))
+        fixture.add(
+            "/interface/bridge/port",
+            mapOf(
+                ".id" to "*T", "bridge" to "br-service", "interface" to "ether1", "pvid" to "7",
+                "ingress-filtering" to "no", "frame-types" to "admit-all", "comment" to "ftth:t1:i1:port:ether1",
+            ),
+        )
+        fixture.add(
+            "/interface/bridge/port",
+            mapOf(
+                ".id" to "*A", "bridge" to "br-service", "interface" to "ether2", "pvid" to "7",
+                "ingress-filtering" to "no", "frame-types" to "admit-all", "comment" to "ftth:t1:i1:port:ether2",
+            ),
+        )
+        fixture.add(
+            "/interface/bridge/vlan",
+            mapOf(
+                ".id" to "*BV", "bridge" to "br-service", "vlan-ids" to "110", "tagged" to "br-service",
+                "untagged" to "", "current-tagged" to "br-service", "current-untagged" to "",
+                "comment" to "ftth:t1:i1:bridge-vlan:110",
+            ),
+        )
+        fixture.add(
+            "/interface/vlan",
+            mapOf(
+                ".id" to "*V", "name" to "svc-110", "interface" to "br-service", "vlan-id" to "111",
+                "comment" to "ftth:t1:i1:vlan:110",
+            ),
+        )
+        fixture.add(
+            "/interface/pppoe-server/server",
+            mapOf(
+                ".id" to "*P", "interface" to "svc-110", "disabled" to "yes", "service-name" to "old",
+                "pppoe-over-vlan-range" to "", "comment" to "ftth:t1:i1:pppoe:110",
+            ),
+        )
+        fixture.add(
+            "/ip/pool",
+            mapOf(".id" to "*POOL", "name" to "ftth-110", "ranges" to "100.64.110.2-100.64.110.10", "comment" to "ftth:t1:i1:pool:110"),
+        )
+        fixture.add("/interface/list", mapOf(".id" to "*L", "name" to "FTTH-CUSTOMER", "comment" to "ftth:t1:i1:list:customer"))
+        fixture.add(
+            "/interface/list/member",
+            mapOf(".id" to "*M", "list" to "FTTH-CUSTOMER", "interface" to "svc-110", "comment" to "ftth:t1:i1:list-member:110"),
+        )
+        fixture.add(
+            "/ip/firewall/filter",
+            mapOf(
+                ".id" to "*F", "chain" to "input", "action" to "accept", "in-interface-list" to "FTTH-CUSTOMER",
+                "out-interface-list" to "FTTH-CUSTOMER", "disabled" to "no",
+                "comment" to "ftth:t1:i1:firewall:deny-inter-vlan",
+            ),
+        )
+        val preflight = adapter.execute(fixture.target(), command(ProvisioningCommandPhase.PREFLIGHT))
+        val apply = command(ProvisioningCommandPhase.APPLY, preflight.preflight!!.preconditionHash, "all-update-apply")
+
+        val applied = adapter.execute(fixture.target(), apply)
+        val requestCount = fixture.requests.size
+        val replayed = adapter.execute(fixture.target(), apply)
+        val updatedPaths = fixture.requests.filter { it.startsWith("PATCH ") }.toSet()
+
+        assertTrue(applied.success, applied.toString())
+        assertEquals(applied, replayed)
+        assertEquals(requestCount, fixture.requests.size)
+        assertTrue(
+            setOf(
+                "PATCH /rest/interface/bridge/*1",
+                "PATCH /rest/interface/bridge/port/*T",
+                "PATCH /rest/interface/bridge/port/*A",
+                "PATCH /rest/interface/bridge/vlan/*BV",
+                "PATCH /rest/interface/vlan/*V",
+                "PATCH /rest/interface/pppoe-server/server/*P",
+                "PATCH /rest/ip/pool/*POOL",
+                "PATCH /rest/ip/firewall/filter/*F",
+            ).all(updatedPaths::contains),
+            updatedPaths.joinToString(),
+        )
+
+        val rollback = adapter.execute(
+            fixture.target(),
+            command(ProvisioningCommandPhase.ROLLBACK, applied.verification!!.stateHash, "all-update-rollback", 2),
+        )
+        assertTrue(rollback.success, rollback.toString())
+        assertEquals("7", fixture.rows("/interface/bridge/port").single { it[".id"] == "*T" }["pvid"])
+        assertEquals("111", fixture.rows("/interface/vlan").single()["vlan-id"])
+        assertEquals("old", fixture.rows("/interface/pppoe-server/server").single()["service-name"])
+        assertEquals("accept", fixture.rows("/ip/firewall/filter").single()["action"])
+        assertEquals("FTTH-CUSTOMER", fixture.rows("/interface/list").single()["name"])
+        assertEquals("svc-110", fixture.rows("/interface/list/member").single()["interface"])
     }
 
     @Test
@@ -494,6 +821,7 @@ class RouterOsProvisioningLifecycleTest {
         assertFalse(result.success)
         assertEquals(ProvisioningErrorCode.VALIDATION_FAILED, result.errorCode)
         assertTrue(fixture.requests.none { !it.startsWith("GET ") })
+
     }
 
     @Test
@@ -509,6 +837,161 @@ class RouterOsProvisioningLifecycleTest {
         )
 
         assertEquals(ProvisioningErrorCode.VALIDATION_FAILED, result.errorCode)
+        assertTrue(fixture.requests.none { !it.startsWith("GET ") })
+
+    }
+
+    @Test
+    fun `rejects vlan interface used as vlan parent before mutation`() {
+        fixture.add("/interface/bridge", ownedBridge(filtering = true))
+        fixture.add(
+            "/interface/vlan",
+            mapOf(".id" to "*outer", "name" to "outer-100", "interface" to "ether1", "vlan-id" to "100"),
+        )
+
+        val result = adapter.execute(
+            fixture.target(),
+            command(ProvisioningCommandPhase.PREFLIGHT, payloadOverrides = mapOf("vlanParent" to "outer-100")),
+        )
+
+        assertEquals(ProvisioningErrorCode.VALIDATION_FAILED, result.errorCode)
+        assertTrue(fixture.requests.none { !it.startsWith("GET ") })
+
+        val selfParent = adapter.execute(
+            fixture.target(),
+            command(
+                ProvisioningCommandPhase.PREFLIGHT,
+                key = "self-parent",
+                fencingEpoch = 2,
+                payloadOverrides = mapOf("vlanParent" to "svc-110"),
+            ),
+        )
+        assertEquals(ProvisioningErrorCode.VALIDATION_FAILED, selfParent.errorCode)
+        assertTrue(fixture.requests.none { !it.startsWith("GET ") })
+    }
+
+    @Test
+    fun `rejects qinq translation and native tagging before discovery`() {
+        listOf("QINQ", "TRANSLATION", "NATIVE").forEachIndexed { index, tagging ->
+            val result = adapter.execute(
+                fixture.target(),
+                command(
+                    ProvisioningCommandPhase.PREFLIGHT,
+                    key = "unsupported-tagging-$tagging",
+                    fencingEpoch = index.toLong() + 1,
+                    payloadOverrides = mapOf("tagging" to tagging),
+                ),
+            )
+            assertEquals(ProvisioningErrorCode.VALIDATION_FAILED, result.errorCode, tagging)
+        }
+        assertTrue(fixture.requests.isEmpty())
+    }
+
+    @Test
+    fun `verification detects trunk pvid drift`() {
+        fixture.add("/interface/bridge", ownedBridge(filtering = true))
+        val preflight = adapter.execute(fixture.target(), command(ProvisioningCommandPhase.PREFLIGHT))
+        val applied = adapter.execute(
+            fixture.target(),
+            command(ProvisioningCommandPhase.APPLY, preflight.preflight!!.preconditionHash, "trunk-pvid-apply"),
+        )
+        assertTrue(applied.success)
+        val trunk = fixture.rows("/interface/bridge/port").single { it["interface"] == "ether1" }
+        fixture.mutate("/interface/bridge/port", trunk.getValue(".id"), "pvid", "99")
+
+        val verified = adapter.execute(
+            fixture.target(),
+            command(ProvisioningCommandPhase.VERIFY, key = "trunk-pvid-verify", fencingEpoch = 2),
+        )
+
+        assertEquals(ProvisioningErrorCode.VERIFICATION_MISMATCH, verified.errorCode)
+    }
+
+    @Test
+    fun `verification rejects firewall rule narrowed by semantic predicate`() {
+        fixture.add("/interface/bridge", ownedBridge(filtering = true))
+        val preflight = adapter.execute(fixture.target(), command(ProvisioningCommandPhase.PREFLIGHT))
+        val applied = adapter.execute(
+            fixture.target(),
+            command(ProvisioningCommandPhase.APPLY, preflight.preflight!!.preconditionHash, "firewall-apply"),
+        )
+        assertTrue(applied.success)
+        val firewall = fixture.rows("/ip/firewall/filter").single()
+        fixture.mutate("/ip/firewall/filter", firewall.getValue(".id"), "protocol", "tcp")
+
+        val verified = adapter.execute(
+            fixture.target(),
+            command(ProvisioningCommandPhase.VERIFY, key = "firewall-verify", fencingEpoch = 2),
+        )
+
+        assertEquals(ProvisioningErrorCode.VERIFICATION_MISMATCH, verified.errorCode)
+    }
+
+    @Test
+    fun `preflight rejects owned firewall with hidden narrowing predicate before mutation`() {
+        fixture.add("/interface/bridge", ownedBridge(filtering = true))
+        fixture.add(
+            "/ip/firewall/filter",
+            mapOf(
+                ".id" to "*F", "chain" to "forward", "action" to "drop",
+                "in-interface-list" to "FTTH-CUSTOMER", "out-interface-list" to "FTTH-CUSTOMER",
+                "disabled" to "no", "protocol" to "tcp", "comment" to "ftth:t1:i1:firewall:deny-inter-vlan",
+            ),
+        )
+
+        val result = adapter.execute(fixture.target(), command(ProvisioningCommandPhase.PREFLIGHT))
+
+        assertEquals(ProvisioningErrorCode.VALIDATION_FAILED, result.errorCode)
+        assertTrue(fixture.requests.none { !it.startsWith("GET ") })
+    }
+
+    @Test
+    fun `legacy boolean alone cannot authorize bridge activation`() {
+        val result = adapter.execute(
+            fixture.target(),
+            command(
+                ProvisioningCommandPhase.PREFLIGHT,
+                payloadOverrides = mapOf("managementSourceId" to "", "managementSourceType" to ""),
+            ),
+        )
+
+        assertEquals(ProvisioningErrorCode.MANAGEMENT_PATH_UNPROVEN, result.errorCode)
+        assertTrue(fixture.requests.none { !it.startsWith("GET ") })
+    }
+
+    @Test
+    fun `already desired unowned bridge is never adopted`() {
+        fixture.add(
+            "/interface/bridge",
+            mapOf(".id" to "*1", "name" to "br-service", "vlan-filtering" to "yes", "comment" to "operator-owned"),
+        )
+
+        val result = adapter.execute(fixture.target(), command(ProvisioningCommandPhase.PREFLIGHT))
+
+        assertEquals(ProvisioningErrorCode.PROTECTED_RESOURCE, result.errorCode)
+        assertTrue(fixture.requests.none { !it.startsWith("GET ") })
+    }
+
+    @Test
+    fun `malformed or unsupported management evidence cannot authorize activation`() {
+        listOf(
+            mapOf("managementSourceId" to "not-a-uuid", "managementSourceType" to "TOPOLOGY_OBSERVATION"),
+            mapOf(
+                "managementSourceId" to "0199386e-9718-7000-8000-000000000201",
+                "managementSourceType" to "CALLER_ASSERTION",
+            ),
+        ).forEachIndexed { index, overrides ->
+            val result = adapter.execute(
+                fixture.target(),
+                command(
+                    ProvisioningCommandPhase.PREFLIGHT,
+                    key = "invalid-management-evidence-$index",
+                    fencingEpoch = index.toLong() + 1,
+                    payloadOverrides = overrides,
+                ),
+            )
+            assertEquals(ProvisioningErrorCode.MANAGEMENT_PATH_UNPROVEN, result.errorCode)
+        }
         assertTrue(fixture.requests.none { !it.startsWith("GET ") })
     }
 
@@ -658,6 +1141,8 @@ class RouterOsProvisioningLifecycleTest {
                 "interfaceList" to "FTTH-CUSTOMER",
                 "firewallChain" to "forward",
                 "managementPathProven" to "true",
+                "managementSourceId" to "0199386e-9718-7000-8000-000000000201",
+                "managementSourceType" to "TOPOLOGY_OBSERVATION",
                 "protectedInterfaces" to "mgmt",
                 "protectedVlanIds" to "99",
             ) + payloadOverrides,
@@ -673,12 +1158,14 @@ class RouterOsProvisioningLifecycleTest {
 
     private fun adapterWith(
         store: RouterOsProvisioningStateStore,
+        afterCompensationHttpSuccess: (PersistedRouterOsMutation) -> Unit = {},
         afterMutationHttpSuccess: (PersistedRouterOsMutation) -> Unit = {},
     ) = RouterOsProvisioningAdapter(
         clock = Clock.fixed(NOW, ZoneOffset.UTC),
         allowInsecureHttpForTests = true,
         stateStore = store,
         afterMutationHttpSuccess = afterMutationHttpSuccess,
+        afterCompensationHttpSuccess = afterCompensationHttpSuccess,
     )
 
     private fun withTempStore(block: (java.nio.file.Path) -> Unit) {
@@ -698,6 +1185,8 @@ class RouterOsProvisioningLifecycleTest {
         private val ids = AtomicInteger(16)
         private val resources = linkedMapOf<String, MutableList<MutableMap<String, String>>>()
         private val deleteAsNotFound = mutableSetOf<Pair<String, String>>()
+        private val timeoutAfterMutation = mutableSetOf<Pair<String, String>>()
+        private val dropAfterMutation = mutableSetOf<Pair<String, String>>()
         val requests = mutableListOf<String>()
         private val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
 
@@ -727,6 +1216,12 @@ class RouterOsProvisioningLifecycleTest {
         fun allRows(): List<Map<String, String>> = resources.values.flatten()
         fun returnNotFoundAfterDeleting(endpoint: String, id: String) {
             deleteAsNotFound += endpoint to id
+        }
+        fun timeoutAfterApplying(method: String, endpoint: String) {
+            timeoutAfterMutation += method to endpoint
+        }
+        fun dropResponseAfterApplying(method: String, endpoint: String) {
+            dropAfterMutation += method to endpoint
         }
         fun mutate(endpoint: String, id: String, key: String, value: String) {
             resources.getValue(endpoint).single { it[".id"] == id }[key] = value
@@ -763,7 +1258,13 @@ class RouterOsProvisioningLifecycleTest {
                         row["current-untagged"] = row["untagged"].orEmpty()
                     }
                     resources.getValue(endpoint) += row
-                    respond(exchange, row)
+                    if (dropAfterMutation.remove(method to endpoint)) {
+                        exchange.close()
+                    } else if (timeoutAfterMutation.remove(method to endpoint)) {
+                        respond(exchange, mapOf("error" to "timeout"), 408)
+                    } else {
+                        respond(exchange, row)
+                    }
                 }
                 "PATCH" -> {
                     val row = resources.getValue(endpoint).singleOrNull { it[".id"] == id }
@@ -774,7 +1275,13 @@ class RouterOsProvisioningLifecycleTest {
                             row["current-tagged"] = row["tagged"].orEmpty()
                             row["current-untagged"] = row["untagged"].orEmpty()
                         }
-                        respond(exchange, row)
+                        if (dropAfterMutation.remove(method to endpoint)) {
+                            exchange.close()
+                        } else if (timeoutAfterMutation.remove(method to endpoint)) {
+                            respond(exchange, mapOf("error" to "timeout"), 408)
+                        } else {
+                            respond(exchange, row)
+                        }
                     }
                 }
                 "DELETE" -> {

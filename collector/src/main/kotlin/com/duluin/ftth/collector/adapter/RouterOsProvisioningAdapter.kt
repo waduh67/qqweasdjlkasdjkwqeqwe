@@ -19,6 +19,7 @@ import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.KotlinModule
 import java.net.URI
+import java.io.IOException
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -27,6 +28,8 @@ import java.security.MessageDigest
 import java.time.Clock
 import java.time.Duration
 import java.util.Base64
+import java.util.UUID
+import javax.net.ssl.SSLHandshakeException
 
 data class RouterOsBridge(
     val id: String,
@@ -90,6 +93,7 @@ data class RouterOsFirewallRule(
     val outInterfaceList: String?,
     val comment: String?,
     val disabled: Boolean,
+    val configuration: Map<String, String> = emptyMap(),
 )
 
 data class RouterOsNormalizedState(
@@ -116,6 +120,7 @@ class RouterOsProvisioningAdapter(
     private val allowInsecureHttpForTests: Boolean = false,
     private val stateStore: RouterOsProvisioningStateStore,
     private val afterMutationHttpSuccess: (PersistedRouterOsMutation) -> Unit = {},
+    private val afterCompensationHttpSuccess: (PersistedRouterOsMutation) -> Unit = {},
 ) : ProvisioningAdapter {
     override val vendor: String = "MIKROTIK"
     private val mapper = JsonMapper.builder()
@@ -187,6 +192,7 @@ class RouterOsProvisioningAdapter(
                 row["out-interface-list"],
                 row["comment"],
                 row.boolean("disabled"),
+                firewallConfiguration(row),
             )
         },
     )
@@ -209,36 +215,53 @@ class RouterOsProvisioningAdapter(
     }
 
     override fun execute(target: NasTarget, command: ProvisioningPlanStepCommand): ProvisioningStepResult {
-        val deliveryKey = command.deliveryKey()
-        stateStore.result(deliveryKey)?.let { return it }
-        val result = try {
-            requireCommandTarget(target, command)
-            checkDeadline(command)
-            checkFence(command)
-            when (command.phase) {
-                ProvisioningCommandPhase.PREFLIGHT -> preflight(target, command)
-                ProvisioningCommandPhase.APPLY -> apply(target, command)
-                ProvisioningCommandPhase.VERIFY -> verify(target, command)
-                ProvisioningCommandPhase.ROLLBACK -> rollback(target, command)
+        return stateStore.withExecutionLock(target.nasId) {
+            val deliveryKey = command.deliveryKey()
+            var digest: String? = null
+            val result = try {
+                requireCommandTarget(target, command)
+                checkDeadline(command)
+                val currentDigest = commandDigest(target, command)
+                digest = currentDigest
+                when (val cached = stateStore.result(deliveryKey, currentDigest)) {
+                    is RouterOsResultLookup.Hit -> {
+                        checkFence(command)
+                        return@withExecutionLock cached.result
+                    }
+                    RouterOsResultLookup.Conflict -> throw RouterOsCommandException(ProvisioningErrorCode.STALE_PRECONDITION)
+                    RouterOsResultLookup.Missing -> checkFence(command)
+                }
+                when (command.phase) {
+                    ProvisioningCommandPhase.PREFLIGHT -> preflight(target, command)
+                    ProvisioningCommandPhase.APPLY -> apply(target, command)
+                    ProvisioningCommandPhase.VERIFY -> verify(target, command)
+                    ProvisioningCommandPhase.ROLLBACK -> rollback(target, command)
+                }
+            } catch (failure: RouterOsCommandException) {
+                failed(command, failure.code)
+            } catch (failure: RouterOsHttpException) {
+                failed(command, if (failure.status == 408) ProvisioningErrorCode.TIMEOUT else ProvisioningErrorCode.MANUAL_RECONCILIATION)
+            } catch (failure: RouterOsProvisioningException) {
+                val code = if (failure.message == "INSECURE_TRANSPORT") {
+                    ProvisioningErrorCode.INSECURE_TRANSPORT
+                } else {
+                    ProvisioningErrorCode.MANUAL_RECONCILIATION
+                }
+                failed(command, code)
+            } catch (_: java.net.http.HttpTimeoutException) {
+                failed(command, ProvisioningErrorCode.TIMEOUT)
+            } catch (_: SSLHandshakeException) {
+                failed(command, ProvisioningErrorCode.INSECURE_TRANSPORT)
+            } catch (_: IOException) {
+                failed(command, ProvisioningErrorCode.TIMEOUT)
+            } catch (_: Exception) {
+                failed(command, ProvisioningErrorCode.MANUAL_RECONCILIATION)
             }
-        } catch (failure: RouterOsCommandException) {
-            failed(command, failure.code)
-        } catch (failure: RouterOsHttpException) {
-            failed(command, if (failure.status == 408) ProvisioningErrorCode.TIMEOUT else ProvisioningErrorCode.MANUAL_RECONCILIATION)
-        } catch (failure: RouterOsProvisioningException) {
-            val code = if (failure.message == "INSECURE_TRANSPORT") {
-                ProvisioningErrorCode.INSECURE_TRANSPORT
-            } else {
-                ProvisioningErrorCode.MANUAL_RECONCILIATION
+            digest?.let { commandDigest ->
+                if (shouldCache(command, result)) stateStore.saveResult(deliveryKey, commandDigest, result)
             }
-            failed(command, code)
-        } catch (_: java.net.http.HttpTimeoutException) {
-            failed(command, ProvisioningErrorCode.TIMEOUT)
-        } catch (_: Exception) {
-            failed(command, ProvisioningErrorCode.MANUAL_RECONCILIATION)
+            result
         }
-        stateStore.saveResult(deliveryKey, result)
-        return stateStore.result(deliveryKey) ?: result
     }
 
     private fun preflight(target: NasTarget, command: ProvisioningPlanStepCommand): ProvisioningStepResult {
@@ -246,14 +269,18 @@ class RouterOsProvisioningAdapter(
         val state = discover(target)
         validate(state, desired)
         val hash = stateHash(state)
-        stateStore.saveSnapshot(stepKey(command), PersistedRouterOsSnapshot(hash, state))
+        val digest = intentDigest(target, command)
+        val snapshot = stateStore.saveSnapshotIfAbsent(stepKey(command), PersistedRouterOsSnapshot(hash, state, intentDigest = digest))
+        if (snapshot.intentDigest != null && snapshot.intentDigest != digest) {
+            throw RouterOsCommandException(ProvisioningErrorCode.STALE_PRECONDITION)
+        }
         val observation = observation(state, matches = matchesDesired(state, desired))
         return success(
             command,
             preflight = ProvisioningPreflightSnapshot(
                 capturedAt = clock.instant(),
-                preconditionHash = hash,
-                state = statePayload(state),
+                preconditionHash = snapshot.beforeHash,
+                state = statePayload(snapshot.before),
             ),
             verification = observation,
         )
@@ -265,12 +292,16 @@ class RouterOsProvisioningAdapter(
         validate(before, desired)
         val beforeHash = stateHash(before)
         val key = stepKey(command)
+        val digest = intentDigest(target, command)
         var snapshot = stateStore.snapshot(key)
         if (snapshot == null) {
             requirePrecondition(command, beforeHash)
-            snapshot = PersistedRouterOsSnapshot(beforeHash, before)
-            stateStore.saveSnapshot(key, snapshot)
+            snapshot = PersistedRouterOsSnapshot(beforeHash, before, intentDigest = digest)
+            snapshot = stateStore.saveSnapshotIfAbsent(key, snapshot)
         } else {
+            if (snapshot.intentDigest != null && snapshot.intentDigest != digest) {
+                throw RouterOsCommandException(ProvisioningErrorCode.STALE_PRECONDITION)
+            }
             if (command.expectedPreconditionHash != snapshot.beforeHash) {
                 throw RouterOsCommandException(ProvisioningErrorCode.STALE_PRECONDITION)
             }
@@ -320,19 +351,32 @@ class RouterOsProvisioningAdapter(
     private fun rollback(target: NasTarget, command: ProvisioningPlanStepCommand): ProvisioningStepResult {
         val snapshot = stateStore.snapshot(stepKey(command))
             ?: throw RouterOsCommandException(ProvisioningErrorCode.ROLLBACK_CONFLICT)
+        if (snapshot.intentDigest != null && snapshot.intentDigest != intentDigest(target, command)) {
+            throw RouterOsCommandException(ProvisioningErrorCode.ROLLBACK_CONFLICT)
+        }
         val current = discover(target)
         val currentHash = stateHash(current)
         if (currentHash == snapshot.beforeHash) {
             return rollbackSuccess(command, snapshot.beforeHash)
         }
-        requirePrecondition(command, currentHash)
-        if (snapshot.afterHash != null && currentHash != snapshot.afterHash) {
-            throw RouterOsCommandException(ProvisioningErrorCode.ROLLBACK_CONFLICT)
+        val compensationStarted = snapshot.mutations.any {
+            it.status in setOf(
+                PersistedRouterOsMutation.MUTATION_COMPENSATING,
+                PersistedRouterOsMutation.MUTATION_COMPENSATED,
+            )
         }
-        reconcileJournalState(target, stepKey(command), snapshot)
+        if (!compensationStarted) {
+            requirePrecondition(command, currentHash)
+            if (snapshot.afterHash != null && currentHash != snapshot.afterHash) {
+                throw RouterOsCommandException(ProvisioningErrorCode.ROLLBACK_CONFLICT)
+            }
+            reconcileJournalState(target, stepKey(command), snapshot)
+        }
         val reconciled = stateStore.snapshot(stepKey(command))
             ?: throw RouterOsCommandException(ProvisioningErrorCode.ROLLBACK_CONFLICT)
-        reconciled.mutations.sortedByDescending { it.order }.forEach { mutation -> compensateMutation(target, mutation) }
+        reconciled.mutations.sortedByDescending { it.order }.forEach { mutation ->
+            compensateMutation(target, stepKey(command), mutation)
+        }
         val restored = discover(target)
         val restoredHash = stateHash(restored)
         if (restoredHash != snapshot.beforeHash) {
@@ -429,12 +473,7 @@ class RouterOsProvisioningAdapter(
             PPPOE_SERVERS,
             before.pppoeServers.firstOrNull { it.interfaceName == desired.pppoeInterface }?.id,
             desired.comment("pppoe:${desired.vlanId}"),
-            mapOf(
-                "interface" to desired.pppoeInterface,
-                "service-name" to desired.pppoeServiceName,
-                "pppoe-over-vlan-range" to desired.pppoeVlanRange.sorted().joinToString(","),
-                "disabled" to "no",
-            ),
+            desired.pppoeConfiguration(disabled = true),
             stepKey,
         )
         ensureResource(
@@ -442,13 +481,7 @@ class RouterOsProvisioningAdapter(
             FIREWALL_FILTERS,
             before.firewallRules.firstOrNull { it.comment == desired.comment("firewall:deny-inter-vlan") }?.id,
             desired.comment("firewall:deny-inter-vlan"),
-            mapOf(
-                "chain" to desired.firewallChain,
-                "action" to "drop",
-                "in-interface-list" to desired.interfaceList,
-                "out-interface-list" to desired.interfaceList,
-                "disabled" to "no",
-            ),
+            desired.firewallConfiguration() - "comment",
             stepKey,
         )
 
@@ -498,6 +531,15 @@ class RouterOsProvisioningAdapter(
                 bridge.comment,
             )
         }
+        val stagedPppoe = rows(target, PPPOE_SERVERS).single { it["interface"] == desired.pppoeInterface }
+        ensureResource(
+            target,
+            PPPOE_SERVERS,
+            stagedPppoe.id(),
+            desired.comment("pppoe:${desired.vlanId}"),
+            desired.pppoeConfiguration(disabled = false),
+            stepKey,
+        )
     }
 
     private fun ensureResource(
@@ -520,38 +562,44 @@ class RouterOsProvisioningAdapter(
         updateResource(target, stepKey, endpoint, existingId, current, changes, owner)
     }
 
-    private fun compensateMutation(target: NasTarget, mutation: PersistedRouterOsMutation) {
-        when (mutation.kind) {
+    private fun compensateMutation(target: NasTarget, stepKey: String, mutation: PersistedRouterOsMutation) {
+        if (mutation.status == PersistedRouterOsMutation.MUTATION_COMPENSATED) return
+        val compensating = if (mutation.status == PersistedRouterOsMutation.MUTATION_COMPENSATING) {
+            mutation
+        } else {
+            stateStore.markMutationStatus(stepKey, mutation.mutationId, PersistedRouterOsMutation.MUTATION_COMPENSATING)
+        }
+        when (compensating.kind) {
             MUTATION_CREATED -> {
-                val current = locateCreatedResource(target, mutation)
-                if (current == null) return
-                if (current["comment"] != mutation.owner ||
-                    !matchesLocator(current, mutation.locator)
+                val current = locateCreatedResource(target, compensating)
+                if (current != null && (current["comment"] != compensating.owner ||
+                    !matchesLocator(current, compensating.locator))
                 ) {
                     throw RouterOsCommandException(ProvisioningErrorCode.ROLLBACK_CONFLICT)
                 }
-                delete(target, mutation.endpoint, current.id())
+                if (current != null) {
+                    delete(target, compensating.endpoint, current.id())
+                    afterCompensationHttpSuccess(compensating)
+                }
             }
             MUTATION_UPDATED -> {
-                val id = mutation.id ?: throw RouterOsCommandException(ProvisioningErrorCode.ROLLBACK_CONFLICT)
-                val current = getRow(target, mutation.endpoint, id)
-                if (current == null || current["comment"] != mutation.owner) {
+                val id = compensating.id ?: throw RouterOsCommandException(ProvisioningErrorCode.ROLLBACK_CONFLICT)
+                val current = getRow(target, compensating.endpoint, id)
+                if (current == null || current["comment"] != compensating.owner) {
                     throw RouterOsCommandException(ProvisioningErrorCode.ROLLBACK_CONFLICT)
                 }
                 val mutable = mutableRow(current)
-                if (mutable == mutation.before && mutation.status == PersistedRouterOsMutation.MUTATION_PLANNED) return
-                val expected = if (mutation.status == PersistedRouterOsMutation.MUTATION_APPLIED) {
-                    mutation.after
-                } else {
-                    mutation.expectedAfter
-                }
-                if (mutable != expected) {
+                if (mutable != compensating.before && mutable != compensating.after && mutable != compensating.expectedAfter) {
                     throw RouterOsCommandException(ProvisioningErrorCode.ROLLBACK_CONFLICT)
                 }
-                update(target, mutation.endpoint, id, mutation.before)
+                if (mutable != compensating.before) {
+                    update(target, compensating.endpoint, id, compensating.before)
+                    afterCompensationHttpSuccess(compensating)
+                }
             }
             else -> throw RouterOsCommandException(ProvisioningErrorCode.ROLLBACK_CONFLICT)
         }
+        stateStore.markMutationStatus(stepKey, mutation.mutationId, PersistedRouterOsMutation.MUTATION_COMPENSATED)
     }
 
     private fun createResource(
@@ -653,6 +701,11 @@ class RouterOsProvisioningAdapter(
             .groupBy { it.endpoint to (it.id ?: "owner:${it.owner}") }
             .map { (_, mutations) -> mutations.last() }
             .forEach { mutation ->
+                if (mutation.status in setOf(
+                        PersistedRouterOsMutation.MUTATION_COMPENSATING,
+                        PersistedRouterOsMutation.MUTATION_COMPENSATED,
+                    )
+                ) return@forEach
                 when (mutation.kind) {
                     MUTATION_CREATED -> {
                         val current = locateCreatedResource(target, mutation)
@@ -719,11 +772,18 @@ class RouterOsProvisioningAdapter(
         .filterKeys { it != ".id" && it !in DYNAMIC_ROW_FIELDS }
         .toSortedMap()
 
+    private fun firewallConfiguration(row: Map<String, String>): Map<String, String> = row
+        .filterKeys { it != ".id" && it !in FIREWALL_OPERATIONAL_FIELDS }
+        .toSortedMap()
+
     private fun validate(state: RouterOsNormalizedState, desired: RouterOsDesiredState) {
         if (desired.vlanId !in 2..4094 || desired.trunkPorts.isEmpty() || desired.accessPorts.isEmpty()) {
             throw RouterOsCommandException(ProvisioningErrorCode.VALIDATION_FAILED)
         }
         if ((desired.trunkPorts intersect desired.accessPorts).isNotEmpty()) {
+            throw RouterOsCommandException(ProvisioningErrorCode.VALIDATION_FAILED)
+        }
+        if (desired.vlanParent == desired.vlanInterface || state.vlanInterfaces.any { it.name == desired.vlanParent }) {
             throw RouterOsCommandException(ProvisioningErrorCode.VALIDATION_FAILED)
         }
         if (desired.vlanId in desired.protectedVlanIds ||
@@ -743,89 +803,64 @@ class RouterOsProvisioningAdapter(
         if (bridge == null || !bridge.vlanFiltering) {
             val modelled = desired.trunkPorts + desired.accessPorts
             val unmodelledPorts = state.bridgePorts.any { it.bridge == desired.bridge && it.interfaceName !in modelled }
-            val protectedModelComplete = desired.protectedInterfaces.isNotEmpty() && desired.protectedVlanIds.isNotEmpty()
             val ownedWhenPresent = bridge == null || bridge.comment == desired.comment("bridge")
-            if (!ownedWhenPresent || !desired.managementPathProven || !protectedModelComplete || unmodelledPorts) {
+            if (!ownedWhenPresent || !desired.managementEvidenceValid || unmodelledPorts) {
                 throw RouterOsCommandException(ProvisioningErrorCode.MANAGEMENT_PATH_UNPROVEN)
             }
+        }
+        if (bridge != null && bridge.comment != desired.comment("bridge")) {
+            throw RouterOsCommandException(ProvisioningErrorCode.PROTECTED_RESOURCE)
         }
         rejectDuplicate(state.bridges.count { it.name == desired.bridge })
         desired.trunkPorts.forEach { name ->
             val matches = state.bridgePorts.filter { it.bridge == desired.bridge && it.interfaceName == name }
             rejectDuplicate(matches.size)
             matches.singleOrNull()?.let { port ->
-                requireOwnedIfChanged(
-                    port.comment,
-                    desired.comment("port:$name"),
-                    port.pvid == 1 && port.ingressFiltering && port.frameTypes == "admit-only-vlan-tagged",
-                )
+                requireOwned(port.comment, desired.comment("port:$name"))
             }
         }
         desired.accessPorts.forEach { name ->
             val matches = state.bridgePorts.filter { it.bridge == desired.bridge && it.interfaceName == name }
             rejectDuplicate(matches.size)
             matches.singleOrNull()?.let { port ->
-                requireOwnedIfChanged(
-                    port.comment,
-                    desired.comment("port:$name"),
-                    port.pvid == desired.vlanId && port.ingressFiltering &&
-                        port.frameTypes == "admit-only-untagged-and-priority-tagged",
-                )
+                requireOwned(port.comment, desired.comment("port:$name"))
             }
         }
         val bridgeVlans = state.bridgeVlans.filter { it.bridge == desired.bridge && desired.vlanId in it.vlanIds }
         rejectDuplicate(bridgeVlans.size)
         bridgeVlans.singleOrNull()?.let { vlan ->
-            requireOwnedIfChanged(
-                vlan.comment,
-                desired.comment("bridge-vlan:${desired.vlanId}"),
-                vlan.vlanIds == setOf(desired.vlanId) &&
-                    vlan.tagged == desired.trunkPorts + desired.bridge && vlan.untagged == desired.accessPorts,
-            )
+            requireOwned(vlan.comment, desired.comment("bridge-vlan:${desired.vlanId}"))
         }
         val vlanInterfaces = state.vlanInterfaces.filter { it.name == desired.vlanInterface }
         rejectDuplicate(vlanInterfaces.size)
         vlanInterfaces.singleOrNull()?.let { vlan ->
-            requireOwnedIfChanged(
-                vlan.comment,
-                desired.comment("vlan:${desired.vlanId}"),
-                vlan.interfaceName == desired.vlanParent && vlan.vlanId == desired.vlanId,
-            )
+            requireOwned(vlan.comment, desired.comment("vlan:${desired.vlanId}"))
         }
         val servers = state.pppoeServers.filter { it.interfaceName == desired.pppoeInterface }
         rejectDuplicate(servers.size)
         servers.singleOrNull()?.let { server ->
-            requireOwnedIfChanged(
-                server.comment,
-                desired.comment("pppoe:${desired.vlanId}"),
-                !server.disabled && server.serviceName == desired.pppoeServiceName &&
-                    server.vlanRange == desired.pppoeVlanRange,
-            )
+            requireOwned(server.comment, desired.comment("pppoe:${desired.vlanId}"))
         }
         val pools = state.ipPools.filter { it.name == desired.poolName }
         rejectDuplicate(pools.size)
         pools.singleOrNull()?.let { pool ->
-            requireOwnedIfChanged(
-                pool.comment,
-                desired.comment("pool:${desired.vlanId}"),
-                pool.ranges == desired.poolRanges,
-            )
+            requireOwned(pool.comment, desired.comment("pool:${desired.vlanId}"))
         }
         val lists = state.interfaceLists.filter { it.name == desired.interfaceList }
         rejectDuplicate(lists.size)
+        lists.singleOrNull()?.let { requireOwned(it.comment, desired.comment("list:customer")) }
         val members = state.interfaceListMembers.filter {
             it.list == desired.interfaceList && it.interfaceName == desired.vlanInterface
         }
         rejectDuplicate(members.size)
+        members.singleOrNull()?.let { requireOwned(it.comment, desired.comment("list-member:${desired.vlanId}")) }
         val firewalls = state.firewallRules.filter { it.comment == desired.comment("firewall:deny-inter-vlan") }
         rejectDuplicate(firewalls.size)
         firewalls.singleOrNull()?.let { firewall ->
-            requireOwnedIfChanged(
-                firewall.comment,
-                desired.comment("firewall:deny-inter-vlan"),
-                !firewall.disabled && firewall.chain == desired.firewallChain && firewall.action == "drop" &&
-                    firewall.inInterfaceList == desired.interfaceList && firewall.outInterfaceList == desired.interfaceList,
-            )
+            if (firewall.configuration.keys != desired.firewallConfiguration().keys) {
+                throw RouterOsCommandException(ProvisioningErrorCode.VALIDATION_FAILED)
+            }
+            requireOwned(firewall.comment, desired.comment("firewall:deny-inter-vlan"))
         }
     }
 
@@ -833,8 +868,8 @@ class RouterOsProvisioningAdapter(
         if (count > 1) throw RouterOsCommandException(ProvisioningErrorCode.VALIDATION_FAILED)
     }
 
-    private fun requireOwnedIfChanged(actualOwner: String?, expectedOwner: String, alreadyDesired: Boolean) {
-        if (!alreadyDesired && actualOwner != expectedOwner) {
+    private fun requireOwned(actualOwner: String?, expectedOwner: String) {
+        if (actualOwner != expectedOwner) {
             throw RouterOsCommandException(ProvisioningErrorCode.PROTECTED_RESOURCE)
         }
     }
@@ -843,7 +878,9 @@ class RouterOsProvisioningAdapter(
         val bridge = state.bridges.singleOrNull { it.name == desired.bridge } ?: return false
         if (!bridge.vlanFiltering) return false
         val ports = state.bridgePorts.filter { it.bridge == desired.bridge }.associateBy { it.interfaceName }
-        if (desired.trunkPorts.any { ports[it]?.let { p -> p.ingressFiltering && p.frameTypes == "admit-only-vlan-tagged" } != true }) return false
+        if (desired.trunkPorts.any {
+                ports[it]?.let { p -> p.pvid == 1 && p.ingressFiltering && p.frameTypes == "admit-only-vlan-tagged" } != true
+            }) return false
         if (desired.accessPorts.any {
                 ports[it]?.let { p -> p.pvid == desired.vlanId && p.ingressFiltering && p.frameTypes == "admit-only-untagged-and-priority-tagged" } != true
             }) return false
@@ -859,7 +896,8 @@ class RouterOsProvisioningAdapter(
         if (state.interfaceListMembers.none { it.list == desired.interfaceList && it.interfaceName == desired.vlanInterface }) return false
         return state.firewallRules.any {
             !it.disabled && it.chain == desired.firewallChain && it.action == "drop" &&
-                it.inInterfaceList == desired.interfaceList && it.outInterfaceList == desired.interfaceList
+                it.inInterfaceList == desired.interfaceList && it.outInterfaceList == desired.interfaceList &&
+                it.comment == desired.comment("firewall:deny-inter-vlan") && it.configuration == desired.firewallConfiguration()
         }
     }
 
@@ -868,6 +906,8 @@ class RouterOsProvisioningAdapter(
             throw RouterOsCommandException(ProvisioningErrorCode.UNSUPPORTED_CAPABILITY)
         }
         val payload = command.payload.values
+        val tagging = payload.tagging?.uppercase() ?: "SINGLE_TAG"
+        if (tagging != "SINGLE_TAG") throw RouterOsCommandException(ProvisioningErrorCode.VALIDATION_FAILED)
         fun required(value: String?) = value?.takeIf(String::isNotBlank)
             ?: throw RouterOsCommandException(ProvisioningErrorCode.VALIDATION_FAILED)
         return RouterOsDesiredState(
@@ -876,6 +916,7 @@ class RouterOsProvisioningAdapter(
             bridge = required(payload.bridge),
             vlanId = required(payload.vlanId).toIntOrNull()
                 ?: throw RouterOsCommandException(ProvisioningErrorCode.VALIDATION_FAILED),
+            tagging = tagging,
             trunkPorts = csv(payload.trunkPorts),
             accessPorts = csv(payload.accessPorts),
             vlanInterface = required(payload.vlanInterface),
@@ -887,7 +928,8 @@ class RouterOsProvisioningAdapter(
             poolRanges = required(payload.poolRanges),
             interfaceList = required(payload.interfaceList),
             firewallChain = required(payload.firewallChain),
-            managementPathProven = payload.managementPathProven.toBoolean(),
+            managementSourceId = payload.managementSourceId,
+            managementSourceType = payload.managementSourceType,
             protectedInterfaces = csv(payload.protectedInterfaces),
             protectedVlanIds = parseVlanSet(payload.protectedVlanIds),
         )
@@ -954,7 +996,7 @@ class RouterOsProvisioningAdapter(
             state.ipPools.forEach { add("pool|${it.id}|${it.name}|${it.ranges}|${it.comment}") }
             state.interfaceLists.forEach { add("list|${it.id}|${it.name}|${it.comment}") }
             state.interfaceListMembers.forEach { add("member|${it.id}|${it.list}|${it.interfaceName}|${it.comment}") }
-            state.firewallRules.forEach { add("firewall|${it.id}|${it.chain}|${it.action}|${it.inInterfaceList}|${it.outInterfaceList}|${it.comment}|${it.disabled}") }
+            state.firewallRules.forEach { add("firewall|${it.id}|${it.configuration}") }
         }.sorted().joinToString("\n")
         return MessageDigest.getInstance("SHA-256").digest(canonical.toByteArray(StandardCharsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
@@ -1046,6 +1088,40 @@ class RouterOsProvisioningAdapter(
 
     private fun stepKey(command: ProvisioningPlanStepCommand) = "${command.planId}:${command.revision}:${command.stepId}"
 
+    private fun commandDigest(target: NasTarget, command: ProvisioningPlanStepCommand): String {
+        val canonical = mapper.writeValueAsString(command) + listOf(
+            target.nasId,
+            target.vendor.uppercase(),
+            target.host.orEmpty(),
+            target.apiPort?.toString().orEmpty(),
+            target.apiUseTls.toString(),
+        ).joinToString(prefix = "|", separator = "|")
+        return MessageDigest.getInstance("SHA-256").digest(canonical.toByteArray(StandardCharsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+    }
+
+    private fun intentDigest(target: NasTarget, command: ProvisioningPlanStepCommand): String {
+        val canonical = listOf(
+            command.planId,
+            command.revision.toString(),
+            command.stepId,
+            command.operationClass,
+            mapper.writeValueAsString(command.target),
+            mapper.writeValueAsString(command.payload),
+            target.nasId,
+            target.vendor.uppercase(),
+            target.host.orEmpty(),
+            target.apiPort?.toString().orEmpty(),
+            target.apiUseTls.toString(),
+        ).joinToString("|") { value -> "${value.toByteArray(StandardCharsets.UTF_8).size}:$value" }
+        return MessageDigest.getInstance("SHA-256").digest(canonical.toByteArray(StandardCharsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+    }
+
+    private fun shouldCache(command: ProvisioningPlanStepCommand, result: ProvisioningStepResult): Boolean {
+        return result.errorCode != ProvisioningErrorCode.TIMEOUT
+    }
+
     private fun rows(target: NasTarget, path: String): List<Map<String, String>> {
         val response = send(target, "GET", path)
         return mapper.readValue(response, object : TypeReference<List<Map<String, String>>>() {})
@@ -1106,6 +1182,7 @@ class RouterOsProvisioningAdapter(
             "running",
             "actual-interface",
         )
+        private val FIREWALL_OPERATIONAL_FIELDS = DYNAMIC_ROW_FIELDS + setOf("bytes", "packets")
         private val MAP_TYPE = object : TypeReference<Map<String, String>>() {}
         private val LIST_TYPE = object : TypeReference<List<Map<String, String>>>() {}
         private val SUPPORTED_OPERATIONS = setOf(
@@ -1156,6 +1233,7 @@ private data class RouterOsDesiredState(
     val intent: String,
     val bridge: String,
     val vlanId: Int,
+    val tagging: String,
     val trunkPorts: Set<String>,
     val accessPorts: Set<String>,
     val vlanInterface: String,
@@ -1167,9 +1245,31 @@ private data class RouterOsDesiredState(
     val poolRanges: String,
     val interfaceList: String,
     val firewallChain: String,
-    val managementPathProven: Boolean,
+    val managementSourceId: String?,
+    val managementSourceType: String?,
     val protectedInterfaces: Set<String>,
     val protectedVlanIds: Set<Int>,
 ) {
     fun comment(resource: String): String = "ftth:$tenant:$intent:$resource"
+
+    val managementEvidenceValid: Boolean
+        get() = managementSourceId?.let { raw ->
+            runCatching { UUID.fromString(raw) }.getOrNull()?.toString() == raw.lowercase()
+        } == true && managementSourceType in setOf("TOPOLOGY_OBSERVATION", "DEVICE_OBSERVATION")
+
+    fun pppoeConfiguration(disabled: Boolean) = mapOf(
+        "interface" to pppoeInterface,
+        "service-name" to pppoeServiceName,
+        "pppoe-over-vlan-range" to pppoeVlanRange.sorted().joinToString(","),
+        "disabled" to if (disabled) "yes" else "no",
+    )
+
+    fun firewallConfiguration() = sortedMapOf(
+        "action" to "drop",
+        "chain" to firewallChain,
+        "comment" to comment("firewall:deny-inter-vlan"),
+        "disabled" to "no",
+        "in-interface-list" to interfaceList,
+        "out-interface-list" to interfaceList,
+    )
 }

@@ -41,7 +41,7 @@ class RouterOsProvisioningAdapterTest {
                 "/rest/interface/list/member" ->
                     """[{".id":"*8","list":"FTTH-CUSTOMER","interface":"svc-110","comment":"ftth:t1:i1:list-member:110"}]"""
                 "/rest/ip/firewall/filter" ->
-                    """[{".id":"*9","chain":"forward","action":"drop","in-interface-list":"FTTH-CUSTOMER","out-interface-list":"FTTH-CUSTOMER","comment":"ftth:t1:i1:firewall:deny-inter-vlan"}]"""
+                    """[{".id":"*9","chain":"forward","action":"drop","in-interface-list":"FTTH-CUSTOMER","out-interface-list":"FTTH-CUSTOMER","protocol":"tcp","dst-port":"443","comment":"ftth:t1:i1:firewall:deny-inter-vlan"}]"""
                 "/rest/system/resource" ->
                     """[{"platform":"MikroTik","board-name":"CCR2004-16G-2S+","version":"7.20.1"}]"""
                 else -> error("Unexpected fixture request ${exchange.requestMethod} ${exchange.requestURI.path}")
@@ -75,6 +75,8 @@ class RouterOsProvisioningAdapterTest {
         assertEquals("FTTH-CUSTOMER", state.interfaceLists.single().name)
         assertEquals("svc-110", state.interfaceListMembers.single().interfaceName)
         assertEquals("drop", state.firewallRules.single().action)
+        assertEquals("tcp", state.firewallRules.single().configuration["protocol"])
+        assertEquals("443", state.firewallRules.single().configuration["dst-port"])
         assertEquals("CCR2004-16G-2S+", report.fingerprint.model)
         assertEquals("7.20.1", report.fingerprint.firmware)
         assertTrue("CERTIFICATION_PROVISIONAL" in report.capabilities)
