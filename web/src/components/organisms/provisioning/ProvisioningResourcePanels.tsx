@@ -85,6 +85,7 @@ export function IntentsPanel({ intents, profiles, canOperate = false, onSuspend,
               <StatusBadge status={value.status} label={statusLabel(value.status)} />
             </div>
             <div className="row wrap"><Badge tone={dedicated ? 'accent' : 'neutral'}>{dedicated ? 'Enterprise dedicated' : 'Residential shared'}</Badge><Badge>Revisi {revision}</Badge></div>
+            <div className="workspace-kv"><span>Akses OLT / PON / ONU</span><strong>{value.accessOltId && value.accessPonPortId && value.accessOnuId ? `${value.accessOltId} / ${value.accessPonPortId} / ${value.accessOnuId}` : 'Belum terikat'}</strong></div>
             {dedicated && <div className="workspace-kv"><span>VLAN dedicated</span><strong>{value.dedicatedVlanId ?? 'Dipilih server'}</strong></div>}
             {canOperate && <div className="row wrap">
               {value.status === 'ACTIVE' && <button type="button" className="ghost small" onClick={() => onSuspend?.({ revision, value })}>Tangguhkan</button>}

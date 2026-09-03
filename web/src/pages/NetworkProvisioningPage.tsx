@@ -204,7 +204,7 @@ export function NetworkProvisioningPage() {
       {tab === 'drift' && <DriftPanel drift={drift} canAdopt={permissions.adopt} adoptingId={adoptingId} onAdopt={(item) => void adopt(item)} />}
       {tab === 'certification' && <CertificationPanel tenantId={draft.preview?.plan.tenantId ?? null} capabilities={capabilities} certifications={certifications} canCertify={permissions.certification} onCertify={async (tenantId, capability, validUntil) => { const created = await certifyAdapter(tenantId, { deviceKind: capability.deviceKind, deviceId: capability.deviceId, vendor: capability.vendor, model: capability.model, firmware: capability.firmware, transport: capability.transport, operationClass: capability.operationClass, validUntil }); setCertifications((current) => [...current, created]); toast.success('Adapter tersertifikasi') }} onRevoke={async (certification) => { const revoked = await revokeAdapterCertification(certification.tenantId, certification.id, certification.revision); setCertifications((current) => current.map((item) => item.id === revoked.id ? revoked : item)); toast.success('Sertifikasi dicabut') }} onError={(cause) => toast.error(messageOf(cause, 'Sertifikasi adapter ditolak'))} />}
       </div>
-      <ProvisioningEditorModal editor={editor} profiles={profiles} defaultPoolId={pools[0]?.value.id ?? ''} onClose={() => setEditor(null)} onCreated={load} onError={(cause) => toast.error(messageOf(cause, 'Perubahan provisioning ditolak'))} />
+      <ProvisioningEditorModal editor={editor} profiles={profiles} topology={topology} defaultPoolId={pools[0]?.value.id ?? ''} onClose={() => setEditor(null)} onCreated={load} onError={(cause) => toast.error(messageOf(cause, 'Perubahan provisioning ditolak'))} />
     </div>
   )
 }
