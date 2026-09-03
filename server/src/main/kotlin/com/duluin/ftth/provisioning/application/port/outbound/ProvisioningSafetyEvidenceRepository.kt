@@ -12,6 +12,7 @@ interface ProvisioningSafetyEvidenceRepository {
     fun findCapabilityEvidence(tenantId: UUID, fingerprint: DeviceFingerprint): CapabilityEvidence?
     fun findCertificationEvidence(tenantId: UUID, fingerprint: DeviceFingerprint): CertificationEvidence?
     fun findManagementEvidence(tenantId: UUID, device: DeviceReference): ManagementSafetyEvidence?
+    fun findLatestCapabilityEvidence(tenantId: UUID, device: DeviceReference, operationClass: String): CapabilityEvidence? = null
 }
 
 fun interface ProvisioningDeviceOwnershipRepository {

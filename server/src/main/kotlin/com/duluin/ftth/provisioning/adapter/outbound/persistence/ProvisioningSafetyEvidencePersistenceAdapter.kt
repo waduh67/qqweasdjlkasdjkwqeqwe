@@ -54,6 +54,24 @@ class ProvisioningSafetyEvidencePersistenceAdapter(
         )
     }
 
+    override fun findLatestCapabilityEvidence(
+        tenantId: UUID,
+        device: DeviceReference,
+        operationClass: String,
+    ): CapabilityEvidence? {
+        val row = entityManager.createNativeQuery(
+            """SELECT id, tenant_id, device_kind, device_id, vendor, model, firmware, transport,
+                      operation_class, supported, observed_at, expires_at
+               FROM provisioning_capability_evidence
+               WHERE tenant_id = :tenant AND device_kind = :kind AND device_id = :device
+                 AND operation_class = :operation
+               ORDER BY observed_at DESC, id DESC LIMIT 1""",
+        ).setParameter("tenant", tenantId).setParameter("kind", device.kind.name)
+            .setParameter("device", device.id).setParameter("operation", operationClass)
+            .resultList.singleOrNull() as? Array<*> ?: return null
+        return CapabilityEvidence(row[0] as UUID, row[1] as UUID, row.fingerprint(), row[9] as Boolean, row[10] as Instant, row[11] as Instant)
+    }
+
     override fun findCertificationEvidence(tenantId: UUID, fingerprint: DeviceFingerprint): CertificationEvidence? {
         val row = entityManager.createNativeQuery(
             """SELECT id, tenant_id, device_kind, device_id, vendor, model, firmware, transport,
