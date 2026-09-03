@@ -3,6 +3,16 @@ import { api } from './client'
 export type ProvisioningDeviceKind = 'OLT' | 'SWITCH' | 'ROUTER' | 'BRAS'
 export type ProvisioningMode = 'PRODUCTION_AUTO_APPLY' | 'DRY_RUN' | 'SIMULATOR'
 export type CertificationStatus = 'CERTIFIED' | 'PROVISIONAL' | 'UNSUPPORTED' | 'REQUIRES_MANUAL'
+export type ExecutionStatus =
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'VERIFYING'
+  | 'SUCCEEDED'
+  | 'ROLLING_BACK'
+  | 'ROLLED_BACK'
+  | 'FAILED'
+  | 'MANUAL_RECONCILIATION'
+  | 'CANCELLED'
 
 export interface RevisionedResource<T> {
   revision: number
@@ -44,17 +54,48 @@ export interface ServiceIntentView {
 }
 
 export interface PlanPreview {
-  planId: string
-  revision: number
-  status: string
+  plan: {
+    id: string
+    tenantId: string
+    intentId: string
+    revision: number
+    status: 'GENERATED' | 'VALIDATED' | 'REJECTED' | 'SUPERSEDED'
+    contentHash: string
+    preconditionHash: string
+    steps: Array<{
+      id: string
+      order: number
+      device: { kind: ProvisioningDeviceKind; id: string }
+      operation: string
+      attributes: Record<string, string>
+      preconditionHash: string
+    }>
+  }
   decision: { allowed: boolean; code: string; warnings: string[]; evidenceIds: string[] }
 }
 
 export interface ExecutionView {
   id: string
   planId: string
+  revision: number
+  status: ExecutionStatus
+}
+
+export interface ExecutionTimelineEntry {
+  stepOrder: number
+  attemptNumber: number
+  phase: string
   status: string
-  detail: string | null
+  errorCode: string | null
+  startedAt: string
+  completedAt: string | null
+}
+
+export interface ObservationView {
+  id: string
+  deviceKind: ProvisioningDeviceKind
+  deviceId: string
+  observedAt: string
 }
 
 export interface CapabilityEvidenceView {
@@ -85,6 +126,7 @@ export interface DriftView {
   id: string
   deviceKind: ProvisioningDeviceKind
   deviceId: string
+  revision: number
   status: 'NONE' | 'BENIGN' | 'CONFLICTING' | 'UNKNOWN'
   recordedAt: string
 }
@@ -103,7 +145,57 @@ export interface AdapterCertificationView {
   validUntil: string
   evidenceId: string | null
   revokedAt: string | null
+  revision: number
 }
+
+export type CertifyAdapterInput = {
+  readonly deviceKind: ProvisioningDeviceKind
+  readonly deviceId: string
+  readonly vendor: string
+  readonly model: string
+  readonly firmware: string
+  readonly transport: string
+  readonly operationClass: string
+  readonly validUntil: string
+}
+
+export class InvalidProvisioningResponseError extends Error {
+  readonly name = 'InvalidProvisioningResponseError'
+
+  constructor() {
+    super('Respons provisioning tidak sesuai kontrak')
+  }
+}
+
+function isExecutionStatus(value: string): value is ExecutionStatus {
+  switch (value) {
+    case 'QUEUED':
+    case 'RUNNING':
+    case 'VERIFYING':
+    case 'SUCCEEDED':
+    case 'ROLLING_BACK':
+    case 'ROLLED_BACK':
+    case 'FAILED':
+    case 'MANUAL_RECONCILIATION':
+    case 'CANCELLED':
+      return true
+    default:
+      return false
+  }
+}
+
+function parseExecution(value: unknown): ExecutionView {
+  if (
+    typeof value !== 'object' || value === null ||
+    !('id' in value) || typeof value.id !== 'string' ||
+    !('planId' in value) || typeof value.planId !== 'string' ||
+    !('revision' in value) || typeof value.revision !== 'number' ||
+    !('status' in value) || typeof value.status !== 'string' || !isExecutionStatus(value.status)
+  ) throw new InvalidProvisioningResponseError()
+  return { id: value.id, planId: value.planId, revision: value.revision, status: value.status }
+}
+
+const revisionHeader = (revision: number) => ({ 'If-Match': `"${revision}"` })
 
 export const getTopology = () => api.get<ProvisioningTopology>('/api/provisioning/topology')
 export const createTopologyNode = (body: TopologyNodeInput) => api.post<RevisionedResource<ProvisioningTopology['nodes'][number]>>('/api/provisioning/topology/nodes', body)
@@ -122,24 +214,43 @@ export const listSegmentProfiles = () => api.get<Array<RevisionedResource<Segmen
 export const createSegmentProfile = (body: SegmentProfileInput) => api.post<RevisionedResource<SegmentProfileView>>('/api/provisioning/segment-profiles', body)
 export const updateSegmentProfile = (id: string, body: SegmentProfileInput) => api.put<RevisionedResource<SegmentProfileView>>(`/api/provisioning/segment-profiles/${id}`, body)
 export const deleteSegmentProfile = (id: string, revision: number) => api.del<void>(`/api/provisioning/segment-profiles/${id}?revision=${revision}`)
-export const listServiceIntents = () => api.get<Array<RevisionedResource<ServiceIntentView>>>('/api/provisioning/intents')
+export const listServiceIntents = (signal?: AbortSignal) =>
+  api.request<Array<RevisionedResource<ServiceIntentView>>>('/api/provisioning/intents', { signal })
 export const createServiceIntent = (body: ServiceIntentInput) => api.post<RevisionedResource<ServiceIntentView>>('/api/provisioning/intents', body)
 export const updateServiceIntent = (id: string, body: ServiceIntentInput) => api.put<RevisionedResource<ServiceIntentView>>(`/api/provisioning/intents/${id}`, body)
-export const previewProvisioning = (planId: string, mode: Exclude<ProvisioningMode, 'PRODUCTION_AUTO_APPLY'>) =>
-  api.post<PlanPreview>(`/api/provisioning/plans/${planId}/preview?mode=${mode}`)
-export const applyProvisioningPlan = (planId: string, revision: number, idempotencyKey: string) =>
-  api.post<ExecutionView>(`/api/provisioning/plans/${planId}/apply`, { revision, idempotencyKey })
-export const cancelProvisioningExecution = (executionId: string) =>
-  api.post<ExecutionView>(`/api/provisioning/executions/${executionId}/cancel`)
-export const getProvisioningExecution = (executionId: string) =>
-  api.get<ExecutionView>(`/api/provisioning/executions/${executionId}`)
+export const previewProvisioning = (
+  planId: string,
+  mode: Exclude<ProvisioningMode, 'PRODUCTION_AUTO_APPLY'>,
+  signal?: AbortSignal,
+) => api.request<PlanPreview>(`/api/provisioning/plans/${planId}/preview?mode=${mode}`, { method: 'POST', signal })
+export const applyProvisioningPlan = async (planId: string, revision: number, idempotencyKey: string) =>
+  parseExecution(await api.request<unknown>(`/api/provisioning/plans/${planId}/apply`, {
+    method: 'POST',
+    headers: { ...revisionHeader(revision), 'Idempotency-Key': idempotencyKey },
+  }))
+export const cancelProvisioningExecution = async (executionId: string, revision: number) =>
+  parseExecution(await api.request<unknown>(`/api/provisioning/executions/${executionId}/cancel`, {
+    method: 'POST', headers: revisionHeader(revision),
+  }))
+export const getProvisioningExecution = async (executionId: string, signal?: AbortSignal) =>
+  parseExecution(await api.request<unknown>(`/api/provisioning/executions/${executionId}`, { signal }))
+export const getProvisioningTimeline = (executionId: string, signal?: AbortSignal) =>
+  api.request<ExecutionTimelineEntry[]>(`/api/provisioning/executions/${executionId}/timeline`, { signal })
 export const listProvisioningCapabilities = () => api.get<CapabilityEvidenceView[]>('/api/provisioning/capabilities')
 export const listManagementProtections = () => api.get<ManagementProtectionView[]>('/api/provisioning/management-protections')
+export const listProvisioningObservations = (signal?: AbortSignal) =>
+  api.request<ObservationView[]>('/api/provisioning/observations', { signal })
 export const listProvisioningDrift = () => api.get<DriftView[]>('/api/provisioning/drift')
-export const adoptProvisioningDrift = (id: string) => api.post<DriftView>(`/api/provisioning/drift/${id}/adopt`)
+export const adoptProvisioningDrift = (id: string, revision: number) =>
+  api.request<DriftView>(`/api/provisioning/drift/${id}/adopt`, {
+    method: 'POST', headers: revisionHeader(revision),
+  })
 export const listAdapterCertifications = (tenantId: string) =>
   api.get<AdapterCertificationView[]>(`/api/platform/tenants/${tenantId}/provisioning/certifications`)
-export const certifyAdapter = (tenantId: string, body: Omit<AdapterCertificationView, 'id' | 'tenantId' | 'status' | 'evidenceId' | 'revokedAt'>) =>
+export const certifyAdapter = (tenantId: string, body: CertifyAdapterInput) =>
   api.post<AdapterCertificationView>(`/api/platform/tenants/${tenantId}/provisioning/certifications`, body)
-export const revokeAdapterCertification = (tenantId: string, certificationId: string) =>
-  api.post<AdapterCertificationView>(`/api/platform/tenants/${tenantId}/provisioning/certifications/${certificationId}/revoke`)
+export const revokeAdapterCertification = (tenantId: string, certificationId: string, revision: number) =>
+  api.request<AdapterCertificationView>(
+    `/api/platform/tenants/${tenantId}/provisioning/certifications/${certificationId}/revoke`,
+    { method: 'POST', headers: revisionHeader(revision) },
+  )
