@@ -58,6 +58,10 @@ import { HotspotPage } from './pages/HotspotPage'
 import { canViewHotspot, HOTSPOT_VIEW_PERMISSIONS } from './api/hotspot'
 import { PortalApp } from './portal/PortalApp'
 import { HotspotPortalPage } from './pages/HotspotPortalPage'
+import {
+  NETWORK_PROVISIONING_ROUTE,
+  NETWORK_PROVISIONING_VIEW_PERMISSION,
+} from './hooks/useProvisioningPermissions'
 
 /** Menahan rute sampai sesi dipulihkan, lalu mengarahkan ke login bila belum masuk. */
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -68,7 +72,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 /** Guard berbasis izin — server tetap penegak sebenarnya, ini demi UX. */
-function RequirePermission({ permission, children }: { permission: string; children: ReactNode }) {
+export function RequirePermission({ permission, children }: { permission: string; children: ReactNode }) {
   const { can } = useCan()
   if (!can(permission)) return <ForbiddenPermission permission={permission} />
   return <>{children}</>
@@ -288,6 +292,14 @@ function OperatorApp() {
               element={
                 <RequirePermission permission="monitoring.dashboard.view">
                   <MonitoringPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path={NETWORK_PROVISIONING_ROUTE}
+              element={
+                <RequirePermission permission={NETWORK_PROVISIONING_VIEW_PERMISSION}>
+                  <ProvisioningPage />
                 </RequirePermission>
               }
             />
