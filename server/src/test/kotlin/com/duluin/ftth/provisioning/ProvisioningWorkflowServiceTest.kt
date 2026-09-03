@@ -373,7 +373,7 @@ class ProvisioningWorkflowServiceTest {
         private val plans: Plans,
         private val executions: Executions,
     ) : ProvisioningExecutionAdmissionUseCase {
-        override fun admit(planId: UUID, keySuffix: String, affectedSubscriberCount: Int): ProvisionExecution {
+        override fun admit(planId: UUID, keySuffix: String): ProvisionExecution {
             val plan = requireNotNull(plans.findById(planId))
             val key = "${plan.intentId}:${plan.revision}:$keySuffix"
             return executions.findByIdempotencyKey(key)

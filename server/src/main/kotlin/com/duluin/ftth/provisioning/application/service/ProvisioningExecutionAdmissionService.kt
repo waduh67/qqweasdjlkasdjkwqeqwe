@@ -18,12 +18,15 @@ class ProvisioningExecutionAdmissionService(
     private val executions: ProvisionExecutionRepository,
     private val safetyGate: ProvisioningSafetyGate,
     private val rollout: ProvisioningRolloutProperties,
+    private val pools: com.duluin.ftth.provisioning.application.port.outbound.VlanPoolRepository,
     private val metrics: ProvisioningMetrics? = null,
 ) : ProvisioningExecutionAdmissionUseCase {
     @Transactional
-    override fun admit(planId: UUID, keySuffix: String, affectedSubscriberCount: Int): ProvisionExecution {
+    override fun admit(planId: UUID, keySuffix: String): ProvisionExecution {
         val plan = plans.findById(planId) ?: throw ValidationException("PLAN_NOT_FOUND")
         if (plan.status !in setOf(PlanStatus.GENERATED, PlanStatus.VALIDATED)) throw ValidationException("PLAN_NOT_VALIDATED")
+        val affectedSubscriberCount = pools.affectedActiveSubscriberCount(plan.intentId)
+        if (affectedSubscriberCount < 1) throw ValidationException("AFFECTED_SUBSCRIBER_COUNT_UNAVAILABLE")
         rollout.requireAutoApplyAllowed(affectedSubscriberCount)
         val decision = safetyGate.evaluate(plan, ExecutionMode.PRODUCTION_AUTO_APPLY)
         if (!decision.allowed) {

@@ -45,7 +45,6 @@ class ProvisioningLifecycleServiceTest {
 
         assertThat(replay.id).isEqualTo(first.id)
         assertThat(executions.values).hasSize(1)
-        assertThat(admission.affectedCounts).containsExactly(1, 1)
     }
 
     @Test
@@ -78,9 +77,7 @@ class ProvisioningLifecycleServiceTest {
         private val plan: ProvisionPlan,
         private val executions: Executions,
     ) : ProvisioningExecutionAdmissionUseCase {
-        val affectedCounts = mutableListOf<Int>()
-        override fun admit(planId: UUID, keySuffix: String, affectedSubscriberCount: Int): ProvisionExecution {
-            affectedCounts += affectedSubscriberCount
+        override fun admit(planId: UUID, keySuffix: String): ProvisionExecution {
             return executions.findByIdempotencyKey(keySuffix)
                 ?: executions.save(ProvisionExecution.queue(plan.tenantId, plan.intentId, plan.id, keySuffix))
         }

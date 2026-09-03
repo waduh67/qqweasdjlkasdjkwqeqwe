@@ -111,7 +111,7 @@ class ProvisioningWorkflowService(
 
     private fun execute(plan: ProvisionPlan, command: ProvisioningWorkflowCommand, ownerId: String): ProvisioningWorkflowResult {
         if (command.idempotencyKey.isBlank()) throw ConflictException("IDEMPOTENCY_KEY_REQUIRED")
-        val execution = admission.admit(plan.id, command.idempotencyKey, command.affectedSubscriberIds.size)
+        val execution = admission.admit(plan.id, command.idempotencyKey)
         return ProvisioningWorkflowResult(
             ProvisioningWorkflowDisposition.EXECUTED,
             plan,

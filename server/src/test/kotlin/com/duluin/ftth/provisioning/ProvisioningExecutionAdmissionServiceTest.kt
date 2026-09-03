@@ -5,6 +5,7 @@ import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisionExecutionRepository
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisionPlanRepository
+import com.duluin.ftth.provisioning.application.port.outbound.VlanPoolRepository
 import com.duluin.ftth.provisioning.application.port.inbound.ProvisioningExecutionAdmissionUseCase
 import com.duluin.ftth.provisioning.application.service.ProvisioningExecutionAdmissionService
 import com.duluin.ftth.provisioning.application.service.ProvisioningSafetyGate
@@ -21,6 +22,8 @@ import com.duluin.ftth.provisioning.domain.policy.PolicyDecision
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
 import java.util.UUID
 
 class ProvisioningExecutionAdmissionServiceTest {
@@ -30,19 +33,23 @@ class ProvisioningExecutionAdmissionServiceTest {
         val executions = ExecutionRepository()
         val firstPlan = validatedPlan().also(plans::save)
         val secondPlan = validatedPlan().also(plans::save)
+        val impacts = mock(VlanPoolRepository::class.java).also {
+            `when`(it.affectedActiveSubscriberCount(firstPlan.intentId)).thenReturn(1)
+            `when`(it.affectedActiveSubscriberCount(secondPlan.intentId)).thenReturn(1)
+        }
         val gate = object : ProvisioningSafetyGate {
             override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode) =
                 PolicyDecision(true, PolicyCode.AUTO_APPLY_ALLOWED)
         }
         val admission = ProvisioningExecutionAdmissionService(
-            plans, executions, gate, ProvisioningRolloutProperties(autoApplyEnabled = true),
+            plans, executions, gate, ProvisioningRolloutProperties(autoApplyEnabled = true), impacts,
         )
 
-        val first = admission.admit(firstPlan.id, "request-key", 1)
-        val replay = admission.admit(firstPlan.id, "request-key", 1)
+        val first = admission.admit(firstPlan.id, "request-key")
+        val replay = admission.admit(firstPlan.id, "request-key")
 
         assertThat(replay.id).isEqualTo(first.id)
-        assertThatThrownBy { admission.admit(secondPlan.id, "request-key", 1) }
+        assertThatThrownBy { admission.admit(secondPlan.id, "request-key") }
             .isInstanceOf(ConflictException::class.java)
             .hasMessage("EXECUTION_IDEMPOTENCY_KEY_REUSED")
     }
@@ -61,10 +68,10 @@ class ProvisioningExecutionAdmissionServiceTest {
         }
         val admission: ProvisioningExecutionAdmissionUseCase =
             ProvisioningExecutionAdmissionService(
-                plans, executions, gate, ProvisioningRolloutProperties(autoApplyEnabled = true),
+                plans, executions, gate, ProvisioningRolloutProperties(autoApplyEnabled = true), blastRadius(plan.intentId, 1),
             )
 
-        assertThatThrownBy { admission.admit(plan.id, "task-12", 1) }
+        assertThatThrownBy { admission.admit(plan.id, "task-12") }
             .isInstanceOf(ValidationException::class.java)
             .hasMessage(PolicyCode.UNCERTIFIED_CAPABILITY.name)
         assertThat(evaluatedPlan).isSameAs(plan)
@@ -84,10 +91,10 @@ class ProvisioningExecutionAdmissionServiceTest {
             }
         }
         val admission = ProvisioningExecutionAdmissionService(
-            plans, executions, gate, ProvisioningRolloutProperties(),
+            plans, executions, gate, ProvisioningRolloutProperties(), blastRadius(plan.intentId, 1),
         )
 
-        assertThatThrownBy { admission.admit(plan.id, "disabled-auto-apply", 1) }
+        assertThatThrownBy { admission.admit(plan.id, "disabled-auto-apply") }
             .isInstanceOf(ConflictException::class.java)
             .hasMessage("PRODUCTION_AUTO_APPLY_DISABLED")
         assertThat(evaluated).isFalse()
@@ -105,9 +112,9 @@ class ProvisioningExecutionAdmissionServiceTest {
         }
 
         val defaultAdmission = ProvisioningExecutionAdmissionService(
-            plans, executions, gate, ProvisioningRolloutProperties(autoApplyEnabled = true),
+            plans, executions, gate, ProvisioningRolloutProperties(autoApplyEnabled = true), blastRadius(plan.intentId, 2),
         )
-        assertThatThrownBy { defaultAdmission.admit(plan.id, "bulk-disabled", 2) }
+        assertThatThrownBy { defaultAdmission.admit(plan.id, "bulk-disabled") }
             .isInstanceOf(ConflictException::class.java)
             .hasMessage("BULK_EXPANSION_DISABLED")
 
@@ -119,9 +126,9 @@ class ProvisioningExecutionAdmissionServiceTest {
                 autoApplyEnabled = true,
                 maxAffectedSubscribers = 2,
                 bulkExpansionEnabled = true,
-            ),
+            ), blastRadius(plan.intentId, 2),
         )
-        assertThat(configuredAdmission.admit(plan.id, "bulk-enabled", 2).planId).isEqualTo(plan.id)
+        assertThat(configuredAdmission.admit(plan.id, "bulk-enabled").planId).isEqualTo(plan.id)
     }
 
     @Test
@@ -136,10 +143,10 @@ class ProvisioningExecutionAdmissionServiceTest {
             override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode) = PolicyDecision(true, PolicyCode.AUTO_APPLY_ALLOWED)
         }
         val admission = ProvisioningExecutionAdmissionService(
-            plans, executions, gate, ProvisioningRolloutProperties(autoApplyEnabled = true),
+            plans, executions, gate, ProvisioningRolloutProperties(autoApplyEnabled = true), blastRadius(generated.intentId, 1),
         )
 
-        val execution = admission.admit(generated.id, "generated-plan", 1)
+        val execution = admission.admit(generated.id, "generated-plan")
 
         assertThat(generated.status.name).isEqualTo("VALIDATED")
         assertThat(execution.planId).isEqualTo(generated.id)
@@ -158,6 +165,10 @@ class ProvisioningExecutionAdmissionServiceTest {
             ),
         ),
     ).also(ProvisionPlan::validate)
+
+    private fun blastRadius(intentId: UUID, count: Int): VlanPoolRepository = mock(VlanPoolRepository::class.java).also {
+        `when`(it.affectedActiveSubscriberCount(intentId)).thenReturn(count)
+    }
 
     private class PlanRepository : ProvisionPlanRepository {
         private val values = linkedMapOf<UUID, ProvisionPlan>()

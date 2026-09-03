@@ -21,7 +21,7 @@ data class ProvisioningPlanEvaluation(
 )
 
 interface ProvisioningExecutionAdmissionUseCase {
-    fun admit(planId: UUID, keySuffix: String, affectedSubscriberCount: Int): ProvisionExecution
+    fun admit(planId: UUID, keySuffix: String): ProvisionExecution
 }
 
 fun interface ProvisioningExecutionRunner {
