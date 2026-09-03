@@ -195,15 +195,9 @@ class ProvisioningWorkflowServiceTest {
     }
 
     @Test
-    fun `caller supplied canary limit cannot widen trusted rollout scope`() {
-        val fixture = Fixture()
-
-        assertThatThrownBy {
-            fixture.workflow.create(command(request(), affectedSubscribers = 2, callerLimit = 999))
-        }
-            .isInstanceOf(ConflictException::class.java)
-            .hasMessage("BULK_EXPANSION_DISABLED")
-        assertThat(fixture.plans.values).isEmpty()
+    fun `workflow command exposes no caller controlled canary limit`() {
+        assertThat(ProvisioningWorkflowCommand::class.java.declaredFields.map { it.name })
+            .doesNotContain("maxAffectedSubscribers")
     }
 
     @Test
@@ -222,7 +216,7 @@ class ProvisioningWorkflowServiceTest {
         val fixture = Fixture(rollout = rollout)
 
         val result = fixture.workflow.create(
-            command(request(), affectedSubscribers = 2, callerLimit = 1),
+            command(request(), affectedSubscribers = 2),
         )
 
         assertThat(result.execution?.status).isEqualTo(ExecutionStatus.SUCCEEDED)
@@ -271,7 +265,6 @@ class ProvisioningWorkflowServiceTest {
         forceDisconnect: Boolean = false,
         forceAuthorized: Boolean = false,
         affectedSubscribers: Int = 1,
-        callerLimit: Int = 1,
     ) = ProvisioningWorkflowCommand(
         compilation = request,
         idempotencyKey = key,
@@ -282,7 +275,6 @@ class ProvisioningWorkflowServiceTest {
             add(request.intent.subjectId)
             if (affectedSubscribers > 1) add(UUID.fromString("00000000-0000-7000-8000-000000000099"))
         },
-        maxAffectedSubscribers = callerLimit,
     )
 
     private fun request(

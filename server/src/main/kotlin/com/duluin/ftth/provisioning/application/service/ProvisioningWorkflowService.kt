@@ -12,6 +12,9 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
+import org.springframework.beans.factory.annotation.Value
 
 data class SubscriberSessionEvidence(
     val activeSessionCount: Int,
@@ -29,8 +32,6 @@ data class ProvisioningWorkflowCommand(
     val forceDisconnect: Boolean = false,
     val forceDisconnectAuthorized: Boolean = false,
     val affectedSubscriberIds: Set<UUID> = setOf(compilation.intent.subjectId),
-    @Deprecated("Ignored; server rollout configuration is authoritative")
-    val maxAffectedSubscribers: Int = 1,
 )
 
 enum class ProvisioningWorkflowDisposition {
@@ -45,6 +46,7 @@ data class ProvisioningWorkflowResult(
     val execution: ProvisionExecution?,
 )
 
+@Service
 class ProvisioningWorkflowService(
     private val planning: ProvisioningPlanningUseCase,
     private val admission: ProvisioningExecutionAdmissionUseCase,
@@ -52,6 +54,7 @@ class ProvisioningWorkflowService(
     private val executionRunner: ProvisioningExecutionRunner,
     private val clock: Clock,
     private val rollout: ProvisioningRolloutProperties,
+    @Value("${'$'}{ftth.provisioning.workflow-evidence-max-age:PT5M}")
     private val maximumEvidenceAge: Duration = Duration.ofMinutes(5),
 ) {
     fun create(command: ProvisioningWorkflowCommand, ownerId: String = DEFAULT_OWNER): ProvisioningWorkflowResult {
@@ -148,6 +151,7 @@ class ProvisioningWorkflowService(
     }
 }
 
+@Component
 class EngineProvisioningExecutionRunner(
     private val engine: ProvisioningExecutionEngine,
 ) : ProvisioningExecutionRunner {
