@@ -70,6 +70,7 @@ class ProvisioningWireCompatibilityTest {
         assertEquals("true", command.payload.values.managementPathProven)
         assertEquals(null, command.payload.values.managementSourceId)
         assertEquals(null, command.payload.values.managementSourceType)
+        assertFalse(command.observationOnly)
     }
 
     @Test
@@ -126,6 +127,7 @@ class ProvisioningWireCompatibilityTest {
             setOf(
                 "planId", "revision", "stepId", "attemptId", "phase", "operationClass", "idempotencyKey",
                 "fencingEpoch", "expectedPreconditionHash", "deadline", "target", "payload",
+                "observationOnly",
             ),
             root.properties().map { it.key }.toSet(),
         )
@@ -228,8 +230,9 @@ class ProvisioningWireCompatibilityTest {
         )
         val root = mapper.readTree(mapper.writeValueAsString(state))
 
-        assertEquals(setOf("managedResourceCount"), root.properties().map { it.key }.toSet())
+        assertEquals(setOf("managedResourceCount", "vlanIds"), root.properties().map { it.key }.toSet())
         assertTrue(root.get("managedResourceCount").isIntegralNumber)
+        assertTrue(root.get("vlanIds").isArray)
         assertFalse(root.toString().contains("values"))
     }
 

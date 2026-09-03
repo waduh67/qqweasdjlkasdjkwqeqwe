@@ -1,6 +1,7 @@
 package com.duluin.ftth.contract
 
 import java.time.Instant
+import java.nio.charset.StandardCharsets
 
 /**
  * Protokol collector ↔ server.
@@ -371,16 +372,27 @@ private fun Map<String, String>.optional(key: String): String? = get(key)?.takeI
 /** Closed result projection; reusable credentials and arbitrary fields are unrepresentable. */
 class ProvisioningResultState(
     val managedResourceCount: Int = 0,
+    vlanIds: List<Int> = emptyList(),
 ) {
+    val vlanIds: List<Int> = vlanIds.distinct().sorted()
+
     init {
         require(managedResourceCount >= 0) { "Managed resource count cannot be negative" }
+        require(this.vlanIds.all { it in 2..4094 }) { "Observed VLAN must be in 2..4094" }
     }
 
-    override fun equals(other: Any?): Boolean = other is ProvisioningResultState && managedResourceCount == other.managedResourceCount
+    override fun equals(other: Any?): Boolean =
+        other is ProvisioningResultState && managedResourceCount == other.managedResourceCount && vlanIds == other.vlanIds
 
-    override fun hashCode(): Int = managedResourceCount
+    override fun hashCode(): Int = 31 * managedResourceCount + vlanIds.hashCode()
 
-    override fun toString(): String = "ProvisioningResultState(managedResourceCount=$managedResourceCount)"
+    override fun toString(): String = "ProvisioningResultState(managedResourceCount=$managedResourceCount,vlanCount=${vlanIds.size})"
+
+    fun observationHash(): String {
+        val canonical = "managedResourceCount=$managedResourceCount;vlanIds=${vlanIds.joinToString(",")}"
+        return java.security.MessageDigest.getInstance("SHA-256").digest(canonical.toByteArray(StandardCharsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+    }
 }
 
 /** Immutable instruction for exactly one plan step and one execution phase. */
@@ -398,9 +410,13 @@ data class ProvisioningPlanStepCommand(
     val deadline: Instant,
     val target: ProvisioningTarget,
     val payload: ProvisioningPayload = ProvisioningPayload(),
+    val observationOnly: Boolean = false,
 ) {
     init {
         expectedPreconditionHash?.requireSha256()
+        require(!observationOnly || phase == ProvisioningCommandPhase.PREFLIGHT) {
+            "Observation-only command must use PREFLIGHT"
+        }
     }
 }
 
