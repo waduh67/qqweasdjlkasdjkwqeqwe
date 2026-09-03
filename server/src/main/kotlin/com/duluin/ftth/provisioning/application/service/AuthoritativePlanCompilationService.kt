@@ -41,6 +41,8 @@ class AuthoritativePlanCompilationService(
     private val observations: DeviceObservationRepository,
     private val planning: ProvisioningPlanningUseCase,
     private val plans: ProvisionPlanRepository,
+    private val customers: com.duluin.ftth.customer.CustomerApi,
+    private val network: com.duluin.ftth.network.NetworkApi,
 ) {
     @Transactional
     fun generate(intentId: UUID, change: PlanChange): ProvisionPlan = planning.generate(request(intentId, change))
@@ -74,9 +76,26 @@ class AuthoritativePlanCompilationService(
         val profile = profiles.findById(intent.segmentProfileId) ?: throw NotFoundException("SEGMENT_PROFILE_NOT_FOUND")
         val snapshot = topology.snapshot()
         val nodes = snapshot.nodes.associateBy(ManagedNode::id)
-        val access = snapshot.interfaces.filter { networkInterface ->
-            networkInterface.role == InterfaceRole.ACCESS && nodes[networkInterface.nodeId]?.role == ManagedNodeRole.OLT
-        }.singleOrNull() ?: throw ConflictException("AUTHORITATIVE_ACCESS_PATH_REQUIRED")
+        val binding = intent.accessBinding ?: throw ConflictException("AUTHORITATIVE_ACCESS_BINDING_REQUIRED")
+        val subscriptionId = intent.subscriptionId ?: throw ConflictException("FIXED_SUBSCRIPTION_REQUIRED")
+        val subscription = customers.findSubscription(subscriptionId) ?: throw ConflictException("ACCESS_SUBSCRIPTION_NOT_FOUND")
+        val placement = customers.placementsForOnus(setOf(binding.onuId)).singleOrNull()
+            ?.takeIf { it.customerId == subscription.customerId }
+            ?: throw ConflictException("ACCESS_ONU_BINDING_MISMATCH")
+        val odpId = placement.odpId ?: throw ConflictException("ACCESS_ONU_NOT_ATTACHED")
+        val upstream = network.upstreamOf(odpId)
+        if (upstream.olt?.id != binding.oltId || upstream.ponPort?.id != binding.ponPortId) {
+            throw ConflictException("ACCESS_PATH_BINDING_STALE")
+        }
+        val access = snapshot.interfaces.singleOrNull { networkInterface ->
+            val node = nodes[networkInterface.nodeId]
+            networkInterface.role == InterfaceRole.ACCESS &&
+                networkInterface.reference?.kind == com.duluin.ftth.provisioning.domain.model.TopologyReferenceKind.PON &&
+                networkInterface.reference.id == binding.ponPortId &&
+                node?.role == ManagedNodeRole.OLT &&
+                node.reference?.kind == com.duluin.ftth.provisioning.domain.model.TopologyReferenceKind.OLT &&
+                node.reference.id == binding.oltId
+        } ?: throw ConflictException("AUTHORITATIVE_ACCESS_PATH_REQUIRED")
         val path = pathResolver.resolve(tenantId, access.id)
         val allocation = allocation(intent, profile.poolId, path.nodes.first(), path.nodes.last(), change)
         val planNodes = path.nodes.mapIndexed { index, node ->

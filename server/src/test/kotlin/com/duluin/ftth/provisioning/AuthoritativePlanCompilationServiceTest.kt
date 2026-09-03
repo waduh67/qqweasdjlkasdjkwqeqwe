@@ -45,6 +45,7 @@ import com.duluin.ftth.provisioning.domain.policy.ProtectedManagementResources
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import java.time.Instant
 import java.util.UUID
@@ -53,16 +54,21 @@ class AuthoritativePlanCompilationServiceTest {
     @Test
     fun `generation assembles plan only from persisted intent topology allocation and evidence`() {
         val tenantId = UUID.randomUUID()
+        val oltTarget = UUID.randomUUID()
+        val ponTarget = UUID.randomUUID()
+        val onuTarget = UUID.randomUUID()
         val intent = ServiceIntent.create(
             tenantId, UUID.randomUUID(), UUID.randomUUID(), dedicatedVlanId = 320,
             allocationMode = VlanAllocationMode.DEDICATED,
+            accessBinding = com.duluin.ftth.provisioning.domain.model.ServiceAccessBinding(oltTarget, ponTarget, onuTarget),
         )
         val profile = SegmentProfile.create(tenantId, "Business", UUID.randomUUID())
-        val oltTarget = UUID.randomUUID()
         val brasTarget = UUID.randomUUID()
         val olt = ManagedNode.create(tenantId, "OLT", ManagedNodeRole.OLT, TopologyReference(TopologyReferenceKind.OLT, oltTarget), AdministrativeStatus.ENABLED, NOW)
         val bras = ManagedNode.create(tenantId, "BRAS", ManagedNodeRole.BRAS, TopologyReference(TopologyReferenceKind.NAS, brasTarget), AdministrativeStatus.ENABLED, NOW)
-        val access = ManagedInterface.create(tenantId, olt.id, "pon-1", InterfaceRole.ACCESS, null, AdministrativeStatus.ENABLED, NOW)
+        val otherOlt = ManagedNode.create(tenantId, "Other OLT", ManagedNodeRole.OLT, TopologyReference(TopologyReferenceKind.OLT, UUID.randomUUID()), AdministrativeStatus.ENABLED, NOW)
+        val access = ManagedInterface.create(tenantId, olt.id, "pon-1", InterfaceRole.ACCESS, TopologyReference(TopologyReferenceKind.PON, ponTarget), AdministrativeStatus.ENABLED, NOW)
+        val otherAccess = ManagedInterface.create(tenantId, otherOlt.id, "pon-other", InterfaceRole.ACCESS, TopologyReference(TopologyReferenceKind.PON, UUID.randomUUID()), AdministrativeStatus.ENABLED, NOW)
         val uplink = ManagedInterface.create(tenantId, bras.id, "ae0", InterfaceRole.TRUNK, null, AdministrativeStatus.ENABLED, NOW)
         val link = TransportLink.create(tenantId, access.id, uplink.id, AdministrativeStatus.ENABLED, NOW)
         val path = ResolvedTransportPath(listOf(olt, bras), listOf(TransportPathHop(link, access, uplink)))
@@ -84,6 +90,23 @@ class AuthoritativePlanCompilationServiceTest {
                 throw UnsupportedOperationException()
         }
         val planRepository = mock(com.duluin.ftth.provisioning.application.port.outbound.ProvisionPlanRepository::class.java)
+        val customers = mock(com.duluin.ftth.customer.CustomerApi::class.java)
+        val network = mock(com.duluin.ftth.network.NetworkApi::class.java)
+        val customerId = UUID.randomUUID()
+        val odpId = UUID.randomUUID()
+        `when`(customers.findSubscription(requireNotNull(intent.subscriptionId))).thenReturn(
+            com.duluin.ftth.customer.SubscriptionRef(requireNotNull(intent.subscriptionId), customerId, null, "Business", 100, "ACTIVE"),
+        )
+        `when`(customers.placementsForOnus(setOf(onuTarget))).thenReturn(
+            listOf(com.duluin.ftth.customer.OnuPlacementRef(onuTarget, customerId, odpId)),
+        )
+        `when`(network.upstreamOf(odpId)).thenReturn(
+            com.duluin.ftth.network.UpstreamPath(
+                mock(com.duluin.ftth.network.OdpRef::class.java), null,
+                com.duluin.ftth.network.UpstreamHop(ponTarget, "PON", "PON"),
+                com.duluin.ftth.network.UpstreamHop(oltTarget, "OLT", "OLT"), null, 0.0,
+            ),
+        )
         val pool = VlanPool.create(tenantId, "Dedicated", VlanRange(300, 399), emptyList())
         val allocation = pool.allocate(DeviceReference(DeviceKind.OLT, oltTarget), 320, intent.id).also {
             it.addReference("SERVICE_INTENT", intent.id)
@@ -91,7 +114,7 @@ class AuthoritativePlanCompilationServiceTest {
         `when`(intents.findById(intent.id)).thenReturn(intent)
         `when`(profiles.findById(intent.segmentProfileId)).thenReturn(profile)
         `when`(pools.findById(profile.poolId)).thenReturn(pool)
-        `when`(topology.snapshot()).thenReturn(com.duluin.ftth.provisioning.domain.model.TransportTopologySnapshot(listOf(olt, bras), listOf(access, uplink), listOf(link)))
+        `when`(topology.snapshot()).thenReturn(com.duluin.ftth.provisioning.domain.model.TransportTopologySnapshot(listOf(olt, bras, otherOlt), listOf(access, uplink, otherAccess), listOf(link)))
         `when`(resolver.resolve(tenantId, access.id)).thenReturn(path)
         `when`(
             allocator.allocateDedicated(
@@ -107,7 +130,7 @@ class AuthoritativePlanCompilationServiceTest {
         `when`(safety.findLatestCapabilityEvidence(tenantId, bras.device(), ProvisionOperation.ENSURE_PPPOE_TERMINATION.name))
             .thenReturn(capability(tenantId, bras.device(), ProvisionOperation.ENSURE_PPPOE_TERMINATION))
         val service = AuthoritativePlanCompilationService(
-            intents, profiles, pools, topology, resolver, allocator, safety, observations, planning, planRepository,
+            intents, profiles, pools, topology, resolver, allocator, safety, observations, planning, planRepository, customers, network,
         )
 
         val plan = TenantContext.runAs(tenantId) { service.generate(intent.id, PlanChange.CREATE) }
@@ -115,6 +138,7 @@ class AuthoritativePlanCompilationServiceTest {
         assertThat(captured.vlanId).isEqualTo(320)
         assertThat(captured.intent).isSameAs(intent)
         assertThat(plan.steps.map { it.device }).containsExactly(bras.device(), olt.device())
+        verify(resolver).resolve(tenantId, access.id)
     }
 
     private fun capability(tenantId: UUID, device: DeviceReference, operation: ProvisionOperation) = CapabilityEvidence(

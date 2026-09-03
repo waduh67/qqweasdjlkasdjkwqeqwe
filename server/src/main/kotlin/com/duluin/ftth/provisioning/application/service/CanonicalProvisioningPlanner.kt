@@ -178,6 +178,10 @@ class CanonicalProvisioningPlanner {
             "segmentProfileId" to request.intent.segmentProfileId.toString(),
             "encapsulation" to request.intent.encapsulation.name,
             "dedicatedVlanId" to request.intent.dedicatedVlanId,
+            "allocationMode" to request.intent.allocationMode.name,
+            "accessOltId" to request.intent.accessBinding?.oltId?.toString(),
+            "accessPonPortId" to request.intent.accessBinding?.ponPortId?.toString(),
+            "accessOnuId" to request.intent.accessBinding?.onuId?.toString(),
             "status" to request.intent.status.name,
         )))
         append("|vlan=").append(request.vlanId).append("|change=").append(request.change)
