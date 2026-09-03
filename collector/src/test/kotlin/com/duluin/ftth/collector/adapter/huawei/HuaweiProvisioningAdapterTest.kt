@@ -129,7 +129,7 @@ private fun profileReadCommands() = listOf(
     "display service-port 1",
 )
 
-private class HuaweiMa5800Fixture(
+internal class HuaweiMa5800Fixture(
     private val firmware: String = "MA5800V100R019C10",
     private val ambiguousLineProfile: Boolean = false,
     private val overrides: Map<String, String> = emptyMap(),
