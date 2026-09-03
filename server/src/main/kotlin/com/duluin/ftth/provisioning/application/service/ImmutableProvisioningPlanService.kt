@@ -21,6 +21,7 @@ class ImmutableProvisioningPlanService(
 
     @Transactional
     override fun validateProduction(request: PlanCompilationRequest): ProvisionPlan {
+        plans.lockIntent(request.intent.id)
         val current = plans.findLatestByIntentId(request.intent.id)
         val comparison = planner.compile(request, current?.revision ?: 1)
         if (current != null && current.preconditionHash == comparison.preconditionHash) {

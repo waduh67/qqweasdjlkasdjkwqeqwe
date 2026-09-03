@@ -42,6 +42,7 @@ interface ProvisionPlanRepository {
     fun save(value: ProvisionPlan): ProvisionPlan
     fun findById(id: UUID): ProvisionPlan?
     fun findLatestByIntentId(intentId: UUID): ProvisionPlan?
+    fun lockIntent(intentId: UUID) = Unit
 }
 interface ProvisionExecutionRepository {
     fun save(value: ProvisionExecution): ProvisionExecution
@@ -77,6 +78,13 @@ interface StepAttemptRepository {
     fun findById(id: UUID): StepAttempt?
     fun findByExecutionStepId(executionStepId: UUID): List<StepAttempt>
     fun completeIfDispatched(id: UUID, status: com.duluin.ftth.provisioning.domain.model.AttemptStatus, errorCode: String?, completedAt: Instant): Boolean
+    fun completeAcknowledgementIfCurrentLease(
+        id: UUID,
+        status: com.duluin.ftth.provisioning.domain.model.AttemptStatus,
+        errorCode: String?,
+        completedAt: Instant,
+        acceptedAt: Instant,
+    ): Boolean = completeIfDispatched(id, status, errorCode, completedAt)
 }
 interface StepSnapshotRepository {
     fun save(value: StepSnapshot): StepSnapshot
