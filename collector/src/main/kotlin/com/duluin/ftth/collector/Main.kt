@@ -41,7 +41,10 @@ fun main() {
     // MENGGANTIKAN seluruh adapter SNMP — mencampur perangkat sungguhan dengan
     // perangkat tiruan dalam satu siklus hanya menghasilkan data yang tak jelas
     // asalnya.
-    val simulatorEnabled = env("FTTH_COLLECTOR_SIMULATOR", "false").toBoolean()
+    val simulatorEnabled = CollectorRuntimeMode.resolve(
+        environment = env("FTTH_ENVIRONMENT", "development"),
+        simulatorRequested = env("FTTH_COLLECTOR_SIMULATOR", "false").toBoolean(),
+    ).simulatorEnabled
 
     // GPON (data-driven MibProfile) + EPON HSGQ (adapter tersendiri karena identitas MAC
     // & join dua-tabel — lihat HsgqEponSnmpAdapter). Simulator memerankan tiap vendor.
