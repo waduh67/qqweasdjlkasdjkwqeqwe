@@ -55,6 +55,7 @@ class FencedExecutionPersistenceAdapter(
 @Component
 class DeviceLeasePersistenceAdapter(
     private val leases: DeviceLeaseJpaRepository,
+    private val entityManager: jakarta.persistence.EntityManager,
 ) : DeviceLeaseRepository {
     @Transactional
     override fun acquire(
@@ -68,15 +69,14 @@ class DeviceLeasePersistenceAdapter(
         requireExecutionTenant(tenantId)
         require(ownerId.isNotBlank()) { "LEASE_OWNER_REQUIRED" }
         require(!duration.isZero && !duration.isNegative) { "LEASE_DURATION_INVALID" }
+        entityManager.createNativeQuery("SELECT pg_advisory_xact_lock(hashtextextended(:lockKey, 0))")
+            .setParameter("lockKey", "$tenantId:provisioning-device:${device.kind}:${device.id}")
+            .singleResult
         val current = leases.findLockedByDevice(device.kind, device.id)
         if (current == null) {
             return leases.saveAndFlush(
                 DeviceLeaseJpaEntity(UuidV7.generate(), device.kind, device.id, executionId, ownerId, 1, now.plus(duration)),
             ).toDomain()
-        }
-        if (current.executionId == executionId && current.ownerId == ownerId && current.expiresAt.isAfter(now)) {
-            current.expiresAt = now.plus(duration)
-            return leases.save(current).toDomain()
         }
         if (current.expiresAt.isAfter(now)) return null
         current.executionId = executionId
@@ -215,6 +215,22 @@ class StepAttemptPersistenceAdapter(
         if (status == com.duluin.ftth.provisioning.domain.model.AttemptStatus.SUCCEEDED && errorCode != null) return false
         if (status != com.duluin.ftth.provisioning.domain.model.AttemptStatus.SUCCEEDED && errorCode.isNullOrBlank()) return false
         return attempts.completeIfDispatched(id, status, errorCode, completedAt) == 1
+    }
+
+    @Transactional
+    override fun completeAcknowledgementIfCurrentLease(
+        id: UUID,
+        status: com.duluin.ftth.provisioning.domain.model.AttemptStatus,
+        errorCode: String?,
+        completedAt: Instant,
+        acceptedAt: Instant,
+    ): Boolean {
+        if (status == com.duluin.ftth.provisioning.domain.model.AttemptStatus.DISPATCHED) return false
+        if (status == com.duluin.ftth.provisioning.domain.model.AttemptStatus.SUCCEEDED && errorCode != null) return false
+        if (status != com.duluin.ftth.provisioning.domain.model.AttemptStatus.SUCCEEDED && errorCode.isNullOrBlank()) return false
+        return attempts.completeAcknowledgementIfCurrentLease(
+            id, status.name, errorCode, completedAt, acceptedAt,
+        ) == 1
     }
 
     private fun StepAttemptJpaEntity.toDomain() = StepAttempt.rehydrate(

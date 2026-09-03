@@ -145,6 +145,13 @@ class ProvisioningExecutionPersistenceIT {
         val firstLease = asTenant(fixture.tenantId) {
             leases.acquire(fixture.tenantId, device, first.id, "worker-a", now, Duration.ofSeconds(30))
         }
+        val sameOwnerReentry = asTenant(fixture.tenantId) {
+            listOf(
+                leases.acquire(
+                    fixture.tenantId, device, first.id, "worker-a", now.plusSeconds(1), Duration.ofSeconds(30),
+                ),
+            )
+        }.single()
         var blocked = firstLease
         asTenant(fixture.tenantId) {
             blocked = leases.acquire(
@@ -162,6 +169,7 @@ class ProvisioningExecutionPersistenceIT {
 
         assertThat(firstLease).isNotNull
         assertThat(firstLease!!.fencingToken).isEqualTo(1)
+        assertThat(sameOwnerReentry).isNull()
         assertThat(blocked).isNull()
         assertThat(takeover!!.fencingToken).isGreaterThan(firstLease.fencingToken)
         assertThat(takeover.executionId).isEqualTo(second.id)
@@ -196,12 +204,81 @@ class ProvisioningExecutionPersistenceIT {
     }
 
     @Test
+    fun `concurrent first lease acquisition returns one owner and one blocked result`() {
+        val fixture = fixture("execution-first-lease-race")
+        val device = DeviceReference(DeviceKind.ROUTER, UuidV7.generate())
+        val now = Instant.parse("2026-09-02T12:00:00Z")
+        val first = ProvisionExecution.queue(fixture.tenantId, fixture.intentId, fixture.firstPlanId, "first-race")
+        val second = ProvisionExecution.queue(fixture.tenantId, fixture.intentId, fixture.secondPlanId, "second-race")
+        asTenant(fixture.tenantId) { executions.save(first) }
+        first.fail("FIRST_READY")
+        asTenant(fixture.tenantId) { executions.save(first); executions.save(second) }
+        val ready = CountDownLatch(2)
+        val start = CountDownLatch(1)
+        val workers = Executors.newFixedThreadPool(2)
+        try {
+            val results = listOf(first to "worker-a", second to "worker-b").map { (execution, owner) ->
+                workers.submit<com.duluin.ftth.provisioning.domain.model.DeviceLease?> {
+                    ready.countDown()
+                    start.await()
+                    asTenant(fixture.tenantId) {
+                        listOf(leases.acquire(fixture.tenantId, device, execution.id, owner, now, Duration.ofSeconds(30)))
+                    }.single()
+                }
+            }
+            ready.await()
+            start.countDown()
+
+            assertThat(results.map { it.get() }.count { it != null }).isEqualTo(1)
+        } finally {
+            workers.shutdownNow()
+        }
+    }
+
+    @Test
+    fun `stale acknowledgement cannot complete after lease fencing token advances`() {
+        val fixture = fixture("execution-stale-ack")
+        val device = DeviceReference(DeviceKind.ROUTER, UuidV7.generate())
+        val now = Instant.parse("2026-09-02T12:00:00Z")
+        val first = ProvisionExecution.queue(fixture.tenantId, fixture.intentId, fixture.firstPlanId, "stale-ack-first")
+        val second = ProvisionExecution.queue(fixture.tenantId, fixture.intentId, fixture.secondPlanId, "stale-ack-second")
+        val attempt = asTenant(fixture.tenantId) {
+            executions.save(first)
+            val lease = leases.acquire(fixture.tenantId, device, first.id, "worker-a", now, Duration.ofSeconds(30))!!
+            val step = executionSteps.save(
+                ExecutionStep.pending(fixture.tenantId, first.id, fixture.firstStepId, 1, device),
+            )
+            attempts.save(
+                StepAttempt.dispatch(
+                    fixture.tenantId, step.id, ExecutionPhase.APPLY, 1, "stale-ack-attempt",
+                    lease.fencingToken, now.plusSeconds(20), now,
+                ),
+            )
+        }
+        first.fail("FIRST_COMPLETE")
+        asTenant(fixture.tenantId) { executions.save(first); executions.save(second) }
+        asTenant(fixture.tenantId) {
+            leases.acquire(fixture.tenantId, device, second.id, "worker-b", now.plusSeconds(31), Duration.ofSeconds(30))
+        }
+
+        val accepted = asTenant(fixture.tenantId) {
+            attempts.completeAcknowledgementIfCurrentLease(
+                attempt.id, AttemptStatus.SUCCEEDED, null, now.plusSeconds(10), now.plusSeconds(31),
+            )
+        }
+
+        assertThat(accepted).isFalse()
+        assertThat(asTenant(fixture.tenantId) { attempts.findById(attempt.id)!!.status })
+            .isEqualTo(AttemptStatus.DISPATCHED)
+    }
+
+    @Test
     fun `collector channel emits persisted attempt and acknowledges result and report durably`() {
         val fixture = fixture("collector-channel")
         val execution = ProvisionExecution.queue(fixture.tenantId, fixture.intentId, fixture.firstPlanId, "collector-channel")
         val device = DeviceReference(DeviceKind.BRAS, UuidV7.generate())
         val collectorId = UuidV7.generate()
-        val deadline = Instant.parse("2026-09-02T12:05:00Z")
+        val deadline = Instant.now().plusSeconds(300)
         val attempt = asTenant(fixture.tenantId) {
             em.createNativeQuery(
                 """INSERT INTO collector
@@ -212,6 +289,9 @@ class ProvisioningExecutionPersistenceIT {
                 .setParameter("hash", UUID.randomUUID().toString().replace("-", "").repeat(2))
                 .executeUpdate()
             executions.save(execution)
+            val lease = leases.acquire(
+                fixture.tenantId, device, execution.id, "collector-worker", deadline.minusSeconds(30), Duration.ofMinutes(5),
+            )!!
             val step = executionSteps.save(
                 ExecutionStep.pending(fixture.tenantId, execution.id, fixture.firstStepId, 1, device),
             )
@@ -222,7 +302,7 @@ class ProvisioningExecutionPersistenceIT {
                     ExecutionPhase.APPLY,
                     1,
                     "collector-channel-attempt",
-                    7,
+                    lease.fencingToken,
                     deadline,
                     deadline.minusSeconds(30),
                 ),
@@ -327,7 +407,7 @@ class ProvisioningExecutionPersistenceIT {
                     ExecutionPhase.APPLY,
                     2,
                     attempt.idempotencyKey,
-                    8,
+                    attempt.fencingToken,
                     deadline.plusSeconds(60),
                     deadline,
                 ),
@@ -361,7 +441,7 @@ class ProvisioningExecutionPersistenceIT {
                     ExecutionPhase.APPLY,
                     3,
                     attempt.idempotencyKey,
-                    9,
+                    attempt.fencingToken,
                     deadline.plusSeconds(120),
                     deadline.plusSeconds(60),
                 ),
@@ -388,7 +468,7 @@ class ProvisioningExecutionPersistenceIT {
                             idempotencyKey = lateAttempt.idempotencyKey,
                             fencingEpoch = lateAttempt.fencingToken,
                             success = true,
-                            completedAt = lateAttempt.deadline,
+                            completedAt = lateAttempt.deadline.plusMillis(1),
                             apply = ProvisioningApplyResult(lateAttempt.deadline.minusSeconds(1), true, lateHash),
                             verification = ProvisioningVerificationObservation(
                                 lateAttempt.deadline,
@@ -406,7 +486,7 @@ class ProvisioningExecutionPersistenceIT {
         assertThat(pending.commands.single().planId).isEqualTo(fixture.firstPlanId.toString())
         assertThat(pending.commands.single().revision).isEqualTo(1)
         assertThat(pending.commands.single().stepId).isEqualTo(fixture.firstStepId.toString())
-        assertThat(pending.commands.single().fencingEpoch).isEqualTo(7)
+        assertThat(pending.commands.single().fencingEpoch).isEqualTo(attempt.fencingToken)
         assertThat(pending.commands.single().attemptId).isEqualTo(attempt.id.toString())
         assertThat(otherCollectorCommands).isEmpty()
         assertThat(wrongCollectorAcknowledgement).isEqualTo(com.duluin.ftth.contract.ProvisioningAcknowledgement())
