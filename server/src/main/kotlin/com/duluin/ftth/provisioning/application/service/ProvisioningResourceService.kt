@@ -184,7 +184,7 @@ class ProvisioningResourceService(
         val current = intents.findById(id) ?: throw NotFoundException("SERVICE_INTENT_NOT_FOUND")
         val next = revisions.advance(INTENT, id, revision)
         val updated = ServiceIntent.rehydrate(
-            current.id, tenantId(), current.subscriptionId, profileId, current.encapsulation,
+            current.id, tenantId(), current.subscriptionId, current.hotspotSiteId, profileId, current.encapsulation,
             current.dedicatedVlanId, com.duluin.ftth.provisioning.domain.model.IntentStatus.valueOf(status),
         )
         val saved = intents.save(updated)

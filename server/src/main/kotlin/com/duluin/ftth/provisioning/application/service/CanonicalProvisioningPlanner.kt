@@ -173,7 +173,8 @@ class CanonicalProvisioningPlanner {
         append("intent=").append(canonicalValue(mapOf(
             "id" to request.intent.id.toString(),
             "tenantId" to request.intent.tenantId.toString(),
-            "subscriptionId" to request.intent.subscriptionId.toString(),
+            "serviceSubjectKind" to request.intent.subjectKind.name,
+            "serviceSubjectId" to request.intent.subjectId.toString(),
             "segmentProfileId" to request.intent.segmentProfileId.toString(),
             "encapsulation" to request.intent.encapsulation.name,
             "dedicatedVlanId" to request.intent.dedicatedVlanId,
