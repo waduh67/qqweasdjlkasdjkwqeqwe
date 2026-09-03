@@ -91,8 +91,8 @@ class ProvisioningRuntimeWiringTest {
             DeviceReference(DeviceKind.OLT, UuidV7.generate()), ProvisionOperation.ENSURE_ACCESS_PORT,
             ExecutionPhase.VERIFY, "receipt-key", 1, "a".repeat(64), now.plusSeconds(30), mapOf("vlanId" to "320"),
         )
-        `when`(reader.find("receipt-key", ExecutionPhase.VERIFY)).thenReturn(
-            CollectorResultReceipt(true, null, true, listOf(320)),
+        `when`(reader.find("receipt-key", ExecutionPhase.VERIFY, work.fencingToken)).thenReturn(
+            receipt(work, true, listOf(320)),
         )
 
         val observed = CollectorBackedProvisioningDeviceGateway(reader, Clock.fixed(now, ZoneOffset.UTC)).observe(work)
@@ -107,15 +107,15 @@ class ProvisioningRuntimeWiringTest {
     fun `collector receipt simulator bng radius and hotspot boundaries converge`() {
         val simulator = DeterministicNetworkSimulator(SimulatorProfiles.simulator)
         assertThat(simulator.create(320)).isEqualTo(SimulatorTerminalState.SUCCEEDED)
-        val reader = mock(CollectorResultReceiptReader::class.java)
-        `when`(reader.find("integrated-receipt", ExecutionPhase.VERIFY)).thenReturn(
-            CollectorResultReceipt(true, null, true, simulator.state().olt.vlans.toList()),
-        )
         val work = DispatchableProvisioningWork(
             UuidV7.generate(), UuidV7.generate(), 1, UuidV7.generate(),
             DeviceReference(DeviceKind.OLT, UuidV7.generate()), ProvisionOperation.ENSURE_ACCESS_PORT,
             ExecutionPhase.VERIFY, "integrated-receipt", 1, "a".repeat(64), now.plusSeconds(30),
             mapOf("vlanId" to "320"),
+        )
+        val reader = mock(CollectorResultReceiptReader::class.java)
+        `when`(reader.find("integrated-receipt", ExecutionPhase.VERIFY, work.fencingToken)).thenReturn(
+            receipt(work, true, simulator.state().olt.vlans.toList()),
         )
         val observed = CollectorBackedProvisioningDeviceGateway(reader, Clock.fixed(now, ZoneOffset.UTC)).observe(work)
         val sessions = SimulatorBngAdapter(clock = { now }).pollSessions(
@@ -131,4 +131,29 @@ class ProvisioningRuntimeWiringTest {
         assertThat(hotspotIntent.hotspotSiteId).isNotNull()
         assertThat(simulator.delete(320)).isEqualTo(SimulatorTerminalState.SUCCEEDED)
     }
+
+    private fun gatewayWork(phase: ExecutionPhase, key: String) = DispatchableProvisioningWork(
+        UuidV7.generate(), UuidV7.generate(), 1, UuidV7.generate(),
+        DeviceReference(DeviceKind.OLT, UuidV7.generate()), ProvisionOperation.ENSURE_ACCESS_PORT,
+        phase, key, 1, "a".repeat(64), now.plusSeconds(30), mapOf("vlanId" to "320"),
+    )
+
+    private fun receipt(
+        work: DispatchableProvisioningWork,
+        verificationMatches: Boolean?,
+        vlanIds: List<Int>?,
+    ) = CollectorResultReceipt(
+        work.idempotencyKey,
+        when (work.phase) {
+            ExecutionPhase.PREFLIGHT, ExecutionPhase.ROLLBACK_CHECK -> "PREFLIGHT"
+            ExecutionPhase.APPLY -> "APPLY"
+            ExecutionPhase.VERIFY, ExecutionPhase.ROLLBACK_VERIFY -> "VERIFY"
+            ExecutionPhase.COMPENSATE -> "ROLLBACK"
+        },
+        work.fencingToken,
+        true,
+        null,
+        verificationMatches,
+        vlanIds,
+    )
 }
