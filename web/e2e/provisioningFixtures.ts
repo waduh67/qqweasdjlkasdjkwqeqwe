@@ -19,14 +19,16 @@ const profile = {
   twoFactorEnabled: true,
 }
 
-const preview = (planId: string, allowed: boolean) => ({
+const preview = (planId: string, intentId: string, allowed: boolean) => {
+  const enterprise = intentId === 'intent-enterprise'
+  return {
   plan: {
-    id: planId, tenantId: 'tenant-1', intentId: planId.includes('enterprise') ? 'intent-enterprise' : 'intent-home',
+    id: planId, tenantId: 'tenant-1', intentId,
     revision: 1, status: 'VALIDATED', contentHash: 'content-hash', preconditionHash: 'precondition-hash',
     steps: [
-      { id: 'step-1', order: 1, device: { kind: 'BRAS', id: 'bras-1' }, operation: 'ENSURE_PPPOE_TERMINATION', attributes: { vlanId: planId.includes('enterprise') ? '3101' : '120', pppoeProfile: planId.includes('enterprise') ? 'Enterprise dedicated' : 'Residential shared', firewallAllowList: 'RADIUS, PPPoE' }, preconditionHash: 'bras-before' },
-      { id: 'step-2', order: 2, device: { kind: 'SWITCH', id: 'switch-1' }, operation: 'ENSURE_TAGGED_VLAN', attributes: { vlanId: planId.includes('enterprise') ? '3101' : '120', interface: 'xe-0/0/1' }, preconditionHash: 'switch-before' },
-      { id: 'step-3', order: 3, device: { kind: 'OLT', id: 'olt-1' }, operation: 'ENSURE_ACCESS_PORT', attributes: { vlanId: planId.includes('enterprise') ? '3101' : '120', interface: 'PON 0/1', onuSerial: 'QA-ONU-17', blastRadius: '1 pelanggan' }, preconditionHash: 'olt-before' },
+      { id: 'step-1', order: 1, device: { kind: 'BRAS', id: 'bras-1' }, operation: 'ENSURE_PPPOE_TERMINATION', attributes: { vlanId: enterprise ? '3101' : '120', pppoeProfile: enterprise ? 'Enterprise dedicated' : 'Residential shared', firewallAllowList: 'RADIUS, PPPoE' }, preconditionHash: 'bras-before' },
+      { id: 'step-2', order: 2, device: { kind: 'SWITCH', id: 'switch-1' }, operation: 'ENSURE_TAGGED_VLAN', attributes: { vlanId: enterprise ? '3101' : '120', interface: 'xe-0/0/1' }, preconditionHash: 'switch-before' },
+      { id: 'step-3', order: 3, device: { kind: 'OLT', id: 'olt-1' }, operation: 'ENSURE_ACCESS_PORT', attributes: { vlanId: enterprise ? '3101' : '120', interface: 'PON 0/1', onuSerial: 'QA-ONU-17', blastRadius: '1 pelanggan' }, preconditionHash: 'olt-before' },
     ],
   },
   decision: {
@@ -35,7 +37,8 @@ const preview = (planId: string, allowed: boolean) => ({
     warnings: allowed ? [] : ['Adapter provisional dan resource manajemen dilindungi.'],
     evidenceIds: allowed ? ['evidence-1', 'evidence-2'] : [],
   },
-})
+  }
+}
 
 const json = (route: Route, body: unknown) => route.fulfill({
   status: 200,
@@ -45,6 +48,8 @@ const json = (route: Route, body: unknown) => route.fulfill({
 
 export async function installProvisioningRoutes(page: Page, scenario: RolloutScenario): Promise<void> {
   let appliedPlanId = 'plan-enterprise'
+  const planIntents = new Map<string, string>()
+  const intentStatuses = new Map([['intent-home', 'ACTIVE'], ['intent-enterprise', 'ACTIVE']])
   const sessionProfile = scenario.platformAdmin ? { ...profile, platformAdmin: true, permissions: [...permissions, 'provisioning.certification.manage'] } : profile
   const tokenResponse = { accessToken: 'browser-test-token', tokenType: 'Bearer', accessTokenExpiresAt: '2099-01-01T00:00:00Z', refreshToken: 'browser-test-refresh', refreshTokenExpiresAt: '2099-01-02T00:00:00Z', user: sessionProfile }
   await page.addInitScript(() => localStorage.setItem('ftth.refreshToken', 'browser-test-refresh'))
@@ -60,9 +65,9 @@ export async function installProvisioningRoutes(page: Page, scenario: RolloutSce
     })
     if (path === '/api/provisioning/topology') return json(route, {
       nodes: [
-        { id: 'olt-1', name: 'OLT QA', role: 'ACCESS_OLT', administrativeStatus: 'ACTIVE' },
-        { id: 'switch-1', name: 'Transit QA', role: 'AGGREGATION_SWITCH', administrativeStatus: 'ACTIVE' },
-        { id: 'bras-1', name: 'BRAS QA', role: 'BRAS', administrativeStatus: 'ACTIVE' },
+        { id: 'olt-1', name: 'OLT QA', role: 'OLT', administrativeStatus: 'ENABLED' },
+        { id: 'switch-1', name: 'Transit QA', role: 'AGGREGATION_SWITCH', administrativeStatus: 'ENABLED' },
+        { id: 'bras-1', name: 'BRAS QA', role: 'BRAS', administrativeStatus: 'ENABLED' },
       ],
       interfaces: [], links: [],
     })
@@ -72,8 +77,8 @@ export async function installProvisioningRoutes(page: Page, scenario: RolloutSce
       { revision: 1, value: { id: 'profile-enterprise', name: 'Enterprise dedicated', poolId: 'pool-1' } },
     ])
     if (path === '/api/provisioning/intents') return json(route, [
-      { revision: 1, value: { id: 'intent-home', subscriptionId: 'sub-home', segmentProfileId: 'profile-home', status: 'ACTIVE' } },
-      { revision: 1, value: { id: 'intent-enterprise', subscriptionId: 'sub-enterprise', segmentProfileId: 'profile-enterprise', status: 'ACTIVE' } },
+      { revision: 1, value: { id: 'intent-home', subscriptionId: 'sub-home', segmentProfileId: 'profile-home', allocationMode: 'SHARED', dedicatedVlanId: null, status: intentStatuses.get('intent-home') } },
+      { revision: 1, value: { id: 'intent-enterprise', subscriptionId: 'sub-enterprise', segmentProfileId: 'profile-enterprise', allocationMode: 'DEDICATED', dedicatedVlanId: 3101, status: intentStatuses.get('intent-enterprise') } },
     ])
     if (path === '/api/provisioning/capabilities') return json(route, [
       { id: 'cap-1', deviceKind: 'OLT', deviceId: 'olt-1', vendor: 'SIMULATOR_FIXTURE', model: 'DETERMINISTIC_NETWORK', firmware: '1', transport: 'IN_MEMORY', operationClass: 'ENSURE_ACCESS_PORT', supported: scenario.previewAllowed, observedAt: '2026-09-03T00:00:00Z', expiresAt: '2099-01-01T00:00:00Z' },
@@ -86,6 +91,15 @@ export async function installProvisioningRoutes(page: Page, scenario: RolloutSce
       { id: 'protection-3', deviceKind: 'BRAS', deviceId: 'bras-1', complete: scenario.previewAllowed, sourceType: 'DEVICE_OBSERVATION', sourceEvidenceId: 'obs-3', validUntil: '2099-01-01T00:00:00Z' },
     ])
     if (path === '/api/provisioning/drift') return json(route, [{ id: 'drift-1', deviceKind: 'OLT', deviceId: 'olt-1', revision: 1, status: 'CONFLICTING', recordedAt: '2026-09-03T00:00:00Z' }])
+    if (path.endsWith('/suspend')) { intentStatuses.set('intent-home', 'SUSPENDED'); return json(route, 'SUSPENDED') }
+    if (path.endsWith('/restore')) { intentStatuses.set('intent-home', 'ACTIVE'); return json(route, 'ACTIVE') }
+    if (path.endsWith('/deprovision')) { appliedPlanId = 'plan-delete'; return json(route, { id: 'execution-plan-delete', planId: 'plan-delete', revision: 1, status: 'QUEUED' }) }
+    if (path.includes('/intents/') && path.endsWith('/plans')) {
+      const intentId = path.split('/intents/')[1]?.split('/')[0] ?? 'intent-unknown'
+      const planId = `generated-${intentId}`
+      planIntents.set(planId, intentId)
+      return json(route, { id: planId, intentId, revision: 1, status: 'GENERATED', contentHash: 'content-hash' })
+    }
     if (path.includes('/provisioning/certifications')) return json(route, [
       { id: 'cert-1', tenantId: 'tenant-1', deviceKind: 'OLT', deviceId: 'olt-1', vendor: 'SIMULATOR_FIXTURE', model: 'DETERMINISTIC_NETWORK', firmware: '1', transport: 'IN_MEMORY', operationClass: 'ENSURE_ACCESS_PORT', status: 'CERTIFIED', validUntil: '2099-01-01T00:00:00Z', evidenceId: 'cap-1', revokedAt: null, revision: 1 },
       { id: 'cert-2', tenantId: 'tenant-1', deviceKind: 'SWITCH', deviceId: 'switch-1', vendor: 'SIMULATOR_FIXTURE', model: 'DETERMINISTIC_NETWORK', firmware: '1', transport: 'IN_MEMORY', operationClass: 'ENSURE_TAGGED_VLAN', status: 'CERTIFIED', validUntil: '2099-01-01T00:00:00Z', evidenceId: 'cap-2', revokedAt: null, revision: 1 },
@@ -93,7 +107,7 @@ export async function installProvisioningRoutes(page: Page, scenario: RolloutSce
     ])
     if (path.includes('/preview')) {
       const planId = path.split('/plans/')[1]?.split('/')[0] ?? 'plan-unknown'
-      return json(route, preview(planId, scenario.previewAllowed))
+      return json(route, preview(planId, planIntents.get(planId) ?? 'intent-home', scenario.previewAllowed))
     }
     if (path.includes('/apply')) {
       appliedPlanId = path.split('/plans/')[1]?.split('/')[0] ?? 'plan-unknown'
