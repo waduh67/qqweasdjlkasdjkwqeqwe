@@ -50,6 +50,8 @@ data class ObservationView(val id: UUID, val deviceKind: String, val deviceId: U
 
 data class ExecutionTimelineEntry(
     val stepOrder: Int,
+    val deviceKind: String,
+    val deviceId: UUID,
     val attemptNumber: Int,
     val phase: String,
     val status: String,
@@ -114,8 +116,8 @@ class ProvisioningEvidenceQueryService(
             .setParameter("id", executionId).singleResult as Number
         if (exists.toLong() == 0L) throw NotFoundException("EXECUTION_NOT_FOUND")
         return entityManager.createNativeQuery(
-            """SELECT step.step_order, attempt.attempt_number, attempt.phase, attempt.status,
-                      attempt.error_code, attempt.started_at, attempt.completed_at
+            """SELECT step.step_order, step.device_kind, step.device_id, attempt.attempt_number,
+                      attempt.phase, attempt.status, attempt.error_code, attempt.started_at, attempt.completed_at
                FROM provisioning_execution_step step
                JOIN provisioning_step_attempt attempt
                  ON attempt.execution_step_id = step.id AND attempt.tenant_id = step.tenant_id
@@ -124,8 +126,8 @@ class ProvisioningEvidenceQueryService(
         ).setParameter("id", executionId).resultList.map { raw ->
             val row = raw as Array<*>
             ExecutionTimelineEntry(
-                (row[0] as Number).toInt(), (row[1] as Number).toInt(), row[2] as String, row[3] as String,
-                row[4] as String?, row[5] as Instant, row[6] as Instant?,
+                (row[0] as Number).toInt(), row[1] as String, row[2] as UUID, (row[3] as Number).toInt(),
+                row[4] as String, row[5] as String, row[6] as String?, row[7] as Instant, row[8] as Instant?,
             )
         }
     }
