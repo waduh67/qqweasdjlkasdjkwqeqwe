@@ -19,6 +19,26 @@ import java.util.UUID
 
 class ProvisioningCollectorChannelAdapterTest {
     @Test
+    fun `dispatch payload binds immutable management evidence source`() {
+        val payload = provisioningPayload(
+            mapOf(
+                "intentId" to "intent-1",
+                "vlanId" to "110",
+                "safety.managementSourceId" to "0199386e-9718-7000-8000-000000000201",
+                "safety.managementSourceType" to "TOPOLOGY_OBSERVATION",
+                "safety.managementComplete" to "true",
+                "safety.vendor" to "MIKROTIK",
+                "preconditionHash" to "a".repeat(64),
+            ),
+        )
+
+        assertThat(payload.values.managementSourceId).isEqualTo("0199386e-9718-7000-8000-000000000201")
+        assertThat(payload.values.managementSourceType).isEqualTo("TOPOLOGY_OBSERVATION")
+        assertThat(payload.values.intentId).isEqualTo("intent-1")
+        assertThat(payload.values.vlanId).isEqualTo("110")
+    }
+
+    @Test
     fun `same collector stale read still requires guarded dispatched claim before emit`() {
         val tenantId = UUID.fromString("0199386e-9718-7000-8000-000000000101")
         val collectorId = UUID.fromString("0199386e-9718-7000-8000-000000000102")

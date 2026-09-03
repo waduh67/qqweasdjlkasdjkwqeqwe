@@ -13,13 +13,26 @@ import com.duluin.ftth.contract.ProvisioningTarget
 import com.duluin.ftth.contract.acknowledgementKey
 import com.duluin.ftth.provisioning.domain.model.AttemptStatus
 import com.duluin.ftth.provisioning.domain.model.ExecutionPhase
-import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
 import com.duluin.ftth.provisioning.domain.model.ProvisionStep
 import jakarta.persistence.EntityManager
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 import java.time.Clock
+
+internal fun provisioningPayload(attributes: Map<String, String>): ProvisioningPayload {
+    val projected = attributes.filterKeys(WIRE_PAYLOAD_KEYS::contains).toMutableMap()
+    attributes["safety.managementSourceId"]?.let { projected["managementSourceId"] = it }
+    attributes["safety.managementSourceType"]?.let { projected["managementSourceType"] = it }
+    return ProvisioningPayload(projected)
+}
+
+private val WIRE_PAYLOAD_KEYS = setOf(
+    "tenantId", "intentId", "bridge", "vlanId", "tagging", "trunkPorts", "accessPorts", "vlanInterface",
+    "interface", "vlanParent", "pppoeInterface", "pppoeServiceName", "pppoeVlanRange", "poolName",
+    "poolRanges", "interfaceList", "firewallChain", "managementPathProven", "protectedInterfaces",
+    "protectedVlanIds",
+)
 
 @Component
 class ProvisioningCollectorChannelAdapter(
@@ -81,9 +94,7 @@ class ProvisioningCollectorChannelAdapter(
         val plan = plans.findById(execution.planId).orElse(null) ?: return null
         val planStep = planSteps.findById(executionStep.planStepId).orElse(null) ?: return null
         val values = attributes.findByStepIdIn(listOf(planStep.id)).associate { it.attributeKey to it.attributeValue }
-        val payload = ProvisioningPayload(
-            values.filterKeys { it !in setOf(ProvisionStep.PRECONDITION_HASH_ATTRIBUTE, ProvisionPlan.PLAN_PRECONDITION_HASH_ATTRIBUTE) },
-        )
+        val payload = provisioningPayload(values)
         return ProvisioningDispatch(
             planId = plan.id.toString(),
             revision = plan.revision,
