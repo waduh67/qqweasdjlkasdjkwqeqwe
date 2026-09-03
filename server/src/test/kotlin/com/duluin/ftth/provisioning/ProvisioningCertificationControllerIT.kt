@@ -60,13 +60,15 @@ class ProvisioningCertificationControllerIT {
             "/api/platform/tenants/${tenant.id}/provisioning/certifications/$certificationId/revoke",
             platformToken,
             "",
+            mapOf("If-Match" to "1"),
         )
         assertThat(revokeStatus).isEqualTo(200)
     }
 
-    private fun post(url: String, token: String?, body: String): Int {
+    private fun post(url: String, token: String?, body: String, headers: Map<String, String> = emptyMap()): Int {
         val request = post(url).contentType(MediaType.APPLICATION_JSON).content(body)
         if (token != null) request.header("Authorization", "Bearer $token")
+        headers.forEach(request::header)
         return mockMvc.perform(request).andReturn().response.status
     }
 

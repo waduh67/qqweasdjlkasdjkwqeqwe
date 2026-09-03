@@ -30,5 +30,5 @@ fun interface ProvisioningExecutionRunner {
 interface ProvisioningCertificationUseCase {
     fun list(targetTenantId: UUID): List<AdapterCertification>
     fun certify(command: CertifyAdapterCommand): AdapterCertification
-    fun revoke(targetTenantId: UUID, certificationId: UUID): AdapterCertification
+    fun revoke(targetTenantId: UUID, certificationId: UUID, revision: Int): AdapterCertification
 }

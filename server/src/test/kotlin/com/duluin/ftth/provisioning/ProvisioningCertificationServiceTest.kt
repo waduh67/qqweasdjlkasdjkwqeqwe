@@ -11,6 +11,7 @@ import com.duluin.ftth.provisioning.application.port.outbound.ProvisioningDevice
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisioningSafetyEvidenceRepository
 import com.duluin.ftth.provisioning.application.service.CertifyAdapterCommand
 import com.duluin.ftth.provisioning.application.service.ProvisioningCertificationService
+import com.duluin.ftth.provisioning.application.service.ProvisioningAuditPublisher
 import com.duluin.ftth.provisioning.domain.model.AdapterCertification
 import com.duluin.ftth.provisioning.domain.model.DeviceKind
 import com.duluin.ftth.provisioning.domain.model.DeviceReference
@@ -90,7 +91,7 @@ class ProvisioningCertificationServiceTest {
         val certification = platformService.certify(command(targetTenantId))
 
         assertThatThrownBy {
-            service(user(platformAdmin = false, tenantId = targetTenantId)).revoke(targetTenantId, certification.id)
+            service(user(platformAdmin = false, tenantId = targetTenantId)).revoke(targetTenantId, certification.id, 1)
         }.isInstanceOf(AccessDeniedException::class.java)
             .hasMessage("PLATFORM_ADMIN_REQUIRED")
         assertThat(certification.revokedAt).isNull()
@@ -101,7 +102,7 @@ class ProvisioningCertificationServiceTest {
         val platformService = service(user(platformAdmin = true, tenantId = platformTenantId))
         val certification = platformService.certify(command(targetTenantId))
 
-        val revoked = platformService.revoke(targetTenantId, certification.id)
+        val revoked = platformService.revoke(targetTenantId, certification.id, 1)
 
         assertThat(revoked.revokedAt).isEqualTo(now)
         assertThat(revoked.revokedBy).isEqualTo(actorId)
@@ -135,16 +136,19 @@ class ProvisioningCertificationServiceTest {
         capabilityExpiresAt: Instant = now.plusSeconds(300),
         capabilitySupported: Boolean = true,
         returnedFingerprint: DeviceFingerprint = fingerprint(),
-    ) = ProvisioningCertificationService(
-        object : CurrentUserProvider {
+    ): ProvisioningCertificationService {
+        val currentUser = object : CurrentUserProvider {
             override fun currentOrNull() = actor
-        },
-        repository,
-        ProvisioningDeviceOwnershipRepository { _, _ -> ownsTarget },
-        evidenceRepository(capabilityExpiresAt, capabilitySupported, returnedFingerprint),
-        Clock.fixed(now, ZoneOffset.UTC),
-        org.springframework.context.ApplicationEventPublisher { },
-    )
+        }
+        return ProvisioningCertificationService(
+            currentUser,
+            repository,
+            ProvisioningDeviceOwnershipRepository { _, _ -> ownsTarget },
+            evidenceRepository(capabilityExpiresAt, capabilitySupported, returnedFingerprint),
+            Clock.fixed(now, ZoneOffset.UTC),
+            ProvisioningAuditPublisher(currentUser, org.springframework.context.ApplicationEventPublisher { }),
+        )
+    }
 
     private fun user(platformAdmin: Boolean, tenantId: UUID) = AuthenticatedUser(
         actorId,

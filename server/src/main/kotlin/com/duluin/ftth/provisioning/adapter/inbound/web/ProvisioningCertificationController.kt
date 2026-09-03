@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RestController
 import java.time.Instant
 import java.util.UUID
@@ -47,7 +48,8 @@ class ProvisioningCertificationController(
     fun revoke(
         @PathVariable tenantId: UUID,
         @PathVariable certificationId: UUID,
-    ): AdapterCertificationResponse = certifications.revoke(tenantId, certificationId).toResponse()
+        @RequestHeader("If-Match") revision: String,
+    ): AdapterCertificationResponse = certifications.revoke(tenantId, certificationId, parseRevision(revision)).toResponse()
 }
 
 data class CertifyAdapterRequest(
@@ -86,6 +88,7 @@ data class AdapterCertificationResponse(
     val validUntil: Instant,
     val evidenceId: UUID?,
     val revokedAt: Instant?,
+    val revision: Int,
 )
 
 private fun AdapterCertification.toResponse() = AdapterCertificationResponse(
@@ -102,4 +105,5 @@ private fun AdapterCertification.toResponse() = AdapterCertificationResponse(
     validUntil,
     evidenceId,
     revokedAt,
+    if (active) 1 else 2,
 )
