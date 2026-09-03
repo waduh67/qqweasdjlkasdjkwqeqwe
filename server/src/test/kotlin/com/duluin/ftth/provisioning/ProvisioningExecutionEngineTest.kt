@@ -418,7 +418,7 @@ class ProvisioningExecutionEngineTest {
 
     @Test
     fun `verification mismatch is never retried and requires manual reconciliation`() {
-        val fixture = Fixture(policy = ExecutionPolicy(circuitFailureThreshold = 1))
+        val fixture = Fixture()
         val execution = fixture.engine.enqueue(fixture.plan, "verify-mismatch")
         fixture.gateway.verificationMismatchFor += fixture.olt
 
