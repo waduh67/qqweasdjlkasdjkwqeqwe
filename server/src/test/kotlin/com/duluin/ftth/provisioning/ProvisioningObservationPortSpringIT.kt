@@ -1,6 +1,11 @@
 package com.duluin.ftth.provisioning
 
 import com.duluin.ftth.provisioning.application.service.ProvisioningDriftScanner
+import com.duluin.ftth.provisioning.application.service.ProvisioningExecutionEngine
+import com.duluin.ftth.provisioning.application.service.ProvisioningExecutionQueueWorker
+import com.duluin.ftth.provisioning.application.service.ProvisioningWorkflowService
+import com.duluin.ftth.provisioning.application.port.inbound.ProvisioningExecutionRunner
+import com.duluin.ftth.provisioning.application.service.ProvisioningDeviceGateway
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisioningObservationPort
 import com.duluin.ftth.provisioning.adapter.outbound.persistence.ProvisioningObservationPersistenceAdapter
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisioningObservationFailure
@@ -28,6 +33,11 @@ class ProvisioningObservationPortSpringIT {
     @Autowired private lateinit var scanner: ProvisioningDriftScanner
     @Autowired private lateinit var applicationContext: ApplicationContext
     @Autowired private lateinit var tenants: TenantApi
+    @Autowired private lateinit var executionEngine: ProvisioningExecutionEngine
+    @Autowired private lateinit var executionRunner: ProvisioningExecutionRunner
+    @Autowired private lateinit var executionQueue: ProvisioningExecutionQueueWorker
+    @Autowired private lateinit var workflow: ProvisioningWorkflowService
+    @Autowired private lateinit var deviceGateway: ProvisioningDeviceGateway
 
     @Test
     fun `production context wires one read only provisioning observer`() {
@@ -43,6 +53,17 @@ class ProvisioningObservationPortSpringIT {
         assertThat(ProvisioningObservationPort::class.java.methods.map { it.name })
             .contains("observe")
             .doesNotContain("apply", "compensate")
+    }
+
+    @Test
+    fun `production context wires collector backed execution and queue`() {
+        assertThat(executionEngine).isNotNull
+        assertThat(executionRunner).isNotNull
+        assertThat(executionQueue).isNotNull
+        assertThat(workflow).isNotNull
+        assertThat(deviceGateway).isInstanceOf(
+            com.duluin.ftth.provisioning.adapter.outbound.persistence.CollectorBackedProvisioningDeviceGateway::class.java,
+        )
     }
 
     @Test

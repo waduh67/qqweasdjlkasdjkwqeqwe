@@ -32,6 +32,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import org.springframework.stereotype.Component
 
 data class ExecutionPolicy(
     val maxAttempts: Int = 3,
@@ -95,6 +96,7 @@ fun interface RetrySleeper {
     fun sleep(duration: Duration)
 }
 
+@Component
 class ProvisioningExecutionEngine(
     private val plans: ProvisionPlanRepository,
     private val executions: ProvisionExecutionRepository,
