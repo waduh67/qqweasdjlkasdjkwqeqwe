@@ -157,7 +157,7 @@ class ProvisioningCollectorChannelAdapter(
                VALUES (:id, :tenant, :collector, :key, :plan, :revision, :step, :attempt, :target, :operation, :fence,
                 :phase, :success, :completedAt, CAST(:errorCode AS varchar), CAST(:preflightHash AS varchar),
                 CAST(:applyChanged AS boolean), CAST(:applyHash AS varchar), CAST(:verificationMatches AS boolean),
-                 CAST(:verificationHash AS varchar), CAST(:resourceCount AS integer), :stateVlans, CAST(:rollbackSuccess AS boolean),
+                 CAST(:verificationHash AS varchar), CAST(:resourceCount AS integer), CAST(:stateVlans AS text), CAST(:rollbackSuccess AS boolean),
                 CAST(:rollbackHash AS varchar), CAST(:rollbackError AS varchar))
                ON CONFLICT (tenant_id, attempt_id) DO NOTHING""",
         ).setParameter("id", UUID.randomUUID())
@@ -186,7 +186,7 @@ class ProvisioningCollectorChannelAdapter(
             )
             .setParameter(
                 "stateVlans",
-                (result.verification?.state ?: result.preflight?.state)?.vlanIds?.sorted()?.joinToString(",") ?: "",
+                (result.verification?.state ?: result.preflight?.state)?.vlanIds?.sorted()?.joinToString(","),
             )
             .setParameter("rollbackSuccess", result.rollback?.success)
             .setParameter("rollbackHash", result.rollback?.resultingStateHash)
