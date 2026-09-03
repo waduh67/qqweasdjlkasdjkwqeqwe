@@ -5,10 +5,16 @@ import com.duluin.ftth.provisioning.application.port.outbound.ServiceSegmentStat
 import com.duluin.ftth.provisioning.application.port.outbound.SubscriberAccessLifecyclePort
 import com.duluin.ftth.provisioning.application.port.outbound.SubscriptionLifecycleStatusPort
 import com.duluin.ftth.provisioning.application.service.ServiceIntentLifecycleCoordinator
+import com.duluin.ftth.provisioning.application.service.ProvisioningIntentLifecycleService
 import com.duluin.ftth.provisioning.domain.model.IntentStatus
 import com.duluin.ftth.provisioning.domain.model.ServiceIntent
 import com.duluin.ftth.provisioning.domain.model.ServiceIntentSubjectKind
 import com.duluin.ftth.provisioning.domain.model.VlanEncapsulation
+import com.duluin.ftth.collector.adapter.SimulatorBngAdapter
+import com.duluin.ftth.contract.NasTarget
+import com.duluin.ftth.simulator.network.DeterministicNetworkSimulator
+import com.duluin.ftth.simulator.network.SimulatorProfiles
+import com.duluin.ftth.simulator.network.SimulatorTerminalState
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -20,6 +26,29 @@ class ServiceIntentLifecycleIntegrationTest {
     private val subscriptionId = UUID.randomUUID()
     private val siteId = UUID.randomUUID()
     private val profileId = UUID.randomUUID()
+
+    @Test
+    fun `network simulator bng radius and hotspot boundaries preserve one lifecycle`() {
+        val simulator = DeterministicNetworkSimulator(SimulatorProfiles.simulator)
+        val intent = fixedIntent()
+        val segments = Segments(ServiceSegmentState.PENDING)
+        val access = Access()
+        val activation = ServiceIntentLifecycleCoordinator(Intents(intent), segments, access, SubscriptionStatus("ACTIVE"))
+
+        assertThat(simulator.create(320)).isEqualTo(SimulatorTerminalState.SUCCEEDED)
+        segments.state = ServiceSegmentState.APPLIED
+        activation.reconcile()
+        val sessions = SimulatorBngAdapter(clock = { Instant.parse("2026-09-03T12:00:00Z") }).pollSessions(
+            NasTarget("nas-1", "BRAS simulator", "SIMULATOR", "127.0.0.1", "SIMULATOR", listOf("qa-user")),
+        )
+        val hotspotIntent = ServiceIntent.createHotspot(tenantId, siteId, profileId)
+
+        assertThat(access.activations).containsExactly(subscriptionId)
+        assertThat(sessions).hasSize(1)
+        assertThat(hotspotIntent.subjectKind).isEqualTo(ServiceIntentSubjectKind.HOTSPOT_SITE)
+        assertThat(simulator.delete(320)).isEqualTo(SimulatorTerminalState.SUCCEEDED)
+        assertThat(simulator.state().isEmpty()).isTrue()
+    }
 
     @Test
     fun `fixed activation waits for applied segment and reconciliation activates once`() {
@@ -63,6 +92,18 @@ class ServiceIntentLifecycleIntegrationTest {
 
         assertThat(access.isolations).containsExactly(subscriptionId)
         assertThat(segments.state).isEqualTo(ServiceSegmentState.APPLIED)
+    }
+
+    @Test
+    fun `operator suspend and restore update authoritative intent and access owner`() {
+        val intent = fixedIntent()
+        val access = Access()
+        val service = ProvisioningIntentLifecycleService(Intents(intent), access)
+
+        assertThat(service.suspend(intent.id).status).isEqualTo(IntentStatus.SUSPENDED)
+        assertThat(service.restore(intent.id).status).isEqualTo(IntentStatus.ACTIVE)
+        assertThat(access.isolations).containsExactly(subscriptionId)
+        assertThat(access.activations).containsExactly(subscriptionId)
     }
 
     @Test
