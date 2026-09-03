@@ -1,6 +1,9 @@
 import { api } from './client'
 
 export type ProvisioningDeviceKind = 'OLT' | 'SWITCH' | 'ROUTER' | 'BRAS'
+export type ManagedNodeRole = 'OLT' | 'ACCESS_SWITCH' | 'AGGREGATION_SWITCH' | 'BRAS'
+export type AdministrativeStatus = 'ENABLED' | 'DISABLED' | 'EXCLUDED'
+export type VlanAllocationMode = 'SHARED' | 'DEDICATED'
 export type ProvisioningMode = 'PRODUCTION_AUTO_APPLY' | 'DRY_RUN' | 'SIMULATOR'
 export type CertificationStatus = 'CERTIFIED' | 'PROVISIONAL' | 'UNSUPPORTED' | 'REQUIRES_MANUAL'
 export type ExecutionStatus =
@@ -20,18 +23,18 @@ export interface RevisionedResource<T> {
 }
 
 export interface ProvisioningTopology {
-  nodes: Array<{ id: string; name: string; role: string; administrativeStatus: string }>
-  interfaces: Array<{ id: string; nodeId: string; name: string; role: string; administrativeStatus: string }>
-  links: Array<{ id: string; interfaceAId: string; interfaceZId: string; administrativeStatus: string }>
+  nodes: Array<{ id: string; name: string; role: ManagedNodeRole; administrativeStatus: AdministrativeStatus }>
+  interfaces: Array<{ id: string; nodeId: string; name: string; role: 'ACCESS' | 'TRUNK' | 'UPLINK' | 'MANAGEMENT'; administrativeStatus: AdministrativeStatus }>
+  links: Array<{ id: string; interfaceAId: string; interfaceZId: string; administrativeStatus: AdministrativeStatus }>
 }
 
 export interface VlanRangeInput { start: number; endInclusive: number }
-export interface TopologyNodeInput { revision?: number; name: string; role: string; referenceKind?: string | null; referenceId?: string | null; status: string }
+export interface TopologyNodeInput { revision?: number; name: string; role: ManagedNodeRole; referenceKind?: string | null; referenceId?: string | null; status: AdministrativeStatus }
 export interface TopologyInterfaceInput { revision?: number; nodeId: string; name: string; role: string; referenceKind?: string | null; referenceId?: string | null; status: string }
 export interface TopologyLinkInput { revision?: number; interfaceAId: string; interfaceZId: string; status: string }
 export interface VlanPoolInput { revision?: number; name: string; vlanStart: number; vlanEnd: number; reserved?: VlanRangeInput[] }
 export interface SegmentProfileInput { revision?: number; name: string; poolId: string }
-export interface ServiceIntentInput { revision?: number; subscriptionId: string; segmentProfileId: string; dedicatedVlanId?: number | null; status?: string }
+export interface ServiceIntentInput { revision?: number; subscriptionId: string; segmentProfileId: string; allocationMode: VlanAllocationMode; dedicatedVlanId?: number | null; status?: string }
 
 export interface VlanPoolView {
   id: string
@@ -48,10 +51,15 @@ export interface SegmentProfileView {
 
 export interface ServiceIntentView {
   id: string
-  subscriptionId: string
+  subscriptionId: string | null
+  hotspotSiteId: string | null
   segmentProfileId: string
+  allocationMode: VlanAllocationMode
+  dedicatedVlanId: number | null
   status: string
 }
+
+export interface GeneratedPlanView { id: string; intentId: string; revision: number; status: string; contentHash: string }
 
 export interface PlanPreview {
   plan: {
@@ -220,6 +228,19 @@ export const listServiceIntents = (signal?: AbortSignal) =>
   api.request<Array<RevisionedResource<ServiceIntentView>>>('/api/provisioning/intents', { signal })
 export const createServiceIntent = (body: ServiceIntentInput) => api.post<RevisionedResource<ServiceIntentView>>('/api/provisioning/intents', body)
 export const updateServiceIntent = (id: string, body: ServiceIntentInput) => api.put<RevisionedResource<ServiceIntentView>>(`/api/provisioning/intents/${id}`, body)
+export const generateProvisioningPlan = (
+  intentId: string,
+  change: 'CREATE' | 'DELETE' = 'CREATE',
+  signal?: AbortSignal,
+) => api.request<GeneratedPlanView>(`/api/provisioning/intents/${intentId}/plans`, {
+  method: 'POST', body: JSON.stringify({ change }), signal,
+})
+export const suspendProvisioningIntent = (intentId: string) => api.post<string>(`/api/provisioning/intents/${intentId}/suspend`)
+export const restoreProvisioningIntent = (intentId: string) => api.post<string>(`/api/provisioning/intents/${intentId}/restore`)
+export const deprovisionIntent = async (intentId: string, idempotencyKey: string, forceDisconnect = false) =>
+  parseExecution(await api.request<unknown>(`/api/provisioning/intents/${intentId}/deprovision?forceDisconnect=${forceDisconnect}`, {
+    method: 'POST', headers: { 'Idempotency-Key': idempotencyKey },
+  }))
 export const previewProvisioning = (
   planId: string,
   mode: Exclude<ProvisioningMode, 'PRODUCTION_AUTO_APPLY'>,

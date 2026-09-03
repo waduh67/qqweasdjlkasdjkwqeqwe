@@ -5,6 +5,8 @@ import {
   applyProvisioningPlan,
   cancelProvisioningExecution,
   getProvisioningExecution,
+  generateProvisioningPlan,
+  deprovisionIntent,
   listServiceIntents,
   previewProvisioning,
   revokeAdapterCertification,
@@ -26,6 +28,22 @@ describe('provisioning API', () => {
     expect(request).toHaveBeenCalledWith('/api/provisioning/plans/plan-1/apply', {
       method: 'POST',
       headers: { 'Idempotency-Key': 'request-1', 'If-Match': '"7"' },
+    })
+  })
+
+  it('membuat plan dari intent dan mengirim deprovision dengan kunci idempotensi', async () => {
+    const request = vi.spyOn(api, 'request').mockResolvedValue({
+      id: 'execution-1', planId: 'plan-1', revision: 1, status: 'QUEUED',
+    })
+
+    await generateProvisioningPlan('intent-1')
+    await deprovisionIntent('intent-1', 'deprovision-1', true)
+
+    expect(request).toHaveBeenNthCalledWith(1, '/api/provisioning/intents/intent-1/plans', {
+      method: 'POST', body: JSON.stringify({ change: 'CREATE' }), signal: undefined,
+    })
+    expect(request).toHaveBeenNthCalledWith(2, '/api/provisioning/intents/intent-1/deprovision?forceDisconnect=true', {
+      method: 'POST', headers: { 'Idempotency-Key': 'deprovision-1' },
     })
   })
 
