@@ -68,7 +68,7 @@ class ProvisioningResourceControllerIT {
         postJson(
             "/api/provisioning/intents",
             first.token,
-            """{"subscriptionId":"${UUID.randomUUID()}","segmentProfileId":"$profileId","dedicatedVlanId":null}""",
+            """{"subscriptionId":"${UUID.randomUUID()}","segmentProfileId":"$profileId","dedicatedVlanId":null,"accessOltId":"${UUID.randomUUID()}","accessPonPortId":"${UUID.randomUUID()}","accessOnuId":"${UUID.randomUUID()}"}""",
             201,
         )
 

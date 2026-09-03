@@ -131,7 +131,12 @@ class ProvisioningResourceController(
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("@authz.can('provisioning.segment.manage')")
     fun createIntent(@RequestBody request: IntentRequest) =
-        resources.createIntent(request.subscriptionId, request.segmentProfileId, request.allocationMode, request.dedicatedVlanId)
+        resources.createIntent(
+            request.subscriptionId, request.segmentProfileId, request.allocationMode, request.dedicatedVlanId,
+            com.duluin.ftth.provisioning.domain.model.ServiceAccessBinding(
+                request.accessOltId, request.accessPonPortId, request.accessOnuId,
+            ),
+        )
             .let { RevisionedResource(it.revision, it.value.toView()) }
 
     @PutMapping("/intents/{id}")

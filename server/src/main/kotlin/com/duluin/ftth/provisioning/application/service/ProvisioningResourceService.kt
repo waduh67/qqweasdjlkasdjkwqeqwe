@@ -178,6 +178,7 @@ class ProvisioningResourceService(
         profileId: UUID,
         allocationMode: VlanAllocationMode,
         dedicatedVlanId: Int?,
+        accessBinding: com.duluin.ftth.provisioning.domain.model.ServiceAccessBinding,
     ): RevisionedResource<ServiceIntent> {
         profiles.findById(profileId) ?: throw NotFoundException("SEGMENT_PROFILE_NOT_FOUND")
         return saveNew(
@@ -185,6 +186,7 @@ class ProvisioningResourceService(
             intents.save(
                 ServiceIntent.create(
                     tenantId(), subscriptionId, profileId, VlanEncapsulation.SINGLE_TAG, dedicatedVlanId, allocationMode,
+                    accessBinding,
                 ),
             ),
         )
@@ -197,6 +199,7 @@ class ProvisioningResourceService(
         val updated = ServiceIntent.rehydrate(
             current.id, tenantId(), current.subscriptionId, current.hotspotSiteId, profileId, current.encapsulation,
             current.dedicatedVlanId, com.duluin.ftth.provisioning.domain.model.IntentStatus.valueOf(status), current.allocationMode,
+            current.accessBinding,
         )
         val saved = intents.save(updated)
         audit("provisioning.intent.updated", id)
