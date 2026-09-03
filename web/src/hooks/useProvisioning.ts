@@ -25,6 +25,12 @@ export function useProvisioningDraft<T>(initialDraft: T) {
 
   useEffect(() => () => controller.current?.abort(), [])
 
+  const updateDraft = useCallback((nextDraft: T) => {
+    setDraft(nextDraft)
+    setPreview(null)
+    setError(null)
+  }, [])
+
   const previewPlan = useCallback(async (
     planId: string,
     mode: Exclude<ProvisioningMode, 'PRODUCTION_AUTO_APPLY'>,
@@ -44,7 +50,7 @@ export function useProvisioningDraft<T>(initialDraft: T) {
 
   return {
     draft,
-    setDraft,
+    setDraft: updateDraft,
     preview,
     serverPlanRevision: preview?.plan.revision ?? null,
     error,

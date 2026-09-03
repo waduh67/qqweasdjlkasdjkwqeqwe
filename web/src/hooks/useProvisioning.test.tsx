@@ -40,6 +40,20 @@ describe('useProvisioningDraft', () => {
     unmount()
     expect(signals[1]?.aborted).toBe(true)
   })
+
+  it('membuang preview server saat draf plan berubah', async () => {
+    vi.spyOn(provisioningApi, 'previewProvisioning').mockResolvedValue({
+      plan: { id: 'plan-1', tenantId: 'tenant-1', intentId: 'intent-1', revision: 2, status: 'VALIDATED', contentHash: 'hash', preconditionHash: 'before', steps: [] },
+      decision: { allowed: true, code: 'ALLOWED', warnings: [], evidenceIds: [] },
+    })
+    const { result } = renderHook(() => useProvisioningDraft({ planId: 'plan-1' }))
+    await act(() => result.current.previewPlan('plan-1', 'DRY_RUN'))
+
+    act(() => result.current.setDraft({ planId: 'plan-2' }))
+
+    expect(result.current.preview).toBeNull()
+    expect(result.current.serverPlanRevision).toBeNull()
+  })
 })
 
 describe('useProvisioningApply', () => {
