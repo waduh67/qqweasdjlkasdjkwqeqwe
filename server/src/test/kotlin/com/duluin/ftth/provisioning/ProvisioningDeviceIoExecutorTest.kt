@@ -2,6 +2,7 @@ package com.duluin.ftth.provisioning
 
 import com.duluin.ftth.provisioning.application.service.DeviceIoDeadlineExceededException
 import com.duluin.ftth.provisioning.application.service.DeviceIoExecutor
+import com.duluin.ftth.provisioning.application.service.DeviceIoExclusion
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -24,6 +25,7 @@ class ProvisioningDeviceIoExecutorTest {
     private val executor: DeviceIoExecutor = com.duluin.ftth.provisioning.application.service.TransactionSuspendingDeviceIoExecutor(
         txManager,
         Clock.systemUTC(),
+        ImmediateExclusion,
     )
 
     @Test
@@ -32,6 +34,7 @@ class ProvisioningDeviceIoExecutorTest {
             assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isTrue()
 
             val result = executor.execute(
+                "test-device",
                 Instant.now().plusSeconds(2),
                 Duration.ofMillis(50),
                 renewLease = { true },
@@ -51,6 +54,7 @@ class ProvisioningDeviceIoExecutorTest {
 
         assertThatThrownBy {
             executor.execute(
+                "test-device",
                 Instant.now().plusMillis(100),
                 Duration.ofMillis(25),
                 renewLease = { true },
@@ -71,6 +75,7 @@ class ProvisioningDeviceIoExecutorTest {
         val renewals = AtomicInteger()
 
         val result = executor.execute(
+            "test-device",
             Instant.now().plusSeconds(2),
             Duration.ofMillis(25),
             renewLease = { renewals.incrementAndGet(); true },
@@ -93,6 +98,7 @@ class ProvisioningDeviceIoExecutorTest {
         }
 
         executor.execute(
+            "test-device",
             Instant.now().plusSeconds(2),
             Duration.ofMillis(20),
             renewLease = {
@@ -113,5 +119,9 @@ class ProvisioningDeviceIoExecutorTest {
         override fun doBegin(transaction: Any, definition: TransactionDefinition) = Unit
         override fun doCommit(status: DefaultTransactionStatus) = Unit
         override fun doRollback(status: DefaultTransactionStatus) = Unit
+    }
+
+    private object ImmediateExclusion : DeviceIoExclusion {
+        override fun <T : Any> withLock(key: String, operation: () -> T): T = operation()
     }
 }
