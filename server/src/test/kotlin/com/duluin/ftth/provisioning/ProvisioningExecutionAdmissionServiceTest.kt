@@ -8,6 +8,7 @@ import com.duluin.ftth.provisioning.application.port.outbound.ProvisionPlanRepos
 import com.duluin.ftth.provisioning.application.port.inbound.ProvisioningExecutionAdmissionUseCase
 import com.duluin.ftth.provisioning.application.service.ProvisioningExecutionAdmissionService
 import com.duluin.ftth.provisioning.application.service.ProvisioningSafetyGate
+import com.duluin.ftth.provisioning.config.ProvisioningRolloutProperties
 import com.duluin.ftth.provisioning.domain.model.DeviceKind
 import com.duluin.ftth.provisioning.domain.model.DeviceReference
 import com.duluin.ftth.provisioning.domain.model.ProvisionExecution
@@ -33,7 +34,9 @@ class ProvisioningExecutionAdmissionServiceTest {
             override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode) =
                 PolicyDecision(true, PolicyCode.AUTO_APPLY_ALLOWED)
         }
-        val admission = ProvisioningExecutionAdmissionService(plans, executions, gate)
+        val admission = ProvisioningExecutionAdmissionService(
+            plans, executions, gate, ProvisioningRolloutProperties(autoApplyEnabled = true),
+        )
 
         val first = admission.admit(firstPlan.id, "request-key")
         val replay = admission.admit(firstPlan.id, "request-key")
@@ -57,12 +60,37 @@ class ProvisioningExecutionAdmissionServiceTest {
             }
         }
         val admission: ProvisioningExecutionAdmissionUseCase =
-            ProvisioningExecutionAdmissionService(plans, executions, gate)
+            ProvisioningExecutionAdmissionService(
+                plans, executions, gate, ProvisioningRolloutProperties(autoApplyEnabled = true),
+            )
 
         assertThatThrownBy { admission.admit(plan.id, "task-12") }
             .isInstanceOf(ValidationException::class.java)
             .hasMessage(PolicyCode.UNCERTIFIED_CAPABILITY.name)
         assertThat(evaluatedPlan).isSameAs(plan)
+        assertThat(executions.values).isEmpty()
+    }
+
+    @Test
+    fun `fresh production configuration rejects apply before safety evaluation or persistence`() {
+        val plans = PlanRepository()
+        val executions = ExecutionRepository()
+        val plan = validatedPlan().also(plans::save)
+        var evaluated = false
+        val gate = object : ProvisioningSafetyGate {
+            override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode): PolicyDecision {
+                evaluated = true
+                return PolicyDecision(true, PolicyCode.AUTO_APPLY_ALLOWED)
+            }
+        }
+        val admission = ProvisioningExecutionAdmissionService(
+            plans, executions, gate, ProvisioningRolloutProperties(),
+        )
+
+        assertThatThrownBy { admission.admit(plan.id, "disabled-auto-apply") }
+            .isInstanceOf(ConflictException::class.java)
+            .hasMessage("PRODUCTION_AUTO_APPLY_DISABLED")
+        assertThat(evaluated).isFalse()
         assertThat(executions.values).isEmpty()
     }
 
