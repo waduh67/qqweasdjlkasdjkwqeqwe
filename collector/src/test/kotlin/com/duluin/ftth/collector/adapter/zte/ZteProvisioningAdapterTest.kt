@@ -169,7 +169,7 @@ class ZteProvisioningAdapterTest {
     )
 }
 
-private class ZteC320V201P3Fixture(
+internal class ZteC320V201P3Fixture(
     private val firmware: String = "V2.0.1P3",
     private val overrides: Map<String, String> = emptyMap(),
 ) : ZteCliTransport {
