@@ -2,6 +2,7 @@ package com.duluin.ftth.provisioning
 
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
+import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisionExecutionRepository
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisionPlanRepository
 import com.duluin.ftth.provisioning.application.port.inbound.ProvisioningExecutionAdmissionUseCase
@@ -22,6 +23,27 @@ import org.junit.jupiter.api.Test
 import java.util.UUID
 
 class ProvisioningExecutionAdmissionServiceTest {
+    @Test
+    fun `identical idempotency key replays one execution and rejects another plan`() {
+        val plans = PlanRepository()
+        val executions = ExecutionRepository()
+        val firstPlan = validatedPlan().also(plans::save)
+        val secondPlan = validatedPlan().also(plans::save)
+        val gate = object : ProvisioningSafetyGate {
+            override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode) =
+                PolicyDecision(true, PolicyCode.AUTO_APPLY_ALLOWED)
+        }
+        val admission = ProvisioningExecutionAdmissionService(plans, executions, gate)
+
+        val first = admission.admit(firstPlan.id, "request-key")
+        val replay = admission.admit(firstPlan.id, "request-key")
+
+        assertThat(replay.id).isEqualTo(first.id)
+        assertThatThrownBy { admission.admit(secondPlan.id, "request-key") }
+            .isInstanceOf(ConflictException::class.java)
+            .hasMessage("EXECUTION_IDEMPOTENCY_KEY_REUSED")
+    }
+
     @Test
     fun `production admission reloads authoritative plan and rejects before execution persistence`() {
         val plans = PlanRepository()

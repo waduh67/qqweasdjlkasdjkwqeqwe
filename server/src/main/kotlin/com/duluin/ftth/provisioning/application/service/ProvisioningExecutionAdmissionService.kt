@@ -16,14 +16,25 @@ class ProvisioningExecutionAdmissionService(
     private val plans: ProvisionPlanRepository,
     private val executions: ProvisionExecutionRepository,
     private val safetyGate: ProvisioningSafetyGate,
+    private val metrics: ProvisioningMetrics? = null,
 ) : ProvisioningExecutionAdmissionUseCase {
     @Transactional
     override fun admit(planId: UUID, keySuffix: String): ProvisionExecution {
         val plan = plans.findById(planId) ?: throw ValidationException("PLAN_NOT_FOUND")
         if (plan.status != PlanStatus.VALIDATED) throw ValidationException("PLAN_NOT_VALIDATED")
-        safetyGate.requireAllowed(plan, ExecutionMode.PRODUCTION_AUTO_APPLY)
-        val key = "${plan.intentId}:${plan.revision}:$keySuffix"
-        executions.findByIdempotencyKey(key)?.let { return it }
-        return executions.save(ProvisionExecution.queue(plan.tenantId, plan.intentId, plan.id, key))
+        val decision = safetyGate.evaluate(plan, ExecutionMode.PRODUCTION_AUTO_APPLY)
+        if (!decision.allowed) {
+            if (decision.code.name.contains("CERTIFICATION") || decision.code.name.contains("CERTIFIED")) {
+                metrics?.certificationBlock()
+            }
+            throw ValidationException(decision.code.name)
+        }
+        executions.findByIdempotencyKey(keySuffix)?.let { existing ->
+            if (existing.planId != plan.id) throw com.duluin.ftth.common.domain.error.ConflictException(
+                "EXECUTION_IDEMPOTENCY_KEY_REUSED",
+            )
+            return existing
+        }
+        return executions.save(ProvisionExecution.queue(plan.tenantId, plan.intentId, plan.id, keySuffix))
     }
 }
