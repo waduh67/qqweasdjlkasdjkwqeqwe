@@ -9,6 +9,8 @@ import java.util.UUID
 
 enum class ServiceIntentSubjectKind { FIXED_SUBSCRIPTION, HOTSPOT_SITE }
 
+data class ServiceAccessBinding(val oltId: UUID, val ponPortId: UUID, val onuId: UUID)
+
 class ServiceIntent private constructor(
     override val id: UUID,
     val tenantId: UUID,
@@ -19,6 +21,7 @@ class ServiceIntent private constructor(
     val dedicatedVlanId: Int?,
     val allocationMode: VlanAllocationMode,
     status: IntentStatus,
+    val accessBinding: ServiceAccessBinding? = null,
 ) : ProvisioningAggregate {
     val subjectKind: ServiceIntentSubjectKind
         get() = if (subscriptionId != null) ServiceIntentSubjectKind.FIXED_SUBSCRIPTION else ServiceIntentSubjectKind.HOTSPOT_SITE
@@ -58,9 +61,10 @@ class ServiceIntent private constructor(
             encapsulation: VlanEncapsulation = VlanEncapsulation.SINGLE_TAG,
             dedicatedVlanId: Int? = null,
             allocationMode: VlanAllocationMode = if (dedicatedVlanId == null) VlanAllocationMode.SHARED else VlanAllocationMode.DEDICATED,
+            accessBinding: ServiceAccessBinding? = null,
         ) = ServiceIntent(
             UuidV7.generate(), tenantId, subscriptionId, null, segmentProfileId, encapsulation, dedicatedVlanId, allocationMode,
-            IntentStatus.DRAFT,
+            IntentStatus.DRAFT, accessBinding,
         )
 
         fun createHotspot(
@@ -72,7 +76,7 @@ class ServiceIntent private constructor(
             allocationMode: VlanAllocationMode = if (dedicatedVlanId == null) VlanAllocationMode.SHARED else VlanAllocationMode.DEDICATED,
         ) = ServiceIntent(
             UuidV7.generate(), tenantId, null, hotspotSiteId, segmentProfileId, encapsulation, dedicatedVlanId, allocationMode,
-            IntentStatus.DRAFT,
+            IntentStatus.DRAFT, null,
         )
 
         fun rehydrate(
@@ -84,7 +88,8 @@ class ServiceIntent private constructor(
             dedicatedVlanId: Int?,
             status: IntentStatus,
             allocationMode: VlanAllocationMode = if (dedicatedVlanId == null) VlanAllocationMode.SHARED else VlanAllocationMode.DEDICATED,
-        ) = ServiceIntent(id, tenantId, subscriptionId, null, segmentProfileId, encapsulation, dedicatedVlanId, allocationMode, status)
+            accessBinding: ServiceAccessBinding? = null,
+        ) = ServiceIntent(id, tenantId, subscriptionId, null, segmentProfileId, encapsulation, dedicatedVlanId, allocationMode, status, accessBinding)
 
         fun rehydrate(
             id: UUID,
@@ -96,8 +101,9 @@ class ServiceIntent private constructor(
             dedicatedVlanId: Int?,
             status: IntentStatus,
             allocationMode: VlanAllocationMode = if (dedicatedVlanId == null) VlanAllocationMode.SHARED else VlanAllocationMode.DEDICATED,
+            accessBinding: ServiceAccessBinding? = null,
         ) = ServiceIntent(
-            id, tenantId, subscriptionId, hotspotSiteId, segmentProfileId, encapsulation, dedicatedVlanId, allocationMode, status,
+            id, tenantId, subscriptionId, hotspotSiteId, segmentProfileId, encapsulation, dedicatedVlanId, allocationMode, status, accessBinding,
         )
     }
 }

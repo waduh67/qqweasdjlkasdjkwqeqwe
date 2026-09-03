@@ -60,6 +60,9 @@ class ServiceIntentJpaEntity(
     @Enumerated(EnumType.STRING) @Column(name = "allocation_mode", nullable = false, length = 20)
     val allocationMode: com.duluin.ftth.provisioning.domain.model.VlanAllocationMode,
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 30) var status: IntentStatus,
+    @Column(name = "access_olt_id", updatable = false) val accessOltId: UUID? = null,
+    @Column(name = "access_pon_port_id", updatable = false) val accessPonPortId: UUID? = null,
+    @Column(name = "access_onu_id", updatable = false) val accessOnuId: UUID? = null,
 ) : TenantAwareJpaEntity(id)
 
 @Entity

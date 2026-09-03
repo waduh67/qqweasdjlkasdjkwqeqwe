@@ -42,6 +42,27 @@ class VlanAllocatorPersistenceIT {
     @PersistenceContext private lateinit var em: EntityManager
 
     @Test
+    fun `shared allocation blast radius counts every active fixed subscriber reference`() {
+        val tenantId = tenantApi.ensureTenant("allocator-impact-${UUID.randomUUID().toString().take(8)}", "allocator").id
+        asTenant(tenantId) {
+            val pool = pools.save(VlanPool.create(tenantId, "impact-${UUID.randomUUID()}", VlanRange(410, 419)))
+            val profile = profiles.save(SegmentProfile.create(tenantId, "impact-profile-${UUID.randomUUID()}", pool.id))
+            val first = intents.save(ServiceIntent.create(tenantId, UuidV7.generate(), profile.id)).also {
+                it.activate(); intents.save(it)
+            }
+            val second = intents.save(ServiceIntent.create(tenantId, UuidV7.generate(), profile.id)).also {
+                it.activate(); intents.save(it)
+            }
+            val key = SharedAllocationKey(tenantId, UuidV7.generate(), UuidV7.generate(), UuidV7.generate(), profile.id)
+            allocator.allocateShared(SharedVlanAllocationCommand(pool.id, first.id, key, first.id))
+            allocator.allocateShared(SharedVlanAllocationCommand(pool.id, second.id, key, second.id))
+            em.flush()
+
+            assertThat(pools.affectedActiveSubscriberCount(first.id)).isEqualTo(2)
+        }
+    }
+
+    @Test
     fun `shared scope and reference count persist until safe release then lowest VLAN is reused`() {
         val tenantId = tenantApi.ensureTenant("allocator-${UUID.randomUUID().toString().take(8)}", "allocator").id
         asTenant(tenantId) {

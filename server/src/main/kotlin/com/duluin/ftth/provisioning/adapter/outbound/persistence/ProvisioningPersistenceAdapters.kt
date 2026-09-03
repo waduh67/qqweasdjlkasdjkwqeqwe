@@ -77,6 +77,9 @@ class ServiceIntentPersistenceAdapter(private val jpa: ServiceIntentJpaRepositor
             value.dedicatedVlanId,
             value.allocationMode,
             value.status,
+            value.accessBinding?.oltId,
+            value.accessBinding?.ponPortId,
+            value.accessBinding?.onuId,
         )
         return jpa.save(entity).toDomain()
     }
@@ -87,6 +90,9 @@ class ServiceIntentPersistenceAdapter(private val jpa: ServiceIntentJpaRepositor
     private fun ServiceIntentJpaEntity.toDomain() = ServiceIntent.rehydrate(
         id, tenant(tenantId), subscriptionId, hotspotSiteId, segmentProfileId, encapsulation, dedicatedVlanId, status,
         allocationMode,
+        accessOltId?.let { olt -> accessPonPortId?.let { pon -> accessOnuId?.let { onu ->
+            com.duluin.ftth.provisioning.domain.model.ServiceAccessBinding(olt, pon, onu)
+        } } },
     )
 
     override fun findBySubscriptionId(subscriptionId: UUID): ServiceIntent? =
@@ -196,6 +202,26 @@ class VlanPoolPersistenceAdapter(
     override fun findAll(): List<VlanPool> = pools.findAll().mapNotNull { findById(it.id) }
 
     override fun deleteById(id: UUID) = pools.deleteById(id)
+
+    @Transactional(readOnly = true)
+    override fun affectedActiveSubscriberCount(intentId: UUID): Int = (entityManager.createNativeQuery(
+        """SELECT count(DISTINCT intent.subscription_id)
+           FROM provisioning_vlan_allocation_reference affected
+           JOIN provisioning_vlan_allocation allocation ON allocation.id = affected.allocation_id
+           JOIN provisioning_service_intent intent ON intent.id = affected.reference_id
+           WHERE allocation.active = true
+             AND affected.reference_kind = 'SERVICE_INTENT'
+             AND intent.subscription_id IS NOT NULL
+             AND (intent.status = 'ACTIVE' OR intent.id = :intentId)
+             AND allocation.id = (
+                 SELECT owner.allocation_id
+                 FROM provisioning_vlan_allocation_reference owner
+                 JOIN provisioning_vlan_allocation owned ON owned.id = owner.allocation_id
+                 WHERE owner.reference_kind = 'SERVICE_INTENT' AND owner.reference_id = :intentId
+                   AND owned.active = true
+                 LIMIT 1
+             )""",
+    ).setParameter("intentId", intentId).singleResult as Number).toInt()
 
     @Transactional
     override fun lockDeviceAndFindActiveVlans(tenantId: UUID, device: DeviceReference): Set<Int> {

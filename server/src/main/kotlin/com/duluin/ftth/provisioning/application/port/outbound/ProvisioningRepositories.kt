@@ -32,6 +32,7 @@ interface VlanPoolRepository {
     fun findAll(): List<VlanPool> = emptyList()
     fun deleteById(id: UUID): Unit = error("VLAN_POOL_DELETE_UNSUPPORTED")
     fun lockDeviceAndFindActiveVlans(tenantId: UUID, device: DeviceReference): Set<Int>
+    fun affectedActiveSubscriberCount(intentId: UUID): Int = error("AFFECTED_SUBSCRIBER_COUNT_UNSUPPORTED")
 }
 interface ServiceIntentRepository {
     fun save(value: ServiceIntent): ServiceIntent
