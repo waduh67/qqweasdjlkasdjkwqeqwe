@@ -1,45 +1,54 @@
-/** Setelan payment gateway tenant (module `billing`): Pivot (agregator platform) atau Manual. */
+/** Setelan payment gateway tenant (module `billing`): Pivot, Tripay BYOK, atau Manual. */
 
 import { api } from './client'
 
-/** Penyedia pembayaran tenant: PIVOT (via akun platform) atau MANUAL (transfer/QRIS). */
-export type PaymentProvider = 'PIVOT' | 'MANUAL'
+/** Penyedia pembayaran tenant: PIVOT (via akun platform), TRIPAY (akun tenant), atau MANUAL. */
+export type PaymentProvider = 'PIVOT' | 'TRIPAY' | 'MANUAL'
 
 export const PAYMENT_PROVIDER_LABEL: Record<PaymentProvider, string> = {
   PIVOT: 'Pivot',
+  TRIPAY: 'Tripay (akun sendiri)',
   MANUAL: 'Manual (tunai/transfer)',
 }
 
 /**
- * Setelan seperti dibaca dari server. Tak ada kredensial per-tenant lagi — penagihan otomatis
- * memakai akun master Pivot platform + sub-account tenant. Field manual (transfer/QRIS)
- * non-rahasia, ditampilkan apa adanya; `qrisImageSet` hanya penanda gambar sudah terunggah.
+ * Setelan seperti dibaca dari server. Kredensial Tripay bersifat write-only: GET hanya membawa
+ * penanda apakah API Key dan Private Key sudah tersimpan, bukan nilainya.
  */
 export interface PaymentGatewaySettingsView {
-  provider: PaymentProvider
-  enabled: boolean
+  readonly provider: PaymentProvider
+  readonly enabled: boolean
   // Pembayaran manual (transfer/QRIS) — non-rahasia, ditampilkan apa adanya.
-  manualTransferEnabled: boolean
-  bankName: string | null
-  accountNumber: string | null
-  accountHolder: string | null
-  manualQrisEnabled: boolean
+  readonly manualTransferEnabled: boolean
+  readonly bankName: string | null
+  readonly accountNumber: string | null
+  readonly accountHolder: string | null
+  readonly manualQrisEnabled: boolean
   /** Apakah gambar QRIS sudah terunggah (byte di object storage). */
-  qrisImageSet: boolean
+  readonly qrisImageSet: boolean
+  // Tripay BYOK — kredensialnya tak pernah dikembalikan server.
+  readonly tripayMerchantCode: string | null
+  readonly tripayApiKeySet: boolean
+  readonly tripayPrivateKeySet: boolean
+  readonly tripaySandbox: boolean
 }
 
 /**
- * Perubahan setelan. Tak ada kredensial — hanya pilih penyedia (PIVOT/MANUAL), status aktif,
- * dan konfigurasi pembayaran manual. Gambar QRIS diunggah terpisah (multipart).
+ * Perubahan setelan. Tripay API Key dan Private Key write-only; `null` atau string kosong
+ * mempertahankan nilai tersimpan. Gambar QRIS diunggah terpisah (multipart).
  */
 export interface UpdatePaymentGatewaySettingsRequest {
-  provider: PaymentProvider
-  enabled: boolean
-  manualTransferEnabled: boolean
-  bankName: string | null
-  accountNumber: string | null
-  accountHolder: string | null
-  manualQrisEnabled: boolean
+  readonly provider: PaymentProvider
+  readonly enabled: boolean
+  readonly manualTransferEnabled: boolean
+  readonly bankName: string | null
+  readonly accountNumber: string | null
+  readonly accountHolder: string | null
+  readonly manualQrisEnabled: boolean
+  readonly tripayMerchantCode: string | null
+  readonly tripayApiKey: string | null
+  readonly tripayPrivateKey: string | null
+  readonly tripaySandbox: boolean
 }
 
 export function getPaymentGatewaySettings(): Promise<PaymentGatewaySettingsView> {
@@ -66,4 +75,3 @@ export function uploadQrisImage(file: File): Promise<PaymentGatewaySettingsView>
 export function deleteQrisImage(): Promise<PaymentGatewaySettingsView> {
   return api.del(QRIS_IMAGE_PATH)
 }
-

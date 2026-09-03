@@ -9,14 +9,15 @@ import java.util.UUID
  *  - [PIVOT]  otomatis lewat sub-account Pivot tenant (charge on-behalf + split fee platform).
  *             Butuh sub-account terprovisi ([TenantPivotAccount]); bila belum siap, resolver
  *             jatuh ke [MANUAL].
+ *  - [TRIPAY] akun Tripay milik tenant sendiri (BYOK).
  *  - [MANUAL] pembayaran luar-band (tunai/transfer/QRIS) + webhook bersecret bersama. Juga
  *             fallback saat tenant belum/nonaktif memakai Pivot.
  */
-enum class PaymentProvider { PIVOT, MANUAL }
+enum class PaymentProvider { PIVOT, TRIPAY, MANUAL }
 
 /**
- * Penanda asal charge Pivot:
- *  - [BYO]      MANUAL / fallback — bukan Pivot.
+ * Penanda asal charge otomatis:
+ *  - [BYO]      TRIPAY atau MANUAL / fallback — bukan charge akun platform.
  *  - [PLATFORM] transaksi Pivot berjalan di akun MASTER platform ([ResolvedGatewayContext.apiKey]),
  *               untuk pelanggan tenant via `x-submerchant-id` ([ResolvedGatewayContext.subAccountId]).
  *
@@ -28,7 +29,8 @@ enum class GatewayMode { BYO, PLATFORM }
 /**
  * Kredensial gateway yang SUDAH teresolusi & terdekripsi — bentuk datar siap-pakai yang dipakai
  * adapter untuk membuat charge / memverifikasi callback. Untuk model Pivot "business as platform",
- * kredensial SELALU akun master ([apiKey]/[secretKey]); aksi atas nama tenant lewat [subAccountId].
+ * kredensial memakai akun master ([apiKey]/[secretKey]); aksi atas nama tenant lewat [subAccountId].
+ * Untuk Tripay BYOK, [apiKey] dan [secretKey] adalah credential tenant sendiri.
  *
  * [provider] String (bukan enum) agar registry bisa memilih adapter apa pun — termasuk `MANUAL`.
  *
@@ -39,7 +41,6 @@ enum class GatewayMode { BYO, PLATFORM }
 data class ResolvedGatewayContext(
     val provider: String,
     val mode: GatewayMode,
-    /** PIVOT: `X-MERCHANT-SECRET` master. Null untuk MANUAL. */
     val secretKey: String?,
     /** Token verifikasi callback. PIVOT: Callback API Key master. MANUAL: shared secret global. */
     val webhookToken: String?,
@@ -51,9 +52,9 @@ data class ResolvedGatewayContext(
      * Null untuk charge SaaS/MANUAL.
      */
     val tenantSlug: String? = null,
-    /** PIVOT: `X-MERCHANT-ID` master (auth + tujuan split-routing fee platform). */
     val apiKey: String? = null,
-    /** PIVOT: lingkungan Pivot (sandbox vs produksi). */
+    /** TRIPAY: merchant code tenant untuk signature create-transaction. */
+    val merchantCode: String? = null,
     val sandbox: Boolean = false,
     /** PIVOT: fee platform per transaksi (minor unit IDR). 0 = tanpa split-routing. */
     val platformFeeMinor: Long = 0,
@@ -90,10 +91,56 @@ data class ManualPaymentConfig(
 }
 
 /**
+ * Kredensial Tripay per tenant. [apiKey] dan [privateKey] hanya berada di memori domain; adapter
+ * persistence menyimpannya sebagai ciphertext dan API pengaturan hanya mengekspos penanda `*Set`.
+ */
+class TripayPaymentConfig(
+    val merchantCode: String? = null,
+    apiKey: String? = null,
+    privateKey: String? = null,
+    val sandbox: Boolean = true,
+) {
+    private val apiKeyValue = apiKey
+    private val privateKeyValue = privateKey
+
+    val ready: Boolean
+        get() = !merchantCode.isNullOrBlank() && !apiKeyValue.isNullOrBlank() && !privateKeyValue.isNullOrBlank()
+
+    fun apiKeyForGateway(): String? = apiKeyValue
+
+    fun privateKeyForGateway(): String? = privateKeyValue
+
+    fun normalized(): TripayPaymentConfig = TripayPaymentConfig(
+        merchantCode = merchantCode?.trim()?.takeIf { it.isNotEmpty() },
+        apiKey = apiKeyValue?.trim()?.takeIf { it.isNotEmpty() },
+        privateKey = privateKeyValue?.trim()?.takeIf { it.isNotEmpty() },
+        sandbox = sandbox,
+    )
+
+    override fun equals(other: Any?): Boolean =
+        other is TripayPaymentConfig &&
+            merchantCode == other.merchantCode &&
+            apiKeyValue == other.apiKeyValue &&
+            privateKeyValue == other.privateKeyValue &&
+            sandbox == other.sandbox
+
+    override fun hashCode(): Int =
+        listOf(merchantCode, apiKeyValue, privateKeyValue, sandbox).hashCode()
+
+    override fun toString(): String =
+        "TripayPaymentConfig(merchantCode=$merchantCode, apiKeySet=${!apiKeyValue.isNullOrBlank()}, " +
+            "privateKeySet=${!privateKeyValue.isNullOrBlank()}, sandbox=$sandbox)"
+
+    companion object {
+        val EMPTY = TripayPaymentConfig()
+    }
+}
+
+/**
  * Setelan penagihan satu tenant (satu baris per tenant): metode aktif ([provider]) + konfigurasi
- * pembayaran MANUAL. TIDAK lagi menyimpan kredensial gateway apa pun — model BYOK dibuang; charge
- * Pivot memakai akun MASTER platform ([PivotMasterConfig]) atas nama sub-account tenant
- * ([TenantPivotAccount]). Yang tersisa di sini murni non-rahasia (metode + instruksi manual).
+ * pembayaran MANUAL, serta kredensial Tripay BYOK. Charge Pivot memakai akun MASTER platform
+ * ([PivotMasterConfig]) atas nama sub-account tenant ([TenantPivotAccount]); rahasia Tripay
+ * dienkripsi di persistence dan tidak pernah dikembalikan oleh API.
  *
  * Default aman: [PaymentProvider.MANUAL] / MATI — perilaku lama (webhook MANUAL bersecret global)
  * berlaku sampai tenant mengaktifkan Pivot dengan sadar.
@@ -104,6 +151,7 @@ class TenantPaymentGateway private constructor(
     provider: PaymentProvider,
     enabled: Boolean,
     manual: ManualPaymentConfig,
+    tripay: TripayPaymentConfig,
     qrisStorageKey: String?,
     qrisContentType: String?,
 ) {
@@ -115,6 +163,10 @@ class TenantPaymentGateway private constructor(
 
     /** Metode pembayaran manual (tunai/transfer/QRIS). Non-rahasia; disunting operator lewat [update]. */
     var manual: ManualPaymentConfig = manual
+        private set
+
+    /** Konfigurasi Tripay BYOK; dua key hanya dipakai resolver/adapter, bukan view API. */
+    var tripay: TripayPaymentConfig = tripay
         private set
 
     /** Object-storage key gambar QRIS (satu per tenant). Dikelola [attachQrisImage]/[clearQrisImage]. */
@@ -131,15 +183,20 @@ class TenantPaymentGateway private constructor(
     /** Apakah tenant memakai Pivot otomatis (bukan MANUAL) untuk menagih pelanggannya. */
     val usesPivot: Boolean get() = enabled && provider == PaymentProvider.PIVOT
 
+    /** Apakah Tripay BYOK siap dipakai untuk menerbitkan charge otomatis. */
+    val usesTripay: Boolean get() = enabled && provider == PaymentProvider.TRIPAY && tripay.ready
+
     /** Sunting metode aktif + konfigurasi manual (semua non-rahasia). */
     fun update(
         provider: PaymentProvider,
         enabled: Boolean,
         manual: ManualPaymentConfig = ManualPaymentConfig.EMPTY,
+        tripay: TripayPaymentConfig = TripayPaymentConfig.EMPTY,
     ) {
         this.provider = provider
         this.enabled = enabled
         this.manual = manual.normalized()
+        this.tripay = tripay.normalized()
     }
 
     /** Pasang (atau ganti) gambar QRIS yang sudah tersimpan di object storage. */
@@ -163,6 +220,7 @@ class TenantPaymentGateway private constructor(
             provider = PaymentProvider.MANUAL,
             enabled = false,
             manual = ManualPaymentConfig.EMPTY,
+            tripay = TripayPaymentConfig.EMPTY,
             qrisStorageKey = null,
             qrisContentType = null,
         )
@@ -173,10 +231,11 @@ class TenantPaymentGateway private constructor(
             provider: PaymentProvider,
             enabled: Boolean,
             manual: ManualPaymentConfig,
+            tripay: TripayPaymentConfig = TripayPaymentConfig.EMPTY,
             qrisStorageKey: String?,
             qrisContentType: String?,
         ): TenantPaymentGateway = TenantPaymentGateway(
-            id, tenantId, provider, enabled, manual, qrisStorageKey, qrisContentType,
+            id, tenantId, provider, enabled, manual, tripay, qrisStorageKey, qrisContentType,
         )
     }
 }

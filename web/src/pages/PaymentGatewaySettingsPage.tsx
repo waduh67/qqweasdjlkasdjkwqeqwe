@@ -60,11 +60,32 @@ import {
  *  3. **Wajib konfirmasi** — menyimpan memunculkan ringkasan diff yang harus dikonfirmasi.
  *
  * Penagihan otomatis memakai **Pivot** lewat akun master platform + sub-account tenant (dikelola di
- * kartu "Sub-account Pivot" di bawah, endpoint terpisah). Tak ada lagi kredensial per-tenant.
+ * kartu "Sub-account Pivot" di bawah, endpoint terpisah), atau **Tripay** dengan kredensial akun
+ * tenant yang write-only.
  */
 
-/** Metode pembayaran tenant: PIVOT (otomatis via platform) atau MANUAL (transfer/QRIS). */
-const PROVIDER_OPTIONS: PaymentProvider[] = ['PIVOT', 'MANUAL']
+const PROVIDER_OPTIONS: PaymentProvider[] = ['PIVOT', 'TRIPAY', 'MANUAL']
+
+/**
+ * Kredensial Tripay tidak pernah menjadi bagian dari respons GET atau state `form`. Draf ini hanya
+ * hidup di browser hingga penyimpanan berhasil; string kosong diterjemahkan menjadi `null` agar
+ * server mempertahankan kredensial yang sudah tersimpan.
+ */
+type TripaySecretDraft = {
+  readonly apiKey: string
+  readonly privateKey: string
+}
+
+type TripayValidation = {
+  readonly merchantCodeMissing: boolean
+  readonly apiKeyMissing: boolean
+  readonly privateKeyMissing: boolean
+}
+
+const EMPTY_TRIPAY_SECRET_DRAFT: TripaySecretDraft = {
+  apiKey: '',
+  privateKey: '',
+}
 
 /** Profil sub-account kosong (string kosong agar input terkontrol, bukan null). */
 const EMPTY_PROFILE: PivotProfileRequest = {
@@ -104,12 +125,14 @@ export function PaymentGatewaySettingsPage() {
   const [qrisFile, setQrisFile] = useState<File | null>(null)
   const [qrisRemoved, setQrisRemoved] = useState(false)
   const [qrisVersion, setQrisVersion] = useState(0)
+  const [tripaySecretDraft, setTripaySecretDraft] = useState<TripaySecretDraft>(EMPTY_TRIPAY_SECRET_DRAFT)
 
   useEffect(() => {
     getPaymentGatewaySettings()
       .then((s) => {
         setSaved(s)
         setForm(s)
+        setTripaySecretDraft(EMPTY_TRIPAY_SECRET_DRAFT)
       })
       .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Gagal memuat setelan gateway'))
       .finally(() => setLoading(false))
@@ -139,27 +162,49 @@ export function PaymentGatewaySettingsPage() {
     if (form.manualQrisEnabled !== saved.manualQrisEnabled) {
       out.push({ label: 'QRIS', from: onOff(saved.manualQrisEnabled), to: onOff(form.manualQrisEnabled) })
     }
+    const savedTripayMerchantCode = saved.tripayMerchantCode?.trim() ?? ''
+    const formTripayMerchantCode = form.tripayMerchantCode?.trim() ?? ''
+    if (formTripayMerchantCode !== savedTripayMerchantCode) {
+      out.push({ label: 'Merchant code Tripay', from: savedTripayMerchantCode || 'kosong', to: formTripayMerchantCode || 'kosong' })
+    }
+    if (form.tripaySandbox !== saved.tripaySandbox) {
+      out.push({ label: 'Mode Tripay', from: saved.tripaySandbox ? 'Sandbox' : 'Produksi', to: form.tripaySandbox ? 'Sandbox' : 'Produksi' })
+    }
+    if (tripaySecretDraft.apiKey.trim()) {
+      out.push({ label: 'API Key Tripay', from: saved.tripayApiKeySet ? 'tersimpan' : 'belum disimpan', to: 'diperbarui' })
+    }
+    if (tripaySecretDraft.privateKey.trim()) {
+      out.push({ label: 'Private Key Tripay', from: saved.tripayPrivateKeySet ? 'tersimpan' : 'belum disimpan', to: 'diperbarui' })
+    }
     if (qrisFile) {
       out.push({ label: 'Gambar QRIS', from: saved.qrisImageSet ? 'tersimpan' : 'kosong', to: 'unggah gambar baru' })
     } else if (qrisRemoved && saved.qrisImageSet) {
       out.push({ label: 'Gambar QRIS', from: 'tersimpan', to: 'dihapus' })
     }
     return out
-  }, [saved, form, qrisFile, qrisRemoved])
+  }, [saved, form, qrisFile, qrisRemoved, tripaySecretDraft])
 
   const dirty = changes.length > 0
-  const enabling = !!saved && !!form && form.provider === 'PIVOT' && saved.provider !== 'PIVOT'
+  const tripayValidation: TripayValidation = {
+    merchantCodeMissing: form?.provider === 'TRIPAY' && !form.tripayMerchantCode?.trim(),
+    apiKeyMissing: form?.provider === 'TRIPAY' && !form.tripayApiKeySet && !tripaySecretDraft.apiKey.trim(),
+    privateKeyMissing: form?.provider === 'TRIPAY' && !form.tripayPrivateKeySet && !tripaySecretDraft.privateKey.trim(),
+  }
+  const tripayConfigurationValid = !tripayValidation.merchantCodeMissing &&
+    !tripayValidation.apiKeyMissing &&
+    !tripayValidation.privateKeyMissing
+  const enabling = !!saved && !!form && saved.provider === 'MANUAL' && form.provider !== 'MANUAL'
 
-  // Toggle metode PIVOT/MANUAL. PIVOT = penagihan otomatis (enabled); MANUAL = pelanggan bayar
-  // transfer/QRIS (enabled false). Field manual dipertahankan agar tak hilang saat berpindah.
   const onProvider = (provider: PaymentProvider) => {
-    setForm((f) => (f ? { ...f, provider, enabled: provider === 'PIVOT' } : f))
+    setForm((f) => (f ? { ...f, provider, enabled: provider !== 'MANUAL' } : f))
+    if (provider !== 'TRIPAY') setTripaySecretDraft(EMPTY_TRIPAY_SECRET_DRAFT)
   }
 
   const discard = () => {
     if (saved) setForm(saved)
     setQrisFile(null)
     setQrisRemoved(false)
+    setTripaySecretDraft(EMPTY_TRIPAY_SECRET_DRAFT)
   }
 
   // Pilih/ganti/hapus gambar QRIS hanya menyentuh state lokal — unggahan sesungguhnya terjadi saat
@@ -184,6 +229,10 @@ export function PaymentGatewaySettingsPage() {
       accountNumber: form.accountNumber?.trim() || null,
       accountHolder: form.accountHolder?.trim() || null,
       manualQrisEnabled: form.manualQrisEnabled,
+      tripayMerchantCode: form.tripayMerchantCode?.trim() || null,
+      tripayApiKey: tripaySecretDraft.apiKey.trim() || null,
+      tripayPrivateKey: tripaySecretDraft.privateKey.trim() || null,
+      tripaySandbox: form.tripaySandbox,
     }
     try {
       // Simpan setelan dulu (baris pasti ada), lalu terapkan perubahan gambar QRIS bila ada —
@@ -198,11 +247,12 @@ export function PaymentGatewaySettingsPage() {
       setForm(result)
       setQrisFile(null)
       setQrisRemoved(false)
+      setTripaySecretDraft(EMPTY_TRIPAY_SECRET_DRAFT)
       setQrisVersion((v) => v + 1)
       setConfirmOpen(false)
       toast.success('Setelan payment gateway disimpan')
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Gagal menyimpan setelan')
+    } catch {
+      toast.error('Gagal menyimpan setelan gateway. Periksa konfigurasi lalu coba lagi.')
     } finally {
       setSaving(false)
     }
@@ -214,6 +264,7 @@ export function PaymentGatewaySettingsPage() {
   }
 
   const showManual = form.provider === 'MANUAL'
+  const showTripay = form.provider === 'TRIPAY'
 
   return (
     <div className="stack settings-page">
@@ -238,7 +289,7 @@ export function PaymentGatewaySettingsPage() {
         >
           <Segmented
             value={form.provider}
-            onChange={(v) => onProvider(v as PaymentProvider)}
+            onChange={onProvider}
             disabled={!manage}
             options={PROVIDER_OPTIONS.map((p) => ({ value: p, label: PAYMENT_PROVIDER_LABEL[p] }))}
           />
@@ -248,6 +299,20 @@ export function PaymentGatewaySettingsPage() {
           <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
             Pastikan sub-account dan rekening payout Pivot sudah disetel.
           </Text>
+        )}
+
+        {showTripay && (
+          <>
+            <div className="hr" />
+            <TripayPaymentSection
+              form={form}
+              secretDraft={tripaySecretDraft}
+              validation={tripayValidation}
+              onChange={(patch) => setForm((f) => (f ? { ...f, ...patch } : f))}
+              onSecretDraftChange={setTripaySecretDraft}
+              disabled={!manage}
+            />
+          </>
         )}
 
         {showManual && (
@@ -275,7 +340,7 @@ export function PaymentGatewaySettingsPage() {
                 <Button variant="subtle" onClick={discard} disabled={!dirty || saving}>
                   Batalkan
                 </Button>
-                <Button variant="primary" onClick={() => setConfirmOpen(true)} disabled={!dirty || saving}>
+                <Button variant="primary" onClick={() => setConfirmOpen(true)} disabled={!dirty || saving || !tripayConfigurationValid}>
                   Tinjau &amp; simpan…
                 </Button>
               </div>
@@ -321,11 +386,10 @@ export function PaymentGatewaySettingsPage() {
 
             {enabling && (
               <Callout>
-                Metode akan beralih ke <Text as="strong" weight="semibold" >Pivot</Text> — tagihan berikutnya otomatis dibuatkan tautan bayar.
-                Pastikan sub-account Pivot sudah aktif &amp; rekening payout tersetel.
+                Metode akan beralih ke <Text as="strong" weight="semibold" >{PAYMENT_PROVIDER_LABEL[form.provider]}</Text> — tagihan berikutnya otomatis dibuatkan tautan bayar.
               </Callout>
             )}
-            {saved.provider === 'PIVOT' && form.provider === 'MANUAL' && (
+            {saved.provider !== 'MANUAL' && form.provider === 'MANUAL' && (
               <Callout>
                 Metode akan beralih ke <Text as="strong" weight="semibold" >Manual</Text> — tagihan tetap terbit tapi tanpa tautan bayar; pelunasan
                 harus dicatat manual.
@@ -340,7 +404,7 @@ export function PaymentGatewaySettingsPage() {
 
 /** Kartu ringkas konfigurasi yang benar-benar berlaku sekarang (bukan suntingan). */
 function StatusPanel({ saved }: { saved: PaymentGatewaySettingsView }) {
-  const auto = saved.provider === 'PIVOT'
+  const auto = saved.provider !== 'MANUAL'
   return (
     <div className="card stack" style={{ gap: '0.75rem' }}>
       <div className="spread" style={{ alignItems: 'center' }}>
@@ -355,6 +419,7 @@ function StatusPanel({ saved }: { saved: PaymentGatewaySettingsView }) {
         <Badge tone="accent">{PAYMENT_PROVIDER_LABEL[saved.provider]}</Badge>
       </div>
 
+      {saved.provider === 'TRIPAY' && <TripaySummary saved={saved} />}
       {!auto && <ManualSummary saved={saved} />}
     </div>
   )
@@ -373,6 +438,22 @@ function ManualSummary({ saved }: { saved: PaymentGatewaySettingsView }) {
       ) : (
         active.map((m) => <Badge key={m}>{m}</Badge>)
       )}
+    </div>
+  )
+}
+
+function TripaySummary({ saved }: { saved: PaymentGatewaySettingsView }) {
+  return (
+    <div className="stack" style={{ gap: '0.4rem' }}>
+      <div className="row" style={{ ...typographyStyles.caption1, gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center', minWidth: 0 }}>
+        <Text as="span" className="muted">Merchant code:</Text>
+        <Text as="span" font="monospace" style={{ overflowWrap: 'anywhere' }}>{saved.tripayMerchantCode || 'belum diisi'}</Text>
+      </div>
+      <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap' }}>
+        <Badge tone={saved.tripaySandbox ? 'warning' : 'good'}>{saved.tripaySandbox ? 'Sandbox' : 'Produksi'}</Badge>
+        <Badge tone={saved.tripayApiKeySet ? 'good' : 'warning'}>{saved.tripayApiKeySet ? 'API Key tersimpan' : 'API Key belum disimpan'}</Badge>
+        <Badge tone={saved.tripayPrivateKeySet ? 'good' : 'warning'}>{saved.tripayPrivateKeySet ? 'Private Key tersimpan' : 'Private Key belum disimpan'}</Badge>
+      </div>
     </div>
   )
 }
@@ -1200,6 +1281,101 @@ function PivotPayoutSection({
         </>
       )}
     </>
+  )
+}
+
+function TripayPaymentSection({
+  form,
+  secretDraft,
+  validation,
+  onChange,
+  onSecretDraftChange,
+  disabled,
+}: {
+  form: PaymentGatewaySettingsView
+  secretDraft: TripaySecretDraft
+  validation: TripayValidation
+  onChange: (patch: Partial<PaymentGatewaySettingsView>) => void
+  onSecretDraftChange: (draft: TripaySecretDraft) => void
+  disabled: boolean
+}) {
+  return (
+    <div className="stack" style={{ gap: '0.85rem' }}>
+      <div className="stack" style={{ gap: '0.25rem' }}>
+        <SectionTitle>Tripay (akun sendiri)</SectionTitle>
+        <Text as="p" className="muted" size={200} style={{ margin: '0.25rem 0 0' }}>
+          Kredensial hanya dikirim saat disimpan dan tidak pernah dibaca kembali oleh halaman ini.
+        </Text>
+      </div>
+
+      <TextField
+        label="Merchant code"
+        value={form.tripayMerchantCode ?? ''}
+        onChange={(_, data) => onChange({ tripayMerchantCode: data.value })}
+        placeholder="mis. T12345"
+        maxLength={100}
+        disabled={disabled}
+        validationState={validation.merchantCodeMissing ? 'error' : 'none'}
+        validationMessage={validation.merchantCodeMissing ? 'Merchant code wajib diisi untuk mengaktifkan Tripay.' : undefined}
+      />
+
+      <FormRow label="Mode Tripay" hint="Gunakan Sandbox untuk pengujian; Produksi untuk pembayaran pelanggan sebenarnya.">
+        <Segmented
+          value={form.tripaySandbox ? 'sandbox' : 'production'}
+          onChange={(value) => onChange({ tripaySandbox: value === 'sandbox' })}
+          disabled={disabled}
+          options={[
+            { value: 'sandbox', label: 'Sandbox' },
+            { value: 'production', label: 'Produksi' },
+          ]}
+        />
+      </FormRow>
+
+      <div className="stack" style={{ gap: '0.6rem' }}>
+        <TextField
+          label="API Key"
+          type="password"
+          autoComplete="new-password"
+          value={secretDraft.apiKey}
+          onChange={(_, data) => onSecretDraftChange({ ...secretDraft, apiKey: data.value })}
+          placeholder={form.tripayApiKeySet ? 'Biarkan kosong untuk mempertahankan API Key.' : 'Masukkan API Key Tripay'}
+          maxLength={500}
+          disabled={disabled}
+          validationState={validation.apiKeyMissing ? 'error' : 'none'}
+          validationMessage={validation.apiKeyMissing ? 'Masukkan API Key untuk mengaktifkan Tripay.' : undefined}
+        />
+        <Text as="span" className="muted" size={200}>{form.tripayApiKeySet ? 'API Key tersimpan.' : 'API Key belum disimpan.'}</Text>
+
+        <TextField
+          label="Private Key"
+          type="password"
+          autoComplete="new-password"
+          value={secretDraft.privateKey}
+          onChange={(_, data) => onSecretDraftChange({ ...secretDraft, privateKey: data.value })}
+          placeholder={form.tripayPrivateKeySet ? 'Biarkan kosong untuk mempertahankan Private Key.' : 'Masukkan Private Key Tripay'}
+          maxLength={500}
+          disabled={disabled}
+          validationState={validation.privateKeyMissing ? 'error' : 'none'}
+          validationMessage={validation.privateKeyMissing ? 'Masukkan Private Key untuk mengaktifkan Tripay.' : undefined}
+        />
+        <Text as="span" className="muted" size={200}>{form.tripayPrivateKeySet ? 'Private Key tersimpan.' : 'Private Key belum disimpan.'}</Text>
+        <Text as="span" className="muted" size={200}>Kosongkan kedua input untuk mempertahankan nilai tersimpan.</Text>
+      </div>
+
+      <FormRow label="Callback pembayaran" hint="Masukkan rute server ini di Tripay; halaman tidak menghitung atau menampilkan origin browser.">
+        <Text as="span" font="monospace" style={{ overflowWrap: 'anywhere' }}>/api/platform/tripay/callbacks/payment</Text>
+      </FormRow>
+
+      <div className="stack" style={{ gap: '0.35rem', minWidth: 0 }}>
+        <Text as="strong" weight="semibold">Kontrak server Tripay</Text>
+        <Text as="span" className="muted" size={200} style={{ overflowWrap: 'anywhere' }}>Sandbox create: https://tripay.co.id/api-sandbox/transaction/create</Text>
+        <Text as="span" className="muted" size={200} style={{ overflowWrap: 'anywhere' }}>Produksi create: https://tripay.co.id/api/transaction/create</Text>
+        <Text as="span" className="muted" size={200}>Authorization: Bearer API key</Text>
+        <Text as="span" className="muted" size={200} style={{ overflowWrap: 'anywhere' }}>Signature: HMAC-SHA256(merchantCode + merchantRef + amount, privateKey)</Text>
+        <Text as="span" className="muted" size={200} style={{ overflowWrap: 'anywhere' }}>Callback: HMAC atas body JSON mentah yang sama persis melalui X-Callback-Signature.</Text>
+        <Text as="span" className="muted" size={200}>Hanya status PAID yang melunasi tagihan.</Text>
+      </div>
+    </div>
   )
 }
 

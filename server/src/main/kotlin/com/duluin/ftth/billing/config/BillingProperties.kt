@@ -30,6 +30,7 @@ data class BillingProperties(
     val webhookSecret: String = "dev-only-billing-webhook-secret-change-me",
     /** Setelan adapter Pivot: URL balik wajib mode REDIRECT (success/failure/expiration diturunkan darinya). */
     val pivot: PivotProperties = PivotProperties(),
+    val tripay: TripayProperties = TripayProperties(),
 )
 
 /**
@@ -40,4 +41,9 @@ data class BillingProperties(
  */
 data class PivotProperties(
     val redirectBaseUrl: String = "",
+)
+
+data class TripayProperties(
+    val callbackUrl: String = "",
+    val returnUrl: String = "",
 )

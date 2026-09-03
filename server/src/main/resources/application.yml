@@ -199,6 +199,9 @@ ftth:
     pivot:
       sandbox: ${FTTH_BILLING_PIVOT_SANDBOX:false}
       redirect-base-url: ${FTTH_BILLING_PIVOT_REDIRECT_BASE_URL:}
+    tripay:
+      callback-url: ${FTTH_BILLING_TRIPAY_CALLBACK_URL:}
+      return-url: ${FTTH_BILLING_TRIPAY_RETURN_URL:}
     # Adapter Paywuz (BYO). payment-method = kode metode wajib saat bikin transaksi
     # (mis. meta-method QRIS/VA dari daftar metode proyek tenant). Sandbox via prefiks key.
     paywuz:

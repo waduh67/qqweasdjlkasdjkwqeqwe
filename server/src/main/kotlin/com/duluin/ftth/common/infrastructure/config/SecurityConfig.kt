@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
 import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.security.authorization.AuthorizationDecision
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
@@ -124,6 +125,7 @@ class SecurityConfig {
                     "/swagger-ui.html",
                     "/v3/api-docs/**",
                 ).permitAll()
+                it.requestMatchers(HttpMethod.POST, "/api/platform/tripay/callbacks/payment").permitAll()
                 it.anyRequest().authenticated()
             }
             .oauth2ResourceServer { oauth2 ->

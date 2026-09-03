@@ -22,7 +22,8 @@ interface ActiveGatewayProbe {
 }
 
 /**
- * Menyelesaikan gateway aktif untuk tenant saat ini. Model Pivot "business as platform":
+ * Menyelesaikan gateway aktif untuk tenant saat ini. Tripay memakai kredensial tenant yang sudah
+ * didekripsi oleh repository. Model Pivot "business as platform":
  * bila tenant memakai PIVOT dan sub-account-nya sudah terprovisi (aktif), charge dibuat di akun
  * MASTER platform ([com.duluin.ftth.billing.domain.model.PivotMasterConfig]) atas nama sub-account
  * tenant (`x-submerchant-id`) plus split fee platform. Selain itu jatuh ke fallback MANUAL
@@ -44,6 +45,17 @@ class TenantPaymentGatewayResolver(
 
     fun resolve(): ResolvedGatewayContext {
         val settings = repo.find()
+        if (settings?.usesTripay == true) {
+            return ResolvedGatewayContext(
+                provider = "TRIPAY",
+                mode = GatewayMode.BYO,
+                secretKey = settings.tripay.privateKeyForGateway(),
+                webhookToken = null,
+                apiKey = settings.tripay.apiKeyForGateway(),
+                merchantCode = settings.tripay.merchantCode,
+                sandbox = settings.tripay.sandbox,
+            )
+        }
         if (settings != null && settings.usesPivot) {
             val master = masterConfig.current()
             val sub = subAccounts.find()?.takeIf { it.provisioned && it.status.usableForCharge() }

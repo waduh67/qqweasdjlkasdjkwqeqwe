@@ -6,7 +6,9 @@ import com.duluin.ftth.billing.application.port.inbound.PaymentGatewaySettingsVi
 import com.duluin.ftth.billing.application.port.inbound.UpdatePaymentGatewaySettingsCommand
 import com.duluin.ftth.billing.application.port.outbound.TenantPaymentGatewayRepository
 import com.duluin.ftth.billing.domain.model.ManualPaymentConfig
+import com.duluin.ftth.billing.domain.model.PaymentProvider
 import com.duluin.ftth.billing.domain.model.TenantPaymentGateway
+import com.duluin.ftth.billing.domain.model.TripayPaymentConfig
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.storage.ObjectStorage
@@ -35,6 +37,17 @@ class PaymentGatewaySettingsService(
     @Transactional
     override fun update(command: UpdatePaymentGatewaySettingsCommand): PaymentGatewaySettingsView {
         val settings = repository.find() ?: TenantPaymentGateway.defaultFor(TenantContext.tenantId())
+        val tripay = TripayPaymentConfig(
+            merchantCode = command.tripayMerchantCode,
+            apiKey = command.tripayApiKey?.trim()?.takeIf { it.isNotEmpty() } ?: settings.tripay.apiKeyForGateway(),
+            privateKey = command.tripayPrivateKey?.trim()?.takeIf { it.isNotEmpty() } ?: settings.tripay.privateKeyForGateway(),
+            sandbox = command.tripaySandbox,
+        ).normalized()
+        if (command.provider == PaymentProvider.TRIPAY && command.enabled && !tripay.ready) {
+            throw ValidationException(
+                "Tripay aktif memerlukan merchant code, API key, dan private key yang lengkap",
+            )
+        }
         settings.update(
             provider = command.provider,
             enabled = command.enabled,
@@ -45,6 +58,7 @@ class PaymentGatewaySettingsService(
                 accountHolder = command.accountHolder,
                 qrisEnabled = command.manualQrisEnabled,
             ),
+            tripay = tripay,
         )
         val saved = repository.save(settings)
         auditor.record(
@@ -120,6 +134,10 @@ class PaymentGatewaySettingsService(
         accountHolder = manual.accountHolder,
         manualQrisEnabled = manual.qrisEnabled,
         qrisImageSet = qrisImageSet,
+        tripayMerchantCode = tripay.merchantCode,
+        tripayApiKeySet = !tripay.apiKeyForGateway().isNullOrBlank(),
+        tripayPrivateKeySet = !tripay.privateKeyForGateway().isNullOrBlank(),
+        tripaySandbox = tripay.sandbox,
     )
 
     private companion object {

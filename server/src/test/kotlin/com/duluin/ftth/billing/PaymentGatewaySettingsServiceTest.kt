@@ -1,8 +1,11 @@
 package com.duluin.ftth.billing
 
+import com.duluin.ftth.billing.application.port.inbound.UpdatePaymentGatewaySettingsCommand
 import com.duluin.ftth.billing.application.port.outbound.TenantPaymentGatewayRepository
 import com.duluin.ftth.billing.application.service.PaymentGatewaySettingsService
+import com.duluin.ftth.billing.domain.model.PaymentProvider
 import com.duluin.ftth.billing.domain.model.TenantPaymentGateway
+import com.duluin.ftth.billing.domain.model.TripayPaymentConfig
 import com.duluin.ftth.common.domain.UuidV7
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
@@ -11,6 +14,7 @@ import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.common.storage.ObjectStorage
 import com.duluin.ftth.common.storage.StoredObject
 import com.duluin.ftth.common.tenant.TenantContext
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
@@ -52,7 +56,7 @@ class PaymentGatewaySettingsServiceTest {
         val view = service.uploadQrisImage("image/png", byteArrayOf(1, 2, 3))
 
         assertThat(view.qrisImageSet).isTrue()
-        val saved = repository.find()!!
+        val saved = checkNotNull(repository.find())
         assertThat(saved.qrisStorageKey).isEqualTo("$tenantId/billing/gateway/qris")
         assertThat(saved.qrisContentType).isEqualTo("image/png")
         assertThat(storage.objects).containsKey("$tenantId/billing/gateway/qris")
@@ -72,7 +76,7 @@ class PaymentGatewaySettingsServiceTest {
         val view = service.deleteQrisImage()
 
         assertThat(view.qrisImageSet).isFalse()
-        val saved = repository.find()!!
+        val saved = checkNotNull(repository.find())
         assertThat(saved.qrisStorageKey).isNull()
         assertThat(saved.qrisContentType).isNull()
         assertThat(storage.objects).isEmpty()
@@ -85,6 +89,75 @@ class PaymentGatewaySettingsServiceTest {
 
         service.deleteQrisImage()
         assertThat(service.getQrisImage()).isNull()
+    }
+
+    @Test
+    fun `update TRIPAY mempertahankan secret kosong dan view tidak menserialkan credential`() {
+        val stored = TenantPaymentGateway.defaultFor(tenantId).apply {
+            update(
+                provider = PaymentProvider.TRIPAY,
+                enabled = true,
+                tripay = TripayPaymentConfig(
+                    merchantCode = "merchant-existing",
+                    apiKey = "api-key-existing",
+                    privateKey = "private-key-existing",
+                    sandbox = false,
+                ),
+            )
+        }
+        repository.save(stored)
+
+        val view = service.update(
+            UpdatePaymentGatewaySettingsCommand(
+                provider = PaymentProvider.TRIPAY,
+                enabled = true,
+                manualTransferEnabled = false,
+                bankName = null,
+                accountNumber = null,
+                accountHolder = null,
+                manualQrisEnabled = false,
+                tripayMerchantCode = "merchant-current",
+                tripayApiKey = "   ",
+                tripayPrivateKey = null,
+                tripaySandbox = true,
+            ),
+        )
+
+        assertThat(checkNotNull(repository.find()).tripay).isEqualTo(
+            TripayPaymentConfig(
+                merchantCode = "merchant-current",
+                apiKey = "api-key-existing",
+                privateKey = "private-key-existing",
+                sandbox = true,
+            ),
+        )
+        assertThat(view.tripayApiKeySet).isTrue()
+        assertThat(view.tripayPrivateKeySet).isTrue()
+        val serialized = ObjectMapper().writeValueAsString(view)
+        assertThat(serialized)
+            .contains("\"tripayApiKeySet\":true", "\"tripayPrivateKeySet\":true")
+            .doesNotContain("api-key-existing", "private-key-existing")
+    }
+
+    @Test
+    fun `update TRIPAY aktif menolak credential efektif yang tidak lengkap`() {
+        assertThatThrownBy {
+            service.update(
+                UpdatePaymentGatewaySettingsCommand(
+                    provider = PaymentProvider.TRIPAY,
+                    enabled = true,
+                    manualTransferEnabled = false,
+                    bankName = null,
+                    accountNumber = null,
+                    accountHolder = null,
+                    manualQrisEnabled = false,
+                    tripayMerchantCode = "merchant-only",
+                    tripayApiKey = " ",
+                    tripayPrivateKey = null,
+                    tripaySandbox = true,
+                ),
+            )
+        }.isInstanceOf(ValidationException::class.java)
     }
 
     // --- fakes ---

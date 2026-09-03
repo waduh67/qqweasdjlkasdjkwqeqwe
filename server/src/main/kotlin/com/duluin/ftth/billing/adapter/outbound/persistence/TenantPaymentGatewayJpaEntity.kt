@@ -10,10 +10,8 @@ import jakarta.persistence.Table
 import java.util.UUID
 
 /**
- * Satu baris setelan penagihan per tenant. TIDAK menyimpan kredensial apa pun (model BYOK
- * dibuang — charge Pivot memakai akun master + sub-account, lihat [PivotMasterConfigJpaEntity] &
- * [TenantPivotAccountJpaEntity]). Yang tersisa: metode aktif ([provider]) + konfigurasi
- * pembayaran MANUAL (semua non-rahasia, plaintext).
+ * Satu baris setelan penagihan per tenant. Kredensial Tripay BYOK disimpan sebagai ciphertext;
+ * enkripsi/dekripsi berada di [TenantPaymentGatewayPersistenceAdapter].
  */
 @Entity
 @Table(name = "tenant_payment_gateway")
@@ -26,6 +24,18 @@ class TenantPaymentGatewayJpaEntity(
 
     @Column(nullable = false)
     var enabled: Boolean,
+
+    @Column(name = "tripay_merchant_code", length = 80)
+    var tripayMerchantCode: String?,
+
+    @Column(name = "tripay_api_key", length = 1024)
+    var tripayApiKey: String?,
+
+    @Column(name = "tripay_private_key", length = 1024)
+    var tripayPrivateKey: String?,
+
+    @Column(name = "tripay_sandbox", nullable = false)
+    var tripaySandbox: Boolean,
 
     // --- Pembayaran manual (transfer/QRIS) — semua NON-rahasia (plaintext). ---
     @Column(name = "manual_transfer_enabled", nullable = false)

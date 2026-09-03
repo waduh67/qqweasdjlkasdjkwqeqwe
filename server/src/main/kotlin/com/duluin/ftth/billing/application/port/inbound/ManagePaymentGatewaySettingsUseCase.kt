@@ -26,8 +26,8 @@ interface ManagePaymentGatewaySettingsUseCase {
 }
 
 /**
- * Setelan penagihan untuk ditampilkan. [provider] = metode aktif (`PIVOT`/`MANUAL`). Konfigurasi
- * manual non-rahasia ditampilkan apa adanya.
+ * Setelan penagihan untuk ditampilkan. Rahasia Tripay sengaja tidak pernah keluar dari server;
+ * hanya penanda apakah key sudah tersimpan yang dikembalikan.
  */
 data class PaymentGatewaySettingsView(
     val provider: String,
@@ -39,6 +39,10 @@ data class PaymentGatewaySettingsView(
     val accountHolder: String?,
     val manualQrisEnabled: Boolean,
     val qrisImageSet: Boolean,
+    val tripayMerchantCode: String?,
+    val tripayApiKeySet: Boolean,
+    val tripayPrivateKeySet: Boolean,
+    val tripaySandbox: Boolean,
 )
 
 /**
@@ -56,8 +60,8 @@ data class ManualPaymentInstructionsView(
 )
 
 /**
- * Perubahan setelan. [provider] metode aktif; konfigurasi manual (non-rahasia) selalu diganti
- * (null/kosong = kosongkan).
+ * Perubahan setelan. Konfigurasi manual selalu diganti. Key Tripay bersifat write-only: null atau
+ * kosong mempertahankan key yang sudah tersimpan, sedangkan nilai baru menggantikannya.
  */
 data class UpdatePaymentGatewaySettingsCommand(
     val provider: PaymentProvider,
@@ -67,4 +71,8 @@ data class UpdatePaymentGatewaySettingsCommand(
     val accountNumber: String?,
     val accountHolder: String?,
     val manualQrisEnabled: Boolean,
+    val tripayMerchantCode: String?,
+    val tripayApiKey: String?,
+    val tripayPrivateKey: String?,
+    val tripaySandbox: Boolean,
 )

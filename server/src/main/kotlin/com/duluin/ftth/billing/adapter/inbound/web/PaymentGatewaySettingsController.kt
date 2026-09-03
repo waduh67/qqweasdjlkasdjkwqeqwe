@@ -27,9 +27,8 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
 
 /**
- * Setelan penagihan tenant: metode aktif (PIVOT otomatis / MANUAL) + konfigurasi pembayaran manual
- * (transfer/QRIS). Tak ada kredensial di sini — Pivot memakai akun master platform + sub-account
- * tenant (kelola lewat `/api/billing/pivot-account`).
+ * Setelan penagihan tenant: Pivot platform, Tripay BYOK, atau pembayaran manual. Key Tripay
+ * diterima hanya saat PUT dan tidak pernah dikirim kembali lewat GET.
  */
 @RestController
 @RequestMapping("/api/billing/gateway-settings")
@@ -45,7 +44,7 @@ class PaymentGatewaySettingsController(
 
     @PutMapping
     @PreAuthorize("@authz.can('billing.gateway.manage')")
-    @Operation(summary = "Ubah metode aktif & konfigurasi pembayaran manual")
+    @Operation(summary = "Ubah metode aktif, Tripay BYOK, dan konfigurasi pembayaran manual")
     fun update(@Valid @RequestBody request: PaymentGatewaySettingsRequest): PaymentGatewaySettingsView =
         useCase.update(request.toCommand())
 
@@ -73,8 +72,8 @@ class PaymentGatewaySettingsController(
 }
 
 /**
- * Metode aktif (`PIVOT`/`MANUAL`) + konfigurasi pembayaran manual (non-rahasia). Gambar QRIS
- * diunggah terpisah lewat endpoint multipart.
+ * Metode aktif + konfigurasi pembayaran manual. API/private key Tripay write-only; respons GET
+ * hanya memuat penanda apakah masing-masing sudah tersimpan.
  */
 data class PaymentGatewaySettingsRequest(
     @field:NotNull val provider: PaymentProvider,
@@ -84,6 +83,10 @@ data class PaymentGatewaySettingsRequest(
     @field:Size(max = 60) val accountNumber: String? = null,
     @field:Size(max = 160) val accountHolder: String? = null,
     val manualQrisEnabled: Boolean = false,
+    @field:Size(max = 80) val tripayMerchantCode: String? = null,
+    @field:Size(max = 512) val tripayApiKey: String? = null,
+    @field:Size(max = 512) val tripayPrivateKey: String? = null,
+    val tripaySandbox: Boolean = true,
 ) {
     fun toCommand() = UpdatePaymentGatewaySettingsCommand(
         provider = provider,
@@ -93,5 +96,9 @@ data class PaymentGatewaySettingsRequest(
         accountNumber = accountNumber,
         accountHolder = accountHolder,
         manualQrisEnabled = manualQrisEnabled,
+        tripayMerchantCode = tripayMerchantCode,
+        tripayApiKey = tripayApiKey,
+        tripayPrivateKey = tripayPrivateKey,
+        tripaySandbox = tripaySandbox,
     )
 }
