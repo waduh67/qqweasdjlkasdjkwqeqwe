@@ -1,5 +1,6 @@
 package com.duluin.ftth.collector.adapter.hsgq
 
+import com.duluin.ftth.collector.adapter.OltProvisioningAdapter
 import com.duluin.ftth.contract.DeviceCapabilityReport
 import com.duluin.ftth.contract.DeviceFingerprint
 import com.duluin.ftth.contract.OltManagementTransport
@@ -24,8 +25,10 @@ class HsgqProvisioningAdapter(
     private val certifications: HsgqCertificationRegistry = HsgqCertificationRegistry(),
     private val stateStore: HsgqProvisioningStateStore,
     private val clock: Clock,
-) {
-    fun capabilityReport(target: OltTarget): DeviceCapabilityReport = withSession(target) { session ->
+) : OltProvisioningAdapter {
+    override val vendor: String = "HSGQ"
+
+    override fun capabilityReport(target: OltTarget): DeviceCapabilityReport = withSession(target) { session ->
         val state = session.discover()
         val fingerprint = fingerprint(target, state)
         val certification = certifications.find(fingerprint)
@@ -42,7 +45,7 @@ class HsgqProvisioningAdapter(
         )
     }
 
-    fun execute(target: OltTarget, command: ProvisioningPlanStepCommand): ProvisioningStepResult =
+    override fun execute(target: OltTarget, command: ProvisioningPlanStepCommand): ProvisioningStepResult =
         stateStore.withExecutionLock(target.oltId) {
             val digest = commandDigest(target, command)
             try {
