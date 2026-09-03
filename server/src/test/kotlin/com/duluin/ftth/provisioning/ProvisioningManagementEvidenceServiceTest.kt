@@ -7,6 +7,7 @@ import com.duluin.ftth.common.security.AuthenticatedUser
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisioningManagementEvidenceRepository
 import com.duluin.ftth.provisioning.application.service.ProvisioningManagementEvidenceService
+import com.duluin.ftth.provisioning.application.service.ProvisioningAuditPublisher
 import com.duluin.ftth.provisioning.application.service.RecordManagementEvidenceCommand
 import com.duluin.ftth.provisioning.domain.model.DeviceKind
 import com.duluin.ftth.provisioning.domain.model.DeviceReference
@@ -54,10 +55,9 @@ class ProvisioningManagementEvidenceServiceTest {
         val actor = AuthenticatedUser(
             UuidV7.generate(), tenantId, "platform@example.test", "Platform", true, emptySet(), emptySet(),
         )
+        val currentUser = object : CurrentUserProvider { override fun currentOrNull() = actor }
         return ProvisioningManagementEvidenceService(
-            repository,
-            object : CurrentUserProvider { override fun currentOrNull() = actor },
-            ApplicationEventPublisher { },
+            repository, currentUser, ProvisioningAuditPublisher(currentUser, ApplicationEventPublisher { }),
         )
     }
 
@@ -68,10 +68,9 @@ class ProvisioningManagementEvidenceServiceTest {
             UuidV7.generate(), tenantId, "tenant@example.test", "Tenant", false,
             setOf("provisioning.segment.manage"), emptySet(),
         )
+        val currentUser = object : CurrentUserProvider { override fun currentOrNull() = tenantActor }
         val service = ProvisioningManagementEvidenceService(
-            repository,
-            object : CurrentUserProvider { override fun currentOrNull() = tenantActor },
-            ApplicationEventPublisher { },
+            repository, currentUser, ProvisioningAuditPublisher(currentUser, ApplicationEventPublisher { }),
         )
 
         assertThatThrownBy { service.record(command()) }
