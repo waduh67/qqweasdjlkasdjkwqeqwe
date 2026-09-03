@@ -16,6 +16,7 @@ import com.duluin.ftth.provisioning.domain.model.ExecutionPhase
 import com.duluin.ftth.provisioning.domain.model.ProvisionStep
 import jakarta.persistence.EntityManager
 import org.springframework.stereotype.Component
+import org.springframework.context.annotation.Primary
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 import java.time.Clock
@@ -35,6 +36,7 @@ private val WIRE_PAYLOAD_KEYS = setOf(
 )
 
 @Component
+@Primary
 class ProvisioningCollectorChannelAdapter(
     private val attempts: StepAttemptJpaRepository,
     private val executionSteps: ExecutionStepJpaRepository,
