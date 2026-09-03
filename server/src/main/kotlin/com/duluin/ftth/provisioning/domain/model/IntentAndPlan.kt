@@ -7,19 +7,27 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.UUID
 
+enum class ServiceIntentSubjectKind { FIXED_SUBSCRIPTION, HOTSPOT_SITE }
+
 class ServiceIntent private constructor(
     override val id: UUID,
     val tenantId: UUID,
-    val subscriptionId: UUID,
+    val subscriptionId: UUID?,
+    val hotspotSiteId: UUID?,
     val segmentProfileId: UUID,
     val encapsulation: VlanEncapsulation,
     val dedicatedVlanId: Int?,
     status: IntentStatus,
 ) : ProvisioningAggregate {
+    val subjectKind: ServiceIntentSubjectKind
+        get() = if (subscriptionId != null) ServiceIntentSubjectKind.FIXED_SUBSCRIPTION else ServiceIntentSubjectKind.HOTSPOT_SITE
+    val subjectId: UUID
+        get() = subscriptionId ?: requireNotNull(hotspotSiteId)
     var status: IntentStatus = status
         private set
 
     init {
+        require((subscriptionId == null) != (hotspotSiteId == null)) { "SERVICE_INTENT_SUBJECT_EXCLUSIVE" }
         if (encapsulation != VlanEncapsulation.SINGLE_TAG) throw ValidationException("UNSUPPORTED_VLAN_MODE")
         dedicatedVlanId?.let {
             if (it !in 2..4094) throw ValidationException("VLAN_ID_OUT_OF_RANGE")
@@ -46,7 +54,18 @@ class ServiceIntent private constructor(
             encapsulation: VlanEncapsulation = VlanEncapsulation.SINGLE_TAG,
             dedicatedVlanId: Int? = null,
         ) = ServiceIntent(
-            UuidV7.generate(), tenantId, subscriptionId, segmentProfileId, encapsulation, dedicatedVlanId, IntentStatus.DRAFT,
+            UuidV7.generate(), tenantId, subscriptionId, null, segmentProfileId, encapsulation, dedicatedVlanId, IntentStatus.DRAFT,
+        )
+
+        fun createHotspot(
+            tenantId: UUID,
+            hotspotSiteId: UUID,
+            segmentProfileId: UUID,
+            encapsulation: VlanEncapsulation = VlanEncapsulation.SINGLE_TAG,
+            dedicatedVlanId: Int? = null,
+        ) = ServiceIntent(
+            UuidV7.generate(), tenantId, null, hotspotSiteId, segmentProfileId, encapsulation, dedicatedVlanId,
+            IntentStatus.DRAFT,
         )
 
         fun rehydrate(
@@ -57,7 +76,20 @@ class ServiceIntent private constructor(
             encapsulation: VlanEncapsulation,
             dedicatedVlanId: Int?,
             status: IntentStatus,
-        ) = ServiceIntent(id, tenantId, subscriptionId, segmentProfileId, encapsulation, dedicatedVlanId, status)
+        ) = ServiceIntent(id, tenantId, subscriptionId, null, segmentProfileId, encapsulation, dedicatedVlanId, status)
+
+        fun rehydrate(
+            id: UUID,
+            tenantId: UUID,
+            subscriptionId: UUID?,
+            hotspotSiteId: UUID?,
+            segmentProfileId: UUID,
+            encapsulation: VlanEncapsulation,
+            dedicatedVlanId: Int?,
+            status: IntentStatus,
+        ) = ServiceIntent(
+            id, tenantId, subscriptionId, hotspotSiteId, segmentProfileId, encapsulation, dedicatedVlanId, status,
+        )
     }
 }
 

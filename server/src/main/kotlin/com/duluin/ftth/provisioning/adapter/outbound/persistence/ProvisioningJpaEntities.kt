@@ -52,7 +52,8 @@ class SegmentProfileJpaEntity(
 @Table(name = "provisioning_service_intent")
 class ServiceIntentJpaEntity(
     id: UUID,
-    @Column(name = "subscription_id", nullable = false, updatable = false) val subscriptionId: UUID,
+    @Column(name = "subscription_id", updatable = false) val subscriptionId: UUID?,
+    @Column(name = "hotspot_site_id", updatable = false) val hotspotSiteId: UUID?,
     @Column(name = "segment_profile_id", nullable = false) var segmentProfileId: UUID,
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) val encapsulation: VlanEncapsulation,
     @Column(name = "dedicated_vlan_id") val dedicatedVlanId: Int?,
