@@ -71,13 +71,16 @@ class SubscriberAccessLifecycle(
      * pelanggan yang instalasinya belum rampung tak perlu diberi login hanya untuk diisolir.
      */
     fun onIsolated(subscriptionId: UUID) = forEachLive(subscriptionId) {
+        if (it.status == AccessStatus.ISOLATED) return@forEachLive
         val wasPending = it.status == AccessStatus.PENDING
         it.isolate()
         if (!wasPending) bngActions.enqueueIsolir(it, requestedBy = null, requestedByEmail = null)
     }
 
     fun onTerminated(subscriptionId: UUID) =
-        subscriberAccessRepository.findBySubscriptionId(subscriptionId).forEach {
+        subscriberAccessRepository.findBySubscriptionId(subscriptionId)
+            .filter { it.status != AccessStatus.TERMINATED }
+            .forEach {
             it.terminate()
             subscriberAccessRepository.save(it)
             // Langganan berakhir → cabut otorisasi akun dari RADIUS (system-triggered,
