@@ -65,11 +65,11 @@ export async function installProvisioningRoutes(page: Page, scenario: RolloutSce
     })
     if (path === '/api/provisioning/topology') return json(route, {
       nodes: [
-        { id: 'olt-1', name: 'OLT QA', role: 'OLT', administrativeStatus: 'ENABLED' },
+        { id: 'olt-1', name: 'OLT QA', role: 'OLT', reference: { kind: 'OLT', id: 'olt-device-1' }, administrativeStatus: 'ENABLED' },
         { id: 'switch-1', name: 'Transit QA', role: 'AGGREGATION_SWITCH', administrativeStatus: 'ENABLED' },
         { id: 'bras-1', name: 'BRAS QA', role: 'BRAS', administrativeStatus: 'ENABLED' },
       ],
-      interfaces: [], links: [],
+      interfaces: [{ id: 'pon-if-1', nodeId: 'olt-1', name: 'PON 0/1', role: 'ACCESS', reference: { kind: 'PON', id: 'pon-port-1' }, administrativeStatus: 'ENABLED' }], links: [],
     })
     if (path === '/api/provisioning/vlan-pools') return json(route, [{ revision: 1, value: { id: 'pool-1', name: 'Pool QA', range: { start: 100, endInclusive: 3999 }, reservedRanges: [] } }])
     if (path === '/api/provisioning/segment-profiles') return json(route, [
@@ -77,8 +77,8 @@ export async function installProvisioningRoutes(page: Page, scenario: RolloutSce
       { revision: 1, value: { id: 'profile-enterprise', name: 'Enterprise dedicated', poolId: 'pool-1' } },
     ])
     if (path === '/api/provisioning/intents') return json(route, [
-      { revision: 1, value: { id: 'intent-home', subscriptionId: 'sub-home', segmentProfileId: 'profile-home', allocationMode: 'SHARED', dedicatedVlanId: null, status: intentStatuses.get('intent-home') } },
-      { revision: 1, value: { id: 'intent-enterprise', subscriptionId: 'sub-enterprise', segmentProfileId: 'profile-enterprise', allocationMode: 'DEDICATED', dedicatedVlanId: 3101, status: intentStatuses.get('intent-enterprise') } },
+      { revision: 1, value: { id: 'intent-home', subscriptionId: 'sub-home', segmentProfileId: 'profile-home', allocationMode: 'SHARED', dedicatedVlanId: null, accessOltId: 'olt-device-1', accessPonPortId: 'pon-port-1', accessOnuId: 'onu-home', status: intentStatuses.get('intent-home') } },
+      { revision: 1, value: { id: 'intent-enterprise', subscriptionId: 'sub-enterprise', segmentProfileId: 'profile-enterprise', allocationMode: 'DEDICATED', dedicatedVlanId: 3101, accessOltId: 'olt-device-1', accessPonPortId: 'pon-port-1', accessOnuId: 'onu-enterprise', status: intentStatuses.get('intent-enterprise') } },
     ])
     if (path === '/api/provisioning/capabilities') return json(route, [
       { id: 'cap-1', deviceKind: 'OLT', deviceId: 'olt-1', vendor: 'SIMULATOR_FIXTURE', model: 'DETERMINISTIC_NETWORK', firmware: '1', transport: 'IN_MEMORY', operationClass: 'ENSURE_ACCESS_PORT', supported: scenario.previewAllowed, observedAt: '2026-09-03T00:00:00Z', expiresAt: '2099-01-01T00:00:00Z' },
