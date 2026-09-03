@@ -148,7 +148,7 @@ class ProvisioningEvidenceQueryService(
         if (row[7] as String != "BENIGN" || !classifier.semanticallyEquivalent(
                 codec.decode(row[5] as String), codec.decode(row[6] as String),
             )) throw ConflictException("DRIFT_NOT_SEMANTICALLY_EQUIVALENT")
-        requireAdoptionSafety(row[0] as String, row[1] as UUID)
+        requireAdoptionSafety(row[0] as String, row[1] as UUID, row[4] as UUID)
         revisions.advance(DRIFT, id, revision)
         val baselineSnapshotId = UuidV7.generate()
         entityManager.createNativeQuery(
@@ -174,15 +174,48 @@ class ProvisioningEvidenceQueryService(
         return drift().single { it.id == id }
     }
 
-    private fun requireAdoptionSafety(deviceKind: String, deviceId: UUID) {
+    private fun requireAdoptionSafety(deviceKind: String, deviceId: UUID, planId: UUID) {
         val allowed = entityManager.createNativeQuery(
             """SELECT
                  EXISTS (SELECT 1 FROM provisioning_management_safety_evidence
                          WHERE device_kind = :kind AND device_id = :device AND complete = true AND valid_until > now())
-                 AND EXISTS (SELECT 1 FROM provisioning_adapter_certification
-                             WHERE device_kind = :kind AND device_id = :device AND status = 'CERTIFIED'
-                               AND revoked_at IS NULL AND valid_until > now())""",
-        ).setParameter("kind", deviceKind).setParameter("device", deviceId).singleResult as Boolean
+                 AND EXISTS (SELECT 1 FROM provisioning_step
+                             WHERE plan_id = :plan AND device_kind = :kind AND device_id = :device)
+                 AND NOT EXISTS (
+                     SELECT 1 FROM provisioning_step step
+                     WHERE step.plan_id = :plan AND step.device_kind = :kind AND step.device_id = :device
+                       AND NOT EXISTS (
+                           SELECT 1
+                           FROM provisioning_capability_evidence capability
+                           JOIN provisioning_adapter_certification certification
+                             ON certification.evidence_id = capability.id
+                            AND certification.tenant_id = capability.tenant_id
+                            AND certification.device_kind = capability.device_kind
+                            AND certification.device_id = capability.device_id
+                            AND certification.vendor = capability.vendor
+                            AND certification.model = capability.model
+                            AND certification.firmware = capability.firmware
+                            AND certification.transport = capability.transport
+                            AND certification.operation_class = capability.operation_class
+                           WHERE capability.device_kind = step.device_kind
+                             AND capability.device_id = step.device_id
+                             AND capability.operation_class = step.operation
+                             AND capability.vendor = (SELECT attribute_value FROM provisioning_step_attribute
+                                                      WHERE step_id = step.id AND attribute_key = 'safety.vendor')
+                             AND capability.model = (SELECT attribute_value FROM provisioning_step_attribute
+                                                     WHERE step_id = step.id AND attribute_key = 'safety.model')
+                             AND capability.firmware = (SELECT attribute_value FROM provisioning_step_attribute
+                                                        WHERE step_id = step.id AND attribute_key = 'safety.firmware')
+                             AND capability.transport = (SELECT attribute_value FROM provisioning_step_attribute
+                                                         WHERE step_id = step.id AND attribute_key = 'safety.transport')
+                             AND capability.supported = true
+                             AND capability.observed_at <= now() AND capability.expires_at > now()
+                             AND certification.status = 'CERTIFIED'
+                             AND certification.revoked_at IS NULL AND certification.valid_until > now()
+                       )
+                 )""",
+        ).setParameter("kind", deviceKind).setParameter("device", deviceId).setParameter("plan", planId)
+            .singleResult as Boolean
         if (!allowed) throw ConflictException("DRIFT_ADOPTION_SAFETY_BLOCKED")
     }
 

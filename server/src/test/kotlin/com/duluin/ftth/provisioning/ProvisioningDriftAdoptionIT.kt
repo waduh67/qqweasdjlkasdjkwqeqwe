@@ -1,6 +1,11 @@
 package com.duluin.ftth.provisioning
 
 import com.duluin.ftth.common.tenant.TenantContext
+import com.duluin.ftth.provisioning.application.service.ProvisioningDriftScanner
+import com.duluin.ftth.provisioning.domain.model.NormalizedDeviceState
+import com.duluin.ftth.provisioning.domain.model.NormalizedField
+import com.duluin.ftth.provisioning.domain.model.NormalizedStateHash
+import com.duluin.ftth.provisioning.domain.model.NormalizedValue
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
 import com.jayway.jsonpath.JsonPath
@@ -27,6 +32,7 @@ class ProvisioningDriftAdoptionIT {
     @Autowired private lateinit var mockMvc: MockMvc
     @Autowired private lateinit var onboarding: OnboardTenantUseCase
     @Autowired private lateinit var txManager: PlatformTransactionManager
+    @Autowired private lateinit var scanner: ProvisioningDriftScanner
     @PersistenceContext private lateinit var entityManager: EntityManager
 
     @Test
@@ -45,9 +51,11 @@ class ProvisioningDriftAdoptionIT {
 
         assertThat(response.status).isEqualTo(200)
         assertThat(JsonPath.read<String>(response.contentAsString, "$.status")).isEqualTo("NONE")
+        scanner.scan()
         asTenant(tenant.id) {
             assertThat(count("provisioning_adoption_baseline", "drift_id", fixture.driftId)).isEqualTo(1)
             assertThat(count("provisioning_device_snapshot", "device_id", fixture.deviceId)).isEqualTo(2)
+            assertThat(count("provisioning_device_observation", "device_id", fixture.deviceId)).isEqualTo(2)
         }
         val audit = mockMvc.perform(
             org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/audit-logs?page=0&size=100")
@@ -56,11 +64,34 @@ class ProvisioningDriftAdoptionIT {
         assertThat(audit).contains("provisioning.drift.adopted")
     }
 
-    private fun insertFixture(tenantId: UUID): Fixture {
+    @Test
+    fun `unrelated operation certification cannot authorize adoption`() {
+        val slug = "adopt-denied-${UUID.randomUUID().toString().take(8)}"
+        val email = "admin@$slug.test"
+        val tenant = onboarding.onboard(OnboardTenantCommand(slug, slug, email, "Admin", PASSWORD)).tenant
+        val fixture = asTenant(tenant.id) { insertFixture(tenant.id, "REMOVE_TAGGED_VLAN") }
+
+        val response = mockMvc.perform(
+            post("/api/provisioning/drift/${fixture.driftId}/adopt")
+                .header("Authorization", "Bearer ${login(slug, email)}")
+                .header("If-Match", "1"),
+        ).andReturn().response
+
+        assertThat(response.status).isEqualTo(409)
+        assertThat(response.contentAsString).contains("DRIFT_ADOPTION_SAFETY_BLOCKED")
+        asTenant(tenant.id) {
+            assertThat(count("provisioning_adoption_baseline", "drift_id", fixture.driftId)).isZero()
+        }
+    }
+
+    private fun insertFixture(tenantId: UUID, certificationOperation: String = "ENSURE_TAGGED_VLAN"): Fixture {
         val poolId = UUID.randomUUID()
         val profileId = UUID.randomUUID()
         val intentId = UUID.randomUUID()
         val planId = UUID.randomUUID()
+        val stepId = UUID.randomUUID()
+        val executionId = UUID.randomUUID()
+        val executionStepId = UUID.randomUUID()
         val deviceId = UUID.randomUUID()
         val snapshotId = UUID.randomUUID()
         val observationId = UUID.randomUUID()
@@ -80,6 +111,22 @@ class ProvisioningDriftAdoptionIT {
         entityManager.createNativeQuery("INSERT INTO provisioning_plan (id,tenant_id,intent_id,revision,status,content_hash) VALUES (:a,:t,:intent,1,'GENERATED',:hash)")
             .setParameter("a", planId).setParameter("t", tenantId).setParameter("intent", intentId)
             .setParameter("hash", "0".repeat(64)).executeUpdate()
+        entityManager.createNativeQuery("""INSERT INTO provisioning_step
+            (id,tenant_id,plan_id,step_order,device_kind,device_id,operation)
+            VALUES (:a,:t,:plan,1,'ROUTER',:device,'ENSURE_TAGGED_VLAN')""")
+            .setParameter("a", stepId).setParameter("t", tenantId).setParameter("plan", planId)
+            .setParameter("device", deviceId).executeUpdate()
+        listOf(
+            "safety.vendor" to "MIKROTIK",
+            "safety.model" to "CCR2004",
+            "safety.firmware" to "7.20.2",
+            "safety.transport" to "HTTPS_REST",
+        ).forEach { (key, value) ->
+            entityManager.createNativeQuery("""INSERT INTO provisioning_step_attribute
+                (id,tenant_id,step_id,attribute_key,attribute_value) VALUES (:a,:t,:step,:key,:value)""")
+                .setParameter("a", UUID.randomUUID()).setParameter("t", tenantId).setParameter("step", stepId)
+                .setParameter("key", key).setParameter("value", value).executeUpdate()
+        }
         entityManager.createNativeQuery("""INSERT INTO provisioning_device_snapshot
             (id,tenant_id,device_kind,device_id,plan_id,normalized_state,captured_at)
             VALUES (:a,:t,'ROUTER',:device,:plan,CAST(:state AS jsonb),:now)""")
@@ -90,24 +137,41 @@ class ProvisioningDriftAdoptionIT {
             VALUES (:a,:t,'ROUTER',:device,CAST(:state AS jsonb),:now)""")
             .setParameter("a", observationId).setParameter("t", tenantId).setParameter("device", deviceId)
             .setParameter("state", OBSERVED).setParameter("now", now).executeUpdate()
+        val readbackHash = NormalizedStateHash.sha256(
+            NormalizedDeviceState.of(
+                NormalizedField.VLAN_ID to NormalizedValue.number(110),
+                NormalizedField.EXTERNAL to NormalizedValue.flag(false),
+            ),
+        )
+        entityManager.createNativeQuery("""INSERT INTO provisioning_execution
+            (id,tenant_id,intent_id,plan_id,idempotency_key,status) VALUES (:a,:t,:intent,:plan,:key,'QUEUED')""")
+            .setParameter("a", executionId).setParameter("t", tenantId).setParameter("intent", intentId)
+            .setParameter("plan", planId).setParameter("key", "readback-$executionId").executeUpdate()
+        entityManager.createNativeQuery("""INSERT INTO provisioning_execution_step
+            (id,tenant_id,execution_id,plan_step_id,step_order,device_kind,device_id,status,after_hash)
+            VALUES (:a,:t,:execution,:step,1,'ROUTER',:device,'VERIFIED',:hash)""")
+            .setParameter("a", executionStepId).setParameter("t", tenantId).setParameter("execution", executionId)
+            .setParameter("step", stepId).setParameter("device", deviceId).setParameter("hash", readbackHash).executeUpdate()
+        entityManager.createNativeQuery("""INSERT INTO provisioning_step_snapshot
+            (id,tenant_id,execution_step_id,snapshot_kind,state_hash,normalized_state,captured_at)
+            VALUES (:a,:t,:step,'AFTER',:hash,CAST(:state AS jsonb),:now)""")
+            .setParameter("a", UUID.randomUUID()).setParameter("t", tenantId).setParameter("step", executionStepId)
+            .setParameter("hash", readbackHash).setParameter("state", BASELINE).setParameter("now", now).executeUpdate()
         entityManager.createNativeQuery("""INSERT INTO provisioning_drift_record
             (id,tenant_id,device_kind,device_id,snapshot_id,observation_id,status,recorded_at)
             VALUES (:a,:t,'ROUTER',:device,:snapshot,:observation,'BENIGN',:now)""")
             .setParameter("a", driftId).setParameter("t", tenantId).setParameter("device", deviceId)
             .setParameter("snapshot", snapshotId).setParameter("observation", observationId).setParameter("now", now).executeUpdate()
-        insertCertificationEvidence(tenantId, deviceId, collectorId, reportId, capabilityId, observationId, now)
+        insertCertificationEvidence(
+            CertificationFixture(
+                tenantId, deviceId, collectorId, reportId, capabilityId, observationId, now, certificationOperation,
+            ),
+        )
         return Fixture(driftId, deviceId)
     }
 
-    private fun insertCertificationEvidence(
-        tenantId: UUID,
-        deviceId: UUID,
-        collectorId: UUID,
-        reportId: UUID,
-        capabilityId: UUID,
-        observationId: UUID,
-        now: Instant,
-    ) {
+    private fun insertCertificationEvidence(fixture: CertificationFixture) {
+        val (tenantId, deviceId, collectorId, reportId, capabilityId, observationId, now, operation) = fixture
         entityManager.createNativeQuery("""INSERT INTO collector
             (id,tenant_id,name,api_key_hash,api_key_hint,status,poll_interval_seconds)
             VALUES (:a,:t,'adoption-collector',:hash,'task14','ACTIVE',60)""")
@@ -117,25 +181,28 @@ class ProvisioningDriftAdoptionIT {
             (id,tenant_id,collector_id,report_key,target_id,vendor,model,firmware,transport,capabilities,
              operation_classes,reported_at,expires_at)
             VALUES (:a,:t,:collector,:key,:target,'MIKROTIK','CCR2004','7.20.2','HTTPS_REST','VLAN',
-                    'ENSURE_TAGGED_VLAN',:now,:expires)""")
+                    :operation,:now,:expires)""")
             .setParameter("a", reportId).setParameter("t", tenantId).setParameter("collector", collectorId)
             .setParameter("key", "$deviceId@$now").setParameter("target", deviceId.toString())
+            .setParameter("operation", operation)
             .setParameter("now", now).setParameter("expires", now.plusSeconds(600)).executeUpdate()
         entityManager.createNativeQuery("""INSERT INTO provisioning_capability_evidence
             (id,tenant_id,collector_id,report_id,device_kind,device_id,vendor,model,firmware,transport,
              operation_class,supported,observed_at,expires_at)
             VALUES (:a,:t,:collector,:report,'ROUTER',:device,'MIKROTIK','CCR2004','7.20.2','HTTPS_REST',
-                    'ENSURE_TAGGED_VLAN',true,:now,:expires)""")
+                    :operation,true,:now,:expires)""")
             .setParameter("a", capabilityId).setParameter("t", tenantId).setParameter("collector", collectorId)
             .setParameter("report", reportId).setParameter("device", deviceId).setParameter("now", now)
+            .setParameter("operation", operation)
             .setParameter("expires", now.plusSeconds(600)).executeUpdate()
         entityManager.createNativeQuery("""INSERT INTO provisioning_adapter_certification
             (id,tenant_id,device_kind,device_id,vendor,model,firmware,transport,operation_class,status,
              valid_until,evidence_id,certified_by,certified_at)
-            VALUES (:a,:t,'ROUTER',:device,'MIKROTIK','CCR2004','7.20.2','HTTPS_REST','ENSURE_TAGGED_VLAN',
+            VALUES (:a,:t,'ROUTER',:device,'MIKROTIK','CCR2004','7.20.2','HTTPS_REST',:operation,
                     'CERTIFIED',:expires,:evidence,:actor,:now)""")
             .setParameter("a", UUID.randomUUID()).setParameter("t", tenantId).setParameter("device", deviceId)
             .setParameter("expires", now.plusSeconds(600)).setParameter("evidence", capabilityId)
+            .setParameter("operation", operation)
             .setParameter("actor", UUID.randomUUID()).setParameter("now", now).executeUpdate()
         entityManager.createNativeQuery("""INSERT INTO provisioning_management_safety_evidence
             (id,tenant_id,device_kind,device_id,protected_vlan_ranges,protected_ip_prefixes,protected_vrfs,
@@ -164,6 +231,16 @@ class ProvisioningDriftAdoptionIT {
     }
 
     private data class Fixture(val driftId: UUID, val deviceId: UUID)
+    private data class CertificationFixture(
+        val tenantId: UUID,
+        val deviceId: UUID,
+        val collectorId: UUID,
+        val reportId: UUID,
+        val capabilityId: UUID,
+        val observationId: UUID,
+        val now: Instant,
+        val operation: String,
+    )
 
     private companion object {
         const val PASSWORD = "secret12345"
