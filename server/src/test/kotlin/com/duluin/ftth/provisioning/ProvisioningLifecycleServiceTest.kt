@@ -46,8 +46,8 @@ class ProvisioningLifecycleServiceTest {
         val queued = executions.save(ProvisionExecution.queue(plan.tenantId, plan.intentId, plan.id, "cancel-key"))
         val service = ProvisioningLifecycleService(Plans(plan), executions, Admission(plan, executions), allowedGate())
 
-        assertThat(service.cancel(queued.id).status).isEqualTo(ExecutionStatus.CANCELLED)
-        assertThatThrownBy { service.cancel(queued.id) }.isInstanceOf(ConflictException::class.java)
+        assertThat(service.cancel(queued.id, 1).status).isEqualTo(ExecutionStatus.CANCELLED)
+        assertThatThrownBy { service.cancel(queued.id, 1) }.isInstanceOf(ConflictException::class.java)
     }
 
     private class Plans(private val plan: ProvisionPlan) : ProvisionPlanRepository {
@@ -68,9 +68,8 @@ class ProvisioningLifecycleServiceTest {
         private val executions: Executions,
     ) : ProvisioningExecutionAdmissionUseCase {
         override fun admit(planId: UUID, keySuffix: String): ProvisionExecution {
-            val key = "${plan.intentId}:${plan.revision}:$keySuffix"
-            return executions.findByIdempotencyKey(key)
-                ?: executions.save(ProvisionExecution.queue(plan.tenantId, plan.intentId, plan.id, key))
+            return executions.findByIdempotencyKey(keySuffix)
+                ?: executions.save(ProvisionExecution.queue(plan.tenantId, plan.intentId, plan.id, keySuffix))
         }
     }
 

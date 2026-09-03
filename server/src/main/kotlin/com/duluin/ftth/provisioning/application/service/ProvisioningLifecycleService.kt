@@ -19,6 +19,9 @@ class ProvisioningLifecycleService(
     private val executions: ProvisionExecutionRepository,
     private val admission: ProvisioningExecutionAdmissionUseCase,
     private val safetyGate: ProvisioningSafetyGate,
+    private val audit: ProvisioningAuditPublisher? = null,
+    private val metrics: ProvisioningMetrics? = null,
+    private val revisions: ProvisioningResourceRevisionStore? = null,
 ) {
     @Transactional(readOnly = true)
     fun plan(id: UUID): ProvisionPlan = plans.findById(id) ?: throw NotFoundException("PLAN_NOT_FOUND")
@@ -34,16 +37,29 @@ class ProvisioningLifecycleService(
         val plan = plan(id)
         if (plan.revision != revision) throw ConflictException("STALE_PLAN")
         if (idempotencyKey.isBlank()) throw ConflictException("IDEMPOTENCY_KEY_REQUIRED")
-        return admission.admit(id, idempotencyKey)
+        val execution = admission.admit(id, idempotencyKey)
+        revisions?.register(EXECUTION, execution.id)
+        audit?.publish(ProvisioningAuditRecord(execution.tenantId, "provisioning.execution.applied", "ProvisionExecution", execution.id))
+        metrics?.queueDepth(1)
+        return execution
     }
 
     @Transactional(readOnly = true)
     fun execution(id: UUID): ProvisionExecution = executions.findById(id) ?: throw NotFoundException("EXECUTION_NOT_FOUND")
 
     @Transactional
-    fun cancel(id: UUID): ProvisionExecution {
+    fun cancel(id: UUID, revision: Int): ProvisionExecution {
         val execution = execution(id)
+        if (revisions == null && revision != 1) throw ConflictException("STALE_REVISION")
+        revisions?.advance(EXECUTION, id, revision)
         execution.cancel()
-        return executions.save(execution)
+        val saved = executions.save(execution)
+        audit?.publish(ProvisioningAuditRecord(saved.tenantId, "provisioning.execution.cancelled", "ProvisionExecution", saved.id))
+        metrics?.queueDepth(0)
+        return saved
     }
+
+    fun executionRevision(id: UUID): Int = revisions?.current(EXECUTION, id) ?: 1
+
+    private companion object { const val EXECUTION = "EXECUTION" }
 }

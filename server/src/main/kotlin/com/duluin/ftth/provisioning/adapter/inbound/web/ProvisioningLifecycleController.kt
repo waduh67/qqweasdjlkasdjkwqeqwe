@@ -5,11 +5,13 @@ import com.duluin.ftth.provisioning.application.service.ProvisioningEvidenceQuer
 import com.duluin.ftth.provisioning.domain.model.ProvisionExecution
 import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
 import com.duluin.ftth.provisioning.domain.policy.ExecutionMode
+import com.duluin.ftth.common.domain.error.ValidationException
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -31,16 +33,24 @@ class ProvisioningLifecycleController(
 
     @PostMapping("/plans/{id}/apply")
     @PreAuthorize("@authz.can('provisioning.execution.apply')")
-    fun apply(@PathVariable id: UUID, @RequestBody request: ApplyPlanRequest) =
-        lifecycle.apply(id, request.revision, request.idempotencyKey).toView()
+    fun apply(
+        @PathVariable id: UUID,
+        @RequestHeader("Idempotency-Key") idempotencyKey: String,
+        @RequestHeader("If-Match") revision: String,
+    ) = lifecycle.apply(id, parseRevision(revision), idempotencyKey).let { it.toView(lifecycle.executionRevision(it.id)) }
 
     @GetMapping("/executions/{id}")
     @PreAuthorize("@authz.can('provisioning.plan.view')")
-    fun execution(@PathVariable id: UUID) = lifecycle.execution(id).toView()
+    fun execution(@PathVariable id: UUID) = lifecycle.execution(id).let { it.toView(lifecycle.executionRevision(it.id)) }
+
+    @GetMapping("/executions/{id}/timeline")
+    @PreAuthorize("@authz.can('provisioning.plan.view')")
+    fun timeline(@PathVariable id: UUID) = evidence.timeline(id)
 
     @PostMapping("/executions/{id}/cancel")
     @PreAuthorize("@authz.can('provisioning.execution.cancel')")
-    fun cancel(@PathVariable id: UUID) = lifecycle.cancel(id).toView()
+    fun cancel(@PathVariable id: UUID, @RequestHeader("If-Match") revision: String) =
+        lifecycle.cancel(id, parseRevision(revision)).let { it.toView(lifecycle.executionRevision(it.id)) }
 
     @GetMapping("/capabilities")
     @PreAuthorize("@authz.can('provisioning.plan.view')")
@@ -50,18 +60,25 @@ class ProvisioningLifecycleController(
     @PreAuthorize("@authz.can('provisioning.segment.view')")
     fun protections() = evidence.protections()
 
+    @GetMapping("/observations")
+    @PreAuthorize("@authz.can('provisioning.drift.view')")
+    fun observations() = evidence.observations()
+
     @GetMapping("/drift")
     @PreAuthorize("@authz.can('provisioning.drift.view')")
     fun drift() = evidence.drift()
 
     @PostMapping("/drift/{id}/adopt")
     @PreAuthorize("@authz.can('provisioning.drift.adopt')")
-    fun adoptDrift(@PathVariable id: UUID) = evidence.adoptDrift(id)
+    fun adoptDrift(@PathVariable id: UUID, @RequestHeader("If-Match") revision: String) =
+        evidence.adoptDrift(id, parseRevision(revision))
 }
 
-data class ApplyPlanRequest(val revision: Int, val idempotencyKey: String)
 data class ProvisioningPlanView(val id: UUID, val intentId: UUID, val revision: Int, val status: String, val contentHash: String)
-data class ProvisioningExecutionView(val id: UUID, val planId: UUID, val status: String, val detail: String?)
+data class ProvisioningExecutionView(val id: UUID, val planId: UUID, val revision: Int, val status: String)
 
 private fun ProvisionPlan.toView() = ProvisioningPlanView(id, intentId, revision, status.name, contentHash)
-private fun ProvisionExecution.toView() = ProvisioningExecutionView(id, planId, status.name, detail)
+private fun ProvisionExecution.toView(revision: Int) = ProvisioningExecutionView(id, planId, revision, status.name)
+
+fun parseRevision(value: String): Int = value.removePrefix("W/").trim('"').toIntOrNull()
+    ?.takeIf { it > 0 } ?: throw ValidationException("REVISION_REQUIRED")
