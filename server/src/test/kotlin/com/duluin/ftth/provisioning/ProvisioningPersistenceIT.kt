@@ -5,6 +5,7 @@ import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisionExecutionRepository
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisionPlanRepository
+import com.duluin.ftth.provisioning.application.service.SafetyPlanAttributes
 import com.duluin.ftth.provisioning.domain.model.DeviceKind
 import com.duluin.ftth.provisioning.domain.model.DeviceReference
 import com.duluin.ftth.provisioning.domain.model.PlanStatus
@@ -193,6 +194,44 @@ class ProvisioningPersistenceIT {
         assertThat(stored.steps).hasSize(1)
         assertThat(stored.steps.single().operation).isEqualTo(ProvisionOperation.ENSURE_TAGGED_VLAN)
         assertThat(stored.steps.single().attributes).containsEntry("vlanId", "110")
+    }
+
+    @Test
+    fun `database accepts every normalized task four safety plan attribute`() {
+        val tenantId = tenant("provision-safety-attributes")
+        val intentId = asTenant(tenantId) { insertIntent(tenantId, insertPool(tenantId)) }
+        val sourceId = UuidV7.generate()
+        val step = ProvisionStep.create(
+            1,
+            DeviceReference(DeviceKind.ROUTER, FIXED_DEVICE),
+            ProvisionOperation.ENSURE_TAGGED_VLAN,
+            mapOf(
+                "intentId" to intentId.toString(),
+                "vlanId" to "110",
+                ProvisionStep.PRECONDITION_HASH_ATTRIBUTE to "a".repeat(64),
+                ProvisionPlan.PLAN_PRECONDITION_HASH_ATTRIBUTE to "b".repeat(64),
+                "interface" to "ether1",
+                SafetyPlanAttributes.VENDOR to "MIKROTIK",
+                SafetyPlanAttributes.MODEL to "CCR2004",
+                SafetyPlanAttributes.FIRMWARE to "7.20.2",
+                SafetyPlanAttributes.TRANSPORT to "HTTPS_REST",
+                SafetyPlanAttributes.MANAGEMENT_COMPLETE to "true",
+                SafetyPlanAttributes.MANAGEMENT_SOURCE_ID to sourceId.toString(),
+                SafetyPlanAttributes.MANAGEMENT_SOURCE_TYPE to "DEVICE_OBSERVATION",
+                SafetyPlanAttributes.INTERFACE_ROLES to "TRUNK",
+                SafetyPlanAttributes.IP_ADDRESSES to "10.0.0.1/32",
+                SafetyPlanAttributes.VRFS to "main",
+                SafetyPlanAttributes.COLLECTOR_PATHS to "vpn/main",
+                SafetyPlanAttributes.REQUIRED_OOB_ROUTES to "10.0.0.0/24",
+                SafetyPlanAttributes.CHANGED_OOB_ROUTES to "",
+                SafetyPlanAttributes.AVAILABLE_OOB_ROUTES to "10.0.0.0/24",
+            ),
+        )
+        val plan = ProvisionPlan.generate(tenantId, intentId, 1, listOf(step))
+
+        val stored = asTenant(tenantId) { provisionPlans.save(plan) }
+
+        assertThat(stored.steps.single().attributes).isEqualTo(step.attributes)
     }
 
     @Test
@@ -464,6 +503,10 @@ class ProvisioningPersistenceIT {
             "interface" to "secret-label",
             "interface" to "/interface vlan add name=vlan110",
             "interface" to "-----begin",
+            SafetyPlanAttributes.MANAGEMENT_COMPLETE to "false",
+            SafetyPlanAttributes.MANAGEMENT_SOURCE_TYPE to "UNKNOWN",
+            SafetyPlanAttributes.IP_ADDRESSES to "not an address",
+            SafetyPlanAttributes.VENDOR to "secret-vendor",
         ).forEach { (key, value) ->
             assertThatThrownBy {
                 asTenant(tenantId) {
