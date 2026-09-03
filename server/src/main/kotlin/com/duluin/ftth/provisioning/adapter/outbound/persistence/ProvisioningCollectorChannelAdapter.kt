@@ -152,12 +152,12 @@ class ProvisioningCollectorChannelAdapter(
             """INSERT INTO provisioning_collector_result_receipt
                 (id, tenant_id, collector_id, idempotency_key, plan_id, revision, step_id, attempt_id, target_id,
                 operation_class, fencing_epoch, phase, success, completed_at, error_code, preflight_hash, apply_changed, apply_state_hash,
-                verification_matches, verification_state_hash, managed_resource_count, rollback_success,
+                 verification_matches, verification_state_hash, managed_resource_count, state_vlan_ids, rollback_success,
                 rollback_state_hash, rollback_error_code)
                VALUES (:id, :tenant, :collector, :key, :plan, :revision, :step, :attempt, :target, :operation, :fence,
                 :phase, :success, :completedAt, CAST(:errorCode AS varchar), CAST(:preflightHash AS varchar),
                 CAST(:applyChanged AS boolean), CAST(:applyHash AS varchar), CAST(:verificationMatches AS boolean),
-                CAST(:verificationHash AS varchar), CAST(:resourceCount AS integer), CAST(:rollbackSuccess AS boolean),
+                 CAST(:verificationHash AS varchar), CAST(:resourceCount AS integer), :stateVlans, CAST(:rollbackSuccess AS boolean),
                 CAST(:rollbackHash AS varchar), CAST(:rollbackError AS varchar))
                ON CONFLICT (tenant_id, attempt_id) DO NOTHING""",
         ).setParameter("id", UUID.randomUUID())
@@ -183,6 +183,10 @@ class ProvisioningCollectorChannelAdapter(
             .setParameter(
                 "resourceCount",
                 result.verification?.state?.managedResourceCount ?: result.preflight?.state?.managedResourceCount,
+            )
+            .setParameter(
+                "stateVlans",
+                (result.verification?.state ?: result.preflight?.state)?.vlanIds?.sorted()?.joinToString(",") ?: "",
             )
             .setParameter("rollbackSuccess", result.rollback?.success)
             .setParameter("rollbackHash", result.rollback?.resultingStateHash)

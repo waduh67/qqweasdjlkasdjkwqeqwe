@@ -214,7 +214,11 @@ class StepAttemptPersistenceAdapter(
         if (status == com.duluin.ftth.provisioning.domain.model.AttemptStatus.DISPATCHED) return false
         if (status == com.duluin.ftth.provisioning.domain.model.AttemptStatus.SUCCEEDED && errorCode != null) return false
         if (status != com.duluin.ftth.provisioning.domain.model.AttemptStatus.SUCCEEDED && errorCode.isNullOrBlank()) return false
-        return attempts.completeIfDispatched(id, status, errorCode, completedAt) == 1
+        val updated = attempts.completeIfDispatched(id, status, errorCode, completedAt) == 1
+        if (updated) return true
+        return attempts.findById(id).orElse(null)?.let { stored ->
+            stored.status == status && stored.errorCode == errorCode
+        } == true
     }
 
     @Transactional
