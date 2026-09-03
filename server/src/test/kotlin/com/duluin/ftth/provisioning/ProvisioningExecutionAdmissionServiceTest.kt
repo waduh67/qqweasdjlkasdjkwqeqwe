@@ -38,11 +38,11 @@ class ProvisioningExecutionAdmissionServiceTest {
             plans, executions, gate, ProvisioningRolloutProperties(autoApplyEnabled = true),
         )
 
-        val first = admission.admit(firstPlan.id, "request-key")
-        val replay = admission.admit(firstPlan.id, "request-key")
+        val first = admission.admit(firstPlan.id, "request-key", 1)
+        val replay = admission.admit(firstPlan.id, "request-key", 1)
 
         assertThat(replay.id).isEqualTo(first.id)
-        assertThatThrownBy { admission.admit(secondPlan.id, "request-key") }
+        assertThatThrownBy { admission.admit(secondPlan.id, "request-key", 1) }
             .isInstanceOf(ConflictException::class.java)
             .hasMessage("EXECUTION_IDEMPOTENCY_KEY_REUSED")
     }
@@ -64,7 +64,7 @@ class ProvisioningExecutionAdmissionServiceTest {
                 plans, executions, gate, ProvisioningRolloutProperties(autoApplyEnabled = true),
             )
 
-        assertThatThrownBy { admission.admit(plan.id, "task-12") }
+        assertThatThrownBy { admission.admit(plan.id, "task-12", 1) }
             .isInstanceOf(ValidationException::class.java)
             .hasMessage(PolicyCode.UNCERTIFIED_CAPABILITY.name)
         assertThat(evaluatedPlan).isSameAs(plan)
@@ -87,7 +87,7 @@ class ProvisioningExecutionAdmissionServiceTest {
             plans, executions, gate, ProvisioningRolloutProperties(),
         )
 
-        assertThatThrownBy { admission.admit(plan.id, "disabled-auto-apply") }
+        assertThatThrownBy { admission.admit(plan.id, "disabled-auto-apply", 1) }
             .isInstanceOf(ConflictException::class.java)
             .hasMessage("PRODUCTION_AUTO_APPLY_DISABLED")
         assertThat(evaluated).isFalse()
@@ -122,6 +122,27 @@ class ProvisioningExecutionAdmissionServiceTest {
             ),
         )
         assertThat(configuredAdmission.admit(plan.id, "bulk-enabled", 2).planId).isEqualTo(plan.id)
+    }
+
+    @Test
+    fun `allowed generated plan becomes validated during authoritative admission`() {
+        val plans = PlanRepository()
+        val executions = ExecutionRepository()
+        val generated = ProvisionPlan.generate(
+            UuidV7.generate(), UuidV7.generate(), 1,
+            listOf(ProvisionStep.create(1, DeviceReference(DeviceKind.BRAS, UuidV7.generate()), ProvisionOperation.ENSURE_PPPOE_TERMINATION, mapOf("vlanId" to "320"))),
+        ).also(plans::save)
+        val gate = object : ProvisioningSafetyGate {
+            override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode) = PolicyDecision(true, PolicyCode.AUTO_APPLY_ALLOWED)
+        }
+        val admission = ProvisioningExecutionAdmissionService(
+            plans, executions, gate, ProvisioningRolloutProperties(autoApplyEnabled = true),
+        )
+
+        val execution = admission.admit(generated.id, "generated-plan", 1)
+
+        assertThat(generated.status.name).isEqualTo("VALIDATED")
+        assertThat(execution.planId).isEqualTo(generated.id)
     }
 
     private fun validatedPlan(): ProvisionPlan = ProvisionPlan.generate(

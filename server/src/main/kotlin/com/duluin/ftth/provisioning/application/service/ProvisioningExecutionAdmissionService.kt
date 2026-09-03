@@ -23,7 +23,7 @@ class ProvisioningExecutionAdmissionService(
     @Transactional
     override fun admit(planId: UUID, keySuffix: String, affectedSubscriberCount: Int): ProvisionExecution {
         val plan = plans.findById(planId) ?: throw ValidationException("PLAN_NOT_FOUND")
-        if (plan.status != PlanStatus.VALIDATED) throw ValidationException("PLAN_NOT_VALIDATED")
+        if (plan.status !in setOf(PlanStatus.GENERATED, PlanStatus.VALIDATED)) throw ValidationException("PLAN_NOT_VALIDATED")
         rollout.requireAutoApplyAllowed(affectedSubscriberCount)
         val decision = safetyGate.evaluate(plan, ExecutionMode.PRODUCTION_AUTO_APPLY)
         if (!decision.allowed) {
@@ -31,6 +31,10 @@ class ProvisioningExecutionAdmissionService(
                 metrics?.certificationBlock()
             }
             throw ValidationException(decision.code.name)
+        }
+        if (plan.status == PlanStatus.GENERATED) {
+            plan.validate()
+            plans.save(plan)
         }
         executions.findByIdempotencyKey(keySuffix)?.let { existing ->
             if (existing.planId != plan.id) throw com.duluin.ftth.common.domain.error.ConflictException(
