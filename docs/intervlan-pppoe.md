@@ -9,7 +9,8 @@ manajemen lengkap, dan operator mengaktifkan rollout.
 1. Cadangkan DB aplikasi, DB RADIUS, dan jurnal `FTTH_COLLECTOR_STATE_DIR`.
 2. Daftarkan node, interface, link, pool VLAN, profil segmen, dan intent layanan di
    **Provisioning jaringan**. Residential shared memakai alokasi bersama ber-reference count;
-   enterprise dedicated memakai VLAN unik atau override yang bebas konflik.
+   enterprise dedicated memakai VLAN unik atau override yang bebas konflik. Mode alokasi
+   disimpan sebagai `SHARED`/`DEDICATED`; nama profil tidak menentukan perilaku.
 3. Daftarkan BRAS/RADIUS dan pastikan auth, accounting interim, serta DAE/CoA sesuai
    [`bras-radius.md`](bras-radius.md). Voucher hotspot hanya direferensikan melalui site;
    kredensial voucher tidak masuk plan.
@@ -49,8 +50,10 @@ khususnya bukan sertifikasi fisik HSGQ Task 9.
 
 ## Dry-run dan interpretasi
 
-1. Pilih intent dan masukkan ID plan aktif.
-2. Jalankan **Pratinjau dry-run**. Tidak boleh tercipta execution, attempt, receipt, command
+1. Pilih intent lalu jalankan **Buat dan pratinjau plan**. Server merakit plan dari intent,
+   alokasi VLAN, topologi, observasi, kapabilitas, dan proteksi yang tersimpan; operator tidak
+   memasukkan ID plan atau bukti perangkat secara manual.
+2. Dry-run tidak boleh menciptakan execution, attempt, receipt, command
    collector, perubahan RADIUS, atau mutasi perangkat.
 3. Periksa urutan OLT/transit/BRAS, diff ternormalisasi, VLAN, interface, blast radius,
    evidence ID, dan warning.
@@ -70,6 +73,20 @@ khususnya bukan sertifikasi fisik HSGQ Task 9.
 
 Apply memakai revision `If-Match` dan satu `Idempotency-Key` stabil per percobaan. Replay
 dengan key yang sama tidak membuat eksekusi kedua.
+
+Eksekusi yang diterima masuk antrean persisten. Worker server mengambil status `QUEUED`,
+`RUNNING`, atau `ROLLING_BACK`, lalu menggunakan kanal heartbeat collector yang sama untuk
+dispatch dan ACK. Bila server atau collector restart, lease dan fencing token mencegah dua
+worker menulis perangkat yang sama. Jangan menjalankan jalur mutasi paralel di luar kanal ini.
+
+Endpoint `POST /api/provisioning/intents/{id}/plans` merakit plan dari state tersimpan. UI
+memanggil endpoint ini sebelum preview; ID plan bukan lagi input operator. Endpoint intent
+`/suspend`, `/restore`, dan `/deprovision` menghubungkan lifecycle akses dan pembongkaran.
+
+Tombol **Tangguhkan** mempertahankan transport dan mengisolasi akses; **Pulihkan** mengaktifkan
+akses kembali. **Deprovision** menyusun plan DELETE dari state tersimpan, memeriksa sesi aktif,
+menjalankan rollback-safe removal, lalu melepas referensi VLAN dan menandai intent dihentikan
+hanya setelah eksekusi sukses.
 
 ## Pembatalan, rollback, dan rekonsiliasi manual
 
