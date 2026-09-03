@@ -1041,6 +1041,9 @@ td.dg-actions {
    disembunyikan agar tak menggandakan garis bawah strip tab. */
 [role='tablist'] {
   overflow-x: auto;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   scrollbar-width: none;
 }
 [role='tablist']::-webkit-scrollbar {
@@ -2672,6 +2675,13 @@ td.dg-actions {
       'topbar'
       'main';
   }
+  .app,
+  .main,
+  .content {
+    min-width: 0;
+    max-width: 100vw;
+    overflow-x: clip;
+  }
   /* Laci selalu tampil versi lengkap (ikon + teks); mode rel-ikon tak berlaku di sini. */
   .sidebar-collapsed .brand-text,
   .sidebar-collapsed .nav-text,
@@ -2699,14 +2709,28 @@ td.dg-actions {
     z-index: 41;
     transform: translateX(-100%);
     transition: transform 0.18s ease;
-    box-shadow: 6px 0 24px -12px rgba(0, 0, 0, 0.5);
+    box-shadow: none;
   }
   .app.nav-open .sidebar {
     transform: none;
+    box-shadow: 6px 0 24px -12px rgba(0, 0, 0, 0.5);
   }
   /* Konten sesak di ponsel: padding halaman dipangkas agar kartu tak jadi lorong sempit. */
   .content {
     padding: 1rem 0.85rem 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .card.clickable,
+  .core-chip,
+  .meter-fill {
+    transition: none;
+  }
+  .nav-scrim,
+  .toast {
+    animation: none;
   }
 }
 
@@ -3012,6 +3036,163 @@ td.dg-actions {
   display: flex;
   gap: 0.7rem;
   padding-left: 0.2rem;
+}
+
+.network-provisioning-page {
+  gap: 1.25rem;
+  min-width: 0;
+  max-width: 100%;
+}
+.workspace-summary,
+.workspace-grid,
+.workspace-safety-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+  gap: 1rem;
+}
+.workspace-summary {
+  grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
+}
+.workspace-summary-item,
+.workspace-safety-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.workspace-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.workspace-title-group > * {
+  margin: 0;
+}
+.workspace-path {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+}
+.workspace-path li {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.workspace-path li:last-child {
+  border-bottom: 0;
+}
+.workspace-step-index {
+  width: 1.75rem;
+  height: 1.75rem;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: var(--fontSizeBase200);
+  font-weight: var(--fontWeightSemibold);
+}
+.workspace-step-content {
+  gap: 0.65rem;
+}
+.workspace-list-row,
+.workspace-kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  min-width: 0;
+}
+.workspace-list-row {
+  padding-block: 0.65rem;
+  border-bottom: 1px solid var(--border);
+}
+.workspace-kv span {
+  color: var(--muted);
+}
+.workspace-kv strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: end;
+}
+.workspace-actions {
+  display: grid;
+  grid-template-columns: minmax(min(18rem, 100%), 1fr) auto auto;
+  gap: 0.75rem;
+  align-items: end;
+}
+.workspace-diff {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr));
+  gap: 0.5rem 1rem;
+  padding: 0.75rem;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+.workspace-callout {
+  padding: 0.65rem 0.75rem;
+  border-inline-start: 3px solid currentColor;
+  background: var(--surface-2);
+  overflow-wrap: anywhere;
+}
+.workspace-callout.warning {
+  color: var(--warning-ink);
+  background: color-mix(in srgb, var(--warning) 10%, var(--surface));
+}
+.workspace-callout.critical,
+.workspace-error-code {
+  color: var(--critical-ink);
+}
+.workspace-callout.critical {
+  background: color-mix(in srgb, var(--critical) 10%, var(--surface));
+}
+.workspace-code,
+.min-w-0 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.workspace-field {
+  gap: 0.35rem;
+}
+
+@media (max-width: 700px) {
+  .workspace-actions {
+    grid-template-columns: 1fr;
+  }
+  .workspace-actions button {
+    width: 100%;
+  }
+  .workspace-list-row,
+  .workspace-kv {
+    flex-wrap: wrap;
+  }
+  .workspace-kv strong {
+    text-align: start;
+  }
+}
+
+@media (max-width: 560px) {
+  .topbar {
+    min-width: 0;
+    gap: 0.5rem;
+    padding-inline: 0.75rem;
+    overflow: hidden;
+  }
+  .topbar > .row {
+    min-width: 0;
+    gap: 0.35rem !important;
+  }
+  .topbar .user-chip > div {
+    display: none;
+  }
 }
 .tl-dot {
   width: 10px;
