@@ -50,6 +50,7 @@ class CollectorProvisioningExchangeTest {
         )
 
         assertThat(response.commands.map { it.idempotencyKey }).containsExactly("attempt-pending")
+        assertThat(response.commands.single().observationOnly).isTrue()
         assertThat(response.acknowledgement.resultIdempotencyKeys).containsExactly("attempt-accepted")
         assertThat(response.acknowledgement.deviceReportKeys).containsExactly("device-1@$reportedAt")
         assertThat(channel.receivedResults).containsExactly(result, stale)
@@ -85,7 +86,7 @@ class CollectorProvisioningExchangeTest {
                 revision = 1,
                 stepId = "step-1",
                 attemptId = "attempt-id-pending",
-                phase = ProvisioningCommandPhase.APPLY,
+                phase = ProvisioningCommandPhase.PREFLIGHT,
                 operationClass = "ENSURE_TAGGED_VLAN",
                 idempotencyKey = "attempt-pending",
                 fencingEpoch = 3,
@@ -94,6 +95,7 @@ class CollectorProvisioningExchangeTest {
                 deviceId = "device-1",
                 deviceKind = "BRAS",
                 payload = ProvisioningPayload(ProvisioningPayloadValues(vlanId = "110", vlanInterface = "ether2")),
+                observationOnly = true,
             ),
         )
 

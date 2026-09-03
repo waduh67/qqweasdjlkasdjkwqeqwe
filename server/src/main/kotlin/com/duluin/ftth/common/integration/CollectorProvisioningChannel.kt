@@ -35,4 +35,5 @@ data class ProvisioningDispatch(
     val deviceId: String,
     val deviceKind: String,
     val payload: ProvisioningPayload,
+    val observationOnly: Boolean = false,
 )

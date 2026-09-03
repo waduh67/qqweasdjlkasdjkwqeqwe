@@ -49,6 +49,7 @@ class CollectorProvisioningExchange(
                 deadline = dispatch.deadline,
                 target = target,
                 payload = dispatch.payload,
+                observationOnly = dispatch.observationOnly,
             )
         }
         return ProvisioningExchangeResult(
