@@ -27,6 +27,7 @@ import com.duluin.ftth.contract.ProvisioningPayload
 import com.duluin.ftth.contract.ProvisioningPlanStepCommand
 import com.duluin.ftth.contract.ProvisioningAcknowledgement
 import com.duluin.ftth.contract.ProvisioningStepResult
+import com.duluin.ftth.contract.ProvisioningResultState
 import com.duluin.ftth.contract.ProvisioningTarget
 import com.duluin.ftth.contract.ProvisioningVerificationObservation
 import java.time.Clock
@@ -411,6 +412,28 @@ class CollectorAgentTest {
         assertEquals(ProvisioningErrorCode.STALE_PRECONDITION, client.heartbeats[1].provisioningResults.single().errorCode)
     }
 
+    @Test
+    fun `observation command returns live state without invoking mutation path`() {
+        val command = provisioningCommand("observation-live").copy(observationOnly = true)
+        val target = NasTarget("switch-1", "router", "MIKROTIK", "router.invalid", "ROUTER_OS")
+        val client = FakeServerClient(ArrayDeque(listOf(
+            FakeServerClient.IDLE.copy(nasTargets = listOf(target), provisioningCommands = listOf(command)),
+            FakeServerClient.IDLE,
+        )))
+        val adapter = RecordingProvisioningAdapter()
+        val agent = CollectorAgent(
+            client, AdapterRegistry(emptyList()), "test-1.0", sleeper = {},
+            clock = { Instant.parse("2026-07-26T00:00:00Z") },
+            provisioningRegistry = ProvisioningAdapterRegistry(listOf(adapter)),
+        )
+
+        agent.runOnce()
+
+        assertTrue(adapter.commands.isEmpty())
+        assertEquals(listOf(command), adapter.observations)
+        assertEquals(listOf(120), client.heartbeats[1].provisioningResults.single().verification?.state?.vlanIds)
+    }
+
     private fun failedProvisioningResult(stepId: String) = ProvisioningStepResult(
         planId = "plan-1",
         revision = 1,
@@ -490,8 +513,22 @@ class CollectorAgentTest {
     private class RecordingProvisioningAdapter : ProvisioningAdapter {
         override val vendor = "MIKROTIK"
         val commands = mutableListOf<ProvisioningPlanStepCommand>()
+        val observations = mutableListOf<ProvisioningPlanStepCommand>()
 
         override fun execute(target: NasTarget, command: ProvisioningPlanStepCommand): ProvisioningStepResult {
+            if (command.observationOnly) {
+                observations += command
+                val at = Instant.parse("2026-07-26T00:00:00Z")
+                val state = ProvisioningResultState(managedResourceCount = 1, vlanIds = listOf(120))
+                return ProvisioningStepResult(
+                    command.planId, command.revision, command.stepId, command.attemptId, command.target.deviceId,
+                    command.operationClass, command.idempotencyKey, 0, ProvisioningCommandPhase.PREFLIGHT, true, at,
+                    preflight = com.duluin.ftth.contract.ProvisioningPreflightSnapshot(
+                        at, "a".repeat(64), state,
+                    ),
+                    verification = ProvisioningVerificationObservation(at, false, state.observationHash(), state),
+                )
+            }
             commands += command
             val at = Instant.parse("2026-07-26T00:00:00Z")
             return ProvisioningStepResult(

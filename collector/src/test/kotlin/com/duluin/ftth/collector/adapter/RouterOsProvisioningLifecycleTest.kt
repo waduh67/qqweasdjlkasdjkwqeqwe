@@ -50,6 +50,30 @@ class RouterOsProvisioningLifecycleTest {
     fun stopFixture() = fixture.close()
 
     @Test
+    fun `observation reports changed live vlan without device mutation`() {
+        fixture.add(
+            "/interface/bridge/vlan",
+            mapOf(
+                ".id" to "*OBS", "bridge" to "br-service", "vlan-ids" to "110", "tagged" to "ether1",
+                "untagged" to "", "current-tagged" to "ether1", "current-untagged" to "", "comment" to "external",
+            ),
+        )
+        val first = adapter.execute(
+            fixture.target(), command(ProvisioningCommandPhase.PREFLIGHT, key = "observe-1").copy(observationOnly = true),
+        )
+        fixture.mutate("/interface/bridge/vlan", "*OBS", "vlan-ids", "120")
+        val writesBefore = fixture.requests.count { !it.startsWith("GET ") }
+
+        val changed = adapter.execute(
+            fixture.target(), command(ProvisioningCommandPhase.PREFLIGHT, key = "observe-2").copy(observationOnly = true),
+        )
+
+        assertEquals(listOf(110), first.verification!!.state.vlanIds)
+        assertEquals(listOf(120), changed.verification!!.state.vlanIds)
+        assertEquals(writesBefore, fixture.requests.count { !it.startsWith("GET ") })
+    }
+
+    @Test
     fun `applies prerequisites before filtering verifies replay and compensates owned ids`() {
         fixture.add(
             "/interface/bridge",

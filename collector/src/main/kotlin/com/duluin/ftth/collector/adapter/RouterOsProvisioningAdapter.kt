@@ -216,6 +216,7 @@ class RouterOsProvisioningAdapter(
 
     override fun execute(target: NasTarget, command: ProvisioningPlanStepCommand): ProvisioningStepResult {
         return stateStore.withExecutionLock(target.nasId) {
+            if (command.observationOnly) return@withExecutionLock observeCurrent(target, command)
             val deliveryKey = command.deliveryKey()
             var digest: String? = null
             val result = try {
@@ -262,6 +263,17 @@ class RouterOsProvisioningAdapter(
             }
             result
         }
+    }
+
+    private fun observeCurrent(target: NasTarget, command: ProvisioningPlanStepCommand): ProvisioningStepResult {
+        requireCommandTarget(target, command)
+        checkDeadline(command)
+        val state = statePayload(discover(target))
+        return success(
+            command,
+            preflight = ProvisioningPreflightSnapshot(clock.instant(), state.observationHash(), state),
+            verification = ProvisioningVerificationObservation(clock.instant(), false, state.observationHash(), state),
+        )
     }
 
     private fun preflight(target: NasTarget, command: ProvisioningPlanStepCommand): ProvisioningStepResult {
@@ -1004,6 +1016,7 @@ class RouterOsProvisioningAdapter(
 
     private fun statePayload(state: RouterOsNormalizedState) = ProvisioningResultState(
         managedResourceCount = ownedIds(state).size,
+        vlanIds = (state.bridgeVlans.flatMap { it.vlanIds } + state.vlanInterfaces.map { it.vlanId }),
     )
 
     private fun ownedIds(state: RouterOsNormalizedState): List<String> = buildList {
