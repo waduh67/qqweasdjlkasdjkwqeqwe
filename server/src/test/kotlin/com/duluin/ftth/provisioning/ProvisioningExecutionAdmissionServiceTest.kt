@@ -94,6 +94,36 @@ class ProvisioningExecutionAdmissionServiceTest {
         assertThat(executions.values).isEmpty()
     }
 
+    @Test
+    fun `admission applies trusted bulk configuration to affected subscriber count`() {
+        val plans = PlanRepository()
+        val executions = ExecutionRepository()
+        val plan = validatedPlan().also(plans::save)
+        val gate = object : ProvisioningSafetyGate {
+            override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode) =
+                PolicyDecision(true, PolicyCode.AUTO_APPLY_ALLOWED)
+        }
+
+        val defaultAdmission = ProvisioningExecutionAdmissionService(
+            plans, executions, gate, ProvisioningRolloutProperties(autoApplyEnabled = true),
+        )
+        assertThatThrownBy { defaultAdmission.admit(plan.id, "bulk-disabled", 2) }
+            .isInstanceOf(ConflictException::class.java)
+            .hasMessage("BULK_EXPANSION_DISABLED")
+
+        val configuredAdmission = ProvisioningExecutionAdmissionService(
+            plans,
+            executions,
+            gate,
+            ProvisioningRolloutProperties(
+                autoApplyEnabled = true,
+                maxAffectedSubscribers = 2,
+                bulkExpansionEnabled = true,
+            ),
+        )
+        assertThat(configuredAdmission.admit(plan.id, "bulk-enabled", 2).planId).isEqualTo(plan.id)
+    }
+
     private fun validatedPlan(): ProvisionPlan = ProvisionPlan.generate(
         UuidV7.generate(),
         UuidV7.generate(),

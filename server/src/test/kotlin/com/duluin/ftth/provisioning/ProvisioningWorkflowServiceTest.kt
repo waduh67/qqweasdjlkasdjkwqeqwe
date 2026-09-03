@@ -22,6 +22,7 @@ import com.duluin.ftth.provisioning.application.service.ProvisioningWorkflowComm
 import com.duluin.ftth.provisioning.application.service.ProvisioningWorkflowDisposition
 import com.duluin.ftth.provisioning.application.service.ProvisioningWorkflowService
 import com.duluin.ftth.provisioning.application.service.SubscriberSessionEvidence
+import com.duluin.ftth.provisioning.config.ProvisioningRolloutProperties
 import com.duluin.ftth.provisioning.domain.model.AdministrativeStatus
 import com.duluin.ftth.provisioning.domain.model.DeviceKind
 import com.duluin.ftth.provisioning.domain.model.DeviceReference
@@ -46,6 +47,9 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
+import org.springframework.boot.context.properties.bind.Bindable
+import org.springframework.boot.context.properties.bind.Binder
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -185,9 +189,44 @@ class ProvisioningWorkflowServiceTest {
 
         assertThatThrownBy { fixture.workflow.create(command(request(), affectedSubscribers = 2)) }
             .isInstanceOf(ConflictException::class.java)
-            .hasMessage("CANARY_SCOPE_EXCEEDED")
+            .hasMessage("BULK_EXPANSION_DISABLED")
         assertThat(fixture.plans.values).isEmpty()
         assertThat(fixture.runner.forward).isEmpty()
+    }
+
+    @Test
+    fun `caller supplied canary limit cannot widen trusted rollout scope`() {
+        val fixture = Fixture()
+
+        assertThatThrownBy {
+            fixture.workflow.create(command(request(), affectedSubscribers = 2, callerLimit = 999))
+        }
+            .isInstanceOf(ConflictException::class.java)
+            .hasMessage("BULK_EXPANSION_DISABLED")
+        assertThat(fixture.plans.values).isEmpty()
+    }
+
+    @Test
+    fun `bound bulk rollout config authorizes configured scope despite caller limit`() {
+        val source = MapConfigurationPropertySource(
+            mapOf(
+                "ftth.provisioning.rollout.auto-apply-enabled" to "true",
+                "ftth.provisioning.rollout.bulk-expansion-enabled" to "true",
+                "ftth.provisioning.rollout.max-affected-subscribers" to "2",
+            ),
+        )
+        val rollout = Binder(source).bind(
+            "ftth.provisioning.rollout",
+            Bindable.of(ProvisioningRolloutProperties::class.java),
+        ).get()
+        val fixture = Fixture(rollout = rollout)
+
+        val result = fixture.workflow.create(
+            command(request(), affectedSubscribers = 2, callerLimit = 1),
+        )
+
+        assertThat(result.execution?.status).isEqualTo(ExecutionStatus.SUCCEEDED)
+        assertThat(fixture.executions.values).hasSize(1)
     }
 
     @Test
@@ -232,6 +271,7 @@ class ProvisioningWorkflowServiceTest {
         forceDisconnect: Boolean = false,
         forceAuthorized: Boolean = false,
         affectedSubscribers: Int = 1,
+        callerLimit: Int = 1,
     ) = ProvisioningWorkflowCommand(
         compilation = request,
         idempotencyKey = key,
@@ -242,6 +282,7 @@ class ProvisioningWorkflowServiceTest {
             add(request.intent.subjectId)
             if (affectedSubscribers > 1) add(UUID.fromString("00000000-0000-7000-8000-000000000099"))
         },
+        maxAffectedSubscribers = callerLimit,
     )
 
     private fun request(
@@ -303,6 +344,7 @@ class ProvisioningWorkflowServiceTest {
         activeSessions: Int = 0,
         failVerificationAt: ProvisionOperation? = null,
         accessPort: SubscriberAccessIsolationPort? = null,
+        rollout: ProvisioningRolloutProperties = ProvisioningRolloutProperties(autoApplyEnabled = true),
     ) {
         val plans = Plans()
         val executions = Executions()
@@ -316,6 +358,7 @@ class ProvisioningWorkflowServiceTest {
             accessPort ?: access,
             runner,
             clock,
+            rollout,
         )
     }
 
@@ -338,7 +381,7 @@ class ProvisioningWorkflowServiceTest {
         private val plans: Plans,
         private val executions: Executions,
     ) : ProvisioningExecutionAdmissionUseCase {
-        override fun admit(planId: UUID, keySuffix: String): ProvisionExecution {
+        override fun admit(planId: UUID, keySuffix: String, affectedSubscriberCount: Int): ProvisionExecution {
             val plan = requireNotNull(plans.findById(planId))
             val key = "${plan.intentId}:${plan.revision}:$keySuffix"
             return executions.findByIdempotencyKey(key)

@@ -73,7 +73,7 @@ class ProvisioningLifecycleServiceTest {
         private val plan: ProvisionPlan,
         private val executions: Executions,
     ) : ProvisioningExecutionAdmissionUseCase {
-        override fun admit(planId: UUID, keySuffix: String): ProvisionExecution {
+        override fun admit(planId: UUID, keySuffix: String, affectedSubscriberCount: Int): ProvisionExecution {
             return executions.findByIdempotencyKey(keySuffix)
                 ?: executions.save(ProvisionExecution.queue(plan.tenantId, plan.intentId, plan.id, keySuffix))
         }

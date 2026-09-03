@@ -21,10 +21,10 @@ class ProvisioningExecutionAdmissionService(
     private val metrics: ProvisioningMetrics? = null,
 ) : ProvisioningExecutionAdmissionUseCase {
     @Transactional
-    override fun admit(planId: UUID, keySuffix: String): ProvisionExecution {
+    override fun admit(planId: UUID, keySuffix: String, affectedSubscriberCount: Int): ProvisionExecution {
         val plan = plans.findById(planId) ?: throw ValidationException("PLAN_NOT_FOUND")
         if (plan.status != PlanStatus.VALIDATED) throw ValidationException("PLAN_NOT_VALIDATED")
-        rollout.requireAutoApplyAllowed(1)
+        rollout.requireAutoApplyAllowed(affectedSubscriberCount)
         val decision = safetyGate.evaluate(plan, ExecutionMode.PRODUCTION_AUTO_APPLY)
         if (!decision.allowed) {
             if (decision.code.name.contains("CERTIFICATION") || decision.code.name.contains("CERTIFIED")) {
