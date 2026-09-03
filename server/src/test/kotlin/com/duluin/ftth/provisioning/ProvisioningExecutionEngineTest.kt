@@ -14,6 +14,7 @@ import com.duluin.ftth.provisioning.application.service.DeviceApplyResult
 import com.duluin.ftth.provisioning.application.service.DeviceFailureKind
 import com.duluin.ftth.provisioning.application.service.DeviceOperationException
 import com.duluin.ftth.provisioning.application.service.DeviceIoExecutor
+import com.duluin.ftth.provisioning.application.service.DeviceIoCancellationPendingException
 import com.duluin.ftth.provisioning.application.service.DeviceStateObservation
 import com.duluin.ftth.provisioning.application.service.DispatchableProvisioningWork
 import com.duluin.ftth.provisioning.application.service.ExecutionPolicy
@@ -201,6 +202,29 @@ class ProvisioningExecutionEngineTest {
             .first { it.phase == ExecutionPhase.APPLY }
         assertThat(applyAttempt.status).isEqualTo(AttemptStatus.TRANSIENT_FAILURE)
         assertThat(applyAttempt.errorCode).isEqualTo("DEADLINE_EXCEEDED")
+    }
+
+    @Test
+    fun `interrupt resistant timeout is persisted as manual reconciliation`() {
+        val fixture = Fixture()
+        fixture.deviceIoExecutor = object : DeviceIoExecutor {
+            override fun <T : Any> execute(
+                exclusionKey: String,
+                deadline: Instant,
+                renewalInterval: Duration,
+                renewLease: () -> Boolean,
+                operation: () -> T,
+            ): T = throw DeviceIoCancellationPendingException()
+        }
+        val engine = fixture.engine()
+        val execution = engine.enqueue(fixture.plan, "cancellation-pending")
+
+        engine.run(execution.id, "worker")
+
+        assertThat(fixture.executions.findById(execution.id)!!.status)
+            .isEqualTo(ExecutionStatus.MANUAL_RECONCILIATION)
+        assertThat(fixture.executions.findById(execution.id)!!.detail)
+            .isEqualTo("DEVICE_IO_CANCELLATION_PENDING")
     }
 
     @Test
@@ -641,6 +665,7 @@ class ProvisioningExecutionEngineTest {
         ).also { it.validate(); plans.save(it) }
         val gateway = FakeGateway(initialStates, desiredStates)
         val safety = MutableSafetyGate()
+        var deviceIoExecutor: DeviceIoExecutor = ImmediateDeviceIoExecutor
         val engine = engine()
 
         fun multiStepPlan(): ProvisionPlan = ProvisionPlan.generate(
@@ -665,7 +690,7 @@ class ProvisioningExecutionEngineTest {
             snapshots,
             circuits,
             gateway,
-            ImmediateDeviceIoExecutor,
+            deviceIoExecutor,
             safety,
             clock,
             sleeper,
@@ -708,6 +733,7 @@ class ProvisioningExecutionEngineTest {
 
     private object ImmediateDeviceIoExecutor : DeviceIoExecutor {
         override fun <T : Any> execute(
+            exclusionKey: String,
             deadline: Instant,
             renewalInterval: Duration,
             renewLease: () -> Boolean,

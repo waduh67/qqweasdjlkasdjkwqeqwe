@@ -133,6 +133,7 @@ class ProvisioningSafetyAdmissionIT {
 
     private object ImmediateDeviceIoExecutor : DeviceIoExecutor {
         override fun <T : Any> execute(
+            exclusionKey: String,
             deadline: java.time.Instant,
             renewalInterval: java.time.Duration,
             renewLease: () -> Boolean,

@@ -515,6 +515,7 @@ class ProvisioningExecutionEngine(
             )
             try {
                 val result = deviceIoExecutor.execute(
+                    "${execution.tenantId}:${planStep.device.kind}:${planStep.device.id}",
                     deadline,
                     renewalInterval = policy.leaseDuration.dividedBy(3),
                     renewLease = {
@@ -568,6 +569,30 @@ class ProvisioningExecutionEngine(
                 return IoResult.success(result)
             } catch (_: DeviceIoLeaseLostException) {
                 return IoResult.failure(StepFailure("LEASE_LOST", false, false, false))
+            } catch (_: DeviceIoExclusionBusyException) {
+                return IoResult.failure(StepFailure("DEVICE_IO_EXCLUSION_BUSY", false, false, false))
+            } catch (_: DeviceIoCancellationPendingException) {
+                val returnedAt = clock.instant()
+                val cancellationFailure = StepFailure("DEVICE_IO_CANCELLATION_PENDING", false, true, true)
+                val committed = fencedWrites.commitIfLeaseValid(
+                    execution.tenantId,
+                    planStep.device,
+                    execution.id,
+                    activeLease.ownerId,
+                    activeLease.fencingToken,
+                    returnedAt,
+                    policy.leaseDuration,
+                ) {
+                    if (!attempts.completeIfDispatched(
+                            attempt.id, AttemptStatus.PERMANENT_FAILURE, cancellationFailure.code, returnedAt,
+                        )
+                    ) return@commitIfLeaseValid false
+                    onTerminalFailure(cancellationFailure)
+                    true
+                }
+                return IoResult.failure(
+                    if (committed) cancellationFailure else StepFailure("LEASE_LOST_OR_ACK_COMPLETED", false, false, false),
+                )
             } catch (_: DeviceIoDeadlineExceededException) {
                 val returnedAt = clock.instant()
                 val deadlineFailure = StepFailure("DEADLINE_EXCEEDED", true, true, true)
