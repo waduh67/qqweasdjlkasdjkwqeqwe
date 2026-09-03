@@ -6,6 +6,12 @@ import com.duluin.ftth.provisioning.domain.model.ProvisionExecution
 import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
 import com.duluin.ftth.provisioning.domain.policy.ExecutionMode
 import com.duluin.ftth.provisioning.config.ProvisioningRolloutProperties
+import com.duluin.ftth.provisioning.application.service.AuthoritativePlanCompilationService
+import com.duluin.ftth.provisioning.application.service.PlanChange
+import com.duluin.ftth.provisioning.application.service.ProvisioningWorkflowCommand
+import com.duluin.ftth.provisioning.application.service.ProvisioningWorkflowService
+import com.duluin.ftth.provisioning.application.service.ProvisioningIntentLifecycleService
+import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.common.domain.error.ValidationException
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
@@ -24,6 +30,10 @@ class ProvisioningLifecycleController(
     private val lifecycle: ProvisioningLifecycleService,
     private val evidence: ProvisioningEvidenceQueryService,
     private val rollout: ProvisioningRolloutProperties,
+    private val planCompilation: AuthoritativePlanCompilationService,
+    private val workflow: ProvisioningWorkflowService,
+    private val intentLifecycle: ProvisioningIntentLifecycleService,
+    private val currentUser: CurrentUserProvider,
 ) {
     @GetMapping("/rollout")
     @PreAuthorize("@authz.can('provisioning.plan.view')")
@@ -84,6 +94,35 @@ class ProvisioningLifecycleController(
     @PreAuthorize("@authz.can('provisioning.drift.adopt')")
     fun adoptDrift(@PathVariable id: UUID, @RequestHeader("If-Match") revision: String) =
         evidence.adoptDrift(id, parseRevision(revision))
+
+    @PostMapping("/intents/{id}/suspend")
+    @PreAuthorize("@authz.can('provisioning.execution.apply')")
+    fun suspendIntent(@PathVariable id: UUID) = intentLifecycle.suspend(id).status.name
+
+    @PostMapping("/intents/{id}/restore")
+    @PreAuthorize("@authz.can('provisioning.execution.apply')")
+    fun restoreIntent(@PathVariable id: UUID) = intentLifecycle.restore(id).status.name
+
+    @PostMapping("/intents/{id}/deprovision")
+    @PreAuthorize("@authz.can('provisioning.execution.apply')")
+    fun deprovisionIntent(
+        @PathVariable id: UUID,
+        @RequestHeader("Idempotency-Key") idempotencyKey: String,
+        @RequestParam(defaultValue = "false") forceDisconnect: Boolean,
+    ): ProvisioningExecutionView {
+        val request = planCompilation.request(id, PlanChange.DELETE)
+        val result = workflow.delete(
+            ProvisioningWorkflowCommand(
+                request,
+                idempotencyKey,
+                forceDisconnect = forceDisconnect,
+                forceDisconnectAuthorized = currentUser.current().hasPermission("bng.session.disconnect"),
+            ),
+        )
+        val execution = requireNotNull(result.execution)
+        planCompilation.completeDeprovisionIfNeeded(execution)
+        return execution.toView(lifecycle.executionRevision(execution.id))
+    }
 }
 
 data class ProvisioningPlanView(val id: UUID, val intentId: UUID, val revision: Int, val status: String, val contentHash: String)

@@ -5,6 +5,7 @@ import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.provisioning.application.port.inbound.ProvisioningExecutionAdmissionUseCase
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisionExecutionRepository
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisionPlanRepository
+import com.duluin.ftth.provisioning.application.port.outbound.ServiceIntentRepository
 import com.duluin.ftth.provisioning.domain.model.ProvisionExecution
 import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
 import com.duluin.ftth.provisioning.application.port.inbound.ProvisioningPlanEvaluation
@@ -21,6 +22,7 @@ class ProvisioningLifecycleService(
     private val admission: ProvisioningExecutionAdmissionUseCase,
     private val safetyGate: ProvisioningSafetyGate,
     private val rollout: ProvisioningRolloutProperties,
+    private val intents: ServiceIntentRepository,
     private val audit: ProvisioningAuditPublisher? = null,
     private val metrics: ProvisioningMetrics? = null,
     private val revisions: ProvisioningResourceRevisionStore? = null,
@@ -40,7 +42,8 @@ class ProvisioningLifecycleService(
         val plan = plan(id)
         if (plan.revision != revision) throw ConflictException("STALE_PLAN")
         if (idempotencyKey.isBlank()) throw ConflictException("IDEMPOTENCY_KEY_REQUIRED")
-        val execution = admission.admit(id, idempotencyKey)
+        val intent = intents.findById(plan.intentId) ?: throw NotFoundException("SERVICE_INTENT_NOT_FOUND")
+        val execution = admission.admit(id, idempotencyKey, setOf(intent.subjectId).size)
         revisions?.register(EXECUTION, execution.id)
         audit?.publish(ProvisioningAuditRecord(execution.tenantId, "provisioning.execution.applied", "ProvisionExecution", execution.id))
         metrics?.queueDepth(1)

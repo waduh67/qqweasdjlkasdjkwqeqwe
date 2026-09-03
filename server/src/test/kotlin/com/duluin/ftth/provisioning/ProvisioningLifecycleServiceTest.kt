@@ -5,6 +5,7 @@ import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.provisioning.application.port.inbound.ProvisioningExecutionAdmissionUseCase
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisionExecutionRepository
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisionPlanRepository
+import com.duluin.ftth.provisioning.application.port.outbound.ServiceIntentRepository
 import com.duluin.ftth.provisioning.application.service.ProvisioningLifecycleService
 import com.duluin.ftth.provisioning.config.ProvisioningRolloutProperties
 import com.duluin.ftth.provisioning.domain.model.DeviceKind
@@ -14,6 +15,9 @@ import com.duluin.ftth.provisioning.domain.model.ProvisionExecution
 import com.duluin.ftth.provisioning.domain.model.ProvisionOperation
 import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
 import com.duluin.ftth.provisioning.domain.model.ProvisionStep
+import com.duluin.ftth.provisioning.domain.model.ServiceIntent
+import com.duluin.ftth.provisioning.domain.model.IntentStatus
+import com.duluin.ftth.provisioning.domain.model.VlanEncapsulation
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -31,7 +35,7 @@ class ProvisioningLifecycleServiceTest {
         val executions = Executions()
         val admission = Admission(plan, executions)
         val service = ProvisioningLifecycleService(
-            plans, executions, admission, allowedGate(), ProvisioningRolloutProperties(autoApplyEnabled = true),
+            plans, executions, admission, allowedGate(), ProvisioningRolloutProperties(autoApplyEnabled = true), Intents(plan),
         )
 
         assertThatThrownBy { service.apply(plan.id, 2, "request-1") }
@@ -41,6 +45,7 @@ class ProvisioningLifecycleServiceTest {
 
         assertThat(replay.id).isEqualTo(first.id)
         assertThat(executions.values).hasSize(1)
+        assertThat(admission.affectedCounts).containsExactly(1, 1)
     }
 
     @Test
@@ -49,7 +54,7 @@ class ProvisioningLifecycleServiceTest {
         val queued = executions.save(ProvisionExecution.queue(plan.tenantId, plan.intentId, plan.id, "cancel-key"))
         val service = ProvisioningLifecycleService(
             Plans(plan), executions, Admission(plan, executions), allowedGate(),
-            ProvisioningRolloutProperties(autoApplyEnabled = true),
+            ProvisioningRolloutProperties(autoApplyEnabled = true), Intents(plan),
         )
 
         assertThat(service.cancel(queued.id, 1).status).isEqualTo(ExecutionStatus.CANCELLED)
@@ -73,10 +78,21 @@ class ProvisioningLifecycleServiceTest {
         private val plan: ProvisionPlan,
         private val executions: Executions,
     ) : ProvisioningExecutionAdmissionUseCase {
+        val affectedCounts = mutableListOf<Int>()
         override fun admit(planId: UUID, keySuffix: String, affectedSubscriberCount: Int): ProvisionExecution {
+            affectedCounts += affectedSubscriberCount
             return executions.findByIdempotencyKey(keySuffix)
                 ?: executions.save(ProvisionExecution.queue(plan.tenantId, plan.intentId, plan.id, keySuffix))
         }
+    }
+
+    private class Intents(plan: ProvisionPlan) : ServiceIntentRepository {
+        private val intent = ServiceIntent.rehydrate(
+            plan.intentId, plan.tenantId, UUID.randomUUID(), UUID.randomUUID(), VlanEncapsulation.SINGLE_TAG, null,
+            IntentStatus.ACTIVE,
+        )
+        override fun save(value: ServiceIntent) = value
+        override fun findById(id: UUID) = intent.takeIf { it.id == id }
     }
 
     private fun allowedGate() = object : com.duluin.ftth.provisioning.application.service.ProvisioningSafetyGate {
