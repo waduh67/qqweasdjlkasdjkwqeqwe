@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.annotation.Propagation
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -28,6 +29,7 @@ class BngProvisioningApiService(
     private val lifecycle: SubscriberAccessLifecycle,
     private val actions: BngActionService,
     private val disconnectConfirmer: SubscriberSessionDisconnectConfirmer,
+    private val clock: Clock,
     @Value("\${ftth.bng.session-stale-after:PT3M}") private val sessionStaleAfter: Duration,
 ) : BngProvisioningApi {
     override fun findNas(nasId: UUID): BngNasRef? = nas.findById(nasId)?.let {
@@ -36,7 +38,7 @@ class BngProvisioningApiService(
 
     override fun findAccess(subscriptionId: UUID): BngSubscriberAccessRef? {
         val access = accesses.findBySubscriptionId(subscriptionId).singleOrNull() ?: return null
-        val now = Instant.now()
+        val now = clock.instant()
         val activeSessions = sessions.findBySubscriberAccessId(access.id)
             ?.takeIf { it.isLiveAt(now, sessionStaleAfter) }
             ?.let { 1 } ?: 0

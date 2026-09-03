@@ -23,8 +23,10 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.time.ZoneOffset
 import java.util.UUID
 
 class BngProvisioningBoundaryTest {
@@ -48,6 +50,19 @@ class BngProvisioningBoundaryTest {
         assertThat(result.serviceClass).isEqualTo("Residential")
         assertThat(result.javaClass.declaredFields.map { it.name }).doesNotContain("secret", "credential", "password")
         assertThat(result.toString()).doesNotContain("pppoe-secret-never-crosses")
+    }
+
+    @Test
+    fun `session older than three minute safety window is reported inactive`() {
+        val fixture = fixture(
+            confirmation = DisconnectConfirmation(1, now),
+            sessionObservedAt = now.minus(Duration.ofMinutes(3)).minusSeconds(1),
+        )
+
+        val result = requireNotNull(fixture.service.findAccess(subscriptionId))
+
+        assertThat(result.activeSessionCount).isZero()
+        assertThat(result.observedAt).isEqualTo(now)
     }
 
     @Test
@@ -98,6 +113,7 @@ class BngProvisioningBoundaryTest {
     private fun fixture(
         nasVendor: NasVendor = NasVendor.MIKROTIK,
         confirmation: DisconnectConfirmation,
+        sessionObservedAt: Instant = now,
     ): Fixture {
         val accesses = mock(SubscriberAccessRepository::class.java)
         val sessions = mock(RadiusSessionRepository::class.java)
@@ -107,13 +123,16 @@ class BngProvisioningBoundaryTest {
         val actions = mock(BngActionService::class.java)
         val confirmer = mock(SubscriberSessionDisconnectConfirmer::class.java)
         `when`(accesses.findBySubscriptionId(subscriptionId)).thenReturn(listOf(access))
-        `when`(sessions.findBySubscriberAccessId(access.id)).thenReturn(liveSession())
+        `when`(sessions.findBySubscriberAccessId(access.id)).thenReturn(liveSession(sessionObservedAt))
         `when`(nas.findById(access.nasId!!)).thenReturn(nas(nasVendor))
         `when`(catalog.findPlanNetwork(planId)).thenReturn(plan())
         `when`(actions.enqueueDisconnect(access, null, null)).thenReturn(true)
         `when`(confirmer.confirm(setOf(access.username), 1)).thenReturn(confirmation)
         return Fixture(
-            BngProvisioningApiService(accesses, sessions, nas, catalog, lifecycle, actions, confirmer, Duration.ofMinutes(3)),
+            BngProvisioningApiService(
+                accesses, sessions, nas, catalog, lifecycle, actions, confirmer,
+                Clock.fixed(now, ZoneOffset.UTC), Duration.ofMinutes(3),
+            ),
             lifecycle,
             actions,
             confirmer,
@@ -125,9 +144,9 @@ class BngProvisioningBoundaryTest {
         reachability = NasReachability.DIRECT,
     )
 
-    private fun liveSession() = RadiusSession.start(
+    private fun liveSession(observedAt: Instant) = RadiusSession.start(
         tenantId, access.id, subscriptionId, access.customerId, access.username, true, access.nasId,
-        "203.0.113.9", "100.64.0.1", "session-1", null, 60, now,
+        "203.0.113.9", "100.64.0.1", "session-1", null, 60, observedAt,
     )
 
     private fun plan() = PlanNetworkRef(
