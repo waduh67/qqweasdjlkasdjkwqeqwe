@@ -68,6 +68,8 @@ class ProvisioningWireCompatibilityTest {
         assertEquals("ether1,ether2", command.payload.values.trunkPorts)
         assertEquals("110-120", command.payload.values.pppoeVlanRange)
         assertEquals("true", command.payload.values.managementPathProven)
+        assertEquals(null, command.payload.values.managementSourceId)
+        assertEquals(null, command.payload.values.managementSourceType)
     }
 
     @Test
@@ -108,7 +110,14 @@ class ProvisioningWireCompatibilityTest {
             expectedPreconditionHash = "a".repeat(64),
             deadline = Instant.parse("2026-09-02T12:30:00Z"),
             target = ProvisioningTarget("device-1", "BRAS", "router.invalid", "HTTPS_REST"),
-            payload = ProvisioningPayload(ProvisioningPayloadValues(vlanId = "110", vlanInterface = "ether2")),
+            payload = ProvisioningPayload(
+                ProvisioningPayloadValues(
+                    vlanId = "110",
+                    vlanInterface = "ether2",
+                    managementSourceId = "0199386e-9718-7000-8000-000000000201",
+                    managementSourceType = "TOPOLOGY_OBSERVATION",
+                ),
+            ),
         )
 
         val root = mapper.readTree(mapper.writeValueAsString(command))
@@ -130,7 +139,7 @@ class ProvisioningWireCompatibilityTest {
                 "tenantId", "intentId", "bridge", "vlanId", "tagging", "trunkPorts", "accessPorts",
                 "vlanInterface", "vlanParent", "pppoeInterface", "pppoeServiceName", "pppoeVlanRange",
                 "poolName", "poolRanges", "interfaceList", "firewallChain", "managementPathProven",
-                "protectedInterfaces", "protectedVlanIds",
+                "managementSourceId", "managementSourceType", "protectedInterfaces", "protectedVlanIds",
             ),
             root.at("/payload/values").properties().map { it.key }.toSet(),
         )
@@ -138,6 +147,8 @@ class ProvisioningWireCompatibilityTest {
         assertTrue(root.at("/payload/values/vlanId").isTextual)
         assertTrue(root.at("/payload/values/trunkPorts").isNull)
         assertTrue(root.at("/payload/values/managementPathProven").isNull)
+        assertEquals("0199386e-9718-7000-8000-000000000201", root.at("/payload/values/managementSourceId").asString())
+        assertEquals("TOPOLOGY_OBSERVATION", root.at("/payload/values/managementSourceType").asString())
     }
 
     @Test

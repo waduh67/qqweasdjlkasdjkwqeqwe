@@ -270,6 +270,8 @@ class ProvisioningPayloadValues(
     interfaceList: String? = null,
     firewallChain: String? = null,
     managementPathProven: String? = null,
+    managementSourceId: String? = null,
+    managementSourceType: String? = null,
     protectedInterfaces: String? = null,
     protectedVlanIds: String? = null,
 ) {
@@ -290,6 +292,8 @@ class ProvisioningPayloadValues(
     val interfaceList = interfaceList
     val firewallChain = firewallChain
     val managementPathProven = managementPathProven
+    val managementSourceId = managementSourceId
+    val managementSourceType = managementSourceType
     val protectedInterfaces = protectedInterfaces
     val protectedVlanIds = protectedVlanIds
 
@@ -311,6 +315,8 @@ class ProvisioningPayloadValues(
         interfaceList = values.optional("interfaceList"),
         firewallChain = values.optional("firewallChain"),
         managementPathProven = values.optional("managementPathProven"),
+        managementSourceId = values.optional("managementSourceId"),
+        managementSourceType = values.optional("managementSourceType"),
         protectedInterfaces = values.optional("protectedInterfaces"),
         protectedVlanIds = values.optional("protectedVlanIds"),
     ) {
@@ -326,7 +332,7 @@ class ProvisioningPayloadValues(
     private fun fields(): List<Any?> = listOf(
         tenantId, intentId, bridge, vlanId, tagging, trunkPorts, accessPorts, vlanInterface, vlanParent,
         pppoeInterface, pppoeServiceName, pppoeVlanRange, poolName, poolRanges, interfaceList,
-        firewallChain, managementPathProven, protectedInterfaces, protectedVlanIds,
+        firewallChain, managementPathProven, managementSourceId, managementSourceType, protectedInterfaces, protectedVlanIds,
     )
 
     private fun fieldNames(): List<String> = PROPERTY_NAMES.filterIndexed { index, _ ->
@@ -338,12 +344,14 @@ class ProvisioningPayloadValues(
         val ALLOWED_LEGACY_KEYS = setOf(
             "tenantId", "intentId", "bridge", "vlanId", "tagging", "trunkPorts", "accessPorts", "vlanInterface", "interface",
             "vlanParent", "pppoeInterface", "pppoeServiceName", "pppoeVlanRange", "poolName", "poolRanges",
-            "interfaceList", "firewallChain", "managementPathProven", "protectedInterfaces", "protectedVlanIds",
+            "interfaceList", "firewallChain", "managementPathProven", "managementSourceId", "managementSourceType",
+            "protectedInterfaces", "protectedVlanIds",
         )
         val PROPERTY_NAMES = listOf(
             "tenantId", "intentId", "bridge", "vlanId", "tagging", "trunkPorts", "accessPorts", "vlanInterface", "vlanParent",
             "pppoeInterface", "pppoeServiceName", "pppoeVlanRange", "poolName", "poolRanges", "interfaceList",
-            "firewallChain", "managementPathProven", "protectedInterfaces", "protectedVlanIds",
+            "firewallChain", "managementPathProven", "managementSourceId", "managementSourceType",
+            "protectedInterfaces", "protectedVlanIds",
         )
     }
 }
