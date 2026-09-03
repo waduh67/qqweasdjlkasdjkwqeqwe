@@ -120,7 +120,7 @@ class ProvisioningWorkflowServiceTest {
 
         assertThatThrownBy { fixture.workflow.delete(command(request(PlanChange.DELETE), forceDisconnect = false)) }
             .isInstanceOf(ConflictException::class.java)
-            .hasMessage("ACTIVE_SESSION_REQUIRES_FORCE_DISCONNECT")
+            .hasMessage("ACTIVE_SESSION_BLOCKS_REMOVAL")
 
         assertThatThrownBy { fixture.workflow.delete(command(request(PlanChange.DELETE), forceDisconnect = true)) }
             .isInstanceOf(ConflictException::class.java)
@@ -215,7 +215,7 @@ class ProvisioningWorkflowServiceTest {
         forceDisconnect = forceDisconnect,
         forceDisconnectAuthorized = forceAuthorized,
         affectedSubscriberIds = buildSet {
-            add(request.intent.subscriptionId)
+            add(request.intent.subjectId)
             if (affectedSubscribers > 1) add(UUID.fromString("00000000-0000-7000-8000-000000000099"))
         },
     )
@@ -332,6 +332,8 @@ class ProvisioningWorkflowServiceTest {
         override fun isolate(subscriptionId: UUID) {
             isolated += subscriptionId
         }
+
+        override fun terminate(subscriptionId: UUID) = Unit
 
         override fun disconnectActiveSessions(subscriptionId: UUID): SubscriberSessionEvidence {
             disconnects += subscriptionId

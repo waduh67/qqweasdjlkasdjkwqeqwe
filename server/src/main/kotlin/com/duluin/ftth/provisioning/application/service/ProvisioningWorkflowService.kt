@@ -27,7 +27,7 @@ data class ProvisioningWorkflowCommand(
     val expectedPlanPreconditionHash: String? = null,
     val forceDisconnect: Boolean = false,
     val forceDisconnectAuthorized: Boolean = false,
-    val affectedSubscriberIds: Set<UUID> = setOf(compilation.intent.subscriptionId),
+    val affectedSubscriberIds: Set<UUID> = setOf(compilation.intent.subjectId),
     val maxAffectedSubscribers: Int = 1,
 )
 
@@ -89,14 +89,19 @@ class ProvisioningWorkflowService(
         requireCanary(command)
         requireFreshEvidence(command.compilation)
         val subscriptionId = command.compilation.intent.subscriptionId
+            ?: throw ConflictException("FIXED_SUBSCRIPTION_REQUIRED")
         val session = accessIsolation.observe(subscriptionId).also(::requireFreshSessionEvidence)
         if (session.activeSessionCount > 0) {
-            if (!command.forceDisconnect) throw ConflictException("ACTIVE_SESSION_REQUIRES_FORCE_DISCONNECT")
+            if (!command.forceDisconnect) throw ConflictException("ACTIVE_SESSION_BLOCKS_REMOVAL")
             if (!command.forceDisconnectAuthorized) throw ConflictException("FORCE_DISCONNECT_FORBIDDEN")
             val disconnected = accessIsolation.disconnectActiveSessions(subscriptionId).also(::requireFreshSessionEvidence)
             if (disconnected.activeSessionCount > 0) throw ConflictException("ACTIVE_SESSION_DISCONNECT_FAILED")
         }
-        return execute(planning.validateProduction(command.compilation), command.idempotencyKey, ownerId)
+        val result = execute(planning.validateProduction(command.compilation), command.idempotencyKey, ownerId)
+        if (result.execution?.status == com.duluin.ftth.provisioning.domain.model.ExecutionStatus.SUCCEEDED) {
+            accessIsolation.terminate(subscriptionId)
+        }
+        return result
     }
 
     private fun execute(plan: ProvisionPlan, idempotencyKey: String, ownerId: String): ProvisioningWorkflowResult {
@@ -132,7 +137,7 @@ class ProvisioningWorkflowService(
     private fun requireCanary(command: ProvisioningWorkflowCommand) =
         requireCanary(
             command.affectedSubscriberIds,
-            command.compilation.intent.subscriptionId,
+            command.compilation.intent.subjectId,
             command.maxAffectedSubscribers,
         )
 
