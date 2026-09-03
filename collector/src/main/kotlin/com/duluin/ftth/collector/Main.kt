@@ -72,22 +72,9 @@ fun main() {
             Path.of(System.getProperty("user.home"), ".local", "state", "ftth-collector").toString(),
         ),
     )
-    val provisioningRegistry = ProvisioningAdapterRegistry(
-        if (simulatorEnabled) {
-            emptyList()
-        } else {
-            listOf(
-                RouterOsProvisioningAdapter(
-                    stateStore = FileRouterOsProvisioningStateStore(
-                        provisioningStateDirectory.resolve("routeros-provisioning-state.json"),
-                    ),
-                ),
-            )
-        },
-    )
-    val oltProvisioningRegistry = OltProvisioningAdapterRegistry(
-        listOf(ProvisionalHsgqProvisioningAdapter()),
-    )
+    val provisioningAdapters = RuntimeProvisioningAdapterFactory.create(simulatorEnabled, provisioningStateDirectory)
+    val provisioningRegistry = provisioningAdapters.nas
+    val oltProvisioningRegistry = provisioningAdapters.olt
 
     log.info("ftth-collector {} → {}", AGENT_VERSION, serverUrl)
     if (simulatorEnabled) log.warn("MODE SIMULATOR aktif — data yang dikirim adalah tiruan, bukan dari perangkat")
