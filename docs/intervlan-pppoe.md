@@ -24,14 +24,13 @@ FTTH_PROVISIONING_PLANNER_ENABLED=true
 FTTH_PROVISIONING_UI_ENABLED=true
 FTTH_PROVISIONING_AUTO_APPLY_ENABLED=false
 FTTH_PROVISIONING_MAX_AFFECTED_SUBSCRIBERS=1
-FTTH_PROVISIONING_CIRCUIT_FAILURE_THRESHOLD=1
 FTTH_PROVISIONING_BULK_EXPANSION_ENABLED=false
 ```
 
 Konfigurasi baru mengizinkan plan dan dry-run, tetapi menolak apply dengan
 `PRODUCTION_AUTO_APPLY_DISABLED`. Canary hanya satu subscriber. Nilai canary di atas satu
 tidak valid kecuali bulk expansion dinyalakan eksplisit. Kegagalan verifikasi pertama membuka
-circuit perangkat.
+circuit perangkat; ambang satu ini invariant keselamatan, bukan konfigurasi operator.
 
 ## Resource manajemen yang dilindungi
 
