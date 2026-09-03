@@ -23,13 +23,30 @@ import com.duluin.ftth.provisioning.domain.model.ProvisionStep
 import com.duluin.ftth.provisioning.domain.model.SegmentProfile
 import com.duluin.ftth.provisioning.domain.model.ServiceIntent
 import com.duluin.ftth.provisioning.domain.model.VlanEncapsulation
+import com.duluin.ftth.provisioning.domain.model.VlanAllocationMode
 import com.duluin.ftth.provisioning.domain.model.VlanPool
 import com.duluin.ftth.provisioning.domain.model.VlanRange
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import java.util.UUID
 
 class ProvisioningDomainTest {
+    @Test
+    fun `intent allocation mode is explicit and independent from dedicated vlan override`() {
+        val dedicated = ServiceIntent.create(
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), allocationMode = VlanAllocationMode.DEDICATED,
+        )
+
+        assertThat(dedicated.allocationMode).isEqualTo(VlanAllocationMode.DEDICATED)
+        assertThat(dedicated.dedicatedVlanId).isNull()
+        assertThatThrownBy {
+            ServiceIntent.create(
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), dedicatedVlanId = 320,
+                allocationMode = VlanAllocationMode.SHARED,
+            )
+        }.isInstanceOf(ValidationException::class.java)
+    }
     private val tenantId = UuidV7.generate()
     private val device = DeviceReference(DeviceKind.ROUTER, UuidV7.generate())
 
