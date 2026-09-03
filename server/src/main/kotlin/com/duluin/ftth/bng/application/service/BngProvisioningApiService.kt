@@ -8,10 +8,12 @@ import com.duluin.ftth.bng.application.port.outbound.RadiusSessionRepository
 import com.duluin.ftth.bng.application.port.outbound.SubscriberAccessRepository
 import com.duluin.ftth.bng.domain.model.AccessStatus
 import com.duluin.ftth.bng.domain.model.AuthType
+import com.duluin.ftth.bng.domain.model.NasVendor
 import com.duluin.ftth.catalog.CatalogApi
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.annotation.Propagation
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -25,10 +27,11 @@ class BngProvisioningApiService(
     private val catalog: CatalogApi,
     private val lifecycle: SubscriberAccessLifecycle,
     private val actions: BngActionService,
+    private val disconnectConfirmer: SubscriberSessionDisconnectConfirmer,
     @Value("\${ftth.bng.session-stale-after:PT3M}") private val sessionStaleAfter: Duration,
 ) : BngProvisioningApi {
     override fun findNas(nasId: UUID): BngNasRef? = nas.findById(nasId)?.let {
-        BngNasRef(it.id, it.enabled, it.enabled)
+        BngNasRef(it.id, it.enabled, it.enabled && it.vendor != NasVendor.OTHER)
     }
 
     override fun findAccess(subscriptionId: UUID): BngSubscriberAccessRef? {
@@ -38,7 +41,8 @@ class BngProvisioningApiService(
             ?.takeIf { it.isLiveAt(now, sessionStaleAfter) }
             ?.let { 1 } ?: 0
         val plan = catalog.findPlanNetwork(access.planId)
-        val capable = access.authType == AuthType.PPPOE && access.nasId?.let(::findNas)?.enabled == true &&
+        val capable = access.authType == AuthType.PPPOE &&
+            access.nasId?.let(::findNas)?.pppoeTerminationCapable == true &&
             plan?.serviceTypes?.contains(AuthType.PPPOE.name) == true
         return BngSubscriberAccessRef(
             access.id, subscriptionId, access.nasId, access.planId, plan?.name, access.authType.name,
@@ -52,12 +56,18 @@ class BngProvisioningApiService(
     @Transactional
     override fun isolate(subscriptionId: UUID) = lifecycle.onIsolated(subscriptionId)
 
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     override fun disconnect(subscriptionId: UUID): BngSubscriberAccessRef? {
-        accesses.findBySubscriptionId(subscriptionId)
+        val owned = accesses.findBySubscriptionId(subscriptionId)
             .filter { it.status != AccessStatus.TERMINATED }
-            .forEach { actions.enqueueDisconnect(it, null, null) }
-        return findAccess(subscriptionId)
+        val before = findAccess(subscriptionId) ?: return null
+        if (before.activeSessionCount == 0) return before
+        if (!owned.all { actions.enqueueDisconnect(it, null, null) }) return before
+        val confirmation = disconnectConfirmer.confirm(owned.mapTo(linkedSetOf()) { it.username }, before.activeSessionCount)
+        return before.copy(
+            activeSessionCount = confirmation.activeSessionCount,
+            observedAt = confirmation.observedAt,
+        )
     }
 
     @Transactional

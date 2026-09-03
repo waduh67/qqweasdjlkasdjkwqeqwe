@@ -15,6 +15,7 @@ interface BngProvisioningApi {
 data class BngNasRef(
     val id: UUID,
     val enabled: Boolean,
+    /** NAS aktif dengan vendor BNG yang dikenal; reachability hanya menentukan jalur DAE. */
     val pppoeTerminationCapable: Boolean,
 )
 

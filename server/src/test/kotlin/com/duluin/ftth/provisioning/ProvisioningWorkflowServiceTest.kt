@@ -1,6 +1,9 @@
 package com.duluin.ftth.provisioning
 
+import com.duluin.ftth.bng.BngProvisioningApi
+import com.duluin.ftth.bng.BngSubscriberAccessRef
 import com.duluin.ftth.common.domain.error.ConflictException
+import com.duluin.ftth.provisioning.adapter.outbound.bng.BngSubscriberAccessAdapter
 import com.duluin.ftth.provisioning.application.port.inbound.ProvisioningExecutionAdmissionUseCase
 import com.duluin.ftth.provisioning.application.port.inbound.ProvisioningExecutionRunner
 import com.duluin.ftth.provisioning.application.port.outbound.ProvisionExecutionRepository
@@ -41,6 +44,8 @@ import com.duluin.ftth.provisioning.domain.policy.PolicyDecision
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -140,6 +145,25 @@ class ProvisioningWorkflowServiceTest {
         )
         assertThat(deleted.execution!!.status).isEqualTo(ExecutionStatus.SUCCEEDED)
         assertThat(fixture.access.disconnects).containsExactly(subscriptionId, subscriptionId)
+    }
+
+    @Test
+    fun `authorized delete crosses public BNG adapter only after confirmed session closure`() {
+        val bng = mock(BngProvisioningApi::class.java)
+        val live = BngSubscriberAccessRef(
+            UUID.randomUUID(), subscriptionId, bras.id, UUID.randomUUID(), "Residential", "PPPOE", "ACTIVE",
+            true, 1, now,
+        )
+        `when`(bng.findAccess(subscriptionId)).thenReturn(live)
+        `when`(bng.disconnect(subscriptionId)).thenReturn(live.copy(activeSessionCount = 0, observedAt = now))
+        val fixture = Fixture(accessPort = BngSubscriberAccessAdapter(bng))
+
+        val deleted = fixture.workflow.delete(
+            command(request(PlanChange.DELETE), forceDisconnect = true, forceAuthorized = true),
+        )
+
+        assertThat(deleted.execution!!.status).isEqualTo(ExecutionStatus.SUCCEEDED)
+        assertThat(fixture.runner.forward).contains(ProvisionOperation.REMOVE_ACCESS_PORT)
     }
 
     @Test
@@ -278,6 +302,7 @@ class ProvisioningWorkflowServiceTest {
     private inner class Fixture(
         activeSessions: Int = 0,
         failVerificationAt: ProvisionOperation? = null,
+        accessPort: SubscriberAccessIsolationPort? = null,
     ) {
         val plans = Plans()
         val executions = Executions()
@@ -288,7 +313,7 @@ class ProvisioningWorkflowServiceTest {
         val workflow = ProvisioningWorkflowService(
             planning,
             admission,
-            access,
+            accessPort ?: access,
             runner,
             clock,
         )
