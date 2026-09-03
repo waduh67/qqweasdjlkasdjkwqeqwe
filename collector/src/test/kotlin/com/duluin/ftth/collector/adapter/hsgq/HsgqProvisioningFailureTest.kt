@@ -34,15 +34,19 @@ class HsgqProvisioningFailureTest {
     @Test
     fun `changed firmware remains provisional and apply performs no write`() {
         val session = FixtureSession(fixtureState().copy(firmware = "V1.2.4-unknown"))
+        val provisioner = adapter(session)
 
-        val result = adapter(session).execute(
+        val report = provisioner.capabilityReport(target())
+
+        val result = provisioner.execute(
             target(firmware = "V1.2.4-unknown"),
             command(ProvisioningCommandPhase.APPLY, expectedHash = null),
         )
 
+        assertEquals("V1.2.4-unknown", report.fingerprint.firmware)
+        assertTrue("CERTIFICATION_PROVISIONAL" in report.capabilities)
         assertEquals(ProvisioningErrorCode.UNCERTIFIED_FINGERPRINT, result.errorCode)
         assertTrue(session.calls.none { it.startsWith("ensure") || it == "persist" })
-        assertTrue("CERTIFICATION_PROVISIONAL" in adapter(session).capabilityReport(target(firmware = "V1.2.4-unknown")).capabilities)
     }
 
     @Test

@@ -27,7 +27,6 @@ class HsgqProvisioningAdapter(
 ) {
     fun capabilityReport(target: OltTarget): DeviceCapabilityReport = withSession(target) { session ->
         val state = session.discover()
-        verifyTargetFingerprint(target, state)
         val fingerprint = fingerprint(target, state)
         val certification = certifications.find(fingerprint)
         DeviceCapabilityReport(
