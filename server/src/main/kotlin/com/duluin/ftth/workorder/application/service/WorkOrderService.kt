@@ -27,6 +27,7 @@ import com.duluin.ftth.workorder.application.port.outbound.WorkOrderRepository
 import com.duluin.ftth.workorder.domain.model.WorkOrder
 import com.duluin.ftth.workorder.domain.model.WorkOrderEvent
 import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
+import com.duluin.ftth.workorder.domain.model.ProofOfWorkPacket
 import com.duluin.ftth.workorder.domain.model.WorkOrderType
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
@@ -68,6 +69,7 @@ class WorkOrderService(
             assignees = command.assignees,
             createdBy = actor.userId,
             subscriptionId = command.subscriptionId,
+            orderId = command.orderId,
         )
         val saved = repository.save(workOrder)
         if (saved.assignees.isNotEmpty()) publishAssigned(saved)
@@ -114,25 +116,19 @@ class WorkOrderService(
         return repository.save(workOrder).toView()
     }
 
-    @Transactional
-    override fun complete(id: UUID, resolutionNote: String?): WorkOrderView {
+    override fun authorizeComplete(id: UUID) {
         val workOrder = require(id)
         requireArea(workOrder)
         requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.close")
-        workOrder.complete(resolutionNote, Instant.now(), currentUser.current().userId)
-        val saved = repository.save(workOrder)
-        // Penyelesaian WO menggerakkan status langganan: PSB selesai = layanan resmi hidup
-        // (aktif + mulai ditagih prorata), DISMANTLE selesai = layanan berakhir. Panggilan
-        // ke customer idempoten (no-op bila status langganan tak sesuai), jadi menyelesaikan
-        // ulang WO yang sempat ditolak penyelia tak menggeser tanggal aktivasi/terminasi.
-        saved.subscriptionId?.let { subscriptionId ->
-            when (saved.type) {
-                WorkOrderType.PSB -> customerApi.activateForInstallation(subscriptionId)
-                WorkOrderType.DISMANTLE -> customerApi.terminateForDismantle(subscriptionId)
-                else -> Unit
-            }
-        }
-        return saved.toView()
+    }
+
+    @Transactional
+    override fun complete(id: UUID, resolutionNote: String?, packet: ProofOfWorkPacket): WorkOrderView {
+        val workOrder = require(id)
+        requireArea(workOrder)
+        requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.close")
+        workOrder.complete(resolutionNote, packet, Instant.now(), currentUser.current().userId)
+        return repository.save(workOrder).toView()
     }
 
     @Transactional
@@ -157,7 +153,9 @@ class WorkOrderService(
         requireActiveActor()
         requireArea(workOrder)
         workOrder.approve(note, Instant.now(), currentUser.current().userId)
-        return repository.save(workOrder).toView()
+        val saved = repository.save(workOrder)
+        events.publishEvent(com.duluin.ftth.workorder.FulfillmentApproved(saved.tenantId, saved.id, saved.type.name, saved.subscriptionId, saved.proofOfWorkHash!!, saved.orderId, saved.approvedBy, setOf("SUBSCRIPTION", "PROVISIONING", "WORK_ORDER")))
+        return saved.toView()
     }
 
     @Transactional

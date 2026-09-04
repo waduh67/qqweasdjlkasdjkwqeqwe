@@ -2,10 +2,15 @@ package com.duluin.ftth
 
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
+import com.duluin.ftth.common.tenant.TenantContext
+import com.duluin.ftth.fieldservice.application.port.inbound.CreateVisitCommand
+import com.duluin.ftth.fieldservice.application.port.inbound.FieldServiceUseCase
+import com.duluin.ftth.fieldservice.domain.model.CommandMetadata
 import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
@@ -30,9 +35,17 @@ class WorkOrderIT {
 
     @Autowired private lateinit var mockMvc: MockMvc
     @Autowired private lateinit var onboarding: OnboardTenantUseCase
+    @Autowired @Qualifier("fieldServiceUseCase") private lateinit var fieldService: FieldServiceUseCase
 
     private val pass = "secret12345"
     private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
+
+    private fun completionBody(note: String? = null): String {
+        val kinds = listOf("FAT", "ODP", "DROPCORE", "ONT", "ONU", "OPTICAL_BEFORE", "OPTICAL_AFTER", "TECHNICIAN_SIGNATURE", "CUSTOMER_ACKNOWLEDGEMENT", "LOCATION")
+        val artifacts = kinds.joinToString(",") { "{\"kind\":\"$it\",\"revisionId\":\"${UUID.randomUUID()}\"}" }
+        val resolution = note?.let { ",\"resolutionNote\":\"$it\"" }.orEmpty()
+        return "{\"proofRevision\":1,\"artifacts\":[$artifacts]$resolution}"
+    }
 
     private fun login(slug: String, email: String): String {
         val json = mockMvc.perform(
@@ -78,6 +91,17 @@ class WorkOrderIT {
         val ids = JsonPath.read<List<String>>(roles, "$[*].id")
         val roleId = ids[names.indexOf("Teknisi")]
         return id(post("/api/users", token, """{"email":"tech-$s@x.test","name":"$name","password":"$pass","roleIds":["$roleId"]}"""))
+    }
+
+    private fun newApprover(token: String): String {
+        val roles = get("/api/roles", token)
+        val names = JsonPath.read<List<String>>(roles, "$[*].name")
+        val ids = JsonPath.read<List<String>>(roles, "$[*].id")
+        val roleIndex = names.indexOfFirst { it.contains("Admin", ignoreCase = true) }.takeIf { it >= 0 } ?: 0
+        val email = "approver-${uniq()}@x.test"
+        post("/api/users", token, "{\"email\":\"$email\",\"name\":\"Approver\",\"password\":\"$pass\",\"roleIds\":[\"${ids[roleIndex]}\"]}", 201)
+        val slug = JsonPath.read<String>(get("/api/me", token), "$.tenantSlug")
+        return login(slug, email)
     }
 
     private fun newCustomer(token: String): Pair<String, String> {
@@ -132,7 +156,7 @@ class WorkOrderIT {
         // Kerjakan lalu selesaikan.
         val started = post("/api/work-orders/$woId/start", token, "", 200)
         assertThat(JsonPath.read<String>(started, "$.status")).isEqualTo("IN_PROGRESS")
-        val done = post("/api/work-orders/$woId/complete", token, """{"resolutionNote":"Core disambung ulang"}""", 200)
+        val done = post("/api/work-orders/$woId/complete", token, completionBody("Core disambung ulang"), 200)
         assertThat(JsonPath.read<String>(done, "$.status")).isEqualTo("DONE")
         assertThat(JsonPath.read<String>(done, "$.resolutionNote")).isEqualTo("Core disambung ulang")
 
@@ -266,7 +290,7 @@ class WorkOrderIT {
         val wo4 = id(createWorkOrder(token, """{"type":"MIGRATION","title":"Migrasi"}"""))
         post("/api/work-orders/$wo4/assign", token, """{"technicianIds":["$techB"]}""", 200)
         post("/api/work-orders/$wo4/start", token, "", 200)
-        post("/api/work-orders/$wo4/complete", token, "", 200)
+        post("/api/work-orders/$wo4/complete", token, completionBody(), 200)
 
         val dash = get("/api/work-orders/dashboard", token)
         assertThat(JsonPath.read<Int>(dash, "$.total")).isEqualTo(4)
@@ -287,19 +311,19 @@ class WorkOrderIT {
     }
 
     /** Bawa sebuah WO baru sampai DONE (assign → start → complete), kembalikan id-nya. */
-    private fun completeWorkOrder(token: String, title: String): String {
+    private fun completeWorkOrder(token: String, title: String): Pair<String, String> {
         val woId = id(createWorkOrder(token, """{"type":"PSB","title":"$title"}"""))
         val techId = newTechnician(token, "Teknisi $title")
         post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
         post("/api/work-orders/$woId/start", token, "", 200)
-        post("/api/work-orders/$woId/complete", token, "", 200)
-        return woId
+        post("/api/work-orders/$woId/complete", token, completionBody(), 200)
+        return woId to newApprover(token)
     }
 
     @Test
     fun `hasil kerja masuk antrean persetujuan, penolakan membuka kembali, persetujuan mengunci`() {
         val token = newTenantAdmin("wo")
-        val woId = completeWorkOrder(token, "Pasang baru")
+        val (woId, approverToken) = completeWorkOrder(token, "Pasang baru")
 
         // Selesai → menunggu persetujuan; muncul di antrean & dashboard.
         val done = get("/api/work-orders/$woId", token)
@@ -316,31 +340,31 @@ class WorkOrderIT {
         post("/api/work-orders/$woId/reject", token, """{"reason":""}""", expected = 400)
 
         // Tolak → WO dibuka kembali ke IN_PROGRESS untuk dikerjakan ulang.
-        val rejected = post("/api/work-orders/$woId/reject", token, """{"reason":"Redaman masih jelek"}""", 200)
+        val rejected = post("/api/work-orders/$woId/reject", approverToken, """{"reason":"Redaman masih jelek"}""", 200)
         assertThat(JsonPath.read<String>(rejected, "$.status")).isEqualTo("IN_PROGRESS")
         assertThat(JsonPath.read<String>(rejected, "$.approvalStatus")).isEqualTo("REJECTED")
         assertThat(JsonPath.read<String>(rejected, "$.approvalNote")).isEqualTo("Redaman masih jelek")
-        assertThat(JsonPath.read<String>(rejected, "$.approvedByName")).isEqualTo("Admin")
+        assertThat(JsonPath.read<String>(rejected, "$.approvedByName")).isEqualTo("Approver")
         assertThat(JsonPath.read<Any?>(rejected, "$.completedAt")).isNull()
 
         // Antrean kini kosong (sudah tak PENDING).
         assertThat(JsonPath.read<Int>(get("/api/work-orders/dashboard", token), "$.pendingApproval")).isEqualTo(0)
 
         // Selesaikan ulang → kembali PENDING, catatan penolakan lama tereset.
-        val redone = post("/api/work-orders/$woId/complete", token, """{"resolutionNote":"Splice ulang"}""", 200)
+        val redone = post("/api/work-orders/$woId/complete", token, completionBody("Splice ulang"), 200)
         assertThat(JsonPath.read<String>(redone, "$.approvalStatus")).isEqualTo("PENDING")
         assertThat(JsonPath.read<Any?>(redone, "$.approvalNote")).isNull()
 
         // Setujui → terkunci APPROVED dengan pengambil keputusan tercatat.
-        val approved = post("/api/work-orders/$woId/approve", token, """{"note":"Sekarang OK"}""", 200)
+        val approved = post("/api/work-orders/$woId/approve", approverToken, """{"note":"Sekarang OK"}""", 200)
         assertThat(JsonPath.read<String>(approved, "$.status")).isEqualTo("DONE")
         assertThat(JsonPath.read<String>(approved, "$.approvalStatus")).isEqualTo("APPROVED")
         assertThat(JsonPath.read<String>(approved, "$.approvalNote")).isEqualTo("Sekarang OK")
-        assertThat(JsonPath.read<String>(approved, "$.approvedByName")).isEqualTo("Admin")
+        assertThat(JsonPath.read<String>(approved, "$.approvedByName")).isEqualTo("Approver")
 
         // Sudah disetujui → tak bisa disetujui/ditolak lagi.
-        post("/api/work-orders/$woId/approve", token, "", expected = 409)
-        post("/api/work-orders/$woId/reject", token, """{"reason":"berubah pikiran"}""", expected = 409)
+        post("/api/work-orders/$woId/approve", approverToken, "", expected = 409)
+        post("/api/work-orders/$woId/reject", approverToken, """{"reason":"berubah pikiran"}""", expected = 409)
 
         // Timeline memuat penolakan lalu persetujuan.
         val timeline = JsonPath.read<List<String>>(get("/api/work-orders/$woId", token), "$.timeline[*].type")
@@ -415,17 +439,11 @@ class WorkOrderIT {
         // Langganan masih PENDING sampai WO benar-benar selesai.
         assertThat(subscriptionStatus(token, customerId)).isEqualTo("PENDING")
 
-        // Selesai → layanan resmi hidup.
-        post("/api/work-orders/$woId/complete", token, """{"resolutionNote":"Terpasang"}""", 200)
+        post("/api/work-orders/$woId/complete", token, completionBody("Terpasang"), 200)
+        assertThat(subscriptionStatus(token, customerId)).isEqualTo("PENDING")
+        post("/api/work-orders/$woId/approve", newApprover(token), "{\"note\":\"Disetujui\"}", 200)
         assertThat(subscriptionStatus(token, customerId)).isEqualTo("ACTIVE")
 
-        // Penyelia menolak → WO dibuka lagi; aktivasi TIDAK dibatalkan (layanan sudah jalan).
-        post("/api/work-orders/$woId/reject", token, """{"reason":"Rapikan kabel"}""", 200)
-        assertThat(subscriptionStatus(token, customerId)).isEqualTo("ACTIVE")
-
-        // Selesai ulang: idempoten (activate no-op karena bukan PENDING), tetap ACTIVE tanpa error.
-        post("/api/work-orders/$woId/complete", token, """{"resolutionNote":"Sudah rapi"}""", 200)
-        assertThat(subscriptionStatus(token, customerId)).isEqualTo("ACTIVE")
     }
 
     @Test
@@ -444,8 +462,10 @@ class WorkOrderIT {
         val techId = newTechnician(token, "Teknisi Bongkar")
         post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
         post("/api/work-orders/$woId/start", token, "", 200)
-        post("/api/work-orders/$woId/complete", token, "", 200)
+        post("/api/work-orders/$woId/complete", token, completionBody(), 200)
 
+        assertThat(subscriptionStatus(token, customerId)).isEqualTo("ACTIVE")
+        post("/api/work-orders/$woId/approve", newApprover(token), "{\"note\":\"Disetujui\"}", 200)
         assertThat(subscriptionStatus(token, customerId)).isEqualTo("TERMINATED")
     }
 
@@ -463,7 +483,7 @@ class WorkOrderIT {
         val techId = newTechnician(token, "Teknisi Repair")
         post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
         post("/api/work-orders/$woId/start", token, "", 200)
-        post("/api/work-orders/$woId/complete", token, "", 200)
+        post("/api/work-orders/$woId/complete", token, completionBody(), 200)
 
         // REPAIR bukan pemasangan/pembongkaran → langganan tetap PENDING.
         assertThat(subscriptionStatus(token, customerId)).isEqualTo("PENDING")
@@ -506,7 +526,7 @@ class WorkOrderIT {
 
         // Kerjakan WO sendiri → boleh.
         post("/api/work-orders/$woMine/start", tech1Token, "", 200)
-        post("/api/work-orders/$woMine/complete", tech1Token, """{"resolutionNote":"Selesai"}""", 200)
+        post("/api/work-orders/$woMine/complete", tech1Token, completionBody("Selesai"), 200)
 
         // Sentuh WO teknisi lain → 403 (bukan pemiliknya).
         post("/api/work-orders/$woOther/start", tech1Token, "", expected = 403)
@@ -577,5 +597,48 @@ class WorkOrderIT {
 
         // Roster kosong ditolak oleh bean validation (@NotEmpty).
         post("/api/work-orders/$woId/assign", adminToken, """{"technicianIds":[]}""", expected = 400)
+    }
+
+    @Test
+    fun `fieldservice visit list is authenticated scoped and tenant isolated`() {
+        val adminToken = newTenantAdmin("visit")
+        val (customerId, _) = newCustomer(adminToken)
+        val roles = get("/api/roles", adminToken)
+        val roleNames = JsonPath.read<List<String>>(roles, "$[*].name")
+        val roleIds = JsonPath.read<List<String>>(roles, "$[*].id")
+        val technicianRoleId = roleIds[roleNames.indexOf("Teknisi")]
+        val technicianEmail = "visit-tech-${uniq()}@x.test"
+        val technicianId = id(post("/api/users", adminToken, """{"email":"$technicianEmail","name":"Visit Tech","password":"$pass","roleIds":["$technicianRoleId"]}"""))
+        val technicianToken = login(JsonPath.read<String>(get("/api/me", adminToken), "$.tenantSlug"), technicianEmail)
+        val workOrderId = id(createWorkOrder(adminToken, """{"type":"REPAIR","title":"Visit list","customerId":"$customerId","scheduledAt":"2026-09-04T10:00:00Z"}"""))
+        post("/api/work-orders/$workOrderId/assign", adminToken, """{"technicianIds":["$technicianId"]}""", 200)
+        val tenantId = UUID.fromString(JsonPath.read(get("/api/me", adminToken), "$.tenantId"))
+        val adminId = UUID.fromString(JsonPath.read(get("/api/me", adminToken), "$.id"))
+        val visit = TenantContext.runAs(tenantId) {
+            fieldService.create(
+                CreateVisitCommand(
+                    tenantId,
+                    UUID.fromString(customerId),
+                    UUID.fromString(workOrderId),
+                    UUID.fromString(technicianId),
+                    java.time.Instant.parse("2026-09-04T10:00:00Z"),
+                    CommandMetadata(tenantId, adminId, "visit.create", uniq(), "${"a".repeat(64)}", 0),
+                ),
+            ).id.toString()
+        }
+
+        val technicianList = get("/api/v1/fieldservice/visits", technicianToken)
+        assertThat(JsonPath.read<List<String>>(technicianList, "$.content[*].id")).containsExactly(visit)
+        assertThat(JsonPath.read<String>(technicianList, "$.content[0].workOrderId")).isEqualTo(workOrderId)
+        assertThat(JsonPath.read<String>(technicianList, "$.content[0].state")).isEqualTo("PLANNED")
+        assertThat(technicianList).doesNotContain("technicianId", "latitude", "longitude", "approvalNote")
+
+        val dispatcherList = get("/api/v1/fieldservice/visits?scope=ALL&size=1", adminToken)
+        assertThat(JsonPath.read<Int>(dispatcherList, "$.size")).isEqualTo(1)
+        assertThat(JsonPath.read<Long>(dispatcherList, "$.totalElements")).isEqualTo(1L)
+
+        val otherTenant = newTenantAdmin("visit-other")
+        val isolated = get("/api/v1/fieldservice/visits?scope=ALL", otherTenant)
+        assertThat(JsonPath.read<List<Any>>(isolated, "$.content")).isEmpty()
     }
 }

@@ -2,6 +2,7 @@ package com.duluin.ftth.workorder.application.port.inbound
 
 import com.duluin.ftth.workorder.domain.model.WorkOrderPriority
 import com.duluin.ftth.workorder.domain.model.WorkOrderType
+import com.duluin.ftth.workorder.domain.model.ProofOfWorkPacket
 import java.time.Instant
 import java.util.UUID
 
@@ -21,7 +22,9 @@ interface ManageWorkOrderUseCase {
 
     fun start(id: UUID): WorkOrderView
 
-    fun complete(id: UUID, resolutionNote: String?): WorkOrderView
+    fun authorizeComplete(id: UUID)
+
+    fun complete(id: UUID, resolutionNote: String?, packet: ProofOfWorkPacket): WorkOrderView
 
     fun cancel(id: UUID, reason: String?): WorkOrderView
 
@@ -52,6 +55,7 @@ data class SaveWorkOrderCommand(
     val scheduledAt: Instant?,
     /** Roster teknisi awal (tim datar); kosong = WO lahir belum ditugaskan. */
     val assignees: Set<UUID> = emptySet(),
+    val orderId: UUID? = null,
 )
 
 /** Mengubah rincian deskriptif; tipe tak bisa diubah, penugasan lewat [ManageWorkOrderUseCase.assign]. */

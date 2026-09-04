@@ -8,5 +8,5 @@ interface WorkOrderEvidenceJpaRepository : JpaRepository<WorkOrderEvidenceJpaEnt
 }
 
 interface WorkOrderSignatureJpaRepository : JpaRepository<WorkOrderSignatureJpaEntity, UUID> {
-    fun findByWorkOrderId(workOrderId: UUID): WorkOrderSignatureJpaEntity?
+    fun findByWorkOrderId(workOrderId: UUID): List<WorkOrderSignatureJpaEntity>
 }

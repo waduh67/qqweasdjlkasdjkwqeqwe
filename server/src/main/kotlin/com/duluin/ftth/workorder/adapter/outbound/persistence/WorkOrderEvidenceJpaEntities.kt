@@ -2,6 +2,7 @@ package com.duluin.ftth.workorder.adapter.outbound.persistence
 
 import com.duluin.ftth.common.infrastructure.persistence.TenantAwareJpaEntity
 import com.duluin.ftth.workorder.domain.model.EvidenceKind
+import com.duluin.ftth.workorder.domain.model.EvidenceRevisionState
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -46,6 +47,20 @@ class WorkOrderEvidenceJpaEntity(
 
     @Column(name = "uploaded_by", nullable = false, updatable = false)
     var uploadedBy: UUID,
+
+    @Column(name = "receipt_at", nullable = false, updatable = false)
+    var receiptAt: Instant,
+    @Column(name = "sha256", length = 64, updatable = false)
+    var sha256: String?,
+    @Column(name = "expected_content_type", nullable = false, length = 100, updatable = false)
+    var expectedContentType: String,
+    @Column(name = "expected_size_bytes", nullable = false, updatable = false)
+    var expectedSizeBytes: Long,
+    @Enumerated(EnumType.STRING)
+    @Column(name = "revision_state", nullable = false, length = 20)
+    var revisionState: EvidenceRevisionState,
+    @Column(name = "correction_reason", length = 500, updatable = false)
+    var correctionReason: String?,
 ) : TenantAwareJpaEntity(id)
 
 /** Metadata tanda tangan pelanggan; byte-nya di object storage pada [storageKey]. */
@@ -74,4 +89,18 @@ class WorkOrderSignatureJpaEntity(
 
     @Column(name = "signed_at", nullable = false, updatable = false)
     var signedAt: Instant,
+
+    @Column(name = "receipt_at", nullable = false, updatable = false)
+    var receiptAt: Instant,
+    @Column(name = "sha256", length = 64, updatable = false)
+    var sha256: String?,
+    @Column(name = "expected_content_type", nullable = false, length = 100, updatable = false)
+    var expectedContentType: String,
+    @Column(name = "expected_size_bytes", nullable = false, updatable = false)
+    var expectedSizeBytes: Long,
+    @Enumerated(EnumType.STRING)
+    @Column(name = "revision_state", nullable = false, length = 20)
+    var revisionState: EvidenceRevisionState,
+    @Column(name = "correction_reason", length = 500, updatable = false)
+    var correctionReason: String?,
 ) : TenantAwareJpaEntity(id)

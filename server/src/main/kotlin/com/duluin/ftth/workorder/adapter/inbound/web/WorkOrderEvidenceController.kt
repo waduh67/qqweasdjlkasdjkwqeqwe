@@ -59,6 +59,7 @@ class WorkOrderEvidenceController(
         @RequestParam(required = false) latitude: Double?,
         @RequestParam(required = false) longitude: Double?,
         @RequestParam(required = false) capturedAt: String?,
+        @RequestParam(required = false) correctionReason: String?,
     ): EvidenceView = manage.attachPhoto(
         workOrderId,
         AttachEvidenceCommand(
@@ -69,6 +70,7 @@ class WorkOrderEvidenceController(
             latitude = latitude,
             longitude = longitude,
             capturedAt = parseInstant(capturedAt),
+            correctionReason = correctionReason,
         ),
     )
 
@@ -76,7 +78,8 @@ class WorkOrderEvidenceController(
     @PreAuthorize("@authz.canAny('workorder.evidence.view','workorder.order.field')")
     fun content(@PathVariable workOrderId: UUID, @PathVariable evidenceId: UUID): ResponseEntity<ByteArray> {
         val content = query.downloadPhoto(workOrderId, evidenceId)
-        return ResponseEntity.ok().contentType(MediaType.parseMediaType(content.contentType)).body(content.bytes)
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(content.contentType))
+            .header("Content-Disposition", "inline; filename=\"evidence\"").body(content.bytes)
     }
 
     @DeleteMapping("/evidence/{evidenceId}")
@@ -97,6 +100,7 @@ class WorkOrderEvidenceController(
         @RequestParam("file") file: MultipartFile,
         @RequestParam signerName: String,
         @RequestParam(required = false) signedAt: String?,
+        @RequestParam(required = false) correctionReason: String?,
     ): SignatureView = manage.captureSignature(
         workOrderId,
         CaptureSignatureCommand(
@@ -104,6 +108,7 @@ class WorkOrderEvidenceController(
             contentType = file.requireContentType(),
             bytes = file.bytes,
             signedAt = parseInstant(signedAt),
+            correctionReason = correctionReason,
         ),
     )
 
@@ -111,7 +116,8 @@ class WorkOrderEvidenceController(
     @PreAuthorize("@authz.canAny('workorder.evidence.view','workorder.order.field')")
     fun signatureContent(@PathVariable workOrderId: UUID): ResponseEntity<ByteArray> {
         val content = query.downloadSignature(workOrderId)
-        return ResponseEntity.ok().contentType(MediaType.parseMediaType(content.contentType)).body(content.bytes)
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(content.contentType))
+            .header("Content-Disposition", "inline; filename=\"signature\"").body(content.bytes)
     }
 
     @DeleteMapping("/signature")

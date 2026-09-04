@@ -21,6 +21,8 @@ enum class EvidenceKind {
     OTHER,
 }
 
+enum class EvidenceRevisionState { PENDING, COMMITTED, ORPHAN_OBJECT, MISSING_OBJECT, SUPERSEDED, TOMBSTONED, LEGAL_HOLD }
+
 /**
  * Satu bukti foto sebuah work order. Byte-nya tinggal di object storage
  * (MinIO/S3); yang dipersistensi di DB hanyalah metadata + [storageKey] penunjuk.
@@ -46,6 +48,12 @@ class WorkOrderEvidence private constructor(
     val capturedAt: Instant?,
     val uploadedBy: UUID,
     val createdAt: Instant,
+    val receiptAt: Instant = createdAt,
+    val sha256: String? = null,
+    val expectedContentType: String = contentType,
+    val expectedSizeBytes: Long = sizeBytes,
+    val revisionState: EvidenceRevisionState = EvidenceRevisionState.COMMITTED,
+    val correctionReason: String? = null,
 ) {
     companion object {
         /** Kunci objek: `<tenant>/wo/<workOrder>/evidence/<id>` — terprefiks tenant sebagai lapis pertahanan. */
@@ -65,6 +73,9 @@ class WorkOrderEvidence private constructor(
             capturedAt: Instant?,
             uploadedBy: UUID,
             at: Instant = Instant.now(),
+            receiptAt: Instant = at,
+            sha256: String? = null,
+            correctionReason: String? = null,
         ): WorkOrderEvidence {
             val id = UuidV7.generate()
             return WorkOrderEvidence(
@@ -81,6 +92,9 @@ class WorkOrderEvidence private constructor(
                 capturedAt = capturedAt,
                 uploadedBy = uploadedBy,
                 createdAt = at,
+                receiptAt = receiptAt,
+                sha256 = sha256,
+                correctionReason = correctionReason,
             )
         }
 
@@ -99,9 +113,16 @@ class WorkOrderEvidence private constructor(
             capturedAt: Instant?,
             uploadedBy: UUID,
             createdAt: Instant,
+            receiptAt: Instant = createdAt,
+            sha256: String? = null,
+            expectedContentType: String = contentType,
+            expectedSizeBytes: Long = sizeBytes,
+            revisionState: EvidenceRevisionState = EvidenceRevisionState.COMMITTED,
+            correctionReason: String? = null,
         ) = WorkOrderEvidence(
-            id, tenantId, workOrderId, kind, caption, storageKey, contentType, sizeBytes,
-            latitude, longitude, capturedAt, uploadedBy, createdAt,
+            id = id, tenantId = tenantId, workOrderId = workOrderId, kind = kind, caption = caption, storageKey = storageKey, contentType = contentType, sizeBytes = sizeBytes,
+            latitude = latitude, longitude = longitude, capturedAt = capturedAt, uploadedBy = uploadedBy, createdAt = createdAt, receiptAt = receiptAt, sha256 = sha256,
+            expectedContentType = expectedContentType, expectedSizeBytes = expectedSizeBytes, revisionState = revisionState, correctionReason = correctionReason,
         )
     }
 }
@@ -122,6 +143,12 @@ class WorkOrderSignature private constructor(
     val signedBy: UUID,
     val signedAt: Instant,
     val createdAt: Instant,
+    val receiptAt: Instant = createdAt,
+    val sha256: String? = null,
+    val expectedContentType: String = contentType,
+    val expectedSizeBytes: Long = sizeBytes,
+    val revisionState: EvidenceRevisionState = EvidenceRevisionState.COMMITTED,
+    val correctionReason: String? = null,
 ) {
     companion object {
         internal fun keyOf(tenantId: UUID, workOrderId: UUID, id: UUID) =
@@ -137,6 +164,9 @@ class WorkOrderSignature private constructor(
             signedBy: UUID,
             signedAt: Instant = Instant.now(),
             at: Instant = Instant.now(),
+            receiptAt: Instant = at,
+            sha256: String? = null,
+            correctionReason: String? = null,
         ): WorkOrderSignature {
             val id = UuidV7.generate()
             return WorkOrderSignature(
@@ -150,6 +180,9 @@ class WorkOrderSignature private constructor(
                 signedBy = signedBy,
                 signedAt = signedAt,
                 createdAt = at,
+                receiptAt = receiptAt,
+                sha256 = sha256,
+                correctionReason = correctionReason,
             )
         }
 
@@ -165,9 +198,16 @@ class WorkOrderSignature private constructor(
             signedBy: UUID,
             signedAt: Instant,
             createdAt: Instant,
+            receiptAt: Instant = createdAt,
+            sha256: String? = null,
+            expectedContentType: String = contentType,
+            expectedSizeBytes: Long = sizeBytes,
+            revisionState: EvidenceRevisionState = EvidenceRevisionState.COMMITTED,
+            correctionReason: String? = null,
         ) = WorkOrderSignature(
-            id, tenantId, workOrderId, signerName, storageKey, contentType, sizeBytes,
-            signedBy, signedAt, createdAt,
+            id = id, tenantId = tenantId, workOrderId = workOrderId, signerName = signerName, storageKey = storageKey, contentType = contentType, sizeBytes = sizeBytes,
+            signedBy = signedBy, signedAt = signedAt, createdAt = createdAt, receiptAt = receiptAt, sha256 = sha256, expectedContentType = expectedContentType,
+            expectedSizeBytes = expectedSizeBytes, revisionState = revisionState, correctionReason = correctionReason,
         )
     }
 }

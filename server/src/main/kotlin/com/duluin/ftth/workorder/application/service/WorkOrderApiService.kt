@@ -6,6 +6,7 @@ import com.duluin.ftth.workorder.RaisePsbCommand
 import com.duluin.ftth.workorder.RaiseRepairCommand
 import com.duluin.ftth.workorder.TechnicianProductivity
 import com.duluin.ftth.workorder.WorkOrderRef
+import com.duluin.ftth.workorder.WorkOrderAssignmentRef
 import com.duluin.ftth.workorder.WorkorderApi
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderUseCase
 import com.duluin.ftth.workorder.application.port.inbound.SaveWorkOrderCommand
@@ -31,6 +32,17 @@ class WorkOrderApiService(
     private val workOrderRepository: WorkOrderRepository,
     private val manageWorkOrder: ManageWorkOrderUseCase,
 ) : WorkorderApi {
+
+    override fun assignment(workOrderId: UUID, technicianId: UUID): WorkOrderAssignmentRef? {
+        val workOrder = workOrderRepository.findById(workOrderId) ?: return null
+        return if (workOrder.isAssignedTo(technicianId)) {
+            WorkOrderAssignmentRef(workOrder.tenantId, workOrder.id, workOrder.customerId, technicianId, workOrder.status.open, workOrder.areaId)
+        } else {
+            null
+        }
+    }
+
+    override fun scheduledAt(workOrderId: UUID): Instant? = workOrderRepository.findById(workOrderId)?.scheduledAt
 
     override fun openPsbByCustomer(): Map<UUID, WorkOrderRef> =
         workOrderRepository.findOpenByType(WorkOrderType.PSB)

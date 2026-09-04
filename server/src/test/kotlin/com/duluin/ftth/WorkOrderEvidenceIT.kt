@@ -87,7 +87,7 @@ class WorkOrderEvidenceIT {
     }
 
     private fun png(name: String = "foto.png") =
-        MockMultipartFile("file", name, MediaType.IMAGE_PNG_VALUE, byteArrayOf(1, 2, 3, 4, 5))
+        MockMultipartFile("file", name, MediaType.IMAGE_PNG_VALUE, byteArrayOf(137.toByte(), 80, 78, 71, 13, 10, 26, 10, 1, 2, 3, 4, 5))
 
     @Test
     fun `foto bukti diunggah, didaftar, diunduh, lalu dihapus`() {
@@ -101,7 +101,7 @@ class WorkOrderEvidenceIT {
         ).andExpect(status().isCreated).andReturn().response.contentAsString
         assertThat(JsonPath.read<String>(uploaded, "$.kind")).isEqualTo("AFTER")
         assertThat(JsonPath.read<String>(uploaded, "$.caption")).isEqualTo("Sesudah disambung")
-        assertThat(JsonPath.read<Int>(uploaded, "$.sizeBytes")).isEqualTo(5)
+        assertThat(JsonPath.read<Int>(uploaded, "$.sizeBytes")).isEqualTo(13)
         assertThat(JsonPath.read<String>(uploaded, "$.uploadedByName")).isEqualTo("Admin")
         val evidenceId = id(uploaded)
 
@@ -114,7 +114,7 @@ class WorkOrderEvidenceIT {
             get("/api/work-orders/$woId/evidence/$evidenceId/content").header("Authorization", "Bearer $token"),
         ).andExpect(status().isOk).andReturn().response
         assertThat(content.contentType).startsWith(MediaType.IMAGE_PNG_VALUE)
-        assertThat(content.contentAsByteArray).containsExactly(1, 2, 3, 4, 5)
+        assertThat(content.contentAsByteArray).containsExactly(137.toByte(), 80, 78, 71, 13, 10, 26, 10, 1, 2, 3, 4, 5)
 
         // Dihapus → hilang dari galeri.
         mockMvc.perform(
@@ -166,12 +166,13 @@ class WorkOrderEvidenceIT {
         val content = mockMvc.perform(
             get("/api/work-orders/$woId/signature/content").header("Authorization", "Bearer $token"),
         ).andExpect(status().isOk).andReturn().response
-        assertThat(content.contentAsByteArray).containsExactly(1, 2, 3, 4, 5)
+        assertThat(content.contentAsByteArray).containsExactly(137.toByte(), 80, 78, 71, 13, 10, 26, 10, 1, 2, 3, 4, 5)
 
         // Satu tanda tangan per work order: PUT ulang menggantikan yang lama.
         mockMvc.perform(
             multipart(HttpMethod.PUT, "/api/work-orders/$woId/signature").file(png("ttd2.png"))
-                .param("signerName", "Bu Lurah").header("Authorization", "Bearer $token"),
+                .param("signerName", "Bu Lurah").param("correctionReason", "Tanda tangan diperbarui")
+                .header("Authorization", "Bearer $token"),
         ).andExpect(status().isOk)
         assertThat(JsonPath.read<String>(get("/api/work-orders/$woId/signature", token), "$.signerName"))
             .isEqualTo("Bu Lurah")

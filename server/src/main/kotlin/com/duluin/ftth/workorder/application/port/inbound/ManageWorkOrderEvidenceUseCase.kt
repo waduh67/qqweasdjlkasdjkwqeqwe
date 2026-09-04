@@ -28,6 +28,7 @@ data class AttachEvidenceCommand(
     val latitude: Double?,
     val longitude: Double?,
     val capturedAt: Instant?,
+    val correctionReason: String? = null,
 )
 
 data class CaptureSignatureCommand(
@@ -35,4 +36,5 @@ data class CaptureSignatureCommand(
     val contentType: String,
     val bytes: ByteArray,
     val signedAt: Instant?,
+    val correctionReason: String? = null,
 )

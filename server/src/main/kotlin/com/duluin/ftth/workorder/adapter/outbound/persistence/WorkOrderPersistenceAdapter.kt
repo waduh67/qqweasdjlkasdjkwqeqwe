@@ -31,6 +31,7 @@ class WorkOrderPersistenceAdapter(
             priority = workOrder.priority
             status = workOrder.status
             customerId = workOrder.customerId
+            orderId = workOrder.orderId
             incidentId = workOrder.incidentId
             areaId = workOrder.areaId
             assignedAt = workOrder.assignedAt
@@ -45,6 +46,8 @@ class WorkOrderPersistenceAdapter(
             approvedBy = workOrder.approvedBy
             approvedAt = workOrder.approvedAt
             approvalNote = workOrder.approvalNote
+            completedBy = workOrder.completedBy
+            proofOfWorkHash = workOrder.proofOfWorkHash
         } ?: WorkOrderJpaEntity(
             id = workOrder.id,
             code = workOrder.code,
@@ -55,6 +58,7 @@ class WorkOrderPersistenceAdapter(
             status = workOrder.status,
             customerId = workOrder.customerId,
             subscriptionId = workOrder.subscriptionId,
+            orderId = workOrder.orderId,
             incidentId = workOrder.incidentId,
             areaId = workOrder.areaId,
             assignedAt = workOrder.assignedAt,
@@ -69,6 +73,8 @@ class WorkOrderPersistenceAdapter(
             approvedBy = workOrder.approvedBy,
             approvedAt = workOrder.approvedAt,
             approvalNote = workOrder.approvalNote,
+            completedBy = workOrder.completedBy,
+            proofOfWorkHash = workOrder.proofOfWorkHash,
             createdBy = workOrder.createdBy,
         )
         val saved = jpa.save(entity)
@@ -264,6 +270,7 @@ private fun WorkOrderJpaEntity.toDomain(assignees: Set<UUID>): WorkOrder = WorkO
     code = code,
     type = type,
     subscriptionId = subscriptionId,
+    orderId = orderId,
     title = title,
     description = description,
     priority = priority,
@@ -284,6 +291,8 @@ private fun WorkOrderJpaEntity.toDomain(assignees: Set<UUID>): WorkOrder = WorkO
     approvedBy = approvedBy,
     approvedAt = approvedAt,
     approvalNote = approvalNote,
+    completedBy = completedBy,
+    proofOfWorkHash = proofOfWorkHash,
     createdBy = createdBy,
     createdAt = createdAt,
 )

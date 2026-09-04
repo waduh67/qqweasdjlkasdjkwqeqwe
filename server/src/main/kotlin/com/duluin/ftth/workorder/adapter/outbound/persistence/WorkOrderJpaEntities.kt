@@ -48,6 +48,9 @@ class WorkOrderJpaEntity(
     @Column(name = "subscription_id", updatable = false)
     var subscriptionId: UUID?,
 
+    @Column(name = "order_id", updatable = false)
+    var orderId: UUID?,
+
     @Column(name = "incident_id")
     var incidentId: UUID?,
 
@@ -92,6 +95,12 @@ class WorkOrderJpaEntity(
 
     @Column(name = "approval_note", length = 500)
     var approvalNote: String?,
+
+    @Column(name = "completed_by")
+    var completedBy: UUID?,
+
+    @Column(name = "proof_of_work_hash", length = 64)
+    var proofOfWorkHash: String?,
 
     // Null = dibuat sistem (mis. WO preventif dari degradasi optik), tanpa pengguna.
     @Column(name = "created_by", updatable = false)

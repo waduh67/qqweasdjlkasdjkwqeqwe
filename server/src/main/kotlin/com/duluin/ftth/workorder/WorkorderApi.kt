@@ -13,6 +13,9 @@ import java.util.UUID
  */
 interface WorkorderApi {
 
+    fun assignment(workOrderId: UUID, technicianId: UUID): WorkOrderAssignmentRef? = null
+    fun scheduledAt(workOrderId: UUID): Instant? = null
+
     /**
      * WO PSB (pasang baru) yang masih terbuka, dipetakan per pelanggan yang dituju.
      *
@@ -44,6 +47,37 @@ interface WorkorderApi {
      */
     fun fieldOpsReport(from: LocalDate, to: LocalDate): FieldOpsReport
 }
+
+interface WorkOrderFulfillmentApi {
+    fun validateFulfillment(command: WorkOrderFulfillmentCommand) = Unit
+    fun recordFulfillmentResult(command: WorkOrderFulfillmentCommand): WorkOrderFulfillmentResult
+}
+
+data class WorkOrderFulfillmentCommand(
+    val tenantId: UUID,
+    val workOrderId: UUID,
+    val namespace: String,
+    val operationKey: String,
+    val payloadHash: String,
+    val source: String,
+    val result: String,
+)
+
+data class WorkOrderFulfillmentResult(
+    val tenantId: UUID,
+    val workOrderId: UUID,
+    val result: String,
+    val replayed: Boolean,
+)
+
+data class WorkOrderAssignmentRef(
+    val tenantId: UUID,
+    val workOrderId: UUID,
+    val orderId: UUID?,
+    val technicianId: UUID,
+    val active: Boolean,
+    val areaId: UUID?,
+)
 
 /**
  * Kinerja lapangan satu tenant pada satu rentang.

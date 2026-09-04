@@ -18,13 +18,16 @@ import com.duluin.ftth.workorder.application.port.inbound.WorkOrderEvidenceQuery
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderEvidenceRepository
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderRepository
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderSignatureRepository
+import com.duluin.ftth.workorder.application.port.outbound.EvidenceObjectRegistryRepository
 import com.duluin.ftth.workorder.domain.model.WorkOrder
 import com.duluin.ftth.workorder.domain.model.WorkOrderEvidence
 import com.duluin.ftth.workorder.domain.model.WorkOrderSignature
 import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
+import com.duluin.ftth.workorder.domain.model.EvidenceRevisionState
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
+import java.security.MessageDigest
 
 /**
  * Bukti pengerjaan: foto & tanda tangan. Byte disimpan di object storage
@@ -46,6 +49,7 @@ class WorkOrderEvidenceService(
     private val storage: ObjectStorage,
     private val iamApi: IamApi,
     private val currentUser: CurrentUserProvider,
+    private val registry: EvidenceObjectRegistryRepository,
 ) : ManageWorkOrderEvidenceUseCase, WorkOrderEvidenceQuery {
 
     @Transactional
@@ -53,6 +57,8 @@ class WorkOrderEvidenceService(
         val workOrder = requireDocumentable(workOrderId)
         requireFieldAccess(workOrder)
         validateImage(command.contentType, command.bytes)
+        val receiptAt = java.time.Instant.now()
+        val hash = sha256(command.bytes)
         val photo = WorkOrderEvidence.attach(
             tenantId = workOrder.tenantId,
             workOrderId = workOrder.id,
@@ -64,18 +70,27 @@ class WorkOrderEvidenceService(
             longitude = command.longitude,
             capturedAt = command.capturedAt,
             uploadedBy = currentUser.current().userId,
+            at = receiptAt,
+            receiptAt = receiptAt,
+            sha256 = hash,
+            correctionReason = command.correctionReason,
         )
+        registry.registerPending(photo.id, photo.storageKey, hash, photo.expectedSizeBytes, photo.expectedContentType, photo.uploadedBy, photo.tenantId)
         storage.put(photo.storageKey, photo.contentType, command.bytes)
-        return evidence.save(photo).toView(uploaderName(photo.uploadedBy))
+        verifyStored(photo.tenantId, photo.storageKey, photo.expectedSizeBytes, hash)
+        val saved = evidence.save(photo)
+        registry.markCommitted(photo.id, storage.head(photo.tenantId.toString(), photo.storageKey).etag)
+        return saved.toView(uploaderName(photo.uploadedBy))
     }
 
     @Transactional
     override fun removePhoto(workOrderId: UUID, evidenceId: UUID) {
         val photo = evidence.findById(evidenceId)?.takeIf { it.workOrderId == workOrderId }
             ?: throw NotFoundException("Bukti $evidenceId tidak ditemukan pada work order $workOrderId")
-        requireFieldAccess(require(workOrderId))
-        evidence.deleteById(photo.id)
-        storage.delete(photo.storageKey)
+        val workOrder = require(workOrderId)
+        requireFieldAccess(workOrder)
+        rejectApproved(workOrder)
+        evidence.save(photo.rehydrateState(EvidenceRevisionState.TOMBSTONED, "deleted"))
     }
 
     @Transactional
@@ -88,11 +103,14 @@ class WorkOrderEvidenceService(
         if (command.signerName.isBlank()) throw ValidationException("Nama penanda tangan wajib diisi")
         validateImage(command.contentType, command.bytes)
 
-        // Satu tanda tangan per work order: yang lama diganti seutuhnya.
-        signatures.findByWorkOrder(workOrderId)?.let {
-            signatures.deleteById(it.id)
-            storage.delete(it.storageKey)
+        rejectApproved(workOrder)
+        val previous = signatures.findByWorkOrder(workOrderId)
+        if (previous != null && command.correctionReason.isNullOrBlank()) {
+            throw ValidationException("Alasan koreksi tanda tangan wajib diisi")
         }
+        previous?.let { signatures.save(it.rehydrateState(EvidenceRevisionState.SUPERSEDED, command.correctionReason)) }
+        val receiptAt = java.time.Instant.now()
+        val hash = sha256(command.bytes)
         val signature = WorkOrderSignature.capture(
             tenantId = workOrder.tenantId,
             workOrderId = workOrder.id,
@@ -101,18 +119,27 @@ class WorkOrderEvidenceService(
             sizeBytes = command.bytes.size.toLong(),
             signedBy = currentUser.current().userId,
             signedAt = command.signedAt ?: java.time.Instant.now(),
+            at = receiptAt,
+            receiptAt = receiptAt,
+            sha256 = hash,
+            correctionReason = command.correctionReason,
         )
+        registry.registerPending(signature.id, signature.storageKey, hash, signature.expectedSizeBytes, signature.expectedContentType, signature.signedBy, signature.tenantId)
         storage.put(signature.storageKey, signature.contentType, command.bytes)
-        return signatures.save(signature).toView(uploaderName(signature.signedBy))
+        verifyStored(signature.tenantId, signature.storageKey, signature.expectedSizeBytes, hash)
+        val saved = signatures.save(signature)
+        registry.markCommitted(signature.id, storage.head(signature.tenantId.toString(), signature.storageKey).etag)
+        return saved.toView(uploaderName(signature.signedBy))
     }
 
     @Transactional
     override fun removeSignature(workOrderId: UUID) {
         val signature = signatures.findByWorkOrder(workOrderId)
             ?: throw NotFoundException("Work order $workOrderId belum punya tanda tangan")
-        requireFieldAccess(require(workOrderId))
-        signatures.deleteById(signature.id)
-        storage.delete(signature.storageKey)
+        val workOrder = require(workOrderId)
+        requireFieldAccess(workOrder)
+        rejectApproved(workOrder)
+        signatures.save(signature.rehydrateState(EvidenceRevisionState.TOMBSTONED, "deleted"))
     }
 
     override fun listPhotos(workOrderId: UUID): List<EvidenceView> {
@@ -135,7 +162,8 @@ class WorkOrderEvidenceService(
         val photo = evidence.findById(evidenceId)?.takeIf { it.workOrderId == workOrderId }
             ?: throw NotFoundException("Bukti $evidenceId tidak ditemukan pada work order $workOrderId")
         val stored = storage.get(photo.storageKey)
-        return DownloadedContent(stored.contentType, stored.bytes)
+        verifyHash(photo.sha256, stored.bytes)
+        return DownloadedContent(safeContentType(photo.contentType, stored.bytes), stored.bytes)
     }
 
     override fun downloadSignature(workOrderId: UUID): DownloadedContent {
@@ -144,7 +172,8 @@ class WorkOrderEvidenceService(
         val signature = signatures.findByWorkOrder(workOrderId)
             ?: throw NotFoundException("Work order $workOrderId belum punya tanda tangan")
         val stored = storage.get(signature.storageKey)
-        return DownloadedContent(stored.contentType, stored.bytes)
+        verifyHash(signature.sha256, stored.bytes)
+        return DownloadedContent(safeContentType(signature.contentType, stored.bytes), stored.bytes)
     }
 
     private fun require(id: UUID): WorkOrder =
@@ -207,7 +236,54 @@ class WorkOrderEvidenceService(
         if (bytes.size > MAX_BYTES) {
             throw ValidationException("Berkas melebihi ${MAX_BYTES / (1024 * 1024)} MB")
         }
+        val known = when {
+            contentType == "image/png" -> bytes.startsWith(byteArrayOf(137.toByte(), 80, 78, 71, 13, 10, 26, 10))
+            contentType == "image/jpeg" -> bytes.startsWith(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte()))
+            contentType == "image/gif" -> bytes.startsWith("GIF".toByteArray())
+            contentType == "image/webp" -> bytes.size > 12 && bytes.copyOfRange(0, 4).contentEquals("RIFF".toByteArray()) && bytes.copyOfRange(8, 12).contentEquals("WEBP".toByteArray())
+            else -> false
+        }
+        if (!known) throw ValidationException("Isi berkas tidak cocok dengan tipe gambar")
     }
+
+    private fun verifyStored(tenantId: UUID, key: String, size: Long, expectedHash: String) {
+        val metadata = storage.head(tenantId.toString(), key)
+        if (metadata.size != size || (metadata.sha256 != null && metadata.sha256 != expectedHash)) {
+            throw ValidationException("Objek storage gagal verifikasi hash/ukuran")
+        }
+    }
+
+    private fun verifyHash(expected: String?, bytes: ByteArray) {
+        if (expected != null && expected != sha256(bytes)) throw ConflictException("Bukti tidak lolos verifikasi integritas")
+    }
+
+    private fun safeContentType(declared: String, bytes: ByteArray): String = when {
+        bytes.startsWith(byteArrayOf(137.toByte(), 80, 78, 71, 13, 10, 26, 10)) -> "image/png"
+        bytes.startsWith(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte())) -> "image/jpeg"
+        bytes.startsWith("GIF".toByteArray()) -> "image/gif"
+        else -> declared
+    }
+
+    private fun rejectApproved(workOrder: WorkOrder) {
+        if (workOrder.approvalStatus == com.duluin.ftth.workorder.domain.model.WorkOrderApprovalStatus.APPROVED) {
+            throw ConflictException("Bukti yang sudah disetujui terkunci")
+        }
+    }
+
+    private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256")
+        .digest(bytes).joinToString("") { "%02x".format(it) }
+
+    private fun ByteArray.startsWith(prefix: ByteArray) = size >= prefix.size && copyOf(prefix.size).contentEquals(prefix)
+
+    private fun WorkOrderEvidence.rehydrateState(state: EvidenceRevisionState, reason: String?) = WorkOrderEvidence.rehydrate(
+        id, tenantId, workOrderId, kind, caption, storageKey, contentType, sizeBytes, latitude, longitude,
+        capturedAt, uploadedBy, createdAt, receiptAt, sha256, expectedContentType, expectedSizeBytes, state, reason,
+    )
+
+    private fun WorkOrderSignature.rehydrateState(state: EvidenceRevisionState, reason: String?) = WorkOrderSignature.rehydrate(
+        id, tenantId, workOrderId, signerName, storageKey, contentType, sizeBytes, signedBy, signedAt, createdAt,
+        receiptAt, sha256, expectedContentType, expectedSizeBytes, state, reason,
+    )
 
     private fun WorkOrderEvidence.toView(uploadedByName: String?) = EvidenceView(
         id = id,

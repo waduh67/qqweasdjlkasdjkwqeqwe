@@ -15,6 +15,10 @@ import com.duluin.ftth.workorder.domain.model.WorkOrderApprovalStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderPriority
 import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderType
+import com.duluin.ftth.workorder.domain.model.ProofArtifactKind
+import com.duluin.ftth.workorder.domain.model.ProofArtifactRef
+import com.duluin.ftth.workorder.domain.model.ProofOfWorkPacket
+import com.duluin.ftth.workorder.domain.model.EvidenceRevisionState
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -117,8 +121,10 @@ class WorkOrderController(
 
     @PostMapping("/{id}/complete")
     @PreAuthorize("@authz.canAny('workorder.order.close','workorder.order.field')")
-    fun complete(@PathVariable id: UUID, @Valid @RequestBody(required = false) request: CompleteRequest?): WorkOrderView =
-        manage.complete(id, request?.resolutionNote)
+    fun complete(@PathVariable id: UUID, @RequestBody(required = false) request: CompleteRequest?): WorkOrderView {
+        manage.authorizeComplete(id)
+        return manage.complete(id, request?.resolutionNote, request?.toPacket() ?: throw IllegalArgumentException("Proof of Work wajib diisi"))
+    }
 
     @PostMapping("/{id}/cancel")
     @PreAuthorize("@authz.can('workorder.order.close')")
@@ -158,6 +164,7 @@ data class CreateWorkOrderRequest(
     val scheduledAt: Instant?,
     /** Roster teknisi awal (tim datar); null/kosong = WO lahir belum ditugaskan. */
     val assignees: Set<UUID>?,
+    val orderId: UUID?,
 ) {
     fun toCommand() = SaveWorkOrderCommand(
         type = type!!,
@@ -170,6 +177,7 @@ data class CreateWorkOrderRequest(
         areaId = areaId,
         scheduledAt = scheduledAt,
         assignees = assignees ?: emptySet(),
+        orderId = orderId,
     )
 }
 
@@ -200,7 +208,20 @@ data class AssignRequest(
 
 data class CompleteRequest(
     @field:Size(max = 2000) val resolutionNote: String?,
-)
+    @field:NotNull val proofRevision: Int?,
+    @field:NotNull val artifacts: List<ProofArtifactRequest>?,
+) {
+    fun toPacket() = ProofOfWorkPacket(proofRevision!!, artifacts!!.map { it.toDomain() }.toSet())
+}
+
+data class ProofArtifactRequest(
+    @field:NotNull val kind: ProofArtifactKind?,
+    @field:NotNull val revisionId: UUID?,
+    val revisionState: EvidenceRevisionState = EvidenceRevisionState.COMMITTED,
+    val correctionReason: String?,
+) {
+    fun toDomain() = ProofArtifactRef(kind!!, revisionId!!, revisionState, correctionReason)
+}
 
 data class CancelRequest(
     @field:Size(max = 500) val reason: String?,
