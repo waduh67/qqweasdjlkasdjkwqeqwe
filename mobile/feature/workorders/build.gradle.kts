@@ -1,11 +1,26 @@
-plugins { id("ftth.mobile.kmp") }
+plugins {
+    id("ftth.mobile.kmp")
+    alias(libs.plugins.kotlin.compose.compiler)
+    alias(libs.plugins.compose.multiplatform)
+}
 
-kotlin { sourceSets { commonMain.dependencies {
-    implementation(project(":mobile:domain"))
-    implementation(project(":mobile:data"))
-    implementation(project(":mobile:core:common"))
-    implementation(project(":mobile:core:network"))
-    implementation(project(":mobile:core:storage"))
-    implementation(project(":mobile:core:location"))
-    implementation(project(":mobile:core:evidence"))
-} } }
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(project(":mobile:domain"))
+            implementation(project(":mobile:core:mvi"))
+            implementation(project(":mobile:core:ui"))
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+            implementation("org.jetbrains.compose.runtime:runtime:1.9.3")
+            implementation("org.jetbrains.compose.foundation:foundation:1.9.3")
+            implementation("org.jetbrains.compose.ui:ui:1.9.3")
+        }
+        commonTest.dependencies {
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+        }
+        jvmTest.dependencies {
+            implementation("org.jetbrains.compose.ui:ui-test:1.9.3")
+            implementation(compose.desktop.currentOs)
+        }
+    }
+}

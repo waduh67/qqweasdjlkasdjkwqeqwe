@@ -1,6 +1,12 @@
 package com.duluin.ftth.mobile.workorders
 
-import com.duluin.ftth.mobile.domain.*
+import com.duluin.ftth.mobile.domain.ObserveWorkOrders
+import com.duluin.ftth.mobile.domain.Outbox
+import com.duluin.ftth.mobile.domain.OutboxStatus
+import com.duluin.ftth.mobile.domain.PermissionState
+import com.duluin.ftth.mobile.domain.WorkOrderEvent
+import com.duluin.ftth.mobile.domain.WorkOrderState
+import com.duluin.ftth.mobile.domain.reduce
 
 data class WorkOrderScreenModel(
     val state: WorkOrderState,
