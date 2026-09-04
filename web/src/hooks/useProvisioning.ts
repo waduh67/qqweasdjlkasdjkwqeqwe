@@ -28,6 +28,8 @@ export function useProvisioningDraft<T>(initialDraft: T) {
 
   const updateDraft = useCallback((nextDraft: T) => {
     controller.current?.abort()
+    controller.current = null
+    setPreviewing(false)
     setDraft(nextDraft)
     setPreview(null)
     setError(null)
@@ -44,12 +46,15 @@ export function useProvisioningDraft<T>(initialDraft: T) {
     setPreviewing(true)
     try {
       const nextPreview = await previewProvisioning(planId, mode, nextController.signal)
-      if (!nextController.signal.aborted) setPreview(nextPreview)
+      if (controller.current === nextController && !nextController.signal.aborted) setPreview(nextPreview)
     } catch (cause) {
       if (cause instanceof DOMException && cause.name === 'AbortError') return
-      setError(cause)
+      if (controller.current === nextController) setError(cause)
     } finally {
-      if (!nextController.signal.aborted) setPreviewing(false)
+      if (controller.current === nextController) {
+        controller.current = null
+        setPreviewing(false)
+      }
     }
   }, [])
 

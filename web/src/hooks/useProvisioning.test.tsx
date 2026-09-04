@@ -67,6 +67,27 @@ describe('useProvisioningDraft', () => {
     act(() => result.current.setDraft({ planId: '' }))
 
     expect(signal?.aborted).toBe(true)
+    expect(result.current.previewing).toBe(false)
+  })
+
+  it('abort preview lama tidak mematikan loading request pengganti', async () => {
+    let resolveSecond: (() => void) | undefined
+    vi.spyOn(provisioningApi, 'previewProvisioning')
+      .mockImplementationOnce(() => new Promise(() => {}))
+      .mockImplementationOnce(() => new Promise((resolve) => {
+        resolveSecond = () => resolve({
+          plan: { id: 'plan-2', tenantId: 'tenant-1', intentId: 'intent-1', revision: 2, status: 'VALIDATED', contentHash: 'hash', preconditionHash: 'before', steps: [] },
+          decision: { allowed: true, code: 'ALLOWED', warnings: [], evidenceIds: [] },
+        })
+      }))
+    const { result } = renderHook(() => useProvisioningDraft({ planId: 'plan-1' }))
+
+    act(() => { void result.current.previewPlan('plan-1', 'DRY_RUN') })
+    act(() => { void result.current.previewPlan('plan-2', 'DRY_RUN') })
+    expect(result.current.previewing).toBe(true)
+    await act(async () => resolveSecond?.())
+
+    expect(result.current.previewing).toBe(false)
   })
 })
 
