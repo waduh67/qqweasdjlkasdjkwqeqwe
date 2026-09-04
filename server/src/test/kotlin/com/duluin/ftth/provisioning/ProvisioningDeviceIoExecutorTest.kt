@@ -3,6 +3,7 @@ package com.duluin.ftth.provisioning
 import com.duluin.ftth.provisioning.application.service.DeviceIoDeadlineExceededException
 import com.duluin.ftth.provisioning.application.service.DeviceIoExecutor
 import com.duluin.ftth.provisioning.application.service.DeviceIoExclusion
+import com.duluin.ftth.common.tenant.TenantContext
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -19,6 +20,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
+import java.util.UUID
 
 class ProvisioningDeviceIoExecutorTest {
     private val txManager = TestTransactionManager()
@@ -46,6 +48,23 @@ class ProvisioningDeviceIoExecutorTest {
             assertThat(result).isEqualTo("completed")
             assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isTrue()
         }
+    }
+
+    @Test
+    fun `gateway operation inherits tenant context on virtual worker`() {
+        val tenantId = UUID.randomUUID()
+
+        val observed = TenantContext.runAs(tenantId) {
+            executor.execute(
+                "tenant-device",
+                Instant.now().plusSeconds(2),
+                Duration.ofMillis(50),
+                renewLease = { true },
+            ) { TenantContext.tenantId() }
+        }
+
+        assertThat(observed).isEqualTo(tenantId)
+        assertThat(TenantContext.tenantIdOrNull()).isNull()
     }
 
     @Test

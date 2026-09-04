@@ -1,5 +1,6 @@
 package com.duluin.ftth.provisioning.application.service
 
+import com.duluin.ftth.common.tenant.TenantContext
 import org.springframework.stereotype.Component
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
@@ -88,10 +89,11 @@ class TransactionSuspendingDeviceIoExecutor(
         val timeout = Duration.between(clock.instant(), deadline)
         if (timeout.isZero || timeout.isNegative) throw DeviceIoDeadlineExceededException()
         val executor = Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("provisioning-device-io-", 0).factory())
+        val tenantId = TenantContext.tenantIdOrNull()
         val workerExited = CountDownLatch(1)
         val future = executor.submit(Callable {
             try {
-                exclusion.withLock(exclusionKey, operation)
+                TenantContext.runAs(tenantId) { exclusion.withLock(exclusionKey, operation) }
             } finally {
                 workerExited.countDown()
             }
