@@ -112,9 +112,7 @@ class AdminProvisioner(
 
         /** Izin minimal role Teknisi; kepemilikan WO ditegakkan terpisah di modul workorder. */
         val TECHNICIAN_PERMISSION_CODES = setOf(
-            "workorder.order.view",
             "workorder.order.field",
-            "workorder.evidence.view",
             "customer.customer.view",
             "customer.subscription.view",
             // Teknisi mengetik setelan TR-069 ke ONT di rumah pelanggan; tanpa ini ia

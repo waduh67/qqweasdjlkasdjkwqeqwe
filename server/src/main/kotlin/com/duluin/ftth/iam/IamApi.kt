@@ -41,6 +41,7 @@ data class UserRef(
     val name: String,
     val email: String,
     val active: Boolean,
+    val technician: Boolean = false,
 )
 
 /** Pandangan ringkas sebuah area/wilayah operasional untuk konsumen lintas-module. */
