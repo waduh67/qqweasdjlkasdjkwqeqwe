@@ -77,8 +77,8 @@ class ProvisioningCollectorChannelAdapter(
         }
             .toSet()
         return ProvisioningAcknowledgement(
-            resultIdempotencyKeys = accepted.filter { it.attemptId == null }.mapTo(linkedSetOf()) { it.idempotencyKey },
-            resultAttemptIds = accepted.mapNotNullTo(linkedSetOf()) { it.attemptId },
+            resultIdempotencyKeys = emptySet(),
+            resultAttemptIds = accepted.mapTo(linkedSetOf()) { it.attemptId },
             deviceReportKeys = reportKeys,
         )
     }
@@ -115,9 +115,10 @@ class ProvisioningCollectorChannelAdapter(
     }
 
     private fun acknowledgeResult(collectorId: UUID, tenantId: UUID, result: ProvisioningStepResult): AcceptedResult? {
-        val candidates = result.attemptId?.let { rawId ->
-            runCatching { UUID.fromString(rawId) }.getOrNull()?.let(attempts::findById)?.orElse(null)?.let(::listOf).orEmpty()
-        } ?: attempts.findByIdempotencyKey(result.idempotencyKey)
+        val rawAttemptId = result.attemptId ?: return null
+        if (result.targetId == null || result.fencingEpoch <= 0L) return null
+        val attemptId = runCatching { UUID.fromString(rawAttemptId) }.getOrNull() ?: return null
+        val candidates = attempts.findById(attemptId).orElse(null)?.let(::listOf).orEmpty()
         val context = candidates
             .mapNotNull(::contextFor)
             .singleOrNull { it.matches(collectorId, result) }
@@ -139,7 +140,7 @@ class ProvisioningCollectorChannelAdapter(
             )
         if (!accepted) return null
         persistResult(collectorId, tenantId, context, result)
-        return AcceptedResult(result.idempotencyKey, result.attemptId)
+        return AcceptedResult(rawAttemptId)
     }
 
     private fun persistResult(
@@ -213,8 +214,7 @@ class ProvisioningCollectorChannelAdapter(
         val step: ProvisionStepJpaEntity,
     ) {
         fun matches(collectorId: UUID, result: ProvisioningStepResult): Boolean {
-            val fenceMatches = result.fencingEpoch == attempt.fencingToken ||
-                (result.fencingEpoch == 0L && attempt.fencingToken == 1L && result.attemptId == null)
+            val fenceMatches = result.fencingEpoch == attempt.fencingToken
             val phaseMatches = when (attempt.phase) {
                 ExecutionPhase.PREFLIGHT, ExecutionPhase.ROLLBACK_CHECK -> ProvisioningCommandPhase.PREFLIGHT
                 ExecutionPhase.APPLY -> ProvisioningCommandPhase.APPLY
@@ -223,15 +223,15 @@ class ProvisioningCollectorChannelAdapter(
             } == result.phase
             return attempt.collectorId == collectorId && fenceMatches &&
                 result.idempotencyKey == attempt.idempotencyKey &&
-                (result.attemptId == null || result.attemptId == attempt.id.toString()) &&
-                (result.targetId == null || result.targetId == executionStep.deviceId.toString()) &&
+                result.attemptId == attempt.id.toString() &&
+                result.targetId == executionStep.deviceId.toString() &&
                 phaseMatches &&
                 plan.id.toString() == result.planId && plan.revision == result.revision &&
                 step.id.toString() == result.stepId && step.operation.name == result.operationClass
         }
     }
 
-    private data class AcceptedResult(val idempotencyKey: String, val attemptId: String?)
+    private data class AcceptedResult(val attemptId: String)
 
     private data class AttemptOutcome(val status: AttemptStatus, val errorCode: String?)
 

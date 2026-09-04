@@ -375,6 +375,17 @@ class ProvisioningExecutionPersistenceIT {
                 listOf(target),
             ).acknowledgement
         }
+        val legacyAcknowledgement = asTenant(fixture.tenantId) {
+            collectorExchange.exchange(
+                collectorId,
+                fixture.tenantId,
+                CollectorHeartbeat(
+                    "test",
+                    provisioningResults = listOf(result.copy(attemptId = null, targetId = null, fencingEpoch = 0)),
+                ),
+                listOf(target),
+            ).acknowledgement
+        }
         val acknowledgement = asTenant(fixture.tenantId) {
             collectorExchange.exchange(
                 collectorId,
@@ -492,6 +503,7 @@ class ProvisioningExecutionPersistenceIT {
         assertThat(wrongCollectorAcknowledgement).isEqualTo(com.duluin.ftth.contract.ProvisioningAcknowledgement())
         assertThat(wrongFenceAcknowledgement).isEqualTo(com.duluin.ftth.contract.ProvisioningAcknowledgement())
         assertThat(wrongPhaseAcknowledgement).isEqualTo(com.duluin.ftth.contract.ProvisioningAcknowledgement())
+        assertThat(legacyAcknowledgement).isEqualTo(com.duluin.ftth.contract.ProvisioningAcknowledgement())
         assertThat(acknowledgement.resultAttemptIds).containsExactly(attempt.id.toString())
         assertThat(
             asTenant(fixture.tenantId) {
