@@ -4,6 +4,46 @@ Runbook ini berlaku untuk jalur OLT - transit - BRAS/RADIUS. Preview tersedia se
 sedangkan mutasi produksi gagal tertutup sampai seluruh jalur eksak tersertifikasi, proteksi
 manajemen lengkap, dan operator mengaktifkan rollout.
 
+## Ringkasnya: fitur ini buat apa?
+
+InterVLAN/PPPoE membantu operator menyiapkan jalur layanan internet pelanggan dari ujung ke
+ujung. Gambaran sederhananya:
+
+```text
+rumah/ONU → OLT → switch → BRAS/RADIUS → internet
+```
+
+**VLAN adalah jalur angkut bernomor.** Bayangkan setiap layanan pelanggan berjalan di jalur
+bernomor yang sama dari OLT, melewati switch transit, sampai ke BRAS. Jalur ini terisolasi agar
+trafik layanan tidak tercampur. VLAN bukan berarti jaringan pelanggan bebas saling merutekan
+trafik atau dapat mengakses pelanggan lain.
+
+**PPPoE adalah pemeriksaan akses pelanggan.** Setelah trafik tiba di BRAS, PPPoE bersama
+RADIUS memeriksa identitas dan aturan layanan pelanggan. BRAS/RADIUS yang menentukan apakah
+pelanggan boleh masuk ke layanan internet, ditangguhkan, atau dipulihkan. Jadi, VLAN mengantar
+trafik ke tempat yang benar, sedangkan PPPoE/RADIUS mengatur siapa yang boleh memakai layanan.
+
+NetOps Console mengubah intent pelanggan dan layanan yang tersimpan menjadi satu plan perangkat
+yang otoritatif. Plan itu dirakit server dari alokasi VLAN, topologi, kapabilitas, bukti
+manajemen, dan observasi aktual. Operator meninjau plan lebih dahulu sebelum eksekusi dilakukan
+secara terkendali; aplikasi tidak langsung menebak lalu mengubah perangkat.
+
+Manfaat praktisnya:
+
+- login manual ke OLT, switch, BRAS, dan RADIUS menjadi jauh lebih sedikit;
+- VLAN dialokasikan secara deterministik sehingga hasilnya dapat diulang dan konflik dapat
+  dicegah;
+- siklus layanan lebih aman untuk create/update, suspend, restore, dan deprovision;
+- setiap plan dan eksekusi dapat diaudit; dan
+- drift antara intent tersimpan dan kondisi perangkat dapat dideteksi untuk ditinjau.
+
+Keamanan produksi tetap **fail-closed**. Preview dan dry-run dapat digunakan, tetapi mutasi
+produksi ditolak bila jalur, kapabilitas, sertifikasi eksak, atau proteksi manajemen belum
+memenuhi syarat. Dukungan RouterOS, IOS-XE, Junos, HSGQ, Huawei, dan ZTE tetap bergantung pada
+gate kapabilitas dan sertifikasi yang cocok dengan perangkat serta operasinya. Adapter vendor
+yang masih provisional tidak boleh auto-apply di produksi. Khusus HSGQ, sertifikasi terhadap
+perangkat fisik masih menunggu bukti lab resmi dan belum boleh dianggap selesai.
+
 ## Prasyarat dan onboarding
 
 1. Cadangkan DB aplikasi, DB RADIUS, dan jurnal `FTTH_COLLECTOR_STATE_DIR`.
