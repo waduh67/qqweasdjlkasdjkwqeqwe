@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.time.Duration
+import java.util.UUID
 import java.util.concurrent.locks.LockSupport
 
 @Component
@@ -57,10 +58,10 @@ class CollectorBackedProvisioningDeviceGateway(
         if (timeout.isZero || timeout.isNegative) throw DeviceOperationException("DEADLINE_EXCEEDED", DeviceFailureKind.TRANSIENT)
         val expiresAt = System.nanoTime() + timeout.toNanos()
         while (System.nanoTime() < expiresAt) {
-            receipts.find(work.idempotencyKey, work.phase, work.fencingToken)?.let { receipt ->
-                if (receipt.idempotencyKey != work.idempotencyKey || receipt.phase != work.phase.wireName() ||
-                    receipt.fencingEpoch != work.fencingToken
-                ) throw DeviceOperationException("COLLECTOR_RECEIPT_IDENTITY_MISMATCH", DeviceFailureKind.STALE_PRECONDITION)
+            receipts.find(work)?.let { receipt ->
+                if (!receipt.matches(work)) {
+                    throw DeviceOperationException("COLLECTOR_RECEIPT_IDENTITY_MISMATCH", DeviceFailureKind.STALE_PRECONDITION)
+                }
                 if (!receipt.success) throw DeviceOperationException(
                     receipt.errorCode ?: "COLLECTOR_REJECTED",
                     if (receipt.errorCode in TRANSIENT_ERRORS) DeviceFailureKind.TRANSIENT else DeviceFailureKind.PERMANENT,
@@ -90,6 +91,12 @@ class CollectorBackedProvisioningDeviceGateway(
 }
 
 data class CollectorResultReceipt(
+    val attemptId: UUID,
+    val planId: UUID,
+    val revision: Int,
+    val stepId: UUID,
+    val targetId: UUID,
+    val operation: com.duluin.ftth.provisioning.domain.model.ProvisionOperation,
     val idempotencyKey: String,
     val phase: String,
     val fencingEpoch: Long,
@@ -100,6 +107,11 @@ data class CollectorResultReceipt(
     val managedResourceCount: Int?,
     val reportedStateHash: String?,
 ) {
+    fun matches(work: DispatchableProvisioningWork): Boolean =
+        attemptId == work.attemptId && planId == work.planId && revision == work.revision && stepId == work.stepId &&
+            targetId == work.device.id && operation == work.operation && idempotencyKey == work.idempotencyKey &&
+            phase == work.phase.wireName() && fencingEpoch == work.fencingToken
+
     fun requiredState(): NormalizedDeviceState {
         val ids = vlanIds ?: throw DeviceOperationException("COLLECTOR_RECEIPT_STATE_MISSING", DeviceFailureKind.PERMANENT)
         val count = managedResourceCount
@@ -127,31 +139,44 @@ data class CollectorResultReceipt(
 @Component
 class CollectorResultReceiptReader(private val entityManager: EntityManager) {
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
-    fun find(idempotencyKey: String, phase: ExecutionPhase, fencingToken: Long): CollectorResultReceipt? {
-        val wirePhase = phase.wireName()
+    fun find(work: DispatchableProvisioningWork): CollectorResultReceipt? {
+        val wirePhase = work.phase.wireName()
         val row = entityManager.createNativeQuery(
-            """SELECT idempotency_key, phase, fencing_epoch, success, error_code, verification_matches, state_vlan_ids,
+            """SELECT attempt_id, plan_id, revision, step_id, target_id, operation_class,
+                      idempotency_key, phase, fencing_epoch, success, error_code, verification_matches, state_vlan_ids,
                       managed_resource_count, preflight_hash, apply_state_hash, verification_state_hash, rollback_state_hash
                FROM provisioning_collector_result_receipt
-               WHERE idempotency_key = :key AND phase = :phase AND fencing_epoch = :fence
+               WHERE attempt_id = :attempt AND idempotency_key = :key AND plan_id = :plan AND revision = :revision
+                 AND step_id = :step AND target_id = :target AND operation_class = :operation
+                 AND phase = :phase AND fencing_epoch = :fence
                ORDER BY completed_at DESC LIMIT 1""",
-        ).setParameter("key", idempotencyKey).setParameter("phase", wirePhase).setParameter("fence", fencingToken)
+        ).setParameter("attempt", work.attemptId).setParameter("key", work.idempotencyKey)
+            .setParameter("plan", work.planId.toString()).setParameter("revision", work.revision)
+            .setParameter("step", work.stepId.toString()).setParameter("target", work.device.id.toString())
+            .setParameter("operation", work.operation.name).setParameter("phase", wirePhase)
+            .setParameter("fence", work.fencingToken)
             .resultList.singleOrNull() as? Array<*>
             ?: return null
         return CollectorResultReceipt(
-            row[0] as String,
-            row[1] as String,
-            (row[2] as Number).toLong(),
-            row[3] as Boolean,
-            row[4] as String?,
-            row[5] as Boolean?,
-            parseReceiptVlanIds(row[6] as String?),
-            (row[7] as Number?)?.toInt(),
-            when (row[1] as String) {
-                "PREFLIGHT" -> row[8] as String?
-                "APPLY" -> row[9] as String?
-                "VERIFY" -> row[10] as String?
-                "ROLLBACK" -> row[11] as String?
+            row[0] as UUID,
+            UUID.fromString(row[1] as String),
+            (row[2] as Number).toInt(),
+            UUID.fromString(row[3] as String),
+            UUID.fromString(row[4] as String),
+            com.duluin.ftth.provisioning.domain.model.ProvisionOperation.valueOf(row[5] as String),
+            row[6] as String,
+            row[7] as String,
+            (row[8] as Number).toLong(),
+            row[9] as Boolean,
+            row[10] as String?,
+            row[11] as Boolean?,
+            parseReceiptVlanIds(row[12] as String?),
+            (row[13] as Number?)?.toInt(),
+            when (row[7] as String) {
+                "PREFLIGHT" -> row[14] as String?
+                "APPLY" -> row[15] as String?
+                "VERIFY" -> row[16] as String?
+                "ROLLBACK" -> row[17] as String?
                 else -> null
             },
         )

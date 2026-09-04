@@ -129,14 +129,32 @@ class CollectorBackedProvisioningDeviceGatewayTest {
         assertFailure("COLLECTOR_RECEIPT_IDENTITY_MISMATCH") { gateway(work, malformed).apply(work) }
     }
 
+    @Test
+    fun `gateway rejects every mismatched immutable receipt identity`() {
+        val work = work(ExecutionPhase.APPLY, "complete-identity")
+        val accepted = receipt(work, true, listOf(320))
+        val mismatches = listOf(
+            accepted.copy(attemptId = UuidV7.generate()),
+            accepted.copy(planId = UuidV7.generate()),
+            accepted.copy(revision = work.revision + 1),
+            accepted.copy(stepId = UuidV7.generate()),
+            accepted.copy(targetId = UuidV7.generate()),
+            accepted.copy(operation = ProvisionOperation.REMOVE_ACCESS_PORT),
+        )
+
+        mismatches.forEach { malformed ->
+            assertFailure("COLLECTOR_RECEIPT_IDENTITY_MISMATCH") { gateway(work, malformed).apply(work) }
+        }
+    }
+
     private fun gateway(work: DispatchableProvisioningWork, receipt: CollectorResultReceipt): CollectorBackedProvisioningDeviceGateway {
         val reader = mock(CollectorResultReceiptReader::class.java)
-        `when`(reader.find(work.idempotencyKey, work.phase, work.fencingToken)).thenReturn(receipt)
+        `when`(reader.find(work)).thenReturn(receipt)
         return CollectorBackedProvisioningDeviceGateway(reader, clock)
     }
 
     private fun work(phase: ExecutionPhase, key: String) = DispatchableProvisioningWork(
-        UuidV7.generate(), UuidV7.generate(), 1, UuidV7.generate(),
+        UuidV7.generate(), UuidV7.generate(), 1, UuidV7.generate(), UuidV7.generate(),
         DeviceReference(DeviceKind.OLT, UuidV7.generate()), ProvisionOperation.ENSURE_ACCESS_PORT,
         phase, key, 7, "a".repeat(64), now.plusSeconds(30), mapOf("vlanId" to "320"),
     )
@@ -146,6 +164,12 @@ class CollectorBackedProvisioningDeviceGatewayTest {
         verificationMatches: Boolean?,
         vlanIds: List<Int>?,
     ) = CollectorResultReceipt(
+        work.attemptId,
+        work.planId,
+        work.revision,
+        work.stepId,
+        work.device.id,
+        work.operation,
         work.idempotencyKey,
         wirePhase(work.phase),
         work.fencingToken,

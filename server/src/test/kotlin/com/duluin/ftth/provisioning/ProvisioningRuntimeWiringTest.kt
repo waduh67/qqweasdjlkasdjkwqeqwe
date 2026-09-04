@@ -87,11 +87,11 @@ class ProvisioningRuntimeWiringTest {
     fun `collector gateway converts accepted receipt into normalized device state`() {
         val reader = mock(CollectorResultReceiptReader::class.java)
         val work = DispatchableProvisioningWork(
-            UuidV7.generate(), UuidV7.generate(), 1, UuidV7.generate(),
+            UuidV7.generate(), UuidV7.generate(), 1, UuidV7.generate(), UuidV7.generate(),
             DeviceReference(DeviceKind.OLT, UuidV7.generate()), ProvisionOperation.ENSURE_ACCESS_PORT,
             ExecutionPhase.VERIFY, "receipt-key", 1, "a".repeat(64), now.plusSeconds(30), mapOf("vlanId" to "320"),
         )
-        `when`(reader.find("receipt-key", ExecutionPhase.VERIFY, work.fencingToken)).thenReturn(
+        `when`(reader.find(work)).thenReturn(
             receipt(work, true, listOf(320)),
         )
 
@@ -108,13 +108,13 @@ class ProvisioningRuntimeWiringTest {
         val simulator = DeterministicNetworkSimulator(SimulatorProfiles.simulator)
         assertThat(simulator.create(320)).isEqualTo(SimulatorTerminalState.SUCCEEDED)
         val work = DispatchableProvisioningWork(
-            UuidV7.generate(), UuidV7.generate(), 1, UuidV7.generate(),
+            UuidV7.generate(), UuidV7.generate(), 1, UuidV7.generate(), UuidV7.generate(),
             DeviceReference(DeviceKind.OLT, UuidV7.generate()), ProvisionOperation.ENSURE_ACCESS_PORT,
             ExecutionPhase.VERIFY, "integrated-receipt", 1, "a".repeat(64), now.plusSeconds(30),
             mapOf("vlanId" to "320"),
         )
         val reader = mock(CollectorResultReceiptReader::class.java)
-        `when`(reader.find("integrated-receipt", ExecutionPhase.VERIFY, work.fencingToken)).thenReturn(
+        `when`(reader.find(work)).thenReturn(
             receipt(work, true, simulator.state().olt.vlans.toList()),
         )
         val observed = CollectorBackedProvisioningDeviceGateway(reader, Clock.fixed(now, ZoneOffset.UTC)).observe(work)
@@ -133,7 +133,7 @@ class ProvisioningRuntimeWiringTest {
     }
 
     private fun gatewayWork(phase: ExecutionPhase, key: String) = DispatchableProvisioningWork(
-        UuidV7.generate(), UuidV7.generate(), 1, UuidV7.generate(),
+        UuidV7.generate(), UuidV7.generate(), 1, UuidV7.generate(), UuidV7.generate(),
         DeviceReference(DeviceKind.OLT, UuidV7.generate()), ProvisionOperation.ENSURE_ACCESS_PORT,
         phase, key, 1, "a".repeat(64), now.plusSeconds(30), mapOf("vlanId" to "320"),
     )
@@ -143,6 +143,12 @@ class ProvisioningRuntimeWiringTest {
         verificationMatches: Boolean?,
         vlanIds: List<Int>?,
     ) = CollectorResultReceipt(
+        work.attemptId,
+        work.planId,
+        work.revision,
+        work.stepId,
+        work.device.id,
+        work.operation,
         work.idempotencyKey,
         when (work.phase) {
             ExecutionPhase.PREFLIGHT, ExecutionPhase.ROLLBACK_CHECK -> "PREFLIGHT"
