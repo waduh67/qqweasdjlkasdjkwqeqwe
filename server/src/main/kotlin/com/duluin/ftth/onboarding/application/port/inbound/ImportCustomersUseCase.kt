@@ -31,9 +31,14 @@ interface ImportCustomersUseCase {
     fun importCustomers(command: ImportCustomersCommand): ImportCustomersResult
 }
 
+enum class ImportMode { VALIDATE_ONLY, PENDING_INSTALLATION, ALREADY_INSTALLED }
+
 /** Perintah impor: kumpulan baris CSV yang sudah diurai klien menjadi bentuk terstruktur. */
 data class ImportCustomersCommand(
     val rows: List<CustomerImportRow>,
+    val schemaVersion: Int = 1,
+    val mode: ImportMode = ImportMode.ALREADY_INSTALLED,
+    val operationKey: String? = null,
 )
 
 /**

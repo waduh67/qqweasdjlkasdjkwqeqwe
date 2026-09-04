@@ -13,6 +13,7 @@ import com.duluin.ftth.onboarding.application.port.inbound.ImportCustomersUseCas
 import com.duluin.ftth.onboarding.application.port.inbound.ImportPppoeCommand
 import com.duluin.ftth.onboarding.application.port.inbound.ImportPppoeResult
 import com.duluin.ftth.onboarding.application.port.inbound.ImportPppoeUseCase
+import com.duluin.ftth.onboarding.application.port.inbound.ImportMode
 import com.duluin.ftth.onboarding.application.port.inbound.ImportRow
 import com.duluin.ftth.onboarding.application.port.inbound.ImportSource
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
@@ -168,9 +169,12 @@ internal object CustomerCsv {
  */
 data class ImportCustomersRequest(
     @field:Valid val rows: List<CustomerImportRowPayload> = emptyList(),
+    val schemaVersion: Int = 1,
+    val mode: ImportMode = ImportMode.ALREADY_INSTALLED,
+    val operationKey: String? = null,
 ) {
     fun toCommand() = ImportCustomersCommand(
-        rows = rows.map {
+            rows = rows.map {
             CustomerImportRow(
                 name = it.name,
                 phone = it.phone,
@@ -188,8 +192,11 @@ data class ImportCustomersRequest(
                 longitude = it.longitude,
                 framedIp = it.framedIp,
             )
-        },
-    )
+            },
+            schemaVersion = schemaVersion,
+            mode = mode,
+            operationKey = operationKey,
+        )
 }
 
 /**
@@ -233,6 +240,9 @@ data class ImportPppoeRequest(
     val areaId: UUID? = null,
     @field:Size(max = 500) val defaultAddress: String? = null,
     @field:Valid val defaultLocation: LocationPayload? = null,
+    val schemaVersion: Int = 1,
+    val mode: ImportMode = ImportMode.ALREADY_INSTALLED,
+    val operationKey: String? = null,
 ) {
     fun toCommand() = ImportPppoeCommand(
         nasId = nasId!!,
@@ -245,6 +255,9 @@ data class ImportPppoeRequest(
         areaId = areaId,
         defaultAddress = defaultAddress,
         defaultLocation = defaultLocation?.let { Coordinate(it.longitude, it.latitude) },
+        schemaVersion = schemaVersion,
+        mode = mode,
+        operationKey = operationKey,
     )
 }
 
