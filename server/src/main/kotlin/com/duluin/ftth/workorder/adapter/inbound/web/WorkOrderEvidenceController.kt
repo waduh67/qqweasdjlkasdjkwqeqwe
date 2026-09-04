@@ -45,7 +45,7 @@ class WorkOrderEvidenceController(
     private val query: WorkOrderEvidenceQuery,
 ) {
     @GetMapping("/evidence")
-    @PreAuthorize("@authz.can('workorder.evidence.view')")
+    @PreAuthorize("@authz.canAny('workorder.evidence.view','workorder.order.field')")
     fun list(@PathVariable workOrderId: UUID): List<EvidenceView> = query.listPhotos(workOrderId)
 
     @PostMapping("/evidence", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
@@ -73,7 +73,7 @@ class WorkOrderEvidenceController(
     )
 
     @GetMapping("/evidence/{evidenceId}/content")
-    @PreAuthorize("@authz.can('workorder.evidence.view')")
+    @PreAuthorize("@authz.canAny('workorder.evidence.view','workorder.order.field')")
     fun content(@PathVariable workOrderId: UUID, @PathVariable evidenceId: UUID): ResponseEntity<ByteArray> {
         val content = query.downloadPhoto(workOrderId, evidenceId)
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(content.contentType)).body(content.bytes)
@@ -86,7 +86,7 @@ class WorkOrderEvidenceController(
         manage.removePhoto(workOrderId, evidenceId)
 
     @GetMapping("/signature")
-    @PreAuthorize("@authz.can('workorder.evidence.view')")
+    @PreAuthorize("@authz.canAny('workorder.evidence.view','workorder.order.field')")
     fun signature(@PathVariable workOrderId: UUID): ResponseEntity<SignatureView> =
         query.getSignature(workOrderId)?.let { ResponseEntity.ok(it) } ?: ResponseEntity.noContent().build()
 
@@ -108,7 +108,7 @@ class WorkOrderEvidenceController(
     )
 
     @GetMapping("/signature/content")
-    @PreAuthorize("@authz.can('workorder.evidence.view')")
+    @PreAuthorize("@authz.canAny('workorder.evidence.view','workorder.order.field')")
     fun signatureContent(@PathVariable workOrderId: UUID): ResponseEntity<ByteArray> {
         val content = query.downloadSignature(workOrderId)
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(content.contentType)).body(content.bytes)

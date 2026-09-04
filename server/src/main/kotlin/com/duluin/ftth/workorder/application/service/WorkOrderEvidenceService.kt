@@ -5,6 +5,7 @@ import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.security.CurrentUserProvider
+import com.duluin.ftth.common.security.areaScope
 import com.duluin.ftth.common.storage.ObjectStorage
 import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.workorder.application.port.inbound.AttachEvidenceCommand
@@ -115,18 +116,22 @@ class WorkOrderEvidenceService(
     }
 
     override fun listPhotos(workOrderId: UUID): List<EvidenceView> {
-        require(workOrderId)
+        val workOrder = require(workOrderId)
+        requireReadAccess(workOrder)
         val photos = evidence.listByWorkOrder(workOrderId)
         val names = iamApi.usersByIds(photos.mapTo(HashSet()) { it.uploadedBy }).associate { it.id to it.name }
         return photos.map { it.toView(names[it.uploadedBy]) }
     }
 
     override fun getSignature(workOrderId: UUID): SignatureView? {
-        require(workOrderId)
+        val workOrder = require(workOrderId)
+        requireReadAccess(workOrder)
         return signatures.findByWorkOrder(workOrderId)?.let { it.toView(uploaderName(it.signedBy)) }
     }
 
     override fun downloadPhoto(workOrderId: UUID, evidenceId: UUID): DownloadedContent {
+        val workOrder = require(workOrderId)
+        requireReadAccess(workOrder)
         val photo = evidence.findById(evidenceId)?.takeIf { it.workOrderId == workOrderId }
             ?: throw NotFoundException("Bukti $evidenceId tidak ditemukan pada work order $workOrderId")
         val stored = storage.get(photo.storageKey)
@@ -134,6 +139,8 @@ class WorkOrderEvidenceService(
     }
 
     override fun downloadSignature(workOrderId: UUID): DownloadedContent {
+        val workOrder = require(workOrderId)
+        requireReadAccess(workOrder)
         val signature = signatures.findByWorkOrder(workOrderId)
             ?: throw NotFoundException("Work order $workOrderId belum punya tanda tangan")
         val stored = storage.get(signature.storageKey)
@@ -162,8 +169,31 @@ class WorkOrderEvidenceService(
      */
     private fun requireFieldAccess(workOrder: WorkOrder) {
         val actor = currentUser.current()
-        if (!actor.hasPermission("workorder.evidence.manage") && !workOrder.isAssignedTo(actor.userId)) {
+        requireActiveActor()
+        requireArea(workOrder)
+        if (actor.hasPermission("workorder.evidence.manage")) return
+        if (!actor.hasPermission("workorder.order.field") || iamApi.findUser(actor.userId)?.technician != true || !workOrder.isAssignedTo(actor.userId)) {
             throw AccessDeniedException("Work order ${workOrder.code} tidak ditugaskan ke Anda")
+        }
+    }
+
+    private fun requireReadAccess(workOrder: WorkOrder) {
+        requireActiveActor()
+        requireArea(workOrder)
+        val actor = currentUser.current()
+        if (actor.hasPermission("workorder.evidence.view")) return
+        if (actor.hasPermission("workorder.order.field") && iamApi.findUser(actor.userId)?.technician == true && workOrder.isAssignedTo(actor.userId)) return
+        throw NotFoundException("Work order ${workOrder.id} tidak ditemukan")
+    }
+
+    private fun requireActiveActor() {
+        if (iamApi.findUser(currentUser.current().userId)?.active != true) throw AccessDeniedException("Akun tidak aktif")
+    }
+
+    private fun requireArea(workOrder: WorkOrder) {
+        val scope = currentUser.current().areaScope()
+        if (scope != null && (workOrder.areaId == null || workOrder.areaId !in scope)) {
+            throw AccessDeniedException("Work order di luar area Anda")
         }
     }
 

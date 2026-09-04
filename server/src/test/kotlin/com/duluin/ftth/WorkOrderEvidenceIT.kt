@@ -67,7 +67,11 @@ class WorkOrderEvidenceIT {
 
     private fun newTechnician(token: String): String {
         val s = uniq()
-        return id(post("/api/users", token, """{"email":"tech-$s@x.test","name":"Teknisi $s","password":"$pass"}"""))
+        val roles = get("/api/roles", token)
+        val names = JsonPath.read<List<String>>(roles, "$[*].name")
+        val ids = JsonPath.read<List<String>>(roles, "$[*].id")
+        val roleId = ids[names.indexOf("Teknisi")]
+        return id(post("/api/users", token, """{"email":"tech-$s@x.test","name":"Teknisi $s","password":"$pass","roleIds":["$roleId"]}"""))
     }
 
     private fun newWorkOrder(token: String) =
@@ -198,5 +202,32 @@ class WorkOrderEvidenceIT {
             multipart(HttpMethod.PUT, "/api/work-orders/$assigned/signature").file(png("ttd.png"))
                 .param("signerName", "X").header("Authorization", "Bearer $token"),
         ).andExpect(status().isConflict)
+    }
+
+    @Test
+    fun `teknisi hanya dapat membaca bukti work order yang ditugaskan`() {
+        val admin = newTenantAdmin("wo")
+        val roles = get("/api/roles", admin)
+        val names = JsonPath.read<List<String>>(roles, "$[*].name")
+        val ids = JsonPath.read<List<String>>(roles, "$[*].id")
+        val technicianRole = ids[names.indexOf("Teknisi")]
+        val oneEmail = "one-${uniq()}@x.test"
+        val twoEmail = "two-${uniq()}@x.test"
+        val one = id(post("/api/users", admin, """{"email":"$oneEmail","name":"Satu","password":"$pass","roleIds":["$technicianRole"]}"""))
+        val two = id(post("/api/users", admin, """{"email":"$twoEmail","name":"Dua","password":"$pass","roleIds":["$technicianRole"]}"""))
+        val oneToken = login(admin, oneEmail)
+        val twoToken = login(admin, twoEmail)
+        val woId = id(post("/api/work-orders", admin, """{"type":"REPAIR","title":"Bukti"}"""))
+        post("/api/work-orders/$woId/assign", admin, """{"technicianIds":["$one"]}""", 200)
+        post("/api/work-orders/$woId/start", admin, "", 200)
+        val uploaded = mockMvc.perform(
+            multipart("/api/work-orders/$woId/evidence").file(png()).header("Authorization", "Bearer $admin"),
+        ).andExpect(status().isCreated).andReturn().response.contentAsString
+        val evidenceId = id(uploaded)
+
+        get("/api/work-orders/$woId/evidence", oneToken, 200)
+        get("/api/work-orders/$woId/evidence", twoToken, 404)
+        get("/api/work-orders/$woId/evidence/$evidenceId/content", oneToken, 200)
+        get("/api/work-orders/$woId/evidence/$evidenceId/content", twoToken, 404)
     }
 }
