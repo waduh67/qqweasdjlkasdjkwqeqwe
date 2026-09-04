@@ -73,7 +73,11 @@ class WorkOrderIT {
     /** Buat pengguna (calon teknisi), kembalikan id-nya. */
     private fun newTechnician(token: String, name: String): String {
         val s = uniq()
-        return id(post("/api/users", token, """{"email":"tech-$s@x.test","name":"$name","password":"$pass"}"""))
+        val roles = get("/api/roles", token)
+        val names = JsonPath.read<List<String>>(roles, "$[*].name")
+        val ids = JsonPath.read<List<String>>(roles, "$[*].id")
+        val roleId = ids[names.indexOf("Teknisi")]
+        return id(post("/api/users", token, """{"email":"tech-$s@x.test","name":"$name","password":"$pass","roleIds":["$roleId"]}"""))
     }
 
     private fun newCustomer(token: String): Pair<String, String> {
@@ -164,6 +168,15 @@ class WorkOrderIT {
         val techId = newTechnician(token, "Teknisi Cuti")
         post("/api/users/$techId/disable", token, "", 200)
         post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", expected = 409)
+    }
+
+    @Test
+    fun `assign pengguna aktif tanpa role Teknisi ditolak`() {
+        val token = newTenantAdmin("wo")
+        val woId = id(createWorkOrder(token, """{"type":"REPAIR","title":"Perbaikan"}"""))
+        val userId = newTechnician(token, "Pengguna Operasional")
+        put("/api/users/$userId/access", token, """{"roleIds":[],"areaIds":[]}""", 200)
+        post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$userId"]}""", expected = 409)
     }
 
     @Test

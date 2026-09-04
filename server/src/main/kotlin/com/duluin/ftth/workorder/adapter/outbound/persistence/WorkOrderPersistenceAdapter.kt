@@ -119,6 +119,7 @@ class WorkOrderPersistenceAdapter(
         approvalStatus: WorkOrderApprovalStatus?,
         customerId: UUID?,
         pageRequest: PageRequest,
+        areaIds: Set<UUID>?,
     ): Page<WorkOrder> {
         val spec = matchesText(query)
             .and(hasType(type))
@@ -126,6 +127,7 @@ class WorkOrderPersistenceAdapter(
             .and(assignedToIs(assignedTo))
             .and(hasApprovalStatus(approvalStatus))
             .and(hasCustomer(customerId))
+            .and(hasArea(areaIds))
         val page = jpa.findAll(spec, pageRequest.toPageable())
         val rosters = rostersOf(page.content.map { it.id })
         return page.toDomainPage().map { it.toDomain(rosters[it.id].orEmpty()) }
@@ -134,22 +136,24 @@ class WorkOrderPersistenceAdapter(
     override fun timelineOf(workOrderId: UUID): List<WorkOrderEvent> =
         eventJpa.findByWorkOrderIdOrderByAt(workOrderId).map { it.toDomain() }
 
-    override fun countByStatus(): Map<WorkOrderStatus, Long> =
-        jpa.countGroupedByStatus().associate { it.status to it.total }
+    override fun countByStatus(areaIds: Set<UUID>?): Map<WorkOrderStatus, Long> =
+        jpa.findAll(hasArea(areaIds)).groupingBy { it.status }.eachCount().mapValues { it.value.toLong() }
 
-    override fun countByType(): Map<WorkOrderType, Long> =
-        jpa.countGroupedByType().associate { it.type to it.total }
+    override fun countByType(areaIds: Set<UUID>?): Map<WorkOrderType, Long> =
+        jpa.findAll(hasArea(areaIds)).groupingBy { it.type }.eachCount().mapValues { it.value.toLong() }
 
-    override fun countOpenByTechnician(): Map<UUID?, Long> {
+    override fun countOpenByTechnician(areaIds: Set<UUID>?): Map<UUID?, Long> {
         val openStatuses = WorkOrderStatus.entries.filter { it.open }
-        val byTechnician: Map<UUID?, Long> =
-            jpa.countOpenGroupedByTechnician(openStatuses).associate { it.assignedTo to it.total }
-        val unassigned = jpa.countOpenUnassigned(openStatuses)
+        val open = jpa.findAll(hasArea(areaIds)).filter { it.status in openStatuses }
+        val roster = rostersOf(open.map { it.id })
+        val byTechnician: Map<UUID?, Long> = roster.values.flatten().groupingBy { it as UUID? }.eachCount().mapValues { it.value.toLong() }
+        val unassigned = open.count { roster[it.id].isNullOrEmpty() }.toLong()
         // Kunci null = antrean WO terbuka tanpa satu pun teknisi (dipakai dashboard "belum ditugaskan").
         return if (unassigned > 0) byTechnician + (null to unassigned) else byTechnician
     }
 
-    override fun countPendingApproval(): Long = jpa.countByApprovalStatus(WorkOrderApprovalStatus.PENDING)
+    override fun countPendingApproval(areaIds: Set<UUID>?): Long =
+        jpa.findAll(hasArea(areaIds)).count { it.approvalStatus == WorkOrderApprovalStatus.PENDING }.toLong()
 
     override fun existsOpenPreventiveForCustomer(customerId: UUID): Boolean {
         val openStatuses = WorkOrderStatus.entries.filter { it.open }
@@ -243,6 +247,10 @@ class WorkOrderPersistenceAdapter(
 
     private fun hasCustomer(customerId: UUID?) = Specification<WorkOrderJpaEntity> { root, _, cb ->
         if (customerId == null) cb.conjunction() else cb.equal(root.get<UUID>("customerId"), customerId)
+    }
+
+    private fun hasArea(areaIds: Set<UUID>?) = Specification<WorkOrderJpaEntity> { root, _, cb ->
+        if (areaIds == null) cb.conjunction() else root.get<UUID>("areaId").`in`(areaIds)
     }
 
     private fun hasApprovalStatus(approvalStatus: WorkOrderApprovalStatus?) = Specification<WorkOrderJpaEntity> { root, _, cb ->
