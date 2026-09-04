@@ -34,8 +34,12 @@ class CustomerJpaEntity(
     @Column(nullable = false, length = 500)
     var address: String,
 
-    @Column(nullable = false, columnDefinition = "geometry(Point,4326)")
-    var location: Point,
+    @Column(columnDefinition = "geometry(Point,4326)")
+    var location: Point?,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "location_status", nullable = false, length = 20)
+    var locationStatus: com.duluin.ftth.customer.domain.model.LocationStatus,
 
     @Column(name = "area_id")
     var areaId: UUID?,

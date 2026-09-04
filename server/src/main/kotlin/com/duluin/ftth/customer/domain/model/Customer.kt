@@ -16,6 +16,8 @@ enum class CustomerStatus {
     TERMINATED,
 }
 
+enum class LocationStatus { LOCATED, UNLOCATED }
+
 /**
  * Pelanggan beserta titik lokasi rumahnya. Lokasi bersifat wajib karena inilah
  * yang membuat pertanyaan operasional seperti "siapa saja yang terdampak kalau
@@ -29,7 +31,8 @@ class Customer private constructor(
     phone: String?,
     email: String?,
     address: String,
-    location: Coordinate,
+    location: Coordinate?,
+    locationStatus: LocationStatus,
     areaId: UUID?,
     idCardNumber: String?,
     status: CustomerStatus,
@@ -46,7 +49,10 @@ class Customer private constructor(
     var address: String = address
         private set
 
-    var location: Coordinate = location
+    var location: Coordinate? = location
+        private set
+
+    var locationStatus: LocationStatus = locationStatus
         private set
 
     var areaId: UUID? = areaId
@@ -64,7 +70,7 @@ class Customer private constructor(
         phone: String?,
         email: String?,
         address: String,
-        location: Coordinate,
+        location: Coordinate?,
         areaId: UUID?,
         idCardNumber: String?,
     ) {
@@ -73,6 +79,7 @@ class Customer private constructor(
         this.email = email?.trim()?.takeIf { it.isNotEmpty() }
         this.address = validateAddress(address)
         this.location = location
+        this.locationStatus = if (location == null) LocationStatus.UNLOCATED else LocationStatus.LOCATED
         this.areaId = areaId
         this.idCardNumber = normalizeIdCard(idCardNumber)
     }
@@ -108,7 +115,7 @@ class Customer private constructor(
             phone: String?,
             email: String?,
             address: String,
-            location: Coordinate,
+            location: Coordinate?,
             areaId: UUID?,
             idCardNumber: String? = null,
             status: CustomerStatus = CustomerStatus.PROSPECT,
@@ -121,6 +128,7 @@ class Customer private constructor(
             email = email?.trim()?.takeIf { it.isNotEmpty() },
             address = validateAddress(address),
             location = location,
+            locationStatus = if (location == null) LocationStatus.UNLOCATED else LocationStatus.LOCATED,
             areaId = areaId,
             idCardNumber = normalizeIdCard(idCardNumber),
             status = status,
@@ -135,11 +143,12 @@ class Customer private constructor(
             phone: String?,
             email: String?,
             address: String,
-            location: Coordinate,
+            location: Coordinate?,
             areaId: UUID?,
             idCardNumber: String?,
             status: CustomerStatus,
-        ): Customer = Customer(id, tenantId, code, name, phone, email, address, location, areaId, idCardNumber, status)
+            locationStatus: LocationStatus = if (location == null) LocationStatus.UNLOCATED else LocationStatus.LOCATED,
+        ): Customer = Customer(id, tenantId, code, name, phone, email, address, location, locationStatus, areaId, idCardNumber, status)
 
         private fun validateCode(code: String): String {
             val normalized = code.trim().uppercase()

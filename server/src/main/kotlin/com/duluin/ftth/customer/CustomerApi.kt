@@ -1,6 +1,7 @@
 package com.duluin.ftth.customer
 
 import com.duluin.ftth.common.domain.geo.Coordinate
+import com.duluin.ftth.customer.domain.model.LocationStatus
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -253,10 +254,11 @@ data class CustomerExportRow(
     val email: String?,
     val address: String,
     val idCardNumber: String?,
-    val location: Coordinate,
+    val location: Coordinate?,
     val packageName: String,
     val activatedAt: Instant?,
     val billingDayOfMonth: Int?,
+    val locationStatus: LocationStatus = if (location == null) LocationStatus.UNLOCATED else LocationStatus.LOCATED,
 )
 
 /**
@@ -282,7 +284,7 @@ data class RegisterCustomerCommand(
     val phone: String?,
     val email: String?,
     val address: String,
-    val location: Coordinate,
+    val location: Coordinate?,
     val areaId: UUID?,
     /** Nomor identitas (NIK/KTP/paspor); opsional. */
     val idCardNumber: String? = null,
@@ -369,8 +371,9 @@ data class CustomerRef(
     val phone: String?,
     /** Email pelanggan (opsional) — dipakai gateway bayar yang mewajibkan email pelanggan. */
     val email: String?,
-    val location: Coordinate,
+    val location: Coordinate?,
     val status: String,
+    val locationStatus: LocationStatus = if (location == null) LocationStatus.UNLOCATED else LocationStatus.LOCATED,
 )
 
 /** Pandangan ringkas sebuah langganan untuk konsumen lintas-module (mis. bng). */
@@ -415,7 +418,7 @@ data class OdpOccupant(
     val customerCode: String,
     val customerName: String,
     val phone: String?,
-    val location: Coordinate,
+    val location: Coordinate?,
     /** Id ONU penghuni — untuk memadukan dengan bacaan hidup monitoring per ONU. */
     val onuId: UUID,
     val onuSerialNumber: String,
@@ -424,4 +427,5 @@ data class OdpOccupant(
     val installRxPowerDbm: Double?,
     val subscriptionPackage: String?,
     val subscriptionStatus: String?,
+    val locationStatus: LocationStatus = if (location == null) LocationStatus.UNLOCATED else LocationStatus.LOCATED,
 )

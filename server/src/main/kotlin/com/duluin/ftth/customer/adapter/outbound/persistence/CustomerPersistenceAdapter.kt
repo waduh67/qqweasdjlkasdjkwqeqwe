@@ -30,7 +30,8 @@ class CustomerPersistenceAdapter(
             phone = customer.phone
             email = customer.email
             address = customer.address
-            location = Geometries.point(customer.location)
+            location = customer.location?.let(Geometries::point)
+            locationStatus = customer.locationStatus
             areaId = customer.areaId
             idCardNumber = customer.idCardNumber
             status = customer.status
@@ -41,7 +42,8 @@ class CustomerPersistenceAdapter(
             phone = customer.phone,
             email = customer.email,
             address = customer.address,
-            location = Geometries.point(customer.location),
+            location = customer.location?.let(Geometries::point),
+            locationStatus = customer.locationStatus,
             areaId = customer.areaId,
             idCardNumber = customer.idCardNumber,
             status = customer.status,
@@ -84,7 +86,7 @@ class CustomerPersistenceAdapter(
         }
         val sql = """
             SELECT * FROM customer c
-            WHERE ST_X(c.location) = 0 AND ST_Y(c.location) = 0
+             WHERE c.location_status = 'UNLOCATED'
               AND c.status <> 'TERMINATED'
               $areaFilter
               $textFilter
@@ -157,8 +159,9 @@ internal fun CustomerJpaEntity.toDomain(): Customer = Customer.rehydrate(
     phone = phone,
     email = email,
     address = address,
-    location = location.toCoordinate(),
+    location = location?.toCoordinate(),
     areaId = areaId,
     idCardNumber = idCardNumber,
     status = status,
+    locationStatus = locationStatus,
 )
