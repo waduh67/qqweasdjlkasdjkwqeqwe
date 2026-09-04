@@ -7,6 +7,23 @@ import com.duluin.ftth.collector.adapter.ProvisioningAdapter
 import com.duluin.ftth.collector.adapter.ProvisioningAdapterRegistry
 import com.duluin.ftth.collector.adapter.RouterOsProvisioningAdapter
 import com.duluin.ftth.collector.adapter.hsgq.ProvisionalHsgqProvisioningAdapter
+import com.duluin.ftth.collector.adapter.huawei.HuaweiAdapterException
+import com.duluin.ftth.collector.adapter.huawei.HuaweiCliTransport
+import com.duluin.ftth.collector.adapter.huawei.HuaweiFailureCode
+import com.duluin.ftth.collector.adapter.huawei.HuaweiProvisioningAdapter
+import com.duluin.ftth.collector.adapter.huawei.HuaweiTarget
+import com.duluin.ftth.collector.adapter.iosxe.IosXeNetconfError
+import com.duluin.ftth.collector.adapter.iosxe.IosXeNetconfException
+import com.duluin.ftth.collector.adapter.iosxe.IosXeNetconfSessionFactory
+import com.duluin.ftth.collector.adapter.iosxe.IosXeProvisioningAdapter
+import com.duluin.ftth.collector.adapter.junos.JunosNetconfException
+import com.duluin.ftth.collector.adapter.junos.JunosNetconfSessionFactory
+import com.duluin.ftth.collector.adapter.junos.JunosProvisioningAdapter
+import com.duluin.ftth.collector.adapter.zte.ZteAdapterException
+import com.duluin.ftth.collector.adapter.zte.ZteCliTransport
+import com.duluin.ftth.collector.adapter.zte.ZteFailureCode
+import com.duluin.ftth.collector.adapter.zte.ZteProvisioningAdapter
+import com.duluin.ftth.collector.adapter.zte.ZteTarget
 import com.duluin.ftth.contract.DeviceCapabilityReport
 import com.duluin.ftth.contract.DeviceFingerprint
 import com.duluin.ftth.contract.NasTarget
@@ -28,8 +45,27 @@ data class RuntimeProvisioningRegistries(
     val olt: OltProvisioningAdapterRegistry,
 )
 
+data class RuntimeProvisioningTransports(
+    val iosXeSessions: IosXeNetconfSessionFactory = IosXeNetconfSessionFactory { _, _ ->
+        throw IosXeNetconfException(IosXeNetconfError.RPC_ERROR)
+    },
+    val junosSessions: JunosNetconfSessionFactory = JunosNetconfSessionFactory {
+        throw JunosNetconfException("NETCONF runtime session is not configured")
+    },
+    val huaweiTransport: (OltTarget) -> HuaweiCliTransport = {
+        HuaweiCliTransport { throw HuaweiAdapterException(HuaweiFailureCode.PRODUCTION_NOT_CERTIFIED, "Huawei runtime transport unavailable") }
+    },
+    val zteTransport: (OltTarget) -> ZteCliTransport = {
+        ZteCliTransport { throw ZteAdapterException(ZteFailureCode.PRODUCTION_NOT_CERTIFIED, "ZTE runtime transport unavailable") }
+    },
+)
+
 object RuntimeProvisioningAdapterFactory {
-    fun create(simulatorEnabled: Boolean, stateDirectory: Path): RuntimeProvisioningRegistries = if (simulatorEnabled) {
+    fun create(
+        simulatorEnabled: Boolean,
+        stateDirectory: Path,
+        transports: RuntimeProvisioningTransports = RuntimeProvisioningTransports(),
+    ): RuntimeProvisioningRegistries = if (simulatorEnabled) {
         RuntimeProvisioningRegistries(
             ProvisioningAdapterRegistry(NAS_VENDORS.map { RuntimeNasAdapter(it, "SIMULATOR", simulator = true) }),
             OltProvisioningAdapterRegistry(OLT_VENDORS.map { RuntimeOltAdapter(it, "SIMULATOR", simulator = true) }),
@@ -41,15 +77,15 @@ object RuntimeProvisioningAdapterFactory {
                     RouterOsProvisioningAdapter(
                         stateStore = FileRouterOsProvisioningStateStore(stateDirectory.resolve("routeros-provisioning-state.json")),
                     ),
-                    RuntimeNasAdapter("CISCO", "NETCONF_SSH"),
-                    RuntimeNasAdapter("JUNIPER", "NETCONF_SSH"),
+                    IosXeProvisioningAdapter(transports.iosXeSessions),
+                    JunosProvisioningAdapter(transports.junosSessions),
                 ),
             ),
             OltProvisioningAdapterRegistry(
                 listOf(
                     ProvisionalHsgqProvisioningAdapter(),
-                    RuntimeOltAdapter("HUAWEI", "SSH_CLI"),
-                    RuntimeOltAdapter("ZTE", "SSH_CLI"),
+                    HuaweiRuntimeOltProvisioningAdapter(transports.huaweiTransport),
+                    ZteRuntimeOltProvisioningAdapter(transports.zteTransport),
                 ),
             ),
         )
@@ -68,6 +104,40 @@ private class RuntimeNasAdapter(
     override fun capabilityReport(target: NasTarget) = runtimeReport(target.nasId, vendor, transport, simulator, clock)
     override fun execute(target: NasTarget, command: ProvisioningPlanStepCommand) =
         if (simulator) simulated(command, target.nasId, clock) else rejected(command, target.nasId, clock)
+}
+
+class HuaweiRuntimeOltProvisioningAdapter(
+    private val transport: (OltTarget) -> HuaweiCliTransport,
+    private val clock: Clock = Clock.systemUTC(),
+) : OltProvisioningAdapter {
+    override val vendor: String = "HUAWEI"
+
+    override fun capabilityReport(target: OltTarget): DeviceCapabilityReport = HuaweiProvisioningAdapter(
+        transport(target),
+        clock = clock,
+    ).capabilityReport(
+        HuaweiTarget(target.oltId, target.host, requireNotNull(target.model), requireNotNull(target.firmware)),
+    ).report
+
+    override fun execute(target: OltTarget, command: ProvisioningPlanStepCommand): ProvisioningStepResult =
+        rejected(command, target.oltId, clock)
+}
+
+class ZteRuntimeOltProvisioningAdapter(
+    private val transport: (OltTarget) -> ZteCliTransport,
+    private val clock: Clock = Clock.systemUTC(),
+) : OltProvisioningAdapter {
+    override val vendor: String = "ZTE"
+
+    override fun capabilityReport(target: OltTarget): DeviceCapabilityReport = ZteProvisioningAdapter(
+        transport(target),
+        clock = clock,
+    ).capabilityReport(
+        ZteTarget(target.oltId, target.host, requireNotNull(target.model), requireNotNull(target.firmware)),
+    ).report
+
+    override fun execute(target: OltTarget, command: ProvisioningPlanStepCommand): ProvisioningStepResult =
+        rejected(command, target.oltId, clock)
 }
 
 private class RuntimeOltAdapter(
