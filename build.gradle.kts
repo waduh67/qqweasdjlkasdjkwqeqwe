@@ -12,6 +12,7 @@ allprojects {
     version = "0.1.0-SNAPSHOT"
 
     repositories {
+        google()
         mavenCentral()
     }
 }
