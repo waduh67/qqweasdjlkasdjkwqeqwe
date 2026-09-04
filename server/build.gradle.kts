@@ -82,6 +82,10 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    maxParallelForks = 1
+    forkEvery = 50
+    maxHeapSize = "768m"
+    systemProperty("ftth.scheduling.enabled", "false")
     testLogging {
         events("passed", "skipped", "failed")
     }

@@ -15,6 +15,8 @@ spring:
     password: ftth
 
 ftth:
+  scheduling:
+    enabled: false
   cpe:
     # Memoisasi probe kesehatan DIMATIKAN di tes: satu context dipakai bersama semua
     # kelas tes, jadi tes yang mematikan ACS akan menerima jawaban "ONLINE" yang
