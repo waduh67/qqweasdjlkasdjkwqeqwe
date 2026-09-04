@@ -13,6 +13,8 @@ import jakarta.persistence.Table
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 
 @Entity
 @Table(name = "migration_fulfillment_inbox")
@@ -26,6 +28,7 @@ class MigrationFulfillmentInboxJpaEntity(
     @Column(name = "auth_type", nullable = false, length = 20) var authType: String,
     @Column(name = "credential_handle_id") var credentialHandleId: UUID?,
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 32) var state: InboxState = InboxState.PENDING,
+    @Column(name = "canonical_hash", nullable = false, length = 64) var canonicalHash: String,
 ) : TenantAwareJpaEntity(id)
 
 enum class InboxState { PENDING, APPROVED, APPLIED, FAILED }
@@ -45,7 +48,13 @@ class MigrationFulfillmentJpaPublisher(
             nasId = request.nasId,
             authType = request.authType,
             credentialHandleId = request.credentialHandle?.id,
+            canonicalHash = request.canonicalHash.ifBlank { canonicalHash(request) },
         )
         entityManager.persist(entity)
+    }
+
+    private fun canonicalHash(request: MigrationFulfillmentRequested): String {
+        val canonical = listOf(request.operationKey, request.subscriptionId, request.username, request.planId, request.nasId, request.authType, request.credentialHandle?.id).joinToString("\u001f")
+        return MessageDigest.getInstance("SHA-256").digest(canonical.toByteArray(StandardCharsets.UTF_8)).joinToString("") { "%02x".format(it) }
     }
 }

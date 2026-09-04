@@ -33,8 +33,14 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RequestPart
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.multipart.MultipartFile
+import com.duluin.ftth.onboarding.application.service.CustomerCsvParser
+import com.duluin.ftth.onboarding.application.service.CustomerImportBatchService
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
@@ -55,6 +61,7 @@ class OnboardingController(
     private val importPppoe: ImportPppoeUseCase,
     private val importCustomers: ImportCustomersUseCase,
     private val exportCustomers: ExportCustomersUseCase,
+    private val customerBatches: CustomerImportBatchService,
 ) {
 
     @PostMapping("/psb")
@@ -90,6 +97,46 @@ class OnboardingController(
     )
     fun importCustomers(@Valid @RequestBody request: ImportCustomersRequest): ImportCustomersResult =
         importCustomers.importCustomers(request.toCommand())
+
+    @PostMapping("/v1/import/customers", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @PreAuthorize("@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update','bng.access.manage')")
+    fun stageCustomerImport(
+        @RequestPart("file") file: MultipartFile,
+        @RequestParam operationKey: String,
+        @RequestParam(defaultValue = "ALREADY_INSTALLED") mode: ImportMode,
+    ) = customerBatches.stage(operationKey, CustomerCsvParser.parse(file.inputStream, file.size), mode)
+
+    @GetMapping("/v1/import/customers/{id}")
+    @PreAuthorize("@authz.can('customer.customer.view')")
+    fun customerImportStatus(@PathVariable id: UUID) = customerBatches.status(id)
+
+    @PostMapping("/v1/import/customers/{id}/commit")
+    @PreAuthorize("@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update','bng.access.manage')")
+    fun commitCustomerImport(
+        @PathVariable id: UUID,
+        @RequestParam commitOperationKey: String,
+        @RequestParam commitHash: String,
+    ) = customerBatches.commit(id, commitOperationKey, commitHash)
+
+    @PostMapping("/v1/import/customers/{id}/cancel")
+    @PreAuthorize("@authz.can('customer.customer.update')")
+    fun cancelCustomerImport(@PathVariable id: UUID) = customerBatches.cancel(id)
+
+    @PostMapping("/v1/import/customers/{id}/retry")
+    @PreAuthorize("@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update','bng.access.manage')")
+    fun retryCustomerImport(
+        @PathVariable id: UUID,
+        @RequestParam commitOperationKey: String,
+        @RequestParam commitHash: String,
+    ) = customerBatches.retry(id, commitOperationKey, commitHash)
+
+    @GetMapping("/v1/import/customers/{id}/report", produces = ["text/csv"])
+    @PreAuthorize("@authz.can('customer.customer.view')")
+    fun customerImportReport(@PathVariable id: UUID): ResponseEntity<ByteArray> = ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=customer-import-$id-report.csv")
+        .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+        .body(customerBatches.report(id).toByteArray(Charsets.UTF_8))
 
     /**
      * Ekspor CSV pelanggan (kebalikan simetris impor) — satu baris per akun jaringan, kolom cocok
@@ -155,7 +202,9 @@ internal object CustomerCsv {
 
     /** Escaping RFC-4180: bungkus tanda kutip bila mengandung koma/kutip/baris-baru; kutip digandakan. */
     private fun escape(value: String): String =
-        if (value.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) {
+        if (value.firstOrNull() in setOf('=', '+', '-', '@')) {
+            escape("'$value")
+        } else if (value.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) {
             "\"" + value.replace("\"", "\"\"") + "\""
         } else {
             value

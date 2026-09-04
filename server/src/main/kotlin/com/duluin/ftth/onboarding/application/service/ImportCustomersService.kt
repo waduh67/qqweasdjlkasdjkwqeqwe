@@ -21,7 +21,6 @@ import com.duluin.ftth.onboarding.MigrationFulfillmentRequested
 import com.duluin.ftth.onboarding.NoopMigrationFulfillmentPublisher
 import com.duluin.ftth.onboarding.CredentialSealer
 import com.duluin.ftth.onboarding.UuidCredentialSealer
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.ZoneOffset
@@ -43,8 +42,6 @@ private const val MAX_BILLING_DAY = 28
 class ImportCustomersService(
     private val rowImporter: CustomerRowImporter,
 ) : ImportCustomersUseCase {
-
-    private val log = LoggerFactory.getLogger(javaClass)
 
     override fun importCustomers(command: ImportCustomersCommand): ImportCustomersResult {
         val outcomes = command.rows.map { process(command, it) }
@@ -77,7 +74,6 @@ class ImportCustomersService(
             // Bentrok (mis. sudah pernah diimpor lewat jalur lain) → impor idempoten, lewati saja.
             CustomerImportOutcome(username, CustomerImportStatus.SKIPPED, e.message)
         } catch (e: RuntimeException) {
-            log.warn("Impor pelanggan gagal untuk '{}': {}", username, e.message)
             CustomerImportOutcome(username, CustomerImportStatus.FAILED, e.message)
         }
     }
@@ -190,6 +186,7 @@ class CustomerRowImporter(
     private fun coordinateOf(row: CustomerImportRow): Coordinate? {
         val lat = row.latitude ?: return null
         val lon = row.longitude ?: return null
+        if (lon == 0.0 && lat == 0.0) return null
         return Coordinate(lon, lat)
     }
 

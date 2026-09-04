@@ -14,11 +14,19 @@ data class MigrationFulfillmentRequested(
     val authType: String,
     val credentialHandle: CredentialHandle?,
     val requestedAt: Instant = Instant.now(),
+    val canonicalHash: String = "",
 )
 
 interface MigrationFulfillmentPublisher {
     fun publish(request: MigrationFulfillmentRequested)
 }
+
+data class MigrationImportApproved(
+    val tenantId: UUID,
+    val operationKey: String,
+    val canonicalHash: String,
+    val subscriptionId: UUID,
+)
 
 interface CredentialSealer {
     fun seal(secret: String?): CredentialHandle?
