@@ -1,7 +1,6 @@
 package com.duluin.ftth.onboarding.application.service
 
 import com.duluin.ftth.bng.BngApi
-import com.duluin.ftth.bng.ProvisionAccessSpec
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.customer.CustomerApi
@@ -13,6 +12,12 @@ import com.duluin.ftth.onboarding.application.port.inbound.ImportRow
 import com.duluin.ftth.onboarding.application.port.inbound.ImportRowOutcome
 import com.duluin.ftth.onboarding.application.port.inbound.ImportRowStatus
 import com.duluin.ftth.onboarding.application.port.inbound.ImportSource
+import com.duluin.ftth.onboarding.application.port.inbound.ImportMode
+import com.duluin.ftth.onboarding.MigrationFulfillmentPublisher
+import com.duluin.ftth.onboarding.MigrationFulfillmentRequested
+import com.duluin.ftth.onboarding.NoopMigrationFulfillmentPublisher
+import com.duluin.ftth.onboarding.CredentialSealer
+import com.duluin.ftth.onboarding.UuidCredentialSealer
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -63,6 +68,9 @@ class ImportPppoeService(
                 row.name, ImportRowStatus.SKIPPED, "Profil '${row.profile ?: "-"}' belum dipetakan ke paket",
             )
         return try {
+            if (command.mode == ImportMode.VALIDATE_ONLY) {
+                return ImportRowOutcome(row.name, ImportRowStatus.SKIPPED, "VALIDATE_ONLY")
+            }
             rowImporter.importRow(command, row, planId)
             ImportRowOutcome(row.name, ImportRowStatus.CREATED, null)
         } catch (e: ConflictException) {
@@ -87,6 +95,8 @@ class ImportPppoeService(
 class PppoeRowImporter(
     private val customerApi: CustomerApi,
     private val bngApi: BngApi,
+    private val fulfillment: MigrationFulfillmentPublisher = NoopMigrationFulfillmentPublisher,
+    private val credentialSealer: CredentialSealer = UuidCredentialSealer,
 ) {
 
     @Transactional
@@ -98,24 +108,23 @@ class PppoeRowImporter(
                 phone = null,
                 email = null,
                 address = command.defaultAddress?.trim()?.takeIf { it.isNotEmpty() } ?: PLACEHOLDER_ADDRESS,
-                location = command.defaultLocation ?: Coordinate(0.0, 0.0),
+                location = command.defaultLocation,
                 areaId = command.areaId,
                 planId = planId,
             ),
         ).subscriptionId
-        // Pelanggan impor sudah terpasang di lapangan → langsung aktif (tanpa WO PSB). Aktivasi
-        // memprorata tagihan dari kini — konsekuensi yang direlay ke operator di UI/panduan.
-        customerApi.activateForInstallation(subscriptionId)
-        bngApi.provisionAccess(
-            ProvisionAccessSpec(
-                subscriptionId = subscriptionId,
-                username = row.name,
-                secret = row.password,
-                planId = planId,
-                nasId = command.nasId,
-                authType = "PPPOE",
-                framedIp = null,
-            ),
-        )
+        if (command.mode == ImportMode.ALREADY_INSTALLED) {
+            fulfillment.publish(
+                MigrationFulfillmentRequested(
+                    operationKey = command.operationKey ?: "import-pppoe:${row.name}",
+                    subscriptionId = subscriptionId,
+                    username = row.name,
+                    planId = planId,
+                    nasId = command.nasId,
+                    authType = "PPPOE",
+                    credentialHandle = credentialSealer.seal(row.password),
+                ),
+            )
+        }
     }
 }

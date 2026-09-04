@@ -5,7 +5,7 @@ import java.util.UUID
 
 /**
  * Bulk-import PPPoE: migrasi akun `/ppp/secret` sebuah RouterOS menjadi pelanggan +
- * langganan + akun jaringan yang sudah AKTIF dan terprovisi ke RADIUS pusat — untuk operator
+ * langganan + a pending fulfillment request — untuk operator
  * yang memindah pelanggan existing dari router lama ke platform. Berbeda dari PSB ekspres:
  * TAK ada Work Order (pelanggan sudah terpasang di lapangan) dan langganan langsung diaktifkan
  * lalu diprovisi ke RADIUS (bukan menunggu WO PSB).
@@ -23,7 +23,7 @@ import java.util.UUID
  *  - `/ppp/secret` tak punya alamat/koordinat pelanggan → import memakai placeholder
  *    ([ImportPppoeCommand.defaultAddress]/[ImportPppoeCommand.defaultLocation]); operator
  *    memperkaya lokasi/alamat asli belakangan.
- *  - Aktivasi langganan MEMPRORATA tagihan dari tanggal aktivasi (jalur `activateForInstallation`).
+ *  - ALREADY_INSTALLED queues fulfillment; activation and provisioning are coordinator effects.
  */
 interface ImportPppoeUseCase {
 
@@ -53,6 +53,9 @@ data class ImportPppoeCommand(
     val areaId: UUID?,
     val defaultAddress: String?,
     val defaultLocation: Coordinate?,
+    val schemaVersion: Int = 1,
+    val mode: ImportMode = ImportMode.ALREADY_INSTALLED,
+    val operationKey: String? = null,
 )
 
 /**
