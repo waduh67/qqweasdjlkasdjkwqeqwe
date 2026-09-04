@@ -6,8 +6,11 @@ plugins {
 
 kotlin { sourceSets { commonMain.dependencies {
     implementation(project(":mobile:feature:workorders"))
+    implementation(project(":mobile:feature:attendance"))
+    implementation(project(":mobile:feature:payroll"))
+    implementation(project(":mobile:core:ui"))
+    implementation(project(":mobile:core:mvi"))
+    implementation(project(":mobile:domain"))
     implementation("org.jetbrains.compose.runtime:runtime:1.9.3")
     implementation("org.jetbrains.compose.foundation:foundation:1.9.3")
-    implementation("org.jetbrains.compose.ui:ui:1.9.3")
-    implementation("io.github.compose-fluent:fluent:v0.1.0")
 } } }
