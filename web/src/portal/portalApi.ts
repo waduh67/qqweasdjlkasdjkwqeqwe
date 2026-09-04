@@ -193,6 +193,40 @@ export interface PortalTicketDetail {
   messages: PortalTicketMessage[]
 }
 
+export type PortalOrderStatus =
+  | 'RECEIVED'
+  | 'REVIEWING'
+  | 'SCHEDULED'
+  | 'IN_PROGRESS'
+  | 'WAITING_CUSTOMER'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'REQUIRES_ATTENTION'
+
+export interface PortalOrderLine {
+  catalogItemId: string
+  description: string
+  quantity: number
+}
+
+export interface PortalOrderAppointment {
+  startsAt: string
+  endsAt: string
+}
+
+export interface PortalOrder {
+  id: string
+  status: PortalOrderStatus
+  lines: PortalOrderLine[]
+  serviceAddress: {
+    address: string
+    city: string
+    postalCode: string
+  }
+  appointment: PortalOrderAppointment | null
+  revision: number
+}
+
 /** Satu ISP yang bisa dipilih ketika identitas yang sama dipakai di lebih dari satu tempat. */
 export interface PortalTenantChoice {
   tenantSlug: string
@@ -257,6 +291,10 @@ export const changePortalPassword = (currentPassword: string, newPassword: strin
 
 export const getPortalTickets = () => portalApiClient.get<PortalTicket[]>('/api/portal/me/tickets')
 
+export const getPortalOrders = () => portalApiClient.get<PortalOrder[]>('/api/portal/orders')
+
+export const getPortalOrder = (id: string) => portalApiClient.get<PortalOrder>(`/api/portal/orders/${id}`)
+
 export const getPortalTicket = (id: string) =>
   portalApiClient.get<PortalTicketDetail>(`/api/portal/me/tickets/${id}`)
 
@@ -269,4 +307,3 @@ export const replyPortalTicket = (id: string, body: string) =>
 /** "Sudah beres" — pelanggan menutup sendiri laporannya; utasnya berhenti menerima balasan. */
 export const closePortalTicket = (id: string) =>
   portalApiClient.post<PortalTicketDetail>(`/api/portal/me/tickets/${id}/close`)
-

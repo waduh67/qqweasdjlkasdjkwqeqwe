@@ -17,6 +17,7 @@ const LABELS: Record<string, string> = {
   subscription: 'Langganan Aplikasi',
   map: 'Peta Jaringan',
   inventory: 'Inventory',
+  warehouse: 'Operasi Gudang',
   olts: 'OLT',
   bras: 'BRAS & RADIUS',
   acs: 'ACS / TR-069',

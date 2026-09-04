@@ -1,437 +1,243 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text, typographyStyles } from '@fluentui/react-components'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import {
   CUSTOMER_CSV_COLUMNS,
-  importCustomers,
-  type CustomerCsvRow,
-  type CustomerImportStatus,
-  type ImportCustomersResult,
+  cancelCustomerImport,
+  commitCustomerImport,
+  customerImportStatus,
+  downloadCustomerImportReport,
+  retryCustomerImport,
+  stageCustomerImport,
+  type CustomerImportCommitIdentity,
+  type CustomerImportBatchState,
+  type CustomerImportBatchView,
 } from '../api/onboarding'
 import { useCan } from '../auth/useCan'
-import { Badge, Button, EmptyState } from '@/components/atoms'
-import { useToast } from '@/system'
+import { Badge, Button, EmptyState, Spinner } from '@/components/atoms'
 import { PageHeader } from '@/components/molecules'
-import { IconInbox, IconDownload, IconUpload } from '@/components/atoms/icons'
+import { IconDownload, IconInbox } from '@/components/atoms/icons'
+import { useToast } from '@/system'
 
-/**
- * Impor CSV pelanggan — unggah satu berkas berisi biodata + langganan + akun jaringan, di-UPSERT
- * menurut `mikrotik_username`. Berbeda dari Impor PPPoE (menyedot `/ppp/secret` sebuah router):
- * sumbernya berkas CSV yang dirakit operator (atau hasil ekspor sistem ini, sehingga bisa
- * di-round-trip). Alur: unggah → urai di klien → pratinjau → commit → rekap per-baris.
- *
- * Penguraian CSV terjadi di browser (RFC-4180, dipetakan lewat NAMA header sehingga urutan kolom
- * bebas). Semua tipe koneksi didukung: `pppoe`/`hotspot` (login username+password) &
- * `dhcp`/`static` (identitas MAC — `mikrotik_username` diisi MAC). Baris bermasalah diprediksi di
- * pratinjau — tanpa `mikrotik_username` (dilewati), tipe tak dikenal atau Static tanpa `framed_ip`
- * (gagal) — namun server tetap penegak sebenarnya dan melaporkannya kembali di rekap.
- */
+type ImportMode = CustomerImportBatchView['mode']
 
-/** Prediksi klien atas satu baris: `skip` (server melewati) / `fail` (server menolak) + alasannya. */
-type RowIssue = { kind: 'skip' | 'fail'; reason: string }
-
-/** Satu baris pratinjau: muatan siap-kirim + masalah yang diprediksi klien (null bila siap). */
-type PreviewRow = CustomerCsvRow & { issue: RowIssue | null }
-
-/**
- * Urai teks CSV jadi larik-baris (RFC-4180): field boleh dibungkus kutip; kutip ganda `""` jadi satu
- * kutip; koma/baris-baru di dalam kutip bukan pemisah. Menangani akhir baris `\r\n` maupun `\n`.
- */
-function parseCsvRecords(text: string): string[][] {
-  const src = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text // buang BOM Excel
-  const records: string[][] = []
-  let row: string[] = []
-  let field = ''
-  let inQuotes = false
-  let i = 0
-  const pushField = () => {
-    row.push(field)
-    field = ''
-  }
-  const pushRow = () => {
-    pushField()
-    records.push(row)
-    row = []
-  }
-  while (i < src.length) {
-    const c = src[i]
-    if (inQuotes) {
-      if (c === '"') {
-        if (src[i + 1] === '"') {
-          field += '"'
-          i += 2
-          continue
-        }
-        inQuotes = false
-        i++
-        continue
-      }
-      field += c
-      i++
-      continue
-    }
-    if (c === '"') {
-      inQuotes = true
-      i++
-      continue
-    }
-    if (c === ',') {
-      pushField()
-      i++
-      continue
-    }
-    if (c === '\r') {
-      i++
-      continue
-    }
-    if (c === '\n') {
-      pushRow()
-      i++
-      continue
-    }
-    field += c
-    i++
-  }
-  // Baris terakhir tanpa newline penutup.
-  if (field.length > 0 || row.length > 0) pushRow()
-  // Buang baris yang seluruh selnya kosong (baris hampa di tengah/akhir berkas).
-  return records.filter((r) => r.some((cell) => cell.trim() !== ''))
+const BATCH_TONE: Record<CustomerImportBatchState, 'accent' | 'good' | 'neutral' | 'critical' | 'warning'> = {
+  STAGED: 'accent',
+  PROCESSING: 'warning',
+  COMMITTED: 'good',
+  CANCELLED: 'neutral',
+  FAILED: 'critical',
+  RETRYABLE_FAILED: 'warning',
+  PERMANENT_FAILED: 'critical',
+  PURGED: 'neutral',
 }
 
-/** Normalisasi tanggal ke ISO `YYYY-MM-DD`. Terima ISO, `DD/MM/YYYY`, `DD-MM-YYYY`, `YYYY/MM/DD`. Tak terbaca → null. */
-function normalizeDate(raw: string): string | null {
-  const s = raw.trim()
-  if (!s) return null
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
-  const ymd = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/)
-  if (ymd) return `${ymd[1]}-${ymd[2].padStart(2, '0')}-${ymd[3].padStart(2, '0')}`
-  const dmy = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/)
-  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`
-  return null
+const BATCH_LABEL: Record<CustomerImportBatchState, string> = {
+  STAGED: 'Menunggu konfirmasi',
+  PROCESSING: 'Sedang diproses',
+  COMMITTED: 'Selesai',
+  CANCELLED: 'Dibatalkan',
+  FAILED: 'Perlu perhatian',
+  RETRYABLE_FAILED: 'Dapat diulangi',
+  PERMANENT_FAILED: 'Perlu perbaikan manual',
+  PURGED: 'Sudah dihapus',
 }
 
-/** Angka desimal — terima koma sebagai titik desimal; kosong/tak terbaca → null. */
-function toNum(raw: string): number | null {
-  const s = raw.trim().replace(',', '.')
-  if (!s) return null
-  const n = Number(s)
-  return Number.isFinite(n) ? n : null
+function createOperationKey(): string {
+  return crypto.randomUUID()
 }
 
-function toInt(raw: string): number | null {
-  const n = toNum(raw)
-  return n === null ? null : Math.trunc(n)
-}
-
-/** Kosong → null; selain itu trim. Menjaga muatan ramping (kolom kosong = "pertahankan" saat upsert). */
-function orNull(raw: string): string | null {
-  const s = raw.trim()
-  return s === '' ? null : s
-}
-
-/** Tipe koneksi kanonis dari nilai bebas CSV (cermin `resolveAuthType` server via substring). */
-type ConnType = 'pppoe' | 'hotspot' | 'dhcp' | 'static'
-
-/** Petakan `connection_type` ke tipe kanonis; kosong → pppoe; tak dikenal → null (baris gagal). */
-function resolveType(connectionType: string | null | undefined): ConnType | null {
-  if (!connectionType) return 'pppoe'
-  const v = connectionType.toLowerCase()
-  if (v.includes('pppoe')) return 'pppoe'
-  if (v.includes('hotspot')) return 'hotspot'
-  if (v.includes('static')) return 'static'
-  if (v.includes('dhcp')) return 'dhcp'
-  return null
-}
-
-/** Petakan larik-baris CSV ber-header jadi baris pratinjau. Kolom dicocokkan lewat NAMA header. */
-function toPreviewRows(records: string[][]): PreviewRow[] {
-  if (records.length === 0) return []
-  const [header, ...body] = records
-  const idx: Record<string, number> = {}
-  header.forEach((h, i) => {
-    idx[h.trim().toLowerCase()] = i
-  })
-  const at = (cols: string[], name: string): string => {
-    const i = idx[name]
-    return i === undefined ? '' : (cols[i] ?? '')
-  }
-  return body.map((cols) => {
-    const mikrotikUsername = orNull(at(cols, 'mikrotik_username'))
-    const connectionType = orNull(at(cols, 'connection_type'))
-    const framedIp = orNull(at(cols, 'framed_ip'))
-    const type = resolveType(connectionType)
-    // Prediksi masalah baris (cermin aturan server): username kosong → dilewati; tipe tak dikenal
-    // atau Static tanpa Framed-IP → gagal. Sisanya siap. Server tetap penegak final.
-    const issue: RowIssue | null = !mikrotikUsername
-      ? { kind: 'skip', reason: 'username kosong' }
-      : type === null
-        ? { kind: 'fail', reason: `tipe '${connectionType}' tak dikenal` }
-        : type === 'static' && !framedIp
-          ? { kind: 'fail', reason: 'Static wajib framed_ip' }
-          : null
-    return {
-      name: orNull(at(cols, 'name')),
-      phone: orNull(at(cols, 'phone')),
-      address: orNull(at(cols, 'address')),
-      packageName: orNull(at(cols, 'package_name')),
-      connectionType,
-      installationDate: normalizeDate(at(cols, 'installation_date')),
-      mikrotikUsername,
-      mikrotikPassword: orNull(at(cols, 'mikrotik_password')),
-      email: orNull(at(cols, 'email')),
-      routerName: orNull(at(cols, 'router_name')),
-      framedIp,
-      idCardNumber: orNull(at(cols, 'id_card_number')),
-      nextBillingDay: toInt(at(cols, 'next_billing')),
-      latitude: toNum(at(cols, 'latitude')),
-      longitude: toNum(at(cols, 'longitude')),
-      issue,
-    }
-  })
-}
-
-/** Unduh Blob teks sebagai berkas di browser. */
-function triggerDownload(blob: Blob, filename: string) {
+function download(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
   URL.revokeObjectURL(url)
 }
 
-/** Template CSV: hanya baris header kanonis (+ BOM agar Excel membaca UTF-8). */
 function downloadTemplate() {
-  const csv = `${CUSTOMER_CSV_COLUMNS.join(',')}\r\n`
-  triggerDownload(new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' }), 'template-pelanggan.csv')
+  download(new Blob([`\uFEFF${CUSTOMER_CSV_COLUMNS.join(',')}\r\n`], { type: 'text/csv;charset=utf-8' }), 'template-pelanggan.csv')
 }
 
 export function ImportCustomersPage() {
   const { can } = useCan()
   const toast = useToast()
   const navigate = useNavigate()
+  const [batch, setBatch] = useState<CustomerImportBatchView | null>(null)
+  const [commitIdentity, setCommitIdentity] = useState<CustomerImportCommitIdentity | null>(null)
+  const [mode, setMode] = useState<ImportMode>('ALREADY_INSTALLED')
+  const [busy, setBusy] = useState(false)
+  const canImport = can('customer.customer.create') && can('customer.customer.update') && can('customer.subscription.update') && can('bng.access.manage')
+  const canCancel = can('customer.customer.update')
 
-  const [fileName, setFileName] = useState('')
-  const [rows, setRows] = useState<PreviewRow[]>([])
-  const [saving, setSaving] = useState(false)
-  const [result, setResult] = useState<ImportCustomersResult | null>(null)
+  useEffect(() => {
+    if (!batch || batch.state !== 'PROCESSING') return
+    let active = true
+    const timeout = window.setTimeout(() => {
+      void customerImportStatus(batch.id)
+        .then((next) => active && setBatch(next))
+        .catch((error) => active && toast.error(error instanceof ApiError ? error.message : 'Gagal memperbarui status impor'))
+    }, 1500)
+    return () => {
+      active = false
+      window.clearTimeout(timeout)
+    }
+  }, [batch, toast])
 
-  const canImport =
-    can('customer.customer.create') &&
-    can('customer.customer.update') &&
-    can('customer.subscription.update') &&
-    can('bng.access.manage')
+  const summary = useMemo(() => batch?.result ?? null, [batch])
 
-  const issueCount = useMemo(() => rows.filter((r) => r.issue).length, [rows])
-  const readyCount = rows.length - issueCount
-
-  const onFile = (file: File) => {
-    setResult(null)
-    void file.text().then((text) => {
-      const parsed = toPreviewRows(parseCsvRecords(text))
-      if (parsed.length === 0) {
-        toast.error('Berkas kosong atau hanya berisi header. Pastikan ada baris data.')
-        setRows([])
-        setFileName('')
-        return
-      }
-      setRows(parsed)
-      setFileName(file.name)
-      toast.success(`${parsed.length} baris terbaca.`)
-    })
+  const stage = async (file: File) => {
+    setBusy(true)
+    try {
+      const next = await stageCustomerImport(file, createOperationKey(), mode)
+      setBatch(next)
+      setCommitIdentity({ commitOperationKey: createOperationKey(), commitHash: next.sha256 })
+      toast.success(next.errors.length === 0 ? 'Berkas disiapkan untuk ditinjau.' : 'Validasi server menemukan baris yang perlu diperbaiki.')
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : 'Gagal mengunggah CSV')
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const submit = async () => {
-    if (rows.length === 0) return
-    setSaving(true)
+  const act = async (action: (id: string) => Promise<CustomerImportBatchView>, success: string) => {
+    if (!batch || busy) return
+    setBusy(true)
     try {
-      // Kirim SEMUA baris (termasuk yang diprediksi bermasalah) agar rekap server jujur & lengkap.
-      const payload: CustomerCsvRow[] = rows.map(({ issue: _issue, ...row }) => row)
-      const res = await importCustomers({ rows: payload })
-      setResult(res)
-      toast.success(
-        `Impor selesai: ${res.created} dibuat, ${res.updated} diperbarui, ${res.skipped} dilewati, ${res.failed} gagal.`,
-      )
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Gagal menjalankan impor')
+      const next = await action(batch.id)
+      setBatch(next)
+      toast.success(success)
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : 'Aksi impor gagal')
     } finally {
-      setSaving(false)
+      setBusy(false)
+    }
+  }
+
+  const promote = async (
+    action: (id: string, identity: CustomerImportCommitIdentity) => Promise<CustomerImportBatchView>,
+    success: string,
+  ) => {
+    if (!batch || !commitIdentity || busy) return
+    setBusy(true)
+    try {
+      const next = await action(batch.id, commitIdentity)
+      setBatch(next)
+      toast.success(success)
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : 'Aksi impor gagal')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const downloadReport = async () => {
+    if (!batch || busy) return
+    setBusy(true)
+    try {
+      download(await downloadCustomerImportReport(batch.id), 'customer-import-report.csv')
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : 'Gagal mengunduh rekap impor')
+    } finally {
+      setBusy(false)
     }
   }
 
   if (!canImport) {
-    return (
-      <div className="card">
-        <EmptyState
-          title="Tak berizin"
-          hint="Anda memerlukan izin untuk membuat dan mengubah pelanggan, langganan, serta akun jaringan."
-          icon={<IconInbox size={32} />}
-        />
-      </div>
-    )
+    return <div className="card"><EmptyState title="Tak berizin" hint="Anda memerlukan izin untuk membuat dan mengubah pelanggan, langganan, serta akun jaringan." icon={<IconInbox size={32} />} /></div>
   }
 
   return (
-    <div className="stack" style={{ gap: '1.25rem' }}>
+    <div className="stack">
       <PageHeader
         title="Impor CSV pelanggan"
-        subtitle={
-          <>
-            Unggah CSV pelanggan. <code>mikrotik_username</code> menjadi kunci: data baru dibuat, data
-            yang ada diperbarui, dan kolom kosong tetap menggunakan nilai sebelumnya.
-          </>
-        }
-        actions={
-          <Button variant="subtle" onClick={() => navigate('/customers')}>
-            Kembali ke Pelanggan
-          </Button>
-        }
+        subtitle="Unggah berkas ke server untuk divalidasi dan ditinjau sebelum perubahan dijalankan. Sistem tidak mengaktifkan atau mengirim perubahan jaringan langsung dari browser."
+        actions={<Button variant="subtle" onClick={() => navigate('/customers')}>Kembali ke Pelanggan</Button>}
       />
 
-      {/* 1. Unggah berkas */}
-      <div className="card stack" style={{ gap: '0.8rem' }}>
-        <div className="spread" style={{ alignItems: 'center' }}>
-          <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>1. Unggah berkas CSV</Text>
-          <Button variant="subtle" size="small" onClick={downloadTemplate}>
-            <IconDownload size={14} /> Unduh template
-          </Button>
+      <div className="card stack">
+        <div className="spread wrap">
+          <Text as="h3" size={400} weight="semibold" style={{ margin: 0 }}>1. Unggah dan validasi server</Text>
+          <Button variant="subtle" size="small" onClick={downloadTemplate}><IconDownload size={14} /> Unduh template</Button>
         </div>
-        <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+        <label>
+          <span>Mode pemenuhan</span>
+          <select value={mode} onChange={(event) => setMode(event.target.value as ImportMode)} disabled={busy || !!batch}>
+            <option value="ALREADY_INSTALLED">Pelanggan sudah terpasang</option>
+            <option value="PENDING_INSTALLATION">Menunggu pemasangan</option>
+            <option value="VALIDATE_ONLY">Validasi saja</option>
+          </select>
+        </label>
+        <div className="row wrap">
           <input
             id="customer-csv-upload"
             type="file"
             accept=".csv,text/csv"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) onFile(f)
-              e.target.value = '' // izinkan mengunggah berkas yang sama lagi
+            disabled={busy || !!batch}
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              if (file) void stage(file)
+              event.target.value = ''
             }}
           />
-          <label
-            htmlFor="customer-csv-upload"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', padding: '0.4rem 0.7rem', borderRadius: 6, border: '1px solid var(--border)' }}
-          >
-            <IconUpload size={14} /> Pilih berkas…
-          </label>
-          {fileName && (
-            <Text as="span" className="muted" size={300}>
-              <code>{fileName}</code> — {rows.length} baris
-            </Text>
-          )}
+          {busy && <Spinner />}
+          {batch && <Text as="span" className="muted" size={200}>Berkas siap untuk ditinjau</Text>}
         </div>
         <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-          Header wajib: {CUSTOMER_CSV_COLUMNS.join(', ')}. Urutan kolom bebas; CSV ekspor dari halaman
-          Pelanggan dapat diunggah kembali.
-        </Text>
-        <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-          <code>connection_type</code>: <code>pppoe</code>, <code>hotspot</code>, <code>dhcp</code>, atau{' '}
-          <code>static</code> (kosong = <code>pppoe</code>). Untuk <code>dhcp</code>/<code>static</code>, isi{' '}
-          <code>mikrotik_username</code> dengan MAC; <code>framed_ip</code> wajib untuk <code>static</code>.
-          <br />
-          <code>installation_date</code>: <code>YYYY-MM-DD</code> atau <code>DD/MM/YYYY</code>.{' '}
-          <code>next_billing</code>: 1–28. <code>mikrotik_password</code> kosong mempertahankan password lama.
+          Header yang dikenali: {CUSTOMER_CSV_COLUMNS.filter((column) => !column.includes('password') && !column.includes('id_card')).join(', ')}. Nilai sensitif dalam berkas tidak ditampilkan kembali oleh halaman ini.
         </Text>
       </div>
 
-      {/* 2. Pratinjau */}
-      {rows.length > 0 && (
-        <div className="card stack" style={{ gap: '0.6rem' }}>
-          <div className="spread" style={{ alignItems: 'center' }}>
-            <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>
-              2. Pratinjau{' '}
-              <Text as="span" className="muted" size={200}>
-                ({readyCount} siap{issueCount > 0 ? `, ${issueCount} bermasalah` : ''})
-              </Text>
-            </Text>
+      {batch && (
+        <div className="card stack" aria-live="polite">
+          <div className="spread wrap">
+            <div className="row wrap"><Text as="h3" size={400} weight="semibold">2. Status batch</Text><Badge tone={BATCH_TONE[batch.state]}>{BATCH_LABEL[batch.state]}</Badge></div>
+            <Button variant="subtle" size="small" onClick={() => void downloadReport()} disabled={busy || batch.state === 'PURGED'}><IconDownload size={14} /> Unduh rekap aman</Button>
           </div>
-          <div style={{ maxHeight: 360, overflow: 'auto' }}>
-            <Table className="table" style={typographyStyles.body1}><TableHeader><TableRow ><TableHeaderCell >Username / MAC</TableHeaderCell>
-            <TableHeaderCell >Nama</TableHeaderCell>
-            <TableHeaderCell >Paket</TableHeaderCell>
-            <TableHeaderCell >Koneksi</TableHeaderCell>
-            <TableHeaderCell >Framed-IP</TableHeaderCell>
-            <TableHeaderCell >Tgl pasang</TableHeaderCell>
-            <TableHeaderCell >Tagih</TableHeaderCell>
-            <TableHeaderCell >Status</TableHeaderCell></TableRow></TableHeader>
-            <TableBody>{rows.map((r, i) => (
-              <TableRow key={i}><TableCell >{r.mikrotikUsername ? <code>{r.mikrotikUsername}</code> : <span className="muted">—</span>}</TableCell>
-              <TableCell >{r.name ?? <span className="muted">—</span>}</TableCell>
-              <TableCell >{r.packageName ?? <span className="muted">—</span>}</TableCell>
-              <TableCell >{r.connectionType ?? <span className="muted">pppoe</span>}</TableCell>
-              <TableCell >{r.framedIp ? <code>{r.framedIp}</code> : <span className="muted">—</span>}</TableCell>
-              <TableCell >{r.installationDate ?? <span className="muted">—</span>}</TableCell>
-              <TableCell >{r.nextBillingDay ?? <span className="muted">—</span>}</TableCell>
-              <TableCell >{r.issue ? (
-                <Badge tone={r.issue.kind === 'fail' ? 'critical' : 'neutral'}>
-                  {r.issue.kind === 'fail' ? 'gagal' : 'dilewati'} · {r.issue.reason}
-                </Badge>
-              ) : (
-                <Badge tone="good">siap</Badge>
-              )}</TableCell></TableRow>
-            ))}</TableBody></Table>
+          <Text as="p" className="muted" size={200} style={{ margin: 0 }}>Mode: {modeLabel(batch.mode)}. Validasi dan hasil akhir ditetapkan server.</Text>
+          <BatchSummary result={summary} />
+          {batch.errors.length > 0 && <BatchErrors errors={batch.errors} />}
+          <div className="row wrap">
+            <Button variant="primary" onClick={() => void promote(commitCustomerImport, 'Batch dikirim untuk diproses.')} disabled={busy || batch.state !== 'STAGED' || batch.errors.length > 0}>Jalankan impor</Button>
+            <Button variant="danger" onClick={() => void act(cancelCustomerImport, 'Batch dibatalkan.')} disabled={busy || !canCancel || batch.state !== 'STAGED'}>Batalkan batch</Button>
+            <Button variant="default" onClick={() => void promote(retryCustomerImport, 'Batch dikirim ulang.')} disabled={busy || batch.state !== 'RETRYABLE_FAILED'}>Ulangi batch</Button>
+            {batch.state === 'CANCELLED' && <Button variant="subtle" onClick={() => setBatch(null)}>Unggah berkas lain</Button>}
+            {(batch.state === 'PERMANENT_FAILED' || batch.state === 'PURGED') && <Button variant="subtle" onClick={() => setBatch(null)}>Unggah berkas baru</Button>}
           </div>
-          {issueCount > 0 && (
-            <Text as="p" className="muted" size={200} style={{ margin: 0 }}>
-              {issueCount} baris perlu perhatian: Username kosong dilewati; tipe tidak dikenal atau
-              <code>static</code> tanpa <code>framed_ip</code> gagal. Rekap server menjadi hasil akhir.
-            </Text>
-          )}
+          {batch.state === 'RETRYABLE_FAILED' && <Text as="p" className="muted" size={200} style={{ margin: 0 }}>Pemrosesan dapat diulangi dengan identitas commit yang sama.</Text>}
+          {batch.state === 'PERMANENT_FAILED' && <Text as="p" className="muted" size={200} style={{ margin: 0 }}>Batch tidak dapat diulangi. Perbaiki sumber data lalu unggah berkas baru.</Text>}
+          {batch.state === 'PURGED' && <Text as="p" className="muted" size={200} style={{ margin: 0 }}>Data batch telah melewati retensi dan tidak lagi tersedia.</Text>}
         </div>
       )}
-
-      {/* 3. Commit */}
-      {rows.length > 0 && (
-        <div className="row" style={{ gap: '0.5rem' }}>
-          <Button variant="primary" onClick={() => void submit()} disabled={saving || readyCount === 0}>
-            <IconInbox size={15} /> {saving ? 'Mengimpor…' : `Impor ${readyCount} baris`}
-          </Button>
-          <Text as="span" className="muted" size={200} style={{ alignSelf: 'center' }}>
-            Data baru langsung aktif dan dikirim ke RADIUS.
-          </Text>
-        </div>
-      )}
-
-      {result && <ResultCard result={result} onDismiss={() => setResult(null)} />}
     </div>
   )
 }
 
-const STATUS_TONE: Record<CustomerImportStatus, 'good' | 'accent' | 'neutral' | 'critical'> = {
-  CREATED: 'good',
-  UPDATED: 'accent',
-  SKIPPED: 'neutral',
-  FAILED: 'critical',
+function modeLabel(mode: ImportMode): string {
+  const labels: Record<ImportMode, string> = {
+    ALREADY_INSTALLED: 'Pelanggan sudah terpasang',
+    PENDING_INSTALLATION: 'Menunggu pemasangan',
+    VALIDATE_ONLY: 'Validasi saja',
+  }
+  return labels[mode]
 }
 
-/** Rekap hasil impor + rincian per-baris (username, status, pesan). */
-function ResultCard({ result, onDismiss }: { result: ImportCustomersResult; onDismiss: () => void }) {
+function BatchSummary({ result }: { result: CustomerImportBatchView['result'] }) {
+  if (!result) return null
+  return <div className="row wrap"><Badge tone="good">{result.created} dibuat</Badge><Badge tone="accent">{result.updated} diperbarui</Badge><Badge tone="neutral">{result.skipped} dilewati</Badge><Badge tone="critical">{result.failed} gagal</Badge></div>
+}
+
+function BatchErrors({ errors }: { errors: CustomerImportBatchView['errors'] }) {
   return (
-    <div className="card stack" style={{ gap: '0.6rem', borderLeft: '3px solid var(--good)' }}>
-      <div className="spread" style={{ alignItems: 'center' }}>
-        <Text as="h3" weight="semibold" size={300} style={{ margin: 0 }}>
-          Hasil impor — <Badge tone="good">{result.created} dibuat</Badge>{' '}
-          <Badge tone="accent">{result.updated} diperbarui</Badge>{' '}
-          <Badge tone="neutral">{result.skipped} dilewati</Badge>{' '}
-          {result.failed > 0 && <Badge tone="critical">{result.failed} gagal</Badge>}
-        </Text>
-        <Button variant="subtle" onClick={onDismiss}>
-          Tutup
-        </Button>
-      </div>
-      <div style={{ maxHeight: 360, overflow: 'auto' }}>
-        <Table className="table" style={typographyStyles.body1}><TableHeader><TableRow ><TableHeaderCell >Username</TableHeaderCell>
-        <TableHeaderCell >Status</TableHeaderCell>
-        <TableHeaderCell >Keterangan</TableHeaderCell></TableRow></TableHeader>
-        <TableBody>{result.rows.map((r, i) => (
-          <TableRow key={i}><TableCell >{r.username ? <code>{r.username}</code> : <span className="muted">—</span>}</TableCell>
-          <TableCell ><Badge tone={STATUS_TONE[r.status]}>{r.status}</Badge></TableCell>
-          <TableCell >{r.message ?? <span className="muted">—</span>}</TableCell></TableRow>
-        ))}</TableBody></Table>
-      </div>
+    <div className="table-wrap">
+      <Table style={typographyStyles.body1} aria-label="Galat validasi CSV">
+        <TableHeader><TableRow><TableHeaderCell>Baris</TableHeaderCell><TableHeaderCell>Kolom</TableHeaderCell><TableHeaderCell>Kode</TableHeaderCell></TableRow></TableHeader>
+        <TableBody>{errors.map((error, index) => <TableRow key={`${error.row}-${error.column}-${index}`}><TableCell>{error.row}</TableCell><TableCell>{error.column ?? 'Berkas'}</TableCell><TableCell><Badge tone="critical">{error.code}</Badge></TableCell></TableRow>)}</TableBody>
+      </Table>
     </div>
   )
 }

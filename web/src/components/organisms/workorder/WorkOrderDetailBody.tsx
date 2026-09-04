@@ -36,6 +36,7 @@ import {
 } from '@/utils/woLabels'
 import { AssigneeChips, WoField } from './views'
 import { WorkOrderFiberWork } from './WorkOrderFiberWork'
+import { ProofOfWorkCompletion } from './ProofOfWorkCompletion'
 
 /** Detail + aksi lifecycle. Tombol yang muncul mengikuti status & izin. */
 export function WorkOrderDetailBody({
@@ -177,12 +178,7 @@ export function WorkOrderDetailBody({
               value={note}
               onChange={(_, data) => setNote(data.value)}
             />
-            <Button
-              variant="primary"
-              onClick={() => onAct(() => api.post(`/api/work-orders/${id}/complete`, { resolutionNote: note.trim() || null }), 'Work order selesai', true)}
-            >
-              Selesaikan
-            </Button>
+            <ProofOfWorkCompletion workOrderId={id} type={wo.type} note={note} onAct={onAct} />
           </section>
         )}
 

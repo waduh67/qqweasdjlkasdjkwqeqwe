@@ -7,6 +7,7 @@ import com.duluin.ftth.customer.CustomerPlacement
 import com.duluin.ftth.customer.CustomerRef
 import com.duluin.ftth.customer.SubscriptionRef
 import com.duluin.ftth.workorder.WorkOrderRef
+import com.duluin.ftth.inventory.CustomerMaterialFactRef
 import java.util.UUID
 
 /**
@@ -48,6 +49,7 @@ data class Subscriber360View(
     val cpeDevices: List<CpeDeviceStatusRef>?,
     /** Work order pasang-baru yang masih terbuka; null bila tak ada ATAU izin `workorder.order.view` tak ada. */
     val openWorkOrder: WorkOrderRef?,
+    val materialHistory: List<CustomerMaterialFactRef>? = null,
     val access: Subscriber360Access,
 )
 
@@ -62,4 +64,5 @@ data class Subscriber360Access(
     val billing: Boolean,
     val cpe: Boolean,
     val workOrder: Boolean,
+    val materialHistory: Boolean = false,
 )

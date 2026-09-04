@@ -15,6 +15,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { PlatformDashboardPage } from './pages/PlatformDashboardPage'
 import { PlatformJobsPage } from './pages/PlatformJobsPage'
 import { InventoryPage } from './pages/InventoryPage'
+import { WarehouseOperationsPage } from './pages/WarehouseOperationsPage'
 import { OltDetailPage } from './pages/OltDetailPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { InvoicesPage } from './pages/InvoicesPage'
@@ -191,6 +192,14 @@ function OperatorApp() {
               element={
                 <RequirePermission permission="network.odp.view">
                   <InventoryPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="warehouse"
+              element={
+                <RequirePermission permission="inventory.item.view">
+                  <WarehouseOperationsPage />
                 </RequirePermission>
               }
             />
