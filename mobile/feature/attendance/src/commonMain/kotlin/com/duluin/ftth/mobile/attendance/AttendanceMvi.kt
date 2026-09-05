@@ -15,10 +15,9 @@ import com.duluin.ftth.mobile.mvi.MviEffect
 import com.duluin.ftth.mobile.mvi.MviIntent
 import com.duluin.ftth.mobile.mvi.MviReducer
 import com.duluin.ftth.mobile.mvi.MviState
-import com.duluin.ftth.mobile.mvi.MviStore
+import com.duluin.ftth.mobile.mvi.MviViewModel
 import com.duluin.ftth.mobile.mvi.MviTransition
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
 sealed interface AttendanceStatus {
@@ -116,29 +115,16 @@ class AttendanceFeature(
     }
 }
 
-class AttendanceStore(
+class AttendanceViewModel(
     feature: AttendanceFeature,
     permissions: Set<Permission>,
-    parentScope: CoroutineScope,
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
-) : AutoCloseable {
-    private val delegate: MviStore<AttendanceUiState, AttendanceIntent, AttendanceAction, AttendanceEffect>
-
-    init {
-        delegate = MviStore(
+) : MviViewModel<AttendanceUiState, AttendanceIntent, AttendanceAction, AttendanceEffect>(
             initialState = AttendanceUiState(permissions = permissions),
             reducer = AttendanceReducer(),
-            parentScope = parentScope,
-            dispatcher = dispatcher,
-            actionHandler = { action -> when (action) {
+            stateActionHandler = { currentState, action -> when (action) {
                 AttendanceAction.Load -> feature.load()
-                is AttendanceAction.Submit -> feature.submit(action.operation, delegate.state.value)
+                is AttendanceAction.Submit -> feature.submit(action.operation, currentState)
             } },
-        )
-    }
-
-    val state = delegate.state
-    val effects = delegate.effects
-    suspend fun dispatch(intent: AttendanceIntent) = delegate.dispatch(intent)
-    override fun close() = delegate.close()
-}
+            dispatcher = dispatcher,
+)
