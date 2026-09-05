@@ -23,4 +23,8 @@ class EvidenceObjectRegistryJpaEntity(
     @Column(name = "retention_class", nullable = false, length = 40, updatable = false) var retentionClass: String,
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) var state: EvidenceRevisionState,
     @Column(length = 200) var etag: String?,
+    @Column(name = "purge_state", nullable = false, length = 20) var purgeState: String = "ACTIVE",
+    @Column(name = "purge_claim_id") var purgeClaimId: UUID? = null,
+    @Column(name = "purge_claimed_at") var purgeClaimedAt: Instant? = null,
+    @jakarta.persistence.Version @Column(name = "row_version", nullable = false) var rowVersion: Long = 0,
 ) : TenantAwareJpaEntity(id)
