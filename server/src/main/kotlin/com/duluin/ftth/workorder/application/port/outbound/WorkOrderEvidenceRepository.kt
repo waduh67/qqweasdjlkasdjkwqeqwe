@@ -11,6 +11,8 @@ interface WorkOrderEvidenceRepository {
 
     fun findById(id: UUID): WorkOrderEvidence?
 
+    fun findVisibleById(id: UUID): WorkOrderEvidence?
+
     /** Bukti sebuah work order, terlama lebih dulu. */
     fun listByWorkOrder(workOrderId: UUID): List<WorkOrderEvidence>
 

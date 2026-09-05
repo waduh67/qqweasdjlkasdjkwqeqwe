@@ -13,6 +13,8 @@ import com.duluin.ftth.workorder.application.port.inbound.CaptureSignatureComman
 import com.duluin.ftth.workorder.application.port.inbound.DownloadedContent
 import com.duluin.ftth.workorder.application.port.inbound.EvidenceView
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderEvidenceUseCase
+import com.duluin.ftth.workorder.application.port.inbound.ProofOfWorkView
+import com.duluin.ftth.workorder.application.port.inbound.ProofArtifactRevisionView
 import com.duluin.ftth.workorder.application.port.inbound.SignatureView
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderEvidenceQuery
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderEvidenceRepository
@@ -24,6 +26,7 @@ import com.duluin.ftth.workorder.domain.model.WorkOrderEvidence
 import com.duluin.ftth.workorder.domain.model.WorkOrderSignature
 import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
 import com.duluin.ftth.workorder.domain.model.EvidenceRevisionState
+import com.duluin.ftth.workorder.domain.model.ProofArtifactCompatibility
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -85,7 +88,9 @@ class WorkOrderEvidenceService(
 
     @Transactional
     override fun removePhoto(workOrderId: UUID, evidenceId: UUID) {
-        val photo = evidence.findById(evidenceId)?.takeIf { it.workOrderId == workOrderId }
+        val photo = evidence.findById(evidenceId)?.takeIf {
+            it.workOrderId == workOrderId && it.revisionState == EvidenceRevisionState.COMMITTED
+        }
             ?: throw NotFoundException("Bukti $evidenceId tidak ditemukan pada work order $workOrderId")
         val workOrder = require(workOrderId)
         requireFieldAccess(workOrder)
@@ -156,10 +161,28 @@ class WorkOrderEvidenceService(
         return signatures.findByWorkOrder(workOrderId)?.let { it.toView(uploaderName(it.signedBy)) }
     }
 
+    override fun proofOfWork(workOrderId: UUID): ProofOfWorkView {
+        val workOrder = require(workOrderId)
+        requireReadAccess(workOrder)
+        val artifacts = evidence.listByWorkOrder(workOrderId).mapNotNull { item ->
+            ProofArtifactCompatibility.fromEvidence(item.kind)?.let { kind ->
+                ProofArtifactRevisionView(kind, item.id, item.caption ?: kind.name)
+            }
+        }.toMutableList()
+        signatures.findByWorkOrder(workOrderId)?.let { signature ->
+            artifacts += ProofArtifactRevisionView(
+                ProofArtifactCompatibility.customerSignature,
+                signature.id,
+                signature.signerName,
+            )
+        }
+        return ProofOfWorkView(proofRevision(artifacts.mapTo(LinkedHashSet()) { it.revisionId }), artifacts)
+    }
+
     override fun downloadPhoto(workOrderId: UUID, evidenceId: UUID): DownloadedContent {
         val workOrder = require(workOrderId)
         requireReadAccess(workOrder)
-        val photo = evidence.findById(evidenceId)?.takeIf { it.workOrderId == workOrderId }
+        val photo = evidence.findVisibleById(evidenceId)?.takeIf { it.workOrderId == workOrderId }
             ?: throw NotFoundException("Bukti $evidenceId tidak ditemukan pada work order $workOrderId")
         val stored = storage.get(photo.storageKey)
         verifyHash(photo.sha256, stored.bytes)
@@ -286,7 +309,7 @@ class WorkOrderEvidenceService(
     )
 
     private fun WorkOrderEvidence.toView(uploadedByName: String?) = EvidenceView(
-        id = id,
+        revisionId = id,
         workOrderId = workOrderId,
         kind = kind.name,
         caption = caption,
@@ -301,7 +324,7 @@ class WorkOrderEvidenceService(
     )
 
     private fun WorkOrderSignature.toView(signedByName: String?) = SignatureView(
-        id = id,
+        revisionId = id,
         workOrderId = workOrderId,
         signerName = signerName,
         contentType = contentType,
@@ -315,5 +338,9 @@ class WorkOrderEvidenceService(
     private companion object {
         /** Batas per berkas bukti; sepadan dengan foto ponsel. */
         const val MAX_BYTES = 15L * 1024 * 1024
+
+        fun proofRevision(revisionIds: Set<UUID>): String = MessageDigest.getInstance("SHA-256")
+            .digest(revisionIds.sortedBy { it.toString() }.joinToString("|").toByteArray())
+            .joinToString("") { "%02x".format(it) }
     }
 }
