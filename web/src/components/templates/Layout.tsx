@@ -87,6 +87,7 @@ const GROUPS: NavGroup[] = [
       // cuma punya `order.view`+`order.field`) tak melihatnya, hanya "Tugas Saya" di bawah.
       { to: '/work-orders', label: 'Work Order', permission: 'workorder.dashboard.view', icon: IconWorkOrder },
       { to: '/my-work-orders', label: 'Tugas Saya', permission: 'workorder.order.field', icon: IconInbox },
+      { to: '/my-visits', label: 'Kunjungan Saya', permission: 'workorder.order.field', icon: IconWorkOrder },
     ],
   },
   {

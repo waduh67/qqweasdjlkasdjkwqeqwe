@@ -29,6 +29,7 @@ import { IncidentsPage } from './pages/IncidentsPage'
 import { HelpdeskPage } from './pages/HelpdeskPage'
 import { WorkOrdersPage } from './pages/WorkOrdersPage'
 import { MyWorkOrdersPage } from './pages/MyWorkOrdersPage'
+import { MyVisitsPage } from './pages/MyVisitsPage'
 import { WorkOrderDetailPage } from './pages/WorkOrderDetailPage'
 import { CatalogPage } from './pages/CatalogPage'
 import { AcsPage } from './pages/AcsPage'
@@ -361,6 +362,7 @@ function OperatorApp() {
                 </RequirePermission>
               }
             />
+            <Route path="my-visits" element={<RequirePermission permission="workorder.order.field"><MyVisitsPage /></RequirePermission>} />
             <Route
               path="my-work-orders/:id"
               element={

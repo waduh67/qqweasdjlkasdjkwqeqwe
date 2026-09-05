@@ -67,6 +67,15 @@ export const APPROVAL_TONE: Record<WorkOrderApprovalStatus, 'warning' | 'good' |
 }
 
 export const KIND_LABEL: Record<EvidenceKind, string> = {
+  FAT: 'FAT',
+  ODP: 'ODP',
+  DROPCORE: 'Dropcore',
+  ONT: 'ONT',
+  ONU: 'ONU',
+  OPTICAL_BEFORE: 'Optik sebelum',
+  OPTICAL_AFTER: 'Optik sesudah',
+  TECHNICIAN_SIGNATURE: 'Tanda tangan teknisi',
+  CUSTOMER_ACKNOWLEDGEMENT: 'Persetujuan pelanggan',
   BEFORE: 'Sebelum',
   AFTER: 'Sesudah',
   LOCATION: 'Lokasi',
