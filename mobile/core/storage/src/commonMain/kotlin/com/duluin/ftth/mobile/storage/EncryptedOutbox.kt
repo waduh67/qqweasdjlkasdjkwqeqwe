@@ -22,13 +22,19 @@ interface OutboxCipher {
 }
 
 class OutboxDecryptionException : IllegalStateException()
+class OutboxUserScopeException : IllegalStateException()
 
-class EncryptedOutbox(private val records: SecureOutboxRecords, private val cipher: OutboxCipher) : SecureOutboxPort {
+class EncryptedOutbox(
+    private val records: SecureOutboxRecords,
+    private val cipher: OutboxCipher,
+    private val boundUserId: String? = null,
+) : SecureOutboxPort {
     override fun enqueue(operation: OutboxOperation): EnqueueResult = EnqueueResult.Conflict
 
     override fun enqueueSecure(operation: SecureOutboxOperation): EnqueueResult {
-        val identity = "${operation.namespace}:${operation.key}"
-        val existing = records.entries().firstOrNull { "${it.operation.namespace}:${it.operation.key}" == identity }
+        if (boundUserId != null && operation.userId != boundUserId) return EnqueueResult.Conflict
+        val identity = identity(operation)
+        val existing = scopedEntries().firstOrNull { identity(it.operation) == identity }
         return when {
             existing == null -> {
                 records.write(SecureOutboxRecord(operation.copy(payload = byteArrayOf()), cipher.encrypt(operation.payload), retries = 0))
@@ -39,13 +45,23 @@ class EncryptedOutbox(private val records: SecureOutboxRecords, private val ciph
         }
     }
 
-    override fun retry(key: String): Boolean = records.retry(key)
-    override fun purge(userId: String) = records.delete(userId)
+    override fun retry(key: String): Boolean {
+        if (boundUserId != null && key.substringBefore(':') != boundUserId) return false
+        return records.retry(key)
+    }
+
+    override fun purge(userId: String) {
+        if (boundUserId != null && userId != boundUserId) throw OutboxUserScopeException()
+        records.delete(userId)
+    }
     override fun status(): OutboxStatus {
-        val entries = records.entries()
+        val entries = scopedEntries()
         entries.forEach { record ->
             cipher.decrypt(record.payload)
         }
         return OutboxStatus(entries.size, 0, encryptedAtRest = true)
     }
+
+    private fun identity(operation: SecureOutboxOperation) = "${operation.userId}:${operation.namespace}:${operation.key}"
+    private fun scopedEntries() = records.entries().filter { boundUserId == null || it.operation.userId == boundUserId }
 }
