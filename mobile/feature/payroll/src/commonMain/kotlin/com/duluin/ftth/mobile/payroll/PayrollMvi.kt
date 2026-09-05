@@ -9,10 +9,9 @@ import com.duluin.ftth.mobile.mvi.MviEffect
 import com.duluin.ftth.mobile.mvi.MviIntent
 import com.duluin.ftth.mobile.mvi.MviReducer
 import com.duluin.ftth.mobile.mvi.MviState
-import com.duluin.ftth.mobile.mvi.MviStore
+import com.duluin.ftth.mobile.mvi.MviViewModel
 import com.duluin.ftth.mobile.mvi.MviTransition
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
 sealed interface PayrollStatus {
@@ -58,16 +57,9 @@ class PayrollFeature(private val payslips: SecurePayslipPort) {
     )
 }
 
-class PayrollStore(feature: PayrollFeature, permissions: Set<Permission>, parentScope: CoroutineScope, dispatcher: CoroutineDispatcher = Dispatchers.Default) : AutoCloseable {
-    private val delegate = MviStore(
+class PayrollViewModel(feature: PayrollFeature, permissions: Set<Permission>, dispatcher: CoroutineDispatcher = Dispatchers.Default) : MviViewModel<PayrollUiState, PayrollIntent, LoadPayroll, PayrollEffect>(
         initialState = PayrollUiState(permissions = permissions),
         reducer = PayrollReducer(),
-        parentScope = parentScope,
         dispatcher = dispatcher,
         actionHandler = { feature.load() },
     )
-
-    val state = delegate.state
-    suspend fun dispatch(intent: PayrollIntent) = delegate.dispatch(intent)
-    override fun close() = delegate.close()
-}
