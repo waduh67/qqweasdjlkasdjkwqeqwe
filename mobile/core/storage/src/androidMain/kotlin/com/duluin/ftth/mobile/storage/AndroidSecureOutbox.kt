@@ -12,9 +12,10 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.spec.GCMParameterSpec
 
-class AndroidSecureOutbox(context: Context) : SecureOutboxPort by EncryptedOutbox(
+class AndroidSecureOutbox(context: Context, userId: String) : SecureOutboxPort by EncryptedOutbox(
     AndroidOutboxRecords(context.applicationContext),
     AndroidKeystoreCipher(),
+    userId,
 )
 
 private class AndroidKeystoreCipher : OutboxCipher {
@@ -54,7 +55,7 @@ private class AndroidOutboxRecords(context: Context) : SecureOutboxRecords {
     override fun delete(userId: String) { preferences.edit().also { editor -> entries().filter { it.operation.userId == userId }.forEach { editor.remove(id(it)) } }.commit() }
     override fun retry(key: String): Boolean = entries().firstOrNull { id(it) == key }?.let { write(it.copy(retries = it.retries + 1)); true } ?: false
 
-    private fun id(record: SecureOutboxRecord) = "${record.operation.namespace}:${record.operation.key}"
+    private fun id(record: SecureOutboxRecord) = "${record.operation.userId}:${record.operation.namespace}:${record.operation.key}"
     private fun encode(record: SecureOutboxRecord): String = listOf(record.operation.userId, record.operation.deviceId, record.operation.sessionId, record.operation.namespace, record.operation.key, record.operation.payloadHash, record.operation.revision.toString(), record.retries.toString(), record.payload.keyVersion, Base64.getEncoder().encodeToString(record.payload.bytes)).joinToString(".") { Base64.getEncoder().encodeToString(it.encodeToByteArray()) }
     private fun decode(value: String): SecureOutboxRecord? = try {
         val fields = value.split('.').map { Base64.getDecoder().decode(it).decodeToString() }
