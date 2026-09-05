@@ -101,6 +101,34 @@ class CustomerCsvTest {
     }
 
     @Test
+    fun `angka negatif tetap numerik sementara formula tetap diprefix apostrof`() {
+        val csv = CustomerCsv.render(
+            listOf(
+                CustomerExportLine(
+                    name = "=2+2",
+                    phone = "+62812",
+                    address = "@formula",
+                    packageName = "-cmd",
+                    connectionType = "pppoe",
+                    installationDate = null,
+                    mikrotikUsername = " \t=1+1",
+                    email = "-1+2",
+                    routerName = null,
+                    idCardNumber = null,
+                    nextBillingDay = -6,
+                    latitude = -6.0,
+                    longitude = -6.2,
+                ),
+            ),
+        )
+
+        assertThat(csv.split("\r\n")[1].split(",")).containsExactly(
+            "'=2+2", "'+62812", "'@formula", "'-cmd", "pppoe", "", "' \t=1+1", "",
+            "'-1+2", "", "", "", "-6", "-6.0", "-6.2", "",
+        )
+    }
+
+    @Test
     fun `tanpa baris hanya menghasilkan header`() {
         val csv = CustomerCsv.render(emptyList())
         assertThat(csv).isEqualTo(header + "\r\n")

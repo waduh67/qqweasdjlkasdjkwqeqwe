@@ -133,7 +133,7 @@ class CustomerImportBatchService(
         if (byFile != null) return view(byFile)
         val entity = CustomerImportBatchJpaEntity().apply {
             this.operationKey = operationKey; sha256 = parsed.sha256; this.mode = mode.name; state = CustomerImportBatchState.STAGED
-            objectKey = "customer-import/${parsed.sha256}"; rowCount = parsed.rows.size; schemaVersion = 1; importType = "CUSTOMERS_CSV"; retentionUntil = Instant.now().plus(Duration.ofDays(90))
+            objectKey = "customer-import/${parsed.sha256}"; rowCount = parsed.rows.size; schemaVersion = 1; importType = "CUSTOMERS_CSV"; retentionUntil = Instant.now().plus(Duration.ofDays(30))
         }
         try { batches.saveAndFlush(entity) } catch (ex: DataIntegrityViolationException) {
             val concurrentOperation = batches.findByOperationKey(operationKey)

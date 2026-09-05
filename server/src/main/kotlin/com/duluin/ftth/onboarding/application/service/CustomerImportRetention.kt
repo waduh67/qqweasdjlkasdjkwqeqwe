@@ -34,7 +34,7 @@ class CustomerImportRetentionWorker(
     private val credentials: CustomerImportCredentialVault,
 ) {
     @Transactional
-    fun purgeExpired(retention: Duration = Duration.ofDays(90)) {
+    fun purgeExpired(retention: Duration = Duration.ofDays(30)) {
         val cutoff = Instant.now().minus(retention)
         batches.findAllByRetentionUntilBeforeAndLegalHoldFalse(cutoff).forEach { batch ->
             val credentialHandles = staging.findAllByBatchIdOrderByRowNumber(batch.id).mapNotNull { it.credentialHandleId }
