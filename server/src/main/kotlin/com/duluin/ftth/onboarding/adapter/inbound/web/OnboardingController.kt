@@ -165,6 +165,8 @@ class OnboardingController(
  */
 internal object CustomerCsv {
 
+    private val negativeNumber = Regex("-\\d+(?:\\.\\d+)?")
+
     /** Urutan kolom = template impor. Diubah = klien impor/ekspor harus ikut disesuaikan. */
     private val HEADER = listOf(
         "name", "phone", "address", "package_name", "connection_type", "installation_date",
@@ -202,7 +204,7 @@ internal object CustomerCsv {
 
     /** Escaping RFC-4180: bungkus tanda kutip bila mengandung koma/kutip/baris-baru; kutip digandakan. */
     private fun escape(value: String): String =
-        if (value.firstOrNull() in setOf('=', '+', '-', '@')) {
+        if (value.trimStart().firstOrNull() in setOf('=', '+', '-', '@') && !negativeNumber.matches(value.trim())) {
             escape("'$value")
         } else if (value.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) {
             "\"" + value.replace("\"", "\"\"") + "\""

@@ -208,7 +208,7 @@ data class AssignRequest(
 
 data class CompleteRequest(
     @field:Size(max = 2000) val resolutionNote: String?,
-    @field:NotNull val proofRevision: Int?,
+    @field:NotBlank val proofRevision: String?,
     @field:NotNull val artifacts: List<ProofArtifactRequest>?,
 ) {
     fun toPacket() = ProofOfWorkPacket(proofRevision!!, artifacts!!.map { it.toDomain() }.toSet())
@@ -217,10 +217,8 @@ data class CompleteRequest(
 data class ProofArtifactRequest(
     @field:NotNull val kind: ProofArtifactKind?,
     @field:NotNull val revisionId: UUID?,
-    val revisionState: EvidenceRevisionState = EvidenceRevisionState.COMMITTED,
-    val correctionReason: String?,
 ) {
-    fun toDomain() = ProofArtifactRef(kind!!, revisionId!!, revisionState, correctionReason)
+    fun toDomain() = ProofArtifactRef(kind!!, revisionId!!)
 }
 
 data class CancelRequest(

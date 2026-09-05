@@ -5,6 +5,7 @@ import com.duluin.ftth.workorder.application.port.inbound.AttachEvidenceCommand
 import com.duluin.ftth.workorder.application.port.inbound.CaptureSignatureCommand
 import com.duluin.ftth.workorder.application.port.inbound.EvidenceView
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderEvidenceUseCase
+import com.duluin.ftth.workorder.application.port.inbound.ProofOfWorkView
 import com.duluin.ftth.workorder.application.port.inbound.SignatureView
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderEvidenceQuery
 import com.duluin.ftth.workorder.domain.model.EvidenceKind
@@ -92,6 +93,10 @@ class WorkOrderEvidenceController(
     @PreAuthorize("@authz.canAny('workorder.evidence.view','workorder.order.field')")
     fun signature(@PathVariable workOrderId: UUID): ResponseEntity<SignatureView> =
         query.getSignature(workOrderId)?.let { ResponseEntity.ok(it) } ?: ResponseEntity.noContent().build()
+
+    @GetMapping("/proof-of-work")
+    @PreAuthorize("@authz.canAny('workorder.evidence.view','workorder.order.field')")
+    fun proofOfWork(@PathVariable workOrderId: UUID): ProofOfWorkView = query.proofOfWork(workOrderId)
 
     @PutMapping("/signature", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     @PreAuthorize("@authz.canAny('workorder.evidence.manage','workorder.order.field')")
