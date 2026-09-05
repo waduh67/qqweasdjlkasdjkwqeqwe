@@ -1,22 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Text } from '@fluentui/react-components'
 import { api, ApiError } from '@/api/client'
-import type { EvidenceView, SignatureView, WorkOrderType } from '@/api/workorder'
+import type { ProofArtifactKind, ProofOfWorkView, WorkOrderType } from '@/api/workorder'
 import { Button, SelectField, SkeletonRows } from '@/components/atoms'
 import { useToast } from '@/system'
 import type { ActFn } from '@/utils/woLabels'
-
-type ProofArtifactKind =
-  | 'FAT'
-  | 'ODP'
-  | 'DROPCORE'
-  | 'ONT'
-  | 'ONU'
-  | 'OPTICAL_BEFORE'
-  | 'OPTICAL_AFTER'
-  | 'TECHNICIAN_SIGNATURE'
-  | 'CUSTOMER_ACKNOWLEDGEMENT'
-  | 'LOCATION'
 
 type ProofSelection = Record<ProofArtifactKind, string>
 
@@ -41,22 +29,14 @@ const LABEL: Record<ProofArtifactKind, string> = {
   LOCATION: 'Lokasi',
 }
 
-type EvidenceOption = { readonly id: string; readonly label: string }
-
 export function ProofOfWorkCompletion({ workOrderId, type, note, onAct }: { workOrderId: string; type: WorkOrderType; note: string; onAct: ActFn }) {
   const toast = useToast()
-  const [photos, setPhotos] = useState<readonly EvidenceView[] | null>(null)
-  const [signature, setSignature] = useState<SignatureView | null>(null)
+  const [proof, setProof] = useState<ProofOfWorkView | null>(null)
   const [selection, setSelection] = useState<Partial<ProofSelection>>({})
 
   const load = useCallback(async () => {
     try {
-      const [evidence, signed] = await Promise.all([
-        api.get<EvidenceView[]>(`/api/work-orders/${workOrderId}/evidence`),
-        api.get<SignatureView | undefined>(`/api/work-orders/${workOrderId}/signature`),
-      ])
-      setPhotos(evidence)
-      setSignature(signed ?? null)
+      setProof(await api.get<ProofOfWorkView>(`/api/work-orders/${workOrderId}/proof-of-work`))
     } catch (caught) {
       toast.error(caught instanceof ApiError ? caught.message : 'Gagal memuat bukti Proof of Work')
     }
@@ -66,14 +46,10 @@ export function ProofOfWorkCompletion({ workOrderId, type, note, onAct }: { work
     void load()
   }, [load])
 
-  const options = useMemo<readonly EvidenceOption[]>(() => [
-    ...(photos ?? []).map((photo) => ({ id: photo.id, label: `${photo.kind} · ${photo.caption ?? 'Bukti foto'}` })),
-    ...(signature ? [{ id: signature.id, label: `Tanda tangan · ${signature.signerName}` }] : []),
-  ], [photos, signature])
   const required = REQUIRED[type]
-  const complete = required.every((kind) => selection[kind])
+  const complete = proof !== null && required.every((kind) => selection[kind])
 
-  if (photos === null) return <SkeletonRows rows={3} />
+  if (proof === null) return <SkeletonRows rows={3} />
 
   return (
     <section className="stack" style={{ gap: '0.6rem' }}>
@@ -81,7 +57,7 @@ export function ProofOfWorkCompletion({ workOrderId, type, note, onAct }: { work
         <Text as="h3" size={300} weight="semibold">Proof of Work</Text>
         <Text as="p" className="muted" size={200} style={{ margin: 0 }}>Hubungkan setiap bukti wajib dengan revisi bukti yang sudah diunggah.</Text>
       </div>
-      {options.length === 0 ? (
+      {proof.artifacts.length === 0 ? (
         <Text as="p" className="muted" size={200} style={{ margin: 0 }}>Unggah bukti dan tanda tangan sebelum menyelesaikan pekerjaan.</Text>
       ) : (
         <div className="stack" style={{ gap: '0.5rem' }}>
@@ -93,7 +69,12 @@ export function ProofOfWorkCompletion({ workOrderId, type, note, onAct }: { work
               onChange={(_, data) => setSelection((current) => ({ ...current, [kind]: data.value }))}
             >
               <option value="">Pilih bukti</option>
-              {options.map((option) => <option key={`${kind}:${option.id}`} value={option.id}>{option.label}</option>)}
+              {proof.artifacts
+                .filter((artifact) => artifact.kind === kind)
+                .map((artifact) => {
+                  const usedByOtherKind = Object.entries(selection).some(([selectedKind, revisionId]) => selectedKind !== kind && revisionId === artifact.revisionId)
+                  return <option disabled={usedByOtherKind} key={`${kind}:${artifact.revisionId}`} value={artifact.revisionId}>{artifact.label}</option>
+                })}
             </SelectField>
           ))}
         </div>
@@ -104,8 +85,8 @@ export function ProofOfWorkCompletion({ workOrderId, type, note, onAct }: { work
         onClick={() => onAct(
           () => api.post(`/api/work-orders/${workOrderId}/complete`, {
             resolutionNote: note.trim() || null,
-            proofRevision: 1,
-            artifacts: required.map((kind) => ({ kind, revisionId: selection[kind], revisionState: 'COMMITTED', correctionReason: null })),
+            proofRevision: proof?.revision,
+            artifacts: required.map((kind) => ({ kind, revisionId: selection[kind] })),
           }),
           'Work order dikirim untuk persetujuan',
           true,
