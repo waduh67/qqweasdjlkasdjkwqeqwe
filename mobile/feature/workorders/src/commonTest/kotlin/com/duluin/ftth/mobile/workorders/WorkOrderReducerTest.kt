@@ -59,12 +59,11 @@ class WorkOrderReducerTest {
             }),
             InMemoryOutbox(),
         )
-        val store = WorkOrderStore(feature, this, saver, StandardTestDispatcher(testScheduler))
+        val store = WorkOrderViewModel(feature, saver, StandardTestDispatcher(testScheduler))
 
         assertEquals(WorkOrderState.Ready, store.state.value.workOrder)
         store.dispatch(WorkOrderIntent.Load)
         runCurrent()
         assertEquals(WorkOrderState.Ready, saver.saved?.workOrder)
-        store.close()
     }
 }

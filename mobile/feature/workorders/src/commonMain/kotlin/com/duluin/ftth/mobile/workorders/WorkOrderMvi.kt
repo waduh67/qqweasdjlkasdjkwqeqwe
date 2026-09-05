@@ -8,11 +8,10 @@ import com.duluin.ftth.mobile.mvi.MviEffect
 import com.duluin.ftth.mobile.mvi.MviIntent
 import com.duluin.ftth.mobile.mvi.MviReducer
 import com.duluin.ftth.mobile.mvi.MviState
-import com.duluin.ftth.mobile.mvi.MviStore
+import com.duluin.ftth.mobile.mvi.MviViewModel
 import com.duluin.ftth.mobile.mvi.MviTransition
 import com.duluin.ftth.mobile.mvi.MviStateSaver
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
 data class WorkOrderUiState(
@@ -37,29 +36,19 @@ sealed interface WorkOrderEffect : MviEffect {
 
 class WorkOrderStateSaver(override var saved: WorkOrderUiState? = null) : MviStateSaver<WorkOrderUiState>
 
-class WorkOrderStore(
+class WorkOrderViewModel(
     feature: WorkOrderFeature,
-    parentScope: CoroutineScope,
     stateSaver: MviStateSaver<WorkOrderUiState>? = null,
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
-) : AutoCloseable {
-    private val delegate = MviStore(
+) : MviViewModel<WorkOrderUiState, WorkOrderIntent, LoadWorkOrders, WorkOrderEffect>(
         initialState = WorkOrderUiState(),
         reducer = WorkOrderReducer(),
-        parentScope = parentScope,
         stateSaver = stateSaver,
         dispatcher = dispatcher,
         actionHandler = { action -> when (action) {
             LoadWorkOrders -> WorkOrderIntent.Loaded(feature.load())
         } },
-    )
-
-    val state = delegate.state
-    val effects = delegate.effects
-
-    suspend fun dispatch(intent: WorkOrderIntent) = delegate.dispatch(intent)
-    override fun close() = delegate.close()
-}
+)
 
 class WorkOrderReducer : MviReducer<WorkOrderUiState, WorkOrderIntent, LoadWorkOrders, WorkOrderEffect> {
     override fun reduce(
