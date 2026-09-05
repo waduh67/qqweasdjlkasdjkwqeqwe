@@ -71,6 +71,7 @@ springdoc:
     path: /swagger-ui
 
 ftth:
+  production: ${FTTH_PRODUCTION:false}
   provisioning:
     rollout:
       planner-enabled: ${FTTH_PROVISIONING_PLANNER_ENABLED:true}
