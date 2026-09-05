@@ -407,7 +407,7 @@ function OperatorApp() {
             <Route path="tenants" element={<Navigate to="/platform/tenants" replace />} />
             <Route path="platform-billing" element={<Navigate to="/platform/billing" replace />} />
             <Route
-              path="notifications"
+              path="notifications/*"
               element={
                 <RequirePermission permission="notification.settings.view">
                   <NotificationSettingsPage />

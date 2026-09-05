@@ -1,13 +1,15 @@
 package com.duluin.ftth.notification.application.service
 
 import com.duluin.ftth.common.domain.error.ConflictException
+import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.infrastructure.audit.AuditRecorder
 import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.notification.application.port.inbound.ManageNotificationSettingsUseCase
-import com.duluin.ftth.notification.application.port.inbound.FonnteTestResultView
 import com.duluin.ftth.notification.application.port.inbound.NotificationSettingsView
 import com.duluin.ftth.notification.application.port.inbound.QontakChannelView
 import com.duluin.ftth.notification.application.port.inbound.UpdateNotificationSettingsCommand
+import com.duluin.ftth.notification.application.port.inbound.WhatsAppTestCommand
+import com.duluin.ftth.notification.application.port.inbound.WhatsAppTestResultView
 import com.duluin.ftth.notification.application.port.outbound.NotificationSettingsRepository
 import com.duluin.ftth.notification.application.port.outbound.QontakChannelDirectory
 import com.duluin.ftth.notification.application.port.outbound.MessageDispatcher
@@ -78,28 +80,51 @@ class NotificationSettingsService(
     }
 
     @Transactional
-    override fun sendFonnteTest(destination: String): FonnteTestResultView {
-        val settings = repository.find()
-            ?: throw ConflictException("Pengujian Fonnte membutuhkan penyedia Fonnte dan token yang sudah tersimpan.")
-        val gateway = settings.resolveFonnteGatewayForTest()
-            ?: throw ConflictException("Pengujian Fonnte membutuhkan penyedia Fonnte dan token yang sudah tersimpan.")
+    override fun sendWhatsAppTest(command: WhatsAppTestCommand): WhatsAppTestResultView {
+        if (command.provider != WhatsAppProvider.FONNTE && command.provider != WhatsAppProvider.HTTP_GENERIC) {
+            throw ValidationException("Pengujian langsung hanya tersedia untuk Fonnte dan HTTP Generic.")
+        }
+        val destination = command.destination.trim()
+        if (!INTERNATIONAL_PHONE.matches(destination)) {
+            throw ValidationException("Nomor tujuan harus berupa nomor internasional, misalnya 628123456789")
+        }
+        val message = command.message.trim().takeIf { it.isNotEmpty() }
+            ?: throw ValidationException("Pesan uji wajib diisi")
+        if (message.length > MAX_TEST_MESSAGE) throw ValidationException("Pesan uji maksimal 2000 karakter")
+
+        val settings = repository.find() ?: NotificationSettings.defaultFor(TenantContext.tenantId())
+        val gateway = settings.resolveGatewayForTest(
+            testProvider = command.provider,
+            draftEndpointUrl = command.httpEndpointUrl,
+            draftToken = command.httpToken,
+            draftPhoneField = command.httpPhoneField,
+            draftMessageField = command.httpMessageField,
+        ) ?: throw ConflictException(missingTestConfiguration(command.provider))
         val outcome = dispatcher.send(
             gateway = gateway,
             phone = destination,
-            recipientName = "Uji Fonnte",
-            message = FONNTE_TEST_MESSAGE,
+            recipientName = "Uji WhatsApp",
+            message = message,
         )
         val accepted = outcome.status == DeliveryStatus.SENT
         auditor.record(
-            action = "notification.settings.fonnte.tested",
+            action = "notification.settings.whatsapp.tested",
             entityType = "NotificationSettings",
             entityId = settings.id,
             tenantId = settings.tenantId,
-            detail = mapOf("accepted" to accepted.toString()),
+            detail = mapOf(
+                "provider" to command.provider.name,
+                "accepted" to accepted.toString(),
+            ),
         )
-        return FonnteTestResultView(
+        val providerLabel = if (command.provider == WhatsAppProvider.FONNTE) "Fonnte" else "Gateway HTTP"
+        return WhatsAppTestResultView(
             delivered = accepted,
-            detail = outcome.detail ?: "Fonnte tidak mengembalikan keterangan.",
+            detail = if (accepted) {
+                "$providerLabel menerima permintaan uji."
+            } else {
+                "$providerLabel menolak atau gagal menerima permintaan uji."
+            },
         )
     }
 
@@ -125,6 +150,14 @@ class NotificationSettingsService(
     )
 
     private companion object {
-        const val FONNTE_TEST_MESSAGE = "Pesan uji konfigurasi Fonnte dari aplikasi FTTH."
+        const val MAX_TEST_MESSAGE = 2000
+        val INTERNATIONAL_PHONE = Regex("^\\+?[1-9][0-9]{7,14}$")
+
+        fun missingTestConfiguration(provider: WhatsAppProvider): String = when (provider) {
+            WhatsAppProvider.FONNTE -> "Pengujian Fonnte membutuhkan token draft atau token Fonnte yang sudah tersimpan."
+            WhatsAppProvider.HTTP_GENERIC ->
+                "Pengujian HTTP Generic membutuhkan URL endpoint draft atau endpoint yang sudah tersimpan."
+            else -> "Pengujian langsung tidak tersedia untuk provider ini."
+        }
     }
 }

@@ -1,15 +1,18 @@
 package com.duluin.ftth.notification.adapter.inbound.web
 
 import com.duluin.ftth.notification.application.port.inbound.ManageNotificationSettingsUseCase
-import com.duluin.ftth.notification.application.port.inbound.FonnteTestResultView
+import com.duluin.ftth.notification.application.port.inbound.DEFAULT_WHATSAPP_TEST_MESSAGE
 import com.duluin.ftth.notification.application.port.inbound.NotificationSettingsView
 import com.duluin.ftth.notification.application.port.inbound.QontakChannelView
 import com.duluin.ftth.notification.application.port.inbound.UpdateNotificationSettingsCommand
+import com.duluin.ftth.notification.application.port.inbound.WhatsAppTestCommand
+import com.duluin.ftth.notification.application.port.inbound.WhatsAppTestResultView
 import com.duluin.ftth.notification.domain.model.WhatsAppProvider
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
@@ -56,14 +59,53 @@ class NotificationSettingsController(
     @PostMapping("/fonnte/test")
     @PreAuthorize("@authz.can('notification.settings.manage')")
     @Operation(summary = "Kirim pesan uji Fonnte memakai token tersimpan")
-    fun sendFonnteTest(@Valid @RequestBody request: FonnteTestRequest): FonnteTestResultView =
-        useCase.sendFonnteTest(request.destination)
+    fun sendFonnteTest(@Valid @RequestBody request: FonnteTestRequest): WhatsAppTestResultView =
+        useCase.sendWhatsAppTest(
+            WhatsAppTestCommand(
+                provider = WhatsAppProvider.FONNTE,
+                destination = request.destination,
+                message = DEFAULT_WHATSAPP_TEST_MESSAGE,
+                httpToken = null,
+                httpEndpointUrl = null,
+                httpPhoneField = null,
+                httpMessageField = null,
+            ),
+        )
+
+    @PostMapping("/whatsapp/test")
+    @PreAuthorize("@authz.can('notification.settings.manage')")
+    @Operation(summary = "Uji gateway WhatsApp tidak resmi memakai konfigurasi draft")
+    fun sendWhatsAppTest(@Valid @RequestBody request: WhatsAppTestRequest): WhatsAppTestResultView =
+        useCase.sendWhatsAppTest(request.toCommand())
 }
 
 data class FonnteTestRequest(
     @field:Pattern(regexp = "^\\+?[1-9][0-9]{7,14}$", message = "Nomor tujuan harus berupa nomor internasional, misalnya 628123456789")
     val destination: String,
 )
+
+data class WhatsAppTestRequest(
+    @field:NotNull val provider: WhatsAppProvider,
+    @field:Pattern(regexp = "^\\+?[1-9][0-9]{7,14}$", message = "Nomor tujuan harus berupa nomor internasional, misalnya 628123456789")
+    val destination: String,
+    @field:NotBlank(message = "Pesan uji wajib diisi")
+    @field:Size(max = 2000, message = "Pesan uji maksimal 2000 karakter")
+    val message: String,
+    @field:Size(max = 255) val httpToken: String? = null,
+    @field:Size(max = 500) val httpEndpointUrl: String? = null,
+    @field:Size(max = 50) val httpPhoneField: String? = null,
+    @field:Size(max = 50) val httpMessageField: String? = null,
+) {
+    fun toCommand() = WhatsAppTestCommand(
+        provider = provider,
+        destination = destination,
+        message = message,
+        httpToken = httpToken,
+        httpEndpointUrl = httpEndpointUrl,
+        httpPhoneField = httpPhoneField,
+        httpMessageField = httpMessageField,
+    )
+}
 
 /**
  * Token ([httpToken]/[metaAccessToken]/[qontakAccessToken]) opsional: kosong/absen = biarkan

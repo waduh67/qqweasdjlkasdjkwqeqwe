@@ -9,7 +9,7 @@ import com.duluin.ftth.notification.domain.model.WhatsAppProvider
 interface ManageNotificationSettingsUseCase {
     fun get(): NotificationSettingsView
     fun update(command: UpdateNotificationSettingsCommand): NotificationSettingsView
-    fun sendFonnteTest(destination: String): FonnteTestResultView
+    fun sendWhatsAppTest(command: WhatsAppTestCommand): WhatsAppTestResultView
 
     /**
      * Daftar kanal WhatsApp di akun Qontak untuk dropdown pemilihan, memakai token yang SUDAH
@@ -18,8 +18,19 @@ interface ManageNotificationSettingsUseCase {
     fun qontakChannels(): List<QontakChannelView>
 }
 
-/** Hasil uji Fonnte: accepted berarti penyedia menerima permintaan, bukan jaminan pesan tiba di handset. */
-data class FonnteTestResultView(val delivered: Boolean, val detail: String)
+const val DEFAULT_WHATSAPP_TEST_MESSAGE = "Pesan uji konfigurasi Fonnte dari aplikasi FTTH."
+
+data class WhatsAppTestCommand(
+    val provider: WhatsAppProvider,
+    val destination: String,
+    val message: String,
+    val httpToken: String?,
+    val httpEndpointUrl: String?,
+    val httpPhoneField: String?,
+    val httpMessageField: String?,
+)
+
+data class WhatsAppTestResultView(val delivered: Boolean, val detail: String)
 
 /**
  * Setelan notifikasi untuk ditampilkan. Token TAK pernah dikembalikan — hanya penanda

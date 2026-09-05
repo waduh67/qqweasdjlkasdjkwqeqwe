@@ -332,6 +332,37 @@ class NotificationSettings private constructor(
         return WhatsAppGateway.Fonnte(token)
     }
 
+    @Suppress("LongParameterList")
+    fun resolveGatewayForTest(
+        testProvider: WhatsAppProvider,
+        draftEndpointUrl: String?,
+        draftToken: String?,
+        draftPhoneField: String?,
+        draftMessageField: String?,
+    ): WhatsAppGateway? {
+        val sameProvider = provider == testProvider
+        val endpoint = draftEndpointUrl.nonBlankOr(if (sameProvider) httpEndpointUrl else null)
+        val token = draftToken.nonBlankOr(if (sameProvider) httpToken else null)
+        val phoneField = draftPhoneField.nonBlankOr(if (sameProvider) httpPhoneField else null)
+        val messageField = draftMessageField.nonBlankOr(if (sameProvider) httpMessageField else null)
+
+        return when (testProvider) {
+            WhatsAppProvider.FONNTE -> token?.let {
+                WhatsAppGateway.Fonnte(validateToken(it, "Token gateway HTTP", MAX_HTTP_TOKEN))
+            }
+            WhatsAppProvider.HTTP_GENERIC -> {
+                val validEndpoint = validateEndpointUrl(endpoint) ?: return null
+                WhatsAppGateway.HttpGeneric(
+                    endpointUrl = validEndpoint,
+                    token = token?.let { validateToken(it, "Token gateway HTTP", MAX_HTTP_TOKEN) },
+                    phoneField = validateFieldName(phoneField, DEFAULT_PHONE_FIELD, "Field nomor"),
+                    messageField = validateFieldName(messageField, DEFAULT_MESSAGE_FIELD, "Field pesan"),
+                )
+            }
+            WhatsAppProvider.LOG, WhatsAppProvider.META_CLOUD, WhatsAppProvider.QONTAK -> null
+        }
+    }
+
     /**
      * Kredensial API template siap-pakai, atau null bila prasyarat belum terpenuhi. Prasyarat
      * dihitung dari setelan yang SUDAH TERSIMPAN, jadi token yang baru diketik di form tapi
@@ -476,5 +507,9 @@ class NotificationSettings private constructor(
             if (trimmed.length > 64) throw ValidationException("Channel integration ID Qontak maksimal 64 karakter")
             return trimmed
         }
+
+        private fun String?.nonBlankOr(fallback: String?): String? =
+            this?.trim()?.takeIf { it.isNotEmpty() }
+                ?: fallback?.trim()?.takeIf { it.isNotEmpty() }
     }
 }

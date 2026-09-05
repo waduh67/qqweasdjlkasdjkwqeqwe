@@ -1,19 +1,22 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Text } from '@fluentui/react-components'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import {
   getNotificationSettings,
   getQontakChannels,
   PROVIDER_LABEL,
-  sendFonnteTest,
+  sendWhatsAppTest,
   updateNotificationSettings,
   type NotificationSettingsView,
   type QontakChannelView,
   type UpdateNotificationSettingsRequest,
   type WhatsAppProvider,
+  type WhatsAppTestRequest,
 } from '../api/notification'
 import { useCan } from '../auth/useCan'
-import { Button, EmptyState, SelectField, TextField } from '@/components/atoms'
+import { Button, EmptyState, SelectField, TextareaField, TextField } from '@/components/atoms'
+import { Tabs } from '@/components/molecules'
 import { TenantEmailBrandingCard, WhatsAppTemplateCard } from '@/components/organisms'
 import { Checkbox } from '@fluentui/react-components'
 import { useToast } from '@/system'
@@ -33,8 +36,23 @@ import { IconAlert } from '@/components/atoms/icons'
  */
 
 const PROVIDERS: WhatsAppProvider[] = ['LOG', 'HTTP_GENERIC', 'FONNTE', 'META_CLOUD', 'QONTAK']
+const DEFAULT_TEST_MESSAGE = 'Pesan uji konfigurasi Fonnte dari aplikasi FTTH.'
 
-const TRIGGERS: { key: keyof NotificationSettingsView; label: string }[] = [
+type NotificationTab = 'whatsapp' | 'email' | 'triggers'
+
+const NOTIFICATION_TABS: { key: NotificationTab; label: string }[] = [
+  { key: 'whatsapp', label: 'WhatsApp' },
+  { key: 'email', label: 'Email' },
+  { key: 'triggers', label: 'Pemicu otomatis' },
+]
+
+type TriggerKey =
+  | 'notifyOnSubscriptionLifecycle'
+  | 'notifyOnInvoiceReminder'
+  | 'notifyOnWorkOrderSchedule'
+  | 'notifyOnIncidentOpen'
+
+const TRIGGERS: { key: TriggerKey; label: string }[] = [
   { key: 'notifyOnSubscriptionLifecycle', label: 'Perubahan langganan' },
   { key: 'notifyOnInvoiceReminder', label: 'Pengingat tagihan' },
   { key: 'notifyOnWorkOrderSchedule', label: 'Jadwal kunjungan teknisi' },
@@ -46,20 +64,32 @@ const nullify = (s: string | null): string | null => {
   return t ? t : null
 }
 
+function isWhatsAppProvider(value: string): value is WhatsAppProvider {
+  return PROVIDERS.some((provider) => provider === value)
+}
+
+function isTestableProvider(provider: WhatsAppProvider): provider is WhatsAppTestRequest['provider'] {
+  return provider === 'FONNTE' || provider === 'HTTP_GENERIC'
+}
+
 export function NotificationSettingsPage() {
   const { can } = useCan()
   const toast = useToast()
   const manage = can('notification.settings.manage')
+  const location = useLocation()
+  const navigate = useNavigate()
 
   const [form, setForm] = useState<NotificationSettingsView | null>(null)
+  const [persistedProvider, setPersistedProvider] = useState<WhatsAppProvider | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   // Input token write-only, terpisah dari view: kosong = pertahankan yang tersimpan.
   const [httpToken, setHttpToken] = useState('')
   const [metaToken, setMetaToken] = useState('')
   const [qontakToken, setQontakToken] = useState('')
-  const [fonnteDestination, setFonnteDestination] = useState('')
-  const [testingFonnte, setTestingFonnte] = useState(false)
+  const [testDestination, setTestDestination] = useState('')
+  const [testMessage, setTestMessage] = useState(DEFAULT_TEST_MESSAGE)
+  const [testingWhatsApp, setTestingWhatsApp] = useState(false)
   // Daftar kanal Qontak ditarik atas permintaan, bukan saat memuat halaman: panggilannya
   // menembak API Qontak dan hanya relevan bagi tenant yang memakai penyedia itu.
   const [channels, setChannels] = useState<QontakChannelView[] | null>(null)
@@ -67,12 +97,18 @@ export function NotificationSettingsPage() {
 
   useEffect(() => {
     getNotificationSettings()
-      .then((s) => setForm(s))
+      .then((settings) => {
+        setForm(settings)
+        setPersistedProvider(settings.provider)
+      })
       .catch((err) => toast.error(err instanceof ApiError ? err.message : 'Gagal memuat setelan notifikasi'))
       .finally(() => setLoading(false))
   }, [toast])
 
   const patch = (delta: Partial<NotificationSettingsView>) => setForm((f) => (f ? { ...f, ...delta } : f))
+  const patchTrigger = (key: TriggerKey, checked: boolean) => {
+    setForm((current) => (current ? { ...current, [key]: checked } : current))
+  }
 
   const save = async () => {
     if (!form) return
@@ -98,6 +134,7 @@ export function NotificationSettingsPage() {
     try {
       const saved = await updateNotificationSettings(body)
       setForm(saved)
+      setPersistedProvider(saved.provider)
       setHttpToken('')
       setMetaToken('')
       setQontakToken('')
@@ -124,20 +161,30 @@ export function NotificationSettingsPage() {
     }
   }
 
-  const testFonnte = async () => {
-    if (!fonnteDestination.trim()) return
-    setTestingFonnte(true)
+  const testWhatsApp = async () => {
+    if (!form || !isTestableProvider(form.provider)) return
+    if (!testDestination.trim() || !testMessage.trim()) return
+    const provider = form.provider
+    setTestingWhatsApp(true)
     try {
-      const result = await sendFonnteTest(fonnteDestination.trim())
+      const result = await sendWhatsAppTest({
+        provider,
+        destination: testDestination.trim(),
+        message: testMessage.trim(),
+        httpToken: nullify(httpToken),
+        httpEndpointUrl: nullify(form.httpEndpointUrl),
+        httpPhoneField: nullify(form.httpPhoneField),
+        httpMessageField: nullify(form.httpMessageField),
+      })
       if (result.delivered) {
-        toast.success('Fonnte menerima permintaan uji. Pesan masih dapat menunggu di antrean penyedia.')
+        toast.success(`${PROVIDER_LABEL[provider]} menerima permintaan uji. Pesan masih dapat menunggu di antrean penyedia.`)
       } else {
-        toast.error(`Fonnte tidak menerima permintaan uji: ${result.detail}`)
+        toast.error(`${PROVIDER_LABEL[provider]} tidak menerima permintaan uji: ${result.detail}`)
       }
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Pengujian Fonnte gagal')
+      toast.error(err instanceof ApiError ? err.message : 'Pengujian WhatsApp gagal')
     } finally {
-      setTestingFonnte(false)
+      setTestingWhatsApp(false)
     }
   }
 
@@ -151,6 +198,18 @@ export function NotificationSettingsPage() {
     )
   }
 
+  const pathSegment = location.pathname.split('/').filter(Boolean).at(-1)
+  const activeTab: NotificationTab =
+    pathSegment === 'email' || pathSegment === 'triggers' ? pathSegment : 'whatsapp'
+  const storedHttpTokenAvailable = persistedProvider === form.provider && form.httpTokenSet
+  const canTestWhatsApp =
+    isTestableProvider(form.provider) &&
+    testDestination.trim().length > 0 &&
+    testMessage.trim().length > 0 &&
+    (form.provider === 'HTTP_GENERIC'
+      ? Boolean(form.httpEndpointUrl?.trim())
+      : Boolean(httpToken.trim()) || storedHttpTokenAvailable)
+
   return (
     <div className="stack">
       <div className="spread">
@@ -158,14 +217,33 @@ export function NotificationSettingsPage() {
           <Text as="h2" size={500} weight="semibold" style={{ margin: 0 }}>Pengaturan Notifikasi</Text>
         </div>
         {manage && (
-          <Button variant="primary" onClick={() => void save()} disabled={saving || testingFonnte}>
+          <Button variant="primary" onClick={() => void save()} disabled={saving || testingWhatsApp}>
             {saving ? 'Menyimpan…' : 'Simpan'}
           </Button>
         )}
       </div>
 
-      {/* ---- Gateway WhatsApp ---- */}
-      <div className="card stack">
+      <div className="workspace-tabs">
+        <Tabs
+          tabs={NOTIFICATION_TABS}
+          active={activeTab}
+          onChange={(tab) => navigate(`/notifications/${tab}`)}
+          idPrefix="notification-settings"
+        />
+      </div>
+
+      <Routes>
+        <Route index element={<Navigate to="/notifications/whatsapp" replace />} />
+        <Route
+          path="whatsapp"
+          element={(
+            <div
+              className="stack"
+              role="tabpanel"
+              id="notification-settings-panel-whatsapp"
+              aria-labelledby="notification-settings-tab-whatsapp"
+            >
+              <div className="card stack">
         <SectionTitle>Gateway WhatsApp</SectionTitle>
 
         <Checkbox
@@ -177,7 +255,9 @@ export function NotificationSettingsPage() {
         <SelectField
           label="Penyedia"
           value={form.provider}
-          onChange={(_, data) => patch({ provider: data.value as WhatsAppProvider })}
+          onChange={(_, data) => {
+            if (isWhatsAppProvider(data.value)) patch({ provider: data.value })
+          }}
           disabled={!manage}
         >
           {PROVIDERS.map((p) => (
@@ -197,11 +277,11 @@ export function NotificationSettingsPage() {
               disabled={!manage}
             />
             <TextField
-              label={<>Token / API key {form.httpTokenSet && <Text as="span" className="muted">(tersimpan)</Text>}</>}
+              label={<>Token / API key {storedHttpTokenAvailable && <Text as="span" className="muted">(tersimpan)</Text>}</>}
               type="password"
               value={httpToken}
               onChange={(_, data) => setHttpToken(data.value)}
-               placeholder={form.httpTokenSet ? 'Kosongkan untuk mempertahankan token' : 'Token dikirim sebagai header Authorization'}
+              placeholder={storedHttpTokenAvailable ? 'Kosongkan untuk mempertahankan token' : 'Token dikirim sebagai header Authorization'}
               disabled={!manage}
             />
             <div className="row">
@@ -228,34 +308,16 @@ export function NotificationSettingsPage() {
         {form.provider === 'FONNTE' && (
           <>
             <TextField
-              label={<>Token Fonnte {form.httpTokenSet && <Text as="span" className="muted">(tersimpan)</Text>}</>}
+              label={<>Token Fonnte {storedHttpTokenAvailable && <Text as="span" className="muted">(tersimpan)</Text>}</>}
               type="password"
               value={httpToken}
               onChange={(_, data) => setHttpToken(data.value)}
-              placeholder={form.httpTokenSet ? 'Kosongkan untuk mempertahankan token' : 'Token dari dasbor Fonnte'}
-              disabled={!manage || testingFonnte}
+              placeholder={storedHttpTokenAvailable ? 'Kosongkan untuk mempertahankan token' : 'Token dari dasbor Fonnte'}
+              disabled={!manage || testingWhatsApp}
             />
             <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
               Endpoint dan format Fonnte sudah tetap: aplikasi mengirim field <code>target</code> dan <code>message</code>.
             </Text>
-            {form.httpTokenSet && (
-              <div className="row" style={{ alignItems: 'flex-end' }}>
-                <TextField
-                  label="Nomor tujuan uji"
-                  value={fonnteDestination}
-                  onChange={(_, data) => setFonnteDestination(data.value)}
-                  placeholder="+628123456789"
-                  disabled={!manage || saving || testingFonnte}
-                  style={{ flex: 1 }}
-                />
-                <Button
-                  onClick={() => void testFonnte()}
-                  disabled={testingFonnte || saving || !manage || !fonnteDestination.trim() || !form.httpTokenSet}
-                >
-                  {testingFonnte ? 'Mengirim uji…' : 'Kirim pesan test'}
-                </Button>
-              </div>
-            )}
           </>
         )}
 
@@ -338,10 +400,54 @@ export function NotificationSettingsPage() {
             </Text>
           </>
         )}
-      </div>
+              </div>
 
-      {/* ---- Kanal email ---- */}
-      <div className="card stack">
+              {isTestableProvider(form.provider) && (
+                <div className="card stack">
+                  <SectionTitle>Test pengiriman WhatsApp</SectionTitle>
+                  <Text as="p" className="muted" size={300} style={{ margin: 0 }}>
+                    Kirim pesan uji memakai konfigurasi yang sedang diisi, tanpa perlu menyimpan atau mengaktifkan gateway.
+                  </Text>
+                  <TextField
+                    label="Nomor tujuan uji"
+                    value={testDestination}
+                    onChange={(_, data) => setTestDestination(data.value)}
+                    placeholder="628123456789"
+                    disabled={!manage || saving || testingWhatsApp}
+                  />
+                  <TextareaField
+                    label="Pesan uji"
+                    value={testMessage}
+                    onChange={(_, data) => setTestMessage(data.value)}
+                    rows={4}
+                    maxLength={2000}
+                    disabled={!manage || saving || testingWhatsApp}
+                  />
+                  <div className="row">
+                    <Button
+                      onClick={() => void testWhatsApp()}
+                      disabled={!manage || saving || testingWhatsApp || !canTestWhatsApp}
+                    >
+                      {testingWhatsApp ? 'Mengirim test…' : 'Kirim pesan test'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <WhatsAppTemplateCard templateReady={form.templateReady} />
+            </div>
+          )}
+        />
+        <Route
+          path="email"
+          element={(
+            <div
+              className="stack"
+              role="tabpanel"
+              id="notification-settings-panel-email"
+              aria-labelledby="notification-settings-tab-email"
+            >
+              <div className="card stack">
         <SectionTitle>Kanal email</SectionTitle>
 
         <Checkbox
@@ -352,27 +458,35 @@ export function NotificationSettingsPage() {
         />
 
 
-      </div>
-
-      {/* ---- Identitas & tampilan email (timpaan atas bawaan platform) ---- */}
-      <TenantEmailBrandingCard manage={manage} />
-
-      {/* ---- Template pesan WhatsApp ---- */}
-      <WhatsAppTemplateCard templateReady={form.templateReady} />
-
-      {/* ---- Pemicu otomatis ---- */}
-      <div className="card stack">
+              </div>
+              <TenantEmailBrandingCard manage={manage} />
+            </div>
+          )}
+        />
+        <Route
+          path="triggers"
+          element={(
+            <div
+              className="card stack"
+              role="tabpanel"
+              id="notification-settings-panel-triggers"
+              aria-labelledby="notification-settings-tab-triggers"
+            >
         <SectionTitle>Pemicu otomatis</SectionTitle>
         {TRIGGERS.map((t) => (
           <Checkbox
             key={t.key}
             label={t.label}
-            checked={form[t.key] as boolean}
-            onChange={(_, data) => patch({ [t.key]: !!data.checked } as Partial<NotificationSettingsView>)}
+            checked={form[t.key]}
+            onChange={(_, data) => patchTrigger(t.key, Boolean(data.checked))}
             disabled={!manage}
           />
         ))}
-      </div>
+            </div>
+          )}
+        />
+        <Route path="*" element={<Navigate to="/notifications/whatsapp" replace />} />
+      </Routes>
     </div>
   )
 }

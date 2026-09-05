@@ -124,12 +124,26 @@ export function getQontakChannels(): Promise<QontakChannelView[]> {
   return api.get('/api/notifications/settings/qontak/channels')
 }
 
-export interface FonnteTestResultView {
+export interface WhatsAppTestRequest {
+  readonly provider: 'FONNTE' | 'HTTP_GENERIC'
+  readonly destination: string
+  readonly message: string
+  readonly httpToken: string | null
+  readonly httpEndpointUrl: string | null
+  readonly httpPhoneField: string | null
+  readonly httpMessageField: string | null
+}
+
+export interface WhatsAppTestResultView {
   readonly delivered: boolean
   readonly detail: string
 }
 
-export function sendFonnteTest(destination: string): Promise<FonnteTestResultView> {
+export function sendWhatsAppTest(body: WhatsAppTestRequest): Promise<WhatsAppTestResultView> {
+  return api.post('/api/notifications/settings/whatsapp/test', body)
+}
+
+export function sendFonnteTest(destination: string): Promise<WhatsAppTestResultView> {
   return api.post('/api/notifications/settings/fonnte/test', { destination })
 }
 
