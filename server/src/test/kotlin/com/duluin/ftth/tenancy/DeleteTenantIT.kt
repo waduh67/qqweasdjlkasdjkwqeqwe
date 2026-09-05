@@ -100,6 +100,18 @@ class DeleteTenantIT {
             }!!
         }
 
+    private fun countCustomersWithLocationStatus(tenantId: UUID, locationStatus: String): Long =
+        TenantContext.runAs(tenantId) {
+            tx.execute {
+                (
+                    em.createNativeQuery("SELECT count(*) FROM customer WHERE tenant_id = :t AND location_status = :status")
+                        .setParameter("t", tenantId)
+                        .setParameter("status", locationStatus)
+                        .singleResult as Number
+                    ).toLong()
+            }!!
+        }
+
     /**
      * Semai satu ONU yang TERPASANG di ODP (odp_id & odp_port_number terisi) untuk [tenantId].
      * Ini kunci reproduksi bug: `DELETE FROM odp` akan men-`SET NULL` `onu.odp_id` (FK ON DELETE
@@ -113,10 +125,15 @@ class DeleteTenantIT {
                 val odpId = UUID.randomUUID()
                 val suffix = uniq()
                 em.createNativeQuery(
-                    "INSERT INTO customer (id, tenant_id, code, name, address, location) " +
-                        "VALUES (:id, :t, :code, 'ONU Test', 'Jl. Test', ST_SetSRID(ST_MakePoint(106.8, -6.2), 4326))",
+                    "INSERT INTO customer (id, tenant_id, code, name, address, location, location_status) " +
+                        "VALUES (:id, :t, :code, 'ONU Test', 'Jl. Test', ST_SetSRID(ST_MakePoint(106.8, -6.2), 4326), 'LOCATED')",
                 ).setParameter("id", customerId).setParameter("t", tenantId)
                     .setParameter("code", "CUST-$suffix").executeUpdate()
+                em.createNativeQuery(
+                    "INSERT INTO customer (id, tenant_id, code, name, address, location_status) " +
+                        "VALUES (:id, :t, :code, 'Unlocated Test', 'Jl. Test', 'UNLOCATED')",
+                ).setParameter("id", UUID.randomUUID()).setParameter("t", tenantId)
+                    .setParameter("code", "UNLOC-$suffix").executeUpdate()
                 em.createNativeQuery(
                     // `splitter_ratio` tak lagi ada di sini sejak V92 memindahkan rasio ke tabel
                     // `splitter` tersendiri (satu ODP boleh punya lebih dari satu kaki).
@@ -193,7 +210,9 @@ class DeleteTenantIT {
 
         // Prasyarat reproduksi: ONU benar-benar terpasang (odp_id terisi). Menghapus `odp`
         // sebelum `onu` akan men-SET NULL odp_id & melanggar ck_onu_attachment (dulu → 500).
-        assertThat(countFor("customer", victim.id)).isEqualTo(1)
+        assertThat(countFor("customer", victim.id)).isEqualTo(2)
+        assertThat(countCustomersWithLocationStatus(victim.id, "LOCATED")).isEqualTo(1)
+        assertThat(countCustomersWithLocationStatus(victim.id, "UNLOCATED")).isEqualTo(1)
         assertThat(countFor("odp", victim.id)).isEqualTo(1)
         assertThat(countFor("onu", victim.id)).isEqualTo(1)
 
