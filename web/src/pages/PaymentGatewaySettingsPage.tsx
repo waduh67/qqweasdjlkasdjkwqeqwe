@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Text, typographyStyles } from '@fluentui/react-components'
 import { Copy } from 'lucide-react'
 import { api, ApiError } from '../api/client'
@@ -7,6 +7,7 @@ import {
   getPaymentGatewaySettings,
   PAYMENT_PROVIDER_LABEL,
   QRIS_IMAGE_PATH,
+  testTripaySandboxPayment,
   updatePaymentGatewaySettings,
   uploadQrisImage,
   type PaymentGatewaySettingsView,
@@ -126,6 +127,15 @@ export function PaymentGatewaySettingsPage() {
   const [qrisRemoved, setQrisRemoved] = useState(false)
   const [qrisVersion, setQrisVersion] = useState(0)
   const [tripaySecretDraft, setTripaySecretDraft] = useState<TripaySecretDraft>(EMPTY_TRIPAY_SECRET_DRAFT)
+  const [sandboxPaymentUrl, setSandboxPaymentUrl] = useState<string | null>(null)
+  const [testingSandbox, setTestingSandbox] = useState(false)
+  const sandboxRequestVersion = useRef(0)
+
+  const invalidateSandboxTest = useCallback(() => {
+    sandboxRequestVersion.current += 1
+    setSandboxPaymentUrl(null)
+    setTestingSandbox(false)
+  }, [])
 
   useEffect(() => {
     getPaymentGatewaySettings()
@@ -196,11 +206,13 @@ export function PaymentGatewaySettingsPage() {
   const enabling = !!saved && !!form && saved.provider === 'MANUAL' && form.provider !== 'MANUAL'
 
   const onProvider = (provider: PaymentProvider) => {
+    invalidateSandboxTest()
     setForm((f) => (f ? { ...f, provider, enabled: provider !== 'MANUAL' } : f))
     if (provider !== 'TRIPAY') setTripaySecretDraft(EMPTY_TRIPAY_SECRET_DRAFT)
   }
 
   const discard = () => {
+    invalidateSandboxTest()
     if (saved) setForm(saved)
     setQrisFile(null)
     setQrisRemoved(false)
@@ -248,6 +260,7 @@ export function PaymentGatewaySettingsPage() {
       setQrisFile(null)
       setQrisRemoved(false)
       setTripaySecretDraft(EMPTY_TRIPAY_SECRET_DRAFT)
+      invalidateSandboxTest()
       setQrisVersion((v) => v + 1)
       setConfirmOpen(false)
       toast.success('Setelan payment gateway disimpan')
@@ -255,6 +268,31 @@ export function PaymentGatewaySettingsPage() {
       toast.error('Gagal menyimpan setelan gateway. Periksa konfigurasi lalu coba lagi.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const testTripaySandbox = async () => {
+    if (!form || !manage || form.provider !== 'TRIPAY' || !form.tripaySandbox || !tripayConfigurationValid) return
+
+    const requestVersion = sandboxRequestVersion.current + 1
+    sandboxRequestVersion.current = requestVersion
+    setSandboxPaymentUrl(null)
+    setTestingSandbox(true)
+    try {
+      const result = await testTripaySandboxPayment({
+        merchantCode: form.tripayMerchantCode?.trim() ?? '',
+        apiKey: tripaySecretDraft.apiKey.trim() || null,
+        privateKey: tripaySecretDraft.privateKey.trim() || null,
+      })
+      if (sandboxRequestVersion.current === requestVersion) setSandboxPaymentUrl(result.paymentUrl)
+    } catch (err) {
+      if (sandboxRequestVersion.current === requestVersion) {
+        toast.error(err instanceof ApiError
+          ? err.message
+          : 'Gagal menguji Tripay sandbox. Periksa konfigurasi lalu coba lagi.')
+      }
+    } finally {
+      if (sandboxRequestVersion.current === requestVersion) setTestingSandbox(false)
     }
   }
 
@@ -308,8 +346,18 @@ export function PaymentGatewaySettingsPage() {
               form={form}
               secretDraft={tripaySecretDraft}
               validation={tripayValidation}
-              onChange={(patch) => setForm((f) => (f ? { ...f, ...patch } : f))}
-              onSecretDraftChange={setTripaySecretDraft}
+              onChange={(patch) => {
+                invalidateSandboxTest()
+                setForm((f) => (f ? { ...f, ...patch } : f))
+              }}
+              onSecretDraftChange={(draft) => {
+                invalidateSandboxTest()
+                setTripaySecretDraft(draft)
+              }}
+              onTestSandbox={() => void testTripaySandbox()}
+              sandboxPaymentUrl={sandboxPaymentUrl}
+              testingSandbox={testingSandbox}
+              showSandboxTest={manage && form.tripaySandbox && tripayConfigurationValid}
               disabled={!manage}
             />
           </>
@@ -1290,6 +1338,10 @@ function TripayPaymentSection({
   validation,
   onChange,
   onSecretDraftChange,
+  onTestSandbox,
+  sandboxPaymentUrl,
+  testingSandbox,
+  showSandboxTest,
   disabled,
 }: {
   form: PaymentGatewaySettingsView
@@ -1297,6 +1349,10 @@ function TripayPaymentSection({
   validation: TripayValidation
   onChange: (patch: Partial<PaymentGatewaySettingsView>) => void
   onSecretDraftChange: (draft: TripaySecretDraft) => void
+  onTestSandbox: () => void
+  sandboxPaymentUrl: string | null
+  testingSandbox: boolean
+  showSandboxTest: boolean
   disabled: boolean
 }) {
   return (
@@ -1366,15 +1422,18 @@ function TripayPaymentSection({
         <Text as="span" font="monospace" style={{ overflowWrap: 'anywhere' }}>/api/platform/tripay/callbacks/payment</Text>
       </FormRow>
 
-      <div className="stack" style={{ gap: '0.35rem', minWidth: 0 }}>
-        <Text as="strong" weight="semibold">Kontrak server Tripay</Text>
-        <Text as="span" className="muted" size={200} style={{ overflowWrap: 'anywhere' }}>Sandbox create: https://tripay.co.id/api-sandbox/transaction/create</Text>
-        <Text as="span" className="muted" size={200} style={{ overflowWrap: 'anywhere' }}>Produksi create: https://tripay.co.id/api/transaction/create</Text>
-        <Text as="span" className="muted" size={200}>Authorization: Bearer API key</Text>
-        <Text as="span" className="muted" size={200} style={{ overflowWrap: 'anywhere' }}>Signature: HMAC-SHA256(merchantCode + merchantRef + amount, privateKey)</Text>
-        <Text as="span" className="muted" size={200} style={{ overflowWrap: 'anywhere' }}>Callback: HMAC atas body JSON mentah yang sama persis melalui X-Callback-Signature.</Text>
-        <Text as="span" className="muted" size={200}>Hanya status PAID yang melunasi tagihan.</Text>
-      </div>
+      {showSandboxTest && (
+        <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }} aria-live="polite">
+          <Button onClick={onTestSandbox} disabled={testingSandbox} aria-busy={testingSandbox}>
+            {testingSandbox ? 'Menguji…' : 'Test sandbox'}
+          </Button>
+          {sandboxPaymentUrl && (
+            <a href={sandboxPaymentUrl} target="_blank" rel="noopener noreferrer">
+              Buka pembayaran sandbox
+            </a>
+          )}
+        </div>
+      )}
     </div>
   )
 }

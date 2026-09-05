@@ -51,6 +51,16 @@ export interface UpdatePaymentGatewaySettingsRequest {
   readonly tripaySandbox: boolean
 }
 
+export interface TripaySandboxTestRequest {
+  readonly merchantCode: string
+  readonly apiKey: string | null
+  readonly privateKey: string | null
+}
+
+export interface TripaySandboxTestView {
+  readonly paymentUrl: string
+}
+
 export function getPaymentGatewaySettings(): Promise<PaymentGatewaySettingsView> {
   return api.get('/api/billing/gateway-settings')
 }
@@ -59,6 +69,12 @@ export function updatePaymentGatewaySettings(
   body: UpdatePaymentGatewaySettingsRequest,
 ): Promise<PaymentGatewaySettingsView> {
   return api.put('/api/billing/gateway-settings', body)
+}
+
+export function testTripaySandboxPayment(
+  body: TripaySandboxTestRequest,
+): Promise<TripaySandboxTestView> {
+  return api.post('/api/billing/gateway-settings/tripay/test', body)
 }
 
 /** Path konten byte gambar QRIS (ter-gate) — untuk pola `AuthedImage` (api.blob + createObjectURL). */

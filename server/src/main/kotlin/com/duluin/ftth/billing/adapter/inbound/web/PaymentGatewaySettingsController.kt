@@ -2,6 +2,9 @@ package com.duluin.ftth.billing.adapter.inbound.web
 
 import com.duluin.ftth.billing.application.port.inbound.ManagePaymentGatewaySettingsUseCase
 import com.duluin.ftth.billing.application.port.inbound.PaymentGatewaySettingsView
+import com.duluin.ftth.billing.application.port.inbound.TestTripaySandboxCommand
+import com.duluin.ftth.billing.application.port.inbound.TestTripaySandboxUseCase
+import com.duluin.ftth.billing.application.port.inbound.TripaySandboxTestView
 import com.duluin.ftth.billing.application.port.inbound.UpdatePaymentGatewaySettingsCommand
 import com.duluin.ftth.billing.domain.model.PaymentProvider
 import com.duluin.ftth.common.domain.error.ValidationException
@@ -9,6 +12,7 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
 import org.springframework.http.HttpStatus
@@ -36,6 +40,7 @@ import org.springframework.web.multipart.MultipartFile
 @SecurityRequirement(name = "bearer-jwt")
 class PaymentGatewaySettingsController(
     private val useCase: ManagePaymentGatewaySettingsUseCase,
+    private val tripaySandboxTest: TestTripaySandboxUseCase,
 ) {
     @GetMapping
     @PreAuthorize("@authz.can('billing.gateway.view')")
@@ -47,6 +52,12 @@ class PaymentGatewaySettingsController(
     @Operation(summary = "Ubah metode aktif, Tripay BYOK, dan konfigurasi pembayaran manual")
     fun update(@Valid @RequestBody request: PaymentGatewaySettingsRequest): PaymentGatewaySettingsView =
         useCase.update(request.toCommand())
+
+    @PostMapping("/tripay/test")
+    @PreAuthorize("@authz.can('billing.gateway.manage')")
+    @Operation(summary = "Uji kredensial Tripay hanya melalui sandbox tanpa menyimpan perubahan")
+    fun testTripaySandbox(@Valid @RequestBody request: TripaySandboxTestRequest): TripaySandboxTestView =
+        tripaySandboxTest.testTripay(request.toCommand())
 
     @PostMapping("/qris", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     @PreAuthorize("@authz.can('billing.gateway.manage')")
@@ -69,6 +80,22 @@ class PaymentGatewaySettingsController(
         val image = useCase.getQrisImage() ?: return ResponseEntity.notFound().build()
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(image.contentType)).body(image.bytes)
     }
+}
+
+data class TripaySandboxTestRequest(
+    @field:NotBlank
+    @field:Size(max = 80)
+    val merchantCode: String? = null,
+    @field:Size(max = 512)
+    val apiKey: String? = null,
+    @field:Size(max = 512)
+    val privateKey: String? = null,
+) {
+    fun toCommand() = TestTripaySandboxCommand(
+        merchantCode = merchantCode,
+        apiKey = apiKey,
+        privateKey = privateKey,
+    )
 }
 
 /**
