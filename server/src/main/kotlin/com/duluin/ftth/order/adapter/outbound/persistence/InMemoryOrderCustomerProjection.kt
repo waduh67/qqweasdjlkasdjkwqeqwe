@@ -38,7 +38,8 @@ class InMemoryOrderCustomerProjection {
         val status = portalStatus(order.status) ?: run { rows.remove(order.id); return }
         rows[order.id] = PortalRow(order.customerId, PortalOrderView(
             order.id, status, order.lines.map { OrderLineView(it.catalogItemId, it.description, it.quantity) },
-            order.serviceAddress, order.appointment, order.revision,
+            PortalServiceAddress(order.serviceAddress.address, order.serviceAddress.city, order.serviceAddress.postalCode),
+            order.appointment, order.revision,
         ))
     }
 

@@ -94,9 +94,15 @@ data class PortalOrderView(
     val id: UUID,
     val status: PortalOrderStatus,
     val lines: List<OrderLineView>,
-    val serviceAddress: ServiceAddress,
+    val serviceAddress: PortalServiceAddress,
     val appointment: Appointment?,
     val revision: Long,
+)
+
+data class PortalServiceAddress(
+    val address: String,
+    val city: String,
+    val postalCode: String,
 )
 
 enum class PortalOrderStatus { RECEIVED, REVIEWING, SCHEDULED, IN_PROGRESS, WAITING_CUSTOMER, COMPLETED, CANCELLED, REQUIRES_ATTENTION }

@@ -10,6 +10,7 @@ import com.duluin.ftth.order.application.service.OrderApplicationService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import java.beans.Introspector
 
 class OrderApplicationServiceTest {
     private val tenant = UuidV7.generate()
@@ -35,6 +36,25 @@ class OrderApplicationServiceTest {
         assertThat(submitted.status).isEqualTo("SUBMITTED")
         assertThat(service.portalOrders(customer)).extracting<String> { it.status.name }.containsExactly("RECEIVED")
         assertThat(service.portalOrder(UuidV7.generate(), first.id)).isNull()
+    }
+
+    @Test
+    fun `portal projection redacts coordinates and internal order fields`() {
+        val first = service.create(
+            CreateOrderCommand(
+                customer,
+                listOf(OrderLineCommand(UuidV7.generate(), "Paket", 1)),
+                ServiceAddress("Alamat", "Kota", "12345", -6.2, 106.8),
+                operation = OperationCommand("order.create", "redaction", "redaction-hash"),
+            ),
+        )
+        service.transition(OrderTransitionCommand(first.id, OrderTransition.SUBMIT, 0, operation = OperationCommand("order.submit", "redaction", "submit-redaction-hash")))
+
+        val addressProperties = Introspector.getBeanInfo(service.portalOrders(customer).single().serviceAddress.javaClass)
+            .propertyDescriptors.map { it.name }
+
+        assertThat(addressProperties).doesNotContain("latitude", "longitude")
+        assertThat(service.portalOrders(UuidV7.generate())).isEmpty()
     }
 
     private fun create(key: String, hash: String) = CreateOrderCommand(
