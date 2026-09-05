@@ -31,8 +31,9 @@ KeyStore/Keychain-backed implementations of those ports. JVM persistence is test
 
 `mobile:core:mvi` provides the only commonMain MVI contract: typed
 `Intent -> reducer -> immutable State`, ordered actions, non-replayed effects, explicit
-store ownership/cancellation, and an optional state saver. Feature stores own their scope
-through composition rather than Android ViewModel inheritance.
+store ownership/cancellation, and an optional state saver. Feature ViewModels own their
+stores under AndroidX Lifecycle `viewModelScope`; Compose obtains them through Koin rather
+than constructing feature stores directly.
 
 `mobile:core:ui` provides FluentTheme-backed atoms (`FluentAction`, `FluentMessage`,
 `FluentPanel`), molecules (`FluentStatePanel`), and responsive scaffolding. Atoms contain
@@ -42,7 +43,7 @@ list/form slots, and responsive surfaces. The Fluent dependency is
 `io.github.compose-fluent:fluent:v0.1.0`; this release is experimental and
 was published against an older Compose generation, so upgrades require Android
 and iOS validation. Location adapters are `expect`/`actual` boundaries and do
-not claim native permission or secure-storage behavior yet.
+not claim native runtime permission behavior yet.
 
 The repository currently cannot configure the Android target: Kotlin 2.3.21
 fails to infer the Android Gradle Plugin version when `androidTarget()` is used
@@ -61,3 +62,38 @@ enabling the Android launcher.
   competing feature-local store or shared visual state layer.
 - Attendance uses self-service permission state, operation keys/revisions, `SecureOutboxPort`, and explicit offline/conflict states; its queued payload is metadata only.
 - Payroll reads only `SecurePayslipPort.personalPayslip()`, has no peer identifier or mutation intent, and renders locked periods as read-only.
+
+## Lifecycle And Dependency Injection
+
+The shared MVI engine remains a pure `MviReducer` plus `MviStore`. Lifecycle-facing
+owners are feature `ViewModel`s (`WorkOrderViewModel`, `AttendanceViewModel`, and
+`PayrollViewModel`) built on the single `core:mvi` `MviViewModel` abstraction. That
+base owns `MviStore` under AndroidX Lifecycle `viewModelScope`, exposes immutable
+`StateFlow`/`SharedFlow`, and closes the store from `onCleared`.
+
+Compose obtains those owners with Koin's `koinViewModel()` rather than constructing
+stores in `remember` or closing them from `DisposableEffect`. `commonAppModule`
+declares feature/domain port bindings and ViewModels; Android and iOS platform
+modules bind the platform port bundle and their concrete secure outbox. Android
+uses `applicationContext`; iOS uses CryptoKit, Keychain, and Application Support.
+Koin is initialized by the platform entrypoint through `KoinApplication`, once for
+the Compose app lifecycle. Hilt is intentionally not used because it is Android-
+centric and does not provide the shared iOS composition required by this KMP app.
+
+## Permissions And Runtime Limits
+
+Location is purpose-bound to technician check-in. The common state machine represents
+only `Unknown`, `Granted`, and `Denied`; denied permission routes to permission help and
+does not claim background or continuous tracking. JVM and iOS location adapters currently
+return `Unknown` and reject coordinate retrieval, so neither is native runtime proof.
+Android runtime execution is also environment-gated because this repository does not
+configure an Android KMP target. A production Android adapter must declare/request location
+permission, disclose the onsite purpose, and keep exact coordinates out of portal and
+payslip projections before it can be claimed as implemented.
+
+Secure outbox behavior is concrete on the available platform bindings: Koin injects a
+user-scoped `SecureOutboxPort`; Android uses application context and iOS uses CryptoKit,
+Keychain, and Application Support. The outbox binds user/device/session/operation identity,
+encrypts bytes at rest, rejects foreign-user retry/enqueue/purge, and purges the signed-out
+user. Native device execution, Keychain fault injection, and Android permission prompts
+remain platform-runtime acceptance checks, not evidence supplied by JVM/common tests.
