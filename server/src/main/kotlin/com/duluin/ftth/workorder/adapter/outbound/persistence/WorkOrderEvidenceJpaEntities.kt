@@ -21,7 +21,7 @@ class WorkOrderEvidenceJpaEntity(
     var workOrderId: UUID,
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20, updatable = false)
+    @Column(nullable = false, length = 32, updatable = false)
     var kind: EvidenceKind,
 
     @Column(length = 300)
@@ -61,6 +61,15 @@ class WorkOrderEvidenceJpaEntity(
     var revisionState: EvidenceRevisionState,
     @Column(name = "correction_reason", length = 500, updatable = false)
     var correctionReason: String?,
+    @Column(name = "purge_state", nullable = false, length = 20)
+    var purgeState: String = "ACTIVE",
+    @Column(name = "purge_claim_id")
+    var purgeClaimId: UUID? = null,
+    @Column(name = "purge_claimed_at")
+    var purgeClaimedAt: Instant? = null,
+    @jakarta.persistence.Version
+    @Column(name = "row_version", nullable = false)
+    var rowVersion: Long = 0,
 ) : TenantAwareJpaEntity(id)
 
 /** Metadata tanda tangan pelanggan; byte-nya di object storage pada [storageKey]. */
@@ -103,4 +112,13 @@ class WorkOrderSignatureJpaEntity(
     var revisionState: EvidenceRevisionState,
     @Column(name = "correction_reason", length = 500, updatable = false)
     var correctionReason: String?,
+    @Column(name = "purge_state", nullable = false, length = 20)
+    var purgeState: String = "ACTIVE",
+    @Column(name = "purge_claim_id")
+    var purgeClaimId: UUID? = null,
+    @Column(name = "purge_claimed_at")
+    var purgeClaimedAt: Instant? = null,
+    @jakarta.persistence.Version
+    @Column(name = "row_version", nullable = false)
+    var rowVersion: Long = 0,
 ) : TenantAwareJpaEntity(id)

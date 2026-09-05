@@ -1,6 +1,7 @@
 package com.duluin.ftth.workorder.adapter.outbound.persistence
 
 import com.duluin.ftth.common.tenant.TenantContext
+import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderEvidenceRepository
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderSignatureRepository
 import com.duluin.ftth.workorder.domain.model.WorkOrderEvidence
@@ -16,6 +17,7 @@ class WorkOrderEvidencePersistenceAdapter(
     override fun save(evidence: WorkOrderEvidence): WorkOrderEvidence {
         val current = jpa.findById(evidence.id).orElse(null)
         val entity = current?.apply {
+            if (purgeState != "ACTIVE") throw ConflictException("Bukti sedang diproses retensi")
             caption = evidence.caption
             revisionState = evidence.revisionState
         } ?: WorkOrderEvidenceJpaEntity(
@@ -42,8 +44,13 @@ class WorkOrderEvidencePersistenceAdapter(
 
     override fun findById(id: UUID): WorkOrderEvidence? = jpa.findById(id).orElse(null)?.toDomain()
 
+    override fun findVisibleById(id: UUID): WorkOrderEvidence? =
+        jpa.findById(id).orElse(null)?.takeIf { it.visibleForRead() }?.toDomain()
+
     override fun listByWorkOrder(workOrderId: UUID): List<WorkOrderEvidence> =
-        jpa.findByWorkOrderIdOrderByCreatedAt(workOrderId).filter { it.revisionState == com.duluin.ftth.workorder.domain.model.EvidenceRevisionState.COMMITTED }.map { it.toDomain() }
+        jpa.findByWorkOrderIdOrderByCreatedAt(workOrderId)
+            .filter { it.visibleForRead() }
+            .map { it.toDomain() }
 
     override fun deleteById(id: UUID) = jpa.deleteById(id)
 }
@@ -56,6 +63,7 @@ class WorkOrderSignaturePersistenceAdapter(
     override fun save(signature: WorkOrderSignature): WorkOrderSignature {
         val current = jpa.findById(signature.id).orElse(null)
         val entity = current?.apply {
+            if (purgeState != "ACTIVE") throw ConflictException("Tanda tangan sedang diproses retensi")
             signerName = signature.signerName
             revisionState = signature.revisionState
         } ?: WorkOrderSignatureJpaEntity(
@@ -78,13 +86,21 @@ class WorkOrderSignaturePersistenceAdapter(
     }
 
     override fun findByWorkOrder(workOrderId: UUID): WorkOrderSignature? =
-        jpa.findByWorkOrderId(workOrderId).filter { it.revisionState == com.duluin.ftth.workorder.domain.model.EvidenceRevisionState.COMMITTED }.maxByOrNull { it.createdAt }?.toDomain()
+        jpa.findByWorkOrderId(workOrderId)
+            .filter { it.visibleForRead() }
+            .maxByOrNull { it.createdAt }?.toDomain()
 
     // Flush langsung: saat tanda tangan diganti (hapus lama → simpan baru dalam satu
     // transaksi), Hibernate secara default mengurutkan INSERT sebelum DELETE dan
     // menabrak indeks unik (tenant_id, work_order_id). Paksa DELETE turun lebih dulu.
     override fun deleteById(id: UUID) = jpa.deleteById(id)
 }
+
+private fun WorkOrderEvidenceJpaEntity.visibleForRead() =
+    revisionState == com.duluin.ftth.workorder.domain.model.EvidenceRevisionState.COMMITTED && purgeState == "ACTIVE"
+
+private fun WorkOrderSignatureJpaEntity.visibleForRead() =
+    revisionState == com.duluin.ftth.workorder.domain.model.EvidenceRevisionState.COMMITTED && purgeState == "ACTIVE"
 
 private fun WorkOrderEvidenceJpaEntity.toDomain(): WorkOrderEvidence = WorkOrderEvidence.rehydrate(
     id = id,
