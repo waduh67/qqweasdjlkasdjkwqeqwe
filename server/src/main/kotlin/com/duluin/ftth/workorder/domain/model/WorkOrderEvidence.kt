@@ -6,6 +6,15 @@ import java.util.UUID
 
 /** Jenis bukti pengerjaan yang lazim di lapangan FTTH. */
 enum class EvidenceKind {
+    FAT,
+    ODP,
+    DROPCORE,
+    ONT,
+    ONU,
+    OPTICAL_BEFORE,
+    OPTICAL_AFTER,
+    TECHNICIAN_SIGNATURE,
+
     /** Kondisi sebelum dikerjakan. */
     BEFORE,
 
@@ -17,6 +26,8 @@ enum class EvidenceKind {
 
     /** Label/serial number ONU atau perangkat. */
     SERIAL,
+
+    CUSTOMER_ACKNOWLEDGEMENT,
 
     OTHER,
 }

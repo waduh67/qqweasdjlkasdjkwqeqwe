@@ -10,7 +10,7 @@ import com.duluin.ftth.workorder.domain.model.WorkOrderType
 import com.duluin.ftth.workorder.domain.model.ProofArtifactKind
 import com.duluin.ftth.workorder.domain.model.ProofArtifactRef
 import com.duluin.ftth.workorder.domain.model.ProofOfWorkPacket
-import com.duluin.ftth.workorder.domain.model.EvidenceRevisionState
+import com.duluin.ftth.workorder.domain.model.ProofArtifactCompatibility
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -20,9 +20,9 @@ import java.time.Instant
 class WorkOrderTest {
 
     private fun packet(type: WorkOrderType): ProofOfWorkPacket = ProofOfWorkPacket(
-        revision = 1,
+        revision = "proof-revision",
         artifacts = com.duluin.ftth.workorder.domain.model.ProofOfWorkPolicy.requiredArtifacts(type)
-            .map { ProofArtifactRef(it, UuidV7.generate(), EvidenceRevisionState.COMMITTED) }.toSet(),
+            .map { ProofArtifactRef(it, UuidV7.generate()) }.toSet(),
     )
 
     private fun draft() = WorkOrder.open(
@@ -169,6 +169,33 @@ class WorkOrderTest {
             assertThatThrownBy { partial.validateFor(type) }
                 .isInstanceOf(ConflictException::class.java)
         }
+    }
+
+    @Test
+    fun `satu revisi tidak boleh dipakai ulang untuk dua jenis bukti`() {
+        val revisionId = UuidV7.generate()
+
+        assertThatThrownBy {
+            ProofOfWorkPacket(
+                revision = "proof-revision",
+                artifacts = setOf(
+                    ProofArtifactRef(ProofArtifactKind.FAT, revisionId),
+                    ProofArtifactRef(ProofArtifactKind.ODP, revisionId),
+                ),
+            )
+        }.isInstanceOf(ConflictException::class.java)
+    }
+
+    @Test
+    fun `revisi otoritatif dengan jenis berbeda ditolak`() {
+        val revisionId = UuidV7.generate()
+
+        assertThatThrownBy {
+            ProofArtifactCompatibility.requireMatching(
+                setOf(ProofArtifactRef(ProofArtifactKind.FAT, revisionId)),
+                mapOf(revisionId to ProofArtifactKind.ODP),
+            )
+        }.isInstanceOf(ConflictException::class.java)
     }
 
     @Test
