@@ -1109,3 +1109,124 @@ pemantauanmu (dibatasi firewall) atau lewat terowongan SSH, dengan header
   pelanggan, berhari-hari kemudian.
 - **Test job di CI** butuh Postgres+Timescale; kalau rewel, bisa longgarin dengan hapus
   `needs: test` di job `build-and-push` (`.github/workflows/deploy.yml`).
+
+---
+
+## Bagian O — Privasi, retensi, dan preflight rilis
+
+Nama produk di dokumen operasi ini adalah **NetOps Console**. Data tenant tidak boleh
+disalin ke tiket, shell history, contoh curl, atau log insiden. Projection portal order
+tidak memuat koordinat persis; GPS persis tetap berada di boundary field-service dan
+hanya dipakai untuk tujuan onsite yang dicatat server.
+
+### O.1 Jadwal retensi dan legal hold
+
+| Kelas data | Jadwal | Status kontrol saat ini |
+|---|---:|---|
+| Bukti asli (foto, tanda tangan) | 24 bulan | `EvidenceRetentionScheduler` berjalan per tenant; hanya revision `COMMITTED`/`SUPERSEDED` yang lama dihapus melalui `head` dan `deleteIfMatch`, lalu registry ditombstone dan audit ditulis. |
+| Turunan bukti (thumbnail/report turunan) | 12 bulan | Kebijakan operasional; buat ticket purge yang mencatat jumlah, hash/ID revision, waktu, operator, dan hasil. |
+| GPS presisi | 90 hari | `GpsRetentionWorker` menghapus titik kedaluwarsa dan mengecualikan ID pada legal hold; mengembalikan `GpsDeletionEvidence`. |
+| Keputusan attendance | 24 bulan | Kebijakan operasional; jangan menghapus keputusan koreksi immutable sebelum hold dilepas. |
+| Payroll | 24 bulan | Kebijakan operasional untuk data operasional; audit/legal-hold tetap 7 tahun. |
+| CSV asli dan safe report | 30 hari | Batch baru menetapkan `retention_until` 30 hari; worker onboarding membersihkan staging/report batch yang lewat waktu dan tidak legal-held. |
+| Audit trail dan legal-hold record | 7 tahun | Kebijakan operasional; append-only, tidak dihapus oleh job aplikasi. |
+
+Legal hold menang atas jadwal di atas. Worker menyimpan audit `LEGAL_HOLD_SKIP`, `MISSING_OBJECT`, `CONDITIONAL_DELETE_CONFLICT`, `METADATA_CHANGED`, atau `DELETED`; ia tidak menghapus revision `LEGAL_HOLD`. Catat tujuan pemrosesan, pemilik hold, dasar
+hukum/case reference, scope record, waktu mulai, reviewer, dan waktu pelepasan. Jangan
+memakai hold untuk menunda purging tanpa owner. Bukti penghapusan harus berisi tenant,
+kelas retensi, ID opaque atau hash, waktu, worker/operator, hasil, dan alasan skip untuk
+record held. GPS dan customer-import saat ini memiliki seam legal-hold yang diuji; kelas
+lain memerlukan workflow operasi manual sampai worker khusus tersedia.
+
+#### State machine retensi bukti
+
+Untuk foto dan tanda tangan yang sudah melewati retensi, registry dan source row bergerak
+bersama: `ACTIVE` → `CLAIMED` → `DELETED`, atau `ACTIVE`/`CLAIMED` → `RECONCILE` bila
+metadata, legal hold, atau claim tidak lagi cocok. Claim disimpan dan di-commit sebelum
+`head`/`deleteIfMatch`; byte object dihapus di luar transaksi claim; finalisasi mengubah
+source serta registry menjadi tombstone dan `DELETED` dalam transaksi baru. Jika proses
+crash setelah guarded delete, worker berikutnya mengambil kembali `CLAIMED`: object yang
+sudah hilang difinalisasi aman sebagai tombstone. Jika source/registry berubah atau tidak
+cocok setelah delete, keduanya tetap tersembunyi di `RECONCILE` untuk perbaikan manual,
+bukan dikembalikan ke `ACTIVE` atau dihapus ulang. Konflik conditional delete menghapus
+claim dan mengembalikan kedua sisi ke `ACTIVE`; legal hold selalu mencegah claim baru.
+
+### O.2 Reconciliation object storage
+
+Registry evidence adalah sumber kebenaran metadata, sedangkan bucket hanya penyimpanan
+byte. Rekonsiliasi per tenant harus paginasi `list(tenant, prefix)`, lalu `head` setiap
+object untuk hash/ETag/version dan membandingkannya dengan revision registry. Jangan
+melakukan delete buta: hanya hapus orphan yang masih sama dengan ETag/version hasil
+`head`, melalui `deleteIfMatch`. Bila commit/revision baru menang di antara list dan
+delete, guarded delete wajib mengembalikan konflik dan object baru dibiarkan utuh.
+Jangan pernah menyapu prefix tenant lain. `WorkOrderEvidenceStorageTest` mencakup prefix,
+head, guard salah, dan race replace-versus-delete.
+
+### O.3 Migration preflight dan rollback
+
+Jalankan dari `/opt/ftth` sebelum setiap image server dinaikkan:
+
+```bash
+docker compose -f docker-compose.prod.yml config >/dev/null
+docker compose -f docker-compose.prod.yml up -d postgres
+docker compose -f docker-compose.prod.yml exec -T postgres pg_isready -U postgres -d "$FTTH_DB_NAME"
+docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d "$FTTH_DB_NAME" -v ON_ERROR_STOP=1 -c "SELECT version, success FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 5;"
+docker compose -f docker-compose.prod.yml run --rm server
+docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d "$FTTH_DB_NAME" -v ON_ERROR_STOP=1 -c "SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1;"
+```
+
+Expected upgraded version is `170`; a clean database must reach the same version. Take
+and verify a restore-capable backup first. Assert non-zero source and destination counts
+for every backfill expected to copy existing rows. Flyway migrations are forward-only:
+never edit an applied version; roll forward with a new version or restore the verified
+preflight backup in a maintenance window.
+
+Release compatibility for this chain is explicit: `V166` widens `wo_evidence.kind` to
+`varchar(32)`; `V167` replaces the artifact-kind check with the proof-of-work kinds;
+`V168` creates the tenant-scoped, FORCE-RLS `evidence_retention_audit`; `V169` adds its
+JPA timestamps; and `V170` adds retention claim state, claim metadata, row version, and
+indexes on registry/photo/signature rows. Roll out the server that understands the new
+proof kinds and claim states together with these migrations. None of `V166`–`V170` may be
+edited, reversed in place, or used as a downgrade mechanism after application. Rollback is
+forward remediation with a new migration, or restore the verified preflight backup during
+a maintenance window; a binary downgrade that cannot read the expanded kinds or V170 state
+is not supported.
+
+Inspect RLS, policies, and indexes under the non-owner `NOBYPASSRLS` application role.
+Do not set `app.tenant_id` from a request parameter.
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d "$FTTH_DB_NAME" -v ON_ERROR_STOP=1 -c "SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname='$FTTH_DB_USER';"
+docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d "$FTTH_DB_NAME" -v ON_ERROR_STOP=1 -c "SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity, p.policyname FROM pg_class c LEFT JOIN pg_policies p ON p.tablename=c.relname WHERE c.relname IN ('wo_evidence','wo_signature','evidence_object_registry','evidence_retention_audit','work_order','work_order_assignee','fulfillment_checkpoint','payroll_run','attendance_decision') ORDER BY c.relname, p.policyname;"
+docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d "$FTTH_DB_NAME" -v ON_ERROR_STOP=1 -c "SELECT indexname, indexdef FROM pg_indexes WHERE tablename IN ('wo_evidence','wo_signature','evidence_object_registry','evidence_retention_audit') ORDER BY tablename, indexname;"
+```
+
+Verify `V166`, `V167`, `V168`, `V169`, and `V170` explicitly in `flyway_schema_history`, then inspect every table
+touched by the release with the same RLS/policy/index query. Run tenant visibility probes
+as `$FTTH_DB_USER`, not `postgres`; an owner or `BYPASSRLS` session cannot prove RLS.
+
+For a reproducible application-role probe, set two existing tenant IDs and run the read
+probe through `SET ROLE` inside a transaction. The first count must be one for tenant A
+and zero for tenant B while the session GUC is tenant A:
+
+```bash
+export FTTH_TENANT_A=00000000-0000-0000-0000-000000000001
+export FTTH_TENANT_B=00000000-0000-0000-0000-000000000002
+docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d "$FTTH_DB_NAME" -v ON_ERROR_STOP=1 -c "BEGIN; SET ROLE \"$FTTH_DB_USER\"; SELECT set_config('app.tenant_id', '$FTTH_TENANT_A', false); SELECT count(*) AS visible_a FROM evidence_retention_audit WHERE tenant_id = '$FTTH_TENANT_A'; SELECT count(*) AS hidden_b FROM evidence_retention_audit WHERE tenant_id = '$FTTH_TENANT_B'; ROLLBACK;"
+```
+
+The cross-tenant write probe must fail with a row-security violation and roll back;
+success is a release blocker. It intentionally uses the application role after setting
+tenant A, while attempting to write a tenant-B audit row:
+
+```bash
+if docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d "$FTTH_DB_NAME" -v ON_ERROR_STOP=1 -c "BEGIN; SET ROLE \"$FTTH_DB_USER\"; SELECT set_config('app.tenant_id', '$FTTH_TENANT_A', false); INSERT INTO evidence_retention_audit (id, tenant_id, revision_id, object_key, retention_class, outcome, worker) VALUES (gen_random_uuid(), '$FTTH_TENANT_B', gen_random_uuid(), '$FTTH_TENANT_B/probe', 'PROBE', 'PROBE', 'runbook'); ROLLBACK;"; then echo 'ERROR: cross-tenant write unexpectedly succeeded'; exit 1; else echo 'OK: NOBYPASSRLS cross-tenant write denied'; fi
+```
+
+### O.4 Production configuration gate
+
+The production Compose service sets `FTTH_PRODUCTION=true`. Startup rejects known
+development defaults for JWT, encryption, application database, and bootstrap passwords,
+and rejects demo seeding. Local/dev/test remain usable with `FTTH_PRODUCTION=false`.
+Set distinct random JWT and encryption secrets, a non-default database password, a
+non-default initial admin password, and `FTTH_SEED_DEMO=false` before deployment.

@@ -171,6 +171,7 @@ services:
       radius-db:
         condition: service_started
     environment:
+      FTTH_PRODUCTION: "true"
       FTTH_DB_URL: jdbc:postgresql://postgres:5432/${FTTH_DB_NAME}
       FTTH_DB_USER: ${FTTH_DB_USER}
       FTTH_DB_PASSWORD: ${FTTH_DB_PASSWORD}
