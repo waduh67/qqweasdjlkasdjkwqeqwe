@@ -40,6 +40,7 @@ class MviStore<State : MviState, Intent : MviIntent, Action : MviAction, Effect 
     private val actionHandler: (suspend (Action) -> Intent?)? = null,
     private val stateSaver: MviStateSaver<State>? = null,
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val stateActionHandler: (suspend (State, Action) -> Intent?)? = null,
 ) : AutoCloseable {
     private val storeJob = SupervisorJob(parentScope.coroutineContext[Job])
     private val scope = CoroutineScope(parentScope.coroutineContext + storeJob + dispatcher)
@@ -55,7 +56,7 @@ class MviStore<State : MviState, Intent : MviIntent, Action : MviAction, Effect 
     init {
         scope.launch {
             for (action in actions) {
-                val intent = actionHandler?.invoke(action) ?: continue
+                val intent = stateActionHandler?.invoke(mutableState.value, action) ?: actionHandler?.invoke(action) ?: continue
                 dispatch(intent)
             }
         }
