@@ -13,6 +13,9 @@ import com.duluin.ftth.customer.UpdateCustomerBiodataCommand
 import com.duluin.ftth.onboarding.application.port.inbound.CustomerImportRow
 import com.duluin.ftth.onboarding.application.port.inbound.CustomerImportStatus
 import com.duluin.ftth.onboarding.application.port.inbound.ImportCustomersCommand
+import com.duluin.ftth.onboarding.application.port.inbound.ImportMode
+import com.duluin.ftth.onboarding.MigrationFulfillmentPublisher
+import com.duluin.ftth.onboarding.MigrationFulfillmentRequested
 import com.duluin.ftth.onboarding.application.service.CustomerRowImporter
 import com.duluin.ftth.onboarding.application.service.ImportCustomersService
 import org.assertj.core.api.Assertions.assertThat
@@ -49,14 +52,21 @@ class ImportCustomersServiceTest {
     private val brasId: UUID = UuidV7.generate()
 
     private fun newService(catalog: FakeCatalogApi, bng: FakeBngApi, customer: FakeCustomerApi) =
-        ImportCustomersService(CustomerRowImporter(customer, catalog, bng))
+        RecordingPublisher().let { publisher ->
+            TestService(ImportCustomersService(CustomerRowImporter(customer, catalog, bng, publisher)), publisher)
+        }
+
+    private data class TestService(val service: ImportCustomersService, val publisher: RecordingPublisher) {
+        fun importCustomers(command: ImportCustomersCommand) = service.importCustomers(command)
+    }
 
     @Test
     fun `baris baru dibuat lengkap dan memprovisi RADIUS dengan paket & BRAS dari nama`() {
         val catalog = FakeCatalogApi(mapOf("home 20" to homePlan))
         val bng = FakeBngApi(routers = mapOf("bras-01" to brasId))
         val customer = FakeCustomerApi()
-        val result = newService(catalog, bng, customer).importCustomers(
+        val testService = newService(catalog, bng, customer)
+        val result = testService.importCustomers(
             ImportCustomersCommand(
                 listOf(
                     row(
@@ -82,20 +92,14 @@ class ImportCustomersServiceTest {
         val registered = customer.registered.single()
         assertThat(registered.name).isEqualTo("Joko Susilo")
         assertThat(registered.code).isNull() // kode auto-generate
-        assertThat(registered.location.longitude).isEqualTo(106.8)
-        assertThat(registered.location.latitude).isEqualTo(-6.2)
+        assertThat(registered.location!!.longitude).isEqualTo(106.8)
+        assertThat(registered.location!!.latitude).isEqualTo(-6.2)
 
-        val provisioned = bng.provisioned.single()
-        assertThat(provisioned.username).isEqualTo("joko")
-        assertThat(provisioned.secret).isEqualTo("rahasia")
-        assertThat(provisioned.planId).isEqualTo(homePlan.planId)
-        assertThat(provisioned.nasId).isEqualTo(brasId)
-        assertThat(provisioned.authType).isEqualTo("PPPOE")
-
-        val activation = customer.activatedImported.single()
-        assertThat(activation.activatedAt)
-            .isEqualTo(LocalDate.of(2024, 1, 15).atStartOfDay(ZoneOffset.UTC).toInstant())
-        assertThat(activation.billingDay).isEqualTo(10)
+        assertThat(bng.provisioned).isEmpty()
+        assertThat(customer.activatedImported).isEmpty()
+        assertThat(testService.publisher.requests).hasSize(1)
+        assertThat(testService.publisher.requests.single().username).isEqualTo("joko")
+        assertThat(testService.publisher.requests.single().credentialHandle).isNotNull()
     }
 
     @Test
@@ -109,8 +113,7 @@ class ImportCustomersServiceTest {
             ),
         )
 
-        // Password kosong pada CREATE → null (server generate), bukan string kosong.
-        assertThat(bng.provisioned.single().secret).isNull()
+        assertThat(bng.provisioned).isEmpty()
     }
 
     @Test
@@ -154,11 +157,7 @@ class ImportCustomersServiceTest {
         assertThat(biodata.address).isNull() // kolom kosong dipertahankan
         assertThat(biodata.location).isNull()
 
-        val updated = bng.accessUpdates.single()
-        assertThat(updated.accessId).isEqualTo(existing.accessId)
-        assertThat(updated.planId).isEqualTo(existingPlan) // paket TAK berubah
-        assertThat(updated.nasId).isEqualTo(existingNas) // BRAS lama (router_name kosong)
-        assertThat(updated.secret).isEqualTo("") // password kosong diteruskan; bng yang pertahankan
+        assertThat(bng.accessUpdates).isEmpty()
 
         assertThat(customer.billingOverrides).isEmpty() // next_billing kosong → tak disetel
     }
@@ -180,7 +179,7 @@ class ImportCustomersServiceTest {
             ImportCustomersCommand(listOf(row(username = "joko", routerName = "BRAS-02"))),
         )
 
-        assertThat(bng.accessUpdates.single().nasId).isEqualTo(newBras)
+        assertThat(bng.accessUpdates).isEmpty()
     }
 
     @Test
@@ -194,7 +193,7 @@ class ImportCustomersServiceTest {
             ),
         )
 
-        assertThat(customer.activatedImported.single().billingDay).isEqualTo(28)
+        assertThat(customer.activatedImported).isEmpty()
     }
 
     @Test
@@ -243,10 +242,7 @@ class ImportCustomersServiceTest {
             ),
         )
 
-        val provisioned = bng.provisioned.single()
-        assertThat(provisioned.authType).isEqualTo("HOTSPOT")
-        assertThat(provisioned.secret).isEqualTo("kopi123")
-        assertThat(provisioned.framedIp).isNull()
+        assertThat(bng.provisioned).isEmpty()
     }
 
     @Test
@@ -266,9 +262,7 @@ class ImportCustomersServiceTest {
             ),
         )
 
-        val provisioned = bng.provisioned.single()
-        assertThat(provisioned.authType).isEqualTo("DHCP")
-        assertThat(provisioned.username).isEqualTo("AA:BB:CC:DD:EE:FF")
+        assertThat(bng.provisioned).isEmpty()
     }
 
     @Test
@@ -288,9 +282,7 @@ class ImportCustomersServiceTest {
             ),
         )
 
-        val provisioned = bng.provisioned.single()
-        assertThat(provisioned.authType).isEqualTo("STATIC")
-        assertThat(provisioned.framedIp).isEqualTo("100.64.0.10")
+        assertThat(bng.provisioned).isEmpty()
     }
 
     @Test
@@ -302,6 +294,43 @@ class ImportCustomersServiceTest {
         assertThat(result.failed).isEqualTo(1)
         assertThat(result.rows.single().status).isEqualTo(CustomerImportStatus.FAILED)
         assertThat(result.rows.single().message).contains("tak dikenal")
+    }
+
+    @Test
+    fun `validate only tidak membuat customer atau fulfillment`() {
+        val bng = FakeBngApi(routers = mapOf("bras-01" to brasId))
+        val customer = FakeCustomerApi()
+        val testService = newService(FakeCatalogApi(mapOf("home 20" to homePlan)), bng, customer)
+
+        val result = testService.importCustomers(
+            ImportCustomersCommand(
+                rows = listOf(row(name = "Validasi", address = "Jl. A", packageName = "Home 20", username = "validate")),
+                mode = ImportMode.VALIDATE_ONLY,
+            ),
+        )
+
+        assertThat(result.skipped).isEqualTo(1)
+        assertThat(customer.registered).isEmpty()
+        assertThat(testService.publisher.requests).isEmpty()
+    }
+
+    @Test
+    fun `pending installation membuat customer tanpa activation provisioning atau handle`() {
+        val bng = FakeBngApi(routers = mapOf("bras-01" to brasId))
+        val customer = FakeCustomerApi()
+        val testService = newService(FakeCatalogApi(mapOf("home 20" to homePlan)), bng, customer)
+
+        testService.importCustomers(
+            ImportCustomersCommand(
+                rows = listOf(row(name = "Pending", address = "Jl. A", packageName = "Home 20", username = "pending", password = "secret")),
+                mode = ImportMode.PENDING_INSTALLATION,
+            ),
+        )
+
+        assertThat(customer.registered.single().location).isNull()
+        assertThat(customer.activatedImported).isEmpty()
+        assertThat(bng.provisioned).isEmpty()
+        assertThat(testService.publisher.requests).isEmpty()
     }
 
     @Test
@@ -410,6 +439,11 @@ class ImportCustomersServiceTest {
     data class AccessUpdate(val accessId: UUID, val planId: UUID, val nasId: UUID?, val secret: String?)
 
     data class ActivatedImported(val subscriptionId: UUID, val activatedAt: Instant?, val billingDay: Int?)
+
+    private class RecordingPublisher : MigrationFulfillmentPublisher {
+        val requests = mutableListOf<MigrationFulfillmentRequested>()
+        override fun publish(request: MigrationFulfillmentRequested) { requests += request }
+    }
 
     private class FakeCustomerApi : com.duluin.ftth.customer.CustomerApi {
         val registered = mutableListOf<RegisterCustomerCommand>()

@@ -4,6 +4,7 @@ import com.duluin.ftth.iam.AreaRef
 import com.duluin.ftth.iam.IamApi
 import com.duluin.ftth.iam.UserRef
 import com.duluin.ftth.iam.application.port.outbound.AreaRepository
+import com.duluin.ftth.iam.application.port.outbound.RoleRepository
 import com.duluin.ftth.iam.application.port.outbound.UserDirectory
 import com.duluin.ftth.iam.application.port.outbound.UserRepository
 import com.duluin.ftth.iam.domain.model.Area
@@ -18,6 +19,7 @@ class IamApiService(
     private val userRepository: UserRepository,
     private val userDirectory: UserDirectory,
     private val areaRepository: AreaRepository,
+    private val roleRepository: RoleRepository,
 ) : IamApi {
 
     override fun findUser(id: UUID): UserRef? = userRepository.findById(id)?.toRef()
@@ -36,6 +38,7 @@ class IamApiService(
         name = name,
         email = email.value,
         active = active,
+        technician = roleRepository.findAllByIds(roleIds).any { it.name == "Teknisi" },
     )
 
     private fun Area.toRef() = AreaRef(id = id, code = code, name = name)

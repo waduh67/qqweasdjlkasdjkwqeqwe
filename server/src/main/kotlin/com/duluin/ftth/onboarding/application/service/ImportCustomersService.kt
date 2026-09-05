@@ -2,7 +2,6 @@ package com.duluin.ftth.onboarding.application.service
 
 import com.duluin.ftth.bng.BngApi
 import com.duluin.ftth.bng.ImportedAccessRef
-import com.duluin.ftth.bng.ProvisionAccessSpec
 import com.duluin.ftth.catalog.CatalogApi
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.ValidationException
@@ -16,14 +15,18 @@ import com.duluin.ftth.onboarding.application.port.inbound.CustomerImportStatus
 import com.duluin.ftth.onboarding.application.port.inbound.ImportCustomersCommand
 import com.duluin.ftth.onboarding.application.port.inbound.ImportCustomersResult
 import com.duluin.ftth.onboarding.application.port.inbound.ImportCustomersUseCase
-import org.slf4j.LoggerFactory
+import com.duluin.ftth.onboarding.application.port.inbound.ImportMode
+import com.duluin.ftth.onboarding.MigrationFulfillmentPublisher
+import com.duluin.ftth.onboarding.MigrationFulfillmentRequested
+import com.duluin.ftth.onboarding.NoopMigrationFulfillmentPublisher
+import com.duluin.ftth.onboarding.CredentialSealer
+import com.duluin.ftth.onboarding.UuidCredentialSealer
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.ZoneOffset
 import java.util.UUID
 
 /** Koordinat placeholder saat baris CSV tak membawa lat/long — operator memperkayanya belakangan. */
-private val PLACEHOLDER_LOCATION = Coordinate(0.0, 0.0)
 
 /** Batas atas hari tanggal tagih: hari >28 di-clamp ke 28 agar tetap ada di tiap bulan (Februari). */
 private const val MAX_BILLING_DAY = 28
@@ -40,10 +43,8 @@ class ImportCustomersService(
     private val rowImporter: CustomerRowImporter,
 ) : ImportCustomersUseCase {
 
-    private val log = LoggerFactory.getLogger(javaClass)
-
     override fun importCustomers(command: ImportCustomersCommand): ImportCustomersResult {
-        val outcomes = command.rows.map { process(it) }
+        val outcomes = command.rows.map { process(command, it) }
         return ImportCustomersResult(
             created = outcomes.count { it.status == CustomerImportStatus.CREATED },
             updated = outcomes.count { it.status == CustomerImportStatus.UPDATED },
@@ -53,7 +54,7 @@ class ImportCustomersService(
         )
     }
 
-    private fun process(row: CustomerImportRow): CustomerImportOutcome {
+    private fun process(command: ImportCustomersCommand, row: CustomerImportRow): CustomerImportOutcome {
         val username = row.mikrotikUsername?.trim().orEmpty()
         if (username.isEmpty()) {
             return CustomerImportOutcome("", CustomerImportStatus.SKIPPED, "mikrotik_username kosong — baris dilewati")
@@ -64,13 +65,15 @@ class ImportCustomersService(
                 username, CustomerImportStatus.FAILED,
                 "Tipe koneksi '${row.connectionType}' tak dikenal (pppoe/hotspot/dhcp/static)",
             )
+        if (command.mode == ImportMode.VALIDATE_ONLY) {
+            return CustomerImportOutcome(username, CustomerImportStatus.SKIPPED, "VALIDATE_ONLY")
+        }
         return try {
-            CustomerImportOutcome(username, rowImporter.importRow(username, authType, row), null)
+            CustomerImportOutcome(username, rowImporter.importRow(command, username, authType, row), null)
         } catch (e: ConflictException) {
             // Bentrok (mis. sudah pernah diimpor lewat jalur lain) → impor idempoten, lewati saja.
             CustomerImportOutcome(username, CustomerImportStatus.SKIPPED, e.message)
         } catch (e: RuntimeException) {
-            log.warn("Impor pelanggan gagal untuk '{}': {}", username, e.message)
             CustomerImportOutcome(username, CustomerImportStatus.FAILED, e.message)
         }
     }
@@ -102,16 +105,23 @@ class CustomerRowImporter(
     private val customerApi: CustomerApi,
     private val catalogApi: CatalogApi,
     private val bngApi: BngApi,
+    private val fulfillment: MigrationFulfillmentPublisher = NoopMigrationFulfillmentPublisher,
+    private val credentialSealer: CredentialSealer = UuidCredentialSealer,
 ) {
 
     @Transactional
-    fun importRow(username: String, authType: String, row: CustomerImportRow): CustomerImportStatus {
+    fun importRow(
+        command: ImportCustomersCommand,
+        username: String,
+        authType: String,
+        row: CustomerImportRow,
+    ): CustomerImportStatus {
         val existing = bngApi.findAccessByUsername(username)
-        return if (existing == null) createNew(username, authType, row) else updateExisting(existing, row)
+        return if (existing == null) createNew(command, username, authType, row) else updateExisting(existing, row)
     }
 
     /** Pelanggan+langganan+akun BARU, langsung aktif (pelanggan impor sudah terpasang di lapangan). */
-    private fun createNew(username: String, authType: String, row: CustomerImportRow): CustomerImportStatus {
+    private fun createNew(command: ImportCustomersCommand, username: String, authType: String, row: CustomerImportRow): CustomerImportStatus {
         val plan = catalogApi.findPlanByName(row.packageName.orEmpty())
             ?: throw ValidationException("Paket '${row.packageName ?: "-"}' tidak ditemukan")
         val nasId = resolveNas(row.routerName)
@@ -122,31 +132,26 @@ class CustomerRowImporter(
                 phone = row.phone?.trim()?.takeIf { it.isNotEmpty() },
                 email = row.email?.trim()?.takeIf { it.isNotEmpty() },
                 address = row.address?.trim().orEmpty(),
-                location = coordinateOf(row) ?: PLACEHOLDER_LOCATION,
+                location = coordinateOf(row),
                 areaId = null,
                 idCardNumber = row.idCardNumber?.trim()?.takeIf { it.isNotEmpty() },
                 planId = plan.planId,
             ),
         )
         val subscriptionId = registered.subscriptionId
-        customerApi.activateImportedSubscription(
-            subscriptionId,
-            row.installationDate?.atStartOfDay(ZoneOffset.UTC)?.toInstant(),
-            clampBillingDay(row.nextBillingDay),
-        )
-        bngApi.provisionAccess(
-            ProvisionAccessSpec(
-                subscriptionId = subscriptionId,
-                username = username,
-                // Password hanya untuk tipe login (PPPoE/Hotspot); MAC-based (DHCP/Static) mengabaikannya.
-                secret = row.mikrotikPassword?.trim()?.takeIf { it.isNotEmpty() },
-                planId = plan.planId,
-                nasId = nasId,
-                authType = authType,
-                // Framed-IP hanya bermakna untuk Static (wajib) / DHCP (opsional); bng memvalidasi.
-                framedIp = row.framedIp?.trim()?.takeIf { it.isNotEmpty() },
-            ),
-        )
+        if (command.mode == ImportMode.ALREADY_INSTALLED) {
+            fulfillment.publish(
+                MigrationFulfillmentRequested(
+                    operationKey = command.operationKey ?: "import-customers:$username",
+                    subscriptionId = subscriptionId,
+                    username = username,
+                    planId = plan.planId,
+                    nasId = nasId,
+                    authType = authType,
+                    credentialHandle = credentialSealer.seal(row.mikrotikPassword),
+                ),
+            )
+        }
         return CustomerImportStatus.CREATED
     }
 
@@ -167,10 +172,7 @@ class CustomerRowImporter(
         row.nextBillingDay?.let {
             customerApi.overrideSubscriptionBillingDay(existing.subscriptionId, clampBillingDay(it))
         }
-        // BRAS diperbarui bila router_name diisi; kosong = pertahankan BRAS lama. Password kosong
-        // = pertahankan (ditangani di dalam updateAccessFromImport). Paket tetap (existing.planId).
-        val nasId = if (row.routerName.isNullOrBlank()) existing.nasId else resolveNas(row.routerName)
-        bngApi.updateAccessFromImport(existing.accessId, existing.planId, nasId, row.mikrotikPassword)
+        if (!row.routerName.isNullOrBlank()) resolveNas(row.routerName)
         return CustomerImportStatus.UPDATED
     }
 
@@ -184,6 +186,7 @@ class CustomerRowImporter(
     private fun coordinateOf(row: CustomerImportRow): Coordinate? {
         val lat = row.latitude ?: return null
         val lon = row.longitude ?: return null
+        if (lon == 0.0 && lat == 0.0) return null
         return Coordinate(lon, lat)
     }
 

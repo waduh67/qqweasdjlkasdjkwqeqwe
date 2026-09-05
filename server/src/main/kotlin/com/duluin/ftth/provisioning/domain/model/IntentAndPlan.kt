@@ -1,0 +1,263 @@
+package com.duluin.ftth.provisioning.domain.model
+
+import com.duluin.ftth.common.domain.UuidV7
+import com.duluin.ftth.common.domain.error.ConflictException
+import com.duluin.ftth.common.domain.error.ValidationException
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import java.util.UUID
+
+enum class ServiceIntentSubjectKind { FIXED_SUBSCRIPTION, HOTSPOT_SITE }
+
+data class ServiceAccessBinding(val oltId: UUID, val ponPortId: UUID, val onuId: UUID)
+
+class ServiceIntent private constructor(
+    override val id: UUID,
+    val tenantId: UUID,
+    val subscriptionId: UUID?,
+    val hotspotSiteId: UUID?,
+    val segmentProfileId: UUID,
+    val encapsulation: VlanEncapsulation,
+    val dedicatedVlanId: Int?,
+    val allocationMode: VlanAllocationMode,
+    status: IntentStatus,
+    val accessBinding: ServiceAccessBinding? = null,
+) : ProvisioningAggregate {
+    val subjectKind: ServiceIntentSubjectKind
+        get() = if (subscriptionId != null) ServiceIntentSubjectKind.FIXED_SUBSCRIPTION else ServiceIntentSubjectKind.HOTSPOT_SITE
+    val subjectId: UUID
+        get() = subscriptionId ?: requireNotNull(hotspotSiteId)
+    var status: IntentStatus = status
+        private set
+
+    init {
+        require((subscriptionId == null) != (hotspotSiteId == null)) { "SERVICE_INTENT_SUBJECT_EXCLUSIVE" }
+        if (encapsulation != VlanEncapsulation.SINGLE_TAG) throw ValidationException("UNSUPPORTED_VLAN_MODE")
+        dedicatedVlanId?.let {
+            if (it !in 2..4094) throw ValidationException("VLAN_ID_OUT_OF_RANGE")
+        }
+        if (allocationMode == VlanAllocationMode.SHARED && dedicatedVlanId != null) {
+            throw ValidationException("SHARED_INTENT_DEDICATED_VLAN_FORBIDDEN")
+        }
+    }
+
+    fun activate() = transitionTo(IntentStatus.ACTIVE, setOf(IntentStatus.DRAFT, IntentStatus.SUSPENDED))
+    fun suspend() = transitionTo(IntentStatus.SUSPENDED, setOf(IntentStatus.ACTIVE))
+    fun decommission() = transitionTo(
+        IntentStatus.DECOMMISSIONED,
+        setOf(IntentStatus.DRAFT, IntentStatus.ACTIVE, IntentStatus.SUSPENDED),
+    )
+
+    private fun transitionTo(next: IntentStatus, allowed: Set<IntentStatus>) {
+        if (status !in allowed) throw ConflictException("ILLEGAL_INTENT_TRANSITION: $status -> $next")
+        status = next
+    }
+
+    companion object {
+        fun create(
+            tenantId: UUID,
+            subscriptionId: UUID,
+            segmentProfileId: UUID,
+            encapsulation: VlanEncapsulation = VlanEncapsulation.SINGLE_TAG,
+            dedicatedVlanId: Int? = null,
+            allocationMode: VlanAllocationMode = if (dedicatedVlanId == null) VlanAllocationMode.SHARED else VlanAllocationMode.DEDICATED,
+            accessBinding: ServiceAccessBinding? = null,
+        ) = ServiceIntent(
+            UuidV7.generate(), tenantId, subscriptionId, null, segmentProfileId, encapsulation, dedicatedVlanId, allocationMode,
+            IntentStatus.DRAFT, accessBinding,
+        )
+
+        fun createHotspot(
+            tenantId: UUID,
+            hotspotSiteId: UUID,
+            segmentProfileId: UUID,
+            encapsulation: VlanEncapsulation = VlanEncapsulation.SINGLE_TAG,
+            dedicatedVlanId: Int? = null,
+            allocationMode: VlanAllocationMode = if (dedicatedVlanId == null) VlanAllocationMode.SHARED else VlanAllocationMode.DEDICATED,
+        ) = ServiceIntent(
+            UuidV7.generate(), tenantId, null, hotspotSiteId, segmentProfileId, encapsulation, dedicatedVlanId, allocationMode,
+            IntentStatus.DRAFT, null,
+        )
+
+        fun rehydrate(
+            id: UUID,
+            tenantId: UUID,
+            subscriptionId: UUID,
+            segmentProfileId: UUID,
+            encapsulation: VlanEncapsulation,
+            dedicatedVlanId: Int?,
+            status: IntentStatus,
+            allocationMode: VlanAllocationMode = if (dedicatedVlanId == null) VlanAllocationMode.SHARED else VlanAllocationMode.DEDICATED,
+            accessBinding: ServiceAccessBinding? = null,
+        ) = ServiceIntent(id, tenantId, subscriptionId, null, segmentProfileId, encapsulation, dedicatedVlanId, allocationMode, status, accessBinding)
+
+        fun rehydrate(
+            id: UUID,
+            tenantId: UUID,
+            subscriptionId: UUID?,
+            hotspotSiteId: UUID?,
+            segmentProfileId: UUID,
+            encapsulation: VlanEncapsulation,
+            dedicatedVlanId: Int?,
+            status: IntentStatus,
+            allocationMode: VlanAllocationMode = if (dedicatedVlanId == null) VlanAllocationMode.SHARED else VlanAllocationMode.DEDICATED,
+            accessBinding: ServiceAccessBinding? = null,
+        ) = ServiceIntent(
+            id, tenantId, subscriptionId, hotspotSiteId, segmentProfileId, encapsulation, dedicatedVlanId, allocationMode, status, accessBinding,
+        )
+    }
+}
+
+class ProvisionStep private constructor(
+    override val id: UUID,
+    val order: Int,
+    val device: DeviceReference,
+    val operation: ProvisionOperation,
+    attributes: Map<String, String>,
+    strictAttributes: Boolean,
+) : ProvisioningAggregate {
+    val attributes: Map<String, String> = attributes.toMap()
+    val preconditionHash: String
+        get() = attributes[PRECONDITION_HASH_ATTRIBUTE] ?: EMPTY_PRECONDITION_HASH
+
+    init {
+        if (order < 1) throw ValidationException("PROVISION_STEP_ORDER_INVALID")
+        if (strictAttributes) PlanAttributePolicy.validate(attributes) else PlanAttributePolicy.validateLegacy(attributes)
+    }
+
+    internal fun canonical(): String = buildString {
+        listOf(id.toString(), order.toString(), device.kind.name, device.id.toString(), operation.name)
+            .forEach { append(LengthPrefixedCanonical.encode(it)) }
+        attributes.entries.sortedWith { left, right -> Utf8ByteComparator.compare(left.key, right.key) }.forEach { (key, value) ->
+            append(LengthPrefixedCanonical.encode(key))
+            append(LengthPrefixedCanonical.encode(value))
+        }
+    }
+
+    companion object {
+        const val PRECONDITION_HASH_ATTRIBUTE = "expectedPreconditionHash"
+        private val EMPTY_PRECONDITION_HASH = sha256("")
+
+        fun create(
+            order: Int,
+            device: DeviceReference,
+            operation: ProvisionOperation,
+            attributes: Map<String, String>,
+        ) = ProvisionStep(UuidV7.generate(), order, device, operation, attributes.toMap(), true)
+
+        fun rehydrate(
+            id: UUID,
+            order: Int,
+            device: DeviceReference,
+            operation: ProvisionOperation,
+            attributes: Map<String, String>,
+        ) = ProvisionStep(id, order, device, operation, attributes, false)
+
+        fun compile(
+            id: UUID,
+            order: Int,
+            device: DeviceReference,
+            operation: ProvisionOperation,
+            attributes: Map<String, String>,
+        ) = ProvisionStep(id, order, device, operation, attributes, true)
+
+        private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")
+            .digest(value.toByteArray(StandardCharsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+    }
+}
+
+class ProvisionPlan private constructor(
+    override val id: UUID,
+    val tenantId: UUID,
+    val intentId: UUID,
+    val revision: Int,
+    steps: List<ProvisionStep>,
+    status: PlanStatus,
+    contentHash: String,
+) : ProvisioningAggregate {
+    val steps: List<ProvisionStep> = steps.toList()
+    var status: PlanStatus = status
+        private set
+    val contentHash: String = contentHash
+    val preconditionHash: String
+        get() = steps.firstNotNullOfOrNull { it.attributes[PLAN_PRECONDITION_HASH_ATTRIBUTE] } ?: contentHash
+
+    init {
+        if (revision < 1) throw ValidationException("PLAN_REVISION_INVALID")
+        requireValidSteps(steps)
+        if (!contentHash.matches(Regex("^[a-f0-9]{64}$"))) throw ValidationException("PLAN_CONTENT_HASH_INVALID")
+        if (contentHash != hash(steps)) throw ValidationException("PLAN_CONTENT_HASH_MISMATCH")
+    }
+
+    fun validate() = transitionTo(PlanStatus.VALIDATED, setOf(PlanStatus.GENERATED))
+    fun reject() = transitionTo(PlanStatus.REJECTED, setOf(PlanStatus.GENERATED))
+    fun supersede() = transitionTo(PlanStatus.SUPERSEDED, setOf(PlanStatus.VALIDATED))
+
+    fun canonicalPayload(): String = buildString {
+        append(LengthPrefixedCanonical.encode(
+            listOf(id.toString(), tenantId.toString(), intentId.toString(), revision.toString(), preconditionHash, contentHash),
+        ))
+        steps.sortedBy { it.order }.forEach { append(LengthPrefixedCanonical.encode(it.canonical())) }
+    }
+
+    private fun transitionTo(next: PlanStatus, allowed: Set<PlanStatus>) {
+        if (status !in allowed) throw ConflictException("ILLEGAL_PLAN_TRANSITION: $status -> $next")
+        status = next
+    }
+
+    companion object {
+        const val PLAN_PRECONDITION_HASH_ATTRIBUTE = "planPreconditionHash"
+
+        fun generate(tenantId: UUID, intentId: UUID, revision: Int, steps: List<ProvisionStep>) =
+            ProvisionPlan(UuidV7.generate(), tenantId, intentId, revision, steps, PlanStatus.GENERATED, hash(steps))
+
+        fun rehydrate(
+            id: UUID,
+            tenantId: UUID,
+            intentId: UUID,
+            revision: Int,
+            steps: List<ProvisionStep>,
+            status: PlanStatus,
+            contentHash: String,
+        ) = ProvisionPlan(id, tenantId, intentId, revision, steps, status, contentHash)
+
+        fun compile(
+            id: UUID,
+            tenantId: UUID,
+            intentId: UUID,
+            revision: Int,
+            steps: List<ProvisionStep>,
+        ) = ProvisionPlan(id, tenantId, intentId, revision, steps, PlanStatus.GENERATED, hash(steps))
+
+        private fun requireValidSteps(steps: List<ProvisionStep>) {
+            if (steps.isEmpty()) throw ValidationException("PLAN_STEPS_EMPTY")
+            if (steps.map { it.order }.toSet().size != steps.size) throw ValidationException("PLAN_STEP_ORDER_DUPLICATE")
+        }
+
+        private fun hash(steps: List<ProvisionStep>): String {
+            val canonical = steps.sortedBy { it.order }
+                .joinToString(separator = "") { LengthPrefixedCanonical.encode(it.canonical()) }
+            return MessageDigest.getInstance("SHA-256")
+                .digest(canonical.toByteArray(StandardCharsets.UTF_8))
+                .joinToString("") { "%02x".format(it) }
+        }
+    }
+}
+
+internal object LengthPrefixedCanonical {
+    fun encode(value: String): String = "${value.toByteArray(StandardCharsets.UTF_8).size}:$value"
+    fun encode(values: List<String>): String = values.joinToString(separator = "", transform = ::encode)
+}
+
+internal object Utf8ByteComparator {
+    fun compare(left: String, right: String): Int {
+        val leftBytes = left.toByteArray(StandardCharsets.UTF_8)
+        val rightBytes = right.toByteArray(StandardCharsets.UTF_8)
+        for (index in 0 until minOf(leftBytes.size, rightBytes.size)) {
+            val comparison = (leftBytes[index].toInt() and 0xff).compareTo(rightBytes[index].toInt() and 0xff)
+            if (comparison != 0) return comparison
+        }
+        return leftBytes.size.compareTo(rightBytes.size)
+    }
+}

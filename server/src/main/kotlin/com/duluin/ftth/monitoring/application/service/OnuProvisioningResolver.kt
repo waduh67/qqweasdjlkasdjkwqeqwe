@@ -65,7 +65,8 @@ class OnuProvisioningResolver(
         val psbBacked = awaiting.filter { it.id in openPsb }
         val pool = psbBacked.ifEmpty { awaiting }
         val match = pool
-            .flatMap { c -> candidates.map { slot -> Match(c, slot, c.location.distanceTo(slot.odp.location)) } }
+            .filter { it.location != null }
+            .flatMap { c -> candidates.map { slot -> Match(c, slot, c.location!!.distanceTo(slot.odp.location)) } }
             .minByOrNull { it.distanceMeters }
 
         return when {

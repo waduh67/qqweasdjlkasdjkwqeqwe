@@ -178,6 +178,7 @@ async function requestBlob(path: string, init: RequestInit = {}): Promise<Blob> 
 }
 
 export const api = {
+  request: <T>(path: string, init: RequestInit = {}) => request<T>(path, init),
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) }),

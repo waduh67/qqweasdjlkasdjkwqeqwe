@@ -48,6 +48,7 @@ dependencies {
 
     // Uji kebenaran agen: adapter :snmp produksi diarahkan ke agen ini.
     testImplementation(kotlin("test"))
+    testImplementation(project(":collector"))
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

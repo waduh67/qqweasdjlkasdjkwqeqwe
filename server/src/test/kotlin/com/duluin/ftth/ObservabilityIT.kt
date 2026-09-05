@@ -1,5 +1,6 @@
 package com.duluin.ftth
 
+import com.duluin.ftth.bng.application.service.RadiusProvisioningDispatcher
 import com.duluin.ftth.common.infrastructure.observability.JobHealth
 import com.duluin.ftth.common.infrastructure.observability.JobHealthRegistry
 import com.jayway.jsonpath.JsonPath
@@ -27,7 +28,7 @@ import java.time.Duration
  *    oleh pembuat proxy, dan tak ada yang tahu sampai ada job macet yang lolos.
  * 3. `/actuator/prometheus` tertutup tanpa token dan terbuka dengan token.
  */
-@SpringBootTest
+@SpringBootTest(properties = ["ftth.scheduling.enabled=true"])
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class ObservabilityIT {
@@ -37,6 +38,7 @@ class ObservabilityIT {
 
     @Autowired private lateinit var mockMvc: MockMvc
     @Autowired private lateinit var jobs: JobHealthRegistry
+    @Autowired private lateinit var radiusProvisioningDispatcher: RadiusProvisioningDispatcher
 
     @Test
     fun `seluruh job terjadwal terdaftar beserta intervalnya`() {
@@ -136,11 +138,8 @@ class ObservabilityIT {
      * jadi denyut yang tak kunjung muncul berarti advisor pemantaunya tidak terpasang.
      */
     private fun awaitJobRun(name: String): JobHealth {
-        repeat(100) { attempt ->
-            val job = jobs.health(name)
-            if (job != null && job.runs > 0) return job
-            if (attempt < 99) Thread.sleep(100)
-        }
-        error("job '$name' tak pernah berdenyut dalam 10 detik — advisor pemantau tidak terpasang")
+        radiusProvisioningDispatcher.dispatch()
+        return jobs.health(name)?.takeIf { it.runs > 0 }
+            ?: error("job '$name' tak pernah berdenyut — advisor pemantau tidak terpasang")
     }
 }

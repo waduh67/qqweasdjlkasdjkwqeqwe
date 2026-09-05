@@ -36,6 +36,7 @@ import {
 } from '@/utils/woLabels'
 import { AssigneeChips, WoField } from './views'
 import { WorkOrderFiberWork } from './WorkOrderFiberWork'
+import { ProofOfWorkCompletion } from './ProofOfWorkCompletion'
 
 /** Detail + aksi lifecycle. Tombol yang muncul mengikuti status & izin. */
 export function WorkOrderDetailBody({
@@ -177,12 +178,7 @@ export function WorkOrderDetailBody({
               value={note}
               onChange={(_, data) => setNote(data.value)}
             />
-            <Button
-              variant="primary"
-              onClick={() => onAct(() => api.post(`/api/work-orders/${id}/complete`, { resolutionNote: note.trim() || null }), 'Work order selesai', true)}
-            >
-              Selesaikan
-            </Button>
+            <ProofOfWorkCompletion workOrderId={id} type={wo.type} note={note} onAct={onAct} />
           </section>
         )}
 
@@ -534,13 +530,13 @@ function EvidenceSection({ workOrderId, status }: { workOrderId: string; status:
               {photos.length > 0 && (
                 <div className="evidence-grid">
                   {photos.map((ph) => (
-                    <div key={ph.id} className="stack" style={{ gap: '0.25rem', minWidth: 0 }}>
-                      <AuthedImage path={`/api/work-orders/${workOrderId}/evidence/${ph.id}/content`} alt={ph.caption ?? KIND_LABEL[ph.kind]} size="fill" />
+                    <div key={ph.revisionId} className="stack" style={{ gap: '0.25rem', minWidth: 0 }}>
+                      <AuthedImage path={`/api/work-orders/${workOrderId}/evidence/${ph.revisionId}/content`} alt={ph.caption ?? KIND_LABEL[ph.kind]} size="fill" />
                       <Text as="span" className="badge" size={100}>{KIND_LABEL[ph.kind]}</Text>
                       {ph.caption && <Text as="span" className="muted" size={100}>{ph.caption}</Text>}
                       {ph.uploadedByName && <Text as="span" className="muted" size={100}>oleh {ph.uploadedByName}</Text>}
                       {canManage && (
-                        <Button variant="danger" size="small" onClick={() => void removePhoto(ph.id)}>
+                        <Button variant="danger" size="small" onClick={() => void removePhoto(ph.revisionId)}>
                           Hapus
                         </Button>
                       )}

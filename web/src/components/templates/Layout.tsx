@@ -54,10 +54,12 @@ const GROUPS: NavGroup[] = [
     items: [
       { to: '/map', label: 'Peta Jaringan', permission: 'gis.map.view', icon: IconMap },
       { to: '/inventory', label: 'Inventory', permission: 'network.odp.view', icon: IconInventory },
+      { to: '/warehouse', label: 'Operasi Gudang', permission: 'inventory.item.view', icon: IconInventory },
       { to: '/bras', label: 'BRAS & RADIUS', permission: 'bng.nas.view', icon: IconGauge },
       { to: '/acs', label: 'ACS / TR-069', permission: 'cpe.acs.view', icon: IconWifi },
       { to: '/vpn', label: 'Akun VPN', permission: 'vpn.peer.view', icon: IconRoute },
       { to: '/monitoring', label: 'Monitoring', permission: 'monitoring.dashboard.view', icon: IconMonitor },
+      { to: '/network-provisioning', label: 'Provisioning Jaringan', permission: 'provisioning.segment.view', icon: IconRoute },
       { to: '/provisioning', label: 'Provisioning', permission: 'monitoring.provisioning.view', icon: IconInbox },
     ],
   },
@@ -85,6 +87,7 @@ const GROUPS: NavGroup[] = [
       // cuma punya `order.view`+`order.field`) tak melihatnya, hanya "Tugas Saya" di bawah.
       { to: '/work-orders', label: 'Work Order', permission: 'workorder.dashboard.view', icon: IconWorkOrder },
       { to: '/my-work-orders', label: 'Tugas Saya', permission: 'workorder.order.field', icon: IconInbox },
+      { to: '/my-visits', label: 'Kunjungan Saya', permission: 'workorder.order.field', icon: IconWorkOrder },
     ],
   },
   {

@@ -162,7 +162,7 @@ data class OdpUtilization(
     val odpId: UUID,
     val code: String,
     val name: String,
-    val location: Coordinate,
+    val location: Coordinate?,
     val capacity: Int,
     val used: Int,
     /** Port terpakai / kapasitas, dibulatkan ke persen. 0 bila kapasitas 0. */
@@ -330,7 +330,7 @@ data class CustomerTrace(
     val customerId: UUID,
     val customerCode: String,
     val customerName: String,
-    val location: Coordinate,
+    val location: Coordinate?,
     val onuSerialNumber: String?,
     val onuStatus: String?,
     val installRxPowerDbm: Double?,

@@ -48,7 +48,7 @@ data class SaveCustomerCommand(
     val phone: String?,
     val email: String?,
     val address: String,
-    val location: Coordinate,
+    val location: Coordinate?,
     val areaId: UUID?,
     /** Nomor identitas (NIK/KTP/paspor); opsional. */
     val idCardNumber: String? = null,

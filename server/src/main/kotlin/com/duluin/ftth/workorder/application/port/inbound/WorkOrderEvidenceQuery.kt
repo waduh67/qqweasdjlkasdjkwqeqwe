@@ -2,6 +2,7 @@ package com.duluin.ftth.workorder.application.port.inbound
 
 import java.time.Instant
 import java.util.UUID
+import com.duluin.ftth.workorder.domain.model.ProofArtifactKind
 
 /** Membaca bukti pengerjaan sebuah work order dan mengalirkan byte-nya. */
 interface WorkOrderEvidenceQuery {
@@ -9,6 +10,8 @@ interface WorkOrderEvidenceQuery {
     fun listPhotos(workOrderId: UUID): List<EvidenceView>
 
     fun getSignature(workOrderId: UUID): SignatureView?
+
+    fun proofOfWork(workOrderId: UUID): ProofOfWorkView
 
     /** Byte satu bukti foto — di-proxy lewat backend agar tetap ter-gate izin & tenant. */
     fun downloadPhoto(workOrderId: UUID, evidenceId: UUID): DownloadedContent
@@ -18,7 +21,7 @@ interface WorkOrderEvidenceQuery {
 }
 
 data class EvidenceView(
-    val id: UUID,
+    val revisionId: UUID,
     val workOrderId: UUID,
     val kind: String,
     val caption: String?,
@@ -34,7 +37,7 @@ data class EvidenceView(
 )
 
 data class SignatureView(
-    val id: UUID,
+    val revisionId: UUID,
     val workOrderId: UUID,
     val signerName: String,
     val contentType: String,
@@ -43,6 +46,17 @@ data class SignatureView(
     val signedByName: String?,
     val signedAt: Instant,
     val createdAt: Instant,
+)
+
+data class ProofOfWorkView(
+    val revision: String,
+    val artifacts: List<ProofArtifactRevisionView>,
+)
+
+data class ProofArtifactRevisionView(
+    val kind: ProofArtifactKind,
+    val revisionId: UUID,
+    val label: String,
 )
 
 /** Isi biner yang dialirkan ke klien, lengkap dengan tipe kontennya. */

@@ -75,11 +75,17 @@ dependencies {
     testImplementation("org.springframework.modulith:spring-modulith-starter-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:testcontainers-postgresql")
+    testImplementation(project(":simulator"))
+    testImplementation(project(":collector"))
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    maxParallelForks = 1
+    forkEvery = 50
+    maxHeapSize = "768m"
+    systemProperty("ftth.scheduling.enabled", "false")
     testLogging {
         events("passed", "skipped", "failed")
     }

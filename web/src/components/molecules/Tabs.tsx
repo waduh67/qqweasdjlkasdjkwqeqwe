@@ -13,10 +13,12 @@ export function Tabs<T extends string>({
   tabs,
   active,
   onChange,
+  idPrefix,
 }: {
   tabs: { key: T; label: ReactNode; badge?: ReactNode }[]
   active: T
   onChange: (key: T) => void
+  idPrefix?: string
 }) {
   return (
     <TabList
@@ -24,7 +26,7 @@ export function Tabs<T extends string>({
       onTabSelect={(_, data: SelectTabData) => onChange(data.value as T)}
     >
       {tabs.map((t) => (
-        <Tab key={t.key} value={t.key}>
+        <Tab key={t.key} value={t.key} id={idPrefix ? `${idPrefix}-tab-${t.key}` : undefined} aria-controls={idPrefix ? `${idPrefix}-panel-${t.key}` : undefined}>
           {t.label}
           {t.badge != null && <Text as="span" className="tab-badge" size={100} weight="semibold">{t.badge}</Text>}
         </Tab>

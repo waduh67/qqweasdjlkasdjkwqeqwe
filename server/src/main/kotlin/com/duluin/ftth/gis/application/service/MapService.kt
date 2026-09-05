@@ -119,12 +119,12 @@ class MapService(
             opticalHealth = placement?.opticalHealth,
             odpPortNumber = placement?.portNumber,
             upstream = upstream?.toView(),
-            estimatedLossDb = upstream?.let { estimateLoss(it, customer.location) },
+             estimatedLossDb = customer.location?.let { location -> upstream?.let { estimateLoss(it, location) } },
             bras = bras?.toHopView(),
             liveOnuStatus = live?.status,
             liveRxPowerDbm = live?.rxPowerDbm,
             distanceMeters = live?.distanceMeters,
-            hops = buildHops(customer.location, upstream, bras, live),
+             hops = buildHops(customer.location, upstream, bras, live),
             cpeDeviceId = cpe?.deviceId,
             cpeOnline = cpe?.online,
         )
@@ -585,7 +585,7 @@ class MapService(
      * punya akun PPPoE sebelum ONU-nya terpasang, dan sesi itu tetap layak dilihat.
      */
     private fun buildHops(
-        customerLocation: Coordinate,
+        customerLocation: Coordinate?,
         upstream: UpstreamPath?,
         bras: SubscriberSessionRef?,
         live: OnuLiveMetric?,

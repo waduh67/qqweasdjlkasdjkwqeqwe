@@ -109,7 +109,7 @@ class CustomerService(
         val saved = customerRepository.save(customer)
         // Kabel drop dimiliki module network; minta network menempelkan ujungnya
         // ke titik baru bila rumah pelanggan berpindah.
-        if (moved) networkApi.resnapCablesForMovedCustomer(id, saved.location)
+        if (moved) saved.location?.let { networkApi.resnapCablesForMovedCustomer(id, it) }
         auditor.record("customer.updated", "Customer", saved.id, saved.tenantId, mapOf("code" to saved.code))
         events.publishEvent(saved.contactChanged())
         return assemble(saved)
@@ -119,7 +119,7 @@ class CustomerService(
         val customer = requireCustomer(id)
         customer.relocate(location)
         val saved = customerRepository.save(customer)
-        networkApi.resnapCablesForMovedCustomer(id, saved.location)
+        saved.location?.let { networkApi.resnapCablesForMovedCustomer(id, it) }
         auditor.record("customer.relocated", "Customer", saved.id, saved.tenantId, mapOf("code" to saved.code))
         return assemble(saved)
     }

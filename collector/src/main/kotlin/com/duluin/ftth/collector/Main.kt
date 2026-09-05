@@ -2,19 +2,25 @@ package com.duluin.ftth.collector
 
 import com.duluin.ftth.collector.adapter.BngAdapterRegistry
 import com.duluin.ftth.collector.adapter.MikrotikRouterOsAdapter
+import com.duluin.ftth.collector.adapter.ProvisioningAdapterRegistry
+import com.duluin.ftth.collector.adapter.OltProvisioningAdapterRegistry
+import com.duluin.ftth.collector.adapter.FileRouterOsProvisioningStateStore
+import com.duluin.ftth.collector.adapter.RouterOsProvisioningAdapter
 import com.duluin.ftth.collector.adapter.SimulatorBngAdapter
 import com.duluin.ftth.collector.adapter.SimulatorOltAdapter
+import com.duluin.ftth.collector.adapter.hsgq.ProvisionalHsgqProvisioningAdapter
 import com.duluin.ftth.snmp.AdapterRegistry
 import com.duluin.ftth.snmp.GponSnmpAdapter
 import com.duluin.ftth.snmp.HsgqEponSnmpAdapter
 import com.duluin.ftth.snmp.MibProfiles
 import org.slf4j.LoggerFactory
+import java.nio.file.Path
 
 /**
  * Titik masuk agent.
  *
- * Konfigurasinya sengaja hanya tiga variabel lingkungan: alamat server, API key,
- * dan (opsional) apakah simulator diaktifkan. Sisanya — OLT mana yang di-polling,
+ * Konfigurasinya memakai alamat server, API key, mode simulator, dan direktori state
+ * provisioning lokal. Sisanya — OLT mana yang di-polling,
  * seberapa sering — datang dari server, karena itulah yang diatur operator lewat
  * UI dan tidak boleh perlu masuk ke mesin collector untuk mengubahnya.
  */
@@ -35,7 +41,10 @@ fun main() {
     // MENGGANTIKAN seluruh adapter SNMP — mencampur perangkat sungguhan dengan
     // perangkat tiruan dalam satu siklus hanya menghasilkan data yang tak jelas
     // asalnya.
-    val simulatorEnabled = env("FTTH_COLLECTOR_SIMULATOR", "false").toBoolean()
+    val simulatorEnabled = CollectorRuntimeMode.resolve(
+        environment = env("FTTH_ENVIRONMENT", "development"),
+        simulatorRequested = env("FTTH_COLLECTOR_SIMULATOR", "false").toBoolean(),
+    ).simulatorEnabled
 
     // GPON (data-driven MibProfile) + EPON HSGQ (adapter tersendiri karena identitas MAC
     // & join dua-tabel — lihat HsgqEponSnmpAdapter). Simulator memerankan tiap vendor.
@@ -57,6 +66,15 @@ fun main() {
     } else {
         BngAdapterRegistry(listOf(MikrotikRouterOsAdapter()))
     }
+    val provisioningStateDirectory = Path.of(
+        env(
+            "FTTH_COLLECTOR_STATE_DIR",
+            Path.of(System.getProperty("user.home"), ".local", "state", "ftth-collector").toString(),
+        ),
+    )
+    val provisioningAdapters = RuntimeProvisioningAdapterFactory.create(simulatorEnabled, provisioningStateDirectory)
+    val provisioningRegistry = provisioningAdapters.nas
+    val oltProvisioningRegistry = provisioningAdapters.olt
 
     log.info("ftth-collector {} → {}", AGENT_VERSION, serverUrl)
     if (simulatorEnabled) log.warn("MODE SIMULATOR aktif — data yang dikirim adalah tiruan, bukan dari perangkat")
@@ -68,6 +86,8 @@ fun main() {
         registry = registry,
         agentVersion = AGENT_VERSION,
         bngRegistry = bngRegistry,
+        provisioningRegistry = provisioningRegistry,
+        oltProvisioningRegistry = oltProvisioningRegistry,
     )
 
     if (env("FTTH_COLLECTOR_ONCE", "false").toBoolean()) {

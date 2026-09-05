@@ -51,6 +51,24 @@ akan melahirkan "pengguna sistem" palsu yang mengotori audit.
 
 ## Alur status
 
+### Proof of Work dan efek fulfillment
+
+`complete` menerima paket Proof of Work immutable yang dirujuk ke evidence revision
+yang sudah `COMMITTED`. Kebijakan typed menentukan artefak wajib per tipe: PSB dan
+migrasi memerlukan FAT, ODP, dropcore, ONT, ONU, optical before/after, tanda tangan
+teknisi, acknowledgement pelanggan, dan lokasi; repair/dismantle/preventive memiliki
+set minimum masing-masing. Paket yang parsial, duplikat, atau menunjuk revision
+superseded/tombstoned ditolak oleh domain, bukan UI. Paket menyimpan hash kanonik untuk
+audit dan replay.
+
+`DONE/PENDING` adalah submission eksekusi dan belum menjadi status customer-visible.
+Teknisi yang mengirim submission tidak boleh menyetujuinya sendiri. Approval hanya
+menerbitkan event publik `FulfillmentApproved`; activation/termination tidak dijalankan
+oleh `WorkOrder.complete` atau approval path. Coordinator fulfillment idempoten yang
+akan datang (Todo 16) adalah satu-satunya pemilik efek tersebut. Evidence yang sudah
+dipakai untuk approval tidak diganti destruktif: koreksi harus berupa revision baru
+dengan alasan.
+
 ```
    DRAFT ──assign──▶ ASSIGNED ──start──▶ IN_PROGRESS ──complete──▶ DONE
      │                   │                    ▲                      │

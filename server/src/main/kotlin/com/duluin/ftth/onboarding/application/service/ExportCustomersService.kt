@@ -43,8 +43,8 @@ class ExportCustomersService(
                 routerName = access.nasName,
                 idCardNumber = row.idCardNumber,
                 nextBillingDay = row.billingDayOfMonth,
-                latitude = row.location.latitude,
-                longitude = row.location.longitude,
+                    latitude = row.location?.latitude,
+                    longitude = row.location?.longitude,
                 // Framed-IP hanya terisi untuk akun Static/DHCP; null → kolom kosong (round-trip).
                 framedIp = access.framedIp,
             )

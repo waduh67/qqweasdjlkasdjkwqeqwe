@@ -130,6 +130,13 @@ interface BngApi {
     fun exportAccesses(): List<AccessExportRef>
 }
 
+data class CredentialHandle(
+    val id: UUID,
+    val state: CredentialHandleState = CredentialHandleState.SEALED,
+)
+
+enum class CredentialHandleState { SEALED, RELEASED, PURGED }
+
 /**
  * Identitas ringkas satu akun jaringan untuk EKSPOR CSV pelanggan. [authType] nama tipe layanan
  * (mis. "PPPOE") yang dipetakan ke kolom `connection_type`; [nasName] nama BRAS ter-resolusi untuk

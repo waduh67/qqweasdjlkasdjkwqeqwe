@@ -8,6 +8,7 @@ import { PortalRingkasanPage } from './PortalRingkasanPage'
 import { PortalTagihanPage } from './PortalTagihanPage'
 import { PortalKoneksiPage } from './PortalKoneksiPage'
 import { PortalProfilPage } from './PortalProfilPage'
+import { PortalOrdersPage } from './PortalOrdersPage'
 import { BantuanTab } from './PortalHelpTab'
 
 /** Menahan rute sampai sesi portal dipulihkan, lalu arahkan ke login bila belum masuk. */
@@ -72,6 +73,7 @@ export function PortalApp() {
           <Route index element={<PortalRingkasanPage />} />
           <Route path="tagihan" element={<PortalTagihanPage />} />
           <Route path="koneksi" element={<PortalKoneksiPage />} />
+          <Route path="pesanan" element={<PortalOrdersPage />} />
           <Route path="bantuan" element={<BantuanTab />} />
           <Route path="profil" element={<PortalProfilPage />} />
         </Route>

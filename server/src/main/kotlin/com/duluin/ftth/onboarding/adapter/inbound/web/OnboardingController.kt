@@ -13,6 +13,7 @@ import com.duluin.ftth.onboarding.application.port.inbound.ImportCustomersUseCas
 import com.duluin.ftth.onboarding.application.port.inbound.ImportPppoeCommand
 import com.duluin.ftth.onboarding.application.port.inbound.ImportPppoeResult
 import com.duluin.ftth.onboarding.application.port.inbound.ImportPppoeUseCase
+import com.duluin.ftth.onboarding.application.port.inbound.ImportMode
 import com.duluin.ftth.onboarding.application.port.inbound.ImportRow
 import com.duluin.ftth.onboarding.application.port.inbound.ImportSource
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
@@ -32,8 +33,14 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RequestPart
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.multipart.MultipartFile
+import com.duluin.ftth.onboarding.application.service.CustomerCsvParser
+import com.duluin.ftth.onboarding.application.service.CustomerImportBatchService
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
@@ -54,6 +61,7 @@ class OnboardingController(
     private val importPppoe: ImportPppoeUseCase,
     private val importCustomers: ImportCustomersUseCase,
     private val exportCustomers: ExportCustomersUseCase,
+    private val customerBatches: CustomerImportBatchService,
 ) {
 
     @PostMapping("/psb")
@@ -90,6 +98,46 @@ class OnboardingController(
     fun importCustomers(@Valid @RequestBody request: ImportCustomersRequest): ImportCustomersResult =
         importCustomers.importCustomers(request.toCommand())
 
+    @PostMapping("/v1/import/customers", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @PreAuthorize("@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update','bng.access.manage')")
+    fun stageCustomerImport(
+        @RequestPart("file") file: MultipartFile,
+        @RequestParam operationKey: String,
+        @RequestParam(defaultValue = "ALREADY_INSTALLED") mode: ImportMode,
+    ) = customerBatches.stage(operationKey, CustomerCsvParser.parse(file.inputStream, file.size), mode)
+
+    @GetMapping("/v1/import/customers/{id}")
+    @PreAuthorize("@authz.can('customer.customer.view')")
+    fun customerImportStatus(@PathVariable id: UUID) = customerBatches.status(id)
+
+    @PostMapping("/v1/import/customers/{id}/commit")
+    @PreAuthorize("@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update','bng.access.manage')")
+    fun commitCustomerImport(
+        @PathVariable id: UUID,
+        @RequestParam commitOperationKey: String,
+        @RequestParam commitHash: String,
+    ) = customerBatches.commit(id, commitOperationKey, commitHash)
+
+    @PostMapping("/v1/import/customers/{id}/cancel")
+    @PreAuthorize("@authz.can('customer.customer.update')")
+    fun cancelCustomerImport(@PathVariable id: UUID) = customerBatches.cancel(id)
+
+    @PostMapping("/v1/import/customers/{id}/retry")
+    @PreAuthorize("@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update','bng.access.manage')")
+    fun retryCustomerImport(
+        @PathVariable id: UUID,
+        @RequestParam commitOperationKey: String,
+        @RequestParam commitHash: String,
+    ) = customerBatches.retry(id, commitOperationKey, commitHash)
+
+    @GetMapping("/v1/import/customers/{id}/report", produces = ["text/csv"])
+    @PreAuthorize("@authz.can('customer.customer.view')")
+    fun customerImportReport(@PathVariable id: UUID): ResponseEntity<ByteArray> = ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=customer-import-$id-report.csv")
+        .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+        .body(customerBatches.report(id).toByteArray(Charsets.UTF_8))
+
     /**
      * Ekspor CSV pelanggan (kebalikan simetris impor) — satu baris per akun jaringan, kolom cocok
      * template impor sehingga hasilnya bisa diunggah kembali. `mikrotik_password` & `notes` selalu
@@ -116,6 +164,8 @@ class OnboardingController(
  * Kolom `mikrotik_password` & `notes` selalu kosong.
  */
 internal object CustomerCsv {
+
+    private val negativeNumber = Regex("-\\d+(?:\\.\\d+)?")
 
     /** Urutan kolom = template impor. Diubah = klien impor/ekspor harus ikut disesuaikan. */
     private val HEADER = listOf(
@@ -154,7 +204,9 @@ internal object CustomerCsv {
 
     /** Escaping RFC-4180: bungkus tanda kutip bila mengandung koma/kutip/baris-baru; kutip digandakan. */
     private fun escape(value: String): String =
-        if (value.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) {
+        if (value.trimStart().firstOrNull() in setOf('=', '+', '-', '@') && !negativeNumber.matches(value.trim())) {
+            escape("'$value")
+        } else if (value.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) {
             "\"" + value.replace("\"", "\"\"") + "\""
         } else {
             value
@@ -168,9 +220,12 @@ internal object CustomerCsv {
  */
 data class ImportCustomersRequest(
     @field:Valid val rows: List<CustomerImportRowPayload> = emptyList(),
+    val schemaVersion: Int = 1,
+    val mode: ImportMode = ImportMode.ALREADY_INSTALLED,
+    val operationKey: String? = null,
 ) {
     fun toCommand() = ImportCustomersCommand(
-        rows = rows.map {
+            rows = rows.map {
             CustomerImportRow(
                 name = it.name,
                 phone = it.phone,
@@ -188,8 +243,11 @@ data class ImportCustomersRequest(
                 longitude = it.longitude,
                 framedIp = it.framedIp,
             )
-        },
-    )
+            },
+            schemaVersion = schemaVersion,
+            mode = mode,
+            operationKey = operationKey,
+        )
 }
 
 /**
@@ -233,6 +291,9 @@ data class ImportPppoeRequest(
     val areaId: UUID? = null,
     @field:Size(max = 500) val defaultAddress: String? = null,
     @field:Valid val defaultLocation: LocationPayload? = null,
+    val schemaVersion: Int = 1,
+    val mode: ImportMode = ImportMode.ALREADY_INSTALLED,
+    val operationKey: String? = null,
 ) {
     fun toCommand() = ImportPppoeCommand(
         nasId = nasId!!,
@@ -245,6 +306,9 @@ data class ImportPppoeRequest(
         areaId = areaId,
         defaultAddress = defaultAddress,
         defaultLocation = defaultLocation?.let { Coordinate(it.longitude, it.latitude) },
+        schemaVersion = schemaVersion,
+        mode = mode,
+        operationKey = operationKey,
     )
 }
 

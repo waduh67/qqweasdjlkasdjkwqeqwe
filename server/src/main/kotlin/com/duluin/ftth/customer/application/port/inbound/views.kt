@@ -2,6 +2,7 @@ package com.duluin.ftth.customer.application.port.inbound
 
 import com.duluin.ftth.common.domain.geo.Coordinate
 import com.duluin.ftth.customer.domain.model.CustomerStatus
+import com.duluin.ftth.customer.domain.model.LocationStatus
 import com.duluin.ftth.customer.domain.model.OnuStatus
 import com.duluin.ftth.customer.domain.model.OpticalHealth
 import com.duluin.ftth.customer.domain.model.SubscriptionStatus
@@ -16,7 +17,8 @@ data class CustomerView(
     val phone: String?,
     val email: String?,
     val address: String,
-    val location: Coordinate,
+    val location: Coordinate?,
+    val locationStatus: LocationStatus,
     val areaId: UUID?,
     val idCardNumber: String?,
     val status: CustomerStatus,

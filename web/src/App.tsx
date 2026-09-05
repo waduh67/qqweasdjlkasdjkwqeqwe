@@ -15,6 +15,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { PlatformDashboardPage } from './pages/PlatformDashboardPage'
 import { PlatformJobsPage } from './pages/PlatformJobsPage'
 import { InventoryPage } from './pages/InventoryPage'
+import { WarehouseOperationsPage } from './pages/WarehouseOperationsPage'
 import { OltDetailPage } from './pages/OltDetailPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { InvoicesPage } from './pages/InvoicesPage'
@@ -23,10 +24,12 @@ import { ImportPppoePage } from './pages/ImportPppoePage'
 import { ImportCustomersPage } from './pages/ImportCustomersPage'
 import { MonitoringPage } from './pages/MonitoringPage'
 import { ProvisioningPage } from './pages/ProvisioningPage'
+import { NetworkProvisioningPage } from './pages/NetworkProvisioningPage'
 import { IncidentsPage } from './pages/IncidentsPage'
 import { HelpdeskPage } from './pages/HelpdeskPage'
 import { WorkOrdersPage } from './pages/WorkOrdersPage'
 import { MyWorkOrdersPage } from './pages/MyWorkOrdersPage'
+import { MyVisitsPage } from './pages/MyVisitsPage'
 import { WorkOrderDetailPage } from './pages/WorkOrderDetailPage'
 import { CatalogPage } from './pages/CatalogPage'
 import { AcsPage } from './pages/AcsPage'
@@ -58,6 +61,10 @@ import { HotspotPage } from './pages/HotspotPage'
 import { canViewHotspot, HOTSPOT_VIEW_PERMISSIONS } from './api/hotspot'
 import { PortalApp } from './portal/PortalApp'
 import { HotspotPortalPage } from './pages/HotspotPortalPage'
+import {
+  NETWORK_PROVISIONING_ROUTE,
+  NETWORK_PROVISIONING_VIEW_PERMISSION,
+} from './hooks/useProvisioningPermissions'
 
 /** Menahan rute sampai sesi dipulihkan, lalu mengarahkan ke login bila belum masuk. */
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -68,7 +75,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 /** Guard berbasis izin — server tetap penegak sebenarnya, ini demi UX. */
-function RequirePermission({ permission, children }: { permission: string; children: ReactNode }) {
+export function RequirePermission({ permission, children }: { permission: string; children: ReactNode }) {
   const { can } = useCan()
   if (!can(permission)) return <ForbiddenPermission permission={permission} />
   return <>{children}</>
@@ -190,6 +197,14 @@ function OperatorApp() {
               }
             />
             <Route
+              path="warehouse"
+              element={
+                <RequirePermission permission="inventory.item.view">
+                  <WarehouseOperationsPage />
+                </RequirePermission>
+              }
+            />
+            <Route
               path="olts/:id"
               element={
                 <RequirePermission permission="network.olt.view">
@@ -292,6 +307,14 @@ function OperatorApp() {
               }
             />
             <Route
+              path={NETWORK_PROVISIONING_ROUTE}
+              element={
+                <RequirePermission permission={NETWORK_PROVISIONING_VIEW_PERMISSION}>
+                  <NetworkProvisioningPage />
+                </RequirePermission>
+              }
+            />
+            <Route
               path="provisioning"
               element={
                 <RequirePermission permission="monitoring.provisioning.view">
@@ -339,6 +362,7 @@ function OperatorApp() {
                 </RequirePermission>
               }
             />
+            <Route path="my-visits" element={<RequirePermission permission="workorder.order.field"><MyVisitsPage /></RequirePermission>} />
             <Route
               path="my-work-orders/:id"
               element={

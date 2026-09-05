@@ -23,3 +23,14 @@ data class WorkOrderAssigned(
     /** Pelanggan WO (null utk kerja infrastruktur murni); konsumen notifikasi memberi tahu ybs. */
     val customerId: UUID?,
 )
+
+data class FulfillmentApproved(
+    val tenantId: UUID,
+    val workOrderId: UUID,
+    val workOrderType: String,
+    val subscriptionId: UUID?,
+    val proofOfWorkHash: String,
+    val orderId: UUID? = null,
+    val approvalActorId: UUID? = null,
+    val applicableEffects: Set<String> = emptySet(),
+)

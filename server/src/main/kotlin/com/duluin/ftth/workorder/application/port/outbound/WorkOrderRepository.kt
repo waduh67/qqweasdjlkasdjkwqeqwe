@@ -26,22 +26,23 @@ interface WorkOrderRepository {
         approvalStatus: WorkOrderApprovalStatus?,
         customerId: UUID?,
         pageRequest: PageRequest,
+        areaIds: Set<UUID>? = null,
     ): Page<WorkOrder>
 
     /** Timeline sebuah work order, terlama lebih dulu. */
     fun timelineOf(workOrderId: UUID): List<WorkOrderEvent>
 
     /** Jumlah WO per status (status tanpa data absen dari peta). */
-    fun countByStatus(): Map<WorkOrderStatus, Long>
+    fun countByStatus(areaIds: Set<UUID>? = null): Map<WorkOrderStatus, Long>
 
     /** Jumlah WO per tipe (tipe tanpa data absen dari peta). */
-    fun countByType(): Map<WorkOrderType, Long>
+    fun countByType(areaIds: Set<UUID>? = null): Map<WorkOrderType, Long>
 
     /** Beban WO terbuka per teknisi; kunci `null` = kelompok yang belum ditugaskan. */
-    fun countOpenByTechnician(): Map<UUID?, Long>
+    fun countOpenByTechnician(areaIds: Set<UUID>? = null): Map<UUID?, Long>
 
     /** Jumlah WO yang menunggu persetujuan (selesai tapi belum dikurasi). */
-    fun countPendingApproval(): Long
+    fun countPendingApproval(areaIds: Set<UUID>? = null): Long
 
     /**
      * Apakah pelanggan ini sudah punya WO preventif yang masih terbuka. Dasar

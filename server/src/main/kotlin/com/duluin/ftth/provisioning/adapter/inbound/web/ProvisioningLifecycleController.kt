@@ -1,0 +1,142 @@
+package com.duluin.ftth.provisioning.adapter.inbound.web
+
+import com.duluin.ftth.provisioning.application.service.ProvisioningLifecycleService
+import com.duluin.ftth.provisioning.application.service.ProvisioningEvidenceQueryService
+import com.duluin.ftth.provisioning.domain.model.ProvisionExecution
+import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
+import com.duluin.ftth.provisioning.domain.policy.ExecutionMode
+import com.duluin.ftth.provisioning.config.ProvisioningRolloutProperties
+import com.duluin.ftth.provisioning.application.service.AuthoritativePlanCompilationService
+import com.duluin.ftth.provisioning.application.service.PlanChange
+import com.duluin.ftth.provisioning.application.service.ProvisioningWorkflowCommand
+import com.duluin.ftth.provisioning.application.service.ProvisioningWorkflowService
+import com.duluin.ftth.provisioning.application.service.ProvisioningIntentLifecycleService
+import com.duluin.ftth.common.security.CurrentUserProvider
+import com.duluin.ftth.common.domain.error.ValidationException
+import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
+
+@RestController
+@RequestMapping("/api/provisioning")
+class ProvisioningLifecycleController(
+    private val lifecycle: ProvisioningLifecycleService,
+    private val evidence: ProvisioningEvidenceQueryService,
+    private val rollout: ProvisioningRolloutProperties,
+    private val planCompilation: AuthoritativePlanCompilationService,
+    private val workflow: ProvisioningWorkflowService,
+    private val intentLifecycle: ProvisioningIntentLifecycleService,
+    private val currentUser: CurrentUserProvider,
+) {
+    @GetMapping("/rollout")
+    @PreAuthorize("@authz.can('provisioning.plan.view')")
+    fun rollout() = ProvisioningRolloutView(
+        rollout.plannerEnabled,
+        rollout.uiEnabled,
+        rollout.autoApplyEnabled,
+        rollout.maxAffectedSubscribers,
+        rollout.bulkExpansionEnabled,
+    )
+
+    @GetMapping("/plans/{id}")
+    @PreAuthorize("@authz.can('provisioning.plan.view')")
+    fun plan(@PathVariable id: UUID) = lifecycle.plan(id).toView()
+
+    @PostMapping("/plans/{id}/preview")
+    @PreAuthorize("@authz.can('provisioning.plan.view')")
+    fun preview(@PathVariable id: UUID, @RequestParam mode: ExecutionMode) = lifecycle.preview(id, mode)
+
+    @PostMapping("/plans/{id}/apply")
+    @PreAuthorize("@authz.can('provisioning.execution.apply')")
+    fun apply(
+        @PathVariable id: UUID,
+        @RequestHeader("Idempotency-Key") idempotencyKey: String,
+        @RequestHeader("If-Match") revision: String,
+    ) = lifecycle.apply(id, parseRevision(revision), idempotencyKey).let { it.toView(lifecycle.executionRevision(it.id)) }
+
+    @GetMapping("/executions/{id}")
+    @PreAuthorize("@authz.can('provisioning.plan.view')")
+    fun execution(@PathVariable id: UUID) = lifecycle.execution(id).let { it.toView(lifecycle.executionRevision(it.id)) }
+
+    @GetMapping("/executions/{id}/timeline")
+    @PreAuthorize("@authz.can('provisioning.plan.view')")
+    fun timeline(@PathVariable id: UUID) = evidence.timeline(id)
+
+    @PostMapping("/executions/{id}/cancel")
+    @PreAuthorize("@authz.can('provisioning.execution.cancel')")
+    fun cancel(@PathVariable id: UUID, @RequestHeader("If-Match") revision: String) =
+        lifecycle.cancel(id, parseRevision(revision)).let { it.toView(lifecycle.executionRevision(it.id)) }
+
+    @GetMapping("/capabilities")
+    @PreAuthorize("@authz.can('provisioning.plan.view')")
+    fun capabilities() = evidence.capabilities()
+
+    @GetMapping("/management-protections")
+    @PreAuthorize("@authz.can('provisioning.segment.view')")
+    fun protections() = evidence.protections()
+
+    @GetMapping("/observations")
+    @PreAuthorize("@authz.can('provisioning.drift.view')")
+    fun observations() = evidence.observations()
+
+    @GetMapping("/drift")
+    @PreAuthorize("@authz.can('provisioning.drift.view')")
+    fun drift() = evidence.drift()
+
+    @PostMapping("/drift/{id}/adopt")
+    @PreAuthorize("@authz.can('provisioning.drift.adopt')")
+    fun adoptDrift(@PathVariable id: UUID, @RequestHeader("If-Match") revision: String) =
+        evidence.adoptDrift(id, parseRevision(revision))
+
+    @PostMapping("/intents/{id}/suspend")
+    @PreAuthorize("@authz.can('provisioning.execution.apply')")
+    fun suspendIntent(@PathVariable id: UUID) = intentLifecycle.suspend(id).status.name
+
+    @PostMapping("/intents/{id}/restore")
+    @PreAuthorize("@authz.can('provisioning.execution.apply')")
+    fun restoreIntent(@PathVariable id: UUID) = intentLifecycle.restore(id).status.name
+
+    @PostMapping("/intents/{id}/deprovision")
+    @PreAuthorize("@authz.can('provisioning.execution.apply')")
+    fun deprovisionIntent(
+        @PathVariable id: UUID,
+        @RequestHeader("Idempotency-Key") idempotencyKey: String,
+        @RequestParam(defaultValue = "false") forceDisconnect: Boolean,
+    ): ProvisioningExecutionView {
+        val request = planCompilation.request(id, PlanChange.DELETE)
+        val result = workflow.delete(
+            ProvisioningWorkflowCommand(
+                request,
+                idempotencyKey,
+                forceDisconnect = forceDisconnect,
+                forceDisconnectAuthorized = currentUser.current().hasPermission("bng.session.disconnect"),
+            ),
+        )
+        val execution = requireNotNull(result.execution)
+        planCompilation.completeDeprovisionIfNeeded(execution)
+        return execution.toView(lifecycle.executionRevision(execution.id))
+    }
+}
+
+data class ProvisioningPlanView(val id: UUID, val intentId: UUID, val revision: Int, val status: String, val contentHash: String)
+data class ProvisioningExecutionView(val id: UUID, val planId: UUID, val revision: Int, val status: String)
+data class ProvisioningRolloutView(
+    val plannerEnabled: Boolean,
+    val uiEnabled: Boolean,
+    val autoApplyEnabled: Boolean,
+    val maxAffectedSubscribers: Int,
+    val bulkExpansionEnabled: Boolean,
+)
+
+private fun ProvisionPlan.toView() = ProvisioningPlanView(id, intentId, revision, status.name, contentHash)
+private fun ProvisionExecution.toView(revision: Int) = ProvisioningExecutionView(id, planId, revision, status.name)
+
+fun parseRevision(value: String): Int = value.removePrefix("W/").trim('"').toIntOrNull()
+    ?.takeIf { it > 0 } ?: throw ValidationException("REVISION_REQUIRED")

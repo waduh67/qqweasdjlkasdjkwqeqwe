@@ -33,6 +33,7 @@ dependencies {
     implementation(libs.postgresql)
 
     testImplementation(kotlin("test"))
+    testImplementation(project(":simulator"))
 }
 
 tasks.withType<Test> {

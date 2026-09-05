@@ -14,6 +14,9 @@ import com.duluin.ftth.onboarding.application.port.inbound.ImportPppoeCommand
 import com.duluin.ftth.onboarding.application.port.inbound.ImportRow
 import com.duluin.ftth.onboarding.application.port.inbound.ImportRowStatus
 import com.duluin.ftth.onboarding.application.port.inbound.ImportSource
+import com.duluin.ftth.onboarding.application.port.inbound.ImportMode
+import com.duluin.ftth.onboarding.MigrationFulfillmentPublisher
+import com.duluin.ftth.onboarding.MigrationFulfillmentRequested
 import com.duluin.ftth.onboarding.application.service.ImportPppoeService
 import com.duluin.ftth.onboarding.application.service.PppoeRowImporter
 import org.assertj.core.api.Assertions.assertThat
@@ -52,16 +55,11 @@ class ImportPppoeServiceTest {
         assertThat(result.created).isEqualTo(2)
         assertThat(result.skipped).isZero()
         assertThat(result.failed).isZero()
-        assertThat(bng.provisioned.map { it.username }).containsExactly("budi", "siti")
-        val budi = bng.provisioned.first { it.username == "budi" }
-        assertThat(budi.secret).isEqualTo("pwd-budi")
-        assertThat(budi.planId).isEqualTo(vipPlan)
-        assertThat(budi.nasId).isEqualTo(nasId)
-        assertThat(budi.authType).isEqualTo("PPPOE")
+        assertThat(bng.provisioned).isEmpty()
         // comment jadi nama pelanggan; tanpa comment jatuh ke username.
         assertThat(customer.registered.first { it.code == "budi" }.name).isEqualTo("Budi Santoso")
         assertThat(customer.registered.first { it.code == "siti" }.name).isEqualTo("siti")
-        assertThat(customer.activatedCount).isEqualTo(2)
+        assertThat(customer.activatedCount).isZero()
     }
 
     @Test
@@ -94,7 +92,7 @@ class ImportPppoeServiceTest {
         )
 
         assertThat(result.created).isEqualTo(1)
-        assertThat(bng.provisioned.single().planId).isEqualTo(defaultPlan)
+        assertThat(bng.provisioned).isEmpty()
     }
 
     @Test
@@ -147,7 +145,7 @@ class ImportPppoeServiceTest {
 
         // Server menarik dari NAS; yang disabled dilewati (skipDisabled default).
         assertThat(result.created).isEqualTo(1)
-        assertThat(bng.provisioned.single().username).isEqualTo("budi")
+        assertThat(bng.provisioned).isEmpty()
     }
 
     @Test
@@ -166,10 +164,54 @@ class ImportPppoeServiceTest {
         )
 
         assertThat(result.created).isEqualTo(1)
-        assertThat(bng.provisioned.single().username).isEqualTo("siti")
+        assertThat(bng.provisioned).isEmpty()
+    }
+
+    @Test
+    fun `ALREADY_INSTALLED queues opaque credential without activation or provisioning`() {
+        val bng = FakeBngApi()
+        val customer = FakeCustomerApi()
+        val publisher = RecordingPublisher()
+        val result = ImportPppoeService(bng, PppoeRowImporter(customer, bng, publisher)).importPppoe(
+            command(
+                source = ImportSource.INLINE,
+                rows = listOf(ImportRow("queued", "plaintext-secret", "vip", null, disabled = false)),
+                profilePlanId = mapOf("vip" to vipPlan),
+            ),
+        )
+
+        assertThat(result.created).isEqualTo(1)
+        assertThat(customer.activatedCount).isZero()
+        assertThat(bng.provisioned).isEmpty()
+        assertThat(customer.registered.single().location).isNull()
+        assertThat(publisher.requests.single().credentialHandle).isNotNull()
+        assertThat(publisher.requests.toString()).doesNotContain("plaintext-secret")
+    }
+
+    @Test
+    fun `VALIDATE_ONLY performs no registration or queueing`() {
+        val bng = FakeBngApi()
+        val customer = FakeCustomerApi()
+        val publisher = RecordingPublisher()
+        val result = ImportPppoeService(bng, PppoeRowImporter(customer, bng, publisher)).importPppoe(
+            command(
+                source = ImportSource.INLINE,
+                rows = listOf(ImportRow("validate", "secret", "vip", null, disabled = false)),
+                profilePlanId = mapOf("vip" to vipPlan),
+            ).copy(mode = ImportMode.VALIDATE_ONLY),
+        )
+
+        assertThat(result.skipped).isEqualTo(1)
+        assertThat(customer.registered).isEmpty()
+        assertThat(publisher.requests).isEmpty()
     }
 
     // ---- Fixture & fake ----
+
+    private class RecordingPublisher : MigrationFulfillmentPublisher {
+        val requests = mutableListOf<MigrationFulfillmentRequested>()
+        override fun publish(request: MigrationFulfillmentRequested) { requests += request }
+    }
 
     @Suppress("LongParameterList")
     private fun command(

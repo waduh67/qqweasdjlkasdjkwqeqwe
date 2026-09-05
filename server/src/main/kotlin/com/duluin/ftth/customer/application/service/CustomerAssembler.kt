@@ -56,6 +56,7 @@ internal fun Customer.toView(subscription: SubscriptionView?, onus: List<OnuView
     email = email,
     address = address,
     location = location,
+    locationStatus = locationStatus,
     areaId = areaId,
     idCardNumber = idCardNumber,
     status = status,

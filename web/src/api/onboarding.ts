@@ -192,6 +192,50 @@ export interface ImportCustomersResult {
 export const importCustomers = (body: ImportCustomersRequest) =>
   api.post<ImportCustomersResult>('/api/onboarding/import/customers', body)
 
+export type CustomerImportBatchState =
+  | 'STAGED'
+  | 'PROCESSING'
+  | 'COMMITTED'
+  | 'CANCELLED'
+  | 'FAILED'
+  | 'RETRYABLE_FAILED'
+  | 'PERMANENT_FAILED'
+  | 'PURGED'
+export interface CustomerImportBatchView {
+  id: string
+  sha256: string
+  mode: 'VALIDATE_ONLY' | 'PENDING_INSTALLATION' | 'ALREADY_INSTALLED'
+  state: CustomerImportBatchState
+  errors: Array<{ row: number; column: string | null; code: string; message: string }>
+  result: ImportCustomersResult | null
+  createdAt: string
+}
+
+export const stageCustomerImport = (file: File, operationKey: string, mode: CustomerImportBatchView['mode']) => {
+  const form = new FormData()
+  form.append('file', file)
+  return api.postForm<CustomerImportBatchView>(`/api/onboarding/v1/import/customers?operationKey=${encodeURIComponent(operationKey)}&mode=${mode}`, form)
+}
+export const customerImportStatus = (id: string) => api.get<CustomerImportBatchView>(`/api/onboarding/v1/import/customers/${id}`)
+export interface CustomerImportCommitIdentity {
+  readonly commitOperationKey: string
+  readonly commitHash: string
+}
+
+function commitPath(id: string, action: 'commit' | 'retry', identity: CustomerImportCommitIdentity): string {
+  const query = new URLSearchParams()
+  query.set('commitOperationKey', identity.commitOperationKey)
+  query.set('commitHash', identity.commitHash)
+  return `/api/onboarding/v1/import/customers/${id}/${action}?${query.toString()}`
+}
+
+export const commitCustomerImport = (id: string, identity: CustomerImportCommitIdentity) =>
+  api.post<CustomerImportBatchView>(commitPath(id, 'commit', identity))
+export const cancelCustomerImport = (id: string) => api.post<CustomerImportBatchView>(`/api/onboarding/v1/import/customers/${id}/cancel`, {})
+export const retryCustomerImport = (id: string, identity: CustomerImportCommitIdentity) =>
+  api.post<CustomerImportBatchView>(commitPath(id, 'retry', identity))
+export const downloadCustomerImportReport = (id: string) => api.blob(`/api/onboarding/v1/import/customers/${id}/report`)
+
 /**
  * Ekspor CSV pelanggan sebagai Blob (byte ter-gate → diambil dengan header Bearer, bukan `<a href>`).
  * Pemanggil menjadikannya unduhan berkas (object URL). Header kolomnya cocok template impor.

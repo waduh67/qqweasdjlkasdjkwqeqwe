@@ -48,8 +48,8 @@ const STATUS_LABEL: Record<string, string> = {
   ABANDONED: 'Ditinggal',
 }
 
-export function StatusBadge({ status, label }: { status: string; label?: string }) {
-  const tone = STATUS_TONE[status] ?? 'neutral'
+export function StatusBadge({ status, label, tone: toneOverride }: { status: string; label?: string; tone?: Tone }) {
+  const tone = toneOverride ?? STATUS_TONE[status] ?? 'neutral'
   return (
     <Text as="span" className={`badge ${tone}`} size={200} weight="semibold">
       <span className="dot" />

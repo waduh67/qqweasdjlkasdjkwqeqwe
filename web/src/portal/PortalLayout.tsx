@@ -21,6 +21,7 @@ import {
   IconSidebar,
   IconUsers,
   IconWifi,
+  IconWorkOrder,
 } from '@/components/atoms/icons'
 
 /**
@@ -35,6 +36,7 @@ const PORTAL_NAV: NavGroup[] = [
       { to: '/portal', label: 'Ringkasan', permission: null, icon: IconDashboard, end: true },
       { to: '/portal/tagihan', label: 'Tagihan', permission: null, icon: IconReceipt },
       { to: '/portal/koneksi', label: 'Koneksi', permission: null, icon: IconWifi },
+      { to: '/portal/pesanan', label: 'Pesanan saya', permission: null, icon: IconWorkOrder },
       { to: '/portal/bantuan', label: 'Bantuan', permission: null, icon: IconChat },
       { to: '/portal/profil', label: 'Profil', permission: null, icon: IconUsers },
     ],

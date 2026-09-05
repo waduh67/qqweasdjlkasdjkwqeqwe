@@ -43,6 +43,12 @@ Berkasnya ditulis ke **bind mount** `./backups`, bukan named volume — supaya o
 menyalinnya keluar dengan `scp`/`rsync` tanpa mantra `docker cp`. `user: root` + `chmod 600`:
 isinya seluruh basis data, jadi memang sepantasnya hanya root yang boleh membacanya.
 
+Dump aplikasi juga memuat control-plane provisioning: plan, alokasi/referensi VLAN,
+sertifikasi, snapshot, lease, circuit breaker, observasi, drift, dan provenance audit.
+Jurnal collector di `FTTH_COLLECTOR_STATE_DIR` berada di luar database. Salin direktori itu
+secara terpisah dengan izin 600/700 tanpa mencetak API key, kredensial perangkat, atau
+konfigurasi mentah ke log maupun artefak bukti.
+
 ---
 
 ## Gerbang terpenting: role yang mendump harus kebal RLS
@@ -117,6 +123,11 @@ lalu: tidur sampai BACKUP_AT, jalan, tidur lagi
 Container ini ikut restart **tiap kali stack di-deploy**. Tanpa pengejaran ketinggalan,
 deploy yang kebetulan jatuh tiap hari sebelum jam cadangan akan membuat cadangan **tak
 pernah berjalan sama sekali** — dan tak ada yang memberi tahu, karena tak ada yang gagal.
+
+Untuk disaster recovery provisioning, pulihkan DB aplikasi, DB RADIUS, lalu jurnal collector
+sebelum menghidupkan kembali auto-apply. Pertahankan
+`FTTH_PROVISIONING_AUTO_APPLY_ENABLED=false` selama pemeriksaan queue, drift, circuit, dan
+sertifikasi eksak; layanan PPPoE yang sudah ada tetap berjalan ketika control-plane dimatikan.
 
 Waktu tunggu selalu dihitung ulang dari jam dinding (`(target - now + 86400) % 86400`), jadi
 pergeseran zona waktu/DST paling banter menggeser satu ronde, tak pernah mengakumulasi

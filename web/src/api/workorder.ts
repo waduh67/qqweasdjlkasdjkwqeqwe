@@ -79,10 +79,36 @@ export interface WorkOrderDetail {
 }
 
 /** Bukti pengerjaan (Phase 4.2): foto & tanda tangan. Byte diambil via `api.blob`. */
-export type EvidenceKind = 'BEFORE' | 'AFTER' | 'LOCATION' | 'SERIAL' | 'OTHER'
+export type EvidenceKind =
+  | 'FAT'
+  | 'ODP'
+  | 'DROPCORE'
+  | 'ONT'
+  | 'ONU'
+  | 'OPTICAL_BEFORE'
+  | 'OPTICAL_AFTER'
+  | 'TECHNICIAN_SIGNATURE'
+  | 'CUSTOMER_ACKNOWLEDGEMENT'
+  | 'BEFORE'
+  | 'AFTER'
+  | 'LOCATION'
+  | 'SERIAL'
+  | 'OTHER'
+
+export type ProofArtifactKind =
+  | 'FAT'
+  | 'ODP'
+  | 'DROPCORE'
+  | 'ONT'
+  | 'ONU'
+  | 'OPTICAL_BEFORE'
+  | 'OPTICAL_AFTER'
+  | 'TECHNICIAN_SIGNATURE'
+  | 'CUSTOMER_ACKNOWLEDGEMENT'
+  | 'LOCATION'
 
 export interface EvidenceView {
-  id: string
+  revisionId: string
   workOrderId: string
   kind: EvidenceKind
   caption: string | null
@@ -97,7 +123,7 @@ export interface EvidenceView {
 }
 
 export interface SignatureView {
-  id: string
+  revisionId: string
   workOrderId: string
   signerName: string
   contentType: string
@@ -106,6 +132,17 @@ export interface SignatureView {
   signedByName: string | null
   signedAt: string
   createdAt: string
+}
+
+export interface ProofOfWorkView {
+  revision: string
+  artifacts: ProofArtifactRevisionView[]
+}
+
+export interface ProofArtifactRevisionView {
+  kind: ProofArtifactKind
+  revisionId: string
+  label: string
 }
 
 /**

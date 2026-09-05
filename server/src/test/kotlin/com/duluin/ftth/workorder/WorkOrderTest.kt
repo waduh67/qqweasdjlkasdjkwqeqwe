@@ -7,6 +7,10 @@ import com.duluin.ftth.workorder.domain.model.WorkOrderEventType
 import com.duluin.ftth.workorder.domain.model.WorkOrderPriority
 import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
 import com.duluin.ftth.workorder.domain.model.WorkOrderType
+import com.duluin.ftth.workorder.domain.model.ProofArtifactKind
+import com.duluin.ftth.workorder.domain.model.ProofArtifactRef
+import com.duluin.ftth.workorder.domain.model.ProofOfWorkPacket
+import com.duluin.ftth.workorder.domain.model.ProofArtifactCompatibility
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -14,6 +18,12 @@ import java.time.Instant
 
 /** Menguji penugasan tim datar (roster jamak) sebuah work order — murni domain. */
 class WorkOrderTest {
+
+    private fun packet(type: WorkOrderType): ProofOfWorkPacket = ProofOfWorkPacket(
+        revision = "proof-revision",
+        artifacts = com.duluin.ftth.workorder.domain.model.ProofOfWorkPolicy.requiredArtifacts(type)
+            .map { ProofArtifactRef(it, UuidV7.generate()) }.toSet(),
+    )
 
     private fun draft() = WorkOrder.open(
         tenantId = UuidV7.generate(),
@@ -119,5 +129,85 @@ class WorkOrderTest {
 
         val label = wo.pendingEvents().last { it.type == WorkOrderEventType.ASSIGNED }.message
         assertThat(label).isEqualTo("Ditugaskan ke teknisi")
+    }
+
+    @Test
+    fun `complete menolak packet yang kehilangan satu artefak`() {
+        val wo = draft()
+        wo.assign(setOf(UuidV7.generate()), Instant.now(), null)
+        wo.start(Instant.now(), null)
+        val incomplete = packet(WorkOrderType.REPAIR).copy(artifacts = packet(WorkOrderType.REPAIR).artifacts.drop(1).toSet())
+
+        assertThatThrownBy { wo.complete(null, incomplete, Instant.now(), UuidV7.generate()) }
+            .isInstanceOf(ConflictException::class.java)
+        assertThat(wo.status).isEqualTo(WorkOrderStatus.IN_PROGRESS)
+    }
+
+    @Test
+    fun `complete menghasilkan DONE pending tanpa efek pelanggan dan approval maker checker`() {
+        val wo = draft()
+        val technician = UuidV7.generate()
+        val approver = UuidV7.generate()
+        wo.assign(setOf(technician), Instant.now(), null)
+        wo.start(Instant.now(), technician)
+        wo.complete(null, packet(WorkOrderType.REPAIR), Instant.now(), technician)
+
+        assertThat(wo.status).isEqualTo(WorkOrderStatus.DONE)
+        assertThat(wo.approvalStatus).isEqualTo(com.duluin.ftth.workorder.domain.model.WorkOrderApprovalStatus.PENDING)
+        assertThatThrownBy { wo.approve(null, Instant.now(), technician) }.isInstanceOf(ConflictException::class.java)
+        wo.approve(null, Instant.now(), approver)
+        assertThat(wo.approvalStatus).isEqualTo(com.duluin.ftth.workorder.domain.model.WorkOrderApprovalStatus.APPROVED)
+        assertThatThrownBy { wo.approve(null, Instant.now(), UuidV7.generate()) }.isInstanceOf(ConflictException::class.java)
+    }
+
+    @Test
+    fun `setiap artefak wajib yang hilang ditolak secara deterministik`() {
+        val type = WorkOrderType.PSB
+        val complete = packet(type)
+        com.duluin.ftth.workorder.domain.model.ProofOfWorkPolicy.requiredArtifacts(type).forEach { missing ->
+            val partial = complete.copy(artifacts = complete.artifacts.filterNot { it.kind == missing }.toSet())
+            assertThatThrownBy { partial.validateFor(type) }
+                .isInstanceOf(ConflictException::class.java)
+        }
+    }
+
+    @Test
+    fun `satu revisi tidak boleh dipakai ulang untuk dua jenis bukti`() {
+        val revisionId = UuidV7.generate()
+
+        assertThatThrownBy {
+            ProofOfWorkPacket(
+                revision = "proof-revision",
+                artifacts = setOf(
+                    ProofArtifactRef(ProofArtifactKind.FAT, revisionId),
+                    ProofArtifactRef(ProofArtifactKind.ODP, revisionId),
+                ),
+            )
+        }.isInstanceOf(ConflictException::class.java)
+    }
+
+    @Test
+    fun `revisi otoritatif dengan jenis berbeda ditolak`() {
+        val revisionId = UuidV7.generate()
+
+        assertThatThrownBy {
+            ProofArtifactCompatibility.requireMatching(
+                setOf(ProofArtifactRef(ProofArtifactKind.FAT, revisionId)),
+                mapOf(revisionId to ProofArtifactKind.ODP),
+            )
+        }.isInstanceOf(ConflictException::class.java)
+    }
+
+    @Test
+    fun `penolakan membuka kembali pekerjaan untuk submission baru`() {
+        val wo = draft()
+        val technician = UuidV7.generate()
+        wo.assign(setOf(technician), Instant.now(), null)
+        wo.start(Instant.now(), technician)
+        wo.complete(null, packet(WorkOrderType.REPAIR), Instant.now(), technician)
+        wo.reject("Foto lokasi tidak jelas", Instant.now(), UuidV7.generate())
+
+        assertThat(wo.status).isEqualTo(WorkOrderStatus.IN_PROGRESS)
+        assertThat(wo.completedAt).isNull()
     }
 }

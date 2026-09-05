@@ -5,6 +5,7 @@ import com.duluin.ftth.workorder.application.port.inbound.AttachEvidenceCommand
 import com.duluin.ftth.workorder.application.port.inbound.CaptureSignatureCommand
 import com.duluin.ftth.workorder.application.port.inbound.EvidenceView
 import com.duluin.ftth.workorder.application.port.inbound.ManageWorkOrderEvidenceUseCase
+import com.duluin.ftth.workorder.application.port.inbound.ProofOfWorkView
 import com.duluin.ftth.workorder.application.port.inbound.SignatureView
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderEvidenceQuery
 import com.duluin.ftth.workorder.domain.model.EvidenceKind
@@ -45,7 +46,7 @@ class WorkOrderEvidenceController(
     private val query: WorkOrderEvidenceQuery,
 ) {
     @GetMapping("/evidence")
-    @PreAuthorize("@authz.can('workorder.evidence.view')")
+    @PreAuthorize("@authz.canAny('workorder.evidence.view','workorder.order.field')")
     fun list(@PathVariable workOrderId: UUID): List<EvidenceView> = query.listPhotos(workOrderId)
 
     @PostMapping("/evidence", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
@@ -59,6 +60,7 @@ class WorkOrderEvidenceController(
         @RequestParam(required = false) latitude: Double?,
         @RequestParam(required = false) longitude: Double?,
         @RequestParam(required = false) capturedAt: String?,
+        @RequestParam(required = false) correctionReason: String?,
     ): EvidenceView = manage.attachPhoto(
         workOrderId,
         AttachEvidenceCommand(
@@ -69,14 +71,16 @@ class WorkOrderEvidenceController(
             latitude = latitude,
             longitude = longitude,
             capturedAt = parseInstant(capturedAt),
+            correctionReason = correctionReason,
         ),
     )
 
     @GetMapping("/evidence/{evidenceId}/content")
-    @PreAuthorize("@authz.can('workorder.evidence.view')")
+    @PreAuthorize("@authz.canAny('workorder.evidence.view','workorder.order.field')")
     fun content(@PathVariable workOrderId: UUID, @PathVariable evidenceId: UUID): ResponseEntity<ByteArray> {
         val content = query.downloadPhoto(workOrderId, evidenceId)
-        return ResponseEntity.ok().contentType(MediaType.parseMediaType(content.contentType)).body(content.bytes)
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(content.contentType))
+            .header("Content-Disposition", "inline; filename=\"evidence\"").body(content.bytes)
     }
 
     @DeleteMapping("/evidence/{evidenceId}")
@@ -86,9 +90,13 @@ class WorkOrderEvidenceController(
         manage.removePhoto(workOrderId, evidenceId)
 
     @GetMapping("/signature")
-    @PreAuthorize("@authz.can('workorder.evidence.view')")
+    @PreAuthorize("@authz.canAny('workorder.evidence.view','workorder.order.field')")
     fun signature(@PathVariable workOrderId: UUID): ResponseEntity<SignatureView> =
         query.getSignature(workOrderId)?.let { ResponseEntity.ok(it) } ?: ResponseEntity.noContent().build()
+
+    @GetMapping("/proof-of-work")
+    @PreAuthorize("@authz.canAny('workorder.evidence.view','workorder.order.field')")
+    fun proofOfWork(@PathVariable workOrderId: UUID): ProofOfWorkView = query.proofOfWork(workOrderId)
 
     @PutMapping("/signature", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     @PreAuthorize("@authz.canAny('workorder.evidence.manage','workorder.order.field')")
@@ -97,6 +105,7 @@ class WorkOrderEvidenceController(
         @RequestParam("file") file: MultipartFile,
         @RequestParam signerName: String,
         @RequestParam(required = false) signedAt: String?,
+        @RequestParam(required = false) correctionReason: String?,
     ): SignatureView = manage.captureSignature(
         workOrderId,
         CaptureSignatureCommand(
@@ -104,14 +113,16 @@ class WorkOrderEvidenceController(
             contentType = file.requireContentType(),
             bytes = file.bytes,
             signedAt = parseInstant(signedAt),
+            correctionReason = correctionReason,
         ),
     )
 
     @GetMapping("/signature/content")
-    @PreAuthorize("@authz.can('workorder.evidence.view')")
+    @PreAuthorize("@authz.canAny('workorder.evidence.view','workorder.order.field')")
     fun signatureContent(@PathVariable workOrderId: UUID): ResponseEntity<ByteArray> {
         val content = query.downloadSignature(workOrderId)
-        return ResponseEntity.ok().contentType(MediaType.parseMediaType(content.contentType)).body(content.bytes)
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(content.contentType))
+            .header("Content-Disposition", "inline; filename=\"signature\"").body(content.bytes)
     }
 
     @DeleteMapping("/signature")

@@ -6,6 +6,7 @@ import com.duluin.ftth.common.domain.error.AccessDeniedException
 import com.duluin.ftth.common.domain.error.ConflictException
 import com.duluin.ftth.common.domain.error.NotFoundException
 import com.duluin.ftth.common.security.CurrentUserProvider
+import com.duluin.ftth.common.security.areaScope
 import com.duluin.ftth.customer.CustomerApi
 import com.duluin.ftth.customer.CustomerRef
 import com.duluin.ftth.iam.IamApi
@@ -23,9 +24,14 @@ import com.duluin.ftth.workorder.application.port.inbound.WorkOrderFilter
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderQuery
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderView
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderRepository
+import com.duluin.ftth.workorder.application.port.outbound.WorkOrderEvidenceRepository
+import com.duluin.ftth.workorder.application.port.outbound.WorkOrderSignatureRepository
 import com.duluin.ftth.workorder.domain.model.WorkOrder
 import com.duluin.ftth.workorder.domain.model.WorkOrderEvent
 import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
+import com.duluin.ftth.workorder.domain.model.ProofOfWorkPacket
+import com.duluin.ftth.workorder.domain.model.ProofArtifactCompatibility
+import com.duluin.ftth.workorder.domain.model.ProofArtifactKind
 import com.duluin.ftth.workorder.domain.model.WorkOrderType
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
@@ -46,10 +52,13 @@ class WorkOrderService(
     private val customerApi: CustomerApi,
     private val currentUser: CurrentUserProvider,
     private val events: ApplicationEventPublisher,
+    private val evidence: WorkOrderEvidenceRepository,
+    private val signatures: WorkOrderSignatureRepository,
 ) : ManageWorkOrderUseCase, WorkOrderQuery {
 
     @Transactional
     override fun create(command: SaveWorkOrderCommand): WorkOrderView {
+        requireArea(command.areaId)
         requireCustomerExists(command.customerId)
         command.assignees.forEach { requireActiveTechnician(it) }
         val actor = currentUser.current()
@@ -66,6 +75,7 @@ class WorkOrderService(
             assignees = command.assignees,
             createdBy = actor.userId,
             subscriptionId = command.subscriptionId,
+            orderId = command.orderId,
         )
         val saved = repository.save(workOrder)
         if (saved.assignees.isNotEmpty()) publishAssigned(saved)
@@ -74,6 +84,7 @@ class WorkOrderService(
 
     @Transactional
     override fun update(id: UUID, command: UpdateWorkOrderCommand): WorkOrderView {
+        requireArea(command.areaId)
         requireCustomerExists(command.customerId)
         val workOrder = require(id)
         workOrder.updateDetails(
@@ -93,8 +104,9 @@ class WorkOrderService(
     @Transactional
     override fun assign(id: UUID, technicianIds: Set<UUID>): WorkOrderView {
         if (technicianIds.isEmpty()) throw ConflictException("Minimal satu teknisi harus ditugaskan")
-        technicianIds.forEach { requireActiveTechnician(it) }
         val workOrder = require(id)
+        requireArea(workOrder)
+        technicianIds.forEach { requireActiveTechnician(it) }
         workOrder.assign(technicianIds, Instant.now(), currentUser.current().userId)
         val saved = repository.save(workOrder)
         publishAssigned(saved)
@@ -104,29 +116,37 @@ class WorkOrderService(
     @Transactional
     override fun start(id: UUID): WorkOrderView {
         val workOrder = require(id)
+        requireArea(workOrder)
         requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.update")
         workOrder.start(Instant.now(), currentUser.current().userId)
         return repository.save(workOrder).toView()
     }
 
-    @Transactional
-    override fun complete(id: UUID, resolutionNote: String?): WorkOrderView {
+    override fun authorizeComplete(id: UUID) {
         val workOrder = require(id)
+        requireArea(workOrder)
         requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.close")
-        workOrder.complete(resolutionNote, Instant.now(), currentUser.current().userId)
-        val saved = repository.save(workOrder)
-        // Penyelesaian WO menggerakkan status langganan: PSB selesai = layanan resmi hidup
-        // (aktif + mulai ditagih prorata), DISMANTLE selesai = layanan berakhir. Panggilan
-        // ke customer idempoten (no-op bila status langganan tak sesuai), jadi menyelesaikan
-        // ulang WO yang sempat ditolak penyelia tak menggeser tanggal aktivasi/terminasi.
-        saved.subscriptionId?.let { subscriptionId ->
-            when (saved.type) {
-                WorkOrderType.PSB -> customerApi.activateForInstallation(subscriptionId)
-                WorkOrderType.DISMANTLE -> customerApi.terminateForDismantle(subscriptionId)
-                else -> Unit
-            }
+    }
+
+    @Transactional
+    override fun complete(id: UUID, resolutionNote: String?, packet: ProofOfWorkPacket): WorkOrderView {
+        val workOrder = require(id)
+        requireArea(workOrder)
+        requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.close")
+        val authoritativeArtifacts = HashMap<UUID, ProofArtifactKind>()
+        evidence.listByWorkOrder(id).forEach { item ->
+            ProofArtifactCompatibility.fromEvidence(item.kind)?.let { kind -> authoritativeArtifacts[item.id] = kind }
         }
-        return saved.toView()
+        signatures.findByWorkOrder(id)?.let { signature ->
+            authoritativeArtifacts[signature.id] = ProofArtifactCompatibility.customerSignature
+        }
+        val authoritativeRevision = proofRevision(authoritativeArtifacts.keys)
+        if (packet.revision != authoritativeRevision) {
+            throw ConflictException("Proof of Work sudah berubah; muat ulang bukti sebelum mengirim")
+        }
+        ProofArtifactCompatibility.requireMatching(packet.artifacts, authoritativeArtifacts)
+        workOrder.complete(resolutionNote, packet, Instant.now(), currentUser.current().userId)
+        return repository.save(workOrder).toView()
     }
 
     @Transactional
@@ -139,6 +159,7 @@ class WorkOrderService(
     @Transactional
     override fun recordOptical(id: UUID, command: RecordOpticalCommand): WorkOrderView {
         val workOrder = require(id)
+        requireArea(workOrder)
         requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.update")
         workOrder.recordOptical(command.rxBeforeDbm, command.rxAfterDbm, Instant.now(), currentUser.current().userId)
         return repository.save(workOrder).toView()
@@ -147,13 +168,19 @@ class WorkOrderService(
     @Transactional
     override fun approve(id: UUID, note: String?): WorkOrderView {
         val workOrder = require(id)
+        requireActiveActor()
+        requireArea(workOrder)
         workOrder.approve(note, Instant.now(), currentUser.current().userId)
-        return repository.save(workOrder).toView()
+        val saved = repository.save(workOrder)
+        events.publishEvent(com.duluin.ftth.workorder.FulfillmentApproved(saved.tenantId, saved.id, saved.type.name, saved.subscriptionId, saved.proofOfWorkHash!!, saved.orderId, saved.approvedBy, setOf("SUBSCRIPTION", "PROVISIONING", "WORK_ORDER")))
+        return saved.toView()
     }
 
     @Transactional
     override fun reject(id: UUID, reason: String): WorkOrderView {
         val workOrder = require(id)
+        requireActiveActor()
+        requireArea(workOrder)
         workOrder.reject(reason, Instant.now(), currentUser.current().userId)
         return repository.save(workOrder).toView()
     }
@@ -170,6 +197,7 @@ class WorkOrderService(
     }
 
     override fun search(filter: WorkOrderFilter, page: PageRequest): Page<WorkOrderView> {
+        requireActiveActor()
         val result = repository.search(
             query = filter.query?.trim()?.takeIf { it.isNotEmpty() },
             type = filter.type,
@@ -178,6 +206,7 @@ class WorkOrderService(
             approvalStatus = filter.approvalStatus,
             customerId = filter.customerId,
             pageRequest = page,
+            areaIds = currentUser.current().areaScope(),
         )
         // Teknisi (roster) & penyetuju sama-sama pengguna iam → kumpulkan idnya lalu resolusi sekali-batch.
         val userIds = HashSet<UUID>()
@@ -207,14 +236,17 @@ class WorkOrderService(
 
     override fun get(id: UUID): WorkOrderDetail {
         val workOrder = require(id)
+        requireReadAccess(workOrder)
         val timeline = repository.timelineOf(id).map { it.toView() }
         return WorkOrderDetail(workOrder.toView(), timeline)
     }
 
     override fun dashboard(): WorkOrderDashboardView {
-        val byStatus = repository.countByStatus()
-        val byType = repository.countByType()
-        val openByTechnician = repository.countOpenByTechnician()
+        requireActiveActor()
+        val areaIds = currentUser.current().areaScope()
+        val byStatus = repository.countByStatus(areaIds)
+        val byType = repository.countByType(areaIds)
+        val openByTechnician = repository.countOpenByTechnician(areaIds)
 
         // Nama teknisi diresolusi sekali-batch lewat iam (hindari N+1); WO tanpa
         // teknisi masuk kunci null dan dihitung terpisah sebagai antrean dispatch.
@@ -229,7 +261,7 @@ class WorkOrderService(
             total = byStatus.values.sum(),
             open = WorkOrderStatus.entries.filter { it.open }.sumOf { byStatus[it] ?: 0L },
             unassignedOpen = openByTechnician[null] ?: 0L,
-            pendingApproval = repository.countPendingApproval(),
+            pendingApproval = repository.countPendingApproval(areaIds),
             byStatus = WorkOrderStatus.entries.associate { it.name to (byStatus[it] ?: 0L) },
             byType = WorkOrderType.entries.associate { it.name to (byType[it] ?: 0L) },
             workloads = workloads,
@@ -238,6 +270,10 @@ class WorkOrderService(
 
     private fun require(id: UUID): WorkOrder =
         repository.findById(id) ?: throw NotFoundException("Work order $id tidak ditemukan")
+
+    private fun proofRevision(revisionIds: Set<UUID>): String = java.security.MessageDigest.getInstance("SHA-256")
+        .digest(revisionIds.sortedBy { it.toString() }.joinToString("|").toByteArray())
+        .joinToString("") { "%02x".format(it) }
 
     private fun requireCustomerExists(customerId: UUID?) {
         if (customerId != null && customerApi.findCustomer(customerId) == null) {
@@ -249,6 +285,7 @@ class WorkOrderService(
         val user = iamApi.findUser(technicianId)
             ?: throw NotFoundException("Teknisi $technicianId tidak ditemukan")
         if (!user.active) throw ConflictException("Teknisi ${user.name} tidak aktif")
+        if (!user.technician) throw ConflictException("Pengguna ${user.name} bukan teknisi")
     }
 
     /**
@@ -258,8 +295,35 @@ class WorkOrderService(
      */
     private fun requireFieldAccess(workOrder: WorkOrder, dispatcherPermission: String) {
         val actor = currentUser.current()
-        if (!actor.hasPermission(dispatcherPermission) && !workOrder.isAssignedTo(actor.userId)) {
+        requireActiveActor()
+        requireArea(workOrder)
+        if (actor.hasPermission(dispatcherPermission)) return
+        if (!actor.hasPermission("workorder.order.field") || !iamApi.findUser(actor.userId).let { it?.technician == true } || !workOrder.isAssignedTo(actor.userId)) {
             throw AccessDeniedException("Work order ${workOrder.code} tidak ditugaskan ke Anda")
+        }
+    }
+
+    private fun requireReadAccess(workOrder: WorkOrder) {
+        requireActiveActor()
+        requireArea(workOrder)
+        val actor = currentUser.current()
+        if (actor.hasPermission("workorder.order.view")) return
+        if (actor.hasPermission("workorder.order.field") && iamApi.findUser(actor.userId)?.technician == true && workOrder.isAssignedTo(actor.userId)) return
+        throw NotFoundException("Work order ${workOrder.id} tidak ditemukan")
+    }
+
+    private fun requireActiveActor() {
+        if (iamApi.findUser(currentUser.current().userId)?.active != true) {
+            throw AccessDeniedException("Akun tidak aktif")
+        }
+    }
+
+    private fun requireArea(workOrder: WorkOrder) = requireArea(workOrder.areaId)
+
+    private fun requireArea(areaId: UUID?) {
+        val scope = currentUser.current().areaScope()
+        if (scope != null && (areaId == null || areaId !in scope)) {
+            throw AccessDeniedException("Work order di luar area Anda")
         }
     }
 

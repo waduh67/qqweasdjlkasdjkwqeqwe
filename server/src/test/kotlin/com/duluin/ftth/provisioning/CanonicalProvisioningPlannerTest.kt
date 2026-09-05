@@ -1,0 +1,279 @@
+package com.duluin.ftth.provisioning
+
+import com.duluin.ftth.common.domain.UuidV7
+import com.duluin.ftth.provisioning.application.service.CanonicalProvisioningPlanner
+import com.duluin.ftth.provisioning.application.service.ImmutableProvisioningPlanService
+import com.duluin.ftth.provisioning.application.service.PlanCapability
+import com.duluin.ftth.provisioning.application.service.PlanChange
+import com.duluin.ftth.provisioning.application.service.PlanCompilationRequest
+import com.duluin.ftth.provisioning.application.service.PlanObservation
+import com.duluin.ftth.provisioning.application.service.PlanTopologyNode
+import com.duluin.ftth.provisioning.application.service.PlanManagementSource
+import com.duluin.ftth.provisioning.application.service.ProvisioningSafetyGate
+import com.duluin.ftth.provisioning.application.port.outbound.ProvisionPlanRepository
+import com.duluin.ftth.provisioning.domain.model.AdministrativeStatus
+import com.duluin.ftth.provisioning.domain.model.DeviceKind
+import com.duluin.ftth.provisioning.domain.model.DeviceReference
+import com.duluin.ftth.provisioning.domain.model.ManagedNodeRole
+import com.duluin.ftth.provisioning.domain.model.InterfaceRole
+import com.duluin.ftth.provisioning.domain.model.NormalizedDeviceState
+import com.duluin.ftth.provisioning.domain.model.NormalizedField
+import com.duluin.ftth.provisioning.domain.model.NormalizedValue
+import com.duluin.ftth.provisioning.domain.model.PlanStatus
+import com.duluin.ftth.provisioning.domain.model.ProvisionOperation
+import com.duluin.ftth.provisioning.domain.model.ProvisionPlan
+import com.duluin.ftth.provisioning.domain.model.ServiceIntent
+import com.duluin.ftth.provisioning.domain.policy.ExecutionMode
+import com.duluin.ftth.provisioning.domain.policy.PolicyCode
+import com.duluin.ftth.provisioning.domain.policy.PolicyDecision
+import com.duluin.ftth.provisioning.domain.policy.ManagementEvidenceSourceType
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Test
+import java.time.Instant
+import java.util.UUID
+
+class CanonicalProvisioningPlannerTest {
+    private val tenantId = UUID.fromString("00000000-0000-7000-8000-000000000001")
+    private val intent = ServiceIntent.rehydrate(
+        UUID.fromString("00000000-0000-7000-8000-000000000002"),
+        tenantId,
+        UUID.fromString("00000000-0000-7000-8000-000000000003"),
+        UUID.fromString("00000000-0000-7000-8000-000000000004"),
+        com.duluin.ftth.provisioning.domain.model.VlanEncapsulation.SINGLE_TAG,
+        null,
+        com.duluin.ftth.provisioning.domain.model.IntentStatus.ACTIVE,
+    )
+    private val olt = DeviceReference(DeviceKind.OLT, UUID.fromString("00000000-0000-7000-8000-000000000010"))
+    private val transit = DeviceReference(DeviceKind.SWITCH, UUID.fromString("00000000-0000-7000-8000-000000000011"))
+    private val bras = DeviceReference(DeviceKind.BRAS, UUID.fromString("00000000-0000-7000-8000-000000000012"))
+    private val observedAt = Instant.parse("2026-01-02T03:04:05Z")
+    private val planner = CanonicalProvisioningPlanner()
+
+    @Test
+    fun `identical logical inputs produce byte stable plans and sha256 hashes`() {
+        val first = planner.compile(request(), revision = 1)
+        val reordered = planner.compile(request(reverseInputOrder = true), revision = 1)
+
+        assertThat(first.canonicalPayload()).isEqualTo(reordered.canonicalPayload())
+        assertThat(first.id).isEqualTo(reordered.id)
+        assertThat(first.steps.map { it.id }).isEqualTo(reordered.steps.map { it.id })
+        assertThat(first.contentHash).matches("^[a-f0-9]{64}$")
+        assertThat(first.preconditionHash).matches("^[a-f0-9]{64}$")
+        assertThat(first.steps.map { it.preconditionHash }).allMatch { it.matches(Regex("^[a-f0-9]{64}$")) }
+    }
+
+    @Test
+    fun `duplicate capability or observation evidence is rejected before canonicalization`() {
+        val source = request()
+
+        assertThatThrownBy {
+            planner.compile(source.copy(capabilities = source.capabilities + source.capabilities.first()), revision = 1)
+        }.isInstanceOf(com.duluin.ftth.common.domain.error.ValidationException::class.java)
+            .hasMessage("PLANNING_CAPABILITIES_DUPLICATE")
+        assertThatThrownBy {
+            planner.compile(source.copy(observations = source.observations + source.observations.first()), revision = 1)
+        }.isInstanceOf(com.duluin.ftth.common.domain.error.ValidationException::class.java)
+            .hasMessage("PLANNING_OBSERVATIONS_DUPLICATE")
+    }
+
+    @Test
+    fun `canonical evidence ordering uses device kind and id when ids tie`() {
+        val sharedId = UUID.fromString("00000000-0000-7000-8000-000000000099")
+        val switchWithSharedId = DeviceReference(DeviceKind.SWITCH, sharedId)
+        val brasWithSharedId = DeviceReference(DeviceKind.BRAS, sharedId)
+        val source = request().copy(
+            topology = listOf(
+                PlanTopologyNode(olt, ManagedNodeRole.OLT, AdministrativeStatus.ENABLED, observedAt, management("pon-1", InterfaceRole.ACCESS, olt.id)),
+                PlanTopologyNode(switchWithSharedId, ManagedNodeRole.ACCESS_SWITCH, AdministrativeStatus.ENABLED, observedAt, management("xe-0/0/1", InterfaceRole.TRUNK, sharedId)),
+                PlanTopologyNode(brasWithSharedId, ManagedNodeRole.BRAS, AdministrativeStatus.ENABLED, observedAt, management("ae0", InterfaceRole.TRUNK, sharedId)),
+            ),
+            capabilities = listOf(
+                PlanCapability(olt, "ZTE", "C320", "1.2", "SSH", setOf("access-vlan"), observedAt),
+                PlanCapability(switchWithSharedId, "JUNIPER", "EX", "22", "NETCONF", setOf("tagged-vlan"), observedAt),
+                PlanCapability(brasWithSharedId, "MIKROTIK", "CCR", "7", "REST", setOf("pppoe"), observedAt),
+            ),
+            observations = listOf(
+                PlanObservation(olt, NormalizedDeviceState.of(NormalizedField.ENABLED to NormalizedValue.flag(true)), observedAt),
+                PlanObservation(switchWithSharedId, NormalizedDeviceState.of(NormalizedField.ENABLED to NormalizedValue.flag(true)), observedAt),
+                PlanObservation(brasWithSharedId, NormalizedDeviceState.of(NormalizedField.ENABLED to NormalizedValue.flag(true)), observedAt),
+            ),
+        )
+
+        val forward = planner.compile(source, revision = 1)
+        val reversed = planner.compile(
+            source.copy(capabilities = source.capabilities.reversed(), observations = source.observations.reversed()),
+            revision = 1,
+        )
+
+        assertThat(forward.canonicalPayload()).isEqualTo(reversed.canonicalPayload())
+        assertThat(forward.preconditionHash).isEqualTo(reversed.preconditionHash)
+    }
+
+    @Test
+    fun `create and delete use safety ordering and only clean unreferenced bras resources`() {
+        val create = planner.compile(request(), revision = 1)
+        assertThat(create.steps.map { it.device }).containsExactly(bras, transit, olt)
+        assertThat(create.steps.map { it.operation }).containsExactly(
+            ProvisionOperation.ENSURE_PPPOE_TERMINATION,
+            ProvisionOperation.ENSURE_TAGGED_VLAN,
+            ProvisionOperation.ENSURE_ACCESS_PORT,
+        )
+
+        val retainedDelete = planner.compile(request(change = PlanChange.DELETE, brasReferenceCount = 1), revision = 2)
+        assertThat(retainedDelete.steps.map { it.operation }).containsExactly(
+            ProvisionOperation.BLOCK_PPPOE_SESSIONS,
+            ProvisionOperation.REMOVE_ACCESS_PORT,
+            ProvisionOperation.REMOVE_TAGGED_VLAN,
+        )
+
+        val cleanupDelete = planner.compile(request(change = PlanChange.DELETE, brasReferenceCount = 0), revision = 2)
+        assertThat(cleanupDelete.steps.map { it.device }).containsExactly(bras, olt, transit, bras)
+        assertThat(cleanupDelete.steps.last().operation).isEqualTo(ProvisionOperation.REMOVE_PPPOE_TERMINATION)
+    }
+
+    @Test
+    fun `changed source creates a new revision and supersedes without mutating old payload`() {
+        val repository = InMemoryPlanRepository()
+        val service = ImmutableProvisioningPlanService(planner, repository, allowingGate())
+        val original = service.plan(request())
+        val originalPayload = original.canonicalPayload()
+
+        val unchanged = service.plan(request())
+        val replacement = service.plan(request(vlanId = 321))
+
+        assertThat(unchanged.id).isEqualTo(original.id)
+        assertThat(original.status).isEqualTo(PlanStatus.SUPERSEDED)
+        assertThat(original.canonicalPayload()).isEqualTo(originalPayload)
+        assertThat(replacement.id).isNotEqualTo(original.id)
+        assertThat(replacement.revision).isEqualTo(2)
+        assertThat(replacement.contentHash).isNotEqualTo(original.contentHash)
+        assertThat(replacement.preconditionHash).isNotEqualTo(original.preconditionHash)
+    }
+
+    @Test
+    fun `production safety rejection creates no validated or persisted plan`() {
+        val repository = InMemoryPlanRepository()
+        val rejectingGate = object : ProvisioningSafetyGate {
+            override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode) =
+                PolicyDecision(false, PolicyCode.PROTECTED_MANAGEMENT_RESOURCE)
+        }
+        val service = ImmutableProvisioningPlanService(planner, repository, rejectingGate)
+
+        org.assertj.core.api.Assertions.assertThatThrownBy { service.plan(request()) }
+            .hasMessage(PolicyCode.PROTECTED_MANAGEMENT_RESOURCE.name)
+        assertThat(repository.savedCount).isZero()
+    }
+
+    @Test
+    fun `dry run and simulator previews are callable return warnings and never persist executable plans`() {
+        val repository = InMemoryPlanRepository()
+        val evaluatedModes = mutableListOf<ExecutionMode>()
+        val gate = object : ProvisioningSafetyGate {
+            override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode): PolicyDecision {
+                evaluatedModes += mode
+                return PolicyDecision(
+                    true,
+                    if (mode == ExecutionMode.DRY_RUN) {
+                        PolicyCode.DRY_RUN_ALLOWED_WITH_WARNINGS
+                    } else {
+                        PolicyCode.SIMULATION_ALLOWED_WITH_WARNINGS
+                    },
+                    warnings = listOf("PROVISIONAL_CERTIFICATION:BRAS:${bras.id}"),
+                )
+            }
+        }
+        val service = ImmutableProvisioningPlanService(planner, repository, gate)
+
+        val dryRun = service.preview(request(), ExecutionMode.DRY_RUN)
+        val simulator = service.preview(request(), ExecutionMode.SIMULATOR)
+
+        assertThat(dryRun.plan.status).isEqualTo(PlanStatus.GENERATED)
+        assertThat(simulator.plan.status).isEqualTo(PlanStatus.GENERATED)
+        assertThat(dryRun.decision.warnings).isNotEmpty()
+        assertThat(simulator.decision.warnings).isNotEmpty()
+        assertThat(evaluatedModes).containsExactly(ExecutionMode.DRY_RUN, ExecutionMode.SIMULATOR)
+        assertThat(repository.savedCount).isZero()
+    }
+
+    private fun request(
+        change: PlanChange = PlanChange.CREATE,
+        brasReferenceCount: Int = 0,
+        vlanId: Int = 320,
+        reverseInputOrder: Boolean = false,
+    ): PlanCompilationRequest {
+        val topology = listOf(
+            PlanTopologyNode(olt, ManagedNodeRole.OLT, AdministrativeStatus.ENABLED, observedAt, management("pon-1", InterfaceRole.ACCESS, olt.id)),
+            PlanTopologyNode(transit, ManagedNodeRole.ACCESS_SWITCH, AdministrativeStatus.ENABLED, observedAt, management("xe-0/0/1", InterfaceRole.TRUNK, transit.id)),
+            PlanTopologyNode(bras, ManagedNodeRole.BRAS, AdministrativeStatus.ENABLED, observedAt, management("ae0", InterfaceRole.TRUNK, bras.id)),
+        )
+        val capabilities = listOf(
+            PlanCapability(olt, "ZTE", "C320", "1.2", "SSH", setOf("access-vlan"), observedAt),
+            PlanCapability(transit, "JUNIPER", "EX", "22", "NETCONF", setOf("tagged-vlan", "verify"), observedAt),
+            PlanCapability(bras, "MIKROTIK", "CCR", "7", "REST", setOf("pppoe", "firewall"), observedAt),
+        )
+        val observations = listOf(
+            PlanObservation(
+                olt,
+                NormalizedDeviceState.of(
+                    NormalizedField.PORT to NormalizedValue.identifier("pon-1"),
+                    NormalizedField.VLANS to NormalizedValue.sequence(NormalizedValue.number(99), NormalizedValue.number(100)),
+                ),
+                observedAt,
+            ),
+            PlanObservation(
+                transit,
+                NormalizedDeviceState.of(
+                    NormalizedField.VLANS to NormalizedValue.sequence(NormalizedValue.number(100), NormalizedValue.number(99)),
+                    NormalizedField.PORT to NormalizedValue.identifier("xe-0/0/1"),
+                ),
+                observedAt,
+            ),
+            PlanObservation(
+                bras,
+                NormalizedDeviceState.of(
+                    NormalizedField.ENABLED to NormalizedValue.flag(true),
+                    NormalizedField.VLANS to NormalizedValue.sequence(NormalizedValue.number(100)),
+                ),
+                observedAt,
+            ),
+        )
+        return PlanCompilationRequest(
+            intent = intent,
+            vlanId = vlanId,
+            change = change,
+            topology = topology,
+            capabilities = if (reverseInputOrder) capabilities.reversed().map { it.copy(capabilities = it.capabilities.reversed().toSet()) } else capabilities,
+            observations = if (reverseInputOrder) observations.reversed() else observations,
+            brasReferenceCount = brasReferenceCount,
+        )
+    }
+
+    private fun management(interfaceName: String, role: InterfaceRole, sourceId: UUID) = PlanManagementSource(
+        interfaceName,
+        role,
+        ManagementEvidenceSourceType.TOPOLOGY_OBSERVATION,
+        sourceId,
+        emptySet(),
+        emptySet(),
+        emptySet(),
+        emptySet(),
+        emptySet(),
+        emptySet(),
+    )
+
+    private class InMemoryPlanRepository : ProvisionPlanRepository {
+        private val values = linkedMapOf<UUID, ProvisionPlan>()
+        val savedCount: Int get() = values.size
+
+        override fun save(value: ProvisionPlan): ProvisionPlan = value.also { values[it.id] = it }
+        override fun findById(id: UUID): ProvisionPlan? = values[id]
+        override fun findLatestByIntentId(intentId: UUID): ProvisionPlan? =
+            values.values.filter { it.intentId == intentId }.maxByOrNull { it.revision }
+    }
+
+    private fun allowingGate() = object : ProvisioningSafetyGate {
+        override fun evaluate(plan: ProvisionPlan, mode: ExecutionMode) =
+            PolicyDecision(true, PolicyCode.AUTO_APPLY_ALLOWED)
+    }
+}

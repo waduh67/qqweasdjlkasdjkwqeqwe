@@ -171,6 +171,7 @@ services:
       radius-db:
         condition: service_started
     environment:
+      FTTH_PRODUCTION: "true"
       FTTH_DB_URL: jdbc:postgresql://postgres:5432/${FTTH_DB_NAME}
       FTTH_DB_USER: ${FTTH_DB_USER}
       FTTH_DB_PASSWORD: ${FTTH_DB_PASSWORD}
@@ -181,11 +182,18 @@ services:
       FTTH_RADIUS_DB_URL: jdbc:postgresql://radius-db:5432/${RADIUS_DB_NAME:-radius}
       FTTH_RADIUS_DB_USER: ${RADIUS_DB_USER:-radius}
       FTTH_RADIUS_DB_PASSWORD: ${RADIUS_DB_PASSWORD:?wajib diisi di .env}
+      FTTH_RADIUS_ENABLED: ${FTTH_RADIUS_ENABLED:-true}
       # Alamat publik FreeRADIUS pusat yang DITAMPILKAN ke tenant untuk mengarahkan
       # router-nya (kartu "Arahkan router ke RADIUS ini" di UI). Biasanya = IP publik VPS
       # ini. Kosong → UI menandai "belum dikonfigurasi" (auth tetap jalan, hanya panduan
       # yang menampilkan placeholder).
       FTTH_RADIUS_PUBLIC_HOST: ${FTTH_RADIUS_PUBLIC_HOST:-}
+      # Rollout InterVLAN: perencanaan/UI aktif, mutasi produksi tetap opt-in.
+      FTTH_PROVISIONING_PLANNER_ENABLED: ${FTTH_PROVISIONING_PLANNER_ENABLED:-true}
+      FTTH_PROVISIONING_UI_ENABLED: ${FTTH_PROVISIONING_UI_ENABLED:-true}
+      FTTH_PROVISIONING_AUTO_APPLY_ENABLED: ${FTTH_PROVISIONING_AUTO_APPLY_ENABLED:-false}
+      FTTH_PROVISIONING_MAX_AFFECTED_SUBSCRIBERS: ${FTTH_PROVISIONING_MAX_AFFECTED_SUBSCRIBERS:-1}
+      FTTH_PROVISIONING_BULK_EXPANSION_ENABLED: ${FTTH_PROVISIONING_BULK_EXPANSION_ENABLED:-false}
       FTTH_JWT_SECRET: ${FTTH_JWT_SECRET}
       FTTH_ENCRYPTION_SECRET: ${FTTH_ENCRYPTION_SECRET}
       FTTH_CORS_ORIGINS: ${FTTH_CORS_ORIGINS}
@@ -281,6 +289,7 @@ services:
       BACKUP_TARGET: app
       BACKUP_AT: ${BACKUP_AT:-02:30}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_STALE_HOURS: ${BACKUP_STALE_HOURS:-26}
       # Pemilik database saat dipulihkan — role aplikasi, bukan superuser yang mendump.
       BACKUP_DB_OWNER: ${FTTH_DB_USER}
       TZ: ${BACKUP_TZ:-UTC}
@@ -308,6 +317,7 @@ services:
       # Digeser setengah jam dari cadangan aplikasi supaya dua pg_dump tak berebut I/O.
       BACKUP_AT: ${BACKUP_RADIUS_AT:-03:00}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_STALE_HOURS: ${BACKUP_STALE_HOURS:-26}
       TZ: ${BACKUP_TZ:-UTC}
       PGHOST: radius-db
       PGUSER: ${RADIUS_DB_USER:-radius}

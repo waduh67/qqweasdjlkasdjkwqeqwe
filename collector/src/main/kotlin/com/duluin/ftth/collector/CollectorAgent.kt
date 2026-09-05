@@ -2,6 +2,8 @@ package com.duluin.ftth.collector
 
 import com.duluin.ftth.collector.adapter.BngAdapter
 import com.duluin.ftth.collector.adapter.BngAdapterRegistry
+import com.duluin.ftth.collector.adapter.ProvisioningAdapterRegistry
+import com.duluin.ftth.collector.adapter.OltProvisioningAdapterRegistry
 import com.duluin.ftth.snmp.AdapterRegistry
 import com.duluin.ftth.snmp.ProbeResult
 import com.duluin.ftth.contract.BngActionCommand
@@ -10,12 +12,18 @@ import com.duluin.ftth.contract.BngSessionBatch
 import com.duluin.ftth.contract.CollectorConfig
 import com.duluin.ftth.contract.CollectorHeartbeat
 import com.duluin.ftth.contract.CycleReport
+import com.duluin.ftth.contract.DeviceCapabilityReport
 import com.duluin.ftth.contract.MetricBatch
 import com.duluin.ftth.contract.NasTarget
 import com.duluin.ftth.contract.OltTarget
 import com.duluin.ftth.contract.OnuReading
+import com.duluin.ftth.contract.ProvisioningPlanStepCommand
+import com.duluin.ftth.contract.ProvisioningErrorCode
+import com.duluin.ftth.contract.ProvisioningStepResult
 import com.duluin.ftth.contract.RadiusSessionReading
 import com.duluin.ftth.contract.TargetFailure
+import com.duluin.ftth.contract.acknowledgementKey
+import com.duluin.ftth.contract.deliveryKey
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.util.UUID
@@ -46,6 +54,8 @@ class CollectorAgent(
      * collector ini tidak melayani polling BRAS — konfigurasi `nasTargets` diabaikan.
      */
     private val bngRegistry: BngAdapterRegistry? = null,
+    private val provisioningRegistry: ProvisioningAdapterRegistry? = null,
+    private val oltProvisioningRegistry: OltProvisioningAdapterRegistry? = null,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val running = AtomicBoolean(true)
@@ -57,6 +67,24 @@ class CollectorAgent(
      * ACK yang gagal terkirim tidak hilang (server mengirim ulang perintahnya toh).
      */
     private var pendingActionResults: List<BngActionResult> = emptyList()
+    private val provisioningLock = Any()
+    private var pendingProvisioningResults: List<ProvisioningStepResult> = emptyList()
+    private var pendingProvisioningCommandsByKey: Map<String, ProvisioningPlanStepCommand> = emptyMap()
+    private var pendingProvisioningCommands: List<ProvisioningPlanStepCommand> = emptyList()
+    private var pendingDeviceReports: List<DeviceCapabilityReport> = emptyList()
+
+    /** Records an adapter-produced result for delivery; adapters are added later. */
+    fun recordProvisioningResult(result: ProvisioningStepResult) {
+        synchronized(provisioningLock) {
+            pendingProvisioningResults = (pendingProvisioningResults + result)
+                .distinctBy(ProvisioningStepResult::deliveryKey)
+        }
+    }
+
+    /** Claims commands without executing them, preserving the adapter boundary. */
+    fun takeProvisioningCommands(): List<ProvisioningPlanStepCommand> = synchronized(provisioningLock) {
+        pendingProvisioningCommands.also { pendingProvisioningCommands = emptyList() }
+    }
 
     fun stop() = running.set(false)
 
@@ -72,7 +100,10 @@ class CollectorAgent(
             log.info("Collector '{}' sedang dijeda server", config.collectorName)
             return null
         }
-        return runCycle(config)
+        val pendingBeforeCycle = pendingProvisioningKeys()
+        val report = runCycle(config)
+        if (pendingProvisioningKeys() != pendingBeforeCycle) sendHeartbeat(report)
+        return report
     }
 
     /**
@@ -81,11 +112,39 @@ class CollectorAgent(
      * tetap utuh untuk denyut berikutnya).
      */
     private fun sendHeartbeat(lastCycle: CycleReport?): CollectorConfig {
+        val provisioningResults = synchronized(provisioningLock) { pendingProvisioningResults.toList() }
+        val deviceReports = synchronized(provisioningLock) { pendingDeviceReports.toList() }
         val config = client.heartbeat(
-            CollectorHeartbeat(agentVersion = agentVersion, lastCycle = lastCycle, actionResults = pendingActionResults),
+            CollectorHeartbeat(
+                agentVersion = agentVersion,
+                lastCycle = lastCycle,
+                actionResults = pendingActionResults,
+                deviceReports = deviceReports,
+                provisioningResults = provisioningResults,
+            ),
         )
         pendingActionResults = emptyList()
+        synchronized(provisioningLock) {
+            val acknowledgement = config.provisioningAcknowledgement
+            pendingProvisioningResults = pendingProvisioningResults.filterNot {
+                if (it.attemptId == null) {
+                    it.idempotencyKey in acknowledgement.resultIdempotencyKeys
+                } else {
+                    it.attemptId in acknowledgement.resultAttemptIds
+                }
+            }
+            val pendingKeys = pendingProvisioningResults.mapTo(hashSetOf(), ProvisioningStepResult::deliveryKey)
+            pendingProvisioningCommandsByKey = pendingProvisioningCommandsByKey.filterKeys(pendingKeys::contains)
+            pendingDeviceReports = pendingDeviceReports.filterNot {
+                it.acknowledgementKey() in acknowledgement.deviceReportKeys
+            }
+        }
         return config
+    }
+
+    private fun pendingProvisioningKeys(): Pair<Set<String>, Set<String>> = synchronized(provisioningLock) {
+        pendingProvisioningResults.mapTo(linkedSetOf(), ProvisioningStepResult::deliveryKey) to
+            pendingDeviceReports.mapTo(linkedSetOf(), DeviceCapabilityReport::acknowledgementKey)
     }
 
     fun run() {
@@ -122,6 +181,7 @@ class CollectorAgent(
 
     /** Menjalankan satu putaran polling untuk seluruh OLT. */
     internal fun runCycle(config: CollectorConfig): CycleReport {
+        processProvisioning(config)
         val startedAt = clock()
         val failures = mutableListOf<TargetFailure>()
         val readings = mutableListOf<OnuReading>()
@@ -163,6 +223,77 @@ class CollectorAgent(
         )
         return report
     }
+
+    private fun processProvisioning(config: CollectorConfig) {
+        if (provisioningRegistry == null && oltProvisioningRegistry == null) {
+            synchronized(provisioningLock) {
+                pendingProvisioningCommands = (pendingProvisioningCommands + config.provisioningCommands)
+                    .distinctBy(ProvisioningPlanStepCommand::deliveryKey)
+            }
+            return
+        }
+        config.provisioningCommands.groupBy(ProvisioningPlanStepCommand::deliveryKey).forEach { (_, deliveries) ->
+            val command = deliveries.first()
+            val pending = synchronized(provisioningLock) { pendingProvisioningCommandsByKey[command.deliveryKey()] }
+            val collision = deliveries.any { it != command } || (pending != null && pending != command)
+            if (pending == command && !collision) return@forEach
+            val nasTarget = config.nasTargets.singleOrNull { it.nasId == command.target.deviceId }
+            val oltTarget = config.targets.singleOrNull { it.oltId == command.target.deviceId }
+            val nasAdapter = nasTarget?.let { provisioningRegistry?.forVendor(it.vendor) }
+            val oltAdapter = oltTarget?.let { oltProvisioningRegistry?.forVendor(it.vendor) }
+            val result = if (collision) {
+                failedProvisioning(command, ProvisioningErrorCode.STALE_PRECONDITION)
+            } else if (nasTarget != null && nasAdapter != null) {
+                nasAdapter.execute(nasTarget, command)
+            } else if (oltTarget != null && oltAdapter != null) {
+                oltAdapter.execute(oltTarget, command)
+            } else {
+                unsupportedProvisioning(command)
+            }
+            synchronized(provisioningLock) {
+                pendingProvisioningResults = pendingProvisioningResults.filterNot { it.deliveryKey() == result.deliveryKey() } + result
+                pendingProvisioningCommandsByKey = pendingProvisioningCommandsByKey + (command.deliveryKey() to command)
+                val report = when {
+                    nasTarget != null && nasAdapter != null -> nasAdapter.capabilityReport(nasTarget)
+                    oltTarget != null && oltAdapter != null -> oltAdapter.capabilityReport(oltTarget)
+                    else -> null
+                }
+                if (report != null && pendingDeviceReports.none { it.targetId == report.targetId }) {
+                    pendingDeviceReports = pendingDeviceReports + report
+                }
+            }
+        }
+    }
+
+    private fun unsupportedProvisioning(command: ProvisioningPlanStepCommand) = ProvisioningStepResult(
+        planId = command.planId,
+        revision = command.revision,
+        stepId = command.stepId,
+        attemptId = command.attemptId,
+        targetId = command.target.deviceId,
+        operationClass = command.operationClass,
+        idempotencyKey = command.idempotencyKey,
+        fencingEpoch = command.fencingEpoch,
+        phase = command.phase,
+        success = false,
+        completedAt = clock(),
+        errorCode = ProvisioningErrorCode.UNSUPPORTED_CAPABILITY,
+    )
+
+    private fun failedProvisioning(command: ProvisioningPlanStepCommand, error: ProvisioningErrorCode) = ProvisioningStepResult(
+        planId = command.planId,
+        revision = command.revision,
+        stepId = command.stepId,
+        attemptId = command.attemptId,
+        targetId = command.target.deviceId,
+        operationClass = command.operationClass,
+        idempotencyKey = command.idempotencyKey,
+        fencingEpoch = command.fencingEpoch,
+        phase = command.phase,
+        success = false,
+        completedAt = clock(),
+        errorCode = error,
+    )
 
     private fun pollTarget(target: OltTarget): List<OnuReading> {
         val adapter = registry.forVendor(target.vendor)

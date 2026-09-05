@@ -84,6 +84,7 @@ class WorkOrder private constructor(
      * (aktivasi/terminasi). `null` untuk WO tanpa langganan (perbaikan jaringan, preventif).
      */
     val subscriptionId: UUID?,
+    val orderId: UUID?,
     title: String,
     description: String?,
     priority: WorkOrderPriority,
@@ -104,6 +105,8 @@ class WorkOrder private constructor(
     approvedBy: UUID?,
     approvedAt: Instant?,
     approvalNote: String?,
+    completedBy: UUID?,
+    proofOfWorkHash: String?,
     /** Pembuat WO; `null` berarti dibuat sistem (mis. preventif dari degradasi optik), tanpa pengguna. */
     val createdBy: UUID?,
     val createdAt: Instant,
@@ -158,6 +161,10 @@ class WorkOrder private constructor(
     var approvedAt: Instant? = approvedAt
         private set
     var approvalNote: String? = approvalNote
+        private set
+    var completedBy: UUID? = completedBy
+        private set
+    var proofOfWorkHash: String? = proofOfWorkHash
         private set
 
     private val pending = mutableListOf<WorkOrderEvent>()
@@ -225,8 +232,9 @@ class WorkOrder private constructor(
      * persetujuan ([WorkOrderApprovalStatus.PENDING]); keputusan penyelia
      * sebelumnya (mis. bila WO ini pernah ditolak lalu dikerjakan ulang) direset.
      */
-    fun complete(note: String?, at: Instant, actorId: UUID?) {
+    fun complete(note: String?, packet: ProofOfWorkPacket, at: Instant, actorId: UUID?) {
         if (status != WorkOrderStatus.IN_PROGRESS) throw ConflictException("Work order harus sedang dikerjakan untuk diselesaikan")
+        packet.validateFor(type)
         status = WorkOrderStatus.DONE
         completedAt = at
         resolutionNote = note?.ifBlank { null }
@@ -234,12 +242,15 @@ class WorkOrder private constructor(
         approvedBy = null
         approvedAt = null
         approvalNote = null
+        completedBy = actorId
+        proofOfWorkHash = packet.canonicalHash()
         record(WorkOrderEventType.COMPLETED, "Pekerjaan selesai", at, actorId)
     }
 
     /** Penyelia menyetujui hasil kerja. Hanya untuk WO selesai yang masih menunggu persetujuan. */
     fun approve(note: String?, at: Instant, actorId: UUID?) {
         requirePendingApproval()
+        if (actorId != null && actorId == completedBy) throw ConflictException("Pembuat submission tidak boleh menyetujui hasilnya sendiri")
         approvalStatus = WorkOrderApprovalStatus.APPROVED
         approvedBy = actorId
         approvedAt = at
@@ -345,6 +356,7 @@ class WorkOrder private constructor(
             createdBy: UUID?,
             // Default null: WO yang lahir tanpa langganan (mis. preventif) tak perlu menyebutnya.
             subscriptionId: UUID? = null,
+            orderId: UUID? = null,
             at: Instant = Instant.now(),
         ): WorkOrder {
             val id = UuidV7.generate()
@@ -354,6 +366,7 @@ class WorkOrder private constructor(
                 code = deriveCode(id),
                 type = type,
                 subscriptionId = subscriptionId,
+                orderId = orderId,
                 title = validateTitle(title),
                 description = description?.ifBlank { null },
                 priority = priority,
@@ -373,7 +386,9 @@ class WorkOrder private constructor(
                 approvalStatus = null,
                 approvedBy = null,
                 approvedAt = null,
-                approvalNote = null,
+            approvalNote = null,
+            completedBy = null,
+            proofOfWorkHash = null,
                 createdBy = createdBy,
                 createdAt = at,
             )
@@ -410,12 +425,16 @@ class WorkOrder private constructor(
             approvedBy: UUID?,
             approvedAt: Instant?,
             approvalNote: String?,
+            completedBy: UUID?,
+            proofOfWorkHash: String?,
             createdBy: UUID?,
             createdAt: Instant,
+            orderId: UUID? = null,
         ): WorkOrder = WorkOrder(
-            id, tenantId, code, type, subscriptionId, title, description, priority, customerId, incidentId, areaId,
+            id, tenantId, code, type, subscriptionId, orderId, title, description, priority, customerId, incidentId, areaId,
             status, assignees, assignedAt, scheduledAt, startedAt, completedAt, resolutionNote,
             cancelReason, rxBeforeDbm, rxAfterDbm, approvalStatus, approvedBy, approvedAt, approvalNote,
+            completedBy, proofOfWorkHash,
             createdBy, createdAt,
         )
     }
