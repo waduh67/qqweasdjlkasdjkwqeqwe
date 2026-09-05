@@ -2,6 +2,11 @@ package com.duluin.ftth
 
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantCommand
 import com.duluin.ftth.iam.application.port.inbound.OnboardTenantUseCase
+import com.duluin.ftth.common.tenant.TenantContext
+import com.duluin.ftth.tenancy.TenantApi
+import com.duluin.ftth.workorder.application.service.EvidenceRetentionWorker
+import com.duluin.ftth.workorder.adapter.outbound.persistence.WorkOrderEvidenceJpaRepository
+import com.duluin.ftth.workorder.domain.model.EvidenceRevisionState
 import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -19,6 +24,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multi
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.util.UUID
+import java.time.Instant
 
 /**
  * Uji bukti pengerjaan Phase 4.2: foto & tanda tangan disimpan via object storage
@@ -32,6 +38,9 @@ class WorkOrderEvidenceIT {
 
     @Autowired private lateinit var mockMvc: MockMvc
     @Autowired private lateinit var onboarding: OnboardTenantUseCase
+    @Autowired private lateinit var tenantApi: TenantApi
+    @Autowired private lateinit var retentionWorker: EvidenceRetentionWorker
+    @Autowired private lateinit var evidenceJpa: WorkOrderEvidenceJpaRepository
 
     private val pass = "secret12345"
     private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
@@ -51,7 +60,16 @@ class WorkOrderEvidenceIT {
         return login(slug, admin)
     }
 
+    private fun newTenantSession(prefix: String): Pair<String, UUID> {
+        val slug = "$prefix${uniq()}"
+        val admin = "admin@$slug.test"
+        onboarding.onboard(OnboardTenantCommand(slug, "Tenant $slug", admin, "Admin", pass))
+        return login(slug, admin) to tenantApi.findBySlug(slug)!!.id
+    }
+
     private fun id(json: String): String = JsonPath.read(json, "$.id")
+
+    private fun evidenceRevisionId(json: String): String = JsonPath.read(json, "$.revisionId")
 
     private fun post(url: String, token: String, body: String, expected: Int = 201): String =
         mockMvc.perform(
@@ -96,14 +114,19 @@ class WorkOrderEvidenceIT {
 
         val uploaded = mockMvc.perform(
             multipart("/api/work-orders/$woId/evidence").file(png())
-                .param("kind", "AFTER").param("caption", "Sesudah disambung")
+                .param("kind", "FAT").param("caption", "FAT terpasang")
                 .header("Authorization", "Bearer $token"),
         ).andExpect(status().isCreated).andReturn().response.contentAsString
-        assertThat(JsonPath.read<String>(uploaded, "$.kind")).isEqualTo("AFTER")
-        assertThat(JsonPath.read<String>(uploaded, "$.caption")).isEqualTo("Sesudah disambung")
+        assertThat(JsonPath.read<String>(uploaded, "$.kind")).isEqualTo("FAT")
+        assertThat(JsonPath.read<String>(uploaded, "$.caption")).isEqualTo("FAT terpasang")
         assertThat(JsonPath.read<Int>(uploaded, "$.sizeBytes")).isEqualTo(13)
         assertThat(JsonPath.read<String>(uploaded, "$.uploadedByName")).isEqualTo("Admin")
-        val evidenceId = id(uploaded)
+        val evidenceId = evidenceRevisionId(uploaded)
+
+        val proof = get("/api/work-orders/$woId/proof-of-work", token)
+        assertThat(JsonPath.read<String>(proof, "$.revision")).hasSize(64)
+        assertThat(JsonPath.read<List<String>>(proof, "$.artifacts[*].revisionId")).containsExactly(evidenceId)
+        assertThat(JsonPath.read<List<String>>(proof, "$.artifacts[*].kind")).containsExactly("FAT")
 
         // Terdaftar di galeri work order.
         val list = get("/api/work-orders/$woId/evidence", token)
@@ -121,6 +144,69 @@ class WorkOrderEvidenceIT {
             delete("/api/work-orders/$woId/evidence/$evidenceId").header("Authorization", "Bearer $token"),
         ).andExpect(status().isNoContent)
         assertThat(JsonPath.read<List<Any>>(get("/api/work-orders/$woId/evidence", token), "$[*]")).isEmpty()
+    }
+
+    @Test
+    fun `retention purge hides photo and signature from list proof and download APIs`() {
+        val (token, tenantId) = newTenantSession("retention-api")
+        val woId = startedWorkOrder(token)
+        val uploaded = mockMvc.perform(
+            multipart("/api/work-orders/$woId/evidence").file(png())
+                .param("kind", "FAT").header("Authorization", "Bearer $token"),
+        ).andExpect(status().isCreated).andReturn().response.contentAsString
+        val evidenceId = evidenceRevisionId(uploaded)
+        mockMvc.perform(
+            multipart(HttpMethod.PUT, "/api/work-orders/$woId/signature").file(png("ttd.png"))
+                .param("signerName", "Customer").header("Authorization", "Bearer $token"),
+        ).andExpect(status().isOk)
+
+        TenantContext.runAs(tenantId) { retentionWorker.purge(Instant.now().plusSeconds(1)) }
+
+        assertThat(JsonPath.read<List<Any>>(get("/api/work-orders/$woId/evidence", token), "$[*]")).isEmpty()
+        assertThat(JsonPath.read<List<Any>>(get("/api/work-orders/$woId/proof-of-work", token), "$.artifacts[*]")).isEmpty()
+        mockMvc.perform(
+            get("/api/work-orders/$woId/evidence/$evidenceId/content").header("Authorization", "Bearer $token"),
+        ).andExpect(status().isNotFound)
+        mockMvc.perform(get("/api/work-orders/$woId/signature").header("Authorization", "Bearer $token"))
+            .andExpect(status().isNoContent)
+        mockMvc.perform(get("/api/work-orders/$woId/signature/content").header("Authorization", "Bearer $token"))
+            .andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `hidden photo metadata cannot be downloaded while bytes remain`() {
+        val (token, tenantId) = newTenantSession("hidden-photo")
+        val woId = startedWorkOrder(token)
+        val first = mockMvc.perform(
+            multipart("/api/work-orders/$woId/evidence").file(png())
+                .param("kind", "FAT").header("Authorization", "Bearer $token"),
+        ).andExpect(status().isCreated).andReturn().response.contentAsString
+        val tombstonedId = evidenceRevisionId(first)
+        TenantContext.runAs(tenantId) {
+            evidenceJpa.findById(UUID.fromString(tombstonedId)).orElseThrow().apply {
+                revisionState = EvidenceRevisionState.TOMBSTONED
+            }.let(evidenceJpa::save)
+        }
+        mockMvc.perform(
+            get("/api/work-orders/$woId/evidence/$tombstonedId/content").header("Authorization", "Bearer $token"),
+        ).andExpect(status().isNotFound)
+
+        val second = mockMvc.perform(
+            multipart("/api/work-orders/$woId/evidence").file(png("claimed.png"))
+                .param("kind", "FAT").header("Authorization", "Bearer $token"),
+        ).andExpect(status().isCreated).andReturn().response.contentAsString
+        val claimedId = evidenceRevisionId(second)
+        TenantContext.runAs(tenantId) {
+            evidenceJpa.findById(UUID.fromString(claimedId)).orElseThrow().apply {
+                purgeState = "CLAIMED"
+                purgeClaimId = UUID.randomUUID()
+            }.let(evidenceJpa::save)
+        }
+        mockMvc.perform(
+            get("/api/work-orders/$woId/evidence/$claimedId/content").header("Authorization", "Bearer $token"),
+        ).andExpect(status().isNotFound)
+        assertThat(JsonPath.read<List<Any>>(get("/api/work-orders/$woId/evidence", token), "$[*]")).isEmpty()
+        assertThat(JsonPath.read<List<Any>>(get("/api/work-orders/$woId/proof-of-work", token), "$.artifacts[*]")).isEmpty()
     }
 
     @Test
@@ -224,7 +310,7 @@ class WorkOrderEvidenceIT {
         val uploaded = mockMvc.perform(
             multipart("/api/work-orders/$woId/evidence").file(png()).header("Authorization", "Bearer $admin"),
         ).andExpect(status().isCreated).andReturn().response.contentAsString
-        val evidenceId = id(uploaded)
+        val evidenceId = evidenceRevisionId(uploaded)
 
         get("/api/work-orders/$woId/evidence", oneToken, 200)
         get("/api/work-orders/$woId/evidence", twoToken, 404)

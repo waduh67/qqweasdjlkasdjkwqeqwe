@@ -14,12 +14,14 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
+import org.springframework.mock.web.MockMultipartFile
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.util.UUID
 
@@ -40,11 +42,39 @@ class WorkOrderIT {
     private val pass = "secret12345"
     private fun uniq() = UUID.randomUUID().toString().substring(0, 8)
 
-    private fun completionBody(note: String? = null): String {
+    private fun completionBody(workOrderId: String, token: String, note: String? = null): String {
+        val evidenceRevisionIds = listOf(
+            "FAT", "ODP", "DROPCORE", "ONT", "ONU", "OPTICAL_BEFORE", "OPTICAL_AFTER", "TECHNICIAN_SIGNATURE", "LOCATION",
+        ).associateWith { kind ->
+            val evidence = mockMvc.perform(
+                multipart("/api/work-orders/$workOrderId/evidence")
+                    .file(MockMultipartFile("file", "$kind.png", MediaType.IMAGE_PNG_VALUE, PNG))
+                    .param("kind", kind)
+                    .header("Authorization", "Bearer $token"),
+            ).andExpect(status().isCreated).andReturn().response.contentAsString
+            JsonPath.read<String>(evidence, "$.revisionId")
+        }
+        val acknowledgement = mockMvc.perform(
+            multipart(org.springframework.http.HttpMethod.PUT, "/api/work-orders/$workOrderId/signature")
+                .file(MockMultipartFile("file", "acknowledgement.png", MediaType.IMAGE_PNG_VALUE, PNG))
+                .param("signerName", "Pelanggan")
+                .param("correctionReason", "Persetujuan pelanggan diperbarui")
+                .header("Authorization", "Bearer $token"),
+        ).andExpect(status().isOk).andReturn().response.contentAsString
+        val acknowledgementRevisionId = JsonPath.read<String>(acknowledgement, "$.revisionId")
+        val proof = get("/api/work-orders/$workOrderId/proof-of-work", token)
+        val revision = JsonPath.read<String>(proof, "$.revision")
         val kinds = listOf("FAT", "ODP", "DROPCORE", "ONT", "ONU", "OPTICAL_BEFORE", "OPTICAL_AFTER", "TECHNICIAN_SIGNATURE", "CUSTOMER_ACKNOWLEDGEMENT", "LOCATION")
-        val artifacts = kinds.joinToString(",") { "{\"kind\":\"$it\",\"revisionId\":\"${UUID.randomUUID()}\"}" }
+        val artifacts = kinds.joinToString(",") { kind ->
+            val revisionId = if (kind == "CUSTOMER_ACKNOWLEDGEMENT") acknowledgementRevisionId else evidenceRevisionIds.getValue(kind)
+            "{\"kind\":\"$kind\",\"revisionId\":\"$revisionId\"}"
+        }
         val resolution = note?.let { ",\"resolutionNote\":\"$it\"" }.orEmpty()
-        return "{\"proofRevision\":1,\"artifacts\":[$artifacts]$resolution}"
+        return "{\"proofRevision\":\"$revision\",\"artifacts\":[$artifacts]$resolution}"
+    }
+
+    private companion object {
+        val PNG = byteArrayOf(137.toByte(), 80, 78, 71, 13, 10, 26, 10, 1, 2, 3, 4, 5)
     }
 
     private fun login(slug: String, email: String): String {
@@ -156,7 +186,7 @@ class WorkOrderIT {
         // Kerjakan lalu selesaikan.
         val started = post("/api/work-orders/$woId/start", token, "", 200)
         assertThat(JsonPath.read<String>(started, "$.status")).isEqualTo("IN_PROGRESS")
-        val done = post("/api/work-orders/$woId/complete", token, completionBody("Core disambung ulang"), 200)
+        val done = post("/api/work-orders/$woId/complete", token, completionBody(woId, token, "Core disambung ulang"), 200)
         assertThat(JsonPath.read<String>(done, "$.status")).isEqualTo("DONE")
         assertThat(JsonPath.read<String>(done, "$.resolutionNote")).isEqualTo("Core disambung ulang")
 
@@ -176,6 +206,39 @@ class WorkOrderIT {
         val token = newTenantAdmin("wo")
         val woId = id(createWorkOrder(token, """{"type":"PSB","title":"Pasang baru"}"""))
         post("/api/work-orders/$woId/start", token, "", expected = 409)
+    }
+
+    @Test
+    fun `completion rejects a stale authoritative proof revision`() {
+        val token = newTenantAdmin("wo")
+        val woId = id(createWorkOrder(token, """{"type":"REPAIR","title":"Bukti stale"}"""))
+        val techId = newTechnician(token, "Teknisi bukti")
+        post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
+        post("/api/work-orders/$woId/start", token, "", 200)
+        val stale = completionBody(woId, token).replaceFirst("\\\"proofRevision\\\":\\\"[^\\\"]+\\\"".toRegex(), "\"proofRevision\":\"stale\"")
+
+        post("/api/work-orders/$woId/complete", token, stale, 409)
+    }
+
+    @Test
+    fun `completion rejects an authoritative revision bound to an incompatible proof kind`() {
+        val token = newTenantAdmin("wo")
+        val woId = id(createWorkOrder(token, """{"type":"REPAIR","title":"Bukti tidak cocok"}"""))
+        val techId = newTechnician(token, "Teknisi bukti")
+        post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
+        post("/api/work-orders/$woId/start", token, "", 200)
+        val odp = mockMvc.perform(
+            multipart("/api/work-orders/$woId/evidence")
+                .file(MockMultipartFile("file", "odp.png", MediaType.IMAGE_PNG_VALUE, PNG))
+                .param("kind", "ODP")
+                .header("Authorization", "Bearer $token"),
+        ).andExpect(status().isCreated).andReturn().response.contentAsString
+        val odpRevisionId = JsonPath.read<String>(odp, "$.revisionId")
+        val proofRevision = JsonPath.read<String>(get("/api/work-orders/$woId/proof-of-work", token), "$.revision")
+        val artifacts = listOf("FAT", "DROPCORE", "OPTICAL_BEFORE", "OPTICAL_AFTER", "TECHNICIAN_SIGNATURE", "CUSTOMER_ACKNOWLEDGEMENT", "LOCATION")
+            .joinToString(",") { kind -> "{\"kind\":\"$kind\",\"revisionId\":\"${if (kind == "FAT") odpRevisionId else UUID.randomUUID()}\"}" }
+
+        post("/api/work-orders/$woId/complete", token, "{\"proofRevision\":\"$proofRevision\",\"artifacts\":[$artifacts]}", 409)
     }
 
     @Test
@@ -290,7 +353,7 @@ class WorkOrderIT {
         val wo4 = id(createWorkOrder(token, """{"type":"MIGRATION","title":"Migrasi"}"""))
         post("/api/work-orders/$wo4/assign", token, """{"technicianIds":["$techB"]}""", 200)
         post("/api/work-orders/$wo4/start", token, "", 200)
-        post("/api/work-orders/$wo4/complete", token, completionBody(), 200)
+        post("/api/work-orders/$wo4/complete", token, completionBody(wo4, token), 200)
 
         val dash = get("/api/work-orders/dashboard", token)
         assertThat(JsonPath.read<Int>(dash, "$.total")).isEqualTo(4)
@@ -316,7 +379,7 @@ class WorkOrderIT {
         val techId = newTechnician(token, "Teknisi $title")
         post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
         post("/api/work-orders/$woId/start", token, "", 200)
-        post("/api/work-orders/$woId/complete", token, completionBody(), 200)
+        post("/api/work-orders/$woId/complete", token, completionBody(woId, token), 200)
         return woId to newApprover(token)
     }
 
@@ -351,7 +414,7 @@ class WorkOrderIT {
         assertThat(JsonPath.read<Int>(get("/api/work-orders/dashboard", token), "$.pendingApproval")).isEqualTo(0)
 
         // Selesaikan ulang → kembali PENDING, catatan penolakan lama tereset.
-        val redone = post("/api/work-orders/$woId/complete", token, completionBody("Splice ulang"), 200)
+        val redone = post("/api/work-orders/$woId/complete", token, completionBody(woId, token, "Splice ulang"), 200)
         assertThat(JsonPath.read<String>(redone, "$.approvalStatus")).isEqualTo("PENDING")
         assertThat(JsonPath.read<Any?>(redone, "$.approvalNote")).isNull()
 
@@ -439,7 +502,7 @@ class WorkOrderIT {
         // Langganan masih PENDING sampai WO benar-benar selesai.
         assertThat(subscriptionStatus(token, customerId)).isEqualTo("PENDING")
 
-        post("/api/work-orders/$woId/complete", token, completionBody("Terpasang"), 200)
+        post("/api/work-orders/$woId/complete", token, completionBody(woId, token, "Terpasang"), 200)
         assertThat(subscriptionStatus(token, customerId)).isEqualTo("PENDING")
         post("/api/work-orders/$woId/approve", newApprover(token), "{\"note\":\"Disetujui\"}", 200)
         assertThat(subscriptionStatus(token, customerId)).isEqualTo("ACTIVE")
@@ -462,7 +525,7 @@ class WorkOrderIT {
         val techId = newTechnician(token, "Teknisi Bongkar")
         post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
         post("/api/work-orders/$woId/start", token, "", 200)
-        post("/api/work-orders/$woId/complete", token, completionBody(), 200)
+        post("/api/work-orders/$woId/complete", token, completionBody(woId, token), 200)
 
         assertThat(subscriptionStatus(token, customerId)).isEqualTo("ACTIVE")
         post("/api/work-orders/$woId/approve", newApprover(token), "{\"note\":\"Disetujui\"}", 200)
@@ -483,7 +546,7 @@ class WorkOrderIT {
         val techId = newTechnician(token, "Teknisi Repair")
         post("/api/work-orders/$woId/assign", token, """{"technicianIds":["$techId"]}""", 200)
         post("/api/work-orders/$woId/start", token, "", 200)
-        post("/api/work-orders/$woId/complete", token, completionBody(), 200)
+        post("/api/work-orders/$woId/complete", token, completionBody(woId, token), 200)
 
         // REPAIR bukan pemasangan/pembongkaran → langganan tetap PENDING.
         assertThat(subscriptionStatus(token, customerId)).isEqualTo("PENDING")
@@ -526,7 +589,7 @@ class WorkOrderIT {
 
         // Kerjakan WO sendiri → boleh.
         post("/api/work-orders/$woMine/start", tech1Token, "", 200)
-        post("/api/work-orders/$woMine/complete", tech1Token, completionBody("Selesai"), 200)
+        post("/api/work-orders/$woMine/complete", tech1Token, completionBody(woMine, tech1Token, "Selesai"), 200)
 
         // Sentuh WO teknisi lain → 403 (bukan pemiliknya).
         post("/api/work-orders/$woOther/start", tech1Token, "", expected = 403)

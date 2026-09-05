@@ -24,10 +24,14 @@ import com.duluin.ftth.workorder.application.port.inbound.WorkOrderFilter
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderQuery
 import com.duluin.ftth.workorder.application.port.inbound.WorkOrderView
 import com.duluin.ftth.workorder.application.port.outbound.WorkOrderRepository
+import com.duluin.ftth.workorder.application.port.outbound.WorkOrderEvidenceRepository
+import com.duluin.ftth.workorder.application.port.outbound.WorkOrderSignatureRepository
 import com.duluin.ftth.workorder.domain.model.WorkOrder
 import com.duluin.ftth.workorder.domain.model.WorkOrderEvent
 import com.duluin.ftth.workorder.domain.model.WorkOrderStatus
 import com.duluin.ftth.workorder.domain.model.ProofOfWorkPacket
+import com.duluin.ftth.workorder.domain.model.ProofArtifactCompatibility
+import com.duluin.ftth.workorder.domain.model.ProofArtifactKind
 import com.duluin.ftth.workorder.domain.model.WorkOrderType
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
@@ -48,6 +52,8 @@ class WorkOrderService(
     private val customerApi: CustomerApi,
     private val currentUser: CurrentUserProvider,
     private val events: ApplicationEventPublisher,
+    private val evidence: WorkOrderEvidenceRepository,
+    private val signatures: WorkOrderSignatureRepository,
 ) : ManageWorkOrderUseCase, WorkOrderQuery {
 
     @Transactional
@@ -127,6 +133,18 @@ class WorkOrderService(
         val workOrder = require(id)
         requireArea(workOrder)
         requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.close")
+        val authoritativeArtifacts = HashMap<UUID, ProofArtifactKind>()
+        evidence.listByWorkOrder(id).forEach { item ->
+            ProofArtifactCompatibility.fromEvidence(item.kind)?.let { kind -> authoritativeArtifacts[item.id] = kind }
+        }
+        signatures.findByWorkOrder(id)?.let { signature ->
+            authoritativeArtifacts[signature.id] = ProofArtifactCompatibility.customerSignature
+        }
+        val authoritativeRevision = proofRevision(authoritativeArtifacts.keys)
+        if (packet.revision != authoritativeRevision) {
+            throw ConflictException("Proof of Work sudah berubah; muat ulang bukti sebelum mengirim")
+        }
+        ProofArtifactCompatibility.requireMatching(packet.artifacts, authoritativeArtifacts)
         workOrder.complete(resolutionNote, packet, Instant.now(), currentUser.current().userId)
         return repository.save(workOrder).toView()
     }
@@ -252,6 +270,10 @@ class WorkOrderService(
 
     private fun require(id: UUID): WorkOrder =
         repository.findById(id) ?: throw NotFoundException("Work order $id tidak ditemukan")
+
+    private fun proofRevision(revisionIds: Set<UUID>): String = java.security.MessageDigest.getInstance("SHA-256")
+        .digest(revisionIds.sortedBy { it.toString() }.joinToString("|").toByteArray())
+        .joinToString("") { "%02x".format(it) }
 
     private fun requireCustomerExists(customerId: UUID?) {
         if (customerId != null && customerApi.findCustomer(customerId) == null) {
