@@ -50,9 +50,8 @@ class InMemoryObjectStorage : ObjectStorage {
     override fun deleteIfMatch(tenantId: String, key: String, guard: DeleteGuard): Boolean {
         requireTenant(tenantId, key)
         val value = objects[key] ?: return false
-        if (guard.etag != null && guard.etag != value.etag) return false
-        objects.remove(key, value)
-        return true
+        if (guard.etag != null && guard.etag != value.etag.orEmpty().ifBlank { sha256(value.bytes) }) return false
+        return objects.remove(key, value)
     }
 
     private fun requireTenant(tenantId: String, key: String) {
@@ -60,7 +59,7 @@ class InMemoryObjectStorage : ObjectStorage {
     }
 
     private fun StoredObject.metadata(key: String) = StoredObjectMetadata(
-        key, contentType, size, sha256(bytes), etag, version,
+        key, contentType, size, sha256(bytes), etag ?: sha256(bytes), version,
     )
 
     private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256")
