@@ -31,6 +31,7 @@ export interface PaymentGatewaySettingsView {
   readonly tripayApiKeySet: boolean
   readonly tripayPrivateKeySet: boolean
   readonly tripaySandbox: boolean
+  readonly tripayCallbackUrl: string | null
 }
 
 /**

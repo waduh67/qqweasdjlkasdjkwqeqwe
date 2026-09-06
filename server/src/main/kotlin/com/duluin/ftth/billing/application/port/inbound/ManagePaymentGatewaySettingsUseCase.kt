@@ -43,6 +43,7 @@ data class PaymentGatewaySettingsView(
     val tripayApiKeySet: Boolean,
     val tripayPrivateKeySet: Boolean,
     val tripaySandbox: Boolean,
+    val tripayCallbackUrl: String?,
 )
 
 /**

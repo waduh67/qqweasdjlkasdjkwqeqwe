@@ -70,6 +70,7 @@ const tripaySettings: PaymentGatewaySettingsView = {
   tripayApiKeySet: true,
   tripayPrivateKeySet: true,
   tripaySandbox: true,
+  tripayCallbackUrl: 'https://app.example.test/api/platform/tripay/callbacks/payment',
 }
 
 const pivotSettings: PaymentGatewaySettingsView = {
@@ -115,7 +116,7 @@ describe('Tripay BYOK settings', () => {
     expect(screen.getByLabelText('API Key').getAttribute('autocomplete')).toBe('new-password')
     expect(screen.getByLabelText('Private Key').getAttribute('type')).toBe('password')
     expect(screen.getByLabelText('Private Key').getAttribute('autocomplete')).toBe('new-password')
-    expect(screen.getByText('/api/platform/tripay/callbacks/payment')).toBeDefined()
+    expect(screen.getByText('https://app.example.test/api/platform/tripay/callbacks/payment')).toBeDefined()
     expect(screen.getByText('API Key tersimpan.')).toBeDefined()
     expect(screen.getByText('Private Key tersimpan.')).toBeDefined()
     expect(screen.getByRole('button', { name: 'Test sandbox' })).toBeDefined()
@@ -123,16 +124,16 @@ describe('Tripay BYOK settings', () => {
     expect(screen.queryByText(/api-sandbox\/transaction\/create/)).toBeNull()
   })
 
-  it('copies the exact Tripay callback path and confirms success', async () => {
+  it('copies the canonical Tripay callback URL supplied by the server and confirms success', async () => {
     getSettings.mockResolvedValue(tripaySettings)
     const user = renderPage()
     const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined)
 
     try {
-      await user.click(await screen.findByRole('button', { name: 'Salin path callback' }))
+      await user.click(await screen.findByRole('button', { name: 'Salin URL callback' }))
 
       await waitFor(() => {
-        expect(writeText).toHaveBeenCalledWith('/api/platform/tripay/callbacks/payment')
+        expect(writeText).toHaveBeenCalledWith('https://app.example.test/api/platform/tripay/callbacks/payment')
       })
       await waitFor(() => {
         expect(document.querySelector('.toast.success')?.textContent?.trim()).not.toBe('')
@@ -142,14 +143,14 @@ describe('Tripay BYOK settings', () => {
     }
   })
 
-  it('shows generic feedback when copying the Tripay callback path fails', async () => {
+  it('shows generic feedback when copying the Tripay callback URL fails', async () => {
     getSettings.mockResolvedValue(tripaySettings)
     const user = renderPage()
     const diagnostic = 'clipboard unavailable'
     const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error(diagnostic))
 
     try {
-      await user.click(await screen.findByRole('button', { name: 'Salin path callback' }))
+      await user.click(await screen.findByRole('button', { name: 'Salin URL callback' }))
 
       await waitFor(() => {
         expect(document.querySelector('.toast.error')?.textContent?.trim()).not.toBe('')

@@ -66,7 +66,6 @@ import {
  */
 
 const PROVIDER_OPTIONS: PaymentProvider[] = ['PIVOT', 'TRIPAY', 'MANUAL']
-const TRIPAY_CALLBACK_PATH = '/api/platform/tripay/callbacks/payment' as const
 
 /**
  * Kredensial Tripay tidak pernah menjadi bagian dari respons GET atau state `form`. Draf ini hanya
@@ -297,12 +296,12 @@ export function PaymentGatewaySettingsPage() {
     }
   }
 
-  const copyTripayCallbackPath = async () => {
+  const copyTripayCallbackUrl = async (callbackUrl: string) => {
     try {
-      await navigator.clipboard.writeText(TRIPAY_CALLBACK_PATH)
-      toast.success('Path callback disalin')
+      await navigator.clipboard.writeText(callbackUrl)
+      toast.success('URL callback disalin')
     } catch {
-      toast.error('Gagal menyalin path callback. Salin manual dari kolomnya.')
+      toast.error('Gagal menyalin URL callback. Salin manual dari kolomnya.')
     }
   }
 
@@ -368,7 +367,7 @@ export function PaymentGatewaySettingsPage() {
               sandboxPaymentUrl={sandboxPaymentUrl}
               testingSandbox={testingSandbox}
               showSandboxTest={manage && form.tripaySandbox && tripayConfigurationValid}
-              onCopyCallbackPath={() => void copyTripayCallbackPath()}
+              onCopyCallbackUrl={(callbackUrl) => void copyTripayCallbackUrl(callbackUrl)}
               disabled={!manage}
             />
           </>
@@ -1353,7 +1352,7 @@ function TripayPaymentSection({
   sandboxPaymentUrl,
   testingSandbox,
   showSandboxTest,
-  onCopyCallbackPath,
+  onCopyCallbackUrl,
   disabled,
 }: {
   form: PaymentGatewaySettingsView
@@ -1365,9 +1364,11 @@ function TripayPaymentSection({
   sandboxPaymentUrl: string | null
   testingSandbox: boolean
   showSandboxTest: boolean
-  onCopyCallbackPath: () => void
+  onCopyCallbackUrl: (callbackUrl: string) => void
   disabled: boolean
 }) {
+  const tripayCallbackUrl = form.tripayCallbackUrl
+
   return (
     <div className="stack" style={{ gap: '0.85rem' }}>
       <div className="stack" style={{ gap: '0.25rem' }}>
@@ -1431,12 +1432,20 @@ function TripayPaymentSection({
         <Text as="span" className="muted" size={200}>Kosongkan kedua input untuk mempertahankan nilai tersimpan.</Text>
       </div>
 
-      <FormRow label="Callback pembayaran" hint="Server membentuk URL callback Tripay publik lengkap dari FTTH_SITE_ADDRESS. Teks yang disalin hanya path callback.">
+      <FormRow label="Callback pembayaran" hint="Server membentuk URL callback publik lengkap dari FTTH_SITE_ADDRESS.">
         <div className="row" style={{ gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <Text as="span" font="monospace" style={{ overflowWrap: 'anywhere' }}>{TRIPAY_CALLBACK_PATH}</Text>
-          <Button type="button" variant="subtle" icon={<Copy size={16} />} onClick={onCopyCallbackPath}>
-            Salin path callback
-          </Button>
+          {tripayCallbackUrl ? (
+            <>
+              <Text as="span" font="monospace" style={{ overflowWrap: 'anywhere' }}>{tripayCallbackUrl}</Text>
+              <Button type="button" variant="subtle" icon={<Copy size={16} />} onClick={() => onCopyCallbackUrl(tripayCallbackUrl)}>
+                Salin URL callback
+              </Button>
+            </>
+          ) : (
+            <Text as="span" className="muted" size={200}>
+              Isi FTTH_SITE_ADDRESS dengan domain HTTPS publik untuk memakai Tripay.
+            </Text>
+          )}
         </div>
       </FormRow>
 

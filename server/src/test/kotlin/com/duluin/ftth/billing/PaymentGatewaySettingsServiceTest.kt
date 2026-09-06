@@ -3,6 +3,7 @@ package com.duluin.ftth.billing
 import com.duluin.ftth.billing.application.port.inbound.UpdatePaymentGatewaySettingsCommand
 import com.duluin.ftth.billing.application.port.outbound.TenantPaymentGatewayRepository
 import com.duluin.ftth.billing.application.service.PaymentGatewaySettingsService
+import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.billing.domain.model.PaymentProvider
 import com.duluin.ftth.billing.domain.model.TenantPaymentGateway
 import com.duluin.ftth.billing.domain.model.TripayPaymentConfig
@@ -45,6 +46,7 @@ class PaymentGatewaySettingsServiceTest {
             repository = repository,
             auditor = AuditRecorder(ApplicationEventPublisher { }, NoUser),
             storage = storage,
+            billingProperties = BillingProperties(siteAddress = "app.example.test"),
         )
     }
 
@@ -89,6 +91,14 @@ class PaymentGatewaySettingsServiceTest {
 
         service.deleteQrisImage()
         assertThat(service.getQrisImage()).isNull()
+    }
+
+    @Test
+    fun `view exposes the canonical Tripay callback URL from the server site address`() {
+        val view = service.get()
+
+        assertThat(view.tripayCallbackUrl)
+            .isEqualTo("https://app.example.test/api/platform/tripay/callbacks/payment")
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.duluin.ftth.billing.config
 
+import com.duluin.ftth.common.domain.error.ConflictException
 import org.springframework.boot.context.properties.ConfigurationProperties
 
 /**
@@ -31,7 +32,21 @@ data class BillingProperties(
     val siteAddress: String = "",
     /** Setelan adapter Pivot: URL balik wajib mode REDIRECT (success/failure/expiration diturunkan darinya). */
     val pivot: PivotProperties = PivotProperties(),
-)
+) {
+    fun tripayCallbackUrlOrNull(): String? = tripayPublicBaseUrlOrNull()?.let { "$it/api/platform/tripay/callbacks/payment" }
+
+    fun requireTripayCallbackUrl(): String = tripayCallbackUrlOrNull()
+        ?: throw ConflictException("Tripay membutuhkan FTTH_SITE_ADDRESS berupa domain HTTPS publik, bukan kosong atau :80")
+
+    fun requireTripayReturnUrl(): String = tripayPublicBaseUrlOrNull()?.let { "$it/paid" }
+        ?: throw ConflictException("Tripay membutuhkan FTTH_SITE_ADDRESS berupa domain HTTPS publik, bukan kosong atau :80")
+
+    private fun tripayPublicBaseUrlOrNull(): String? {
+        val siteAddress = siteAddress.trim()
+        if (siteAddress.isEmpty() || siteAddress == ":80") return null
+        return "https://$siteAddress"
+    }
+}
 
 /**
  * Setelan adapter Pivot non-rahasia. [redirectBaseUrl] WAJIB diisi bila Pivot aktif — mode REDIRECT

@@ -101,12 +101,8 @@ class TripayPaymentGateway(
         val customerEmail = request.customerEmail?.trim()?.takeIf { it.isNotEmpty() }
             ?: throw ValidationException("Email pembayar wajib untuk transaksi Tripay")
         val itemName = request.description.trim().takeIf { it.isNotEmpty() } ?: merchantRef
-        val siteAddress = billingProperties.siteAddress.trim()
-        if (siteAddress.isEmpty() || siteAddress == ":80") {
-            throw ConflictException("Tripay membutuhkan FTTH_SITE_ADDRESS berupa domain HTTPS publik, bukan kosong atau :80")
-        }
-        val callbackUrl = "https://$siteAddress/api/platform/tripay/callbacks/payment"
-        val returnUrl = "https://$siteAddress/paid"
+        val callbackUrl = billingProperties.requireTripayCallbackUrl()
+        val returnUrl = billingProperties.requireTripayReturnUrl()
 
         return LinkedMultiValueMap<String, String>().apply {
             add("method", selection.tripayCode)

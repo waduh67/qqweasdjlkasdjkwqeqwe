@@ -5,6 +5,7 @@ import com.duluin.ftth.billing.application.port.inbound.ManualPaymentInstruction
 import com.duluin.ftth.billing.application.port.inbound.PaymentGatewaySettingsView
 import com.duluin.ftth.billing.application.port.inbound.UpdatePaymentGatewaySettingsCommand
 import com.duluin.ftth.billing.application.port.outbound.TenantPaymentGatewayRepository
+import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.billing.domain.model.ManualPaymentConfig
 import com.duluin.ftth.billing.domain.model.PaymentProvider
 import com.duluin.ftth.billing.domain.model.TenantPaymentGateway
@@ -29,6 +30,7 @@ class PaymentGatewaySettingsService(
     private val repository: TenantPaymentGatewayRepository,
     private val auditor: AuditRecorder,
     private val storage: ObjectStorage,
+    private val billingProperties: BillingProperties,
 ) : ManagePaymentGatewaySettingsUseCase {
 
     override fun get(): PaymentGatewaySettingsView =
@@ -138,6 +140,7 @@ class PaymentGatewaySettingsService(
         tripayApiKeySet = !tripay.apiKeyForGateway().isNullOrBlank(),
         tripayPrivateKeySet = !tripay.privateKeyForGateway().isNullOrBlank(),
         tripaySandbox = tripay.sandbox,
+        tripayCallbackUrl = billingProperties.tripayCallbackUrlOrNull(),
     )
 
     private companion object {
