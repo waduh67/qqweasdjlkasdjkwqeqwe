@@ -43,12 +43,17 @@ class SecurityPropertiesTest {
         productionConfiguration()
     }
 
+    @Test
+    fun `production configuration ignores the unused demo administrator password`() {
+        productionConfiguration(demoAdminPassword = "admin12345")
+    }
+
     private fun productionConfiguration(
-        jwt: String = "j".repeat(32), encryption: String = "e".repeat(32), databasePassword: String = "database-password-strong", bootstrapPassword: String = "bootstrap-password-strong", storageSecret: String = "storage-secret-strong",
+        jwt: String = "j".repeat(32), encryption: String = "e".repeat(32), databasePassword: String = "database-password-strong", bootstrapPassword: String = "bootstrap-password-strong", demoAdminPassword: String = "legacy-password-strong", storageSecret: String = "storage-secret-strong",
     ) = ProductionConfigurationValidator.requireSafeProductionConfiguration(
         ProductionConfiguration(
             SecurityProperties(jwt, encryption),
-            BootstrapProperties("operator@company.test", bootstrapPassword, seedDemoTenant = false, demoAdminPassword = "legacy-password-strong"),
+            BootstrapProperties("operator@company.test", bootstrapPassword, seedDemoTenant = false, demoAdminPassword = demoAdminPassword),
             DataSourceProperties().apply { password = databasePassword },
             StorageProperties(accessKey = "storage-access-strong", secretKey = storageSecret),
         ),

@@ -25,7 +25,6 @@ class ProductionConfigurationValidator(
                 configuration.security.encryptionSecret,
                 configuration.dataSource.password,
                 configuration.bootstrap.platformAdminPassword,
-                configuration.bootstrap.demoAdminPassword,
                 configuration.storage.accessKey,
                 configuration.storage.secretKey,
             )
