@@ -28,9 +28,9 @@ data class BillingProperties(
     /** Selang jalannya scheduler penagihan (ISO-8601 duration). */
     val schedulerInterval: String = "PT12H",
     val webhookSecret: String = "dev-only-billing-webhook-secret-change-me",
+    val siteAddress: String = "",
     /** Setelan adapter Pivot: URL balik wajib mode REDIRECT (success/failure/expiration diturunkan darinya). */
     val pivot: PivotProperties = PivotProperties(),
-    val tripay: TripayProperties = TripayProperties(),
 )
 
 /**
@@ -41,9 +41,4 @@ data class BillingProperties(
  */
 data class PivotProperties(
     val redirectBaseUrl: String = "",
-)
-
-data class TripayProperties(
-    val callbackUrl: String = "",
-    val returnUrl: String = "",
 )

@@ -23,6 +23,8 @@ import com.duluin.ftth.tenancy.TenantRef
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.verifyNoInteractions
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -89,6 +91,97 @@ class TripayCallbackControllerTest {
     }
 
     @Test
+    fun `malformed raw bytes with an invalid signature are rejected before JSON parsing or settlement`() {
+        val tenant = UuidV7.generate()
+        val recorder = RecordingPayments()
+        val objectMapper = mock<ObjectMapper>()
+        val malformedRawBody = byteArrayOf('{'.code.toByte(), '"'.code.toByte(), 'x'.code.toByte())
+
+        mockMvc(
+            tenants = listOf(tenant),
+            configs = mapOf(tenant to tripayConfig(tenant)),
+            recorder = recorder,
+            objectMapper = objectMapper,
+        ).perform(callback(malformedRawBody, sign("different raw body", PRIVATE_KEY)))
+            .andExpect(status().isBadRequest)
+
+        assertThat(recorder.settlements).isEmpty()
+        verifyNoInteractions(objectMapper)
+    }
+
+    @Test
+    fun `ambiguous active complete Tripay configurations reject a matching signature without settlement`() {
+        val firstTenant = UuidV7.generate()
+        val secondTenant = UuidV7.generate()
+        val recorder = RecordingPayments()
+        val body = callbackBody(status = "PAID")
+
+        mockMvc(
+            tenants = listOf(firstTenant, secondTenant),
+            configs = mapOf(
+                firstTenant to tripayConfig(firstTenant),
+                secondTenant to tripayConfig(secondTenant),
+            ),
+            recorder = recorder,
+        ).perform(callback(body, sign(body, PRIVATE_KEY)))
+            .andExpect(status().isBadRequest)
+
+        assertThat(recorder.settlements).isEmpty()
+    }
+
+    @Test
+    fun `rotating the active Tripay configuration rejects the old signature and accepts the new signature`() {
+        val tenant = UuidV7.generate()
+        val oldPrivateKey = "old-fixture-tripay-private-key"
+        val newPrivateKey = "new-fixture-tripay-private-key"
+        val configs = mutableMapOf<UUID, TenantPaymentGateway>(
+            tenant to tripayConfig(tenant, privateKey = oldPrivateKey),
+        )
+        val recorder = RecordingPayments()
+        val body = callbackBody(status = "PAID")
+        val mvc = mockMvc(tenants = listOf(tenant), configs = configs, recorder = recorder)
+
+        configs[tenant] = tripayConfig(tenant, privateKey = newPrivateKey)
+
+        mvc.perform(callback(body, sign(body, oldPrivateKey)))
+            .andExpect(status().isBadRequest)
+
+        assertThat(recorder.settlements).isEmpty()
+
+        mvc.perform(callback(body, sign(body, newPrivateKey)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.success").value(true))
+
+        assertThat(recorder.settlements).containsExactly(
+            RecordedSettlement(tenant, "INV-202609-0001"),
+        )
+    }
+
+    @Test
+    fun `duplicate signed PAID callbacks persist one logical settlement`() {
+        val tenant = UuidV7.generate()
+        val recorder = RecordingPayments()
+        val body = callbackBody(status = "PAID")
+        val mvc = mockMvc(
+            tenants = listOf(tenant),
+            configs = mapOf(tenant to tripayConfig(tenant)),
+            recorder = recorder,
+        )
+
+        repeat(2) {
+            mvc.perform(callback(body, sign(body, PRIVATE_KEY)))
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.success").value(true))
+        }
+
+        assertThat(recorder.settlements).containsExactly(
+            RecordedSettlement(tenant, "INV-202609-0001"),
+        )
+        assertThat(recorder.settlementApplyAttempts).isEqualTo(2)
+        assertThat(recorder.persistedLogicalSettlementCount).isEqualTo(1)
+    }
+
+    @Test
     fun `valid non PAID callback acknowledges success without settlement`() {
         val tenant = UuidV7.generate()
         val recorder = RecordingPayments()
@@ -146,14 +239,16 @@ class TripayCallbackControllerTest {
         tenants: List<UUID>,
         configs: Map<UUID, TenantPaymentGateway>,
         recorder: RecordingPayments,
+        objectMapper: ObjectMapper = ObjectMapper(),
     ) = MockMvcBuilders.standaloneSetup(
-        TripayCallbackController(billingCallbacks(tenants, configs, recorder)),
+        TripayCallbackController(billingCallbacks(tenants, configs, recorder, objectMapper)),
     ).setControllerAdvice(GlobalExceptionHandler()).build()
 
     private fun billingCallbacks(
         tenants: List<UUID>,
         configs: Map<UUID, TenantPaymentGateway>,
         recorder: RecordingPayments,
+        objectMapper: ObjectMapper,
     ) = TripayPaymentCallbackService(
         tenantApi = ActiveTenants(tenants),
         gatewayResolver = TenantPaymentGatewayResolver(
@@ -164,10 +259,13 @@ class TripayCallbackControllerTest {
             props = BillingProperties(),
         ),
         recordPayment = recorder,
-        objectMapper = ObjectMapper(),
+        objectMapper = objectMapper,
     )
 
     private fun callback(body: String, signature: String) =
+        callback(body.toByteArray(StandardCharsets.UTF_8), signature)
+
+    private fun callback(body: ByteArray, signature: String) =
         post("/api/platform/tripay/callbacks/payment")
             .contentType(MediaType.APPLICATION_JSON)
             .header("X-Callback-Signature", signature)
@@ -206,11 +304,23 @@ class TripayCallbackControllerTest {
     private class RecordingPayments(
         private val ignoredInvoices: Set<String> = emptySet(),
     ) : RecordPaymentUseCase {
-        val settlements = mutableListOf<RecordedSettlement>()
+        private val persistedSettlements = linkedSetOf<RecordedSettlement>()
+
+        val settlements: List<RecordedSettlement>
+            get() = persistedSettlements.toList()
+
+        val settlementApplyAttempts: Int
+            get() = applyAttempts
+
+        val persistedLogicalSettlementCount: Int
+            get() = persistedSettlements.size
+
+        private var applyAttempts = 0
 
         override fun applySettlement(settlement: PaymentSettlement) {
             if (settlement.invoiceNumber !in ignoredInvoices) {
-                settlements += RecordedSettlement(TenantContext.tenantId(), settlement.invoiceNumber)
+                applyAttempts += 1
+                persistedSettlements += RecordedSettlement(TenantContext.tenantId(), settlement.invoiceNumber)
             }
         }
 

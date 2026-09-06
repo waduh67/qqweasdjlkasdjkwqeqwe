@@ -123,6 +123,43 @@ describe('Tripay BYOK settings', () => {
     expect(screen.queryByText(/api-sandbox\/transaction\/create/)).toBeNull()
   })
 
+  it('copies the exact Tripay callback path and confirms success', async () => {
+    getSettings.mockResolvedValue(tripaySettings)
+    const user = renderPage()
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined)
+
+    try {
+      await user.click(await screen.findByRole('button', { name: 'Salin path callback' }))
+
+      await waitFor(() => {
+        expect(writeText).toHaveBeenCalledWith('/api/platform/tripay/callbacks/payment')
+      })
+      await waitFor(() => {
+        expect(document.querySelector('.toast.success')?.textContent?.trim()).not.toBe('')
+      })
+    } finally {
+      writeText.mockRestore()
+    }
+  })
+
+  it('shows generic feedback when copying the Tripay callback path fails', async () => {
+    getSettings.mockResolvedValue(tripaySettings)
+    const user = renderPage()
+    const diagnostic = 'clipboard unavailable'
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error(diagnostic))
+
+    try {
+      await user.click(await screen.findByRole('button', { name: 'Salin path callback' }))
+
+      await waitFor(() => {
+        expect(document.querySelector('.toast.error')?.textContent?.trim()).not.toBe('')
+      })
+      expect(screen.queryByText(diagnostic)).toBeNull()
+    } finally {
+      writeText.mockRestore()
+    }
+  })
+
   it('hides the sandbox action in production mode or without manage permission', async () => {
     getSettings.mockResolvedValue({ ...tripaySettings, tripaySandbox: false })
 

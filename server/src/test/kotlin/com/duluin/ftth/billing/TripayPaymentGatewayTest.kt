@@ -6,7 +6,6 @@ import com.duluin.ftth.billing.adapter.outbound.gateway.tripay.TripayCredentials
 import com.duluin.ftth.billing.application.port.outbound.ChargeRequest
 import com.duluin.ftth.billing.application.port.outbound.GatewayCallback
 import com.duluin.ftth.billing.config.BillingProperties
-import com.duluin.ftth.billing.config.TripayProperties
 import com.duluin.ftth.billing.domain.model.GatewayMode
 import com.duluin.ftth.billing.domain.model.ResolvedGatewayContext
 import com.duluin.ftth.common.domain.error.ConflictException
@@ -47,7 +46,7 @@ class TripayPaymentGatewayTest {
             assertThat(wire.request.form).containsEntry("customer_name", "Budi")
             assertThat(wire.request.form).containsEntry("customer_email", "budi@example.test")
             assertThat(wire.request.form).containsEntry("callback_url", "https://app.example.test/api/platform/tripay/callbacks/payment")
-            assertThat(wire.request.form).containsEntry("return_url", "https://app.example.test/invoices/paid")
+            assertThat(wire.request.form).containsEntry("return_url", "https://app.example.test/paid")
             assertThat(wire.request.form).containsEntry("order_items[0][sku]", "INV-202609-0001")
             assertThat(wire.request.form).containsEntry("order_items[0][name]", "September service")
             assertThat(wire.request.form).containsEntry("order_items[0][price]", "150000")
@@ -69,6 +68,21 @@ class TripayPaymentGatewayTest {
             assertThat(virtualAccount.name).isEqualTo("BNI Virtual Account")
             assertThat(virtualAccount.expiresAt).isEqualTo(Instant.ofEpochSecond(1_788_000_000))
             assertThat(result.qr).isNull()
+        }
+    }
+
+    @Test
+    fun `site address derives Tripay callback and return URLs`() {
+        WireTripay(qrResponse()).use { wire ->
+            gateway(wire = wire, siteAddress = "app.example.test")
+                .createCharge(request(method = "QR"), ctx(sandbox = true))
+
+            assertThat(wire.request.form).containsEntry(
+                "callback_url",
+                "https://app.example.test/api/platform/tripay/callbacks/payment",
+            )
+            assertThat(wire.request.form).containsEntry("return_url", "https://app.example.test/paid")
+            assertThat(wire.requestCount).isEqualTo(1)
         }
     }
 
@@ -224,19 +238,40 @@ class TripayPaymentGatewayTest {
     }
 
     @Test
-    fun `blank deployment URL and unsupported VA channel are rejected before an HTTP request`() {
+    fun `blank site address is rejected before an HTTP request`() {
         WireTripay(vaResponse()).use { wire ->
-            val missingUrl = checkNotNull(catchThrowable {
-                gateway(wire, callbackUrl = "   ").createCharge(request(method = "QR"), ctx(sandbox = true))
+            val thrown = checkNotNull(catchThrowable {
+                gateway(wire, siteAddress = "   ").createCharge(request(method = "QR"), ctx(sandbox = true))
             })
-            val unsupportedChannel = checkNotNull(catchThrowable {
+
+            assertThat(thrown).isInstanceOf(ConflictException::class.java)
+            assertThat(thrown.message).contains("FTTH_SITE_ADDRESS")
+            assertThat(wire.requestCount).isZero()
+        }
+    }
+
+    @Test
+    fun `port 80 site address is rejected before an HTTP request`() {
+        WireTripay(vaResponse()).use { wire ->
+            val thrown = checkNotNull(catchThrowable {
+                gateway(wire, siteAddress = ":80").createCharge(request(method = "QR"), ctx(sandbox = true))
+            })
+
+            assertThat(thrown).isInstanceOf(ConflictException::class.java)
+            assertThat(thrown.message).contains("FTTH_SITE_ADDRESS")
+            assertThat(wire.requestCount).isZero()
+        }
+    }
+
+    @Test
+    fun `unsupported VA channel is rejected before an HTTP request`() {
+        WireTripay(vaResponse()).use { wire ->
+            val thrown = checkNotNull(catchThrowable {
                 gateway(wire).createCharge(request(method = "VIRTUAL_ACCOUNT", channel = "DANAMON"), ctx(sandbox = true))
             })
 
-            assertThat(missingUrl).isInstanceOf(ConflictException::class.java)
-            assertThat(missingUrl.message).contains("FTTH_BILLING_TRIPAY_CALLBACK_URL")
-            assertThat(unsupportedChannel).isInstanceOf(ConflictException::class.java)
-            assertThat(unsupportedChannel.message).contains("DANAMON")
+            assertThat(thrown).isInstanceOf(ConflictException::class.java)
+            assertThat(thrown.message).contains("DANAMON")
             assertThat(wire.requestCount).isZero()
         }
     }
@@ -260,8 +295,7 @@ class TripayPaymentGatewayTest {
 
     private fun gateway(
         wire: WireTripay,
-        callbackUrl: String = "https://app.example.test/api/platform/tripay/callbacks/payment",
-        returnUrl: String = "https://app.example.test/invoices/paid",
+        siteAddress: String = "app.example.test",
         readTimeout: Duration = Duration.ofSeconds(20),
     ): TripayPaymentGateway = TripayPaymentGateway(
         apiClient = TripayApiClient(
@@ -270,12 +304,7 @@ class TripayPaymentGatewayTest {
             productionBaseUrl = "${wire.baseUrl}/api",
             readTimeout = readTimeout,
         ),
-        billingProperties = BillingProperties(
-            tripay = TripayProperties(
-                callbackUrl = callbackUrl,
-                returnUrl = returnUrl,
-            ),
-        ),
+        billingProperties = BillingProperties(siteAddress = siteAddress),
     )
 
     private fun request(method: String, channel: String? = null) = ChargeRequest(

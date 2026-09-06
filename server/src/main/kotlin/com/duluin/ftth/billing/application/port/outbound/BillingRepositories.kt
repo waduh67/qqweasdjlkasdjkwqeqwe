@@ -25,6 +25,8 @@ interface InvoiceRepository {
 
     fun findByNumber(number: String): Invoice?
 
+    fun findForSettlementByNumber(number: String): Invoice? = findByNumber(number)
+
     fun findByCustomerId(customerId: UUID): List<Invoice>
 
     fun findByStatus(status: InvoiceStatus): List<Invoice>

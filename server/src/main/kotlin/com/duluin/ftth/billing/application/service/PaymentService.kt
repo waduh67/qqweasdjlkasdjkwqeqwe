@@ -29,12 +29,15 @@ class PaymentService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     override fun applySettlement(settlement: PaymentSettlement) {
-        val invoice = invoiceRepository.findByNumber(settlement.invoiceNumber)
+        val invoice = invoiceRepository.findForSettlementByNumber(settlement.invoiceNumber)
         if (invoice == null) {
             log.warn("Settlement diabaikan — nomor tagihan '{}' tidak dikenal", settlement.invoiceNumber)
             return
         }
-        if (invoice.status == InvoiceStatus.PAID) return
+        if (invoice.status != InvoiceStatus.ISSUED && invoice.status != InvoiceStatus.OVERDUE) {
+            log.info("Settlement diabaikan — tagihan '{}' berstatus {}", invoice.number, invoice.status)
+            return
+        }
         settle(invoice, settlement, note = null)
     }
 

@@ -2,7 +2,9 @@ package com.duluin.ftth.billing.adapter.outbound.persistence
 
 import com.duluin.ftth.billing.domain.model.InvoiceStatus
 import com.duluin.ftth.billing.domain.model.RefundStatus
+import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.time.Instant
@@ -18,6 +20,11 @@ interface InvoiceStatusCount {
 interface InvoiceJpaRepository : JpaRepository<InvoiceJpaEntity, UUID> {
     fun findAllByOrderByIssuedAtDesc(): List<InvoiceJpaEntity>
     fun findByNumber(number: String): InvoiceJpaEntity?
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select invoice from InvoiceJpaEntity invoice where invoice.number = :number")
+    fun findForSettlementByNumber(@Param("number") number: String): InvoiceJpaEntity?
+
     fun findByCustomerIdOrderByIssuedAtDesc(customerId: UUID): List<InvoiceJpaEntity>
     fun findByStatusOrderByIssuedAtDesc(status: InvoiceStatus): List<InvoiceJpaEntity>
     fun existsBySubscriptionIdAndPeriodStart(subscriptionId: UUID, periodStart: LocalDate): Boolean

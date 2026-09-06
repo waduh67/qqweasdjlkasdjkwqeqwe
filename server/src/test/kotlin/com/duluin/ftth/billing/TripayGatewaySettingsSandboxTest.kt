@@ -9,7 +9,6 @@ import com.duluin.ftth.billing.application.port.inbound.TestTripaySandboxCommand
 import com.duluin.ftth.billing.application.port.outbound.TenantPaymentGatewayRepository
 import com.duluin.ftth.billing.application.service.TripaySandboxTestService
 import com.duluin.ftth.billing.config.BillingProperties
-import com.duluin.ftth.billing.config.TripayProperties
 import com.duluin.ftth.billing.domain.model.PaymentProvider
 import com.duluin.ftth.billing.domain.model.TenantPaymentGateway
 import com.duluin.ftth.billing.domain.model.TripayPaymentConfig
@@ -248,12 +247,7 @@ class TripayGatewaySettingsSandboxTest {
                     sandboxBaseUrl = "${wire.baseUrl}/api-sandbox",
                     productionBaseUrl = "${wire.baseUrl}/api",
                 ),
-                billingProperties = BillingProperties(
-                    tripay = TripayProperties(
-                        callbackUrl = "https://app.example.test/api/platform/tripay/callbacks/payment",
-                        returnUrl = "https://app.example.test/billing/tripay-test",
-                    ),
-                ),
+                billingProperties = BillingProperties(siteAddress = "app.example.test"),
             ),
         )
     }

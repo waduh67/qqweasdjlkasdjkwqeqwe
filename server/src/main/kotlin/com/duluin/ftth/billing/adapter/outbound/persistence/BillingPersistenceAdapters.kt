@@ -77,6 +77,9 @@ class InvoicePersistenceAdapter(
 
     override fun findByNumber(number: String): Invoice? = jpa.findByNumber(number)?.toDomain()
 
+    override fun findForSettlementByNumber(number: String): Invoice? =
+        jpa.findForSettlementByNumber(number)?.toDomain()
+
     override fun findByCustomerId(customerId: UUID): List<Invoice> =
         jpa.findByCustomerIdOrderByIssuedAtDesc(customerId).map { it.toDomain() }
 
