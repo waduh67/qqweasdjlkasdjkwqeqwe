@@ -19,6 +19,7 @@ class WarehouseSchemaIT {
         "inventory_operation", "inventory_outbox", "inventory_inbox", "inventory_reservation",
         "inventory_material_plan", "inventory_material_plan_line", "inventory_usage_snapshot",
         "inventory_inspection", "inventory_warehouse_scope",
+        "inventory_command_identity", "inventory_outbox_delivery",
     )
 
     private fun strings(sql: String): List<String> = dataSource.connection.use { connection ->
@@ -46,7 +47,7 @@ class WarehouseSchemaIT {
         assertThat(strings("""
             SELECT DISTINCT conrelid::regclass::text FROM pg_constraint
             WHERE contype='f' AND cardinality(conkey)>=2
-        """.trimIndent())).contains("inventory_document_line", "inventory_reservation", "inventory_segment")
+        """.trimIndent())).contains("inventory_document_line", "inventory_reservation", "inventory_segment", "inventory_command_identity", "inventory_outbox_delivery")
     }
 
     @Test
@@ -68,6 +69,6 @@ class WarehouseSchemaIT {
         assertThat(strings("""
             SELECT DISTINCT event_object_table FROM information_schema.triggers
             WHERE trigger_schema='public' AND trigger_name LIKE '%append_only%'
-        """.trimIndent())).contains("inventory_operation", "inventory_outbox", "inventory_inbox", "inventory_usage_snapshot")
+        """.trimIndent())).contains("inventory_operation", "inventory_outbox", "inventory_inbox", "inventory_usage_snapshot", "inventory_command_identity")
     }
 }
