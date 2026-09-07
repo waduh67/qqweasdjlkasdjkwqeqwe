@@ -4,12 +4,12 @@ Baseline `ebf98fdf270b30ac30b7a01b1f609b39e8414618` memiliki 169 migrasi,
 versi maksimum `V172__evidence_retention_claim_state.sql`. Celah V56-V58
 adalah riwayat, bukan slot bebas. Manifest ini dibekukan untuk branch
 `feat/warehouse-workorder`. Task04 menambahkan V173 serta M02 V174, V174.1,
-V174.2, V174.3 dan V174.4; versi historis tidak diubah.
+V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 
 | Slot | Versi | Pemilik tugas | Cakupan |
 | --- | --- | --- | --- |
 | M01 | V173 | 04 | Precision, masters, identity claims, cutover/auth fences |
-| M02 | V174, V174.1, V174.2, V174.3, V174.4 | 04 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity and deferred tenant scope guards |
+| M02 | V174, V174.1, V174.2, V174.3, V174.4, V174.5 | 04 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity and internally scoped deferred validators |
 | M03 | V175 | 11 | Approval, counts, remaining operations |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
@@ -195,3 +195,21 @@ penonaktifan RLS. Tenant GUC harus cocok saat validasi commit; context yang
 dipulihkan sebelum commit diperiksa normal. Staging oleh migration owner setelah
 V174.4 juga harus memasang context tenant secara eksplisit, bukan memanfaatkan
 BYPASSRLS sebagai pengganti scope transaksi.
+
+## V174.5: scope internal pada setiap validator deferred
+
+V174.5 diperiksa bebas dan dicadangkan sebelum SQL dibuat. V173-V174.4 tetap
+byte-identical dan V175-V178 tetap milik task berikutnya. Audit katalog menemukan
+20 trigger constraint warehouse DEFERRABLE (selain FK internal PostgreSQL),
+menggunakan delapan fungsi. Kapasitas lot dan companion sudah memiliki assertion
+internal; enam fungsi lain diperbarui tanpa mengubah logika domain setelahnya:
+asset claim, stock provenance, source provenance, origin, segment conservation,
+dan usage postings. Semuanya SECURITY INVOKER.
+
+Setiap fungsi memanggil `warehouse_assert_deferred_scope(NEW.tenant_id)` sebagai
+statement pertama, sebelum IF/SELECT/loop. Scope bukan bukti yang dapat dipakai
+ulang dari companion: `SET CONSTRAINTS ... IMMEDIATE` pada constraint lain tidak
+boleh menghilangkan validasi yang masih pending. Pengujian mengisolasi setiap
+fungsi dengan mengeksekusi constraint lainnya terlebih dahulu, termasuk data
+valid pada scope correct/restored dan penolakan data invalid melalui constraint
+aktualnya sendiri. Mutasi source baru sesudah validasi awal diperiksa ulang.
