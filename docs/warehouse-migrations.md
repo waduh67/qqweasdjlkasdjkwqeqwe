@@ -4,12 +4,12 @@ Baseline `ebf98fdf270b30ac30b7a01b1f609b39e8414618` memiliki 169 migrasi,
 versi maksimum `V172__evidence_retention_claim_state.sql`. Celah V56-V58
 adalah riwayat, bukan slot bebas. Manifest ini dibekukan untuk branch
 `feat/warehouse-workorder`. Task04 menambahkan V173 serta M02 V174, V174.1,
-V174.2 dan V174.3; versi historis tidak diubah.
+V174.2, V174.3 dan V174.4; versi historis tidak diubah.
 
 | Slot | Versi | Pemilik tugas | Cakupan |
 | --- | --- | --- | --- |
 | M01 | V173 | 04 | Precision, masters, identity claims, cutover/auth fences |
-| M02 | V174, V174.1, V174.2, V174.3 | 04 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain and aggregate lot capacity guards |
+| M02 | V174, V174.1, V174.2, V174.3, V174.4 | 04 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity and deferred tenant scope guards |
 | M03 | V175 | 11 | Approval, counts, remaining operations |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
@@ -181,3 +181,17 @@ transaction REPEATABLE READ/SERIALIZABLE ditolak40001 agar snapshot lama tidak
 melewati SUM setelah menunggu writer READ COMMITTED. Caller harus mengulang
 seluruh transaksi dengan profil row-lock READ COMMITTED; tidak ada pelemahan
 append-only lot hanya untuk memperbarui counter alokasi.
+
+## V174.4: scope tenant saat constraint deferred dieksekusi
+
+V174.4 diperiksa bebas dan dicadangkan sebelum SQL dibuat. Byte/checksum V173
+sampai V174.3 tidak berubah; slot V175-V178 tidak digunakan. Constraint kapasitas
+menolak scope tenant kosong/berbeda dan lot referensi yang tidak terlihat atau
+hilang, bukan melewati validasi ketika RLS menyaring row tersebut.
+
+Guard deferred invoker-rights juga menjaga tenant row untuk segment, lot, asset,
+balance, reservation, claim dan usage snapshot. Tidak ada SECURITY DEFINER atau
+penonaktifan RLS. Tenant GUC harus cocok saat validasi commit; context yang
+dipulihkan sebelum commit diperiksa normal. Staging oleh migration owner setelah
+V174.4 juga harus memasang context tenant secara eksplisit, bukan memanfaatkan
+BYPASSRLS sebagai pengganti scope transaksi.
