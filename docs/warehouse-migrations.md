@@ -9,7 +9,7 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | Slot | Versi | Pemilik tugas | Cakupan |
 | --- | --- | --- | --- |
 | M01 | V173 | 04 | Precision, masters, identity claims, cutover/auth fences |
-| M02 | V174, V174.1, V174.2, V174.3, V174.4, V174.5 | 04 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity and internally scoped deferred validators |
+| M02 | V174, V174.1, V174.2, V174.3, V174.4, V174.5, V174.6 | 04 / 06 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity, internally scoped deferred validators and durable command/delivery metadata |
 | M03 | V175 | 11 | Approval, counts, remaining operations |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
@@ -213,3 +213,11 @@ boleh menghilangkan validasi yang masih pending. Pengujian mengisolasi setiap
 fungsi dengan mengeksekusi constraint lainnya terlebih dahulu, termasuk data
 valid pada scope correct/restored dan penolakan data invalid melalui constraint
 aktualnya sendiri. Mutasi source baru sesudah validasi awal diperiksa ulang.
+
+## Reservasi V174.6: metadata command dan delivery task06
+
+Slot V174.6 diperiksa bebas sebelum file SQL dibuat. Patch M02 ini hanya
+menambahkan metadata canonical command immutable dan state delivery mutable yang
+mereferensikan outbox immutable. Payload/event lama tidak diubah. Semua byte
+V173-V174.5 tetap dipertahankan; V175-V178 tetap milik owner berikutnya.
+Gate WarehouseSchemaIT wajib dijalankan kembali setelah patch.
