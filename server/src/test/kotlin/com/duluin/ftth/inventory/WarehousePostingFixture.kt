@@ -56,7 +56,7 @@ internal class WarehousePostingFixture(val context: ConfigurableApplicationConte
         check(scalar("SELECT current_user") == "warehouse_app")
         listOf(warehouse to "BIN", technician to "TECHNICIAN", source to "TRANSIT", consumed to "CUSTOMER_SITE").forEach { (id, kind) ->
             val code = when (id) { source -> "RECEIPT_SOURCE"; consumed -> "CONSUMED"; else -> id.toString() }
-            sql("INSERT INTO inventory_location(id,tenant_id,code,kind) VALUES ('$id','$tenant','$code','$kind')")
+            sql("INSERT INTO inventory_location(id,tenant_id,code,kind,issue_eligible) VALUES ('$id','$tenant','$code','$kind',${id==warehouse || id==technician})")
         }
         sql("INSERT INTO inventory_sku(id,tenant_id,code,name,tracking,base_unit) VALUES ('$sku','$tenant','cable','Cable','LOT','MM'),('$serialSku','$tenant','onu','ONU','SERIAL','EA')")
         sql("INSERT INTO inventory_sku(id,tenant_id,code,name,tracking,base_unit) VALUES ('$bulkSku','$tenant','fastener','Fastener','BULK','EA')")
@@ -119,7 +119,7 @@ internal class WarehousePostingFixture(val context: ConfigurableApplicationConte
         val document=UUID.randomUUID()
         val line=UUID.randomUUID()
         sql("INSERT INTO inventory_document(id,tenant_id,code,kind,actor_id,cutover_epoch,authority_epoch) VALUES ('$document','$tenant','$document','DEMAND','$actor',0,0)")
-        sql("INSERT INTO inventory_document_line(id,tenant_id,document_id,line_number,document_revision,sku_id,stock_identity_id,lot_id,base_unit,tracking,quantity_base) VALUES ('$line','$tenant','$document',1,0,'${piece.skuId}','${piece.stockIdentityId}',${piece.lotId?.let { "'$it'" } ?: "NULL"},'${quantity.unit}','${if(quantity.unit==StockUnit.EA) "SERIAL" else "LOT"}',${quantity.quantityBase})")
+        sql("INSERT INTO inventory_document_line(id,tenant_id,document_id,line_number,document_revision,sku_id,stock_identity_id,lot_id,base_unit,tracking,quantity_base) VALUES ('$line','$tenant','$document',1,0,'${piece.skuId}','${piece.stockIdentityId}',${piece.lotId?.let { "'$it'" } ?: "NULL"},'${quantity.unit}','${if(piece.skuId==serialSku) "SERIAL" else if(piece.skuId==bulkSku) "BULK" else "LOT"}',${quantity.quantityBase})")
         return WarehousePost(document,0,"SUBMITTED",operation("RESERVE"),MovementKind.RESERVE,"Reserve",emptyList(),listOf(
             ReservationChange(UUID.randomUUID(),line,piece,null,quantity,StockQuantity.of(0,quantity.unit),java.time.Instant.now().plusSeconds(86400))))
     }
@@ -141,11 +141,11 @@ internal class WarehousePostingFixture(val context: ConfigurableApplicationConte
         return issued
     }
 
-    fun usage(piece: PostingDimension): PostingUsage {
+    fun usage(piece: PostingDimension, usageWorkOrder: UUID = workOrder): PostingUsage {
         val plan=UUID.randomUUID()
-        sql("INSERT INTO inventory_material_plan(id,tenant_id,work_order_id,plan_revision,work_order_revision,material_mode,actor_id) VALUES ('$plan','$tenant','$workOrder',1,0,'MATERIAL_REQUIRED','$actor')")
+        sql("INSERT INTO inventory_material_plan(id,tenant_id,work_order_id,plan_revision,work_order_revision,material_mode,actor_id) VALUES ('$plan','$tenant','$usageWorkOrder',1,0,'MATERIAL_REQUIRED','$actor')")
         sql("INSERT INTO inventory_material_plan_line(id,tenant_id,plan_id,line_number,sku_id,quantity_base,base_unit) VALUES ('${UUID.randomUUID()}','$tenant','$plan',1,'${piece.skuId}',1,'EA')")
         sql("UPDATE inventory_material_plan SET state='SUBMITTED',submitted_at=now(),revision=1 WHERE id='$plan'")
-        return PostingUsage(UUID.randomUUID(),workOrder,0,plan,1,"{\"used\":\"1\"}")
+        return PostingUsage(UUID.randomUUID(),usageWorkOrder,0,plan,1,"{\"used\":\"1\"}")
     }
 }
