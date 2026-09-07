@@ -12,13 +12,14 @@ class WarehouseInboxStore(private val jdbc: WarehouseCommandJdbc, private val cu
     override fun consume(eventId: UUID, consumer: String, localEffect: (WarehouseDocumentEvent) -> Unit): Boolean {
         require(consumer.matches(Regex("[a-z][a-z0-9.-]{0,119}")))
         val event = jdbc.execute { sql ->
-            sql.query("""SELECT event.*,operation.cutover_epoch FROM inventory_outbox event
+            sql.query("""SELECT event.*,operation.cutover_epoch,document.work_order_id FROM inventory_outbox event
                 JOIN inventory_operation operation ON operation.tenant_id=event.tenant_id AND operation.id=event.operation_id
+                JOIN inventory_document document ON document.tenant_id=event.tenant_id AND document.id=event.document_id
                 WHERE event.tenant_id=? AND event.id=? AND EXISTS (SELECT 1 FROM inventory_movement movement
                     WHERE movement.tenant_id=event.tenant_id AND movement.operation_id=event.operation_id AND movement.state='APPLIED')""",
                 sql.tenant, eventId) {
                 Triple(WarehouseDocumentEvent(eventId, sql.tenant, it.uuid("operation_id"), it.uuid("document_id"),
-                    it.getLong("document_revision"), WarehouseEventKind.valueOf(it.getString("event_kind")), null, null,
+                    it.getLong("document_revision"), WarehouseEventKind.valueOf(it.getString("event_kind")), it.optionalUuid("work_order_id"), null,
                     it.getTimestamp("recorded_at").toInstant()), it.getLong("cutover_epoch"), it.getString("payload"))
             }.singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
         }
