@@ -30,6 +30,9 @@ class WarehouseConcurrencyITAuthority {
     }
 
     private fun authenticate(fixture: WarehousePostingFixture, actor: UUID = fixture.actor) {
+        if (actor != fixture.actor) fixture.transaction {
+            sql("INSERT INTO app_user(id,tenant_id,email,name,password_hash,platform_admin) VALUES ('$actor','$tenant','$actor@example.test','Admin','unused',true) ON CONFLICT (id) DO NOTHING")
+        }
         val jwt = Jwt.withTokenValue("original-signed-session").header("alg", "RS256")
             .subject(actor.toString()).claim("tid", fixture.tenant.toString())
             .claim("email", "$actor@example.test").claim("name", "Actor")
@@ -66,7 +69,8 @@ class WarehouseConcurrencyITAuthority {
 
     @Test fun `role revocation waits for shared authority and original JWT loses permission`() {
         val fixture = fixture()
-        authenticate(fixture)
+        val admin = UUID.randomUUID()
+        authenticate(fixture, admin)
         val roles = context.getBean(RoleService::class.java)
         val authority = context.getBean(CurrentAuthorityApi::class.java)
         val role = fixture.transaction {
@@ -87,7 +91,7 @@ class WarehouseConcurrencyITAuthority {
                 snapshot.fence.assertHeld()
             } }
             check(held.await(10, TimeUnit.SECONDS))
-            val revoke = pool.submit { authenticate(fixture); fixture.transaction {
+            val revoke = pool.submit { authenticate(fixture, admin); fixture.transaction {
                 roles.update(role.id, UpdateRoleCommand("Warehouse", null, emptySet()))
             } }
             val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
@@ -99,6 +103,7 @@ class WarehouseConcurrencyITAuthority {
             assertThat(blocked).isTrue()
             release.countDown()
             reader.get(15, TimeUnit.SECONDS); revoke.get(15, TimeUnit.SECONDS)
+            authenticate(fixture)
             assertThat(fixture.transaction { authority.lockCurrent().permissions }).doesNotContain("inventory.transfer.manage")
         } finally { release.countDown(); pool.shutdownNow(); pool.awaitTermination(10, TimeUnit.SECONDS) }
     }
