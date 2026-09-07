@@ -5,7 +5,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource
 import java.sql.DriverManager
 import java.util.UUID
 
-internal class WarehouseSchemaDatabase : AutoCloseable {
+internal class WarehouseSchemaDatabase(target: String = "latest") : AutoCloseable {
     val schema = "warehouse_schema_" + UUID.randomUUID().toString().replace("-", "")
     private val baseUrl = requireNotNull(System.getenv("SPRING_DATASOURCE_URL"))
     val url = "$baseUrl?currentSchema=$schema,public"
@@ -27,12 +27,18 @@ internal class WarehouseSchemaDatabase : AutoCloseable {
             }
         }
         try {
-            Flyway.configure().dataSource(url, ownerUser, ownerPassword).schemas(schema).defaultSchema(schema)
-                .locations("classpath:db/migration").load().migrate()
+            migrate(target)
         } catch (failure: Exception) {
             close()
             throw failure
         }
+    }
+
+    fun migrate(target: String = "latest") = Flyway.configure().dataSource(url, ownerUser, ownerPassword)
+        .schemas(schema).defaultSchema(schema).target(target).locations("classpath:db/migration").load().migrate()
+
+    fun ownerFixture(block: (java.sql.Connection) -> Unit) {
+        DriverManager.getConnection(url, ownerUser, ownerPassword).use(block)
     }
 
     private fun owner(block: (java.sql.Connection) -> Unit) {

@@ -163,7 +163,13 @@ class WarehouseSchemaITConstraints {
         sql(position)
         reject("23505", balance(quantity="1").replace("'$lot'", "NULL").replace("'MM'", "'EA'").replace("'$actor'", "'${UUID.randomUUID()}'"))
         reject("23514", "UPDATE inventory_serialized_asset SET serial_number='Other',revision=1 WHERE id='$segment'")
+        reject("23514", "UPDATE inventory_identity_claim SET state='RETIRED',revision=1 WHERE id='$claim'")
+        sql("SET CONSTRAINTS ALL DEFERRED")
+        sql("UPDATE inventory_balance_projection SET quantity_base=0,revision=1 WHERE stock_identity_id='$segment'")
+        sql("UPDATE inventory_segment SET state='RETIRED',revision=1 WHERE id='$segment'")
         sql("UPDATE inventory_identity_claim SET state='RETIRED',revision=1 WHERE id='$claim'")
+        sql("SET CONSTRAINTS ALL IMMEDIATE")
+        reject("23514", "UPDATE inventory_balance_projection SET quantity_base=1,revision=2 WHERE stock_identity_id='$segment'")
         reject("23505", "INSERT INTO inventory_identity_claim(id,tenant_id,identity_type,canonical_value,state,admitted_asset_id) VALUES ('${UUID.randomUUID()}','$tenant','SERIAL','SERIAL-1','ADMITTED','$segment')")
     }
 }

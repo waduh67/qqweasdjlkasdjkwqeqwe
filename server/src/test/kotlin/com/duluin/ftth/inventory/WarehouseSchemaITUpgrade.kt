@@ -25,7 +25,7 @@ class WarehouseSchemaITUpgrade {
                 it.setString(4, raw); it.setObject(5, location); it.setObject(6, location); it.executeUpdate()
             }
         }
-        migrations(schema,url,"174.1").migrate()
+        migrations(schema,url,"174.2").migrate()
         DriverManager.getConnection(url, env("SPRING_DATASOURCE_USERNAME"), env("SPRING_DATASOURCE_PASSWORD")).use { app ->
             app.createStatement().use { statement ->
                 statement.execute("SET app.tenant_id='$tenant'")
@@ -46,8 +46,8 @@ class WarehouseSchemaITUpgrade {
 
     @Test
     fun `all packaged migrations boot in a clean schema and validate twice`() = isolated { schema, url, owner ->
-        val flyway = migrations(schema, url, "174.1")
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(172)
+        val flyway = migrations(schema, url, "174.2")
+        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(173)
         flyway.validate()
         assertThat(flyway.migrate().migrationsExecuted).isZero()
         owner.createStatement().use { statement ->
@@ -86,8 +86,8 @@ class WarehouseSchemaITUpgrade {
                 VALUES ('${UUID.randomUUID()}','$tenant','${UUID.randomUUID()}','$legacySku','$location','$location','WAREHOUSE','AVAILABLE',82500,now())
             """.trimIndent())
         }
-        val expanded = migrations(schema, url, "174.1")
-        assertThat(expanded.migrate().migrationsExecuted).isEqualTo(3)
+        val expanded = migrations(schema, url, "174.2")
+        assertThat(expanded.migrate().migrationsExecuted).isEqualTo(4)
         expanded.validate()
         DriverManager.getConnection(url, env("SPRING_DATASOURCE_USERNAME"), env("SPRING_DATASOURCE_PASSWORD")).use { app ->
             app.autoCommit = false
