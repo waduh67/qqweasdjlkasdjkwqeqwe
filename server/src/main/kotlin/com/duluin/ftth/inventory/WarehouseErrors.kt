@@ -1,0 +1,13 @@
+package com.duluin.ftth.inventory
+
+enum class WarehouseErrorCode(val httpStatus: Int) {
+    MALFORMED_REQUEST(400), UNAUTHENTICATED(401), FORBIDDEN(403), NOT_FOUND(404),
+    INSUFFICIENT_STOCK(409), STALE_REVISION(409), SOURCE_NOT_VERIFIED(409), WRONG_CUSTODIAN(409),
+    ACTIVE_ASSIGNMENT_EXISTS(409), APPROVAL_REQUIRED(409), COUNT_STALE(409), IDEMPOTENCY_CONFLICT(409),
+    STALE_AUTHORITY(409), CUTOVER_REQUIRED(409), STALE_CUTOVER(409), USE_WORKORDER_ASSET_WORKFLOW(409),
+    INDEPENDENT_APPROVER_REQUIRED(409), COST_BASIS_REQUIRED(409), CURRENCY_MISMATCH(409),
+}
+
+data class WarehouseError(val code: WarehouseErrorCode, val message: String)
+
+class WarehouseContractException(val error: WarehouseError) : RuntimeException(error.message)
