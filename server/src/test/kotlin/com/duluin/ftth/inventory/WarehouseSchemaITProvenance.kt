@@ -94,10 +94,15 @@ class WarehouseSchemaITProvenance {
             val probe=WarehouseSchemaFixture(connection)
             probe.masters()
             connection.commit()
-            database.ownerFixture { owner -> owner.createStatement().use {
-                it.execute("INSERT INTO inventory_lot(id,tenant_id,sku_id,code,base_unit,received_quantity_base,received_at,warehouse_admission) VALUES ('${probe.lot}','${probe.tenant}','${probe.sku}','legacy','MM',82500,now(),'LEGACY_UNRESOLVED')")
-                it.execute("INSERT INTO inventory_segment(id,tenant_id,sku_id,lot_id,kind,base_unit,quantity_base,warehouse_admission) VALUES ('${probe.segment}','${probe.tenant}','${probe.sku}','${probe.lot}','REEL','MM',82500,'LEGACY_UNRESOLVED')")
-            } }
+            database.ownerFixture { owner ->
+                owner.autoCommit=false
+                owner.createStatement().use {
+                    it.execute("SET LOCAL app.tenant_id='${probe.tenant}'")
+                    it.execute("INSERT INTO inventory_lot(id,tenant_id,sku_id,code,base_unit,received_quantity_base,received_at,warehouse_admission) VALUES ('${probe.lot}','${probe.tenant}','${probe.sku}','legacy','MM',82500,now(),'LEGACY_UNRESOLVED')")
+                    it.execute("INSERT INTO inventory_segment(id,tenant_id,sku_id,lot_id,kind,base_unit,quantity_base,warehouse_admission) VALUES ('${probe.segment}','${probe.tenant}','${probe.sku}','${probe.lot}','REEL','MM',82500,'LEGACY_UNRESOLVED')")
+                }
+                owner.commit()
+            }
             probe.apply {
                 sql("SET LOCAL app.tenant_id='$tenant'")
                 val failure=assertThrows<SQLException> {
