@@ -7,8 +7,6 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
-import org.springframework.context.ApplicationListener
-import org.springframework.context.PayloadApplicationEvent
 import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -60,8 +58,8 @@ class WarehousePostingIT {
         } }
     }
 
-    @ParameterizedTest @EnumSource(PostingPhase::class)
-    fun `failure at every persistence phase rolls back all effects`(phase: PostingPhase) {
+    @ParameterizedTest @EnumSource(TestPostingPhase::class)
+    fun `failure at every persistence phase rolls back all effects`(phase: TestPostingPhase) {
         val fixture=WarehousePostingFixture(context).also { it.setup() }
         val piece=fixture.transaction {
             val received=receipt(StockQuantity.each("1"))
@@ -73,18 +71,15 @@ class WarehousePostingIT {
         val reservation=fixture.transaction { val command=reservation(piece,StockQuantity.each("1")); post(command); command.reservations.single() }
         fixture.transaction { post(reclassify(piece,StockQuantity.each("1"),InventoryStatus.AVAILABLE,InventoryStatus.ISSUED)) }
         val before=fixture.transaction { counts() }
-        val listener=ApplicationListener<PayloadApplicationEvent<*>> { event ->
-            val value=event.payload
-            if(value is PostingPhaseReached && value.phase==phase) throw IllegalStateException("injected-$phase")
-        }
-        context.addApplicationListener(listener)
-        try {
+        val occurrence=if(phase in setOf(TestPostingPhase.LEGS,TestPostingPhase.BALANCES)) 2 else 1
+        PostingJdbcProbe(context,phase,occurrence) { error("injected-$phase") }.use { probe ->
             assertThatThrownBy { fixture.transaction {
                 val fact=PostingMaterialFact(UUID.randomUUID(),piece.stockIdentityId,customer,workOrder,"ONU",StockQuantity.each("1"),1,true,false,UUID.randomUUID())
                 val command=move(piece,piece.copy(locationId=consumed,custodianId=customer,custodianKind=OwnerKind.CUSTOMER),StockQuantity.each("1"),MovementKind.CONSUME,facts=listOf(fact))
                 post(command.copy(reservations=listOf(reservation.copy(expectedRevision=0,unpicked=StockQuantity.each("0"),state=ReservationState.DISPATCHED)),usage=usage(piece)))
             } }.hasMessageContaining("injected")
-        } finally { context.getBean("applicationEventMulticaster",org.springframework.context.event.ApplicationEventMulticaster::class.java).removeApplicationListener(listener) }
+            assertThat(probe.observations).isEqualTo(occurrence)
+        }
         fixture.transaction {
             assertThat(counts()).isEqualTo(before); assertThat(total(technician,StockUnit.EA)).isEqualTo(1)
             assertThat(scalar("SELECT reserved_unpicked_base FROM inventory_reservation")).isEqualTo("1")

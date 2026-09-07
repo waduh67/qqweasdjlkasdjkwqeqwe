@@ -4,7 +4,6 @@ import com.duluin.ftth.common.tenant.TenantContext
 import com.duluin.ftth.inventory.*
 import com.duluin.ftth.inventory.application.port.outbound.*
 import com.duluin.ftth.inventory.domain.model.*
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
@@ -14,7 +13,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 class WarehousePostingService(
     private val store: WarehousePostingStore,
     private val policies: InventoryTenantPolicyService,
-    private val events: ApplicationEventPublisher,
 ) : WarehousePosting {
     @Transactional(propagation = Propagation.MANDATORY, rollbackFor = [Exception::class])
     override fun post(command: WarehousePost, cutover: TenantCutoverFence): WarehousePostResult {
@@ -23,10 +21,7 @@ class WarehousePostingService(
         check(cutover.snapshot.tenantId == TenantContext.tenantId())
         if (cutover.snapshot.state != WarehouseCutoverState.ENFORCED) fail(WarehouseErrorCode.CUTOVER_REQUIRED)
         validate(command)
-        return store.write(command, cutover.snapshot.epoch) { phase, result ->
-            cutover.assertHeld()
-            events.publishEvent(PostingPhaseReached(result.postingId, phase))
-        }
+        return store.write(command, cutover.snapshot.epoch)
     }
 
     @Transactional(propagation = Propagation.MANDATORY, rollbackFor = [Exception::class])

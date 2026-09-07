@@ -117,5 +117,3 @@ data class WarehousePost(
 
 data class WarehousePostResult(val postingId: UUID, val operationId: UUID, val documentRevision: Long, val recordedAt: Instant)
 data class PostingBalance(val dimension: PostingDimension, val quantity: StockQuantity, val status: InventoryStatus)
-enum class PostingPhase { DOCUMENT, HEADER, LEGS, BALANCES, RESERVATIONS, CUSTODY, FACTS, EVENTS }
-data class PostingPhaseReached(val postingId: UUID, val phase: PostingPhase)

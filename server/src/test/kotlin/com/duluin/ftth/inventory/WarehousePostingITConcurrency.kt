@@ -4,8 +4,6 @@ import com.duluin.ftth.inventory.application.port.outbound.*
 import com.duluin.ftth.inventory.domain.model.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
-import org.springframework.context.ApplicationListener
-import org.springframework.context.PayloadApplicationEvent
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -81,12 +79,9 @@ class WarehousePostingITConcurrency {
         val piece=fixture.transaction { receipt(StockQuantity.metres("100")) }
         val reached=CountDownLatch(1)
         val release=CountDownLatch(1)
-        val listener=ApplicationListener<PayloadApplicationEvent<*>> { event ->
-            if((event.payload as? PostingPhaseReached)?.phase==PostingPhase.LEGS) {
-                reached.countDown(); check(release.await(15,TimeUnit.SECONDS))
-            }
+        val probe=PostingJdbcProbe(context,TestPostingPhase.LEGS) {
+            reached.countDown(); check(release.await(15,TimeUnit.SECONDS))
         }
-        context.addApplicationListener(listener)
         val pool=Executors.newFixedThreadPool(2)
         try {
             val write=pool.submit<WarehousePostResult> { fixture.transaction { post(move(piece,piece.copy(locationId=technician,custodianId=actor,custodianKind=OwnerKind.TECHNICIAN),StockQuantity.metres("100"))) } }
@@ -105,7 +100,7 @@ class WarehousePostingITConcurrency {
             fixture.transaction { assertThat(total(warehouse)).isZero(); assertThat(total(technician)).isEqualTo(100000) }
         } finally {
             release.countDown(); pool.shutdownNow(); pool.awaitTermination(10,TimeUnit.SECONDS)
-            context.getBean("applicationEventMulticaster",org.springframework.context.event.ApplicationEventMulticaster::class.java).removeApplicationListener(listener)
+            probe.close()
         }
     }
 

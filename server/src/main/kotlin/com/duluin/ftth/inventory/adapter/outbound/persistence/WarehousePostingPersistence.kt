@@ -14,29 +14,21 @@ import java.util.UUID
 
 @Repository
 class WarehousePostingPersistence(private val entityManager: EntityManager) : WarehousePostingStore {
-    override fun write(command: WarehousePost, cutoverEpoch: Long, stage: (PostingPhase, WarehousePostResult) -> Unit): WarehousePostResult = within { sql ->
+    override fun write(command: WarehousePost, cutoverEpoch: Long): WarehousePostResult = within { sql ->
         val documents = PostingDocuments(sql)
         documents.lock(command,cutoverEpoch)
         val stock = PostingStock(sql)
         stock.lock(command)
         val result = WarehousePostResult(UUID.randomUUID(),command.operation.id,Math.addExact(command.expectedRevision,1),Instant.now())
         documents.advance(command,result,cutoverEpoch)
-        stage(PostingPhase.DOCUMENT,result)
         documents.header(command,result)
-        stage(PostingPhase.HEADER,result)
         stock.split(command)
         stock.legs(command,result)
-        stage(PostingPhase.LEGS,result)
         stock.balances(command,result.recordedAt)
-        stage(PostingPhase.BALANCES,result)
         PostingReservations(sql).apply(command,result)
-        stage(PostingPhase.RESERVATIONS,result)
         stock.custody(command)
-        stage(PostingPhase.CUSTODY,result)
         PostingFacts(sql).write(command,result)
-        stage(PostingPhase.FACTS,result)
         documents.events(command,result)
-        stage(PostingPhase.EVENTS,result)
         result
     }
 
