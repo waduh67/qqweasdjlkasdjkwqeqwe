@@ -3,16 +3,84 @@
 Baseline `ebf98fdf270b30ac30b7a01b1f609b39e8414618` memiliki 169 migrasi,
 versi maksimum `V172__evidence_retention_claim_state.sql`. Celah V56-V58
 adalah riwayat, bukan slot bebas. Manifest ini dibekukan untuk branch
-`feat/warehouse-workorder`; belum ada SQL baru yang dibuat.
+`feat/warehouse-workorder`. Task04 menambahkan V173, V174 dan split forward-only
+V174.1; versi historis tidak diubah.
 
 | Slot | Versi | Pemilik tugas | Cakupan |
 | --- | --- | --- | --- |
 | M01 | V173 | 04 | Precision, masters, identity claims, cutover/auth fences |
-| M02 | V174 | 04 | Documents, posting, reservations, inspection, scopes, material plans |
+| M02 | V174, V174.1 | 04 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity precision guard |
 | M03 | V175 | 11 | Approval, counts, remaining operations |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
 | M06 | V178 | 43 | Admission-scoped constraints and compatibility gates |
+
+## M01/M02: persistence task04
+
+Reservasi tambahan V174.1 dicatat sebelum file dibuat setelah probe PostgreSQL
+menemukan upper/btrim default berbeda dari codec Kotlin untuk Unicode/whitespace.
+Versi ini berada setelah V174 dan sebelum M03 V175, tidak menduduki slot owner
+lain, tidak memakai ulang gap, dan tidak mengubah checksum V173/V174 yang sudah
+diuji pada database task. PostgreSQL ICU root collation `und-x-icu` digunakan
+untuk uppercase penuh (misalnya sharp-s -> SS), dengan himpunan whitespace
+Character.isWhitespace/isSpaceChar yang sama dengan Kotlin trim. Candidate
+menyimpan canonical/claim sebelumnya; claim alias lama tidak dihapus atau
+diberikan kepada aset lain.
+
+V173 membuat SKU/conversion/supplier, identity claim/candidate, cutover dan epoch
+IAM, lot/segment; V174 membuat document/line, operation/outbox/inbox, reservation,
+material plan/line, usage snapshot, inspection dan warehouse scope. Semua tabel
+tenant baru memakai FORCE RLS, USING/WITH CHECK dan foreign key tenant gabungan.
+`inventory_segment.id` adalah stockIdentityId; untuk SERIAL sama dengan assetId.
+Lot dan segment bukan pengganti asset fisik lama.
+
+Kolom quantity/raw serial/MAC lama tidak dihapus atau ditafsirkan ulang. Quantity
+lama boleh null untuk baris baru yang hanya mempunyai quantity_base; pembaca lama
+harus memakai proyeksi kompatibilitas, bukan mengubah MM menjadi count.
+Serialized movement leg lama mempunyai unit yang diketahui (EA); bulk legacy dan
+saldo dengan unit tidak terbukti tetap quantity_base/base_unit null. Seluruh
+baris lama tetap LEGACY_UNRESOLVED dan tidak masuk dimensi saldo VERIFIED.
+
+Satu claim unik tanpa predicate mencadangkan setiap grup canonical; candidate
+menyimpan semua sumber asset, tombstone dan ONU beserta raw aslinya. Grup bertabrakan
+CONFLICT tanpa admitted_asset_id; tidak ada pemilihan pemenang. Candidate hanya
+ditulis migration owner. Deferred FK diverifikasi sebelum ALTER TABLE berikutnya
+agar upgrade dengan kandidat tidak gagal karena pending trigger events.
+
+Dokumen dimulai DRAFT; header dan lines membeku setelah transisi pertama. Revisi
+update harus tepat sebelumnya+1. Operation/original response, event, inbox,
+inspection, usage snapshot, lot dan posting APPLIED append-only. Outbox adalah
+event immutable; task06 tetap bertanggung jawab atas protokol delivery/retry.
+Receipt origin dan claim SERIAL divalidasi di akhir transaksi untuk mendukung
+insert atomik document/line/asset/segment tanpa menciptakan origin palsu.
+
+`InventoryTenantInitializationApi` adalah API internal owner, bukan controller.
+Caller wajib memakai transaksi aktif dan TenantContext tenant yang dibuat;
+initializeNewEmptyTenant memeriksa waktu pembuatan tenant setelah activation
+migrasi serta ketiadaan stock/history. Existing tenant diinisialisasi LEGACY,
+termasuk tenant kosong. Missing policy menghasilkan CUTOVER_REQUIRED. Tidak ada
+inisialisasi otomatis pada read atau listener asinkron yang mengaku atomik.
+
+InventoryTenantPolicyService menyediakan fence transaksi, C10 allowlist dan
+LEGACY->VALIDATING dengan watermark/batch/pending legacy movement IDs. Fence
+tidak menggantikan permission check atau memberi hak approval. Operasi migrasi
+yang perlu persetujuan tetap INDEPENDENT_APPROVER_REQUIRED; finalisasi mengembalikan
+typed INDEPENDENT_APPROVAL_NOT_INSTALLED. Guard DB juga menutup VALIDATING->ENFORCED
+sampai pemilik approval menyediakan validasi nyata melalui migrasi forward-only
+yang terkoordinasi. Task05/06 wajib menghubungkan seluruh writer lama/baru ke
+posting dan fence sebelum mengaktifkan operasi warehouse. Task04 tidak memasang
+receipt API, posting service, permission adapter, assignment atau workflow WO.
+
+Uji task04:
+
+```sh
+scripts/warehouse/qa.sh server --tests '*WarehouseSchemaIT*' --rerun-tasks --no-parallel
+```
+
+Suite menjalankan clean/upgrade semua migration dalam schema temporer bernama
+unik, SQL adversarial sebagai warehouse_app, JPA round-trip dan dua Spring context
+baru untuk restart. Schema fixture dihapus, database/volume task dipertahankan.
+Owner dipakai hanya untuk DDL/fixture upgrade, bukan bukti akses aplikasi.
 
 Jangan memakai ulang atau menomori ulang migrasi yang sudah diterapkan.
 Jika merge menduduki slot ini, hentikan implementasi dan sepakati migrasi
