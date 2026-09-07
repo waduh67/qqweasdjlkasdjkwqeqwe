@@ -7,7 +7,7 @@ internal class PostingFacts(private val sql: PostingSql) {
     fun write(command: WarehousePost, result: WarehousePostResult) {
         command.facts.forEach { fact ->
             val dimension=command.legs.first { it.dimension.stockIdentityId==fact.stockIdentityId }.dimension
-            val legacy=if(fact.quantity.unit==StockUnit.EA) Math.toIntExact(fact.quantity.quantityBase) else null
+            val legacy=if(fact.quantity.unit==StockUnit.EA && fact.quantity.quantityBase<=Int.MAX_VALUE) fact.quantity.quantityBase.toInt() else null
             val key="${command.operation.id}:${fact.id}"
             sql.update("""INSERT INTO inventory_customer_material_fact(id,tenant_id,customer_id,work_order_id,item_category,quantity,installed,returned,
                 recorded_at,operation_key,payload_hash,quantity_base,base_unit,stock_identity_id,lot_id,posting_id,use_revision,compensation_id)
