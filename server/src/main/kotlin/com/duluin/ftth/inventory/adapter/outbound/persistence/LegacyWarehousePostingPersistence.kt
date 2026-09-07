@@ -25,22 +25,24 @@ class LegacyWarehousePostingPersistence(private val entityManager: EntityManager
             leg.quantity,true,true,command.actorId,command.namespace,command.operationKey,command.payloadHash,command.reason)
     }
 
-    override fun resolve(command: InventoryFulfillmentCommand, returned: Boolean, cutoverEpoch: Long): WarehousePost = within { sql ->
-        require(command.tenantId==sql.tenant && command.quantity>0 && command.installed!=returned)
-        if(!command.serialized || command.quantity!=1) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
-        if(sql.value("SELECT id FROM inventory_movement WHERE tenant_id=? AND operation_namespace=? AND operation_key=?",sql.tenant,command.namespace,command.operationKey)!=null)
-            sql.fail(WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
-        val issued = sql.query("""SELECT line.id,line.document_id,document.revision,document.authority_epoch FROM inventory_document_line line
+    override fun reference(command: InventoryFulfillmentCommand): LegacyPostingReference = within { sql ->
+        sql.query("""SELECT line.id,line.document_id,line.location_id,document.revision,document.authority_epoch FROM inventory_document_line line
             JOIN inventory_document document ON document.tenant_id=line.tenant_id AND document.id=line.document_id
             WHERE line.tenant_id=? AND line.stock_identity_id=? AND line.sku_id=? AND line.base_unit='EA'
             AND document.kind='ISSUE' AND document.state IN ('RECEIVED','PART_RECEIVED') AND line.accepted_base>=1
             AND document.work_order_id=? AND document.customer_id=? ORDER BY document.created_at DESC,document.id DESC LIMIT 1""",
-            sql.tenant,command.itemId,command.skuId,command.workOrderId,command.customerId) { LegacyIssue(it.uuid("id"),it.uuid("document_id"),it.getLong("revision"),it.getLong("authority_epoch")) }
-            .singleOrNull() ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            sql.tenant,command.itemId,command.skuId,command.workOrderId,command.customerId) { LegacyPostingReference(it.uuid("id"),it.uuid("document_id"),it.getLong("revision"),it.getLong("authority_epoch"),it.uuid("location_id")) }
+             .singleOrNull() ?: sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+    }
+
+    override fun resolve(command: InventoryFulfillmentCommand, returned: Boolean, cutoverEpoch: Long, reference: LegacyPostingReference): WarehousePost = within { sql ->
+        require(command.tenantId==sql.tenant && command.quantity>0 && command.installed!=returned)
+        if(!command.serialized || command.quantity!=1) sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        val issued = reference
         val source=sql.query("SELECT * FROM inventory_balance_projection WHERE tenant_id=? AND stock_identity_id=? AND sku_id=? AND quantity_base=1 AND base_unit='EA' AND custody_owner_id=? AND custody_owner_kind='TECHNICIAN' AND status='ISSUED' AND warehouse_admission='VERIFIED'",
             sql.tenant,command.itemId,command.skuId,command.actorId) { PostingProjection.dimension(it) }.singleOrNull() ?: sql.fail(WarehouseErrorCode.INSUFFICIENT_STOCK)
         if(source.locationId!=command.locationId) sql.fail(WarehouseErrorCode.WRONG_CUSTODIAN)
-        val targetLocation=if(returned) sql.value("SELECT location_id FROM inventory_document_line WHERE tenant_id=? AND id=?",sql.tenant,issued.line)
+        val targetLocation=if(returned) issued.returnLocation.toString()
             else sql.value("SELECT id FROM inventory_location WHERE tenant_id=? AND code='CONSUMED' AND state='ACTIVE'",sql.tenant)
         val destination=targetLocation?.let(UUID::fromString) ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
         val target=source.copy(locationId=destination,custodianId=if(returned) destination else command.customerId,
@@ -77,5 +79,4 @@ class LegacyWarehousePostingPersistence(private val entityManager: EntityManager
         check(sql.value("SELECT current_setting('app.tenant_id',true)")==sql.tenant.toString())
         action(sql)
     }
-    private data class LegacyIssue(val line: UUID,val document: UUID,val revision: Long,val authorityEpoch: Long)
 }

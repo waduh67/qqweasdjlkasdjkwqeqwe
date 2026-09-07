@@ -16,10 +16,12 @@ class WarehousePostingITLegacy {
     private lateinit var context: org.springframework.context.ConfigurableApplicationContext
     @BeforeAll fun start() { database=WarehouseSchemaDatabase(); context=postingContext(database) }
     @AfterAll fun stop() { context.close(); database.close() }
+    @AfterEach fun clearIdentity() { org.springframework.security.core.context.SecurityContextHolder.clearContext() }
 
     @ParameterizedTest @ValueSource(strings=["DURABLE","MATERIAL","RETURN","MOVEMENT"])
     fun `legacy entry points use paired durable posting and facts`(mode: String) {
         val fixture=WarehousePostingFixture(context).also { it.setup() }
+        fixture.legacyAuthority()
         val piece=fixture.transaction { acknowledge(receipt(StockQuantity.each("1"))) }
         val key=UUID.randomUUID().toString()
         fixture.transaction {
@@ -36,7 +38,8 @@ class WarehousePostingITLegacy {
             assertThat(scalar("SELECT count(*) FROM inventory_customer_material_fact")).isEqualTo("1")
             assertThat(scalar("SELECT count(*) FROM inventory_fulfillment_effect")).isEqualTo("1")
             assertThat(scalar("SELECT sum(CASE direction WHEN 'IN' THEN quantity_base ELSE -quantity_base END) FROM inventory_movement_leg")).isEqualTo("0")
-            assertThat(scalar("SELECT authority_epoch FROM inventory_operation WHERE authority_epoch=7")).isEqualTo("7")
+            assertThat(scalar("SELECT authority_epoch FROM inventory_operation WHERE namespace LIKE 'warehouse.legacy.%'"))
+                .isEqualTo(scalar("SELECT epoch FROM iam_authorization_epoch"))
             assertThat(context.getBean(MaterialConsumptionService::class.java).forCustomer(tenant,customer)).hasSize(1)
         }
         val before=fixture.transaction { counts() }

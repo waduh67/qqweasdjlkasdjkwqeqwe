@@ -19,7 +19,17 @@ class WarehouseCommandService(
     private val scopes: InventoryWarehouseScopeApi,
     private val operations: WarehouseOperationStore,
     private val posting: WarehousePosting,
+    private val workOrders: InventoryCommandWorkOrderPort,
+    private val legacy: WarehouseLegacyCommandExecutor,
 ) {
+    @Transactional(rollbackFor = [Exception::class])
+    fun executeLegacy(command: InventoryFulfillmentCommand, returned: Boolean): com.duluin.ftth.inventory.domain.model.InventoryMovement =
+        legacy.execute(command, returned)
+
+    @Transactional(rollbackFor = [Exception::class])
+    fun executeMovement(command: com.duluin.ftth.inventory.domain.model.MovementCommand): com.duluin.ftth.inventory.domain.model.InventoryMovement =
+        legacy.executeMovement(command)
+
     @Transactional(rollbackFor = [Exception::class])
     fun execute(command: WarehousePreparedCommand): WarehouseOperationReceipt {
         val cutover = cutovers.lockForCommand(command.cutoverEpoch, WarehouseOperationClass.ORDINARY_STOCK)
@@ -38,6 +48,10 @@ class WarehouseCommandService(
             val areaScope = current.areaScope
             if (areaScope is AuthorityScope.Restricted && operations.locationAreas(command.locations).values.any { it != null && it !in areaScope.ids }) fail(WarehouseErrorCode.FORBIDDEN)
         }
+        command.referencedRevisions.filterKeys { it.startsWith("workorder:") }.toSortedMap().forEach { (reference, revision) ->
+            workOrders.lock(UUID.fromString(reference.substringAfter(':')), revision, current, null, false)
+        }
+        operations.lockDocuments(command.documentId, command.referencedRevisions)
         val prior = operations.lock(command)
         if (prior != null) {
             if (prior.actorId != current.fence.identity.userId) fail(WarehouseErrorCode.FORBIDDEN)
