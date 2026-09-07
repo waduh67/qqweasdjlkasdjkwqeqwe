@@ -54,10 +54,13 @@ class WorkOrderService(
     private val events: ApplicationEventPublisher,
     private val evidence: WorkOrderEvidenceRepository,
     private val signatures: WorkOrderSignatureRepository,
+    private val cutovers: com.duluin.ftth.inventory.InventoryTenantCutoverApi,
+    private val authority: com.duluin.ftth.iam.CurrentAuthorityApi,
 ) : ManageWorkOrderUseCase, WorkOrderQuery {
 
     @Transactional
     override fun create(command: SaveWorkOrderCommand): WorkOrderView {
+        commandFence("workorder.order.create")
         requireArea(command.areaId)
         requireCustomerExists(command.customerId)
         command.assignees.forEach { requireActiveTechnician(it) }
@@ -84,6 +87,7 @@ class WorkOrderService(
 
     @Transactional
     override fun update(id: UUID, command: UpdateWorkOrderCommand): WorkOrderView {
+        commandFence("workorder.order.update")
         requireArea(command.areaId)
         requireCustomerExists(command.customerId)
         val workOrder = require(id)
@@ -103,6 +107,7 @@ class WorkOrderService(
 
     @Transactional
     override fun assign(id: UUID, technicianIds: Set<UUID>): WorkOrderView {
+        commandFence("workorder.order.assign")
         if (technicianIds.isEmpty()) throw ConflictException("Minimal satu teknisi harus ditugaskan")
         val workOrder = require(id)
         requireArea(workOrder)
@@ -115,6 +120,7 @@ class WorkOrderService(
 
     @Transactional
     override fun start(id: UUID): WorkOrderView {
+        commandFence("workorder.order.update", "workorder.order.field")
         val workOrder = require(id)
         requireArea(workOrder)
         requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.update")
@@ -130,6 +136,7 @@ class WorkOrderService(
 
     @Transactional
     override fun complete(id: UUID, resolutionNote: String?, packet: ProofOfWorkPacket): WorkOrderView {
+        commandFence("workorder.order.close", "workorder.order.field")
         val workOrder = require(id)
         requireArea(workOrder)
         requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.close")
@@ -151,6 +158,7 @@ class WorkOrderService(
 
     @Transactional
     override fun cancel(id: UUID, reason: String?): WorkOrderView {
+        commandFence("workorder.order.close")
         val workOrder = require(id)
         workOrder.cancel(reason, Instant.now(), currentUser.current().userId)
         return repository.save(workOrder).toView()
@@ -158,6 +166,7 @@ class WorkOrderService(
 
     @Transactional
     override fun recordOptical(id: UUID, command: RecordOpticalCommand): WorkOrderView {
+        commandFence("workorder.order.update", "workorder.order.field")
         val workOrder = require(id)
         requireArea(workOrder)
         requireFieldAccess(workOrder, dispatcherPermission = "workorder.order.update")
@@ -167,6 +176,7 @@ class WorkOrderService(
 
     @Transactional
     override fun approve(id: UUID, note: String?): WorkOrderView {
+        commandFence("workorder.order.approve")
         val workOrder = require(id)
         requireActiveActor()
         requireArea(workOrder)
@@ -178,6 +188,7 @@ class WorkOrderService(
 
     @Transactional
     override fun reject(id: UUID, reason: String): WorkOrderView {
+        commandFence("workorder.order.approve")
         val workOrder = require(id)
         requireActiveActor()
         requireArea(workOrder)
@@ -187,6 +198,7 @@ class WorkOrderService(
 
     @Transactional
     override fun delete(id: UUID) {
+        commandFence("workorder.order.update")
         val workOrder = require(id)
         // Sekali ditugaskan, work order punya jejak (assignment/timeline) yang tak boleh
         // hilang diam-diam; yang belum tersentuh boleh dihapus, sisanya dibatalkan saja.
@@ -194,6 +206,12 @@ class WorkOrderService(
             throw ConflictException("Hanya work order berstatus DRAFT yang bisa dihapus; batalkan sisanya")
         }
         repository.deleteById(id)
+    }
+
+    private fun commandFence(vararg permissions: String) {
+        cutovers.lockForCommand(cutovers.read().epoch, com.duluin.ftth.inventory.WarehouseOperationClass.CONTROL_PLANE).assertHeld()
+        val current = authority.lockCurrent()
+        if (!current.platformAdmin && permissions.none { it in current.permissions }) throw AccessDeniedException("Current work order permission required")
     }
 
     override fun search(filter: WorkOrderFilter, page: PageRequest): Page<WorkOrderView> {
