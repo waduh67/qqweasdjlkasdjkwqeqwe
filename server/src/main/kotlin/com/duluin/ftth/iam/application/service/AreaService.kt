@@ -19,9 +19,11 @@ import java.util.UUID
 class AreaService(
     private val areaRepository: AreaRepository,
     private val currentUser: CurrentUserProvider,
+    private val authority: com.duluin.ftth.iam.CurrentAuthorityApi,
 ) : ManageAreaUseCase {
 
     override fun create(command: CreateAreaCommand): AreaView {
+        authority.lockForChange().incrementEpoch()
         val code = command.code.trim().uppercase()
         if (areaRepository.existsByCode(code)) throw ConflictException("Kode area '$code' sudah ada")
         command.parentId?.let { requireArea(it) }
@@ -32,6 +34,7 @@ class AreaService(
     }
 
     override fun update(id: UUID, command: UpdateAreaCommand): AreaView {
+        authority.lockForChange().incrementEpoch()
         val area = requireArea(id)
         if (command.parentId != null) {
             if (command.parentId == id) throw ValidationException("Area tidak boleh menjadi induk dirinya sendiri")
@@ -42,6 +45,7 @@ class AreaService(
     }
 
     override fun delete(id: UUID) {
+        authority.lockForChange().incrementEpoch()
         requireArea(id)
         areaRepository.deleteById(id)
     }
