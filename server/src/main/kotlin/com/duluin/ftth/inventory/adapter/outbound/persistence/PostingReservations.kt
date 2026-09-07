@@ -14,7 +14,7 @@ internal class PostingReservations(private val sql: PostingSql) {
             }.singleOrNull()
             if(before?.first != change.expectedRevision) sql.fail(WarehouseErrorCode.STALE_REVISION)
             val previousTotal=before?.let { Math.addExact(it.second,it.third) } ?: 0L
-            if(total.quantityBase>previousTotal) {
+            if(total.quantityBase>previousTotal || change.picked.quantityBase>(before?.third ?: 0L)) {
                 require(dimension.condition==com.duluin.ftth.inventory.WarehouseCondition.SERVICEABLE && dimension.legalOwner==com.duluin.ftth.inventory.AssetLegalOwner.ISP)
                 val position=PostingProjection(sql).readLocked(dimension) ?: sql.fail(WarehouseErrorCode.INSUFFICIENT_STOCK)
                 require(position.status==InventoryStatus.AVAILABLE && position.quantity.unit==total.unit && position.quantity.quantityBase>0) { "Reservation requires available physical stock" }
