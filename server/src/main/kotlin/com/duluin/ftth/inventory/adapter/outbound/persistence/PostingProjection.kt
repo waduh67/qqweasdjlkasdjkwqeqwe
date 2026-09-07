@@ -8,17 +8,23 @@ import java.sql.ResultSet
 import java.time.Instant
 import java.util.UUID
 
+internal data class LockedPostingBalance(val quantity: StockQuantity, val status: InventoryStatus, val revision: Long)
+
 internal class PostingProjection(private val sql: PostingSql) {
-    fun lock(dimension: PostingDimension, zero: StockQuantity, status: InventoryStatus, now: Instant): PostingBalance {
+    fun lock(dimension: PostingDimension, zero: StockQuantity, status: InventoryStatus, now: Instant): LockedPostingBalance {
+        val revision=sql.value("SELECT coalesce(max(revision),0) FROM inventory_movement_leg WHERE $predicate",*parameters(dimension))!!.toLong()
         sql.update("""INSERT INTO inventory_balance_projection(id,tenant_id,item_id,sku_id,stock_identity_id,lot_id,location_id,custody_owner_id,
-            custody_owner_kind,condition,legal_owner,status,quantity_base,base_unit,rebuilt_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,0,?,?)
+            custody_owner_kind,condition,legal_owner,status,quantity_base,base_unit,rebuilt_at,revision) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?)
             ON CONFLICT (tenant_id,sku_id,stock_identity_id,lot_id,location_id,custody_owner_id,custody_owner_kind,condition,legal_owner)
             WHERE warehouse_admission='VERIFIED' DO NOTHING""",UUID.randomUUID(),sql.tenant,dimension.stockIdentityId,dimension.skuId,
-            dimension.stockIdentityId,dimension.lotId,dimension.locationId,dimension.custodianId,dimension.custodianKind,dimension.condition,dimension.legalOwner,status,zero.unit,now)
-        return sql.query("SELECT quantity_base,base_unit,status FROM inventory_balance_projection WHERE $predicate FOR UPDATE",*parameters(dimension)) {
-            PostingBalance(dimension,StockQuantity.of(it.getLong("quantity_base"),StockUnit.valueOf(it.getString("base_unit"))),InventoryStatus.valueOf(it.getString("status")))
-        }.single()
+            dimension.stockIdentityId,dimension.lotId,dimension.locationId,dimension.custodianId,dimension.custodianKind,dimension.condition,dimension.legalOwner,status,zero.unit,now,revision)
+        return requireNotNull(readLocked(dimension))
     }
+
+    fun readLocked(dimension: PostingDimension): LockedPostingBalance? =
+        sql.query("SELECT quantity_base,base_unit,status,revision FROM inventory_balance_projection WHERE $predicate FOR UPDATE",*parameters(dimension)) {
+            LockedPostingBalance(StockQuantity.of(it.getLong("quantity_base"),StockUnit.valueOf(it.getString("base_unit"))),InventoryStatus.valueOf(it.getString("status")),it.getLong("revision"))
+        }.singleOrNull()
 
     fun set(dimension: PostingDimension, quantity: StockQuantity, status: InventoryStatus, now: Instant) {
         check(sql.update("UPDATE inventory_balance_projection SET quantity_base=?,status=?,rebuilt_at=?,revision=revision+1,updated_at=? WHERE $predicate",
@@ -26,10 +32,18 @@ internal class PostingProjection(private val sql: PostingSql) {
     }
 
     fun rebuild(): List<PostingBalance> {
+        val ambiguous=sql.value("""WITH inbound AS (
+            SELECT leg.*,dense_rank() OVER (PARTITION BY leg.sku_id,leg.stock_identity_id,leg.lot_id,leg.location_id,leg.custody_owner_id,
+                leg.custody_owner_kind,leg.condition,leg.legal_owner,leg.base_unit ORDER BY leg.revision DESC,movement.server_received_at DESC) state_rank
+            FROM inventory_movement_leg leg JOIN inventory_movement movement ON movement.tenant_id=leg.tenant_id AND movement.id=leg.movement_id
+            WHERE leg.tenant_id=? AND leg.warehouse_admission='VERIFIED' AND movement.state='APPLIED' AND leg.direction='IN'
+        ) SELECT count(*) FROM (SELECT 1 FROM inbound WHERE state_rank=1 GROUP BY sku_id,stock_identity_id,lot_id,location_id,
+            custody_owner_id,custody_owner_kind,condition,legal_owner,base_unit HAVING count(DISTINCT status)>1) conflicting""",sql.tenant)
+        check(ambiguous=="0") { "Historical inbound position status is ambiguous" }
         val rebuilt=sql.query("""SELECT leg.sku_id,leg.stock_identity_id,leg.lot_id,leg.location_id,leg.custody_owner_id,leg.custody_owner_kind,
             leg.condition,leg.legal_owner,leg.base_unit,
             sum(CASE leg.direction WHEN 'IN' THEN leg.quantity_base::numeric ELSE -leg.quantity_base::numeric END) quantity_base,
-            (array_agg(leg.status ORDER BY movement.server_received_at DESC,movement.id DESC,leg.id DESC))[1] status
+            (array_agg(leg.status ORDER BY leg.revision DESC,movement.server_received_at DESC) FILTER (WHERE leg.direction='IN'))[1] status
             FROM inventory_movement_leg leg JOIN inventory_movement movement ON movement.tenant_id=leg.tenant_id AND movement.id=leg.movement_id
             WHERE leg.tenant_id=? AND leg.warehouse_admission='VERIFIED' AND movement.state='APPLIED' AND leg.status<>'RECEIPT_SOURCE'
             GROUP BY leg.sku_id,leg.stock_identity_id,leg.lot_id,leg.location_id,leg.custody_owner_id,leg.custody_owner_kind,leg.condition,leg.legal_owner,leg.base_unit

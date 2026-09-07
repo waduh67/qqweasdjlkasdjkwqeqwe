@@ -10,9 +10,14 @@ internal data class PostingPiece(val id: UUID, val sku: UUID, val lot: UUID?, va
 
 internal class PostingStock(private val sql: PostingSql) {
     private val pieces=mutableMapOf<UUID,PostingPiece>()
+    private val positions=mutableMapOf<PostingDimension,LockedPostingBalance>()
 
     fun lock(command: WarehousePost) {
         val dimensions=(command.legs.map { it.dimension }+command.reservations.map { it.dimension }).distinct()
+        command.reservations.map { it.dimension.locationId }.distinct().sortedBy(UUID::toString).forEach { location ->
+            if(sql.value("SELECT id FROM inventory_location WHERE tenant_id=? AND id=? FOR SHARE",sql.tenant,location)==null)
+                sql.fail(WarehouseErrorCode.NOT_FOUND)
+        }
         dimensions.mapNotNull { it.lotId }.distinct().sortedBy(UUID::toString).forEach { lot ->
             if(sql.value("SELECT id FROM inventory_lot WHERE tenant_id=? AND id=? AND warehouse_admission='VERIFIED' FOR UPDATE",sql.tenant,lot)==null)
                 sql.fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
@@ -66,14 +71,21 @@ internal class PostingStock(private val sql: PostingSql) {
     }
 
     fun legs(command: WarehousePost, result: WarehousePostResult) {
+        val projection=PostingProjection(sql)
+        command.legs.filter { it.endpoint!=PostingEndpoint.RECEIPT_SOURCE }.groupBy { it.dimension }.entries.sortedBy { it.key.orderKey() }.forEach { (dimension,legs) ->
+            val statuses=legs.filter { it.direction==LegDirection.IN }.map { it.status }.distinct()
+            require(statuses.size<=1) { "Inbound position statuses contradict each other" }
+            positions[dimension]=projection.lock(dimension,StockQuantity.of(0,legs.first().quantity.unit),statuses.singleOrNull() ?: legs.first().status,result.recordedAt)
+        }
         command.legs.forEach { leg ->
             val dimension=leg.dimension
             sql.update("""INSERT INTO inventory_movement_leg(id,tenant_id,movement_id,direction,item_id,sku_id,location_id,quantity,serialized,
-                custody_owner_id,custody_owner_kind,status,quantity_base,base_unit,stock_identity_id,lot_id,document_line_id,condition,legal_owner)
-                VALUES (?,?,?,?,?,?,?,NULL,?,?,?,?,?,?,?,?,?,?,?)""",UUID.randomUUID(),sql.tenant,result.postingId,leg.direction,dimension.stockIdentityId,
+                custody_owner_id,custody_owner_kind,status,quantity_base,base_unit,stock_identity_id,lot_id,document_line_id,condition,legal_owner,revision)
+                VALUES (?,?,?,?,?,?,?,NULL,?,?,?,?,?,?,?,?,?,?,?,?)""",UUID.randomUUID(),sql.tenant,result.postingId,leg.direction,dimension.stockIdentityId,
                 dimension.skuId,dimension.locationId,pieces.getValue(dimension.stockIdentityId).kind=="SERIAL",dimension.custodianId,dimension.custodianKind,
                 if(leg.endpoint==PostingEndpoint.RECEIPT_SOURCE) InventoryStatus.RECEIPT_SOURCE else leg.status,leg.quantity.quantityBase,leg.quantity.unit,
-                dimension.stockIdentityId,dimension.lotId,leg.documentLineId,dimension.condition,dimension.legalOwner)
+                dimension.stockIdentityId,dimension.lotId,leg.documentLineId,dimension.condition,dimension.legalOwner,
+                if(leg.endpoint==PostingEndpoint.RECEIPT_SOURCE) 0L else Math.addExact(positions.getValue(dimension).revision,1))
         }
     }
 
@@ -82,12 +94,13 @@ internal class PostingStock(private val sql: PostingSql) {
         val projection=PostingProjection(sql)
         val changes=physical.groupBy { it.dimension }.entries.sortedBy { it.key.orderKey() }.map { (dimension,legs) ->
             val zero=StockQuantity.of(0,legs.first().quantity.unit)
-            val before=projection.lock(dimension,zero,legs.first().status,now)
+            val before=positions.getValue(dimension)
             val outgoing=legs.filter { it.direction==LegDirection.OUT }.fold(zero) { sum,leg -> sum+leg.quantity }
             val incoming=legs.filter { it.direction==LegDirection.IN }.fold(zero) { sum,leg -> sum+leg.quantity }
             if(before.quantity.quantityBase<outgoing.quantityBase) sql.fail(WarehouseErrorCode.INSUFFICIENT_STOCK)
             require(legs.filter { it.direction==LegDirection.OUT }.all { it.status==before.status }) { "Source position state mismatch" }
-            Triple(dimension,(before.quantity-outgoing)+incoming,legs.last().status)
+            val status=legs.filter { it.direction==LegDirection.IN }.map { it.status }.distinct().singleOrNull() ?: before.status
+            Triple(dimension,(before.quantity-outgoing)+incoming,status)
         }.sortedBy { it.first.orderKey() }
         changes.sortedBy { it.second.quantityBase>0 }.forEach { (dimension,quantity,status) -> projection.set(dimension,quantity,status,now) }
         pieces.values.forEach { piece ->
