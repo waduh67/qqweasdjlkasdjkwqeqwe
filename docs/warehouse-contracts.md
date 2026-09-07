@@ -116,6 +116,10 @@ dua kali, dispatch mengonsumsi encumbrance sambil memindahkan fisik.
 
 ## C3. Posting, Lock, dan Idempotensi
 
+Implementasi primitive task 5 dan batas tanggung jawab task 6 dijelaskan di
+[warehouse-posting.md](warehouse-posting.md). Kontrak replay/otorisasi berikut
+tetap mengikat task 6, bukan klaim bahwa endpoint operational sudah tersedia.
+
 WarehousePostingService task berikutnya menjadi satu otoritas posting; tidak ada
 insert leg alternatif dari durable fulfillment atau peta in-memory produksi.
 Satu transaksi menyimpan revisi dokumen, header/leg immutable, saldo checked,
