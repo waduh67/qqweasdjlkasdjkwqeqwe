@@ -9,7 +9,7 @@ V174.2, V174.3, V174.4 dan V174.5; versi historis tidak diubah.
 | Slot | Versi | Pemilik tugas | Cakupan |
 | --- | --- | --- | --- |
 | M01 | V173 | 04 | Precision, masters, identity claims, cutover/auth fences |
-| M02 | V174, V174.1, V174.2, V174.3, V174.4, V174.5, V174.6 | 04 / 06 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity, internally scoped deferred validators and durable command/delivery metadata |
+| M02 | V174, V174.1, V174.2, V174.3, V174.4, V174.5, V174.6, V174.7 | 04 / 06 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain, aggregate lot capacity, internally scoped deferred validators, durable delivery metadata, fulfillment observations and WO reference revisions |
 | M03 | V175 | 11 | Approval, counts, remaining operations |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
@@ -221,3 +221,10 @@ menambahkan metadata canonical command immutable dan state delivery mutable yang
 mereferensikan outbox immutable. Payload/event lama tidak diubah. Semua byte
 V173-V174.5 tetap dipertahankan; V175-V178 tetap milik owner berikutnya.
 Gate WarehouseSchemaIT wajib dijalankan kembali setelah patch.
+
+## Reservasi V174.7: delivery produksi dan revisi referensi
+
+Slot V174.7 diperiksa bebas sebelum SQL dibuat. Tambahan M02 ini membuat jurnal
+observasi provenance milik fulfillment, revision fence WO/roster dan larangan
+menghapus state delivery. Tidak mengaktifkan settlement, approval atau assignment
+baru. Seluruh byte V173-V174.6 dipertahankan dan gate task04 dijalankan kembali.
