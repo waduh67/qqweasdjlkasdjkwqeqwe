@@ -129,3 +129,33 @@ Bagian ini memperketat implementasi task 5 di atas; bukan implementasi task 6.
 
 Tidak ada byte migrasi yang sudah diterapkan, RLS, admission, provenance,
 lot-capacity, atau deferred tenant-scope guard yang diubah untuk koreksi ini.
+
+## Pengikatan aktual dan transisi pick
+
+- Eligibility diperiksa bila total encumbrance **atau picked** meningkat. Pick
+  unpicked40 menjadi picked40 bukan kenaikan total, tetapi tetap membutuhkan
+  posisi AVAILABLE dan lokasi eligible. Penurunan/release tetap boleh; unpick
+  memindahkan picked ke unpicked tanpa menambah total atau saldo fisik, dan tidak
+  membuat posisi IN_TRANSIT/noneligible menjadi available.
+- Setiap leg OUT maupun IN wajib sama dengan identitas line terkunci atau
+  descendant-nya. Descendant yang baru dibuat harus berasal dari split dalam
+  posting yang sama; identitas committed mengikuti lineage database. Kesamaan SKU
+  atau ancestor bersama tidak mengizinkan sibling menggantikan alokasi line.
+  SKU, lot dan unit aktual juga harus cocok dengan line.
+- Kuantitas OUT/IN harus berpasangan per line. Kuantitas yang dialokasikan tidak
+  boleh melebihi quantity line. Split dapat mempertahankan REMNANT pada posisi,
+  custody, condition, owner dan status source yang persis sama: bagian retained
+  itu tidak dihitung sebagai issue/consume kedua. Jika seluruh hasil split tetap
+  berupa remnant lokal, line mengikat kuantitas parent penuh. Retained remnant
+  tetap wajib memenuhi lineage dan konservasi fisik; label REMNANT tidak dapat
+  menyembunyikan pemindahan ke custody/lokasi/condition/owner/status lain.
+- Source issue mengikat identitas **aktual**, termasuk child, bukan hanya ID yang
+  tertulis pada draft line. Line issue acknowledged dikunci `FOR NO KEY UPDATE`
+  untuk menserialisasi kuantitas: total alokasi dari seluruh line dalam satu
+  posting ditambah fakta used/returned yang telah diposting lewat issue line itu
+  tidak boleh melampaui accepted quantity. Riwayat tetap immutable; bukan counter
+  in-memory atau implementasi replay/IAM task 6.
+- Movement tanpa fakta tetap mengikat lineage, SKU, unit dan quantity issue yang
+  dirujuk. Quantity acknowledged serta pengurangan oleh fakta terdahulu berlaku
+  untuk posting material accountable; pemeriksaan struktural tidak dilewati
+  hanya karena daftar fakta kosong.
