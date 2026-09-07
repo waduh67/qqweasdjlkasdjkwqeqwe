@@ -4,10 +4,14 @@ import com.duluin.ftth.inventory.WarehouseErrorCode
 import com.duluin.ftth.inventory.WarehouseEventKind
 import com.duluin.ftth.inventory.application.port.outbound.*
 import com.duluin.ftth.inventory.domain.model.MovementKind
+import com.duluin.ftth.inventory.domain.model.LegDirection
+import com.duluin.ftth.inventory.domain.model.OwnerKind
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.util.UUID
 
 internal class PostingDocuments(private val sql: PostingSql) {
+    private data class LockedDocument(val revision: Long,val epoch: Long,val kind: String,val customer: UUID?,val workOrder: UUID?)
+
     fun lock(command: WarehousePost, epoch: Long) {
         val identities = (command.legs.map { it.dimension.stockIdentityId } + command.splits.map { it.parentId } +
             command.reservations.map { it.dimension.stockIdentityId }).distinct()
@@ -21,16 +25,19 @@ internal class PostingDocuments(private val sql: PostingSql) {
         val source=sql.query("SELECT source_document_id,source_revision FROM inventory_document WHERE tenant_id=? AND id=? AND source_document_id IS NOT NULL",sql.tenant,command.documentId) {
             it.uuid("source_document_id") to it.getLong("source_revision")
         }.singleOrNull()
-        (origins.map { it.first } + listOfNotNull(command.documentId,source?.first)).distinct().sortedBy(UUID::toString).forEach { id ->
+        val linkedLines=linkedSources(command)
+        val locked=mutableMapOf<UUID,LockedDocument>()
+        (origins.map { it.first } + linkedLines.map { it.first } + listOfNotNull(command.documentId,source?.first)).distinct().sortedBy(UUID::toString).forEach { id ->
             val mode = if(id == command.documentId) "FOR UPDATE" else "FOR SHARE"
-            val row = sql.query("SELECT revision,cutover_epoch FROM inventory_document WHERE tenant_id=? AND id=? $mode",sql.tenant,id) {
-                it.getLong("revision") to it.getLong("cutover_epoch")
+            val row = sql.query("SELECT revision,cutover_epoch,kind,customer_id,work_order_id FROM inventory_document WHERE tenant_id=? AND id=? $mode",sql.tenant,id) {
+                LockedDocument(it.getLong("revision"),it.getLong("cutover_epoch"),it.getString("kind"),it.optionalUuid("customer_id"),it.optionalUuid("work_order_id"))
             }.singleOrNull() ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
-            if(id == command.documentId && row.first != command.expectedRevision) sql.fail(WarehouseErrorCode.STALE_REVISION)
-            if(id == command.documentId && row.second != epoch) sql.fail(WarehouseErrorCode.STALE_CUTOVER)
-            if(source != null && id == source.first && row.first != source.second) sql.fail(WarehouseErrorCode.STALE_REVISION)
+            if(id == command.documentId && row.revision != command.expectedRevision) sql.fail(WarehouseErrorCode.STALE_REVISION)
+            if(id == command.documentId && row.epoch != epoch) sql.fail(WarehouseErrorCode.STALE_CUTOVER)
+            if(source != null && id == source.first && row.revision != source.second) sql.fail(WarehouseErrorCode.STALE_REVISION)
+            locked[id]=row
         }
-        (origins.map { it.second } + command.legs.map { it.documentLineId } + command.reservations.map { it.documentLineId })
+        (origins.map { it.second } + linkedLines.map { it.second } + command.legs.map { it.documentLineId } + command.reservations.map { it.documentLineId })
             .distinct().sortedBy(UUID::toString).forEach { id ->
                 if(sql.value("SELECT id FROM inventory_document_line WHERE tenant_id=? AND id=? FOR SHARE",sql.tenant,id)==null) sql.fail(WarehouseErrorCode.NOT_FOUND)
             }
@@ -39,6 +46,57 @@ internal class PostingDocuments(private val sql: PostingSql) {
                 sql.tenant,leg.documentLineId,command.documentId,leg.dimension.skuId,leg.quantity.unit)
             require(found != null) { "Leg must reference its document and snapshotted SKU unit" }
         }
+        if(linkedSources(command)!=linkedLines) sql.fail(WarehouseErrorCode.STALE_REVISION)
+        val document=locked.getValue(command.documentId)
+        (linkedLines.map { it.first } + listOfNotNull(source?.first)).distinct().forEach { id ->
+            val issue=locked.getValue(id)
+            if(issue.kind=="ISSUE") require(issue.customer==document.customer && issue.workOrder==document.workOrder) { "Source issue and posting document context mismatch" }
+        }
+        command.facts.forEach { fact ->
+            require(fact.customerId==document.customer && fact.workOrderId==document.workOrder) { "Material fact and posting document context mismatch" }
+            if(fact.installed) {
+                val sink=command.legs.single { it.direction==LegDirection.IN && it.dimension.stockIdentityId==fact.stockIdentityId }.dimension
+                require(sink.custodianKind==OwnerKind.CUSTOMER && sink.custodianId==fact.customerId) { "Consumed sink must retain the document customer custody" }
+            }
+        }
+        command.usage?.let { require(it.workOrderId==document.workOrder) { "Usage snapshot and posting document context mismatch" } }
+        if(command.facts.isNotEmpty() || command.usage!=null) {
+            validateMaterialSources(command,source?.first?.takeIf { locked.getValue(it).kind=="ISSUE" })
+        }
+    }
+
+    private fun validateMaterialSources(command: WarehousePost, declaredIssue: UUID?) {
+        command.legs.map { it.documentLineId }.distinct().sortedBy(UUID::toString).forEach { line ->
+            val source=sql.query("""SELECT line.stock_identity_id current_identity,line.sku_id current_sku,line.base_unit current_unit,line.quantity_base,
+                source.stock_identity_id issued_identity,source.sku_id issued_sku,source.base_unit issued_unit,source.accepted_base,
+                source.document_id issued_document,document.kind,document.state
+                FROM inventory_document_line line LEFT JOIN inventory_document_line source ON source.tenant_id=line.tenant_id AND source.id=line.source_line_id
+                LEFT JOIN inventory_document document ON document.tenant_id=source.tenant_id AND document.id=source.document_id
+                WHERE line.tenant_id=? AND line.id=?""",sql.tenant,line) {
+                MaterialSource(it.optionalUuid("current_identity"),it.uuid("current_sku"),it.getString("current_unit"),it.getLong("quantity_base"),
+                    it.optionalUuid("issued_identity"),it.optionalUuid("issued_sku"),it.getString("issued_unit"),it.getLong("accepted_base"),
+                    it.optionalUuid("issued_document"),it.getString("kind"),it.getString("state"))
+            }.single()
+            if(declaredIssue!=null) require(source.document==declaredIssue) { "Declared source issue requires an explicit matching issue line" }
+            if(source.kind=="ISSUE") {
+                require(source.sku==source.issuedSku && source.unit==source.issuedUnit && source.quantity<=source.accepted && source.accepted>0 &&
+                    source.state in setOf("RECEIVED","PART_RECEIVED")) { "Material source must match an acknowledged issue quantity and unit" }
+                val descendant=sql.value("""WITH RECURSIVE lineage AS (
+                    SELECT id,parent_segment_id FROM inventory_segment WHERE tenant_id=? AND id=?
+                    UNION SELECT parent.id,parent.parent_segment_id FROM inventory_segment parent JOIN lineage child ON parent.id=child.parent_segment_id WHERE parent.tenant_id=?
+                ) SELECT count(*) FROM lineage WHERE id=?""",sql.tenant,source.identity,sql.tenant,source.issuedIdentity)
+                require(descendant=="1") { "Material source identity does not belong to the acknowledged issue" }
+            }
+        }
+    }
+
+    private data class MaterialSource(val identity: UUID?,val sku: UUID,val unit: String,val quantity: Long,val issuedIdentity: UUID?,
+        val issuedSku: UUID?,val issuedUnit: String?,val accepted: Long,val document: UUID?,val kind: String?,val state: String?)
+
+    private fun linkedSources(command: WarehousePost): List<Pair<UUID,UUID>> = command.legs.map { it.documentLineId }.distinct().sortedBy(UUID::toString).flatMap { line ->
+        sql.query("""SELECT source.document_id,source.id FROM inventory_document_line line
+            JOIN inventory_document_line source ON source.tenant_id=line.tenant_id AND source.id=line.source_line_id
+            WHERE line.tenant_id=? AND line.id=?""",sql.tenant,line) { it.uuid("document_id") to it.uuid("id") }
     }
 
     fun advance(command: WarehousePost, result: WarehousePostResult, epoch: Long) {
