@@ -20,6 +20,7 @@ class WarehouseSchemaIT {
         "inventory_material_plan", "inventory_material_plan_line", "inventory_usage_snapshot",
         "inventory_inspection", "inventory_warehouse_scope",
         "inventory_command_identity", "inventory_outbox_delivery",
+        "fulfillment_warehouse_observation",
     )
 
     private fun strings(sql: String): List<String> = dataSource.connection.use { connection ->
