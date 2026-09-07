@@ -48,7 +48,7 @@ Tidak boleh merekayasa pelanggan supaya materialless/preventive WO bisa berjalan
 `assetId` tetap ID `inventory_serialized_asset` lama. Retur/reuse tidak membuat
 aset fisik baru. Serial kanonis = trim + uppercase locale-independent; MAC
 diparse menjadi 12 hex uppercase dan ditampilkan dengan titik dua. Normalisasi
-bersama berada di common, implementasi aritmetika/codec ada di task 3. Unik kanonis
+bersama berada di common (value object task 3). Unik kanonis
 per tenant tetap mengikat setelah arsip/disposal; benturan tidak memilih pemenang.
 
 `WarehouseTracking = SERIAL|LOT|BULK`, `WarehouseBaseUnit = EA|MM`.
@@ -59,6 +59,44 @@ Tolak overflow, pecahan EA, nonfinite, dan presisi lebih dari 3, bukan dibulatka
 `WarehouseQuantity("82500", MM, "82.500", M)` berarti 82.500 m, bukan 82.500 unit.
 Konversi paket menyimpan rasio integer positif per receipt; unit SKU tidak berubah
 setelah posting. GIS hanya estimasi dan tidak pernah mengubah stok.
+
+Implementasi nilai task 3:
+
+- `StockQuantity` berisi `quantityBase: Long` nonnegatif dan `StockUnit` immutable.
+  Factory `of`/`parseBase`/`each`/`metres` satu-satunya konstruksi; operasi tambah,
+  kurang, kali checked dan menolak campuran EA/MM. Stok kurang melempar
+  `ConflictException`; input/overflow melempar `ValidationException`. Tidak ada
+  floating point atau pembulatan. Nol adalah saldo sah, bukan perangkat serial.
+- Metre menerima `[0-9]+(\.[0-9]{1,3})?`, integer base `[0-9]+`. Tidak ada tanda,
+  eksponen, whitespace, digit Unicode, koma, atau presisi ekstra. Leading zero
+  diterima sebagai nilai sama. `toMetres` dan keluaran wire MM selalu tiga digit
+  pecahan (`82500 -> "82.500"`); masukan wire boleh 0-3 digit. Konversi eksplisit
+  `WarehouseQuantity.toStockQuantity` membandingkan unit dan kedua nilai; mismatch
+  menghasilkan `MALFORMED_REQUEST`, tidak memilih salah satu nilai diam-diam.
+- `ReceiptConversion` menyimpan numerator/denominator positif asli, tidak
+  direduksi pada snapshot. Maknanya base-unit per paket; `toBase` dan `toPackages`
+  menuntut pembagian tepat, membatalkan faktor sebelum checked multiply agar
+  hasil sah tidak gagal karena intermediate overflow. Jumlah paket integer;
+  pecahan paket tidak diterima. Unit diperoleh dari snapshot SKU receipt, bukan
+  katalog terkini. DTO `ReceiptConversionSnapshot` dikonversi eksplisit di
+  `inventory.application.StockValueConversions`, bukan menjadi model domain.
+- `StockUnitDefinition` adalah pasangan tracking/unit immutable; SERIAL hanya EA
+  dan `parseQuantity` satu aset serial harus tepat 1. LOT/BULK boleh EA/MM.
+  Saldo beberapa aset adalah agregat EA, bukan kuantitas satu aset. Task 4 dan
+  posting berikutnya wajib menyimpan snapshot ini serta menolak perubahan
+  tracking/unit SKU setelah posting; task 3 tidak mengklaim enforcement DB.
+- Common `SerialIdentity`/`MacIdentity` menyimpan `raw` persis masukan dan
+  `canonical` untuk equality/hash/claim. Serial menggunakan `Locale.ROOT`;
+  tidak menghapus tanda di tengah serial atau menafsirkan serial sebagai MAC.
+  MAC menerima 12 hex tanpa separator, enam pasangan dengan colon/dash (boleh
+  campuran), atau tiga kelompok empat hex bertitik. Whitespace luar ditrim;
+  separator berulang/salah posisi, whitespace dalam, dan non-hex ditolak.
+- `StockIdentity` menggunakan kedua nilai common dan tepat 1 EA. Customer
+  `Onu.create` memakai codec serial yang sama, tetap dengan batas format lama.
+  Inventory registration/read dan ONU rehydrate tidak diubah: case/separator/raw
+  historis tetap tersedia. Nilai kanonis **bukan** bukti claim tenant unik atau
+  resolusi collision. Migrasi/persistence berikutnya wajib menyimpan raw secara
+  terpisah dan menegakkan claim tanpa memilih pemenang dari benturan lama.
 
 `WarehouseStockDimension` selalu dipakai bersama tenant autentikasi: SKU,
 stockIdentityId, lot bila ada, location, custodian, condition, legalOwner.
