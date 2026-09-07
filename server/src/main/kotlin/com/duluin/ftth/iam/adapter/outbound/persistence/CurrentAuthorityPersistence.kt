@@ -23,7 +23,7 @@ class CurrentAuthorityPersistence(
 ) : CurrentAuthorityApi {
     @Transactional(propagation = Propagation.MANDATORY)
     override fun lockCurrent(): CurrentAuthority {
-        val user = users.current()
+        val user = users.currentOrNull() ?: throw com.duluin.ftth.common.domain.error.AuthenticationException("Authentication required")
         if (user.tenantId != TenantContext.tenantId()) denied()
         val transaction = lock(false)
         entityManager.flush()
@@ -41,12 +41,13 @@ class CurrentAuthorityPersistence(
             WHERE link.user_id=? AND area.tenant_id=?""", user.userId, user.tenantId) { it.getObject(1, UUID::class.java) }.toSet()
         val identity = SessionIdentity(user.tenantId, user.userId, user.sessionId)
         val epoch = transaction.epoch
+        val generation = transaction.generation
         val fence = object : AuthorityFence {
             override val identity = identity
             override val epoch = epoch
             override fun assertHeld() {
                 transaction.assertHeld()
-                check(transaction.epoch == epoch) { "Authority changed after snapshot" }
+                check(transaction.epoch == epoch && transaction.generation == generation) { "Authority changed after snapshot" }
             }
         }
         return CurrentAuthority(fence, roles, permissions,
@@ -62,6 +63,8 @@ class CurrentAuthorityPersistence(
             override fun assertHeld() = transaction.assertHeld()
             override fun incrementEpoch(): Long {
                 assertHeld()
+                transaction.generation++
+                if (CatalogAuthorityFence.incremented(tenantId)) transaction.incremented = true
                 if (!transaction.incremented) {
                     transaction.epoch = query("""UPDATE iam_authorization_epoch SET epoch=epoch+1,
                         revision=revision+1,updated_at=clock_timestamp() WHERE tenant_id=? RETURNING epoch""",
@@ -83,6 +86,7 @@ class CurrentAuthorityPersistence(
             return prior
         }
         val mode = if (exclusive) "FOR UPDATE" else "FOR SHARE"
+        query("SELECT pg_advisory_xact_lock_shared(hashtextextended(current_schema()||':iam.catalog',0))") { Unit }
         val epoch = query("SELECT epoch FROM iam_authorization_epoch WHERE tenant_id=? $mode", tenant) { it.getLong(1) }
             .singleOrNull() ?: denied()
         return AuthorityTransaction(tenant, epoch, exclusive).also(Transactions::registerSynchronization)
@@ -99,11 +103,12 @@ class CurrentAuthorityPersistence(
 
     private fun denied(): Nothing = throw AccessDeniedException("Current authority is unavailable")
 
-    private class AuthorityTransaction(val tenant: UUID, var epoch: Long, val exclusive: Boolean) : TransactionSynchronization {
+    private class AuthorityTransaction(val tenant: UUID, var epoch: Long, val exclusive: Boolean) : TenantAuthorityTransaction {
         private val resources = Transactions.getResourceMap().toMap()
         private val thread = Thread.currentThread()
         private var active = true
         var incremented = false
+        var generation = 0L
         fun assertHeld() {
             check(active && Thread.currentThread() === thread && TenantContext.tenantId() == tenant &&
                 Transactions.isActualTransactionActive() && Transactions.getSynchronizations().any { it === this } &&

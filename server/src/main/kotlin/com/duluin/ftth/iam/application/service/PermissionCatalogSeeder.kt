@@ -14,9 +14,11 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class PermissionCatalogSeeder(
     private val permissionRepository: PermissionRepository,
+    private val authority: com.duluin.ftth.iam.adapter.outbound.persistence.CatalogAuthorityFence,
 ) {
     @Transactional
     fun sync() {
+        authority.lock()
         val existing = permissionRepository.findAll().associateBy { it.code.value }
 
         PermissionCatalog.ALL.forEach { def ->
