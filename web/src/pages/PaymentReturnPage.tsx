@@ -25,8 +25,11 @@ interface Copy {
   icon: ReactNode
   title: string
   body: string
-  cta: string
-  ctaTo: string
+  note: string | null
+  nextAction: {
+    label: string
+    to: string
+  } | null
 }
 
 const COPY: Record<Variant, Copy> = {
@@ -39,8 +42,8 @@ const COPY: Record<Variant, Copy> = {
       'Terima kasih. Pembayaran sedang kami konfirmasi ke bank/penyedia. ' +
       'Masa aktif langganan diperbarui otomatis begitu pelunasan terkonfirmasi — ' +
       'biasanya beberapa saat. Tak perlu membayar ulang.',
-    cta: 'Lihat langganan',
-    ctaTo: '/subscription',
+    note: 'Anda boleh menutup halaman ini.',
+    nextAction: null,
   },
   failed: {
     tone: 'var(--critical)',
@@ -50,8 +53,8 @@ const COPY: Record<Variant, Copy> = {
     body:
       'Transaksi tidak selesai atau dibatalkan. Tak ada dana yang terpotong. ' +
       'Kamu bisa mencoba lagi dari halaman langganan — tagihannya masih menunggu pembayaran.',
-    cta: 'Coba bayar lagi',
-    ctaTo: '/subscription',
+    note: null,
+    nextAction: { label: 'Coba bayar lagi', to: '/subscription' },
   },
   expired: {
     tone: 'var(--warning)',
@@ -61,8 +64,8 @@ const COPY: Record<Variant, Copy> = {
     body:
       'Batas waktu halaman pembayaran ini sudah lewat. Tak ada dana yang terpotong. ' +
       'Buka lagi tagihan dari halaman langganan untuk memperoleh tautan bayar baru.',
-    cta: 'Kembali ke langganan',
-    ctaTo: '/subscription',
+    note: null,
+    nextAction: { label: 'Kembali ke langganan', to: '/subscription' },
   },
 }
 
@@ -96,6 +99,17 @@ function PaymentReturnPage({ variant }: { variant: Variant }) {
         <div className="stack" style={{ gap: '0.4rem' }}>
           <Text as="h2" size={400} weight="semibold" style={{ margin: 0 }}>{copy.title}</Text>
           <Text as="p" className="muted" size={300} style={{ margin: 0 }}>{copy.body}</Text>
+          {copy.note && (
+            <Text
+              as="p"
+              className="muted"
+              data-testid="payment-close-notice"
+              size={200}
+              style={{ margin: 0 }}
+            >
+              {copy.note}
+            </Text>
+          )}
         </div>
 
         {ref && (
@@ -104,21 +118,23 @@ function PaymentReturnPage({ variant }: { variant: Variant }) {
           </Text>
         )}
 
-        <Link
-          to={copy.ctaTo}
-          style={{
-            display: 'block',
-            width: '100%',
-            padding: '0.6rem',
-            textAlign: 'center',
-            textDecoration: 'none',
-            color: 'var(--accent-ink)',
-            background: 'var(--accent)',
-            borderRadius: 'var(--radius)',
-          }}
-        >
-          {copy.cta}
-        </Link>
+        {copy.nextAction && (
+          <Link
+            to={copy.nextAction.to}
+            style={{
+              display: 'block',
+              width: '100%',
+              padding: '0.6rem',
+              textAlign: 'center',
+              textDecoration: 'none',
+              color: 'var(--accent-ink)',
+              background: 'var(--accent)',
+              borderRadius: 'var(--radius)',
+            }}
+          >
+            {copy.nextAction.label}
+          </Link>
+        )}
       </div>
     </div>
   )
