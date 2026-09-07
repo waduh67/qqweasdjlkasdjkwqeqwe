@@ -1,6 +1,6 @@
 package com.duluin.ftth.inventory.adapter.outbound.persistence
 
-import com.duluin.ftth.common.infrastructure.persistence.TenantAwareJpaEntity
+import com.duluin.ftth.inventory.WarehouseAdmission
 import com.duluin.ftth.inventory.domain.model.*
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -29,7 +29,12 @@ class InventoryMovementJpaEntity(
     @Enumerated(EnumType.STRING) @Column(nullable = false, updatable = false) var kind: MovementKind,
     @Enumerated(EnumType.STRING) @Column(nullable = false) var state: MovementState,
     @Column(updatable = false) var compensatesMovementId: UUID?,
-) : TenantAwareJpaEntity(id)
+) : WarehouseVersionedEntity(id) {
+    var documentId: UUID? = null
+    var documentRevision: Long? = null
+    var operationId: UUID? = null
+    @Enumerated(EnumType.STRING) var warehouseAdmission: WarehouseAdmission = WarehouseAdmission.VERIFIED
+}
 
 @Entity
 @Table(name = "inventory_movement_leg")
@@ -40,12 +45,21 @@ class InventoryMovementLegJpaEntity(
     @Column(nullable = false, updatable = false) var itemId: UUID,
     @Column(nullable = false, updatable = false) var skuId: UUID,
     @Column(nullable = false, updatable = false) var locationId: UUID,
-    @Column(nullable = false, updatable = false) var quantity: Int,
+    @Column(updatable = false) var quantity: Int?,
     @Column(nullable = false, updatable = false) var serialized: Boolean,
     @Column(nullable = false, updatable = false) var custodyOwnerId: UUID,
     @Enumerated(EnumType.STRING) @Column(nullable = false, updatable = false) var custodyOwnerKind: OwnerKind,
     @Enumerated(EnumType.STRING) @Column(nullable = false, updatable = false) var status: InventoryStatus,
-) : TenantAwareJpaEntity(id)
+) : WarehouseVersionedEntity(id) {
+    var quantityBase: Long? = null
+    var baseUnit: String? = null
+    var stockIdentityId: UUID? = null
+    var lotId: UUID? = null
+    var documentLineId: UUID? = null
+    var condition: String? = null
+    var legalOwner: String? = null
+    @Enumerated(EnumType.STRING) var warehouseAdmission: WarehouseAdmission = WarehouseAdmission.VERIFIED
+}
 
 @Entity
 @Table(name = "inventory_balance_projection")
@@ -57,9 +71,18 @@ class InventoryBalanceProjectionJpaEntity(
     @Column(nullable = false) var custodyOwnerId: UUID,
     @Enumerated(EnumType.STRING) @Column(nullable = false) var custodyOwnerKind: OwnerKind,
     @Enumerated(EnumType.STRING) @Column(nullable = false) var status: InventoryStatus,
-    @Column(nullable = false) var quantity: Int,
+    @Column var quantity: Int?,
     @Column(nullable = false) var rebuiltAt: Instant,
-) : TenantAwareJpaEntity(id)
+) : WarehouseVersionedEntity(id) {
+    var quantityBase: Long? = null
+    var baseUnit: String? = null
+    var stockIdentityId: UUID? = null
+    var lotId: UUID? = null
+    var condition: String? = null
+    var legalOwner: String? = null
+    var serialized: Boolean = false
+    @Enumerated(EnumType.STRING) var warehouseAdmission: WarehouseAdmission = WarehouseAdmission.VERIFIED
+}
 
 interface InventoryMovementJpaRepository : JpaRepository<InventoryMovementJpaEntity, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -85,11 +108,20 @@ class InventoryFulfillmentEffectJpaEntity(
     @Column(name = "operation_key", nullable = false, updatable = false) var operationKey: String,
     @Column(name = "payload_hash", nullable = false, updatable = false) var payloadHash: String,
     @Column(name = "item_category", nullable = false, updatable = false) var itemCategory: String,
-    @Column(nullable = false, updatable = false) var quantity: Int,
+    @Column(updatable = false) var quantity: Int?,
     @Column(nullable = false, updatable = false) var installed: Boolean,
     @Column(nullable = false, updatable = false) var returned: Boolean,
     @Column(name = "recorded_at", nullable = false, updatable = false) var recordedAt: Instant,
-) : TenantAwareJpaEntity(id)
+) : WarehouseVersionedEntity(id) {
+    var quantityBase: Long? = null
+    var baseUnit: String? = null
+    var stockIdentityId: UUID? = null
+    var lotId: UUID? = null
+    var operationId: UUID? = null
+    var postingId: UUID? = null
+    var useRevision: Long? = null
+    @Enumerated(EnumType.STRING) var warehouseAdmission: WarehouseAdmission = WarehouseAdmission.VERIFIED
+}
 
 interface InventoryFulfillmentEffectJpaRepository : JpaRepository<InventoryFulfillmentEffectJpaEntity, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
