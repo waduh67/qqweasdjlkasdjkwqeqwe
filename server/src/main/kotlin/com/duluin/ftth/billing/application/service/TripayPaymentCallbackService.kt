@@ -65,8 +65,9 @@ class TripayPaymentCallbackService(
     }
 
     private fun hmacMatches(rawBody: ByteArray, presented: ByteArray, privateKey: String): Boolean {
+        val normalizedPrivateKey = privateKey.trim().takeIf { it.isNotEmpty() } ?: return false
         val mac = Mac.getInstance(HMAC_SHA_256)
-        mac.init(SecretKeySpec(privateKey.toByteArray(StandardCharsets.UTF_8), HMAC_SHA_256))
+        mac.init(SecretKeySpec(normalizedPrivateKey.toByteArray(StandardCharsets.UTF_8), HMAC_SHA_256))
         return MessageDigest.isEqual(mac.doFinal(rawBody), presented)
     }
 

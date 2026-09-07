@@ -10,6 +10,7 @@ import com.duluin.ftth.billing.application.service.TenantPaymentGatewayResolver
 import com.duluin.ftth.billing.application.service.TripayPaymentCallbackService
 import com.duluin.ftth.billing.config.BillingProperties
 import com.duluin.ftth.billing.domain.model.PaymentProvider
+import com.duluin.ftth.billing.domain.model.ManualPaymentConfig
 import com.duluin.ftth.billing.domain.model.PivotMasterConfig
 import com.duluin.ftth.billing.domain.model.TenantPaymentGateway
 import com.duluin.ftth.billing.domain.model.TenantPivotAccount
@@ -158,6 +159,25 @@ class TripayCallbackControllerTest {
     }
 
     @Test
+    fun `callback authenticates a legacy private key with surrounding whitespace`() {
+        val tenant = UuidV7.generate()
+        val recorder = RecordingPayments()
+        val body = callbackBody(status = "PAID")
+
+        mockMvc(
+            tenants = listOf(tenant),
+            configs = mapOf(tenant to rehydratedTripayConfig(tenant, " \n$PRIVATE_KEY\t")),
+            recorder = recorder,
+        ).perform(callback(body, sign(body, PRIVATE_KEY)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.success").value(true))
+
+        assertThat(recorder.settlements).containsExactly(
+            RecordedSettlement(tenant, "INV-202609-0001"),
+        )
+    }
+
+    @Test
     fun `duplicate signed PAID callbacks persist one logical settlement`() {
         val tenant = UuidV7.generate()
         val recorder = RecordingPayments()
@@ -294,6 +314,22 @@ class TripayCallbackControllerTest {
                 ),
             )
         }
+
+    private fun rehydratedTripayConfig(tenantId: UUID, privateKey: String): TenantPaymentGateway =
+        TenantPaymentGateway.rehydrate(
+            id = UuidV7.generate(),
+            tenantId = tenantId,
+            provider = PaymentProvider.TRIPAY,
+            enabled = true,
+            manual = ManualPaymentConfig.EMPTY,
+            tripay = TripayPaymentConfig(
+                merchantCode = "fixture-merchant",
+                apiKey = "fixture-api-key",
+                privateKey = privateKey,
+            ),
+            qrisStorageKey = null,
+            qrisContentType = null,
+        )
 
     private fun sign(body: String, privateKey: String): String {
         val mac = Mac.getInstance("HmacSHA256")
