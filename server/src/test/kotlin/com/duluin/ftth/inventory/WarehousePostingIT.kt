@@ -66,10 +66,12 @@ class WarehousePostingIT {
         val piece=fixture.transaction {
             val received=receipt(StockQuantity.each("1"))
             val issued=received.copy(locationId=technician,custodianId=actor,custodianKind=OwnerKind.TECHNICIAN)
-            post(move(received,issued,StockQuantity.each("1")))
+            val command=move(received,issued,StockQuantity.each("1"))
+            post(command.copy(legs=command.legs.map { if(it.direction==LegDirection.IN) it.copy(status=InventoryStatus.AVAILABLE) else it }))
             issued
         }
         val reservation=fixture.transaction { val command=reservation(piece,StockQuantity.each("1")); post(command); command.reservations.single() }
+        fixture.transaction { post(reclassify(piece,StockQuantity.each("1"),InventoryStatus.AVAILABLE,InventoryStatus.ISSUED)) }
         val before=fixture.transaction { counts() }
         val listener=ApplicationListener<PayloadApplicationEvent<*>> { event ->
             val value=event.payload

@@ -9,15 +9,23 @@ internal class PostingReservations(private val sql: PostingSql) {
         command.reservations.sortedBy { it.dimension.orderKey()+it.id }.forEach { change ->
             val dimension=change.dimension
             val total=change.unpicked+change.picked
-            if(total.quantityBase>0) {
-                require(dimension.condition==com.duluin.ftth.inventory.WarehouseCondition.SERVICEABLE && dimension.legalOwner==com.duluin.ftth.inventory.AssetLegalOwner.ISP)
-                require(dimension.custodianKind in setOf(OwnerKind.WAREHOUSE,OwnerKind.TECHNICIAN,OwnerKind.VEHICLE))
-                require(sql.value("SELECT kind FROM inventory_location WHERE tenant_id=? AND id=? AND state='ACTIVE'",sql.tenant,dimension.locationId) in setOf("BIN","WAREHOUSE","TECHNICIAN","VEHICLE"))
-            }
             val before=sql.query("SELECT revision,reserved_unpicked_base,reserved_picked_base FROM inventory_reservation WHERE tenant_id=? AND id=? FOR UPDATE",sql.tenant,change.id) {
                 Triple(it.getLong("revision"),it.getLong("reserved_unpicked_base"),it.getLong("reserved_picked_base"))
             }.singleOrNull()
             if(before?.first != change.expectedRevision) sql.fail(WarehouseErrorCode.STALE_REVISION)
+            val previousTotal=before?.let { Math.addExact(it.second,it.third) } ?: 0L
+            if(total.quantityBase>previousTotal) {
+                require(dimension.condition==com.duluin.ftth.inventory.WarehouseCondition.SERVICEABLE && dimension.legalOwner==com.duluin.ftth.inventory.AssetLegalOwner.ISP)
+                val position=PostingProjection(sql).readLocked(dimension) ?: sql.fail(WarehouseErrorCode.INSUFFICIENT_STOCK)
+                require(position.status==InventoryStatus.AVAILABLE && position.quantity.unit==total.unit && position.quantity.quantityBase>0) { "Reservation requires available physical stock" }
+                val kind=sql.value("SELECT kind FROM inventory_location WHERE tenant_id=? AND id=? AND state='ACTIVE' AND issue_eligible FOR SHARE",sql.tenant,dimension.locationId)
+                require(when(dimension.custodianKind) {
+                    OwnerKind.WAREHOUSE -> kind in setOf("BIN","WAREHOUSE")
+                    OwnerKind.TECHNICIAN -> kind=="TECHNICIAN"
+                    OwnerKind.VEHICLE -> kind=="VEHICLE"
+                    else -> false
+                }) { "Reservation location is not approved for this custody scope" }
+            }
             if(before == null) {
                 require(change.state==ReservationState.OPEN && total.quantityBase>0)
                 sql.update("""INSERT INTO inventory_reservation(id,tenant_id,document_line_id,sku_id,stock_identity_id,lot_id,base_unit,location_id,custodian_id,
