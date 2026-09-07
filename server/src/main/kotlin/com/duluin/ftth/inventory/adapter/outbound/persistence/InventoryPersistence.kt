@@ -1,6 +1,6 @@
 package com.duluin.ftth.inventory.adapter.outbound.persistence
 
-import com.duluin.ftth.common.infrastructure.persistence.TenantAwareJpaEntity
+import com.duluin.ftth.inventory.WarehouseAdmission
 import com.duluin.ftth.inventory.application.port.outbound.InventoryLocationRepository
 import com.duluin.ftth.inventory.application.port.outbound.SerializedAssetRepository
 import com.duluin.ftth.inventory.domain.model.CustodyClaim
@@ -24,7 +24,13 @@ class InventoryLocationJpaEntity(
     id: UUID,
     @Column(nullable = false, length = 64) var code: String,
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 24) var kind: LocationKind,
-) : TenantAwareJpaEntity(id)
+) : WarehouseVersionedEntity(id) {
+    var name: String? = null
+    var parentLocationId: UUID? = null
+    var areaId: UUID? = null
+    var issueEligible: Boolean = false
+    var state: String = "ACTIVE"
+}
 
 @Entity
 @Table(name = "inventory_serialized_asset")
@@ -39,7 +45,20 @@ class SerializedAssetJpaEntity(
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 24) var custodyOwnerKind: OwnerKind,
     @Column var installedOnuId: UUID?,
     @Column(length = 128) var lastOperationKey: String?,
-) : TenantAwareJpaEntity(id)
+) : WarehouseVersionedEntity(id) {
+    @Enumerated(EnumType.STRING) var warehouseAdmission: WarehouseAdmission = WarehouseAdmission.VERIFIED
+    var canonicalSerialCandidate: String? = null
+    var canonicalMacCandidate: String? = null
+    var baseUnitCandidate: String? = null
+    var warehouseSkuId: UUID? = null
+    var canonicalSerial: String? = null
+    var canonicalMac: String? = null
+    var quantityBase: Long? = null
+    var baseUnit: String? = null
+    var condition: String? = null
+    var legalOwner: String? = null
+    var originDocumentLineId: UUID? = null
+}
 
 interface InventoryLocationJpaRepository : JpaRepository<InventoryLocationJpaEntity, UUID> {
     fun findAllByTenantId(tenantId: UUID): List<InventoryLocationJpaEntity>
