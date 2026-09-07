@@ -3,13 +3,13 @@
 Baseline `ebf98fdf270b30ac30b7a01b1f609b39e8414618` memiliki 169 migrasi,
 versi maksimum `V172__evidence_retention_claim_state.sql`. Celah V56-V58
 adalah riwayat, bukan slot bebas. Manifest ini dibekukan untuk branch
-`feat/warehouse-workorder`. Task04 menambahkan V173, V174 dan split forward-only
-V174.1; versi historis tidak diubah.
+`feat/warehouse-workorder`. Task04 menambahkan V173 serta M02 V174, V174.1,
+V174.2 dan V174.3; versi historis tidak diubah.
 
 | Slot | Versi | Pemilik tugas | Cakupan |
 | --- | --- | --- | --- |
 | M01 | V173 | 04 | Precision, masters, identity claims, cutover/auth fences |
-| M02 | V174, V174.1 | 04 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity precision guard |
+| M02 | V174, V174.1, V174.2, V174.3 | 04 | Documents, posting, reservations, inspection, scopes, material plans; canonical identity, provenance chain and aggregate lot capacity guards |
 | M03 | V175 | 11 | Approval, counts, remaining operations |
 | M04 | V176 | 19 | Assignments, customer installation episodes |
 | M05 | V177 | 43 | Preservation, staging, reconciliation |
@@ -147,7 +147,7 @@ satu project, test dilewati, flaky, atau gagal membuat runner gagal.
 
 ## 2026-09-07: koreksi verifikasi independen task04
 
-Manifest M02 diperluas menjadi **V174, V174.1, V174.2**. V174.2 diperiksa bebas
+Manifest M02 kini **V174, V174.1, V174.2, V174.3**. V174.2 diperiksa bebas
 dan dicadangkan sebelum SQL dibuat. V173/V174/V174.1 tetap byte-identical;
 V175-V178 tetap milik task berikutnya. Koreksi forward ini menutup AV-01
 (rantai VERIFIED), AV-02 (opening tanpa approval), dan AV-03 (lot serta saldo
@@ -165,3 +165,19 @@ inventory dan IAM sinkron, MANDATORY, fail-fast pada transaksi yang sama;
 tidak memakai AFTER_COMMIT/best-effort. JDBC scoped di koneksi Hibernate yang
 sama memulihkan GUC asal tanpa mengganti tenant EntityManager di tengah transaksi.
 Pengiriman event ganda tidak mempromosikan policy existing atau menaikkan epoch.
+
+## V174.3: kapasitas agregat root lot
+
+V174.3 dicadangkan setelah pemeriksaan slot bebas, sebelum SQL dibuat. Tidak ada
+perubahan byte V173/V174/V174.1/V174.2 atau pemakaian slot V175-V178.
+Jumlah seluruh root VERIFIED (`parent_segment_id IS NULL`) per tenant/lot tidak
+boleh melebihi received_quantity_base. ACTIVE, SPLIT dan RETIRED tetap dihitung;
+child hanya mewakili pemecahan root, bukan penerimaan fisik tambahan.
+
+BEFORE INSERT/UPDATE mengunci row lot lama/baru menurut tenant/id, lalu constraint
+deferred memeriksa SUM numeric terhadap keadaan akhir transaksi. Mutasi segment
+lot memakai READ COMMITTED (READ UNCOMMITTED PostgreSQL ekuivalen); snapshot
+transaction REPEATABLE READ/SERIALIZABLE ditolak40001 agar snapshot lama tidak
+melewati SUM setelah menunggu writer READ COMMITTED. Caller harus mengulang
+seluruh transaksi dengan profil row-lock READ COMMITTED; tidak ada pelemahan
+append-only lot hanya untuk memperbarui counter alokasi.
