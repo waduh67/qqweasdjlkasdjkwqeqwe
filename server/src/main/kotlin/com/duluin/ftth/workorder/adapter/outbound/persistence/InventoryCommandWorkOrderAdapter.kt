@@ -15,6 +15,7 @@ class InventoryCommandWorkOrderAdapter(private val entityManager: EntityManager)
     override fun lock(id: UUID, expectedRevision: Long?, authority: CurrentAuthority, customerId: UUID?, fieldAction: Boolean): Long {
         authority.fence.assertHeld()
         return entityManager.unwrap(Session::class.java).doReturningWork { connection: Connection ->
+            try {
             connection.prepareStatement("SELECT warehouse_revision,area_id,customer_id,status FROM work_order WHERE tenant_id=? AND id=? FOR UPDATE").use { statement ->
                 statement.setObject(1, TenantContext.tenantId()); statement.setObject(2, id)
                 statement.executeQuery().use { row ->
@@ -34,6 +35,10 @@ class InventoryCommandWorkOrderAdapter(private val entityManager: EntityManager)
                     if (expectedRevision != null && revision != expectedRevision) fail(WarehouseErrorCode.STALE_REVISION)
                     revision
                 }
+            }
+            } catch (failure: java.sql.SQLException) {
+                if (failure.sqlState in setOf("40001", "40P01", "55P03")) fail(WarehouseErrorCode.STALE_REVISION)
+                throw failure
             }
         }
     }

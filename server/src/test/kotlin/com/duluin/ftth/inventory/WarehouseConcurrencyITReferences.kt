@@ -38,6 +38,28 @@ class WarehouseConcurrencyITReferences {
         assertThat(blocked).isTrue()
     }
 
+    @ParameterizedTest @ValueSource(strings=["work_order","inventory_document"])
+    fun `bounded reference lock failures map to conflict instead of server error`(table: String) {
+        val fixture=WarehousePostingFixture(context).also { it.setup(); it.legacyAuthority() }
+        val piece=fixture.transaction { receipt(StockQuantity.each("1")) }
+        val post=fixture.transaction { move(piece,piece.copy(locationId=technician,custodianId=actor,custodianKind=OwnerKind.TECHNICIAN),StockQuantity.each("1")) }
+        val command=WarehousePreparedCommand.prepare(post,"lock-timeout",0,mapOf("workorder:${fixture.workOrder}" to 1L))
+        val id=if(table=="work_order") fixture.workOrder else post.documentId
+        val held=CountDownLatch(1); val release=CountDownLatch(1); val pool=Executors.newSingleThreadExecutor()
+        try {
+            val writer=pool.submit { fixture.transaction {
+                scalar("SELECT id FROM $table WHERE id='$id' FOR UPDATE")
+                held.countDown(); check(release.await(10,TimeUnit.SECONDS))
+            } }
+            check(held.await(10,TimeUnit.SECONDS))
+            assertThatThrownBy { fixture.transaction {
+                sql("SET LOCAL lock_timeout='100ms'")
+                context.getBean(WarehouseCommandService::class.java).execute(command)
+            } }.isInstanceOfSatisfying(WarehouseContractException::class.java) { assertThat(it.error.code).isEqualTo(WarehouseErrorCode.STALE_REVISION) }
+            release.countDown(); writer.get(10,TimeUnit.SECONDS)
+        } finally { release.countDown(); pool.shutdownNow(); pool.awaitTermination(10,TimeUnit.SECONDS) }
+    }
+
     @Test fun `actual WO reassignment waits for consume and revokes replay`() {
         val fixture=WarehousePostingFixture(context).also { it.setup(); it.legacyAuthority() }
         val command=command(fixture)

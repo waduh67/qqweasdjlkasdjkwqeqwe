@@ -15,7 +15,13 @@ class WarehouseCommandJdbc(private val entityManager: EntityManager) {
             check(!connection.autoCommit && connection.transactionIsolation == Connection.TRANSACTION_READ_COMMITTED)
             val sql = PostingSql(connection, TenantContext.tenantId())
             check(sql.value("SELECT current_setting('app.tenant_id',true)") == sql.tenant.toString())
-            action(sql)
+            try { action(sql) } catch (failure: java.sql.SQLException) {
+                when (failure.sqlState) {
+                    "40001", "40P01", "55P03" -> sql.fail(com.duluin.ftth.inventory.WarehouseErrorCode.STALE_REVISION)
+                    "23505" -> sql.fail(com.duluin.ftth.inventory.WarehouseErrorCode.IDEMPOTENCY_CONFLICT)
+                    else -> throw failure
+                }
+            }
         }
     }
 }
