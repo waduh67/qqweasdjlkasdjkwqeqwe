@@ -20,10 +20,11 @@ class InventoryApprovalService(
     private val monitor = Any()
     private val requests = linkedMapOf<UUID, InventoryApprovalRequest>()
     private val byOperation = mutableMapOf<Pair<UUID, String>, InventoryApprovalRequest>()
-    private val delegations = mutableListOf<ApproverDelegation>()
     private val effects = linkedMapOf<UUID, InventoryApprovalEffect>()
 
-    fun registerDelegation(delegation: ApproverDelegation) = synchronized(monitor) { delegations += delegation }
+    fun registerDelegation(delegation: ApproverDelegation): Nothing =
+        throw com.duluin.ftth.inventory.WarehouseContractException(com.duluin.ftth.inventory.WarehouseError(
+            com.duluin.ftth.inventory.WarehouseErrorCode.INDEPENDENT_APPROVER_REQUIRED, "Delegation requires durable approval policy setup"))
 
     fun request(command: CreateInventoryApproval): InventoryApprovalRequest = synchronized(monitor) {
         currentUser?.current()?.let {
@@ -57,7 +58,7 @@ class InventoryApprovalService(
             requests[approvalId] = expired
             throw ConflictException("approval has expired")
         }
-        val delegatedFrom = delegations.firstOrNull { it.delegateId == command.approverId && it.validUntil.isAfter(now) && it.approverId in (current.currentTier()?.approverIds ?: emptySet()) }?.approverId
+        val delegatedFrom: UUID? = null
         val tier = current.currentTier() ?: throw ConflictException("approval is already complete")
         val effectiveApprover = if (delegatedFrom != null) delegatedFrom else command.approverId
         if (command.approverId == current.requesterId || command.approverId == current.custodianId || effectiveApprover !in tier.approverIds) throw ValidationException("approver is not independent and authorized for this tier")
