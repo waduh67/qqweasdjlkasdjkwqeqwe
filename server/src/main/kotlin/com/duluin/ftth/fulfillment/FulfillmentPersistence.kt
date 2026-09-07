@@ -38,6 +38,7 @@ class FulfillmentCheckpointJpaEntity(
 @Component
 class FulfillmentCheckpointPersistenceAdapter(
     @PersistenceContext private val entityManager: EntityManager,
+    private val cutovers: com.duluin.ftth.inventory.InventoryTenantCutoverApi,
 ) : FulfillmentCheckpointRepository, FulfillmentOutboxRepository {
     @Transactional(readOnly = true)
     override fun find(tenantId: UUID, namespace: String, operationKey: String): FulfillmentCheckpoint? = entityManager.createQuery(
@@ -48,6 +49,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun claim(tenantId: UUID, namespace: String, operationKey: String): FulfillmentCheckpoint? {
+        cutoverFence()
         val id = entityManager.createNativeQuery(
             "SELECT id FROM fulfillment_checkpoint WHERE tenant_id = :tenant AND namespace = :namespace AND operation_key = :operation FOR UPDATE",
         ).setParameter("tenant", tenantId).setParameter("namespace", namespace).setParameter("operation", operationKey)
@@ -57,6 +59,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun claimOrCreate(request: FulfillmentRequest): FulfillmentCheckpoint {
+        cutoverFence()
         entityManager.createNativeQuery(
             """INSERT INTO fulfillment_checkpoint
                (id, tenant_id, namespace, operation_key, canonical_hash, source, target_id, subscription_id, work_order_id, work_order_kind, required_effects, order_id, approval_actor_id, state, attempts, checkpoint_updated_at)
@@ -118,6 +121,7 @@ class FulfillmentCheckpointPersistenceAdapter(
 
     @Transactional
     override fun claimPending(tenantId: UUID, workerId: String, now: Instant, leaseUntil: Instant): FulfillmentOutboxRecord? {
+        cutoverFence()
         val row = entityManager.createNativeQuery(
             """WITH candidate AS (
                    SELECT id FROM fulfillment_outbox
@@ -143,6 +147,10 @@ class FulfillmentCheckpointPersistenceAdapter(
         entityManager.createNativeQuery(
             "UPDATE fulfillment_outbox SET published_at = now(), claimed_by = NULL, lease_until = NULL WHERE id = :id AND claimed_by = :worker",
         ).setParameter("id", id).setParameter("worker", workerId).executeUpdate()
+    }
+
+    private fun cutoverFence() {
+        cutovers.lockForCommand(cutovers.read().epoch, com.duluin.ftth.inventory.WarehouseOperationClass.CONTROL_PLANE).assertHeld()
     }
 
     @Transactional(readOnly = true)

@@ -132,6 +132,9 @@ class PublicApiFulfillmentEffectExecutor(
     private val fieldService: FieldServiceApi,
 ) : FulfillmentEffectExecutor {
     override fun preflight(request: FulfillmentRequest) {
+        if (FulfillmentEffectType.INVENTORY in request.requiredEffects) {
+            throw FulfillmentExecutionFailure.ReconciliationRequired("LEGACY_INVENTORY_REQUIRES_WAREHOUSE_COMMAND")
+        }
         request.requiredEffects.forEach { effect ->
             when (effect) {
                 FulfillmentEffectType.SUBSCRIPTION, FulfillmentEffectType.PROVISIONING -> {
