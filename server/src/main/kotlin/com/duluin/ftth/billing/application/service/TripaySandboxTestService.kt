@@ -81,7 +81,7 @@ class TripaySandboxTestService(
     private fun String?.normalizedSecret(): String? = this?.trim()?.takeIf { it.isNotEmpty() }
 
     private companion object {
-        val TEST_AMOUNT: BigDecimal = BigDecimal("1000")
+        val TEST_AMOUNT: BigDecimal = BigDecimal("50000")
         val SAFE_URL_SCHEMES: Set<String> = setOf("http", "https")
     }
 }

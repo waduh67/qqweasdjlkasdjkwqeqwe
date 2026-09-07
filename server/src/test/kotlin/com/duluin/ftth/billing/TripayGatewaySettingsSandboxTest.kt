@@ -72,7 +72,7 @@ class TripayGatewaySettingsSandboxTest {
                 .containsOnly("/api-sandbox/transaction/create")
             assertThat(wire.requests.map { it.authorization })
                 .containsOnly("Bearer draft-api-key")
-            assertThat(wire.requests.map { it.form.getValue("amount") }).containsOnly("1000")
+            assertThat(wire.requests.map { it.form.getValue("amount") }).containsOnly("50000")
             assertThat(wire.requests.map { it.form.getValue("method") }).containsOnly("QRIS")
             assertThat(wire.requests.map { it.form.getValue("merchant_ref") })
                 .allMatch { it.startsWith("TST-") }
@@ -80,7 +80,7 @@ class TripayGatewaySettingsSandboxTest {
             wire.requests.forEach { request ->
                 val merchantRef = request.form.getValue("merchant_ref")
                 assertThat(request.form.getValue("signature"))
-                    .isEqualTo(sign("draft-private-key", "DRAFT-MERCHANT${merchantRef}1000"))
+                    .isEqualTo(sign("draft-private-key", "DRAFT-MERCHANT${merchantRef}50000"))
             }
             assertThat(repository.saveCalls).isZero()
         }
@@ -111,7 +111,7 @@ class TripayGatewaySettingsSandboxTest {
             assertThat(request.form.getValue("signature")).isEqualTo(
                 sign(
                     "stored-private-key",
-                    "CURRENT-MERCHANT${request.form.getValue("merchant_ref")}1000",
+                    "CURRENT-MERCHANT${request.form.getValue("merchant_ref")}50000",
                 ),
             )
             assertThat(repository.saveCalls).isZero()
