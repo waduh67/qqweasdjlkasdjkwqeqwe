@@ -88,3 +88,44 @@ Suite mencakup 1000 m + 10 ONU, issue 100 m + 1 ONU, use 82.5 m + 1 ONU,
 retur/inspeksi 17.5 m, rollback tiap tahap, reservasi/split, entry point lama,
 duplicate/stale/quantity/context, race identitas terakhir, missing-row, urutan
 multi-dimensi, rebuild bersaing, dan fresh-context restart.
+
+## Koreksi verifier AV5
+
+Bagian ini memperketat implementasi task 5 di atas; bukan implementasi task 6.
+
+- Status OUT harus cocok dengan posisi yang dikunci. Semua IN untuk satu dimensi
+  harus menyatakan status yang sama. Status hasil berasal dari IN tersebut, atau
+  status posisi sebelumnya bila posting hanya mengurangi kuantitas dimensi itu.
+  Urutan leg tidak pernah menentukan status saldo atau custody serial.
+- Setiap leg fisik baru menyimpan revisi state dimensi berikutnya pada kolom
+  `inventory_movement_leg.revision` yang sudah tersedia. Nomor berasal dari row
+  saldo terkunci dan disimpan immutable bersama leg; rebuild memulihkan high-water
+  mark ini bila row proyeksi hilang. Rebuild memilih state IN terbaru menurut
+  revisi tersebut, bukan UUID leg/posting. Waktu server hanya menjadi urutan
+  fallback untuk riwayat lama dengan revisi nol. Riwayat lama dengan state IN
+  bertentangan pada urutan yang sama ditolak sebagai ambigu, bukan ditebak atau
+  diubah. Perubahan status dan partial bulk tetap konsisten setelah rebuild.
+- Tidak ada publikasi `PostingPhaseReached`, callback tahap, atau
+  `ApplicationEventPublisher` dalam jalur posting produksi. Hanya row outbox
+  durable yang menjadi batas delivery. Uji rollback delapan tahap memakai
+  decorator JDBC yang dipasang eksplisit dari test sources; class/injector itu
+  tidak berada dalam bootJar dan tidak otomatis ditemukan Spring.
+- Pembuatan atau kenaikan encumbrance memerlukan posisi tepat yang dikunci,
+  kuantitas positif, status AVAILABLE, SERVICEABLE milik ISP, serta lokasi ACTIVE
+  dengan `issue_eligible=true`. Scope custody harus cocok dengan jenis lokasi:
+  WAREHOUSE pada WAREHOUSE/BIN, TECHNICIAN pada TECHNICIAN, VEHICLE pada VEHICLE.
+  Penurunan/release accountability yang sudah ada tetap boleh setelah status atau
+  eligibility lokasi berubah. Ini bukan pengganti pemeriksaan izin IAM task 6.
+- Customer/work order fakta dan work order usage harus cocok dengan dokumen
+  posting yang dikunci. Sink konsumsi berkustodian CUSTOMER yang sama dengan
+  customer fakta. Referensi issue eksplisit juga mengikat context, line,
+  kuantitas acknowledged, unit dan identitas asli/descendant yang sama. Posting
+  standalone tanpa fakta tidak memerlukan customer buatan.
+- `quantity_base` Long dan unit selalu disimpan independen dari proyeksi legacy.
+  Kolom legacy `quantity` diisi hanya untuk EA yang muat dalam Int; MM atau EA
+  lebih besar tetap null. Pembaca count legacy tidak mengekspos fakta tersebut;
+  bukan overflow, truncation, atau konversi MM menjadi count. V2 nanti dapat
+  membaca field exact yang sudah durable.
+
+Tidak ada byte migrasi yang sudah diterapkan, RLS, admission, provenance,
+lot-capacity, atau deferred tenant-scope guard yang diubah untuk koreksi ini.
