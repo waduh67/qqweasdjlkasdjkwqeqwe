@@ -1,5 +1,7 @@
 package com.duluin.ftth.iam.application.service
 
+import com.duluin.ftth.iam.authorizeChange
+
 import com.duluin.ftth.common.audit.AuditTrailEvent
 import com.duluin.ftth.common.domain.error.AuthenticationException
 import com.duluin.ftth.common.domain.error.NotFoundException
@@ -57,6 +59,7 @@ class TwoFactorService(
 
     override fun startEnrollment(): TotpEnrollmentView {
         authority.lockForChange().incrementEpoch()
+        authority.lockCurrent()
         val user = loadSelf()
         val secret = totp.newSecret()
         user.beginTotpEnrollment(cipher.encrypt(secret))
@@ -69,6 +72,7 @@ class TwoFactorService(
 
     override fun confirmEnrollment(code: String): RecoveryCodesView {
         authority.lockForChange().incrementEpoch()
+        authority.lockCurrent()
         val user = loadSelf()
         val secret = user.totpSecret?.let(cipher::decrypt)
             ?: throw ValidationException("Belum ada pendaftaran 2FA yang menunggu — mulai dari awal")
@@ -83,6 +87,7 @@ class TwoFactorService(
 
     override fun disable(password: String) {
         authority.lockForChange().incrementEpoch()
+        authority.lockCurrent()
         val user = loadSelf()
         requirePassword(user, password)
         user.disableTotp()
@@ -93,6 +98,7 @@ class TwoFactorService(
 
     override fun regenerateRecoveryCodes(password: String): RecoveryCodesView {
         authority.lockForChange().incrementEpoch()
+        authority.lockCurrent()
         val user = loadSelf()
         requirePassword(user, password)
         if (!user.twoFactorEnabled) throw ValidationException("2FA belum aktif")
@@ -107,7 +113,7 @@ class TwoFactorService(
      * dicari lebih dulu kalau suatu saat ada akun yang disalahgunakan.
      */
     override fun resetFor(userId: UUID) {
-        authority.lockForChange().incrementEpoch()
+        authority.authorizeChange("iam.user.update").incrementEpoch()
         val user = userRepository.findById(userId)
             ?: throw NotFoundException("User $userId tidak ditemukan")
         user.disableTotp()
