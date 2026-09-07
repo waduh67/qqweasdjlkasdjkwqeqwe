@@ -59,10 +59,7 @@ export function Combobox<T>({
   const [loading, setLoading] = useState(false)
   const [label, setLabel] = useState(initialLabel)
   const containerRef = useRef<HTMLDivElement>(null)
-  const fetchRef = useRef(fetchOptions)
   const requestRef = useRef(0)
-
-  fetchRef.current = fetchOptions
 
   useEffect(() => {
     if (!value) setLabel('')
@@ -105,7 +102,7 @@ export function Combobox<T>({
     setLoading(true)
     const timeout = window.setTimeout(async () => {
       try {
-        const fetchedOptions = await fetchRef.current(term.trim())
+        const fetchedOptions = await fetchOptions(term.trim())
         if (request === requestRef.current) setOptions(fetchedOptions)
       } catch {
         if (request === requestRef.current) setOptions([])
@@ -118,7 +115,7 @@ export function Combobox<T>({
       window.clearTimeout(timeout)
       requestRef.current += 1
     }
-  }, [debounceMs, open, term])
+  }, [debounceMs, fetchOptions, open, term])
 
   const groupedOptions = useMemo<OptionGroupData<T>[]>(() => {
     if (!groupOf) return []

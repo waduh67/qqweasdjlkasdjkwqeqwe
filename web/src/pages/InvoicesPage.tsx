@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Text } from '@fluentui/react-components'
 import { Ban, Copy, ExternalLink, FlaskConical, Link2, Printer, Undo2, Wallet } from 'lucide-react'
 import { api, ApiError } from '../api/client'
@@ -378,12 +378,11 @@ export function InvoicesPage() {
       () => requestRefund(id, { amount: amount || undefined, reason, note: note || undefined }),
       'Pengembalian dana diajukan',
     )
-    if (detailIdRef.current === id) loadHistory(id)
   }
 
   const doSettleRefund = async () => {
     if (!settleTarget) return
-    const { id, invoiceId } = settleTarget
+    const { id } = settleTarget
     const success = settleSuccess
     const reason = settleReason.trim()
     setSettleTarget(null)
@@ -391,7 +390,6 @@ export function InvoicesPage() {
       () => settleRefund(id, success, reason || undefined),
       success ? 'Pengembalian dana ditutup: berhasil' : 'Pengembalian dana ditandai gagal',
     )
-    if (detailIdRef.current === invoiceId) loadHistory(invoiceId)
   }
 
   /**
@@ -424,32 +422,35 @@ export function InvoicesPage() {
       .catch(() => toast.error('Gagal menyalin link bayar'))
 
   // Klik baris membuka pratinjau (seragam dengan tabel lain). Riwayat pembayaran
-  // ditarik terpisah; `detailIdRef` membuang balasan basi bila baris cepat ditukar.
-  const detailIdRef = useRef<string | null>(null)
-  const loadHistory = useCallback((invoiceId: string) => {
+  // ditarik terpisah; cleanup effect membuang balasan basi saat baris cepat ditukar.
+  useEffect(() => {
+    if (!detail) return
+
+    let active = true
     setLoadingPayments(true)
     // Pembayaran & pengembalian ditarik bersamaan: keduanya mengisi satu blok riwayat uang
     // di pratinjau, jadi tak ada gunanya menampilkan salah satunya lebih dulu.
-    Promise.all([listPayments(invoiceId), listRefunds(invoiceId)])
+    void Promise.all([listPayments(detail.id), listRefunds(detail.id)])
       .then(([p, r]) => {
-        if (detailIdRef.current !== invoiceId) return
+        if (!active) return
         setPayments(p)
         setRefunds(r)
       })
       .catch(() => undefined)
       .finally(() => {
-        if (detailIdRef.current === invoiceId) setLoadingPayments(false)
+        if (active) setLoadingPayments(false)
       })
-  }, [])
+
+    return () => {
+      active = false
+    }
+  }, [detail])
   const openDetail = (inv: InvoiceView) => {
-    detailIdRef.current = inv.id
     setDetail(inv)
     setPayments([])
     setRefunds([])
-    loadHistory(inv.id)
   }
   const closeDetail = () => {
-    detailIdRef.current = null
     setDetail(null)
     setPayments([])
     setRefunds([])

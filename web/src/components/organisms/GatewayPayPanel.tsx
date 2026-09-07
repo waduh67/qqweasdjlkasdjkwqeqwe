@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import QRCode from 'react-qr-code'
 import { typographyStyles } from '@fluentui/react-components'
 import { Button, SelectField } from '@/components/atoms'
@@ -115,21 +115,16 @@ export function GatewayPayPanel({
     }
   }
 
-  const onPaidRef = useRef(onPaid)
-  onPaidRef.current = onPaid
-  const pollRef = useRef(pollStatus)
-  pollRef.current = pollStatus
-
   // Polling deteksi lunas: hanya selagi instruksi ada & belum lunas.
   useEffect(() => {
-    if (!instruction || paid || !pollRef.current) return
+    if (!instruction || paid || !pollStatus) return
     let alive = true
     const timer = window.setInterval(async () => {
       try {
-        const status = await pollRef.current?.()
+        const status = await pollStatus()
         if (alive && status && SETTLED.has(status.toUpperCase())) {
           setPaid(true)
-          onPaidRef.current?.()
+          onPaid?.()
         }
       } catch {
         /* transient — coba lagi tick berikutnya */
@@ -139,7 +134,7 @@ export function GatewayPayPanel({
       alive = false
       window.clearInterval(timer)
     }
-  }, [instruction, paid])
+  }, [instruction, onPaid, paid, pollStatus])
 
   const copyVa = async () => {
     if (!instruction?.vaNumber) return

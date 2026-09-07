@@ -61,7 +61,7 @@ export function TenantsPage() {
         .then((s) => setDefaultFee(s.defaultMonthlyFee))
         .catch(() => undefined)
     }
-  }, [])
+  }, [can])
 
   async function run(action: () => Promise<unknown>) {
     setError(null)
