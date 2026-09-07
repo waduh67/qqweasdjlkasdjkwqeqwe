@@ -54,7 +54,10 @@ data class PostingOperation(
     val originalStatus: Int,
     val originalBody: String,
     val authorityEpoch: Long,
-)
+    val recordedAt: Instant = Instant.now(),
+) {
+    val postingId: UUID get() = UUID.nameUUIDFromBytes("warehouse:$id".toByteArray(Charsets.UTF_8))
+}
 
 data class ReservationChange(
     val id: UUID,

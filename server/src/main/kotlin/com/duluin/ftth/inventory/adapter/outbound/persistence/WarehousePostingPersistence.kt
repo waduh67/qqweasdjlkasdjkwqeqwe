@@ -19,7 +19,7 @@ class WarehousePostingPersistence(private val entityManager: EntityManager) : Wa
         documents.lock(command,cutoverEpoch)
         val stock = PostingStock(sql)
         stock.lock(command)
-        val result = WarehousePostResult(UUID.randomUUID(),command.operation.id,Math.addExact(command.expectedRevision,1),Instant.now())
+        val result = WarehousePostResult(command.operation.postingId,command.operation.id,Math.addExact(command.expectedRevision,1),command.operation.recordedAt)
         documents.advance(command,result,cutoverEpoch)
         documents.header(command,result)
         stock.split(command)

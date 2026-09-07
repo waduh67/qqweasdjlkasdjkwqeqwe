@@ -115,10 +115,10 @@ internal class PostingDocuments(private val sql: PostingSql) {
     fun advance(command: WarehousePost, result: WarehousePostResult, epoch: Long) {
         val operation=command.operation
         sql.update("""INSERT INTO inventory_operation(id,tenant_id,namespace,operation_key,actor_id,resource_id,resource_scope,payload_hash,
-            document_id,document_revision,business_action,original_status,original_body,cutover_epoch,authority_epoch)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", operation.id,sql.tenant,operation.namespace,operation.key,operation.actorId,
+            document_id,document_revision,business_action,original_status,original_body,cutover_epoch,authority_epoch,created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", operation.id,sql.tenant,operation.namespace,operation.key,operation.actorId,
             operation.resourceId,operation.resourceScope,operation.payloadHash,command.documentId,result.documentRevision,operation.businessAction,
-            operation.originalStatus,operation.originalBody,epoch,operation.authorityEpoch)
+            operation.originalStatus,operation.originalBody,epoch,operation.authorityEpoch,operation.recordedAt)
         check(sql.update("UPDATE inventory_document SET state=?,revision=revision+1,updated_at=? WHERE tenant_id=? AND id=? AND revision=?",
             command.nextState,result.recordedAt,sql.tenant,command.documentId,command.expectedRevision)==1)
     }
