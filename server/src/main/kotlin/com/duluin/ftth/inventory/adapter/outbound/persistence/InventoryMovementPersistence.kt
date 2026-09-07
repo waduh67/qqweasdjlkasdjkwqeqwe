@@ -10,7 +10,6 @@ import jakarta.persistence.Table
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
-import org.springframework.data.jpa.repository.Modifying
 import org.springframework.stereotype.Component
 import jakarta.persistence.LockModeType
 import java.time.Instant
@@ -127,9 +126,6 @@ interface InventoryFulfillmentEffectJpaRepository : JpaRepository<InventoryFulfi
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     fun findByTenantIdAndNamespaceAndOperationKey(tenantId: UUID, namespace: String, key: String): InventoryFulfillmentEffectJpaEntity?
 
-    @Modifying
-    @Query(value = "INSERT INTO inventory_fulfillment_effect (id, tenant_id, target_id, work_order_id, customer_id, namespace, operation_key, payload_hash, item_category, quantity, installed, returned) VALUES (:id, :tenantId, :targetId, :workOrderId, :customerId, :namespace, :operationKey, :payloadHash, :itemCategory, :quantity, :installed, :returned) ON CONFLICT (tenant_id, namespace, operation_key) DO NOTHING", nativeQuery = true)
-    fun insertIfAbsent(id: UUID, tenantId: UUID, targetId: UUID, workOrderId: UUID, customerId: UUID, namespace: String, operationKey: String, payloadHash: String, itemCategory: String, quantity: Int, installed: Boolean, returned: Boolean): Int
 }
 
 @Component
