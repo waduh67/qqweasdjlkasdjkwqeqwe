@@ -89,4 +89,33 @@ tasks.withType<Test> {
     testLogging {
         events("passed", "skipped", "failed")
     }
+    if (providers.environmentVariable("WAREHOUSE_QA").orNull == "true") {
+        outputs.upToDateWhen { false }
+        outputs.cacheIf { false }
+        filter.isFailOnNoMatchingTests = true
+        addTestListener(object : TestListener {
+            override fun beforeSuite(suite: TestDescriptor) = Unit
+            override fun beforeTest(testDescriptor: TestDescriptor) = Unit
+            override fun afterTest(testDescriptor: TestDescriptor, result: TestResult) = Unit
+            override fun afterSuite(suite: TestDescriptor, result: TestResult) {
+                if (suite.parent == null) {
+                    check(result.testCount > 0 && result.skippedTestCount == 0L) {
+                        "Warehouse QA requires nonzero executed tests and zero skipped tests"
+                    }
+                    logger.lifecycle("WAREHOUSE_COUNTS tests={} failures={} skipped={}", result.testCount, result.failedTestCount, result.skippedTestCount)
+                }
+            }
+        })
+    }
+}
+
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    val metadata = layout.buildDirectory.file("warehouse/boot-jar-path.txt")
+    outputs.file(metadata)
+    doLast {
+        metadata.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText(archiveFile.get().asFile.canonicalPath + "\n")
+        }
+    }
 }
