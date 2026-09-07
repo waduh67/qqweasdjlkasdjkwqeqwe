@@ -13,6 +13,7 @@ class WarehousePreparedCommand private constructor(
     val cutoverEpoch: Long,
     val authorityEpoch: Long?,
     val canonical: WarehouseCanonicalPayload,
+    val referencedRevisions: Map<String, Long>,
 ) {
     val namespace = "warehouse.post.${posting.kind.name.lowercase()}"
     val documentId: UUID = posting.documentId
@@ -32,9 +33,18 @@ class WarehousePreparedCommand private constructor(
             val mapper = jacksonObjectMapper()
             val tree = mapper.valueToTree<tools.jackson.databind.node.ObjectNode>(frozen)
             tree.remove("operation")
+            referencedRevisions.keys.forEach { reference ->
+                val parts = reference.split(':')
+                if (parts.size != 2 || parts.first() !in setOf("document", "workorder") || runCatching { UUID.fromString(parts.last()) }.isFailure) {
+                    throw WarehouseContractException(WarehouseError(WarehouseErrorCode.MALFORMED_REQUEST, "Unknown revision reference"))
+                }
+                if (parts.first() == "document" && UUID.fromString(parts.last()) == posting.documentId) {
+                    throw WarehouseContractException(WarehouseError(WarehouseErrorCode.MALFORMED_REQUEST, "Command document has its own expectedRevision"))
+                }
+            }
             val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(mapOf(
                 "posting" to tree, "referencedRevisions" to referencedRevisions.toSortedMap())))
-            return WarehousePreparedCommand(frozen, key, cutoverEpoch, authorityEpoch, canonical)
+            return WarehousePreparedCommand(frozen, key, cutoverEpoch, authorityEpoch, canonical, referencedRevisions.toSortedMap())
         }
     }
 }
