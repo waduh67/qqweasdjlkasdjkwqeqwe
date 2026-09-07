@@ -3,7 +3,7 @@ package com.duluin.ftth.inventory.domain.model
 import java.util.UUID
 
 enum class InventoryStatus {
-    AVAILABLE, RESERVED, ISSUED, IN_TRANSIT, CONSUMED, RETURNED, QUARANTINE, LOST, DISPOSED
+    AVAILABLE, RESERVED, ISSUED, IN_TRANSIT, CONSUMED, RETURNED, QUARANTINE, LOST, DISPOSED, RECEIPT_SOURCE
 }
 
 enum class LocationKind { WAREHOUSE, BIN, VEHICLE, TECHNICIAN, CUSTOMER_SITE, QUARANTINE, LOST, DISPOSED, TRANSIT }
@@ -90,7 +90,7 @@ data class SerializedAsset(
             InventoryStatus.IN_TRANSIT -> to in setOf(InventoryStatus.AVAILABLE, InventoryStatus.ISSUED, InventoryStatus.RETURNED, InventoryStatus.QUARANTINE, InventoryStatus.LOST)
             InventoryStatus.RETURNED -> to in setOf(InventoryStatus.AVAILABLE, InventoryStatus.QUARANTINE)
             InventoryStatus.QUARANTINE, InventoryStatus.LOST -> to == InventoryStatus.DISPOSED
-            InventoryStatus.CONSUMED, InventoryStatus.DISPOSED -> false
+            InventoryStatus.CONSUMED, InventoryStatus.DISPOSED, InventoryStatus.RECEIPT_SOURCE -> false
         }
     }
 }
