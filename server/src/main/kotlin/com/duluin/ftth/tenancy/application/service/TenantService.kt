@@ -8,6 +8,7 @@ import com.duluin.ftth.common.domain.error.ValidationException
 import com.duluin.ftth.common.infrastructure.persistence.TenantEraser
 import com.duluin.ftth.common.security.CurrentUserProvider
 import com.duluin.ftth.tenancy.TenantApi
+import com.duluin.ftth.tenancy.TenantCreatedEvent
 import com.duluin.ftth.tenancy.TenantRef
 import com.duluin.ftth.tenancy.application.port.inbound.ManageTenantUseCase
 import com.duluin.ftth.tenancy.application.port.outbound.TenantRepository
@@ -59,6 +60,7 @@ class TenantService(
         tenantRepository.findBySlug(normalized)?.let { return it.toRef() }
 
         val created = tenantRepository.save(Tenant.create(normalized, name))
+        events.publishEvent(TenantCreatedEvent(created.id))
         events.publishEvent(
             AuditTrailEvent(
                 tenantId = created.id,
